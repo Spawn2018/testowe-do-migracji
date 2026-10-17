@@ -439,6 +439,7 @@ const RISK_TYPE: Record<string, RiskType> = {
   FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
   AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS', DATES_UNCONFIRMED: 'OPS', LATE_DATE_CHANGE: 'OPS',
+  INVOICE_OVERDUE: 'OPS',
 };
 const SEVERITY: Record<string, Severity> = { INFO: 'LOW', LOW: 'LOW', MEDIUM: 'MEDIUM', HIGH: 'HIGH', CRITICAL: 'CRITICAL' };
 export function riskFromRow(r: RiskRow, nowIso: string): Risk {
@@ -467,6 +468,8 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     titleParams: params,
     metaKey: str(d.meta_key) || undefined,
     metaParams: params,
+    /* wyglad/W-faktura-termin (A4): sprawa „Faktura po terminie płatności” prowadzi do tej faktury */
+    invoiceId: str(d.invoice_id) || undefined,
   };
 }
 

@@ -94,6 +94,8 @@ const pl: Dict = {
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
   rk_source_down_since: 'Źródło niedostępne: {source} od {since} — HHL weryfikuje ręcznie',
+  /* A4 (wyglad/W-faktura-termin): jedna sprawa HHL na fakturę po terminie; `detail.params` = number, from, to, due (DD.MM.RRRR) */
+  rk_invoice_overdue: 'Faktura {number} ({from} → {to}) nieopłacona po terminie {due}',
   rk_src_POLFERRIES_STATUS: 'status promów (Polferries)',
   rk_src_POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   rk_src_STENA_STATUS: 'status promów (Stena Line)',

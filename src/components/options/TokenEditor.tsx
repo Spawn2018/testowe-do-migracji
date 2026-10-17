@@ -5,7 +5,7 @@
  * Wklejanie — tylko zwykły tekst. Bez formatowania i bez cofania przeglądarki (pole zmienia też kod). Nowy początek — `key` u rodzica.
  */
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { TOKEN_LABEL, type Seg, type TokenId } from '../../lib/p8Texts';
+import { tokenLabelIn, type MsgGroup, type Seg, type TokenId } from '../../lib/p8Texts';
 import { readSegs } from '../../lib/p8Dom';
 
 export interface TokenEditorHandle {
@@ -22,6 +22,8 @@ interface Props {
   label: string;
   /** napis klocka przycisku w e-mailu logowania */
   buttonLabel?: string;
+  /** A4 (wyglad/W-faktura-termin): grupa wiadomości — w „Fakturach” klocek linku to „Link do faktury” */
+  group?: MsgGroup;
   /** przycisk z linkiem nie do usunięcia (e-mail logowania, E43) */
   lockButton?: boolean;
   describedBy?: string;
@@ -29,24 +31,24 @@ interface Props {
   onFocus?: () => void;
 }
 
-function chipLabel(id: TokenId, buttonLabel?: string): string {
-  return id === 'button' ? `Przycisk „${buttonLabel ?? 'Dołącz'}”` : TOKEN_LABEL[id];
+function chipLabel(id: TokenId, buttonLabel?: string, group?: MsgGroup): string {
+  return id === 'button' ? `Przycisk „${buttonLabel ?? 'Dołącz'}”` : tokenLabelIn(id, group);
 }
 
-function chip(id: TokenId, buttonLabel?: string): HTMLSpanElement {
+function chip(id: TokenId, buttonLabel?: string, group?: MsgGroup): HTMLSpanElement {
   const s = document.createElement('span');
   s.contentEditable = 'false';
   s.className = id === 'button' ? 'mt-chip mt-chip-btn' : 'mt-chip';
   s.dataset.tok = id;
-  s.textContent = chipLabel(id, buttonLabel);
+  s.textContent = chipLabel(id, buttonLabel, group);
   return s;
 }
 
-function fill(el: HTMLElement, segs: readonly Seg[], buttonLabel?: string): void {
+function fill(el: HTMLElement, segs: readonly Seg[], buttonLabel?: string, group?: MsgGroup): void {
   el.textContent = '';
   for (const x of segs) {
     if (x.k === 'txt') el.appendChild(document.createTextNode(x.v));
-    else el.appendChild(chip(x.id, buttonLabel));
+    else el.appendChild(chip(x.id, buttonLabel, group));
   }
   /* za ostatnim klockiem musi być tekst — inaczej klik w puste pole stawia kursor w środku klocka */
   if (segs[segs.length - 1]?.k === 'tok') el.appendChild(document.createTextNode(' '));
@@ -60,13 +62,13 @@ function chipOf(n: Node | null, box: HTMLElement): HTMLElement | null {
 }
 
 export const TokenEditor = forwardRef<TokenEditorHandle, Props>(function TokenEditor(
-  { initial, onChange, multiline, readOnly, label, buttonLabel, lockButton, describedBy, invalid, onFocus }, ref,
+  { initial, onChange, multiline, readOnly, label, buttonLabel, group, lockButton, describedBy, invalid, onFocus }, ref,
 ) {
   const el = useRef<HTMLDivElement>(null);
   const range = useRef<Range | null>(null);
 
   useEffect(() => {
-    if (el.current) fill(el.current, initial, buttonLabel);
+    if (el.current) fill(el.current, initial, buttonLabel, group);
     // treść startowa tylko przy montażu; nowy początek — nowy `key`
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -236,13 +238,13 @@ export const TokenEditor = forwardRef<TokenEditorHandle, Props>(function TokenEd
       const before = charBefore();
       const after = charAfter();
       if (before && !/\s/.test(before) && !/[([„"]/.test(before)) insertNode(document.createTextNode(' '));
-      insertNode(chip(id, buttonLabel));
+      insertNode(chip(id, buttonLabel, group));
       /* odstęp po klocku, żeby kursor nie kleił się do niego — chyba że dalej jest odstęp albo znak przestankowy */
       if (!/^[\s.,:;!?)\]”]$/.test(after)) insertNode(document.createTextNode(' '));
       el.current?.focus();
     },
     focus: () => el.current?.focus(),
-  }), [readOnly, buttonLabel]); // eslint-disable-line react-hooks/exhaustive-deps
+  }), [readOnly, buttonLabel, group]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div

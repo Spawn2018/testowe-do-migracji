@@ -24,6 +24,9 @@ import { attachMoneyV2 } from '../lib/money/loadMoney';
 import { orderNoReminders, orderNoRisks } from '../lib/orderNumbers';
 import { demoChatNotices } from '../lib/p6eDemo';
 import { buildSeedBills } from '../lib/invoices3';
+import { invoiceOverdueRisks } from '../lib/invoiceOverdue';
+import { getNowIso } from '../lib/frozenNow';
+import { localDateOf } from '../lib/money/engine';
 import { buildSeedSailings, linkSeedSailings } from '../lib/sailings';
 import type { Load } from '../types';
 
@@ -55,7 +58,11 @@ export function buildDemoSnapshot(): DataSnapshot {
   const loads = attachMoneyV2(loadsV1, invoices, DEMO_TODAY_LOCAL);
   /* M5 — brak numeru zlecenia przed terminem → kolejka ryzyk (lustro detect_missing_order_numbers) */
   /* audyt 17.10 (F7): teksty spraw z tych samych liczb co transport (okno, cisza GPS, załadunek) */
-  const risks = [...alignDemoRisks(seedRisks, loads), ...orderNoRisks(loads, DEMO_NOW)];
+  const bills = buildSeedBills(loads, DEMO_TODAY_LOCAL);
+  /* A4 (wyglad/W-faktura-termin): faktura nieopłacona po terminie → sprawa HHL (lustro bazy). Przy zegarze baseline
+     (23.09) żadna faktura demo nie jest po terminie; widać ją przy późniejszej dacie (?now=…) */
+  const nowIso = getNowIso();
+  const risks = [...alignDemoRisks(seedRisks, loads), ...orderNoRisks(loads, DEMO_NOW), ...invoiceOverdueRisks(bills, localDateOf(nowIso), nowIso)];
   const sailings = buildSeedSailings();
   const messages = buildSeedMessages(loads);
   return {
@@ -71,7 +78,7 @@ export function buildDemoSnapshot(): DataSnapshot {
     notifications: [...orderNoReminders(risks, '2026-09-23T00:30:00+02:00'), ...INITIAL_NOTIFICATIONS, ...demoChatNotices(loads, messages)],
     invoices,
     /* M6 — faktury v2 (osobny wycinek; nie zmienia poziomu/marży transportów do G4) */
-    bills: buildSeedBills(loads, DEMO_TODAY_LOCAL),
+    bills,
     /* M10 — rozkład rejsów (dane startowe); transport ↔ rejs tylko przy zgodnej rezerwacji */
     sailings,
     scheduleVersions: SCHEDULE_VERSIONS,

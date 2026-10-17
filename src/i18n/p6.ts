@@ -64,6 +64,8 @@ const PL: Record<string, string> = {
   p6_awiz_s: 'Awizacja',
   p6_docs: 'Wgraj',
   p6_open: 'Otwórz transport',
+  /* A4 (wyglad/W-faktura-termin): sprawa „Faktura … nieopłacona po terminie” */
+  p6_invoice: 'Otwórz fakturę',
   p6_fee: 'Dopłata',
   p6_fee_name_DWELL: 'Dopłata: postój {where} {dur}',
   p6_fee_name_CANCEL: 'Dopłata: anulowanie ({pct} % frachtu)',

@@ -7,7 +7,7 @@
  * formularz oferty faktoringu) usunięty (E4 „Jedna strona”, E4b „Usunąć”). Telefon: kafelki 2 × 2 i karty, bez obiegu
  * i bez tabeli „Kto co widzi” (img/e4-faktury-phone, E8). Terminy: SCX → HHL 35 dni, HHL → KSH 30 dni (03_REJESTR).
  */
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { attachDocumentFile } from '../lib/docFiles';
 import { canSeeCost } from '../lib/permissions';
@@ -39,6 +39,13 @@ export function InvoicesView() {
   const [attachLoadId, setAttachLoadId] = useState<string | null>(null);
   const sections: BillDirection[] = role === 'HHL' ? ['KOSZT', 'PRZYCHOD'] : role === 'SCX' ? ['KOSZT'] : ['PRZYCHOD'];
   const [tab, setTab] = useState<BillDirection>(sections[0]);
+  /* A4 (wyglad/W-faktura-termin): faktura z linku albo ze sprawy — zakładka jej kierunku (HHL: koszt albo przychód) */
+  const openInvoiceId = useTowerStore((s) => s.openInvoiceId);
+  const openDirection = openInvoiceId ? bills.find((b) => b.id === openInvoiceId)?.direction : undefined;
+  useEffect(() => {
+    if (openDirection && sections.includes(openDirection)) setTab(openDirection);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sections wynika z roli; zmiana kierunku wystarcza
+  }, [openDirection]);
   const nowIso = getNowIso();
   const tasks = useMemo(() => (role === 'HHL' ? factoringTasksOf(bills, nowIso) : []), [role, bills, nowIso]);
   /* CMR do faktur: ostatnie dostarczone transporty (wgrywanie CMR z podpisem — jak dziś; okno „Wgraj dokument” E31 w P5) */

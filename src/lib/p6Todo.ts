@@ -13,7 +13,7 @@ import { isTimeBan, isTodoRisk, todoCardKey } from './todoRules';
 
 export type IssueSrc = 'RISK' | 'DECISION' | 'FEE' | 'CHECK' | 'DETOUR';
 /** Dokąd prowadzi główny przycisk sprawy (bez zapisu — nawigacja). */
-export type IssueGo = 'AWIZACJA' | 'DOCS' | 'PRICING' | 'OPEN' | 'FEE' | 'NONE';
+export type IssueGo = 'AWIZACJA' | 'DOCS' | 'PRICING' | 'OPEN' | 'FEE' | 'INVOICE' | 'NONE';
 export type TodoScope = 'MINE' | 'FIRM' | 'ALL';
 export type PersonRole = 'HHL_ADMIN' | 'HHL_OPS' | 'CARRIER_DISPATCH' | 'CARRIER_USER' | 'CLIENT_USER';
 
@@ -80,6 +80,8 @@ const minIso = (a: string | null, b: string | null) => (!a ? b : !b ? a : Date.p
 const AWIZ_KEYS = /^(rk_seed_res|rk_seed_escort|rk_order_no)/;
 
 export function riskGo(r: Risk): IssueGo {
+  /* A4 (wyglad/W-faktura-termin): faktura po terminie — do tej faktury w Fakturach */
+  if (r.invoiceId) return 'INVOICE';
   if (r.type === 'DOC') return 'DOCS';
   if (r.kind === 'RESOURCE_MISSING' || (r.titleKey && AWIZ_KEYS.test(r.titleKey))) return 'AWIZACJA';
   return r.loadId ? 'OPEN' : 'NONE';
