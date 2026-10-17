@@ -143,6 +143,7 @@ const pl: Dict = {
   dec5_trig_enter: 'SMS przy wjeździe na teren',
   dec5_person: 'Osoba',
   dec5_name: 'Imię',
+  dec5_prefix: 'Numer kierunkowy',
   dec5_saved: 'Odbiorca SMS zapisany',
   dec5_sms_test: 'Wyślij SMS testowy',
   dec5_test_queued: 'SMS testowy: {n} w kolejce',

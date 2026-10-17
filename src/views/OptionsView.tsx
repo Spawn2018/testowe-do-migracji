@@ -198,7 +198,7 @@ export function OptionsView() {
       scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
-          {SmsZoneRecipients ? block(<SmsZoneRecipients />) : null}
+          {SmsZoneRecipients ? block(<SmsZoneRecipients readOnly={ro} />) : null}
           {SmsGateway ? block(<SmsGateway />) : null}
           <div className="settings-list" style={{ marginTop: 10 }}>
             {geofences.map((g) => (

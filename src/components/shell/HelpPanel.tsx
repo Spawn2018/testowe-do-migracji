@@ -81,7 +81,8 @@ export function HelpPanel({ open, onClose, initialTab = 'how' }: { open: boolean
       </div>
     );
   } else if (shown === 'news') {
-    const items = whatsNew() ?? [];
+    const news = whatsNew();
+    const items = news ?? [];
     body = (
       <div data-help-news>
         {DEMO ? <DemoMark /> : null}
@@ -95,11 +96,12 @@ export function HelpPanel({ open, onClose, initialTab = 'how' }: { open: boolean
               </li>
             ))}
           </ul>
-        ) : <p className="helpp-intro">{hp(locale, 'help_news_none')}</p>}
+        ) : <p className="helpp-intro" data-help-news-empty={news ? 'none' : 'nosource'}>{hp(locale, news ? 'help_news_none' : 'help_news_soon')}</p>}
       </div>
     );
   } else if (shown === 'contact') {
-    const list = helpContacts() ?? [];
+    const contacts = helpContacts();
+    const list = contacts ?? [];
     body = (
       <div data-help-contact>
         {DEMO ? <DemoMark /> : null}
@@ -115,7 +117,7 @@ export function HelpPanel({ open, onClose, initialTab = 'how' }: { open: boolean
               </li>
             ))}
           </ul>
-        ) : <p className="helpp-intro">{hp(locale, 'help_contact_none')}</p>}
+        ) : <p className="helpp-intro" data-help-contact-empty={contacts ? 'none' : 'nosource'}>{hp(locale, contacts ? 'help_contact_none' : 'help_contact_soon')}</p>}
       </div>
     );
   } else {

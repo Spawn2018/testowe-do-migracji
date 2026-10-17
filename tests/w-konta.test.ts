@@ -69,3 +69,24 @@ describe('menu konta i ekrany', () => {
   });
 });
 
+
+describe('Pomoc bez danych na produkcji (audyt 17.10 sekcja 06 N11)', () => {
+  it('brak źródła (null) — „pojawi się po włączeniu danych”; pusta lista — „Brak konta…” / „Brak zmian…”', () => {
+    const s = read('src/components/shell/HelpPanel.tsx');
+    expect(s).toMatch(/hp\(locale, contacts \? 'help_contact_none' : 'help_contact_soon'\)/);
+    expect(s).toMatch(/hp\(locale, news \? 'help_news_none' : 'help_news_soon'\)/);
+    expect(read('src/i18n/help.ts')).toMatch(/help_contact_soon: 'Kontakt do Operacji HHL pojawi się tutaj po włączeniu danych\.'/);
+  });
+});
+
+describe('SMS przy miejscach na produkcji do czasu P8 (audyt 17.10 sekcja 03 N7)', () => {
+  it('Operacje HHL — bez „Zapisz”, przełączników i SMS testowego; PL/SE jako numer kierunkowy', () => {
+    const s = read('src/auth/SmsZoneRecipients.tsx');
+    expect(s).toMatch(/\{readOnly \? null : <button type="submit"/);
+    expect(s).toMatch(/\{readOnly \? null : <button type="button" className="btn ghost" onClick=\{\(\) => void testList/);
+    expect(s).toMatch(/checked=\{approach\} disabled=\{readOnly\}/);
+    expect(s).toMatch(/<option value="PL">\+48 PL<\/option>/);
+    expect(read('src/views/OptionsView.tsx')).toMatch(/<SmsZoneRecipients readOnly=\{ro\} \/>/);
+    expect(hasKey('pl', 'dec5_prefix')).toBe(true);
+  });
+});

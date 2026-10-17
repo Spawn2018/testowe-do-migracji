@@ -1,4 +1,4 @@
-# wyglad/W-konta — Operacje HHL i Użytkownik SCX w demo — 17.10.2026
+# wyglad/W-konta — Operacje HHL i Użytkownik SCX w demo; Pomoc i SMS przy miejscach bez fałszywych napisów i przycisków — 17.10.2026
 
 Podstawa: audyt 17.10, §7 „Co nie zostało sprawdzone”: role „HHL Operacje” i „SCX Użytkownik” w demo nie istnieją w przełączniku — sprawdzone tylko z kodu uprawnień. Także raport F7 do #282: widok „tylko do odczytu” Kalibracji ETA dało się sprawdzić tylko testem, nie na ekranie.
 
@@ -12,6 +12,8 @@ Dopisek: D-20261017-1220-01. Tylko demo i obliczenia widoku (F8); produkcja bez 
 | Panel transportu | — | Operacje HHL bez „Zmień status” i bez „Popraw awizację” (E9) |
 | Strefy, Automatyzacje, Rejsy | — | Operacje HHL oglądają bez zmian (jak dotąd w kodzie, teraz widać w demo) |
 | Adres | — | `#/…?konto=operacje` albo `?konto=uzytkownik` — od razu wybrany rodzaj (testy, zrzuty) |
+| Opcje › SMS przy miejscach na produkcji, do czasu P8 (audyt 03 N7) | Operacje HHL widzą „Zapisz”, przełączniki i „Wyślij SMS testowy”; wybór „PL / SE” wygląda jak język | Operacje HHL: napis „Tylko podgląd · zmienia Administrator HHL”, pola tylko do odczytu, bez przycisków; wybór „+48 PL / +46 SE” z opisem „Numer kierunkowy” |
+| Pomoc › Kontakt i „Co nowego” na produkcji (audyt 06 N11) | „Brak konta Operacji HHL z telefonem.”, „Brak zmian do pokazania.” — nieprawda, bo dane nie są jeszcze podłączone | „Kontakt do Operacji HHL pojawi się tutaj po włączeniu danych.”, „Lista zmian pojawi się tutaj po włączeniu danych.”; po podłączeniu pusta lista dalej mówi „Brak konta…” |
 
 Jak działa:
 - `src/lib/accountRole.ts` — jedno miejsce, w którym ekrany czytają rodzaj konta: produkcja — `getAuthProfile()?.role` (bez zmian); demo — `null` (konto domyślne firmy, jak dotąd) albo wybrany drugi rodzaj, tylko w tej samej firmie (w Podglądzie KSH Operacje HHL nie mają znaczenia).
@@ -25,7 +27,7 @@ Obrazy (`now=2026-09-23T14:32Z`):
 - `po-panel-ops` — panel T-17 u Operacji: bez „Zmień status”.
 
 **Testy:**
-- `tests/w-konta.test.ts` (5) — domyślnie bez zmian; Operacje tylko w HHL; Użytkownik tylko w SCX; prawa (status, awizacja, decyzje); przełącznik tylko poza produkcją; ekrany czytają `accountRole(role)`;
+- `tests/w-konta.test.ts` (7) — domyślnie bez zmian; Operacje tylko w HHL; Użytkownik tylko w SCX; prawa (status, awizacja, decyzje); przełącznik tylko poza produkcją; ekrany czytają `accountRole(role)`;
 - e2e `e8-phone-gate` — „W-konta”: przełącznik w menu, Operacje — Kalibracja i Progi tylko do odczytu, KSH bez przełącznika, powrót do Administratora; Użytkownik SCX z adresu;
 - zmienione pod nowe wywołanie: `audyt-af`, `l8-cockpit-tiles`, `p7-awiz`;
 - build produkcyjny: bez kodu przełącznika i klucza `wt-demo-account` (jest tylko tekst słownika).
