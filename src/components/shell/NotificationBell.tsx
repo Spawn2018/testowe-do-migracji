@@ -34,7 +34,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const lang: BellLocale = locale === 'en' || locale === 'sv' ? locale : 'pl';
+  const lang: BellLocale = 'pl'; /* 8A (17.10): dzwonek tylko po polsku */
   const all = bellGroups(notifications, role, (id) => {
     const load = loads.find((l) => l.id === id);
     return load ? transportLabel(load, role) : undefined;

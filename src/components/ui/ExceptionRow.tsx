@@ -9,25 +9,19 @@ import { transportCaseTitle } from '../../lib/transportName';
 
 /**
  * E21 „Czas względny zostaje: »18 min temu«”, „po polsku wszędzie” (audyt-A A-05): wiek sprawy w „Najpilniejszych”
- * — „24 min temu”, „6 h temu”, „1 dzień temu”, „3 dni temu” (bez skrótów „24m”, „6h”, „1d”).
+ * — „24 min temu”, „6 h temu”, „1 dzień temu”, „3 dni temu” (bez skrótów „24m”, „6h”, „1d”). Tylko po polsku (8A).
  */
 export function formatExqAge(ageHours: number, locale: Locale = 'pl'): string {
   if (ageHours < 1) {
     const m = Math.max(1, Math.round(ageHours * 60));
-    if (locale === 'en') return `${m} min ago`;
-    if (locale === 'sv') return `${m} min sedan`;
     return `${m} min temu`;
   }
   if (ageHours >= 24) {
     const d = Math.round(ageHours / 24);
-    if (locale === 'en') return `${d} ${d === 1 ? 'day' : 'days'} ago`;
-    if (locale === 'sv') return `${d} ${d === 1 ? 'dag' : 'dagar'} sedan`;
     return `${d} ${plPlural(d, 'dzień', 'dni', 'dni')} temu`;
   }
   const h = Math.round(ageHours);
   if (h >= 24) return formatExqAge(24, locale);
-  if (locale === 'en') return `${h} h ago`;
-  if (locale === 'sv') return `${h} h sedan`;
   return `${h} h temu`;
 }
 

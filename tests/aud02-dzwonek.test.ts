@@ -72,8 +72,8 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
     expect(bellAge('2026-10-06T09:00:00Z', now, 'pl')).toBe('3 godz. temu');
     expect(bellAge('2026-10-05T10:00:00Z', now, 'pl')).toBe('wczoraj');
     expect(bellAge('2026-10-01T10:00:00Z', now, 'pl')).toBe('5 dni temu');
-    expect(bellAge('2026-10-06T11:45:00Z', now, 'en')).toBe('15 min ago');
-    expect(bellAge('2026-10-06T11:45:00Z', now, 'sv')).toBe('15 min sedan');
+    expect(bellAge('2026-10-06T11:45:00Z', now, 'en')).toBe('15 min temu'); /* 8A (17.10): tylko po polsku */
+    expect(bellAge('2026-10-06T11:45:00Z', now, 'sv')).toBe('15 min temu');
   });
   it('nieznany szablon → „Powiadomienie”, nigdy kod', () => {
     expect(bellTitle('SOME_NEW_TEMPLATE', 'SG-01', 'pl')).toBe('SG-01 — Powiadomienie');

@@ -40,7 +40,8 @@ describe('M5 — błędy bazy → zrozumiały komunikat', () => {
   it.each(cases)('%s', (raw, re) => expect(friendlyDbError(raw, 'pl')).toMatch(re));
   it('komunikat GOTOWY = ten sam tekst w aplikacji i z bazy', () => {
     expect(friendlyDbError('bez numeru zlecenia HHL nie może', 'en')).toBe(orderGateMessage('NO_HHL_ORDER', 'en'));
-    expect(orderGateMessage('NO_HHL_ORDER', 'sv')).toMatch(/HHL:s ordernummer saknas/);
+    /* 8A (17.10): tylko po polsku — inny język dostaje tekst polski */
+    expect(orderGateMessage('NO_HHL_ORDER', 'sv')).toBe(orderGateMessage('NO_HHL_ORDER', 'pl'));
   });
   it('nieznany błąd — bez zmian', () => expect(friendlyDbError('network down')).toBe('network down'));
 });

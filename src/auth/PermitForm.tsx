@@ -93,7 +93,7 @@ export default function PermitForm({ loadId }: { loadId: string }) {
     await after(t(locale, 'p64_unlinked'));
   };
   if (linked === null) return null;
-  const lim = (v: number | null, u: string) => (v === null ? '—' : `${String(v).replace('.', locale === 'en' ? '.' : ',')} ${u}`);
+  const lim = (v: number | null, u: string) => (v === null ? '—' : `${String(v).replace('.', ',')} ${u}`);
   const P = (k: keyof typeof EMPTY, v: string) => setF((s) => ({ ...s, [k]: v }));
   const preReady = PRE_READY.includes(status);
   return (

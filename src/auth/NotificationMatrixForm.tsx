@@ -28,8 +28,8 @@ function locked(row: Row | undefined, role: MatrixRole): boolean {
   return row.event_group === 'SYSTEM' && role !== 'HHL_ADMIN' && role !== 'HHL_OPS';
 }
 
-function roleLabel(locale: 'pl' | 'en' | 'sv', role: MatrixRole): string {
-  return t(locale, `a6_role_${role}`);
+function roleLabel(_locale: 'pl' | 'en' | 'sv', role: MatrixRole): string {
+  return t('pl', `a6_role_${role}`); /* 8A (17.10), audyt N20 */
 }
 
 export default function NotificationMatrixForm() {

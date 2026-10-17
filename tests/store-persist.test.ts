@@ -114,7 +114,7 @@ describe('D22 zustand rehydrate paths', () => {
     await useTowerStore.persist.rehydrate();
     const s = useTowerStore.getState();
     expect(s.role).toBe('KSH');
-    expect(s.locale).toBe('sv');
+    expect(s.locale).toBe('pl'); /* 8A (17.10): panel tylko po polsku — zapisany „sv” wraca do „pl” */
     expect(s.themeManual).toBe(true);
     /* v4 (W-demo, audyt 17.10 N6): zapisane stare transporty demo nie przykrywają danych startowych */
     expect(s.loads.some((l) => l.id === 'kept-load')).toBe(false);
@@ -136,7 +136,7 @@ describe('D22 zustand rehydrate paths', () => {
     );
     await useTowerStore.persist.rehydrate();
     expect(useTowerStore.getState().role).toBe('SCX');
-    expect(useTowerStore.getState().locale).toBe('en');
+    expect(useTowerStore.getState().locale).toBe('pl'); /* 8A (17.10) */
     expect(sessionStorage.getItem(STORE_WIPE_FLAG_KEY)).toBeNull();
   });
 

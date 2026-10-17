@@ -121,7 +121,7 @@ describe('A-05 — wiek sprawy po polsku', () => {
     expect(formatExqAge(23.7)).toBe('1 dzień temu');
     expect(formatExqAge(26)).toBe('1 dzień temu');
     expect(formatExqAge(72)).toBe('3 dni temu');
-    expect(formatExqAge(0.4, 'en')).toBe('24 min ago');
+    expect(formatExqAge(0.4, 'en')).toBe('24 min temu'); /* 8A (17.10): tylko po polsku */
   });
 });
 
