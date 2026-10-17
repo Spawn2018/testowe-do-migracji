@@ -6,6 +6,7 @@
  * (D-20261009-1233-01: numer rejestracyjny, imię i nazwisko; konwój KR — D-20261009-1309-01 R1).
  * Zapis jak dotąd (zasoby, numer zlecenia, rejs); piloci — przez `savePilotsOf` (w produkcji do podłączenia).
  */
+import { READY_PREP } from '../../lib/readyGaps';
 import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
@@ -212,7 +213,10 @@ export function AwizacjaModal({ load, onClose }: Props) {
               {deadline ? ` ${ptp(locale, `${deadline.phase === 'urgent' ? 'p7_m_urgent' : 'p7_m_warn'}${deadline.byHour ? '_h' : ''}`, { at: dmHm(deadline.urgentAt), warn: dmHm(deadline.warnAt) })}` : null}
             </div>
           ) : (
-            <div className="am-alert ok" data-awiz-missing={0}><b>{pt(locale, 'p7_m_complete')}</b></div>
+            <div className="am-alert ok" data-awiz-missing={0}><b>{pt(locale, 'p7_m_complete')}</b>
+              {/* F7 runda 2 (A9): rejs jest brakiem do „Gotowy” — uzupełnia się tutaj */}
+              {!sailingId && READY_PREP.includes(load.status) ? <span data-awiz-nosail>{` ${pt(locale, 'p7_m_complete_nosail')}`}</span> : null}
+            </div>
           )}
           {dupCode ? (
             <div className="banner amber" data-awiz-dup>

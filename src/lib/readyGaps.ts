@@ -7,7 +7,9 @@
 import type { Document, Load, LoadStatus, ReadyGap } from '../types';
 import { isReadyBlocked } from './permits';
 
-const PREP: LoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING'];
+/** Statusy przygotowania — tylko w nich liczą się braki do „Gotowy” (także „rejs niewybrany” w Przeglądzie i Awizacji). */
+export const READY_PREP: readonly LoadStatus[] = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING'];
+const PREP = READY_PREP;
 
 export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGap[] {
   if (!PREP.includes(load.status)) return [];

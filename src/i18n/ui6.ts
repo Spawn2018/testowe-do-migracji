@@ -40,7 +40,7 @@ const pl: Dict = {
   auth_link_continue: 'Dalej',
   auth_set_pw: 'Ustaw hasło',
   auth_set_pw_recovery: 'Ustaw nowe hasło',
-  auth_set_pw_hint: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery i cyfry. Potem logujesz się e-mailem i hasłem — bez linków.',
+  auth_set_pw_hint: 'Hasło musi mieć co najmniej {n~znak|znaki|znaków}, w tym litery (a–z) i cyfry. Potem logujesz się e-mailem i hasłem — bez linków.',
   auth_set_pw_save: 'Zapisz hasło',
   auth_saving: 'Zapisywanie…',
   /* C11: ta sama reguła co Supabase Auth (W1) — długość, litery i cyfry */

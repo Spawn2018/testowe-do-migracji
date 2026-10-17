@@ -113,3 +113,26 @@ describe('A2 — Strefy: wyjazd z placu nie obiecuje automatu przed A2', () => {
     expect(v).toMatch(/z\.type === 'LOADING' && serverRuleOn\('SITE_EXIT_DELIVERED'\)/);
   });
 });
+
+describe('F7 runda 2 — czas polski po zmianie czasu (25.10) w danych demo', () => {
+  it('rozkład: odejście 18:00 i przypłynięcie 12:00 czasu polskiego także po 25.10', async () => {
+    const { buildSeedSailings } = await import('../src/lib/sailings');
+    const hm = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+    const ss = buildSeedSailings().filter((s) => s.status === 'ZAPLANOWANY');
+    expect(ss.length).toBe(60);
+    for (const s of ss) {
+      expect([s.id, hm(s.departureAt)]).toEqual([s.id, '18:00']);
+      expect([s.id, hm(s.arrivalAt)]).toEqual([s.id, '12:00']);
+    }
+    expect(ss.find((s) => s.id === 'sail-2026-10-24-N' || s.id === 'sail-2026-10-24-W')).toBeTruthy();
+  });
+  it('Stan systemu: przed 07:15 następna próba 07:15, a „od” — od wczoraj', () => {
+    const fuel = demoSources('2026-09-23T04:00:00.000Z').find((r) => r.id === 'fuel')!;
+    const at = (iso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso));
+    expect(at(fuel.nextTryAt!)).toBe('23.09, 07:15');
+    expect(at(fuel.since!)).toBe('22.09, 07:15');
+    expect(Date.parse(fuel.since!)).toBeLessThan(Date.parse('2026-09-23T04:00:00.000Z'));
+    // po 25.10 (czas zimowy) nadal 07:15 czasu polskiego
+    expect(at(demoSources('2026-10-26T15:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('27.10, 07:15');
+  });
+});

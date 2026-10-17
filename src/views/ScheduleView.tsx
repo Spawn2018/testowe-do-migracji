@@ -549,7 +549,7 @@ export function ScheduleView() {
           )}
           {step === 'map' && (
             <>
-              <ul style={{ fontSize: 12, columns: 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>
+              <ul style={{ fontSize: 12, columns: phone ? 1 : 2, color: 'var(--ink-3)', margin: '0 0 8px' }}>
                 {mapKeys.map(([k, v]) => (
                   <li key={k}>
                     <span style={{ color: 'var(--ink)' }}>{v}</span>{hasKey(locale, `p7_imp_f_${k}`) ? ` → ${t(locale, `p7_imp_f_${k}`)}` : null}
