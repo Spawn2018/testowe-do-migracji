@@ -70,6 +70,7 @@ import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
 import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
+import { refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
@@ -1624,7 +1625,11 @@ export const useTowerStore = create<TowerState>()(
           return false;
         }
         const disputeNote = next === 'SPORNA' ? (note ?? '').trim() : b.disputeNote ?? null;
-        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? { ...x, verification: next, disputeNote } : x)) }));
+        set((st) => {
+          const bills = st.bills.map((x) => (x.id === billId ? { ...x, verification: next, disputeNote } : x));
+          /* A4 (wyglad/W-faktura-termin): spór wstrzymuje sprawę „po terminie”; po rozstrzygnięciu wraca (demo) */
+          return { bills, risks: syncInvoiceOverdue(st.risks, bills.find((x) => x.id === billId), localDateOf(getNowIso()), getNowIso(), !SUPABASE_AUTH_ENABLED) };
+        });
         writeThrough({ type: 'bill.verify', billId, verification: next, note: disputeNote });
         return true;
       },
@@ -1640,7 +1645,11 @@ export const useTowerStore = create<TowerState>()(
           get().pushToast(t(s.locale, 'iii7_pay_blocked'), 'HIGH');
           return false;
         }
-        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? { ...x, payment: 'OPLACONA' as const, paidAt } : x)) }));
+        set((st) => {
+          const bills = st.bills.map((x) => (x.id === billId ? { ...x, payment: 'OPLACONA' as const, paidAt } : x));
+          /* A4 (wyglad/W-faktura-termin): „Opłacona” zamyka sprawę „Faktura … nieopłacona po terminie” */
+          return { bills, risks: syncInvoiceOverdue(st.risks, bills.find((x) => x.id === billId), localDateOf(getNowIso()), getNowIso(), !SUPABASE_AUTH_ENABLED) };
+        });
         writeThrough({ type: 'bill.paid', billId, paidAt });
         return true;
       },
@@ -1656,9 +1665,11 @@ export const useTowerStore = create<TowerState>()(
           return false;
         }
         const today = localDateOf(getNowIso());
-        set((st) => ({
-          bills: st.bills.map((x) => (x.id === billId ? { ...x, paidAt: null, payment: billPaymentToday({ ...x, paidAt: null, payment: 'NIEOPLACONA' }, today) } : x)),
-        }));
+        set((st) => {
+          const bills = st.bills.map((x) => (x.id === billId ? { ...x, paidAt: null, payment: billPaymentToday({ ...x, paidAt: null, payment: 'NIEOPLACONA' }, today) } : x));
+          /* A4 (wyglad/W-faktura-termin): cofnięta opłata po terminie — sprawa wraca (demo; na produkcji zakłada ją baza) */
+          return { bills, risks: syncInvoiceOverdue(st.risks, bills.find((x) => x.id === billId), today, getNowIso(), !SUPABASE_AUTH_ENABLED) };
+        });
         writeThrough({ type: 'bill.unpaid', billId, reason: reason.trim() });
         return true;
       },
@@ -1972,6 +1983,17 @@ export const useTowerStore = create<TowerState>()(
         }
         if (!state) return;
         if (state.role) setPreviewViewRole(state.role);
+        /* A4 (wyglad/W-faktura-termin, F7): demo — sprawy „Faktura nieopłacona po terminie” z faktur na dziś (zapisany stan) */
+        if (!SUPABASE_MODE) {
+          queueMicrotask(() => {
+            try {
+              const now = getNowIso();
+              useTowerStore.setState((st) => ({ risks: refreshInvoiceOverdue(st.risks, st.bills, localDateOf(now), now) }));
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
+        }
         /* 8A (17.10): zapisany w przeglądarce „en” albo „sv” wraca do „pl” — panel tylko po polsku. */
         if (state.locale !== 'pl') {
           queueMicrotask(() => {

@@ -46,6 +46,7 @@ export function DashboardView() {
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const navigateTo = useTowerStore((s) => s.navigateTo);
   const setView = useTowerStore((s) => s.setView);
+  const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
 
   const bills = useTowerStore((s) => s.bills);
   const sailings = useTowerStore((s) => s.sailings);
@@ -225,7 +226,10 @@ export function DashboardView() {
                   key={ex.id}
                   item={ex}
                   onClick={() => {
+                    /* A4 (wyglad/W-faktura-termin): faktura po terminie — od razu ta faktura */
+                    const inv = ex.loadId ? undefined : risks.find((r) => r.id === ex.id)?.invoiceId;
                     if (ex.loadId) selectLoad(ex.loadId);
+                    else if (inv) { setOpenInvoiceId(inv); setView('inv'); }
                     else setView('risk');
                   }}
                 />
