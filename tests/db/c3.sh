@@ -69,7 +69,7 @@ sval "czat IN_APP title i body" "select (bool_and(n.payload->>'title' is not nul
 sval "czat WEB_PUSH bez critical" "select (count(*) > 0 and bool_and(coalesce(n.payload->>'critical','') is distinct from 'true'))::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='tylko hhl i scx' and n.channel='WEB_PUSH' and n.user_id='$SCXU'" true
 # fallback: ustaw SENT bez delivered_at, jak po 5 min — enqueue musi zwrócić false
 sys "update notifications n set status='SENT', sent_at=now()-interval '6 minutes', delivered_at=null, payload=n.payload||'{\"critical\":\"true\"}'::jsonb from load_messages m where n.dedup_key like 'CHAT:'||m.id::text||':WP:%' and m.body='tylko hhl i scx' and n.channel='WEB_PUSH'" >/dev/null
-sval "czat: enqueue_fallback odmawia" "select public.web_push_enqueue_fallback(n.id)::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':WP:%' where m.body='tylko hhl i scx' and n.channel='WEB_PUSH' limit 1" f
+sval "czat: enqueue_fallback odmawia" "select public.web_push_enqueue_fallback(n.id)::text from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':WP:%' where m.body='tylko hhl i scx' and n.channel='WEB_PUSH' limit 1" false
 
 # C3-p: ZONE_ENTER PRE_ARRIVAL → wiersz 50 km przed placem (nie „Strefy”)
 sys "select public.matrix_notify('LOAD_STATUS','ZONE_ENTER','$L','$P', jsonb_build_object('geofence_kind','PRE_ARRIVAL','geofence_country','SE','geofence_name','Bufor 50 km przed Boden'), 'c3p-site-1', null)" >/dev/null
