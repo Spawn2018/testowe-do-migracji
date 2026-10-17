@@ -11,6 +11,18 @@ import { trackerKind } from './trackerLink';
 import { rioStartsLate, trackerBarRio } from './p4c';
 import { transportLabel } from './transportName';
 import type { OrgKind } from '../types';
+import { serverRuleOn, SOON } from './serverRules';
+
+/**
+ * Audyt 17.10 (F7 do D-20261017-0730-01 §4): dopóki okno śledzenia nie działa na serwerze (A1, `TRACKING_WINDOW`),
+ * zdania o samoczynnym włączeniu o 03:00 i wyłączeniu przy „Dostarczone” mają dopisek „włączamy wkrótce”.
+ */
+export function trkSub(locale: Locale, key: 'p4b_trk_before_sub' | 'p4b_trk_before_sub_noawiz' | 'p4b_trk_on_sub'): string {
+  const base = t(locale, key);
+  if (serverRuleOn('TRACKING_WINDOW')) return base;
+  return key === 'p4b_trk_on_sub' ? `${base} — ${SOON}` : `${base} · start o 03:00 — ${SOON}`;
+}
+
 
 function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   const rio = trackerBarRio(link, nowIso, locale, load);
@@ -46,7 +58,7 @@ export function trackingStateLines(
 
   if (phase === 'before') {
     const sub = [
-      t(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
+      trkSub(locale, hasAwizacja(load) ? 'p4b_trk_before_sub' : 'p4b_trk_before_sub_noawiz'),
       trailer ? tp(locale, 'p4b_trailer', { plate: trailer }) : t(locale, 'p4b_no_trailer'),
       trackingLink?.provider === 'RIO'
         && (rioStartsLate(trackingLink, load, nowIso) || (trackingLink.validTo && isoMs(trackingLink.validTo) <= isoMs(nowIso)))
@@ -68,7 +80,7 @@ export function trackingStateLines(
     const head = [start ? tp(locale, 'p4b_trk_on', { start }) : t(locale, 'p4b_trk_on_nostart'), lastFix ? tp(locale, 'p4b_trk_on_last', { ago: ago(lastFix, nowIso, locale) }) : null]
       .filter(Boolean)
       .join(' · ');
-    return { head, sub: [t(locale, 'p4b_trk_on_sub'), tracker].join(' · ') };
+    return { head, sub: [trkSub(locale, 'p4b_trk_on_sub'), tracker].join(' · ') };
   }
 
   if (load.status === 'CANCELLED') {

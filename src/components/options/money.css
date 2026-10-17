@@ -11,6 +11,7 @@
 .pm-alarm .ox-muted,.pm-miss .pm-pub,.pm-card.is-now .ox-eyebrow{color:var(--ink-2)}
 
 .pm-cards{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);gap:14px;margin:0 0 6px}
+.pm-cards.pm-cards-2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 .pm-card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:14px 18px;background:var(--surface-2);border:1px solid var(--rule)}
 .pm-card.is-now{background:var(--go-bg);border-color:var(--go)}
 .pm-big{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-family:var(--font-cond);line-height:1.05}

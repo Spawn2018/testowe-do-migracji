@@ -274,7 +274,7 @@ test.describe('wyglad/P10b-a komunikat HHL z „Zamknij” (E37 pkt 4)', () => {
     await boot(page, 'HHL', false, URL_BC);
     const bar = page.locator('[data-banner="system-broadcast"]');
     await expect(bar).toBeVisible();
-    await expect(bar.locator('.subbar-tag')).toHaveText('KOMUNIKAT HHL');
+    await expect(bar.locator('.subbar-tag')).toHaveText('Komunikat HHL');
     await expect(bar.locator('.subbar-body')).toHaveText('Prom Stena Estelle wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.');
     await expect(bar.locator('.subbar-until')).toHaveText(/^ · do \d{2}\.\d{2}\.\d{4}, \d{2}:\d{2}$/);
     const close = bar.locator('[data-bcast-close]');
@@ -796,7 +796,7 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
     await expect(page.locator('[data-err]')).toHaveCount(3);
     await page.locator('[data-err="e1"]').click();
     await expect(page.locator('[data-err-more="e1"]')).toContainText('Role');
-    await expect(page.locator('[data-err-state="fixed"]')).toHaveText('USTĄPIŁ PO NAPRAWIE');
+    await expect(page.locator('[data-err-state="fixed"]')).toHaveText('Ustąpił po naprawie');
     await expect(page.locator('[data-err-rule]')).toContainText('Alarm do Administratorów HHL');
     await page.locator('[data-sys-tab="security"]').click();
     await expect(page.locator('[data-sec]')).toHaveCount(5);
@@ -1263,7 +1263,7 @@ test.describe('wyglad/P2-2 W3 i W4 (img/e8-after)', () => {
 const SUBBARS_HTML = `
 <div class="subbar subbar-preview" data-banner="preview" role="status"><p class="subbar-tx"><b>Podgląd: tak widzi KSH Użytkownik.</b> Nic tu nie zapiszesz.</p><button class="subbar-btn" type="button">Wróć do HHL</button></div>
 <div class="subbar subbar-actas" data-banner="impersonation" role="status"><p class="subbar-tx"><b>Działasz jako: dyspozytor SCX (Przemysław Szczepański-Kowalczyk)</b> Każda zmiana zapisze się w historii jako „administrator.hhl@przyklad.pl (HHL) jako dyspozytor SCX”.</p><button class="subbar-btn" type="button">Zakończ</button></div>
-<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">KOMUNIKAT HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10.2026, 12:00</span></p></div>`;
+<div class="subbar subbar-bcast" data-banner="system-broadcast" role="status"><p class="subbar-tx"><span class="subbar-tag">Komunikat HHL</span><b class="subbar-tag-ph">Komunikat HHL:</b> <b class="subbar-body">Prom Stena Estelle 09.10.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.</b><span class="subbar-until"> · do 09.10.2026, 12:00</span></p></div>`;
 const LONG_NAME = 'Przemysław Szczepański-Kowalczyk';
 
 /**
@@ -1599,7 +1599,7 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     await boot(page, 'HHL');
     const bar = page.locator('[data-stage-bar="global"]');
     await expect(bar).toBeVisible();
-    await expect(bar.locator('.sbar-grp span')).toHaveText(['PRZYGOTOWANIE', 'W TRASIE · ŚLEDZENIE', 'PO DOSTAWIE']);
+    await expect(bar.locator('.sbar-grp span')).toHaveText(['Przygotowanie', 'W trasie · śledzenie', 'Po dostawie']);
     const ids = await bar.locator('[data-tile]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.tile));
     expect(ids).toEqual(TILES);
     for (const n of await bar.locator('[data-tile] .n').allInnerTexts()) expect(n).toMatch(/^\d+$/);
@@ -1866,9 +1866,9 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       await page.waitForSelector('.ox-tiles');
       const list = await phoneScreens(page);
       expect(list.length).toBeGreaterThan(role === 'HHL' ? 15 : 2);
-      /* KSH i SCX w demo mają jedną grupę — telefon pokazuje od razu ekrany „Dla mnie” (bez kafelka grupy) */
-      /* wyglad/C (E11 menu „Dla mnie”, E5): „Ten telefon / komputer” po „Wygląd i waluta” */
-      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look', 'device']);
+      /* wyglad/C (E11 menu „Dla mnie”, E5): „Ten telefon / komputer” po „Wygląd i waluta”;
+         5B (17.10): KSH i SCX mają też „Pieniądze › Opłata paliwowa” tylko do odczytu */
+      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['fuel', 'account', 'forme', 'look', 'device']);
       const hits: Hit[] = [];
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 844 });
@@ -1934,6 +1934,9 @@ test.describe('wyglad/P6-f — „Ten telefon”: aplikacja i wiadomości z Czat
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
   const openDevice = async (page: Page, view: 'options' | 'settings') => {
     await openView(page, view);
+    /* 5B (17.10): Ustawienia KSH i SCX mają dwie grupy — na telefonie najpierw kafelek „Dla mnie” */
+    await page.evaluate(() => { if (!document.querySelector('[data-opt-nav="device"]')) (document.querySelector('.ox-tiles [data-opt-group="forme"]') as HTMLButtonElement | null)?.click(); });
+    await page.waitForSelector('[data-opt-nav="device"]', { timeout: 10_000 });
     await page.evaluate(() => (document.querySelector('[data-opt-nav="device"]') as HTMLButtonElement).click());
     await page.waitForSelector('[data-screen="device"]', { timeout: 10_000 });
   };
@@ -2316,7 +2319,7 @@ test.describe('wyglad/P5 Finanse — E16, E39, E40', () => {
     await boot(page, 'HHL');
     await openView(page, 'fin');
     const stages = page.locator('[data-fin-stages="both"]');
-    await expect(stages.locator('thead th')).toHaveText(['ETAP ROZLICZENIA', 'TRANSPORTY', 'PRZYCHÓD (KSH)', 'KOSZT (SCX)', 'MARŻA', '%']);
+    await expect(stages.locator('thead th')).toHaveText(['Etap rozliczenia', 'Transporty', 'Przychód (KSH)', 'Koszt (SCX)', 'Marża', '%']);
     await expect(stages.locator('tbody [data-fin-stage]')).toHaveCount(3);
     await expect(page.locator('[data-fin-types] tbody tr').first()).toBeVisible();
     await expect(page.locator('[data-fin-nbp]')).toContainText('Ostatnia tabela');
@@ -2378,7 +2381,7 @@ test.describe('wyglad/P5 Faktury — E4, E4b', () => {
     await expect(page.locator('#inv-panel-PRZYCHOD')).toBeHidden();
     await expect(page.locator('[data-inv-kpis="KOSZT"] [data-inv-kpi]')).toHaveCount(4);
     await expect(page.locator('[data-inv-flow="KOSZT"] li')).toHaveCount(5);
-    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['TYDZIEŃ', 'FAKTURA', 'TRANSPORTY', 'NETTO', 'VAT 23 %', 'BRUTTO', 'TERMIN', 'STATUS', /.*/]);
+    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['Tydzień', 'Faktura', 'Transporty', 'Netto', 'VAT 23 %', 'Brutto', 'Termin', 'Status', /.*/]);
     for (const row of await page.locator('#inv-panel-KOSZT tr[data-bill]').all()) {
       await expect(row.locator('[data-bill-status]')).toHaveCount(1);
     }
@@ -2430,7 +2433,7 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openView(page, 'docs');
-    await expect(page.locator('table.doc-req thead th')).toHaveText(['DOKUMENT', 'KTO WGRYWA', 'TERMIN', 'PO TERMINIE', 'W CIĄGU 7 DNI', 'UWAGI']);
+    await expect(page.locator('table.doc-req thead th')).toHaveText(['Dokument', 'Kto wgrywa', 'Termin', 'Po terminie', 'W ciągu 7 dni', 'Uwagi']);
     await expect(page.locator('tr[data-docreq]')).toHaveCount(5);
     await expect(page.locator('[data-action="docreq-edit"]')).toHaveCount(0);
     await expect(page.locator('table.doc-req')).not.toContainText(/Rysunek|POD|mocowania/);
@@ -2557,7 +2560,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await openLoad(page, 'K-03');
     await expect(page.locator('.drawer [data-po-pilot]')).toHaveCount(2);
     await page.locator('.drawer [data-awiz-open]').click();
-    await expect(modal.locator('[data-awiz-pilots]')).toContainText('2 BRAKUJĄ');
+    await expect(modal.locator('[data-awiz-pilots]')).toContainText('2 brakują');
     await expect(modal.locator('[data-awiz-pilot]')).toHaveCount(2);
     await expect(modal.locator('[data-awiz-pilot] input')).toHaveCount(4);
     await expect(modal.locator('[data-awiz-missing]')).toContainText('pilot PL — numer rejestracyjny, imię i nazwisko');
@@ -2644,7 +2647,7 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'HHL');
     await openTab(page, 'SG-03', 3);
-    await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'KOSZT · SCX', 'PRZYCHÓD · KSH']);
+    await expect(page.locator('.drawer [data-pp-table] thead th')).toHaveText([/.*/, 'Koszt · SCX', 'Przychód · KSH']);
     await expect(page.locator('.drawer [data-pp-row]')).toHaveCount(4);
     /* audyt-B B-06 (E33): „Dopłaty” = suma listy dopłat — w demo żadna nie jest dodana */
     await expect(page.locator('.drawer [data-pp-row="fees"] td.num')).toHaveText(['0,00', '0,00']);
@@ -3068,7 +3071,7 @@ test.describe('wyglad/P8-c Strefy (E34, img/e34-after)', () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await boot(page, 'HHL', false, ZONES_URL);
     await openView(page, 'geo');
-    await expect(page.locator('.zv-grp-h')).toHaveText(['ŚREM · ZAŁADUNEK', 'GDAŃSK · POLFERRIES → NYNÄSHAMN', 'GDYNIA · STENA → KARLSKRONA', 'PORTY W SZWECJI', 'BODEN · ROZŁADUNEK']);
+    await expect(page.locator('.zv-grp-h')).toHaveText(['Śrem · załadunek', 'Gdańsk · Polferries → Nynäshamn', 'Gdynia · Stena → Karlskrona', 'Porty w Szwecji', 'Boden · rozładunek']);
     await expect(page.locator('[data-zone-card] h3')).toHaveText('Plac budowy Stegra Boden');
     await page.locator('[data-zone-edit]').click();
     await page.locator('[data-zone-f="radius"]').fill('1100');

@@ -23,6 +23,9 @@ import { fc, fcp } from '../../i18n/p5c';
 import '../finance/finance.css';
 import './panel.css';
 
+/** F7 (17.10): kwota nie łamie się w środku liczby (spacja tysięcy → niełamliwa). */
+const nb = (s: string): string => s.replace(/ /g, '\u00a0');
+
 const FeeModal = lazy(lazyRetry(() => import('./FeeModal').then((m) => ({ default: m.FeeModal }))));
 
 const n2 = (n: number) => formatPlNumber(n, 2);
@@ -237,8 +240,8 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       {pln
         ? ftp(locale, 'p5_pr_rate_pln', { rate: rateText })
         : both && midCost && midRev
-          ? ftp(locale, 'p5_pr_pln', { rate: rateText, cost: n2(pr.costTotal * midCost), rev: n2(pr.revTotal * midRev), margin: n2(pr.revTotal * midRev - pr.costTotal * midCost) })
-          : ftp(locale, 'p5_pr_pln_one', { rate: rateText, amount: n2((role === 'KSH' ? pr.revTotal : pr.costTotal) * (fx?.mid ?? 0)) })}
+          ? ftp(locale, 'p5_pr_pln', { rate: rateText, cost: nb(n2(pr.costTotal * midCost)), rev: nb(n2(pr.revTotal * midRev)), margin: nb(n2(pr.revTotal * midRev - pr.costTotal * midCost)) })
+          : ftp(locale, 'p5_pr_pln_one', { rate: rateText, amount: nb(n2((role === 'KSH' ? pr.revTotal : pr.costTotal) * (fx?.mid ?? 0))) })}
       {fx?.provisional ? ` ${ft(locale, 'p5_pr_rate_after')}` : ''}
     </p>
   ) : null;

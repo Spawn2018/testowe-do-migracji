@@ -474,7 +474,7 @@ const pl: Dict = {
   dec_matrix_MONEY: 'Cennik, opłata paliwowa, faktury',
   dec_matrix_SYSTEM: 'Integracje, kopie, logowania',
   dec_matrix_locked: 'Ta kombinacja jest zablokowana (ochrona danych).',
-  dec_matrix_note: 'SYSTEM — tylko HHL. Telefon (push) startowo tylko dla promy/pogoda/ETA i decyzji (E5-2). Zmiany w historii.',
+  dec_matrix_note: 'System — tylko HHL. Telefon (push) startowo tylko dla promy/pogoda/ETA i decyzji (E5-2). Zmiany w historii.',
   dec_matrix_plan_dates_locked: 'Zmiana dat planu: dzwonek w aplikacji zawsze dla HHL Administrator, HHL Operacje, SCX Dyspozytor i SCX Użytkownik — nie do wyłączenia (decyzja właściciela 09.10.2026). E-mail i push według macierzy.',
   opt_acc_subtitle: 'Ustawienia administratora — sekcje zwijane.',
   opt_acc_search: 'Szukaj ustawienia',

@@ -19,6 +19,7 @@ import { DeviceScreen } from '../components/options/DeviceScreen';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 import { fuelScreenOf } from '../lib/p5bSource';
+import { DEMO_EXAMPLE_BASE_EUR } from '../lib/p5bDemo';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { lazyRetry } from '../lib/lazyRetry';
@@ -87,7 +88,11 @@ export function SettingsView() {
   const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()));
   if (role === 'KSH' || role === 'SCX') {
     if (SefsReadOnly) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
-    else if (fuelDemo) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<FuelScreen locale={locale} view={fuelDemo} actions={null} readOnly />) }] });
+    else if (fuelDemo) {
+      /* F7 (17.10): przykład opłaty na własnej stawce — KSH stawka KSH (przychód HHL), SCX stawka SCX; bez spraw HHL */
+      const view = { ...fuelDemo, exampleBaseEur: role === 'KSH' ? DEMO_EXAMPLE_BASE_EUR.rev : DEMO_EXAMPLE_BASE_EUR.cost };
+      groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<FuelScreen locale={locale} view={view} actions={null} readOnly party={role} />) }] });
+    }
   }
   groups.push({ id: 'forme', screens: forme, summary: demo?.summaries.forme?.text });
 

@@ -138,3 +138,29 @@ describe('drobne z audytu', () => {
     expect(readFileSync('src/components/schedule/SchedTables.tsx', 'utf8')).toContain('{swap ? <> → <span className="s7-nw">');
   });
 });
+
+describe('F7 do PR #277', () => {
+  it('5B: KSH i SCX — bez spraw HHL (alarm, pobieranie, „Pobrane”, uzgodnienie), przykład na własnej stawce', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { createElement } = await import('react');
+    const { FuelScreen } = await import('../src/components/options/MoneyScreens');
+    const { demoFuelScreen, DEMO_EXAMPLE_BASE_EUR } = await import('../src/lib/p5bDemo');
+    const view = demoFuelScreen('2026-09-23');
+    const ksh = renderToStaticMarkup(createElement(FuelScreen, { locale: 'pl', view: { ...view, exampleBaseEur: DEMO_EXAMPLE_BASE_EUR.rev }, actions: null, readOnly: true, party: 'KSH' }));
+    for (const x of ['data-pm-fetch', 'data-pm-alarm', 'pm-how-c', 'ox-tag-active']) expect(ksh).not.toContain(x);
+    expect(ksh).toContain('7 245');
+    expect(ksh).not.toContain('6 900');
+    const hhl = renderToStaticMarkup(createElement(FuelScreen, { locale: 'pl', view, actions: null, readOnly: true }));
+    expect(hhl).toContain('data-pm-fetch');
+    expect(hhl).toContain('6 900');
+  });
+  it('pasek śledzenia w produkcji: „włączamy wkrótce” przy 03:00 i „Dostarczone”; w demo bez dopisku', async () => {
+    const demo = await import('../src/lib/trackingStateText');
+    expect(demo.trkSub('pl', 'p4b_trk_on_sub')).toBe('wyłączy się samo przy „Dostarczone”');
+    await prod(async () => {
+      const m = await import('../src/lib/trackingStateText');
+      expect(m.trkSub('pl', 'p4b_trk_on_sub')).toBe('wyłączy się samo przy „Dostarczone” — włączamy wkrótce');
+      expect(m.trkSub('pl', 'p4b_trk_before_sub')).toMatch(/· start o 03:00 — włączamy wkrótce$/);
+    });
+  });
+});

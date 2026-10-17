@@ -215,11 +215,16 @@ function FetchMark({ ok }: { ok: boolean | null }) {
   return ok ? <span className="pm-ok" role="img" aria-label="pobrano">✓</span> : <span className="pm-bad" role="img" aria-label="błąd">✕</span>;
 }
 
-export function FuelScreen({ locale, view, actions, readOnly }: {
+export function FuelScreen({ locale, view, actions, readOnly, party }: {
   locale: Locale;
   view: FuelScreenView;
   actions: FuelActions | null;
   readOnly: boolean;
+  /**
+   * 5B (17.10): Ustawienia KSH i SCX — tylko to, co dotyczy ich rozliczenia (tygodnie, ceny, mnożniki, przykład
+   * na własnej stawce). Bez spraw HHL: alarm pobierania, kafelek „Pobieranie cen”, kolumna „Pobrane”, stan uzgodnienia.
+   */
+  party?: 'KSH' | 'SCX';
 }) {
   const [allTiers, setAllTiers] = useState(false);
   const [fillMsg, setFillMsg] = useState<string | null>(null);
@@ -240,10 +245,10 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
     <div className="pm-fuel" data-pm-fuel data-deur-exempt="fuel-index">
       <div className="pm-head">
         <span className="pm-head-sub">{fbp(locale, 'p5b_f_sub', { v: view.contract.version, date: dmy(view.contract.from) })}</span>
-        <span className={`ox-tag${view.contract.agreed ? ' ox-tag-active' : ' ox-tag-unfinished'}`}>{fb(locale, view.contract.agreed ? 'p5b_f_agreed' : 'p5b_f_not_agreed')}</span>
+        {party ? null : <span className={`ox-tag${view.contract.agreed ? ' ox-tag-active' : ' ox-tag-unfinished'}`}>{fb(locale, view.contract.agreed ? 'p5b_f_agreed' : 'p5b_f_not_agreed')}</span>}
       </div>
 
-      {alarm ? (
+      {alarm && !party ? (
         <div className="pm-alarm" role="alert" data-pm-alarm={alarm.source}>
           <p className="pm-alarm-tx">
             <b>{fbp(locale, 'p5b_f_alarm_t', { src: srcName(alarm.source), date: dm(alarm.date) })}</b>{' '}
@@ -275,7 +280,7 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
         </div>
       ) : null}
 
-      <div className="pm-cards">
+      <div className={`pm-cards${party ? ' pm-cards-2' : ''}`}>
         <section className={`pm-card${cur.final ? ' is-now' : ''}`} data-pm-week="now">
           <span className="ox-eyebrow">{fbp(locale, 'p5b_f_now_h', { range: range(cur.from, cur.to) })}</span>
           <span className="pm-big"><b className="tabular">+{pctTxt(cur.applied)} %</b> <span className="pm-x">×{mult(cur.applied)}</span></span>
@@ -287,12 +292,14 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
           <span className="pm-big"><b className="tabular">+{pctTxt(next.forecast)} %</b> <span className="pm-fc">{fb(locale, 'p5b_f_forecast')}</span></span>
           <span className="pm-card-l">{fbp(locale, 'p5b_f_next_x', { date: dm(next.finalOn), range: range(next.idxFrom, next.idxTo) })}</span>
         </section>
-        <section className="pm-card" data-pm-fetch>
-          <span className="ox-eyebrow">{fbp(locale, 'p5b_f_fetch_h', { at: fetch.at })}</span>
-          {fetchLine('p5b_f_today', fetch.today)}
-          {fetchLine('p5b_f_yesterday', fetch.yesterday)}
-          <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: fetch.retries.join(' i ') })}</span>
-        </section>
+        {party ? null : (
+          <section className="pm-card" data-pm-fetch>
+            <span className="ox-eyebrow">{fbp(locale, 'p5b_f_fetch_h', { at: fetch.at })}</span>
+            {fetchLine('p5b_f_today', fetch.today)}
+            {fetchLine('p5b_f_yesterday', fetch.yesterday)}
+            <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: fetch.retries.join(' i ') })}</span>
+          </section>
+        )}
       </div>
 
       <h4 className="ox-eyebrow pm-h">{fb(locale, 'p5b_f_how_h')}</h4>
@@ -313,13 +320,13 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
                   <th scope="col">{fb(locale, 'p5b_f_col_day')}</th>
                   <th scope="col" className="num">{fb(locale, 'p5b_f_col_okq8')}</th>
                   <th scope="col" className="num">{fb(locale, 'p5b_f_col_orlen')}</th>
-                  <th scope="col" className="pm-how-c">{fb(locale, 'p5b_f_col_how')}</th>
+                  {party ? null : <th scope="col" className="pm-how-c">{fb(locale, 'p5b_f_col_how')}</th>}
                 </tr>
               </thead>
               {view.days.map((g) => (
                 <tbody key={g.from}>
                   <tr className="pm-grp">
-                    <th scope="rowgroup" colSpan={4}>
+                    <th scope="rowgroup" colSpan={party ? 3 : 4}>
                       {g.closed
                         ? fbp(locale, 'p5b_f_grp_closed', { range: range(g.from, g.to), sek: g.closed.okq8 == null ? '—' : n2(g.closed.okq8), pln: g.closed.orlen == null ? '—' : n2(g.closed.orlen), m: mult(g.closed.mult) })
                         : fbp(locale, 'p5b_f_grp_open', { range: range(g.from, g.to) })}
@@ -336,7 +343,7 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
                         {r.orlen == null ? <b>{fb(locale, 'p5b_f_missing')}</b> : n3(r.orlen)}
                         {r.orlenPub ? <small className="pm-pub"> {fbp(locale, 'p5b_f_pub', { date: dm(r.orlenPub) })}</small> : null}
                       </td>
-                      <td className="pm-how-c">{dayHow(locale, r)}</td>
+                      {party ? null : <td className="pm-how-c">{dayHow(locale, r)}</td>}
                     </tr>
                   ))}
                 </tbody>

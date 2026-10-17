@@ -31,9 +31,37 @@ Obrazy: `przed-*` = `main` 7db7282, `po-*` = ta gałąź; demo, `now=2026-09-23T
 - `*-panel-t17-1440`.
 
 Testy:
-- `tests/w-audyt.test.ts` (12) — teksty w demo i w produkcji, brak wersalików w komponentach, `letter-spacing`, EUR i migracja v3, dzwonek, `lazyRetry`, tytuł okna, liczby, przepięcie;
+- `tests/w-audyt.test.ts` (12, po F7 — 14) — teksty w demo i w produkcji, brak wersalików w komponentach, `letter-spacing`, EUR i migracja v3, dzwonek, `lazyRetry`, tytuł okna, liczby, przepięcie;
 - poprawione oczekiwania: `audyt-e-opcje`, `p5b-money`, `data-layer`, `i13-sefs-scope`, `i4-guide`, `i5-mfa`, `money-v2`.
 
 Unit: 1508 zielonych. Pierwsze wczytanie: 371,7 kB gzip (budżet 400 kB).
 
 **Wzorce `visual` zmieniają się na wielu ekranach** (wielkie litery i odstępy liter). Odświeżam je workflow `visual.yml` z `update=true`.
+
+**Poprawki po niezależnym sprawdzeniu (F7, 17.10):**
+1. **(blokowało)** Ustawienia KSH › Opłata paliwowa pokazywały przykład na stawce przewoźnika (6 900 EUR, koszt HHL). Teraz przykład liczy się na własnej stawce strony: KSH 7 245 EUR (stawka KSH), SCX 6 900 EUR (stawka SCX).
+2. KSH i SCX nie widzą spraw HHL na tym ekranie:
+   - alarmu braku ceny i „Ponowienia … potem powiadomienie do HHL”;
+   - kafelka „Pobieranie cen”;
+   - kolumny „Pobrane”;
+   - znacznika „Uzgodnione z przewoźnikiem”.
+
+   Zostają tygodnie, ceny, mnożniki i „Jak liczymy” (E39: KSH i SCX widzą to samo co HHL przy opłacie).
+3. Instrukcja kierowcy: „Załadowany”, „Na promie”, „Rozładowany”, „Problem” — tak jak na przyciskach (PL, EN, SV).
+4. Pasek śledzenia w panelu (produkcja, do A1): „wyłączy się samo przy „Dostarczone” — włączamy wkrótce”, a przed startem „· start o 03:00 — włączamy wkrótce”.
+5. Kwoty „W PLN” w panelu › Ceny nie łamią się w środku liczby (spacja niełamliwa).
+6. Pozostałe słowa wersalikami w tekstach polskich:
+   - „Prom”, „Gotowy”, „Sporna” w cudzysłowie;
+   - „System — tylko HHL”;
+   - lista „Stop”;
+   - klasa „Standard”.
+
+   Kody zostają: TEST (nazwa środowiska), START-1…7 (kody reguł), READY w EN/SV.
+7. Etykieta stanu błędu w Stanie systemu z wielkiej litery („Ustąpił po naprawie”).
+
+Bez zmian (do wiadomości): grupa „Pieniądze” na stronie „Dla mnie” u KSH i SCX — tak jak dziś na produkcji (`SefsReadOnly`).
+
+**Testy po F7:**
+- `tests/w-audyt.test.ts` (14);
+- `e8-phone-gate.spec.ts` — oczekiwania zwykłym zapisem i Ustawienia KSH/SCX z grupą „Pieniądze”;
+- `i4-guide`, `i19-rate-card.local`.

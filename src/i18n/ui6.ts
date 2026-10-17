@@ -557,7 +557,7 @@ const pl: Dict = {
   a6_ts_no_planb: 'Brak opcji Plan B dla tego ryzyka',
   a6_ts_order_removed: 'Numer zlecenia usunięty',
   a6_ts_order_saved: 'Numer zlecenia zapisany: {v}',
-  a6_ts_permit_mismatch: 'Zezwolenie nie pasuje do wymiarów — READY zablokowane',
+  a6_ts_permit_mismatch: 'Zezwolenie nie pasuje do wymiarów — „Gotowy” zablokowany',
   a6_ts_planb: 'Plan B: {option}',
   a6_ts_planb_noload: 'Plan B: brak transportu do przypisania',
   a6_ts_pos: 'Pozycja: {lat}, {lng}',

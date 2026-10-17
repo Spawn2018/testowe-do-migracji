@@ -51,17 +51,17 @@ test('HHL: cennik kosztów — wersja 1, wersja 2 z powodem, dziennik', async ({
   await form.getByRole('button', { name: 'Zapisz nową wersję cennika' }).click();
   await expect(f.locator('[role="status"]')).toContainText('Wiersz 1');
   await form.getByLabel('Stawka, wiersz 1', { exact: true }).fill('1,5');
-  await form.getByLabel(/Stawka STANDARD/).fill('2');
+  await form.getByLabel(/Stawka „Standard”/).fill('2');
   await form.getByRole('button', { name: 'Zapisz nową wersję cennika' }).click();
   await expect(f.locator('[data-rate-card-current]')).toHaveText('wersja 1 · od 2026-10-01', { timeout: 15000 });
   await expect(f.locator('[data-rate-version="1"]')).toContainText('pozycji: 2 · ze stawką STANDARD');
   // wersja 2: formularz wypełniony bieżącą wersją, powód wymagany
   await expect(form.getByLabel('Stawka, wiersz 1', { exact: true })).toHaveValue('1,5');
-  await form.getByLabel(/Stawka STANDARD/).fill('');
+  await form.getByLabel(/Stawka „Standard”/).fill('');
   await form.getByLabel('Powód zmiany (wymagany)').fill('TEST bez STANDARD');
   await form.getByRole('button', { name: 'Zapisz nową wersję cennika' }).click();
   await expect(f.locator('[data-rate-card-current]')).toHaveText('wersja 2 · od 2026-10-01', { timeout: 15000 });
-  await expect(f.locator('[data-rate-version="2"]')).toContainText('bez stawki STANDARD');
+  await expect(f.locator('[data-rate-version="2"]')).toContainText('bez stawki „Standard”');
   await expect(f.locator('[data-rate-version="1"]')).toContainText('ze stawką STANDARD');
   const log = f.locator('[data-rate-card="log"]');
   await expect(log).toContainText('koszt (przewoźnik) · SCX · wersja 2 · pozycje 2 → 1 · TEST bez STANDARD');
