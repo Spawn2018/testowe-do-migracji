@@ -109,7 +109,7 @@ describe('I-2d/e: ETA i prom z bazy', () => {
   it('pigułka opóźnienia: produkcja = loads.delay_minutes, bez zastępczych 95', () => {
     expect(delayPillMinutes({ delayed: true, delayMinutesDb: null }, null, true)).toBeNull()
     expect(delayPillMinutes({ delayed: true, delayMinutesDb: 42 }, 10, true)).toBe(42)
-    expect(delayPillMinutes({ delayed: true }, null, false)).toBe(95)
+    expect(delayPillMinutes({ delayed: true }, null, false)).toBeNull() /* audyt 17.10 (F7): demo bez zastępczych 95 min — ETA w oknie = bez pigułki */
     expect(delayPillMinutes({ delayed: false, delayMinutesDb: 42 }, null, true)).toBeNull()
   })
   it('ufność z pasma minut: ≤30 HIGH, ≤120 MED, inaczej / brak LOW (E15-3 / H3.2)', () => {

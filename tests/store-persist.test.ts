@@ -35,7 +35,8 @@ describe('D22 storePersist pure migrator', () => {
     expect(r.state.role).toBe('KSH');
     expect(r.state.locale).toBe('en');
     expect(r.state.themeManual).toBe(true);
-    expect(r.state.loads).toEqual([{ id: 'L1', code: 'X' }]);
+    /* v4 (W-demo, audyt 17.10 N6): stare dane startowe demo odrzucone — wracają dane z dniem demo 23.09 */
+    expect(r.state).not.toHaveProperty('loads');
     expect(r.state).not.toHaveProperty('junkIgnored');
     expect(sessionStorage.getItem(STORE_WIPE_FLAG_KEY)).toBeNull();
   });
@@ -115,9 +116,9 @@ describe('D22 zustand rehydrate paths', () => {
     expect(s.role).toBe('KSH');
     expect(s.locale).toBe('sv');
     expect(s.themeManual).toBe(true);
-    expect(s.loads).toEqual([{ id: 'kept-load', code: 'KEEP' }]);
-    // visual seed length may differ after overwrite — just ensure we did not wipe to empty accidentally without intent
-    expect(s.loads.length).toBe(1);
+    /* v4 (W-demo, audyt 17.10 N6): zapisane stare transporty demo nie przykrywają danych startowych */
+    expect(s.loads.some((l) => l.id === 'kept-load')).toBe(false);
+    expect(s.loads.length).toBe(seedLoadsLen);
     expect(seedLoadsLen).toBeGreaterThan(0);
 
     const raw = JSON.parse(localStorage.getItem(STORE_PERSIST_KEY)!);

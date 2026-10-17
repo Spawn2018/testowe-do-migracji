@@ -19,8 +19,19 @@ function todayLocalForMigration(): string {
 
 export const STORE_PERSIST_KEY = 'watch-tower-ui-v6-ready-gate';
 
-/** Bump when persisted shape breaks backward compatibility. v3 (audyt 17.10): domyślna waluta widoku EUR. */
-export const STORE_SCHEMA_VERSION = 3;
+/** Bump when persisted shape breaks backward compatibility. v3 (audyt 17.10): domyślna waluta widoku EUR.
+ *  v4 (audyt 17.10, N6, F7): dane demo zgodne z dniem demo — zapisane w przeglądarce stare dane startowe odrzucone. */
+export const STORE_SCHEMA_VERSION = 4;
+
+/**
+ * v3 → v4: wycinki danych startowych demo (transporty, zdarzenia, sprawy, faktury, czat…). Zapisane przed wyglad/W-demo
+ * miały załadunki w październiku i brak ETA — po migracji wracają dane startowe; zostaje konto i wygląd
+ * (rola, motyw, ustawienia powiadomień, oferta faktoringu). W trybie Supabase tych wycinków się nie zapisuje.
+ */
+const SEED_DATA_KEYS_V4: readonly StorePersistFieldKey[] = [
+  'loads', 'events', 'documents', 'messages', 'notifications', 'invoices', 'bills', 'sailings', 'geofences',
+  'workflows', 'workflowRuns', 'scheduleVersions', 'rateCost', 'rateRev', 'baf', 'risks', 'exceptions',
+];
 
 /** sessionStorage flag → toast after rehydrate (baseline/visual clear this). */
 export const STORE_WIPE_FLAG_KEY = 'wt-persist-wipe-notice';
@@ -187,6 +198,9 @@ export function migrateTowerPersist(
   // `displayCurrency` nie należy do STORE_PERSIST_FIELD_KEYS, więc przy migracji wraca wartość domyślna (EUR).
   // Zapisany w przeglądarce „PLN” był dotąd wartością domyślną, nie wyborem; wybór zapisany na koncie
   // (`user_preferences`) wraca przy logowaniu (`loadPreferences`).
+  if (fromVersion < 4) {
+    for (const k of SEED_DATA_KEYS_V4) delete picked[k];
+  }
   if (fromVersion <= 0 || fromVersion < STORE_SCHEMA_VERSION) {
     return { state: picked, wiped: false };
   }

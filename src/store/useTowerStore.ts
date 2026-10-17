@@ -73,6 +73,7 @@ import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBil
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
+import { withDemoEta } from '../data/demoEta';
 import { isReadyBlocked } from '../lib/permits';
 import { currentActorLabel } from '../lib/historyActor';
 import { formatPlMoney } from '../lib/format';
@@ -90,6 +91,9 @@ export interface NotificationPrefs {
  * zalogowaniu) i nie czyta/zapisuje danych demo z localStorage v2.
  */
 const SUPABASE_MODE = SUPABASE_AUTH_ENABLED;
+/* audyt 17.10 (F7): w demo zmiana statusu, rejsu albo pozycji nie kasuje ETA demo (`withDemoEta`);
+   produkcja bez zmian — `demoEta.ts` podmieniony w buildzie na pusty (I-0, `PROD_DEMO_SWAP`). */
+const etaFor = (l: Load, at: string): Load => withDemoEta(applyEtaToLoad(l, at));
 const initialData = SUPABASE_MODE ? emptySnapshot() : buildDemoSnapshot();
 
 function uid(prefix: string) {
@@ -790,7 +794,7 @@ export const useTowerStore = create<TowerState>()(
               silentMinutes: status === 'SILENT' ? l.silentMinutes ?? 100 : l.silentMinutes,
               ...(delivered ? { unloadedAt: at } : {}),
             };
-            const withEta = applyEtaToLoad(next, at);
+            const withEta = etaFor(next, at);
             return delivered && !SUPABASE_AUTH_ENABLED ? withMoneyV2(withEta, localDateOf(at)) : withEta;
           }),
         }));
@@ -989,7 +993,7 @@ export const useTowerStore = create<TowerState>()(
         set((s) => ({
           loads: s.loads.map((l) => {
             if (l.id !== loadId) return l;
-            return applyEtaToLoad({ ...l, ferry: { ...l.ferry, ...patch } }, at);
+            return etaFor({ ...l, ferry: { ...l.ferry, ...patch } }, at);
           }),
         }));
         writeThrough({ type: 'load.ferry', loadId, patch });
@@ -1113,7 +1117,7 @@ export const useTowerStore = create<TowerState>()(
         set((s) => ({
           loads: s.loads.map((l) =>
             l.id === loadId
-              ? applyEtaToLoad(
+              ? etaFor(
                   {
                     ...l,
                     carrierId: 'org-scx',
@@ -1173,7 +1177,7 @@ export const useTowerStore = create<TowerState>()(
           get().setLoadStatus(loadId, nextStatus, 'geofence-engine', `Geofence ${g.type}`);
         } else {
           set((s) => ({
-            loads: s.loads.map((l) => (l.id === loadId ? applyEtaToLoad(l, at) : l)),
+            loads: s.loads.map((l) => (l.id === loadId ? etaFor(l, at) : l)),
           }));
         }
         const roles: RoleId[] = [];
@@ -1402,7 +1406,7 @@ export const useTowerStore = create<TowerState>()(
           /* M8 — każde wyliczenie przez niezmiennik (buildLoadMoney → assertSameMechanism); rozjazd przerywa */
           const today = localDateOf(getNowIso());
           loads = loads.map((l) => (changed.some((ch) => ch.id === l.id) ? withMoneyV2(l, today) : l));
-          loads = [...loads, ...newLoads.map((l) => withMoneyV2(applyEtaToLoad(l, nowIso()), today))];
+          loads = [...loads, ...newLoads.map((l) => withMoneyV2(etaFor(l, nowIso()), today))];
           const ver: ScheduleVersion = {
             id: uid('sv'),
             at: nowIso(),
@@ -1793,7 +1797,7 @@ export const useTowerStore = create<TowerState>()(
           set((s) => ({
             loads: s.loads.map((l) => {
               if (l.id !== loadId) return l;
-              return applyEtaToLoad(
+              return etaFor(
                 {
                   ...l,
                   ferry: {
@@ -1869,7 +1873,7 @@ export const useTowerStore = create<TowerState>()(
           loads: s.loads.map((l) => {
             if (l.id !== loadId) return l;
             const eta = l.etaBoden ? new Date(Date.parse(l.etaBoden) + alt.delayMin * 60_000).toISOString() : l.etaBoden;
-            return applyEtaToLoad(
+            return etaFor(
               {
                 ...l,
                 delayed: true,

@@ -194,7 +194,8 @@ describe('Demo i strażnik I-0', () => {
     }
   });
   it('czat demo: rozmowa „tylko HHL i SCX”, odczyty spójne z nieprzeczytanymi, nie z przyszłości', () => {
-    const l = snap.loads[0];
+    /* W-demo (audyt 17.10, N6): rozmowa demo przy transportach przed załadunkiem — pierwszy transport z wiadomościami */
+    const l = snap.loads.find((x) => snap.messages.some((m) => m.loadId === x.id))!;
     const chat = demoChat(l, snap.messages.filter((x) => x.loadId === l.id), now);
     expect(chat.some((x) => x.visibleTo === 'HHL_SCX')).toBe(true);
     expect(chat.flatMap((x) => x.reads ?? []).every((r) => Date.parse(r.at) < Date.parse(now))).toBe(true);

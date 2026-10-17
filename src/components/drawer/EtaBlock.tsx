@@ -97,7 +97,8 @@ export function EtaBlock({
         load.awizacja.unloadWindowEnd ?? load.planDates?.deliveryTo,
       )
     : null;
-  const late = load.delayed || kind === 'after';
+  /* audyt 17.10 (F7): „po oknie” tylko, gdy ETA jest za oknem dostawy; bez ETA — znacznik opóźnienia z bazy */
+  const late = kind ? kind === 'after' : !!load.delayed;
   const win = kind ? (late ? 'after' : kind === 'before' ? 'before' : 'in') : null;
   const winText = win ? t(locale, `p4b_eta_win_${win}`) : null;
   const osm = (load.etaMethod ?? '').includes('OSM') ? t(locale, 'i2_eta_osm_attr') : null;

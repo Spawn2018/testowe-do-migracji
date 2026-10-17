@@ -125,7 +125,7 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
   }
 
   /* ETA Boden (pkt 6, E15): „–” przed wyjazdem; na placu „od”; opóźnienie wobec okna KSH tylko po wyjeździe */
-  const vsPlan = delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo);
+  const vsPlan = delayMinutesVsPlan(l.etaBoden, l.plannedDeliverDate, l.planDates?.deliveryTo ?? l.awizacja?.unloadWindowEnd);
   const delayMin = departed ? delayPillMinutes(l, vsPlan, ctx.prod) ?? (ctx.prod ? null : vsPlan) : null;
   const late = departed && (delayMin != null && delayMin > 0 || ((l.delayed || l.status === 'DELAYED') && tile !== 'SITE'));
   let eta: MapRow['eta'];

@@ -83,4 +83,5 @@ export const PROD_DEMO_SWAP: Record<string, string> = {
   'src/data/seed.ts': 'src/data/seed.prod.ts',
   'src/data/demoProvider.ts': 'src/data/demoProvider.prod.ts',
   'src/i18n/demoOnly.ts': 'src/i18n/demoOnly.prod.ts',
+  'src/data/demoEta.ts': 'src/data/demoEta.prod.ts',
 }

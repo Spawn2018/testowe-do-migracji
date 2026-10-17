@@ -67,7 +67,7 @@ describe('M2 dane v2', () => {
   });
 
   it('STORE_SCHEMA_VERSION = 2; migracja v1→v2 dokłada dane v2 bez utraty pól', () => {
-    expect(STORE_SCHEMA_VERSION).toBe(3);
+    expect(STORE_SCHEMA_VERSION).toBe(4); /* v4 — W-demo (audyt 17.10, N6) */
     const v1Loads = snap.loads.slice(0, 3).map((l) => {
       const { money: _m, ...pricing } = l.pricing;
       void _m;
@@ -75,11 +75,10 @@ describe('M2 dane v2', () => {
     });
     const res = migrateTowerPersist({ loads: v1Loads, invoices: [], role: 'HHL' }, 1);
     expect(res.wiped).toBe(false);
-    const out = res.state.loads as Load[];
-    expect(out).toHaveLength(3);
-    expect(out.every((l) => l.pricing.money?.v === 2)).toBe(true);
-    expect(out[0].code).toBe(v1Loads[0].code);
-    expect(out[0].pricing.costTotal).toBe(v1Loads[0].pricing.costTotal);
+    /* v4 (W-demo, audyt 17.10 N6): zapisane dane startowe demo odrzucone — wracają dane v2 z dniem demo; rola zostaje */
+    expect(res.state).not.toHaveProperty('loads');
+    expect(res.state.role).toBe('HHL');
+    expect(snap.loads.every((l) => l.pricing.money?.v === 2)).toBe(true);
   });
 });
 
