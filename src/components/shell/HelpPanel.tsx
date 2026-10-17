@@ -12,13 +12,13 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import { hp, hpp } from '../../i18n/help';
 import { useIsPhone } from '../../lib/useIsPhone';
-import { getAuthProfile } from '../../auth/profile';
 import { viewedKind } from '../../lib/cockpitE9';
 import { helpVersion, HELP_PHONE_STEPS, type HelpStep } from '../../lib/helpContent';
 import { goHelpTarget } from '../../lib/helpNav';
 import { helpContacts, whatsNew } from '../../lib/helpSource';
 import { DemoMark } from '../ui/DemoMark';
 import { formatCalendarDay } from '../../lib/time';
+import { accountRole } from '../../lib/accountRole';
 
 export type HelpTab = 'how' | 'news' | 'contact' | 'keys';
 
@@ -43,7 +43,7 @@ export function HelpPanel({ open, onClose, initialTab = 'how' }: { open: boolean
   }, [open, onClose]);
 
   if (!open) return null;
-  const version = helpVersion(viewedKind(role, getAuthProfile()?.role));
+  const version = helpVersion(viewedKind(role, accountRole(role)));
   const tabs: HelpTab[] = phone ? ['how', 'news', 'contact'] : ['how', 'news', 'contact', 'keys'];
   const shown: HelpTab = tabs.includes(tab) ? tab : 'how';
   const label = (k: HelpTab) => hp(locale, k === 'how' ? 'help_tab_how' : k === 'news' ? 'help_tab_news' : k === 'contact' ? 'help_tab_contact' : 'help_tab_keys');

@@ -9,7 +9,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LiveMark } from '../components/shell/LiveMark';
 import { useTowerStore } from '../store/useTowerStore';
-import { getAuthProfile } from '../auth/profile';
 import { todoQueue, viewedKind } from '../lib/cockpitE9';
 import { routeRisks } from '../lib/todoRules';
 import { getNow } from '../lib/frozenNow';
@@ -24,6 +23,7 @@ import { RoutePanel } from '../components/risks/RoutePanel';
 import { useOpenDecisions } from '../components/risks/useDecisions';
 import { rt } from '../i18n/p6';
 import '../components/risks/risks.css';
+import { accountRole } from '../lib/accountRole';
 
 const PROD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 type Tab = 'todo' | 'route' | 'sys';
@@ -48,7 +48,7 @@ export function RisksView() {
 
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
-  const kind = viewedKind(role, getAuthProfile()?.role);
+  const kind = viewedKind(role, accountRole(role));
   const count = useMemo(() => todoQueue(role, risks, kind)?.total ?? 0, [role, risks, kind]);
   const decisions = useOpenDecisions(PROD && role !== 'KSH');
 

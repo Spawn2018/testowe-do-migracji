@@ -1294,6 +1294,9 @@ img,video{max-width:100%;height:auto}
 .acc-preview{display:none;border-bottom:1px solid var(--rule-2)}
 .acc-preview .acc-row{border-bottom:0}
 .acc-seg{margin:0 16px 12px}
+/* wyglad/W-konta: rodzaj konta w demo */
+.acc-demo-kind{border-bottom:1px solid var(--rule-2)}
+.acc-demo-kind .acc-row-static{display:flex;border-bottom:0;cursor:default}
 .acc-seg button{flex:1 1 0;min-height:44px;font-size:14px}
 
 /* paski pod paskiem górnym (kolejność: Podgląd albo „Działasz jako”, potem komunikat HHL) */

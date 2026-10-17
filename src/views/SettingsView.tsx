@@ -9,7 +9,6 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
-import { getAuthProfile } from '../auth/profile';
 import { OPEN_OPTIONS_EVENT, optScreenOf, takeOptionsScreen, type OptionsScreen } from '../lib/openOptions';
 import { OptionsShell } from '../components/options/OptionsShell';
 import type { AccountKind, OptGroup, OptScreen, OptScreenId } from '../components/options/types';
@@ -23,6 +22,7 @@ import { DEMO_EXAMPLE_BASE_EUR } from '../lib/p5bDemo';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { lazyRetry } from '../lib/lazyRetry';
+import { accountRole } from '../lib/accountRole';
 
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
 const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SefsReadOnly'))) : null;
@@ -56,7 +56,7 @@ export function SettingsView() {
     return () => window.removeEventListener(OPEN_OPTIONS_EVENT, onOpen);
   }, []);
 
-  const profileRole = getAuthProfile()?.role;
+  const profileRole = accountRole(role);
   const kind: AccountKind = role === 'KSH'
     ? 'CLIENT_USER'
     : profileRole === 'CARRIER_USER' ? 'CARRIER_USER' : 'CARRIER_DISPATCH';

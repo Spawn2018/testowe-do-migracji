@@ -16,6 +16,7 @@ import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
 import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
+import { accountRole } from '../lib/accountRole';
 
 const VESSELS = ['Wawel', 'Nova Star', 'Stena Spirit', 'Stena Estelle', 'Stena Ebba'] as const;
 
@@ -33,7 +34,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   // (E9 „Rejsy · ręczne zmiany: zmienia — HHL Admin.; widzi — HHL Oper.”; audyt-F F-07 — według rodzaju konta).
   const canEditSailings = PROD_BUILD
     ? getAuthProfile()?.role === 'HHL_ADMIN'
-    : role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS';
+    : role === 'HHL' && accountRole(role) !== 'HHL_OPS';
 
   /* E30 pkt 7: domyślnie przyszłe i tylko do Szwecji */
   const [future, setFuture] = useState(true);

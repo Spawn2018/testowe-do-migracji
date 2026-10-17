@@ -7,7 +7,7 @@
 import type { Load, OrgKind } from '../types';
 import type { Pilots } from './p7Awiz';
 import { demoPilots, demoSavePilots, demoSaveSet, demoSymbolSpec } from './p7Demo';
-import { getAuthProfile } from '../auth/profile';
+import { accountRole } from './accountRole';
 
 /** Wiersz tabeli właściciela według symbolu (E32 pkt 7): zestaw z ładunkiem, wymóg pilotów, rodzaj zezwolenia. */
 export interface SymbolSpec {
@@ -40,7 +40,7 @@ export function savePilotsOf(): ((codes: readonly string[], p: Pilots) => void) 
  * do odczytu. Produkcja — po sprawdzeniu praw zapisu w bazie (wykonawca).
  */
 export function canFixAwizOf(role: OrgKind): boolean {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS' : false;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' && accountRole(role) !== 'HHL_OPS' : false;
 }
 
 /** Wymiary zestawu z ładunkiem w metrach. */

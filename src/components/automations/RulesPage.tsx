@@ -7,7 +7,6 @@
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
-import { getAuthProfile } from '../../auth/profile';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { getNowIso } from '../../lib/frozenNow';
 import { formatListDateTime } from '../../lib/format';
@@ -23,6 +22,7 @@ import { AutoRulesList } from './AutoRulesList';
 import { RuleCreator } from './RuleCreator';
 import { histText, ruleSentence, runRules, runText } from './ruleText';
 import './rules.css';
+import { accountRole } from '../../lib/accountRole';
 
 type Tab = 'auto' | 'own' | 'runs' | 'hist';
 const TABS: Tab[] = ['auto', 'own', 'runs', 'hist'];
@@ -51,7 +51,7 @@ export function RulesPage() {
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const workflowFocus = useTowerStore((s) => s.workflowFocus);
   /* E9, E35 pkt 5: zmienia tylko Administrator HHL; Operacje HHL — podgląd */
-  const canEdit = role === 'HHL' && getAuthProfile()?.role !== 'HHL_OPS' && !!src?.save;
+  const canEdit = role === 'HHL' && accountRole(role) !== 'HHL_OPS' && !!src?.save;
   const [tab, setTab] = useState<Tab>(workflowFocus ? 'own' : 'auto');
   const [rev, setRev] = useState(0);
   const [rules, retryRules] = useList(src?.rules ?? null, rev, src?.initial ?? null);

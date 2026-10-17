@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { useTowerStore } from '../../store/useTowerStore'
 import { navForRole, type NavKey } from '../../lib/permissions'
 import { invoiceTodoCount, todoQueue, viewedKind } from '../../lib/cockpitE9'
-import { getAuthProfile } from '../../auth/profile'
 import { getNowIso } from '../../lib/frozenNow'
 import { localDateOf } from '../../lib/money/engine'
 import { navLabel, t } from '../../i18n/messages'
 import { ClaudeIcon, type IconKey } from './ClaudeIcon'
+import { accountRole } from '../../lib/accountRole';
 /* wyglad/P3 (E37 pkt 1): e-mail, rodzaj konta i „Wyloguj” przeszły do menu konta w pasku górnym (AccountMenu). */
 
 /** Claude v2.0 SVG icons 1:1 */
@@ -107,7 +107,7 @@ export function Nav() {
      Bez liczb przy Harmonogramie, Strefach i Automatyzacjach. */
   const badge = (key: NavKey): { n: number; hot?: boolean } | null => {
     if (key === 'risk') {
-      const q = todoQueue(role, risks, viewedKind(role, getAuthProfile()?.role))
+      const q = todoQueue(role, risks, viewedKind(role, accountRole(role)))
       return q && q.total ? { n: q.total, hot: true } : null
     }
     if (key === 'inv') {

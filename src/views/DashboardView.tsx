@@ -15,7 +15,6 @@ import { ferryRouteName } from '../lib/portName';
 import { vesselById } from '../lib/ferry';
 import { effDeparture, nearestCrossingSailings } from '../lib/sailings';
 import { buildCockpit, todoQueue, todoRisks, viewedKind, type CockpitTile } from '../lib/cockpitE9';
-import { getAuthProfile } from '../auth/profile';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { aggregateTier } from '../lib/money/loadMoney';
@@ -26,6 +25,7 @@ import { riskAsException, sortExceptions } from '../lib/prodDash';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { CarrierRatingDemo } from '../components/dash/CarrierRatingDemo';
 import { lazyRetry } from '../lib/lazyRetry';
+import { accountRole } from '../lib/accountRole';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
 const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
@@ -70,7 +70,7 @@ export function DashboardView() {
     return undefined;
   }, [locale]);
   /* rodzaj konta oglądanej firmy (w Podglądzie — rodzaj domyślny tej firmy, nie rodzaj osoby z HHL) */
-  const kind = viewedKind(role, getAuthProfile()?.role);
+  const kind = viewedKind(role, accountRole(role));
 
   /* „Brak dokumentów” — filtr strony Dokumenty po kliknięciu kafelka zezwoleń */
   const { docsMissing } = useMemo(() => computeCorridorKpis(loads, risks), [loads, risks]);

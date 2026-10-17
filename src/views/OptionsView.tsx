@@ -6,7 +6,6 @@ import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { hasKey, t, tp } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
-import { getAuthProfile } from '../auth/profile';
 import { UiPrefsPanel } from '../components/settings/UiPrefsPanel';
 import { OptionsShell } from '../components/options/OptionsShell';
 import type { OptGroup, OptScreen, OptScreenId, AccountKind } from '../components/options/types';
@@ -34,6 +33,7 @@ import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
+import { accountRole } from '../lib/accountRole';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -139,7 +139,7 @@ export function OptionsView() {
   const updateFactoring = <K extends keyof FactoringOffer>(key: K, value: FactoringOffer[K]) => updateFactoringOffer({ [key]: value });
 
   /* E12-A: Operacje HHL — bez Użytkowników, Logowań i Historii; ustawienia tylko do odczytu (baza 0198). */
-  const authRole = getAuthProfile()?.role;
+  const authRole = accountRole(role);
   const isHhlAdmin = authRole !== 'HHL_OPS';
   const kind: AccountKind = isHhlAdmin ? 'HHL_ADMIN' : 'HHL_OPS';
   const ro = !isHhlAdmin;
