@@ -15,7 +15,7 @@ export type ServerRule = 'TRACKING_WINDOW' | 'SITE_EXIT_DELIVERED' | 'WIND_E49' 
 
 /** Stan na produkcji. Zmienia tylko wykonawca, przy wdrożeniu pozycji z nawiasu. */
 const ON_IN_PRODUCTION: Record<ServerRule, boolean> = {
-  TRACKING_WINDOW: false /* A1 */,
+  TRACKING_WINDOW: true /* A1 */,
   SITE_EXIT_DELIVERED: false /* A2 */,
   WIND_E49: false /* P6 E49 Z1 */,
   DETOUR_E49: false /* P6 E49 Z3 */,

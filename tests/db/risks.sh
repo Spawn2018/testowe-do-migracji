@@ -26,7 +26,7 @@ fx() { $PSQL -c "set session_replication_role = replica; $1" >/dev/null 2>&1 || 
 echo; echo "[0042] title_key w każdej funkcji zapisującej ryzyko"
 chk "kolumna risk_signals.title_key istnieje" "$(Q "select count(*) from information_schema.columns where table_name='risk_signals' and column_name='title_key'")" 1
 
-fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234' where id='$L1'"
+fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234', plan_load_date=current_date - 1 where id='$L1'"
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'TELEMATICS_API')" >/dev/null
 Q "select detect_silent_vehicles(90)" >/dev/null
 chk "detect_silent_vehicles → rk_silent_vehicle" "$(key "kind='SILENT_VEHICLE'")" rk_silent_vehicle

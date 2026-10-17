@@ -258,7 +258,7 @@ chk "retencja: ostatnia pozycja statku zostaje zawsze (także starsza niż 30 dn
 
 echo; echo "[I-2l] czas wykrycia odchylenia z risk_signals (0055)"
 L7=33333333-0000-0000-0000-000000000077
-$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, tractor_plate) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/77','HHL/2026/77','SCX/77','IN_TRANSIT_PL','GD 7777')" >/dev/null
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, tractor_plate, plan_load_date) values ('$L7','$P','00000000-0000-0000-0000-00000000a003','KSH/77','HHL/2026/77','SCX/77','IN_TRANSIT_PL','GD 7777', current_date - 1)" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) select '$L7', now()-interval '3 hours', st_setsrid(st_makepoint(18.0, 53.0),4326), source from positions limit 1" >/dev/null
 chk "anon bez EXECUTE kpi_detection_lag; funkcja SECURITY INVOKER" "$(Q "select has_function_privilege('anon','kpi_detection_lag(uuid,integer)','execute')::text||'/'||(select prosecdef::text from pg_proc where proname='kpi_detection_lag')")" "false/false"
 val "brak ryzyk z czasem zdarzenia → 0 próbek, mediana NULL (kafelek „—”)" $HHL "select samples||'/'||coalesce(median_min::text,'∅') from kpi_detection_lag('$P')" "0/∅"
@@ -272,6 +272,9 @@ chk "jawny detail.occurred_at przyjęty; brak/nieczytelny czas → NULL (nie zga
 val "HHL: mediana z 3 próbek (7, 20, 90) = 20 min" $HHL "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
 val "KSH: tylko ryzyka widoczne dla KSH (RLS: odbiorca HHL) → 0 próbek" $KSH "select samples from kpi_detection_lag('$P')" 0
 val "SCX: ryzyka swojego transportu widoczne dla przewoźnika (7, 20, 90) → 3/20" $SCX "select samples||'/'||median_min from kpi_detection_lag('$P')" "3/20"
+# A1: wczorajsza data trzyma L7 w oknie ciszy. Przed skanem awizacji (I-21) zamykamy transport,
+# inaczej l3_scan liczy zaległą awizację i polisę (dwa nowe ryzyka).
+$PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null
 val "konto bez app_users: 0 próbek" $NOAPP "select samples from kpi_detection_lag('$P')" 0
 $PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where dedup_key='T-I2L-J'" >/dev/null
 val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
