@@ -817,11 +817,12 @@ export function buildSeedDocuments(loads: Load[]): Document[] {
 }
 
 export function buildSeedMessages(loads: Load[]): LoadMessage[] {
-  /* audyt 17.10 (N6): rozmowa o awizacji przy transportach przed załadunkiem (21.09 11:00 — załadunek później) */
-  return loads.filter((l) => l.plannedLoadDate > '2026-09-21').slice(0, 12).map((l, i) => ({
+  /* audyt 17.10 (N6, F7): te same transporty co dotąd (pierwsze w pliku), rozmowa o awizacji przed załadunkiem —
+     2 dni przed załadunkiem, najpóźniej 21.09 11:00 */
+  return [...loads].sort((a, b) => fileOrderOf(a.code) - fileOrderOf(b.code)).slice(0, 12).map((l, i) => ({
     id: `msg-${i + 1}`,
     loadId: l.id,
-    at: '2026-09-21T11:00:00+02:00',
+    at: notAfter(atLocal(dayBefore(l.plannedLoadDate, 2), '11:00'), '2026-09-21T11:00:00+02:00'),
     author: i % 2 === 0 ? 'Anna Ops' : 'Erik Dispatch',
     org: (i % 2 === 0 ? 'HHL' : 'SCX') as LoadMessage['org'],
     text:

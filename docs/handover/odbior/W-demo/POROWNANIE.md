@@ -16,7 +16,7 @@ Zegar demo: środa 23.09.2026, 16:32.
 | Daty transportów demo | 44 transporty w drodze, na placu i dostarczone miały załadunek po dniu demo: 40 w październiku, 3 z 30.09, 1 z 01.11. Np. „Śledzenie trwa od 01.10” przy statusie „Prom”, Kokpit KSH „Wykonanie” 0 t. | Załadunek liczony wstecz od 23.09 według etapu, tylko w dni robocze. Dostawa z planu KSH: + 5 dni (dostarczone: + 4), a sobota i niedziela przechodzą na piątek. Szczegóły w tabeli „Daty” niżej. |
 | Rozładunek | „Dostarczone 24.09, 12:00” przy zegarze 23.09, 16:32 (B1) | rozładunek dziś o 13:50; dostarczone 08.09–22.09, co trzeci następnego dnia rano, po terminie (terminowość w Kokpicie KSH) |
 | Historia transportu | import 10.09 po załadunku 06.09; „Zasoby przypisane 18.09” po „Dostarczone 14.09” (P5) | import pliku KSH 01.09 (wersja 1); zasoby 2 dni przed załadunkiem; rejs wieczorem w dniu załadunku; rozładunek z godziny rozładunku; „brak pingu” 90 min po ostatniej pozycji. Wszystko przed zegarem i po kolei. |
-| Czat demo | wiadomość „Proszę potwierdzić awizację” 21.09 przy transporcie dostarczonym 15.09 (P5) | rozmowy o awizacji przy transportach z załadunkiem po 21.09 |
+| Czat demo | wiadomość „Proszę potwierdzić awizację” 21.09 przy transporcie dostarczonym 15.09 (P5) | te same transporty co dotąd; rozmowa o awizacji 2 dni przed załadunkiem (najpóźniej 21.09) |
 | Kolejność w Harmonogramie | jak w pliku | po dacie załadunku, jak plik KSH; przy tej samej dacie — pozycja w pliku. Sprawy demo zostają przy tych samych transportach co przed sortowaniem — liczba „Do zrobienia” w menu = liczba kart (E7-2). |
 | Panel › Przegląd › blok ETA (E15) | „ETA: –” i „Brak pozycji GPS”, choć Mapa miała pozycję | ETA Boden, pasmo ± minut, pewność, wiek pozycji, km i jazda. Zasada: **ETA = ostatnia pozycja + jazda + odpoczynek** (+ postój, rejs). Szczegóły w tabeli „ETA” niżej. |
 | Mapa — kolumna „ETA Boden” | pusta | ta sama ETA co w panelu; na placu „od 15:10” (przed zegarem, P2); w czasie załadunku „–” |
@@ -69,6 +69,7 @@ Obrazy: `przed-*` = `main` 7db7282 (bez #277), `po-*` = ta gałąź (z #277); de
 
 **Testy:**
 - `tests/w-demo.test.ts` (15) — daty, dni robocze, rozładunek przed zegarem, kolejność zdarzeń, czat, ETA = pozycja + jazda + odpoczynek, „po oknie” tylko za oknem, brak GPS, teksty spraw, kurs bieżący (także spóźniony), zapis v4, sprawy przy tych samych transportach;
-- zmienione: `carrier-rating`, `store-persist`, `money-v2`, `w-audyt` (wersja zapisu 4), `i2-facade` (bez 95 min w demo), `p6-history` (czat).
+- zmienione: `carrier-rating`, `store-persist`, `money-v2`, `w-audyt` (wersja zapisu 4), `i2-facade` (bez 95 min w demo), `p6-history` (czat), `e8-phone-gate` (P9-f: T-12 „Na placu od 23.09.2026, 15:10”);
+- e2e `e8-phone-gate` + `persist-toast` lokalnie: 130 zielonych.
 
 Unit: 1525 zielonych. **Wzorce `visual` zmieniają się na wielu ekranach (daty) — odświeżam je.**

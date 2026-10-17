@@ -666,7 +666,8 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await expect(page.locator('aside.drawer [data-drawer-note="after"]')).toHaveText('Śledzenie zakończone — „Dostarczone”');
     await page.keyboard.press('Escape');
     await openPanel(page, 'T-12');
-    await expect(page.locator('aside.drawer [data-drawer-note]')).toHaveCount(0);
+    /* W-demo (audyt 17.10, N2): na placu od godziny wjazdu — dane demo mają ją teraz jak z serwera (E32 pkt 3) */
+    await expect(page.locator('aside.drawer [data-drawer-note="site"]')).toHaveText('Na placu od 23.09.2026, 15:10');
     await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
   });
 });
