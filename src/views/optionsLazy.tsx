@@ -4,9 +4,10 @@
  * Bez zmiany działania: ekran wskazany z menu konta czeka w `openOptions.ts` (takeOptionsScreen) do zamontowania widoku.
  */
 import { lazy, Suspense } from 'react';
+import { lazyRetry } from '../lib/lazyRetry';
 
-const Options = lazy(() => import('./OptionsView').then((m) => ({ default: m.OptionsView })));
-const Settings = lazy(() => import('./SettingsView').then((m) => ({ default: m.SettingsView })));
+const Options = lazy(lazyRetry(() => import('./OptionsView').then((m) => ({ default: m.OptionsView }))));
+const Settings = lazy(lazyRetry(() => import('./SettingsView').then((m) => ({ default: m.SettingsView }))));
 
 export function OptionsViewLazy() {
   return <Suspense fallback={null}><Options /></Suspense>;

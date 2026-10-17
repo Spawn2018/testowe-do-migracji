@@ -11,7 +11,6 @@ import { ACCOUNT_KINDS, type AccountKind } from './types';
 
 export type { Channel, MatrixCell, MatrixGroup, MatrixRow } from './channels';
 import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, type MatrixGroup, type MatrixRow } from './channels';
-import { up } from './up';
 
 export type WhoGetsCards = {
   mail: { on: boolean; used: number; max: number; reserve: number };
@@ -113,7 +112,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
       {cards ? (
         <div className="ox-cards3">
           <div className="ox-card" data-who-card="mail">
-            <span className="ox-eyebrow">{up(t(locale, 'p3c_mail_title'))}</span>
+            <span className="ox-eyebrow">{t(locale, 'p3c_mail_title')}</span>
             <span className="ox-card-top">
               <b className="ox-card-v">{t(locale, mailOn ? 'p3c_on' : 'p3c_off')}</b>
               <CardSwitch label={t(locale, 'p3c_mail_title')} on={mailOn} readOnly={readOnly} onChange={(next) => card('mail', next)} />
@@ -122,7 +121,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
             <span className="ox-card-sub">{t(locale, 'p3c_mail_quota').replace('{used}', String(cards.mail.used)).replace('{max}', String(cards.mail.max)).replace('{reserve}', String(cards.mail.reserve))}</span>
           </div>
           <div className="ox-card" data-who-card="push">
-            <span className="ox-eyebrow">{up(t(locale, 'p3c_push_title'))}</span>
+            <span className="ox-eyebrow">{t(locale, 'p3c_push_title')}</span>
             <span className="ox-card-top">
               <b className="ox-card-v">{t(locale, pushOn ? 'p3c_on' : 'p3c_off')}</b>
               <CardSwitch label={t(locale, 'p3c_push_title')} on={pushOn} readOnly={readOnly} onChange={(next) => card('push', next)} />
@@ -130,7 +129,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
             <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>
           </div>
           <div className="ox-card">
-            <span className="ox-eyebrow">{up(t(locale, 'p3c_last_title'))}</span>
+            <span className="ox-eyebrow">{t(locale, 'p3c_last_title')}</span>
             <b className="ox-card-v" data-content>{cards.last.when}</b>
             <span className="ox-card-sub" data-content>{cards.last.text}</span>
           </div>
@@ -151,16 +150,16 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
           <table className="ox-mx">
             <thead>
               <tr>
-                <th rowSpan={2} className="ox-mx-ev">{up(t(locale, 'p3c_col_event'))}</th>
-                {FIRMS.map((f) => <th key={f.firm} colSpan={f.kinds.length} className="ox-mx-firm">{up(t(locale, `p3c_firm_${f.firm}`))}</th>)}
+                <th rowSpan={2} className="ox-mx-ev">{t(locale, 'p3c_col_event')}</th>
+                {FIRMS.map((f) => <th key={f.firm} colSpan={f.kinds.length} className="ox-mx-firm">{t(locale, `p3c_firm_${f.firm}`)}</th>)}
               </tr>
               <tr>
-                {ACCOUNT_KINDS.map((k) => <th key={k} className="ox-mx-kind">{up(t(locale, `p3c_kind_${k}`))}</th>)}
+                {ACCOUNT_KINDS.map((k) => <th key={k} className="ox-mx-kind">{t(locale, `p3c_kind_${k}`)}</th>)}
               </tr>
             </thead>
             {groups.map((g) => (
               <tbody key={g.id}>
-                <tr className="ox-mx-group"><th colSpan={6} scope="colgroup"><span data-content>{up(g.title)}</span>{g.sub ? <small data-content>{g.sub}</small> : null}</th></tr>
+                <tr className="ox-mx-group"><th colSpan={6} scope="colgroup"><span data-content>{g.title}</span>{g.sub ? <small data-content>{g.sub}</small> : null}</th></tr>
                 {g.rows.map((r) => (
                   <tr key={r.id} className={r.id === sel ? 'is-sel' : undefined}>
                     <th scope="row" className="ox-mx-ev">
@@ -185,7 +184,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
         <div className="ox-mxc">
           {groups.map((g) => (
             <section key={g.id} className="ox-mxc-group">
-              <h3 data-content>{up(g.title)}</h3>
+              <h3 data-content>{g.title}</h3>
               {g.rows.map((r) => {
                 const isSel = r.id === sel;
                 return (
@@ -218,7 +217,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
         <aside className="ox-who-side">
           {selected ? (
             <div className="ox-card ox-preview">
-              <span className="ox-eyebrow">{up(t(locale, 'p3c_preview'))}</span>
+              <span className="ox-eyebrow">{t(locale, 'p3c_preview')}</span>
               <h3 data-content>{selected.title}</h3>
               <ul>
                 {ACCOUNT_KINDS.map((k) => (
@@ -240,7 +239,7 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
             </div>
           ) : null}
           <div className="ox-card ox-rules">
-            <span className="ox-eyebrow">{up(t(locale, 'p3c_rules'))}</span>
+            <span className="ox-eyebrow">{t(locale, 'p3c_rules')}</span>
             <p>{t(locale, 'p3c_rule_scope')}</p>
             <p>{t(locale, 'p3c_rule_quota')}</p>
             {history ? <p className="ox-rules-hist" data-content>{tp(locale, 'p3c_rule_hist', { n: history.n, since: history.since, last: history.last })}</p> : null}

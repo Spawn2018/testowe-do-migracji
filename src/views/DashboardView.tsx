@@ -25,9 +25,10 @@ import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { riskAsException, sortExceptions } from '../lib/prodDash';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { CarrierRatingDemo } from '../components/dash/CarrierRatingDemo';
+import { lazyRetry } from '../lib/lazyRetry';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
-const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/CarrierRatingLive')) : null;
+const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
 
 export function DashboardView() {
   // I-2l: czas wykrycia odchylenia z bazy (kpi_detection_lag) — wyłącznie build produkcyjny, moduł leniwy

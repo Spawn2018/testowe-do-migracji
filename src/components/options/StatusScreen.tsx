@@ -255,7 +255,7 @@ function Thresholds({ locale, admin }: { locale: Locale; admin: boolean }) {
 
 function ErrorStateTag({ locale, g }: { locale: Locale; g: ErrorGroup }) {
   const txt = g.state === 'known' ? (g.stateNote ?? '') : sy(locale, `sys_err_st_${g.state}`);
-  return <span className={`mtag sys-etag is-${g.state}`} data-err-state={g.state}>{txt.toLocaleUpperCase('pl')}</span>;
+  return <span className={`mtag sys-etag is-${g.state}`} data-err-state={g.state}>{txt}</span>;
 }
 
 function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; nowIso: string }) {

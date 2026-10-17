@@ -21,7 +21,6 @@ import {
 import type { DwellPatch, TestMailResult } from '../../lib/p5bSource';
 import { t } from '../../i18n/messages';
 import { fb, fbp } from '../../i18n/p5b';
-import { up } from './up';
 import './money.css';
 
 /* ---------- formaty ---------- */
@@ -188,7 +187,7 @@ function TierTable({ locale, head, tiers, avg, all }: { locale: Locale; head: st
   const dig = 2;
   return (
     <table className="ox-table pm-tiers-t">
-      <thead><tr><th scope="col">{up(head)}</th><th scope="col" className="num">{up(fb(locale, 'p5b_f_col_mult'))}</th></tr></thead>
+      <thead><tr><th scope="col">{head}</th><th scope="col" className="num">{fb(locale, 'p5b_f_col_mult')}</th></tr></thead>
       <tbody>
         {rows.map((r, i) => (
           <tr key={`${r.from}`} className={i === hitRow ? 'pm-hit' : undefined} data-pm-tier-hit={i === hitRow ? '' : undefined}>
@@ -241,7 +240,7 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
     <div className="pm-fuel" data-pm-fuel data-deur-exempt="fuel-index">
       <div className="pm-head">
         <span className="pm-head-sub">{fbp(locale, 'p5b_f_sub', { v: view.contract.version, date: dmy(view.contract.from) })}</span>
-        <span className={`ox-tag${view.contract.agreed ? ' ox-tag-active' : ' ox-tag-unfinished'}`}>{up(fb(locale, view.contract.agreed ? 'p5b_f_agreed' : 'p5b_f_not_agreed'))}</span>
+        <span className={`ox-tag${view.contract.agreed ? ' ox-tag-active' : ' ox-tag-unfinished'}`}>{fb(locale, view.contract.agreed ? 'p5b_f_agreed' : 'p5b_f_not_agreed')}</span>
       </div>
 
       {alarm ? (
@@ -278,25 +277,25 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
 
       <div className="pm-cards">
         <section className={`pm-card${cur.final ? ' is-now' : ''}`} data-pm-week="now">
-          <span className="ox-eyebrow">{up(fbp(locale, 'p5b_f_now_h', { range: range(cur.from, cur.to) }))}</span>
+          <span className="ox-eyebrow">{fbp(locale, 'p5b_f_now_h', { range: range(cur.from, cur.to) })}</span>
           <span className="pm-big"><b className="tabular">+{pctTxt(cur.applied)} %</b> <span className="pm-x">×{mult(cur.applied)}</span></span>
           <span className="pm-card-l">{fbp(locale, cur.final ? 'p5b_f_final' : 'p5b_f_forecast_from', { range: range(cur.idxFrom, cur.idxTo) })}</span>
           <span className="pm-card-l">{fbp(locale, 'p5b_f_applies', { from: dm(cur.from), to: dm(cur.to) })}</span>
         </section>
         <section className="pm-card" data-pm-week="next">
-          <span className="ox-eyebrow">{up(fbp(locale, 'p5b_f_next_h', { range: range(next.from, next.to) }))}</span>
+          <span className="ox-eyebrow">{fbp(locale, 'p5b_f_next_h', { range: range(next.from, next.to) })}</span>
           <span className="pm-big"><b className="tabular">+{pctTxt(next.forecast)} %</b> <span className="pm-fc">{fb(locale, 'p5b_f_forecast')}</span></span>
           <span className="pm-card-l">{fbp(locale, 'p5b_f_next_x', { date: dm(next.finalOn), range: range(next.idxFrom, next.idxTo) })}</span>
         </section>
         <section className="pm-card" data-pm-fetch>
-          <span className="ox-eyebrow">{up(fbp(locale, 'p5b_f_fetch_h', { at: fetch.at }))}</span>
+          <span className="ox-eyebrow">{fbp(locale, 'p5b_f_fetch_h', { at: fetch.at })}</span>
           {fetchLine('p5b_f_today', fetch.today)}
           {fetchLine('p5b_f_yesterday', fetch.yesterday)}
           <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: fetch.retries.join(' i ') })}</span>
         </section>
       </div>
 
-      <h4 className="ox-eyebrow pm-h">{up(fb(locale, 'p5b_f_how_h'))}</h4>
+      <h4 className="ox-eyebrow pm-h">{fb(locale, 'p5b_f_how_h')}</h4>
       <div className="pm-how">
         <div className="pm-step"><b className="pm-step-h">{fb(locale, 'p5b_f_s1')}</b><span>{fb(locale, 'p5b_f_s1_x')}</span><b className="pm-step-v tabular">{fbp(locale, 'p5b_f_s1_v', { sek: cur.okq8.avg == null ? '—' : n2(cur.okq8.avg), pln: cur.orlen.avg == null ? '—' : n2(cur.orlen.avg) })}</b></div>
         <div className="pm-step"><b className="pm-step-h">{fb(locale, 'p5b_f_s2')}</b><span>{fb(locale, 'p5b_f_s2_x')}</span><b className="pm-step-v tabular">{fbp(locale, 'p5b_f_s2_v', { a: mult(cur.okq8.mult), b: mult(cur.orlen.mult) })}</b></div>
@@ -306,24 +305,24 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
 
       <div className="pm-two">
         <section className="pm-days">
-          <h4 className="ox-eyebrow pm-h">{up(fb(locale, 'p5b_f_days_h'))}</h4>
+          <h4 className="ox-eyebrow pm-h">{fb(locale, 'p5b_f_days_h')}</h4>
           <div className="pm-scroll">
             <table className="ox-table pm-days-t">
               <thead>
                 <tr>
-                  <th scope="col">{up(fb(locale, 'p5b_f_col_day'))}</th>
-                  <th scope="col" className="num">{up(fb(locale, 'p5b_f_col_okq8'))}</th>
-                  <th scope="col" className="num">{up(fb(locale, 'p5b_f_col_orlen'))}</th>
-                  <th scope="col" className="pm-how-c">{up(fb(locale, 'p5b_f_col_how'))}</th>
+                  <th scope="col">{fb(locale, 'p5b_f_col_day')}</th>
+                  <th scope="col" className="num">{fb(locale, 'p5b_f_col_okq8')}</th>
+                  <th scope="col" className="num">{fb(locale, 'p5b_f_col_orlen')}</th>
+                  <th scope="col" className="pm-how-c">{fb(locale, 'p5b_f_col_how')}</th>
                 </tr>
               </thead>
               {view.days.map((g) => (
                 <tbody key={g.from}>
                   <tr className="pm-grp">
                     <th scope="rowgroup" colSpan={4}>
-                      {up(g.closed
+                      {g.closed
                         ? fbp(locale, 'p5b_f_grp_closed', { range: range(g.from, g.to), sek: g.closed.okq8 == null ? '—' : n2(g.closed.okq8), pln: g.closed.orlen == null ? '—' : n2(g.closed.orlen), m: mult(g.closed.mult) })
-                        : fbp(locale, 'p5b_f_grp_open', { range: range(g.from, g.to) }))}
+                        : fbp(locale, 'p5b_f_grp_open', { range: range(g.from, g.to) })}
                     </th>
                   </tr>
                   {g.rows.map((r) => (
@@ -348,7 +347,7 @@ export function FuelScreen({ locale, view, actions, readOnly }: {
         </section>
 
         <section className="pm-tiers" data-pm-tiers={allTiers ? 'all' : 'near'}>
-          <h4 className="ox-eyebrow pm-h">{up(fb(locale, allTiers ? 'p5b_f_tiers_all_h' : 'p5b_f_tiers_h'))}</h4>
+          <h4 className="ox-eyebrow pm-h">{fb(locale, allTiers ? 'p5b_f_tiers_all_h' : 'p5b_f_tiers_h')}</h4>
           <div className="pm-tiers-2">
             <TierTable locale={locale} head={fb(locale, 'p5b_f_col_sek')} tiers={view.tiers.sek} avg={cur.okq8.avg} all={allTiers} />
             <TierTable locale={locale} head={fb(locale, 'p5b_f_col_pln')} tiers={view.tiers.pln} avg={cur.orlen.avg} all={allTiers} />
@@ -410,7 +409,7 @@ export function DwellScreen({ locale, rules, readOnly, onSave }: {
   };
   return (
     <div className="pm-dwell" data-pm-dwell>
-      <div className="pm-sec-hd"><h4 className="ox-eyebrow">{up(fb(locale, 'p5b_d_h'))}</h4><Changed locale={locale} changed={r.changed} /></div>
+      <div className="pm-sec-hd"><h4 className="ox-eyebrow">{fb(locale, 'p5b_d_h')}</h4><Changed locale={locale} changed={r.changed} /></div>
       <ValueRows
         locale={locale}
         rows={rows}
@@ -472,7 +471,7 @@ export function RatesExtras({ locale, cancel, onCancelSave, margin, onMarginSave
       {cancel ? (
         <section className="pm-sec" data-pm-cancel>
           <div className="pm-sec-hd">
-            <h4 className="ox-eyebrow">{up(fb(locale, 'p5b_c_cancel_h'))}</h4>
+            <h4 className="ox-eyebrow">{fb(locale, 'p5b_c_cancel_h')}</h4>
             <Changed locale={locale} changed={cancel.changed} />
           </div>
           <p className="ox-muted pm-sec-sub">{fb(locale, 'p5b_c_cancel_sub')}</p>
@@ -506,7 +505,7 @@ export function RatesExtras({ locale, cancel, onCancelSave, margin, onMarginSave
       ) : null}
       {margin !== undefined ? (
         <section className="pm-sec" data-pm-margin>
-          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{up(fb(locale, 'p5b_c_margin_h'))}</h4></div>
+          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{fb(locale, 'p5b_c_margin_h')}</h4></div>
           <ValueRows
             locale={locale}
             readOnly={readOnly}
@@ -517,7 +516,7 @@ export function RatesExtras({ locale, cancel, onCancelSave, margin, onMarginSave
           <p className="ox-foot">{fb(locale, 'p5b_c_margin_off')}</p>
         </section>
       ) : null}
-      {cancel || margin !== undefined ? <h4 className="ox-eyebrow pm-h">{up(fb(locale, 'p5b_c_rates_h'))}</h4> : null}
+      {cancel || margin !== undefined ? <h4 className="ox-eyebrow pm-h">{fb(locale, 'p5b_c_rates_h')}</h4> : null}
     </div>
   );
 }
@@ -564,9 +563,8 @@ export function RateCard({ locale, view: initial, today, nowIso, readOnly, onSav
   const priceOf = (r: RateCardRow, side: RcSide) => (side === 'KSH' ? r.revEur : r.costEur);
   const pricesFor = (side: RcSide) => Object.fromEntries(view.rows.map((r) => [r.id, n2(priceOf(r, side))]));
   const colLabel = (side: RcSide) => fb(locale, side === 'KSH' ? 'p5b_r_col_rev' : 'p5b_r_col_cost');
-  /* „Koszt SCX · v1”; w nagłówku tabeli wielkie litery tylko w nazwie, numer wersji zostaje „v1” */
+  /* „Koszt SCX · v1” — bez wielkich liter (decyzja właściciela 17.10, 6A) */
   const colName = (side: RcSide) => `${colLabel(side)} · v${verOf(side).v}`;
-  const colHead = (side: RcSide) => `${up(colLabel(side))} · v${verOf(side).v}`;
   const rowName = (r: RateCardRow) => (r.convoy ? `${r.symbol} · ${fb(locale, `p5b_r_convoy_${r.convoy}`)}` : r.symbol);
   const parsed: Record<string, number | null> = draft ? Object.fromEntries(view.rows.map((r) => [r.id, plNum(draft.prices[r.id] ?? '')])) : {};
   const changed = draft ? view.rows.filter((r) => parsed[r.id] != null && cents(parsed[r.id]!) !== cents(priceOf(r, draft.side))).length : 0;
@@ -634,9 +632,9 @@ export function RateCard({ locale, view: initial, today, nowIso, readOnly, onSav
       ) : null}
       {draft && old ? (
         <div className="pm-rc-new" data-rate-draft={draft.side}>
-          <h4 className="ox-eyebrow">{up(fb(locale, 'p5b_r_new_h'))}</h4>
+          <h4 className="ox-eyebrow">{fb(locale, 'p5b_r_new_h')}</h4>
           <div className="pm-rc-fields">
-            <div className="ox-field"><span>{up(fb(locale, 'p5b_r_side'))}</span>
+            <div className="ox-field"><span>{fb(locale, 'p5b_r_side')}</span>
               <SegRadio
                 label={fb(locale, 'p5b_r_side')}
                 value={draft.side}
@@ -646,10 +644,10 @@ export function RateCard({ locale, view: initial, today, nowIso, readOnly, onSav
                 onPick={(side) => { if (side !== draft.side) setDraft({ ...draft, side, prices: pricesFor(side), err: null }); }}
               />
             </div>
-            <label className="ox-field"><span>{up(fb(locale, 'p5b_r_from'))}</span>
+            <label className="ox-field"><span>{fb(locale, 'p5b_r_from')}</span>
               <input className="input" type="date" value={draft.from} min={isoAdd(old.from, 1)} onChange={(e) => setDraft({ ...draft, from: e.target.value, err: null })} />
             </label>
-            <label className="ox-field pm-rc-note"><span>{up(fb(locale, 'p5b_r_note'))}</span>
+            <label className="ox-field pm-rc-note"><span>{fb(locale, 'p5b_r_note')}</span>
               <input className="input" value={draft.note} placeholder={fb(locale, 'p5b_r_note_ph')} onChange={(e) => setDraft({ ...draft, note: e.target.value })} />
             </label>
           </div>
@@ -664,21 +662,21 @@ export function RateCard({ locale, view: initial, today, nowIso, readOnly, onSav
       <table className="ox-table ox-cards-phone pm-rc-t" data-opt-table="rates">
         <thead>
           <tr>
-            <th scope="col">{up(fb(locale, 'p5b_r_col_symbol'))}</th>
-            <th scope="col">{up(fb(locale, 'p5b_r_col_kind'))}</th>
-            <th scope="col">{up(fb(locale, 'p5b_r_col_set'))}</th>
-            <th scope="col" className="num">{colHead('SCX')}</th>
-            <th scope="col" className="num">{colHead('KSH')}</th>
+            <th scope="col">{fb(locale, 'p5b_r_col_symbol')}</th>
+            <th scope="col">{fb(locale, 'p5b_r_col_kind')}</th>
+            <th scope="col">{fb(locale, 'p5b_r_col_set')}</th>
+            <th scope="col" className="num">{colName('SCX')}</th>
+            <th scope="col" className="num">{colName('KSH')}</th>
           </tr>
         </thead>
         <tbody>
           {view.rows.map((r) => (
             <tr key={r.id} data-rate={r.id}>
-              <th scope="row" data-label={up(fb(locale, 'p5b_r_col_symbol'))}><b>{r.symbol}</b>{r.convoy ? <span className="ox-sub">{fb(locale, `p5b_r_convoy_${r.convoy}`)}</span> : null}</th>
-              <td data-label={up(fb(locale, 'p5b_r_col_kind'))}>{r.kind}</td>
-              <td data-label={up(fb(locale, 'p5b_r_col_set'))} className="tabular">{r.set ? `${dim(r.set.l)} × ${dim(r.set.w)} × ${dim(r.set.h)} m` : '—'}</td>
-              <td data-label={colHead('SCX')} className="num tabular">{cell(r, 'SCX')}</td>
-              <td data-label={colHead('KSH')} className="num tabular">{cell(r, 'KSH')}</td>
+              <th scope="row" data-label={fb(locale, 'p5b_r_col_symbol')}><b>{r.symbol}</b>{r.convoy ? <span className="ox-sub">{fb(locale, `p5b_r_convoy_${r.convoy}`)}</span> : null}</th>
+              <td data-label={fb(locale, 'p5b_r_col_kind')}>{r.kind}</td>
+              <td data-label={fb(locale, 'p5b_r_col_set')} className="tabular">{r.set ? `${dim(r.set.l)} × ${dim(r.set.w)} × ${dim(r.set.h)} m` : '—'}</td>
+              <td data-label={colName('SCX')} className="num tabular">{cell(r, 'SCX')}</td>
+              <td data-label={colName('KSH')} className="num tabular">{cell(r, 'KSH')}</td>
             </tr>
           ))}
         </tbody>
@@ -837,7 +835,7 @@ export function TermsScreen({ locale, terms, onTermsSave, addresses, onAddrSave,
     <div className="pm-terms" data-pm-terms>
       {terms ? (
         <section className="pm-sec">
-          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{up(fb(locale, 'p5b_t_terms_h'))}</h4><Changed locale={locale} changed={terms.changed} /></div>
+          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{fb(locale, 'p5b_t_terms_h')}</h4><Changed locale={locale} changed={terms.changed} /></div>
           <ValueRows
             locale={locale}
             readOnly={readOnly}
@@ -851,7 +849,7 @@ export function TermsScreen({ locale, terms, onTermsSave, addresses, onAddrSave,
       ) : null}
       {addresses ? (
         <section className="pm-sec">
-          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{up(fb(locale, 'p5b_t_addr_h'))}</h4></div>
+          <div className="pm-sec-hd"><h4 className="ox-eyebrow">{fb(locale, 'p5b_t_addr_h')}</h4></div>
           <AddressBook locale={locale} addresses={addresses} readOnly={readOnly} onChange={onAddrSave} onTest={onTest} />
           <p className="ox-foot">{fb(locale, 'p5b_t_note')}</p>
         </section>

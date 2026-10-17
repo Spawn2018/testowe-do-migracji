@@ -18,7 +18,7 @@
 .rk-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;padding:12px 16px;border-bottom:1px solid var(--rule-2)}
 .rk-head h2{margin:0;font-family:var(--font-cond);font-weight:700;font-size:25px;line-height:1.15}
 .rk-count{color:var(--red);font-family:var(--font-cond);font-weight:700}
-.rk-head-note{margin-left:auto;color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:13.5px;letter-spacing:.08em}
+.rk-head-note{margin-left:auto;color:var(--ink-2);font-family:var(--font-cond);font-weight:600;font-size:13.5px;letter-spacing:.02em}
 
 /* filtry */
 .rk-filters{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:10px 16px;border-bottom:1px solid var(--rule-2)}
@@ -43,7 +43,7 @@
 .rk-card-s{color:var(--ink-2);font-size:15.5px;line-height:1.4}
 .rk-infos{display:flex;flex-direction:column;gap:2px}
 .rk-info{color:var(--sea);font-size:15px;line-height:1.4}
-.rk-tag{flex:none;display:inline-block;padding:2px 9px;border:1px solid currentcolor;font-family:var(--font-cond);font-weight:700;font-size:13.5px;letter-spacing:.07em;line-height:1.5;white-space:nowrap}
+.rk-tag{flex:none;display:inline-block;padding:2px 9px;border:1px solid currentcolor;font-family:var(--font-cond);font-weight:700;font-size:13.5px;letter-spacing:.02em;line-height:1.5;white-space:nowrap}
 .rk-tag.is-red{color:var(--red);background:var(--red-bg)}
 .rk-tag.is-amber{color:var(--amber-ink);background:var(--amber-bg)}
 .rk-tag.is-sea{color:var(--sea);background:var(--sea-bg)}
@@ -74,7 +74,7 @@
 .rk-case-dl>div{display:contents}
 .rk-case-dl dt{color:var(--ink-3)}
 .rk-case-dl dd{margin:0;min-width:0}
-.rk-sec{margin:0 0 6px;font-family:var(--font-cond);font-weight:600;font-size:14px;letter-spacing:.08em;color:var(--ink-2)}
+.rk-sec{margin:0 0 6px;font-family:var(--font-cond);font-weight:600;font-size:14px;letter-spacing:.02em;color:var(--ink-2)}
 .rk-callbox{border:1px solid var(--rule);background:var(--surface)}
 .rk-callbox .rk-sec{margin:0;padding:8px 12px;border-bottom:1px solid var(--rule-2);background:var(--surface-2)}
 .rk-callbox ul{list-style:none;margin:0;padding:0}
@@ -107,7 +107,7 @@
 .rk-ferry-s,.rk-road-s{color:var(--ink-2);font-size:14.5px;line-height:1.45}
 .rk-road-t{font-size:16px;line-height:1.4}
 .rk-road-n{color:var(--ink-3);font-size:13.5px;line-height:1.4}
-.rk-alert{font-family:var(--font-cond);font-weight:700;font-size:14px;letter-spacing:.05em}
+.rk-alert{font-family:var(--font-cond);font-weight:700;font-size:14px;letter-spacing:.02em}
 .rk-alert.is-red{color:var(--red)}
 .rk-alert.is-amber{color:var(--amber-ink)}
 .rk-alert.is-go{color:var(--go)}
@@ -170,12 +170,12 @@
 .dtr-opt.is-none{background:var(--surface)}
 .dtr-oh{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 8px}
 .dtr-oh h4{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:700;color:var(--ink)}
-.dtr-fast{padding:1px 7px;border:1px solid var(--go);color:var(--go);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.dtr-fast{padding:1px 7px;border:1px solid var(--go);color:var(--go);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
 .dtr-big{margin:0;font-size:14.5px;font-weight:600;line-height:1.4;color:var(--ink)}
 .dtr-nums{margin:0;font-family:var(--font-cond);font-size:22px;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
 .dtr-nums b{font-weight:700}
 .dtr-eta{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
-.dtr-rh{margin:4px 0 0;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.dtr-rh{margin:4px 0 0;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .dtr-risks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
 .dtr-risks li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:7px;font-size:13.5px;line-height:1.45;color:var(--ink)}
 .dtr-risks li.is-ok{color:var(--ink-2)}

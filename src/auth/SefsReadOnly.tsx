@@ -8,6 +8,7 @@ import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import './auth.css';
+import { formatPlNumber } from '../lib/format';
 
 interface Row {
   version: number; valid_from: string; applies_to: 'COST' | 'REVENUE' | 'BOTH'; base_sek: number; base_pln: number;
@@ -41,8 +42,8 @@ export default function SefsReadOnly() {
           <div className="auth-admin-row" key={r.version} data-sefs-version={r.version} data-sefs-applies={r.applies_to}>
             <span className="grow">
               <b>{tp(locale, 'i13_ro_line', { v: String(r.version), d: r.valid_from })}</b> · {t(locale, `i13_${r.applies_to}`)} · {t(locale, r.cycle === 'WEEKLY' ? 'i2_baf_weekly' : 'i2_baf_monthly')}
-              <small> · SEK {Number(r.base_sek).toFixed(2)} ({r.index_sek}, <a href={r.source_url_sek} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>)
-                · PLN {Number(r.base_pln).toFixed(3)} ({r.index_pln}, <a href={r.source_url_pln} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>)
+              <small> · SEK {formatPlNumber(Number(r.base_sek), 2)} ({r.index_sek}, <a href={r.source_url_sek} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>)
+                · PLN {formatPlNumber(Number(r.base_pln), 3)} ({r.index_pln}, <a href={r.source_url_pln} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>)
                 {r.agreed_with_carrier ? ` · ${t(locale, 'i2_baf_agreed')}${r.agreement_ref ? ` (${r.agreement_ref})` : ''}` : ''}</small>
             </span>
           </div>

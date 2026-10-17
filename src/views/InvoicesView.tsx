@@ -24,7 +24,6 @@ import { useIsPhone } from '../lib/useIsPhone';
 import { docCategoryLabel } from '../lib/enumLabels';
 import { factoringTasksOf } from '../lib/p5Source';
 import { FactoringTaskCard } from '../components/invoices/Factoring';
-import { up } from '../components/options/up';
 import '../components/finance/finance.css';
 import '../components/invoices/invoices.css';
 
@@ -84,7 +83,7 @@ export function InvoicesView() {
               onClick={() => setTab(d)}
               onKeyDown={(e) => onTabKey(e, i)}
             >
-              {up(ft(locale, `p5_inv_tab_${d}`))}
+              {ft(locale, `p5_inv_tab_${d}`)}
             </button>
           ))}
         </div>

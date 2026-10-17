@@ -15,7 +15,6 @@ import { t } from '../../i18n/messages';
 import { formatListDateTime } from '../../lib/format';
 import { pushDevicesOf, type PushDevice, type PushTestResult } from '../../lib/pushDeviceSource';
 import { ackFresh, phaseAfterRefresh, phoneChecks, reasonKey, type PhoneEnv, type Platform, type TestPhase } from '../../lib/phoneCheck';
-import { up } from './up';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { useInstallState, type InstallState } from '../../lib/installPrompt';
 import { ft, type P6fKey } from '../../i18n/p6f';
@@ -233,17 +232,17 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
       <div className="ox-panel-bd">
         <p className="ox-panel-note ox-flush">{t(locale, 'dev_rule')}</p>
 
-        <span className="ox-eyebrow">{up(t(locale, 'dev_ios'))}</span>
+        <span className="ox-eyebrow">{t(locale, 'dev_ios')}</span>
         <ol className="ox-dev-steps">
           {['dev_ios_1', 'dev_ios_2', 'dev_ios_3', 'dev_ios_4'].map((k, i) => (
             <li key={k}><span className="ox-dev-n">{i + 1}</span><span>{t(locale, k)}</span></li>
           ))}
         </ol>
-        <span className="ox-eyebrow">{up(t(locale, 'dev_android'))}</span>
+        <span className="ox-eyebrow">{t(locale, 'dev_android')}</span>
         <ol className="ox-dev-steps">
           <li><span className="ox-dev-n">1</span><span>{t(locale, 'dev_android_1')}</span></li>
         </ol>
-        <span className="ox-eyebrow">{up(t(locale, 'dev_samsung'))}</span>
+        <span className="ox-eyebrow">{t(locale, 'dev_samsung')}</span>
         <ol className="ox-dev-steps" data-dev-samsung>
           {['dev_samsung_1', 'dev_samsung_2', 'dev_samsung_3'].map((k, i) => (
             <li key={k}><span className="ox-dev-n">{i + 1}</span><span>{t(locale, k)}</span></li>
@@ -251,7 +250,7 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
         </ol>
 
         <div className="ox-dev-app" data-dev-app={inst.state}>
-          <span className="ox-eyebrow">{up(ft('p6f_app'))}</span>
+          <span className="ox-eyebrow">{ft('p6f_app')}</span>
           <p className={`ox-dev-app-st${inst.state === 'app' || inst.state === 'installed' ? ' is-ok' : ''}`}>{ft(APP_TEXT[inst.state])}</p>
           {inst.install ? (
             <div className="ox-actions ox-actions-start">
@@ -263,13 +262,13 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
           {inst.state !== 'app' && !ios ? <p className="ox-foot" data-dev-samsung-install>{ft('p6f_samsung')}</p> : null}
         </div>
         <div className="ox-dev-chat" data-dev-chat>
-          <span className="ox-eyebrow">{up(ft('p6f_chat'))}</span>
+          <span className="ox-eyebrow">{ft('p6f_chat')}</span>
           <ul className="ox-dev-bul">
             {(['p6f_chat_1', 'p6f_chat_2', 'p6f_chat_3', 'p6f_chat_4', 'p6f_chat_5', 'p6f_chat_6'] as const).map((k) => <li key={k}>{ft(k)}</li>)}
           </ul>
         </div>
         <div className="ox-dev-here">
-          <span className="ox-eyebrow">{up(t(locale, 'dev_here'))}</span>
+          <span className="ox-eyebrow">{t(locale, 'dev_here')}</span>
           <div className="ox-actions ox-actions-start">
             <button type="button" className="btn ox-btn" data-dev-on disabled={!live || !wpReady || busy || iosBlock} onClick={() => turn(true)}>{t(locale, 'dev_on')}</button>
             <button type="button" className="btn ghost ox-btn" data-dev-off disabled={!live || !wpReady || busy} onClick={() => turn(false)}>{t(locale, 'dev_off')}</button>
@@ -278,7 +277,7 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
         </div>
 
         <div className="ox-dev-check" data-dev-check>
-          <span className="ox-eyebrow">{up(t(locale, 'dev_check'))}</span>
+          <span className="ox-eyebrow">{t(locale, 'dev_check')}</span>
           <ul className="ox-dev-ck">
             {checks.map((c) => (
               <li key={c.key} data-check={c.key} data-state={c.state}>
@@ -297,7 +296,7 @@ export function DeviceScreen({ locale }: { locale: Locale }) {
 
         {src && devices ? (
           <div className="ox-dev-list">
-            <span className="ox-eyebrow">{up(t(locale, 'dev_mine'))}</span>
+            <span className="ox-eyebrow">{t(locale, 'dev_mine')}</span>
             {devices.length === 0 ? <p className="ox-foot">{t(locale, 'dev_none')}</p> : (
               <ul className="ox-list ox-dev-ul">
                 {devices.map((d) => {

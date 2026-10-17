@@ -14,7 +14,6 @@ import {
 import type { RulesSource } from '../../lib/p8dSource';
 import type { LoadStatus } from '../../types';
 import { p8dt, type P8dKey } from '../../i18n/p8d';
-import { up } from '../options/up';
 import { statusName } from './ruleText';
 
 const WHEN_KINDS: RuleWhen['kind'][] = ['zone', 'status', 'issue', 'daily'];
@@ -142,14 +141,14 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
       </header>
       <div className="rl-c-bd">
         <div className="rl-f">
-          <label htmlFor={`${id}-name`}>{up(p8dt('p8d_c_name'))}</label>
+          <label htmlFor={`${id}-name`}>{p8dt('p8d_c_name')}</label>
           <input ref={reg('name')} id={`${id}-name`} className="input" value={draft.name} maxLength={120} placeholder={p8dt('p8d_c_name_ph')} {...desc('name')}
             onChange={(e) => { patch({ name: e.target.value }); setErrs((x) => x.filter((k) => k !== 'name')); }} data-rule-f="name" />
           {err('name')}
         </div>
 
         <div className="rl-f" role="group" aria-labelledby={`${id}-when`}>
-          <span className="rl-lbl" id={`${id}-when`}>{up(p8dt('p8d_c_when'))}</span>
+          <span className="rl-lbl" id={`${id}-when`}>{p8dt('p8d_c_when')}</span>
           <div className="rl-seg">
             {WHEN_KINDS.map((k) => (
               <button key={k} type="button" className="rl-opt" aria-pressed={w.kind === k} onClick={() => { if (w.kind !== k) setWhen(whenOf(k, zones.find((z) => z.type === 'SITE')?.id ?? zones[0]?.id ?? '')); }} data-rule-when={k}>
@@ -162,7 +161,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
         {w.kind === 'zone' ? (
           <div className="rl-row2">
             <div className="rl-f">
-              <label htmlFor={`${id}-zone`}>{up(p8dt('p8d_c_zone'))}</label>
+              <label htmlFor={`${id}-zone`}>{p8dt('p8d_c_zone')}</label>
               <select ref={reg('zone')} id={`${id}-zone`} className="input" value={w.zoneId} {...desc('zone')} onChange={(e) => setWhen({ ...w, zoneId: e.target.value })} data-rule-f="zone">
                 {!w.zoneId ? <option value="">{p8dt('p8d_c_zone_pick')}</option> : null}
                 {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
@@ -170,7 +169,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
               {err('zone')}
             </div>
             <div className="rl-f">
-              <label htmlFor={`${id}-min`}>{up(p8dt('p8d_c_longer'))}</label>
+              <label htmlFor={`${id}-min`}>{p8dt('p8d_c_longer')}</label>
               <select id={`${id}-min`} className="input" value={w.minutes} onChange={(e) => setWhen({ ...w, minutes: Number(e.target.value) })} data-rule-f="minutes">
                 {DWELL_STEPS.map((m) => <option key={m} value={m}>{durText(m)}</option>)}
               </select>
@@ -178,14 +177,14 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
           </div>
         ) : w.kind === 'status' ? (
           <div className="rl-f">
-            <label htmlFor={`${id}-st`}>{up(p8dt('p8d_c_status'))}</label>
+            <label htmlFor={`${id}-st`}>{p8dt('p8d_c_status')}</label>
             <select id={`${id}-st`} className="input" value={w.status} onChange={(e) => setWhen({ kind: 'status', status: e.target.value as LoadStatus | 'ANY' })} data-rule-f="status">
               {RULE_STATUSES.map((s) => <option key={s} value={s}>{statusName(s)}</option>)}
             </select>
           </div>
         ) : w.kind === 'issue' ? (
           <div className="rl-f">
-            <label htmlFor={`${id}-is`}>{up(p8dt('p8d_c_issue'))}</label>
+            <label htmlFor={`${id}-is`}>{p8dt('p8d_c_issue')}</label>
             <select id={`${id}-is`} className="input" value={w.issue} onChange={(e) => setWhen({ kind: 'issue', issue: e.target.value as typeof w.issue })} data-rule-f="issue">
               {ISSUE_KINDS.map((k) => <option key={k} value={k}>{p8dt(`p8d_i_${k}` as P8dKey)}</option>)}
             </select>
@@ -193,14 +192,14 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
         ) : (
           <div className="rl-row2">
             <div className="rl-f">
-              <label htmlFor={`${id}-dc`}>{up(p8dt('p8d_c_check'))}</label>
+              <label htmlFor={`${id}-dc`}>{p8dt('p8d_c_check')}</label>
               <select id={`${id}-dc`} className="input" value={w.check} onChange={(e) => setWhen({ ...w, check: e.target.value as typeof w.check })} data-rule-f="check">
                 {DAILY_CHECKS.map((c) => <option key={c} value={c}>{p8dt(`p8d_dc_${c}` as P8dKey, { h: '…' }).replace(' w ciągu …', '')}</option>)}
               </select>
             </div>
             {w.check !== 'DATES_UNCONFIRMED' ? (
               <div className="rl-f">
-                <label htmlFor={`${id}-h`}>{up(p8dt('p8d_c_within'))}</label>
+                <label htmlFor={`${id}-h`}>{p8dt('p8d_c_within')}</label>
                 <select id={`${id}-h`} className="input" value={w.hours} onChange={(e) => setWhen({ ...w, hours: Number(e.target.value) })} data-rule-f="hours">
                   {WITHIN_STEPS.map((h) => <option key={h} value={h}>{durText(h * 60)}</option>)}
                 </select>
@@ -210,7 +209,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
         )}
 
         <div className="rl-f" role="group" aria-labelledby={`${id}-then`} aria-describedby={errs.includes('then') ? `${id}-then-err` : undefined}>
-          <span className="rl-lbl" id={`${id}-then`}>{up(p8dt('p8d_c_then'))}</span>
+          <span className="rl-lbl" id={`${id}-then`}>{p8dt('p8d_c_then')}</span>
           <div className="rl-seg is-wrap">
             {WHO.map((x, i) => (
               <button key={x} ref={i === 0 ? reg('then') : undefined} type="button" className="rl-opt" aria-pressed={th.notify.includes(x)} onClick={() => toggleWho(x)} data-rule-then={`notify-${x}`}>
@@ -229,7 +228,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
           {err('email')}
           {th.todo ? (
             <div className="rl-f rl-inline">
-              <label htmlFor={`${id}-todo`}>{up(p8dt('p8d_c_todo_who'))}</label>
+              <label htmlFor={`${id}-todo`}>{p8dt('p8d_c_todo_who')}</label>
               <select id={`${id}-todo`} className="input" value={th.todo} onChange={(e) => setThen({ todo: e.target.value as Who })} data-rule-f="todo">
                 {WHO.map((x) => <option key={x} value={x}>{p8dt(`p8d_w_${x}` as P8dKey)}</option>)}
               </select>
@@ -243,7 +242,7 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
 
         {editing ? (
           <div className="rl-f">
-            <label htmlFor={`${id}-reason`}>{up(p8dt('p8d_c_reason'))}</label>
+            <label htmlFor={`${id}-reason`}>{p8dt('p8d_c_reason')}</label>
             <input ref={reg('reason')} id={`${id}-reason`} className="input" value={reason} placeholder={p8dt('p8d_c_reason_ph')} {...desc('reason')}
               onChange={(e) => { setReason(e.target.value); setErrs((x) => x.filter((k) => k !== 'reason')); }} data-rule-f="reason" />
             {err('reason')}

@@ -24,10 +24,10 @@ import { zonesOf, type NearPos, type ZoneDraft, type ZonesSource } from '../lib/
 import { geofenceTypeLabel } from '../lib/enumLabels';
 import type { GeofenceType } from '../types';
 import { p8ct, type P8cKey } from '../i18n/p8c';
-import { up } from '../components/options/up';
 import '../components/zones/zones.css';
+import { lazyRetry } from '../lib/lazyRetry';
 
-const ZonesMap = lazy(() => import('../components/zones/ZonesMap'));
+const ZonesMap = lazy(lazyRetry(() => import('../components/zones/ZonesMap')));
 
 type Circle = { lat: number; lng: number; radiusM: number };
 type Pos = { code: string; lat: number; lng: number };
@@ -149,7 +149,7 @@ export function ZonesView() {
     <div className="zv-list">
       {groups.map(({ group, zones: zs }) => (
         <section key={group} className="zv-grp" aria-labelledby={`zv-g-${group}`}>
-          <h3 className="zv-grp-h" id={`zv-g-${group}`}>{up(p8ct(`p8c_g_${group}` as P8cKey))}</h3>
+          <h3 className="zv-grp-h" id={`zv-g-${group}`}>{p8ct(`p8c_g_${group}` as P8cKey)}</h3>
           <ul>
             {zs.map((z) => (
               <li key={z.id}>
@@ -378,8 +378,8 @@ function ZoneCard({ zone, tracked, canEdit, phone, reveal, autoFocus, onBack, sr
       <header className="zv-card-hd">
         {onBack ? <button type="button" className="zv-back" aria-label={p8ct('p8c_back')} onClick={onBack}>‹</button> : null}
         <h3 id={hid} ref={titleRef} tabIndex={-1}>{zone.name}</h3>
-        <span className="zv-kind">{up(geofenceTypeLabel(zone.type))}</span>
-        {!zone.active ? <span className="zv-kind is-off">{up(p8ct('p8c_off'))}</span> : null}
+        <span className="zv-kind">{geofenceTypeLabel(zone.type)}</span>
+        {!zone.active ? <span className="zv-kind is-off">{p8ct('p8c_off')}</span> : null}
         <span className="zv-meta">{zone.last ? `${meta} · ${p8ct('p8c_card_last', { t: lastText(zone) })}` : meta}</span>
         {canEdit ? (
           <span className="zv-acts">
@@ -629,7 +629,7 @@ function ZoneForm({ zone, tracked, near, phone, reveal, onCancel, onSave }: {
         {field('hyst', p8ct('p8c_f_hyst'), { value: hyst, set: setHyst, mode: 'numeric' })}
         {field('samples', p8ct('p8c_f_samples'), { value: samples, set: setSamples, mode: 'numeric' })}
         {field('dwell', p8ct('p8c_f_dwell'), { value: dwell, set: setDwell, mode: 'numeric' })}
-        {field('reason', up(p8ct('p8c_f_reason')), { value: reason, set: setReason, ph: p8ct('p8c_f_reason_ph') }, ' zv-wide zv-reason')}
+        {field('reason', p8ct('p8c_f_reason'), { value: reason, set: setReason, ph: p8ct('p8c_f_reason_ph') }, ' zv-wide zv-reason')}
       </div>
 
       {zone ? (

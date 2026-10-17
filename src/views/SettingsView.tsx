@@ -1,7 +1,8 @@
 /**
  * Ustawienia (KSH, SCX) — wyglad/P3-c: ten sam układ co Opcje HHL (E11, E12 pkt 1: KSH i SCX tylko „Dla mnie”).
- * Ekrany: Moje konto (E37, E6), Co dostaję (E11), Wygląd i waluta, Instrukcja; na produkcji także
- * Pieniądze › Opłata paliwowa tylko do odczytu (I-13; pełny ekran E39 — P5).
+ * Ekrany: Moje konto (E37, E6), Co dostaję (E11), Wygląd i waluta, Instrukcja oraz
+ * Pieniądze › Opłata paliwowa tylko do odczytu (I-13; decyzja właściciela 17.10.2026, 07:20 — 5B: KSH i SCX widzą ją
+ * tylko do odczytu, w demo i na produkcji; zmienia E12 pkt 1). Produkcja — `SefsReadOnly`, demo — ekran E39 bez zapisu.
  */
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
@@ -17,11 +18,18 @@ import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
+import { fuelScreenOf } from '../lib/p5bSource';
+import { getNowIso } from '../lib/frozenNow';
+import { localDateOf } from '../lib/money/engine';
+import { lazyRetry } from '../lib/lazyRetry';
 
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
-const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/SefsReadOnly')) : null;
+const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SefsReadOnly'))) : null;
 /** D-20261014-0700-01 J3 pkt 1: Moje konto KSH/SCX (Podgląd = tylko odczyt w LiveAccountScreen). */
-const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('../auth/LiveAccountScreen')) : null;
+const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
+
+/* 5B (17.10): demo — ten sam ekran „Opłata paliwowa” co w Opcjach HHL, tylko do odczytu */
+const FuelScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.FuelScreen }))));
 
 function block(el: ReactNode) {
   return <Suspense fallback={null}>{el}</Suspense>;
@@ -76,8 +84,10 @@ export function SettingsView() {
   /* wyglad/P10b-b (E37 pkt 3): „Instrukcja” znika z Opcji i Ustawień — zastępuje ją Pomoc („?”, menu konta) */
 
   const groups: OptGroup[] = [];
-  if (SefsReadOnly && (role === 'KSH' || role === 'SCX')) {
-    groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
+  const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()));
+  if (role === 'KSH' || role === 'SCX') {
+    if (SefsReadOnly) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
+    else if (fuelDemo) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<FuelScreen locale={locale} view={fuelDemo} actions={null} readOnly />) }] });
   }
   groups.push({ id: 'forme', screens: forme, summary: demo?.summaries.forme?.text });
 

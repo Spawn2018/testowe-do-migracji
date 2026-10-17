@@ -37,7 +37,7 @@ describe('I-4 treść', () => {
 });
 
 describe('I-4 osadzenie', () => {
-  const lazyRe = /const Guide = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(\(\) => import\('\.\.\/components\/guide\/Guide'\)\) : null;/;
+  const lazyRe = /const Guide = import\.meta\.env\.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED \? lazy\(lazyRetry\(\(\) => import\('\.\.\/components\/guide\/Guide'\)\)\) : null;/;
   /* wyglad/P10b-b (E37 pkt 3, P10b „Testy do przepisania: i4-guide”): Instrukcja tylko w PWA kierowcy;
      w Opcjach i Ustawieniach zastępuje ją Pomoc („Jak pracuję” w 5 wersjach) — tests/help-content.test.ts */
   it('PWA kierowcy — leniwie, tylko build produkcyjny; Opcje i Ustawienia bez Instrukcji', () => {

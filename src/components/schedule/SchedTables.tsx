@@ -48,8 +48,9 @@ function Pair({ a, b, swap, mono, locale }: { a: string | null | undefined; b: s
   if (!p.a && !p.b && !p.missingB) return dash;
   return (
     <span className={mono ? 'mono' : undefined} data-content>
-      {p.a ?? <Q locale={locale} />}
-      {swap ? <> → {p.b ?? <Q locale={locale} />}</> : null}
+      {/* audyt 17.10 (E20): przy przepięciu wiersz łamie się tylko przy „→”, nie w środku nazwiska ani numeru */}
+      <span className="s7-nw">{p.a ?? <Q locale={locale} />}</span>
+      {swap ? <> → <span className="s7-nw">{p.b ?? <Q locale={locale} />}</span></> : null}
     </span>
   );
 }
@@ -138,7 +139,7 @@ function Code({ l, locale }: { l: Load; locale: Locale }) {
   return (
     <>
       <span className="code" data-content>{l.code}</span>
-      {l.renumberedFrom ? <span className="mtag s7-renum" title={s7p(locale, 's7_renum_tip', { code: l.renumberedFrom })}>{s7(locale, 's7_renum').toLocaleUpperCase('pl')}</span> : null}
+      {l.renumberedFrom ? <span className="mtag s7-renum" title={s7p(locale, 's7_renum_tip', { code: l.renumberedFrom })}>{s7(locale, 's7_renum')}</span> : null}
     </>
   );
 }
@@ -242,8 +243,8 @@ function shortCell(id: string, l: Load, ctx: SchedRowCtx): ReactNode {
       return (
         <span className="s7-tr">
           <span className="code" data-content>{l.code}</span>{rest ? <span className="mono s7-trno" data-content>{rest}</span> : null}
-          {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad" data-no-hhl>{s7(L, 's7_no_hhl').toLocaleUpperCase('pl')}</span> : null}
-          {l.renumberedFrom ? <span className="mtag s7-renum" title={s7p(L, 's7_renum_tip', { code: l.renumberedFrom })}>{s7(L, 's7_renum').toLocaleUpperCase('pl')}</span> : null}
+          {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad" data-no-hhl>{s7(L, 's7_no_hhl')}</span> : null}
+          {l.renumberedFrom ? <span className="mtag s7-renum" title={s7p(L, 's7_renum_tip', { code: l.renumberedFrom })}>{s7(L, 's7_renum')}</span> : null}
         </span>
       );
     }
@@ -343,7 +344,7 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
               <span className="code" data-content>{transportLabel(l, ctx.role, 'schedule')}</span>
               <StatusPill status={l.status} stage={l.stage} />
               <StatusMarkers load={l} delayMin={ctx.delayOf(l)} />
-              {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad">{s7(L, 's7_no_hhl').toLocaleUpperCase('pl')}</span> : null}
+              {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad">{s7(L, 's7_no_hhl')}</span> : null}
             </div>
             <div className="meta" data-content>
               {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {dmy(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {dmy(l.plannedDeliverDate)}

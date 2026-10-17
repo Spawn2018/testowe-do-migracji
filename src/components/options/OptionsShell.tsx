@@ -9,7 +9,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { DESC_KEY, GROUP_KEY, RIGHT_KEY, SCREEN_KEY, type OptGroup, type OptGroupId, type OptScreen, type OptScreenId } from './types';
-import { up } from './up';
 import './options.css';
 
 const PHONE_MQ = '(max-width: 768px)';
@@ -179,7 +178,7 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
         </div>
         {groups.map((g) => (
           <section key={g.id} className="ox-side-group" data-opt-group={g.id}>
-            <h2>{up(t(locale, GROUP_KEY[g.id]))}</h2>
+            <h2>{t(locale, GROUP_KEY[g.id])}</h2>
             <ul>
               {g.screens.map((s) => (
                 <li key={s.id}>
@@ -215,7 +214,7 @@ function ScreenFrame({ locale, root, group, screen, phone = false }: { locale: L
           {phone ? null : <h2>{t(locale, SCREEN_KEY[screen.id])}</h2>}
           <span className="ox-crumb">{t(locale, GROUP_KEY[group]) === root ? root : t(locale, 'p3c_crumb').replace('{root}', root).replace('{group}', t(locale, GROUP_KEY[group]))}</span>
           {screen.mark}
-          {screen.right ? <span className="ox-right" data-opt-right={screen.right}>{up(t(locale, RIGHT_KEY[screen.right]))}</span> : null}
+          {screen.right ? <span className="ox-right" data-opt-right={screen.right}>{t(locale, RIGHT_KEY[screen.right])}</span> : null}
         </div>
         <p>{t(locale, DESC_KEY[screen.id])}</p>
       </header>

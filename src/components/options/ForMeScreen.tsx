@@ -4,7 +4,6 @@ import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import type { AccountKind } from './types';
 import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixGroup } from './channels';
-import { up } from './up';
 import type { MyNotifyPrefs } from '../../lib/forMeSource';
 
 type Props = {
@@ -62,7 +61,7 @@ export function ForMeScreen({ locale, kind, groups, mark, prefs, onSave }: Props
           if (!rows.length) return null;
           return (
             <div key={g.id} className="ox-forme-group">
-              <h4 data-content>{up(g.title)}</h4>
+              <h4 data-content>{g.title}</h4>
               <ul className="ox-list">
                 {rows.map((r) => {
                   const cell = r.cells[kind]!;

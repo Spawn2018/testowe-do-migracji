@@ -7,7 +7,7 @@
 .ph-chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .ph-chip:focus-visible,.ch-seg button:focus-visible,.ch-log:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .ph-days{display:flex;flex-direction:column}
-.ph-day-hd{margin:0;padding:8px 15px 7px;background:var(--surface-2);border-bottom:1px solid var(--rule-2);font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-2)}
+.ph-day-hd{margin:0;padding:8px 15px 7px;background:var(--surface-2);border-bottom:1px solid var(--rule-2);font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
 .ph-day + .ph-day .ph-day-hd{border-top:1px solid var(--rule)}
 .ph-list{list-style:none;margin:0;padding:0 15px}
 .ph-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 6px;padding:10px 0;border-bottom:1px solid var(--rule-2)}
@@ -17,7 +17,7 @@
 .ph-what{font-size:15px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
 .ph-what s{color:var(--ink-3)}
 .ph-what b{font-weight:600}
-.ph-tag{display:inline-block;margin-right:6px;padding:0 5px;border:1px solid currentColor;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.06em;line-height:1.4;vertical-align:1px;color:var(--ink-3)}
+.ph-tag{display:inline-block;margin-right:6px;padding:0 5px;border:1px solid currentColor;font-family:var(--font-cond);font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1.4;vertical-align:1px;color:var(--ink-3)}
 .ph-tag.t-status,.ph-tag.t-trasa{color:var(--go)}
 .ph-tag.t-zasoby,.ph-tag.t-cena{color:var(--amber-ink)}
 .ph-tag.t-numer,.ph-tag.t-dokument,.ph-tag.t-plan{color:var(--sea)}
@@ -30,7 +30,7 @@
 .ch{flex:1;min-height:0;display:flex;flex-direction:column}
 .ch-log{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 15px 16px;background:var(--surface-2)}
 .ch-day{display:flex;flex-direction:column;gap:10px}
-.ch-day-hd{align-self:center;margin:4px 0 0;font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-2)}
+.ch-day-hd{align-self:center;margin:4px 0 0;font-family:var(--font-cond);font-size:13.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
 .ch-msg{align-self:flex-start;display:flex;flex-direction:column;gap:3px;max-width:80%;min-width:0;padding:9px 13px;background:var(--surface);border:1px solid var(--rule)}
 .ch-msg.is-me{align-self:flex-end;background:var(--sea-bg);border-color:var(--rule)}
 .ch-msg.is-me .ch-who{color:var(--ink-2)}

@@ -336,7 +336,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
                 <span className="rk-card-t">{rtn(locale, 'p6_more', rest)}</span>
                 <span className="rk-card-s">{rt(locale, 'p6_more_sub')}</span>
               </span>
-              <span className="rk-tag is-plain">{rt(locale, 'p6_expand').toUpperCase()}</span>
+              <span className="rk-tag is-plain">{rt(locale, 'p6_expand')}</span>
             </button>
           ) : null}
         </div>

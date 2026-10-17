@@ -7,7 +7,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { up } from './up';
 import { m2 } from '../../i18n/mfa2';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
 import { IcoCall } from './icons';
@@ -91,17 +90,17 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
       </div>
 
       <table className="ox-table ox-cards-phone ox-people" data-opt-table="people">
-        <thead><tr><th>{up(t(locale, 'p3c_u_person'))}</th><th>{up(t(locale, 'p3c_u_kind'))}</th><th>{up(t(locale, 'p3c_u_tel'))}</th><th>{up(t(locale, 'p3c_u_last'))}</th><th>{up(t(locale, 'p3c_u_2fa'))}</th><th><span className="sronly">{t(locale, 'p3c_u_call').replace(/:?\s*\{name\}/, '')}</span></th></tr></thead>
+        <thead><tr><th>{t(locale, 'p3c_u_person')}</th><th>{t(locale, 'p3c_u_kind')}</th><th>{t(locale, 'p3c_u_tel')}</th><th>{t(locale, 'p3c_u_last')}</th><th>{t(locale, 'p3c_u_2fa')}</th><th><span className="sronly">{t(locale, 'p3c_u_call').replace(/:?\s*\{name\}/, '')}</span></th></tr></thead>
         {firms.map(({ f, rows }) => (
           <tbody key={f}>
-            <tr className="ox-firm-row"><th colSpan={6} scope="colgroup">{up(FIRM_NAME[f])}</th></tr>
+            <tr className="ox-firm-row"><th colSpan={6} scope="colgroup">{FIRM_NAME[f]}</th></tr>
             {rows.flatMap((p) => [
               <tr key={p.id} data-person={p.id} className={p.active === false ? 'is-off' : undefined}>
-                <th scope="row" data-label={up(t(locale, 'p3c_u_person'))}><b data-content>{p.name}</b><span className="ox-sub" data-content>{p.mail}</span></th>
-                <td data-label={up(t(locale, 'p3c_u_kind'))}>{t(locale, `p3c_kind_${p.kind}`)}</td>
-                <td data-label={up(t(locale, 'p3c_u_tel'))} className="ox-nowrap">{p.phone ? <span data-content>{p.phone}</span> : <span className="ox-alert">{t(locale, 'p3c_u_no_phone')}</span>}</td>
-                <td data-label={up(t(locale, 'p3c_u_last'))} data-content>{p.last ?? '—'}</td>
-                <td data-label={up(t(locale, 'p3c_u_2fa'))} className={p.mfa ? 'ox-go' : undefined}>{t(locale, p.mfa ? 'p3c_yes' : 'p3c_no')}</td>
+                <th scope="row" data-label={t(locale, 'p3c_u_person')}><b data-content>{p.name}</b><span className="ox-sub" data-content>{p.mail}</span></th>
+                <td data-label={t(locale, 'p3c_u_kind')}>{t(locale, `p3c_kind_${p.kind}`)}</td>
+                <td data-label={t(locale, 'p3c_u_tel')} className="ox-nowrap">{p.phone ? <span data-content>{p.phone}</span> : <span className="ox-alert">{t(locale, 'p3c_u_no_phone')}</span>}</td>
+                <td data-label={t(locale, 'p3c_u_last')} data-content>{p.last ?? '—'}</td>
+                <td data-label={t(locale, 'p3c_u_2fa')} className={p.mfa ? 'ox-go' : undefined}>{t(locale, p.mfa ? 'p3c_yes' : 'p3c_no')}</td>
                 <td className="ox-call-cell">
                   <span className="ox-row-act">
                     {p.phone ? <a className="ox-callbtn" href={telHref(p.phone)} aria-label={t(locale, 'p3c_u_call').replace('{name}', p.name)}><IcoCall /></a> : null}
@@ -138,7 +137,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
                   <span data-content>{iv.line}</span>
                 </span>
                 <span className="ox-invite-act">
-                  <span className={`ox-tag ox-tag-${iv.status}`}>{up(t(locale, STATUS_KEY[iv.status]))}</span>
+                  <span className={`ox-tag ox-tag-${iv.status}`}>{t(locale, STATUS_KEY[iv.status])}</span>
                   {readOnly ? null : STATUS_ACTIONS[iv.status].map((a) => (
                     <button key={a} type="button" className="btn ghost ox-btn" onClick={() => onAction?.(iv.id, a)}>{t(locale, a)}</button>
                   ))}
@@ -158,7 +157,7 @@ function PersonActions({ locale, p, onPerson }: { locale: Locale; p: PersonRow; 
   return (
     <div className="ox-person-panel" data-person-actions={p.id}>
       <label className="ox-field ox-field-inline">
-        <span>{up(t(locale, 'p3c_u_kind'))}</span>
+        <span>{t(locale, 'p3c_u_kind')}</span>
         <select className="input" value={kind} disabled={p.self} onChange={(e) => setKind(e.target.value as AccountKind)}>
           {ACCOUNT_KINDS.map((k) => <option key={k} value={k}>{t(locale, `p3c_role_${k}`)}</option>)}
         </select>
@@ -180,14 +179,14 @@ function InviteForm({ locale, onInvite }: { locale: Locale; onInvite?: (v: { fir
       <header className="ox-panel-hd"><h3>{t(locale, 'p3c_inv_title')}</h3></header>
       <div className="ox-panel-bd">
         <div className="ox-grid2">
-          <label className="ox-field"><span>{up(t(locale, 'p3c_inv_first'))}</span><input className="input" autoComplete="off" value={v.first} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
-          <label className="ox-field"><span>{up(t(locale, 'p3c_inv_last'))}</span><input className="input" autoComplete="off" value={v.last} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
-          <label className="ox-field"><span>{up(t(locale, 'p3c_inv_phone'))}</span><input className="input" inputMode="tel" placeholder="+48" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} /></label>
-          <label className="ox-field"><span>{up(t(locale, 'p3c_inv_mail'))}</span><input className="input" type="email" autoComplete="off" value={v.mail} onChange={(e) => setV({ ...v, mail: e.target.value })} /></label>
+          <label className="ox-field"><span>{t(locale, 'p3c_inv_first')}</span><input className="input" autoComplete="off" value={v.first} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
+          <label className="ox-field"><span>{t(locale, 'p3c_inv_last')}</span><input className="input" autoComplete="off" value={v.last} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
+          <label className="ox-field"><span>{t(locale, 'p3c_inv_phone')}</span><input className="input" inputMode="tel" placeholder="+48" value={v.phone} onChange={(e) => setV({ ...v, phone: e.target.value })} /></label>
+          <label className="ox-field"><span>{t(locale, 'p3c_inv_mail')}</span><input className="input" type="email" autoComplete="off" value={v.mail} onChange={(e) => setV({ ...v, mail: e.target.value })} /></label>
         </div>
         <small className="ox-muted">{t(locale, 'p3c_inv_phone_fmt')}</small>
         <div className="ox-field">
-          <span>{up(t(locale, 'p3c_inv_kind'))}</span>
+          <span>{t(locale, 'p3c_inv_kind')}</span>
           <div className="ox-seg ox-seg-wrap" role="radiogroup" aria-label={t(locale, 'p3c_inv_kind')}>
             {ACCOUNT_KINDS.map((k) => (
               <button key={k} type="button" role="radio" aria-checked={v.kind === k} onClick={() => setV({ ...v, kind: k })}>{t(locale, `p3c_role_${k}`).replace(' · ', ' ')}</button>
@@ -213,14 +212,14 @@ export function LoginsScreen({ locale, rows, mark }: { locale: Locale; rows: Log
     <div className="ox-logins">
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <table className="ox-table ox-cards-phone" data-opt-table="logins">
-        <thead><tr><th>{up(t(locale, 'p3c_l_when'))}</th><th>{up(t(locale, 'p3c_l_who'))}</th><th>{up(t(locale, 'p3c_l_result'))}</th><th>{up(t(locale, 'p3c_l_where'))}</th></tr></thead>
+        <thead><tr><th>{t(locale, 'p3c_l_when')}</th><th>{t(locale, 'p3c_l_who')}</th><th>{t(locale, 'p3c_l_result')}</th><th>{t(locale, 'p3c_l_where')}</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id}>
-              <th scope="row" data-label={up(t(locale, 'p3c_l_when'))} className="ox-nowrap" data-content>{r.when}</th>
-              <td data-label={up(t(locale, 'p3c_l_who'))}><b data-content>{r.who}</b>{r.kind ? <span className="ox-sub">{t(locale, `p3c_role_${r.kind}`)}</span> : null}</td>
-              <td data-label={up(t(locale, 'p3c_l_result'))} className={r.ok ? 'ox-go' : 'ox-alert'}>{t(locale, r.ok ? 'p3c_l_ok' : 'p3c_l_fail')}</td>
-              <td data-label={up(t(locale, 'p3c_l_where'))} data-content>{r.where}</td>
+              <th scope="row" data-label={t(locale, 'p3c_l_when')} className="ox-nowrap" data-content>{r.when}</th>
+              <td data-label={t(locale, 'p3c_l_who')}><b data-content>{r.who}</b>{r.kind ? <span className="ox-sub">{t(locale, `p3c_role_${r.kind}`)}</span> : null}</td>
+              <td data-label={t(locale, 'p3c_l_result')} className={r.ok ? 'ox-go' : 'ox-alert'}>{t(locale, r.ok ? 'p3c_l_ok' : 'p3c_l_fail')}</td>
+              <td data-label={t(locale, 'p3c_l_where')} data-content>{r.where}</td>
             </tr>
           ))}
         </tbody>
@@ -248,23 +247,23 @@ export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPubl
     <div className="ox-bcast">
       <section className="ox-panel">
         <div className="ox-panel-bd">
-          <label className="ox-field"><span>{up(t(locale, 'p3c_b_text'))}</span>
+          <label className="ox-field"><span>{t(locale, 'p3c_b_text')}</span>
             <textarea className="input" maxLength={500} rows={3} value={v.text} readOnly={readOnly} onChange={(e) => setV({ ...v, text: e.target.value })} />
           </label>
           <div className="ox-count-line"><small className="ox-muted">{t(locale, 'p3c_b_chars').replace('{n}', String(v.text.length))}</small>{mark}</div>
           <div className="ox-grid2">
             <div className="ox-field">
-              <span>{up(t(locale, 'p3c_b_for'))}</span>
+              <span>{t(locale, 'p3c_b_for')}</span>
               <div className="ox-seg" role="group" aria-label={t(locale, 'p3c_b_for')}>
                 {(['HHL', 'KSH', 'SCX'] as const).map((f) => (
                   <button key={f} type="button" aria-pressed={v.firms.includes(f)} disabled={readOnly} onClick={() => toggle(f)}>{f}</button>
                 ))}
               </div>
             </div>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_b_until'))}</span><input className="input" type="datetime-local" value={v.until} readOnly={readOnly} onChange={(e) => setV({ ...v, until: e.target.value })} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_b_until')}</span><input className="input" type="datetime-local" value={v.until} readOnly={readOnly} onChange={(e) => setV({ ...v, until: e.target.value })} /></label>
           </div>
           <div className="ox-field">
-            <span>{up(t(locale, 'p3c_b_how'))}</span>
+            <span>{t(locale, 'p3c_b_how')}</span>
             <div className="ox-seg"><button type="button" aria-pressed="true" disabled>{t(locale, 'p3c_b_banner')}</button></div>
           </div>
           {readOnly ? null : (
@@ -334,10 +333,10 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
         <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_data')}</h3></header>
         <div className="ox-panel-bd">
           <div className="ox-grid2">
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_first'))}</span><input className="input" value={v.first} readOnly={ro} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_last'))}</span><input className="input" value={v.last} readOnly={ro} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_phone'))}</span><input className={`input${v.phone.trim() ? '' : ' is-invalid'}`} inputMode="tel" placeholder="+48" value={v.phone} readOnly={ro} onChange={(e) => setV({ ...v, phone: e.target.value })} /><small className="ox-muted">{t(locale, 'p3c_m_phone_note')}</small></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_m_mail'))}</span><input className="input" value={me.mail} readOnly /><small className="ox-muted">{t(locale, 'p3c_m_mail_note')}</small></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_m_first')}</span><input className="input" value={v.first} readOnly={ro} onChange={(e) => setV({ ...v, first: e.target.value })} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_m_last')}</span><input className="input" value={v.last} readOnly={ro} onChange={(e) => setV({ ...v, last: e.target.value })} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_m_phone')}</span><input className={`input${v.phone.trim() ? '' : ' is-invalid'}`} inputMode="tel" placeholder="+48" value={v.phone} readOnly={ro} onChange={(e) => setV({ ...v, phone: e.target.value })} /><small className="ox-muted">{t(locale, 'p3c_m_phone_note')}</small></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_m_mail')}</span><input className="input" value={me.mail} readOnly /><small className="ox-muted">{t(locale, 'p3c_m_mail_note')}</small></label>
           </div>
           <div className="ox-actions"><button type="button" className="btn ox-btn" disabled={ro} onClick={() => onSave?.(v)}>{t(locale, 'p3c_m_save')}</button></div>
           {ro ? <p className="ox-foot" data-acc-preview>{m2('m2_preview')}</p> : null}
@@ -352,13 +351,13 @@ export function AccountScreen({ locale, me, mfa, devices, mark, onSave, onPasswo
           </div>
         </section>
         <section className="ox-panel">
-          <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_2fa')}</h3><span className={`ox-tag ${mfa ? 'ox-tag-active' : 'ox-tag-plain'}`}>{up(t(locale, mfa ? 'p3c_m_2fa_on' : 'p3c_m_2fa_off'))}</span></header>
+          <header className="ox-panel-hd"><h3>{t(locale, 'p3c_m_2fa')}</h3><span className={`ox-tag ${mfa ? 'ox-tag-active' : 'ox-tag-plain'}`}>{t(locale, mfa ? 'p3c_m_2fa_on' : 'p3c_m_2fa_off')}</span></header>
           <div className="ox-panel-bd">
             <p className="ox-panel-note ox-flush">{t(locale, 'p3c_m_2fa_note')}</p>
             {mfa ? null : <div className="ox-actions ox-actions-start"><button type="button" className="btn ghost ox-btn" disabled={ro} onClick={onMfa}>{t(locale, 'p3c_m_2fa_enable')}</button></div>}
             {mfa && mfaDevices ? (
               <div className="ox-mfa" data-mfa-devices={mfaDevices.length}>
-                <span className="ox-eyebrow">{up(m2('m2_devices'))}</span>
+                <span className="ox-eyebrow">{m2('m2_devices')}</span>
                 <ul className="ox-mfa-list">
                   {mfaDevices.map((d) => (
                     <li key={d.id} data-mfa-device>

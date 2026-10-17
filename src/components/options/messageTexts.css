@@ -19,7 +19,7 @@
 .mt-list{position:sticky;top:0;max-height:calc(100dvh - 150px);overflow-y:auto;min-width:0;padding:14px 0 16px;scrollbar-width:thin}
 .mt-ed-box{min-width:0}
 .mt-grp + .mt-grp{margin-top:12px}
-.mt-grp-h{display:block;padding:0 16px 4px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.mt-grp-h{display:block;padding:0 16px 4px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .mt-grp ul{list-style:none;margin:0;padding:0}
 .mt-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:40px;padding:7px 14px 7px 15px;border:0;border-left:3px solid transparent;background:transparent;color:var(--ink);font-size:15px;text-align:left}
 .mt-item:hover{background:var(--surface)}
@@ -28,7 +28,7 @@
 .mt-item-n small{font-size:12.5px;font-weight:400}
 .mt-item-s{flex:0 0 auto;color:var(--ink-3);font-size:13px;font-weight:400}
 .mt-item-s.is-changed{color:var(--amber-ink)}
-.mt-tag{flex:0 0 auto;display:inline-block;padding:2px 7px;border:1px solid var(--rule);background:var(--surface);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--ink-2);white-space:nowrap}
+.mt-tag{flex:0 0 auto;display:inline-block;padding:2px 7px;border:1px solid var(--rule);background:var(--surface);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-2);white-space:nowrap}
 .mt-foot{margin:14px 16px 0;color:var(--ink-3);font-size:13.5px;line-height:1.5}
 
 /* ---------- edytor ---------- */
@@ -43,7 +43,7 @@
 .mt-ro{margin:0;padding:8px 12px;border-left:3px solid var(--sea);background:var(--sea-bg);color:var(--ink);font-size:14px}
 
 .mt-field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.mt-lbl{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.mt-lbl{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .mt-field > .mt-lbl{font-family:var(--font-sans);font-size:13.5px;font-weight:400;letter-spacing:0}
 .mt-hint{color:var(--ink-3);font-size:13px}
 

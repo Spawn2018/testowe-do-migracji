@@ -31,13 +31,13 @@ import {
 } from '../lib/p5Docs';
 import { docRequirementsStart, docsSeenOf, otherDocsOn, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
-import { up } from '../components/options/up';
 import '../components/finance/finance.css';
 import '../components/docs/docs.css';
+import { lazyRetry } from '../lib/lazyRetry';
 
 const InsurancePolicyForm =
   import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
-    ? lazy(() => import('../auth/InsurancePolicyForm'))
+    ? lazy(lazyRetry(() => import('../auth/InsurancePolicyForm')))
     : null;
 
 /** Rodzaje do wgrania przy transporcie (polisy dodaje się raz — formularz polis, G-21); „Inne” (E31 pkt 5) po `otherDocsOn`. */
@@ -262,12 +262,12 @@ export function DocsView() {
       <table className="fin-table doc-req">
         <thead>
           <tr>
-            <th>{up(ft(locale, 'p5_doc_col_doc'))}</th>
-            <th>{up(ft(locale, 'p5_doc_col_who'))}</th>
-            <th>{up(ft(locale, 'p5_doc_col_due'))}</th>
-            <th className="num">{up(ft(locale, 'p5_doc_col_over'))}</th>
-            <th className="num">{up(ft(locale, 'p5_doc_col_soon'))}</th>
-            <th>{up(ft(locale, 'p5_doc_col_note'))}</th>
+            <th>{ft(locale, 'p5_doc_col_doc')}</th>
+            <th>{ft(locale, 'p5_doc_col_who')}</th>
+            <th>{ft(locale, 'p5_doc_col_due')}</th>
+            <th className="num">{ft(locale, 'p5_doc_col_over')}</th>
+            <th className="num">{ft(locale, 'p5_doc_col_soon')}</th>
+            <th>{ft(locale, 'p5_doc_col_note')}</th>
           </tr>
         </thead>
         <tbody>
@@ -299,12 +299,12 @@ export function DocsView() {
         const isPolicy = r.key === 'INSURANCE' || r.key === 'OCS';
         const kind: 'over' | 'soon' | null = isPolicy ? null : over ? 'over' : soon ? 'soon' : null;
         const tag = isPolicy ? (
-          r.missingPolicy ? <span className="fin-tag red">{up(ft(locale, 'p5_doc_tag_none'))}</span>
-            : r.noteGood ? <span className="fin-tag go">{up(ft(locale, 'p5_doc_tag_ok'))}</span> : null
+          r.missingPolicy ? <span className="fin-tag red">{ft(locale, 'p5_doc_tag_none')}</span>
+            : r.noteGood ? <span className="fin-tag go">{ft(locale, 'p5_doc_tag_ok')}</span> : null
         ) : kind === 'over' ? (
-          <span className="fin-tag red" data-docreq-card-overdue={over}>{up(ftp(locale, 'p5_doc_tag_over', { n: over }))}</span>
+          <span className="fin-tag red" data-docreq-card-overdue={over}>{ftp(locale, 'p5_doc_tag_over', { n: over })}</span>
         ) : kind === 'soon' ? (
-          <span className="fin-tag warn">{up(ftp(locale, 'p5_doc_tag_soon', { n: soon }))}</span>
+          <span className="fin-tag warn">{ftp(locale, 'p5_doc_tag_soon', { n: soon })}</span>
         ) : null;
         return (
           <article key={r.key} className="fin-card doc-card" data-docreq-card={r.key}>
@@ -335,7 +335,7 @@ export function DocsView() {
         <div className="fin-cards doc-cards">
           {permits.map((p) => (
             <article key={p.id} className="fin-card doc-card" data-doc-permit={p.id}>
-              <header className="doc-card-hd"><b data-content>{p.country} · {p.number ?? ft(locale, 'p5_doc_perm_at_load')}</b><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></header>
+              <header className="doc-card-hd"><b data-content>{p.country} · {p.number ?? ft(locale, 'p5_doc_perm_at_load')}</b><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{ft(locale, `p5_doc_perm_${p.scope}`)}</span></header>
               <p className="fin-muted" data-content>
                 {[p.appliesTo, p.limits ? `${m2(p.limits.l)} × ${m2(p.limits.w)} × ${m2(p.limits.h)} m` : null, p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : null,
                   ftp(locale, p.scope === 'FIRMA' ? 'p5_doc_perm_auto' : 'p5_doc_perm_manual', { n: p.loads })].filter(Boolean).join(' · ')}
@@ -348,19 +348,19 @@ export function DocsView() {
           <table className="fin-table">
             <thead>
               <tr>
-                <th>{up(ft(locale, 'p5_doc_perm_c_kind'))}</th>
-                <th>{up(ft(locale, 'p5_doc_perm_c_country'))}</th>
-                <th>{up(ft(locale, 'p5_doc_perm_c_no'))}</th>
-                <th>{up(ft(locale, 'p5_doc_perm_c_valid'))}</th>
-                <th>{up(ft(locale, 'p5_doc_perm_c_limits'))}</th>
-                <th>{up(ft(locale, 'p5_doc_perm_c_for'))}</th>
-                <th className="num">{up(ft(locale, 'p5_doc_perm_c_loads'))}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_kind')}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_country')}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_no')}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_valid')}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_limits')}</th>
+                <th>{ft(locale, 'p5_doc_perm_c_for')}</th>
+                <th className="num">{ft(locale, 'p5_doc_perm_c_loads')}</th>
               </tr>
             </thead>
             <tbody>
               {permits.map((p) => (
                 <tr key={p.id} data-doc-permit={p.id}>
-                  <td><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{up(ft(locale, `p5_doc_perm_${p.scope}`))}</span></td>
+                  <td><span className={p.scope === 'FIRMA' ? 'fin-tag sea' : 'fin-tag warn'}>{ft(locale, `p5_doc_perm_${p.scope}`)}</span></td>
                   <td>{p.country.replace('+', ' + ')}</td>
                   <td data-content>{p.number ?? <span className="fin-muted">{ft(locale, 'p5_doc_perm_at_load')}</span>}</td>
                   <td>{p.validFrom && p.validTo ? fmtDateRange(p.validFrom, p.validTo) : '—'}</td>
@@ -410,11 +410,11 @@ export function DocsView() {
           <table className="fin-table doc-files">
             <thead>
               <tr>
-                <th>{up(ft(locale, 'p5_doc_fc_file'))}</th>
-                <th>{up(ft(locale, 'p5_doc_fc_for'))}</th>
-                <th>{up(ft(locale, 'p5_doc_fc_cat'))}</th>
-                <th>{up(ft(locale, 'p5_doc_fc_at'))}</th>
-                <th>{up(ft(locale, 'p5_doc_fc_seen'))}</th>
+                <th>{ft(locale, 'p5_doc_fc_file')}</th>
+                <th>{ft(locale, 'p5_doc_fc_for')}</th>
+                <th>{ft(locale, 'p5_doc_fc_cat')}</th>
+                <th>{ft(locale, 'p5_doc_fc_at')}</th>
+                <th>{ft(locale, 'p5_doc_fc_seen')}</th>
               </tr>
             </thead>
             <tbody>

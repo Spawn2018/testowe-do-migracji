@@ -6,7 +6,7 @@
 .auth-screen.fe label{align-items:stretch}
 .fe-head{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:4px}
 .fe-steps{display:flex;flex-direction:column;align-items:center;gap:5px}
-.fe-steps-n{font:600 12.5px var(--font-cond);letter-spacing:.06em;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.fe-steps-n{font:600 12.5px var(--font-cond);letter-spacing:.02em;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .fe-steps-bar{display:flex;gap:4px}
 .fe-steps-bar i{display:block;width:34px;height:3px;background:var(--rule)}
 .fe-steps-bar i.is-on{background:var(--amber)}

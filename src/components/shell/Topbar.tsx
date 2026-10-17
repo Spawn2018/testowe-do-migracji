@@ -16,9 +16,10 @@ import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
 import { formatListDateTime } from '../../lib/format';
+import { lazyRetry } from '../../lib/lazyRetry';
 
 /* wyglad/P10b-b: Pomoc ładowana dopiero po otwarciu (treści 5 wersji poza pierwszym wczytaniem) */
-const HelpPanel = lazy(() => import('./HelpPanel').then((m) => ({ default: m.HelpPanel })));
+const HelpPanel = lazy(lazyRetry(() => import('./HelpPanel').then((m) => ({ default: m.HelpPanel }))));
 
 const ROLES: RoleId[] = ['HHL', 'KSH', 'SCX'];
 /** ISO week number (Europe/Warsaw local date). */

@@ -29,7 +29,6 @@ import { formatPlNumber } from '../lib/format';
 import { fmtDate, fmtDateRange } from '../lib/time';
 import { transportsText } from '../lib/p5Finance';
 import { ISSUER, RECIPIENT, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, weekOptionLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
-import { up } from '../components/options/up';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { factoringOfferOf } from '../lib/p5Source';
 import { billLineFuel } from '../lib/p5cFuel';
@@ -183,7 +182,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
   return (
     <div className="inv-kpis" data-inv-kpis={direction}>
       <section className={`inv-kpi${first ? ' is-sea' : ''}`} data-inv-kpi="pending">
-        <h3>{up(ft(locale, 'p5_inv_k_pending'))}</h3>
+        <h3>{ft(locale, 'p5_inv_k_pending')}</h3>
         <b className="inv-kpi-v">{first ? ftp(locale, 'p5_inv_k_pending_v', { no: first.no }) : '—'}</b>
         <p>
           {first ? (
@@ -196,7 +195,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         </p>
       </section>
       <section className={`inv-kpi${kpis.toVerify.length && kpis.verifyMine ? ' is-warn' : ''}`} data-inv-kpi="verify">
-        <h3>{up(kpis.verifyMine ? ft(locale, 'p5_inv_k_verify_mine') : ftp(locale, 'p5_inv_k_verify_other', { who: RECIPIENT[direction] }))}</h3>
+        <h3>{kpis.verifyMine ? ft(locale, 'p5_inv_k_verify_mine') : ftp(locale, 'p5_inv_k_verify_other', { who: RECIPIENT[direction] })}</h3>
         <b className="inv-kpi-v">{kpis.toVerify.length}</b>
         <p>
           {ver ? (
@@ -208,12 +207,12 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         </p>
       </section>
       <section className="inv-kpi" data-inv-kpi="due">
-        <h3>{up(ft(locale, 'p5_inv_k_due'))}</h3>
+        <h3>{ft(locale, 'p5_inv_k_due')}</h3>
         <b className="inv-kpi-v">{kpis.dueSoon.length}</b>
         <p>{kpis.nextDue ? ftp(locale, 'p5_inv_k_due_s', { date: fmtDay(kpis.nextDue) }) : ft(locale, 'p5_inv_k_due_none')}</p>
       </section>
       <section className={`inv-kpi${kpis.overdue.length ? ' is-red' : ''}`} data-inv-kpi="overdue">
-        <h3>{up(ft(locale, 'p5_inv_k_over'))}</h3>
+        <h3>{ft(locale, 'p5_inv_k_over')}</h3>
         <b className="inv-kpi-v">{kpis.overdue.length}</b>
         <p>
           {kpis.overdue[0] ? (
@@ -240,7 +239,7 @@ function Flow({ direction }: { direction: BillDirection }) {
     <ol className="inv-flow" data-inv-flow={direction}>
       {steps.map((s) => (
         <li key={s.t}>
-          <span className="inv-flow-h">{up(s.h)}</span>
+          <span className="inv-flow-h">{s.h}</span>
           <b>{s.t}</b>
           <span className="inv-flow-d">{s.d}</span>
         </li>
@@ -258,7 +257,7 @@ function StatusTag({ bill, status }: { bill?: Bill; status: InvStatus }) {
   const locale = useTowerStore((s) => s.locale);
   return (
     <span className={STATUS_TAG[status]} data-bill-status={status} data-verif={bill?.verification} data-pay={bill?.payment}>
-      {up(ft(locale, `p5_inv_st_${status}`))}
+      {ft(locale, `p5_inv_st_${status}`)}
     </span>
   );
 }
@@ -348,14 +347,14 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
             <table className="fin-table inv-table">
               <thead>
                 <tr>
-                  <th>{up(ft(locale, 'p5_inv_col_week'))}</th>
-                  <th>{up(ft(locale, 'p5_inv_col_inv'))}</th>
-                  <th className="num">{up(ft(locale, 'p5_inv_col_loads'))}</th>
-                  <th className="num">{up(ft(locale, 'p5_inv_col_net'))}</th>
-                  <th className="num">{up(ft(locale, 'p5_inv_col_vat'))}</th>
-                  <th className="num">{up(ft(locale, 'p5_inv_col_gross'))}</th>
-                  <th>{up(ft(locale, 'p5_inv_col_due'))}</th>
-                  <th>{up(ft(locale, 'p5_inv_col_status'))}</th>
+                  <th>{ft(locale, 'p5_inv_col_week')}</th>
+                  <th>{ft(locale, 'p5_inv_col_inv')}</th>
+                  <th className="num">{ft(locale, 'p5_inv_col_loads')}</th>
+                  <th className="num">{ft(locale, 'p5_inv_col_net')}</th>
+                  <th className="num">{ft(locale, 'p5_inv_col_vat')}</th>
+                  <th className="num">{ft(locale, 'p5_inv_col_gross')}</th>
+                  <th>{ft(locale, 'p5_inv_col_due')}</th>
+                  <th>{ft(locale, 'p5_inv_col_status')}</th>
                   <th><span className="sronly">{t(locale, 'bill_col_checks')}</span></th>
                 </tr>
               </thead>
@@ -391,7 +390,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
                         <td>
                           <span className="inv-status">
                             <StatusTag bill={b} status={billStatus(b)} />
-                            {flagged ? <span className="fin-tag warn" data-bill-flags={flagged}>{up(t(locale, 'bill_flags'))} · {flagged}</span> : null}
+                            {flagged ? <span className="fin-tag warn" data-bill-flags={flagged}>{t(locale, 'bill_flags')} · {flagged}</span> : null}
                           </span>
                         </td>
                         <td>{actions(b)}</td>
@@ -425,7 +424,7 @@ export function WhoSees() {
       <div className="fin-scroll">
         <table className="fin-table">
           <thead>
-            <tr><th><span className="sronly">{ft(locale, 'p5_inv_col_inv')}</span></th><th>HHL</th><th>KSH</th><th>{up('Scandinavian Express')}</th></tr>
+            <tr><th><span className="sronly">{ft(locale, 'p5_inv_col_inv')}</span></th><th>HHL</th><th>KSH</th><th>{'Scandinavian Express'}</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => (
@@ -646,12 +645,12 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
               <thead>
                 <tr>
                   <th><span className="sronly">{t(locale, 'bill_col_checks')}</span></th>
-                  <th>{up(t(locale, 'sched_col_code'))}</th>
-                  <th>{up(t(locale, 'bill_col_unload'))}</th>
-                  <th className="num">{up(t(locale, 'bill_col_expected'))}</th>
-                  <th className="num">{up(t(locale, 'bill_col_invoiced'))}</th>
-                  {currency === 'PLN' ? <th>{up(t(locale, 'bill_col_fx'))}</th> : null}
-                  <th>{up(t(locale, 'bill_col_checks'))}</th>
+                  <th>{t(locale, 'sched_col_code')}</th>
+                  <th>{t(locale, 'bill_col_unload')}</th>
+                  <th className="num">{t(locale, 'bill_col_expected')}</th>
+                  <th className="num">{t(locale, 'bill_col_invoiced')}</th>
+                  {currency === 'PLN' ? <th>{t(locale, 'bill_col_fx')}</th> : null}
+                  <th>{t(locale, 'bill_col_checks')}</th>
                 </tr>
               </thead>
               <tbody>

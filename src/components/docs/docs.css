@@ -49,7 +49,7 @@
 .up-modal .panel-hd h2{font-size:20px;margin:0}
 .up-bd{display:flex;flex-direction:column;gap:14px}
 .up-field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.up-lbl{font-family:var(--font-cond);font-weight:600;font-size:13px;letter-spacing:.07em;color:var(--ink-2)}
+.up-lbl{font-family:var(--font-cond);font-weight:600;font-size:13px;letter-spacing:.02em;color:var(--ink-2)}
 .up-field .input{width:100%;min-height:40px;font-size:15px}
 .up-seg{display:flex;flex-wrap:wrap;gap:8px}
 .up-seg button{min-height:40px;padding:6px 12px;border:1px solid var(--rule);background:var(--surface);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-align:left}

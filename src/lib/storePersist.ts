@@ -19,8 +19,8 @@ function todayLocalForMigration(): string {
 
 export const STORE_PERSIST_KEY = 'watch-tower-ui-v6-ready-gate';
 
-/** Bump when persisted shape breaks backward compatibility. */
-export const STORE_SCHEMA_VERSION = 2;
+/** Bump when persisted shape breaks backward compatibility. v3 (audyt 17.10): domyślna waluta widoku EUR. */
+export const STORE_SCHEMA_VERSION = 3;
 
 /** sessionStorage flag → toast after rehydrate (baseline/visual clear this). */
 export const STORE_WIPE_FLAG_KEY = 'wt-persist-wipe-notice';
@@ -183,6 +183,10 @@ export function migrateTowerPersist(
     const invoices = Array.isArray(picked.invoices) ? (picked.invoices as Invoice[]) : [];
     picked.loads = attachMoneyV2(picked.loads as Load[], invoices, todayLocalForMigration());
   }
+  // v2 → v3 (audyt 17.10, D-20261017-0730-01 §4): domyślna waluta widoku EUR, jak w fakturach i cenniku (E16).
+  // `displayCurrency` nie należy do STORE_PERSIST_FIELD_KEYS, więc przy migracji wraca wartość domyślna (EUR).
+  // Zapisany w przeglądarce „PLN” był dotąd wartością domyślną, nie wyborem; wybór zapisany na koncie
+  // (`user_preferences`) wraca przy logowaniu (`loadPreferences`).
   if (fromVersion <= 0 || fromVersion < STORE_SCHEMA_VERSION) {
     return { state: picked, wiped: false };
   }

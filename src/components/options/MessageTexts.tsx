@@ -20,7 +20,6 @@ import {
 import { messageTextsOf, type SavedText } from '../../lib/p8Source';
 import { p8t, type P8Key } from '../../i18n/p8';
 import { TokenEditor, type TokenEditorHandle } from './TokenEditor';
-import { up } from './up';
 import { openOptionsScreen } from '../../lib/openOptions';
 import './messageTexts.css';
 
@@ -116,7 +115,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
     >
       {GROUPS.map((g) => (
         <div key={g} className="mt-grp">
-          <h3 className="mt-grp-h" id={`mt-g-${g}`}>{up(GROUP_LABEL[g])}</h3>
+          <h3 className="mt-grp-h" id={`mt-g-${g}`}>{GROUP_LABEL[g]}</h3>
           <ul aria-labelledby={`mt-g-${g}`}>
             {MESSAGES.filter((m) => m.group === g).map((m) => {
               const st = status(m, true);
@@ -138,7 +137,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
                     </span>
                     {phone
                       ? <span className={`mt-item-s${st.changed ? ' is-changed' : ''}`}>{st.text}</span>
-                      : m.channel !== 'EMAIL' ? <span className="mt-tag">{up(channelLabel(m.channel))}</span> : null}
+                      : m.channel !== 'EMAIL' ? <span className="mt-tag">{channelLabel(m.channel)}</span> : null}
                   </button>
                 </li>
               );
@@ -327,7 +326,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
       <header className="mt-ed-hd">
         {onBack ? <button type="button" className="mt-back" aria-label={p8t('p8_back')} onClick={onBack}>‹</button> : null}
         <Title className="mt-title">{item.name}</Title>
-        <span className="mt-tag">{up(channelLabel(item.channel))}</span>
+        <span className="mt-tag">{channelLabel(item.channel)}</span>
         {item.to && !phone ? <span className="mt-to">{item.to}</span> : null}
         <span className={`mt-state${status.changed ? ' is-changed' : ''}`}>{status.text}</span>
       </header>
@@ -370,7 +369,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
 
       {!readOnly ? (
         <div className="mt-ins">
-          <span className="mt-lbl">{phone ? p8t('p8_insert_phone') : up(p8t('p8_insert'))}</span>
+          <span className="mt-lbl">{phone ? p8t('p8_insert_phone') : p8t('p8_insert')}</span>
           <div className={`mt-ins-row${phone ? ' is-scroll' : ''}`}>
             {insertable.map((tk) => (
               <button

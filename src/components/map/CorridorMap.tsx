@@ -40,9 +40,10 @@ import { drawerMapNote } from '../../lib/p9fNote';
 import { detourLinesOf, subscribeDetourLines } from '../../lib/e49Source';
 import { detourLineOk, detourLineTip } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
+import { lazyRetry } from '../../lib/lazyRetry';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
-const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(() => import('./TrackReplay')) : null;
+const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./TrackReplay'))) : null;
 
 
 function statusColor(status: string): string {

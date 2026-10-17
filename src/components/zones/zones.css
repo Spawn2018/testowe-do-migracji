@@ -30,7 +30,7 @@
 .leaflet-tooltip-bottom.zm-tip::before{border-bottom-color:var(--rule)}
 
 .zv-list{display:flex;flex-direction:column}
-.zv-grp-h{margin:0;padding:12px 14px 4px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.zv-grp-h{margin:0;padding:12px 14px 4px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .zv-grp ul{list-style:none;margin:0;padding:0}
 .zv-item{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%;min-height:52px;padding:8px 14px 8px 11px;border:0;border-left:3px solid transparent;border-top:1px solid var(--rule-2);background:transparent;color:var(--ink);text-align:left}
 .zv-item:hover{background:var(--surface-2)}
@@ -48,7 +48,7 @@
 .zv-card-hd h3{margin:0;font-family:var(--font-cond);font-size:24px;font-weight:700;line-height:1.1;scroll-margin-top:12px}
 .zv-card-hd h3:focus{outline:none}
 .zv-card-hd h3:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.zv-kind{padding:2px 8px;border:1px solid var(--go);background:var(--go-bg);color:var(--go);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.06em}
+.zv-kind{padding:2px 8px;border:1px solid var(--go);background:var(--go-bg);color:var(--go);font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em}
 .zv-kind.is-off{border-color:var(--rule);background:var(--surface-2);color:var(--ink-3)}
 .zv-meta{color:var(--ink-3);font-size:14.5px}
 .zv-acts{display:flex;gap:8px;margin-left:auto}
@@ -81,7 +81,7 @@ button.zv-hist-b:hover{background:var(--surface-2)}
 .zv-field{display:flex;flex-direction:column;align-items:stretch;gap:4px;min-width:0;font-size:13.5px;color:var(--ink-2)}
 .zv-field .input{width:100%;min-width:0;font-size:15px}
 .zv-wide{grid-column:1 / -1}
-.zv-reason > label{font-family:var(--font-cond);font-weight:700;letter-spacing:.06em;color:var(--ink-2)}
+.zv-reason > label{font-family:var(--font-cond);font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
 .zv-impact{padding:10px 12px;border:1px solid var(--rule);background:var(--surface-2)}
 .zv-impact ul{margin:6px 0;padding-left:18px;font-size:14.5px;line-height:1.5}
 .zv-form-acts{display:flex;justify-content:flex-end;gap:8px}

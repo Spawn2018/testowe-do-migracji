@@ -15,7 +15,6 @@ import { minText, type EtaWx } from '../../lib/e49Wx';
 import { e49wx } from '../../i18n/e49Wx';
 
 const SE = 'Europe/Stockholm';
-const up = (s: string) => s.toLocaleUpperCase('pl');
 
 function ago(fromIso: string, nowIso: string, locale: Locale): string {
   const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
@@ -116,7 +115,7 @@ export function EtaBlock({
   if (phase === 'REST') {
     lbl = tp(locale, 'p4b_eta_rest_lbl', { at: dayTime(d?.restFrom ?? load.etaUpdatedAt) });
     value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
-    pill = { cls: 'p-sea', text: up(t(locale, 'p4b_eta_rest_pill')) };
+    pill = { cls: 'p-sea', text: t(locale, 'p4b_eta_rest_pill') };
     sub = [
       d?.restFrom ? tp(locale, 'p4b_eta_rest_from', { from: timeOnly(d.restFrom) }) : null,
       d?.restUntil
@@ -130,7 +129,7 @@ export function EtaBlock({
   } else if (phase === 'WAIT_SITE') {
     lbl = tp(locale, 'p4b_eta_wait_lbl', { at: dayTime(load.etaUpdatedAt) });
     value = tp(locale, 'p4b_eta_wait_val', { time: timeOnly(d?.waitSince) });
-    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: up(t(locale, `p4b_eta_pill_${win}`)) } : null;
+    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: t(locale, `p4b_eta_pill_${win}`) } : null;
     sub = [
       t(locale, 'p4b_eta_wait_edge'),
       tp(locale, 'p4b_eta_wait_window', { day: dayOnly(load.plannedDeliverDate) }),
@@ -139,13 +138,13 @@ export function EtaBlock({
   } else if (phase === 'SITE') {
     lbl = siteSince ? tp(locale, 'p4b_eta_site_lbl_at', { at: dayTime(siteSince) }) : t(locale, 'p4b_eta_site_lbl');
     value = siteSince ? tp(locale, 'p4b_eta_wait_val', { time: timeOnly(siteSince) }) : t(locale, 'p4b_eta_site_val');
-    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: up(t(locale, `p4b_eta_pill_${win}`)) } : null;
+    pill = win ? { cls: win === 'after' ? 'p-red' : 'p-go', text: t(locale, `p4b_eta_pill_${win}`) } : null;
     sub = [tp(locale, 'p4b_eta_wait_window', { day: dayOnly(load.plannedDeliverDate) })];
   } else {
     lbl = phone ? t(locale, 'p4b_eta_phone_lbl') : tp(locale, 'p4b_eta_route_lbl', { at: dayTime(load.etaUpdatedAt) });
     value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
     pill = load.etaBoden
-      ? { cls: load.etaConfidence === 'LOW' ? 'p-red' : load.etaConfidence === 'HIGH' ? 'p-go' : 'p-amber', text: up(band), db: load.etaConfMin != null }
+      ? { cls: load.etaConfidence === 'LOW' ? 'p-red' : load.etaConfidence === 'HIGH' ? 'p-go' : 'p-amber', text: band, db: load.etaConfMin != null }
       : null;
     const drive = d?.driveMin != null
       ? tp(locale, d.restNeeded === false ? 'p4b_eta_drive_norest' : 'p4b_eta_drive', { dur: hoursMinutes(d.driveMin * 60_000) })
@@ -196,7 +195,7 @@ export function EtaBlock({
           ) : null}
           {late && delayMin != null ? <span className="pill p-red" data-eta-delay>{formatDelayPill(delayMin)}</span> : null}
           {load.etaBoden && etaIsNightArrival(load.etaBoden) ? (
-            <span className="pill" data-eta-night="1">{up(t(locale, 'a6_dr_night_arrival'))}</span>
+            <span className="pill" data-eta-night="1">{t(locale, 'a6_dr_night_arrival')}</span>
           ) : null}
         </div>
         {subText ? (

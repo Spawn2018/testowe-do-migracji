@@ -15,7 +15,7 @@
 .ox-side-hd h1{margin:0;font-family:var(--font-cond);font-size:28px;line-height:1.05;letter-spacing:.02em;font-weight:700}
 .ox-side-hd span{display:block;margin-top:3px;color:var(--ink-3);font-size:14px}
 .ox-side-group{margin-top:14px}
-.ox-side-group h2{margin:0 0 4px;padding:0 20px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.ox-side-group h2{margin:0 0 4px;padding:0 20px;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .ox-side-group ul{list-style:none;margin:0;padding:0}
 .ox-side-item{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;min-height:38px;padding:7px 18px 7px 25px;border-left:3px solid transparent;text-align:left;font-size:15px;color:var(--ink)}
 .ox-side-item:hover{background:var(--surface-2)}
@@ -32,14 +32,14 @@
 .ox-screen-title{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px}
 .ox-screen-title h2{margin:0;font-family:var(--font-cond);font-size:30px;line-height:1.05;font-weight:700;letter-spacing:.01em}
 .ox-crumb{color:var(--ink-3);font-size:15px}
-.ox-right{margin-left:auto;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-2)}
+.ox-right{margin-left:auto;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
 .ox-screen-hd p{margin:8px 0 0;color:var(--ink-2);font-size:15px;max-width:980px}
 .ox-screen-title .panel-mark{margin-left:0}
 .ox-screen-bd{min-width:0}
 .ox-screen-bd > .panel{margin:0 0 12px}
 
 /* ---------- wspólne elementy ekranów ---------- */
-.ox-eyebrow{display:block;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.ox-eyebrow{display:block;font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .ox-card{background:var(--surface);border:1px solid var(--rule);padding:16px 18px;min-width:0}
 .ox-card-v{display:block;margin-top:4px;font-family:var(--font-cond);font-size:24px;font-weight:700}
 .ox-card-sub{display:block;margin-top:6px;color:var(--ink-2);font-size:14px}
@@ -76,7 +76,7 @@
 .ox-actions-start{justify-content:flex-start}
 .ox-btn{min-height:40px;padding:8px 16px;font-size:14px}
 .ox-field{display:flex;flex-direction:column;gap:5px;min-width:0;margin-bottom:12px}
-.ox-field > span{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.ox-field > span{font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .ox-field .input{min-height:40px;font-size:15px;width:100%}
 .ox-field textarea.input{min-height:76px}
 .input.is-invalid{border-color:var(--red)}
@@ -100,7 +100,7 @@
 .ox-switchline{display:inline-flex;align-items:center;gap:10px}
 
 /* znaczniki stanu */
-.ox-tag{display:inline-block;padding:3px 9px;border:1px solid var(--rule);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--ink-2);background:var(--surface-2);white-space:nowrap}
+.ox-tag{display:inline-block;padding:3px 9px;border:1px solid var(--rule);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-2);background:var(--surface-2);white-space:nowrap}
 .ox-tag-sent{background:var(--sea-bg);border-color:var(--sea);color:var(--sea)}
 .ox-tag-unfinished{background:var(--amber-bg);border-color:var(--amber);color:var(--amber-ink)}
 .ox-tag-nophone{background:var(--red-bg);border-color:var(--red);color:var(--red)}
@@ -109,10 +109,10 @@
 /* tabele */
 .ox-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule)}
 .ox-table th,.ox-table td{white-space:normal;padding:11px 14px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:middle;font-size:14.5px}
-.ox-table thead th{background:var(--surface-2);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+.ox-table thead th{background:var(--surface-2);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 .ox-table tbody th{font-weight:400}
 .ox-table tbody th b{font-weight:600}
-.ox-firm-row th{background:var(--surface-2);font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-2)}
+.ox-firm-row th{background:var(--surface-2);font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
 
 /* ---------- Kto co dostaje ---------- */
 .ox-legend{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:0 0 12px;color:var(--ink-2);font-size:14.5px}
@@ -123,14 +123,14 @@
 .ox-mx-wrap{min-width:0;overflow-x:auto;background:var(--surface);border:1px solid var(--rule)}
 .ox-mx{width:100%;border-collapse:collapse;min-width:820px}
 .ox-mx th,.ox-mx td{padding:8px 10px;border-bottom:1px solid var(--rule-2);border-left:1px solid var(--rule-2);text-align:center;vertical-align:middle}
-.ox-mx thead th{background:var(--surface-2);font-family:var(--font-cond);font-weight:700;letter-spacing:.08em;font-size:13px;color:var(--ink-2)}
+.ox-mx thead th{background:var(--surface-2);font-family:var(--font-cond);font-weight:700;letter-spacing:.02em;font-size:13px;color:var(--ink-2)}
 .ox-mx .ox-mx-firm{font-size:14px;color:var(--ink)}
 .ox-mx .ox-mx-ev{text-align:left;border-left:0;min-width:240px}
 .ox-mx-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;padding:2px 0}
 .ox-mx-row b{font-size:15px;font-weight:600}
 .ox-mx-row span{font-size:13px;color:var(--ink-3);font-weight:400}
 .ox-mx tbody th{font-weight:400}
-.ox-mx-group th{background:var(--surface-2);text-align:left;font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-2)}
+.ox-mx-group th{background:var(--surface-2);text-align:left;font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
 .ox-mx-group th small{margin-left:8px;font-family:var(--font-sans);letter-spacing:0;font-weight:400;font-size:13px;color:var(--ink-3)}
 .ox-mx tr.is-sel > th{border-left:3px solid var(--sea);background:var(--sea-bg)}
 .ox-mx tr.is-sel > td{background:var(--sea-bg)}
@@ -154,7 +154,7 @@
 .ox-rules-hist{padding-top:8px;border-top:1px solid var(--rule-2)}
 
 /* ---------- Dla mnie › Co dostaję ---------- */
-.ox-forme-group h4{margin:12px 16px 4px;font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+.ox-forme-group h4{margin:12px 16px 4px;font-family:var(--font-cond);font-size:13.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
 /* wyglad/audyt-E (E-05, W47): przełączniki osoby — legenda kanałów i „Zapisano …” */
 .ox-forme-legend{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin:0 16px 8px;color:var(--ink-2);font-size:14px}
 .ox-forme-legend-item{display:inline-flex;align-items:center;gap:8px}
@@ -270,7 +270,7 @@
   .ox-mxc{display:block}
   .ox-who-side{display:flex}
   .ox-preview{display:none}
-  .ox-mxc-group h3{margin:14px 0 8px;font-family:var(--font-cond);font-size:14px;font-weight:700;letter-spacing:.1em;color:var(--ink-3)}
+  .ox-mxc-group h3{margin:14px 0 8px;font-family:var(--font-cond);font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
   .ox-mxc-card{background:var(--surface);border:1px solid var(--rule);margin-bottom:10px}
   .ox-mxc-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:64px;padding:12px 16px;text-align:left}
   .ox-mxc-hd:disabled{cursor:default}
@@ -291,7 +291,7 @@
   .ox-cards-phone tbody tr.ox-firm-row{background:transparent;border:0;margin:14px 0 4px;padding:0}
   .ox-cards-phone .ox-firm-row th{background:transparent;padding:0}
   .ox-cards-phone th,.ox-cards-phone td{border:0;padding:6px 16px}
-  .ox-cards-phone [data-label]::before{content:attr(data-label);display:block;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--ink-3)}
+  .ox-cards-phone [data-label]::before{content:attr(data-label);display:block;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
   .ox-cards-phone .ox-call-cell{text-align:left}
   /* nagłówek kolumny działań jest tylko dla czytnika ekranu — bez etykiety „Zadzwoń” nad przyciskami karty */
   .ox-cards-phone .ox-call-cell[data-label]::before{content:none}

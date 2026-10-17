@@ -7,6 +7,7 @@ import { t, tp } from '../i18n/messages';
 import { clickableRow } from '../lib/clickableRow';
 import { newGeofenceDraft, notifyWho, placeForCountry } from '../lib/geofenceDraft';
 import { GeofenceEditorMap } from '../components/map/GeofenceEditorMap';
+import { formatPlNumber } from '../lib/format';
 
 const TYPE_PILL: Record<string, string> = {
   SITE: 'p-go',
@@ -104,7 +105,7 @@ export function GeofenceView() {
                       <span className={`pill ${TYPE_PILL[g.type] ?? 'p-plan'}`}>{geofenceTypeLabel(g.type, locale)}</span>
                     </td>
                     <td>{countryLabel(locale, g.country)}</td>
-                    <td className="num">{(g.radiusM / 1000).toFixed(g.radiusM >= 1000 ? 0 : 1)} km</td>
+                    <td className="num">{formatPlNumber(g.radiusM / 1000, g.radiusM >= 1000 ? 0 : 1)} km</td>
                     <td className="num">{dwell}</td>
                     <td className="num">{hyst}</td>
                     <td className="num">{g.samplesRequired ?? 1}</td>

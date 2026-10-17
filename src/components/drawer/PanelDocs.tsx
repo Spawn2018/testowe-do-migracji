@@ -23,7 +23,6 @@ import { lazyRetry } from '../../lib/lazyRetry';
 import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { t, tp } from '../../i18n/messages';
 import { ft, ftp } from '../../i18n/p5';
-import { up } from '../options/up';
 import '../finance/finance.css';
 import './panel.css';
 import { fmtDate, formatCalendarDay } from '../../lib/time';
@@ -127,7 +126,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
           {ok ? <span className="pd-ok" data-content>{ok}</span> : unknown ? <span className="fin-muted">—</span> : <span className="neg">{ft(locale, `p5_pd_policy_none_${key}`)}</span>}
         </div>
         <div className="pd-act">
-          <span className={ok ? 'fin-tag go' : 'fin-tag plain'}>{ok ? up(ft(locale, 'p5_pd_auto')) : org}</span>
+          <span className={ok ? 'fin-tag go' : 'fin-tag plain'}>{ok ? ft(locale, 'p5_pd_auto') : org}</span>
         </div>
       </li>
     );

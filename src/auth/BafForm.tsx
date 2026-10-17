@@ -7,6 +7,7 @@ import { fmtDateTime } from '../lib/time';
 import { lookupMult, type SefsTier } from '../lib/sefs';
 import { prevWeekStatus, warsawDay } from '../lib/sefsWeek';
 import './auth.css';
+import { formatPlNumber } from '../lib/format';
 
 const PROJECT_CODE = 'STEGRA_BODEN';
 
@@ -149,7 +150,7 @@ export default function BafForm() {
         <div className="note option-note">{t(locale, 'i2_baf_note')}</div>
         {preview ? (
           <div className="banner" data-baf-preview style={{ margin: '8px 0' }}>
-            {tp(locale, 'i2_baf_preview', { p: preview.period, s: preview.ms.toFixed(3), l: preview.mp.toFixed(3), a: preview.applied.toFixed(3) })}
+            {tp(locale, 'i2_baf_preview', { p: preview.period, s: formatPlNumber(preview.ms, 3), l: formatPlNumber(preview.mp, 3), a: formatPlNumber(preview.applied, 3) })}
           </div>
         ) : (
           <div className="note" data-no-source="baf-preview" style={{ margin: '8px 0' }}>{t(locale, 'i2_baf_no_preview')}</div>
@@ -158,7 +159,7 @@ export default function BafForm() {
         <div className={`note${week.mult !== null ? '' : ' sefs-week-missing'}`} data-sefs-week={week.mult !== null ? 'ok' : 'missing'} style={{ margin: '0 0 8px' }}>
           {tp(locale, 'b6_sefs_week', { from: week.from, to: week.to, s: String(week.nSek), p: String(week.nPln) })}{' '}
           {week.mult !== null
-            ? tp(locale, 'b6_sefs_week_ok', { as: (week.avgSek ?? 0).toFixed(2), ap: (week.avgPln ?? 0).toFixed(2), m: week.mult.toFixed(3) })
+            ? tp(locale, 'b6_sefs_week_ok', { as: formatPlNumber(week.avgSek ?? 0, 2), ap: formatPlNumber(week.avgPln ?? 0, 2), m: formatPlNumber(week.mult, 3) })
             : t(locale, 'b6_sefs_week_missing')}
         </div>
 
@@ -198,7 +199,7 @@ export default function BafForm() {
             const isLive = live.includes(r);
             return (
               <div className={`auth-admin-row${isLive ? '' : ' inactive'}`} key={r.id} data-reading={r.id}>
-                <span className="grow"><b>{r.index_code} · {r.period}</b> {Number(r.value).toFixed(2)} {r.index_code}/l <small>{tp(locale, 'i2_baf_read_on', { d: r.reading_date })} · <a href={r.source_url} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>{r.corrects_id ? ` · ${tp(locale, 'i2_baf_corrects', { id: String(r.corrects_id), why: r.correction_reason ?? '' })}` : ''}{isLive ? '' : ` · ${t(locale, 'i2_baf_superseded')}`}</small></span>
+                <span className="grow"><b>{r.index_code} · {r.period}</b> {formatPlNumber(Number(r.value), 2)} {r.index_code}/l <small>{tp(locale, 'i2_baf_read_on', { d: r.reading_date })} · <a href={r.source_url} target="_blank" rel="noreferrer">{t(locale, 'i2_baf_source')}</a>{r.corrects_id ? ` · ${tp(locale, 'i2_baf_corrects', { id: String(r.corrects_id), why: r.correction_reason ?? '' })}` : ''}{isLive ? '' : ` · ${t(locale, 'i2_baf_superseded')}`}</small></span>
                 {isLive ? <button className="chipbtn" type="button" disabled={busy} onClick={() => setRf({ ...EMPTY_R, index_code: r.index_code, period: r.period, corrects: String(r.id), source_url: r.source_url })}>{t(locale, 'i2_baf_correct')}</button> : null}
               </div>
             );

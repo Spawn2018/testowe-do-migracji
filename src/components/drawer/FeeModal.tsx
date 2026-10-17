@@ -13,7 +13,6 @@ import { fmtTime, formatCalendarDay } from '../../lib/time';
 import { localDateOf } from '../../lib/money/engine';
 import { cancelFee, dwellFee, durText, type FeeDecision, type FeeKind, type FeeRules, type FeeSuggestion } from '../../lib/p5Fees';
 import { ft, ftn, ftp } from '../../i18n/p5';
-import { up } from '../options/up';
 import { useModal } from '../ui/useModal';
 import { t } from '../../i18n/messages';
 import { transportLabel } from '../../lib/transportName';
@@ -102,7 +101,7 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
         </header>
         <div className="panel-bd awiz-modal-bd fee-bd">
           <div className="up-field" role="group" aria-labelledby="fee-kind">
-            <span className="up-lbl" id="fee-kind">{up(ft(locale, 'p5_fee_kind'))}</span>
+            <span className="up-lbl" id="fee-kind">{ft(locale, 'p5_fee_kind')}</span>
             <div className="up-seg">
               {(['DWELL', 'CANCEL'] as const).map((k, i) => (
                 <button key={k} ref={i === 0 ? firstRef : undefined} type="button" aria-pressed={kind === k} data-fee-kind={k} onClick={() => setKind(k)}>
@@ -123,7 +122,7 @@ export function FeeModal({ load, role, locale, rules, suggestions, initial, onCl
             ) : box(ft(locale, 'p5_fee_cost_mine'), calc?.cost ?? null, calc?.costNote ?? null, ft(locale, 'p5_fee_cost_after'), true)}
           </div>
           <label className="up-field">
-            <span className="up-lbl">{up(ft(locale, 'p5_fee_desc'))}</span>
+            <span className="up-lbl">{ft(locale, 'p5_fee_desc')}</span>
             <input className="input" value={desc} placeholder={ft(locale, 'p5_fee_desc_ph')} onChange={(e) => setDesc(e.target.value)} data-fee-desc />
           </label>
           <div className="up-acts">

@@ -6,7 +6,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { up } from './up';
 import { E49_THR } from '../../i18n/e49Thr';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
@@ -64,14 +63,14 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
     <div className="ox-flags">
       <div className="ox-count-line"><span>{tp(locale, 'p3c_flags_count', { n: flags.length })}</span>{mark}</div>
       <table className="ox-table ox-cards-phone" data-opt-table="flags">
-        <thead><tr><th>{up(t(locale, 'p3c_col_flag'))}</th><th>{up(t(locale, 'p3c_col_state'))}</th><th>{up(t(locale, 'p3c_col_does'))}</th><th>{up(t(locale, 'p3c_col_last'))}</th></tr></thead>
+        <thead><tr><th>{t(locale, 'p3c_col_flag')}</th><th>{t(locale, 'p3c_col_state')}</th><th>{t(locale, 'p3c_col_does')}</th><th>{t(locale, 'p3c_col_last')}</th></tr></thead>
         <tbody>
           {flags.map((f) => (
             <tr key={f.key} data-flag={f.key}>
-              <th scope="row" data-label={up(t(locale, 'p3c_col_flag'))}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
-              <td data-label={up(t(locale, 'p3c_col_state'))}>{sw(f)}</td>
-              <td data-label={up(t(locale, 'p3c_col_does'))}>{f.does}</td>
-              <td data-label={up(t(locale, 'p3c_col_last'))} className="ox-flag-last" data-content>{last(f)}</td>
+              <th scope="row" data-label={t(locale, 'p3c_col_flag')}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
+              <td data-label={t(locale, 'p3c_col_state')}>{sw(f)}</td>
+              <td data-label={t(locale, 'p3c_col_does')}>{f.does}</td>
+              <td data-label={t(locale, 'p3c_col_last')} className="ox-flag-last" data-content>{last(f)}</td>
             </tr>
           ))}
         </tbody>
@@ -122,15 +121,15 @@ export function HistoryScreen({ locale, entries, techCount, people, areas, range
   return (
     <div className="ox-hist">
       <div className="ox-filters">
-        <label className="ox-field"><span>{up(t(locale, 'p3c_hist_from'))}</span><input className="input" type="date" defaultValue={range.from} /></label>
-        <label className="ox-field"><span>{up(t(locale, 'p3c_hist_to'))}</span><input className="input" type="date" defaultValue={range.to} /></label>
-        <label className="ox-field"><span>{up(t(locale, 'p3c_hist_who'))}</span>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span><input className="input" type="date" defaultValue={range.from} /></label>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span><input className="input" type="date" defaultValue={range.to} /></label>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_who')}</span>
           <select className="input" defaultValue="">
             <option value="">{t(locale, 'p3c_hist_all')}</option>
             {people.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </label>
-        <label className="ox-field"><span>{up(t(locale, 'p3c_hist_what'))}</span>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_what')}</span>
           <select className="input" defaultValue="">
             <option value="">{t(locale, 'p3c_hist_all_what')}</option>
             {areas.map((a) => <option key={a} value={a}>{a}</option>)}
@@ -202,8 +201,8 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
         <dt>{t(locale, 'p3c_exp_range')}</dt>
         <dd>
           <div className="ox-range">
-            <label className="ox-field"><span>{up(t(locale, 'p3c_hist_from'))}</span><input className="input" type="date" defaultValue={range.from} /></label>
-            <label className="ox-field"><span>{up(t(locale, 'p3c_hist_to'))}</span><input className="input" type="date" defaultValue={range.to} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span><input className="input" type="date" defaultValue={range.from} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span><input className="input" type="date" defaultValue={range.to} /></label>
           </div>
           <small className="ox-muted">{t(locale, 'p3c_exp_range_note')}</small>
         </dd>
