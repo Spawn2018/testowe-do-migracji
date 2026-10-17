@@ -2883,6 +2883,20 @@ Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teśc
 - **TEST wolne** od 17.10.2026 20:54 (koniec nullguard-4).
 - Dalej: **A1**. #291 nadal do scalenia w przerwie między pozycjami.
 
+## 2026-10-18 — A1 NA PRODUKCJI
+
+- PR #296; merge `10007b24` (treść `5769a9ad`). Migracja `0227_a1_tracking_window.sql`. Funkcja Edge `emtrack-web` wdrożona.
+- CI na `5769a9ad`: unit, visual, `db` zielone.
+- TEST: security **114/114** (+2 SKIP), status **83/83**, nullguard 161+136+228+127 = **652/652**.
+- Doradca security na TEST: 171 zgłoszeń, 0 spoza `advisor-exceptions.txt`.
+- Porównanie funkcji z produkcją przed `db push` (D-20261017-2250-01): `guard_load_update` różni się tylko `tower.track_ctx` i `tracking_opened_at` na liście `dates_ctx` (zostaje wyjątek A5 `MANUAL`/`IMPORT`); `process_position` — brama okna i zapis startu; `telm_infer_phase_from_position` — powrót poza oknem; `detect_silent_vehicles` — zamknięcie ciszy poza oknem i dowolne źródło pozycji.
+- Próba prod ROLLBACK: cron `tower-tracking-guard` 1, `anon`/`authenticated` bez EXECUTE, kolumna `tracking_opened_at`; po ROLLBACK kolumny brak.
+- `supabase db push`: 0227 nałożona. Po: `schema_migrations` = 0227; kolumna 1; cron `15 6 * * *` = 1; `anon` bez EXECUTE.
+- Wdrożenie: `dpl_76iSLDoP7mu5kBj3J17LiwytGQBT`, 18.10.2026 01:03; tower i makieta 200; `assets/index-BNuQNLhs.js`; 0× `service_role`.
+- Stare `PLANNED` w oknie (odczyt 17.10.2026, 21:55): **21**. Do domknięcia przez HHL i SCX przed W37.
+- **TEST wolne** od 18.10.2026 01:00 (koniec nullguard-4).
+- Dalej: **A2**.
+
 ## 2026-10-17 — DOPISEK D-20261017-2205-01 W PLANIE (A1, PR #296)
 
 Przegląd #296 przed scaleniem, w tym samym PR:
