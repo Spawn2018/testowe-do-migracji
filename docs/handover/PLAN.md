@@ -173,7 +173,10 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 
 **Kolejka wyglądu (D-20261016-2130-01):** `wyglad/W-dane` PR #274 — scalone i wdrożone 17.10.2026 00:38 po skończonym C3 (`7db7282f`, `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1`). Wygląd bez bazy (F8): „Inne pliki” z „+ Dodaj” (produkcja: `otherDocsOn()` = false do P5), przerywana linia objazdu (produkcja: `detourLinesOf()` = [] do P9), przeprawy z HERE z `map_display_state.ferries` (bez danych zostaje stały tor). Plik dopisku wszedł z PR.
 
-**Kolejka wyglądu (D-20261017-0730-01):** `wyglad/W-audyt` — przyjdzie dziś. Scalasz po skończonym punkcie, przy zielonych `unit` i `visual`. W PR: 6A i 8A po stronie aplikacji; 5B w demo; EUR; komórka „Kierowca” przy przepięciu; `formatPlNumber`; ETA demo; `lazyRetry`; prawdziwe teksty o automatach przez `serverRuleOn(key)` (`TRACKING_WINDOW` A1, `SITE_EXIT_DELIVERED` A2, `WIND_E49` / `DETOUR_E49` P6 — przy wdrożeniu przestawiasz tylko swój klucz na `true`). Dopisek PR wejdzie z PR-em.
+**Kolejka wyglądu (D-20261017-0800-01 / 0930-01 / 0915-01):** scalasz **#277 → #279 → #280** w przerwach między pozycjami, każdy po zielonych `unit` i `visual`; wdrożenie po scaleniu. Wzorce `visual` odświeża koordynator; gdy `visual` czerwony przed jego commitem z wzorcami — sygnał „VISUAL #<numer>”.
+- **#277 `wyglad/W-audyt` (D-20261017-0800-01):** `serverRuleOn(key)` (`TRACKING_WINDOW` → A1, `SITE_EXIT_DELIVERED` → A2, `WIND_E49` / `DETOUR_E49` → P6 E49 Z1/Z3, `ROAD_PL_HERE` → P6 E2, `ROAD_SITUATIONS_MAP` → P9 E29 pkt 3 — przy wdrożeniu przestawiasz tylko swój klucz na `true`, test: tekst na produkcji bez „włączamy wkrótce”); 6A bez wielkich liter; 5B „Opłata paliwowa” KSH/SCX tylko do odczytu w demo; domyślnie EUR (`STORE_SCHEMA_VERSION` 2→3); przepięcie w Harmonogramie; liczby po polsku; dzwonek; `lazyRetry`.
+- **#279 `wyglad/W-demo` (D-20261017-0930-01, na #277):** daty demo zgodne z 23.09; ETA w demo (`demoEta.ts` w `PROD_DEMO_SWAP`); `STORE_SCHEMA_VERSION` 3→4; „po oknie” tylko za oknem dostawy; `fxForDate(…, unloaded)` kurs bieżący przed rozładunkiem.
+- **#280 `wyglad/W-pl` (D-20261017-0915-01, na #279):** panel tylko po polsku (8A); EN/SV tylko w aplikacji kierowcy; N20 w aplikacji; pierwsze wczytanie 317,6 kB gzip.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -375,13 +378,13 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (C3-p NA PRODUKCJI; dalej B1…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** C3-p → B1 → B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → **B1** → B2 → B6 → A8 → A1 → A2 → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — `passwordOk` dziś sprawdza tylko długość; test `auth-password.test.ts`) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
-### C3-p · Poprawki C3 (C3 jest na produkcji — migracja 0222)
+### C3-p · Poprawki C3 — NA PRODUKCJI (17.10.2026 11:18; merge `17be0998` / PR #278; migracja 0223; `dpl_2xXvmtEXdvCnUp8WWW6DzNodae9G`)
 1. **Czat bez e-maila zapasowego:**
    - `matrix_notify`: wiersz WEB_PUSH dla zdarzenia `chat` **bez** `payload.critical = true`;
    - `web_push_enqueue_fallback` i obie pętle `web_push_fallback_tick`: dodatkowo `template <> 'LOAD_CHAT_MESSAGE'`.
@@ -403,6 +406,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 6. **Sprawdzenie na produkcji (SELECT)**, wynik w `POSTEP.md`:
    - `SYSTEM` / „Źródło danych nie działa” × Administrator HHL: e-mail i telefon włączone;
    - KSH nie dostaje Stref ani zadań innych firm.
+7. **Teksty z serwera bez `upper(` w funkcjach treści** (D-20261017-0800-01 §3 pkt 3 / 6A) — w C3-p albo C6; kody (`SG-03`, tablice) bez zmian.
 
 ### B1 · `security_flags` bez 403
 - Polityka SELECT dla kont HHL i grant.
@@ -441,6 +445,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Bezpiecznik L17 jako cron dzienny.
 - Zmiana daty załadunku przed startem przesuwa start.
 - Test E27: 02:59 → pozycja nie przypisana, 03:00 → przypisana; po „Dostarczone” → nie przypisana; transport z przyszłego tygodnia → nie przypisana.
+- **Przy wdrożeniu:** przestaw `serverRuleOn('TRACKING_WINDOW')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: tekst na produkcji bez „włączamy wkrótce” (Pomoc › Mapa / pasek śledzenia).
 
 ### A2 · Reguły stref (E26, D-136, L14 — dziś brak w bazie)
 - `apply_geofence_status` (nowa migracja):
@@ -453,6 +458,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - „Nie” → zamknięcie sprawy z notatką.
 - Podłączasz `onYes` i `onNo` w `TodoPanel.tsx` i `LoadDrawer.tsx` (dane, bez zmiany wyglądu, F1).
 - Test (`dwell`, `status`): odtworzenie SG-03 na zmyślonym śladzie (G-17) → „Dostarczone 12:19”, śledzenie gaśnie; postój 6 min → sprawa L14; „Tak” → „Dostarczone”.
+- **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
 - `doc_requirements`:
@@ -533,11 +539,15 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane.
 - Kopia identyfikatorów w `audit_log` (`action = 'AUDYT17_MARK_READ'`); liczby przed i po w `POSTEP.md`.
 
-### B9 · Bez EN/SV w bazie (8A)
+### B9 · Bez EN/SV w bazie (8A) — + D-20261017-0915-01 §3 pkt 1
 - `translation_queue`, `translation_memory`, `deepl_usage`, a także funkcje, crony i wywołania DeepL z nich korzystające: migracja z kopią (liczba wierszy i zrzut do `audit_log`), potem `drop`.
 - Aktualizacja `_shared/backup/core.ts`, `gate-suites.mjs` i `advisor-exceptions.txt`.
 - Klucz DeepL w Secrets usunie właściciel po Twoim sygnale „B9 — klucz DeepL do usunięcia”.
 - Jeśli `user_preferences` / `app_users` ma pole języka: zostaje `pl` dla wszystkich, a pole usuwasz z kopią.
+- **W tym samym commicie (0915 §3 pkt 1 — jedyny wyjątek od F1 w B9):**
+  - usuwasz **kafelek DeepL w Stanie systemu** (`SystemStatusPanel.tsx`, `deepl_usage_view`) i klucze `b6_sys_deepl`, `b6_sys_deepl_d`, `pl_deepl_warn`, `pl_deepl_full`, `pl_show_original`, `rk_deepl_usage` — żeby panel nie wołał usuniętej funkcji;
+  - przy usuwaniu kolumny języka zmieniasz też `select` w `supabaseProvider.ts` (`loadPreferences`: `display_currency,locale,theme`) i `prefs.save`.
+  - Test: Stan systemu bez kafelka DeepL i bez błędu w konsoli; konto z zapisanym „en” widzi panel po polsku.
 
 ### A6 · Plik KSH = Harmonogram (E38, L31, C23 — przeniesione z P7; W13: sekrety są)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):**
@@ -579,6 +589,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
 3. **Format ETA (D-071):** „X d Y h Z min” powyżej 24 h, „Y h Z min” poniżej — w tekstach z serwera. Widok sprawdza koordynator.
 4. **E44 RIO pkt 2–8** w całości według PLAN P4: regulamin RIO najpierw (STOP §1 pkt 12.6, jeśli zakaz), adapter, cron `tower-rio-links`, zapis `SUBCONTRACTOR_LINK`, błędy i sprawy.
 5. **E27 L17** — jeśli nie weszło w A1.
+6. **`delayed` / `delay_minutes` (D-20261017-0930-01 §3):** serwer ustawia je zgodnie z ETA wobec okna dostawy (jak widok: „po oknie” tylko gdy ETA jest za oknem; opóźniony o 4 h, ale przed oknem — bez „po oknie”). Test z odbioru P4-u.
 
 ### P5 · Pieniądze i dokumenty — DO ZROBIENIA
 - **D1** — **zrobione w Naprawach audytu 17.10 (A7)** (D-20261015-0300-01 D; doprecyzowanie D-20261016-0200-01 Z1): wymiary zestawu, pilot i rodzaj zezwolenia z tabeli właściciela (`WYMIARY_PILOT_ZEZWOLENIA.md`) — **same**, dla każdego transportu i przy każdym imporcie; nie ma stanu „czeka na wymiary”; D-83, B-3a, ZEZW-13 **zamknięte 16.10.2026** (dane z tabeli 07.10); D-21 zastąpione przez E31 i L6. Odbiór Z1 pkt 8 (TEST: 94 transporty vs tabela).
@@ -600,6 +611,8 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - marża, **próg 4 %** (wartość startowa), kurs NBP i „kurs bieżący”;
   - waluta w bazie; próg w „Cennik i opłaty” (E12-2);
   - sprawdzić regułę koloru marży (E16 „jedna marża wszędzie”): w tabeli „Marża według typu” dodatnia marża (np. 15,3 %) ma klasę `neg` i jest czerwona (D-20261013-1815-01, do planu bez działania w 1815-01).
+  - **Kurs bieżący w produkcji (D-20261017-0930-01 §3 / sekcja 02 N8):** z ostatniej tabeli `fx_rates` opublikowanej do dziś włącznie — nigdy z późniejszej; także dla transportu spóźnionego bez rozładunku (ta sama zasada co `fxForDate(…, unloaded)` w widoku). Test: transport przed rozładunkiem → tabela z dziś albo wcześniejsza, nigdy późniejsza.
+  - **Stary model faktur demo (`invoices`, bez widoku):** usuwasz przy przejściu pieniędzy na `bills` (D-20261017-0930-01 §3).
 - **E4** faktury — **zrobione w Naprawach audytu 17.10 (A4)**: zakładki według firmy, VAT 23 %, akceptacja, kwoty „co do grosza” (E4-3), spóźniony CMR (E4-1).
 - **E4b** faktoring: 1 % netto, wypłata 48 h kalendarzowych po akceptacji, ekran „Faktoring” w grupie „Pieniądze” (E4b-1, E4b-2).
 - **E40** paczka tygodnia:
@@ -635,6 +648,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - zasady E5 (13:21): sytuacja bez przypisanego transportu — tylko strona Ryzyka, bez dzwonka, e-maila i telefonu; przy transporcie — tylko sytuacje jeszcze przed pojazdem;
   - odbiór (E2 „Sprawdzenie”): po wdrożeniu w `integration_runs` przebiegi `road-pl` co 15 minut, licznik HERE Traffic rośnie, panel „Drogi PL” pokazuje dane albo „brak utrudnień”; test w zestawie `risks`: sytuacja PL bez transportu → 0 wpisów w dzwonku;
   - teksty i wygląd panelu bez zmian (koordynator). Gdy dane wymagają innego układu, wpis w `POSTEP.md` — poprawka w `wyglad/*`.
+  - **Przy wdrożeniu:** przestaw `serverRuleOn('ROAD_PL_HERE')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: dopisek pod mapą z „HERE (PL)” — bez „włączamy wkrótce”.
 - **W38 Podgląd z prawdziwymi uprawnieniami** — **zrobione w Naprawach audytu 17.10 (B5)** (decyzja właściciela 15.10.2026, 03:12; D-20261015-0330-01; przeniesione z P6):
   - Podgląd = „Działaj jako” w trybie tylko do odczytu: `impersonation_state.read_only`; przełącznik „HHL · KSH · SCX” tylko HHL (Administrator i Operacje); start: pierwsze aktywne konto KSH Użytkownik / SCX Dyspozytor; HHL Operacje tylko `read_only`;
   - `current_app_*` = konto docelowe (RLS jak to konto); każdy zapis w `read_only` → odmowa `assert_not_preview()` („Podgląd — nic tu nie zapiszesz”);
@@ -646,6 +660,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - zawężenie `events_insert` (E17-1, E19-1).
 - **E17 Czat — dane** (D-20261016-0250-01; wiadomość właściciela 16.10, 02:39): Cz1 zapis wyboru odbiorców `visible_to` (serwer pilnuje: KSH zawsze do wszystkich, tylko dwie wartości); Cz2 odczyt `visible_to`; Cz3 powiadomienia bez KSH dla „tylko HHL i SCX”, bez autora; Cz4 odczyt tylko po otwarciu Czatu (bez 40 ostatnich, bez własnych, bez Podglądu; porządek starych odczytów z kopią); Cz5 `reads[]`: osoba (bez nazwiska — e-mail), kod firmy, godzina; Cz6 nowe wiadomości i odczyty przy otwartym Czacie ≤ 15 s bez przeładowania; Cz7 nieprzeczytane z bazy; Cz8 „moje” po osobie (`author_id`); Cz9 autor „Imię Nazwisko”; Cz10 `chatVisibilityOn()` i `chatReadsOn()` → `true` w tym samym wdrożeniu; Cz11 wygląd `wyglad/P6-d`; odbiór Cz12 (13 punktów); **Cz13–Cz24 (D-20261016-0310-01; wiadomość właściciela 16.10, 02:57):** Cz13 w C3; Cz14 (D-20261016-0330-01 pkt 3; zastępuje „SG-03 · Imię Nazwisko // firma” z 0310): dzwonek „<nazwa transportu według firmy> — Imię Nazwisko // pełna nazwa firmy”, treść w drugiej linii; telefon „SG-03 — Imię Nazwisko // HHL”, z pauzą zamiast „·”; Cz15 jedno powiadomienie na transport (3 ostatnie); Cz16 przyciski „Oznacz jako odczytane” i „Odpowiedz” (pole tekstu w powiadomieniu); Cz17 odczyt z powiadomienia bez otwierania aplikacji; Cz18 odpowiedź z powiadomienia, odbiorcy jak w wiadomości, błąd → Czat z tekstem; Cz19 dotknięcie otwiera zainstalowaną aplikację, nie Chrome (okno `standalone`, manifest `id` / `scope` / `launch_handler`, diagnoza S24); Cz20 token akcji HMAC 7 dni, `chat-push-action`, dziennik, limit; Cz21 bez powiadomienia przy otwartym Czacie; Cz22 porządek po odczytaniu; Cz23 wygląd `wyglad/P6-e`; odbiór Cz24 (12 punktów); **Cz25–Cz33 (D-20261016-0315-01; wiadomość właściciela 16.10, 03:06) — powiadomienia tylko do osób, które widzą wiadomość:** Cz26 powiadomienia tylko dla kont spełniających `msgs_read`; Cz27 drugi bezpiecznik w bazie na `notifications` + `CHAT_NOTIFY_BLOCKED`; Cz28 sprawdzenie przed wysyłką web push, grupa i licznik tylko z widocznych; Cz29 akcje z powiadomienia tylko dla widocznych, odpowiedź zachowuje odbiorców; Cz30 e-mail, e-mail zapasowy, podsumowanie dzienne, SMS — ta sama zasada, czat bez e-maila zapasowego i bez SMS; Cz31 Realtime, odczyty i licznik tylko z widocznych; Cz32 zdanie o ekranie blokady w Pomocy; Cz33 testy (14 punktów) zielone przed włączeniem wyboru odbiorców (Cz10). **Miejsca w kodzie — D-20261016-0330-01 pkt 1–6:** `chatReadView` i `reads[]` / `visibleTo`; wejście z powiadomienia (`sw.js` → `?zakladka=czat&odpowiedz=1` / `&tekst=`); `title` i `body` z `LOAD_CHAT_MESSAGE`; `Notification.chatOnly` w `notificationFromRow`; `chatBellAutoReadOn()` razem z Cz4.
 - **E49** — wiatr w ETA, ostrzeżenia 20 / 25 m/s, zamknięty most lub droga: sprawa SCX „Objazd czy postój?”, śliskość lokalnie (D-20261016-0230-01 Z1–Z6); wygląd `wyglad/E49` (#240); dane podłączasz w P6 według Z1–Z4. Odbiór Z6 (10 punktów + Z3). Miejsca w kodzie i kształt danych — D-20261016-0305-01 pkt 1–5: `e49Source.ts` — `detourCasesOf`, `detourDecideOf`, `etaWxOf`; `DetourCase` i ryzyka; `eta_basis.causes.weather`; 8 progów wiatru i śliskości; po podłączeniu zapisu decyzji lokalny `appendEvent` w `TodoPanel.tsx` znika (wpis w PR).
+  - **Przy wdrożeniu Z1:** przestaw `serverRuleOn('WIND_E49')` na `true`; **przy Z3:** `serverRuleOn('DETOUR_E49')` na `true` (D-20261017-0800-01 §2 pkt 1). Testy: teksty na produkcji bez „włączamy wkrótce” („Działa samo” › Cisza GPS… — wiatr / objazd).
 - **E18 P16** usunięcie `route-profile` i `load_route_profiles` (0 wierszy) z listą kopii.
 - **Testy do przepisania:**
   - matryca `ryzyka` (uchwyt `[data-panel="ferry"]` zostaje); `etap6-ui.spec.ts` l.29–33;
@@ -704,6 +719,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - e-mail zastępczy, wpis w Historii.
   - Przełącznik „Wysyłka do odbiorców” włącza właściciel (§5).
   - **D-20261014-0700-01 J3 pkt 12:** przełącznik strefy SMS dla Operacji HHL — wyłączenie w UI (baza i tak odmawia `geofences_write` = HHL_ADMIN); E12 1A.
+  - **N20 na serwerze (D-20261017-0915-01 §3 pkt 2):** `sms_render` z 3 języków do 1 (tylko PL, bez polskich znaków według E43). E-maile i powiadomienia z serwera — tylko PL.
 - **E43** „Treści wiadomości”: tylko PL; edytor; 28 rodzajów (L53); link 24 h (L37). E-maile logowania według L54 (§5).
 - **E35** Automatyzacje (D-20261016-0220-01; wygląd `wyglad/P8-d` #239): kreator z akcją SMS (L35); „Działa samo” według E35 pkt 1 i L13; **Z1** porządki START-1…7 (przeniesienie do E11 / usunięcie z historią); **Z2** dane — `rules`/`check`/`runs`/`history`/`zones` z silnika `workflows` (ONE-MECH), przebiegi i historia zdaniami; **Z3** zapis z powodem (`save`/`setEnabled`/`remove`), tylko Administrator HHL, Operacje HHL — podgląd bez zapisu; odbiór sekcja „Test” E35 + punkty z dopisku.
 - **H-7** mapa w e-mailach i PDF (zlecenie HERE z 04.10; w starym planie „do decyzji koordynatora” — koordynator 09.10: P8). Najpierw stan (B-10 z 05.10: „PDF+mapa H-7”). Brakującą część budujesz przy treściach wiadomości (E43): mapa trasy transportu (droga i prom jak na Przeglądzie — E1, E45) jako obraz w e-mailu o transporcie i w PDF; HERE w limicie 100 USD/mies.
@@ -720,6 +736,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
 - **E29** Mapa: wygląd `wyglad/P9-c`; dane D-20261016-0615-01 pkt 1–4.
   - tabela = transporty w oknie śledzenia; filtry „Opóźnione”, „Brak GPS”, „Bez pozycji” (L22);
   - kafelek zmienia zakres; bez deklaracji częstotliwości (L20).
+  - **pkt 3 — warstwa „Utrudnienia drogowe” z danych produkcji:** przy wdrożeniu przestaw `serverRuleOn('ROAD_SITUATIONS_MAP')` na `true` (D-20261017-0800-01 §2 pkt 1). Test: dopisek pod mapą z utrudnieniami — bez „włączamy wkrótce”.
 - **E45** trasy:
   - promy z HERE — **pkt 3.3 (D-20261016-2130-01, L56):** najpierw sprawdzenie na TEST, czy HERE Routing zwraca odcinek promowy (`sections[].transport.mode = 'ferry'`) dla Gdańsk–Nynäshamn i Gdynia–Karlskrona. Jeśli tak — `map_display_state` dostaje `ferries: [{ leg: 'FERRY-GDN-NYN' | 'FERRY-GDY-KAA', points: [[szer., dł.], …] }]`, z tego samego odczytu co `roads`. Jeśli HERE nie ma odcinka promowego — wpis W w §5 (jak w L56) i zostają stałe tory. Element mapy ma `data-ferries` ze skrótem sprawdzenia, np. „FERRY-GDN-NYN: HERE · FERRY-GDY-KAA: tor — końce dalej niż 10 km od portów”. Wynik z TEST wpisujesz do `POSTEP.md`. Test: poprawny odcinek → rysowany zamiast toru; zła geometria → stały tor; jedna przeprawa z HERE → druga ze stałego toru. Bez kropek. Wygląd odczytu `ferries` jest w `wyglad/W-dane` (PR #274); bez danych zostaje stały tor;
   - checkbox „Trasa” chowa drogę i prom; statki AIS pod „Pojazdy”;
@@ -796,6 +813,7 @@ Bez ekranów Opcji (te w P10b, po P3).
    - **KOPIA-D**: kopia `usuniete_standard_2026-10-03` z R2 do `D:\Watch Tower\dane\` (poza repozytorium) i suma SHA-256 zgodna z kopią w R2. Brak dostępu do R2 z komputera = wpis w §5.
 5. **Pełna brama TEST** na commicie wydania (niezależnie od bram niedzielnych, §3).
 6. **Regeneracja 280 ujęć** w środowisku bramy wizualnej (cron właściciela), tag `baseline-audyt-<data P11, RRRR-MM-DD>` — §5 W11.
+   - **Ujęcia z TEST (D-20261017-0930-01 §2 pkt 6 / §3):** logowanie, zaproszenie, „Nie pamiętam hasła”, „Link wygasł”, 2FA (ustawienie i kod), pasek „Działasz jako”, pasek Podglądu, komunikat HHL, „Jest nowa wersja”. Zapis w `docs/handover/odbior/P11/`. (Ekrany AuthGate nie idą do demo — odbiór na TEST z kontem.)
 7. **Końcowy przegląd zgodności całej aplikacji** (D-20261013-1550-01 Z12), przed R-4 i przed `release-1.0`:
    - zrzuty każdego miejsca z „Mapy aplikacji”: dla każdego rodzaju konta, który je widzi; przy 1440 i 390 px; w trybie demo; obok obrazu z `raport/img/` albo wzoru z Z10;
    - zapis w `docs/handover/odbior/P11-zgodnosc/` z tabelą: miejsce | konto | szerokość | obraz | zgodne / różnica | decyzja, która uzasadnia różnicę;
@@ -958,3 +976,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 16.10.2026 21:30 | D-20261016-2130-01: `wyglad/W-dane` PR #274 — „Inne pliki” z „+ Dodaj”, linia objazdu, przeprawy z HERE (wygląd bez bazy, F8). Scalenie po skończonym C3 (#273), gdy unit i visual zielone. Dane: P5 pkt 3.1 (rodzaj OTHER, na końcu `otherDocsOn()` = true); P9 pkt 3.2 (geometria objazdu, `detourLinesOf()`); P9 pkt 3.3 (najpierw TEST — odcinek promowy HERE, inaczej W). Podgląd W38 bez zmian w planie | właściciel 16.10 21:13 i 21:22; koordynator |
 | 14.10.2026 10:55 | D-20261014-1055-01 (Cursor robi UI/UX reszty P4) — **unieważniony** przez D-20261014-1320-01 K1; zapis porządkowy (D-20261017-0730-01) | koordynator |
 | 17.10.2026 07:30 | D-20261017-0730-01: audyt 17.10 przyjęty; decyzje 1A/2C/3A/4B/5B/6A/7A/8A; termin `release-1.0` = środa 28.10.2026 20:00; bez cięcia zakresu; Naprawy audytu 17.10 przed C4 (C3-p→…→A6); P4 → CZĘŚCIOWO; P4-u; W1/W27/W36/W44; W37 w drodze; kolejka `wyglad/W-audyt` | właściciel 07:01 / 07:20 / 07:28; koordynator |
+| 17.10.2026 08:00 | D-20261017-0800-01: PR #277 `wyglad/W-audyt` — `serverRuleOn`, 6A, 5B demo Opłata paliwowa, EUR, przepięcie, liczby, dzwonek, `lazyRetry`; klucze przy A1/A2/P6 E49/P6 E2/P9 E29 pkt 3; EUR w bazie przy pierwszym logowaniu; teksty serwera bez `upper(` (C3-p/C6) | właściciel 07:20 (5B, 6A); koordynator |
+| 17.10.2026 09:15 | D-20261017-0915-01: PR #280 `wyglad/W-pl` (po #279) — panel tylko PL (8A), EN/SV tylko kierowca, N20 w aplikacji; B9: kafelek DeepL + kolumna języka + `supabaseProvider`; P8: `sms_render` tylko PL | właściciel 07:20 (8A); koordynator |
+| 17.10.2026 09:30 | D-20261017-0930-01: PR #279 `wyglad/W-demo` (po #277) — daty demo 23.09, ETA demo, `STORE_SCHEMA_VERSION` 4, kurs bieżący przed rozładunkiem; P5 kurs `fx_rates` + usunięcie `invoices` demo przy `bills`; P4-u `delayed`; P11 pkt 6 ujęcia z TEST | właściciel 07:01; koordynator |

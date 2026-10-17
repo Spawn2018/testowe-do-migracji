@@ -2717,9 +2717,18 @@ Kolejka wyglądu: `wyglad/W-dane` PR #274. Wpisane 16.10; scalone i wdrożone 17
 - #259: unit i visual zielone, scalenie zatrzymane — konflikt z `main`. Bez wdrożenia.
 - Dalej kolejka (po D-20261017-0730-01): **C3-p → B1 → … → A6**, potem C4… (nie od razu C4).
 
-## 2026-10-17 — C3-p w toku (pakiet/audyt-17)
+## 2026-10-17 — C3-p NA PRODUKCJI
 
-Migracja `0223_c3p_chat_matrix_fixes.sql`: czat bez `critical` / bez e-maila zapasowego; title/body na telefon; `C3_MATRIX_KOPIA` (25 wierszy); osobne `pre_arrival_site` / `pre_arrival_srem` / `src_back`; usunięcie `AUTOMATIC_DECISION_EMAIL`. Testy: `c3` 24 asercje; katalog 25 zdarzeń.
+- Gałąź `pakiet/audyt-17`; PR #278; merge `17be0998` (treść `161d1f19`).
+- Migracja `0223_c3p_chat_matrix_fixes.sql`: czat bez `critical` / bez e-maila zapasowego; title/body na telefon; `C3_MATRIX_KOPIA`; osobne `pre_arrival_site` / `pre_arrival_srem` / `src_back`; usunięcie `AUTOMATIC_DECISION_EMAIL`.
+- CI: unit, visual, `db` (pełna brama) zielone na `161d1f19`.
+- TEST (SHA `161d1f19`): security 84/84 (+2 SKIP), status 55/55, nullguard 161+136+224+126 = **647/647**, c3 **26/26**; doradca security TEST: 151 zgłoszeń, 0 nowych (wyjątki 166).
+- Próba prod ROLLBACK: matrix 100 → w TX 107 / 25 event_key / AUTOMATIC=0 / KOPIA=1; po ROLLBACK z powrotem 100 / AUTOMATIC=1.
+- `supabase db push`: 0223 nałożona. Po: matrix 107, 25 zdarzeń, KOPIA=1, AUTOMATIC=0.
+- SELECT pkt 6: `src_down` × HHL_ADMIN email=true push=true in_app=true; `zone`/`cmr` × CLIENT_USER in_app=false; chat push bez e-maila = 5.
+- Wdrożenie: `dpl_2xXvmtEXdvCnUp8WWW6DzNodae9G`, 17.10.2026 11:18; tower/makieta 200; `assets/index-C_gl0fhW.js`; 0× `service_role`.
+- **TEST wolne** od 17.10.2026 11:14.
+- Dalej: B1 (po dopiskach 0800/0930/0915 i scaleniu #277…).
 
 ## 2026-10-17 — DOPISEK D-20261017-0730-01 WŁĄCZONY
 
@@ -2742,10 +2751,14 @@ Termin `release-1.0`: **środa 28.10.2026, 20:00** (bez cięcia zakresu; „Reze
 - W37 — emtrack od SCX w drodze; A8 bez czekania.
 
 ### Liczby do uzupełnienia przy odbiorze
-- C3-p pkt 6 (SELECT produkcja): SYSTEM / „Źródło danych nie działa” × Administrator HHL; KSH bez Stref i zadań innych firm — **po C3-p**.
+- C3-p pkt 6 — **uzupełnione** (wyżej): src_down HHL_ADMIN e-mail+telefon; KSH zone/cmr wyłączone.
 - B2: `advisor_ok`, liczba zgłoszeń vs `advisor-exceptions.txt`; potwierdzenie braku `auth_leaked_password_protection`.
 - B8: liczby nieprzeczytanych `IN_APP` przed i po (starsze niż 7 dni).
 
 ### #275
-Scalone `1eb7f395` (odbiór C3 + #274) — same dokumenty, bez wdrożenia. Dalej: C3-p na gałęzi `pakiet/audyt-17`.
+Scalone `1eb7f395` (odbiór C3 + #274) — same dokumenty, bez wdrożenia.
+
+## 2026-10-17 — DOPISKI D-20261017-0800-01 / 0930-01 / 0915-01 W PLANIE
+
+Kolejka PR wyglądu: **#277 `wyglad/W-audyt` → #279 `wyglad/W-demo` → #280 `wyglad/W-pl`**. Scalanie w przerwach między pozycjami; wdrożenie po scaleniu. `serverRuleOn`: TRACKING_WINDOW (A1), SITE_EXIT_DELIVERED (A2), WIND_E49 / DETOUR_E49 (P6 E49), ROAD_PL_HERE (P6 E2), ROAD_SITUATIONS_MAP (P9 E29 pkt 3). Zadania: EUR przy pierwszym logowaniu; teksty serwera bez `upper(` (C3-p/C6); P5 kurs `fx_rates` + usunięcie `invoices` demo; P4-u `delayed`; P11 ujęcia z TEST; B9 DeepL + język; P8 `sms_render` PL. VISUAL #279 / #280 — czekają na wzorce koordynatora (unit zielone, visual czerwone przed odświeżeniem).
 
