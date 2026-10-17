@@ -2,7 +2,9 @@
  * wyglad/W-pl (decyzja właściciela 17.10.2026, 07:20 — 8A; Konstytucja X: interfejs tylko po polsku).
  * Słowniki EN i SV zostają tylko dla aplikacji kierowcy (`DriverPwa`, instrukcja `Guide`): kierowca SE wybiera język
  * na swoim telefonie (decyzja „aplikacja kierowcy — bez zmian”). Reszta aplikacji czyta wyłącznie słownik PL.
- * Klucze: `drv_*`, `a6_drv_*`, `milestone_*`, `i4_drv_*`, `i4_h`, `i4_sub_drv`, `share_pos`, `pr7_pdf_too_big`.
+ * Klucze: `drv_*`, `a6_drv_*`, `milestone_*`, `i4_drv_*`, `i4_h`, `i4_sub_drv`, `share_pos`, `pr7_pdf_too_big` oraz
+ * (F7, 17.10) dokumenty transportu u kierowcy: `a6_doc_*`, `a6_doccat_*`, `a6_dp_*`, `bk4_link_*`, `iii6_ver`, `docs_lashing`,
+ * `doc_cat_drawing`. Strażnik: `tests/w-pl.test.ts` — każdy klucz z kodu aplikacji kierowcy jest w EN i SV.
  */
 type Dict = Record<string, string>;
 
@@ -44,6 +46,35 @@ export const DRIVER_EN: Dict = {
   milestone_unloaded: "Unloaded",
   pr7_pdf_too_big: "The PDF is too large ({mb} MB). The limit is 10 MB — reduce the file (e.g. scan at a lower resolution) and try again.",
   share_pos: "Share position",
+  /* F7 (17.10): dokumenty transportu w aplikacji kierowcy (DocFileRow, DocPreview) i komunikaty linku */
+  a6_doc_download: "Download",
+  a6_doc_download_name: "Download {name}",
+  a6_doc_missing: "missing",
+  a6_doc_preview: "Preview",
+  a6_doc_upload: "Upload",
+  a6_doccat_CMR: "CMR",
+  a6_doccat_INSURANCE: "OCP insurance policy",
+  a6_doccat_INVOICE: "Invoice",
+  a6_doccat_PERMIT_PL: "Permit PL",
+  a6_doccat_PERMIT_SE: "Permit SE",
+  a6_doccat_POD: "POD",
+  a6_doccat_OTHER: "Other",
+  docs_lashing: "Lashing photos",
+  doc_cat_drawing: "Element drawing",
+  a6_dp_close: "Close",
+  a6_dp_close_preview: "Close preview",
+  a6_dp_download: "Download",
+  a6_dp_meta: " · metadata",
+  a6_dp_preview: "Preview · {name}",
+  a6_dp_stub: "No file content — showing the file details only. Upload the file to see the image or PDF.",
+  bk4_link_failed: "Could not open the file: {msg}",
+  bk4_link_ttl: "link valid for 15 min",
+  bk4_link_loading: "Getting the link…",
+  iii6_ver: "version {n}",
+  drv_token_unknown: "Unknown driver link — in the demo use #/driver/demo-active",
+  drv_link_inactive: "The link is inactive.",
+  drv_link_invalid: "Driver link not valid — {err}. Ask the dispatcher for a new link.",
+  drv_demo_nodb: "Demo mode — no database",
 };
 
 export const DRIVER_SV: Dict = {
@@ -84,4 +115,33 @@ export const DRIVER_SV: Dict = {
   milestone_unloaded: "Lossad",
   pr7_pdf_too_big: "PDF-filen är för stor ({mb} MB). Gränsen är 10 MB — minska filen (t.ex. skanna med lägre upplösning) och försök igen.",
   share_pos: "Dela position",
+  /* F7 (17.10): dokumenty transportu w aplikacji kierowcy (DocFileRow, DocPreview) i komunikaty linku */
+  a6_doc_download: "Ladda ner",
+  a6_doc_download_name: "Ladda ner {name}",
+  a6_doc_missing: "saknas",
+  a6_doc_preview: "Förhandsgranska",
+  a6_doc_upload: "Ladda upp",
+  a6_doccat_CMR: "CMR",
+  a6_doccat_INSURANCE: "OCP-försäkring",
+  a6_doccat_INVOICE: "Faktura",
+  a6_doccat_PERMIT_PL: "Tillstånd PL",
+  a6_doccat_PERMIT_SE: "Tillstånd SE",
+  a6_doccat_POD: "POD",
+  a6_doccat_OTHER: "Övrigt",
+  docs_lashing: "Bilder på lastsäkring",
+  doc_cat_drawing: "Ritning av elementet",
+  a6_dp_close: "Stäng",
+  a6_dp_close_preview: "Stäng förhandsgranskningen",
+  a6_dp_download: "Ladda ner",
+  a6_dp_meta: " · uppgifter",
+  a6_dp_preview: "Förhandsgranskning · {name}",
+  a6_dp_stub: "Filens innehåll saknas — endast uppgifterna om filen visas. Ladda upp filen för att se bilden eller PDF:en.",
+  bk4_link_failed: "Kunde inte öppna filen: {msg}",
+  bk4_link_ttl: "länken gäller i 15 min",
+  bk4_link_loading: "Hämtar länken…",
+  iii6_ver: "version {n}",
+  drv_token_unknown: "Okänd förarlänk — i demon, använd #/driver/demo-active",
+  drv_link_inactive: "Länken är inaktiv.",
+  drv_link_invalid: "Förarlänken gäller inte — {err}. Be trafikledaren om en ny länk.",
+  drv_demo_nodb: "Demoläge — ingen databas",
 };

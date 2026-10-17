@@ -1,5 +1,5 @@
 /** Punkt 5 — wiersz pliku w stylu .mrow + .iconbtn ↓ (Claude v2: zwykły tekst ✓ nazwa). */
-import type { Document } from '../../types';
+import type { Document, Locale } from '../../types';
 import { downloadDocumentFile } from '../../lib/docsIo';
 import { downloadStoredDocument } from '../../lib/docFiles';
 import { isStoredDoc } from '../../data/registry';
@@ -13,10 +13,13 @@ type Props = {
   onPreview: (doc: Document) => void;
   onUploadClick?: () => void;
   showUpload?: boolean;
+  /** 8A (17.10): aplikacja kierowcy podaje własny język (PL, EN, SV); panel — zawsze „pl” ze store */
+  locale?: Locale;
 };
 
-export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload }: Props) {
-  const locale = useTowerStore((s) => s.locale);
+export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload, locale: driverLocale }: Props) {
+  const storeLocale = useTowerStore((s) => s.locale);
+  const locale = driverLocale ?? storeLocale;
   const uploaded = doc.status === 'UPLOADED' || doc.status === 'MISMATCH' || doc.status === 'EXPIRED';
   const okColor = doc.status === 'MISMATCH' ? 'var(--amber)' : 'var(--go)';
 

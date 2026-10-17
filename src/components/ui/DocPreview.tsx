@@ -1,6 +1,6 @@
 /** Punkt 5 — podgląd pliku: scrim + panel (język Claude v2.0). Esc zamyka. */
 import { useEffect, useMemo, useState } from 'react';
-import type { Document } from '../../types';
+import type { Document, Locale } from '../../types';
 import {
   downloadDocumentFile,
   isImageMime,
@@ -15,10 +15,13 @@ import { t } from '../../i18n/messages';
 type Props = {
   doc: Document | null;
   onClose: () => void;
+  /** 8A (17.10): aplikacja kierowcy podaje własny język (PL, EN, SV); panel — zawsze „pl” ze store */
+  locale?: Locale;
 };
 
-export function DocPreview({ doc, onClose }: Props) {
-  const locale = useTowerStore((s) => s.locale);
+export function DocPreview({ doc, onClose, locale: driverLocale }: Props) {
+  const storeLocale = useTowerStore((s) => s.locale);
+  const locale = driverLocale ?? storeLocale;
   const stored = !!doc && isStoredDoc(doc);
   const handle = useMemo(() => (doc && !isStoredDoc(doc) ? objectUrlFromDoc(doc) : null), [doc]);
   // BK4: plik w Storage — link podpisany (15 min), pobierany przy otwarciu podglądu.
