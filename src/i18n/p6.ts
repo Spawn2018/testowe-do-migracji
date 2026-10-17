@@ -48,6 +48,8 @@ const PL: Record<string, string> = {
   p6_dec_short_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
   p6_dec_short_DELIVERED_CHECK: 'Czy dostarczono?',
   p6_dec_short_CMR_UPLOAD: 'Wgraj CMR',
+  /* A1 L17 (D-20261017-2130-01 §5) */
+  p6_dec_short_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę',
   p6_merged_1: '{n} zgłoszenie',
   p6_merged_2: '{n} jednakowe zgłoszenia połączone w jedno',
   p6_merged_5: '{n} jednakowych zgłoszeń połączonych w jedno',

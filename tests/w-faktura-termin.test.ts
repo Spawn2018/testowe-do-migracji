@@ -141,3 +141,15 @@ describe('A4 — „Kto co dostaje” i treść e-maila', () => {
     expect(read('src/components/options/TokenEditor.tsx')).toContain('tokenLabelIn(id, group)');
   });
 });
+
+describe('A1 L17 — „Potwierdź dostawę” (D-20261017-2130-01 §5)', () => {
+  it('nazwy w „Do zrobienia”, katalogu spraw i opcji; rodzaj na liście Automatyzacji', () => {
+    expect(read('src/i18n/p6.ts')).toContain("p6_dec_short_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę',");
+    const d = read('src/i18n/decisions.ts');
+    expect(d).toContain("dec_type_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę — doba po planowanej dostawie bez „Dostarczone”',");
+    expect(d).toContain("dec_opt_STILL_EN_ROUTE: 'Jeszcze w drodze — przypomnij jutro',");
+    expect(d).toContain("dec_opt_MANUAL_STATUS: 'Podaj status ręcznie',");
+    expect(read('src/lib/workflowCreator.ts')).toContain("'DELIVERY_UNCONFIRMED'] as const;");
+  });
+});
+
