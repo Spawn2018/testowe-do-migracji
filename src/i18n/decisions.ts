@@ -23,8 +23,6 @@ const pl: Dict = {
   dec_type_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
   dec_type_DELIVERED_CHECK: 'Wyjazd z placu po krótkim postoju — czy dostarczono?',
   dec_type_CMR_UPLOAD: 'Wgraj CMR z podpisem odbiorcy',
-  /* A1 L17 (E27 pkt 7; wyglad/W-faktura-termin, D-20261017-2130-01 §5): bezpiecznik dzienny */
-  dec_type_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę — doba po planowanej dostawie bez „Dostarczone”',
   dec_opt_NEXT_SAME: 'Następny rejs tego armatora',
   dec_opt_OTHER_OPERATOR: 'Rejs drugiego armatora',
   dec_opt_HOLD: 'Wstrzymaj',
@@ -59,7 +57,6 @@ const pl: Dict = {
   dec_opt_DELIVERED_YES: 'Tak, dostarczono',
   dec_opt_DELIVERED_NO: 'Nie',
   dec_opt_UPLOAD_CMR: 'Wgraj CMR',
-  dec_opt_STILL_EN_ROUTE: 'Jeszcze w drodze — przypomnij jutro',
 };
 
 export const DEC_I18N: Record<Locale, Dict> = { pl, en: {}, sv: {} };
