@@ -330,6 +330,7 @@ const pl: Dict = {
   p4b_ago_now: 'przed chwilą',
   p4b_ago_min: '{n} min temu',
   p4b_ago_h: '{h} h {m} min temu',
+  p4b_ago_dur: '{d} temu',
   p4b_trailer: 'naczepa {plate}',
   p4b_no_trailer: 'brak naczepy',
   p4b_tracker_emtrack: 'Lokalizator: naczepa {plate} · emtrack',

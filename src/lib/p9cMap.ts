@@ -8,10 +8,10 @@
  */
 import type { Load, RoleId, Sailing } from '../types';
 import { stageTileOf, statusMarkers, trackingPhase, type StageTile } from './stageTiles';
-import { delayMinutesVsPlan, fmtTime, TZ_OPS } from './time';
+import { delayMinutesVsPlan, etaIsNightArrival, fmtTime, TZ_OPS } from './time';
+import { etaDuration } from './etaDuration';
 import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
-import { durText } from './p5Fees';
 import { transportLabel, transportSearchBlob } from './transportName';
 
 const TZ = 'Europe/Warsaw';
@@ -135,7 +135,10 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
     const since = l.etaDetail?.waitSince ?? l.etaBoden;
     eta = { main: tx('p9c_eta_site', { t: hm(since) }), sub: null, late: false };
   } else {
-    const sub = late && delayMin ? tx('p9c_eta_late', { d: durText(delayMin) }) : nogps ? tx('p9c_eta_from_last') : null;
+    /* D-071: „+1 d 4 h 27 min po oknie”; D-101 (ETA-MARK): „przyjazd nocą” przy ETA 22:00–06:00 */
+    const night = etaIsNightArrival(l.etaBoden) ? tx('p9c_eta_night') : null;
+    const sub = [late && delayMin ? tx('p9c_eta_late', { d: etaDuration(delayMin) }) : nogps ? tx('p9c_eta_from_last') : null, night]
+      .filter(Boolean).join(' · ') || null;
     eta = { main: formatListDateTime(l.etaBoden, TZ_OPS), sub, late: late && !!delayMin };
   }
 

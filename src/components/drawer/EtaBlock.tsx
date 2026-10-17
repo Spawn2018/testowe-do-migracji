@@ -9,7 +9,8 @@ import { t, tp } from '../../i18n/messages';
 import { etaConfidenceLabel } from '../../lib/enumLabels';
 import { etaIsNightArrival, etaWindowKind } from '../../lib/time';
 import { stageTileOf } from '../../lib/stageTiles';
-import { dayOnly, dayTime, hoursMinutes, timeOnly } from '../../lib/statusAxis';
+import { dayOnly, dayTime, timeOnly } from '../../lib/statusAxis';
+import { etaDuration } from '../../lib/etaDuration';
 import { formatDelayPill } from '../ui/StatusPill';
 import { minText, type EtaWx } from '../../lib/e49Wx';
 import { e49wx } from '../../i18n/e49Wx';
@@ -20,7 +21,8 @@ function ago(fromIso: string, nowIso: string, locale: Locale): string {
   const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
   if (m < 1) return t(locale, 'p4b_ago_now');
   if (m < 60) return tp(locale, 'p4b_ago_min', { n: m });
-  return tp(locale, 'p4b_ago_h', { h: Math.floor(m / 60), m: m % 60 });
+  /* D-071: „3 h 27 min temu”, „1 d 2 h temu” */
+  return tp(locale, 'p4b_ago_dur', { d: etaDuration(m) });
 }
 
 export function EtaBlock({
@@ -124,7 +126,7 @@ export function EtaBlock({
           ? tp(locale, 'p4b_eta_rest_until_h', { h: d.restHours, until: dayTime(d.restUntil) })
           : tp(locale, 'p4b_eta_rest_until', { until: dayTime(d.restUntil) })
         : null,
-      d?.driveMin != null ? tp(locale, 'p4b_eta_rest_then', { dur: hoursMinutes(d.driveMin * 60_000) }) : null,
+      d?.driveMin != null ? tp(locale, 'p4b_eta_rest_then', { dur: etaDuration(d.driveMin) }) : null,
       osm,
     ];
   } else if (phase === 'WAIT_SITE') {
@@ -148,7 +150,7 @@ export function EtaBlock({
       ? { cls: load.etaConfidence === 'LOW' ? 'p-red' : load.etaConfidence === 'HIGH' ? 'p-go' : 'p-amber', text: band, db: load.etaConfMin != null }
       : null;
     const drive = d?.driveMin != null
-      ? tp(locale, d.restNeeded === false ? 'p4b_eta_drive_norest' : 'p4b_eta_drive', { dur: hoursMinutes(d.driveMin * 60_000) })
+      ? tp(locale, d.restNeeded === false ? 'p4b_eta_drive_norest' : 'p4b_eta_drive', { dur: etaDuration(d.driveMin) })
       : null;
     sub = [
       lastFix ? tp(locale, 'p4b_eta_gps', { ago: ago(lastFix, nowIso, locale) }) : null,
@@ -164,7 +166,7 @@ export function EtaBlock({
   /* telefon: „Dlaczego tyle” (E15 pkt 8) */
   const why: string[] = [];
   if (phone && phase === 'DRIVE' && d) {
-    if (d.driveMin != null) why.push(tp(locale, 'p4b_eta_why_drive', { dur: hoursMinutes(d.driveMin * 60_000) }));
+    if (d.driveMin != null) why.push(tp(locale, 'p4b_eta_why_drive', { dur: etaDuration(d.driveMin) }));
     if (d.restDoneFrom && d.restDoneTo) why.push(tp(locale, 'p4b_eta_why_rest_done', { from: timeOnly(d.restDoneFrom), to: timeOnly(d.restDoneTo) }));
     if (d.restNeeded === false) why.push(t(locale, 'p4b_eta_why_norest'));
     else if (d.restNeeded && d.restHours) why.push(tp(locale, 'p4b_eta_why_rest_ahead', { h: d.restHours }));

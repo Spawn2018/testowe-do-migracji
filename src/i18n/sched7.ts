@@ -57,6 +57,7 @@ const PL: Record<string, string> = {
   s7_no_phone: 'brak',
   s7_eta_done: 'dostarczono',
   s7_eta_site: 'na placu',
+  s7_eta_night: 'przyjazd nocą',
   s7_d_CMR: 'CMR z podpisem',
   s7_d_PERMIT_PL: 'zezwolenie PL',
   s7_d_PERMIT_SE: 'zezwolenie SE',

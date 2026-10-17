@@ -59,6 +59,7 @@ const PL: Record<string, string> = {
   p9c_eta_late: '+{d} po oknie',
   p9c_eta_late_ksh: '{d} po oknie KSH',
   p9c_eta_from_last: 'z ostatniej pozycji',
+  p9c_eta_night: 'przyjazd nocą',
   p9c_eta_site: 'na placu od {t}',
   p9c_empty: 'W oknie śledzenia: 0',
   p9c_empty_sub: 'nikt nie jest teraz w oknie śledzenia',

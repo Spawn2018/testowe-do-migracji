@@ -14,7 +14,7 @@ import { s7, s7p } from '../../i18n/sched7';
 import { StatusMarkers, StatusPill } from '../ui/StatusPill';
 import { clickableRow } from '../../lib/clickableRow';
 import { formatLoadMoney, formatLoadRevMargin } from '../../lib/money/loadPln';
-import { formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
+import { etaIsNightArrival, formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
 import {
   dmy, dayPl, docCell, etaText, hmIn, moneyKey, pair, SHORT_COLS, SHORT_EXTRAS,
@@ -97,7 +97,13 @@ function Eta({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {
   if (k === 'done') return <span>{s7(ctx.locale, 's7_eta_done')}</span>;
   if (k === 'site') return <span>{s7(ctx.locale, 's7_eta_site')}</span>;
   if (k === 'none') return dash;
-  return <span className="s7-num">{formatTableInZone(l.etaBoden, TZ_UNLOAD_SE)}</span>;
+  /* D-101 (ETA-MARK): przyjazd nocą 22:00–06:00 — znacznik pod godziną */
+  return (
+    <span className="s7-num">
+      {formatTableInZone(l.etaBoden, TZ_UNLOAD_SE)}
+      {etaIsNightArrival(l.etaBoden) ? <small className="s7-sub" data-eta-night>{s7(ctx.locale, 's7_eta_night')}</small> : null}
+    </span>
+  );
 }
 
 function Docs({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
