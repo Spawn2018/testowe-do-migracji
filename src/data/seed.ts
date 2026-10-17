@@ -16,6 +16,7 @@ import type {
   ScheduleVersion,
   WorkflowRule,
   WorkflowRun,
+  LoadStatus,
 } from '../types';
 import { positionAlong, PROGRESS_OF, STATUS_TO_STAGE } from '../lib/status';
 import rawLoads from './loads.json';
@@ -450,8 +451,69 @@ function withoutDemoExtras(p: Load['pricing']): Load['pricing'] {
   return { ...p, costExtras: 0, revExtras: 0, costTotal, revTotal, margin, marginPct: revTotal ? margin / revTotal : 0 };
 }
 
+/**
+ * wyglad/W-demo (audyt 17.10, sekcja 15 N6): daty transportów demo zgodne z dniem demo 23.09.2026.
+ * Transporty w drodze, na placu i dostarczone z pierwotnego zestawu miały załadunek w październiku (w przyszłości),
+ * np. „Śledzenie trwa od 01.10” przy statusie „Prom”. Załadunek liczony wstecz od 23.09 według etapu
+ * (dzień załadunku = dzień 0), dostawa wg planu KSH: załadunek + 5 dni (dostarczone: + 4, już po dostawie).
+ * W obrębie statusu kolejność pliku = kolejność dat (wcześniejszy wiersz — wcześniejszy załadunek).
+ * Transporty przed załadunkiem i dodatkowe (EXTRA_LOAD_SPECS) mają daty zgodne — bez zmian.
+ */
+const DEMO_DAY_MS = Date.parse('2026-09-23T12:00:00Z');
+const DAYS_SINCE_LOAD: Partial<Record<LoadStatus, readonly number[]>> = {
+  LOADING: [0],
+  IN_TRANSIT_PL: [0],
+  AT_PORT: [1],
+  ON_FERRY: [1],
+  IN_TRANSIT_SE: [3, 2],
+  DELAYED: [3, 2],
+  SILENT: [3, 2],
+  APPROACHING_SITE: [4, 3],
+  UNLOADING: [4],
+  DELIVERED: [17, 15, 13, 11, 9, 7, 5],
+};
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+function withDemoDates(l: Load, nth: number): Load {
+  const back = DAYS_SINCE_LOAD[l.status];
+  if (!back) return l;
+  const loadMs = DEMO_DAY_MS - back[nth % back.length] * 864e5;
+  const deliverMs = loadMs + (l.status === 'DELIVERED' ? 4 : 5) * 864e5;
+  const load = isoDay(loadMs);
+  const deliver = isoDay(deliverMs);
+  return {
+    ...l,
+    plannedLoadDate: load,
+    plannedDeliverDate: deliver,
+    awizacja: {
+      ...l.awizacja,
+      loadWindowStart: `${load}T06:00:00Z`,
+      loadWindowEnd: `${load}T14:00:00Z`,
+      unloadWindowStart: `${deliver}T07:00:00Z`,
+      unloadWindowEnd: `${deliver}T15:00:00Z`,
+    },
+    etaBoden: null,
+    /* dostarczone: rozładunek w dniu planu (co trzeci — następnego dnia rano, po terminie; terminowość w Kokpicie KSH) */
+    ...(l.status === 'DELIVERED'
+      ? { unloadedAt: nth % 3 === 2 ? `${isoDay(deliverMs + 864e5)}T09:40:00+02:00` : `${deliver}T11:20:00+02:00` }
+      : {}),
+  };
+}
+
+/** Pierwotny zestaw z datami zgodnymi z dniem demo (licznik osobno dla każdego statusu). */
+function redatedRawLoads(): Load[] {
+  const seen = new Map<LoadStatus, number>();
+  return (rawLoads as unknown as Load[]).map((l) => {
+    const n = seen.get(l.status) ?? 0;
+    seen.set(l.status, n + 1);
+    return withDemoDates(l, n);
+  });
+}
+
 export function buildSeedLoads(): Load[] {
-  const sourceLoads = [...(rawLoads as unknown as Load[]), ...buildExtraLoads()];
+  /* audyt 17.10 (N6): kolejność jak w pliku KSH — po dacie załadunku (przy tej samej dacie — pozycja w pliku) */
+  const sourceLoads = [...redatedRawLoads(), ...buildExtraLoads()]
+    .sort((a, b) => a.plannedLoadDate.localeCompare(b.plannedLoadDate) || (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
   return sourceLoads.map((l, idx) => {
     const progress = PROGRESS_OF[l.status] ?? l.progress;
     const pos = positionAlong(progress);

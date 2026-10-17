@@ -84,8 +84,12 @@ function plannedDeliveryUtc(load: Load): string {
  */
 export function fxForDate(localRefDate: string, todayLocal: string, rates: NbpRate[] = DEMO_NBP_RATES): { rate: NbpRate; provisional: boolean } {
   try {
-    const rate = nbpRateBefore(rates, localRefDate);
-    return { rate, provisional: localRefDate > todayLocal };
+    /* audyt 17.10 (E16, decyzja 07.10 23:12): przed rozładunkiem — kurs bieżący, czyli ostatnia tabela opublikowana
+       do dziś włącznie (nie tabela z przyszłości wobec „dziś”); po rozładunku — dzień roboczy przed rozładunkiem */
+    const future = localRefDate > todayLocal;
+    const nextDay = new Date(Date.parse(`${todayLocal}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
+    const rate = nbpRateBefore(rates, future ? nextDay : localRefDate);
+    return { rate, provisional: future };
   } catch {
     const sorted = [...rates].sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
     return { rate: sorted[0], provisional: true };

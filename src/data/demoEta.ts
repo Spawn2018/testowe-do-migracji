@@ -59,9 +59,39 @@ export const DEMO_ETA: Readonly<Record<string, DemoEta>> = {
   },
 };
 
-/** ETA demo dla transportu z listy; pozostałe bez zmian. */
+/**
+ * Pozostałe transporty w trasie (pierwotny zestaw z datami z dnia demo, seed.ts N6): ETA z planu dostawy KSH
+ * i etapu — Droga PL i port: prom + Szwecja; prom: wpłynięcie jutro 12:00 (AIS); Droga SE: plan dostawy;
+ * opóźnione i bez sygnału — po oknie, niska pewność; przed placem — dziś po południu.
+ */
+function genericEta(load: Load): DemoEta | null {
+  const day = load.plannedDeliverDate;
+  if (!day) return null;
+  const at = (d: string, hm: string) => `${d}T${hm}:00+02:00`;
+  switch (load.status) {
+    case 'IN_TRANSIT_PL':
+    case 'LOADING':
+      return { etaBoden: at(day, '11:00'), etaConfidence: 'MED', etaConfMin: 120, detail: { phase: 'DRIVE', lastFixAt: FIX, distanceKm: 1690, driveMin: 1450, restNeeded: true, restHours: 11 } };
+    case 'AT_PORT':
+      return { etaBoden: at(day, '10:00'), etaConfidence: 'MED', etaConfMin: 120, detail: { phase: 'DRIVE', lastFixAt: FIX } };
+    case 'ON_FERRY':
+      return { etaBoden: at(day, '09:30'), etaConfidence: 'MED', etaConfMin: 90, detail: { phase: 'FERRY', ferryEtaAt: '2026-09-24T12:00:00+02:00', lastFixAt: FIX } };
+    case 'IN_TRANSIT_SE':
+      return { etaBoden: at(day, '08:40'), etaConfidence: 'HIGH', etaConfMin: 45, detail: { phase: 'DRIVE', lastFixAt: FIX, distanceKm: 640, driveMin: 560, restNeeded: true, restHours: 11 } };
+    case 'DELAYED':
+      return { etaBoden: at(day, '19:10'), etaConfidence: 'LOW', etaConfMin: 150, detail: { phase: 'DRIVE', lastFixAt: FIX, distanceKm: 820, driveMin: 730, restNeeded: true, restHours: 11 } };
+    case 'SILENT':
+      return { etaBoden: at(day, '13:00'), etaConfidence: 'LOW', etaConfMin: 180, detail: { phase: 'DRIVE', lastFixAt: '2026-09-23T13:05:00+02:00' } };
+    case 'APPROACHING_SITE':
+      return { etaBoden: '2026-09-23T17:20:00+02:00', etaConfidence: 'HIGH', etaConfMin: 15, detail: { phase: 'DRIVE', lastFixAt: FIX, distanceKm: 38, driveMin: 45, restNeeded: false } };
+    default:
+      return null;
+  }
+}
+
+/** ETA demo: transport z listy albo ETA z planu i etapu dla pozostałych w trasie; reszta bez zmian. */
 export function withDemoEta(load: Load): Load {
-  const e = DEMO_ETA[load.code];
+  const e = DEMO_ETA[load.code] ?? genericEta(load);
   if (!e) return load;
   return {
     ...load,
