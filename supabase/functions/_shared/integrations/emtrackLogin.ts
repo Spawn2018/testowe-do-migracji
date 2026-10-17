@@ -1,4 +1,5 @@
-/** A8 / C15: po 3× login_failed emtrack — jedna próba na 6 h, aż zmieni się sekret. */
+/** A8 / C15: po 3× odmowie hasła (login_failed) — jedna próba na 6 h, aż zmieni się sekret.
+ *  Wyjątek sieci, czas i 5xx nie wchodzą do serii (D-20261017-1920-01). */
 
 export const EMTRACK_LOGIN_FAILS = 3;
 export const EMTRACK_RETRY_MS = 6 * 60 * 60 * 1000;

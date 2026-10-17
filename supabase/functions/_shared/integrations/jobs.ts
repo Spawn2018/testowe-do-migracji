@@ -141,6 +141,8 @@ export interface JobDeps {
   /** Testy: zamiast żywego WebSocket aisstream. ferry-ais bez tego czyta pozycje AISSTREAM z bazy
    *  (zapisuje je ferry-ais-listen); ferry-ais-listen bez tego słucha WebSocket. */
   collectAisstream?: (listenMs?: number) => Promise<VesselFix[]>;
+  /** Testy emtrack: zamiast żywego WebSocket. */
+  WebSocketImpl?: typeof WebSocket;
 }
 export interface JobResult {
   job: string; mode: 'LIVE' | 'DEMO'; ok: boolean; reason?: string;
@@ -1152,8 +1154,8 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   let loginState = emtrackLoginFresh(prevLogin, secretFp);
   if (emtrackLoginSkipped(loginState, deps.now())) {
     return {
-      job: 'emtrack-web', mode: 'LIVE', ok: true,
-      reason: `Logowanie pominięte do ${loginState.skippedUntil} — po trzech błędach jedna próba na 6 h`,
+      job: 'emtrack-web', mode: 'LIVE', ok: false,
+      reason: `Logowanie wstrzymane do ${loginState.skippedUntil} — po trzech odmowach jedna próba na 6 h`,
       observations: {
         skipped: 'true',
         skipped_until: loginState.skippedUntil ?? '',
@@ -1186,15 +1188,16 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       login,
       password,
       auth: (deps.env.EMTRACK_AUTH_TYPE as 'INTERNAL' | 'DIRECT' | undefined) ?? 'INTERNAL',
-      WebSocketImpl: (deps as JobDeps & { WebSocketImpl?: typeof WebSocket }).WebSocketImpl,
+      WebSocketImpl: deps.WebSocketImpl,
     });
     objects = r.objects;
     sentLog = r.sentLog;
     loginOk = r.loginOk;
   } catch (e) {
     const w = e instanceof Error ? e.message : String(e);
-    loginState = emtrackLoginFail(loginState, deps.now());
-    if (deps.store.saveEmtrackLoginState) await deps.store.saveEmtrackLoginState(loginState);
+    if (deps.store.saveEmtrackLoginState && loginState.secretFp !== (prevLogin?.secretFp ?? null)) {
+      await deps.store.saveEmtrackLoginState(loginState);
+    }
     await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', [w], deps.now().toISOString(), 'https://emtrack.eu/app/'));
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: [w],

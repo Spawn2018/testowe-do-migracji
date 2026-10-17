@@ -434,8 +434,9 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 5. **Polityka `loads_read`:** usuwasz martwą ścieżkę `OR current_org_kind() = 'SITE'`. Test w `security.sh`.
 
 ### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj)
-- Po 3× `login_failed` → 1 próba / 6 h (`skipped_until`), aż do zmiany sekretu.
-- Jedna sprawa `SOURCE_DOWN:EMTRACK_WEB` z „od kiedy”, klucz bez daty; 10 starych duplikatów zamykasz z kopią.
+- Po 3× `login_failed` (`loginOk === false`) → 1 próba / 6 h (`skipped_until`), aż do zmiany sekretu. Wyjątek sieci, czas i 5xx: sprawa `SOURCE_DOWN` jak dziś, bez zwiększania serii i bez pauzy 6 h — ponowienie co 2 min (D-20261017-1920-01 pkt 1).
+- Przebieg w pauzie: `ok: false`, `observations.skipped = 'true'`, `next_try_at` = `skipped_until`. Próby logowania to przebiegi bez `skipped` (D-20261017-1920-01 pkt 2).
+- Jedna sprawa `SOURCE_DOWN:EMTRACK_WEB` z „od kiedy”, klucz bez daty; 10 starych duplikatów zamykasz z kopią. `detail.od_kiedy` zostaje (pierwsza awaria w migracji, chwila pierwszego zgłoszenia w kodzie). Tekst „od …” na ekranie — #291 (D-20261017-1920-01 pkt 3).
 - Reset po udanym logowaniu.
 - W danych Stanu systemu (P10b-c, gdy podłączysz je na produkcji) dla „Telematyka naczep”: `SourceRow.nextTryAt` = `skipped_until` (`emtrackNextTryAt`). Wyglądu tego miejsca nie zmieniasz (F1, #291).
 - **W37:** właściciel wpisze nowe `EMTRACK_LOGIN` i `EMTRACK_PASSWORD` w Secrets i napisze „W37 wpisane”. Po tym jedno wywołanie, wynik w `POSTEP.md`. A8 robisz bez czekania na W37.
@@ -997,3 +998,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 14:50 | D-20261017-1450-01: PR #289 `wyglad/W-naprawy` (po #284) — `billReady` / `INVOICE_A4` pod A4, `preview_as` pod B5, kody spraw `KSH_DATES_CHECK`, `DELIVERED_CHECK`, `CMR_UPLOAD`; scalenie po skończonym punkcie, wdrożenie bezpieczne przed A4 | koordynator |
 | 17.10.2026 15:30 | D-20261017-1530-01: uwagi do PR #290 (B6, 0225) przed scaleniem — revoke insert/update na `loads` i grant kolumn bez `rio_secret`; limit anon z nagłówków; tekst `EMAIL_BUDGET`; e-mail zapasowy W42 poza limitem | koordynator |
 | 17.10.2026 17:15 | D-20261017-1715-01: PR #291 `wyglad/W-naprawy-2` (baza `main`, #289 scalony) — wygląd pod A5, A6, A8, A9 i C11 oraz zdania Stref przy A2. Scalenie po skończonym punkcie, przy zielonych `unit` i `visual`; wdrożenie bezpieczne, pola opcjonalne. C11: widok #291, Auth W1, test na TEST. A9: `load.readyGaps` według §2 pkt 2. A5: rejs nie wcześniej niż okno awizacji i dzień załadunku. A6: `ImportDiff.skippedCarrier`, `skippedEmpty`, `datesToCheck` i `standardSkipMessage`. A8: `SourceRow.nextTryAt` = `skipped_until`. A2: przestawienie `SITE_EXIT_DELIVERED` zmienia też zdania w Strefach | koordynator |
+| 17.10.2026 19:20 | D-20261017-1920-01: przegląd #293 przed scaleniem. Pauza 6 h tylko po `login_failed`; wyjątek sieci bez serii. Przebieg w pauzie `ok: false` i `skipped`. `detail.od_kiedy` bez zmian; tekst na ekranie w #291. Odbiór A8 po wdrożeniu — koordynator | koordynator |

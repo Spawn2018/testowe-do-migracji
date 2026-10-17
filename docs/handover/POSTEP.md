@@ -2861,5 +2861,14 @@ Twoja część, w swojej kolejności, bez zmiany wyglądu (F1):
 
 Bieżąca pozycja w chwili wpisu: **A8**. #291 jeszcze niescalony.
 
+## 2026-10-17 — DOPISEK D-20261017-1920-01 W PLANIE
+
+Przegląd #293 przed scaleniem. W tym samym PR:
+- pauza 6 h tylko po odmowie hasła (`loginOk === false`); wyjątek sieci, czas i 5xx zostawia sprawę `SOURCE_DOWN` i nie zwiększa serii;
+- przebieg w pauzie: `ok: false`, `observations.skipped = 'true'`, `next_try_at` = `skipped_until`;
+- `detail.od_kiedy` bez zmian; „od …” na ekranie robi koordynator w #291.
+
+Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teście z odbioru i wdrożeniu, nie wcześniej.
+
 
 
