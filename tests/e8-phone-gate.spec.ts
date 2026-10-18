@@ -2661,8 +2661,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       await expect(page.locator('.drawer .wb-back')).toBeVisible();
       await expect(page.locator('.drawer .drawer-hd button.iconbtn')).toHaveCount(1);
       const folds = page.locator('.drawer details.po-fold');
-      /* przegląd 18.10 (B1): SG-19 bez zestawu ma u HHL sekcję „Do zrobienia” (brak kierowcy i zestawu, brak awizacji) */
-      await expect(folds).toHaveCount(role === 'KSH' ? 4 : role === 'HHL' ? 6 : 5);
+      /* przegląd 18.10 (B1): SG-19 bez zestawu ma u HHL i SCX sekcję „Do zrobienia” (brak kierowcy i zestawu, brak awizacji — awizuje SCX) */
+      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 6);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
       await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
