@@ -15,6 +15,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t, fmtNum } from '../../i18n/messages';
 import { pt, ptn, ptp } from '../../i18n/p7';
 import { buildTodo, visibleTodoRisks, type TodoIssue } from '../../lib/p6Todo';
+import { openTodoRisks } from '../../lib/todoRules';
 import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
 import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
@@ -67,6 +68,8 @@ interface Props {
 const dim = (n: number | null | undefined, locale: Locale) => (n == null ? '—' : fmtNum(locale, n, 2));
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
 const ORG_SHORT: Record<OrgKind, string> = { HHL: 'HHL', SCX: 'SCX', KSH: 'KSH' };
+/** Sprawy zezwolenia w danych demo bez klucza słownika („Brak zezwolenia SE”, „Zezwolenie nie obejmuje wymiarów zestawu”). */
+const PERMIT_TODO = /^(Brak zezwolenia|Zezwolenie nie obejmuje)/;
 
 /** Sekcja: na komputerze otwarta z nagłówkiem; na telefonie zwinięta z linią stanu (E32 „Telefon”). */
 function Sec({ id, phone, title, extra, status, right, children }: {
@@ -236,13 +239,64 @@ export function PanelOverview(p: Props) {
   const orderSide = editableOrderSide(role);
   const curSailing = sailings.find((x) => x.id === load.sailingId);
 
+  /* ---------- Numery i dokumenty (E32 pkt 8, E41, E31) — przed „Do zrobienia”: ten sam stan zezwoleń i polisy ---------- */
+  const hhlNo = (load.hhlOrderNo ?? '').trim();
+  const scxNo = (load.carrierOrderNo ?? '').trim();
+  const cached = getDocReqCache();
+  const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
+  const reqs = cached?.reqs ?? docRequirementsStart();
+  const rows = cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso));
+  const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
+  const row = (c: string) => rows.find((x) => x.category === c);
+  /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
+  const permitFirm = spec?.permit === 'FIRMA';
+  const permitState: 'mismatch' | 'ok' | 'missing' = load.permitFits === false || docs.some((d) => d.category.startsWith('PERMIT') && d.status === 'MISMATCH')
+    ? 'mismatch' : (permitFirm ? !!(doc('PERMIT_PL') ?? doc('PERMIT_SE')) : !!(doc('PERMIT_PL') && doc('PERMIT_SE'))) ? 'ok' : 'missing';
+  const permitRows = [row('PERMIT_PL'), row('PERMIT_SE')].filter((x): x is NonNullable<typeof x> => !!x && x.state !== 'OK');
+  const permitRow = permitRows.find((x) => x.state === 'OVERDUE')
+    ?? [...permitRows].sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999'))[0];
+  const permitText = permitState === 'mismatch' ? pt(locale, 'p7_doc_mismatch')
+    : permitState === 'ok' ? pt(locale, 'p7_doc_ok')
+      : permitRow?.state === 'OVERDUE' ? pt(locale, 'p7_doc_over')
+        : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
+  const cmrDoc = doc('CMR');
+  const cmrRow = row('CMR');
+  const cmrSigned = cmrKind(reqs.find((x) => x.category === 'CMR')) === 'SIGNED';
+  const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
+  const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
+    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, cmrSigned ? 'p7_doc_cmr_after_unload' : 'p7_doc_cmr_after');
+  const policies = policiesOf();
+  const policyRow = (key: 'INSURANCE' | 'OCS') => {
+    if (!reqVisible(key, role)) return null;
+    const org = key === 'INSURANCE' ? 'SCX' : 'HHL';
+    const pv = policies?.find((x) => x.org === org) ?? null;
+    const fromDb = key === 'INSURANCE' && p.insAuto?.covered && p.insAuto.policyNo ? p.insAuto : null;
+    const ok = pv ? ptp(locale, 'p7_doc_policy', { number: pv.number, date: dmy(pv.validTo) })
+      : fromDb ? ptp(locale, 'p7_doc_policy', { number: fromDb.policyNo!, date: fromDb.validUntil ? dmy(fromDb.validUntil) : '—' }) : null;
+    /* ta sama reguła co zakładka Dokumenty (PanelDocs): polisa HHL bez danych z bazy — „—”, nie „brak”; SCX — dopóki nie wczytano */
+    const unknown = !ok && policies == null && (key === 'OCS' || !p.insAuto);
+    return { key, ok, unknown };
+  };
+  /* E32 (img/e32-after „Dokumenty”): w skrócie tylko polisa przewoźnika; polisa HHL — w zakładce Dokumenty (E31) */
+  const pols = [policyRow('INSURANCE')].filter((x): x is NonNullable<ReturnType<typeof policyRow>> => !!x);
+  const docMiss = (permitState !== 'ok' ? 1 : 0) + (cmrState === 'over' ? 1 : 0) + pols.filter((x) => !x.ok && !x.unknown).length;
+  const polsOk = pols.every((q) => !!q.ok);
+
+
   /* ---------- Do zrobienia przy tym transporcie (E32 pkt 2; lista E7) ---------- */
-  const card = useMemo(() => {
+  /* bez useMemo — zależy też od stanu zezwolenia i polisy liczonego wyżej przy każdym rysowaniu (React Compiler) */
+  const card = (() => {
     if (role === 'KSH') return null;
-    const own = visibleTodoRisks(role, risks).filter((x) => x.loadId === load.id);
-    const decs = sampleDecisionsOf(loads, nowIso, role).filter((d) => d.loadId === load.id);
+    /* właściciel 18.10, 11:35: bez spraw już zrobionych (dane wpisane w panelu, transport dostarczony) — `todoRules.todoDoneOnLoad` */
+    const own = visibleTodoRisks(role, openTodoRisks(risks.filter((x) => x.loadId === load.id), loads))
+      /* „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy sekcja „Dokumenty” pokazuje zezwolenie „jest”;
+         brak dokumentu przed załadunkiem z bazy (`rk_res_docs`: zezwolenie albo polisa) — gdy jest też polisa przewoźnika */
+      .filter((x) => !(permitState === 'ok' && (x.titleKey === 'rk_seed_permit' || PERMIT_TODO.test(x.title)
+        || (x.titleKey === 'rk_res_docs' && polsOk))));
+    /* „Brak awizacji” znika, gdy awizacja jest kompletna (ten sam stan co sekcja „Kierowcy i zestaw”) */
+    const decs = sampleDecisionsOf(loads, nowIso, role).filter((d) => d.loadId === load.id && !(d.typeCode === 'NO_AWIZACJA' && awiz === 'ok'));
     return buildTodo({ risks: own, decisions: decs, nowIso }).find((c) => c.loadId === load.id) ?? null;
-  }, [role, risks, loads, load.id, nowIso]);
+  })();
   const ctx: CardCtx | null = role === 'KSH' ? null : {
     role, locale, phone, nowIso, loadOf: (id) => loads.find((x) => x.id === id), assignOn: false, assignee: () => null, me: null,
     peopleOf: () => null, historyOf: () => null, onTake: noop, onGive: noop, onTakeover: noop, confirmId: null, onConfirm: noop,
@@ -276,27 +330,49 @@ export function PanelOverview(p: Props) {
     return parts.join(' · ');
   };
   const red = !!card && (card.overdue || card.severity === 'CRITICAL' || card.severity === 'HIGH');
+  const todoItems = card && ctx ? (
+    <ul className="po-todo-l">
+      {card.issues.map((i) => {
+        const tx = issueTexts(i, ctx);
+        return (
+          <li key={i.id} className="po-todo-i" data-po-issue={i.go}>
+            <div className="po-todo-tx">
+              <b data-content>{tx.name}</b>
+              <span>{sub(i)}</span>
+            </div>
+            <div className="po-todo-a">{action(i)}</div>
+          </li>
+        );
+      })}
+    </ul>
+  ) : null;
+  /* właściciel 18.10, 11:35 i 11:46: na telefonie zwija się tylko „Do zrobienia” (jak sekcje niżej) — zwinięte, w linii stanu
+     pierwsza sprawa i liczba pozostałych; czerwony lub bursztynowy pasek zostaje. Komputer bez zmian. */
+  const first = card && ctx ? issueTexts(card.issues[0], ctx).name : '';
   const todoBox = card && ctx ? (
-    <section className={`po-todo${red ? ' is-red' : ''}`} data-po-todo={card.issues.length} aria-label={ptp(locale, 'p7_todo_h', { n: card.issues.length })}>
-      <div className="po-todo-hd">
-        <b>{ptp(locale, phone ? 'p7_todo_h_phone' : 'p7_todo_h', { n: card.issues.length })}</b>
-        {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
-      </div>
-      <ul className="po-todo-l">
-        {card.issues.map((i) => {
-          const tx = issueTexts(i, ctx);
-          return (
-            <li key={i.id} className="po-todo-i" data-po-issue={i.go}>
-              <div className="po-todo-tx">
-                <b data-content>{tx.name}</b>
-                <span>{sub(i)}</span>
-              </div>
-              <div className="po-todo-a">{action(i)}</div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    phone ? (
+      <details className={`po-todo po-fold${red ? ' is-red' : ''}`} data-po="todo" data-po-todo={card.issues.length}>
+        <summary>
+          <span className="po-fold-t">
+            <b>{ptp(locale, 'p7_todo_h_phone', { n: card.issues.length })}</b>
+            <span className="po-todo-s" data-content>
+              {first}{card.issues.length > 1 ? ` · ${ptn(locale, 'p7_todo_more', card.issues.length - 1)}` : ''}
+            </span>
+          </span>
+          {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
+          <span className="po-fold-i" aria-hidden="true">▾</span>
+        </summary>
+        {todoItems}
+      </details>
+    ) : (
+      <section className={`po-todo${red ? ' is-red' : ''}`} data-po-todo={card.issues.length} aria-label={ptp(locale, 'p7_todo_h', { n: card.issues.length })}>
+        <div className="po-todo-hd">
+          <b>{ptp(locale, 'p7_todo_h', { n: card.issues.length })}</b>
+          {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
+        </div>
+        {todoItems}
+      </section>
+    )
   ) : null;
   const kshLine = role === 'KSH' ? (
     <p className={`po-kshline is-${awiz}`} data-po-ksh-line={awiz}>
@@ -378,48 +454,6 @@ export function PanelOverview(p: Props) {
       ? <span data-content><b className="mono">{x!.plate}</b>{` · ${x!.name}`}</span>
       : <span className="po-miss">{pt(locale, 'p7_pilot_none')}</span>;
   };
-
-  /* ---------- Numery i dokumenty (E32 pkt 8, E41, E31) ---------- */
-  const hhlNo = (load.hhlOrderNo ?? '').trim();
-  const scxNo = (load.carrierOrderNo ?? '').trim();
-  const cached = getDocReqCache();
-  const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
-  const reqs = cached?.reqs ?? docRequirementsStart();
-  const rows = cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso));
-  const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
-  const row = (c: string) => rows.find((x) => x.category === c);
-  /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
-  const permitFirm = spec?.permit === 'FIRMA';
-  const permitState: 'mismatch' | 'ok' | 'missing' = load.permitFits === false || docs.some((d) => d.category.startsWith('PERMIT') && d.status === 'MISMATCH')
-    ? 'mismatch' : (permitFirm ? !!(doc('PERMIT_PL') ?? doc('PERMIT_SE')) : !!(doc('PERMIT_PL') && doc('PERMIT_SE'))) ? 'ok' : 'missing';
-  const permitRows = [row('PERMIT_PL'), row('PERMIT_SE')].filter((x): x is NonNullable<typeof x> => !!x && x.state !== 'OK');
-  const permitRow = permitRows.find((x) => x.state === 'OVERDUE')
-    ?? [...permitRows].sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999'))[0];
-  const permitText = permitState === 'mismatch' ? pt(locale, 'p7_doc_mismatch')
-    : permitState === 'ok' ? pt(locale, 'p7_doc_ok')
-      : permitRow?.state === 'OVERDUE' ? pt(locale, 'p7_doc_over')
-        : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
-  const cmrDoc = doc('CMR');
-  const cmrRow = row('CMR');
-  const cmrSigned = cmrKind(reqs.find((x) => x.category === 'CMR')) === 'SIGNED';
-  const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
-  const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
-    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, cmrSigned ? 'p7_doc_cmr_after_unload' : 'p7_doc_cmr_after');
-  const policies = policiesOf();
-  const policyRow = (key: 'INSURANCE' | 'OCS') => {
-    if (!reqVisible(key, role)) return null;
-    const org = key === 'INSURANCE' ? 'SCX' : 'HHL';
-    const pv = policies?.find((x) => x.org === org) ?? null;
-    const fromDb = key === 'INSURANCE' && p.insAuto?.covered && p.insAuto.policyNo ? p.insAuto : null;
-    const ok = pv ? ptp(locale, 'p7_doc_policy', { number: pv.number, date: dmy(pv.validTo) })
-      : fromDb ? ptp(locale, 'p7_doc_policy', { number: fromDb.policyNo!, date: fromDb.validUntil ? dmy(fromDb.validUntil) : '—' }) : null;
-    /* ta sama reguła co zakładka Dokumenty (PanelDocs): polisa HHL bez danych z bazy — „—”, nie „brak”; SCX — dopóki nie wczytano */
-    const unknown = !ok && policies == null && (key === 'OCS' || !p.insAuto);
-    return { key, ok, unknown };
-  };
-  /* E32 (img/e32-after „Dokumenty”): w skrócie tylko polisa przewoźnika; polisa HHL — w zakładce Dokumenty (E31) */
-  const pols = [policyRow('INSURANCE')].filter((x): x is NonNullable<ReturnType<typeof policyRow>> => !!x);
-  const docMiss = (permitState !== 'ok' ? 1 : 0) + (cmrState === 'over' ? 1 : 0) + pols.filter((x) => !x.ok && !x.unknown).length;
 
   const setL = r.setLengthM ?? spec?.set.l ?? null;
   const setW = r.setWidthM ?? spec?.set.w ?? null;
