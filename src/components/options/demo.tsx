@@ -86,7 +86,7 @@ export const DEMO_MATRIX: MatrixGroup[] = [
       { id: 'sms_gw', perDay: 1, title: 'Bramka SMS milczy albo SMS niedoręczony', sub: 'SMS niewysłany w 10 min · e-mail do Operacji HHL', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       /* wyglad/audyt-E (E-02; E23 decyzja 1 A 08.10, E46): alarm do Administratorów HHL — e-mail i telefon na stałe */
-      { id: 'src_down', perDay: 1, title: 'Źródło danych nie działa', sub: 'przy awarii, przypomnienie po 2 h · Administrator HHL: e-mail i telefon zawsze — decyzja właściciela 08.10.2026', target: 'Opcje › Stan systemu',
+      { id: 'src_down', perDay: 1, title: 'Źródło danych nie działa', sub: 'przy awarii, przypomnienie po 2 h · Administrator HHL: e-mail i telefon zawsze — decyzja właściciela', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'src_back', perDay: 1, title: 'Źródło danych wróciło', sub: 'po awarii · Administrator HHL: e-mail i telefon zawsze', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
@@ -103,15 +103,15 @@ export const DEMO_ACCOUNTS: Record<AccountKind, number> = { HHL_ADMIN: 4, HHL_OP
 /** 9 przełączników — nazwy i zdania z obrazu E12, stany i ostatnie zmiany z bazy 08.10; bez „Kontroli trasy”,
  *  „Przeszkód” (16.10, 01:13) i „E-maila o decyzjach automatycznych” (E5, E11 — e-mail ustawia „Kto co dostaje”). */
 export const DEMO_FLAGS: SecurityFlagRow[] = [
-  { key: 'EXTERNAL_MESSAGING', on: false, when: '02.10.2026, 18:43', by: null },
-  { key: 'MFA_HHL_ADMIN', on: false, when: '27.09.2026, 21:25', by: null },
-  { key: 'PERMIT_REQUIRED_NON_STANDARD', on: false, when: '05.10.2026, 19:38', by: 'Administrator HHL' },
-  { key: 'SMS_ZONE_APPROACH', on: true, when: '01.10.2026, 23:01', by: null },
-  { key: 'SMS_ZONE_ENTER', on: true, when: '01.10.2026, 23:01', by: null },
-  { key: 'TELM_EMTRACK_WEB', on: true, when: '05.10.2026, 13:18', by: null },
-  { key: 'DRIVER_LINK_ACCEPT', on: false, when: '03.10.2026, 23:52', by: null },
-  { key: 'FUEL_SE_PL_INGEST', on: true, when: '05.10.2026, 11:07', by: null },
-  { key: 'FUEL_WOB_INGEST', on: false, when: '28.09.2026, 09:58', by: null },
+  { key: 'EXTERNAL_MESSAGING', on: false, when: '15.09.2026, 18:43', by: null },
+  { key: 'MFA_HHL_ADMIN', on: false, when: '10.09.2026, 21:25', by: null },
+  { key: 'PERMIT_REQUIRED_NON_STANDARD', on: false, when: '18.09.2026, 19:38', by: 'Administrator HHL' },
+  { key: 'SMS_ZONE_APPROACH', on: true, when: '14.09.2026, 23:01', by: null },
+  { key: 'SMS_ZONE_ENTER', on: true, when: '14.09.2026, 23:01', by: null },
+  { key: 'TELM_EMTRACK_WEB', on: true, when: '18.09.2026, 13:18', by: null },
+  { key: 'DRIVER_LINK_ACCEPT', on: false, when: '16.09.2026, 23:52', by: null },
+  { key: 'FUEL_SE_PL_INGEST', on: true, when: '18.09.2026, 11:07', by: null },
+  { key: 'FUEL_WOB_INGEST', on: false, when: '11.09.2026, 09:58', by: null },
 ];
 
 /** Wartości progów z bazy 08.10 (E12 „Fakty”; cisza GPS według E12-3: 30 min w ruchu). */
@@ -140,18 +140,18 @@ export const DEMO_THRESHOLDS: ThresholdRow[] = [
 const PEOPLE: PersonRow[] = [
   { id: 'p1', name: 'Anna Wiśniewska', mail: 'a.wisniewska@…', kind: 'HHL_ADMIN', phone: '+48 600 000 010', last: 'dziś, 08:12', mfa: true, self: true },
   { id: 'p2', name: 'Marek Lis', mail: 'm.lis@…', kind: 'HHL_OPS', phone: '+48 600 000 003', last: 'dziś, 07:55', mfa: false },
-  { id: 'p3', name: 'Piotr Zając', mail: 'p.zajac@…', kind: 'CLIENT_USER', phone: null, last: '06.10.2026, 16:40', mfa: false },
+  { id: 'p3', name: 'Piotr Zając', mail: 'p.zajac@…', kind: 'CLIENT_USER', phone: null, last: '19.09.2026, 16:40', mfa: false },
   { id: 'p4', name: 'Jan Nowak', mail: 'j.nowak@…', kind: 'CARRIER_DISPATCH', phone: '+48 600 000 001', last: 'dziś, 06:30', mfa: false },
-  { id: 'p5', name: 'Ewa Kowal', mail: 'e.kowal@…', kind: 'CARRIER_DISPATCH', phone: '+48 600 000 002', last: '05.10.2026, 11:09', mfa: false },
+  { id: 'p5', name: 'Ewa Kowal', mail: 'e.kowal@…', kind: 'CARRIER_DISPATCH', phone: '+48 600 000 002', last: '18.09.2026, 11:09', mfa: false },
   /* wyglad/W-konta (F7): Użytkownik SCX w demo — „Moje konto” pokazuje tę osobę, nie Administratora HHL. Dane wymyślone (G-09). */
   { id: 'p6', name: 'Tomasz Wrona', mail: 't.wrona@…', kind: 'CARRIER_USER', phone: '+48 600 000 004', last: 'dziś, 07:10', mfa: false },
 ];
 
 const INVITES: InviteRow[] = [
-  { id: 'i1', name: 'Dyspozytor SCX', kind: 'CARRIER_DISPATCH', domain: 'scandinavian.com.pl', line: 'link otwarty 29.09.2026, hasła nie ustawił · 0 aktywnych sesji', status: 'unfinished' },
-  { id: 'i2', name: 'Anna Nowak', kind: 'CLIENT_USER', line: 'zaproszenie wysłane 09.10.2026, 10:15 · ważne do 16.10.2026 · e-mail doręczony', status: 'sent' },
-  { id: 'i3', name: 'Jan Kowalski', kind: 'CARRIER_USER', line: 'zaproszenie z 01.10.2026 wygasło 08.10.2026', status: 'expired' },
-  { id: 'i4', name: 'Operacje HHL', kind: 'HHL_OPS', domain: 'hhlogistics.pl', line: 'aktywne · ostatnie logowanie 05.10.2026 · bez imienia i telefonu', status: 'nophone' },
+  { id: 'i1', name: 'Dyspozytor SCX', kind: 'CARRIER_DISPATCH', domain: 'scandinavian.com.pl', line: 'link otwarty 12.09.2026, hasła nie ustawił · 0 aktywnych sesji', status: 'unfinished' },
+  { id: 'i2', name: 'Anna Nowak', kind: 'CLIENT_USER', line: 'zaproszenie wysłane 22.09.2026, 10:15 · ważne do 29.09.2026 · e-mail doręczony', status: 'sent' },
+  { id: 'i3', name: 'Jan Kowalski', kind: 'CARRIER_USER', line: 'zaproszenie z 14.09.2026 wygasło 21.09.2026', status: 'expired' },
+  { id: 'i4', name: 'Operacje HHL', kind: 'HHL_OPS', domain: 'hhlogistics.pl', line: 'aktywne · ostatnie logowanie 18.09.2026 · bez imienia i telefonu', status: 'nophone' },
 ];
 
 export type DemoBodies = {
@@ -177,7 +177,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
             { id: 'l2', when: 'dziś, 07:55', who: 'Marek Lis', kind: 'HHL_OPS', ok: true, where: 'Safari · iPhone' },
             { id: 'l3', when: 'dziś, 07:51', who: 'm.lis@…', kind: null, ok: false, where: 'Safari · iPhone' },
             { id: 'l4', when: 'dziś, 06:30', who: 'Jan Nowak', kind: 'CARRIER_DISPATCH', ok: true, where: 'Chrome · Android' },
-            { id: 'l5', when: '06.10.2026, 16:40', who: 'Piotr Zając', kind: 'CLIENT_USER', ok: true, where: 'Edge · Windows' },
+            { id: 'l5', when: '19.09.2026, 16:40', who: 'Piotr Zając', kind: 'CLIENT_USER', ok: true, where: 'Edge · Windows' },
           ]}
         />
       ),
@@ -188,8 +188,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           accounts={DEMO_ACCOUNTS}
           readOnly={readOnly}
           mark={mark}
-          cards={{ mail: { on: true, used: 23, max: 90, reserve: 10 }, push: { on: true, devices: 1 }, last: { when: '05.10.2026, 12:10', text: 'Administrator HHL · System → HHL: e-mail wyłączony' } }}
-          history={{ n: 4, since: '01.10.2026', last: '05.10.2026, 12:10' }}
+          cards={{ mail: { on: true, used: 23, max: 90, reserve: 10 }, push: { on: true, devices: 1 }, last: { when: '18.09.2026, 12:10', text: 'Administrator HHL · System → HHL: e-mail wyłączony' } }}
+          history={{ n: 4, since: '14.09.2026', last: '18.09.2026, 12:10' }}
         />
       ),
       bcast: (
@@ -197,10 +197,10 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           locale={locale}
           readOnly={readOnly}
           mark={mark}
-          draft={{ text: 'Prom Stena Estelle 09.10.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.', firms: ['HHL', 'KSH', 'SCX'], until: '2026-10-09T12:00' }}
+          draft={{ text: 'Prom Stena Estelle 24.09.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.', firms: ['HHL', 'KSH', 'SCX'], until: '2026-09-24T12:00' }}
           history={[
-            { id: 'b1', when: '01.10.2026, 22:04', who: 'Administrator HHL', text: 'Witamy w Watch Tower. To jest komunikat testowy.', line: 'HHL, KSH, SCX · zdjęty 02.10.2026, 14:50', test: true },
-            { id: 'b2', when: '01.10.2026, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5 s', test: true },
+            { id: 'b1', when: '14.09.2026, 22:04', who: 'Administrator HHL', text: 'Witamy w Watch Tower. To jest komunikat testowy.', line: 'HHL, KSH, SCX · zdjęty 15.09.2026, 14:50', test: true },
+            { id: 'b2', when: '14.09.2026, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5 s', test: true },
           ]}
         />
       ),
@@ -212,17 +212,17 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           locale={locale}
           mark={mark}
           techCount={2713}
-          range={{ from: '2026-10-01', to: '2026-10-08' }}
+          range={{ from: '2026-09-14', to: '2026-09-21' }}
           people={['Administrator HHL', 'Operacje HHL', 'System // Watch Tower']}
           /* wyglad/audyt-E (E-08; E12 „co: konta, ustawienia, ceny, transporty”, E37 „Działaj jako”, E18 porządki) */
           areas={['konta', 'ustawienia', 'ceny', 'transporty', 'powiadomienia', 'przełączniki']}
           entries={[
-            { id: 'h0a', when: '08.10.2026, 09:12', who: 'Anna Wiśniewska (HHL) jako Jan Nowak', text: 'SG-02: numer zlecenia SCX wpisany za SCX Dyspozytora' },
-            { id: 'h0b', when: '08.10.2026, 08:40', who: 'Administrator HHL', text: 'Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana' },
-            { id: 'h1', when: '07.10.2026, 14:10', who: 'Administrator HHL', text: 'Zaproszenie: nowe konto Operacje HHL' },
-            { id: 'h2', when: '07.10.2026, 14:08', who: 'Administrator HHL', text: 'Konto włączone' },
-            { id: 'h3', when: '06.10.2026, 16:02', who: 'Administrator HHL', text: 'Cennik KSH: wersja 2 · „Poprawa cen do pełnej liczby”' },
-            { id: 'h4', when: '05.10.2026, 19:38', who: 'Administrator HHL', text: 'Bez zezwolenia nie ma „Gotowy”', was: 'włączony', is: 'wyłączony' },
+            { id: 'h0a', when: '21.09.2026, 09:12', who: 'Anna Wiśniewska (HHL) jako Jan Nowak', text: 'SG-02: numer zlecenia SCX wpisany za SCX Dyspozytora' },
+            { id: 'h0b', when: '21.09.2026, 08:40', who: 'Administrator HHL', text: 'Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana' },
+            { id: 'h1', when: '20.09.2026, 14:10', who: 'Administrator HHL', text: 'Zaproszenie: nowe konto Operacje HHL' },
+            { id: 'h2', when: '20.09.2026, 14:08', who: 'Administrator HHL', text: 'Konto włączone' },
+            { id: 'h3', when: '19.09.2026, 16:02', who: 'Administrator HHL', text: 'Cennik KSH: wersja 2 · „Poprawa cen do pełnej liczby”' },
+            { id: 'h4', when: '18.09.2026, 19:38', who: 'Administrator HHL', text: 'Bez zezwolenia nie ma „Gotowy”', was: 'włączony', is: 'wyłączony' },
           ]}
         />
       ),
@@ -230,8 +230,8 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
         <ExportScreen
           locale={locale}
           kinds={readOnly ? ['loads', 'risks', 'fin'] : ['loads', 'hist', 'risks', 'fin']}
-          range={{ from: '2026-10-01', to: '2026-10-08' }}
-          fileName={(k) => `WatchTower_${k === 'loads' ? 'Transporty' : k === 'hist' ? 'Historia' : k === 'risks' ? 'Sprawy' : 'Finanse'}_01.10.2026–08.10.2026.xlsx`}
+          range={{ from: '2026-09-14', to: '2026-09-21' }}
+          fileName={(k) => `WatchTower_${k === 'loads' ? 'Transporty' : k === 'hist' ? 'Historia' : k === 'risks' ? 'Sprawy' : 'Finanse'}_14.09.2026–21.09.2026.xlsx`}
         />
       ),
       account: (
@@ -240,7 +240,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           mark={mark}
           me={{ first: first ?? '', last: rest.join(' '), phone: me.phone ?? '', mail: me.mail, kind, lastLogin: me.last }}
           mfa={me.mfa}
-          mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '12.10.2026' }] : undefined}
+          mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '22.09.2026' }] : undefined}
           mfaCode
           onMfaAdd={() => undefined}
           onMfaRemove={() => undefined}

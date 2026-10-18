@@ -13,7 +13,7 @@ function texts(): Map<string, SavedText> {
       id: 'SMS_C',
       subject: null,
       body: '{{code}}: auto {{trailer}} stoi przy {{place}} od {{dwell}}. Plan dostawy: {{planDate}}.',
-      at: '2026-10-07T20:42:00Z',
+      at: '2026-09-20T20:42:00Z',
       who: 'Anna Wiśniewska',
     }],
   ]);

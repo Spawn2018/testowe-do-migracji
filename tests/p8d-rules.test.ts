@@ -132,9 +132,9 @@ describe('demo: zapis z powodem trafia do historii (E35 pkt 4)', () => {
     expect(h.slice(0, 3).map((x) => [x.action, x.reason])).toEqual([['removed', 'koniec'], ['off', 'test'], ['created', null]]);
     expect(demoRulesNow().length).toBe(before);
   });
-  it('przebiegi jak w bazie 08.10 (E35 „Fakty”): jeden wykonany — SG-03, 06.10 11:22', async () => {
+  it('przebiegi demo (E35 „Fakty”, przegląd 18.10: przed zegarem 23.09): jeden wykonany — T-11, 22.09 05:22', async () => {
     const done = (await demoRuleRuns()).filter((r) => r.result.kind === 'done');
-    expect(done.map((r) => [r.code, r.at])).toEqual([['SG-03', '2026-10-06T09:22:00Z']]);
+    expect(done.map((r) => [r.code, r.at])).toEqual([['T-11', '2026-09-22T03:22:00Z']]);
   });
 });
 

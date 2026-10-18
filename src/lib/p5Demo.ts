@@ -63,7 +63,7 @@ export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[
 export function demoFactoringOffer(): FactoringOfferView | null {
   const o = useTowerStore.getState().factoringOffer;
   if (!o.enabled) return null;
-  return { feePct: o.feePercent, hours: o.payoutDelayUnit === 'days' ? o.payoutDelayValue * 24 : o.payoutDelayValue, version: 1, from: '2026-10-07' };
+  return { feePct: o.feePercent, hours: o.payoutDelayUnit === 'days' ? o.payoutDelayValue * 24 : o.payoutDelayValue, version: 1, from: '2026-09-20' };
 }
 
 /** E4b — zadanie „Wypłata faktoringu” dla pierwszej przyjętej, nieopłaconej faktury przewoźnika. */
@@ -112,8 +112,8 @@ export function demoPackActions(): PackActions {
 export function demoPermits(loads: Load[]): PermitView[] {
   const n = (prefix: string) => loads.filter((l) => l.code.startsWith(prefix)).length;
   return [
-    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'P/0000/2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
-    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 0000-2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'P/0000/2026', validFrom: '2026-09-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 0000-2026', validFrom: '2026-09-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
     { id: 'demo-p3', scope: 'TRASA', country: 'PL+SE', number: null, validFrom: null, validTo: null, limits: { l: 23.69, w: 3.52, h: 3.9 }, pilot: 'PL + SE', appliesTo: 'Kratownice (KR)', loads: n('KR-') },
   ];
 }

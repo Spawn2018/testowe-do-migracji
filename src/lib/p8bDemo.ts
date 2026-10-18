@@ -15,7 +15,7 @@ function st(): SmsPlacesState {
       { id: 'LOAD_SREM', people: [{ userId: 'demo-hhl-1', name: 'Anna Wiśniewska', country: 'PL', phone: '000000010', kinds: ['A', 'C', 'D'] }, null] },
       { id: 'UNLOAD_BODEN', people: [null, null] },
     ],
-    gateway: { active: true, lastSignal: '2026-10-15T15:57:00Z', today: 0, limit: 150 },
+    gateway: { active: true, lastSignal: '2026-09-22T15:57:00Z', today: 0, limit: 150 },
   };
   return store;
 }

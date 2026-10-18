@@ -84,7 +84,7 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
   const actions = { fill: ok, newVersion: () => undefined };
   it('karty, kroki „Jak liczymy”, alarm z „Uzupełnij z Orlen”, tabele cen i mnożników', () => {
     const h = html(createElement(FuelScreen, { locale: 'pl', view, actions, readOnly: false }));
-    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 28.09.2026');
+    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 11.09.2026');
     expect(h).toContain('+5%');
     expect(h).toContain('×1,05');
     expect(h).toContain('Brak ceny Orlen z 13.10.');
@@ -119,7 +119,7 @@ describe('E33 — Dopłaty: postój', () => {
     expect(h).toContain('750 EUR');
     expect(h).toContain('role="radio" aria-checked="true"');
     expect(h).toContain('→ 225,00 EUR');
-    expect(h).toContain('Ostatnia zmiana: 07.10.2026, 12:35 · Administrator HHL');
+    expect(h).toContain('Ostatnia zmiana: 20.09.2026, 12:35 · Administrator HHL');
     expect(h).not.toMatch(/WSTĘPNE|wstępne/);
     expect((h.match(/>Zmień</g) ?? []).length).toBe(5);
     expect(h).toContain('Stawka dobowa powyżej');
