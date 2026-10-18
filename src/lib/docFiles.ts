@@ -6,7 +6,7 @@
  * Moduł bez kodu Supabase — paczka demo pozostaje czysta.
  */
 import type { DocCategory, Document } from '../types';
-import { getFileSink, isServerId, isStoredDoc } from '../data/registry';
+import { getFileSink, isServerId, isStoredDoc, notifyFileUploaded } from '../data/registry';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { readFileAsDataUrl } from './docsIo';
@@ -49,6 +49,8 @@ export async function attachDocumentFile(
       if (prev && doc.versionError) st.pushToast(t(st.locale, 'iii6_newver_fail').replace('{msg}', doc.versionError), 'HIGH', loadId);
       else if (prev && (doc.version ?? 1) > 1) st.pushToast(t(st.locale, 'iii6_newver').replace('{n}', String(doc.version)), 'MEDIUM', loadId);
       st.addStoredDocument(opts.driverToken ? { ...doc, source: 'driver' } : doc, opts.driverToken ? 'DRIVER' : undefined);
+      /* D-20261018-1215-01 §3: dokument idzie przez FileSink, nie przez mutację mostka. */
+      await notifyFileUploaded();
       return true;
     } catch (e) {
       st.pushToast(t(st.locale, 'bk4_file_failed').replace('{msg}', errMsg(e)), 'HIGH', loadId);

@@ -7,7 +7,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { useTowerStore } from '../store/useTowerStore';
 import { createSupabaseProvider } from './supabaseProvider';
 import { emptySnapshot, type DataMutation } from './provider';
-import { registerFileSink, registerRemoteSink } from './registry';
+import { registerAfterFileUpload, registerFileSink, registerRemoteSink } from './registry';
 import { createStorageSink } from './storageFiles';
 import { friendlyDbError } from '../lib/orderNumbers';
 
@@ -25,6 +25,7 @@ export async function refreshFromServer(opts: { keepSelection?: boolean } = {}):
 export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
+  registerAfterFileUpload(() => refreshFromServer({ keepSelection: true }));
   await refreshFromServer();
   // M4: ustawienia użytkownika z serwera (język, waluta, motyw) — bez ponownego zapisu
   try {
@@ -50,6 +51,10 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         /* M9 — zdarzenie strefy mogło zmienić status; rozładunek zapisał migawkę ceny */
         if (m.type === 'position.report' && res && res.id && res.id !== '0') await refreshFromServer();
         if (m.type === 'load.status' && m.status === 'UNLOADING') await refreshFromServer();
+        /* D-20261018-1215-01 §3: zapis z panelu (awizacja, numer, status) odświeża „Do zrobienia”. */
+        if (m.type === 'load.awizacja' || m.type === 'load.orderNo' || (m.type === 'load.status' && m.status !== 'UNLOADING')) {
+          await refreshFromServer({ keepSelection: true });
+        }
         /* M10 — nowy rejs dostaje id z serwera; rezerwacja transportu z rejsu (jedno źródło prawdy) */
         if (m.type === 'sailing.save' || m.type === 'load.sailing') await refreshFromServer();
         /* 9.4 — reguła: id, walidacja i liczniki z bazy */
@@ -65,6 +70,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 export function disconnectSupabaseData(): void {
   registerRemoteSink(null);
   registerFileSink(null);
+  registerAfterFileUpload(null);
   active = null;
   useTowerStore.setState({ ...emptySnapshot(), selectedLoadId: null });
 }

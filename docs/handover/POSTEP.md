@@ -2981,3 +2981,33 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 
 - `nullguard-3` raz urwał się przed startem testu (bez wpisu w `wyniki.json`); powtórka 232/232.
 - `i2-2` 102/104: `ksh@test` miał `CLIENT_ADMIN` (zaproszenie z `SEED_AUTH_USERS`), a `seed.sql` i asercja mają `CLIENT_USER`. Stąd też odmowa `ksh_confirm_dates`. Rola w fixture wraca do `CLIENT_USER`. Brama niedzielna od nowa na commicie z tą poprawką.
+
+## 2026-10-18 16:17 — DOPISEK D-20261018-1610-01 W PLANIE
+
+- Po bazie panelu (D-20261018-1215-01 §2), przed A3: L-1 bez decyzji `SOURCE` dla tygodnia, który jeszcze trwa; 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień; jedna eskalacja na `event_key` i osobę; powyżej 2 w jednym przebiegu — jeden wpis i jeden e-mail zbiorczy; tytuły z kodem transportu i „Opłata paliwowa”.
+- Lista 23 otwartych `NO_AWIZACJA` przy starych `PLANNED` — w tym wpisie przy wykonaniu pozycji, bez kodu.
+- Brama niedzielna i PR #302 idą dalej. Tego dopisku nie wdrażam w tej przerwie.
+
+## 2026-10-18 17:45 — DOPISEK D-20261018-1740-01 W PLANIE
+
+- Po eskalacjach (D-20261018-1610-01), przed A3: CMR tylko po rozładunku. `doc_requirements` → `AFTER_UNLOAD` / 24 h, bez powiadomień; przed „Dostarczone” CMR nie jest `OVERDUE`. Kotwica przy załadunku odrzucona. Lista miejsc z CMR przy załadunku — przy wykonaniu pozycji.
+- Sprawa „Wgraj CMR” zostaje w A3. Wygląd robi koordynator w #303; tekstów i filtra nie zmieniam (F1).
+- Brama niedzielna idzie dalej (`nullguard-1` w chwili wpisu). Tego dopisku nie wdrażam w tej przerwie.
+
+## 2026-10-18 20:07 — PR #303 scalony (P11 pkt 7, partie 1–6)
+
+- Głowa `ab0969d` bez zmiany. F7: „gotowe do scalenia”. Unit i visual zielone. `git merge-tree` z `main` i z #301: bez konfliktu.
+- Scalenie `7e9c286c`. Bez bazy (wygląd, teksty, obliczenia widoku, dane demo). Tekstów i filtra CMR nie ruszam (F1).
+- Brama niedzielna na `516ef63b`, migracja 0228: **ZIELONA** (21:31). Ostatni zestaw `backup` 21/21 (+8 SKIP). Suma nullguard 657/657, i2 540/540. **TEST wolne** od 18.10.2026 21:31.
+- Wdrożenie z `main` `7e9c286c`: `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33. `tower.log-mar.pl` i makieta: 200.
+
+## 2026-10-18 21:45 — Panel › Do zrobienia, baza (D-20261018-1215-01 §2–§3)
+
+- Brama niedzielna zielona, TEST wolne. Gałąź `pakiet/panel-do-zrobienia-baza`, migracja `0229_panel_close_alarms.sql`.
+- Wyzwalacz na `decisions.status`: sygnał `decision-overdue:<id>` dostaje `resolved_at`, gdy status schodzi z `NEW` / `ASSIGNED` / `SNOOZED`.
+- `loads_close_delivery_unconfirmed` (A1 + L14 bez zmian) zamyka też alarmy sprzed dostawy i w drodze przy `DELIVERED` / `READY_TO_INVOICE` / `INVOICED` / `CANCELLED`. Faktura po terminie, L14 i inne decyzje po terminie zostają.
+- Porządek jednorazowy tą samą regułą, znacznik `detail.closed_by = D-20261018-1215-01`, bez nowych powiadomień (C1 tylko oznacza istniejące IN_APP jako przeczytane).
+- Aplikacja: `refreshFromServer({ keepSelection: true })` po awizacji, numerze zlecenia i ręcznym statusie; po wgraniu dokumentu `notifyFileUploaded()` (FileSink omija mutację mostka).
+- Testy: `risks.sh` +6 (oczekiwane 33 lokalnie / 31 na TEST), w tym `RES:DRIVER` przy `DELIVERED`. Sam `title_key = rk_res_driver` nie zamyka alarmu.
+- Porządek na produkcji (oczekiwane, przegląd #305): `decision-overdue` 16, alarmy sprzed dostawy 7 (4 + 3 `RES:DRIVER`). Liczby po `db push` wpisuję obok.
+- Decyzje W26, W28, W29, W30, W31, W33 i W45 wpisane (D-20261018-2200-01, zamknięte 18.10.2026, 21:57).
