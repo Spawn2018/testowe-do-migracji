@@ -1,42 +1,99 @@
 /**
  * P11 pkt 6 (paczka B, e17 / e25; POROWNANIE P11-zgodnosc, „Dane demo”): w demo transporty na placu, rozładowane
- * i dostarczone mają zdarzenia strefy placu jak z silnika stref — wjazd („Na placu” z automatu), postój potwierdzony
- * po 15 min, wyjazd w chwili rozładunku („Wyjazd z placu po 3 h 44 min”).
+ * i dostarczone mają zdarzenia strefy placu jak z silnika stref — wjazd na plac
+ * („Na placu” z automatu), postój potwierdzony po 15 min, wyjazd w chwili rozładunku („Wyjazd z placu po 3 h 44 min”).
+ * Uwagi F7 #304: wjazd przy „Na placu” = „czeka przed placem od …” z bloku ETA; czas na placu = Ceny › Postój · rozładunek;
+ * pierwszy „Na placu” (karta „czy dostarczono?”) — wjazd i wyjazd po 6 min; ślad z przewozu nie zaczyna się na placu.
  */
 import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
-import { statusHits } from '../src/lib/statusAxis';
+import { buildStatusAxis, statusHits } from '../src/lib/statusAxis';
 import { deliveredCheckFromEvents } from '../src/lib/p4cSource';
+import { demoDeliveredCheck } from '../src/lib/p4cDemo';
+import { demoFeeSuggestions } from '../src/lib/p5Demo';
+
+const CLOCK = '2026-09-23T16:32:00+02:00';
+const MIN = 60_000;
 
 describe('demo — zdarzenia strefy placu', () => {
   const snap = buildDemoSnapshot();
   const evs = (id: string) => snap.events.filter((e) => e.loadId === id);
-  const site = (id: string, type: string) => evs(id).filter((e) => e.type === type && (e.payload as { geofence_id?: string } | undefined)?.geofence_id === 'gf-11');
+  const zone = (id: string, type: string, gf = 'gf-11') =>
+    evs(id).filter((e) => e.type === type && (e.payload as { geofence_id?: string } | undefined)?.geofence_id === gf);
+  const t = (iso: string) => Date.parse(iso);
+  const onSite = snap.loads
+    .filter((l) => l.status === 'APPROACHING_SITE')
+    .sort((a, b) => a.code.localeCompare(b.code, 'pl', { numeric: true }));
+  const first = onSite[0];
 
-  it('dostarczone i rozładowane: wjazd → postój po 15 min → wyjazd w chwili rozładunku; „Na placu” przed „Dostarczone”', () => {
+  it('dostarczone i rozładowane: wjazd → postój po 15 min → wyjazd w chwili rozładunku, 3 h 44 min jak w Cenach', () => {
     const done = snap.loads.filter((l) => l.status === 'DELIVERED' || l.status === 'UNLOADING');
     expect(done.length).toBeGreaterThan(5);
     for (const l of done) {
-      const [enter] = site(l.id, 'GEOFENCE_ENTER');
-      const [dwell] = site(l.id, 'GEOFENCE_DWELL');
-      const [exit] = site(l.id, 'GEOFENCE_EXIT');
+      const [enter] = zone(l.id, 'GEOFENCE_ENTER');
+      const [dwell] = zone(l.id, 'GEOFENCE_DWELL');
+      const [exit] = zone(l.id, 'GEOFENCE_EXIT');
       expect(enter && dwell && exit, l.code).toBeTruthy();
-      expect(Date.parse(dwell.at) - Date.parse(enter.at), l.code).toBe(15 * 60_000);
-      expect(Date.parse(exit.at), l.code).toBe(Date.parse(l.unloadedAt!));
-      expect((exit.payload as { dwell_min: number }).dwell_min, l.code).toBeGreaterThanOrEqual(180);
+      expect(t(dwell.at) - t(enter.at), l.code).toBe(15 * MIN);
+      expect(t(exit.at), l.code).toBe(t(l.unloadedAt!));
+      expect((exit.payload as { dwell_min: number }).dwell_min, l.code).toBe(224);
+      expect(t(exit.at) - t(enter.at), l.code).toBe(224 * MIN);
+      /* Ceny › „Postój · rozładunek Boden” — ten sam wjazd, wyjazd i czas */
+      const fee = demoFeeSuggestions(l).find((f) => f.kind === 'DWELL' && f.place === 'UNLOAD')!;
+      expect(fee.minutes, l.code).toBe(224);
+      expect(t(fee.enterAt!), l.code).toBe(t(enter.at));
+      expect(t(fee.exitAt!), l.code).toBe(t(exit.at));
       const hits = statusHits(evs(l.id));
       const at = (s: string) => hits.find((h) => h.status === s)?.at;
-      expect(Date.parse(at('APPROACHING_SITE')!), l.code).toBeLessThan(Date.parse(at('DELIVERED')!));
-      /* długi postój — bez sprawy „czy dostarczono?” */
-      expect(deliveredCheckFromEvents(l, snap.events, snap.geofences, 'HHL'), l.code).toBeNull();
+      expect(t(at('APPROACHING_SITE')!), l.code).toBeLessThan(t(at('DELIVERED')!));
     }
   });
 
-  it('na placu (T-12): wjazd 15:10, postój potwierdzony 15:25, bez wyjazdu', () => {
-    const t12 = snap.loads.find((l) => l.code === 'T-12')!;
-    expect(t12.status).toBe('APPROACHING_SITE');
-    expect(Date.parse(site(t12.id, 'GEOFENCE_ENTER')[0].at)).toBe(Date.parse('2026-09-23T15:10:00+02:00'));
-    expect(Date.parse(site(t12.id, 'GEOFENCE_DWELL')[0].at)).toBe(Date.parse('2026-09-23T15:25:00+02:00'));
-    expect(site(t12.id, 'GEOFENCE_EXIT')).toHaveLength(0);
+  it('rozładowane: długi postój — bez karty „czy dostarczono?”', () => {
+    const unloading = snap.loads.filter((l) => l.status === 'UNLOADING');
+    expect(unloading.length).toBeGreaterThan(0);
+    for (const l of unloading) {
+      expect(zone(l.id, 'GEOFENCE_EXIT'), l.code).toHaveLength(1);
+      expect(deliveredCheckFromEvents(l, snap.events, snap.geofences, 'SCX'), l.code).toBeNull();
+    }
+  });
+
+  it('na placu: wjazd o godzinie „czeka przed placem od …” z bloku ETA (T-12 15:10, T-18 11:40)', () => {
+    expect(onSite.length).toBeGreaterThanOrEqual(3);
+    for (const l of onSite) {
+      const [enter] = zone(l.id, 'GEOFENCE_ENTER');
+      expect(t(enter.at), l.code).toBe(t(l.etaDetail!.waitSince!));
+      const auto = evs(l.id).find((e) => e.type === 'STATUS_AUTO')!;
+      expect(t(auto.at), l.code).toBe(t(enter.at));
+    }
+    const code = (c: string) => snap.loads.find((l) => l.code === c)!;
+    expect(t(zone(code('T-12').id, 'GEOFENCE_ENTER')[0].at)).toBe(t('2026-09-23T15:10:00+02:00'));
+    expect(t(zone(code('T-12').id, 'GEOFENCE_DWELL')[0].at)).toBe(t('2026-09-23T15:25:00+02:00'));
+    expect(t(zone(code('T-18').id, 'GEOFENCE_ENTER')[0].at)).toBe(t('2026-09-23T11:40:00+02:00'));
+    for (const l of onSite.slice(1)) expect(zone(l.id, 'GEOFENCE_EXIT'), l.code).toHaveLength(0);
+  });
+
+  it('pierwszy „Na placu” (karta „czy dostarczono?”): wjazd i wyjazd po 6 min, ta sama chwila co na karcie', () => {
+    const [enter] = zone(first.id, 'GEOFENCE_ENTER');
+    const [exit] = zone(first.id, 'GEOFENCE_EXIT');
+    expect(t(exit.at) - t(enter.at)).toBe(6 * MIN);
+    expect(zone(first.id, 'GEOFENCE_DWELL')).toHaveLength(0);
+    const card = demoDeliveredCheck(first, snap.loads, snap.geofences, CLOCK, 'SCX')!;
+    expect(card.minutes).toBe(6);
+    expect(t(card.exitAt)).toBe(t(exit.at));
+    const fromEvents = deliveredCheckFromEvents(first, snap.events, snap.geofences, 'SCX')!;
+    expect(fromEvents.minutes).toBe(6);
+    expect(t(fromEvents.exitAt)).toBe(t(card.exitAt));
+  });
+
+  it('ślad z przewozu: od „Załadunek · GPS”, nie od wjazdu na plac', () => {
+    const withSite = snap.loads.filter((l) => ['APPROACHING_SITE', 'UNLOADING', 'DELIVERED'].includes(l.status));
+    for (const l of withSite) {
+      const loaded = evs(l.id).find((e) => e.type === 'LOADED')!;
+      const axis = buildStatusAxis(l, evs(l.id));
+      expect(axis.firstFixAt, l.code).toBe(loaded.at);
+      expect(t(axis.firstFixAt!), l.code).toBeLessThan(t(zone(l.id, 'GEOFENCE_ENTER')[0].at));
+      if (axis.deliveredAt) expect(t(axis.firstFixAt!), l.code).toBeLessThan(t(axis.deliveredAt));
+    }
   });
 });

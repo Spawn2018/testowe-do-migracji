@@ -647,12 +647,19 @@ const DEMO_CLOCK_MS = Date.parse('2026-09-23T14:32:00Z');
 const atLocal = (day: string, hm: string) => `${day}T${hm}:00+02:00`;
 const notAfter = (iso: string, capIso: string) => (Date.parse(iso) > Date.parse(capIso) ? capIso : iso);
 const dayBefore = (day: string, n: number) => isoDay(Date.parse(`${day}T12:00:00Z`) - n * 864e5);
+/** Czas na placu przy rozładunku — „Postój · rozładunek Boden” 3 h 44 min w Cenach (p5Demo). */
+const SITE_DWELL_MIN = 224;
+/** Karta „czy dostarczono?” w demo (p4cDemo): po 6 min na placu (wjazd 16:01 z bloku ETA, wyjazd 16:07 = zegar − 25 min). */
+const DEMO_DC_DWELL_MIN = 6;
 const hmOf = (ms: number) => new Date(ms + 2 * 3600e3).toISOString().slice(11, 16);
 
 export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   const events: LoadEvent[] = [];
   let n = 0;
-  let siteN = 0;
+  /* pierwszy „Na placu” wg kodu — ten sam co karta „czy dostarczono?” w p4cDemo (`demoDeliveredCheck`) */
+  const firstOnSite = [...loads]
+    .filter((x) => x.status === 'APPROACHING_SITE')
+    .sort((a, b) => a.code.localeCompare(b.code, 'pl', { numeric: true }))[0]?.id;
   for (const l of loads) {
     events.push({
       id: `ev-${++n}`,
@@ -711,17 +718,24 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
       });
     }
     /* P11 pkt 6 (paczka B, e17/e25: „Na placu · pominięte”, brak „wyjazd z placu po 3 h 44 min”): zdarzenia strefy placu
-       w demo jak z silnika stref — wjazd (status „Na placu” z automatu), postój potwierdzony po 15 min (`dwellMin` strefy),
-       a przy rozładowanych i dostarczonych wyjazd ze strefy w chwili rozładunku (ten sam moment co „Dostarczone”). */
+       w demo jak z silnika stref (uwagi F7 #304):
+       - wjazd na plac (status „Na placu” z automatu) o godzinie „czeka przed placem od …” z bloku ETA (`waitSince`),
+         przy rozładowanych i dostarczonych 3 h 44 min przed wyjazdem — tyle co „Postój · rozładunek Boden” w Cenach;
+       - postój potwierdzony po 15 min (`dwellMin` strefy), wyjazd ze strefy w chwili rozładunku (ten sam moment co „Dostarczone”);
+       - pierwszy transport „Na placu” ma kartę „Wyjazd z placu po 6 min — czy dostarczono?” (p4cDemo) — tu ten sam wjazd i wyjazd. */
     const SITE = { geofence_id: 'gf-11', geofence_type: 'SITE', source: 'GPS', provider: 'emtrack' };
+    const iso = (ms: number) => atLocal(isoDay(ms + 2 * 3600e3), hmOf(ms));
     if (['APPROACHING_SITE', 'UNLOADING', 'DELIVERED'].includes(l.status)) {
-      const exitAt = l.status === 'APPROACHING_SITE' ? null : l.unloadedAt ?? atLocal(l.plannedDeliverDate, '12:00');
-      const dwellMin = [224, 196, 251][siteN++ % 3];
-      const enterMs = exitAt ? Date.parse(exitAt) - dwellMin * 60_000 : Date.parse('2026-09-23T15:10:00+02:00');
-      const iso = (ms: number) => atLocal(isoDay(ms + 2 * 3600e3), hmOf(ms));
+      const shortVisit = l.id === firstOnSite;
+      const dwellMin = shortVisit ? DEMO_DC_DWELL_MIN : SITE_DWELL_MIN;
+      const waitMs = Date.parse(l.etaDetail?.waitSince ?? l.etaBoden ?? '2026-09-23T15:10:00+02:00');
+      const exitAt = shortVisit
+        ? iso(waitMs + dwellMin * 60_000)
+        : l.status === 'APPROACHING_SITE' ? null : l.unloadedAt ?? atLocal(l.plannedDeliverDate, '12:00');
+      const enterMs = exitAt && !shortVisit ? Date.parse(exitAt) - dwellMin * 60_000 : waitMs;
       events.push({ id: `ev-${++n}`, loadId: l.id, type: 'STATUS_AUTO', at: iso(enterMs), actor: 'system', payload: { from: 'IN_TRANSIT_SE', to: 'APPROACHING_SITE', powod: 'wjazd do strefy placu', ...SITE } });
       events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_ENTER', at: iso(enterMs), actor: 'geofence-engine', payload: SITE });
-      if (enterMs + 15 * 60_000 < DEMO_CLOCK_MS) {
+      if (dwellMin >= 15 && enterMs + 15 * 60_000 < DEMO_CLOCK_MS) {
         events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_DWELL', at: iso(enterMs + 15 * 60_000), actor: 'geofence-engine', payload: { ...SITE, dwell_min: 15 } });
       }
       if (exitAt) events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_EXIT', at: exitAt, actor: 'geofence-engine', payload: { ...SITE, dwell_min: dwellMin } });

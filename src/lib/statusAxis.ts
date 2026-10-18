@@ -240,11 +240,12 @@ export function buildStatusAxis(
   }));
   const current = cancelled ? null : AXIS[cur].status;
   const currentSince = current ? (last.get(current)?.at ?? null) : null;
-  /* początek śladu = pierwsze zdarzenie z pozycji (strefa albo faza z pozycji) */
+  /* początek śladu = pierwsze zdarzenie z pozycji (strefa, faza z pozycji albo zdarzenie oznaczone „GPS”, np. „Załadunek · GPS”
+     w osi Status — uwaga F7 #304: bez tego ślad dostarczonego zaczynał się dopiero na placu) */
   let firstFix: string | null = null;
   for (const e of events) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
-    const fromGps = e.type.startsWith('GEOFENCE_') || (e.type === 'STATUS_AUTO' && typeof p.lat === 'number');
+    const fromGps = e.type.startsWith('GEOFENCE_') || (e.type === 'STATUS_AUTO' && typeof p.lat === 'number') || p.source === 'GPS';
     if (fromGps && (!firstFix || ms(e.at) < ms(firstFix))) firstFix = e.at;
   }
   /* data realizacji usługi = `actual_delivery_at` (rozliczenie); zdarzenie — gdy jej brak (demo) */

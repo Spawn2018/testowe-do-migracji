@@ -72,6 +72,11 @@ export const DEMO_ETA: Readonly<Record<string, DemoEta>> = {
     etaBoden: '2026-09-23T11:40:00+02:00', etaConfidence: 'HIGH', etaConfMin: 30,
     detail: { phase: 'WAIT_SITE', lastFixAt: FIX, waitSince: '2026-09-23T11:40:00+02:00' },
   },
+  /* Plac Boden — wjechał 16:01 i po 6 min wyjechał (karta „czy dostarczono?” w p4cDemo; zdarzenia strefy w seed.ts) */
+  'D-01': {
+    etaBoden: '2026-09-23T16:01:00+02:00', etaConfidence: 'HIGH', etaConfMin: 15,
+    detail: { phase: 'WAIT_SITE', lastFixAt: FIX, waitSince: '2026-09-23T16:01:00+02:00' },
+  },
   /* Opóźniony — okno dostawy minęło dziś o 15:00, do placu 560 km: dojedzie jutro przed południem */
   'SG-35': drive(FIX_MS, 560, 500, 11, 'LOW', 150),
   /* Port PL — rejs 24.09 odwołany, najbliższy 25.09 18:00 → Nynäshamn 26.09 12:00, potem jazda i odpoczynek */

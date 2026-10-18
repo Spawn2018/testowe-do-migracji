@@ -10,30 +10,48 @@ Koordynator (Claude), 18.10.2026, 20:50. Gałąź `wyglad/W-demo-strefy` (od `ma
 - Termin z tamtego porównania: do 25.10.
 
 ## Co zmieniam
-`src/data/seed.ts`, `buildSeedEvents`: dla transportów „Na placu”, „Rozładowany” i „Dostarczone” zdarzenia strefy placu (gf-11 „Stegra · Stalverket 20, Boden”) jak z silnika stref:
-- wjazd do strefy z automatu: `STATUS_AUTO` → „Na placu” oraz `GEOFENCE_ENTER`;
-- postój potwierdzony po 15 min (`GEOFENCE_DWELL`, jak `dwellMin` strefy) — tylko gdy jest przed zegarem demo;
-- przy rozładowanych i dostarczonych wyjazd ze strefy (`GEOFENCE_EXIT`, `dwell_min`) w chwili rozładunku — ten sam moment co „Dostarczone”;
-- czas na placu na zmianę: 3 h 44 min, 3 h 16 min, 4 h 11 min;
-- T-12 (na placu): wjazd 15:10 — ta sama godzina co „Na placu od 15:10” w panelu — postój 15:25, bez wyjazdu.
+`src/data/seed.ts`, `buildSeedEvents`: dla transportów „Na placu”, „Rozładowany” i „Dostarczone” zdarzenia strefy placu jak z silnika stref:
+- wjazd na plac (gf-11 „Stegra · Stalverket 20, Boden”) z automatu: `STATUS_AUTO` → „Na placu” oraz `GEOFENCE_ENTER`:
+  - przy „Na placu” o godzinie „czeka przed placem od …” z bloku ETA (`waitSince`): T-12 15:10, T-18 11:40;
+  - przy rozładowanych i dostarczonych 3 h 44 min przed wyjazdem — tyle, ile „Postój · rozładunek Boden” w Cenach (ten sam wjazd i wyjazd);
+- postój potwierdzony po 15 min (`GEOFENCE_DWELL`, jak `dwellMin` strefy) — tylko przy postoju co najmniej 15 min i przed zegarem demo;
+- wyjazd ze strefy (`GEOFENCE_EXIT`, `dwell_min`) w chwili rozładunku — ten sam moment co „Dostarczone”;
+- D-01 (pierwszy „Na placu”, karta „Wyjazd z placu po 6 min — czy dostarczono?”):
+  - wjazd 16:01 (blok ETA: „Na miejscu od 16:01”), wyjazd 16:07 po 6 min, bez postoju potwierdzonego;
+  - wyjazd o tej samej godzinie co na karcie (zegar − 25 min).
 
-Postój dłuższy niż 10 min, więc nie powstaje sprawa „Wyjazd z placu po … — czy dostarczono?” (L14).
+Długi postój (3 h 44 min) nie otwiera sprawy „czy dostarczono?” (L14). Otwiera ją tylko D-01 — jak przed zmianą.
+
+`src/data/demoEta.ts`: D-01 „Na miejscu od 16:01” (było ogólne 15:10) — ta sama chwila co wjazd na plac.
+
+`src/lib/statusAxis.ts` (obliczenie widoku, F8):
+- początek „śladu z przewozu” liczy też zdarzenia oznaczone „GPS” (np. „Załadunek · GPS” w osi Status);
+- bez tego ślad dostarczonego zaczynał się dopiero przy wjeździe na plac (uwaga F7 B4);
+- przykład SG-23: „ślad z przewozu: 18.09.2026, 08:30 – 22.09.2026, 11:20”.
 
 ## Wynik (demo, zegar 23.09.2026, 16:32)
-| transport | Status › Na placu | Status › Dostarczone |
+| transport | Status › Na placu | Status › Dostarczone / pasek śledzenia |
 |---|---|---|
-| SG-23 | „Wjazd na „Stegra · Stalverket 20, Boden”” · „08:19 · postój … potwierdzony” | „Wyjazd z placu po 3 h 16 min · śledzenie wyłączone · data realizacji usługi” |
-| SG-02 | wjazd · „10:21 · postój … potwierdzony” | „Wyjazd z placu po 3 h 44 min · …” |
-| T-12 | wjazd · „15:25 · postój … potwierdzony” | — (jeszcze na placu) |
+| SG-23 | wjazd 22.09, 07:36 · postój potwierdzony 07:51 | „Wyjazd z placu po 3 h 44 min” · „ślad z przewozu: 18.09.2026, 08:30 – 22.09.2026, 11:20” |
+| SG-02 (rozładowany) | wjazd 10:06 · postój 10:21 | wyjazd 13:50 |
+| T-12 | wjazd 15:10 · postój 15:25 | — (jeszcze na placu) |
+| T-18 | wjazd 11:40 · postój 11:55 | — |
+| D-01 | wjazd 16:01 · wyjazd 16:07 (6 min) | — (karta „czy dostarczono?”) |
+
+Inne miejsca, które się zmieniają:
+- Automatyzacje › „Status ze stref” — ostatnie działanie: było „SG-02 · 13:50”, jest „D-01 · 16:07” (najpóźniejsze zdarzenie strefy przed zegarem).
 
 ## Testy
-- Nowy `tests/p11-demo-strefa-placu.test.ts`:
-  - kolejność wjazd → postój → wyjazd;
-  - wyjazd = rozładunek;
-  - „Na placu” przed „Dostarczone”;
-  - brak sprawy „czy dostarczono?”;
-  - T-12.
-- Unit, `tsc -b`, e2e etap4/5/6, aud03, d-eur-t, persist-toast, e8 — wynik w PR.
+- `tests/p11-demo-strefa-placu.test.ts` (5 testów):
+  - rozładowane i dostarczone: wjazd → postój → wyjazd = rozładunek, 224 min, ten sam wjazd, wyjazd i czas co Ceny;
+  - rozładowane: bez karty „czy dostarczono?” (sprawdzane na statusie „Rozładowany”, gdzie karta jest możliwa);
+  - „Na placu”: wjazd = `waitSince` z bloku ETA, status z automatu w tej samej chwili, T-12 i T-18, bez wyjazdu poza D-01;
+  - D-01: 6 min, chwila wyjazdu = karta demo = karta liczona ze zdarzeń;
+  - ślad z przewozu: `firstFixAt` = „Załadunek · GPS”, przed wjazdem na plac i przed „Dostarczone”.
+- Unit (całość), `tsc -b`, e2e etap4/5/6, aud03, d-eur-t, persist-toast, e8 — zielone lokalnie.
 
 ## Poza zakresem
-- Podpowiedź „Z GPS: wyjazd z placu … · Użyj” w oknie „Zmień status” pojawia się tylko przy transporcie, który wyjechał z placu, a status stoi. W demo takiego nie ma — wyjazd od razu zmienia status. Na produkcji podpowiedź bierze się z bazy.
+- Podpowiedź „Z GPS: … · Użyj” w oknie „Zmień status”:
+  - pojawia się, gdy istnieje zdarzenie strefy pasujące do wybranego statusu i nie wcześniejsze niż bieżący status (`gpsHint`);
+  - po tej zmianie ma ją każdy z 15 transportów ze zdarzeniami placu — np. przy „Dostarczone” z godziną wyjazdu z placu;
+  - jej wyglądu ani reguły nie zmieniam.
