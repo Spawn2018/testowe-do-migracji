@@ -41,8 +41,8 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
       - gitleaks 0;
       - `npm audit --omit=dev --audit-level=high` bez high i critical;
    4. PR → `gh pr checks --watch` → `gh pr merge --merge` (merge commit, autor Sebastian Bożek); nigdy `git push` na `main` z komputera wykonawcy (D-86, D-87);
-   5. wdrożenie z `main`;
-   6. migracja na produkcji (najpierw próba w transakcji z ROLLBACK, potem `supabase db push`, lista migracji = `schema_migrations`);
+   5. wdrożenie produkcyjne tylko z `main`, po scaleniu PR i po przeglądzie koordynatora (D-20261018-1110-01): `vercel --prod`, `supabase db push` i funkcje Edge. Nigdy z gałęzi roboczej i nigdy przed tym przeglądem. Gałąź pokazujesz tylko jako Preview (bez `--prod`). Przed wdrożeniem z CLI: `git checkout main && git pull`, a `git status` bez zmian. W `POSTEP.md` podajesz `dpl_…` i commit `main`. Przy błędzie wdrożenia — wpis w `POSTEP.md` (co, z czego, dlaczego) i wdrożenie poprawne z `main`;
+   6. migracja na produkcji z `main` (najpierw próba w transakcji z ROLLBACK, potem `supabase db push`, lista migracji = `schema_migrations`);
    7. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200;
    8. wpis w `POSTEP.md`.
 4. **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce według decyzji; w komentarzu podajesz numer etapu i decyzji. Nigdy nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy każdej paczce.
@@ -1027,3 +1027,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 00:40 | D-20261018-0040-01: **wykonane** — A1 na produkcji (01:01) i przyjęte (odbiór 01:15 / 08:26, L17 08:15); kolejka #295 → #297; po A1 od razu A2 | koordynator |
 | 18.10.2026 02:35 | D-20261018-0235-01: #298 `wyglad/W-przed-wydaniem-2` (po #295/#297) — U+00A0 liczba+jednostka, kod transportu w całości; **§1 pkt 10** (zasada liczb); #295→#297→#298 scalone 10:31–10:33, Vercel `a51cf771` READY | koordynator |
 | 18.10.2026 11:00 | D-20261018-1100-01: przegląd #299 (A2) przed scaleniem — jedna karta L14 ze sprawy, `decision_resolve` jak `delivered_check_resolve`, „Tak” tylko z `AT_SITE`, komentarze produkcji, risks 7→6 | koordynator |
+| 18.10.2026 11:10 | D-20261018-1110-01: produkcja tylko z `main` po scaleniu i przeglądzie — `vercel --prod`, `db push`, Edge; gałąź tylko Preview. §1 pkt 3.5 | koordynator |

@@ -2940,5 +2940,13 @@ Inwentarz `risks.sh`: 7 → 6 kluczy, bo A2 celowo nie tworzy `rk_left_loading_u
 
 Karta L14 w produkcji z otwartej sprawy, nie ze zdarzenia. „Tak” tylko z `AT_SITE` przez `auto_set_status`. Operacje HHL: odmowa; Administrator HHL: może (kontrola nullguard — komunikat „Brak otwartej sprawy” nie jest odmową uprawnień).
 
+## 2026-10-18 11:10 — DOPISEK D-20261018-1110-01 (wdrożenie tylko z main)
+
+O 10:37 poszło `vercel --prod` z gałęzi roboczej `pakiet/audyt-17-a2`, commit `0fe5a14a` (jeszcze przed przeglądem A2): `dpl_ACEKzFYJZASN1ag6xtPaYQdKF8mh` — **ERROR**. To był błąd wykonawcy: produkcja miała dostać widok A2 (`SITE_EXIT_DELIVERED`) bez migracji 0228. Budowa się nie udała, więc produkcja tego nie dostała.
+
+O 10:41 wdrożenie z czystego archiwum `main` `a51cf771` (#295, #297, #298, bez A2): `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` — **READY**, przyjęte. Baza produkcji zostaje na migracji 0227.
+
+Od teraz: `vercel --prod`, `supabase db push` i funkcje Edge tylko z `main` po scaleniu i po przeglądzie koordynatora. Gałąź tylko jako Preview. Przed CLI: `git checkout main && git pull`, `git status` bez zmian. W `POSTEP.md`: `dpl_…` i commit `main`.
+
 
 
