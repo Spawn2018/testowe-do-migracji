@@ -84,7 +84,7 @@ export const SEED_SITUATIONS: RoadSituation[] = [
   {
     id: 'seed-sit-4',
     title: 'E4 Luleå — tymczasowy limit masy',
-    detail: 'Ograniczenie BK na moście w nocy · ponadgabaryt może wymagać okna objazdu · +90–150 min',
+    detail: 'Ograniczenie BK na moście w nocy · ponadgabaryt może wymagać okna objazdu · +90–150\u00a0min',
     severity: 'CRITICAL',
     lng: 22.154,
     lat: 65.584,
@@ -97,7 +97,7 @@ export const SEED_SITUATIONS: RoadSituation[] = [
   {
     id: 'seed-sit-5',
     title: 'E4 Södertälje — kolejka',
-    detail: 'Duży ruch na południe od Sztokholmu · kumulacja przyjazdów promów · +15–25 min',
+    detail: 'Duży ruch na południe od Sztokholmu · kumulacja przyjazdów promów · +15–25\u00a0min',
     severity: 'LOW',
     lng: 17.625,
     lat: 59.195,
@@ -110,7 +110,7 @@ export const SEED_SITUATIONS: RoadSituation[] = [
   {
     id: 'seed-sit-boden',
     title: 'E4 Boden S — śnieżyca / zamknięcie odcinka',
-    detail: 'Siła wyższa · przejazd tylko za pługiem · kolumna HGV · +180–240 min',
+    detail: 'Siła wyższa · przejazd tylko za pługiem · kolumna HGV · +180–240\u00a0min',
     severity: 'CRITICAL',
     lng: 21.69,
     lat: 65.825,

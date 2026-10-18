@@ -27,7 +27,7 @@ import { formatPlNumber } from '../lib/format';
 import { fmtDate, fmtDateRange, fmtDateTime } from '../lib/time';
 import { weekKeyLabel } from '../lib/p5Invoices';
 import {
-  cmrKind, codesText, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
+  cmrKind, codesParts, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
 } from '../lib/p5Docs';
 import { docRequirementsStart, docsSeenOf, otherDocsOn, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
@@ -64,7 +64,22 @@ interface ReqRow {
   /** Polisa HHL bez wpisu — „brak” zamiast liczby. */
   missingPolicy: boolean;
   note: string;
+  /** wyglad/W-przed-wydaniem-2: kody transportów po uwadze — każdy w całości (bez łamania na łączniku „SG-” / „13”). */
+  codes?: string[];
   noteGood: boolean;
+}
+
+/** Lista kodów jak `codesText`, ale każdy kod w osobnym `<span>` bez łamania wiersza. */
+function CodeRun({ codes }: { codes: readonly string[] }) {
+  const { shown, total } = codesParts(codes);
+  return (
+    <>
+      {shown.map((c, i) => (
+        <Fragment key={`${c}-${i}`}>{i ? ', ' : ''}<span className="doc-code">{c}</span></Fragment>
+      ))}
+      {total != null ? ` … (${total})` : null}
+    </>
+  );
 }
 
 function policyNote(locale: Locale, p: PolicyView): string {
@@ -161,14 +176,15 @@ export function DocsView() {
         ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: req.offsetHours })
         : t(locale, `iii6_a_${req.anchor}`).replace('{h}', String(req.offsetHours));
       let note = '';
+      let codes: string[] | undefined;
       /* „Firma” podpina się sama — opis dopiero, gdy zezwolenia „Firma / Trasa” są w danych */
       if (key === 'PERMIT_PL' && permits) note = ft(locale, 'p5_doc_n_PERMIT_PL');
       if (key === 'PERMIT_SE') note = ftp(locale, 'p5_doc_n_PERMIT_SE', { n: loads.filter((l) => l.ferry?.departureAt).length, all: loads.length });
       if (cmr) {
         note = ft(locale, `p5_doc_n_CMR_${cmr}`);
-        if (cmr === 'SIGNED' && cnt.overdue.length) note += `; ${codesText(cnt.overdue.map((r) => byId.get(r.loadId)?.code ?? r.loadId))}`;
+        if (cmr === 'SIGNED' && cnt.overdue.length) codes = cnt.overdue.map((r) => byId.get(r.loadId)?.code ?? r.loadId);
       }
-      out.push({ key, label, who: responsibleOrg(req.responsible), due, over: cnt.overdue, soon: cnt.soon, missingPolicy: false, note, noteGood: false });
+      out.push({ key, label, who: responsibleOrg(req.responsible), due, over: cnt.overdue, soon: cnt.soon, missingPolicy: false, note, codes, noteGood: false });
     }
     return out;
   }, [role, reqs, statusRows, nowMs, locale, loads, byId, policies, insuranceCover, permits]);
@@ -279,7 +295,7 @@ export function DocsView() {
                 <td data-docreq-text="">{r.due}</td>
                 <td className="num" data-docreq-overdue={r.over ? r.over.length : undefined}>{r.missingPolicy ? <span className="neg" data-docreq-missing>{ft(locale, 'p5_doc_none')}</span> : countBtn(r, 'over')}</td>
                 <td className="num" data-docreq-soon={r.soon ? r.soon.length : undefined}>{countBtn(r, 'soon')}</td>
-                <td className={r.noteGood ? 'doc-note good' : 'doc-note'} data-content>{r.note}</td>
+                <td className={r.noteGood ? 'doc-note good' : 'doc-note'} data-content>{r.note}{r.codes?.length ? <>; <CodeRun codes={r.codes} /></> : null}</td>
               </tr>
               {open?.key === r.key ? (
                 <tr className="fin-detail-row"><td colSpan={6}>{openList(r)}</td></tr>

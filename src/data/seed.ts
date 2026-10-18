@@ -874,7 +874,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
       id: `risk-permit-${i + 1}`,
       type: 'DOC',
       severity: i === 0 ? 'CRITICAL' : 'HIGH',
-      title: `Brak zezwolenia — załadunek za ${18 + i * 14} h`,
+      title: `Brak zezwolenia — załadunek za ${18 + i * 14}\u00a0h`,
       detail: `Do załadunku <${18 + i * 14} h, brak zezwolenia obejmującego wymiary zestawu`,
       loadId: l.id,
       owner: 'SCX',
@@ -1238,7 +1238,7 @@ function withSeedRiskKeys(r: Risk): Risk {
   let k: Partial<Risk> = {};
   const n = (re: RegExp) => re.exec(r.title) ?? [];
   if (r.id.startsWith('risk-permit-') && !r.id.startsWith('risk-permit-mismatch')) {
-    k = { titleKey: 'rk_seed_permit', titleParams: { h: Number(n(/za (\d+) h/)[1]) }, ...owner(r.meta) };
+    k = { titleKey: 'rk_seed_permit', titleParams: { h: Number(n(/za (\d+)[ \u00a0]h/)[1]) }, ...owner(r.meta) };
   } else if (r.id.startsWith('risk-eta-')) {
     k = { titleKey: 'rk_seed_eta', titleParams: { d: n(/poza oknem o (.+)$/)[1] ?? '' } };
   } else if (r.id === 'risk-ferry') {

@@ -131,8 +131,8 @@ describe('drobne z audytu', () => {
   });
   it('liczby po polsku: „max 1 417 t”, kwoty z przecinkiem', async () => {
     const { formatPlNumber, formatPlMoney } = await import('../src/lib/format');
-    expect(formatPlNumber(1417)).toBe('1 417');
-    expect(formatPlMoney(150.5, 'EUR')).toBe('150,50 EUR');
+    expect(formatPlNumber(1417)).toBe('1\u00a0417');
+    expect(formatPlMoney(150.5, 'EUR')).toBe('150,50\u00a0EUR');
     expect(readFileSync('src/components/chart/DeliveryProgress.tsx', 'utf8')).toContain('max {formatPlNumber(maxV)} t');
   });
   it('przepięcie w układzie pliku: komórki zestawu łamią się tylko przy „→”', () => {
@@ -150,11 +150,11 @@ describe('F7 do PR #277', () => {
     const view = demoFuelScreen('2026-09-23');
     const ksh = renderToStaticMarkup(createElement(FuelScreen, { locale: 'pl', view: { ...view, exampleBaseEur: DEMO_EXAMPLE_BASE_EUR.rev }, actions: null, readOnly: true, party: 'KSH' }));
     for (const x of ['data-pm-fetch', 'data-pm-alarm', 'pm-how-c', 'ox-tag-active']) expect(ksh).not.toContain(x);
-    expect(ksh).toContain('7 245');
-    expect(ksh).not.toContain('6 900');
+    expect(ksh).toContain('7\u00a0245');
+    expect(ksh).not.toContain('6\u00a0900');
     const hhl = renderToStaticMarkup(createElement(FuelScreen, { locale: 'pl', view, actions: null, readOnly: true }));
     expect(hhl).toContain('data-pm-fetch');
-    expect(hhl).toContain('6 900');
+    expect(hhl).toContain('6\u00a0900');
   });
   it('pasek śledzenia po A1: produkcja bez „włączamy wkrótce” przy 03:00 i „Dostarczone”', async () => {
     const demo = await import('../src/lib/trackingStateText');

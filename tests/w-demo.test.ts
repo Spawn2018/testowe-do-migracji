@@ -140,7 +140,7 @@ describe('F7 (17.10): spójność danych demo z zegarem 23.09, 16:32', () => {
     for (const r of snap.risks.filter((x) => x.id.startsWith('risk-permit-'))) {
       const l = snap.loads.find((x) => x.id === r.loadId)!;
       const h = Math.max(1, Math.round((Date.parse(l.awizacja.loadWindowStart!) - CLOCK) / 3600e3));
-      expect(r.title, l.code).toBe(`Brak zezwolenia — załadunek za ${h < 48 ? `${h} h` : `${Math.round(h / 24)} dni`}`);
+      expect(r.title, l.code).toBe(`Brak zezwolenia — załadunek za ${h < 48 ? `${h}\u00a0h` : `${Math.round(h / 24)}\u00a0dni`}`);
     }
     /* to samo na ekranie (klucz słownika z parametrami) i w „Najpilniejszych” (kolejka wyjątków) */
     for (const r of snap.risks.filter((x) => /^risk-(permit-\d|eta-|silent)/.test(x.id))) {

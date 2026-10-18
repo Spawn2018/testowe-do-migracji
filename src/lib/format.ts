@@ -22,11 +22,12 @@ export function formatListCompact(iso: string | null | undefined, timeZone: Corr
 }
 
 /** Przecinek dziesiętny, spacja co 3 cyfry od 1 000. */
+/* wyglad/W-przed-wydaniem-2: separator tysięcy = twarda spacja (U+00A0) — liczba nie łamie się w środku („18” / „245,92”, E8) */
 export function formatPlNumber(n: number, digits = 0): string {
   if (!Number.isFinite(n)) return '—';
   const neg = n < 0;
   const [i, f] = Math.abs(n).toFixed(digits).split('.');
-  const grouped = i.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const grouped = i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
   return `${neg ? '-' : ''}${grouped}${f ? `,${f}` : ''}`;
 }
 
@@ -37,7 +38,7 @@ export function formatPercentPoints(points: number, digits = 1): string {
 
 /** „1 726,59 PLN”. */
 export function formatPlMoney(amount: number, currency: string, digits = 2): string {
-  return `${formatPlNumber(amount, digits)} ${currency}`;
+  return `${formatPlNumber(amount, digits)}\u00a0${currency}`;
 }
 
 /** „800 m” / „2,3 km”. */

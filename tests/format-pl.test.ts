@@ -12,10 +12,10 @@ describe('E21 formaty', () => {
   });
 
   it('liczba, procent, kwota, odległość, odmiana', () => {
-    expect(formatPlNumber(1726.59, 2)).toBe('1 726,59');
-    expect(formatPlNumber(8239.15, 2)).toBe('8 239,15');
+    expect(formatPlNumber(1726.59, 2)).toBe('1\u00a0726,59');
+    expect(formatPlNumber(8239.15, 2)).toBe('8\u00a0239,15');
     expect(formatPercentPoints(4.8)).toBe('4,8%');
-    expect(formatPlMoney(1726.59, 'PLN')).toBe('1 726,59 PLN');
+    expect(formatPlMoney(1726.59, 'PLN')).toBe('1\u00a0726,59\u00a0PLN');
     expect(formatDistance(800)).toBe('800 m');
     expect(formatDistance(2300)).toBe('2,3 km');
     expect(vehiclesInMotion(1)).toBe('1 pojazd w ruchu');

@@ -291,7 +291,7 @@ const pl: Dict = {
   p3c_inv_phone: 'Telefon',
   p3c_inv_mail: 'E-mail',
   p3c_inv_kind: 'Firma i rodzaj konta',
-  p3c_inv_note: 'E-mail „Watch Tower — zaproszenie”: kto zaprasza, firma, rodzaj konta i przycisk „Dołącz”. Link w e-mailu działa 24 h, zaproszenie jest ważne 7 dni.',
+  p3c_inv_note: 'E-mail „Watch Tower — zaproszenie”: kto zaprasza, firma, rodzaj konta i przycisk „Dołącz”. Link w e-mailu działa 24\u00a0h, zaproszenie jest ważne 7\u00a0dni.',
   p3c_inv_send: 'Wyślij zaproszenie',
   p3c_inv_phone_fmt: 'Telefon w formacie międzynarodowym, z numerem kierunkowym kraju.',
 
