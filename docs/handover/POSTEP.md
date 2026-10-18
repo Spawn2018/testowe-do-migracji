@@ -3063,3 +3063,16 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Po CMR (D-20261018-1740-01), przed A3: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL bez zmian. Baza w tej pozycji; aplikacja w `wyglad/W-przed-wydaniem-4`.
 - Bieżąca pozycja bez zmian: eskalacje decyzji, PR #306. Tego dopisku nie wdrażam w tej przerwie.
 
+## 2026-10-19 00:40 — Eskalacje decyzji, przegląd 00:22 niegotowe
+
+- PR #306, migracja 0230. Przegląd koordynatora 19.10 00:22: niegotowe. Poprawki B1–B6 i P1–P6 w tym samym PR, przed scaleniem.
+- B1: `l3_critical_notify` nie dokłada `l3crit`, gdy osoba ma już `dec:ESCALATE` albo zbiorczy z tą decyzją. `RISK_SEVERITY` przy `l3_level = critical` nie idzie osobno.
+- B2: `l1b_sefs_note` traktuje `status = OSTATECZNY` jak tydzień zamknięty, także bez klucza `final`.
+- B3: jednorazowe zamknięcie `SOURCE`. Odczyt produkcji 19.10 przed nałożeniem: **12** otwartych, z tego **8** (tydzień jeszcze trwa) i **4** (ceny już w bazie: tygodnie od 21.09, 28.09, 05.10, 12.10). Po nałożeniu oczekiwane **0**. Liczbę po `db push` dopiszę przy wdrożeniu.
+- B4: zbiorczy od **6.** eskalacji u osoby (limit rodzaju e-maila to 5). Pojedyncze powstają tylko poniżej tego progu. E-mail zbiorczy idzie przez `l13_queue_email`.
+- B5: przy eskalacji wyzwalacz ryzyka nie dokłada `RISK_OPEN` dla `decision-overdue`.
+- B6: wzorzec identyfikatora łapie też tekst „Decyzja po terminie: 2e97c024:”. Jednorazowo poprawiane są tytuły spraw, `detail.params.title` i powiadomienia inne niż wysłany e-mail.
+- P1–P6: numer zlecenia firmy czytającej tytuł; odnośnik `/ryzyka` i temat e-maila = tytuł zbiorczy; osoba z samą pocztą też dostaje zbiorczy; strażnik jest na osobę.
+- Jeden e-mail zbiorczy jest prawdziwy tylko wtedy, gdy pojedyncze nie powstają wcześniej. Kasowanie po wstawieniu zjadłoby limit.
+- `NO_AWIZACJA` przy `PLANNED`: tabela z 18.10 23:50 (23 pozycje) zostaje. Przegląd podał później 26 (doszły SG-23, SG-24, T-12). To informacja, bez zmiany kodu.
+

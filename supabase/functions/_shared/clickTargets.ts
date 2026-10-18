@@ -69,8 +69,10 @@ put([
   'FERRY_CANCELLED', 'ETA_AFTER_LATEST', 'KSH_DATE_LT_5D', 'NO_AWIZACJA', 'DOC_MISSING',
   'KSH_ROW_GONE', 'TOWER_KSH_CONFLICT', 'KSH_FILE_ERROR', 'NO_POSITION', 'ROUTE_DEVIATION',
   'SEFS_OUT_OF_TABLE', 'SEFS_INVOICE_DIFF', 'KR_OVER_3', 'INSURANCE_EXPIRING', 'DWELL_OVER_FREE',
-  'BACKUP_FAILED', 'DECISION_OPEN', 'DECISION_ESCALATED', 'DECISION',
-], (i) => decision(i.decisionId));
+  'BACKUP_FAILED', 'DECISION_OPEN', 'DECISION_ESCALATED', 'DECISION_ESCALATED_BATCH', 'DECISION',
+], (i) => i.type === 'DECISION_ESCALATED_BATCH'
+  ? { kind: 'entry' as const, path: '/ryzyka' }
+  : decision(i.decisionId));
 
 put(['FERRY', 'SAILING_CANCELLED', 'MISSED_SAILING', 'FERRY_OVERDUE'], (i) => decision(i.decisionId));
 put(['ETA_BREACH'], (i) => decision(i.decisionId));

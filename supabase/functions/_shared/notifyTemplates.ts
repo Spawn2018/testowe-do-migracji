@@ -299,6 +299,11 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const body = `Zdarzenie drogowe w Szwecji: ${event}. Treść jest po polsku. Oryginał tylko w panelu, pod przyciskiem „Pokaż oryginał”.`;
       return { subject, body, severity: 'MEDIUM', view: 'risk' };
     }
+    case 'DECISION_ESCALATED_BATCH': {
+      const title = String(p.title ?? 'Po terminie: decyzje');
+      const body = 'Lista jest w Ryzykach.';
+      return { subject: title, body, severity: 'HIGH', view: 'risk' };
+    }
     case 'DECISION_ESCALATED':
     case 'DECISION_OPEN': {
       const title = String(p.title ?? '');

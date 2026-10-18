@@ -500,12 +500,13 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - **Aplikacja:** po zapisie w panelu (awizacja, numer zlecenia, dokument, ręczna zmiana statusu) — `refreshFromServer({ keepSelection: true })` w `supabaseBridge.ts`. Wyglądu nie zmieniasz.
 
 ### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3) — W TOKU (`pakiet/eskalacje-decyzji`, migracja 0230)
-- L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen.
-- Jednorazowo: 12 otwartych `SEFS_OUT_OF_TABLE` z `reason = SOURCE` dla przyszłych tygodni → `EXPIRED` („nie dotyczy — tydzień wskaźników jeszcze trwa”), wpis w `decision_events`, bez powiadomień, razem ze sprawami „Decyzja po terminie”.
-- Eskalacja: jedno powiadomienie na `event_key` i osobę (także przy drugim przebiegu). Więcej niż 2 eskalacje u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail zbiorczy, jak `L17_BACKLOG` („Po terminie: N decyzji · Opłata paliwowa”, odnośnik do Ryzyk). Osobne wpisy nie idą.
-- Tytuły decyzji, spraw i e-maili z bazy: kod transportu i numer zlecenia danej firmy (E41), nie 8 znaków identyfikatora. „SEFS” → „Opłata paliwowa” (E39). Jednorazowa poprawka otwartych tytułów, bez powiadomień.
+#306 — przegląd 19.10 00:22: niegotowe, B1–B6, poprawki w toku.
+- L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen. Gałąź `OSTATECZNY` bez klucza `final` też otwiera sprawę.
+- Jednorazowo: 12 otwartych `SOURCE` (odczyt produkcji 19.10: 8 — tydzień jeszcze trwa, 4 — ceny już są) → `EXPIRED`, wpis w `decision_events`, bez powiadomień. Po nałożeniu oczekiwane 0.
+- Eskalacja: jedno powiadomienie na decyzję i osobę, także gdy L-3 idzie po eskalacji. Więcej niż 5 eskalacji u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail przez próg L-13 („Po terminie: N decyzji · Opłata paliwowa”, odnośnik `/ryzyka`). Pojedyncze powstają tylko tam, gdzie zbiorczy nie powstaje. `RISK_OPEN` dla `decision-overdue` wchodzi do zbiorczego.
+- Tytuły: numer zlecenia firmy, która czyta (E41). Zapisana sprawa trzyma sam kod. „SEFS:” → „Opłata paliwowa”. Wzorzec identyfikatora łapie też „Decyzja po terminie: 2e97c024:”. Jednorazowa poprawka otwartych tytułów, `detail.params.title` i powiadomień innych niż wysłany e-mail.
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
-- Testy §5 dopisku. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
+- Testy §5 dopisku plus L-3, limit poczty, `RISK_OPEN`, E41 i część jednorazowa. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
 ### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3)
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
@@ -1066,7 +1067,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 11:10 | D-20261018-1110-01: produkcja tylko z `main` po scaleniu i przeglądzie — `vercel --prod`, `db push`, Edge; gałąź tylko Preview. §1 pkt 3.5 | koordynator |
 | 18.10.2026 11:30 | D-20261018-1130-01: #299 — poprawki 1100 przyjęte; L14 zamyka się przy Dostarczone / anulowaniu (`loads_close_delivery_unconfirmed`) | koordynator |
 | 18.10.2026 12:15 | D-20261018-1215-01: panel Przegląd › „Do zrobienia” tylko aktualny stan — #300 wygląd; po A2 baza (zamknięcie nieaktualnych) + `refreshFromServer` w panelu; przed A3 | właściciel 11:35 / 11:46; koordynator |
-| 18.10.2026 16:10 | D-20261018-1610-01: eskalacje decyzji — L-1 bez `SOURCE` dla przyszłego tygodnia, 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień, jedna eskalacja na osobę, zbiorcza powyżej 2, tytuły z kodem transportu i „Opłata paliwowa”. Po bazie panelu §2, przed A3 | koordynator |
+| 18.10.2026 16:10 | D-20261018-1610-01: eskalacje decyzji — L-1 bez `SOURCE` dla przyszłego tygodnia, 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień, jedna eskalacja na osobę, zbiorcza powyżej 2, tytuły z kodem transportu i „Opłata paliwowa”. Po bazie panelu §2, przed A3. Przegląd 19.10 00:22: niegotowe (B1–B6: L-3 i `RISK_SEVERITY`, `OSTATECZNY` bez `final`, 4 tygodnie z cenami, limit poczty przy >5, `RISK_OPEN`, wzorzec identyfikatora i `params.title`). Poprawki w #306, przed scaleniem | koordynator |
 | 18.10.2026 17:40 | D-20261018-1740-01: CMR tylko po rozładunku — `AFTER_UNLOAD` / 24 h, bez `OVERDUE` przed dostawą, odmowa kotwicy przy załadunku. Po eskalacjach, przed A3. Wygląd: #303 (F1) | właściciel 17:28; koordynator |
 | 18.10.2026 22:00 | D-20261018-2200-01: właściciel 21:57 przyjął domyślne odpowiedzi — W26, W28, W29, W30, W31, W33 i W45 zamknięte. W29 i W31 obowiązują w „P7 — uzupełnienie W13”. Poza tym bez zmian w kodzie | właściciel 21:57; koordynator |
 | 19.10.2026 00:05 | D-20261019-0005-01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń (decyzja 00:01). Pozycja po CMR (D-20261018-1740-01), przed A3. Aplikacja: `wyglad/W-przed-wydaniem-4`. W30 uzupełnione | właściciel 00:01; koordynator |

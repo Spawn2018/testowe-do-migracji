@@ -56,13 +56,31 @@ B2=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 2', '{}
 B3=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 3', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id in ('$B1','$B2','$B3')" >/dev/null
 sys "select decision_escalate_overdue()" >/dev/null
-val "3 eskalacje → jeden wpis" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.dedup_key like 'ESC_BATCH:%:IN'" 1
-val "3 eskalacje → jeden e-mail" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.dedup_key like 'ESC_BATCH:%:EM'" 1
-val "3 eskalacje bez osobnych wpisów" $HHL "select count(*) from notifications where dedup_key like 'dec:ESCALATE:$B1:IN:%'" 0
-val "tytuł zbiorczy" $HHL "select (payload->>'title' = 'Po terminie: 3 decyzji · Opłata paliwowa') from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.dedup_key like 'ESC_BATCH:%:IN'" t
+val "3 eskalacje → osobne wpisy" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED' and n.dedup_key like 'dec:ESCALATE:%:IN:%' and n.payload->>'decision_id' in ('$B1','$B2','$B3')" 3
+val "3 eskalacje → osobne e-maile" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.template='DECISION_ESCALATED' and n.payload->>'decision_id' in ('$B1','$B2','$B3')" 3
+val "3 eskalacje bez zbiorczego" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.template='DECISION_ESCALATED_BATCH'" 0
+sys "update decisions set detail = coalesce(detail,'{}'::jsonb) || jsonb_build_object('event_key','l3:test:$D3') where id='$D3'" >/dev/null
+sys "select l3_critical_notify('l3:test:$D3', now())" >/dev/null
+val "L-3 po eskalacji bez drugiego wpisu" $HHL "select count(*) from notifications where dedup_key like 'l3crit:$D3:IN:%'" 0
+for i in 1 2 3 4 5 6; do
+  id=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen partia $i', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+  sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id='$id'" >/dev/null
+done
+sys "select decision_escalate_overdue()" >/dev/null
+val "6 eskalacji → jeden wpis" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 6" 1
+val "6 eskalacji → jeden e-mail" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 6" 1
+val "6 eskalacji bez limitu poczty" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.template='EMAIL_BUDGET'" 0
+val "6 eskalacji bez RISK_OPEN" $HHL "select count(*) from notifications where template='RISK_OPEN' and coalesce(payload->>'title','') like 'Decyzja po terminie:%'" 0
+val "tytuł zbiorczy" $HHL "select (payload->>'title' = 'Po terminie: 6 decyzji · Opłata paliwowa' and payload->>'path' = '/ryzyka') from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 6" t
+
+L=33333333-0000-0000-0000-000000000001
+sys "update loads set hhl_order_no='HHL/1', carrier_order_no='SCX/1' where id='$L'" >/dev/null
+sys "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) select '$P', '$L', 'SG-T', 1, 1, 1 where not exists (select 1 from shipment_items where load_id='$L' and shipment_code='SG-T')" >/dev/null
+val "tytuł HHL z numerem HHL" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'HHL') = 'SG-T · HHL/1 — brak awizacji'" t
+val "tytuł SCX z numerem SCX" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'SCX') = 'SG-T · SCX/1 — brak awizacji'" t
+val "tytuł KSH sam kod" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'KSH') = 'SG-T — brak awizacji'" t
 
 # skutki opcji (0126)
-L=33333333-0000-0000-0000-000000000001
 D4=$(run "$HHL" "select decision_open('$P','ETA_AFTER_LATEST','ETA po terminie', jsonb_build_object('eta','2026-10-02T12:00:00Z'), '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "NOTIFY_KSH → applied" $HHL "select (decision_resolve('$D4','NOTIFY_KSH')->>'applied')" true commit
 val "NOTIFY → powiadomienie KSH IN_APP" $KSH "select count(*) from notifications where template='ETA_NOTIFY_KSH' and load_id='$L'" 1
