@@ -79,7 +79,7 @@ export function KshDatesModal({ load, onClose }: { load: Load; onClose: () => vo
           p_load_from: lf, p_load_to: lt, p_delivery_from: df, p_delivery_to: dt,
         });
         if (r.error) throw new Error(r.error.message);
-        pushToast(t(locale, 'b_ksh_saved'), 'MEDIUM', load.id);
+        pushToast(t(locale, admin ? 'b_ksh_saved_admin' : 'b_ksh_saved'), 'MEDIUM', load.id);
         const { refreshFromServer } = await import('../../data/supabaseBridge');
         await refreshFromServer({ keepSelection: true });
         onClose();

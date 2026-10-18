@@ -16,10 +16,10 @@ Zakres (F8): dane demo, obliczenia widoku, teksty, wygląd i testy. Bez bazy. Cz
 
 | # | było | jest |
 |---|---|---|
-| 1 B | SG-09: sprawy „Brak kierowcy i numerów”, dzwonek „Brak naczepy”, a panel ma kompletny zestaw | SG-09 i SG-18: status „Brak dokumentów” (brakuje tylko zezwolenia). „Brak kierowcy i numerów” tylko przy transportach bez zestawu (SG-19, SG-30). Dzwonek „Brak kierowcy i zestawu” i decyzja „Brak awizacji” przy SG-19. Sprawa po terminie przy SG-34 (załadunek jutro, brak zezwolenia) |
+| 1 B | SG-09: sprawy „Brak kierowcy i numerów”, dzwonek „Brak naczepy”, a panel ma kompletny zestaw | SG-09 i SG-18: status „Brak dokumentów” (brakuje tylko zezwolenia). „Brak kierowcy i numerów” tylko przy transportach bez zestawu (SG-19, SG-30). Dzwonek „Brak kierowcy i zestawu” i decyzja „Brak awizacji” przy SG-19. Sprawa po terminie przy SG-34 (załadunek jutro, brak zezwolenia). Zezwolenia firmowe SG (PL, SE) ważne do 24.09 — podpięte same do 28 transportów; SG z załadunkiem od 25.09 (SG-36, SG-09, SG-18 …) czekają na nowe zezwolenie, stąd „Brak zezwolenia” (F7 P1) |
 | 2 B | ten sam kierowca, ciągnik albo naczepa w 2–3 transportach naraz (ok. 30 par) | `deconflictResources`: okres zajęcia = załadunek … rozładunek + 3 dni powrotu. Transporty w drodze i na placu zachowują zestaw, pozostałe dostają wolny z puli (numery fikcyjne, I-2). 0 nakładań |
 | 3 B | Strefy: plac „teraz w strefie: 0”, Kokpit „3 na placu” | T-12 i T-18 stoją w strefie placu. D-01 po wyjeździe 16:07 stoi tuż za strefą („czy dostarczono?”). Strefy: „teraz w strefie: 2” |
-| 4 B | prom Nova Star 23.09, 18:00: Kokpit „fala 1,4 m · niskie”, Ryzyka „3,2 m · możliwe odwołanie” | jedna prognoza: 3,2 m, ryzyko wysokie (Kokpit, pasek, Ryzyka). Baner HHL „Rejs 23.09.2026 zagrożony” |
+| 4 B | prom Nova Star 23.09, 18:00: Kokpit „fala 1,4 m · niskie”, Ryzyka „3,2 m · możliwe odwołanie” | jedna prognoza: 3,2 m, ryzyko wysokie (Kokpit, pasek, Ryzyka). |
 | 5 B | Strefy i Automatyzacje: zdarzenia z października (SG-03 dostarczony 07.10) | daty przed zegarem demo. Zdarzenia z T-11 (dostarczony 22.09) i SG-24, ostatnie zdarzenia stref jak Mapa (D-01 16:07, SG-32 13:40, SG-28 07:42) |
 | 6 P | Opcje: logowania, zaproszenia, Dopłaty — daty z października | przed 23.09, 16:32 (zaproszenie ważne do 29.09, szkic komunikatu na 24.09) |
 | 7 P | Ryzyka: „ta sama liczba … w dzwonku” (23 vs 16) | „ta sama liczba w menu i w Kokpicie”. Dzwonek liczy powiadomienia, nie sprawy |
@@ -31,14 +31,14 @@ Zakres (F8): dane demo, obliczenia widoku, teksty, wygląd i testy. Bez bazy. Cz
 | 13 P | zafakturowane i opłacone dalej „Dostarczone”, „Rozliczenie 0” | transport na obu fakturach: „Zafakturowano”. Widoki pytające o „Dostarczone” liczą też „Gotowe do fakturowania” i „Zafakturowano” (`isAfterDelivery`; dotyczy też produkcji) |
 | 14 P | Harmonogram vs Finanse: marża Tężników różna o 41,48 EUR | Harmonogram: przychód i marża po fakturze, gdy jest (jak Finanse). Tężniki 21 063,46 EUR w obu |
 | 15 P | Mapa „bez pozycji 0” obok „Brak GPS 5” | „bez żadnej pozycji 0” — inna rzecz niż „Brak GPS” (pozycja była, przestała przychodzić) |
-| 16 P | Ryzyka „na pokładzie: 1”, Mapa „Prom 6” | „na pokładzie” = transporty w etapie Prom |
+| 16 P | Ryzyka „na pokładzie: 1”, Mapa „Prom 6” | „na pokładzie” = transporty w etapie Prom, także opóźnione na statku (SG-03) — 6 jak Mapa |
 | 17 P | D-01 „Na placu od 15:10” obok wyjazdu 16:07 | #304: wjazd 16:01, wyjazd 16:07 |
 | 18 P | oś „Na placu — plan”, SG-23 „pominięte” | #304: zdarzenia strefy placu |
 | 19 P | 300 km w 50 min (Śrem 09:40 → bufor Gdańsk 10:30) | bufor 13:40 |
 | 20 P | Ceny „śledzenie od Szwecji”, a oś ma GPS w Polsce | „w czasie wolnym — bez dopłaty (wyjazd ze strefy 09:40)” |
 | 21 P | zakaz ruchu 25.09 przy SG-09 (załadunek 05.10) | zakaz tylko przy transportach w drodze w ten dzień |
 | 22 P | „Rejs: Wawel · rejs niewybrany” | „Wawel · dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji” |
-| 23 P | zezwolenia firmowe od 01.10 przy wrześniowych transportach | ważne od 01.09.2026 |
+| 23 P | zezwolenia firmowe od 01.10 przy wrześniowych transportach | ważne 01.09–24.09.2026 (patrz #1) |
 | 24 P | autor „workflow:wf-2” | „System // Watch Tower” (także produkcja) |
 | 25 P | Użytkownicy „0 z telefonem” | liczniki z tej samej listy (5 z telefonem) |
 | 26 P | Ryzyka: „seed makiety … (D18)”, „Po podłączeniu…” | „— to przykład w wersji pokazowej…”, „Brak komunikatów o utrudnieniach na drogach w Polsce. Źródło: HERE…” |
@@ -52,7 +52,7 @@ Zakres (F8): dane demo, obliczenia widoku, teksty, wygląd i testy. Bez bazy. Cz
 | 34 D | „Opcje › Progi”, „Przeglądzie i awizacji” | „Opcje › Progi alarmów”, „W zakładce »Przegląd«”. Telefon „Polferries 18:00” — **N**: na telefonie dwie linie (Stena, Polferries) obok siebie |
 | 35 D | „kurs tymczasowy · 60” | „kurs tymczasowy · 60 transportów” |
 | 36 D | „bez pingu”, „ostatni ping” | „bez nowej pozycji”, „ostatnia pozycja” |
-| 37 D | „+37 000 000 002” | „+370 000 000 02” — kody 3-cyfrowe (także produkcja) |
+| 37 D | „+37 000 000 002” | „+370 000 000 02” — długość kodu kraju według E.164: 1 cyfra (+1, +7), 3 cyfry (+370, +358, +420, +972 …), reszta 2 (także produkcja) |
 | 38 D | edytor terminu CMR: „24” + „h · po „Dostarczone”, do 24 h” | „24” + „h · po „Dostarczone”” |
 | 39 D | D-01 „Ładunek: D · 7 szt.” | „Stężenia międzysłupowe · D · 7 szt.” |
 
@@ -66,8 +66,17 @@ Opcje › Opłata paliwowa: data „dziś 14.10.2026” była tylko w teście je
 - KSH, SCX i Operacje HHL — bez zmian.
 - Na produkcji zadziała po części bazy (D-20261019-0005-01 §2).
 
+## F7 runda 1 (niezależny przegląd 19.10, 00:58) — niegotowe, 0 B, 5 P; poprawione
+- P1: zezwolenia firmowe a „Brak zezwolenia” przy SG — patrz #1 i #23.
+- P2: „na pokładzie” po etapie Prom — patrz #16.
+- P3: bez dat po zegarze demo: Automatyzacje › Historia („decyzja właściciela”), Opcje › Kto co dostaje „zawsze — decyzja właściciela” (tekst także na produkcji).
+- P4: opis PR uzupełniony o #12, #14, #29, #31, #38, #39.
+- P5: e2e i zrzuty powtórzone na buildzie z HEAD.
+- D1: kody kraju 1 i 3 cyfry (test `phone-display`). D2: twarde spacje w 4 tekstach i łączniki w zakresach objazdów. D6: po zapisie dat przez Administratora HHL „Zapisano daty i godziny — zmiana jest w Historii transportu.”. D7: T-11 — wyjazd z bufora 40 min po placu, sprawa postoju w trakcie postoju.
+- Bez zmian (N): D4 — Kokpit liczy etap „Plac” (D-01 po wyjeździe czeka na „czy dostarczono?”), Strefy liczą auta w strefie; D8 — karta „czy dostarczono?” dotyczy tylko transportów przed „Dostarczone”; D9 — do czasu części bazy D-20261019-0005-01 §2 zapis Administratora HHL po załadunku odrzuci baza dzisiejszym komunikatem (w kolejce Cursora tuż po D-1740).
+
 ## Testy
-- Unit: 1636 przechodzi, 35 pominiętych (199 plików). Nowe testy: `tests/admin-dates.test.ts` i rozszerzony `tests/p11-demo-strefa-placu.test.ts` (8 przypadków).
+- Unit: 1637 przechodzi, 35 pominiętych (199 plików). Nowe testy: `tests/admin-dates.test.ts` i rozszerzony `tests/p11-demo-strefa-placu.test.ts` (8 przypadków).
 - Zmienione oczekiwania — każda zmiana wynika z poprawki:
   - `voyage` (fokus 23.09);
   - `audyt-af`, `audyt-c`, `p11-demo-spojne`, `p3b-cockpit-e9`, `p8d-rules`, `p5b-money`, `audyt-e-opcje`, `w-eta-calib`, `p9c-map`;

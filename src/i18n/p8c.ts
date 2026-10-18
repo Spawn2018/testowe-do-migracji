@@ -97,7 +97,7 @@ const pl = {
   p8c_cancel: 'Anuluj',
   p8c_err_reason: 'Wpisz powód zmiany.',
   p8c_err_center: 'Podaj środek: szerokość 50–70, długość 10–30 (np. 65,80539 21,75914).',
-  p8c_err_radius: 'Promień: od 100 m do 60\u00a0km.',
+  p8c_err_radius: 'Promień: od 100\u00a0m do 60\u00a0km.',
   p8c_err_hyst: 'Margines granicy: od 0 do 5 000 m.',
   p8c_err_samples: 'Potwierdzenie: od 1 do 10 pozycji.',
   p8c_err_dwell: 'Pobyt: od 0 do 240\u00a0min.',

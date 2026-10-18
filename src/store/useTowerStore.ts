@@ -881,7 +881,7 @@ export const useTowerStore = create<TowerState>()(
           actor: currentActorLabel(admin ? 'HHL' : 'KSH'),
           payload: { by: admin ? 'HHL' : 'KSH', load_date: p.loadDate, delivery_date: p.deliveryDate, before_load_date: load.plannedLoadDate, before_delivery_date: load.plannedDeliverDate },
         });
-        get().pushToast(t(get().locale, 'b_ksh_saved'), 'MEDIUM', loadId);
+        get().pushToast(t(get().locale, admin ? 'b_ksh_saved_admin' : 'b_ksh_saved'), 'MEDIUM', loadId);
         return true;
       },
 

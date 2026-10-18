@@ -7,13 +7,13 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
-  a6_alt_e18_detail: 'Omija roboty E4 Gävle–Söderhamn · +45–70\u00a0min · zalecane przy wysokim ryzyku',
+  a6_alt_e18_detail: 'Omija roboty E4 Gävle–Söderhamn · +45\u2060–\u206070\u00a0min · zalecane przy wysokim ryzyku',
   a6_alt_e18_title: 'E4 → E18 via Västerås / Uppsala',
   a6_alt_pause_detail: 'Gdy okno Stegra nie dotrzymane · unikaj nocnego podejścia placu',
   a6_alt_pause_title: 'Pauza w Gävle / Sundsvall + nowy slot Boden',
   a6_alt_rail_detail: 'Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby',
   a6_alt_rail_title: 'Kolej + ostatnia mila (Boden rail terminal)',
-  a6_alt_rv83_detail: 'Objazd śnieżycy środkowego Norrland · +90–120\u00a0min · zima',
+  a6_alt_rv83_detail: 'Objazd śnieżycy środkowego Norrland · +90\u2060–\u2060120\u00a0min · zima',
   a6_alt_rv83_title: 'E4 → Rv 83 / Rv 84 (Ljusdal – Ånge)',
   a6_auth_deactivated: 'Konto zostało dezaktywowane przez administratora HHL.',
   a6_auth_email: 'Adres e-mail',

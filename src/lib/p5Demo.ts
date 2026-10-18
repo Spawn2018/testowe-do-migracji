@@ -108,12 +108,17 @@ export function demoPackActions(): PackActions {
   };
 }
 
+/** Ostatni dzień ważności zezwoleń firmowych w demo: transporty SG z załadunkiem od 25.09 czekają na nowe zezwolenie
+ *  (F7 #307 P1 — „podpina się samo” tylko do transportów w okresie ważności; SG-36, SG-09, SG-18 … mają „Brak zezwolenia”). */
+const FIRM_VALID_TO = '2026-09-24';
+
 /** E31 — zezwolenia z tabeli właściciela 07.10 (wymiary i rodzaje); numery i daty przykładowe (G-09). */
 export function demoPermits(loads: Load[]): PermitView[] {
   const n = (prefix: string) => loads.filter((l) => l.code.startsWith(prefix)).length;
+  const firm = loads.filter((l) => l.code.startsWith('SG-') && (l.plannedLoadDate ?? '') <= FIRM_VALID_TO).length;
   return [
-    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'ZP/ŚR/0815/2026', validFrom: '2026-09-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
-    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 2026/41378', validFrom: '2026-09-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'ZP/ŚR/0815/2026', validFrom: '2026-09-01', validTo: FIRM_VALID_TO, limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: firm },
+    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 2026/41378', validFrom: '2026-09-01', validTo: FIRM_VALID_TO, limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: firm },
     { id: 'demo-p3', scope: 'TRASA', country: 'PL+SE', number: null, validFrom: null, validTo: null, limits: { l: 23.69, w: 3.52, h: 3.9 }, pilot: 'PL + SE', appliesTo: 'Kratownice (KR)', loads: n('KR-') },
   ];
 }

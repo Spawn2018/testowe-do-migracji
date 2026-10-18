@@ -25,11 +25,11 @@ const ZONES: ZoneOption[] = [
 ];
 
 /* E34 „Zdarzenia stref” (przegląd 18.10, B5: przed zegarem demo 23.09, 16:32, te same transporty co oś Status):
-   T-11 Śrem ENTER 17.09 07:40 → EXIT 09:40, bufor Boden ENTER 22.09 05:22 → EXIT 09:55, plac ENTER 05:56 → EXIT 09:40
+   T-11 Śrem ENTER 17.09 07:40 → EXIT 09:40, bufor Boden ENTER 22.09 05:22 → EXIT 10:20 (50 km od placu — ok. 40 min jazdy, F7 #307 D7), plac ENTER 05:56 → EXIT 09:40
    (Dostarczone); SG-24 bufor Gdańsk ENTER 18.09 13:40 → EXIT 14:15 */
 const VISITS: Visit[] = [
   { code: 'T-11', loadId: null, zoneId: 'z-srem', enter: '2026-09-17T05:40:00Z', exit: '2026-09-17T07:40:00Z' },
-  { code: 'T-11', loadId: null, zoneId: 'z-bod-buf', enter: '2026-09-22T03:22:00Z', exit: '2026-09-22T07:55:00Z' },
+  { code: 'T-11', loadId: null, zoneId: 'z-bod-buf', enter: '2026-09-22T03:22:00Z', exit: '2026-09-22T08:20:00Z' },
   { code: 'T-11', loadId: null, zoneId: 'z-bod', enter: '2026-09-22T03:56:00Z', exit: '2026-09-22T07:40:00Z' },
   { code: 'SG-24', loadId: null, zoneId: 'z-gda-buf', enter: '2026-09-18T11:40:00Z', exit: '2026-09-18T12:15:00Z' },
 ];
@@ -42,7 +42,7 @@ const STATUS: { code: string; status: string; at: string }[] = [
 /* sprawy (przykład demo): brak awizacji SG-15 przed załadunkiem (E32), postój T-11 na placu */
 const ISSUES: { code: string; issue: string; at: string }[] = [
   { code: 'SG-15', issue: 'AWIZ', at: '2026-09-20T04:00:00Z' },
-  { code: 'T-11', issue: 'DWELL', at: '2026-09-22T07:56:00Z' },
+  { code: 'T-11', issue: 'DWELL', at: '2026-09-22T06:56:00Z' },
 ];
 
 /* E35 „Przebiegi” (workflow_runs) — zdania zamiast kodów */
@@ -56,7 +56,7 @@ const RUNS: RuleRun[] = [
 
 /* E35 „Historia” (audit_log workflows) i zmiana z E35 pkt 2 (reguły START) */
 const HIST: RuleHist[] = [
-  { at: '2026-09-22T06:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Rozładunek — wgraj POD', reason: 'bez POD — podpisany CMR jest w Dokumentach (decyzja 07.10.2026, 19:51)' },
+  { at: '2026-09-22T06:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Rozładunek — wgraj POD', reason: 'bez POD — podpisany CMR jest w Dokumentach (decyzja właściciela)' },
   { at: '2026-09-22T06:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Opóźnienie transportu · Krytyczna zmiana daty · Cichy pojazd', reason: 'wbudowane automaty robią to samo' },
   { at: '2026-09-22T06:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Transport anulowany', reason: 'anulowanie liczy dopłatę i powiadamia według „Kto co dostaje”, bez sprawy „brak zasobów”' },
   { at: '2026-09-22T06:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Dojazd na plac · Wjazd przed port', what: 'przeniesione do „Kto co dostaje”: „Auto 50 km przed placem / przed Śremem”, „Auto 20 km przed portem”', reason: 'ci sami odbiorcy co dziś' },

@@ -24,6 +24,8 @@ const pl: Dict = {
   b_ksh_dates_row: 'Daty i godziny załadunku i rozładunku',
   b_ksh_modal_title: 'Daty i godziny',
   b_ksh_saved: 'Zapisano daty i godziny — HHL i przewoźnik dostali powiadomienie.',
+  /* F7 #307 D6: zapis przez Administratora HHL — bez obietnicy powiadomienia, zmiana w Historii */
+  b_ksh_saved_admin: 'Zapisano daty i godziny — zmiana jest w Historii transportu.',
   b_ksh_locked: 'Po wjeździe na załadunek daty zmienia wyłącznie HHL.',
   b_ksh_ev_dates: 'Zmiana dat i godzin planu',
   b_ksh_ev_crit: 'Zmiana daty transportu awizowanego',
