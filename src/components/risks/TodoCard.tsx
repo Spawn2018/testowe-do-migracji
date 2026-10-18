@@ -44,7 +44,7 @@ export interface CardCtx {
   onCancelConfirm: () => void;
   onGo: (i: TodoIssue) => void;
   onFee: (i: TodoIssue) => void;
-  checkHandlers: (i: TodoIssue) => { onYes?: () => void; onNo?: () => void };
+  checkHandlers: (i: TodoIssue) => { onYes?: () => void; onNo?: () => void; busy?: boolean };
   /** wyglad/E49: „Objazd czy postój?” — kto decyduje i zapis (null = nie podłączone) */
   detourHandlers: (i: TodoIssue) => { canDecide: boolean; busy: boolean; onDecide: ((pick: 'HOLD' | 'DETOUR', note: string | null) => void) | null };
   decisions: DecisionsApi | null;
@@ -291,7 +291,7 @@ function IssueRow({ i, ctx, open, onToggle }: { i: TodoIssue; ctx: CardCtx; open
     const h = ctx.checkHandlers(i);
     return (
       <li className="rk-issue is-check" data-rk-issue={i.id}>
-        <DeliveredCheckCard check={i.check} locale={locale} onYes={h.onYes} onNo={h.onNo} />
+        <DeliveredCheckCard check={i.check} locale={locale} busy={h.busy} onYes={h.onYes} onNo={h.onNo} />
       </li>
     );
   }

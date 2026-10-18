@@ -2883,6 +2883,30 @@ Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teśc
 - **TEST wolne** od 17.10.2026 20:54 (koniec nullguard-4).
 - Dalej: **A1**. #291 nadal do scalenia w przerwie między pozycjami.
 
+## 2026-10-18 — A1 NA PRODUKCJI — przyjęte
+
+- PR #296; merge `10007b24` (treść `5769a9ad`). Migracja `0227_a1_tracking_window.sql`. Funkcja Edge `emtrack-web` wdrożona.
+- CI na `5769a9ad`: unit, visual, `db` zielone.
+- TEST: security **114/114** (+2 SKIP), status **83/83**, nullguard 161+136+228+127 = **652/652**.
+- Doradca security na TEST: 171 zgłoszeń, 0 spoza `advisor-exceptions.txt`.
+- Porównanie funkcji z produkcją przed `db push` (D-20261017-2250-01): `guard_load_update` różni się tylko `tower.track_ctx` i `tracking_opened_at` na liście `dates_ctx` (zostaje wyjątek A5 `MANUAL`/`IMPORT`); `process_position` — brama okna i zapis startu; `telm_infer_phase_from_position` — powrót poza oknem; `detect_silent_vehicles` — zamknięcie ciszy poza oknem i dowolne źródło pozycji.
+- Próba prod ROLLBACK: cron `tower-tracking-guard` 1, `anon`/`authenticated` bez EXECUTE, kolumna `tracking_opened_at`; po ROLLBACK kolumny brak.
+- `supabase db push`: 0227 nałożona. Po: `schema_migrations` = 0227; kolumna 1; cron `15 6 * * *` = 1; `anon` bez EXECUTE.
+- Wdrożenie: `dpl_76iSLDoP7mu5kBj3J17LiwytGQBT`, 18.10.2026 01:03; tower i makieta 200; `assets/index-BNuQNLhs.js`; 0× `service_role`.
+- Stare `PLANNED` w oknie (odczyt 17.10.2026, 21:55): **21**. Do domknięcia przez HHL i SCX przed W37.
+- **TEST wolne** od 18.10.2026 01:00 (koniec nullguard-4).
+- **Odbiór koordynatora:** 01:15 i 08:26 — przyjęte w całości. Przebieg L17 nd 08:15: 17 spraw „Potwierdź dostawę” (kod wysyłki w tytule); 0 powiadomień do SCX; po 1 wpisie zbiorczym u każdego z 3 Administratorów HHL.
+- **A1 NA PRODUKCJI — przyjęte.** Czeka W37. Dalej: **A2**.
+
+## 2026-10-18 — DOPISKI D-20261018-0040-01 i D-20261018-0235-01 W PLANIE
+
+- Pliki w `docs/handover/dopiski/` (źródło: `docs/handover/dopiski_nowe/`).
+- D-20261018-0040-01: **wykonane** — A1 wdrożone i przyjęte; #297 w kolejce (scalone 10:32).
+- D-20261018-0235-01: zasada liczb U+00A0 → PLAN §1 pkt 10; kolejka #295 → #297 → #298.
+- Scalenie wyglądu 18.10: #295 `a6eab269` 10:31 → #297 `c0362839` 10:32 → #298 `a51cf771` 10:33.
+- Wdrożenie Vercel z `a51cf771`: `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` READY; tower.log-mar.pl aliased.
+- Dalej: **A2** (bez przerwy).
+
 ## 2026-10-17 — DOPISEK D-20261017-2205-01 W PLANIE (A1, PR #296)
 
 Przegląd #296 przed scaleniem, w tym samym PR:
@@ -2902,5 +2926,34 @@ Odczyt `pg_get_functiondef` na produkcji `nglnnrmzmhusvxslousq`, przed `db push`
 - `telm_infer_phase_from_position`: tylko powrót, gdy transport jest poza oknem.
 - `detect_silent_vehicles`: zamknięcie otwartej ciszy poza oknem, pętla z `having load_in_tracking_window`, źródło pozycji bez twardej listy `TELEMATICS_API`/`RFMS`/`DRIVER_PWA`.
 
+## 2026-10-18 11:10 — DOPISEK D-20261018-1100-01 (A2, PR #299, przed db push)
 
+Porównanie `pg_get_functiondef` produkcji `nglnnrmzmhusvxslousq` (18.10, przed nałożeniem 0228) z migracją 0228. Różnice tylko w miejscach A2:
 
+- `apply_geofence_status`: zostają komentarze „Awaryjnie: GPS zgubił wyjazd z portu SE…” i „Wyjazd ze strefy portu Gdańsk… celowo niczego nie zmienia”. Dochodzi: zamknięte statusy `READY_TO_INVOICE` i `INVOICED`; nazwa strefy i `project_id`; pominięcie zdarzeń `synthetic`; wyjazd LOADING ≥ 5 min → `IN_TRANSIT_PL` + `actual_load_at` bez `loaded_confirmed` i bez `rk_left_loading_unconfirmed`; wyjazd SITE ≥ 10 min → `DELIVERED`; krócej → `DELIVERED_CHECK`.
+- `process_position`: zostają komentarze „POPRAWKA 24.09.2026…” (dwa miejsca), „Odrzucamy oczywiste błędy GPS…”, „ANEKS 4 PR5…”, „A1 / E27…”, „1) Zapis…”, „2) Ewaluacja…”, „3) Emisja…”. `p_ts` bez `default now()` — jak na produkcji. Dochodzi `dwell_min`, `entered_at` i `minutes` w payloadzie EXIT/DWELL.
+- `decision_resolve`: treść z 0139; dla `DELIVERED_CHECK` zwrot do `delivered_check_apply` (przed zamknięciem sprawy).
+
+Zdarzenia syntetyczne (`payload.synthetic = true`) nie zmieniają statusu ani `actual_load_at`. Fazę z pozycji ustawia sama `telm_infer_phase_from_position`.
+
+Inwentarz `risks.sh`: 7 → 6 kluczy, bo A2 celowo nie tworzy `rk_left_loading_unconfirmed` (wyjazd ze Śremu bez `loaded_confirmed`).
+
+Karta L14 w produkcji z otwartej sprawy, nie ze zdarzenia. „Tak” tylko z `AT_SITE` przez `auto_set_status`. Operacje HHL: odmowa; Administrator HHL: może (kontrola nullguard — komunikat „Brak otwartej sprawy” nie jest odmową uprawnień).
+
+## 2026-10-18 11:10 — DOPISEK D-20261018-1110-01 (wdrożenie tylko z main)
+
+O 10:37 poszło `vercel --prod` z gałęzi roboczej `pakiet/audyt-17-a2`, commit `0fe5a14a` (jeszcze przed przeglądem A2): `dpl_ACEKzFYJZASN1ag6xtPaYQdKF8mh` — **ERROR**. To był błąd wykonawcy: produkcja miała dostać widok A2 (`SITE_EXIT_DELIVERED`) bez migracji 0228. Budowa się nie udała, więc produkcja tego nie dostała.
+
+O 10:41 wdrożenie z czystego archiwum `main` `a51cf771` (#295, #297, #298, bez A2): `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` — **READY**, przyjęte. Baza produkcji zostaje na migracji 0227.
+
+Od teraz: `vercel --prod`, `supabase db push` i funkcje Edge tylko z `main` po scaleniu i po przeglądzie koordynatora. Gałąź tylko jako Preview. Przed CLI: `git checkout main && git pull`, `git status` bez zmian. W `POSTEP.md`: `dpl_…` i commit `main`.
+
+## 2026-10-18 11:30 — DOPISEK D-20261018-1130-01 (L14 zamyka się po Dostarczone)
+
+Poprawki z 1100 przyjęte. `loads_close_delivery_unconfirmed` (A1) zamyka też otwarte `DELIVERED_CHECK`, gdy status schodzi na `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED`: `RESOLVED`, kod `DELIVERED` albo `CANCELLED`, wpis w `decision_events`. Inaczej eskalacja po 24 h wołałaby o sprawie, której karta już nie pokazuje.
+
+## 2026-10-18 12:15 — DOPISEK D-20261018-1215-01 W PLANIE
+
+- #300 `wyglad/W-panel-do-zrobienia` — kolejka wyglądu; scalenie w przerwie przy F7 i zielonych unit/visual; wdrożenie z `main`.
+- Po wdrożeniu A2, przed A3: migracja zamykania nieaktualnych spraw (decision-overdue + alarmy przed dostawą) i `refreshFromServer` po zapisach w panelu.
+- **TEST zajęte: A2, od 12:00** (SHA `9798c4ed`; security/status/nullguard + risks).

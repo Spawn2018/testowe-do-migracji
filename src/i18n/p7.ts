@@ -15,6 +15,10 @@ const PL: Record<string, string> = {
   /* Do zrobienia przy tym transporcie */
   p7_todo_h: 'Do zrobienia przy tym transporcie · {n}',
   p7_todo_h_phone: 'Do zrobienia · {n}',
+  /* telefon, linia stanu zwiniętej sekcji (właściciel 18.10, 11:35) */
+  p7_todo_more_1: 'i jeszcze {n} sprawa',
+  p7_todo_more_2: 'i jeszcze {n} sprawy',
+  p7_todo_more_5: 'i jeszcze {n} spraw',
   p7_todo_today: 'Załadunek dziś',
   p7_todo_over: 'po terminie',
   p7_todo_due: 'termin {date}',
