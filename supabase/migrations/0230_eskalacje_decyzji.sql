@@ -152,7 +152,7 @@ as $$
 declare
   r record;
   h record;
-  u record;
+  person record;
   n int := 0;
   v_key text;
   v_stamp text := to_char(now(), 'YYYYMMDDHH24MISSMS');
@@ -210,7 +210,6 @@ begin
       )
       on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
     end if;
-    begin
     insert into pg_temp.esc_hit (user_id, decision_id, load_id, type_code, raw_title, bell, mail, recipient, locale, party)
     select u.id, r.id, r.load_id, r.type_code, r.title,
            public.notify_person_on(u.id, 'dec_late', 'bell', m.in_app, m.fixed_in_app),
@@ -240,13 +239,10 @@ begin
               or exists (select 1 from loads l join projects p on p.id = l.project_id
                           where l.id = r.load_id and p.client_org_id = o.id)))
        );
-    exception when others then
-      raise exception 'ESC_HIT: %', sqlerrm;
-    end;
     n := n + 1;
   end loop;
 
-  for u in
+  for person in
     select user_id, count(*)::int as cnt,
            bool_or(bell) as bell, bool_or(mail) as mail,
            min(recipient) as recipient, min(locale) as locale
@@ -258,29 +254,29 @@ begin
            count(distinct type_code), min(type_code)
       into v_ids, v_types, v_type
       from pg_temp.esc_hit
-     where user_id = u.user_id;
-    v_label := 'Po terminie: ' || u.cnt || ' decyzji';
+     where user_id = person.user_id;
+    v_label := 'Po terminie: ' || person.cnt || ' decyzji';
     if v_types = 1 and v_type = 'SEFS_OUT_OF_TABLE' then
       v_label := v_label || ' · Opłata paliwowa';
     end if;
     v_payload := jsonb_build_object(
       'title', v_label, 'decision', v_label, 'path', '/ryzyka',
-      'n', u.cnt, 'event', 'ESCALATE', 'locale', u.locale,
+      'n', person.cnt, 'event', 'ESCALATE', 'locale', person.locale,
       'decision_ids', v_ids
     );
-    if u.bell is true then
+    if person.bell is true then
       insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
       values (
-        'IN_APP', u.recipient, u.user_id, 'DECISION_ESCALATED_BATCH', v_payload,
-        left('ESC_BATCH:' || u.user_id::text || ':' || v_stamp || ':IN', 200)
+        'IN_APP', person.recipient, person.user_id, 'DECISION_ESCALATED_BATCH', v_payload,
+        left('ESC_BATCH:' || person.user_id::text || ':' || v_stamp || ':IN', 200)
       )
       on conflict (dedup_key) where dedup_key is not null do nothing;
     end if;
-    if u.mail is true then
+    if person.mail is true then
       perform public.l13_queue_email(
-        'critical', 'DECISION_ESCALATED_BATCH', u.user_id, u.recipient,
+        'critical', 'DECISION_ESCALATED_BATCH', person.user_id, person.recipient,
         null, null, v_payload,
-        left('ESC_BATCH:' || u.user_id::text || ':' || v_stamp || ':EM', 200),
+        left('ESC_BATCH:' || person.user_id::text || ':' || v_stamp || ':EM', 200),
         null
       );
     end if;
