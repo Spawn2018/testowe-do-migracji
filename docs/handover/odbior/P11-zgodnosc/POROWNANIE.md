@@ -101,7 +101,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 - **Partia 6 — CMR tylko po rozładunku (decyzja właściciela 18.10, 17:28; wcześniej 08.10 B):**
   - wszędzie „CMR z podpisem odbiorcy”; teksty „CMR z załadunku” i „do 2 h po załadunku” usunięte;
   - Harmonogram, Dokumenty i panel pomijają stan CMR transportów przed „Dostarczone” (`cmrAfterDelivery`), w panelu „po rozładunku”; „Rozładowany” (UNLOADING) liczy się jak „Dostarczone”, tak jak w Kokpicie i kreatorze faktury (F7 #303 B1: pierwsza wersja ukrywała przy nich brak CMR);
-  - F7 #303: na telefonie dopisek na mapie Przeglądu w jednym ciągu (pojazd i „+ / −” widoczne), kody etapów usunięte z tekstów zmienionych plików („szablon E43”, „zasad E42”, „E34”, „W12”, „III-4”, „E5-2”), twarde spacje w liczbach z jednostką w tych plikach, pomoc SCX: CMR „do 24 h” po „Dostarczone”;
+  - F7 #303: na telefonie (do 768 px, jak `useIsPhone`) dopisek na mapie Przeglądu u góry, w jednym ciągu (pojazd i „+ / −” widoczne; test e8 przy 390 i 768), „brak: zezwolenie PL” zamiast „brak zezwolenie PL”, bez „(I-21)” w tekstach spraw, kody etapów usunięte z tekstów zmienionych plików („szablon E43”, „zasad E42”, „E34”, „W12”, „III-4”, „E5-2”), twarde spacje w liczbach z jednostką w tych plikach, pomoc SCX: CMR „do 24 h” po „Dostarczone”;
   - wartość startowa aplikacji: CMR po rozładunku, 24 h;
   - na produkcji wymaganie ma jeszcze „2 h po załadunku” (22 transporty przed dostawą z „po terminie”) — poprawka bazy: D-20261018-1740-01; filtr widoku działa już teraz.
 

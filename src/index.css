@@ -1887,8 +1887,9 @@ img,video{max-width:100%;height:auto}
 .po-mapnote-l{display:block}
 .po-mapnote-l.is-alert{color:var(--red)}
 /* F7 #303 P1: na telefonie mapa Przeglądu ma 150 px — dopisek u góry, w jednym ciągu („Na placu od … · ostatnia pozycja …
-   · strefa …”), mniejszy i z miejscem na „+ / −” po prawej, żeby pojazd w środku mapy i podpis podkładu zostały widoczne */
-@media (max-width:600px){
+   · strefa …”), mniejszy i z miejscem na „+ / −” po prawej, żeby pojazd w środku mapy i podpis podkładu zostały widoczne;
+   do 768 px — tak jak „telefon” w aplikacji (`useIsPhone`, F7 #303 r2 P1) */
+@media (max-width:768px){
   .note.po-mapnote{top:6px;bottom:auto;left:6px;right:60px;padding:3px 6px;font-size:12px;line-height:1.35}
   .po-mapnote-l{display:inline}
   .po-mapnote-l+.po-mapnote-l::before{content:" · ";color:var(--ink-3)}

@@ -28,7 +28,8 @@ describe('CMR tylko po rozładunku (decyzja 18.10, 17:28)', () => {
 
   it('w tekstach nie ma „CMR z załadunku” ani CMR „po załadunku”', () => {
     /* F7 #303 P4: wszystkie pliki tekstów, nie tylko p5 i p7 */
-    for (const f of readdirSync('src/i18n').filter((x) => x.endsWith('.ts')).map((x) => `src/i18n/${x}`)) {
+    /* F7 #303 r2 D2: także pomoc (`helpContent.ts`) */
+    for (const f of [...readdirSync('src/i18n').filter((x) => x.endsWith('.ts')).map((x) => `src/i18n/${x}`), 'src/lib/helpContent.ts']) {
       const src = readFileSync(f, 'utf8');
       expect(src, f).not.toMatch(/CMR z załadunku|CMR przy załadunku/i);
       expect(src, f).not.toMatch(/p7_doc_cmr_after:|p5_doc_r_CMR_LOAD|p5_doc_n_CMR_LOAD/);

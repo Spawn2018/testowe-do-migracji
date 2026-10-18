@@ -673,8 +673,8 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
   });
 
   /* F7 #303 P1: telefon — mapa Przeglądu ma 150 px; dopisek nie zasłania pojazdu ani „+ / −” */
-  test('telefon 390: na placu — dopisek nie zasłania pojazdu i przycisków „+ / −”', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+  for (const w of [390, 768] as const) test(`telefon ${w}: na placu — dopisek nie zasłania pojazdu i przycisków „+ / −”`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 844 });
     await boot(page, 'HHL');
     await openPanel(page, 'T-12');
     await expect(page.locator('aside.drawer [data-drawer-note="site"]')).toBeVisible();

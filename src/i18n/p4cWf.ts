@@ -28,7 +28,7 @@ const PL: Record<string, string> = {
   p4c_wf_r_texts: 'SMS do Śremu i Boden',
   p4c_wf_r_texts_d: 'A zbliżanie · B wcześniejszy przyjazd · C auto czeka · D wjazd; cisza 20:00–06:00',
   p4c_wf_r_prices: 'Opłata paliwowa, kurs NBP, ceny',
-  p4c_wf_r_prices_d: 'ceny paliwa 07:15 (także 09:15 i 13:15), NBP 12:30 i 16:30, wycena co 6 h',
+  p4c_wf_r_prices_d: 'ceny paliwa 07:15 (także 09:15 i 13:15), NBP 12:30 i 16:30, wycena co 6\u00a0h',
   p4c_wf_r_sched: 'Harmonogram KSH',
   p4c_wf_r_sched_d: 'plik KSH: wiersze z „Przewoźnik = HH”, daty zmienia tylko KSH; SharePoint po dostępie od IT KSH',
   p4c_wf_link_thr: 'Opcje › Progi',
