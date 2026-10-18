@@ -40,7 +40,7 @@ const PL: Record<string, string> = {
   p5b_f_s3_x: 'Stosujemy niższy z dwóch mnożników',
   p5b_f_s4: '4 · Opłata',
   p5b_f_s4_x: 'Stawka bazowa × (mnożnik − 1)',
-  p5b_f_s4_v: '{base}\u00a0EUR × {pct}\u00a0% = {fee}\u00a0EUR',
+  p5b_f_s4_v: '{base}\u00a0EUR × {pct}% = {fee}\u00a0EUR',
   p5b_f_days_h: 'Ceny paliwa — ostatnie 2 tygodnie',
   p5b_f_col_day: 'Dzień',
   p5b_f_col_okq8: 'OKQ8 GoEasy SEK/l',
@@ -116,7 +116,7 @@ const PL: Record<string, string> = {
   p5b_c_rates_h: 'Cennik przewoźnika i cennik KSH',
   /* wyglad/audyt-E (E-06, C-14): cennik według symboli w wersjach (E33, E11) */
   p5b_r_versions: 'Cennik KSH v{k} od {kf} · cennik SCX v{s} od {sf}',
-  p5b_r_sub: 'Kwoty netto w EUR, za jeden transport, bez opłaty paliwowej. VAT 23 % dolicza system na fakturze. Zestaw z ładunkiem: D — długość, S — szerokość, W — wysokość.',
+  p5b_r_sub: 'Kwoty netto w EUR, za jeden transport, bez opłaty paliwowej. VAT 23% dolicza system na fakturze. Zestaw z ładunkiem: D — długość, S — szerokość, W — wysokość.',
   p5b_r_col_symbol: 'Symbol',
   p5b_r_col_kind: 'Ładunek',
   p5b_r_col_set: 'Zestaw D × S × W',

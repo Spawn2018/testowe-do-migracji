@@ -219,7 +219,7 @@ test.describe('M6 — faktury v2', () => {
     await wz.locator('[data-w="submit"]').click()
     await expect(wz.locator('[data-w-errors]')).toContainText('Numer faktury jest wymagany')
     /* audyt-C C-09 (E4, decyzja 16.10 13:58 · 1): netto wpisuje wystawca, VAT 23 % i brutto liczy system (pola tylko do odczytu) */
-    await expect(wz.locator('[data-w-errors]')).toContainText('VAT 23 % i brutto liczy system')
+    await expect(wz.locator('[data-w-errors]')).toContainText('VAT 23% i brutto liczy system')
     await wz.locator('[data-w="number"]').fill('HHL/FV/2026/0950')
     await wz.locator('[data-w="net"]').fill('10000')
     await expect(wz.locator('[data-w="vat"]')).toHaveAttribute('readonly', '')

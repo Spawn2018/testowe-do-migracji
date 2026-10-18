@@ -57,8 +57,8 @@ describe('teksty o automatach (serverRuleOn)', () => {
       expect(wt('pl', 'p4c_wf_r_zones_d')).not.toContain('włączamy wkrótce');
       expect(wt('pl', 'p4c_wf_zt_site_out')).not.toMatch(/— włączamy wkrótce$/);
       const gps = wt('pl', 'p4c_wf_r_gps_d');
-      expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany (E15, E45) · ')).toBe(true);
-      expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce \(E49\)$/);
+      expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany · ')).toBe(true); /* P11 (E21): bez kodów etapów */
+      expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce$/);
       const { p9m } = await import('../src/i18n/p9c');
       expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
     });

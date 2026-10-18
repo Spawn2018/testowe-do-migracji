@@ -396,6 +396,8 @@ button.kpi:hover{background:var(--surface-2)}
   background:var(--surface);color:var(--ink);
 }
 textarea.input{min-height:64px;width:100%}
+/* P11 (e4b): zablokowane pole wygląda na zablokowane (Operacje HHL w Opcjach — tylko podgląd) */
+.input:disabled,select.input:disabled,textarea.input:disabled{background:var(--surface-2);color:var(--ink-2);cursor:not-allowed}
 
 /* toast stack */
 .toasts{position:fixed;right:14px;bottom:14px;z-index:60;display:flex;flex-direction:column;gap:8px;width:min(360px,calc(100vw - 28px))}
@@ -994,9 +996,6 @@ img,video{max-width:100%;height:auto}
   min-height:0;
 }
 .mapstage{position:absolute;inset:0}
-/* P11 (e29): białe linie między kafelkami podkładu przy przybliżeniu ułamkowym (zoomSnap 0,25) — kafelek 256 px zachodzi
-   na sąsiada o ok. pół piksela; `scale` składa się z przesunięciem, które Leaflet wpisuje w styl elementu */
-.leaflet-tile-container img.leaflet-tile{scale:1.002;transform-origin:0 0}
 /* P11 (e29): przy długiej liście mapa zostaje na ekranie (przewija się `main`), podświetlenie znacznika po najechaniu na wiersz widać */
 @media (min-width:1001px){
   .page-sections[data-page="map"] .mapbox{position:sticky;top:8px}
@@ -1281,6 +1280,10 @@ img,video{max-width:100%;height:auto}
   /* nic uciętego: nazwy w liście na Mapie i nazwy plików w Dokumentach zawijają się zamiast „…” */
   .map-loads-table .cell-clip{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
   .docrow-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  /* P11 (e31): „Pliki” na telefonie — nazwa transportu i rodzaj w pierwszej linii, plik i „↓” zawsze w jednym rzędzie pod spodem */
+  .doc-file-rows .mrow{flex-direction:column;align-items:stretch;gap:4px}
+  .doc-file-rows .docrow-actions{display:flex;flex-wrap:nowrap;justify-content:space-between;min-width:0}
+  .doc-file-rows .docrow-name{min-width:0}
 }
 
 /* ===== wyglad/P3 — E37 pkt 1–2 (img/e37-after „Po zmianie”): pasek górny, konto po prawej, paski pod paskiem =====
@@ -1569,6 +1572,8 @@ img,video{max-width:100%;height:auto}
 @media (max-width:768px){
   /* Harmonogram na telefonie (E8): przełącznik Transporty / Rejsy na całą szerokość, bez linii wersji (pierwsza karta wyżej) */
   .page-sections[data-page="schedule"]>.panel-hd>.sub{display:none}
+  /* P11 (e30): Rejsy — linia trasy zostaje na telefonie (jak na komputerze) */
+  .page-sections[data-page="schedule"]>.panel-hd>.sub.sv-route{display:block;flex:1 1 100%;order:1}
   .page-sections[data-page="schedule"] [data-sched-tabs]{flex:1 1 100%;display:flex}
   .page-sections[data-page="schedule"] [data-sched-tabs] button{flex:1 1 0;min-height:44px}
 }

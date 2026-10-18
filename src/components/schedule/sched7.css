@@ -134,3 +134,4 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 /* wyglad/P7-e (W13 zasada 15): linia synchronizacji w całości (bez wielokropka); plik KSH nie odczytany od ponad 30 min — czerwona */
 .s7-hd .sub[data-ksh-sync]{max-width:none}
 .sub.s7-sync-down{color:var(--red);font-weight:600}
+.s7-card-docs{font-size:13.5px;line-height:1.4}

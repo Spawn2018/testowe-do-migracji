@@ -263,7 +263,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
       users: { meta: '12 aktywnych' },
       zones: { meta: 'Boden: brak', tone: 'alert' },
       rates: { meta: 'KSH v2 · SCX v1' },
-      fact: { meta: '1 %' },
+      fact: { meta: '1%' },
       permits: { meta: 'wył.' },
       status: { meta: '1 problem', tone: 'alert' },
     },

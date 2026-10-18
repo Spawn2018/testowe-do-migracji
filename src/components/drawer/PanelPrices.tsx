@@ -312,7 +312,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
           {showCost ? <article className="fin-card pp-sum" data-pp-total="cost"><b>{ft(locale, both ? 'p5_pr_col_cost' : 'p5_pr_h_SCX')}</b><b>{amt(pr.costTotal, 'cost')} {cur}</b></article> : null}
           {showRev ? <article className="fin-card pp-sum" data-pp-total="rev"><b>{ft(locale, both ? 'p5_pr_col_rev' : 'p5_pr_h_KSH')}</b><b>{amt(pr.revTotal, 'rev')} {cur}</b></article> : null}
           {both ? (
-            <article className="fin-card pp-sum" data-pp-margin><b>{ft(locale, 'p5_pr_margin')}</b><b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)} %` : '—'}</b></article>
+            <article className="fin-card pp-sum" data-pp-margin><b>{ft(locale, 'p5_pr_margin')}</b><b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)}%` : '—'}</b></article>
           ) : null}
           {fuelLabel ? card('fuel', <><b>{ft(locale, 'p5_pr_fuel')}</b> <span className="fin-muted">{fuelLabel}</span></>, <>{fuelCard}{plnLine}</>) : null}
           {suggestions ? card('fees', <><b>{ft(locale, 'p5_pr_fees')}</b> <span className="fin-muted">· {ft(locale, 'p5_pr_fees_sub')} {n2(feeSum ?? 0)} EUR</span></>, feeList) : null}
@@ -366,7 +366,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       {both ? (
         <div className="pp-margin" data-pp-margin>
           <b>{ft(locale, 'p5_pr_margin')}</b>
-          <b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)} %` : '—'}</b>
+          <b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)}%` : '—'}</b>
         </div>
       ) : null}
       {plnLine}

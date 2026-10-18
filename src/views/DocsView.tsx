@@ -139,6 +139,7 @@ export function DocsView() {
   }, [packOpen]);
 
   const statusRows = useMemo(() => serverStatus ?? docStatusRows(loads, documents, reqs, nowMs), [serverStatus, loads, documents, reqs, nowMs]);
+  const deliveredIds = useMemo(() => new Set(loads.filter((l) => l.status === 'DELIVERED' || l.status === 'READY_TO_INVOICE' || l.status === 'INVOICED').map((l) => l.id)), [loads]);
   const byId = useMemo(() => new Map(loads.map((l) => [l.id, l])), [loads]);
   const nameOf = (id: string) => { const l = byId.get(id); return l ? transportLabel(l, role) : id; };
   const policies = policiesOf();
@@ -169,8 +170,9 @@ export function DocsView() {
       }
       const req = reqs.find((r) => r.category === key) ?? null;
       if (!req || !req.required) continue;
-      const cnt = reqCount(statusRows, key, nowMs);
       const cmr = key === 'CMR' ? cmrKind(req) : null;
+      /* P11 (e31): CMR z podpisem odbiorcy ma termin dopiero po „Dostarczone” — transporty w drodze się nie liczą („—”) */
+      const cnt = reqCount(cmr === 'SIGNED' ? statusRows.filter((r) => r.category !== 'CMR' || deliveredIds.has(r.loadId)) : statusRows, key, nowMs);
       const label = cmr ? ft(locale, `p5_doc_r_CMR_${cmr}`) : ft(locale, `p5_doc_r_${key}`);
       const due = cmr === 'SIGNED'
         ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: req.offsetHours })
@@ -187,7 +189,7 @@ export function DocsView() {
       out.push({ key, label, who: responsibleOrg(req.responsible), due, over: cnt.overdue, soon: cnt.soon, missingPolicy: false, note, codes, noteGood: false });
     }
     return out;
-  }, [role, reqs, statusRows, nowMs, locale, loads, byId, policies, insuranceCover, permits]);
+  }, [role, reqs, statusRows, deliveredIds, nowMs, locale, loads, byId, policies, insuranceCover, permits]);
 
   /* paczka tygodnia: tylko dokumenty, które widzi ta firma (RLS i `visibleTo`), od najnowszego tygodnia */
   const weeks = useMemo(() => weeksWithLoads(loads).reverse(), [loads]);

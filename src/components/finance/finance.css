@@ -104,7 +104,8 @@ table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-
 .pack .neg,.pack-card .neg{color:var(--red);font-weight:600}
 .pack-files{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px;font-size:13.5px;color:var(--ink-2)}
 .pack-files li{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;min-width:0;overflow-wrap:anywhere}
-.pack-files li::before{content:"";flex:none;width:9px;height:11px;border:1px solid var(--ink-3);background:var(--surface-2);transform:translateY(1px)}
+/* P11 (e40): znak pliku — kartka z zagiętym rogiem (nie puste pole, które wyglądało jak pole wyboru) */
+.pack-files li::before{content:"";flex:none;width:9px;height:11px;background:var(--ink-3);clip-path:polygon(0 0,62% 0,100% 30%,100% 100%,0 100%);transform:translateY(1px)}
 .pack-acts{display:flex;flex-direction:column;gap:8px}
 .pack-btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pack-btns .btn{min-height:40px}

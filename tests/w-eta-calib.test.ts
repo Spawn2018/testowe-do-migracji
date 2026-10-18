@@ -108,7 +108,7 @@ describe('ekran', () => {
     expect(h).toContain('data-cal-proposal="ready"');
     expect(h).toContain(`nowe czasy dają średni błąd 24 h przed przyjazdem ${etaDuration(data.proposal!.errorAfterMin)} zamiast ${etaDuration(data.proposal!.errorBeforeMin)}`);
     expect(h).toContain('za mało dostaw');
-    expect(h).toMatch(/bez zmian \(−\d+\u00a0%\)/);
+    expect(h).toMatch(/bez zmian \(−\d+%\)/);
   });
   it('Operacje HHL — tylko podgląd, bez przycisku', () => {
     const h = html(data, true);

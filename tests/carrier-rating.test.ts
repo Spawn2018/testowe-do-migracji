@@ -38,7 +38,7 @@ describe('J4 — okres i „na czas”', () => {
   });
 
   it('teksty: procent ze spacją, spóźnienie w min / h / d', () => {
-    expect(pctText(5, 6)).toBe('83 %');
+    expect(pctText(5, 6)).toBe('83%');
     expect(pctText(0, 0)).toBe('—');
     expect(lateText(null)).toBe('—');
     expect(lateText(45)).toBe('45 min');

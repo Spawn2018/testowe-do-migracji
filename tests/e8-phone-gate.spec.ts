@@ -2414,7 +2414,7 @@ test.describe('wyglad/P5 Faktury — E4, E4b', () => {
     await expect(page.locator('#inv-panel-PRZYCHOD')).toBeHidden();
     await expect(page.locator('[data-inv-kpis="KOSZT"] [data-inv-kpi]')).toHaveCount(4);
     await expect(page.locator('[data-inv-flow="KOSZT"] li')).toHaveCount(5);
-    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['Tydzień', 'Faktura', 'Transporty', 'Netto', 'VAT 23 %', 'Brutto', 'Termin', 'Status', /.*/]);
+    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['Tydzień', 'Faktura', 'Transporty', 'Netto', 'VAT 23%', 'Brutto', 'Termin', 'Status', /.*/]);
     for (const row of await page.locator('#inv-panel-KOSZT tr[data-bill]').all()) {
       await expect(row.locator('[data-bill-status]')).toHaveCount(1);
     }
@@ -2642,7 +2642,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       const folds = page.locator('.drawer details.po-fold');
       await expect(folds).toHaveCount(role === 'KSH' ? 4 : 5);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
-      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('sob. 17.10.2026 → czw. 22.10.2026');
+      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
       const map = await page.locator('.drawer [data-load-map]').boundingBox();
       expect(map && map.height).toBeLessThanOrEqual(152);

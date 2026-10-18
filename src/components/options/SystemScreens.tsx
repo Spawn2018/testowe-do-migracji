@@ -236,6 +236,9 @@ export type ThresholdRow = {
   unit: string;
 };
 
+/** P11 (E21): procent bez odstępu („4%”), inne jednostki z odstępem („30 min”). */
+const withUnit = (v: string, unit: string) => (unit === '%' ? `${v}%` : `${v} ${unit}`);
+
 export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
   locale: Locale;
   rows: ThresholdRow[];
@@ -262,14 +265,14 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
               {editing ? (
                 <span className="ox-thr-edit">
                   {edit.ask ? (
-                    <span className="ox-thr-ask">{t(locale, 'p3c_thr_ask').replace('{name}', label).replace('{was}', `${fmt(v)} ${r.unit}`).replace('{is}', `${fmt(num(edit.draft))} ${r.unit}`)}</span>
+                    <span className="ox-thr-ask">{t(locale, 'p3c_thr_ask').replace('{name}', label).replace('{was}', withUnit(fmt(v), r.unit)).replace('{is}', withUnit(fmt(num(edit.draft)), r.unit))}</span>
                   ) : (
                     <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
                   )}
                   <span className="ox-thr-val"><span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
                 </span>
               ) : (
-                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                <span className="ox-thr-val"><b data-content>{withUnit(fmt(v), r.unit)}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
               )}
               {readOnly ? null : editing ? (
                 <span className="ox-thr-btns">

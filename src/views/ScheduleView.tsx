@@ -360,7 +360,7 @@ export function ScheduleView() {
       <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12 }}>
         <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
           <h2>{t(locale, 'nav_sched')}</h2>
-          <span className="sub">{sv(locale, 'sv_sub')}</span>
+          <span className="sub sv-route">{sv(locale, 'sv_sub')}</span>
           <LiveMark />
           <div className="spacer" />
           {schedTabs}

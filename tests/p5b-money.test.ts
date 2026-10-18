@@ -85,14 +85,14 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
   it('karty, kroki „Jak liczymy”, alarm z „Uzupełnij z Orlen”, tabele cen i mnożników', () => {
     const h = html(createElement(FuelScreen, { locale: 'pl', view, actions, readOnly: false }));
     expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 28.09.2026');
-    expect(h).toContain('+5 %');
+    expect(h).toContain('+5%');
     expect(h).toContain('×1,05');
     expect(h).toContain('Brak ceny Orlen z 13.10.');
     expect(h).toContain('Uzupełnij z Orlen');
     expect(h).toContain('Następna automatyczna próba: dziś 13:15');
     expect(h).toContain('OKQ8 19,68 SEK/l · Orlen 5,74 PLN/l');
     expect(h).toContain('SE ×1,05 · PL ×1,05');
-    expect(h).toContain('6\u00a0900\u00a0EUR × 5\u00a0% = 345\u00a0EUR');
+    expect(h).toContain('6\u00a0900\u00a0EUR × 5% = 345\u00a0EUR');
     expect(h).toContain('Ostateczna wartość w poniedziałek 19.10.2026 rano, ze średniej 12.10.2026–18.10.2026.');
     expect((h.match(/data-pm-tier-hit/g) ?? []).length).toBe(2);
     expect(h).toContain('Nowa wersja umowy');
@@ -143,7 +143,7 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   it('6 wierszy z przykładem SG (koszt / przychód), próg marży „nie ustawiony”', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: null, onMarginSave: ok, readOnly: false }));
     expect((h.match(/data-pm-row="\d"/g) ?? []).length).toBe(6);
-    expect(h).toContain('25 %');
+    expect(h).toContain('25%');
     /* wyglad/audyt-E (E-06): przykład = fracht SG z cennika poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
     expect(h).toContain('SG: 1\u00a0725,00 / 1\u00a0811,25 EUR');
     expect(h).toContain('SG: 6\u00a0900,00 / 7\u00a0245,00 EUR');
@@ -155,13 +155,13 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   });
   it('bez przykładu z cennika — procenty bez kwot SG (nic na stałe w komponencie)', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: { ...demoCancelRules(), example: null }, onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: false }));
-    expect(h).toContain('15 %');
+    expect(h).toContain('15%');
     expect(h).not.toMatch(/SG:|6 900|7 245/);
     expect(h).toContain('Dni liczymy kalendarzowo od daty anulowania do planowanego załadunku.');
   });
   it('Operacje HHL (tylko odczyt): procenty i próg bez „Zmień”', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: true }));
-    expect(h).toContain('4 %');
+    expect(h).toContain('4%');
     expect(h).not.toContain('>Zmień<');
   });
   it('próg niepodłączony (undefined) — pola nie ma', () => {

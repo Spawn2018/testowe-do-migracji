@@ -776,6 +776,16 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     ro?.observe(attr);
     return () => ro?.disconnect();
   }, [hasNote, mapReady]);
+  /* cała trasa (bez pozycji) — po przesunięciu dopisku nad podpis i zmianie liczby linii kadr liczony od nowa, trasa nad dopiskiem */
+  const noteLines = drawerNote?.lines.length ?? 0;
+  useEffect(() => {
+    if (!mapReady || slot !== 'drawer' || followedIdRef.current !== '-') return;
+    const raf = requestAnimationFrame(() => {
+      programmaticRef.current = true;
+      try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [attrH, noteLines, mapReady, slot]);
 
   return (
     <div

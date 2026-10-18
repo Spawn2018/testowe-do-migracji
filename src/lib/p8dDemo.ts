@@ -56,8 +56,8 @@ const RUNS: RuleRun[] = [
 /* E35 „Historia” (audit_log workflows) i zmiana z E35 pkt 2 (reguły START) */
 const HIST: RuleHist[] = [
   { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Rozładunek — wgraj POD', reason: 'bez POD — podpisany CMR jest w Dokumentach (decyzja 07.10.2026, 19:51)' },
-  { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Opóźnienie transportu · Krytyczna zmiana daty · Cichy pojazd', reason: 'wbudowane automaty robią to samo (E35)' },
-  { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Transport anulowany', reason: 'anulowanie liczy dopłatę (E33) i powiadamia według „Kto co dostaje”, bez sprawy „brak zasobów”' },
+  { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Opóźnienie transportu · Krytyczna zmiana daty · Cichy pojazd', reason: 'wbudowane automaty robią to samo' },
+  { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Transport anulowany', reason: 'anulowanie liczy dopłatę i powiadamia według „Kto co dostaje”, bez sprawy „brak zasobów”' },
   { at: '2026-10-15T08:00:00Z', who: 'Administrator HHL', action: 'removed', rule: 'Dojazd na plac · Wjazd przed port', what: 'przeniesione do „Kto co dostaje”: „Auto 50 km przed placem / przed Śremem”, „Auto 20 km przed portem”', reason: 'te same odbiorcy co dziś (E35 pkt 2)' },
   { at: '2026-10-06T20:35:00Z', who: 'Administrator HHL', action: 'on', rule: 'Transport anulowany', reason: null },
   { at: '2026-10-05T17:42:00Z', who: 'Administrator HHL', action: 'on', rule: 'Dojazd na plac · Wjazd przed port · 4 inne', what: '12 przełączeń w minutę', reason: null },
