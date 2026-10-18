@@ -75,7 +75,7 @@ const INV_T: TokenId[] = ['invoiceNo', 'week', 'amount', 'due', 'link'];
 const PACK_T: TokenId[] = ['week', 'invoiceNo', 'amount', 'count', 'codes'];
 const LOGIN_T: TokenId[] = ['name', 'firm', 'account', 'inviter', 'validity', 'button'];
 
-const SMS_TO_BOTH = 'Do: odbiorcy w Śremie i Boden z zaznaczonym rodzajem (E42)';
+const SMS_TO_BOTH = 'Do: odbiorcy w Śremie i Boden z zaznaczonym rodzajem';
 const I = (
   id: string, group: MsgGroup, channel: MsgChannel, name: string, to: string, tokens: TokenId[], body: string, subject?: string,
   extra: Partial<MsgItem> = {},
@@ -87,9 +87,9 @@ export const MESSAGES: readonly MsgItem[] = [
      „przy placu Stegra Boden”, „Miejsce (wjazd na …)” — „plac Stegra Boden” / „teren KSH Śrem” */
   I('SMS_A', 'zone', 'SMS', 'A · Przyjazd za ok. 60 min', SMS_TO_BOTH, SMS_T,
     '{{code}}: auto {{trailer}} będzie przy {{place}} ok. {{arrival}}.'),
-  I('SMS_B', 'zone', 'SMS', 'B · Wcześniejszy przyjazd', 'Do: odbiorcy w Boden z zaznaczonym „B” (E42)', SMS_T,
+  I('SMS_B', 'zone', 'SMS', 'B · Wcześniejszy przyjazd', 'Do: odbiorcy w Boden z zaznaczonym „B”', SMS_T,
     '{{code}}: auto {{trailer}} będzie przy {{place}} ok. {{arrival}}, dzień przed planem (dostawa {{planDate}}).'),
-  I('SMS_C', 'zone', 'SMS', 'C · Auto czeka', 'Do: odbiorcy w Śremie i Boden z zaznaczonym „C” (E42)', SMS_T,
+  I('SMS_C', 'zone', 'SMS', 'C · Auto czeka', 'Do: odbiorcy w Śremie i Boden z zaznaczonym „C”', SMS_T,
     '{{code}}: auto {{trailer}} stoi przy {{place}} od {{dwell}}. Plan dostawy: {{planDate}}.'),
   I('SMS_D', 'zone', 'SMS', 'D · Wjazd', SMS_TO_BOTH, SMS_T,
     '{{code}}: auto {{trailer}} wjechało na {{placeTo}} o {{arrival}}.'),
@@ -208,7 +208,7 @@ export const MESSAGES: readonly MsgItem[] = [
 ];
 
 export const GROUP_LABEL: Record<MsgGroup, string> = {
-  zone: 'SMS do Śremu i Boden (E42)', risk: 'Ryzyka i decyzje', load: 'Transport', inv: 'Faktury', sys: 'System', login: 'Logowanie',
+  zone: 'SMS do Śremu i Boden', risk: 'Ryzyka i decyzje', load: 'Transport', inv: 'Faktury', sys: 'System', login: 'Logowanie',
 };
 /** Napis kanału przy pozycji i w nagłówku edytora (bez obiektu z kluczem „SMS:”, strażnik I-2 szuka „sms:”). */
 export function channelLabel(c: MsgChannel): string {

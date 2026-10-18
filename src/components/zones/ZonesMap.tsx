@@ -12,6 +12,8 @@ import { plPlural } from '../../lib/plPlural';
 import { groupOf, radiusText, routeOf, type ZoneRow } from '../../lib/p8cZones';
 import type { NearPos } from '../../lib/p8cSource';
 import { formatListDateTime } from '../../lib/format';
+import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
+import { WATER_GDN_NYN, WATER_GDY_KAA } from '../../lib/map/draw';
 import { p8ct } from '../../i18n/p8c';
 
 type Circle = { lat: number; lng: number; radiusM: number };
@@ -79,6 +81,7 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
   const box = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const groupRef = useRef<L.LayerGroup | null>(null);
+  const routeRef = useRef<L.LayerGroup | null>(null);
   const tilesRef = useRef<L.Layer | null>(null);
   const onMoveRef = useRef(onMove);
   const fitKey = useRef('');
@@ -90,10 +93,23 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
     const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
     map.setView([60, 18], 4);
     map.on('click', (e) => onMoveRef.current?.(e.latlng.lat, e.latlng.lng));
+    /* P11 (e34): mapa wszystkich stref z trasą — droga (demo: stałe odcinki lądowe; produkcja: trasy HERE z serwera)
+       i przerywane przeprawy promowe między miejscami, pod strefami */
+    const route = L.layerGroup().addTo(map);
+    routeRef.current = route;
+    const roadStyle = { color: tok('--amber', '#C97E12'), weight: 3, opacity: 0.8, interactive: false };
+    const drawRoads = (lines: readonly (readonly (readonly [number, number])[])[]) => {
+      for (const line of lines) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), roadStyle).addTo(route);
+    };
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') drawRoads(DEMO_ROAD_LINES.map((l) => l));
+    else void import('../map/applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => { if (routeRef.current === route) drawRoads(lines); }).catch(() => undefined);
+    for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
+      L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: tok('--sea', '#245C87'), weight: 2, opacity: 0.8, dashArray: '6 6', interactive: false }).addTo(route);
+    }
     groupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     const t = window.setTimeout(() => map.invalidateSize(), 200);
-    return () => { window.clearTimeout(t); map.remove(); mapRef.current = null; groupRef.current = null; tilesRef.current = null; };
+    return () => { window.clearTimeout(t); map.remove(); mapRef.current = null; groupRef.current = null; routeRef.current = null; tilesRef.current = null; };
   }, []);
 
   useEffect(() => {
@@ -132,6 +148,8 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
        źródła mapy (link 44 px), więc więcej miejsca przy dolnej krawędzi */
     const slim = (box.current?.clientWidth ?? 1000) < 520;
     const padEnd: [number, number] = [28, slim ? 96 : 28];
+    const route = routeRef.current;
+    if (route) { if (mode === 'all') { if (!map.hasLayer(route)) route.addTo(map); } else if (map.hasLayer(route)) map.removeLayer(route); }
     if (mode === 'all') {
       for (const z of zones) {
         if (z.radiusM >= 10_000) continue;

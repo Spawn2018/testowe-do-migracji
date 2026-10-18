@@ -18,6 +18,7 @@ import { useModal } from '../ui/useModal';
 import { t } from '../../i18n/messages';
 import './docs.css';
 import { formatCalendarDay } from '../../lib/time';
+import { transportsText } from '../../lib/p5Finance';
 
 interface Props {
   locale: Locale;
@@ -58,6 +59,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
 
   const stateText = (s: 'OVERDUE' | 'MISSING' | 'OK' | null) => (s ? ft(locale, `p5_up_state_${s}`) : '');
   const typeName = load?.itemType ?? '';
+  const firmaCount = typeName ? loads.filter((l) => l.itemType === typeName && l.status !== 'CANCELLED').length : 0;
 
   const submit = async () => {
     if (!sel || !kind || !file) return;
@@ -157,7 +159,12 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
               onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) setFile(f); }}
             />
             {isPermit && scopeOn && scope === 'FIRMA' && load ? (
-              <span className="fin-muted" data-content>{ftp(locale, 'p5_up_firma_note', { type: typeName || ft(locale, 'p5_up_this_type') })}</span>
+              /* P11 (e31): nazwa zapisywanego pliku i liczba transportów, do których się podepnie */
+              <span className="fin-muted" data-content data-up-firma-n={firmaCount}>
+                {typeName
+                  ? ftp(locale, 'p5_up_firma_note_n', { file: `Zezwolenie_${kind === 'PERMIT_SE' ? 'SE' : 'PL'}_${typeName}.pdf`, loads: transportsText(firmaCount), type: typeName })
+                  : ftp(locale, 'p5_up_firma_note', { type: ft(locale, 'p5_up_this_type') })}
+              </span>
             ) : null}
           </div>
           <div className="up-acts">

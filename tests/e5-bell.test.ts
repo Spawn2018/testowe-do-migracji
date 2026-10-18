@@ -27,6 +27,10 @@ describe('E5: grupy dzwonka', () => {
     }
     expect(bellSection(n('a', 'INVOICE_NEW', undefined))).toBe('todo');
   });
+  it('P11: informacja bez działania i bez transportu (faktura zaakceptowana, import zatwierdzony) = Moje transporty', () => {
+    expect(bellSection(n('a', 'INVOICE_ACCEPTED', undefined))).toBe('mine');
+    expect(bellSection(n('a', 'SCHEDULE_IMPORTED', undefined))).toBe('mine');
+  });
   it('ryzyko podniesione do krytycznego przy transporcie = Do zrobienia, inne podniesienie = Moje transporty', () => {
     expect(bellSection(n('a', 'RISK_SEVERITY', L1, { severity: 'CRITICAL' }))).toBe('todo');
     expect(bellSection(n('a', 'RISK_SEVERITY', L1, { severity: 'HIGH' }))).toBe('mine');

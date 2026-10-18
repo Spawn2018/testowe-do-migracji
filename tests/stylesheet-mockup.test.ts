@@ -43,6 +43,9 @@ const ODSTEPSTWA: Record<string, string> = {
   '.stage .kb|opacity': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
   '.stage[aria-pressed="true"] .kb|opacity': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
   '.stage[aria-pressed="true"] .kb|color': 'L-11 (decyzja 03.10): numer etapu 1–9 znika z kafelka, reguła .kb bez elementu',
+  '.perf|height': 'P11 pkt 7 (e41, nowsza makieta panelu): kreskowana linia pod nagłówkiem panelu znika (gradient spoza tokenów), reguła .perf bez elementu',
+  '.perf|margin-top': 'P11 pkt 7 (e41): jw.',
+  '.perf|background-image': 'P11 pkt 7 (e41): jw.',
 };
 
 /** D-27 — kontrast WCAG. Makieta ma stare heksy; cofnięcie w aplikacji łamie AA. */

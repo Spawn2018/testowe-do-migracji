@@ -24,7 +24,7 @@ import {
 } from '../lib/schedLayout';
 import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
 import { s7, s7p } from '../i18n/sched7';
-import { docStatusRows } from '../lib/docRequirements';
+import { cmrAfterDelivery, docStatusRows } from '../lib/docRequirements';
 import { getDocReqCache } from '../lib/docReqCache';
 import { docRequirementsStart, marginThresholdOf } from '../lib/p5Source';
 import '../components/schedule/sched7.css';
@@ -333,7 +333,9 @@ export function ScheduleView() {
   const reqs = docCache?.reqs ?? docRequirementsStart();
   const nowMs = Date.parse(nowIso);
   const docByLoad = useMemo(() => {
-    const rows = docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs);
+    /* CMR liczy się dopiero po „Dostarczone” (decyzja właściciela 18.10, 17:28) — „brak CMR” nie przy transportach w drodze */
+    const st = new Map(list.map((l) => [l.id, l.status]));
+    const rows = cmrAfterDelivery(docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs), (id) => st.get(id));
     const m = new Map<string, typeof rows>();
     for (const r of rows) { const a = m.get(r.loadId) ?? []; a.push(r); m.set(r.loadId, a); }
     return m;
@@ -360,7 +362,7 @@ export function ScheduleView() {
       <div className="panel section-card page-sections" data-page="schedule" style={{ margin: 12 }}>
         <div className="panel-hd" style={{ flexWrap: 'wrap' }}>
           <h2>{t(locale, 'nav_sched')}</h2>
-          <span className="sub">{sv(locale, 'sv_sub')}</span>
+          <span className="sub sv-route">{sv(locale, 'sv_sub')}</span>
           <LiveMark />
           <div className="spacer" />
           {schedTabs}

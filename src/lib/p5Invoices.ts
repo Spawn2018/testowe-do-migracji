@@ -115,11 +115,11 @@ export function weekOptionLabel(weekKey: string): string {
   return `t${Number(m[1])} · ${dmy(from)}–${dmy(addDaysIso(from, 6))}`;
 }
 
-/** „41 · 05.10.2026–11.10.2026” z klucza tygodnia „2026-W41” (bez „t” — kolumna „Tydzień” w Fakturach; Dokumenty dodają „t”). */
+/** „t41 · 05.10.2026–11.10.2026” z klucza tygodnia „2026-W41” (decyzja 16.10 pkt 4: tydzień zawsze z „t” — Faktury i Dokumenty). */
 export function weekKeyLabel(weekKey: string): string {
   const m = /^\d{4}-W(\d{2})$/.exec(weekKey);
   if (!m) return weekKey;
   const from = isoWeekMonday(weekKey);
   const to = addDaysIso(from, 6);
-  return `${Number(m[1])} · ${fmtDateRange(from, to)}`;
+  return `t${Number(m[1])} · ${fmtDateRange(from, to)}`;
 }

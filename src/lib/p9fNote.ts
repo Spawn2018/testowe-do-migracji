@@ -7,7 +7,14 @@ import type { Load } from '../types';
 import { stageTileOf, trackingPhase } from './stageTiles';
 import { formatCalendarDay } from './time';
 
-export type DrawerNote = { kind: 'before' | 'after' | 'nopos' | 'site'; text: string };
+/** `lines` — P11 (e1, e32): dopisek w kilku liniach jak na makiecie; `alert` — numer linii na czerwono (brak linku śledzenia). */
+export type DrawerNote = { kind: 'before' | 'after' | 'nopos' | 'site'; text: string; lines: string[]; alert?: number };
+
+const note = (kind: DrawerNote['kind'], lines: (string | null)[], alertLine?: string | null): DrawerNote => {
+  const ls = lines.filter((x): x is string => !!x);
+  const i = alertLine ? ls.indexOf(alertLine) : -1;
+  return { kind, text: ls.join(' · '), lines: ls, ...(i >= 0 ? { alert: i } : {}) };
+};
 
 export type NoteCtx = {
   nowIso: string;
@@ -21,6 +28,10 @@ export type NoteCtx = {
   dt: (iso: string) => string;
   /** Wjazd do strefy placu (ostatnie `GEOFENCE_ENTER` SITE, jak „na placu od” w Kokpicie). */
   siteSince?: string | null;
+  /** P11 (e32): nazwa strefy placu (Strefy, typ SITE) — trzecia linia dopisku na placu. */
+  siteZone?: string | null;
+  /** „09:22” — godzina ostatniej pozycji (druga linia dopisku na placu). */
+  hm?: (iso: string) => string;
 };
 
 const cap = (s: string) => (s ? s.charAt(0).toLocaleUpperCase('pl') + s.slice(1) : s);
@@ -43,17 +54,22 @@ export function drawerMapNote(l: Load, ctx: NoteCtx): DrawerNote | null {
     const from = /^\d{4}-\d{2}-\d{2}$/.test(day)
       ? ctx.tx('p9f_track_from', { t: `${formatCalendarDay(day)}, 03:00` })
       : ctx.tx('p9f_track_from_day');
-    return { kind: 'before', text: [ctx.tx('p9f_nopos'), from, linkWhy(l, ctx.tx, 'before')].filter(Boolean).join(' · ') };
+    const why = linkWhy(l, ctx.tx, 'before');
+    return note('before', [ctx.tx('p9f_nopos'), from, why], l.trackingLink === null ? why : null);
   }
-  if (phase === 'after') return { kind: 'after', text: ctx.tx('p9f_track_done') };
+  if (phase === 'after') return note('after', [ctx.tx('p9f_track_done')]);
   if (ctx.prod && ctx.gpsReady && !ctx.hasFix) {
     const why = linkWhy(l, ctx.tx, 'on');
-    return { kind: 'nopos', text: why ? `${ctx.tx('p9f_nopos')} · ${why}` : ctx.tx('p9c_drawer_nogps') };
+    return why ? note('nopos', [ctx.tx('p9f_nopos'), why], l.trackingLink === null ? why : null) : note('nopos', [ctx.tx('p9c_drawer_nogps')]);
   }
   if (stageTileOf(l) === 'SITE') {
     /* tylko fakty: wjazd do strefy placu, a bez niego początek czekania przed placem (E15) — bez ETA */
     const since = ctx.siteSince ?? l.etaDetail?.waitSince ?? null;
-    if (since) return { kind: 'site', text: ctx.tx('p9f_site_since', { t: ctx.dt(since) }) };
+    if (since) {
+      const last = l.etaDetail?.lastFixAt && ctx.hm ? ctx.tx('p9f_site_last', { t: ctx.hm(l.etaDetail.lastFixAt) }) : null;
+      const zone = ctx.siteZone ? ctx.tx('p9f_site_zone', { z: ctx.siteZone }) : null;
+      return note('site', [ctx.tx('p9f_site_since', { t: ctx.dt(since) }), last, zone]);
+    }
   }
   return null;
 }

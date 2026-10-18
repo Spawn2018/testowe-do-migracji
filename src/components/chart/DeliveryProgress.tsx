@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useIsPhone } from '../../lib/useIsPhone';
 import type { Load, Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { getNow } from '../../lib/frozenNow';
@@ -59,6 +60,20 @@ export function progressWeeksLabel(weeks: readonly WeekPoint[]): string | null {
 
 /** Claude scurveHTML twin — cumulative tonnes Plan/Actual weeks 37–45. */
 export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Locale }) {
+  /* P11 (e8, E8 „na telefonie żaden tekst poniżej 12 px”): na telefonie wykres rysowany w szerokości ramki (skala 1:1),
+     napisy 12,5 px — wcześniej SVG 560 px pomniejszone do ~350 px dawało 7,4 px */
+  const phone = useIsPhone();
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [boxW, setBoxW] = useState(0);
+  useLayoutEffect(() => {
+    const el = boxRef.current;
+    if (!phone || !el) return;
+    const read = () => setBoxW(Math.round(el.getBoundingClientRect().width));
+    read();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(read);
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [phone]);
   const weeks = useMemo(() => {
     if (PROD_BUILD) return progressWeeksFromDb(loads, prodToday());
     const start = new Date('2026-09-07T00:00:00Z');
@@ -87,8 +102,10 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
   if (!weeks.length) return <div className="note" data-progress="empty" style={{ border: 0 }}>{t(locale, 'i2_progress_empty')}</div>;
 
   const maxV = Math.max(1, ...weeks.map((x) => x.plan));
-  const W = 560;
+  const W = phone && boxW > 200 ? boxW : 560;
   const H = 150;
+  const fsWeek = phone ? 12.5 : 10.5;
+  const fsHead = phone ? 12.5 : 11;
   const pad = 26;
   const X = (i: number) => pad + (i * (W - pad * 2)) / Math.max(1, weeks.length - 1);
   const Y = (v: number) => H - 18 - (v / maxV) * (H - 34);
@@ -104,7 +121,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
   const nowX = futureIdx < 0 ? X(weeks.length - 1) : X(Math.max(0, futureIdx - 0.15));
 
   return (
-    <div>
+    <div ref={boxRef}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         style={{ width: '100%', height: 'auto', display: 'block' }}
@@ -127,7 +144,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
             key={d.w}
             x={X(i)}
             y={H - 5}
-            fontSize={10.5}
+            fontSize={fsWeek}
             textAnchor="middle"
             fill="var(--ink-3)"
             fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
@@ -138,7 +155,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
         <text
           x={pad}
           y={13}
-          fontSize={11}
+          fontSize={fsHead}
           fill="var(--ink-3)"
           fontFamily="Barlow Condensed, Barlow, Arial, sans-serif"
         >

@@ -11,7 +11,7 @@ import { ft, ftp } from '../../i18n/p5';
 import type { DocCategory } from '../../types';
 import type { DocRequirement } from '../../lib/docRequirements';
 import { docRequirementsStart } from '../../lib/p5Source';
-import { cmrKind, responsibleOrg } from '../../lib/p5Docs';
+import { responsibleOrg } from '../../lib/p5Docs';
 import '../finance/finance.css';
 import './docs.css';
 
@@ -54,8 +54,9 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
     }
   };
 
-  const label = (r: DocRequirement) => (r.category === 'CMR' ? ft(locale, `p5_doc_r_CMR_${cmrKind(r)}`) : ft(locale, `p5_doc_r_${r.category}`));
-  const due = (r: DocRequirement) => (r.category === 'CMR' && cmrKind(r) === 'SIGNED'
+  /* decyzja 18.10, 17:28: tylko CMR po rozładunku — opis z podpisem odbiorcy i terminem od „Dostarczone” */
+  const label = (r: DocRequirement) => (r.category === 'CMR' ? ft(locale, 'p5_doc_r_CMR_SIGNED') : ft(locale, `p5_doc_r_${r.category}`));
+  const due = (r: DocRequirement) => (r.category === 'CMR'
     ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: r.offsetHours })
     : t(locale, `iii6_a_${r.anchor}`).replace('{h}', String(r.offsetHours)));
   const rows = KEYS.map((k) => reqs.find((r) => r.category === k)).filter((r): r is DocRequirement => !!r);

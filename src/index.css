@@ -267,7 +267,7 @@ h4.sec{margin:0 0 8px;font-family:var(--font-cond);font-size:15px;font-weight:60
 .tl .ts{font-size:12px;color:var(--ink-3)}
 
 /* money block */
-.mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
 .mrow.total{font-weight:700;border-bottom:0;border-top:1px solid var(--rule);margin-top:3px;padding-top:7px}
 .mrow .lbl{color:var(--ink-2)}
 .locked{padding:11px;background:var(--surface-2);border:1px dashed var(--rule);color:var(--ink-3);font-size:13px}
@@ -341,14 +341,15 @@ kbd{font-family:var(--font-cond);font-weight:600;font-size:11.5px;padding:0 5px;
 
 /* ---------- nagłówek listu przewozowego ---------- */
 .wb-code{font-family:var(--font-cond);font-weight:700;font-size:31px;letter-spacing:.04em;line-height:1}
+/* P11 pkt 7 (e41): numer zlecenia w nagłówku panelu mniejszy i szaroniebieski, kropka w kolorze akcentu */
+.wb-code .wb-dot{color:var(--amber);white-space:pre}
+.wb-code .wb-no{font-size:.7em;font-weight:600;letter-spacing:.02em;color:var(--ink-3)}
 .wb-fields{display:flex;flex-wrap:wrap;margin-top:9px;row-gap:7px}
 .wb-fields span{padding:0 12px;border-left:1px solid var(--rule-2)}
 .wb-fields span:first-child{padding-left:0;border-left:0}
 .wb-fields b{display:block;font-family:var(--font-cond);font-weight:600;font-size:10.5px;
   color:var(--ink-3);letter-spacing:.05em}
 .wb-fields em{font-style:normal;font-size:12.5px;font-weight:500}
-.perf{height:1px;margin-top:11px;
-  background-image:repeating-linear-gradient(90deg,var(--rule) 0 3px,transparent 3px 7px)}
 
 /* ---------- pasek operacyjny w nagłówku ---------- */
 .ops{display:flex;align-items:center;gap:9px;white-space:nowrap;font-size:12.5px}
@@ -395,6 +396,8 @@ button.kpi:hover{background:var(--surface-2)}
   background:var(--surface);color:var(--ink);
 }
 textarea.input{min-height:64px;width:100%}
+/* P11 (e4b): zablokowane pole wygląda na zablokowane (Operacje HHL w Opcjach — tylko podgląd) */
+.input:disabled,select.input:disabled,textarea.input:disabled{background:var(--surface-2);color:var(--ink-2);cursor:not-allowed}
 
 /* toast stack */
 .toasts{position:fixed;right:14px;bottom:14px;z-index:60;display:flex;flex-direction:column;gap:8px;width:min(360px,calc(100vw - 28px))}
@@ -567,7 +570,8 @@ nav button{padding:8px 14px}
 .opt-ro{border:0;margin:0;padding:0;min-width:0}
 .opt-ro :is(button[type="submit"],.btn,.chipbtn,[data-action]){display:none}
 .switchline{display:inline-flex;align-items:center;gap:7px;cursor:pointer}
-.switchline input{accent-color:var(--go);width:15px;height:15px}
+.switchline input{width:15px;height:15px}
+.switchline input:checked{background:var(--go);border-color:var(--go)}
 .inline-input{display:flex;align-items:center;gap:7px}
 .inline-input .input{width:92px}
 .settings-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
@@ -879,6 +883,16 @@ progress{vertical-align:baseline}
 [type=search]{-webkit-appearance:textfield;outline-offset:-2px}
 ::-webkit-search-decoration{-webkit-appearance:none}
 ::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
+/* P11 pkt 7 (e29 warstwy Mapy, e42 SMS przy miejscach, e4 faktury): pole wyboru w tokenach — kwadrat bez zaokrągleń,
+   zaznaczone wypełnione kolorem tekstu (nie niebieskie z przeglądarki); radio w kolorze tekstu */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;display:inline-grid;grid-template:100%/100%;place-items:center;box-sizing:border-box;width:16px;height:16px;margin:0;flex:0 0 auto;border:1.5px solid var(--ink-2);border-radius:0;background:var(--surface);cursor:pointer;vertical-align:middle}
+input[type=checkbox]::before{content:"";width:62%;height:34%;box-sizing:border-box;border-left:2px solid var(--surface);border-bottom:2px solid var(--surface);transform:translateY(-1px) rotate(-45deg);visibility:hidden}
+input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}
+input[type=checkbox]:checked::before{visibility:visible}
+input[type=checkbox]:indeterminate{background:var(--ink);border-color:var(--ink)}
+input[type=checkbox]:indeterminate::before{visibility:visible;height:0;border-left:0;transform:none}
+input[type=checkbox]:disabled{opacity:.5;cursor:not-allowed}
+input[type=radio]{accent-color:var(--ink)}
 summary{display:list-item}
 ol,ul,menu{list-style:none;margin:0;padding:0}
 blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}
@@ -930,7 +944,8 @@ img,video{max-width:100%;height:auto}
   .kv{grid-template-columns:1fr;gap:2px 0}
   .kv dt{margin-top:8px}
   .dtabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .dtabs button{min-height:44px;flex:0 0 auto}
+  /* P11 pkt 7 (e17, e32): wszystkie 6 zakładek panelu mieści się na telefonie 360–430 px (bez uciętej „Historii”) */
+  .dtabs button{min-height:44px;flex:1 1 auto;padding-left:8px;padding-right:8px}
   .awiz-modal{
     inset:0;left:0;top:0;transform:none;width:100%;max-height:none;height:100%;
     border-radius:0;border:0;
@@ -981,6 +996,10 @@ img,video{max-width:100%;height:auto}
   min-height:0;
 }
 .mapstage{position:absolute;inset:0}
+/* P11 (e29): przy długiej liście mapa zostaje na ekranie (przewija się `main`), podświetlenie znacznika po najechaniu na wiersz widać */
+@media (min-width:1001px){
+  .page-sections[data-page="map"] .mapbox{position:sticky;top:8px}
+}
 @media (max-width:1000px){
   .page-sections[data-page="map"] .mapsplit{grid-template-columns:minmax(0,1fr)}
   .page-sections[data-page="map"] .mapbox{border-right:0;border-bottom:1px solid var(--rule)}
@@ -1057,6 +1076,7 @@ img,video{max-width:100%;height:auto}
 /* E5 (img/e5-desk, img/e5-phone): dzwonek w dwóch grupach, zdanie o sytuacji ogólnej pod listą */
 .bell-pop{width:min(420px,92vw);max-height:min(560px,calc(100vh - 72px))}
 .bell-hd h2{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:600;letter-spacing:.02em}
+.bell-hd .bell-x{margin-left:4px}
 .bell-hd .btn.bell-all{border:0;background:none;padding:0;min-height:0;color:var(--sea);text-decoration:underline;font-size:13px;font-weight:400}
 .bell-scroll{overflow-y:auto;flex:1}
 .bell-sec{border-bottom:1px solid var(--rule)}
@@ -1086,7 +1106,11 @@ img,video{max-width:100%;height:auto}
   .bell-chat{font-size:14px}
   /* wyglad/P6-e: cele dotyku ≥ 44 px także w nagłówku i pod listą dzwonka (E8) */
   .bell-hd .btn.bell-all{min-height:44px;padding:0 4px}
-  .bell-general .btn.bell-link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;vertical-align:middle}
+  /* P11 (e13): „✕” w pierwszym wierszu obok tytułu, „Oznacz wszystkie…” pod spodem */
+  .bell-hd .bell-x{order:2;margin-left:auto}
+  .bell-hd .btn.bell-all{order:3;margin-right:auto}
+  /* P11 (e5-phone): link w środku zdania zostaje w linii tekstu; cel dotyku 44 px z dopełnienia (bez rozpychania akapitu) */
+  .bell-general .btn.bell-link{display:inline;min-height:0;min-width:0;padding:15px 4px;margin:-15px -4px;vertical-align:baseline}
 }
 
 @media (max-width:768px){
@@ -1103,10 +1127,13 @@ img,video{max-width:100%;height:auto}
   nav.tower-nav .nav-session,
   nav.tower-nav .sep,
   nav.tower-nav>.iconbtn{display:none}
-  nav.tower-nav.nav-more-open button:not(.nav-pin, .nav-more-btn),
+  /* P11 pkt 7 (e8, e9): w arkuszu „Więcej” bez „»” (zwijanie menu jest tylko na komputerze); liczba przy swoim wierszu */
+  nav.tower-nav.nav-more-open button:not(.nav-pin, .nav-more-btn, .iconbtn),
   nav.tower-nav.nav-more-open .nav-session{
-    display:flex;flex:1 1 100%;width:100%;order:1;min-height:44px;
+    display:flex;flex:1 1 100%;width:100%;order:1;min-height:44px;position:relative;
+    justify-content:flex-start;align-items:center;gap:10px;padding:0 16px;text-align:left;
   }
+  nav.tower-nav.nav-more-open button:not(.nav-pin, .nav-more-btn, .iconbtn) .count{position:static;margin-left:auto}
   nav.tower-nav .nav-pin,
   nav.tower-nav .nav-more-btn{
     display:flex;order:2;flex:1 1 20%;width:20%;flex-direction:column;
@@ -1115,7 +1142,8 @@ img,video{max-width:100%;height:auto}
     font-size:12px;text-align:center;position:relative;
   }
   nav.tower-nav button.nav-pin[aria-current="page"],
-  nav.tower-nav button.nav-more-btn[aria-expanded="true"]{
+  nav.tower-nav button.nav-more-btn[aria-expanded="true"],
+  nav.tower-nav button.nav-more-btn[data-active="true"]{
     border-left-color:transparent;border-top-color:var(--ink);color:var(--ink);font-weight:600;
   }
   nav.tower-nav .nav-pin .lbl,
@@ -1135,6 +1163,10 @@ img,video{max-width:100%;height:auto}
     display:flex;align-items:center;justify-content:space-between;gap:8px;
     width:auto;min-height:44px;padding:6px 12px;border:0;
   }
+}
+
+@media (max-width:375px){
+  .dtabs button{padding-left:6px;padding-right:6px;font-size:13px}
 }
 
 /* E8 pkt 1–4 (P2-wyglad, D-20261013-1535-01 V3). Telefon ≤ 768 px.
@@ -1187,6 +1219,9 @@ img,video{max-width:100%;height:auto}
     display:inline-flex;align-items:center;box-sizing:border-box;
     min-width:44px;min-height:44px;
   }
+  /* P11 (e4): etykieta nad polem (kolumna) zostaje przy lewej krawędzi — reguła wyżej centrowała ją w poziomie */
+  .inv-field,.po-set-f,.pp-rej-l,.rk-note,.up-field,.dtr-note,
+  .auth-form label,.auth-admin-form label,.baf-form label,.cr-custom label,.s7-sheet .s7-range label{align-items:stretch}
   /* wyglad/P2-2 W5: pole wyboru w zwykłym rozmiarze; 44 px ma cały wiersz z napisem (label) */
   input[type="checkbox"],input[type="radio"]{width:22px;height:22px;min-width:22px;min-height:22px;margin:0 8px 0 0;flex:0 0 auto}
   label:has(> input[type="checkbox"]),label:has(> input[type="radio"]){gap:2px;padding-right:8px;cursor:pointer}
@@ -1245,6 +1280,10 @@ img,video{max-width:100%;height:auto}
   /* nic uciętego: nazwy w liście na Mapie i nazwy plików w Dokumentach zawijają się zamiast „…” */
   .map-loads-table .cell-clip{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
   .docrow-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  /* P11 (e31): „Pliki” na telefonie — nazwa transportu i rodzaj w pierwszej linii, plik i „↓” zawsze w jednym rzędzie pod spodem */
+  .doc-file-rows .mrow{flex-direction:column;align-items:stretch;gap:4px}
+  .doc-file-rows .docrow-actions{display:flex;flex-wrap:nowrap;justify-content:space-between;min-width:0}
+  .doc-file-rows .docrow-name{min-width:0}
 }
 
 /* ===== wyglad/P3 — E37 pkt 1–2 (img/e37-after „Po zmianie”): pasek górny, konto po prawej, paski pod paskiem =====
@@ -1320,7 +1359,7 @@ img,video{max-width:100%;height:auto}
 .live-mark.is-off i{background:var(--red)}
 /* wyglad/P10a-a (E22 pkt 4): komunikat w miejscu części, która się nie wczytała */
 .part-fail{margin:12px;padding:22px 24px;max-width:640px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--amber)}
-.part-fail h2{margin:0;font-size:18px;color:var(--ink)}
+.part-fail h2{margin:0;font-family:var(--font-cond);font-weight:700;font-size:18px;color:var(--ink)}
 .part-fail p{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
 .subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}
@@ -1533,6 +1572,8 @@ img,video{max-width:100%;height:auto}
 @media (max-width:768px){
   /* Harmonogram na telefonie (E8): przełącznik Transporty / Rejsy na całą szerokość, bez linii wersji (pierwsza karta wyżej) */
   .page-sections[data-page="schedule"]>.panel-hd>.sub{display:none}
+  /* P11 (e30): Rejsy — linia trasy zostaje na telefonie (jak na komputerze) */
+  .page-sections[data-page="schedule"]>.panel-hd>.sub.sv-route{display:block;flex:1 1 100%;order:1}
   .page-sections[data-page="schedule"] [data-sched-tabs]{flex:1 1 100%;display:flex}
   .page-sections[data-page="schedule"] [data-sched-tabs] button{flex:1 1 0;min-height:44px}
 }
@@ -1841,7 +1882,18 @@ img,video{max-width:100%;height:auto}
 .mapsheet .mapgrp-row{min-height:48px;font-size:15px}
 .mapsheet .mapgrp-row b{font-size:16px}
 /* wyglad/P9-f (E32 pkt 3): dopisek na mapie Przeglądu — powód braku pozycji albo „Na placu od …” */
-.note.po-mapnote{position:absolute;left:12px;right:12px;bottom:8px;z-index:500;max-width:360px;background:var(--surface);color:var(--ink);padding:6px 8px;font-size:13px}
+.note.po-mapnote{position:absolute;left:12px;right:12px;bottom:var(--note-bottom,8px);z-index:500;max-width:360px;background:var(--surface);color:var(--ink);padding:6px 8px;font-size:13px}
+/* P11 (e1, e32): dopisek w liniach jak na makiecie; brak linku śledzenia na czerwono */
+.po-mapnote-l{display:block}
+.po-mapnote-l.is-alert{color:var(--red)}
+/* F7 #303 P1: na telefonie mapa Przeglądu ma 150 px — dopisek u góry, w jednym ciągu („Na placu od … · ostatnia pozycja …
+   · strefa …”), mniejszy i z miejscem na „+ / −” po prawej, żeby pojazd w środku mapy i podpis podkładu zostały widoczne;
+   do 768 px — tak jak „telefon” w aplikacji (`useIsPhone`, F7 #303 r2 P1) */
+@media (max-width:768px){
+  .note.po-mapnote{top:6px;bottom:auto;left:6px;right:60px;padding:3px 6px;font-size:12px;line-height:1.35}
+  .po-mapnote-l{display:inline}
+  .po-mapnote-l+.po-mapnote-l::before{content:" · ";color:var(--ink-3)}
+}
 .map-cards{margin:8px 10px}
 .map-card{width:100%}
 .map-cards-empty{padding:10px;font-size:13px}

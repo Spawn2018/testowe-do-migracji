@@ -67,10 +67,15 @@ const INFO_KINDS = new Set([
   'FERRY', 'ROUTE_OBSTACLE', 'WORKFLOW_ALERT',
 ]);
 
+/** P11 (e5, E5): informacje bez działania i bez transportu („Faktura zaakceptowana”, „Import harmonogramu zatwierdzony”) —
+ *  „Moje transporty”, nie „Do zrobienia” (tam tylko sprawy z działaniem). */
+const INFO_NOLOAD_KINDS = new Set(['SCHEDULE_IMPORTED', 'INVOICE_ACCEPTED']);
+
 export function bellSection(n: Pick<BellSource, 'kind' | 'loadId' | 'severity' | 'href'>): BellSection {
   const k = n.kind;
   if (k) {
     if (!n.loadId && GENERAL_KINDS.has(k)) return 'general';
+    if (INFO_NOLOAD_KINDS.has(k)) return 'mine';
     if (k === 'RISK_SEVERITY') return n.severity === 'CRITICAL' ? 'todo' : 'mine';
     if (n.loadId && INFO_KINDS.has(k)) return 'mine';
     return 'todo';

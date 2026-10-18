@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, Locale } from '../types';
+import { formatPlNumber } from '../lib/format';
 import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { hasKey, t, tp } from '../i18n/messages';
 import { DemoMark } from '../components/ui/DemoMark';
@@ -197,7 +198,6 @@ export function OptionsView() {
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),
-      scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
       scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
@@ -219,11 +219,14 @@ export function OptionsView() {
         </>
       ), { right: change }),
       scr('bcast', pick('bcast', BroadcastForm ? roBlock(<BroadcastForm />) : null), { right: change }),
+      /* P11 (e11/e12, G-11): „Treści wiadomości” ostatnie w grupie Powiadomienia */
+      scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
     ],
   });
 
   /* wyglad/P5-b — dane ekranów Pieniądze; null = nie podłączone (zostaje dzisiejszy formularz albo sekcji nie ma) */
   const fuelView = fuelScreenOf(localDateOf(getNowIso()), getNowIso());
+  const fuelMeta = fuelView?.current.applied != null ? `× ${formatPlNumber(fuelView.current.applied, 2)}` : undefined;
   const dwell = dwellRulesOf();
   const cancel = cancelRulesOf();
   const margin = marginSettingOf();
@@ -276,7 +279,12 @@ export function OptionsView() {
           </>
         )}
       </>
-    ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
+    ), {
+      right: change,
+      mark: PROD_BUILD ? undefined : <DemoMark />,
+      /* P11 (e3, E3 „Jedna liczba”): mnożnik przy pozycji menu z tego samego źródła co karta „Ten tydzień” */
+      meta: fuelMeta,
+    }),
   ];
   if (terms || addresses) {
     money.push(scr('terms', block(
@@ -380,7 +388,8 @@ export function OptionsView() {
 
   for (const g of groups) {
     const s = demo?.summaries[g.id];
-    if (s) { g.summary = s.text; g.summaryTone = s.tone; }
+    /* P11 (e3): „paliwo × …” w opisie grupy Pieniądze — ta sama liczba co przy pozycji menu */
+    if (s) { g.summary = g.id === 'money' ? s.text.replace('{fuel}', fuelMeta ?? '—') : s.text; g.summaryTone = s.tone; }
   }
 
   return (

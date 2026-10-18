@@ -348,10 +348,12 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}>
             <div className="r1">
               <span className="code" data-content>{transportLabel(l, ctx.role, 'schedule')}</span>
-              <StatusPill status={l.status} stage={l.stage} />
-              <StatusMarkers load={l} delayMin={ctx.delayOf(l)} />
+              {/* P11 (e30 pkt 8): status z oznaczeniami i datą „Dostarczone” — jak kolumna „Status” na komputerze */}
+              <Status l={l} ctx={ctx} />
               {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad">{s7(L, 's7_no_hhl')}</span> : null}
             </div>
+            {/* P11 (e30): braki dokumentów („brak CMR”, „brak zezwoleń”) — jak kolumna „Dokumenty” na komputerze */}
+            {docCell(ctx.docRows(l.id), ctx.reqs).tone === 'bad' ? <div className="s7-card-docs" data-card-docs><Docs l={l} ctx={ctx} /></div> : null}
             <div className="meta" data-content>
               {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {dmy(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {dmy(l.plannedDeliverDate)}
             </div>

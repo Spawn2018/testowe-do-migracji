@@ -17,26 +17,26 @@ const PL: Record<string, string> = {
   p4c_wf_g_msg: 'Wiadomości',
   p4c_wf_g_money: 'Pieniądze i dane',
   p4c_wf_r_zones: 'Status ze stref',
-  p4c_wf_r_zones_d: 'wjazd i wyjazd: Śrem, porty, plac (E25, E34) · wyjazd z placu → Dostarczone (E26)',
+  p4c_wf_r_zones_d: 'wjazd i wyjazd: Śrem, porty, plac · wyjazd z placu → Dostarczone',
   p4c_wf_r_cases: 'Sprawy z terminem',
-  p4c_wf_r_cases_d: 'awizacja 48/12 h, dokumenty 24 h, numery zleceń, daty KSH ≤ 5 dni, postój ponad czas wolny (E7, E32, E31, E33)',
+  p4c_wf_r_cases_d: 'awizacja 48/12\u00a0h, dokumenty 24\u00a0h, numery zleceń, daty KSH ≤ 5\u00a0dni, postój ponad czas wolny',
   /* wyglad/audyt-E (E-10; E49 16.10, 02:08): wbudowane automaty wiatru, śliskości i objazdu */
   p4c_wf_r_gps: 'Cisza GPS, ETA, prom, wiatr',
-  p4c_wf_r_gps_d: 'brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany, wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój), śliskość do 25 km od auta, sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze (E15, E45, E49)',
+  p4c_wf_r_gps_d: 'brak pozycji 30\u00a0min w ruchu / 3\u00a0h na postoju, opóźnienie po wyjeździe, rejs odwołany, wiatr w ETA (od 20\u00a0m/s wolniej, od 25\u00a0m/s postój), śliskość do 25\u00a0km od auta, sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze',
   p4c_wf_r_notify: 'Powiadomienia i e-maile',
-  p4c_wf_r_notify_d: 'kto co dostaje: zdarzenie × rola × kanał (E11, E5), treści z szablonów (E43)',
+  p4c_wf_r_notify_d: 'kto co dostaje: zdarzenie × rola × kanał, treści z szablonów',
   p4c_wf_r_texts: 'SMS do Śremu i Boden',
-  p4c_wf_r_texts_d: 'A zbliżanie · B wcześniejszy przyjazd · C auto czeka · D wjazd; cisza 20:00–06:00 (E42)',
+  p4c_wf_r_texts_d: 'A zbliżanie · B wcześniejszy przyjazd · C auto czeka · D wjazd; cisza 20:00–06:00',
   p4c_wf_r_prices: 'Opłata paliwowa, kurs NBP, ceny',
-  p4c_wf_r_prices_d: 'ceny paliwa 07:15 (po E3 także 09:15 i 13:15), NBP 12:30 i 16:30, wycena co 6 h (E3, E16, E39)',
+  p4c_wf_r_prices_d: 'ceny paliwa 07:15 (także 09:15 i 13:15), NBP 12:30 i 16:30, wycena co 6\u00a0h',
   p4c_wf_r_sched: 'Harmonogram KSH',
-  p4c_wf_r_sched_d: 'plik KSH: wiersze z „Przewoźnik = HH”, daty zmienia tylko KSH; SharePoint po dostępie od IT KSH (E38)',
+  p4c_wf_r_sched_d: 'plik KSH: wiersze z „Przewoźnik = HH”, daty zmienia tylko KSH; SharePoint po dostępie od IT KSH',
   p4c_wf_link_thr: 'Opcje › Progi',
   p4c_wf_link_who: 'Opcje › Kto co dostaje',
   p4c_wf_link_zones: 'Opcje › SMS przy miejscach',
   p4c_wf_link_fuel: 'Opcje › Opłata paliwowa',
   p4c_wf_link_geo: 'Strefy',
-  p4c_wf_meta_sched: 'po E38',
+  p4c_wf_meta_sched: 'po dostępie od IT KSH',
   p4c_wf_last: 'Ostatnie działanie: {what}',
   p4c_wf_last_none: 'Ostatnie działanie: brak źródła danych.',
   p4c_wf_state: 'Stan: {what}',
@@ -74,7 +74,7 @@ const GPS_PARTS: { rule: ServerRule | null; text: string }[] = [
 
 function soonText(key: string): string | null {
   if (key === 'p4c_wf_r_zones_d' && !serverRuleOn('SITE_EXIT_DELIVERED')) {
-    return `wjazd i wyjazd: Śrem, porty, plac (E25, E34) · wyjazd z placu → Dostarczone (E26) — ${SOON}`;
+    return `wjazd i wyjazd: Śrem, porty, plac · wyjazd z placu → Dostarczone — ${SOON}`;
   }
   if (key === 'p4c_wf_zt_site_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return `${PL[key]} — ${SOON}`;
   /* W-naprawy-2 (F7): do A2 wyjazd ze Śremu działa tylko po potwierdzeniu załadunku — jak karta strefy */
@@ -83,7 +83,7 @@ function soonText(key: string): string | null {
     const on = GPS_PARTS.filter((p) => p.rule === null || serverRuleOn(p.rule)).map((p) => p.text);
     const off = GPS_PARTS.filter((p) => p.rule !== null && !serverRuleOn(p.rule)).map((p) => p.text);
     if (off.length === 0) return null;
-    return `${on.join(', ')} (E15, E45) · ${off.join('; ')} — ${SOON} (E49)`;
+    return `${on.join(', ')} · ${off.join('; ')} — ${SOON}`;
   }
   return null;
 }

@@ -43,6 +43,8 @@
 .po-ksh-act{display:block;margin-top:6px}
 .po-inline{margin-left:10px}
 .po-order-f{display:flex;gap:6px;align-items:center}
+/* P11 (e32, e41): numer jako tekst z „Edytuj” / „brak” z „Dodaj” */
+.po-order-v{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 .po-order-f .input{flex:1;min-width:0}
 /* wyglad/P7-b — „Zmień” przy zestawie (E32 pkt 7, img/e32-after) */
 .po-set-v{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
@@ -76,6 +78,7 @@
 .po-fold-t{flex:1;min-width:0;font-size:15.5px}
 .po-fold-t b{font-family:var(--font-cond);font-size:18px}
 .po-fold-s{color:var(--ink-2)}
+.po-fold-s2{display:block;font-size:14.5px;color:var(--ink-2)}
 .po-fold-r{flex:none;font-size:15px;color:var(--ink-2)}
 .po-fold-i{flex:none;color:var(--ink-2)}
 .po-fold[open] .po-fold-i{transform:rotate(180deg)}

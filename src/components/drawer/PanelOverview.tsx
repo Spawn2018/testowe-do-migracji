@@ -18,7 +18,7 @@ import { buildTodo, visibleTodoRisks, type TodoIssue } from '../../lib/p6Todo';
 import { openTodoRisks } from '../../lib/todoRules';
 import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
-import { awizDeadline, awizMissing, awizState, dayLong, dayShort, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
+import { awizDeadline, awizMissing, awizState, dayLong, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
 import { activeLeg, driverPhoneView } from '../../lib/activeDriver';
 import { canFixAwizOf, pilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
 import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
@@ -28,8 +28,8 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { getDocReqCache } from '../../lib/docReqCache';
-import { docStatusRows } from '../../lib/docRequirements';
-import { cmrKind, reqVisible } from '../../lib/p5Docs';
+import { cmrAfterDelivery, docStatusRows } from '../../lib/docRequirements';
+import { reqVisible } from '../../lib/p5Docs';
 import { docRequirementsStart, policiesOf } from '../../lib/p5Source';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { EtaBlock } from './EtaBlock';
@@ -37,6 +37,7 @@ import type { EtaWx } from '../../lib/e49Wx';
 import { OptionsHowTo } from '../settings/OptionsHowTo';
 import './p7.css';
 import { formatCalendarDay } from '../../lib/time';
+import { stageTileOf } from '../../lib/stageTiles';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -98,18 +99,44 @@ function Sec({ id, phone, title, extra, status, right, children }: {
   );
 }
 
+/**
+ * P11 (e32, e41): własny numer zlecenia — wpisany jako tekst z „Edytuj”, brak jako czerwone „brak” z „Dodaj”;
+ * pole z „Zapisz” i „Anuluj” dopiero po kliknięciu (Escape zamyka i wraca do przycisku).
+ */
 function OrderNoField({ value, onSave, locale }: { value?: string | null; onSave: (v: string | null) => void; locale: Locale }) {
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value ?? '');
+  const input = useRef<HTMLInputElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) input.current?.focus();
+    else if (wasOpen.current) btn.current?.focus();
+    wasOpen.current = open;
+  }, [open]);
+  if (!open) {
+    return (
+      <span className="po-order-v">
+        {value ? <b className="mono">{value}</b> : <span className="po-miss">{pt(locale, 'p7_num_missing')}</span>}
+        <button ref={btn} type="button" className="btn ghost po-inline" data-order-edit onClick={() => { setDraft(value ?? ''); setOpen(true); }}>
+          {pt(locale, value ? 'p7_num_edit' : 'p7_num_add')}
+        </button>
+      </span>
+    );
+  }
   return (
     <form
       className="po-order-f"
       onSubmit={(e) => {
         e.preventDefault();
         if ((draft.trim() || null) !== (value ?? null)) onSave(draft.trim() || null);
+        setOpen(false);
       }}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); } }}
     >
-      <input className="input mono" value={draft} placeholder={t(locale, 'a6_dr_not_filled')} onChange={(e) => setDraft(e.target.value)} aria-label={t(locale, 'a6_dr_order_no')} />
+      <input ref={input} className="input mono" value={draft} placeholder={t(locale, 'a6_dr_not_filled')} onChange={(e) => setDraft(e.target.value)} aria-label={t(locale, 'a6_dr_order_no')} />
       <button type="submit" className="btn ghost">{t(locale, 'a6_dr_save')}</button>
+      <button type="button" className="btn ghost" onClick={() => setOpen(false)}>{pt(locale, 'p7_num_cancel')}</button>
     </form>
   );
 }
@@ -245,7 +272,8 @@ export function PanelOverview(p: Props) {
   const cached = getDocReqCache();
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
   const reqs = cached?.reqs ?? docRequirementsStart();
-  const rows = cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso));
+  /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) */
+  const rows = cmrAfterDelivery(cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso)), () => load.status);
   const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
   const row = (c: string) => rows.find((x) => x.category === c);
   /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
@@ -261,10 +289,9 @@ export function PanelOverview(p: Props) {
         : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
   const cmrDoc = doc('CMR');
   const cmrRow = row('CMR');
-  const cmrSigned = cmrKind(reqs.find((x) => x.category === 'CMR')) === 'SIGNED';
   const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
   const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
-    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, cmrSigned ? 'p7_doc_cmr_after_unload' : 'p7_doc_cmr_after');
+    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, 'p7_doc_cmr_after_unload');
   const policies = policiesOf();
   const policyRow = (key: 'INSURANCE' | 'OCS') => {
     if (!reqVisible(key, role)) return null;
@@ -397,6 +424,8 @@ export function PanelOverview(p: Props) {
     day ? <><b>{dayLong(day)}</b>{hours ? `, ${hours}` : ` · ${pt(locale, 'p7_no_hour')}`}</> : <span className="po-miss">{pt(locale, 'p7_no_date')}</span>
   );
   const etaShort = !load.etaBoden || load.etaPreLoad ? '–' : dmHm(load.etaBoden);
+  /* P11 (e32): na placu — „Na placu od …” (wjazd do strefy, a bez niego początek czekania przed placem — jak dopisek na mapie) */
+  const siteSincePh = stageTileOf(load) === 'SITE' ? p.siteSince ?? load.etaDetail?.waitSince ?? null : null;
 
   /* ---------- Awizacja / Kierowcy i zestaw (E32 pkt 5–7, E6) ---------- */
   const phoneOk = !!visibleDriverPhone(role, load);
@@ -475,8 +504,15 @@ export function PanelOverview(p: Props) {
         id="plan"
         phone={phone}
         title={phone ? pt(locale, 'p7_ph_plan') : pt(locale, 'p7_plan_h')}
-        status={phone ? ` · ${ptp(locale, 'p7_plan_line', { a: dayShort(load.plannedLoadDate), b: dayShort(load.plannedDeliverDate) })}` : null}
-        right={phone ? ptp(locale, 'p7_ph_eta', { v: etaShort }) : null}
+        /* P11 (e32): telefon — daty z rokiem bez dnia tygodnia, w drugiej linii ETA albo „Na placu od …” (bez poszarpanego zawijania) */
+        status={phone ? (
+          <>
+            {` · ${ptp(locale, 'p7_plan_line', { a: dmy(load.plannedLoadDate), b: dmy(load.plannedDeliverDate) })}`}
+            <span className="po-fold-s2" data-plan-eta>
+              {siteSincePh ? ptp(locale, 'p7_ph_site', { v: dmHm(siteSincePh) }) : ptp(locale, 'p7_ph_eta', { v: etaShort })}
+            </span>
+          </>
+        ) : null}
       >
         <dl className="po-kv">
           <dt>{pt(locale, 'p7_plan_load')}</dt>
@@ -634,7 +670,7 @@ export function PanelOverview(p: Props) {
         <dl className="po-kv">
           <dt>{pt(locale, permitFirm ? 'p7_doc_permit_firm' : 'p7_doc_permit')}</dt>
           <dd data-permit={permitState}><span className={permitState === 'ok' ? 'po-ok' : 'po-miss'}>{permitText}</span></dd>
-          <dt>{pt(locale, cmrSigned ? 'p7_doc_cmr_signed' : 'p7_doc_cmr')}</dt>
+          <dt>{pt(locale, 'p7_doc_cmr_signed')}</dt>
           <dd data-po-cmr={cmrState}><span className={cmrState === 'ok' ? 'po-ok' : cmrState === 'over' ? 'po-miss' : ''}>{cmrText}</span></dd>
           {pols.map((x) => (
             <Fragment key={x.key}>
