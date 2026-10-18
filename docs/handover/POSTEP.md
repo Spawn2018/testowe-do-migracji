@@ -3010,3 +3010,4 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Aplikacja: `refreshFromServer({ keepSelection: true })` po awizacji, numerze zlecenia i ręcznym statusie; po wgraniu dokumentu `notifyFileUploaded()` (FileSink omija mutację mostka).
 - Testy: `risks.sh` +6 (oczekiwane 33 lokalnie / 31 na TEST), w tym `RES:DRIVER` przy `DELIVERED`. Sam `title_key = rk_res_driver` nie zamyka alarmu.
 - Porządek na produkcji (oczekiwane, przegląd #305): `decision-overdue` 16, alarmy sprzed dostawy 7 (4 + 3 `RES:DRIVER`). Liczby po `db push` wpisuję obok.
+- Decyzje W26, W28, W29, W30, W31, W33 i W45 wpisane (D-20261018-2200-01, zamknięte 18.10.2026, 21:57).

@@ -114,22 +114,25 @@ $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, 
   values ('$P','$L1','DOC_MISSING','HIGH','Decyzja po terminie','rk_decision_overdue','decision-overdue:$DID'),
          ('$P',null,'DOC_MISSING','HIGH','Decyzja po terminie','rk_decision_overdue','decision-overdue:$DID2')" >/dev/null
 NDEC=$(Q "select count(*) from notifications")
-$PSQL -c "update decisions set status='EXPIRED' where id='$DID'" >/dev/null
-$PSQL -c "update decisions set status='RESOLVED', resolved_at=now() where id='$DID2'" >/dev/null
+# EXPIRED wymaga expired_reason (0102). Sam status zostaje NEW i sygnał się nie zamyka.
+$PSQL -v ON_ERROR_STOP=1 -c "update decisions set status='EXPIRED', expired_reason='1215' where id='$DID'" >/dev/null
+$PSQL -v ON_ERROR_STOP=1 -c "update decisions set status='RESOLVED', resolved_at=now() where id='$DID2'" >/dev/null
 chk "1215: NEW→EXPIRED zamyka decision-overdue" \
   "$(Q "select count(*) from risk_signals where dedup_key='decision-overdue:$DID' and resolved_at is not null")" 1
 chk "1215: NEW→RESOLVED zamyka decision-overdue" \
   "$(Q "select count(*) from risk_signals where dedup_key='decision-overdue:$DID2' and resolved_at is not null")" 1
 chk "1215: zamknięcie decyzji → 0 nowych powiadomień" \
   "$(Q "select count(*) - $NDEC from notifications")" 0
-$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
-  values ('$P','$L1','DOC_MISSING','HIGH','Brak awizacji','rk_res_driver','l3:NO_AWIZACJA:$L1'),
-         ('$P','$L1','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L1')" >/dev/null
-$PSQL -c "update loads set status='DELIVERED' where id='$L1'" >/dev/null
+# Osobny transport: L1 ma już otwartą ciszę; zamykanie jej razem ze statusem nie jest przedmiotem testu.
+$PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
+  values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak awizacji','rk_res_docs','l3:NO_AWIZACJA:$L2')" >/dev/null
+$PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
+  values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L2')" >/dev/null
+err=$($PSQL -v ON_ERROR_STOP=1 -c "update loads set status='DELIVERED' where id='$L2'" 2>&1) || echo "  FAIL  1215 update DELIVERED: $err"
 chk "1215: l3:NO_AWIZACJA znika przy DELIVERED" \
-  "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L1' and resolved_at is not null")" 1
+  "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is not null")" 1
 chk "1215: RES:DRIVER znika przy DELIVERED" \
-  "$(Q "select count(*) from risk_signals where dedup_key='RES:DRIVER:$L1' and resolved_at is not null")" 1
+  "$(Q "select count(*) from risk_signals where dedup_key='RES:DRIVER:$L2' and resolved_at is not null")" 1
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
   values ('$P','$L2','INVOICE_MISMATCH','HIGH','Faktura po terminie','rk_invoice_overdue','invoice-overdue:$L2')" >/dev/null
 $PSQL -c "update loads set status='INVOICED' where id='$L2'" >/dev/null
