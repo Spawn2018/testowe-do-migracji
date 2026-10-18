@@ -33,6 +33,9 @@
 .s7-nw{white-space:nowrap}
 /* daty z rokiem (16.10.2026): dwa braki i termin zawijają się między słowami, data zostaje w całości */
 .s7-file td[data-col="docs"]{white-space:normal}
+/* P11 pkt 3 runda 3 (E20, CI Chromium 153): kwota z marżą może przejść do drugiej linii tylko wtedy, gdy nie mieści się
+   w kolumnie 250 px (wcześniej wychodziła poza komórkę); liczby i waluta stoją na twardej spacji, więc się nie rozdzielają */
+.s7-file td[data-col="money"]{white-space:normal}
 /* audyt 17.10 (E20): przepięcie — „Kierowca”, „Ciągnik”, „Naczepa” w dwóch liniach zamiast wjeżdżać na sąsiednią kolumnę */
 .s7-file td[data-col="driver"],.s7-file td[data-col="tractor"],.s7-file td[data-col="trailer"]{white-space:normal}
 .s7-q{color:var(--red)}

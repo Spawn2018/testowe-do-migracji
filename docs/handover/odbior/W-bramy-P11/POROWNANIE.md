@@ -74,7 +74,7 @@ F7 r2 D9 (zamiana `--ink-3` na całym najechanym wierszu Harmonogramu): zostaje 
 Powód: przygaszony tekst przy najechaniu ma 3,99 w ciemnym motywie, czyli za mało (E10); najechany wiersz to ten, który użytkownik właśnie czyta. Zawężenie do kilku komórek zostawiłoby inne szare teksty wiersza poniżej 4,5 i każda nowa kolumna wymagałaby osobnej poprawki.
 
 ## Układ — poprawka z CI (F7 r2 B-CI)
-Harmonogram, układ pliku KSH (szerokie kolumny), kolumna „Kwota i marża” (250 px): na Chromium 153 w CI kwota z marżą w jednej linii wychodziła poza komórkę (E20 oblał w CI, lokalnie na Chromium 141 nie). Teraz w tym układzie kwota i marża stoją w dwóch liniach, jak w widoku skróconym (`SchedTables.tsx`, komórka `money`). Treść i dane bez zmian.
+Harmonogram, układ pliku KSH (szerokie kolumny), kolumna „Kwota i marża” (250 px): na Chromium 153 w CI kwota z marżą w jednej linii wychodziła poza komórkę (E20 oblał w CI, lokalnie na Chromium 141 nie). Teraz komórka może zawinąć tekst (`sched7.css`, `td[data-col="money"]`): marża przechodzi do drugiej linii tylko w wierszu, w którym się nie mieści; liczby i waluta stoją na twardej spacji. Wiersze, które się mieszczą, zostają jednoliniowe — wysokość wierszy i liczba wierszy na ekranie bez zmian (F7 r3: pierwsza wersja, kwota i marża zawsze w dwóch liniach, podnosiła każdy wiersz z 32 do 48 px — wycofana). Treść, teksty i dane bez zmian.
 
 ## Wynik lokalnie (build gałęzi, 2 wątki, Chromium 141; CI ma Chromium 153)
 - Runda 2: cały plik 32 testy w 7,5 min; pierwszy przebieg 28 z 32 — znalazł wiersze Harmonogramu (tabela wyżej) i lukę w regule kwot. Po poprawce E21 (11 testów) i E10 ciemny komputer (3): 14 z 14 w 4,0 min.
