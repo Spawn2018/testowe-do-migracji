@@ -77,6 +77,8 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-file tbody tr.hl td.s7-stick{background:var(--amber-bg)}
 .s7-file td.s7-wt{background:var(--surface-2)}
 .s7-file tbody tr:hover td.s7-wt{background:var(--surface-3)}
+/* P11 pkt 3 (E10): najechany wiersz (surface-3) — szary opis ink-2 (ink-3 ma 3,99 : 1 w ciemnym motywie) */
+.s7-file tbody tr:hover{--ink-3:var(--ink-2)}
 .s7-file tbody tr.hl td.s7-wt{background:var(--amber-bg)}
 .s7-file .s7-wt1{border-left:2px solid var(--ink-3)}
 

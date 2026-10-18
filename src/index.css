@@ -172,6 +172,8 @@ tbody tr{cursor:default}
 tbody tr[tabindex]{cursor:pointer}
 tbody tr:hover{background:var(--surface-2)}
 tbody tr.hl{background:var(--amber-bg)}
+/* P11 pkt 3 (E10): szary opis na bursztynowym wierszu — ink-2 (ink-3 ma 3,88 : 1 w ciemnym motywie) */
+tbody tr.hl{--ink-3:var(--ink-2)}
 tbody tr.done td{color:var(--ink-3)}
 .money{font-weight:600}
 .money.neg{color:var(--red)}
@@ -787,6 +789,8 @@ nav button{padding:8px 14px}
 }
 .map-loads-table tbody tr:hover,
 .map-loads-table tbody tr.is-active{background:var(--amber-bg)}
+/* P11 pkt 3 (E10, axe): czerwony alarm w podświetlonym wierszu na białym polu — kontrast ≥ 4,5 w obu motywach */
+.map-loads-table tbody tr:hover .map-alarm,.map-loads-table tbody tr.is-active .map-alarm{background:var(--surface);padding:0 3px}
 .map-loads-table .cell-clip{
   display:block;overflow:hidden;text-overflow:clip;white-space:nowrap;min-width:0;max-width:100%;
 }

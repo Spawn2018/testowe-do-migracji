@@ -134,8 +134,8 @@
 .ox-mx-group th small{margin-left:8px;font-family:var(--font-sans);letter-spacing:0;font-weight:400;font-size:13px;color:var(--ink-3)}
 .ox-mx tr.is-sel > th{border-left:3px solid var(--sea);background:var(--sea-bg)}
 .ox-mx tr.is-sel > td{background:var(--sea-bg)}
-/* P11 pkt 3 (E10, axe): w zaznaczonym wierszu opis zdarzenia ciemniejszy — kontrast ≥ 4,5 */
-.ox-mx tr.is-sel > th,.ox-mx tr.is-sel > td{--ink-3:var(--ink-2)}
+/* P11 pkt 3 (E10, axe): w zaznaczonym wierszu opis zdarzenia ciemniejszy — kontrast ≥ 4,5 (tylko opis; kanały bez zmian) */
+.ox-mx tr.is-sel .ox-mx-row span{color:var(--ink-2)}
 .ox-mx-only{color:var(--ink-2);font-size:14.5px;background:var(--surface-2)}
 .ox-chips{display:inline-flex;gap:4px}
 .ox-ch{display:inline-grid;place-items:center;width:30px;height:30px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink-3)}

@@ -166,7 +166,7 @@
 .dtr-s.is-late{color:var(--red)}
 .dtr-opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .dtr-opt{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;border:1px solid var(--rule);background:var(--surface-2)}
-.dtr-opt.is-fast{border-color:var(--go);background:var(--go-bg)}
+.dtr-opt.is-fast{border-color:var(--go);background:var(--go-bg);--ink-3:var(--ink-2)}
 .dtr-opt.is-none{background:var(--surface)}
 .dtr-oh{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 8px}
 .dtr-oh h4{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:700;color:var(--ink)}
