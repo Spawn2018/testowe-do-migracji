@@ -176,7 +176,7 @@ begin
     locale text,
     party text
   ) on commit drop;
-  delete from esc_hit;
+  delete from pg_temp.esc_hit;
 
   for r in
     select d.id, d.project_id, d.type_code, d.title, d.load_id, d.due_at
@@ -209,7 +209,7 @@ begin
       )
       on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
     end if;
-    insert into esc_hit (user_id, decision_id, load_id, type_code, raw_title, bell, mail, recipient, locale, party)
+    insert into pg_temp.esc_hit (user_id, decision_id, load_id, type_code, raw_title, bell, mail, recipient, locale, party)
     select u.id, r.id, r.load_id, r.type_code, r.title,
            public.notify_person_on(u.id, 'dec_late', 'bell', m.in_app, m.fixed_in_app),
            public.notify_person_on(u.id, 'dec_late', 'mail', m.email, m.fixed_email)
@@ -245,14 +245,14 @@ begin
     select user_id, count(*)::int as cnt,
            bool_or(bell) as bell, bool_or(mail) as mail,
            min(recipient) as recipient, min(locale) as locale
-      from esc_hit
+      from pg_temp.esc_hit
      group by user_id
     having count(*) > 5
   loop
     select coalesce(jsonb_agg(distinct decision_id::text), '[]'::jsonb),
            count(distinct type_code), min(type_code)
       into v_ids, v_types, v_type
-      from esc_hit
+      from pg_temp.esc_hit
      where user_id = u.user_id;
     v_label := 'Po terminie: ' || u.cnt || ' decyzji';
     if v_types = 1 and v_type = 'SEFS_OUT_OF_TABLE' then
@@ -282,9 +282,9 @@ begin
   end loop;
 
   for h in
-    select * from esc_hit e
+    select * from pg_temp.esc_hit e
      where e.user_id not in (
-       select user_id from esc_hit group by user_id having count(*) > 5
+       select user_id from pg_temp.esc_hit group by user_id having count(*) > 5
      )
   loop
     v_title := public.tower_public_title(h.load_id, h.raw_title, h.party);

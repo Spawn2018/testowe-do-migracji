@@ -76,9 +76,12 @@ val "tytuł zbiorczy" $HHL "select (payload->>'title' = 'Po terminie: 6 decyzji 
 L=33333333-0000-0000-0000-000000000001
 sys "update loads set hhl_order_no='HHL/1', carrier_order_no='SCX/1' where id='$L'" >/dev/null
 sys "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) select '$P', '$L', 'SG-T', 1, 1, 1 where not exists (select 1 from shipment_items where load_id='$L' and shipment_code='SG-T')" >/dev/null
-val "tytuł HHL z numerem HHL" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'HHL') = 'SG-T · HHL/1 — brak awizacji'" t
-val "tytuł SCX z numerem SCX" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'SCX') = 'SG-T · SCX/1 — brak awizacji'" t
-val "tytuł KSH sam kod" $HHL "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'KSH') = 'SG-T — brak awizacji'" t
+out=$(sys "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'HHL') = 'SG-T · HHL/1 — brak awizacji'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+if [ "$out" = "t" ]; then ok=$((ok+1)); echo "  OK    tytuł HHL z numerem HHL"; else fail=$((fail+1)); echo "  FAIL  tytuł HHL z numerem HHL (otrzymano: $out)"; fi
+out=$(sys "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'SCX') = 'SG-T · SCX/1 — brak awizacji'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+if [ "$out" = "t" ]; then ok=$((ok+1)); echo "  OK    tytuł SCX z numerem SCX"; else fail=$((fail+1)); echo "  FAIL  tytuł SCX z numerem SCX (otrzymano: $out)"; fi
+out=$(sys "select tower_public_title('$L'::uuid, 'aaaaaaaa: brak awizacji', 'KSH') = 'SG-T — brak awizacji'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+if [ "$out" = "t" ]; then ok=$((ok+1)); echo "  OK    tytuł KSH sam kod"; else fail=$((fail+1)); echo "  FAIL  tytuł KSH sam kod (otrzymano: $out)"; fi
 
 # skutki opcji (0126)
 D4=$(run "$HHL" "select decision_open('$P','ETA_AFTER_LATEST','ETA po terminie', jsonb_build_object('eta','2026-10-02T12:00:00Z'), '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
