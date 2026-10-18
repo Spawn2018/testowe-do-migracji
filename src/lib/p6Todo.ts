@@ -133,7 +133,11 @@ export function buildTodo({ risks, decisions = [], extras = [], nowIso }: TodoIn
     if (r.loadId && isTimeBan(r)) infos.push({ id: r.id, loadId: r.loadId, risk: r });
     else if (isTodoRisk(r)) issues.push(riskIssue(r, nowIso));
   }
-  for (const d of decisions) issues.push(decisionIssue(d, nowIso));
+  for (const d of decisions) {
+    /* D-20261018-1100-01: L14 jest kartą CHECK, nie drugą decyzją DELIVERED_CHECK */
+    if (d.typeCode === 'DELIVERED_CHECK') continue;
+    issues.push(decisionIssue(d, nowIso));
+  }
   issues.push(...extras);
 
   const cards = new Map<string, TodoCard>();

@@ -72,6 +72,7 @@ authenticated_security_definer_function_executable	public.decision_expire	E19 �
 authenticated_security_definer_function_executable	public.decision_open	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.decision_resolve	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.decision_snooze	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.delivered_check_resolve	A2/L14 — allowlista RPC; l2_may_resolve('CARRIER') w funkcji
 authenticated_security_definer_function_executable	public.deepl_usage_view	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.discard_document	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.doc_requirement_set	E19 — allowlista RPC; sprawdzenie roli w funkcji

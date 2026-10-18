@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
-  status: 83, // A1: okno 03:00, L17, strażnik A5 (cancel_ctx), cisza poza oknem
+  status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
   money: 135,
   release: 146,
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 27, // +4 C1 zalew dzwonka (D-0300); wcześniej 23
   import: 66,
-  nullguard: 652, // B1 +5: security_flags_list (4 odmowy + kontrola HHL)
+  nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
   i2: 540,
   i30: 10,
   i31: 9,
