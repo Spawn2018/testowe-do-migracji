@@ -89,7 +89,8 @@ export function StatusChangeModal({
   /* „Teraz: … od …” i podpowiedź z GPS — z dziennika zdarzeń transportu (bez zapytań) */
   const events = useMemo(() => allEvents.filter((e) => e.loadId === loadId), [allEvents, loadId]);
   const axis = useMemo(() => (load ? buildStatusAxis(load, events) : null), [load, events]);
-  const since = axis?.currentSince ?? null;
+  /* P11 pkt 7 (e25): „Teraz: Na placu od …” — bez zdarzenia statusu ta sama chwila co na mapie w Przeglądzie (`drawerMapNote`) */
+  const since = axis?.currentSince ?? (axis?.current === 'APPROACHING_SITE' ? load?.etaDetail?.waitSince ?? null : null);
   const hint = useMemo(() => gpsHint(status, events, geofences, since), [status, events, geofences, since]);
   /* wyglad/P4-c (L6, L9, L29): „Gotowy” tylko przy komplecie — przycisk zablokowany, obok zdanie, czego brakuje */
   const gaps = useMemo(

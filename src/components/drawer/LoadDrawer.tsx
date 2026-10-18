@@ -229,8 +229,11 @@ export function LoadDrawer() {
                 /* E41, E32: „SG-15 brak nr HHL” — brak numeru na czerwono */
                 const label = transportLabel(load, role, 'panel');
                 const m = / (brak nr (?:HHL|SCX))$/.exec(label);
-                return m
-                  ? <span className="wb-code" data-content>{label.slice(0, m.index)} <span className="wb-miss">{m[1]}</span></span>
+                if (m) return <span className="wb-code" data-content>{label.slice(0, m.index)} <span className="wb-miss">{m[1]}</span></span>;
+                /* P11 pkt 7 (e41): „SG-32 · HHL/2026/1304” — kropka w kolorze akcentu, numer mniejszy i szaroniebieski */
+                const dot = label.indexOf(' · ');
+                return dot > 0
+                  ? <span className="wb-code" data-content>{label.slice(0, dot)}<span className="wb-dot"> · </span><span className="wb-no">{label.slice(dot + 3)}</span></span>
                   : <span className="wb-code" data-content>{label}</span>;
               })()}
               <StatusPill status={load.status} stage={load.stage} />
@@ -259,7 +262,6 @@ export function LoadDrawer() {
               </span>
             </div>
           ) : null}
-          <div className="perf" />
         </div>
 
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}

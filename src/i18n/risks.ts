@@ -48,7 +48,7 @@ const pl: Dict = {
   rk_res_escort: '{code}: brak pojazdów pilotujących wymaganych zezwoleniem',
   rk_res_escort_text: 'Pojazdy pilotujące wymagane zezwoleniem mają być awizowane {h} h przed załadunkiem (III-4).',
   rk_res_escort_next: 'Awizuj pojazdy pilotujące w szufladzie transportu',
-  rk_order_no_carrier: '{code}: brak numeru zlecenia przewoźnika',
+  rk_order_no_carrier: '{code}: brak numeru zlecenia SCX',
   rk_order_no_carrier_text: 'Numer zlecenia przewoźnika jest obowiązkowy przed załadunkiem (W12).',
   rk_order_no_carrier_next: 'Wpisz numer zlecenia przewoźnika w szufladzie transportu',
   rk_usage_warn: 'Limit planu darmowego: {metric} {pct:1}% — przekroczone 70%',

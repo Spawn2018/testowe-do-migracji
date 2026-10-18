@@ -291,8 +291,9 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       <div className="pp" data-pp-phone>
         {noPrice}
         <div className="fin-cards">
-          {showCost ? <article className="fin-card pp-sum" data-pp-total="cost"><b>{ft(locale, 'p5_pr_col_cost')}</b><b>{amt(pr.costTotal, 'cost')} {cur}</b></article> : null}
-          {showRev ? <article className="fin-card pp-sum" data-pp-total="rev"><b>{ft(locale, 'p5_pr_col_rev')}</b><b>{amt(pr.revTotal, 'rev')} {cur}</b></article> : null}
+          {/* P11 pkt 7 (e33): KSH i SCX — „Twoja cena” / „Twoja stawka”, jak na komputerze; HHL — obie strony */}
+          {showCost ? <article className="fin-card pp-sum" data-pp-total="cost"><b>{ft(locale, both ? 'p5_pr_col_cost' : 'p5_pr_h_SCX')}</b><b>{amt(pr.costTotal, 'cost')} {cur}</b></article> : null}
+          {showRev ? <article className="fin-card pp-sum" data-pp-total="rev"><b>{ft(locale, both ? 'p5_pr_col_rev' : 'p5_pr_h_KSH')}</b><b>{amt(pr.revTotal, 'rev')} {cur}</b></article> : null}
           {both ? (
             <article className="fin-card pp-sum" data-pp-margin><b>{ft(locale, 'p5_pr_margin')}</b><b className={below ? 'neg' : undefined}>{n2(pln && midCost && midRev ? pr.revTotal * midRev - pr.costTotal * midCost : margin)} {cur} · {mPct != null ? `${formatPlNumber(mPct, 2)} %` : '—'}</b></article>
           ) : null}
