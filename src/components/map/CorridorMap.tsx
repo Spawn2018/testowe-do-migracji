@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { activeDriver } from '../../lib/activeDriver';
 import L from 'leaflet';
 
@@ -822,7 +822,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       {drawerNote ? (
         <div
           className="note po-mapnote"
-          style={attrH ? { bottom: attrH + 6 } : undefined}
+          style={attrH ? ({ ['--note-bottom' as string]: `${attrH + 6}px` } as CSSProperties) : undefined}
           data-map-bottom
           data-drawer-note={drawerNote.kind}
           data-empty={drawerNote.kind === 'site' ? undefined : 'vehicle-positions'}

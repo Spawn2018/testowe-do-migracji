@@ -21,6 +21,9 @@ import { loadFxMid } from '../../lib/money/loadPln';
 import { ft, ftp } from '../../i18n/p5';
 import { fc, fcp } from '../../i18n/p5c';
 import '../finance/finance.css';
+
+/* F7 #303 D2: zdanie na początku karty opłaty — wielką literą (teksty „ostateczna …” stoją też w środku zdań) */
+const capFirst = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import './panel.css';
 
 /** F7 (17.10): kwota nie łamie się w środku liczby (spacja tysięcy → niełamliwa). */
@@ -243,7 +246,7 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
       </dl>
       <p className="pp-fuel-note">
         {fuelRow.state === 'PROGNOZA' ? (
-          <span data-pp-final={fuelRow.finalFrom ?? ''}>{fuelRow.finalFrom ? fcp(locale, 'p5c_fuel_final_from', { date: dm(fuelRow.finalFrom) }) : fc(locale, 'p5c_fuel_until')}. </span>
+          <span data-pp-final={fuelRow.finalFrom ?? ''}>{capFirst(fuelRow.finalFrom ? fcp(locale, 'p5c_fuel_final_from', { date: dm(fuelRow.finalFrom) }) : fc(locale, 'p5c_fuel_until'))}. </span>
         ) : null}
         {ft(locale, 'p5_pr_fuel_note')}{' '}
         <button type="button" className="linkbtn pp-link" onClick={() => useTowerStore.getState().setView('fin')}>▸ {ft(locale, 'p5_pr_fuel_link')}</button>

@@ -51,7 +51,7 @@ const pl = {
   p8c_does_SITE_exit_soon: 'Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu — {soon}.',
   p8c_does_LOADING_exit_a2: 'Wyjazd po postoju co najmniej 5\u00a0min: „Droga PL” (bez czekania na potwierdzenie załadunku).',
   p8c_does_SITE: 'Wjazd: status „Na placu” i SMS „wjazd” do odbiorców Boden.|Wyjazd po co najmniej 10\u00a0min: „Dostarczone” i koniec śledzenia.|Postój ponad 4\u00a0h jest liczony do dopłaty. Powiadomienia działają według Opcji › „Kto co dostaje”.',
-  p8c_does_other: 'Ten rodzaj strefy niczego nie uruchamia. Wyłącz strefę (E34 „Porządek”).',
+  p8c_does_other: 'Ten rodzaj strefy niczego nie uruchamia. Wyłącz strefę.',
   p8c_hist: 'Historia zmian',
   p8c_hist_none: 'Bez zmian od utworzenia.',
   p8c_hist_note: 'Kliknięcie wpisu pokazuje poprzedni kształt na mapie (szare koło).',

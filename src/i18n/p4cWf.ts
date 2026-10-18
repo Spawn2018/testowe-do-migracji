@@ -19,10 +19,10 @@ const PL: Record<string, string> = {
   p4c_wf_r_zones: 'Status ze stref',
   p4c_wf_r_zones_d: 'wjazd i wyjazd: Śrem, porty, plac · wyjazd z placu → Dostarczone',
   p4c_wf_r_cases: 'Sprawy z terminem',
-  p4c_wf_r_cases_d: 'awizacja 48/12 h, dokumenty 24 h, numery zleceń, daty KSH ≤ 5 dni, postój ponad czas wolny',
+  p4c_wf_r_cases_d: 'awizacja 48/12\u00a0h, dokumenty 24\u00a0h, numery zleceń, daty KSH ≤ 5\u00a0dni, postój ponad czas wolny',
   /* wyglad/audyt-E (E-10; E49 16.10, 02:08): wbudowane automaty wiatru, śliskości i objazdu */
   p4c_wf_r_gps: 'Cisza GPS, ETA, prom, wiatr',
-  p4c_wf_r_gps_d: 'brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany, wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój), śliskość do 25 km od auta, sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze',
+  p4c_wf_r_gps_d: 'brak pozycji 30\u00a0min w ruchu / 3\u00a0h na postoju, opóźnienie po wyjeździe, rejs odwołany, wiatr w ETA (od 20\u00a0m/s wolniej, od 25\u00a0m/s postój), śliskość do 25\u00a0km od auta, sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze',
   p4c_wf_r_notify: 'Powiadomienia i e-maile',
   p4c_wf_r_notify_d: 'kto co dostaje: zdarzenie × rola × kanał, treści z szablonów',
   p4c_wf_r_texts: 'SMS do Śremu i Boden',

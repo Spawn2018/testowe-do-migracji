@@ -92,9 +92,9 @@ const SCX_STEPS: HelpStep[] = [
   { place: 'Panel transportu › Status i Czat', target: 'panel', text: 'Status zmieniasz ręcznie, tylko do przodu, z datą. W Czacie wybierasz „HHL, SCX, KSH” albo „tylko HHL i SCX”.' },
   { place: 'Mapa', target: 'map', text: 'Śledzenie z linku śledzenia: od 03:00 w dniu załadunku do „Dostarczone”. Auta na promie i w tym samym miejscu — jeden znacznik z liczbą.' },
   { place: 'Dokumenty', target: 'docs', text: 'Zezwolenie „Firma” wpisujesz raz (kraj, numer, ważność, limity, rodzaje ładunku) i podpina się samo do transportów. Zezwolenie „Trasa” wgrywasz przy transporcie. Twoją polisę OCP wgrywasz raz; po zatwierdzeniu przez HHL podpina się sama do dokumentów każdego transportu. Wgrywasz zawsze z wyborem transportu (albo „cała firma”) i rodzaju.' },
-  { place: 'Dokumenty › CMR z podpisem odbiorcy', target: 'docs', text: 'Wgrywasz po „Dostarczone”, w ciągu 48 h. Transport przechodzi wtedy do „Gotowe do fakturowania”.' },
+  { place: 'Dokumenty › CMR z podpisem odbiorcy', target: 'docs', text: 'Wgrywasz po „Dostarczone”, do 24\u00a0h. Transport przechodzi wtedy do „Gotowe do fakturowania”.' },
   { place: 'Moje stawki', target: 'fin', text: '„Twoja stawka” według etapu rozliczenia. Opłata paliwowa zawsze z tygodniem, w którym obowiązuje. Dopłaty po Twojej stronie (postój, anulowanie) system wylicza i podpowiada. Czy je dodać, decydujesz Ty; dodaną dopłatę akceptuje HHL.' },
-  { place: 'Faktury', target: 'inv', text: 'Wystawiasz fakturę SCX dla HHL za transporty „Gotowe do fakturowania”. Przy fakturze wybierasz faktoring: prowizja 1% netto, wypłata 48 h po akceptacji przez HHL. Termin płatności: 35 dni od wystawienia.' },
+  { place: 'Faktury', target: 'inv', text: 'Wystawiasz fakturę SCX dla HHL za transporty „Gotowe do fakturowania”. Przy fakturze wybierasz faktoring: prowizja 1% netto, wypłata 48\u00a0h po akceptacji przez HHL. Termin płatności: 35\u00a0dni od wystawienia.' },
   { place: 'Menu konta', target: 'konto', text: KONTO_ALL },
 ];
 

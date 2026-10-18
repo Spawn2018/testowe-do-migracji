@@ -37,7 +37,8 @@ export const DEFAULT_DOC_REQUIREMENTS: DocRequirement[] = [
  * Widok stosuje to wszędzie (Harmonogram, Dokumenty, panel), także gdy baza ma jeszcze stare wymaganie „2 h po
  * załadunku” (poprawka bazy: D-20261018-1740-01).
  */
-const CMR_FROM: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED']);
+/* F7 #303 B1: „Rozładowany” (UNLOADING) aplikacja pokazuje jako „Dostarczone” (E25, audyt-B B-03) — liczy się tak samo */
+const CMR_FROM: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['UNLOADING', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED']);
 export const cmrCounts = (status: LoadStatus | null | undefined): boolean => !!status && CMR_FROM.has(status);
 export function cmrAfterDelivery<T extends { loadId: string; category: DocCategory }>(rows: readonly T[], statusOf: (loadId: string) => LoadStatus | null | undefined): T[] {
   return rows.filter((r) => r.category !== 'CMR' || cmrCounts(statusOf(r.loadId)));

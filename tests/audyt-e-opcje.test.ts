@@ -192,7 +192,8 @@ describe('E-07 … E-15: Zezwolenia, Historia, Stan systemu, Automatyzacje, Stre
     expect(src).toMatch(/Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana/);
   });
   it('E-10: „Działa samo” — wiatr w ETA 20 / 25 m/s, śliskość do 25 km, sprawa SCX „Objazd czy postój?”', async () => {
-    const src = read('src/i18n/p4cWf.ts');
+    /* F7 #303 D1: liczba i jednostka na twardej spacji — w źródle `\u00a0` */
+    const src = read('src/i18n/p4cWf.ts').replace(/\\u00a0/g, ' ');
     expect(src).toMatch(/wiatr w ETA \(od 20 m\/s wolniej, od 25 m\/s postój\), śliskość do 25 km od auta, sprawa SCX „Objazd czy postój\?”/);
   });
   it('E-11: Strefy — bufory odsyłają do zdarzeń „Kto co dostaje”, bez „(Automatyzacje)”', () => {

@@ -35,7 +35,7 @@ describe('teksty o automatach (serverRuleOn)', () => {
     const { helpVersion } = await import('../src/lib/helpContent');
     expect(helpVersion('HHL_ADMIN').steps.map((s) => s.text).join(' ')).not.toContain('włączamy wkrótce');
     const { wt } = await import('../src/i18n/p4cWf');
-    expect(wt('pl', 'p4c_wf_r_gps_d')).toContain('wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój)');
+    expect(wt('pl', 'p4c_wf_r_gps_d').replace(/\u00a0/g, ' ')).toContain('wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój)');
     expect(wt('pl', 'p4c_wf_r_gps_d')).not.toContain('wkrótce');
     const { p9m } = await import('../src/i18n/p9c');
     expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');

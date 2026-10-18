@@ -671,6 +671,26 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await expect(page.locator('aside.drawer [data-drawer-note="site"] .po-mapnote-l').first()).toHaveText('Na placu od 23.09.2026, 15:10');
     await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
   });
+
+  /* F7 #303 P1: telefon — mapa Przeglądu ma 150 px; dopisek nie zasłania pojazdu ani „+ / −” */
+  test('telefon 390: na placu — dopisek nie zasłania pojazdu i przycisków „+ / −”', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL');
+    await openPanel(page, 'T-12');
+    await expect(page.locator('aside.drawer [data-drawer-note="site"]')).toBeVisible();
+    const r = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
+      const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
+      const over = (b: DOMRect) => Math.min(n.right, b.right) - Math.max(n.left, b.left) > 1 && Math.min(n.bottom, b.bottom) - Math.max(n.top, b.top) > 1;
+      const mk = [...root.querySelectorAll('.wt-mk')].map((x) => x.getBoundingClientRect()).filter((x) => x.width > 0);
+      const zoom = [...root.querySelectorAll('.leaflet-control-zoom a')].map((x) => x.getBoundingClientRect());
+      return { markers: mk.length, mkHidden: mk.filter(over).length, zoom: zoom.length, zoomHidden: zoom.filter(over).length };
+    });
+    expect(r.markers, 'pojazd na mapie').toBeGreaterThan(0);
+    expect(r.mkHidden, 'pojazd pod dopiskiem').toBe(0);
+    expect(r.zoom).toBe(2);
+    expect(r.zoomHidden, '„+ / −” pod dopiskiem').toBe(0);
+  });
 });
 
 /* wyglad/P10b-b — E37 pkt 3 (Pomoc) i D-20261009-0015-01: „?” = Pomoc z zakładkami Jak pracuję, Co nowego, Kontakt,

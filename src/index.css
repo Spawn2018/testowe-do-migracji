@@ -1882,10 +1882,17 @@ img,video{max-width:100%;height:auto}
 .mapsheet .mapgrp-row{min-height:48px;font-size:15px}
 .mapsheet .mapgrp-row b{font-size:16px}
 /* wyglad/P9-f (E32 pkt 3): dopisek na mapie Przeglądu — powód braku pozycji albo „Na placu od …” */
-.note.po-mapnote{position:absolute;left:12px;right:12px;bottom:8px;z-index:500;max-width:360px;background:var(--surface);color:var(--ink);padding:6px 8px;font-size:13px}
+.note.po-mapnote{position:absolute;left:12px;right:12px;bottom:var(--note-bottom,8px);z-index:500;max-width:360px;background:var(--surface);color:var(--ink);padding:6px 8px;font-size:13px}
 /* P11 (e1, e32): dopisek w liniach jak na makiecie; brak linku śledzenia na czerwono */
 .po-mapnote-l{display:block}
 .po-mapnote-l.is-alert{color:var(--red)}
+/* F7 #303 P1: na telefonie mapa Przeglądu ma 150 px — dopisek u góry, w jednym ciągu („Na placu od … · ostatnia pozycja …
+   · strefa …”), mniejszy i z miejscem na „+ / −” po prawej, żeby pojazd w środku mapy i podpis podkładu zostały widoczne */
+@media (max-width:600px){
+  .note.po-mapnote{top:6px;bottom:auto;left:6px;right:60px;padding:3px 6px;font-size:12px;line-height:1.35}
+  .po-mapnote-l{display:inline}
+  .po-mapnote-l+.po-mapnote-l::before{content:" · ";color:var(--ink-3)}
+}
 .map-cards{margin:8px 10px}
 .map-card{width:100%}
 .map-cards-empty{padding:10px;font-size:13px}

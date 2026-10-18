@@ -31,7 +31,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 | e27-after | panel przed, w i po oknie śledzenia; Mapa | 1 W | zakładki panelu na telefonie bez ucinania (partia 1) |
 | e15-after, e49-eta | panel › blok ETA, 7 stanów | 2 W | etap „Załadunek” jako „Przed wyjazdem ze Śremu”, ETA Boden na promie (partia 3) |
 | e49-objazd-scx | Ryzyka › objazd czy postój | zgodny; 1 D | — |
-| e1-drawer-new-z11, e32-after | panel › Przegląd, 5 kont, 1440 / 390 | 5 W | tytuły „Nr zlecenia HHL / SCX” (partia 1) · ramka stanu mapy nie zasłania podpisu mapy i ma drugą linię, numer zlecenia jako tekst z „Edytuj”, linia „Plan” na telefonie (partia 3) |
+| e1-drawer-new-z11, e32-after | panel › Przegląd, 5 kont, 1440 / 390 | 5 W | tytuły spraw „Brak numeru zlecenia HHL / SCX” (partia 1; makieta pisze „Nr zlecenia …” — u nas pełne zdanie o braku, jak w „Do zrobienia”) · ramka stanu mapy nie zasłania podpisu mapy i ma drugą linię, numer zlecenia jako tekst z „Edytuj”, linia „Plan” na telefonie (partia 3) |
 | e17-after, e25-after, e26-after | Status, Historia, Czat; okno „Zmień status” | 1 W | „Teraz: Na placu od …” (partia 1) |
 | e33-after, e3-drawer | panel › Ceny, 5 kont | 2 W | podpisy „Twoja cena” / „Twoja stawka” na telefonie (partia 1) · „+ Dopłata” u SCX (partia 3, sprawdzenie uprawnień widoku) |
 | e41-after | nagłówek panelu i okien | 2 W | kod duży, kropka w kolorze akcentu, numer mniejszy; bez kreskowanej linii (partia 1) |
@@ -53,11 +53,11 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 | e9-after | menu i Kokpit, 5 kont | 3 W | liczba Faktur w „Więcej” (partia 1) · Operacje bez Automatyzacji w demo (partia 2) |
 | e42-after, e43-after | SMS przy miejscach, Treści wiadomości | 3 W | pola A–D w tokenach, bez kodów etapów, podgląd e-maili logowania bez transportu (partia 2) |
 | e23-after, e18-after, e19-after, e46-after | Stan systemu, Historia zmian, Bezpieczeństwo, Wydajność | 4 W (niska waga) | Operacje bez podpowiedzi 2FA, odnośnik progów źródeł, Historia i Wydajność na telefonie (partia 2) |
-| e5-desk, e5-phone, e13-phone-fix | dzwonek, 360 / 390 / 430 | 3 W | Esc i „✕”, link „Ryzyka” w linii tekstu (partia 2) · „☎ Dyspozytor SCX” przy decyzji — L: telefonu firmy decydującej nie ma w danych dzwonka |
+| e5-desk, e5-phone, e13-phone-fix | dzwonek, 360 / 390 / 430 | 3 W | Esc i „✕”, link „Ryzyka” w linii tekstu (partia 2) · „☎ Dyspozytor SCX” przy decyzji — L: telefonu firmy decydującej nie ma w danych dzwonka (do Cursora z P10b, do 27.10) |
 | e37-after | pasek górny, menu konta, Pomoc | zgodny | — |
 | e8-after | wszystkie strony, telefon 390 | 2 W | wykres postępu ≥ 12 px, paczka tygodnia pod „Wgraj dokument” (partia 2) |
 | e20-after | Harmonogram, Faktury, Finanse, 1280–1920 | 1 W | nagłówek „Załadunek → dostawa” przy 1280 (partia 2) |
-| e21-after | teksty wszystkich ekranów | 2 W | procent bez odstępu („4%”) w tekstach, Opcjach i panelu (partia 4); reguły strażnika dla procentu i kodów etapów — po scaleniu #301 · kwoty EUR bez waluty w Fakturach = N (obraz E4: waluta umowy bez kodu) |
+| e21-after | teksty wszystkich ekranów | 2 W | procent bez odstępu („4%”) w tekstach, Opcjach i panelu (partia 4); reguły strażnika dla procentu i kodów etapów — po scaleniu #301, najpóźniej 21.10 · kwoty EUR bez waluty w Fakturach = N (obraz E4: waluta umowy bez kodu) |
 | e22-after | przeładowanie, nowa wersja | 1 W | pogrubiony nagłówek komunikatu (partia 2) |
 | e10-after | kontrast | 1 W | Kto co dostaje — zaznaczony wiersz (#301) |
 
@@ -80,7 +80,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
   - komunikat po aktualizacji.
 - **Partia 3:**
   - blok ETA (załadunek, prom);
-  - Mapa (mapa na ekranie, linie kafelków, zapis opóźnienia);
+  - Mapa (mapa na ekranie, zapis opóźnienia); białych linii między kafelkami na buildzie gałęzi nie powtórzono — próbna poprawka kafelków wycofana, bez zmian;
   - Przegląd (ramka stanu mapy, numer zlecenia, linia „Plan”);
   - panel › Ceny (karta opłaty paliwowej, „Dostarczone”, „+ Dopłata” u SCX).
 - **Partia 4:**
@@ -100,7 +100,8 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
   - wzorce `visual` Kokpitu HHL (jasny, ciemny) — kafelek „Marża (prognoza)” z danymi demo: 14,5 % → 17,6 % (bez ukrytych 303 EUR w koszcie).
 - **Partia 6 — CMR tylko po rozładunku (decyzja właściciela 18.10, 17:28; wcześniej 08.10 B):**
   - wszędzie „CMR z podpisem odbiorcy”; teksty „CMR z załadunku” i „do 2 h po załadunku” usunięte;
-  - Harmonogram, Dokumenty i panel pomijają stan CMR transportów przed „Dostarczone” (`cmrAfterDelivery`), w panelu „po rozładunku”;
+  - Harmonogram, Dokumenty i panel pomijają stan CMR transportów przed „Dostarczone” (`cmrAfterDelivery`), w panelu „po rozładunku”; „Rozładowany” (UNLOADING) liczy się jak „Dostarczone”, tak jak w Kokpicie i kreatorze faktury (F7 #303 B1: pierwsza wersja ukrywała przy nich brak CMR);
+  - F7 #303: na telefonie dopisek na mapie Przeglądu w jednym ciągu (pojazd i „+ / −” widoczne), kody etapów usunięte z tekstów zmienionych plików („szablon E43”, „zasad E42”, „E34”, „W12”, „III-4”, „E5-2”), twarde spacje w liczbach z jednostką w tych plikach, pomoc SCX: CMR „do 24 h” po „Dostarczone”;
   - wartość startowa aplikacji: CMR po rozładunku, 24 h;
   - na produkcji wymaganie ma jeszcze „2 h po załadunku” (22 transporty przed dostawą z „po terminie”) — poprawka bazy: D-20261018-1740-01; filtr widoku działa już teraz.
 
@@ -124,9 +125,9 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 - **„+ / −” na mapie Kokpitu** — N: Kokpit ma mapę podglądu (przybliżanie na stronie Mapa), reguła z 07.10.
 
 ## Czeka na bazę (L) — dopisek do wykonawcy
-- **CMR tylko po rozładunku** (decyzja właściciela 18.10, 17:28) — wymaganie CMR w produkcji (`doc_requirements`) ma kotwicę `AT_LOAD` + 2 h; poprawka wymagania, zabezpieczenia i `doc_requirements_status()`: D-20261018-1740-01. Widok (partia 6) pomija CMR przed „Dostarczone” już teraz.
-- **Eskalacje decyzji** — fałszywe sprawy „SEFS: brak źródła indeksu”, podwójne wpisy, numery wewnętrzne w tytułach: D-20261018-1610-01.
-- **Ślad przejazdu w Boden i linie promów** — z HERE (E45, P9).
-- **Linia „Plik KSH (SharePoint): zsynchronizowano …”, znacznik „Zmiana numeracji”, waga elementu** — W13 i import.
-- **Wpisy SMS w Historii transportu** (P8) i sprawa „Źródło danych nie działa” w dzwonku Administratora (E23, P10b).
-- **Paski „Podgląd…” i „Działasz jako…”, logowanie, zaproszenie** — sprawdzić na TEST, w tym czy „Nie pamiętam hasła” nie zdradza, że konto istnieje (`authErrorPl`).
+- **CMR tylko po rozładunku** (decyzja właściciela 18.10, 17:28) — wymaganie CMR w produkcji (`doc_requirements`) ma kotwicę `AT_LOAD` + 2 h; poprawka wymagania, zabezpieczenia i `doc_requirements_status()`: D-20261018-1740-01 — **do 20.10** (przed A3). Widok (partia 6) pomija CMR przed „Dostarczone” już teraz; do poprawki bazy Dokumenty › Terminy pokazują godziny ze starego wymagania („do 2 h”), a po „Dostarczone” termin z bazy jest jeszcze liczony od załadunku.
+- **Eskalacje decyzji** — fałszywe sprawy „SEFS: brak źródła indeksu”, podwójne wpisy, numery wewnętrzne w tytułach: D-20261018-1610-01 — **do 20.10**.
+- **Ślad przejazdu w Boden i linie promów** — z HERE (E45, P9) — **do 26.10**.
+- **Linia „Plik KSH (SharePoint): zsynchronizowano …”, znacznik „Zmiana numeracji”, waga elementu** — W13 i import — **do 26.10**.
+- **Wpisy SMS w Historii transportu** (P8) i sprawa „Źródło danych nie działa” w dzwonku Administratora (E23, P10b) — **do 27.10**.
+- **Paski „Podgląd…” i „Działasz jako…”, logowanie, zaproszenie** — sprawdzić na TEST, w tym czy „Nie pamiętam hasła” nie zdradza, że konto istnieje (`authErrorPl`) — **27.10**, pełna brama TEST (P11 pkt 5).

@@ -3,7 +3,7 @@
  * odbiorcy — w każdym miejscu programu. Przed „Dostarczone” CMR nie jest brakiem ani „po terminie”, także gdy baza
  * ma jeszcze stare wymaganie „2 h po załadunku” (poprawka bazy: D-20261018-1740-01).
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { cmrAfterDelivery, cmrCounts, DEFAULT_DOC_REQUIREMENTS, type DocStatusRow } from '../src/lib/docRequirements';
 import type { LoadStatus } from '../src/types';
@@ -21,15 +21,16 @@ describe('CMR tylko po rozładunku (decyzja 18.10, 17:28)', () => {
       { loadId: id, category: 'PERMIT_PL', dueAt: '2026-10-01T04:00:00Z', state: 'OVERDUE' },
     ]);
     const out = cmrAfterDelivery(rows, (id) => st[id]);
-    expect(out.filter((r) => r.category === 'CMR').map((r) => r.loadId).sort()).toEqual(['c', 'd', 'e']);
+    expect(out.filter((r) => r.category === 'CMR').map((r) => r.loadId).sort()).toEqual(['c', 'd', 'e', 'f']);
     expect(out.filter((r) => r.category === 'PERMIT_PL')).toHaveLength(6);
-    expect([cmrCounts('LOADING'), cmrCounts('UNLOADING'), cmrCounts('DELIVERED'), cmrCounts(undefined)]).toEqual([false, false, true, false]);
+    expect([cmrCounts('LOADING'), cmrCounts('APPROACHING_SITE'), cmrCounts('UNLOADING'), cmrCounts('DELIVERED'), cmrCounts(undefined)]).toEqual([false, false, true, true, false]);
   });
 
   it('w tekstach nie ma „CMR z załadunku” ani CMR „po załadunku”', () => {
-    for (const f of ['src/i18n/p5.ts', 'src/i18n/p7.ts']) {
+    /* F7 #303 P4: wszystkie pliki tekstów, nie tylko p5 i p7 */
+    for (const f of readdirSync('src/i18n').filter((x) => x.endsWith('.ts')).map((x) => `src/i18n/${x}`)) {
       const src = readFileSync(f, 'utf8');
-      expect(src, f).not.toMatch(/CMR z załadunku/);
+      expect(src, f).not.toMatch(/CMR z załadunku|CMR przy załadunku/i);
       expect(src, f).not.toMatch(/p7_doc_cmr_after:|p5_doc_r_CMR_LOAD|p5_doc_n_CMR_LOAD/);
     }
   });
