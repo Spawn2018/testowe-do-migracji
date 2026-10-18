@@ -33,8 +33,40 @@ async function blockTiles(page: Page) {
 }
 
 /** Czyste dane demo, rola, konto i motyw; zwraca budowanie adresu z tym samym zegarem i kontem. */
+/**
+ * F7 #301 r3 B1: treść, która przychodzi później niż odczyty strażnika (np. po 2 s), też jest sprawdzana — obserwator
+ * zmian w DOM zbiera widoczny tekst każdego dodanego albo zmienionego węzła od wejścia na ekran (`takeSeen`).
+ */
+const SEEN_INIT = `(() => {
+  const w = window; w.__wtSeen = new Set();
+  const vis = (el) => !!el && el.isConnected && !el.closest('script,style,noscript,template,.sr-only,.sronly,.leaflet-container')
+    && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  const add = (el) => { if (vis(el)) { const t = (el.innerText || '').trim(); if (t) w.__wtSeen.add(t.slice(0, 4000)); } };
+  const start = () => new MutationObserver((ms) => {
+    for (const m of ms) {
+      if (m.type === 'characterData') add(m.target.parentElement);
+      else for (const n of m.addedNodes) add(n.nodeType === 1 ? n : n.parentElement);
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  if (document.documentElement) start(); else document.addEventListener('DOMContentLoaded', start);
+})()`
+const takeSeen = (page: Page): Promise<string[]> => page.evaluate(() => {
+  const w = window as unknown as { __wtSeen?: Set<string> }
+  const out = [...(w.__wtSeen ?? [])]
+  w.__wtSeen?.clear()
+  return out
+})
+/** Najkrótszy pobyt na ekranie przed ostatnim odczytem (od `go`, `openOpt`, `openTab`): strony 3 s, panel i Opcje 1,6 s. */
+const entered = new WeakMap<Page, number>()
+const enter = async (page: Page) => { entered.set(page, Date.now()); await takeSeen(page).catch(() => []) }
+async function dwell(page: Page, ms: number) {
+  const left = (entered.get(page) ?? 0) + ms - Date.now()
+  if (left > 0) await page.waitForTimeout(left)
+}
+
 async function boot(page: Page, o: { role?: Role; clock?: string; konto?: string; width?: number; height?: number; theme?: 'light' | 'dark' } = {}) {
   const { role = 'HHL', clock = NOW, konto = '', width = 1440, height = 900 } = o
+  await page.addInitScript(SEEN_INIT)
   await blockTiles(page)
   await page.setViewportSize({ width, height })
   const at = (path: string) => `/#${path}?now=${clock}${konto}`
@@ -81,6 +113,7 @@ async function settle(page: Page, sel = 'main', quietMs = 400) {
 /** Strona: widok z `data-page` musi się wczytać (leniwe części aplikacji), potem cisza w `main`. Kursor poza treścią (F7 D10). */
 async function go(page: Page, url: string, sel = 'main') {
   await page.mouse.move(0, 0)
+  await enter(page)
   await page.goto(url)
   await page.waitForSelector('main [data-page]', { timeout: 15_000 })
   await settle(page, sel)
@@ -88,6 +121,7 @@ async function go(page: Page, url: string, sel = 'main') {
 
 /** Otwiera transport w panelu (musi się otworzyć) — zawsze od zakładki Przegląd (panel pamięta ostatnią zakładkę). */
 async function openLoad(page: Page, url: string) {
+  await enter(page)
   await page.goto(url)
   await page.waitForSelector('aside.drawer #dtab-overview', { timeout: 15_000 })
   await page.evaluate(() => (document.getElementById('dtab-overview') as HTMLButtonElement).click())
@@ -102,6 +136,7 @@ async function openLoad(page: Page, url: string) {
 async function openTab(page: Page, id: (typeof TABS)[number]) {
   const btn = page.locator(`#dtab-${id}`)
   await expect(btn, `zakładka ${id}`).toHaveCount(1)
+  await enter(page)
   await page.evaluate((x) => (document.getElementById(x) as HTMLButtonElement).click(), `dtab-${id}`)
   await expect(btn).toHaveAttribute('aria-selected', 'true')
   await expect.poll(() => page.evaluate(() => (document.querySelector('aside.drawer #dpanel') as HTMLElement | null)?.innerText.trim().length ?? 0), { timeout: 15_000, message: `treść zakładki ${id}` }).toBeGreaterThan(0)
@@ -149,6 +184,7 @@ async function optNavs(page: Page): Promise<string[]> {
 }
 
 async function openOpt(page: Page, n: string) {
+  await enter(page)
   await page.locator(`[data-opt-nav="${n}"]`).first().click()
   await settle(page)
 }
@@ -173,7 +209,8 @@ const layoutHits = (rootSel: string) => {
       const cs = getComputedStyle(sc)
       if (!/auto|scroll/.test(cs.overflowX) || sc.closest('.leaflet-container')) continue
       if (sc.scrollWidth <= sc.clientWidth + 1 || sc.clientWidth === 0) continue
-      const wide = [...sc.querySelectorAll('table')].some((tb) => tb.getBoundingClientRect().width > sc.clientWidth + 1)
+      /* F7 #301 r3 P1: zwolnione tylko opakowanie tabeli (tabela bezpośrednio w środku), nie każdy obszar z tabelą głębiej */
+      const wide = [...sc.children].some((tb) => tb.tagName === 'TABLE' && tb.getBoundingClientRect().width > sc.clientWidth + 1)
       if (!wide) out.push(`przewijanie w bok ${sc.tagName.toLowerCase()}.${[...sc.classList].join('.')}: ${sc.scrollWidth} > ${sc.clientWidth}`)
     }
     for (const tr of root.querySelectorAll('tr')) {
@@ -301,7 +338,7 @@ const RULES: [string, RegExp][] = [
   ['szwedzki', /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|olycka|körfält|avstängd)(?![\p{L}])/giu],
   ['pusta wartość', /\b(undefined|null|NaN|Invalid Date)\b|\[object Object\]/g],
   /* F7 #301 r2 P3: także po minusie i twardej spacji; 4 cyfry bez groszy przed walutą („4500 PLN”; kwoty mają odstęp tysięcy także przy 4 cyfrach, a „1050 km” — nie musi) */
-  ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)/g],
+  ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)|(?<![\d/.,])\d{5,}(?=[ \u00a0](?:km|kg)\b)/g],
   ['data angielska', /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{4}\b|\bGMT[+-]\d{4}\b/g],
 ]
 /* E21 pkt 7: wyjątki — nazwy plików z rozszerzeniem (wielkość liter dowolna, także z łącznikiem), licencja „CC BY 4.0” */
@@ -343,12 +380,18 @@ function textHits(raw: string, where: string, o: { codesAllowed?: boolean } = {}
 
 const innerText = (page: Page, sel: string) => page.evaluate((s) => (document.querySelector(s) as HTMLElement | null)?.innerText ?? '', sel)
 
-/** Strażnik czyta dwa razy: po dorysowaniu i 0,8 s później — treść dopisana z opóźnieniem też jest sprawdzona (F7 #301 B3). */
-async function scan(page: Page, sel: string, where: string, o: { codesAllowed?: boolean } = {}): Promise<string[]> {
+/**
+ * Strażnik czyta dwa razy: po dorysowaniu i po pobycie na ekranie (strona 3 s, panel i Opcje 1,6 s, najmniej 0,8 s
+ * między odczytami), a do tego cały widoczny tekst dodany w tym czasie gdziekolwiek na stronie (`takeSeen`) — także
+ * komunikat, który pojawił się i zniknął (F7 #301 B3, r3 B1).
+ */
+async function scan(page: Page, sel: string, where: string, o: { codesAllowed?: boolean; dwellMs?: number } = {}): Promise<string[]> {
   const a = await innerText(page, sel)
   await page.waitForTimeout(800)
+  await dwell(page, o.dwellMs ?? 1600)
   const b = await innerText(page, sel)
-  return [...new Set([...textHits(a, where, o), ...textHits(b, where, o)])]
+  const seen = await takeSeen(page)
+  return [...new Set([...textHits(a, where, o), ...textHits(b, where, o), ...seen.flatMap((x) => textHits(x, `${where} (dopisane później)`, o))])]
 }
 
 test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
@@ -363,7 +406,7 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
         const hits: string[] = []
         for (const p of PAGES) {
           await go(page, at(p))
-          hits.push(...await scan(page, 'main', p, { codesAllowed: p === '/opcje/stan-systemu' }))
+          hits.push(...await scan(page, 'main', p, { codesAllowed: p === '/opcje/stan-systemu', dwellMs: 3000 }))
           if (p === '/ryzyka') await eachRiskCard(page, async (i) => { hits.push(...textHits(await innerText(page, '[data-axe-target]'), `/ryzyka › karta ${i + 1}`)) })
           if (p === '/opcje') {
             for (const n of await optNavs(page)) {
@@ -373,6 +416,9 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
           }
         }
         await go(page, at('/kokpit'))
+        /* F7 #301 r3 B1: Kokpit jeszcze raz w całości (późny komunikat o podkładzie), potem dzwonek */
+        hits.push(...await scan(page, 'main', '/kokpit (powrót)', { dwellMs: 3000 }))
+        await enter(page)
         await page.locator('.bell-trigger').first().click()
         await settle(page, '.bell-wrap')
         hits.push(...await scan(page, '.bell-wrap', 'dzwonek'))
@@ -397,7 +443,7 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
       'mnożnik SEK 1.120', 'Realizacja 4.8% · 1726,59 PLN', '22.49 SEK/l', '12.10 PLN', '5c77d4d7: brak awizacji', '5C77D4D7',
       'sail_src_STENA', 'risk.kind.no_awizacja', '1 pojazdów w ruchu', '22 pojazdów', '5 pojazdy', 'kwota 8239,15', 'fala 3.4 m',
       'E4: från Backen till Gärde', 'Nieznany kod źródła drogowego', 'undefined',
-      '-8239,15 PLN', 'razem\u00a08239,15 PLN', '4500 PLN', 'Mon Oct 12 2026 12:00 GMT+0200',
+      '-8239,15 PLN', 'razem\u00a08239,15 PLN', '4500 PLN', 'Mon Oct 12 2026 12:00 GMT+0200', '12345 km', '40000 kg',
     ]
     for (const s of bad) expect(textHits(s, 't').length, s).toBeGreaterThan(0)
     const ok = [
@@ -421,6 +467,8 @@ const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.mi
    mierzymy sami — kolor tekstu (z przezroczystością) na złożonym tle przodków. Pomijamy tylko podkład mapy (obraz)
    oraz pojedyncze znaki i ikony (axe: shortTextContent, nonBmp, pseudoContent, imgNode). */
 async function contrast(page: Page, where: string, out: string[], sel = 'main') {
+  /* F7 #301 r3 B1: strona — dopiero po 3 s od wejścia (późne komunikaty, np. o podkładzie na Kokpicie) */
+  if (sel === 'main') { await dwell(page, 3000); await settle(page) }
   if (!(await page.evaluate(() => 'axe' in window))) await page.addScriptTag({ content: AXE })
   const r = await page.evaluate(async (s) => {
     type AxeNode = { target: string[]; element?: Element; any: { message: string; data?: { messageKey?: string } | null }[] }

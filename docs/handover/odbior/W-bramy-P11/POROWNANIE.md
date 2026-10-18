@@ -18,14 +18,15 @@ Kiedy brama patrzy (F7 r2 B3, D10, D12):
 - przed każdą stroną kursor wraca w róg okna (`mouse.move(0, 0)`), więc nic nie jest przypadkiem najechane;
 - strona, zakładka panelu i rozwinięta karta Ryzyk są sprawdzane dopiero po dorysowaniu: obszar ma tekst, a potem przez 400 ms (karta: 250 ms) nie zmienia się w nim nic — ani węzły, ani tekst (obserwator zmian w DOM); najwyżej 8 s;
 - zakładka panelu wczytuje się osobno, więc brama czeka, aż w niej pojawi się tekst, i dopiero wtedy liczy ciszę;
-- E21 czyta tekst dwa razy, w odstępie 800 ms, i łączy trafienia — łapie też komunikat, który pojawia się później (np. „Nie udało się wczytać podkładu” na Kokpicie po ok. 2,5 s, gdy kafelki są zablokowane).
+- E21 czyta tekst dwa razy: zaraz po dorysowaniu i po pobycie na ekranie (strona 3 s, panel, Opcje i dzwonek 1,6 s); do tego obserwator zmian w DOM zbiera cały widoczny tekst dodany albo zmieniony od wejścia na ekran, także taki, który zdążył zniknąć (F7 r3 B1). Kokpit jest sprawdzany jeszcze raz w całości przed dzwonkiem — późny komunikat „Nie udało się wczytać podkładu” (ok. 2,5 s, gdy kafelki są zablokowane) trafia do strażnika;
+- E10 bada stronę dopiero 3 s po wejściu.
 
 Panel zawsze otwiera się od zakładki Przegląd, a brak zakładki oblewa test (bez cichego pominięcia).
 
 ## Co sprawdzają
 1. **E20 — szerokości komputera.** 3 firmy × zegar 23.09 (12 stron) i 20.11 (Kokpit, Harmonogram, Finanse, Faktury) × 1280 / 1366 / 1440 / 1920. Do tego panel SG-03, SG-32 i T-01, 6 zakładek, przy 1280. Jedno wejście na stronę i 4 zmiany rozmiaru okna. Wymagane 0:
    - treść szersza od `main` albo od panelu (F7 B1 — `main` ucina nadmiar, więc liczy się sam `main` i jego potomkowie), dokument szerszy od okna;
-   - przewijanie w bok w obszarze, który nie jest tabelą (F7 r2 B1 — np. treść zakładki panelu `.dbody` szersza od panelu); tabela szersza od swojego pudełka jest dozwolona tylko tam, gdzie tak zaprojektowano (Harmonogram, układ pliku KSH, E38);
+   - przewijanie w bok w obszarze, który nie jest tabelą (F7 r2 B1 — np. treść zakładki panelu `.dbody` szersza od panelu); zwolnione jest tylko opakowanie, w którym tabela stoi bezpośrednio (F7 r3 P1 — np. Harmonogram w układzie pliku KSH, E38), a nie każdy obszar z tabelą gdzieś w środku;
    - pasek górny: treść wyższa od paska, dziecko paska wyższe niż pasek albo napis w więcej niż jednej linii (F7 B2, r2 D11 — „WATCH TOWER” w dwóch liniach mieści się w 51 px, więc liczone są linie tekstu, nie wysokość);
    - kolumny tabeli na sobie, tekst wylany z komórki, ucięty widoczny tekst;
    - kafelki i panele w siatce lub rzędzie nachodzące na siebie (F7 P1).
@@ -33,7 +34,7 @@ Panel zawsze otwiera się od zakładki Przegląd, a brak zakładki oblewa test (
    Osobno: Harmonogram „Widok skrócony” (8 kolumn) bez przewijania w bok przy 1280 i 1366 (HHL, KSH, SCX; F7 D7 — domyślny układ pliku KSH przewija się w bok z założenia, E38).
 2. **E21 — strażnik tekstów.**
    - Zakres: 5 rodzajów kont × zegar 23.09 i 20.11 × 12 stron, każdy ekran Opcji, dzwonek, Ryzyka z rozwiniętą listą i każdą kartą rozwiniętą po kolei (F7 r2 B4: karty działają jak akordeon, więc „kliknij wszystkie” otwierało 2 z 21). Panel: 13 transportów przy 23.09 i 3 przy 20.11, każdy po 6 zakładek (Operacje HHL bez panelu — ten sam widok co Administrator).
-   - Reguły (F7 P3): kody z podkreśleniem; klucze małymi literami („sail_src_STENA”, „risk.kind.…”); numery wewnętrzne (8 znaków, małe i wielkie litery); daty ISO, także z „T”; sekundy; daty bez zera; data przeglądarki po angielsku („Mon Oct 12 2026 … GMT+0200”); kropka dziesiętna (także „12.10 PLN”); kwota bez odstępu tysięcy („8239,15”, także po minusie i twardej spacji, oraz „4500 PLN” — 4 cyfry przed walutą; „1050 km” przechodzi, bo przy odległości odstęp w liczbie czterocyfrowej nie jest wymagany); szwedzkie słowa; zła odmiana („22 pojazdów”, „5 pojazdy”); puste wartości; „Nieznany kod” poza Stanem systemu.
+   - Reguły (F7 P3): kody z podkreśleniem; klucze małymi literami („sail_src_STENA”, „risk.kind.…”); numery wewnętrzne (8 znaków, małe i wielkie litery); daty ISO, także z „T”; sekundy; daty bez zera; data przeglądarki po angielsku („Mon Oct 12 2026 … GMT+0200”); kropka dziesiętna (także „12.10 PLN”); kwota bez odstępu tysięcy („8239,15”, także po minusie i twardej spacji, oraz „4500 PLN” — 4 cyfry przed walutą; przy km i kg od 5 cyfr: „12345 km”, „40000 kg”; „1050 km” przechodzi, bo w liczbie czterocyfrowej odstęp nie jest wymagany); szwedzkie słowa; zła odmiana („22 pojazdów”, „5 pojazdy”); puste wartości; „Nieznany kod” poza Stanem systemu.
    - Wyjątki (F7 D3, r2 P3): nazwy plików z rozszerzeniem (wielkość liter dowolna, także z łącznikiem), licencja „CC BY 4.0”, adresy e-mail i nazwy domen; kolor „#1a2b3c4d” to nie numer wewnętrzny; odmiana po słowach z dopełniaczem („z”, „dla”, „bez”, „brak”, „brakuje”, „dotyczy”, „w ciągu”, „sprzed” …) nie jest sprawdzana. Kody w Stanie systemu są dozwolone (E21 pkt 3, F7 D6).
    - Osobny test reguł: przykłady z audytu i z F7 muszą zostać złapane, a daty, pliki, licencja, domeny, e-maile i dopełniacz przepuszczone.
 3. **E10 — kontrast (axe-core, `color-contrast`, WCAG AA).**
@@ -41,7 +42,7 @@ Panel zawsze otwiera się od zakładki Przegląd, a brak zakładki oblewa test (
    - Telefon 390: 3 firmy × 2 motywy, strony i panel SG-32 (F7 P4).
    - Operacje HHL i Użytkownik SCX: każdy ekran Opcji w obu motywach.
    - axe wstrzykiwany raz na stronę (F7 P5).
-   - Węzły, których axe nie ocenia („incomplete”: zasłonięte przez przyklejone kolumny, nakryte, poza oknem — sam Harmonogram ma ich ok. 430), brama mierzy sama: kolor tekstu z przezroczystością na złożonym tle przodków, próg 4,5 (duży tekst 3). Pomijane są tylko podkład mapy i pojedyncze znaki lub ikony. Liczby zmierzonych i pominiętych są w adnotacji testu (F7 r2 P6).
+   - Węzły, których axe nie ocenia („incomplete”: zasłonięte przez przyklejone kolumny, nakryte, poza oknem — sam Harmonogram ma ich ok. 430), brama mierzy sama: kolor tekstu z przezroczystością na złożonym tle przodków, próg 4,5 (duży tekst 3). Pomijane są: mapa (podkład i dymki — Leaflet, np. Strefy), pojedyncze znaki i ikony oraz węzły bez nieprzezroczystego tła w drzewie albo z kolorem, którego pomiar nie odczyta (np. podpisy wykresu SVG na Kokpicie). Liczby zmierzonych i pominiętych są w adnotacji testu (F7 r2 P6; F7 r3 sprawdził zgodność z axe wycinkowo). Tło z gradientem dałoby fałszywe trafienie — gradientów w aplikacji nie ma (tokeny).
    - Wymagane 0 węzłów.
 
 Kafelki mapy są blokowane tylko po hostach podkładu (F7 D4).
@@ -79,6 +80,7 @@ Harmonogram, układ pliku KSH (szerokie kolumny), kolumna „Kwota i marża”: 
 ## Wynik lokalnie (build gałęzi, 2 wątki, Chromium 141; CI ma Chromium 153)
 - Runda 2: cały plik 32 testy w 7,5 min; pierwszy przebieg 28 z 32 — znalazł wiersze Harmonogramu (tabela wyżej) i lukę w regule kwot. Po poprawce E21 (11 testów) i E10 ciemny komputer (3): 14 z 14 w 4,0 min.
 - Runda 3: cały plik 32 testy w 13,9 min (2 wątki). Pierwszy przebieg: E21 8 z 10 czerwonych przez nową regułę „4 cyfry przed jednostką” („1050 km do placu”) — reguła zawężona do walut; E10 z pomiarem własnym znalazł 2 nowe miejsca (tabela wyżej: szary opis w najechanym wierszu Mapy, nazwa pliku niezgodnego w Dokumentach na telefonie). Po poprawkach: E21 11 z 11, E10 14 z 14, E20 7 z 7. Pomiar własny objął 6 980 węzłów „incomplete”, pominięte 1 186 (podkład mapy, pojedyncze znaki i ikony).
+- Runda 4 (po F7 r3: późna treść, opakowanie tabeli, km/kg): cały plik 32 z 32 w 22,4 min (2 wątki na zajętej maszynie; w CI 4 wątki). Próba: tekst z kodem dodany na Kokpicie po 2,2 s i usunięty po 0,3 s oraz kod w czacie po 1,3 s — oba złapane.
 - `tsc -b`, `stylelint`, `oxlint` bez uwag.
 - Wersje przeglądarki różnią się (lokalnie 141, w CI 153), więc rozstrzyga wynik w CI — lokalny przebieg jest próbą przed wysłaniem.
 
