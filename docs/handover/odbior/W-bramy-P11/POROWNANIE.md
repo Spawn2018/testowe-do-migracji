@@ -18,7 +18,7 @@ Kiedy brama patrzy (F7 r2 B3, D10, D12):
 - przed każdą stroną kursor wraca w róg okna (`mouse.move(0, 0)`), więc nic nie jest przypadkiem najechane;
 - strona, zakładka panelu i rozwinięta karta Ryzyk są sprawdzane dopiero po dorysowaniu: obszar ma tekst, a potem przez 400 ms (karta: 250 ms) nie zmienia się w nim nic — ani węzły, ani tekst (obserwator zmian w DOM); najwyżej 8 s;
 - zakładka panelu wczytuje się osobno, więc brama czeka, aż w niej pojawi się tekst, i dopiero wtedy liczy ciszę;
-- E21 czyta tekst dwa razy: zaraz po dorysowaniu i po pobycie na ekranie (strona 3 s, panel, Opcje i dzwonek 1,6 s); do tego obserwator zmian w DOM zbiera cały widoczny tekst dodany albo zmieniony od wejścia na ekran, także taki, który zdążył zniknąć (F7 r3 B1). Kokpit jest sprawdzany jeszcze raz w całości przed dzwonkiem — późny komunikat „Nie udało się wczytać podkładu” (ok. 2,5 s, gdy kafelki są zablokowane) trafia do strażnika;
+- E21 czyta tekst dwa razy: zaraz po dorysowaniu i po pobycie na ekranie (strona 3 s, panel, Opcje i dzwonek 1,6 s); do tego obserwator zmian w DOM zbiera cały widoczny tekst dodany albo zmieniony od wejścia na ekran do wyjścia z niego, także taki, który zdążył zniknąć — tekst, który przyszedł już po odczycie, jest sprawdzany przy wyjściu z ekranu z nazwą i wyjątkami tego ekranu, a na końcu testu jeszcze raz (F7 r3 B1, r4 B1). Kokpit jest sprawdzany jeszcze raz w całości przed dzwonkiem — późny komunikat „Nie udało się wczytać podkładu” (ok. 2,5 s, gdy kafelki są zablokowane) trafia do strażnika;
 - E10 bada stronę dopiero 3 s po wejściu.
 
 Panel zawsze otwiera się od zakładki Przegląd, a brak zakładki oblewa test (bez cichego pominięcia).

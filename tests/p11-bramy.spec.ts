@@ -41,7 +41,7 @@ const SEEN_INIT = `(() => {
   const w = window; w.__wtSeen = new Set();
   const vis = (el) => !!el && el.isConnected && !el.closest('script,style,noscript,template,.sr-only,.sronly,.leaflet-container')
     && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
-  const add = (el) => { if (vis(el)) { const t = (el.innerText || '').trim(); if (t) w.__wtSeen.add(t.slice(0, 4000)); } };
+  const add = (el) => { if (vis(el)) { const t = (el.innerText || '').trim(); if (t) w.__wtSeen.add(t); } };
   const start = () => new MutationObserver((ms) => {
     for (const m of ms) {
       if (m.type === 'characterData') add(m.target.parentElement);
@@ -58,7 +58,23 @@ const takeSeen = (page: Page): Promise<string[]> => page.evaluate(() => {
 })
 /** Najkrótszy pobyt na ekranie przed ostatnim odczytem (od `go`, `openOpt`, `openTab`): strony 3 s, panel i Opcje 1,6 s. */
 const entered = new WeakMap<Page, number>()
-const enter = async (page: Page) => { entered.set(page, Date.now()); await takeSeen(page).catch(() => []) }
+/* F7 #301 r4 B1: tekst, który przyszedł po odczycie `scan()`, a przed wyjściem z ekranu, jest sprawdzany przy wyjściu
+   (`enter` następnego ekranu albo `lateHits` na końcu testu) — z nazwą i wyjątkami ostatniego `scan()` */
+const lastScan = new WeakMap<Page, { where: string; o: { codesAllowed?: boolean } }>()
+const lateOut = new WeakMap<Page, string[]>()
+const enter = async (page: Page) => {
+  entered.set(page, Date.now())
+  const seen = await takeSeen(page).catch(() => [] as string[])
+  const ctx = lastScan.get(page)
+  if (ctx && seen.length) lateOut.set(page, [...(lateOut.get(page) ?? []), ...seen.flatMap((x) => textHits(x, `${ctx.where} (po odczycie)`, ctx.o))])
+  lastScan.delete(page)
+}
+async function lateHits(page: Page): Promise<string[]> {
+  await enter(page)
+  const out = lateOut.get(page) ?? []
+  lateOut.delete(page)
+  return out
+}
 async function dwell(page: Page, ms: number) {
   const left = (entered.get(page) ?? 0) + ms - Date.now()
   if (left > 0) await page.waitForTimeout(left)
@@ -391,6 +407,7 @@ async function scan(page: Page, sel: string, where: string, o: { codesAllowed?: 
   await dwell(page, o.dwellMs ?? 1600)
   const b = await innerText(page, sel)
   const seen = await takeSeen(page)
+  lastScan.set(page, { where, o: { codesAllowed: o.codesAllowed } })
   return [...new Set([...textHits(a, where, o), ...textHits(b, where, o), ...seen.flatMap((x) => textHits(x, `${where} (dopisane później)`, o))])]
 }
 
@@ -431,6 +448,7 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
             }
           }
         }
+        hits.push(...await lateHits(page))
         const u = [...new Set(hits)]
         expect(u, u.join('\n')).toEqual([])
       })
