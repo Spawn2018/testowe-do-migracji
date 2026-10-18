@@ -528,7 +528,8 @@ nav button{padding:8px 14px}
 .docrow-name:hover{text-decoration:underline}
 /* P11 pkt 3 runda 3 (E10, pomiar własny): plik niezgodny (np. zezwolenie na inny zestaw) — bursztynowy tekst na bursztynowym
    polu; sam bursztyn na tle strony telefonu miał 2,65 : 1 (jasny motyw) */
-.docrow-name.is-mismatch{color:var(--amber-ink);background:var(--amber-bg);padding:0 4px}
+/* bez dopełnienia: nazwa pliku ma tę samą szerokość co zwykła (etap6, 360 px — „SG-07” nie może się złamać) */
+.docrow-name.is-mismatch{color:var(--amber-ink);background:var(--amber-bg)}
 
 /* ---------- Punkt 6: Opcje + creator automatyzacji ---------- */
 .options-page{padding:0;overflow:visible;min-height:min-content;background:var(--page)}
