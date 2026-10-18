@@ -1,7 +1,9 @@
 -- D-20261018-1215-01 §2.
 -- Decyzja, która schodzi z NEW / ASSIGNED / SNOOZED, zamyka sygnał „Decyzja po terminie”
 -- (dedup decision-overdue:<id>). Transport dostarczony, gotowy do faktury, zafakturowany
--- albo anulowany zamyka alarmy sprzed dostawy i w drodze. Spraw po dostawie (faktura
+-- albo anulowany zamyka alarmy sprzed dostawy i w drodze.
+-- Brak kierowcy zamyka się po prefiksie RES:DRIVER: (przegląd #305). Sam title_key rk_res_driver nie.
+-- Spraw po dostawie (faktura
 -- po terminie, L14, postoje, różnica SEFS) nie ruszamy. Bez powiadomień.
 
 create or replace function public.risk_is_predelivery_alarm(p_dedup text, p_title_key text)
@@ -12,6 +14,7 @@ set search_path = public
 as $$
   select coalesce(p_dedup, '') like 'l3:NO_AWIZACJA:%'
       or coalesce(p_dedup, '') like 'l3:DOC_MISSING:%'
+      or coalesce(p_dedup, '') like 'RES:DRIVER:%'
       or coalesce(p_dedup, '') like 'RES:VEHICLE:%'
       or coalesce(p_dedup, '') like 'RES:ESCORT:%'
       or coalesce(p_dedup, '') like 'ORDERNO:HHL:%'

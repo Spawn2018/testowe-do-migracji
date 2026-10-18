@@ -123,10 +123,13 @@ chk "1215: NEW→RESOLVED zamyka decision-overdue" \
 chk "1215: zamknięcie decyzji → 0 nowych powiadomień" \
   "$(Q "select count(*) - $NDEC from notifications")" 0
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
-  values ('$P','$L1','DOC_MISSING','HIGH','Brak awizacji','rk_res_driver','l3:NO_AWIZACJA:$L1')" >/dev/null
+  values ('$P','$L1','DOC_MISSING','HIGH','Brak awizacji','rk_res_driver','l3:NO_AWIZACJA:$L1'),
+         ('$P','$L1','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L1')" >/dev/null
 $PSQL -c "update loads set status='DELIVERED' where id='$L1'" >/dev/null
 chk "1215: l3:NO_AWIZACJA znika przy DELIVERED" \
   "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L1' and resolved_at is not null")" 1
+chk "1215: RES:DRIVER znika przy DELIVERED" \
+  "$(Q "select count(*) from risk_signals where dedup_key='RES:DRIVER:$L1' and resolved_at is not null")" 1
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
   values ('$P','$L2','INVOICE_MISMATCH','HIGH','Faktura po terminie','rk_invoice_overdue','invoice-overdue:$L2')" >/dev/null
 $PSQL -c "update loads set status='INVOICED' where id='$L2'" >/dev/null

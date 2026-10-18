@@ -3008,4 +3008,5 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `loads_close_delivery_unconfirmed` (A1 + L14 bez zmian) zamyka też alarmy sprzed dostawy i w drodze przy `DELIVERED` / `READY_TO_INVOICE` / `INVOICED` / `CANCELLED`. Faktura po terminie, L14 i inne decyzje po terminie zostają.
 - Porządek jednorazowy tą samą regułą, znacznik `detail.closed_by = D-20261018-1215-01`, bez nowych powiadomień (C1 tylko oznacza istniejące IN_APP jako przeczytane).
 - Aplikacja: `refreshFromServer({ keepSelection: true })` po awizacji, numerze zlecenia i ręcznym statusie; po wgraniu dokumentu `notifyFileUploaded()` (FileSink omija mutację mostka).
-- Testy: `risks.sh` +5 (oczekiwane 32 lokalnie / 30 na TEST). Brama `db` — zestawy `risks` i `security` na gałęzi.
+- Testy: `risks.sh` +6 (oczekiwane 33 lokalnie / 31 na TEST), w tym `RES:DRIVER` przy `DELIVERED`. Sam `title_key = rk_res_driver` nie zamyka alarmu.
+- Porządek na produkcji (oczekiwane, przegląd #305): `decision-overdue` 16, alarmy sprzed dostawy 7 (4 + 3 `RES:DRIVER`). Liczby po `db push` wpisuję obok.
