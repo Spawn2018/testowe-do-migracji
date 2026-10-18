@@ -2957,3 +2957,27 @@ Poprawki z 1100 przyjęte. `loads_close_delivery_unconfirmed` (A1) zamyka też o
 - #300 `wyglad/W-panel-do-zrobienia` — kolejka wyglądu; scalenie w przerwie przy F7 i zielonych unit/visual; wdrożenie z `main`.
 - Po wdrożeniu A2, przed A3: migracja zamykania nieaktualnych spraw (decision-overdue + alarmy przed dostawą) i `refreshFromServer` po zapisach w panelu.
 - **TEST zajęte: A2, od 12:00** (SHA `9798c4ed`; security/status/nullguard + risks).
+- **TEST wolne** od 18.10.2026 13:38 (koniec bramy `db` na `main` `1f7b7ade`).
+
+## 2026-10-18 13:40 — A2 i #300 na produkcji; start bramy niedzielnej
+
+- A2: PR #299 scalony 11:29 UTC, merge `1f7b7ade`. Próba 0228 w transakcji z ROLLBACK: po wycofaniu ostatnia migracja zostaje 0227. Potem `supabase db push`: 0228. `EXECUTE` dla `authenticated` tylko na `delivered_check_resolve`.
+- Wdrożenie z `main` `1f7b7ade`: `dpl_HvaTf2bycbrUPXnKFjksvb35sE2y` READY 13:33. `tower.log-mar.pl` i makieta: 200.
+- #300 scalony 11:33 UTC, merge `a2eb2d48` (F7 „gotowe do scalenia”, unit i visual zielone). Wdrożenie z `main`: `dpl_CpMsNnaro6ZzDmUjdHCHjBv3hew9` READY 13:35. Unit na `main` zielony. Brama `db` na `1f7b7ade` zielona 13:38.
+- Brama niedzielna na `main` `a2eb2d48`, migracja 0228. **TEST zajęte: brama niedzielna, od 13:40.**
+- Doradca security na TEST (`emkbykwenwrjmbprydml`), przed prep: 153 zgłoszeń, 0 nowych wobec `advisor-exceptions.txt` (170 wyjątków).
+- `npm audit`: 9 high, wszystkie w łańcuchu stylelint (dev: braces / fast-glob / globby / micromatch / source-map-js). `npm audit --omit=dev --audit-level=high`: 0. Poprawki P3-BRACES nie ma w zależnościach produkcyjnych; luki dev nie blokują scalenia.
+- Poczta produkcji, tydzień 12.10–18.10 (czas warszawski), kanał EMAIL, „od razu” = PENDING+SENT bez zaproszeń i resetu hasła:
+
+| Dzień | od razu | w tym krytyczne | skrót | wstrzymane | błąd | wiersze |
+|---|---|---|---|---|---|---|
+| 2026-10-12 – 2026-10-14 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2026-10-15 | 81 | 0 | 0 | 0 | 0 | 82 |
+| 2026-10-16 | 61 | 0 | 0 | 0 | 0 | 62 |
+| 2026-10-17 | 9 | 0 | 3 | 0 | 0 | 12 |
+| 2026-10-18 | 24 | 21 | 3 | 0 | 0 | 27 |
+
+Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Maksimum: 81 (15.10). Skrót: 6. Strażnik `email-budget`: 0 wpisów w tym tygodniu (ostatni przebieg 04.10 18:00 czasu polskiego). Próg „więcej niż dwa razy” nie zapalił się.
+
+- `nullguard-3` raz urwał się przed startem testu (bez wpisu w `wyniki.json`); powtórka 232/232.
+- `i2-2` 102/104: `ksh@test` miał `CLIENT_ADMIN` (zaproszenie z `SEED_AUTH_USERS`), a `seed.sql` i asercja mają `CLIENT_USER`. Stąd też odmowa `ksh_confirm_dates`. Rola w fixture wraca do `CLIENT_USER`. Brama niedzielna od nowa na commicie z tą poprawką.
