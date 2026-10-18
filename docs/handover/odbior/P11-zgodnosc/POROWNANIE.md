@@ -116,7 +116,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
   - w panelu › Ceny kwoty nie sumowały się do „Razem” (w sumie była ukryta kwota ok. 303 EUR, a opłata paliwowa przy „×1,05” wynosiła ok. 1 % frachtu) — **poprawione**: opłata paliwowa = fracht × (mnożnik − 1) z tej samej migawki co znacznik „t38 · ×1,05”, „Razem” = fracht + opłata paliwowa + dopłaty; transporty „poniżej progu” mają marżę ok. 9 % z tych samych wierszy (`seed.ts`, `consistentDemoPricing`);
   - „Zafakturowane 0” przy wystawionych fakturach t37–t38 — **poprawione**: w demo etap „Zafakturowane” strony bierze się z faktur na stronie Faktury (HHL → KSH zamyka przychód, SCX → HHL — koszt; `invoices3.ts`, `withBilledMoney`), a nie ze starego zestawu faktur przewoźnika. Ta sama zasada co status „Zafakturowano” (transport na obu fakturach);
   - prom: transporty „Na promie · Nova Star” przy odejściu o 18:00 — **N**: wjazd na prom 15:30, ok. 2,5 h przed odejściem, jak w porcie; przypłynięcie następnego dnia 12:00;
-  - brak zdarzeń strefy placu (wjazd, postój, wyjazd po 3 h 44 min) — odkładam do P11 pkt 6 (do 25.10): wymaga spójnych godzin z rozładunkiem i osią statusów w danych demo; produkcja ma te zdarzenia z bazy (silnik stref).
+  - brak zdarzeń strefy placu (wjazd, postój, wyjazd po 3 h 44 min) — **poprawione** 18.10 w `wyglad/W-demo-strefy` (`docs/handover/odbior/W-demo-strefy/`); produkcja ma te zdarzenia z bazy (silnik stref).
 - **Decyzje właściciela (18.10, 15:34):**
   1. rogi przycisków i pól zostają zaokrąglone (2 px) — N wobec tokenów makiet „radius 0”;
   2. podkład mapy w demo z angielskimi nazwami zostaje (produkcja: HERE) — N;

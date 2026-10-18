@@ -652,6 +652,7 @@ const hmOf = (ms: number) => new Date(ms + 2 * 3600e3).toISOString().slice(11, 1
 export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   const events: LoadEvent[] = [];
   let n = 0;
+  let siteN = 0;
   for (const l of loads) {
     events.push({
       id: `ev-${++n}`,
@@ -708,6 +709,22 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         actor: 'system',
         payload: { source: 'AIS' },
       });
+    }
+    /* P11 pkt 6 (paczka B, e17/e25: „Na placu · pominięte”, brak „wyjazd z placu po 3 h 44 min”): zdarzenia strefy placu
+       w demo jak z silnika stref — wjazd (status „Na placu” z automatu), postój potwierdzony po 15 min (`dwellMin` strefy),
+       a przy rozładowanych i dostarczonych wyjazd ze strefy w chwili rozładunku (ten sam moment co „Dostarczone”). */
+    const SITE = { geofence_id: 'gf-11', geofence_type: 'SITE', source: 'GPS', provider: 'emtrack' };
+    if (['APPROACHING_SITE', 'UNLOADING', 'DELIVERED'].includes(l.status)) {
+      const exitAt = l.status === 'APPROACHING_SITE' ? null : l.unloadedAt ?? atLocal(l.plannedDeliverDate, '12:00');
+      const dwellMin = [224, 196, 251][siteN++ % 3];
+      const enterMs = exitAt ? Date.parse(exitAt) - dwellMin * 60_000 : Date.parse('2026-09-23T15:10:00+02:00');
+      const iso = (ms: number) => atLocal(isoDay(ms + 2 * 3600e3), hmOf(ms));
+      events.push({ id: `ev-${++n}`, loadId: l.id, type: 'STATUS_AUTO', at: iso(enterMs), actor: 'system', payload: { from: 'IN_TRANSIT_SE', to: 'APPROACHING_SITE', powod: 'wjazd do strefy placu', ...SITE } });
+      events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_ENTER', at: iso(enterMs), actor: 'geofence-engine', payload: SITE });
+      if (enterMs + 15 * 60_000 < DEMO_CLOCK_MS) {
+        events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_DWELL', at: iso(enterMs + 15 * 60_000), actor: 'geofence-engine', payload: { ...SITE, dwell_min: 15 } });
+      }
+      if (exitAt) events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_EXIT', at: exitAt, actor: 'geofence-engine', payload: { ...SITE, dwell_min: dwellMin } });
     }
     if (['UNLOADING', 'DELIVERED'].includes(l.status)) {
       events.push({
