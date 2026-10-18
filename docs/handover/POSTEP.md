@@ -2952,5 +2952,8 @@ Od teraz: `vercel --prod`, `supabase db push` i funkcje Edge tylko z `main` po s
 
 Poprawki z 1100 przyjęte. `loads_close_delivery_unconfirmed` (A1) zamyka też otwarte `DELIVERED_CHECK`, gdy status schodzi na `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED`: `RESOLVED`, kod `DELIVERED` albo `CANCELLED`, wpis w `decision_events`. Inaczej eskalacja po 24 h wołałaby o sprawie, której karta już nie pokazuje.
 
+## 2026-10-18 12:15 — DOPISEK D-20261018-1215-01 W PLANIE
 
-
+- #300 `wyglad/W-panel-do-zrobienia` — kolejka wyglądu; scalenie w przerwie przy F7 i zielonych unit/visual; wdrożenie z `main`.
+- Po wdrożeniu A2, przed A3: migracja zamykania nieaktualnych spraw (decision-overdue + alarmy przed dostawą) i `refreshFromServer` po zapisach w panelu.
+- **TEST zajęte: A2, od 12:00** (SHA `9798c4ed`; security/status/nullguard + risks).
