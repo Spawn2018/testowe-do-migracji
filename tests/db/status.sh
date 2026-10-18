@@ -364,6 +364,20 @@ OPS=11111111-0000-0000-0000-0000000000aa
 q "insert into app_users (auth_id, org_id, email, role) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops-a2@test','HHL_OPS')" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$OPS'; select delivered_check_resolve('$SG3', false, null); rollback;" 2>&1)
 echo "$out" | grep -qiE 'Rozstrzygnięcie|42501' && { ok=$((ok+1)); echo "  OK    A2 Operacje HHL: odmowa L14"; } || { fail=$((fail+1)); echo "  FAIL  A2 Operacje HHL: odmowa L14: $out"; }
+# D-20261018-1130-01: „Zmień status” na Dostarczone zamyka niewidoczną sprawę L14
+SG7=$(L 61)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG7','$P','$SCXO','KSH/SG11','HHL/SG11','SCX/SG11','AT_SITE','2026-10-05')" >/dev/null
+q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG7','SG-11: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 15:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG7', null)" >/dev/null
+chk "A2 L14 przed Zmień status: 1 otwarta" "select count(*) from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+chk "A2 L14 + load_status_set DELIVERED: 0 otwartych" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select load_status_set('$SG7','DELIVERED','2026-10-18 08:00+00',null); select count(*) from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED'); commit" 0
+chk "A2 L14 po Zmień status: RESOLVED/DELIVERED" "select status||'/'||resolution_code from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK'" "RESOLVED/DELIVERED"
+chk "A2 L14 po Zmień status: wpis decision_events" "select count(*) from decision_events e join decisions d on d.id=e.decision_id where d.load_id='$SG7' and d.type_code='DELIVERED_CHECK' and e.action='RESOLVE'" 1
+SG8=$(L 62)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG8','$P','$SCXO','KSH/SG12','HHL/SG12','SCX/SG12','AT_SITE','2026-10-05')" >/dev/null
+q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG8','SG-12: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 16:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG8', null)" >/dev/null
+chk "A2 L14 + anulowanie: RESOLVED/CANCELLED i 0 otwartych" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select load_status_set('$SG8','CANCELLED','2026-10-18 08:00+00','test A2'); select status||'/'||resolution_code||'/'||(select count(*) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK'; commit" "RESOLVED/CANCELLED/0"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

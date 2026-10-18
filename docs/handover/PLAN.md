@@ -482,6 +482,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - `decision_resolve` z `DELIVERED_YES` / `DELIVERED_NO` = `delivered_check_apply` (ta sama Historia, `audit_log`, `decision_notify(..., 'RESOLVE')`);
   - „Tak” tylko ze statusu `AT_SITE` przez `auto_set_status`; inny status → `22023` „Status transportu zmienił się — ustaw „Dostarczone” przez „Zmień status””, sprawa zostaje otwarta;
   - komentarze produkcji w `apply_geofence_status` i `process_position`; `p_ts` bez `default`; syntetyczny wyjazd nie zmienia statusu ani `actual_load_at`; `busy` przy „Tak / Nie” w `TodoPanel`; inwentarz risks 6 kluczy (bez `rk_left_loading_unconfirmed`).
+- D-20261018-1130-01: otwarta `DELIVERED_CHECK` zamyka się sama przy `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED` (rozszerzenie `loads_close_delivery_unconfirmed`). `RESOLVED`, `resolution_code` `DELIVERED` albo przy anulowaniu `CANCELLED`, wpis w `decision_events`. Test: `load_status_set(..., 'DELIVERED')` → 0 otwartych.
 - **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). To samo przestawienie zmienia zdania w Strefach: plac i załadunek (D-20261017-1715-01). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
@@ -1028,3 +1029,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 02:35 | D-20261018-0235-01: #298 `wyglad/W-przed-wydaniem-2` (po #295/#297) — U+00A0 liczba+jednostka, kod transportu w całości; **§1 pkt 10** (zasada liczb); #295→#297→#298 scalone 10:31–10:33, Vercel `a51cf771` READY | koordynator |
 | 18.10.2026 11:00 | D-20261018-1100-01: przegląd #299 (A2) przed scaleniem — jedna karta L14 ze sprawy, `decision_resolve` jak `delivered_check_resolve`, „Tak” tylko z `AT_SITE`, komentarze produkcji, risks 7→6 | koordynator |
 | 18.10.2026 11:10 | D-20261018-1110-01: produkcja tylko z `main` po scaleniu i przeglądzie — `vercel --prod`, `db push`, Edge; gałąź tylko Preview. §1 pkt 3.5 | koordynator |
+| 18.10.2026 11:30 | D-20261018-1130-01: #299 — poprawki 1100 przyjęte; L14 zamyka się przy Dostarczone / anulowaniu (`loads_close_delivery_unconfirmed`) | koordynator |

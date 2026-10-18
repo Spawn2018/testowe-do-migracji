@@ -2948,5 +2948,9 @@ O 10:41 wdrożenie z czystego archiwum `main` `a51cf771` (#295, #297, #298, bez 
 
 Od teraz: `vercel --prod`, `supabase db push` i funkcje Edge tylko z `main` po scaleniu i po przeglądzie koordynatora. Gałąź tylko jako Preview. Przed CLI: `git checkout main && git pull`, `git status` bez zmian. W `POSTEP.md`: `dpl_…` i commit `main`.
 
+## 2026-10-18 11:30 — DOPISEK D-20261018-1130-01 (L14 zamyka się po Dostarczone)
+
+Poprawki z 1100 przyjęte. `loads_close_delivery_unconfirmed` (A1) zamyka też otwarte `DELIVERED_CHECK`, gdy status schodzi na `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED`: `RESOLVED`, kod `DELIVERED` albo `CANCELLED`, wpis w `decision_events`. Inaczej eskalacja po 24 h wołałaby o sprawie, której karta już nie pokazuje.
+
 
 

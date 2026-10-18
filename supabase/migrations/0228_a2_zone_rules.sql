@@ -612,3 +612,59 @@ begin
 end $$;
 revoke all on function decision_resolve(uuid, text, text) from public, anon;
 grant execute on function decision_resolve(uuid, text, text) to authenticated;
+
+-- -------------------------------------------------------------------------
+-- D-20261018-1130-01: rozszerzenie wyzwalacza A1 (0227).
+-- DELIVERY_UNCONFIRMED jak dotychczas. DELIVERED_CHECK zamyka się też przy CANCELLED.
+-- -------------------------------------------------------------------------
+create or replace function public.loads_close_delivery_unconfirmed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  v_code text;
+begin
+  if new.status is not distinct from old.status then
+    return new;
+  end if;
+
+  if new.status in ('DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED') then
+    update decisions
+       set status = 'RESOLVED',
+           resolved_at = now(),
+           resolution_code = 'DELIVERED',
+           updated_at = now()
+     where load_id = new.id
+       and type_code = 'DELIVERY_UNCONFIRMED'
+       and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+  end if;
+
+  if new.status in ('DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED') then
+    v_code := case when new.status = 'CANCELLED' then 'CANCELLED' else 'DELIVERED' end;
+    for r in
+      update decisions
+         set status = 'RESOLVED',
+             resolved_at = now(),
+             resolution_code = v_code,
+             updated_at = now()
+       where load_id = new.id
+         and type_code = 'DELIVERED_CHECK'
+         and status in ('NEW', 'ASSIGNED', 'SNOOZED')
+      returning id
+    loop
+      insert into decision_events (decision_id, actor_id, action, payload)
+      values (
+        r.id,
+        current_app_user_id(),
+        'RESOLVE',
+        jsonb_build_object('option', v_code, 'via', 'status', 'status', new.status)
+      );
+    end loop;
+  end if;
+  return new;
+end $$;
+
+revoke all on function public.loads_close_delivery_unconfirmed() from public, anon, authenticated;
