@@ -83,7 +83,7 @@ const pl: Dict = {
   drv_tracking_err: 'Brak dostępu do lokalizacji w telefonie — sprawdź uprawnienia przeglądarki.',
   drv_accuracy: 'dokładność',
   tier_PROGNOZA: 'Prognoza',
-  tier_REALIZACJA: 'Realizacja',
+  tier_REALIZACJA: 'Dostarczone',
   tier_FAKTURA: 'Faktura',
   tier_label: 'Poziom wyceny',
   fx_provisional: 'kurs tymczasowy',

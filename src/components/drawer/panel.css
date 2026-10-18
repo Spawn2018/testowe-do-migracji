@@ -9,8 +9,19 @@
 .pp-margin{display:flex;justify-content:space-between;gap:12px;font-size:15px;font-variant-numeric:tabular-nums}
 .pp-margin .neg,.pp-sum .neg{color:var(--red)}
 .pp-pln{margin:0}
-.pp-fuel{padding:10px 12px;background:var(--sea-bg);border:1px solid var(--sea);font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.pp-fuel{display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:var(--surface);border:1px solid var(--rule);font-size:13.5px;line-height:1.5;color:var(--ink-2)}
 .pp-fuel b{color:var(--ink)}
+/* P11 (e39): karta z polami — etykieta | wartość */
+.pp-fuel-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.pp-fuel-hd b{font-family:var(--font-cond);font-size:16px}
+.pp-fuel-kv{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:4px 14px;margin:0}
+.pp-fuel-kv dt{color:var(--ink-3)}
+.pp-fuel-kv dd{margin:0;color:var(--ink);font-variant-numeric:tabular-nums}
+.pp-fuel-note{margin:0}
+@media (max-width:480px){
+  .pp-fuel-kv{grid-template-columns:minmax(0,1fr)}
+  .pp-fuel-kv dd{margin-bottom:4px}
+}
 .pp-link{margin-left:6px}
 .pp-err{margin:0;color:var(--red)}
 .pp-sec{display:flex;flex-direction:column;gap:8px;padding-top:6px}

@@ -115,7 +115,6 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
     }
     return '';
   };
-  const canAdd = role === 'HHL' || role === 'SCX';
 
   const feeList = suggestions ? (
     <div className="pp-fees" data-fee-list>
@@ -215,23 +214,40 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
     </section>
   ) : null;
 
+  /* P11 (e39, E39 „karta w panelu”): karta „Opłata paliwowa ×…” ze znacznikiem stanu i polami — obowiązuje w tygodniu,
+     wskaźniki z tygodnia, OKQ8 i Orlen (średnia, liczba publikacji, mnożnik), stosowany; zdanie wyjaśnienia i publikacje */
+  const src = (s: { avg: number | null; n: number | null; mult: number }, unit: 'SEK/l' | 'PLN/l', n: string) => (
+    <>{s.avg != null ? `${formatPlNumber(s.avg, 2)}\u00a0${unit}${n ? `\u00a0${n}` : ''} → ` : ''}{x2(s.mult)}</>
+  );
   const fuelCard = fuelRow && fuelRow.week ? (
     <div className="pp-fuel" data-pp-fuel data-deur-exempt="fuel-index">
-      <b>{ftp(locale, 'p5_pr_fuel_card', { week: weekLabel(fuelRow.week) })}</b>
-      {fuelRow.idx ? <span> · {ftp(locale, 'p5_pr_fuel_idx', { idx: weekLabel(fuelRow.idx) })}</span> : null}
-      {/* wyglad/P5-c (E39): średnia z liczbą publikacji; przy prognozie — od kiedy ostateczna */}
-      {fuelRow.okq8 ? <span>: OKQ8 {fuelRow.okq8.avg != null ? `${formatPlNumber(fuelRow.okq8.avg, 2)}\u00a0SEK/l${fuelRow.okq8.n ? `\u00a0${fcp(locale, 'p5c_fuel_n', { n: fuelRow.okq8.n })}` : ''} → ` : ''}{x2(fuelRow.okq8.mult)}</span> : null}
-      {fuelRow.orlen ? <span> · Orlen {fuelRow.orlen.avg != null ? `${formatPlNumber(fuelRow.orlen.avg, 2)}\u00a0PLN/l${fuelRow.orlen.n ? `\u00a0${fcp(locale, 'p5c_fuel_n', { n: fuelRow.orlen.n })}` : ''} → ` : ''}{x2(fuelRow.orlen.mult)}</span> : null}
-      {fuelRow.applied != null ? (
-        <span> · {fuelRow.state === 'PROGNOZA' && fuelRow.running && fuelRow.idx
-          ? fcp(locale, 'p5c_fuel_running', { x: x2(fuelRow.applied), last: `t${weekOf(addDays(mondayOf(today), -7)).no}` })
-          : ftp(locale, 'p5_pr_fuel_lower', { x: x2(fuelRow.applied) })}</span>
-      ) : null}
-      <span> · {ft(locale, `p5_fuel_state_${fuelRow.state}`).toLocaleLowerCase('pl-PL')}</span>
-      {fuelRow.state === 'PROGNOZA' ? (
-        <span data-pp-final={fuelRow.finalFrom ?? ''}> · {fuelRow.finalFrom ? fcp(locale, 'p5c_fuel_final_from', { date: dm(fuelRow.finalFrom) }) : fc(locale, 'p5c_fuel_until')}</span>
-      ) : null}
-      <button type="button" className="linkbtn pp-link" onClick={() => useTowerStore.getState().setView('fin')}>▸ {ft(locale, 'p5_pr_fuel_link')}</button>
+      <div className="pp-fuel-hd">
+        <b>{ft(locale, 'p5_pr_fuel')}{fuelRow.applied != null ? ` ${x2(fuelRow.applied)}` : ''}</b>
+        <span className={fuelRow.state === 'OSTATECZNA' ? 'fin-tag go' : fuelRow.state === 'PROGNOZA' ? 'fin-tag plain' : 'fin-tag warn'} data-pp-fuel-state={fuelRow.state}>
+          {ft(locale, `p5_fuel_state_${fuelRow.state}`)}
+        </span>
+      </div>
+      <dl className="pp-fuel-kv">
+        <dt>{ft(locale, 'p5_pr_fuel_k_week')}</dt><dd>{weekLabel(fuelRow.week)}</dd>
+        {fuelRow.idx ? <><dt>{ft(locale, 'p5_pr_fuel_k_idx')}</dt><dd>{weekLabel(fuelRow.idx)}</dd></> : null}
+        {fuelRow.okq8 ? <><dt>{ft(locale, 'p5_fuel_col_okq8')}</dt><dd>{src(fuelRow.okq8, 'SEK/l', fuelRow.okq8.n ? fcp(locale, 'p5c_fuel_n', { n: fuelRow.okq8.n }) : '')}</dd></> : null}
+        {fuelRow.orlen ? <><dt>{ft(locale, 'p5_fuel_col_orlen')}</dt><dd>{src(fuelRow.orlen, 'PLN/l', fuelRow.orlen.n ? fcp(locale, 'p5c_fuel_n', { n: fuelRow.orlen.n }) : '')}</dd></> : null}
+        {fuelRow.applied != null ? (
+          <>
+            <dt>{ft(locale, 'p5_pr_fuel_k_applied')}</dt>
+            <dd>{fuelRow.state === 'PROGNOZA' && fuelRow.running && fuelRow.idx
+              ? fcp(locale, 'p5c_fuel_running', { x: x2(fuelRow.applied), last: `t${weekOf(addDays(mondayOf(today), -7)).no}` })
+              : ftp(locale, 'p5_pr_fuel_lower', { x: x2(fuelRow.applied) })}</dd>
+          </>
+        ) : null}
+      </dl>
+      <p className="pp-fuel-note">
+        {fuelRow.state === 'PROGNOZA' ? (
+          <span data-pp-final={fuelRow.finalFrom ?? ''}>{fuelRow.finalFrom ? fcp(locale, 'p5c_fuel_final_from', { date: dm(fuelRow.finalFrom) }) : fc(locale, 'p5c_fuel_until')}. </span>
+        ) : null}
+        {ft(locale, 'p5_pr_fuel_note')}{' '}
+        <button type="button" className="linkbtn pp-link" onClick={() => useTowerStore.getState().setView('fin')}>▸ {ft(locale, 'p5_pr_fuel_link')}</button>
+      </p>
     </div>
   ) : null;
 
@@ -258,7 +274,8 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
     <div className="note pp-err" data-money-error>{ftp(locale, 'p5_pr_noprice', { why: pr.moneyError })}{/NO_CONVOY/.test(pr.moneyError) ? ` · ${ft(locale, 'p5_pr_konwoj')}` : ''}</div>
   ) : null;
 
-  const addBtn = canAdd && suggestions ? (
+  /* P11 (e33): „+ Dopłata” nad listą tylko u HHL; SCX proponuje dopłatę przyciskiem przy wierszu, gdy pomiar przekroczy czas wolny */
+  const addBtn = role === 'HHL' && suggestions ? (
     <button type="button" className={phone ? 'btn pp-add-big' : 'btn pp-add'} data-fee-add onClick={() => setFeeOpen('new')}>{ft(locale, 'p5_pr_fee_add')}</button>
   ) : null;
 

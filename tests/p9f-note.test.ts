@@ -14,7 +14,7 @@ const L = (x: Partial<Load>): Load => ({ id: 'x', status: 'PLANNED', stage: 'PRE
 
 describe('P9-f dopisek na mapie Przeglądu', () => {
   it('przed oknem śledzenia: brak pozycji, od kiedy śledzenie i brak linku (SG-15 z makiety E32)', () => {
-    expect(drawerMapNote(L({ trackingLink: null }), base)).toEqual({ kind: 'before', text: 'Brak pozycji · Śledzenie od 08.10.2026, 03:00 · Brak linku śledzenia — SCX' });
+    expect(drawerMapNote(L({ trackingLink: null }), base)).toEqual({ kind: 'before', text: 'Brak pozycji · Śledzenie od 08.10.2026, 03:00 · Brak linku śledzenia — SCX', lines: ['Brak pozycji', 'Śledzenie od 08.10.2026, 03:00', 'Brak linku śledzenia — SCX'], alert: 2 });
     /* serwer nie podaje stanu linku — bez zgadywania powodu */
     expect(drawerMapNote(L({}), base)?.text).toBe('Brak pozycji · Śledzenie od 08.10.2026, 03:00');
     /* link czeka na pierwszą pozycję — przed oknem to normalne, bez powodu */
@@ -32,12 +32,21 @@ describe('P9-f dopisek na mapie Przeglądu', () => {
 
   it('na placu: „Na placu od …”; po „Dostarczone”: śledzenie zakończone', () => {
     const site = L({ status: 'AT_SITE', stage: 'SITE', plannedLoadDate: '2026-10-03', etaDetail: { waitSince: '2026-10-07T06:35:00Z' } as Load['etaDetail'] });
-    expect(drawerMapNote(site, { ...base, hasFix: true })).toEqual({ kind: 'site', text: 'Na placu od 07.10.2026, 08:35' });
+    expect(drawerMapNote(site, { ...base, hasFix: true })).toEqual({ kind: 'site', text: 'Na placu od 07.10.2026, 08:35', lines: ['Na placu od 07.10.2026, 08:35'] });
     /* wjazd do strefy placu ma pierwszeństwo; bez faktów (tylko ETA) — bez dopisku */
     const seen: string[] = [];
     drawerMapNote(site, { ...base, hasFix: true, siteSince: '2026-10-07T06:00:00Z', dt: (iso) => { seen.push(iso); return 'x'; } });
     expect(seen).toEqual(['2026-10-07T06:00:00Z']);
     expect(drawerMapNote(L({ status: 'AT_SITE', stage: 'SITE', plannedLoadDate: '2026-10-03', etaBoden: '2026-10-07T06:00:00Z' } as Partial<Load>), { ...base, hasFix: true })).toBeNull();
-    expect(drawerMapNote(L({ status: 'DELIVERED', stage: 'DELIVERED', plannedLoadDate: '2026-10-01' }), base)).toEqual({ kind: 'after', text: 'Śledzenie zakończone — „Dostarczone”' });
+    expect(drawerMapNote(L({ status: 'DELIVERED', stage: 'DELIVERED', plannedLoadDate: '2026-10-01' }), base)).toEqual({ kind: 'after', text: 'Śledzenie zakończone — „Dostarczone”', lines: ['Śledzenie zakończone — „Dostarczone”'] });
+  });
+
+  it('P11 (e32): na placu — ostatnia pozycja i strefa placu w kolejnych liniach; brak linku na czerwono tylko przy braku linku', () => {
+    const site = L({ status: 'AT_SITE', stage: 'SITE', plannedLoadDate: '2026-10-03', etaDetail: { waitSince: '2026-10-07T06:35:00Z', lastFixAt: '2026-10-07T07:22:00Z' } as Load['etaDetail'] });
+    expect(drawerMapNote(site, { ...base, hasFix: true, hm: () => '09:22', siteZone: 'Plac budowy Stegra Boden' })?.lines)
+      .toEqual(['Na placu od 07.10.2026, 08:35', 'ostatnia pozycja 09:22 · postój', 'strefa „Plac budowy Stegra Boden”']);
+    const on = { status: 'IN_TRANSIT_SE', stage: 'SE_ROAD', plannedLoadDate: '2026-10-06' } as Partial<Load>;
+    expect(drawerMapNote(L({ ...on, trackingLink: null }), base)?.alert).toBe(1);
+    expect(drawerMapNote(L({ ...on, trackingLink: { url: 'u', check: { state: 'down' } } as unknown as Load['trackingLink'] }), base)?.alert).toBeUndefined();
   });
 });

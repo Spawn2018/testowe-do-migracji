@@ -113,6 +113,7 @@ const PL: Record<string, string> = {
   /* Numery zleceń */
   p7_num_h: 'Numery zleceń',
   p7_num_missing: 'brak',
+  p7_num_cancel: 'Anuluj',
   p7_num_by_scx: 'wpisuje SCX',
   p7_num_by_hhl: 'wpisuje HHL',
   p7_num_add: 'Dodaj',
@@ -144,6 +145,7 @@ const PL: Record<string, string> = {
   /* telefon — linie stanu sekcji */
   p7_ph_plan: 'Plan',
   p7_ph_eta: 'ETA {v}',
+  p7_ph_site: 'Na placu od {v}',
   p7_ph_num_both: 'brak obu',
   p7_ph_num_one: 'brak {which}',
   p7_ph_num_ok: 'są',

@@ -12,7 +12,7 @@ import { formatOpsDateTime } from '../../lib/time';
 import type { Load } from '../../types';
 import { truckDivIcon, ferryDivIcon } from '../../lib/mapMarkers';
 import { nextLiveSailing } from '../../lib/ferry';
-import { severityLabel } from '../../lib/enumLabels';
+import { geofenceDisplayName, severityLabel } from '../../lib/enumLabels';
 import { getNowIso, isFrozenNow } from '../../lib/frozenNow';
 import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { isServerId } from '../../data/registry';
@@ -41,6 +41,7 @@ import { detourLinesOf, subscribeDetourLines } from '../../lib/e49Source';
 import { detourLineOk, detourLineTip } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
 import { lazyRetry } from '../../lib/lazyRetry';
+import { etaDuration } from '../../lib/etaDuration';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./TrackReplay'))) : null;
@@ -101,7 +102,7 @@ function vehicleIcon(row: MapRow, label: string | null): L.DivIcon {
 function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0]): string {
   const l1 = `<b>${esc(row.label)}</b> · ${esc(t(locale, row.stageKey))}`;
   const eta = row.eta.main && row.eta.main !== p9m(locale, 'p9c_eta_none') ? p9mp(locale, 'p9c_tip_eta', { eta: row.eta.main }) : '';
-  const late = row.late && row.delayMin ? `<span class="r">${esc(p9mp(locale, 'p9c_tip_late', { d: durTextLocal(row.delayMin) }))}</span>` : '';
+  const late = row.late && row.delayMin ? `<span class="r">${esc(p9mp(locale, 'p9c_tip_late', { d: etaDuration(row.delayMin) }))}</span>` : '';
   const l2 = [late, esc(eta)].filter(Boolean).join(' · ');
   const last = row.pos.kind === 'nogps' ? row.pos.text : row.lastFixAt ? p9mp(locale, 'p9c_tip_last', { t: row.pos.text }) : '';
   const l3 = [last, p9m(locale, `p9c_tip_seg_${row.seg}`)].filter(Boolean).map(esc).join(' · ');
@@ -142,11 +143,6 @@ function groupTip(v: GroupView, locale: Parameters<typeof t>[0]): string {
     v.note ? `<span class="g">${esc(v.note)}</span>` : '',
     `<span class="g">${esc(p9e(locale, 'p9e_tip_click'))}</span>`,
   ].filter(Boolean).join('<br>');
-}
-function durTextLocal(m: number): string {
-  const h = Math.floor(m / 60);
-  const mm = Math.round(m % 60);
-  return h ? `${h} h${mm ? ` ${mm} min` : ''}` : `${mm} min`;
 }
 
 /** Podpisy na stronie Mapa: przy ≤ 15 autach zawsze, przy większej liczbie od przybliżenia 7 (bez zasłaniania trasy). */
@@ -763,8 +759,23 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       tx: (k, p) => (k.startsWith('p9c_') ? (p ? p9mp(locale, k, p) : p9m(locale, k)) : (p ? p9ep(locale, k, p) : p9e(locale, k))),
       dt: (iso) => formatListDateTime(iso, TZ_OPS),
       siteSince: panelSiteSince,
+      hm,
+      siteZone: (() => { const g = geofences.find((x) => x.type === 'SITE' && x.active); return g ? geofenceDisplayName(g.name, locale) : null; })(),
     })
     : null;
+  /* P11 (e1, e32): dopisek stoi nad podpisem podkładu (prawa autorskie), nie na nim — wysokość podpisu z elementu Leaflet */
+  const hasNote = !!drawerNote;
+  const [attrH, setAttrH] = useState(0);
+  useEffect(() => {
+    if (!hasNote || !mapReady) return;
+    const attr = attributionOf(mapReady);
+    if (!attr) return;
+    const read = () => setAttrH(attr.offsetHeight || 0);
+    read();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(read);
+    ro?.observe(attr);
+    return () => ro?.disconnect();
+  }, [hasNote, mapReady]);
 
   return (
     <div
@@ -801,11 +812,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       {drawerNote ? (
         <div
           className="note po-mapnote"
+          style={attrH ? { bottom: attrH + 6 } : undefined}
           data-map-bottom
           data-drawer-note={drawerNote.kind}
           data-empty={drawerNote.kind === 'site' ? undefined : 'vehicle-positions'}
         >
-          {drawerNote.text}
+          {drawerNote.lines.map((ln, i) => (
+            <span key={i} className={`po-mapnote-l${drawerNote.alert === i ? ' is-alert' : ''}`}>{ln}</span>
+          ))}
         </div>
       ) : null}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}

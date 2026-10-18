@@ -354,7 +354,7 @@ const pl: Dict = {
   p4b_eta_ferry_lbl: 'Na promie',
   p4b_eta_ferry_wait_ais: 'czeka na pozycję AIS',
   p4b_eta_ferry_wait_sub: 'ETA z promu pojawi się po odczycie AIS',
-  p4b_eta_ferry_ais_sub: 'ETA z AIS · {at}',
+  p4b_eta_ferry_in: 'wpłynięcie promu {at} (AIS)',
   p4b_eta_phone_lbl: 'ETA Boden',
   p4b_eta_none: 'ETA: –',
   p4b_eta_band: '± {m} min · {word}',
