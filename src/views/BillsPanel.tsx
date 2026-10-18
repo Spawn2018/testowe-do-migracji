@@ -272,6 +272,8 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const verifyBill = useTowerStore((s) => s.verifyBill);
   const [wizard, setWizard] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const openInvoiceId = useTowerStore((s) => s.openInvoiceId);
+  const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
   const today = localDateOf(getNowIso());
   const bills = useMemo(
     () => allBills.filter((b) => billVisibleTo(role, b)).map((b) => ({ ...b, payment: billPaymentToday(b, today) })),
@@ -287,6 +289,26 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const dm = fmtDay;
   const quick = (b: Bill) => canVerifyBill(role, b) && b.verification === 'DO_WERYFIKACJI';
   const open = (id: string) => setOpenId((o) => (o === id ? null : id));
+  /* A4 (wyglad/W-faktura-termin): link „/finanse/faktury/<id>” z dzwonka i e-maila, „Otwórz fakturę” z „Do zrobienia” i Kokpitu —
+     otwiera szczegóły tej faktury, przewija do niej i ustawia na niej fokus (faktura, której konto nie widzi, nic nie otwiera) */
+  useEffect(() => {
+    if (!openInvoiceId || !list.some((b) => b.id === openInvoiceId)) return;
+    const id = openInvoiceId;
+    setOpenId(id);
+    setOpenInvoiceId(null);
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-bill="${CSS.escape(id)}"]`);
+      /* nagłówek faktury (wiersz tabeli albo nagłówek karty na telefonie) na górze obszaru treści — przewija się tylko
+         `main`, pasek górny zostaje (F7: scrollIntoView przewijał też dokument; „center” na telefonie chował numer) */
+      const head = el?.matches('tr') ? el : el?.querySelector<HTMLElement>('.inv-card-hd') ?? el;
+      const box = head?.closest('main');
+      if (head && box) {
+        const top = head.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 12;
+        box.scrollTo({ top: Math.max(0, top) });
+      }
+      head?.focus({ preventScroll: true });
+    }, 50);
+  }, [openInvoiceId, list, setOpenInvoiceId]);
   const dispute = (id: string) => {
     setOpenId(id);
     window.setTimeout(() => (document.querySelector(`[data-bill-detail="${id}"] [data-dispute-note]`) as HTMLInputElement | null)?.focus(), 50);

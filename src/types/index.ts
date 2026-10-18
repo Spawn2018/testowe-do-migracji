@@ -501,6 +501,8 @@ export interface Risk {
   metaParams?: Record<string, unknown>;
   /** wyglad/P6 — rodzaj z bazy (`risk_signals.kind`, np. RESOURCE_MISSING, JOB_FAILURE, ROAD_PL); nazwy spraw E7-4. */
   kind?: string;
+  /** wyglad/W-faktura-termin (A4): faktura sprawy „po terminie płatności” (`detail.invoice_id`) — przycisk „Otwórz fakturę”. */
+  invoiceId?: string;
 }
 
 export interface RateRule {
