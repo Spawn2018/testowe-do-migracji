@@ -66,13 +66,21 @@ export function demoDeliveredCheck(
   geofences: readonly Pick<Geofence, 'type' | 'name'>[],
   nowIso: string,
   role: 'HHL' | 'KSH' | 'SCX',
+  events: readonly LoadEvent[] = [],
 ): DeliveredCheck | null {
   const first = [...loads].sort(byCode).find((l) => l.status === 'APPROACHING_SITE');
   if (!first || first.id !== load.id) return null;
+  /* F7 #304: wyjazd i czas na placu z ostatniego wyjazdu ze strefy placu w danych demo (seed.ts: 16:07 po 6 min) —
+     ta sama chwila co na osi Status przy każdym zegarze; bez zdarzenia — jak dawniej, 25 min przed zegarem */
+  const exit = [...events]
+    .filter((e) => e.loadId === load.id && e.type === 'GEOFENCE_EXIT' && (e.payload as { geofence_type?: string } | undefined)?.geofence_type === 'SITE')
+    .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
+  if (exit && isoMs(exit.at) > isoMs(nowIso)) return null; /* zegar przed wyjazdem — jeszcze na placu */
+  const exitMin = Number((exit?.payload as { dwell_min?: number } | undefined)?.dwell_min);
   return {
     id: `demo-dc-${load.id}`,
-    exitAt: new Date(isoMs(nowIso) - 25 * 6e4).toISOString(),
-    minutes: 6,
+    exitAt: exit ? exit.at : new Date(isoMs(nowIso) - 25 * 6e4).toISOString(),
+    minutes: exit && Number.isFinite(exitMin) ? Math.round(exitMin) : 6,
     zoneName: geofences.find((g) => g.type === 'SITE')?.name ?? 'Plac budowy',
     canDecide: role === 'SCX',
   };

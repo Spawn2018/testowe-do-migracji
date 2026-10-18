@@ -24,7 +24,9 @@ Długi postój (3 h 44 min) nie otwiera sprawy „czy dostarczono?” (L14). Otw
 
 `src/data/demoEta.ts`: D-01 „Na miejscu od 16:01” (było ogólne 15:10) — ta sama chwila co wjazd na plac.
 
-`src/lib/statusAxis.ts` (obliczenie widoku, F8):
+`src/lib/p6bDemo.ts`, `src/lib/p4cDemo.ts` (dane demo): strona szwedzka w Historii i karta „czy dostarczono?” — niżej, „Przy innym zegarze”.
+
+`src/lib/statusAxis.ts` (obliczenie widoku, F8; na produkcji dziś bez skutku — żaden zapis `load_events` nie ma `payload.source = 'GPS'`, F7 runda 2):
 - początek „śladu z przewozu” liczy też zdarzenia oznaczone „GPS” (np. „Załadunek · GPS” w osi Status);
 - bez tego ślad dostarczonego zaczynał się dopiero przy wjeździe na plac (uwaga F7 B4);
 - przykład SG-23: „ślad z przewozu: 18.09.2026, 08:30 – 22.09.2026, 11:20”.
@@ -39,10 +41,21 @@ Długi postój (3 h 44 min) nie otwiera sprawy „czy dostarczono?” (L14). Otw
 | D-01 | wjazd 16:01 · wyjazd 16:07 (6 min) | — (karta „czy dostarczono?”) |
 
 Inne miejsca, które się zmieniają:
-- Automatyzacje › „Status ze stref” — ostatnie działanie: było „SG-02 · 13:50”, jest „D-01 · 16:07” (najpóźniejsze zdarzenie strefy przed zegarem).
+- Automatyzacje — ostatnie działanie w wierszach „Status ze stref” oraz „Opłata paliwowa, kurs NBP, ceny”: było „SG-02 · 13:50”, jest „D-01 · 16:07” (najpóźniejsze zdarzenie strefy przed zegarem);
+- Mapa i Harmonogram: D-01 „na placu od 16:01” (było 15:10).
+
+## Przy innym zegarze (F7 runda 2, `?now=2026-11-20T11:00:00+01:00`)
+- Przy późniejszym zegarze zdarzenia z przyszłości przestają być odfiltrowane. Dlatego:
+  - T-18: Historia demo (`p6bDemo`) liczyła stronę szwedzką od dnia dostawy z planu (25.09). Wyjazd z portu i bufor 50 km wypadały po wjeździe na plac (23.09, 11:40);
+  - teraz liczy od wcześniejszego z dni: dostawa z planu albo „czeka przed placem od …” (`etaDetail.waitSince`);
+  - T-18 po zmianie: prom 21.09, 18:00 → wyjazd z portu 22.09, 14:05 → bufor 50 km 23.09, 05:22 → plac 23.09, 11:40.
+- D-01: karta demo „czy dostarczono?” brała wyjazd jako „zegar − 25 min”. Przy późniejszym zegarze pokazywała 20.11, a oś miała 23.09, 16:07.
+  - Teraz karta bierze wyjazd i czas z ostatniego wyjazdu ze strefy placu (`p4cDemo.demoDeliveredCheck`): 23.09.2026, 16:07 po 6 min, przy każdym zegarze.
+  - Przy zegarze przed 16:07 karty nie ma, bo transport jest jeszcze na placu.
+- Test: dwa przypadki przy zegarze 20.11 (karta D-01, kolejność strony szwedzkiej w Historii przy wszystkich 15 transportach z placem).
 
 ## Testy
-- `tests/p11-demo-strefa-placu.test.ts` (5 testów):
+- `tests/p11-demo-strefa-placu.test.ts` (7 testów):
   - rozładowane i dostarczone: wjazd → postój → wyjazd = rozładunek, 224 min, ten sam wjazd, wyjazd i czas co Ceny;
   - rozładowane: bez karty „czy dostarczono?” (sprawdzane na statusie „Rozładowany”, gdzie karta jest możliwa);
   - „Na placu”: wjazd = `waitSince` z bloku ETA, status z automatu w tej samej chwili, T-12 i T-18, bez wyjazdu poza D-01;

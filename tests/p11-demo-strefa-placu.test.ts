@@ -11,6 +11,7 @@ import { buildStatusAxis, statusHits } from '../src/lib/statusAxis';
 import { deliveredCheckFromEvents } from '../src/lib/p4cSource';
 import { demoDeliveredCheck } from '../src/lib/p4cDemo';
 import { demoFeeSuggestions } from '../src/lib/p5Demo';
+import { demoHistoryEvents } from '../src/lib/p6bDemo';
 
 const CLOCK = '2026-09-23T16:32:00+02:00';
 const MIN = 60_000;
@@ -94,6 +95,33 @@ describe('demo — zdarzenia strefy placu', () => {
       expect(axis.firstFixAt, l.code).toBe(loaded.at);
       expect(t(axis.firstFixAt!), l.code).toBeLessThan(t(zone(l.id, 'GEOFENCE_ENTER')[0].at));
       if (axis.deliveredAt) expect(t(axis.firstFixAt!), l.code).toBeLessThan(t(axis.deliveredAt));
+    }
+  });
+
+  /* F7 #304 runda 2: przy zegarze późniejszym niż zegar demo (zdarzenia z przyszłości przestają być odfiltrowane) */
+  const LATE = '2026-11-20T11:00:00+01:00';
+
+  it('późniejszy zegar: karta „czy dostarczono?” D-01 z wyjazdu ze strefy (16:07, 6 min), nie „zegar − 25 min”', () => {
+    const [exit] = zone(first.id, 'GEOFENCE_EXIT');
+    for (const clock of [CLOCK, LATE]) {
+      const card = demoDeliveredCheck(first, snap.loads, snap.geofences, clock, 'SCX', snap.events)!;
+      expect(t(card.exitAt), clock).toBe(t(exit.at));
+      expect(card.minutes, clock).toBe(6);
+    }
+    /* zegar przed wyjazdem — karty jeszcze nie ma */
+    expect(demoDeliveredCheck(first, snap.loads, snap.geofences, '2026-09-23T16:03:00+02:00', 'SCX', snap.events)).toBeNull();
+  });
+
+  it('późniejszy zegar: strona szwedzka w Historii (wyjazd z portu, bufor 50 km) przed wjazdem na plac', () => {
+    const withSite = snap.loads.filter((l) => ['APPROACHING_SITE', 'UNLOADING', 'DELIVERED'].includes(l.status));
+    for (const l of withSite) {
+      const hist = demoHistoryEvents(l, LATE);
+      const enter = t(zone(l.id, 'GEOFENCE_ENTER')[0].at);
+      const portOut = hist.find((e) => e.type === 'STATUS_AUTO' && (e.payload as { to?: string } | undefined)?.to === 'IN_TRANSIT_SE');
+      const buffer = hist.find((e) => e.type === 'GEOFENCE_ENTER' && (e.payload as { geofence_id?: string } | undefined)?.geofence_id === 'gf-10');
+      expect(portOut && buffer, l.code).toBeTruthy();
+      expect(t(portOut!.at), l.code).toBeLessThan(t(buffer!.at));
+      expect(t(buffer!.at), l.code).toBeLessThan(enter);
     }
   });
 });

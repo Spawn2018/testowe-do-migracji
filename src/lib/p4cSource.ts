@@ -110,7 +110,7 @@ export function deliveredCheckOf(
     return load.deliveredCheck;
   }
   /* produkcja: brak pola = brak karty; zdarzenie GEOFENCE_EXIT nie otwiera karty po „Nie” */
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role, events) : null;
 }
 
 function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {
