@@ -45,7 +45,10 @@ val "KSH nie listuje decyzji" $KSH "select count(*) from decisions where id='$D3
 # eskalacja: sztucznie przeszły termin (funkcja tylko dla postgres/cron — bez EXECUTE dla authenticated)
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
 sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id='$D3'" >/dev/null
-out=$(sys "select decision_escalate_overdue()" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+raw=$(sys "select decision_escalate_overdue()" | tr -d '\r')
+errline=$(printf '%s\n' "$raw" | grep -m1 'ERROR:' || true)
+out=$(printf '%s\n' "$raw" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
+if [ -n "$errline" ]; then out="$errline | $out"; fi
 if [ "${out:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    escalate overdue ($out)"; else fail=$((fail+1)); echo "  FAIL  escalate overdue (otrzymano: $out)"; fi
 val "escalated_at ustawione" $HHL "select escalated_at is not null from decisions where id='$D3'" t
 val "historia ESCALATE" $HHL "select count(*) filter (where action='ESCALATE') from decision_events where decision_id='$D3'" 1

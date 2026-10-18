@@ -164,6 +164,7 @@ declare
   v_payload jsonb;
 begin
   perform set_config('tower.escalate_overdue', '1', true);
+  perform set_config('search_path', 'pg_temp, public', true);
   create temporary table if not exists esc_hit (
     user_id uuid,
     decision_id uuid,
@@ -209,6 +210,7 @@ begin
       )
       on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
     end if;
+    begin
     insert into pg_temp.esc_hit (user_id, decision_id, load_id, type_code, raw_title, bell, mail, recipient, locale, party)
     select u.id, r.id, r.load_id, r.type_code, r.title,
            public.notify_person_on(u.id, 'dec_late', 'bell', m.in_app, m.fixed_in_app),
@@ -238,6 +240,9 @@ begin
               or exists (select 1 from loads l join projects p on p.id = l.project_id
                           where l.id = r.load_id and p.client_org_id = o.id)))
        );
+    exception when others then
+      raise exception 'ESC_HIT: %', sqlerrm;
+    end;
     n := n + 1;
   end loop;
 
