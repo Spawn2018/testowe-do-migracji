@@ -171,7 +171,7 @@ export function alignDemoRisks(risks: readonly Risk[], loads: readonly Load[]): 
     if (r.id.startsWith('risk-permit-')) {
       const start = Date.parse(l.awizacja?.loadWindowStart ?? `${l.plannedLoadDate}T06:00:00Z`);
       const h = Math.max(1, Math.round((start - NOW_MS) / H));
-      const when = h < 48 ? `${h} h` : `${Math.round(h / 24)} ${plPlural(Math.round(h / 24), 'dzień', 'dni', 'dni')}`;
+      const when = h < 48 ? `${h}\u00a0h` : `${Math.round(h / 24)}\u00a0${plPlural(Math.round(h / 24), 'dzień', 'dni', 'dni')}`;
       return {
         ...r, title: `Brak zezwolenia — załadunek za ${when}`, detail: `Do załadunku ${when}, brak zezwolenia obejmującego wymiary zestawu`,
         ...(h < 48 ? { titleKey: 'rk_seed_permit', titleParams: { h } } : { titleKey: undefined, titleParams: undefined }),

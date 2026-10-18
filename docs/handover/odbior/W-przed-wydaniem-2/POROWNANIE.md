@@ -4,7 +4,7 @@ Podstawa: odbiór wyglądu przed wydaniem (`ODBIOR_WYGLADU_PRZED_WYDANIEM.md`); 
 Tylko wygląd i teksty (F8). Dwie rzeczy: (1) zwykły odstęp zamieniony na twardą spację (U+00A0) — między liczbą a jednostką oraz jako separator tysięcy w `formatPlNumber` (jedna funkcja liczb w aplikacji, E21) i między kwotą a walutą w `formatPlMoney`; (2) kody transportów w Dokumenty › Uwagi w osobnych `<span class="doc-code">` bez łamania wiersza (`CodeRun`, `.doc-code{white-space:nowrap}`). Słowa, wartości i dane bez zmian; wygląd liczby ten sam (odstęp tej samej szerokości).
 PR stoi na #297 (`wyglad/W-przed-wydaniem-1`), a ten na #295: scalić po nich.
 
-Przegląd całej aplikacji. Ustawienia: zegar 20.11 (i 23.09 przy pierwszym przeglądzie), konta HHL, SCX i KSH, szerokości 1440 / 1280 / 390 / 360, 12 stron. Szukane: liczba złamana na separatorze tysięcy, liczba oderwana od jednostki (h, min, km, dni, %, PLN, EUR, SEK, m/s) i kod transportu złamany w środku. Przed zmianą — 11 miejsc, po zmianie — 0:
+Przegląd całej aplikacji. Ustawienia: zegar 20.11 (i 23.09 przy pierwszym przeglądzie), konta HHL, SCX i KSH, szerokości 1440 / 1280 / 390 / 360, 12 stron. Szukane: liczba złamana na separatorze tysięcy, liczba oderwana od jednostki (h, min, km, dni, %, PLN, EUR, SEK, m/s) i kod transportu złamany w środku. Przed zmianą — 12 miejsc (11 lokalnie, 12. wykrył test w CI), po zmianie — 0:
 
 | Miejsce | Było (koniec linii) | Jest |
 |---|---|---|
@@ -17,6 +17,7 @@ Przegląd całej aplikacji. Ustawienia: zegar 20.11 (i 23.09 przy pierwszym prze
 | Opcje › stan systemu › źródło „Wiatr — SMHI” (1280, HHL; dane demo) | „od 25” / „m/s postój” | „25 m/s” razem |
 | Opcje › Opłata paliwowa › „Jak liczymy”, krok 4 „Opłata” (1440, KSH) | „= 362,25” / „EUR” | „362,25 EUR” razem |
 | Ryzyka › drogi SE (1440; dane demo) | „+90–150” / „min”, „+180–240” / „min” | „+90–150 min”, „+180–240 min” razem (także „+15–25 min”) |
+| Ryzyka › Do zrobienia, sprawa „Brak zezwolenia — załadunek za 12 dni” (telefon 360, HHL i SCX; dane demo — wykrył CI na #298, czcionki CI) | „za 12” / „dni” | „12 dni” razem; tak samo „{h} h” w tej sprawie |
 | Faktury › karta faktury, opis pod kwotą (telefon 360, wszystkie konta) | „VAT 18” / „245,92” — kwota złamana na separatorze tysięcy | „18 245,92” w całości — dotyczy każdej liczby z `formatPlNumber` w aplikacji |
 
 Obrazy (zegar 20.11):

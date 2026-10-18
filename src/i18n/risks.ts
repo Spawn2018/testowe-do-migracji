@@ -129,7 +129,7 @@ const pl: Dict = {
   rk_banner_loads_few: '{n} transporty przypięte',
   rk_banner_loads_many: '{n} transportów przypiętych',
   // --- dane demonstracyjne
-  rk_seed_permit: 'Brak zezwolenia — załadunek za {h} h',
+  rk_seed_permit: 'Brak zezwolenia — załadunek za {h}\u00a0h',
   rk_seed_res: 'Brak kierowcy i numerów rejestracyjnych',
   rk_seed_res_meta: 'Termin uzupełnienia minął 4 h temu',
   rk_seed_silent: 'Brak pozycji od 2 h 14 min',
