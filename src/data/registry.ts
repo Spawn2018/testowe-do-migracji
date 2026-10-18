@@ -80,5 +80,14 @@ export function registerFileSink(s: FileSink | null): void {
   fileSink = s;
 }
 export const getFileSink = (): FileSink | null => fileSink;
+
+/** D-20261018-1215-01: po wgraniu pliku odśwież panel. Ustawiane tylko w moście Supabase. */
+let afterFileUpload: (() => Promise<void>) | null = null;
+export function registerAfterFileUpload(fn: (() => Promise<void>) | null): void {
+  afterFileUpload = fn;
+}
+export function notifyFileUploaded(): Promise<void> {
+  return afterFileUpload ? afterFileUpload() : Promise.resolve();
+}
 /** Dokument z pliku w Storage (bajty nie w przeglądarce — tylko link podpisany). */
 export const isStoredDoc = (d: Pick<Document, 'storagePath'>): boolean => Boolean(d.storagePath);

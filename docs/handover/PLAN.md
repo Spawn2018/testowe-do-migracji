@@ -118,7 +118,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza) → Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -186,6 +186,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#297 `wyglad/W-przed-wydaniem-1` (D-20261018-0040-01, po #295):** **SCALONE I WDROŻONE** (18.10.2026 10:32, merge `c0362839`). Strefy bez wydłużonego dokumentu; numer transportu w szczegółach faktury w całości na telefonie.
 - **#298 `wyglad/W-przed-wydaniem-2` (D-20261018-0235-01, po #297):** **SCALONE I WDROŻONE** (18.10.2026 10:33, merge `a51cf771`; Vercel `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` READY). Liczba w całości i z jednostką (U+00A0); kod transportu w całości. Zasada §1 pkt 10 obowiązuje od teraz.
 - **#300 `wyglad/W-panel-do-zrobienia` (D-20261018-1215-01):** **SCALONE I WDROŻONE** (18.10.2026 13:33 UTC, merge `a2eb2d48`; Vercel `dpl_CpMsNnaro6ZzDmUjdHCHjBv3hew9` READY 13:35). Wygląd: „Do zrobienia” w Przeglądzie — tylko aktualny stan, zwijane na telefonie. Baza i odświeżenie panelu — pozycja po A2 (§4).
+- **#303 `wyglad/W-przed-wydaniem-3` (P11 pkt 7, partie 1–6):** **SCALONE I WDROŻONE** (18.10.2026 20:07, merge `7e9c286c`, głowa `ab0969d`; Vercel `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33). Tylko wygląd: zgodność z raportem, spójne ceny w demo, CMR po rozładunku. Tekstów i filtra CMR nie zmieniam (F1).
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -389,7 +390,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza) → Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -486,7 +487,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - D-20261018-1130-01: otwarta `DELIVERED_CHECK` zamyka się sama przy `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED` (rozszerzenie `loads_close_delivery_unconfirmed`). `RESOLVED`, `resolution_code` `DELIVERED` albo przy anulowaniu `CANCELLED`, wpis w `decision_events`. Test: `load_status_set(..., 'DELIVERED')` → 0 otwartych.
 - **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). To samo przestawienie zmienia zdania w Strefach: plac i załadunek (D-20261017-1715-01). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
-### Panel › Do zrobienia — aktualny stan (D-20261018-1215-01; po A2, przed A3) — wygląd NA PRODUKCJI (`a2eb2d48`, 18.10.2026 13:35); baza §2–§3 po bramie niedzielnej
+### Panel › Do zrobienia — aktualny stan (D-20261018-1215-01; po A2, przed A3) — wygląd NA PRODUKCJI (`a2eb2d48`, 18.10.2026 13:35); baza §2–§3 W TOKU (`pakiet/panel-do-zrobienia-baza`, migracja 0229)
 - **Wygląd:** PR #300 `wyglad/W-panel-do-zrobienia` — scala w przerwie (§1 kolejka wyglądu); wdrożenie z `main`.
 - **Baza (nowa migracja, po wdrożeniu A2):**
   - `risk_signals` `decision-overdue:<id>` → `resolved_at`, gdy decyzja przestaje być `NEW` / `ASSIGNED` / `SNOOZED` (każda droga: rozstrzygnięcie, wygaśnięcie, A2);
@@ -494,6 +495,22 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - bez powiadomień; jednorazowy porządek tą samą regułą (na produkcji 16+6+1 — liczby sprawdzasz przed wgraniem);
   - testy w `risks.sh` / `dec2.sh` (dopisek §2c); brama `db` zielona.
 - **Aplikacja:** po zapisie w panelu (awizacja, numer zlecenia, dokument, ręczna zmiana statusu) — `refreshFromServer({ keepSelection: true })` w `supabaseBridge.ts`. Wyglądu nie zmieniasz.
+
+### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3)
+- L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen.
+- Jednorazowo: 12 otwartych `SEFS_OUT_OF_TABLE` z `reason = SOURCE` dla przyszłych tygodni → `EXPIRED` („nie dotyczy — tydzień wskaźników jeszcze trwa”), wpis w `decision_events`, bez powiadomień, razem ze sprawami „Decyzja po terminie”.
+- Eskalacja: jedno powiadomienie na `event_key` i osobę (także przy drugim przebiegu). Więcej niż 2 eskalacje u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail zbiorczy, jak `L17_BACKLOG` („Po terminie: N decyzji · Opłata paliwowa”, odnośnik do Ryzyk). Osobne wpisy nie idą.
+- Tytuły decyzji, spraw i e-maili z bazy: kod transportu i numer zlecenia danej firmy (E41), nie 8 znaków identyfikatora. „SEFS” → „Opłata paliwowa” (E39). Jednorazowa poprawka otwartych tytułów, bez powiadomień.
+- W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
+- Testy §5 dopisku. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
+
+### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3)
+Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
+- Jednorazowo `doc_requirements` CMR → `AFTER_UNLOAD`, 24 h, wpis w `audit_log`, bez powiadomień.
+- `CHECK (category <> 'CMR' OR anchor = 'AFTER_UNLOAD')`. `doc_requirement_set` odrzuca inną kotwicę dla CMR. Test `tests/db/i2.sh` (ok. l. 643) na CMR po rozładunku i na odmowę `AT_LOAD`.
+- `doc_requirements_status()`: termin CMR od faktycznego „Dostarczone” + 24 h. Przed dostawą CMR nie jest `OVERDUE` ani brakiem z terminem.
+- Przegląd miejsc w bazie, które zakładają CMR przy załadunku (braki, sprawy, powiadomienia, szablony, `seed.sql`, konta TEST, API kierowcy) — lista w `POSTEP.md` i poprawka. Warunek „Gotowe do fakturowania” bez zmian.
+- POD zostaje. Testy §6 dopisku. Wygląd: PR #303 (partia 6) — tekstów i filtra nie zmieniasz (F1).
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
 - `doc_requirements`:
@@ -861,7 +878,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 5. **Pełna brama TEST** na commicie wydania (niezależnie od bram niedzielnych, §3).
 6. **Regeneracja 280 ujęć** w środowisku bramy wizualnej (cron właściciela), tag `baseline-audyt-<data P11, RRRR-MM-DD>` — §5 W11.
    - **Ujęcia z TEST (D-20261017-0930-01 §2 pkt 6 / §3):** logowanie, zaproszenie, „Nie pamiętam hasła”, „Link wygasł”, 2FA (ustawienie i kod), pasek „Działasz jako”, pasek Podglądu, komunikat HHL, „Jest nowa wersja”. Zapis w `docs/handover/odbior/P11/`. (Ekrany AuthGate nie idą do demo — odbiór na TEST z kontem.)
-7. **Końcowy przegląd zgodności całej aplikacji** (D-20261013-1550-01 Z12), przed R-4 i przed `release-1.0`:
+7. **Końcowy przegląd zgodności całej aplikacji** (D-20261013-1550-01 Z12), przed R-4 i przed `release-1.0`. **Partie 1–6:** scalone i wdrożone w #303 (`7e9c286c`, `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR`, 18.10.2026 21:33) — zgodność z raportem, spójne ceny w demo, CMR tylko po rozładunku.
    - zrzuty każdego miejsca z „Mapy aplikacji”: dla każdego rodzaju konta, który je widzi; przy 1440 i 390 px; w trybie demo; obok obrazu z `raport/img/` albo wzoru z Z10;
    - zapis w `docs/handover/odbior/P11-zgodnosc/` z tabelą: miejsce | konto | szerokość | obraz | zgodne / różnica | decyzja, która uzasadnia różnicę;
    - koordynator sprawdza całość; właściciel ogląda aplikację na swoim telefonie i komputerze;
@@ -1041,3 +1058,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 11:10 | D-20261018-1110-01: produkcja tylko z `main` po scaleniu i przeglądzie — `vercel --prod`, `db push`, Edge; gałąź tylko Preview. §1 pkt 3.5 | koordynator |
 | 18.10.2026 11:30 | D-20261018-1130-01: #299 — poprawki 1100 przyjęte; L14 zamyka się przy Dostarczone / anulowaniu (`loads_close_delivery_unconfirmed`) | koordynator |
 | 18.10.2026 12:15 | D-20261018-1215-01: panel Przegląd › „Do zrobienia” tylko aktualny stan — #300 wygląd; po A2 baza (zamknięcie nieaktualnych) + `refreshFromServer` w panelu; przed A3 | właściciel 11:35 / 11:46; koordynator |
+| 18.10.2026 16:10 | D-20261018-1610-01: eskalacje decyzji — L-1 bez `SOURCE` dla przyszłego tygodnia, 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień, jedna eskalacja na osobę, zbiorcza powyżej 2, tytuły z kodem transportu i „Opłata paliwowa”. Po bazie panelu §2, przed A3 | koordynator |
+| 18.10.2026 17:40 | D-20261018-1740-01: CMR tylko po rozładunku — `AFTER_UNLOAD` / 24 h, bez `OVERDUE` przed dostawą, odmowa kotwicy przy załadunku. Po eskalacjach, przed A3. Wygląd: #303 (F1) | właściciel 17:28; koordynator |

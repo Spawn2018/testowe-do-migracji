@@ -107,4 +107,30 @@ chk "C1: resolve → RISK_OPEN oznaczony przeczytany" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and read_at is not null and payload->>'c1_resolved' = 'true'")" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID'")"
 
+echo; echo "[1215] zamknięcie alarmów panelu (D-20261018-1215-01)"
+DID=$(Q "insert into decisions (project_id, type_code, status, title) values ('$P','FERRY_CANCELLED','NEW','1215-overdue') returning id")
+DID2=$(Q "insert into decisions (project_id, type_code, status, title) values ('$P','FERRY_CANCELLED','NEW','1215-resolved') returning id")
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
+  values ('$P','$L1','DOC_MISSING','HIGH','Decyzja po terminie','rk_decision_overdue','decision-overdue:$DID'),
+         ('$P',null,'DOC_MISSING','HIGH','Decyzja po terminie','rk_decision_overdue','decision-overdue:$DID2')" >/dev/null
+NDEC=$(Q "select count(*) from notifications")
+$PSQL -c "update decisions set status='EXPIRED' where id='$DID'" >/dev/null
+$PSQL -c "update decisions set status='RESOLVED', resolved_at=now() where id='$DID2'" >/dev/null
+chk "1215: NEW→EXPIRED zamyka decision-overdue" \
+  "$(Q "select count(*) from risk_signals where dedup_key='decision-overdue:$DID' and resolved_at is not null")" 1
+chk "1215: NEW→RESOLVED zamyka decision-overdue" \
+  "$(Q "select count(*) from risk_signals where dedup_key='decision-overdue:$DID2' and resolved_at is not null")" 1
+chk "1215: zamknięcie decyzji → 0 nowych powiadomień" \
+  "$(Q "select count(*) - $NDEC from notifications")" 0
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
+  values ('$P','$L1','DOC_MISSING','HIGH','Brak awizacji','rk_res_driver','l3:NO_AWIZACJA:$L1')" >/dev/null
+$PSQL -c "update loads set status='DELIVERED' where id='$L1'" >/dev/null
+chk "1215: l3:NO_AWIZACJA znika przy DELIVERED" \
+  "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L1' and resolved_at is not null")" 1
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
+  values ('$P','$L2','INVOICE_MISMATCH','HIGH','Faktura po terminie','rk_invoice_overdue','invoice-overdue:$L2')" >/dev/null
+$PSQL -c "update loads set status='INVOICED' where id='$L2'" >/dev/null
+chk "1215: faktura po terminie zostaje przy INVOICED" \
+  "$(Q "select count(*) from risk_signals where dedup_key='invoice-overdue:$L2' and resolved_at is null")" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
