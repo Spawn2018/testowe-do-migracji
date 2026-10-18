@@ -67,5 +67,5 @@ npm run test:etap5
 npm run test:etap6
 npm run test:aud03
 # P11 pkt 3 (wyglad/W-bramy-P11): bramy na stałe — E20 szerokości, E21 strażnik tekstów, E10 kontrast (2 wątki)
-npx playwright test tests/p11-bramy.spec.ts --workers=2
+npx playwright test tests/p11-bramy.spec.ts --workers=4
 echo "[fresh] OK"

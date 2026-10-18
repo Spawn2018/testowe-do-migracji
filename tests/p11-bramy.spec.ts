@@ -6,8 +6,9 @@
  * - E21: strażnik tekstów — 5 rodzajów kont, strony, ekrany Opcji, dzwonek, rozwinięte sprawy Ryzyk, panel transportu.
  * - E10: kontrast (axe-core, `color-contrast`, WCAG AA) — 3 firmy × 2 motywy, komputer i telefon, ekrany Opcji (także
  *   Operacje HHL i Użytkownik SCX), panel, dzwonek, okna, rozwinięte sprawy Ryzyk, najechany wiersz Mapy.
- * Każdy ekran sprawdzany dopiero po dorysowaniu (tekst bez zmian przez 300 ms). Dane demo, zegar zamrożony.
- * CI: `scripts/ci/fresh-smoke.sh` (2 wątki).
+ * Każdy ekran sprawdzany dopiero po dorysowaniu: korzeń widoku albo zakładki panelu z treścią i bez zmian w drzewie przez
+ * 400 ms (MutationObserver); strażnik tekstów czyta drugi raz po 0,8 s (treść dopisana później). Dane demo, zegar zamrożony.
+ * CI: `scripts/ci/fresh-smoke.sh` (4 wątki). F7 #301 r2: lokalnie Chromium 141, w CI 153 — zielone lokalnie ≠ zielone w CI.
  */
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
@@ -56,23 +57,32 @@ async function boot(page: Page, o: { role?: Role; clock?: string; konto?: string
   return at
 }
 
-/** Czeka, aż treść się dorysuje: tekst `sel` niepusty i bez zmian przez 300 ms (najwyżej 6 s). */
-async function settle(page: Page, sel = 'main') {
-  await page.evaluate(async (s) => {
+/**
+ * Czeka, aż treść się dorysuje (F7 #301 B3): korzeń `sel` istnieje i ma tekst, potem drzewo bez zmian (węzły, tekst)
+ * przez `quietMs` — liczone przez MutationObserver; najwyżej 8 s.
+ */
+async function settle(page: Page, sel = 'main', quietMs = 400) {
+  await page.evaluate(async ({ s, q }) => {
     await document.fonts?.ready
-    const len = () => (document.querySelector(s) as HTMLElement | null)?.innerText.length ?? 0
-    let last = len(), stable = 0
     const t0 = performance.now()
-    while (performance.now() - t0 < 6000) {
-      await new Promise((r) => setTimeout(r, 100))
-      const n = len()
-      if (n > 0 && n === last) { stable += 100; if (stable >= 300) return } else { stable = 0; last = n }
-    }
-  }, sel)
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    const root = () => document.querySelector(s) as HTMLElement | null
+    while (performance.now() - t0 < 8000 && !((root()?.innerText.trim().length ?? 0) > 0)) await sleep(50)
+    const r = root()
+    if (!r) return
+    let last = performance.now()
+    const mo = new MutationObserver(() => { last = performance.now() })
+    mo.observe(r, { subtree: true, childList: true, characterData: true })
+    while (performance.now() - t0 < 8000 && performance.now() - last < q) await sleep(50)
+    mo.disconnect()
+  }, { s: sel, q: quietMs })
 }
 
+/** Strona: widok z `data-page` musi się wczytać (leniwe części aplikacji), potem cisza w `main`. Kursor poza treścią (F7 D10). */
 async function go(page: Page, url: string, sel = 'main') {
+  await page.mouse.move(0, 0)
   await page.goto(url)
+  await page.waitForSelector('main [data-page]', { timeout: 15_000 })
   await settle(page, sel)
 }
 
@@ -82,25 +92,56 @@ async function openLoad(page: Page, url: string) {
   await page.waitForSelector('aside.drawer #dtab-overview', { timeout: 15_000 })
   await page.evaluate(() => (document.getElementById('dtab-overview') as HTMLButtonElement).click())
   await page.waitForSelector('aside.drawer [data-overview]', { timeout: 15_000 })
-  await settle(page, 'aside.drawer')
+  await settle(page, 'aside.drawer #dpanel')
 }
 
-/** Zakładka panelu — musi istnieć; czeka na dorysowanie. */
+/**
+ * Zakładka panelu — musi istnieć; czeka na treść samej zakładki (`#dpanel`): zakładki wczytują się osobno i do tego czasu
+ * pole jest puste, a nagłówek panelu ma tekst (F7 #301 B3 pkt 2). Potem cisza w zakładce.
+ */
 async function openTab(page: Page, id: (typeof TABS)[number]) {
   const btn = page.locator(`#dtab-${id}`)
   await expect(btn, `zakładka ${id}`).toHaveCount(1)
   await page.evaluate((x) => (document.getElementById(x) as HTMLButtonElement).click(), `dtab-${id}`)
   await expect(btn).toHaveAttribute('aria-selected', 'true')
-  await settle(page, 'aside.drawer')
+  await expect.poll(() => page.evaluate(() => (document.querySelector('aside.drawer #dpanel') as HTMLElement | null)?.innerText.trim().length ?? 0), { timeout: 15_000, message: `treść zakładki ${id}` }).toBeGreaterThan(0)
+  await settle(page, 'aside.drawer #dpanel')
 }
 
-/** Ryzyka: wszystkie sprawy widoczne i rozwinięte (lista „pokaż resztę”, karty). */
-async function expandRisks(page: Page) {
+/**
+ * Ryzyka: cała lista („pokaż resztę”), potem każda karta po kolei — karty działają jak akordeon (otwarcie jednej zamyka
+ * poprzednią), więc sprawdzenie idzie kartą po karcie (F7 #301 B4 pkt 2). `fn` dostaje kartę oznaczoną `[data-axe-target]`.
+ */
+async function eachRiskCard(page: Page, fn: (i: number) => Promise<void>) {
   const rest = page.locator('[data-rk-rest]')
   if (await rest.count()) { await rest.first().click(); await settle(page) }
-  /* klik w DOM: zwinięte nagłówki bywają poza ekranem albo przykryte — Playwright czekałby na nie do końca testu */
-  await page.evaluate(() => { for (const hd of document.querySelectorAll<HTMLElement>('.rk-card-hd[aria-expanded="false"]')) hd.click() })
-  await settle(page)
+  const n = await page.locator('.rk-card-hd').count()
+  for (let i = 0; i < n; i++) {
+    const ok = await page.evaluate((k) => {
+      const hd = document.querySelectorAll<HTMLElement>('.rk-card-hd')[k]
+      if (!hd) return false
+      /* klik w DOM: nagłówek bywa poza ekranem albo przykryty */
+      if (hd.getAttribute('aria-expanded') === 'false') hd.click()
+      for (const e of document.querySelectorAll('[data-axe-target]')) e.removeAttribute('data-axe-target')
+      ;(hd.closest('[data-rk-card]') ?? hd.parentElement)?.setAttribute('data-axe-target', '')
+      return true
+    }, i)
+    if (!ok) continue
+    await settle(page, '[data-axe-target]', 250)
+    await fn(i)
+  }
+}
+
+/** Ostatnie okno modalne (`aria-modal`) jako cel sprawdzenia — panel transportu też ma `role="dialog"` (F7 #301 B4 pkt 1). */
+async function markLastModal(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    for (const e of document.querySelectorAll('[data-axe-target]')) e.removeAttribute('data-axe-target')
+    const all = [...document.querySelectorAll('[aria-modal="true"]')]
+    const el = all[all.length - 1]
+    if (!el) return false
+    el.setAttribute('data-axe-target', '')
+    return true
+  })
 }
 
 async function optNavs(page: Page): Promise<string[]> {
@@ -127,6 +168,14 @@ const layoutHits = (rootSel: string) => {
     /* treść szersza niż okno — `main` i panel ucinają nadmiar (`overflow-x: hidden`) */
     const rcs = getComputedStyle(root)
     if ((rcs.overflowX === 'hidden' || rcs.overflowX === 'clip') && root.scrollWidth > root.clientWidth + 1) out.push(`treść szersza: ${root.scrollWidth} > ${root.clientWidth}`)
+    /* F7 #301 B1: przewijanie w bok w środku (panel: `.dbody`) — dozwolone tylko w opakowaniu tabeli */
+    for (const sc of [root, ...root.querySelectorAll('*')]) {
+      const cs = getComputedStyle(sc)
+      if (!/auto|scroll/.test(cs.overflowX) || sc.closest('.leaflet-container')) continue
+      if (sc.scrollWidth <= sc.clientWidth + 1 || sc.clientWidth === 0) continue
+      const wide = [...sc.querySelectorAll('table')].some((tb) => tb.getBoundingClientRect().width > sc.clientWidth + 1)
+      if (!wide) out.push(`przewijanie w bok ${sc.tagName.toLowerCase()}.${[...sc.classList].join('.')}: ${sc.scrollWidth} > ${sc.clientWidth}`)
+    }
     for (const tr of root.querySelectorAll('tr')) {
       const cells = [...tr.children].filter((c) => c.getBoundingClientRect().width > 0)
       for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) {
@@ -156,6 +205,15 @@ const layoutHits = (rootSel: string) => {
   const top = document.querySelector('header.topbar') as HTMLElement | null
   if (top) {
     if (top.scrollHeight > top.clientHeight + 1) out.push(`pasek górny: treść ${top.scrollHeight} px > ${top.clientHeight} px`)
+    /* F7 #301 D11: napis w pasku w dwóch liniach, nawet gdy mieści się w 52 px */
+    const walker = document.createTreeWalker(top, NodeFilter.SHOW_TEXT)
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!(n.textContent ?? '').trim() || (n.parentElement && n.parentElement.closest('[role="menu"],[role="dialog"]'))) continue
+      const rg = document.createRange()
+      rg.selectNodeContents(n)
+      const tops = new Set([...rg.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.top)))
+      if (tops.size > 1) out.push(`pasek górny: tekst w ${tops.size} liniach «${(n.textContent ?? '').trim().slice(0, 30)}»`)
+    }
     for (const el of top.querySelectorAll('*')) {
       const r = el.getBoundingClientRect()
       if (r.height > top.clientHeight + 1 && getComputedStyle(el).position !== 'fixed' && !el.closest('[role="menu"],[role="dialog"]')) out.push(`pasek górny: ${el.tagName.toLowerCase()}.${[...el.classList].join('.')} ${Math.round(r.height)} px`)
@@ -231,21 +289,27 @@ const FORMS: string[][] = [
 const FORM_OF = new Map<string, string[]>(FORMS.flatMap((f) => f.map((w) => [w, f] as [string, string[]])))
 const formFor = (n: number, f: string[]) => (n === 1 ? f[0] : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? f[1] : f[2])
 /* przyimki z dopełniaczem („z 3 transportów”, „dla 2 spraw”) — tam druga forma jest poprawna inaczej */
-const GEN_PREP = /(?:^|[\s(„])(?:z|ze|do|od|dla|bez|około|ok\.|u|wśród|spośród|zamiast|według|wobec|ponad)\s+$/i
+const GEN_PREP = /(?:^|[\s(„])(?:z|ze|do|od|dla|bez|około|ok\.|u|wśród|spośród|zamiast|według|wobec|ponad|brak|brakuje|dotyczy|w ciągu|sprzed)\s+$/i
 
 const RULES: [string, RegExp][] = [
   ['kod', /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b/g],
   ['klucz', /\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|(?<![@/\w.-])[a-z]+(?:\.[a-z_]+){2,}(?![\w.-]*@)/g],
-  ['numer wewnętrzny', /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}\b|\b(?=[0-9A-F]*\d)(?=[0-9A-F]*[A-F])[0-9A-F]{8}\b/g],
+  ['numer wewnętrzny', /(?<!#)\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}\b|(?<!#)\b(?=[0-9A-F]*\d)(?=[0-9A-F]*[A-F])[0-9A-F]{8}\b/g],
   ['data ISO', /\b\d{4}-\d{2}-\d{2}(?=T|\b)/g],
   ['sekundy', /(?<!\d)\d{1,2}:\d{2}:\d{2}(?!\d)/g],
   ['data bez zera', /(?<![\d.])\d\.\d{1,2}\.\d{4}\b|(?<![\d.])\d{1,2}\.\d\.\d{4}\b/g],
   ['szwedzki', /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|olycka|körfält|avstängd)(?![\p{L}])/giu],
   ['pusta wartość', /\b(undefined|null|NaN|Invalid Date)\b|\[object Object\]/g],
-  ['kwota bez odstępu tysięcy', /(?<![\d/., -])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,-])\d{5,}(?=[  ](?:PLN|EUR|SEK|km|kg)\b)/g],
+  /* F7 #301 r2 P3: także po minusie i twardej spacji; 4 cyfry bez groszy przed walutą („4500 PLN”; kwoty mają odstęp tysięcy także przy 4 cyfrach, a „1050 km” — nie musi) */
+  ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)/g],
+  ['data angielska', /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{4}\b|\bGMT[+-]\d{4}\b/g],
 ]
 /* E21 pkt 7: wyjątki — nazwy plików z rozszerzeniem (wielkość liter dowolna, także z łącznikiem), licencja „CC BY 4.0” */
-const EXCEPT = [/[\p{L}\p{N}_.-]+\.(?:pdf|xlsx|xls|csv|zip|png|jpe?g|webp|heic|docx?)\b/giu, /\bCC BY(?:-SA)? \d\.\d\b/g]
+const EXCEPT = [
+  /[\p{L}\p{N}_.-]+\.(?:pdf|xlsx|xls|csv|zip|png|jpe?g|webp|heic|docx?)\b/giu, /\bCC BY(?:-SA)? \d\.\d\b/g,
+  /* F7 #301 r2 P3: adresy e-mail i nazwy domen (np. jan_kowalski@firma.pl, api.trafikinfo.trafikverket.se) */
+  /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, /\b(?:[a-z0-9-]+\.)+(?:pl|se|com|eu|net|org|io)\b/g,
+]
 
 function textHits(raw: string, where: string, o: { codesAllowed?: boolean } = {}): string[] {
   const out: string[] = []
@@ -279,6 +343,14 @@ function textHits(raw: string, where: string, o: { codesAllowed?: boolean } = {}
 
 const innerText = (page: Page, sel: string) => page.evaluate((s) => (document.querySelector(s) as HTMLElement | null)?.innerText ?? '', sel)
 
+/** Strażnik czyta dwa razy: po dorysowaniu i 0,8 s później — treść dopisana z opóźnieniem też jest sprawdzona (F7 #301 B3). */
+async function scan(page: Page, sel: string, where: string, o: { codesAllowed?: boolean } = {}): Promise<string[]> {
+  const a = await innerText(page, sel)
+  await page.waitForTimeout(800)
+  const b = await innerText(page, sel)
+  return [...new Set([...textHits(a, where, o), ...textHits(b, where, o)])]
+}
+
 test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
   const KINDS = [['HHL', ''], ['HHL', '&konto=operacje'], ['KSH', ''], ['SCX', ''], ['SCX', '&konto=uzytkownik']] as const
   const LOADS_NOW = ['SG-03', 'SG-07', 'SG-08', 'SG-09', 'SG-10', 'SG-15', 'SG-22', 'SG-32', 'SG-36', 'T-01', 'T-05', 'T-17', 'K-03']
@@ -286,30 +358,30 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
   for (const [role, konto] of KINDS) {
     for (const clock of [NOW, LATE]) {
       test(`${role}${konto ? ` ${konto.slice(7)}` : ''}, zegar ${clock.slice(5, 10)}: strony, Opcje, dzwonek, Ryzyka, panel — 0 trafień`, async ({ page }) => {
-        test.setTimeout(300_000)
+        test.setTimeout(480_000)
         const at = await boot(page, { role, clock, konto })
         const hits: string[] = []
         for (const p of PAGES) {
           await go(page, at(p))
-          if (p === '/ryzyka') await expandRisks(page)
-          hits.push(...textHits(await innerText(page, 'main'), p, { codesAllowed: p === '/opcje/stan-systemu' }))
+          hits.push(...await scan(page, 'main', p, { codesAllowed: p === '/opcje/stan-systemu' }))
+          if (p === '/ryzyka') await eachRiskCard(page, async (i) => { hits.push(...textHits(await innerText(page, '[data-axe-target]'), `/ryzyka › karta ${i + 1}`)) })
           if (p === '/opcje') {
             for (const n of await optNavs(page)) {
               await openOpt(page, n)
-              hits.push(...textHits(await innerText(page, 'main'), `/opcje › ${n}`, { codesAllowed: n === 'status' }))
+              hits.push(...await scan(page, 'main', `/opcje › ${n}`, { codesAllowed: n === 'status' }))
             }
           }
         }
         await go(page, at('/kokpit'))
         await page.locator('.bell-trigger').first().click()
         await settle(page, '.bell-wrap')
-        hits.push(...textHits(await innerText(page, '.bell-wrap'), 'dzwonek'))
+        hits.push(...await scan(page, '.bell-wrap', 'dzwonek'))
         if (konto !== '&konto=operacje') {
           for (const c of clock === NOW ? LOADS_NOW : LOADS_LATE) {
             await openLoad(page, at(`/transport/${c}`))
             for (const tab of TABS) {
               await openTab(page, tab)
-              hits.push(...textHits(await innerText(page, 'aside.drawer'), `panel ${c} › ${tab}`))
+              hits.push(...await scan(page, 'aside.drawer', `panel ${c} › ${tab}`))
             }
           }
         }
@@ -325,12 +397,15 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
       'mnożnik SEK 1.120', 'Realizacja 4.8% · 1726,59 PLN', '22.49 SEK/l', '12.10 PLN', '5c77d4d7: brak awizacji', '5C77D4D7',
       'sail_src_STENA', 'risk.kind.no_awizacja', '1 pojazdów w ruchu', '22 pojazdów', '5 pojazdy', 'kwota 8239,15', 'fala 3.4 m',
       'E4: från Backen till Gärde', 'Nieznany kod źródła drogowego', 'undefined',
+      '-8239,15 PLN', 'razem\u00a08239,15 PLN', '4500 PLN', 'Mon Oct 12 2026 12:00 GMT+0200',
     ]
     for (const s of bad) expect(textHits(s, 't').length, s).toBeGreaterThan(0)
     const ok = [
       'termin 07.10, 12:00', '31.12.2026', 'HHL_FV_2026_0902.pdf', 'WATCH_TOWER_SG-07.PDF', 'Źródło: SMHI (CC BY 4.0)',
       '1 726,59 PLN', '1 pojazd w ruchu', '22 pojazdy', '5 pojazdów', 'z 3 transportów', 'decade effaced deadbeef',
       'SG-03 · HHL/2026/1304', '+1 h 35 min po oknie', '4,8%', 'biuro@h-h.pl', 'tower.log-mar.pl', '2 minuty temu',
+      '1050 km do placu', 'Brak 2 dokumentów', 'Dotyczy 3 transportów', 'w ciągu 2 godzin', 'sprzed 2 godzin', 'brakuje 3 plików',
+      'api.trafikinfo.trafikverket.se', 'jan_kowalski@firma.pl', 'kolor #1a2b3c4d', '−8 239,15 PLN', 'Högakustenbron (E4)',
     ]
     for (const s of ok) expect(textHits(s, 't'), s).toEqual([])
     /* w Stanie systemu kody są dozwolone (E21 pkt 3) */
@@ -342,17 +417,59 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
 
 const AXE = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 
+/* F7 #301 r2 P6: węzły, których axe nie ocenia („incomplete”: zasłonięte przez przyklejone kolumny, nakryte, poza oknem),
+   mierzymy sami — kolor tekstu (z przezroczystością) na złożonym tle przodków. Pomijamy tylko podkład mapy (obraz)
+   oraz pojedyncze znaki i ikony (axe: shortTextContent, nonBmp, pseudoContent, imgNode). */
 async function contrast(page: Page, where: string, out: string[], sel = 'main') {
   if (!(await page.evaluate(() => 'axe' in window))) await page.addScriptTag({ content: AXE })
   const r = await page.evaluate(async (s) => {
-    const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { nodes: { target: string[]; any: { message: string }[] }[] }[]; incomplete: unknown[] }> } }
+    type AxeNode = { target: string[]; element?: Element; any: { message: string; data?: { messageKey?: string } | null }[] }
+    const w = window as unknown as { axe: { run: (c: unknown, o: unknown) => Promise<{ violations: { nodes: AxeNode[] }[]; incomplete: { id: string; nodes: AxeNode[] }[] }> } }
     const root = document.querySelector(s)
-    if (!root) return { v: [`brak ${s}`], inc: 0 }
-    const res = await w.axe.run(root, { runOnly: { type: 'rule', values: ['color-contrast'] }, resultTypes: ['violations', 'incomplete'] })
-    return { v: res.violations.flatMap((x) => x.nodes.map((n) => `${n.target.join(' ')} — ${n.any[0]?.message ?? ''}`.slice(0, 220))), inc: res.incomplete.length }
+    if (!root) return { v: [`brak ${s}`], inc: 0, own: 0, skip: 0 }
+    const res = await w.axe.run(root, { runOnly: { type: 'rule', values: ['color-contrast'] }, resultTypes: ['violations', 'incomplete'], elementRef: true })
+    const v = res.violations.flatMap((x) => x.nodes.map((n) => `${n.target.join(' ')} — ${n.any[0]?.message ?? ''}`.slice(0, 220)))
+    const parse = (c: string): number[] | null => {
+      let m = c.match(/^rgba?\(([^)]+)\)$/)
+      if (m) { const p = m[1].split(/[\s,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] ?? 1] }
+      m = c.match(/^color\(srgb ([^)]+)\)$/)
+      if (m) { const p = m[1].split(/[\s/]+/).filter(Boolean).map(Number); return [p[0] * 255, p[1] * 255, p[2] * 255, p[3] ?? 1] }
+      return null
+    }
+    const over = (a: number[], b: number[]) => [0, 1, 2].map((k) => a[k] * a[3] + b[k] * (1 - a[3])).concat(1)
+    const lum = (c: number[]) => { const f = (x: number) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4 }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]) }
+    const SKIP = new Set(['shortTextContent', 'nonBmp', 'pseudoContent', 'imgNode', 'bgImage'])
+    let own = 0, skip = 0
+    for (const n of res.incomplete.filter((x) => x.id === 'color-contrast').flatMap((x) => x.nodes)) {
+      const el = n.element as HTMLElement | undefined
+      const key = n.any[0]?.data?.messageKey ?? ''
+      if (!el || SKIP.has(key) || el.closest('.leaflet-container')) { skip++; continue }
+      const cs = getComputedStyle(el)
+      const fg0 = parse(cs.color)
+      const layers: number[][] = []
+      let opacity = 1
+      for (let e: Element | null = el; e; e = e.parentElement) {
+        const st = getComputedStyle(e)
+        opacity *= Number(st.opacity)
+        const bg = parse(st.backgroundColor)
+        if (bg === null) { layers.length = 0; break }
+        if (bg[3] > 0) { layers.push(bg); if (bg[3] >= 1) break }
+      }
+      if (!fg0 || !layers.length || layers[layers.length - 1][3] < 1) { skip++; continue }
+      let bg = layers[layers.length - 1]
+      for (let k = layers.length - 2; k >= 0; k--) bg = over(layers[k], bg)
+      const fg = over([fg0[0], fg0[1], fg0[2], fg0[3] * opacity], bg)
+      const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a)
+      const ratio = (hi + 0.05) / (lo + 0.05)
+      const size = parseFloat(cs.fontSize), bold = Number(cs.fontWeight) >= 700
+      const need = size >= 24 || (size >= 18.66 && bold) ? 3 : 4.5
+      own++
+      if (ratio < need - 0.005) v.push(`${n.target.join(' ')} — pomiar własny (axe: ${key || 'incomplete'}): ${ratio.toFixed(2)} < ${need} — «${(el.textContent ?? '').trim().slice(0, 40)}»`.slice(0, 260))
+    }
+    return { v, inc: own + skip, own, skip }
   }, sel)
   out.push(...r.v.map((x) => `${where}: ${x}`))
-  if (r.inc) test.info().annotations.push({ type: 'axe incomplete', description: `${where}: ${r.inc}` })
+  if (r.inc) test.info().annotations.push({ type: 'axe incomplete', description: `${where}: ${r.inc} (zmierzone osobno ${r.own}, pominięte ${r.skip})` })
 }
 
 test.describe('P11 pkt 3 — E10 kontrast', () => {
@@ -365,10 +482,25 @@ test.describe('P11 pkt 3 — E10 kontrast', () => {
         for (const p of PAGES) {
           await go(page, at(p))
           await contrast(page, p, bad)
-          if (p === '/ryzyka') { await expandRisks(page); await contrast(page, '/ryzyka (rozwinięte)', bad) }
+          if (p === '/ryzyka') await eachRiskCard(page, async (i) => { await contrast(page, `/ryzyka › karta ${i + 1}`, bad, '[data-axe-target]') })
           if (p === '/mapa') {
             const row = page.locator('.map-loads-table tbody tr[data-load]').first()
             if (await row.count()) { await row.hover(); await page.waitForTimeout(150); await contrast(page, '/mapa (najechany wiersz)', bad, '.map-loads-table') }
+          }
+          /* F7 #301 D10: najechany wiersz Harmonogramu wprost — zwykły i „Dostarczone” (przygaszony) */
+          if (p === '/harmonogram') {
+            for (const [name, sel] of [['wiersz', 'tbody tr[data-load]:not(.done)'], ['wiersz dostarczony', 'tbody tr.done[data-load]']] as const) {
+              const row = page.locator(`main ${sel}`).first()
+              if (!(await row.count())) continue
+              await row.hover()
+              await page.waitForTimeout(150)
+              await page.evaluate((q) => {
+                for (const e of document.querySelectorAll('[data-axe-target]')) e.removeAttribute('data-axe-target')
+                document.querySelector(`main ${q}`)?.setAttribute('data-axe-target', '')
+              }, sel)
+              await contrast(page, `/harmonogram (najechany ${name})`, bad, '[data-axe-target]')
+            }
+            await page.mouse.move(0, 0)
           }
           if (p === '/opcje') {
             for (const n of await optNavs(page)) { await openOpt(page, n); await contrast(page, `/opcje › ${n}`, bad) }
@@ -386,10 +518,10 @@ test.describe('P11 pkt 3 — E10 kontrast', () => {
         /* okna: Dopłata (HHL), Awizacja (SCX), daty KSH (KSH) — z panelu SG-19 / SG-03 */
         const dialog = async (name: string, open: () => Promise<void>) => {
           await open()
-          const d = page.locator('[role="dialog"]').last()
-          await expect(d, name).toBeVisible()
-          await page.waitForTimeout(200)
-          await contrast(page, `okno ${name}`, bad, '[role="dialog"]:last-of-type')
+          await expect(page.locator('[aria-modal="true"]').last(), name).toBeVisible()
+          expect(await markLastModal(page), `okno ${name}`).toBe(true)
+          await settle(page, '[data-axe-target]', 250)
+          await contrast(page, `okno ${name}`, bad, '[data-axe-target]')
           await page.keyboard.press('Escape')
         }
         if (role === 'HHL') {

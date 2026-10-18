@@ -175,7 +175,7 @@ function fileCell(id: FileColDef['id'], l: Load, ctx: SchedRowCtx): ReactNode {
     case 'status': return <Status l={l} ctx={ctx} />;
     case 'eta': return <Eta l={l} ctx={ctx} />;
     case 'docs': return <Docs l={l} ctx={ctx} />;
-    case 'money': return <Money l={l} ctx={ctx} />;
+    case 'money': return <Money l={l} ctx={ctx} two />; /* P11 pkt 3 (E20, CI Chromium 153): kwota i marża w dwóch liniach — jedna linia wychodziła poza kolumnę 250 px */
     default: return null;
   }
 }
