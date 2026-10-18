@@ -101,7 +101,7 @@ describe('ekran', () => {
     expect(h).toContain(`>${etaDuration(data.segments.find((s) => s.code === 'SE_ROAD')!.medianMin!)}<`);
   });
   it('trzy części; średni błąd 1 h przed względem celu 30 min; zysk z propozycji', () => {
-    const h = html(data);
+    const h = html(data).replace(/\u00a0/g, ' ');
     for (const s of ['Pomiary dostaw', 'Propozycja czasów odcinków', 'Wersje czasów', 'nie większy niż 30 min', 'data-cal-avg', 'data-cal-gain', 'Zatwierdź nowe czasy', 'Bez zatwierdzenia nic się nie zmienia', 'obowiązuje']) {
       expect(h).toContain(s);
     }

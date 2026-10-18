@@ -38,6 +38,7 @@ import { OptionsHowTo } from '../settings/OptionsHowTo';
 import './p7.css';
 import { formatCalendarDay } from '../../lib/time';
 import { stageTileOf } from '../../lib/stageTiles';
+import { itemKindName } from '../../lib/p5Finance';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -491,7 +492,9 @@ export function PanelOverview(p: Props) {
     .every(([a, b]) => a == null || Math.abs((a as number) - (b as number)) < 0.005);
   const setOwn = r.setLengthM != null && !sameAsTable;
   const setSrc = setOwn ? pt(locale, 'p7_set_own') : spec ? ptp(locale, 'p7_set_src', { sym: spec.symbol }) : pt(locale, 'p7_set_none');
-  const cargo = [spec?.kind, spec?.symbol ?? load.itemType, ptp(locale, 'p7_qty', { n: load.qty }), `${dim(load.dims.weightT, locale)} t`].filter(Boolean).join(' · ');
+  /* przegląd 18.10 (D39): symbol spoza tabeli (D, R) — nazwa elementu z tej samej listy co Finanse („Stężenia międzysłupowe”) */
+  const kindName = spec?.kind ?? (load.itemType && itemKindName(load.itemType) !== load.itemType ? itemKindName(load.itemType) : null);
+  const cargo = [kindName, spec?.symbol ?? load.itemType, ptp(locale, 'p7_qty', { n: load.qty }), `${dim(load.dims.weightT, locale)} t`].filter(Boolean).join(' · ');
 
   return (
     <div className="po" data-overview>

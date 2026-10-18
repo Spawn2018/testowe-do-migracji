@@ -315,7 +315,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       ferryTile(false),
       { id: 'bills', label: L('p3b_bills_check'), labelShort: L('p3b_bills_short'), go: 'inv',
         value: String(wait), of: null,
-        desc: wait ? L('p3b_bills_wait') : bills.some((b) => b.recipient === 'KSH') ? L('p3b_bills_none') : L('p3b_bills_empty'),
+        desc: wait ? L('p3b_bills_wait', { n: wait }) : bills.some((b) => b.recipient === 'KSH') ? L('p3b_bills_none') : L('p3b_bills_empty'),
         descShort: L('p3b_bills_wait_short'),
         tone: wait ? 'warn' : 'default' },
     ];

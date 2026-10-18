@@ -59,6 +59,9 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
   const due = (r: DocRequirement) => (r.category === 'CMR'
     ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: r.offsetHours })
     : t(locale, `iii6_a_${r.anchor}`).replace('{h}', String(r.offsetHours)));
+  const dueEdit = (r: DocRequirement) => (r.category === 'CMR'
+    ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: r.offsetHours }).replace(/,?\s*do\s\d+[\s\u00a0]h$/, '')
+    : due(r).replace(/^(do\s)?\d+[\s\u00a0]h\s/, ''));
   const rows = KEYS.map((k) => reqs.find((r) => r.category === k)).filter((r): r is DocRequirement => !!r);
 
   return (
@@ -97,7 +100,8 @@ export default function DocTerms({ canEdit }: { canEdit: boolean }) {
                       <span className="doc-terms-h">
                         <input className="input" type="number" min={0} max={720} data-docreq-hours="" aria-label={t(locale, 'iii6_hours')} value={edit.offsetHours}
                           onChange={(e) => setEdit({ ...edit, offsetHours: Math.max(0, Math.min(720, Math.round(Number(e.target.value) || 0))) })} />
-                        <span>h · {due({ ...edit })}</span>
+                        {/* przegląd 18.10 (D38): liczba godzin jest w polu — opis bez powtórzonego „do 24 h” */}
+                        <span>h · {dueEdit({ ...edit })}</span>
                       </span>
                     ) : due(r)}
                   </td>

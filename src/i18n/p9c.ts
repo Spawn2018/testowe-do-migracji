@@ -8,7 +8,7 @@ import { serverRuleOn } from '../lib/serverRules';
 
 const PL: Record<string, string> = {
   /* nagłówek (pkt 2, L20 — bez deklaracji częstotliwości) */
-  p9c_head: 'W oknie śledzenia {n} · z pozycją {m} · bez pozycji {k}',
+  p9c_head: 'W oknie śledzenia {n} · z pozycją {m} · bez żadnej pozycji {k}',
   p9c_head_hint: ' — od 03:00 w dniu załadunku do „Dostarczone”',
   p9c_head_short: 'w oknie {n} · bez pozycji {k}',
   /* warstwy (pkt 3, E45 pkt 2) */
@@ -48,7 +48,7 @@ const PL: Record<string, string> = {
   p9c_pos_ship: 'statek (AIS)',
   p9c_pos_ship_none: 'statek bez AIS',
   p9c_pos_nogps: 'brak GPS od {t}',
-  p9c_pos_nogps_sub: 'próg 30 min w ruchu',
+  p9c_pos_nogps_sub: 'próg 30\u00a0min w ruchu',
   p9c_pos_rest: 'postój od {t}',
   p9c_pos_none: 'brak pozycji',
   p9c_pos_none_link: 'brak linku śledzenia · Do zrobienia SCX',

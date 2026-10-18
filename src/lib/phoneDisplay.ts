@@ -7,7 +7,9 @@ export function groupPhone(raw: string): string {
   const digits = raw.replace(/[^\d]/g, '');
   if (digits.length < 6) return raw.trim();
   const plus = raw.trim().startsWith('+');
-  const cc = plus ? `+${digits.slice(0, 2)}` : '';
-  const rest = plus ? digits.slice(2) : digits;
+  /* przegląd 18.10 (D37): kody 3-cyfrowe (Litwa +370, Łotwa +371, Estonia +372, Finlandia +358) — nie „+37 000…” */
+  const ccLen = plus && /^(35\d|37\d|38\d|42\d)/.test(digits) ? 3 : 2;
+  const cc = plus ? `+${digits.slice(0, ccLen)}` : '';
+  const rest = plus ? digits.slice(ccLen) : digits;
   return [cc, ...(rest.match(/\d{1,3}/g) ?? [])].filter(Boolean).join(' ');
 }

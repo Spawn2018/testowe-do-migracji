@@ -110,7 +110,7 @@ describe('przebiegi i historia zdaniami (bez SKIPPED i „warunek niespełniony�
   });
   it('historia: akcja, reguła, powód; dawne przełączenia bez powodu opisane wprost', () => {
     expect(sp(histText({ at: '', who: 'Anna', action: 'off', rule: 'Plac 3 h', reason: 'SCX prosi' }))).toBe('wyłączona · „Plac 3 h” · powód: SCX prosi');
-    expect(sp(histText({ at: '', who: 'Admin', action: 'on', rule: 'Transport anulowany', reason: null }))).toBe('włączona · „Transport anulowany” · powód: — (wtedy pola nie było)');
+    expect(sp(histText({ at: '', who: 'Admin', action: 'on', rule: 'Transport anulowany', reason: null }))).toBe('włączona · „Transport anulowany” · bez podanego powodu');
     expect(sp(histText({ at: '', who: 'Anna', action: 'created', rule: 'Plac 3 h', reason: null }))).toBe('dodana · „Plac 3 h”');
   });
 });

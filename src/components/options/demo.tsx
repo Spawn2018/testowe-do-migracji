@@ -154,6 +154,15 @@ const INVITES: InviteRow[] = [
   { id: 'i4', name: 'Operacje HHL', kind: 'HHL_OPS', domain: 'hhlogistics.pl', line: 'aktywne · ostatnie logowanie 18.09.2026 · bez imienia i telefonu', status: 'nophone' },
 ];
 
+/* przegląd 18.10 (P25): liczniki z tych samych list co tabela (było na sztywno „14 · 12 · 0 z telefonem · 7”) */
+const USER_COUNTS = {
+  total: PEOPLE.length + INVITES.length,
+  active: PEOPLE.length + INVITES.filter((i) => i.status === 'nophone').length,
+  withPhone: PEOPLE.filter((p) => p.phone).length,
+  named: PEOPLE.length,
+  noPassword: INVITES.filter((i) => i.status === 'unfinished' || i.status === 'sent').length,
+};
+
 export type DemoBodies = {
   bodies: Partial<Record<string, ReactNode>>;
   meta: Partial<Record<string, { meta?: string; tone?: 'muted' | 'alert' }>>;
@@ -167,7 +176,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
   const [first, ...rest] = me.name.split(' ');
   return {
     bodies: {
-      users: <UsersScreen locale={locale} counts={{ total: 14, active: 12, withPhone: 0, named: 7, noPassword: 8 }} people={PEOPLE} invites={INVITES} readOnly={readOnly} mark={mark} />,
+      users: <UsersScreen locale={locale} counts={USER_COUNTS} people={PEOPLE} invites={INVITES} readOnly={readOnly} mark={mark} />,
       logins: (
         <LoginsScreen
           locale={locale}

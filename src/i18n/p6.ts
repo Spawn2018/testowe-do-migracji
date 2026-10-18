@@ -157,7 +157,7 @@ const PL: Record<string, string> = {
   p6_notice: 'Komunikat armatora (wpis ręczny)',
   p6_road_pl: 'Drogi PL',
   p6_road_pl_src: 'HERE',
-  p6_road_pl_none: 'Brak danych z HERE. Po podłączeniu: odświeżanie co 15 minut, ten sam układ co drogi SE.',
+  p6_road_pl_none: 'Brak komunikatów o utrudnieniach na drogach w Polsce. Źródło: HERE, odświeżanie co 15 minut.',
   p6_road_se: 'Drogi SE',
   p6_road_counts: '{list} · Trafikverket',
   p6_imp_VERY_HIGH: 'Bardzo duży wpływ',

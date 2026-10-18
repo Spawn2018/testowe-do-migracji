@@ -151,7 +151,7 @@ describe('F7 runda 3 — promy w pasku i propozycja Steny w czasie polskim po 25
   });
   it('Automatyzacje: wyjazd ze Śremu — w demo (po A2) bez czekania na potwierdzenie, bez „załadowany”', async () => {
     const { wt } = await import('../src/i18n/p4cWf');
-    expect(wt('pl', 'p4c_wf_zt_srem_out')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
+    expect(wt('pl', 'p4c_wf_zt_srem_out').replace(/\u00a0/g, ' ')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
   });
 });
 

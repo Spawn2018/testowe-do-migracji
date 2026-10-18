@@ -7,13 +7,13 @@ import type { Locale } from '../types';
 type Dict = Record<string, string>;
 
 const pl: Dict = {
-  a6_alt_e18_detail: 'Omija roboty E4 Gävle–Söderhamn · +45–70 min · zalecane przy wysokim ryzyku',
+  a6_alt_e18_detail: 'Omija roboty E4 Gävle–Söderhamn · +45–70\u00a0min · zalecane przy wysokim ryzyku',
   a6_alt_e18_title: 'E4 → E18 via Västerås / Uppsala',
   a6_alt_pause_detail: 'Gdy okno Stegra nie dotrzymane · unikaj nocnego podejścia placu',
   a6_alt_pause_title: 'Pauza w Gävle / Sundsvall + nowy slot Boden',
   a6_alt_rail_detail: 'Gdy siła wyższa na E4 północ · przeładunek SE · +1–2 doby',
   a6_alt_rail_title: 'Kolej + ostatnia mila (Boden rail terminal)',
-  a6_alt_rv83_detail: 'Objazd śnieżycy środkowego Norrland · +90–120 min · zima',
+  a6_alt_rv83_detail: 'Objazd śnieżycy środkowego Norrland · +90–120\u00a0min · zima',
   a6_alt_rv83_title: 'E4 → Rv 83 / Rv 84 (Ljusdal – Ånge)',
   a6_auth_deactivated: 'Konto zostało dezaktywowane przez administratora HHL.',
   a6_auth_email: 'Adres e-mail',
@@ -81,7 +81,7 @@ const pl: Dict = {
   a6_dl_demo: 'Tryb demo — brak bazy',
   a6_dl_gen: 'Wygeneruj nowy link',
   a6_dl_h: 'Link dla kierowcy',
-  a6_dl_new: 'Nowy link — poprzedni przestał działać. Ważny do 24 h po rozładunku, najwyżej 14 dni.',
+  a6_dl_new: 'Nowy link — poprzedni przestał działać. Ważny do 24\u00a0h po rozładunku, najwyżej 14 dni.',
   a6_dl_revoke: 'Odwołaj link',
   a6_dl_revoked: 'Odwołano linków: {n}',
   a6_doc_download: 'Pobierz',
@@ -230,7 +230,7 @@ const pl: Dict = {
     + '|„przed terminem” (bursztynowy) — ETA przed początkiem okna dostawy (inny dzień albo przed godziną „od”); tylko informacja, bez decyzji w Centrum i bez SMS.'
     + '|„po terminie” (czerwony) — ETA po końcu okna dostawy; ten sam warunek co ryzyko ETA po terminie i próg L-3 — bez drugiego alarmu.'
     + '|„przyjazd nocą” — ETA między 22:00 a 06:00 czasu polskiego; tylko informacja, bez decyzji i bez SMS.'
-    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut: Wysoka do ±30 min, Średnia do ±120 min, Niska powyżej albo bez pasma.'
+    + '|Wysoka / Średnia / Niska — pewność prognozy według pasma ± minut: Wysoka do ±30\u00a0min, Średnia do ±120\u00a0min, Niska powyżej albo bez pasma.'
     + '|Rozbicie ETA — jazda, przerwy, odpoczynek dobowy, prom; pasmo ± min łączy niepewność odcinków pierwiastkiem z sumy kwadratów.'
     + '|„–” — przed wyjazdem z placu załadunku albo bez świeżej pozycji GPS ETA nie jest pokazywana.',
   a6_dr_in_window: 'w oknie',
@@ -364,7 +364,7 @@ const pl: Dict = {
   a6_map_all: 'Wszystkie · {n}',
   a6_map_nogps: 'Bez GPS · {n}',
   a6_map_risk: 'Ryzyko · {n}',
-  a6_map_nogps_title: 'Bez sygnału GPS powyżej 30 min',
+  a6_map_nogps_title: 'Bez sygnału GPS powyżej 30\u00a0min',
   a6_map_risk_title: 'Z otwartym ryzykiem',
   a6_map_brak_wymaganych_dokument_w: 'Brak wymaganych dokumentów',
   a6_map_brak_wymaganych_dokumentow: 'Brak wymaganych dokumentów',
@@ -413,7 +413,7 @@ const pl: Dict = {
   a6_risk_alt_km: '+{km} km do Boden',
   a6_risk_demo_a: 'Warunki drogowe SE są',
   a6_risk_demo_b: 'demonstracyjne',
-  a6_risk_demo_c: '(seed makiety). To nie jest żywy feed Trafikverket — brak klucza API. Ten sam wzorzec oznaczenia co stawki demo (D18).',
+  a6_risk_demo_c: '— to przykład w wersji pokazowej. W programie komunikaty przychodzą z Trafikverket.',
   a6_risk_label_ais_nyn: 'AIS: statek w Nynäshamn',
   a6_risk_label_auto_status: 'Zmiana automatyczna zablokowana',
   a6_risk_label_ferry_overdue: 'Prom po czasie',

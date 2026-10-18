@@ -12,26 +12,26 @@ import { getNowIso } from './frozenNow';
 const ME = 'Anna Wiśniewska';
 
 const ZONES: ZoneOption[] = [
-  { id: 'z-srem-buf', name: 'Bufor 50 km przed Śremem', type: 'PRE_ARRIVAL' },
+  { id: 'z-srem-buf', name: 'Bufor 50 km przed Śremem', type: 'PRE_ARRIVAL' },
   { id: 'z-srem', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING' },
-  { id: 'z-gda-buf', name: 'Bufor 20 km przed Gdańskiem', type: 'PRE_PORT' },
+  { id: 'z-gda-buf', name: 'Bufor 20 km przed Gdańskiem', type: 'PRE_PORT' },
   { id: 'z-gda', name: 'Terminal Polferries Gdańsk', type: 'PORT_OUT' },
-  { id: 'z-gdy-buf', name: 'Bufor 20 km przed Gdynią', type: 'PRE_PORT' },
+  { id: 'z-gdy-buf', name: 'Bufor 20 km przed Gdynią', type: 'PRE_PORT' },
   { id: 'z-gdy', name: 'Terminal Stena Line Gdynia', type: 'PORT_OUT' },
   { id: 'z-nyn', name: 'Terminal Nynäshamn', type: 'PORT_IN' },
   { id: 'z-kar', name: 'Terminal Stena Line Karlskrona', type: 'PORT_IN' },
-  { id: 'z-bod-buf', name: 'Bufor 50 km przed Boden', type: 'PRE_ARRIVAL' },
+  { id: 'z-bod-buf', name: 'Bufor 50 km przed Boden', type: 'PRE_ARRIVAL' },
   { id: 'z-bod', name: 'Plac budowy Stegra Boden', type: 'SITE' },
 ];
 
 /* E34 „Zdarzenia stref” (przegląd 18.10, B5: przed zegarem demo 23.09, 16:32, te same transporty co oś Status):
    T-11 Śrem ENTER 17.09 07:40 → EXIT 09:40, bufor Boden ENTER 22.09 05:22 → EXIT 09:55, plac ENTER 05:56 → EXIT 09:40
-   (Dostarczone); SG-24 bufor Gdańsk ENTER 18.09 10:30 → EXIT 11:05 */
+   (Dostarczone); SG-24 bufor Gdańsk ENTER 18.09 13:40 → EXIT 14:15 */
 const VISITS: Visit[] = [
   { code: 'T-11', loadId: null, zoneId: 'z-srem', enter: '2026-09-17T05:40:00Z', exit: '2026-09-17T07:40:00Z' },
   { code: 'T-11', loadId: null, zoneId: 'z-bod-buf', enter: '2026-09-22T03:22:00Z', exit: '2026-09-22T07:55:00Z' },
   { code: 'T-11', loadId: null, zoneId: 'z-bod', enter: '2026-09-22T03:56:00Z', exit: '2026-09-22T07:40:00Z' },
-  { code: 'SG-24', loadId: null, zoneId: 'z-gda-buf', enter: '2026-09-18T08:30:00Z', exit: '2026-09-18T09:05:00Z' },
+  { code: 'SG-24', loadId: null, zoneId: 'z-gda-buf', enter: '2026-09-18T11:40:00Z', exit: '2026-09-18T12:15:00Z' },
 ];
 /* zmiany statusu T-11 ze stref (E25, E34): Droga PL po wyjeździe ze Śremu, Na placu, Dostarczone */
 const STATUS: { code: string; status: string; at: string }[] = [
@@ -51,7 +51,7 @@ const RUNS: RuleRun[] = [
   { id: 'r5', at: '2026-09-22T03:57:00Z', rules: ['Wjazd przed port'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'to nie strefa przed portem' } },
   { id: 'r4', at: '2026-09-22T03:22:00Z', rules: ['Dojazd na plac'], code: 'T-11', loadId: null, result: { kind: 'done', notify: [{ who: 'KSH', n: 4 }, { who: 'SCX', n: 1 }] } },
   { id: 'r3', at: '2026-09-22T03:22:00Z', rules: ['Wjazd przed port'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'to strefa przed placem' } },
-  { id: 'r1', at: '2026-09-18T08:30:00Z', rules: ['Dojazd na plac', 'Wjazd przed port'], code: 'SG-24', loadId: null, result: { kind: 'skipped', since: '2026-09-15T06:09:00Z' } },
+  { id: 'r1', at: '2026-09-18T11:40:00Z', rules: ['Dojazd na plac', 'Wjazd przed port'], code: 'SG-24', loadId: null, result: { kind: 'skipped', since: '2026-09-15T06:09:00Z' } },
 ];
 
 /* E35 „Historia” (audit_log workflows) i zmiana z E35 pkt 2 (reguły START) */

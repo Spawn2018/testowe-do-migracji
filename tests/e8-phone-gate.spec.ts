@@ -364,7 +364,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await boot(page, 'HHL');
     await openView(page, 'map');
     const head = page.locator('[data-map-head]');
-    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
+    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez żadnej pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
     await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
     await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
     await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
@@ -2246,7 +2246,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'SCX');
     await openCode(page, 'D-02');
-    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('rejs niewybrany — wybiera SCX w awizacji');
+    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji');
     await expect(page.locator('.drawer [data-awiz-nosail]')).toHaveText('kompletna · bez rejsu');
     await tab(page, 1);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('rejs');

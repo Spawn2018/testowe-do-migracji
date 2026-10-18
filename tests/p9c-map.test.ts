@@ -44,7 +44,7 @@ describe('P9-c · wiersz Mapy', () => {
   it('brak GPS (cisza 30 min w ruchu, L22): „brak GPS od”, próg, ETA z ostatniej pozycji', () => {
     const r = mapRow(load({ status: 'IN_TRANSIT_PL', stage: 'TO_PORT', silentMinutes: 110, etaBoden: '2026-10-10T04:10:00Z' }), ctx({ hasFix: () => true }));
     expect(r.nogps).toBe(true);
-    expect(r.pos).toMatchObject({ kind: 'nogps', text: 'brak GPS od 22:40', sub: 'próg 30 min w ruchu', alarm: true });
+    expect({ ...r.pos, sub: String((r.pos as { sub?: string }).sub).replace(/\u00a0/g, ' ') }).toMatchObject({ kind: 'nogps', text: 'brak GPS od 22:40', sub: 'próg 30 min w ruchu', alarm: true });
     expect(r.eta.sub).toBe('z ostatniej pozycji');
     expect(r.seg).toBe('PL');
   });
@@ -122,7 +122,7 @@ describe('P9-c · wiersz Mapy', () => {
 
 describe('P9-c · teksty i podpięcie', () => {
   it('nagłówek bez częstotliwości (L20), warstwy E29 pkt 3, legenda pkt 4', () => {
-    expect(p9mp('pl', 'p9c_head', { n: 6, m: 4, k: 2 })).toBe('W oknie śledzenia 6 · z pozycją 4 · bez pozycji 2');
+    expect(p9mp('pl', 'p9c_head', { n: 6, m: 4, k: 2 })).toBe('W oknie śledzenia 6 · z pozycją 4 · bez żadnej pozycji 2');
     expect(p9m('pl', 'p9c_head_hint')).toBe(' — od 03:00 w dniu załadunku do „Dostarczone”');
     expect(['p9c_l_vehicles', 'p9c_l_route', 'p9c_l_zones', 'p9c_l_road', 'p9c_l_trail'].map((k) => p9m('pl', k)))
       .toEqual(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego']);

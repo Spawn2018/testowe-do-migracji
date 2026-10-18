@@ -33,7 +33,7 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
     expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość');
   });
   it('C-02: zamknięcie przy T-17 w postaci E49 i połączone ze sprawą „Objazd czy postój?” (jedna sprawa w karcie)', () => {
-    expect(RISK_I18N.pl.rk_seed_e4_closure).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');
+    expect(RISK_I18N.pl.rk_seed_e4_closure.replace(/\u00a0/g, ' ')).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');
     const t17 = snap.loads.find((l) => l.code === 'T-17')!;
     const closure = risks.filter((r) => r.loadId === t17.id);
     expect(closure.map((r) => r.causeCategory)).toEqual(['closure']);

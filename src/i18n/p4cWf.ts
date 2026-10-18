@@ -31,7 +31,7 @@ const PL: Record<string, string> = {
   p4c_wf_r_prices_d: 'ceny paliwa 07:15 (także 09:15 i 13:15), NBP 12:30 i 16:30, wycena co 6\u00a0h',
   p4c_wf_r_sched: 'Harmonogram KSH',
   p4c_wf_r_sched_d: 'plik KSH: wiersze z „Przewoźnik = HH”, daty zmienia tylko KSH; SharePoint po dostępie od IT KSH',
-  p4c_wf_link_thr: 'Opcje › Progi',
+  p4c_wf_link_thr: 'Opcje › Progi alarmów',
   p4c_wf_link_who: 'Opcje › Kto co dostaje',
   p4c_wf_link_zones: 'Opcje › SMS przy miejscach',
   p4c_wf_link_fuel: 'Opcje › Opłata paliwowa',
@@ -46,7 +46,7 @@ const PL: Record<string, string> = {
   p4c_wf_zt_out: 'Wyjazd',
   p4c_wf_zt_srem: 'KSH Śrem (załadunek)',
   p4c_wf_zt_srem_in: 'Załadunek',
-  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku',
+  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5\u00a0min (próg strefy), bez czekania na potwierdzenie załadunku',
   p4c_wf_zt_portpl: 'Port PL — Gdańsk, Gdynia',
   p4c_wf_zt_portpl_in: 'Port PL',
   p4c_wf_zt_portpl_out: 'bez zmiany — „Na promie” z odejścia rejsu',
@@ -55,8 +55,8 @@ const PL: Record<string, string> = {
   p4c_wf_zt_portse_out: 'Droga SE',
   p4c_wf_zt_site: 'Plac budowy Stegra Boden',
   p4c_wf_zt_site_in: 'Na placu',
-  p4c_wf_zt_site_out: 'Dostarczone — po ≥ 10 min (próg strefy); krócej: sprawa „czy dostarczono?” dla SCX',
-  p4c_wf_zt_buf: 'Bufory: 20 km przed portem, 50 km przed Boden i Śremem',
+  p4c_wf_zt_site_out: 'Dostarczone — po ≥ 10\u00a0min (próg strefy); krócej: sprawa „czy dostarczono?” dla SCX',
+  p4c_wf_zt_buf: 'Bufory: 20\u00a0km przed portem, 50\u00a0km przed Boden i Śremem',
   p4c_wf_zt_buf_in: 'bez zmiany statusu',
   p4c_wf_zt_buf_out: 'bez zmiany statusu',
   p4c_wf_zt_who: 'Zmienia tylko Administrator HHL: edycja strefy i własne reguły. Wierszy tej listy nie edytuje się tutaj.',
@@ -67,8 +67,8 @@ const PL: Record<string, string> = {
  * idą na koniec z dopiskiem „włączamy wkrótce” (`serverRuleOn`, w demo zawsze działa).
  */
 const GPS_PARTS: { rule: ServerRule | null; text: string }[] = [
-  { rule: null, text: 'brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany' },
-  { rule: 'WIND_E49', text: 'wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój), śliskość do 25 km od auta' },
+  { rule: null, text: 'brak pozycji 30\u00a0min w ruchu / 3\u00a0h na postoju, opóźnienie po wyjeździe, rejs odwołany' },
+  { rule: 'WIND_E49', text: 'wiatr w ETA (od 20\u00a0m/s wolniej, od 25\u00a0m/s postój), śliskość do 25\u00a0km od auta' },
   { rule: 'DETOUR_E49', text: 'sprawa SCX „Objazd czy postój?” przy zamkniętym moście lub drodze' },
 ];
 
