@@ -41,11 +41,12 @@ describe('teksty o automatach (serverRuleOn)', () => {
     expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
   });
 
-  it('produkcja po A1: okno 03:00 działa; A2, P6 i P9 nadal „włączamy wkrótce”; dopisek mapy bez utrudnień', async () => {
+  it('produkcja po A2: okno 03:00 i wyjazd z placu działają; P6 i P9 nadal „włączamy wkrótce”; dopisek mapy bez utrudnień', async () => {
     await prod(async () => {
       const { serverRuleOn } = await import('../src/lib/serverRules');
       expect(serverRuleOn('TRACKING_WINDOW')).toBe(true);
-      for (const k of ['SITE_EXIT_DELIVERED', 'WIND_E49', 'DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
+      expect(serverRuleOn('SITE_EXIT_DELIVERED')).toBe(true);
+      for (const k of ['WIND_E49', 'DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
       const { helpVersion, HELP_WINDOW } = await import('../src/lib/helpContent');
       for (const kind of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH'] as const) {
         const map = helpVersion(kind).steps.find((s) => s.target === 'map');
@@ -53,8 +54,8 @@ describe('teksty o automatach (serverRuleOn)', () => {
         expect(map?.text).not.toContain(`${HELP_WINDOW} (włączamy wkrótce)`);
       }
       const { wt } = await import('../src/i18n/p4cWf');
-      expect(wt('pl', 'p4c_wf_r_zones_d')).toMatch(/wyjazd z placu → Dostarczone \(E26\) — włączamy wkrótce$/);
-      expect(wt('pl', 'p4c_wf_zt_site_out')).toMatch(/— włączamy wkrótce$/);
+      expect(wt('pl', 'p4c_wf_r_zones_d')).not.toContain('włączamy wkrótce');
+      expect(wt('pl', 'p4c_wf_zt_site_out')).not.toMatch(/— włączamy wkrótce$/);
       const gps = wt('pl', 'p4c_wf_r_gps_d');
       expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany (E15, E45) · ')).toBe(true);
       expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce \(E49\)$/);

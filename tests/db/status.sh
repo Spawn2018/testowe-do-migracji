@@ -51,12 +51,20 @@ chk "transport niegotowy: ryzyko wysokie"                    "$(rk $E LOADING_NO
 chk "brak numeru przewoźnika: zmiana zablokowana"            "$(st $D)" READY
 chk "brak numeru przewoźnika: ryzyko z przyczyną"            "select count(*) from risk_signals where load_id='$D' and title like '%przewoźnika%'" 1
 chk "blokada statusu NIE przerwała zapisu pozycji"           "select count(*) from positions where load_id='$D'" 2
+# A2: wyjazd LOADING po ≥ 5 min → Droga PL + actual_load_at, bez loaded_confirmed / LEFT_LOADING_UNCONFIRMED
 for x in $F; do pos $x 52.30 17.30 "2026-09-30 11:00+00"; pos $x 52.31 17.31 "2026-09-30 11:05+00"; done
-chk "wyjazd bez potwierdzenia załadunku: status bez zmian"   "$(st $F)" AT_LOADING
-chk "wyjazd bez potwierdzenia załadunku: ryzyko"             "$(rk $F LEFT_LOADING_UNCONFIRMED)" 1
+chk "A2 wyjazd załadunku bez MILESTONE → IN_TRANSIT_PL"      "$(st $F)" IN_TRANSIT_PL
+chk "A2 wyjazd załadunku: actual_load_at ustawione"          "select (actual_load_at is not null)::text from loads where id='$F'" true
+chk "A2 wyjazd załadunku: brak LEFT_LOADING_UNCONFIRMED"     "$(rk $F LEFT_LOADING_UNCONFIRMED)" 0
 q "insert into load_events (load_id,event_type,occurred_at) values ('$G','MILESTONE_LOADED','2026-09-30 10:30+00')" >/dev/null
 pos $G 52.30 17.30 "2026-09-30 11:00+00"; pos $G 52.31 17.31 "2026-09-30 11:05+00"
 chk "wyjazd po potwierdzeniu załadunku → IN_TRANSIT_PL"      "$(st $G)" IN_TRANSIT_PL
+# krótki postój < 5 min — status bez zmian
+Lshort=$(L 5a)
+mk $Lshort A2S "'HHL/A2S'" "'SCX/A2S'" READY null
+pos $Lshort 52.0900 17.0200 "2026-09-30 12:00+00"; pos $Lshort 52.0901 17.0201 "2026-09-30 12:01+00"
+pos $Lshort 52.30 17.30 "2026-09-30 12:03+00"; pos $Lshort 52.31 17.31 "2026-09-30 12:04+00"
+chk "A2 wyjazd załadunku < 5 min: status AT_LOADING"         "$(st $Lshort)" AT_LOADING
 
 echo; echo "[2] Port Gdańsk — wjazd w strefę"
 for x in $A $I $J; do pos $x 54.4030 18.6800 "2026-10-01 10:00+00"; pos $x 54.4031 18.6801 "2026-10-01 10:05+00"; done
@@ -101,17 +109,19 @@ chk "GPS zgubił port SE, auto już na trasie → IN_TRANSIT_SE" "$(st $I)" IN_T
 chk "przeterminowany PROM: tylko auto bez sygnału po przypłynięciu" "select detect_ferry_overdue('2026-10-02 09:00+00')" 1
 chk "ryzyko przeterminowanego PROMU dla właściwego auta"     "$(rk $J FERRY_OVERDUE)" 1
 
-echo; echo "[7] Plac budowy — i nigdy automatycznego rozładunku"
+echo; echo "[7] Plac budowy — A2: wyjazd ≥ 10 min → Dostarczone (nigdy UNLOADED)"
 pos $A 65.5000 21.7000 "2026-10-03 08:00+00"; pos $A 65.5001 21.7001 "2026-10-03 08:05+00"
 pos $A 65.8054 21.7591 "2026-10-03 10:00+00"; pos $A 65.8055 21.7592 "2026-10-03 10:05+00"
 chk "wjazd na plac → AT_SITE"                                "$(st $A)" AT_SITE
 pos $A 65.8054 21.7591 "2026-10-03 10:30+00"
 chk "postój na placu: nadal AT_SITE, NIGDY UNLOADED"         "$(st $A)" AT_SITE
+# wyjazd po długim postoju (od 10:00) → DELIVERED
 pos $A 58.9350 17.9500 "2026-10-04 06:00+00"; pos $A 58.9351 17.9501 "2026-10-04 06:05+00"
-chk "status nie cofa się przy ponownym wjeździe do portu"   "$(st $A)" AT_SITE
+chk "A2 wyjazd z placu ≥ 10 min → DELIVERED"                 "$(st $A)" DELIVERED
+chk "A2 actual_delivery_at = czas wyjazdu"                   "select to_char(actual_delivery_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from loads where id='$A'" "2026-10-04 06:05"
 chk "pełna ścieżka A w dzienniku zdarzeń" \
   "select string_agg(payload->>'to', ' → ' order by occurred_at) from load_events where load_id='$A' and event_type='STATUS_AUTO'" \
-  "AT_PORT_GDANSK → FERRY → AT_PORT_NYNASHAMN → IN_TRANSIT_SE → AT_SITE"
+  "AT_PORT_GDANSK → FERRY → AT_PORT_NYNASHAMN → IN_TRANSIT_SE → AT_SITE → DELIVERED"
 
 echo; echo "[8] Uprawnienia"
 as() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tail -1; }
@@ -278,6 +288,43 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_dat
 q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class) values ('$P','$W8','SG-ZOST',10,3,3,'DIMENSIONED')" >/dev/null
 chk "A1 HHL w sesji: cancel_load z powodem → CANCELLED" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select cancel_load('$W3','Test A1 — anulowanie'); commit" CANCELLED
 chk "A1 import w sesji HHL anuluje PLANNED spoza pliku" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select import_schedule('$P', '[{\"code\":\"SG-KEEP\",\"length_m\":10,\"width_m\":3,\"height_m\":3,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"2026-11-01\",\"delivery_date\":\"2026-11-05\"}]'::jsonb, '{SG-ZOST}'::text[], '{\"name\":\"a1.xlsx\",\"hash\":\"a1\",\"path\":\"x/a1.xlsx\"}'::jsonb, false); select status from loads where id='$W8'; commit" CANCELLED
+
+# A2 / E26 / L14 — SG-03 (zmyślony ślad G-17) i sprawa DELIVERED_CHECK
+echo; echo "[12] A2 — wyjazd z placu i L14"
+SG=$(L 5b); SG2=$(L 5c)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG','$P','$SCXO','KSH/SG03','HHL/SG03','SCX/SG03','IN_TRANSIT_SE','2026-10-05'),
+ ('$SG2','$P','$SCXO','KSH/SG06','HHL/SG06','SCX/SG06','IN_TRANSIT_SE','2026-10-05')" >/dev/null
+q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values ('$P','$SG','SG-03',10,3,3)" >/dev/null
+# SG-03: wjazd ~08:35, wyjazd 12:19 → Dostarczone
+pos $SG 65.8054 21.7591 "2026-10-07 08:35:00+00"; pos $SG 65.8055 21.7592 "2026-10-07 08:36:00+00"
+chk "A2 SG-03 wjazd → AT_SITE" "$(st $SG)" AT_SITE
+pos $SG 65.8054 21.7591 "2026-10-07 10:00:00+00"
+pos $SG 65.50 21.70 "2026-10-07 12:19:00+00"; pos $SG 65.50 21.71 "2026-10-07 12:20:00+00"
+chk "A2 SG-03 wyjazd 12:19 → DELIVERED" "$(st $SG)" DELIVERED
+chk "A2 SG-03 actual_delivery_at po wyjeździe" "select to_char(actual_delivery_at at time zone 'UTC','HH24:MI') from loads where id='$SG'" "12:20"
+chk "A2 SG-03 STATUS_AUTO ma dwell_min" "select (payload ? 'dwell_min')::text from load_events where load_id='$SG' and event_type='STATUS_AUTO' and payload->>'to'='DELIVERED'" true
+chk "A2 SG-03 śledzenie gaśnie (pozycja po Dostarczone = 0 nowych)" "select count(*) from process_position('$SG', 65.40, 21.60, '2026-10-07 13:00:00+00'); select count(*) from positions where load_id='$SG' and ts='2026-10-07 13:00:00+00'" 0
+# L14: postój ~6 min → sprawa
+pos $SG2 65.8054 21.7591 "2026-10-08 10:00:00+00"; pos $SG2 65.8055 21.7592 "2026-10-08 10:01:00+00"
+chk "A2 L14 wjazd → AT_SITE" "$(st $SG2)" AT_SITE
+pos $SG2 65.50 21.70 "2026-10-08 10:06:00+00"; pos $SG2 65.50 21.71 "2026-10-08 10:07:00+00"
+chk "A2 L14 postój 6 min: status AT_SITE" "$(st $SG2)" AT_SITE
+chk "A2 L14 jedna sprawa DELIVERED_CHECK" "select count(*) from decisions where load_id='$SG2' and type_code='DELIVERED_CHECK' and status='NEW'" 1
+chk "A2 L14 detail.dwell_min ≈ 6" "select (abs((detail->>'dwell_min')::numeric - 6) <= 1)::text from decisions where load_id='$SG2' and type_code='DELIVERED_CHECK'" true
+HHL=11111111-0000-0000-0000-000000000001
+chk "A2 L14 SCX Tak → DELIVERED" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select (delivered_check_resolve('$SG2', true, null)->>'status'); commit" DELIVERED
+chk "A2 L14 po Tak sprawa RESOLVED YES" "select status||'/'||resolution_code from decisions where load_id='$SG2' and type_code='DELIVERED_CHECK'" "RESOLVED/DELIVERED_YES"
+# druga sprawa L14 → Nie
+SG3=$(L 5d)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG3','$P','$SCXO','KSH/SG07','HHL/SG07','SCX/SG07','IN_TRANSIT_SE','2026-10-05')" >/dev/null
+pos $SG3 65.8054 21.7591 "2026-10-09 11:00:00+00"; pos $SG3 65.8055 21.7592 "2026-10-09 11:01:00+00"
+pos $SG3 65.50 21.70 "2026-10-09 11:06:00+00"; pos $SG3 65.50 21.71 "2026-10-09 11:07:00+00"
+chk "A2 L14 Nie: status zostaje AT_SITE" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select delivered_check_resolve('$SG3', false, 'jeszcze nie'); select status from loads where id='$SG3'; commit" AT_SITE
+chk "A2 L14 Nie: resolution DELIVERED_NO" "select resolution_code from decisions where load_id='$SG3' and type_code='DELIVERED_CHECK'" DELIVERED_NO
+out=$(as $KSH "select delivered_check_resolve('$SG3', true, null)"); echo "$out" | grep -qiE 'wskazana firma|Rozstrzyg|42501|permission|administrator' && { ok=$((ok+1)); echo "  OK    A2 L14 KSH odmowa"; } || { fail=$((fail+1)); echo "  FAIL  A2 L14 KSH odmowa: $out"; }
+chk "A2 anon bez EXECUTE delivered_check_resolve" "select has_function_privilege('anon','delivered_check_resolve(uuid,boolean,text)','execute')::text" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

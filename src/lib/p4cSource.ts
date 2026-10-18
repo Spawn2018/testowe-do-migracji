@@ -3,7 +3,9 @@
  * `load.deliveredCheck`; D-20261014-1320-01 K2); demo — przykłady z `p4cDemo.ts`.
  * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost, żeby build produkcyjny wyciął przykłady (strażnik I-0).
  */
-import type { DeliveredCheck, Document, Geofence, Load, LoadEvent, ReadyGap, TrackingLinkInfo } from '../types';
+import type { DeliveredCheck, Document, Geofence, Load, LoadEvent, ReadyGap, RoleId, TrackingLinkInfo } from '../types';
+import { accountRole } from './accountRole';
+import { mayResolveDecision } from './decisionAccess';
 import { demoAutoMeta, demoDeliveredCheck, demoReadyGaps, demoTrackingLink } from './p4cDemo';
 import { computeReadyGaps } from './readyGaps';
 import { dayTime, isoMs } from './statusAxis';
@@ -28,7 +30,7 @@ export function deliveredCheckFromEvents(
   load: Load,
   events: readonly LoadEvent[],
   geofences: readonly Pick<Geofence, 'type' | 'name'>[],
-  role: 'HHL' | 'KSH' | 'SCX',
+  role: RoleId,
   thresholdMin = 10,
 ): DeliveredCheck | null {
   if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED') return null;
@@ -36,10 +38,15 @@ export function deliveredCheckFromEvents(
     .filter((e) => e.loadId === load.id && e.type === 'GEOFENCE_EXIT')
     .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
   if (!siteExit) return null;
-  const p = (siteExit.payload ?? {}) as { dwell_min?: number; minutes?: number; zone?: string; geofence_type?: string };
+  const p = (siteExit.payload ?? {}) as {
+    dwell_min?: number; minutes?: number; zone?: string; geofence_name?: string; geofence_type?: string; geofence_kind?: string;
+  };
+  const kind = p.geofence_kind ?? p.geofence_type;
+  if (kind && kind !== 'SITE') return null;
   const minutes = Number(p.dwell_min ?? p.minutes ?? NaN);
   if (!Number.isFinite(minutes) || minutes >= thresholdMin) return null;
   const zoneName = p.zone
+    ?? p.geofence_name
     ?? geofences.find((g) => g.type === 'SITE')?.name
     ?? 'Plac budowy';
   return {
@@ -48,7 +55,7 @@ export function deliveredCheckFromEvents(
     minutes: Math.round(minutes),
     thresholdMin,
     zoneName,
-    canDecide: role === 'SCX',
+    canDecide: mayResolveDecision('CARRIER', accountRole(role)),
   };
 }
 
@@ -57,11 +64,25 @@ export function deliveredCheckOf(
   loads: readonly Load[],
   geofences: readonly Pick<Geofence, 'type' | 'name'>[],
   nowIso: string,
-  role: 'HHL' | 'KSH' | 'SCX',
+  role: RoleId,
   events: readonly LoadEvent[] = [],
 ): DeliveredCheck | null {
   if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED' /* jak TrackingBar: anulowany spoza LoadStatus */) return null;
-  if (load.deliveredCheck !== undefined) return load.deliveredCheck;
+  if (load.deliveredCheck !== undefined) {
+    if (load.deliveredCheck === null) return null;
+    /* produkcja: canDecide z roli konta (D-20261017-1220-01), nie z zserializowanego pola */
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+      return {
+        id: load.deliveredCheck.id,
+        exitAt: load.deliveredCheck.exitAt,
+        minutes: load.deliveredCheck.minutes,
+        thresholdMin: load.deliveredCheck.thresholdMin,
+        zoneName: load.deliveredCheck.zoneName,
+        canDecide: mayResolveDecision('CARRIER', accountRole(role)),
+      };
+    }
+    return load.deliveredCheck;
+  }
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : deliveredCheckFromEvents(load, events, geofences, role);
 }
 

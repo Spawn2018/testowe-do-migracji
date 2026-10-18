@@ -14,6 +14,7 @@ import { todoRisks, type AccountKind } from '../../lib/cockpitE9';
 import { caseAssignmentsOf, caseHistoryOf, caseMeOf, casePeopleOf, sampleDecisionsOf, extraRisksOf, todoExtrasOf } from '../../lib/p6Source';
 import { feeRulesOf, feeSuggestionsOf } from '../../lib/p5Source';
 import { deliveredCheckOf } from '../../lib/p4cSource';
+import { deliveredCheckResolve } from '../../lib/deliveredCheckResolve';
 import { detourCasesOf, detourDecideOf } from '../../lib/e49Source';
 import { kmText, mergeClosures, minText, urgentOf } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
@@ -228,9 +229,36 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     },
     onFee: (i) => setFeeFor(i),
     checkHandlers: (i) => {
-      if (import.meta.env.VITE_AUTH_MODE === 'supabase' || !i.check || !i.loadId) return {};
+      if (!i.check || !i.loadId) return {};
       const chk = i.check;
       const loadId = i.loadId;
+      if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+        return {
+          onYes: () => {
+            void deliveredCheckResolve(loadId, true, null).then(async (r) => {
+              if (!r.ok) {
+                useTowerStore.getState().pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', loadId);
+                return;
+              }
+              setCheckDone((s) => new Set(s).add(chk.id));
+              const { refreshFromServer } = await import('../../data/supabaseBridge');
+              await refreshFromServer();
+            });
+          },
+          onNo: () => {
+            void deliveredCheckResolve(loadId, false, null).then(async (r) => {
+              if (!r.ok) {
+                useTowerStore.getState().pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', loadId);
+                return;
+              }
+              setCheckDone((s) => new Set(s).add(chk.id));
+              useTowerStore.getState().pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', loadId);
+              const { refreshFromServer } = await import('../../data/supabaseBridge');
+              await refreshFromServer();
+            });
+          },
+        };
+      }
       return {
         onYes: () => {
           useTowerStore.getState().setLoadStatus(loadId, 'DELIVERED', role, tp(locale, 'p4c_dc_note_yes', { n: chk.minutes }), chk.exitAt);

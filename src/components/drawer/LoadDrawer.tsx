@@ -11,6 +11,7 @@ import { StatusAxisTab } from './StatusAxisTab';
 import { TrackingBar } from './TrackingBar';
 import { DeliveredCheckCard } from './DeliveredCheckCard';
 import { deliveredCheckOf, readyGapsOf, trackingLinkOf } from '../../lib/p4cSource';
+import { deliveredCheckResolve } from '../../lib/deliveredCheckResolve';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { useEtaWx } from '../../lib/e49WxSource';
 import { buildStatusAxis } from '../../lib/statusAxis';
@@ -128,8 +129,9 @@ export function LoadDrawer() {
 
   /* E27 (wyglad/P4-b): poza oknem śledzenia (przed 03:00 w dniu załadunku i po „Dostarczone”) panel nie pokazuje kropki pojazdu */
   const drawerMapLoads = useMemo(() => (load && trackingPhase(load, nowIso) === 'on' ? [load] : []), [load, nowIso]);
-  /* wyglad/P4-c (L14): sprawa zamknięta „Nie” w trybie demo — karta znika bez zmiany statusu */
+  /* wyglad/P4-c (L14): sprawa zamknięta „Nie” — karta znika; A2: produkcja przez delivered_check_resolve */
   const [dcClosed, setDcClosed] = useState<string | null>(null);
+  const [dcBusy, setDcBusy] = useState(false);
   /* wyglad/E49: linie wiatru / postoju / śliskości / objazdu w ETA (produkcja: `etaDetail.weather`; demo dociągane) */
   const etaWx = useEtaWx(load, loads, nowIso);
 
@@ -146,22 +148,50 @@ export function LoadDrawer() {
   const readyGaps = readyGapsOf(load, loadDocs, documents);
   const dcRaw = deliveredCheckOf(load, loads, geofences, nowIso, role, loadEvents);
   const deliveredCheck = dcRaw && dcRaw.id !== dcClosed ? dcRaw : null;
+  const onDcYes = deliveredCheck
+    ? () => {
+      if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+        setLoadStatus(load.id, 'DELIVERED', role, tp(locale, 'p4c_dc_note_yes', { n: deliveredCheck.minutes }), deliveredCheck.exitAt);
+        return;
+      }
+      setDcBusy(true);
+      void deliveredCheckResolve(load.id, true, null).then(async (r) => {
+        setDcBusy(false);
+        if (!r.ok) { pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', load.id); return; }
+        setDcClosed(deliveredCheck.id);
+        const { refreshFromServer } = await import('../../data/supabaseBridge');
+        await refreshFromServer({ keepSelection: true });
+      });
+    }
+    : undefined;
+  const onDcNo = deliveredCheck
+    ? () => {
+      if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+        setDcClosed(deliveredCheck.id);
+        useTowerStore.getState().appendEvent({ loadId: load.id, type: 'NOTE', at: nowIso, actor: role, note: tp(locale, 'p4c_dc_note_no', { n: deliveredCheck.minutes }) });
+        pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', load.id);
+        window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-action="change-status"]')?.focus());
+        return;
+      }
+      setDcBusy(true);
+      void deliveredCheckResolve(load.id, false, null).then(async (r) => {
+        setDcBusy(false);
+        if (!r.ok) { pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', load.id); return; }
+        setDcClosed(deliveredCheck.id);
+        pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', load.id);
+        const { refreshFromServer } = await import('../../data/supabaseBridge');
+        await refreshFromServer({ keepSelection: true });
+        window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-action="change-status"]')?.focus());
+      });
+    }
+    : undefined;
   const deliveredCard = deliveredCheck ? (
     <DeliveredCheckCard
       check={deliveredCheck}
       locale={locale}
-      onYes={import.meta.env.VITE_AUTH_MODE !== 'supabase'
-        ? () => setLoadStatus(load.id, 'DELIVERED', role, tp(locale, 'p4c_dc_note_yes', { n: deliveredCheck.minutes }), deliveredCheck.exitAt)
-        : undefined}
-      onNo={import.meta.env.VITE_AUTH_MODE !== 'supabase'
-        ? () => {
-          setDcClosed(deliveredCheck.id);
-          useTowerStore.getState().appendEvent({ loadId: load.id, type: 'NOTE', at: nowIso, actor: role, note: tp(locale, 'p4c_dc_note_no', { n: deliveredCheck.minutes }) });
-          pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', load.id);
-          /* fokus nie ginie razem z kartą */
-          window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-action="change-status"]')?.focus());
-        }
-        : undefined}
+      busy={dcBusy}
+      onYes={onDcYes}
+      onNo={onDcNo}
     />
   ) : null;
 

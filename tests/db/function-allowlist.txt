@@ -87,6 +87,7 @@ authenticated decision_assign
 authenticated decision_expire
 authenticated decision_open
 authenticated decision_resolve
+authenticated delivered_check_resolve
 authenticated decision_snooze
 authenticated deepl_usage_view
 authenticated delete_geofence
