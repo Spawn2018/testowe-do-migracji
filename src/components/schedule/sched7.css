@@ -75,7 +75,10 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-file .s7-stick{position:sticky;background:var(--surface);z-index:1}
 .s7-file thead th.s7-stick{z-index:3;background:var(--surface-2)}
 .s7-file .s7-stick-1{left:0}
-.s7-file .s7-stick-2{left:var(--s7-left);border-right:2px solid var(--rule)}
+.s7-file .s7-stick-2{left:var(--s7-left)}
+/* P11 (e38): kreska za „Wysyłka” jedzie z przyklejoną kolumną — przy border-collapse obramowanie komórki zostawało w siatce tabeli */
+.s7-file .s7-stick-2::after{content:"";position:absolute;top:0;right:0;bottom:0;width:2px;background:var(--rule);pointer-events:none}
+.s7-file td.s7-stick-2{padding-right:12px}
 .s7-file tbody tr:hover td.s7-stick,.s7-file tbody tr.hl td.s7-stick{background:var(--surface-2)}
 .s7-file tbody tr.hl td.s7-stick{background:var(--amber-bg)}
 .s7-file td.s7-wt{background:var(--surface-2)}
@@ -88,6 +91,8 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 /* „Widok skrócony” (E30 pkt 1): 8 kolumn w 1154 px, tekst się zawija */
 .s7-short{width:100%}
 .s7-short td{white-space:normal}
+/* P11 (e20): przy 1280 px nagłówek „Załadunek → dostawa” zawija się w dwie linie zamiast urywać się na krawędzi kolumny */
+.s7-short:not(.is-wide) th{white-space:normal}
 .s7-short:not(.is-wide) th[data-col="transport"]{width:13%}
 .s7-short:not(.is-wide) th[data-col="cargo"]{width:13%}
 .s7-short:not(.is-wide) th[data-col="dates"]{width:10%}
@@ -99,7 +104,9 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-short:not(.is-wide) th[data-col="money"]{width:11%}
 /* audyt-B B-02 (E20): z kolumnami z „Kolumny” — szerokości w px (colgroup), przewijanie w bok, „Transport” przyklejony */
 .s7-short.is-wide{min-width:100%}
-.s7-short.is-wide th[data-col="transport"],.s7-short.is-wide td[data-col="code"]{position:sticky;left:0;border-right:2px solid var(--rule)}
+.s7-short.is-wide th[data-col="transport"],.s7-short.is-wide td[data-col="code"]{position:sticky;left:0}
+/* P11 (e38): kreska przy przyklejonym kodzie jedzie z kolumną (jak „Wysyłka” w układzie pliku) */
+.s7-short.is-wide th[data-col="transport"]::after,.s7-short.is-wide td[data-col="code"]::after{content:"";position:absolute;top:0;right:0;bottom:0;width:2px;background:var(--rule);pointer-events:none}
 .s7-short.is-wide th[data-col="transport"]{top:auto;z-index:3;background:var(--surface-2)}
 .s7-short.is-wide td[data-col="code"]{z-index:1;background:var(--surface)}
 .s7-short.is-wide tbody tr:hover td[data-col="code"]{background:var(--surface-2)}
@@ -132,3 +139,4 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 /* wyglad/P7-e (W13 zasada 15): linia synchronizacji w całości (bez wielokropka); plik KSH nie odczytany od ponad 30 min — czerwona */
 .s7-hd .sub[data-ksh-sync]{max-width:none}
 .sub.s7-sync-down{color:var(--red);font-weight:600}
+.s7-card-docs{font-size:13.5px;line-height:1.4}

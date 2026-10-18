@@ -113,6 +113,7 @@ const PL: Record<string, string> = {
   /* Numery zleceń */
   p7_num_h: 'Numery zleceń',
   p7_num_missing: 'brak',
+  p7_num_cancel: 'Anuluj',
   p7_num_by_scx: 'wpisuje SCX',
   p7_num_by_hhl: 'wpisuje HHL',
   p7_num_add: 'Dodaj',
@@ -122,7 +123,6 @@ const PL: Record<string, string> = {
   p7_docs_h: 'Dokumenty',
   p7_docs_go: 'Dokumenty',
   p7_doc_permit: 'Zezwolenie PL, SE',
-  p7_doc_cmr: 'CMR z załadunku',
   p7_doc_cmr_signed: 'CMR z podpisem odbiorcy',
   p7_doc_cmr_after_unload: 'po rozładunku',
   p7_doc_permit_firm: 'Zezwolenie firmowe',
@@ -132,7 +132,6 @@ const PL: Record<string, string> = {
   p7_doc_missing: 'brak pliku',
   p7_doc_over: 'brak · po terminie',
   p7_doc_due: 'brak · termin {date}',
-  p7_doc_cmr_after: 'do 2 h po załadunku',
   p7_doc_policy: '{number} · do {date}',
   p7_doc_policy_none: 'brak',
   p7_doc_policy_unknown: '—',
@@ -144,6 +143,7 @@ const PL: Record<string, string> = {
   /* telefon — linie stanu sekcji */
   p7_ph_plan: 'Plan',
   p7_ph_eta: 'ETA {v}',
+  p7_ph_site: 'Na placu od {v}',
   p7_ph_num_both: 'brak obu',
   p7_ph_num_one: 'brak {which}',
   p7_ph_num_ok: 'są',

@@ -17,6 +17,7 @@ import { formatTableDay } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
 import { headCounts, hm, mapRow, rowMatches, searchHintKey, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
+import { etaDuration } from '../lib/etaDuration';
 
 /**
  * wyglad/P9-c — strona Mapa według E29 (zdecydowane 08.10 12:14, pyt. 1 A; L20, L22) i E45 pkt 2
@@ -401,7 +402,7 @@ function mapRowLabel(rows: readonly { load: Load; row: MapRow }[], l: Load): str
 
 /** E29 pkt 9 (makieta telefonu): kod, oznaczenie, etap · pozycja · ETA. */
 function MapCard({ row, locale, onOpen }: { row: MapRow; locale: Parameters<typeof p9m>[0]; onOpen: () => void }) {
-  const tag = row.nogps ? row.pos.text : row.late && row.delayMin ? p9mp(locale, 'p9c_tip_late', { d: durShort(row.delayMin) }) : row.nopos ? row.pos.text : null;
+  const tag = row.nogps ? row.pos.text : row.late && row.delayMin ? p9mp(locale, 'p9c_tip_late', { d: etaDuration(row.delayMin) }) : row.nopos ? row.pos.text : null;
   const parts = [t(locale, row.stageKey)];
   if (row.pos.kind === 'fix' || row.pos.kind === 'ship') parts.push(`${p9m(locale, 'p9c_c_pos').toLowerCase()} ${row.pos.text}`);
   if (row.eta.main && row.eta.main !== '–') parts.push(`ETA ${row.eta.main}${row.nogps ? ` ${p9m(locale, 'p9c_eta_from_last')}` : ''}`);
@@ -417,8 +418,3 @@ function MapCard({ row, locale, onOpen }: { row: MapRow; locale: Parameters<type
   );
 }
 
-function durShort(m: number): string {
-  const h = Math.floor(m / 60);
-  const mm = Math.round(m % 60);
-  return h ? `${h} h${mm ? ` ${mm}` : ''}` : `${mm} min`;
-}

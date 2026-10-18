@@ -117,7 +117,7 @@ function ValueRows({ locale, rows, readOnly, onSave, allowEmpty }: {
           const editing = edit?.key === r.key;
           const v = vals[r.key] ?? null;
           const draftVal = editing ? parse(edit.draft) : null;
-          const show = (n: number | null) => (n == null ? fmt(n) : `${fmt(n, r.digits)} ${r.unit}`);
+          const show = (n: number | null) => (n == null ? fmt(n) : `${fmt(n, r.digits)}${r.unit === '%' ? '' : ' '}${r.unit}`); /* P11 (E21): „4%” bez odstępu */
           return (
             <li key={r.key} data-pm-row={r.key} className={editing ? 'is-edit' : undefined}>
               <span className="ox-thr-label">{r.label}</span>
@@ -283,13 +283,13 @@ export function FuelScreen({ locale, view, actions, readOnly, party }: {
       <div className={`pm-cards${party ? ' pm-cards-2' : ''}`}>
         <section className={`pm-card${cur.final ? ' is-now' : ''}`} data-pm-week="now">
           <span className="ox-eyebrow">{fbp(locale, 'p5b_f_now_h', { range: range(cur.from, cur.to) })}</span>
-          <span className="pm-big"><b className="tabular">+{pctTxt(cur.applied)} %</b> <span className="pm-x">×{mult(cur.applied)}</span></span>
+          <span className="pm-big"><b className="tabular">+{pctTxt(cur.applied)}%</b> <span className="pm-x">×{mult(cur.applied)}</span></span>
           <span className="pm-card-l">{fbp(locale, cur.final ? 'p5b_f_final' : 'p5b_f_forecast_from', { range: range(cur.idxFrom, cur.idxTo) })}</span>
           <span className="pm-card-l">{fbp(locale, 'p5b_f_applies', { from: dm(cur.from), to: dm(cur.to) })}</span>
         </section>
         <section className="pm-card" data-pm-week="next">
           <span className="ox-eyebrow">{fbp(locale, 'p5b_f_next_h', { range: range(next.from, next.to) })}</span>
-          <span className="pm-big"><b className="tabular">+{pctTxt(next.forecast)} %</b> <span className="pm-fc">{fb(locale, 'p5b_f_forecast')}</span></span>
+          <span className="pm-big"><b className="tabular">+{pctTxt(next.forecast)}%</b> <span className="pm-fc">{fb(locale, 'p5b_f_forecast')}</span></span>
           <span className="pm-card-l">{fbp(locale, 'p5b_f_next_x', { date: dm(next.finalOn), range: range(next.idxFrom, next.idxTo) })}</span>
         </section>
         {party ? null : (

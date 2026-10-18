@@ -72,7 +72,7 @@ const PL: Record<string, string> = {
   p6_invoice: 'Otwórz fakturę',
   p6_fee: 'Dopłata',
   p6_fee_name_DWELL: 'Dopłata: postój {where} {dur}',
-  p6_fee_name_CANCEL: 'Dopłata: anulowanie ({pct} % frachtu)',
+  p6_fee_name_CANCEL: 'Dopłata: anulowanie ({pct}% frachtu)',
   p6_fee_sub: 'podpowiedź systemu {fee} · decyduje {org}',
   p6_fee_wait_hhl: 'Scandinavian Express dodał dopłatę {fee} — czeka na Twoją akceptację',
   p6_call_org: 'Zadzwoń do {org}',

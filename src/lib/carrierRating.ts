@@ -162,7 +162,7 @@ export function demoMyRatings(loads: Load[], carrierId: string, range: RatingRan
 
 /** „83 %” albo „—”. */
 export function pctText(a: number, b: number): string {
-  return b > 0 ? `${Math.round((100 * a) / b)} %` : '—';
+  return b > 0 ? `${Math.round((100 * a) / b)}%` : '—';
 }
 
 /** „45 min”, „2 h 10 min”, „1 d 3 h” albo „—”. */

@@ -150,6 +150,8 @@ export function Nav() {
         type="button"
         className="nav-more-btn"
         aria-expanded={moreOpen}
+        /* P11 pkt 7 (e27, e29, e45): strona spod „Więcej” zaznacza „Więcej” na dolnym pasku */
+        data-active={PHONE_PINS.includes(view as NavKey) ? undefined : 'true'}
         aria-label={t(locale, 'nav_more')}
         onClick={() => setMoreOpen((v) => !v)}
       >

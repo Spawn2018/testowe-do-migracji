@@ -1,7 +1,8 @@
 import type { Load, RoleId } from '../types';
 import { getNowMs } from './frozenNow';
 import { TZ_UNLOAD_SE, calendarDayNoonMs, parseInstant } from './time';
-import { canSeeWorkflows, isPreviewReadOnly } from './prodFacade';
+import { PROD_BUILD, canSeeWorkflows, isPreviewReadOnly } from './prodFacade';
+import { demoAccountKind } from './demoAccount';
 
 /** E9-7: w Podglądzie KSH/SCX (supabase) brak zapisu w UI. */
 function allowWrite(role: RoleId): boolean {
@@ -33,7 +34,9 @@ const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
 export function navForRole(role: RoleId, prod?: boolean, userRole?: string | null): NavKey[] {
   const nav = NAV_BY_ROLE[role];
   const wf = userRole === undefined ? canSeeWorkflows(prod) : canSeeWorkflows(prod, userRole);
-  return wf ? nav : nav.filter((k) => k !== 'wf');
+  /* P11 (e9, tabela E9 „Operacje —”): w demo konto Operacje HHL (`konto=operacje`) też bez Automatyzacji — jak HHL_OPS na produkcji */
+  const demoOps = role === 'HHL' && !(prod ?? PROD_BUILD) && userRole === undefined && demoAccountKind() === 'HHL_OPS';
+  return wf && !demoOps ? nav : nav.filter((k) => k !== 'wf');
 }
 
 export function canSeeCost(role: RoleId): boolean {

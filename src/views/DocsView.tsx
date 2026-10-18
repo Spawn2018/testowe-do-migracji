@@ -17,7 +17,7 @@ import { downloadDocumentsZip } from '../lib/zipDocs';
 import { DocPreview } from '../components/ui/DocPreview';
 import { DocFileRow } from '../components/ui/DocFileRow';
 import { getNowMs } from '../lib/frozenNow';
-import { DEFAULT_DOC_REQUIREMENTS, docStatusRows, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
+import { cmrAfterDelivery, DEFAULT_DOC_REQUIREMENTS, docStatusRows, type DocRequirement, type DocStatusRow } from '../lib/docRequirements';
 import { defaultDocWeek, docsForWeek, weeksWithLoads } from '../lib/docWeek';
 import { setDocReqCache } from '../lib/docReqCache';
 import { useIsPhone } from '../lib/useIsPhone';
@@ -138,8 +138,9 @@ export function DocsView() {
     return () => { window.removeEventListener('mousedown', close); window.removeEventListener('keydown', close); };
   }, [packOpen]);
 
-  const statusRows = useMemo(() => serverStatus ?? docStatusRows(loads, documents, reqs, nowMs), [serverStatus, loads, documents, reqs, nowMs]);
   const byId = useMemo(() => new Map(loads.map((l) => [l.id, l])), [loads]);
+  /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) — także przy starym wymaganiu w bazie */
+  const statusRows = useMemo(() => cmrAfterDelivery(serverStatus ?? docStatusRows(loads, documents, reqs, nowMs), (id) => byId.get(id)?.status), [serverStatus, loads, documents, reqs, nowMs, byId]);
   const nameOf = (id: string) => { const l = byId.get(id); return l ? transportLabel(l, role) : id; };
   const policies = policiesOf();
   const permits = useMemo(() => permitsOf(loads), [loads]);
@@ -169,8 +170,9 @@ export function DocsView() {
       }
       const req = reqs.find((r) => r.category === key) ?? null;
       if (!req || !req.required) continue;
-      const cnt = reqCount(statusRows, key, nowMs);
       const cmr = key === 'CMR' ? cmrKind(req) : null;
+      /* P11 (e31): CMR z podpisem odbiorcy ma termin dopiero po „Dostarczone” — transporty w drodze się nie liczą („—”, `statusRows`) */
+      const cnt = reqCount(statusRows, key, nowMs);
       const label = cmr ? ft(locale, `p5_doc_r_CMR_${cmr}`) : ft(locale, `p5_doc_r_${key}`);
       const due = cmr === 'SIGNED'
         ? ftp(locale, 'p5_doc_due_CMR_SIGNED', { h: req.offsetHours })
@@ -201,7 +203,7 @@ export function DocsView() {
       useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
     });
   };
-  const weekShort = (w: string) => `t${weekKeyLabel(w)}`;
+  const weekShort = (w: string) => weekKeyLabel(w);
 
   const files = useMemo(() => filterFiles(documents, loads, filter), [documents, loads, filter]);
   const fileLoads = useMemo(() => {
@@ -472,6 +474,8 @@ export function DocsView() {
             <button type="button" className="btn doc-upload-big" data-doc-upload onClick={() => setUpload(true)}>{ft(locale, 'p5_doc_upload_phone')}</button>
           </div>
         ) : null}
+        {/* P11 (e8): tydzień paczki i „Pobierz paczkę” pod „Wgraj dokument”, nie na końcu strony */}
+        {phone && packMenu ? <div className="doc-pad doc-pack-phone">{packMenu}</div> : null}
         <section className="doc-sec" aria-labelledby="doc-req-h">
           <header className="doc-sec-hd"><h3 id="doc-req-h">{ft(locale, 'p5_doc_req_h')}</h3></header>
           {phone ? reqCards : reqTable}
@@ -479,7 +483,6 @@ export function DocsView() {
         </section>
         {permitBlock}
         {filesBlock}
-        {phone && packMenu ? <div className="doc-pad doc-pack-phone">{packMenu}</div> : null}
         {driverVault.length > 0 ? (
           <div className="note" data-vault="driver">
             {t(locale, 'a6_docs_driver_vault')}

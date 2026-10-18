@@ -15,8 +15,8 @@ import { downloadDocumentFile } from '../../lib/docsIo';
 import { downloadStoredDocument } from '../../lib/docFiles';
 import { isStoredDoc } from '../../data/registry';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
-import { docStatusRows } from '../../lib/docRequirements';
-import { cmrKind, reqVisible } from '../../lib/p5Docs';
+import { cmrAfterDelivery, cmrCounts, docStatusRows } from '../../lib/docRequirements';
+import { reqVisible } from '../../lib/p5Docs';
 import { getDocReqCache } from '../../lib/docReqCache';
 import { docRequirementsStart, otherDocsOn, policiesOf } from '../../lib/p5Source';
 import { lazyRetry } from '../../lib/lazyRetry';
@@ -61,7 +61,8 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
   const reqs = cached?.reqs ?? docRequirementsStart();
   const rows = useMemo(
-    () => (cached ? cached.status.filter((r) => r.loadId === load.id) : prod ? [] : docStatusRows([load], docs, reqs, nowMs)),
+    /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) */
+    () => cmrAfterDelivery(cached ? cached.status.filter((r) => r.loadId === load.id) : prod ? [] : docStatusRows([load], docs, reqs, nowMs), () => load.status),
     [cached, prod, load, docs, reqs, nowMs],
   );
   const known = !!cached || !prod;
@@ -73,7 +74,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
     if (!req || !req.required) return null;
     const st = rows.find((r) => r.category === c);
     const have = current(c);
-    const label = c === 'CMR' ? (known ? ft(locale, `p5_doc_r_CMR_${cmrKind(req)}`) : ft(locale, 'p5_doc_cat_CMR')) : ft(locale, `p5_doc_r_${c}`);
+    const label = c === 'CMR' ? (known ? ft(locale, 'p5_doc_r_CMR_SIGNED') : ft(locale, 'p5_doc_cat_CMR')) : ft(locale, `p5_doc_r_${c}`);
     const doc = have[0];
     const state = doc
       ? (
@@ -86,7 +87,9 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
         ? <span className="neg" data-pd-state="OVERDUE">{ftp(locale, 'p5_pd_state_OVERDUE', { date: dm(st.dueAt) })}</span>
         : st?.dueAt
           ? <span className="neg" data-pd-state="MISSING">{ftp(locale, 'p5_pd_state_MISSING_due', { date: dm(st.dueAt) })}</span>
-          : <span className="neg" data-pd-state="MISSING">{ft(locale, 'p5_pd_state_MISSING')}</span>;
+          : c === 'CMR' && !cmrCounts(load.status)
+            ? <span className="fin-muted" data-pd-state="WAIT">{ft(locale, 'p5_pd_state_CMR_wait')}</span>
+            : <span className="neg" data-pd-state="MISSING">{ft(locale, 'p5_pd_state_MISSING')}</span>;
     return (
       <li key={c} className="pd-row" data-pd-req={c}>
         <div className="pd-tx"><b>{label}</b>{state}</div>

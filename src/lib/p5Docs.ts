@@ -24,9 +24,9 @@ export function reqVisible(key: ReqKey, role: OrgKind): boolean {
 
 export const responsibleOrg = (r: DocResponsible): OrgKind => (r === 'CARRIER' ? 'SCX' : r === 'CLIENT' ? 'KSH' : 'HHL');
 
-/** CMR po rozładunku (podpisany) albo przy załadunku — według wymagania z bazy. */
-export const cmrKind = (req: DocRequirement | null | undefined): 'SIGNED' | 'LOAD' =>
-  req?.anchor === 'AFTER_UNLOAD' ? 'SIGNED' : 'LOAD';
+/** Decyzja właściciela 18.10, 17:28: tylko CMR po rozładunku (z podpisem odbiorcy) — niezależnie od kotwicy w bazie
+    (stare wymaganie „przy załadunku” poprawia D-20261018-1740-01). Zostaje jako funkcja dla zgodności wywołań. */
+export const cmrKind = (_req?: DocRequirement | null): 'SIGNED' => 'SIGNED';
 
 export interface ReqCount { overdue: DocStatusRow[]; soon: DocStatusRow[] }
 

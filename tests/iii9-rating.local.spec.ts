@@ -63,7 +63,7 @@ test('HHL: ocena w szufladzie → baza; karta przewoźników w Opcjach', async (
   await expect(card).toBeVisible();
   await card.locator('[data-cr-range="all"]').click();
   await expect(card.locator('[data-cr-score]').first()).toContainText('4,00 / 5 (1)');
-  await expect(card.locator('[data-cr-ontime]').first()).toContainText('1 (100 %)');
+  await expect(card.locator('[data-cr-ontime]').first()).toContainText('1 (100%)');
   if (process.env.SHOT) await card.screenshot({ path: '/tmp/iii9-card.png' });
 });
 

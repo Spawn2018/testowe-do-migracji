@@ -60,31 +60,13 @@ export function EtaBlock({
     );
   }
 
-  if (tile === 'PREP' || load.etaPreLoad) {
+  /* P11 (e15, D-80): „Załadunek” (auto na terenie KSH) też „Przed wyjazdem ze Śremu” — ETA liczy się dopiero po wyjeździe ze strefy */
+  if (tile === 'PREP' || tile === 'LOADING' || load.etaPreLoad) {
     return (
       <div className="etab pre" data-eta="pre-load" data-eta-block>
         <div className="etab-lbl">{t(locale, phone ? 'p4b_eta_phone_lbl' : 'p4b_eta_pre_lbl')}</div>
         <div className="etab-val">{t(locale, 'p4b_eta_pre_val')}</div>
         <div className="etab-sub">{tp(locale, 'p4b_eta_pre_sub', { day: dayOnly(load.plannedDeliverDate) })}</div>
-      </div>
-    );
-  }
-
-  /* B7 / E15 pkt 8: faza prom — ETA z AIS albo „czeka na pozycję AIS” */
-  if (d?.phase === 'FERRY' || load.status === 'ON_FERRY') {
-    const aisEta = d?.ferryEtaAt ?? null;
-    const waiting = d?.waitAis || !aisEta;
-    return (
-      <div className="etab ferry" data-eta="ferry" data-eta-block>
-        <div className="etab-lbl">{t(locale, 'p4b_eta_ferry_lbl')}</div>
-        <div className="etab-val">
-          {waiting ? t(locale, 'p4b_eta_ferry_wait_ais') : dayTime(aisEta)}
-        </div>
-        <div className="etab-sub">
-          {waiting
-            ? t(locale, 'p4b_eta_ferry_wait_sub')
-            : tp(locale, 'p4b_eta_ferry_ais_sub', { at: dayTime(aisEta) })}
-        </div>
       </div>
     );
   }
@@ -104,6 +86,29 @@ export function EtaBlock({
   const win = kind ? (late ? 'after' : kind === 'before' ? 'before' : 'in') : null;
   const winText = win ? t(locale, `p4b_eta_win_${win}`) : null;
   const osm = (load.etaMethod ?? '').includes('OSM') ? t(locale, 'i2_eta_osm_attr') : null;
+
+  /* B7 / E15 pkt 8; P11 (e15): na promie główna wartość to ETA Boden (ta sama co w tabeli Mapy),
+     wpłynięcie promu z AIS albo „czeka na pozycję AIS” w podpisie */
+  if (d?.phase === 'FERRY' || load.status === 'ON_FERRY') {
+    const aisEta = d?.ferryEtaAt ?? null;
+    const waiting = d?.waitAis || !aisEta;
+    return (
+      <div className="etab ferry" data-eta="ferry" data-eta-block>
+        <div className="etab-lbl">{t(locale, 'p4b_eta_ferry_lbl')}</div>
+        <div className="etab-val">
+          <span>{load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none')}</span>
+          {win ? <span className={`pill ${win === 'after' ? 'p-red' : 'p-go'}`}>{t(locale, `p4b_eta_pill_${win}`)}</span> : null}
+        </div>
+        <div className="etab-sub">
+          {[
+            waiting ? t(locale, 'p4b_eta_ferry_wait_ais') : tp(locale, 'p4b_eta_ferry_in', { at: dayTime(aisEta) }),
+            waiting ? t(locale, 'p4b_eta_ferry_wait_sub') : null,
+            winText,
+          ].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+    );
+  }
   const reasons = !d && load.etaReasons?.length ? load.etaReasons.slice(0, 2).join(' · ') : null;
 
   /* pasmo ± minut i słowo pewności (E15-3) */

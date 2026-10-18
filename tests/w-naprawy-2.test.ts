@@ -103,7 +103,7 @@ describe('A8 — Stan systemu: „następna próba o …”', () => {
 
 describe('A2 — Strefy: wyjazd z placu nie obiecuje automatu przed A2', () => {
   it('zdanie „wkrótce” dla placu i nowe zdanie wyjazdu ze Śremu po A2', () => {
-    expect(p8ct('p8c_does_SITE_exit_soon', { soon: SOON })).toBe('Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu (E26, E27) — włączamy wkrótce.');
+    expect(p8ct('p8c_does_SITE_exit_soon', { soon: SOON })).toBe('Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu — włączamy wkrótce.');
     expect(p8ct('p8c_does_LOADING_exit_a2')).toContain('postoju co najmniej 5\u00a0min: „Droga PL”');
   });
   it('ZonesView podmienia zdania według serverRuleOn(SITE_EXIT_DELIVERED)', async () => {

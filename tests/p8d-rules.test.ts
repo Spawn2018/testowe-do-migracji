@@ -38,7 +38,7 @@ describe('zdanie reguły (E35 pkt 3)', () => {
   });
   it('„Wtedy” łączy akcje: sprawa, e-mail, SMS według E42', () => {
     const d = draft({ then: { notify: ['KSH'], todo: 'SCX', email: true, smsTo: 'BODEN' } });
-    expect(sp(ruleSentence(d, ZONES))).toContain('wtedy powiadomienie: KSH · sprawa w Do zrobienia (SCX) · e-mail · SMS do odbiorców (Boden, E42)');
+    expect(sp(ruleSentence(d, ZONES))).toContain('wtedy powiadomienie: KSH · sprawa w Do zrobienia (SCX) · e-mail · SMS do odbiorców (Boden)');
   });
   it('czas „dłużej niż” słowami', () => {
     expect(sp(durText(15))).toBe('15 min');

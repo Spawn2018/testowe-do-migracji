@@ -66,7 +66,8 @@ const PL: Record<string, string> = {
   s7_d_who_KSH: 'wgrywa KSH',
   s7_d_who_HHL: 'wgrywa HHL',
   s7_d_bad: 'brak: {list}',
-  s7_d_bad_one: 'brak {doc}',
+  /* F7 #303 r2 D3: z dwukropkiem jak lista — „brak: zezwolenie PL” (bez błędu odmiany) */
+  s7_d_bad_one: 'brak: {doc}',
   s7_d_due: '{list} do {date}',
   s7_d_ok: 'komplet',
   s7_file_line: 'Plik KSH: {ver}',

@@ -248,6 +248,9 @@ const pl: Dict = {
 
   /* Progi */
   p3c_thr_change: 'Zmień',
+  p3c_thr_src: 'Źródła danych',
+  p3c_thr_src_v: 'progi w Stanie systemu',
+  p3c_thr_src_go: 'Stan systemu ›',
   p3c_thr_value: 'Wartość',
   p3c_thr_effect: 'Skutek',
 
@@ -425,7 +428,7 @@ const pl: Dict = {
   cal_prop_h: 'Propozycja czasów odcinków',
   cal_prop_tag: 'propozycja z {d}',
   cal_prop_done: 'zatwierdzone · wersja {no}',
-  cal_prop_note: 'Nowy czas = mediana pomiarów. Odcinek z mniej niż {need} dostawami — za mało danych. Różnica do 10 % — bez zmian.',
+  cal_prop_note: 'Nowy czas = mediana pomiarów. Odcinek z mniej niż {need} dostawami — za mało danych. Różnica do 10% — bez zmian.',
   cal_s_seg: 'Odcinek',
   cal_s_now: 'Teraz',
   cal_s_meas: 'Pomiar',
@@ -438,7 +441,7 @@ const pl: Dict = {
   cal_v_applied: 'zatwierdzone',
   cal_gain: 'Na tych samych {n} dostawach nowe czasy dają średni błąd 24 h przed przyjazdem {after} zamiast {before}.',
   cal_prop_wait: 'Propozycja po {need} dostawach — brakuje {left}. Do tego czasu ETA liczy obecne czasy.',
-  cal_prop_none: 'Wszystkie zmierzone odcinki mieszczą się w 10 % — nic do zatwierdzenia.',
+  cal_prop_none: 'Wszystkie zmierzone odcinki mieszczą się w 10% — nic do zatwierdzenia.',
   cal_prop_ro: 'Nowe czasy zatwierdza Administrator HHL. Bez zatwierdzenia nic się nie zmienia.',
   cal_prop_rule: 'Bez zatwierdzenia nic się nie zmienia — ETA liczy obecne czasy.',
   cal_approve: 'Zatwierdź nowe czasy',

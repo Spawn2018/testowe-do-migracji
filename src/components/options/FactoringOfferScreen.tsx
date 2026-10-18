@@ -35,10 +35,20 @@ export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSave
       <dl className="fin-dl fact-dl">
         <dt>{ft(locale, 'p5_fo_on')}</dt>
         <dd>
-          <label className="switchline">
-            <input type="checkbox" checked={offer.enabled} disabled={readOnly} onChange={(e) => { onChange('enabled', e.target.checked); onSaved('factoring'); }} />
+          {/* P11 (e4b): przełącznik jak w innych ekranach Opcji (nie pole wyboru) */}
+          <span className="ox-switchline">
+            <button
+              type="button"
+              className="ox-switch"
+              role="switch"
+              aria-checked={offer.enabled}
+              aria-label={ft(locale, 'p5_fo_on')}
+              disabled={readOnly}
+              data-fo-enabled
+              onClick={() => { onChange('enabled', !offer.enabled); onSaved('factoring'); }}
+            ><span className="ox-track"><i /></span></button>
             <span>{ft(locale, offer.enabled ? 'p5_fo_on_yes' : 'p5_fo_on_no')}</span>
-          </label>
+          </span>
         </dd>
         <dt>{ft(locale, 'p5_fo_who')}</dt><dd>{ft(locale, 'p5_fo_who_v')}</dd>
         <dt>{ft(locale, 'p5_fo_fee')}</dt>

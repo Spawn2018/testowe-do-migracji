@@ -7,6 +7,7 @@ import type { Load } from '../types';
 import type { PricingTier } from './money/engine';
 import { sideEffectiveEur, type MoneySideV2 } from './money/loadMoney';
 import { fmtDateRange } from './time';
+import { plPlural } from './plPlural';
 
 export type FinStage = PricingTier;
 /** Która strona kwoty: HHL obie, KSH przychód, SCX koszt (E16 „Każda firma”). */
@@ -170,6 +171,11 @@ export function transportsText(n: number): string {
   if (n === 1) return `${n} transport`;
   if (d >= 2 && d <= 4 && !(dd >= 12 && dd <= 14)) return `${n} transporty`;
   return `${n} transportów`;
+}
+
+/** P11 (e4): „1 transport dostarczony”, „2 transporty dostarczone”, „5 transportów dostarczonych”. */
+export function deliveredText(n: number): string {
+  return `${transportsText(n)} ${plPlural(n, 'dostarczony', 'dostarczone', 'dostarczonych')}`;
 }
 
 /** „KR-08 – KR-15” dla ciągu kodów z tym samym przedrostkiem, inaczej lista. */

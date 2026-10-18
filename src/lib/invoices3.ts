@@ -14,7 +14,7 @@ export function addDaysIso(dateIso: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
-import { fxForDate, unloadedAtOf } from './money/loadMoney';
+import { applyInvoiceToSide, fxForDate, leastTier, unloadedAtOf } from './money/loadMoney';
 import { dictEntry } from '../i18n/messages';
 import { serverRuleOn } from './serverRules';
 import { currentCmr } from './statusSettlement';
@@ -333,6 +333,33 @@ export function buildSeedBills(loads: Load[], todayLocal: string): Bill[] {
   const p2 = w2 !== w1 ? mk('PRZYCHOD', w2, 'PLN', 2, 3, {}) : null;
   if (p2) out.push(p2);
   return out.map((b) => ({ ...b, payment: billPaymentToday(b, todayLocal) }));
+}
+
+/**
+ * P11 pkt 7 partia 5 (paczka D: Faktury miały faktury za t37–t38, a Finanse i Rozliczenia — „Zafakturowane 0”):
+ * w demo etap „Zafakturowane” strony bierze się z faktur na stronie Faktury — faktura HHL → KSH zamyka przychód,
+ * faktura SCX → HHL zamyka koszt (kwota z pozycji faktury w EUR; faktura w PLN — przez kurs pozycji). Wyliczenie zostaje
+ * bez zmian (Z1). Na produkcji etap daje baza (E25, C17).
+ */
+export function withBilledMoney(loads: Load[], bills: Bill[]): Load[] {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const billed = new Map<string, { cost?: number; rev?: number }>();
+  for (const b of bills) {
+    for (const ln of b.lines) {
+      const eur = b.currency === 'EUR' ? ln.invoicedNet : ln.fx?.mid ? r2(ln.invoicedNet / ln.fx.mid) : null;
+      if (eur == null) continue;
+      const cur = billed.get(ln.loadId) ?? {};
+      billed.set(ln.loadId, b.direction === 'KOSZT' ? { ...cur, cost: eur } : { ...cur, rev: eur });
+    }
+  }
+  return loads.map((l) => {
+    const hit = billed.get(l.id);
+    const m = l.pricing?.money;
+    if (!hit || !m) return l;
+    const cost = hit.cost != null ? applyInvoiceToSide(m.cost, hit.cost) : m.cost;
+    const rev = hit.rev != null ? applyInvoiceToSide(m.rev, hit.rev) : m.rev;
+    return { ...l, pricing: { ...l.pricing, money: { ...m, tier: leastTier(cost.tier, rev.tier), cost, rev } } };
+  });
 }
 
 /** Poniedziałek tygodnia ISO (RRRR-Www) jako data lokalna. */
