@@ -22,6 +22,7 @@ import type {
 } from '../types';
 import { positionAlong, PROGRESS_OF, STATUS_TO_STAGE } from '../lib/status';
 import rawLoads from './loads.json';
+import { applySefsToRoadRate, sefsForLoadDate } from '../lib/sefs';
 import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
 import { seedOrders, seedResourcesForIndex } from './seedIdentity';
@@ -445,6 +446,29 @@ function buildExtraLoads(): Load[] {
  * audyt-B B-06 (E33, 08.10): „Dopłaty · postój, anulowanie” = suma dopłat z listy pod tabelą. W demo żadna dopłata
  * nie jest dodana ani przyjęta (lista tylko podpowiada), więc wiersz ma 0,00 po obu stronach; „Razem” bez tych kwot.
  */
+/**
+ * P11 pkt 7 partia 5 (paczka B: w panelu › Ceny wiersze nie sumowały się do „Razem”, a opłata paliwowa przy „×1,05”
+ * wynosiła ok. 1 % frachtu): opłata paliwowa = fracht × (mnożnik − 1) z tej samej migawki co znacznik „t38 · ×1,05”
+ * (tydzień dnia załadunku, `sefsForLoadDate` — jak w `buildLoadMoney`), a „Razem” = fracht + opłata paliwowa + dopłaty.
+ * `marginBelow` (transporty „poniżej progu”): fracht kosztu dobrany tak, żeby marża wyszła ok. 9 %.
+ */
+function consistentDemoPricing(p: Load['pricing'], loadDate: string, marginBelow?: number): Load['pricing'] {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const mult = sefsForLoadDate(loadDate).appliedMult;
+  const fuelOf = (base: number) => r2(applySefsToRoadRate(base, mult) - base);
+  const revSefs = fuelOf(p.revBase);
+  const revTotal = r2(p.revBase + revSefs + (p.revExtras ?? 0));
+  const costBase = marginBelow != null ? r2((revTotal * (1 - marginBelow) - (p.costExtras ?? 0)) / mult) : p.costBase;
+  const costSefs = fuelOf(costBase);
+  const costTotal = r2(costBase + costSefs + (p.costExtras ?? 0));
+  const margin = r2(revTotal - costTotal);
+  const marginPct = revTotal ? margin / revTotal : 0;
+  return {
+    ...p, costBase, costSefs, revSefs, costBaf: costSefs, revBaf: revSefs, costTotal, revTotal, margin, marginPct,
+    belowThreshold: marginBelow != null ? true : p.belowThreshold,
+  };
+}
+
 function withoutDemoExtras(p: Load['pricing']): Load['pricing'] {
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const costTotal = r2(p.costTotal - (p.costExtras ?? 0));
@@ -531,21 +555,9 @@ export function buildSeedLoads(): Load[] {
     let status = l.status;
     let docMissing = l.docMissing;
     let permit = l.permit ? { ...l.permit } : undefined;
-    let pricing = withoutDemoExtras(l.pricing);
-
-    // Below-threshold stress (≥3 loads) — actionable in Finance
-    if (['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code)) {
-      const rev = pricing.revTotal;
-      const margin = Math.round(rev * 0.09);
-      const costTotal = rev - margin;
-      pricing = {
-        ...pricing,
-        costTotal,
-        margin,
-        marginPct: 0.09,
-        belowThreshold: true,
-      };
-    }
+    // Below-threshold stress (≥3 loads) — actionable in Finance; partia 5: wiersze sumują się do „Razem”
+    const pricing = consistentDemoPricing(withoutDemoExtras(l.pricing), l.plannedLoadDate,
+      ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code) ? 0.09 : undefined);
 
     // Uncovered TRIP kratownice that block READY (K-03 already TRIP+RESOURCES_PENDING)
     // Promote SG-09 / SG-18 to TRIP gaps mid-pipeline stress

@@ -197,8 +197,9 @@ describe('E-07 … E-15: Zezwolenia, Historia, Stan systemu, Automatyzacje, Stre
   });
   it('E-11: Strefy — bufory odsyłają do zdarzeń „Kto co dostaje”, bez „(Automatyzacje)”', () => {
     const src = read('src/i18n/p8c.ts');
-    expect(src).toContain("p8c_do_PRE_PORT: 'powiadomienie HHL (Kto co dostaje: „Auto 20 km przed portem”)'");
-    expect(src).toMatch(/p8c_do_PRE_ARRIVAL_PL: '[^']*powiadomienie KSH, SCX \(„Auto 50 km przed placem \/ przed Śremem”\)'/);
+    /* P11 pkt 7 (etap6, CI): liczba i jednostka na twardej spacji — „50 km” nie łamie się na końcu linii */
+    expect(src).toContain("p8c_do_PRE_PORT: 'powiadomienie HHL (Kto co dostaje: „Auto 20\\u00a0km przed portem”)'");
+    expect(src).toMatch(/p8c_do_PRE_ARRIVAL_PL: '[^']*powiadomienie KSH, SCX \(„Auto 50\\u00a0km przed placem \/ przed Śremem”\)'/);
     expect(src).not.toMatch(/\(Automatyzacje(, E35)?\)/);
   });
   it('E-12: hasło — „Minimum 12 znaków, litery i cyfry”', () => {

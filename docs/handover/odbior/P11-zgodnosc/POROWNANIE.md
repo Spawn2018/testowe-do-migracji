@@ -78,7 +78,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
   - telefon (wykres, Dokumenty);
   - Harmonogram (kreska, nagłówek);
   - komunikat po aktualizacji.
-- **Partia 3 (w toku):**
+- **Partia 3:**
   - blok ETA (załadunek, prom);
   - Mapa (mapa na ekranie, linie kafelków, zapis opóźnienia);
   - Przegląd (ramka stanu mapy, numer zlecenia, linia „Plan”);
@@ -94,6 +94,9 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
   - procent bez odstępu;
   - bez kodów etapów w Strefach, Automatyzacjach i Historii;
   - dzwonek: informacje bez działania w „Moje transporty”.
+- **Partia 5:**
+  - dane demo: wiersze panelu › Ceny sumują się do „Razem”, opłata paliwowa z mnożnika; etap „Zafakturowane” z faktur na stronie Faktury (niżej, „Dane demo”);
+  - Strefy: „50 km”, „20 km”, „60 min” w opisach buforów na twardej spacji — po usunięciu kodów etapów (partia 4) „50” i „km” łamały się na końcu linii przy 1440 i 1280 (CI, `etap6-ui`).
 
 ## Rozstrzygnięcia koordynatora („?” z paczek)
 - **Liczba przy dzwonku i „Do zrobienia”** — ma być ta sama, bo dopisek w aplikacji to obiecuje (e7).
@@ -102,13 +105,11 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 - **Pierwsza karta Harmonogramu na telefonie na 319 px** — N. Pasek etapów z E28 (nowszy) wygrywa z „górną 1/3” z E8.
 - **Pola daty i godziny w formacie przeglądarki** — N. W polskiej przeglądarce jest „23.09.2026” i „16:32”; testowa przeglądarka ma język angielski.
 - **Kwoty EUR bez kodu waluty w Fakturach** — N. Obraz E4 pisze kwoty w walucie umowy bez kodu, a inną walutę z kodem.
-- **Dane demo:**
-  - w panelu › Ceny kwoty nie sumują się do „Razem”;
-  - „Zafakturowane 0” przy wystawionych fakturach t37–t38;
-  - brak zdarzeń strefy placu;
-  - prom na statku przed wypłynięciem.
-  
-  Poprawia to partia 4 (dane demo, F8).
+- **Dane demo (partia 5, F8):**
+  - w panelu › Ceny kwoty nie sumowały się do „Razem” (w sumie była ukryta kwota ok. 303 EUR, a opłata paliwowa przy „×1,05” wynosiła ok. 1 % frachtu) — **poprawione**: opłata paliwowa = fracht × (mnożnik − 1) z tej samej migawki co znacznik „t38 · ×1,05”, „Razem” = fracht + opłata paliwowa + dopłaty; transporty „poniżej progu” mają marżę ok. 9 % z tych samych wierszy (`seed.ts`, `consistentDemoPricing`);
+  - „Zafakturowane 0” przy wystawionych fakturach t37–t38 — **poprawione**: w demo etap „Zafakturowane” strony bierze się z faktur na stronie Faktury (HHL → KSH zamyka przychód, SCX → HHL — koszt; `invoices3.ts`, `withBilledMoney`), a nie ze starego zestawu faktur przewoźnika. Ta sama zasada co status „Zafakturowano” (transport na obu fakturach);
+  - prom: transporty „Na promie · Nova Star” przy odejściu o 18:00 — **N**: wjazd na prom 15:30, ok. 2,5 h przed odejściem, jak w porcie; przypłynięcie następnego dnia 12:00;
+  - brak zdarzeń strefy placu (wjazd, postój, wyjazd po 3 h 44 min) — odkładam do P11 pkt 6 (do 25.10): wymaga spójnych godzin z rozładunkiem i osią statusów w danych demo; produkcja ma te zdarzenia z bazy (silnik stref).
 - **Decyzje właściciela (18.10, 15:34):**
   1. rogi przycisków i pól zostają zaokrąglone (2 px) — N wobec tokenów makiet „radius 0”;
   2. podkład mapy w demo z angielskimi nazwami zostaje (produkcja: HERE) — N;
