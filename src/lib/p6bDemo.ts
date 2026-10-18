@@ -25,6 +25,9 @@ function at(day: string, hm: string, plusDays = 0): number {
   return guess - (asIfUtc - guess);
 }
 
+/** Dzień „RRRR-MM-DD” chwili w strefie Europe/Warsaw. */
+const localDay = (iso: string): string => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date(iso));
+
 /** Ja w demo (do „przeczytali” i nieprzeczytanych): ta sama osoba co w odczytach tej firmy. */
 export function demoMeId(org: 'HHL' | 'SCX' | 'KSH'): string {
   return PEOPLE[org].userId;
@@ -67,12 +70,16 @@ export function demoHistoryEvents(load: Load, nowIso: string): LoadEvent[] {
   if (p >= PROGRESS_OF.AT_PORT) {
     push(at(day, '10:30'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-03', source: 'GPS', provider: 'emtrack' });
   }
+  /* F7 #304: dzień po stronie szwedzkiej — dostawa z planu albo wcześniejszy dzień przyjazdu na plac („czeka przed placem
+     od …”, T-18 przed oknem dostawy), żeby wyjazd z portu i bufor 50 km były przed wjazdem na plac przy każdym zegarze */
+  const waitDay = load.etaDetail?.waitSince ? localDay(load.etaDetail.waitSince) : null;
+  const seDay = waitDay && waitDay < load.plannedDeliverDate ? waitDay : load.plannedDeliverDate;
   if (p >= PROGRESS_OF.IN_TRANSIT_SE) {
     /* wyglad/P6-c (E17): „Droga SE GPS” — wyjazd ze strefy portu w Szwecji; pod nim wjazd w bufor 50 km przed Boden */
-    push(at(load.plannedDeliverDate, '14:05', -1), 'STATUS_AUTO', 'system', { from: 'AT_PORT_SE', to: 'IN_TRANSIT_SE', powod: 'wyjazd ze strefy portu', source: 'GPS', provider: 'emtrack' });
+    push(at(seDay, '14:05', -1), 'STATUS_AUTO', 'system', { from: 'AT_PORT_SE', to: 'IN_TRANSIT_SE', powod: 'wyjazd ze strefy portu', source: 'GPS', provider: 'emtrack' });
   }
   if (p >= PROGRESS_OF.APPROACHING_SITE) {
-    push(at(load.plannedDeliverDate, '05:22'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-10', source: 'GPS', provider: 'emtrack' });
+    push(at(seDay, '05:22'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-10', source: 'GPS', provider: 'emtrack' });
   }
   return out;
 }
