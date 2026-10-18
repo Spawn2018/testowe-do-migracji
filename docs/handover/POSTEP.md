@@ -2883,7 +2883,7 @@ Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teśc
 - **TEST wolne** od 17.10.2026 20:54 (koniec nullguard-4).
 - Dalej: **A1**. #291 nadal do scalenia w przerwie między pozycjami.
 
-## 2026-10-18 — A1 NA PRODUKCJI
+## 2026-10-18 — A1 NA PRODUKCJI — przyjęte
 
 - PR #296; merge `10007b24` (treść `5769a9ad`). Migracja `0227_a1_tracking_window.sql`. Funkcja Edge `emtrack-web` wdrożona.
 - CI na `5769a9ad`: unit, visual, `db` zielone.
@@ -2895,7 +2895,17 @@ Odbiór A8 po wdrożeniu wpisze koordynator. Własny wpis wykonawcy — po teśc
 - Wdrożenie: `dpl_76iSLDoP7mu5kBj3J17LiwytGQBT`, 18.10.2026 01:03; tower i makieta 200; `assets/index-BNuQNLhs.js`; 0× `service_role`.
 - Stare `PLANNED` w oknie (odczyt 17.10.2026, 21:55): **21**. Do domknięcia przez HHL i SCX przed W37.
 - **TEST wolne** od 18.10.2026 01:00 (koniec nullguard-4).
-- Dalej: **A2**.
+- **Odbiór koordynatora:** 01:15 i 08:26 — przyjęte w całości. Przebieg L17 nd 08:15: 17 spraw „Potwierdź dostawę” (kod wysyłki w tytule); 0 powiadomień do SCX; po 1 wpisie zbiorczym u każdego z 3 Administratorów HHL.
+- **A1 NA PRODUKCJI — przyjęte.** Czeka W37. Dalej: **A2**.
+
+## 2026-10-18 — DOPISKI D-20261018-0040-01 i D-20261018-0235-01 W PLANIE
+
+- Pliki w `docs/handover/dopiski/` (źródło: `docs/handover/dopiski_nowe/`).
+- D-20261018-0040-01: **wykonane** — A1 wdrożone i przyjęte; #297 w kolejce (scalone 10:32).
+- D-20261018-0235-01: zasada liczb U+00A0 → PLAN §1 pkt 10; kolejka #295 → #297 → #298.
+- Scalenie wyglądu 18.10: #295 `a6eab269` 10:31 → #297 `c0362839` 10:32 → #298 `a51cf771` 10:33.
+- Wdrożenie Vercel z `a51cf771`: `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` READY; tower.log-mar.pl aliased.
+- Dalej: **A2** (bez przerwy).
 
 ## 2026-10-17 — DOPISEK D-20261017-2205-01 W PLANIE (A1, PR #296)
 
