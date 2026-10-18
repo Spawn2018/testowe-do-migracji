@@ -129,12 +129,13 @@ export function StatusChangeModal({
         pushToast('Podaj prawidłową datę i godzinę', 'HIGH', loadId);
         return;
       }
-      if (Date.parse(occurredAt) > Date.now() + 60_000) {
+      /* D-20261019-0005-01: Administrator HHL — dowolna data i godzina (bez „nie w przyszłości” i „nie wcześniej niż poprzedni”) */
+      if (!hhlAdmin && Date.parse(occurredAt) > Date.now() + 60_000) {
         pushToast('Czas statusu nie może być w przyszłości', 'HIGH', loadId);
         return;
       }
       /* E25: nie wcześniej niż poprzedni status (tekst zasad w oknie); baza sprawdza to samo — dopisek wykonawcy */
-      if (since && Date.parse(occurredAt) < isoMs(since) && status !== 'CANCELLED') {
+      if (!hhlAdmin && since && Date.parse(occurredAt) < isoMs(since) && status !== 'CANCELLED') {
         pushToast(tp(locale, 'p4b_m_err_before', { at: dayTime(since) }), 'HIGH', loadId);
         return;
       }
@@ -299,7 +300,7 @@ export function StatusChangeModal({
           </label>
           {phone ? null : (
             <p className="scm-rules">
-              {since ? tp(locale, 'p4b_m_rules', { at: dayTime(since) }) : t(locale, 'p4b_m_rules_nodate')}
+              {hhlAdmin ? t(locale, 'p4b_m_rules_admin') : since ? tp(locale, 'p4b_m_rules', { at: dayTime(since) }) : t(locale, 'p4b_m_rules_nodate')}
             </p>
           )}
           <div className="scm-actions">

@@ -301,6 +301,8 @@ const pl: Dict = {
   p4b_m_reason_cancel: 'Powód anulowania (wymagany)',
   p4b_m_reason_ph: 'np. status ustawiony omyłkowo',
   p4b_m_back_info: 'Cofnięcie z „{from}” na „{to}” — zapis tylko z powodem.',
+  /* D-20261019-0005-01: Administrator HHL — dowolna data i godzina */
+  p4b_m_rules_admin: 'Administrator HHL może wpisać dowolną datę i godzinę, także wcześniejszą niż poprzedni status. Cofnięcie statusu — z powodem.',
   p4b_m_rules: 'Nie wcześniej niż poprzedni status ({at}) i nie później niż teraz. Cofnięcie statusu: tylko administrator HHL, z powodem.',
   p4b_m_rules_nodate: 'Nie wcześniej niż poprzedni status i nie później niż teraz. Cofnięcie statusu: tylko administrator HHL, z powodem.',
   p4b_m_cancel: 'Anuluj',

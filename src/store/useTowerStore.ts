@@ -78,6 +78,7 @@ import { withDemoEta } from '../data/demoEta';
 import { isReadyBlocked } from '../lib/permits';
 import { currentActorLabel } from '../lib/historyActor';
 import { formatPlMoney } from '../lib/format';
+import { hhlAdminDates } from '../lib/adminDates';
 
 export type ViewKey = NK;
 
@@ -857,10 +858,12 @@ export const useTowerStore = create<TowerState>()(
       },
 
       kshEditPlanDates: (loadId, p) => {
-        if (get().role !== 'KSH') return false;
+        /* D-20261019-0005-01: Administrator HHL zmienia daty bez ograniczeń (także po załadunku i w dowolnej kolejności) */
+        const admin = hhlAdminDates(get().role);
+        if (get().role !== 'KSH' && !admin) return false;
         const load = get().loads.find((l) => l.id === loadId);
-        if (!load || !p.loadDate || !p.deliveryDate || p.deliveryDate < p.loadDate) return false;
-        if (p.loadFrom > p.loadTo || p.deliveryFrom > p.deliveryTo) return false;
+        if (!load || !p.loadDate || !p.deliveryDate) return false;
+        if (!admin && (p.deliveryDate < p.loadDate || p.loadFrom > p.loadTo || p.deliveryFrom > p.deliveryTo)) return false;
         const at = nowIso();
         set((s) => ({
           loads: s.loads.map((l) => l.id !== loadId ? l : {
@@ -875,8 +878,8 @@ export const useTowerStore = create<TowerState>()(
           loadId,
           type: 'PLAN_DATES_CHANGED',
           at,
-          actor: currentActorLabel('KSH'),
-          payload: { by: 'KSH', load_date: p.loadDate, delivery_date: p.deliveryDate, before_load_date: load.plannedLoadDate, before_delivery_date: load.plannedDeliverDate },
+          actor: currentActorLabel(admin ? 'HHL' : 'KSH'),
+          payload: { by: admin ? 'HHL' : 'KSH', load_date: p.loadDate, delivery_date: p.deliveryDate, before_load_date: load.plannedLoadDate, before_delivery_date: load.plannedDeliverDate },
         });
         get().pushToast(t(get().locale, 'b_ksh_saved'), 'MEDIUM', loadId);
         return true;

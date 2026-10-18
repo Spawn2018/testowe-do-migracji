@@ -9,6 +9,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t } from '../../i18n/messages';
 import { isoToDatetimeLocalValue, wallLocalToIso, TZ_OPS } from '../../lib/time';
 import type { Load } from '../../types';
+import { hhlAdminDates } from '../../lib/adminDates';
 
 /* C12 / D-0300: status UI = DOC_MISSING (mapper), nie DOCS_PENDING z bazy */
 const PRE_LOADING = ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY'];
@@ -31,6 +32,8 @@ export function kshCanEditDates(load: Pick<Load, 'status'>): boolean {
 
 export function KshDatesModal({ load, onClose }: { load: Load; onClose: () => void }) {
   const locale = useTowerStore((s) => s.locale);
+  /* D-20261019-0005-01: Administrator HHL — każda data, po każdym etapie, bez blokady kolejności */
+  const admin = hhlAdminDates(useTowerStore((s) => s.role));
   const kshEditPlanDates = useTowerStore((s) => s.kshEditPlanDates);
   const pushToast = useTowerStore((s) => s.pushToast);
   const pd = load.planDates;
@@ -41,7 +44,7 @@ export function KshDatesModal({ load, onClose }: { load: Load; onClose: () => vo
   const [delTo, setDelTo] = useState(initial(pd?.deliveryTo ?? aw?.unloadWindowEnd, load.plannedDeliverDate, '15:00'));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const locked = !kshCanEditDates(load);
+  const locked = !admin && !kshCanEditDates(load);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -113,17 +116,17 @@ export function KshDatesModal({ load, onClose }: { load: Load; onClose: () => vo
           </label>
           <label className="form-field">
             <span>{t(locale, 'b_ksh_load_to')}</span>
-            <input type="datetime-local" className="input" name="ksh_load_to" value={loadTo} min={loadFrom} disabled={locked}
+            <input type="datetime-local" className="input" name="ksh_load_to" value={loadTo} min={admin ? undefined : loadFrom} disabled={locked}
               onChange={(e) => setLoadTo(e.target.value)} required />
           </label>
           <label className="form-field">
             <span>{t(locale, 'b_ksh_del_from')}</span>
-            <input type="datetime-local" className="input" name="ksh_del_from" value={delFrom} min={loadFrom} disabled={locked}
+            <input type="datetime-local" className="input" name="ksh_del_from" value={delFrom} min={admin ? undefined : loadFrom} disabled={locked}
               onChange={(e) => setDelFrom(e.target.value)} required />
           </label>
           <label className="form-field">
             <span>{t(locale, 'b_ksh_del_to')}</span>
-            <input type="datetime-local" className="input" name="ksh_del_to" value={delTo} min={delFrom} disabled={locked}
+            <input type="datetime-local" className="input" name="ksh_del_to" value={delTo} min={admin ? undefined : delFrom} disabled={locked}
               onChange={(e) => setDelTo(e.target.value)} required />
           </label>
           <div className="creator-actions">

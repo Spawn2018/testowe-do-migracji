@@ -42,7 +42,7 @@ const PL: Record<string, string> = {
   p7_dates_import: 'z harmonogramu KSH · import {at}',
   p7_dates_import_plain: 'z harmonogramu KSH',
   p7_dates_changed: 'zmienił {who}, {at}',
-  p7_dates_ksh_can: 'KSH może zmienić do wjazdu na załadunek',
+  p7_dates_ksh_can: 'KSH może zmienić do wjazdu na załadunek, Administrator HHL — zawsze',
   p7_dates_edit: 'Edytuj',
   p7_place_deliver: 'Stegra, Boden',
   p7_plan_line: '{a} → {b}',

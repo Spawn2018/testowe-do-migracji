@@ -39,6 +39,7 @@ import './p7.css';
 import { formatCalendarDay } from '../../lib/time';
 import { stageTileOf } from '../../lib/stageTiles';
 import { itemKindName } from '../../lib/p5Finance';
+import { hhlAdminDates } from '../../lib/adminDates';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -526,7 +527,7 @@ export function PanelOverview(p: Props) {
           <dd data-dates-origin>
             <span data-content>{origin}</span>
             <span className="po-sub">{pt(locale, 'p7_dates_ksh_can')}</span>
-            {role === 'KSH' ? (
+            {role === 'KSH' || hhlAdminDates(role) ? (
               <span className="po-ksh-act" data-ksh-actions>
                 <button type="button" className="btn" data-ksh-edit onClick={p.onKshDates}>{pt(locale, 'p7_dates_edit')}</button>
               </span>
