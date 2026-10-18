@@ -128,7 +128,9 @@ $PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind
   values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak awizacji','rk_res_docs','l3:NO_AWIZACJA:$L2')" >/dev/null
 $PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
   values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L2')" >/dev/null
-err=$($PSQL -v ON_ERROR_STOP=1 -c "update loads set status='DELIVERED' where id='$L2'" 2>&1) || echo "  FAIL  1215 update DELIVERED: $err"
+# DELIVERED wymaga numerów zleceń (0003). L2 w tym zestawie jest bez nich.
+$PSQL -v ON_ERROR_STOP=1 -c "update loads set hhl_order_no='HHL/1215', carrier_order_no='SCX/1215' where id='$L2'" >/dev/null
+$PSQL -v ON_ERROR_STOP=1 -c "update loads set status='DELIVERED' where id='$L2'" >/dev/null
 chk "1215: l3:NO_AWIZACJA znika przy DELIVERED" \
   "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is not null")" 1
 chk "1215: RES:DRIVER znika przy DELIVERED" \
