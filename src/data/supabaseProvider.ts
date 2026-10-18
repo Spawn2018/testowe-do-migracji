@@ -20,7 +20,7 @@ import {
   SAILING_COLUMNS, sailingFromRow, sailingToRow, type SailingDbRow,
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
-import { deliveredCheckFromEvents } from '../lib/p4cSource';
+import { deliveredCheckFromDecision } from '../lib/p4cSource';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
@@ -131,6 +131,16 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const docRows = must(docs, 'documents') as DocumentRow[];
     const costBy = new Map((must(costV, 'v_load_price_carrier') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
     const revBy = new Map((must(revV, 'v_load_price_client') as unknown as PriceViewRow[]).map((r) => [r.load_id, r]));
+    /* D-20261018-1100-01: karta L14 = otwarta sprawa DELIVERED_CHECK, nie zdarzenie GEOFENCE_EXIT */
+    const dcQ = await sb.from('decisions')
+      .select('id,load_id,status,detail')
+      .eq('type_code', 'DELIVERED_CHECK')
+      .in('status', ['NEW', 'ASSIGNED', 'SNOOZED']);
+    if (dcQ.error) throw new Error(`decisions L14: ${dcQ.error.message}`);
+    const dcBy = new Map<string, { id: string; status: string; detail: Record<string, unknown> | null }>();
+    for (const row of (dcQ.data ?? []) as { id: string; load_id: string; status: string; detail: Record<string, unknown> | null }[]) {
+      if (!dcBy.has(row.load_id)) dcBy.set(row.load_id, row);
+    }
     const mappedEvents = (must(events, 'load_events') as EventRow[]).map(eventFromRow) as LoadEvent[];
     const geosRows = (must(geos, 'v_geofences_circle') as GeofenceRow[]).map((g) => geofenceFromRow(g, orgs));
     const loadRows = must(loads, 'loads') as unknown as LoadRow[];
@@ -170,8 +180,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       if (l.trackingLink?.provider === 'RIO' && usedBy.length) {
         next = { ...next, trackingLink: { ...l.trackingLink, usedBy } };
       }
-      /* B1 / L14: sprawa z zdarzeń bazy → pole load.deliveredCheck */
-      next = { ...next, deliveredCheck: deliveredCheckFromEvents(l, mappedEvents, geosRows, dcRole) };
+      next = { ...next, deliveredCheck: deliveredCheckFromDecision(l, dcBy.get(l.id) ?? null, dcRole) };
       return next;
     });
     return {

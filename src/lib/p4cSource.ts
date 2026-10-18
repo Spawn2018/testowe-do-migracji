@@ -25,7 +25,33 @@ export function readyGapsOf(load: Load, docs: readonly Document[], companyDocs: 
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoReadyGaps(load, docs, companyDocs) : computeReadyGaps(load, docs);
 }
 
-/** B1 / L14: sprawa „czy dostarczono?” z bazy (load.deliveredCheck) albo z GEOFENCE_EXIT SITE przy krótkim postoju. */
+/**
+ * Demo: karta z ostatniego GEOFENCE_EXIT SITE przy postoju krótszym niż próg.
+ * Produkcja (D-20261018-1100-01) bierze otwartą sprawę — `deliveredCheckFromDecision`.
+ */
+export function deliveredCheckFromDecision(
+  load: Load,
+  decision: { id: string; status: string; detail?: Record<string, unknown> | null } | null | undefined,
+  role: RoleId,
+): DeliveredCheck | null {
+  if (!decision || !['NEW', 'ASSIGNED', 'SNOOZED'].includes(decision.status)) return null;
+  if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED') return null;
+  const detail = decision.detail ?? {};
+  const minutes = Number(detail.dwell_min ?? detail.minutes ?? NaN);
+  const exitAt = typeof detail.exit_at === 'string' ? detail.exit_at : '';
+  const zone = typeof detail.zone === 'string' && detail.zone ? detail.zone : 'Plac budowy';
+  const threshold = Number(detail.threshold_min ?? 10);
+  return {
+    id: decision.id,
+    exitAt,
+    minutes: Number.isFinite(minutes) ? Math.round(minutes) : 0,
+    thresholdMin: Number.isFinite(threshold) ? threshold : 10,
+    zoneName: zone,
+    canDecide: mayResolveDecision('CARRIER', accountRole(role)),
+  };
+}
+
+/** B1 / L14: sprawa „czy dostarczono?” ze zdarzenia — tylko demo. */
 export function deliveredCheckFromEvents(
   load: Load,
   events: readonly LoadEvent[],
@@ -83,7 +109,8 @@ export function deliveredCheckOf(
     }
     return load.deliveredCheck;
   }
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : deliveredCheckFromEvents(load, events, geofences, role);
+  /* produkcja: brak pola = brak karty; zdarzenie GEOFENCE_EXIT nie otwiera karty po „Nie” */
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : null;
 }
 
 function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {

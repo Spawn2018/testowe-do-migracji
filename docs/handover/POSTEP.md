@@ -2926,5 +2926,19 @@ Odczyt `pg_get_functiondef` na produkcji `nglnnrmzmhusvxslousq`, przed `db push`
 - `telm_infer_phase_from_position`: tylko powrót, gdy transport jest poza oknem.
 - `detect_silent_vehicles`: zamknięcie otwartej ciszy poza oknem, pętla z `having load_in_tracking_window`, źródło pozycji bez twardej listy `TELEMATICS_API`/`RFMS`/`DRIVER_PWA`.
 
+## 2026-10-18 11:10 — DOPISEK D-20261018-1100-01 (A2, PR #299, przed db push)
+
+Porównanie `pg_get_functiondef` produkcji `nglnnrmzmhusvxslousq` (18.10, przed nałożeniem 0228) z migracją 0228. Różnice tylko w miejscach A2:
+
+- `apply_geofence_status`: zostają komentarze „Awaryjnie: GPS zgubił wyjazd z portu SE…” i „Wyjazd ze strefy portu Gdańsk… celowo niczego nie zmienia”. Dochodzi: zamknięte statusy `READY_TO_INVOICE` i `INVOICED`; nazwa strefy i `project_id`; pominięcie zdarzeń `synthetic`; wyjazd LOADING ≥ 5 min → `IN_TRANSIT_PL` + `actual_load_at` bez `loaded_confirmed` i bez `rk_left_loading_unconfirmed`; wyjazd SITE ≥ 10 min → `DELIVERED`; krócej → `DELIVERED_CHECK`.
+- `process_position`: zostają komentarze „POPRAWKA 24.09.2026…” (dwa miejsca), „Odrzucamy oczywiste błędy GPS…”, „ANEKS 4 PR5…”, „A1 / E27…”, „1) Zapis…”, „2) Ewaluacja…”, „3) Emisja…”. `p_ts` bez `default now()` — jak na produkcji. Dochodzi `dwell_min`, `entered_at` i `minutes` w payloadzie EXIT/DWELL.
+- `decision_resolve`: treść z 0139; dla `DELIVERED_CHECK` zwrot do `delivered_check_apply` (przed zamknięciem sprawy).
+
+Zdarzenia syntetyczne (`payload.synthetic = true`) nie zmieniają statusu ani `actual_load_at`. Fazę z pozycji ustawia sama `telm_infer_phase_from_position`.
+
+Inwentarz `risks.sh`: 7 → 6 kluczy, bo A2 celowo nie tworzy `rk_left_loading_unconfirmed` (wyjazd ze Śremu bez `loaded_confirmed`).
+
+Karta L14 w produkcji z otwartej sprawy, nie ze zdarzenia. „Tak” tylko z `AT_SITE` przez `auto_set_status`. Operacje HHL: odmowa; Administrator HHL: może (kontrola nullguard — komunikat „Brak otwartej sprawy” nie jest odmową uprawnień).
+
 
 

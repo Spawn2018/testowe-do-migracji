@@ -5,7 +5,7 @@
  * Zapisy jak dotąd: rozstrzygnięcie decyzji (`decision_resolve`, `decision_snooze`), dopłata — okno „Dopłata” z P5,
  * „czy dostarczono?” — jak w panelu transportu. Przydział („Biorę tę sprawę”) i osoby — `p6Source.ts` (wykonawca).
  */
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Geofence, Load, Locale, Risk } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -73,6 +73,8 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
   const [checkDone, setCheckDone] = useState<Set<string>>(() => new Set());
   const [detourDone, setDetourDone] = useState<Set<string>>(() => new Set());
   const [detourBusy, setDetourBusy] = useState<string | null>(null);
+  const [checkBusy, setCheckBusy] = useState<string | null>(null);
+  const checkBusyRef = useRef<string | null>(null);
 
   useEffect(() => setScope(defaultScope(kind)), [kind]);
 
@@ -233,30 +235,28 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       const chk = i.check;
       const loadId = i.loadId;
       if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+        const run = (yes: boolean) => {
+          if (checkBusyRef.current) return;
+          checkBusyRef.current = i.id;
+          setCheckBusy(i.id);
+          void deliveredCheckResolve(loadId, yes, null).then(async (r) => {
+            if (!r.ok) {
+              useTowerStore.getState().pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', loadId);
+              return;
+            }
+            setCheckDone((s) => new Set(s).add(chk.id));
+            if (!yes) useTowerStore.getState().pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', loadId);
+            const { refreshFromServer } = await import('../../data/supabaseBridge');
+            await refreshFromServer();
+          }).finally(() => {
+            checkBusyRef.current = null;
+            setCheckBusy(null);
+          });
+        };
         return {
-          onYes: () => {
-            void deliveredCheckResolve(loadId, true, null).then(async (r) => {
-              if (!r.ok) {
-                useTowerStore.getState().pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', loadId);
-                return;
-              }
-              setCheckDone((s) => new Set(s).add(chk.id));
-              const { refreshFromServer } = await import('../../data/supabaseBridge');
-              await refreshFromServer();
-            });
-          },
-          onNo: () => {
-            void deliveredCheckResolve(loadId, false, null).then(async (r) => {
-              if (!r.ok) {
-                useTowerStore.getState().pushToast(r.error ?? t(locale, 'p4c_dc_no_done'), 'HIGH', loadId);
-                return;
-              }
-              setCheckDone((s) => new Set(s).add(chk.id));
-              useTowerStore.getState().pushToast(t(locale, 'p4c_dc_no_done'), 'LOW', loadId);
-              const { refreshFromServer } = await import('../../data/supabaseBridge');
-              await refreshFromServer();
-            });
-          },
+          busy: checkBusy === i.id,
+          onYes: () => run(true),
+          onNo: () => run(false),
         };
       }
       return {

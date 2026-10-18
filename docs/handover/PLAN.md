@@ -476,6 +476,12 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - Podłączasz `onYes` i `onNo` w `TodoPanel.tsx` i `LoadDrawer.tsx` (dane, bez zmiany wyglądu, F1).
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` zostaje na profilu.
 - Test (`dwell`, `status`): odtworzenie SG-03 na zmyślonym śladzie (G-17) → „Dostarczone 12:19”, śledzenie gaśnie; postój 6 min → sprawa L14; „Tak” → „Dostarczone”.
+- D-20261018-1100-01 (przed scaleniem #299):
+  - produkcja: karta L14 z otwartej sprawy `DELIVERED_CHECK` (`exit_at`, `dwell_min`, `zone`); zdarzenie `GEOFENCE_EXIT` tylko w demo; po `RESOLVED` karty nie ma;
+  - w „Do zrobienia” brak drugiej pozycji `DECISION` dla `DELIVERED_CHECK`;
+  - `decision_resolve` z `DELIVERED_YES` / `DELIVERED_NO` = `delivered_check_apply` (ta sama Historia, `audit_log`, `decision_notify(..., 'RESOLVE')`);
+  - „Tak” tylko ze statusu `AT_SITE` przez `auto_set_status`; inny status → `22023` „Status transportu zmienił się — ustaw „Dostarczone” przez „Zmień status””, sprawa zostaje otwarta;
+  - komentarze produkcji w `apply_geofence_status` i `process_position`; `p_ts` bez `default`; syntetyczny wyjazd nie zmienia statusu ani `actual_load_at`; `busy` przy „Tak / Nie” w `TodoPanel`; inwentarz risks 6 kluczy (bez `rk_left_loading_unconfirmed`).
 - **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). To samo przestawienie zmienia zdania w Strefach: plac i załadunek (D-20261017-1715-01). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
@@ -1020,3 +1026,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 17.10.2026 22:50 | D-20261017-2250-01: BLOKER #296. `guard_load_update` w 0227 brał 0210 i gubił wyjątek A5 (`cancel_ctx` MANUAL/IMPORT). Bazą jest produkcja = 0212; dokładamy tylko `tower.track_ctx` i `tracking_opened_at` w `dates_ctx`. Scalenie przy zielonych unit, visual i db | koordynator |
 | 18.10.2026 00:40 | D-20261018-0040-01: **wykonane** — A1 na produkcji (01:01) i przyjęte (odbiór 01:15 / 08:26, L17 08:15); kolejka #295 → #297; po A1 od razu A2 | koordynator |
 | 18.10.2026 02:35 | D-20261018-0235-01: #298 `wyglad/W-przed-wydaniem-2` (po #295/#297) — U+00A0 liczba+jednostka, kod transportu w całości; **§1 pkt 10** (zasada liczb); #295→#297→#298 scalone 10:31–10:33, Vercel `a51cf771` READY | koordynator |
+| 18.10.2026 11:00 | D-20261018-1100-01: przegląd #299 (A2) przed scaleniem — jedna karta L14 ze sprawy, `decision_resolve` jak `delivered_check_resolve`, „Tak” tylko z `AT_SITE`, komentarze produkcji, risks 7→6 | koordynator |

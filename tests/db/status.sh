@@ -65,6 +65,11 @@ mk $Lshort A2S "'HHL/A2S'" "'SCX/A2S'" READY null
 pos $Lshort 52.0900 17.0200 "2026-09-30 12:00+00"; pos $Lshort 52.0901 17.0201 "2026-09-30 12:01+00"
 pos $Lshort 52.30 17.30 "2026-09-30 12:03+00"; pos $Lshort 52.31 17.31 "2026-09-30 12:04+00"
 chk "A2 wyjazd załadunku < 5 min: status AT_LOADING"         "$(st $Lshort)" AT_LOADING
+# D-20261018-1100-01: syntetyczny wyjazd (faza z pozycji) nie rusza statusu ani actual_load_at
+GID=$($PSQL -c "select id from geofences where project_id='$P' and kind='LOADING' order by name limit 1")
+q "insert into load_events (load_id, event_type, occurred_at, payload) values ('$Lshort','GEOFENCE_EXIT','2026-09-30 12:10+00', jsonb_build_object('synthetic', true, 'geofence_id', '$GID', 'geofence_kind', 'LOADING'))" >/dev/null
+chk "A2 syntetyczny wyjazd załadunku: status bez zmian"      "$(st $Lshort)" AT_LOADING
+chk "A2 syntetyczny wyjazd załadunku: actual_load_at puste"  "select (actual_load_at is null)::text from loads where id='$Lshort'" true
 
 echo; echo "[2] Port Gdańsk — wjazd w strefę"
 for x in $A $I $J; do pos $x 54.4030 18.6800 "2026-10-01 10:00+00"; pos $x 54.4031 18.6801 "2026-10-01 10:05+00"; done
@@ -326,6 +331,39 @@ chk "A2 L14 Nie: resolution DELIVERED_NO" "select resolution_code from decisions
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH'; select delivered_check_resolve('$SG3', true, null); rollback;" 2>&1)
 echo "$out" | grep -qiE 'wskazana firma|Rozstrzygnięcie|42501' && { ok=$((ok+1)); echo "  OK    A2 L14 KSH odmowa"; } || { fail=$((fail+1)); echo "  FAIL  A2 L14 KSH odmowa: $out"; }
 chk "A2 anon bez EXECUTE delivered_check_resolve" "select has_function_privilege('anon','delivered_check_resolve(uuid,boolean,text)','execute')::text" false
+chk "A2 komentarz Awaryjnie w apply_geofence_status" "select (strpos(pg_get_functiondef('apply_geofence_status()'::regprocedure), 'Awaryjnie: GPS') > 0)::text" true
+chk "A2 komentarz portu Gdańsk w apply_geofence_status" "select (strpos(pg_get_functiondef('apply_geofence_status()'::regprocedure), 'celowo niczego nie zmienia') > 0)::text" true
+chk "A2 komentarz POPRAWKA 24.09 w process_position" "select (strpos(pg_get_functiondef('process_position(uuid,double precision,double precision,timestamptz,position_source,numeric,numeric,boolean,jsonb)'::regprocedure), 'POPRAWKA 24.09.2026') > 0)::text" true
+chk "A2 p_ts bez default" "select (pg_get_function_arguments(p.oid) not like '%p_ts timestamp with time zone default%')::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='process_position'" true
+chk "A2 delivered_check_apply woła decision_notify RESOLVE" "select (strpos(pg_get_functiondef('delivered_check_apply(uuid,boolean,text)'::regprocedure), 'decision_notify') > 0)::text" true
+# decision_resolve — ta sama ścieżka co karta
+SG4=$(L 5e); SG5=$(L 5f)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG4','$P','$SCXO','KSH/SG08','HHL/SG08','SCX/SG08','AT_SITE','2026-10-05'),
+ ('$SG5','$P','$SCXO','KSH/SG09','HHL/SG09','SCX/SG09','AT_SITE','2026-10-05')" >/dev/null
+q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG4','SG-08: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 12:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG4', null)" >/dev/null
+q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG5','SG-09: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 13:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG5', null)" >/dev/null
+D4=$($PSQL -c "select id from decisions where load_id='$SG4' and type_code='DELIVERED_CHECK' and status='NEW'")
+D5=$($PSQL -c "select id from decisions where load_id='$SG5' and type_code='DELIVERED_CHECK' and status='NEW'")
+chk "A2 decision_resolve TAK → DELIVERED" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select (decision_resolve('$D4','DELIVERED_YES',null)->>'status'); commit" DELIVERED
+chk "A2 decision_resolve TAK: RESOLVED/DELIVERED_YES" "select status||'/'||resolution_code from decisions where id='$D4'" "RESOLVED/DELIVERED_YES"
+chk "A2 decision_resolve NIE: status AT_SITE" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select decision_resolve('$D5','DELIVERED_NO','jeszcze nie'); select status from loads where id='$SG5'; commit" AT_SITE
+chk "A2 decision_resolve NIE: DELIVERED_NO" "select resolution_code from decisions where id='$D5'" DELIVERED_NO
+# Tak przy statusie innym niż AT_SITE — sprawa zostaje otwarta
+SG6=$(L 60)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
+ ('$SG6','$P','$SCXO','KSH/SG10','HHL/SG10','SCX/SG10','AT_SITE','2026-10-05')" >/dev/null
+q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG6','SG-10: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 14:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG6', null)" >/dev/null
+q "select set_config('tower.status_ctx','on',true); update loads set status='IN_TRANSIT_SE' where id='$SG6'" >/dev/null
+D6=$($PSQL -c "select id from decisions where load_id='$SG6' and type_code='DELIVERED_CHECK' and status='NEW'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select decision_resolve('$D6','DELIVERED_YES',null); rollback;" 2>&1)
+echo "$out" | grep -q 'Zmień status' && { ok=$((ok+1)); echo "  OK    A2 Tak poza AT_SITE: odmowa 22023"; } || { fail=$((fail+1)); echo "  FAIL  A2 Tak poza AT_SITE: odmowa 22023: $out"; }
+chk "A2 Tak poza AT_SITE: status bez zmian" "$(st $SG6)" IN_TRANSIT_SE
+chk "A2 Tak poza AT_SITE: sprawa nadal NEW" "select status from decisions where id='$D6'" NEW
+OPS=11111111-0000-0000-0000-0000000000aa
+q "insert into app_users (auth_id, org_id, email, role) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops-a2@test','HHL_OPS')" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$OPS'; select delivered_check_resolve('$SG3', false, null); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Rozstrzygnięcie|42501' && { ok=$((ok+1)); echo "  OK    A2 Operacje HHL: odmowa L14"; } || { fail=$((fail+1)); echo "  FAIL  A2 Operacje HHL: odmowa L14: $out"; }
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
