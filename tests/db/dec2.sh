@@ -49,6 +49,17 @@ out=$(sys "select decision_escalate_overdue()" | grep -vE '^(BEGIN|SET|ROLLBACK|
 if [ "${out:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    escalate overdue ($out)"; else fail=$((fail+1)); echo "  FAIL  escalate overdue (otrzymano: $out)"; fi
 val "escalated_at ustawione" $HHL "select escalated_at is not null from decisions where id='$D3'" t
 val "historia ESCALATE" $HHL "select count(*) filter (where action='ESCALATE') from decision_events where decision_id='$D3'" 1
+sys "select decision_escalate_overdue()" >/dev/null
+val "druga eskalacja bez drugiego wpisu" $HHL "select count(*) from notifications where dedup_key like 'dec:ESCALATE:$D3:IN:%'" 1
+B1=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 1', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+B2=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 2', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+B3=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 3', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id in ('$B1','$B2','$B3')" >/dev/null
+sys "select decision_escalate_overdue()" >/dev/null
+val "3 eskalacje → jeden wpis" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.dedup_key like 'ESC_BATCH:%:IN'" 1
+val "3 eskalacje → jeden e-mail" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.dedup_key like 'ESC_BATCH:%:EM'" 1
+val "3 eskalacje bez osobnych wpisów" $HHL "select count(*) from notifications where dedup_key like 'dec:ESCALATE:$B1:IN:%'" 0
+val "tytuł zbiorczy" $HHL "select (payload->>'title' = 'Po terminie: 3 decyzji · Opłata paliwowa') from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.dedup_key like 'ESC_BATCH:%:IN'" t
 
 # skutki opcji (0126)
 L=33333333-0000-0000-0000-000000000001

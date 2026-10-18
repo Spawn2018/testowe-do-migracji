@@ -118,7 +118,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza) → Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -187,6 +187,8 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#298 `wyglad/W-przed-wydaniem-2` (D-20261018-0235-01, po #297):** **SCALONE I WDROŻONE** (18.10.2026 10:33, merge `a51cf771`; Vercel `dpl_E3bSr7SzadCTaSbYrX8cg1UQqJ9A` READY). Liczba w całości i z jednostką (U+00A0); kod transportu w całości. Zasada §1 pkt 10 obowiązuje od teraz.
 - **#300 `wyglad/W-panel-do-zrobienia` (D-20261018-1215-01):** **SCALONE I WDROŻONE** (18.10.2026 13:33 UTC, merge `a2eb2d48`; Vercel `dpl_CpMsNnaro6ZzDmUjdHCHjBv3hew9` READY 13:35). Wygląd: „Do zrobienia” w Przeglądzie — tylko aktualny stan, zwijane na telefonie. Baza i odświeżenie panelu — pozycja po A2 (§4).
 - **#303 `wyglad/W-przed-wydaniem-3` (P11 pkt 7, partie 1–6):** **SCALONE I WDROŻONE** (18.10.2026 20:07, merge `7e9c286c`, głowa `ab0969d`; Vercel `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33). Tylko wygląd: zgodność z raportem, spójne ceny w demo, CMR po rozładunku. Tekstów i filtra CMR nie zmieniam (F1).
+- **#304 `wyglad/W-demo-strefy` (zdarzenia strefy placu w danych demo):** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `e1beb93b`, głowa `e71a406`; Vercel `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ` READY 23:20). F7 runda 3. Przed `wyglad/W-przed-wydaniem-4`.
+- **#305 `pakiet/panel-do-zrobienia-baza`:** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `dca5888c`, głowa `43d85a8c`; ta sama produkcja `e1beb93b` / `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ`). F7. Migracja 0229. Porządek 16 + 7. #301 nadal otwarty.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -390,7 +392,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → **Panel › Do zrobienia (D-20261018-1215-01, baza) → Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -487,7 +489,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - D-20261018-1130-01: otwarta `DELIVERED_CHECK` zamyka się sama przy `DELIVERED`, `UNLOADED`, `READY_TO_INVOICE`, `INVOICED` albo `CANCELLED` (rozszerzenie `loads_close_delivery_unconfirmed`). `RESOLVED`, `resolution_code` `DELIVERED` albo przy anulowaniu `CANCELLED`, wpis w `decision_events`. Test: `load_status_set(..., 'DELIVERED')` → 0 otwartych.
 - **Przy wdrożeniu:** przestaw `serverRuleOn('SITE_EXIT_DELIVERED')` na `true` (D-20261017-0800-01 §2 pkt 1). To samo przestawienie zmienia zdania w Strefach: plac i załadunek (D-20261017-1715-01). Test: tekst na produkcji bez „włączamy wkrótce” („Działa samo” › Status ze stref / tabela stref).
 
-### Panel › Do zrobienia — aktualny stan (D-20261018-1215-01; po A2, przed A3) — wygląd NA PRODUKCJI (`a2eb2d48`, 18.10.2026 13:35); baza §2–§3 W TOKU (`pakiet/panel-do-zrobienia-baza`, migracja 0229)
+### Panel › Do zrobienia — aktualny stan (D-20261018-1215-01; po A2, przed A3) — NA PRODUKCJI (`dca5888c` w `e1beb93b`, 18.10.2026 23:20, `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ`; migracja 0229; porządek 16 + 7)
 - **Wygląd:** PR #300 `wyglad/W-panel-do-zrobienia` — scala w przerwie (§1 kolejka wyglądu); wdrożenie z `main`.
 - **Baza (nowa migracja, po wdrożeniu A2):**
   - `risk_signals` `decision-overdue:<id>` → `resolved_at`, gdy decyzja przestaje być `NEW` / `ASSIGNED` / `SNOOZED` (każda droga: rozstrzygnięcie, wygaśnięcie, A2);
@@ -496,7 +498,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - testy w `risks.sh` / `dec2.sh` (dopisek §2c); brama `db` zielona.
 - **Aplikacja:** po zapisie w panelu (awizacja, numer zlecenia, dokument, ręczna zmiana statusu) — `refreshFromServer({ keepSelection: true })` w `supabaseBridge.ts`. Wyglądu nie zmieniasz.
 
-### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3)
+### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3) — W TOKU (`pakiet/eskalacje-decyzji`, migracja 0230)
 - L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen.
 - Jednorazowo: 12 otwartych `SEFS_OUT_OF_TABLE` z `reason = SOURCE` dla przyszłych tygodni → `EXPIRED` („nie dotyczy — tydzień wskaźników jeszcze trwa”), wpis w `decision_events`, bez powiadomień, razem ze sprawami „Decyzja po terminie”.
 - Eskalacja: jedno powiadomienie na `event_key` i osobę (także przy drugim przebiegu). Więcej niż 2 eskalacje u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail zbiorczy, jak `L17_BACKLOG` („Po terminie: N decyzji · Opłata paliwowa”, odnośnik do Ryzyk). Osobne wpisy nie idą.

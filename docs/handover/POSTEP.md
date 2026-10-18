@@ -3011,3 +3011,50 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Testy: `risks.sh` +6 (oczekiwane 33 lokalnie / 31 na TEST), w tym `RES:DRIVER` przy `DELIVERED`. Sam `title_key = rk_res_driver` nie zamyka alarmu.
 - Porządek na produkcji (oczekiwane, przegląd #305): `decision-overdue` 16, alarmy sprzed dostawy 7 (4 + 3 `RES:DRIVER`). Liczby po `db push` wpisuję obok.
 - Decyzje W26, W28, W29, W30, W31, W33 i W45 wpisane (D-20261018-2200-01, zamknięte 18.10.2026, 21:57).
+- **TEST zajęte: panel Do zrobienia, od 22:52** — SHA `43d85a8c`; security, status, nullguard, risks. Unit, visual i `db` na tym SHA zielone.
+- Potwierdzenie TEST: security 114/114 (+2 SKIP), status 121/121, risks 31/31 (+2 SKIP), nullguard 161+136+232+128 = 657/657. **TEST wolne** od 18.10.2026 23:55.
+
+## 2026-10-18 23:16 — #305 i #304 scalone, migracja 0229 na produkcji
+
+- PR #305 F7, merge `dca5888c` (głowa `43d85a8c`). PR #304 F7 runda 3, merge `e1beb93b` (głowa `e71a406`). `main` = `e1beb93b`. #301 otwarty — bez scalenia.
+- Przed `db push`, SELECT na produkcji: `decision-overdue` przy decyzji nieotwartej **16**, alarmy sprzed dostawy przy dostarczonych, zafakturowanych i anulowanych **7**.
+- Próba 0229 w transakcji: `UPDATE 23`, drugi przebieg `UPDATE 0`, `ROLLBACK`. Potem `db push` dwa razy (drugi: baza aktualna).
+- Po nałożeniu: otwarte do zamknięcia **0 + 0**, wiersze ze znacznikiem `closed_by = D-20261018-1215-01`: **23**.
+- Wdrożenie z `main` `e1beb93b` (obejmuje #303, #304 i #305; #301 nie): `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ` READY 23:20. `tower.log-mar.pl` i makieta: 200. W pliku JS brak `service_role`.
+
+## 2026-10-18 23:55 — Eskalacje decyzji (D-20261018-1610-01)
+
+- Brama panelu zielona, TEST wolne. Gałąź `pakiet/eskalacje-decyzji`, migracja `0230_eskalacje_decyzji.sql`.
+- L-1: `SOURCE` bez decyzji, gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Jednorazowo te otwarte sprawy → `EXPIRED` („nie dotyczy — tydzień wskaźników jeszcze trwa”), bez powiadomień. Sprawa „Decyzja po terminie” schodzi wyzwalaczem z 0229.
+- Eskalacja: drugi przebieg nie dokłada wpisu (`dec:ESCALATE`). Powyżej dwóch u jednej osoby w jednym przebiegu: jeden wpis i jeden e-mail „Po terminie: N decyzji · Opłata paliwowa”, odnośnik `/ryzyka`.
+- Tytuły: osiem znaków identyfikatora zamieniane na kod transportu; „SEFS” → „Opłata paliwowa”. Dotyczy nowych i otwartych wierszy, bez nowych powiadomień.
+- Otwarte `NO_AWIZACJA` przy `PLANNED` (odczyt produkcji 18.10.2026, 23:50, 23 pozycje):
+
+| kod | załadunek |
+|---|---|
+| T-01 | 2026-09-30 |
+| SG-04 | 2026-10-01 |
+| SG-05 | 2026-10-02 |
+| SG-06 | 2026-10-02 |
+| T-02 | 2026-10-02 |
+| SG-07 | 2026-10-03 |
+| SG-08 | 2026-10-03 |
+| SG-09 | 2026-10-05 |
+| SG-10 | 2026-10-05 |
+| SG-11 | 2026-10-06 |
+| SG-12 | 2026-10-06 |
+| T-06 | 2026-10-06 |
+| SG-13 | 2026-10-07 |
+| SG-14 | 2026-10-07 |
+| T-07 | 2026-10-07 |
+| SG-15 | 2026-10-08 |
+| SG-16 | 2026-10-08 |
+| SG-17 | 2026-10-16 |
+| SG-18 | 2026-10-16 |
+| SG-19 | 2026-10-16 |
+| SG-20 | 2026-10-17 |
+| SG-21 | 2026-10-19 |
+| T-11 | 2026-10-20 |
+
+- 21 z tych transportów ma załadunek przed 18.10 (ostatnie dwa: SG-21 19.10 i T-11 20.10). Eskalacje będą wracać, dopóki właściciel ich nie zamknie albo nie anuluje. Przypomnienie: zamknąć stare zaplanowane transporty bez kierowcy i tablic.
+
