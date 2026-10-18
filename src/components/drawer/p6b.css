@@ -34,6 +34,9 @@
 .ch-msg{align-self:flex-start;display:flex;flex-direction:column;gap:3px;max-width:80%;min-width:0;padding:9px 13px;background:var(--surface);border:1px solid var(--rule)}
 .ch-msg.is-me{align-self:flex-end;background:var(--sea-bg);border-color:var(--rule)}
 .ch-msg.is-me .ch-who{color:var(--ink-2)}
+/* P11 pkt 3 (E10, axe): w mojej wiadomości (tło morskie) „Nikt jeszcze nie przeczytał” i „tylko HHL i SCX” z kontrastem ≥ 4,5 */
+.ch-msg.is-me{--ink-3:var(--ink-2)}
+.ch-msg.is-me .ch-only{background:var(--surface)}
 .ch-msg.is-only{border-style:dashed;border-color:var(--amber)}
 .ch-who{font-size:13px;color:var(--ink-3);overflow-wrap:anywhere}
 .ch-only{display:inline-block;margin-left:6px;padding:0 5px;border:1px solid var(--amber);color:var(--amber-ink);font-size:12px;line-height:1.4}
