@@ -323,7 +323,8 @@ pos $SG3 65.8054 21.7591 "2026-10-09 11:00:00+00"; pos $SG3 65.8055 21.7592 "202
 pos $SG3 65.50 21.70 "2026-10-09 11:06:00+00"; pos $SG3 65.50 21.71 "2026-10-09 11:07:00+00"
 chk "A2 L14 Nie: status zostaje AT_SITE" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select delivered_check_resolve('$SG3', false, 'jeszcze nie'); select status from loads where id='$SG3'; commit" AT_SITE
 chk "A2 L14 Nie: resolution DELIVERED_NO" "select resolution_code from decisions where load_id='$SG3' and type_code='DELIVERED_CHECK'" DELIVERED_NO
-out=$(as $KSH "select delivered_check_resolve('$SG3', true, null)"); echo "$out" | grep -qiE 'wskazana firma|Rozstrzyg|42501|permission|administrator' && { ok=$((ok+1)); echo "  OK    A2 L14 KSH odmowa"; } || { fail=$((fail+1)); echo "  FAIL  A2 L14 KSH odmowa: $out"; }
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH'; select delivered_check_resolve('$SG3', true, null); rollback;" 2>&1)
+echo "$out" | grep -qiE 'wskazana firma|Rozstrzygnięcie|42501' && { ok=$((ok+1)); echo "  OK    A2 L14 KSH odmowa"; } || { fail=$((fail+1)); echo "  FAIL  A2 L14 KSH odmowa: $out"; }
 chk "A2 anon bez EXECUTE delivered_check_resolve" "select has_function_privilege('anon','delivered_check_resolve(uuid,boolean,text)','execute')::text" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
