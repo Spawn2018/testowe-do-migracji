@@ -1,0 +1,76 @@
+# W-przed-wydaniem-4 — 39 usterek z niezależnego przeglądu całej aplikacji + daty Administratora HHL
+
+Koordynator (Claude), 19.10.2026. Gałąź `wyglad/W-przed-wydaniem-4`, odchodzi od #304 (e71a406) — **scalić po #304**.
+
+Zakres (F8): dane demo, obliczenia widoku, teksty, wygląd i testy. Bez bazy. Część bazy decyzji 19.10, 00:01 jest dla wykonawcy w D-20261019-0005-01 §2.
+
+## Podstawa
+- **Przegląd całej aplikacji demo** przez niezależnego agenta (18.10, 22:45):
+  - 3 firmy × 1440 i 390, motyw ciemny, 22 ekrany Opcji, panel SG-23, T-12, D-01 i SG-09;
+  - 39 znalezisk: 5 B, 23 P, 11 D.
+- **Polecenie właściciela 18.10, 23:13:** „poprawisz wszystkie 39”.
+- **Decyzja właściciela 19.10, 00:01:** Administrator HHL zmienia każdą datę bez ograniczeń (D-20261019-0005-01).
+- **F7 #304 runda 3** — dwa punkty P (test przez `deliveredCheckOf`, zdanie o T-18 w POROWNANIE W-demo-strefy).
+
+## Wynik — 39 znalezisk
+
+| # | było | jest |
+|---|---|---|
+| 1 B | SG-09: sprawy „Brak kierowcy i numerów”, dzwonek „Brak naczepy”, a panel ma kompletny zestaw | SG-09 i SG-18: status „Brak dokumentów” (brakuje tylko zezwolenia). „Brak kierowcy i numerów” tylko przy transportach bez zestawu (SG-19, SG-30). Dzwonek „Brak kierowcy i zestawu” i decyzja „Brak awizacji” przy SG-19. Sprawa po terminie przy SG-34 (załadunek jutro, brak zezwolenia) |
+| 2 B | ten sam kierowca, ciągnik albo naczepa w 2–3 transportach naraz (ok. 30 par) | `deconflictResources`: okres zajęcia = załadunek … rozładunek + 3 dni powrotu. Transporty w drodze i na placu zachowują zestaw, pozostałe dostają wolny z puli (numery fikcyjne, I-2). 0 nakładań |
+| 3 B | Strefy: plac „teraz w strefie: 0”, Kokpit „3 na placu” | T-12 i T-18 stoją w strefie placu. D-01 po wyjeździe 16:07 stoi tuż za strefą („czy dostarczono?”). Strefy: „teraz w strefie: 2” |
+| 4 B | prom Nova Star 23.09, 18:00: Kokpit „fala 1,4 m · niskie”, Ryzyka „3,2 m · możliwe odwołanie” | jedna prognoza: 3,2 m, ryzyko wysokie (Kokpit, pasek, Ryzyka). Baner HHL „Rejs 23.09.2026 zagrożony” |
+| 5 B | Strefy i Automatyzacje: zdarzenia z października (SG-03 dostarczony 07.10) | daty przed zegarem demo. Zdarzenia z T-11 (dostarczony 22.09) i SG-24, ostatnie zdarzenia stref jak Mapa (D-01 16:07, SG-32 13:40, SG-28 07:42) |
+| 6 P | Opcje: logowania, zaproszenia, Dopłaty — daty z października | przed 23.09, 16:32 (zaproszenie ważne do 29.09, szkic komunikatu na 24.09) |
+| 7 P | Ryzyka: „ta sama liczba … w dzwonku” (23 vs 16) | „ta sama liczba w menu i w Kokpicie”. Dzwonek liczy powiadomienia, nie sprawy |
+| 8 P | dzwonek „Faktura w sporze · t38 — SG-04” | „Faktura do sprawdzenia · t38 — różnica 180,00 PLN” (stan z Faktur) |
+| 9 P | dzwonek „Marża poniżej progu SG-15”, Finanse „0 poniżej progu” | 4 transporty „poniżej progu” z marżą ok. 3 % (próg demo 4 %). Finanse: 4 |
+| 10 P | T-01, SG-31 „Opóźniony” z ETA przed oknem | „Opóźniony” tylko gdy ETA po sile wyższej wypada po oknie dostawy |
+| 11 P | SG-14 „+3 h” obok „+1 d 4 h 27 min po oknie” | tytuły sił wyższych „… · dolicza 3 h do przyjazdu” |
+| 12 P | „do zafakturowania” 0 / 1 / „nic do wystawienia” | SCX Kokpit = kafel „Czeka na wystawienie” w Fakturach (zamknięte tygodnie) |
+| 13 P | zafakturowane i opłacone dalej „Dostarczone”, „Rozliczenie 0” | transport na obu fakturach: „Zafakturowano”. Widoki pytające o „Dostarczone” liczą też „Gotowe do fakturowania” i „Zafakturowano” (`isAfterDelivery`; dotyczy też produkcji) |
+| 14 P | Harmonogram vs Finanse: marża Tężników różna o 41,48 EUR | Harmonogram: przychód i marża po fakturze, gdy jest (jak Finanse). Tężniki 21 063,46 EUR w obu |
+| 15 P | Mapa „bez pozycji 0” obok „Brak GPS 5” | „bez żadnej pozycji 0” — inna rzecz niż „Brak GPS” (pozycja była, przestała przychodzić) |
+| 16 P | Ryzyka „na pokładzie: 1”, Mapa „Prom 6” | „na pokładzie” = transporty w etapie Prom |
+| 17 P | D-01 „Na placu od 15:10” obok wyjazdu 16:07 | #304: wjazd 16:01, wyjazd 16:07 |
+| 18 P | oś „Na placu — plan”, SG-23 „pominięte” | #304: zdarzenia strefy placu |
+| 19 P | 300 km w 50 min (Śrem 09:40 → bufor Gdańsk 10:30) | bufor 13:40 |
+| 20 P | Ceny „śledzenie od Szwecji”, a oś ma GPS w Polsce | „w czasie wolnym — bez dopłaty (wyjazd ze strefy 09:40)” |
+| 21 P | zakaz ruchu 25.09 przy SG-09 (załadunek 05.10) | zakaz tylko przy transportach w drodze w ten dzień |
+| 22 P | „Rejs: Wawel · rejs niewybrany” | „Wawel · dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji” |
+| 23 P | zezwolenia firmowe od 01.10 przy wrześniowych transportach | ważne od 01.09.2026 |
+| 24 P | autor „workflow:wf-2” | „System // Watch Tower” (także produkcja) |
+| 25 P | Użytkownicy „0 z telefonem” | liczniki z tej samej listy (5 z telefonem) |
+| 26 P | Ryzyka: „seed makiety … (D18)”, „Po podłączeniu…” | „— to przykład w wersji pokazowej…”, „Brak komunikatów o utrudnieniach na drogach w Polsce. Źródło: HERE…” |
+| 27 P | Faktury: EUR bez waluty obok PLN | kwota zawsze z walutą (lista, karta, szczegóły) |
+| 28 P | „OCP-0000-PRZYKLAD” | numery demo jak prawdziwe (G-09: zmyślone) |
+| 29 D | „usunięty 22.10.2026” (data w przyszłości) | „zostanie usunięty …” |
+| 30 D | „+180-⏎240 min”, „50⏎km”, „225,00⏎EUR”, „12 h” | twarda spacja między liczbą a jednostką (km, h, min, m/s, EUR, PLN) w tekstach. Zakresy połączone |
+| 31 D | „1 — faktury HHL czekają” | „1 faktura HHL czeka” (odmiana) |
+| 32 D | „Rozmiar L × W × H” | **bez zmian (N)**: Harmonogram w układzie pliku KSH (E38 1A), nagłówek kolumny z pliku |
+| 33 D | Strefy: „(dziś „Histereza”)”, „powód: — (wtedy pola nie było)” | bez tekstów roboczych, „bez podanego powodu”. „Auto 50 km przed placem / przed Śremem” — **N**: to nazwa jednego zdarzenia w „Kto co dostaje” |
+| 34 D | „Opcje › Progi”, „Przeglądzie i awizacji” | „Opcje › Progi alarmów”, „W zakładce »Przegląd«”. Telefon „Polferries 18:00” — **N**: na telefonie dwie linie (Stena, Polferries) obok siebie |
+| 35 D | „kurs tymczasowy · 60” | „kurs tymczasowy · 60 transportów” |
+| 36 D | „bez pingu”, „ostatni ping” | „bez nowej pozycji”, „ostatnia pozycja” |
+| 37 D | „+37 000 000 002” | „+370 000 000 02” — kody 3-cyfrowe (także produkcja) |
+| 38 D | edytor terminu CMR: „24” + „h · po „Dostarczone”, do 24 h” | „24” + „h · po „Dostarczone”” |
+| 39 D | D-01 „Ładunek: D · 7 szt.” | „Stężenia międzysłupowe · D · 7 szt.” |
+
+Opcje › Opłata paliwowa: data „dziś 14.10.2026” była tylko w teście jednostkowym. W aplikacji ekran bierze zegar demo, więc bez zmian.
+
+## Daty bez ograniczeń dla Administratora HHL (decyzja 19.10, 00:01)
+- **„Zmień status”**: Administrator HHL wpisuje dowolną datę i godzinę.
+  - Nie obowiązują blokady „nie wcześniej niż poprzedni status” ani „nie w przyszłości”.
+  - Tekst zasad jest osobny dla Administratora HHL.
+- **„Daty KSH”**: „Edytuj” także u Administratora HHL. Zapis działa po każdym etapie i w dowolnej kolejności.
+- KSH, SCX i Operacje HHL — bez zmian.
+- Na produkcji zadziała po części bazy (D-20261019-0005-01 §2).
+
+## Testy
+- Unit: 1636 przechodzi, 35 pominiętych (199 plików). Nowe testy: `tests/admin-dates.test.ts` i rozszerzony `tests/p11-demo-strefa-placu.test.ts` (8 przypadków).
+- Zmienione oczekiwania — każda zmiana wynika z poprawki:
+  - `voyage` (fokus 23.09);
+  - `audyt-af`, `audyt-c`, `p11-demo-spojne`, `p3b-cockpit-e9`, `p8d-rules`, `p5b-money`, `audyt-e-opcje`, `w-eta-calib`, `p9c-map`;
+  - teksty z twardą spacją porównywane po normalizacji.
+- e2e (etap4/5/6, aud03, e8, d-eur-t, persist-toast, aud01e) — wynik lokalny w PR.
+- Bramy z #301 (E20, E21, E10) na scaleniu z `wyglad/W-bramy-reguly` — wynik w PR.

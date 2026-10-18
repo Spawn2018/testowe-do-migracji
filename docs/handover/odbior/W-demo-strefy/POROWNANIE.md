@@ -45,6 +45,7 @@ Inne miejsca, które się zmieniają:
 - Mapa i Harmonogram: D-01 „na placu od 16:01” (było 15:10).
 
 ## Przy innym zegarze (F7 runda 2, `?now=2026-11-20T11:00:00+01:00`)
+- Przy zegarze demo (23.09, 16:32) oś Status T-18 pokazuje teraz także „Droga SE” 22.09, 14:05 i bufor 50 km 23.09, 05:22 (wcześniej „pominięte”, bo wpisy liczone od dnia dostawy 25.09 były w przyszłości) — dopisane po F7 rundzie 3.
 - Przy późniejszym zegarze zdarzenia z przyszłości przestają być odfiltrowane. Dlatego:
   - T-18: Historia demo (`p6bDemo`) liczyła stronę szwedzką od dnia dostawy z planu (25.09). Wyjazd z portu i bufor 50 km wypadały po wjeździe na plac (23.09, 11:40);
   - teraz liczy od wcześniejszego z dni: dostawa z planu albo „czeka przed placem od …” (`etaDetail.waitSince`);

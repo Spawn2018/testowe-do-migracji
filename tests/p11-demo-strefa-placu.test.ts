@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import { buildStatusAxis, statusHits } from '../src/lib/statusAxis';
-import { deliveredCheckFromEvents } from '../src/lib/p4cSource';
+import { deliveredCheckFromEvents, deliveredCheckOf } from '../src/lib/p4cSource';
 import { demoDeliveredCheck } from '../src/lib/p4cDemo';
 import { demoFeeSuggestions } from '../src/lib/p5Demo';
 import { demoHistoryEvents } from '../src/lib/p6bDemo';
@@ -122,6 +122,16 @@ describe('demo — zdarzenia strefy placu', () => {
       expect(portOut && buffer, l.code).toBeTruthy();
       expect(t(portOut!.at), l.code).toBeLessThan(t(buffer!.at));
       expect(t(buffer!.at), l.code).toBeLessThan(enter);
+    }
+  });
+
+  /* F7 #304 runda 3 (P): karta w panelu idzie przez `deliveredCheckOf` — zdarzenia muszą do niej dojść */
+  it('panel: `deliveredCheckOf` przekazuje zdarzenia — karta D-01 z wyjazdu 16:07 także przy zegarze 20.11', () => {
+    const [exit] = zone(first.id, 'GEOFENCE_EXIT');
+    for (const clock of [CLOCK, LATE]) {
+      const card = deliveredCheckOf(first, snap.loads, snap.geofences, clock, 'SCX', snap.events)!;
+      expect(t(card.exitAt), clock).toBe(t(exit.at));
+      expect(card.minutes, clock).toBe(6);
     }
   });
 });
