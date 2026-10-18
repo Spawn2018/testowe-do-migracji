@@ -61,7 +61,7 @@ describe('C-03…C-07 — Dokumenty (E31)', () => {
     expect(cmrKind(cmr)).toBe('SIGNED');
     expect(ft('pl', 'p5_doc_r_CMR_SIGNED')).toBe('CMR z podpisem odbiorcy');
     expect(reqs.filter((r) => r.required).map((r) => r.category).sort()).toEqual(['CMR', 'INSURANCE', 'PERMIT_PL', 'PERMIT_SE']);
-    const delivered = new Set(snap.loads.filter((l) => l.status === 'DELIVERED').map((l) => l.id));
+    const delivered = new Set(snap.loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status)).map((l) => l.id));
     const cmrs = docs.filter((d) => d.category === 'CMR' && d.status === 'UPLOADED');
     expect(cmrs.length).toBeGreaterThan(0);
     expect(cmrs.every((d) => delivered.has(d.loadId))).toBe(true);

@@ -5,6 +5,7 @@
  */
 import type { EtaConfidence, EtaSegment, FerryBooking, LoadStatus } from '../types';
 import { getNowIso } from './frozenNow';
+import { isAfterDelivery } from './status';
 
 export const ETA_METHOD_LABEL = 'Szacunek z czasów odcinków (prom + drogi)';
 
@@ -26,7 +27,7 @@ const BASE_HOURS: Record<EtaSegment['kind'], number> = {
 
 /** Remaining fraction of segment by corridor status (heuristic). */
 function remainingFactor(status: LoadStatus, kind: EtaSegment['kind']): number {
-  if (status === 'DELIVERED') return 0;
+  if (isAfterDelivery(status)) return 0;
   if (status === 'UNLOADING') {
     if (kind === 'SE_ROAD' || kind === 'BREAK') return 0.15;
     return 0;

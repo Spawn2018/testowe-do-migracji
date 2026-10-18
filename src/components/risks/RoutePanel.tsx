@@ -97,7 +97,8 @@ export function RoutePanel({
   /* promy */
   const rows: FerryRowView[] = PROD
     ? ferryRowsFromDb(sailings, marine, loads, nowMs)
-    : sampleFerryRowsOf(nowIso, loadsOnVoyage(loads, focusVoyage()).length);
+    /* przegląd 18.10 (P16): „na pokładzie” = transporty już na statku (etap Prom, jak pasek etapów i Mapa), bez czekających w porcie */
+    : sampleFerryRowsOf(nowIso, loadsOnVoyage(loads, focusVoyage()).filter((l) => l.status === 'ON_FERRY').length);
   const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
   const today = dayOf(nowIso);
   const allToday = rows.length > 0 && rows.every((r) => dayOf(r.depIso) === today);

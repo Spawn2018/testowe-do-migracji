@@ -18,7 +18,7 @@ import type { EtaCalibration } from '../src/lib/etaCalibSource';
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const snap = buildDemoSnapshot();
 const data = demoCalibration(snap.loads);
-const delivered = snap.loads.filter((l) => l.status === 'DELIVERED' && l.unloadedAt);
+const delivered = snap.loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status) && l.unloadedAt);
 const html = (d: EtaCalibration, readOnly = false) => renderToStaticMarkup(createElement(EtaCalibScreen, {
   locale: 'pl', data: d, readOnly, onApprove: readOnly ? null : demoCalibrationApproveFor(d),
 }));

@@ -5,6 +5,7 @@ import { t } from '../../i18n/messages';
 import { getNow } from '../../lib/frozenNow';
 import { formatCalendarDay } from '../../lib/time';
 import { formatPlNumber } from '../../lib/format';
+import { isAfterDelivery } from '../../lib/status';
 
 /** I-0: w buildzie produkcyjnym „dziś” = bieżąca data (bez zamrożonej daty danych demo 23.09). */
 const PROD_BUILD = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -90,7 +91,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
       const act = loads
         .filter(
           (l) =>
-            (l.status === 'DELIVERED' || l.status === 'UNLOADING') &&
+            (isAfterDelivery(l.status) || l.status === 'UNLOADING') &&
             new Date(l.plannedDeliverDate) < to,
         )
         .reduce((s, l) => s + (l.dims.weightT || 0), 0);

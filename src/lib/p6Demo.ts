@@ -35,8 +35,9 @@ export function demoDecisions(loads: readonly Load[], nowIso: string): TodoDecis
     const l = byCode(loads, code);
     if (l) out.push({ ...d, deciderRole: d.deciderRole ?? null, loadId: l.id, status: d.escalatedAt ? 'NEW' : 'ASSIGNED', options: [] });
   };
-  /* przegląd 18.10 (B1): SG-09 ma zestaw kompletny, brakuje zezwolenia; brak awizacji — SG-19 (bez kierowcy i zestawu) */
-  add('SG-09', { id: 'demo-dec-1', typeCode: 'DOC_MISSING', titleKey: 'dec_type_DOC_MISSING', title: 'Brak zezwolenia lub dokumentu przed „Gotowy”', dueAt: iso(now - 50 * H), escalatedAt: iso(now - 49.9 * H), decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
+  /* przegląd 18.10 (B1): sprawa po terminie przy SG-34 (załadunek jutro, brak zezwolenia na zestaw) — SG-09 ma zestaw
+     kompletny i tylko sprawę zezwolenia; brak awizacji — SG-19 (bez kierowcy i zestawu) */
+  add('SG-34', { id: 'demo-dec-1', typeCode: 'DOC_MISSING', titleKey: 'dec_type_DOC_MISSING', title: 'Brak zezwolenia lub dokumentu przed „Gotowy”', dueAt: iso(now - 50 * H), escalatedAt: iso(now - 49.9 * H), decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
   add('SG-19', { id: 'demo-dec-2', typeCode: 'NO_AWIZACJA', titleKey: 'dec_type_NO_AWIZACJA', title: 'Brak awizacji w terminie', dueAt: iso(now + 20 * H), escalatedAt: null, decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
   add('SG-10', { id: 'demo-dec-3', typeCode: 'ETA_AFTER_LATEST', titleKey: 'dec_type_ETA_AFTER_LATEST', title: 'ETA po godzinie „najpóźniej do”', dueAt: iso(now + 3 * H), escalatedAt: null, decider: 'HHL', deciderRole: 'HHL_OPS' });
   return out;
