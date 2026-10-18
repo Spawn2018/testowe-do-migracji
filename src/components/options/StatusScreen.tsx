@@ -410,9 +410,10 @@ function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
             {p.rows.map((r) => (
               <tr key={r.id} data-perf={r.id} data-ok={r.ok == null ? 'none' : String(r.ok)}>
                 <td><b>{r.what}</b></td>
-                <td>{segs(r.how)}</td>
-                <td>{segs(r.result)}</td>
-                <td>{segs(r.limit)}</td>
+                {/* P11 (e46): części wartości w jednym ciągu — na telefonie (karta) nie rozjeżdżają się na całą szerokość */}
+                <td><span className="sys-perf-v">{segs(r.how)}</span></td>
+                <td><span className="sys-perf-v">{segs(r.result)}</span></td>
+                <td><span className="sys-perf-v">{segs(r.limit)}</span></td>
                 <td><span className={`sys-st is-${r.ok == null ? 'nosource' : r.ok ? 'ok' : 'down'}`}><Dot state={r.ok == null ? 'nosource' : r.ok ? 'ok' : 'down'} />{state(r.ok)}</span></td>
               </tr>
             ))}

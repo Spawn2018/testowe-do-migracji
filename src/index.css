@@ -267,7 +267,7 @@ h4.sec{margin:0 0 8px;font-family:var(--font-cond);font-size:15px;font-weight:60
 .tl .ts{font-size:12px;color:var(--ink-3)}
 
 /* money block */
-.mrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
 .mrow.total{font-weight:700;border-bottom:0;border-top:1px solid var(--rule);margin-top:3px;padding-top:7px}
 .mrow .lbl{color:var(--ink-2)}
 .locked{padding:11px;background:var(--surface-2);border:1px dashed var(--rule);color:var(--ink-3);font-size:13px}
@@ -568,7 +568,8 @@ nav button{padding:8px 14px}
 .opt-ro{border:0;margin:0;padding:0;min-width:0}
 .opt-ro :is(button[type="submit"],.btn,.chipbtn,[data-action]){display:none}
 .switchline{display:inline-flex;align-items:center;gap:7px;cursor:pointer}
-.switchline input{accent-color:var(--go);width:15px;height:15px}
+.switchline input{width:15px;height:15px}
+.switchline input:checked{background:var(--go);border-color:var(--go)}
 .inline-input{display:flex;align-items:center;gap:7px}
 .inline-input .input{width:92px}
 .settings-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:26px}
@@ -880,6 +881,16 @@ progress{vertical-align:baseline}
 [type=search]{-webkit-appearance:textfield;outline-offset:-2px}
 ::-webkit-search-decoration{-webkit-appearance:none}
 ::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
+/* P11 pkt 7 (e29 warstwy Mapy, e42 SMS przy miejscach, e4 faktury): pole wyboru w tokenach — kwadrat bez zaokrągleń,
+   zaznaczone wypełnione kolorem tekstu (nie niebieskie z przeglądarki); radio w kolorze tekstu */
+input[type=checkbox]{-webkit-appearance:none;appearance:none;display:inline-grid;grid-template:100%/100%;place-items:center;box-sizing:border-box;width:16px;height:16px;margin:0;flex:0 0 auto;border:1.5px solid var(--ink-2);border-radius:0;background:var(--surface);cursor:pointer;vertical-align:middle}
+input[type=checkbox]::before{content:"";width:62%;height:34%;box-sizing:border-box;border-left:2px solid var(--surface);border-bottom:2px solid var(--surface);transform:translateY(-1px) rotate(-45deg);visibility:hidden}
+input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}
+input[type=checkbox]:checked::before{visibility:visible}
+input[type=checkbox]:indeterminate{background:var(--ink);border-color:var(--ink)}
+input[type=checkbox]:indeterminate::before{visibility:visible;height:0;border-left:0;transform:none}
+input[type=checkbox]:disabled{opacity:.5;cursor:not-allowed}
+input[type=radio]{accent-color:var(--ink)}
 summary{display:list-item}
 ol,ul,menu{list-style:none;margin:0;padding:0}
 blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}
@@ -1059,6 +1070,7 @@ img,video{max-width:100%;height:auto}
 /* E5 (img/e5-desk, img/e5-phone): dzwonek w dwóch grupach, zdanie o sytuacji ogólnej pod listą */
 .bell-pop{width:min(420px,92vw);max-height:min(560px,calc(100vh - 72px))}
 .bell-hd h2{margin:0;font-family:var(--font-cond);font-size:19px;font-weight:600;letter-spacing:.02em}
+.bell-hd .bell-x{margin-left:4px}
 .bell-hd .btn.bell-all{border:0;background:none;padding:0;min-height:0;color:var(--sea);text-decoration:underline;font-size:13px;font-weight:400}
 .bell-scroll{overflow-y:auto;flex:1}
 .bell-sec{border-bottom:1px solid var(--rule)}
@@ -1088,7 +1100,11 @@ img,video{max-width:100%;height:auto}
   .bell-chat{font-size:14px}
   /* wyglad/P6-e: cele dotyku ≥ 44 px także w nagłówku i pod listą dzwonka (E8) */
   .bell-hd .btn.bell-all{min-height:44px;padding:0 4px}
-  .bell-general .btn.bell-link{display:inline-flex;align-items:center;min-height:44px;min-width:44px;vertical-align:middle}
+  /* P11 (e13): „✕” w pierwszym wierszu obok tytułu, „Oznacz wszystkie…” pod spodem */
+  .bell-hd .bell-x{order:2;margin-left:auto}
+  .bell-hd .btn.bell-all{order:3;margin-right:auto}
+  /* P11 (e5-phone): link w środku zdania zostaje w linii tekstu; cel dotyku 44 px z dopełnienia (bez rozpychania akapitu) */
+  .bell-general .btn.bell-link{display:inline;min-height:0;min-width:0;padding:15px 4px;margin:-15px -4px;vertical-align:baseline}
 }
 
 @media (max-width:768px){
@@ -1197,6 +1213,9 @@ img,video{max-width:100%;height:auto}
     display:inline-flex;align-items:center;box-sizing:border-box;
     min-width:44px;min-height:44px;
   }
+  /* P11 (e4): etykieta nad polem (kolumna) zostaje przy lewej krawędzi — reguła wyżej centrowała ją w poziomie */
+  .inv-field,.po-set-f,.pp-rej-l,.rk-note,.up-field,.dtr-note,
+  .auth-form label,.auth-admin-form label,.baf-form label,.cr-custom label,.s7-sheet .s7-range label{align-items:stretch}
   /* wyglad/P2-2 W5: pole wyboru w zwykłym rozmiarze; 44 px ma cały wiersz z napisem (label) */
   input[type="checkbox"],input[type="radio"]{width:22px;height:22px;min-width:22px;min-height:22px;margin:0 8px 0 0;flex:0 0 auto}
   label:has(> input[type="checkbox"]),label:has(> input[type="radio"]){gap:2px;padding-right:8px;cursor:pointer}
@@ -1330,7 +1349,7 @@ img,video{max-width:100%;height:auto}
 .live-mark.is-off i{background:var(--red)}
 /* wyglad/P10a-a (E22 pkt 4): komunikat w miejscu części, która się nie wczytała */
 .part-fail{margin:12px;padding:22px 24px;max-width:640px;display:flex;flex-direction:column;align-items:flex-start;gap:10px;background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--amber)}
-.part-fail h2{margin:0;font-size:18px;color:var(--ink)}
+.part-fail h2{margin:0;font-family:var(--font-cond);font-weight:700;font-size:18px;color:var(--ink)}
 .part-fail p{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink-2)}
 .subbar-btn{flex:0 0 auto;padding:3px 12px;border:1px solid var(--rule);border-radius:2px;background:var(--surface);color:var(--ink);font-size:13.5px}
 .subbar-btn:hover{background:var(--surface-2)}

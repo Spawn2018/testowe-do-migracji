@@ -201,7 +201,7 @@ export function DocsView() {
       useTowerStore.getState().pushToast(tp(locale, 'a6_docs_zip_toast', { n: r.count }), 'MEDIUM');
     });
   };
-  const weekShort = (w: string) => `t${weekKeyLabel(w)}`;
+  const weekShort = (w: string) => weekKeyLabel(w);
 
   const files = useMemo(() => filterFiles(documents, loads, filter), [documents, loads, filter]);
   const fileLoads = useMemo(() => {
@@ -472,6 +472,8 @@ export function DocsView() {
             <button type="button" className="btn doc-upload-big" data-doc-upload onClick={() => setUpload(true)}>{ft(locale, 'p5_doc_upload_phone')}</button>
           </div>
         ) : null}
+        {/* P11 (e8): tydzień paczki i „Pobierz paczkę” pod „Wgraj dokument”, nie na końcu strony */}
+        {phone && packMenu ? <div className="doc-pad doc-pack-phone">{packMenu}</div> : null}
         <section className="doc-sec" aria-labelledby="doc-req-h">
           <header className="doc-sec-hd"><h3 id="doc-req-h">{ft(locale, 'p5_doc_req_h')}</h3></header>
           {phone ? reqCards : reqTable}
@@ -479,7 +481,6 @@ export function DocsView() {
         </section>
         {permitBlock}
         {filesBlock}
-        {phone && packMenu ? <div className="doc-pad doc-pack-phone">{packMenu}</div> : null}
         {driverVault.length > 0 ? (
           <div className="note" data-vault="driver">
             {t(locale, 'a6_docs_driver_vault')}

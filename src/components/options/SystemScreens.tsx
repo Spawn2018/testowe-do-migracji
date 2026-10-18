@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { E49_THR } from '../../i18n/e49Thr';
+import { openOptionsScreen } from '../../lib/openOptions';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
@@ -67,7 +68,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
         <tbody>
           {flags.map((f) => (
             <tr key={f.key} data-flag={f.key}>
-              <th scope="row" data-label={t(locale, 'p3c_col_flag')}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
+              <th scope="row" data-label={t(locale, 'p3c_col_flag')}><b>{f.name}</b>{blocked?.[f.key] && !f.on && !readOnly ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
               <td data-label={t(locale, 'p3c_col_state')}>{sw(f)}</td>
               <td data-label={t(locale, 'p3c_col_does')}>{f.does}</td>
               <td data-label={t(locale, 'p3c_col_last')} className="ox-flag-last" data-content>{last(f)}</td>
@@ -285,6 +286,12 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
             </li>
           );
         })}
+        {/* P11 (e12, makieta „Progi alarmów”, ostatni wiersz): progi źródeł danych są w Stanie systemu — odnośnik */}
+        <li data-threshold-link="status">
+          <span className="ox-thr-label">{t(locale, 'p3c_thr_src')}</span>
+          <span className="ox-thr-val"><span>{t(locale, 'p3c_thr_src_v')}</span></span>
+          <button type="button" className="btn ghost ox-btn" onClick={() => openOptionsScreen('status')}>{t(locale, 'p3c_thr_src_go')}</button>
+        </li>
       </ul>
     </div>
   );

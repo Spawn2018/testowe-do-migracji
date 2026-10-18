@@ -407,12 +407,17 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
       {sms ? <span className="sronly" role="status">{smsOver ? p8t('p8_err_sms_long') : ''}</span> : null}
 
       <div className="mt-prev">
-        <label className="mt-prev-hd">
-          <span>{p8t(phone ? 'p8_preview_phone' : 'p8_preview')}</span>
-          <select className="input mt-prev-sel" value={load?.id ?? ''} onChange={(e) => setLoadId(e.target.value)}>
-            {previewLoads.map((l) => <option key={l.id} value={l.id}>{dm(l.plannedDeliverDate) ? `${l.code} · ${dm(l.plannedDeliverDate)}` : l.code}</option>)}
-          </select>
-        </label>
+        {/* P11 (e43): e-maile logowania nie dotyczą transportu — sam „Podgląd”, bez wyboru transportu */}
+        {item.channel === 'LOGIN' ? (
+          <div className="mt-prev-hd"><span>{p8t('p8_preview_phone')}</span></div>
+        ) : (
+          <label className="mt-prev-hd">
+            <span>{p8t(phone ? 'p8_preview_phone' : 'p8_preview')}</span>
+            <select className="input mt-prev-sel" value={load?.id ?? ''} onChange={(e) => setLoadId(e.target.value)}>
+              {previewLoads.map((l) => <option key={l.id} value={l.id}>{dm(l.plannedDeliverDate) ? `${l.code} · ${dm(l.plannedDeliverDate)}` : l.code}</option>)}
+            </select>
+          </label>
+        )}
         <div className={`mt-prev-box${sms ? ' is-sms' : ''}`} data-mt-preview>
           {email ? <Lines lines={previewLines(subject, sample, false, item.buttonLabel)} className="mt-prev-subj" /> : null}
           <Lines lines={previewLines(body, sample, sms, item.buttonLabel)} />

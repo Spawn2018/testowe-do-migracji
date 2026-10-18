@@ -27,7 +27,7 @@ import { readFileAsDataUrl } from '../lib/docsIo';
 import { clickableRow } from '../lib/clickableRow';
 import { formatPlNumber } from '../lib/format';
 import { fmtDate, fmtDateRange } from '../lib/time';
-import { transportsText } from '../lib/p5Finance';
+import { deliveredText, transportsText } from '../lib/p5Finance';
 import { ISSUER, RECIPIENT, billDiff, billStatus, invoiceKpis, pendingWeeks, weekKeyLabel, weekOptionLabel, type InvKpis, type InvStatus } from '../lib/p5Invoices';
 import { ft, ftn, ftp } from '../i18n/p5';
 import { factoringOfferOf } from '../lib/p5Source';
@@ -187,7 +187,7 @@ function Kpis({ direction, kpis }: { direction: BillDirection; kpis: InvKpis }) 
         <p>
           {first ? (
             <>
-              {ftp(locale, 'p5_inv_k_pending_s', { loads: transportsText(first.loads.length), range: fmtDateRange(first.from, first.to), net: formatPlNumber(first.netEur, 2) })}
+              {ftp(locale, 'p5_inv_k_pending_s', { loads: deliveredText(first.loads.length), range: fmtDateRange(first.from, first.to), net: formatPlNumber(first.netEur, 2) })}
               <b>{ftp(locale, 'p5_inv_k_pending_who', { who: ISSUER[direction] })}</b>
               {kpis.pending.length > 1 ? ftn(locale, 'p5_inv_k_pending_more', kpis.pending.length - 1) : ''}
             </>
@@ -330,7 +330,8 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
         <header className="panel-hd fin-hd2 inv-list-hd">
           {phone ? null : <h3 id={`inv-list-${direction}`}>{title}</h3>}
           {role === 'HHL' && !phone ? <span className="sub">{ft(locale, `p5_inv_list_sees_${direction}`)}</span> : null}
-          <div className="spacer" />
+          {/* P11 (e4): na telefonie przycisk na całą szerokość — bez odstępnika */}
+          {phone ? null : <div className="spacer" />}
           {canRegisterBill(role, direction) ? (
             <button type="button" className="btn" data-bill-new={direction} aria-expanded={wizard} onClick={() => setWizard((w) => !w)}>
               {t(locale, direction === 'KOSZT' ? 'bill_new_cost' : 'bill_new_rev')}
@@ -347,7 +348,7 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
               <article key={w.weekKey} className="fin-card inv-card is-sea" data-bill-pending={w.weekKey}>
                 <header className="fin-card-hd"><b>{ftp(locale, 'p5_inv_card_week', { label: weekKeyLabel(w.weekKey) })}</b><StatusTag status="DO_WYSTAWIENIA" /></header>
                 <b className="inv-card-big">{ftp(locale, 'p5_inv_card_net', { net: formatPlNumber(w.netEur, 2) })}</b>
-                <p className="fin-muted">{ftp(locale, 'p5_inv_card_pending', { loads: transportsText(w.loads.length), who: ISSUER[direction] })}</p>
+                <p className="fin-muted">{ftp(locale, 'p5_inv_card_pending', { loads: deliveredText(w.loads.length), who: ISSUER[direction] })}</p>
               </article>
             ))}
             {list.map((b) => (
@@ -762,7 +763,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>
             <div className="strong"><dt>{ft(locale, 'p5_inv_form_sum_diff')}</dt><dd className={sumOk ? 'inv-ok' : chk.lines.length ? 'neg' : undefined} data-w-sum-ok={sumOk ? 'tak' : 'nie'}><Amount n={diff} cur={currency} />{sumOk ? ` · ${ft(locale, 'p5_inv_form_sum_ok')}` : ''}</dd></div>
-            <div><dt>{t(locale, 'bill_col_due')} ({BILL_TERM_DAYS[direction]})</dt><dd>{fmtDay(dueDoc || due)}</dd></div>
+            <div><dt>{ftp(locale, 'p5_inv_form_due', { d: BILL_TERM_DAYS[direction] })}</dt><dd>{fmtDay(dueDoc || due)}</dd></div>
           </dl>
           {chk.headerFlags.length ? <span className="fin-tag warn" data-flag="BRAK_NA_FAKTURZE">{BILL_FLAG_LABEL.BRAK_NA_FAKTURZE[locale]} · {chk.missingLoadIds.length}</span> : null}
           <div className="inv-form-acts">

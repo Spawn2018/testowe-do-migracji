@@ -55,6 +55,18 @@ export function NotificationBell() {
     return () => document.removeEventListener('mousedown', onDoc);
   }, []);
 
+  /* P11 (e5, e13): Esc zamyka dzwonek i wraca na przycisk — jak Pomoc i menu konta */
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      ref.current?.querySelector<HTMLButtonElement>('.bell-trigger')?.focus();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const item = (g: BellGroup<BellSource>) => {
     const isTodo = g.section === 'todo';
     const when = formatListDateTime(g.latest.at);
@@ -132,6 +144,8 @@ export function NotificationBell() {
                 {t(locale, 'bell_mark_all')}
               </button>
             ) : null}
+            {/* P11 (e13): „Dotknięcie obok albo „✕” zamyka panel” */}
+            <button type="button" className="iconbtn bell-x" aria-label={t(locale, 'close')} onClick={() => setOpen(false)}>✕</button>
           </div>
           <div className="bell-scroll">
             {visible.length === 0 ? (

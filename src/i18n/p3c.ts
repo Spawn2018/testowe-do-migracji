@@ -248,6 +248,9 @@ const pl: Dict = {
 
   /* Progi */
   p3c_thr_change: 'Zmień',
+  p3c_thr_src: 'Źródła danych',
+  p3c_thr_src_v: 'progi w Stanie systemu',
+  p3c_thr_src_go: 'Stan systemu ›',
   p3c_thr_value: 'Wartość',
   p3c_thr_effect: 'Skutek',
 

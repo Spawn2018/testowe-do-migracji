@@ -3,7 +3,7 @@
  */
 const pl = {
   p8_title: 'Treści wiadomości',
-  p8_who_link: 'Kto co dostaje — Powiadomienia › Kto co dostaje (E11)',
+  p8_who_link: 'Odbiorców ustawisz w Powiadomienia › Kto co dostaje',
   p8_default: 'domyślna',
   p8_changed: 'zmieniono {d} · {who}',
   p8_changed_short: 'zmieniono {d}',
@@ -22,7 +22,7 @@ const pl = {
   p8_count_note: 'Polskie litery zostaną zamienione (ą → a), bo SMS ma 160 znaków tylko bez nich.',
   p8_preview: 'Podgląd na prawdziwym transporcie',
   p8_preview_phone: 'Podgląd',
-  p8_preview_note: 'Kod transportu w każdej firmie jak w E41: HHL „XX-00 · nr zlecenia HHL”, SCX „XX-00 · nr SCX”, KSH „XX-00”. W SMS zawsze sam kod.',
+  p8_preview_note: 'Kod transportu w każdej firmie: HHL „XX-00 · nr zlecenia HHL”, SCX „XX-00 · nr SCX”, KSH „XX-00”. W SMS zawsze sam kod.',
   p8_save: 'Zapisz',
   p8_test_s: 'Wyślij próbny SMS na mój numer',
   p8_test_s_phone: 'Próbny SMS',

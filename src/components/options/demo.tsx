@@ -263,7 +263,6 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
       users: { meta: '12 aktywnych' },
       zones: { meta: 'Boden: brak', tone: 'alert' },
       rates: { meta: 'KSH v2 · SCX v1' },
-      fuel: { meta: '× 1,13' },
       fact: { meta: '1 %' },
       permits: { meta: 'wył.' },
       status: { meta: '1 problem', tone: 'alert' },
@@ -271,7 +270,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
     summaries: {
       people: { text: '14 kont · 0 z telefonem', tone: 'alert' },
       notify: { text: 'SMS przy miejscach: Boden brak' },
-      money: { text: 'Cennik KSH v2 · paliwo × 1,13' },
+      money: { text: 'Cennik KSH v2 · paliwo {fuel}' },
       rules: { text: '10 progów · wymóg zezwoleń wył.' },
       system: { text: '1 źródło nie działa · 9 przełączników', tone: 'alert' },
       forme: { text: 'motyw, waluta, 2FA' },
