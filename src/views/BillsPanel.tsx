@@ -509,14 +509,17 @@ function BillDetail({ bill }: { bill: Bill }) {
               return (
                 <tr key={ln.loadId} style={{ cursor: 'pointer' }} {...clickableRow(() => { if (l) selectLoad(l.id); })}>
                   <td>
-                    <span className="code" data-content>{l ? transportLabel(l, role) : '—'}</span>
-                    {fuel ? (
-                      <span className="inv-sub inv-fuel" data-bill-fuel={fuel.week} data-deur-exempt="fuel-index">
-                        {fcp(locale, 'p5c_bd_fuel', { week: fuel.week, mult: formatPlNumber(fuel.mult, 2) })}
-                        {fuel.forecast ? ` · ${fc(locale, 'p5c_bd_fuel_fc')}` : ''}
-                        {fuel.amount != null ? ` · ${fcp(locale, 'p5c_bd_fuel_amt', { amt: formatPlNumber(fuel.amount, 2), cur: fuel.currency })}` : ''}
-                      </span>
-                    ) : null}
+                    {/* wyglad/W-przed-wydaniem-1: nazwa i opłata paliwowa w jednym bloku — na telefonie jedna kolumna obok etykiety, numer nie łamie się w środku */}
+                    <div className="inv-line-name">
+                      <span className="code" data-content>{l ? transportLabel(l, role) : '—'}</span>
+                      {fuel ? (
+                        <span className="inv-sub inv-fuel" data-bill-fuel={fuel.week} data-deur-exempt="fuel-index">
+                          {fcp(locale, 'p5c_bd_fuel', { week: fuel.week, mult: formatPlNumber(fuel.mult, 2) })}
+                          {fuel.forecast ? ` · ${fc(locale, 'p5c_bd_fuel_fc')}` : ''}
+                          {fuel.amount != null ? ` · ${fcp(locale, 'p5c_bd_fuel_amt', { amt: formatPlNumber(fuel.amount, 2), cur: fuel.currency })}` : ''}
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td>{fmtDay(at ? localDateOf(at) : null)}</td>
                   <td className="num"><Amount n={ln.expectedNet} cur={bill.currency} /></td>
