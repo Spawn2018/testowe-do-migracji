@@ -97,6 +97,12 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 - **Partia 5:**
   - dane demo: wiersze panelu › Ceny sumują się do „Razem”, opłata paliwowa z mnożnika; etap „Zafakturowane” z faktur na stronie Faktury (niżej, „Dane demo”);
   - Strefy: „50 km”, „20 km”, „60 min” w opisach buforów na twardej spacji — po usunięciu kodów etapów (partia 4) „50” i „km” łamały się na końcu linii przy 1440 i 1280 (CI, `etap6-ui`).
+  - wzorce `visual` Kokpitu HHL (jasny, ciemny) — kafelek „Marża (prognoza)” z danymi demo: 14,5 % → 17,6 % (bez ukrytych 303 EUR w koszcie).
+- **Partia 6 — CMR tylko po rozładunku (decyzja właściciela 18.10, 17:28; wcześniej 08.10 B):**
+  - wszędzie „CMR z podpisem odbiorcy”; teksty „CMR z załadunku” i „do 2 h po załadunku” usunięte;
+  - Harmonogram, Dokumenty i panel pomijają stan CMR transportów przed „Dostarczone” (`cmrAfterDelivery`), w panelu „po rozładunku”;
+  - wartość startowa aplikacji: CMR po rozładunku, 24 h;
+  - na produkcji wymaganie ma jeszcze „2 h po załadunku” (22 transporty przed dostawą z „po terminie”) — poprawka bazy: D-20261018-1740-01; filtr widoku działa już teraz.
 
 ## Rozstrzygnięcia koordynatora („?” z paczek)
 - **Liczba przy dzwonku i „Do zrobienia”** — ma być ta sama, bo dopisek w aplikacji to obiecuje (e7).
@@ -118,7 +124,7 @@ Koordynator (Claude), 18.10.2026, 15:24. Gałąź `wyglad/W-przed-wydaniem-3` (o
 - **„+ / −” na mapie Kokpitu** — N: Kokpit ma mapę podglądu (przybliżanie na stronie Mapa), reguła z 07.10.
 
 ## Czeka na bazę (L) — dopisek do wykonawcy
-- **CMR z podpisem odbiorcy** — wymaganie CMR w produkcji (`doc_requirements`) ma kotwicę `AT_LOAD` + 2 h. Decyzja 08.10 (B) to CMR z podpisem odbiorcy po „Dostarczone”. Widok liczy termin już tylko dla dostarczonych transportów; poprawka wymagania i statusu w bazie — do najbliższego dopisku dla wykonawcy.
+- **CMR tylko po rozładunku** (decyzja właściciela 18.10, 17:28) — wymaganie CMR w produkcji (`doc_requirements`) ma kotwicę `AT_LOAD` + 2 h; poprawka wymagania, zabezpieczenia i `doc_requirements_status()`: D-20261018-1740-01. Widok (partia 6) pomija CMR przed „Dostarczone” już teraz.
 - **Eskalacje decyzji** — fałszywe sprawy „SEFS: brak źródła indeksu”, podwójne wpisy, numery wewnętrzne w tytułach: D-20261018-1610-01.
 - **Ślad przejazdu w Boden i linie promów** — z HERE (E45, P9).
 - **Linia „Plik KSH (SharePoint): zsynchronizowano …”, znacznik „Zmiana numeracji”, waga elementu** — W13 i import.

@@ -33,7 +33,8 @@ describe('E31 — wymagania przy transporcie', () => {
   });
   it('CMR po rozładunku = z podpisem odbiorcy (decyzja 1B); kto wgrywa skrótem firmy', () => {
     expect(cmrKind({ category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AFTER_UNLOAD', offsetHours: 48 })).toBe('SIGNED');
-    expect(cmrKind({ category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 })).toBe('LOAD');
+    /* decyzja właściciela 18.10, 17:28: tylko CMR po rozładunku — także przy starym wymaganiu „przy załadunku” w bazie */
+    expect(cmrKind({ category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 })).toBe('SIGNED');
     expect([responsibleOrg('CARRIER'), responsibleOrg('CLIENT'), responsibleOrg('FORWARDER')]).toEqual(['SCX', 'KSH', 'HHL']);
     expect(codesText(['A-1', 'A-2'])).toBe('A-1, A-2');
     expect(codesText(['1', '2', '3', '4', '5', '6', '7'], 3)).toBe('1, 2, 3 … (7)');

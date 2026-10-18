@@ -301,7 +301,6 @@ const PL: Record<string, string> = {
   p5_doc_r_PERMIT_PL: 'Zezwolenie PL',
   p5_doc_r_PERMIT_SE: 'Zezwolenie SE',
   p5_doc_r_CMR_SIGNED: 'CMR z podpisem odbiorcy',
-  p5_doc_r_CMR_LOAD: 'CMR z załadunku',
   p5_doc_r_INSURANCE: 'Polisa OCP przewoźnika',
   p5_doc_r_OCS: 'Polisa HHL',
   p5_doc_who_INSURANCE: 'SCX wpisuje, HHL zatwierdza',
@@ -311,7 +310,6 @@ const PL: Record<string, string> = {
   p5_doc_n_PERMIT_PL: '„Firma” podpina się samo, „Trasa” dodaje SCX przy transporcie',
   p5_doc_n_PERMIT_SE: 'liczy się po przypisaniu rejsu (dziś {n} z {all})',
   p5_doc_n_CMR_SIGNED: 'po wgraniu status „Gotowe do fakturowania”',
-  p5_doc_n_CMR_LOAD: 'bez podpisu odbiorcy',
   p5_doc_n_cover: '{covered} z {total} transportów z ważną polisą',
   p5_doc_n_policy: '{number} do {date}',
   p5_doc_n_policy_wait: '{number} do {date} · czeka na zatwierdzenie HHL',
@@ -490,6 +488,8 @@ const PL: Record<string, string> = {
   /* E31 — panel „Dokumenty” */
   p5_pd_state_OK: 'jest · ',
   p5_pd_state_MISSING: 'brak',
+  /* decyzja 18.10, 17:28: CMR z podpisem odbiorcy dopiero po rozładunku — przed „Dostarczone” nie jest brakiem */
+  p5_pd_state_CMR_wait: 'po rozładunku',
   p5_pd_state_MISSING_due: 'brak · termin {date}',
   p5_pd_state_OVERDUE: 'brak · po terminie od {date}',
   p5_pd_upload: 'Wgraj',

@@ -28,8 +28,8 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { getDocReqCache } from '../../lib/docReqCache';
-import { docStatusRows } from '../../lib/docRequirements';
-import { cmrKind, reqVisible } from '../../lib/p5Docs';
+import { cmrAfterDelivery, docStatusRows } from '../../lib/docRequirements';
+import { reqVisible } from '../../lib/p5Docs';
 import { docRequirementsStart, policiesOf } from '../../lib/p5Source';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { EtaBlock } from './EtaBlock';
@@ -272,7 +272,8 @@ export function PanelOverview(p: Props) {
   const cached = getDocReqCache();
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
   const reqs = cached?.reqs ?? docRequirementsStart();
-  const rows = cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso));
+  /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) */
+  const rows = cmrAfterDelivery(cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso)), () => load.status);
   const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
   const row = (c: string) => rows.find((x) => x.category === c);
   /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
@@ -288,10 +289,9 @@ export function PanelOverview(p: Props) {
         : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
   const cmrDoc = doc('CMR');
   const cmrRow = row('CMR');
-  const cmrSigned = cmrKind(reqs.find((x) => x.category === 'CMR')) === 'SIGNED';
   const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
   const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
-    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, cmrSigned ? 'p7_doc_cmr_after_unload' : 'p7_doc_cmr_after');
+    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, 'p7_doc_cmr_after_unload');
   const policies = policiesOf();
   const policyRow = (key: 'INSURANCE' | 'OCS') => {
     if (!reqVisible(key, role)) return null;
@@ -670,7 +670,7 @@ export function PanelOverview(p: Props) {
         <dl className="po-kv">
           <dt>{pt(locale, permitFirm ? 'p7_doc_permit_firm' : 'p7_doc_permit')}</dt>
           <dd data-permit={permitState}><span className={permitState === 'ok' ? 'po-ok' : 'po-miss'}>{permitText}</span></dd>
-          <dt>{pt(locale, cmrSigned ? 'p7_doc_cmr_signed' : 'p7_doc_cmr')}</dt>
+          <dt>{pt(locale, 'p7_doc_cmr_signed')}</dt>
           <dd data-po-cmr={cmrState}><span className={cmrState === 'ok' ? 'po-ok' : cmrState === 'over' ? 'po-miss' : ''}>{cmrText}</span></dd>
           {pols.map((x) => (
             <Fragment key={x.key}>
