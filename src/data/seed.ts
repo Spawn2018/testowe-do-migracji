@@ -25,7 +25,7 @@ import rawLoads from './loads.json';
 import { applySefsToRoadRate, sefsForLoadDate } from '../lib/sefs';
 import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
-import { seedOrders, seedResourcesForIndex } from './seedIdentity';
+import { deconflictResources, seedOrders, seedResourcesForIndex } from './seedIdentity';
 import { demoSymbolSpec } from '../lib/p7SymbolsDemo';
 import { RISK_I18N } from '../i18n/risks';
 /** I-0: logika bez danych demo — w lib/seedLogic.ts (używana też w buildzie produkcyjnym bez seed.ts). */
@@ -544,11 +544,23 @@ function redatedRawLoads(): Load[] {
   });
 }
 
+/**
+ * Przegląd 18.10 (B3): transporty „Na placu” stoją w strefie placu Boden (środek 65,80539; 21,75914, promień 1 000 m),
+ * a nie na końcu korytarza — Strefy pokazują „teraz w strefie” zgodnie z Kokpitem. D-01 wyjechał ze strefy o 16:07
+ * po 6 min (karta „czy dostarczono?”) i stoi tuż za nią, ok. 1,3 km od środka (poza strefą placu w obu źródłach: 1 000 i 1 200 m) — „stoi na skraju strefy placu”.
+ */
+const SITE_POS: Readonly<Record<string, { lat: number; lng: number; heading: number }>> = {
+  'T-12': { lat: 65.80461, lng: 21.76188, heading: 140 },
+  'T-18': { lat: 65.80602, lng: 21.75441, heading: 210 },
+  'D-01': { lat: 65.8171, lng: 21.76102, heading: 15 },
+};
+
 export function buildSeedLoads(): Load[] {
   /* audyt 17.10 (N6): kolejność jak w pliku KSH — po dacie załadunku (przy tej samej dacie — pozycja w pliku) */
   const sourceLoads = [...redatedRawLoads(), ...buildExtraLoads()]
     .sort((a, b) => a.plannedLoadDate.localeCompare(b.plannedLoadDate) || (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
-  return sourceLoads.map((l, idx) => {
+  /* przegląd 18.10 (B2): ten sam kierowca, ciągnik albo naczepa nie jedzie w dwóch transportach naraz */
+  return deconflictResources(sourceLoads.map((l, idx) => {
     const progress = PROGRESS_OF[l.status] ?? l.progress;
     const pos = positionAlong(progress);
     // Stress: force a few READY seeds that lack cover to DOC_MISSING / keep TRIP gaps
@@ -561,14 +573,16 @@ export function buildSeedLoads(): Load[] {
 
     // Uncovered TRIP kratownice that block READY (K-03 already TRIP+RESOURCES_PENDING)
     // Promote SG-09 / SG-18 to TRIP gaps mid-pipeline stress
+    /* przegląd 18.10 (B1): zestaw wpisany (awizacja kompletna), brakuje tylko zezwolenia — status „Brak dokumentów”,
+       nie „Brak zasobów” (sprawy „Brak kierowcy…” i „Brak naczepy” przy tych transportach były sprzeczne z panelem) */
     if (l.code === 'SG-09') {
-      status = 'RESOURCES_PENDING';
+      status = 'DOC_MISSING';
       docMissing = true;
       if (permit) permit = { ...permit, attachmentKind: 'TRIP' };
     }
     if (l.code === 'SG-18' && permit) {
       // was READY without cover — force gap
-      status = 'RESOURCES_PENDING';
+      status = 'DOC_MISSING';
       docMissing = true;
       permit = { ...permit, attachmentKind: 'TRIP' };
     }
@@ -620,9 +634,7 @@ export function buildSeedLoads(): Load[] {
       pricing,
       progress,
       stage: STATUS_TO_STAGE[status],
-      lat: pos.lat,
-      lng: pos.lng,
-      heading: pos.heading,
+      ...(SITE_POS[l.code] ?? { lat: pos.lat, lng: pos.lng, heading: pos.heading }),
       etaSegments: l.etaSegments ?? [],
       etaBoden: l.etaBoden ?? null,
       etaConfidence: 'MED' as const,
@@ -635,7 +647,7 @@ export function buildSeedLoads(): Load[] {
     // ETA applied lazily in store init via applyEtaToLoad — keep placeholders here
     void idx;
     return base as Load;
-  });
+  }));
 }
 
 /**
@@ -901,7 +913,10 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
   const odp = (o: 'HHL' | 'KSH' | 'SCX') => `Odpowiada: ${OWNER[o]}`;
 
   const docsPending = loads.filter((l) => l.docMissing || l.status === 'DOC_MISSING').slice(0, 3);
-  const resPending = loads.filter((l) => l.status === 'RESOURCES_PENDING').slice(0, 2);
+  /* „Brak kierowcy i numerów rejestracyjnych” tylko przy transporcie, któremu naprawdę brakuje zestawu (przegląd 18.10, B1) */
+  const resPending = loads
+    .filter((l) => l.status === 'RESOURCES_PENDING' && !(l.resources.driverName && l.resources.tractorPlate && l.resources.trailerPlate))
+    .slice(0, 2);
   const silent = loads.find((l) => l.status === 'SILENT') ?? loads.find((l) => l.status === 'IN_TRANSIT_SE');
   const delayed = loads.filter((l) => l.delayed || l.status === 'DELAYED');
   const ferry = loads.find((l) => l.status === 'ON_FERRY' || l.status === 'AT_PORT');
@@ -1447,7 +1462,7 @@ export const SCHEDULE_VERSIONS: ScheduleVersion[] = [
  * Powiadomienia demo (E41, E5; audyt-A A-01, A-02, F-02, F-03): tytuł to „co się stało” bez kodu transportu —
  * nazwę według firmy wstawia dzwonek z `loadId` (HHL „kod · nr HHL”, SCX „kod · nr SCX”, KSH sam kod).
  * Każdy wpis prowadzi do transportu, którego dotyczy: brak CMR — dostarczony bez podpisanego CMR (SG-23),
- * brak sygnału — T-05 (cisza 95 min), brak naczepy — SG-09 (zasoby niekompletne), marża — SG-15.
+ * brak sygnału — T-05 (cisza 95 min), brak kierowcy i zestawu — SG-19 (zasoby niekompletne), marża — SG-15.
  * KSH nie dostaje zadań przewoźnika (CMR); wpis Stref tylko dla HHL (E34 — Strefy ma tylko HHL).
  */
 export const INITIAL_NOTIFICATIONS: Notification[] = [
@@ -1577,12 +1592,13 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n13',
     at: '2026-09-21T10:15:00+02:00',
-    title: 'Brak naczepy',
-    body: 'Uzupełnij zasoby przed załadunkiem.',
+    title: 'Brak kierowcy i zestawu',
+    body: 'Uzupełnij awizację przed załadunkiem.',
     severity: 'HIGH',
     read: false,
     roleScope: ['SCX', 'HHL'],
-    href: { view: 'tasks', loadId: 'load-013' },
+    /* przegląd 18.10 (B1): SG-19 nie ma kierowcy, ciągnika ani naczepy (SG-09 ma zestaw kompletny) */
+    href: { view: 'tasks', loadId: 'load-027' },
   },
 ];
 

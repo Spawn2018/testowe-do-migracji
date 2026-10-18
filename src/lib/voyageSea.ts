@@ -14,7 +14,8 @@ export interface VoyageSea {
 }
 
 export const VOYAGE_SEA_BY_DAY: Record<string, VoyageSea> = {
-  '2026-09-23': { waveM: 1.4, windMs: 11, risk: 'niskie' },
+  /* przegląd 18.10 (B4): rejs Nova Star 23.09, 18:00 — ta sama prognoza co Ryzyka › Sytuacja na trasie (fala 3,2 m, porywy 42 węzły) */
+  '2026-09-23': { waveM: 3.2, windMs: 21.6, risk: 'wysokie' },
   '2026-09-24': { waveM: 2.9, windMs: 19, risk: 'podwyższone' },
   '2026-09-25': { waveM: 3.4, windMs: 22, risk: 'wysokie' },
   '2026-09-26': { waveM: 1.8, windMs: 13, risk: 'niskie' },

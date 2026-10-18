@@ -87,3 +87,114 @@ export function seedResourcesForIndex(
     escortPlate: opts.escort ? (SEED_ESCORTS[index % SEED_ESCORTS.length] as string) : null,
   };
 }
+
+/* ---------- przegląd 18.10 (B2): ten sam kierowca, ciągnik albo naczepa nie jedzie w dwóch transportach naraz ---------- */
+
+/** Dodatkowi kierowcy demo (osoby zmyślone, numery z pul fikcyjnych: PL +48 000 000 0xx, SE +46 70 174 06 xx). */
+const EXTRA_DRIVERS: ReadonlyArray<{ name: string; phone: string }> = [
+  { name: 'Grzegorz Kaczmarek', phone: '+48000000016' },
+  { name: 'Wojciech Piotrowicz', phone: '+48000000017' },
+  { name: 'Mariusz Dąbrowski', phone: '+48000000018' },
+  { name: 'Robert Pawlak', phone: '+48000000019' },
+  { name: 'Dariusz Michalski', phone: '+48000000020' },
+  { name: 'Kamil Zając', phone: '+48000000021' },
+  { name: 'Artur Król', phone: '+48000000022' },
+  { name: 'Sławomir Wieczorek', phone: '+48000000023' },
+  { name: 'Damian Jabłoński', phone: '+48000000024' },
+  { name: 'Przemysław Wróbel', phone: '+48000000025' },
+  { name: 'Konrad Nowicki', phone: '+48000000026' },
+  { name: 'Hubert Majewski', phone: '+48000000027' },
+  { name: 'Norbert Olszewski', phone: '+48000000028' },
+  { name: 'Radosław Stępień', phone: '+48000000029' },
+  { name: 'Waldemar Malinowski', phone: '+48000000030' },
+  { name: 'Zbigniew Jaworski', phone: '+48000000031' },
+  { name: 'Ireneusz Adamczyk', phone: '+48000000032' },
+  { name: 'Leszek Dudek', phone: '+48000000033' },
+  { name: 'Patryk Nowakowski', phone: '+48000000034' },
+  { name: 'Cezary Pietrzak', phone: '+48000000035' },
+  { name: 'Gustav Lindqvist', phone: '+46701740616' },
+  { name: 'Viktor Sandberg', phone: '+46701740617' },
+  { name: 'Emil Forsberg', phone: '+46701740618' },
+  { name: 'Axel Hedlund', phone: '+46701740619' },
+  { name: 'Oskar Nyström', phone: '+46701740620' },
+  { name: 'Linus Ekström', phone: '+46701740621' },
+  { name: 'Hampus Sjöberg', phone: '+46701740622' },
+  { name: 'Filip Wallin', phone: '+46701740623' },
+  { name: 'Sixten Lundgren', phone: '+46701740624' },
+  { name: 'Elias Bergström', phone: '+46701740625' },
+];
+
+const EXTRA_TRACTORS: readonly string[] = [
+  'PO 1R118', 'PO 2R229', 'GS 3R331', 'GS 4R442', 'WZ 5R553', 'WZ 6R664', 'KR 7R775', 'KR 8R886', 'DW 9R997', 'DW 1S108',
+  'LU 2S219', 'LU 3S321', 'CT 4S432', 'CT 5S543', 'NE 6S654', 'NE 7S765', 'BDA 214', 'CHL 325', 'DKT 436', 'EFR 547',
+  'GLN 658', 'HMS 769', 'JRT 871', 'KVB 982', 'LXD 193', 'MZP 204', 'NRA 315', 'OSB 426', 'PTC 537', 'RUD 648',
+];
+
+const EXTRA_TRAILERS: readonly string[] = [
+  'PO 1W118', 'PO 2W229', 'GS 3W331', 'GS 4W442', 'WZ 5W553', 'WZ 6W664', 'KR 7W775', 'KR 8W886', 'DW 9W997', 'DW 1X108',
+  'LU 2X219', 'LU 3X321', 'CT 4X432', 'CT 5X543', 'NE 6X654', 'NE 7X765', 'BDA 81V', 'CHL 92V', 'DKT 13V', 'EFR 24V',
+  'GLN 35V', 'HMS 46V', 'JRT 57V', 'KVB 68V', 'LXD 79V', 'MZP 81W', 'NRA 92W', 'OSB 13W', 'PTC 24W', 'RUD 35W',
+];
+
+type DeconflictLoad = {
+  code: string;
+  status: string;
+  plannedLoadDate: string;
+  plannedDeliverDate: string;
+  unloadedAt?: string | null;
+  resources: { driverName: string | null; driverPhone: string | null; tractorPlate: string | null; trailerPlate: string | null };
+};
+
+const DAY_MS = 864e5;
+/** Powrót z Boden do Śremu i odpoczynek — kierowca i zestaw wolne dopiero po tym czasie. */
+const RETURN_DAYS = 3;
+/** Kolejność pierwszeństwa: transporty w drodze i na placu zachowują swój zestaw (to je widać w Kokpicie i na Mapie). */
+const PRIORITY: Record<string, number> = {
+  APPROACHING_SITE: 0, IN_TRANSIT_SE: 0, AT_PORT_SE: 0, ON_FERRY: 0, AT_PORT: 0, IN_TRANSIT_PL: 0, LOADING: 0,
+  DELAYED: 0, SILENT: 0, UNLOADING: 1, DELIVERED: 2, READY_TO_INVOICE: 2, INVOICED: 2,
+};
+
+/**
+ * Przydział zestawu bez nakładania się w czasie: okres zajęcia = dzień załadunku … rozładunek (albo dzień dostawy) + 3 dni.
+ * Transport, którego kierowca, ciągnik albo naczepa jest już zajęty w tym okresie, dostaje wolny z puli dodatkowej.
+ * Deterministyczne (te same dane przy każdym starcie demo).
+ */
+export function deconflictResources<T extends DeconflictLoad>(loads: readonly T[]): T[] {
+  const span = (l: T): [number, number] => {
+    const start = Date.parse(`${l.plannedLoadDate}T00:00:00+02:00`);
+    const end = l.unloadedAt ? Date.parse(l.unloadedAt) : Date.parse(`${l.plannedDeliverDate}T23:59:00+02:00`);
+    return [start, end + RETURN_DAYS * DAY_MS];
+  };
+  const busy = new Map<string, Array<[number, number]>>();
+  const free = (key: string, [a, b]: [number, number]) => !(busy.get(key) ?? []).some(([c, d]) => a <= d && c <= b);
+  const take = (key: string, s: [number, number]) => busy.set(key, [...(busy.get(key) ?? []), s]);
+  const order = [...loads.keys()].sort((i, j) => {
+    const a = loads[i]; const b = loads[j];
+    const pa = PRIORITY[a.status] ?? 3; const pb = PRIORITY[b.status] ?? 3;
+    return pa - pb || a.plannedLoadDate.localeCompare(b.plannedLoadDate) || a.code.localeCompare(b.code, 'pl', { numeric: true });
+  });
+  const out = [...loads];
+  for (const i of order) {
+    const l = loads[i];
+    if (l.status === 'CANCELLED') continue;
+    const s = span(l);
+    const r = { ...l.resources };
+    if (r.driverName) {
+      if (!free(`d:${r.driverName}`, s)) {
+        const d = [...SEED_DRIVERS, ...EXTRA_DRIVERS].find((x) => free(`d:${x.name}`, s));
+        if (d) { r.driverName = d.name; r.driverPhone = d.phone; }
+      }
+      take(`d:${r.driverName}`, s);
+    }
+    if (r.tractorPlate) {
+      if (!free(`t:${r.tractorPlate}`, s)) r.tractorPlate = [...SEED_TRACTORS, ...EXTRA_TRACTORS].find((x) => free(`t:${x}`, s)) ?? r.tractorPlate;
+      take(`t:${r.tractorPlate}`, s);
+    }
+    if (r.trailerPlate) {
+      if (!free(`n:${r.trailerPlate}`, s)) r.trailerPlate = [...SEED_TRAILERS, ...EXTRA_TRAILERS].find((x) => free(`n:${x}`, s)) ?? r.trailerPlate;
+      take(`n:${r.trailerPlate}`, s);
+    }
+    out[i] = { ...l, resources: { ...l.resources, ...r } };
+  }
+  return out;
+}

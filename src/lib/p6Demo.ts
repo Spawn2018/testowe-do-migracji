@@ -35,8 +35,9 @@ export function demoDecisions(loads: readonly Load[], nowIso: string): TodoDecis
     const l = byCode(loads, code);
     if (l) out.push({ ...d, deciderRole: d.deciderRole ?? null, loadId: l.id, status: d.escalatedAt ? 'NEW' : 'ASSIGNED', options: [] });
   };
-  add('SG-09', { id: 'demo-dec-1', typeCode: 'NO_AWIZACJA', titleKey: 'dec_type_NO_AWIZACJA', title: 'Brak awizacji w terminie', dueAt: iso(now - 50 * H), escalatedAt: iso(now - 49.9 * H), decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
-  add('SG-18', { id: 'demo-dec-2', typeCode: 'NO_AWIZACJA', titleKey: 'dec_type_NO_AWIZACJA', title: 'Brak awizacji w terminie', dueAt: iso(now + 20 * H), escalatedAt: null, decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
+  /* przegląd 18.10 (B1): SG-09 ma zestaw kompletny, brakuje zezwolenia; brak awizacji — SG-19 (bez kierowcy i zestawu) */
+  add('SG-09', { id: 'demo-dec-1', typeCode: 'DOC_MISSING', titleKey: 'dec_type_DOC_MISSING', title: 'Brak zezwolenia lub dokumentu przed „Gotowy”', dueAt: iso(now - 50 * H), escalatedAt: iso(now - 49.9 * H), decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
+  add('SG-19', { id: 'demo-dec-2', typeCode: 'NO_AWIZACJA', titleKey: 'dec_type_NO_AWIZACJA', title: 'Brak awizacji w terminie', dueAt: iso(now + 20 * H), escalatedAt: null, decider: 'SCX', deciderRole: 'CARRIER_DISPATCH' });
   add('SG-10', { id: 'demo-dec-3', typeCode: 'ETA_AFTER_LATEST', titleKey: 'dec_type_ETA_AFTER_LATEST', title: 'ETA po godzinie „najpóźniej do”', dueAt: iso(now + 3 * H), escalatedAt: null, decider: 'HHL', deciderRole: 'HHL_OPS' });
   return out;
 }
@@ -67,10 +68,15 @@ export function demoHistory(id: string, nowIso: string): CaseEvent[] {
 
 /** Zakaz ruchu w dniu przejazdu — informacja przy transporcie (nie liczy się), dwa transporty z kartą. */
 export function demoTimeBans(loads: readonly Load[], nowIso: string): Risk[] {
-  const day = formatListDateTime(iso(Date.parse(nowIso) + 48 * H)).split(', ')[0];
-  return ['SG-09', 'SG-10']
-    .map((code) => byCode(loads, code))
-    .filter((l): l is Load => !!l)
+  const banMs = Date.parse(nowIso) + 48 * H;
+  const day = formatListDateTime(iso(banMs)).split(', ')[0];
+  const banDay = new Intl.DateTimeFormat('en-CA', { timeZone: TZ_OPS }).format(new Date(banMs));
+  /* przegląd 18.10 (P21): dzień zakazu w terminie transportu — transporty w drodze do Szwecji z dostawą w ten dzień albo później */
+  const ON_WAY: ReadonlySet<string> = new Set(['AT_PORT', 'ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'DELAYED']);
+  return [...loads]
+    .filter((l) => ON_WAY.has(l.status) && l.plannedLoadDate <= banDay && l.plannedDeliverDate >= banDay)
+    .sort((a, b) => a.code.localeCompare(b.code, 'pl', { numeric: true }))
+    .slice(0, 2)
     .map((l, i) => ({
       id: `demo-ban-${i}`, type: 'ROAD_SE' as const, kind: 'ROAD_SE', severity: 'LOW' as const,
       title: `Zakaz ruchu w SE w dniu przejazdu ${day}`, detail: '', loadId: l.id, owner: 'HHL' as const,
