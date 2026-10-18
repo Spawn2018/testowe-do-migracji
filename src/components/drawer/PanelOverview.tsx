@@ -280,19 +280,18 @@ export function PanelOverview(p: Props) {
   /* E32 (img/e32-after „Dokumenty”): w skrócie tylko polisa przewoźnika; polisa HHL — w zakładce Dokumenty (E31) */
   const pols = [policyRow('INSURANCE')].filter((x): x is NonNullable<ReturnType<typeof policyRow>> => !!x);
   const docMiss = (permitState !== 'ok' ? 1 : 0) + (cmrState === 'over' ? 1 : 0) + pols.filter((x) => !x.ok && !x.unknown).length;
-  const polsOk = pols.every((q) => !!q.ok);
 
 
   /* ---------- Do zrobienia przy tym transporcie (E32 pkt 2; lista E7) ---------- */
-  /* bez useMemo — zależy też od stanu zezwolenia i polisy liczonego wyżej przy każdym rysowaniu (React Compiler) */
+  /* bez useMemo: zależy też od stanu zezwolenia liczonego wyżej przy każdym rysowaniu; jeden transport — koszt pomijalny */
   const card = (() => {
     if (role === 'KSH') return null;
     /* właściciel 18.10, 11:35: bez spraw już zrobionych (dane wpisane w panelu, transport dostarczony) — `todoRules.todoDoneOnLoad` */
     const own = visibleTodoRisks(role, openTodoRisks(risks.filter((x) => x.loadId === load.id), loads))
-      /* „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy sekcja „Dokumenty” pokazuje zezwolenie „jest”;
-         brak dokumentu przed załadunkiem z bazy (`rk_res_docs`: zezwolenie albo polisa) — gdy jest też polisa przewoźnika */
-      .filter((x) => !(permitState === 'ok' && (x.titleKey === 'rk_seed_permit' || PERMIT_TODO.test(x.title)
-        || (x.titleKey === 'rk_res_docs' && polsOk))));
+      /* demo: „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy sekcja „Dokumenty” pokazuje zezwolenie „jest”.
+         Produkcja: alarm braku dokumentu (`rk_res_docs`) zamyka baza — dopiero przy zezwoleniach zarejestrowanych
+         w `load_permits` (0143 `l3_scan`), nie przy samym wgranym pliku; widok go nie chowa (F7 #300 B1) */
+      .filter((x) => !(!prod && permitState === 'ok' && (x.titleKey === 'rk_seed_permit' || PERMIT_TODO.test(x.title))));
     /* „Brak awizacji” znika, gdy awizacja jest kompletna (ten sam stan co sekcja „Kierowcy i zestaw”) */
     const decs = sampleDecisionsOf(loads, nowIso, role).filter((d) => d.loadId === load.id && !(d.typeCode === 'NO_AWIZACJA' && awiz === 'ok'));
     return buildTodo({ risks: own, decisions: decs, nowIso }).find((c) => c.loadId === load.id) ?? null;

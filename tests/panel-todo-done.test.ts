@@ -9,9 +9,9 @@ import { openTodoRisks, todoDoneOnLoad } from '../src/lib/todoRules';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 
 const base = buildDemoSnapshot().loads[0];
-const load = (p: Partial<Load> & { res?: Partial<Load['resources']> }): Load => ({
+const load = ({ res, ...p }: Partial<Load> & { res?: Partial<Load['resources']> }): Load => ({
   ...base, id: 'L-T1', status: 'PLANNED', hhlOrderNo: null, carrierOrderNo: null, ...p,
-  resources: { ...base.resources, driverName: null, driverPhone: null, tractorPlate: null, trailerPlate: null, ...p.res },
+  resources: { ...base.resources, driverName: null, driverPhone: null, tractorPlate: null, trailerPlate: null, ...res },
 }) as Load;
 const risk = (titleKey: string, p: Partial<Risk> = {}): Risk => ({
   id: `r-${titleKey}`, type: 'OPS', severity: 'HIGH', title: 'x', detail: '', owner: 'SCX', meta: '', nextAction: '',

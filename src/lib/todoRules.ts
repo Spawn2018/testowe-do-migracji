@@ -40,7 +40,7 @@ export function isTodoRisk(r: R): boolean {
 const LOAD_CLOSED: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED']);
 const filled = (v: string | null | undefined): boolean => !!(v ?? '').trim();
 
-/** Alarmy przed załadunkiem i w drodze — po dostawie albo anulowaniu transportu nieaktualne (baza ich wtedy nie sprawdza: 0143 `l3_*`). */
+/** Alarmy przed załadunkiem i w drodze — po dostawie albo anulowaniu transportu nieaktualne (zamknięcie w bazie — D-20261018-1215-01 §2). */
 const BEFORE_DELIVERY_KEYS: ReadonlySet<string> = new Set([
   'rk_res_driver', 'rk_res_vehicle', 'rk_res_docs', 'rk_res_escort', 'rk_order_no_hhl', 'rk_order_no_carrier', 'rk_seed_res',
   'rk_auto_status_blocked', 'rk_silent_vehicle', 'rk_eta_breach', 'rk_off_corridor',

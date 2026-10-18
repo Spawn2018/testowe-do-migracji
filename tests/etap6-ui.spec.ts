@@ -302,6 +302,32 @@ test.describe('Panel › Przegląd › Do zrobienia — aktualny stan, zwijana n
     }
   });
 
+  /* F7 #300 P1: sprawa zrobiona w panelu znika od razu; gdy nic nie zostaje — sekcji nie ma; niezgodne zezwolenie zostaje */
+  for (const width of [1440, 390] as const) {
+    test(`SCX ${width}: wgranie zezwolenia przy SG-09 — sekcja „Do zrobienia” znika; SG-07 (niezgodne z zestawem) zostaje`, async ({ page }) => {
+      await fresh(page);
+      await page.evaluate(() => (document.querySelector('#roleSeg button[data-role="SCX"]') as HTMLButtonElement).click());
+      await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
+      await openLoad(page, 'SG-09');
+      await expect(page.locator('.drawer [data-po-todo]')).toHaveCount(1);
+      await page.click('#dtab-docs');
+      await page.locator('.drawer [data-pd-upload]').first().click();
+      const modal = page.locator('[data-upload-modal]');
+      await expect(modal).toBeVisible();
+      if (!(await modal.locator('[data-up-kind]').inputValue())) await modal.locator('[data-up-kind]').selectOption('PERMIT_PL');
+      await modal.locator('[data-up-file]').setInputFiles({ name: 'zezwolenie.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF\n') });
+      await modal.locator('[data-up-send]').click();
+      await expect(modal).toHaveCount(0);
+      await page.click('#dtab-overview');
+      await page.waitForSelector('aside.drawer [data-overview]');
+      await expect(page.locator('.drawer [data-permit]')).toHaveAttribute('data-permit', 'ok');
+      await expect(page.locator('.drawer [data-po-todo]')).toHaveCount(0);
+      await openLoad(page, 'SG-07');
+      await expect(page.locator('.drawer [data-permit]')).toHaveAttribute('data-permit', 'mismatch');
+      await expect(page.locator('.drawer [data-po-todo]')).toContainText('Zezwolenie nie obejmuje wymiarów zestawu');
+    });
+  }
+
   test('telefon: „Do zrobienia” zwinięte z pierwszą sprawą i liczbą pozostałych, rozwija się; inne sekcje bez zmian', async ({ page }) => {
     await fresh(page);
     await page.setViewportSize({ width: 390, height: 844 });
