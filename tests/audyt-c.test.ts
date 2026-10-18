@@ -48,7 +48,7 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
     /* audyt-AF A-01: tytuł bez kodu — nazwę transportu (SG-15) wstawia dzwonek z odnośnika */
     expect(text).toContain('Marża poniżej progu 4%');
     expect(text).not.toContain('· SG-15');
-    expect(text).toContain('Faktura w sporze · t38');
+    expect(text).toContain('Faktura do sprawdzenia · t38');
     expect(text).toContain('Zgodność OK · faktoring zaplanowany.');
   });
 });

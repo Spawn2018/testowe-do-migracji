@@ -569,7 +569,7 @@ export function buildSeedLoads(): Load[] {
     let permit = l.permit ? { ...l.permit } : undefined;
     // Below-threshold stress (≥3 loads) — actionable in Finance; partia 5: wiersze sumują się do „Razem”
     const pricing = consistentDemoPricing(withoutDemoExtras(l.pricing), l.plannedLoadDate,
-      ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code) ? 0.09 : undefined);
+      ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code) ? 0.03 : undefined); /* przegląd 18.10 (P9): poniżej progu 4 % (Finanse, dzwonek) */
 
     // Uncovered TRIP kratownice that block READY (K-03 already TRIP+RESOURCES_PENDING)
     // Promote SG-09 / SG-18 to TRIP gaps mid-pipeline stress
@@ -1043,7 +1043,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-snow',
     type: 'FORCE_MAJEURE',
     severity: 'CRITICAL',
-    title: 'Siła wyższa — zamknięcie E4 (śnieżyca) · +4 h',
+    title: 'Siła wyższa — zamknięcie E4 (śnieżyca) · dolicza 4 h do przyjazdu',
     detail: 'Odcinek Luleå–Boden zamknięty dla ponadgabarytu; kolumna za pługiem. Przyczyna: pogoda.',
     loadId: inSe?.id ?? seLoad2?.id,
     owner: 'HHL',
@@ -1059,7 +1059,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-storm',
     type: 'FORCE_MAJEURE',
     severity: 'HIGH',
-    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09.2026 · +12 h',
+    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09.2026 · dolicza 12 h do przyjazdu',
     detail: 'Armator wstrzymuje odejście przy fali >3 m. Transporty w oknie promu.',
     loadId: ferryLoad?.id,
     owner: 'HHL',
@@ -1075,7 +1075,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-strike',
     type: 'FORCE_MAJEURE',
     severity: 'HIGH',
-    title: 'Siła wyższa — akcja związkowa port Nynäshamn · +6 h',
+    title: 'Siła wyższa — akcja związkowa port Nynäshamn · dolicza 6 h do przyjazdu',
     detail: 'Opóźnienie wyładunku HGV; kolejka na rampach. Dotyczy transportów SE_ROAD.',
     loadId: seLoad2?.id ?? inSe?.id,
     owner: 'SCX',
@@ -1090,7 +1090,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-border',
     type: 'FORCE_MAJEURE',
     severity: 'CRITICAL',
-    title: 'Siła wyższa — kontrola graniczna / kolejka · +3 h',
+    title: 'Siła wyższa — kontrola graniczna / kolejka · dolicza 3 h do przyjazdu',
     detail: 'Wzmożone kontrole na odcinku podejścia do Boden; ponadgabaryt wstrzymany.',
     loadId: approaching?.id ?? inSe?.id,
     owner: 'HHL',
@@ -1169,7 +1169,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
       id: 'risk-weather-ice',
       type: 'FORCE_MAJEURE',
       severity: 'CRITICAL',
-      title: 'Siła wyższa — oblodzenie E4 Gävle–Sundsvall · +5 h',
+      title: 'Siła wyższa — oblodzenie E4 Gävle–Sundsvall · dolicza 5 h do przyjazdu',
       detail: 'Wstrzymano przejazd ponadgabarytu do czasu przejazdu pługosolarek; przyczyna: pogoda.',
       loadCode: 'SG-31',
       owner: 'HHL',
@@ -1509,8 +1509,9 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n5',
     at: '2026-09-22T14:05:00+02:00',
-    title: 'Faktura w sporze · t38',
-    body: 'Różnica ponad 50 EUR na pozycji SG-04.',
+    title: 'Faktura do sprawdzenia · t38',
+    /* przegląd 18.10 (P8): ten sam stan co na stronie Faktury — faktura SCX t38 „Do weryfikacji”, różnica 180,00 PLN */
+    body: 'Różnica 180,00 PLN między fakturą SCX a rozliczeniem tygodnia.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],

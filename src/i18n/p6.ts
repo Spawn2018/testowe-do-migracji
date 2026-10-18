@@ -9,7 +9,7 @@ import { t } from './messages';
 const PL: Record<string, string> = {
   p6_title: 'Ryzyka',
   p6_todo: 'Do zrobienia',
-  p6_todo_same: 'ta sama liczba w menu, w Kokpicie i w dzwonku',
+  p6_todo_same: 'ta sama liczba w menu i w Kokpicie',
   p6_scope_MINE: 'Moje',
   p6_scope_FIRM: 'Moja firma',
   p6_scope_ALL: 'Wszystkie',
