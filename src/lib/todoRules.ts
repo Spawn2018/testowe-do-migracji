@@ -7,7 +7,7 @@
  * - sprawa techniczna bez transportu (SMS, kopie, źródła danych) — Opcje › System › Stan systemu.
  * Samozamykanie, „przed pojazdem” i decyzje w liczbie — wykonawca (P6, dopisek).
  */
-import type { Risk } from '../types';
+import type { Load, LoadStatus, Risk } from '../types';
 import { isTechnicalRoadNotice } from './format';
 
 const ROUTE_TYPES: ReadonlySet<Risk['type']> = new Set<Risk['type']>(['FERRY', 'ROAD_SE', 'FORCE_MAJEURE']);
@@ -34,6 +34,52 @@ export function isRouteOnly(r: R): boolean {
 /** Sprawa do zrobienia (liczy się i jest na liście). */
 export function isTodoRisk(r: R): boolean {
   return !isTechnicalRoadNotice(r.title) && !isTimeBan(r) && !isRouteOnly(r) && !isSystemRisk(r);
+}
+
+/** Transport po dostawie albo anulowany — alarmy „przed załadunkiem” przy nim są już nieaktualne. */
+const LOAD_CLOSED: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED']);
+const filled = (v: string | null | undefined): boolean => !!(v ?? '').trim();
+
+/** Alarmy przed załadunkiem i w drodze — po dostawie albo anulowaniu transportu nieaktualne (zamknięcie w bazie — D-20261018-1215-01 §2). */
+const BEFORE_DELIVERY_KEYS: ReadonlySet<string> = new Set([
+  'rk_res_driver', 'rk_res_vehicle', 'rk_res_docs', 'rk_res_escort', 'rk_order_no_hhl', 'rk_order_no_carrier', 'rk_seed_res',
+  'rk_auto_status_blocked', 'rk_silent_vehicle', 'rk_eta_breach', 'rk_off_corridor',
+]);
+
+/**
+ * Sprawa już zrobiona według danych transportu w aplikacji (właściciel 18.10.2026, 11:35 i 11:46: sekcja „Do zrobienia”
+ * w panelu transportu › Przegląd pokazuje tylko aktualny stan). Ta sama zasada co w bazie (0143 `l3_*`, 0012 numery zleceń):
+ * - „brak awizacji” (`rk_res_driver`) — kierowca, telefon, ciągnik i naczepa wpisane;
+ * - „brak tablic” (`rk_res_vehicle`) — ciągnik i naczepa wpisane;
+ * - „brak numeru zlecenia HHL / przewoźnika” — numer wpisany;
+ * - alarmy przed załadunkiem i w drodze przy transporcie dostarczonym, zafakturowanym albo anulowanym.
+ * Sprawa znika od razu po wpisaniu danych w panelu, bez czekania na zamknięcie w bazie i odświeżenie strony.
+ */
+export function todoDoneOnLoad(r: Partial<Pick<Risk, 'titleKey'>>, load: Load | undefined): boolean {
+  if (!load || !r.titleKey) return false;
+  if (LOAD_CLOSED.has(load.status) && BEFORE_DELIVERY_KEYS.has(r.titleKey)) return true;
+  const res = load.resources;
+  switch (r.titleKey) {
+    case 'rk_res_driver':
+      return filled(res.driverName) && filled(res.driverPhone) && filled(res.tractorPlate) && filled(res.trailerPlate);
+    case 'rk_res_vehicle':
+      return filled(res.tractorPlate) && filled(res.trailerPlate);
+    /* demo: „Brak kierowcy i numerów rejestracyjnych” — kierowca, ciągnik i naczepa (jak `clearResourceGapRisks` w store) */
+    case 'rk_seed_res':
+      return filled(res.driverName) && filled(res.tractorPlate) && filled(res.trailerPlate);
+    case 'rk_order_no_hhl':
+      return filled(load.hhlOrderNo);
+    case 'rk_order_no_carrier':
+      return filled(load.carrierOrderNo);
+    default:
+      return false;
+  }
+}
+
+/** Ryzyka bez spraw już zrobionych (`todoDoneOnLoad`) — wejście sekcji „Do zrobienia” w panelu transportu › Przegląd (właściciel 18.10, 11:46: tylko ta sekcja). */
+export function openTodoRisks<T extends Partial<Pick<Risk, 'loadId' | 'titleKey'>>>(risks: readonly T[], loads: readonly Load[]): T[] {
+  const byId = new Map(loads.map((l) => [l.id, l]));
+  return risks.filter((r) => !(r.loadId && todoDoneOnLoad(r, byId.get(r.loadId))));
 }
 
 /**

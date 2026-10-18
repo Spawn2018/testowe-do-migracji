@@ -82,6 +82,14 @@
 .po-fold-b{display:flex;flex-direction:column;gap:10px;padding:0 14px 14px}
 .po-go-ph{align-self:flex-start;min-height:44px}
 .po-fold > summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* właściciel 18.10, 11:35: „Do zrobienia” na telefonie zwija się jak pozostałe sekcje; pasek po lewej (bursztyn / czerwień) zostaje,
+   w linii stanu pierwsza sprawa i liczba pozostałych — po rozwinięciu linia stanu znika (lista pod spodem) */
+.po-todo.po-fold{border-left:4px solid var(--amber)}
+.po-todo.po-fold.is-red{border-left-color:var(--red)}
+.po-todo.po-fold > summary{align-items:flex-start;padding-top:12px;padding-bottom:12px}
+.po-todo.po-fold .po-today,.po-todo.po-fold .po-fold-i{margin-top:2px}
+.po-todo-s{display:block;margin-top:2px;font-size:14.5px;color:var(--ink-2);overflow-wrap:anywhere}
+.po-todo.po-fold[open] .po-todo-s{display:none}
 
 /* okno Awizacja (E32 „Po zmianie — okno Awizacja”): szerokość ~560 px, nagłówek bez tła, „Brakuje: …” na czerwono,
    pola puste z czerwoną krawędzią po lewej, odcinki w ramkach, stopka z opisem i przyciskami */
