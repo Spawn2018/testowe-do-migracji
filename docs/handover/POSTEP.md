@@ -3058,3 +3058,8 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 
 - 21 z tych transportów ma załadunek przed 18.10 (ostatnie dwa: SG-21 19.10 i T-11 20.10). Eskalacje będą wracać, dopóki właściciel ich nie zamknie albo nie anuluje. Przypomnienie: zamknąć stare zaplanowane transporty bez kierowcy i tablic.
 
+## 2026-10-19 00:10 — DOPISEK D-20261019-0005-01 W PLANIE
+
+- Po CMR (D-20261018-1740-01), przed A3: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL bez zmian. Baza w tej pozycji; aplikacja w `wyglad/W-przed-wydaniem-4`.
+- Bieżąca pozycja bez zmian: eskalacje decyzji, PR #306. Tego dopisku nie wdrażam w tej przerwie.
+

@@ -94,7 +94,8 @@ begin
   end if;
   v_res := sefs_week_calc(p_project, p_load_date);
   v_prev_start := (p_load_date - ((extract(isodow from p_load_date)::int) - 1)) - 7;
-  v_final := coalesce((v_res->>'final')::boolean, false);
+  v_final := coalesce((v_res->>'final')::boolean, false)
+    or coalesce(v_res->>'status', '') = 'OSTATECZNY';
   if coalesce(v_res->>'ok', '') <> 'true' then
     v_reason := 'SOURCE';
   elsif coalesce((v_res->>'over_table_sek')::boolean, false) or coalesce((v_res->>'over_table_pln')::boolean, false) then
