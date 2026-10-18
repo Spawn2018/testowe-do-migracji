@@ -590,6 +590,12 @@ export function buildSeedLoads(): Load[] {
       permit = { ...permit, attachmentKind: 'TRIP' };
       docMissing = true;
     }
+    /* F7 #307 runda 2 (P-A): zezwolenia firmowe SG w demo ważne do 24.09 — SG-29 (załadunek 24.10) bez pokrycia
+       nie może być „Gotowy”; czeka na nowe zezwolenie jak SG-09 i SG-18 */
+    if (l.code === 'SG-29') {
+      status = 'DOC_MISSING';
+      docMissing = true;
+    }
     // SG-34: permit MISMATCH must not sit in READY (READY gate / P9)
     if (l.code === 'SG-34') {
       status = 'DOC_MISSING';

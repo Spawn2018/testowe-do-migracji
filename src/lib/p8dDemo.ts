@@ -25,11 +25,11 @@ const ZONES: ZoneOption[] = [
 ];
 
 /* E34 „Zdarzenia stref” (przegląd 18.10, B5: przed zegarem demo 23.09, 16:32, te same transporty co oś Status):
-   T-11 Śrem ENTER 17.09 07:40 → EXIT 09:40, bufor Boden ENTER 22.09 05:22 → EXIT 10:20 (50 km od placu — ok. 40 min jazdy, F7 #307 D7), plac ENTER 05:56 → EXIT 09:40
+   T-11 Śrem ENTER 17.09 07:40 → EXIT 09:40, bufor Boden ENTER 22.09 05:06 → EXIT 10:20 (granica bufora ok. 60 km drogą od placu — ok. 50 min jazdy, F7 #307 D7 i r2 D-C), plac ENTER 05:56 → EXIT 09:40
    (Dostarczone); SG-24 bufor Gdańsk ENTER 18.09 13:40 → EXIT 14:15 */
 const VISITS: Visit[] = [
   { code: 'T-11', loadId: null, zoneId: 'z-srem', enter: '2026-09-17T05:40:00Z', exit: '2026-09-17T07:40:00Z' },
-  { code: 'T-11', loadId: null, zoneId: 'z-bod-buf', enter: '2026-09-22T03:22:00Z', exit: '2026-09-22T08:20:00Z' },
+  { code: 'T-11', loadId: null, zoneId: 'z-bod-buf', enter: '2026-09-22T03:06:00Z', exit: '2026-09-22T08:30:00Z' },
   { code: 'T-11', loadId: null, zoneId: 'z-bod', enter: '2026-09-22T03:56:00Z', exit: '2026-09-22T07:40:00Z' },
   { code: 'SG-24', loadId: null, zoneId: 'z-gda-buf', enter: '2026-09-18T11:40:00Z', exit: '2026-09-18T12:15:00Z' },
 ];
@@ -49,8 +49,8 @@ const ISSUES: { code: string; issue: string; at: string }[] = [
 const RUNS: RuleRun[] = [
   { id: 'r6', at: '2026-09-22T03:57:00Z', rules: ['Dojazd na plac'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'wjazd na plac, a reguła dotyczy strefy 50 km' } },
   { id: 'r5', at: '2026-09-22T03:57:00Z', rules: ['Wjazd przed port'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'to nie strefa przed portem' } },
-  { id: 'r4', at: '2026-09-22T03:22:00Z', rules: ['Dojazd na plac'], code: 'T-11', loadId: null, result: { kind: 'done', notify: [{ who: 'KSH', n: 4 }, { who: 'SCX', n: 1 }] } },
-  { id: 'r3', at: '2026-09-22T03:22:00Z', rules: ['Wjazd przed port'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'to strefa przed placem' } },
+  { id: 'r4', at: '2026-09-22T03:06:00Z', rules: ['Dojazd na plac'], code: 'T-11', loadId: null, result: { kind: 'done', notify: [{ who: 'KSH', n: 4 }, { who: 'SCX', n: 1 }] } },
+  { id: 'r3', at: '2026-09-22T03:06:00Z', rules: ['Wjazd przed port'], code: 'T-11', loadId: null, result: { kind: 'nomatch', why: 'to strefa przed placem' } },
   { id: 'r1', at: '2026-09-18T11:40:00Z', rules: ['Dojazd na plac', 'Wjazd przed port'], code: 'SG-24', loadId: null, result: { kind: 'skipped', since: '2026-09-15T06:09:00Z' } },
 ];
 

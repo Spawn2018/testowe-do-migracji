@@ -13,5 +13,11 @@ export function groupPhone(raw: string): string {
     : /^(2[1-689]|3[578]|42|5[09]|6[7-9]|8[05789]|9[679])/.test(digits) ? 3 : 2;
   const cc = plus ? `+${digits.slice(0, ccLen)}` : '';
   const rest = plus ? digits.slice(ccLen) : digits;
-  return [cc, ...(rest.match(/\d{1,3}/g) ?? [])].filter(Boolean).join(' ');
+  /* grupy po 3 cyfry; gdy na końcu zostałaby jedna cyfra — dwie ostatnie grupy po 2 (F7 #307 r2 D-A: „202 555 01 00”) */
+  const groups = rest.match(/\d{1,3}/g) ?? [];
+  if (groups.length >= 2 && groups[groups.length - 1].length === 1) {
+    const tail = groups.splice(-2).join('');
+    groups.push(tail.slice(0, 2), tail.slice(2));
+  }
+  return [cc, ...groups].filter(Boolean).join(' ');
 }

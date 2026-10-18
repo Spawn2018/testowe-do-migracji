@@ -209,7 +209,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           draft={{ text: 'Prom Stena Estelle 24.09.2026 wypływa o 10:00 zamiast 08:00. Awizacje bez zmian.', firms: ['HHL', 'KSH', 'SCX'], until: '2026-09-24T12:00' }}
           history={[
             { id: 'b1', when: '14.09.2026, 22:04', who: 'Administrator HHL', text: 'Witamy w Watch Tower. To jest komunikat testowy.', line: 'HHL, KSH, SCX · zdjęty 15.09.2026, 14:50', test: true },
-            { id: 'b2', when: '14.09.2026, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5 s', test: true },
+            { id: 'b2', when: '14.09.2026, 22:03', who: 'Administrator HHL', text: 'Witamy w Watch Tower…', line: 'zdjęty po 5\u00a0s', test: true },
           ]}
         />
       ),

@@ -75,6 +75,13 @@ Opcje › Opłata paliwowa: data „dziś 14.10.2026” była tylko w teście je
 - D1: kody kraju 1 i 3 cyfry (test `phone-display`). D2: twarde spacje w 4 tekstach i łączniki w zakresach objazdów. D6: po zapisie dat przez Administratora HHL „Zapisano daty i godziny — zmiana jest w Historii transportu.”. D7: T-11 — wyjazd z bufora 40 min po placu, sprawa postoju w trakcie postoju.
 - Bez zmian (N): D4 — Kokpit liczy etap „Plac” (D-01 po wyjeździe czeka na „czy dostarczono?”), Strefy liczą auta w strefie; D8 — karta „czy dostarczono?” dotyczy tylko transportów przed „Dostarczone”; D9 — do czasu części bazy D-20261019-0005-01 §2 zapis Administratora HHL po załadunku odrzuci baza dzisiejszym komunikatem (w kolejce Cursora tuż po D-1740).
 
+## F7 runda 2 (19.10, 01:50) — 0 B, 1 P; poprawione
+- P-A: SG-29 (załadunek 24.10) był „Gotowy” bez ważnego zezwolenia — teraz „Brak dokumentów”, jak SG-09 i SG-18.
+- D-A: numery z 10 cyframi po kodzie kraju bez pojedynczej cyfry na końcu („+1 202 555 01 00”).
+- D-C: T-11 — wjazd do bufora 50 min przed placem (granica bufora ok. 60 km drogą).
+- D-F: liczba testów w opisie PR. D-G: „zdjęty po 5 s” z twardą spacją.
+- Bez zmian (N): D-B — „28 · podpięte samo” liczy też SG-07 i SG-34: zezwolenie jest podpięte, ale nie obejmuje zestawu („niezgodne z zestawem”), stan sprzed PR; D-D — ważność w `attachmentDocForLoad` to osobna ścieżka sprawdzania „Gotowy”, w demo zablokowana wcześniej przez brak dokumentów; D-E — „Firma — podpina się samo” opisuje rodzaj zezwolenia, stan „brak” stoi obok.
+
 ## Testy
 - Unit: 1637 przechodzi, 35 pominiętych (199 plików). Nowe testy: `tests/admin-dates.test.ts` i rozszerzony `tests/p11-demo-strefa-placu.test.ts` (8 przypadków).
 - Zmienione oczekiwania — każda zmiana wynika z poprawki:
