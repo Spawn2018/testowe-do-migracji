@@ -121,7 +121,7 @@ const pl: Dict = {
   i30_warn_NO_FAMILY: 'Numer wysyłki bez rozpoznanej rodziny cennika — wycena wstrzymana.',
   i30_warn_NO_CONVOY: 'Kratownica bez konwoju (brak daty lub innych KR tego dnia) — wycena wstrzymana.',
   i30_h: 'Cennik HHL — według symbolu',
-  i30_note: 'Pozycje według symbolu, wariantu i konwoju (I-30). Każda zmiana = nowa wersja. Konwój KR liczony automatycznie z daty załadunku. Brak ceny = ostrzeżenie, nigdy zero. Kwoty: skrypt z pliku lokalnego albo wpis HHL.',
+  i30_note: 'Pozycje według symbolu, wariantu i konwoju. Każda zmiana = nowa wersja. Konwój KR liczony automatycznie z daty załadunku. Brak ceny = ostrzeżenie, nigdy zero. Kwoty: skrypt z pliku lokalnego albo wpis HHL.',
   i30_rows_h: 'Pozycje (symbol / max wymiary / konwój)',
   i30_rows_none: 'Brak pozycji.',
   i30_col_symbol: 'Symbol',
