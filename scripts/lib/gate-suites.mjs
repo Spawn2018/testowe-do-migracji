@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
   nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
-  i2: 540,
+  i2: 548,
   i30: 10,
   i31: 9,
   dec2: 42,
