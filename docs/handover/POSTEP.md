@@ -3136,3 +3136,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - **#312:** migracja **0233** — `doc_requirements_status` has_doc CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); i2: CMR z załadunku → OVERDUE po dostawie −25 h → OK po ponownym wgraniu.
 - P1/P2 z F7 #310: **nie** „C17/A5 = CMR po dostawie potwierdzone” — to zadania **A4** (`load_status_set` ręczny READY + `register_invoice` bez CMR z załadunku/zastąpionych). Wpisy w PLAN §4 A4.
 
+## 2026-10-19 13:45 — #312 / 0233 NA PRODUKCJI
+
+- PR #316 scalony `b858b466` (F7 po `0ae0dae0`; unit, `db`, visual zielone).
+- Próba 0233 w transakcji z ROLLBACK: funkcja ma `uploaded_at >= actual_delivery_at` i `purged_at is null`; `schema_migrations` bez 0233; po wycofaniu ostatnia = 0231.
+- `db push`: najpierw 0233, drugi raz „Remote database is up to date”. Parytet MATCH YES (0001…0233).
+- SELECT: pliki CMR przed dostawą (niezastąpione, niepuste `actual_delivery_at`) = 0. CMR w `doc_requirements_status` dla STEGRA_BODEN: OK 2, OVERDUE 1.
+- Vercel z archiwum `main` `b858b466`: `dpl_4RhcGn9QTngr2PtWZZz2LztFCMmf` READY. `tower.log-mar.pl` i makieta **200**. Funkcji Edge nie zmieniano.
+- #317 (docs, F7, CI zielone) ma konflikt z `main` po #316 — bez scalenia.
+- Następna pozycja: **Automat wdrożenia z main** (D-20261019-1050-01).
+
