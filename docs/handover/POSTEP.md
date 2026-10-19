@@ -3168,3 +3168,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
 - Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 15:55 — #319 scalony; wdrożenie padło na adresie bazy
+
+- Skrzynka: #320 już w planie (A6, otwarte). #322 (D-20261019-1515-01, B9 — DeepL zostaje) i #323 (D-20261019-1525-01, Podgląd tylko HHL_ADMIN) wpisane do PLAN §4, §8, rejestru 8A i `dopiski/`. Bez etykiety `pilne` — bieżącej pozycji nie przerywają.
+- PR #319: F7 `Spawn2018` o 13:13:45Z, po ostatnim commicie `39539f9b` (13:12:16Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `9a3c7b26`.
+- `deploy-main` na tym SHA: krok Klucze widzi sekrety; krok Baza w ~1 s: „Connecting to remote database” i `host=/var/run/postgresql user=runner database=runner`. Edge i Vercel pominięte. Adres nie został użyty jako URL (CLI 2.121 przy haśle z „=” i obcym prefiksie, np. cudzysłów, wpada na gniazdo).
+- Poprawka: `scripts/ci/normalize-db-url.py` — zdejmuje cudzysłów i BOM, bierze pierwszą linię `postgres://`, loguje tylko długość, schemat i czy jest użytkownik, host, baza oraz port. Gałąź `pakiet/automat-adres-bazy`. Sekretu nie zmieniam.
+- #321: przegląd F7 z poprawkami, bez „F7: gotowe do scalenia”. #317: konflikt z `main`. Bez scalenia.
+

@@ -56,17 +56,23 @@ jobs:
 
       - name: Baza
         if: steps.keys.outputs.skip != 'true'
+        env:
+          DB_URL_FILE: ${{ runner.temp }}/db-url
+          DB_PORT_FILE: ${{ runner.temp }}/db-port
         run: |
           set -euo pipefail
           set +x
-          port="$(python3 -c 'import os,re; u=os.environ.get("SUPABASE_DB_URL",""); rest=u.rsplit("@",1)[-1]; m=re.search(r":(\d+)", rest); print(m.group(1) if m else "")')"
+          python3 scripts/ci/normalize-db-url.py
+          port="$(cat "$DB_PORT_FILE")"
           redact() {
-            python3 -c 'import os,sys; u=os.environ.get("SUPABASE_DB_URL",""); t=sys.stdin.read(); sys.stdout.write(t.replace(u,"[adres]") if u else t)'
+            python3 -c 'import os,sys; u=open(os.environ["DB_URL_FILE"],encoding="utf-8").read(); t=sys.stdin.read(); sys.stdout.write(t.replace(u,"[adres]") if u else t)'
           }
           run_push() {
             local code=0
             local out
-            out="$(supabase db push --db-url "$SUPABASE_DB_URL" "$@" 2>&1)" || code=$?
+            local url
+            url="$(cat "$DB_URL_FILE")"
+            out="$(supabase db push --db-url="$url" "$@" 2>&1)" || code=$?
             printf '%s\n' "$out" | redact
             if [ "$code" -ne 0 ]; then
               if [ "$port" = "6543" ]; then

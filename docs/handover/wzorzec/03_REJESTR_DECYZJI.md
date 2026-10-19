@@ -280,7 +280,7 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 | 5B | Opłata paliwowa | KSH i SCX widzą „Pieniądze › Opłata paliwowa” **tylko do odczytu**; zapis → odmowa w bazie. Demo wyrównuje koordynator | ✅ 17.10.2026, 07:20 |
 | 6A | wielkie litery | Bez wymuszania w kodzie: koordynator usuwa `toUpperCase` z UI (`wyglad/W-audyt`); wykonawca — szablony e-mail/SMS/sprawy/powiadomienia bez `upper(`; kody (`SG-03`, tablice) bez zmian | ✅ 17.10.2026, 07:20 |
 | 7A | stare nieprzeczytane | Jednorazowo oznaczasz jako przeczytane `IN_APP` starsze niż 7 dni (kopia + `audit_log`) → B8 | ✅ 17.10.2026, 07:20 |
-| 8A | tylko polski | Koordynator usuwa EN/SV z aplikacji; wykonawca usuwa `translation_queue` / `translation_memory` / `deepl_usage` z kopią → B9 | ✅ 17.10.2026, 07:20 |
+| 8A | tylko polski | Koordynator usuwa EN/SV z ekranów; aplikacja kierowcy zostaje w 3 językach. 19.10.2026, 15:10: tłumaczenia komunikatów SV/EN → PL przez DeepL zostają; usuwany jest tylko wybór języka ekranów (D-20261019-1515-01, B9) | ✅ 17.10.2026, 07:20 |
 
 ## Brakujące wpisy rejestru (D-20261017-0730-01)
 
