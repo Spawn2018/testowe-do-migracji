@@ -118,7 +118,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -191,7 +191,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#303 `wyglad/W-przed-wydaniem-3` (P11 pkt 7, partie 1–6):** **SCALONE I WDROŻONE** (18.10.2026 20:07, merge `7e9c286c`, głowa `ab0969d`; Vercel `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33). Tylko wygląd: zgodność z raportem, spójne ceny w demo, CMR po rozładunku. Tekstów i filtra CMR nie zmieniam (F1).
 - **#304 `wyglad/W-demo-strefy` (zdarzenia strefy placu w danych demo):** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `e1beb93b`, głowa `e71a406`; Vercel `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ` READY 23:20). F7 runda 3. Przed `wyglad/W-przed-wydaniem-4`.
 - **#305 `pakiet/panel-do-zrobienia-baza`:** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `dca5888c`, głowa `43d85a8c`; ta sama produkcja `e1beb93b` / `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ`). F7. Migracja 0229. Porządek 16 + 7. #301 nadal otwarty.
-- **#307 `wyglad/W-przed-wydaniem-4` (D-20261019-0005-01):** część aplikacji — 39 usterek z przeglądu + Administrator HHL zmienia daty i godziny bez blokad w oknach. Koordynator. F7 gotowe do scalenia (19.10 02:53); scalasz przy przejściu między pozycjami (po #306 / przed D-1740). Działa w pełni na produkcji po bazie D-0005.
+- **#307 `wyglad/W-przed-wydaniem-4` (D-20261019-0005-01):** **SCALONE I WDROŻONE** 19.10.2026 09:17–09:50 (`d2f8b270` + hotfix #308 `96f83c96`; produkcja `fc5726b3`, `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs`). 39 usterek + daty Administratora HHL w oknach. Pełne działanie dat po bazie D-0005.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -395,7 +395,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **Eskalacje decyzji (D-20261018-1610-01) → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -501,8 +501,8 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
   - testy w `risks.sh` / `dec2.sh` (dopisek §2c); brama `db` zielona.
 - **Aplikacja:** po zapisie w panelu (awizacja, numer zlecenia, dokument, ręczna zmiana statusu) — `refreshFromServer({ keepSelection: true })` w `supabaseBridge.ts`. Wyglądu nie zmieniasz.
 
-### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3) — W TOKU (`pakiet/eskalacje-decyzji`, migracja 0230)
-#306 — przegląd 2 (19.10 ~02:30): B1–B6 poprawione, 3 nowe B (B-N1–B-N3), poprawki w toku.
+### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3) — NA PRODUKCJI (`fc5726b3`, 19.10.2026 09:50, migracja 0230)
+#306 — **scalony** 09:48 (`fc5726b3`); 0230 na produkcji; Edge `send-notifications`; Vercel `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs`. F7 runda 3: gotowe (0 B).
 - L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen. Gałąź `OSTATECZNY` bez klucza `final` też otwiera sprawę.
 - Jednorazowo: 12 otwartych `SOURCE` (odczyt produkcji 19.10: 8 — tydzień jeszcze trwa, 4 — ceny już są) → `EXPIRED`, wpis w `decision_events`, bez powiadomień; `event_key` dostaje `:expired-0230`, żeby po zamknięciu tygodnia bez cen powstała nowa sprawa (B-N3). Po nałożeniu oczekiwane 0 otwartych SOURCE.
 - Eskalacja: jedno powiadomienie na decyzję i osobę, także gdy L-3 idzie po eskalacji. **Więcej niż 2** eskalacje u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail (`DECISION_ESCALATED_BATCH`, odnośnik `/ryzyka`). Pojedyncze powstają tylko poniżej progu. SCX tylko przy `decider_role = CARRIER` (jak `decision_notify`). `RISK_OPEN` dla `decision-overdue` nie idzie osobno.
@@ -522,6 +522,12 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę w każdym miejscu, bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
 - **Baza:** dla `HHL_ADMIN` zdejmujesz odrzucenia z powodu daty w `load_status_set` (przyszłość, wcześniejszy status), `guard_load_update` (G-20), `ksh_confirm_dates` (tylko KSH, blokada po załadunku; kolejność dat jak import KR-03 — sprawa „Daty KSH do sprawdzenia”, bez odrzucenia) i w innych funkcjach z takim odrzuceniem. Historia z prawdziwym wykonawcą (W30). `import_schedule` bez zmian (W29). Testy §2 dopisku.
 - **Aplikacja:** kolejka PR koordynatora, `wyglad/W-przed-wydaniem-4` (okno statusu i dat KSH). Tekstów tego PR nie zmieniasz (F1).
+
+### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
+F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.
+- `l3_scan` i funkcje składające `code`/tytuł: tylko kod transportu, nigdy `left(id::text, 8)` ani samotne `order_no`.
+- `l3_upsert_alarm` nie nadpisuje poprawionego `params.code`.
+- Jednorazowo: 7 ryzyk i 84 powiadomienia SCX z numerem KSH; test części jednorazowej 0230 woła prawdziwą funkcję wygaszania.
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
 - `doc_requirements`:
@@ -1072,6 +1078,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 16:10 | D-20261018-1610-01: eskalacje decyzji — L-1 bez `SOURCE` dla przyszłego tygodnia, 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień, jedna eskalacja na osobę, zbiorcza powyżej 2, tytuły z kodem transportu i „Opłata paliwowa”. Po bazie panelu §2, przed A3. Przegląd 19.10 00:22: niegotowe (B1–B6: L-3 i `RISK_SEVERITY`, `OSTATECZNY` bez `final`, 4 tygodnie z cenami, limit poczty przy >5, `RISK_OPEN`, wzorzec identyfikatora i `params.title`). Poprawki w #306, przed scaleniem | koordynator |
 | 18.10.2026 17:40 | D-20261018-1740-01: CMR tylko po rozładunku — `AFTER_UNLOAD` / 24 h, bez `OVERDUE` przed dostawą, odmowa kotwicy przy załadunku. Po eskalacjach, przed A3. Wygląd: #303 (F1) | właściciel 17:28; koordynator |
 | 18.10.2026 22:00 | D-20261018-2200-01: właściciel 21:57 przyjął domyślne odpowiedzi — W26, W28, W29, W30, W31, W33 i W45 zamknięte. W29 i W31 obowiązują w „P7 — uzupełnienie W13”. Poza tym bez zmian w kodzie | właściciel 21:57; koordynator |
-| 19.10.2026 00:05 | D-20261019-0005-01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń (decyzja 00:01). Pozycja po CMR (D-20261018-1740-01), przed A3. Aplikacja: `wyglad/W-przed-wydaniem-4` (#307 — F7 gotowe, scalenie przy przejściu między pozycjami). W30 uzupełnione | właściciel 00:01; koordynator |
+| 19.10.2026 00:05 | D-20261019-0005-01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń (decyzja 00:01). Pozycja po CMR (D-20261018-1740-01), przed A3. Aplikacja: #307 — **scalony** 19.10 09:17 (`d2f8b270`). W30 uzupełnione | właściciel 00:01; koordynator |
 | 19.10.2026 02:30 | D-20261018-1610-01 / #306 przegląd 2: B1–B6 poprawione; nowe B-N1 (zbiorczy >2), B-N2 (SCX tylko CARRIER), B-N3 (`event_key` `:expired-0230`); P1–P5 w tym samym PR | koordynator |
 | 19.10.2026 08:20 | D-20261019-0820-01: punkt kontrolny +24 h (decyzja właściciela). pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; 23:59 A3–A5; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie 28.10 20:00 bez zmian. Drugi krok: bez B4–B9 we wt → P10a na sob 24.10 z P7/P8 | właściciel 19.10; koordynator |
+| 19.10.2026 09:30 | D-20261019-0930-01: kod transportu w L-3 / E41 ryzyk; bez `left(id,8)` i samotnego `order_no`; `l3_upsert_alarm` nie nadpisuje `params.code`; jednorazowo 7 ryzyk + 84 powiadomienia SCX; test wygaszania 0230 przez prawdziwą funkcję. Po D-0005, przed A3 | koordynator |
+| 19.10.2026 09:50 | D-1610 / #306 **NA PRODUKCJI**: merge `fc5726b3`, 0230, Edge `send-notifications`, Vercel `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs` (z #307+#308). SELECT: SOURCE 12→0, hex/SEFS 0, `params.code` 20→0, IN_APP 898→0 | wykonawca |
