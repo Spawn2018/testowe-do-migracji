@@ -21,7 +21,6 @@ import { DemoMark } from '../ui/DemoMark';
 import { riskText, t } from '../../i18n/messages';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { lazyRetry } from '../../lib/lazyRetry';
-import { TRANSLATION_PENDING } from '../../lib/corridorConditionsDb';
 
 const PROD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 /* komunikat armatora zapisuje w bazie — tylko produkcja (paczka demo bez klienta Supabase, I-2) */
@@ -156,9 +155,10 @@ export function RoutePanel({
                 {rt(locale, `p6_imp_${r.impact}`)}
               </span>
               {r.when ? ` · ${r.when}` : ''}
-              {r.original && r.note !== TRANSLATION_PENDING ? ` · ${rt(locale, 'p6_road_translated')}` : ''}
+              {r.original && !r.pending ? ` · ${rt(locale, 'p6_road_translated')}` : ''}
             </span>
-            {r.note && !phone ? <span className="rk-road-n" data-road-note={r.note === TRANSLATION_PENDING ? 'pending' : 'pl'}>{r.note}</span> : null}
+            {r.pending && !phone ? <span className="rk-road-n" data-road-note="pending">{rt(locale, 'p6_road_pending')}</span>
+              : r.note && !phone ? <span className="rk-road-n" data-road-note="pl">{r.note}</span> : null}
             {r.original && !phone ? (
               <details className="rk-orig">
                 <summary>{rt(locale, 'p6_road_original')}</summary>

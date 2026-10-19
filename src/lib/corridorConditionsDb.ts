@@ -17,28 +17,23 @@ export interface CorridorConditionRow {
   adverseWeather: number | null;
   zrodlo: string | null;
   /** H-2: sytuacje drogowe z Situation 1.6. Pusta lista = API nic nie zwróciło. */
-  situations: { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null }[];
+  situations: { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null; pending?: boolean }[];
   situationsStatus: 'ok' | 'blad' | null;
 }
 
 
-/** B9 (D-20261019-1515-01 pkt 4): tekst szwedzki — typowe słowa komunikatów Trafikverket (jak reguła „szwedzki”
-    w tests/e21Rules.ts); same litery å/ä/ö nie wystarczą, bo są w nazwach miejscowości w polskich opisach. */
-const SV_TEXT = /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|vägarbeten|olycka|körfält|avstängd|avstängt|och|på|norr|söder|öster|väster)(?![\p{L}])/iu;
-export const TRANSLATION_PENDING = 'Tłumaczenie w toku';
-
 /**
- * B9 pkt 4: nieprzetłumaczony tekst wolny nie wchodzi do treści głównej — zamiast niego „Tłumaczenie w toku”,
- * a szwedzki tylko pod „Pokaż oryginał”. Siatka bezpieczeństwa ekranu; właściwe tłumaczenie robi serwer (DeepL, pamięć).
+ * B9 (D-20261019-1515-01 pkt 4): nieprzetłumaczony tekst wolny nie wchodzi do treści głównej. Serwer (`describeDeviation`,
+ * `polishRoadFreeText`) zapisuje wtedy `note = null` i szwedzki w `original`; do czasu tłumaczenia (DeepL, pamięć,
+ * ponawianie co 5 min) panel pokazuje „Tłumaczenie w toku”, a szwedzki tylko pod „Pokaż oryginał”. Opis równy
+ * oryginałowi też jest nieprzetłumaczony. Polskiego opisu nie oceniamy po słowach (nazwy własne: „Norrbottens län”).
  */
-export function guardSwedish(note: string | null, original: string | null): { note: string | null; original: string | null } {
-  if (!note) return { note, original };
-  const untranslated = (original && note.trim() === original.trim()) || SV_TEXT.test(note);
-  if (!untranslated) return { note, original };
-  return { note: TRANSLATION_PENDING, original: original ?? note };
+export function guardSwedish(note: string | null, original: string | null): { note: string | null; original: string | null; pending: boolean } {
+  const pending = Boolean(original) && (!note || note.trim() === original!.trim());
+  return { note: pending ? null : note, original, pending };
 }
 
-function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null }[] {
+function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null; pending: boolean }[] {
   if (!Array.isArray(v)) return [];
   const out = [];
   for (const item of v) {

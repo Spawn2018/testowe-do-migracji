@@ -263,13 +263,14 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
 
   it('M4: ustawienia użytkownika przez provider (user_preferences) — zapis i odczyt własnych', async () => {
     const before = await P.KSH.loadPreferences!();
+    const scxBefore = await P.SCX.loadPreferences!();
     try {
       await P.KSH.apply({ type: 'prefs.save', prefs: { displayCurrency: 'PLN' } });
       await P.KSH.apply({ type: 'prefs.save', prefs: { theme: 'dark' } });
       /* B9: bez języka — panel tylko po polsku */
       expect(await P.KSH.loadPreferences!()).toEqual({ displayCurrency: 'PLN', theme: 'dark' });
-      const scx = await P.SCX.loadPreferences!();
-      expect(scx?.theme ?? null).not.toBe('dark'); // cudze ustawienia niewidoczne
+      /* cudze ustawienia niewidoczne i nienaruszone: SCX widzi swój wiersz jak przed zapisem KSH */
+      expect(await P.SCX.loadPreferences!()).toEqual(scxBefore);
     } finally {
       if (before) await P.KSH.apply({ type: 'prefs.save', prefs: before });
       else {

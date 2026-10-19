@@ -119,14 +119,14 @@ try {
   // ---------- M4: ustawienia użytkownika (user_preferences, RLS: własny wiersz) ----------
   for (const org of ['HHL', 'KSH', 'SCX']) {
     const uid = await sb[org].rpc('current_app_user_id');
-    const had = (await sb[org].from('user_preferences').select('user_id,display_currency,locale,theme').maybeSingle()).data;
-    const up = await sb[org].from('user_preferences').upsert({ user_id: uid.data, display_currency: 'PLN', locale: 'en', theme: 'light' }, { onConflict: 'user_id' }).select('display_currency,locale,theme');
-    check(`M4 ${org}: zapis własnych ustawień (PLN, en, light)`, !up.error && up.data?.[0]?.display_currency === 'PLN' && up.data?.[0]?.locale === 'en', up.error?.message);
+    const had = (await sb[org].from('user_preferences').select('user_id,display_currency,theme').maybeSingle()).data;
+    const up = await sb[org].from('user_preferences').upsert({ user_id: uid.data, display_currency: 'PLN', theme: 'light' }, { onConflict: 'user_id' }).select('display_currency,theme');
+    check(`M4 ${org}: zapis własnych ustawień (PLN, light; bez języka — B9)`, !up.error && up.data?.[0]?.display_currency === 'PLN' && up.data?.[0]?.theme === 'light', up.error?.message);
     const cnt = await sb[org].from('user_preferences').select('user_id');
     check(`M4 ${org}: widzi wyłącznie własny wiersz`, !cnt.error && cnt.data.length === 1);
     const sek = await sb[org].from('user_preferences').update({ display_currency: 'SEK' }).eq('user_id', uid.data).select('user_id');
     check(`M4 ${org}: SEK odrzucony (tylko EUR/PLN)`, Boolean(sek.error));
-    if (had) await sb[org].from('user_preferences').update({ display_currency: had.display_currency, locale: had.locale, theme: had.theme }).eq('user_id', uid.data);
+    if (had) await sb[org].from('user_preferences').update({ display_currency: had.display_currency, theme: had.theme }).eq('user_id', uid.data);
     else await admin.from('user_preferences').delete().eq('user_id', uid.data);
   }
   const foreign = await sb.KSH.from('user_preferences').upsert({ user_id: (await sb.SCX.rpc('current_app_user_id')).data, display_currency: 'PLN' }, { onConflict: 'user_id' }).select('user_id');
