@@ -1,5 +1,6 @@
 -- D-20261019-0005-01: Administrator HHL — daty i godziny bez ograniczeń.
 -- HHL_OPS / KSH / SCX bez zmian. Historia: audit_log + W30 (acting_as).
+-- F7 #313: DECISION_HOLD w CHECK; admin bez sprawy KSH_DATES_CHECK; load_status_set przez current_app_*.
 
 insert into decision_types (code, title_key, decider_role, options, due_hours, due_note, severity_default, sort_order)
 values (
@@ -13,6 +14,23 @@ values (
   34
 )
 on conflict (code) do nothing;
+
+-- B1: ASK_FIX / HOLD wstawia DECISION_HOLD — typ musi być w CHECK (uśpione od 0126).
+alter table public.load_events drop constraint if exists load_events_event_type_known;
+alter table public.load_events add constraint load_events_event_type_known check (event_type in (
+    'NOTE', 'DOC_UPLOADED', 'PERMIT_MISMATCH', 'AWIZACJA_UPDATED', 'RESOURCES_UPDATED', 'ORDER_NO_UPDATED',
+    'FERRY_UPDATED', 'SAILING_ASSIGNED', 'SCX_ASSIGNED', 'PLAN_B_ACTIVATED', 'READY_BLOCKED',
+    'SCHEDULE_IMPORTED', 'SCHEDULE_DATE_CRITICAL', 'STATUS_APPROACHING_SITE', 'STATUS_AT_LOADING',
+    'STATUS_AT_PORT', 'STATUS_AT_PORT_GDANSK', 'STATUS_AT_PORT_NYNASHAMN', 'STATUS_AT_SITE',
+    'STATUS_CANCELLED', 'STATUS_DELAYED', 'STATUS_DELIVERED', 'STATUS_DOCS_PENDING', 'STATUS_DOC_MISSING',
+    'STATUS_FERRY', 'STATUS_IN_TRANSIT_PL', 'STATUS_IN_TRANSIT_SE', 'STATUS_LOADING', 'STATUS_ON_FERRY',
+    'STATUS_PLANNED', 'STATUS_READY', 'STATUS_RESOURCES_PENDING', 'STATUS_SILENT', 'STATUS_UNLOADED',
+    'STATUS_UNLOADING', 'STATUS_READY_TO_INVOICE', 'STATUS_INVOICED',
+    'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'DRIVER_ON_FERRY', 'DRIVER_PROBLEM',
+    'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO', 'POSITION_SHARED',
+    'POSITION_SHARE_DENIED', 'DELAY_DETECTED', 'RISK_RAISED', 'SILENT_VEHICLE',
+    'PLAN_DATES_CONFIRMED', 'PLAN_DATES_CHANGED', 'DECISION_HOLD'
+));
 
 create or replace function public.guard_load_update()
 returns trigger
@@ -166,7 +184,7 @@ create or replace function public.load_status_set(
 ) returns void
 language plpgsql security definer set search_path = public as $$
 declare
-  v_me uuid;
+  v_me uuid := current_app_user_id();
   v_role text;
   v_org uuid;
   v_load loads%rowtype;
@@ -176,12 +194,17 @@ declare
   v_actor text;
   v_prev_at timestamptz;
   v_missing text;
+  v_ev_id bigint;
+  v_ev_old timestamptz;
+  v_old_load_at timestamptz;
+  v_old_del_at timestamptz;
 begin
-  select id, role::text, org_id into v_me, v_role, v_org
-    from app_users where auth_id = auth.uid() and active;
+  -- P3: jak ksh_confirm_dates — MFA i „Działaj jako” przez current_app_*.
   if (v_me is not null) is not true then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
+  v_role := current_app_role()::text;
+  select org_id into v_org from app_users where id = v_me;
   if (v_role in ('HHL_ADMIN', 'CARRIER_DISPATCH', 'CARRIER_USER')) is not true then
     raise exception 'Zmiana statusu — tylko Administrator HHL albo SCX' using errcode = '42501';
   end if;
@@ -271,6 +294,52 @@ begin
     end if;
   end if;
 
+  -- P4: HHL_ADMIN poprawia czas bieżącego wpisu osi (każdy status), nie tylko DELIVERED.
+  if v_load.status is not distinct from v_new and v_role = 'HHL_ADMIN' then
+    select id, occurred_at into v_ev_id, v_ev_old
+      from load_events
+     where load_id = p_load
+       and event_type = 'STATUS_' || v_new::text
+     order by occurred_at desc, id desc
+     limit 1;
+    v_old_load_at := v_load.actual_load_at;
+    v_old_del_at := v_load.actual_delivery_at;
+    if v_ev_id is not null and v_ev_old is distinct from v_when then
+      perform set_config('session_replication_role', 'replica', true);
+      update load_events set occurred_at = v_when where id = v_ev_id;
+      perform set_config('session_replication_role', 'origin', true);
+    end if;
+    perform set_config('tower.status_ctx', 'on', true);
+    update loads
+       set actual_delivery_at = case when v_new = 'DELIVERED' then v_when else actual_delivery_at end,
+           actual_load_at = case
+             when v_new in ('AT_LOADING', 'IN_TRANSIT_PL') then v_when
+             else actual_load_at
+           end,
+           updated_at = now()
+     where id = p_load;
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values (
+      v_me,
+      'LOAD_STATUS_SET',
+      'loads',
+      p_load::text,
+      jsonb_build_object(
+        'status', v_load.status::text,
+        'occurred_at', v_ev_old,
+        'actual_load_at', v_old_load_at,
+        'actual_delivery_at', v_old_del_at
+      ),
+      jsonb_build_object(
+        'status', v_new::text,
+        'occurred_at', v_when,
+        'note', v_note,
+        'time_only', true
+      )
+    );
+    return;
+  end if;
+
   if v_load.status is not distinct from v_new
      and (v_new is distinct from 'DELIVERED' or v_load.actual_delivery_at is not distinct from v_when) then
     return;
@@ -304,6 +373,10 @@ begin
          actual_delivery_at = case
            when v_new = 'DELIVERED' then v_when
            else actual_delivery_at
+         end,
+         actual_load_at = case
+           when v_new in ('AT_LOADING', 'IN_TRANSIT_PL') and actual_load_at is null then v_when
+           else actual_load_at
          end,
          updated_at = now()
    where id = p_load;
@@ -339,7 +412,7 @@ end $$;
 revoke all on function public.load_status_set(uuid, text, timestamptz, text) from public, anon;
 grant execute on function public.load_status_set(uuid, text, timestamptz, text) to authenticated;
 comment on function public.load_status_set(uuid, text, timestamptz, text) is
-  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu statusu; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
+  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu; current_app_*; korekta czasu osi; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
 
 create or replace function public.ksh_confirm_dates(
   p_load uuid,
@@ -444,13 +517,24 @@ begin
   v_payload := jsonb_build_object(
     'code', v_code, 'by', v_by, 'status', 'POTWIERDZONA',
     'load_date', v_ld, 'delivery_date', v_dd,
-    'before_load_date', l.plan_load_date, 'before_delivery_date', l.plan_delivery_date);
+    'before_load_date', l.plan_load_date, 'before_delivery_date', l.plan_delivery_date,
+    'before_load_from', l.plan_load_from, 'before_load_to', l.plan_load_to,
+    'before_delivery_from', l.plan_delivery_from, 'before_delivery_to', l.plan_delivery_to);
+  -- P2: admin bez powiadamiania KSH (tylko HHL/SCX z macierzy — usuń odbiorców CLIENT).
   perform matrix_notify('LOAD_STATUS', 'PLAN_DATES_CHANGED', p_load, l.project_id, v_payload,
                         'PLAN_DATES:' || p_load || ':' || v_stamp);
   delete from notifications
    where user_id = v_actor and load_id = p_load and dedup_key like 'PLAN_DATES:' || p_load || ':' || v_stamp || ':%';
+  if v_admin then
+    delete from notifications n
+     using app_users u, organizations o
+     where n.user_id = u.id and u.org_id = o.id and o.kind = 'CLIENT'
+       and n.load_id = p_load
+       and n.dedup_key like 'PLAN_DATES:' || p_load || ':' || v_stamp || ':%';
+  end if;
 
-  if v_dates_odd then
+  -- P2: sprawa KSH_DATES_CHECK tylko z importu (A6) albo ze zmiany KSH — nie z edycji admina.
+  if v_dates_odd and v_admin is not true then
     perform decision_open_from_event(
       l.project_id,
       'KSH_DATES_CHECK',
@@ -493,7 +577,7 @@ end $$;
 revoke all on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) from public, anon;
 grant execute on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) to authenticated;
 comment on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) is
-  'G-20 + D-0005: KSH Użytkownik albo HHL_ADMIN; dziwne daty u admina → sprawa KSH_DATES_CHECK.';
+  'G-20 + D-0005: KSH Użytkownik albo HHL_ADMIN; sprawa KSH_DATES_CHECK nie z edycji admina (A6/KSH).';
 
 -- Wyzwalacz historii: przy dates_ctx HHL_ADMIN → by=HHL_ADMIN (nie mylić z KSH)
 create or replace function public.trg_plan_dates_notify() returns trigger
@@ -522,6 +606,8 @@ begin
     'code', coalesce(new.order_no, left(new.id::text, 8)), 'by', v_by, 'status', new.plan_dates_status,
     'load_date', new.plan_load_date, 'delivery_date', new.plan_delivery_date,
     'before_load_date', old.plan_load_date, 'before_delivery_date', old.plan_delivery_date,
+    'before_load_from', old.plan_load_from, 'before_load_to', old.plan_load_to,
+    'before_delivery_from', old.plan_delivery_from, 'before_delivery_to', old.plan_delivery_to,
     'load_from', new.plan_load_from, 'load_to', new.plan_load_to,
     'delivery_from', new.plan_delivery_from, 'delivery_to', new.plan_delivery_to)
     || case when v_by in ('KSH', 'HHL_ADMIN') and nullif(current_setting('tower.dates_actor', true), '') is not null
@@ -529,7 +615,9 @@ begin
   v_payload := jsonb_build_object(
     'code', coalesce(new.order_no, left(new.id::text, 8)), 'by', v_by, 'status', new.plan_dates_status,
     'load_date', new.plan_load_date, 'delivery_date', new.plan_delivery_date,
-    'before_load_date', old.plan_load_date, 'before_delivery_date', old.plan_delivery_date);
+    'before_load_date', old.plan_load_date, 'before_delivery_date', old.plan_delivery_date,
+    'before_load_from', old.plan_load_from, 'before_load_to', old.plan_load_to,
+    'before_delivery_from', old.plan_delivery_from, 'before_delivery_to', old.plan_delivery_to);
   -- Powiadomienia dla edycji KSH / HHL_ADMIN idą z ksh_confirm_dates (matrix_notify)
   if v_by not in ('KSH', 'HHL_ADMIN') then
     insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)

@@ -536,9 +536,11 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 
 ### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0234, gałąź `pakiet/hhl-admin-daty`)
 Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
-- **Baza:** `0234_hhl_admin_daty.sql` w PR #313 (`load_status_set`, `guard_load_update`, `ksh_confirm_dates`, historia W30, sprawa `KSH_DATES_CHECK`). Numer 0234, bo 0233 jest już na produkcji. `import_schedule` bez zmian.
-- **Testy:** `aud03` liczy sprawę przez `sval` (bez `chk`/`Q`). Katalog decyzji: 19 typów (`KSH_DATES_CHECK`).
-- **Aplikacja:** #307 scalony (F1).
+- **Baza:** `0234_hhl_admin_daty.sql` w PR #313 (`load_status_set` przez `current_app_*`, korekta czasu osi, `guard_load_update`, `ksh_confirm_dates`, historia W30 z oknami „przed”, `DECISION_HOLD` w CHECK, typ `KSH_DATES_CHECK`). Numer 0234, bo 0233 jest już na produkcji. Następna migracja: **0235**.
+- **Sprawa `KSH_DATES_CHECK`:** nie z edycji Administratora HHL (historia + `audit_log`); z importu (A6) albo ze zmiany KSH.
+- **Wyjątek spójności (D1, lista poranna):** `valid_from ≤ valid_until` (zezwolenia, polisy), rejs (przypłynięcie po wypłynięciu) i data odczytu paliwa — zostają; to spójność danych, nie limit wyboru daty.
+- **Testy:** `aud03` / `e25` / `i2` / `g20` / `dec2` (katalog 19 typów). ASK_FIX → `DECISION_HOLD`.
+- **Aplikacja:** #307 scalony (F1). Widok „zmienił Administrator HHL” — osobny PR `wyglad/*`.
 
 ### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
 F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.
@@ -683,7 +685,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne;
    - filtr przewoźnika HH / HHL;
    - puste wiersze pominięte i policzone; „...” i „-” = puste; „A / B” → pola PL / SE.
-2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4).
+2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03 **i dostawy przed załadunkiem**. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4). `import_schedule` dla Administratora HHL — bez odrzucania dat (D-0005 P5; ta sama zasada „bez odrzucania dat”).
    - Parser wypełnia w `ImportDiff` pola `skippedCarrier`, `skippedEmpty`, `datesToCheck` (liczby, także 0). Po zapisie i w sklepie demo komunikat z `standardSkipMessage(accepted, skippedStandard, { carrier, empty })` — tekstu nie składasz sam (D-20261017-1715-01 §2 pkt 4). `skippedStandard` zostaje, dopóki go liczysz; gdy filtr „Przewoźnik” go zastąpi — podajesz 0. Wyglądu importu nie zmieniasz (F1, #291). Lokalny test `tests/i1-import-ui.local.spec.ts` ma już oczekiwane teksty z tego PR (§1 pkt 10): `[data-import-sum]` zawiera „Nowe: 5”; „Pominięte: rozmiar „Standard” (ładunki innej firmy) — 3.” — tych oczekiwań nie cofasz.
 3. **Zasoby i numery z pliku** zapisane w bazie. Komentarz „Wcześniej to był SG-…” → ten sam transport, nowy kod, `renumbered_from`, „było → jest” w Historii.
 4. **Synchronizacja SharePoint — odczyt** (funkcja Edge `ksh-sharepoint-sync`, `pg_cron` co 5 min):
@@ -1147,3 +1149,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 20:25 | #334 scalony (`6aafacbe`) po „F7: gotowe do scalenia” (głowa `47732685`, CI zielone) | pętla |
 | 19.10.2026 20:30 | Automat: prefiks `NAZWA=` i JDBC → URI w `normalize-db-url.py` (komentarz #331, 18:40). Gałąź `pakiet/automat-prefiks-nazwa` | pętla |
 | 19.10.2026 20:55 | #335 scalony (`b4af5626`). `deploy-main` `39306048061`: prefiks nie, `format: uri`, link, 0 migracji, Edge bez zmian, Vercel READY. Automat zamknięty. Dalej D-0005 (#313) | pętla |
+| 19.10.2026 21:25 | D-0005 #313: F7 niegotowe → B1 DECISION_HOLD, P1–P4 (admin bez sprawy, current_app_*, korekta czasu osi), PLAN D1/A6 P5 | pętla |

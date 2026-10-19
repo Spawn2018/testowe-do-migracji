@@ -3266,3 +3266,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #336 „F7: gotowe do scalenia” od `Spawn2018` o 18:58Z, po ostatnim commicie `72b6afe` (18:55Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `fd2ca8c2`. #317 ma konflikt z `main` (F7 sprzed konfliktu). #313 i #259 bez aktualnego „gotowe”.
 - Bieżąca pozycja: **D-0005** (#313). `main` wciągnięty. Plik migracji `0234_hhl_admin_daty.sql` (0233 jest na produkcji). `aud03`: sprawa `KSH_DATES_CHECK` przez `sval`. `dec2`: katalog 19 typów. Brama `db` po tym pushu.
 
+## 2026-10-19 21:25 — D-0005: F7 niegotowe → B1 + P1–P4
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `fa2d537` — CI zielone (db 11 min, visual), F7 „niegotowe” (19:20Z). #317 konflikt z `main` (bez aktualnego „gotowe”). #259 bez F7.
+- Bieżąca pozycja **D-0005** (#313): poprawki F7 w `0234` — `DECISION_HOLD` w CHECK; admin bez sprawy `KSH_DATES_CHECK`; `load_status_set` przez `current_app_*` + korekta czasu osi; historia z oknami „przed”; testy `aud03`/`e25`/`i2`; PLAN: wyjątek D1, A6 P5 (dostawa przed załadunkiem). Czeka na zielone CI i ponowne F7.
+
