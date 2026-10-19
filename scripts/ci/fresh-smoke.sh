@@ -8,10 +8,17 @@
 # 5) sprzątanie (kill podglądu, rm tmp) przy każdym wyjściu.
 # Nigdy nie dotyka dist/ repo ani podglądu :4177.
 # Użycie: bash scripts/ci/fresh-smoke.sh   (PORT=4179 domyślnie; KEEP=1 zostawia tmp)
+# FRESH_PART (19.10.2026, krok 1 przyspieszenia): all (domyślnie — wszystko, jak dotąd) | zrzuty | telefon | bramy.
+#   zrzuty  = visual, visual-states, persist-toast, deur, etap4, etap5, etap6, aud03
+#   telefon = e8-phone-gate
+#   bramy   = p11-bramy (--workers=4)
+#   Suma trzech części = all (ten sam zestaw testów; workflow visual uruchamia części równolegle).
 set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 PORT="${FRESH_PORT:-4179}"
+PART="${FRESH_PART:-all}"
+case "$PART" in all|zrzuty|telefon|bramy) ;; *) echo "[fresh] nieznana część FRESH_PART=$PART (all|zrzuty|telefon|bramy)" >&2; exit 2;; esac
 if [ "$PORT" = "4177" ]; then echo "[fresh] port 4177 zarezerwowany dla podglądu właściciela" >&2; exit 2; fi
 TMP="$(mktemp -d /tmp/wt-fresh-XXXXXX)"
 PREVIEW_PID=""
@@ -44,28 +51,38 @@ curl -fsS -o /dev/null "http://127.0.0.1:$PORT/" || { echo "[fresh] podgląd nie
 
 export PW_BASE_URL="http://127.0.0.1:$PORT"
 echo "[fresh] PW_BASE_URL=$PW_BASE_URL"
-# PW_UPDATE=1 → --update-snapshots tylko dla visual.spec.ts i visual-states.spec.ts (D-87)
-if [ "${PW_UPDATE:-}" = "1" ]; then
-  npx playwright test tests/visual.spec.ts --update-snapshots
-else
-  npm run test:visual
+echo "[fresh] część: $PART"
+czesc() { [ "$PART" = "all" ] || [ "$PART" = "$1" ]; }
+if czesc zrzuty; then
+  # PW_UPDATE=1 → --update-snapshots tylko dla visual.spec.ts i visual-states.spec.ts (D-87)
+  if [ "${PW_UPDATE:-}" = "1" ]; then
+    npx playwright test tests/visual.spec.ts --update-snapshots
+  else
+    npm run test:visual
+  fi
+  # III-2: zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, pusty, błąd, walidacja) — próg 0,1%
+  if [ "${PW_UPDATE:-}" = "1" ]; then
+    npx playwright test tests/visual-states.spec.ts --update-snapshots
+  else
+    npx playwright test tests/visual-states.spec.ts
+  fi
 fi
-# III-2: zrzuty stanów (najechanie, fokus, wciśnięty, zablokowany, ładowanie, pusty, błąd, walidacja) — próg 0,1%
-if [ "${PW_UPDATE:-}" = "1" ]; then
-  npx playwright test tests/visual-states.spec.ts --update-snapshots
-else
-  npx playwright test tests/visual-states.spec.ts
+if czesc telefon; then
+  # E8 pkt 1 i 7 (P2-wyglad V3): 9 widoków, 360/390/430, 0/0/0 — blokuje scalenie
+  npx playwright test tests/e8-phone-gate.spec.ts
 fi
-# E8 pkt 1 i 7 (P2-wyglad V3): 9 widoków, 360/390/430, 0/0/0 — blokuje scalenie
-npx playwright test tests/e8-phone-gate.spec.ts
-# B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
-npx playwright test tests/persist-toast.spec.ts
-# B-SMOKE-LANG, 8A (17.10): panel tylko po polsku — test:d19 usunięty
-npm run test:deur
-npm run test:etap4
-npm run test:etap5
-npm run test:etap6
-npm run test:aud03
-# P11 pkt 3 (wyglad/W-bramy-P11): bramy na stałe — E20 szerokości, E21 strażnik tekstów, E10 kontrast (2 wątki)
-npx playwright test tests/p11-bramy.spec.ts --workers=4
-echo "[fresh] OK"
+if czesc zrzuty; then
+  # B-PERSIST-TOAST: pierwsze wejście bez toastu „stan uszkodzony”
+  npx playwright test tests/persist-toast.spec.ts
+  # B-SMOKE-LANG, 8A (17.10): panel tylko po polsku — test:d19 usunięty
+  npm run test:deur
+  npm run test:etap4
+  npm run test:etap5
+  npm run test:etap6
+  npm run test:aud03
+fi
+if czesc bramy; then
+  # P11 pkt 3 (wyglad/W-bramy-P11): bramy na stałe — E20 szerokości, E21 strażnik tekstów, E10 kontrast (2 wątki)
+  npx playwright test tests/p11-bramy.spec.ts --workers=4
+fi
+echo "[fresh] OK ($PART)"
