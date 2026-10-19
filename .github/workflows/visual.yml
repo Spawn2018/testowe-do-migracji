@@ -105,7 +105,8 @@ jobs:
   visual:
     name: visual
     needs: [zmiany, czesci]
-    if: always()
+    # nie po anulowaniu (nowszy commit w PR) — inaczej stary commit dostaje czerwony „visual” zamiast „anulowany”
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
