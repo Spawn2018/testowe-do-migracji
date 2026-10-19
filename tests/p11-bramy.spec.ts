@@ -13,6 +13,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
+import { textHits } from './e21Rules'
 
 test.describe.configure({ mode: 'parallel' })
 
@@ -332,68 +333,7 @@ test.describe('P11 pkt 3 — E20 szerokości komputera', () => {
 
 /* ---------- E21 — strażnik tekstów ---------- */
 
-/** Odmiana po liczbie (E21 pkt 2): 1 — pierwsza forma, 2–4 (bez 12–14) — druga, reszta — trzecia. */
-const FORMS: string[][] = [
-  ['pojazd', 'pojazdy', 'pojazdów'], ['transport', 'transporty', 'transportów'], ['sprawa', 'sprawy', 'spraw'],
-  ['plik', 'pliki', 'plików'], ['wiersz', 'wiersze', 'wierszy'], ['minuta', 'minuty', 'minut'], ['godzina', 'godziny', 'godzin'],
-  ['faktura', 'faktury', 'faktur'], ['dokument', 'dokumenty', 'dokumentów'], ['rejs', 'rejsy', 'rejsów'], ['strefa', 'strefy', 'stref'],
-  ['kierowca', 'kierowcy', 'kierowców'], ['dopłata', 'dopłaty', 'dopłat'], ['zdarzenie', 'zdarzenia', 'zdarzeń'], ['konto', 'konta', 'kont'],
-]
-const FORM_OF = new Map<string, string[]>(FORMS.flatMap((f) => f.map((w) => [w, f] as [string, string[]])))
-const formFor = (n: number, f: string[]) => (n === 1 ? f[0] : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? f[1] : f[2])
-/* przyimki z dopełniaczem („z 3 transportów”, „dla 2 spraw”) — tam druga forma jest poprawna inaczej */
-const GEN_PREP = /(?:^|[\s(„])(?:z|ze|do|od|dla|bez|około|ok\.|u|wśród|spośród|zamiast|według|wobec|ponad|brak|brakuje|dotyczy|w ciągu|sprzed)\s+$/i
-
-const RULES: [string, RegExp][] = [
-  ['kod', /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b/g],
-  ['klucz', /\b[a-z][a-z0-9]*(?:_[A-Za-z0-9]+)+\b|(?<![@/\w.-])[a-z]+(?:\.[a-z_]+){2,}(?![\w.-]*@)/g],
-  ['numer wewnętrzny', /(?<!#)\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8}\b|(?<!#)\b(?=[0-9A-F]*\d)(?=[0-9A-F]*[A-F])[0-9A-F]{8}\b/g],
-  ['data ISO', /\b\d{4}-\d{2}-\d{2}(?=T|\b)/g],
-  ['sekundy', /(?<!\d)\d{1,2}:\d{2}:\d{2}(?!\d)/g],
-  ['data bez zera', /(?<![\d.])\d\.\d{1,2}\.\d{4}\b|(?<![\d.])\d{1,2}\.\d\.\d{4}\b/g],
-  ['szwedzki', /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|olycka|körfält|avstängd)(?![\p{L}])/giu],
-  ['pusta wartość', /\b(undefined|null|NaN|Invalid Date)\b|\[object Object\]/g],
-  /* F7 #301 r2 P3: także po minusie i twardej spacji; 4 cyfry bez groszy przed walutą („4500 PLN”; kwoty mają odstęp tysięcy także przy 4 cyfrach, a „1050 km” — nie musi) */
-  ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)|(?<![\d/.,])\d{5,}(?=[ \u00a0](?:km|kg)\b)/g],
-  ['data angielska', /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{4}\b|\bGMT[+-]\d{4}\b/g],
-]
-/* E21 pkt 7: wyjątki — nazwy plików z rozszerzeniem (wielkość liter dowolna, także z łącznikiem), licencja „CC BY 4.0” */
-const EXCEPT = [
-  /[\p{L}\p{N}_.-]+\.(?:pdf|xlsx|xls|csv|zip|png|jpe?g|webp|heic|docx?)\b/giu, /\bCC BY(?:-SA)? \d\.\d\b/g,
-  /* F7 #301 r2 P3: adresy e-mail i nazwy domen (np. jan_kowalski@firma.pl, api.trafikinfo.trafikverket.se) */
-  /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, /\b(?:[a-z0-9-]+\.)+(?:pl|se|com|eu|net|org|io)\b/g,
-]
-
-function textHits(raw: string, where: string, o: { codesAllowed?: boolean } = {}): string[] {
-  const out: string[] = []
-  let text = raw
-  for (const re of EXCEPT) text = text.replace(re, ' ')
-  for (const line of text.split('\n')) {
-    for (const [k, re] of RULES) {
-      if (o.codesAllowed && (k === 'kod' || k === 'klucz' || k === 'numer wewnętrzny')) continue /* E21 pkt 3: kody tylko w Stanie systemu */
-      re.lastIndex = 0
-      for (const m of line.matchAll(re)) out.push(`${where} — ${k}: «${m[0]}» w «${line.trim().slice(0, 90)}»`)
-    }
-    /* kropka dziesiętna; „07.10” (dzień i miesiąc) to data — chyba że stoi przed walutą lub jednostką */
-    for (const m of line.matchAll(/(?<![\d.])(\d+)\.(\d+)(?![\d.])/g)) {
-      const [a, b] = [m[1], m[2]]
-      const dateLike = a.length === 2 && b.length === 2 && +a >= 1 && +a <= 31 && +b >= 1 && +b <= 12
-      const unit = /^[  ]?(?:PLN|EUR|SEK|%|km|kg|m\/s|m|t|h|min|l)(?![\p{L}])/u.test(line.slice((m.index ?? 0) + m[0].length))
-      if (!dateLike || unit) out.push(`${where} — kropka dziesiętna: «${m[0]}» w «${line.trim().slice(0, 90)}»`)
-    }
-    /* odmiana */
-    for (const m of line.matchAll(/(?<![\d,.])(\d+)[  ]([\p{L}]+)/gu)) {
-      const f = FORM_OF.get(m[2].toLowerCase())
-      if (!f) continue
-      if (GEN_PREP.test(line.slice(0, m.index ?? 0))) continue
-      const want = formFor(Number(m[1]), f)
-      if (m[2].toLowerCase() !== want) out.push(`${where} — odmiana: «${m[0]}» (ma być „${m[1]} ${want}”) w «${line.trim().slice(0, 90)}»`)
-    }
-    if (!o.codesAllowed && /Nieznany kod/.test(line)) out.push(`${where} — „Nieznany kod…” poza Stanem systemu: «${line.trim().slice(0, 90)}»`)
-  }
-  return out
-}
-
+/* reguły i wyjątki — `tests/e21Rules.ts` (wspólne z testem treści wiadomości) */
 const innerText = (page: Page, sel: string) => page.evaluate((s) => (document.querySelector(s) as HTMLElement | null)?.innerText ?? '', sel)
 
 /**
@@ -462,14 +402,16 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
       'sail_src_STENA', 'risk.kind.no_awizacja', '1 pojazdów w ruchu', '22 pojazdów', '5 pojazdy', 'kwota 8239,15', 'fala 3.4 m',
       'E4: från Backen till Gärde', 'Nieznany kod źródła drogowego', 'undefined',
       '-8239,15 PLN', 'razem\u00a08239,15 PLN', '4500 PLN', 'Mon Oct 12 2026 12:00 GMT+0200', '12345 km', '40000 kg',
+      'SMS według zasad (E42)', 'do czasu umów (R-2)', 'kod (B-14)', 'jak w E41', 'obowiązkowy (W12)', 'przed załadunkiem (III-4)', 'w systemie (I-21)', 'decyzji (E5-2)', '(E35 pkt 2)', 'marża 14,27 %', '10 (83\u00a0%)',
     ]
     for (const s of bad) expect(textHits(s, 't').length, s).toBeGreaterThan(0)
     const ok = [
       'termin 07.10, 12:00', '31.12.2026', 'HHL_FV_2026_0902.pdf', 'WATCH_TOWER_SG-07.PDF', 'Źródło: SMHI (CC BY 4.0)',
-      '1 726,59 PLN', '1 pojazd w ruchu', '22 pojazdy', '5 pojazdów', 'z 3 transportów', 'decade effaced deadbeef',
+      '1 726,59 PLN', '(T-12)', '(K-03)', '(R-03)', 'czeka na podpisany CMR (T-17) · t41', '1 pojazd w ruchu', '22 pojazdy', '5 pojazdów', 'z 3 transportów', 'decade effaced deadbeef',
       'SG-03 · HHL/2026/1304', '+1 h 35 min po oknie', '4,8%', 'biuro@h-h.pl', 'tower.log-mar.pl', '2 minuty temu',
       '1050 km do placu', 'Brak 2 dokumentów', 'Dotyczy 3 transportów', 'w ciągu 2 godzin', 'sprzed 2 godzin', 'brakuje 3 plików',
       'api.trafikinfo.trafikverket.se', 'jan_kowalski@firma.pl', 'kolor #1a2b3c4d', '−8 239,15 PLN', 'Högakustenbron (E4)',
+      'zamknięcie (E22)', 'Inlandsvägen (E45)', 'marża 14,27%', '10 (83%)', 'Tydzień (t43)',
     ]
     for (const s of ok) expect(textHits(s, 't'), s).toEqual([])
     /* w Stanie systemu kody są dozwolone (E21 pkt 3) */
