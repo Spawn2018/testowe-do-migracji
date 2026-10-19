@@ -402,12 +402,12 @@ test.describe('P11 pkt 3 — E21 strażnik tekstów', () => {
       'sail_src_STENA', 'risk.kind.no_awizacja', '1 pojazdów w ruchu', '22 pojazdów', '5 pojazdy', 'kwota 8239,15', 'fala 3.4 m',
       'E4: från Backen till Gärde', 'Nieznany kod źródła drogowego', 'undefined',
       '-8239,15 PLN', 'razem\u00a08239,15 PLN', '4500 PLN', 'Mon Oct 12 2026 12:00 GMT+0200', '12345 km', '40000 kg',
-      'SMS według zasad (E42)', 'jak w E41', 'obowiązkowy (W12)', 'przed załadunkiem (III-4)', 'w systemie (I-21)', 'decyzji (E5-2)', '(E35 pkt 2)', 'marża 14,27 %', '10 (83\u00a0%)',
+      'SMS według zasad (E42)', 'do czasu umów (R-2)', 'kod (B-14)', 'jak w E41', 'obowiązkowy (W12)', 'przed załadunkiem (III-4)', 'w systemie (I-21)', 'decyzji (E5-2)', '(E35 pkt 2)', 'marża 14,27 %', '10 (83\u00a0%)',
     ]
     for (const s of bad) expect(textHits(s, 't').length, s).toBeGreaterThan(0)
     const ok = [
       'termin 07.10, 12:00', '31.12.2026', 'HHL_FV_2026_0902.pdf', 'WATCH_TOWER_SG-07.PDF', 'Źródło: SMHI (CC BY 4.0)',
-      '1 726,59 PLN', '1 pojazd w ruchu', '22 pojazdy', '5 pojazdów', 'z 3 transportów', 'decade effaced deadbeef',
+      '1 726,59 PLN', '(T-12)', '(K-03)', '(R-03)', 'czeka na podpisany CMR (T-17) · t41', '1 pojazd w ruchu', '22 pojazdy', '5 pojazdów', 'z 3 transportów', 'decade effaced deadbeef',
       'SG-03 · HHL/2026/1304', '+1 h 35 min po oknie', '4,8%', 'biuro@h-h.pl', 'tower.log-mar.pl', '2 minuty temu',
       '1050 km do placu', 'Brak 2 dokumentów', 'Dotyczy 3 transportów', 'w ciągu 2 godzin', 'sprzed 2 godzin', 'brakuje 3 plików',
       'api.trafikinfo.trafikverket.se', 'jan_kowalski@firma.pl', 'kolor #1a2b3c4d', '−8 239,15 PLN', 'Högakustenbron (E4)',

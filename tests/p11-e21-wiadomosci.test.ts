@@ -13,6 +13,7 @@ describe('E21 — treści wiadomości (Opcje › Treści wiadomości)', () => {
   const loads = ['SG-03', 'T-01', 'K-03'].map((c) => snap.loads.find((l) => l.code === c)!).filter(Boolean);
 
   it('domyślne tematy i treści: 0 trafień strażnika (e-mail, dzwonek, logowanie, SMS)', () => {
+    expect(loads).toHaveLength(3); // F7 #321 D3: brak transportu demo nie może po cichu wyłączyć testu
     expect(MESSAGES.length).toBeGreaterThan(30);
     const hits: string[] = [];
     for (const l of loads) {

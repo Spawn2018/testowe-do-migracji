@@ -25,9 +25,9 @@ export const RULES: [string, RegExp][] = [
   ['pusta wartość', /\b(undefined|null|NaN|Invalid Date)\b|\[object Object\]/g],
   /* F7 #301 r2 P3: także po minusie i twardej spacji; 4 cyfry bez groszy przed walutą („4500 PLN”; kwoty mają odstęp tysięcy także przy 4 cyfrach, a „1050 km” — nie musi) */
   ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)|(?<![\d/.,])\d{5,}(?=[ \u00a0](?:km|kg)\b)/g],
-  /* P11 pkt 7 (po #303): kody etapów i punktów planu w tekstach („(E42)”, „jak w E41”, „(W12)”, „(III-4)”, „(I-21)”);
-     drogi w nawiasie zostają („Högakustenbron (E4)”, E10, E12, E22, E45 — Szwecja) */
-  ['kod etapu', /\((?!(?:E4|E10|E12|E22|E45)\))(?:E\d{1,2}(?:[ -](?:pkt )?[\w.]+)?|W\d{1,2}|I{1,3}-\d{1,2}|[A-Z]\d?-\d{1,2}(?:-[A-Z]\d)?)\)|\bjak w E\d{1,2}\b/g],
+  /* P11 pkt 3 i 6 (po #303): kody etapów i punktów planu w tekstach („(E42)”, „jak w E41”, „(W12)”, „(III-4)”, „(I-21)”);
+     kody transportów T-/K-/R-NN w nawiasie zostają („(T-17)”, F7 #321 P2); drogi w nawiasie zostają („Högakustenbron (E4)”, E10, E12, E22, E45 — Szwecja) */
+  ['kod etapu', /\((?!(?:E4|E10|E12|E22|E45)\))(?![TKR]-\d{2}\))(?:E\d{1,2}(?:[ -](?:pkt )?[\w.]+)?|W\d{1,2}|I{1,3}-\d{1,2}|[A-Z]\d?-\d{1,2}(?:-[A-Z]\d)?)\)|\bjak w E\d{1,2}\b/g],
   /* procent bez odstępu („4%”, E21; partia 4 #303) */
   ['procent ze spacją', /\d[ \u00a0]%/g],
   ['data angielska', /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2} \d{4}\b|\bGMT[+-]\d{4}\b/g],

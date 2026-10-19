@@ -320,7 +320,7 @@ const pl: Dict = {
   p64_unlinked: "Zezwolenie odłączone",
   p64_note: "Puste pole limitu = bez ograniczenia. Zezwolenie niezgodne z zestawem blokuje przejście do „Gotowy”. Odłączyć można tylko przed „Gotowy”.",
   i3_ext_on: "wiadomości do osób zewnętrznych włączone",
-  i3_note: "Telefon z aplikacją Watch Tower SMS sam pobiera wiadomości z kolejki. Token urządzenia jest pokazywany tylko raz. Do czasu umów RODO (R-2) telefon wysyła wyłącznie SMS testowe na numery z listy, a e-maile wychodzą tylko na adresy log-mar.pl.",
+  i3_note: "Telefon z aplikacją Watch Tower SMS sam pobiera wiadomości z kolejki. Token urządzenia jest pokazywany tylko raz. Do czasu umów RODO telefon wysyła wyłącznie SMS testowe na numery z listy, a e-maile wychodzą tylko na adresy log-mar.pl.",
   i3_apk_note: "Instalacja APK i uprawnienia: docs/handover/INSTRUKCJA_BRAMKA_SMS_ANDROID.md — token z „Wydaj urządzenie”, numer SIM tylko w ustawieniach aplikacji na telefonie.",
   i3_devices_h: "Urządzenia",
   i3_device_label: "Nazwa telefonu",
