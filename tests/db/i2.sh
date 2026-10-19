@@ -658,7 +658,7 @@ $PSQL -c "delete from documents where load_id='$L9' and category='CMR'" >/dev/nu
 val "HHL: CMR z powrotem 24 h (seed)" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',24) is not null)::text" true commit
 $PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '25 hours', status='DELIVERED' where id='$L9'; set session_replication_role=origin" >/dev/null
 val "SCX: CMR po dostawie bez pliku, termin minął = OVERDUE" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OVERDUE
-$PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=null, status='IN_TRANSIT' where id='$L9'; set session_replication_role=origin" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=null, status='IN_TRANSIT_PL' where id='$L9'; set session_replication_role=origin" >/dev/null
 val "SCX: transport w drodze bez CMR = brak wiersza (nie OVERDUE)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
 val "SCX: ponowne wgranie CMR po teście OVERDUE" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
 val "…CMR = OK (ponownie)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
