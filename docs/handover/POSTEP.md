@@ -3279,3 +3279,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Bieżąca pozycja **D-0005** (#313): korekta czasu bieżącego statusu dopisuje `STATUS_*` z `korekta=true` (`zastepuje`, `poprzednio`, `przez`). Bez `set_config('session_replication_role')`. `actual_*` i `audit_log` bez zmian. SCX przy korekcie czasu — odmowa. Test `e25`. Czeka na zielone CI i ponowne F7.
 - Brama `db` na `16b5f3f` (`39311856014`): aud03 29/32 (`opened_at` zamiast wyniku `decision_open_from_event`; I-10 liczy 3 IN_APP, bo jest też HHL_OPS) i e25 33/34 (`AT_PORT` nie jest statusem). Poprawione w następnym commicie. Visual zielony.
 
+## 2026-10-19 22:05 — D-0005: F7 P1 i P2 na f931341
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `f931341` — F7 „dwie drobne rzeczy” (19:58Z, po ostatnim commicie), więc bez scalenia. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0005** (#313): `wf_enqueue_event` pomija zdarzenie z `korekta=true` (STATUS_CANCELLED nie startuje drugi raz). SCX (`CARRIER_DISPATCH` / `CARRIER_USER`) przy tym samym `DELIVERED` i innej godzinie nadpisuje `actual_delivery_at` jak przed 0234; korekta pozostałych statusów zostaje przy Administratorze HHL. Test `e25`: 39. Czeka na zielone CI i „F7: gotowe do scalenia”.
+

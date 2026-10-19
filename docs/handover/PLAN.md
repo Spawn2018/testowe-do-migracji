@@ -536,7 +536,7 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 
 ### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0234, gałąź `pakiet/hhl-admin-daty`)
 Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
-- **Baza:** `0234_hhl_admin_daty.sql` w PR #313 (`load_status_set` przez `current_app_*`, korekta czasu osi dopiskiem `korekta` bez UPDATE na `load_events`, `guard_load_update`, `ksh_confirm_dates`, historia W30 z oknami „przed”, `DECISION_HOLD` w CHECK, typ `KSH_DATES_CHECK`). Numer 0234, bo 0233 jest już na produkcji. Następna migracja: **0235**.
+- **Baza:** `0234_hhl_admin_daty.sql` w PR #313 (`load_status_set` przez `current_app_*`, korekta czasu osi dopiskiem `korekta` bez UPDATE na `load_events`, `guard_load_update`, `ksh_confirm_dates`, historia W30 z oknami „przed”, `DECISION_HOLD` w CHECK, typ `KSH_DATES_CHECK`). Numer 0234, bo 0233 jest już na produkcji. Następna migracja: **0235**. F7 na `f931341`: dopisek `korekta` nie kolejkuje `workflow_runs`; SCX nadal nadpisuje godzinę `DELIVERED` (pozostałe statusy — odmowa).
 - **Sprawa `KSH_DATES_CHECK`:** nie z edycji Administratora HHL (historia + `audit_log`); z importu (A6) albo ze zmiany KSH.
 - **Wyjątek spójności (D1, lista poranna):** `valid_from ≤ valid_until` (zezwolenia, polisy), rejs (przypłynięcie po wypłynięciu) i data odczytu paliwa — zostają; to spójność danych, nie limit wyboru daty.
 - **Testy:** `aud03` / `e25` / `i2` / `g20` / `dec2` (katalog 19 typów). ASK_FIX → `DECISION_HOLD`.

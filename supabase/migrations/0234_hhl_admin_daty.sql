@@ -350,19 +350,27 @@ begin
     return;
   end if;
 
+  -- P2 (F7): SCX na własnym transporcie nadal nadpisuje actual_delivery_at przy DELIVERED
+  -- (jak 0210). Dopisek na osi i korekta pozostałych statusów — tylko HHL_ADMIN.
   if v_load.status is not distinct from v_new then
-    select occurred_at into v_ev_old
-      from load_events
-     where load_id = p_load
-       and event_type = 'STATUS_' || v_new::text
-     order by occurred_at desc, id desc
-     limit 1;
-    if (v_ev_old is not null and v_when is distinct from v_ev_old)
-       or (v_new = 'DELIVERED' and v_load.actual_delivery_at is distinct from v_when) then
-      raise exception 'Korektę czasu statusu robi wyłącznie Administrator HHL'
-        using errcode = '42501';
+    if (
+      v_role in ('CARRIER_DISPATCH', 'CARRIER_USER')
+      and v_new = 'DELIVERED'
+      and v_load.actual_delivery_at is distinct from v_when
+    ) is not true then
+      select occurred_at into v_ev_old
+        from load_events
+       where load_id = p_load
+         and event_type = 'STATUS_' || v_new::text
+       order by occurred_at desc, id desc
+       limit 1;
+      if (v_ev_old is not null and v_when is distinct from v_ev_old)
+         or (v_new = 'DELIVERED' and v_load.actual_delivery_at is distinct from v_when) then
+        raise exception 'Korektę czasu statusu robi wyłącznie Administrator HHL'
+          using errcode = '42501';
+      end if;
+      return;
     end if;
-    return;
   end if;
 
   -- DELIVERED: wybrana godzina nadpisuje actual_delivery_at (W3 / A6) — może być wcześniejsza niż błędny STATUS_*.
@@ -432,7 +440,7 @@ end $$;
 revoke all on function public.load_status_set(uuid, text, timestamptz, text) from public, anon;
 grant execute on function public.load_status_set(uuid, text, timestamptz, text) to authenticated;
 comment on function public.load_status_set(uuid, text, timestamptz, text) is
-  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu; current_app_*; korekta czasu osi dopiskiem; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
+  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu; current_app_*; korekta osi dopiskiem; SCX nadpisuje godzinę DELIVERED; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
 
 create or replace function public.ksh_confirm_dates(
   p_load uuid,
@@ -658,3 +666,25 @@ begin
   return null;
 end $$;
 revoke all on function public.trg_plan_dates_notify() from public, anon, authenticated;
+
+-- P1 (F7): dopisek korekty czasu nie uruchamia automatyzacji (np. STATUS_CANCELLED drugi raz).
+create or replace function wf_enqueue_event() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if (coalesce(new.payload->>'korekta', '') = 'true') is true then
+    return null;
+  end if;
+  insert into workflow_runs (workflow_id, load_id, event_id, status, attempts, next_attempt_at, dedup_key, payload)
+  select w.id, new.load_id, new.id, 'QUEUED', 0, now(), 'wf:' || w.id || ':ev:' || new.id,
+         jsonb_build_object('event_type', new.event_type, 'occurred_at', new.occurred_at, 'payload', new.payload)
+    from workflows w join loads l on l.id = new.load_id
+   where w.enabled and w.trigger_type = new.event_type and w.project_id = l.project_id
+  on conflict (dedup_key) where dedup_key is not null do nothing;
+  return null;
+exception when others then
+  raise warning 'wf_enqueue_event: %', sqlerrm;
+  return null;
+end $$;
+revoke all on function wf_enqueue_event() from public, anon, authenticated;
+comment on function wf_enqueue_event() is
+  'D-0005 P1: zdarzenie z payload.korekta nie kolejkuje workflow_runs; reszta jak 0094.';

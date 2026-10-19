@@ -57,6 +57,10 @@ val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status
   and (select count(*) from load_events where load_id='$L2' and event_type='STATUS_DELIVERED') = 2
   and (select payload->>'korekta' = 'true' and occurred_at = timestamptz '2026-10-07 10:19:54+00' from load_events where load_id='$L2' and event_type='STATUS_DELIVERED' order by id desc limit 1)
 )::text" true commit
+val "SCX: godzina DELIVERED na własnym transporcie (P2)" $SCX "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 11:00:00+00',null); select (
+  (select status::text = 'DELIVERED' and actual_delivery_at = timestamptz '2026-10-07 11:00:00+00' from loads where id='$L2')
+  and (select count(*) from load_events where load_id='$L2' and event_type='STATUS_DELIVERED') = 2
+)::text" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
 # A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
@@ -113,6 +117,12 @@ err "SCX: czas w przyszłości odrzucony" $SCX "select load_status_set('$L1','IN
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
 val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED
+# P1: korekta czasu nie kolejkuje STATUS_CANCELLED (automatyzacja włączona tylko w teście).
+sys "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','STATUS_CANCELLED',now(),'{}'::jsonb)" >/dev/null
+sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
+val "HHL_ADMIN: korekta czasu CANCELLED" $HHL "select load_status_set('$L1','CANCELLED',timestamptz '2026-10-09 08:00:00+00','korekta osi'); select (payload->>'korekta') from load_events where load_id='$L1' and event_type='STATUS_CANCELLED' order by id desc limit 1" true commit
+sval "korekta CANCELLED nie dodaje przebiegu" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
 sval "audit LOAD_STATUS_SET" "select count(*)>=1 from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2'" t
 # A5: bezpośredni UPDATE statusu z sesji — odmowa
 err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
