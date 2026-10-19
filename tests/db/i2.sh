@@ -422,7 +422,7 @@ $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003'
 chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
 # AUD-03 (0192): ksh_confirm_dates ponownie włączone (decyzja właściciela 05.10, KSH — PANEL ZLECENIA) — pełne testy: tests/db/aud03.sh
 err "AUD-03: ksh_confirm bez zmian dat (KSH) → changed false" $KSH "select ksh_confirm_dates('$LD')" '"changed": false'
-err "AUD-03: ksh_confirm tylko KSH (HHL odmowa)" $HHL "select ksh_confirm_dates('$LD')" "KSH Użytkownik|wyłącznie KSH"
+val "AUD-03: HHL_ADMIN może ksh_confirm (0232 / D-0005)" $HHL "select (ksh_confirm_dates('$LD')->>'changed')" false commit
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
 err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"

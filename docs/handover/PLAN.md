@@ -510,18 +510,17 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
 - Testy §5 dopisku (3 → zbiorczy), L-3, `RISK_SEVERITY`, SCX, wygaszenie+ponowne otwarcie, limit poczty, `RISK_OPEN`, E41. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
-### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — W TOKU (migracja 0231, gałąź `pakiet/cmr-po-rozladunku`)
+### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — NA PRODUKCJI (`39116fbb`, 19.10.2026 10:50, migracja 0231, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`)
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
 - Jednorazowo `doc_requirements` CMR → `AFTER_UNLOAD`, 24 h, wpis w `audit_log`, bez powiadomień.
-- `CHECK (category <> 'CMR' OR anchor = 'AFTER_UNLOAD')`. `doc_requirement_set` odrzuca inną kotwicę dla CMR. Test `tests/db/i2.sh` (ok. l. 643) na CMR po rozładunku i na odmowę `AT_LOAD`.
-- `doc_requirements_status()`: termin CMR od faktycznego „Dostarczone” (`actual_delivery_at`) + 24 h. Przed dostawą CMR nie jest `OVERDUE` ani brakiem z terminem (brak wiersza bez pliku).
-- Przegląd miejsc w bazie — lista w `POSTEP.md`. Warunek „Gotowe do fakturowania” (C17 / A5) bez zmian.
-- POD zostaje. Testy §6 dopisku. Wygląd: PR #303 (partia 6) — tekstów i filtra nie zmieniasz (F1).
+- `CHECK` + `doc_requirement_set` odrzuca `AT_LOAD`. `doc_requirements_status`: termin od `actual_delivery_at`; przed dostawą bez pliku = brak wiersza.
+- SELECT po wdrożeniu: CMR = AFTER_UNLOAD/24; OVERDUE przed dostawą = 0 (było 22). Lista przeglądu w `POSTEP.md`.
+- POD zostaje. Wygląd: #303 (F1).
 
-### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po CMR D-20261018-1740-01, przed A3)
+### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po CMR D-20261018-1740-01, przed A3) — W TOKU (migracja 0232)
 Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę w każdym miejscu, bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
-- **Baza:** dla `HHL_ADMIN` zdejmujesz odrzucenia z powodu daty w `load_status_set` (przyszłość, wcześniejszy status), `guard_load_update` (G-20), `ksh_confirm_dates` (tylko KSH, blokada po załadunku; kolejność dat jak import KR-03 — sprawa „Daty KSH do sprawdzenia”, bez odrzucenia) i w innych funkcjach z takim odrzuceniem. Historia z prawdziwym wykonawcą (W30). `import_schedule` bez zmian (W29). Testy §2 dopisku.
-- **Aplikacja:** kolejka PR koordynatora, `wyglad/W-przed-wydaniem-4` (okno statusu i dat KSH). Tekstów tego PR nie zmieniasz (F1).
+- **Baza:** `load_status_set` (przyszłość / wcześniejszy status), `guard_load_update` (G-20), `ksh_confirm_dates` (admin; po załadunku; dziwne daty → `KSH_DATES_CHECK`). Historia W30. `import_schedule` bez zmian.
+- **Aplikacja:** #307 scalony — tekstów nie zmieniasz (F1).
 
 ### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
 F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.

@@ -3110,22 +3110,18 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Następna pozycja: **D-20261018-1740-01** (CMR tylko po rozładunku), potem D-0005, D-0930, A3…
 - D-20261019-0930-01 dopisany do planu (po D-0005, przed A3).
 
-## 2026-10-19 — D-20261018-1740-01 CMR tylko po rozładunku (0231) — w toku
+## 2026-10-19 — D-20261018-1740-01 CMR tylko po rozładunku (0231) — NA PRODUKCJI
 
-- Gałąź `pakiet/cmr-po-rozladunku`, migracja **0231**.
-- Seed + jednorazowo: CMR → `AFTER_UNLOAD` / 24; `CHECK`; `doc_requirement_set` odrzuca `AT_LOAD`; `doc_requirements_status`: termin od `actual_delivery_at`, przed dostawą bez pliku = brak wiersza.
-- Testy `i2` part 4: +8 (i2 **540 → 548**): odmowa AT_LOAD, brak wiersza przed dostawą, OVERDUE po 25 h bez pliku, OK z plikiem.
-- **Przegląd miejsc (pkt 4 dopisku) — bez dodatkowej poprawki kodu poza 0231:**
-  | miejsce | stan |
-  |---|---|
-  | `doc_requirements` / seed `0078` | poprawione w 0231 |
-  | `doc_requirements_status` | poprawione w 0231 |
-  | `l3_scan` L3_DOC | zezwolenia/polisa przed załadunkiem — **nie** CMR; bez zmian |
-  | C17 `0220` / A5 `0210` | „Gotowe do fakturowania” = CMR po dostawie — **potwierdzone, bez zmian** |
-  | macierz C3 `cmr` / DOC_MISSING | „Brak CMR” — bez kotwicy załadunku; A3 doda sprawę „Wgraj CMR” |
-  | szablony `notifyTemplates` RESOURCE_DEADLINE | „przed załadunkiem” = zasoby I-21, nie CMR |
-  | `seed.sql` / konta TEST | brak seeda CMR AT_LOAD |
-  | API kierowcy `driver-photo` / `0021` | wgrywa CMR; bez reguły „2 h po załadunku” |
-  | wygląd | #303 / DocTerms — F1, bez zmian wykonawcy |
-- Kolejka dalej: D-0005 (baza) → D-0930 → A3–A5 (punkt pn 19.10 23:59).
+- PR #310 merge `39116fbb` 10:50; `supabase db push` → **0231**; Vercel `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`; tower/makieta **200**.
+- SELECT: CMR = `AFTER_UNLOAD` / 24; OVERDUE przed dostawą = **0** (było 22); stany CMR: OK 2, OVERDUE 1 (po dostawie).
+- Testy i2 **548**. Przegląd miejsc — w wpisie „w toku” powyżej (bez dodatkowej poprawki poza 0231).
+- Następna: **D-0005** (0232), potem D-0930, A3…
+
+## 2026-10-19 — D-20261019-0005-01 HHL_ADMIN daty (0232) — w toku
+
+- Gałąź `pakiet/hhl-admin-daty`, migracja **0232**.
+- `load_status_set`: HHL_ADMIN bez limitu przyszłości / wcześniejszego statusu; SCX nadal ograniczone.
+- `guard_load_update`: HHL_ADMIN omija G-20 przy datach planu; HHL_OPS / SCX bez zmian.
+- `ksh_confirm_dates`: HHL_ADMIN + KSH; admin po załadunku; dziwne daty → sprawa `KSH_DATES_CHECK` (typ dopisany).
+- Testy: e25 29→31, aud03 25→28, g20 bez zmiany liczby (err→val), i2 bez zmiany liczby.
 
