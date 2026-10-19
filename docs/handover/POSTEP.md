@@ -3296,3 +3296,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie `7a0516ba` (20:27Z). Ostatni komentarz F7 (20:22Z) dotyczy `03d379af` i zapowiada „gotowe” po zielonej bramie. #317 i #259 mają konflikt z `main`.
 - Bieżąca pozycja **D-0005** (#313): `db` `39319719814` zielony (8 min 53 s), unit zielony, visual `39319719721` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po `7a0516ba`.
 
+## 2026-10-19 23:10 — D-0005 na produkcji
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 scalony `745517e3` (23:03). #317 i #259 mają konflikt z `main` — ostatnie „F7: gotowe do scalenia” na #317 jest sprzed wciągnięcia `main`, więc bez scalenia.
+- `deploy-main` `39324497090`: `format: uri`, `polaczenie: link`, nałożona `0234_hhl_admin_daty.sql`, funkcje Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY (alias `tower.log-mar.pl`). `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200.
+- Pozycja **D-0005** zamknięta. Następna: kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01, migracja 0235).
+
