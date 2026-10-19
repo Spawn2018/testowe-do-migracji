@@ -47,17 +47,20 @@ export function canManageWorkflows(prod: boolean = PROD_BUILD, role: string | nu
 }
 
 /**
- * I-2a — przełącznik „Widok HHL/KSH/SCX”: w produkcji wyłącznie dla konta organizacji HHL
- * (podgląd widoku innej strony). Konta KSH i przewoźnika nie widzą przełącznika — rola wynika z konta.
- * Demo (bez logowania) — przełącznik jest sposobem prezentacji.
+ * I-2a / B5 (D-20261019-1525-01, właściciel 19.10.2026 15:14) — przełącznik „Widok HHL/KSH/SCX” (Podgląd innych
+ * widoków) w produkcji wyłącznie dla roli HHL_ADMIN. HHL_OPS, KSH i przewoźnik nie widzą przełącznika — rola
+ * widoku wynika z konta. Demo (bez logowania) — przełącznik jest sposobem prezentacji.
  */
-export function canSwitchView(prod: boolean = PROD_BUILD, orgCode: string | null | undefined = getAuthProfile()?.org_code): boolean {
-  return !prod || orgCode === 'HHL';
+export function canSwitchView(prod: boolean = PROD_BUILD, role: string | null | undefined = getAuthProfile()?.role): boolean {
+  return !prod || role === 'HHL_ADMIN';
 }
 
+const OWN_VIEW: Record<string, string> = { HHL: 'HHL', KSH: 'KSH', SCX: 'SCX' };
+
 /**
- * E9-7 / G-07 — „Podgląd bez zapisu” tylko w supabase: HHL ogląda KSH/SCX jak ta firma,
- * UI ukrywa i blokuje zapis; sesja bazy zostaje admina. Demo: pełne prawa wybranej roli.
+ * E9-7 / G-07 / B5 — „Podgląd bez zapisu” tylko w supabase: widok innej strony niż własna firma konta
+ * (Administrator HHL ogląda KSH/SCX) — UI ukrywa i blokuje zapis; sesja bazy zostaje konta. Każdy widok inny niż
+ * własny jest tylko do odczytu, także gdyby konto bez prawa Podglądu miało go zapamiętanego. Demo: pełne prawa.
  */
 export function isPreviewReadOnly(opts?: {
   prod?: boolean;
@@ -67,5 +70,7 @@ export function isPreviewReadOnly(opts?: {
   const prod = opts?.prod ?? PROD_BUILD;
   const viewRole = opts?.viewRole !== undefined ? opts.viewRole : getPreviewViewRole();
   const orgCode = opts?.orgCode !== undefined ? opts.orgCode : getAuthProfile()?.org_code;
-  return Boolean(prod && orgCode === 'HHL' && viewRole && viewRole !== 'HHL');
+  const own = orgCode ? OWN_VIEW[orgCode] : undefined;
+  if (!prod || !viewRole || !own) return false;
+  return viewRole !== own;
 }

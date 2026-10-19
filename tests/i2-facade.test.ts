@@ -41,12 +41,16 @@ describe('I-2: rejestr funkcji ukrytych w produkcji', () => {
 })
 
 describe('I-2a: przełącznik widoku i import', () => {
-  it('produkcja: tylko konto HHL; demo: zawsze', () => {
-    expect(canSwitchView(true, 'HHL')).toBe(true)
-    expect(canSwitchView(true, 'KSH')).toBe(false)
-    expect(canSwitchView(true, 'SCX')).toBe(false)
+  it('B5 (D-20261019-1525-01): produkcja — tylko Administrator HHL; demo: zawsze', () => {
+    expect(canSwitchView(true, 'HHL_ADMIN')).toBe(true)
+    expect(canSwitchView(true, 'HHL_OPS')).toBe(false)
+    expect(canSwitchView(true, 'CLIENT_USER')).toBe(false)
+    expect(canSwitchView(true, 'CLIENT_ADMIN')).toBe(false)
+    expect(canSwitchView(true, 'CARRIER_DISPATCH')).toBe(false)
+    expect(canSwitchView(true, 'CARRIER_USER')).toBe(false)
     expect(canSwitchView(true, null)).toBe(false)
     expect(canSwitchView(false, null)).toBe(true)
+    expect(canSwitchView(false, 'HHL_OPS')).toBe(true)
   })
   it('import harmonogramu: wyłącznie HHL (także demo)', () => {
     expect(['HHL', 'KSH', 'SCX'].map((r) => canImportSchedule(r as never))).toEqual([true, false, false])
@@ -57,6 +61,11 @@ describe('I-2a: przełącznik widoku i import', () => {
     expect(isPreviewReadOnly({ prod: true, viewRole: 'HHL', orgCode: 'HHL' })).toBe(false)
     expect(isPreviewReadOnly({ prod: true, viewRole: 'KSH', orgCode: 'KSH' })).toBe(false)
     expect(isPreviewReadOnly({ prod: false, viewRole: 'KSH', orgCode: 'HHL' })).toBe(false)
+    /* B5: każdy widok inny niż własnej firmy — tylko do odczytu (także zapamiętany u konta bez Podglądu) */
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'HHL', orgCode: 'KSH' })).toBe(true)
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'SCX', orgCode: 'SCX' })).toBe(false)
+    expect(isPreviewReadOnly({ prod: true, viewRole: null, orgCode: 'HHL' })).toBe(false)
+    expect(isPreviewReadOnly({ prod: true, viewRole: 'SCX', orgCode: 'INNA' })).toBe(false)
     // demo: pełne prawa wybranej roli (G-07) — PROD_BUILD=false w vitest
     expect(canEditResources('SCX')).toBe(true)
     expect(canSubmitInvoice('SCX')).toBe(true)
