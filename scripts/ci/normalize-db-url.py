@@ -109,6 +109,11 @@ def main() -> int:
         f"baza {'tak' if has_db else 'nie'}, port {port}, "
         f"haslo zakodowane: {encoded}, polaczenie: {mode}"
     )
+    folded = normalized.lower()
+    if folded.startswith("jdbc:") or "host=" in folded:
+        print(
+            "to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler"
+        )
     if scheme != "postgres" or not has_user or not has_host or not has_db:
         print("SUPABASE_DB_URL nie jest pełnym adresem postgresql://uzytkownik@host:port/baza.")
         print(

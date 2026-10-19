@@ -2,7 +2,7 @@
  * F7 #326 P1: hasło w SUPABASE_DB_URL kodowane procentowo (CLI 2.121, net/url).
  * Adresu z sekretu tu nie ma — tylko zmyślone przykłady.
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -36,7 +36,7 @@ function run(raw: string): {
   const passwordPath = join(dir, 'password')
   const modePath = join(dir, 'mode')
   try {
-    const log = execFileSync(PY, ['scripts/ci/normalize-db-url.py'], {
+    const proc = spawnSync(PY, ['scripts/ci/normalize-db-url.py'], {
       encoding: 'utf8',
       env: {
         ...process.env,
@@ -47,6 +47,7 @@ function run(raw: string): {
         DB_MODE_FILE: modePath,
       },
     })
+    const log = `${proc.stdout ?? ''}${proc.stderr ?? ''}`
     return {
       log,
       url: readFileSync(urlPath, 'utf8'),
@@ -133,5 +134,18 @@ describe('normalize-db-url (F7 #326 P1)', () => {
     expect(out.log).toContain('polaczenie: pooler')
     expect(out.log).not.toContain('sekretpula')
     expect(out.log).not.toContain('pooler.supabase.com')
+  })
+
+  it('przy formacie JDBC albo klucz=wartość podpowiada URI sesyjne, bez adresu (#330)', () => {
+    const hint = 'to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler'
+    const jdbc = 'jdbc:postgresql://host.example:5432/postgres?user=tajny&password=sekret'
+    const kv = 'host=host.example port=5432 user=tajny password=sekret dbname=postgres'
+    for (const raw of [jdbc, kv]) {
+      const out = run(raw)
+      expect(out.log).toContain(hint)
+      expect(out.log).not.toContain('sekret')
+      expect(out.log).not.toContain('tajny')
+      expect(out.log).not.toContain('host.example')
+    }
   })
 })
