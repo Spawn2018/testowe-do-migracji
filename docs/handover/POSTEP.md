@@ -3239,3 +3239,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   - Vercel `D8dghXG3wndN4VKWX3RdGcpJerrj` READY, alias `tower.log-mar.pl`; tower i makieta **200**
 - Następny krok tej pozycji: zabezpieczenie prefiksu `NAZWA=` / JDBC w `normalize-db-url.py` (komentarz #331, 18:40). Potem D-0005 (#313).
 
+## 2026-10-19 20:30 — #334 scalony; prefiks NAZWA= i JDBC
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #334 „F7: gotowe do scalenia” od `Spawn2018` o 18:21Z, po ostatnim commicie `47732685` (18:19Z). Unit i visual zielone, `MERGEABLE`, bez forka. Scalony `6aafacbe`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- Ten krok: `normalize-db-url.py` zdejmuje `export NAZWA=` (nazwa `[A-Z_]+` w logu), składa `postgresql://` z JDBC `user`/`password`, loguje `format: uri|jdbc|klucz=wartosc|inny`. Hasła i hosta nie wypisuje. Testy prefiksu, export z cudzysłowem i JDBC.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-prefiks-nazwa`, czeka na „F7: gotowe do scalenia”. Potem D-0005 (#313).
+

@@ -12,20 +12,69 @@ import os
 import re
 import stat
 import sys
-from urllib.parse import quote, unquote
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 SAFE = "!$&'()*+,;=-._~"
 OK = re.compile(r"(?:[A-Za-z0-9\-._~!$&'()*+,;=]|%[0-9A-Fa-f]{2})*")
+ASSIGN = re.compile(r"^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$", re.DOTALL)
+NAME_OK = re.compile(r"[A-Z_]+")
 
 
-def normalize(raw: str) -> str:
-    text = raw.replace("\ufeff", "").strip()
+def strip_quotes(text: str) -> str:
+    text = text.strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in {'"', "'"}:
-        text = text[1:-1].strip()
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if lines and lines[0].startswith(("postgres://", "postgresql://")):
-        return lines[0]
+        return text[1:-1].strip()
     return text
+
+
+def classify(text: str) -> str:
+    folded = text.lower()
+    if folded.startswith("jdbc:"):
+        return "jdbc"
+    if folded.startswith(("postgres://", "postgresql://")):
+        return "uri"
+    if "host=" in folded:
+        return "klucz=wartosc"
+    if "://" in text:
+        return "uri"
+    return "inny"
+
+
+def jdbc_to_uri(text: str) -> str | None:
+    """jdbc:postgresql://host:port/baza?user=&password= → postgresql://…"""
+    if not text.lower().startswith("jdbc:postgresql://"):
+        return None
+    parsed = urlparse(text[len("jdbc:") :])
+    query = parse_qs(parsed.query, keep_blank_values=False)
+    users = query.get("user") or []
+    passwords = query.get("password") or []
+    database = parsed.path.lstrip("/").split("/", 1)[0]
+    if not users or not passwords or not parsed.hostname or not database:
+        return None
+    user = quote(users[0], safe="")
+    port = parsed.port or 5432
+    return f"postgresql://{user}:{passwords[0]}@{parsed.hostname}:{port}/{database}"
+
+
+def prepare(raw: str) -> tuple[str, str | None, str]:
+    """BOM, prefiks NAZWA=, cudzysłów, JDBC. Zwraca (tekst, nazwa albo None, format)."""
+    text = raw.replace("\ufeff", "").strip()
+    name: str | None = None
+    matched = ASSIGN.match(text)
+    if matched:
+        candidate = strip_quotes(matched.group(2).strip())
+        folded = candidate.lower()
+        if folded.startswith(("postgres://", "postgresql://", "jdbc:")) or "://" in candidate:
+            name = matched.group(1)
+            text = matched.group(2)
+    text = strip_quotes(text)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    body = lines[0] if lines else text
+    fmt = classify(body)
+    converted = jdbc_to_uri(body)
+    if converted:
+        body = converted
+    return body, name, fmt
 
 
 def encode_password(url: str) -> str:
@@ -83,7 +132,7 @@ def describe(url: str) -> tuple[str, str, bool, bool, bool]:
 
 
 def main() -> int:
-    normalized = normalize(os.environ.get("SUPABASE_DB_URL", ""))
+    normalized, name, fmt = prepare(os.environ.get("SUPABASE_DB_URL", ""))
     url = encode_password(normalized)
     encoded = "tak" if url != normalized else "nie"
     port, scheme, has_user, has_host, has_db = describe(url)
@@ -109,8 +158,14 @@ def main() -> int:
         f"baza {'tak' if has_db else 'nie'}, port {port}, "
         f"haslo zakodowane: {encoded}, polaczenie: {mode}"
     )
-    folded = normalized.lower()
-    if folded.startswith("jdbc:") or "host=" in folded:
+    if name and NAME_OK.fullmatch(name):
+        print(f"prefiks NAZWA= zdjety: tak ({name})")
+    elif name:
+        print("prefiks NAZWA= zdjety: tak")
+    else:
+        print("prefiks NAZWA= zdjety: nie")
+    print(f"format: {fmt}")
+    if fmt in {"jdbc", "klucz=wartosc"} and scheme != "postgres":
         print(
             "to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler"
         )
