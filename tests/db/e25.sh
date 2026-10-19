@@ -154,6 +154,7 @@ where e2.load_id='33333333-0000-0000-0000-00000000d931'
 val "korekta po STATUS_AUTO zapisuje dopisek" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d934','AT_SITE',timestamptz '2026-10-07 11:00:00+00','powod auto'); select (
   e.payload->>'korekta' = 'true'
   and e.payload->>'zastepuje' = a.id::text
+  and (e.payload->>'poprzednio')::timestamptz = timestamptz '2026-10-07 10:00:00+00'
   and e.payload->>'note' = 'powod auto'
   and e.payload->>'actor' = 'Anna Admin // H&H Logistics'
 )::text
@@ -161,6 +162,17 @@ from load_events e
 join load_events a on a.load_id = e.load_id and a.event_type = 'STATUS_AUTO'
 where e.load_id='33333333-0000-0000-0000-00000000d934'
   and e.event_type='STATUS_AT_SITE'
+  and e.payload->>'korekta' = 'true'" true commit
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, actual_delivery_at, hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000d935','$P','$SCXO','123456/2026/D935','DELIVERED',timestamptz '2026-10-07 09:00:00+00','HHL/D935','SCX/D935')
+     on conflict (id) do update set status=excluded.status, actual_delivery_at=excluded.actual_delivery_at" >/dev/null
+val "korekta bez wpisu: zastepuje null, poprzednio z actual" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d935','DELIVERED',timestamptz '2026-10-07 09:30:00+00','bez wpisu'); select (
+  e.payload->>'zastepuje' is null
+  and (e.payload->>'poprzednio')::timestamptz = timestamptz '2026-10-07 09:00:00+00'
+)::text
+from load_events e
+where e.load_id='33333333-0000-0000-0000-00000000d935'
+  and e.event_type='STATUS_DELIVERED'
   and e.payload->>'korekta' = 'true'" true commit
 val "HHL koryguje D932 do 12:30" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 14:00:00+00',null); select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00','k1'); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
 val "SCX: DELIVERED 12:30 bez błędu" $SCX "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00',null); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit

@@ -234,6 +234,57 @@ $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='
 val "SCX dostał kod SG-D930" "select (count(*)>=1) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('SG-D930' in n.payload::text)>0" t
 val "SCX po ksh_confirm bez numeru KSH" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('KSHLEAK9301' in n.payload::text)>0" 0
 
+echo; echo "[dec-auto] D-0040 numer KSH poza e-mailem SCX"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status)
+  values ('33333333-0000-0000-0000-00000000d940','$P','00000000-0000-0000-0000-00000000a003','KSHLEAK0040','PLANNED')
+  on conflict (id) do update set order_no=excluded.order_no, carrier_org_id=excluded.carrier_org_id, status='PLANNED'" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P','33333333-0000-0000-0000-00000000d940','SG-D040',1,1,1
+   where not exists (select 1 from shipment_items where project_id='$P' and shipment_code='SG-D040')" >/dev/null
+$PSQL -c "update notification_matrix set email=true where event_key='dec_new' and role='CARRIER_DISPATCH'" >/dev/null
+$PSQL -c "select public.decision_open_from_event('$P','FERRY_CANCELLED','d040-ferry','Prom odwolany','{\"bundle_key\":\"d040-ferry\"}'::jsonb,'33333333-0000-0000-0000-00000000d940',null)" >/dev/null
+val "FERRY_CANCELLED do SCX: kod, nie numer KSH" "select coalesce((
+  select bool_and(
+    e->>'order_no' = 'SG-D040'
+    and e->>'order_no' is distinct from 'KSHLEAK0040'
+    and e->>'order_no' is distinct from left(l.id::text, 8)
+  )::text
+  from notifications n
+  join app_users u on u.id = n.user_id
+  join organizations o on o.id = u.org_id
+  join loads l on l.id = n.load_id
+  cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
+  where n.channel = 'EMAIL' and n.template = 'DECISION_OPEN' and o.kind = 'CARRIER'
+    and n.load_id = '33333333-0000-0000-0000-00000000d940'
+), 'false')" t
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled)
+  select '$P', 'D040-MAIL', 'D040 mail SCX', 'DELAY_DETECTED', 'true'::jsonb,
+         '[{\"type\":\"email\",\"audience\":\"CARRIER\",\"critical\":true}]'::jsonb, true
+   where not exists (select 1 from workflows where project_id='$P' and code='D040-MAIL')" >/dev/null
+$PSQL -c "insert into workflow_runs (workflow_id, load_id, status, dedup_key)
+  select w.id, '33333333-0000-0000-0000-00000000d940', 'QUEUED', 'wf:d040:email'
+    from workflows w where w.project_id='$P' and w.code='D040-MAIL'
+  on conflict (dedup_key) where dedup_key is not null do nothing" >/dev/null
+$PSQL -c "select public.wf_action(w, r, '{\"type\":\"email\",\"audience\":\"CARRIER\",\"critical\":true,\"text\":\"t\"}'::jsonb,
+            jsonb_build_object('event_type','MANUAL','load', public.wf_load_context(r.load_id)))
+          from workflows w
+          join workflow_runs r on r.workflow_id = w.id
+         where w.code='D040-MAIL' and r.dedup_key='wf:d040:email'" >/dev/null
+val "workflow e-mail SCX bez numeru KSH i bez hex" "select coalesce((
+  select bool_and(
+    n.payload->>'code' = 'SG-D040'
+    and e->>'order_no' = 'SG-D040'
+    and position('KSHLEAK0040' in n.payload::text) = 0
+    and n.payload->>'code' is distinct from left(l.id::text, 8)
+  )::text
+  from notifications n
+  join app_users u on u.id = n.user_id
+  join organizations o on o.id = u.org_id
+  join loads l on l.id = n.load_id
+  cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
+  where n.channel = 'EMAIL' and n.template = 'WORKFLOW_ALERT' and o.kind = 'CARRIER'
+    and n.load_id = '33333333-0000-0000-0000-00000000d940'
+), 'false')" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

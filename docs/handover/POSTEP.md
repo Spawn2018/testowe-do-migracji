@@ -3321,3 +3321,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie kodu `ed564421` (22:07Z). Komentarz F7 (21:37Z) to „niegotowe” na `47af0dc`. #317 i #259 mają konflikt z `main`.
 - Bieżąca pozycja **D-0930** (#340): `db` `39332882485` zielony (6 min 43 s), unit zielony, visual `39332882486` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po ostatnim commicie.
 
+## 2026-10-20 00:50 — D-0930 na produkcji; start 0236 (#343)
+
+- Skrzynka: #320, #322, #323, #324, #338 już w planie, bez `pilne`. #343 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0040-01. Wpisane: PLAN §4 przy A3 (pierwszy commit, migracja 0236), §8, `docs/handover/dopiski/D-20261020-0040-01.md`. #342 i #344 bez „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Scalanie: #340 scalony `c2c22989` — „F7: gotowe do scalenia” po `0d4b0bcc`, unit, `db` i visual zielone.
+- `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, funkcje Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`).
+- Pozycja **D-0930** zamknięta. Bieżąca: **A3+A9** (`pakiet/a3-a9`). Ten commit: #343 w `0236_ksh_scx_l13_workflow.sql`. Testy `dec-auto` 78, `e25` 47. A3 i A9 dopiszą się do tej samej migracji.
+
