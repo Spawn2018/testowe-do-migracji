@@ -1,5 +1,13 @@
 name: visual
 
+# Przyspieszenie testów (decyzja właściciela 19.10.2026, 17:03 — „krok 1”):
+# 1) zmiany — czy PR zmienia coś poza dokumentami; same dokumenty → części testów pominięte (zielono);
+# 2) części — trzy części fresh-smoke równolegle (zrzuty i testy etapów / bramka telefonu E8 / bramy P11),
+#    każda na świeżym buildzie HEAD; zestaw testów identyczny jak dotąd (FRESH_PART=all lokalnie);
+# 3) visual — jeden zbiorczy check o dotychczasowej nazwie („visual”), zielony tylko gdy wszystkie części zielone
+#    albo gdy PR zmienia wyłącznie dokumenty.
+# Nowy commit w tym samym PR przerywa poprzedni przebieg (concurrency).
+
 on:
   pull_request:
   workflow_dispatch:
@@ -13,11 +21,60 @@ on:
           - 'false'
           - 'true'
 
+concurrency:
+  group: visual-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
-  visual:
-    name: visual
+  zmiany:
+    name: visual · zmiany
     runs-on: ubuntu-24.04
-    timeout-minutes: 55  # P11 pkt 3 (F7 #301 r5 D1): bramy P11 ok. 12 min, cały job ok. 33 min — zapas
+    timeout-minutes: 5
+    outputs:
+      kod: ${{ steps.f.outputs.kod }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: f
+        name: Czy PR zmienia coś poza dokumentami
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # Ręczne uruchomienie (np. odświeżenie migawek) — zawsze pełne testy.
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "Uruchomienie ręczne — pełne testy."
+            echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # Commit scalenia PR z bazą: rodzic 1 = baza, więc diff HEAD^1..HEAD = cała zmiana PR względem bazy.
+          if ! files="$(git diff --name-only HEAD^1 HEAD)"; then
+            echo "Nie da się ustalić zmienionych plików — pełne testy."
+            echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ -z "$files" ]; then
+            echo "Brak zmienionych plików — pełne testy."
+            echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "Zmienione pliki: $(printf '%s\n' "$files" | wc -l)"
+          # Dokument = plik w docs/ albo .md poza katalogami aplikacji i testów. Wszystko inne → pełne testy.
+          kod="$(printf '%s\n' "$files" | python3 scripts/ci/tylko-dokumenty.py)"
+          echo "kod=$kod" >> "$GITHUB_OUTPUT"
+          if [ "$kod" = "false" ]; then echo "Tylko dokumenty — części testów wizualnych pominięte."; else echo "Zmiany w kodzie — pełne testy."; fi
+
+  czesci:
+    name: visual · ${{ matrix.part }}
+    needs: zmiany
+    if: needs.zmiany.outputs.kod != 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [zrzuty, telefon, bramy]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,16 +85,38 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: fresh-smoke
+      - name: fresh-smoke (${{ matrix.part }})
         env:
+          FRESH_PART: ${{ matrix.part }}
           PW_UPDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.update == 'true' && '1' || '' }}
         run: bash scripts/ci/fresh-smoke.sh
       - uses: actions/upload-artifact@v4
         if: failure() || (github.event_name == 'workflow_dispatch' && inputs.update == 'true')
         with:
-          name: visual-artifacts
+          # migawki po odświeżeniu leżą w artefakcie „visual-artifacts” (część zrzuty) — jak dotąd
+          name: ${{ matrix.part == 'zrzuty' && 'visual-artifacts' || format('visual-artifacts-{0}', matrix.part) }}
           path: |
             test-results/
             tests/__screenshots__/
           retention-days: 3
           if-no-files-found: ignore
+
+  visual:
+    name: visual
+    needs: [zmiany, czesci]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Wynik zbiorczy
+        env:
+          ZMIANY: ${{ needs.zmiany.result }}
+          KOD: ${{ needs.zmiany.outputs.kod }}
+          CZESCI: ${{ needs.czesci.result }}
+        run: |
+          set -euo pipefail
+          echo "zmiany=$ZMIANY kod=$KOD czesci=$CZESCI"
+          if [ "$ZMIANY" != "success" ]; then echo "Krok „zmiany” nie przeszedł."; exit 1; fi
+          if [ "$KOD" = "false" ]; then echo "Tylko dokumenty — zielono bez części testów wizualnych."; exit 0; fi
+          if [ "$CZESCI" != "success" ]; then echo "Co najmniej jedna część testów nie przeszła ($CZESCI)."; exit 1; fi
+          echo "Wszystkie części zielone."
