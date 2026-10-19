@@ -542,11 +542,12 @@ Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę
 - **Testy:** `aud03` / `e25` / `i2` / `g20` / `dec2` (katalog 19 typów). ASK_FIX → `DECISION_HOLD`.
 - **Aplikacja:** #307 scalony (F1). Widok „zmienił Administrator HHL” — osobny PR `wyglad/*`.
 
-### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
-F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.
-- `l3_scan` i funkcje składające `code`/tytuł: tylko kod transportu, nigdy `left(id::text, 8)` ani samotne `order_no`.
-- `l3_upsert_alarm` nie nadpisuje poprawionego `params.code`.
-- Jednorazowo: 7 ryzyk i 84 powiadomienia SCX z numerem KSH; test części jednorazowej 0230 woła prawdziwą funkcję wygaszania.
+### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — W TOKU
+F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
+- `l3_scan`, `l3_ksh_lead`, `detect_unconfirmed_dates`, `detect_resource_deadlines` i `trg_plan_dates_notify`: kod z `load_sms_code`, nigdy `left(id::text, 8)` ani samotne `order_no`.
+- `l3_upsert_alarm` nie nadpisuje poprawionego `params.code` identyfikatorem ani numerem KSH.
+- Jednorazowo: otwarte ryzyka i powiadomienia SCX z numerem KSH; `sefs_source_expire_once()` woła test `dec-auto`.
+- **D-20261019-2315-01 (#338), ta sama migracja:** bieżący wpis statusu = ostatni niezastąpiony (`zastepuje`), `v_prev_at` tylko z takich wpisów, dopisek korekty ma `payload.actor` i `actor_id`. Bez nowej pozycji w kolejce.
 
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
 - `doc_requirements`:
@@ -1153,3 +1154,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 21:40 | D-0005 #313: F7 B2 — korekta czasu osi dopiskiem, bez `session_replication_role` | pętla |
 | 19.10.2026 22:50 | D-0005 #313: CI zielone na `7a0516ba` (`db` `39319719814`, unit, visual `39319719721`). Scalenie czeka na „F7: gotowe do scalenia” po tym commicie | pętla |
 | 19.10.2026 23:10 | #313 scalony (`745517e3`). `deploy-main` `39324497090`: migracja 0234, Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY, tower i makieta 200. D-0005 zamknięte. Dalej D-0930 | pętla |
+| 19.10.2026 23:15 | D-20261019-2315-01 (#338): korekta godziny statusu wskazuje ostatni niezastąpiony wpis. W tej samej migracji co D-0930 (0235), bez nowej pozycji kolejki | koordynator |

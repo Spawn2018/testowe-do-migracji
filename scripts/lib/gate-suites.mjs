@@ -36,7 +36,7 @@ export const EXPECTED_LOCAL = {
   hist11: 11,
   workflows: 67,
   insurance: 42,
-  'dec-auto': 72,
+  'dec-auto': 74, // D-0930: l3_scan kod transportu + sefs_source_expire_once
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 39, // D-0005 F7 P1/P2: +SCX godzina DELIVERED, +korekta CANCELLED bez workflow_runs
+  e25: 45, // D-2315: druga korekta wskazuje dopisek; SCX od poprawionej godziny
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };
