@@ -3130,3 +3130,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
 - Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
 
+## 2026-10-19 12:45 — #314 SCALONE; start #312 (0233 has_doc CMR)
+
+- Merge #314 `1966a3dd` (docs praca ciągła + F7 bezpieczeństwo).
+- **#312:** migracja **0233** — `doc_requirements_status` has_doc CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); i2: CMR z załadunku → OVERDUE po dostawie −25 h → OK po ponownym wgraniu.
+- P1/P2 z F7 #310: **nie** „C17/A5 = CMR po dostawie potwierdzone” — to zadania **A4** (`load_status_set` ręczny READY + `register_invoice` bez CMR z załadunku/zastąpionych). Wpisy w PLAN §4 A4.
+
