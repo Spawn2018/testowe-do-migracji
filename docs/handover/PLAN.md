@@ -126,18 +126,20 @@ Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08
 
 Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P0a; bramę końcową P1, P2 i P3 robisz po scaleniu P0b (kodować możesz wcześniej) · P3 scalasz po P2, po Poprawkach P2 — wygląd i po Poprawkach P2 — wygląd 2 (`wyglad/P2-2`; wspólne pliki paska, nazwy E41 i formatów E21 — rebase przed bramą końcową) · P4 po P2 i P3 · P5 po P4 · P6 po P3 i P4 · P7 po P5 i P6 · P8 po P3 i P4 · P9 po P2 i P4 · P10a po P0b (push alarmów podłączasz po scaleniu P3) · P10b po P3 i P10a · P11 po wszystkich.
 
-**Punkty kontrolne (czas polski)** (D-20261017-0730-01, decyzja 2C / 3A):
+**Punkty kontrolne (czas polski)** (D-20261017-0730-01, decyzja 2C / 3A; daty 19–21.10 przesunięte D-20261019-0820-01):
 | Kiedy | Na produkcji |
 |---|---|
 | sob 17.10, 23:59 | C3-p, B1, B2, B6, A8, A1, A2 |
-| nd 18.10, 23:59 | A3, A7, A9, A4, A5; brama niedzielna |
-| pn 19.10, 23:59 | B4, B5, B7, B8, B9; A6 pkt 1–3 |
-| wt 20.10, 23:59 | A6 pkt 4 (odczyt SharePoint); C4–C11, C13 |
-| śr 21.10, 23:59 | P4-u; P3-d |
+| nd 18.10, 23:59 | A3, A7, A9, A4, A5; brama niedzielna — **nieoddane — przeniesione na pn 19.10 23:59 (D-20261019-0820-01)** |
+| pn 19.10, 12:00 | #306 (D-1610) scalony, `db push`, wdrożenie z `main`; #307 scalony |
+| pn 19.10, 18:00 | D-20261018-1740-01 i D-20261019-0005-01 (część bazy) |
+| **pn 19.10, 23:59** | **A3, A7, A9, A4, A5** (nowy punkt kontrolny) |
+| wt 20.10, 23:59 | B4, B5, B7, B8, B9; A6 pkt 1–3; odczyt SharePoint (A6 pkt 4) |
+| śr 21.10, 23:59 | C4–C13; P4-u; P3-d |
 | czw 22.10, 23:59 | P5 |
 | pt 23.10, 23:59 | P6 |
 | sob 24.10, 23:59 | P7 (reszta); P8 |
-| nd 25.10, 23:59 | P10a; brama niedzielna |
+| nd 25.10, 23:59 | P10a; brama niedzielna — jeśli wt 20.10 23:59 B4–B9 nieoddane: P10a razem z P7/P8 na sob 24.10 (D-20261019-0820-01) |
 | pn 26.10, 23:59 | P9 |
 | wt 27.10, 23:59 | P10b; P11 w toku |
 | śr 28.10, 20:00 | P11: pełna brama TEST, 280 ujęć, `release-1.0` |
@@ -189,7 +191,7 @@ Status paczki wpisujesz tu: `DO ZROBIENIA` → `W TOKU (gałąź)` → `NA PRODU
 - **#303 `wyglad/W-przed-wydaniem-3` (P11 pkt 7, partie 1–6):** **SCALONE I WDROŻONE** (18.10.2026 20:07, merge `7e9c286c`, głowa `ab0969d`; Vercel `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33). Tylko wygląd: zgodność z raportem, spójne ceny w demo, CMR po rozładunku. Tekstów i filtra CMR nie zmieniam (F1).
 - **#304 `wyglad/W-demo-strefy` (zdarzenia strefy placu w danych demo):** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `e1beb93b`, głowa `e71a406`; Vercel `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ` READY 23:20). F7 runda 3. Przed `wyglad/W-przed-wydaniem-4`.
 - **#305 `pakiet/panel-do-zrobienia-baza`:** **SCALONE I WDROŻONE** (18.10.2026 23:14, merge `dca5888c`, głowa `43d85a8c`; ta sama produkcja `e1beb93b` / `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ`). F7. Migracja 0229. Porządek 16 + 7. #301 nadal otwarty.
-- **`wyglad/W-przed-wydaniem-4` (D-20261019-0005-01):** część aplikacji — Administrator HHL zmienia daty i godziny bez blokad w oknach. Koordynator. Działa na produkcji po bazie tej pozycji.
+- **#307 `wyglad/W-przed-wydaniem-4` (D-20261019-0005-01):** część aplikacji — 39 usterek z przeglądu + Administrator HHL zmienia daty i godziny bez blokad w oknach. Koordynator. F7 gotowe do scalenia (19.10 02:53); scalasz przy przejściu między pozycjami (po #306 / przed D-1740). Działa w pełni na produkcji po bazie D-0005.
 
 P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — dokumenty, bez wdrożenia aplikacji`, a hash scalenia P0a wpisujesz w pierwszym wpisie P0b w `POSTEP.md`.
 
@@ -500,13 +502,13 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - **Aplikacja:** po zapisie w panelu (awizacja, numer zlecenia, dokument, ręczna zmiana statusu) — `refreshFromServer({ keepSelection: true })` w `supabaseBridge.ts`. Wyglądu nie zmieniasz.
 
 ### Eskalacje decyzji (D-20261018-1610-01; po bazie panelu §2, przed A3) — W TOKU (`pakiet/eskalacje-decyzji`, migracja 0230)
-#306 — przegląd 19.10 00:22: niegotowe, B1–B6, poprawki w toku.
+#306 — przegląd 2 (19.10 ~02:30): B1–B6 poprawione, 3 nowe B (B-N1–B-N3), poprawki w toku.
 - L-1 nie otwiera decyzji `SOURCE` (`SEFS_OUT_OF_TABLE`), gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Sprawa dopiero po zamknięciu tygodnia bez cen. Gałąź `OSTATECZNY` bez klucza `final` też otwiera sprawę.
-- Jednorazowo: 12 otwartych `SOURCE` (odczyt produkcji 19.10: 8 — tydzień jeszcze trwa, 4 — ceny już są) → `EXPIRED`, wpis w `decision_events`, bez powiadomień. Po nałożeniu oczekiwane 0.
-- Eskalacja: jedno powiadomienie na decyzję i osobę, także gdy L-3 idzie po eskalacji. Więcej niż 5 eskalacji u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail przez próg L-13 („Po terminie: N decyzji · Opłata paliwowa”, odnośnik `/ryzyka`). Pojedyncze powstają tylko tam, gdzie zbiorczy nie powstaje. `RISK_OPEN` dla `decision-overdue` wchodzi do zbiorczego.
-- Tytuły: numer zlecenia firmy, która czyta (E41). Zapisana sprawa trzyma sam kod. „SEFS:” → „Opłata paliwowa”. Wzorzec identyfikatora łapie też „Decyzja po terminie: 2e97c024:”. Jednorazowa poprawka otwartych tytułów, `detail.params.title` i powiadomień innych niż wysłany e-mail.
+- Jednorazowo: 12 otwartych `SOURCE` (odczyt produkcji 19.10: 8 — tydzień jeszcze trwa, 4 — ceny już są) → `EXPIRED`, wpis w `decision_events`, bez powiadomień; `event_key` dostaje `:expired-0230`, żeby po zamknięciu tygodnia bez cen powstała nowa sprawa (B-N3). Po nałożeniu oczekiwane 0 otwartych SOURCE.
+- Eskalacja: jedno powiadomienie na decyzję i osobę, także gdy L-3 idzie po eskalacji. **Więcej niż 2** eskalacje u jednej osoby w jednym przebiegu → jeden wpis zbiorczy i jeden e-mail (`DECISION_ESCALATED_BATCH`, odnośnik `/ryzyka`). Pojedyncze powstają tylko poniżej progu. SCX tylko przy `decider_role = CARRIER` (jak `decision_notify`). `RISK_OPEN` dla `decision-overdue` nie idzie osobno.
+- Tytuły: w ryzykach i decyzjach sam kod (E41); numer firmy przy powiadomieniu. „SEFS:” → „Opłata paliwowa”. Jednorazowa poprawka tytułów, `params.title`, `params.code` (hex → kod) i powiadomień innych niż wysłany e-mail.
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
-- Testy §5 dopisku plus L-3, limit poczty, `RISK_OPEN`, E41 i część jednorazowa. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
+- Testy §5 dopisku (3 → zbiorczy), L-3, `RISK_SEVERITY`, SCX, wygaszenie+ponowne otwarcie, limit poczty, `RISK_OPEN`, E41. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
 ### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3)
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
@@ -1070,4 +1072,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 18.10.2026 16:10 | D-20261018-1610-01: eskalacje decyzji — L-1 bez `SOURCE` dla przyszłego tygodnia, 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień, jedna eskalacja na osobę, zbiorcza powyżej 2, tytuły z kodem transportu i „Opłata paliwowa”. Po bazie panelu §2, przed A3. Przegląd 19.10 00:22: niegotowe (B1–B6: L-3 i `RISK_SEVERITY`, `OSTATECZNY` bez `final`, 4 tygodnie z cenami, limit poczty przy >5, `RISK_OPEN`, wzorzec identyfikatora i `params.title`). Poprawki w #306, przed scaleniem | koordynator |
 | 18.10.2026 17:40 | D-20261018-1740-01: CMR tylko po rozładunku — `AFTER_UNLOAD` / 24 h, bez `OVERDUE` przed dostawą, odmowa kotwicy przy załadunku. Po eskalacjach, przed A3. Wygląd: #303 (F1) | właściciel 17:28; koordynator |
 | 18.10.2026 22:00 | D-20261018-2200-01: właściciel 21:57 przyjął domyślne odpowiedzi — W26, W28, W29, W30, W31, W33 i W45 zamknięte. W29 i W31 obowiązują w „P7 — uzupełnienie W13”. Poza tym bez zmian w kodzie | właściciel 21:57; koordynator |
-| 19.10.2026 00:05 | D-20261019-0005-01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń (decyzja 00:01). Pozycja po CMR (D-20261018-1740-01), przed A3. Aplikacja: `wyglad/W-przed-wydaniem-4`. W30 uzupełnione | właściciel 00:01; koordynator |
+| 19.10.2026 00:05 | D-20261019-0005-01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń (decyzja 00:01). Pozycja po CMR (D-20261018-1740-01), przed A3. Aplikacja: `wyglad/W-przed-wydaniem-4` (#307 — F7 gotowe, scalenie przy przejściu między pozycjami). W30 uzupełnione | właściciel 00:01; koordynator |
+| 19.10.2026 02:30 | D-20261018-1610-01 / #306 przegląd 2: B1–B6 poprawione; nowe B-N1 (zbiorczy >2), B-N2 (SCX tylko CARRIER), B-N3 (`event_key` `:expired-0230`); P1–P5 w tym samym PR | koordynator |
+| 19.10.2026 08:20 | D-20261019-0820-01: punkt kontrolny +24 h (decyzja właściciela). pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; 23:59 A3–A5; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie 28.10 20:00 bez zmian. Drugi krok: bez B4–B9 we wt → P10a na sob 24.10 z P7/P8 | właściciel 19.10; koordynator |

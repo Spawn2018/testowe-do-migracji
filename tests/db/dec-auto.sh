@@ -145,6 +145,12 @@ val "SEFS zamknięty tydzień bez cen → decyzja" "select l1b_sefs_note('$P','2
 val "SEFS tytuł bez skrótu" "select (title like 'Opłata paliwowa:%' and title not like '%SEFS%') from decisions where detail->>'event_key' like 'l1b:sefs:$P:2020-06-08:SOURCE'" t
 $PSQL -c "select l1b_sefs_note('$P','2020-06-15')" >/dev/null
 val "SEFS zamknięty tydzień drugi raz → jedna" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:2020-06-08:SOURCE'" 1
+# B-N3: wygaszenie przenosi event_key, potem zamknięty tydzień bez cen → nowa sprawa.
+$PSQL -c "update decisions set detail = coalesce(detail,'{}'::jsonb) || jsonb_build_object('event_key', (detail->>'event_key') || ':expired-0230', 'event_key_0230', detail->>'event_key'), updated_at = now() where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE'" >/dev/null
+$PSQL -c "select decision_expire(id, 'nie dotyczy — tydzień wskaźników jeszcze trwa') from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE:expired-0230'" >/dev/null
+val "SEFS po wygaszeniu → nowa sprawa" "select l1b_sefs_note('$P','2020-06-15')" SOURCE
+val "SEFS po wygaszeniu świeży klucz" "select count(*) from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+val "SEFS wygaszony klucz zostaje" "select count(*) from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE:expired-0230' and status = 'EXPIRED'" 1
 $PSQL -c "insert into sefs_parameters (project_id, version, valid_from, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln)
   select '$P', 91, '2026-01-01', 1, 1, 'OKQ8', 'ORLEN', 'https://example.com/sek', 'https://example.com/pln', 'WEEKLY',
           '[{\"lte\":100,\"mult\":1}]'::jsonb, '[{\"lte\":100,\"mult\":1}]'::jsonb

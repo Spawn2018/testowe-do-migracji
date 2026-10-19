@@ -28,7 +28,7 @@ export const EXPECTED_LOCAL = {
   i2: 540,
   i30: 10,
   i31: 9,
-  dec2: 39,
+  dec2: 42,
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -36,7 +36,7 @@ export const EXPECTED_LOCAL = {
   hist11: 11,
   workflows: 67,
   insurance: 42,
-  'dec-auto': 69,
+  'dec-auto': 72,
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,

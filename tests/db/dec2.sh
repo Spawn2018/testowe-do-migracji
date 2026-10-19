@@ -52,6 +52,9 @@ if [ -n "$errline" ]; then out="$errline | $out"; fi
 if [ "${out:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    escalate overdue ($out)"; else fail=$((fail+1)); echo "  FAIL  escalate overdue (otrzymano: $out)"; fi
 val "escalated_at ustawione" $HHL "select escalated_at is not null from decisions where id='$D3'" t
 val "historia ESCALATE" $HHL "select count(*) filter (where action='ESCALATE') from decision_events where decision_id='$D3'" 1
+val "SEFS po terminie → 0 wpisów u SCX" $SCX "select count(*) from notifications where template in ('DECISION_ESCALATED','DECISION_ESCALATED_BATCH') and (payload->>'decision_id'='$D3' or coalesce(payload->'decision_ids','[]'::jsonb) ? '$D3')" 0
+# Zeruj escalated_at, żeby drugi przebieg naprawdę przeszedł pętlę (dedup po dedup_key).
+sys "update decisions set escalated_at = null where id='$D3'" >/dev/null
 sys "select decision_escalate_overdue()" >/dev/null
 val "druga eskalacja bez drugiego wpisu" $HHL "select count(*) from notifications where dedup_key like 'dec:ESCALATE:$D3:IN:%'" 1
 B1=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 1', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
@@ -59,12 +62,18 @@ B2=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 2', '{}
 B3=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen 3', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id in ('$B1','$B2','$B3')" >/dev/null
 sys "select decision_escalate_overdue()" >/dev/null
-val "3 eskalacje → osobne wpisy" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED' and n.dedup_key like 'dec:ESCALATE:%:IN:%' and n.payload->>'decision_id' in ('$B1','$B2','$B3')" 3
-val "3 eskalacje → osobne e-maile" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.template='DECISION_ESCALATED' and n.payload->>'decision_id' in ('$B1','$B2','$B3')" 3
-val "3 eskalacje bez zbiorczego" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.template='DECISION_ESCALATED_BATCH'" 0
+# B-N1 / dopisek §5: 3 eskalacje → 1 zbiorczy (nie osobne).
+val "3 eskalacje → jeden wpis" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 3" 1
+val "3 eskalacje → jeden e-mail" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='EMAIL' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 3" 1
+val "3 eskalacje bez osobnych" $HHL "select count(*) from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED' and n.payload->>'decision_id' in ('$B1','$B2','$B3')" 0
+val "tytuł zbiorczy 3" $HHL "select (payload->>'title' = 'Po terminie: 3 decyzje · Opłata paliwowa' and payload->>'path' = '/ryzyka') from notifications n join app_users u on u.id=n.user_id where u.auth_id='$HHL' and n.channel='IN_APP' and n.template='DECISION_ESCALATED_BATCH' and (n.payload->>'n')::int = 3" t
 sys "update decisions set detail = coalesce(detail,'{}'::jsonb) || jsonb_build_object('event_key','l3:test:$D3') where id='$D3'" >/dev/null
 sys "select l3_critical_notify('l3:test:$D3', now())" >/dev/null
 val "L-3 po eskalacji bez drugiego wpisu" $HHL "select count(*) from notifications where dedup_key like 'l3crit:$D3:IN:%'" 0
+# RISK_SEVERITY przy l3_level=critical nie dokłada osobnego wpisu (P3).
+L3R=$(sys "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P', null, 'JOB_FAILURE', 'HIGH', 'L-3 test', 'rk_decision_overdue', jsonb_build_object('l3_level','critical','decision_id','$D3'), 'l3sev-test-$D3') returning id" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+sys "update risk_signals set severity = 'CRITICAL' where id='$L3R'" >/dev/null
+val "RISK_SEVERITY przy L-3 bez wpisu" $HHL "select count(*) from notifications where template='RISK_SEVERITY' and payload->>'risk_id'='$L3R'" 0
 for i in 1 2 3 4 5 6; do
   id=$(run "$HHL" "select decision_open('$P','SEFS_OUT_OF_TABLE','brak cen partia $i', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
   sys "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id='$id'" >/dev/null

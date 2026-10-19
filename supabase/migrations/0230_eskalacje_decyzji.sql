@@ -66,16 +66,9 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_party text := 'HHL';
-  v_role text;
 begin
-  if tg_table_name = 'decisions' then
-    select decider_role into v_role from decision_types where code = new.type_code;
-    -- Zapisany tytuł bez numeru jednej firmy. Numer dokłada powiadomienie dla odbiorcy (E41).
-    v_party := 'CODE';
-  end if;
-  new.title := public.tower_public_title(new.load_id, new.title, v_party);
+  -- Ryzyka i decyzje: sam kod. Numer firmy dokłada powiadomienie albo widok (E41 / P1).
+  new.title := public.tower_public_title(new.load_id, new.title, 'CODE');
   return new;
 end $$;
 revoke all on function public.trg_tower_public_title() from public, anon, authenticated;
@@ -164,7 +157,6 @@ declare
   v_payload jsonb;
 begin
   perform set_config('tower.escalate_overdue', '1', true);
-  perform set_config('search_path', 'pg_temp, public', true);
   create temporary table if not exists esc_hit (
     user_id uuid,
     decision_id uuid,
@@ -180,8 +172,10 @@ begin
   delete from pg_temp.esc_hit;
 
   for r in
-    select d.id, d.project_id, d.type_code, d.title, d.load_id, d.due_at
+    select d.id, d.project_id, d.type_code, d.title, d.load_id, d.due_at,
+           t.decider_role
       from decisions d
+      join decision_types t on t.code = d.type_code
      where d.status in ('NEW','ASSIGNED','SNOOZED')
        and d.due_at is not null
        and d.due_at < now()
@@ -210,6 +204,7 @@ begin
       )
       on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
     end if;
+    -- Jak decision_notify: CARRIER tylko przy decider_role = CARRIER (B-N2).
     insert into pg_temp.esc_hit (user_id, decision_id, load_id, type_code, raw_title, bell, mail, recipient, locale, party)
     select u.id, r.id, r.load_id, r.type_code, r.title,
            public.notify_person_on(u.id, 'dec_late', 'bell', m.in_app, m.fixed_in_app),
@@ -230,7 +225,7 @@ begin
        )
        and (
          o.kind = 'FORWARDER'
-         or (o.kind = 'CARRIER' and (
+         or (o.kind = 'CARRIER' and r.decider_role = 'CARRIER' and (
               r.load_id is null
               or exists (select 1 from loads l where l.id = r.load_id and l.carrier_org_id = o.id)))
          or (o.kind = 'CLIENT' and (
@@ -248,14 +243,21 @@ begin
            min(recipient) as recipient, min(locale) as locale
       from pg_temp.esc_hit
      group by user_id
-    having count(*) > 5
+    having count(*) > 2
   loop
     select coalesce(jsonb_agg(distinct decision_id::text), '[]'::jsonb),
            count(distinct type_code), min(type_code)
       into v_ids, v_types, v_type
       from pg_temp.esc_hit
      where user_id = person.user_id;
-    v_label := 'Po terminie: ' || person.cnt || ' decyzji';
+    -- B-N1: zbiorczy powyżej 2 (dopisek §2). Własny szablon = własny licznik limitu.
+    v_label := 'Po terminie: ' || person.cnt || ' '
+      || case
+           when person.cnt % 10 = 1 and person.cnt % 100 <> 11 then 'decyzja'
+           when person.cnt % 10 between 2 and 4
+                and (person.cnt % 100 < 10 or person.cnt % 100 >= 20) then 'decyzje'
+           else 'decyzji'
+         end;
     if v_types = 1 and v_type = 'SEFS_OUT_OF_TABLE' then
       v_label := v_label || ' · Opłata paliwowa';
     end if;
@@ -285,7 +287,7 @@ begin
   for h in
     select * from pg_temp.esc_hit e
      where e.user_id not in (
-       select user_id from pg_temp.esc_hit group by user_id having count(*) > 5
+       select user_id from pg_temp.esc_hit group by user_id having count(*) > 2
      )
   loop
     v_title := public.tower_public_title(h.load_id, h.raw_title, h.party);
@@ -366,6 +368,18 @@ begin
   loop
     v_reason := public.sefs_source_expire_reason(r.project_id, r.detail);
     if v_reason is not null then
+      -- B-N3: zwolnij event_key, żeby po zamknięciu tygodnia bez cen powstała nowa sprawa.
+      if coalesce(r.detail->>'event_key', '') <> ''
+         and r.detail->>'event_key' not like '%:expired-0230' then
+        update decisions
+           set detail = coalesce(detail, '{}'::jsonb)
+               || jsonb_build_object(
+                    'event_key', (detail->>'event_key') || ':expired-0230',
+                    'event_key_0230', detail->>'event_key'
+                  ),
+               updated_at = now()
+         where id = r.id;
+      end if;
       perform public.decision_expire(r.id, v_reason);
     end if;
   end loop;
@@ -379,7 +393,7 @@ update decisions d
    and (d.title ~* '[0-9a-f]{8}:' or d.title ~* '(^|[[:space:]])SEFS:');
 
 update risk_signals s
-   set title = public.tower_public_title(s.load_id, s.title, 'HHL'),
+   set title = public.tower_public_title(s.load_id, s.title, 'CODE'),
        detail = case
          when coalesce(s.detail#>>'{params,title}', '') ~* '[0-9a-f]{8}:'
            or (
@@ -388,7 +402,7 @@ update risk_signals s
            )
          then jsonb_set(
            s.detail, '{params,title}',
-           to_jsonb(public.tower_public_title(s.load_id, s.detail#>>'{params,title}', 'HHL')),
+           to_jsonb(public.tower_public_title(s.load_id, s.detail#>>'{params,title}', 'CODE')),
            true
          )
          else s.detail
@@ -400,6 +414,20 @@ update risk_signals s
      or coalesce(s.detail#>>'{params,title}', '') ~* '[0-9a-f]{8}:'
      or coalesce(s.detail#>>'{params,title}', '') ~* '(^|[[:space:]])SEFS:'
    );
+
+-- P2: params.code z 8 znaków identyfikatora → kod transportu (E41).
+update risk_signals s
+   set detail = jsonb_set(
+         coalesce(s.detail, '{}'::jsonb),
+         '{params,code}',
+         to_jsonb(public.load_sms_code(s.load_id)),
+         true
+       )
+ where s.resolved_at is null
+   and s.load_id is not null
+   and coalesce(s.detail#>>'{params,code}', '') ~* '^[0-9a-f]{8}$'
+   and lower(left(s.load_id::text, 8)) = lower(s.detail#>>'{params,code}')
+   and public.load_sms_code(s.load_id) is distinct from '—';
 
 update notifications n
    set payload = n.payload

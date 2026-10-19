@@ -3069,10 +3069,26 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - B1: `l3_critical_notify` nie dokłada `l3crit`, gdy osoba ma już `dec:ESCALATE` albo zbiorczy z tą decyzją. `RISK_SEVERITY` przy `l3_level = critical` nie idzie osobno.
 - B2: `l1b_sefs_note` traktuje `status = OSTATECZNY` jak tydzień zamknięty, także bez klucza `final`.
 - B3: jednorazowe zamknięcie `SOURCE`. Odczyt produkcji 19.10 przed nałożeniem: **12** otwartych, z tego **8** (tydzień jeszcze trwa) i **4** (ceny już w bazie: tygodnie od 21.09, 28.09, 05.10, 12.10). Po nałożeniu oczekiwane **0**. Liczbę po `db push` dopiszę przy wdrożeniu.
-- B4: zbiorczy od **6.** eskalacji u osoby (limit rodzaju e-maila to 5). Pojedyncze powstają tylko poniżej tego progu. E-mail zbiorczy idzie przez `l13_queue_email`.
+- B4: (poprawione w rundzie 2 — było błędnie „>5”; właściwie **więcej niż 2**, B-N1).
 - B5: przy eskalacji wyzwalacz ryzyka nie dokłada `RISK_OPEN` dla `decision-overdue`.
-- B6: wzorzec identyfikatora łapie też tekst „Decyzja po terminie: 2e97c024:”. Jednorazowo poprawiane są tytuły spraw, `detail.params.title` i powiadomienia inne niż wysłany e-mail.
+- B6 — liczby na produkcji przed nałożeniem 0230 (SELECT 19.10 ~00:15 UTC) i oczekiwane po:
+  | miejsce | przed | po |
+  |---|---|---|
+  | otwarte `decisions.title` „hex:” / „SEFS” | 9 / 12 | 0 / 0 |
+  | otwarte `risk_signals.title` „hex:” / „SEFS” | 25 / 12 | 0 / 0 |
+  | otwarte `params.title` „hex:” / „SEFS” | 15 / 12 | 0 / 0 |
+  | `notifications` IN_APP z „hex:”/„SEFS” | 898 | 0 |
+  | EMAIL `DIGEST`/`ERROR` | 33 | 0 |
+  | EMAIL/WEB_PUSH `SENT` (bez zmian) | 92 / 17 | bez zmian |
+  | otwarte `rk_res_driver` z `params.code` = 8 hex | 20 z 39 | 0 (P2) |
 - P1–P6: numer zlecenia firmy czytającej tytuł; odnośnik `/ryzyka` i temat e-maila = tytuł zbiorczy; osoba z samą pocztą też dostaje zbiorczy; strażnik jest na osobę.
 - Jeden e-mail zbiorczy jest prawdziwy tylko wtedy, gdy pojedyncze nie powstają wcześniej. Kasowanie po wstawieniu zjadłoby limit.
 - `NO_AWIZACJA` przy `PLANNED`: tabela z 18.10 23:50 (23 pozycje) zostaje. Przegląd podał później 26 (doszły SG-23, SG-24, T-12). To informacja, bez zmiany kodu.
+
+## 2026-10-19 08:45 — D-20261019-0820-01 + #306 przegląd 2 w toku
+
+- **Punkty kontrolne (D-0820):** pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; **23:59 A3,A7,A9,A4,A5**; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie śr 28.10 20:00 bez zmian. nd 18.10 nieoddane → pn 19.10 23:59.
+- **#306 runda 2:** B1–B6 OK; poprawki B-N1 (`count(*) > 2`), B-N2 (SCX tylko `decider_role=CARRIER`), B-N3 (`event_key` + `:expired-0230`), P1 CODE w ryzykach, P2 `params.code`, P3 testy, P4 bez `pg_temp` w `search_path`, P5 liczby B6 wyżej.
+- **#307:** F7 gotowe (02:53), CI zielone — scalenie przy przejściu po #306 / przed D-1740.
+- Bieżąca pozycja: #306 poprawki R2, potem brama `db`, komentarz w PR.
 
