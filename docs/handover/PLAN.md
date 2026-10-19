@@ -124,7 +124,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → Poprawka CMR has_doc jak C17 (#312 / D-1740 B1) → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -401,7 +401,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → Poprawka CMR has_doc jak C17 (#312) → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -522,10 +522,11 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 - B1 (`has_doc` jak C17): pozycja **Poprawka CMR has_doc** poniżej (0233).
 - P1/P2 z przeglądu: wpis A5 vs C17 i `register_invoice` → zadania A4 (nie w tej pozycji). Wygląd: #303 (F1).
 
-### Poprawka CMR has_doc jak C17 (#312 / D-1740 B1; zaraz po 0231, przed Automatem) — W TOKU (`pakiet/cmr-has-doc-c17`, migracja 0233)
+### Poprawka CMR has_doc jak C17 (#312 / D-1740 B1; zaraz po 0231, przed Automatem) — NA PRODUKCJI (`b858b466`, 19.10.2026 13:45, migracja 0233, `dpl_4RhcGn9QTngr2PtWZZz2LztFCMmf`)
 - `doc_requirements_status`: dla CMR `has_doc` = plik po `actual_delivery_at`, nie zastąpiony, nie `purged`. Przed dostawą — 0 wierszy CMR.
 - Test i2: CMR przed dostawą → dostawa −25 h → OVERDUE; ponowne wgranie → OK.
-- Gałąź od `main`; po F7 scalasz sam (D-1050 §2).
+- PR #316 scalony po F7 (komentarz po `0ae0dae0`). Parytet przed nałożeniem: brakowało tylko 0233. Próba ROLLBACK: warunek C17 i `purged_at` są, ostatnia migracja zostaje 0231. `db push` drugi raz: baza aktualna. Parytet MATCH YES.
+- Po nałożeniu: pliki CMR niezastąpione, wgrane przed dostawą, przy ustawionej dostawie = 0. Status CMR projektu STEGRA_BODEN: OK 2, OVERDUE 1. tower i makieta 200.
 
 ### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005)
 1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (ten commit); uzupełnij gdy trzeba.
