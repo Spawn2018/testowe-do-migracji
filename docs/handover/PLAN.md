@@ -553,9 +553,10 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - **D-20261020-0010-01 (#341):** po tej pozycji pary PR **A3+A9**, potem **A7+A4**, potem A5, potem A10. Terminy pośrednie w §3. Wydanie 28.10.2026 20:00 bez zmian.
 - Scalone #340 `c2c22989` (F7 po `0d4b0bcc`). `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`). Dalej A3+A9 (migracja 0236).
 
-### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — W TOKU (`pakiet/a3-a9`)
+### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — W TOKU (`pakiet/a3-a9`, PR #345)
 - **D-20261020-0010-01:** jeden PR z A9 (jedna migracja, osobny commit na pozycję, jedno F7). Ekranu nie zmieniasz.
-- **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null).
+- **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null). **ZROBIONE** (`663d953c` / `d11c7d42`).
+- **A3 w 0236 (ten commit):** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią.
 - `doc_requirements`:
   - CMR → `anchor = AFTER_UNLOAD` (po „Dostarczone”), `offset_hours` z Opcji (dziś 24), odpowiada przewoźnik;
   - usuwasz regułę „CMR 2 h po załadunku”, wymagania POD, SPEC i LASHING oraz PERMIT_SE dla wszystkich.
@@ -595,6 +596,13 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 ### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
 - Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
+  - SCX → HHL (`KOSZT`): przed akceptacją HHL zmienia SCX i `HHL_ADMIN`; po `ZAAKCEPTOWANA` — tylko `HHL_ADMIN`.
+  - HHL → KSH (`PRZYCHOD`): przed akceptacją KSH zmienia wystawca HHL (`HHL_ADMIN`, `HHL_OPS`); po — tylko `HHL_ADMIN`.
+  - KSH nie zmienia treści żadnej faktury i nie wystawia (`invoices_insert` bez `CLIENT`); tylko weryfikacja / akceptacja / spór.
+  - `HHL_OPS` nie zmienia treści faktury SCX (może weryfikować jako odbiorca).
+  - RPC `update_invoice(p_invoice, p_patch, p_lines, p_note)`: te same reguły co `register_invoice` (VAT, CMR C17, tolerancja 0); historia; przed akceptacją → `DO_WERYFIKACJI` + `INVOICE_UPDATED`; po akceptacji przez `HHL_ADMIN` → `INVOICE_CORRECTED`. Mutacja ekranu `bill.update`.
+  - `guard_invoice_update` według tabeli ról; testy bramy `db` dla każdej roli i stanu.
 - **Z przeglądu #310 / #312 (P1–P2, decyzja koordynatora → A4):**
   - `load_status_set` przy ręcznym `READY_TO_INVOICE` ma wymagać CMR jak C17 (`c17_cmr_after_delivery`), nie dowolnego CMR — dziś rozjazd z automatem C17.
   - `register_invoice` nie może podpinać CMR zastąpionych ani z załadunku (tylko CMR po dostawie, jak C17).
@@ -1164,3 +1172,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 23:15 | D-20261019-2315-01 (#338): korekta godziny statusu wskazuje ostatni niezastąpiony wpis. W tej samej migracji co D-0930 (0235), bez nowej pozycji kolejki | koordynator |
 | 20.10.2026 00:10 | D-20261020-0010-01 (#341): pary PR A3+A9 i A7+A4; ekran B5/B9/A10 u koordynatora; terminy pośrednie od wt 20.10. Wydanie 28.10 20:00 bez zmian. Nie przerywa D-0930 | koordynator |
 | 20.10.2026 00:40 | D-20261020-0040-01 (#343): numer KSH do SCX z `l13_decision_email` i `wf_load_context` — pierwszy commit PR A3+A9, migracja 0236. Bez nowej pozycji kolejki | koordynator |
+| 20.10.2026 01:20 | D-20261020-0115-01 (#346): edycja faktur — SCX/HHL do akceptacji odbiorcy, potem tylko `HHL_ADMIN`; KSH tylko akceptuje. W A4 (para A7+A4); ekran `wyglad/W-faktura-edycja`. Nie przerywa A3+A9 | właściciel 01:13; koordynator |

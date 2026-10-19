@@ -428,3 +428,383 @@ comment on function public.matrix_notify(text, text, uuid, uuid, jsonb, text, te
 
 comment on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) is
   'G-20 + D-0005: KSH Użytkownik albo HHL_ADMIN; sprawa KSH_DATES_CHECK nie z edycji admina (A6/KSH). D-0930: kod w powiadomieniu to load_sms_code.';
+
+-- =====================================================================
+-- A3 · CMR z rozładunku i sprawa „Wgraj CMR” (E31 / L26; PLAN §4 A3)
+-- =====================================================================
+
+-- Seed: tylko PERMIT_PL, CMR (AFTER_UNLOAD), INSURANCE. Bez POD / SPEC / LASHING / PERMIT_SE.
+create or replace function public.doc_requirements_seed(p_project uuid) returns void
+language sql security definer set search_path = public as $$
+  insert into doc_requirements (project_id, category, required, responsible, anchor, offset_hours)
+  select p_project, v.category::doc_category, true, v.responsible::org_kind, v.anchor, v.offset_hours
+    from (values
+      ('PERMIT_PL', 'CARRIER', 'BEFORE_LOAD',  24),
+      ('CMR',       'CARRIER', 'AFTER_UNLOAD', 24),
+      ('INSURANCE', 'CARRIER', 'ORG',           0)
+    ) as v(category, responsible, anchor, offset_hours)
+  on conflict (project_id, category) do nothing
+$$;
+revoke all on function public.doc_requirements_seed(uuid) from public, anon, authenticated;
+
+-- Zapis: wyłącznie Administrator HHL (E9 / A3).
+create or replace function public.doc_requirement_set(
+  p_project uuid, p_category doc_category, p_required boolean, p_responsible org_kind, p_anchor text, p_offset_hours integer
+) returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid; v_user uuid; v_old jsonb;
+begin
+  if (is_hhl_admin()) is not true then
+    raise exception 'Wymagalność dokumentów ustawia wyłącznie HHL' using errcode = '42501';
+  end if;
+  if (p_anchor in ('BEFORE_LOAD', 'AT_LOAD', 'BEFORE_FERRY', 'AFTER_UNLOAD', 'ORG')) is not true then
+    raise exception 'Nieznane zdarzenie odniesienia: %', coalesce(p_anchor, '—') using errcode = '22023';
+  end if;
+  if p_category = 'CMR' and p_anchor is distinct from 'AFTER_UNLOAD' then
+    raise exception 'CMR tylko po rozładunku (AFTER_UNLOAD)' using errcode = '22023';
+  end if;
+  if (p_offset_hours between 0 and 720) is not true then
+    raise exception 'Przesunięcie terminu 0–720 h' using errcode = '22023';
+  end if;
+  if (p_required is not null and p_responsible is not null and p_category is not null) is not true then
+    raise exception 'Brak kategorii, wymagalności albo strony odpowiedzialnej' using errcode = '22023';
+  end if;
+  if (exists (select 1 from projects where id = p_project)) is not true then raise exception 'Nieznany projekt'; end if;
+  v_user := current_app_user_id();
+  select to_jsonb(r) - 'id' - 'updated_at' - 'updated_by' into v_old from doc_requirements r
+    where project_id = p_project and category = p_category;
+  insert into doc_requirements (project_id, category, required, responsible, anchor, offset_hours, updated_by, updated_at)
+  values (p_project, p_category, p_required, p_responsible, p_anchor, p_offset_hours, v_user, now())
+  on conflict (project_id, category) do update
+    set required = excluded.required, responsible = excluded.responsible, anchor = excluded.anchor,
+        offset_hours = excluded.offset_hours, updated_by = excluded.updated_by, updated_at = now()
+  returning id into v_id;
+  insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+  values (v_user, 'DOC_REQUIREMENT_SET', 'doc_requirements', v_id::text, v_old,
+          jsonb_build_object('category', p_category, 'required', p_required, 'responsible', p_responsible,
+                             'anchor', p_anchor, 'offset_hours', p_offset_hours));
+  return v_id;
+end $$;
+revoke all on function public.doc_requirement_set(uuid, doc_category, boolean, org_kind, text, integer) from public, anon;
+grant execute on function public.doc_requirement_set(uuid, doc_category, boolean, org_kind, text, integer) to authenticated;
+
+-- Jednorazowo: usuń POD / SPEC / LASHING_PHOTO / PERMIT_SE z wymagań (kopia w audit_log).
+do $a3req$
+declare
+  r record;
+  n int := 0;
+begin
+  for r in
+    select id, project_id, category, required, responsible, anchor, offset_hours
+      from doc_requirements
+     where category in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE')
+  loop
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values (
+      null, 'DOC_REQUIREMENT_SET', 'doc_requirements', r.id::text,
+      jsonb_build_object(
+        'category', r.category, 'required', r.required, 'responsible', r.responsible,
+        'anchor', r.anchor, 'offset_hours', r.offset_hours, 'via', '0236-A3'
+      ),
+      jsonb_build_object('removed', true, 'via', '0236-A3', 'reason', 'A3: bez POD/SPEC/LASHING/PERMIT_SE')
+    );
+    delete from doc_requirements where id = r.id;
+    n := n + 1;
+  end loop;
+  if n > 200 then
+    raise exception '0236-A3: zbyt wiele wymagań do usunięcia (%) — przerwane', n;
+  end if;
+end
+$a3req$;
+
+insert into decision_types (code, title_key, decider_role, options, due_hours, due_note, severity_default, sort_order)
+values (
+  'CMR_UPLOAD',
+  'dec_type_CMR_UPLOAD',
+  'CARRIER',
+  '[{"code":"UPLOAD_CMR","label_key":"dec_opt_UPLOAD_CMR","requires_comment":false,"effect":"OPEN_DOC"}]'::jsonb,
+  24,
+  'po Dostarczone bez CMR z podpisem',
+  'WARNING',
+  36
+)
+on conflict (code) do update set
+  title_key = excluded.title_key,
+  decider_role = excluded.decider_role,
+  options = excluded.options,
+  due_hours = excluded.due_hours,
+  due_note = excluded.due_note,
+  severity_default = excluded.severity_default,
+  active = true;
+
+create or replace function public.a3_resolve_cmr_upload(p_load uuid, p_via text default 'C17')
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  n int := 0;
+begin
+  for r in
+    update decisions
+       set status = 'RESOLVED',
+           resolved_at = now(),
+           resolution_code = 'UPLOAD_CMR',
+           updated_at = now()
+     where load_id = p_load
+       and type_code = 'CMR_UPLOAD'
+       and status in ('NEW', 'ASSIGNED', 'SNOOZED')
+    returning id
+  loop
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (
+      r.id,
+      current_app_user_id(),
+      'RESOLVE',
+      jsonb_build_object('option', 'UPLOAD_CMR', 'via', coalesce(p_via, 'C17'))
+    );
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+revoke all on function public.a3_resolve_cmr_upload(uuid, text) from public, anon, authenticated;
+
+create or replace function public.a3_ensure_cmr_upload(p_load uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_load loads%rowtype;
+  v_code text;
+  v_id uuid;
+  v_st text;
+  v_key text := 'cmr-upload:' || p_load::text;
+begin
+  select * into v_load from loads where id = p_load;
+  if not found then
+    return null;
+  end if;
+  if v_load.status in ('READY_TO_INVOICE', 'INVOICED', 'CANCELLED') then
+    perform public.a3_resolve_cmr_upload(p_load, 'STATUS');
+    return null;
+  end if;
+  if v_load.status is distinct from 'DELIVERED' then
+    return null;
+  end if;
+  if public.c17_cmr_after_delivery(p_load) is not null then
+    perform public.a3_resolve_cmr_upload(p_load, 'C17');
+    return null;
+  end if;
+  v_code := coalesce(nullif(public.load_sms_code(p_load), '—'), left(p_load::text, 8));
+  select id, status::text into v_id, v_st
+    from decisions
+   where detail->>'event_key' = v_key
+   order by created_at desc
+   limit 1;
+  if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
+    return v_id;
+  end if;
+  if v_id is not null and v_st in ('RESOLVED', 'EXPIRED') then
+    update decisions
+       set status = 'NEW',
+           resolved_at = null,
+           resolution_code = null,
+           title = v_code || ': Wgraj CMR',
+           updated_at = now()
+     where id = v_id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (v_id, null, 'OPEN', jsonb_build_object('type', 'CMR_UPLOAD', 'event_key', v_key, 'via', 'A3_REOPEN'));
+    return v_id;
+  end if;
+  v_id := public.decision_open_from_event(
+    v_load.project_id,
+    'CMR_UPLOAD',
+    v_key,
+    v_code || ': Wgraj CMR',
+    jsonb_build_object(
+      'category', 'CMR',
+      'params', jsonb_build_object('code', v_code),
+      'via', 'A3'
+    ),
+    p_load,
+    null
+  );
+  return v_id;
+end $$;
+revoke all on function public.a3_ensure_cmr_upload(uuid) from public, anon, authenticated;
+
+create or replace function public.a3_trg_loads_cmr_upload()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' or new.status is distinct from old.status then
+    perform public.a3_ensure_cmr_upload(new.id);
+  end if;
+  return new;
+end $$;
+revoke all on function public.a3_trg_loads_cmr_upload() from public, anon, authenticated;
+
+drop trigger if exists trg_a3_loads_cmr_upload on public.loads;
+create trigger trg_a3_loads_cmr_upload
+  after insert or update of status
+  on public.loads
+  for each row
+  execute function public.a3_trg_loads_cmr_upload();
+
+-- C17 po wgraniu CMR zamyka sprawę CMR_UPLOAD.
+create or replace function public.c17_try_ready_to_invoice(p_load uuid, p_extra jsonb default '{}'::jsonb)
+returns boolean
+language plpgsql
+security definer
+set search_path to 'public'
+as $$
+declare
+  v_status load_status;
+  v_doc uuid;
+  v_ts timestamptz;
+  v_ok boolean;
+begin
+  select status into v_status from loads where id = p_load for update;
+  if v_status is distinct from 'DELIVERED' then
+    return false;
+  end if;
+  v_doc := public.c17_cmr_after_delivery(p_load);
+  if v_doc is null then
+    return false;
+  end if;
+  select d.uploaded_at into v_ts from documents d where d.id = v_doc;
+  v_ok := public.auto_set_status(
+    p_load,
+    'DELIVERED'::load_status,
+    'READY_TO_INVOICE'::load_status,
+    'CMR z podpisem odbiorcy wgrany',
+    coalesce(v_ts, now()),
+    coalesce(p_extra, '{}'::jsonb) || jsonb_build_object(
+      'actor', 'system',
+      'source', 'DOC',
+      'document_id', v_doc
+    )
+  );
+  if v_ok is true then
+    perform public.a3_resolve_cmr_upload(p_load, 'C17');
+  end if;
+  return v_ok;
+end $$;
+revoke all on function public.c17_try_ready_to_invoice(uuid, jsonb) from public, anon, authenticated;
+
+-- Jednorazowo: otwórz CMR_UPLOAD dla Dostarczonych bez CMR; zamknij stare DOC_MISSING ze starego wymagania.
+do $a3close$
+declare
+  r record;
+  n_open int := 0;
+  n_close int := 0;
+  n_batch int := 0;
+begin
+  for r in
+    select id from loads
+     where status = 'DELIVERED'
+       and public.c17_cmr_after_delivery(id) is null
+  loop
+    if public.a3_ensure_cmr_upload(r.id) is not null then
+      n_open := n_open + 1;
+    end if;
+  end loop;
+
+  insert into audit_log (action, entity, entity_id, old_value)
+  select 'A3_STALE_DOC_MISSING_CLOSE', 'decisions', d.id::text,
+         jsonb_build_object(
+           'type_code', d.type_code,
+           'title', d.title,
+           'status', d.status,
+           'load_id', d.load_id,
+           'detail', d.detail,
+           'via', '0236-A3'
+         )
+    from decisions d
+    left join loads l on l.id = d.load_id
+   where d.type_code = 'DOC_MISSING'
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and (
+       coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
+       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
+       or (l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'))
+       or d.status = 'EXPIRED'
+     );
+
+  update decisions d
+     set status = 'RESOLVED',
+         resolved_at = now(),
+         resolution_code = 'A3_STALE_REQ',
+         updated_at = now()
+    from loads l
+   where d.load_id = l.id
+     and d.type_code = 'DOC_MISSING'
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and (
+       coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
+       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
+       or l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED')
+       or d.status = 'EXPIRED'
+     );
+  get diagnostics n_batch = row_count;
+  n_close := n_close + n_batch;
+
+  update decisions d
+     set status = 'RESOLVED',
+         resolved_at = now(),
+         resolution_code = 'A3_STALE_REQ',
+         updated_at = now()
+   where d.load_id is null
+     and d.type_code = 'DOC_MISSING'
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and (
+       coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
+       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
+       or d.status = 'EXPIRED'
+     );
+  get diagnostics n_batch = row_count;
+  n_close := n_close + n_batch;
+
+  insert into audit_log (action, entity, entity_id, old_value)
+  select 'A3_STALE_DOC_MISSING_CLOSE', 'risk_signals', id::text,
+         jsonb_build_object(
+           'kind', kind,
+           'dedup_key', dedup_key,
+           'title', title,
+           'detail', detail,
+           'via', '0236-A3'
+         )
+    from risk_signals
+   where kind = 'DOC_MISSING'
+     and resolved_at is null
+     and (
+       coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
+       or coalesce(title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|CMR)'
+     );
+
+  update risk_signals
+     set resolved_at = now()
+   where kind = 'DOC_MISSING'
+     and resolved_at is null
+     and (
+       coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
+       or coalesce(title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|CMR)'
+     );
+
+  if n_close > 80 then
+    raise exception '0236-A3: zbyt wiele DOC_MISSING do zamknięcia (%) — przerwane', n_close;
+  end if;
+
+  insert into audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    null, 'A3_CMR_UPLOAD_BACKFILL', 'decisions', 'batch',
+    jsonb_build_object('opened_cmr_upload', n_open, 'closed_doc_missing', n_close, 'via', '0236-A3')
+  );
+end
+$a3close$;

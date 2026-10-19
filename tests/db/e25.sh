@@ -51,6 +51,8 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 # commit: actual_delivery_at i audit sprawdzane osobnym zapytaniem poza transakcją testu
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
+sval "A3: po Dostarczone bez CMR → sprawa CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+sval "A3: typ CMR_UPLOAD ma opcję UPLOAD_CMR" "select options->0->>'code' from decision_types where code='CMR_UPLOAD'" UPLOAD_CMR
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
 val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (
   (select actual_delivery_at = timestamptz '2026-10-07 10:19:54+00' from loads where id='$L2')
@@ -77,6 +79,7 @@ sys "insert into documents (project_id, load_id, category, storage_path, file_na
      values ('$P','$L2','CMR','test/e25-cmr-auto.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-07 12:00:00+00')" >/dev/null
 sval "C17 CMR po dostawie → READY STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1"
+sval "A3: C17 zamyka CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 0
 # A5: INVOICED bez faktur
 sys "delete from invoice_lines where load_id='$L2'" >/dev/null
 err "INVOICED bez faktur" $HHL "select load_status_set('$L2','INVOICED',now(),null)" "brak faktury"

@@ -3328,3 +3328,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, funkcje Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`).
 - Pozycja **D-0930** zamknięta. Bieżąca: **A3+A9** (`pakiet/a3-a9`). Ten commit: #343 w `0236_ksh_scx_l13_workflow.sql`. Testy `dec-auto` 78, `e25` 47. A3 i A9 dopiszą się do tej samej migracji.
 
+## 2026-10-20 01:30 — A3 w 0236; #342/#344 scalone; #346 w planie
+
+- Skrzynka: #320, #322, #323, #324, #343 w planie. #346 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0115-01 edycja faktur → PLAN §4 A4, §8, `docs/handover/dopiski/D-20261020-0115-01.md`. Nie przerywa A3+A9.
+- Scalanie: #342 (`f92216d8`) i #344 (`05d3dcb8`) — „F7: gotowe do scalenia” po ostatnim commicie, unit i visual zielone. #345 bez F7 (jeszcze A3/A9). #317 i #259 konflikt.
+- Bieżąca **A3** w `0236_ksh_scx_l13_workflow.sql`: seed 3 wymagań, `is_hhl_admin`, `CMR_UPLOAD`/`UPLOAD_CMR`, C17 zamyka, stare DOC_MISSING z kopią. Testy: `i2` 550, `e25` 50. Dalej A9 w tej samej migracji.
+
