@@ -23,6 +23,8 @@
 .sys-tbl td small{display:block;font-size:12.5px;color:var(--ink-3)}
 .sys-tbl tr.is-down td{background:var(--red-bg)}
 .sys-tbl tr.is-partial td,.sys-tbl tr.is-nomeasure td{background:var(--amber-bg)}
+/* P11 pkt 3 (E10, axe): na tle czerwonym i bursztynowym tekst pomocniczy ciemniejszy — kontrast ≥ 4,5 */
+.sys-tbl tr.is-down td,.sys-tbl tr.is-partial td,.sys-tbl tr.is-nomeasure td{--ink-3:var(--ink-2)}
 .sys-num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .sys-act{text-align:right;white-space:nowrap}
 .sys-st{display:inline-flex;align-items:center;gap:6px;font-weight:600}

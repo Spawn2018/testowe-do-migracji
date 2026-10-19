@@ -302,13 +302,6 @@ export function LoadDrawer() {
         <div className={`dbody${tab === 'chat' ? ' is-chat' : ''}`} role="tabpanel" id="dpanel" aria-labelledby={`dtab-${tab}`} tabIndex={0}>
           {tab === 'overview' && (
             <>
-              {/* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status */}
-              {deliveredCheck ? (
-                <button type="button" className="dcc-jump" data-dc-jump onClick={() => setTab('timeline')}>
-                  <b>{tp(locale, 'p4c_dc_title', { n: deliveredCheck.minutes })}</b>
-                  <span>{t(locale, deliveredCheck.canDecide ? 'p4c_dc_jump' : 'p4c_dc_jump_view')} ›</span>
-                </button>
-              ) : null}
               {/* wyglad/P7-a (E32): Przegląd poza pierwszym wczytaniem (budżet 400 kB gzip) */}
               <Suspense fallback={null}>
                 <PanelOverview
@@ -333,22 +326,13 @@ export function LoadDrawer() {
                   onAwiz={() => setAwizOpen(true)}
                   onKshDates={() => setKshDatesOpen(true)}
                   onTab={(x) => switchTab(x)}
-                  onPdf={() => {
-                    void (async () => {
-                      try {
-                        const { exportLoadPdfWithMap } = await import('../../lib/pdfExport');
-                        const r = await exportLoadPdfWithMap(load, locale);
-                        pushToast(
-                          r.mapAttached
-                            ? tp(locale, 'h7_pdf_ok_map', { code: load.code })
-                            : tp(locale, 'h7_pdf_ok_no_map', { code: load.code, reason: r.mapSkipReason ?? '' }),
-                          'MEDIUM',
-                        );
-                      } catch (e) {
-                        pushToast(tp(locale, 'h7_pdf_fail', { msg: e instanceof Error ? e.message : String(e) }), 'CRITICAL');
-                      }
-                    })();
-                  }}
+                  alertNode={deliveredCheck ? (
+                    /* wyglad/P4-c (L14): otwarta sprawa „czy dostarczono?” — odpowiedź w zakładce Status; pod mapą (właściciel 19.10) */
+                    <button type="button" className="dcc-jump" data-dc-jump onClick={() => setTab('timeline')}>
+                      <b>{tp(locale, 'p4c_dc_title', { n: deliveredCheck.minutes })}</b>
+                      <span>{t(locale, deliveredCheck.canDecide ? 'p4c_dc_jump' : 'p4c_dc_jump_view')} ›</span>
+                    </button>
+                  ) : null}
                 />
               </Suspense>
             </>

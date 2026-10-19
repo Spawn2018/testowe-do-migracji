@@ -172,6 +172,8 @@ tbody tr{cursor:default}
 tbody tr[tabindex]{cursor:pointer}
 tbody tr:hover{background:var(--surface-2)}
 tbody tr.hl{background:var(--amber-bg)}
+/* P11 pkt 3 (E10): szary opis na bursztynowym wierszu — ink-2 (ink-3 ma 3,88 : 1 w ciemnym motywie) */
+tbody tr.hl{--ink-3:var(--ink-2)}
 tbody tr.done td{color:var(--ink-3)}
 .money{font-weight:600}
 .money.neg{color:var(--red)}
@@ -527,6 +529,10 @@ nav button{padding:8px 14px}
   font:inherit;font-size:12.5px;text-align:right;
 }
 .docrow-name:hover{text-decoration:underline}
+/* P11 pkt 3 runda 3 (E10, pomiar własny): plik niezgodny (np. zezwolenie na inny zestaw) — bursztynowy tekst na bursztynowym
+   polu; sam bursztyn na tle strony telefonu miał 2,65 : 1 (jasny motyw) */
+/* bez dopełnienia: nazwa pliku ma tę samą szerokość co zwykła (etap6, 360 px — „SG-07” nie może się złamać) */
+.docrow-name.is-mismatch{color:var(--amber-ink);background:var(--amber-bg)}
 
 /* ---------- Punkt 6: Opcje + creator automatyzacji ---------- */
 .options-page{padding:0;overflow:visible;min-height:min-content;background:var(--page)}
@@ -791,6 +797,11 @@ nav button{padding:8px 14px}
 }
 .map-loads-table tbody tr:hover,
 .map-loads-table tbody tr.is-active{background:var(--amber-bg)}
+/* P11 pkt 3 runda 3 (E10, pomiar własny węzłów „incomplete”): szary opis w najechanym / wybranym wierszu Mapy
+   (numer zlecenia, „ostatnia pozycja …”) na bursztynowym tle — ink-2 (ink-3 ma 3,88 : 1 w ciemnym motywie) */
+.map-loads-table tbody tr:hover,.map-loads-table tbody tr.is-active{--ink-3:var(--ink-2)}
+/* P11 pkt 3 (E10, axe): czerwony alarm w podświetlonym wierszu na białym polu — kontrast ≥ 4,5 w obu motywach */
+.map-loads-table tbody tr:hover .map-alarm,.map-loads-table tbody tr.is-active .map-alarm{background:var(--surface);padding:0 3px}
 .map-loads-table .cell-clip{
   display:block;overflow:hidden;text-overflow:clip;white-space:nowrap;min-width:0;max-width:100%;
 }

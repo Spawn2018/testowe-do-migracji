@@ -42,7 +42,9 @@ export const FILE_COLS: readonly FileColDef[] = [
   /* daty z rokiem (właściciel 16.10.2026): ETA „10.10.2026, 14:30” w jednej linii; „Dokumenty” — „rysunek, zezwolenie PL do 30.10.2026” */
   { id: 'eta', key: 's7_c_eta', group: 'wt', w: 124 },
   { id: 'docs', key: 's7_c_docs', group: 'wt', w: 240 },
-  { id: 'money', key: 's7_c_money', group: 'wt', w: 250, num: true },
+  /* P11 pkt 3 runda 3 (E20, CI Chromium 153): 270 px — „kwota · marża (%)” w jednej linii także przy szerszych literach;
+     zawinięcie w `sched7.css` zostaje tylko jako zapas (F7 r3: przy 250 px wiersze w CI rosły z 32 do 48 px) */
+  { id: 'money', key: 's7_c_money', group: 'wt', w: 270, num: true },
 ];
 
 /** „Widok skrócony” — 8 kolumn E30 pkt 1 + „Telefon kierowcy” (właściciel 16.10, 13:58); „Kolumny” dodaje osobno numery, ciągnik, naczepę, rejs, koszt. */

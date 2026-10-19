@@ -3136,3 +3136,47 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Bieżąca pozycja bez przerwania: #312 / #316 (`pakiet/cmr-has-doc-c17`, 0233) — brama `db` i `visual` w toku, bez nowego commitu na tej gałęzi (G-15).
 - #301 ma komentarz „F7 — gotowe do scalenia” (myślnik, 18.10 18:43, po ostatnim commicie, CI zielone). Zasady pętli wymagają dosłownego „F7: gotowe do scalenia” — bez scalenia w tym przebiegu.
 
+## 2026-10-19 12:45 — #314 SCALONE; start #312 (0233 has_doc CMR)
+
+- Merge #314 `1966a3dd` (docs praca ciągła + F7 bezpieczeństwo).
+- **#312:** migracja **0233** — `doc_requirements_status` has_doc CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); i2: CMR z załadunku → OVERDUE po dostawie −25 h → OK po ponownym wgraniu.
+- P1/P2 z F7 #310: **nie** „C17/A5 = CMR po dostawie potwierdzone” — to zadania **A4** (`load_status_set` ręczny READY + `register_invoice` bez CMR z załadunku/zastąpionych). Wpisy w PLAN §4 A4.
+
+## 2026-10-19 13:45 — #312 / 0233 NA PRODUKCJI
+
+- PR #316 scalony `b858b466` (F7 po `0ae0dae0`; unit, `db`, visual zielone).
+- Próba 0233 w transakcji z ROLLBACK: funkcja ma `uploaded_at >= actual_delivery_at` i `purged_at is null`; `schema_migrations` bez 0233; po wycofaniu ostatnia = 0231.
+- `db push`: najpierw 0233, drugi raz „Remote database is up to date”. Parytet MATCH YES (0001…0233).
+- SELECT: pliki CMR przed dostawą (niezastąpione, niepuste `actual_delivery_at`) = 0. CMR w `doc_requirements_status` dla STEGRA_BODEN: OK 2, OVERDUE 1.
+- Vercel z archiwum `main` `b858b466`: `dpl_4RhcGn9QTngr2PtWZZz2LztFCMmf` READY. `tower.log-mar.pl` i makieta **200**. Funkcji Edge nie zmieniano.
+- #317 (docs, F7, CI zielone) ma konflikt z `main` po #316 — bez scalenia.
+- Następna pozycja: **Automat wdrożenia z main** (D-20261019-1050-01).
+
+## 2026-10-19 14:05 — #318 scalony; start Automatu wdrożenia
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #318 (docs 0233 na produkcji): F7 po commicie `914541d5`, unit i visual zielone, bez forka. Scalony `d46c4b09` (`gh pr merge --merge`). Wdrożenia nie było — same dokumenty.
+- #317 nadal z konfliktem. Komentarz F7 przy #318: wciągnąć `main` w gałąź #317 i czekać na ponowne „gotowe”. Nie w tym kroku.
+- #313: brak F7, brama `db` czerwona, konflikt z `main`. Numer migracji przy rebase: 0234 (komentarz koordynatora 13:08).
+- Bieżąca pozycja: **Automat wdrożenia** — workflow `deploy-main.yml` na `pakiet/automat-wdrozenia`. Test kluczy czeka na wpis właściciela.
+
+## 2026-10-19 14:35 — #301 scalony; F7 #319 niegotowe poprawione
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #301 (`wyglad/W-bramy-P11`): F7 po `b79f4270`, unit i visual zielone, bez konfliktu i bez forka. Scalony `2f66310d`.
+- #317: F7 jest, CI zielone, **konflikt** z `main` — bez scalenia (czeka na wciągnięcie `main` i ponowne „gotowe”).
+- #319: przegląd 14:10 **niegotowe**. Poprawka w tym samym PR: sekret `SUPABASE_DB_URL`, `db push --db-url` z dry-run i komunikatem przy porcie 6543, `::warning::` przy braku kluczy, `vercel@64.5.0`. Czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 15:10 — #320 w planie (plik testowy SharePoint); automat czeka na F7
+
+- Skrzynka: #320 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1420-01. Wpisane: PLAN §4 A6, §3 kolejność, §5 W13, §6, §8, P7, II-10 w `PLAN_OTWARTE_08_10.md`, dopisek `docs/handover/dopiski/D-20261019-1420-01.md`. Zgłoszenie otwarte do zrobienia A6.
+- Adresu pliku testowego nie ma w repozytorium. Właściciel dopisuje `SHAREPOINT_TEST_FILE_URL` w `.env.local`.
+- Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 17:50 — #317: main wciągnięty, zasada #315 zostaje
+
+- Konflikt z `main`: zostawione obie strony (wpisy z `main` + §1 pkt 14.5 i wpis #315). Nic z `main` nie usunięte.
+- Czeka na zielone CI i ponowne „F7: gotowe do scalenia” (komentarz koordynatora 14:52).
+- #326 (adres bazy): unit i visual zielone, ostatni komentarz to „niegotowe” sprzed commita `0556710e` — bez scalenia.
+

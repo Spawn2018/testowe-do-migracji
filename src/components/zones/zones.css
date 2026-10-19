@@ -35,7 +35,7 @@
 .zv-grp ul{list-style:none;margin:0;padding:0}
 .zv-item{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;width:100%;min-height:52px;padding:8px 14px 8px 11px;border:0;border-left:3px solid transparent;border-top:1px solid var(--rule-2);background:transparent;color:var(--ink);text-align:left}
 .zv-item:hover{background:var(--surface-2)}
-.zv-item.is-cur{border-left-color:var(--go);background:var(--go-bg)}
+.zv-item.is-cur{border-left-color:var(--go);background:var(--go-bg);--ink-3:var(--ink-2)}
 .zv-item.is-off .zv-item-n b{color:var(--ink-3)}
 .zv-item-n{display:flex;flex-direction:column;gap:2px;min-width:0}
 .zv-item-n b{font-size:15px;font-weight:600}
