@@ -364,7 +364,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await boot(page, 'HHL');
     await openView(page, 'map');
     const head = page.locator('[data-map-head]');
-    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
+    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez żadnej pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
     await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
     await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
     await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
@@ -1112,7 +1112,8 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await expect(drv.first()).toHaveAttribute('data-po-driver', 'SE');
     await expect(drv.first()).toHaveClass(/is-now/);
     await expect(drv.first()).toContainText('Henrik Lund · +46 701 740 615');
-    await expect(drv.nth(1)).toContainText('Tomasz Wójcik · +48 000 000 003');
+    /* przegląd 18.10 (B2): bez kierowców w dwóch transportach naraz — T-01 ma Łukasza Woźniaka */
+    await expect(drv.nth(1)).toContainText('Łukasz Woźniak · +48 000 000 008');
     await expect(drv.first().locator('a.po-call')).toHaveAttribute('href', 'tel:+46701740615');
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -1578,13 +1579,13 @@ test.describe('wyglad/2fa — Moje konto i Przełączniki', () => {
     await page.waitForTimeout(300);
   };
 
-  test('komputer HHL: 2FA włączona — „Telefon 1 · od 12.10.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
+  test('komputer HHL: 2FA włączona — „Telefon 1 · od 22.09.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await boot(page, 'HHL');
     await openOpt(page, 'options', 'account');
     await expect(page.locator('[data-mfa-devices]')).toHaveAttribute('data-mfa-devices', '1');
     await expect(page.locator('[data-mfa-device]')).toContainText('Telefon 1');
-    await expect(page.locator('[data-mfa-device]')).toContainText('od 12.10.2026');
+    await expect(page.locator('[data-mfa-device]')).toContainText('od 22.09.2026');
     await expect(page.locator('[data-mfa-add]')).toBeEnabled();
     await expect(page.locator('[data-mfa-remove]')).toHaveCount(0);
     await expect(page.locator('[data-mfa-needs-code]')).toHaveCount(0);
@@ -2245,7 +2246,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'SCX');
     await openCode(page, 'D-02');
-    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('rejs niewybrany — wybiera SCX w awizacji');
+    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji');
     await expect(page.locator('.drawer [data-awiz-nosail]')).toHaveText('kompletna · bez rejsu');
     await tab(page, 1);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('rejs');
@@ -2660,7 +2661,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       await expect(page.locator('.drawer .wb-back')).toBeVisible();
       await expect(page.locator('.drawer .drawer-hd button.iconbtn')).toHaveCount(1);
       const folds = page.locator('.drawer details.po-fold');
-      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 5);
+      /* przegląd 18.10 (B1): SG-19 bez zestawu ma u HHL i SCX sekcję „Do zrobienia” (brak kierowcy i zestawu, brak awizacji — awizuje SCX) */
+      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 6);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
       await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
@@ -3199,7 +3201,7 @@ test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
     await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
     await page.locator('[data-rule-then="notify-SCX"]').click();
     await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
-    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10.2026, 08:35 → 07.10.2026, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('T-11 · plac od 22.09.2026, 05:56 → 22.09.2026, 08:56 (wyjazd 09:40)');
     await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
     await noSideScroll(page, 1440);
     await page.locator('[data-rule-save]').click();

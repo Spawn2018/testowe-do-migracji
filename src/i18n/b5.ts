@@ -68,7 +68,7 @@ const pl: Dict = {
   b5_aud_CARRIER: 'Przewoźnik',
   b5_sms_LOAD_SREM: 'Załadunek Śrem',
   b5_sms_UNLOAD_BODEN: 'Rozładunek Boden',
-  b5_sms_ZONE_APPROACH: 'zbliżanie (1 h przed)',
+  b5_sms_ZONE_APPROACH: 'zbliżanie (1\u00a0h przed)',
   b5_sms_ZONE_ENTER: 'wjazd na plac',
   b5_act_other: 'Inne akcje reguły (bez zmian)',
   b5_enabled: 'Reguła włączona',

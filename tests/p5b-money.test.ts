@@ -84,7 +84,7 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
   const actions = { fill: ok, newVersion: () => undefined };
   it('karty, kroki „Jak liczymy”, alarm z „Uzupełnij z Orlen”, tabele cen i mnożników', () => {
     const h = html(createElement(FuelScreen, { locale: 'pl', view, actions, readOnly: false }));
-    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 28.09.2026');
+    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 11.09.2026');
     expect(h).toContain('+5%');
     expect(h).toContain('×1,05');
     expect(h).toContain('Brak ceny Orlen z 13.10.');
@@ -118,8 +118,8 @@ describe('E33 — Dopłaty: postój', () => {
     expect(h).toContain('75 EUR');
     expect(h).toContain('750 EUR');
     expect(h).toContain('role="radio" aria-checked="true"');
-    expect(h).toContain('→ 225,00 EUR');
-    expect(h).toContain('Ostatnia zmiana: 07.10.2026, 12:35 · Administrator HHL');
+    expect(h).toContain('→ 225,00\u00a0EUR');
+    expect(h).toContain('Ostatnia zmiana: 20.09.2026, 12:35 · Administrator HHL');
     expect(h).not.toMatch(/WSTĘPNE|wstępne/);
     expect((h.match(/>Zmień</g) ?? []).length).toBe(5);
     expect(h).toContain('Stawka dobowa powyżej');
@@ -128,9 +128,9 @@ describe('E33 — Dopłaty: postój', () => {
   });
   it('za faktyczny czas: 2 h 10 min × 75 = 162,50 EUR; powyżej progu doby — stawka dobowa', () => {
     const frac = html(createElement(DwellScreen, { locale: 'pl', rules: { ...demoDwellRules(), hourMode: 'FRACTION' }, readOnly: false, onSave: ok }));
-    expect(frac).toContain('→ 162,50 EUR');
+    expect(frac).toContain('→ 162,50\u00a0EUR');
     const day = html(createElement(DwellScreen, { locale: 'pl', rules: { ...demoDwellRules(), dayAfterH: 8 }, readOnly: false, onSave: ok }));
-    expect(day).toContain('→ 750,00 EUR');
+    expect(day).toContain('→ 750,00\u00a0EUR');
   });
   it('tylko odczyt: bez „Zmień”, wybory nieaktywne', () => {
     const h = html(createElement(DwellScreen, { locale: 'pl', rules: demoDwellRules(), readOnly: true, onSave: ok }));

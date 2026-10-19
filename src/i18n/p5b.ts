@@ -90,7 +90,7 @@ const PL: Record<string, string> = {
   p5b_d_mode: 'Godziny ponad czas wolny',
   p5b_d_mode_FULL: 'każda rozpoczęta godzina',
   p5b_d_mode_FRACTION: 'za faktyczny czas',
-  p5b_d_example: 'Przykład: postój 8 h 10 min na załadunku → {eur} EUR, tyle samo po stronie kosztu i przychodu.',
+  p5b_d_example: 'Przykład: postój 8\u00a0h 10\u00a0min na załadunku → {eur}\u00a0EUR, tyle samo po stronie kosztu i przychodu.',
   p5b_d_note: 'Te same zasady dla KSH i SCX. System mierzy postój ze stref i podpowiada dopłatę — nic nie wchodzi do ceny samo: HHL decyduje po swojej stronie, potem akceptuje KSH; SCX po swojej, potem akceptuje HHL. Procenty za anulowanie są w „Cennik i opłaty”.',
   p5b_unit_h: 'h',
   p5b_unit_eur: 'EUR',

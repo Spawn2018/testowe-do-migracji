@@ -25,7 +25,7 @@ import rawLoads from './loads.json';
 import { applySefsToRoadRate, sefsForLoadDate } from '../lib/sefs';
 import { DEMO_FX_META, plnToEurDemo } from '../lib/money/demoFx';
 export { DEMO_FX_META } from '../lib/money/demoFx';
-import { seedOrders, seedResourcesForIndex } from './seedIdentity';
+import { deconflictResources, seedOrders, seedResourcesForIndex } from './seedIdentity';
 import { demoSymbolSpec } from '../lib/p7SymbolsDemo';
 import { RISK_I18N } from '../i18n/risks';
 /** I-0: logika bez danych demo — w lib/seedLogic.ts (używana też w buildzie produkcyjnym bez seed.ts). */
@@ -49,14 +49,14 @@ export const USERS: DemoUser[] = [
 export const GEOFENCES: Geofence[] = [
   { id: 'gf-01', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING', shape: 'circle', lat: 52.07391, lng: 17.0246, radiusM: 600, hysteresisM: 120, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-02', name: 'Polferries Gdańsk · Sucharskiego 70', type: 'PORT_OUT', shape: 'circle', lat: 54.40372, lng: 18.6813, radiusM: 800, hysteresisM: 200, samplesRequired: 2, dwellMin: 15, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
-  { id: 'gf-03', name: 'Bufor 20 km · przed portem Gdańsk', type: 'PRE_PORT', shape: 'circle', lat: 54.3, lng: 18.55, radiusM: 20000, hysteresisM: 500, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-03', name: 'Bufor 20 km · przed portem Gdańsk', type: 'PRE_PORT', shape: 'circle', lat: 54.3, lng: 18.55, radiusM: 20000, hysteresisM: 500, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-04', name: 'Terminal Nynäshamn', type: 'PORT_IN', shape: 'circle', lat: 58.903, lng: 17.948, radiusM: 900, hysteresisM: 200, samplesRequired: 2, dwellMin: 10, notifyHhl: true, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-05', name: 'E4 checkpoint · Södertälje', type: 'CHECKPOINT', shape: 'circle', lat: 59.195, lng: 17.625, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
   { id: 'gf-06', name: 'E4 checkpoint · Gävle', type: 'CHECKPOINT', shape: 'circle', lat: 60.674, lng: 17.141, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
   { id: 'gf-07', name: 'E4 checkpoint · Sundsvall', type: 'CHECKPOINT', shape: 'circle', lat: 62.39, lng: 17.306, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
   { id: 'gf-08', name: 'E4 checkpoint · Umeå', type: 'CHECKPOINT', shape: 'circle', lat: 63.825, lng: 20.263, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
   { id: 'gf-09', name: 'E4 checkpoint · Luleå', type: 'CHECKPOINT', shape: 'circle', lat: 65.584, lng: 22.154, radiusM: 1500, hysteresisM: 300, samplesRequired: 1, dwellMin: 0, notifyHhl: true, notifyKsh: false, notifyScx: false, active: true, trigger: 'ENTER' },
-  { id: 'gf-10', name: 'Bufor 50 km · przed Boden (Stalverket 20)', type: 'PRE_ARRIVAL', shape: 'circle', lat: 65.70, lng: 21.90, radiusM: 50000, hysteresisM: 800, samplesRequired: 2, dwellMin: 0, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
+  { id: 'gf-10', name: 'Bufor 50 km · przed Boden (Stalverket 20)', type: 'PRE_ARRIVAL', shape: 'circle', lat: 65.70, lng: 21.90, radiusM: 50000, hysteresisM: 800, samplesRequired: 2, dwellMin: 0, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-11', name: 'Stegra · Stalverket 20, Boden', type: 'SITE', shape: 'circle', lat: 65.80539, lng: 21.75914, radiusM: 1200, hysteresisM: 200, samplesRequired: 3, dwellMin: 15, notifyHhl: true, notifyKsh: true, notifyScx: true, active: true, trigger: 'DWELL_EXCEEDED' },
   { id: 'gf-12', name: 'Parking REST · ponadgab. · Gävle N', type: 'REST', shape: 'circle', lat: 60.82, lng: 17.2, radiusM: 400, hysteresisM: 100, samplesRequired: 2, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
   { id: 'gf-13', name: 'Parking REST · ponadgab. · Umeå S', type: 'REST', shape: 'circle', lat: 63.7, lng: 20.1, radiusM: 400, hysteresisM: 100, samplesRequired: 2, dwellMin: 20, notifyHhl: false, notifyKsh: false, notifyScx: true, active: true, trigger: 'ENTER' },
@@ -67,7 +67,7 @@ export const WORKFLOWS: WorkflowRule[] = [
     id: 'wf-1',
     name: 'Powiadomienie 40 min przed placem',
     description:
-      'Wjazd w strefę Bufor 50 km · Boden → e-mail do KSH i Scandinavian Express, status Dojazd na plac',
+      'Wjazd w strefę Bufor 50 km · Boden → e-mail do KSH i Scandinavian Express, status Dojazd na plac',
     trigger: 'GEOFENCE_ENTER',
     condition: '{"==":[{"var":"geofence.type"},"PRE_ARRIVAL"]}',
     actions: ['notify_ksh', 'notify_scx', 'set_status:APPROACHING_SITE'],
@@ -150,7 +150,7 @@ export const WORKFLOWS: WorkflowRule[] = [
     id: 'wf-8',
     name: 'Zdążenie na rejs · przed portem',
     description:
-      'Wjazd w Bufor 20 km · przed portem Gdańsk + ETA po zamknięciu boarding → ryzyko promowe wysokie, toast Plan B, zadanie potwierdź rejs',
+      'Wjazd w Bufor 20 km · przed portem Gdańsk + ETA po zamknięciu boarding → ryzyko promowe wysokie, toast Plan B, zadanie potwierdź rejs',
     trigger: 'GEOFENCE_ENTER',
     condition: '{"and":[{"==":[{"var":"geofence.type"},"PRE_PORT"]},{"==":[{"var":"at_risk_ferry_cutoff"},true]}]}',
     actions: ['open_risk_ferry', 'toast_plan_b', 'task_confirm_sailing'],
@@ -544,11 +544,23 @@ function redatedRawLoads(): Load[] {
   });
 }
 
+/**
+ * Przegląd 18.10 (B3): transporty „Na placu” stoją w strefie placu Boden (środek 65,80539; 21,75914, promień 1 000 m),
+ * a nie na końcu korytarza — Strefy pokazują „teraz w strefie” zgodnie z Kokpitem. D-01 wyjechał ze strefy o 16:07
+ * po 6 min (karta „czy dostarczono?”) i stoi tuż za nią, ok. 1,3 km od środka (poza strefą placu w obu źródłach: 1 000 i 1 200 m) — „stoi na skraju strefy placu”.
+ */
+const SITE_POS: Readonly<Record<string, { lat: number; lng: number; heading: number }>> = {
+  'T-12': { lat: 65.80461, lng: 21.76188, heading: 140 },
+  'T-18': { lat: 65.80602, lng: 21.75441, heading: 210 },
+  'D-01': { lat: 65.8171, lng: 21.76102, heading: 15 },
+};
+
 export function buildSeedLoads(): Load[] {
   /* audyt 17.10 (N6): kolejność jak w pliku KSH — po dacie załadunku (przy tej samej dacie — pozycja w pliku) */
   const sourceLoads = [...redatedRawLoads(), ...buildExtraLoads()]
     .sort((a, b) => a.plannedLoadDate.localeCompare(b.plannedLoadDate) || (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
-  return sourceLoads.map((l, idx) => {
+  /* przegląd 18.10 (B2): ten sam kierowca, ciągnik albo naczepa nie jedzie w dwóch transportach naraz */
+  return deconflictResources(sourceLoads.map((l, idx) => {
     const progress = PROGRESS_OF[l.status] ?? l.progress;
     const pos = positionAlong(progress);
     // Stress: force a few READY seeds that lack cover to DOC_MISSING / keep TRIP gaps
@@ -557,23 +569,31 @@ export function buildSeedLoads(): Load[] {
     let permit = l.permit ? { ...l.permit } : undefined;
     // Below-threshold stress (≥3 loads) — actionable in Finance; partia 5: wiersze sumują się do „Razem”
     const pricing = consistentDemoPricing(withoutDemoExtras(l.pricing), l.plannedLoadDate,
-      ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code) ? 0.09 : undefined);
+      ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code) ? 0.03 : undefined); /* przegląd 18.10 (P9): poniżej progu 4 % (Finanse, dzwonek) */
 
     // Uncovered TRIP kratownice that block READY (K-03 already TRIP+RESOURCES_PENDING)
     // Promote SG-09 / SG-18 to TRIP gaps mid-pipeline stress
+    /* przegląd 18.10 (B1): zestaw wpisany (awizacja kompletna), brakuje tylko zezwolenia — status „Brak dokumentów”,
+       nie „Brak zasobów” (sprawy „Brak kierowcy…” i „Brak naczepy” przy tych transportach były sprzeczne z panelem) */
     if (l.code === 'SG-09') {
-      status = 'RESOURCES_PENDING';
+      status = 'DOC_MISSING';
       docMissing = true;
       if (permit) permit = { ...permit, attachmentKind: 'TRIP' };
     }
     if (l.code === 'SG-18' && permit) {
       // was READY without cover — force gap
-      status = 'RESOURCES_PENDING';
+      status = 'DOC_MISSING';
       docMissing = true;
       permit = { ...permit, attachmentKind: 'TRIP' };
     }
     if (l.code === 'K-03' && permit) {
       permit = { ...permit, attachmentKind: 'TRIP' };
+      docMissing = true;
+    }
+    /* F7 #307 runda 2 (P-A): zezwolenia firmowe SG w demo ważne do 24.09 — SG-29 (załadunek 24.10) bez pokrycia
+       nie może być „Gotowy”; czeka na nowe zezwolenie jak SG-09 i SG-18 */
+    if (l.code === 'SG-29') {
+      status = 'DOC_MISSING';
       docMissing = true;
     }
     // SG-34: permit MISMATCH must not sit in READY (READY gate / P9)
@@ -620,9 +640,7 @@ export function buildSeedLoads(): Load[] {
       pricing,
       progress,
       stage: STATUS_TO_STAGE[status],
-      lat: pos.lat,
-      lng: pos.lng,
-      heading: pos.heading,
+      ...(SITE_POS[l.code] ?? { lat: pos.lat, lng: pos.lng, heading: pos.heading }),
       etaSegments: l.etaSegments ?? [],
       etaBoden: l.etaBoden ?? null,
       etaConfidence: 'MED' as const,
@@ -635,7 +653,7 @@ export function buildSeedLoads(): Load[] {
     // ETA applied lazily in store init via applyEtaToLoad — keep placeholders here
     void idx;
     return base as Load;
-  });
+  }));
 }
 
 /**
@@ -647,11 +665,19 @@ const DEMO_CLOCK_MS = Date.parse('2026-09-23T14:32:00Z');
 const atLocal = (day: string, hm: string) => `${day}T${hm}:00+02:00`;
 const notAfter = (iso: string, capIso: string) => (Date.parse(iso) > Date.parse(capIso) ? capIso : iso);
 const dayBefore = (day: string, n: number) => isoDay(Date.parse(`${day}T12:00:00Z`) - n * 864e5);
+/** Czas na placu przy rozładunku — „Postój · rozładunek Boden” 3 h 44 min w Cenach (p5Demo). */
+const SITE_DWELL_MIN = 224;
+/** Karta „czy dostarczono?” w demo (p4cDemo): po 6 min na placu (wjazd 16:01 z bloku ETA, wyjazd 16:07 = zegar − 25 min). */
+const DEMO_DC_DWELL_MIN = 6;
 const hmOf = (ms: number) => new Date(ms + 2 * 3600e3).toISOString().slice(11, 16);
 
 export function buildSeedEvents(loads: Load[]): LoadEvent[] {
   const events: LoadEvent[] = [];
   let n = 0;
+  /* pierwszy „Na placu” wg kodu — ten sam co karta „czy dostarczono?” w p4cDemo (`demoDeliveredCheck`) */
+  const firstOnSite = [...loads]
+    .filter((x) => x.status === 'APPROACHING_SITE')
+    .sort((a, b) => a.code.localeCompare(b.code, 'pl', { numeric: true }))[0]?.id;
   for (const l of loads) {
     events.push({
       id: `ev-${++n}`,
@@ -708,6 +734,29 @@ export function buildSeedEvents(loads: Load[]): LoadEvent[] {
         actor: 'system',
         payload: { source: 'AIS' },
       });
+    }
+    /* P11 pkt 6 (paczka B, e17/e25: „Na placu · pominięte”, brak „wyjazd z placu po 3 h 44 min”): zdarzenia strefy placu
+       w demo jak z silnika stref (uwagi F7 #304):
+       - wjazd na plac (status „Na placu” z automatu) o godzinie „czeka przed placem od …” z bloku ETA (`waitSince`),
+         przy rozładowanych i dostarczonych 3 h 44 min przed wyjazdem — tyle co „Postój · rozładunek Boden” w Cenach;
+       - postój potwierdzony po 15 min (`dwellMin` strefy), wyjazd ze strefy w chwili rozładunku (ten sam moment co „Dostarczone”);
+       - pierwszy transport „Na placu” ma kartę „Wyjazd z placu po 6 min — czy dostarczono?” (p4cDemo) — tu ten sam wjazd i wyjazd. */
+    const SITE = { geofence_id: 'gf-11', geofence_type: 'SITE', source: 'GPS', provider: 'emtrack' };
+    const iso = (ms: number) => atLocal(isoDay(ms + 2 * 3600e3), hmOf(ms));
+    if (['APPROACHING_SITE', 'UNLOADING', 'DELIVERED'].includes(l.status)) {
+      const shortVisit = l.id === firstOnSite;
+      const dwellMin = shortVisit ? DEMO_DC_DWELL_MIN : SITE_DWELL_MIN;
+      const waitMs = Date.parse(l.etaDetail?.waitSince ?? l.etaBoden ?? '2026-09-23T15:10:00+02:00');
+      const exitAt = shortVisit
+        ? iso(waitMs + dwellMin * 60_000)
+        : l.status === 'APPROACHING_SITE' ? null : l.unloadedAt ?? atLocal(l.plannedDeliverDate, '12:00');
+      const enterMs = exitAt && !shortVisit ? Date.parse(exitAt) - dwellMin * 60_000 : waitMs;
+      events.push({ id: `ev-${++n}`, loadId: l.id, type: 'STATUS_AUTO', at: iso(enterMs), actor: 'system', payload: { from: 'IN_TRANSIT_SE', to: 'APPROACHING_SITE', powod: 'wjazd do strefy placu', ...SITE } });
+      events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_ENTER', at: iso(enterMs), actor: 'geofence-engine', payload: SITE });
+      if (dwellMin >= 15 && enterMs + 15 * 60_000 < DEMO_CLOCK_MS) {
+        events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_DWELL', at: iso(enterMs + 15 * 60_000), actor: 'geofence-engine', payload: { ...SITE, dwell_min: 15 } });
+      }
+      if (exitAt) events.push({ id: `ev-${++n}`, loadId: l.id, type: 'GEOFENCE_EXIT', at: exitAt, actor: 'geofence-engine', payload: { ...SITE, dwell_min: dwellMin } });
     }
     if (['UNLOADING', 'DELIVERED'].includes(l.status)) {
       events.push({
@@ -870,7 +919,10 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
   const odp = (o: 'HHL' | 'KSH' | 'SCX') => `Odpowiada: ${OWNER[o]}`;
 
   const docsPending = loads.filter((l) => l.docMissing || l.status === 'DOC_MISSING').slice(0, 3);
-  const resPending = loads.filter((l) => l.status === 'RESOURCES_PENDING').slice(0, 2);
+  /* „Brak kierowcy i numerów rejestracyjnych” tylko przy transporcie, któremu naprawdę brakuje zestawu (przegląd 18.10, B1) */
+  const resPending = loads
+    .filter((l) => l.status === 'RESOURCES_PENDING' && !(l.resources.driverName && l.resources.tractorPlate && l.resources.trailerPlate))
+    .slice(0, 2);
   const silent = loads.find((l) => l.status === 'SILENT') ?? loads.find((l) => l.status === 'IN_TRANSIT_SE');
   const delayed = loads.filter((l) => l.delayed || l.status === 'DELAYED');
   const ferry = loads.find((l) => l.status === 'ON_FERRY' || l.status === 'AT_PORT');
@@ -997,7 +1049,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-snow',
     type: 'FORCE_MAJEURE',
     severity: 'CRITICAL',
-    title: 'Siła wyższa — zamknięcie E4 (śnieżyca) · +4 h',
+    title: 'Siła wyższa — zamknięcie E4 (śnieżyca) · dolicza 4 h do przyjazdu',
     detail: 'Odcinek Luleå–Boden zamknięty dla ponadgabarytu; kolumna za pługiem. Przyczyna: pogoda.',
     loadId: inSe?.id ?? seLoad2?.id,
     owner: 'HHL',
@@ -1013,7 +1065,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-storm',
     type: 'FORCE_MAJEURE',
     severity: 'HIGH',
-    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09.2026 · +12 h',
+    title: 'Siła wyższa — sztorm Bałtyk · rejs 24.09.2026 · dolicza 12 h do przyjazdu',
     detail: 'Armator wstrzymuje odejście przy fali >3 m. Transporty w oknie promu.',
     loadId: ferryLoad?.id,
     owner: 'HHL',
@@ -1029,7 +1081,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-strike',
     type: 'FORCE_MAJEURE',
     severity: 'HIGH',
-    title: 'Siła wyższa — akcja związkowa port Nynäshamn · +6 h',
+    title: 'Siła wyższa — akcja związkowa port Nynäshamn · dolicza 6 h do przyjazdu',
     detail: 'Opóźnienie wyładunku HGV; kolejka na rampach. Dotyczy transportów SE_ROAD.',
     loadId: seLoad2?.id ?? inSe?.id,
     owner: 'SCX',
@@ -1044,7 +1096,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
     id: 'risk-fm-border',
     type: 'FORCE_MAJEURE',
     severity: 'CRITICAL',
-    title: 'Siła wyższa — kontrola graniczna / kolejka · +3 h',
+    title: 'Siła wyższa — kontrola graniczna / kolejka · dolicza 3 h do przyjazdu',
     detail: 'Wzmożone kontrole na odcinku podejścia do Boden; ponadgabaryt wstrzymany.',
     loadId: approaching?.id ?? inSe?.id,
     owner: 'HHL',
@@ -1123,7 +1175,7 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
       id: 'risk-weather-ice',
       type: 'FORCE_MAJEURE',
       severity: 'CRITICAL',
-      title: 'Siła wyższa — oblodzenie E4 Gävle–Sundsvall · +5 h',
+      title: 'Siła wyższa — oblodzenie E4 Gävle–Sundsvall · dolicza 5 h do przyjazdu',
       detail: 'Wstrzymano przejazd ponadgabarytu do czasu przejazdu pługosolarek; przyczyna: pogoda.',
       loadCode: 'SG-31',
       owner: 'HHL',
@@ -1165,11 +1217,11 @@ export function buildSeedRisks(sortedLoads: Load[]): Risk[] {
       id: 'risk-gps-silent-33',
       type: 'OPS',
       severity: 'HIGH',
-      title: 'Cichy GPS — bez pingu od 3 h 14 min',
+      title: 'Cichy GPS — bez nowej pozycji od 3 h 14 min',
       detail: 'Ostatnia pozycja: E4 na południe od Umeå; brak potwierdzenia postoju i kierowcy.',
       loadCode: 'SG-33',
       owner: 'SCX',
-      meta: 'Odpowiada: Scandinavian Express · ostatni ping: E4 Umeå',
+      meta: 'Odpowiada: Scandinavian Express · ostatnia pozycja: E4 Umeå',
       nextAction: 'Zadzwoń do kierowcy i wymuś pozycję',
       ageHours: 3.2,
     }),
@@ -1416,7 +1468,7 @@ export const SCHEDULE_VERSIONS: ScheduleVersion[] = [
  * Powiadomienia demo (E41, E5; audyt-A A-01, A-02, F-02, F-03): tytuł to „co się stało” bez kodu transportu —
  * nazwę według firmy wstawia dzwonek z `loadId` (HHL „kod · nr HHL”, SCX „kod · nr SCX”, KSH sam kod).
  * Każdy wpis prowadzi do transportu, którego dotyczy: brak CMR — dostarczony bez podpisanego CMR (SG-23),
- * brak sygnału — T-05 (cisza 95 min), brak naczepy — SG-09 (zasoby niekompletne), marża — SG-15.
+ * brak sygnału — T-05 (cisza 95 min), brak kierowcy i zestawu — SG-19 (zasoby niekompletne), marża — SG-15.
  * KSH nie dostaje zadań przewoźnika (CMR); wpis Stref tylko dla HHL (E34 — Strefy ma tylko HHL).
  */
 export const INITIAL_NOTIFICATIONS: Notification[] = [
@@ -1443,7 +1495,7 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n3',
     at: '2026-09-22T16:40:00+02:00',
-    title: 'Bufor 50 km Boden',
+    title: 'Bufor 50 km Boden',
     body: 'Wjazd w strefę przed placem — odświeżono ETA.',
     severity: 'MEDIUM',
     read: false,
@@ -1463,8 +1515,9 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n5',
     at: '2026-09-22T14:05:00+02:00',
-    title: 'Faktura w sporze · t38',
-    body: 'Różnica ponad 50 EUR na pozycji SG-04.',
+    title: 'Faktura do sprawdzenia · t38',
+    /* przegląd 18.10 (P8): ten sam stan co na stronie Faktury — faktura SCX t38 „Do weryfikacji”, różnica 180,00 PLN */
+    body: 'Różnica 180,00 PLN między fakturą SCX a rozliczeniem tygodnia.',
     severity: 'HIGH',
     read: false,
     roleScope: ['HHL', 'SCX'],
@@ -1546,12 +1599,13 @@ export const INITIAL_NOTIFICATIONS: Notification[] = [
   {
     id: 'n13',
     at: '2026-09-21T10:15:00+02:00',
-    title: 'Brak naczepy',
-    body: 'Uzupełnij zasoby przed załadunkiem.',
+    title: 'Brak kierowcy i zestawu',
+    body: 'Uzupełnij awizację przed załadunkiem.',
     severity: 'HIGH',
     read: false,
     roleScope: ['SCX', 'HHL'],
-    href: { view: 'tasks', loadId: 'load-013' },
+    /* przegląd 18.10 (B1): SG-19 nie ma kierowcy, ciągnika ani naczepy (SG-09 ma zestaw kompletny) */
+    href: { view: 'tasks', loadId: 'load-027' },
   },
 ];
 

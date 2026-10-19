@@ -110,7 +110,8 @@ test.describe('M5 — numery zleceń', () => {
     await role(page, 'HHL')
     await nav(page, 'sched')
     let code = ''
-    for (const c of ['SG-29', 'SS-03', 'P-01', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
+    /* F7 #307 r2: SG-29 ma teraz „Brak dokumentów” (zezwolenie firmowe demo do 24.09) — „Gotowy” blokują braki; P-01 ma komplet */
+    for (const c of ['P-01', 'SG-29', 'SS-03', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
       await openLoad(page, c)
       await statusTab(page)
       const btn = page.locator('.drawer [data-action="change-status"]')

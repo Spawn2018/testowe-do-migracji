@@ -30,6 +30,7 @@ import { dayShort, isoWeek } from '../../lib/p7Awiz';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { delayPillMinutes } from '../../lib/prodDash';
 import { accountRole } from '../../lib/accountRole';
+import { hhlAdminDates } from '../../lib/adminDates';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../../auth/PermitForm'))) : null;
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
@@ -427,7 +428,7 @@ export function LoadDrawer() {
       </aside>
       <DocPreview doc={previewDoc} onClose={() => setPreviewDoc(null)} />
       {awizOpen ? <Suspense fallback={null}><AwizacjaModal load={load} onClose={() => setAwizOpen(false)} /></Suspense> : null}
-      {kshDatesOpen && role === 'KSH' ? <KshDatesModal load={load} onClose={() => setKshDatesOpen(false)} /> : null}
+      {kshDatesOpen && (role === 'KSH' || hhlAdminDates(role)) ? <KshDatesModal load={load} onClose={() => setKshDatesOpen(false)} /> : null}
       {statusChangeOpen && canStatus ? (
         <Suspense fallback={null}>
           <StatusChangeModal

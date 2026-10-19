@@ -18,7 +18,7 @@ import { buildCockpit, todoQueue, todoRisks, viewedKind, type CockpitTile } from
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
 import { aggregateTier } from '../lib/money/loadMoney';
-import { financeSummary } from '../lib/p5Finance';
+import { financeSummary, transportsText } from '../lib/p5Finance';
 import { formatPlNumber } from '../lib/format';
 import { PROD_BUILD, shows } from '../lib/prodFacade';
 import { riskAsException, sortExceptions } from '../lib/prodDash';
@@ -162,7 +162,7 @@ export function DashboardView() {
   const marginTier = aggregateTier(loads, role);
   const moneyTags = marginTier.tier ? (
     <span data-kpi-tier={marginTier.tier} data-kpi-provisional={marginTier.provisional}>
-      {marginTier.provisional > 0 ? <span className="pill p-amber">{t(locale, 'fx_provisional')} · {marginTier.provisional}</span> : null}
+      {marginTier.provisional > 0 ? <span className="pill p-amber">{t(locale, 'fx_provisional')} · {transportsText(marginTier.provisional)}</span> : null}
     </span>
   ) : null;
   /* Stopka HHL (E9): „Czas wykrycia odchylenia: **za mało danych** (2 z 5 zdarzeń w 30 dniach)”; mediana od 5 zdarzeń */

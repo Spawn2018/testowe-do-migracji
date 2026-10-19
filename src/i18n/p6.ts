@@ -9,7 +9,7 @@ import { t } from './messages';
 const PL: Record<string, string> = {
   p6_title: 'Ryzyka',
   p6_todo: 'Do zrobienia',
-  p6_todo_same: 'ta sama liczba w menu, w Kokpicie i w dzwonku',
+  p6_todo_same: 'ta sama liczba w menu i w Kokpicie',
   p6_scope_MINE: 'Moje',
   p6_scope_FIRM: 'Moja firma',
   p6_scope_ALL: 'Wszystkie',
@@ -157,7 +157,7 @@ const PL: Record<string, string> = {
   p6_notice: 'Komunikat armatora (wpis ręczny)',
   p6_road_pl: 'Drogi PL',
   p6_road_pl_src: 'HERE',
-  p6_road_pl_none: 'Brak danych z HERE. Po podłączeniu: odświeżanie co 15 minut, ten sam układ co drogi SE.',
+  p6_road_pl_none: 'Brak komunikatów o utrudnieniach na drogach w Polsce. Źródło: HERE, odświeżanie co 15 minut.',
   p6_road_se: 'Drogi SE',
   p6_road_counts: '{list} · Trafikverket',
   p6_imp_VERY_HIGH: 'Bardzo duży wpływ',

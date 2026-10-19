@@ -16,6 +16,7 @@ import { clickableRow } from '../../lib/clickableRow';
 import { formatLoadMoney, formatLoadRevMargin } from '../../lib/money/loadPln';
 import { etaIsNightArrival, formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
+import { isAfterDelivery } from '../../lib/status';
 import {
   dmy, dayPl, docCell, etaText, hmIn, moneyKey, pair, SHORT_COLS, SHORT_EXTRAS,
   type FileColDef, type ShortExtraId,
@@ -186,7 +187,7 @@ function rowProps(l: Load, ctx: SchedRowCtx) {
     'data-code': l.code,
     'data-status': l.status,
     /* E25 (audyt-B B-03): „Rozładowany” = „Dostarczone” — ten sam wygląd wiersza */
-    className: `${l.status === 'DELIVERED' || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
+    className: `${isAfterDelivery(l.status) || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
     onMouseEnter: () => ctx.setHover(l.id),
     onMouseLeave: () => ctx.setHover(null),
     ...clickableRow(() => ctx.onOpen(l.id)),

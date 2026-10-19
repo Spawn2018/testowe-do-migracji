@@ -22,13 +22,13 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 27, // +4 C1 zalew dzwonka (D-0300); wcześniej 23
+  risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
   nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
-  i2: 540,
+  i2: 548,
   i30: 10,
   i31: 9,
-  dec2: 26,
+  dec2: 42,
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -36,7 +36,7 @@ export const EXPECTED_LOCAL = {
   hist11: 11,
   workflows: 67,
   insurance: 42,
-  'dec-auto': 64,
+  'dec-auto': 72,
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 114, // 118 − 4 SKIP (B6)
-  risks: 25, // 27 − 2 SKIP (C1)
+  risks: 31, // 33 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

@@ -18,6 +18,7 @@ import { applyInvoiceToSide, fxForDate, leastTier, unloadedAtOf } from './money/
 import { dictEntry } from '../i18n/messages';
 import { serverRuleOn } from './serverRules';
 import { currentCmr } from './statusSettlement';
+import { STATUS_TO_STAGE } from './status';
 
 export const BILL_TERM_DAYS: Record<BillDirection, number> = { PRZYCHOD: 30, KOSZT: 35 };
 /** Tolerancja kwoty do czasu A4 — jak `register_invoice` (0015): > 1 i > 0,2 %. */
@@ -358,7 +359,14 @@ export function withBilledMoney(loads: Load[], bills: Bill[]): Load[] {
     if (!hit || !m) return l;
     const cost = hit.cost != null ? applyInvoiceToSide(m.cost, hit.cost) : m.cost;
     const rev = hit.rev != null ? applyInvoiceToSide(m.rev, hit.rev) : m.rev;
-    return { ...l, pricing: { ...l.pricing, money: { ...m, tier: leastTier(cost.tier, rev.tier), cost, rev } } };
+    /* przegląd 18.10 (P13): transport na obu fakturach (SCX → HHL i HHL → KSH) ma status „Zafakturowano” —
+       pasek etapów „Rozliczenie” i Harmonogram zgodne z Finansami („Zafakturowane · obie faktury”) */
+    const both = hit.cost != null && hit.rev != null && (l.status === 'DELIVERED' || l.status === 'READY_TO_INVOICE');
+    return {
+      ...l,
+      ...(both ? { status: 'INVOICED' as const, stage: STATUS_TO_STAGE.INVOICED } : {}),
+      pricing: { ...l.pricing, money: { ...m, tier: leastTier(cost.tier, rev.tier), cost, rev } },
+    };
   });
 }
 

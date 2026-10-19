@@ -159,9 +159,9 @@ function DisputeThread({ bill }: { bill: Bill }) {
 }
 
 /* E4: kwoty jak w raporcie — „21 820,30” (EUR, waluta umowy); inna waluta faktury z kodem: „38 413,13 PLN”. */
+/* przegląd 18.10 (P27): kwota zawsze z walutą — lista faktur łączy faktury w EUR i w PLN w jednej kolumnie */
 const fmtCur = (n: number | null | undefined, cur: string) =>
-  n == null ? '—' : cur === 'EUR' ? formatPlNumber(n, 2) : `${formatPlNumber(n, 2)} ${cur}`;
-const fmtNum = (n: number | null | undefined) => (n == null ? '—' : formatPlNumber(n, 2));
+  n == null ? '—' : `${formatPlNumber(n, 2)}\u00a0${cur}`;
 /* „08.10.2026” — dzień kalendarza albo chwila (czas polski); rok zawsze — właściciel 16.10.2026 */
 const fmtDay = (iso: string | null | undefined) => (iso ? fmtDate(iso) : '—');
 
@@ -373,9 +373,9 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
                   <span className="code" data-content>{b.number}</span>
                   <StatusTag bill={b} status={billStatus(b)} />
                 </button>
-                <b className="inv-card-big" data-deur-exempt="invoice-currency">{formatPlNumber(b.gross, 2)} {b.currency} {ft(locale, 'p5_inv_col_gross').toLocaleLowerCase('pl-PL')}</b>
+                <b className="inv-card-big" data-deur-exempt="invoice-currency">{fmtCur(b.gross, b.currency)} {ft(locale, 'p5_inv_col_gross').toLocaleLowerCase('pl-PL')}</b>
                 <p className="fin-muted" data-deur-exempt="invoice-currency">
-                  {ftp(locale, 'p5_inv_card_line', { week: Number(b.weekKey.slice(-2)), loads: transportsText(b.lines.length), net: fmtNum(b.net), vat: fmtNum(b.vat), due: dm(b.dueDate) })}
+                  {ftp(locale, 'p5_inv_card_line', { week: Number(b.weekKey.slice(-2)), loads: transportsText(b.lines.length), net: fmtCur(b.net, b.currency), vat: fmtCur(b.vat, b.currency), due: dm(b.dueDate) })}
                 </p>
                 {quick(b) ? <div className="inv-card-acts">{actions(b)}</div> : null}
                 {openId === b.id ? <BillDetail bill={b} /> : null}

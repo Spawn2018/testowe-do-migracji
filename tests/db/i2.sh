@@ -638,19 +638,29 @@ fi # tower-i2-part 3
 if _i2_part_ok 4; then
 echo; echo "[III-6] wymagalność i terminy dokumentów, wersje, widoczność per organizacja (0078)"
 chk "projekt ma 7 wymagań startowych (seed przez wyzwalacz projektu)" "$(Q "select count(*) from doc_requirements where project_id='$P'")" "7"
-err "KSH: zmiana wymagalności odrzucona" $KSH "select doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4)" "wyłącznie HHL"
+err "KSH: zmiana wymagalności odrzucona" $KSH "select doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',48)" "wyłącznie HHL"
 err "HHL: nieznane zdarzenie odniesienia odrzucone" $HHL "select doc_requirement_set('$P','CMR',true,'CARRIER','KIEDYS',4)" "Nieznane zdarzenie"
-val "HHL: CMR do 4 h po załadunku zapisane" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4) is not null)::text" true commit
-chk "wartość zmieniona + audit_log DOC_REQUIREMENT_SET ze starą wartością" "$(Q "select r.offset_hours||'/'||(select (old_value->>'offset_hours') from audit_log where action='DOC_REQUIREMENT_SET' order by id desc limit 1) from doc_requirements r where project_id='$P' and category='CMR'")" "4/2"
+err "HHL: CMR AT_LOAD odrzucony (0231 / D-1740)" $HHL "select doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4)" "CMR tylko po rozładunku"
+val "HHL: CMR 48 h po rozładunku zapisane" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',48) is not null)::text" true commit
+chk "wartość zmieniona + audit_log DOC_REQUIREMENT_SET ze starą wartością" "$(Q "select r.anchor||'/'||r.offset_hours||'/'||(select (old_value->>'offset_hours') from audit_log where action='DOC_REQUIREMENT_SET' order by id desc limit 1) from doc_requirements r where project_id='$P' and category='CMR'")" "AFTER_UNLOAD/48/24"
 val "KSH i SCX czytają wymagania (konfiguracja)" $SCX "select count(*) from doc_requirements where project_id='$P'" 7
 L9=33333333-0000-0000-0000-0000000006c9
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date, plan_delivery_date) values ('$L9','$P','00000000-0000-0000-0000-00000000a003','KSH/9', current_date-3, current_date+2)" >/dev/null
 $PSQL -c "update loads set plan_load_date=current_date-3, plan_delivery_date=current_date+2 where id='$L9'" >/dev/null
 val "SCX: zezwolenie PL transportu z załadunkiem 3 dni temu = OVERDUE" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='PERMIT_PL'" OVERDUE
 val "SCX: POD przed dostawą = MISSING (termin nie minął)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='POD'" MISSING
-val "stan tylko dla kategorii wymaganych per transport (bez polisy): 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
-val "SCX: po wgraniu CMR (create_document) stan OK" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
+val "SCX: CMR przed Dostarczone bez pliku = brak wiersza (0231)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
+val "stan wymaganych per transport przed CMR/dostawą (bez polisy, bez CMR): 5" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
+val "SCX: wgranie CMR przed dostawą (create_document)" $SCX "select count(*) from create_document('$L9','CMR','cmr-zaladunek.pdf','application/pdf',100)" 1 commit
+$PSQL -c "update documents set uploaded_at=now()-interval '48 hours' where load_id='$L9' and file_name='cmr-zaladunek.pdf'" >/dev/null
+val "…CMR z załadunku = brak wiersza (0233 / #312 B1)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
+val "stan nadal 5 (CMR z załadunku nie liczy)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
+val "HHL: CMR z powrotem 24 h (seed)" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',24) is not null)::text" true commit
+$PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '25 hours', status='DELIVERED' where id='$L9'; set session_replication_role=origin" >/dev/null
+val "SCX: CMR z załadunku po dostawie −25 h = OVERDUE (0233)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OVERDUE
+val "SCX: ponowne wgranie CMR po dostawie" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
 val "…CMR = OK" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
+val "stan po CMR OK: 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
 val "SCX: druga rejestracja CMR" $SCX "select count(*) from create_document('$L9','CMR','cmr2.pdf','application/pdf',100)" 1 commit
 D1=$(Q "select id from documents where load_id='$L9' and file_name='cmr1.pdf'"); D2=$(Q "select id from documents where load_id='$L9' and file_name='cmr2.pdf'")
 err "KSH: oznaczenie cudzego pliku jako nowej wersji odrzucone" $KSH "select document_supersede('$D2','$D1')" "tylko autor"
