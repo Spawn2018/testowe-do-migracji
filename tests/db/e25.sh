@@ -116,8 +116,13 @@ val "HHL_ADMIN: czas w przyszłości dozwolony (0234)" $HHL "select load_status_
 err "SCX: czas w przyszłości odrzucony" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now()+interval '3 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
-val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED
+val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED commit
 # P1: korekta czasu nie kolejkuje STATUS_CANCELLED (automatyzacja włączona tylko w teście).
+# Reguły START-* powstają w 0094, zanim seed wstawi projekt — w zestawie tower trzeba je dopisać.
+sys "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
+     select '$P', 'START-7', 'Transport anulowany', 'test e25', 'STATUS_CANCELLED', 'true'::jsonb,
+            '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
+      where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
 sys "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','STATUS_CANCELLED',now(),'{}'::jsonb)" >/dev/null
 sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1

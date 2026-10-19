@@ -3285,3 +3285,8 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #313 po `f931341` — F7 „dwie drobne rzeczy” (19:58Z, po ostatnim commicie), więc bez scalenia. #317 i #259 mają konflikt z `main`.
 - Bieżąca pozycja **D-0005** (#313): `wf_enqueue_event` pomija zdarzenie z `korekta=true` (STATUS_CANCELLED nie startuje drugi raz). SCX (`CARRIER_DISPATCH` / `CARRIER_USER`) przy tym samym `DELIVERED` i innej godzinie nadpisuje `actual_delivery_at` jak przed 0234; korekta pozostałych statusów zostaje przy Administratorze HHL. Test `e25`: 39. Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-19 22:20 — D-0005: e25 P1, brama db czerwona na 03d379af
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Brama `db` `39316540812`: e25 36/39. Unit i visual zielone. Reguła START-7 nie ma projektu z seed (0094 idzie przed seedem), a anulowanie L1 było w transakcji wycofanej, więc korekta czasu nie powstawała. Test dopisuje regułę i zostawia anulowanie. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
