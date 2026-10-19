@@ -222,6 +222,18 @@ val "KR drugie → jedna" "select count(*) from decisions where detail->>'event_
 val "import woła próg KR" "select (position('l1b_kr_check' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
 val "postój nie ma funkcji z sztywnym progiem" "select count(*) from pg_proc where proname='l1b_dwell_check'" 0
 
+echo; echo "[dec-auto] D-0930 kod transportu w powiadomieniu SCX"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
+  values ('33333333-0000-0000-0000-00000000d930','$P','00000000-0000-0000-0000-00000000a003','KSHLEAK9301','PLANNED','2026-12-02','2026-12-06')
+  on conflict (id) do update set order_no=excluded.order_no, status='PLANNED', carrier_org_id=excluded.carrier_org_id,
+    plan_load_date=excluded.plan_load_date, plan_delivery_date=excluded.plan_delivery_date" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P','33333333-0000-0000-0000-00000000d930','SG-D930',1,1,1
+   where not exists (select 1 from shipment_items where project_id='$P' and shipment_code='SG-D930')" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000002'; select ksh_confirm_dates('33333333-0000-0000-0000-00000000d930','2026-12-03','2026-12-07'); commit;" >/dev/null
+val "SCX dostał kod SG-D930" "select (count(*)>=1) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('SG-D930' in n.payload::text)>0" t
+val "SCX po ksh_confirm bez numeru KSH" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('KSHLEAK9301' in n.payload::text)>0" 0
+
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

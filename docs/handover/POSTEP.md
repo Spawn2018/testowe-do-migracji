@@ -3309,3 +3309,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #337 scalony (`e6bc682a`) — „F7: gotowe do scalenia” po `a4bfb3cc`, unit i visual zielone. #317 i #259 mają konflikt z `main`.
 - Bieżąca pozycja **D-0930**: migracja `0235_l3_kod_i_korekta_statusu.sql` — kod transportu w L-3 / E41 oraz korekta statusu z #338. Testy `dec-auto` 74, `e25` 45. Czeka na bramę `db`.
 
+## 2026-10-19 23:50 — #339 scalony; F7 niegotowe #340 (P1–P3)
+
+- Skrzynka bez zmian: #320, #322, #323, #324, #338 w planie, bez `pilne`.
+- Scalanie: #339 `wyglad/W-admin-daty` scalony `d69498c4` — „F7: gotowe do scalenia” po `068c428`, unit i visual zielone, bez migracji. #317 i #259 mają konflikt z `main`.
+- #340: „F7: niegotowe” na `47af0dc` (po tym commicie jest `9a2ac176`, tylko asercje `t`/`true`). Poprawki w tej samej migracji 0235: kod w `ksh_confirm_dates` i postoju, skrót L-13 dla SCX bez numeru KSH, korekta po `STATUS_AUTO` z notatką, tytuł bez „—:”. Testy `dec-auto` 76, `e25` 46. Push po końcu bramy na `9a2ac176`.
+
