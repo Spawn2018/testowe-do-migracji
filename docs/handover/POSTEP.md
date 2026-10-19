@@ -3124,3 +3124,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #311 (1050) — zamknięte po wpisie; #312 — otwarte (następny krok pętli).
 - **Ten czat się zatrzymuje.** Dalej: pętla `cursor-agent` od `ZASADY_CIAGLEJ_PRACY.md`.
 
+## 2026-10-19 12:10 — #314 F7: autor polecenia + F7 po ostatnim commicie
+
+- F7 12:02: dwie poprawki bezpieczeństwa pętli (repo publiczne, `--force`).
+- `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
+- Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
+
