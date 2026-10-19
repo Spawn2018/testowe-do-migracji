@@ -70,6 +70,8 @@ import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
 import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
+import { billEditState, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
+import { accountRole } from '../lib/accountRole';
 import { refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
@@ -365,6 +367,8 @@ interface TowerState {
   /** M10 — przypisanie rejsu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL) */
   assignSailing: (loadId: string, sailingId: string | null, bookingRef: string | null) => SailingDenied;
   registerBill: (draft: BillDraft, file?: Blob | null) => { ok: true; id: string } | { ok: false; errors: string[] };
+  /** A4 / D-20261020-0115-01 — edycja faktury (wystawca do akceptacji odbiorcy, potem tylko Administrator HHL; KSH nigdy). */
+  updateBill: (billId: string, draft: BillDraft, file: Blob | null, note: string | null) => { ok: true } | { ok: false; errors: string[] };
   /** M6 — weryfikacja przez odbiorcę; SPORNA wymaga uzasadnienia. */
   verifyBill: (billId: string, next: BillVerification, note?: string | null) => boolean;
   /** M6 — „Opłacona” z datą (wyłącznie HHL) i cofnięcie z powodem. */
@@ -1613,6 +1617,43 @@ export const useTowerStore = create<TowerState>()(
         writeThrough({ type: 'bill.register', bill, file: file ?? null });
         get().pushToast(`${t(s.locale, 'bill_registered')}: ${bill.number}`, 'MEDIUM');
         return { ok: true as const, id: bill.id };
+      },
+
+      updateBill: (billId, draft, file, note) => {
+        const s = get();
+        const today = localDateOf(getNowIso());
+        const old = s.bills.find((x) => x.id === billId);
+        const account = accountRole(s.role);
+        if (!old || billEditState(s.role, account, old) !== 'edit') {
+          get().pushToast(t(s.locale, old && billEditState(s.role, account, old) === 'locked-accepted' ? 'bill_edit_locked' : 'bill_edit_denied'), 'HIGH');
+          return { ok: false as const, errors: ['ROLE'] };
+        }
+        /* te same kontrole co przy rejestracji; pozycje tej faktury nie liczą się jako „już zafakturowane” */
+        const others = s.bills.filter((x) => x.id !== billId);
+        const chk = checkBill({ ...draft, direction: old.direction, pdfName: draft.pdfName ?? old.pdfName ?? 'faktura.pdf' }, s.loads, others, today, s.documents);
+        if (chk.errors.length) return { ok: false as const, errors: chk.errors };
+        const byAdmin = isHhlAdmin(s.role, account);
+        const next: Bill = {
+          ...old,
+          number: draft.number.trim(), issueDate: draft.issueDate, receiptDate: draft.receiptDate ?? old.receiptDate ?? null,
+          weekKey: draft.weekKey, currency: draft.currency, net: draft.net!, vat: draft.vat!, gross: draft.gross!,
+          dueDate: billDueDate(old.direction, draft.issueDate, draft.dueDateFromDocument),
+          dueFromDocument: Boolean(draft.dueDateFromDocument),
+          pdfName: draft.pdfName ?? old.pdfName ?? null,
+          lines: chk.lines, headerFlags: chk.headerFlags, missingLoadIds: chk.missingLoadIds,
+          verification: verificationAfterEdit(old.verification, byAdmin),
+        };
+        next.payment = billPaymentToday(next, today);
+        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? next : x)) }));
+        const target = editNotifyTarget(old, byAdmin);
+        get().pushNotification({
+          title: t(s.locale, old.verification === 'ZAAKCEPTOWANA' && byAdmin ? 'bill_notifyCorrected' : 'bill_notifyUpdated'),
+          body: `${next.number} · ${next.weekKey} · ${formatPlMoney(next.gross, next.currency)}`,
+          severity: 'MEDIUM', roleScope: [target], href: { view: 'inv', entityId: next.id },
+        });
+        writeThrough({ type: 'bill.update', billId, bill: next, file: file ?? null, note: note?.trim() || null });
+        get().pushToast(`${t(s.locale, 'bill_edit_saved')}: ${next.number}`, 'MEDIUM');
+        return { ok: true as const };
       },
 
       verifyBill: (billId, next, note) => {

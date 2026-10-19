@@ -8,7 +8,7 @@
  */
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
-import { t } from '../i18n/messages';
+import { t, tp } from '../i18n/messages';
 import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Load, Locale } from '../types';
 import { getNowIso } from '../lib/frozenNow';
 import { isoWeekKeyLocal, localDateOf } from '../lib/money/engine';
@@ -34,6 +34,8 @@ import { factoringOfferOf } from '../lib/p5Source';
 import { billLineFuel } from '../lib/p5cFuel';
 import { fc, fcp } from '../i18n/p5c';
 import { PaymentChoice } from '../components/invoices/Factoring';
+import { billEditState, invoiceEditOn } from '../lib/invoiceEdit';
+import { accountRole } from '../lib/accountRole';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
 function DisputeThread({ bill }: { bill: Bill }) {
@@ -478,6 +480,7 @@ export function WhoSees() {
 }
 
 function BillDetail({ bill }: { bill: Bill }) {
+  const [editing, setEditing] = useState(false);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const loads = useTowerStore((s) => s.loads);
@@ -502,6 +505,9 @@ function BillDetail({ bill }: { bill: Bill }) {
       }
     : undefined;
   const verify = (v: BillVerification) => { if (verifyBill(bill.id, v, v === 'SPORNA' ? note : null)) setNote(''); };
+  /* A4 / D-20261020-0115-01: edycja — wystawca do akceptacji odbiorcy, potem tylko Administrator HHL; KSH nigdy */
+  const editState = invoiceEditOn() ? billEditState(role, accountRole(role), bill) : 'none';
+  if (editing) return <BillWizard direction={bill.direction} edit={bill} onDone={() => setEditing(false)} />;
 
   return (
     <div className="inv-detail" data-bill-detail={bill.id}>
@@ -585,6 +591,13 @@ function BillDetail({ bill }: { bill: Bill }) {
         <DocFileRow key={d.id} doc={d} label={`${byId.get(d.loadId!)?.code ?? ''} · ${d.category}`} onPreview={setPreview} />
       )) : null}
       <DisputeThread bill={bill} />
+      {editState === 'edit' ? (
+        <div className="filters" data-bill-actions="edit">
+          <button type="button" className="btn ghost" data-bill-edit={bill.id} onClick={() => setEditing(true)}>{t(locale, 'bill_edit')}</button>
+        </div>
+      ) : editState === 'locked-accepted' ? (
+        <p className="fin-muted" data-bill-edit-locked="">{t(locale, 'bill_edit_locked')}</p>
+      ) : null}
       {canVerifyBill(role, bill) ? (
         <div className="filters" data-bill-actions="verify">
           {/* wyglad/P5 — E4 „Weryfikacja”: Akceptuj albo Sporna z powodem (bez osobnego „Zgodna”) */}
@@ -617,13 +630,16 @@ function BillDetail({ bill }: { bill: Bill }) {
 
 interface LineState { on: boolean; net: string; fuel: string; fx: BillLineFx | null; fxConfirmed: boolean }
 
-function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (id: string | null) => void }) {
+function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onDone: (id: string | null) => void; edit?: Bill }) {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
-  const bills = useTowerStore((s) => s.bills);
   const documents = useTowerStore((s) => s.documents);
   const registerBill = useTowerStore((s) => s.registerBill);
+  const updateBill = useTowerStore((s) => s.updateBill);
+  const allBills = useTowerStore((s) => s.bills);
+  /* edycja: pozycje tej faktury nie są „już zafakturowane” — można je zostawić, zmienić albo zdjąć */
+  const bills = useMemo(() => (edit ? allBills.filter((b) => b.id !== edit.id) : allBills), [allBills, edit]);
   const today = localDateOf(getNowIso());
   const weeks = useMemo(() => {
     const done = invoicedLoadIds(bills, direction);
@@ -632,29 +648,39 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
       const at = unloadedAtOf(l);
       if (at && !done.has(l.id) && (direction === 'PRZYCHOD' || !l.carrierId || l.carrierId === 'org-scx')) set.add(isoWeekKeyLocal(at));
     }
+    if (edit?.weekKey) set.add(edit.weekKey);
     return [...set].sort().reverse();
-  }, [loads, bills, direction]);
+  }, [loads, bills, direction, edit]);
   /* A4 (F7 U4): tydzień, w którym wszystko czeka na CMR, oznaczony na liście; domyślnie najnowszy tydzień z transportem gotowym do faktury */
   const readyIn = useMemo(() => new Map(weeks.map((w) => [w, billCandidates(loads, bills, direction, w).filter((l) => billReady(l, documents)).length])), [weeks, loads, bills, direction, documents]);
-  const [week, setWeek] = useState(weeks.find((w) => (readyIn.get(w) ?? 0) > 0) ?? weeks[0] ?? '');
-  const [currency, setCurrency] = useState<'EUR' | 'PLN'>('EUR');
-  const [number, setNumber] = useState('');
-  const [issueDate, setIssueDate] = useState(today);
-  const [dueDoc, setDueDoc] = useState('');
-  const [net, setNet] = useState('');
+  const [week, setWeek] = useState(edit?.weekKey ?? weeks.find((w) => (readyIn.get(w) ?? 0) > 0) ?? weeks[0] ?? '');
+  const [currency, setCurrency] = useState<'EUR' | 'PLN'>(edit?.currency ?? 'EUR');
+  const [number, setNumber] = useState(edit?.number ?? '');
+  const [issueDate, setIssueDate] = useState(edit?.issueDate ?? today);
+  const [dueDoc, setDueDoc] = useState(edit?.dueFromDocument ? edit.dueDate : '');
+  const [net, setNet] = useState(edit ? formatPlNumber(edit.net, 2) : '');
   const [file, setFile] = useState<File | null>(null);
+  const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const weekLoads = useMemo(() => (week ? billCandidates(loads, bills, direction, week) : []), [loads, bills, direction, week]);
   /* A4 (audyt 17.10): na fakturę tylko transporty z CMR; reszta tygodnia szara z „czeka na CMR” */
-  const candidates = useMemo(() => weekLoads.filter((l) => billReady(l, documents)), [weekLoads, documents]);
+  const candidates = useMemo(() => {
+    const ready = weekLoads.filter((l) => billReady(l, documents));
+    if (!edit) return ready;
+    /* edycja: pozycje z faktury zawsze na liście (także spoza tygodnia — wtedy z flagą „zły tydzień”), nic nie znika po cichu */
+    const ids = new Set(ready.map((l) => l.id));
+    const own = edit.lines.map((ln) => loads.find((l) => l.id === ln.loadId)).filter((l): l is Load => Boolean(l) && !ids.has(l!.id));
+    return [...ready, ...own];
+  }, [weekLoads, documents, edit, loads]);
   const waiting = useMemo(() => weekLoads.filter((l) => !billReady(l, documents)), [weekLoads, documents]);
-  const [lines, setLines] = useState<Record<string, LineState>>({});
+  const [lines, setLines] = useState<Record<string, LineState>>(() => (edit ? editLineState(edit) : {}));
   const lineOf = (id: string): LineState => {
     if (lines[id]) return lines[id];
     const l = loads.find((x) => x.id === id)!;
     const fx = currency === 'PLN' ? suggestLineFx(l, direction, today) : null;
     const exp = expectedNetFor(l, direction, currency, today) ?? (fx ? Math.round(computedEurFor(l, direction) * fx.mid * 100) / 100 : null);
-    return { on: true, net: exp != null ? formatPlNumber(exp, 2) : '', fuel: '', fx, fxConfirmed: false };
+    /* edycja: transport tygodnia, którego nie było na fakturze — domyślnie niezaznaczony */
+    return { on: !edit, net: exp != null ? formatPlNumber(exp, 2) : '', fuel: '', fx, fxConfirmed: false };
   };
   const patch = (id: string, p: Partial<LineState>) => setLines((s) => ({ ...s, [id]: { ...lineOf(id), ...p } }));
   const num = parseAmount;
@@ -664,7 +690,7 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
 
   const draft: BillDraft = {
     direction, number, issueDate, weekKey: week, currency, net: netN, vat: sums?.vat ?? null, gross: sums?.gross ?? null,
-    dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? null, pdfSize: file?.size ?? null,
+    dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? edit?.pdfName ?? (edit ? 'faktura.pdf' : null), pdfSize: file?.size ?? null,
     lines: candidates.filter((l) => lineOf(l.id).on).map((l) => {
       const st = lineOf(l.id);
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };
@@ -675,12 +701,12 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
   const diff = Math.round((chk.invoicedTotal - chk.expectedTotal) * 100) / 100;
   const sumOk = billSumOk(chk);
   const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
-  const offer = direction === 'KOSZT' && role === 'SCX' ? factoringOfferOf() : null;
+  const offer = !edit && direction === 'KOSZT' && role === 'SCX' ? factoringOfferOf() : null;
 
   return (
-    <div className="inv-form" data-bill-wizard={direction}>
+    <div className="inv-form" data-bill-wizard={direction} data-bill-edit-form={edit ? edit.id : undefined}>
       <header className="inv-form-hd">
-        <h4 className="sec">{week ? ftp(locale, 'p5_inv_new_h', { no: Number(week.slice(-2)) }) : ft(locale, 'p5_inv_new')}</h4>
+        <h4 className="sec">{edit ? tp(locale, 'bill_edit_h', { no: edit.number }) : week ? ftp(locale, 'p5_inv_new_h', { no: Number(week.slice(-2)) }) : ft(locale, 'p5_inv_new')}</h4>
         <label className="inv-week">
           <span>{t(locale, 'bill_col_week')}</span>
           <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); setLines({}); }}>
@@ -774,7 +800,10 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
             <label className="inv-field" data-deur-exempt="invoice-currency"><span>{t(locale, 'bill_col_net')} ({currency})</span><input className="input" data-w="net" inputMode="decimal" value={net} onChange={(e) => setNet(e.target.value)} /></label>
             <label className="inv-field" data-deur-exempt="invoice-currency"><span>{ftp(locale, 'p5_inv_vat_auto', { cur: currency })}</span><input className="input inv-auto" data-w="vat" readOnly tabIndex={-1} value={sums ? formatPlNumber(sums.vat, 2) : '—'} /></label>
             <label className="inv-field" data-deur-exempt="invoice-currency"><span>{ftp(locale, 'p5_inv_gross_auto', { cur: currency })}</span><input className="input inv-auto" data-w="gross" readOnly tabIndex={-1} value={sums ? formatPlNumber(sums.gross, 2) : '—'} /></label>
-            <label className="inv-field inv-field-wide"><span>{t(locale, 'bill_pdf')}</span><input className="input" type="file" accept="application/pdf" data-w="pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+            <label className="inv-field inv-field-wide"><span>{t(locale, edit ? 'bill_edit_pdf_keep' : 'bill_pdf')}</span><input className="input" type="file" accept="application/pdf" data-w="pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
+            {edit ? (
+              <label className="inv-field inv-field-wide"><span>{t(locale, 'bill_edit_reason')}</span><input className="input" data-w="reason" placeholder={t(locale, 'bill_edit_reason_ph')} value={reason} onChange={(e) => setReason(e.target.value)} /></label>
+            ) : null}
           </div>
           <p className="fin-muted">{t(locale, 'bill_due_hint')} · {t(locale, 'bill_vat_hint')}</p>
           {offer ? <PaymentChoice offer={offer} net={netN} gross={sums?.gross ?? null} due={due} currency={currency} /> : null}
@@ -792,11 +821,16 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
               className="btn inv-send"
               data-w="submit"
               onClick={() => {
+                if (edit) {
+                  const r = updateBill(edit.id, draft, file, reason);
+                  if (r.ok) onDone(edit.id); else setErrors(r.errors);
+                  return;
+                }
                 const r = registerBill(draft, file);
                 if (r.ok) onDone(r.id); else setErrors(r.errors);
               }}
             >
-              {ft(locale, `p5_inv_form_send_${direction}`)}
+              {edit ? t(locale, 'bill_edit_save') : ft(locale, `p5_inv_form_send_${direction}`)}
             </button>
           </div>
           {errors.length ? (
@@ -806,7 +840,19 @@ function BillWizard({ direction, onDone }: { direction: BillDirection; onDone: (
           ) : null}
         </div>
       </div>
-      <p className="note">{t(locale, 'bill_wizard_note')}</p>
+      <p className="note">{edit ? t(locale, edit.verification === 'ZAAKCEPTOWANA' ? 'bill_edit_note_admin' : 'bill_edit_note_issuer') : t(locale, 'bill_wizard_note')}</p>
     </div>
   );
+}
+
+/** Edycja: stan pozycji z faktury (zaznaczone, kwoty, kurs potwierdzony). */
+function editLineState(b: Bill): Record<string, LineState> {
+  const out: Record<string, LineState> = {};
+  for (const ln of b.lines) {
+    out[ln.loadId] = {
+      on: true, net: formatPlNumber(ln.invoicedNet, 2), fuel: ln.invoicedFuel != null ? formatPlNumber(ln.invoicedFuel, 2) : '',
+      fx: ln.fx ?? null, fxConfirmed: Boolean(ln.fx),
+    };
+  }
+  return out;
 }
