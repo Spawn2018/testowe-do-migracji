@@ -494,3 +494,59 @@ revoke all on function public.ksh_confirm_dates(uuid, date, date, timestamptz, t
 grant execute on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) to authenticated;
 comment on function public.ksh_confirm_dates(uuid, date, date, timestamptz, timestamptz, timestamptz, timestamptz) is
   'G-20 + D-0005: KSH Użytkownik albo HHL_ADMIN; dziwne daty u admina → sprawa KSH_DATES_CHECK.';
+
+-- Wyzwalacz historii: przy dates_ctx HHL_ADMIN → by=HHL_ADMIN (nie mylić z KSH)
+create or replace function public.trg_plan_dates_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_actor uuid := current_app_user_id();
+  v_by text;
+  v_payload jsonb;
+  v_client uuid;
+  v_stamp text := to_char(clock_timestamp(), 'YYYYMMDDHH24MISSUS');
+begin
+  if (new.plan_load_date, new.plan_load_from, new.plan_load_to, new.plan_delivery_date, new.plan_delivery_from, new.plan_delivery_to)
+     is not distinct from (old.plan_load_date, old.plan_load_from, old.plan_load_to, old.plan_delivery_date, old.plan_delivery_from, old.plan_delivery_to) then
+    return null;
+  end if;
+  v_by := case
+    when current_setting('tower.dates_ctx', true) = 'on'
+      and current_app_role() = 'HHL_ADMIN' then 'HHL_ADMIN'
+    when current_setting('tower.dates_ctx', true) = 'on' then 'KSH'
+    when auth.uid() is null then 'SYSTEM'
+    else 'HHL'
+  end;
+  select client_org_id into v_client from projects where id = new.project_id;
+  insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+  values (new.id, 'PLAN_DATES_CHANGED', now(), v_actor, jsonb_build_object(
+    'code', coalesce(new.order_no, left(new.id::text, 8)), 'by', v_by, 'status', new.plan_dates_status,
+    'load_date', new.plan_load_date, 'delivery_date', new.plan_delivery_date,
+    'before_load_date', old.plan_load_date, 'before_delivery_date', old.plan_delivery_date,
+    'load_from', new.plan_load_from, 'load_to', new.plan_load_to,
+    'delivery_from', new.plan_delivery_from, 'delivery_to', new.plan_delivery_to)
+    || case when v_by in ('KSH', 'HHL_ADMIN') and nullif(current_setting('tower.dates_actor', true), '') is not null
+            then jsonb_build_object('actor', current_setting('tower.dates_actor', true)) else '{}'::jsonb end);
+  v_payload := jsonb_build_object(
+    'code', coalesce(new.order_no, left(new.id::text, 8)), 'by', v_by, 'status', new.plan_dates_status,
+    'load_date', new.plan_load_date, 'delivery_date', new.plan_delivery_date,
+    'before_load_date', old.plan_load_date, 'before_delivery_date', old.plan_delivery_date);
+  -- Powiadomienia dla edycji KSH / HHL_ADMIN idą z ksh_confirm_dates (matrix_notify)
+  if v_by not in ('KSH', 'HHL_ADMIN') then
+    insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+    select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, new.id, 'PLAN_DATES_CHANGED',
+           v_payload || jsonb_build_object('locale', u.locale),
+           'PLAN_DATES:' || new.id || ':' || v_stamp || ':' || u.id
+      from app_users u join organizations o on o.id = u.org_id
+     where u.active and u.id is distinct from v_actor
+       and (o.kind = 'FORWARDER'
+            or (new.carrier_org_id is not null and u.org_id = new.carrier_org_id)
+            or (v_client is not null and u.org_id = v_client))
+    on conflict (dedup_key) where dedup_key is not null do nothing;
+  end if;
+  if (new.plan_load_date, new.plan_load_from) is distinct from (old.plan_load_date, old.plan_load_from)
+     or old.plan_load_date is null then
+    perform l3_ksh_lead(new, old.plan_load_date, old.plan_load_from, now());
+  end if;
+  return null;
+end $$;
+revoke all on function public.trg_plan_dates_notify() from public, anon, authenticated;
