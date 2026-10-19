@@ -19,3 +19,10 @@ Polecenie właściciela:
 Zrzuty: `komputer-zwiniete.png` (1440 px, T-01 HHL), `telefon-zwiniete.png` (390 px).
 
 Bez zmian w bazie i w logice; KSH nadal bez „Do zrobienia” (linia stanu awizacji).
+
+## F7 (niezależny przegląd, 19.10.2026) — gotowe; 0 B, 1 P, 7 D
+- Sprawdzone: 46 transportów × 3 role na 1440 px — mapa 220 px pierwsza, „Do zrobienia” zwinięte, KSH tylko linia stanu; klawiatura (Tab, Enter, Spacja), brak ucięć; `p11-bramy` 32/32, `e8-phone-gate` (P7-a, P9-f, L14) 16/16.
+- **P1 (poprawione):** `permit-validator.local` i `p64-permit-form.local` szukały `[data-permit="mismatch"]` z usuniętej sekcji — teraz wiersz zezwolenia w zakładce Dokumenty (`[data-permit-row] [data-permit-fit="no"]`).
+- **D1 (poprawione, błąd sprzed PR):** „Dodaj” numer HHL z „Do zrobienia” najpierw otwiera pole w Numerach, potem ustawia kursor.
+- **D2–D4 (poprawione):** komentarz nagłówka `PanelOverview`, martwy CSS (`.po-todo-hd`, `.po-pdf`, `.po-map.is-phone`), odstęp pod „Czy dostarczono?” (`gap` zamiast marginesu).
+- **Zostaje (D):** nieużywane klucze `h7_pdf_*` / `p7_doc(s)_*` i `exportLoadPdfWithMap` — do sprzątania w P11 (słowniki); brama kontrastu P11 mierzy „Do zrobienia” zwinięte; produkcja: niezgodne zezwolenie w Przeglądzie widać tylko jako sprawę w „Do zrobienia” (zgodnie z poleceniem).

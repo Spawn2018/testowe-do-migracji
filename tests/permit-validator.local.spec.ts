@@ -51,18 +51,21 @@ test('HHL: zezwolenie niezgodne → baner; po korekcie odblokowany', async ({ pa
   test.setTimeout(90_000);
   await login(page, 'hhl@bk5.local');
   await openLoad(page);
-  await expect(page.locator('[data-permit="mismatch"]')).toBeVisible();
+  /* właściciel 19.10: Przegląd bez sekcji „Dokumenty” — stan zezwolenia w zakładce Dokumenty (wiersz zezwolenia) */
+  await page.locator('#dtab-docs').click();
+  await expect(page.locator('[data-permit-row] [data-permit-fit="no"]').first()).toBeVisible();
   // „Gotowy” w bazie: blokada wyzwalacza trg_loads_permit_gate (test i2 [6.5]); tu stan z load_permit_status()
   expect(psql(`select ok::text||'/'||array_to_string(breaches, ',') from load_permit_status() where load_id='${LD}'`)).toBe('false/LENGTH');
   psql(`set session_replication_role=replica; update loads set combo_length_m=29.8 where id='${LD}'`);
   await page.reload();
   await page.waitForSelector('[data-auth="session"]');
   // szuflada transportu zostaje otwarta po odświeżeniu (zapamiętany wybór) — stan z bazy przeładowany
-  if (!(await page.locator('[data-permit]').first().isVisible().catch(() => false))) {
+  if (!(await page.locator('#dtab-docs').isVisible().catch(() => false))) {
     await page.keyboard.press('Escape');
     await openLoad(page);
   }
-  await expect(page.locator('[data-permit]').first()).toBeVisible();
-  await expect(page.locator('[data-permit="mismatch"]')).toHaveCount(0);
+  await page.locator('#dtab-docs').click();
+  await expect(page.locator('[data-permit-row]').first()).toBeVisible();
+  await expect(page.locator('[data-permit-row] [data-permit-fit="no"]')).toHaveCount(0);
   expect(psql(`select ok from load_permit_status() where load_id='${LD}'`)).toBe('t');
 });

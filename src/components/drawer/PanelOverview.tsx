@@ -1,11 +1,13 @@
 /**
  * wyglad/P7-a — panel transportu › „Przegląd” (E32, img/e32-after; decyzje 08.10 12:14, 09.10 12:33 i 13:09).
- * Kolejność dla wszystkich firm: „Do zrobienia przy tym transporcie” (lista E7 z firmą i terminem, przycisk tylko dla firmy,
- * która to robi; KSH — linia stanu), mapa, Plan i ETA (dzień tygodnia, „godzina nie podana”, pochodzenie dat, blok ETA E15),
+ * Kolejność dla wszystkich firm (właściciel 19.10.2026, 15:27): mapa na samej górze, pod nią „Czy dostarczono?” (jeśli jest)
+ * i zwinięte „Do zrobienia przy tym transporcie” (lista E7 z firmą i terminem, przycisk tylko dla firmy, która to robi;
+ * KSH — linia stanu), Plan i ETA (dzień tygodnia, „godzina nie podana”, pochodzenie dat, blok ETA E15),
  * Awizacja albo Kierowcy i zestaw (E6: odcinki, „Zadzwoń”, wyróżniony odcinek; naczepa, link śledzenia, rejs; piloci przy
- * „PL + SE”), Ładunek i zestaw (z tabeli właściciela, D-83), Numery zleceń (E41), Dokumenty w skrócie (E31), PDF.
+ * „PL + SE”), Ładunek i zestaw (z tabeli właściciela, D-83), Numery zleceń (E41). Bez „Dokumentów” i „PDF transportu (+mapa)”
+ * (właściciel 19.10) — dokumenty w zakładce Dokumenty.
  * Znika: „Kontrola trasy”, „Przeszkody”, profil trasy (E17), czerwony baner zezwolenia, „potwierdził KSH” bez osoby.
- * Telefon: Do zrobienia na górze, mapa 150 px, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
+ * Telefon: mapa 220 px na górze, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
  * Zapis jak dziś (numer SCX, okno Awizacja, okno dat KSH); nowe dane — `p7Source.ts`.
  */
 import { READY_PREP } from '../../lib/readyGaps';
@@ -282,7 +284,7 @@ export function PanelOverview(p: Props) {
     if (role === 'KSH') return null;
     /* właściciel 18.10, 11:35: bez spraw już zrobionych (dane wpisane w panelu, transport dostarczony) — `todoRules.todoDoneOnLoad` */
     const own = visibleTodoRisks(role, openTodoRisks(risks.filter((x) => x.loadId === load.id), loads))
-      /* demo: „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy sekcja „Dokumenty” pokazuje zezwolenie „jest”.
+      /* demo: „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy zezwolenie jest wgrane i pasuje (`permitState`).
          Produkcja: alarm braku dokumentu (`rk_res_docs`) zamyka baza — dopiero przy zezwoleniach zarejestrowanych
          w `load_permits` (0143 `l3_scan`), nie przy samym wgranym pliku; widok go nie chowa (F7 #300 B1) */
       .filter((x) => !(!prod && permitState === 'ok' && (x.titleKey === 'rk_seed_permit' || PERMIT_TODO.test(x.title))));
@@ -301,9 +303,15 @@ export function PanelOverview(p: Props) {
   const goHhlNo = () => {
     const fold = document.querySelector<HTMLDetailsElement>('.drawer details[data-po="numbers"]');
     if (fold) fold.open = true;
-    const el = document.querySelector<HTMLInputElement>('.drawer [data-order="hhl"] input');
-    el?.scrollIntoView({ block: 'center' });
-    el?.focus();
+    /* F7 #325 D1: bez numeru jest tylko „Dodaj” — najpierw otwórz pole, potem przewiń i ustaw kursor */
+    if (!document.querySelector('.drawer [data-order="hhl"] input')) {
+      document.querySelector<HTMLButtonElement>('.drawer [data-order="hhl"] [data-order-edit]')?.click();
+    }
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('.drawer [data-order="hhl"] input');
+      el?.scrollIntoView({ block: 'center' });
+      el?.focus();
+    }, 0);
   };
   const action = (i: TodoIssue): ReactNode => {
     if (i.owner !== role) return <span className="po-chip">{ORG_SHORT[i.owner]}</span>;
