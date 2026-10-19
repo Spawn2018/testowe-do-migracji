@@ -528,10 +528,10 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 - PR #316 scalony po F7 (komentarz po `0ae0dae0`). Parytet przed nałożeniem: brakowało tylko 0233. Próba ROLLBACK: warunek C17 i `purged_at` są, ostatnia migracja zostaje 0231. `db push` drugi raz: baza aktualna. Parytet MATCH YES.
 - Po nałożeniu: pliki CMR niezastąpione, wgrane przed dostawą, przy ustawionej dostawie = 0. Status CMR projektu STEGRA_BODEN: OK 2, OVERDUE 1. tower i makieta 200.
 
-### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005)
-1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (ten commit); uzupełnij gdy trzeba.
-2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push` (`nglnnrmzmhusvxslousq`) → Edge zmienione → `vercel deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono z komunikatem „brak kluczy — wdrożenie ręczne”.
-3. Instrukcja dla właściciela w PR (Settings → Secrets). Test po wpisaniu kluczy.
+### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005) — W TOKU (`pakiet/automat-wdrozenia`)
+1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (commit pracy ciągłej); uzupełnij gdy trzeba.
+2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push` (`nglnnrmzmhusvxslousq`, `--skip-vault`) → Edge zmienione w tym pushu (`_shared` = wszystkie) → `vercel deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono z komunikatem „brak kluczy — wdrożenie ręczne”. Plik w tym PR.
+3. Instrukcja dla właściciela w opisie PR (Settings → Secrets and variables → Actions). Test po wpisaniu kluczy (`workflow_dispatch` albo następny push na `main`).
 
 ### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0232, gałąź `pakiet/hhl-admin-daty`)
 Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian.

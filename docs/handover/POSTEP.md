@@ -3146,3 +3146,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #317 (docs, F7, CI zielone) ma konflikt z `main` po #316 — bez scalenia.
 - Następna pozycja: **Automat wdrożenia z main** (D-20261019-1050-01).
 
+## 2026-10-19 14:05 — #318 scalony; start Automatu wdrożenia
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #318 (docs 0233 na produkcji): F7 po commicie `914541d5`, unit i visual zielone, bez forka. Scalony `d46c4b09` (`gh pr merge --merge`). Wdrożenia nie było — same dokumenty.
+- #317 nadal z konfliktem. Komentarz F7 przy #318: wciągnąć `main` w gałąź #317 i czekać na ponowne „gotowe”. Nie w tym kroku.
+- #313: brak F7, brama `db` czerwona, konflikt z `main`. Numer migracji przy rebase: 0234 (komentarz koordynatora 13:08).
+- Bieżąca pozycja: **Automat wdrożenia** — workflow `deploy-main.yml` na `pakiet/automat-wdrozenia`. Test kluczy czeka na wpis właściciela.
+
