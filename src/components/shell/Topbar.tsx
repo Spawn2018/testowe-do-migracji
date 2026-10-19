@@ -199,7 +199,7 @@ export function Topbar() {
         <span id="brandSub" className="brand-sub">{t(locale, 'p3a_brand_sub')}</span>
       </div>
       <div className="spacer" />
-      {/* E9 / E37: „Podgląd” tylko dla HHL (w produkcji — konto organizacji HHL) */}
+      {/* E9 / E37 / B5: „Podgląd” w produkcji tylko dla Administratora HHL (canSwitchView) */}
       {switchView ? <div className="roleswitch">
         <span id="roleLbl" className="role-lbl">{t(locale, 'p3a_preview_lbl')}</span>
         <div className="seg" role="group" aria-label={t(locale, 'p3a_preview_lbl')} id="roleSeg">

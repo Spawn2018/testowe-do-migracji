@@ -4,7 +4,7 @@ import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
 import { sendRecoveryLink } from './sendAuthEmail';
 import { t, tp } from '../i18n/messages';
-import { setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
+import { getAuthProfile, setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
@@ -524,7 +524,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     /* B5 (D-20261019-1525-01): Podgląd innych widoków ma wyłącznie Administrator HHL — inne konta HHL (HHL_OPS)
        zostają w widoku HHL, także po zapamiętanym wcześniej Podglądzie */
     if (locked === 'HHL' && state.profile.role === 'HHL_ADMIN') return;
+    const { org_code: org, role } = state.profile;
     return useTowerStore.subscribe((s) => {
+      /* F7 #342 D3: po zmianie profilu (koniec „Działaj jako”) stara blokada nie cofa widoku nowego konta */
+      const cur = getAuthProfile();
+      if (!cur || cur.org_code !== org || cur.role !== role) return;
       if (locked && s.role !== locked) useTowerStore.getState().setRole(locked);
     });
   }, [state]);

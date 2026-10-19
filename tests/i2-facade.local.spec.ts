@@ -71,8 +71,10 @@ test('B5 (D-20261019-1525-01): HHL_OPS — bez przełącznika widoku, Shift+R ni
   try {
     await login(page, 'hhl@bk5.local');
     await expect(page.locator('.roleswitch')).toHaveCount(0);
-    await page.locator('body').click();
+    await page.locator('nav [data-view="sched"]').first().click();
     await page.keyboard.press('Shift+R');
+    /* skrót dotarł do aplikacji (u konta bez Podglądu Shift+R działa jak „R” — Ryzyka), ale Podglądu nie ma */
+    await expect(page.locator('nav [data-view="risk"][aria-current="page"]').first()).toBeVisible();
     await expect(page.locator('[data-banner="preview"]')).toHaveCount(0);
     await expect(page.locator('.roleswitch')).toHaveCount(0);
   } finally {
