@@ -510,12 +510,12 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
 - Testy §5 dopisku (3 → zbiorczy), L-3, `RISK_SEVERITY`, SCX, wygaszenie+ponowne otwarcie, limit poczty, `RISK_OPEN`, E41. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
-### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3)
+### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — W TOKU (migracja 0231, gałąź `pakiet/cmr-po-rozladunku`)
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
 - Jednorazowo `doc_requirements` CMR → `AFTER_UNLOAD`, 24 h, wpis w `audit_log`, bez powiadomień.
 - `CHECK (category <> 'CMR' OR anchor = 'AFTER_UNLOAD')`. `doc_requirement_set` odrzuca inną kotwicę dla CMR. Test `tests/db/i2.sh` (ok. l. 643) na CMR po rozładunku i na odmowę `AT_LOAD`.
-- `doc_requirements_status()`: termin CMR od faktycznego „Dostarczone” + 24 h. Przed dostawą CMR nie jest `OVERDUE` ani brakiem z terminem.
-- Przegląd miejsc w bazie, które zakładają CMR przy załadunku (braki, sprawy, powiadomienia, szablony, `seed.sql`, konta TEST, API kierowcy) — lista w `POSTEP.md` i poprawka. Warunek „Gotowe do fakturowania” bez zmian.
+- `doc_requirements_status()`: termin CMR od faktycznego „Dostarczone” (`actual_delivery_at`) + 24 h. Przed dostawą CMR nie jest `OVERDUE` ani brakiem z terminem (brak wiersza bez pliku).
+- Przegląd miejsc w bazie — lista w `POSTEP.md`. Warunek „Gotowe do fakturowania” (C17 / A5) bez zmian.
 - POD zostaje. Testy §6 dopisku. Wygląd: PR #303 (partia 6) — tekstów i filtra nie zmieniasz (F1).
 
 ### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po CMR D-20261018-1740-01, przed A3)
