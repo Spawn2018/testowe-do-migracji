@@ -3088,7 +3088,25 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 ## 2026-10-19 08:45 — D-20261019-0820-01 + #306 przegląd 2 w toku
 
 - **Punkty kontrolne (D-0820):** pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; **23:59 A3,A7,A9,A4,A5**; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie śr 28.10 20:00 bez zmian. nd 18.10 nieoddane → pn 19.10 23:59.
-- **#306 runda 2:** B1–B6 OK; poprawki B-N1 (`count(*) > 2`), B-N2 (SCX tylko `decider_role=CARRIER`), B-N3 (`event_key` + `:expired-0230`), P1 CODE w ryzykach, P2 `params.code`, P3 testy, P4 bez `pg_temp` w `search_path`, P5 liczby B6 wyżej.
-- **#307:** F7 gotowe (02:53), CI zielone — scalenie przy przejściu po #306 / przed D-1740.
-- Bieżąca pozycja: #306 poprawki R2, potem brama `db`, komentarz w PR.
+- **#306 runda 2:** B1–B6 OK; poprawki B-N1–B-N3, P1–P5. Commit `36af9835`; F7 runda 3 (09:27): gotowe do scalenia.
+- **#307 / #308:** scalone i w tym samym wdrożeniu z #306.
+
+## 2026-10-19 09:50 — #306 NA PRODUKCJI (D-1610, 0230)
+
+- **#308** merge `96f83c96` (hotfix `groupPhone`). **#307** wcześniej `d2f8b270`. **#306** merge `fc5726b3` 09:48.
+- `supabase db push` → **0230** na produkcji (`schema_migrations` ma 0230).
+- Edge `send-notifications` wdrożona (`--no-verify-jwt`, szablon `DECISION_ESCALATED_BATCH` → `/ryzyka`).
+- Vercel prod: `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs`, `main` `fc5726b3`; tower i makieta **200**.
+- SELECT po nałożeniu (produkcja):
+  | | przed (runda 3) | po |
+  |---|---|---|
+  | otwarte SOURCE | 12 | **0** (`expired-0230` = 12) |
+  | decyzje title hex/SEFS | 9 / 12 | **0 / 0** |
+  | ryzyka title hex/SEFS | 25 / 12 | **0 / 0** |
+  | `params.title` hex/SEFS | 15 / 12 | **0 / 0** |
+  | `params.code` hex | 20 | **0** |
+  | IN_APP hex/SEFS | 898 | **0** |
+- Przebieg 06:20 UTC (17× DELIVERY_UNCONFIRMED): było 221 / 45 / 51 / 9; na kodzie 0230 oczekiwane **13 / 9 / 0 / 0**.
+- Następna pozycja: **D-20261018-1740-01** (CMR tylko po rozładunku), potem D-0005, D-0930, A3…
+- D-20261019-0930-01 dopisany do planu (po D-0005, przed A3).
 
