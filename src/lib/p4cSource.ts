@@ -9,6 +9,7 @@ import { mayResolveDecision } from './decisionAccess';
 import { demoAutoMeta, demoDeliveredCheck, demoReadyGaps, demoTrackingLink } from './p4cDemo';
 import { computeReadyGaps } from './readyGaps';
 import { dayTime, isoMs } from './statusAxis';
+import { isAfterDelivery } from './status';
 
 export function trackingLinkOf(load: Load, loads: readonly Load[], nowIso: string): TrackingLinkInfo | null {
   if (load.trackingLink !== undefined) return load.trackingLink;
@@ -35,7 +36,7 @@ export function deliveredCheckFromDecision(
   role: RoleId,
 ): DeliveredCheck | null {
   if (!decision || !['NEW', 'ASSIGNED', 'SNOOZED'].includes(decision.status)) return null;
-  if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED') return null;
+  if (isAfterDelivery(load.status) || String(load.status) === 'CANCELLED') return null;
   const detail = decision.detail ?? {};
   const minutes = Number(detail.dwell_min ?? detail.minutes ?? NaN);
   const exitAt = typeof detail.exit_at === 'string' ? detail.exit_at : '';
@@ -59,7 +60,7 @@ export function deliveredCheckFromEvents(
   role: RoleId,
   thresholdMin = 10,
 ): DeliveredCheck | null {
-  if (load.status === 'DELIVERED' || String(load.status) === 'CANCELLED') return null;
+  if (isAfterDelivery(load.status) || String(load.status) === 'CANCELLED') return null;
   const siteExit = [...events]
     .filter((e) => e.loadId === load.id && e.type === 'GEOFENCE_EXIT')
     .sort((a, b) => isoMs(b.at) - isoMs(a.at))[0];
@@ -110,7 +111,7 @@ export function deliveredCheckOf(
     return load.deliveredCheck;
   }
   /* produkcja: brak pola = brak karty; zdarzenie GEOFENCE_EXIT nie otwiera karty po „Nie” */
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role) : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoDeliveredCheck(load, loads, geofences, nowIso, role, events) : null;
 }
 
 function prodAutoMeta(loads: readonly Load[], events: readonly LoadEvent[], nowIso: string): Partial<Record<string, string>> {

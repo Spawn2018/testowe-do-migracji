@@ -36,6 +36,8 @@ const PL: Record<string, string> = {
   p9f_track_done: 'Śledzenie zakończone — „Dostarczone”',
   p9f_why_link: 'Brak linku śledzenia — SCX',
   p9f_site_since: 'Na placu od {t}',
+  p9f_site_last: 'ostatnia pozycja {t} · postój',
+  p9f_site_zone: 'strefa „{z}”',
 };
 
 export function p9e(locale: Locale, key: string): string {

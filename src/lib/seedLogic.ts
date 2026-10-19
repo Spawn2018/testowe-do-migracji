@@ -47,10 +47,14 @@ export function applyForceMajeureDelays(loads: Load[], risks: Risk[]): Load[] {
         etaBoden = new Date(t0 + hours * 3600 * 1000).toISOString();
       }
     }
+    /* przegląd 18.10 (P10): „Opóźniony” tylko gdy prognoza po doliczeniu siły wyższej wypada po oknie dostawy —
+       T-01 i SG-31 z ETA przed oknem zostają w swoim etapie (siła wyższa widoczna w bloku ETA i na liście spraw) */
+    const windowEnd = Date.parse(l.awizacja?.unloadWindowEnd ?? `${l.plannedDeliverDate}T15:00:00Z`);
+    const late = !etaBoden || Number.isNaN(windowEnd) || Date.parse(etaBoden) > windowEnd;
     return {
       ...l,
-      delayed: true,
-      status: l.status === 'DELIVERED' ? l.status : l.status === 'SILENT' ? l.status : 'DELAYED',
+      delayed: late,
+      status: l.status === 'DELIVERED' || l.status === 'SILENT' || !late ? l.status : 'DELAYED',
       etaBoden,
       etaLatestHours: (l.etaLatestHours ?? 0) + hours,
       etaReasons: [...(l.etaReasons ?? []), `Siła wyższa · +${hours} h`].slice(-6),

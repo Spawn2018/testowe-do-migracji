@@ -22,7 +22,9 @@ export const SEED_AUTH_USERS = [
     id: '11111111-0000-0000-0000-000000000002',
     email: 'ksh@test',
     org: '00000000-0000-0000-0000-00000000a002',
-    role: 'CLIENT_ADMIN',
+    // seed.sql i i2.sh: to konto jest KSH Użytkownik. CLIENT_ADMIN psuł
+    // hosted ensure-seed (zaproszenie nadpisuje rolę) — ksh_confirm_dates i current_app_role.
+    role: 'CLIENT_USER',
   },
   {
     id: '11111111-0000-0000-0000-000000000003',

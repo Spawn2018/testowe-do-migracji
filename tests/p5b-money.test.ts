@@ -84,15 +84,15 @@ describe('E3, E39 — ekran Opłaty paliwowej w HTML', () => {
   const actions = { fill: ok, newVersion: () => undefined };
   it('karty, kroki „Jak liczymy”, alarm z „Uzupełnij z Orlen”, tabele cen i mnożników', () => {
     const h = html(createElement(FuelScreen, { locale: 'pl', view, actions, readOnly: false }));
-    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 28.09.2026');
-    expect(h).toContain('+5 %');
+    expect(h).toContain('Załącznik 1 do umowy · wersja 3 od 11.09.2026');
+    expect(h).toContain('+5%');
     expect(h).toContain('×1,05');
     expect(h).toContain('Brak ceny Orlen z 13.10.');
     expect(h).toContain('Uzupełnij z Orlen');
     expect(h).toContain('Następna automatyczna próba: dziś 13:15');
     expect(h).toContain('OKQ8 19,68 SEK/l · Orlen 5,74 PLN/l');
     expect(h).toContain('SE ×1,05 · PL ×1,05');
-    expect(h).toContain('6\u00a0900\u00a0EUR × 5\u00a0% = 345\u00a0EUR');
+    expect(h).toContain('6\u00a0900\u00a0EUR × 5% = 345\u00a0EUR');
     expect(h).toContain('Ostateczna wartość w poniedziałek 19.10.2026 rano, ze średniej 12.10.2026–18.10.2026.');
     expect((h.match(/data-pm-tier-hit/g) ?? []).length).toBe(2);
     expect(h).toContain('Nowa wersja umowy');
@@ -118,8 +118,8 @@ describe('E33 — Dopłaty: postój', () => {
     expect(h).toContain('75 EUR');
     expect(h).toContain('750 EUR');
     expect(h).toContain('role="radio" aria-checked="true"');
-    expect(h).toContain('→ 225,00 EUR');
-    expect(h).toContain('Ostatnia zmiana: 07.10.2026, 12:35 · Administrator HHL');
+    expect(h).toContain('→ 225,00\u00a0EUR');
+    expect(h).toContain('Ostatnia zmiana: 20.09.2026, 12:35 · Administrator HHL');
     expect(h).not.toMatch(/WSTĘPNE|wstępne/);
     expect((h.match(/>Zmień</g) ?? []).length).toBe(5);
     expect(h).toContain('Stawka dobowa powyżej');
@@ -128,9 +128,9 @@ describe('E33 — Dopłaty: postój', () => {
   });
   it('za faktyczny czas: 2 h 10 min × 75 = 162,50 EUR; powyżej progu doby — stawka dobowa', () => {
     const frac = html(createElement(DwellScreen, { locale: 'pl', rules: { ...demoDwellRules(), hourMode: 'FRACTION' }, readOnly: false, onSave: ok }));
-    expect(frac).toContain('→ 162,50 EUR');
+    expect(frac).toContain('→ 162,50\u00a0EUR');
     const day = html(createElement(DwellScreen, { locale: 'pl', rules: { ...demoDwellRules(), dayAfterH: 8 }, readOnly: false, onSave: ok }));
-    expect(day).toContain('→ 750,00 EUR');
+    expect(day).toContain('→ 750,00\u00a0EUR');
   });
   it('tylko odczyt: bez „Zmień”, wybory nieaktywne', () => {
     const h = html(createElement(DwellScreen, { locale: 'pl', rules: demoDwellRules(), readOnly: true, onSave: ok }));
@@ -143,7 +143,7 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   it('6 wierszy z przykładem SG (koszt / przychód), próg marży „nie ustawiony”', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: null, onMarginSave: ok, readOnly: false }));
     expect((h.match(/data-pm-row="\d"/g) ?? []).length).toBe(6);
-    expect(h).toContain('25 %');
+    expect(h).toContain('25%');
     /* wyglad/audyt-E (E-06): przykład = fracht SG z cennika poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
     expect(h).toContain('SG: 1\u00a0725,00 / 1\u00a0811,25 EUR');
     expect(h).toContain('SG: 6\u00a0900,00 / 7\u00a0245,00 EUR');
@@ -155,13 +155,13 @@ describe('E33, E16 — Cennik i opłaty: procenty za anulowanie i próg marży',
   });
   it('bez przykładu z cennika — procenty bez kwot SG (nic na stałe w komponencie)', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: { ...demoCancelRules(), example: null }, onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: false }));
-    expect(h).toContain('15 %');
+    expect(h).toContain('15%');
     expect(h).not.toMatch(/SG:|6 900|7 245/);
     expect(h).toContain('Dni liczymy kalendarzowo od daty anulowania do planowanego załadunku.');
   });
   it('Operacje HHL (tylko odczyt): procenty i próg bez „Zmień”', () => {
     const h = html(createElement(RatesExtras, { locale: 'pl', cancel: demoCancelRules(), onCancelSave: ok, margin: 4, onMarginSave: ok, readOnly: true }));
-    expect(h).toContain('4 %');
+    expect(h).toContain('4%');
     expect(h).not.toContain('>Zmień<');
   });
   it('próg niepodłączony (undefined) — pola nie ma', () => {

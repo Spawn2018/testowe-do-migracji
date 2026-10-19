@@ -106,7 +106,9 @@ export function issueTexts(i: TodoIssue, ctx: CardCtx): { name: string; detail: 
     return { name: e49t('e49_short', { place: i.detour.place }), detail: rtp(locale, 'p6_decides', { org }) + ` · ${timeOnly(i.detour.decideByIso)}` };
   }
   const r = i.risk!;
-  const name = stripTransportPrefix(riskText(locale, r.title, r.titleKey, r.titleParams), load?.code);
+  /* P11 pkt 7 (e32, e41): nazwa sprawy od wielkiej litery po zdjęciu kodu transportu („Brak numeru zlecenia HHL”) */
+  const name0 = stripTransportPrefix(riskText(locale, r.title, r.titleKey, r.titleParams), load?.code);
+  const name = name0.charAt(0).toLocaleUpperCase('pl') + name0.slice(1);
   /* „Odpowiada: X” z dawnego opisu zastępuje „uzupełnia / decyduje X” (E6) */
   const meta = riskText(locale, r.meta, r.metaKey, r.metaParams).replace(/^Odpowiada:[^·]*(·\s*)?/, '').trim();
   const merged = i.merged > 1 ? rtn(locale, 'p6_merged', i.merged) : null;

@@ -45,6 +45,8 @@
 .sp-kind.is-on{border-color:var(--go);background:var(--go-bg)}
 .sp-kind.is-na{color:var(--ink-3);background:var(--surface-2);cursor:default}
 .sp-kind input{margin:0}
+/* P11 (e42): zaznaczone A–D w zieleni palety, jak na makiecie */
+.sp-kind input:checked{background:var(--go);border-color:var(--go)}
 .sp-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 .btn.ghost.sp-del{min-width:38px;font-size:18px;line-height:1}
 .sp-row .sp-err,.sp-row .sp-live{grid-column:1 / -1}

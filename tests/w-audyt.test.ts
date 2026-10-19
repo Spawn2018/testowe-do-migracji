@@ -35,7 +35,7 @@ describe('teksty o automatach (serverRuleOn)', () => {
     const { helpVersion } = await import('../src/lib/helpContent');
     expect(helpVersion('HHL_ADMIN').steps.map((s) => s.text).join(' ')).not.toContain('włączamy wkrótce');
     const { wt } = await import('../src/i18n/p4cWf');
-    expect(wt('pl', 'p4c_wf_r_gps_d')).toContain('wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój)');
+    expect(wt('pl', 'p4c_wf_r_gps_d').replace(/\u00a0/g, ' ')).toContain('wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój)');
     expect(wt('pl', 'p4c_wf_r_gps_d')).not.toContain('wkrótce');
     const { p9m } = await import('../src/i18n/p9c');
     expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · utrudnienia: Trafikverket (SE), HERE (PL) · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
@@ -56,9 +56,9 @@ describe('teksty o automatach (serverRuleOn)', () => {
       const { wt } = await import('../src/i18n/p4cWf');
       expect(wt('pl', 'p4c_wf_r_zones_d')).not.toContain('włączamy wkrótce');
       expect(wt('pl', 'p4c_wf_zt_site_out')).not.toMatch(/— włączamy wkrótce$/);
-      const gps = wt('pl', 'p4c_wf_r_gps_d');
-      expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany (E15, E45) · ')).toBe(true);
-      expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce \(E49\)$/);
+      const gps = wt('pl', 'p4c_wf_r_gps_d').replace(/\u00a0/g, ' ');
+      expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany · ')).toBe(true); /* P11 (E21): bez kodów etapów */
+      expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce$/);
       const { p9m } = await import('../src/i18n/p9c');
       expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
     });

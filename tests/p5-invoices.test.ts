@@ -43,8 +43,8 @@ describe('E4 — jeden status faktury', () => {
     expect(billDiff(b)).toBe(180);
   });
   it('etykieta tygodnia „41 · 05.10.2026–11.10.2026” (rok zawsze — właściciel 16.10.2026)', () => {
-    expect(weekKeyLabel('2026-W41')).toBe('41 · 05.10.2026–11.10.2026');
-    expect(weekKeyLabel('2026-W01')).toBe('1 · 29.12.2025–04.01.2026');
+    expect(weekKeyLabel('2026-W41')).toBe('t41 · 05.10.2026–11.10.2026');
+    expect(weekKeyLabel('2026-W01')).toBe('t1 · 29.12.2025–04.01.2026');
   });
   it('terminy: przewoźnik → HHL 35 dni, HHL → KSH 30 dni', () => {
     expect(BILL_TERM_DAYS).toEqual({ KOSZT: 35, PRZYCHOD: 30 });

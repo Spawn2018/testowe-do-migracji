@@ -33,11 +33,11 @@ describe('D4 voyage SoT', () => {
   it('focusVoyage prefers elevated-sea GDN sailing from timetable (not hardcoded 25.09)', () => {
     const focus = focusVoyage(NOW);
     expect(focus.depPort).toBe('GDN');
-    // 23.09 niskie, 24.09 podwyższone → focus 24.09
-    expect(focus.depLocal.slice(0, 10)).toBe('2026-09-24');
-    expect(focus.vessel).toBe('WAW'); // schedule SoT — NOT old SAIL_ROWS Nova Star
-    expect(seaForSailing(focus).risk).toBe('podwyższone');
-    expect(formatVoyageDayLabel(focus.depLocal)).toBe('24.09.2026');
+    // przegląd 18.10 (B4): 23.09 wysokie (ta sama prognoza co Ryzyka › Nova Star 18:00) → focus 23.09
+    expect(focus.depLocal.slice(0, 10)).toBe('2026-09-23');
+    expect(focus.vessel).toBe('NS'); // schedule SoT
+    expect(seaForSailing(focus).risk).toBe('wysokie');
+    expect(formatVoyageDayLabel(focus.depLocal)).toBe('23.09.2026');
   });
 
   it('voyageSeaTableRows vessels follow ferry-sailings schedule (opposite of old SAIL_ROWS)', () => {
@@ -48,19 +48,19 @@ describe('D4 voyage SoT', () => {
     expect(byDay['2026-09-24'].vesselName).toContain('Wawel');
     expect(byDay['2026-09-25'].vesselName).toMatch(/Nova Star/);
     expect(byDay['2026-09-24'].riskLabel).toBe('podwyższone');
-    expect(rows.find((r) => r.focused)?.sailing.depLocal.slice(0, 10)).toBe('2026-09-24');
+    expect(rows.find((r) => r.focused)?.sailing.depLocal.slice(0, 10)).toBe('2026-09-23');
   });
 
   it('loadsOnVoyage prefers departureAt day, else vessel + ferry-adjacent', () => {
-    const focus = focusVoyage(NOW); // 2026-09-24 WAW
+    const focus = focusVoyage(NOW); // 2026-09-23 NS
     const loads = [
       stubLoad({
         id: 'day-hit',
         status: 'AT_PORT',
         stage: 'GDANSK',
         ferry: {
-          vessel: 'Nova Star',
-          departureAt: '2026-09-24T20:00:00+02:00',
+          vessel: 'Wawel',
+          departureAt: '2026-09-23T18:00:00+02:00',
           arrivalAt: null,
           bookingRef: 'X',
           status: 'BOOKED',
@@ -71,7 +71,7 @@ describe('D4 voyage SoT', () => {
         status: 'AT_PORT',
         stage: 'GDANSK',
         ferry: {
-          vessel: 'Wawel',
+          vessel: 'Nova Star',
           departureAt: null,
           arrivalAt: null,
           bookingRef: null,
@@ -100,8 +100,8 @@ describe('D4 voyage SoT', () => {
     const focus = focusVoyage(NOW);
     const banner = cockpitFerryBanner([], NOW);
     expect(banner.voyage.id).toBe(focus.id);
-    expect(banner.title).toBe('Rejs 24.09.2026 zagrożony.');
-    expect(banner.body).toContain('2,9 m');
+    expect(banner.title).toBe('Rejs 23.09.2026 zagrożony.');
+    expect(banner.body).toContain('3,2 m');
     expect(banner.body).toContain(vesselById(focus.vessel).name);
     expect(banner.body).toMatch(/0 transport/);
   });

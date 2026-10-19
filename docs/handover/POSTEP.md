@@ -2957,3 +2957,176 @@ Poprawki z 1100 przyjęte. `loads_close_delivery_unconfirmed` (A1) zamyka też o
 - #300 `wyglad/W-panel-do-zrobienia` — kolejka wyglądu; scalenie w przerwie przy F7 i zielonych unit/visual; wdrożenie z `main`.
 - Po wdrożeniu A2, przed A3: migracja zamykania nieaktualnych spraw (decision-overdue + alarmy przed dostawą) i `refreshFromServer` po zapisach w panelu.
 - **TEST zajęte: A2, od 12:00** (SHA `9798c4ed`; security/status/nullguard + risks).
+- **TEST wolne** od 18.10.2026 13:38 (koniec bramy `db` na `main` `1f7b7ade`).
+
+## 2026-10-18 13:40 — A2 i #300 na produkcji; start bramy niedzielnej
+
+- A2: PR #299 scalony 11:29 UTC, merge `1f7b7ade`. Próba 0228 w transakcji z ROLLBACK: po wycofaniu ostatnia migracja zostaje 0227. Potem `supabase db push`: 0228. `EXECUTE` dla `authenticated` tylko na `delivered_check_resolve`.
+- Wdrożenie z `main` `1f7b7ade`: `dpl_HvaTf2bycbrUPXnKFjksvb35sE2y` READY 13:33. `tower.log-mar.pl` i makieta: 200.
+- #300 scalony 11:33 UTC, merge `a2eb2d48` (F7 „gotowe do scalenia”, unit i visual zielone). Wdrożenie z `main`: `dpl_CpMsNnaro6ZzDmUjdHCHjBv3hew9` READY 13:35. Unit na `main` zielony. Brama `db` na `1f7b7ade` zielona 13:38.
+- Brama niedzielna na `main` `a2eb2d48`, migracja 0228. **TEST zajęte: brama niedzielna, od 13:40.**
+- Doradca security na TEST (`emkbykwenwrjmbprydml`), przed prep: 153 zgłoszeń, 0 nowych wobec `advisor-exceptions.txt` (170 wyjątków).
+- `npm audit`: 9 high, wszystkie w łańcuchu stylelint (dev: braces / fast-glob / globby / micromatch / source-map-js). `npm audit --omit=dev --audit-level=high`: 0. Poprawki P3-BRACES nie ma w zależnościach produkcyjnych; luki dev nie blokują scalenia.
+- Poczta produkcji, tydzień 12.10–18.10 (czas warszawski), kanał EMAIL, „od razu” = PENDING+SENT bez zaproszeń i resetu hasła:
+
+| Dzień | od razu | w tym krytyczne | skrót | wstrzymane | błąd | wiersze |
+|---|---|---|---|---|---|---|
+| 2026-10-12 – 2026-10-14 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2026-10-15 | 81 | 0 | 0 | 0 | 0 | 82 |
+| 2026-10-16 | 61 | 0 | 0 | 0 | 0 | 62 |
+| 2026-10-17 | 9 | 0 | 3 | 0 | 0 | 12 |
+| 2026-10-18 | 24 | 21 | 3 | 0 | 0 | 27 |
+
+Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Maksimum: 81 (15.10). Skrót: 6. Strażnik `email-budget`: 0 wpisów w tym tygodniu (ostatni przebieg 04.10 18:00 czasu polskiego). Próg „więcej niż dwa razy” nie zapalił się.
+
+- `nullguard-3` raz urwał się przed startem testu (bez wpisu w `wyniki.json`); powtórka 232/232.
+- `i2-2` 102/104: `ksh@test` miał `CLIENT_ADMIN` (zaproszenie z `SEED_AUTH_USERS`), a `seed.sql` i asercja mają `CLIENT_USER`. Stąd też odmowa `ksh_confirm_dates`. Rola w fixture wraca do `CLIENT_USER`. Brama niedzielna od nowa na commicie z tą poprawką.
+
+## 2026-10-18 16:17 — DOPISEK D-20261018-1610-01 W PLANIE
+
+- Po bazie panelu (D-20261018-1215-01 §2), przed A3: L-1 bez decyzji `SOURCE` dla tygodnia, który jeszcze trwa; 12 fałszywych `SEFS_OUT_OF_TABLE` na `EXPIRED` bez powiadomień; jedna eskalacja na `event_key` i osobę; powyżej 2 w jednym przebiegu — jeden wpis i jeden e-mail zbiorczy; tytuły z kodem transportu i „Opłata paliwowa”.
+- Lista 23 otwartych `NO_AWIZACJA` przy starych `PLANNED` — w tym wpisie przy wykonaniu pozycji, bez kodu.
+- Brama niedzielna i PR #302 idą dalej. Tego dopisku nie wdrażam w tej przerwie.
+
+## 2026-10-18 17:45 — DOPISEK D-20261018-1740-01 W PLANIE
+
+- Po eskalacjach (D-20261018-1610-01), przed A3: CMR tylko po rozładunku. `doc_requirements` → `AFTER_UNLOAD` / 24 h, bez powiadomień; przed „Dostarczone” CMR nie jest `OVERDUE`. Kotwica przy załadunku odrzucona. Lista miejsc z CMR przy załadunku — przy wykonaniu pozycji.
+- Sprawa „Wgraj CMR” zostaje w A3. Wygląd robi koordynator w #303; tekstów i filtra nie zmieniam (F1).
+- Brama niedzielna idzie dalej (`nullguard-1` w chwili wpisu). Tego dopisku nie wdrażam w tej przerwie.
+
+## 2026-10-18 20:07 — PR #303 scalony (P11 pkt 7, partie 1–6)
+
+- Głowa `ab0969d` bez zmiany. F7: „gotowe do scalenia”. Unit i visual zielone. `git merge-tree` z `main` i z #301: bez konfliktu.
+- Scalenie `7e9c286c`. Bez bazy (wygląd, teksty, obliczenia widoku, dane demo). Tekstów i filtra CMR nie ruszam (F1).
+- Brama niedzielna na `516ef63b`, migracja 0228: **ZIELONA** (21:31). Ostatni zestaw `backup` 21/21 (+8 SKIP). Suma nullguard 657/657, i2 540/540. **TEST wolne** od 18.10.2026 21:31.
+- Wdrożenie z `main` `7e9c286c`: `dpl_3YzYpGiy9rNeDGbZbM7Nf4EdQVCR` READY 21:33. `tower.log-mar.pl` i makieta: 200.
+
+## 2026-10-18 21:45 — Panel › Do zrobienia, baza (D-20261018-1215-01 §2–§3)
+
+- Brama niedzielna zielona, TEST wolne. Gałąź `pakiet/panel-do-zrobienia-baza`, migracja `0229_panel_close_alarms.sql`.
+- Wyzwalacz na `decisions.status`: sygnał `decision-overdue:<id>` dostaje `resolved_at`, gdy status schodzi z `NEW` / `ASSIGNED` / `SNOOZED`.
+- `loads_close_delivery_unconfirmed` (A1 + L14 bez zmian) zamyka też alarmy sprzed dostawy i w drodze przy `DELIVERED` / `READY_TO_INVOICE` / `INVOICED` / `CANCELLED`. Faktura po terminie, L14 i inne decyzje po terminie zostają.
+- Porządek jednorazowy tą samą regułą, znacznik `detail.closed_by = D-20261018-1215-01`, bez nowych powiadomień (C1 tylko oznacza istniejące IN_APP jako przeczytane).
+- Aplikacja: `refreshFromServer({ keepSelection: true })` po awizacji, numerze zlecenia i ręcznym statusie; po wgraniu dokumentu `notifyFileUploaded()` (FileSink omija mutację mostka).
+- Testy: `risks.sh` +6 (oczekiwane 33 lokalnie / 31 na TEST), w tym `RES:DRIVER` przy `DELIVERED`. Sam `title_key = rk_res_driver` nie zamyka alarmu.
+- Porządek na produkcji (oczekiwane, przegląd #305): `decision-overdue` 16, alarmy sprzed dostawy 7 (4 + 3 `RES:DRIVER`). Liczby po `db push` wpisuję obok.
+- Decyzje W26, W28, W29, W30, W31, W33 i W45 wpisane (D-20261018-2200-01, zamknięte 18.10.2026, 21:57).
+- **TEST zajęte: panel Do zrobienia, od 22:52** — SHA `43d85a8c`; security, status, nullguard, risks. Unit, visual i `db` na tym SHA zielone.
+- Potwierdzenie TEST: security 114/114 (+2 SKIP), status 121/121, risks 31/31 (+2 SKIP), nullguard 161+136+232+128 = 657/657. **TEST wolne** od 18.10.2026 23:55.
+
+## 2026-10-18 23:16 — #305 i #304 scalone, migracja 0229 na produkcji
+
+- PR #305 F7, merge `dca5888c` (głowa `43d85a8c`). PR #304 F7 runda 3, merge `e1beb93b` (głowa `e71a406`). `main` = `e1beb93b`. #301 otwarty — bez scalenia.
+- Przed `db push`, SELECT na produkcji: `decision-overdue` przy decyzji nieotwartej **16**, alarmy sprzed dostawy przy dostarczonych, zafakturowanych i anulowanych **7**.
+- Próba 0229 w transakcji: `UPDATE 23`, drugi przebieg `UPDATE 0`, `ROLLBACK`. Potem `db push` dwa razy (drugi: baza aktualna).
+- Po nałożeniu: otwarte do zamknięcia **0 + 0**, wiersze ze znacznikiem `closed_by = D-20261018-1215-01`: **23**.
+- Wdrożenie z `main` `e1beb93b` (obejmuje #303, #304 i #305; #301 nie): `dpl_CK3krSgr7RiYFfsCLyzx6pfTiJjZ` READY 23:20. `tower.log-mar.pl` i makieta: 200. W pliku JS brak `service_role`.
+
+## 2026-10-18 23:55 — Eskalacje decyzji (D-20261018-1610-01)
+
+- Brama panelu zielona, TEST wolne. Gałąź `pakiet/eskalacje-decyzji`, migracja `0230_eskalacje_decyzji.sql`.
+- L-1: `SOURCE` bez decyzji, gdy tydzień wskaźników jeszcze trwa albo się nie zaczął. Jednorazowo te otwarte sprawy → `EXPIRED` („nie dotyczy — tydzień wskaźników jeszcze trwa”), bez powiadomień. Sprawa „Decyzja po terminie” schodzi wyzwalaczem z 0229.
+- Eskalacja: drugi przebieg nie dokłada wpisu (`dec:ESCALATE`). Powyżej dwóch u jednej osoby w jednym przebiegu: jeden wpis i jeden e-mail „Po terminie: N decyzji · Opłata paliwowa”, odnośnik `/ryzyka`.
+- Tytuły: osiem znaków identyfikatora zamieniane na kod transportu; „SEFS” → „Opłata paliwowa”. Dotyczy nowych i otwartych wierszy, bez nowych powiadomień.
+- Otwarte `NO_AWIZACJA` przy `PLANNED` (odczyt produkcji 18.10.2026, 23:50, 23 pozycje):
+
+| kod | załadunek |
+|---|---|
+| T-01 | 2026-09-30 |
+| SG-04 | 2026-10-01 |
+| SG-05 | 2026-10-02 |
+| SG-06 | 2026-10-02 |
+| T-02 | 2026-10-02 |
+| SG-07 | 2026-10-03 |
+| SG-08 | 2026-10-03 |
+| SG-09 | 2026-10-05 |
+| SG-10 | 2026-10-05 |
+| SG-11 | 2026-10-06 |
+| SG-12 | 2026-10-06 |
+| T-06 | 2026-10-06 |
+| SG-13 | 2026-10-07 |
+| SG-14 | 2026-10-07 |
+| T-07 | 2026-10-07 |
+| SG-15 | 2026-10-08 |
+| SG-16 | 2026-10-08 |
+| SG-17 | 2026-10-16 |
+| SG-18 | 2026-10-16 |
+| SG-19 | 2026-10-16 |
+| SG-20 | 2026-10-17 |
+| SG-21 | 2026-10-19 |
+| T-11 | 2026-10-20 |
+
+- 21 z tych transportów ma załadunek przed 18.10 (ostatnie dwa: SG-21 19.10 i T-11 20.10). Eskalacje będą wracać, dopóki właściciel ich nie zamknie albo nie anuluje. Przypomnienie: zamknąć stare zaplanowane transporty bez kierowcy i tablic.
+
+## 2026-10-19 00:10 — DOPISEK D-20261019-0005-01 W PLANIE
+
+- Po CMR (D-20261018-1740-01), przed A3: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL bez zmian. Baza w tej pozycji; aplikacja w `wyglad/W-przed-wydaniem-4`.
+- Bieżąca pozycja bez zmian: eskalacje decyzji, PR #306. Tego dopisku nie wdrażam w tej przerwie.
+
+## 2026-10-19 00:40 — Eskalacje decyzji, przegląd 00:22 niegotowe
+
+- PR #306, migracja 0230. Przegląd koordynatora 19.10 00:22: niegotowe. Poprawki B1–B6 i P1–P6 w tym samym PR, przed scaleniem.
+- B1: `l3_critical_notify` nie dokłada `l3crit`, gdy osoba ma już `dec:ESCALATE` albo zbiorczy z tą decyzją. `RISK_SEVERITY` przy `l3_level = critical` nie idzie osobno.
+- B2: `l1b_sefs_note` traktuje `status = OSTATECZNY` jak tydzień zamknięty, także bez klucza `final`.
+- B3: jednorazowe zamknięcie `SOURCE`. Odczyt produkcji 19.10 przed nałożeniem: **12** otwartych, z tego **8** (tydzień jeszcze trwa) i **4** (ceny już w bazie: tygodnie od 21.09, 28.09, 05.10, 12.10). Po nałożeniu oczekiwane **0**. Liczbę po `db push` dopiszę przy wdrożeniu.
+- B4: (poprawione w rundzie 2 — było błędnie „>5”; właściwie **więcej niż 2**, B-N1).
+- B5: przy eskalacji wyzwalacz ryzyka nie dokłada `RISK_OPEN` dla `decision-overdue`.
+- B6 — liczby na produkcji przed nałożeniem 0230 (SELECT 19.10 ~00:15 UTC) i oczekiwane po:
+  | miejsce | przed | po |
+  |---|---|---|
+  | otwarte `decisions.title` „hex:” / „SEFS” | 9 / 12 | 0 / 0 |
+  | otwarte `risk_signals.title` „hex:” / „SEFS” | 25 / 12 | 0 / 0 |
+  | otwarte `params.title` „hex:” / „SEFS” | 15 / 12 | 0 / 0 |
+  | `notifications` IN_APP z „hex:”/„SEFS” | 898 | 0 |
+  | EMAIL `DIGEST`/`ERROR` | 33 | 0 |
+  | EMAIL/WEB_PUSH `SENT` (bez zmian) | 92 / 17 | bez zmian |
+  | otwarte `rk_res_driver` z `params.code` = 8 hex | 20 z 39 | 0 (P2) |
+- P1–P6: numer zlecenia firmy czytającej tytuł; odnośnik `/ryzyka` i temat e-maila = tytuł zbiorczy; osoba z samą pocztą też dostaje zbiorczy; strażnik jest na osobę.
+- Jeden e-mail zbiorczy jest prawdziwy tylko wtedy, gdy pojedyncze nie powstają wcześniej. Kasowanie po wstawieniu zjadłoby limit.
+- `NO_AWIZACJA` przy `PLANNED`: tabela z 18.10 23:50 (23 pozycje) zostaje. Przegląd podał później 26 (doszły SG-23, SG-24, T-12). To informacja, bez zmiany kodu.
+
+## 2026-10-19 08:45 — D-20261019-0820-01 + #306 przegląd 2 w toku
+
+- **Punkty kontrolne (D-0820):** pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; **23:59 A3,A7,A9,A4,A5**; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie śr 28.10 20:00 bez zmian. nd 18.10 nieoddane → pn 19.10 23:59.
+- **#306 runda 2:** B1–B6 OK; poprawki B-N1–B-N3, P1–P5. Commit `36af9835`; F7 runda 3 (09:27): gotowe do scalenia.
+- **#307 / #308:** scalone i w tym samym wdrożeniu z #306.
+
+## 2026-10-19 09:50 — #306 NA PRODUKCJI (D-1610, 0230)
+
+- **#308** merge `96f83c96` (hotfix `groupPhone`). **#307** wcześniej `d2f8b270`. **#306** merge `fc5726b3` 09:48.
+- `supabase db push` → **0230** na produkcji (`schema_migrations` ma 0230).
+- Edge `send-notifications` wdrożona (`--no-verify-jwt`, szablon `DECISION_ESCALATED_BATCH` → `/ryzyka`).
+- Vercel prod: `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs`, `main` `fc5726b3`; tower i makieta **200**.
+- SELECT po nałożeniu (produkcja):
+  | | przed (runda 3) | po |
+  |---|---|---|
+  | otwarte SOURCE | 12 | **0** (`expired-0230` = 12) |
+  | decyzje title hex/SEFS | 9 / 12 | **0 / 0** |
+  | ryzyka title hex/SEFS | 25 / 12 | **0 / 0** |
+  | `params.title` hex/SEFS | 15 / 12 | **0 / 0** |
+  | `params.code` hex | 20 | **0** |
+  | IN_APP hex/SEFS | 898 | **0** |
+- Przebieg 06:20 UTC (17× DELIVERY_UNCONFIRMED): było 221 / 45 / 51 / 9; na kodzie 0230 oczekiwane **13 / 9 / 0 / 0**.
+- Następna pozycja: **D-20261018-1740-01** (CMR tylko po rozładunku), potem D-0005, D-0930, A3…
+- D-20261019-0930-01 dopisany do planu (po D-0005, przed A3).
+
+## 2026-10-19 10:50 — D-1740 / #310 NA PRODUKCJI (0231) + poprawka #312 w kolejce
+
+- Merge `39116fbb`; `db push` 0231; Vercel `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`; tower/makieta **200**.
+- SELECT: CMR = AFTER_UNLOAD/24; OVERDUE przed dostawą = 0 (było 22).
+- F7 po scaleniu: **B1** — `has_doc` zalicza CMR z załadunku → zgłoszenie **#312** (następna pozycja).
+- Przegląd miejsc (pkt 4): seed/status/CHECK OK; L3_DOC bez CMR; C17 po dostawie OK; **A5 `load_status_set` przy ręcznym READY_TO_INVOICE wymaga dowolnego CMR (nie „po dostawie”) — rozjazd → zadanie A4**; **`register_invoice` podpina wszystkie CMR/POD → zadanie A4**; API kierowcy bez kotwicy 2 h.
+
+## 2026-10-19 11:55 — praca ciągła (D-20261019-1050-01) — przekazanie do pętli
+
+- Zasady §1–§4 w PLAN §1 pkt 14; `docs/handover/ZASADY_CIAGLEJ_PRACY.md`; dopisek w `dopiski/`.
+- Kolejka teraz: **#312 (B1 CMR)** → **Automat wdrożenia** (`deploy-main.yml`) → **D-0005 #313** (0232; stash lokalny `aud03-sval-d0005`) → **D-0930** → **A3–A5** (pn 23:59).
+- Skrzynka: #311 (1050) — zamknięte po wpisie; #312 — otwarte (następny krok pętli).
+- **Ten czat się zatrzymuje.** Dalej: pętla `cursor-agent` od `ZASADY_CIAGLEJ_PRACY.md`.
+
+## 2026-10-19 12:10 — #314 F7: autor polecenia + F7 po ostatnim commicie
+
+- F7 12:02: dwie poprawki bezpieczeństwa pętli (repo publiczne, `--force`).
+- `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
+- Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
+

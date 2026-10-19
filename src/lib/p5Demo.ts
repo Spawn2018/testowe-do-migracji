@@ -63,7 +63,7 @@ export function demoFuelEnrich(rows: FuelWeekRow[], today: string): FuelWeekRow[
 export function demoFactoringOffer(): FactoringOfferView | null {
   const o = useTowerStore.getState().factoringOffer;
   if (!o.enabled) return null;
-  return { feePct: o.feePercent, hours: o.payoutDelayUnit === 'days' ? o.payoutDelayValue * 24 : o.payoutDelayValue, version: 1, from: '2026-10-07' };
+  return { feePct: o.feePercent, hours: o.payoutDelayUnit === 'days' ? o.payoutDelayValue * 24 : o.payoutDelayValue, version: 1, from: '2026-09-20' };
 }
 
 /** E4b — zadanie „Wypłata faktoringu” dla pierwszej przyjętej, nieopłaconej faktury przewoźnika. */
@@ -108,12 +108,17 @@ export function demoPackActions(): PackActions {
   };
 }
 
+/** Ostatni dzień ważności zezwoleń firmowych w demo: transporty SG z załadunkiem od 25.09 czekają na nowe zezwolenie
+ *  (F7 #307 P1 — „podpina się samo” tylko do transportów w okresie ważności; SG-36, SG-09, SG-18 … mają „Brak zezwolenia”). */
+const FIRM_VALID_TO = '2026-09-24';
+
 /** E31 — zezwolenia z tabeli właściciela 07.10 (wymiary i rodzaje); numery i daty przykładowe (G-09). */
 export function demoPermits(loads: Load[]): PermitView[] {
   const n = (prefix: string) => loads.filter((l) => l.code.startsWith(prefix)).length;
+  const firm = loads.filter((l) => l.code.startsWith('SG-') && (l.plannedLoadDate ?? '') <= FIRM_VALID_TO).length;
   return [
-    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'P/0000/2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
-    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 0000-2026', validFrom: '2026-10-01', validTo: '2026-12-31', limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: n('SG-') },
+    { id: 'demo-p1', scope: 'FIRMA', country: 'PL', number: 'ZP/ŚR/0815/2026', validFrom: '2026-09-01', validTo: FIRM_VALID_TO, limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: firm },
+    { id: 'demo-p2', scope: 'FIRMA', country: 'SE', number: 'TRV 2026/41378', validFrom: '2026-09-01', validTo: FIRM_VALID_TO, limits: { l: 21.69, w: 2.45, h: 3.75 }, pilot: null, appliesTo: 'Słupy główne (SG)', loads: firm },
     { id: 'demo-p3', scope: 'TRASA', country: 'PL+SE', number: null, validFrom: null, validTo: null, limits: { l: 23.69, w: 3.52, h: 3.9 }, pilot: 'PL + SE', appliesTo: 'Kratownice (KR)', loads: n('KR-') },
   ];
 }
@@ -123,7 +128,7 @@ export function demoPermits(loads: Load[]): PermitView[] {
  * PZU 1106707356, ważna 23.04.2026–22.04.2027 (`DECYZJE_08_10.md`), podpina się sama do każdego transportu jak polisa SCX.
  */
 export const demoPolicies = (): PolicyView[] => [
-  { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP-0000-PRZYKLAD', validTo: '2027-03-29', approved: true },
+  { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP/SCX/2026/04417', validTo: '2027-03-29', approved: true },
   { org: 'HHL', name: 'Polisa HHL', number: 'PZU 1106707356', validTo: '2027-04-22', approved: true },
 ];
 
@@ -163,7 +168,7 @@ export function demoFeeSuggestions(load: Load): FeeSuggestion[] {
     const waiting = n === 15 ? { hhl: 'CZEKA_KSH' as const, scx: 'CZEKA_HHL' as const } : {};
     out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', enterAt: `${day}T07:10:00+02:00`, exitAt: `${day}T15:20:00+02:00`, minutes: 490, zone: 'Załadunek Śrem', costEur: f.eur, revEur: f.eur, ...waiting });
   } else {
-    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', noMeasure: loaded ? 'brak pomiaru — śledzenie od Szwecji' : 'jeszcze nie mierzono' });
+    out.push({ ...base, id: `${load.id}-dl`, kind: 'DWELL', place: 'LOAD', where: 'Śrem', noMeasure: loaded ? 'w czasie wolnym — bez dopłaty (wyjazd ze strefy 09:40)' : 'jeszcze nie mierzono' }); /* przegląd 18.10 (P20): jak oś Status — „Wyjazd ze strefy załadunku 09:40” z GPS */
   }
   if (at) {
     const exit = Date.parse(at);

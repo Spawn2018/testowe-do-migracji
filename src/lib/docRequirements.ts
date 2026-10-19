@@ -4,7 +4,7 @@
  * (te same co seed migracji — PROPOZYCJA do potwierdzenia z SCX/KSH) i liczenie terminu dla trybu demo
  * według tej samej reguły co SQL.
  */
-import type { DocCategory, Document, Load } from '../types';
+import type { DocCategory, Document, Load, LoadStatus } from '../types';
 import { TZ_LOAD_PL, TZ_UNLOAD_SE, wallLocalToIso } from './time';
 
 export type DocAnchor = 'BEFORE_LOAD' | 'AT_LOAD' | 'BEFORE_FERRY' | 'AFTER_UNLOAD' | 'ORG';
@@ -22,13 +22,27 @@ export interface DocRequirement {
 export const DEFAULT_DOC_REQUIREMENTS: DocRequirement[] = [
   { category: 'PERMIT_PL', required: true, responsible: 'CARRIER', anchor: 'BEFORE_LOAD', offsetHours: 24 },
   { category: 'PERMIT_SE', required: true, responsible: 'CARRIER', anchor: 'BEFORE_FERRY', offsetHours: 24 },
-  { category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 },
+  /* decyzja właściciela 18.10.2026, 17:28 (wcześniej 08.10 B): tylko CMR po rozładunku, z podpisem odbiorcy */
+  { category: 'CMR', required: true, responsible: 'CARRIER', anchor: 'AFTER_UNLOAD', offsetHours: 24 },
   /* UI-12: POD / mocowanie nie wymagane w UI (zostają w modelu/DB) */
   { category: 'POD', required: false, responsible: 'CARRIER', anchor: 'AFTER_UNLOAD', offsetHours: 24 },
   { category: 'LASHING_PHOTOS', required: false, responsible: 'CARRIER', anchor: 'AT_LOAD', offsetHours: 2 },
   { category: 'INSURANCE', required: true, responsible: 'CARRIER', anchor: 'ORG', offsetHours: 0 },
   { category: 'DRAWING', required: true, responsible: 'CLIENT', anchor: 'BEFORE_LOAD', offsetHours: 72 },
 ];
+
+/**
+ * Decyzja właściciela (18.10.2026, 17:28; wcześniej 08.10 B): w Watch Tower jest tylko CMR po rozładunku — z podpisem
+ * odbiorcy. Termin CMR i „po terminie” liczą się dopiero od „Dostarczone”; przed dostawą brak CMR nie jest brakiem.
+ * Widok stosuje to wszędzie (Harmonogram, Dokumenty, panel), także gdy baza ma jeszcze stare wymaganie „2 h po
+ * załadunku” (poprawka bazy: D-20261018-1740-01).
+ */
+/* F7 #303 B1: „Rozładowany” (UNLOADING) aplikacja pokazuje jako „Dostarczone” (E25, audyt-B B-03) — liczy się tak samo */
+const CMR_FROM: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['UNLOADING', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED']);
+export const cmrCounts = (status: LoadStatus | null | undefined): boolean => !!status && CMR_FROM.has(status);
+export function cmrAfterDelivery<T extends { loadId: string; category: DocCategory }>(rows: readonly T[], statusOf: (loadId: string) => LoadStatus | null | undefined): T[] {
+  return rows.filter((r) => r.category !== 'CMR' || cmrCounts(statusOf(r.loadId)));
+}
 
 export type DocState = 'OK' | 'MISSING' | 'OVERDUE';
 export interface DocStatusRow { loadId: string; category: DocCategory; dueAt: string | null; state: DocState }

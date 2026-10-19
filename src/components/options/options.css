@@ -322,6 +322,9 @@
   .ox-counters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .ox-counters .panel-mark{grid-column:1 / -1;margin-left:0}
   .ox-hist-diff{gap:6px 10px}
+  /* P11 (e18): na telefonie data i osoba w dwóch liniach — separator „·” nie zaczyna drugiej linii */
+  .ox-hist-hd{flex-direction:column;gap:0}
+  .ox-hist-hd span::before{content:none}
 }
 
 /* Faktoring (dzisiejszy formularz przeniesiony do ekranu): wybór jednostki nie ucina tekstu */

@@ -133,13 +133,13 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
   const rc = (readOnly: boolean) => html(createElement(RateCard, {
     locale: 'pl', view: demoRateCard(), today: '2026-10-16', nowIso: '2026-10-16T12:00:00Z', readOnly, onSave: async () => true,
   }));
-  it('10 symboli w 12 pozycjach (KR — konwój 1, 2 i 3 auta), wersje KSH v2 i SCX v1 od 28.09.2026', () => {
+  it('10 symboli w 12 pozycjach (KR — konwój 1, 2 i 3 auta), wersje KSH v2 i SCX v1 od 11.09.2026', () => {
     const v = demoRateCard();
     expect(v.rows).toHaveLength(12);
     expect(new Set(v.rows.map((r) => r.symbol)).size).toBe(10);
     expect(v.rows.filter((r) => r.symbol === 'KR').map((r) => r.convoy)).toEqual([1, 2, 3]);
     const h = rc(false);
-    expect(h).toContain('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026');
+    expect(h).toContain('Cennik KSH v2 od 11.09.2026 · cennik SCX v1 od 11.09.2026');
     expect(h).toContain('Koszt SCX · v1');
     expect(h).toContain('Przychód KSH · v2');
   });
@@ -192,13 +192,15 @@ describe('E-07 … E-15: Zezwolenia, Historia, Stan systemu, Automatyzacje, Stre
     expect(src).toMatch(/Porządki danych testowych: faktura testowa i 1 pozycja usunięte · kopia zapisana/);
   });
   it('E-10: „Działa samo” — wiatr w ETA 20 / 25 m/s, śliskość do 25 km, sprawa SCX „Objazd czy postój?”', async () => {
-    const src = read('src/i18n/p4cWf.ts');
+    /* F7 #303 D1: liczba i jednostka na twardej spacji — w źródle `\u00a0` */
+    const src = read('src/i18n/p4cWf.ts').replace(/\\u00a0/g, ' ');
     expect(src).toMatch(/wiatr w ETA \(od 20 m\/s wolniej, od 25 m\/s postój\), śliskość do 25 km od auta, sprawa SCX „Objazd czy postój\?”/);
   });
   it('E-11: Strefy — bufory odsyłają do zdarzeń „Kto co dostaje”, bez „(Automatyzacje)”', () => {
     const src = read('src/i18n/p8c.ts');
-    expect(src).toContain("p8c_do_PRE_PORT: 'powiadomienie HHL (Kto co dostaje: „Auto 20 km przed portem”)'");
-    expect(src).toMatch(/p8c_do_PRE_ARRIVAL_PL: '[^']*powiadomienie KSH, SCX \(„Auto 50 km przed placem \/ przed Śremem”\)'/);
+    /* P11 pkt 7 (etap6, CI): liczba i jednostka na twardej spacji — „50 km” nie łamie się na końcu linii */
+    expect(src).toContain("p8c_do_PRE_PORT: 'powiadomienie HHL (Kto co dostaje: „Auto 20\\u00a0km przed portem”)'");
+    expect(src).toMatch(/p8c_do_PRE_ARRIVAL_PL: '[^']*powiadomienie KSH, SCX \(„Auto 50\\u00a0km przed placem \/ przed Śremem”\)'/);
     expect(src).not.toMatch(/\(Automatyzacje(, E35)?\)/);
   });
   it('E-12: hasło — „Minimum 12 znaków, litery i cyfry”', () => {

@@ -38,7 +38,7 @@ describe('zdanie reguły (E35 pkt 3)', () => {
   });
   it('„Wtedy” łączy akcje: sprawa, e-mail, SMS według E42', () => {
     const d = draft({ then: { notify: ['KSH'], todo: 'SCX', email: true, smsTo: 'BODEN' } });
-    expect(sp(ruleSentence(d, ZONES))).toContain('wtedy powiadomienie: KSH · sprawa w Do zrobienia (SCX) · e-mail · SMS do odbiorców (Boden, E42)');
+    expect(sp(ruleSentence(d, ZONES))).toContain('wtedy powiadomienie: KSH · sprawa w Do zrobienia (SCX) · e-mail · SMS do odbiorców (Boden)');
   });
   it('czas „dłużej niż” słowami', () => {
     expect(sp(durText(15))).toBe('15 min');
@@ -110,7 +110,7 @@ describe('przebiegi i historia zdaniami (bez SKIPPED i „warunek niespełniony�
   });
   it('historia: akcja, reguła, powód; dawne przełączenia bez powodu opisane wprost', () => {
     expect(sp(histText({ at: '', who: 'Anna', action: 'off', rule: 'Plac 3 h', reason: 'SCX prosi' }))).toBe('wyłączona · „Plac 3 h” · powód: SCX prosi');
-    expect(sp(histText({ at: '', who: 'Admin', action: 'on', rule: 'Transport anulowany', reason: null }))).toBe('włączona · „Transport anulowany” · powód: — (wtedy pola nie było)');
+    expect(sp(histText({ at: '', who: 'Admin', action: 'on', rule: 'Transport anulowany', reason: null }))).toBe('włączona · „Transport anulowany” · bez podanego powodu');
     expect(sp(histText({ at: '', who: 'Anna', action: 'created', rule: 'Plac 3 h', reason: null }))).toBe('dodana · „Plac 3 h”');
   });
 });
@@ -132,9 +132,9 @@ describe('demo: zapis z powodem trafia do historii (E35 pkt 4)', () => {
     expect(h.slice(0, 3).map((x) => [x.action, x.reason])).toEqual([['removed', 'koniec'], ['off', 'test'], ['created', null]]);
     expect(demoRulesNow().length).toBe(before);
   });
-  it('przebiegi jak w bazie 08.10 (E35 „Fakty”): jeden wykonany — SG-03, 06.10 11:22', async () => {
+  it('przebiegi demo (E35 „Fakty”, przegląd 18.10: przed zegarem 23.09): jeden wykonany — T-11, 22.09 05:06', async () => {
     const done = (await demoRuleRuns()).filter((r) => r.result.kind === 'done');
-    expect(done.map((r) => [r.code, r.at])).toEqual([['SG-03', '2026-10-06T09:22:00Z']]);
+    expect(done.map((r) => [r.code, r.at])).toEqual([['T-11', '2026-09-22T03:06:00Z']]);
   });
 });
 

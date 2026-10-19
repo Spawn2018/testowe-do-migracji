@@ -89,7 +89,8 @@ export function StatusChangeModal({
   /* „Teraz: … od …” i podpowiedź z GPS — z dziennika zdarzeń transportu (bez zapytań) */
   const events = useMemo(() => allEvents.filter((e) => e.loadId === loadId), [allEvents, loadId]);
   const axis = useMemo(() => (load ? buildStatusAxis(load, events) : null), [load, events]);
-  const since = axis?.currentSince ?? null;
+  /* P11 pkt 7 (e25): „Teraz: Na placu od …” — bez zdarzenia statusu ta sama chwila co na mapie w Przeglądzie (`drawerMapNote`) */
+  const since = axis?.currentSince ?? (axis?.current === 'APPROACHING_SITE' ? load?.etaDetail?.waitSince ?? null : null);
   const hint = useMemo(() => gpsHint(status, events, geofences, since), [status, events, geofences, since]);
   /* wyglad/P4-c (L6, L9, L29): „Gotowy” tylko przy komplecie — przycisk zablokowany, obok zdanie, czego brakuje */
   const gaps = useMemo(
@@ -128,12 +129,13 @@ export function StatusChangeModal({
         pushToast('Podaj prawidłową datę i godzinę', 'HIGH', loadId);
         return;
       }
-      if (Date.parse(occurredAt) > Date.now() + 60_000) {
+      /* D-20261019-0005-01: Administrator HHL — dowolna data i godzina (bez „nie w przyszłości” i „nie wcześniej niż poprzedni”) */
+      if (!hhlAdmin && Date.parse(occurredAt) > Date.now() + 60_000) {
         pushToast('Czas statusu nie może być w przyszłości', 'HIGH', loadId);
         return;
       }
       /* E25: nie wcześniej niż poprzedni status (tekst zasad w oknie); baza sprawdza to samo — dopisek wykonawcy */
-      if (since && Date.parse(occurredAt) < isoMs(since) && status !== 'CANCELLED') {
+      if (!hhlAdmin && since && Date.parse(occurredAt) < isoMs(since) && status !== 'CANCELLED') {
         pushToast(tp(locale, 'p4b_m_err_before', { at: dayTime(since) }), 'HIGH', loadId);
         return;
       }
@@ -298,7 +300,7 @@ export function StatusChangeModal({
           </label>
           {phone ? null : (
             <p className="scm-rules">
-              {since ? tp(locale, 'p4b_m_rules', { at: dayTime(since) }) : t(locale, 'p4b_m_rules_nodate')}
+              {hhlAdmin ? t(locale, 'p4b_m_rules_admin') : since ? tp(locale, 'p4b_m_rules', { at: dayTime(since) }) : t(locale, 'p4b_m_rules_nodate')}
             </p>
           )}
           <div className="scm-actions">

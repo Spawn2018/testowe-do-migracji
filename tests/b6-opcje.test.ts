@@ -44,7 +44,7 @@ describe('B-6a/b/c: „Jak to działa” w Opcjach', () => {
     expect(notif).toMatch(/„\+ Nowa reguła”/);
     expect(notif).not.toMatch(/Centrum decyzji|Nowa automatyzacja|grupy zdarzenia i firmy/);
     expect(t('pl', 'b6_howto_zones')).toMatch(/Śremie i plac w Boden/);
-    const thr = t('pl', 'b6_howto_thresh');
+    const thr = t('pl', 'b6_howto_thresh').replace(/\u00a0/g, ' ');
     expect(thr).toMatch(/48 h przed — ostrzeżenie, na 12 h — krytyczne/);
     expect(thr).toMatch(/„Zmień” → nowa wartość większa od zera → potwierdzenie → wpis w Historii zmian/);
     expect(thr).toMatch(/Polisa HHL i zezwolenie „Firma” podpinają się same/);

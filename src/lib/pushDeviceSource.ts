@@ -57,8 +57,8 @@ export interface PushDeviceSource {
 function demoDevices(): PushDeviceSource {
   return {
     devices: [{
-      id: 'dev-1', label: 'Android · Chrome', since: '2026-10-05T09:12:00+02:00', active: true, current: true,
-      lastAck: '2026-10-05T09:14:03+02:00', ackSupported: true,
+      id: 'dev-1', label: 'Android · Chrome', since: '2026-09-18T09:12:00+02:00', active: true, current: true,
+      lastAck: '2026-09-18T09:14:03+02:00', ackSupported: true,
     }],
     sendTest: async () => ({ ok: true, sentAt: new Date().toISOString() }),
     remove: async () => true,

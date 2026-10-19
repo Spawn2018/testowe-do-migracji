@@ -60,10 +60,10 @@ describe('A-01 / F-03 — powiadomienia demo: tytuł bez kodu, nazwa z transport
     const hhl = groupsFor('HHL');
     const cmr = hhl.find((g) => g.what === 'Brak CMR')!;
     expect(cmr.name).toBe(transportLabel(loadById('load-034')!, 'HHL'));
-    expect(hhl.find((g) => g.what === 'Marża poniżej progu 4 %')!.name).toMatch(/^SG-15 · /);
+    expect(hhl.find((g) => g.what === 'Marża poniżej progu 4%')!.name).toMatch(/^SG-15 · /);
     const scx = groupsFor('SCX');
     expect(scx.find((g) => g.what === 'Brak sygnału')!.name).toMatch(/^T-05 · SCX-/);
-    expect(scx.find((g) => g.what === 'Brak naczepy')!.name).toMatch(/^SG-09 · SCX-/);
+    expect(scx.find((g) => g.what === 'Brak kierowcy i zestawu')!.name).toMatch(/^SG-19 · SCX-/);
     expect(scx.find((g) => g.what === 'Brak zezwolenia PL')!.name).toBeUndefined();
   });
 });

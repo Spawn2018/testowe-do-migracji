@@ -103,7 +103,7 @@ describe('A8 — Stan systemu: „następna próba o …”', () => {
 
 describe('A2 — Strefy: wyjazd z placu nie obiecuje automatu przed A2', () => {
   it('zdanie „wkrótce” dla placu i nowe zdanie wyjazdu ze Śremu po A2', () => {
-    expect(p8ct('p8c_does_SITE_exit_soon', { soon: SOON })).toBe('Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu (E26, E27) — włączamy wkrótce.');
+    expect(p8ct('p8c_does_SITE_exit_soon', { soon: SOON })).toBe('Wyjazd: „Dostarczone” ustawia SCX albo administrator HHL; samo po co najmniej 10\u00a0min na placu — włączamy wkrótce.');
     expect(p8ct('p8c_does_LOADING_exit_a2')).toContain('postoju co najmniej 5\u00a0min: „Droga PL”');
   });
   it('ZonesView podmienia zdania według serverRuleOn(SITE_EXIT_DELIVERED)', async () => {
@@ -151,7 +151,7 @@ describe('F7 runda 3 — promy w pasku i propozycja Steny w czasie polskim po 25
   });
   it('Automatyzacje: wyjazd ze Śremu — w demo (po A2) bez czekania na potwierdzenie, bez „załadowany”', async () => {
     const { wt } = await import('../src/i18n/p4cWf');
-    expect(wt('pl', 'p4c_wf_zt_srem_out')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
+    expect(wt('pl', 'p4c_wf_zt_srem_out').replace(/\u00a0/g, ' ')).toBe('Droga PL — po postoju ≥ 5 min (próg strefy), bez czekania na potwierdzenie załadunku');
   });
 });
 

@@ -79,7 +79,7 @@ export function demoDetourCase(load: Load, nowIso: string): DetourCase {
         permitTrasa(load)
           ? { kind: 'PERMIT', level: 'warn', text: 'zezwolenie „Trasa”: objazd poza trasą w zezwoleniu SE — potrzebna zgoda Trafikverket przed wjazdem na objazd' }
           : { kind: 'PERMIT', level: 'ok', text: 'zezwolenie: transport bez zezwolenia na konkretną trasę — objazd dozwolony' },
-        { kind: 'WIND', level: 'warn', text: `wiatr na objeździe: Sandöbron, porywy 23 m/s z boku (prognoza SMHI ${timeOnly(iso(decideBy + 0.5 * H))}) — +15 % na moście; przy 25 m/s Trafikverket może zamknąć i ten most` },
+        { kind: 'WIND', level: 'warn', text: `wiatr na objeździe: Sandöbron, porywy 23 m/s z boku (prognoza SMHI ${timeOnly(iso(decideBy + 0.5 * H))}) — +15% na moście; przy 25 m/s Trafikverket może zamknąć i ten most` },
         { kind: 'WORKS', level: 'warn', text: 'roboty: droga 90 w Kramfors — ruch wahadłowy, do ok. 10 min' },
         { kind: 'LIMITS', level: 'ok', text: `ograniczenia dla zestawu ${dims(load)}, ${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 }).format(load.dims.weightT)} t ładunku: brak na objeździe (HERE)` },
         { kind: 'HOURS', level: 'ok', text: 'czas pracy kierowcy: +35 min jazdy mieści się w dziennym limicie' },

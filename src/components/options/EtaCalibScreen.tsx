@@ -27,7 +27,7 @@ function errTone(e: CalibErr): string {
   const a = Math.abs(e);
   return a <= GOAL_MIN ? 'ox-go' : a <= 60 ? 'cal-amber' : 'ox-alert';
 }
-const pct = (p: number) => `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p)}\u00a0%`;
+const pct = (p: number) => `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p)}%`; /* P11 (E21): „+12%” bez odstępu */
 const meanAbs = (xs: Array<number | null>) => {
   const v = xs.filter((x): x is number => x != null);
   return v.length ? Math.round(v.reduce((s, x) => s + Math.abs(x), 0) / v.length) : null;

@@ -18,7 +18,7 @@ import type { EtaCalibration } from '../src/lib/etaCalibSource';
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const snap = buildDemoSnapshot();
 const data = demoCalibration(snap.loads);
-const delivered = snap.loads.filter((l) => l.status === 'DELIVERED' && l.unloadedAt);
+const delivered = snap.loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status) && l.unloadedAt);
 const html = (d: EtaCalibration, readOnly = false) => renderToStaticMarkup(createElement(EtaCalibScreen, {
   locale: 'pl', data: d, readOnly, onApprove: readOnly ? null : demoCalibrationApproveFor(d),
 }));
@@ -101,14 +101,14 @@ describe('ekran', () => {
     expect(h).toContain(`>${etaDuration(data.segments.find((s) => s.code === 'SE_ROAD')!.medianMin!)}<`);
   });
   it('trzy części; średni błąd 1 h przed względem celu 30 min; zysk z propozycji', () => {
-    const h = html(data);
+    const h = html(data).replace(/\u00a0/g, ' ');
     for (const s of ['Pomiary dostaw', 'Propozycja czasów odcinków', 'Wersje czasów', 'nie większy niż 30 min', 'data-cal-avg', 'data-cal-gain', 'Zatwierdź nowe czasy', 'Bez zatwierdzenia nic się nie zmienia', 'obowiązuje']) {
       expect(h).toContain(s);
     }
     expect(h).toContain('data-cal-proposal="ready"');
     expect(h).toContain(`nowe czasy dają średni błąd 24 h przed przyjazdem ${etaDuration(data.proposal!.errorAfterMin)} zamiast ${etaDuration(data.proposal!.errorBeforeMin)}`);
     expect(h).toContain('za mało dostaw');
-    expect(h).toMatch(/bez zmian \(−\d+\u00a0%\)/);
+    expect(h).toMatch(/bez zmian \(−\d+%\)/);
   });
   it('Operacje HHL — tylko podgląd, bez przycisku', () => {
     const h = html(data, true);

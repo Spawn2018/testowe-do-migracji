@@ -153,8 +153,8 @@ describe('(a) formatery widoku: rok zawsze, GG:MM', () => {
 
   it('tygodnie (Finanse, Faktury, paczka tygodnia): „t42 · 12.10.2026–18.10.2026”', () => {
     expect(weekLabel(weekOf('2026-10-12'))).toBe('t42 · 12.10.2026–18.10.2026');
-    expect(weekKeyLabel('2026-W42')).toBe('42 · 12.10.2026–18.10.2026');
-    expect(weekKeyLabel('2026-W01')).toBe('1 · 29.12.2025–04.01.2026');
+    expect(weekKeyLabel('2026-W42')).toBe('t42 · 12.10.2026–18.10.2026');
+    expect(weekKeyLabel('2026-W01')).toBe('t1 · 29.12.2025–04.01.2026');
     expect(packWeekLabel('2026-W42')).toBe('t42 · 12.10.2026–18.10.2026');
   });
 });

@@ -364,7 +364,7 @@ test.describe('wyglad/P9-c Mapa (E29, img/e29-after)', () => {
     await boot(page, 'HHL');
     await openView(page, 'map');
     const head = page.locator('[data-map-head]');
-    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
+    await expect(head).toHaveText(/^W oknie śledzenia \d+ · z pozycją \d+ · bez żadnej pozycji \d+ — od 03:00 w dniu załadunku do „Dostarczone”$/);
     await expect(page.locator('[data-page="map"] .panel-hd')).not.toContainText('pozycje co');
     await expect(page.locator('[data-map-table] thead th')).toHaveText(['Transport', 'Etap', 'Pozycja', 'ETA Boden']);
     await expect(page.locator('.maplayers label')).toHaveText(['Pojazdy i statki', 'Trasa (droga i prom)', 'Strefy', 'Utrudnienia drogowe', 'Przebieg wybranego'].map((x) => new RegExp(x.replace(/[()]/g, '\\$&'))));
@@ -652,7 +652,8 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await boot(page, 'HHL');
     await openPanel(page, 'SG-11');
     const note = page.locator('aside.drawer [data-drawer-note="before"]');
-    await expect(note).toHaveText('Brak pozycji · Śledzenie od 07.10.2026, 03:00');
+    /* P11 (e1, e32): dopisek w liniach */
+    await expect(note.locator('.po-mapnote-l')).toHaveText(['Brak pozycji', 'Śledzenie od 07.10.2026, 03:00']);
     const r = await page.evaluate(() => {
       const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
       const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
@@ -667,8 +668,28 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await page.keyboard.press('Escape');
     await openPanel(page, 'T-12');
     /* W-demo (audyt 17.10, N2): na placu od godziny wjazdu — dane demo mają ją teraz jak z serwera (E32 pkt 3) */
-    await expect(page.locator('aside.drawer [data-drawer-note="site"]')).toHaveText('Na placu od 23.09.2026, 15:10');
+    await expect(page.locator('aside.drawer [data-drawer-note="site"] .po-mapnote-l').first()).toHaveText('Na placu od 23.09.2026, 15:10');
     await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
+  });
+
+  /* F7 #303 P1: telefon — mapa Przeglądu ma 150 px; dopisek nie zasłania pojazdu ani „+ / −” */
+  for (const w of [390, 768] as const) test(`telefon ${w}: na placu — dopisek nie zasłania pojazdu i przycisków „+ / −”`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: 844 });
+    await boot(page, 'HHL');
+    await openPanel(page, 'T-12');
+    await expect(page.locator('aside.drawer [data-drawer-note="site"]')).toBeVisible();
+    const r = await page.evaluate(() => {
+      const root = document.querySelector('aside.drawer [data-load-map]') as HTMLElement;
+      const n = (root.querySelector('[data-drawer-note]') as HTMLElement).getBoundingClientRect();
+      const over = (b: DOMRect) => Math.min(n.right, b.right) - Math.max(n.left, b.left) > 1 && Math.min(n.bottom, b.bottom) - Math.max(n.top, b.top) > 1;
+      const mk = [...root.querySelectorAll('.wt-mk')].map((x) => x.getBoundingClientRect()).filter((x) => x.width > 0);
+      const zoom = [...root.querySelectorAll('.leaflet-control-zoom a')].map((x) => x.getBoundingClientRect());
+      return { markers: mk.length, mkHidden: mk.filter(over).length, zoom: zoom.length, zoomHidden: zoom.filter(over).length };
+    });
+    expect(r.markers, 'pojazd na mapie').toBeGreaterThan(0);
+    expect(r.mkHidden, 'pojazd pod dopiskiem').toBe(0);
+    expect(r.zoom).toBe(2);
+    expect(r.zoomHidden, '„+ / −” pod dopiskiem').toBe(0);
   });
 });
 
@@ -1091,7 +1112,8 @@ test.describe('wyglad/P7-c Harmonogram w układzie pliku (E38, E30, E20)', () =>
     await expect(drv.first()).toHaveAttribute('data-po-driver', 'SE');
     await expect(drv.first()).toHaveClass(/is-now/);
     await expect(drv.first()).toContainText('Henrik Lund · +46 701 740 615');
-    await expect(drv.nth(1)).toContainText('Tomasz Wójcik · +48 000 000 003');
+    /* przegląd 18.10 (B2): bez kierowców w dwóch transportach naraz — T-01 ma Łukasza Woźniaka */
+    await expect(drv.nth(1)).toContainText('Łukasz Woźniak · +48 000 000 008');
     await expect(drv.first().locator('a.po-call')).toHaveAttribute('href', 'tel:+46701740615');
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -1557,13 +1579,13 @@ test.describe('wyglad/2fa — Moje konto i Przełączniki', () => {
     await page.waitForTimeout(300);
   };
 
-  test('komputer HHL: 2FA włączona — „Telefon 1 · od 12.10.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
+  test('komputer HHL: 2FA włączona — „Telefon 1 · od 22.09.2026”, „Dodaj drugie urządzenie”; Przełączniki — wymaganie 2FA nieaktywne z powodem', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await boot(page, 'HHL');
     await openOpt(page, 'options', 'account');
     await expect(page.locator('[data-mfa-devices]')).toHaveAttribute('data-mfa-devices', '1');
     await expect(page.locator('[data-mfa-device]')).toContainText('Telefon 1');
-    await expect(page.locator('[data-mfa-device]')).toContainText('od 12.10.2026');
+    await expect(page.locator('[data-mfa-device]')).toContainText('od 22.09.2026');
     await expect(page.locator('[data-mfa-add]')).toBeEnabled();
     await expect(page.locator('[data-mfa-remove]')).toHaveCount(0);
     await expect(page.locator('[data-mfa-needs-code]')).toHaveCount(0);
@@ -1868,8 +1890,8 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
       const list = await phoneScreens(page);
       expect(list.length).toBeGreaterThan(role === 'HHL' ? 15 : 2);
       /* wyglad/C (E11 menu „Dla mnie”, E5): „Ten telefon / komputer” po „Wygląd i waluta”;
-         5B (17.10): KSH i SCX mają też „Pieniądze › Opłata paliwowa” tylko do odczytu */
-      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['fuel', 'account', 'forme', 'look', 'device']);
+         5B (17.10): KSH i SCX mają też „Pieniądze › Opłata paliwowa” tylko do odczytu; P11 (e12): „Dla mnie” pierwsza */
+      if (role !== 'HHL') expect(list.map((x) => x.screen)).toEqual(['account', 'forme', 'look', 'device', 'fuel']);
       const hits: Hit[] = [];
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 844 });
@@ -1897,7 +1919,7 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     await boot(page, 'HHL');
     await openView(page, 'options');
     await expect(page.locator('.ox-side-group h2')).toHaveText(['Ludzie i dostęp', 'Powiadomienia', 'Pieniądze', 'Zasady transportu', 'System', 'Dla mnie']); /* 6A (17.10): bez wymuszonych wielkich liter */
-    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'Treści wiadomości', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich']);
+    await expect(page.locator('.ox-side [data-opt-group="notify"] [data-opt-nav]')).toHaveText(['Kto co dostaje', 'SMS przy miejscachBoden: brak', 'Komunikat dla wszystkich', 'Treści wiadomości']); /* P11 (e11/e12, G-11): Treści wiadomości ostatnie */
     await page.click('[data-opt-nav="flags"]');
     await expect(page.locator('[data-opt-screen="flags"] .ox-crumb')).toHaveText('Opcje › System');
     await expect(page.locator('[data-opt-screen="flags"] tbody tr')).toHaveCount(9); /* wyglad/P9-b: bez H1, H3, H6 (16.10 01:13); wyglad/audyt-E: bez e-maila o decyzjach automatycznych (E5, E11) */
@@ -1920,10 +1942,10 @@ test.describe('wyglad/P3-c Opcje i Ustawienia', () => {
     for (const r of ['KSH', 'SCX'] as const) {
       await boot(page, r);
       await openView(page, 'settings');
-      /* 5B (17.10): „Pieniądze › Opłata paliwowa” tylko do odczytu, potem „Dla mnie” */
-      await expect(page.locator('.ox-side-group h2')).toHaveText(['Pieniądze', 'Dla mnie']);
+      /* 5B (17.10): „Pieniądze › Opłata paliwowa” tylko do odczytu; P11 (e12): „Dla mnie” pierwsza */
+      await expect(page.locator('.ox-side-group h2')).toHaveText(['Dla mnie', 'Pieniądze']);
       /* wyglad/C (E11, E5): „Ten telefon / komputer” */
-      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Opłata paliwowa', 'Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer']);
+      await expect(page.locator('.ox-side [data-opt-nav]')).toHaveText(['Moje konto', 'Co dostaję', 'Wygląd i waluta', 'Ten telefon / komputer', 'Opłata paliwowa']);
     }
   });
 });
@@ -2224,7 +2246,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await page.setViewportSize({ width: 1440, height: 900 });
     await boot(page, 'SCX');
     await openCode(page, 'D-02');
-    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('rejs niewybrany — wybiera SCX w awizacji');
+    await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji');
     await expect(page.locator('.drawer [data-awiz-nosail]')).toHaveText('kompletna · bez rejsu');
     await tab(page, 1);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('rejs');
@@ -2413,7 +2435,7 @@ test.describe('wyglad/P5 Faktury — E4, E4b', () => {
     await expect(page.locator('#inv-panel-PRZYCHOD')).toBeHidden();
     await expect(page.locator('[data-inv-kpis="KOSZT"] [data-inv-kpi]')).toHaveCount(4);
     await expect(page.locator('[data-inv-flow="KOSZT"] li')).toHaveCount(5);
-    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['Tydzień', 'Faktura', 'Transporty', 'Netto', 'VAT 23 %', 'Brutto', 'Termin', 'Status', /.*/]);
+    await expect(page.locator('#inv-panel-KOSZT table.inv-table thead th')).toHaveText(['Tydzień', 'Faktura', 'Transporty', 'Netto', 'VAT 23%', 'Brutto', 'Termin', 'Status', /.*/]);
     for (const row of await page.locator('#inv-panel-KOSZT tr[data-bill]').all()) {
       await expect(row.locator('[data-bill-status]')).toHaveCount(1);
     }
@@ -2556,7 +2578,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-po-set]')).toContainText('z tabeli HHL (SG)');
     await expect(page.locator('.drawer [data-po-permit-kind="FIRMA"]')).toBeVisible();
     /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
-    await expect(page.locator('.drawer [data-order="hhl"] input')).toBeVisible();
+    await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toBeVisible();
     await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
     await expect(page.locator('.drawer [data-action="export-load-pdf-map"]')).toBeVisible();
@@ -2639,9 +2661,10 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       await expect(page.locator('.drawer .wb-back')).toBeVisible();
       await expect(page.locator('.drawer .drawer-hd button.iconbtn')).toHaveCount(1);
       const folds = page.locator('.drawer details.po-fold');
-      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 5);
+      /* przegląd 18.10 (B1): SG-19 bez zestawu ma u HHL i SCX sekcję „Do zrobienia” (brak kierowcy i zestawu, brak awizacji — awizuje SCX) */
+      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 6);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
-      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('sob. 17.10.2026 → czw. 22.10.2026');
+      await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
       const map = await page.locator('.drawer [data-load-map]').boundingBox();
       expect(map && map.height).toBeLessThanOrEqual(152);
@@ -2725,7 +2748,8 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
         }
         await page.setViewportSize({ width: 390, height: 844 });
       }
-      if (role !== 'KSH') {
+      /* P11 (e33): „+ Dopłata” nad listą tylko u HHL (SCX — przycisk przy wierszu, nieaktywny bez pomiaru ponad czas wolny) */
+      if (role === 'HHL') {
         await page.locator('.drawer [data-fee-add]').click();
         await expect(page.locator('[data-fee-modal]')).toBeVisible();
         for (const width of WIDTHS) {
@@ -3177,7 +3201,7 @@ test.describe('wyglad/P8-d Automatyzacje (E35, img/e35-after)', () => {
     await page.locator('[data-rule-then="notify-HHL_OPS"]').click();
     await page.locator('[data-rule-then="notify-SCX"]').click();
     await expect(page.locator('[data-rule-check]')).toContainText('zadziałałaby 1 raz');
-    await expect(page.locator('[data-rule-check]')).toContainText('SG-03 · plac od 07.10.2026, 08:35 → 07.10.2026, 11:35 (wyjazd 12:19)');
+    await expect(page.locator('[data-rule-check]')).toContainText('T-11 · plac od 22.09.2026, 05:56 → 22.09.2026, 08:56 (wyjazd 09:40)');
     await expect(page.locator('[data-rule-check]')).toContainText('Wbudowane automaty robiące to samo: brak.');
     await noSideScroll(page, 1440);
     await page.locator('[data-rule-save]').click();

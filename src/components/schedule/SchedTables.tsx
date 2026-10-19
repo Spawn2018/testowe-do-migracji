@@ -16,6 +16,7 @@ import { clickableRow } from '../../lib/clickableRow';
 import { formatLoadMoney, formatLoadRevMargin } from '../../lib/money/loadPln';
 import { etaIsNightArrival, formatTableInZone, TZ_LOAD_PL, TZ_UNLOAD_SE } from '../../lib/time';
 import { transportLabel } from '../../lib/transportName';
+import { isAfterDelivery } from '../../lib/status';
 import {
   dmy, dayPl, docCell, etaText, hmIn, moneyKey, pair, SHORT_COLS, SHORT_EXTRAS,
   type FileColDef, type ShortExtraId,
@@ -186,7 +187,7 @@ function rowProps(l: Load, ctx: SchedRowCtx) {
     'data-code': l.code,
     'data-status': l.status,
     /* E25 (audyt-B B-03): „Rozładowany” = „Dostarczone” — ten sam wygląd wiersza */
-    className: `${l.status === 'DELIVERED' || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
+    className: `${isAfterDelivery(l.status) || l.status === 'UNLOADING' ? 'done' : ''}${ctx.hoverLoadId === l.id || ctx.selectedLoadId === l.id ? ' hl' : ''}${l.status === 'CANCELLED' ? ' is-cancel' : ''}`,
     onMouseEnter: () => ctx.setHover(l.id),
     onMouseLeave: () => ctx.setHover(null),
     ...clickableRow(() => ctx.onOpen(l.id)),
@@ -348,10 +349,12 @@ export function SchedCards({ list, ctx }: { list: Load[]; ctx: SchedRowCtx }) {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } }}>
             <div className="r1">
               <span className="code" data-content>{transportLabel(l, ctx.role, 'schedule')}</span>
-              <StatusPill status={l.status} stage={l.stage} />
-              <StatusMarkers load={l} delayMin={ctx.delayOf(l)} />
+              {/* P11 (e30 pkt 8): status z oznaczeniami i datą „Dostarczone” — jak kolumna „Status” na komputerze */}
+              <Status l={l} ctx={ctx} />
               {ctx.role === 'HHL' && !l.hhlOrderNo ? <span className="mtag s7-tag-bad">{s7(L, 's7_no_hhl')}</span> : null}
             </div>
+            {/* P11 (e30): braki dokumentów („brak CMR”, „brak zezwoleń”) — jak kolumna „Dokumenty” na komputerze */}
+            {docCell(ctx.docRows(l.id), ctx.reqs).tone === 'bad' ? <div className="s7-card-docs" data-card-docs><Docs l={l} ctx={ctx} /></div> : null}
             <div className="meta" data-content>
               {l.itemType}{l.qty ? ` · ${s7p(L, 's7_pcs', { n: l.qty })}` : ''} · {dim(l.dims.weightT, L)} t · {dayPl(l.plannedLoadDate)} {dmy(l.plannedLoadDate)} → {dayPl(l.plannedDeliverDate)} {dmy(l.plannedDeliverDate)}
             </div>

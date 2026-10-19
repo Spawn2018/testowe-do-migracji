@@ -39,7 +39,7 @@ describe('PL-PLURAL', () => {
     expect(tp('en', 'a6_sch_export_ok', { rows: 22, bytes: 10 })).toBe('Eksport XLSX · 22 wiersze · 10 B');
     expect(tp('pl', 'd26_allow', { n: 2 })).toBe('Anuluj 2 pozycje nieobecne w pliku');
     expect(tp('pl', 'd26_allow', { n: 5 })).toBe('Anuluj 5 pozycji nieobecnych w pliku');
-    expect(tp('pl', 'rk_client_errors', { kinds: 1, hits: 22 })).toBe(
+    expect(tp('pl', 'rk_client_errors', { kinds: 1, hits: 22 }).replace(/\u00a0/g, ' ')).toBe(
       'Błędy w przeglądarce użytkowników: 1 rodzaj, 22 wystąpienia w 15 min',
     );
   });

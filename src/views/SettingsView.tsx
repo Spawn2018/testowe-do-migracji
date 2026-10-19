@@ -85,6 +85,8 @@ export function SettingsView() {
   /* wyglad/P10b-b (E37 pkt 3): „Instrukcja” znika z Opcji i Ustawień — zastępuje ją Pomoc („?”, menu konta) */
 
   const groups: OptGroup[] = [];
+  /* P11 (e12, 5B): „Dla mnie” pierwsza (Moje konto na starcie), Pieniądze › Opłata paliwowa (tylko odczyt) niżej */
+  groups.push({ id: 'forme', screens: forme, summary: demo?.summaries.forme?.text });
   const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()), getNowIso());
   if (role === 'KSH' || role === 'SCX') {
     if (SefsReadOnly) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
@@ -94,7 +96,6 @@ export function SettingsView() {
       groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<FuelScreen locale={locale} view={view} actions={null} readOnly party={role} />) }] });
     }
   }
-  groups.push({ id: 'forme', screens: forme, summary: demo?.summaries.forme?.text });
 
   const firm = role === 'KSH' ? 'KSH' : 'SCX';
   return (

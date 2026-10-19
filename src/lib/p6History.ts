@@ -142,6 +142,8 @@ const ORG_FULL: Record<string, string> = { HHL: 'H&H Logistics', SCX: 'Scandinav
 export function whoOf(actor: string | null | undefined, locale: Locale): string {
   const raw = String(actor ?? '').trim();
   if (raw === 'driver-pwa' || raw === 'DRIVER') return ht(locale, 'p6b_driver_app');
+  /* przegląd 18.10 (P24): automatyzacja („workflow:wf-2”) — jak inne automaty „System // Watch Tower”, bez kodu reguły */
+  if (raw.startsWith('workflow:')) return whoOf('system', locale);
   const s = formatHistoryActor(raw);
   const bare = /^—\s*\/\/\s*(.+)$/.exec(s);
   if (bare) return `${ORG_FULL[bare[1].trim()] ?? bare[1].trim()} ${ht(locale, 'p6b_no_person')}`;

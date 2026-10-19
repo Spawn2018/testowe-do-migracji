@@ -70,7 +70,7 @@ const pl: Dict = {
 
   /* E5 (img/e5-desk): Dla mnie › Ten telefon / komputer */
   dev_title: 'Powiadomienia na telefonie',
-  /* W42 (D-20261015-1955-01, 15.10.2026, 19:57): e-mail zapasowy po 5 min — zdanie dopisane po wdrożeniu N4 (0219) */
+  /* W42 (D-20261015-1955-01, 15.10.2026, 19:57): e-mail zapasowy po 5\u00a0min — zdanie dopisane po wdrożeniu N4 (0219) */
   /* wyglad/P6-f (D-20261016-0310-01 Cz13): wiadomości z Czatu też na telefon */
   dev_rule: 'Na telefon trafiają pilne sprawy „Do zrobienia” i wiadomości z Czatu. Reszta czeka w dzwonku. Gdy telefon nie potwierdzi pilnej sprawy w ciągu 5 minut, dostaniesz ją e-mailem. Wiadomości z Czatu nie przychodzą e-mailem.',
   dev_ios: 'iPhone · tylko z aplikacji na ekranie początkowym',
@@ -189,7 +189,7 @@ const pl: Dict = {
   p3c_fc_mails: '{n~e-mail|e-maile|e-maili}',
   p3c_fc_tail: 'przy tych zaznaczeniach.',
   p3c_fc_over: 'Razem z innymi wierszami przekroczy limit {max}.',
-  p3c_always: 'zawsze — decyzja właściciela 09.10.2026',
+  p3c_always: 'zawsze — decyzja właściciela',
   p3c_risks_only: 'Tylko strona Ryzyka · nie trafia do dzwonka, na telefon ani e-mailem',
   p3c_none: '—',
   p3c_show_row: 'Pokaż wiersz: {name}',
@@ -248,6 +248,9 @@ const pl: Dict = {
 
   /* Progi */
   p3c_thr_change: 'Zmień',
+  p3c_thr_src: 'Źródła danych',
+  p3c_thr_src_v: 'progi w Stanie systemu',
+  p3c_thr_src_go: 'Stan systemu ›',
   p3c_thr_value: 'Wartość',
   p3c_thr_effect: 'Skutek',
 
@@ -360,7 +363,7 @@ const pl: Dict = {
   p3c_flag_SMS_ZONE_ENTER: 'SMS przy wjeździe na teren',
   p3c_flag_SMS_ZONE_ENTER_fx: 'SMS przy wjeździe na załadunek i rozładunek.',
   p3c_flag_TELM_EMTRACK_WEB: 'Odczyt pozycji z emtrack',
-  p3c_flag_TELM_EMTRACK_WEB_fx: 'Pozycje naczep co 2 min.',
+  p3c_flag_TELM_EMTRACK_WEB_fx: 'Pozycje naczep co 2\u00a0min.',
   p3c_flag_DRIVER_LINK_ACCEPT: 'Stary link kierowcy',
   p3c_flag_DRIVER_LINK_ACCEPT_fx: 'Wejście kierowcy z linku. Aplikacji kierowcy nie zmieniamy.',
   p3c_flag_FUEL_SE_PL_INGEST: 'Codzienne ceny paliwa',
@@ -407,12 +410,12 @@ const pl: Dict = {
   cal_meta_same: 'czasy się zgadzają',
   cal_meta_wait: '{n} z {need} dostaw',
   cal_obs_h: 'Pomiary dostaw',
-  cal_obs_note: 'Pomiar zapisuje się po każdej dostawie z GPS. Błąd = wjazd na plac − ETA: plus — auto przyjechało później, niż mówiło ETA, minus — wcześniej. Cel: godzinę przed przyjazdem błąd nie większy niż {goal} min (kolor w kolumnie „Błąd 1 h przed”).',
+  cal_obs_note: 'Pomiar zapisuje się po każdej dostawie z GPS. Błąd = wjazd na plac − ETA: plus — auto przyjechało później, niż mówiło ETA, minus — wcześniej. Cel: godzinę przed przyjazdem błąd nie większy niż {goal}\u00a0min (kolor w kolumnie „Błąd 1\u00a0h przed”).',
   cal_c_load: 'Transport',
   cal_c_arrived: 'Wjazd na plac',
-  cal_c_24: 'Błąd 24 h przed',
-  cal_c_6: 'Błąd 6 h przed',
-  cal_c_1: 'Błąd 1 h przed',
+  cal_c_24: 'Błąd 24\u00a0h przed',
+  cal_c_6: 'Błąd 6\u00a0h przed',
+  cal_c_1: 'Błąd 1\u00a0h przed',
   cal_c_pl: 'Droga PL i odprawa',
   cal_port: 'odprawa {d}',
   cal_c_se: 'Droga SE',
@@ -425,7 +428,7 @@ const pl: Dict = {
   cal_prop_h: 'Propozycja czasów odcinków',
   cal_prop_tag: 'propozycja z {d}',
   cal_prop_done: 'zatwierdzone · wersja {no}',
-  cal_prop_note: 'Nowy czas = mediana pomiarów. Odcinek z mniej niż {need} dostawami — za mało danych. Różnica do 10 % — bez zmian.',
+  cal_prop_note: 'Nowy czas = mediana pomiarów. Odcinek z mniej niż {need} dostawami — za mało danych. Różnica do 10% — bez zmian.',
   cal_s_seg: 'Odcinek',
   cal_s_now: 'Teraz',
   cal_s_meas: 'Pomiar',
@@ -436,9 +439,9 @@ const pl: Dict = {
   cal_v_few: 'za mało dostaw',
   cal_v_same: 'bez zmian ({p})',
   cal_v_applied: 'zatwierdzone',
-  cal_gain: 'Na tych samych {n} dostawach nowe czasy dają średni błąd 24 h przed przyjazdem {after} zamiast {before}.',
+  cal_gain: 'Na tych samych {n} dostawach nowe czasy dają średni błąd 24\u00a0h przed przyjazdem {after} zamiast {before}.',
   cal_prop_wait: 'Propozycja po {need} dostawach — brakuje {left}. Do tego czasu ETA liczy obecne czasy.',
-  cal_prop_none: 'Wszystkie zmierzone odcinki mieszczą się w 10 % — nic do zatwierdzenia.',
+  cal_prop_none: 'Wszystkie zmierzone odcinki mieszczą się w 10% — nic do zatwierdzenia.',
   cal_prop_ro: 'Nowe czasy zatwierdza Administrator HHL. Bez zatwierdzenia nic się nie zmienia.',
   cal_prop_rule: 'Bez zatwierdzenia nic się nie zmienia — ETA liczy obecne czasy.',
   cal_approve: 'Zatwierdź nowe czasy',

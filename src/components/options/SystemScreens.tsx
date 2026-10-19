@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { E49_THR } from '../../i18n/e49Thr';
+import { openOptionsScreen } from '../../lib/openOptions';
 
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
@@ -67,7 +68,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
         <tbody>
           {flags.map((f) => (
             <tr key={f.key} data-flag={f.key}>
-              <th scope="row" data-label={t(locale, 'p3c_col_flag')}><b>{f.name}</b>{blocked?.[f.key] && !f.on ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
+              <th scope="row" data-label={t(locale, 'p3c_col_flag')}><b>{f.name}</b>{blocked?.[f.key] && !f.on && !readOnly ? <small className="ox-flag-why" data-flag-blocked>{blocked[f.key]}</small> : null}</th>
               <td data-label={t(locale, 'p3c_col_state')}>{sw(f)}</td>
               <td data-label={t(locale, 'p3c_col_does')}>{f.does}</td>
               <td data-label={t(locale, 'p3c_col_last')} className="ox-flag-last" data-content>{last(f)}</td>
@@ -235,6 +236,9 @@ export type ThresholdRow = {
   unit: string;
 };
 
+/** P11 (E21): procent bez odstępu („4%”), inne jednostki z odstępem („30 min”). */
+const withUnit = (v: string, unit: string) => (unit === '%' ? `${v}%` : `${v} ${unit}`);
+
 export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
   locale: Locale;
   rows: ThresholdRow[];
@@ -261,14 +265,14 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
               {editing ? (
                 <span className="ox-thr-edit">
                   {edit.ask ? (
-                    <span className="ox-thr-ask">{t(locale, 'p3c_thr_ask').replace('{name}', label).replace('{was}', `${fmt(v)} ${r.unit}`).replace('{is}', `${fmt(num(edit.draft))} ${r.unit}`)}</span>
+                    <span className="ox-thr-ask">{t(locale, 'p3c_thr_ask').replace('{name}', label).replace('{was}', withUnit(fmt(v), r.unit)).replace('{is}', withUnit(fmt(num(edit.draft)), r.unit))}</span>
                   ) : (
                     <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
                   )}
                   <span className="ox-thr-val"><span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
                 </span>
               ) : (
-                <span className="ox-thr-val"><b data-content>{fmt(v)} {r.unit}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                <span className="ox-thr-val"><b data-content>{withUnit(fmt(v), r.unit)}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
               )}
               {readOnly ? null : editing ? (
                 <span className="ox-thr-btns">
@@ -285,6 +289,12 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
             </li>
           );
         })}
+        {/* P11 (e12, makieta „Progi alarmów”, ostatni wiersz): progi źródeł danych są w Stanie systemu — odnośnik */}
+        <li data-threshold-link="status">
+          <span className="ox-thr-label">{t(locale, 'p3c_thr_src')}</span>
+          <span className="ox-thr-val"><span>{t(locale, 'p3c_thr_src_v')}</span></span>
+          <button type="button" className="btn ghost ox-btn" onClick={() => openOptionsScreen('status')}>{t(locale, 'p3c_thr_src_go')}</button>
+        </li>
       </ul>
     </div>
   );

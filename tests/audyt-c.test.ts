@@ -33,7 +33,7 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
     expect(DEMO_ONLY_I18N.RISK.pl.rk_seed_permit_mismatch_34).toBe('Zezwolenie niezgodne z zestawem — przekroczona wysokość i szerokość');
   });
   it('C-02: zamknięcie przy T-17 w postaci E49 i połączone ze sprawą „Objazd czy postój?” (jedna sprawa w karcie)', () => {
-    expect(RISK_I18N.pl.rk_seed_e4_closure).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');
+    expect(RISK_I18N.pl.rk_seed_e4_closure.replace(/\u00a0/g, ' ')).toBe('Högakustenbron (E4) zamknięty — porywy 31 m/s');
     const t17 = snap.loads.find((l) => l.code === 'T-17')!;
     const closure = risks.filter((r) => r.loadId === t17.id);
     expect(closure.map((r) => r.causeCategory)).toEqual(['closure']);
@@ -46,9 +46,9 @@ describe('C-01, C-02, C-15 — Ryzyka i dzwonek po polsku', () => {
     const text = [...INITIAL_NOTIFICATIONS.map((n) => `${n.title} ${n.body}`), ...WORKFLOWS.map((w) => `${w.name} ${w.description}`)].join('\n');
     expect(text).not.toMatch(/factoring|READY|W3\d\b|12%|>50 PLN/);
     /* audyt-AF A-01: tytuł bez kodu — nazwę transportu (SG-15) wstawia dzwonek z odnośnika */
-    expect(text).toContain('Marża poniżej progu 4 %');
+    expect(text).toContain('Marża poniżej progu 4%');
     expect(text).not.toContain('· SG-15');
-    expect(text).toContain('Faktura w sporze · t38');
+    expect(text).toContain('Faktura do sprawdzenia · t38');
     expect(text).toContain('Zgodność OK · faktoring zaplanowany.');
   });
 });
@@ -61,7 +61,7 @@ describe('C-03…C-07 — Dokumenty (E31)', () => {
     expect(cmrKind(cmr)).toBe('SIGNED');
     expect(ft('pl', 'p5_doc_r_CMR_SIGNED')).toBe('CMR z podpisem odbiorcy');
     expect(reqs.filter((r) => r.required).map((r) => r.category).sort()).toEqual(['CMR', 'INSURANCE', 'PERMIT_PL', 'PERMIT_SE']);
-    const delivered = new Set(snap.loads.filter((l) => l.status === 'DELIVERED').map((l) => l.id));
+    const delivered = new Set(snap.loads.filter((l) => ['DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status)).map((l) => l.id));
     const cmrs = docs.filter((d) => d.category === 'CMR' && d.status === 'UPLOADED');
     expect(cmrs.length).toBeGreaterThan(0);
     expect(cmrs.every((d) => delivered.has(d.loadId))).toBe(true);

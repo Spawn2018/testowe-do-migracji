@@ -214,11 +214,11 @@ test.describe('D-EUR-T display currency EUR vs PLN', () => {
     }
 
     /* wyglad/audyt-E (E-06; E16 „stały kurs znika z aplikacji”, E33): Cennik i opłaty bez noty z kursem demo —
-       cennik według symboli w EUR (źródło), „KSH v2 od 28.09.2026 · SCX v1 od 28.09.2026” */
+       cennik według symboli w EUR (źródło), „KSH v2 od 11.09.2026 · SCX v1 od 11.09.2026” (przegląd 18.10: daty demo przed zegarem 23.09) */
     await navTo(page, 'options')
     await page.click('[data-opt-nav="rates"]')
     await expect(page.locator('[data-opt-screen="rates"] [data-fx-note]')).toHaveCount(0)
-    await expect(page.locator('[data-opt-screen="rates"] [data-rate-versions]')).toHaveText('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026')
+    await expect(page.locator('[data-opt-screen="rates"] [data-rate-versions]')).toHaveText('Cennik KSH v2 od 11.09.2026 · cennik SCX v1 od 11.09.2026')
     await expect(page.locator('[data-opt-screen="rates"] [data-rate="SG"]')).toContainText('6 900,00 EUR')
     expect(await page.locator('[data-opt-screen="rates"]').textContent()).not.toMatch(/4[,.]3900|186\/A\/NBP/)
 

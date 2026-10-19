@@ -66,6 +66,8 @@ async function openLoadKsh(page: Page, code: string) {
 async function setHhlOrder(page: Page, v: string) {
   await page.locator('.drawer button[aria-selected]').nth(0).click()
   const f = page.locator('.drawer [data-order="hhl"]')
+  /* P11 (e32, e41): numer jako tekst — pole po „Edytuj” / „Dodaj” */
+  if (await f.locator('[data-order-edit]').count()) await f.locator('[data-order-edit]').click()
   await f.locator('input').fill(v)
   await f.locator('button[type="submit"]').click()
 }
@@ -108,7 +110,8 @@ test.describe('M5 — numery zleceń', () => {
     await role(page, 'HHL')
     await nav(page, 'sched')
     let code = ''
-    for (const c of ['SG-29', 'SS-03', 'P-01', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
+    /* F7 #307 r2: SG-29 ma teraz „Brak dokumentów” (zezwolenie firmowe demo do 24.09) — „Gotowy” blokują braki; P-01 ma komplet */
+    for (const c of ['P-01', 'SG-29', 'SS-03', 'SG-09', 'SG-11', 'SG-18', 'SG-19', 'SG-20', 'T-10', 'SG-30', 'T-14', 'SS-04', 'SS-05', 'K-03', 'P-02', 'R-03']) {
       await openLoad(page, c)
       await statusTab(page)
       const btn = page.locator('.drawer [data-action="change-status"]')
@@ -117,9 +120,10 @@ test.describe('M5 — numery zleceń', () => {
     }
     expect(code, 'transport z przyciskiem Zmień status').not.toBe('')
     await page.locator('.drawer button[aria-selected]').nth(0).click()
-    await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(0)
-    /* wyglad/P7-a — E32: HHL wpisuje numer w polu „Numery zleceń” */
-    await expect(page.locator('.drawer [data-order="hhl"] input')).toHaveValue(/^HHL\/2026\//)
+    await expect(page.locator('.drawer [data-order="scx"] [data-order-edit]')).toHaveCount(0)
+    /* wyglad/P7-a — E32: HHL wpisuje numer w „Numerach zleceń” (P11: tekst z „Edytuj”) */
+    await expect(page.locator('.drawer [data-order="hhl"]')).toContainText(/HHL\/2026\//)
+    await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toHaveText('Edytuj')
     await setHhlOrder(page, '')
     await closeDrawer(page)
     const row0 = page.locator('tr[data-load]', { has: page.locator('span.code', { hasText: new RegExp(`^${code}`) }) })
@@ -143,8 +147,8 @@ test.describe('M5 — numery zleceń', () => {
     await role(page, 'SCX')
     await nav(page, 'sched')
     await openLoad(page, 'SG-11')
-    await expect(page.locator('.drawer [data-order="hhl"] input')).toHaveCount(0)
-    await expect(page.locator('.drawer [data-order="scx"] input')).toHaveCount(1)
+    await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-order="scx"] [data-order-edit]')).toHaveCount(1)
     await actionsTab(page)
     await expect(page.locator('.drawer input[name="loadWindowStart"], .drawer input[name="loadWindowEnd"], .drawer input[name="unloadWindowStart"]')).toHaveCount(0)
     /* AN2 po AWIZ-4 (13ace35): blok „okna planowe (odczyt)” z zakładki działań usunięty — okno załadunku przewoźnik widzi jako tekst w Przeglądzie */
@@ -216,7 +220,7 @@ test.describe('M6 — faktury v2', () => {
     await wz.locator('[data-w="submit"]').click()
     await expect(wz.locator('[data-w-errors]')).toContainText('Numer faktury jest wymagany')
     /* audyt-C C-09 (E4, decyzja 16.10 13:58 · 1): netto wpisuje wystawca, VAT 23 % i brutto liczy system (pola tylko do odczytu) */
-    await expect(wz.locator('[data-w-errors]')).toContainText('VAT 23 % i brutto liczy system')
+    await expect(wz.locator('[data-w-errors]')).toContainText('VAT 23% i brutto liczy system')
     await wz.locator('[data-w="number"]').fill('HHL/FV/2026/0950')
     await wz.locator('[data-w="net"]').fill('10000')
     await expect(wz.locator('[data-w="vat"]')).toHaveAttribute('readonly', '')
@@ -481,7 +485,7 @@ test.describe('G4 — kokpit: poziom i kurs tymczasowy (z M8)', () => {
     await role(page, 'HHL')
     await nav(page, 'dash')
     const tile = page.locator('.kpi[data-ck="margin"]')
-    await expect(tile.locator('.k')).toContainText(/Marża \((prognoza|realizacja|faktura)\)/)
+    await expect(tile.locator('.k')).toContainText(/Marża \((prognoza|dostarczone|faktura)\)/)
     const tag = page.locator('.kpi [data-kpi-tier]')
     await expect(tag).toHaveCount(1)
     const prov = Number(await tag.getAttribute('data-kpi-provisional'))
