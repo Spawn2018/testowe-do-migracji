@@ -3246,3 +3246,17 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Ten krok: `normalize-db-url.py` zdejmuje `export NAZWA=` (nazwa `[A-Z_]+` w logu), składa `postgresql://` z JDBC `user`/`password`, loguje `format: uri|jdbc|klucz=wartosc|inny`. Hasła i hosta nie wypisuje. Testy prefiksu, export z cudzysłowem i JDBC.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-prefiks-nazwa`, czeka na „F7: gotowe do scalenia”. Potem D-0005 (#313).
 
+## 2026-10-19 20:55 — #335 scalony; Automat zamknięty
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #335 „F7: gotowe do scalenia” od `Spawn2018` o 18:46Z, po ostatnim commicie `c2666625` (18:28Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `b4af5626`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- `deploy-main` `39306048061` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - prefiks NAZWA= zdjety: nie
+  - format: uri
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Pozycja **Automat wdrożenia** zamknięta. Następna: **D-0005** (#313, migracja 0234 przy rebase).
+
