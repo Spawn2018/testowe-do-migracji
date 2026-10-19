@@ -3272,3 +3272,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #313 po `fa2d537` — CI zielone (db 11 min, visual), F7 „niegotowe” (19:20Z). #317 konflikt z `main` (bez aktualnego „gotowe”). #259 bez F7.
 - Bieżąca pozycja **D-0005** (#313): poprawki F7 w `0234` — `DECISION_HOLD` w CHECK; admin bez sprawy `KSH_DATES_CHECK`; `load_status_set` przez `current_app_*` + korekta czasu osi; historia z oknami „przed”; testy `aud03`/`e25`/`i2`; PLAN: wyjątek D1, A6 P5 (dostawa przed załadunkiem). Czeka na zielone CI i ponowne F7.
 
+## 2026-10-19 21:40 — D-0005: F7 B2, korekta czasu dopiskiem
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `16b5f3f` — F7 „niegotowe” (B2, 19:33Z, po ostatnim commicie). Brama `db` i visual jeszcze szły na tym SHA; ten SHA nie idzie na produkcję (`session_replication_role` odrzucone na produkcji). #317 i #259 mają konflikt z `main`, bez aktualnego „gotowe”.
+- Bieżąca pozycja **D-0005** (#313): korekta czasu bieżącego statusu dopisuje `STATUS_*` z `korekta=true` (`zastepuje`, `poprzednio`, `przez`). Bez `set_config('session_replication_role')`. `actual_*` i `audit_log` bez zmian. SCX przy korekcie czasu — odmowa. Test `e25`. Czeka na zielone CI i ponowne F7.
+

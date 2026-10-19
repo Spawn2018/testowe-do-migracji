@@ -294,7 +294,8 @@ begin
     end if;
   end if;
 
-  -- P4: HHL_ADMIN poprawia czas bieżącego wpisu osi (każdy status), nie tylko DELIVERED.
+  -- P4: HHL_ADMIN koryguje czas bieżącego statusu dopiskiem (load_events jest niezmienne;
+  -- session_replication_role na produkcji nie jest dostępne dla postgres).
   if v_load.status is not distinct from v_new and v_role = 'HHL_ADMIN' then
     select id, occurred_at into v_ev_id, v_ev_old
       from load_events
@@ -305,9 +306,18 @@ begin
     v_old_load_at := v_load.actual_load_at;
     v_old_del_at := v_load.actual_delivery_at;
     if v_ev_id is not null and v_ev_old is distinct from v_when then
-      perform set_config('session_replication_role', 'replica', true);
-      update load_events set occurred_at = v_when where id = v_ev_id;
-      perform set_config('session_replication_role', 'origin', true);
+      insert into load_events (load_id, event_type, occurred_at, payload)
+      values (
+        p_load,
+        'STATUS_' || v_new::text,
+        v_when,
+        jsonb_build_object(
+          'korekta', true,
+          'zastepuje', v_ev_id,
+          'poprzednio', v_ev_old,
+          'przez', 'HHL_ADMIN'
+        )
+      );
     end if;
     perform set_config('tower.status_ctx', 'on', true);
     update loads
@@ -340,8 +350,18 @@ begin
     return;
   end if;
 
-  if v_load.status is not distinct from v_new
-     and (v_new is distinct from 'DELIVERED' or v_load.actual_delivery_at is not distinct from v_when) then
+  if v_load.status is not distinct from v_new then
+    select occurred_at into v_ev_old
+      from load_events
+     where load_id = p_load
+       and event_type = 'STATUS_' || v_new::text
+     order by occurred_at desc, id desc
+     limit 1;
+    if (v_ev_old is not null and v_when is distinct from v_ev_old)
+       or (v_new = 'DELIVERED' and v_load.actual_delivery_at is distinct from v_when) then
+      raise exception 'Korektę czasu statusu robi wyłącznie Administrator HHL'
+        using errcode = '42501';
+    end if;
     return;
   end if;
 
@@ -412,7 +432,7 @@ end $$;
 revoke all on function public.load_status_set(uuid, text, timestamptz, text) from public, anon;
 grant execute on function public.load_status_set(uuid, text, timestamptz, text) to authenticated;
 comment on function public.load_status_set(uuid, text, timestamptz, text) is
-  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu; current_app_*; korekta czasu osi; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
+  'A5 E25 + D-0005: HHL_ADMIN bez limitu czasu; current_app_*; korekta czasu osi dopiskiem; READY_TO_INVOICE=CMR; INVOICED=obie faktury.';
 
 create or replace function public.ksh_confirm_dates(
   p_load uuid,

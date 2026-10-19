@@ -52,7 +52,11 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
-val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" true commit
+val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (
+  (select actual_delivery_at = timestamptz '2026-10-07 10:19:54+00' from loads where id='$L2')
+  and (select count(*) from load_events where load_id='$L2' and event_type='STATUS_DELIVERED') = 2
+  and (select payload->>'korekta' = 'true' and occurred_at = timestamptz '2026-10-07 10:19:54+00' from load_events where load_id='$L2' and event_type='STATUS_DELIVERED' order by id desc limit 1)
+)::text" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
 # A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
@@ -96,7 +100,13 @@ val "HHL ręcznie INVOICED + actor" $HHL "select load_status_set('$L2','READY_TO
 val "HHL_ADMIN: czas wstecz dozwolony (0234)" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu'); select status::text from loads where id='$L2'" READY_TO_INVOICE commit
 val "HHL_ADMIN: przywróć INVOICED" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text from loads where id='$L2'" INVOICED commit
 # P4: ten sam status — korekta czasu wpisu osi + actual_delivery_at
-val "HHL_ADMIN: korekta czasu tego samego statusu (P4)" $HHL "select load_status_set('$L2','INVOICED',timestamptz '2026-10-08 09:00:00+00','korekta osi'); select (select occurred_at = timestamptz '2026-10-08 09:00:00+00' from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1)::text" true commit
+val "HHL_ADMIN: korekta czasu — nowy wpis, stary zostaje (P4)" $HHL "select load_status_set('$L2','INVOICED',timestamptz '2026-10-08 09:00:00+00','korekta osi'); select (
+  (select count(*) from load_events where load_id='$L2' and event_type='STATUS_INVOICED' and coalesce(payload->>'korekta','') <> 'true')
+  = (select count(*) - 1 from load_events where load_id='$L2' and event_type='STATUS_INVOICED')
+  and (select occurred_at = timestamptz '2026-10-08 09:00:00+00' and payload->>'korekta' = 'true' and payload->>'przez' = 'HHL_ADMIN'
+       from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1)
+)::text" true commit
+err "SCX: korekta czasu tego samego statusu" $SCX "select load_status_set('$L2','INVOICED',timestamptz '2026-10-08 08:00:00+00',null)" "Korektę czasu"
 sval "P4: audit time_only" "select (new_value->>'time_only') from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2' and new_value->>'time_only'='true' order by created_at desc limit 1" true
 val "HHL_ADMIN: czas w przyszłości dozwolony (0234)" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null); select status::text from loads where id='$L1'" AT_LOADING commit
 err "SCX: czas w przyszłości odrzucony" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now()+interval '3 hours',null)" "przyszłości"
