@@ -136,16 +136,43 @@ describe('normalize-db-url (F7 #326 P1)', () => {
     expect(out.log).not.toContain('pooler.supabase.com')
   })
 
-  it('przy formacie JDBC albo klucz=wartość podpowiada URI sesyjne, bez adresu (#330)', () => {
+  it('przy formacie klucz=wartość podpowiada URI sesyjne, bez adresu (#330)', () => {
     const hint = 'to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler'
-    const jdbc = 'jdbc:postgresql://host.example:5432/postgres?user=tajny&password=sekret'
     const kv = 'host=host.example port=5432 user=tajny password=sekret dbname=postgres'
-    for (const raw of [jdbc, kv]) {
-      const out = run(raw)
-      expect(out.log).toContain(hint)
-      expect(out.log).not.toContain('sekret')
-      expect(out.log).not.toContain('tajny')
-      expect(out.log).not.toContain('host.example')
+    const out = run(kv)
+    expect(out.log).toContain(hint)
+    expect(out.log).toContain('format: klucz=wartosc')
+    expect(out.log).toContain('prefiks NAZWA= zdjety: nie')
+    expect(out.log).not.toContain('sekret')
+    expect(out.log).not.toContain('tajny')
+    expect(out.log).not.toContain('host.example')
+  })
+
+  it('zdejmuje prefiks SUPABASE_DB_URL= i export z cudzysłowem (#331)', () => {
+    const bare = 'postgresql://uzytkownik:sekretprefiks@db.example:5432/postgres'
+    const assigned = run(`SUPABASE_DB_URL=${bare}`)
+    const exported = run(`export SUPABASE_DB_URL="${bare}"`)
+    expect(assigned.url).toBe(bare)
+    expect(exported.url).toBe(bare)
+    for (const out of [assigned, exported]) {
+      expect(out.log).toContain('prefiks NAZWA= zdjety: tak (SUPABASE_DB_URL)')
+      expect(out.log).toContain('format: uri')
+      expect(out.log).not.toContain('sekretprefiks')
+      expect(out.log).not.toContain('db.example')
     }
+  })
+
+  it('składa URI z JDBC user i password, log bez hasła i hosta (#331)', () => {
+    const out = run(
+      'jdbc:postgresql://db.example:5432/postgres?user=konto&password=sekretjdbc',
+    )
+    expect(out.url).toBe('postgresql://konto:sekretjdbc@db.example:5432/postgres')
+    expect(out.password).toBe('sekretjdbc')
+    expect(out.port).toBe('5432')
+    expect(out.log).toContain('format: jdbc')
+    expect(out.log).toContain('schemat postgres')
+    expect(out.log).not.toContain('to format JDBC')
+    expect(out.log).not.toContain('sekretjdbc')
+    expect(out.log).not.toContain('db.example')
   })
 })
