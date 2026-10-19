@@ -37,9 +37,12 @@ describe('spis wiadomości (E43 „Jeden ekran”)', () => {
 
   it('34 rodzaje = rodzaje powiadomień z notifyTemplates.ts (L53 + C3) — id wiadomości to nazwa rodzaju; A4 „planned”, dopóki wykonawca nie doda rodzaju', () => {
     const src = readFileSync('supabase/functions/_shared/notifyTemplates.ts', 'utf8');
-    const kinds = [...src.matchAll(/case '([A-Z_]+)':/g)].map((m) => m[1]).sort();
+    const kinds = [...src.matchAll(/case '([A-Z_]+)':/g)].map((m) => m[1])
+      .filter((k) => k !== 'DECISION_ESCALATED_BATCH')
+      .sort();
     const planned = MESSAGES.filter((m) => m.planned).map((m) => m.id);
-    /* wyglad/W-faktura-termin (D-20261017-2130-01): wykonawca dodaje INVOICE_OVERDUE w notifyTemplates.ts i usuwa `planned` */
+    /* wyglad/W-faktura-termin (D-20261017-2130-01): wykonawca dodaje INVOICE_OVERDUE w notifyTemplates.ts i usuwa `planned`. */
+    /* D-20261018-1610-01: temat zbiorczy jest tytułem z payloadu, nie pozycją listy P8. */
     expect(planned.every((id) => id === 'INVOICE_OVERDUE')).toBe(true);
     expect(kinds).toHaveLength(34 + 1 - planned.length);
     expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell && !m.planned).map((m) => m.id).sort()).toEqual(kinds);
