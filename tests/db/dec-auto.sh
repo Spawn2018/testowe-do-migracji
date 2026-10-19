@@ -256,7 +256,7 @@ val "FERRY_CANCELLED do SCX: kod, nie numer KSH" "select coalesce((
   cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
   where n.channel = 'EMAIL' and n.template = 'DECISION_OPEN' and o.kind = 'CARRIER'
     and n.load_id = '33333333-0000-0000-0000-00000000d940'
-), 'false')" t
+), 'false')" true
 $PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled)
   select '$P', 'D040-MAIL', 'D040 mail SCX', 'DELAY_DETECTED', 'true'::jsonb,
          '[{\"type\":\"email\",\"audience\":\"CARRIER\",\"critical\":true}]'::jsonb, true
@@ -284,7 +284,7 @@ val "workflow e-mail SCX bez numeru KSH i bez hex" "select coalesce((
   cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
   where n.channel = 'EMAIL' and n.template = 'WORKFLOW_ALERT' and o.kind = 'CARRIER'
     and n.load_id = '33333333-0000-0000-0000-00000000d940'
-), 'false')" t
+), 'false')" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
