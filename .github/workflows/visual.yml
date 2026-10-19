@@ -51,7 +51,14 @@ jobs:
             echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           # Commit scalenia PR z bazą: rodzic 1 = baza, więc diff HEAD^1..HEAD = cała zmiana PR względem bazy.
-          if ! files="$(git diff --name-only HEAD^1 HEAD)"; then
+          # F7 #327 D2: tylko commit scalenia (2 rodziców) — inaczej pełne testy.
+          if ! git rev-parse -q --verify HEAD^2 >/dev/null; then
+            echo "To nie commit scalenia PR — pełne testy."
+            echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # F7 #327 B1: --no-renames — przeniesienie src/x → docs/x pokazuje obie ścieżki (inaczej tylko docs/x);
+          # core.quotePath=false — polskie znaki w ścieżkach bez cudzysłowów i kodów ósemkowych.
+          if ! files="$(git -c core.quotePath=false diff --no-renames --name-only HEAD^1 HEAD)"; then
             echo "Nie da się ustalić zmienionych plików — pełne testy."
             echo "kod=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
@@ -92,7 +99,8 @@ jobs:
           PW_UPDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.update == 'true' && '1' || '' }}
         run: bash scripts/ci/fresh-smoke.sh
       - uses: actions/upload-artifact@v4
-        if: failure() || (github.event_name == 'workflow_dispatch' && inputs.update == 'true')
+        # F7 #327 P1: przy odświeżaniu migawek artefakt tylko z części zrzuty (inne części mają stare migawki)
+        if: failure() || (matrix.part == 'zrzuty' && github.event_name == 'workflow_dispatch' && inputs.update == 'true')
         with:
           # migawki po odświeżeniu leżą w artefakcie „visual-artifacts” (część zrzuty) — jak dotąd
           name: ${{ matrix.part == 'zrzuty' && 'visual-artifacts' || format('visual-artifacts-{0}', matrix.part) }}

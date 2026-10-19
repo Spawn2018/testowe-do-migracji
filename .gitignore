@@ -27,6 +27,7 @@ dist-ssr/
 
 # Playwright (C2.4)
 /test-results/
+/visual-artifacts*/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
