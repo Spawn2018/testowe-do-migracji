@@ -521,7 +521,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (state.kind !== 'ready') return;
     const locked = viewRoleForOrg(state.profile.org_code);
-    if (locked === 'HHL') return;
+    /* B5 (D-20261019-1525-01): Podgląd innych widoków ma wyłącznie Administrator HHL — inne konta HHL (HHL_OPS)
+       zostają w widoku HHL, także po zapamiętanym wcześniej Podglądzie */
+    if (locked === 'HHL' && state.profile.role === 'HHL_ADMIN') return;
     return useTowerStore.subscribe((s) => {
       if (locked && s.role !== locked) useTowerStore.getState().setRole(locked);
     });

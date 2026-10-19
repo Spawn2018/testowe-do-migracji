@@ -66,6 +66,20 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   await expect(page.locator('.drawer')).not.toContainText(/PL\/2026\/14\d\d|HHL\/2026\/12\d\d/);
 });
 
+test('B5 (D-20261019-1525-01): HHL_OPS — bez przełącznika widoku, Shift+R nic nie zmienia', async ({ page }) => {
+  psql(`update app_users set role = 'HHL_OPS' where email = 'hhl@bk5.local'`);
+  try {
+    await login(page, 'hhl@bk5.local');
+    await expect(page.locator('.roleswitch')).toHaveCount(0);
+    await page.locator('body').click();
+    await page.keyboard.press('Shift+R');
+    await expect(page.locator('[data-banner="preview"]')).toHaveCount(0);
+    await expect(page.locator('.roleswitch')).toHaveCount(0);
+  } finally {
+    psql(`update app_users set role = 'HHL_ADMIN' where email = 'hhl@bk5.local'`);
+  }
+});
+
 test('I-2j KSH: mapa — pozycja promu z bazy z czasem odczytu albo „brak źródła danych”', async ({ page }) => {
   psql(`delete from vessel_positions`);
   await login(page, 'ksh@bk5.local');
