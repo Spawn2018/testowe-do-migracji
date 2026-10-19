@@ -530,7 +530,7 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 
 ### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005) — W TOKU (`pakiet/automat-wdrozenia`)
 1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (commit pracy ciągłej); uzupełnij gdy trzeba.
-2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push` (`nglnnrmzmhusvxslousq`, `--skip-vault`) → Edge zmienione w tym pushu (`_shared` = wszystkie) → `vercel deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono z komunikatem „brak kluczy — wdrożenie ręczne”. Plik w tym PR.
+2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault` (najpierw `--dry-run`; port 6543 i błąd → „potrzebny adres sesyjny (port 5432)”; adresu nie logować) → Edge zmienione w tym pushu (`_shared` = wszystkie, `--project-ref nglnnrmzmhusvxslousq`) → `vercel@64.5.0 deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_URL`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono i `::warning::brak kluczy — wdrożenie ręczne`. Plik w tym PR (F7 #319: B1, B2, P1, P2).
 3. Instrukcja dla właściciela w opisie PR (Settings → Secrets and variables → Actions). Test po wpisaniu kluczy (`workflow_dispatch` albo następny push na `main`).
 
 ### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0232, gałąź `pakiet/hhl-admin-daty`)

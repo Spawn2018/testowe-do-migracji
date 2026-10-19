@@ -3154,3 +3154,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #313: brak F7, brama `db` czerwona, konflikt z `main`. Numer migracji przy rebase: 0234 (komentarz koordynatora 13:08).
 - Bieżąca pozycja: **Automat wdrożenia** — workflow `deploy-main.yml` na `pakiet/automat-wdrozenia`. Test kluczy czeka na wpis właściciela.
 
+## 2026-10-19 14:35 — #301 scalony; F7 #319 niegotowe poprawione
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #301 (`wyglad/W-bramy-P11`): F7 po `b79f4270`, unit i visual zielone, bez konfliktu i bez forka. Scalony `2f66310d`.
+- #317: F7 jest, CI zielone, **konflikt** z `main` — bez scalenia (czeka na wciągnięcie `main` i ponowne „gotowe”).
+- #319: przegląd 14:10 **niegotowe**. Poprawka w tym samym PR: sekret `SUPABASE_DB_URL`, `db push --db-url` z dry-run i komunikatem przy porcie 6543, `::warning::` przy braku kluczy, `vercel@64.5.0`. Czeka na ponowne „F7: gotowe do scalenia”.
+
