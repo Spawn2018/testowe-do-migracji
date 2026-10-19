@@ -72,9 +72,7 @@ test('SCX: nowe zezwolenie → zapis + powiązanie, „niezgodne”, baner; odł
   await expect(row).toContainText('długość ponad limit');
   expect(psql(`select p.authority||'/'||p.escort_required||'/'||p.max_height_m||'/'||(select count(*) from load_permits lp where lp.permit_id=p.id and lp.load_id='${LD}')
                ||'/'||(select count(*) from audit_log a where a.action='PERMIT_SAVE' and a.entity_id=p.id::text) from permits p where p.permit_no='${NO}'`)).toBe('GDDKiA Gdańsk/1/4.50/1/1');
-  await page.locator('.dtabs button').nth(0).click();
-  await expect(page.locator('[data-permit="mismatch"]')).toBeVisible();
-  await page.locator('.dtabs button').nth(2).click();
+  /* właściciel 19.10: Przegląd bez sekcji „Dokumenty” — niezgodność widać w wierszu zezwolenia (wyżej) */
   await page.locator(`[data-permit-unlink="${NO}"]`).click();
   await expect(page.locator('[data-permit-none]')).toBeVisible();
   expect(psql(`select count(*) from load_permits where load_id='${LD}'`)).toBe('0');

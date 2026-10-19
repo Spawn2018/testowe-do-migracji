@@ -32,10 +32,10 @@ val "HHL zmienia ciągnik"                                  $HHL "with u as (upd
 
 echo; echo "[aud03-2] Edycja dat przez KSH (ksh_confirm_dates)"
 err "przewoźnik nie wywoła edycji dat KSH"                 $SCX "select ksh_confirm_dates('$L1','2026-11-11','2026-11-15')" "KSH Użytkownik|wyłącznie KSH"
-val "HHL_ADMIN wywoła edycję dat (0232)"                   $HHL "select (ksh_confirm_dates('$L1','2026-11-11','2026-11-15')->>'changed')" true commit
+val "HHL_ADMIN wywoła edycję dat (0234)"                   $HHL "select (ksh_confirm_dates('$L1','2026-11-11','2026-11-15')->>'changed')" true commit
 err "rozładunek przed załadunkiem odrzucony (KSH)"         $KSH "select ksh_confirm_dates('$L1','2026-11-12','2026-11-11')" "przed datą załadunku"
 val "HHL_ADMIN: rozładunek przed załadunkiem → sprawa"     $HHL "select (ksh_confirm_dates('$L1','2026-11-20','2026-11-10')->>'dates_check')" true commit
-chk "sprawa KSH_DATES_CHECK otwarta" "$(Q "select count(*) from decisions where load_id='$L1' and type_code='KSH_DATES_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')")" 1
+sval "sprawa KSH_DATES_CHECK otwarta" "select count(*) from decisions where load_id='$L1' and type_code='KSH_DATES_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')" 1
 err "okno odwrócone odrzucone"                             $KSH "select ksh_confirm_dates('$L1',null,null,'2026-11-10 16:00+01','2026-11-10 08:00+01')" "Początek okna"
 val "KSH zmienia datę i godziny"                           $KSH "select (ksh_confirm_dates('$L1','2026-11-12','2026-11-16','2026-11-12 08:00+01','2026-11-12 14:00+01','2026-11-16 09:00+01','2026-11-16 13:00+01')->>'changed')" true commit
 sval "daty i okna zapisane"                                "select plan_load_date||'|'||plan_delivery_date||'|'||to_char(plan_load_from at time zone 'Europe/Warsaw','HH24:MI')||'|'||to_char(plan_delivery_to at time zone 'Europe/Warsaw','HH24:MI') from loads where id='$L1'" "2026-11-12|2026-11-16|08:00|13:00"
@@ -51,7 +51,7 @@ val "bez zmiany → changed=false, bez wpisu"                $KSH "select (ksh_c
 sval "nadal jeden wpis PLAN_DATES_CHANGED na L2"           "select count(*) from load_events where load_id='$L2' and event_type='PLAN_DATES_CHANGED' and payload->>'by'='KSH'" "1"
 sys "update loads set status='AT_LOADING', hhl_order_no='HHL/T/1', carrier_order_no='SCX/T/1' where id='$L2'" >/dev/null 2>&1
 err "po wjeździe na załadunek KSH nie zmienia dat"         $KSH "select ksh_confirm_dates('$L2','2026-11-12','2026-11-16')" "Po wjeździe na załadunek|wyłącznie HHL|Brak"
-val "HHL_ADMIN po załadunku zmienia daty (0232)"           $HHL "select (ksh_confirm_dates('$L2','2026-11-13','2026-11-17')->>'changed')" true commit
+val "HHL_ADMIN po załadunku zmienia daty (0234)"           $HHL "select (ksh_confirm_dates('$L2','2026-11-13','2026-11-17')->>'changed')" true commit
 val "anon nie wywoła RPC"                                  $KSH "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

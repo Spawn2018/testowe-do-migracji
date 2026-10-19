@@ -292,12 +292,15 @@ test.describe('Panel › Przegląd › Do zrobienia — aktualny stan, zwijana n
       for (const code of ['SG-09', 'SG-18']) {
         await openLoad(page, code);
         await expect(page.locator('.drawer [data-awiz-state]')).toHaveAttribute('data-awiz-state', 'ok');
+        /* właściciel 19.10, 15:27: na komputerze też zwinięte — rozwija się po kliknięciu */
+        const box = page.locator('.drawer details.po-todo[data-po="todo"]');
+        expect(await box.evaluate((d) => (d as HTMLDetailsElement).open)).toBe(false);
+        await box.locator('> summary').click();
         const items = page.locator('.drawer .po-todo-i b');
         await expect(items).toHaveCount(1);
         await expect(items.first()).toContainText('Brak zezwolenia');
         await expect(page.locator('.drawer [data-po-todo]')).not.toContainText(/Brak kierowcy|Awizacja/);
-        /* komputer bez zmian: sekcja otwarta z nagłówkiem */
-        await expect(page.locator('.drawer section.po-todo .po-todo-hd')).toContainText('Do zrobienia przy tym transporcie · 1');
+        await expect(box.locator('> summary')).toContainText('Do zrobienia przy tym transporcie · 1');
       }
     }
   });
@@ -320,10 +323,9 @@ test.describe('Panel › Przegląd › Do zrobienia — aktualny stan, zwijana n
       await expect(modal).toHaveCount(0);
       await page.click('#dtab-overview');
       await page.waitForSelector('aside.drawer [data-overview]');
-      await expect(page.locator('.drawer [data-permit]')).toHaveAttribute('data-permit', 'ok');
+      /* właściciel 19.10: sekcji „Dokumenty” w Przeglądzie nie ma — stan zezwolenia widać po zniknięciu sprawy */
       await expect(page.locator('.drawer [data-po-todo]')).toHaveCount(0);
       await openLoad(page, 'SG-07');
-      await expect(page.locator('.drawer [data-permit]')).toHaveAttribute('data-permit', 'mismatch');
       await expect(page.locator('.drawer [data-po-todo]')).toContainText('Zezwolenie nie obejmuje wymiarów zestawu');
     });
   }
@@ -345,10 +347,11 @@ test.describe('Panel › Przegląd › Do zrobienia — aktualny stan, zwijana n
     await expect(box.locator('.po-todo-i')).toHaveCount(3);
     await expect(box.locator('.po-todo-i').first()).toBeVisible();
     await expect(sum.locator('.po-todo-s')).toBeHidden();
-    /* pozostałe sekcje Przeglądu jak dotąd: 5 zwiniętych sekcji pod mapą */
-    await expect(page.locator('.drawer details.po-fold:not([data-po="todo"])')).toHaveCount(5);
-    /* „Do zrobienia” zostaje na górze, nad mapą */
-    const first = await page.locator('.drawer [data-overview] > *').first().getAttribute('data-po');
-    expect(first).toBe('todo');
+    /* pozostałe sekcje Przeglądu: 4 zwinięte (bez „Dokumentów” — właściciel 19.10) */
+    await expect(page.locator('.drawer details.po-fold:not([data-po="todo"])')).toHaveCount(4);
+    /* właściciel 19.10, 15:27: mapa na samej górze, „Do zrobienia” zaraz pod nią */
+    const kids = page.locator('.drawer [data-overview] > *');
+    expect(await kids.nth(0).getAttribute('data-load-map')).not.toBeNull();
+    expect(await kids.nth(1).getAttribute('data-po')).toBe('todo');
   });
 });

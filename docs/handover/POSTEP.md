@@ -3110,18 +3110,159 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Następna pozycja: **D-20261018-1740-01** (CMR tylko po rozładunku), potem D-0005, D-0930, A3…
 - D-20261019-0930-01 dopisany do planu (po D-0005, przed A3).
 
-## 2026-10-19 — D-20261018-1740-01 CMR tylko po rozładunku (0231) — NA PRODUKCJI
+## 2026-10-19 10:50 — D-1740 / #310 NA PRODUKCJI (0231) + poprawka #312 w kolejce
 
-- PR #310 merge `39116fbb` 10:50; `supabase db push` → **0231**; Vercel `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`; tower/makieta **200**.
-- SELECT: CMR = `AFTER_UNLOAD` / 24; OVERDUE przed dostawą = **0** (było 22); stany CMR: OK 2, OVERDUE 1 (po dostawie).
-- Testy i2 **548**. Przegląd miejsc — w wpisie „w toku” powyżej (bez dodatkowej poprawki poza 0231).
-- Następna: **D-0005** (0232), potem D-0930, A3…
+- Merge `39116fbb`; `db push` 0231; Vercel `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`; tower/makieta **200**.
+- SELECT: CMR = AFTER_UNLOAD/24; OVERDUE przed dostawą = 0 (było 22).
+- F7 po scaleniu: **B1** — `has_doc` zalicza CMR z załadunku → zgłoszenie **#312** (następna pozycja).
+- Przegląd miejsc (pkt 4): seed/status/CHECK OK; L3_DOC bez CMR; C17 po dostawie OK; **A5 `load_status_set` przy ręcznym READY_TO_INVOICE wymaga dowolnego CMR (nie „po dostawie”) — rozjazd → zadanie A4**; **`register_invoice` podpina wszystkie CMR/POD → zadanie A4**; API kierowcy bez kotwicy 2 h.
 
-## 2026-10-19 — D-20261019-0005-01 HHL_ADMIN daty (0232) — w toku
+## 2026-10-19 11:55 — praca ciągła (D-20261019-1050-01) — przekazanie do pętli
 
-- Gałąź `pakiet/hhl-admin-daty`, migracja **0232**.
-- `load_status_set`: HHL_ADMIN bez limitu przyszłości / wcześniejszego statusu; SCX nadal ograniczone.
-- `guard_load_update`: HHL_ADMIN omija G-20 przy datach planu; HHL_OPS / SCX bez zmian.
-- `ksh_confirm_dates`: HHL_ADMIN + KSH; admin po załadunku; dziwne daty → sprawa `KSH_DATES_CHECK` (typ dopisany).
-- Testy: e25 29→31, aud03 25→28, g20 bez zmiany liczby (err→val), i2 bez zmiany liczby.
+- Zasady §1–§4 w PLAN §1 pkt 14; `docs/handover/ZASADY_CIAGLEJ_PRACY.md`; dopisek w `dopiski/`.
+- Kolejka teraz: **#312 (B1 CMR)** → **Automat wdrożenia** (`deploy-main.yml`) → **D-0005 #313** (0232; stash lokalny `aud03-sval-d0005`) → **D-0930** → **A3–A5** (pn 23:59).
+- Skrzynka: #311 (1050) — zamknięte po wpisie; #312 — otwarte (następny krok pętli).
+- **Ten czat się zatrzymuje.** Dalej: pętla `cursor-agent` od `ZASADY_CIAGLEJ_PRACY.md`.
+
+## 2026-10-19 12:10 — #314 F7: autor polecenia + F7 po ostatnim commicie
+
+- F7 12:02: dwie poprawki bezpieczeństwa pętli (repo publiczne, `--force`).
+- `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
+- Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
+
+## 2026-10-19 12:45 — #314 SCALONE; start #312 (0233 has_doc CMR)
+
+- Merge #314 `1966a3dd` (docs praca ciągła + F7 bezpieczeństwo).
+- **#312:** migracja **0233** — `doc_requirements_status` has_doc CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); i2: CMR z załadunku → OVERDUE po dostawie −25 h → OK po ponownym wgraniu.
+- P1/P2 z F7 #310: **nie** „C17/A5 = CMR po dostawie potwierdzone” — to zadania **A4** (`load_status_set` ręczny READY + `register_invoice` bez CMR z załadunku/zastąpionych). Wpisy w PLAN §4 A4.
+
+## 2026-10-19 13:45 — #312 / 0233 NA PRODUKCJI
+
+- PR #316 scalony `b858b466` (F7 po `0ae0dae0`; unit, `db`, visual zielone).
+- Próba 0233 w transakcji z ROLLBACK: funkcja ma `uploaded_at >= actual_delivery_at` i `purged_at is null`; `schema_migrations` bez 0233; po wycofaniu ostatnia = 0231.
+- `db push`: najpierw 0233, drugi raz „Remote database is up to date”. Parytet MATCH YES (0001…0233).
+- SELECT: pliki CMR przed dostawą (niezastąpione, niepuste `actual_delivery_at`) = 0. CMR w `doc_requirements_status` dla STEGRA_BODEN: OK 2, OVERDUE 1.
+- Vercel z archiwum `main` `b858b466`: `dpl_4RhcGn9QTngr2PtWZZz2LztFCMmf` READY. `tower.log-mar.pl` i makieta **200**. Funkcji Edge nie zmieniano.
+- #317 (docs, F7, CI zielone) ma konflikt z `main` po #316 — bez scalenia.
+- Następna pozycja: **Automat wdrożenia z main** (D-20261019-1050-01).
+
+## 2026-10-19 14:05 — #318 scalony; start Automatu wdrożenia
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #318 (docs 0233 na produkcji): F7 po commicie `914541d5`, unit i visual zielone, bez forka. Scalony `d46c4b09` (`gh pr merge --merge`). Wdrożenia nie było — same dokumenty.
+- #317 nadal z konfliktem. Komentarz F7 przy #318: wciągnąć `main` w gałąź #317 i czekać na ponowne „gotowe”. Nie w tym kroku.
+- #313: brak F7, brama `db` czerwona, konflikt z `main`. Numer migracji przy rebase: 0234 (komentarz koordynatora 13:08).
+- Bieżąca pozycja: **Automat wdrożenia** — workflow `deploy-main.yml` na `pakiet/automat-wdrozenia`. Test kluczy czeka na wpis właściciela.
+
+## 2026-10-19 14:35 — #301 scalony; F7 #319 niegotowe poprawione
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #301 (`wyglad/W-bramy-P11`): F7 po `b79f4270`, unit i visual zielone, bez konfliktu i bez forka. Scalony `2f66310d`.
+- #317: F7 jest, CI zielone, **konflikt** z `main` — bez scalenia (czeka na wciągnięcie `main` i ponowne „gotowe”).
+- #319: przegląd 14:10 **niegotowe**. Poprawka w tym samym PR: sekret `SUPABASE_DB_URL`, `db push --db-url` z dry-run i komunikatem przy porcie 6543, `::warning::` przy braku kluczy, `vercel@64.5.0`. Czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 15:10 — #320 w planie (plik testowy SharePoint); automat czeka na F7
+
+- Skrzynka: #320 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1420-01. Wpisane: PLAN §4 A6, §3 kolejność, §5 W13, §6, §8, P7, II-10 w `PLAN_OTWARTE_08_10.md`, dopisek `docs/handover/dopiski/D-20261019-1420-01.md`. Zgłoszenie otwarte do zrobienia A6.
+- Adresu pliku testowego nie ma w repozytorium. Właściciel dopisuje `SHAREPOINT_TEST_FILE_URL` w `.env.local`.
+- Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 15:55 — #319 scalony; wdrożenie padło na adresie bazy
+
+- Skrzynka: #320 już w planie (A6, otwarte). #322 (D-20261019-1515-01, B9 — DeepL zostaje) i #323 (D-20261019-1525-01, Podgląd tylko HHL_ADMIN) wpisane do PLAN §4, §8, rejestru 8A i `dopiski/`. Bez etykiety `pilne` — bieżącej pozycji nie przerywają.
+- PR #319: F7 `Spawn2018` o 13:13:45Z, po ostatnim commicie `39539f9b` (13:12:16Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `9a3c7b26`.
+- `deploy-main` na tym SHA: krok Klucze widzi sekrety; krok Baza w ~1 s: „Connecting to remote database” i `host=/var/run/postgresql user=runner database=runner`. Edge i Vercel pominięte. Adres nie został użyty jako URL (CLI 2.121 przy haśle z „=” i obcym prefiksie, np. cudzysłów, wpada na gniazdo).
+- Poprawka: `scripts/ci/normalize-db-url.py` — zdejmuje cudzysłów i BOM, bierze pierwszą linię `postgres://`, loguje tylko długość, schemat i czy jest użytkownik, host, baza oraz port. Gałąź `pakiet/automat-adres-bazy`. Sekretu nie zmieniam.
+- #321: przegląd F7 z poprawkami, bez „F7: gotowe do scalenia”. #317: konflikt z `main`. Bez scalenia.
+
+## 2026-10-19 16:10 — #321 scalony; #324 w planie (A10)
+
+- Skrzynka: #320, #322 i #323 już w planie, otwarte do zrobienia pozycji. #324 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1540-01. Wpisane: PLAN §3 (kolejność i punkt wt 20.10), §4 A10 po A5, dopiski przy A9 i A5, §8, `docs/handover/dopiski/D-20261019-1540-01.md`. Zgłoszenie otwarte do zrobienia A10. Bieżącej pozycji nie przerywa.
+- PR #321 (`wyglad/W-bramy-reguly`): F7 `Spawn2018` o 13:32Z, po ostatnim commicie `8be78fd` (12:50Z). Unit i visual zielone, `mergeable` CLEAN, bez forka. Scalony `6b294a50`.
+- #326: unit zielony, visual w toku na `710c9c13`, bez F7 — bez scalenia. #317: konflikt z `main` (F7 sprzed konfliktu). #325: visual w toku, bez F7. #313: `db` czerwone, bez F7.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** — poprawka adresu bazy, PR #326.
+
+## 2026-10-19 16:55 — #326 niegotowe: hasło w adresie kodowane procentowo
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #326 F7 z 14:11Z to „niegotowe” (P1), sprzed commita `d7f661b1`. Unit i visual na `d7f661b1` zielone — bez scalenia. #325 bez F7. #317 F7 jest, konflikt z `main`. #313 bez F7, `db` czerwone.
+- P1: `encode_password` w `scripts/ci/normalize-db-url.py` — znaki specjalne w haśle kodowane procentowo, hasło już zakodowane bez zmian. Log: `haslo zakodowane: tak/nie`, bez adresu. Test `tests/normalize-db-url.test.ts`: 3 przypadki, lokalnie 3/3.
+- D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 18:35 — #330: wdrożenie ręczne z main, sekret Actions nadal zły
+
+- Skrzynka: #330 (`Spawn2018`, `dla-cursora`, bez `pilne`) — sekret `SUPABASE_DB_URL` w Actions nie zaczyna się od `postgresql://`. Wpisane: PLAN §4 Automat pkt 4, §8. Zgłoszenie zostaje otwarte do poprawki sekretu i przebiegu `deploy-main`.
+- Scalanie: #327 bez „F7: gotowe do scalenia” (raport prób po `2d3ab1b`). #317 F7 z 13:08 jest sprzed wciągnięcia `main` (`55e22989`); visual w toku — bez scalenia. #313 bez F7, `db` czerwone. #259 bez F7.
+- Ręcznie z `main` `047ce7b5` (adres sesyjny z `.env.local`, port 5432, pooler): dry-run i `db push` — „Remote database is up to date”, 0 nowych migracji. Funkcje Edge bez zmian od ostatniego wdrożenia `b858b466`.
+- Vercel produkcja: `dpl_FgAn6VsfF1rqoGeyrmbW91jvLary` READY. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` **200**.
+- Log `normalize-db-url.py`: przy `jdbc:` albo `host=` jedna linia „to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler”, bez adresu.
+- Po wpisaniu URI przez właściciela: `workflow_dispatch` `deploy-main` i w POSTEP linia „Adres bazy: …”.
+- Dalej w kolejce, po domknięciu Automatu: **D-0005 #313** (numer migracji 0234 przy rebase).
+
+## 2026-10-19 19:10 — deploy-main 39287813163: host bezpośredni odrzucony; #327 scalony
+
+- Skrzynka: #331 (`pilne`, odpowiedź koordynatora 18:40 — sekret od nowa, `postgresql://`). Jedno `workflow_dispatch` na `main` `047ce7b5`, przebieg `39287813163`. Drugiego nie uruchamiam.
+- Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie.
+- Dry-run: połączenie odrzucone (`ECONNREFUSED`) na hoście bezpośrednim `db.<projekt>.supabase.co` port 5432, zanim powstała lista migracji. To nie jest pula sesyjna. Edge i Vercel pominięte.
+- Linie diagnostyczne w #331. Zabezpieczenie prefiksu `NAZWA=` / JDBC zostaje po pierwszym zielonym `deploy-main`.
+- Scalenie: #327 F7 `Spawn2018` 16:46Z, po commicie `4bdd5b1` (16:27Z). Unit i visual (części) zielone, bez konfliktu, bez forka. Scalony `18344d57`.
+- Gałęzie `proba/ci-dokumenty` i `proba/ci-czerwony` już nie istnieją.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #332 (log JDBC), czeka na „F7: gotowe do scalenia”.
+
+## 2026-10-19 19:20 — #331: link i pula IPv4 zamiast hosta bezpośredniego
+
+- Skrzynka: #331 (`pilne`) — komentarz koordynatora 19:05. Host `db.<projekt>.supabase.co:5432` jest tylko IPv6; przebiegi `39287813163` i `39291759466` dostały `ECONNREFUSED`. Właściciel nic nie wpisuje.
+- Scalanie: #332 ma „F7: gotowe” sprzed commitów `8450ccfa` i `69355b5b`, a `visual` jeszcze trwa — bez scalenia i bez pusha na tę gałąź. #317 i #313 mają konflikt z `main`, bez aktualnego „gotowe”. #259 konflikt, bez F7.
+- Ten krok: `normalize-db-url.py` zapisuje zdekodowane hasło (plik 600) i tryb `pooler` albo `link`. `deploy-main.yml`: pula w adresie → `--db-url`; inaczej `supabase link --project-ref` i `db push --linked`. Log bez hasła i bez hosta. Test: hasło `a@b#c/d` w pliku, log bez hasła.
+- Po scaleniu przebieg `deploy-main` sam z pusha na `main`. Wynik link i dry-run — w następnym wpisie. Do tego czasu wdrożenie ręczne (#330).
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-pooler`, czeka na „F7: gotowe do scalenia”.
+
+## 2026-10-19 19:45 — #332 scalony; #333 wciąga main
+
+- Skrzynka bez nowych zgłoszeń. #331 zostaje otwarte do pierwszego zielonego `deploy-main`.
+- #332: „F7: gotowe do scalenia” od `Spawn2018` o 17:28Z, po ostatnim commicie `69355b5` (17:10Z). Unit i visual zielone, bez forka. Scalony `8726c3c7`.
+- #333 na `739fc577`: unit i visual zielone, ale po scaleniu #332 konflikt z `main`. Ostatnie F7 to „niegotowe” sprzed poprawki YAML — bez scalenia.
+- Ten krok: wciągnięty `main`. Zostają testy link/redact i podpowiedź JDBC. Poprawka YAML (`redact.py`) bez zmian.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #333, czeka na ponowne „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-19 20:20 — pierwszy zielony deploy-main (#333)
+
+- Skrzynka bez nowych zgłoszeń. #331 (`pilne`) i #330 zostają do zamknięcia po tym wpisie.
+- #333: „F7: gotowe do scalenia” od `Spawn2018` o 18:09Z, po ostatnim commicie `b8f27b5d` (17:51Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `97c88a19`.
+- `deploy-main` `39300935077` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `D8dghXG3wndN4VKWX3RdGcpJerrj` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Następny krok tej pozycji: zabezpieczenie prefiksu `NAZWA=` / JDBC w `normalize-db-url.py` (komentarz #331, 18:40). Potem D-0005 (#313).
+
+## 2026-10-19 20:30 — #334 scalony; prefiks NAZWA= i JDBC
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #334 „F7: gotowe do scalenia” od `Spawn2018` o 18:21Z, po ostatnim commicie `47732685` (18:19Z). Unit i visual zielone, `MERGEABLE`, bez forka. Scalony `6aafacbe`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- Ten krok: `normalize-db-url.py` zdejmuje `export NAZWA=` (nazwa `[A-Z_]+` w logu), składa `postgresql://` z JDBC `user`/`password`, loguje `format: uri|jdbc|klucz=wartosc|inny`. Hasła i hosta nie wypisuje. Testy prefiksu, export z cudzysłowem i JDBC.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-prefiks-nazwa`, czeka na „F7: gotowe do scalenia”. Potem D-0005 (#313).
+
+## 2026-10-19 20:55 — #335 scalony; Automat zamknięty
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #335 „F7: gotowe do scalenia” od `Spawn2018` o 18:46Z, po ostatnim commicie `c2666625` (18:28Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `b4af5626`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- `deploy-main` `39306048061` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - prefiks NAZWA= zdjety: nie
+  - format: uri
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Pozycja **Automat wdrożenia** zamknięta. Następna: **D-0005** (#313, migracja 0234 przy rebase).
+
+## 2026-10-19 21:05 — #336 scalony; D-0005: migracja 0234 i czerwone testy
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #336 „F7: gotowe do scalenia” od `Spawn2018` o 18:58Z, po ostatnim commicie `72b6afe` (18:55Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `fd2ca8c2`. #317 ma konflikt z `main` (F7 sprzed konfliktu). #313 i #259 bez aktualnego „gotowe”.
+- Bieżąca pozycja: **D-0005** (#313). `main` wciągnięty. Plik migracji `0234_hhl_admin_daty.sql` (0233 jest na produkcji). `aud03`: sprawa `KSH_DATES_CHECK` przez `sval`. `dec2`: katalog 19 typów. Brama `db` po tym pushu.
 

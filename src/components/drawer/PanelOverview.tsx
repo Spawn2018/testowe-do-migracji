@@ -1,15 +1,17 @@
 /**
  * wyglad/P7-a — panel transportu › „Przegląd” (E32, img/e32-after; decyzje 08.10 12:14, 09.10 12:33 i 13:09).
- * Kolejność dla wszystkich firm: „Do zrobienia przy tym transporcie” (lista E7 z firmą i terminem, przycisk tylko dla firmy,
- * która to robi; KSH — linia stanu), mapa, Plan i ETA (dzień tygodnia, „godzina nie podana”, pochodzenie dat, blok ETA E15),
+ * Kolejność dla wszystkich firm (właściciel 19.10.2026, 15:27): mapa na samej górze, pod nią „Czy dostarczono?” (jeśli jest)
+ * i zwinięte „Do zrobienia przy tym transporcie” (lista E7 z firmą i terminem, przycisk tylko dla firmy, która to robi;
+ * KSH — linia stanu), Plan i ETA (dzień tygodnia, „godzina nie podana”, pochodzenie dat, blok ETA E15),
  * Awizacja albo Kierowcy i zestaw (E6: odcinki, „Zadzwoń”, wyróżniony odcinek; naczepa, link śledzenia, rejs; piloci przy
- * „PL + SE”), Ładunek i zestaw (z tabeli właściciela, D-83), Numery zleceń (E41), Dokumenty w skrócie (E31), PDF.
+ * „PL + SE”), Ładunek i zestaw (z tabeli właściciela, D-83), Numery zleceń (E41). Bez „Dokumentów” i „PDF transportu (+mapa)”
+ * (właściciel 19.10) — dokumenty w zakładce Dokumenty.
  * Znika: „Kontrola trasy”, „Przeszkody”, profil trasy (E17), czerwony baner zezwolenia, „potwierdził KSH” bez osoby.
- * Telefon: Do zrobienia na górze, mapa 150 px, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
+ * Telefon: mapa 220 px na górze, sekcje zwinięte z linią stanu, „Zadzwoń” 44 px.
  * Zapis jak dziś (numer SCX, okno Awizacja, okno dat KSH); nowe dane — `p7Source.ts`.
  */
 import { READY_PREP } from '../../lib/readyGaps';
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Document, Load, LoadEvent, Locale, OrgKind, Risk, Sailing } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, fmtNum } from '../../i18n/messages';
@@ -27,10 +29,6 @@ import { visibleDriverPhone } from '../../lib/permissions';
 import { editableOrderSide } from '../../lib/orderNumbers';
 import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
-import { getDocReqCache } from '../../lib/docReqCache';
-import { cmrAfterDelivery, docStatusRows } from '../../lib/docRequirements';
-import { reqVisible } from '../../lib/p5Docs';
-import { docRequirementsStart, policiesOf } from '../../lib/p5Source';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { EtaBlock } from './EtaBlock';
 import type { EtaWx } from '../../lib/e49Wx';
@@ -65,7 +63,8 @@ interface Props {
   onAwiz: () => void;
   onKshDates: () => void;
   onTab: (tab: 'docs' | 'pricing' | 'timeline') => void;
-  onPdf: () => void;
+  /** Pilna sprawa nad treścią („czy dostarczono?”) — pod mapą (właściciel 19.10, 15:27). */
+  alertNode?: ReactNode;
 }
 
 const dim = (n: number | null | undefined, locale: Locale) => (n == null ? '—' : fmtNum(locale, n, 2));
@@ -268,48 +267,16 @@ export function PanelOverview(p: Props) {
   const orderSide = editableOrderSide(role);
   const curSailing = sailings.find((x) => x.id === load.sailingId);
 
-  /* ---------- Numery i dokumenty (E32 pkt 8, E41, E31) — przed „Do zrobienia”: ten sam stan zezwoleń i polisy ---------- */
+  /* ---------- Numery (E32 pkt 8, E41) i stan zezwolenia dla „Do zrobienia” (demo) ---------- */
+  /* właściciel 19.10, 15:27: sekcja „Dokumenty” i „PDF transportu (+mapa)” usunięte z Przeglądu — dokumenty w zakładce Dokumenty */
   const hhlNo = (load.hhlOrderNo ?? '').trim();
   const scxNo = (load.carrierOrderNo ?? '').trim();
-  const cached = getDocReqCache();
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
-  const reqs = cached?.reqs ?? docRequirementsStart();
-  /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) */
-  const rows = cmrAfterDelivery(cached ? cached.status.filter((x) => x.loadId === load.id) : prod ? [] : docStatusRows([load], [...docs], reqs, Date.parse(nowIso)), () => load.status);
   const doc = (c: string) => docs.find((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
-  const row = (c: string) => rows.find((x) => x.category === c);
   /* E31 (G-01c, L30): „Firma” — jedno zezwolenie firmowe wystarcza; „Trasa” — PL i SE przy transporcie */
   const permitFirm = spec?.permit === 'FIRMA';
   const permitState: 'mismatch' | 'ok' | 'missing' = load.permitFits === false || docs.some((d) => d.category.startsWith('PERMIT') && d.status === 'MISMATCH')
     ? 'mismatch' : (permitFirm ? !!(doc('PERMIT_PL') ?? doc('PERMIT_SE')) : !!(doc('PERMIT_PL') && doc('PERMIT_SE'))) ? 'ok' : 'missing';
-  const permitRows = [row('PERMIT_PL'), row('PERMIT_SE')].filter((x): x is NonNullable<typeof x> => !!x && x.state !== 'OK');
-  const permitRow = permitRows.find((x) => x.state === 'OVERDUE')
-    ?? [...permitRows].sort((a, b) => (a.dueAt ?? '9999').localeCompare(b.dueAt ?? '9999'))[0];
-  const permitText = permitState === 'mismatch' ? pt(locale, 'p7_doc_mismatch')
-    : permitState === 'ok' ? pt(locale, 'p7_doc_ok')
-      : permitRow?.state === 'OVERDUE' ? pt(locale, 'p7_doc_over')
-        : permitRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(permitRow.dueAt) }) : pt(locale, 'p7_doc_missing');
-  const cmrDoc = doc('CMR');
-  const cmrRow = row('CMR');
-  const cmrState: 'ok' | 'over' | 'wait' = cmrDoc ? 'ok' : cmrRow?.state === 'OVERDUE' ? 'over' : 'wait';
-  const cmrText = cmrState === 'ok' ? pt(locale, 'p7_doc_ok') : cmrState === 'over' ? pt(locale, 'p7_doc_over')
-    : cmrRow?.dueAt ? ptp(locale, 'p7_doc_due', { date: dmHm(cmrRow.dueAt) }) : pt(locale, 'p7_doc_cmr_after_unload');
-  const policies = policiesOf();
-  const policyRow = (key: 'INSURANCE' | 'OCS') => {
-    if (!reqVisible(key, role)) return null;
-    const org = key === 'INSURANCE' ? 'SCX' : 'HHL';
-    const pv = policies?.find((x) => x.org === org) ?? null;
-    const fromDb = key === 'INSURANCE' && p.insAuto?.covered && p.insAuto.policyNo ? p.insAuto : null;
-    const ok = pv ? ptp(locale, 'p7_doc_policy', { number: pv.number, date: dmy(pv.validTo) })
-      : fromDb ? ptp(locale, 'p7_doc_policy', { number: fromDb.policyNo!, date: fromDb.validUntil ? dmy(fromDb.validUntil) : '—' }) : null;
-    /* ta sama reguła co zakładka Dokumenty (PanelDocs): polisa HHL bez danych z bazy — „—”, nie „brak”; SCX — dopóki nie wczytano */
-    const unknown = !ok && policies == null && (key === 'OCS' || !p.insAuto);
-    return { key, ok, unknown };
-  };
-  /* E32 (img/e32-after „Dokumenty”): w skrócie tylko polisa przewoźnika; polisa HHL — w zakładce Dokumenty (E31) */
-  const pols = [policyRow('INSURANCE')].filter((x): x is NonNullable<ReturnType<typeof policyRow>> => !!x);
-  const docMiss = (permitState !== 'ok' ? 1 : 0) + (cmrState === 'over' ? 1 : 0) + pols.filter((x) => !x.ok && !x.unknown).length;
-
 
   /* ---------- Do zrobienia przy tym transporcie (E32 pkt 2; lista E7) ---------- */
   /* bez useMemo: zależy też od stanu zezwolenia liczonego wyżej przy każdym rysowaniu; jeden transport — koszt pomijalny */
@@ -317,7 +284,7 @@ export function PanelOverview(p: Props) {
     if (role === 'KSH') return null;
     /* właściciel 18.10, 11:35: bez spraw już zrobionych (dane wpisane w panelu, transport dostarczony) — `todoRules.todoDoneOnLoad` */
     const own = visibleTodoRisks(role, openTodoRisks(risks.filter((x) => x.loadId === load.id), loads))
-      /* demo: „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy sekcja „Dokumenty” pokazuje zezwolenie „jest”.
+      /* demo: „Brak zezwolenia” / „niezgodne z zestawem” znika, gdy zezwolenie jest wgrane i pasuje (`permitState`).
          Produkcja: alarm braku dokumentu (`rk_res_docs`) zamyka baza — dopiero przy zezwoleniach zarejestrowanych
          w `load_permits` (0143 `l3_scan`), nie przy samym wgranym pliku; widok go nie chowa (F7 #300 B1) */
       .filter((x) => !(!prod && permitState === 'ok' && (x.titleKey === 'rk_seed_permit' || PERMIT_TODO.test(x.title))));
@@ -336,9 +303,15 @@ export function PanelOverview(p: Props) {
   const goHhlNo = () => {
     const fold = document.querySelector<HTMLDetailsElement>('.drawer details[data-po="numbers"]');
     if (fold) fold.open = true;
-    const el = document.querySelector<HTMLInputElement>('.drawer [data-order="hhl"] input');
-    el?.scrollIntoView({ block: 'center' });
-    el?.focus();
+    /* F7 #325 D1: bez numeru jest tylko „Dodaj” — najpierw otwórz pole, potem przewiń i ustaw kursor */
+    if (!document.querySelector('.drawer [data-order="hhl"] input')) {
+      document.querySelector<HTMLButtonElement>('.drawer [data-order="hhl"] [data-order-edit]')?.click();
+    }
+    window.setTimeout(() => {
+      const el = document.querySelector<HTMLInputElement>('.drawer [data-order="hhl"] input');
+      el?.scrollIntoView({ block: 'center' });
+      el?.focus();
+    }, 0);
   };
   const action = (i: TodoIssue): ReactNode => {
     if (i.owner !== role) return <span className="po-chip">{ORG_SHORT[i.owner]}</span>;
@@ -374,33 +347,24 @@ export function PanelOverview(p: Props) {
       })}
     </ul>
   ) : null;
-  /* właściciel 18.10, 11:35 i 11:46: na telefonie zwija się tylko „Do zrobienia” (jak sekcje niżej) — zwinięte, w linii stanu
-     pierwsza sprawa i liczba pozostałych; czerwony lub bursztynowy pasek zostaje. Komputer bez zmian. */
+  /* właściciel 18.10, 11:35 i 11:46: „Do zrobienia” zwinięte, w linii stanu pierwsza sprawa i liczba pozostałych;
+     czerwony lub bursztynowy pasek zostaje. Właściciel 19.10, 15:27: tak samo na komputerze — pod mapą, zwinięte,
+     rozwija się po kliknięciu. */
   const first = card && ctx ? issueTexts(card.issues[0], ctx).name : '';
   const todoBox = card && ctx ? (
-    phone ? (
-      <details className={`po-todo po-fold${red ? ' is-red' : ''}`} data-po="todo" data-po-todo={card.issues.length}>
-        <summary>
-          <span className="po-fold-t">
-            <b>{ptp(locale, 'p7_todo_h_phone', { n: card.issues.length })}</b>
-            <span className="po-todo-s" data-content>
-              {first}{card.issues.length > 1 ? ` · ${ptn(locale, 'p7_todo_more', card.issues.length - 1)}` : ''}
-            </span>
+    <details className={`po-todo po-fold${red ? ' is-red' : ''}`} data-po="todo" data-po-todo={card.issues.length}>
+      <summary>
+        <span className="po-fold-t">
+          <b>{phone ? ptp(locale, 'p7_todo_h_phone', { n: card.issues.length }) : ptp(locale, 'p7_todo_h', { n: card.issues.length })}</b>
+          <span className="po-todo-s" data-content>
+            {first}{card.issues.length > 1 ? ` · ${ptn(locale, 'p7_todo_more', card.issues.length - 1)}` : ''}
           </span>
-          {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
-          <span className="po-fold-i" aria-hidden="true">▾</span>
-        </summary>
-        {todoItems}
-      </details>
-    ) : (
-      <section className={`po-todo${red ? ' is-red' : ''}`} data-po-todo={card.issues.length} aria-label={ptp(locale, 'p7_todo_h', { n: card.issues.length })}>
-        <div className="po-todo-hd">
-          <b>{ptp(locale, 'p7_todo_h', { n: card.issues.length })}</b>
-          {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
-        </div>
-        {todoItems}
-      </section>
-    )
+        </span>
+        {today ? <span className="po-today">{pt(locale, 'p7_todo_today')}</span> : null}
+        <span className="po-fold-i" aria-hidden="true">▾</span>
+      </summary>
+      {todoItems}
+    </details>
   ) : null;
   const kshLine = role === 'KSH' ? (
     <p className={`po-kshline is-${awiz}`} data-po-ksh-line={awiz}>
@@ -499,10 +463,11 @@ export function PanelOverview(p: Props) {
 
   return (
     <div className="po" data-overview>
+      {/* właściciel 19.10, 15:27: mapa na samej górze Przeglądu, pod nią pilna sprawa i „Do zrobienia” */}
+      <div className={`po-map${phone ? ' is-phone' : ''}`} data-load-map>{p.mapNode}</div>
+      {p.alertNode}
       {todoBox}
       {kshLine}
-
-      <div className={`po-map${phone ? ' is-phone' : ''}`} data-load-map>{p.mapNode}</div>
 
       <Sec
         id="plan"
@@ -664,31 +629,6 @@ export function PanelOverview(p: Props) {
         </Sec>
       ) : null}
 
-      <Sec
-        id="docs"
-        phone={phone}
-        title={pt(locale, 'p7_docs_h')}
-        status={phone ? <> {docMiss ? <span className="po-miss">{ptn(locale, 'p7_docs_n', docMiss)}</span> : <span className="po-ok">{pt(locale, 'p7_docs_ok')}</span>}</> : null}
-        right={!phone ? <button type="button" className="linkbtn po-go" data-po-go="docs" onClick={() => p.onTab('docs')}>{pt(locale, 'p7_docs_go')} →</button> : null}
-      >
-        <dl className="po-kv">
-          <dt>{pt(locale, permitFirm ? 'p7_doc_permit_firm' : 'p7_doc_permit')}</dt>
-          <dd data-permit={permitState}><span className={permitState === 'ok' ? 'po-ok' : 'po-miss'}>{permitText}</span></dd>
-          <dt>{pt(locale, 'p7_doc_cmr_signed')}</dt>
-          <dd data-po-cmr={cmrState}><span className={cmrState === 'ok' ? 'po-ok' : cmrState === 'over' ? 'po-miss' : ''}>{cmrText}</span></dd>
-          {pols.map((x) => (
-            <Fragment key={x.key}>
-              <dt>{pt(locale, `p7_doc_policy_${x.key}`)}</dt>
-              <dd data-po-policy={x.key}>{x.ok ? <span className="po-ok" data-content>{x.ok}</span> : x.unknown ? <span className="po-muted">{pt(locale, 'p7_doc_policy_unknown')}</span> : <span className="po-miss">{pt(locale, 'p7_doc_policy_none')}</span>}</dd>
-            </Fragment>
-          ))}
-        </dl>
-        {phone ? <button type="button" className="btn ghost po-go-ph" data-po-go="docs" onClick={() => p.onTab('docs')}>{pt(locale, 'p7_docs_go')} →</button> : null}
-      </Sec>
-
-      <div className="po-pdf">
-        <button type="button" className="btn ghost" data-action="export-load-pdf-map" onClick={p.onPdf}>{t(locale, 'h7_pdf_btn')}</button>
-      </div>
       {p.ratingNode}
     </div>
   );

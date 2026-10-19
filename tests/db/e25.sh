@@ -91,9 +91,9 @@ sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount,
      on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
 sval "C17 obie faktury → INVOICED STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='INVOICED') from loads where id='$L2'" "INVOICED|1"
 val "HHL ręcznie INVOICED + actor" $HHL "select load_status_set('$L2','READY_TO_INVOICE',now(),'cofka e25'); select load_status_set('$L2','INVOICED',now(),null); select (payload->>'actor' like '% // %')::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" true commit
-val "HHL_ADMIN: czas wstecz dozwolony (0232)" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu'); select status::text from loads where id='$L2'" READY_TO_INVOICE commit
+val "HHL_ADMIN: czas wstecz dozwolony (0234)" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu'); select status::text from loads where id='$L2'" READY_TO_INVOICE commit
 val "HHL_ADMIN: przywróć INVOICED" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text from loads where id='$L2'" INVOICED commit
-val "HHL_ADMIN: czas w przyszłości dozwolony (0232)" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null); select status::text from loads where id='$L1'" AT_LOADING commit
+val "HHL_ADMIN: czas w przyszłości dozwolony (0234)" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null); select status::text from loads where id='$L1'" AT_LOADING commit
 err "SCX: czas w przyszłości odrzucony" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now()+interval '3 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"

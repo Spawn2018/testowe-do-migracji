@@ -28,7 +28,7 @@ export const EXPECTED_LOCAL = {
   i2: 548, // D-0005: err HHL ksh_confirm → val (bez zmiany liczby)
   i30: 10,
   i31: 9,
-  dec2: 42,
+  dec2: 42, // D-0005: liczba asercji bez zmian; katalog typów 18→19 (KSH_DATES_CHECK)
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23

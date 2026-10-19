@@ -422,7 +422,7 @@ $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003'
 chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
 # AUD-03 (0192): ksh_confirm_dates ponownie włączone (decyzja właściciela 05.10, KSH — PANEL ZLECENIA) — pełne testy: tests/db/aud03.sh
 err "AUD-03: ksh_confirm bez zmian dat (KSH) → changed false" $KSH "select ksh_confirm_dates('$LD')" '"changed": false'
-val "AUD-03: HHL_ADMIN może ksh_confirm (0232 / D-0005)" $HHL "select (ksh_confirm_dates('$LD')->>'changed')" false commit
+val "AUD-03: HHL_ADMIN może ksh_confirm (0234 / D-0005)" $HHL "select (ksh_confirm_dates('$LD')->>'changed')" false commit
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
 err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"
@@ -651,17 +651,16 @@ val "SCX: zezwolenie PL transportu z załadunkiem 3 dni temu = OVERDUE" $SCX "se
 val "SCX: POD przed dostawą = MISSING (termin nie minął)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='POD'" MISSING
 val "SCX: CMR przed Dostarczone bez pliku = brak wiersza (0231)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
 val "stan wymaganych per transport przed CMR/dostawą (bez polisy, bez CMR): 5" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
-val "SCX: po wgraniu CMR (create_document) stan OK" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
-val "…CMR = OK" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
-val "stan po CMR OK: 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
-$PSQL -c "delete from documents where load_id='$L9' and category='CMR'" >/dev/null
+val "SCX: wgranie CMR przed dostawą (create_document)" $SCX "select count(*) from create_document('$L9','CMR','cmr-zaladunek.pdf','application/pdf',100)" 1 commit
+$PSQL -c "update documents set uploaded_at=now()-interval '48 hours' where load_id='$L9' and file_name='cmr-zaladunek.pdf'" >/dev/null
+val "…CMR z załadunku = brak wiersza (0233 / #312 B1)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
+val "stan nadal 5 (CMR z załadunku nie liczy)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
 val "HHL: CMR z powrotem 24 h (seed)" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',24) is not null)::text" true commit
 $PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '25 hours', status='DELIVERED' where id='$L9'; set session_replication_role=origin" >/dev/null
-val "SCX: CMR po dostawie bez pliku, termin minął = OVERDUE" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OVERDUE
-$PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=null, status='IN_TRANSIT_PL' where id='$L9'; set session_replication_role=origin" >/dev/null
-val "SCX: transport w drodze bez CMR = brak wiersza (nie OVERDUE)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
-val "SCX: ponowne wgranie CMR po teście OVERDUE" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
-val "…CMR = OK (ponownie)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
+val "SCX: CMR z załadunku po dostawie −25 h = OVERDUE (0233)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OVERDUE
+val "SCX: ponowne wgranie CMR po dostawie" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
+val "…CMR = OK" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
+val "stan po CMR OK: 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
 val "SCX: druga rejestracja CMR" $SCX "select count(*) from create_document('$L9','CMR','cmr2.pdf','application/pdf',100)" 1 commit
 D1=$(Q "select id from documents where load_id='$L9' and file_name='cmr1.pdf'"); D2=$(Q "select id from documents where load_id='$L9' and file_name='cmr2.pdf'")
 err "KSH: oznaczenie cudzego pliku jako nowej wersji odrzucone" $KSH "select document_supersede('$D2','$D1')" "tylko autor"
