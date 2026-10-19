@@ -13,7 +13,7 @@ import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, isoMs, time
 import { axisMilestones, planNote, type PlanNote } from '../../lib/p6cAxis';
 import { settlementGate } from '../../lib/statusSettlement';
 import { fs6, fs6p } from '../../i18n/p6c';
-import { ht } from '../../i18n/p6b';
+import { ht, htp } from '../../i18n/p6b';
 import { whoOf } from '../../lib/p6History';
 
 /* wyglad/P6-c (E17): „plan 07.10 · w terminie”, „plan 06.10 · +1 dzień”, „plan zał. 01.10” (załadunek zawsze „plan zał.”) */
@@ -85,6 +85,14 @@ function rowSub(
   if (h.source === 'import') return t(locale, 'p4b_sub_import');
   /* B5: zapis w Podglądzie — ten sam autor co w Historii („… jako … // KSH”) */
   const actor = h.previewAs && h.actor ? `${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}` : axisActor(h.actor);
+  /* D-0005 (0234): godzina poprawiona przez Administratora HHL — „poprawił Administrator HHL (było 07.10.2026, 14:00)” */
+  if (h.korekta) {
+    const who = (h.previewAs ? actor : axisActor(h.actor)) ?? ht(locale, 'p6b_korekta_admin');
+    const was = h.korekta.poprzednio ? dayTime(h.korekta.poprzednio) : '—';
+    const parts = [h.note, htp(locale, 'p6b_korekta_axis', { who, was })].filter(Boolean) as string[];
+    if (s === 'DELIVERED') parts.push(t(locale, 'p4b_sub_delivered'));
+    return parts.join(' · ');
+  }
   if (h.source === 'manual') {
     const parts = [h.note, actor].filter(Boolean) as string[];
     if (s === 'DELIVERED') parts.push(t(locale, 'p4b_sub_delivered'));

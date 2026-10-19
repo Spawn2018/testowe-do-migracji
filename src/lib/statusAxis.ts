@@ -88,6 +88,40 @@ export interface AxisHit {
   channel: 'GPS' | 'AIS' | null;
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
+  /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
+  korekta?: { poprzednio: string | null; przez: string | null } | null;
+}
+
+/** Numer zdarzenia z bazy („ev-123” → 123); inne identyfikatory (demo) — NaN. */
+function evSeq(id: string): number {
+  const m = /^ev-(\d+)$/.exec(id);
+  return m ? Number(m[1]) : NaN;
+}
+
+/**
+ * D-0005: wpisy zastąpione korektą (`payload.zastepuje`) znikają z osi, a z kilku korekt tego samego
+ * statusu zostaje najnowsza (najwyższy numer zdarzenia) — oś pokazuje jeden wiersz z poprawionym czasem.
+ */
+function withoutSuperseded(events: readonly LoadEvent[]): LoadEvent[] {
+  const gone = new Set<string>();
+  const newest = new Map<string, LoadEvent>();
+  for (const e of events) {
+    const p = (e.payload ?? {}) as Record<string, unknown>;
+    if (p.korekta !== true) continue;
+    if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') gone.add(`ev-${p.zastepuje}`);
+    const cur = newest.get(e.type);
+    if (!cur) newest.set(e.type, e);
+    else {
+      const a = evSeq(cur.id);
+      const b = evSeq(e.id);
+      /* bez numerów (demo) — kolejność na liście */
+      if (Number.isNaN(a) || Number.isNaN(b) ? true : b > a) {
+        gone.add(cur.id);
+        newest.set(e.type, e);
+      } else gone.add(e.id);
+    }
+  }
+  return gone.size ? events.filter((e) => !gone.has(e.id)) : [...events];
 }
 
 /** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
@@ -122,9 +156,10 @@ const isSystemActor = (a: string | null | undefined) =>
 /** Zdarzenia, które ustawiły status (od najstarszego). */
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
-  for (const e of events) {
+  for (const e of withoutSuperseded(events)) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
     const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string) : null);
+    const korekta = p.korekta === true && e.type.startsWith('STATUS_');
     let status: LoadStatus | null = null;
     let source: AxisSource = 'manual';
     if (e.type === 'SCHEDULE_IMPORTED') {
@@ -138,7 +173,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       source = 'auto';
     } else if (e.type.startsWith('STATUS_')) {
       status = axisStatus(e.type.slice('STATUS_'.length));
-      source = p.manual === true || !isSystemActor(e.actor) ? 'manual' : 'auto';
+      source = korekta || p.manual === true || !isSystemActor(e.actor) ? 'manual' : 'auto';
     } else if (e.type === 'LOADED' || e.type === 'MILESTONE_LOADED') {
       status = 'LOADING';
       source = 'auto';
@@ -162,6 +197,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
+      korekta: korekta ? { poprzednio: str('poprzednio'), przez: str('przez') } : null,
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
