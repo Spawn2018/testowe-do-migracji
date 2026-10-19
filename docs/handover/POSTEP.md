@@ -3201,3 +3201,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Po wpisaniu URI przez właściciela: `workflow_dispatch` `deploy-main` i w POSTEP linia „Adres bazy: …”.
 - Dalej w kolejce, po domknięciu Automatu: **D-0005 #313** (numer migracji 0234 przy rebase).
 
+## 2026-10-19 19:10 — deploy-main 39287813163: host bezpośredni odrzucony; #327 scalony
+
+- Skrzynka: #331 (`pilne`, odpowiedź koordynatora 18:40 — sekret od nowa, `postgresql://`). Jedno `workflow_dispatch` na `main` `047ce7b5`, przebieg `39287813163`. Drugiego nie uruchamiam.
+- Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie.
+- Dry-run: połączenie odrzucone (`ECONNREFUSED`) na hoście bezpośrednim `db.<projekt>.supabase.co` port 5432, zanim powstała lista migracji. To nie jest pula sesyjna. Edge i Vercel pominięte.
+- Linie diagnostyczne w #331. Zabezpieczenie prefiksu `NAZWA=` / JDBC zostaje po pierwszym zielonym `deploy-main`.
+- Scalenie: #327 F7 `Spawn2018` 16:46Z, po commicie `4bdd5b1` (16:27Z). Unit i visual (części) zielone, bez konfliktu, bez forka. Scalony `18344d57`.
+- Gałęzie `proba/ci-dokumenty` i `proba/ci-czerwony` już nie istnieją.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #332 (log JDBC), czeka na „F7: gotowe do scalenia”.
+
