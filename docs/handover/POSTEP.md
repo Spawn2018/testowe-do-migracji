@@ -3227,3 +3227,15 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Ten krok: wciągnięty `main`. Zostają testy link/redact i podpowiedź JDBC. Poprawka YAML (`redact.py`) bez zmian.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #333, czeka na ponowne „F7: gotowe do scalenia” po tym commicie.
 
+## 2026-10-19 20:20 — pierwszy zielony deploy-main (#333)
+
+- Skrzynka bez nowych zgłoszeń. #331 (`pilne`) i #330 zostają do zamknięcia po tym wpisie.
+- #333: „F7: gotowe do scalenia” od `Spawn2018` o 18:09Z, po ostatnim commicie `b8f27b5d` (17:51Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `97c88a19`.
+- `deploy-main` `39300935077` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `D8dghXG3wndN4VKWX3RdGcpJerrj` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Następny krok tej pozycji: zabezpieczenie prefiksu `NAZWA=` / JDBC w `normalize-db-url.py` (komentarz #331, 18:40). Potem D-0005 (#313).
+
