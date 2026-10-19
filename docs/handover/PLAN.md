@@ -516,13 +516,13 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
 - Testy §5 dopisku (3 → zbiorczy), L-3, `RISK_SEVERITY`, SCX, wygaszenie+ponowne otwarcie, limit poczty, `RISK_OPEN`, E41. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
-### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — NA PRODUKCJI (`39116fbb`, 19.10.2026 10:50, migracja 0231, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); poprawka B1 w kolejce (#312)
+### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — NA PRODUKCJI (`39116fbb`, 19.10.2026 10:50, migracja 0231, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); B1 → #312 / 0233
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
 - 0231 na produkcji: `AFTER_UNLOAD` / 24; SELECT OVERDUE przed dostawą = 0 (było 22).
-- **Następny krok (#312, F7 niegotowe):** `has_doc` CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); przed Dostarczone brak wiersza nawet z plikiem; test i2. Migracja poprawiająca (np. 0233) albo poprawka funkcji w nowym PR — #310 już scalony.
+- B1 (`has_doc` jak C17): pozycja **Poprawka CMR has_doc** poniżej (0233).
 - P1/P2 z przeglądu: wpis A5 vs C17 i `register_invoice` → zadania A4 (nie w tej pozycji). Wygląd: #303 (F1).
 
-### Poprawka CMR has_doc jak C17 (#312 / D-1740 B1; zaraz po 0231, przed Automatem)
+### Poprawka CMR has_doc jak C17 (#312 / D-1740 B1; zaraz po 0231, przed Automatem) — W TOKU (`pakiet/cmr-has-doc-c17`, migracja 0233)
 - `doc_requirements_status`: dla CMR `has_doc` = plik po `actual_delivery_at`, nie zastąpiony, nie `purged`. Przed dostawą — 0 wierszy CMR.
 - Test i2: CMR przed dostawą → dostawa −25 h → OVERDUE; ponowne wgranie → OK.
 - Gałąź od `main`; po F7 scalasz sam (D-1050 §2).
@@ -582,6 +582,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
 ### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
 - Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- **Z przeglądu #310 / #312 (P1–P2, decyzja koordynatora → A4):**
+  - `load_status_set` przy ręcznym `READY_TO_INVOICE` ma wymagać CMR jak C17 (`c17_cmr_after_delivery`), nie dowolnego CMR — dziś rozjazd z automatem C17.
+  - `register_invoice` nie może podpinać CMR zastąpionych ani z załadunku (tylko CMR po dostawie, jak C17).
 - `register_invoice` (ta sama reguła co widok):
   - pozycja tylko z `READY_TO_INVOICE` (albo `INVOICED` po drugiej stronie); inny → odmowa „Transport <kod> czeka na CMR”;
   - tolerancja 0: różnica ≥ 0,01 → flaga KWOTA, także opłata paliwowa (`billToRpc`); przy PLN porównanie po kursie NBP z faktury, do grosza, bez „ZGODNA”;
@@ -1097,6 +1100,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 08:20 | D-20261019-0820-01: punkt kontrolny +24 h (decyzja właściciela). pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; 23:59 A3–A5; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie 28.10 20:00 bez zmian. Drugi krok: bez B4–B9 we wt → P10a na sob 24.10 z P7/P8 | właściciel 19.10; koordynator |
 | 19.10.2026 09:30 | D-20261019-0930-01: kod transportu w L-3 / E41 ryzyk; bez `left(id,8)` i samotnego `order_no`; `l3_upsert_alarm` nie nadpisuje `params.code`; jednorazowo 7 ryzyk + 84 powiadomienia SCX; test wygaszania 0230 przez prawdziwą funkcję. Po D-0005, przed A3 | koordynator |
 | 19.10.2026 09:50 | D-1610 / #306 **NA PRODUKCJI**: merge `fc5726b3`, 0230, Edge `send-notifications`, Vercel `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs` (z #307+#308). SELECT: SOURCE 12→0, hex/SEFS 0, `params.code` 20→0, IN_APP 898→0 | wykonawca |
+| 19.10.2026 12:45 | #314 SCALONE (`1966a3dd`); start #312 — migracja 0233 has_doc CMR jak C17; P1/P2 → zadania A4 | pętla |
 | 19.10.2026 12:10 | #314 F7: ZASADY — autor polecenia tylko Spawn2018; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka | koordynator F7 12:02; pętla |
 | 19.10.2026 10:50 | D-20261019-1050-01: praca ciągła — skrzynka `dla-cursora`, scalanie bez promptu (F7), decyzje koordynatora, pętla nocna; `ZASADY_CIAGLEJ_PRACY.md`; pozycja Automat wdrożenia po poprawce #312; kolejka: #312 → Automat → D-0005 (#313) → D-0930 → A3… | właściciel ~10:50; koordynator |
 | 19.10.2026 10:50 | D-1740 / #310 **0231 NA PRODUKCJI** (`39116fbb`, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); F7 B1 otwarte jako #312 (has_doc jak C17) | wykonawca |
