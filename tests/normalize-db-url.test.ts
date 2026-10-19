@@ -3,7 +3,7 @@
  * Adresu z sekretu tu nie ma — tylko zmyślone przykłady.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -22,10 +22,19 @@ function pythonBin(): string {
 
 const PY = pythonBin()
 
-function run(raw: string): { log: string; url: string; port: string } {
+function run(raw: string): {
+  log: string
+  url: string
+  port: string
+  password: string
+  mode: string
+  passwordMode: number
+} {
   const dir = mkdtempSync(join(tmpdir(), 'db-url-'))
   const urlPath = join(dir, 'url')
   const portPath = join(dir, 'port')
+  const passwordPath = join(dir, 'password')
+  const modePath = join(dir, 'mode')
   try {
     const proc = spawnSync(PY, ['scripts/ci/normalize-db-url.py'], {
       encoding: 'utf8',
@@ -34,6 +43,8 @@ function run(raw: string): { log: string; url: string; port: string } {
         SUPABASE_DB_URL: raw,
         DB_URL_FILE: urlPath,
         DB_PORT_FILE: portPath,
+        DB_PASSWORD_FILE: passwordPath,
+        DB_MODE_FILE: modePath,
       },
     })
     const log = `${proc.stdout ?? ''}${proc.stderr ?? ''}`
@@ -41,6 +52,9 @@ function run(raw: string): { log: string; url: string; port: string } {
       log,
       url: readFileSync(urlPath, 'utf8'),
       port: readFileSync(portPath, 'utf8'),
+      password: readFileSync(passwordPath, 'utf8'),
+      mode: readFileSync(modePath, 'utf8'),
+      passwordMode: statSync(passwordPath).mode & 0o777,
     }
   } finally {
     rmSync(dir, { recursive: true, force: true })
@@ -69,6 +83,57 @@ describe('normalize-db-url (F7 #326 P1)', () => {
     expect(out.url).toBe('postgresql://uzytkownik:a%40b%23c%2Fd@db.example:5432/postgres')
     expect(out.log).toContain('haslo zakodowane: tak')
     expect(out.log).toContain('port 5432')
+  })
+
+  it('zapisuje hasło a@b#c/d zdekodowane i nie wypisuje go (#331)', () => {
+    const out = run('postgresql://uzytkownik:a%40b%23c%2Fd@db.example:5432/postgres')
+    expect(out.password).toBe('a@b#c/d')
+    expect(out.mode).toBe('link')
+    expect(out.log).toContain('polaczenie: link')
+    expect(out.log).not.toContain('a@b#c/d')
+    expect(out.log).not.toContain('a%40b%23c%2Fd')
+    expect(out.log).not.toContain('db.example')
+    if (process.platform !== 'win32') {
+      expect(out.passwordMode).toBe(0o600)
+    }
+  })
+
+  it('redact podmienia adres i hasło, sekret nie wychodzi (#331)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'redact-'))
+    const urlPath = join(dir, 'url')
+    const passwordPath = join(dir, 'password')
+    const url = 'postgresql://uzytkownik:a%40b%23c%2Fd@db.example:5432/postgres'
+    const password = 'a@b#c/d'
+    writeFileSync(urlPath, url)
+    writeFileSync(passwordPath, password)
+    try {
+      const log = execFileSync(PY, ['scripts/ci/redact.py'], {
+        encoding: 'utf8',
+        input: `link ${url} haslo ${password}\n`,
+        env: {
+          ...process.env,
+          DB_URL_FILE: urlPath,
+          DB_PASSWORD_FILE: passwordPath,
+        },
+      })
+      expect(log.replace(/\r\n/g, '\n')).toBe('link [adres] haslo [haslo]\n')
+      expect(log).not.toContain(password)
+      expect(log).not.toContain(url)
+      expect(log).not.toContain('db.example')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('adres puli zostawia tryb pooler, bez hosta w logu', () => {
+    const out = run(
+      'postgresql://uzytkownik:sekretpula@aws-1-eu-west-1.pooler.supabase.com:5432/postgres',
+    )
+    expect(out.mode).toBe('pooler')
+    expect(out.password).toBe('sekretpula')
+    expect(out.log).toContain('polaczenie: pooler')
+    expect(out.log).not.toContain('sekretpula')
+    expect(out.log).not.toContain('pooler.supabase.com')
   })
 
   it('przy formacie JDBC albo klucz=wartość podpowiada URI sesyjne, bez adresu (#330)', () => {
