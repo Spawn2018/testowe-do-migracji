@@ -574,3 +574,6 @@ test.describe('P11 pkt 3 — E10 kontrast', () => {
     })
   }
 })
+
+/* PRÓBA #327 (3/4): celowo czerwony test — gałąź nie do scalenia */
+test('PRÓBA #327 — celowo czerwony', () => { expect(1).toBe(2) })
