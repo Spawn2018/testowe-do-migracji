@@ -27,7 +27,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   registerAfterFileUpload(() => refreshFromServer({ keepSelection: true }));
   await refreshFromServer();
-  // M4: ustawienia użytkownika z serwera (język, waluta, motyw) — bez ponownego zapisu
+  // M4: ustawienia użytkownika z serwera (waluta, motyw; język — zawsze polski, B9) — bez ponownego zapisu
   try {
     const prefs = active.loadPreferences ? await active.loadPreferences() : null;
     if (prefs) useTowerStore.getState().applyUserPrefs(prefs);

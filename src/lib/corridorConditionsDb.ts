@@ -22,6 +22,22 @@ export interface CorridorConditionRow {
 }
 
 
+/** B9 (D-20261019-1515-01 pkt 4): tekst szwedzki — typowe słowa komunikatów Trafikverket (jak reguła „szwedzki”
+    w tests/e21Rules.ts); same litery å/ä/ö nie wystarczą, bo są w nazwach miejscowości w polskich opisach. */
+const SV_TEXT = /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|vägarbeten|olycka|körfält|avstängd|avstängt|och|på|norr|söder|öster|väster)(?![\p{L}])/iu;
+export const TRANSLATION_PENDING = 'Tłumaczenie w toku';
+
+/**
+ * B9 pkt 4: nieprzetłumaczony tekst wolny nie wchodzi do treści głównej — zamiast niego „Tłumaczenie w toku”,
+ * a szwedzki tylko pod „Pokaż oryginał”. Siatka bezpieczeństwa ekranu; właściwe tłumaczenie robi serwer (DeepL, pamięć).
+ */
+export function guardSwedish(note: string | null, original: string | null): { note: string | null; original: string | null } {
+  if (!note) return { note, original };
+  const untranslated = (original && note.trim() === original.trim()) || SV_TEXT.test(note);
+  if (!untranslated) return { note, original };
+  return { note: TRANSLATION_PENDING, original: original ?? note };
+}
+
 function parseSituations(v: unknown): { id: string; kind: string; severity: string; title: string; road: string; original: string | null; note: string | null }[] {
   if (!Array.isArray(v)) return [];
   const out = [];
@@ -37,8 +53,10 @@ function parseSituations(v: unknown): { id: string; kind: string; severity: stri
       severity: typeof row.severity === 'string' ? row.severity : 'LOW',
       title: plSeLocation(title),
       road: typeof row.road === 'string' ? row.road : 'E4',
-      original: typeof row.original === 'string' && row.original ? row.original : null,
-      note: typeof row.note === 'string' && row.note ? row.note : null,
+      ...guardSwedish(
+        typeof row.note === 'string' && row.note ? row.note : null,
+        typeof row.original === 'string' && row.original ? row.original : null,
+      ),
     });
   }
   return out;

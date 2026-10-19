@@ -265,10 +265,11 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
     const before = await P.KSH.loadPreferences!();
     try {
       await P.KSH.apply({ type: 'prefs.save', prefs: { displayCurrency: 'PLN' } });
-      await P.KSH.apply({ type: 'prefs.save', prefs: { locale: 'sv', theme: 'dark' } });
-      expect(await P.KSH.loadPreferences!()).toEqual({ displayCurrency: 'PLN', locale: 'sv', theme: 'dark' });
+      await P.KSH.apply({ type: 'prefs.save', prefs: { theme: 'dark' } });
+      /* B9: bez języka — panel tylko po polsku */
+      expect(await P.KSH.loadPreferences!()).toEqual({ displayCurrency: 'PLN', theme: 'dark' });
       const scx = await P.SCX.loadPreferences!();
-      expect(scx?.locale).not.toBe('sv'); // cudze ustawienia niewidoczne
+      expect(scx?.theme ?? null).not.toBe('dark'); // cudze ustawienia niewidoczne
     } finally {
       if (before) await P.KSH.apply({ type: 'prefs.save', prefs: before });
       else {
