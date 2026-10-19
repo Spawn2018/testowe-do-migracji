@@ -1,8 +1,9 @@
 """Normalizuje SUPABASE_DB_URL przed `supabase db push`. Adresu nie wypisuje.
 
 Cudzysłów wokół całości, BOM i puste linie zrzucają CLI 2.121.0 na parser
-słownikowy. Hasło z „=” jest wtedy słowem kluczowym, a host wpada na
-gniazdo lokalne (user=runner).
+słownikowy. Hasło z „=” albo ze znakiem specjalnym (@ # / ? spacja) jest
+wtedy źle odczytane i host wpada na gniazdo lokalne (user=runner).
+Hasło kodujemy procentowo; już zakodowane zostawiamy.
 """
 
 from __future__ import annotations
@@ -11,6 +12,10 @@ import os
 import re
 import stat
 import sys
+from urllib.parse import quote
+
+SAFE = "!$&'()*+,;=-._~"
+OK = re.compile(r"(?:[A-Za-z0-9\-._~!$&'()*+,;=]|%[0-9A-Fa-f]{2})*")
 
 
 def normalize(raw: str) -> str:
@@ -21,6 +26,17 @@ def normalize(raw: str) -> str:
     if lines and lines[0].startswith(("postgres://", "postgresql://")):
         return lines[0]
     return text
+
+
+def encode_password(url: str) -> str:
+    scheme, sep, rest = url.partition("://")
+    if not sep or "@" not in rest:
+        return url
+    userinfo, host = rest.rsplit("@", 1)
+    user, colon, pw = userinfo.partition(":")
+    if not colon or OK.fullmatch(pw):
+        return url
+    return f"{scheme}://{user}:{quote(pw, safe=SAFE)}@{host}"
 
 
 def describe(url: str) -> tuple[str, str, bool, bool, bool]:
@@ -41,7 +57,9 @@ def describe(url: str) -> tuple[str, str, bool, bool, bool]:
 
 
 def main() -> int:
-    url = normalize(os.environ.get("SUPABASE_DB_URL", ""))
+    normalized = normalize(os.environ.get("SUPABASE_DB_URL", ""))
+    url = encode_password(normalized)
+    encoded = "tak" if url != normalized else "nie"
     port, scheme, has_user, has_host, has_db = describe(url)
     url_path = os.environ["DB_URL_FILE"]
     port_path = os.environ["DB_PORT_FILE"]
@@ -53,7 +71,8 @@ def main() -> int:
     print(
         f"Adres bazy: dlugosc {len(url)}, schemat {scheme}, "
         f"uzytkownik {'tak' if has_user else 'nie'}, host {'tak' if has_host else 'nie'}, "
-        f"baza {'tak' if has_db else 'nie'}, port {port}"
+        f"baza {'tak' if has_db else 'nie'}, port {port}, "
+        f"haslo zakodowane: {encoded}"
     )
     if scheme != "postgres" or not has_user or not has_host or not has_db:
         print("SUPABASE_DB_URL nie jest pełnym adresem postgresql://uzytkownik@host:port/baza.")

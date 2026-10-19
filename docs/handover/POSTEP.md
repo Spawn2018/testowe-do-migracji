@@ -3183,3 +3183,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #326: unit zielony, visual w toku na `710c9c13`, bez F7 — bez scalenia. #317: konflikt z `main` (F7 sprzed konfliktu). #325: visual w toku, bez F7. #313: `db` czerwone, bez F7.
 - Bieżąca pozycja zostaje: **Automat wdrożenia** — poprawka adresu bazy, PR #326.
 
+## 2026-10-19 16:55 — #326 niegotowe: hasło w adresie kodowane procentowo
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #326 F7 z 14:11Z to „niegotowe” (P1), sprzed commita `d7f661b1`. Unit i visual na `d7f661b1` zielone — bez scalenia. #325 bez F7. #317 F7 jest, konflikt z `main`. #313 bez F7, `db` czerwone.
+- P1: `encode_password` w `scripts/ci/normalize-db-url.py` — znaki specjalne w haśle kodowane procentowo, hasło już zakodowane bez zmian. Log: `haslo zakodowane: tak/nie`, bez adresu. Test `tests/normalize-db-url.test.ts`: 3 przypadki, lokalnie 3/3.
+- D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
+
