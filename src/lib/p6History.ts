@@ -13,7 +13,7 @@ import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
-import { hitChannel } from './statusAxis';
+import { dayTime, hitChannel } from './statusAxis';
 
 export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
@@ -239,6 +239,12 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_CHANGED') {
     const to = statusName(e.type.slice(7), locale);
     const from = str(p.from) ? statusName(str(p.from), locale) : null;
+    /* D-0005 (0234): dopisek korekty godziny — autor Administrator HHL (gdy baza nie podała osoby), było → teraz */
+    if (p.korekta === true) {
+      const who = SYSTEM_ACTOR(e.actor) ? ht(locale, 'p6b_korekta_admin') : base.who;
+      const was = str(p.poprzednio);
+      return { ...base, who, head: '', from, to, tail: was ? htp(locale, 'p6b_korekta_hist', { was: dayTime(was) }) : note };
+    }
     return { ...base, head: '', from, to, tail: note };
   }
   if (e.type.startsWith('GEOFENCE')) {
