@@ -14,7 +14,7 @@ export function groupPhone(raw: string): string {
   const cc = plus ? `+${digits.slice(0, ccLen)}` : '';
   const rest = plus ? digits.slice(ccLen) : digits;
   /* grupy po 3 cyfry; gdy na końcu zostałaby jedna cyfra — dwie ostatnie grupy po 2 (F7 #307 r2 D-A: „202 555 01 00”) */
-  const groups = rest.match(/\d{1,3}/g) ?? [];
+  const groups: string[] = rest.match(/\d{1,3}/g) ?? [];
   if (groups.length >= 2 && groups[groups.length - 1].length === 1) {
     const tail = groups.splice(-2).join('');
     groups.push(tail.slice(0, 2), tail.slice(2));
