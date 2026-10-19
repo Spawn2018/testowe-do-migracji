@@ -10,12 +10,14 @@ import { describe, expect, it } from 'vitest';
 import { buildStatusAxis, dayTime, statusHits } from '../src/lib/statusAxis';
 import { histRow } from '../src/lib/p6History';
 import { StatusAxisTab } from '../src/components/drawer/StatusAxisTab';
+import { eventFromRow } from '../src/data/mappers';
 import type { Load, LoadEvent } from '../src/types';
 
-const ev = (id: number, type: string, at: string, payload: Record<string, unknown> = {}, actor = 'system'): LoadEvent =>
-  ({ id: `ev-${id}`, loadId: 'L1', type, at, actor, payload });
+/* jak wiersz `load_events` z bazy (id liczbowe, autor w payload.actor) */
+const ev = (id: number, type: string, at: string, payload: Record<string, unknown> = {}, actor?: string, loadId = 'L1'): LoadEvent =>
+  eventFromRow({ id, load_id: loadId, event_type: type, occurred_at: at, payload: actor ? { ...payload, actor } : payload });
 
-const ORIG = '2026-10-07T12:00:00Z'; /* 14:00 czasu polskiego */
+const ORIG = '2026-10-07T12:00:00+00:00'; /* 14:00 czasu polskiego, zapis jak z bazy */
 const FIX = '2026-10-07T10:30:00Z'; /* 12:30 */
 const base: LoadEvent[] = [
   ev(1, 'SCHEDULE_IMPORTED', '2026-10-01T19:43:00Z'),
@@ -23,8 +25,8 @@ const base: LoadEvent[] = [
   ev(3, 'STATUS_LOADING', '2026-10-06T06:00:00Z', {}, 'Jan Nowak // SCX'),
   ev(4, 'STATUS_DELIVERED', ORIG, {}, 'Jan Nowak // SCX'),
 ];
-const fix = (id: number, at: string, zastepuje: number, poprzednio: string, actor = 'system') =>
-  ev(id, 'STATUS_DELIVERED', at, { korekta: true, zastepuje, poprzednio, przez: 'HHL_ADMIN' }, actor);
+const fix = (id: number, at: string, zastepuje: number, poprzednio: string, actor?: string, loadId = 'L1') =>
+  ev(id, 'STATUS_DELIVERED', at, { korekta: true, zastepuje, poprzednio, przez: 'HHL_ADMIN' }, actor, loadId);
 
 const load = { id: 'L1', status: 'DELIVERED', stage: 'SITE', unloadedAt: FIX, resources: {}, plannedLoadDate: null, plannedDeliverDate: null } as unknown as Load;
 const delivered = (events: LoadEvent[]) =>
@@ -47,8 +49,32 @@ describe('D-0005 — korekta godziny statusu na osi', () => {
     const earliest = '2026-10-07T09:00:00Z';
     expect(delivered([...base, fix(5, FIX, 4, ORIG), fix(6, later, 5, FIX)])[0].hit?.at).toBe(later);
     expect(delivered([...base, fix(5, FIX, 4, ORIG), fix(6, earliest, 5, FIX)])[0].hit?.at).toBe(earliest);
-    /* 0234 wskazuje jako „zastępowany” wpis z najpóźniejszą godziną — oba dopiski mogą zastępować ten sam stary */
-    expect(delivered([...base, fix(5, FIX, 4, ORIG), fix(6, earliest, 4, ORIG)])[0].hit?.at).toBe(earliest);
+    /* 0234 wskazuje jako „zastępowany” wpis z najpóźniejszą godziną — oba dopiski mogą zastępować ten sam stary;
+       „było” = poprzednia poprawiona godzina, nie pierwotna (F7 P1) */
+    const two = delivered([...base, fix(5, FIX, 4, ORIG), fix(6, earliest, 4, ORIG)])[0].hit;
+    expect(two?.at).toBe(earliest);
+    expect(two?.korekta?.poprzednio).toBe(FIX);
+  });
+
+  it('korekty dwóch transportów nie wypierają się nawzajem (F7 D1)', () => {
+    const l2 = [ev(20, 'STATUS_DELIVERED', ORIG, {}, 'Jan Nowak // SCX', 'L2'), fix(21, FIX, 20, ORIG, undefined, 'L2')];
+    const hits = statusHits([...base, fix(5, FIX, 4, ORIG), ...l2]).filter((h) => h.status === 'DELIVERED');
+    expect(hits).toHaveLength(2);
+  });
+
+  it('demo bez numerów zdarzeń: wpis zastąpiony też znika (F7 D2)', () => {
+    const demo: LoadEvent[] = [
+      { id: 'd1', loadId: 'L1', type: 'STATUS_DELIVERED', at: ORIG, actor: 'system', payload: {} },
+      { id: 'd2', loadId: 'L1', type: 'STATUS_DELIVERED', at: FIX, actor: 'system', payload: { korekta: true, zastepuje: 'd1', poprzednio: ORIG } },
+    ];
+    expect(statusHits(demo).map((h) => h.at)).toEqual([FIX]);
+  });
+
+  it('korekta na wcześniejszą godzinę wygrywa z wcześniej zapisanym automatem z późniejszą godziną (F7 D3)', () => {
+    const auto = ev(5, 'STATUS_AUTO', '2026-10-07T11:00:00Z', { from: 'APPROACHING_SITE', to: 'DELIVERED' });
+    const rows = delivered([...base, auto, fix(6, '2026-10-07T07:00:00Z', 4, ORIG)]);
+    expect(rows[0].hit?.at).toBe('2026-10-07T07:00:00Z');
+    expect(rows[0].hit?.korekta).not.toBeNull();
   });
 
   it('bez korekty — bez zmian (SCX ponownie ustawia godzinę „Dostarczone”: najpóźniejszy wpis)', () => {
@@ -58,16 +84,18 @@ describe('D-0005 — korekta godziny statusu na osi', () => {
     expect(rows[0].hit?.korekta).toBeNull();
   });
 
-  it('oś: „poprawił Administrator HHL (było 07.10.2026, 14:00)”; z osobą w payload.actor — imię i firma', () => {
+  it('oś: „poprawił Administrator HHL (było 07.10.2026, 14:00)”, znacznik Ręcznie; z osobą w payload.actor — „poprawka godziny: …”', () => {
     const html = (events: LoadEvent[]) =>
       renderToStaticMarkup(createElement(StatusAxisTab, { load, events, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
     const a = html([...base, fix(5, FIX, 4, ORIG)]);
     expect(a).toContain(`poprawił Administrator HHL (było ${dayTime(ORIG)})`);
     expect(dayTime(ORIG)).toBe('07.10.2026, 14:00');
     expect(a).toContain(dayTime(FIX));
-    expect(a).not.toContain('>Auto<');
+    const row = /<li[^>]*data-axis-row="DELIVERED"[\s\S]*?<\/li>/.exec(a)?.[0] ?? '';
+    expect(row).toContain('data-axis-src="manual"');
+    expect(row).toContain('>Ręcznie<');
     const b = html([...base, fix(5, FIX, 4, ORIG, 'Anna Wiśniewska // H&H Logistics')]);
-    expect(b).toContain('poprawił Anna Wiśniewska // H&amp;H Logistics (było 07.10.2026, 14:00)');
+    expect(b).toContain('poprawka godziny: Anna Wiśniewska // H&amp;H Logistics (było 07.10.2026, 14:00)');
   });
 
   it('Historia: autor Administrator HHL i „korekta godziny (było …)”', () => {

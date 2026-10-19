@@ -39,7 +39,8 @@ const PL: Record<string, string> = {
   p6b_as: 'jako',
   /* D-0005 (0234): korekta godziny statusu przez Administratora HHL */
   p6b_korekta_admin: 'Administrator HHL',
-  p6b_korekta_axis: 'poprawił {who} (było {was})',
+  p6b_korekta_axis: 'poprawił Administrator HHL (było {was})',
+  p6b_korekta_axis_who: 'poprawka godziny: {who} (było {was})',
   p6b_korekta_hist: 'korekta godziny (było {was})',
 
   /* nazwy zdarzeń (E17-2) — bez kodów */

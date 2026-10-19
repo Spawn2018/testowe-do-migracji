@@ -87,9 +87,10 @@ function rowSub(
   const actor = h.previewAs && h.actor ? `${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}` : axisActor(h.actor);
   /* D-0005 (0234): godzina poprawiona przez Administratora HHL — „poprawił Administrator HHL (było 07.10.2026, 14:00)” */
   if (h.korekta) {
-    const who = (h.previewAs ? actor : axisActor(h.actor)) ?? ht(locale, 'p6b_korekta_admin');
+    const who = h.previewAs ? actor : axisActor(h.actor);
     const was = h.korekta.poprzednio ? dayTime(h.korekta.poprzednio) : '—';
-    const parts = [h.note, htp(locale, 'p6b_korekta_axis', { who, was })].filter(Boolean) as string[];
+    const line = who ? htp(locale, 'p6b_korekta_axis_who', { who, was }) : htp(locale, 'p6b_korekta_axis', { was });
+    const parts = [h.note, line].filter(Boolean) as string[];
     if (s === 'DELIVERED') parts.push(t(locale, 'p4b_sub_delivered'));
     return parts.join(' · ');
   }

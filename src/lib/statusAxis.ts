@@ -90,6 +90,8 @@ export interface AxisHit {
   previewAs?: string | null;
   /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
   korekta?: { poprzednio: string | null; przez: string | null } | null;
+  /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
+  seq?: number;
 }
 
 /** Numer zdarzenia z bazy („ev-123” → 123); inne identyfikatory (demo) — NaN. */
@@ -100,28 +102,37 @@ function evSeq(id: string): number {
 
 /**
  * D-0005: wpisy zastąpione korektą (`payload.zastepuje`) znikają z osi, a z kilku korekt tego samego
- * statusu zostaje najnowsza (najwyższy numer zdarzenia) — oś pokazuje jeden wiersz z poprawionym czasem.
+ * statusu (i transportu) zostaje najnowsza (najwyższy numer zdarzenia; bez numerów — kolejność na liście).
+ * `was` — godzina poprzedniej korekty: „było …” przy drugiej korekcie pokazuje poprzednią poprawioną
+ * godzinę, także gdy 0234 wpisało w `poprzednio` godzinę pierwotną (#338).
  */
-function withoutSuperseded(events: readonly LoadEvent[]): LoadEvent[] {
+function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; was: Map<string, string> } {
   const gone = new Set<string>();
-  const newest = new Map<string, LoadEvent>();
-  for (const e of events) {
+  const was = new Map<string, string>();
+  const groups = new Map<string, { e: LoadEvent; i: number }[]>();
+  events.forEach((e, i) => {
     const p = (e.payload ?? {}) as Record<string, unknown>;
-    if (p.korekta !== true) continue;
-    if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') gone.add(`ev-${p.zastepuje}`);
-    const cur = newest.get(e.type);
-    if (!cur) newest.set(e.type, e);
-    else {
-      const a = evSeq(cur.id);
-      const b = evSeq(e.id);
-      /* bez numerów (demo) — kolejność na liście */
-      if (Number.isNaN(a) || Number.isNaN(b) ? true : b > a) {
-        gone.add(cur.id);
-        newest.set(e.type, e);
-      } else gone.add(e.id);
+    if (p.korekta !== true) return;
+    if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') {
+      gone.add(`ev-${p.zastepuje}`);
+      gone.add(String(p.zastepuje));
     }
+    const key = `${e.loadId}|${e.type}`;
+    const g = groups.get(key) ?? [];
+    g.push({ e, i });
+    groups.set(key, g);
+  });
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => {
+      const x = evSeq(a.e.id);
+      const y = evSeq(b.e.id);
+      return Number.isNaN(x) || Number.isNaN(y) ? a.i - b.i : x - y;
+    });
+    for (let k = 0; k < g.length - 1; k++) gone.add(g[k].e.id);
+    for (let k = 1; k < g.length; k++) was.set(g[k].e.id, g[k - 1].e.at);
   }
-  return gone.size ? events.filter((e) => !gone.has(e.id)) : [...events];
+  return { list: gone.size ? events.filter((e) => !gone.has(e.id)) : [...events], was };
 }
 
 /** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
@@ -156,7 +167,8 @@ const isSystemActor = (a: string | null | undefined) =>
 /** Zdarzenia, które ustawiły status (od najstarszego). */
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
-  for (const e of withoutSuperseded(events)) {
+  const { list, was } = withoutSuperseded(events);
+  for (const e of list) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
     const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string) : null);
     const korekta = p.korekta === true && e.type.startsWith('STATUS_');
@@ -197,7 +209,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
-      korekta: korekta ? { poprzednio: str('poprzednio'), przez: str('przez') } : null,
+      korekta: korekta ? { poprzednio: was.get(e.id) ?? str('poprzednio'), przez: str('przez') } : null,
+      seq: evSeq(e.id),
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
@@ -241,7 +254,12 @@ export function buildStatusAxis(
 ): StatusAxis {
   const hits = statusHits(events);
   const last = new Map<LoadStatus, AxisHit>();
-  for (const h of hits) last.set(h.status, h);
+  for (const h of hits) {
+    const prev = last.get(h.status);
+    /* D-0005: korekta (np. na 09:00) nie znika pod wcześniej zapisanym wpisem z późniejszą godziną (np. STATUS_AUTO 13:00) */
+    if (prev?.korekta && !h.korekta && (h.seq ?? NaN) < (prev.seq ?? NaN)) continue;
+    last.set(h.status, h);
+  }
   const cur = currentAxisIndex(l);
   const cancelled = cur < 0;
   const rows: { group: AxisGroupKey; row: AxisRow }[] = [];
