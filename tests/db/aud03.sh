@@ -58,7 +58,8 @@ sval "DEC-4: powiadomienie HHL i przewoźnika (IN_APP), autor bez" "select strin
 sval "I-10: transport nieawizowany → bez SCHEDULE_DATE_CRITICAL" "select count(*) from load_events where load_id='$L1' and event_type='SCHEDULE_DATE_CRITICAL'" "0"
 sys "update loads set driver_name='Jan Kierowca' where id='$L2'" >/dev/null
 val "awizowany: KSH zmienia datę"                          $KSH "select (ksh_confirm_dates('$L2','2026-11-11','2026-11-15')->>'awizowany')" true commit
-sval "I-10: awizowany → SCHEDULE_DATE_CRITICAL + IN_APP HHL i przewoźnik" "select (select count(*) from load_events where load_id='$L2' and event_type='SCHEDULE_DATE_CRITICAL')||'|'||(select count(*) from notifications where load_id='$L2' and template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP')" "1|2"
+# Dwa konta HHL (admin + OPS z tego zestawu) i jedno SCX.
+sval "I-10: awizowany → SCHEDULE_DATE_CRITICAL + IN_APP HHL i przewoźnik" "select (select count(*) from load_events where load_id='$L2' and event_type='SCHEDULE_DATE_CRITICAL')||'|'||(select count(*) from notifications where load_id='$L2' and template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP')" "1|3"
 val "bez zmiany → changed=false, bez wpisu"                $KSH "select (ksh_confirm_dates('$L2','2026-11-11','2026-11-15')->>'changed')" false commit
 sval "nadal jeden wpis PLAN_DATES_CHANGED na L2"           "select count(*) from load_events where load_id='$L2' and event_type='PLAN_DATES_CHANGED' and payload->>'by'='KSH'" "1"
 sys "update loads set status='AT_LOADING', hhl_order_no='HHL/T/1', carrier_order_no='SCX/T/1' where id='$L2'" >/dev/null 2>&1
@@ -67,8 +68,7 @@ val "HHL_ADMIN po załadunku zmienia daty (0234)"           $HHL "select (ksh_co
 val "anon nie wywoła RPC"                                  $KSH "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text" false
 
 echo; echo "[aud03-3] B1: ASK_FIX → DECISION_HOLD"
-sys "select decision_open_from_event('$P','KSH_DATES_CHECK','aud03-ask-fix-$L1','L1: daty do sprawdzenia','{\"rule\":\"aud03\"}'::jsonb,'$L1',null)" >/dev/null
-DASK=$(sys "select id from decisions where load_id='$L1' and type_code='KSH_DATES_CHECK' and status in ('NEW','ASSIGNED','SNOOZED') order by opened_at desc limit 1" | tail -1 | tr -d '\r')
+DASK=$(sys "select decision_open_from_event('$P','KSH_DATES_CHECK','aud03-ask-fix-$L1','L1: daty do sprawdzenia','{\"rule\":\"aud03\"}'::jsonb,'$L1',null)" | tail -1 | tr -d '\r')
 val "ASK_FIX na sprawie z transportem → OK (B1)" $HHL "select (decision_resolve('$DASK','ASK_FIX')->>'ui_hint')" HOLD commit
 sval "DECISION_HOLD w osi" "select count(*) from load_events where load_id='$L1' and event_type='DECISION_HOLD'" 1
 

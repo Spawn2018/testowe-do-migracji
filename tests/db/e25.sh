@@ -41,7 +41,7 @@ err "KSH odmowa" $KSH "select load_status_set('$L1','IN_TRANSIT_PL',now(),null)"
 val "HHL_ADMIN do przodu" $HHL "select load_status_set('$L1','AT_LOADING',now(),null); select status::text from loads where id='$L1'" AT_LOADING
 val "SCX do przodu" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select status::text from loads where id='$L1'" IN_TRANSIT_PL
 # P1: SCX — czas wcześniej niż poprzedni STATUS_* → odmowa (HHL_ADMIN może).
-err "SCX: czas wcześniej niż poprzedni status (P1)" $SCX "select load_status_set('$L1','AT_PORT',(select max(occurred_at)-interval '1 minute' from load_events where load_id='$L1' and event_type like 'STATUS_%'),null)" "wcześniej niż poprzedni"
+err "SCX: czas wcześniej niż poprzedni status (P1)" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','AT_PORT_GDANSK',(select max(occurred_at)-interval '1 minute' from load_events where load_id='$L1' and event_type like 'STATUS_%'),null)" "wcześniej niż poprzedni"
 # Ta sama transakcja: najpierw do przodu, potem próba wstecz (osobny rollback zostawiałby READY→READY = no-op).
 err "SCX wstecz" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),'cofka')" "tylko do przodu"
 err "HHL_ADMIN wstecz bez powodu" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),null)" "powodu"
