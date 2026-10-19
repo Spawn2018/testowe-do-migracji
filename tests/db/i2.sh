@@ -652,6 +652,7 @@ val "SCX: POD przed dostawą = MISSING (termin nie minął)" $SCX "select state 
 val "SCX: CMR przed Dostarczone bez pliku = brak wiersza (0231)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
 val "stan wymaganych per transport przed CMR/dostawą (bez polisy, bez CMR): 5" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
 val "SCX: wgranie CMR przed dostawą (create_document)" $SCX "select count(*) from create_document('$L9','CMR','cmr-zaladunek.pdf','application/pdf',100)" 1 commit
+$PSQL -c "update documents set uploaded_at=now()-interval '48 hours' where load_id='$L9' and file_name='cmr-zaladunek.pdf'" >/dev/null
 val "…CMR z załadunku = brak wiersza (0233 / #312 B1)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
 val "stan nadal 5 (CMR z załadunku nie liczy)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
 val "HHL: CMR z powrotem 24 h (seed)" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',24) is not null)::text" true commit
