@@ -74,7 +74,7 @@ System kontroli transportów konstrukcji stalowych ponadnormatywnych Śrem → G
 - **Testy idą za decyzjami.** Test sprzeczny z decyzją etapu bieżącej paczki przepisujesz w tej paczce, w komentarzu podajesz numer etapu i decyzji. Nie zmieniasz aplikacji po to, żeby przeszedł stary test. Lista testów do przepisania jest przy paczce w `PLAN.md`.
 - Wygląd = raport audytu (`raport/index.html` + `raport/img/`), najnowsza decyzja wygrywa; `makiety_html/` pomocniczo; dowód w `docs/handover/odbior/P<n>/` (konstytucja VIII, WYGLAD-RAPORT, D-20261013-1535-01 Z). Wygląd robi koordynator; nie zmieniasz klas, znaczników, stylów ani tekstów jego elementów (F1). Zmiana wyglądu ekranu z listy paczki jest przewidziana.
 - **Wzorce zrzutów:**
-  - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w paczce, która zmienia ekran, w GitHub Actions: `gh workflow run visual.yml --ref <gałąź> -f update=true`, `gh run download`, commit w paczce (D-87), z wpisem w `docs/handover/G4_WZORZEC.md` („P<n> — E<nr>, ekrany: …”);
+  - 15 migawek Playwright (`tests/__screenshots__/`) odświeżasz w paczce, która zmienia ekran, w GitHub Actions: `gh workflow run visual.yml --ref <gałąź> -f update=true`, `gh run download <id> -n visual-artifacts`, commit w paczce (D-87), z wpisem w `docs/handover/G4_WZORZEC.md` („P<n> — E<nr>, ekrany: …”);
   - 280 ujęć matrycy (`shots-baseline/`) odświeża wyłącznie środowisko bramy wizualnej, raz, w P11, z tagiem `baseline-audyt-<data P11, RRRR-MM-DD>`;
   - nocna brama wizualna do tego czasu tylko raportuje.
   Akceptacja planu przez właściciela = zgoda na te odświeżenia.
