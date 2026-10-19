@@ -672,7 +672,7 @@ test.describe('wyglad/P9-f mapa w Przeglądzie (E32 pkt 3)', () => {
     await expect(page.locator('aside.drawer .leaflet-overlay-pane path[fill="#1B6E5D"]')).toHaveCount(1);
   });
 
-  /* F7 #303 P1: telefon — mapa Przeglądu ma 150 px; dopisek nie zasłania pojazdu ani „+ / −” */
+  /* F7 #303 P1: telefon — mapa Przeglądu (220 px od 19.10); dopisek nie zasłania pojazdu ani „+ / −” */
   for (const w of [390, 768] as const) test(`telefon ${w}: na placu — dopisek nie zasłania pojazdu i przycisków „+ / −”`, async ({ page }) => {
     await page.setViewportSize({ width: w, height: 844 });
     await boot(page, 'HHL');
@@ -2547,7 +2547,7 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
  * wyglad/P7-a — panel transportu › Przegląd i okno Awizacja (E32, img/e32-after; piloci D-20261009-1233-01, konwój R1).
  * Kolejność sekcji, „Do zrobienia przy tym transporcie” / linia stanu KSH, daty z dniem tygodnia i pochodzeniem, bez „Kontroli
  * trasy”, „Przeszkód” i czerwonego baneru zezwolenia; okno Awizacja z „Brakuje: …” i terminem, zapis części; piloci przy KR.
- * Telefon: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 150 px, okno na cały ekran — 0 w bramie E8.
+ * Telefon: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 220 px (właściciel 19.10), okno na cały ekran — 0 w bramie E8.
  */
 test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
@@ -2567,7 +2567,10 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-hd-load]')).toHaveText('sob. 17.10.2026 · t42');
     await expect(page.locator('.drawer [data-hd-deliver]')).toHaveText('czw. 22.10.2026 · t43');
     const order = await page.locator('.drawer [data-overview] [data-po]').evaluateAll((els) => els.map((e) => e.getAttribute('data-po')));
-    expect(order).toEqual(['plan', 'awiz', 'cargo', 'numbers', 'docs']);
+    /* właściciel 19.10, 15:27: mapa na górze, pod nią „Do zrobienia” (zwinięte); bez „Dokumentów” i PDF */
+    expect(order).toEqual(['todo', 'plan', 'awiz', 'cargo', 'numbers']);
+    expect(await page.locator('.drawer [data-overview] > *').first().getAttribute('data-load-map')).not.toBeNull();
+    expect(await page.locator('.drawer details[data-po="todo"]').evaluate((d) => (d as HTMLDetailsElement).open)).toBe(false);
     await expect(page.locator('.drawer [data-route-check], .drawer [data-corridor-obstacles], .drawer [data-plan-dates], .drawer .banner[data-permit]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-load-when]')).toContainText('sob. 17.10.2026, 08:00–16:00');
     await expect(page.locator('.drawer [data-dates-origin]')).toContainText('z harmonogramu KSH');
@@ -2581,7 +2584,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toBeVisible();
     await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
-    await expect(page.locator('.drawer [data-action="export-load-pdf-map"]')).toBeVisible();
+    await expect(page.locator('.drawer [data-action="export-load-pdf-map"], .drawer [data-po="docs"]')).toHaveCount(0);
     await closeDrawer(page);
 
     /* SCX: „Uzupełnij awizację” → „Brakuje: …” z terminem; zapis kierowcy i ciągnika → „Brakuje: telefon, naczepa” */
@@ -2645,7 +2648,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
-    test(`telefon ${role}: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 150 px; okno Awizacja na cały ekran — 0 w bramie E8`, async ({ page }) => {
+    test(`telefon ${role}: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 220 px; okno Awizacja na cały ekran — 0 w bramie E8`, async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await boot(page, role, false, NOW_URL);
       const hits: Hit[] = [];
@@ -2662,12 +2665,16 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       await expect(page.locator('.drawer .drawer-hd button.iconbtn')).toHaveCount(1);
       const folds = page.locator('.drawer details.po-fold');
       /* przegląd 18.10 (B1): SG-19 bez zestawu ma u HHL i SCX sekcję „Do zrobienia” (brak kierowcy i zestawu, brak awizacji — awizuje SCX) */
-      await expect(folds).toHaveCount(role === 'KSH' ? 4 : 6);
+      /* właściciel 19.10, 15:27: bez sekcji „Dokumenty” w Przeglądzie */
+      await expect(folds).toHaveCount(role === 'KSH' ? 3 : 5);
+      await expect(page.locator('.drawer details[data-po="docs"], .drawer [data-action="export-load-pdf-map"]')).toHaveCount(0);
       expect(await folds.evaluateAll((els) => els.filter((d) => (d as HTMLDetailsElement).open).length)).toBe(0);
       await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
       const map = await page.locator('.drawer [data-load-map]').boundingBox();
-      expect(map && map.height).toBeLessThanOrEqual(152);
+      /* właściciel 19.10, 15:27: mapa na samej górze Przeglądu, 220 px (jak przed zmniejszeniem do 150 px) */
+      expect(map && Math.round(map.height)).toBe(220);
+      expect(await page.locator('.drawer [data-overview] > *').first().getAttribute('data-load-map')).not.toBeNull();
       for (const s of await page.locator('.drawer details.po-fold > summary').all()) {
         const b = await s.boundingBox();
         expect(b && b.height).toBeGreaterThanOrEqual(44);

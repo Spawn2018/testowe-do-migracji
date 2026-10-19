@@ -17,8 +17,9 @@
 .po-kshline.is-ok{border-left-color:var(--go)}
 
 /* mapa (E1 — P9) */
+/* właściciel 19.10, 15:27: telefon znów 220 px (jak przed E32, gdy zmniejszono do 150 px); komputer 220 px bez zmian */
 .po-map{position:relative;height:220px}
-.po-map.is-phone{height:150px}
+.po-map.is-phone{height:220px}
 
 /* sekcje */
 .po-sec{display:flex;flex-direction:column;gap:8px;min-width:0}
