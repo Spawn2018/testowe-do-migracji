@@ -155,9 +155,10 @@ export function RoutePanel({
                 {rt(locale, `p6_imp_${r.impact}`)}
               </span>
               {r.when ? ` · ${r.when}` : ''}
-              {r.original ? ` · ${rt(locale, 'p6_road_translated')}` : ''}
+              {r.original && !r.pending ? ` · ${rt(locale, 'p6_road_translated')}` : ''}
             </span>
-            {r.note && !phone ? <span className="rk-road-n">{r.note}</span> : null}
+            {r.pending && !phone ? <span className="rk-road-n" data-road-note="pending">{rt(locale, 'p6_road_pending')}</span>
+              : r.note && !phone ? <span className="rk-road-n" data-road-note="pl">{r.note}</span> : null}
             {r.original && !phone ? (
               <details className="rk-orig">
                 <summary>{rt(locale, 'p6_road_original')}</summary>

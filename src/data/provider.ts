@@ -78,9 +78,8 @@ export type DataMutation =
   | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> }
   | { type: 'workflow.delete'; id: string };
 
-/** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
+/** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. B9: bez języka (panel tylko PL). */
 export interface UserPrefsPatch {
-  locale?: 'pl' | 'en' | 'sv';
   displayCurrency?: 'EUR' | 'PLN';
   theme?: 'light' | 'dark' | null;
 }

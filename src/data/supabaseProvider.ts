@@ -246,21 +246,21 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     appUserId = r.data as string;
     return appUserId;
   }
+  /* B9 (8A, D-20261019-1515-01): panel tylko po polsku — kolumny języka w `user_preferences` nie czytamy ani nie zapisujemy
+     (wykonawca usuwa ją w bazie; aplikacja kierowcy ma własny wybór języka). */
   async function loadPreferences(): Promise<UserPrefsPatch | null> {
-    const r = await sb.from('user_preferences').select('display_currency,locale,theme').maybeSingle();
+    const r = await sb.from('user_preferences').select('display_currency,theme').maybeSingle();
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
     if (!r.data) return null;
-    const d = r.data as { display_currency: string; locale: string; theme: string | null };
+    const d = r.data as { display_currency: string; theme: string | null };
     return {
       displayCurrency: d.display_currency === 'PLN' ? 'PLN' : 'EUR',
-      locale: (['pl', 'en', 'sv'].includes(d.locale) ? d.locale : 'pl') as UserPrefsPatch['locale'],
       theme: d.theme === 'light' || d.theme === 'dark' ? d.theme : null,
     };
   }
   async function savePreferences(p: UserPrefsPatch): Promise<void> {
     const row: Record<string, unknown> = { user_id: await myUserId(), updated_at: new Date().toISOString() };
     if (p.displayCurrency) row.display_currency = p.displayCurrency;
-    if (p.locale) row.locale = p.locale;
     if ('theme' in p) row.theme = p.theme ?? null;
     const r = await sb.from('user_preferences').upsert(row, { onConflict: 'user_id' }).select('user_id');
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);

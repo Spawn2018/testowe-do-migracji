@@ -42,7 +42,7 @@ describe('8A — tylko PL poza aplikacją kierowcy', () => {
     expect(tp('sv', 'a6_sch_export_ok', { rows: 5, bytes: 10 })).toBe(tp('pl', 'a6_sch_export_ok', { rows: 5, bytes: 10 }));
   });
   it('panel zostaje po polsku: zapisany język z konta i wybór „en”/„sv” nie przełączają panelu', () => {
-    useTowerStore.getState().applyUserPrefs({ locale: 'en' });
+    useTowerStore.getState().applyUserPrefs({ locale: 'en' } as never); // stary zapis z konta (przed B9)
     expect(useTowerStore.getState().locale).toBe('pl');
     useTowerStore.getState().setLocale('sv');
     expect(useTowerStore.getState().locale).toBe('pl');
@@ -51,5 +51,14 @@ describe('8A — tylko PL poza aplikacją kierowcy', () => {
     const now = Date.parse('2026-10-06T12:00:00Z');
     expect(bellAge('2026-10-06T09:00:00Z', now, 'en')).toBe('3 godz. temu');
     expect(bellAge('2026-10-04T12:00:00Z', now, 'sv')).toBe('2 dni temu');
+  });
+});
+
+describe('B9 (D-20261019-1515-01): ustawienia konta bez języka', () => {
+  it('provider Supabase nie czyta ani nie zapisuje kolumny języka w user_preferences', () => {
+    const src = readFileSync('src/data/supabaseProvider.ts', 'utf8');
+    const prefs = src.slice(src.indexOf('async function loadPreferences'), src.indexOf('async function apply('));
+    expect(prefs).toContain("select('display_currency,theme')");
+    expect(prefs).not.toMatch(/locale/);
   });
 });
