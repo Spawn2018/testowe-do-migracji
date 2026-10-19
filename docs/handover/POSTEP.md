@@ -3161,3 +3161,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #317: F7 jest, CI zielone, **konflikt** z `main` — bez scalenia (czeka na wciągnięcie `main` i ponowne „gotowe”).
 - #319: przegląd 14:10 **niegotowe**. Poprawka w tym samym PR: sekret `SUPABASE_DB_URL`, `db push --db-url` z dry-run i komunikatem przy porcie 6543, `::warning::` przy braku kluczy, `vercel@64.5.0`. Czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 15:10 — #320 w planie (plik testowy SharePoint); automat czeka na F7
+
+- Skrzynka: #320 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1420-01. Wpisane: PLAN §4 A6, §3 kolejność, §5 W13, §6, §8, P7, II-10 w `PLAN_OTWARTE_08_10.md`, dopisek `docs/handover/dopiski/D-20261019-1420-01.md`. Zgłoszenie otwarte do zrobienia A6.
+- Adresu pliku testowego nie ma w repozytorium. Właściciel dopisuje `SHAREPOINT_TEST_FILE_URL` w `.env.local`.
+- Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
+

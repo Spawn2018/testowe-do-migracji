@@ -124,7 +124,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -401,7 +401,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -647,7 +647,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
   - przy usuwaniu kolumny języka zmieniasz też `select` w `supabaseProvider.ts` (`loadPreferences`: `display_currency,locale,theme`) i `prefs.save`.
   - Test: Stan systemu bez kafelka DeepL i bez błędu w konsoli; konto z zapisanym „en” widzi panel po polsku.
 
-### A6 · Plik KSH = Harmonogram (E38, L31, C23 — przeniesione z P7; W13: sekrety są)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):**
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
@@ -661,7 +661,8 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
    - tabela stanu `ksh_sync_state`, wiersz w Stanie systemu;
    - `SOURCE_DOWN` po 30 min; ostrzeżenie 30 dni przed wygaśnięciem sekretu;
    - „Transport zniknął z pliku” → sprawa HHL „Anuluj / Zostaw” (nic nie znika samo);
-   - zapis WT → plik zostaje wyłączony, aż przyjdzie plik testowy od IT KSH (P7).
+   - **zapis na pliku testowym (D-20261019-1420-01):** ten sam kod odczytu, adres tylko ze zmiennej `SHAREPOINT_TEST_FILE_URL` (właściciel w `.env.local`; adresu nie ma w repozytorium, zgłoszeniach, logach ani testach). Raport różnic na TEST — tylko liczby. Zapis dat i godzin KSH (G-20) oraz numerów zleceń (E38) do pliku testowego, w układzie pliku; KR-03 nie odrzucać. Każdy zapis w historii: kto, kiedy, przed i po. Wiersz zmieniony w pliku od ostatniego odczytu nie jest nadpisywany — sprawa „Plik KSH zmieniony — sprawdź” dla HHL. Testy na pliku testowym albo na makiecie Graph; CI bez dostępu do SharePoint. Po teście przywrócenie poprzedniej wartości (przed → po → przywrócone w `POSTEP.md`). Przy 401/403: zgłoszenie `pytanie-do-koordynatora` z komunikatem Graph, bez sekretów, i dalej reszta kolejki.
+   - Zapis do pliku produkcyjnego zostaje wyłączony (przełącznik w Opcjach › System, domyślnie wyłączony), aż właściciel zaakceptuje go po testach. II-10: plik testowy dostępny 19.10; zapis na produkcji po akceptacji właściciela.
 5. Test:
    - plik z 08.10 na TEST z danymi zmyślonymi (G-17) → 95 HH, 43 NTG i 15 pustych policzone, 0 błędów, KR-03 ze sprawą;
    - próba z ROLLBACK na produkcji w oknie wdrożenia (jak R-1 w P7);
@@ -784,7 +785,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - aktualizacja po kodzie; zmiana z panelu KSH według E9-6 (do synchronizacji W13); daty i godziny zmienia i potwierdza tylko KSH i plik (G-20; prawa i ochrona w bazie — P3);
   - **zmiana dat lub godzin przy wgraniu pliku** (decyzja 09.10 13:09 pkt 1, G-18, D-20261009-1309-01 R4): porównanie 4 pól („Data załadunku”, „Godzina (załadunek)”, „Data dostawy na budowę”, „Godzina (rozładunek)”) → powiadomienie `PLAN_DATES_CHANGED` do HHL Administrator, HHL Operacje, SCX Dyspozytor, SCX Użytkownik, jedno na transport na wgranie, z „było → jest”, wpis w Historii; to samo przy zmianie KSH w Watch Tower; sprawy D-12 i L31, przesunięcie startu śledzenia (E27 pkt 1), E39, E16 i workflow E9 bez zmian;
   - Harmonogram domyślnie w układzie pliku (nazwy kolumn z makiety, L42); 8 kolumn jako „Widok skrócony”; wygląd `wyglad/P7-c`; dane D-20261016-1020-01 pkt 1–5.
-  - Synchronizacja z SharePoint w obie strony i zapis do pliku — po dostępie od działu IT KSH (§5 W13, L41) jako pozycja „P7 — uzupełnienie W13”; w niej także zapis dat i godzin zmienionych przez KSH w Watch Tower do pliku (do 1 min), plik → Watch Tower co 5 min, komórki i konflikt według D-20261009-1309-01 R6 pkt 4–6 (G-20, W29, W31). Obowiązują W29 i W31 według D-20261018-2200-01: przy konflikcie dat wygrywa plik, a KSH dostaje informację w dzwonku; formuła „dostawa − 5 dni” jest zastępowana wartością.
+  - Synchronizacja z SharePoint: odczyt i zapis na pliku testowym są w A6 (D-20261019-1420-01, plik testowy dostępny 19.10). Zapis na produkcji — po akceptacji właściciela, jako „P7 — uzupełnienie W13”: daty i godziny zmienione przez KSH w Watch Tower do pliku (do 1 min), plik → Watch Tower co 5 min, komórki i konflikt według D-20261009-1309-01 R6 pkt 4–6 (G-20, W29, W31). Obowiązują W29 i W31 według D-20261018-2200-01: przy konflikcie dat wygrywa plik, a KSH dostaje informację w dzwonku; formuła „dostawa − 5 dni” jest zastępowana wartością.
 - **E30** Harmonogram: filtry E28 + tydzień; zmiana zestawu tylko w oknie Awizacja. Harmonogram — wygląd `wyglad/P7-c` (D-20261016-1020-01).
 - **E20** pełny zakres poza paskiem górnym (pasek w P3): szerokości, przyklejone kolumny (E20-1, E20-2). Harmonogram — wygląd `wyglad/P7-c` (D-20261016-1020-01).
 - **E32** panel i okno Awizacja (mapa Przeglądu w panelu — z P9 / E1; P7 jej nie zmienia):
@@ -936,7 +937,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W10 | Konto testowe Claude (interia.pl) — usunięcie po wszystkich pracach (E18 P1) | po R-4 | czeka |
 | W11 | Regeneracja 280 ujęć i tag `baseline-audyt-<data P11>` na maszynie z nocną bramą wizualną (cron właściciela, `scripts/visual/gate.sh`) — wykonawca przygotowuje polecenie w P11 | P11 | czeka |
 | W12 | Usunięcie `tower-hhl.pages.dev` z Redirect URLs w panelu Supabase (E24 pkt 3) | po P9 | czeka — właściciel po wdrożeniu przekierowania 301 w P9 (E24); gdy 301 działa → w raporcie „W12 TERAZ” (D-20261017-0730-01) |
-| W13 | Dostęp do pliku harmonogramu KSH na SharePoint od działu IT KSH (decyzja 12:50 „czekamy”) — potem synchronizacja w obie strony według E38 (L41) i według decyzji 09.10 13:09: daty i godziny zmienione przez KSH w Watch Tower trafiają do pliku (G-20) | gdy będzie | czeka |
+| W13 | Dostęp do pliku harmonogramu KSH na SharePoint od działu IT KSH — synchronizacja w obie strony według E38 (L41) i decyzji 09.10 13:09: daty i godziny zmienione przez KSH w Watch Tower trafiają do pliku (G-20) | A6 | **plik testowy dostępny 19.10** (D-20261019-1420-01, #320); zapis na produkcji po akceptacji właściciela |
 | W14 | Linki śledzenia od podwykonawców SCX (E44, L55) | — | **ZAMKNIĘTE 09.10.2026**: link RIO jest (10:34), dane automatycznie (10:54), zgody na piśmie i nowy link na każdy przejazd (11:19) — E44 w P4 (G-24) |
 | W15 | Oficjalne API emtrack (TELM-2, II-4, D-TELM-ETA) i API Stena (D-LATER); do tego czasu odczyt jak dziś (`emtrack-web`, źródło STENA) | gdy będzie | czeka |
 | W16 | Kody opóźnień uzgodnione z SCX (II-2) — po spotkaniu z SCX | gdy będą | czeka |
@@ -971,7 +972,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
-- synchronizacja SharePoint w obie strony (E38, L41) — W13;
+- synchronizacja SharePoint w obie strony (E38, L41) — W13: plik testowy dostępny 19.10; zapis na produkcji po akceptacji właściciela (D-20261019-1420-01, pozycja A6);
 - oficjalne API emtrack: TELM-2, II-4, D-TELM-ETA; API Stena (D-LATER) — W15;
 - II-2 kody opóźnień z SCX — W16;
 - 6.9 e-CMR, 9.9 kanał zespołowy, 9.10 kalendarz, 10.9 ślad węglowy, retencja `files/` w R2 — W18;
@@ -1105,3 +1106,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 12:10 | #314 F7: ZASADY — autor polecenia tylko Spawn2018; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka | koordynator F7 12:02; pętla |
 | 19.10.2026 10:50 | D-20261019-1050-01: praca ciągła — skrzynka `dla-cursora`, scalanie bez promptu (F7), decyzje koordynatora, pętla nocna; `ZASADY_CIAGLEJ_PRACY.md`; pozycja Automat wdrożenia po poprawce #312; kolejka: #312 → Automat → D-0005 (#313) → D-0930 → A3… | właściciel ~10:50; koordynator |
 | 19.10.2026 10:50 | D-1740 / #310 **0231 NA PRODUKCJI** (`39116fbb`, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); F7 B1 otwarte jako #312 (has_doc jak C17) | wykonawca |
+| 19.10.2026 14:20 | D-20261019-1420-01 (#320): A6 = odczyt SharePoint + zapis na pliku testowym; plik produkcyjny bez zapisu do akceptacji właściciela. II-10 i W13: plik testowy dostępny 19.10. Kolejka bez zmian (po B9, przed C4) | właściciel 14:19; koordynator |
