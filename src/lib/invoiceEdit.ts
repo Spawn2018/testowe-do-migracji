@@ -36,15 +36,20 @@ export function billEditState(
 }
 
 /**
- * Weryfikacja po zmianie: poprawka Administratora HHL po akceptacji zostawia „Zaakceptowana”
- * (druga strona dostaje powiadomienie); każda inna zmiana wraca do „Do weryfikacji” — odbiorca sprawdza ponownie.
+ * Weryfikacja po zmianie (F7 #347 P3): zmiana wystawcy przed akceptacją → „Do weryfikacji” (odbiorca sprawdza ponownie).
+ * Poprawka Administratora HHL po akceptacji i poprawka strony odbiorcy (Administrator HHL na fakturze SCX) — status zostaje.
  */
-export function verificationAfterEdit(prev: BillVerification, byAdmin: boolean): BillVerification {
+export function verificationAfterEdit(prev: BillVerification, issuerEdit: boolean, byAdmin: boolean): BillVerification {
+  if (!issuerEdit) return prev;
   return prev === 'ZAAKCEPTOWANA' && byAdmin ? 'ZAAKCEPTOWANA' : 'DO_WERYFIKACJI';
 }
 
-/** Kto dostaje powiadomienie o zmianie: przy poprawce po akceptacji — strona inna niż HHL; inaczej odbiorca. */
-export function editNotifyTarget(b: Pick<Bill, 'issuer' | 'recipient' | 'verification'>, byAdmin: boolean): RoleId {
-  if (b.verification === 'ZAAKCEPTOWANA' && byAdmin) return b.issuer === 'HHL' ? b.recipient : b.issuer;
-  return b.recipient;
+/** Kto dostaje powiadomienie: zmienia wystawca → odbiorca; zmienia druga strona (Administrator HHL na fakturze SCX) → wystawca. */
+export function editNotifyTarget(b: Pick<Bill, 'issuer' | 'recipient'>, issuerEdit: boolean): RoleId {
+  return issuerEdit ? b.recipient : b.issuer;
+}
+
+/** „Faktura poprawiona przez Administratora HHL” — poprawka po akceptacji albo na cudzej fakturze; inaczej „zmieniona”. */
+export function editIsCorrection(b: Pick<Bill, 'verification'>, issuerEdit: boolean, byAdmin: boolean): boolean {
+  return !issuerEdit || (byAdmin && b.verification === 'ZAAKCEPTOWANA');
 }

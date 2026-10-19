@@ -110,6 +110,10 @@ test.describe('A4 — faktura po terminie', () => {
     const form = page.locator('[data-bill-edit-form="bill-k-2026-W38"]')
     await expect(form).toBeVisible()
     await expect(form.locator('[data-w="vat"]')).not.toHaveValue('—')
+    /* F7 #347 P5: zmiana waluty nie odznacza pozycji tej faktury */
+    await form.locator('[data-cur="EUR"]').click()
+    await form.locator('[data-cur="PLN"]').click()
+    await expect(form.locator('tr[data-w-line] input.inv-check:checked')).toHaveCount(await form.locator('tr[data-w-line]').count())
     await form.locator('[data-w="number"]').fill('SCX/FV/2026/0938-K')
     await form.locator('[data-w="reason"]').fill('błędny numer')
     await form.locator('[data-w="submit"]').click()

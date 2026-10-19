@@ -70,9 +70,10 @@ import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
 import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
-import { billEditState, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
+import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
+import { isPreviewReadOnly } from '../lib/prodFacade';
 import { accountRole } from '../lib/accountRole';
-import { refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
+import { INVOICE_OVERDUE_KIND, refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { PROGRESS_OF, STATUS_TO_STAGE, positionAlong } from '../lib/status';
 import { applyEtaToLoad } from '../lib/eta';
@@ -1624,7 +1625,8 @@ export const useTowerStore = create<TowerState>()(
         const today = localDateOf(getNowIso());
         const old = s.bills.find((x) => x.id === billId);
         const account = accountRole(s.role);
-        if (!old || billEditState(s.role, account, old) !== 'edit') {
+        /* F7 #347 P1: Podgląd innej firmy jest tylko do odczytu — bez zmiany „na niby” */
+        if (!old || isPreviewReadOnly({ viewRole: s.role }) || billEditState(s.role, account, old) !== 'edit') {
           get().pushToast(t(s.locale, old && billEditState(s.role, account, old) === 'locked-accepted' ? 'bill_edit_locked' : 'bill_edit_denied'), 'HIGH');
           return { ok: false as const, errors: ['ROLE'] };
         }
@@ -1633,6 +1635,7 @@ export const useTowerStore = create<TowerState>()(
         const chk = checkBill({ ...draft, direction: old.direction, pdfName: draft.pdfName ?? old.pdfName ?? 'faktura.pdf' }, s.loads, others, today, s.documents);
         if (chk.errors.length) return { ok: false as const, errors: chk.errors };
         const byAdmin = isHhlAdmin(s.role, account);
+        const issuerEdit = s.role === old.issuer;
         const next: Bill = {
           ...old,
           number: draft.number.trim(), issueDate: draft.issueDate, receiptDate: draft.receiptDate ?? old.receiptDate ?? null,
@@ -1641,13 +1644,19 @@ export const useTowerStore = create<TowerState>()(
           dueFromDocument: Boolean(draft.dueDateFromDocument),
           pdfName: draft.pdfName ?? old.pdfName ?? null,
           lines: chk.lines, headerFlags: chk.headerFlags, missingLoadIds: chk.missingLoadIds,
-          verification: verificationAfterEdit(old.verification, byAdmin),
+          verification: verificationAfterEdit(old.verification, issuerEdit, byAdmin),
         };
         next.payment = billPaymentToday(next, today);
-        set((st) => ({ bills: st.bills.map((x) => (x.id === billId ? next : x)) }));
-        const target = editNotifyTarget(old, byAdmin);
+        set((st) => {
+          const bills = st.bills.map((x) => (x.id === billId ? next : x));
+          /* F7 #347 P4: nowy termin / numer / status — sprawa „po terminie” jak przy weryfikacji i płatności */
+          /* demo: sprawa z nowym numerem i terminem (na produkcji sprawy zakłada baza) */
+          const base = SUPABASE_AUTH_ENABLED ? st.risks : st.risks.filter((r) => !(r.kind === INVOICE_OVERDUE_KIND && r.invoiceId === billId));
+          return { bills, risks: syncInvoiceOverdue(base, next, today, getNowIso(), !SUPABASE_AUTH_ENABLED) };
+        });
+        const target = editNotifyTarget(old, issuerEdit);
         get().pushNotification({
-          title: t(s.locale, old.verification === 'ZAAKCEPTOWANA' && byAdmin ? 'bill_notifyCorrected' : 'bill_notifyUpdated'),
+          title: t(s.locale, editIsCorrection(old, issuerEdit, byAdmin) ? 'bill_notifyCorrected' : 'bill_notifyUpdated'),
           body: `${next.number} · ${next.weekKey} · ${formatPlMoney(next.gross, next.currency)}`,
           severity: 'MEDIUM', roleScope: [target], href: { view: 'inv', entityId: next.id },
         });

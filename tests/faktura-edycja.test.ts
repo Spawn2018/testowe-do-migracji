@@ -5,12 +5,13 @@
  * Dane demo (zmyślone).
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { billEditState, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../src/lib/invoiceEdit';
+import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../src/lib/invoiceEdit';
 import { buildDemoSnapshot, DEMO_TODAY_LOCAL } from '../src/data/demoProvider';
 import { useTowerStore } from '../src/store/useTowerStore';
 import { resetDemoAccountCache, setDemoAccountKind } from '../src/lib/demoAccount';
 import { vatGrossOf, type BillDraft } from '../src/lib/invoices3';
 import type { Bill } from '../src/types';
+import { INVOICE_OVERDUE_KIND } from '../src/lib/invoiceOverdue';
 
 const B = (issuer: 'SCX' | 'HHL', verification: Bill['verification']) => ({ issuer, verification });
 
@@ -40,13 +41,18 @@ describe('Kto zmienia fakturę (prod: konto z profilu)', () => {
     expect(isHhlAdmin('HHL', null, false)).toBe(true);
     expect(isHhlAdmin('HHL', 'HHL_OPS', false)).toBe(false);
   });
-  it('po zmianie: poprawka admina po akceptacji zostawia akceptację, inne zmiany → „Do weryfikacji”; komu powiadomienie', () => {
-    expect(verificationAfterEdit('ZAAKCEPTOWANA', true)).toBe('ZAAKCEPTOWANA');
-    expect(verificationAfterEdit('SPORNA', false)).toBe('DO_WERYFIKACJI');
-    expect(verificationAfterEdit('ZGODNA', true)).toBe('DO_WERYFIKACJI');
-    expect(editNotifyTarget({ issuer: 'SCX', recipient: 'HHL', verification: 'ZAAKCEPTOWANA' }, true)).toBe('SCX');
-    expect(editNotifyTarget({ issuer: 'HHL', recipient: 'KSH', verification: 'ZAAKCEPTOWANA' }, true)).toBe('KSH');
-    expect(editNotifyTarget({ issuer: 'SCX', recipient: 'HHL', verification: 'SPORNA' }, false)).toBe('HHL');
+  it('po zmianie: wystawca → „Do weryfikacji” i powiadomienie odbiorcy; Administrator HHL na fakturze SCX → status zostaje, powiadomienie SCX (F7 P3)', () => {
+    expect(verificationAfterEdit('SPORNA', true, false)).toBe('DO_WERYFIKACJI');
+    expect(verificationAfterEdit('ZGODNA', true, true)).toBe('DO_WERYFIKACJI');
+    expect(verificationAfterEdit('ZAAKCEPTOWANA', true, true)).toBe('ZAAKCEPTOWANA');
+    expect(verificationAfterEdit('DO_WERYFIKACJI', false, true)).toBe('DO_WERYFIKACJI');
+    expect(verificationAfterEdit('ZAAKCEPTOWANA', false, true)).toBe('ZAAKCEPTOWANA');
+    expect(editNotifyTarget({ issuer: 'SCX', recipient: 'HHL' }, false)).toBe('SCX');
+    expect(editNotifyTarget({ issuer: 'HHL', recipient: 'KSH' }, true)).toBe('KSH');
+    expect(editNotifyTarget({ issuer: 'SCX', recipient: 'HHL' }, true)).toBe('HHL');
+    expect(editIsCorrection({ verification: 'DO_WERYFIKACJI' }, false, true)).toBe(true);
+    expect(editIsCorrection({ verification: 'ZAAKCEPTOWANA' }, true, true)).toBe(true);
+    expect(editIsCorrection({ verification: 'SPORNA' }, true, false)).toBe(false);
   });
 });
 
@@ -110,6 +116,34 @@ describe('Akcja updateBill (demo)', () => {
     useTowerStore.setState({ bills: useTowerStore.getState().bills.map((b) => (b.id === p.id ? { ...b, verification: 'DO_WERYFIKACJI' } : b)) });
     expect(useTowerStore.getState().updateBill(p.id, draftOf(p, { number: `${p.number}-B` }), null, null).ok).toBe(true);
     expect(przychod().number).toBe(`${p.number}-B`);
+  });
+
+  it('Administrator HHL poprawia fakturę SCX przed akceptacją: status zostaje, powiadomienie u SCX (F7 P3)', () => {
+    const k = koszt();
+    useTowerStore.setState({ bills: useTowerStore.getState().bills.map((b) => (b.id === k.id ? { ...b, verification: 'DO_WERYFIKACJI' } : b)) });
+    expect(useTowerStore.getState().updateBill(k.id, draftOf(k, { number: `${k.number}-A` }), null, 'literówka').ok).toBe(true);
+    expect(koszt().verification).toBe('DO_WERYFIKACJI');
+    expect(useTowerStore.getState().notifications[0].roleScope).toEqual(['SCX']);
+  });
+
+  it('nowy termin z dokumentu zamyka sprawę „po terminie”; nowy numer w sprawie (F7 P4)', () => {
+    const mine = (id: string) => useTowerStore.getState().risks.filter((r) => r.kind === INVOICE_OVERDUE_KIND && r.invoiceId === id);
+    const p = przychod();
+    useTowerStore.setState({ bills: useTowerStore.getState().bills.map((b) => (b.id === p.id ? { ...b, verification: 'DO_WERYFIKACJI', payment: 'PO_TERMINIE', dueDate: '2026-01-01', dueFromDocument: true } : b)) });
+    const q = przychod();
+    /* nadal po terminie, nowy numer → sprawa z nowym numerem */
+    expect(useTowerStore.getState().updateBill(q.id, draftOf(q, { number: 'HHL/FV/NOWY/1', dueDateFromDocument: '2026-01-01' }), null, 'numer').ok).toBe(true);
+    expect(mine(q.id).length).toBe(1);
+    expect(JSON.stringify(mine(q.id)[0])).toContain('HHL/FV/NOWY/1');
+    /* nowy termin w przyszłości → sprawa znika */
+    expect(useTowerStore.getState().updateBill(q.id, draftOf(przychod(), { dueDateFromDocument: '2099-12-31' }), null, 'termin').ok).toBe(true);
+    expect(mine(q.id)).toHaveLength(0);
+    expect(przychod().payment).not.toBe('PO_TERMINIE');
+  });
+
+  it('Podgląd innej firmy: bez zmiany faktury (F7 P1)', async () => {
+    const pf = await import('../src/lib/prodFacade');
+    expect(pf.isPreviewReadOnly({ prod: true, viewRole: 'SCX', orgCode: 'HHL' })).toBe(true);
   });
 
   it('pozycje tej faktury nie są „już zafakturowane” przy zapisie (bez błędu DOUBLE)', () => {

@@ -35,6 +35,7 @@ import { billLineFuel } from '../lib/p5cFuel';
 import { fc, fcp } from '../i18n/p5c';
 import { PaymentChoice } from '../components/invoices/Factoring';
 import { billEditState, invoiceEditOn } from '../lib/invoiceEdit';
+import { isPreviewReadOnly } from '../lib/prodFacade';
 import { accountRole } from '../lib/accountRole';
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
@@ -506,7 +507,7 @@ function BillDetail({ bill }: { bill: Bill }) {
     : undefined;
   const verify = (v: BillVerification) => { if (verifyBill(bill.id, v, v === 'SPORNA' ? note : null)) setNote(''); };
   /* A4 / D-20261020-0115-01: edycja — wystawca do akceptacji odbiorcy, potem tylko Administrator HHL; KSH nigdy */
-  const editState = invoiceEditOn() ? billEditState(role, accountRole(role), bill) : 'none';
+  const editState = invoiceEditOn() && !isPreviewReadOnly({ viewRole: role }) ? billEditState(role, accountRole(role), bill) : 'none';
   if (editing) return <BillWizard direction={bill.direction} edit={bill} onDone={() => setEditing(false)} />;
 
   return (
@@ -673,6 +674,8 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
     return [...ready, ...own];
   }, [weekLoads, documents, edit, loads]);
   const waiting = useMemo(() => weekLoads.filter((l) => !billReady(l, documents)), [weekLoads, documents]);
+  /* F7 #347 D1: pozycje faktury z transportem niewidocznym na liście (np. anulowany) zostają bez zmian — nic nie znika po cichu */
+  const hiddenOwn = useMemo(() => (edit ? edit.lines.filter((ln) => !loads.some((l) => l.id === ln.loadId)) : []), [edit, loads]);
   const [lines, setLines] = useState<Record<string, LineState>>(() => (edit ? editLineState(edit) : {}));
   const lineOf = (id: string): LineState => {
     if (lines[id]) return lines[id];
@@ -680,7 +683,8 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
     const fx = currency === 'PLN' ? suggestLineFx(l, direction, today) : null;
     const exp = expectedNetFor(l, direction, currency, today) ?? (fx ? Math.round(computedEurFor(l, direction) * fx.mid * 100) / 100 : null);
     /* edycja: transport tygodnia, którego nie było na fakturze — domyślnie niezaznaczony */
-    return { on: !edit, net: exp != null ? formatPlNumber(exp, 2) : '', fuel: '', fx, fxConfirmed: false };
+    /* F7 #347 P5: po zmianie waluty / tygodnia pozycje tej faktury zostają zaznaczone */
+    return { on: !edit || edit.lines.some((ln) => ln.loadId === id), net: exp != null ? formatPlNumber(exp, 2) : '', fuel: '', fx, fxConfirmed: false };
   };
   const patch = (id: string, p: Partial<LineState>) => setLines((s) => ({ ...s, [id]: { ...lineOf(id), ...p } }));
   const num = parseAmount;
@@ -691,10 +695,10 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
   const draft: BillDraft = {
     direction, number, issueDate, weekKey: week, currency, net: netN, vat: sums?.vat ?? null, gross: sums?.gross ?? null,
     dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? edit?.pdfName ?? (edit ? 'faktura.pdf' : null), pdfSize: file?.size ?? null,
-    lines: candidates.filter((l) => lineOf(l.id).on).map((l) => {
+    lines: [...hiddenOwn.map((ln) => ({ loadId: ln.loadId, invoicedNet: ln.invoicedNet, invoicedFuel: ln.invoicedFuel ?? null, fx: ln.fx ?? null })), ...candidates.filter((l) => lineOf(l.id).on).map((l) => {
       const st = lineOf(l.id);
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };
-    }),
+    })],
   };
   const chk = checkBill(draft, loads, bills, today, documents);
 
@@ -709,7 +713,7 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
         <h4 className="sec">{edit ? tp(locale, 'bill_edit_h', { no: edit.number }) : week ? ftp(locale, 'p5_inv_new_h', { no: Number(week.slice(-2)) }) : ft(locale, 'p5_inv_new')}</h4>
         <label className="inv-week">
           <span>{t(locale, 'bill_col_week')}</span>
-          <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); setLines({}); }}>
+          <select className="input" value={week} data-w="week" onChange={(e) => { setWeek(e.target.value); if (!edit) setLines({}); }}>
             {weeks.map((w) => <option key={w} value={w}>{weekOptionLabel(w)}{readyIn.get(w) ? '' : ` · ${ft(locale, 'p5_inv_wait_cmr')}`}</option>)}
           </select>
         </label>
@@ -782,7 +786,8 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
             </table>
           </div>
           {waiting.length ? <p className="fin-muted" data-w-wait-n>{ftp(locale, 'p5_inv_wait_n', { n: String(waiting.length), codes: waiting.map((l) => l.code).join(', ') })}</p> : null}
-          <p className="fin-muted">{ft(locale, 'p5_inv_form_lines_note')}</p>
+          {hiddenOwn.length ? <p className="fin-muted" data-w-hidden-lines>{tp(locale, 'bill_edit_hidden_lines', { n: hiddenOwn.length })}</p> : null}
+          <p className="fin-muted">{edit ? t(locale, 'bill_edit_lines_note') : ft(locale, 'p5_inv_form_lines_note')}</p>
         </div>
         <div className="inv-form-fields">
           <div className="inv-fields">
@@ -840,7 +845,7 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
           ) : null}
         </div>
       </div>
-      <p className="note">{edit ? t(locale, edit.verification === 'ZAAKCEPTOWANA' ? 'bill_edit_note_admin' : 'bill_edit_note_issuer') : t(locale, 'bill_wizard_note')}</p>
+      <p className="note">{edit ? t(locale, role === edit.issuer && edit.verification !== 'ZAAKCEPTOWANA' ? 'bill_edit_note_issuer' : 'bill_edit_note_admin') : t(locale, 'bill_wizard_note')}</p>
     </div>
   );
 }

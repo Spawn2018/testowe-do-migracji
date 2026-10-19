@@ -378,7 +378,13 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         }
         const { lines, ...patch } = billToRpc(m.bill, docId ?? '');
         delete patch.direction; // kierunku faktury nie zmienia się (wystawca i odbiorca bez zmian)
-        const res = await sb.rpc('update_invoice', { p_invoice: m.billId, p_patch: { ...patch, document_id: docId }, p_lines: lines, p_note: m.note });
+        /* F7 #347 P2: pełna treść nagłówka, bez „null = licz sam” — termin zawsze jawnie, z flagą „z dokumentu” */
+        const res = await sb.rpc('update_invoice', {
+          p_invoice: m.billId,
+          p_patch: { ...patch, due_date: m.bill.dueDate, due_date_from_document: m.bill.dueFromDocument, document_id: docId },
+          p_lines: lines,
+          p_note: m.note,
+        });
         if (res.error) {
           if (uploaded) {
             await sb.storage.from(uploaded.bucket).remove([uploaded.objectPath]);

@@ -65,7 +65,7 @@ describe('A4 · faktura tylko z CMR (kreator)', () => {
     const s = read('src/views/BillsPanel.tsx');
     expect(s).toMatch(/const ready = weekLoads\.filter\(\(l\) => billReady\(l, documents\)\)/);
     expect(s).toMatch(/const waiting = useMemo\(\(\) => weekLoads\.filter\(\(l\) => !billReady\(l, documents\)\)/);
-    expect(s).toMatch(/lines: candidates\.filter\(\(l\) => lineOf\(l\.id\)\.on\)/);
+    expect(s).toMatch(/\.\.\.candidates\.filter\(\(l\) => lineOf\(l\.id\)\.on\)/);
     expect(s).toMatch(/<tr key=\{l\.id\} className="inv-wait" data-w-wait=\{l\.code\}>/);
     expect(s).toMatch(/checked=\{false\} disabled/);
     expect(read('src/i18n/p5.ts')).toContain("p5_inv_wait_cmr: 'czeka na CMR',");

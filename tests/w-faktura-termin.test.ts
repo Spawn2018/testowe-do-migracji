@@ -85,8 +85,8 @@ describe('A4 — zmiana faktury zamyka albo przywraca sprawę', () => {
   });
   it('sklep: opłata, cofnięcie i spór przechodzą przez syncInvoiceOverdue (produkcja bez dodawania)', () => {
     const src = read('src/store/useTowerStore.ts');
-    expect(src.match(/syncInvoiceOverdue\(/g)).toHaveLength(3);
-    expect(src.match(/syncInvoiceOverdue\([^;]*!SUPABASE_AUTH_ENABLED\)/g)).toHaveLength(3);
+    expect(src.match(/syncInvoiceOverdue\(/g)).toHaveLength(4); // + edycja faktury (A4, D-20261020-0115-01)
+    expect(src.match(/syncInvoiceOverdue\([^;]*!SUPABASE_AUTH_ENABLED\)/g)).toHaveLength(4);
   });
 });
 
