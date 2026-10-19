@@ -124,7 +124,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -140,7 +140,7 @@ Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P
 | pn 19.10, 12:00 | #306 (D-1610) scalony, `db push`, wdrożenie z `main`; #307 scalony |
 | pn 19.10, 18:00 | D-20261018-1740-01 i D-20261019-0005-01 (część bazy) |
 | **pn 19.10, 23:59** | **A3, A7, A9, A4, A5** (nowy punkt kontrolny) |
-| wt 20.10, 23:59 | B4, B5, B7, B8, B9; A6 pkt 1–3; odczyt SharePoint (A6 pkt 4) |
+| wt 20.10, 23:59 | B4, B5, B7, B8, B9; A10; A6 pkt 1–3; odczyt SharePoint (A6 pkt 4) |
 | śr 21.10, 23:59 | C4–C13; P4-u; P3-d |
 | czw 22.10, 23:59 | P5 |
 | pt 23.10, 23:59 | P6 |
@@ -401,7 +401,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -576,7 +576,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
   Link śledzenia **nie** blokuje (4B).
 - Wynik `awiz_missing(load)` podajesz widokowi jako `load.readyGaps` (`ReadyGap[]`). Widok bierze to pole zamiast liczyć sam. Mapowanie z D-20261017-1715-01 §2 pkt 2: `AWIZ` z `items` dokładnie „kierowca”, „telefon”, „ciągnik”, „naczepa”, „kierowca SE”, „telefon SE”, „ciągnik SE”; `SAILING`; `PILOTS` (`items`: „pilot” albo „pilot ×N”); `ORDER_SCX`; `ORDER_HHL`; `POLICY_SCX`; `PERMIT` (rodzaj „Firma” / „Trasa” z A7); `who`: „SCX” albo „HHL”; pusta lista = komplet; `undefined` = baza jeszcze nie liczy. Wyglądu nie zmieniasz (F1, #291).
 - Z tej funkcji korzystają L3 (0143), `readyGaps`, `resourcesComplete` i Kokpit.
-- `READY` nadawany w bazie po każdej zmianie.
+- `READY` nadawany w bazie po każdej zmianie. Rozszerzone w A10 o „Brak zasobów”, „Brak dokumentów” i przesuwanie w obie strony wewnątrz Przygotowania (D-20261019-1540-01).
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
@@ -613,6 +613,28 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
   - jeden zestaw kluczy `eta_basis` zgodny z `etaDetail.ts` (`ferry_eta_at`, `wait_ais`);
   - `READY_TO_INVOICE` i `INVOICED` jak `DELIVERED`.
 - Test: rejs Stena → „Prom” i ETA do Karlskrony; rejs Polferries → „Prom” i ETA do Nynäshamn; dziś `sailing_id` 0/94.
+- Zapas „Na promie” bez rejsu (pozycja na morzu albo AIS, oraz statek odpłynął a auto bez pozycji w porcie PL) jest w A10 (D-20261019-1540-01).
+
+### A10 · Automat wszystkich statusów (D-20261019-1540-01, #324; po A5, przed B4; termin wt 20.10, 23:59)
+Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każdy status, z cofnięciem; SCX — tylko do przodu, własne transporty (`load_status_set`). Automat nie cofa ręcznej zmiany. Po ręcznej zmianie automat idzie dalej od nowego statusu. Na osi źródło: „automatycznie (GPS / strefa / prom / dokumenty / import)” albo „ręcznie — osoba”.
+- **Przygotowanie** — jeden wyzwalacz AFTER INSERT/UPDATE na `loads` (zasoby, numery, piloci, `sailing_id`), `load_permits`, polisach i `documents`; rozszerza A9 (`awiz_missing`, `readyGaps`):
+  - Zaplanowany: import i nowy transport. Zostaje, dopóki SCX nie wpisze żadnej danej awizacji i do załadunku jest więcej niż 48 h (`p7Awiz`).
+  - Brak zasobów: brak kierowcy, telefonu, ciągnika, naczepy, pilotów lub numerów.
+  - Brak dokumentów: zasoby komplet, brak zezwolenia lub polisy SCX (wymagania według HHL_ADMIN, A3).
+  - Gotowy: wszystko komplet.
+  - Wewnątrz Przygotowania automat przesuwa w obie strony (np. Gotowy → Brak zasobów po usunięciu kierowcy). Poza Przygotowaniem — tylko do przodu.
+- **Trasa** — `apply_geofence_status`, tylko do przodu:
+  - Załadunek: wjazd w strefę załadunku z każdego statusu Przygotowania. Gdy status nie był Gotowy — ryzyko HHL „Załadunek bez gotowości: <braki>”, bez blokady.
+  - Droga PL: bez zmian.
+  - Port PL: także z Załadunku i Gotowy.
+  - Na promie: (a) A5 — rejs i `promote_ferry_departures`; (b) GPS na morzu w korytarzu albo zbieżność z AIS statku do 2 km; (c) statek odpłynął według AIS, a auto od 30 min bez pozycji w porcie PL.
+  - Port SE: wjazd z każdego wcześniejszego statusu trasy. Gdy pominięty Na promie — wpis Na promie z czasem odejścia (AIS albo rozkład).
+  - Droga SE: bez zmian. Na placu: wjazd z każdego wcześniejszego statusu trasy. Dostarczone: bez zmian (wyjazd po ≥ 10 min albo „Czy dostarczono?” → Tak).
+- **Rozliczenie:** po każdym Dostarczone ponowna próba `c17_try_billing_status` (także CMR wgrany wcześniej). Wyzwalacz AFTER UPDATE OF status na `loads`. Zafakturowano bez zmian (A4).
+- Ponowny automat po cofnięciu przez HHL_ADMIN: `dedup_key` z czasem zmiany, oś pokazuje nową godzinę. Czas ręcznej zmiany: `load_status_set` dla HHL_ADMIN bez ograniczeń daty (D-0005, #313). Jeśli #313 tego nie obejmuje — w A10.
+- Test bramy: każdy z 14 statusów automatem, bez ręcznego kroku. Łańcuch bez rejsu: strefy PL → morze → port SE → plac → wyjazd → CMR → Gotowe do fakturowania. Cofnięcie przez HHL_ADMIN i ponowny automat → nowy wpis. SCX wstecz → odmowa.
+- Widok (F8, koordynator): oś pokazuje źródło przy każdym wpisie.
+- Odbiór (SELECT): udział zmian automatycznych w `load_events`. Statusy Przygotowania na transportach zgodne z brakami z `readyGaps`.
 
 ### B4 · `visible_to` na serwerze (Cz1–Cz3, Cz25)
 - Zapis `visible_to` przy wiadomości czatu i dokumencie oraz sprawdzenie w RLS i w odbiorcach powiadomień.
@@ -1115,3 +1137,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 15:15 | D-20261019-1515-01 (#322): B9 zawężone — DeepL i tłumaczenia komunikatów SV/EN → PL zostają; usuwany tylko wybór języka ekranów; zero braków (ponawianie, „Tłumaczenie w toku”, alarm 15 min) | właściciel 15:10; koordynator |
 | 19.10.2026 15:25 | D-20261019-1525-01 (#323): Podgląd innych kont i widoków wyłącznie dla Administratora HHL. W B5, termin bez zmian | właściciel 15:14; koordynator |
 | 19.10.2026 15:51 | #319 scalony (`9a3c7b26`). Pierwszy `deploy-main` padł na kroku Baza (gniazdo lokalne). Poprawka adresu w `scripts/ci/normalize-db-url.py` | pętla |
+| 19.10.2026 15:40 | D-20261019-1540-01 (#324): A10 · Automat wszystkich statusów, zaraz po A5; termin wt 20.10, 23:59. Ręczna zmiana zostaje | właściciel 15:27; koordynator |

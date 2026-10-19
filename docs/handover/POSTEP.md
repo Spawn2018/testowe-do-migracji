@@ -3176,3 +3176,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Poprawka: `scripts/ci/normalize-db-url.py` — zdejmuje cudzysłów i BOM, bierze pierwszą linię `postgres://`, loguje tylko długość, schemat i czy jest użytkownik, host, baza oraz port. Gałąź `pakiet/automat-adres-bazy`. Sekretu nie zmieniam.
 - #321: przegląd F7 z poprawkami, bez „F7: gotowe do scalenia”. #317: konflikt z `main`. Bez scalenia.
 
+## 2026-10-19 16:10 — #321 scalony; #324 w planie (A10)
+
+- Skrzynka: #320, #322 i #323 już w planie, otwarte do zrobienia pozycji. #324 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1540-01. Wpisane: PLAN §3 (kolejność i punkt wt 20.10), §4 A10 po A5, dopiski przy A9 i A5, §8, `docs/handover/dopiski/D-20261019-1540-01.md`. Zgłoszenie otwarte do zrobienia A10. Bieżącej pozycji nie przerywa.
+- PR #321 (`wyglad/W-bramy-reguly`): F7 `Spawn2018` o 13:32Z, po ostatnim commicie `8be78fd` (12:50Z). Unit i visual zielone, `mergeable` CLEAN, bez forka. Scalony `6b294a50`.
+- #326: unit zielony, visual w toku na `710c9c13`, bez F7 — bez scalenia. #317: konflikt z `main` (F7 sprzed konfliktu). #325: visual w toku, bez F7. #313: `db` czerwone, bez F7.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** — poprawka adresu bazy, PR #326.
+
