@@ -3191,3 +3191,23 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 18:35 — #330: wdrożenie ręczne z main, sekret Actions nadal zły
+
+- Skrzynka: #330 (`Spawn2018`, `dla-cursora`, bez `pilne`) — sekret `SUPABASE_DB_URL` w Actions nie zaczyna się od `postgresql://`. Wpisane: PLAN §4 Automat pkt 4, §8. Zgłoszenie zostaje otwarte do poprawki sekretu i przebiegu `deploy-main`.
+- Scalanie: #327 bez „F7: gotowe do scalenia” (raport prób po `2d3ab1b`). #317 F7 z 13:08 jest sprzed wciągnięcia `main` (`55e22989`); visual w toku — bez scalenia. #313 bez F7, `db` czerwone. #259 bez F7.
+- Ręcznie z `main` `047ce7b5` (adres sesyjny z `.env.local`, port 5432, pooler): dry-run i `db push` — „Remote database is up to date”, 0 nowych migracji. Funkcje Edge bez zmian od ostatniego wdrożenia `b858b466`.
+- Vercel produkcja: `dpl_FgAn6VsfF1rqoGeyrmbW91jvLary` READY. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` **200**.
+- Log `normalize-db-url.py`: przy `jdbc:` albo `host=` jedna linia „to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler”, bez adresu.
+- Po wpisaniu URI przez właściciela: `workflow_dispatch` `deploy-main` i w POSTEP linia „Adres bazy: …”.
+- Dalej w kolejce, po domknięciu Automatu: **D-0005 #313** (numer migracji 0234 przy rebase).
+
+## 2026-10-19 19:10 — deploy-main 39287813163: host bezpośredni odrzucony; #327 scalony
+
+- Skrzynka: #331 (`pilne`, odpowiedź koordynatora 18:40 — sekret od nowa, `postgresql://`). Jedno `workflow_dispatch` na `main` `047ce7b5`, przebieg `39287813163`. Drugiego nie uruchamiam.
+- Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie.
+- Dry-run: połączenie odrzucone (`ECONNREFUSED`) na hoście bezpośrednim `db.<projekt>.supabase.co` port 5432, zanim powstała lista migracji. To nie jest pula sesyjna. Edge i Vercel pominięte.
+- Linie diagnostyczne w #331. Zabezpieczenie prefiksu `NAZWA=` / JDBC zostaje po pierwszym zielonym `deploy-main`.
+- Scalenie: #327 F7 `Spawn2018` 16:46Z, po commicie `4bdd5b1` (16:27Z). Unit i visual (części) zielone, bez konfliktu, bez forka. Scalony `18344d57`.
+- Gałęzie `proba/ci-dokumenty` i `proba/ci-czerwony` już nie istnieją.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #332 (log JDBC), czeka na „F7: gotowe do scalenia”.
+
