@@ -1,6 +1,13 @@
 import type { CorridorStage, LoadStatus } from '../types';
 import { CORRIDOR_REF_COORDS, positionAlongCorridor } from './corridor';
 
+/**
+ * Przegląd 18.10 (P13): po dostawie — „Dostarczone”, „Gotowe do fakturowania”, „Zafakturowano” (rozliczenie idzie
+ * dalej, transport jest dostarczony). Widoki, które pytały tylko o DELIVERED, gubiły transporty po fakturze.
+ */
+export const AFTER_DELIVERY: ReadonlySet<string> = new Set(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED']);
+export const isAfterDelivery = (status: string): boolean => AFTER_DELIVERY.has(status);
+
 export const STATUS_TO_STAGE: Record<LoadStatus, CorridorStage> = {
   PLANNED: 'PLAN',
   RESOURCES_PENDING: 'PLAN',

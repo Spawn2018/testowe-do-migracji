@@ -197,6 +197,9 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
   const toInvoiceNoCmr = toInvoice.filter((l) => !billReady(l, documents));
   /* audyt-C C-10: HHL „gotowe do faktury” = te same transporty co kafel „Czeka na wystawienie” i liczba w menu */
   const readyToInvoice = invoiceReadyLoads('HHL', loads, bills, today, documents);
+  /* przegląd 18.10 (P12): SCX „Do zafakturowania” = ta sama lista co kafel „Czeka na wystawienie” na stronie Faktury
+     (zamknięte tygodnie, z podpisanym CMR) — wcześniej liczył też transporty z bieżącego tygodnia */
+  const readyToInvoiceScx = invoiceReadyLoads('SCX', loads, bills, today, documents);
   const plan72 = loads.filter((l) => {
     const d = dayKey(l.plannedDeliverDate);
     return !delivered(l) && d != null && d >= today && d <= in72;
@@ -206,7 +209,7 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
     .filter((l) => dayKey(l.unloadedAt) && dayKey(l.plannedDeliverDate))
     .sort((a, b) => Date.parse(String(b.unloadedAt)) - Date.parse(String(a.unloadedAt)));
   const onTime = doneDated.filter((l) => (dayKey(l.unloadedAt) as string) <= (dayKey(l.plannedDeliverDate) as string));
-  return { today, loads7, lateLoads, permitsOk7, atSite, inTransit, done, doneNoCmr, toInvoice, toInvoiceNoCmr, readyToInvoice, plan72, doneDated, onTime };
+  return { today, loads7, lateLoads, permitsOk7, atSite, inTransit, done, doneNoCmr, toInvoice, toInvoiceNoCmr, readyToInvoice, readyToInvoiceScx, plan72, doneDated, onTime };
 }
 
 function shortDate(day: string | null): string {
@@ -312,7 +315,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       ferryTile(false),
       { id: 'bills', label: L('p3b_bills_check'), labelShort: L('p3b_bills_short'), go: 'inv',
         value: String(wait), of: null,
-        desc: wait ? L('p3b_bills_wait') : bills.some((b) => b.recipient === 'KSH') ? L('p3b_bills_none') : L('p3b_bills_empty'),
+        desc: wait ? L('p3b_bills_wait', { n: wait }) : bills.some((b) => b.recipient === 'KSH') ? L('p3b_bills_none') : L('p3b_bills_empty'),
         descShort: L('p3b_bills_wait_short'),
         tone: wait ? 'warn' : 'default' },
     ];
@@ -330,7 +333,7 @@ export function buildCockpit(input: CockpitInput): CockpitTile[] {
       inTransit,
       loads7Tile(true),
       { id: 'to-invoice', label: L('p3b_to_invoice'), labelShort: L('p3b_to_invoice'), go: 'inv',
-        value: String(f.toInvoice.length - f.toInvoiceNoCmr.length), of: null,
+        value: String(f.readyToInvoiceScx.length), of: null,
         desc: f.toInvoice.length === 0 ? L('p3b_to_invoice_none', { w })
           : f.toInvoiceNoCmr.length
             ? L('p3b_to_invoice_desc', { n: f.toInvoiceNoCmr.length, codes: codes(f.toInvoiceNoCmr, role), w })

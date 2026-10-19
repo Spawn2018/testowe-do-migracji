@@ -153,7 +153,8 @@ describe('E9 — kafelki Kokpitu (img/e9-after)', () => {
     expect(by.todo.value).toBe('1');
     expect(by['in-transit'].desc).toBe('SG-03 na placu w Boden');
     expect(by.loads7.desc).toBe('zezwolenia 1 z 2 · 1 po dacie załadunku');
-    expect(by['to-invoice'].value).toBe('1');
+    /* przegląd 18.10 (P12): liczba = kafel „Czeka na wystawienie” w Fakturach — tydzień t41 jeszcze trwa, więc 0 */
+    expect(by['to-invoice'].value).toBe('0');
     expect(by['to-invoice'].desc).toBe('1 czeka na podpisany CMR (SG-01) · t41');
     expect(by['to-invoice'].descShort).toBe('1 czeka na CMR');
     expect(by.ferry.desc).toBe('Wawel GDN → NYN · prognoza morza na stronie Ryzyka');

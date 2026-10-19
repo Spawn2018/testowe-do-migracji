@@ -56,7 +56,7 @@ describe('teksty o automatach (serverRuleOn)', () => {
       const { wt } = await import('../src/i18n/p4cWf');
       expect(wt('pl', 'p4c_wf_r_zones_d')).not.toContain('włączamy wkrótce');
       expect(wt('pl', 'p4c_wf_zt_site_out')).not.toMatch(/— włączamy wkrótce$/);
-      const gps = wt('pl', 'p4c_wf_r_gps_d');
+      const gps = wt('pl', 'p4c_wf_r_gps_d').replace(/\u00a0/g, ' ');
       expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany · ')).toBe(true); /* P11 (E21): bez kodów etapów */
       expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce$/);
       const { p9m } = await import('../src/i18n/p9c');

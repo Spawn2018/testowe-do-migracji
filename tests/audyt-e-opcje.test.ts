@@ -133,13 +133,13 @@ describe('E-06, C-14: Cennik i opłaty — symbole, wersje, liczby po polsku, D 
   const rc = (readOnly: boolean) => html(createElement(RateCard, {
     locale: 'pl', view: demoRateCard(), today: '2026-10-16', nowIso: '2026-10-16T12:00:00Z', readOnly, onSave: async () => true,
   }));
-  it('10 symboli w 12 pozycjach (KR — konwój 1, 2 i 3 auta), wersje KSH v2 i SCX v1 od 28.09.2026', () => {
+  it('10 symboli w 12 pozycjach (KR — konwój 1, 2 i 3 auta), wersje KSH v2 i SCX v1 od 11.09.2026', () => {
     const v = demoRateCard();
     expect(v.rows).toHaveLength(12);
     expect(new Set(v.rows.map((r) => r.symbol)).size).toBe(10);
     expect(v.rows.filter((r) => r.symbol === 'KR').map((r) => r.convoy)).toEqual([1, 2, 3]);
     const h = rc(false);
-    expect(h).toContain('Cennik KSH v2 od 28.09.2026 · cennik SCX v1 od 28.09.2026');
+    expect(h).toContain('Cennik KSH v2 od 11.09.2026 · cennik SCX v1 od 11.09.2026');
     expect(h).toContain('Koszt SCX · v1');
     expect(h).toContain('Przychód KSH · v2');
   });

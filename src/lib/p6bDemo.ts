@@ -68,7 +68,8 @@ export function demoHistoryEvents(load: Load, nowIso: string): LoadEvent[] {
     push(at(day, '09:40'), 'STATUS_AUTO', 'system', { from: 'LOADING', to: 'IN_TRANSIT_PL', powod: 'wyjazd ze strefy załadunku', source: 'GPS', provider: 'emtrack' });
   }
   if (p >= PROGRESS_OF.AT_PORT) {
-    push(at(day, '10:30'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-03', source: 'GPS', provider: 'emtrack' });
+    /* przegląd 18.10 (P19): Śrem → bufor 20 km przed Gdańskiem ok. 250 km — 4 h jazdy po wyjeździe 09:40 */
+    push(at(day, '13:40'), 'GEOFENCE_ENTER', 'geofence-engine', { geofence_id: 'gf-03', source: 'GPS', provider: 'emtrack' });
   }
   /* F7 #304: dzień po stronie szwedzkiej — dostawa z planu albo wcześniejszy dzień przyjazdu na plac („czeka przed placem
      od …”, T-18 przed oknem dostawy), żeby wyjazd z portu i bufor 50 km były przed wjazdem na plac przy każdym zegarze */

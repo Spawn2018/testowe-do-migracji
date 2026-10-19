@@ -88,7 +88,7 @@ export function demoFuelScreen(today: string, nowHm?: string): FuelScreenView {
   ];
   const yesterdayInWeek = todayIdx > 0;
   return {
-    contract: { version: 3, from: '2026-09-28', agreed: true },
+    contract: { version: 3, from: '2026-09-11', agreed: true },
     alarm: yesterdayInWeek
       ? { source: 'ORLEN', date: yesterday, at: '07:15', published: curOrlen(todayIdx - 1), affectsFrom: nextMon, affectsTo: add(nextMon, 6), nextTry: nowHm == null ? '13:15' : fuelNextTryToday(nowHm) }
       : null,
@@ -113,14 +113,14 @@ export const demoDwellRules = (): DwellRulesView => ({
   /* dayAfterH 10 h — decyzja właściciela 15.10, 18:32 (W41); wcześniej 24 h (07.10 12:35) */
   freeLoadH: 6, freeUnloadH: 4, hourEur: 75, dayEur: 750, dayAfterH: 10,
   startFrom: 'LATER', hourMode: 'FULL',
-  changed: { at: '2026-10-07T12:35:00+02:00', by: 'Administrator HHL' },
+  changed: { at: '2026-09-20T12:35:00+02:00', by: 'Administrator HHL' },
 });
 
 export const demoCancelRules = (): CancelRulesView => ({
   pct: { 5: 0, 4: 15, 3: 25, 2: 25, 1: 50, 0: 100 },
   /* wyglad/audyt-E (E-06): ten sam fracht SG co w cenniku poniżej (SCX v1 6 900, KSH v2 7 245 EUR — baza 08.10, E33) */
   example: { label: 'SG', costEur: DEMO_EXAMPLE_BASE_EUR.cost, revEur: DEMO_EXAMPLE_BASE_EUR.rev },
-  changed: { at: '2026-10-08T12:14:00+02:00', by: 'Administrator HHL' },
+  changed: { at: '2026-09-21T12:14:00+02:00', by: 'Administrator HHL' },
 });
 
 export const demoPaymentTerms = (): PaymentTermsView => ({ kshDays: 30, scxDays: 35, changed: null });
@@ -146,6 +146,6 @@ export const demoRateCard = (): RateCardView => ({
     R('T', 'T', 'Tężniki', 18.19, 2.45, 3.75, 5320),
     R('TS', 'TS', 'Tężniki ściany A', 20.69, 2.45, 3.95, 5950),
   ],
-  ksh: { side: 'KSH', v: 2, from: '2026-09-28', note: 'Poprawa cen do pełnej liczby', at: '2026-10-06T16:02:00+02:00', by: 'Administrator HHL' },
-  scx: { side: 'SCX', v: 1, from: '2026-09-28', note: null, at: '2026-09-30T10:00:00+02:00', by: 'Administrator HHL' },
+  ksh: { side: 'KSH', v: 2, from: '2026-09-11', note: 'Poprawa cen do pełnej liczby', at: '2026-09-19T16:02:00+02:00', by: 'Administrator HHL' },
+  scx: { side: 'SCX', v: 1, from: '2026-09-11', note: null, at: '2026-09-13T10:00:00+02:00', by: 'Administrator HHL' },
 });

@@ -61,8 +61,8 @@ describe('A6-T1 dane demo', () => {
   });
   it('PL z klucza == dotychczasowy tytuł i meta', () => {
     for (const r of risks) {
-      expect(riskText('pl', r.title, r.titleKey, r.titleParams), r.id).toBe(r.title);
-      if (r.metaKey) expect(riskText('pl', r.meta ?? '', r.metaKey, r.metaParams), r.id).toBe(r.meta);
+      expect(riskText('pl', r.title, r.titleKey, r.titleParams).replace(/\u00a0/g, ' '), r.id).toBe(r.title.replace(/\u00a0/g, ' '));
+      if (r.metaKey) expect(riskText('pl', r.meta ?? '', r.metaKey, r.metaParams).replace(/\u00a0/g, ' '), r.id).toBe((r.meta ?? '').replace(/\u00a0/g, ' '));
     }
   });
   it('8A: EN i SV dają tekst polski', () => {

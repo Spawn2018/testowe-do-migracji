@@ -115,7 +115,7 @@ export function TrackingBar({
     done && axis.firstFixAt && isoMs(axis.firstFixAt) < isoMs(done)
       ? tp(locale, 'p4b_trk_after_trail', { from: dayTime(axis.firstFixAt), to: dayTime(done) })
       : null,
-    purge ? tp(locale, 'p4b_trk_after_purge', { day: dayOnly(purge) }) : null,
+    purge ? tp(locale, isoMs(purge) > isoMs(nowIso) ? 'p4b_trk_after_purge_future' : 'p4b_trk_after_purge', { day: dayOnly(purge) }) : null,
   ]
     .filter(Boolean)
     .join(' · ');

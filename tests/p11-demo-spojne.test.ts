@@ -23,13 +23,13 @@ describe('P11 pkt 7 partia 5 — dane demo spójne', () => {
     }
   });
 
-  it('transporty „poniżej progu” mają marżę ok. 9 % z tych samych wierszy', () => {
+  it('transporty „poniżej progu” mają marżę ok. 3 % (poniżej progu 4 %) z tych samych wierszy', () => {
     const below = snap.loads.filter((l) => ['SG-15', 'SG-22', 'SS-02', 'SG-08'].includes(l.code));
     expect(below.length).toBe(4);
     for (const l of below) {
       expect(l.pricing.belowThreshold, l.code).toBe(true);
-      expect(l.pricing.marginPct, l.code).toBeGreaterThan(0.085);
-      expect(l.pricing.marginPct, l.code).toBeLessThan(0.095);
+      expect(l.pricing.marginPct, l.code).toBeGreaterThan(0.025);
+      expect(l.pricing.marginPct, l.code).toBeLessThan(0.035);
     }
   });
 

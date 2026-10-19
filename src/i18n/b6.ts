@@ -10,7 +10,7 @@ type Dict = Record<string, string>;
 const pl: Dict = {
   b6_howto: 'Jak to działa',
   b6_howto_notif:
-    'Zdarzenie: zmiana statusu, nowe albo zmienione ryzyko, wjazd lub wyjazd ze strefy, auto 50 km przed placem albo 20 km przed portem, sprawa do zrobienia, wiadomość w czacie, faktura.'
+    'Zdarzenie: zmiana statusu, nowe albo zmienione ryzyko, wjazd lub wyjazd ze strefy, auto 50\u00a0km przed placem albo 20\u00a0km przed portem, sprawa do zrobienia, wiadomość w czacie, faktura.'
     + '|Tabela poniżej: zdarzenie × rodzaj konta (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik) × kanał: dzwonek w aplikacji, powiadomienie na telefonie, e-mail. To wartości startowe dla każdego konta tego rodzaju.'
     + '|Każda osoba zmienia swoje kanały w „Dla mnie › Co dostaję”, tylko dla zdarzeń, które dostaje jej rodzaj konta. Kanał oznaczony „zawsze” zostaje włączony.'
     + '|Przewoźnik dostaje tylko swoje transporty, KSH tylko swój projekt, HHL wszystko według tabeli. To samo zdarzenie powtórzone nie tworzy drugiego wpisu.'
@@ -19,7 +19,7 @@ const pl: Dict = {
     + '|Automatyzacje: Administrator HHL dodaje własne reguły przyciskiem „+ Nowa reguła”. Jedno zdarzenie daje jedno powiadomienie na osobę, bez dubli z automatami.',
   b6_howto_centre:
     'Lista poniżej to otwarte sprawy wymagające reakcji (brak awizacji, brak dokumentu, opłata paliwowa poza tabelą i inne typy z macierzy).'
-    + '|Kliknięcie otwiera sprawę: osoba z właściwą rolą wybiera rozstrzygnięcie, może dodać komentarz albo odłożyć na 2 h.'
+    + '|Kliknięcie otwiera sprawę: osoba z właściwą rolą wybiera rozstrzygnięcie, może dodać komentarz albo odłożyć na 2\u00a0h.'
     + '|Ostrzeżenie i stan krytyczny to ta sama sprawa; po terminie sprawa czerwienieje. Gdy warunek ustanie — sprawa zamyka się jako nieaktualna.'
     + '|Powiadomienia o sprawach idą według macierzy w Opcjach; rozstrzygnięcie zapisuje się w historii transportu.',
   b6_howto_zones:
@@ -33,9 +33,9 @@ const pl: Dict = {
   b6_howto_thresh:
     'Każda liczba to granica, od której system podnosi alarm. Zmienia tylko Administrator HHL: „Zmień” → nowa wartość większa od zera → potwierdzenie → wpis w Historii zmian (kto, kiedy, było → jest). Automaty czytają progi wyłącznie stąd.'
     + '|Ostrzeżenie i stan krytyczny to jeden alarm, który rośnie: przy ostrzeżeniu w Ryzyka › Do zrobienia pojawia się sprawa z terminem w chwili krytycznej; przy krytycznym ta sama sprawa czerwienieje i idą powiadomienia według „Kto co dostaje”.'
-    + '|Awizacja: kierowca, ciągnik, naczepa i telefon liczone od planowanego załadunku, kierowca dostarczający od planowanej dostawy. Brak na 48 h przed — ostrzeżenie, na 12 h — krytyczne.'
-    + '|Dokumenty: brak wymaganego dokumentu na 24 h przed terminem — ostrzeżenie, na 6 h — krytyczne. Polisa HHL i zezwolenie „Firma” podpinają się same; zezwolenie PL i SE przy transporcie jest potrzebne tylko przy „Trasa” (KR).'
-    + '|Fala i porywy wiatru: automat pogody na trasie promu. Wiatr na drodze: od 20 m/s ETA liczy wolniejszą jazdę, od 25 m/s postój; śliskość tylko do 25 km od auta.'
+    + '|Awizacja: kierowca, ciągnik, naczepa i telefon liczone od planowanego załadunku, kierowca dostarczający od planowanej dostawy. Brak na 48\u00a0h przed — ostrzeżenie, na 12\u00a0h — krytyczne.'
+    + '|Dokumenty: brak wymaganego dokumentu na 24\u00a0h przed terminem — ostrzeżenie, na 6\u00a0h — krytyczne. Polisa HHL i zezwolenie „Firma” podpinają się same; zezwolenie PL i SE przy transporcie jest potrzebne tylko przy „Trasa” (KR).'
+    + '|Fala i porywy wiatru: automat pogody na trasie promu. Wiatr na drodze: od 20\u00a0m/s ETA liczy wolniejszą jazdę, od 25\u00a0m/s postój; śliskość tylko do 25\u00a0km od auta.'
     + '|Opóźnienie: ETA z prawdziwej pozycji (GPS auta, AIS promu) później niż koniec okna dostawy plus próg.'
     + '|Brak GPS: ostatnia pozycja starsza niż próg — tylko gdy auto ma źródło pozycji i jest w drodze.'
     + '|Zjazd z trasy: dalej od trasy niż próg przez co najmniej 2 pozycje i 10 minut; nie na promie, w portach ani na placach.'

@@ -6,6 +6,7 @@
  */
 import type { Load } from '../../types';
 import { formatMoney, type DisplayCurrency } from './engine';
+import { sideEffectiveEur } from './loadMoney';
 
 type Side = 'cost' | 'rev';
 type MoneyOf = Pick<Load, 'pricing'>;
@@ -32,13 +33,17 @@ export function formatLoadMoney(eur: number, load: MoneyOf, side: Side, lang: 'p
  */
 export function formatLoadRevMargin(load: MoneyOf, lang: 'pl' | 'en' | 'sv', display: DisplayCurrency): { rev: string; margin: string } {
   const p = load.pricing;
+  /* przegląd 18.10 (P14): kwota po fakturze, gdy jest (jak Finanse i Kokpit — `sideEffectiveEur`), inaczej z cennika */
+  const m = p.money;
+  const revE = m ? sideEffectiveEur(m.rev) : p.revTotal;
+  const costE = m ? sideEffectiveEur(m.cost) : p.costTotal;
   const cost = display === 'PLN' ? loadFxMid(load, 'cost') : null;
   const rev = display === 'PLN' ? loadFxMid(load, 'rev') : null;
   if (cost != null && rev != null) {
     return {
-      rev: formatMoney(round2(p.revTotal * rev), lang, 'PLN'),
-      margin: formatMoney(round2(p.revTotal * rev - p.costTotal * cost), lang, 'PLN'),
+      rev: formatMoney(round2(revE * rev), lang, 'PLN'),
+      margin: formatMoney(round2(revE * rev - costE * cost), lang, 'PLN'),
     };
   }
-  return { rev: formatMoney(p.revTotal, lang, curOf(load)), margin: formatMoney(p.margin, lang, curOf(load)) };
+  return { rev: formatMoney(round2(revE), lang, curOf(load)), margin: formatMoney(round2(revE - costE), lang, curOf(load)) };
 }

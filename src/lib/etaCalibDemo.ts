@@ -8,6 +8,7 @@ import type { Load } from '../types';
 import { etaDuration } from './etaDuration';
 import { getNowIso } from './frozenNow';
 import type { CalibObservation, CalibProposal, CalibSegment, CalibVersion, EtaCalibration } from './etaCalibSource';
+import { isAfterDelivery } from './status';
 
 /**
  * Na dostawę, od najwcześniejszej: błąd ETA 24/6/1 h przed (min; minus = przyjechał wcześniej, niż mówiło ETA),
@@ -70,7 +71,7 @@ const fixed = (code: string, name: string, currentMin: number, note: string): Ca
 
 export function demoCalibration(loads: readonly Load[]): EtaCalibration {
   const done = loads
-    .filter((l) => l.status === 'DELIVERED' && l.unloadedAt)
+    .filter((l) => isAfterDelivery(l.status) && l.unloadedAt)
     .sort((a, b) => Date.parse(a.unloadedAt!) - Date.parse(b.unloadedAt!));
   const used: Array<(typeof SAMPLES)[number]> = [];
   const observations: CalibObservation[] = done.map((l, i) => {

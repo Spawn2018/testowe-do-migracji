@@ -137,14 +137,15 @@ test('AUD-03: bez „Zmień ciągnik” w Harmonogramie (E30 pkt 5) — u żadne
   }
 })
 
-test('AUD-03: przewoźnik nie ma „Edytuj” dat KSH; HHL też nie', async ({ page }) => {
+/* D-20261019-0005-01 (właściciel 19.10, 00:01): Administrator HHL zmienia każdą datę — ma „Edytuj”; przewoźnik nie */
+test('AUD-03: przewoźnik nie ma „Edytuj” dat KSH; Administrator HHL ma (decyzja 19.10)', async ({ page }) => {
   await boot(page)
   for (const r of ['SCX', 'HHL'] as const) {
     await role(page, r)
     await sched(page)
     await page.locator(ROW).first().click()
     await page.waitForSelector('.drawer [data-order="hhl"]')
-    await expect(page.locator('.drawer [data-ksh-edit]')).toHaveCount(0)
+    await expect(page.locator('.drawer [data-ksh-edit]')).toHaveCount(r === 'HHL' ? 1 : 0)
     await page.locator('.drawer .drawer-hd button.iconbtn').last().click()
     await page.waitForSelector('.drawer', { state: 'detached' })
   }
