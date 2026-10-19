@@ -3,7 +3,7 @@
  * Adresu z sekretu tu nie ma — tylko zmyślone przykłady.
  */
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -94,6 +94,33 @@ describe('normalize-db-url (F7 #326 P1)', () => {
     expect(out.log).not.toContain('db.example')
     if (process.platform !== 'win32') {
       expect(out.passwordMode).toBe(0o600)
+    }
+  })
+
+  it('redact podmienia adres i hasło, sekret nie wychodzi (#331)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'redact-'))
+    const urlPath = join(dir, 'url')
+    const passwordPath = join(dir, 'password')
+    const url = 'postgresql://uzytkownik:a%40b%23c%2Fd@db.example:5432/postgres'
+    const password = 'a@b#c/d'
+    writeFileSync(urlPath, url)
+    writeFileSync(passwordPath, password)
+    try {
+      const log = execFileSync(PY, ['scripts/ci/redact.py'], {
+        encoding: 'utf8',
+        input: `link ${url} haslo ${password}\n`,
+        env: {
+          ...process.env,
+          DB_URL_FILE: urlPath,
+          DB_PASSWORD_FILE: passwordPath,
+        },
+      })
+      expect(log.replace(/\r\n/g, '\n')).toBe('link [adres] haslo [haslo]\n')
+      expect(log).not.toContain(password)
+      expect(log).not.toContain(url)
+      expect(log).not.toContain('db.example')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
     }
   })
 

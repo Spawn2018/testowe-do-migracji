@@ -67,17 +67,7 @@ jobs:
           python3 scripts/ci/normalize-db-url.py
           port="$(cat "$DB_PORT_FILE")"
           mode="$(cat "$DB_MODE_FILE")"
-          redact() {
-            python3 -c 'import os,sys
-u=open(os.environ["DB_URL_FILE"],encoding="utf-8").read()
-p=open(os.environ["DB_PASSWORD_FILE"],encoding="utf-8").read()
-t=sys.stdin.read()
-if u:
-    t=t.replace(u,"[adres]")
-if p:
-    t=t.replace(p,"[haslo]")
-sys.stdout.write(t)'
-          }
+          redact() { python3 scripts/ci/redact.py; }
           run_push() {
             local code=0
             local out
