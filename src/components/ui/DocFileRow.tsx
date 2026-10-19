@@ -21,7 +21,7 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload, l
   const storeLocale = useTowerStore((s) => s.locale);
   const locale = driverLocale ?? storeLocale;
   const uploaded = doc.status === 'UPLOADED' || doc.status === 'MISMATCH' || doc.status === 'EXPIRED';
-  const okColor = doc.status === 'MISMATCH' ? 'var(--amber)' : 'var(--go)';
+  const mismatch = doc.status === 'MISMATCH';
 
   return (
     <div className="mrow">
@@ -31,9 +31,9 @@ export function DocFileRow({ doc, label, onPreview, onUploadClick, showUpload, l
           <>
             <button
               type="button"
-              className="docrow-name"
+              className={mismatch ? 'docrow-name is-mismatch' : 'docrow-name'}
               title={t(locale, 'a6_doc_preview')}
-              style={{ color: okColor }}
+              style={mismatch ? undefined : { color: 'var(--go)' }}
               onClick={() => onPreview(doc)}
             >
               ✓ {doc.name}

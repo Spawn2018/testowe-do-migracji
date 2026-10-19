@@ -17,7 +17,7 @@ jobs:
   visual:
     name: visual
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55  # P11 pkt 3 (F7 #301 r5 D1): bramy P11 ok. 12 min, cały job ok. 33 min — zapas
     steps:
       - uses: actions/checkout@v4
         with:
