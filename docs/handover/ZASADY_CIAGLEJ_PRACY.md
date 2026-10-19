@@ -18,7 +18,7 @@ Sprawdzenie: `gh issue view <n> --json author,labels,comments` → `author.login
    - Nowe zgłoszenie → wpisz do PLAN §4 / §8 / `POSTEP.md` (+ plik w `docs/handover/dopiski/` gdy trzeba); skomentuj „wpisane do planu: \<miejsce\>, commit \<sha\>”; zamknij gdy pozycja zrobiona (albo od razu, jeśli wystarczyło samo wpisanie).
    - **Nie przerywaj** bieżącej pozycji — wyjątek: etykieta `pilne`.
    - Czytaj skrzynkę też po każdej pozycji, przed przejściem i co najmniej co 30 min.
-3. **Scalanie (§2):** PR z komentarzem „F7: gotowe do scalenia” od autora `Spawn2018`, dodanym **po** ostatnim commicie PR (porównaj `createdAt` komentarza z datą ostatniego commita), zielone CI, bez konfliktu → `gh pr merge --merge` (sam). Nowy commit po „gotowe” = czekaj na ponowne „gotowe”. „niegotowe” → popraw w tym samym PR. **Nigdy nie scalasz PR z forka.** Wdrożenie: do czasu sekretów GitHub — ręcznie z `main` (D-1110); potem workflow `deploy-main.yml`.
+3. **Scalanie (§2):** PR z komentarzem „F7: gotowe do scalenia” od autora `Spawn2018`, dodanym **po** ostatnim commicie PR (porównaj `createdAt` komentarza z datą ostatniego commita), zielone CI, bez konfliktu → `gh pr merge --merge` (sam). Nowy commit po „gotowe” = czekaj na ponowne „gotowe”. „niegotowe” → popraw w tym samym PR. **Nigdy nie scalasz PR z forka.** Po scaleniu nie czekasz na wdrożenie — `deploy-main` robi resztę (D-20261020-0010-01). Wpis w `POSTEP.md` w następnym PR z dokumentami albo razem z następną pozycją.
 4. **Jeden krok:** następny niezakończony fragment bieżącej pozycji z PLAN §4 → commit i push na gałąź PR. Koniec przebiegu.
 
 ## Decyzje bez czekania na właściciela

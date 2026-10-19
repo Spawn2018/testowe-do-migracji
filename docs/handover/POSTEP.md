@@ -3303,3 +3303,21 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `deploy-main` `39324497090`: `format: uri`, `polaczenie: link`, nałożona `0234_hhl_admin_daty.sql`, funkcje Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY (alias `tower.log-mar.pl`). `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200.
 - Pozycja **D-0005** zamknięta. Następna: kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01, migracja 0235).
 
+## 2026-10-19 23:20 — #337 scalony; start 0235 (D-0930 + #338)
+
+- Skrzynka: #320, #322, #323, #324 już w planie, bez `pilne`. #338 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-2315-01. Wpisane: PLAN §4 przy D-0930 (ta sama migracja 0235), §8, `docs/handover/dopiski/D-20261019-2315-01.md`. Zgłoszenie otwarte do zrobienia 0235.
+- Scalanie: #337 scalony (`e6bc682a`) — „F7: gotowe do scalenia” po `a4bfb3cc`, unit i visual zielone. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0930**: migracja `0235_l3_kod_i_korekta_statusu.sql` — kod transportu w L-3 / E41 oraz korekta statusu z #338. Testy `dec-auto` 74, `e25` 45. Czeka na bramę `db`.
+
+## 2026-10-19 23:50 — #339 scalony; F7 niegotowe #340 (P1–P3)
+
+- Skrzynka bez zmian: #320, #322, #323, #324, #338 w planie, bez `pilne`.
+- Scalanie: #339 `wyglad/W-admin-daty` scalony `d69498c4` — „F7: gotowe do scalenia” po `068c428`, unit i visual zielone, bez migracji. #317 i #259 mają konflikt z `main`.
+- #340: „F7: niegotowe” na `47af0dc` (po tym commicie jest `9a2ac176`, tylko asercje `t`/`true`). Poprawki w tej samej migracji 0235: kod w `ksh_confirm_dates` i postoju, skrót L-13 dla SCX bez numeru KSH, korekta po `STATUS_AUTO` z notatką, tytuł bez „—:”. Testy `dec-auto` 76, `e25` 46. Push po końcu bramy na `9a2ac176`.
+
+## 2026-10-20 00:25 — D-0930: CI zielone na ed564421; #341 w planie
+
+- Skrzynka: #320, #322, #323, #324, #338 już w planie, bez `pilne`. #341 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0010-01. Wpisane: PLAN §3 (terminy), §4 (pary A3+A9, A7+A4; ekran B5/B9/A10 u koordynatora), §8, `docs/handover/dopiski/D-20261020-0010-01.md`, `ZASADY_CIAGLEJ_PRACY.md` (scalenie bez czekania na wdrożenie).
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie kodu `ed564421` (22:07Z). Komentarz F7 (21:37Z) to „niegotowe” na `47af0dc`. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0930** (#340): `db` `39332882485` zielony (6 min 43 s), unit zielony, visual `39332882486` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po ostatnim commicie.
+

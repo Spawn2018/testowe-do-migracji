@@ -129,6 +129,44 @@ sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from wor
 val "HHL_ADMIN: korekta czasu CANCELLED" $HHL "select load_status_set('$L1','CANCELLED',timestamptz '2026-10-09 08:00:00+00','korekta osi'); select (payload->>'korekta') from load_events where load_id='$L1' and event_type='STATUS_CANCELLED' order by id desc limit 1" true commit
 sval "korekta CANCELLED nie dodaje przebiegu" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
 sval "audit LOAD_STATUS_SET" "select count(*)>=1 from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2'" t
+# D-2315 / F7 #340: druga korekta wskazuje dopisek; korekta po STATUS_AUTO; imię i firma.
+sys "update app_users set full_name='Anna Admin' where auth_id='$HHL'" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000d931','$P','$SCXO','123456/2026/D931','PLANNED','HHL/D931','SCX/D931'),
+            ('33333333-0000-0000-0000-00000000d932','$P','$SCXO','123456/2026/D932','PLANNED','HHL/D932','SCX/D932'),
+            ('33333333-0000-0000-0000-00000000d933','$P','$SCXO','123456/2026/D933','PLANNED','HHL/D933','SCX/D933'),
+            ('33333333-0000-0000-0000-00000000d934','$P','$SCXO','123456/2026/D934','AT_SITE','HHL/D934','SCX/D934')
+     on conflict (id) do update set status=excluded.status, carrier_org_id=excluded.carrier_org_id,
+       hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload)
+     values ('33333333-0000-0000-0000-00000000d934','STATUS_AUTO',timestamptz '2026-10-07 10:00:00+00','{\"to\":\"AT_SITE\"}'::jsonb)" >/dev/null
+val "korekta 14:00 → 12:30 → 13:00 wskazuje dopisek" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d931','DELIVERED',timestamptz '2026-10-07 14:00:00+00',null); select load_status_set('33333333-0000-0000-0000-00000000d931','DELIVERED',timestamptz '2026-10-07 12:30:00+00','k1'); select load_status_set('33333333-0000-0000-0000-00000000d931','DELIVERED',timestamptz '2026-10-07 13:00:00+00','k2'); select (
+  (e2.payload->>'zastepuje') = e1.id::text
+  and (e2.payload->>'poprzednio')::timestamptz = timestamptz '2026-10-07 12:30:00+00'
+  and e2.payload->>'actor' = 'Anna Admin // H&H Logistics'
+  and e2.payload->>'actor_id' = current_app_user_id()::text
+  and e2.payload->>'note' = 'k2'
+)::text
+from load_events e2
+join load_events e1 on e1.id::text = e2.payload->>'zastepuje'
+where e2.load_id='33333333-0000-0000-0000-00000000d931'
+  and e2.occurred_at = timestamptz '2026-10-07 13:00:00+00'" true commit
+val "korekta po STATUS_AUTO zapisuje dopisek" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d934','AT_SITE',timestamptz '2026-10-07 11:00:00+00','powod auto'); select (
+  e.payload->>'korekta' = 'true'
+  and e.payload->>'zastepuje' = a.id::text
+  and e.payload->>'note' = 'powod auto'
+  and e.payload->>'actor' = 'Anna Admin // H&H Logistics'
+)::text
+from load_events e
+join load_events a on a.load_id = e.load_id and a.event_type = 'STATUS_AUTO'
+where e.load_id='33333333-0000-0000-0000-00000000d934'
+  and e.event_type='STATUS_AT_SITE'
+  and e.payload->>'korekta' = 'true'" true commit
+val "HHL koryguje D932 do 12:30" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 14:00:00+00',null); select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00','k1'); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
+val "SCX: DELIVERED 12:30 bez błędu" $SCX "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00',null); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
+val "SCX: DELIVERED 12:45 nadpisuje godzinę" $SCX "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:45:00+00',null); select (actual_delivery_at = timestamptz '2026-10-07 12:45:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
+val "HHL: READY 09:00 potem 08:00" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d933','READY',timestamptz '2026-10-07 09:00:00+00',null); select load_status_set('33333333-0000-0000-0000-00000000d933','READY',timestamptz '2026-10-07 08:00:00+00','korekta ready'); select status::text from loads where id='33333333-0000-0000-0000-00000000d933'" READY commit
+val "SCX przyjmuje LOADING o 08:30" $SCX "select load_status_set('33333333-0000-0000-0000-00000000d933','AT_LOADING',timestamptz '2026-10-07 08:30:00+00',null); select status::text from loads where id='33333333-0000-0000-0000-00000000d933'" AT_LOADING commit
 # A5: bezpośredni UPDATE statusu z sesji — odmowa
 err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
 err "SCX bezpośredni UPDATE statusu" $SCX "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
