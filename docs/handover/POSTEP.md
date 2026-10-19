@@ -3191,3 +3191,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 18:35 — #330: wdrożenie ręczne z main, sekret Actions nadal zły
+
+- Skrzynka: #330 (`Spawn2018`, `dla-cursora`, bez `pilne`) — sekret `SUPABASE_DB_URL` w Actions nie zaczyna się od `postgresql://`. Wpisane: PLAN §4 Automat pkt 4, §8. Zgłoszenie zostaje otwarte do poprawki sekretu i przebiegu `deploy-main`.
+- Scalanie: #327 bez „F7: gotowe do scalenia” (raport prób po `2d3ab1b`). #317 F7 z 13:08 jest sprzed wciągnięcia `main` (`55e22989`); visual w toku — bez scalenia. #313 bez F7, `db` czerwone. #259 bez F7.
+- Ręcznie z `main` `047ce7b5` (adres sesyjny z `.env.local`, port 5432, pooler): dry-run i `db push` — „Remote database is up to date”, 0 nowych migracji. Funkcje Edge bez zmian od ostatniego wdrożenia `b858b466`.
+- Vercel produkcja: `dpl_FgAn6VsfF1rqoGeyrmbW91jvLary` READY. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` **200**.
+- Log `normalize-db-url.py`: przy `jdbc:` albo `host=` jedna linia „to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler”, bez adresu.
+- Po wpisaniu URI przez właściciela: `workflow_dispatch` `deploy-main` i w POSTEP linia „Adres bazy: …”.
+- Dalej w kolejce, po domknięciu Automatu: **D-0005 #313** (numer migracji 0234 przy rebase).
+
