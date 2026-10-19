@@ -79,6 +79,11 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
     6. regulamin usługi wyklucza użycie.
 
     Przy STOP: wpis w §5 „Czeka na właściciela” i **dalej następna pozycja**. Nie czekasz.
+14. **Praca ciągła (D-20261019-1050-01; decyzje właściciela 19.10 ~10:50).** Szczegóły: `docs/handover/ZASADY_CIAGLEJ_PRACY.md`.
+    1. **Skrzynka** `gh issue list --label dla-cursora --state open` — po każdej pozycji, przed przejściem, co ≤ 30 min, na starcie pętli. Zgłoszenie → PLAN §4/§8/`POSTEP.md` → komentarz „wpisane: \<miejsce\>, \<sha\>” → zamknięcie gdy zrobione. Bieżącej pozycji nie przerywasz (wyjątek: `pilne`).
+    2. **Scalanie bez promptu.** „F7: gotowe do scalenia” + zielone CI → scalasz sam (`gh pr merge --merge`). „niegotowe” → poprawiasz w tym samym PR. Wdrożenie: na razie ręczne z `main` (D-1110); po pozycji „Automat wdrożenia” — workflow GitHub.
+    3. **Nigdy nie czekasz na właściciela.** Niejasność → `pytanie-do-koordynatora` z opcjami i rekomendacją → od razu następna pozycja; po 60 min bez odpowiedzi przyjmujesz rekomendację. Wyjątki właściciela: usuwanie danych na produkcji, sekrety, płatności, cięcie zakresu, data wydania.
+    4. **Pętla nocna:** każdy przebieg zaczyna od `ZASADY_CIAGLEJ_PRACY.md` i robi jeden logiczny krok (commit + push na gałąź PR), bez pytań do człowieka.
 
 ## §2. Wprowadzanie zmian i poprawek do planu (obowiązkowe)
 
@@ -118,7 +123,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → Poprawka CMR has_doc jak C17 (#312 / D-1740 B1) → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -395,7 +400,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → CMR tylko po rozładunku (D-20261018-1740-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → Poprawka CMR has_doc jak C17 (#312) → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -510,18 +515,26 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 - W `POSTEP.md`: lista otwartych `NO_AWIZACJA` przy starych `PLANNED` (kod, data załadunku) — informacja dla właściciela, bez kodu.
 - Testy §5 dopisku (3 → zbiorczy), L-3, `RISK_SEVERITY`, SCX, wygaszenie+ponowne otwarcie, limit poczty, `RISK_OPEN`, E41. Potem PR, scalenie, wdrożenie z `main`. Odbiór koordynatora SELECT-ami z §5.
 
-### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — W TOKU (migracja 0231, gałąź `pakiet/cmr-po-rozladunku`)
+### CMR tylko po rozładunku (D-20261018-1740-01; po eskalacjach, przed A3) — NA PRODUKCJI (`39116fbb`, 19.10.2026 10:50, migracja 0231, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); poprawka B1 w kolejce (#312)
 Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozładunku, w każdym miejscu. CMR z załadunku odrzucony. Sprawa „Wgraj CMR” zostaje w A3.
-- Jednorazowo `doc_requirements` CMR → `AFTER_UNLOAD`, 24 h, wpis w `audit_log`, bez powiadomień.
-- `CHECK (category <> 'CMR' OR anchor = 'AFTER_UNLOAD')`. `doc_requirement_set` odrzuca inną kotwicę dla CMR. Test `tests/db/i2.sh` (ok. l. 643) na CMR po rozładunku i na odmowę `AT_LOAD`.
-- `doc_requirements_status()`: termin CMR od faktycznego „Dostarczone” (`actual_delivery_at`) + 24 h. Przed dostawą CMR nie jest `OVERDUE` ani brakiem z terminem (brak wiersza bez pliku).
-- Przegląd miejsc w bazie — lista w `POSTEP.md`. Warunek „Gotowe do fakturowania” (C17 / A5) bez zmian.
-- POD zostaje. Testy §6 dopisku. Wygląd: PR #303 (partia 6) — tekstów i filtra nie zmieniasz (F1).
+- 0231 na produkcji: `AFTER_UNLOAD` / 24; SELECT OVERDUE przed dostawą = 0 (było 22).
+- **Następny krok (#312, F7 niegotowe):** `has_doc` CMR jak C17 (`uploaded_at >= actual_delivery_at`, `purged_at is null`); przed Dostarczone brak wiersza nawet z plikiem; test i2. Migracja poprawiająca (np. 0233) albo poprawka funkcji w nowym PR — #310 już scalony.
+- P1/P2 z przeglądu: wpis A5 vs C17 i `register_invoice` → zadania A4 (nie w tej pozycji). Wygląd: #303 (F1).
 
-### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po CMR D-20261018-1740-01, przed A3)
-Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę w każdym miejscu, bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
-- **Baza:** dla `HHL_ADMIN` zdejmujesz odrzucenia z powodu daty w `load_status_set` (przyszłość, wcześniejszy status), `guard_load_update` (G-20), `ksh_confirm_dates` (tylko KSH, blokada po załadunku; kolejność dat jak import KR-03 — sprawa „Daty KSH do sprawdzenia”, bez odrzucenia) i w innych funkcjach z takim odrzuceniem. Historia z prawdziwym wykonawcą (W30). `import_schedule` bez zmian (W29). Testy §2 dopisku.
-- **Aplikacja:** kolejka PR koordynatora, `wyglad/W-przed-wydaniem-4` (okno statusu i dat KSH). Tekstów tego PR nie zmieniasz (F1).
+### Poprawka CMR has_doc jak C17 (#312 / D-1740 B1; zaraz po 0231, przed Automatem)
+- `doc_requirements_status`: dla CMR `has_doc` = plik po `actual_delivery_at`, nie zastąpiony, nie `purged`. Przed dostawą — 0 wierszy CMR.
+- Test i2: CMR przed dostawą → dostawa −25 h → OVERDUE; ponowne wgranie → OK.
+- Gałąź od `main`; po F7 scalasz sam (D-1050 §2).
+
+### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005)
+1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (ten commit); uzupełnij gdy trzeba.
+2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push` (`nglnnrmzmhusvxslousq`) → Edge zmienione → `vercel deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono z komunikatem „brak kluczy — wdrożenie ręczne”.
+3. Instrukcja dla właściciela w PR (Settings → Secrets). Test po wpisaniu kluczy.
+
+### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0232, gałąź `pakiet/hhl-admin-daty`)
+Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian.
+- **Baza:** 0232 w PR #313 (load_status_set / guard / ksh_confirm + `KSH_DATES_CHECK`). Do domknięcia: test `aud03` (`sval` zamiast `chk` — stash `aud03-sval-d0005`).
+- **Aplikacja:** #307 scalony (F1).
 
 ### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
 F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.
@@ -1083,3 +1096,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 08:20 | D-20261019-0820-01: punkt kontrolny +24 h (decyzja właściciela). pn 19.10 12:00 #306+#307; 18:00 D-1740+D-0005; 23:59 A3–A5; wt 20.10 B4–B9+A6+SharePoint; śr 21.10 C4–C13+P4-u+P3-d; wydanie 28.10 20:00 bez zmian. Drugi krok: bez B4–B9 we wt → P10a na sob 24.10 z P7/P8 | właściciel 19.10; koordynator |
 | 19.10.2026 09:30 | D-20261019-0930-01: kod transportu w L-3 / E41 ryzyk; bez `left(id,8)` i samotnego `order_no`; `l3_upsert_alarm` nie nadpisuje `params.code`; jednorazowo 7 ryzyk + 84 powiadomienia SCX; test wygaszania 0230 przez prawdziwą funkcję. Po D-0005, przed A3 | koordynator |
 | 19.10.2026 09:50 | D-1610 / #306 **NA PRODUKCJI**: merge `fc5726b3`, 0230, Edge `send-notifications`, Vercel `dpl_F9jd19WBLGMWYCsKgqT8d1deFdcs` (z #307+#308). SELECT: SOURCE 12→0, hex/SEFS 0, `params.code` 20→0, IN_APP 898→0 | wykonawca |
+| 19.10.2026 10:50 | D-20261019-1050-01: praca ciągła — skrzynka `dla-cursora`, scalanie bez promptu (F7), decyzje koordynatora, pętla nocna; `ZASADY_CIAGLEJ_PRACY.md`; pozycja Automat wdrożenia po poprawce #312; kolejka: #312 → Automat → D-0005 (#313) → D-0930 → A3… | właściciel ~10:50; koordynator |
+| 19.10.2026 10:50 | D-1740 / #310 **0231 NA PRODUKCJI** (`39116fbb`, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); F7 B1 otwarte jako #312 (has_doc jak C17) | wykonawca |

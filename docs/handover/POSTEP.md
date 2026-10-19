@@ -3110,22 +3110,17 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Następna pozycja: **D-20261018-1740-01** (CMR tylko po rozładunku), potem D-0005, D-0930, A3…
 - D-20261019-0930-01 dopisany do planu (po D-0005, przed A3).
 
-## 2026-10-19 — D-20261018-1740-01 CMR tylko po rozładunku (0231) — w toku
+## 2026-10-19 10:50 — D-1740 / #310 NA PRODUKCJI (0231) + poprawka #312 w kolejce
 
-- Gałąź `pakiet/cmr-po-rozladunku`, migracja **0231**.
-- Seed + jednorazowo: CMR → `AFTER_UNLOAD` / 24; `CHECK`; `doc_requirement_set` odrzuca `AT_LOAD`; `doc_requirements_status`: termin od `actual_delivery_at`, przed dostawą bez pliku = brak wiersza.
-- Testy `i2` part 4: +8 (i2 **540 → 548**): odmowa AT_LOAD, brak wiersza przed dostawą, OVERDUE po 25 h bez pliku, OK z plikiem.
-- **Przegląd miejsc (pkt 4 dopisku) — bez dodatkowej poprawki kodu poza 0231:**
-  | miejsce | stan |
-  |---|---|
-  | `doc_requirements` / seed `0078` | poprawione w 0231 |
-  | `doc_requirements_status` | poprawione w 0231 |
-  | `l3_scan` L3_DOC | zezwolenia/polisa przed załadunkiem — **nie** CMR; bez zmian |
-  | C17 `0220` / A5 `0210` | „Gotowe do fakturowania” = CMR po dostawie — **potwierdzone, bez zmian** |
-  | macierz C3 `cmr` / DOC_MISSING | „Brak CMR” — bez kotwicy załadunku; A3 doda sprawę „Wgraj CMR” |
-  | szablony `notifyTemplates` RESOURCE_DEADLINE | „przed załadunkiem” = zasoby I-21, nie CMR |
-  | `seed.sql` / konta TEST | brak seeda CMR AT_LOAD |
-  | API kierowcy `driver-photo` / `0021` | wgrywa CMR; bez reguły „2 h po załadunku” |
-  | wygląd | #303 / DocTerms — F1, bez zmian wykonawcy |
-- Kolejka dalej: D-0005 (baza) → D-0930 → A3–A5 (punkt pn 19.10 23:59).
+- Merge `39116fbb`; `db push` 0231; Vercel `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`; tower/makieta **200**.
+- SELECT: CMR = AFTER_UNLOAD/24; OVERDUE przed dostawą = 0 (było 22).
+- F7 po scaleniu: **B1** — `has_doc` zalicza CMR z załadunku → zgłoszenie **#312** (następna pozycja).
+- Przegląd miejsc (pkt 4): seed/status/CHECK OK; L3_DOC bez CMR; C17 po dostawie OK; **A5 `load_status_set` przy ręcznym READY_TO_INVOICE wymaga dowolnego CMR (nie „po dostawie”) — rozjazd → zadanie A4**; **`register_invoice` podpina wszystkie CMR/POD → zadanie A4**; API kierowcy bez kotwicy 2 h.
+
+## 2026-10-19 11:55 — praca ciągła (D-20261019-1050-01) — przekazanie do pętli
+
+- Zasady §1–§4 w PLAN §1 pkt 14; `docs/handover/ZASADY_CIAGLEJ_PRACY.md`; dopisek w `dopiski/`.
+- Kolejka teraz: **#312 (B1 CMR)** → **Automat wdrożenia** (`deploy-main.yml`) → **D-0005 #313** (0232; stash lokalny `aud03-sval-d0005`) → **D-0930** → **A3–A5** (pn 23:59).
+- Skrzynka: #311 (1050) — zamknięte po wpisie; #312 — otwarte (następny krok pętli).
+- **Ten czat się zatrzymuje.** Dalej: pętla `cursor-agent` od `ZASADY_CIAGLEJ_PRACY.md`.
 
