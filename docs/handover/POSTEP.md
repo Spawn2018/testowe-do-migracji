@@ -3260,3 +3260,39 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   - Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z` READY, alias `tower.log-mar.pl`; tower i makieta **200**
 - Pozycja **Automat wdrożenia** zamknięta. Następna: **D-0005** (#313, migracja 0234 przy rebase).
 
+## 2026-10-19 21:05 — #336 scalony; D-0005: migracja 0234 i czerwone testy
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #336 „F7: gotowe do scalenia” od `Spawn2018` o 18:58Z, po ostatnim commicie `72b6afe` (18:55Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `fd2ca8c2`. #317 ma konflikt z `main` (F7 sprzed konfliktu). #313 i #259 bez aktualnego „gotowe”.
+- Bieżąca pozycja: **D-0005** (#313). `main` wciągnięty. Plik migracji `0234_hhl_admin_daty.sql` (0233 jest na produkcji). `aud03`: sprawa `KSH_DATES_CHECK` przez `sval`. `dec2`: katalog 19 typów. Brama `db` po tym pushu.
+
+## 2026-10-19 21:25 — D-0005: F7 niegotowe → B1 + P1–P4
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `fa2d537` — CI zielone (db 11 min, visual), F7 „niegotowe” (19:20Z). #317 konflikt z `main` (bez aktualnego „gotowe”). #259 bez F7.
+- Bieżąca pozycja **D-0005** (#313): poprawki F7 w `0234` — `DECISION_HOLD` w CHECK; admin bez sprawy `KSH_DATES_CHECK`; `load_status_set` przez `current_app_*` + korekta czasu osi; historia z oknami „przed”; testy `aud03`/`e25`/`i2`; PLAN: wyjątek D1, A6 P5 (dostawa przed załadunkiem). Czeka na zielone CI i ponowne F7.
+
+## 2026-10-19 21:40 — D-0005: F7 B2, korekta czasu dopiskiem
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `16b5f3f` — F7 „niegotowe” (B2, 19:33Z, po ostatnim commicie). Brama `db` i visual jeszcze szły na tym SHA; ten SHA nie idzie na produkcję (`session_replication_role` odrzucone na produkcji). #317 i #259 mają konflikt z `main`, bez aktualnego „gotowe”.
+- Bieżąca pozycja **D-0005** (#313): korekta czasu bieżącego statusu dopisuje `STATUS_*` z `korekta=true` (`zastepuje`, `poprzednio`, `przez`). Bez `set_config('session_replication_role')`. `actual_*` i `audit_log` bez zmian. SCX przy korekcie czasu — odmowa. Test `e25`. Czeka na zielone CI i ponowne F7.
+- Brama `db` na `16b5f3f` (`39311856014`): aud03 29/32 (`opened_at` zamiast wyniku `decision_open_from_event`; I-10 liczy 3 IN_APP, bo jest też HHL_OPS) i e25 33/34 (`AT_PORT` nie jest statusem). Poprawione w następnym commicie. Visual zielony.
+
+## 2026-10-19 22:05 — D-0005: F7 P1 i P2 na f931341
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `f931341` — F7 „dwie drobne rzeczy” (19:58Z, po ostatnim commicie), więc bez scalenia. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0005** (#313): `wf_enqueue_event` pomija zdarzenie z `korekta=true` (STATUS_CANCELLED nie startuje drugi raz). SCX (`CARRIER_DISPATCH` / `CARRIER_USER`) przy tym samym `DELIVERED` i innej godzinie nadpisuje `actual_delivery_at` jak przed 0234; korekta pozostałych statusów zostaje przy Administratorze HHL. Test `e25`: 39. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-19 22:20 — D-0005: e25 P1, brama db czerwona na 03d379af
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Brama `db` `39316540812`: e25 36/39. Unit i visual zielone. Reguła START-7 nie ma projektu z seed (0094 idzie przed seedem), a anulowanie L1 było w transakcji wycofanej, więc korekta czasu nie powstawała. Test dopisuje regułę i zostawia anulowanie. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-19 22:50 — D-0005: CI zielone na 7a0516ba, czeka na F7
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie `7a0516ba` (20:27Z). Ostatni komentarz F7 (20:22Z) dotyczy `03d379af` i zapowiada „gotowe” po zielonej bramie. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0005** (#313): `db` `39319719814` zielony (8 min 53 s), unit zielony, visual `39319719721` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po `7a0516ba`.
+

@@ -422,7 +422,10 @@ $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003'
 chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
 # AUD-03 (0192): ksh_confirm_dates ponownie włączone (decyzja właściciela 05.10, KSH — PANEL ZLECENIA) — pełne testy: tests/db/aud03.sh
 err "AUD-03: ksh_confirm bez zmian dat (KSH) → changed false" $KSH "select ksh_confirm_dates('$LD')" '"changed": false'
-err "AUD-03: ksh_confirm tylko KSH (HHL odmowa)" $HHL "select ksh_confirm_dates('$LD')" "KSH Użytkownik|wyłącznie KSH"
+val "AUD-03: HHL_ADMIN może ksh_confirm (0234 / D-0005)" $HHL "select (ksh_confirm_dates('$LD')->>'changed')" false commit
+OPS_I2=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS_I2','00000000-0000-0000-0000-00000000a001','ops-i2-dates@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+err "AUD-03: HHL_OPS odmowa ksh_confirm (P1)" $OPS_I2 "select ksh_confirm_dates('$LD','$D3','$D4')" "KSH Użytkownik|wyłącznie KSH"
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
 err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"

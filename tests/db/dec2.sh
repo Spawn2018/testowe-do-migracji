@@ -25,7 +25,7 @@ val() { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | 
 err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
 
 echo; echo "[DEC-2] katalog + proces decyzji"
-val "katalog 18 typów" $HHL "select count(*) from decision_types where active" 18 # A2: +DELIVERED_CHECK
+val "katalog 19 typów" $HHL "select count(*) from decision_types where active" 19 # A2: +DELIVERED_CHECK; D-0005: +KSH_DATES_CHECK
 
 D=$(run "$HHL" "select decision_open('$P','SEFS_INVOICE_DIFF','SEFS na fakturze', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "open → NEW" $HHL "select status::text from decisions where id='$D'" NEW

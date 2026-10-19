@@ -25,10 +25,10 @@ export const EXPECTED_LOCAL = {
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
   nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
-  i2: 548,
+  i2: 549, // D-0005 F7: +1 err HHL_OPS ksh_confirm
   i30: 10,
   i31: 9,
-  dec2: 42,
+  dec2: 42, // D-0005: liczba asercji bez zmian; katalog typów 18→19 (KSH_DATES_CHECK)
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -46,12 +46,12 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 33,
   h4: 19,
-  aud03: 25,
-  g20: 15, // P3-poprawki — G-20 daty + DECISION×CLIENT_USER push (D-20261014-0015-01)
+  aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
+  g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
+  e25: 39, // D-0005 F7 P1/P2: +SCX godzina DELIVERED, +korekta CANCELLED bez workflow_runs
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

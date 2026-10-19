@@ -36,11 +36,11 @@ sys "update loads set plan_load_date='2026-12-01', plan_delivery_date='2026-12-0
        status='PLANNED', carrier_org_id='$SCXORG'
      where id='$L2'" >/dev/null
 
-echo; echo "[g20] odmowa HHL / SCX PATCH dat planu"
-err "HHL_ADMIN nie zmieni plan_load_date" $HHL "update loads set plan_load_date='2026-12-02' where id='$L2'" "KSH Użytkownik|G-20"
-err "HHL_ADMIN nie zmieni plan_load_from" $HHL "update loads set plan_load_from='2026-12-01 08:00+01' where id='$L2'" "KSH Użytkownik|G-20"
+echo; echo "[g20] HHL_ADMIN może daty (0234); HHL_OPS / SCX nadal odmowa"
+val "HHL_ADMIN zmieni plan_load_date (0234)" $HHL "with u as (update loads set plan_load_date='2026-12-02' where id='$L2' returning plan_load_date) select plan_load_date::text from u" "2026-12-02" commit
+val "HHL_ADMIN zmieni plan_load_from (0234)" $HHL "with u as (update loads set plan_load_from='2026-12-01 08:00+01' where id='$L2' returning 1) select count(*) from u" 1 commit
 err "HHL_OPS nie zmieni plan_delivery_date" $OPS "update loads set plan_delivery_date='2026-12-06' where id='$L2'" "KSH Użytkownik|G-20"
-err "CARRIER_DISPATCH nie zmieni plan_load_date" $SCX "update loads set plan_load_date='2026-12-02' where id='$L2'" "nie może zmieniać|Przewoźnik"
+err "CARRIER_DISPATCH nie zmieni plan_load_date" $SCX "update loads set plan_load_date='2026-12-09' where id='$L2'" "nie może zmieniać|Przewoźnik"
 err "CARRIER_USER nie zmieni plan_delivery_to" $CU "update loads set plan_delivery_to='2026-12-05 16:00+01' where id='$L2'" "nie może zmieniać|Przewoźnik|Brak uprawnień"
 val "HHL nadal zmienia hhl_order_no" $HHL "with u as (update loads set hhl_order_no='HHL/G20' where id='$L2' returning 1) select count(*) from u" 1
 

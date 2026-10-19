@@ -40,6 +40,8 @@ err "HHL_OPS odmowa" $OPS "select load_status_set('$L1','IN_TRANSIT_PL',now(),nu
 err "KSH odmowa" $KSH "select load_status_set('$L1','IN_TRANSIT_PL',now(),null)" "Zmiana statusu"
 val "HHL_ADMIN do przodu" $HHL "select load_status_set('$L1','AT_LOADING',now(),null); select status::text from loads where id='$L1'" AT_LOADING
 val "SCX do przodu" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select status::text from loads where id='$L1'" IN_TRANSIT_PL
+# P1: SCX — czas wcześniej niż poprzedni STATUS_* → odmowa (HHL_ADMIN może).
+err "SCX: czas wcześniej niż poprzedni status (P1)" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','AT_PORT_GDANSK',(select max(occurred_at)-interval '1 minute' from load_events where load_id='$L1' and event_type like 'STATUS_%'),null)" "wcześniej niż poprzedni"
 # Ta sama transakcja: najpierw do przodu, potem próba wstecz (osobny rollback zostawiałby READY→READY = no-op).
 err "SCX wstecz" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),'cofka')" "tylko do przodu"
 err "HHL_ADMIN wstecz bez powodu" $HHL "select load_status_set('$L1','IN_TRANSIT_PL',now(),null); select load_status_set('$L1','READY',now(),null)" "powodu"
@@ -50,7 +52,15 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
-val "DELIVERED nadpisuje godzinę" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (actual_delivery_at = timestamptz '2026-10-07 10:19:54+00')::text from loads where id='$L2'" true commit
+val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (
+  (select actual_delivery_at = timestamptz '2026-10-07 10:19:54+00' from loads where id='$L2')
+  and (select count(*) from load_events where load_id='$L2' and event_type='STATUS_DELIVERED') = 2
+  and (select payload->>'korekta' = 'true' and occurred_at = timestamptz '2026-10-07 10:19:54+00' from load_events where load_id='$L2' and event_type='STATUS_DELIVERED' order by id desc limit 1)
+)::text" true commit
+val "SCX: godzina DELIVERED na własnym transporcie (P2)" $SCX "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 11:00:00+00',null); select (
+  (select status::text = 'DELIVERED' and actual_delivery_at = timestamptz '2026-10-07 11:00:00+00' from loads where id='$L2')
+  and (select count(*) from load_events where load_id='$L2' and event_type='STATUS_DELIVERED') = 2
+)::text" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
 # A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
@@ -91,11 +101,33 @@ sys "insert into invoice_lines (invoice_id, load_id, direction, expected_amount,
      on conflict (invoice_id, load_id) do update set direction=excluded.direction" >/dev/null
 sval "C17 obie faktury → INVOICED STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='INVOICED') from loads where id='$L2'" "INVOICED|1"
 val "HHL ręcznie INVOICED + actor" $HHL "select load_status_set('$L2','READY_TO_INVOICE',now(),'cofka e25'); select load_status_set('$L2','INVOICED',now(),null); select (payload->>'actor' like '% // %')::text from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1" true commit
-err "wcześniej niż poprzedni status" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu')" "wcześniej"
-err "czas w przyszłości" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null)" "przyszłości"
+val "HHL_ADMIN: czas wstecz dozwolony (0234)" $HHL "select load_status_set('$L2','READY_TO_INVOICE',(select max(occurred_at)-interval '1 second' from load_events where load_id='$L2' and event_type like 'STATUS_%'),'test cofniecia czasu'); select status::text from loads where id='$L2'" READY_TO_INVOICE commit
+val "HHL_ADMIN: przywróć INVOICED" $HHL "select load_status_set('$L2','INVOICED',now(),null); select status::text from loads where id='$L2'" INVOICED commit
+# P4: ten sam status — korekta czasu wpisu osi + actual_delivery_at
+val "HHL_ADMIN: korekta czasu — nowy wpis, stary zostaje (P4)" $HHL "select load_status_set('$L2','INVOICED',timestamptz '2026-10-08 09:00:00+00','korekta osi'); select (
+  (select count(*) from load_events where load_id='$L2' and event_type='STATUS_INVOICED' and coalesce(payload->>'korekta','') <> 'true')
+  = (select count(*) - 1 from load_events where load_id='$L2' and event_type='STATUS_INVOICED')
+  and (select occurred_at = timestamptz '2026-10-08 09:00:00+00' and payload->>'korekta' = 'true' and payload->>'przez' = 'HHL_ADMIN'
+       from load_events where load_id='$L2' and event_type='STATUS_INVOICED' order by id desc limit 1)
+)::text" true commit
+err "SCX: korekta czasu tego samego statusu" $SCX "select load_status_set('$L2','INVOICED',timestamptz '2026-10-08 08:00:00+00',null)" "Korektę czasu"
+sval "P4: audit time_only" "select (new_value->>'time_only') from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2' and new_value->>'time_only'='true' order by created_at desc limit 1" true
+val "HHL_ADMIN: czas w przyszłości dozwolony (0234)" $HHL "select load_status_set('$L1','AT_LOADING',now()+interval '2 hours',null); select status::text from loads where id='$L1'" AT_LOADING commit
+err "SCX: czas w przyszłości odrzucony" $SCX "select load_status_set('$L1','IN_TRANSIT_PL',now()+interval '3 hours',null)" "przyszłości"
 err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now(),null)" "powodu"
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
-val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED
+val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED commit
+# P1: korekta czasu nie kolejkuje STATUS_CANCELLED (automatyzacja włączona tylko w teście).
+# Reguły START-* powstają w 0094, zanim seed wstawi projekt — w zestawie tower trzeba je dopisać.
+sys "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
+     select '$P', 'START-7', 'Transport anulowany', 'test e25', 'STATUS_CANCELLED', 'true'::jsonb,
+            '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
+      where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
+sys "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','STATUS_CANCELLED',now(),'{}'::jsonb)" >/dev/null
+sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
+val "HHL_ADMIN: korekta czasu CANCELLED" $HHL "select load_status_set('$L1','CANCELLED',timestamptz '2026-10-09 08:00:00+00','korekta osi'); select (payload->>'korekta') from load_events where load_id='$L1' and event_type='STATUS_CANCELLED' order by id desc limit 1" true commit
+sval "korekta CANCELLED nie dodaje przebiegu" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
 sval "audit LOAD_STATUS_SET" "select count(*)>=1 from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2'" t
 # A5: bezpośredni UPDATE statusu z sesji — odmowa
 err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
