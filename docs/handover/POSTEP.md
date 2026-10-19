@@ -3130,3 +3130,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
 - Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
 
+## 2026-10-19 12:57 — #315 wpisane: daty = terminy najpóźniejsze
+
+- Zgłoszenie #315 (Spawn2018, `dla-cursora`): PLAN §1 pkt 14.5 i `ZASADY_CIAGLEJ_PRACY.md` krok 4. Po pozycji od razu następna z §4, także z kolejnych dni. Bez czekania na dzień planu i punkt kontrolny.
+- Bieżąca pozycja bez przerwania: #312 / #316 (`pakiet/cmr-has-doc-c17`, 0233) — brama `db` i `visual` w toku, bez nowego commitu na tej gałęzi (G-15).
+- #301 ma komentarz „F7 — gotowe do scalenia” (myślnik, 18.10 18:43, po ostatnim commicie, CI zielone). Zasady pętli wymagają dosłownego „F7: gotowe do scalenia” — bez scalenia w tym przebiegu.
+
