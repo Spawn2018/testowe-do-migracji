@@ -3146,3 +3146,25 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #317 (docs, F7, CI zielone) ma konflikt z `main` po #316 — bez scalenia.
 - Następna pozycja: **Automat wdrożenia z main** (D-20261019-1050-01).
 
+## 2026-10-19 14:05 — #318 scalony; start Automatu wdrożenia
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #318 (docs 0233 na produkcji): F7 po commicie `914541d5`, unit i visual zielone, bez forka. Scalony `d46c4b09` (`gh pr merge --merge`). Wdrożenia nie było — same dokumenty.
+- #317 nadal z konfliktem. Komentarz F7 przy #318: wciągnąć `main` w gałąź #317 i czekać na ponowne „gotowe”. Nie w tym kroku.
+- #313: brak F7, brama `db` czerwona, konflikt z `main`. Numer migracji przy rebase: 0234 (komentarz koordynatora 13:08).
+- Bieżąca pozycja: **Automat wdrożenia** — workflow `deploy-main.yml` na `pakiet/automat-wdrozenia`. Test kluczy czeka na wpis właściciela.
+
+## 2026-10-19 14:35 — #301 scalony; F7 #319 niegotowe poprawione
+
+- Skrzynka `dla-cursora`: pusta.
+- PR #301 (`wyglad/W-bramy-P11`): F7 po `b79f4270`, unit i visual zielone, bez konfliktu i bez forka. Scalony `2f66310d`.
+- #317: F7 jest, CI zielone, **konflikt** z `main` — bez scalenia (czeka na wciągnięcie `main` i ponowne „gotowe”).
+- #319: przegląd 14:10 **niegotowe**. Poprawka w tym samym PR: sekret `SUPABASE_DB_URL`, `db push --db-url` z dry-run i komunikatem przy porcie 6543, `::warning::` przy braku kluczy, `vercel@64.5.0`. Czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 15:10 — #320 w planie (plik testowy SharePoint); automat czeka na F7
+
+- Skrzynka: #320 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1420-01. Wpisane: PLAN §4 A6, §3 kolejność, §5 W13, §6, §8, P7, II-10 w `PLAN_OTWARTE_08_10.md`, dopisek `docs/handover/dopiski/D-20261019-1420-01.md`. Zgłoszenie otwarte do zrobienia A6.
+- Adresu pliku testowego nie ma w repozytorium. Właściciel dopisuje `SHAREPOINT_TEST_FILE_URL` w `.env.local`.
+- Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
+

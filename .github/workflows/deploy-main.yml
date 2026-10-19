@@ -1,0 +1,141 @@
+# Automat wdrożenia z main (D-20261019-1050-01 §5, F7 #319).
+# Kolejność stała: baza → funkcje Edge zmienione w pushu → produkcja Vercel.
+# Gdy krok bazy padnie, Edge i produkcja się nie wykonują.
+# Brak sekretów: zielono, ostrzeżenie „brak kluczy — wdrożenie ręczne”.
+# Adres bazy (SUPABASE_DB_URL) nigdy nie trafia do logu.
+
+name: deploy-main
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: baza, Edge, produkcja
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+      PROJECT_REF: nglnnrmzmhusvxslousq
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Klucze
+        id: keys
+        run: |
+          set -euo pipefail
+          set +x
+          if [ -z "${SUPABASE_ACCESS_TOKEN}" ] || [ -z "${SUPABASE_DB_URL}" ] || [ -z "${VERCEL_TOKEN}" ]; then
+            echo "brak kluczy — wdrożenie ręczne"
+            echo "::warning::brak kluczy — wdrożenie ręczne"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.keys.outputs.skip != 'true'
+        with:
+          version: 2.121.0
+
+      - name: Baza
+        if: steps.keys.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          set +x
+          port="$(python3 -c 'import os,re; u=os.environ.get("SUPABASE_DB_URL",""); rest=u.rsplit("@",1)[-1]; m=re.search(r":(\d+)", rest); print(m.group(1) if m else "")')"
+          redact() {
+            python3 -c 'import os,sys; u=os.environ.get("SUPABASE_DB_URL",""); t=sys.stdin.read(); sys.stdout.write(t.replace(u,"[adres]") if u else t)'
+          }
+          run_push() {
+            local code=0
+            local out
+            out="$(supabase db push --db-url "$SUPABASE_DB_URL" "$@" 2>&1)" || code=$?
+            printf '%s\n' "$out" | redact
+            if [ "$code" -ne 0 ]; then
+              if [ "$port" = "6543" ]; then
+                echo "potrzebny adres sesyjny (port 5432)"
+              fi
+              exit "$code"
+            fi
+          }
+          echo "Lista migracji (dry-run):"
+          run_push --dry-run --yes --skip-vault
+          run_push --yes --skip-vault
+
+      - name: Edge
+        if: steps.keys.outputs.skip != 'true'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          set +x
+          before="${BEFORE:-}"
+          if [ -z "$before" ] || printf '%s' "$before" | grep -Eq '^0+$'; then
+            echo "Brak poprzedniego commita — funkcje Edge bez zmian."
+            exit 0
+          fi
+          if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            echo "Poprzedni commit niedostępny — funkcje Edge bez zmian."
+            exit 0
+          fi
+          mapfile -t files < <(git diff --name-only "$before" "$GITHUB_SHA" -- supabase/functions)
+          shared=0
+          declare -A seen=()
+          names=()
+          for f in "${files[@]}"; do
+            [ -z "$f" ] && continue
+            rest="${f#supabase/functions/}"
+            name="${rest%%/*}"
+            if [ "$name" = "_shared" ]; then
+              shared=1
+              continue
+            fi
+            if [ -f "supabase/functions/${name}/index.ts" ] && [ -z "${seen[$name]:-}" ]; then
+              seen[$name]=1
+              names+=("$name")
+            fi
+          done
+          if [ "$shared" = 1 ]; then
+            names=()
+            for d in supabase/functions/*/index.ts; do
+              name="$(basename "$(dirname "$d")")"
+              [ "$name" = "_shared" ] && continue
+              names+=("$name")
+            done
+          fi
+          if [ "${#names[@]}" -eq 0 ]; then
+            echo "Funkcje Edge bez zmian."
+            exit 0
+          fi
+          for name in "${names[@]}"; do
+            echo "Wdrażam funkcję: ${name}"
+            supabase functions deploy "$name" --project-ref "$PROJECT_REF" --use-api --yes
+          done
+
+      - name: Produkcja Vercel
+        if: steps.keys.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          set +x
+          if [ -z "${VERCEL_ORG_ID}" ] || [ -z "${VERCEL_PROJECT_ID}" ]; then
+            echo "Brak zmiennych VERCEL_ORG_ID albo VERCEL_PROJECT_ID."
+            exit 1
+          fi
+          npx --yes vercel@64.5.0 deploy --prod --yes
