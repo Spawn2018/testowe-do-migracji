@@ -59,13 +59,24 @@ jobs:
         env:
           DB_URL_FILE: ${{ runner.temp }}/db-url
           DB_PORT_FILE: ${{ runner.temp }}/db-port
+          DB_PASSWORD_FILE: ${{ runner.temp }}/db-password
+          DB_MODE_FILE: ${{ runner.temp }}/db-mode
         run: |
           set -euo pipefail
           set +x
           python3 scripts/ci/normalize-db-url.py
           port="$(cat "$DB_PORT_FILE")"
+          mode="$(cat "$DB_MODE_FILE")"
           redact() {
-            python3 -c 'import os,sys; u=open(os.environ["DB_URL_FILE"],encoding="utf-8").read(); t=sys.stdin.read(); sys.stdout.write(t.replace(u,"[adres]") if u else t)'
+            python3 -c 'import os,sys
+u=open(os.environ["DB_URL_FILE"],encoding="utf-8").read()
+p=open(os.environ["DB_PASSWORD_FILE"],encoding="utf-8").read()
+t=sys.stdin.read()
+if u:
+    t=t.replace(u,"[adres]")
+if p:
+    t=t.replace(p,"[haslo]")
+sys.stdout.write(t)'
           }
           run_push() {
             local code=0
@@ -81,9 +92,32 @@ jobs:
               exit "$code"
             fi
           }
-          echo "Lista migracji (dry-run):"
-          run_push --dry-run --yes --skip-vault
-          run_push --yes --skip-vault
+          push_linked() {
+            local code=0
+            local out
+            out="$(supabase db push --linked "$@" 2>&1)" || code=$?
+            printf '%s\n' "$out" | redact
+            if [ "$code" -ne 0 ]; then
+              exit "$code"
+            fi
+          }
+          if [ "$mode" = "pooler" ]; then
+            echo "Lista migracji (dry-run, pula w adresie):"
+            run_push --dry-run --yes --skip-vault
+            run_push --yes --skip-vault
+          else
+            echo "Polaczenie: supabase link, pula IPv4 z API."
+            export SUPABASE_DB_PASSWORD="$(cat "$DB_PASSWORD_FILE")"
+            link_code=0
+            link_out="$(supabase link --project-ref "$PROJECT_REF" --yes 2>&1)" || link_code=$?
+            printf '%s\n' "$link_out" | redact
+            if [ "$link_code" -ne 0 ]; then
+              exit "$link_code"
+            fi
+            echo "Lista migracji (dry-run):"
+            push_linked --dry-run --yes --skip-vault
+            push_linked --yes --skip-vault
+          fi
 
       - name: Edge
         if: steps.keys.outputs.skip != 'true'

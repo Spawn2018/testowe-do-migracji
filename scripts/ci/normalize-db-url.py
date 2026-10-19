@@ -12,7 +12,7 @@ import os
 import re
 import stat
 import sys
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 SAFE = "!$&'()*+,;=-._~"
 OK = re.compile(r"(?:[A-Za-z0-9\-._~!$&'()*+,;=]|%[0-9A-Fa-f]{2})*")
@@ -39,6 +39,32 @@ def encode_password(url: str) -> str:
     return f"{scheme}://{user}:{quote(pw, safe=SAFE)}@{host}"
 
 
+def password_of(url: str) -> str:
+    """Hasło zdekodowane (unquote). Puste, gdy adres nie ma użytkownika."""
+    scheme, sep, rest = url.partition("://")
+    if not sep or scheme not in {"postgres", "postgresql"} or "@" not in rest:
+        return ""
+    userinfo, _host = rest.rsplit("@", 1)
+    _user, colon, pw = userinfo.partition(":")
+    if not colon:
+        return ""
+    return unquote(pw)
+
+
+def connection_mode(url: str) -> str:
+    """pooler — host puli (IPv4, --db-url). link — reszta, CLI bierze pulę z API."""
+    _port, scheme, _user, has_host, _db = describe(url)
+    if scheme != "postgres" or not has_host:
+        return "link"
+    rest = url.rsplit("@", 1)[-1]
+    hostport = rest.split("/", 1)[0].split("?", 1)[0]
+    tail = hostport.rsplit(":", 1)
+    host = tail[0] if len(tail) == 2 and tail[1].isdigit() else hostport
+    if "pooler.supabase.com" in host:
+        return "pooler"
+    return "link"
+
+
 def describe(url: str) -> tuple[str, str, bool, bool, bool]:
     scheme = "postgres" if url.startswith(("postgres://", "postgresql://")) else "inny"
     has_at = "@" in url
@@ -63,16 +89,25 @@ def main() -> int:
     port, scheme, has_user, has_host, has_db = describe(url)
     url_path = os.environ["DB_URL_FILE"]
     port_path = os.environ["DB_PORT_FILE"]
+    password_path = os.environ["DB_PASSWORD_FILE"]
+    mode_path = os.environ["DB_MODE_FILE"]
+    password = password_of(url)
+    mode = connection_mode(url)
     with open(url_path, "w", encoding="utf-8") as handle:
         handle.write(url)
     os.chmod(url_path, stat.S_IRUSR | stat.S_IWUSR)
     with open(port_path, "w", encoding="utf-8") as handle:
         handle.write(port)
+    with open(password_path, "w", encoding="utf-8") as handle:
+        handle.write(password)
+    os.chmod(password_path, stat.S_IRUSR | stat.S_IWUSR)
+    with open(mode_path, "w", encoding="utf-8") as handle:
+        handle.write(mode)
     print(
         f"Adres bazy: dlugosc {len(url)}, schemat {scheme}, "
         f"uzytkownik {'tak' if has_user else 'nie'}, host {'tak' if has_host else 'nie'}, "
         f"baza {'tak' if has_db else 'nie'}, port {port}, "
-        f"haslo zakodowane: {encoded}"
+        f"haslo zakodowane: {encoded}, polaczenie: {mode}"
     )
     if scheme != "postgres" or not has_user or not has_host or not has_db:
         print("SUPABASE_DB_URL nie jest pełnym adresem postgresql://uzytkownik@host:port/baza.")

@@ -3191,3 +3191,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 19:20 — #331: link i pula IPv4 zamiast hosta bezpośredniego
+
+- Skrzynka: #331 (`pilne`) — komentarz koordynatora 19:05. Host `db.<projekt>.supabase.co:5432` jest tylko IPv6; przebiegi `39287813163` i `39291759466` dostały `ECONNREFUSED`. Właściciel nic nie wpisuje.
+- Scalanie: #332 ma „F7: gotowe” sprzed commitów `8450ccfa` i `69355b5b`, a `visual` jeszcze trwa — bez scalenia i bez pusha na tę gałąź. #317 i #313 mają konflikt z `main`, bez aktualnego „gotowe”. #259 konflikt, bez F7.
+- Ten krok: `normalize-db-url.py` zapisuje zdekodowane hasło (plik 600) i tryb `pooler` albo `link`. `deploy-main.yml`: pula w adresie → `--db-url`; inaczej `supabase link --project-ref` i `db push --linked`. Log bez hasła i bez hosta. Test: hasło `a@b#c/d` w pliku, log bez hasła.
+- Po scaleniu przebieg `deploy-main` sam z pusha na `main`. Wynik link i dry-run — w następnym wpisie. Do tego czasu wdrożenie ręczne (#330).
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-pooler`, czeka na „F7: gotowe do scalenia”.
+
