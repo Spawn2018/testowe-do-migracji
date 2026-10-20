@@ -26,11 +26,12 @@ const pl: Dict = {
   // --- baza (0042)
   rk_auto_status_blocked: 'Automatyczna zmiana statusu {from} → {to} zablokowana: {error}',
   rk_loading_not_ready: 'Pojazd w strefie załadunku, a transport niegotowy (status {status})',
-  rk_port_no_loaded: 'Pojazd w porcie Gdańsk bez potwierdzenia załadunku',
+  /* A5 (0238): dwie przeprawy — Gdańsk (Polferries) i Gdynia (Stena); baza nie podaje portu w `params` */
+  rk_port_no_loaded: 'Pojazd w porcie PL bez potwierdzenia załadunku',
   rk_left_loading_unconfirmed: 'Pojazd opuścił strefę załadunku bez potwierdzenia załadunku — status bez zmian',
   rk_ferry_overdue: 'Transport nadal w statusie „Prom”, choć {vessel} miał przypłynąć {arr}',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
-  rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie Gdańsk w chwili odejścia rejsu {vessel} {dep}',
+  rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
   rk_silent_vehicle: 'Brak pozycji pojazdu {plate} od {minutes} min',
   rk_sequence: 'Rozjazd kolejności montażu: {early} (poz. {early_seq}) przyjedzie po {late} (poz. {late_seq})',
   rk_order_no_hhl: '{code}: brak numeru zlecenia HHL',
