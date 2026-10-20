@@ -34,6 +34,12 @@ const PL: Record<string, string> = {
   p6b_src_AIS: 'AIS',
   p6b_src_IMPORT: 'import',
   p6b_src_MANUAL: 'ręcznie',
+  /* A10: pozostałe źródła automatu (oś Status — p6c_tag_*) */
+  p6b_src_SCHEDULE: 'rozkład promu',
+  p6b_src_DATA: 'dane awizacji',
+  p6b_src_DOC: 'dokumenty',
+  p6b_src_DRIVER: 'kierowca (aplikacja)',
+  p6b_src_INVOICE: 'faktury',
   p6b_driver_app: 'Kierowca (aplikacja)',
   p6b_no_person: '(zapis bez osoby)',
   p6b_as: 'jako',

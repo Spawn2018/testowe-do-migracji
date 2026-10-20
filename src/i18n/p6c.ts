@@ -9,6 +9,12 @@ const PL: Record<string, string> = {
   p6c_tag_IMPORT: 'Import',
   p6c_tag_GPS: 'GPS',
   p6c_tag_AIS: 'AIS',
+  /* A10 (D-20261019-1540-01 §3): pozostałe źródła automatu */
+  p6c_tag_SCHEDULE: 'Rozkład',
+  p6c_tag_DATA: 'Dane',
+  p6c_tag_DOC: 'Dokumenty',
+  p6c_tag_DRIVER: 'Kierowca',
+  p6c_tag_INVOICE: 'Faktura',
   p6c_plan: 'plan {d}',
   p6c_plan_load: 'plan zał. {d}',
   p6c_plan_ok: 'w terminie',
@@ -27,7 +33,7 @@ const PL: Record<string, string> = {
   p6c_inv_ok: 'Transport jest na obu fakturach · można zmienić status',
   p6c_inv_ok_ro: 'Transport jest na obu fakturach',
   p6c_inv_mine: 'Faktura dołączona: {list}',
-  p6c_legend: 'GPS = lokalizator (emtrack, link RIO) · AIS = prom · ręcznie = osoba.',
+  p6c_legend: 'GPS = lokalizator (emtrack, link RIO) · AIS = prom · Rozkład = rozkład promu · Dane = awizacja i zasoby · Dokumenty = zezwolenia, polisy, CMR · Kierowca = aplikacja kierowcy · Faktura = faktury · ręcznie = osoba.',
 };
 
 export function fs6(locale: Locale, key: string): string {
