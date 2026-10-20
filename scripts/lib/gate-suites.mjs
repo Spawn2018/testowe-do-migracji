@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
+  security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
   status: 135, // A5: +9 + F7 source/ETA Stena>Polferries + eta_site not null ×2
   storage: 37,
   money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
@@ -64,7 +64,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 114, // 118 − 4 SKIP (B6)
+  security: 118, // 122 − 4 SKIP (B6)
   risks: 31, // 33 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

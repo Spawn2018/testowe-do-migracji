@@ -3518,3 +3518,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
 - Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
 
+## 2026-10-20 16:05 — HOTFIX D-1525 start (F7 #361: przed #356)
+
+- Skrzynka: #364/#362/#365/`#356` — w planie; #364 bez `pilne`, ale F7 #361 każe scalić HOTFIX przed #361. #317 — CI zielone, bez F7 po ostatnim merge main.
+- Scalanie: #361 — F7 gotowe (`7ddf16ba`), CI w toku; merge dopiero po HOTFIX. #366/#363 wygląd bez F7. #317 bez F7 po `f89b59d9`.
+- Ten krok: `pakiet/hotfix-d1525-trailer-swap` — migracja **0240** `guard_load_update` (lista SCX + HHL_ADMIN `carrier_order_no`); security 122 / TEST 118; money bez zmiany liczby. Część 2 NO_AWIZ_SE — następny krok. Po scaleniu #356 → migracja 0241.
+
