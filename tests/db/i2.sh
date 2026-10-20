@@ -635,12 +635,14 @@ $PSQL -c "update loads set ferry_booking_ref=null where id='$L1'; set session_re
 echo; echo "[I-21] terminy uzupełnienia zasobów przed załadunkiem i eskalacja (0073; A9: skan = l3_scan, nie detect_resource_deadlines)"
 SCXORG=$(Q "select org_id from app_users where auth_id='$SCX'")
 # D-1501: rejs + telematyka, żeby I-21 liczyło tylko NO_AWIZACJA / DOC (nie NO_SAILING / NO_TRACKING).
-$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-00000000i21a','I21 Vessel','Polferries') on conflict (id) do update set name=excluded.name" >/dev/null
+# UUID tylko hex (0-9a-f) — litera „i” w …i21a psuła INSERT/UPDATE (cisza przez >/dev/null).
+$PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-00000000a21a','I21 Vessel','Polferries') on conflict (id) do update set name=excluded.name" >/dev/null
 $PSQL -c "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
- values ('66666666-0000-0000-0000-00000000i21a','$P','55555555-0000-0000-0000-00000000i21a','GDN-NYN',
+ values ('66666666-0000-0000-0000-00000000a21a','$P','55555555-0000-0000-0000-00000000a21a','GDN-NYN',
          now() + interval '10 days', now() + interval '10 days 18 hours','RECZNIE')
  on conflict (id) do update set departure_at=excluded.departure_at, arrival_at=excluded.arrival_at, status='ZAPLANOWANY'" >/dev/null
-$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null, sailing_id='66666666-0000-0000-0000-00000000i21a', telematics_vehicle_id='rio:i21-test' where id='$L2'" >/dev/null
+# L1 bez okna awizacji — inaczej NO_SAILING/NO_TRACKING L1 psuje oczekiwane „1” z l3_scan.
+$PSQL -c "set session_replication_role=replica; update loads set plan_load_from=null, plan_load_date=null where id='$L1'; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', plan_load_date=(now() + interval '30 hours')::date, driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null, sailing_id='66666666-0000-0000-0000-00000000a21a', telematics_vehicle_id='rio:i21-test' where id='$L2'" >/dev/null
 chk "progi awizacji i dokumentów tylko w Opcjach; duplikaty DRIVER/VEHICLE/DOCS usunięte" "$(Q "select (select value_num::int from ops_thresholds where key='AWIZ_EARLY_H')||'/'||(select value_num::int from ops_thresholds where key='AWIZ_LATE_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_WARN_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_CRIT_H')||'/'||(select count(*) from resource_deadlines where kind in ('DRIVER','VEHICLE','DOCS'))")" "48/12/24/6/0"
 chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select l3_scan(now() - interval '24 hours')")" 0
 chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select l3_scan()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
