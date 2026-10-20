@@ -300,6 +300,8 @@ const PL: Record<string, string> = {
   p5_doc_col_note: 'Uwagi',
   p5_doc_r_PERMIT_PL: 'Zezwolenie PL',
   p5_doc_r_PERMIT_SE: 'Zezwolenie SE',
+  /* D-20261020-1118-01: zezwolenie „Firma” — jedno, podpięte samo */
+  p5_doc_r_PERMIT_FIRM: 'Zezwolenie firmowe',
   p5_doc_r_CMR_SIGNED: 'CMR z podpisem odbiorcy',
   p5_doc_r_INSURANCE: 'Polisa OCP przewoźnika',
   p5_doc_r_OCS: 'Polisa HHL',
@@ -497,6 +499,7 @@ const PL: Record<string, string> = {
   p5_pd_policy_none_OCS: 'brak — podpina się sama po wpisaniu polisy',
   p5_pd_policy_none_INSURANCE: 'brak ważnej polisy w dniu transportu',
   p5_pd_auto: 'Auto',
+  p5_pd_permit_firm_none: 'brak ważnego zezwolenia firmowego w dniu załadunku',
   p5_pd_other: 'Inne pliki',
   p5_pd_other_add: '+ Dodaj',
   p5_pd_other_aria: 'Dodaj inny plik do {code}',

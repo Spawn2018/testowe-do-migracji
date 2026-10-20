@@ -17,8 +17,9 @@ import { isStoredDoc } from '../../data/registry';
 import { downloadDocumentsZip } from '../../lib/zipDocs';
 import { cmrAfterDelivery, cmrCounts, docStatusRows } from '../../lib/docRequirements';
 import { reqVisible } from '../../lib/p5Docs';
-import { getDocReqCache } from '../../lib/docReqCache';
-import { docRequirementsStart, otherDocsOn, policiesOf } from '../../lib/p5Source';
+import { useDocReqCache } from '../../lib/docReqCache';
+import { docRequirementsStart, otherDocsOn, permitsOf, policiesOf } from '../../lib/p5Source';
+import { firmPermitFor, firmPermitLoad, withoutRoutePermits } from '../../lib/permitKind';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { t, tp } from '../../i18n/messages';
@@ -30,6 +31,8 @@ import { fmtDate, formatCalendarDay } from '../../lib/time';
 const UploadDocModal = lazy(lazyRetry(() => import('../docs/UploadDocModal').then((m) => ({ default: m.UploadDocModal }))));
 
 const REQ: DocCategory[] = ['PERMIT_PL', 'PERMIT_SE', 'CMR'];
+/* D-20261020-1118-01: zezwolenie firmowe — jedno, podpina się samo; przy transporcie wgrywa się tylko CMR */
+const REQ_FIRM: DocCategory[] = ['CMR'];
 const OTHER: DocCategory[] = ['OTHER'];
 /* rok zawsze — właściciel 16.10.2026 */
 const dmy = (iso: string) => formatCalendarDay(iso.slice(0, 10));
@@ -56,18 +59,22 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   /* W38: w Podglądzie bez zapisu — przycisk ukryty jak inne zapisy */
   const canAddOther = canUpload && otherDocsOn() && !isPreviewReadOnly({ viewRole: role });
   const policies = policiesOf();
+  /* D-20261020-1118-01: rodzaj zezwolenia z tabeli symboli (Firma — jedno zezwolenie, Trasa — PL i SE) */
+  const firm = firmPermitLoad(load);
+  const firmPermit = firm ? firmPermitFor(load, permitsOf([load])) : null;
+  const reqCats = firm ? REQ_FIRM : REQ;
   /* ten sam odczyt co strona Dokumenty (baza); w demo — wartości startowe; w produkcji bez odczytu — bez terminów */
-  const cached = getDocReqCache();
+  const cached = useDocReqCache(docs.length);
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
   const reqs = cached?.reqs ?? docRequirementsStart();
   const rows = useMemo(
     /* CMR liczy się dopiero po „Dostarczone” (decyzja 18.10, 17:28) */
-    () => cmrAfterDelivery(cached ? cached.status.filter((r) => r.loadId === load.id) : prod ? [] : docStatusRows([load], docs, reqs, nowMs), () => load.status),
-    [cached, prod, load, docs, reqs, nowMs],
+    () => withoutRoutePermits(cmrAfterDelivery(cached ? cached.status.filter((r) => r.loadId === load.id) : prod ? [] : docStatusRows([load], docs, reqs, nowMs), () => load.status), firm),
+    [cached, prod, load, docs, reqs, nowMs, firm],
   );
   const known = !!cached || !prod;
   const current = (c: DocCategory) => docs.filter((d) => d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
-  const others = docs.filter((d) => !REQ.includes(d.category) && d.category !== 'INSURANCE' && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
+  const others = docs.filter((d) => !reqCats.includes(d.category) && !(firm && !firmPermit && REQ.includes(d.category)) && d.category !== 'INSURANCE' && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
 
   const reqRow = (c: DocCategory) => {
     const req = reqs.find((r) => r.category === c);
@@ -106,7 +113,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
             </button>
           ) : null}
           {canUpload && !doc ? (
-            <button type="button" className="btn ghost" data-pd-upload={c} onClick={() => setUpload(REQ)}>{ft(locale, 'p5_pd_upload')}</button>
+            <button type="button" className="btn ghost" data-pd-upload={c} onClick={() => setUpload(reqCats)}>{ft(locale, 'p5_pd_upload')}</button>
           ) : !doc ? <span className="fin-tag plain">SCX</span> : null}
         </div>
       </li>
@@ -135,10 +142,38 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
     );
   };
 
+  /* D-20261020-1118-01: zezwolenie firmowe — numer i ważność z „Auto” (jak polisy); bez ważnego — wgrany plik zezwolenia
+     tego transportu albo „brak” z „Wgraj” (nowe zezwolenie firmowe w oknie „Wgraj dokument”, rodzaj „Firma”) */
+  const firmRow = () => {
+    const ok = firmPermit ? ftp(locale, 'p5_pd_policy_ok', { number: firmPermit.number ?? '—', date: firmPermit.validTo ? dmy(firmPermit.validTo) : '—' }) : null;
+    const file = ok ? null : current('PERMIT_PL')[0] ?? current('PERMIT_SE')[0] ?? null;
+    return (
+      <li key="PERMIT_FIRM" className="pd-row" data-pd-req="PERMIT_FIRM">
+        <div className="pd-tx">
+          <b>{ft(locale, 'p5_doc_r_PERMIT_FIRM')}</b>
+          {ok ? <span className="pd-ok" data-content>{ok}</span>
+            : file ? (
+              <span className={file.status === 'MISMATCH' ? 'pd-warn' : 'pd-ok'} data-pd-state="OK">
+                {ft(locale, 'p5_pd_state_OK')}
+                <button type="button" className="linkbtn pd-name" title={t(locale, 'a6_doc_preview')} onClick={() => onPreview(file)}>{file.name}</button>
+              </span>
+            )
+              : <span className="neg" data-pd-state="MISSING">{ft(locale, 'p5_pd_permit_firm_none')}</span>}
+        </div>
+        <div className="pd-act">
+          {ok ? <span className="fin-tag go">{ft(locale, 'p5_pd_auto')}</span>
+            : !file && canUpload ? <button type="button" className="btn ghost" data-pd-upload="PERMIT_FIRM" onClick={() => setUpload(REQ)}>{ft(locale, 'p5_pd_upload')}</button>
+              : !file ? <span className="fin-tag plain">HHL</span> : null}
+        </div>
+      </li>
+    );
+  };
+
   return (
-    <div className="pd" data-pd>
+    <div className="pd" data-pd data-pd-permit={firm ? 'FIRMA' : 'TRASA'}>
       <ul className="pd-list">
-        {REQ.map(reqRow)}
+        {firm ? firmRow() : null}
+        {reqCats.map(reqRow)}
         {policyRow('INSURANCE')}
         {policyRow('OCS')}
         <li className="pd-row" data-pd-other>
@@ -178,7 +213,8 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
         </button>
       </div>
       <p className="fin-muted">{ft(locale, 'p5_pd_note')}</p>
-      {permitForm}
+      {/* zezwolenia przy transporcie (dodaj, podłącz, zgodność) — tylko przy zezwoleniu „Trasa” */}
+      {firm ? null : permitForm}
       {upload && canUpload ? (
         <Suspense fallback={null}>
           <UploadDocModal

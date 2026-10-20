@@ -22,13 +22,14 @@ import {
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
 import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
+import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
-  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,' +
+  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,symbol,permit_kind,' +
   'rio_tracking_id,rio_asset_name,rio_tracker_on,rio_valid_from,rio_valid_to,rio_check_state,rio_check_at,rio_last_fix_at,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,actual_delivery_at,' +
@@ -79,7 +80,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -114,7 +115,19 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       /* A7: zezwolenia i polisy z bazy (KSH tylko HHL; SCX tylko własna) */
       sb.rpc('a7_permits_list'),
       sb.rpc('a7_policies_list'),
+      /* D-20261020-1118-01: tabela symboli (zezwolenie Firma/Trasa, piloci) i piloci z awizacji (load_escorts PL/SE) */
+      sb.from('symbol_specs').select('symbol,position_name,combo_length_m,combo_width_m,combo_height_m,pilot,permit_kind'),
+      sb.from('load_escorts').select('load_id,seq,plate,scope'),
+      sb.rpc('load_escort_contacts'),
     ]);
+    /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
+    setSymbolSpecsFromServer(symQ.error ? null : ((symQ.data ?? []) as SymbolSpecRow[]));
+    {
+      const names = new Map(((escContactQ.error ? [] : escContactQ.data ?? []) as { load_id: string; seq: number; driver_name: string | null }[])
+        .map((c) => [`${c.load_id}|${c.seq}`, c.driver_name]));
+      setPilotsFromServer(escQ.error ? null : ((escQ.data ?? []) as { load_id: string; seq: number; plate: string; scope: string }[])
+        .map((e) => ({ loadId: e.load_id, scope: e.scope, plate: e.plate, name: names.get(`${e.load_id}|${e.seq}`) ?? null })));
+    }
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
     }

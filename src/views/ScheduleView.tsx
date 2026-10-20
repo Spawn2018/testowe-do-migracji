@@ -25,7 +25,8 @@ import {
 import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
 import { s7, s7p } from '../i18n/sched7';
 import { cmrAfterDelivery, docStatusRows } from '../lib/docRequirements';
-import { getDocReqCache } from '../lib/docReqCache';
+import { useDocReqCache } from '../lib/docReqCache';
+import { firmPermitLoad, withoutRoutePermits } from '../lib/permitKind';
 import { docRequirementsStart, marginThresholdOf } from '../lib/p5Source';
 import '../components/schedule/sched7.css';
 import { SailingsPanel } from './SailingsPanel';
@@ -329,7 +330,8 @@ export function ScheduleView() {
   ) : null;
 
   /* E31: stan dokumentów jak na stronie Dokumenty i w panelu (baza po wejściu na Dokumenty; demo — reguły startowe) */
-  const docCache = getDocReqCache();
+  /* D-20261020-1118-01: stan z bazy przy wejściu na Harmonogram (nie dopiero po stronie Dokumenty) */
+  const docCache = useDocReqCache(documents.length);
   const reqs = docCache?.reqs ?? docRequirementsStart();
   const nowMs = Date.parse(nowIso);
   const docByLoad = useMemo(() => {
@@ -338,6 +340,8 @@ export function ScheduleView() {
     const rows = cmrAfterDelivery(docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs), (id) => st.get(id));
     const m = new Map<string, typeof rows>();
     for (const r of rows) { const a = m.get(r.loadId) ?? []; a.push(r); m.set(r.loadId, a); }
+    /* D-20261020-1118-01: przy zezwoleniu firmowym bez wierszy „zezwolenie PL / SE” (jak w panelu) */
+    for (const l of list) { const a = m.get(l.id); if (a && firmPermitLoad(l)) m.set(l.id, withoutRoutePermits(a, true)); }
     return m;
   }, [docCache, list, documents, reqs, nowMs]);
   const marginMin = marginThresholdOf();

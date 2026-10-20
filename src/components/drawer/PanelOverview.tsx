@@ -469,42 +469,48 @@ export function PanelOverview(p: Props) {
       {todoBox}
       {kshLine}
 
-      <Sec
-        id="plan"
-        phone={phone}
-        title={phone ? pt(locale, 'p7_ph_plan') : pt(locale, 'p7_plan_h')}
-        /* P11 (e32): telefon — daty z rokiem bez dnia tygodnia, w drugiej linii ETA albo „Na placu od …” (bez poszarpanego zawijania) */
-        status={phone ? (
-          <>
-            {` · ${ptp(locale, 'p7_plan_line', { a: dmy(load.plannedLoadDate), b: dmy(load.plannedDeliverDate) })}`}
-            <span className="po-fold-s2" data-plan-eta>
-              {siteSincePh ? ptp(locale, 'p7_ph_site', { v: dmHm(siteSincePh) }) : ptp(locale, 'p7_ph_eta', { v: etaShort })}
-            </span>
-          </>
-        ) : null}
-      >
-        <dl className="po-kv">
-          <dt>{pt(locale, 'p7_plan_load')}</dt>
-          <dd data-load-when>{dateVal(load.plannedLoadDate, loadHours)}<span className="po-sub">{SITES.loading.name}</span></dd>
-          <dt>{pt(locale, 'p7_plan_deliver')}</dt>
-          <dd data-deliver-when>{dateVal(load.plannedDeliverDate, delHours)}<span className="po-sub">{pt(locale, 'p7_place_deliver')}</span></dd>
-          <dt>{pt(locale, 'p7_plan_dates')}</dt>
-          <dd data-dates-origin>
-            <span data-content>{origin}</span>
-            <span className="po-sub">{pt(locale, 'p7_dates_ksh_can')}</span>
-            {role === 'KSH' || hhlAdminDates(role) ? (
-              <span className="po-ksh-act" data-ksh-actions>
-                <button type="button" className="btn" data-ksh-edit onClick={p.onKshDates}>{pt(locale, 'p7_dates_edit')}</button>
+      {/* D-20261020-1118-01: „Plan i ETA” zwijane, domyślnie zwinięte (komputer i telefon); ramka ETA i „Jak działa” poza
+          zwijaniem — widoczne cały czas */}
+      <details className="po-sec po-fold" data-po="plan">
+        <summary>
+          <span className="po-fold-t">
+            <b>{phone ? pt(locale, 'p7_ph_plan') : pt(locale, 'p7_plan_h')}</b>
+            {/* P11 (e32): telefon — daty z rokiem bez dnia tygodnia, w drugiej linii ETA albo „Na placu od …” */}
+            <span className="po-fold-s">{` · ${ptp(locale, 'p7_plan_line', { a: dmy(load.plannedLoadDate), b: dmy(load.plannedDeliverDate) })}`}</span>
+            {phone ? (
+              <span className="po-fold-s2" data-plan-eta>
+                {siteSincePh ? ptp(locale, 'p7_ph_site', { v: dmHm(siteSincePh) }) : ptp(locale, 'p7_ph_eta', { v: etaShort })}
               </span>
             ) : null}
-          </dd>
-        </dl>
-        {/* E15 pkt 8 (img/e15-after): blok ETA — w „Planie i ETA” (E32 pkt 4) */}
+          </span>
+          <span className="po-fold-i" aria-hidden="true">▾</span>
+        </summary>
+        <div className="po-fold-b">
+          <dl className="po-kv">
+            <dt>{pt(locale, 'p7_plan_load')}</dt>
+            <dd data-load-when>{dateVal(load.plannedLoadDate, loadHours)}<span className="po-sub">{SITES.loading.name}</span></dd>
+            <dt>{pt(locale, 'p7_plan_deliver')}</dt>
+            <dd data-deliver-when>{dateVal(load.plannedDeliverDate, delHours)}<span className="po-sub">{pt(locale, 'p7_place_deliver')}</span></dd>
+            <dt>{pt(locale, 'p7_plan_dates')}</dt>
+            <dd data-dates-origin>
+              <span data-content>{origin}</span>
+              <span className="po-sub">{pt(locale, 'p7_dates_ksh_can')}</span>
+              {role === 'KSH' || hhlAdminDates(role) ? (
+                <span className="po-ksh-act" data-ksh-actions>
+                  <button type="button" className="btn" data-ksh-edit onClick={p.onKshDates}>{pt(locale, 'p7_dates_edit')}</button>
+                </span>
+              ) : null}
+            </dd>
+          </dl>
+        </div>
+      </details>
+      {/* E15 pkt 8 (img/e15-after): blok ETA — pod „Planem i ETA”, zawsze widoczny */}
+      <div className="po-eta" data-po="eta">
         <EtaBlock load={load} locale={locale} phone={phone} nowIso={nowIso} deliveredAt={p.deliveredAt} siteSince={p.siteSince} delayMin={p.delayMin} wx={p.wx} />
         <div data-eta-howto className="etab-howto">
           <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
         </div>
-      </Sec>
+      </div>
 
       <Sec
         id="awiz"
