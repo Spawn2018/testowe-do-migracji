@@ -102,10 +102,7 @@ revoke all on function public.loads_freeze_tracking_open() from public, anon, au
 -- -------------------------------------------------------------------------
 -- 4) apply_geofence_status — EXIT LOADING tylko po ENTER
 -- -------------------------------------------------------------------------
-
--- -------------------------------------------------------------------------
--- 4) apply_geofence_status — EXIT LOADING tylko po ENTER
--- -------------------------------------------------------------------------create or replace function public.apply_geofence_status()
+create or replace function public.apply_geofence_status()
 returns trigger
 language plpgsql
 security definer
@@ -297,7 +294,8 @@ revoke all on function public.apply_geofence_status() from public, anon, authent
 
 -- -------------------------------------------------------------------------
 -- 5) compute_load_eta — EXIT LOADING tylko od startu okna
--- -------------------------------------------------------------------------create or replace function public.compute_load_eta(p_load uuid, p_now timestamp with time zone DEFAULT now())
+-- -------------------------------------------------------------------------
+create or replace function public.compute_load_eta(p_load uuid, p_now timestamp with time zone DEFAULT now())
  returns table(eta timestamp with time zone, conf_min integer, basis jsonb)
  language plpgsql
  stable security definer
