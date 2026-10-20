@@ -6,6 +6,7 @@ import {
   ferryFromSailing, historicalSailings, sailingAssignDenied, selectableSailings,
 } from '../src/lib/sailings';
 import { sailingFromRow, riskFromRow } from '../src/data/mappers';
+import { friendlyDbError } from '../src/lib/orderNumbers';
 import type { Load, Sailing } from '../src/types';
 
 const snap = buildDemoSnapshot();
@@ -103,5 +104,42 @@ describe('D-20261020-1501-01 — rejsy historyczne tylko dla Administratora HHL'
     const all = [past, onSea, S({ id: 'h3', departureAt: '2026-09-18T16:00:00Z', arrivalAt: '2026-09-19T10:00:00Z' }),
       S({ id: 'h4', departureAt: '2026-09-17T16:00:00Z', arrivalAt: '2026-09-18T10:00:00Z', status: 'ODWOLANY' }), S({ id: 'f1' })];
     expect(historicalSailings(all, NOW).map((s) => s.id)).toEqual(['h1', 'h3']);
+  });
+});
+
+/* 0242 (D-1501) — ekran zgodny z bazą: Operacje HHL jak przewoźnik, komunikaty bazy po polsku */
+describe('W-rejs-komunikaty — Operacje HHL i teksty 0242', () => {
+  const NOW2 = '2026-09-24T12:00:00Z';
+  const base2 = { id: 'l1', status: 'READY' } as Load;
+  const past2 = { id: 'p', departureAt: '2026-09-23T10:00:00Z', arrivalAt: '2026-09-24T08:00:00Z', status: 'PLANOWY' } as unknown as Sailing;
+  const fut2 = { id: 'f', departureAt: '2026-09-26T10:00:00Z', arrivalAt: '2026-09-27T08:00:00Z', status: 'PLANOWY' } as unknown as Sailing;
+  it('Operacje HHL nie zmieniają rejsu po wypłynięciu (także zdjęcie rejsu)', () => {
+    expect(sailingAssignDenied('HHL', { ...base2, status: 'ON_FERRY' } as Load, past2, null, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+    expect(sailingAssignDenied('HHL', base2, past2, fut2, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+    expect(sailingAssignDenied('HHL', base2, undefined, fut2, NOW2, 'HHL_OPS')).toBeNull();
+  });
+  it('Administrator HHL może zmienić rejs po wypłynięciu', () => {
+    expect(sailingAssignDenied('HHL', { ...base2, status: 'ON_FERRY' } as Load, past2, fut2, NOW2, 'HHL_ADMIN')).toBeNull();
+  });
+  it('odwołany rejs nie blokuje przepięcia na przyszły', () => {
+    const cancelled = { ...past2, status: 'ODWOLANY' } as Sailing;
+    expect(sailingAssignDenied('HHL', base2, cancelled, fut2, NOW2, 'HHL_OPS')).toBeNull();
+  });
+  it('teksty wyjątków 0242 zamienione na zrozumiałe', () => {
+    expect(friendlyDbError('Przewoźnik i Operacje HHL przypisują tylko rejs, który jeszcze nie wypłynął')).toMatch(/Rejs historyczny przypisuje Administrator HHL/);
+    expect(friendlyDbError('Rejs odwołany — nie można przypisać')).toBe('Ten rejs jest odwołany — wybierz inny.');
+    expect(friendlyDbError('Nie znaleziono rejsu')).toMatch(/odśwież listę rejsów/);
+    expect(friendlyDbError('Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator')).toBe('Rejs po wypłynięciu może zmienić wyłącznie Administrator HHL.');
+  });
+  it('Operacje HHL: docelowy wypłynięty bez bieżącego → DEPARTED; zdjęcie przed promem → wolno', () => {
+    expect(sailingAssignDenied('HHL', base2, undefined, past2, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+    expect(sailingAssignDenied('HHL', base2, fut2, null, NOW2, 'HHL_OPS')).toBeNull();
+  });
+  it('anulowany i rozliczany transport: przewoźnik i Operacje HHL nie zmieniają rejsu (jak baza: status >= FERRY)', () => {
+    for (const st of ['CANCELLED', 'READY_TO_INVOICE', 'INVOICED'] as const) {
+      expect(sailingAssignDenied('SCX', { ...base2, status: st } as Load, fut2, null, NOW2)).toBe('DEPARTED');
+      expect(sailingAssignDenied('HHL', { ...base2, status: st } as Load, fut2, null, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+      expect(sailingAssignDenied('HHL', { ...base2, status: st } as Load, fut2, null, NOW2, 'HHL_ADMIN')).toBeNull();
+    }
   });
 });
