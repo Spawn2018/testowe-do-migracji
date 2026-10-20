@@ -24,11 +24,11 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
+  nullguard: 658, // A9 +1: load_ready_gaps EMPTY
   i2: 550, // A3: +1 err HHL_OPS doc_requirement_set
   i30: 10,
   i31: 9,
-  dec2: 42, // D-0005: liczba asercji bez zmian; katalog typów 18→19 (KSH_DATES_CHECK)
+  dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 50, // A3: CMR_UPLOAD po Dostarczone, opcja UPLOAD_CMR, C17 zamyka
+  e25: 55, // A9: awiz_missing / READY / tower-zasoby / POLICY_SCX z insurance_policies
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

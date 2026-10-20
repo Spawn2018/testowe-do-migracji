@@ -3334,3 +3334,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #342 (`f92216d8`) i #344 (`05d3dcb8`) — „F7: gotowe do scalenia” po ostatnim commicie, unit i visual zielone. #345 bez F7 (jeszcze A3/A9). #317 i #259 konflikt.
 - Bieżąca **A3** w `0236_ksh_scx_l13_workflow.sql`: seed 3 wymagań, `is_hhl_admin`, `CMR_UPLOAD`/`UPLOAD_CMR`, C17 zamyka, stare DOC_MISSING z kopią. Testy: `i2` 550, `e25` 50. Dalej A9 w tej samej migracji.
 
+## 2026-10-20 02:05 — A9 w 0236; dec2 20 typów
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez F7 (para A3+A9 w toku). #347 wygląd bez F7. #317 i #259 konflikt z `main` (F7 sprzed wciągnięcia).
+- Poprzedni `db` na `e5ad7b53` czerwony: `dec2` katalog 19→20 (CMR_UPLOAD). Poprawione.
+- **A9** w `0236_ksh_scx_l13_workflow.sql`: `awiz_missing`, `load_ready_gaps`, `a9_try_ready` + wyzwalacze, L3 z lukami, `tower-zasoby` wyłączony, zamknięcie `RESOURCE_MISSING` z kopią. Widok: `load.readyGaps` z RPC. Testy: `e25` 55, `nullguard` 658. Czeka na bramę `db`.
+

@@ -78,7 +78,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -108,6 +108,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('load_order_numbers'),
       /* B7: progi ETA / ciszy — cache dla mappera (RLS: HHL wszystko, inni podzbiór) */
       sb.from('ops_thresholds').select('key,value_num'),
+      /* A9: braki do Gotowy z bazy; brak RPC (przed migracją) → widok liczy sam */
+      sb.rpc('load_ready_gaps'),
     ]);
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
@@ -118,8 +120,13 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (orderNos.error && !/load_order_numbers|PGRST202|schema cache|Could not find/i.test(orderNos.error.message ?? '')) {
       throw new Error(`load_order_numbers: ${orderNos.error.message}`);
     }
+    if (gapsQ.error && !/load_ready_gaps|PGRST202|schema cache|Could not find/i.test(gapsQ.error.message ?? '')) {
+      throw new Error(`load_ready_gaps: ${gapsQ.error.message}`);
+    }
     const orderBy = new Map(((orderNos.error ? [] : orderNos.data ?? []) as { load_id: string; hhl_order_no: string | null; carrier_order_no: string | null }[])
       .map((r) => [r.load_id, r]));
+    const gapsBy = new Map(((gapsQ.error ? [] : gapsQ.data ?? []) as { load_id: string; gaps: import('../types').ReadyGap[] | null }[])
+      .map((r) => [r.load_id, Array.isArray(r.gaps) ? r.gaps : []]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
@@ -181,6 +188,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         next = { ...next, trackingLink: { ...l.trackingLink, usedBy } };
       }
       next = { ...next, deliveredCheck: deliveredCheckFromDecision(l, dcBy.get(l.id) ?? null, dcRole) };
+      /* A9: baza podała listę → widok nie liczy sam (undefined = brak RPC). */
+      if (!gapsQ.error) next = { ...next, readyGaps: gapsBy.get(l.id) ?? [] };
       return next;
     });
     return {

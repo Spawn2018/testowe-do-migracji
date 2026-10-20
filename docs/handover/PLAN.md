@@ -556,7 +556,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 ### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — W TOKU (`pakiet/a3-a9`, PR #345)
 - **D-20261020-0010-01:** jeden PR z A9 (jedna migracja, osobny commit na pozycję, jedno F7). Ekranu nie zmieniasz.
 - **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null). **ZROBIONE** (`663d953c` / `d11c7d42`).
-- **A3 w 0236 (ten commit):** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią.
+- **A3 w 0236:** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią. **ZROBIONE** (`e5ad7b53`); dec2 katalog 20 typów.
 - `doc_requirements`:
   - CMR → `anchor = AFTER_UNLOAD` (po „Dostarczone”), `offset_hours` z Opcji (dziś 24), odpowiada przewoźnik;
   - usuwasz regułę „CMR 2 h po załadunku”, wymagania POD, SPEC i LASHING oraz PERMIT_SE dla wszystkich.
@@ -578,7 +578,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `p5Source.ts` `permitsOf` / `policiesOf` / `permitScopeOf` → produkcja z bazy.
 - Test: `permits = 1`, `insurance_policies = 2`; każdy transport ma wymiary, pilota i rodzaj zezwolenia; KSH widzi polisę HHL, nie widzi polisy SCX; „Zezwolenie SE” brakuje tylko przy KR.
 
-### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4)
+### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — W TOKU (ta sama migracja 0236 / PR #345)
 - Jedna funkcja kompletu awizacji `awiz_missing(load)`:
   - kierowca PL i SE (przy przepięciu) z telefonem, ciągnik, naczepa;
   - rejs przy trasie promowej;

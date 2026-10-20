@@ -186,5 +186,27 @@ val "SCX przyjmuje LOADING o 08:30" $SCX "select load_status_set('33333333-0000-
 err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
 err "SCX bezpośredni UPDATE statusu" $SCX "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
 
+echo; echo "[e25] A9 awiz_missing / Gotowy"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
+     driver_name, driver_phone, tractor_plate, trailer_plate, trailer_swap,
+     driver_delivery_name, driver_delivery_phone, tractor_delivery_plate,
+     hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000a901','$P','$SCXO','123456/2026/A901','PLANNED','2026-10-20',
+     'Jan A9','600111222','WGM1A9','GDA1A9',true,
+     'Erik A9',null,'ABC1A9',
+     'HHL/A901','SCX/A901')
+     on conflict (id) do update set status='PLANNED', trailer_swap=true,
+       driver_delivery_phone=null, hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
+sval "A9: brak telefonu SE w awiz_missing" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g,
+               jsonb_array_elements_text(g->'items') i
+   where g->>'kind'='AWIZ' and i='telefon SE')" t
+sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
+sval "A9: cron tower-zasoby wyłączony" "select count(*) from cron.job where jobname='tower-zasoby'" 0
+val "A9: HHL widzi load_ready_gaps" $HHL "select (gaps @> '[{\"kind\":\"AWIZ\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
+sval "A9: SAILING gdy brak sailing_id" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
+   where g->>'kind'='SAILING')" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

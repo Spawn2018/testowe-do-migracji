@@ -116,6 +116,7 @@ authenticated_security_definer_function_executable	public.load_insurance_cover	E
 authenticated_security_definer_function_executable	public.load_insurance_cover_one	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_message_read_list	lista czytających — tylko widoczna wiadomość i transport (loads_read); nazwiska i e-maile dla wszystkich firm (decyzja właściciela 15.10, 03:12, zgody RODO)
 authenticated_security_definer_function_executable	public.load_order_numbers	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.load_ready_gaps	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_permit_link	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_permit_save	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.load_permit_unlink	E19 — allowlista RPC; sprawdzenie roli w funkcji

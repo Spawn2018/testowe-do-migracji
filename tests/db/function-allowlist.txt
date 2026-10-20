@@ -156,6 +156,7 @@ authenticated money_effective_eur
 authenticated money_least_tier
 authenticated my_mfa_status
 authenticated load_order_numbers
+authenticated load_ready_gaps
 authenticated my_profile
 authenticated my_sessions
 authenticated my_session_revoke

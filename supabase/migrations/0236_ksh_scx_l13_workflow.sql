@@ -1,5 +1,5 @@
 -- D-20261020-0040-01 (#343): numer KSH nie trafia do SCX z l13_decision_email ani z reguły workflow.
--- Ta sama migracja 0236 będzie rozszerzona o A3 i A9 (osobne commity, jedno F7).
+-- A3: CMR_UPLOAD / seed wymagań. A9: awiz_missing, READY, tower-zasoby. Jedno F7 na parę.
 
 create or replace function public.l13_decision_email(p_decision uuid)
 returns void
@@ -808,3 +808,398 @@ begin
   );
 end
 $a3close$;
+
+-- =============================================================================
+-- A9 · „Gotowy” w bazie (E25 L6/L9/L29; D-20261017-1715-01 §2 pkt 2)
+-- awiz_missing → load.readyGaps; READY po komplecie; wyłączenie tower-zasoby.
+-- =============================================================================
+
+create or replace function public.awiz_missing(p_load uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  l public.loads%rowtype;
+  gaps jsonb := '[]'::jsonb;
+  awiz text[] := '{}';
+  v_pilots int := 0;
+  v_escorts int := 0;
+  v_anchor date;
+  v_has_policy boolean;
+  v_permit_missing boolean;
+  v_items jsonb;
+begin
+  select * into l from public.loads where id = p_load;
+  if not found then
+    return '[]'::jsonb;
+  end if;
+  if l.status::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING') then
+    return '[]'::jsonb;
+  end if;
+
+  if coalesce(btrim(l.driver_name), '') = '' then awiz := array_append(awiz, 'kierowca'); end if;
+  if coalesce(btrim(l.driver_phone), '') = '' then awiz := array_append(awiz, 'telefon'); end if;
+  if coalesce(btrim(l.tractor_plate), '') = '' then awiz := array_append(awiz, 'ciągnik'); end if;
+  if coalesce(btrim(l.trailer_plate), '') = '' then awiz := array_append(awiz, 'naczepa'); end if;
+  if l.trailer_swap is true then
+    if coalesce(btrim(l.driver_delivery_name), '') = '' then awiz := array_append(awiz, 'kierowca SE'); end if;
+    if coalesce(btrim(l.driver_delivery_phone), '') = '' then awiz := array_append(awiz, 'telefon SE'); end if;
+    if coalesce(btrim(l.tractor_delivery_plate), '') = '' then awiz := array_append(awiz, 'ciągnik SE'); end if;
+  end if;
+  if coalesce(array_length(awiz, 1), 0) > 0 then
+    gaps := gaps || jsonb_build_array(jsonb_build_object(
+      'kind', 'AWIZ', 'items', to_jsonb(awiz), 'who', 'SCX'
+    ));
+  end if;
+
+  /* Trasa Śrem → Boden zawsze z przeprawą — brak rejsu = SAILING (A5/A9). */
+  if l.sailing_id is null then
+    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'SAILING', 'who', 'SCX'));
+  end if;
+
+  select coalesce(max(p.escort_required), 0) into v_pilots
+    from public.load_permits lp
+    join public.permits p on p.id = lp.permit_id
+   where lp.load_id = l.id;
+  select count(*)::int into v_escorts from public.load_escorts e where e.load_id = l.id;
+  if v_pilots < coalesce(l.escort_vehicles, 0) then
+    v_pilots := coalesce(l.escort_vehicles, 0);
+  end if;
+  if v_pilots > 0 and v_escorts < v_pilots then
+    v_items := case
+      when v_pilots > 1 then jsonb_build_array('pilot ×' || v_pilots::text)
+      else jsonb_build_array('pilot')
+    end;
+    gaps := gaps || jsonb_build_array(jsonb_build_object(
+      'kind', 'PILOTS', 'items', v_items, 'who', 'SCX'
+    ));
+  end if;
+
+  if coalesce(btrim(l.carrier_order_no), '') = '' then
+    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'ORDER_SCX', 'who', 'SCX'));
+  end if;
+  if coalesce(btrim(l.hhl_order_no), '') = '' then
+    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'ORDER_HHL', 'who', 'HHL'));
+  end if;
+
+  /* Polisa SCX z insurance_policies (nie z documents.load_id) — koniec fałszywego POLICY_SCX. */
+  v_anchor := coalesce(l.plan_load_date, (now() at time zone 'Europe/Warsaw')::date);
+  v_has_policy := l.carrier_org_id is not null and exists (
+    select 1 from public.insurance_policies ip
+     where ip.org_id = l.carrier_org_id
+       and ip.approval_status = 'APPROVED'
+       and ip.valid_from <= v_anchor
+       and ip.valid_until >= v_anchor
+  );
+  if v_has_policy is not true then
+    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'POLICY_SCX', 'who', 'SCX'));
+  end if;
+
+  /* Do A7: Trasa = brak PL lub SE; Firma podpięta w A7. */
+  v_permit_missing := public.permit_required_enabled()
+    and public.load_needs_permit(l.id)
+    and exists (
+      select 1 from unnest(array['PL', 'SE']) c
+       where not exists (
+         select 1
+           from public.load_permits lp
+           join public.permits p on p.id = lp.permit_id
+          where lp.load_id = l.id and p.country = c
+       )
+    );
+  if v_permit_missing is true then
+    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'PERMIT', 'who', 'SCX'));
+  end if;
+
+  return gaps;
+end $$;
+
+revoke all on function public.awiz_missing(uuid) from public, anon, authenticated;
+comment on function public.awiz_missing(uuid) is
+  'A9: braki do Gotowy (AWIZ/SAILING/PILOTS/ORDER_*/POLICY_SCX/PERMIT). Mapowanie D-20261017-1715-01.';
+
+create or replace function public.load_ready_gaps()
+returns table (load_id uuid, gaps jsonb)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if current_app_user_id() is null then
+    return;
+  end if;
+  if is_hhl() is true then
+    return query
+    select l.id, public.awiz_missing(l.id)
+      from public.loads l;
+    return;
+  end if;
+  if current_org_kind() = 'CARRIER' then
+    return query
+    select l.id, public.awiz_missing(l.id)
+      from public.loads l
+     where l.carrier_org_id = current_org_id();
+    return;
+  end if;
+  if current_org_kind() = 'CLIENT' then
+    return query
+    select l.id, public.awiz_missing(l.id)
+      from public.loads l
+     where exists (
+       select 1 from public.projects p
+        where p.id = l.project_id and p.client_org_id = current_org_id()
+     );
+  end if;
+end $$;
+
+revoke all on function public.load_ready_gaps() from public, anon;
+grant execute on function public.load_ready_gaps() to authenticated;
+comment on function public.load_ready_gaps() is
+  'A9: lista readyGaps dla widoku (load.readyGaps). Pusta = komplet; poza przygotowaniem [].';
+
+create or replace function public.a9_try_ready(p_load uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status public.load_status;
+  v_gaps jsonb;
+begin
+  select status into v_status from public.loads where id = p_load for update;
+  if not found then
+    return false;
+  end if;
+  if v_status::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING') then
+    return false;
+  end if;
+  v_gaps := public.awiz_missing(p_load);
+  if coalesce(jsonb_array_length(v_gaps), 0) > 0 then
+    return false;
+  end if;
+  return public.auto_set_status(
+    p_load,
+    v_status,
+    'READY'::public.load_status,
+    'Awizacja kompletna',
+    now(),
+    jsonb_build_object('actor', 'system', 'source', 'A9', 'gaps', v_gaps)
+  );
+end $$;
+
+revoke all on function public.a9_try_ready(uuid) from public, anon, authenticated;
+comment on function public.a9_try_ready(uuid) is
+  'A9: PLANNED/RESOURCES_PENDING/DOCS_PENDING → READY gdy awiz_missing puste. Demotion w A10.';
+
+create or replace function public.a9_trg_loads_ready()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.a9_try_ready(new.id);
+  return new;
+end $$;
+revoke all on function public.a9_trg_loads_ready() from public, anon, authenticated;
+
+drop trigger if exists trg_a9_loads_ready on public.loads;
+create trigger trg_a9_loads_ready
+  after insert or update of
+    driver_name, driver_phone, tractor_plate, trailer_plate,
+    trailer_swap, driver_delivery_name, driver_delivery_phone, tractor_delivery_plate,
+    sailing_id, hhl_order_no, carrier_order_no, escort_vehicles, carrier_org_id, status,
+    plan_load_date
+  on public.loads
+  for each row
+  execute function public.a9_trg_loads_ready();
+
+create or replace function public.a9_trg_related_ready()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_load uuid;
+  r record;
+begin
+  if tg_table_name = 'load_permits' or tg_table_name = 'load_escorts' then
+    v_load := coalesce(new.load_id, old.load_id);
+    if v_load is not null then
+      perform public.a9_try_ready(v_load);
+    end if;
+  elsif tg_table_name = 'insurance_policies' then
+    for r in
+      select id from public.loads
+       where carrier_org_id = coalesce(new.org_id, old.org_id)
+         and status::text in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING')
+    loop
+      perform public.a9_try_ready(r.id);
+    end loop;
+  end if;
+  return coalesce(new, old);
+end $$;
+revoke all on function public.a9_trg_related_ready() from public, anon, authenticated;
+
+drop trigger if exists trg_a9_load_permits_ready on public.load_permits;
+create trigger trg_a9_load_permits_ready
+  after insert or update or delete on public.load_permits
+  for each row execute function public.a9_trg_related_ready();
+
+drop trigger if exists trg_a9_load_escorts_ready on public.load_escorts;
+create trigger trg_a9_load_escorts_ready
+  after insert or update or delete on public.load_escorts
+  for each row execute function public.a9_trg_related_ready();
+
+drop trigger if exists trg_a9_insurance_ready on public.insurance_policies;
+create trigger trg_a9_insurance_ready
+  after insert or update or delete on public.insurance_policies
+  for each row execute function public.a9_trg_related_ready();
+
+-- L3: braki awizacji z awiz_missing (AWIZ), nie osobna lista pól.
+create or replace function public.l3_scan(p_now timestamptz default now())
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  n int := 0;
+  v_code text;
+  v_anchor timestamptz;
+  v_missing boolean;
+  v_permit boolean;
+  v_policy boolean;
+  v_warn timestamptz;
+  v_crit timestamptz;
+  v_gaps jsonb;
+begin
+  if p_now is null or l3_ops('AWIZ_EARLY_H') is null or l3_ops('DOC_WARN_H') is null then
+    return 0;
+  end if;
+  for r in
+    select l.*
+      from public.loads l
+     where l.status not in ('CANCELLED', 'DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED')
+  loop
+    v_code := public.load_sms_code(r.id);
+    v_anchor := l3_anchor(r.plan_load_date, r.plan_load_from);
+    v_gaps := public.awiz_missing(r.id);
+    v_missing := exists (
+      select 1 from jsonb_array_elements(v_gaps) g
+       where g ->> 'kind' = 'AWIZ'
+    );
+    v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
+    v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');
+    n := n + l3_upsert_alarm(
+      r.project_id, r.id, 'RESOURCE_MISSING', 'l3:NO_AWIZACJA:' || r.id,
+      public.l3_headed(v_code, 'brak awizacji przed załadunkiem'),
+      'rk_res_driver',
+      v_anchor is not null and v_missing and p_now >= v_warn,
+      v_crit is not null and p_now >= v_crit,
+      v_crit,
+      jsonb_build_object('rule', 'L3_AWIZ', 'resource', 'LOAD', 'due', v_anchor,
+        'params', jsonb_build_object('code', v_code, 'h', l3_ops('AWIZ_EARLY_H'))),
+      p_now
+    );
+
+    v_permit := exists (
+      select 1 from jsonb_array_elements(v_gaps) g where g ->> 'kind' = 'PERMIT'
+    );
+    v_policy := exists (
+      select 1 from jsonb_array_elements(v_gaps) g where g ->> 'kind' = 'POLICY_SCX'
+    );
+    v_warn := l3_moment(v_anchor, 'DOC_WARN_H');
+    v_crit := l3_moment(v_anchor, 'DOC_CRIT_H');
+    n := n + l3_upsert_alarm(
+      r.project_id, r.id, 'DOC_MISSING', 'l3:DOC_MISSING:' || r.id,
+      public.l3_headed(v_code, 'brak wymaganego dokumentu przed załadunkiem'),
+      'rk_res_docs',
+      v_anchor is not null and (v_permit or v_policy) and p_now >= v_warn,
+      v_crit is not null and p_now >= v_crit,
+      v_crit,
+      jsonb_build_object('rule', 'L3_DOC', 'permit', v_permit, 'policy', v_policy, 'due', v_anchor,
+        'params', jsonb_build_object('code', v_code, 'h', l3_ops('DOC_WARN_H'))),
+      p_now
+    );
+  end loop;
+  return n;
+end $$;
+revoke all on function public.l3_scan(timestamptz) from public, anon, authenticated;
+comment on function public.l3_scan(timestamptz) is
+  'L3 + A9: NO_AWIZACJA / DOC_MISSING z awiz_missing (POLICY_SCX z insurance_policies).';
+
+-- Wyłączenie tower-zasoby (E18 P12 / A9).
+create or replace function public.detect_resource_deadlines(p_now timestamptz default now())
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  /* A9: braki awizacji = readyGaps / L3; cron tower-zasoby wyłączony. */
+  return 0;
+end $$;
+revoke all on function public.detect_resource_deadlines(timestamptz) from public, anon, authenticated;
+comment on function public.detect_resource_deadlines(timestamptz) is
+  'A9: no-op — RESOURCE_MISSING z terminów zasobów zamknięte; braki w awiz_missing.';
+
+do $a9cron$
+begin
+  perform cron.unschedule(jobid) from cron.job where jobname = 'tower-zasoby';
+exception when undefined_table then
+  null;
+when others then
+  if sqlstate not in ('42703', '42P01') then
+    raise;
+  end if;
+end
+$a9cron$;
+
+do $a9close$
+declare
+  n_close int := 0;
+begin
+  insert into audit_log (action, entity, entity_id, old_value)
+  select 'A9_RESOURCE_MISSING_CLOSE', 'risk_signals', id::text,
+         jsonb_build_object(
+           'kind', kind,
+           'dedup_key', dedup_key,
+           'title', title,
+           'title_key', title_key,
+           'detail', detail,
+           'via', '0236-A9'
+         )
+    from risk_signals
+   where kind = 'RESOURCE_MISSING'
+     and resolved_at is null;
+
+  update risk_signals
+     set resolved_at = now()
+   where kind = 'RESOURCE_MISSING'
+     and resolved_at is null;
+  get diagnostics n_close = row_count;
+
+  if n_close > 150 then
+    raise exception '0236-A9: zbyt wiele RESOURCE_MISSING do zamknięcia (%) — przerwane', n_close;
+  end if;
+
+  insert into audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    null, 'A9_READY_BACKFILL', 'risk_signals', 'batch',
+    jsonb_build_object('closed_resource_missing', n_close, 'via', '0236-A9')
+  );
+
+  /* Jednorazowo: spróbuj READY na przygotowaniu z kompletem. */
+  perform public.a9_try_ready(l.id)
+    from loads l
+   where l.status::text in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING');
+end
+$a9close$;
