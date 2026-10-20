@@ -13,46 +13,67 @@ stable
 set search_path = public, extensions
 as $$
 declare
-  l public.loads%rowtype;
-  p public.permits%rowtype;
-  v_kind text;
+  /* Bez select * — driver_* nie są w GRANT SELECT na loads (0076). */
+  v_load_id uuid;
+  v_permit_kind text;
+  v_symbol text;
+  v_len numeric;
+  v_wid numeric;
+  v_hei numeric;
   v_wgt numeric;
+  v_plan_load date;
+  v_scope text;
+  v_max_len numeric;
+  v_max_wid numeric;
+  v_max_hei numeric;
+  v_max_wgt numeric;
+  v_valid_from date;
+  v_valid_until date;
+  v_kind text;
   v_breaches text[] := '{}';
   v_dims_unknown boolean := false;
 begin
-  select * into l from public.loads where id = p_load_id;
-  select * into p from public.permits where id = p_permit_id;
-  if (l.id is not null and p.id is not null) is not true then
+  select l.id, l.permit_kind, l.symbol, l.combo_length_m, l.combo_width_m, l.combo_height_m,
+         l.combo_weight_t, l.plan_load_date
+    into v_load_id, v_permit_kind, v_symbol, v_len, v_wid, v_hei, v_wgt, v_plan_load
+    from public.loads l
+   where l.id = p_load_id;
+  select p.scope, p.max_length_m, p.max_width_m, p.max_height_m, p.max_weight_t,
+         p.valid_from, p.valid_until
+    into v_scope, v_max_len, v_max_wid, v_max_hei, v_max_wgt, v_valid_from, v_valid_until
+    from public.permits p
+   where p.id = p_permit_id;
+  if (v_load_id is not null and v_scope is not null) is not true then
     return query select false, array['MISSING']::text[];
     return;
   end if;
 
   v_kind := coalesce(
-    l.permit_kind,
-    (select ss.permit_kind from public.symbol_specs ss where ss.symbol = l.symbol),
+    v_permit_kind,
+    (select ss.permit_kind from public.symbol_specs ss where ss.symbol = v_symbol),
     'FIRMA'
   );
 
   /* Rodzaj: zezwolenie firmowe tylko przy permit_kind FIRMA (KR + 13/GD → KIND). */
-  if p.scope = 'FIRMA' and (v_kind = 'FIRMA') is not true then
+  if v_scope = 'FIRMA' and (v_kind = 'FIRMA') is not true then
     v_breaches := array_append(v_breaches, 'KIND');
   end if;
 
-  if p.max_length_m is not null and l.combo_length_m is null then
+  if v_max_len is not null and v_len is null then
     v_dims_unknown := true;
-  elsif p.max_length_m is not null and l.combo_length_m > p.max_length_m then
+  elsif v_max_len is not null and v_len > v_max_len then
     v_breaches := array_append(v_breaches, 'LENGTH');
   end if;
 
-  if p.max_width_m is not null and l.combo_width_m is null then
+  if v_max_wid is not null and v_wid is null then
     v_dims_unknown := true;
-  elsif p.max_width_m is not null and l.combo_width_m > p.max_width_m then
+  elsif v_max_wid is not null and v_wid > v_max_wid then
     v_breaches := array_append(v_breaches, 'WIDTH');
   end if;
 
-  if p.max_height_m is not null and l.combo_height_m is null then
+  if v_max_hei is not null and v_hei is null then
     v_dims_unknown := true;
-  elsif p.max_height_m is not null and l.combo_height_m > p.max_height_m then
+  elsif v_max_hei is not null and v_hei > v_max_hei then
     v_breaches := array_append(v_breaches, 'HEIGHT');
   end if;
 
@@ -61,22 +82,21 @@ begin
   end if;
 
   /* Masa: combo → suma pozycji → cargo z tabeli symboli; brak masy ≠ naruszenie. */
-  v_wgt := l.combo_weight_t;
   if v_wgt is null then
     select nullif(sum(si.total_weight_t), 0) into v_wgt
       from public.shipment_items si
-     where si.load_id = l.id;
+     where si.load_id = v_load_id;
   end if;
-  if v_wgt is null and l.symbol is not null then
+  if v_wgt is null and v_symbol is not null then
     select ss.cargo_weight_t into v_wgt
       from public.symbol_specs ss
-     where ss.symbol = l.symbol;
+     where ss.symbol = v_symbol;
   end if;
-  if p.max_weight_t is not null and v_wgt is not null and v_wgt > p.max_weight_t then
+  if v_max_wgt is not null and v_wgt is not null and v_wgt > v_max_wgt then
     v_breaches := array_append(v_breaches, 'WEIGHT');
   end if;
 
-  if (coalesce(l.plan_load_date, current_date) between p.valid_from and p.valid_until) is not true then
+  if (coalesce(v_plan_load, current_date) between v_valid_from and v_valid_until) is not true then
     v_breaches := array_append(v_breaches, 'VALIDITY');
   end if;
 
@@ -89,6 +109,23 @@ grant execute on function public.permit_fits(uuid, uuid) to authenticated;
 
 comment on function public.permit_fits(uuid, uuid) is
   'D-1118: zgodność zezwolenia z zestawem; DIMS_UNKNOWN tylko L×W×H; masa z fallbackiem; KIND dla FIRMA vs TRASA.';
+
+-- PILOTS_SET musi być w CHECK load_events (0234).
+alter table public.load_events drop constraint if exists load_events_event_type_known;
+alter table public.load_events add constraint load_events_event_type_known check (event_type in (
+    'NOTE', 'DOC_UPLOADED', 'PERMIT_MISMATCH', 'AWIZACJA_UPDATED', 'RESOURCES_UPDATED', 'ORDER_NO_UPDATED',
+    'FERRY_UPDATED', 'SAILING_ASSIGNED', 'SCX_ASSIGNED', 'PLAN_B_ACTIVATED', 'READY_BLOCKED',
+    'SCHEDULE_IMPORTED', 'SCHEDULE_DATE_CRITICAL', 'STATUS_APPROACHING_SITE', 'STATUS_AT_LOADING',
+    'STATUS_AT_PORT', 'STATUS_AT_PORT_GDANSK', 'STATUS_AT_PORT_NYNASHAMN', 'STATUS_AT_SITE',
+    'STATUS_CANCELLED', 'STATUS_DELAYED', 'STATUS_DELIVERED', 'STATUS_DOCS_PENDING', 'STATUS_DOC_MISSING',
+    'STATUS_FERRY', 'STATUS_IN_TRANSIT_PL', 'STATUS_IN_TRANSIT_SE', 'STATUS_LOADING', 'STATUS_ON_FERRY',
+    'STATUS_PLANNED', 'STATUS_READY', 'STATUS_RESOURCES_PENDING', 'STATUS_SILENT', 'STATUS_UNLOADED',
+    'STATUS_UNLOADING', 'STATUS_READY_TO_INVOICE', 'STATUS_INVOICED',
+    'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'DRIVER_ON_FERRY', 'DRIVER_PROBLEM',
+    'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO', 'POSITION_SHARED',
+    'POSITION_SHARE_DENIED', 'DELAY_DETECTED', 'RISK_RAISED', 'SILENT_VEHICLE',
+    'PLAN_DATES_CONFIRMED', 'PLAN_DATES_CHANGED', 'DECISION_HOLD', 'PILOTS_SET'
+));
 
 -- ---------------------------------------------------------------------
 -- awiz_pilots_set — pola awizacji Pilot PL / Pilot SE
@@ -105,18 +142,30 @@ security definer
 set search_path = public
 as $$
 declare
-  v_load public.loads%rowtype;
-  v_role text := current_app_role()::text;
+  v_load_id uuid;
+  v_status text;
+  v_carrier uuid;
+  v_symbol text;
+  v_role text;
   v_pilot text;
   v_old jsonb;
   v_new jsonb;
-  v_pl_plate text := nullif(upper(btrim(coalesce(p_pl_plate, ''))), '');
-  v_pl_name text := nullif(btrim(coalesce(p_pl_name, '')), '');
-  v_se_plate text := nullif(upper(btrim(coalesce(p_se_plate, ''))), '');
-  v_se_name text := nullif(btrim(coalesce(p_se_name, '')), '');
+  v_pl_plate text;
+  v_pl_name text;
+  v_se_plate text;
+  v_se_name text;
 begin
-  select * into v_load from public.loads where id = p_load;
-  if (v_load.id is not null) is not true then
+  v_role := current_app_role()::text;
+  v_pl_plate := nullif(upper(btrim(coalesce(p_pl_plate, ''))), '');
+  v_pl_name := nullif(btrim(coalesce(p_pl_name, '')), '');
+  v_se_plate := nullif(upper(btrim(coalesce(p_se_plate, ''))), '');
+  v_se_name := nullif(btrim(coalesce(p_se_name, '')), '');
+
+  select l.id, l.status::text, l.carrier_org_id, l.symbol
+    into v_load_id, v_status, v_carrier, v_symbol
+    from public.loads l
+   where l.id = p_load;
+  if (v_load_id is not null) is not true then
     raise exception 'Brak transportu' using errcode = '22023';
   end if;
 
@@ -124,13 +173,13 @@ begin
     v_role = 'HHL_ADMIN'
     or (
       current_org_kind() = 'CARRIER'
-      and v_load.carrier_org_id = current_org_id()
+      and v_carrier = current_org_id()
     )
   ) is not true then
     raise exception 'Pilotów awizuje Administrator HHL albo przewoźnik transportu' using errcode = '42501';
   end if;
 
-  if v_load.status in (
+  if v_status in (
     'UNLOADED', 'DELIVERED', 'CANCELLED', 'READY_TO_INVOICE', 'INVOICED'
   ) then
     raise exception 'Transport zakończony albo anulowany — awizacja pilotów zamknięta'
@@ -139,7 +188,7 @@ begin
 
   select ss.pilot into v_pilot
     from public.symbol_specs ss
-   where ss.symbol = v_load.symbol;
+   where ss.symbol = v_symbol;
   if (coalesce(v_pilot, 'BRAK') = 'PL_SE') is not true then
     raise exception 'Transport bez wymogu pilotów' using errcode = '22023';
   end if;

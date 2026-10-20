@@ -1031,9 +1031,9 @@ $PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_D2','$PM_F')
 chk "D-1118 KR+13/GD: KIND (rodzaj)" \
   "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_D2','$PM_F')")" "false/KIND"
 $PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values
- ('11111111-0000-0000-0000-00000000d0ps','00000000-0000-0000-0000-00000000a001','ops-d1118@test','HHL_OPS',true)
+ ('11111111-0000-0000-0000-00000000d0f5','00000000-0000-0000-0000-00000000a001','ops-d1118@test','HHL_OPS',true)
  on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
-OPS_D=11111111-0000-0000-0000-00000000d0ps
+OPS_D=11111111-0000-0000-0000-00000000d0f5
 err "D-1118 KSH odmowa awiz_pilots_set" $KSH "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
 err "D-1118 HHL_OPS odmowa awiz_pilots_set" $OPS_D "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
 err "D-1118 SG bez wymogu pilotów → 22023" $SCX "select awiz_pilots_set('$L_D1','PO1','Jan','ABC','Erik')" "bez wymogu pilotów"

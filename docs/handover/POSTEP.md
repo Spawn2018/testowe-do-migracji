@@ -3494,3 +3494,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #351 — „F7: gotowe do scalenia” po `9aa9616e`, CI zielone, merge `889fc09d`. `deploy-main` nie czekamy. #317/#259 konflikt — bez scalenia.
 - Bieżąca **D-1118** (`pakiet/d1118-zezwolenie-pilot`): migracja 0239 — `permit_fits` (masa, KIND), potem `awiz_pilots_set`.
 
+## 2026-10-20 12:15 — #354 scalone; #356 w planie; fix D-1118 db
+
+- Skrzynka: #356 (`Spawn2018`, `dla-cursora`, bez `pilne`) — decyzja właściciela 11:57: wdrożenie cichego uzupełnienia godzin (`import_quiet_hours`), **przed D-1118 i A10**. Wpisane: PLAN §3/§4/§8, dopisek `D-20261020-1157-01.md`. Komentarz w #356 (łańcuch DECISION_OPEN/RISK_OPEN). #320/#322/#323/#324/#353 w planie.
+- Scalanie: #354 — F7 po `17601dc`, CI zielone → merge `a1366549`. #357 bez F7 (db FAIL). #317 konflikt — bez scalenia. #259 bez F7.
+- D-1118 fix (ten commit): `permit_fits` bez `select *` (GRANT kolumn 0076); `PILOTS_SET` w CHECK `load_events`; UUID OPS w teście; init `awiz_pilots_set` w BEGIN. Po zielonym CI — kolejna pozycja **#356** (`pakiet/import-godziny-cicho`); #357 zostaje otwarte.
+
