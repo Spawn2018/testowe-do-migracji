@@ -436,6 +436,8 @@ q "select process_position('$L_A5', 56.16460, 15.63080, now() - interval '5 minu
     select process_position('$L_PF', 58.9044, 17.9480, now() - interval '5 minutes');
     select process_position('$L_PF', 58.9045, 17.9481, now() - interval '1 minute')" >/dev/null
 q "select refresh_load_eta('$L_A5'); select refresh_load_eta('$L_PF')" >/dev/null
+chk "A5 Stena: eta_site nie null w porcie SE" "select (eta_site is not null)::text from loads where id='$L_A5'" true
+chk "A5 Polferries: eta_site nie null w porcie SE" "select (eta_site is not null)::text from loads where id='$L_PF'" true
 chk "A5 ETA plac Stena > Polferries (SE_ROAD_KAA 21,5 > SE_ROAD 17)" \
   "select (s.eta_site > p.eta_site)::text from loads s join loads p on true where s.id='$L_A5' and p.id='$L_PF'" true
 

@@ -3481,3 +3481,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Przyczyna: pozycje GPS w teście z `2026-10-06` poza `GPS_FRESH_MIN` względem `now()` w CI → `compute_load_eta` zwraca null przy `AT_PORT_NYNASHAMN`.
 - Poprawka: `process_position(…, now() − 5/1 min)` w `tests/db/status.sh`. Oczekiwane status nadal **133**. Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 11:30 — A5: db zielone na `b0b7f607`; F7 runda 2 → asercje eta_site
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 — F7 runda 2 niegotowe (przed poprawką GPS); #352 scalone wcześniej. #317/#259 konflikt — bez scalenia.
+- CI na `b0b7f607`: db `39398905684` / unit / visual **zielone** (status 133).
+- F7 runda 2: dopisane `chk` `eta_site is not null` dla Stena i Polferries przed porównaniem. Oczekiwane status **135**. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
