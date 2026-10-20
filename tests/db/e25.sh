@@ -304,6 +304,7 @@ sval "A9: brak otwartych RES:* (Do zrobienia spójne)" "select count(*) from dec
     and (coalesce(detail->>'event_key','') like 'RES:%' or coalesce(detail->>'event_key','') like 'l3:RES:%')" 0
 
 # --- A7: symbol_specs, zezwolenie firmowe, polisa HHL ---
+sys "select a7_seed_firm_assets()" >/dev/null
 sval "A7: symbol_specs = 10" "select count(*) from symbol_specs" 10
 sval "A7: zezwolenie 13/GD/2026 FIRMA" "select count(*) from permits where permit_no='13/GD/2026' and scope='FIRMA'" 1
 sval "A7: polisa HHL PZU 1106707356" "select count(*) from insurance_policies ip

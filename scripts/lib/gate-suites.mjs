@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 666, // A7: +a7_permits_list/policies_list/apply_symbol/symbol_spec_of
+  nullguard: 681, // A7: +a7_* GUARD, symbol_spec_of EMPTY, symbol_resolve_code PURE (+completeness)
   i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
   i30: 10,
   i31: 9,
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 79, // A7: +8 (symbol_specs, permit, polisa, SG, load_permits, KR, PERMIT)
+  e25: 78, // A7: +7 (symbol_specs, permit, polisa, SG, load_permits, KR, PERMIT)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

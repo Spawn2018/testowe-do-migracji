@@ -167,4 +167,5 @@ load_ready_gaps | EMPTY | select count(*)::text from load_ready_gaps() | 0
 a7_permits_list | GUARD | select a7_permits_list() | Brak aktywnego konta
 a7_policies_list | GUARD | select a7_policies_list() | Brak aktywnego konta
 a7_apply_symbol | GUARD | select a7_apply_symbol('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta
-symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | t
+symbol_resolve_code | PURE | select symbol_resolve_code('SG-03') | SG
+symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | true

@@ -492,38 +492,23 @@ comment on function public.awiz_missing(uuid) is
 
 -- ---------------------------------------------------------------------
 -- 6. Jednorazowo: zezwolenie firmowe + polisa HHL (metadane; PDF = skrypt)
+-- Na świeżej bazie CI projekty/org są dopiero w seedzie — wołaj
+-- a7_seed_firm_assets() z tests/db/seed.sql (i z e25). Na produkcji orgs już są.
 -- ---------------------------------------------------------------------
-do $$
+create or replace function public.a7_seed_firm_assets()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   v_project uuid;
   v_hhl uuid;
   v_permit uuid;
   v_pol uuid;
-  v_n int;
+  v_n int := 0;
 begin
-  select id into v_project from public.projects order by created_at nulls last, id limit 1;
   select id into v_hhl from public.organizations where kind = 'FORWARDER' order by id limit 1;
-
-  if v_project is not null then
-    select id into v_permit from public.permits
-     where permit_no = '13/GD/2026' and scope = 'FIRMA' limit 1;
-    if v_permit is null then
-      insert into public.permits (
-        project_id, country, permit_no, authority, category, scope,
-        max_length_m, max_width_m, max_height_m, max_weight_t,
-        escort_required, valid_from, valid_until, route_desc
-      ) values (
-        v_project, 'PL', '13/GD/2026', 'GDDKiA', 'IV', 'FIRMA',
-        23.00, 3.40, 4.30, 60.00,
-        0, '2026-01-25', '2028-01-25',
-        'Zezwolenie firmowe kat. IV (druk AF 0082620) — Scandinavian Express Poland'
-      ) returning id into v_permit;
-      insert into public.audit_log (user_id, action, entity, entity_id, new_value)
-      values (null, 'A7_SEED_PERMIT', 'permits', v_permit::text,
-              jsonb_build_object('permit_no', '13/GD/2026', 'scope', 'FIRMA',
-                'note', 'wpis jednorazowy — decyzja właściciela 16.10.2026, 01:13'));
-    end if;
-  end if;
 
   if v_hhl is not null then
     select id into v_pol from public.insurance_policies
@@ -543,9 +528,32 @@ begin
     end if;
   end if;
 
-  /* Uzupełnij symbole i wymiary na istniejących transportach (cicho). */
+  for v_project in select id from public.projects order by created_at nulls last, id loop
+    select id into v_permit from public.permits
+     where permit_no = '13/GD/2026' and scope = 'FIRMA' and project_id = v_project
+     limit 1;
+    if v_permit is null then
+      insert into public.permits (
+        project_id, country, permit_no, authority, category, scope,
+        max_length_m, max_width_m, max_height_m, max_weight_t,
+        escort_required, valid_from, valid_until, route_desc
+      ) values (
+        v_project, 'PL', '13/GD/2026', 'GDDKiA', 'IV', 'FIRMA',
+        23.00, 3.40, 4.30, 60.00,
+        0, '2026-01-25', '2028-01-25',
+        'Zezwolenie firmowe kat. IV (druk AF 0082620) — Scandinavian Express Poland'
+      ) returning id into v_permit;
+      insert into public.audit_log (user_id, action, entity, entity_id, new_value)
+      values (null, 'A7_SEED_PERMIT', 'permits', v_permit::text,
+              jsonb_build_object('permit_no', '13/GD/2026', 'scope', 'FIRMA',
+                'project_id', v_project,
+                'note', 'wpis jednorazowy — decyzja właściciela 16.10.2026, 01:13'));
+    end if;
+  end loop;
+
   perform set_config('tower.bulk_quiet', 'on', true);
-  select count(*) into v_n from public.loads l
+  select count(*)::int into v_n
+    from public.loads l
    where l.status <> 'CANCELLED'
      and exists (select 1 from public.shipment_items si where si.load_id = l.id);
   perform public.a7_apply_symbol(l.id, 'A7 jednorazowe uzupełnienie')
@@ -554,8 +562,14 @@ begin
      and exists (select 1 from public.shipment_items si where si.load_id = l.id);
   perform set_config('tower.bulk_quiet', 'off', true);
 
-  raise notice 'A7: permit %, policy %, apply na transportach z pozycjami (okolo %)',
-    v_permit, v_pol, v_n;
+  return jsonb_build_object('permit', v_permit, 'policy', v_pol, 'applied', v_n);
+end $$;
+
+revoke all on function public.a7_seed_firm_assets() from public, anon, authenticated;
+
+do $$
+begin
+  raise notice 'A7 seed: %', public.a7_seed_firm_assets();
 end $$;
 
 -- Seed PERMIT_SE na istniejących projektach
