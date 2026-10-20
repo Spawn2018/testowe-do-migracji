@@ -326,3 +326,71 @@ describe('A8 pauza logowania', () => {
     expect(String(risk.title)).toMatch(/od /);
   });
 });
+
+describe('#374 emtrack version ≠ awaria', () => {
+  const emptyStore = () => {
+    let state: { failStreak: number; skippedUntil: string | null; secretFp: string | null } | null = null;
+    let raised = 0;
+    return {
+      raised: () => raised,
+      store: {
+        async projectId() { return 'p'; },
+        async vessels() { return []; },
+        async sailingsSince() { return []; },
+        async insertSailings() {},
+        async updateSailing() { return false; },
+        async latestPositions() { return []; },
+        async lastRun() { return null; },
+        async resolveRisks() { return 0; },
+        async recordRun() {},
+        async saveVesselPosition() {},
+        async telmEmtrackWebEnabled() { return true; },
+        async listActiveLoadsForTelematics() { return []; },
+        async emtrackLoginState() { return state; },
+        async saveEmtrackLoginState(s: { failStreak: number; skippedUntil: string | null; secretFp: string | null }) {
+          state = s;
+        },
+        async raiseRisk() { raised += 1; return true; },
+      },
+    };
+  };
+
+  class OkWs {
+    onopen: (() => void) | null = null;
+    onmessage: ((ev: MessageEvent) => void) | null = null;
+    constructor(_url: string) {
+      queueMicrotask(() => this.onopen?.());
+    }
+    send(raw: string) {
+      const msg = JSON.parse(raw) as { id: number; type: string };
+      queueMicrotask(() => {
+        const frame = (body: unknown) => new MessageEvent('message', { data: JSON.stringify(body) });
+        if (msg.type === 'SELECT_PROTOCOL') {
+          this.onmessage?.(frame({ id: msg.id, type: 'PROTOCOL', data: { protocol: 'accepted' } }));
+        } else if (msg.type === 'LOGIN') {
+          this.onmessage?.(frame({ id: msg.id, type: 'LOGIN_RESPONSE', data: { sessionId: 's1' } }));
+        } else if (msg.type === 'GET_TRACKING_OBJECTS') {
+          this.onmessage?.(frame({ id: msg.id, type: 'TRACKING_OBJECTS', data: { trackingObjects: [] } }));
+        } else if (msg.type === 'LOGOUT') {
+          this.onmessage?.(frame({ id: msg.id, type: 'ACK', data: {} }));
+        }
+      });
+    }
+    close() {}
+  }
+
+  it('wersja ≠ oczekiwanej + udane logowanie → brak raiseRisk, jest version_mismatch', async () => {
+    const ctx = emptyStore();
+    const r = await runEmtrackWeb({
+      store: ctx.store,
+      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_EXPECTED_VERSION: '6.32.0' },
+      now: () => new Date('2026-10-20T20:00:00Z'),
+      WebSocketImpl: OkWs as unknown as typeof WebSocket,
+    });
+    expect(r.ok).toBe(true);
+    expect(ctx.raised()).toBe(0);
+    expect(r.observations?.version_mismatch).toBe('6.33.0≠6.32.0');
+    expect(r.observations?.version).toBe('6.33.0');
+  });
+});

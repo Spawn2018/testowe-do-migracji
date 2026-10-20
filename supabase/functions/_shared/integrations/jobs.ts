@@ -1171,14 +1171,8 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     version = m?.[1] ?? '';
   }
   const expected = deps.env.EMTRACK_EXPECTED_VERSION?.trim() || EMTRACK_EXPECTED_VERSION;
-  if (version && version !== expected) {
-    await deps.store.raiseRisk(sourceDownRisk(
-      'EMTRACK_WEB',
-      [`meta version ${version} ≠ oczekiwane ${expected}`],
-      deps.now().toISOString(),
-      'https://emtrack.eu/app/',
-    ));
-  }
+  // #374: inna wersja meta ≠ awaria — SOURCE_DOWN tylko przy nieudanym logowaniu / pobraniu.
+  const versionMismatch = version && version !== expected ? `${version}≠${expected}` : '';
 
   let objects: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['objects'] = [];
   let sentLog: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['sentLog'] = [];
@@ -1201,7 +1195,11 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', [w], deps.now().toISOString(), 'https://emtrack.eu/app/'));
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: [w],
-      observations: { sentTypes: sentLog.map((s) => s.type).join(','), fail_streak: String(loginState.failStreak) },
+      observations: {
+        sentTypes: sentLog.map((s) => s.type).join(','),
+        fail_streak: String(loginState.failStreak),
+        ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
+      },
     };
   }
   if (!loginOk) {
@@ -1210,7 +1208,11 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     await deps.store.raiseRisk(sourceDownRisk('EMTRACK_WEB', ['login_failed'], deps.now().toISOString(), 'https://emtrack.eu/app/'));
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: ['login_failed'],
-      observations: { sentTypes: sentLog.map((s) => s.type).join(','), fail_streak: String(loginState.failStreak) },
+      observations: {
+        sentTypes: sentLog.map((s) => s.type).join(','),
+        fail_streak: String(loginState.failStreak),
+        ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
+      },
     };
   }
   loginState = emtrackLoginOk(loginState);
@@ -1297,6 +1299,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       skippedInterval: String(skippedInterval),
       ambiguous_trailer: String(ambiguousTrailer),
       sentTypes: sentLog.map((s) => s.type).join(','),
+      ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
     },
   };
 }

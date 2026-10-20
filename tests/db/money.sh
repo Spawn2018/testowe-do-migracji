@@ -318,6 +318,16 @@ err "zalogowany nie wywoła latest_vehicle_positions"                    $SCX "s
 chk "system: ryzyko projektowe (bez transportu) zapisane"               "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" t
 chk "system: ten sam klucz → bez duplikatu (false)"                     "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" f
 chk "system: ryzyko transportu bierze projekt z transportu"             "$(Q "select raise_integration_risk(null,'$L1','ROAD_PL','MEDIUM','ruch','{}','TRAFFIC_FLOW:T12'); select (project_id='$P')::text||' '||kind from risk_signals where dedup_key='TRAFFIC_FLOW:T12'")" "true ROAD_PL"
+# #374: klucz bez daty — po zamknięciu w ≤ 60 min wznów stary wiersz, bez nowego RISK_OPEN
+sys "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')"
+FLICK=$(Q "select id from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")
+sys "update risk_signals set resolved_at = now() - interval '5 minutes' where id='$FLICK'"
+chk "#374: wznowienie w 60 min → false (bez nowego wiersza)"            "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')")" f
+chk "#374: ten sam id znów otwarty"                                     "$(Q "select (id='$FLICK' and resolved_at is null)::text from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' order by detected_at desc limit 1")" true
+chk "#374: bez drugiego otwartego wiersza"                              "$(Q "select count(*) from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")" 1
+sys "update risk_signals set resolved_at = now() - interval '90 minutes' where dedup_key='SOURCE_DOWN:FLICKER_TEST'"
+chk "#374: po 60 min → nowy wiersz (true)"                              "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker 2','{}','SOURCE_DOWN:FLICKER_TEST')")" t
+sys "update risk_signals set resolved_at = now() where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null"
 chk "system (bez sesji): zapis rejsu zostaje POLFERRIES"                "$(Q "update sailings set status='OPOZNIONY' where id='$S12'; select source from sailings where id='$S12'")" POLFERRIES
 val "HHL: zmiana rejsu w aplikacji → źródło RECZNIE (baza)"             $HHL "update sailings set status='ODWOLANY', source='POLFERRIES' where id='$S12'; select source||' '||status from sailings where id='$S12'" "RECZNIE ODWOLANY" commit
 chk "HHL: autor zmiany rejsu zapisany przez serwer"                     "$(Q "select (updated_by = (select id from app_users where auth_id='$HHL'))::text from sailings where id='$S12'")" true

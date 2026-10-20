@@ -1,11 +1,11 @@
 /**
  * TELM-EMTRACK-WEB — protokół web emtrack.eu/app (tylko odczyt).
- * Źródło: RAPORT_TELM_EMTRACK_WEB_05_10.md (publiczny klient v6.32.0).
+ * Źródło: RAPORT_TELM_EMTRACK_WEB_05_10.md (publiczny klient; oczekiwana wersja meta).
  * Nigdy nie logować username/password/sessionId.
  */
 export const EMTRACK_WS_URL = 'wss://emtrack.eu:443/ws/';
 export const EMTRACK_APP_URL = 'https://emtrack.eu/app/';
-export const EMTRACK_EXPECTED_VERSION = '6.32.0';
+export const EMTRACK_EXPECTED_VERSION = '6.33.0';
 export const EMTRACK_UA =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 

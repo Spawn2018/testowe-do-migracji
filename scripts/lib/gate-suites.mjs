@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
   status: 158, // D-1710 155 + D-1501 B2/B3 +2 + N2 +1 (ODWOLANY→przyszły)
   storage: 37,
-  money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
+  money: 178, // #374: +4 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
