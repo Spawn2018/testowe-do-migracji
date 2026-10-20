@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { buildStatusAxis, hitChannel, statusHits } from '../src/lib/statusAxis';
 import { fs6 } from '../src/i18n/p6c';
 import { histRow } from '../src/lib/p6History';
+import { htHas } from '../src/i18n/p6b';
 import type { Load, LoadEvent } from '../src/types';
 
 let n = 0;
@@ -27,6 +28,19 @@ describe('A10: źródło automatu z payload.source', () => {
     expect(hitChannel('STATUS_AUTO', { source: 'DRIVER' }, 'DELIVERED')).toBe('DRIVER');
     expect(hitChannel('STATUS_AUTO', { source: 'DRIVER_PWA' }, 'LOADING')).toBe('DRIVER');
     expect(hitChannel('STATUS_AUTO', { source: 'INVOICE' }, 'INVOICED')).toBe('INVOICE');
+    expect(hitChannel('MILESTONE_LOADED', { via: 'driver_token' }, 'LOADING')).toBe('DRIVER');
+  });
+  it('konflikt kategorii: słowa lokalizatora wygrywają (F7 #350 P1)', () => {
+    expect(hitChannel('STATUS_AUTO', { source: 'GPS_DATA' }, 'READY')).toBe('GPS');
+    expect(hitChannel('STATUS_AUTO', { source: 'DRIVER_GPS' }, 'DELIVERED')).toBe('GPS');
+    expect(hitChannel('STATUS_AUTO', { source: 'GPS', zrodlo: 'ROZKLAD' }, 'ON_FERRY')).toBe('GPS');
+    expect(hitChannel('STATUS_AUTO', { source: 'DOC', lat: 54.4 }, 'READY_TO_INVOICE')).toBe('DOC');
+  });
+  it('każdy kanał ma etykietę na osi i w Historii', () => {
+    for (const ch of ['GPS', 'AIS', 'SCHEDULE', 'DATA', 'DOC', 'DRIVER', 'INVOICE']) {
+      expect(fs6('pl', `p6c_tag_${ch}`)).not.toBe(`p6c_tag_${ch}`);
+      expect(htHas(`p6b_src_${ch}`)).toBe(true);
+    }
   });
   it('dotychczasowe źródła bez zmian; fragment słowa to nie źródło', () => {
     expect(hitChannel('STATUS_AUTO', { source: 'AIS' }, 'ON_FERRY')).toBe('AIS');
@@ -73,6 +87,8 @@ describe('A10: Przygotowanie w obie strony', () => {
     const axis = buildStatusAxis(load('READY'), more);
     expect(axis.current).toBe('READY');
     expect(axis.currentSince).toBe('2026-10-19T15:00:00Z');
+    const ready = axis.groups.find((g) => g.key === 'prep')!.rows.find((r) => r.statuses.includes('READY'))!;
+    expect(ready.hit?.channel).toBe('DATA');
   });
 });
 
@@ -86,5 +102,14 @@ describe('A10: Historia pokazuje źródło automatu', () => {
     expect(ferry.src).toBe('rozkład promu');
     const gps = histRow(ev('STATUS_AUTO', '2026-10-19T21:00:00Z', { from: 'ON_FERRY', to: 'AT_PORT_SE', source: 'GPS', provider: 'emtrack' }), 'pl');
     expect(gps.src).toBe('GPS emtrack');
+    /* oś i Historia zgodne także przy wpisie z pozycją (F7 #350 P2) */
+    const ferryLat = histRow(ev('STATUS_AUTO', '2026-10-19T20:00:00Z', { from: 'AT_PORT', to: 'ON_FERRY', source: 'FERRY_SCHEDULE', lat: 54.5 }), 'pl');
+    expect(ferryLat.src).toBe('rozkład promu');
+    const doc = histRow(ev('STATUS_AUTO', '2026-10-15T12:11:00Z', { to: 'READY_TO_INVOICE', source: 'DOC', lat: 65.8 }), 'pl');
+    expect(doc.src).toBe('dokumenty');
+  });
+  it('wpis ręczny z `source: DATA` — bez źródła automatu w Historii (F7 #350 U1)', () => {
+    const row = histRow(ev('STATUS_READY', '2026-10-20T08:00:00Z', { manual: true, source: 'DATA' }, 'Anna Nowak // HHL'), 'pl');
+    expect(row.src).toBeNull();
   });
 });

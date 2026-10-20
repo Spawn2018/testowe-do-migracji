@@ -150,13 +150,16 @@ export function hitChannel(type: string, p: Record<string, unknown>, status: Loa
   const has = (...w: string[]) => w.some((x) => words.has(x));
   /* pozycja statku (AIS, Digitraffic, Stena) — przed sprawdzeniem `lat`, bo pozycja promu też ma współrzędne */
   if (has('AIS', 'AISSTREAM', 'DIGITRAFFIC', 'STENA')) return 'AIS';
+  /* słowa lokalizatora wygrywają z nowymi kanałami („GPS_DATA” to GPS — F7 #350 P1) */
+  if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE')) return 'GPS';
   /* A10: rozkład promu (A5), dane awizacji, dokumenty, kierowca, faktury — przed `lat`, bo wpis może mieć pozycję */
   if (has('SCHEDULE', 'ROZKLAD', 'TIMETABLE')) return 'SCHEDULE';
   if (has('DOC', 'DOCS', 'DOKUMENTY', 'CMR', 'PERMIT', 'ZEZWOLENIE', 'POLICY', 'POLISA', 'INSURANCE')) return 'DOC';
   if (has('DATA', 'DANE', 'AWIZ', 'AWIZACJA', 'RESOURCES', 'ZASOBY', 'READINESS')) return 'DATA';
-  if (has('DRIVER', 'KIEROWCA', 'PWA')) return 'DRIVER';
+  /* kamień milowy z aplikacji kierowcy (`driver_post_event`: `via: 'driver_token'`) */
+  if (has('DRIVER', 'KIEROWCA', 'PWA') || p.via === 'driver_token') return 'DRIVER';
   if (has('INVOICE', 'FAKTURA')) return 'INVOICE';
-  if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE') || typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
+  if (typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
   /* Tylko demo (I-0): zdarzenia przykładowe bez `source`. Na produkcji bez `source` znacznik zostaje „AUTO” —
      wykonawca zapisuje `payload.source` przy statusie z automatu (dopisek P6-c). */
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {

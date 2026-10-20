@@ -162,8 +162,12 @@ function posSource(p: Record<string, unknown>, locale: Locale): string {
   return prov ? `${ht(locale, 'p6b_src_GPS')} ${prov}` : ht(locale, 'p6b_src_GPS');
 }
 
+/* A10: kanały automatu — tylko przy STATUS_AUTO (wpis ręczny z `source: 'DATA'` nie dostaje „dane awizacji” — F7 #350 U1) */
+const AUTO_ONLY_SRC = new Set(['SCHEDULE', 'DATA', 'DOC', 'DRIVER', 'INVOICE']);
+
 function srcOf(p: Record<string, unknown>, locale: Locale): string | null {
   const raw = String(p.source ?? '').toUpperCase();
+  if (AUTO_ONLY_SRC.has(raw)) return null;
   if (raw === 'GPS' || raw === 'AIS' || typeof p.lat === 'number') return posSource(p, locale);
   return htHas(`p6b_src_${raw}`) ? ht(locale, `p6b_src_${raw}`) : null;
 }
@@ -234,8 +238,9 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     const to = str(p.to) ? statusName(str(p.to), locale) : null;
     const why = cleanNote(str(p.powod ?? p.reason), e.type, locale) ?? note;
     /* A10 (D-20261019-1540-01 §3): źródło automatu jak na osi — rozkład promu, dane awizacji, dokumenty, kierowca, faktury */
-    const ch = base.src ? null : hitChannel(e.type, p, null);
-    const src = ch && ch !== 'GPS' && ch !== 'AIS' ? ht(locale, `p6b_src_${ch}`) : base.src;
+    /* to samo źródło co na osi (F7 #350 P2): kanał z `hitChannel`, dla GPS z dostawcą („GPS emtrack”) */
+    const ch = hitChannel(e.type, p, null);
+    const src = ch === 'GPS' ? posSource(p, locale) : ch === 'AIS' ? ht(locale, 'p6b_src_AIS') : ch ? ht(locale, `p6b_src_${ch}`) : base.src;
     if (!from && !to) return { ...base, src, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
     return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }
