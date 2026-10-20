@@ -136,6 +136,7 @@ authenticated load_driver_contacts
 authenticated load_dwell_info
 authenticated load_escort_contacts
 authenticated load_escort_status
+authenticated awiz_pilots_set
 authenticated load_escorts_set
 authenticated load_insurance_cover
 authenticated load_insurance_cover_one

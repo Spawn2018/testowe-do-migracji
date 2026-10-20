@@ -10,9 +10,10 @@
  * - `ROAD_PL_HERE` — utrudnienia drogowe PL z HERE co 15 min (P6 E2, cron `tower-road-pl`);
  * - `ROAD_SITUATIONS_MAP` — warstwa „Utrudnienia drogowe” na mapie z danych produkcji (P9 E29 pkt 3);
  * - `INVOICE_A4` — faktura co do grosza i „pominięty” tylko z CMR w `register_invoice` (A4; wyglad/W-naprawy);
- * - `INVOICE_EDIT` — edycja faktury przez `update_invoice` (A4, D-20261020-0115-01; wyglad/W-faktura-edycja).
+ * - `INVOICE_EDIT` — edycja faktury przez `update_invoice` (A4, D-20261020-0115-01; wyglad/W-faktura-edycja);
+ * - `AWIZ_PILOTS` — awizacja Pilot PL/SE przez `awiz_pilots_set` (D-1118; wyglad/W-1118).
  */
-export type ServerRule = 'TRACKING_WINDOW' | 'SITE_EXIT_DELIVERED' | 'WIND_E49' | 'DETOUR_E49' | 'ROAD_PL_HERE' | 'ROAD_SITUATIONS_MAP' | 'INVOICE_A4' | 'INVOICE_EDIT';
+export type ServerRule = 'TRACKING_WINDOW' | 'SITE_EXIT_DELIVERED' | 'WIND_E49' | 'DETOUR_E49' | 'ROAD_PL_HERE' | 'ROAD_SITUATIONS_MAP' | 'INVOICE_A4' | 'INVOICE_EDIT' | 'AWIZ_PILOTS';
 
 /** Stan na produkcji. Zmienia tylko wykonawca, przy wdrożeniu pozycji z nawiasu. */
 const ON_IN_PRODUCTION: Record<ServerRule, boolean> = {
@@ -24,6 +25,7 @@ const ON_IN_PRODUCTION: Record<ServerRule, boolean> = {
   ROAD_SITUATIONS_MAP: false /* P9 E29 pkt 3 */,
   INVOICE_A4: true /* A4 register_invoice */,
   INVOICE_EDIT: true /* A4 update_invoice (D-20261020-0115-01) */,
+  AWIZ_PILOTS: true /* D-1118 awiz_pilots_set */,
 };
 
 export function serverRuleOn(rule: ServerRule): boolean {

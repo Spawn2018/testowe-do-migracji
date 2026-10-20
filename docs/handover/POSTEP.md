@@ -3488,3 +3488,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - CI na `b0b7f607`: db `39398905684` / unit / visual **zielone** (status 133).
 - F7 runda 2: dopisane `chk` `eta_site is not null` dla Stena i Polferries przed porównaniem. Oczekiwane status **135**. Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-20 11:50 — A5 scalone; #353 w planie; start D-1118
+
+- Skrzynka: #353 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-1118-01. Wpisane: PLAN §3/§4 (D-1118 po A5 przed A10), §8, dopisek `docs/handover/dopiski/D-20261020-1118-01.md`. Zgłoszenie otwarte do zrobienia D-1118. #320/#322/#323/#324 już w planie.
+- Scalanie: #351 — „F7: gotowe do scalenia” po `9aa9616e`, CI zielone, merge `889fc09d`. `deploy-main` nie czekamy. #317/#259 konflikt — bez scalenia.
+- Bieżąca **D-1118** (`pakiet/d1118-zezwolenie-pilot`): migracja 0239 — `permit_fits` (masa, KIND), potem `awiz_pilots_set`.
+
