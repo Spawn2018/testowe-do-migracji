@@ -55,6 +55,13 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(matchFixToLoad(fix, [
       { id: 'd', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'DONE', plannedLoadDate: '2020-01-01' },
     ])).toBeNull();
+    // Link-adres emtrack + naczepa = textId (produkcja SG-17).
+    expect(matchFixToLoad(fix, [
+      { id: 'url', trailer_plate: 'GD035YX', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
+    ])?.id).toBe('url');
+    expect(matchFixToLoad(fix, [
+      { id: 'url2', trailer_plate: 'OTHER', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
+    ])).toBeNull();
   });
 
   it('E27/D-1710: okno od 03:00 + link; ta sama naczepa z linkiem → wcześniejszy', () => {

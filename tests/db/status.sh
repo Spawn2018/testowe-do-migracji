@@ -287,6 +287,8 @@ chk "A1 L17 nowy po terminie: sprawa z powiadomieniem" "select public.tracking_d
 q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$W3','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}','SILENT:$W3')" >/dev/null
 chk "A1 cisza poza oknem się zamyka" "select public.detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$W3'" true
 chk "A1 po teście brak klucza ciszy w bazie statusów" "delete from decision_events where decision_id in (select d.id from decisions d join risk_signals s on s.id=d.risk_id where s.title_key='rk_silent_vehicle' or s.kind='SILENT_VEHICLE' or s.dedup_key like 'SILENT:%'); delete from decisions where risk_id in (select id from risk_signals where title_key='rk_silent_vehicle' or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'); delete from risk_signals where title_key='rk_silent_vehicle' or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'; select count(*) from risk_signals where title_key='rk_silent_vehicle'" 0
+# D-1710: sprzątanie LATE_DATE z przesunięć dat w A1 (risks.sh liczy klucze automatu).
+q "delete from risk_signals where title_key='rk_late_date_change' or dedup_key like 'LATE_DATE%'" >/dev/null
 chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
 chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 chk "A1 strażnik: anulowanie z cancel_ctx nadal dozwolone" "select (pg_get_functiondef('guard_load_update()'::regprocedure) like '%v_ctx not in (''MANUAL'', ''IMPORT'')%')::text" true
@@ -303,6 +305,12 @@ q "update loads set telematics_vehicle_id='TEL-A1NL' where id='$Wnl'" >/dev/null
 pos $Wnl 52.09 17.02 "$T00"
 chk "D-1710 po dodaniu linku: pozycja w oknie" "select count(*) from positions where load_id='$Wnl'" 1
 chk "D-1710 load_in_tracking_window wymaga linku" "select strpos(pg_get_functiondef(p.oid), 'telematics_vehicle_id') > 0 from pg_proc p where p.proname='load_in_tracking_window'" t
+# F7 #373 pkt 6+8: TELM nie rusza READY; SCX zmienia link — tracking_opened_at z freeze nie blokuje.
+Wscx=$(L 4e)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$Wscx','$P','$SCXO','KSH/A1SCX','HHL/A1SCX','SCX/A1SCX','READY','2026-10-05','TEL-SCX-1')" >/dev/null
+chk "D-1710 TELM: READY bez fazy z pozycji" "select coalesce(telm_infer_phase_from_position('$Wscx', 52.1, 17.0, public.tracking_window_start('2026-10-05'))::text,'∅')" "∅"
+chk "D-1710 SCX: usunięcie linku OK (tracking_opened_at)" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set telematics_vehicle_id=null where id='$Wscx'; select (telematics_vehicle_id is null)::text from loads where id='$Wscx'; commit" true
 HHL=11111111-0000-0000-0000-000000000001
 W8=$(L 4b)
 q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date,telematics_vehicle_id) values ('$W8','$P','$SCXO','KSH/A1W8','PLANNED','2026-11-20','TEL-A1W8')" >/dev/null

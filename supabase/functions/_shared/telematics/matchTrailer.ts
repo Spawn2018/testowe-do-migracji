@@ -69,9 +69,15 @@ export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]
   return n > 1 ? n : 0;
 }
 
+/** Link emtrack (adres aplikacji / WS) — na produkcji często `https://emtrack.eu/app/`. */
+export function isEmtrackTrackingLink(link: string): boolean {
+  return /emtrack\.eu/i.test(String(link ?? '').trim());
+}
+
 /**
- * D-1710 / #368: dopasowanie tylko po linku (telematics_vehicle_id).
- * Koniec dopasowania po samym numerze naczepy.
+ * D-1710 / #368: dopasowanie tylko przy niepustym linku.
+ * Równość z id/naczepą w polu linku; albo link emtrack + naczepa = textId (SG-17).
+ * Bez dopasowania po samej naczepie przy pustym linku (SG-15/16).
  */
 export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): LoadMatchRow | null {
   const plate = normalizePlate(fix.textId);
@@ -83,7 +89,9 @@ export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): Lo
   const hit = (l: LoadMatchRow) => {
     const t = String(l.telematics_vehicle_id ?? '').trim();
     if (!t) return false;
-    return t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate);
+    if (t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate)) return true;
+    if (isEmtrackTrackingLink(t) && plate !== '' && normalizePlate(l.trailer_plate) === plate) return true;
+    return false;
   };
   return active.find(hit) ?? null;
 }

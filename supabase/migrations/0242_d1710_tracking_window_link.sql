@@ -439,9 +439,13 @@ begin
       where e.load_id = p_load
         and e.event_type = 'GEOFENCE_EXIT'
         and e.payload->>'geofence_kind' = 'LOADING'
-        and l.plan_load_date is not null
-        and e.occurred_at >= public.tracking_window_start(l.plan_load_date)
         and coalesce((e.payload->>'synthetic')::boolean, false) is not true
+        -- D-1710 F7: EXIT LOADING tylko od startu okna (opened albo 03:00 dnia planu).
+        and e.occurred_at >= coalesce(
+              l.tracking_opened_at,
+              case when l.plan_load_date is not null
+                   then public.tracking_window_start(l.plan_load_date) end,
+              '-infinity'::timestamptz)
     );
 
   select ts, coalesce(geom_snapped, geom_raw) as g into p from positions where load_id = p_load order by ts desc limit 1;
@@ -736,20 +740,502 @@ end $function$;
 revoke execute on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
 
 -- -------------------------------------------------------------------------
--- 6) Naprawa danych (bez DELETE, z historią)
+-- 6) Kolumny odłączenia (RODO / śledzenie zmian)
 -- -------------------------------------------------------------------------
-do $fix$
+alter table public.positions
+  add column if not exists detached_load_id uuid,
+  add column if not exists detached_at timestamptz;
+alter table public.load_events
+  add column if not exists detached_load_id uuid,
+  add column if not exists detached_at timestamptz;
+
+comment on column public.positions.detached_load_id is
+  'D-1710: transport, z którego odłączono pozycję (load_id = null); retencja 30 dni.';
+comment on column public.load_events.detached_load_id is
+  'D-1710: transport, z którego odłączono zdarzenie (load_id = null).';
+
+-- -------------------------------------------------------------------------
+-- 7) telm_infer_phase_from_position — tylko po starcie (F7 #373 pkt 6)
+-- -------------------------------------------------------------------------
+create or replace function public.telm_infer_phase_from_position(
+  p_load uuid, p_lat float8, p_lon float8, p_ts timestamptz default now()
+) returns text
+language plpgsql security definer set search_path = public as $$
+declare
+  v_status load_status;
+  v_actual timestamptz;
+  v_phase text;
+  v_ok boolean := false;
+  v_ts timestamptz := coalesce(p_ts, now());
+  v_gid uuid;
+  v_tracker text;
+  v_plate text;
+begin
+  if public.load_in_tracking_window(p_load, v_ts) is not true then
+    return null;
+  end if;
+  if p_load is null or p_lat is null or p_lon is null then return null; end if;
+  select status, actual_load_at, rio_tracker_on,
+         coalesce(nullif(btrim(trailer_plate), ''), nullif(btrim(tractor_plate), ''))
+    into v_status, v_actual, v_tracker, v_plate
+    from loads where id = p_load;
+  -- D-1710: dla PLANNED…READY bez załadunku nie zmieniać statusu (fałszywe Droga PL).
+  if v_actual is null and (v_status is null or v_status < 'AT_LOADING') then
+    return null;
+  end if;
+  if v_status is null or v_status in (
+    'CANCELLED', 'UNLOADED', 'DELIVERED', 'AT_SITE',
+    'IN_TRANSIT_SE', 'AT_PORT_NYNASHAMN', 'FERRY'
+  ) then
+    return null;
+  end if;
+
+  if p_lat >= 55.0 and p_lon >= 11.0 and p_lon <= 25.0 and p_lat <= 70.0 then
+    v_phase := 'IN_TRANSIT_SE';
+  elsif p_lat >= 49.0 and p_lat < 55.0 and p_lon >= 14.0 and p_lon <= 25.0 then
+    v_phase := 'IN_TRANSIT_PL';
+  else
+    return null;
+  end if;
+
+  insert into telm_attach_phase (load_id, phase, observed_at, lat, lon)
+  values (p_load, v_phase, v_ts, p_lat, p_lon)
+  on conflict (load_id) do nothing;
+
+  select id into v_gid from geofences
+   where kind = 'LOADING' and active
+   order by sort_order nulls last, name
+   limit 1;
+  insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+  values (
+    p_load, 'GEOFENCE_EXIT', v_ts,
+    jsonb_build_object(
+      'geofence_id', v_gid,
+      'geofence_kind', 'LOADING',
+      'synthetic', true,
+      'zrodlo', 'TELM_PHASE_INFER',
+      'powod', 'faza z pozycji przy podłączeniu',
+      'actual_load', false
+    ),
+    'TELM_PHASE_EXIT_LOAD:' || p_load::text
+  )
+  on conflict (dedup_key) where dedup_key is not null do nothing;
+
+  v_ok := auto_set_status(
+    p_load, v_status, v_phase::load_status,
+    'faza z pozycji przy podłączeniu',
+    v_ts,
+    jsonb_build_object(
+      'zrodlo', 'TELM_PHASE_INFER',
+      'lat', p_lat, 'lon', p_lon,
+      'powod', 'faza z pozycji przy podłączeniu',
+      'tracker_on', v_tracker,
+      'trackerPlate', v_plate
+    )
+  );
+
+  insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+  values (
+    p_load, 'STATUS_AUTO', v_ts,
+    jsonb_build_object(
+      'from', v_status,
+      'to', case when v_ok then v_phase else v_status::text end,
+      'target_phase', v_phase,
+      'status_applied', v_ok,
+      'powod', 'faza z pozycji przy podłączeniu',
+      'zrodlo', 'TELM_PHASE_INFER',
+      'lat', p_lat, 'lon', p_lon,
+      'tracker_on', v_tracker,
+      'trackerPlate', v_plate
+    ),
+    'TELM_PHASE_INFER:' || p_load::text || ':' || v_phase
+  )
+  on conflict (dedup_key) where dedup_key is not null do nothing;
+
+  begin
+    perform public.refresh_load_eta(p_load);
+  exception when others then
+    null;
+  end;
+
+  return v_phase;
+end $$;
+
+revoke all on function public.telm_infer_phase_from_position(uuid, float8, float8, timestamptz) from public, anon, authenticated;
+grant execute on function public.telm_infer_phase_from_position(uuid, float8, float8, timestamptz) to service_role;
+
+-- -------------------------------------------------------------------------
+-- 8) guard_load_update — tracking_opened_at przy zmianie linku przez SCX (F7 pkt 8)
+-- -------------------------------------------------------------------------
+create or replace function public.guard_load_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_changed  text[];
+  v_bad      text[];
+  v_ctx      text;
+  v_carrier  text[] := array[
+    'tractor_plate','trailer_plate','trailer_type','driver_name','driver_phone',
+    'driver_phone_country',
+    'driver_delivery_name','driver_delivery_phone','driver_delivery_phone_country',
+    'tractor_delivery_plate','trailer_swap',
+    'escort_vehicles','telematics_vehicle_id','telematics_provider',
+    'ferry_booking_ref','sailing_id','carrier_order_no',
+    'combo_length_m','combo_width_m','combo_height_m','combo_weight_t',
+    'actual_load_at','actual_delivery_at','status','updated_at'];
+begin
+  if current_setting('tower.eta_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['eta_site','eta_confidence_min','eta_basis','eta_computed_at','delay_minutes','updated_at']::text[]) is not true then
+      raise exception 'Przeliczenie ETA może zmienić wyłącznie kolumny eta_* (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.track_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Okno śledzenia może zmienić wyłącznie tracking_opened_at (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['plan_load_date','plan_load_from','plan_load_to','plan_delivery_date','plan_delivery_from','plan_delivery_to',
+                           'plan_dates_status','plan_dates_confirmed_by','plan_dates_confirmed_at','tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Potwierdzenie dat może zmienić wyłącznie daty planu (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if auth.uid() is not null and (new.plan_dates_status, new.plan_dates_confirmed_by, new.plan_dates_confirmed_at)
+       is distinct from (old.plan_dates_status, old.plan_dates_confirmed_by, old.plan_dates_confirmed_at) then
+    raise exception 'Status dat planu zmienia wyłącznie potwierdzenie KSH („Potwierdź daty”)';
+  end if;
+
+  if new.status = 'CANCELLED' and old.status is distinct from 'CANCELLED' then
+    v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
+    if v_ctx = 'IMPORT' then
+      if exists (select 1 from invoice_lines where load_id = old.id) then
+        raise exception 'Import nie anuluje transportu na fakturze (%)', coalesce(old.order_no, left(old.id::text, 8));
+      end if;
+      if old.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+        raise exception 'Import nie anuluje transportu w statusie % — od AT_LOADING wyłącznie HHL ręcznie, z powodem', old.status;
+      end if;
+    elsif v_ctx = 'MANUAL' then
+      null;
+    elsif auth.uid() is not null then
+      raise exception 'Anulować transport może wyłącznie HHL — przez cancel_load() z powodem albo import harmonogramu';
+    end if;
+  end if;
+
+  if new.status = 'UNLOADED' and new.actual_delivery_at is null then
+    raise exception 'Status UNLOADED wymaga daty rozładunku — to data realizacji usługi';
+  end if;
+
+  if new.actual_delivery_at is distinct from old.actual_delivery_at then
+    if auth.uid() is not null and is_hhl() is not true
+       and exists (select 1 from invoice_lines where load_id = old.id) then
+      raise exception 'Data rozładunku transportu na fakturze jest zamrożona — zmiana wyłącznie przez HHL';
+    end if;
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values ((select id from app_users where auth_id = auth.uid()),
+            'LOAD_DELIVERY_DATE_CHANGE', 'loads', old.id::text,
+            jsonb_build_object('actual_delivery_at', old.actual_delivery_at),
+            jsonb_build_object('actual_delivery_at', new.actual_delivery_at));
+  end if;
+
+  if auth.uid() is null then return new; end if;
+
+  v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
+  if (
+    (new.status is distinct from old.status or new.actual_delivery_at is distinct from old.actual_delivery_at)
+    and current_setting('tower.status_ctx', true) is distinct from 'on'
+    and v_ctx not in ('MANUAL', 'IMPORT')
+  ) then
+    raise exception 'Status i datę rozładunku zmienia wyłącznie load_status_set albo automat'
+      using errcode = '42501';
+  end if;
+
+  select coalesce(array_agg(n.key), '{}') into v_changed
+    from jsonb_each(to_jsonb(new)) n
+   where n.value is distinct from (to_jsonb(old) -> n.key);
+
+  if is_hhl() is true then
+    if new.carrier_order_no is distinct from old.carrier_order_no
+       and current_app_role() is distinct from 'HHL_ADMIN' then
+      raise exception 'Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik';
+    end if;
+    if (
+      (new.plan_load_date, new.plan_load_from, new.plan_load_to,
+       new.plan_delivery_date, new.plan_delivery_from, new.plan_delivery_to)
+      is not distinct from
+      (old.plan_load_date, old.plan_load_from, old.plan_load_to,
+       old.plan_delivery_date, old.plan_delivery_from, old.plan_delivery_to)
+      or current_setting('tower.import_ctx', true) = 'on'
+      or current_app_role() = 'HHL_ADMIN'
+    ) is not true then
+      raise exception 'Daty i godziny załadunku i rozładunku zmienia wyłącznie KSH Użytkownik (G-20)'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if (current_org_kind() = 'CARRIER' and old.carrier_org_id = current_org_id()) is true then
+    -- D-1710: freeze przy zmianie/usunięciu linku ustawia tracking_opened_at — nie blokuj SCX.
+    select coalesce(array_agg(c), '{}') into v_bad
+      from unnest(v_changed) c
+     where c <> all (v_carrier)
+       and c is distinct from 'tracking_opened_at';
+    if cardinality(v_bad) > 0 then
+      raise exception 'Przewoźnik nie może zmieniać: %', array_to_string(v_bad, ', ');
+    end if;
+    if new.status is distinct from old.status then
+      if new.status = 'CANCELLED' then
+        raise exception 'Anulować transport może wyłącznie HHL';
+      end if;
+      if old.status <> 'CANCELLED' and new.status < old.status then
+        if current_setting('tower.invoice_edit', true) = 'on'
+           and old.status = 'INVOICED'
+           and new.status = 'READY_TO_INVOICE' then
+          null;
+        else
+          raise exception 'Status nie może się cofnąć: % → %', old.status, new.status;
+        end if;
+      end if;
+    end if;
+    if new.sailing_id is distinct from old.sailing_id and old.status >= 'FERRY' then
+      raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL';
+    end if;
+    return new;
+  end if;
+
+  raise exception 'Brak uprawnień do zmiany transportu';
+end $$;
+
+comment on function public.guard_load_update() is
+  'D-1710 / 0242: SCX — tracking_opened_at przy linku; D-1525 trailer_swap/SE; HHL_ADMIN carrier_order_no.';
+
+-- -------------------------------------------------------------------------
+-- 9) tracking_delivery_guard — także bez linku (F7: L17 ≠ śledzenie)
+-- -------------------------------------------------------------------------
+create or replace function public.tracking_delivery_guard()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n int := 0;
+  r record;
+  d record;
+  v_due timestamptz;
+  v_lat float8;
+  v_lon float8;
+  v_fix timestamptz;
+  v_place text;
+  v_when text;
+  v_title text;
+  v_backlog int := 0;
+begin
+  for r in
+    select id, project_id, order_no, plan_delivery_date
+      from loads
+     where plan_delivery_date is not null
+       and status not in ('CANCELLED', 'DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED')
+  loop
+    v_due := (((r.plan_delivery_date + 1)::timestamp) at time zone 'Europe/Warsaw') + interval '24 hours';
+    if (now() >= v_due) is not true then
+      continue;
+    end if;
+    d := null;
+    select id, status, resolution_code, resolved_at
+      into d
+      from decisions
+     where load_id = r.id and type_code = 'DELIVERY_UNCONFIRMED'
+     order by created_at desc
+     limit 1;
+    if found and d.status in ('NEW', 'ASSIGNED', 'SNOOZED') then
+      continue;
+    end if;
+    if found and d.status = 'RESOLVED' and d.resolution_code in ('STILL_EN_ROUTE', 'MANUAL_STATUS') then
+      if d.resolved_at > now() - interval '24 hours' then
+        continue;
+      end if;
+      update decisions
+         set status = 'NEW',
+             resolved_at = null,
+             resolved_by = null,
+             resolution_code = null,
+             resolution_note = null,
+             due_at = now() + interval '24 hours',
+             updated_at = now()
+       where id = d.id;
+      n := n + 1;
+      continue;
+    end if;
+    if found then
+      continue;
+    end if;
+    v_lat := null; v_lon := null; v_fix := null; v_place := null;
+    select st_y(geom_raw::geometry), st_x(geom_raw::geometry), ts
+      into v_lat, v_lon, v_fix
+      from positions
+     where load_id = r.id
+     order by ts desc
+     limit 1;
+    if v_fix is not null then
+      select g.name into v_place
+        from geofences g
+       where g.project_id = r.project_id
+         and g.active
+         and st_contains(g.geom, (select geom_raw from positions where load_id = r.id order by ts desc limit 1))
+       limit 1;
+      if v_place is null then
+        v_place := 'pozycja ' || trim(to_char(v_lat, '990.00')) || ', ' || trim(to_char(v_lon, '990.00'));
+      end if;
+      v_when := 'ostatnia pozycja ' || to_char(v_fix at time zone 'Europe/Warsaw', 'DD.MM.YYYY, HH24:MI') || ', ' || v_place;
+    else
+      v_when := 'brak pozycji';
+    end if;
+    v_title := public.load_sms_code(r.id) || ': brak „Dostarczone” dobę po planowanej dostawie '
+      || to_char(r.plan_delivery_date, 'DD.MM.YYYY') || ' · ' || v_when;
+    if r.plan_delivery_date < coalesce(
+         (select label::timestamptz at time zone 'Europe/Warsaw' from app_parameters where key = 'A1_DEPLOYED_AT')::date,
+         (now() at time zone 'Europe/Warsaw')::date
+       ) then
+      insert into decisions (project_id, type_code, title, detail, load_id, due_at)
+      values (
+        r.project_id,
+        'DELIVERY_UNCONFIRMED',
+        v_title,
+        jsonb_build_object(
+          'zrodlo', 'L17', 'event_key', 'L17:' || r.id::text, 'opened_by', 'L17-zaleglosc',
+          'last_lat', v_lat, 'last_lon', v_lon, 'last_fix', v_fix,
+          'plan_delivery_date', r.plan_delivery_date
+        ),
+        r.id,
+        now() + interval '24 hours'
+      );
+      insert into decision_events (decision_id, actor_id, action, payload)
+      select id, null, 'OPEN', jsonb_build_object('type', 'DELIVERY_UNCONFIRMED', 'event_key', 'L17:' || r.id::text, 'silent', true)
+        from decisions
+       where load_id = r.id and type_code = 'DELIVERY_UNCONFIRMED'
+       order by created_at desc
+       limit 1;
+      n := n + 1;
+      v_backlog := v_backlog + 1;
+      continue;
+    end if;
+    perform decision_open_from_event(
+      r.project_id,
+      'DELIVERY_UNCONFIRMED',
+      'L17:' || r.id::text,
+      v_title,
+      jsonb_build_object(
+        'zrodlo', 'L17',
+        'last_lat', v_lat,
+        'last_lon', v_lon,
+        'last_fix', v_fix,
+        'plan_delivery_date', r.plan_delivery_date
+      ),
+      r.id,
+      null
+    );
+    n := n + 1;
+  end loop;
+  if v_backlog > 0 then
+    insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+    select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, 'L17_BACKLOG',
+           jsonb_build_object(
+             'title', 'Potwierdź dostawę: ' || v_backlog || ' transportów bez „Dostarczone” po planowanej dostawie — lista w „Do zrobienia”',
+             'n', v_backlog
+           ),
+           'L17_BACKLOG:' || u.id::text
+      from app_users u
+     where u.active and u.role = 'HHL_ADMIN'
+    on conflict (dedup_key) where dedup_key is not null do nothing;
+  end if;
+  return n;
+end $$;
+
+revoke all on function public.tracking_delivery_guard() from public, anon, authenticated;
+grant execute on function public.tracking_delivery_guard() to service_role;
+
+-- -------------------------------------------------------------------------
+-- 10) report_position — bez linku odrzucane (F7)
+-- -------------------------------------------------------------------------
+create or replace function public.report_position(
+  p_load_id uuid, p_lat double precision, p_lon double precision, p_ts timestamp with time zone,
+  p_accuracy numeric DEFAULT NULL::numeric, p_speed numeric DEFAULT NULL::numeric,
+  p_heading numeric DEFAULT NULL::numeric
+)
+returns table(event_type text, geofence_id uuid, geofence_name text)
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare v_carrier uuid; v_link text;
+begin
+  select l.carrier_org_id, l.telematics_vehicle_id into v_carrier, v_link from loads l where l.id = p_load_id;
+  if not found then raise exception 'Nieznany transport'; end if;
+  if (is_hhl() or (current_org_kind() = 'CARRIER' and v_carrier = current_org_id())) is not true then
+    raise exception 'Pozycję transportu zgłasza wyłącznie jego przewoźnik albo HHL';
+  end if;
+  if nullif(btrim(v_link), '') is null then
+    raise exception 'Pozycja kierowcy wymaga linku śledzenia w awizacji';
+  end if;
+  if p_lat is null or p_lon is null or abs(p_lat) > 90 or abs(p_lon) > 180 then
+    raise exception 'Niepoprawne współrzędne';
+  end if;
+  if p_ts is null or p_ts > now() + interval '5 minutes' then
+    raise exception 'Czas pozycji z przyszłości';
+  end if;
+  if p_accuracy is not null and p_accuracy > 250 then return; end if;
+  return query
+    select r.event_type, r.geofence_id, r.geofence_name
+      from process_position(p_load_id, p_lat, p_lon, p_ts, 'DRIVER_PWA'::position_source,
+                            p_speed, p_heading, null,
+                            jsonb_build_object('accuracy_m', p_accuracy, 'via', 'report_position')) r;
+end $function$;
+
+revoke all on function public.report_position(uuid, float8, float8, timestamptz, numeric, numeric, numeric) from public, anon;
+grant execute on function public.report_position(uuid, float8, float8, timestamptz, numeric, numeric, numeric) to authenticated;
+
+-- -------------------------------------------------------------------------
+-- 11) d1710_repair() — naprawa danych (F7: bez eta_ctx/track_ctx; trigger off; po dowodzie)
+-- -------------------------------------------------------------------------
+create or replace function public.d1710_repair()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   v_n int;
   r record;
   v_note text;
-  v_link text;
+  v_from text;
+  v_to text;
+  v_pos_ids uuid[] := '{}';
+  v_ev_ids bigint[] := '{}';
+  v_load_ids uuid[] := '{}';
+  v_t0 timestamptz;
 begin
   perform set_config('tower.bulk_quiet', 'on', true);
   perform set_config('tower.status_ctx', 'on', true);
-  perform set_config('tower.track_ctx', 'on', true);
-  perform set_config('tower.eta_ctx', 'on', true);
 
+  -- A) czyść fałszywe tracking_opened_at w przygotowaniu
   with upd as (
     update public.loads l
        set tracking_opened_at = null,
@@ -771,80 +1257,85 @@ begin
   values (null, 'D1710_CLEAR_TRACKING_OPEN', 'loads', null,
           jsonb_build_object('cleared', v_n, 'note', 'D-20261020-1710-01'));
 
-  with bad as (
-    select id from public.loads where nullif(btrim(telematics_vehicle_id), '') is null
-  ), p as (
-    update public.positions pos set load_id = null from bad b where pos.load_id = b.id
-    returning pos.id
-  )
-  select count(*) into v_n from p;
-  insert into public.audit_log(user_id, action, entity, entity_id, new_value)
-  values (null, 'D1710_DETACH_POS_NO_LINK', 'positions', null,
-          jsonb_build_object('detached', v_n, 'note', 'D-20261020-1959-01'));
+  -- B) transporty do naprawy — po dowodzie fałszywego automatu
+  create temporary table if not exists _d1710_targets (
+    load_id uuid primary key,
+    reason text not null,
+    restore_to text
+  ) on commit drop;
+  delete from _d1710_targets;
 
-  with bad as (
-    select id from public.loads where nullif(btrim(telematics_vehicle_id), '') is null
-  ), e as (
-    update public.load_events ev set load_id = null from bad b
-     where ev.load_id = b.id
-       and ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL')
-    returning ev.id
-  )
-  select count(*) into v_n from e;
-  insert into public.audit_log(user_id, action, entity, entity_id, new_value)
-  values (null, 'D1710_DETACH_GEOFENCE_NO_LINK', 'load_events', null,
-          jsonb_build_object('detached', v_n, 'note', 'D-20261020-1959-01'));
-
-  with early as (
-    select l.id as load_id, public.tracking_window_start(l.plan_load_date) as win
-      from public.loads l
-     where l.actual_load_at is null and l.status < 'AT_LOADING' and l.plan_load_date is not null
-  ), p as (
-    update public.positions pos set load_id = null from early e
-     where pos.load_id = e.load_id and pos.ts < e.win
-    returning pos.id
-  )
-  select count(*) into v_n from p;
-  insert into public.audit_log(user_id, action, entity, entity_id, new_value)
-  values (null, 'D1710_DETACH_POS_BEFORE_WINDOW', 'positions', null,
-          jsonb_build_object('detached', v_n, 'note', 'D-20261020-1710-01'));
-
-  with early as (
-    select l.id as load_id, public.tracking_window_start(l.plan_load_date) as win
-      from public.loads l
-     where l.actual_load_at is null and l.status < 'AT_LOADING' and l.plan_load_date is not null
-  ), e as (
-    update public.load_events ev set load_id = null from early x
-     where ev.load_id = x.load_id
-       and ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL')
-       and ev.occurred_at < x.win
-    returning ev.id
-  )
-  select count(*) into v_n from e;
-  insert into public.audit_log(user_id, action, entity, entity_id, new_value)
-  values (null, 'D1710_DETACH_GEOFENCE_BEFORE_WINDOW', 'load_events', null,
-          jsonb_build_object('detached', v_n, 'note', 'D-20261020-1710-01'));
-
-  for r in
-    select l.id, l.telematics_vehicle_id
-      from public.loads l
-     where l.status = 'IN_TRANSIT_PL'
-       and l.actual_load_at is null
-       and (
-         nullif(btrim(l.telematics_vehicle_id), '') is null
-         or (
-           l.plan_load_date is not null
-           and l.plan_load_date > ((now() at time zone 'Europe/Warsaw')::date)
+  insert into _d1710_targets (load_id, reason, restore_to)
+  select distinct l.id,
+         case
+           when nullif(btrim(l.telematics_vehicle_id), '') is null then 'NO_LINK'
+           else 'BEFORE_WINDOW'
+         end,
+         coalesce(
+           (select e.payload->>'from'
+              from load_events e
+             where e.load_id = l.id
+               and e.event_type = 'STATUS_AUTO'
+               and e.payload->>'to' in ('IN_TRANSIT_PL', 'IN_TRANSIT_SE')
+               and (
+                 nullif(btrim(l.telematics_vehicle_id), '') is null
+                 or (l.plan_load_date is not null
+                     and e.occurred_at < public.tracking_window_start(l.plan_load_date))
+               )
+             order by e.occurred_at desc
+             limit 1),
+           'READY'
          )
+    from loads l
+   where l.actual_load_at is null
+     and l.status in (
+       'AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
+       'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
+     )
+     and (
+       exists (
+         select 1 from load_events e
+          where e.load_id = l.id
+            and (
+              e.event_type = 'STATUS_AUTO'
+              or e.dedup_key like 'STATUS_AUTO:' || l.id::text || ':%'
+              or e.dedup_key like 'TELM_PHASE_EXIT_LOAD:' || l.id::text
+              or e.dedup_key like 'TELM_PHASE_INFER:' || l.id::text || ':%'
+              or (e.event_type = 'GEOFENCE_EXIT'
+                  and e.payload->>'geofence_kind' = 'LOADING'
+                  and coalesce((e.payload->>'synthetic')::boolean, false) is true)
+            )
+            and (
+              nullif(btrim(l.telematics_vehicle_id), '') is null
+              or (l.plan_load_date is not null
+                  and e.occurred_at < public.tracking_window_start(l.plan_load_date))
+            )
        )
+       or exists (
+         select 1 from positions p
+          where p.load_id = l.id
+            and nullif(btrim(l.telematics_vehicle_id), '') is null
+       )
+     )
+  on conflict (load_id) do nothing;
+
+  select coalesce(array_agg(load_id), '{}') into v_load_ids from _d1710_targets;
+
+  -- C) najpierw przywróć status
+  for r in select * from _d1710_targets
   loop
+    v_to := coalesce(nullif(r.restore_to, ''), 'READY');
+    if v_to not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+      v_to := 'READY';
+    end if;
     v_note := case
-      when nullif(btrim(r.telematics_vehicle_id), '') is null
+      when r.reason = 'NO_LINK'
         then 'Korekta: sledzenie bez linku (D-20261020-1959-01)'
       else 'Korekta: sledzenie otwarte przed dniem zaladunku (D-20261020-1710-01)'
     end;
+    select status::text into v_from from loads where id = r.load_id;
     update public.loads
-       set status = 'READY',
+       set status = v_to::load_status,
            tracking_opened_at = null,
            eta_site = null,
            eta_confidence_min = null,
@@ -852,56 +1343,227 @@ begin
            eta_computed_at = null,
            delay_minutes = null,
            updated_at = now()
-     where id = r.id;
+     where id = r.load_id;
     insert into public.load_events (load_id, event_type, occurred_at, payload, dedup_key)
     values (
-      r.id, 'STATUS_READY', now(),
-      jsonb_build_object('from', 'IN_TRANSIT_PL', 'to', 'READY', 'note', v_note, 'manual', true, 'korekta', true),
-      'D1710_READY:' || r.id::text
+      r.load_id, 'STATUS_READY', now(),
+      jsonb_build_object('from', v_from, 'to', v_to, 'note', v_note, 'manual', true, 'korekta', true),
+      'D1710_READY:' || r.load_id::text
     )
     on conflict (dedup_key) where dedup_key is not null do nothing;
     insert into public.audit_log(user_id, action, entity, entity_id, new_value)
-    values (null, 'LOAD_STATUS_SET', 'loads', r.id::text,
-            jsonb_build_object('from', 'IN_TRANSIT_PL', 'to', 'READY', 'note', v_note, 'korekta', true));
+    values (null, 'LOAD_STATUS_SET', 'loads', r.load_id::text,
+            jsonb_build_object('from', v_from, 'to', v_to, 'note', v_note, 'korekta', true));
   end loop;
 
-  update public.risk_signals s
-     set resolved_at = coalesce(s.resolved_at, now()),
-         detail = coalesce(s.detail, '{}'::jsonb) || jsonb_build_object('korekta', 'D-1710')
-   where s.resolved_at is null
-     and s.load_id in (
-       select id from public.loads
-        where nullif(btrim(telematics_vehicle_id), '') is null
-           or (
-             actual_load_at is null and status <= 'READY'
-             and plan_load_date is not null
-             and plan_load_date > ((now() at time zone 'Europe/Warsaw')::date)
+  -- D) odłącz pozycje / zdarzenia (trigger immutable off)
+  alter table public.load_events disable trigger trg_load_events_immutable;
+  begin
+    with p as (
+      update public.positions pos
+         set detached_load_id = pos.load_id,
+             detached_at = now(),
+             load_id = null
+        from _d1710_targets t
+       where pos.load_id = t.load_id
+         and (
+           t.reason = 'NO_LINK'
+           or exists (
+             select 1 from loads l
+              where l.id = t.load_id
+                and l.plan_load_date is not null
+                and pos.ts < public.tracking_window_start(l.plan_load_date)
            )
-     )
-     and (
-       s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
-       or s.dedup_key like 'OFF_CORRIDOR:%'
-       or coalesce(s.detail->>'title_key', '') in ('rk_off_corridor', 'rk_silent_vehicle')
-     );
+         )
+      returning pos.id
+    )
+    select coalesce(array_agg(id), '{}') into v_pos_ids from p;
 
-  update public.decisions d
-     set status = 'RESOLVED',
-         resolution_code = coalesce(d.resolution_code, 'MANUAL_STATUS'),
-         resolved_at = coalesce(d.resolved_at, now())
-   where d.status = 'NEW'
-     and d.load_id in (
-       select id from public.loads
-        where nullif(btrim(telematics_vehicle_id), '') is null
-           or (
-             actual_load_at is null and status <= 'READY'
-             and plan_load_date is not null
-             and plan_load_date > ((now() at time zone 'Europe/Warsaw')::date)
+    with e as (
+      update public.load_events ev
+         set detached_load_id = ev.load_id,
+             detached_at = now(),
+             load_id = null,
+             payload = coalesce(ev.payload, '{}'::jsonb) || jsonb_build_object(
+               'd1710_detached', true,
+               'd1710_note', 'D-20261020-1710-01'
+             )
+        from _d1710_targets t
+       where ev.load_id = t.load_id
+         and (
+           ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO')
+           or ev.dedup_key like 'STATUS_AUTO:' || t.load_id::text || ':%'
+           or ev.dedup_key like 'TELM_PHASE_%'
+         )
+         and (
+           t.reason = 'NO_LINK'
+           or exists (
+             select 1 from loads l
+              where l.id = t.load_id
+                and l.plan_load_date is not null
+                and ev.occurred_at < public.tracking_window_start(l.plan_load_date)
            )
-     );
+         )
+      returning ev.id
+    )
+    select coalesce(array_agg(id), '{}') into v_ev_ids from e;
+
+    delete from telm_attach_phase p using _d1710_targets t where p.load_id = t.load_id;
+    delete from geofence_states s using _d1710_targets t where s.load_id = t.load_id;
+
+    alter table public.load_events enable trigger trg_load_events_immutable;
+  exception when others then
+    alter table public.load_events enable trigger trg_load_events_immutable;
+    raise;
+  end;
+
+  insert into public.audit_log(user_id, action, entity, entity_id, new_value)
+  values (null, 'D1710_DETACH', 'loads', null,
+          jsonb_build_object(
+            'loads', v_load_ids,
+            'positions', v_pos_ids,
+            'events', v_ev_ids,
+            'note', 'D-20261020-1710-01'
+          ));
+
+  -- E) zamknij ryzyka/sprawy tylko naprawionych, od pierwszej odłączonej chwili
+  for r in select * from _d1710_targets
+  loop
+    select coalesce(
+      least(
+        (select min(detached_at) from positions where detached_load_id = r.load_id),
+        (select min(detached_at) from load_events where detached_load_id = r.load_id)
+      ),
+      now() - interval '7 days'
+    ) into v_t0;
+
+    update public.risk_signals s
+       set resolved_at = coalesce(s.resolved_at, now()),
+           detail = coalesce(s.detail, '{}'::jsonb)
+             || jsonb_build_object('korekta', 'D-1710', 'resolution_note', 'D-20261020-1710-01')
+     where s.resolved_at is null
+       and s.load_id = r.load_id
+       and s.detected_at >= v_t0
+       and (
+         s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
+         or s.kind::text like 'ROAD_%'
+         or s.dedup_key like 'OFF_CORRIDOR:%'
+         or coalesce(s.detail->>'title_key', s.title_key, '') in ('rk_off_corridor', 'rk_silent_vehicle')
+       );
+
+    update public.decisions d
+       set status = 'RESOLVED',
+           resolution_code = coalesce(d.resolution_code, 'MANUAL_STATUS'),
+           resolution_note = coalesce(d.resolution_note, 'D-20261020-1710-01'),
+           resolved_at = coalesce(d.resolved_at, now()),
+           updated_at = now()
+     where d.load_id = r.load_id
+       and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+       and d.created_at >= v_t0
+       and (
+         coalesce(d.detail->>'zrodlo', '') in ('TELM_PHASE_INFER', 'AUTO_STATUS')
+         or d.risk_id in (
+           select s.id from risk_signals s
+            where s.load_id = r.load_id
+              and s.detected_at >= v_t0
+              and (
+                s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
+                or s.dedup_key like 'OFF_CORRIDOR:%'
+              )
+         )
+       );
+
+    insert into decision_events (decision_id, action, payload)
+    select d.id, 'RESOLVE',
+           jsonb_build_object('note', 'D-20261020-1710-01', 'korekta', true, 'option', 'MANUAL_STATUS')
+      from decisions d
+     where d.load_id = r.load_id
+       and d.resolution_note = 'D-20261020-1710-01'
+       and d.resolved_at >= now() - interval '1 minute'
+       and not exists (
+         select 1 from decision_events de
+          where de.decision_id = d.id and de.action = 'RESOLVE'
+            and de.payload->>'note' = 'D-20261020-1710-01'
+       );
+  end loop;
 
   perform set_config('tower.bulk_quiet', 'off', true);
   perform set_config('tower.status_ctx', 'off', true);
-  perform set_config('tower.track_ctx', 'off', true);
-  perform set_config('tower.eta_ctx', 'off', true);
-end
-$fix$;
+
+  return jsonb_build_object(
+    'loads', v_load_ids,
+    'positions_detached', coalesce(cardinality(v_pos_ids), 0),
+    'events_detached', coalesce(cardinality(v_ev_ids), 0)
+  );
+end $$;
+
+revoke all on function public.d1710_repair() from public, anon, authenticated;
+grant execute on function public.d1710_repair() to service_role;
+
+select public.d1710_repair();
+
+-- -------------------------------------------------------------------------
+-- 12) purge_personal_data — odłączone pozycje 30 dni (RODO)
+-- -------------------------------------------------------------------------
+create or replace function public.purge_personal_data(p_days integer default 90)
+returns integer
+language plpgsql
+set search_path to 'public', 'extensions'
+as $function$
+declare n int; n_c int; n_pos int; n_pos_c int; n_pos_d int; n_tok int; n_esc int;
+begin
+  if (p_days >= 0) is not true then raise exception 'p_days musi być ≥ 0' using errcode = '22023'; end if;
+
+  update loads set driver_name = null, driver_phone = null
+  where actual_delivery_at is not null
+    and actual_delivery_at < now() - make_interval(days => p_days)
+    and (driver_name is not null or driver_phone is not null);
+  get diagnostics n = row_count;
+
+  update loads set driver_name = null, driver_phone = null
+  where status = 'CANCELLED' and actual_delivery_at is null
+    and updated_at < now() - make_interval(days => p_days)
+    and (driver_name is not null or driver_phone is not null);
+  get diagnostics n_c = row_count;
+
+  update load_escorts e set driver_name = null, driver_phone = null
+    from loads l
+   where l.id = e.load_id
+     and (e.driver_name is not null or e.driver_phone is not null)
+     and ((l.actual_delivery_at is not null and l.actual_delivery_at < now() - make_interval(days => p_days))
+       or (l.status = 'CANCELLED' and l.actual_delivery_at is null and l.updated_at < now() - make_interval(days => p_days)));
+  get diagnostics n_esc = row_count;
+
+  delete from positions p
+  using loads l
+  where l.id = p.load_id
+    and l.actual_delivery_at is not null
+    and l.actual_delivery_at < now() - interval '30 days';
+  get diagnostics n_pos = row_count;
+
+  delete from positions p
+  using loads l
+  where l.id = p.load_id and l.status = 'CANCELLED' and l.actual_delivery_at is null
+    and l.updated_at < now() - make_interval(days => p_days);
+  get diagnostics n_pos_c = row_count;
+
+  -- D-1710: odłączone pozycje — 30 dni od detached_at
+  delete from positions
+   where detached_load_id is not null
+     and load_id is null
+     and detached_at is not null
+     and detached_at < now() - interval '30 days';
+  get diagnostics n_pos_d = row_count;
+
+  delete from driver_tokens
+  where coalesce(revoked_at, expires_at) < now() - make_interval(days => p_days);
+  get diagnostics n_tok = row_count;
+
+  insert into integration_runs (job, ok, result)
+  values ('rodo', true, jsonb_build_object('dni', p_days, 'kierowcy_rozladowane', n, 'kierowcy_anulowane', n_c,
+          'piloci', n_esc, 'pozycje_rozladowane', n_pos, 'pozycje_anulowane', n_pos_c,
+          'pozycje_odlaczone', n_pos_d, 'linki_kierowcy', n_tok));
+  return n + n_c + n_esc;
+end $function$;
+
+revoke all on function public.purge_personal_data(integer) from public, anon, authenticated;

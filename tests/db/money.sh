@@ -281,7 +281,7 @@ val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "se
 
 echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
 L9=33333333-0000-0000-0000-000000000009
-sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date) values ('$L9','$P','$CAR','KSH/9','HHL/9','SCX/9','READY', current_date - 1)"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date, telematics_vehicle_id) values ('$L9','$P','$CAR','KSH/9','HHL/9','SCX/9','READY', current_date - 1, 'TEL-M9')"
 sys "insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country) values ('$P','KSH Śrem · Grunwaldzka 27C','LOADING',make_circle_fence(52.07391,17.02460,600),150,0,2,'PL')"
 NOW="now() - interval '1 minute'"
 err "anon nie wywoła process_position (usterka: domyślne EXECUTE)"   $KSH "set local role anon; select * from process_position('$L9',52.07391,17.0246,now())" "permission denied"

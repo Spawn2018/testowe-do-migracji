@@ -3615,8 +3615,20 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: F7 #370 20:21 — jeszcze NIE (brak zmiany linku). #371 F7 po #370. Kolejność merge: **#368 → #370 → #371**.
 - Bieżąca: **D-1501** — wycofane D1/N6: `v_track_missing` bez `not exists (positions…)`; test: pozycja telematyczna bez linku nie wycisza, link wycisza. i2 **620**. SELECT NO_TRACKING na produkcji — ponowić przed `db push`.
 
-## 2026-10-20 21:20 � #372 SCALONE; start D-1710 (#368, 0242)
+## 2026-10-20 21:20 ? #372 SCALONE; start D-1710 (#368, 0242)
 
-- Skrzynka: #368/#365/#364/#362/#359� � w planie (Spawn2018, dla-cursora); bez etykiety `pilne`.
-- Scalanie: #372 SCALONE (bbd4c7c, wyglad sledzenie bez linku). #370 F7: gotowe (head `18de74c`) � **po #368**. #371 po #370.
-- Biezaca: **D-1710** � galaz `pakiet/d1710-tracking-window-link`, migracja **0242**: okno tylko przy linku, freeze po starcie, odlaczenie pozycji/zdarzen, READY dla falszywego Droga PL, matchTrailer bez naczepy samej. D-1501 (#370) po rebase � **0243**.
+- Skrzynka: #368/#365/#364/#362/#359? ? w planie (Spawn2018, dla-cursora); bez etykiety `pilne`.
+- Scalanie: #372 SCALONE (`bbbd4c7c`, wyglad sledzenie bez linku). #370 F7: gotowe (head `18de74c`) ? **po #368**. #371 po #370.
+- Biezaca: **D-1710** ? galaz `pakiet/d1710-tracking-window-link`, migracja **0242**: okno tylko przy linku, freeze po starcie, odlaczenie pozycji/zdarzen, READY dla falszywego Droga PL, matchTrailer bez naczepy samej. D-1501 (#370) po rebase ? **0243**.
+
+## 2026-10-20 22:00 ? D-1710 (#373): F7 poprawki
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#362? w planie (`Spawn2018`).
+- Scalanie: #370/#371 czekaja na #368; #373 F7: niegotowe ? poprawki w tym PR.
+- Biezaca: **D-1710 F7** ? `d1710_repair()` (bez eta/track_ctx, trigger off, po dowodzie), `telm_infer` tylko po starcie, `guard` SCX `tracking_opened_at`, L17 bez wymogu linku, `report_position` wymaga linku, matchTrailer URL emtrack + naczepa, testy money/release/risks/i2/baf/status 141 / baf 46.
+
+## 2026-10-20 22:00 — D-1710 (#373): F7 poprawki
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#362… w planie (`Spawn2018`).
+- Scalanie: #370/#371 czekają na #368; #373 F7: niegotowe → poprawki w tym PR.
+- Bieżąca: **D-1710 F7** — `d1710_repair()` (bez eta/track_ctx, trigger off, po dowodzie), `telm_infer` tylko po starcie, `guard` SCX `tracking_opened_at`, L17 bez wymogu linku, `report_position` wymaga linku, matchTrailer URL emtrack + naczepa, testy status 141 / baf 46.
