@@ -105,14 +105,16 @@ insert into invoices (project_id, carrier_org_id, direction, status, invoice_num
 select '$P', '$ORG', 'KOSZT', 'SUBMITTED', 'WT-TEST-P6-20261005', 'EUR', current_date, current_date, 1
 where not exists (select 1 from invoices where invoice_number = 'WT-TEST-P6-20261005');
 
+-- Najpierw READY (bez zezwolenia z A7), potem pozycja — trigger a7 nie blokuje bramy zezwoleń przy wejściu w READY.
+update loads set status = 'READY', hhl_order_no = 'Tx/1/2026', tractor_plate = 'GGH666',
+  trailer_plate = 'TGGG1111', driver_name = 'Test', driver_phone = '48111', ferry_booking_ref = '01',
+  plan_load_date = coalesce(plan_load_date, current_date + 2)
+where id = '$L24';
 -- seed często nie ma shipment_items — jeden wiersz SG-24 na L24
 insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, unit_weight_t, qty, total_weight_t)
 select '$P', '$L24', 'SG-24', 'DIMENSIONED', 12, 2, 1, 10, 1, 10
 where not exists (select 1 from shipment_items where shipment_code = 'SG-24');
 update shipment_items set load_id = '$L24' where shipment_code = 'SG-24' and load_id is distinct from '$L24'::uuid;
-update loads set status = 'READY', hhl_order_no = 'Tx/1/2026', tractor_plate = 'GGH666',
-  trailer_plate = 'TGGG1111', driver_name = 'Test', driver_phone = '48111', ferry_booking_ref = '01'
-where id = '$L24';
 
 insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
 select '$L24', g.id, 'INSIDE', 1, now(), now() from geofences g limit 1

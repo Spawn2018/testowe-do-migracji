@@ -277,7 +277,7 @@ end $$;
 revoke all on function public.a7_apply_symbol(uuid, text) from public, anon;
 grant execute on function public.a7_apply_symbol(uuid, text) to authenticated;
 
-/* Import: po pozycji ładunku (symbol z shipment_code) — F7 P9. */
+/* Import / pozycja ładunku: symbol z shipment_code — F7 P9. */
 create or replace function public.trg_shipment_items_a7_symbol()
 returns trigger
 language plpgsql
@@ -285,8 +285,16 @@ security definer
 set search_path = public
 as $$
 begin
-  perform set_config('tower.bulk_quiet', 'on', true);
-  perform public.a7_apply_symbol(new.load_id, 'A7 przy imporcie / pozycja ładunku');
+  if (new.load_id is not null) is not true then
+    return new;
+  end if;
+  begin
+    perform set_config('tower.bulk_quiet', 'on', true);
+    perform public.a7_apply_symbol(new.load_id, 'A7 przy imporcie / pozycja ładunku');
+  exception when others then
+    raise exception 'A7 symbol (load %): %', new.load_id, sqlerrm
+      using errcode = sqlstate;
+  end;
   return new;
 end $$;
 

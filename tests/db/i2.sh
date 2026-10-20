@@ -679,7 +679,8 @@ $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-000
   insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000a009','cx2@test','CARRIER_DISPATCH') on conflict do nothing;
   insert into documents (project_id, category, storage_path, file_name, uploaded_by) values ('$P','INSURANCE','-','polisa-cx2.pdf',(select id from app_users where email='cx2@test'))" >/dev/null
 val "SCX nie widzi polisy innego przewoźnika (dokument bez transportu)" $SCX "select count(*) from documents where file_name='polisa-cx2.pdf'" 0
-val "KSH widzi polisę przewoźnika (visible_to: CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
+val "KSH nie widzi polisy SCX (A7 F7 P9 — bez CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 0
+val "HHL widzi polisę przewoźnika" $HHL "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 val "drugi przewoźnik widzi własną polisę" 11111111-0000-0000-0000-000000000009 "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 $PSQL -c "delete from documents where load_id='$L9' or file_name='polisa-cx2.pdf'; update loads set status='CANCELLED' where id='$L9'; delete from app_users where email='cx2@test'; delete from organizations where code='CX2'" >/dev/null
 echo; echo "[III-7] ścieżka sporu i akceptacji faktury (0079)"

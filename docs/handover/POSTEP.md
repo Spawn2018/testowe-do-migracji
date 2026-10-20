@@ -3402,3 +3402,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - **A4** (ten commit, ta sama migracja 0237 / PR #348): `register_invoice` (READY+CMR C17, VAT 23%, tolerancja 0, INVOICE_NEW także KOSZT), `update_invoice`, `guard_invoice_update`, `invoices_insert` bez CLIENT, `INVOICE_OVERDUE` + macierz `inv_overdue`, `load_status_set` = `c17_cmr_after_delivery`, `INVOICE_A4`/`INVOICE_EDIT: true`.
 - Oczekiwane bramy: money 138, nullguard 681, e25 79. Unit lokalnie: p8/c3/w-naprawy/w-faktura-termin **58/58**.
 
+## 2026-10-20 07:45 — #349 scalone; F7 niegotowe #348 → poprawki bramy db
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #349 (`ci/typecheck`) — „F7: gotowe do scalenia” po `a3836f9`, CI zielone, merge `786d46c3`. `deploy-main` nie czekamy.
+- #348 F7 niegotowe (`d68d81e`): poprawki w `ffaa25ca`/`f57e4941`; brama db `39374679867` czerwona (security/money/i2/baf/e18).
+- Ten krok: money (rola HHL_OPS przez `sys`, `commit` po akceptacji), security (wzorzec „Edytuj fakturę”), i2 (KSH bez polisy SCX + HHL widzi; i2=553), baf (czyszczenie combo po triggerze A7), e18 (READY przed shipment_items), komunikat błędu w triggerze A7.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po ostatnim commicie. #317/#259 konflikt — bez scalenia.
+

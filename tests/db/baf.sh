@@ -96,6 +96,9 @@ sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class
   ('$P','$LSG','SG-B1','DIMENSIONED',18.21,2.45,2.45,20.0), ('$P','$LPL','PL-1','DIMENSIONED',14.7,3.4,2.6,14.0),
   ('$P','$LK1','KR-B1','DIMENSIONED',20.0,3.5,2.5,28.0), ('$P','$LK2','KR-B2','DIMENSIONED',20.0,3.5,2.5,28.0),
   ('$P','$LCX','SG-B2','DIMENSIONED',18.0,2.4,2.4,19.0), ('$P','$LNX','SG-B3','DIMENSIONED',18.0,2.4,2.4,19.0)"
+# A7 trigger wypełnia combo_* z symbol_specs — ten zestaw sprawdza ścieżkę CARGO (wymiary ładunku).
+sys "update loads set combo_length_m=null, combo_width_m=null, combo_height_m=null, escort_vehicles=null
+     where id in ('$LSG','$LPL','$LK1','$LK2','$LCX','$LNX')"
 fresh_price "$LSG" "$LPL" "$LK1" "$LK2" "$LCX" "$LNX"
 
 chk "combo_* puste — stawka z wymiarów ładunku" "$(Q "select count(*) from loads where id in ('$LSG','$LPL','$LK1','$LK2') and combo_length_m is null")" "4"
@@ -116,6 +119,7 @@ chk "anulowany: brak dopłaty paliwowej" "$(Q "select coalesce(baf_amount::text,
 LND=33333333-0000-0000-0000-0000000baf07
 sys "insert into loads (id, project_id, carrier_org_id, order_no) values ('$LND','$P','$CAR','BAF/ND')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LND','SG-B4','DIMENSIONED',18.0,2.4,2.4,19.0)"
+sys "update loads set combo_length_m=null, combo_width_m=null, combo_height_m=null, escort_vehicles=null where id='$LND'"
 sys "select load_price_compute('$LND', '2026-10-08')"
 chk "bez daty załadunku → cena z mnożnikiem PROGNOZA" "$(Q "select base_amount||'/'||fuel_status||'/'||coalesce(fuel_ref_date::text,'∅') from load_cost where load_id='$LND'")" "6900.00/PROGNOZA/∅"
 
