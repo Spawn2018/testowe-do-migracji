@@ -82,6 +82,7 @@ import { isReadyBlocked } from '../lib/permits';
 import { currentActorLabel } from '../lib/historyActor';
 import { formatPlMoney } from '../lib/format';
 import { hhlAdminDates } from '../lib/adminDates';
+import { etaDuration } from '../lib/etaDuration';
 
 export type ViewKey = NK;
 
@@ -833,8 +834,11 @@ export const useTowerStore = create<TowerState>()(
       setOrderNo: (loadId, side, value) => {
         const role = get().role;
         const locale = get().locale;
-        const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX');
-        if (!allowed) {
+        /* D-20261020-1501-01 (15:48): numer zlecenia SCX wpisuje też Administrator HHL (awizacja jak SCX); Operacje HHL — nie */
+        const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX')
+          || (side === 'CARRIER' && role === 'HHL' && (import.meta.env.VITE_AUTH_MODE === 'supabase' ? accountRole(role) === 'HHL_ADMIN' : accountRole(role) !== 'HHL_OPS'));
+        /* B5: w Podglądzie bez zmiany „na niby” (D-20261020-1501-01) */
+        if (!allowed || isPreviewReadOnly({ viewRole: role })) {
           get().pushToast(orderEditDeniedMessage(side, locale), 'HIGH', loadId);
           return false;
         }
@@ -1574,7 +1578,11 @@ export const useTowerStore = create<TowerState>()(
         if (!load) return 'ROLE';
         const current = st.sailings.find((x) => x.id === load.sailingId);
         const target = sailingId ? st.sailings.find((x) => x.id === sailingId) ?? null : null;
-        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso());
+        /* nieznany rejs nie może oznaczać „zdejmij rejs” (F7 #371) */
+        if (sailingId && !target) return 'NOT_FOUND';
+        /* B5: w Podglądzie rejs się nie zmienia — także lokalnie (D-20261020-1501-01) */
+        if (isPreviewReadOnly({ viewRole: st.role })) return 'ROLE';
+        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso(), accountRole(st.role));
         if (denied) return denied;
         const ref = bookingRef?.trim() || null;
         set((s2) => ({
@@ -1807,13 +1815,13 @@ export const useTowerStore = create<TowerState>()(
           title:
             type === 'FORCE_MAJEURE'
               ? `Siła wyższa — ${situation.title} · +${hours} h`
-              : `${situation.title} · +${situation.delayMin} min`,
+              : `${situation.title} · +${etaDuration(situation.delayMin)}`,
           detail: situation.detail,
           loadId: targetLoadId,
           owner: 'HHL' as const,
           meta: `Odpowiada: H&H Logistics · Trafikverket · ${situation.kind}`,
           titleKey: type === 'FORCE_MAJEURE' ? 'rk_seed_tv_fm' : 'rk_seed_tv',
-          titleParams: type === 'FORCE_MAJEURE' ? { title: situation.title, h: hours } : { title: situation.title, min: situation.delayMin },
+          titleParams: type === 'FORCE_MAJEURE' ? { title: situation.title, h: hours } : { title: situation.title, min: etaDuration(situation.delayMin) },
           metaKey: 'rk_seed_tv_meta',
           metaParams: { kind: situation.kind },
           nextAction: type === 'FORCE_MAJEURE' ? 'Wymaga decyzji — hold / objazd' : 'Śledź checkpoint',
@@ -1973,7 +1981,7 @@ export const useTowerStore = create<TowerState>()(
         });
         get().pushNotification({
           title: 'Alternatywa SE',
-          body: `${alt.title} · +${alt.delayMin} min`,
+          body: `${alt.title} · +${etaDuration(alt.delayMin)}`,
           severity: 'MEDIUM',
           loadId,
           roleScope: ['SCX', 'HHL'],

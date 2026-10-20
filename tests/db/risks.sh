@@ -26,7 +26,7 @@ fx() { $PSQL -c "set session_replication_role = replica; $1" >/dev/null 2>&1 || 
 echo; echo "[0042] title_key w każdej funkcji zapisującej ryzyko"
 chk "kolumna risk_signals.title_key istnieje" "$(Q "select count(*) from information_schema.columns where table_name='risk_signals' and column_name='title_key'")" 1
 
-fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234', plan_load_date=current_date - 1 where id='$L1'"
+fx "update loads set status='IN_TRANSIT_PL', tractor_plate='WGM 1234', plan_load_date=current_date - 1, telematics_vehicle_id='TEL-SILENT-1' where id='$L1'"
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'TELEMATICS_API')" >/dev/null
 Q "select detect_silent_vehicles(90)" >/dev/null
 chk "detect_silent_vehicles → rk_silent_vehicle" "$(key "kind='SILENT_VEHICLE'")" rk_silent_vehicle
@@ -125,14 +125,18 @@ chk "1215: zamknięcie decyzji → 0 nowych powiadomień" \
   "$(Q "select count(*) - $NDEC from notifications")" 0
 # Osobny transport: L1 ma już otwartą ciszę; zamykanie jej razem ze statusem nie jest przedmiotem testu.
 $PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
-  values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak awizacji','rk_res_docs','l3:NO_AWIZACJA:$L2')" >/dev/null
-$PSQL -v ON_ERROR_STOP=1 -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)
-  values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L2')" >/dev/null
+  values ('$P','$L2','RESOURCE_MISSING','HIGH','Brak awizacji','rk_res_docs','l3:NO_AWIZACJA:$L2'),
+         ('$P','$L2','RESOURCE_MISSING','HIGH','Brak kierowcy','rk_res_driver','RES:DRIVER:$L2'),
+         ('$P','$L2','RESOURCE_MISSING','HIGH','Brak rejsu','rk_no_sailing','l3:NO_SAILING:$L2'),
+         ('$P','$L2','RESOURCE_MISSING','HIGH','Brak linku','rk_no_tracking','l3:NO_TRACKING:$L2'),
+         ('$P','$L2','RESOURCE_MISSING','HIGH','Brak SE','rk_no_awiz_se','l3:NO_AWIZ_SE:$L2')" >/dev/null
 # DELIVERED wymaga numerów zleceń (0003). L2 w tym zestawie jest bez nich.
 $PSQL -v ON_ERROR_STOP=1 -c "update loads set hhl_order_no='HHL/1215', carrier_order_no='SCX/1215' where id='$L2'" >/dev/null
 $PSQL -v ON_ERROR_STOP=1 -c "update loads set status='DELIVERED' where id='$L2'" >/dev/null
 chk "1215: l3:NO_AWIZACJA znika przy DELIVERED" \
   "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is not null")" 1
+chk "D-1501: l3:NO_SAILING/TRACKING/AWIZ_SE znikają przy DELIVERED" \
+  "$(Q "select count(*) from risk_signals where dedup_key in ('l3:NO_SAILING:$L2','l3:NO_TRACKING:$L2','l3:NO_AWIZ_SE:$L2') and resolved_at is not null")" 3
 chk "1215: RES:DRIVER znika przy DELIVERED" \
   "$(Q "select count(*) from risk_signals where dedup_key='RES:DRIVER:$L2' and resolved_at is not null")" 1
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, dedup_key)

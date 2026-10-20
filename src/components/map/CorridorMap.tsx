@@ -700,7 +700,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           fillColor: severityColor(s.severity),
           fillOpacity: 1,
         });
-        const delay = s.delayMin != null ? ` · +${s.delayMin} min` : '';
+        const delay = s.delayMin != null ? ` · +${etaDuration(s.delayMin)}` : '';
         m.bindTooltip(`${s.title} (${severityLabel(s.severity, useTowerStore.getState().locale)})${delay}`, { direction: 'top' });
         m.on('click', (e) => {
           L.DomEvent.stopPropagation(e);

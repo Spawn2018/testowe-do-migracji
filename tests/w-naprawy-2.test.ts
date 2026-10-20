@@ -51,12 +51,9 @@ describe('A9 — braki do „Gotowy”: rejs i kierowca SE przy przepięciu', ()
   it('z rejsem → bez braku rejsu', () => {
     expect(computeReadyGaps(load({ sailingId: 's1' }), []).some((g) => g.kind === 'SAILING')).toBe(false);
   });
-  it('przepięcie naczepy bez kierowcy SE → „kierowca SE”, „telefon SE”, „ciągnik SE” w awizacji', () => {
+  it('przepięcie naczepy bez kierowcy SE → nie blokuje „Gotowy” (D-20261020-1525-01: termin 48 h przed dostawą)', () => {
     const l = load({ resources: { driverName: 'Jan Nowak', driverPhone: '+48 600 100 200', tractorPlate: 'PO 1AB', trailerPlate: 'PO 2CD', trailerSwap: true } });
-    const awiz = computeReadyGaps(l, []).find((g) => g.kind === 'AWIZ');
-    expect(awiz?.items).toEqual(['kierowca SE', 'telefon SE', 'ciągnik SE']);
-    /* F7: na ekranie słowa z okna Awizacja */
-    expect(readyGapsText(computeReadyGaps(l, []), 'pl').list).toContain('awizacja (kierowca odcinka SE, telefon odcinka SE, ciągnik odcinka SE)');
+    expect(computeReadyGaps(l, []).find((g) => g.kind === 'AWIZ')).toBeUndefined();
     expect(tp('pl', 'p4c_ready_ok')).toContain('rejs');
   });
 });

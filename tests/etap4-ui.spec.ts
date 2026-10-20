@@ -123,7 +123,8 @@ test.describe('M5 — numery zleceń', () => {
     }
     expect(code, 'transport z przyciskiem Zmień status').not.toBe('')
     await page.locator('.drawer button[aria-selected]').nth(0).click()
-    await expect(page.locator('.drawer [data-order="scx"] [data-order-edit]')).toHaveCount(0)
+    /* D-20261020-1501-01 (15:48): Administrator HHL wpisuje też numer SCX (awizacja jak SCX); Operacje HHL — nie */
+    await expect(page.locator('.drawer [data-order="scx"] [data-order-edit]')).toHaveCount(1)
     /* wyglad/P7-a — E32: HHL wpisuje numer w „Numerach zleceń” (P11: tekst z „Edytuj”) */
     await expect(page.locator('.drawer [data-order="hhl"]')).toContainText(/HHL\/2026\//)
     await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toHaveText('Edytuj')

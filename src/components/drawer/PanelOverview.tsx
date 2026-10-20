@@ -27,6 +27,7 @@ import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
 import { visibleDriverPhone } from '../../lib/permissions';
 import { editableOrderSide } from '../../lib/orderNumbers';
+import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { trackingLinkOf } from '../../lib/p4cSource';
@@ -315,6 +316,8 @@ export function PanelOverview(p: Props) {
     }, 0);
   };
   const action = (i: TodoIssue): ReactNode => {
+    /* D-20261020-1501-01: sprawę awizacji SCX może załatwić też Administrator HHL (to samo okno) */
+    if (i.go === 'AWIZACJA' && i.owner === 'SCX' && role === 'HHL' && canFixAwizOf(role)) return <button type="button" className="btn ghost" data-po-act="awiz" onClick={p.onAwiz}>{pt(locale, 'p7_todo_awiz')}</button>;
     if (i.owner !== role) return <span className="po-chip">{ORG_SHORT[i.owner]}</span>;
     if (i.go === 'AWIZACJA') {
       if (role === 'SCX') return <button type="button" className="btn ghost" data-po-act="awiz" onClick={p.onAwiz}>{pt(locale, 'p7_todo_awiz')}</button>;
@@ -437,7 +440,8 @@ export function PanelOverview(p: Props) {
   const fixAwiz = canFixAwizOf(role);
   const awizBtn = role === 'SCX'
     ? <button type="button" className="btn" data-awiz-open onClick={p.onAwiz}>{pt(locale, awiz === 'none' ? 'p7_awiz_btn_add' : 'p7_awiz_btn_edit')}</button>
-    : fixAwiz ? <button type="button" className="btn ghost" data-awiz-fix onClick={p.onAwiz}>{pt(locale, 'p7_awiz_btn_fix')}</button> : null;
+    /* D-20261020-1501-01: Administrator HHL awizuje tak samo jak SCX — ten sam przycisk „Uzupełnij / Edytuj awizację” */
+    : fixAwiz ? <button type="button" className="btn" data-awiz-fix onClick={p.onAwiz}>{pt(locale, awiz === 'none' ? 'p7_awiz_btn_add' : 'p7_awiz_btn_edit')}</button> : null;
   const awizChip = awiz === 'ok'
     ? (sailMissing ? <span className="po-pill amber" data-awiz-nosail>{pt(locale, 'p7_awiz_ok_nosail')}</span> : <span className="po-pill go">{pt(locale, 'p7_awiz_ok')}</span>)
     : awiz === 'part' ? <span className="po-pill amber">{ptp(locale, 'p7_awiz_part', { n: missing.length })}</span>
@@ -624,7 +628,8 @@ export function PanelOverview(p: Props) {
             </dd>
             <dt>SCX</dt>
             <dd data-order="scx">
-              {orderSide === 'CARRIER' ? (
+              {/* B5: w Podglądzie bez „Edytuj” — zapis i tak nic nie zmienia (F7 #363 P4) */}
+              {(orderSide === 'CARRIER' && !isPreviewReadOnly({ viewRole: role })) || (role === 'HHL' && canFixAwizOf(role)) ? (
                 <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} locale={locale} />
               ) : scxNo ? <b className="mono">{scxNo}</b> : <><span className="po-miss">{pt(locale, 'p7_num_missing')}</span><span className="po-muted">{` · ${pt(locale, 'p7_num_by_scx')}`}</span></>}
             </dd>

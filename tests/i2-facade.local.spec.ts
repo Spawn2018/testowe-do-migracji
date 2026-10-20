@@ -59,7 +59,7 @@ test('HHL (HHL_ADMIN): przełącznik jest; Automatyzacje z bazy (9.4); ryzyka �
   /* przepisane w wyglad/P4-b — E15 pkt 6 i 8: blok ETA w Przeglądzie; przed wyjazdem „ETA: –”, w trasie „± N MIN · SŁOWO” z bazy */
   const eta = page.locator('[data-eta-block]');
   await expect(eta).toHaveCount(1);
-  if ((await eta.getAttribute('data-eta')) === 'value') await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ MIN · /);
+  if ((await eta.getAttribute('data-eta')) === 'value') await expect(page.locator('[data-eta="db"]')).toContainText(/± \d+ (D|H|MIN)\b[^·]*· /);
   else await expect(eta).toContainText('ETA: –');
   /* właściciel 19.10: sekcja „Dokumenty” (stan zezwolenia) usunięta z Przeglądu */
   await expect(page.locator('[data-overview] [data-po="docs"]')).toHaveCount(0);

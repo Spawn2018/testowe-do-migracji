@@ -3530,4 +3530,165 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
 - Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
 
+## 2026-10-20 14:20 — #357 scalone; start #356 import_quiet_hours
 
+- Skrzynka: #353 zamknięte (D-1118 zrobione). #358/#359/#356/#324/#323/#322/#320 otwarte, w planie; bez etykiety `pilne` — bez przerwania.
+- Scalanie: #357 — F7 po `374e62c`, CI zielone (db/unit/visual) → merge `b21524b8`. #360 wygląd bez F7. #317/#259 konflikt.
+- Bieżąca **#356** (`pakiet/import-godziny-cicho`): migracja (wtedy 0240) — `ops_thresholds.import_quiet_hours=1`, `trg_plan_dates_notify` szanuje `tower.bulk_quiet`, `import_schedule` ciche pierwsze uzupełnienie godzin; i2 584 (+12). Wyłączenie: `admin_ops_threshold_set('import_quiet_hours', 0)`.
+
+## 2026-10-20 14:45 — #356 fix CI db (i2 składnia, dec6 22 progi)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez `pilne`.
+- Scalanie: #361 bez F7; #360 visual zielone, bez F7; #317 konflikt z main (koordynator: wciągnij main — po zakończeniu CI #361 / G-15).
+- Fix #356: `i2.sh` — zagnieżdżone cudzysłowy w IQH → WYNIK brak; wzorzec jak IMP18T. `dec6.sh` — 22 progi (+`import_quiet_hours`).
+
+## 2026-10-20 15:00 — #360 scalone; fix IQH-1 chk (FROM loads)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez etykiety `pilne`.
+- Scalanie: #360 — F7 po `adefd1c`, CI zielone → merge `953f3ee1`. #361 db FAIL (IQH-1). #317/#259 konflikt.
+- Fix #356: `i2.sh` IQH-1 chk — brak `from loads where id` (jak linia godzin D18); CI db `583 OK, 1 FAIL` → oczekiwane 584.
+
+## 2026-10-20 15:40 — #361 F7 niegotowe: B1 + P1–P4
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez `pilne`.
+- Scalanie: #361 F7: niegotowe (15:35). #317 main wciągnięty (`f89b59d9`), czeka na F7. #259 konflikt.
+- Poprawki #356 (i2): B1 — quiet tylko gdy `plan_*` w loads puste; P1 komentarz wyłączenia na ekranie; P2 `on conflict do nothing`; P3 testy (KSH, mix, OPS, critical, decisions/risk); P4 UTF-8 w POSTEP. i2 592.
+
+## 2026-10-20 16:00 — #361 CI zielone; skrzynka #362/#364/#365 w planie
+
+- Skrzynka: #364 (D-1525 HOTFIX `trailer_swap`+SE+`carrier_order_no`), #362 (D-1501 awizacja HHL), #365 (emtrack login_failed) — `Spawn2018`, `dla-cursora`, **bez** etykiety `pilne`. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1525-01.md`, `D-20261020-1501-01.md`. Kolejność po #356: HOTFIX → D-1501 → C15-emtrack → D-1300. Bieżącej #361 nie przerywam.
+- Scalanie: #361 — CI na `7986ef6f` zielone (db `39431301503`, unit, visual `39431301490`); czeka na „F7: gotowe do scalenia” runda 2. #363 wygląd bez F7. #317 czeka na F7 po `f89b59d9`. #259 konflikt.
+- Bieżąca #356: poprawki F7 B1+P1–P4 na SHA; bez nowego kodu do F7.
+
+## 2026-10-20 16:05 — HOTFIX D-1525 start (F7 #361: przed #356)
+
+- Skrzynka: #364/#362/#365/#356 — w planie; #364 bez `pilne`, ale F7 #361 każe scalić HOTFIX przed #361. #317 — CI zielone, bez F7 po ostatnim merge main.
+- Scalanie: #361 — F7 gotowe (`7ddf16ba`), CI w toku; merge dopiero po HOTFIX. #366/#363 wygląd bez F7. #317 bez F7 po `f89b59d9`.
+- HOTFIX: `pakiet/hotfix-d1525-trailer-swap` — migracja **0240** `guard_load_update` (lista SCX + HHL_ADMIN `carrier_order_no`); security 122 / TEST 118. Część 2 NO_AWIZ_SE — z #362. Po scaleniu HOTFIX #356 → migracja 0241.
+
+## 2026-10-20 16:40 — HOTFIX #367 F7 B1 (test security)
+
+- Skrzynka: #364/#362/#365/#356 — bez nowych; #362 PILNE w tytule, bez etykiety `pilne` — nie przerywa HOTFIX.
+- Scalanie: #367 — F7 niegotowe (tylko test); db 121/1 FAIL; unit+visual zielone. #361 F7 gotowe po HOTFIX; #366 po #361; #317 bez F7 po `f89b59d9`.
+- Poprawka: `security.sh` — puste SE: `driver_delivery_phone_country='PL'` (NOT NULL; jak ekran).
+
+## 2026-10-20 16:54 — HOTFIX #367 SCALONE; #361 → 0241
+
+- Skrzynka: #364/#362/#365/#356 — w planie; bez etykiety `pilne` przerywającej. #364 część 1 zrobiona (merge); część 2 NO_AWIZ_SE zostaje z #362.
+- Scalanie: #367 — F7 gotowe po `14b90710`, CI zielone (db `39440605672`, unit, visual `39440605710`) → merge `e92d4ba6`. #361 — wciągnięty main, migracja przemianowana **0240→0241**; czeka na CI i ponowne F7. #366 po #361. #317 bez F7 po `f89b59d9`.
+- Bieżąca pozycja: **Import godziny cicho** (#361, 0241).
+
+## 2026-10-20 17:17 — #361+#366+#363 SCALONE; start D-1501 (#362, 0242)
+
+- Skrzynka: #365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`. #356 zamknięte po scaleniu.
+- Scalanie: #363 F7 po `dd1f122` → `70a67701`. #361 F7 po `5b228efd`, CI zielone → `cd06c89f` (0241). #366 F7 po #361 → `e641bcc7`. #317 bez F7 po `f89b59d9`.
+- Bieżąca: **D-1501** — gałąź `pakiet/d1501-no-sailing-tracking`, migracja **0242**: NO_SAILING / NO_TRACKING / NO_AWIZ_SE, rejs historyczny tylko HHL_ADMIN, AWIZ_SE poza Gotowy. i2 604 (+12), risks 34, dec2 23 typów.
+
+## 2026-10-20 17:45 — D-1501: poprawka I-21 UUID; #368 wpisane do planu
+
+- Skrzynka: #368 (D-1710, `Spawn2018`, `dla-cursora`, PILNE w tytule, **bez** etykiety `pilne`) — wpisane: PLAN §3/§4/§8, dopisek `D-20261020-1710-01.md`. Kolejność: po #370 (D-1501), przed C15/D-1300. #365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie.
+- Scalanie: #370 bez F7; db padło (i2 597/7 — I-21). #369/#317 bez F7 po ostatnim commicie. #259 bez F7.
+- Bieżąca: **D-1501** — I-21: UUID `…i21a` → `…a21a` (hex); L1 bez `plan_load_*` przy skanie, żeby `l3_scan` = 1.
+
+## 2026-10-20 18:20 — #369 SCALONE; D-1501: kolizja UUID Lfut/SG w status.sh
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#364/#362/#359… w planie.
+- Scalanie: #369 F7 po `a50ace88`, CI 7/7 → merge `4fdb8489`. #370: db `39455271674` — status 126/11 (A2), nie F7. #317 CONFLICTING, bez F7 po ostatnim. #259 bez F7.
+- Bieżąca: **D-1501** — `Lfut` z `L 5b` → `L 63` (kolizja z SG-03 w [12] A2 psuła INSERT i 11 asercji).
+
+## 2026-10-20 18:45 — D-1501: F7 N2–N7 (po zielonej bramie na 5aa87a6d)
+
+- Skrzynka: bez nowych `pilne`; #368 po #370; #317 bez F7 po ostatnim (CONFLICTING).
+- Scalanie: #370 db+unit+visual zielone na `5aa87a6d`, F7 „jeszcze NIE” (N2–N7). Bez F7 → bez merge.
+- Bieżąca: **D-1501** — N2 ODWOLANY→przyszły; N3 pierwszy skan (escalated_at, bez DECISION_OPEN); N4 due=okno+2h; N5 data załadunku ≤ dziś; N6 tylko telematyka; N7 testy. status 138, i2 618.
+
+## 2026-10-20 19:00 — D-1501: N3 filtr czasu (clock_timestamp → now)
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#364/#362/#359… w planie (`Spawn2018`).
+- Scalanie: #370 db `39460223216` — i2 616/2 FAIL (pierwszy skan: 24× DECISION_OPEN, escalated_at=false). #317 CONFLICTING, bez F7. #371 wygląd bez F7. Bez merge.
+- Bieżąca: **D-1501** — N3: `v_t0 := now()` (nie `clock_timestamp()`); delete DECISION_OPEN także po `load_id`. i2 618.
+
+## 2026-10-20 19:45 — D-1501: CI zielone na 76353f09, czekam na F7
+
+- Skrzynka: #368/#365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. #368 PILNE w tytule — nie przerywa #370.
+- Scalanie: #370 unit+visual+db zielone na `76353f09` (db `39466224169`, visual `39466224176`); **brak** „F7: gotowe do scalenia” po ostatnim commicie → bez merge. #371 F7 po `dca8866` (scalać po #370). #317 CONFLICTING, bez F7. #259 bez F7.
+- Bieżąca: **D-1501** — F7 N3 pełne: `l3_scan_first_deploy_quiet`, `bulk_quiet` w `decision_open_from_event`, `escalated_at` tylko gdy `due_at<=now()`, bez DELETE; i2 619. SELECT liczb pierwszego skanu na produkcji — przed `db push` (MCP Supabase tu bez auth).
+
+## 2026-10-20 20:00 — D-1501: F7 #370 miniona dostawa bez załadunku
+
+- Skrzynka: #368/#365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. #368 po #370.
+- Scalanie: czwarty F7 #370 — jeszcze NIE. Jedna zmiana: NO_SAILING i NO_TRACKING nie powstają, gdy `plan_delivery_date` < dziś (Warszawa) i `actual_load_at` jest puste. i2 621 (+2). Bez merge do zielonego CI i „F7: gotowe”.
+- Bieżąca: **D-1501** — filtr w `l3_scan` (0242). SELECT produkcji (odczyt, 20.10): aktywne 92; NO_SAILING otworzy **2** (było 19 w oknie; odcięte 17), NO_TRACKING otworzy **0** (odcięte 16), NO_AWIZ_SE 0. Zostają dwa PLANNED z załadunkiem 22.10 i dostawą 28–29.10.
+
+## 2026-10-20 20:50 — D-1501: F7 NO_TRACKING = brak linku; kolejność #368→#370
+
+- Skrzynka: #368 rozszerzone (właściciel 19:59/20:01 — śledzenie tylko przy linku, SG-15/16); `#368`/`#365`/`#362`… w planie; bez etykiety `pilne`.
+- Scalanie: F7 #370 20:21 — jeszcze NIE (brak zmiany linku). #371 F7 po #370. Kolejność merge: **#368 → #370 → #371**.
+- Bieżąca: **D-1501** — wycofane D1/N6: `v_track_missing` bez `not exists (positions…)`; test: pozycja telematyczna bez linku nie wycisza, link wycisza. i2 **620**. SELECT NO_TRACKING na produkcji — ponowić przed `db push`.
+
+## 2026-10-20 21:20 ? #372 SCALONE; start D-1710 (#368, 0242)
+
+- Skrzynka: #368/#365/#364/#362/#359? ? w planie (Spawn2018, dla-cursora); bez etykiety `pilne`.
+- Scalanie: #372 SCALONE (`bbbd4c7c`, wyglad sledzenie bez linku). #370 F7: gotowe (head `18de74c`) ? **po #368**. #371 po #370.
+- Biezaca: **D-1710** ? galaz `pakiet/d1710-tracking-window-link`, migracja **0242**: okno tylko przy linku, freeze po starcie, odlaczenie pozycji/zdarzen, READY dla falszywego Droga PL, matchTrailer bez naczepy samej. D-1501 (#370) po rebase ? **0243**.
+
+## 2026-10-20 22:00 ? D-1710 (#373): F7 poprawki
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#362? w planie (`Spawn2018`).
+- Scalanie: #370/#371 czekaja na #368; #373 F7: niegotowe ? poprawki w tym PR.
+- Biezaca: **D-1710 F7** ? `d1710_repair()` (bez eta/track_ctx, trigger off, po dowodzie), `telm_infer` tylko po starcie, `guard` SCX `tracking_opened_at`, L17 bez wymogu linku, `report_position` wymaga linku, matchTrailer URL emtrack + naczepa, testy money/release/risks/i2/baf/status 141 / baf 46.
+
+## 2026-10-20 22:00 — D-1710 (#373): F7 poprawki
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#362… w planie (`Spawn2018`).
+- Scalanie: #370/#371 czekają na #368; #373 F7: niegotowe → poprawki w tym PR.
+- Bieżąca: **D-1710 F7** — `d1710_repair()` (bez eta/track_ctx, trigger off, po dowodzie), `telm_infer` tylko po starcie, `guard` SCX `tracking_opened_at`, L17 bez wymogu linku, `report_position` wymaga linku, matchTrailer URL emtrack + naczepa, testy status 141 / baf 46.
+
+## 2026-10-20 22:30 — D-1710 (#373): F7 runda 2
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#362… w planie (`Spawn2018`).
+- Scalanie: #373 F7 ponownie niegotowe (db czerwone: risks 2, baf 7); #370/#371 czekają.
+- Bieżąca: **D-1710 F7 r2** — `v_pos_ids bigint[]`; dowód tylko TELM IN_TRANSIT+synt. EXIT / pozycje bez linku; `v_t0` z ts/occurred_at; decision_events z RETURNING; telm ≤AT_LOADING bez actual → null; reset telm/geofence bez DELETE; baf AT_LOADING→∅, SE w trasie; LATE_DATE po D-1710; test repair; status 149 / baf 47.
+
+## 2026-10-20 22:50 — D-1710 (#373): db risks — sprzątanie FK
+
+- Skrzynka: #368 PILNE (bieżąca); pozostałe `dla-cursora` w planie. Bez F7 „gotowe” na #373.
+- Scalanie: #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
+- CI na `465f547e`: unit/visual zielone; `db` FAIL — `risks` 8 kluczy zamiast 6 (`rk_eta_after_latest`, `rk_late_date_change`): DELETE bez kaskady na `decisions.risk_id`.
+- Bieżąca: sprzątanie w `status.sh` z `decision_events`→`decisions`→`risk_signals` (LATE_DATE + ETA z testu repair). Czekam na zieloną `db` i F7.
+
+## 2026-10-20 23:15 — D-1710 (#373): F7 r3 dedup_key :d1710
+
+- Skrzynka: #368/#365/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`.
+- Scalanie: CI na `9cb8a547` zielone (unit/visual/db); brak „F7: gotowe” (trzecie F7: prawie). #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
+- Bieżąca: **D-1710 F7 r3** — przy odłączaniu `dedup_key || ':d1710'`; fixture `STATUS_AUTO:<id>:IN_TRANSIT_PL`; asercja prawdziwego STATUS_AUTO po `auto_set_status`; NO_AWIZACJA + brak nowych notifications/workflow_runs. status **155**.
+
+## 2026-10-20 23:45 — #373 D-1710 SCALONE; rebase D-1501 → 0243
+
+- Skrzynka: #368/#365/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`.
+- Scalanie: #373 F7: gotowe (head `abca2bc`) po ostatnim commicie, CI 8/8 → merge `c4779dc1`. #370 F7 stare unieważnione rebase; #371 po #370; #317/#259 konflikt.
+- Bieżąca: **D-1501** — rebase na main, migracja **0243**; NO_TRACKING = brak linku + warunek czasu (bez `load_in_tracking_window`); `guard_load_update` na bazie 0242 D-1710.
+
+## 2026-10-20 23:55 — D-1501 (#370): rebase na main → 0243
+
+- Skrzynka: #368/#365/#362… w planie (`Spawn2018`); bez `pilne`.
+- Scalanie: #373 SCALONE (`c4779dc1`). #370 F7 stare unieważnione (rebase); #371 po #370.
+- Bieżąca: **D-1501** — migracja **0243**; NO_TRACKING = brak linku + `p_now >= coalesce(tracking_opened_at, tracking_window_start)` (bez `load_in_tracking_window`); `guard` SCX `tracking_opened_at` z 0242; status **158**, i2 **620**. Czekam na CI i F7.
+
+## 2026-10-21 00:10 — HOTFIX #374 emtrack version/noflicker (PR #375)
+
+- Skrzynka: **#374** (Spawn2018, `dla-cursora`, PILNE w tytule) — wpisane: PLAN §3/§4/§8, dopisek `D-20261020-2355-01.md`. #365/#359/#358/#324/#323/#322/#320 — w planie. Bez etykiety `pilne`.
+- Scalanie: F7 00:15 na #375 — kolejność: najpierw #370 (0243), potem #371, #375→0244. #370 F7 gotowe (`c13251e`) → merge `b44660c7`. #371 F7 → merge `a6e217a5`. #317/#259 konflikt.
+- Bieżąca: **HOTFIX #374** — rebase na main, migracja **0244**; asercja money `::text` → `true`; money **178**. Czekam na CI i F7.
+
+## 2026-10-21 00:50 — HOTFIX #374: F7 drobne (PR #375)
+
+- Skrzynka: #374 nadal otwarte (PILNE); reszta w planie, bez `pilne`.
+- Scalanie: CI na `ed388785` zielone (db/unit/visual). Brak „F7: gotowe” po head — drobne F7 w tym kroku. #317/#259 bez F7 po ostatnim commicie / konflikt.
+- Bieżąca: **HOTFIX #374** — `channel = 'IN_APP'` przy oznaczaniu dzwonków; money +1 asercja „wznowienie bez nowego RISK_OPEN”; money **179**. Push → czekam na CI i F7.
+
+## 2026-10-21 01:40 — pętla: C15 CI zielone; #317 main; skrzynka zamknięta
+
+- Skrzynka: #362/#364/#358 zamknięte (pozycje SCALONE). #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #376 C15 — CI zielone na `cf641647` (unit/visual/db), MERGEABLE; **brak** „F7: gotowe do scalenia” → bez merge. #317 — ten commit: main wciągnięty, konflikt POSTEP (obie strony + pkt 14.5). #259 konflikt / bez F7.
+- Bieżąca: **C15-emtrack** (#365 / #376) — kod gotowy, czeka na F7. Potem D-1300 (#359).

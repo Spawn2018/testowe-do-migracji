@@ -94,7 +94,8 @@ L3=33333333-0000-0000-0000-000000000003; L4=33333333-0000-0000-0000-000000000004
 # A5/E25: status tylko load_status_set; A4: numery w RETURNING → load_order_numbers()
 err "GOTOWY bez numeru HHL → zrozumiały komunikat bazy"    $HHL "select load_status_set('$L1','READY',now(),null)" "bez numeru zlecenia HHL"
 val "HHL wpisuje swój numer"                               $HHL "update loads set hhl_order_no='HHL/T/1' where id='$L1'; select hhl_order_no from load_order_numbers() where load_id='$L1'" "HHL/T/1"
-err "HHL nie zmieni numeru przewoźnika (W12)"              $HHL "update loads set carrier_order_no='X' where id='$L1'" "wpisuje wy..cznie przewo"
+# D-1525: HHL_ADMIN może Nr zlecenia SCX (W12 zawężone do HHL_OPS)
+val "HHL_ADMIN ustawia numer przewoźnika (D-1525)"         $HHL "update loads set carrier_order_no='SCX/HHL-ADMIN' where id='$L1'; select carrier_order_no from load_order_numbers() where load_id='$L1'" "SCX/HHL-ADMIN"
 err "przewoźnik nie zmieni numeru HHL"                     $SCX "update loads set hhl_order_no='X' where id='$L1'" "nie mo.e zmienia.: hhl_order_no"
 err "przewoźnik nie zmieni numeru KSH"                     $SCX "update loads set order_no='X' where id='$L1'" "nie mo.e zmienia.: order_no"
 val "przewoźnik wpisuje swój numer"                        $SCX "update loads set carrier_order_no='SCX/T/1' where id='$L1'; select carrier_order_no from load_order_numbers() where load_id='$L1'" "SCX/T/1"
@@ -280,7 +281,7 @@ val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "se
 
 echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
 L9=33333333-0000-0000-0000-000000000009
-sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date) values ('$L9','$P','$CAR','KSH/9','HHL/9','SCX/9','READY', current_date - 1)"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date, telematics_vehicle_id) values ('$L9','$P','$CAR','KSH/9','HHL/9','SCX/9','READY', current_date - 1, 'TEL-M9')"
 sys "insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country) values ('$P','KSH Śrem · Grunwaldzka 27C','LOADING',make_circle_fence(52.07391,17.02460,600),150,0,2,'PL')"
 NOW="now() - interval '1 minute'"
 err "anon nie wywoła process_position (usterka: domyślne EXECUTE)"   $KSH "set local role anon; select * from process_position('$L9',52.07391,17.0246,now())" "permission denied"
@@ -317,6 +318,18 @@ err "zalogowany nie wywoła latest_vehicle_positions"                    $SCX "s
 chk "system: ryzyko projektowe (bez transportu) zapisane"               "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" t
 chk "system: ten sam klucz → bez duplikatu (false)"                     "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" f
 chk "system: ryzyko transportu bierze projekt z transportu"             "$(Q "select raise_integration_risk(null,'$L1','ROAD_PL','MEDIUM','ruch','{}','TRAFFIC_FLOW:T12'); select (project_id='$P')::text||' '||kind from risk_signals where dedup_key='TRAFFIC_FLOW:T12'")" "true ROAD_PL"
+# #374: klucz bez daty — po zamknięciu w ≤ 60 min wznów stary wiersz, bez nowego RISK_OPEN
+sys "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')"
+FLICK=$(Q "select id from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")
+sys "update risk_signals set resolved_at = now() - interval '5 minutes' where id='$FLICK'"
+N_FLICK=$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$FLICK'")
+chk "#374: wznowienie w 60 min → false (bez nowego wiersza)"            "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')")" f
+chk "#374: ten sam id znów otwarty"                                     "$(Q "select (id='$FLICK' and resolved_at is null)::text from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' order by detected_at desc limit 1")" true
+chk "#374: bez drugiego otwartego wiersza"                              "$(Q "select count(*) from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")" 1
+chk "#374: wznowienie bez nowego RISK_OPEN"                             "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$FLICK'")" "$N_FLICK"
+sys "update risk_signals set resolved_at = now() - interval '90 minutes' where dedup_key='SOURCE_DOWN:FLICKER_TEST'"
+chk "#374: po 60 min → nowy wiersz (true)"                              "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker 2','{}','SOURCE_DOWN:FLICKER_TEST')")" t
+sys "update risk_signals set resolved_at = now() where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null"
 chk "system (bez sesji): zapis rejsu zostaje POLFERRIES"                "$(Q "update sailings set status='OPOZNIONY' where id='$S12'; select source from sailings where id='$S12'")" POLFERRIES
 val "HHL: zmiana rejsu w aplikacji → źródło RECZNIE (baza)"             $HHL "update sailings set status='ODWOLANY', source='POLFERRIES' where id='$S12'; select source||' '||status from sailings where id='$S12'" "RECZNIE ODWOLANY" commit
 chk "HHL: autor zmiany rejsu zapisany przez serwer"                     "$(Q "select (updated_by = (select id from app_users where auth_id='$HHL'))::text from sailings where id='$S12'")" true

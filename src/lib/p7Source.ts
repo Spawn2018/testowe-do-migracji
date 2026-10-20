@@ -9,6 +9,7 @@ import type { Pilots } from './p7Awiz';
 import { demoPilots, demoSavePilots, demoSaveSet, demoSymbolSpec } from './p7Demo';
 import { accountRole } from './accountRole';
 import { serverRuleOn } from './serverRules';
+import { isPreviewReadOnly } from './prodFacade';
 
 /** Wiersz tabeli właściciela według symbolu (E32 pkt 7): zestaw z ładunkiem, wymóg pilotów, rodzaj zezwolenia. */
 export interface SymbolSpec {
@@ -98,12 +99,12 @@ function savePilotsProd(codes: readonly string[], p: Pilots): void {
 }
 
 /**
- * E32 pkt 6: HHL Administrator może poprawić awizację; Operacje HHL i KSH tylko oglądają (E9; 09.10 12:33).
- * Demo: według rodzaju konta, nie samej firmy (audyt-F F-07) — konto HHL Operacje bez „Popraw awizację”, okno tylko
- * do odczytu. Produkcja — po sprawdzeniu praw zapisu w bazie (wykonawca).
+ * E32 pkt 6 + D-20261020-1501-01 (właściciel 15:01): Administrator HHL awizuje tak samo jak SCX; Operacje HHL i KSH
+ * tylko oglądają (E9; 09.10 12:33). Demo: według rodzaju konta (audyt-F F-07). Produkcja: konto HHL_ADMIN we własnym
+ * widoku HHL (baza przyjmuje zapis HHL — `loads_update_hhl`, `guard_load_update`); w Podglądzie nigdy.
  */
 export function canFixAwizOf(role: OrgKind): boolean {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' && accountRole(role) !== 'HHL_OPS' : false;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? role === 'HHL' && accountRole(role) !== 'HHL_OPS' : role === 'HHL' && accountRole(role) === 'HHL_ADMIN' && !isPreviewReadOnly({ viewRole: role });
 }
 
 /** Wymiary zestawu z ładunkiem w metrach. */

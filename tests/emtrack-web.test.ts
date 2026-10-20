@@ -40,36 +40,43 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(pollIntervalSec({ ...fix, speedKmh: 0, ignition: false }, 120, 900)).toBe(900);
   });
 
-  it('matchFixToLoad: telematics_vehicle_id albo trailer_plate', () => {
+  it('D-1710: matchFixToLoad tylko po linku (bez naczepy samej)', () => {
     const fix = parseCurrentSnapshot({
       trackingObjectId: 11008, name: 'x', textId: 'GD035YX', type: 'TRAILER',
       currentSnapshot: { ts: Date.now(), d: { C: { v: { lat: 1, lng: 2 } } } },
     });
-    const loads = [
-      { id: 'a', trailer_plate: 'OTHER', telematics_vehicle_id: null, status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
+    // Sam numer naczepy bez linku — brak dopasowania (SG-15/16).
+    expect(matchFixToLoad(fix, [
       { id: 'b', trailer_plate: 'GD 035 YX', telematics_vehicle_id: null, status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
-    ];
-    expect(matchFixToLoad(fix, loads)?.id).toBe('b');
+    ])).toBeNull();
     expect(matchFixToLoad(fix, [
       { id: 'c', trailer_plate: null, telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
     ])?.id).toBe('c');
     expect(matchFixToLoad(fix, [
-      { id: 'd', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'DONE', plannedLoadDate: '2020-01-01' },
+      { id: 'd', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'DONE', plannedLoadDate: '2020-01-01' },
+    ])).toBeNull();
+    // Link-adres emtrack + naczepa = textId (produkcja SG-17).
+    expect(matchFixToLoad(fix, [
+      { id: 'url', trailer_plate: 'GD035YX', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
+    ])?.id).toBe('url');
+    expect(matchFixToLoad(fix, [
+      { id: 'url2', trailer_plate: 'OTHER', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
     ])).toBeNull();
   });
 
-  it('E27: okno od 03:00 dnia załadunku; ta sama naczepa → wcześniejszy niedostarczony', () => {
+  it('E27/D-1710: okno od 03:00 + link; ta sama naczepa z linkiem → wcześniejszy', () => {
     const day = '2026-10-05';
     const start = new Date(trackingWindowStartMs(day)).toISOString();
     const before = new Date(trackingWindowStartMs(day) - 60_000).toISOString();
-    const row = { id: 'e', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: day };
+    const row = { id: 'e', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: day };
+    expect(loadInTrackingWindow({ ...row, telematics_vehicle_id: null }, start)).toBe(false);
     expect(loadInTrackingWindow(row, before)).toBe(false);
     expect(loadInTrackingWindow(row, start)).toBe(true);
     expect(loadInTrackingWindow({ ...row, status: 'DELIVERED' }, start)).toBe(false);
     expect(loadInTrackingWindow({ ...row, plannedLoadDate: '2026-10-20' }, start)).toBe(false);
     expect(loadInTrackingWindow({ ...row, plannedLoadDate: '2026-12-01', trackingOpenedAt: start }, '2026-10-06T08:00:00.000Z')).toBe(true);
-    const early = { id: 'early', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-05' };
-    const late = { id: 'late', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-06' };
+    const early = { id: 'early', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-05' };
+    const late = { id: 'late', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-06' };
     const at = new Date(trackingWindowStartMs('2026-10-06') + 60_000).toISOString();
     const fix = parseCurrentSnapshot({
       trackingObjectId: 1, name: 'x', textId: 'GD035YX', type: 'TRAILER',
@@ -317,5 +324,73 @@ describe('A8 pauza logowania', () => {
     expect(risk.dedup).toBe('SOURCE_DOWN:EMTRACK_WEB');
     expect(risk.detail).toMatchObject({ od_kiedy: '2026-10-05T12:00:00.000Z' });
     expect(String(risk.title)).toMatch(/od /);
+  });
+});
+
+describe('#374 emtrack version ≠ awaria', () => {
+  const emptyStore = () => {
+    let state: { failStreak: number; skippedUntil: string | null; secretFp: string | null } | null = null;
+    let raised = 0;
+    return {
+      raised: () => raised,
+      store: {
+        async projectId() { return 'p'; },
+        async vessels() { return []; },
+        async sailingsSince() { return []; },
+        async insertSailings() {},
+        async updateSailing() { return false; },
+        async latestPositions() { return []; },
+        async lastRun() { return null; },
+        async resolveRisks() { return 0; },
+        async recordRun() {},
+        async saveVesselPosition() {},
+        async telmEmtrackWebEnabled() { return true; },
+        async listActiveLoadsForTelematics() { return []; },
+        async emtrackLoginState() { return state; },
+        async saveEmtrackLoginState(s: { failStreak: number; skippedUntil: string | null; secretFp: string | null }) {
+          state = s;
+        },
+        async raiseRisk() { raised += 1; return true; },
+      },
+    };
+  };
+
+  class OkWs {
+    onopen: (() => void) | null = null;
+    onmessage: ((ev: MessageEvent) => void) | null = null;
+    constructor(_url: string) {
+      queueMicrotask(() => this.onopen?.());
+    }
+    send(raw: string) {
+      const msg = JSON.parse(raw) as { id: number; type: string };
+      queueMicrotask(() => {
+        const frame = (body: unknown) => new MessageEvent('message', { data: JSON.stringify(body) });
+        if (msg.type === 'SELECT_PROTOCOL') {
+          this.onmessage?.(frame({ id: msg.id, type: 'PROTOCOL', data: { protocol: 'accepted' } }));
+        } else if (msg.type === 'LOGIN') {
+          this.onmessage?.(frame({ id: msg.id, type: 'LOGIN_RESPONSE', data: { sessionId: 's1' } }));
+        } else if (msg.type === 'GET_TRACKING_OBJECTS') {
+          this.onmessage?.(frame({ id: msg.id, type: 'TRACKING_OBJECTS', data: { trackingObjects: [] } }));
+        } else if (msg.type === 'LOGOUT') {
+          this.onmessage?.(frame({ id: msg.id, type: 'ACK', data: {} }));
+        }
+      });
+    }
+    close() {}
+  }
+
+  it('wersja ≠ oczekiwanej + udane logowanie → brak raiseRisk, jest version_mismatch', async () => {
+    const ctx = emptyStore();
+    const r = await runEmtrackWeb({
+      store: ctx.store,
+      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_EXPECTED_VERSION: '6.32.0' },
+      now: () => new Date('2026-10-20T20:00:00Z'),
+      WebSocketImpl: OkWs as unknown as typeof WebSocket,
+    });
+    expect(r.ok).toBe(true);
+    expect(ctx.raised()).toBe(0);
+    expect(r.observations?.version_mismatch).toBe('6.33.0≠6.32.0');
+    expect(r.observations?.version).toBe('6.33.0');
   });
 });

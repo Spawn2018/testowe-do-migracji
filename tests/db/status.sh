@@ -30,11 +30,14 @@ insert into sailings (id,project_id,vessel_id,departure_at,arrival_at,delayed_de
  ('77777777-0000-0000-0000-000000000001','$P','66666666-0000-0000-0000-000000000001','2026-10-01 12:00+00','2026-10-02 06:00+00',null,null,'ZAPLANOWANY'),
  ('77777777-0000-0000-0000-000000000002','$P','66666666-0000-0000-0000-000000000002','2026-10-01 20:00+00','2026-10-02 14:00+00',null,null,'ODWOLANY'),
  ('77777777-0000-0000-0000-000000000003','$P','66666666-0000-0000-0000-000000000001','2026-10-01 16:00+00','2026-10-02 10:00+00','2026-10-01 19:00+00','2026-10-02 13:00+00','OPOZNIONY'),
- ('77777777-0000-0000-0000-000000000004','$P','66666666-0000-0000-0000-000000000002','2026-10-01 14:00+00','2026-10-02 08:00+00',null,null,'ZAPLANOWANY');
+ ('77777777-0000-0000-0000-000000000004','$P','66666666-0000-0000-0000-000000000002','2026-10-01 14:00+00','2026-10-02 08:00+00',null,null,'ZAPLANOWANY'),
+ ('77777777-0000-0000-0000-000000000005','$P','66666666-0000-0000-0000-000000000001', now() + interval '7 days', now() + interval '7 days 18 hours',null,null,'ZAPLANOWANY');
 " >/dev/null
 S1=77777777-0000-0000-0000-000000000001; S2=77777777-0000-0000-0000-000000000002; S3=77777777-0000-0000-0000-000000000003; S4=77777777-0000-0000-0000-000000000004
-mk() { q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date)
-          values ('$1','$P','$SCXO','KSH/$2',$3,$4,'$5',$6,'2026-09-30')" >/dev/null; }
+S5=77777777-0000-0000-0000-000000000005
+# D-1710: process_position wymaga linku śledzenia (telematics_vehicle_id).
+mk() { q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,telematics_vehicle_id)
+          values ('$1','$P','$SCXO','KSH/$2',$3,$4,'$5',$6,'2026-09-30','TEL-$2')" >/dev/null; }
 mk $A A "'HHL/A'" "'SCX/A'" IN_TRANSIT_PL "'$S1'";  mk $B B "'HHL/B'" "'SCX/B'" IN_TRANSIT_PL "'$S1'"
 mk $C C "'HHL/C'" "'SCX/C'" IN_TRANSIT_PL "'$S2'";  mk $D D "'HHL/D'" null        READY         null
 mk $E E null      null      DOCS_PENDING  null;      mk $F F "'HHL/F'" "'SCX/F'" READY         null
@@ -131,10 +134,23 @@ chk "pełna ścieżka A w dzienniku zdarzeń" \
 echo; echo "[8] Uprawnienia"
 as() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tail -1; }
 out=$(as $SCX "select promote_ferry_departures('2099-01-01')"); echo "$out" | grep -q "permission denied" && { ok=$((ok+1)); echo "  OK    użytkownik nie wywoła przełączania PROMU"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
-chk "KSH widzi rozkład rejsów"  "select 4" "$(as $KSH "select count(*) from sailings")"
-chk "SCX przypisuje rejs do swojego transportu" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S4' where id='$B' returning 1) select count(*) from u")"
-chk "KSH nie przypisze rejsu"   "select 0" "$(as $KSH "with u as (update loads set sailing_id='$S4' where id='$B' returning 1) select count(*) from u")"
+chk "KSH widzi rozkład rejsów"  "select 5" "$(as $KSH "select count(*) from sailings")"
+# D-1501 / F7 B2: SCX przypisuje przyszły (S5) na transport bez wypłyniętego rejsu.
+# UUID 63 — nie 5b (5b = SG-03 w [12] A2).
+Lfut=$(L 63)
+mk $Lfut FUT "'HHL/FUT'" "'SCX/FUT'" READY null
+chk "SCX przypisuje przyszły rejs do swojego transportu" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
+chk "KSH nie przypisze rejsu"   "select 0" "$(as $KSH "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S4' where id='$Lfut'; rollback;" 2>&1)
+echo "$out" | grep -q "jeszcze nie wypłynął" && { ok=$((ok+1)); echo "  OK    SCX nie przypisze rejsu wypłyniętego"; } || { fail=$((fail+1)); echo "  FAIL  wypłynięty: $out"; }
+# F7 B3: B ma S1 wypłynięty — SCX nie przepnie nawet na przyszły S5.
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S5' where id='$B'; rollback;" 2>&1)
+echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    SCX nie zmieni rejsu gdy stary wypłynął"; } || { fail=$((fail+1)); echo "  FAIL  stary rejs: $out"; }
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S4' where id='$A'; rollback;" 2>&1); echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    przewoźnik nie zmieni rejsu po wypłynięciu"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
+# F7 N2: SCX przepina z odwołanego (godzina minęła) na przyszły.
+Lcan=$(L 64)
+mk $Lcan CAN "'HHL/CAN'" "'SCX/CAN'" READY "'$S2'"
+chk "SCX przepina z odwołanego na przyszły" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lcan' returning 1) select count(*) from u")"
 
 echo; echo "[9] Strefy w prawdziwych metrach — różnica od zadanego promienia poniżej 1%"
 chk "port Gdańsk: 800 m"   "select abs(round(st_distance(st_centroid(geom)::geography, st_exteriorring(geom)::geography)::numeric) - 800) < 8   from geofences where name='Port Gdańsk'"   t
@@ -224,16 +240,17 @@ chk "C17 UNLOADED i DELIVERED ta sama ranga" "select (load_status_rank('UNLOADED
 chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where status='UNLOADED' and id in ('$C17A','$C17B','$C17C','$C17D')" 0
 
 # A1 / E27 / L17 (D-20261017-2130-01 §5, D-20261017-2205-01): okno 03:00 i bezpiecznik.
+# D-1710 (#368): okno i pozycje tylko przy telematics_vehicle_id.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
 W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
 # Data od razu docelowa: mk() wstawia 30.09, a zmiana daty po starcie okna zamraża śledzenie.
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05'),
- ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05'),
- ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24'),
- ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05'),
- ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05'),
- ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05','TEL-A1W1'),
+ ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05','TEL-A1W2'),
+ ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24','TEL-A1W3'),
+ ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05','TEL-A1W4'),
+ ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05','TEL-A1W5'),
+ ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01','TEL-A1W6')" >/dev/null
 T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
 T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
 # W4: daty w przyszłości (nie „dziś”) — po 03:00 w dniu planu okno już startuje i zamraża tracking_opened_at.
@@ -257,8 +274,8 @@ q "update loads set plan_load_date='2026-12-01' where id='$W5'" >/dev/null
 pos $W5 52.09 17.02 "2026-10-06 08:00:00+00"
 chk "A1 po starcie późniejsza data nie zamyka śledzenia" "select count(*) from positions where load_id='$W5'" 2
 chk "A1 tracking_opened_at zamrożone" "select (tracking_opened_at = public.tracking_window_start('2026-10-05'::date))::text from loads where id='$W5'" true
-chk "A1 L17 17 zaległych transportów" "with ins as (insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date)
-   select ('55555555-0000-0000-0000-00000000a1'||lpad(g::text,2,'0'))::uuid, '$P', '$SCXO', 'KSH/L17/'||g, 'HHL/L17/'||g, 'SCX/L17/'||g, 'IN_TRANSIT_PL', current_date - 10, current_date - 5
+chk "A1 L17 17 zaległych transportów" "with ins as (insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, telematics_vehicle_id)
+   select ('55555555-0000-0000-0000-00000000a1'||lpad(g::text,2,'0'))::uuid, '$P', '$SCXO', 'KSH/L17/'||g, 'HHL/L17/'||g, 'SCX/L17/'||g, 'IN_TRANSIT_PL', current_date - 10, current_date - 5, 'TEL-L17-'||g
    from generate_series(1,17) g returning 1) select count(*) from ins" 17
 chk "A1 L17 zaległości: 17 spraw" "select public.tracking_delivery_guard(); select count(*) from decisions where type_code='DELIVERY_UNCONFIRMED' and load_id in (select id from loads where order_no like 'KSH/L17/%')" 17
 chk "A1 L17 zaległości: 0 powiadomień SCX" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='DECISION_OPEN' and n.load_id in (select id from loads where order_no like 'KSH/L17/%') and o.kind='CARRIER'" 0
@@ -288,9 +305,84 @@ chk "A1 po teście brak klucza ciszy w bazie statusów" "delete from decision_ev
 chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
 chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 chk "A1 strażnik: anulowanie z cancel_ctx nadal dozwolone" "select (pg_get_functiondef('guard_load_update()'::regprocedure) like '%v_ctx not in (''MANUAL'', ''IMPORT'')%')::text" true
+# D-1710: bez linku brak pozycji; przesunięcie daty w przygotowaniu czyści tracking_opened_at.
+Wnl=$(L 4c); Wprep=$(L 4d)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id,tracking_opened_at) values
+ ('$Wnl','$P','$SCXO','KSH/A1NL','HHL/A1NL','SCX/A1NL','READY','2026-10-05',null,null),
+ ('$Wprep','$P','$SCXO','KSH/A1PR','HHL/A1PR','SCX/A1PR','READY','2026-10-05','TEL-A1PR', public.tracking_window_start('2026-10-01'::date))" >/dev/null
+pos $Wnl 52.09 17.02 "$T00"
+chk "D-1710 bez linku: brak pozycji mimo 03:00" "select count(*) from positions where load_id='$Wnl'" 0
+q "update loads set plan_load_date='2026-11-07' where id='$Wprep'" >/dev/null
+chk "D-1710 przesunięcie daty w przygotowaniu czyści tracking_opened_at" "select (tracking_opened_at is null)::text from loads where id='$Wprep'" true
+q "update loads set telematics_vehicle_id='TEL-A1NL' where id='$Wnl'" >/dev/null
+pos $Wnl 52.09 17.02 "$T00"
+chk "D-1710 po dodaniu linku: pozycja w oknie" "select count(*) from positions where load_id='$Wnl'" 1
+chk "D-1710 load_in_tracking_window wymaga linku" "select strpos(pg_get_functiondef(p.oid), 'telematics_vehicle_id') > 0 from pg_proc p where p.proname='load_in_tracking_window'" t
+# F7 #373 pkt 6+8: TELM nie rusza READY; SCX zmienia link — tracking_opened_at z freeze nie blokuje.
+Wscx=$(L 4e)
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$Wscx','$P','$SCXO','KSH/A1SCX','HHL/A1SCX','SCX/A1SCX','READY','2026-10-05','TEL-SCX-1')" >/dev/null
+chk "D-1710 TELM: READY bez fazy z pozycji" "select coalesce(telm_infer_phase_from_position('$Wscx', 52.1, 17.0, public.tracking_window_start('2026-10-05'))::text,'∅')" "∅"
+chk "D-1710 SCX: usunięcie linku OK (tracking_opened_at)" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set telematics_vehicle_id=null where id='$Wscx'; select (telematics_vehicle_id is null)::text from loads where id='$Wscx'; commit" true
+# F7 #373: d1710_repair — SG-17 (TELM przed oknem), SG-15 (bez linku), nietknięty w trasie z linkiem.
+R17=$(L 6a); R15=$(L 6b); Rok=$(L 6c); Rdel=$(L 6d)
+TW17=$(q "select public.tracking_window_start('2026-10-22'::date)")
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id,tracking_opened_at) values
+ ('$R17','$P','$SCXO','KSH/R17','HHL/R17','SCX/R17','IN_TRANSIT_PL','2026-10-22','https://emtrack.eu/app/', ('$TW17'::timestamptz - interval '1 day')),
+ ('$R15','$P','$SCXO','KSH/R15','HHL/R15','SCX/R15','READY','2026-10-22',null,null),
+ ('$Rok','$P','$SCXO','KSH/ROK','HHL/ROK','SCX/ROK','IN_TRANSIT_SE','2026-10-05','TEL-ROK', public.tracking_window_start('2026-10-05'::date)),
+ ('$Rdel','$P','$SCXO','KSH/RDEL','HHL/RDEL','SCX/RDEL','DELIVERED','2026-09-01','https://emtrack.eu/app/',null)" >/dev/null
+# STATUS_AUTO:<id>:IN_TRANSIT_PL jak z auto_set_status w telm_infer — bez :d1710 blokuje prawdziwy wyjazd.
+q "insert into load_events (load_id,event_type,occurred_at,payload,dedup_key) values
+ ('$R17','STATUS_AUTO',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('from','READY','to','IN_TRANSIT_PL','zrodlo','TELM_PHASE_INFER'),'STATUS_AUTO:$R17:IN_TRANSIT_PL'),
+ ('$R17','STATUS_AUTO',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('from','READY','to','IN_TRANSIT_PL','zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_INFER:$R17:IN_TRANSIT_PL'),
+ ('$R17','GEOFENCE_EXIT',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('geofence_kind','LOADING','synthetic',true,'zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_EXIT_LOAD:$R17'),
+ ('$Rok','STATUS_AUTO','2026-10-04 12:00+00', jsonb_build_object('from','DOCS_PENDING','to','READY','zrodlo','A9'),'STATUS_AUTO:$Rok:READY')" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$R17', ('$TW17'::timestamptz - interval '90 minutes'), st_setsrid(st_makepoint(18.65, 54.35), 4326), 'TELEMATICS_API'),
+ ('$R15', '2026-10-20 10:00+00', st_setsrid(st_makepoint(17.02, 52.09), 4326), 'TELEMATICS_API'),
+ ('$Rok', '2026-10-06 10:00+00', st_setsrid(st_makepoint(17.2, 60.5), 4326), 'TELEMATICS_API'),
+ ('$Rdel', '2026-09-02 10:00+00', st_setsrid(st_makepoint(17.2, 60.5), 4326), 'TELEMATICS_API')" >/dev/null
+q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at) values
+ ('$P','$R17','ETA_BREACH','HIGH','Opóźnienie','rk_eta_after_latest','{\"l3\":\"1\"}','ETA:$R17', ('$TW17'::timestamptz - interval '80 minutes'))" >/dev/null
+q "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon) values ('$R17','IN_TRANSIT_PL',('$TW17'::timestamptz - interval '2 hours'), 54.35, 18.65)" >/dev/null
+# Prawidłowa sprawa NO_AWIZACJA na R15 — naprawa nie może jej zamknąć (F7).
+q "select decision_open_from_event('$P','NO_AWIZACJA','AWIZ:$R15','R15: brak awizacji', '{}'::jsonb, '$R15', null)" >/dev/null
+Nbef=$(q "select count(*) from notifications")
+Wbef=$(q "select count(*) from workflow_runs")
+q "select public.d1710_repair()" >/dev/null
+chk "D-1710 repair: SG-17 → READY" "select status from loads where id='$R17'" READY
+chk "D-1710 repair: pozycja SG-17 odłączona" "select count(*) from positions where detached_load_id='$R17'" 1
+chk "D-1710 repair: pozycje bez linku = 0" "select count(*) from positions p join loads l on l.id=p.load_id where nullif(btrim(l.telematics_vehicle_id),'') is null" 0
+chk "D-1710 repair: ryzyko ETA zamknięte" "select (resolved_at is not null)::text from risk_signals where dedup_key='ETA:$R17'" true
+chk "D-1710 repair: w trasie z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rok' group by status" "IN_TRANSIT_SE/1"
+chk "D-1710 repair: DELIVERED z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rdel' group by status" "DELIVERED/1"
+chk "D-1710 repair: STATUS_AUTO→READY zostaje na osi" "select count(*) from load_events where load_id='$Rok' and payload->>'to'='READY'" 1
+chk "D-1710 repair: telm_attach_phase zresetowany" "select source from telm_attach_phase where load_id='$R17'" D1710_RESET
+chk "D-1710 repair: dedup_key odłączonych z :d1710" "select count(*) from load_events where detached_load_id='$R17' and dedup_key like '%:d1710'" 3
+chk "D-1710 repair: NO_AWIZACJA nietknięta" "select status from decisions where load_id='$R15' and type_code='NO_AWIZACJA' order by created_at desc limit 1" NEW
+chk "D-1710 repair: bez nowych notifications" "select (count(*)=$Nbef)::text from notifications" true
+chk "D-1710 repair: bez nowych workflow_runs" "select (count(*)=$Wbef)::text from workflow_runs" true
+# Po naprawie prawdziwy wyjazd musi trafić na oś (dedup STATUS_AUTO:<id>:IN_TRANSIT_PL wolny).
+q "select auto_set_status('$R17','READY','IN_TRANSIT_PL','wyjazd ze strefy załadunku', now(), jsonb_build_object('powod','test D-1710'))" >/dev/null
+chk "D-1710 repair: prawdziwy STATUS_AUTO po wyjeździe" "select count(*) from load_events where load_id='$R17' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_PL' and dedup_key='STATUS_AUTO:$R17:IN_TRANSIT_PL'" 1
+chk "D-1710 repair: status po prawdziwym wyjeździe" "select status from loads where id='$R17'" IN_TRANSIT_PL
+# F7: sprzątanie LATE_DATE + ETA z D-1710 (risks.sh liczy klucze automatu w tower_test_status).
+# decisions.risk_id → risk_signals bez CASCADE — najpierw decision_events/decisions.
+q "delete from decision_events where decision_id in (
+      select d.id from decisions d join risk_signals s on s.id=d.risk_id
+       where s.title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or s.dedup_key like 'LATE_DATE%' or s.dedup_key like 'ETA:%');
+    delete from decisions where risk_id in (
+      select id from risk_signals
+       where title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%');
+    delete from risk_signals
+     where title_key in ('rk_late_date_change','rk_eta_after_latest')
+        or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%'" >/dev/null
 HHL=11111111-0000-0000-0000-000000000001
 W8=$(L 4b)
-q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date) values ('$W8','$P','$SCXO','KSH/A1W8','PLANNED','2026-11-20')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date,telematics_vehicle_id) values ('$W8','$P','$SCXO','KSH/A1W8','PLANNED','2026-11-20','TEL-A1W8')" >/dev/null
 q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class) values ('$P','$W8','SG-ZOST',10,3,3,'DIMENSIONED')" >/dev/null
 chk "A1 HHL w sesji: cancel_load z powodem → CANCELLED" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select cancel_load('$W3','Test A1 — anulowanie'); commit" CANCELLED
 chk "A1 import w sesji HHL anuluje PLANNED spoza pliku" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select import_schedule('$P', '[{\"code\":\"SG-KEEP\",\"length_m\":10,\"width_m\":3,\"height_m\":3,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"2026-11-01\",\"delivery_date\":\"2026-11-05\"}]'::jsonb, '{SG-ZOST}'::text[], '{\"name\":\"a1.xlsx\",\"hash\":\"a1\",\"path\":\"x/a1.xlsx\"}'::jsonb, false); select status from loads where id='$W8'; commit" CANCELLED
@@ -298,9 +390,9 @@ chk "A1 import w sesji HHL anuluje PLANNED spoza pliku" "begin; set local role a
 # A2 / E26 / L14 — SG-03 (zmyślony ślad G-17) i sprawa DELIVERED_CHECK
 echo; echo "[12] A2 — wyjazd z placu i L14"
 SG=$(L 5b); SG2=$(L 5c)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG','$P','$SCXO','KSH/SG03','HHL/SG03','SCX/SG03','IN_TRANSIT_SE','2026-10-05'),
- ('$SG2','$P','$SCXO','KSH/SG06','HHL/SG06','SCX/SG06','IN_TRANSIT_SE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG','$P','$SCXO','KSH/SG03','HHL/SG03','SCX/SG03','IN_TRANSIT_SE','2026-10-05','TEL-SG03'),
+ ('$SG2','$P','$SCXO','KSH/SG06','HHL/SG06','SCX/SG06','IN_TRANSIT_SE','2026-10-05','TEL-SG06')" >/dev/null
 q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values ('$P','$SG','SG-03',10,3,3)" >/dev/null
 # SG-03: wjazd ~08:35, wyjazd 12:19 → Dostarczone
 pos $SG 65.8054 21.7591 "2026-10-07 08:35:00+00"; pos $SG 65.8055 21.7592 "2026-10-07 08:36:00+00"
@@ -323,8 +415,8 @@ chk "A2 L14 SCX Tak → DELIVERED" "begin; set local role authenticated; set loc
 chk "A2 L14 po Tak sprawa RESOLVED YES" "select status||'/'||resolution_code from decisions where load_id='$SG2' and type_code='DELIVERED_CHECK'" "RESOLVED/DELIVERED_YES"
 # druga sprawa L14 → Nie
 SG3=$(L 5d)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG3','$P','$SCXO','KSH/SG07','HHL/SG07','SCX/SG07','IN_TRANSIT_SE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG3','$P','$SCXO','KSH/SG07','HHL/SG07','SCX/SG07','IN_TRANSIT_SE','2026-10-05','TEL-SG07')" >/dev/null
 pos $SG3 65.8054 21.7591 "2026-10-09 11:00:00+00"; pos $SG3 65.8055 21.7592 "2026-10-09 11:01:00+00"
 pos $SG3 65.50 21.70 "2026-10-09 11:06:00+00"; pos $SG3 65.50 21.71 "2026-10-09 11:07:00+00"
 chk "A2 L14 Nie: status zostaje AT_SITE" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select delivered_check_resolve('$SG3', false, 'jeszcze nie'); select status from loads where id='$SG3'; commit" AT_SITE
@@ -339,9 +431,9 @@ chk "A2 p_ts bez default" "select (pg_get_function_arguments(p.oid) not like '%p
 chk "A2 delivered_check_apply woła decision_notify RESOLVE" "select (strpos(pg_get_functiondef('delivered_check_apply(uuid,boolean,text)'::regprocedure), 'decision_notify') > 0)::text" true
 # decision_resolve — ta sama ścieżka co karta
 SG4=$(L 5e); SG5=$(L 5f)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG4','$P','$SCXO','KSH/SG08','HHL/SG08','SCX/SG08','AT_SITE','2026-10-05'),
- ('$SG5','$P','$SCXO','KSH/SG09','HHL/SG09','SCX/SG09','AT_SITE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG4','$P','$SCXO','KSH/SG08','HHL/SG08','SCX/SG08','AT_SITE','2026-10-05','TEL-SG08'),
+ ('$SG5','$P','$SCXO','KSH/SG09','HHL/SG09','SCX/SG09','AT_SITE','2026-10-05','TEL-SG09')" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG4','SG-08: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 12:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG4', null)" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG5','SG-09: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 13:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG5', null)" >/dev/null
 D4=$($PSQL -c "select id from decisions where load_id='$SG4' and type_code='DELIVERED_CHECK' and status='NEW'")
@@ -352,8 +444,8 @@ chk "A2 decision_resolve NIE: status AT_SITE" "begin; set local role authenticat
 chk "A2 decision_resolve NIE: DELIVERED_NO" "select resolution_code from decisions where id='$D5'" DELIVERED_NO
 # Tak przy statusie innym niż AT_SITE — sprawa zostaje otwarta
 SG6=$(L 60)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG6','$P','$SCXO','KSH/SG10','HHL/SG10','SCX/SG10','AT_SITE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG6','$P','$SCXO','KSH/SG10','HHL/SG10','SCX/SG10','AT_SITE','2026-10-05','TEL-SG10')" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG6','SG-10: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 14:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG6', null)" >/dev/null
 q "select set_config('tower.status_ctx','on',true); update loads set status='IN_TRANSIT_SE' where id='$SG6'" >/dev/null
 D6=$($PSQL -c "select id from decisions where load_id='$SG6' and type_code='DELIVERED_CHECK' and status='NEW'")
@@ -367,16 +459,16 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 echo "$out" | grep -qiE 'Rozstrzygnięcie|42501' && { ok=$((ok+1)); echo "  OK    A2 Operacje HHL: odmowa L14"; } || { fail=$((fail+1)); echo "  FAIL  A2 Operacje HHL: odmowa L14: $out"; }
 # D-20261018-1130-01: „Zmień status” na Dostarczone zamyka niewidoczną sprawę L14
 SG7=$(L 61)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG7','$P','$SCXO','KSH/SG11','HHL/SG11','SCX/SG11','AT_SITE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG7','$P','$SCXO','KSH/SG11','HHL/SG11','SCX/SG11','AT_SITE','2026-10-05','TEL-SG11')" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG7','SG-11: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 15:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG7', null)" >/dev/null
 chk "A2 L14 przed Zmień status: 1 otwarta" "select count(*) from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')" 1
 chk "A2 L14 + load_status_set DELIVERED: 0 otwartych" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select load_status_set('$SG7','DELIVERED','2026-10-18 08:00+00',null); select count(*) from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED'); commit" 0
 chk "A2 L14 po Zmień status: RESOLVED/DELIVERED" "select status||'/'||resolution_code from decisions where load_id='$SG7' and type_code='DELIVERED_CHECK'" "RESOLVED/DELIVERED"
 chk "A2 L14 po Zmień status: wpis decision_events" "select count(*) from decision_events e join decisions d on d.id=e.decision_id where d.load_id='$SG7' and d.type_code='DELIVERED_CHECK' and e.action='RESOLVE'" 1
 SG8=$(L 62)
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date) values
- ('$SG8','$P','$SCXO','KSH/SG12','HHL/SG12','SCX/SG12','AT_SITE','2026-10-05')" >/dev/null
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
+ ('$SG8','$P','$SCXO','KSH/SG12','HHL/SG12','SCX/SG12','AT_SITE','2026-10-05','TEL-SG12')" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG8','SG-12: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 16:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG8', null)" >/dev/null
 chk "A2 L14 + anulowanie: RESOLVED/CANCELLED i 0 otwartych" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select load_status_set('$SG8','CANCELLED','2026-10-18 08:00+00','test A2'); select status||'/'||resolution_code||'/'||(select count(*) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK'; commit" "RESOLVED/CANCELLED/0"
 

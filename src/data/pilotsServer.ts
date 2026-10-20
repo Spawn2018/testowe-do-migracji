@@ -6,8 +6,11 @@
 import { getSupabase } from '../auth/client';
 import { useTowerStore } from '../store/useTowerStore';
 import type { Pilots } from '../lib/p7Awiz';
+import { isPreviewReadOnly } from '../lib/prodFacade';
 
 export async function savePilotsServer(codes: readonly string[], p: Pilots): Promise<void> {
+  /* B5 (D-20261019-1525-01): Podgląd nic nie zmienia w danych — także piloci (F7 D-1501) */
+  if (isPreviewReadOnly()) return;
   const st = useTowerStore.getState();
   const ids = st.loads.filter((l) => codes.includes(l.code)).map((l) => l.id);
   const sb = await getSupabase();

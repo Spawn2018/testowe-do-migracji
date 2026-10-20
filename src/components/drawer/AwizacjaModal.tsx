@@ -19,11 +19,13 @@ import {
   type FerryOperatorId,
 } from '../../lib/awizacjaState';
 import { isPlausibleNational, toNationalPhone } from '../../lib/phoneNational';
-import { effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
+import { effArrival, effDeparture, fmtLocal, historicalSailings, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
+import { isPreviewReadOnly } from '../../lib/prodFacade';
+import { accountRole } from '../../lib/accountRole';
 import { getNowIso } from '../../lib/frozenNow';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { TrackingLinkField } from './TrackingLinkField';
-import { awizDeadline, awizMissing, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
+import { awizDeadline, awizMissing, awizMissingSe, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
 import { canFixAwizOf, pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
 import { transportLabel } from '../../lib/transportName';
 import { pt, ptp } from '../../i18n/p7';
@@ -47,9 +49,14 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const pushToast = useTowerStore((s) => s.pushToast);
 
   const orderSide = editableOrderSide(role);
+  /* D-20261020-1501-01 (15:48): Administrator HHL wpisuje w awizacji także „Nr zlecenia SCX” (jak SCX) */
+  const carrierEdit = orderSide === 'CARRIER' || (role === 'HHL' && canFixAwizOf(role));
   const nowIso = getNowIso();
   const curSailing = sailings.find((x) => x.id === load.sailingId);
-  const sailingLock = sailingAssignDenied(role, load, curSailing, null, nowIso);
+  const account = accountRole(role);
+  /* B5 (D-20261019-1525-01): Podgląd innej firmy — okno tylko do odczytu, bez zapisu „na niby” (D-20261020-1501-01) */
+  const preview = isPreviewReadOnly({ viewRole: role });
+  const sailingLock = sailingAssignDenied(role, load, curSailing, null, nowIso, account);
 
   const [driverName, setDriverName] = useState(load.resources.driverName ?? '');
   const [driverPhone, setDriverPhone] = useState(load.resources.driverPhone ?? '');
@@ -94,6 +101,12 @@ export function AwizacjaModal({ load, onClose }: Props) {
     () => reachableSailings(sailings, load, nowIso, operator),
     [sailings, load, nowIso, operator],
   );
+  /* D-20261020-1501-01: rejsy, które już wypłynęły i dopłynęły — tylko Administrator HHL (SCX i Operacje HHL: przyszłe) */
+  const histOn = role === 'HHL' && canFixAwizOf(role);
+  const historyOptions = useMemo(
+    () => (histOn ? historicalSailings(sailings, nowIso, operator).filter((s) => !sailingOptions.some((o) => o.id === s.id)) : []),
+    [histOn, sailings, nowIso, operator, sailingOptions],
+  );
 
   const dupCode = awizacjaDuplicateWarning(loads, load.id, { driverName, tractorPlate });
 
@@ -109,6 +122,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
   const save = () => {
     setErr(null);
+    if (preview) return;
     const name = driverName.trim();
     const plate = tractorPlate.trim().toUpperCase();
     if (!name) {
@@ -147,7 +161,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
     if (pilotsOn && savePilots) savePilots(convoy.length ? convoy.map((l) => l.code) : [load.code], pil);
 
-    if (orderSide === 'CARRIER') {
+    if (carrierEdit) {
       const v = carrierOrder.trim() || null;
       if (v !== (load.carrierOrderNo ?? null)) setOrderNo(load.id, 'CARRIER', v);
     }
@@ -170,6 +184,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
   };
 
   /* „Brakuje: …” z bieżących pól okna — ta sama definicja co w Przeglądzie (E32 pkt 6) */
+  const missingSe = awizMissingSe({ driverName, driverPhone, tractorPlate, trailerPlate, trailerSwap, driverDeliveryName, driverDeliveryPhone, tractorDeliveryPlate });
   const missing = awizMissing(
     { driverName, driverPhone, tractorPlate, trailerPlate, trailerSwap, driverDeliveryName, driverDeliveryPhone, tractorDeliveryPlate },
     pilotsOn,
@@ -179,7 +194,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
   /* E6: odcinek SE tylko przy przepięciu naczepy */
   const twoSeg = trailerSwap;
   /* E32 pkt 6: SCX robi, HHL Administrator poprawia (canFixAwizOf), HHL Operacje i KSH tylko oglądają */
-  const readOnly = role === 'KSH' || (role === 'HHL' && !canFixAwizOf(role));
+  const readOnly = role === 'KSH' || (role === 'HHL' && !canFixAwizOf(role)) || preview;
   const missText = missing.map((m) => pt(locale, `p7_miss_${m}`)).join(', ');
   const pilotsMiss = pilotsMissingCount(missing);
   const setPilot = (side: 'pl' | 'se', key: 'plate' | 'name', v: string) => setPil((x) => ({ ...x, [side]: { ...x[side], [key]: v } }));
@@ -225,7 +240,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           ) : null}
           {err ? <div className="am-err" role="alert">{err}</div> : null}
 
-          {readOnly ? <p className="am-note" data-awiz-ro>{pt(locale, 'p7_m_ro')}</p> : null}
+          {readOnly ? <p className="am-note" data-awiz-ro>{pt(locale, preview ? 'p7_m_ro_preview' : 'p7_m_ro')}</p> : null}
           <fieldset className="am-all" disabled={readOnly}>
           <fieldset className="am-box" data-awiz-seg={twoSeg ? 'PL' : 'one'}>
             <legend className="am-lg">{pt(locale, twoSeg ? 'p7_m_seg_pl' : 'p7_m_seg_one')}</legend>
@@ -268,9 +283,11 @@ export function AwizacjaModal({ load, onClose }: Props) {
           {twoSeg ? (
             <fieldset className="am-box" data-awiz-seg="SE">
               <legend className="am-lg">{pt(locale, 'p7_m_seg_se')}</legend>
+              {/* D-20261020-1525-01: pola SE nieobowiązkowe przy zapisie; termin 48 h przed dostawą */}
+              <small className="am-hint" data-awiz-se-later>{missingSe.length ? ptp(locale, 'p7_m_se_later_miss', { what: missingSe.map((m) => pt(locale, `p7_miss_${m}`)).join(', ') }) : pt(locale, 'p7_m_se_later')}</small>
               <label className="form-field am-f">
                 <span>{pt(locale, 'p7_m_name')}</span>
-                <input className={`input${driverDeliveryName.trim() ? '' : ' am-need'}`} value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
+                <input className={`input${driverDeliveryName.trim() ? '' : ' am-later'}`} value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
               </label>
               <div className="am-2">
                 <label className="form-field am-f">
@@ -280,12 +297,12 @@ export function AwizacjaModal({ load, onClose }: Props) {
                       <option value="PL">PL</option>
                       <option value="SE">SE</option>
                     </select>
-                    <input className={`input mono${driverDeliveryPhone.trim() ? '' : ' am-need'}`} type="tel" inputMode="numeric" value={driverDeliveryPhone} onChange={(e) => setDriverDeliveryPhone(e.target.value)} placeholder="701234567" autoComplete="off" />
+                    <input className={`input mono${driverDeliveryPhone.trim() ? '' : ' am-later'}`} type="tel" inputMode="numeric" value={driverDeliveryPhone} onChange={(e) => setDriverDeliveryPhone(e.target.value)} placeholder="701234567" autoComplete="off" />
                   </div>
                 </label>
                 <label className="form-field am-f">
                   <span>{pt(locale, 'p7_m_tractor')}</span>
-                  <input className={`input mono${tractorDeliveryPlate.trim() ? '' : ' am-need'}`} value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
+                  <input className={`input mono${tractorDeliveryPlate.trim() ? '' : ' am-later'}`} value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
                 </label>
               </div>
             </fieldset>
@@ -318,6 +335,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 }
               }}
           />
+          <small className="am-hint" data-awiz-track-later>{pt(locale, 'p7_m_track_later')}</small>
 
           <div className="am-2">
             <label className="form-field am-f">
@@ -339,7 +357,17 @@ export function AwizacjaModal({ load, onClose }: Props) {
                       {o.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(o.status, locale)}` : ''}
                     </option>
                   ))}
+                  {historyOptions.length ? (
+                    <optgroup label={pt(locale, 'p7_m_sailing_hist')} data-awiz-sailing-hist>
+                      {historyOptions.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
                 </select>
+                <small className="am-hint" data-awiz-sailing-later>{pt(locale, 'p7_m_sailing_later')}</small>
               </label>
             )}
           </div>
@@ -348,7 +376,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <div className="am-2">
               <label className="form-field am-f">
                 <span>{pt(locale, 'p7_m_scx_no')}</span>
-                {orderSide === 'CARRIER' ? (
+                {carrierEdit ? (
                   <input className={`input mono${carrierOrder.trim() ? '' : ' am-need'}`} value={carrierOrder} onChange={(e) => setCarrierOrder(e.target.value)} autoComplete="off" />
                 ) : (
                   <span className="am-ro mono">{load.carrierOrderNo || '—'}</span>

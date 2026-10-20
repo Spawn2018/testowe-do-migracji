@@ -15,6 +15,8 @@ import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
 import { rioStartsLate, trackerBarRio } from '../../lib/p4c';
 import { trkSub } from '../../lib/trackingStateText';
+export { trackingNoLink } from '../../lib/trackerLink';
+import { trackingNoLink } from '../../lib/trackerLink';
 
 function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */
@@ -52,6 +54,18 @@ export function TrackingBar({
   const phase = trackingPhase(load, nowIso);
   const tracker = trackerText(load, locale, trackingLink, nowIso);
   const trailer = (load.resources.trailerPlate ?? '').trim();
+
+  if ((phase === 'before' || phase === 'on') && trackingNoLink(load, trackingLink)) {
+    return (
+      <div className="trk nolink" data-tracking-bar="nolink">
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{t(locale, 'p4b_trk_nolink')}</b>
+          <span>{t(locale, 'p4b_trk_nolink_sub')}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === 'before') {
     const sub = [

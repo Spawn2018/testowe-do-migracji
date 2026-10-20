@@ -61,7 +61,7 @@ val "brak GPS: flaga ostrożna" \
   "select (flags::text like '%ostrożne%')::text from h4_driver_state_from_gps('$L1', now())" "true"
 
 # compute_load_eta H-4 na odcinku SE ze świeżą pozycją (po wyjeździe z placu)
-sys "update loads set hhl_order_no='HHL-H4-1', status='IN_TRANSIT_SE' where id='$L1'" >/dev/null
+sys "update loads set hhl_order_no='HHL-H4-1', status='IN_TRANSIT_SE', plan_load_date=current_date - 2, telematics_vehicle_id='TEL-H4-1' where id='$L1'" >/dev/null
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','GEOFENCE_EXIT', now()-interval '1 day', '{\"geofence_kind\":\"LOADING\"}')" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, source, raw) values ('$L1', now()-interval '5 minutes', st_setsrid(st_makepoint(18.0, 62.0), 4326), 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
 val "compute_load_eta: causes.h4=true" \
@@ -88,7 +88,7 @@ val "po przepięciu: flaga przepięcia w state" \
 
 # (a) brak historii odpoczynku → ostrożne, rest wstawiony, Wysoka niedostępna (conf>60)
 L2=33333333-0000-0000-0000-000000000002
-sys "update loads set hhl_order_no='HHL-H4-2', status='IN_TRANSIT_SE', trailer_swap=false, trailer_swap_at=null where id='$L2'" >/dev/null
+sys "update loads set hhl_order_no='HHL-H4-2', status='IN_TRANSIT_SE', plan_load_date=current_date - 2, telematics_vehicle_id='TEL-H4-2', trailer_swap=false, trailer_swap_at=null where id='$L2'" >/dev/null
 sys "delete from positions where load_id='$L2'" >/dev/null
 sys "delete from load_events where load_id='$L2'" >/dev/null
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L2','GEOFENCE_EXIT', now()-interval '1 day', '{\"geofence_kind\":\"LOADING\"}')" >/dev/null

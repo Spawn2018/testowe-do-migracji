@@ -140,7 +140,7 @@ export function LoadDrawer() {
 
   const canStatus = canChangeLoadStatus(role, accountRole(role));
   const delayMin = delayPillMinutes(load, delayMinutesVsPlan(load.etaBoden, load.plannedDeliverDate, load.planDates?.deliveryTo ?? load.awizacja?.unloadWindowEnd), PROD_BUILD);
-  const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : formatDelayPill(delayMin);
+  const delayPillText = delayMin === null ? t(locale, 'i2_delay_pill') : tp(locale, 'p4b_eta_delay', { d: formatDelayPill(delayMin) });
 
   /* E25: oś statusów raz na render — data dostawy i wjazd na plac do bloku ETA */
   const statusAxis = buildStatusAxis(load, axisEvents);
@@ -238,7 +238,7 @@ export function LoadDrawer() {
                   : <span className="wb-code" data-content>{label}</span>;
               })()}
               <StatusPill status={load.status} stage={load.stage} />
-              {load.delayed ? <span className="pill p-red">{delayPillText}</span> : null}
+              {load.delayed ? <span className="pill p-red" data-drawer-delay title={t(locale, 'p4b_eta_delay_tip')}>{delayPillText}</span> : null}
             </div>
             {!phone ? (
               <button type="button" className="iconbtn" aria-label={t(locale, 'close')} onClick={() => selectLoad(null)}>

@@ -10,7 +10,8 @@ import { p9m, p9mp } from '../src/i18n/p9c';
 
 const tx = (k: string, p?: Record<string, string | number>) => (k.startsWith('p9c_') ? (p ? p9mp('pl', k, p) : p9m('pl', k)) : (p ? p9ep('pl', k, p) : p9e('pl', k)));
 const base = { nowIso: '2026-10-07T20:00:00Z', prod: true, gpsReady: true, hasFix: false, tx, dt: () => '07.10.2026, 08:35' };
-const L = (x: Partial<Load>): Load => ({ id: 'x', status: 'PLANNED', stage: 'PREP', plannedLoadDate: '2026-10-08', ...x } as unknown as Load);
+/* link w transporcie — dopisek „bez linku” (decyzja 20.10 20:01) testuje w-sledzenie-link.test.ts */
+const L = (x: Partial<Load>): Load => ({ id: 'x', status: 'PLANNED', stage: 'PREP', plannedLoadDate: '2026-10-08', resources: { trackingRef: 'https://emtrack.eu/app/' }, ...x } as unknown as Load);
 
 describe('P9-f dopisek na mapie Przeglądu', () => {
   it('przed oknem śledzenia: brak pozycji, od kiedy śledzenie i brak linku (SG-15 z makiety E32)', () => {

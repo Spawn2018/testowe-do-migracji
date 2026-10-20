@@ -172,11 +172,15 @@ sys "select load_price_compute('$LF2', '2026-10-12')"
 M42L=$(Q "select fuel_applied_mult from load_cost where load_id='$LF1'")
 chk "F2 po zamknięciu: PROGNOZA = OSTATECZNY z tyg. 42" "$(Q "select fuel_status||'/'||fuel_applied_mult from load_cost where load_id='$LF2'")" "PROGNOZA/$M42L"
 
-# TELM 0188: podłączenie w trasie 05.10, plan załadunku 01.10 → actual pusty, tydzień paliwa 40, 1,14
+# TELM 0188 / D-1710 F7: ≤ AT_LOADING bez actual → null; faza z pozycji dopiero w trasie (pierwsze podłączenie).
 LTM=33333333-0000-0000-0000-0000000baf08
-sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$LTM','$P','$CAR','BAF/TM','2026-10-01')"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, plan_load_date, status, telematics_vehicle_id) values ('$LTM','$P','$CAR','BAF/TM','HHL/TM','SCX/TM','2026-10-01','READY','TEL-BAF-TM')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values ('$P','$LTM','SG-B5','DIMENSIONED',18.21,2.45,2.45,20.0)"
-chk "TELM: faza z pozycji SE przy podłączeniu" "$(Q "select telm_infer_phase_from_position('$LTM', 60.5, 17.2, '2026-10-05 13:21+02')")" "IN_TRANSIT_SE"
+chk "D-1710 TELM: READY bez fazy z pozycji" "$(Q "select coalesce(telm_infer_phase_from_position('$LTM', 60.5, 17.2, '2026-10-05 13:21+02'),'∅')")" "∅"
+sys "update loads set status='AT_LOADING' where id='$LTM'"
+chk "D-1710 TELM: AT_LOADING bez actual bez fazy" "$(Q "select coalesce(telm_infer_phase_from_position('$LTM', 60.5, 17.2, '2026-10-05 13:21+02'),'∅')")" "∅"
+sys "update loads set status='IN_TRANSIT_PL' where id='$LTM'"
+chk "TELM: faza z pozycji SE po podłączeniu w trasie" "$(Q "select telm_infer_phase_from_position('$LTM', 60.5, 17.2, '2026-10-05 13:21+02')")" "IN_TRANSIT_SE"
 chk "TELM: rzeczywisty załadunek pusty po podłączeniu" "$(Q "select coalesce(actual_load_at::text,'∅') from loads where id='$LTM'")" "∅"
 chk "TELM: faza zapisana osobno z adnotacją" "$(Q "select phase||'/'||note from telm_attach_phase where load_id='$LTM'")" "IN_TRANSIT_SE/faza z pozycji przy podłączeniu"
 chk "TELM: data paliwa = plan KSH 01.10 (tydz. 40)" "$(Q "select fuel_load_date('$LTM')")" "2026-10-01"

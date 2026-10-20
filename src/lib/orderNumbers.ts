@@ -51,6 +51,9 @@ const MSG = {
   NO_BACKWARD: dictEntry('a6_msg_no_backward'),
   UNLOADED_NEEDS_DATE: dictEntry('a6_msg_unloaded_needs_date'),
   SAILING_LOCKED: dictEntry('a6_msg_sailing_locked'),
+  SAILING_PAST: dictEntry('a6_msg_sailing_past'),
+  SAILING_CANCELLED: dictEntry('a6_msg_sailing_cancelled'),
+  SAILING_NOT_FOUND: dictEntry('a6_msg_sailing_not_found'),
   DUPLICATE: dictEntry('a6_msg_duplicate'),
 } satisfies Record<string, Msg>;
 
@@ -76,6 +79,10 @@ export function friendlyDbError(raw: string, locale: Locale = 'pl'): string {
   if (/Status nie mo\S* si\S* cofn/i.test(raw)) return m('NO_BACKWARD');
   if (/UNLOADED wymaga daty/i.test(raw)) return m('UNLOADED_NEEDS_DATE');
   if (/Zmiana rejsu po wyp\S+/i.test(raw)) return m('SAILING_LOCKED');
+  /* D-20261020-1501-01 / 0242: przypisanie rejsu (teksty z guard_load_update) */
+  if (/przypisuj\S* tylko rejs, kt\S+ jeszcze nie wyp/i.test(raw)) return m('SAILING_PAST');
+  if (/Rejs odwo\S+ .*nie mo\S+ przypisa/i.test(raw)) return m('SAILING_CANCELLED');
+  if (/Nie znaleziono rejsu/i.test(raw)) return m('SAILING_NOT_FOUND');
   if (/loads_(hhl|carrier)_order_no_uq/i.test(raw)) return m('DUPLICATE');
   return raw;
 }

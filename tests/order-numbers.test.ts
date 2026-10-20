@@ -5,6 +5,7 @@ import {
 } from '../src/lib/orderNumbers';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import { useTowerStore } from '../src/store/useTowerStore';
+import { setAuthProfile } from '../src/auth/profile';
 import { SCHED_COLS, loadSchedPrefs } from '../src/lib/scheduleColumns';
 import type { Load } from '../src/types';
 
@@ -85,15 +86,20 @@ describe('M5 — store: każda strona swój numer, GOTOWY bez numeru zablokowany
     expect(sg36().status).toBe(before);
     expect(useTowerStore.getState().toasts[0]?.message).toMatch(/brak numeru zlecenia HHL/);
   });
-  it('HHL wpisuje swój numer → ryzyko znika; numeru przewoźnika nie zmieni', () => {
+  it('HHL wpisuje swój numer → ryzyko znika; numer przewoźnika: Administrator HHL tak, Operacje HHL nie (D-20261020-1501-01)', () => {
     const st = useTowerStore.getState();
     st.setOrderNo(sg36().id, 'HHL', null);
     expect(useTowerStore.getState().setOrderNo(sg36().id, 'HHL', ' HHL/2026/1310 ')).toBe(true);
     expect(sg36().hhlOrderNo).toBe('HHL/2026/1310');
     expect(useTowerStore.getState().risks.some((r) => r.id === `risk-orderno-hhl-${sg36().id}`)).toBe(false);
     const prev = sg36().carrierOrderNo;
+    setAuthProfile({ user_id: 'u1', email: 'x@example.com', full_name: 'Test', role: 'HHL_OPS' as never, org_code: 'HHL', org_name: 'H&H Logistics', locale: 'pl', active: true });
     expect(useTowerStore.getState().setOrderNo(sg36().id, 'CARRIER', 'X')).toBe(false);
     expect(sg36().carrierOrderNo).toBe(prev);
+    setAuthProfile(null);
+    expect(useTowerStore.getState().setOrderNo(sg36().id, 'CARRIER', 'SCX-26-0001')).toBe(true);
+    expect(sg36().carrierOrderNo).toBe('SCX-26-0001');
+    useTowerStore.getState().setOrderNo(sg36().id, 'CARRIER', prev ?? null);
   });
   it('SCX nie zmieni numeru HHL; KSH żadnego', () => {
     useTowerStore.setState({ role: 'SCX' });
