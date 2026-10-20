@@ -40,4 +40,16 @@ describe('W-eta-czas — format czasu ETA', () => {
     expect(se?.distanceTo).toBe('SITE');
     expect(tp('pl', 'p4b_eta_km', { km: 812 })).toBe('812 km do placu');
   });
+  it('segment z bazy ma pierwszeństwo przed statusem (ETA sprzed zmiany statusu)', () => {
+    const stale = etaDetailFromBasis({ segment: 'IN_TRANSIT_PL', causes: { remaining_km: 40 } } as never, 'IN_TRANSIT_SE');
+    expect(stale?.distanceTo).toBe('PORT');
+    const noSeg = etaDetailFromBasis({ causes: { remaining_km: 300 } } as never, 'IN_TRANSIT_SE');
+    expect(noSeg?.distanceTo).toBe('SITE');
+  });
+  it('opóźnienie Trafikverket i alternatywa SE bez surowych minut', () => {
+    expect(tp('pl', 'rk_seed_tv', { title: 'E4 Umeå', min: etaDuration(210) })).toBe('E4 Umeå · +3 h 30 min');
+    const src = readFileSync('src/store/useTowerStore.ts', 'utf8');
+    expect(src).not.toContain('+${situation.delayMin} min');
+    expect(src).not.toContain('+${alt.delayMin} min');
+  });
 });

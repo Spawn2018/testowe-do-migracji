@@ -16,7 +16,7 @@ const pl: Dict = {
   rk_generic: '{title}',
   rk_seed_sail_cancel: '{code}: rejs {vessel} {dep} odwołany — transport wymaga nowego rejsu',
   rk_seed_tv_fm: 'Siła wyższa — {title} · +{h} h',
-  rk_seed_tv: '{title} · +{min} min',
+  rk_seed_tv: '{title} · +{min}',
   rk_seed_tv_meta: 'Odpowiada: H&H Logistics · Trafikverket · {kind}',
   rk_planb_meta: 'Plan B aktywny: {option}',
   rk_alt_se_meta: 'Alternatywa SE: {title}',

@@ -82,6 +82,7 @@ import { isReadyBlocked } from '../lib/permits';
 import { currentActorLabel } from '../lib/historyActor';
 import { formatPlMoney } from '../lib/format';
 import { hhlAdminDates } from '../lib/adminDates';
+import { etaDuration } from '../lib/etaDuration';
 
 export type ViewKey = NK;
 
@@ -1812,13 +1813,13 @@ export const useTowerStore = create<TowerState>()(
           title:
             type === 'FORCE_MAJEURE'
               ? `Siła wyższa — ${situation.title} · +${hours} h`
-              : `${situation.title} · +${situation.delayMin} min`,
+              : `${situation.title} · +${etaDuration(situation.delayMin)}`,
           detail: situation.detail,
           loadId: targetLoadId,
           owner: 'HHL' as const,
           meta: `Odpowiada: H&H Logistics · Trafikverket · ${situation.kind}`,
           titleKey: type === 'FORCE_MAJEURE' ? 'rk_seed_tv_fm' : 'rk_seed_tv',
-          titleParams: type === 'FORCE_MAJEURE' ? { title: situation.title, h: hours } : { title: situation.title, min: situation.delayMin },
+          titleParams: type === 'FORCE_MAJEURE' ? { title: situation.title, h: hours } : { title: situation.title, min: etaDuration(situation.delayMin) },
           metaKey: 'rk_seed_tv_meta',
           metaParams: { kind: situation.kind },
           nextAction: type === 'FORCE_MAJEURE' ? 'Wymaga decyzji — hold / objazd' : 'Śledź checkpoint',
@@ -1978,7 +1979,7 @@ export const useTowerStore = create<TowerState>()(
         });
         get().pushNotification({
           title: 'Alternatywa SE',
-          body: `${alt.title} · +${alt.delayMin} min`,
+          body: `${alt.title} · +${etaDuration(alt.delayMin)}`,
           severity: 'MEDIUM',
           loadId,
           roleScope: ['SCX', 'HHL'],

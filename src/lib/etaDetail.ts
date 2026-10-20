@@ -49,7 +49,10 @@ export function etaDetailFromBasis(
     detail.distanceKm = Math.round(Number(causes.remaining_km));
     /* W-eta-czas (20.10, SG-17): baza liczy remaining_km po korytarzu bieżącego odcinka —
        na odcinku PL to km do portu wypłynięcia, nie do placu w Boden. */
-    detail.distanceTo = /SE|SITE|NYNASHAMN|KARLSKRONA/.test(segment) || ['AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE'].includes(status) ? 'SITE' : 'PORT';
+    /* segment z bazy = status z chwili liczenia ETA; status frontu tylko gdy segmentu brak */
+    const seSegments = ['AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE'];
+    const seStatuses: LoadStatus[] = ['AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE'];
+    detail.distanceTo = (segment ? seSegments.includes(segment) || segment.startsWith('SE_') : seStatuses.includes(status)) ? 'SITE' : 'PORT';
   }
   if (causes?.drive_h != null && Number.isFinite(Number(causes.drive_h))) {
     detail.driveMin = Math.round(Number(causes.drive_h) * 60);
