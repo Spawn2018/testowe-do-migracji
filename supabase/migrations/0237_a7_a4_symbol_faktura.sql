@@ -229,13 +229,22 @@ begin
   ) into v_old
     from public.loads l where l.id = p_load;
 
+  /* Zamknięte statusy: nie nadpisuj combo_* / escort (F7 D / P9). */
   update public.loads l
      set symbol = v_spec.symbol,
          permit_kind = v_spec.permit_kind,
-         combo_length_m = v_spec.combo_length_m,
-         combo_width_m = v_spec.combo_width_m,
-         combo_height_m = v_spec.combo_height_m,
-         escort_vehicles = v_escorts
+         combo_length_m = case
+           when l.status::text in ('DELIVERED','READY_TO_INVOICE','INVOICED','CANCELLED')
+             then l.combo_length_m else v_spec.combo_length_m end,
+         combo_width_m = case
+           when l.status::text in ('DELIVERED','READY_TO_INVOICE','INVOICED','CANCELLED')
+             then l.combo_width_m else v_spec.combo_width_m end,
+         combo_height_m = case
+           when l.status::text in ('DELIVERED','READY_TO_INVOICE','INVOICED','CANCELLED')
+             then l.combo_height_m else v_spec.combo_height_m end,
+         escort_vehicles = case
+           when l.status::text in ('DELIVERED','READY_TO_INVOICE','INVOICED','CANCELLED')
+             then l.escort_vehicles else v_escorts end
    where l.id = p_load;
 
   insert into public.audit_log (user_id, action, entity, entity_id, old_value, new_value)
@@ -249,14 +258,14 @@ begin
     )
   );
 
-  /* Firma: podepnij zezwolenie firmowe w okresie ważności. */
+  /* Firma: podepnij zezwolenie firmowe (13/GD/2026) w okresie ważności. */
   if v_spec.permit_kind = 'FIRMA' then
     insert into public.load_permits (load_id, permit_id)
     select p_load, p.id
       from public.permits p
       join public.loads l on l.id = p_load
      where p.scope = 'FIRMA'
-       and p.project_id = l.project_id
+       and p.permit_no = '13/GD/2026'
        and coalesce(l.plan_load_date, (now() at time zone 'Europe/Warsaw')::date)
            between p.valid_from and p.valid_until
     on conflict do nothing;
@@ -267,6 +276,52 @@ end $$;
 
 revoke all on function public.a7_apply_symbol(uuid, text) from public, anon;
 grant execute on function public.a7_apply_symbol(uuid, text) to authenticated;
+
+/* Import: po pozycji ładunku (symbol z shipment_code) — F7 P9. */
+create or replace function public.trg_shipment_items_a7_symbol()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform set_config('tower.bulk_quiet', 'on', true);
+  perform public.a7_apply_symbol(new.load_id, 'A7 przy imporcie / pozycja ładunku');
+  return new;
+end $$;
+
+drop trigger if exists trg_shipment_items_a7_symbol on public.shipment_items;
+create trigger trg_shipment_items_a7_symbol
+  after insert or update of shipment_code, load_id on public.shipment_items
+  for each row execute function public.trg_shipment_items_a7_symbol();
+
+revoke all on function public.trg_shipment_items_a7_symbol() from public, anon, authenticated;
+
+/* Polisa SCX: bez widoczności KSH (F7 P9). */
+create or replace function public.trg_documents_insurance_visibility()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.category = 'INSURANCE' then
+    new.visible_to := array['FORWARDER', 'CARRIER']::org_kind[];
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_documents_insurance_visibility on public.documents;
+create trigger trg_documents_insurance_visibility
+  before insert or update of category, visible_to on public.documents
+  for each row execute function public.trg_documents_insurance_visibility();
+
+update public.documents
+   set visible_to = array['FORWARDER', 'CARRIER']::org_kind[]
+ where category = 'INSURANCE'
+   and 'CLIENT'::org_kind = any (visible_to);
+
+revoke all on function public.trg_documents_insurance_visibility() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- 4. Seed PERMIT_SE z powrotem (tylko Trasa w statusie); filtr statusu
@@ -447,7 +502,8 @@ begin
   end if;
 
   v_kind := coalesce(l.permit_kind, (public.symbol_spec_of(l.id)).permit_kind, 'FIRMA');
-  if public.permit_required_enabled() is true then
+  if public.permit_required_enabled() is true
+     and public.load_needs_permit(l.id) is true then
     if v_kind = 'TRASA' then
       v_permit_missing := exists (
         select 1 from unnest(array['PL', 'SE']) c
@@ -528,9 +584,11 @@ begin
     end if;
   end if;
 
-  for v_project in select id from public.projects order by created_at nulls last, id loop
+  /* Jedno zezwolenie firmowe — pierwszy projekt (F7 D: permits ≠ 1 przy wielu projektach). */
+  select id into v_project from public.projects order by created_at nulls last, id limit 1;
+  if v_project is not null then
     select id into v_permit from public.permits
-     where permit_no = '13/GD/2026' and scope = 'FIRMA' and project_id = v_project
+     where permit_no = '13/GD/2026' and scope = 'FIRMA'
      limit 1;
     if v_permit is null then
       insert into public.permits (
@@ -549,7 +607,7 @@ begin
                 'project_id', v_project,
                 'note', 'wpis jednorazowy — decyzja właściciela 16.10.2026, 01:13'));
     end if;
-  end loop;
+  end if;
 
   perform set_config('tower.bulk_quiet', 'on', true);
   select count(*)::int into v_n
@@ -666,7 +724,7 @@ grant execute on function public.a7_policies_list() to authenticated;
 
 alter type risk_kind add value if not exists 'INVOICE_OVERDUE';
 
--- Macierz: faktura po terminie (tylko HHL) — kolumny jak C3 (0222): in_app/push/fixed_*/label_pl
+-- Macierz: faktura po terminie + edycja (inv_updated / inv_corrected) — kolumny C3
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
   fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
@@ -675,7 +733,17 @@ insert into public.notification_matrix (
   ('inv_overdue','MONEY','HHL_OPS',true,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
   ('inv_overdue','MONEY','CLIENT_USER',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
   ('inv_overdue','MONEY','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
-  ('inv_overdue','MONEY','CARRIER_USER',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie')
+  ('inv_overdue','MONEY','CARRIER_USER',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
+  ('inv_updated','MONEY','HHL_ADMIN',true,true,false,false,false,false,false,'Faktura zmieniona przez wystawcę'),
+  ('inv_updated','MONEY','HHL_OPS',true,false,false,false,false,false,false,'Faktura zmieniona przez wystawcę'),
+  ('inv_updated','MONEY','CLIENT_USER',true,true,false,false,false,false,false,'Faktura zmieniona przez wystawcę'),
+  ('inv_updated','MONEY','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Faktura zmieniona przez wystawcę'),
+  ('inv_updated','MONEY','CARRIER_USER',false,false,false,false,false,false,false,'Faktura zmieniona przez wystawcę'),
+  ('inv_corrected','MONEY','HHL_ADMIN',true,true,false,false,false,false,false,'Faktura poprawiona przez Administratora HHL'),
+  ('inv_corrected','MONEY','HHL_OPS',true,false,false,false,false,false,false,'Faktura poprawiona przez Administratora HHL'),
+  ('inv_corrected','MONEY','CLIENT_USER',true,true,false,false,false,false,false,'Faktura poprawiona przez Administratora HHL'),
+  ('inv_corrected','MONEY','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Faktura poprawiona przez Administratora HHL'),
+  ('inv_corrected','MONEY','CARRIER_USER',false,false,false,false,false,false,false,'Faktura poprawiona przez Administratora HHL')
 on conflict (event_key, role) do update set
   in_app = excluded.in_app,
   email = excluded.email,
@@ -728,7 +796,9 @@ as $$
     when p_template = 'APP_ERROR' then 'app_err'
     when p_template in ('SMS_GATEWAY_SILENT', 'SMS_UNDELIVERED', 'SMS_FALLBACK', 'ZONE_LIMIT') then 'sms_gw'
     when p_template in ('DAILY_DIGEST', 'ADMIN_DIGEST') then 'daily'
-    when p_template in ('INVOICE_NEW', 'INVOICE_UPDATED', 'INVOICE_CORRECTED') then 'inv_check'
+    when p_template = 'INVOICE_NEW' then 'inv_check'
+    when p_template = 'INVOICE_UPDATED' then 'inv_updated'
+    when p_template = 'INVOICE_CORRECTED' then 'inv_corrected'
     when p_template in ('INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED') then 'inv_dispute'
     when p_template = 'INVOICE_OVERDUE' then 'inv_overdue'
     when p_template in ('WEEK_CLOSED', 'INVOICE_WEEK') then 'week'
@@ -1000,6 +1070,7 @@ declare
     or new.paid_marked_at is distinct from old.paid_marked_at;
   v_accepted boolean := (old.verification_status = 'ZAAKCEPTOWANA');
   v_can_edit boolean := false;
+  v_edit_ctx boolean := (current_setting('tower.invoice_edit', true) = 'on');
 begin
   if new.verification_status = 'SPORNA'
      and (new.dispute_note is null or btrim(new.dispute_note) = '') then
@@ -1014,6 +1085,10 @@ begin
   end if;
 
   if issuer_changed then
+    /* Treść tylko przez update_invoice (F7 P7). */
+    if v_edit_ctx is not true then
+      raise exception 'Treść faktury zmieniasz przez Edytuj fakturę' using errcode = '42501';
+    end if;
     if v_kind = 'CLIENT' then
       raise exception 'KSH nie zmienia faktur — może je zaakceptować albo zgłosić spór'
         using errcode = '42501';
@@ -1024,12 +1099,9 @@ begin
           using errcode = '42501';
       end if;
     else
-      -- przed akceptacją: wystawca albo HHL_ADMIN; HHL_OPS tylko własne HHL→KSH
       if org = old.issuer_org_id then
         v_can_edit := true;
       elsif v_role = 'HHL_ADMIN' then
-        v_can_edit := true;
-      elsif v_role = 'HHL_OPS' and old.direction = 'PRZYCHOD' and org = old.issuer_org_id then
         v_can_edit := true;
       end if;
       if v_can_edit is not true then
@@ -1037,22 +1109,28 @@ begin
           raise exception 'Fakturę przewoźnika zmienia przewoźnik albo Administrator HHL'
             using errcode = '42501';
         end if;
-        raise exception 'Fakturę zaakceptowaną zmienia tylko Administrator HHL'
-          using errcode = '42501';
+        raise exception 'Nie masz uprawnień do zmiany tej faktury' using errcode = '42501';
       end if;
     end if;
   end if;
 
   if verifier_changed then
+    /* Wystawca: tylko powrót do DO_WERYFIKACJI z update_invoice (F7 B3). */
     if org = old.issuer_org_id then
-      raise exception 'Wystawca nie weryfikuje własnej faktury — spór klienta rozstrzyga rozmowa, nie przycisk wystawcy';
-    end if;
-    if (org = old.recipient_org_id or is_hhl()) is not true then
+      if v_edit_ctx is true
+         and new.verification_status = 'DO_WERYFIKACJI'
+         and old.verification_status in ('SPORNA', 'ZGODNA', 'DO_WERYFIKACJI') then
+        null;
+      else
+        raise exception 'Wystawca nie weryfikuje własnej faktury — spór klienta rozstrzyga rozmowa, nie przycisk wystawcy';
+      end if;
+    elsif (org = old.recipient_org_id or is_hhl()) is not true then
       raise exception 'Weryfikację robi odbiorca faktury' using errcode = '42501';
     end if;
   end if;
 
-  if org = old.recipient_org_id and issuer_changed then
+  /* Odbiorca nie zmienia treści — wyjątek: HHL_ADMIN na fakturze SCX (F7 B2). */
+  if org = old.recipient_org_id and issuer_changed and (v_role = 'HHL_ADMIN') is not true then
     raise exception 'Odbiorca faktury może ją weryfikować, nie zmieniać jej treści';
   end if;
 
@@ -1155,6 +1233,7 @@ begin
     select l.id, l.project_id, l.carrier_org_id, l.actual_delivery_at, l.status, l.order_no,
            coalesce((select min(si.shipment_code) from shipment_items si where si.load_id = l.id), l.order_no) as code,
            (case v_dir when 'KOSZT' then c.computed_total_eur else r.computed_total_eur end) as computed_eur,
+           (case v_dir when 'KOSZT' then c.baf_amount else r.baf_amount end) as baf_eur,
            (case v_dir when 'KOSZT' then c.fx_table_no else r.fx_table_no end) as snap_no,
            (case v_dir when 'KOSZT' then c.fx_rate_pln else r.fx_rate_pln end) as snap_mid,
            (case v_dir when 'KOSZT' then c.fx_effective_date else r.fx_effective_date end) as snap_date
@@ -1215,11 +1294,16 @@ begin
         v_flags := array_append(v_flags, 'KWOTA');
       end if;
     end if;
-    if v_fuel is not null and v_load.computed_eur is not null then
-      /* opłata paliwowa: flaga gdy różnica ≥ 0,01 wobec podanej w linii (kontrola aplikacji) */
-      null;
+    if v_fuel is not null and v_load.baf_eur is not null then
+      v_eur := case v_cur
+        when 'EUR' then round(v_load.baf_eur, 2)
+        else case when v_rule_mid is not null then round(v_load.baf_eur * v_rule_mid, 2) end
+      end;
+      if v_eur is not null and abs(v_fuel - v_eur) >= 0.01 then
+        v_flags := array_append(v_flags, 'OPLATA_PALIWOWA');
+      end if;
     end if;
-    if coalesce((ln->'flags') ? 'OPLATA_PALIWOWA', false) then
+    if coalesce((ln->'flags') ? 'OPLATA_PALIWOWA', false) and not ('OPLATA_PALIWOWA' = any (v_flags)) then
       v_flags := array_append(v_flags, 'OPLATA_PALIWOWA');
     end if;
     if coalesce((ln->'flags') ? 'KWOTA', false) and not ('KWOTA' = any (v_flags)) then
@@ -1320,7 +1404,6 @@ declare
   v_accepted boolean;
   v_is_issuer boolean;
   v_is_admin boolean := (v_role = 'HHL_ADMIN');
-  v_actor_issuer boolean;
   v_old jsonb;
   v_new jsonb;
   v_net_sum numeric := 0;
@@ -1378,21 +1461,17 @@ begin
     if v_is_issuer then
       null; -- SCX swoją / HHL swoją (także HHL_OPS na PRZYCHOD)
     elsif v_is_admin then
-      null; -- HHL_ADMIN na fakturze SCX
+      null; -- HHL_ADMIN na fakturze SCX (także jako odbiorca)
     else
       if inv.direction = 'KOSZT' then
         raise exception 'Fakturę przewoźnika zmienia przewoźnik albo Administrator HHL'
           using errcode = '42501';
       end if;
-      raise exception 'Fakturę zaakceptowaną zmienia tylko Administrator HHL'
-        using errcode = '42501';
+      raise exception 'Nie masz uprawnień do zmiany tej faktury' using errcode = '42501';
     end if;
   end if;
 
-  v_actor_issuer := v_is_issuer and not (v_is_admin and inv.direction = 'KOSZT' and not v_is_issuer);
-  if v_is_admin and inv.direction = 'KOSZT' and not v_is_issuer then
-    v_actor_issuer := false;
-  end if;
+  perform set_config('tower.invoice_edit', 'on', true);
 
   select coalesce(nullif(btrim(u.full_name), ''), split_part(u.email::text, '@', 1), '—')
          || ' // ' || coalesce(nullif(btrim(o.name), ''), nullif(btrim(o.code), ''), '—')
@@ -1486,13 +1565,22 @@ begin
   where id = p_invoice;
 
   if p_lines is not null then
+    /* Stare pozycje w audycie (F7 P8). */
+    v_old := v_old || jsonb_build_object(
+      'lines', coalesce((
+        select jsonb_agg(to_jsonb(il) - 'invoice_id' order by il.load_id)
+          from invoice_lines il where il.invoice_id = p_invoice
+      ), '[]'::jsonb)
+    );
     delete from invoice_lines where invoice_id = p_invoice;
-    delete from invoice_documents where invoice_id = p_invoice and role in ('CMR', 'POD');
+    delete from invoice_documents where invoice_id = p_invoice and role = 'CMR';
+    /* POD zostaje (F7 P8). */
 
     for ln in select * from jsonb_array_elements(p_lines) loop
       select l.id, l.project_id, l.carrier_org_id, l.actual_delivery_at, l.status, l.order_no,
              coalesce((select min(si.shipment_code) from shipment_items si where si.load_id = l.id), l.order_no) as code,
              (case inv.direction when 'KOSZT' then c.computed_total_eur else r.computed_total_eur end) as computed_eur,
+             (case inv.direction when 'KOSZT' then c.baf_amount else r.baf_amount end) as baf_eur,
              (case inv.direction when 'KOSZT' then c.fx_table_no else r.fx_table_no end) as snap_no,
              (case inv.direction when 'KOSZT' then c.fx_rate_pln else r.fx_rate_pln end) as snap_mid,
              (case inv.direction when 'KOSZT' then c.fx_effective_date else r.fx_effective_date end) as snap_date
@@ -1507,12 +1595,31 @@ begin
       if inv.direction = 'KOSZT' and v_load.carrier_org_id is distinct from inv.issuer_org_id then
         raise exception 'Pozycja: transport innego przewoźnika' using errcode = '42501';
       end if;
-      if (v_load.status in ('READY_TO_INVOICE', 'INVOICED')) is not true then
-        raise exception 'Transport % czeka na CMR', coalesce(v_load.code, v_load.order_no, v_load.id::text);
-      end if;
-      v_cmr := public.c17_cmr_after_delivery(v_load.id);
-      if v_cmr is null then
-        raise exception 'Transport % czeka na CMR', coalesce(v_load.code, v_load.order_no, v_load.id::text);
+      /* Pozycja bez zmian (load_id + netto + paliwo) — bez ponownego CMR/stanu (F7 P8). */
+      if (v_load.id = any (v_old_loads)) is true
+         and exists (
+           select 1 from jsonb_array_elements(coalesce(v_old->'lines', '[]'::jsonb)) o(x)
+            where (o.x->>'load_id')::uuid = v_load.id
+              and abs(coalesce((o.x->>'invoiced_net')::numeric, 0)
+                    - coalesce((ln->>'invoiced_net')::numeric, 0)) < 0.005
+              and coalesce((o.x->>'invoiced_fuel')::numeric, -1)
+                  is not distinct from coalesce(nullif(ln->>'invoiced_fuel', '')::numeric, -1)
+         ) then
+        v_cmr := public.c17_cmr_after_delivery(v_load.id);
+        if v_cmr is null then
+          select d.id into v_cmr from documents d
+           where d.load_id = v_load.id and d.category = 'CMR'
+             and d.superseded_at is null and d.purged_at is null
+           order by d.uploaded_at desc nulls last limit 1;
+        end if;
+      else
+        if (v_load.status in ('READY_TO_INVOICE', 'INVOICED')) is not true then
+          raise exception 'Transport % czeka na CMR', coalesce(v_load.code, v_load.order_no, v_load.id::text);
+        end if;
+        v_cmr := public.c17_cmr_after_delivery(v_load.id);
+        if v_cmr is null then
+          raise exception 'Transport % czeka na CMR', coalesce(v_load.code, v_load.order_no, v_load.id::text);
+        end if;
       end if;
 
       v_flags := '{}';
@@ -1553,7 +1660,16 @@ begin
           v_flags := array_append(v_flags, 'KWOTA');
         end if;
       end if;
-      if coalesce((ln->'flags') ? 'OPLATA_PALIWOWA', false) then
+      if v_fuel is not null and v_load.baf_eur is not null then
+        v_eur := case v_cur
+          when 'EUR' then round(v_load.baf_eur, 2)
+          else case when v_rule_mid is not null then round(v_load.baf_eur * v_rule_mid, 2) end
+        end;
+        if v_eur is not null and abs(v_fuel - v_eur) >= 0.01 then
+          v_flags := array_append(v_flags, 'OPLATA_PALIWOWA');
+        end if;
+      end if;
+      if coalesce((ln->'flags') ? 'OPLATA_PALIWOWA', false) and not ('OPLATA_PALIWOWA' = any (v_flags)) then
         v_flags := array_append(v_flags, 'OPLATA_PALIWOWA');
       end if;
 
@@ -1578,8 +1694,10 @@ begin
         end if;
       end if;
 
-      insert into invoice_documents (invoice_id, document_id, role)
-      values (p_invoice, v_cmr, 'CMR') on conflict do nothing;
+      if v_cmr is not null then
+        insert into invoice_documents (invoice_id, document_id, role)
+        values (p_invoice, v_cmr, 'CMR') on conflict do nothing;
+      end if;
     end loop;
 
     select coalesce(array_agg(load_id), '{}') into v_new_loads
@@ -1593,11 +1711,22 @@ begin
           update load_revenue set invoiced_total_eur = null where load_id = v_lid;
         end if;
         perform public.c17_try_billing_status(v_lid, '{}'::jsonb);
-        /* usunięty z faktury → wraca do READY_TO_INVOICE gdy CMR jest */
+        /* usunięty → READY_TO_INVOICE ze ścieżką statusu + load_events (F7 P8) */
         if exists (select 1 from loads l where l.id = v_lid and l.status = 'INVOICED')
            and public.c17_invoice_pair_ok(v_lid) is null then
           perform set_config('tower.status_ctx', 'on', true);
-          update loads set status = 'READY_TO_INVOICE', updated_at = now() where id = v_lid and status = 'INVOICED';
+          update loads set status = 'READY_TO_INVOICE', updated_at = now()
+           where id = v_lid and status = 'INVOICED';
+          insert into load_events (load_id, event_type, occurred_at, source, payload, dedup_key)
+          values (
+            v_lid, 'STATUS_AUTO', now(), 'SYSTEM',
+            jsonb_build_object(
+              'from', 'INVOICED', 'to', 'READY_TO_INVOICE',
+              'powod', 'usunięcie z faktury', 'actor', v_actor, 'source', 'INVOICE_EDIT'
+            ),
+            'STATUS_AUTO:' || v_lid || ':READY_TO_INVOICE:' || p_invoice::text
+          )
+          on conflict (dedup_key) where dedup_key is not null do nothing;
         end if;
       end if;
     end loop;
@@ -1624,12 +1753,10 @@ begin
     v_new || jsonb_build_object('note', v_note, 'actor', v_actor)
   );
 
-  if v_accepted then
+  /* P5: INVOICE_CORRECTED do drugiej strony; HHL_ADMIN na KOSZT → wystawca SCX. */
+  if v_accepted or (v_is_admin and v_is_issuer is not true) then
     v_tpl := 'INVOICE_CORRECTED';
-    v_notify_org := inv.recipient_org_id;
-  elsif v_is_admin and not v_is_issuer then
-    v_tpl := 'INVOICE_CORRECTED';
-    v_notify_org := inv.issuer_org_id;
+    v_notify_org := case when v_is_issuer then inv.recipient_org_id else inv.issuer_org_id end;
   elsif v_is_issuer then
     v_tpl := 'INVOICE_UPDATED';
     v_notify_org := inv.recipient_org_id;
@@ -1638,24 +1765,26 @@ begin
     v_notify_org := inv.issuer_org_id;
   end if;
 
-  insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
-  select ch, coalesce(u.email::text, u.id::text), u.id, v_tpl,
-         jsonb_build_object(
-           'invoice_id', inv.id,
-           'number', inv.invoice_number,
-           'week', inv.week_key,
-           'amount', inv.gross_total,
-           'currency', inv.currency,
-           'due', inv.due_date,
-           'firm', split_part(v_actor, ' // ', 2),
-           'note', v_note,
-           'locale', u.locale
-         ),
-         v_tpl || ':' || inv.id || ':' || u.id || ':' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISSMS') || ':' || ch
-    from app_users u
-    cross join lateral (values ('IN_APP'), ('EMAIL')) as c(ch)
-   where u.org_id = v_notify_org and u.active
-  on conflict (dedup_key) where dedup_key is not null do nothing;
+  /* P6: macierz inv_updated / inv_corrected + matrix_notify (load z pozycji zawęża CARRIER). */
+  select load_id into v_lid from invoice_lines where invoice_id = p_invoice order by load_id limit 1;
+  perform public.matrix_notify(
+    'MONEY',
+    v_tpl,
+    v_lid,
+    inv.project_id,
+    jsonb_build_object(
+      'invoice_id', inv.id,
+      'number', inv.invoice_number,
+      'week', inv.week_key,
+      'amount', inv.gross_total,
+      'currency', inv.currency,
+      'due', inv.due_date,
+      'firm', split_part(v_actor, ' // ', 2),
+      'note', v_note
+    ),
+    v_tpl || ':' || inv.id || ':' || to_char(clock_timestamp(), 'YYYYMMDDHH24MISSMS'),
+    (select o.kind::text from organizations o where o.id = v_notify_org)
+  );
 
   return jsonb_build_object('id', inv.id, 'verification_status', inv.verification_status,
                             'net_total', inv.net_total, 'vat_total', inv.vat_total, 'gross_total', inv.gross_total);

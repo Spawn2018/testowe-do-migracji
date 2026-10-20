@@ -169,10 +169,31 @@ val "Q13: KSH dostał powiadomienie o nowej fakturze HHL"          $KSH "select 
 val "KSH w module faktur: PDF + CMR"                              $KSH "select string_agg(distinct role, ',' order by role) from invoice_documents x join invoices i on i.id=x.invoice_id where i.invoice_number='HHL/FV/39/1'" "CMR,FAKTURA_PDF"
 err "KSH: SPORNA bez uzasadnienia — odrzucone"                    $KSH "update invoices set verification_status='SPORNA' where invoice_number='HHL/FV/39/1'" "wymaga uzasadnienia"
 val "KSH: SPORNA z uzasadnieniem"                                 $KSH "update invoices set verification_status='SPORNA', dispute_note='kurs pozycji 2' where invoice_number='HHL/FV/39/1' returning verification_status" SPORNA
-err "KSH nie zmieni treści faktury"                               $KSH "update invoices set net_total=1 where invoice_number='HHL/FV/39/1'" "nie zmienia|KSH nie"
+err "KSH nie zmieni treści faktury (UPDATE bezpośredni)"         $KSH "update invoices set net_total=1 where invoice_number='HHL/FV/39/1'" "Edytuj fakturę|KSH nie"
+err "Treść faktury tylko przez update_invoice (nie REST)"         $SCX "update invoices set vat_total=0 where invoice_number='SCX/FV/39/1'" "Edytuj fakturę"
 err "HHL (wystawca) nie zmieni statusu sporu KSH (Q14)"           $HHL "update invoices set verification_status='ZGODNA' where invoice_number='HHL/FV/39/1'" "Wystawca nie weryfikuje"
 err "SCX nie weryfikuje własnej faktury"                          $SCX "update invoices set verification_status='ZGODNA' where invoice_number='SCX/FV/39/1'" "Wystawca nie weryfikuje"
-val "HHL weryfikuje fakturę SCX: ZGODNA"                          $HHL "update invoices set verification_status='ZGODNA' where invoice_number='SCX/FV/39/1' returning verification_status" ZGODNA
+
+echo; echo "[A4 / D-0115] update_invoice — role i stany (#346 / F7 B4)"
+INV_SCX="(select id from invoices where invoice_number='SCX/FV/39/1')"
+INV_HHL="(select id from invoices where invoice_number='HHL/FV/39/1')"
+DOC_SCX="(select document_id from invoices where invoice_number='SCX/FV/39/1')"
+PATCH_SCX="(select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'due_date_from_document',due_date_from_document,'document_id',document_id,'net_total',net_total,'vat_total',vat_total,'gross_total',gross_total) from invoices where invoice_number='SCX/FV/39/1')"
+LINES_SCX="(select coalesce(jsonb_agg(jsonb_build_object('load_id',load_id,'invoiced_net',invoiced_net,'invoiced_fuel',invoiced_fuel) order by load_id),'[]'::jsonb) from invoice_lines where invoice_id=$INV_SCX)"
+# SPORNA na KOSZT → SCX (wystawca) wraca do DO_WERYFIKACJI
+sys "update invoices set verification_status='SPORNA', dispute_note='test sporu SCX' where invoice_number='SCX/FV/39/1'"
+val "A4: SCX poprawia SPORNĄ → DO_WERYFIKACJI" $SCX "select (update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'korekta po sporze')->>'verification_status')" DO_WERYFIKACJI commit
+val "A4: po korekcie SCX — INVOICE_UPDATED u HHL" $HHL "select count(*) > 0 from notifications where template='INVOICE_UPDATED' and payload->>'number'='SCX/FV/39/1'" t
+err "A4: HHL_OPS nie zmienia treści KOSZT" $HHL "update app_users set role='HHL_OPS' where auth_id='$HHL'; select update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'ops'); update app_users set role='HHL_ADMIN' where auth_id='$HHL'" "przewoźnik albo Administrator|42501|Nie masz"
+sys "update app_users set role='HHL_ADMIN' where auth_id='$HHL'"
+val "A4: HHL_ADMIN zmienia KOSZT przed akceptacją" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 1 from invoices where invoice_number='SCX/FV/39/1')), $LINES_SCX, 'admin korekta')->>'id') is not null" t commit
+val "A4: HHL_ADMIN na KOSZT → INVOICE_CORRECTED u SCX" $SCX "select count(*) > 0 from notifications where template='INVOICE_CORRECTED' and payload->>'number'='SCX/FV/39/1'" t
+val "A4: HHL akceptuje KOSZT" $HHL "update invoices set verification_status='ZAAKCEPTOWANA' where invoice_number='SCX/FV/39/1' returning verification_status" ZAAKCEPTOWANA
+err "A4: SCX nie zmieni zaakceptowanej" $SCX "select update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'za późno')" "zaakceptowaną|Administrator HHL"
+val "A4: HHL_ADMIN po akceptacji KOSZT (termin)" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 2 from invoices where invoice_number='SCX/FV/39/1')), $LINES_SCX, 'po akceptacji')->>'verification_status')" ZAAKCEPTOWANA commit
+err "A4: KSH nie woła update_invoice" $KSH "select update_invoice($INV_HHL, (select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'document_id',document_id) from invoices where invoice_number='HHL/FV/39/1'), null, 'ksh')" "KSH nie"
+err "A4: KSH nie wstawi faktury" $KSH "insert into invoices (project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, net_total, vat_total, gross_total, invoiced_amount, due_date, document_id, status) select project_id, carrier_org_id, period_start, period_end, currency, 'PRZYCHOD', issuer_org_id, recipient_org_id, 'KSH/X', issue_date, week_key, 1, 0.23, 1.23, 1, due_date, document_id, 'SUBMITTED' from invoices where invoice_number='HHL/FV/39/1'" "KSH nie|42501|Edytuj|wystaw|wstaw"
+val "A4: SCX/FV/39/1 po testach ról = ZAAKCEPTOWANA" $HHL "select verification_status from invoices where invoice_number='SCX/FV/39/1'" ZAAKCEPTOWANA
 err "SCX nie oznaczy „Opłacona”"                                  $SCX "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01')" "wy..cznie HHL|wyłącznie HHL"
 val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01"
 err "cofnięcie „Opłacona” bez powodu — odrzucone"                 $HHL "select unmark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '')" "Wymagany pow"

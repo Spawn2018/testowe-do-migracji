@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
   status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
-  money: 138, // A4: VAT, INVOICE_NEW KOSZT, odmowa bez READY/CMR
+  money: 149, // A4 + D-0115 update_invoice role/stany (F7 B4; −1 ZGODNA +12)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -53,7 +53,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 26, // C3-p + A4 inv_overdue (26 distinct event_key)
+  c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };
 
 /**

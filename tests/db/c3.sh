@@ -28,7 +28,7 @@ sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
 sval() { out=$(sys "$2" | tail -1 | tr -d '\r'); if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $3)"; fi; }
 
 echo; echo "[C3] macierz po zdarzeniu"
-sval "26 zdarzeń w katalogu" "select count(distinct event_key) from notification_matrix" 26
+sval "28 zdarzeń w katalogu" "select count(distinct event_key) from notification_matrix" 28
 sval "czat: 5 ról, telefon, bez e-maila" "select count(*) from notification_matrix where event_key='chat' and in_app and push and email is false" 5
 sval "W39 status HHL_ADMIN bez e-maila" "select email::text from notification_matrix where event_key='status' and role='HHL_ADMIN'" false
 sval "strefa KSH wyłączona" "select in_app::text from notification_matrix where event_key='zone' and role='CLIENT_USER'" false
