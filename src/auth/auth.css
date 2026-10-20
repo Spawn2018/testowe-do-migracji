@@ -40,3 +40,8 @@ nav[aria-expanded="false"] .nav-session{align-items:center;padding:6px 4px}
 .auth-screen .auth-title{font:700 20px/1.2 var(--font-cond);color:var(--ink);text-align:center}
 .auth-screen[data-auth="expired"] .btn{min-height:44px;font-size:14px}
 .auth-screen .auth-note{color:var(--ink-3)}
+
+/* D-20261020-1157-01: przełącznik „Ciche uzupełnienie godzin” w Opcjach › Progi */
+[data-panel="ops-thresholds"] .check-row{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;line-height:1.45}
+[data-panel="ops-thresholds"] .check-row small{color:var(--ink-3)}
+[data-panel="ops-thresholds"] .check-row input{margin-top:3px;flex:none}

@@ -16,9 +16,13 @@ const ORDER = [
   'ETA_CONF_HIGH_MIN', 'ETA_CONF_MED_MIN', 'GEOFENCE_EDGE_M',
 ] as const;
 
+/** D-20261020-1157-01 (#356, 0240): przełącznik 0/1 „cichego” uzupełnienia godzin z pliku KSH — wyłączenie 26.10. */
+const QUIET_KEY = 'import_quiet_hours';
+
 export default function OpsThresholdsForm() {
   const locale = useTowerStore((s) => s.locale);
   const [rows, setRows] = useState<Row[]>([]);
+  const [quiet, setQuiet] = useState<Row | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,6 +37,7 @@ export default function OpsThresholdsForm() {
     const list = ((q.data ?? []) as Row[]).filter((r) => (ORDER as readonly string[]).includes(r.key));
     list.sort((a, b) => ORDER.indexOf(a.key as typeof ORDER[number]) - ORDER.indexOf(b.key as typeof ORDER[number]));
     setRows(list);
+    setQuiet(((q.data ?? []) as Row[]).find((r) => r.key === QUIET_KEY) ?? null);
     const d: Record<string, string> = {};
     for (const r of list) d[r.key] = String(r.value_num);
     setDraft(d);
@@ -61,9 +66,32 @@ export default function OpsThresholdsForm() {
     await refresh();
   }
 
+  /* przełącznik 0/1 — RPC przyjmuje 0 tylko dla tego klucza (0240); zapis od razu po kliknięciu */
+  async function setQuietOn(on: boolean) {
+    setBusy(true);
+    const sb = await getSupabase();
+    const { error } = await sb.rpc('admin_ops_threshold_set', { p_key: QUIET_KEY, p_value: on ? 1 : 0 });
+    setBusy(false);
+    if (error) {
+      setMsg(error.message);
+      return;
+    }
+    setMsg(null);
+    await refresh();
+  }
+
   return (
     <div data-panel="ops-thresholds">
       {msg ? <div className="note">{msg}</div> : null}
+      {quiet ? (
+        <label className="check-row" data-quiet-hours={quiet.value_num === 1 ? 'on' : 'off'}>
+          <input type="checkbox" checked={quiet.value_num === 1} disabled={busy} onChange={(e) => void setQuietOn(e.target.checked)} />
+          <span>
+            <b>{t(locale, 'opt_quiet_hours')}</b>
+            <small>{` — ${t(locale, quiet.value_num === 1 ? 'opt_quiet_hours_on' : 'opt_quiet_hours_off')}`}</small>
+          </span>
+        </label>
+      ) : null}
       <dl className="kv options-kv">
         {rows.map((r) => (
           <div className="kv-row" key={r.key}>

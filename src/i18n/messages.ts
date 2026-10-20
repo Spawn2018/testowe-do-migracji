@@ -538,6 +538,10 @@ const pl: Dict = {
   opt_acc_thresh_desc: 'Fala, wiatr, opóźnienie, awizacja, dokumenty, GPS, zjazd',
   opt_acc_thresh_soon: 'Edycja progów z historią zmian — w toku (DEC-6).',
   opt_acc_thresh_note: 'Zmiana zapisuje się przy wyjściu z pola · wpis w historii (OPS_THRESHOLD_SET).',
+  /* D-20261020-1157-01 (#356): ciche uzupełnienie godzin z pliku KSH — przełącznik Administratora HHL */
+  opt_quiet_hours: 'Ciche uzupełnienie godzin z pliku KSH',
+  opt_quiet_hours_on: 'włączone: pierwsze wpisanie pustych godzin z importu bez powiadomień (zmiany dni i godzin dalej powiadamiają). Wyłączyć 26.10.2026.',
+  opt_quiet_hours_off: 'wyłączone: każda zmiana z importu powiadamia jak dotąd.',
   opt_acc_thresh_bad: 'Wartość musi być większa od zera.',
   opt_acc_dwell_title: 'Czas wolny i przestój',
   opt_acc_dwell_desc: 'Czas wolny, stawki postoju i chwila, od której liczymy',
