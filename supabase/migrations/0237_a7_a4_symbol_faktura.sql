@@ -361,6 +361,42 @@ update public.documents d
 
 revoke all on function public.trg_documents_insurance_visibility() from public, anon, authenticated;
 
+/* F7 P2: HHL wgrywa dokument INSURANCE, potem insurance_policy_save(p_org=SCX).
+   Przy INSERT dokumentu polisy jeszcze nie ma — zawężamy visible_to dopiero przy
+   podpięciu document_id do polisy przewoźnika. */
+create or replace function public.trg_insurance_policies_doc_visibility()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.document_id is not null
+     and exists (
+       select 1 from public.organizations o
+        where o.id = new.org_id and o.kind = 'CARRIER'
+     ) then
+    update public.documents
+       set visible_to = array['FORWARDER', 'CARRIER']::org_kind[]
+     where id = new.document_id
+       and category = 'INSURANCE'
+       and (
+         visible_to is null
+         or 'CLIENT'::org_kind = any (visible_to)
+         or not (visible_to @> array['FORWARDER', 'CARRIER']::org_kind[]
+                 and cardinality(visible_to) = 2)
+       );
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_insurance_policies_doc_visibility on public.insurance_policies;
+create trigger trg_insurance_policies_doc_visibility
+  after insert or update of document_id, org_id on public.insurance_policies
+  for each row execute function public.trg_insurance_policies_doc_visibility();
+
+revoke all on function public.trg_insurance_policies_doc_visibility() from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- 4. Seed PERMIT_SE z powrotem (tylko Trasa w statusie); filtr statusu
 -- ---------------------------------------------------------------------
@@ -1794,6 +1830,7 @@ begin
               'powod', 'usunięcie z faktury', 'actor', v_actor, 'source', 'INVOICE_EDIT'
             ),
             'STATUS_AUTO:' || v_lid || ':READY_TO_INVOICE:' || p_invoice::text
+              || ':' || extract(epoch from clock_timestamp())::bigint
           )
           on conflict (dedup_key) where dedup_key is not null do nothing;
         end if;

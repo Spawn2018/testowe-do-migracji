@@ -3437,3 +3437,14 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   3. HHL_OPS nie podbija `due_date` HHL/FV (zostawało 26.10 → refresh 26.10 nie dawał PO_TERMINIE).
 - Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 09:05 — #348 F7 runda 3: OPLATA + P2/P4
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a224f6ca`. Unit zielone; db `39382941105` czerwone: money **161/1** — zapytanie OPLATA bez `FROM invoice_lines` (błąd poprzedniej poprawki).
+- Ten krok (F7 runda 3 B1 + P2 + P4):
+  1. OPLATA — przywrócony `FROM invoice_lines … load_id=L7` (boolean bez `::text` → `t`);
+  2. P2: wyzwalacz `trg_insurance_policies_doc_visibility` — po `document_id` polisy CARRIER `visible_to` bez CLIENT; test w `insurance.sh` (+2 → 44);
+  3. P4: money — SCX usuwa L5, HHL usuwa L6 z PRZYCHOD, zmiana kwoty L7, edycja opłaconej (HHL_ADMIN + SCX przed akceptacją) → **172**;
+  4. U: `dedup_key` STATUS_AUTO z epoch (ponowne usunięcie).
+- P3 (opis PR z liczbami ROLLBACK) — w komentarzu PR po pushu. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+

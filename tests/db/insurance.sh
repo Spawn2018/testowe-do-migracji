@@ -90,4 +90,10 @@ chk "nowa polisa poza oknem: ryzyko zamknięte automatycznie" "$(Q "select detec
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where carrier_org_id='$SCXO'" >/dev/null
 chk "transporty anulowane: polisa kończy się, ale bez ryzyka (nic nie jest zagrożone)" "$(Q "select detect_insurance_expiry(now() + interval '420 days')")" 0
 chk "NULL w p_now = wyjątek" "$($PSQL -c "select detect_insurance_expiry(null)" 2>&1 | grep -c 'p_now wymagane')" 1
+echo; echo "[A7 F7 P2] polisa SCX z dokumentem wgranym przez HHL — bez CLIENT"
+DOCINS=$($PSQL -c "insert into documents (project_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_by)
+  select '$P','INSURANCE','test/polisa-hhl-scx.pdf','polisa.pdf','application/pdf',100,id
+    from app_users where auth_id='$HHL' returning id" | head -1)
+val "HHL zapisuje polisę SCX z dokumentem INSURANCE" $HHL "select insurance_policy_save('$SCXO','OCP/VIS',current_date - 10,current_date + 200,'PZU',true,true,null,'EUR','$DOCINS') is not null" t commit
+chk "po podpięciu document_id: visible_to bez CLIENT" "$(Q "select ('CLIENT'=any(visible_to))::text from documents where id='$DOCINS'")" f
 echo; echo "WYNIK: $ok OK, $fail FAIL"

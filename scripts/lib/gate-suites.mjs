@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
   status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
-  money: 162, // A4 + D-0115 F7 runda 2: PRZYCHOD/ZGODNA/usunięcie pozycji/OPLATA/B3/P7 (+13)
+  money: 172, // A4 F7 runda 3: OPLATA FROM + SCX/PRZYCHOD usunięcie + kwota + opłacona (+10)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -35,7 +35,7 @@ export const EXPECTED_LOCAL = {
   adm10: 8,
   hist11: 11,
   workflows: 67,
-  insurance: 42,
+  insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
   'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
