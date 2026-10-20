@@ -88,7 +88,17 @@ err "SCX nie zmieni planowanego okna dostawy"         $SCX "update loads set pla
 err "SCX nie zmieni planowanego okna załadunku"       $SCX "update loads set plan_load_to='2026-10-20 08:00+00' where id='$L2'" "nie może zmieniać: plan_load_to"
 val "SCX zmienia dane kierowcy we własnym transporcie" $SCX "with u as (update loads set driver_name='Jonas Lindqvist' where id='$L2' returning 1) select count(*) from u" 1
 err "SCX nie anuluje transportu"                       $SCX "update loads set status='CANCELLED' where id='$L2'" "wyłącznie HHL|load_status_set|cancel_load"
-err "HHL nie zmieni numeru zlecenia przewoźnika"       $HHL "update loads set carrier_order_no='ZMIENIONY' where id='$L2'" "wyłącznie przewoźnik"
+# D-1525 (#364): HHL_ADMIN może carrier_order_no; HHL_OPS nie; SCX — trailer_swap + SE
+OPS_D1525=11111111-0000-0000-0000-0000000000d5
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS_D1525','00000000-0000-0000-0000-00000000a001','ops-d1525@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "HHL_ADMIN ustawia carrier_order_no (D-1525)"      $HHL "with u as (update loads set carrier_order_no='HHL-ADMIN-SCX' where id='$L2' returning 1) select count(*) from u" 1 commit
+val "HHL_ADMIN czyści carrier_order_no (D-1525)"       $HHL "with u as (update loads set carrier_order_no=null where id='$L2' returning 1) select count(*) from u" 1 commit
+err "HHL_OPS nie zmieni carrier_order_no (D-1525)"     $OPS_D1525 "update loads set carrier_order_no='OPS-X' where id='$L2'" "wyłącznie przewoźnik"
+# Puste SE: name/phone/plate null; phone_country NOT NULL — ekran zawsze 'PL'/'SE' (F7 #367 B1).
+val "SCX zapisuje trailer_swap z pustym SE (D-1525)"   $SCX "with u as (update loads set trailer_swap=true, driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL', tractor_delivery_plate=null, driver_phone_country='PL' where id='$L2' returning 1) select count(*) from u" 1 commit
+val "SCX zapisuje trailer_swap z SE (D-1525)"          $SCX "with u as (update loads set trailer_swap=true, driver_delivery_name='Erik SE', driver_delivery_phone='0700111222', driver_delivery_phone_country='SE', tractor_delivery_plate='ABC123', driver_phone_country='PL' where id='$L2' returning 1) select count(*) from u" 1 commit
 val "HHL zmienia swój numer zlecenia"                  $HHL "with u as (update loads set hhl_order_no='HHL/2026/0777' where id='$L2' returning 1) select count(*) from u" 1
 err "rozładunek bez daty / bezpośredni UPDATE (A5)"   $HHL "update loads set status='UNLOADED' where id='$L1'" "wymaga daty rozładunku|load_status_set"
 err "SCX nie zmieni daty rozładunku transportu na fakturze" $SCX "update loads set actual_delivery_at='2026-09-20 10:00+00' where id='$L1'" "zamrożona|load_status_set"
