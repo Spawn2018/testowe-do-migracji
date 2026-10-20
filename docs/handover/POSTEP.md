@@ -3395,3 +3395,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #317 / #259: konflikt z `main` — bez scalenia.
 - Bieżąca **A7+A4** (`pakiet/a7-a4`): migracja `0237_a7_a4_symbol_faktura.sql` — A7 (symbol_specs, Firma/Trasa, 13/GD/2026, PZU 1106707356, RPC, widok). A4 w następnym commicie tej samej migracji. Testy e25 79, nullguard 666.
 
+## 2026-10-20 06:45 — A4 w 0237 (#348)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po A7 (`41f486ed`); CI A7 zielone (db/unit/visual). #317/#259 konflikt — bez scalenia.
+- **A4** (ten commit, ta sama migracja 0237 / PR #348): `register_invoice` (READY+CMR C17, VAT 23%, tolerancja 0, INVOICE_NEW także KOSZT), `update_invoice`, `guard_invoice_update`, `invoices_insert` bez CLIENT, `INVOICE_OVERDUE` + macierz `inv_overdue`, `load_status_set` = `c17_cmr_after_delivery`, `INVOICE_A4`/`INVOICE_EDIT: true`.
+- Oczekiwane bramy: money 138, nullguard 681, e25 79. Unit lokalnie: p8/c3/w-naprawy/w-faktura-termin **58/58**.
+

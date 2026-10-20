@@ -565,9 +565,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `doc_requirement_set`: zmienia tylko Administrator HHL (E9), sprawdzenie roli w funkcji.
 - Test: SG-03 po „Dostarczone” → sprawa „Wgraj CMR” u SCX; wgranie CMR → sprawa znika, transport „Gotowe do fakturowania” (C17); Operacje HHL nie zmienią terminów.
 
-### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — W TOKU (`pakiet/a7-a4`, migracja 0237)
+### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — W TOKU (`pakiet/a7-a4` / #348, migracja 0237; A7 na gałęzi, A4 w tym samym PR)
 - **D-20261020-0010-01:** jeden PR z A4 (jedna migracja, osobny commit na pozycję, jedno F7).
-- **A7 w 0237 (ten commit):** `symbol_specs` (10), `symbol_spec_of` / `a7_apply_symbol`, kolumny `loads.symbol`/`permit_kind`, `permits.scope`, zezwolenie `13/GD/2026` + polisa `1106707356` (metadane), `awiz_missing` Firma/Trasa, `doc_requirements_status` bez PERMIT_* dla Firmy, RPC `a7_permits_list` / `a7_policies_list`, widok `p5Source` + `permitScopeOf`. PDF → `scripts/a7-seed-docs.mjs` (poza CI).
+- **A7 w 0237:** `symbol_specs` (10), `symbol_spec_of` / `a7_apply_symbol`, kolumny `loads.symbol`/`permit_kind`, `permits.scope`, zezwolenie `13/GD/2026` + polisa `1106707356` (metadane), `awiz_missing` Firma/Trasa, `doc_requirements_status` bez PERMIT_* dla Firmy, RPC `a7_permits_list` / `a7_policies_list`, widok `p5Source` + `permitScopeOf`. PDF → `scripts/a7-seed-docs.mjs` (poza CI).
 - Tabela symboli w bazie (`symbol_specs`) i `symbol_spec_of(load)`:
   - wymiary zestawu, piloci PL/SE (PL-A / PL-B po szerokości), rodzaj zezwolenia „Firma” / „Trasa”;
   - uzupełnianie `loads.combo_*` przy imporcie.
@@ -595,9 +595,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
-### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
+### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5) — W TOKU (`pakiet/a7-a4` / #348, 0237)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
-- Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- Baza: `register_invoice` + `INVOICE_A4: true` / `INVOICE_EDIT: true` w `src/lib/serverRules.ts`.
 - **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
   - SCX → HHL (`KOSZT`): przed akceptacją HHL zmienia SCX i `HHL_ADMIN`; po `ZAAKCEPTOWANA` — tylko `HHL_ADMIN`.
   - HHL → KSH (`PRZYCHOD`): przed akceptacją KSH zmienia wystawca HHL (`HHL_ADMIN`, `HHL_OPS`); po — tylko `HHL_ADMIN`.

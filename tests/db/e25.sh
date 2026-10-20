@@ -69,20 +69,22 @@ val "SCX: godzina DELIVERED na własnym transporcie (P2)" $SCX "select load_stat
 )::text" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
-# A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
+# A4: CMR sprzed dostawy nie wystarcza także przy ręcznym READY (jak C17)
 sys "delete from documents where load_id='$L2' and category='CMR' and storage_path like 'test/e25-cmr%'" >/dev/null
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L2','CMR','test/e25-cmr-early.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-06 08:00:00+00')" >/dev/null
 sval "C17 wczesny CMR: nadal DELIVERED" "select status::text from loads where id='$L2'" DELIVERED
-val "SCX → READY_TO_INVOICE + zdarzenie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
-# C17: CMR po dostawie na świeżym DELIVERED → STATUS_AUTO (cofnięcie ręczne + supersede wczesnego)
-val "HHL cofa do DELIVERED (A5)" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','cofka e25'); select status::text from loads where id='$L2'" DELIVERED commit
+err "A4: READY_TO_INVOICE z CMR sprzed dostawy — odmowa" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
+# C17: CMR po dostawie → STATUS_AUTO READY_TO_INVOICE
 sys "update documents set superseded_at=now() where load_id='$L2' and category='CMR' and superseded_at is null" >/dev/null
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L2','CMR','test/e25-cmr-auto.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-07 12:00:00+00')" >/dev/null
 sval "C17 CMR po dostawie → READY STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1"
+# A4: ręczne READY przy CMR po dostawie (HHL cofa, SCX ustawia READY)
+val "HHL cofa do DELIVERED (A4)" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','cofka e25'); select status::text from loads where id='$L2'" DELIVERED commit
+val "A4: SCX → READY_TO_INVOICE przy CMR po dostawie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
 sval "A3: C17 zamyka CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 0
 # A5: INVOICED bez faktur
 sys "delete from invoice_lines where load_id='$L2'" >/dev/null

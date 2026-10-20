@@ -29,7 +29,7 @@ val "KSH nie widzi wierszy w load_cost (RLS)"        $KSH "select count(*) from 
 val "SCX nie widzi wierszy w load_revenue (RLS)"     $SCX "select count(*) from load_revenue" 0
 
 echo; echo "[3] Kto może zmieniać co na fakturze"
-err "KSH nie zmieni kwoty faktury HHL"               $KSH "update invoices set net_total=1 where id='$INVP'" "weryfikowa"
+err "KSH nie zmieni kwoty faktury HHL"               $KSH "update invoices set net_total=1 where id='$INVP'" "weryfikowa|KSH nie"
 val "KSH może oznaczyć fakturę HHL jako sporną"      $KSH "with u as (update invoices set verification_status='SPORNA', dispute_note='test' where id='$INVP' returning 1) select count(*) from u" 1
 val "KSH nie dosięgnie faktury kosztowej"            $KSH "with u as (update invoices set dispute_note='x' where id='$INVK' returning 1) select count(*) from u" 0
 err "SCX nie zweryfikuje własnej faktury"            $SCX "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INVK'" "Wystawca nie weryfikuje"

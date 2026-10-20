@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
   status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
-  money: 135,
+  money: 138, // A4: VAT, INVOICE_NEW KOSZT, odmowa bez READY/CMR
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 680, // A7: +a7_* GUARD, symbol_spec_of EMPTY, symbol_resolve_code PURE (+completeness)
+  nullguard: 681, // A4: +update_invoice GUARD
   i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
   i30: 10,
   i31: 9,
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 78, // A7: +7 (symbol_specs, permit, polisa, SG, load_permits, KR, PERMIT)
+  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

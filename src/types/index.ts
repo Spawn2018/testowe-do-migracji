@@ -624,7 +624,7 @@ export interface Bill {
   receiptDate?: string | null;
   weekKey: string;
   currency: 'EUR' | 'PLN';
-  /** Netto / VAT / brutto przepisane z dokumentu — system nie liczy VAT. */
+  /** Netto z dokumentu; VAT i brutto liczy baza (A4, 23%). */}
   net: number;
   vat: number;
   gross: number;

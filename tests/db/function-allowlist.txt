@@ -178,6 +178,7 @@ authenticated rate_match
 authenticated real_app_role
 authenticated real_app_user_id
 authenticated register_invoice
+authenticated update_invoice
 authenticated report_client_error
 authenticated report_csp_violation
 authenticated report_position

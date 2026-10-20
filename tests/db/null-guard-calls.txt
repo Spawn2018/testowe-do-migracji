@@ -20,6 +20,7 @@ issue_driver_token | GUARD | select issue_driver_token('$L2') | wyłącznie prze
 keep_alive | GUARD | select keep_alive('test') | Brak aktywnego konta
 mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyłącznie HHL
 register_invoice | GUARD | select register_invoice('{"direction":"PRZYCHOD"}'::jsonb) | Brak konta organizacji
+update_invoice | GUARD | select update_invoice('00000000-0000-0000-0000-00000000ffff', '{}'::jsonb) | Brak aktywnego konta
 report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyłącznie
 revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyłącznie
 revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywnego konta
