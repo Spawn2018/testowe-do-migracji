@@ -373,6 +373,7 @@ declare
   v_gaps jsonb;
   v_sail_missing boolean;
   v_track_missing boolean;
+  v_past_idle boolean;
   v_se boolean;
   v_due timestamptz;
 begin
@@ -406,8 +407,18 @@ begin
       p_now
     );
 
-    /* D-1501 / F7 D2: brak rejsu — tylko przed FERRY; progi jak AWIZ. */
-    v_sail_missing := r.sailing_id is null and r.status < 'FERRY';
+    /* F7 #370: dostawa już minęła i brak actual_load_at — transport nie ruszył.
+       Nie otwieraj NO_SAILING / NO_TRACKING (stare, nigdy nie zamknięte).
+       W drodze (actual_load_at jest) sprawa zostaje. */
+    v_past_idle := (
+      r.plan_delivery_date < (p_now at time zone 'Europe/Warsaw')::date
+      and r.actual_load_at is null
+    ) is true;
+
+    /* D-1501 / F7 D2: brak rejsu — tylko przed FERRY; progi jak AWIZ.
+       F7 #370: bez v_past_idle. */
+    v_sail_missing := r.sailing_id is null and r.status < 'FERRY'
+      and v_past_idle is not true;
     v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
     v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');
     n := n + l3_upsert_alarm(
@@ -425,12 +436,14 @@ begin
     /* D-1501 / F7 N4+N5+N6: przed AT_SITE, w oknie śledzenia;
        N5: do #368 — bez plan_load_date w przyszłości (fałszywe okno);
        N4: due = start okna + 2 h (CRITICAL od wtedy, wcześniej HIGH);
-       N6: pozycja wycisza tylko telematykę (nie MANUAL / DRIVER_PWA). */
+       N6: pozycja wycisza tylko telematykę (nie MANUAL / DRIVER_PWA);
+       F7 #370: bez v_past_idle (miniona dostawa i brak actual_load_at). */
     v_track_missing := r.status < 'AT_SITE'
       and r.plan_load_date is not null
       and r.plan_load_date <= (p_now at time zone 'Europe/Warsaw')::date
       and public.load_in_tracking_window(r.id, p_now) is true
       and nullif(btrim(r.telematics_vehicle_id), '') is null
+      and v_past_idle is not true
       and not exists (
         select 1 from public.positions p
          where p.load_id = r.id

@@ -1242,6 +1242,25 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, p
 chk "D-1501: poza oknem śledzenia brak NO_TRACKING" \
   "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15w' and resolved_at is null")" \
   "0/0"
+# F7 #370: dostawa w przeszłości i brak actual_load_at → brak NO_SAILING / NO_TRACKING.
+# Ten sam transport z actual_load_at (w drodze) — sprawy zostają.
+L_D15p=33333333-0000-0000-0000-00000000d154
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_load_from,
+     plan_delivery_date, hhl_order_no, carrier_order_no)
+ values ('$L_D15p','$P','$SCXORG_D15','123456/2026/D154','PLANNED',
+        current_date - 10, now() - interval '10 days', current_date - 1,
+        'HHL/D154','SCX/D154')
+ on conflict (id) do update set status='PLANNED', sailing_id=null, telematics_vehicle_id=null,
+   plan_load_date=excluded.plan_load_date, plan_load_from=excluded.plan_load_from,
+   plan_delivery_date=excluded.plan_delivery_date, actual_load_at=null, tracking_opened_at=null" >/dev/null
+chk "D-1501: miniona dostawa bez załadunku — brak NO_SAILING i NO_TRACKING" \
+  "$(Q "select (l3_scan() >= 0)::text")/$(Q "select count(*) from risk_signals where load_id='$L_D15p' and resolved_at is null and dedup_key in ('l3:NO_SAILING:$L_D15p','l3:NO_TRACKING:$L_D15p')")" \
+  "true/0"
+$PSQL -c "set session_replication_role=replica; update loads set actual_load_at = now() - interval '9 days' where id='$L_D15p'" >/dev/null
+chk "D-1501: miniona dostawa i actual_load_at — NO_SAILING i NO_TRACKING" \
+  "$(Q "select (l3_scan() >= 1)::text")/$(Q "select (count(*) filter (where dedup_key='l3:NO_SAILING:$L_D15p'))::text||'/'||(count(*) filter (where dedup_key='l3:NO_TRACKING:$L_D15p'))::text from risk_signals where load_id='$L_D15p' and resolved_at is null")" \
+  "true/1/1"
+$PSQL -c "update loads set status='CANCELLED' where id='$L_D15p'" >/dev/null
 # N7: ten sam mechanizm co migracja (l3_scan_first_deploy_quiet) — bez DECISION_OPEN;
 # escalated_at tylko gdy due_at <= now() (F7 N3); count(*) > 0.
 L_D15n=33333333-0000-0000-0000-00000000d153

@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
   import: 66,
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 619, // D-1501 F7 N3: +1 (escalated_at tylko po terminie; cisza ×3)
+  i2: 621, // D-1501 F7 #370: +2 miniona dostawa (bez actual_load_at / w drodze)
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
