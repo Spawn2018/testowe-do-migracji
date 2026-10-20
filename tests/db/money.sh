@@ -224,32 +224,35 @@ val "A4: HHL_ADMIN usuwa L5 z KOSZT + paliwo → OPLATA_PALIWOWA" $HHL "select (
 val "A4: flaga OPLATA_PALIWOWA na L7" $HHL "select ('OPLATA_PALIWOWA'=any(flags)) from invoice_lines where invoice_id=$INV_SCX and load_id='$L7'" t
 val "A4: po usunięciu L5 ze SCX → READY_TO_INVOICE" $HHL "select status from loads where id='$L5'" READY_TO_INVOICE
 val "A4: STATUS_AUTO po usunięciu z faktury" $HHL "select count(*) > 0 from load_events where load_id='$L5' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" t
-# F7 runda 3 P4: zmiana kwoty bez usunięcia — L7 zostaje INVOICED
-val "A4: zmiana kwoty L7 bez usunięcia → INVOICED" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',510,'vat_total',117.30,'gross_total',627.30), jsonb_build_array(jsonb_build_object('load_id','$L7','invoiced_net',510,'invoiced_fuel',40)), 'kwota L7')->>'id') is not null; select status from loads where id='$L7'" INVOICED commit
+# F7 runda 3 P4: przywróć L5 na KOSZT (para z PRZYCHOD) → L5 = INVOICED; zmiana kwoty bez usunięcia
+LINES_SCX_L5_L7="(select jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000),jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)))"
+val "A4: HHL_ADMIN przywraca L5 przed testem kwoty" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',1500,'vat_total',345,'gross_total',1845), $LINES_SCX_L5_L7, 'przywróć L5 pod kwotę')->>'id') is not null" t commit
+val "A4: L5 INVOICED po przywróceniu pary" $HHL "select status from loads where id='$L5'" INVOICED
+val "A4: zmiana kwoty L5 bez usunięcia → INVOICED" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',1510,'vat_total',347.30,'gross_total',1857.30), jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1010),jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)), 'kwota L5')->>'id') is not null; select status from loads where id='$L5'" INVOICED commit
 # F7 B3: bulk_quiet przywrócony — INSERT pozycji + anulowanie w tej samej transakcji → LOAD_STATUS_CHANGED
 L_IMP=33333333-0000-0000-0000-0000000000b3
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L_IMP','$P','$CAR','KSH/B3','HHL/B3','SCX/B3','PLANNED')"
 val "A4: import symbol + anulowanie → LOAD_STATUS_CHANGED (F7 B3)" $HHL "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty, total_weight_t) values ('$P','$L_IMP','SG-B3',16.0,3.2,3.5,1,40); select cancel_load('$L_IMP','test F7 B3'); select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L_IMP'" t commit
 val "A4: SCX/FV/39/1 po testach ról = ZAAKCEPTOWANA" $HHL "select verification_status from invoices where invoice_number='SCX/FV/39/1'" ZAAKCEPTOWANA
 err "SCX nie oznaczy „Opłacona”"                                  $SCX "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01')" "wy..cznie HHL|wyłącznie HHL"
-val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01"
-val "A4: HHL_ADMIN edytuje opłaconą zaakceptowaną (termin)" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 3 from invoices where invoice_number='SCX/FV/39/1'), 'net_total',510,'vat_total',117.30,'gross_total',627.30), jsonb_build_array(jsonb_build_object('load_id','$L7','invoiced_net',510,'invoiced_fuel',40)), 'po oplaceniu')->>'payment_status')" OPLACONA commit
+val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01" commit
+val "A4: HHL_ADMIN edytuje opłaconą zaakceptowaną (termin)" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 3 from invoices where invoice_number='SCX/FV/39/1')), null, 'po oplaceniu')->>'payment_status')" OPLACONA commit
 err "cofnięcie „Opłacona” bez powodu — odrzucone"                 $HHL "select unmark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '')" "Wymagany pow"
-err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-24T12:00:00Z' where id='$L7'" "zamro"
+err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-24T12:00:00Z' where id='$L5'" "zamro"
 L8=33333333-0000-0000-0000-000000000008
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L8','$P','$CAR','KSH/8','HHL/8','SCX/8','DELIVERED')"
 err "A4: transport bez READY_TO_INVOICE / CMR → odmowa"           $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',2.30,'gross_total',12.30,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10))))" "czeka na CMR"
-# L8 pod M7 (przypomnienia): osobna faktura kosztowa na L7 już jest; zakładamy drugą na L6
+# L8 pod M7 (przypomnienia): osobna faktura kosztowa; termin 30.10 bez zmian po edycji SCX
 sys "update loads set status='READY_TO_INVOICE', actual_delivery_at='2026-09-22T14:00:00Z' where id='$L8'"
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L8','CMR','test/m6-cmr8.pdf','cmr.pdf','application/pdf',100,'2026-09-22T15:00:00Z')"
 val "A4: rejestracja L8 READY z CMR" $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',2.30,'gross_total',12.30,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))) is not null" t commit
-# F7 runda 3 P4: SCX edytuje opłaconą przed akceptacją HHL
+# F7 runda 3 P4: SCX edytuje opłaconą przed akceptacją HHL (bez zmiany due_date — M7 liczy −3 od 30.10)
 INV_SCX8="(select id from invoices where invoice_number='SCX/FV/39/8')"
 PATCH_SCX8="(select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'due_date_from_document',due_date_from_document,'document_id',document_id,'net_total',net_total,'vat_total',vat_total,'gross_total',gross_total) from invoices where invoice_number='SCX/FV/39/8')"
 LINES_SCX8="(select jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))"
 val "A4: HHL oznacza SCX/FV/39/8 Opłacona (przed akceptacją)" $HHL "select mark_invoice_paid($INV_SCX8, '2026-10-01'); select payment_status from invoices where invoice_number='SCX/FV/39/8'" OPLACONA commit
-val "A4: SCX edytuje opłaconą niezaakceptowaną" $SCX "select (update_invoice($INV_SCX8, $PATCH_SCX8 || jsonb_build_object('due_date', (select due_date + 1 from invoices where invoice_number='SCX/FV/39/8')), $LINES_SCX8, 'po oplaceniu SCX')->>'payment_status')" OPLACONA commit
+val "A4: SCX edytuje opłaconą niezaakceptowaną" $SCX "select (update_invoice($INV_SCX8, $PATCH_SCX8, $LINES_SCX8, 'po oplaceniu SCX')->>'payment_status')" OPLACONA commit
 val "A4: cofnięcie Opłacona 39/8 przed M7" $HHL "select unmark_invoice_paid($INV_SCX8, 'powrót do M7'); select payment_status from invoices where invoice_number='SCX/FV/39/8'" NIEOPLACONA commit
 
 echo; echo "[M7] Terminy i przypomnienia: kadencja −3/0/+1/+7/+14, tylko płatnik i wierzyciel, opłacona → cisza"

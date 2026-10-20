@@ -95,5 +95,5 @@ DOCINS=$($PSQL -c "insert into documents (project_id, category, storage_path, fi
   select '$P','INSURANCE','test/polisa-hhl-scx.pdf','polisa.pdf','application/pdf',100,id
     from app_users where auth_id='$HHL' returning id" | head -1)
 val "HHL zapisuje polisę SCX z dokumentem INSURANCE" $HHL "select insurance_policy_save('$SCXO','OCP/VIS',current_date - 10,current_date + 200,'PZU',true,true,null,'EUR','$DOCINS') is not null" t commit
-chk "po podpięciu document_id: visible_to bez CLIENT" "$(Q "select ('CLIENT'=any(visible_to))::text from documents where id='$DOCINS'")" f
+chk "po podpięciu document_id: visible_to bez CLIENT" "$(Q "select ('CLIENT'=any(visible_to)) from documents where id='$DOCINS'")" f
 echo; echo "WYNIK: $ok OK, $fail FAIL"

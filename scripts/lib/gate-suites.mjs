@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
   status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
-  money: 172, // A4 F7 runda 3: OPLATA FROM + SCX/PRZYCHOD usunięcie + kwota + opłacona (+10)
+  money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active

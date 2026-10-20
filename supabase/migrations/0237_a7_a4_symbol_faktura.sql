@@ -1892,8 +1892,15 @@ begin
     (select o.kind::text from organizations o where o.id = v_notify_org)
   );
 
-  return jsonb_build_object('id', inv.id, 'verification_status', inv.verification_status,
-                            'net_total', inv.net_total, 'vat_total', inv.vat_total, 'gross_total', inv.gross_total);
+  return jsonb_build_object(
+    'id', inv.id,
+    'verification_status', inv.verification_status,
+    'payment_status', inv.payment_status,
+    'paid_at', inv.paid_at,
+    'net_total', inv.net_total,
+    'vat_total', inv.vat_total,
+    'gross_total', inv.gross_total
+  );
 end $$;
 
 revoke all on function public.update_invoice(uuid, jsonb, jsonb, text) from public, anon;

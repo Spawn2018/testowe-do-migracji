@@ -3448,3 +3448,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   4. U: `dedup_key` STATUS_AUTO z epoch (ponowne usunięcie).
 - P3 (opis PR z liczbami ROLLBACK) — w komentarzu PR po pushu. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 09:20 — #348 db FAIL po F7 runda 3 → poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `324a3a4b`. Unit/visual zielone; db `39384899533` czerwone: money **166/6**, insurance **43/1**.
+- Poprawki:
+  1. `update_invoice` zwraca `payment_status` / `paid_at` (testy opłaconej czytały pusty klucz);
+  2. money: przywróć L5 na KOSZT → INVOICED, zmiana kwoty na L5 (L7 nigdy nie był w parze); `mark_invoice_paid` 39/1 z `commit`; edycja SCX 39/8 bez zmiany `due_date` (M7 −3 od 30.10); money **174**;
+  3. insurance: boolean bez `::text` (`f` nie `false`).
+- Opis PR #348 uzupełniony liczbami P3. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
