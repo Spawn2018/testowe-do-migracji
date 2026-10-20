@@ -165,3 +165,17 @@ describe('Harmonogram › Dokumenty przy zezwoleniu firmowym (F7 #355 B1)', () =
     expect(docCell(firmDocRows(pl, L, firm), [])).toEqual({ tone: 'ok' });
   });
 });
+
+describe('produkcja — piloci: wpisy PL / SE przed starszymi PL_SE (F7 #360 P5)', () => {
+  afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
+  it('PL_SE nie zajmuje strony, którą ma wpis PL; trafia na wolne SE', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    const m = await import('../src/lib/p7Source');
+    const kr = { id: 'l3', code: 'KR-04', symbol: 'KR', permitKind: 'TRASA' } as Load;
+    m.setPilotsFromServer([
+      { loadId: 'l3', scope: 'PL_SE', plate: 'GD 11111', name: 'Stary Wpis' },
+      { loadId: 'l3', scope: 'PL', plate: 'WX 00002', name: 'Nowy Pilot' },
+    ]);
+    expect(m.pilotsOf(kr)).toEqual({ pl: { plate: 'WX 00002', name: 'Nowy Pilot' }, se: { plate: 'GD 11111', name: 'Stary Wpis' } });
+  });
+});

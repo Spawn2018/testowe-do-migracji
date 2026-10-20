@@ -76,14 +76,13 @@ test('SCX: wymagane 2 → awizacja 2 pilotów → stan zgodny, zapis w bazie', a
   expect(psql(`select escort_vehicles||'/'||(select (count(*) > 0)::text from audit_log where action='ESCORTS_SET' and entity_id='${LD}' and jsonb_array_length(new_value)=2) from loads where id='${LD}'`)).toBe('2/true');
 });
 
-test('KSH: lista pilotów tylko do odczytu', async ({ page }) => {
+test('KSH: lista pilotów tylko do odczytu, z imieniem i telefonem (D-1243)', async ({ page }) => {
   test.setTimeout(90_000);
   await login(page, 'ksh@bk5.local');
   await openRes(page);
   await expect(page.locator('[data-escorts="2"]')).toContainText('PO 12345');
   await expect(page.locator('[data-escorts-form]')).toHaveCount(0);
-  // D-22: KSH nie widzi imienia ani telefonu kierowcy pilota (ani w DOM, ani w odpowiedziach API)
-  await expect(page.locator('[data-escorts]')).not.toContainText('Adam Pilot');
-  await expect(page.locator('[data-escorts]')).not.toContainText('600100200');
-  expect(await page.content()).not.toContain('600100200');
+  // D-20261020-1243-01 (zastępuje D-22): KSH widzi imię i telefon kierowcy pilota (zgody RODO)
+  await expect(page.locator('[data-escorts]')).toContainText('Adam Pilot');
+  await expect(page.locator('[data-escorts]')).toContainText('600100200');
 });

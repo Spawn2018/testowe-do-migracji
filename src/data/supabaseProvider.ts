@@ -117,7 +117,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('a7_policies_list'),
       /* D-20261020-1118-01: tabela symboli (zezwolenie Firma/Trasa, piloci) i piloci z awizacji (load_escorts PL/SE) */
       sb.from('symbol_specs').select('symbol,position_name,combo_length_m,combo_width_m,combo_height_m,pilot,permit_kind'),
-      sb.from('load_escorts').select('load_id,seq,plate,scope'),
+      sb.from('load_escorts').select('load_id,seq,plate,scope').order('load_id').order('seq'), /* stała kolejność wpisów PL_SE między sobą; pierwszeństwo PL/SE ustala setPilotsFromServer (F7 #357 P6, #360) */
       sb.rpc('load_escort_contacts'),
     ]);
     /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
