@@ -3542,3 +3542,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez `pilne`.
 - Scalanie: #361 F7: niegotowe (15:35). #317 main wciągnięty (`f89b59d9`), czeka na F7. #259 konflikt.
 - Poprawki #356 (0240 + i2): B1 — quiet tylko gdy `plan_*` w loads puste; P1 komentarz wyłączenia na ekranie; P2 `on conflict do nothing`; P3 testy (KSH, mix, OPS, critical, decisions/risk); P4 UTF-8 w POSTEP. i2 592.
+
+## 2026-10-20 16:00 — #361 CI zielone; skrzynka #362/#364/#365 w planie
+
+- Skrzynka: #364 (D-1525 HOTFIX `trailer_swap`+SE+`carrier_order_no`), #362 (D-1501 awizacja HHL), #365 (emtrack login_failed) — `Spawn2018`, `dla-cursora`, **bez** etykiety `pilne`. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1525-01.md`, `D-20261020-1501-01.md`. Kolejność po #356: HOTFIX → D-1501 → C15-emtrack → D-1300. Bieżącej #361 nie przerywam.
+- Scalanie: #361 — CI na `7986ef6f` zielone (db `39431301503`, unit, visual `39431301490`); czeka na „F7: gotowe do scalenia” runda 2. #363 wygląd bez F7. #317 czeka na F7 po `f89b59d9`. #259 konflikt.
+- Bieżąca #356: poprawki F7 B1+P1–P4 na SHA; bez nowego kodu do F7.
