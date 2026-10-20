@@ -1208,18 +1208,13 @@ val "D-1501: HHL_OPS + przyszły rejs → zgoda" $OPS_D15 \
 $PSQL -c "set session_replication_role=replica; update loads set sailing_id=null where id='$L_D15'" >/dev/null
 val "D-1501: SCX przypisuje rejs przyszły" $SCX \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15' returning 1" 1 commit
-# F7 N6: MANUAL nie wycisza; telematyka wycisza.
+# F7 #370 (decyzja 20:01): pozycja bez linku nie wycisza; link wycisza (wycofane D1/N6).
 $PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
- ('$L_D15', now() - interval '30 minutes', st_setsrid(st_makepoint(18.0, 54.0),4326), 'MANUAL')" >/dev/null
-chk "D-1501: pozycja MANUAL nie wycisza NO_TRACKING" \
+ ('$L_D15', now() - interval '20 minutes', st_setsrid(st_makepoint(18.1, 54.1),4326), 'EMTRACK_WEB')" >/dev/null
+chk "D-1501: pozycja telematyczna bez linku nie wycisza NO_TRACKING" \
   "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
   "0/1"
-$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
- ('$L_D15', now() - interval '20 minutes', st_setsrid(st_makepoint(18.1, 54.1),4326), 'EMTRACK_WEB')" >/dev/null
-chk "D-1501: pozycja telematyczna wycisza NO_TRACKING" \
-  "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
-  "0/0"
 $PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
 $PSQL -c "update loads set telematics_vehicle_id='rio:d1501' where id='$L_D15'" >/dev/null
 chk "D-1501: po linku NO_TRACKING zamknięte" \

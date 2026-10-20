@@ -433,23 +433,18 @@ begin
       p_now
     );
 
-    /* D-1501 / F7 N4+N5+N6: przed AT_SITE, w oknie śledzenia;
+    /* D-1501 / F7 N4+N5 + decyzja właściciela 20:01 (#368):
+       NO_TRACKING = brak linku (telematics_vehicle_id) w oknie śledzenia.
+       Pozycje nie wyciszają (wycofane D1/N6 — dopasowanie po naczepie bez linku).
        N5: do #368 — bez plan_load_date w przyszłości (fałszywe okno);
        N4: due = start okna + 2 h (CRITICAL od wtedy, wcześniej HIGH);
-       N6: pozycja wycisza tylko telematykę (nie MANUAL / DRIVER_PWA);
        F7 #370: bez v_past_idle (miniona dostawa i brak actual_load_at). */
     v_track_missing := r.status < 'AT_SITE'
       and r.plan_load_date is not null
       and r.plan_load_date <= (p_now at time zone 'Europe/Warsaw')::date
       and public.load_in_tracking_window(r.id, p_now) is true
       and nullif(btrim(r.telematics_vehicle_id), '') is null
-      and v_past_idle is not true
-      and not exists (
-        select 1 from public.positions p
-         where p.load_id = r.id
-           and p.ts >= p_now - interval '6 hours'
-           and p.source not in ('MANUAL', 'DRIVER_PWA')
-      );
+      and v_past_idle is not true;
     v_warn := coalesce(r.tracking_opened_at, public.tracking_window_start(r.plan_load_date));
     v_crit := case when v_warn is not null then v_warn + interval '2 hours' else null end;
     n := n + l3_upsert_alarm(
