@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { etaDuration } from '../src/lib/etaDuration';
 import { tp } from '../src/i18n/messages';
+import { etaDetailFromBasis } from '../src/lib/etaDetail';
 
 describe('W-eta-czas — format czasu ETA', () => {
   it('poniżej godziny: same minuty', () => {
@@ -29,5 +30,14 @@ describe('W-eta-czas — format czasu ETA', () => {
     const src = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
     expect(src).not.toContain('+${s.delayMin} min');
     expect(src).toContain('+${etaDuration(s.delayMin)}');
+  });
+  it('km na odcinku PL to km do portu wypłynięcia, nie do placu (SG-17: 5,71 km)', () => {
+    const pl = etaDetailFromBasis({ segment: 'IN_TRANSIT_PL', causes: { remaining_km: 5.71 } } as never, 'IN_TRANSIT_PL');
+    expect(pl?.distanceKm).toBe(6);
+    expect(pl?.distanceTo).toBe('PORT');
+    expect(tp('pl', 'p4b_eta_km_port', { km: 6 })).toBe('6 km do portu wypłynięcia');
+    const se = etaDetailFromBasis({ segment: 'IN_TRANSIT_SE', causes: { remaining_km: 812 } } as never, 'IN_TRANSIT_SE');
+    expect(se?.distanceTo).toBe('SITE');
+    expect(tp('pl', 'p4b_eta_km', { km: 812 })).toBe('812 km do placu');
   });
 });

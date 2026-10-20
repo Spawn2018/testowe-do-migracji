@@ -366,6 +366,7 @@ const pl: Dict = {
   p4b_eta_wait_val: 'Na miejscu od {time}',
   p4b_eta_gps: 'z GPS {ago}',
   p4b_eta_km: '{km} km do placu',
+  p4b_eta_km_port: '{km} km do portu wypłynięcia',
   p4b_eta_drive: 'jazda {dur}',
   p4b_eta_drive_norest: 'jazda {dur}, odpoczynek nie jest potrzebny',
   p4b_eta_rest_from: 'postój od {from}',
