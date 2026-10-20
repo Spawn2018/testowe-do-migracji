@@ -3410,3 +3410,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Ten krok: money (rola HHL_OPS przez `sys`, `commit` po akceptacji), security (wzorzec „Edytuj fakturę”), i2 (KSH bez polisy SCX + HHL widzi; i2=553), baf (czyszczenie combo po triggerze A7), e18 (READY przed shipment_items), komunikat błędu w triggerze A7.
 - Czeka na zielone CI i „F7: gotowe do scalenia” po ostatnim commicie. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 08:05 — #348 brama db: baf 45 (A7 combo)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `25c1a98c`. Unit/visual zielone; db `39376792710` czerwone: **baf** 45/46 — asercja „combo_* puste” po A7 (trigger wypełnia combo z `symbol_specs`).
+- Poprawka: usunięta asercja i zbędne czyszczenie combo w `baf.sh` (wycena i tak `dims_source=CARGO` z pozycji); `gate-suites` baf **45**. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
