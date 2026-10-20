@@ -3130,6 +3130,12 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - `ZASADY_CIAGLEJ_PRACY.md` + PLAN §1 pkt 14.0 / 14.2: tylko `Spawn2018`/własne; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka.
 - Skrzynka: #312 (Spawn2018, już w PLAN) — bez przerwania; po scaleniu #314 → #312.
 
+## 2026-10-19 12:57 — #315 wpisane: daty = terminy najpóźniejsze
+
+- Zgłoszenie #315 (Spawn2018, `dla-cursora`): PLAN §1 pkt 14.5 i `ZASADY_CIAGLEJ_PRACY.md` krok 4. Po pozycji od razu następna z §4, także z kolejnych dni. Bez czekania na dzień planu i punkt kontrolny.
+- Bieżąca pozycja bez przerwania: #312 / #316 (`pakiet/cmr-has-doc-c17`, 0233) — brama `db` i `visual` w toku, bez nowego commitu na tej gałęzi (G-15).
+- #301 ma komentarz „F7 — gotowe do scalenia” (myślnik, 18.10 18:43, po ostatnim commicie, CI zielone). Zasady pętli wymagają dosłownego „F7: gotowe do scalenia” — bez scalenia w tym przebiegu.
+
 ## 2026-10-19 12:45 — #314 SCALONE; start #312 (0233 has_doc CMR)
 
 - Merge #314 `1966a3dd` (docs praca ciągła + F7 bezpieczeństwo).
@@ -3190,6 +3196,12 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - P1: `encode_password` w `scripts/ci/normalize-db-url.py` — znaki specjalne w haśle kodowane procentowo, hasło już zakodowane bez zmian. Log: `haslo zakodowane: tak/nie`, bez adresu. Test `tests/normalize-db-url.test.ts`: 3 przypadki, lokalnie 3/3.
 - D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
 - Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
+
+## 2026-10-19 17:50 — #317: main wciągnięty, zasada #315 zostaje
+
+- Konflikt z `main`: zostawione obie strony (wpisy z `main` + §1 pkt 14.5 i wpis #315). Nic z `main` nie usunięte.
+- Czeka na zielone CI i ponowne „F7: gotowe do scalenia” (komentarz koordynatora 14:52).
+- #326 (adres bazy): unit i visual zielone, ostatni komentarz to „niegotowe” sprzed commita `0556710e` — bez scalenia.
 
 ## 2026-10-19 18:35 — #330: wdrożenie ręczne z main, sekret Actions nadal zły
 
@@ -3518,7 +3530,6 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
 - Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
 
-
 ## 2026-10-20 14:20 — #357 scalone; start #356 import_quiet_hours
 
 - Skrzynka: #353 zamknięte (D-1118 zrobione). #358/#359/#356/#324/#323/#322/#320 otwarte, w planie; bez etykiety `pilne` — bez przerwania.
@@ -3675,3 +3686,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #374 nadal otwarte (PILNE); reszta w planie, bez `pilne`.
 - Scalanie: CI na `ed388785` zielone (db/unit/visual). Brak „F7: gotowe” po head — drobne F7 w tym kroku. #317/#259 bez F7 po ostatnim commicie / konflikt.
 - Bieżąca: **HOTFIX #374** — `channel = 'IN_APP'` przy oznaczaniu dzwonków; money +1 asercja „wznowienie bez nowego RISK_OPEN”; money **179**. Push → czekam na CI i F7.
+
+## 2026-10-21 01:40 — pętla: C15 CI zielone; #317 main; skrzynka zamknięta
+
+- Skrzynka: #362/#364/#358 zamknięte (pozycje SCALONE). #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #376 C15 — CI zielone na `cf641647` (unit/visual/db), MERGEABLE; **brak** „F7: gotowe do scalenia” → bez merge. #317 — ten commit: main wciągnięty, konflikt POSTEP (obie strony + pkt 14.5). #259 konflikt / bez F7.
+- Bieżąca: **C15-emtrack** (#365 / #376) — kod gotowy, czeka na F7. Potem D-1300 (#359).
