@@ -136,7 +136,8 @@ as() { $PSQL -c "begin; set local role authenticated; set local request.jwt.clai
 out=$(as $SCX "select promote_ferry_departures('2099-01-01')"); echo "$out" | grep -q "permission denied" && { ok=$((ok+1)); echo "  OK    użytkownik nie wywoła przełączania PROMU"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
 chk "KSH widzi rozkład rejsów"  "select 5" "$(as $KSH "select count(*) from sailings")"
 # D-1501 / F7 B2: SCX przypisuje przyszły (S5) na transport bez wypłyniętego rejsu.
-Lfut=$(L 5b)
+# UUID 63 — nie 5b (5b = SG-03 w [12] A2).
+Lfut=$(L 63)
 mk $Lfut FUT "'HHL/FUT'" "'SCX/FUT'" READY null
 chk "SCX przypisuje przyszły rejs do swojego transportu" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
 chk "KSH nie przypisze rejsu"   "select 0" "$(as $KSH "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
