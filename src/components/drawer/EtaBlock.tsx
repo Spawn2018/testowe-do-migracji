@@ -201,7 +201,7 @@ export function EtaBlock({
               {pill.text}
             </span>
           ) : null}
-          {late && delayMin != null ? <span className="pill p-red" data-eta-delay>{formatDelayPill(delayMin)}</span> : null}
+          {late && delayMin != null ? <span className="pill p-red" data-eta-delay title={t(locale, 'p4b_eta_delay_tip')}>{tp(locale, 'p4b_eta_delay', { d: formatDelayPill(delayMin) })}</span> : null}
           {load.etaBoden && etaIsNightArrival(load.etaBoden) ? (
             <span className="pill" data-eta-night="1">{t(locale, 'a6_dr_night_arrival')}</span>
           ) : null}

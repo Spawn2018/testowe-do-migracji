@@ -15,6 +15,16 @@ import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
 import { rioStartsLate, trackerBarRio } from '../../lib/p4c';
 import { trkSub } from '../../lib/trackingStateText';
+import { PROD_BUILD } from '../../lib/prodFacade';
+
+/**
+ * Decyzja właściciela 20.10.2026, 20:01: śledzenie i lokalizacja tylko przy podanym linku śledzenia.
+ * Bez linku (ani w transporcie, ani link RIO z serwera) pasek nie mówi „Śledzenie trwa”.
+ * W demo transporty nie mają linków — tam zostaje dotychczasowy pasek.
+ */
+export function trackingNoLink(load: Pick<Load, 'resources'>, link: TrackingLinkInfo | null, prod: boolean = PROD_BUILD): boolean {
+  return prod && !link && trackerKind(load.resources.trackingRef) === 'none';
+}
 
 function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */
@@ -52,6 +62,18 @@ export function TrackingBar({
   const phase = trackingPhase(load, nowIso);
   const tracker = trackerText(load, locale, trackingLink, nowIso);
   const trailer = (load.resources.trailerPlate ?? '').trim();
+
+  if ((phase === 'before' || phase === 'on') && trackingNoLink(load, trackingLink)) {
+    return (
+      <div className="trk nolink" data-tracking-bar="nolink">
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{t(locale, 'p4b_trk_nolink')}</b>
+          <span>{t(locale, 'p4b_trk_nolink_sub')}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === 'before') {
     const sub = [
