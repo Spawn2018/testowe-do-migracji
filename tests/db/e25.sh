@@ -51,6 +51,12 @@ echo; echo "[e25] UNLOADED→DELIVERED, READY_TO_INVOICE/INVOICED (H1), actor i 
 # commit: actual_delivery_at i audit sprawdzane osobnym zapytaniem poza transakcją testu
 val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now(),null); select status::text from loads where id='$L2'" DELIVERED commit
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
+sval "A3: po Dostarczone bez CMR → sprawa CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+sval "A3: typ CMR_UPLOAD ma opcję UPLOAD_CMR" "select options->0->>'code' from decision_types where code='CMR_UPLOAD'" UPLOAD_CMR
+# F7 P4: przed C17 — klik UPLOAD_CMR tylko otwiera okno, sprawa zostaje NEW.
+val "A3: UPLOAD_CMR nie zamyka sprawy" $SCX "select (decision_resolve(
+  (select id from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED') limit 1),
+  'UPLOAD_CMR')->>'kept_open')||'|'||(select status::text from decisions where load_id='$L2' and type_code='CMR_UPLOAD' order by created_at desc limit 1)" "true|NEW" commit
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
 val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (
   (select actual_delivery_at = timestamptz '2026-10-07 10:19:54+00' from loads where id='$L2')
@@ -77,6 +83,7 @@ sys "insert into documents (project_id, load_id, category, storage_path, file_na
      values ('$P','$L2','CMR','test/e25-cmr-auto.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-07 12:00:00+00')" >/dev/null
 sval "C17 CMR po dostawie → READY STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1"
+sval "A3: C17 zamyka CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 0
 # A5: INVOICED bez faktur
 sys "delete from invoice_lines where load_id='$L2'" >/dev/null
 err "INVOICED bez faktur" $HHL "select load_status_set('$L2','INVOICED',now(),null)" "brak faktury"
@@ -154,6 +161,7 @@ where e2.load_id='33333333-0000-0000-0000-00000000d931'
 val "korekta po STATUS_AUTO zapisuje dopisek" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d934','AT_SITE',timestamptz '2026-10-07 11:00:00+00','powod auto'); select (
   e.payload->>'korekta' = 'true'
   and e.payload->>'zastepuje' = a.id::text
+  and (e.payload->>'poprzednio')::timestamptz = timestamptz '2026-10-07 10:00:00+00'
   and e.payload->>'note' = 'powod auto'
   and e.payload->>'actor' = 'Anna Admin // H&H Logistics'
 )::text
@@ -161,6 +169,17 @@ from load_events e
 join load_events a on a.load_id = e.load_id and a.event_type = 'STATUS_AUTO'
 where e.load_id='33333333-0000-0000-0000-00000000d934'
   and e.event_type='STATUS_AT_SITE'
+  and e.payload->>'korekta' = 'true'" true commit
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, actual_delivery_at, hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000d935','$P','$SCXO','123456/2026/D935','DELIVERED',timestamptz '2026-10-07 09:00:00+00','HHL/D935','SCX/D935')
+     on conflict (id) do update set status=excluded.status, actual_delivery_at=excluded.actual_delivery_at" >/dev/null
+val "korekta bez wpisu: zastepuje null, poprzednio z actual" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d935','DELIVERED',timestamptz '2026-10-07 09:30:00+00','bez wpisu'); select (
+  e.payload->>'zastepuje' is null
+  and (e.payload->>'poprzednio')::timestamptz = timestamptz '2026-10-07 09:00:00+00'
+)::text
+from load_events e
+where e.load_id='33333333-0000-0000-0000-00000000d935'
+  and e.event_type='STATUS_DELIVERED'
   and e.payload->>'korekta' = 'true'" true commit
 val "HHL koryguje D932 do 12:30" $HHL "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 14:00:00+00',null); select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00','k1'); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
 val "SCX: DELIVERED 12:30 bez błędu" $SCX "select load_status_set('33333333-0000-0000-0000-00000000d932','DELIVERED',timestamptz '2026-10-07 12:30:00+00',null); select (actual_delivery_at = timestamptz '2026-10-07 12:30:00+00')::text from loads where id='33333333-0000-0000-0000-00000000d932'" true commit
@@ -170,6 +189,119 @@ val "SCX przyjmuje LOADING o 08:30" $SCX "select load_status_set('33333333-0000-
 # A5: bezpośredni UPDATE statusu z sesji — odmowa
 err "HHL bezpośredni UPDATE statusu" $HHL "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
 err "SCX bezpośredni UPDATE statusu" $SCX "update loads set status='IN_TRANSIT_PL' where id='$L1'" "load_status_set"
+
+echo; echo "[e25] A9 awiz_missing / Gotowy"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
+     driver_name, driver_phone, tractor_plate, trailer_plate, trailer_swap,
+     driver_delivery_name, driver_delivery_phone, tractor_delivery_plate,
+     hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000a901','$P','$SCXO','123456/2026/A901','PLANNED','2026-10-20',
+     'Jan A9','600111222','WGM1A9','GDA1A9',true,
+     'Erik A9',null,'ABC1A9',
+     'HHL/A901','SCX/A901')
+     on conflict (id) do update set status='PLANNED', trailer_swap=true,
+       driver_delivery_phone=null, hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
+sval "A9: brak telefonu SE w awiz_missing" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g,
+               jsonb_array_elements_text(g->'items') i
+   where g->>'kind'='AWIZ' and i='telefon SE')" t
+sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
+# CI bez pg_cron: CASE WHEN nie chroni przed parse cron.job — jak insurance.sh / workflows.sh.
+if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; then
+  sval "A9: cron tower-zasoby wyłączony" "select count(*) from cron.job where jobname='tower-zasoby'" 0
+else
+  ok=$((ok+1)); echo "  OK    A9: cron tower-zasoby wyłączony"
+fi
+val "A9: HHL widzi load_ready_gaps" $HHL "select (gaps @> '[{\"kind\":\"AWIZ\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
+sval "A9: SAILING gdy brak sailing_id" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
+   where g->>'kind'='SAILING')" t
+# F7 P3/P8: bez fałszywego POLICY_SCX gdy brak przewoźnika; UPLOAD_CMR nie zamyka.
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
+     driver_name, driver_phone, tractor_plate, trailer_plate, trailer_swap,
+     hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000a902','$P',null,'123456/2026/A902','PLANNED','2026-10-20',
+     'Jan A9b','600111223','WGM1A2','GDA1A2',false,
+     'HHL/A902','SCX/A902')
+     on conflict (id) do update set status='PLANNED', carrier_org_id=null" >/dev/null
+sval "A9: bez POLICY_SCX gdy brak carrier" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a902')) g
+   where g->>'kind'='POLICY_SCX')" f
+sval "A9: CARRIER gdy brak przewoźnika (F7 P3)" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a902')) g
+   where g->>'kind'='CARRIER')" t
+# F7 P8: EXPIRED — UUID tylko hex (bez „x”); zamknięcie A3 nie rusza EXPIRED.
+sys "delete from decisions where id in ('33333333-0000-0000-0000-00000000ee01','33333333-0000-0000-0000-00000000ee02')" >/dev/null
+sys "insert into decisions (id, project_id, type_code, title, status, expired_reason, detail)
+     values ('33333333-0000-0000-0000-00000000ee01','$P','DOC_MISSING','CMR po terminie','EXPIRED','termin minął',
+             '{\"category\":\"CMR\",\"event_key\":\"e25:exp:doc\"}'::jsonb),
+            ('33333333-0000-0000-0000-00000000ee02','$P','NO_AWIZACJA','brak awizacji','EXPIRED','termin minął',
+             '{\"event_key\":\"e25:exp:awiz\"}'::jsonb)" >/dev/null
+sys "update decisions d set status='RESOLVED', resolved_at=now(), resolution_code='A3_STALE_REQ', expired_reason=null, updated_at=now()
+     where d.type_code='DOC_MISSING' and d.status in ('NEW','ASSIGNED','SNOOZED')
+       and coalesce(d.detail->>'category','') in ('POD','SPEC','LASHING_PHOTO','PERMIT_SE','CMR')" >/dev/null
+sval "A3: EXPIRED DOC_MISSING nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee01'" "EXPIRED|termin minął"
+sval "A3: EXPIRED NO_AWIZACJA nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee02'" "EXPIRED|termin minął"
+sval "A9: brak telefonu SE → dokładnie 1 pozycja AWIZ" "select jsonb_array_length(g->'items') from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ'" 1
+# Komplet → Gotowy: telefon SE + rejs + polisa na plan_load_date a901; PERMIT wyłączony.
+# UUID rejsu tylko hex (s901 było nielegalne → cast uuid → „^” w logu CI).
+sys "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+sys "delete from shipment_items where load_id='33333333-0000-0000-0000-00000000a901' and shipment_code='E25-A901';
+     insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m)
+     values ('$P','33333333-0000-0000-0000-00000000a901','E25-A901','STANDARD',null,null,null)" >/dev/null
+sys "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-00000000e25a','E25 A901','Polferries')
+     on conflict (id) do update set name=excluded.name, operator=excluded.operator" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
+     values ('33333333-0000-0000-0000-00000000f901','$P','55555555-0000-0000-0000-00000000e25a','GDN-NYN',
+             '2026-12-15 20:00:00+00','2026-12-16 08:00:00+00','RECZNIE')
+     on conflict (id) do update set vessel_id=excluded.vessel_id, departure_at=excluded.departure_at,
+       arrival_at=excluded.arrival_at, route=excluded.route" >/dev/null
+sval "A9: rejs f901 w bazie" "select count(*) from sailings where id='33333333-0000-0000-0000-00000000f901'" 1
+# Polisa na datę załadunku a901 (nie sztywne 2026-10-20 — F7 koordynator po ed161f7).
+sys "delete from insurance_policies where policy_no='POL-E25-A901';
+     insert into insurance_policies (org_id, policy_no, insurer, valid_from, valid_until, approval_status)
+     select '$SCXO', 'POL-E25-A901', 'Test',
+            coalesce((select plan_load_date from loads where id='33333333-0000-0000-0000-00000000a901'), current_date) - 30,
+            coalesce((select plan_load_date from loads where id='33333333-0000-0000-0000-00000000a901'), current_date) + 400,
+            'APPROVED'" >/dev/null
+sys "update loads set driver_delivery_phone='0700111222', sailing_id='33333333-0000-0000-0000-00000000f901', escort_vehicles=0
+     where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+# Przy FAIL w logu widać kinds (nie samą liczbę).
+sval "A9: po komplecie awiz_missing puste" "select case
+  when coalesce(jsonb_array_length(awiz_missing('33333333-0000-0000-0000-00000000a901')),0)=0 then '0'
+  else (select string_agg(g->>'kind', ',' order by g->>'kind')
+          from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g)
+end" 0
+# Wyzwalacz a9_trg_loads_ready ustawia READY przy UPDATE; a9_try_ready potem = 0 zmian.
+sval "A9: komplet → Gotowy sam" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
+# CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
+# DELIVERED wymaga hhl_order_no + carrier_order_no (0003) — bez nich INSERT padał i SCX widział 0 spraw.
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
+     hhl_order_no, carrier_order_no, actual_delivery_at)
+     values ('33333333-0000-0000-0000-00000000a903','$P','$SCXO','123456/2026/A903','DELIVERED','2026-10-10','2026-10-15',
+     'HHL/A903','SCX/A903', timestamptz '2026-10-15 12:00:00+00')
+     on conflict (id) do update set status='DELIVERED', carrier_org_id=excluded.carrier_org_id,
+       hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no,
+       actual_delivery_at=excluded.actual_delivery_at" >/dev/null
+sys "select a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903')" >/dev/null
+val "A3: CMR_UPLOAD widoczna dla SCX" $SCX "select count(*) from decisions where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+# CHECK 0102: EXPIRED ⇒ expired_reason NOT NULL; RESOLVED ⇔ resolved_at — resolved_at przy EXPIRED psuje UPDATE.
+sys "select decision_expire(d.id, 'termin minal') from decisions d
+     where d.load_id='33333333-0000-0000-0000-00000000a903' and d.type_code='CMR_UPLOAD'
+       and d.status in ('NEW','ASSIGNED','SNOOZED')" >/dev/null
+sval "A3: po decision_expire status EXPIRED" "select status::text from decisions
+  where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD'
+  order by updated_at desc limit 1" EXPIRED
+# Osobne komendy: ten sam SELECT z ensure+status potrafił czytać EXPIRED sprzed reopen (plan zapytania).
+sval "A3: reopen EXPIRED CMR_UPLOAD zwraca id" "select a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903') is not null" t
+sval "A3: po reopen NEW bez expired_reason" "select status::text||'|'||(expired_reason is null)::text from decisions
+  where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD'
+  order by updated_at desc limit 1" "NEW|true"
+sval "A3: drugi a3_ensure na otwartej = null (0 zmian)" "select a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903') is null" t
+sval "A9: brak otwartych RES:* (Do zrobienia spójne)" "select count(*) from decisions
+  where status in ('NEW','ASSIGNED','SNOOZED')
+    and (coalesce(detail->>'event_key','') like 'RES:%' or coalesce(detail->>'event_key','') like 'l3:RES:%')" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

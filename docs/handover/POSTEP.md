@@ -3321,3 +3321,70 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie kodu `ed564421` (22:07Z). Komentarz F7 (21:37Z) to „niegotowe” na `47af0dc`. #317 i #259 mają konflikt z `main`.
 - Bieżąca pozycja **D-0930** (#340): `db` `39332882485` zielony (6 min 43 s), unit zielony, visual `39332882486` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po ostatnim commicie.
 
+## 2026-10-20 00:50 — D-0930 na produkcji; start 0236 (#343)
+
+- Skrzynka: #320, #322, #323, #324, #338 już w planie, bez `pilne`. #343 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0040-01. Wpisane: PLAN §4 przy A3 (pierwszy commit, migracja 0236), §8, `docs/handover/dopiski/D-20261020-0040-01.md`. #342 i #344 bez „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Scalanie: #340 scalony `c2c22989` — „F7: gotowe do scalenia” po `0d4b0bcc`, unit, `db` i visual zielone.
+- `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, funkcje Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`).
+- Pozycja **D-0930** zamknięta. Bieżąca: **A3+A9** (`pakiet/a3-a9`). Ten commit: #343 w `0236_ksh_scx_l13_workflow.sql`. Testy `dec-auto` 78, `e25` 47. A3 i A9 dopiszą się do tej samej migracji.
+
+## 2026-10-20 01:30 — A3 w 0236; #342/#344 scalone; #346 w planie
+
+- Skrzynka: #320, #322, #323, #324, #343 w planie. #346 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0115-01 edycja faktur → PLAN §4 A4, §8, `docs/handover/dopiski/D-20261020-0115-01.md`. Nie przerywa A3+A9.
+- Scalanie: #342 (`f92216d8`) i #344 (`05d3dcb8`) — „F7: gotowe do scalenia” po ostatnim commicie, unit i visual zielone. #345 bez F7 (jeszcze A3/A9). #317 i #259 konflikt.
+- Bieżąca **A3** w `0236_ksh_scx_l13_workflow.sql`: seed 3 wymagań, `is_hhl_admin`, `CMR_UPLOAD`/`UPLOAD_CMR`, C17 zamyka, stare DOC_MISSING z kopią. Testy: `i2` 550, `e25` 50. Dalej A9 w tej samej migracji.
+
+## 2026-10-20 02:05 — A9 w 0236; dec2 20 typów
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez F7 (para A3+A9 w toku). #347 wygląd bez F7. #317 i #259 konflikt z `main` (F7 sprzed wciągnięcia).
+- Poprzedni `db` na `e5ad7b53` czerwony: `dec2` katalog 19→20 (CMR_UPLOAD). Poprawione.
+- **A9** w `0236_ksh_scx_l13_workflow.sql`: `awiz_missing`, `load_ready_gaps`, `a9_try_ready` + wyzwalacze, L3 z lukami, `tower-zasoby` wyłączony, zamknięcie `RESOURCE_MISSING` z kopią. Widok: `load.readyGaps` z RPC. Testy: `e25` 55, `nullguard` 658. Czeka na bramę `db`.
+
+## 2026-10-20 02:25 — #347 scalone; poprawka bramy A9 (i2/e25)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #347 (`686064b7`, F7 po `f85afdd`) — wygląd edycji faktury. #345 bez F7 (para w toku). #317 i #259 konflikt z `main`.
+- Brama `db` na `41348842` czerwona: i2 8× `detect_resource_deadlines` (A9 = no-op) + e25 `cron.job` bez pg_cron w CI. Poprawka: i2 I-21 → `l3_scan`, III-4 → `awiz_missing` PILOTS; e25 `to_regclass('cron.job')`; cron `tower-l3` w 0236; nullguard 662.
+
+## 2026-10-20 02:45 — A3+A9 F7 B1/P1–P9 + e25 cron (shell)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez „F7: gotowe” po `a3a3b652`. `db` czerwone (e25 cron: CASE WHEN i `cron.job` — parse w CI). Visual zielony. #317/#259 konflikt.
+- Ten krok (F7 niegotowe + brama): B1 bez ruszania EXPIRED; P1 `l3_headed`/`load_sms_code`; P2 tytuł WF = kod; P3 `dates_ctx` + POLICY_SCX tylko z carrier; P4 UPLOAD_CMR = `kept_open`; P5 `tower.bulk_quiet`; P6 zamknięcie RES:*; P9 `offset_hours`; D `\y…\y`; e25 cron jak insurance.sh; e25 58.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 03:20 — #345 F7 niegotowe runda 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Uzupełnienie #346 (kontrakt `update_invoice`) — do A4, nie przerywa.
+- Scalanie: CI na `03d428d1` zielone (unit/visual/db); F7: niegotowe runda 2.
+- Poprawki w 0236 + testy: B alarm pilotów (`AWIZ`+`PILOTS`); P2 tylko `load_sms_code`; P3 luka `CARRIER`; P5 `wf_enqueue_status` + `bulk_quiet`; P8 e25 (EXPIRED, Gotowy, CMR SCX, reopen); D POD/`~` + min 1 h + `n_open` bez już otwartych. i2 552, e25 67.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 03:45 — #345 poprawka bramy db po F7 rundzie 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `585b277d`. `db` `39353345803` czerwone (e25 6 FAIL + status A1×2). Visual zielony.
+- e25: UUID `ee01`/`ee02` (hex); rejs własny vessel `e25a` (unikat departure); a903 DELIVERED z numerami HHL/SCX; status A1 W4 → daty XI (nie „dziś” po 03:00).
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 04:15 — #345 e25 po F7: komplet A9 + reopen EXPIRED
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `ed161f7f`. `db` `39355584107` czerwone (e25 65/67); visual zielony.
+- e25: polisa na `plan_load_date` a901; PERMIT off + STANDARD; asercja kinds przy lukach; **EXPIRED przez `decision_expire`** (CHECK 0102: `EXPIRED`+`resolved_at` psuło UPDATE → sprawa zostawała NEW, ensure zwracał null). e25 69.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 04:35 — #345 e25: UUID rejsu hex + reopen w dwóch komendach
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a1197b30`. `db` `39357785497` czerwone (e25 66/4 FAIL); visual/unit zielone.
+- Przyczyna: UUID `…s901` (litera **s** poza hex) → INSERT/SELECT padają z `invalid input syntax for type uuid` (w logu sam `^`); stąd AWIZ+SAILING i PLANNED. Reopen: jeden SELECT z `ensure||status` mógł czytać EXPIRED sprzed UPDATE — rozdzielone; `a3_ensure` reopen z `IF NOT FOUND` + reopen gdy `open_from_event` zwróci zamkniętą.
+- e25 70. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-20 04:55 — #345 e25: oczekiwane 71 (licznik bramy)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `3449a9c8`. Unit i visual zielone; `db` `39360005068` czerwone: e25 **71/71 OK**, ale `gate-suites.mjs` oczekiwał 70.
+- Poprawka: `e25: 71` (asercja „rejs f901 w bazie” + reopen w dwóch komendach). Czeka na zielone CI i „F7: gotowe do scalenia”.
+

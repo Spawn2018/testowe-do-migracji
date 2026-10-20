@@ -124,7 +124,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~ → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -403,7 +403,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -544,16 +544,19 @@ Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę
 - **Testy:** `aud03` / `e25` / `i2` / `g20` / `dec2` (katalog 19 typów). ASK_FIX → `DECISION_HOLD`.
 - **Aplikacja:** #307 scalony (F1). Widok „zmienił Administrator HHL” — osobny PR `wyglad/*`.
 
-### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — W TOKU
+### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — NA PRODUKCJI (`c2c22989`, 20.10.2026 00:46, migracja 0235, `deploy-main` `39337027018`, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y`)
 F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `l3_scan`, `l3_ksh_lead`, `detect_unconfirmed_dates`, `detect_resource_deadlines` i `trg_plan_dates_notify`: kod z `load_sms_code`, nigdy `left(id::text, 8)` ani samotne `order_no`.
 - `l3_upsert_alarm` nie nadpisuje poprawionego `params.code` identyfikatorem ani numerem KSH.
 - Jednorazowo: otwarte ryzyka i powiadomienia SCX z numerem KSH; `sefs_source_expire_once()` woła test `dec-auto`.
 - **D-20261019-2315-01 (#338), ta sama migracja:** bieżący wpis statusu = ostatni niezastąpiony (`zastepuje`), `v_prev_at` tylko z takich wpisów, dopisek korekty ma `payload.actor` i `actor_id`. Bez nowej pozycji w kolejce.
 - **D-20261020-0010-01 (#341):** po tej pozycji pary PR **A3+A9**, potem **A7+A4**, potem A5, potem A10. Terminy pośrednie w §3. Wydanie 28.10.2026 20:00 bez zmian.
+- Scalone #340 `c2c22989` (F7 po `0d4b0bcc`). `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`). Dalej A3+A9 (migracja 0236).
 
-### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
+### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — W TOKU (`pakiet/a3-a9`, PR #345)
 - **D-20261020-0010-01:** jeden PR z A9 (jedna migracja, osobny commit na pozycję, jedno F7). Ekranu nie zmieniasz.
+- **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null). **ZROBIONE** (`663d953c` / `d11c7d42`).
+- **A3 w 0236:** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią. **ZROBIONE** (`e5ad7b53`); dec2 katalog 20 typów.
 - `doc_requirements`:
   - CMR → `anchor = AFTER_UNLOAD` (po „Dostarczone”), `offset_hours` z Opcji (dziś 24), odpowiada przewoźnik;
   - usuwasz regułę „CMR 2 h po załadunku”, wymagania POD, SPEC i LASHING oraz PERMIT_SE dla wszystkich.
@@ -575,7 +578,8 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `p5Source.ts` `permitsOf` / `policiesOf` / `permitScopeOf` → produkcja z bazy.
 - Test: `permits = 1`, `insurance_policies = 2`; każdy transport ma wymiary, pilota i rodzaj zezwolenia; KSH widzi polisę HHL, nie widzi polisy SCX; „Zezwolenie SE” brakuje tylko przy KR.
 
-### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4)
+### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — W TOKU (ta sama migracja 0236 / PR #345)
+- **A9 w 0236:** `awiz_missing`, `load_ready_gaps`, READY z bazy, `tower-zasoby` → `tower-l3` (`l3_scan`), zamknięcie `RESOURCE_MISSING` z kopią. **ZROBIONE** (`41348842` + poprawka bramy i2/e25).
 - Jedna funkcja kompletu awizacji `awiz_missing(load)`:
   - kierowca PL i SE (przy przepięciu) z telefonem, ciągnik, naczepa;
   - rejs przy trasie promowej;
@@ -593,6 +597,14 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 ### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
 - Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
+  - SCX → HHL (`KOSZT`): przed akceptacją HHL zmienia SCX i `HHL_ADMIN`; po `ZAAKCEPTOWANA` — tylko `HHL_ADMIN`.
+  - HHL → KSH (`PRZYCHOD`): przed akceptacją KSH zmienia wystawca HHL (`HHL_ADMIN`, `HHL_OPS`); po — tylko `HHL_ADMIN`.
+  - KSH nie zmienia treści żadnej faktury i nie wystawia (`invoices_insert` bez `CLIENT`); tylko weryfikacja / akceptacja / spór.
+  - `HHL_OPS` nie zmienia treści faktury SCX (może weryfikować jako odbiorca).
+  - RPC `update_invoice(p_invoice, p_patch, p_lines, p_note)`: te same reguły co `register_invoice` (VAT, CMR C17, tolerancja 0); historia; przed akceptacją → `DO_WERYFIKACJI` + `INVOICE_UPDATED`; po akceptacji przez `HHL_ADMIN` → `INVOICE_CORRECTED`. Mutacja ekranu `bill.update`.
+  - **Uzupełnienie #346 (po #347):** `p_patch` = pełna treść nagłówka (nie częściowa; `null` = puste); `p_lines` jak `register_invoice`. Wystawca → `INVOICE_UPDATED` / po akceptacji `INVOICE_CORRECTED` do odbiorcy; `HHL_ADMIN` na fakturze SCX → `INVOICE_CORRECTED` do wystawcy, status bez zmian. `dispute_note` zostaje. Allowlista + `grant execute` do `authenticated`. Stary PDF = zastąpiony. Po wdrożeniu `INVOICE_EDIT: true` w `serverRules.ts`.
+  - `guard_invoice_update` według tabeli ról; testy bramy `db` dla każdej roli i stanu.
 - **Z przeglądu #310 / #312 (P1–P2, decyzja koordynatora → A4):**
   - `load_status_set` przy ręcznym `READY_TO_INVOICE` ma wymagać CMR jak C17 (`c17_cmr_after_delivery`), nie dowolnego CMR — dziś rozjazd z automatem C17.
   - `register_invoice` nie może podpinać CMR zastąpionych ani z załadunku (tylko CMR po dostawie, jak C17).
@@ -1161,3 +1173,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 23:10 | #313 scalony (`745517e3`). `deploy-main` `39324497090`: migracja 0234, Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY, tower i makieta 200. D-0005 zamknięte. Dalej D-0930 | pętla |
 | 19.10.2026 23:15 | D-20261019-2315-01 (#338): korekta godziny statusu wskazuje ostatni niezastąpiony wpis. W tej samej migracji co D-0930 (0235), bez nowej pozycji kolejki | koordynator |
 | 20.10.2026 00:10 | D-20261020-0010-01 (#341): pary PR A3+A9 i A7+A4; ekran B5/B9/A10 u koordynatora; terminy pośrednie od wt 20.10. Wydanie 28.10 20:00 bez zmian. Nie przerywa D-0930 | koordynator |
+| 20.10.2026 00:40 | D-20261020-0040-01 (#343): numer KSH do SCX z `l13_decision_email` i `wf_load_context` — pierwszy commit PR A3+A9, migracja 0236. Bez nowej pozycji kolejki | koordynator |
+| 20.10.2026 01:20 | D-20261020-0115-01 (#346): edycja faktur — SCX/HHL do akceptacji odbiorcy, potem tylko `HHL_ADMIN`; KSH tylko akceptuje. W A4 (para A7+A4); ekran `wyglad/W-faktura-edycja`. Nie przerywa A3+A9 | właściciel 01:13; koordynator |

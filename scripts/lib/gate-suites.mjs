@@ -24,11 +24,11 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
-  i2: 549, // D-0005 F7: +1 err HHL_OPS ksh_confirm
+  nullguard: 662, // A9: load_ready_gaps + asercje bramy (CI 662)
+  i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
   i30: 10,
   i31: 9,
-  dec2: 42, // D-0005: liczba asercji bez zmian; katalog typów 18→19 (KSH_DATES_CHECK)
+  dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -36,7 +36,7 @@ export const EXPECTED_LOCAL = {
   hist11: 11,
   workflows: 67,
   insurance: 42,
-  'dec-auto': 76, // D-0930 F7: SCX po ksh_confirm dostaje kod, nie numer KSH
+  'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 46, // F7 #340: korekta po STATUS_AUTO zapisuje dopisek z notatką
+  e25: 71, // +1 vs 70: asercja „rejs f901 w bazie” (obok reopen w dwóch komendach)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };
