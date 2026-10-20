@@ -3524,3 +3524,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #361 — F7 gotowe (`7ddf16ba`), CI w toku; merge dopiero po HOTFIX. #366/#363 wygląd bez F7. #317 bez F7 po `f89b59d9`.
 - Ten krok: `pakiet/hotfix-d1525-trailer-swap` — migracja **0240** `guard_load_update` (lista SCX + HHL_ADMIN `carrier_order_no`); security 122 / TEST 118; money bez zmiany liczby. Część 2 NO_AWIZ_SE — następny krok. Po scaleniu #356 → migracja 0241.
 
+## 2026-10-20 16:40 — HOTFIX #367 F7 B1 (test security)
+
+- Skrzynka: #364/#362/#365/#356 — bez nowych; #362 PILNE w tytule, bez etykiety `pilne` — nie przerywa HOTFIX.
+- Scalanie: #367 — F7 niegotowe (tylko test); db 121/1 FAIL; unit+visual zielone. #361 F7 gotowe po HOTFIX; #366 po #361; #317 bez F7 po `f89b59d9`.
+- Ten krok: `security.sh` — puste SE: `driver_delivery_phone_country='PL'` (NOT NULL; jak ekran). Czekam na zielone CI / F7 gotowe.
+
