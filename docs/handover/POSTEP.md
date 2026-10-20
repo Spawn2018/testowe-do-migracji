@@ -3473,3 +3473,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Przyczyna: w `compute_load_eta` rekord `s` + alias `FROM sailings s` przy odczycie `s.route` (nieprzypisany rekord) → błąd przy każdym `sailing_id`. Port/prom/ETA i przypisanie rejsu padały.
 - Poprawka w tej samej 0238 (jeszcze nie na produkcji): `v_sail` / alias `sa`. Czeka na zielone CI i F7.
 
+## 2026-10-20 11:10 — #352 scalone; A5 db: ETA Stena vs Polferries (świeże GPS)
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #352 (`wyglad/W-a5-port`) — „F7: gotowe do scalenia” po `dcd4681`, CI zielone, merge `f8c2f39b`. `deploy-main` nie czekamy.
+- #351 na `51dc06cb`: unit/visual zielone; db `39396573337` czerwone — status **132/1**: „A5 ETA plac Stena > Polferries” dostało pusty wynik (oba `eta_site` null).
+- Przyczyna: pozycje GPS w teście z `2026-10-06` poza `GPS_FRESH_MIN` względem `now()` w CI → `compute_load_eta` zwraca null przy `AT_PORT_NYNASHAMN`.
+- Poprawka: `process_position(…, now() − 5/1 min)` w `tests/db/status.sh`. Oczekiwane status nadal **133**. Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
