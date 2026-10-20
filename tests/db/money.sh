@@ -94,7 +94,8 @@ L3=33333333-0000-0000-0000-000000000003; L4=33333333-0000-0000-0000-000000000004
 # A5/E25: status tylko load_status_set; A4: numery w RETURNING → load_order_numbers()
 err "GOTOWY bez numeru HHL → zrozumiały komunikat bazy"    $HHL "select load_status_set('$L1','READY',now(),null)" "bez numeru zlecenia HHL"
 val "HHL wpisuje swój numer"                               $HHL "update loads set hhl_order_no='HHL/T/1' where id='$L1'; select hhl_order_no from load_order_numbers() where load_id='$L1'" "HHL/T/1"
-err "HHL nie zmieni numeru przewoźnika (W12)"              $HHL "update loads set carrier_order_no='X' where id='$L1'" "wpisuje wy..cznie przewo"
+# D-1525: HHL_ADMIN może Nr zlecenia SCX (W12 zawężone do HHL_OPS)
+val "HHL_ADMIN ustawia numer przewoźnika (D-1525)"         $HHL "update loads set carrier_order_no='SCX/HHL-ADMIN' where id='$L1'; select carrier_order_no from load_order_numbers() where load_id='$L1'" "SCX/HHL-ADMIN"
 err "przewoźnik nie zmieni numeru HHL"                     $SCX "update loads set hhl_order_no='X' where id='$L1'" "nie mo.e zmienia.: hhl_order_no"
 err "przewoźnik nie zmieni numeru KSH"                     $SCX "update loads set order_no='X' where id='$L1'" "nie mo.e zmienia.: order_no"
 val "przewoźnik wpisuje swój numer"                        $SCX "update loads set carrier_order_no='SCX/T/1' where id='$L1'; select carrier_order_no from load_order_numbers() where load_id='$L1'" "SCX/T/1"

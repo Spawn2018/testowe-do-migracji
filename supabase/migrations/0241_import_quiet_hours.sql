@@ -1,4 +1,4 @@
--- 0240 — D-20261020-1157-01 (#356): ciche uzupelnienie godzin importu (import_quiet_hours).
+-- 0241 — D-20261020-1157-01 (#356): ciche uzupelnienie godzin importu (import_quiet_hours).
 -- Przelacznik ops_thresholds.import_quiet_hours=1 (wlaczone).
 -- Wylaczenie 26.10: Administrator HHL na ekranie Opcje › Progi (wyglad/* — koordynator);
 -- RPC admin_ops_threshold_set bez zmian (wymaga sesji HHL_ADMIN / auth.uid()).
