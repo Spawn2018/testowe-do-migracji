@@ -386,7 +386,7 @@ describe.runIf(LIVE)('BK3 SupabaseProvider (live, RLS)', () => {
       loadId = l!.id;
     }
     const err = await P.SCX.apply({ type: 'load.sailing', loadId, sailingId: null, bookingRef: null }).then(() => '', (e: Error) => e.message);
-    expect(friendlyDbError(err)).toBe('Rejs po wypłynięciu może zmienić wyłącznie HHL.');
+    expect(friendlyDbError(err)).toBe('Rejs po wypłynięciu może zmienić wyłącznie Administrator HHL.');
   });
 
   it('M12: rejsy z odczytu Polferries (ferry-status/ferry-schedule, scripts/ferry/run-job.ts) widoczne na 3 kontach; dziennik przebiegów tylko HHL', async () => {

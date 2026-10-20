@@ -62,7 +62,7 @@ const pl: Dict = {
   sail_assign: 'Przypisz rejs',
   sail_assigned: 'Rejs przypisany',
   sail_unassigned: 'nieprzypisany',
-  sail_deny_DEPARTED: 'Po wypłynięciu rejs zmienia wyłącznie HHL',
+  sail_deny_DEPARTED: 'Po wypłynięciu rejs zmienia wyłącznie Administrator HHL',
   sail_deny_CANCELLED: 'Rejs jest odwołany — wybierz inny',
   sail_deny_ROLE: 'Rejs przypisuje HHL albo przewoźnik transportu',
   tl_auto: 'Zmiana automatyczna',

@@ -25,8 +25,9 @@ export function sailingAssignDenied(
   role: OrgKind, load: Load, current: Sailing | undefined, target: Sailing | null, nowIso: string, account?: string | null,
 ): SailingDenied {
   if (target && target.status === 'ODWOLANY') return role === 'HHL' || role === 'SCX' ? 'CANCELLED' : 'ROLE';
-  if (role === 'HHL') return account === 'HHL_OPS' && target && hasDeparted(target, nowIso) ? 'DEPARTED' : null;
-  if (role !== 'SCX') return 'ROLE';
+  /* 0242 (D-1501): Administrator HHL — także rejsy historyczne i zmiana po wypłynięciu; Operacje HHL jak przewoźnik */
+  if (role === 'HHL' && account !== 'HHL_OPS') return null;
+  if (role !== 'SCX' && role !== 'HHL') return 'ROLE';
   if (AFTER_FERRY.has(load.status) || (current && hasDeparted(current, nowIso) && current.status !== 'ODWOLANY')) return 'DEPARTED';
   if (target && hasDeparted(target, nowIso)) return 'DEPARTED';
   return null;
