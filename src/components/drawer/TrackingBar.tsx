@@ -15,16 +15,8 @@ import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
 import { rioStartsLate, trackerBarRio } from '../../lib/p4c';
 import { trkSub } from '../../lib/trackingStateText';
-import { PROD_BUILD } from '../../lib/prodFacade';
-
-/**
- * Decyzja właściciela 20.10.2026, 20:01: śledzenie i lokalizacja tylko przy podanym linku śledzenia.
- * Bez linku (ani w transporcie, ani link RIO z serwera) pasek nie mówi „Śledzenie trwa”.
- * W demo transporty nie mają linków — tam zostaje dotychczasowy pasek.
- */
-export function trackingNoLink(load: Pick<Load, 'resources'>, link: TrackingLinkInfo | null, prod: boolean = PROD_BUILD): boolean {
-  return prod && !link && trackerKind(load.resources.trackingRef) === 'none';
-}
+export { trackingNoLink } from '../../lib/trackerLink';
+import { trackingNoLink } from '../../lib/trackerLink';
 
 function trackerText(load: Pick<Load, 'resources' | 'plannedLoadDate'>, locale: Locale, link: TrackingLinkInfo | null, nowIso: string): string {
   /* wyglad/P4-c (E44 pkt 5, 6): link RIO z serwera — pojazd z lokalizatorem, start i wygaśnięcie linku */

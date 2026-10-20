@@ -13,6 +13,7 @@ import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, isoMs, time
 import { axisMilestones, planNote, type PlanNote } from '../../lib/p6cAxis';
 import { settlementGate } from '../../lib/statusSettlement';
 import { fs6, fs6p } from '../../i18n/p6c';
+import { trackingNoLink } from '../../lib/trackerLink';
 import { ht, htp } from '../../i18n/p6b';
 import { whoOf } from '../../lib/p6History';
 
@@ -137,7 +138,7 @@ export function StatusAxisTab({
   documents = [],
   bills = [],
 }: {
-  load: Pick<Load, 'id' | 'status' | 'stage' | 'unloadedAt' | 'resources' | 'plannedLoadDate' | 'plannedDeliverDate'>;
+  load: Pick<Load, 'id' | 'status' | 'stage' | 'unloadedAt' | 'resources' | 'plannedLoadDate' | 'plannedDeliverDate' | 'trackingLink'>;
   events: readonly LoadEvent[];
   geofences: readonly Pick<Geofence, 'id' | 'name'>[];
   locale: Locale;
@@ -205,7 +206,7 @@ export function StatusAxisTab({
                   {t(locale, isOpen ? 'p4b_g_collapse' : 'p4b_g_expand')}
                 </button>
               ) : (
-                <span className="sax-gr">{t(locale, key === 'route' && phone ? 'p4b_g_route_r_ph' : `p4b_g_${key}_r`)}</span>
+                <span className="sax-gr">{t(locale, key === 'route' && trackingNoLink(load, load.trackingLink) ? 'p4b_g_route_r_nolink' : key === 'route' && phone ? 'p4b_g_route_r_ph' : `p4b_g_${key}_r`)}</span>
               )}
             </div>
             {shown.length === 0 ? null : (

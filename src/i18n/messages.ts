@@ -247,6 +247,7 @@ const pl: Dict = {
   p4b_g_after: 'Rozliczenie',
   p4b_g_prep_r: 'bez śledzenia',
   p4b_g_route_r: 'śledzenie włączone',
+  p4b_g_route_r_nolink: 'bez linku śledzenia',
   p4b_g_route_r_ph: 'śledzenie',
   p4b_g_after_r: 'bez śledzenia',
   p4b_g_expand: 'rozwiń ▾',

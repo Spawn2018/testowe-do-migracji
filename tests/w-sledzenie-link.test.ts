@@ -41,3 +41,20 @@ describe('W-sledzenie-link — dwie wartości czasu w ETA opisane', () => {
     expect(readFileSync('src/components/drawer/EtaBlock.tsx', 'utf8')).toContain("tp(locale, 'p4b_eta_delay', { d: formatDelayPill(delayMin) })");
   });
 });
+
+describe('W-sledzenie-link — ten sam stan w PDF, mapie, osi i „najbliższych włączeniach”', () => {
+  it('PDF/jedna linia, mapa, oś statusu i lista włączeń sprawdzają brak linku', () => {
+    expect(readFileSync('src/lib/trackingStateText.ts', 'utf8')).toContain("trackingNoLink(load, trackingLink)");
+    expect(readFileSync('src/lib/p9fNote.ts', 'utf8')).toContain("trackingNoLink(l, l.trackingLink, ctx.prod)");
+    expect(readFileSync('src/components/drawer/StatusAxisTab.tsx', 'utf8')).toContain("'p4b_g_route_r_nolink'");
+    expect(readFileSync('src/lib/stageTiles.ts', 'utf8')).toContain('if (trackingNoLink(l, l.trackingLink)) continue;');
+  });
+  it('dopisek mapy bez linku w produkcji: „Brak linku śledzenia — SCX” na czerwono', async () => {
+    const { drawerMapNote } = await import('../src/lib/p9fNote');
+    const load = { id: 'x', code: 'SG-15', status: 'IN_TRANSIT_PL', stage: 'PL', plannedLoadDate: '2026-10-08', plannedDeliverDate: '2026-10-14', resources: { trackingRef: null } } as unknown as Load;
+    const n = drawerMapNote(load, { nowIso: '2026-10-20T18:00:00Z', prod: true, gpsReady: true, hasFix: true, tx: (k) => k, dt: (s) => s });
+    expect(n?.kind).toBe('nopos');
+    expect(n?.lines).toEqual(['p9f_nopos', 'p9f_why_link']);
+    expect(n?.alert).toBe(1);
+  });
+});
