@@ -3488,3 +3488,33 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - CI na `b0b7f607`: db `39398905684` / unit / visual **zielone** (status 133).
 - F7 runda 2: dopisane `chk` `eta_site is not null` dla Stena i Polferries przed porównaniem. Oczekiwane status **135**. Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-20 11:50 — A5 scalone; #353 w planie; start D-1118
+
+- Skrzynka: #353 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-1118-01. Wpisane: PLAN §3/§4 (D-1118 po A5 przed A10), §8, dopisek `docs/handover/dopiski/D-20261020-1118-01.md`. Zgłoszenie otwarte do zrobienia D-1118. #320/#322/#323/#324 już w planie.
+- Scalanie: #351 — „F7: gotowe do scalenia” po `9aa9616e`, CI zielone, merge `889fc09d`. `deploy-main` nie czekamy. #317/#259 konflikt — bez scalenia.
+- Bieżąca **D-1118** (`pakiet/d1118-zezwolenie-pilot`): migracja 0239 — `permit_fits` (masa, KIND), potem `awiz_pilots_set`.
+
+## 2026-10-20 12:15 — #354 scalone; #356 w planie; fix D-1118 db
+
+- Skrzynka: #356 (`Spawn2018`, `dla-cursora`, bez `pilne`) — decyzja właściciela 11:57: wdrożenie cichego uzupełnienia godzin (`import_quiet_hours`), **przed D-1118 i A10**. Wpisane: PLAN §3/§4/§8, dopisek `D-20261020-1157-01.md`. Komentarz w #356 (łańcuch DECISION_OPEN/RISK_OPEN). #320/#322/#323/#324/#353 w planie.
+- Scalanie: #354 — F7 po `17601dc`, CI zielone → merge `a1366549`. #357 bez F7 (db FAIL). #317 konflikt — bez scalenia. #259 bez F7.
+- D-1118 fix (ten commit): `permit_fits` bez `select *` (GRANT kolumn 0076); `PILOTS_SET` w CHECK `load_events`; UUID OPS w teście; init `awiz_pilots_set` w BEGIN. Po zielonym CI — kolejna pozycja **#356** (`pakiet/import-godziny-cicho`); #357 zostaje otwarte.
+
+## 2026-10-20 12:55 — D-1118: i2 PL_SE + nullguard 690
+
+- Skrzynka: #356/#353/#324/#323/#322/#320 — w planie, bez `pilne`.
+- Scalanie: #357 — brak „F7: gotowe”; db FAIL (i2 569/2: PL_SE). #355 visual w toku wcześniej. #317/#259 konflikt.
+- Fix: insert testowy PL_SE z telefonem krajowym (0111), nie E.164 — wcześniej INSERT padał w `/dev/null`. nullguard EXPECTED 690. Czeka na zielone CI i F7.
+
+## 2026-10-20 13:20 — #355 scalone; D-1243 w #357; #358/#359 w planie
+
+- Skrzynka: #358 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-1243 dane osobowe widoczne; razem z D-1118. #359 (`Spawn2018`, `dla-cursora`, bez `pilne`, treść „pilne przed A10”) — OKQ8 7 dni / Orlen 5 publ. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1243-01.md`, `D-20261020-1300-01.md`. Bieżącej D-1118 nie przerywam (#359 bez etykiety `pilne`).
+- Scalanie: #355 — F7 po `8a9637a`, CI zielone → merge `e7842326`. #357 CI zielone na `4bae611f`, bez F7 (czekają poprawki D-1243). #317/#259 konflikt.
+- Ten commit (#357): `awiz_pilots_set` — imię jawne w audit/`load_events`; `load_escort_contacts` CLIENT_*; test KSH `PILOTS_SET`; i2 572; merge main po #355, `AWIZ_PILOTS: true`.
+
+## 2026-10-20 13:55 — #357 CI zielone; D-1322 w planie
+
+- Skrzynka: #359 komentarz D-20261020-1322-01 v3 (`Spawn2018`, bez `pilne`) — obie tabele paliwowe „od progu”. Wpisane: PLAN §4 (D-1300 + 1322), §8, dopisek `D-20261020-1322-01.md`; dopisek 1300 pkt 3 → odwołanie do 1322. #358/#356/#353/#324/#323/#322/#320 w planie.
+- Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
+- Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
+

@@ -884,9 +884,9 @@ err "imię ponad 120 znaków → odmowa" $SCX "select load_escorts_set('$LP',jso
 val "SCX awizuje pilota z kierowcą (telefon ze spacjami → krajowy) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
 val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 val "HHL widzi kontakt" $HHL "select count(*) from load_escort_contacts() where load_id='$LP'" 1
-val "KSH: load_escort_contacts → 0 wierszy" $KSH "select count(*) from load_escort_contacts()" 0
+val "KSH: load_escort_contacts z imieniem i telefonem (D-1243)" $KSH "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 err "KSH: bezpośredni odczyt driver_phone → brak uprawnień" $KSH "select driver_phone from load_escorts where load_id='$LP'" "permission denied"
-val "KSH nadal widzi pojazdy (firma, tablica) bez danych osobowych" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
+val "KSH widzi pojazdy (firma, tablica) z load_escorts" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 kontaktów" 11111111-0000-0000-0000-00000000000b "select count(*) from load_escort_contacts() where load_id='$LP'" 0
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
@@ -1011,6 +1011,67 @@ fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
 chk "II-7: >2 km od korytarza → ryzyko rk_off_corridor" "$(Q "select title_key from risk_signals where load_id='$L7' and dedup_key='OFF_CORRIDOR:$L7' and resolved_at is null")" "rk_off_corridor"
 $PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null 2>&1
+
+echo; echo "[D-1118] permit_fits masa/KIND + awiz_pilots_set"
+L_D1=33333333-0000-0000-0000-00000000d111
+L_D2=33333333-0000-0000-0000-00000000d112
+PM_F=$(Q "select id from permits where permit_no='13/GD/2026' and scope='FIRMA' limit 1")
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_D1','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-SG','DOCS_PENDING','SG','FIRMA',
+  21.69, 2.45, 3.75, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_D1','$PM_F')" >/dev/null
+chk "D-1118 SG+13/GD: ok bez combo_weight (cargo z symboli)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_D1','$PM_F')")" "true/"
+val "D-1118 permit_fits jako HHL" $HHL "select ok::text from permit_fits('$L_D1','$PM_F')" true
+val "D-1118 permit_fits jako KSH" $KSH "select ok::text from permit_fits('$L_D1','$PM_F')" true
+val "D-1118 permit_fits jako SCX" $SCX "select ok::text from permit_fits('$L_D1','$PM_F')" true
+chk "D-1118 FIRMA: missing_countries puste (nie SE)" \
+  "$(Q "select coalesce(array_to_string(missing_countries,','),'') from load_permit_status() where load_id='$L_D1'")" ""
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_D2','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-KR','DOCS_PENDING','KR','TRASA',
+  23.00, 3.40, 3.90, 28.4, current_date+3, 2)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_D2','$PM_F')" >/dev/null
+chk "D-1118 KR+13/GD: KIND (rodzaj)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_D2','$PM_F')")" "false/KIND"
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values
+ ('11111111-0000-0000-0000-00000000d0f5','00000000-0000-0000-0000-00000000a001','ops-d1118@test','HHL_OPS',true)
+ on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+OPS_D=11111111-0000-0000-0000-00000000d0f5
+err "D-1118 KSH odmowa awiz_pilots_set" $KSH "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
+err "D-1118 HHL_OPS odmowa awiz_pilots_set" $OPS_D "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
+err "D-1118 SG bez wymogu pilotów → 22023" $SCX "select awiz_pilots_set('$L_D1','PO1','Jan','ABC','Erik')" "bez wymogu pilotów"
+err "D-1118 imię bez tablicy → 22023" $SCX "select awiz_pilots_set('$L_D2',null,'Jan Pilot',null,null)" "numer rejestracyjny"
+# PL_SE z load_escorts_set — awiz_pilots_set nie może go skasować
+# telefon krajowy (0111), nie E.164 — inaczej INSERT ginie w /dev/null i asercja PL_SE jest fałszywa
+$PSQL -c "insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
+ values ('$L_D2', 1, 'Firma Pilot', 'XX99', 'PL_SE', 'Sekret', '111222333', 'PL',
+         (select id from app_users where auth_id='$SCX'))" >/dev/null
+val "D-1118 SCX awizuje Pilot PL/SE" $SCX "select (awiz_pilots_set('$L_D2','po 11','Jan Pilot','se 22','Erik Pilot')->>'ok')" true commit
+chk "D-1118 escort_vehicles bez zmian po awizacji" \
+  "$(Q "select escort_vehicles::text from loads where id='$L_D2'")" "2"
+chk "D-1118 load_escorts PL+SE + zachowany PL_SE" \
+  "$(Q "select string_agg(scope||':'||plate, ',' order by scope, seq) from load_escorts where load_id='$L_D2'")" "PL:PO 11,PL_SE:XX99,SE:SE 22"
+chk "D-1118 audit z imieniem pilota (D-1243)" \
+  "$(Q "select (new_value::text like '%Jan Pilot%' and new_value::text not like '%[dane osobowe]%')::text from audit_log where action='AWIZ_PILOTS_SET' and entity_id='$L_D2' order by created_at desc limit 1")" "true"
+chk "D-1118 load_events z imieniem (D-1243)" \
+  "$(Q "select (payload::text like '%Jan Pilot%' and payload::text not like '%[dane osobowe]%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1")" "true"
+val "D-1118 KSH czyta PILOTS_SET z imieniem (D-1243)" $KSH \
+  "select (payload::text like '%Jan Pilot%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1" true
+val "D-1118 puste pola usuwają strony PL/SE" $SCX "select (awiz_pilots_set('$L_D2',null,null,null,null)->>'ok')" true commit
+chk "D-1118 po wyczyszczeniu PL_SE zostaje" \
+  "$(Q "select string_agg(scope||':'||plate, ',' order by seq) from load_escorts where load_id='$L_D2'")" "PL_SE:XX99"
+# Gotowy + przełącznik: FIRMA z 13/GD nie blokowany brakiem SE
+$PSQL -c "update security_flags set enabled=true where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t)
+ values ('$P','$L_D1','D1118-SG-1','DIMENSIONED',21.69,2.45,3.75,10)
+ on conflict (project_id, shipment_code) do update set load_id=excluded.load_id, cargo_class='DIMENSIONED'" >/dev/null
+$PSQL -c "update loads set hhl_order_no='HHL/D1118-SG' where id='$L_D1'" >/dev/null
+val "D-1118 FIRMA+13/GD przy włączonym wymogu → READY" $HHL \
+  "select load_status_set('$L_D1','READY',now(),null); select status from loads where id='$L_D1'" READY commit
+$PSQL -c "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_D1','$L_D2')" >/dev/null
 
 fi # tower-i2-part 5
 

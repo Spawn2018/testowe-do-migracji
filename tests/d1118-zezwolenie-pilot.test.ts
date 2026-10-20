@@ -88,8 +88,8 @@ describe('produkcja — tabela symboli i piloci z bazy', () => {
     m.setPilotsFromServer([{ loadId: 'l2', scope: 'PL', plate: 'WX 00001', name: 'Jan Testowy' }, { loadId: 'l2', scope: 'SE', plate: 'ABC 001', name: null }]);
     expect(m.pilotsOf(kr)).toEqual({ pl: { plate: 'WX 00001', name: 'Jan Testowy' }, se: { plate: 'ABC 001', name: null } });
     expect(m.pilotsOf(sg)).toEqual({ pl: { plate: null, name: null }, se: { plate: null, name: null } });
-    /* zapis pilotów dopiero po `awiz_pilots_set` w bazie (#353) — flaga wykonawcy */
-    expect(m.savePilotsOf()).toBeNull();
+    /* D-1118: AWIZ_PILOTS true razem z 0239 — zapis przez awiz_pilots_set */
+    expect(m.savePilotsOf()).toEqual(expect.any(Function));
   });
 });
 

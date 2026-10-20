@@ -82,6 +82,7 @@ document_supersede | GUARD | select document_supersede(gen_random_uuid(), gen_ra
 invoice_dispute_reply | GUARD | select invoice_dispute_reply('$INV', 'x') | Brak aktywnego konta
 load_permit_link | GUARD | select load_permit_link('$L1', '$PERMIT') | HHL albo przewoźnik transportu
 load_permit_status | EMPTY | select count(*) from load_permit_status() | 0
+awiz_pilots_set | GUARD | select awiz_pilots_set('$L1', null, null, null, null) | Pilotów awizuje
 load_escorts_set | GUARD | select load_escorts_set('$L1', '[]'::jsonb) | HHL albo przewoźnik transportu
 carrier_rate_load | GUARD | select carrier_rate_load('$L1', 5) | wyłącznie HHL
 carrier_scorecard | GUARD | select count(*) from carrier_scorecard() | wyłącznie dla HHL

@@ -24,8 +24,8 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 685, // A4: +update_invoice GUARD (+4 vs 681)
-  i2: 553, // A7 F7 P9: KSH bez polisy SCX + asercja HHL widzi
+  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
+  i2: 572, // D-1118 + D-1243: KSH czyta PILOTS_SET z imieniem
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
