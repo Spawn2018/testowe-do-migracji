@@ -666,9 +666,10 @@ grant execute on function public.a7_policies_list() to authenticated;
 
 alter type risk_kind add value if not exists 'INVOICE_OVERDUE';
 
--- Macierz: faktura po terminie (tylko HHL)
+-- Macierz: faktura po terminie (tylko HHL) — kolumny jak C3 (0222): in_app/push/fixed_*/label_pl
 insert into public.notification_matrix (
-  event_key, event_group, role, bell, email, phone, always_bell, always_email, always_phone, risks_only, label
+  event_key, event_group, role, in_app, email, push,
+  fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
 ) values
   ('inv_overdue','MONEY','HHL_ADMIN',true,true,false,false,false,false,false,'Faktura nieopłacona po terminie'),
   ('inv_overdue','MONEY','HHL_OPS',true,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
@@ -676,10 +677,10 @@ insert into public.notification_matrix (
   ('inv_overdue','MONEY','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie'),
   ('inv_overdue','MONEY','CARRIER_USER',false,false,false,false,false,false,false,'Faktura nieopłacona po terminie')
 on conflict (event_key, role) do update set
-  bell = excluded.bell,
+  in_app = excluded.in_app,
   email = excluded.email,
-  phone = excluded.phone,
-  label = excluded.label;
+  push = excluded.push,
+  label_pl = excluded.label_pl;
 
 create or replace function public.notify_event_key(p_template text, p_payload jsonb)
 returns text
