@@ -118,6 +118,15 @@ $PSQL -c "update ops_thresholds set value_num = 9 where key = 'OFFROUTE_KM'" >/d
 val "większy próg zjazdu gasi alarm" "select l3_deviation_alarm(5000, 2, 10, false)" f
 $PSQL -c "update ops_thresholds set value_num = 2 where key = 'OFFROUTE_KM'" >/dev/null
 val "prom i port bez zjazdu" "select l3_deviation_alarm(5000, 2, 10, true)" f
+$PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
+  ('33333333-0000-0000-0000-00000000d930','$P','123456/2026/KSH','PLANNED','2026-10-21')
+  on conflict (id) do update set order_no=excluded.order_no, status='PLANNED', plan_load_date=excluded.plan_load_date" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P','33333333-0000-0000-0000-00000000d930','SG-D930',1,1,1
+   where not exists (select 1 from shipment_items where project_id='$P' and shipment_code='SG-D930')" >/dev/null
+val "l3_scan: params.code to kod transportu" "select l3_scan(timestamptz '2026-10-20 12:00+00'); select detail#>>'{params,code}' from risk_signals where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930' and resolved_at is null" "SG-D930"
+$PSQL -c "update risk_signals set detail = jsonb_set(detail, '{params,code}', '\"SG-D930\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'" >/dev/null
+val "l3_upsert_alarm nie nadpisuje kodu identyfikatorem" "update risk_signals set severity='HIGH', detail = jsonb_set(jsonb_set(coalesce(detail,'{}'::jsonb), '{params,code}', '\"SG-D930\"'), '{l3_level}', '\"warning\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'; select l3_upsert_alarm((select project_id from loads where id='33333333-0000-0000-0000-00000000d930'), '33333333-0000-0000-0000-00000000d930', 'RESOURCE_MISSING', 'l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930', '33333333: zly', 'rk_res_driver', true, true, now(), jsonb_build_object('params', jsonb_build_object('code', left('33333333-0000-0000-0000-00000000d930'::text, 8))), now()); select detail#>>'{params,code}' from risk_signals where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930' and resolved_at is null" "SG-D930"
 
 
 echo; echo "[dec-auto] L-1b"
@@ -145,9 +154,9 @@ val "SEFS zamknięty tydzień bez cen → decyzja" "select l1b_sefs_note('$P','2
 val "SEFS tytuł bez skrótu" "select (title like 'Opłata paliwowa:%' and title not like '%SEFS%') from decisions where detail->>'event_key' like 'l1b:sefs:$P:2020-06-08:SOURCE'" t
 $PSQL -c "select l1b_sefs_note('$P','2020-06-15')" >/dev/null
 val "SEFS zamknięty tydzień drugi raz → jedna" "select count(*) from decisions where detail->>'event_key' like 'l1b:sefs:$P:2020-06-08:SOURCE'" 1
-# B-N3: wygaszenie przenosi event_key, potem zamknięty tydzień bez cen → nowa sprawa.
-$PSQL -c "update decisions set detail = coalesce(detail,'{}'::jsonb) || jsonb_build_object('event_key', (detail->>'event_key') || ':expired-0230', 'event_key_0230', detail->>'event_key'), updated_at = now() where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE'" >/dev/null
-$PSQL -c "select decision_expire(id, 'nie dotyczy — tydzień wskaźników jeszcze trwa') from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE:expired-0230'" >/dev/null
+# B-N3 / D-0930: wygaszenie woła sefs_source_expire_once (kod migracji 0230), nie ręczny UPDATE.
+$PSQL -c "update decisions set detail = coalesce(detail,'{}'::jsonb) || jsonb_build_object('prev_week_start', (timezone('Europe/Warsaw', now()))::date::text) where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE'" >/dev/null
+$PSQL -c "select sefs_source_expire_once()" >/dev/null
 val "SEFS po wygaszeniu → nowa sprawa" "select l1b_sefs_note('$P','2020-06-15')" SOURCE
 val "SEFS po wygaszeniu świeży klucz" "select count(*) from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE' and status in ('NEW','ASSIGNED','SNOOZED')" 1
 val "SEFS wygaszony klucz zostaje" "select count(*) from decisions where detail->>'event_key' = 'l1b:sefs:$P:2020-06-08:SOURCE:expired-0230' and status = 'EXPIRED'" 1
@@ -213,6 +222,69 @@ val "KR drugie → jedna" "select count(*) from decisions where detail->>'event_
 val "import woła próg KR" "select (position('l1b_kr_check' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
 val "postój nie ma funkcji z sztywnym progiem" "select count(*) from pg_proc where proname='l1b_dwell_check'" 0
 
+echo; echo "[dec-auto] D-0930 kod transportu w powiadomieniu SCX"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
+  values ('33333333-0000-0000-0000-00000000d930','$P','00000000-0000-0000-0000-00000000a003','KSHLEAK9301','PLANNED','2026-12-02','2026-12-06')
+  on conflict (id) do update set order_no=excluded.order_no, status='PLANNED', carrier_org_id=excluded.carrier_org_id,
+    plan_load_date=excluded.plan_load_date, plan_delivery_date=excluded.plan_delivery_date" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P','33333333-0000-0000-0000-00000000d930','SG-D930',1,1,1
+   where not exists (select 1 from shipment_items where project_id='$P' and shipment_code='SG-D930')" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000002'; select ksh_confirm_dates('33333333-0000-0000-0000-00000000d930','2026-12-03','2026-12-07'); commit;" >/dev/null
+val "SCX dostał kod SG-D930" "select (count(*)>=1) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('SG-D930' in n.payload::text)>0" t
+val "SCX po ksh_confirm bez numeru KSH" "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='33333333-0000-0000-0000-00000000d930' and o.kind='CARRIER' and position('KSHLEAK9301' in n.payload::text)>0" 0
+
+echo; echo "[dec-auto] D-0040 numer KSH poza e-mailem SCX"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status)
+  values ('33333333-0000-0000-0000-00000000d940','$P','00000000-0000-0000-0000-00000000a003','KSHLEAK0040','PLANNED')
+  on conflict (id) do update set order_no=excluded.order_no, carrier_org_id=excluded.carrier_org_id, status='PLANNED'" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P','33333333-0000-0000-0000-00000000d940','SG-D040',1,1,1
+   where not exists (select 1 from shipment_items where project_id='$P' and shipment_code='SG-D040')" >/dev/null
+$PSQL -c "update notification_matrix set email=true where event_key='dec_new' and role='CARRIER_DISPATCH'" >/dev/null
+$PSQL -c "select public.decision_open_from_event('$P','FERRY_CANCELLED','d040-ferry','Prom odwolany','{\"bundle_key\":\"d040-ferry\"}'::jsonb,'33333333-0000-0000-0000-00000000d940',null)" >/dev/null
+val "FERRY_CANCELLED do SCX: kod, nie numer KSH" "select coalesce((
+  select bool_and(
+    e->>'order_no' = 'SG-D040'
+    and e->>'order_no' is distinct from 'KSHLEAK0040'
+    and e->>'order_no' is distinct from left(l.id::text, 8)
+  )::text
+  from notifications n
+  join app_users u on u.id = n.user_id
+  join organizations o on o.id = u.org_id
+  join loads l on l.id = n.load_id
+  cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
+  where n.channel = 'EMAIL' and n.template = 'DECISION_OPEN' and o.kind = 'CARRIER'
+    and n.load_id = '33333333-0000-0000-0000-00000000d940'
+), 'false')" true
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled)
+  select '$P', 'D040-MAIL', 'D040 mail SCX', 'DELAY_DETECTED', 'true'::jsonb,
+         '[{\"type\":\"email\",\"audience\":\"CARRIER\",\"critical\":true}]'::jsonb, true
+   where not exists (select 1 from workflows where project_id='$P' and code='D040-MAIL')" >/dev/null
+$PSQL -c "insert into workflow_runs (workflow_id, load_id, status, dedup_key)
+  select w.id, '33333333-0000-0000-0000-00000000d940', 'QUEUED', 'wf:d040:email'
+    from workflows w where w.project_id='$P' and w.code='D040-MAIL'
+  on conflict (dedup_key) where dedup_key is not null do nothing" >/dev/null
+$PSQL -c "select public.wf_action(w, r, '{\"type\":\"email\",\"audience\":\"CARRIER\",\"critical\":true,\"text\":\"t\"}'::jsonb,
+            jsonb_build_object('event_type','MANUAL','load', public.wf_load_context(r.load_id)))
+          from workflows w
+          join workflow_runs r on r.workflow_id = w.id
+         where w.code='D040-MAIL' and r.dedup_key='wf:d040:email'" >/dev/null
+val "workflow e-mail SCX bez numeru KSH i bez hex" "select coalesce((
+  select bool_and(
+    n.payload->>'code' = 'SG-D040'
+    and e->>'order_no' = 'SG-D040'
+    and position('KSHLEAK0040' in n.payload::text) = 0
+    and n.payload->>'code' is distinct from left(l.id::text, 8)
+  )::text
+  from notifications n
+  join app_users u on u.id = n.user_id
+  join organizations o on o.id = u.org_id
+  join loads l on l.id = n.load_id
+  cross join lateral jsonb_array_elements(coalesce(n.payload->'transports', '[]'::jsonb)) e
+  where n.channel = 'EMAIL' and n.template = 'WORKFLOW_ALERT' and o.kind = 'CARRIER'
+    and n.load_id = '33333333-0000-0000-0000-00000000d940'
+), 'false')" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

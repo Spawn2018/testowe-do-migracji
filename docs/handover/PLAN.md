@@ -125,7 +125,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01) → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~ → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → Import godziny cicho (D-20261020-1157-01, #356) → D-1118 · Zezwolenie Firma/Trasa, piloci (D-20261020-1118-01) + D-1243 · Dane osobowe widoczne (D-20261020-1243-01, #358) → D-1300 · Opłata paliwowa OKQ8 7 dni (D-20261020-1300-01, #359) → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -140,15 +140,17 @@ Zależności (kolejność je spełnia; lista do kontroli): wszystkie paczki po P
 | nd 18.10, 23:59 | A3, A7, A9, A4, A5; brama niedzielna — **nieoddane — przeniesione na pn 19.10 23:59 (D-20261019-0820-01)** |
 | pn 19.10, 12:00 | #306 (D-1610) scalony, `db push`, wdrożenie z `main`; #307 scalony |
 | pn 19.10, 18:00 | D-20261018-1740-01 i D-20261019-0005-01 (część bazy) |
-| **pn 19.10, 23:59** | **A3, A7, A9, A4, A5** (nowy punkt kontrolny) |
-| wt 20.10, 23:59 | B4, B5, B7, B8, B9; A6 pkt 1–3; odczyt SharePoint (A6 pkt 4) |
-| śr 21.10, 23:59 | C4–C13; P4-u; P3-d |
-| czw 22.10, 23:59 | P5 |
-| pt 23.10, 23:59 | P6 |
-| sob 24.10, 23:59 | P7 (reszta); P8 |
-| nd 25.10, 23:59 | P10a; brama niedzielna — jeśli wt 20.10 23:59 B4–B9 nieoddane: P10a razem z P7/P8 na sob 24.10 (D-20261019-0820-01) |
-| pn 26.10, 23:59 | P9 |
-| wt 27.10, 23:59 | P10b; P11 w toku |
+| **pn 19.10, 23:59** | **A3, A7, A9, A4, A5** — nieoddane (D-20261020-0010-01) |
+| wt 20.10, 12:00 | D-0930, A3+A9 |
+| wt 20.10, 23:59 | A7+A4, A5, #356 ciche godziny, D-1118+D-1243, D-1300 paliwo, A10 |
+| śr 21.10, 12:00 | B4, B5, B7, B8 |
+| śr 21.10, 23:59 | B9, A6 |
+| czw 22.10, 23:59 | C4–C13 (C4, C5, C6, C7, C8, C9, C10, C11, C13) |
+| pt 23.10, 23:59 | P4-u, P3-d, P5 |
+| sob 24.10, 23:59 | P6 |
+| nd 25.10, 23:59 | P7, P8; brama niedzielna |
+| pn 26.10, 23:59 | P10a, P9 |
+| wt 27.10, 23:59 | P10b |
 | śr 28.10, 20:00 | P11: pełna brama TEST, 280 ujęć, `release-1.0` |
 
   Test E22 („tydzień bez nowych błędów”) kończy się 7 dni po wdrożeniu P10a. Wynik dopisuje koordynator.
@@ -400,11 +402,12 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (A5 scalone #351; #355 wygląd D-1118 scalone; D-1118+#358 w #357; potem #356, D-1300, A10…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → Automat wdrożenia z main (D-20261019-1050-01) → Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313) → Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)** → A3 → A7 → A9 → A4 → A5 → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → **Import godziny cicho (D-20261020-1157-01, #356)** → **D-1118 · Zezwolenie Firma/Trasa, piloci (D-20261020-1118-01) + D-1243 (#358)** → D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322) → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
+
 
 ### C3-p · Poprawki C3 — NA PRODUKCJI (17.10.2026 11:18; merge `17be0998` / PR #278; migracja 0223; `dpl_2xXvmtEXdvCnUp8WWW6DzNodae9G`)
 1. **Czat bez e-maila zapasowego:**
@@ -529,23 +532,33 @@ Decyzja właściciela 18.10.2026, 17:28: w Watch Tower jest tylko CMR po rozład
 - PR #316 scalony po F7 (komentarz po `0ae0dae0`). Parytet przed nałożeniem: brakowało tylko 0233. Próba ROLLBACK: warunek C17 i `purged_at` są, ostatnia migracja zostaje 0231. `db push` drugi raz: baza aktualna. Parytet MATCH YES.
 - Po nałożeniu: pliki CMR niezastąpione, wgrane przed dostawą, przy ustawionej dostawie = 0. Status CMR projektu STEGRA_BODEN: OK 2, OVERDUE 1. tower i makieta 200.
 
-### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005) — W TOKU (`pakiet/automat-wdrozenia`)
+### Automat wdrożenia z main (D-20261019-1050-01 §5; po poprawce #312, przed D-0005) — NA PRODUKCJI (`b4af5626`, 19.10.2026 20:53, `deploy-main` `39306048061`, Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z`)
 1. `docs/handover/ZASADY_CIAGLEJ_PRACY.md` — **już** (commit pracy ciągłej); uzupełnij gdy trzeba.
-2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push --db-url "$SUPABASE_DB_URL" --yes --skip-vault` (najpierw `--dry-run`; port 6543 i błąd → „potrzebny adres sesyjny (port 5432)”; adresu nie logować) → Edge zmienione w tym pushu (`_shared` = wszystkie, `--project-ref nglnnrmzmhusvxslousq`) → `vercel@64.5.0 deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_URL`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono i `::warning::brak kluczy — wdrożenie ręczne`. Plik w tym PR (F7 #319: B1, B2, P1, P2).
-3. Instrukcja dla właściciela w opisie PR (Settings → Secrets and variables → Actions). Test po wpisaniu kluczy (`workflow_dispatch` albo następny push na `main`).
+2. `.github/workflows/deploy-main.yml` po `push` do `main`: `supabase db push --db-url` (najpierw `--dry-run`; port 6543 i błąd → „potrzebny adres sesyjny (port 5432)”; adresu nie logować) → Edge zmienione w tym pushu (`_shared` = wszystkie, `--project-ref nglnnrmzmhusvxslousq`) → `vercel@64.5.0 deploy --prod`. Sekrety: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_URL`, `VERCEL_TOKEN`; zmienne: `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`. Brak sekretów → zielono i `::warning::brak kluczy — wdrożenie ręczne`. #319 scalony `9a3c7b26` (F7 po `39539f9b`). Pierwszy przebieg na `main`: krok Baza połączył się z gniazdem lokalnym (`user=runner`) — adres nie wszedł jako URL. Poprawka: `scripts/ci/normalize-db-url.py` (cudzysłów, BOM, pierwsza linia `postgres://`, hasło kodowane procentowo — już zakodowane bez zmian) i log bez adresu (długość, schemat, czy jest użytkownik, host, baza, port, czy hasło zakodowane).
+3. Instrukcja dla właściciela w opisie PR (Settings → Secrets and variables → Actions). Test po wpisaniu kluczy (`workflow_dispatch` albo następny push na `main`). Sekret jest ustawiony; ma być pełnym adresem sesyjnym (port 5432), bez cudzysłowu wokół całości.
+4. Host bezpośredni `db.<projekt>.supabase.co:5432` jest tylko IPv6. GitHub Actions dostaje `ECONNREFUSED` (przebiegi `39287813163` i `39291759466` na `main`). Krok Baza: gdy host nie zawiera `pooler.supabase.com`, skrypt zapisuje hasło zdekodowane (`unquote`) do pliku 600 i workflow robi `supabase link --project-ref` (`SUPABASE_DB_PASSWORD`, bez hasła w logu) oraz `db push --linked` (dry-run, potem naprawdę). `--db-url` zostaje tylko dla puli. Po scaleniu przebieg sam z pusha na `main`. Ręcznie z `047ce7b5` zostaje: 0 nowych migracji, Edge bez zmian od `b858b466`, Vercel `dpl_FgAn6VsfF1rqoGeyrmbW91jvLary` READY, tower i makieta 200. Log JDBC jest w skrypcie (#330, scalone #332 `8726c3c7`). #333 scalony `97c88a19` (F7 po `b8f27b5d`). Przebieg `39300935077` na `main`: Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link. `supabase link` zakończony. Dry-run i push: „Remote database is up to date” (0 nowych migracji). Edge bez zmian. Vercel `D8dghXG3wndN4VKWX3RdGcpJerrj` READY, alias `tower.log-mar.pl`; tower i makieta 200. Zabezpieczenie prefiksu `NAZWA=` / JDBC: `prepare()` zdejmuje `export NAZWA=` przed cudzysłowem, składa URI z `jdbc:postgresql://` (`user` i `password` w zapytaniu), loguje `prefiks NAZWA= zdjety` i `format:` bez hasła i hosta. #335 scalony `b4af5626` (F7 po `c2666625`). Przebieg `39306048061`: `prefiks NAZWA= zdjety: nie`, `format: uri`, `polaczenie: link`, `Finished supabase link.`, dry-run i push „Remote database is up to date” (0 migracji), Edge bez zmian, Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z` READY (alias `tower.log-mar.pl`), tower i makieta 200. Pozycja zamknięta. D-0005 (#313) jest na produkcji. Dalej kod transportu w L-3 (D-20261019-0930-01, migracja 0235).
 
-### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — W TOKU (#313, migracja 0232, gałąź `pakiet/hhl-admin-daty`)
-Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian.
-- **Baza:** 0232 w PR #313 (load_status_set / guard / ksh_confirm + `KSH_DATES_CHECK`). Do domknięcia: test `aud03` (`sval` zamiast `chk` — stash `aud03-sval-d0005`).
-- **Aplikacja:** #307 scalony (F1).
+### Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01; po Automacie, przed A3) — NA PRODUKCJI (`745517e3`, 19.10.2026 23:06, migracja 0234, `deploy-main` `39324497090`, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63`)
+Decyzja właściciela 19.10.2026, 00:01: Administrator HHL zmienia każdą datę i godzinę bez ograniczeń. KSH, SCX i Operacje HHL — bez zmian. Zmienia G-20 i E25 tylko dla `HHL_ADMIN`.
+- **Baza:** `0234_hhl_admin_daty.sql` w PR #313 (`load_status_set` przez `current_app_*`, korekta czasu osi dopiskiem `korekta` bez UPDATE na `load_events`, `guard_load_update`, `ksh_confirm_dates`, historia W30 z oknami „przed”, `DECISION_HOLD` w CHECK, typ `KSH_DATES_CHECK`). Numer 0234, bo 0233 jest już na produkcji. Następna migracja: **0235**. F7 na `f931341`: dopisek `korekta` nie kolejkuje `workflow_runs`; SCX nadal nadpisuje godzinę `DELIVERED` (pozostałe statusy — odmowa). Na `7a0516ba` brama `db` `39319719814`, unit i visual `39319719721` zielone. Scalone `745517e3` (19.10.2026 23:03). `deploy-main` `39324497090`: `format: uri`, `polaczenie: link`, migracja `0234_hhl_admin_daty.sql`, Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY (alias `tower.log-mar.pl`), tower i makieta 200. Dalej D-0930 (migracja 0235).
+- **Sprawa `KSH_DATES_CHECK`:** nie z edycji Administratora HHL (historia + `audit_log`); z importu (A6) albo ze zmiany KSH.
+- **Wyjątek spójności (D1, lista poranna):** `valid_from ≤ valid_until` (zezwolenia, polisy), rejs (przypłynięcie po wypłynięciu) i data odczytu paliwa — zostają; to spójność danych, nie limit wyboru daty.
+- **Testy:** `aud03` / `e25` / `i2` / `g20` / `dec2` (katalog 19 typów). ASK_FIX → `DECISION_HOLD`.
+- **Aplikacja:** #307 scalony (F1). Widok „zmienił Administrator HHL” — osobny PR `wyglad/*`.
 
-### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — DO ZROBIENIA
-F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-0005.
-- `l3_scan` i funkcje składające `code`/tytuł: tylko kod transportu, nigdy `left(id::text, 8)` ani samotne `order_no`.
-- `l3_upsert_alarm` nie nadpisuje poprawionego `params.code`.
-- Jednorazowo: 7 ryzyk i 84 powiadomienia SCX z numerem KSH; test części jednorazowej 0230 woła prawdziwą funkcję wygaszania.
+### Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01; po D-0005, przed A3) — NA PRODUKCJI (`c2c22989`, 20.10.2026 00:46, migracja 0235, `deploy-main` `39337027018`, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y`)
+F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
+- `l3_scan`, `l3_ksh_lead`, `detect_unconfirmed_dates`, `detect_resource_deadlines` i `trg_plan_dates_notify`: kod z `load_sms_code`, nigdy `left(id::text, 8)` ani samotne `order_no`.
+- `l3_upsert_alarm` nie nadpisuje poprawionego `params.code` identyfikatorem ani numerem KSH.
+- Jednorazowo: otwarte ryzyka i powiadomienia SCX z numerem KSH; `sefs_source_expire_once()` woła test `dec-auto`.
+- **D-20261019-2315-01 (#338), ta sama migracja:** bieżący wpis statusu = ostatni niezastąpiony (`zastepuje`), `v_prev_at` tylko z takich wpisów, dopisek korekty ma `payload.actor` i `actor_id`. Bez nowej pozycji w kolejce.
+- **D-20261020-0010-01 (#341):** po tej pozycji pary PR **A3+A9**, potem **A7+A4**, potem A5, potem A10. Terminy pośrednie w §3. Wydanie 28.10.2026 20:00 bez zmian.
+- Scalone #340 `c2c22989` (F7 po `0d4b0bcc`). `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`). Dalej A3+A9 (migracja 0236).
 
-### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5)
+### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — NA PRODUKCJI (scalenie #345 `7589dbef`, 20.10.2026 03:29; `deploy-main` w toku)
+- **D-20261020-0010-01:** jeden PR z A9 (jedna migracja, osobny commit na pozycję, jedno F7). Ekranu nie zmieniasz.
+- **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null). **ZROBIONE** (`663d953c` / `d11c7d42`).
+- **A3 w 0236:** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią. **ZROBIONE** (`e5ad7b53`); dec2 katalog 20 typów.
 - `doc_requirements`:
   - CMR → `anchor = AFTER_UNLOAD` (po „Dostarczone”), `offset_hours` z Opcji (dziś 24), odpowiada przewoźnik;
   - usuwasz regułę „CMR 2 h po załadunku”, wymagania POD, SPEC i LASHING oraz PERMIT_SE dla wszystkich.
@@ -554,7 +567,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
 - `doc_requirement_set`: zmienia tylko Administrator HHL (E9), sprawdzenie roli w funkcji.
 - Test: SG-03 po „Dostarczone” → sprawa „Wgraj CMR” u SCX; wgranie CMR → sprawa znika, transport „Gotowe do fakturowania” (C17); Operacje HHL nie zmienią terminów.
 
-### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`)
+### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — SCALONE (#348 `0f7765a7`, 20.10.2026 09:53; `deploy-main` w toku; para A7+A4, migracja 0237)
+- **D-20261020-0010-01:** jeden PR z A4 (jedna migracja, osobny commit na pozycję, jedno F7).
+- **A7 w 0237:** `symbol_specs` (10), `symbol_spec_of` / `a7_apply_symbol`, kolumny `loads.symbol`/`permit_kind`, `permits.scope`, zezwolenie `13/GD/2026` + polisa `1106707356` (metadane), `awiz_missing` Firma/Trasa, `doc_requirements_status` bez PERMIT_* dla Firmy, RPC `a7_permits_list` / `a7_policies_list`, widok `p5Source` + `permitScopeOf`. PDF → `scripts/a7-seed-docs.mjs` (poza CI).
 - Tabela symboli w bazie (`symbol_specs`) i `symbol_spec_of(load)`:
   - wymiary zestawu, piloci PL/SE (PL-A / PL-B po szerokości), rodzaj zezwolenia „Firma” / „Trasa”;
   - uzupełnianie `loads.combo_*` przy imporcie.
@@ -566,7 +581,8 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
 - `p5Source.ts` `permitsOf` / `policiesOf` / `permitScopeOf` → produkcja z bazy.
 - Test: `permits = 1`, `insurance_policies = 2`; każdy transport ma wymiary, pilota i rodzaj zezwolenia; KSH widzi polisę HHL, nie widzi polisy SCX; „Zezwolenie SE” brakuje tylko przy KR.
 
-### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4)
+### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — NA PRODUKCJI (ta sama migracja 0236 / #345 `7589dbef`)
+- **A9 w 0236:** `awiz_missing`, `load_ready_gaps`, READY z bazy, `tower-zasoby` → `tower-l3` (`l3_scan`), zamknięcie `RESOURCE_MISSING` z kopią. **ZROBIONE** (F7 po `a4b2cfa4`).
 - Jedna funkcja kompletu awizacji `awiz_missing(load)`:
   - kierowca PL i SE (przy przepięciu) z telefonem, ciągnik, naczepa;
   - rejs przy trasie promowej;
@@ -577,13 +593,21 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
   Link śledzenia **nie** blokuje (4B).
 - Wynik `awiz_missing(load)` podajesz widokowi jako `load.readyGaps` (`ReadyGap[]`). Widok bierze to pole zamiast liczyć sam. Mapowanie z D-20261017-1715-01 §2 pkt 2: `AWIZ` z `items` dokładnie „kierowca”, „telefon”, „ciągnik”, „naczepa”, „kierowca SE”, „telefon SE”, „ciągnik SE”; `SAILING`; `PILOTS` (`items`: „pilot” albo „pilot ×N”); `ORDER_SCX`; `ORDER_HHL`; `POLICY_SCX`; `PERMIT` (rodzaj „Firma” / „Trasa” z A7); `who`: „SCX” albo „HHL”; pusta lista = komplet; `undefined` = baza jeszcze nie liczy. Wyglądu nie zmieniasz (F1, #291).
 - Z tej funkcji korzystają L3 (0143), `readyGaps`, `resourcesComplete` i Kokpit.
-- `READY` nadawany w bazie po każdej zmianie.
+- `READY` nadawany w bazie po każdej zmianie. Rozszerzone w A10 o „Brak zasobów”, „Brak dokumentów” i przesuwanie w obie strony wewnątrz Przygotowania (D-20261019-1540-01).
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
-### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
+### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5) — SCALONE (#348 `0f7765a7`, 20.10.2026 09:53; para A7+A4, 0237; `deploy-main` w toku)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
-- Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- Baza: `register_invoice` + `INVOICE_A4: true` / `INVOICE_EDIT: true` w `src/lib/serverRules.ts`.
+- **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
+  - SCX → HHL (`KOSZT`): przed akceptacją HHL zmienia SCX i `HHL_ADMIN`; po `ZAAKCEPTOWANA` — tylko `HHL_ADMIN`.
+  - HHL → KSH (`PRZYCHOD`): przed akceptacją KSH zmienia wystawca HHL (`HHL_ADMIN`, `HHL_OPS`); po — tylko `HHL_ADMIN`.
+  - KSH nie zmienia treści żadnej faktury i nie wystawia (`invoices_insert` bez `CLIENT`); tylko weryfikacja / akceptacja / spór.
+  - `HHL_OPS` nie zmienia treści faktury SCX (może weryfikować jako odbiorca).
+  - RPC `update_invoice(p_invoice, p_patch, p_lines, p_note)`: te same reguły co `register_invoice` (VAT, CMR C17, tolerancja 0); historia; przed akceptacją → `DO_WERYFIKACJI` + `INVOICE_UPDATED`; po akceptacji przez `HHL_ADMIN` → `INVOICE_CORRECTED`. Mutacja ekranu `bill.update`.
+  - **Uzupełnienie #346 (po #347):** `p_patch` = pełna treść nagłówka (nie częściowa; `null` = puste); `p_lines` jak `register_invoice`. Wystawca → `INVOICE_UPDATED` / po akceptacji `INVOICE_CORRECTED` do odbiorcy; `HHL_ADMIN` na fakturze SCX → `INVOICE_CORRECTED` do wystawcy, status bez zmian. `dispute_note` zostaje. Allowlista + `grant execute` do `authenticated`. Stary PDF = zastąpiony. Po wdrożeniu `INVOICE_EDIT: true` w `serverRules.ts`.
+  - `guard_invoice_update` według tabeli ról; testy bramy `db` dla każdej roli i stanu.
 - **Z przeglądu #310 / #312 (P1–P2, decyzja koordynatora → A4):**
   - `load_status_set` przy ręcznym `READY_TO_INVOICE` ma wymagać CMR jak C17 (`c17_cmr_after_delivery`), nie dowolnego CMR — dziś rozjazd z automatem C17.
   - `register_invoice` nie może podpinać CMR zastąpionych ani z załadunku (tylko CMR po dostawie, jak C17).
@@ -605,7 +629,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
 - Test „co do grosza” na TEST; transport bez CMR niedostępny w kreatorze; po rejestracji „Zafakturowano” samo.
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2).
 
-### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8)
+### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8) — SCALONE (#351, `889fc09d`, 20.10.2026 11:49, migracja 0238; `deploy-main` w toku)
 - D-20261017-1450-01: bez zmian zakresu (kody spraw i faktura są w A2, A3, A4, A6, B5).
 - Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9, brak `SAILING`). Jeśli baza sprawdza rejs przy zapisie awizacji — ta sama reguła co widok: rejs nie wcześniej niż późniejsze z okna awizacji i dnia załadunku z planu (+ czas na port) (D-20261017-1715-01 §2 pkt 3). Wyglądu okna nie zmieniasz.
 - `promote_ferry_departures` dla obu przepraw (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Statusy portów według `geofences.route`.
@@ -614,6 +638,43 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
   - jeden zestaw kluczy `eta_basis` zgodny z `etaDetail.ts` (`ferry_eta_at`, `wait_ais`);
   - `READY_TO_INVOICE` i `INVOICED` jak `DELIVERED`.
 - Test: rejs Stena → „Prom” i ETA do Karlskrony; rejs Polferries → „Prom” i ETA do Nynäshamn; dziś `sailing_id` 0/94.
+- Zapas „Na promie” bez rejsu (pozycja na morzu albo AIS, oraz statek odpłynął a auto bez pozycji w porcie PL) jest w A10 (D-20261019-1540-01).
+
+### Import godziny cicho · `import_quiet_hours` (D-20261020-1157-01, #356; po A5, przed D-1118; decyzja właściciela 20.10 11:57) — NASTĘPNA
+Gałąź `pakiet/import-godziny-cicho`, migracja następna wolna po 0239. Przełącznik `ops_thresholds.import_quiet_hours` (1 = włączone). Przy 1: tylko pierwsze uzupełnienie pustych `load_time`/`delivery_time` przy tym samym dniu → `tower.bulk_quiet`, bez `PLAN_DATES_CHANGED` / `SCHEDULE_DATE_CRITICAL` / decyzji / ryzyk. Wyłączenie 26.10 (przypomnienie koordynatora). #354 odczyt godzin — SCALONE. Właściciel nie wgrywa pliku, dopóki #354 i ta pozycja na produkcji.
+
+### D-1118 · Zezwolenie Firma/Trasa, piloci, Dokumenty w Harmonogramie (D-20261020-1118-01, #353; + D-1243 #358; po #356, przed D-1300/A10; termin wt 20.10, 23:59) — W TOKU (`pakiet/d1118-zezwolenie-pilot`, migracja 0239; PR #357; wygląd #355 SCALONE `e7842326`)
+**D-1243 w tym PR:** `awiz_pilots_set` zapisuje imię jawnie; `load_escort_contacts` także CLIENT_*; test KSH czyta `PILOTS_SET` z imieniem. Pełny przegląd maskowania — ewentualnie `pakiet/d1243-dane-osobowe` po tym PR.
+Baza (Cursor):
+1. **`permit_fits`:** `DIMS_UNKNOWN` tylko dla L×W×H. Masa: `combo_weight_t` → suma `shipment_items.total_weight_t` → `symbol_specs.cargo_weight_t`; bez masy — limit masy nie jest naruszeniem. FIRMA (`permits.scope='FIRMA'`) przy `permit_kind='FIRMA'` — zgodne przy wymiarach zestawu z tabeli. Test: SG-18 + 13/GD/2026 → `ok`; KR + 13/GD → `KIND`.
+2. **Gotowy:** transport FIRMA z 13/GD nie blokowany przez fałszywy brak PERMIT_PL/SE ani zgodność.
+3. **`awiz_pilots_set(p_load, p_pl_plate, p_pl_name, p_se_plate, p_se_name)`** — SECURITY DEFINER, `is not true`, 42501 poza HHL_ADMIN i przewoźnikiem transportu; zapis `load_escorts` PL/SE (firma „Pilot”); puste pola = usunięcie strony; **bez** zmiany `loads.escort_vehicles`; bez wymogu pilotów → 22023; audit `AWIZ_PILOTS_SET` + `PILOTS_SET`; allowlista, null-guard, testy ról.
+4. **`serverRules.ts`:** `AWIZ_PILOTS: true` (flagę `false` dodaje koordynator w `wyglad/W-1118`).
+Ekran (koordynator, `wyglad/W-1118`): Dokumenty FIRMA/TRASA, piloci tylko KR/PL-B, Harmonogram › Dokumenty z bazy, Plan i ETA zwijane, mapa 340/300 px, Status Przygotowanie/Rozliczenie zwijane. Plików `src/` poza `serverRules.ts` nie zmieniasz.
+
+### D-1300 · Opłata paliwowa — OKQ8 7 dni, Orlen 5 publ., obie tabele „od progu” (D-20261020-1300-01 + D-20261020-1322-01, #359; po D-1118/D-1243, przed A10; pilne — kwoty)
+OKQ8: średnia z 7 cen dziennych (cena dnia = ostatnia publikacja ≤ dzień). Orlen: 5 publikacji wt–sob. **Odczyt tabeli SEK i PLN „od progu”** (D-1322 v3): mnożnik = wiersz o najwyższym progu ≤ średnia (np. SEK 22,85→1,13; PLN 7,11→1,13). `fuel_basis.n_sek=7` + lista dni. Przeliczyć niezafakturowane wyceny; przy fakturze t40 (×1,14→×1,13) — sprawa HHL, bez autozmiany faktur. Razem: `fuel-prices` — źródła osobno (E3), ponowienia. Testy db wg dopisków. Ekran: koordynator (karta „7 dni” / „5 publikacji”; kolumna „od (cena)”).
+
+### A10 · Automat wszystkich statusów (D-20261019-1540-01, #324; po D-1300, przed B4; termin wt 20.10, 23:59)
+Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każdy status, z cofnięciem; SCX — tylko do przodu, własne transporty (`load_status_set`). Automat nie cofa ręcznej zmiany. Po ręcznej zmianie automat idzie dalej od nowego statusu. Na osi źródło: „automatycznie (GPS / strefa / prom / dokumenty / import)” albo „ręcznie — osoba”.
+- **Przygotowanie** — jeden wyzwalacz AFTER INSERT/UPDATE na `loads` (zasoby, numery, piloci, `sailing_id`), `load_permits`, polisach i `documents`; rozszerza A9 (`awiz_missing`, `readyGaps`):
+  - Zaplanowany: import i nowy transport. Zostaje, dopóki SCX nie wpisze żadnej danej awizacji i do załadunku jest więcej niż 48 h (`p7Awiz`).
+  - Brak zasobów: brak kierowcy, telefonu, ciągnika, naczepy, pilotów lub numerów.
+  - Brak dokumentów: zasoby komplet, brak zezwolenia lub polisy SCX (wymagania według HHL_ADMIN, A3).
+  - Gotowy: wszystko komplet.
+  - Wewnątrz Przygotowania automat przesuwa w obie strony (np. Gotowy → Brak zasobów po usunięciu kierowcy). Poza Przygotowaniem — tylko do przodu.
+- **Trasa** — `apply_geofence_status`, tylko do przodu:
+  - Załadunek: wjazd w strefę załadunku z każdego statusu Przygotowania. Gdy status nie był Gotowy — ryzyko HHL „Załadunek bez gotowości: <braki>”, bez blokady.
+  - Droga PL: bez zmian.
+  - Port PL: także z Załadunku i Gotowy.
+  - Na promie: (a) A5 — rejs i `promote_ferry_departures`; (b) GPS na morzu w korytarzu albo zbieżność z AIS statku do 2 km; (c) statek odpłynął według AIS, a auto od 30 min bez pozycji w porcie PL.
+  - Port SE: wjazd z każdego wcześniejszego statusu trasy. Gdy pominięty Na promie — wpis Na promie z czasem odejścia (AIS albo rozkład).
+  - Droga SE: bez zmian. Na placu: wjazd z każdego wcześniejszego statusu trasy. Dostarczone: bez zmian (wyjazd po ≥ 10 min albo „Czy dostarczono?” → Tak).
+- **Rozliczenie:** po każdym Dostarczone ponowna próba `c17_try_billing_status` (także CMR wgrany wcześniej). Wyzwalacz AFTER UPDATE OF status na `loads`. Zafakturowano bez zmian (A4).
+- Ponowny automat po cofnięciu przez HHL_ADMIN: `dedup_key` z czasem zmiany, oś pokazuje nową godzinę. Czas ręcznej zmiany: `load_status_set` dla HHL_ADMIN bez ograniczeń daty (D-0005, #313). Jeśli #313 tego nie obejmuje — w A10.
+- Test bramy: każdy z 14 statusów automatem, bez ręcznego kroku. Łańcuch bez rejsu: strefy PL → morze → port SE → plac → wyjazd → CMR → Gotowe do fakturowania. Cofnięcie przez HHL_ADMIN i ponowny automat → nowy wpis. SCX wstecz → odmowa.
+- Widok (F8, koordynator): oś pokazuje źródło przy każdym wpisie. **D-20261020-0010-01:** Ty tylko reguły w bazie. Plików `src/` nie zmieniasz; zmianę typu w `src/types` opisujesz w PR.
+- Odbiór (SELECT): udział zmian automatycznych w `load_events`. Statusy Przygotowania na transportach zgodne z brakami z `readyGaps`.
 
 ### B4 · `visible_to` na serwerze (Cz1–Cz3, Cz25)
 - Zapis `visible_to` przy wiadomości czatu i dokumencie oraz sprawdzenie w RLS i w odbiorcach powiadomień.
@@ -629,6 +690,11 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — osobna migracja po D-00
 - Przy impersonacji Historia zapisuje „<admin> (HHL) jako <osoba>”. Autor „jako” w Historii i na osi Status — `wyglad/W-naprawy` (`payload.preview_as`). Przy zapisie w Podglądzie (jeśli jakikolwiek zapis przejdzie — np. dziennik start/koniec): `load_events.payload.preview_as` = „Imię Nazwisko // KSH” (albo „// SCX”); `actor` zostaje administratorem (D-20261017-1450-01 §2 pkt 2).
 - Test `e9-role`: „Podgląd KSH: zapis → odmowa”; HHL widzi to, co KSH — bez numerów, kosztu i marży.
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2). `prodFacade.ts` (`canSeeWorkflows`, `canManageWorkflows`) zostaje na profilu.
+- **Tylko HHL_ADMIN (D-20261019-1525-01, #323):**
+  1. Ekran (`canSwitchView()`, `isPreviewReadOnly()`, powrót do własnej roli, test `e9-role` i testy jednostkowe) robi koordynator na `wyglad/W-b5-podglad` (D-20261020-0010-01). Produkcja: tylko `role === 'HHL_ADMIN'` (nie `org_code`). Menu konta, pasek, Shift+R. Konto inne niż `HHL_ADMIN` z zapamiętaną obcą rolą widoku wraca do własnej roli, bez komunikatu. Demo bez logowania bez zmian. Ty: funkcje bazy, `impersonation_state.read_only`, `42501` dla `HHL_OPS`, brama. Plików `src/` nie zmieniasz.
+  2. Baza: start i koniec Podglądu tylko funkcją; `HHL_ADMIN` + `mfa_satisfied`, inaczej `42501`. Ta sama zasada dla funkcji B5. `HHL_OPS` nie zaczyna Podglądu ani „Działaj jako”.
+  3. Testy: `e9-role` — `HHL_OPS` nie widzi „Podgląd”, Shift+R nic nie zmienia; `HHL_ADMIN` widzi i przełącza; KSH i SCX nie widzą. Jednostkowe `canSwitchView` / `isPreviewReadOnly` dla `HHL_ADMIN`, `HHL_OPS`, `CLIENT_USER`, `CARRIER_DISPATCH`, demo. Brama: `admin_impersonate_start` i start Podglądu jako `HHL_OPS` → `42501`; `HHL_ADMIN` bez 2FA (gdy wymagane) → `42501`.
+  4. Odbiór na produkcji (SELECT): `IMPERSONATE_START` i start Podglądu w `audit_log` tylko od `HHL_ADMIN`.
 
 ### B7 · Nagłówki — zakres po słowach właściciela 17.10.2026, 12:25 (D-20261017-1220-01 §2)
 Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny” (DRV-CLOSE). **Bez prac:** `Permissions-Policy: geolocation=(self)`, komunikat `POSITION_SHARE_DENIED`, test Playwright „kierowca udostępnia pozycję”.
@@ -638,15 +704,15 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane.
 - Kopia identyfikatorów w `audit_log` (`action = 'AUDYT17_MARK_READ'`); liczby przed i po w `POSTEP.md`.
 
-### B9 · Bez EN/SV w bazie (8A) — + D-20261017-0915-01 §3 pkt 1
-- `translation_queue`, `translation_memory`, `deepl_usage`, a także funkcje, crony i wywołania DeepL z nich korzystające: migracja z kopią (liczba wierszy i zrzut do `audit_log`), potem `drop`.
-- Aktualizacja `_shared/backup/core.ts`, `gate-suites.mjs` i `advisor-exceptions.txt`.
-- Klucz DeepL w Secrets usunie właściciel po Twoim sygnale „B9 — klucz DeepL do usunięcia”.
-- Jeśli `user_preferences` / `app_users` ma pole języka: zostaje `pl` dla wszystkich, a pole usuwasz z kopią.
-- **W tym samym commicie (0915 §3 pkt 1 — jedyny wyjątek od F1 w B9):**
-  - usuwasz **kafelek DeepL w Stanie systemu** (`SystemStatusPanel.tsx`, `deepl_usage_view`) i klucze `b6_sys_deepl`, `b6_sys_deepl_d`, `pl_deepl_warn`, `pl_deepl_full`, `pl_show_original`, `rk_deepl_usage` — żeby panel nie wołał usuniętej funkcji;
-  - przy usuwaniu kolumny języka zmieniasz też `select` w `supabaseProvider.ts` (`loadPreferences`: `display_currency,locale,theme`) i `prefs.save`.
-  - Test: Stan systemu bez kafelka DeepL i bez błędu w konsoli; konto z zapisanym „en” widzi panel po polsku.
+### B9 · Panel tylko PL (8A) — DeepL zostaje (D-20261019-1515-01, #322)
+Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN → PL zostaje (właściciel 19.10.2026, 15:10). Opis „`drop` tabel tłumaczeń” jest w tej części nieważny.
+1. **Zostają:** `translation_memory`, `translation_queue`, `deepl_usage`; `deepl_usage_view` i kafelek DeepL w Stanie systemu; `src/lib/pl/deepl.ts`, `polishRoadFreeText`, metody tłumaczeń w `store.ts`; klucze `b6_sys_deepl`, `b6_sys_deepl_d`, `pl_deepl_warn`, `pl_deepl_full`, `pl_show_original`, `rk_deepl_usage`; sekret `DEEPL_API_KEY`. Sygnału „B9 — klucz DeepL do usunięcia” nie wysyłasz.
+2. **Usuwasz tylko** wybór języka ekranów EN/SV (kolumna języka w `user_preferences` / `app_users` — z kopią, wszyscy `pl`). Ekran (`AccountMenu`, Ustawienia, `loadPreferences`, `prefs.save`, „Tłumaczenie w toku”, „Pokaż oryginał”) robi koordynator na `wyglad/W-b9-pl` (D-20261020-0010-01). Ty: kolumna, `translate-retry`, alarm, testy bazy. Plików `src/` nie zmieniasz. Aplikacja kierowcy zostaje w 3 językach.
+3. **Ponawianie.** Zadanie `translate-retry` co 5 min (cron, Edge, ten sam rdzeń `translateFreeText`): kolejka z powodem `blad` albo `brak`; po sukcesie zapis do `translation_memory`, uzupełnienie opisu, usunięcie z kolejki. Powód `limit`: od 1. dnia następnego miesiąca albo po podniesieniu limitu. Powód `odrzucone`: opis z kodów po polsku. `polishRoadFreeText` po sukcesie też usuwa wpis z kolejki.
+4. **Zanim tłumaczenie dotrze:** opis główny po polsku z kodów. Zamiast nieprzetłumaczonego tekstu wolnego: „Tłumaczenie w toku”. Szwedzki tylko pod „Pokaż oryginał”. Szwedzki tekst nie wchodzi do treści głównej, tytułu, dzwonka, e-maila ani SMS.
+5. **Alarm.** Kafelek DeepL: liczba wpisów w kolejce i najstarszy. Wpis starszy niż 15 min (poza `odrzucone`) → stan ostrzegawczy i ryzyko `ROAD_SE` dla HHL „Komunikat drogowy czeka na tłumaczenie” (dedup na hash). Limit ≥ 80 % i wyczerpany — jak dziś (`rk_deepl_usage`).
+6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
+7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):**
@@ -655,7 +721,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne;
    - filtr przewoźnika HH / HHL;
    - puste wiersze pominięte i policzone; „...” i „-” = puste; „A / B” → pola PL / SE.
-2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4).
+2. **Nic nie pada na datach (L31):** zamiast `raise exception` wiersz wchodzi, a gdy dostawa < załadunek, = załadunek albo > 14 dni → sprawa „Daty KSH do sprawdzenia” dla HHL i KSH. Dotyczy np. KR-03 **i dostawy przed załadunkiem**. Kod dokładnie `KSH_DATES_CHECK`, opcje `DATES_OK` („Daty są dobre”) i `ASK_FIX` („Poproś KSH o poprawkę”) (D-20261017-1450-01 §2 pkt 4). `import_schedule` dla Administratora HHL — bez odrzucania dat (D-0005 P5; ta sama zasada „bez odrzucania dat”).
    - Parser wypełnia w `ImportDiff` pola `skippedCarrier`, `skippedEmpty`, `datesToCheck` (liczby, także 0). Po zapisie i w sklepie demo komunikat z `standardSkipMessage(accepted, skippedStandard, { carrier, empty })` — tekstu nie składasz sam (D-20261017-1715-01 §2 pkt 4). `skippedStandard` zostaje, dopóki go liczysz; gdy filtr „Przewoźnik” go zastąpi — podajesz 0. Wyglądu importu nie zmieniasz (F1, #291). Lokalny test `tests/i1-import-ui.local.spec.ts` ma już oczekiwane teksty z tego PR (§1 pkt 10): `[data-import-sum]` zawiera „Nowe: 5”; „Pominięte: rozmiar „Standard” (ładunki innej firmy) — 3.” — tych oczekiwań nie cofasz.
 3. **Zasoby i numery z pliku** zapisane w bazie. Komentarz „Wcześniej to był SG-…” → ten sam transport, nowy kod, `renumbered_from`, „było → jest” w Historii.
 4. **Synchronizacja SharePoint — odczyt** (funkcja Edge `ksh-sharepoint-sync`, `pg_cron` co 5 min):
@@ -1109,3 +1175,30 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 10:50 | D-1740 / #310 **0231 NA PRODUKCJI** (`39116fbb`, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); F7 B1 otwarte jako #312 (has_doc jak C17) | wykonawca |
 | 19.10.2026 12:46 | #315: daty w planie to terminy najpóźniejsze, nie daty rozpoczęcia (§1 pkt 14.5). Po pozycji od razu następna z §4, bez czekania na dzień ani punkt kontrolny | koordynator; zgłoszenie #315 |
 | 19.10.2026 14:20 | D-20261019-1420-01 (#320): A6 = odczyt SharePoint + zapis na pliku testowym; plik produkcyjny bez zapisu do akceptacji właściciela. II-10 i W13: plik testowy dostępny 19.10. Kolejka bez zmian (po B9, przed C4) | właściciel 14:19; koordynator |
+| 19.10.2026 15:15 | D-20261019-1515-01 (#322): B9 zawężone — DeepL i tłumaczenia komunikatów SV/EN → PL zostają; usuwany tylko wybór języka ekranów; zero braków (ponawianie, „Tłumaczenie w toku”, alarm 15 min) | właściciel 15:10; koordynator |
+| 19.10.2026 15:25 | D-20261019-1525-01 (#323): Podgląd innych kont i widoków wyłącznie dla Administratora HHL. W B5, termin bez zmian | właściciel 15:14; koordynator |
+| 19.10.2026 15:51 | #319 scalony (`9a3c7b26`). Pierwszy `deploy-main` padł na kroku Baza (gniazdo lokalne). Poprawka adresu w `scripts/ci/normalize-db-url.py` | pętla |
+| 19.10.2026 15:40 | D-20261019-1540-01 (#324): A10 · Automat wszystkich statusów, zaraz po A5; termin wt 20.10, 23:59. Ręczna zmiana zostaje | właściciel 15:27; koordynator |
+| 19.10.2026 18:19 | #330: sekret `SUPABASE_DB_URL` w Actions w złym formacie — wdrożenie ręczne z `main` do poprawki sekretu; log JDBC w `normalize-db-url.py` | koordynator; pętla |
+| 19.10.2026 19:20 | #331: krok Baza przez `supabase link` i pulę IPv4, gdy adres nie jest pulą. `--db-url` tylko dla `pooler.supabase.com` | koordynator 19:05; pętla |
+| 19.10.2026 19:35 | #332 scalony (`8726c3c7`) po „F7: gotowe do scalenia” (głowa `69355b5`, CI zielone). #333 wciąga `main` — konflikt w planie, postępie i teście | pętla |
+| 19.10.2026 20:20 | #333 scalony (`97c88a19`). Pierwszy zielony `deploy-main` `39300935077`: `polaczenie: link`, 0 migracji, Edge bez zmian, Vercel READY. Zostaje prefiks `NAZWA=` / JDBC | pętla |
+| 19.10.2026 20:25 | #334 scalony (`6aafacbe`) po „F7: gotowe do scalenia” (głowa `47732685`, CI zielone) | pętla |
+| 19.10.2026 20:30 | Automat: prefiks `NAZWA=` i JDBC → URI w `normalize-db-url.py` (komentarz #331, 18:40). Gałąź `pakiet/automat-prefiks-nazwa` | pętla |
+| 19.10.2026 20:55 | #335 scalony (`b4af5626`). `deploy-main` `39306048061`: prefiks nie, `format: uri`, link, 0 migracji, Edge bez zmian, Vercel READY. Automat zamknięty. Dalej D-0005 (#313) | pętla |
+| 19.10.2026 21:25 | D-0005 #313: F7 niegotowe → B1 DECISION_HOLD, P1–P4 (admin bez sprawy, current_app_*, korekta czasu osi), PLAN D1/A6 P5 | pętla |
+| 19.10.2026 21:40 | D-0005 #313: F7 B2 — korekta czasu osi dopiskiem, bez `session_replication_role` | pętla |
+| 19.10.2026 22:50 | D-0005 #313: CI zielone na `7a0516ba` (`db` `39319719814`, unit, visual `39319719721`). Scalenie czeka na „F7: gotowe do scalenia” po tym commicie | pętla |
+| 19.10.2026 23:10 | #313 scalony (`745517e3`). `deploy-main` `39324497090`: migracja 0234, Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY, tower i makieta 200. D-0005 zamknięte. Dalej D-0930 | pętla |
+| 19.10.2026 23:15 | D-20261019-2315-01 (#338): korekta godziny statusu wskazuje ostatni niezastąpiony wpis. W tej samej migracji co D-0930 (0235), bez nowej pozycji kolejki | koordynator |
+| 20.10.2026 00:10 | D-20261020-0010-01 (#341): pary PR A3+A9 i A7+A4; ekran B5/B9/A10 u koordynatora; terminy pośrednie od wt 20.10. Wydanie 28.10 20:00 bez zmian. Nie przerywa D-0930 | koordynator |
+| 20.10.2026 00:40 | D-20261020-0040-01 (#343): numer KSH do SCX z `l13_decision_email` i `wf_load_context` — pierwszy commit PR A3+A9, migracja 0236. Bez nowej pozycji kolejki | koordynator |
+| 20.10.2026 01:20 | D-20261020-0115-01 (#346): edycja faktur — SCX/HHL do akceptacji odbiorcy, potem tylko `HHL_ADMIN`; KSH tylko akceptuje. W A4 (para A7+A4); ekran `wyglad/W-faktura-edycja`. Nie przerywa A3+A9 | właściciel 01:13; koordynator |
+| 20.10.2026 11:30 | D-20261020-1118-01 (#353): D-1118 po A5 przed A10 — `permit_fits` masa/KIND, `awiz_pilots_set`, Dokumenty/piloci/zwijanie (ekran `wyglad/W-1118`). Termin wt 20.10 23:59 | właściciel 11:18; koordynator |
+| 20.10.2026 11:49 | A5 SCALONE (#351, `889fc09d`, migracja 0238). Dalej D-1118 | pętla |
+| 20.10.2026 11:57 | D-20261020-1157-01 (#356): ciche uzupełnienie godzin importu (`import_quiet_hours`), przed D-1118/A10; #354 scalone | właściciel 11:57; koordynator |
+| 20.10.2026 12:50 | D-20261020-1243-01 (#358): KSH/HHL/SCX widzą wszystkie dane osobowe i telefony (zastępuje D-22); w #357 przed F7 + `load_escort_contacts` CLIENT_* | właściciel 12:43; koordynator |
+| 20.10.2026 13:05 | D-20261020-1300-01 (#359): OKQ8 średnia 7 dni pn–nd, Orlen 5 publ. wt–sob; źródła fuel-prices osobno; przed A10 | właściciel 12:57; koordynator |
+| 20.10.2026 13:08 | #355 `wyglad/W-1118` SCALONE (`e7842326`). Dalej D-1118 baza #357 (D-1243 w PR) | pętla |
+| 20.10.2026 13:45 | D-20261020-1322-01 (#359 v3): obie tabele paliwowe SEK/PLN „od progu”; uzupełnia D-1300, ten sam PR | właściciel 13:22/13:33; koordynator |
+| 20.10.2026 13:55 | #357 CI zielone (`00f41360`: db/unit/visual). Czeka na „F7: gotowe do scalenia”. D-1322 wpisane do planu | pętla |

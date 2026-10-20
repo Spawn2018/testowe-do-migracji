@@ -34,9 +34,20 @@ const PL: Record<string, string> = {
   p6b_src_AIS: 'AIS',
   p6b_src_IMPORT: 'import',
   p6b_src_MANUAL: 'ręcznie',
+  /* A10: pozostałe źródła automatu (oś Status — p6c_tag_*) */
+  p6b_src_SCHEDULE: 'rozkład promu',
+  p6b_src_DATA: 'dane awizacji',
+  p6b_src_DOC: 'dokumenty',
+  p6b_src_DRIVER: 'kierowca (aplikacja)',
+  p6b_src_INVOICE: 'faktury',
   p6b_driver_app: 'Kierowca (aplikacja)',
   p6b_no_person: '(zapis bez osoby)',
   p6b_as: 'jako',
+  /* D-0005 (0234): korekta godziny statusu przez Administratora HHL */
+  p6b_korekta_admin: 'Administrator HHL',
+  p6b_korekta_axis: 'poprawił Administrator HHL (było {was})',
+  p6b_korekta_axis_who: 'poprawka godziny: {who} (było {was})',
+  p6b_korekta_hist: 'korekta godziny (było {was})',
 
   /* nazwy zdarzeń (E17-2) — bez kodów */
   p6b_ev_STATUS: 'Status: {to}',
@@ -47,6 +58,8 @@ const PL: Record<string, string> = {
   p6b_ev_zone_none: '(strefa bez nazwy)',
   p6b_ev_RESOURCES_UPDATED: 'Zasoby: {fields}',
   p6b_ev_RESOURCES_ASSIGNED: 'Zasoby przypisane',
+  /* D-20261020-1118-01 (#357): zapis pilotów z okna „Uzupełnij awizację” */
+  p6b_ev_PILOTS_SET: 'Piloci w awizacji zapisani',
   p6b_ev_ORDER_NO_UPDATED: 'Numer zlecenia',
   p6b_ev_ORDER_NO_HHL: 'Nr zlecenia HHL',
   p6b_ev_ORDER_NO_SCX: 'Nr zlecenia SCX',

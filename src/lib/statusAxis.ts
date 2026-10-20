@@ -69,6 +69,13 @@ export function currentAxisIndex(l: Pick<Load, 'status' | 'stage'>): number {
 }
 
 export type AxisSource = 'auto' | 'manual' | 'import';
+/**
+ * Źródło automatu (E17 + A10, D-20261019-1540-01 §3 — „automatycznie (GPS / strefa / prom / dokumenty / import)”):
+ * GPS — lokalizator i strefy; AIS — pozycja promu; SCHEDULE — rozkład promu (A5);
+ * DATA — dane awizacji i zasoby (Przygotowanie: Brak zasobów / Brak dokumentów / Gotowy);
+ * DOC — dokumenty (zezwolenia, polisy, CMR); DRIVER — aplikacja kierowcy; INVOICE — faktury.
+ */
+export type AxisChannel = 'GPS' | 'AIS' | 'SCHEDULE' | 'DATA' | 'DOC' | 'DRIVER' | 'INVOICE';
 
 export interface AxisHit {
   status: LoadStatus;
@@ -85,20 +92,74 @@ export interface AxisHit {
   /** B4: `payload.tracker_on` (NACZEPA / CIAGNIK_*) */
   trackerOn: string | null;
   /** wyglad/P6-c (E17): skąd automat wziął status — GPS (lokalizator) albo AIS (prom); null = nie wiadomo */
-  channel: 'GPS' | 'AIS' | null;
+  channel: AxisChannel | null;
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
+  /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
+  korekta?: { poprzednio: string | null; przez: string | null } | null;
+  /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
+  seq?: number;
 }
 
-/** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
-export function hitChannel(type: string, p: Record<string, unknown>, status: LoadStatus | null): 'GPS' | 'AIS' | null {
+/** Numer zdarzenia z bazy („ev-123” → 123); inne identyfikatory (demo) — NaN. */
+function evSeq(id: string): number {
+  const m = /^ev-(\d+)$/.exec(id);
+  return m ? Number(m[1]) : NaN;
+}
+
+/**
+ * D-0005: wpisy zastąpione korektą (`payload.zastepuje`) znikają z osi, a z kilku korekt tego samego
+ * statusu (i transportu) zostaje najnowsza (najwyższy numer zdarzenia; bez numerów — kolejność na liście).
+ * `was` — godzina poprzedniej korekty: „było …” przy drugiej korekcie pokazuje poprzednią poprawioną
+ * godzinę, także gdy 0234 wpisało w `poprzednio` godzinę pierwotną (#338).
+ */
+function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; was: Map<string, string> } {
+  const gone = new Set<string>();
+  const was = new Map<string, string>();
+  const groups = new Map<string, { e: LoadEvent; i: number }[]>();
+  events.forEach((e, i) => {
+    const p = (e.payload ?? {}) as Record<string, unknown>;
+    if (p.korekta !== true) return;
+    if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') {
+      gone.add(`ev-${p.zastepuje}`);
+      gone.add(String(p.zastepuje));
+    }
+    const key = `${e.loadId}|${e.type}`;
+    const g = groups.get(key) ?? [];
+    g.push({ e, i });
+    groups.set(key, g);
+  });
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => {
+      const x = evSeq(a.e.id);
+      const y = evSeq(b.e.id);
+      return Number.isNaN(x) || Number.isNaN(y) ? a.i - b.i : x - y;
+    });
+    for (let k = 0; k < g.length - 1; k++) gone.add(g[k].e.id);
+    for (let k = 1; k < g.length; k++) was.set(g[k].e.id, g[k - 1].e.at);
+  }
+  return { list: gone.size ? events.filter((e) => !gone.has(e.id)) : [...events], was };
+}
+
+/** E17 + A10: źródło automatu z `payload.source` (dane wykonawcy), a bez niego z rodzaju zdarzenia. */
+export function hitChannel(type: string, p: Record<string, unknown>, status: LoadStatus | null): AxisChannel | null {
   /* całe słowa, nie fragmenty („PRIORITY” to nie RIO, „RAISE” to nie AIS) */
   const words = new Set(['source', 'kanal', 'channel', 'zrodlo', 'provider']
     .flatMap((k) => (typeof p[k] === 'string' ? (p[k] as string).toUpperCase().split(/[^A-Z0-9]+/) : [])));
   const has = (...w: string[]) => w.some((x) => words.has(x));
   /* pozycja statku (AIS, Digitraffic, Stena) — przed sprawdzeniem `lat`, bo pozycja promu też ma współrzędne */
   if (has('AIS', 'AISSTREAM', 'DIGITRAFFIC', 'STENA')) return 'AIS';
-  if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE') || typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
+  /* słowa lokalizatora wygrywają z nowymi kanałami („GPS_DATA” to GPS — F7 #350 P1) */
+  if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE')) return 'GPS';
+  /* A10: rozkład promu (A5), dane awizacji, dokumenty, kierowca, faktury — przed `lat`, bo wpis może mieć pozycję */
+  if (has('SCHEDULE', 'ROZKLAD', 'TIMETABLE')) return 'SCHEDULE';
+  if (has('DOC', 'DOCS', 'DOKUMENTY', 'CMR', 'PERMIT', 'ZEZWOLENIE', 'POLICY', 'POLISA', 'INSURANCE')) return 'DOC';
+  if (has('DATA', 'DANE', 'AWIZ', 'AWIZACJA', 'RESOURCES', 'ZASOBY', 'READINESS')) return 'DATA';
+  /* kamień milowy z aplikacji kierowcy (`driver_post_event`: `via: 'driver_token'`) */
+  if (has('DRIVER', 'KIEROWCA', 'PWA') || p.via === 'driver_token') return 'DRIVER';
+  if (has('INVOICE', 'FAKTURA')) return 'INVOICE';
+  if (typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
   /* Tylko demo (I-0): zdarzenia przykładowe bez `source`. Na produkcji bez `source` znacznik zostaje „AUTO” —
      wykonawca zapisuje `payload.source` przy statusie z automatu (dopisek P6-c). */
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
@@ -122,9 +183,11 @@ const isSystemActor = (a: string | null | undefined) =>
 /** Zdarzenia, które ustawiły status (od najstarszego). */
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
-  for (const e of events) {
+  const { list, was } = withoutSuperseded(events);
+  for (const e of list) {
     const p = (e.payload ?? {}) as Record<string, unknown>;
     const str = (k: string) => (typeof p[k] === 'string' ? (p[k] as string) : null);
+    const korekta = p.korekta === true && e.type.startsWith('STATUS_');
     let status: LoadStatus | null = null;
     let source: AxisSource = 'manual';
     if (e.type === 'SCHEDULE_IMPORTED') {
@@ -138,7 +201,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       source = 'auto';
     } else if (e.type.startsWith('STATUS_')) {
       status = axisStatus(e.type.slice('STATUS_'.length));
-      source = p.manual === true || !isSystemActor(e.actor) ? 'manual' : 'auto';
+      source = korekta || p.manual === true || !isSystemActor(e.actor) ? 'manual' : 'auto';
     } else if (e.type === 'LOADED' || e.type === 'MILESTONE_LOADED') {
       status = 'LOADING';
       source = 'auto';
@@ -162,6 +225,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
+      korekta: korekta ? { poprzednio: was.get(e.id) ?? str('poprzednio'), przez: str('przez') } : null,
+      seq: evSeq(e.id),
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
@@ -205,7 +270,12 @@ export function buildStatusAxis(
 ): StatusAxis {
   const hits = statusHits(events);
   const last = new Map<LoadStatus, AxisHit>();
-  for (const h of hits) last.set(h.status, h);
+  for (const h of hits) {
+    const prev = last.get(h.status);
+    /* D-0005: korekta (np. na 09:00) nie znika pod wcześniej zapisanym wpisem z późniejszą godziną (np. STATUS_AUTO 13:00) */
+    if (prev?.korekta && !h.korekta && (h.seq ?? NaN) < (prev.seq ?? NaN)) continue;
+    last.set(h.status, h);
+  }
   const cur = currentAxisIndex(l);
   const cancelled = cur < 0;
   const rows: { group: AxisGroupKey; row: AxisRow }[] = [];

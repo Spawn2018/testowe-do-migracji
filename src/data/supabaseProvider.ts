@@ -21,13 +21,15 @@ import {
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
+import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
+import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
-  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,' +
+  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,symbol,permit_kind,' +
   'rio_tracking_id,rio_asset_name,rio_tracker_on,rio_valid_from,rio_valid_to,rio_check_state,rio_check_at,rio_last_fix_at,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,actual_delivery_at,' +
@@ -78,7 +80,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -108,7 +110,24 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('load_order_numbers'),
       /* B7: progi ETA / ciszy — cache dla mappera (RLS: HHL wszystko, inni podzbiór) */
       sb.from('ops_thresholds').select('key,value_num'),
+      /* A9: braki do Gotowy z bazy; brak RPC (przed migracją) → widok liczy sam */
+      sb.rpc('load_ready_gaps'),
+      /* A7: zezwolenia i polisy z bazy (KSH tylko HHL; SCX tylko własna) */
+      sb.rpc('a7_permits_list'),
+      sb.rpc('a7_policies_list'),
+      /* D-20261020-1118-01: tabela symboli (zezwolenie Firma/Trasa, piloci) i piloci z awizacji (load_escorts PL/SE) */
+      sb.from('symbol_specs').select('symbol,position_name,combo_length_m,combo_width_m,combo_height_m,pilot,permit_kind'),
+      sb.from('load_escorts').select('load_id,seq,plate,scope').order('load_id').order('seq'), /* stała kolejność wpisów PL_SE między sobą; pierwszeństwo PL/SE ustala setPilotsFromServer (F7 #357 P6, #360) */
+      sb.rpc('load_escort_contacts'),
     ]);
+    /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
+    setSymbolSpecsFromServer(symQ.error ? null : ((symQ.data ?? []) as SymbolSpecRow[]));
+    {
+      const names = new Map(((escContactQ.error ? [] : escContactQ.data ?? []) as { load_id: string; seq: number; driver_name: string | null }[])
+        .map((c) => [`${c.load_id}|${c.seq}`, c.driver_name]));
+      setPilotsFromServer(escQ.error ? null : ((escQ.data ?? []) as { load_id: string; seq: number; plate: string; scope: string }[])
+        .map((e) => ({ loadId: e.load_id, scope: e.scope, plate: e.plate, name: names.get(`${e.load_id}|${e.seq}`) ?? null })));
+    }
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
     }
@@ -118,8 +137,33 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (orderNos.error && !/load_order_numbers|PGRST202|schema cache|Could not find/i.test(orderNos.error.message ?? '')) {
       throw new Error(`load_order_numbers: ${orderNos.error.message}`);
     }
+    if (gapsQ.error && !/load_ready_gaps|PGRST202|schema cache|Could not find/i.test(gapsQ.error.message ?? '')) {
+      throw new Error(`load_ready_gaps: ${gapsQ.error.message}`);
+    }
+    if (a7PermitsQ.error && !/a7_permits_list|PGRST202|schema cache|Could not find/i.test(a7PermitsQ.error.message ?? '')) {
+      throw new Error(`a7_permits_list: ${a7PermitsQ.error.message}`);
+    }
+    if (a7PoliciesQ.error && !/a7_policies_list|PGRST202|schema cache|Could not find/i.test(a7PoliciesQ.error.message ?? '')) {
+      throw new Error(`a7_policies_list: ${a7PoliciesQ.error.message}`);
+    }
+    if (!a7PermitsQ.error) {
+      const raw = a7PermitsQ.data;
+      const rows = (Array.isArray(raw) ? raw : raw ?? []) as PermitView[];
+      setPermitsFromServer(Array.isArray(rows) ? rows : []);
+    } else {
+      setPermitsFromServer([]);
+    }
+    if (!a7PoliciesQ.error) {
+      const raw = a7PoliciesQ.data;
+      const rows = (Array.isArray(raw) ? raw : raw ?? []) as PolicyView[];
+      setPoliciesFromServer(Array.isArray(rows) ? rows : []);
+    } else {
+      setPoliciesFromServer([]);
+    }
     const orderBy = new Map(((orderNos.error ? [] : orderNos.data ?? []) as { load_id: string; hhl_order_no: string | null; carrier_order_no: string | null }[])
       .map((r) => [r.load_id, r]));
+    const gapsBy = new Map(((gapsQ.error ? [] : gapsQ.data ?? []) as { load_id: string; gaps: import('../types').ReadyGap[] | null }[])
+      .map((r) => [r.load_id, Array.isArray(r.gaps) ? r.gaps : []]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
@@ -181,6 +225,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         next = { ...next, trackingLink: { ...l.trackingLink, usedBy } };
       }
       next = { ...next, deliveredCheck: deliveredCheckFromDecision(l, dcBy.get(l.id) ?? null, dcRole) };
+      /* A9: baza podała listę → widok nie liczy sam (undefined = brak RPC). */
+      if (!gapsQ.error) next = { ...next, readyGaps: gapsBy.get(l.id) ?? [] };
       return next;
     });
     return {
@@ -246,21 +292,21 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     appUserId = r.data as string;
     return appUserId;
   }
+  /* B9 (8A, D-20261019-1515-01): panel tylko po polsku — kolumny języka w `user_preferences` nie czytamy ani nie zapisujemy
+     (wykonawca usuwa ją w bazie; aplikacja kierowcy ma własny wybór języka). */
   async function loadPreferences(): Promise<UserPrefsPatch | null> {
-    const r = await sb.from('user_preferences').select('display_currency,locale,theme').maybeSingle();
+    const r = await sb.from('user_preferences').select('display_currency,theme').maybeSingle();
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
     if (!r.data) return null;
-    const d = r.data as { display_currency: string; locale: string; theme: string | null };
+    const d = r.data as { display_currency: string; theme: string | null };
     return {
       displayCurrency: d.display_currency === 'PLN' ? 'PLN' : 'EUR',
-      locale: (['pl', 'en', 'sv'].includes(d.locale) ? d.locale : 'pl') as UserPrefsPatch['locale'],
       theme: d.theme === 'light' || d.theme === 'dark' ? d.theme : null,
     };
   }
   async function savePreferences(p: UserPrefsPatch): Promise<void> {
     const row: Record<string, unknown> = { user_id: await myUserId(), updated_at: new Date().toISOString() };
     if (p.displayCurrency) row.display_currency = p.displayCurrency;
-    if (p.locale) row.locale = p.locale;
     if ('theme' in p) row.theme = p.theme ?? null;
     const r = await sb.from('user_preferences').upsert(row, { onConflict: 'user_id' }).select('user_id');
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
@@ -351,6 +397,48 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           throw new Error(res.error.message);
         }
         return { id: String(res.data) };
+      }
+      case 'bill.update': {
+        // A4 / D-20261020-0115-01: edycja faktury — nowy PDF (opcjonalnie) → Storage, potem `update_invoice`
+        // (uprawnienia, VAT, co do grosza, CMR, historia „było → jest” i powiadomienia — w bazie, jedna transakcja)
+        await ensureContext();
+        let docId = m.bill.pdfDocId ?? null;
+        let uploaded: { id: string; bucket: string; objectPath: string } | null = null;
+        if (m.file) {
+          if (!projectId) throw new Error('faktura: brak projektu');
+          const created = await sb.rpc('create_document', {
+            p_load_id: null, p_category: 'INVOICE', p_file_name: m.bill.pdfName ?? 'faktura.pdf',
+            p_mime: 'application/pdf', p_size: m.file.size, p_project_id: projectId,
+          });
+          const row = (Array.isArray(created.data) ? created.data[0] : created.data) as { id: string; bucket: string; object_path: string } | null;
+          if (created.error || !row) throw new Error(`faktura PDF: ${created.error?.message ?? 'brak rejestracji'}`);
+          const stored = safeStorageTarget(row.bucket, row.object_path);
+          const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+          const up = await sb.storage.from(stored.bucket).upload(objectPath, m.file, { contentType: 'application/pdf', upsert: false });
+          if (up.error) {
+            await sb.rpc('discard_document', { p_id: row.id });
+            throw new Error(`faktura PDF: ${up.error.message}`);
+          }
+          uploaded = { id: row.id, bucket: stored.bucket, objectPath };
+          docId = row.id;
+        }
+        const { lines, ...patch } = billToRpc(m.bill, docId ?? '');
+        delete patch.direction; // kierunku faktury nie zmienia się (wystawca i odbiorca bez zmian)
+        /* F7 #347 P2: pełna treść nagłówka, bez „null = licz sam” — termin zawsze jawnie, z flagą „z dokumentu” */
+        const res = await sb.rpc('update_invoice', {
+          p_invoice: m.billId,
+          p_patch: { ...patch, due_date: m.bill.dueDate, due_date_from_document: m.bill.dueFromDocument, document_id: docId },
+          p_lines: lines,
+          p_note: m.note,
+        });
+        if (res.error) {
+          if (uploaded) {
+            await sb.storage.from(uploaded.bucket).remove([uploaded.objectPath]);
+            await sb.rpc('discard_document', { p_id: uploaded.id });
+          }
+          throw new Error(res.error.message);
+        }
+        return;
       }
       case 'bill.verify': {
         const res = await sb.from('invoices').update({

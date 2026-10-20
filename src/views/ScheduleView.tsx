@@ -25,8 +25,9 @@ import {
 import { FileTable, SchedCards, ShortTable, type SchedRowCtx } from '../components/schedule/SchedTables';
 import { s7, s7p } from '../i18n/sched7';
 import { cmrAfterDelivery, docStatusRows } from '../lib/docRequirements';
-import { getDocReqCache } from '../lib/docReqCache';
-import { docRequirementsStart, marginThresholdOf } from '../lib/p5Source';
+import { useDocReqCache } from '../lib/docReqCache';
+import { firmDocRows, firmPermitLoad } from '../lib/permitKind';
+import { docRequirementsStart, marginThresholdOf, permitsOf } from '../lib/p5Source';
 import '../components/schedule/sched7.css';
 import { SailingsPanel } from './SailingsPanel';
 import { sv, svp } from '../i18n/sail7';
@@ -329,7 +330,9 @@ export function ScheduleView() {
   ) : null;
 
   /* E31: stan dokumentów jak na stronie Dokumenty i w panelu (baza po wejściu na Dokumenty; demo — reguły startowe) */
-  const docCache = getDocReqCache();
+  /* D-20261020-1118-01: stan z bazy przy wejściu na Harmonogram (nie dopiero po stronie Dokumenty) */
+  /* odświeżenie także po zmianie statusów (np. „Dostarczone” — CMR zaczyna się liczyć) */
+  const docCache = useDocReqCache(`${documents.length}|${list.map((l) => l.status).join(',')}`);
   const reqs = docCache?.reqs ?? docRequirementsStart();
   const nowMs = Date.parse(nowIso);
   const docByLoad = useMemo(() => {
@@ -338,6 +341,13 @@ export function ScheduleView() {
     const rows = cmrAfterDelivery(docCache ? docCache.status : PROD_BUILD ? [] : docStatusRows(list, documents, reqs, nowMs), (id) => st.get(id));
     const m = new Map<string, typeof rows>();
     for (const r of rows) { const a = m.get(r.loadId) ?? []; a.push(r); m.set(r.loadId, a); }
+    /* D-20261020-1118-01: przy zezwoleniu firmowym bez wierszy „zezwolenie PL / SE” (jak w panelu) */
+    /* F7 #355 B1: zezwolenie firmowe ważne w dniu załadunku = dokument transportu w porządku (bez „–” przed dostawą) */
+    const permits = permitsOf(list);
+    for (const l of list) {
+      if (!firmPermitLoad(l)) continue;
+      m.set(l.id, firmDocRows(m.get(l.id) ?? [], l, permits));
+    }
     return m;
   }, [docCache, list, documents, reqs, nowMs]);
   const marginMin = marginThresholdOf();

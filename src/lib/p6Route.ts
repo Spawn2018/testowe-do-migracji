@@ -125,6 +125,8 @@ export interface RoadRowView {
   note: string | null;
   /** oryginał po szwedzku, gdy tytuł przetłumaczony */
   original: string | null;
+  /** B9: tłumaczenie opisu jeszcze nie dotarło — „Tłumaczenie w toku” */
+  pending?: boolean;
 }
 
 const IMPACT_RANK: Record<RoadImpact, number> = { VERY_HIGH: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -143,8 +145,9 @@ export function roadCounts(rows: readonly RoadRowView[]): string {
 }
 
 /** Produkcja: sytuacje z `corridor_conditions` (tytuł już po polsku, oryginał zostaje do podglądu). */
-export function roadRowsFromCorridor(sit: readonly { id: string; severity: string; title: string; road: string; original: string | null; note: string | null }[]): RoadRowView[] {
+export function roadRowsFromCorridor(sit: readonly { id: string; severity: string; title: string; road: string; original: string | null; note: string | null; pending?: boolean }[]): RoadRowView[] {
   return sortRoads(sit.map((s) => ({
     id: s.id, road: s.road || 'E4', title: s.title, impact: impactOf(s.severity), when: null, note: s.note, original: s.original,
+    pending: s.pending === true,
   })));
 }

@@ -166,6 +166,8 @@ const PL: Record<string, string> = {
   p6_imp_LOW: 'Mały wpływ',
   p6_road_translated: 'przetłumaczone ze szwedzkiego',
   p6_road_original: 'Pokaż oryginał',
+  /* B9 (D-20261019-1515-01 pkt 4) */
+  p6_road_pending: 'Tłumaczenie w toku',
   p6_road_all: 'Pokaż wszystkie {n}',
   p6_road_less: 'Pokaż mniej',
   p6_road_note: 'Najpierw bardzo duży i duży wpływ. Zakazy ruchu w dniu przejazdu są informacją przy swoim transporcie, nie liczą się do „Do zrobienia”.',

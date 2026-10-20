@@ -113,7 +113,8 @@ function Docs({ l, ctx, two }: { l: Load; ctx: SchedRowCtx; two?: boolean }) {
   if (c.tone === 'none') return dash;
   if (c.tone === 'ok') return <span className="s7-ok" data-docs="ok">{s7(L, 's7_d_ok')}</span>;
   if (c.tone === 'due') {
-    return <span className="s7-muted" data-docs="due">{s7p(L, 's7_d_due', { list: c.keys.map((k) => s7(L, k)).join(', '), date: dmy(c.due) })}</span>;
+    const list = c.keys.map((k) => s7(L, k)).join(', ');
+    return <span className="s7-muted" data-docs="due">{c.due ? s7p(L, 's7_d_due', { list, date: dmy(c.due) }) : s7p(L, 's7_d_bad', { list })}</span>;
   }
   const text = c.keys.length === 1 ? s7p(L, 's7_d_bad_one', { doc: s7(L, c.keys[0]) }) : s7p(L, 's7_d_bad', { list: c.keys.map((k) => s7(L, k)).join(', ') });
   return (

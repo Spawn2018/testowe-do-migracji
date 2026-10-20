@@ -63,9 +63,9 @@ describe('A4 · faktura tylko z CMR (kreator)', () => {
   });
   it('kreator: pozycje faktury tylko z gotowych; szare wiersze bez pola kwoty, nie do zaznaczenia, z „czeka na CMR”', () => {
     const s = read('src/views/BillsPanel.tsx');
-    expect(s).toMatch(/const candidates = useMemo\(\(\) => weekLoads\.filter\(\(l\) => billReady\(l, documents\)\)/);
+    expect(s).toMatch(/const ready = weekLoads\.filter\(\(l\) => billReady\(l, documents\)\)/);
     expect(s).toMatch(/const waiting = useMemo\(\(\) => weekLoads\.filter\(\(l\) => !billReady\(l, documents\)\)/);
-    expect(s).toMatch(/lines: candidates\.filter\(\(l\) => lineOf\(l\.id\)\.on\)/);
+    expect(s).toMatch(/\.\.\.candidates\.filter\(\(l\) => lineOf\(l\.id\)\.on\)/);
     expect(s).toMatch(/<tr key=\{l\.id\} className="inv-wait" data-w-wait=\{l\.code\}>/);
     expect(s).toMatch(/checked=\{false\} disabled/);
     expect(read('src/i18n/p5.ts')).toContain("p5_inv_wait_cmr: 'czeka na CMR',");
@@ -76,7 +76,7 @@ describe('A4 · faktura tylko z CMR (kreator)', () => {
     expect(s).toMatch(/\.filter\(\(l\) => !onBill\.has\(l\.id\) && \(!invoiceA4On\(\) \|\| billReady\(l, documents\)\)\)/);
     expect(s).toContain('export const BILL_TOLERANCE_A4 = 0.01;');
     expect(s).toContain('export const BILL_TOLERANCE = { abs: 1, pct: 0.002 };');
-    expect(read('src/lib/serverRules.ts')).toContain('INVOICE_A4: false /* A4 register_invoice */,');
+    expect(read('src/lib/serverRules.ts')).toContain('INVOICE_A4: true /* A4 register_invoice */,');
     expect(read('src/views/BillsPanel.tsx')).toContain('checkBill(draft, loads, bills, today, documents)');
     expect(read('src/store/useTowerStore.ts')).toContain('checkBill(draft, s.loads, s.bills, today, s.documents)');
   });

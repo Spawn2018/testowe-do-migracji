@@ -56,17 +56,24 @@ jobs:
 
       - name: Baza
         if: steps.keys.outputs.skip != 'true'
+        env:
+          DB_URL_FILE: ${{ runner.temp }}/db-url
+          DB_PORT_FILE: ${{ runner.temp }}/db-port
+          DB_PASSWORD_FILE: ${{ runner.temp }}/db-password
+          DB_MODE_FILE: ${{ runner.temp }}/db-mode
         run: |
           set -euo pipefail
           set +x
-          port="$(python3 -c 'import os,re; u=os.environ.get("SUPABASE_DB_URL",""); rest=u.rsplit("@",1)[-1]; m=re.search(r":(\d+)", rest); print(m.group(1) if m else "")')"
-          redact() {
-            python3 -c 'import os,sys; u=os.environ.get("SUPABASE_DB_URL",""); t=sys.stdin.read(); sys.stdout.write(t.replace(u,"[adres]") if u else t)'
-          }
+          python3 scripts/ci/normalize-db-url.py
+          port="$(cat "$DB_PORT_FILE")"
+          mode="$(cat "$DB_MODE_FILE")"
+          redact() { python3 scripts/ci/redact.py; }
           run_push() {
             local code=0
             local out
-            out="$(supabase db push --db-url "$SUPABASE_DB_URL" "$@" 2>&1)" || code=$?
+            local url
+            url="$(cat "$DB_URL_FILE")"
+            out="$(supabase db push --db-url="$url" "$@" 2>&1)" || code=$?
             printf '%s\n' "$out" | redact
             if [ "$code" -ne 0 ]; then
               if [ "$port" = "6543" ]; then
@@ -75,9 +82,32 @@ jobs:
               exit "$code"
             fi
           }
-          echo "Lista migracji (dry-run):"
-          run_push --dry-run --yes --skip-vault
-          run_push --yes --skip-vault
+          push_linked() {
+            local code=0
+            local out
+            out="$(supabase db push --linked "$@" 2>&1)" || code=$?
+            printf '%s\n' "$out" | redact
+            if [ "$code" -ne 0 ]; then
+              exit "$code"
+            fi
+          }
+          if [ "$mode" = "pooler" ]; then
+            echo "Lista migracji (dry-run, pula w adresie):"
+            run_push --dry-run --yes --skip-vault
+            run_push --yes --skip-vault
+          else
+            echo "Polaczenie: supabase link, pula IPv4 z API."
+            export SUPABASE_DB_PASSWORD="$(cat "$DB_PASSWORD_FILE")"
+            link_code=0
+            link_out="$(supabase link --project-ref "$PROJECT_REF" --yes 2>&1)" || link_code=$?
+            printf '%s\n' "$link_out" | redact
+            if [ "$link_code" -ne 0 ]; then
+              exit "$link_code"
+            fi
+            echo "Lista migracji (dry-run):"
+            push_linked --dry-run --yes --skip-vault
+            push_linked --yes --skip-vault
+          fi
 
       - name: Edge
         if: steps.keys.outputs.skip != 'true'

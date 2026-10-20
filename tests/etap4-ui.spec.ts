@@ -60,6 +60,9 @@ async function openLoad(page: Page, code: string, opts?: { orders?: boolean }) {
 /** E41 (P2): KSH bez pól numerów; jedyny przycisk zmian = „Edytuj”. */
 async function openLoadKsh(page: Page, code: string) {
   await openLoad(page, code, { orders: false })
+  /* D-20261020-1118-01: „Plan i ETA” domyślnie zwinięte — „Edytuj” po rozwinięciu */
+  const plan = page.locator('.drawer details[data-po="plan"]')
+  if ((await plan.count()) && !(await plan.evaluate((d) => (d as HTMLDetailsElement).open))) await plan.locator(':scope > summary').click()
   await page.waitForSelector('.drawer [data-ksh-edit]')
 }
 /** wyglad/P7-a — E32 pkt 2, E9 krok 5: nr HHL wpisuje HHL w „Numerach zleceń” Przeglądu (bez okna Awizacja i bez kompletnej awizacji). */

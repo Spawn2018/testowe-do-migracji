@@ -128,47 +128,132 @@ err "SCX nie wstawi przebiegu reguły"                 $SCX "insert into workflo
 err "SCX nie zmieni stanu strefy"                     $SCX "update geofence_states set consec_fixes = 99" "permission denied"
 err "KSH nie powiąże zezwolenia"                      $KSH "insert into load_permits (load_id, permit_id) values ('$L1', gen_random_uuid())" "row-level security|permission denied|violates"
 
-echo; echo "[M6] Faktury — model trzech stron: rejestracja z PDF, kontrole w bazie, dwa statusy, Z1, Z4, Q13"
+echo; echo "[M6] Faktury — A4: READY_TO_INVOICE + CMR po dostawie, VAT 23%, tolerancja 0"
 L5=33333333-0000-0000-0000-000000000005; L6=33333333-0000-0000-0000-000000000006; L7=33333333-0000-0000-0000-000000000007
 CAR=00000000-0000-0000-0000-00000000a003
-sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('$L5','$P','$CAR','KSH/5','HHL/5','SCX/5'), ('$L6','$P','$CAR','KSH/6','HHL/6','SCX/6'), ('$L7','$P','$CAR','KSH/7','HHL/7','SCX/7')"
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status, actual_delivery_at) values
+  ('$L5','$P','$CAR','KSH/5','HHL/5','SCX/5','READY_TO_INVOICE','2026-09-22T10:00:00Z'),
+  ('$L6','$P','$CAR','KSH/6','HHL/6','SCX/6','READY_TO_INVOICE','2026-09-22T12:00:00Z'),
+  ('$L7','$P','$CAR','KSH/7','HHL/7','SCX/7','READY_TO_INVOICE','2026-09-23T10:00:00Z')"
 sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2026-09-21',4.2500,'183/A/NBP/2026') on conflict do nothing"
-sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$L5',1000,1000),('$L6',800,800),('$L7',500,500); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$L5',1300,1300),('$L6',1100,1100),('$L7',700,700)"
-sys "update loads set actual_delivery_at='2026-09-22T10:00:00Z' where id in ('$L5','$L6')"
+# REALIZACJA wprost: INSERT z actual_delivery_at nie odpala migawki FX (ta jest na UPDATE) — inaczej least_tier = PROGNOZA
+sys "insert into load_cost (load_id, base_amount, computed_total_eur, pricing_tier) values ('$L5',1000,1000,'REALIZACJA'),('$L6',800,800,'REALIZACJA'),('$L7',500,500,'REALIZACJA'); insert into load_revenue (load_id, base_amount, computed_total_eur, pricing_tier) values ('$L5',1300,1300,'REALIZACJA'),('$L6',1100,1100,'REALIZACJA'),('$L7',700,700,'REALIZACJA')"
+sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+     values ('$P','$L5','CMR','test/m6-cmr5.pdf','cmr.pdf','application/pdf',100,'2026-09-22T11:00:00Z'),
+            ('$P','$L6','CMR','test/m6-cmr6.pdf','cmr.pdf','application/pdf',100,'2026-09-22T13:00:00Z'),
+            ('$P','$L7','CMR','test/m6-cmr7.pdf','cmr.pdf','application/pdf',100,'2026-09-23T11:00:00Z')"
 DOC="(select id from create_document(null,'INVOICE','f.pdf','application/pdf',100,'$P'))"
-REGK="select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/1','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1500,'vat_total',0,'gross_total',1500,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000),jsonb_build_object('load_id','$L7','invoiced_net',500)))) is not null"
+# net 1500 → VAT 345, brutto 1845
+REGK="select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/1','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1500,'vat_total',345,'gross_total',1845,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000),jsonb_build_object('load_id','$L7','invoiced_net',500)))) is not null"
 val "SCX rejestruje fakturę kosztową EUR z PDF"                 $SCX "$REGK" t commit
-val "kontrole pozycji w bazie: L5 bez flag, L7 NIEZREALIZOWANY"   $HHL "select string_agg(coalesce(array_to_string(flags,'+'),'')||'', ',' order by load_id) from invoice_lines where direction='KOSZT' and load_id in ('$L5','$L7')" ",NIEZREALIZOWANY"
-val "nagłówek: BRAK_NA_FAKTURZE (L6 z tygodnia pominięty)"      $HHL "select array_to_string(check_flags,',')||' '||('$L6'=any(missing_load_ids))::text from invoices where invoice_number='SCX/FV/39/1'" "BRAK_NA_FAKTURZE true"
+val "A4: VAT 23% zapisany w nagłówku"                           $HHL "select vat_total||' '||gross_total from invoices where invoice_number='SCX/FV/39/1'" "345.00 1845.00"
+val "kontrole pozycji: L5 i L7 bez flag kwoty"                  $HHL "select string_agg(coalesce(array_to_string(flags,'+'),'')||'', ',' order by load_id) from invoice_lines where direction='KOSZT' and load_id in ('$L5','$L7')" ","
+val "nagłówek: BRAK_NA_FAKTURZE (L6 READY pominięty)"           $HHL "select array_to_string(check_flags,',')||' '||('$L6'=any(missing_load_ids))::text from invoices where invoice_number='SCX/FV/39/1'" "BRAK_NA_FAKTURZE true"
 val "termin KOSZT: wystawienie + 35 dni"                          $HHL "select due_date from invoices where invoice_number='SCX/FV/39/1'" 2026-10-30
 val "Z1: kwota z faktury obok wyliczenia; poziom = mniej pewna strona" $HHL "select cost_invoiced_eur||' '||cost_computed_eur||' '||pricing_tier from v_load_financials_hhl where load_id='$L5'" "1000.00 1000.00 REALIZACJA"
 val "KSH nie widzi faktury kosztowej"                             $KSH "select count(*) from invoices where invoice_number='SCX/FV/39/1'" 0
-err "podwójne fakturowanie zablokowane w bazie"                   $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/2','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1,'vat_total',0,'gross_total',1,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000))))" "podw.jne fakturowanie"
-err "SCX nie zarejestruje faktury przychodowej"                   $SCX "select register_invoice(jsonb_build_object('direction','PRZYCHOD','invoice_number','X','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1,'vat_total',0,'gross_total',1,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1))))" "rejestruje HHL"
-err "bez PDF — odrzucone"                                         $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','X2','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1,'vat_total',0,'gross_total',1,'lines',jsonb_build_array(jsonb_build_object('load_id','$L6','invoiced_net',1))))" "PDF faktury jest wymagany"
-err "bez VAT z dokumentu — odrzucone (system nie liczy VAT)"      $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','X3','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1,'gross_total',1,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L6','invoiced_net',1))))" "nie liczy VAT"
-REGP="select register_invoice(jsonb_build_object('direction','PRZYCHOD','invoice_number','HHL/FV/39/1','issue_date','2026-09-25','week_key','2026-W39','currency','PLN','net_total',10200,'vat_total',0,'gross_total',10200,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',5525.00,'fx_table_no','183/A/NBP/2026','fx_mid',4.25,'fx_effective_date','2026-09-21'),jsonb_build_object('load_id','$L6','invoiced_net',4700,'fx_table_no','999/A/X','fx_mid',4.30,'fx_effective_date','2026-09-21')))) is not null"
+val "A4: INVOICE_NEW także dla kosztowej (odbiorca HHL)"         $HHL "select count(*) from notifications where template='INVOICE_NEW' and payload->>'number'='SCX/FV/39/1'" 1
+err "podwójne fakturowanie zablokowane w bazie"                   $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/2','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1000,'vat_total',230,'gross_total',1230,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000))))" "podw.jne fakturowanie"
+err "SCX nie zarejestruje faktury przychodowej"                   $SCX "select register_invoice(jsonb_build_object('direction','PRZYCHOD','invoice_number','X','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',1,'vat_total',0.23,'gross_total',1.23,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1))))" "rejestruje HHL"
+err "bez PDF — odrzucone"                                         $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','X2','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',800,'vat_total',184,'gross_total',984,'lines',jsonb_build_array(jsonb_build_object('load_id','$L6','invoiced_net',800))))" "PDF faktury jest wymagany"
+err "A4: zły VAT → odmowa (baza liczy 23%)"                        $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','X3','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',800,'vat_total',0,'gross_total',800,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L6','invoiced_net',800))))" "VAT liczy baza"
+# net 10225 → VAT 2351.75, brutto 12576.75 (L5 5525 + L6 4700)
+REGP="select register_invoice(jsonb_build_object('direction','PRZYCHOD','invoice_number','HHL/FV/39/1','issue_date','2026-09-25','week_key','2026-W39','currency','PLN','net_total',10225,'vat_total',2351.75,'gross_total',12576.75,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',5525.00,'fx_table_no','183/A/NBP/2026','fx_mid',4.25,'fx_effective_date','2026-09-21'),jsonb_build_object('load_id','$L6','invoiced_net',4700,'fx_table_no','999/A/X','fx_mid',4.30,'fx_effective_date','2026-09-21')))) is not null"
 val "HHL rejestruje fakturę przychodową PLN z kursem per pozycja" $HHL "$REGP" t commit
-val "kurs podpowiadany z reguły W3 zgodny → bez flag; zły kurs → TABELA+KURS+KWOTA" $HHL "select string_agg(array_to_string(flags,'+'), ',' order by load_id) from invoice_lines where direction='PRZYCHOD' and load_id in ('$L5','$L6')" ",TABELA_NBP+KURS_NBP+KWOTA"
+val "kurs: L5 OK; L6 TABELA+KURS+KWOTA (tolerancja 0)"            $HHL "select string_agg(array_to_string(flags,'+'), ',' order by load_id) from invoice_lines where direction='PRZYCHOD' and load_id in ('$L5','$L6')" ",TABELA_NBP+KURS_NBP+KWOTA"
 val "termin PRZYCHOD: wystawienie + 30 dni"                       $HHL "select due_date from invoices where invoice_number='HHL/FV/39/1'" 2026-10-25
 val "Z1 po stronie przychodu: 5525 PLN / 4,25 = 1300 EUR"         $HHL "select rev_invoiced_eur from v_load_financials_hhl where load_id='$L5'" 1300.00
 val "KSH widzi fakturę HHL, SCX nie"                              $KSH "select count(*) from invoices where invoice_number='HHL/FV/39/1'" 1
 val "SCX nie widzi faktury przychodowej"                          $SCX "select count(*) from invoices where invoice_number='HHL/FV/39/1'" 0
-val "Q13: KSH dostał powiadomienie o nowej fakturze HHL"          $KSH "select count(*) from notifications where template='INVOICE_NEW'" 1
-val "KSH w module faktur: PDF + CMR/POD, nic więcej"              $KSH "select string_agg(distinct role, ',') from invoice_documents x join invoices i on i.id=x.invoice_id where i.invoice_number='HHL/FV/39/1'" FAKTURA_PDF
+val "Q13: KSH dostał powiadomienie o nowej fakturze HHL"          $KSH "select count(*) from notifications where template='INVOICE_NEW' and payload->>'number'='HHL/FV/39/1'" 1
+val "KSH w module faktur: PDF + CMR"                              $KSH "select string_agg(distinct role, ',' order by role) from invoice_documents x join invoices i on i.id=x.invoice_id where i.invoice_number='HHL/FV/39/1'" "CMR,FAKTURA_PDF"
 err "KSH: SPORNA bez uzasadnienia — odrzucone"                    $KSH "update invoices set verification_status='SPORNA' where invoice_number='HHL/FV/39/1'" "wymaga uzasadnienia"
 val "KSH: SPORNA z uzasadnieniem"                                 $KSH "update invoices set verification_status='SPORNA', dispute_note='kurs pozycji 2' where invoice_number='HHL/FV/39/1' returning verification_status" SPORNA
-err "KSH nie zmieni treści faktury"                               $KSH "update invoices set net_total=1 where invoice_number='HHL/FV/39/1'" "nie zmienia|weryfikowa"
+err "KSH nie zmieni treści faktury (UPDATE bezpośredni)"         $KSH "update invoices set net_total=1 where invoice_number='HHL/FV/39/1'" "Edytuj fakturę|KSH nie"
+err "Treść faktury tylko przez update_invoice (nie REST)"         $SCX "update invoices set vat_total=0 where invoice_number='SCX/FV/39/1'" "Edytuj fakturę"
 err "HHL (wystawca) nie zmieni statusu sporu KSH (Q14)"           $HHL "update invoices set verification_status='ZGODNA' where invoice_number='HHL/FV/39/1'" "Wystawca nie weryfikuje"
 err "SCX nie weryfikuje własnej faktury"                          $SCX "update invoices set verification_status='ZGODNA' where invoice_number='SCX/FV/39/1'" "Wystawca nie weryfikuje"
-val "HHL weryfikuje fakturę SCX: ZGODNA"                          $HHL "update invoices set verification_status='ZGODNA' where invoice_number='SCX/FV/39/1' returning verification_status" ZGODNA
+
+echo; echo "[A4 / D-0115] update_invoice — role i stany (#346 / F7 B4)"
+INV_SCX="(select id from invoices where invoice_number='SCX/FV/39/1')"
+INV_HHL="(select id from invoices where invoice_number='HHL/FV/39/1')"
+DOC_SCX="(select document_id from invoices where invoice_number='SCX/FV/39/1')"
+PATCH_SCX="(select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'due_date_from_document',due_date_from_document,'document_id',document_id,'net_total',net_total,'vat_total',vat_total,'gross_total',gross_total) from invoices where invoice_number='SCX/FV/39/1')"
+LINES_SCX="(select coalesce(jsonb_agg(jsonb_build_object('load_id',load_id,'invoiced_net',invoiced_net,'invoiced_fuel',invoiced_fuel) order by load_id),'[]'::jsonb) from invoice_lines where invoice_id=$INV_SCX)"
+# SPORNA na KOSZT → SCX (wystawca) wraca do DO_WERYFIKACJI
+sys "update invoices set verification_status='SPORNA', dispute_note='test sporu SCX' where invoice_number='SCX/FV/39/1'"
+val "A4: SCX poprawia SPORNĄ → DO_WERYFIKACJI" $SCX "select (update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'korekta po sporze')->>'verification_status')" DO_WERYFIKACJI commit
+val "A4: po korekcie SCX — INVOICE_UPDATED u HHL" $HHL "select count(*) > 0 from notifications where template='INVOICE_UPDATED' and payload->>'number'='SCX/FV/39/1'" t
+val "A4: korekta SPORNA bez DISPUTE_RESOLVED (F7 P5)" $SCX "select count(*) from notifications where template='INVOICE_DISPUTE_RESOLVED' and payload->>'number'='SCX/FV/39/1'" 0
+sys "update app_users set role='HHL_OPS' where auth_id='$HHL'"
+err "A4: HHL_OPS nie zmienia treści KOSZT" $HHL "select update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'ops')" "przewoźnik albo Administrator|42501|Nie masz"
+sys "update app_users set role='HHL_ADMIN' where auth_id='$HHL'"
+val "A4: HHL_ADMIN zmienia KOSZT przed akceptacją" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 1 from invoices where invoice_number='SCX/FV/39/1')), $LINES_SCX, 'admin korekta')->>'id') is not null" t commit
+val "A4: HHL_ADMIN na KOSZT → INVOICE_CORRECTED u SCX" $SCX "select count(*) > 0 from notifications where template='INVOICE_CORRECTED' and payload->>'number'='SCX/FV/39/1'" t
+# F7 runda 3 P4: SCX usuwa pozycję z KOSZT przed akceptacją, potem przywracamy L5 pod test OPLATA
+LINES_SCX_L7_ONLY="(select jsonb_build_array(jsonb_build_object('load_id','$L7','invoiced_net',500)))"
+val "A4: SCX usuwa L5 z KOSZT" $SCX "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',500,'vat_total',115,'gross_total',615), $LINES_SCX_L7_ONLY, 'SCX bez L5')->>'id') is not null" t commit
+val "A4: po usunięciu SCX L5 → READY_TO_INVOICE" $SCX "select status from loads where id='$L5'" READY_TO_INVOICE
+LINES_SCX_BOTH="(select jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000),jsonb_build_object('load_id','$L7','invoiced_net',500)))"
+val "A4: HHL_ADMIN przywraca L5 na KOSZT" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',1500,'vat_total',345,'gross_total',1845), $LINES_SCX_BOTH, 'przywróć L5')->>'id') is not null" t commit
+val "A4: HHL akceptuje KOSZT" $HHL "update invoices set verification_status='ZAAKCEPTOWANA' where invoice_number='SCX/FV/39/1' returning verification_status" ZAAKCEPTOWANA commit
+err "A4: SCX nie zmieni zaakceptowanej" $SCX "select update_invoice($INV_SCX, $PATCH_SCX, $LINES_SCX, 'za późno')" "zaakceptowaną|Administrator HHL"
+val "A4: HHL_ADMIN po akceptacji KOSZT (termin)" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 2 from invoices where invoice_number='SCX/FV/39/1')), $LINES_SCX, 'po akceptacji')->>'verification_status')" ZAAKCEPTOWANA commit
+err "A4: KSH nie woła update_invoice" $KSH "select update_invoice($INV_HHL, (select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'document_id',document_id) from invoices where invoice_number='HHL/FV/39/1'), null, 'ksh')" "KSH nie"
+err "A4: KSH nie wstawi faktury" $KSH "insert into invoices (project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, net_total, vat_total, gross_total, invoiced_amount, due_date, document_id, status) select project_id, carrier_org_id, period_start, period_end, currency, 'PRZYCHOD', issuer_org_id, recipient_org_id, 'KSH/X', issue_date, week_key, 1, 0.23, 1.23, 1, due_date, document_id, 'SUBMITTED' from invoices where invoice_number='HHL/FV/39/1'" "KSH nie|42501|row-level security|Edytuj|wystaw|wstaw"
+err "A4: INSERT faktury poza register_invoice (F7 P7)" $SCX "insert into invoices (project_id, carrier_org_id, period_start, period_end, currency, direction, issuer_org_id, recipient_org_id, invoice_number, issue_date, week_key, net_total, vat_total, gross_total, invoiced_amount, due_date, document_id, status) select project_id, carrier_org_id, period_start, period_end, currency, 'KOSZT', issuer_org_id, recipient_org_id, 'SCX/REST', issue_date, week_key, 1, 0, 1, 1, due_date, document_id, 'SUBMITTED' from invoices where invoice_number='SCX/FV/39/1'" "row-level security|42501|register"
+# PRZYCHOD: HHL_ADMIN / HHL_OPS, ZGODNA, korekta bez DISPUTE_RESOLVED (F7 P6)
+PATCH_HHL="(select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'due_date_from_document',due_date_from_document,'document_id',document_id,'net_total',net_total,'vat_total',vat_total,'gross_total',gross_total) from invoices where invoice_number='HHL/FV/39/1')"
+LINES_HHL="(select coalesce(jsonb_agg(jsonb_build_object('load_id',load_id,'invoiced_net',invoiced_net,'invoiced_fuel',invoiced_fuel,'fx_table_no',fx_table_no,'fx_mid',fx_mid,'fx_effective_date',fx_effective_date) order by load_id),'[]'::jsonb) from invoice_lines where invoice_id=$INV_HHL)"
+val "A4: HHL poprawia SPORNĄ PRZYCHOD → DO_WERYFIKACJI" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL, $LINES_HHL, 'korekta HHL po sporze')->>'verification_status')" DO_WERYFIKACJI commit
+val "A4: PRZYCHOD po korekcie — INVOICE_UPDATED u KSH" $KSH "select count(*) > 0 from notifications where template='INVOICE_UPDATED' and payload->>'number'='HHL/FV/39/1'" t
+val "A4: PRZYCHOD korekta bez DISPUTE_RESOLVED" $HHL "select count(*) from notifications where template='INVOICE_DISPUTE_RESOLVED' and payload->>'number'='HHL/FV/39/1'" 0
+sys "update app_users set role='HHL_OPS' where auth_id='$HHL'"
+val "A4: HHL_OPS zmienia PRZYCHOD przed akceptacją" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL, $LINES_HHL, 'ops przychod')->>'id') is not null" t commit
+sys "update app_users set role='HHL_ADMIN' where auth_id='$HHL'"
+val "KSH: ZGODNA na PRZYCHOD" $KSH "update invoices set verification_status='ZGODNA' where invoice_number='HHL/FV/39/1' returning verification_status" ZGODNA commit
+val "A4: HHL poprawia ZGODNĄ → DO_WERYFIKACJI" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL, $LINES_HHL, 'po zgodnej')->>'verification_status')" DO_WERYFIKACJI commit
+# F7 runda 3 P4: usunięcie pozycji z PRZYCHOD (L6 tylko po stronie HHL)
+LINES_HHL_L5="(select jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',5525.00,'fx_table_no','183/A/NBP/2026','fx_mid',4.25,'fx_effective_date','2026-09-21')))"
+val "A4: HHL usuwa L6 z PRZYCHOD" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL || jsonb_build_object('net_total',5525,'vat_total',1270.75,'gross_total',6795.75), $LINES_HHL_L5, 'bez L6')->>'id') is not null" t commit
+val "A4: po usunięciu L6 z PRZYCHOD → READY_TO_INVOICE" $HHL "select status from loads where id='$L6'" READY_TO_INVOICE
+# Usunięcie pozycji INVOICED (L5 na obu fakturach) — F7 B2
+sys "update load_cost set baf_amount=50 where load_id='$L7'"
+LINES_SCX_L7="(select jsonb_build_array(jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)))"
+val "A4: HHL_ADMIN usuwa L5 z KOSZT + paliwo → OPLATA_PALIWOWA" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',500,'vat_total',115,'gross_total',615), $LINES_SCX_L7, 'bez L5')->>'id') is not null" t commit
+val "A4: flaga OPLATA_PALIWOWA na L7" $HHL "select ('OPLATA_PALIWOWA'=any(flags)) from invoice_lines where invoice_id=$INV_SCX and load_id='$L7'" t
+val "A4: po usunięciu L5 ze SCX → READY_TO_INVOICE" $HHL "select status from loads where id='$L5'" READY_TO_INVOICE
+val "A4: STATUS_AUTO po usunięciu z faktury" $HHL "select count(*) > 0 from load_events where load_id='$L5' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" t
+# F7 runda 3 P4: przywróć L5 na KOSZT (para z PRZYCHOD) → L5 = INVOICED; zmiana kwoty bez usunięcia
+LINES_SCX_L5_L7="(select jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1000),jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)))"
+val "A4: HHL_ADMIN przywraca L5 przed testem kwoty" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',1500,'vat_total',345,'gross_total',1845), $LINES_SCX_L5_L7, 'przywróć L5 pod kwotę')->>'id') is not null" t commit
+val "A4: L5 INVOICED po przywróceniu pary" $HHL "select status from loads where id='$L5'" INVOICED
+val "A4: zmiana kwoty L5 bez usunięcia → INVOICED" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',1510,'vat_total',347.30,'gross_total',1857.30), jsonb_build_array(jsonb_build_object('load_id','$L5','invoiced_net',1010),jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)), 'kwota L5')->>'id') is not null; select status from loads where id='$L5'" INVOICED commit
+# F7 B3: bulk_quiet przywrócony — INSERT pozycji + anulowanie w tej samej transakcji → LOAD_STATUS_CHANGED
+L_IMP=33333333-0000-0000-0000-0000000000b3
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L_IMP','$P','$CAR','KSH/B3','HHL/B3','SCX/B3','PLANNED')"
+val "A4: import symbol + anulowanie → LOAD_STATUS_CHANGED (F7 B3)" $HHL "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty, total_weight_t) values ('$P','$L_IMP','SG-B3',16.0,3.2,3.5,1,40); select cancel_load('$L_IMP','test F7 B3'); select count(*) > 0 from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L_IMP'" t commit
+val "A4: SCX/FV/39/1 po testach ról = ZAAKCEPTOWANA" $HHL "select verification_status from invoices where invoice_number='SCX/FV/39/1'" ZAAKCEPTOWANA
 err "SCX nie oznaczy „Opłacona”"                                  $SCX "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01')" "wy..cznie HHL|wyłącznie HHL"
-val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01"
+val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01" commit
+val "A4: HHL_ADMIN edytuje opłaconą zaakceptowaną (termin)" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('due_date', (select due_date + 3 from invoices where invoice_number='SCX/FV/39/1')), null, 'po oplaceniu')->>'payment_status')" OPLACONA commit
 err "cofnięcie „Opłacona” bez powodu — odrzucone"                 $HHL "select unmark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '')" "Wymagany pow"
-err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-23T10:00:00Z' where id='$L5'" "zamro"
+err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-24T12:00:00Z' where id='$L5'" "zamro"
 L8=33333333-0000-0000-0000-000000000008
-sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no) values ('$L8','$P','$CAR','KSH/8','HHL/8','SCX/8')"
-val "0015: pierwsza pozycja bez migawki i bez rozładunku (reguła nieustalona) — rejestracja działa, flaga NIEZREALIZOWANY" $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',0,'gross_total',10,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))) is not null; select array_to_string(flags,'+') from invoice_lines where load_id='$L8'" NIEZREALIZOWANY commit
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L8','$P','$CAR','KSH/8','HHL/8','SCX/8','DELIVERED')"
+err "A4: transport bez READY_TO_INVOICE / CMR → odmowa"           $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',2.30,'gross_total',12.30,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10))))" "czeka na CMR"
+# L8 pod M7 (przypomnienia): osobna faktura kosztowa; termin 30.10 bez zmian po edycji SCX
+sys "update loads set status='READY_TO_INVOICE', actual_delivery_at='2026-09-22T14:00:00Z' where id='$L8'"
+sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
+     values ('$P','$L8','CMR','test/m6-cmr8.pdf','cmr.pdf','application/pdf',100,'2026-09-22T15:00:00Z')"
+val "A4: rejestracja L8 READY z CMR" $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',2.30,'gross_total',12.30,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))) is not null" t commit
+# F7 runda 3 P4: SCX edytuje opłaconą przed akceptacją HHL (bez zmiany due_date — M7 liczy −3 od 30.10)
+INV_SCX8="(select id from invoices where invoice_number='SCX/FV/39/8')"
+PATCH_SCX8="(select jsonb_build_object('invoice_number',invoice_number,'issue_date',issue_date,'week_key',week_key,'currency',currency,'due_date',due_date,'due_date_from_document',due_date_from_document,'document_id',document_id,'net_total',net_total,'vat_total',vat_total,'gross_total',gross_total) from invoices where invoice_number='SCX/FV/39/8')"
+LINES_SCX8="(select jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10)))"
+val "A4: HHL oznacza SCX/FV/39/8 Opłacona (przed akceptacją)" $HHL "select mark_invoice_paid($INV_SCX8, '2026-10-01'); select payment_status from invoices where invoice_number='SCX/FV/39/8'" OPLACONA commit
+val "A4: SCX edytuje opłaconą niezaakceptowaną" $SCX "select (update_invoice($INV_SCX8, $PATCH_SCX8, $LINES_SCX8, 'po oplaceniu SCX')->>'payment_status')" OPLACONA commit
+val "A4: cofnięcie Opłacona 39/8 przed M7" $HHL "select unmark_invoice_paid($INV_SCX8, 'powrót do M7'); select payment_status from invoices where invoice_number='SCX/FV/39/8'" NIEOPLACONA commit
 
 echo; echo "[M7] Terminy i przypomnienia: kadencja −3/0/+1/+7/+14, tylko płatnik i wierzyciel, opłacona → cisza"
 Q() { $PSQL -c "$1" 2>&1 | tail -1; }

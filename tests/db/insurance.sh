@@ -48,7 +48,8 @@ err "ujemna suma" $HHL "select insurance_policy_save('$SCXO', 'OCP/2', current_d
 err "dokument spoza kategorii INSURANCE odrzucony" $HHL "select insurance_policy_save('$SCXO', 'OCP/2', current_date, current_date + 1, null, false, false, null, 'EUR', '$DOCCMR')" "nie jest polisą"
 val "HHL zapisuje polisę innego przewoźnika (commit)" $HHL "select (select $(SAVE $SCX2O OCP/9 200)) is not null" t commit
 chk "audit_log INSURANCE_SAVE z numerem i datą, bez sumy" "$(Q "select count(*)||':'||bool_and(new_value ? 'valid_until')::text||':'||bool_and(not new_value ? 'sum_insured')::text from audit_log where action='INSURANCE_SAVE'")" "1:true:true"
-val "HHL: lista — wszystkie polisy" $HHL "select count(*) from insurance_policies_list()" 1
+# A7: seed polisy HHL PZU 1106707356 + OCP/9 z bloku wyżej → 2.
+val "HHL: lista — wszystkie polisy" $HHL "select count(*) from insurance_policies_list()" 2
 val "przewoźnik: lista — tylko własne (0)" $SCX "select count(*) from insurance_policies_list()" 0
 val "KSH: lista pusta" $KSH "select count(*) from insurance_policies_list()" 0
 err "HHL: wprost z tabeli → permission denied" $HHL "select count(*) from insurance_policies" "permission denied"
@@ -89,4 +90,10 @@ chk "nowa polisa poza oknem: ryzyko zamknięte automatycznie" "$(Q "select detec
 $PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where carrier_org_id='$SCXO'" >/dev/null
 chk "transporty anulowane: polisa kończy się, ale bez ryzyka (nic nie jest zagrożone)" "$(Q "select detect_insurance_expiry(now() + interval '420 days')")" 0
 chk "NULL w p_now = wyjątek" "$($PSQL -c "select detect_insurance_expiry(null)" 2>&1 | grep -c 'p_now wymagane')" 1
+echo; echo "[A7 F7 P2] polisa SCX z dokumentem wgranym przez HHL — bez CLIENT"
+DOCINS=$($PSQL -c "insert into documents (project_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_by)
+  select '$P','INSURANCE','test/polisa-hhl-scx.pdf','polisa.pdf','application/pdf',100,id
+    from app_users where auth_id='$HHL' returning id" | head -1)
+val "HHL zapisuje polisę SCX z dokumentem INSURANCE" $HHL "select insurance_policy_save('$SCXO','OCP/VIS',current_date - 10,current_date + 200,'PZU',true,true,null,'EUR','$DOCINS') is not null" t commit
+chk "po podpięciu document_id: visible_to bez CLIENT" "$(Q "select ('CLIENT'=any(visible_to)) from documents where id='$DOCINS'")" f
 echo; echo "WYNIK: $ok OK, $fail FAIL"

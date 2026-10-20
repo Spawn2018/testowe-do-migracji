@@ -208,7 +208,7 @@ const WHO: Record<DocRequirement['responsible'], string> = { CARRIER: 's7_d_who_
 
 export type DocCell =
   | { tone: 'bad'; keys: string[]; whoKey: string | null }
-  | { tone: 'due'; keys: string[]; due: string }
+  | { tone: 'due'; keys: string[]; due: string | null }
   | { tone: 'ok' }
   | { tone: 'none' };
 
@@ -225,6 +225,9 @@ export function docCell(rows: readonly DocStatusRow[], reqs: readonly DocRequire
   }
   const miss = rows.filter((r) => r.state === 'MISSING' && DOC_LABEL[r.category] && r.dueAt).sort((a, b) => (a.dueAt! < b.dueAt! ? -1 : 1));
   if (miss.length) return { tone: 'due', keys: miss.slice(0, 2).map((r) => DOC_LABEL[r.category]!), due: miss[0].dueAt! };
+  /* D-20261020-1118-01: brak bez terminu (np. bez daty załadunku) — „brak: …” bez czerwieni, nie „–” */
+  const open = rows.filter((r) => r.state === 'MISSING' && DOC_LABEL[r.category] && !r.dueAt);
+  if (open.length) return { tone: 'due', keys: open.slice(0, 2).map((r) => DOC_LABEL[r.category]!), due: null };
   return rows.every((r) => r.state === 'OK') ? { tone: 'ok' } : { tone: 'none' };
 }
 

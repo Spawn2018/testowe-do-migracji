@@ -13,9 +13,9 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
-  status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
+  status: 135, // A5: +9 + F7 source/ETA Stena>Polferries + eta_site not null ×2
   storage: 37,
-  money: 135,
+  money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -24,19 +24,19 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 657, // A2 +5: delivered_check_resolve (4 odmowy + kontrola)
-  i2: 548,
+  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
+  i2: 572, // D-1118 + D-1243: KSH czyta PILOTS_SET z imieniem
   i30: 10,
   i31: 9,
-  dec2: 42,
+  dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
   hist11: 11,
   workflows: 67,
-  insurance: 42,
-  'dec-auto': 72,
+  insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
+  'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
@@ -46,14 +46,14 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 33,
   h4: 19,
-  aud03: 25,
-  g20: 15, // P3-poprawki — G-20 daty + DECISION×CLIENT_USER push (D-20261014-0015-01)
-  baf: 46,
+  aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
+  g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
+  baf: 45,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 29, // P4 E25 + C17 auto CMR/faktury (D-20261015-2110-01)
+  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
+  c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };
 
 /**

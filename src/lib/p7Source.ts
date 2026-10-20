@@ -8,6 +8,7 @@ import type { Load, OrgKind } from '../types';
 import type { Pilots } from './p7Awiz';
 import { demoPilots, demoSavePilots, demoSaveSet, demoSymbolSpec } from './p7Demo';
 import { accountRole } from './accountRole';
+import { serverRuleOn } from './serverRules';
 
 /** Wiersz tabeli właściciela według symbolu (E32 pkt 7): zestaw z ładunkiem, wymóg pilotów, rodzaj zezwolenia. */
 export interface SymbolSpec {
@@ -19,19 +20,81 @@ export interface SymbolSpec {
   permit: 'FIRMA' | 'TRASA';
 }
 
-/** Tabela symboli (E32 pkt 7, D-83). Produkcja — po wpisaniu tabeli do bazy (wykonawca). */
+/** Wiersz `symbol_specs` z bazy (A7, 0237). */
+export interface SymbolSpecRow {
+  symbol: string;
+  position_name: string | null;
+  combo_length_m: number | string | null;
+  combo_width_m: number | string | null;
+  combo_height_m: number | string | null;
+  pilot: string | null;
+  permit_kind: string | null;
+}
+let prodSpecs: Map<string, SymbolSpec> | null = null;
+const numOr0 = (v: number | string | null) => (v == null || v === '' ? 0 : Number(v));
+/** D-20261020-1118-01: tabela symboli z bazy; `null` = brak odczytu (widok jak bez tabeli). */
+export function setSymbolSpecsFromServer(rows: readonly SymbolSpecRow[] | null): void {
+  prodSpecs = rows
+    ? new Map(rows.map((r) => [r.symbol, {
+      symbol: r.symbol,
+      kind: r.position_name ?? r.symbol,
+      set: { l: numOr0(r.combo_length_m), w: numOr0(r.combo_width_m), h: numOr0(r.combo_height_m) },
+      pilots: r.pilot === 'PL_SE',
+      permit: r.permit_kind === 'TRASA' ? 'TRASA' as const : 'FIRMA' as const,
+    }]))
+    : null;
+}
+
+/**
+ * Tabela symboli (E32 pkt 7, D-83). Produkcja (A7, D-20261020-1118-01): symbol transportu z `loads.symbol`
+ * i wiersz `symbol_specs`; rodzaj zezwolenia z `loads.permit_kind`, gdy baza go podała.
+ */
 export function symbolSpecOf(load: Load): SymbolSpec | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSymbolSpec(load) : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSymbolSpec(load) : prodSymbolSpec(load);
+}
+function prodSymbolSpec(load: Load): SymbolSpec | null {
+  const spec = load.symbol ? prodSpecs?.get(load.symbol) ?? null : null;
+  if (!spec) return null;
+  return load.permitKind && load.permitKind !== spec.permit ? { ...spec, permit: load.permitKind } : spec;
 }
 
-/** Piloci z awizacji (D-20261009-1233-01: numer rejestracyjny, imię i nazwisko). Produkcja — po nowych polach (wykonawca). */
+/** Piloci z bazy (`load_escorts` PL / SE + imię i nazwisko z `load_escort_contacts`). */
+let prodPilots: Map<string, Pilots> | null = null;
+export function setPilotsFromServer(rows: readonly { loadId: string; scope: string; plate: string | null; name: string | null }[] | null): void {
+  if (!rows) { prodPilots = null; return; }
+  const m = new Map<string, Pilots>();
+  /* najpierw wpisy z zakresem PL / SE (awizacja), potem starsze `load_escorts_set` z zakresem PL_SE na wolne miejsca:
+     pierwszy wolny — PL, potem SE (F7 #355 P3, #360 P5 — PL_SE nie zajmuje strony, którą ma wpis PL lub SE) */
+  const ordered = [...rows.filter((r) => r.scope !== 'PL_SE'), ...rows.filter((r) => r.scope === 'PL_SE')];
+  for (const r of ordered) {
+    const cur = m.get(r.loadId) ?? { pl: { plate: null, name: null }, se: { plate: null, name: null } };
+    const side = r.scope === 'SE' ? 'se' : r.scope === 'PL' ? 'pl'
+      : r.scope === 'PL_SE' ? (!cur.pl.plate ? 'pl' : !cur.se.plate ? 'se' : null) : null;
+    if (!side) continue;
+    cur[side] = { plate: r.plate || null, name: r.name || null };
+    m.set(r.loadId, cur);
+  }
+  prodPilots = m;
+}
+
+/** Piloci z awizacji (D-20261009-1233-01: numer rejestracyjny, imię i nazwisko). */
 export function pilotsOf(load: Load): Pilots | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPilots(load) : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPilots(load) : prodPilotsOf(load);
+}
+function prodPilotsOf(load: Load): Pilots | null {
+  return prodPilots ? prodPilots.get(load.id) ?? { pl: { plate: null, name: null }, se: { plate: null, name: null } } : null;
 }
 
-/** Zapis pilotów z okna Awizacja — w demo w pamięci strony; w produkcji brak (sekcja pilotów ukryta do podłączenia). */
+/**
+ * Zapis pilotów z okna Awizacja — demo: w pamięci strony; produkcja: `awiz_pilots_set` (D-20261020-1118-01, #353)
+ * po włączeniu `AWIZ_PILOTS` przez wykonawcę. Puste pola są dozwolone (zapis awizacji nie wymaga pilotów).
+ */
 export function savePilotsOf(): ((codes: readonly string[], p: Pilots) => void) | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSavePilots : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoSavePilots : serverRuleOn('AWIZ_PILOTS') ? savePilotsProd : null;
+}
+/** Produkcja: zapis w `src/data/pilotsServer.ts` (moduł leniwy — tu bez zapytań do bazy, F8). */
+function savePilotsProd(codes: readonly string[], p: Pilots): void {
+  void import('../data/pilotsServer').then((m) => m.savePilotsServer(codes, p));
 }
 
 /**

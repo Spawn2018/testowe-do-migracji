@@ -3174,9 +3174,360 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #319 visual zielony (33 min), unit zielony, bez konfliktu, bez F7 po `52d9650a` — bez scalenia. #317 F7 jest, CI zielone, konflikt z `main` — bez scalenia. #313 bez F7, `db` czerwone.
 - Bieżąca pozycja zostaje: **Automat wdrożenia** (PR #319), czeka na ponowne „F7: gotowe do scalenia”.
 
+## 2026-10-19 15:55 — #319 scalony; wdrożenie padło na adresie bazy
+
+- Skrzynka: #320 już w planie (A6, otwarte). #322 (D-20261019-1515-01, B9 — DeepL zostaje) i #323 (D-20261019-1525-01, Podgląd tylko HHL_ADMIN) wpisane do PLAN §4, §8, rejestru 8A i `dopiski/`. Bez etykiety `pilne` — bieżącej pozycji nie przerywają.
+- PR #319: F7 `Spawn2018` o 13:13:45Z, po ostatnim commicie `39539f9b` (13:12:16Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `9a3c7b26`.
+- `deploy-main` na tym SHA: krok Klucze widzi sekrety; krok Baza w ~1 s: „Connecting to remote database” i `host=/var/run/postgresql user=runner database=runner`. Edge i Vercel pominięte. Adres nie został użyty jako URL (CLI 2.121 przy haśle z „=” i obcym prefiksie, np. cudzysłów, wpada na gniazdo).
+- Poprawka: `scripts/ci/normalize-db-url.py` — zdejmuje cudzysłów i BOM, bierze pierwszą linię `postgres://`, loguje tylko długość, schemat i czy jest użytkownik, host, baza oraz port. Gałąź `pakiet/automat-adres-bazy`. Sekretu nie zmieniam.
+- #321: przegląd F7 z poprawkami, bez „F7: gotowe do scalenia”. #317: konflikt z `main`. Bez scalenia.
+
+## 2026-10-19 16:10 — #321 scalony; #324 w planie (A10)
+
+- Skrzynka: #320, #322 i #323 już w planie, otwarte do zrobienia pozycji. #324 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-1540-01. Wpisane: PLAN §3 (kolejność i punkt wt 20.10), §4 A10 po A5, dopiski przy A9 i A5, §8, `docs/handover/dopiski/D-20261019-1540-01.md`. Zgłoszenie otwarte do zrobienia A10. Bieżącej pozycji nie przerywa.
+- PR #321 (`wyglad/W-bramy-reguly`): F7 `Spawn2018` o 13:32Z, po ostatnim commicie `8be78fd` (12:50Z). Unit i visual zielone, `mergeable` CLEAN, bez forka. Scalony `6b294a50`.
+- #326: unit zielony, visual w toku na `710c9c13`, bez F7 — bez scalenia. #317: konflikt z `main` (F7 sprzed konfliktu). #325: visual w toku, bez F7. #313: `db` czerwone, bez F7.
+- Bieżąca pozycja zostaje: **Automat wdrożenia** — poprawka adresu bazy, PR #326.
+
+## 2026-10-19 16:55 — #326 niegotowe: hasło w adresie kodowane procentowo
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #326 F7 z 14:11Z to „niegotowe” (P1), sprzed commita `d7f661b1`. Unit i visual na `d7f661b1` zielone — bez scalenia. #325 bez F7. #317 F7 jest, konflikt z `main`. #313 bez F7, `db` czerwone.
+- P1: `encode_password` w `scripts/ci/normalize-db-url.py` — znaki specjalne w haśle kodowane procentowo, hasło już zakodowane bez zmian. Log: `haslo zakodowane: tak/nie`, bez adresu. Test `tests/normalize-db-url.test.ts`: 3 przypadki, lokalnie 3/3.
+- D1 (linia „Adres bazy” z przebiegu na `main`) — po scaleniu i pierwszym poprawnym dry-run.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #326, czeka na ponowne „F7: gotowe do scalenia”.
+
 ## 2026-10-19 17:50 — #317: main wciągnięty, zasada #315 zostaje
 
 - Konflikt z `main`: zostawione obie strony (wpisy z `main` + §1 pkt 14.5 i wpis #315). Nic z `main` nie usunięte.
 - Czeka na zielone CI i ponowne „F7: gotowe do scalenia” (komentarz koordynatora 14:52).
 - #326 (adres bazy): unit i visual zielone, ostatni komentarz to „niegotowe” sprzed commita `0556710e` — bez scalenia.
+
+## 2026-10-19 18:35 — #330: wdrożenie ręczne z main, sekret Actions nadal zły
+
+- Skrzynka: #330 (`Spawn2018`, `dla-cursora`, bez `pilne`) — sekret `SUPABASE_DB_URL` w Actions nie zaczyna się od `postgresql://`. Wpisane: PLAN §4 Automat pkt 4, §8. Zgłoszenie zostaje otwarte do poprawki sekretu i przebiegu `deploy-main`.
+- Scalanie: #327 bez „F7: gotowe do scalenia” (raport prób po `2d3ab1b`). #317 F7 z 13:08 jest sprzed wciągnięcia `main` (`55e22989`); visual w toku — bez scalenia. #313 bez F7, `db` czerwone. #259 bez F7.
+- Ręcznie z `main` `047ce7b5` (adres sesyjny z `.env.local`, port 5432, pooler): dry-run i `db push` — „Remote database is up to date”, 0 nowych migracji. Funkcje Edge bez zmian od ostatniego wdrożenia `b858b466`.
+- Vercel produkcja: `dpl_FgAn6VsfF1rqoGeyrmbW91jvLary` READY. `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` **200**.
+- Log `normalize-db-url.py`: przy `jdbc:` albo `host=` jedna linia „to format JDBC/klucz=wartość — wklej URI z Supabase → Connect → Session pooler”, bez adresu.
+- Po wpisaniu URI przez właściciela: `workflow_dispatch` `deploy-main` i w POSTEP linia „Adres bazy: …”.
+- Dalej w kolejce, po domknięciu Automatu: **D-0005 #313** (numer migracji 0234 przy rebase).
+
+## 2026-10-19 19:10 — deploy-main 39287813163: host bezpośredni odrzucony; #327 scalony
+
+- Skrzynka: #331 (`pilne`, odpowiedź koordynatora 18:40 — sekret od nowa, `postgresql://`). Jedno `workflow_dispatch` na `main` `047ce7b5`, przebieg `39287813163`. Drugiego nie uruchamiam.
+- Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie.
+- Dry-run: połączenie odrzucone (`ECONNREFUSED`) na hoście bezpośrednim `db.<projekt>.supabase.co` port 5432, zanim powstała lista migracji. To nie jest pula sesyjna. Edge i Vercel pominięte.
+- Linie diagnostyczne w #331. Zabezpieczenie prefiksu `NAZWA=` / JDBC zostaje po pierwszym zielonym `deploy-main`.
+- Scalenie: #327 F7 `Spawn2018` 16:46Z, po commicie `4bdd5b1` (16:27Z). Unit i visual (części) zielone, bez konfliktu, bez forka. Scalony `18344d57`.
+- Gałęzie `proba/ci-dokumenty` i `proba/ci-czerwony` już nie istnieją.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #332 (log JDBC), czeka na „F7: gotowe do scalenia”.
+
+## 2026-10-19 19:20 — #331: link i pula IPv4 zamiast hosta bezpośredniego
+
+- Skrzynka: #331 (`pilne`) — komentarz koordynatora 19:05. Host `db.<projekt>.supabase.co:5432` jest tylko IPv6; przebiegi `39287813163` i `39291759466` dostały `ECONNREFUSED`. Właściciel nic nie wpisuje.
+- Scalanie: #332 ma „F7: gotowe” sprzed commitów `8450ccfa` i `69355b5b`, a `visual` jeszcze trwa — bez scalenia i bez pusha na tę gałąź. #317 i #313 mają konflikt z `main`, bez aktualnego „gotowe”. #259 konflikt, bez F7.
+- Ten krok: `normalize-db-url.py` zapisuje zdekodowane hasło (plik 600) i tryb `pooler` albo `link`. `deploy-main.yml`: pula w adresie → `--db-url`; inaczej `supabase link --project-ref` i `db push --linked`. Log bez hasła i bez hosta. Test: hasło `a@b#c/d` w pliku, log bez hasła.
+- Po scaleniu przebieg `deploy-main` sam z pusha na `main`. Wynik link i dry-run — w następnym wpisie. Do tego czasu wdrożenie ręczne (#330).
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-pooler`, czeka na „F7: gotowe do scalenia”.
+
+## 2026-10-19 19:45 — #332 scalony; #333 wciąga main
+
+- Skrzynka bez nowych zgłoszeń. #331 zostaje otwarte do pierwszego zielonego `deploy-main`.
+- #332: „F7: gotowe do scalenia” od `Spawn2018` o 17:28Z, po ostatnim commicie `69355b5` (17:10Z). Unit i visual zielone, bez forka. Scalony `8726c3c7`.
+- #333 na `739fc577`: unit i visual zielone, ale po scaleniu #332 konflikt z `main`. Ostatnie F7 to „niegotowe” sprzed poprawki YAML — bez scalenia.
+- Ten krok: wciągnięty `main`. Zostają testy link/redact i podpowiedź JDBC. Poprawka YAML (`redact.py`) bez zmian.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, PR #333, czeka na ponowne „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-19 20:20 — pierwszy zielony deploy-main (#333)
+
+- Skrzynka bez nowych zgłoszeń. #331 (`pilne`) i #330 zostają do zamknięcia po tym wpisie.
+- #333: „F7: gotowe do scalenia” od `Spawn2018` o 18:09Z, po ostatnim commicie `b8f27b5d` (17:51Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `97c88a19`.
+- `deploy-main` `39300935077` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `D8dghXG3wndN4VKWX3RdGcpJerrj` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Następny krok tej pozycji: zabezpieczenie prefiksu `NAZWA=` / JDBC w `normalize-db-url.py` (komentarz #331, 18:40). Potem D-0005 (#313).
+
+## 2026-10-19 20:30 — #334 scalony; prefiks NAZWA= i JDBC
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #334 „F7: gotowe do scalenia” od `Spawn2018` o 18:21Z, po ostatnim commicie `47732685` (18:19Z). Unit i visual zielone, `MERGEABLE`, bez forka. Scalony `6aafacbe`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- Ten krok: `normalize-db-url.py` zdejmuje `export NAZWA=` (nazwa `[A-Z_]+` w logu), składa `postgresql://` z JDBC `user`/`password`, loguje `format: uri|jdbc|klucz=wartosc|inny`. Hasła i hosta nie wypisuje. Testy prefiksu, export z cudzysłowem i JDBC.
+- Bieżąca pozycja zostaje: **Automat wdrożenia**, gałąź `pakiet/automat-prefiks-nazwa`, czeka na „F7: gotowe do scalenia”. Potem D-0005 (#313).
+
+## 2026-10-19 20:55 — #335 scalony; Automat zamknięty
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #335 „F7: gotowe do scalenia” od `Spawn2018` o 18:46Z, po ostatnim commicie `c2666625` (18:28Z). Unit i visual zielone, `CLEAN`, bez forka. Scalony `b4af5626`. #317 ma konflikt z `main`. #313 i #259 bez aktualnego „gotowe”.
+- `deploy-main` `39306048061` (push na `main`):
+  - Adres bazy: dlugosc 90, schemat postgres, uzytkownik tak, host tak, baza tak, port 5432, haslo zakodowane: nie, polaczenie: link
+  - prefiks NAZWA= zdjety: nie
+  - format: uri
+  - `Finished supabase link.`
+  - dry-run i właściwy push: „Remote database is up to date” (0 nowych migracji)
+  - Funkcje Edge bez zmian
+  - Vercel `BPqpLRVu3YB9WGA4cLgKYh8cdH1Z` READY, alias `tower.log-mar.pl`; tower i makieta **200**
+- Pozycja **Automat wdrożenia** zamknięta. Następna: **D-0005** (#313, migracja 0234 przy rebase).
+
+## 2026-10-19 21:05 — #336 scalony; D-0005: migracja 0234 i czerwone testy
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #336 „F7: gotowe do scalenia” od `Spawn2018` o 18:58Z, po ostatnim commicie `72b6afe` (18:55Z). Unit i visual zielone, bez konfliktu, bez forka. Scalony `fd2ca8c2`. #317 ma konflikt z `main` (F7 sprzed konfliktu). #313 i #259 bez aktualnego „gotowe”.
+- Bieżąca pozycja: **D-0005** (#313). `main` wciągnięty. Plik migracji `0234_hhl_admin_daty.sql` (0233 jest na produkcji). `aud03`: sprawa `KSH_DATES_CHECK` przez `sval`. `dec2`: katalog 19 typów. Brama `db` po tym pushu.
+
+## 2026-10-19 21:25 — D-0005: F7 niegotowe → B1 + P1–P4
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `fa2d537` — CI zielone (db 11 min, visual), F7 „niegotowe” (19:20Z). #317 konflikt z `main` (bez aktualnego „gotowe”). #259 bez F7.
+- Bieżąca pozycja **D-0005** (#313): poprawki F7 w `0234` — `DECISION_HOLD` w CHECK; admin bez sprawy `KSH_DATES_CHECK`; `load_status_set` przez `current_app_*` + korekta czasu osi; historia z oknami „przed”; testy `aud03`/`e25`/`i2`; PLAN: wyjątek D1, A6 P5 (dostawa przed załadunkiem). Czeka na zielone CI i ponowne F7.
+
+## 2026-10-19 21:40 — D-0005: F7 B2, korekta czasu dopiskiem
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `16b5f3f` — F7 „niegotowe” (B2, 19:33Z, po ostatnim commicie). Brama `db` i visual jeszcze szły na tym SHA; ten SHA nie idzie na produkcję (`session_replication_role` odrzucone na produkcji). #317 i #259 mają konflikt z `main`, bez aktualnego „gotowe”.
+- Bieżąca pozycja **D-0005** (#313): korekta czasu bieżącego statusu dopisuje `STATUS_*` z `korekta=true` (`zastepuje`, `poprzednio`, `przez`). Bez `set_config('session_replication_role')`. `actual_*` i `audit_log` bez zmian. SCX przy korekcie czasu — odmowa. Test `e25`. Czeka na zielone CI i ponowne F7.
+- Brama `db` na `16b5f3f` (`39311856014`): aud03 29/32 (`opened_at` zamiast wyniku `decision_open_from_event`; I-10 liczy 3 IN_APP, bo jest też HHL_OPS) i e25 33/34 (`AT_PORT` nie jest statusem). Poprawione w następnym commicie. Visual zielony.
+
+## 2026-10-19 22:05 — D-0005: F7 P1 i P2 na f931341
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 — już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 po `f931341` — F7 „dwie drobne rzeczy” (19:58Z, po ostatnim commicie), więc bez scalenia. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0005** (#313): `wf_enqueue_event` pomija zdarzenie z `korekta=true` (STATUS_CANCELLED nie startuje drugi raz). SCX (`CARRIER_DISPATCH` / `CARRIER_USER`) przy tym samym `DELIVERED` i innej godzinie nadpisuje `actual_delivery_at` jak przed 0234; korekta pozostałych statusów zostaje przy Administratorze HHL. Test `e25`: 39. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-19 22:20 — D-0005: e25 P1, brama db czerwona na 03d379af
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Brama `db` `39316540812`: e25 36/39. Unit i visual zielone. Reguła START-7 nie ma projektu z seed (0094 idzie przed seedem), a anulowanie L1 było w transakcji wycofanej, więc korekta czasu nie powstawała. Test dopisuje regułę i zostawia anulowanie. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-19 22:50 — D-0005: CI zielone na 7a0516ba, czeka na F7
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie `7a0516ba` (20:27Z). Ostatni komentarz F7 (20:22Z) dotyczy `03d379af` i zapowiada „gotowe” po zielonej bramie. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0005** (#313): `db` `39319719814` zielony (8 min 53 s), unit zielony, visual `39319719721` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po `7a0516ba`.
+
+## 2026-10-19 23:10 — D-0005 na produkcji
+
+- Skrzynka `dla-cursora`: #320, #322, #323, #324 już w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #313 scalony `745517e3` (23:03). #317 i #259 mają konflikt z `main` — ostatnie „F7: gotowe do scalenia” na #317 jest sprzed wciągnięcia `main`, więc bez scalenia.
+- `deploy-main` `39324497090`: `format: uri`, `polaczenie: link`, nałożona `0234_hhl_admin_daty.sql`, funkcje Edge bez zmian, Vercel `2PC4SLzaJhbehwEpRVH32A5Lsy63` READY (alias `tower.log-mar.pl`). `tower.log-mar.pl` i `watch-tower-makieta.vercel.app` zwracają 200.
+- Pozycja **D-0005** zamknięta. Następna: kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01, migracja 0235).
+
+## 2026-10-19 23:20 — #337 scalony; start 0235 (D-0930 + #338)
+
+- Skrzynka: #320, #322, #323, #324 już w planie, bez `pilne`. #338 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261019-2315-01. Wpisane: PLAN §4 przy D-0930 (ta sama migracja 0235), §8, `docs/handover/dopiski/D-20261019-2315-01.md`. Zgłoszenie otwarte do zrobienia 0235.
+- Scalanie: #337 scalony (`e6bc682a`) — „F7: gotowe do scalenia” po `a4bfb3cc`, unit i visual zielone. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0930**: migracja `0235_l3_kod_i_korekta_statusu.sql` — kod transportu w L-3 / E41 oraz korekta statusu z #338. Testy `dec-auto` 74, `e25` 45. Czeka na bramę `db`.
+
+## 2026-10-19 23:50 — #339 scalony; F7 niegotowe #340 (P1–P3)
+
+- Skrzynka bez zmian: #320, #322, #323, #324, #338 w planie, bez `pilne`.
+- Scalanie: #339 `wyglad/W-admin-daty` scalony `d69498c4` — „F7: gotowe do scalenia” po `068c428`, unit i visual zielone, bez migracji. #317 i #259 mają konflikt z `main`.
+- #340: „F7: niegotowe” na `47af0dc` (po tym commicie jest `9a2ac176`, tylko asercje `t`/`true`). Poprawki w tej samej migracji 0235: kod w `ksh_confirm_dates` i postoju, skrót L-13 dla SCX bez numeru KSH, korekta po `STATUS_AUTO` z notatką, tytuł bez „—:”. Testy `dec-auto` 76, `e25` 46. Push po końcu bramy na `9a2ac176`.
+
+## 2026-10-20 00:25 — D-0930: CI zielone na ed564421; #341 w planie
+
+- Skrzynka: #320, #322, #323, #324, #338 już w planie, bez `pilne`. #341 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0010-01. Wpisane: PLAN §3 (terminy), §4 (pary A3+A9, A7+A4; ekran B5/B9/A10 u koordynatora), §8, `docs/handover/dopiski/D-20261020-0010-01.md`, `ZASADY_CIAGLEJ_PRACY.md` (scalenie bez czekania na wdrożenie).
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie kodu `ed564421` (22:07Z). Komentarz F7 (21:37Z) to „niegotowe” na `47af0dc`. #317 i #259 mają konflikt z `main`.
+- Bieżąca pozycja **D-0930** (#340): `db` `39332882485` zielony (6 min 43 s), unit zielony, visual `39332882486` zielony (zrzuty, telefon, bramy). Bez scalenia, dopóki `Spawn2018` nie napisze „F7: gotowe do scalenia” po ostatnim commicie.
+
+## 2026-10-20 00:50 — D-0930 na produkcji; start 0236 (#343)
+
+- Skrzynka: #320, #322, #323, #324, #338 już w planie, bez `pilne`. #343 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0040-01. Wpisane: PLAN §4 przy A3 (pierwszy commit, migracja 0236), §8, `docs/handover/dopiski/D-20261020-0040-01.md`. #342 i #344 bez „F7: gotowe do scalenia” po ostatnim commicie. #317 i #259 mają konflikt z `main`.
+- Scalanie: #340 scalony `c2c22989` — „F7: gotowe do scalenia” po `0d4b0bcc`, unit, `db` i visual zielone.
+- `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, funkcje Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`).
+- Pozycja **D-0930** zamknięta. Bieżąca: **A3+A9** (`pakiet/a3-a9`). Ten commit: #343 w `0236_ksh_scx_l13_workflow.sql`. Testy `dec-auto` 78, `e25` 47. A3 i A9 dopiszą się do tej samej migracji.
+
+## 2026-10-20 01:30 — A3 w 0236; #342/#344 scalone; #346 w planie
+
+- Skrzynka: #320, #322, #323, #324, #343 w planie. #346 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-0115-01 edycja faktur → PLAN §4 A4, §8, `docs/handover/dopiski/D-20261020-0115-01.md`. Nie przerywa A3+A9.
+- Scalanie: #342 (`f92216d8`) i #344 (`05d3dcb8`) — „F7: gotowe do scalenia” po ostatnim commicie, unit i visual zielone. #345 bez F7 (jeszcze A3/A9). #317 i #259 konflikt.
+- Bieżąca **A3** w `0236_ksh_scx_l13_workflow.sql`: seed 3 wymagań, `is_hhl_admin`, `CMR_UPLOAD`/`UPLOAD_CMR`, C17 zamyka, stare DOC_MISSING z kopią. Testy: `i2` 550, `e25` 50. Dalej A9 w tej samej migracji.
+
+## 2026-10-20 02:05 — A9 w 0236; dec2 20 typów
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez F7 (para A3+A9 w toku). #347 wygląd bez F7. #317 i #259 konflikt z `main` (F7 sprzed wciągnięcia).
+- Poprzedni `db` na `e5ad7b53` czerwony: `dec2` katalog 19→20 (CMR_UPLOAD). Poprawione.
+- **A9** w `0236_ksh_scx_l13_workflow.sql`: `awiz_missing`, `load_ready_gaps`, `a9_try_ready` + wyzwalacze, L3 z lukami, `tower-zasoby` wyłączony, zamknięcie `RESOURCE_MISSING` z kopią. Widok: `load.readyGaps` z RPC. Testy: `e25` 55, `nullguard` 658. Czeka na bramę `db`.
+
+## 2026-10-20 02:25 — #347 scalone; poprawka bramy A9 (i2/e25)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #347 (`686064b7`, F7 po `f85afdd`) — wygląd edycji faktury. #345 bez F7 (para w toku). #317 i #259 konflikt z `main`.
+- Brama `db` na `41348842` czerwona: i2 8× `detect_resource_deadlines` (A9 = no-op) + e25 `cron.job` bez pg_cron w CI. Poprawka: i2 I-21 → `l3_scan`, III-4 → `awiz_missing` PILOTS; e25 `to_regclass('cron.job')`; cron `tower-l3` w 0236; nullguard 662.
+
+## 2026-10-20 02:45 — A3+A9 F7 B1/P1–P9 + e25 cron (shell)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez „F7: gotowe” po `a3a3b652`. `db` czerwone (e25 cron: CASE WHEN i `cron.job` — parse w CI). Visual zielony. #317/#259 konflikt.
+- Ten krok (F7 niegotowe + brama): B1 bez ruszania EXPIRED; P1 `l3_headed`/`load_sms_code`; P2 tytuł WF = kod; P3 `dates_ctx` + POLICY_SCX tylko z carrier; P4 UPLOAD_CMR = `kept_open`; P5 `tower.bulk_quiet`; P6 zamknięcie RES:*; P9 `offset_hours`; D `\y…\y`; e25 cron jak insurance.sh; e25 58.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 03:20 — #345 F7 niegotowe runda 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Uzupełnienie #346 (kontrakt `update_invoice`) — do A4, nie przerywa.
+- Scalanie: CI na `03d428d1` zielone (unit/visual/db); F7: niegotowe runda 2.
+- Poprawki w 0236 + testy: B alarm pilotów (`AWIZ`+`PILOTS`); P2 tylko `load_sms_code`; P3 luka `CARRIER`; P5 `wf_enqueue_status` + `bulk_quiet`; P8 e25 (EXPIRED, Gotowy, CMR SCX, reopen); D POD/`~` + min 1 h + `n_open` bez już otwartych. i2 552, e25 67.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 03:45 — #345 poprawka bramy db po F7 rundzie 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `585b277d`. `db` `39353345803` czerwone (e25 6 FAIL + status A1×2). Visual zielony.
+- e25: UUID `ee01`/`ee02` (hex); rejs własny vessel `e25a` (unikat departure); a903 DELIVERED z numerami HHL/SCX; status A1 W4 → daty XI (nie „dziś” po 03:00).
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 04:15 — #345 e25 po F7: komplet A9 + reopen EXPIRED
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `ed161f7f`. `db` `39355584107` czerwone (e25 65/67); visual zielony.
+- e25: polisa na `plan_load_date` a901; PERMIT off + STANDARD; asercja kinds przy lukach; **EXPIRED przez `decision_expire`** (CHECK 0102: `EXPIRED`+`resolved_at` psuło UPDATE → sprawa zostawała NEW, ensure zwracał null). e25 69.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
+## 2026-10-20 04:35 — #345 e25: UUID rejsu hex + reopen w dwóch komendach
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a1197b30`. `db` `39357785497` czerwone (e25 66/4 FAIL); visual/unit zielone.
+- Przyczyna: UUID `…s901` (litera **s** poza hex) → INSERT/SELECT padają z `invalid input syntax for type uuid` (w logu sam `^`); stąd AWIZ+SAILING i PLANNED. Reopen: jeden SELECT z `ensure||status` mógł czytać EXPIRED sprzed UPDATE — rozdzielone; `a3_ensure` reopen z `IF NOT FOUND` + reopen gdy `open_from_event` zwróci zamkniętą.
+- e25 70. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-20 04:55 — #345 e25: oczekiwane 71 (licznik bramy)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `3449a9c8`. Unit i visual zielone; `db` `39360005068` czerwone: e25 **71/71 OK**, ale `gate-suites.mjs` oczekiwał 70.
+- Poprawka: `e25: 71` (asercja „rejs f901 w bazie” + reopen w dwóch komendach). Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-20 05:30 — #345 scalone; start A7+A4 (0237)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 — „F7: gotowe do scalenia” po `a4b2cfa4` (03:15Z), CI zielone (db `39361912023`, unit, visual), bez konfliktu. Merge `7589dbef`. `deploy-main` `39364557245` w toku (nie czekamy — D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A7+A4** (`pakiet/a7-a4`): migracja `0237_a7_a4_symbol_faktura.sql` — A7 (symbol_specs, Firma/Trasa, 13/GD/2026, PZU 1106707356, RPC, widok). A4 w następnym commicie tej samej migracji. Testy e25 79, nullguard 666.
+
+## 2026-10-20 06:45 — A4 w 0237 (#348)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po A7 (`41f486ed`); CI A7 zielone (db/unit/visual). #317/#259 konflikt — bez scalenia.
+- **A4** (ten commit, ta sama migracja 0237 / PR #348): `register_invoice` (READY+CMR C17, VAT 23%, tolerancja 0, INVOICE_NEW także KOSZT), `update_invoice`, `guard_invoice_update`, `invoices_insert` bez CLIENT, `INVOICE_OVERDUE` + macierz `inv_overdue`, `load_status_set` = `c17_cmr_after_delivery`, `INVOICE_A4`/`INVOICE_EDIT: true`.
+- Oczekiwane bramy: money 138, nullguard 681, e25 79. Unit lokalnie: p8/c3/w-naprawy/w-faktura-termin **58/58**.
+
+## 2026-10-20 07:45 — #349 scalone; F7 niegotowe #348 → poprawki bramy db
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #349 (`ci/typecheck`) — „F7: gotowe do scalenia” po `a3836f9`, CI zielone, merge `786d46c3`. `deploy-main` nie czekamy.
+- #348 F7 niegotowe (`d68d81e`): poprawki w `ffaa25ca`/`f57e4941`; brama db `39374679867` czerwona (security/money/i2/baf/e18).
+- Ten krok: money (rola HHL_OPS przez `sys`, `commit` po akceptacji), security (wzorzec „Edytuj fakturę”), i2 (KSH bez polisy SCX + HHL widzi; i2=553), baf (czyszczenie combo po triggerze A7), e18 (READY przed shipment_items), komunikat błędu w triggerze A7.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po ostatnim commicie. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:05 — #348 brama db: baf 45 (A7 combo)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `25c1a98c`. Unit/visual zielone; db `39376792710` czerwone: **baf** 45/46 — asercja „combo_* puste” po A7 (trigger wypełnia combo z `symbol_specs`).
+- Poprawka: usunięta asercja i zbędne czyszczenie combo w `baf.sh` (wycena i tak `dims_source=CARGO` z pozycji); `gate-suites` baf **45**. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:20 — #350 scalone; #348 F7 runda 2 poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #350 (`wyglad/W-a10-zrodlo`) — „F7: gotowe do scalenia” po `383f55b`, CI zielone, merge `d0e6f8d4`. `deploy-main` nie czekamy.
+- #348 CI na `6b663338` zielone (unit/visual/db); F7 runda 2 **niegotowe** — ten krok:
+  - B2: `load_events` bez `source=SYSTEM`; `guard_load_update` pozwala INVOICED→READY w `tower.invoice_edit`;
+  - B3: `trg_shipment_items_a7_symbol` przywraca `bulk_quiet`; P8 wymiary w wyzwalaczu;
+  - P4: `visible_to` tylko polisy CARRIER; P5: `dispute_track` pomija przy edycji; P7: INSERT tylko z `register_invoice`;
+  - P6: money +13 (PRZYCHOD/ZGODNA/usunięcie/OPLATA/B3/P7) → **162**.
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:50 — #348 money 3 FAIL po F7 runda 2 → poprawki testów
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `9688bd14`. Unit/visual zielone; db `39380884619` czerwone: money **159/3**.
+- Poprawki `money.sh` (bez migracji):
+  1. OPLATA_PALIWOWA — `::text` dawało `true`, `val` oczekuje `t` (jak inne boolean);
+  2. Z4 — ta sama data co w INSERT L7 = no-op; data `2026-09-24`;
+  3. HHL_OPS nie podbija `due_date` HHL/FV (zostawało 26.10 → refresh 26.10 nie dawał PO_TERMINIE).
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 09:05 — #348 F7 runda 3: OPLATA + P2/P4
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a224f6ca`. Unit zielone; db `39382941105` czerwone: money **161/1** — zapytanie OPLATA bez `FROM invoice_lines` (błąd poprzedniej poprawki).
+- Ten krok (F7 runda 3 B1 + P2 + P4):
+  1. OPLATA — przywrócony `FROM invoice_lines … load_id=L7` (boolean bez `::text` → `t`);
+  2. P2: wyzwalacz `trg_insurance_policies_doc_visibility` — po `document_id` polisy CARRIER `visible_to` bez CLIENT; test w `insurance.sh` (+2 → 44);
+  3. P4: money — SCX usuwa L5, HHL usuwa L6 z PRZYCHOD, zmiana kwoty L7, edycja opłaconej (HHL_ADMIN + SCX przed akceptacją) → **172**;
+  4. U: `dedup_key` STATUS_AUTO z epoch (ponowne usunięcie).
+- P3 (opis PR z liczbami ROLLBACK) — w komentarzu PR po pushu. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 09:20 — #348 db FAIL po F7 runda 3 → poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `324a3a4b`. Unit/visual zielone; db `39384899533` czerwone: money **166/6**, insurance **43/1**.
+- Poprawki:
+  1. `update_invoice` zwraca `payment_status` / `paid_at` (testy opłaconej czytały pusty klucz);
+  2. money: przywróć L5 na KOSZT → INVOICED, zmiana kwoty na L5 (L7 nigdy nie był w parze); `mark_invoice_paid` 39/1 z `commit`; edycja SCX 39/8 bez zmiany `due_date` (M7 −3 od 30.10); money **174**;
+  3. insurance: boolean bez `::text` (`f` nie `false`).
+- Opis PR #348 uzupełniony liczbami P3. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 09:55 — #348 scalone; start A5 (0238)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #348 — „F7: gotowe do scalenia” po `708f3000` (07:50Z), CI zielone (db `39387282216`, unit, visual), bez konfliktu. Merge `0f7765a7`. `deploy-main` nie czekamy (D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A5** (`pakiet/a5-rejs-prom`): migracja `0238_a5_rejs_prom_port.sql` — `geofences.route`, `promote_ferry_departures` / `apply_geofence_status` / `compute_load_eta` (PORT według rejsu, `ferry_eta_at`/`wait_ais`, READY_TO_INVOICE jak DELIVERED). Testy status **130** (+9 A5).
+
+## 2026-10-20 10:25 — A5: db czerwone → cień rekordu `s` w compute_load_eta
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 bez F7; #317/#259 konflikt — bez scalenia.
+- Brama `db` `39390843961` czerwona: status 96/34, i2 546/7 (`trg_eta_after_load`), workflows/h3/e25/ferry-status/risks.
+- Przyczyna: w `compute_load_eta` rekord `s` + alias `FROM sailings s` przy odczycie `s.route` (nieprzypisany rekord) → błąd przy każdym `sailing_id`. Port/prom/ETA i przypisanie rejsu padały.
+- Poprawka w tej samej 0238 (jeszcze nie na produkcji): `v_sail` / alias `sa`. Czeka na zielone CI i F7.
+
+## 2026-10-20 11:10 — #352 scalone; A5 db: ETA Stena vs Polferries (świeże GPS)
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #352 (`wyglad/W-a5-port`) — „F7: gotowe do scalenia” po `dcd4681`, CI zielone, merge `f8c2f39b`. `deploy-main` nie czekamy.
+- #351 na `51dc06cb`: unit/visual zielone; db `39396573337` czerwone — status **132/1**: „A5 ETA plac Stena > Polferries” dostało pusty wynik (oba `eta_site` null).
+- Przyczyna: pozycje GPS w teście z `2026-10-06` poza `GPS_FRESH_MIN` względem `now()` w CI → `compute_load_eta` zwraca null przy `AT_PORT_NYNASHAMN`.
+- Poprawka: `process_position(…, now() − 5/1 min)` w `tests/db/status.sh`. Oczekiwane status nadal **133**. Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 11:30 — A5: db zielone na `b0b7f607`; F7 runda 2 → asercje eta_site
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 — F7 runda 2 niegotowe (przed poprawką GPS); #352 scalone wcześniej. #317/#259 konflikt — bez scalenia.
+- CI na `b0b7f607`: db `39398905684` / unit / visual **zielone** (status 133).
+- F7 runda 2: dopisane `chk` `eta_site is not null` dla Stena i Polferries przed porównaniem. Oczekiwane status **135**. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
+## 2026-10-20 11:50 — A5 scalone; #353 w planie; start D-1118
+
+- Skrzynka: #353 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-20261020-1118-01. Wpisane: PLAN §3/§4 (D-1118 po A5 przed A10), §8, dopisek `docs/handover/dopiski/D-20261020-1118-01.md`. Zgłoszenie otwarte do zrobienia D-1118. #320/#322/#323/#324 już w planie.
+- Scalanie: #351 — „F7: gotowe do scalenia” po `9aa9616e`, CI zielone, merge `889fc09d`. `deploy-main` nie czekamy. #317/#259 konflikt — bez scalenia.
+- Bieżąca **D-1118** (`pakiet/d1118-zezwolenie-pilot`): migracja 0239 — `permit_fits` (masa, KIND), potem `awiz_pilots_set`.
+
+## 2026-10-20 12:15 — #354 scalone; #356 w planie; fix D-1118 db
+
+- Skrzynka: #356 (`Spawn2018`, `dla-cursora`, bez `pilne`) — decyzja właściciela 11:57: wdrożenie cichego uzupełnienia godzin (`import_quiet_hours`), **przed D-1118 i A10**. Wpisane: PLAN §3/§4/§8, dopisek `D-20261020-1157-01.md`. Komentarz w #356 (łańcuch DECISION_OPEN/RISK_OPEN). #320/#322/#323/#324/#353 w planie.
+- Scalanie: #354 — F7 po `17601dc`, CI zielone → merge `a1366549`. #357 bez F7 (db FAIL). #317 konflikt — bez scalenia. #259 bez F7.
+- D-1118 fix (ten commit): `permit_fits` bez `select *` (GRANT kolumn 0076); `PILOTS_SET` w CHECK `load_events`; UUID OPS w teście; init `awiz_pilots_set` w BEGIN. Po zielonym CI — kolejna pozycja **#356** (`pakiet/import-godziny-cicho`); #357 zostaje otwarte.
+
+## 2026-10-20 12:55 — D-1118: i2 PL_SE + nullguard 690
+
+- Skrzynka: #356/#353/#324/#323/#322/#320 — w planie, bez `pilne`.
+- Scalanie: #357 — brak „F7: gotowe”; db FAIL (i2 569/2: PL_SE). #355 visual w toku wcześniej. #317/#259 konflikt.
+- Fix: insert testowy PL_SE z telefonem krajowym (0111), nie E.164 — wcześniej INSERT padał w `/dev/null`. nullguard EXPECTED 690. Czeka na zielone CI i F7.
+
+## 2026-10-20 13:20 — #355 scalone; D-1243 w #357; #358/#359 w planie
+
+- Skrzynka: #358 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-1243 dane osobowe widoczne; razem z D-1118. #359 (`Spawn2018`, `dla-cursora`, bez `pilne`, treść „pilne przed A10”) — OKQ8 7 dni / Orlen 5 publ. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1243-01.md`, `D-20261020-1300-01.md`. Bieżącej D-1118 nie przerywam (#359 bez etykiety `pilne`).
+- Scalanie: #355 — F7 po `8a9637a`, CI zielone → merge `e7842326`. #357 CI zielone na `4bae611f`, bez F7 (czekają poprawki D-1243). #317/#259 konflikt.
+- Ten commit (#357): `awiz_pilots_set` — imię jawne w audit/`load_events`; `load_escort_contacts` CLIENT_*; test KSH `PILOTS_SET`; i2 572; merge main po #355, `AWIZ_PILOTS: true`.
+
+## 2026-10-20 13:55 — #357 CI zielone; D-1322 w planie
+
+- Skrzynka: #359 komentarz D-20261020-1322-01 v3 (`Spawn2018`, bez `pilne`) — obie tabele paliwowe „od progu”. Wpisane: PLAN §4 (D-1300 + 1322), §8, dopisek `D-20261020-1322-01.md`; dopisek 1300 pkt 3 → odwołanie do 1322. #358/#356/#353/#324/#323/#322/#320 w planie.
+- Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
+- Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
+
 

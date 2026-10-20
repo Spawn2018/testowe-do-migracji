@@ -13,7 +13,7 @@ import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
-import { hitChannel } from './statusAxis';
+import { dayTime, hitChannel } from './statusAxis';
 
 export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
@@ -41,7 +41,7 @@ export function histCat(type: string): HistCat {
   if (/FEE|PRIC|SURCHARGE|MARGIN/.test(type)) return 'CENA';
   if (type.startsWith('STATUS_') || STATUS_WORDS.has(type)) return 'STATUS';
   if (type.startsWith('GEOFENCE') || type.startsWith('POSITION_') || ROUTE_WORDS.has(type)) return 'TRASA';
-  if (type.startsWith('RESOURCES_') || type === 'AWIZACJA_UPDATED' || type === 'SCX_ASSIGNED' || type === 'ESCORTS_UPDATED') return 'ZASOBY';
+  if (type.startsWith('RESOURCES_') || type === 'AWIZACJA_UPDATED' || type === 'SCX_ASSIGNED' || type === 'ESCORTS_UPDATED' || type === 'PILOTS_SET') return 'ZASOBY';
   if (type === 'ORDER_NO_UPDATED') return 'NUMER';
   if (type.startsWith('DOC_') || type.startsWith('PERMIT_')) return 'DOKUMENT';
   if (type === 'SCHEDULE_IMPORTED') return 'IMPORT';
@@ -162,8 +162,12 @@ function posSource(p: Record<string, unknown>, locale: Locale): string {
   return prov ? `${ht(locale, 'p6b_src_GPS')} ${prov}` : ht(locale, 'p6b_src_GPS');
 }
 
+/* A10: kanały automatu — tylko przy STATUS_AUTO (wpis ręczny z `source: 'DATA'` nie dostaje „dane awizacji” — F7 #350 U1) */
+const AUTO_ONLY_SRC = new Set(['SCHEDULE', 'DATA', 'DOC', 'DRIVER', 'INVOICE']);
+
 function srcOf(p: Record<string, unknown>, locale: Locale): string | null {
   const raw = String(p.source ?? '').toUpperCase();
+  if (AUTO_ONLY_SRC.has(raw)) return null;
   if (raw === 'GPS' || raw === 'AIS' || typeof p.lat === 'number') return posSource(p, locale);
   return htHas(`p6b_src_${raw}`) ? ht(locale, `p6b_src_${raw}`) : null;
 }
@@ -233,12 +237,22 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     const from = str(p.from) ? statusName(str(p.from), locale) : null;
     const to = str(p.to) ? statusName(str(p.to), locale) : null;
     const why = cleanNote(str(p.powod ?? p.reason), e.type, locale) ?? note;
-    if (!from && !to) return { ...base, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
-    return { ...base, head: '', from, to: to ?? '—', tail: why };
+    /* A10 (D-20261019-1540-01 §3): źródło automatu jak na osi — rozkład promu, dane awizacji, dokumenty, kierowca, faktury */
+    /* to samo źródło co na osi (F7 #350 P2): kanał z `hitChannel`, dla GPS z dostawcą („GPS emtrack”) */
+    const ch = hitChannel(e.type, p, null);
+    const src = ch === 'GPS' ? posSource(p, locale) : ch === 'AIS' ? ht(locale, 'p6b_src_AIS') : ch ? ht(locale, `p6b_src_${ch}`) : base.src;
+    if (!from && !to) return { ...base, src, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
+    return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_CHANGED') {
     const to = statusName(e.type.slice(7), locale);
     const from = str(p.from) ? statusName(str(p.from), locale) : null;
+    /* D-0005 (0234): dopisek korekty godziny — autor Administrator HHL (gdy baza nie podała osoby), było → teraz */
+    if (p.korekta === true) {
+      const who = SYSTEM_ACTOR(e.actor) ? ht(locale, 'p6b_korekta_admin') : base.who;
+      const was = str(p.poprzednio);
+      return { ...base, who, head: '', from, to, tail: was ? htp(locale, 'p6b_korekta_hist', { was: dayTime(was) }) : note };
+    }
     return { ...base, head: '', from, to, tail: note };
   }
   if (e.type.startsWith('GEOFENCE')) {

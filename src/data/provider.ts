@@ -63,6 +63,8 @@ export type DataMutation =
   /** M6 — faktury v2: rejestracja (PDF → Storage, potem RPC register_invoice), weryfikacja, płatność */
   | { type: 'bill.register'; bill: Bill; file: Blob | null }
   | { type: 'bill.verify'; billId: string; verification: BillVerification; note: string | null }
+  /** A4 / D-20261020-0115-01 — edycja faktury (`update_invoice`): nowa treść, nowy PDF (opcjonalnie), powód zmiany */
+  | { type: 'bill.update'; billId: string; bill: Bill; file: Blob | null; note: string | null }
   | { type: 'bill.paid'; billId: string; paidAt: string }
   | { type: 'bill.unpaid'; billId: string; reason: string }
   /** M7 — centrum powiadomień: przeczytane (własne wiersze IN_APP; id serwera bez prefiksu `srv-`) */
@@ -78,9 +80,8 @@ export type DataMutation =
   | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> }
   | { type: 'workflow.delete'; id: string };
 
-/** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. */
+/** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. B9: bez języka (panel tylko PL). */
 export interface UserPrefsPatch {
-  locale?: 'pl' | 'en' | 'sv';
   displayCurrency?: 'EUR' | 'PLN';
   theme?: 'light' | 'dark' | null;
 }

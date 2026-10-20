@@ -422,7 +422,10 @@ $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003'
 chk "nowy transport: POTWIERDZONA z pliku, bez autora KSH" "$(Q "select plan_dates_status||'/'||coalesce(plan_dates_confirmed_by::text,'∅')||'/'||(plan_dates_confirmed_at is not null)::text from loads where id='$LD'")" "POTWIERDZONA/∅/true"
 # AUD-03 (0192): ksh_confirm_dates ponownie włączone (decyzja właściciela 05.10, KSH — PANEL ZLECENIA) — pełne testy: tests/db/aud03.sh
 err "AUD-03: ksh_confirm bez zmian dat (KSH) → changed false" $KSH "select ksh_confirm_dates('$LD')" '"changed": false'
-err "AUD-03: ksh_confirm tylko KSH (HHL odmowa)" $HHL "select ksh_confirm_dates('$LD')" "KSH Użytkownik|wyłącznie KSH"
+val "AUD-03: HHL_ADMIN może ksh_confirm (0234 / D-0005)" $HHL "select (ksh_confirm_dates('$LD')->>'changed')" false commit
+OPS_I2=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS_I2','00000000-0000-0000-0000-00000000a001','ops-i2-dates@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+err "AUD-03: HHL_OPS odmowa ksh_confirm (P1)" $OPS_I2 "select ksh_confirm_dates('$LD','$D3','$D4')" "KSH Użytkownik|wyłącznie KSH"
 err "konto bez app_users: odmowa" 11111111-0000-0000-0000-0000000000ee "select ksh_confirm_dates('$LD')" "Brak aktywnego konta"
 err "HHL nie ustawi statusu ręcznie (PATCH)" $HHL "update loads set plan_dates_status='WSTEPNA' where id='$LD'" "Status dat planu"
 err "ANEKS 2: przewoźnik nadal nie zmienia okien KSH" $SCX "update loads set plan_load_date='$D3' where id='$LD'" "Przewoźnik nie może zmieniać"
@@ -579,24 +582,24 @@ chk "usunięcie transportu: ROW_DELETE loads (stara wartość, bez nowej)" "$(Q 
 val "KSH: dziennik audytu niewidoczny (tylko HHL_ADMIN)" $KSH "select count(*) from audit_log where action like 'ROW_%'" 0
 err "authenticated: brak EXECUTE audit_row_change" $HHL "select audit_row_change()" "permission denied|trigger functions can only be called"
 $PSQL -c "update loads set ferry_booking_ref=null where id='$L1'; set session_replication_role=replica; update loads set driver_phone=null, driver_name=null where id='$L1'" >/dev/null
-echo; echo "[I-21] terminy uzupełnienia zasobów przed załadunkiem i eskalacja (0073)"
+echo; echo "[I-21] terminy uzupełnienia zasobów przed załadunkiem i eskalacja (0073; A9: skan = l3_scan, nie detect_resource_deadlines)"
 SCXORG=$(Q "select org_id from app_users where auth_id='$SCX'")
 $PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null where id='$L2'" >/dev/null
 chk "progi awizacji i dokumentów tylko w Opcjach; duplikaty DRIVER/VEHICLE/DOCS usunięte" "$(Q "select (select value_num::int from ops_thresholds where key='AWIZ_EARLY_H')||'/'||(select value_num::int from ops_thresholds where key='AWIZ_LATE_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_WARN_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_CRIT_H')||'/'||(select count(*) from resource_deadlines where kind in ('DRIVER','VEHICLE','DOCS'))")" "48/12/24/6/0"
-chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select detect_resource_deadlines(now() - interval '24 hours')")" 0
-chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select detect_resource_deadlines()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
+chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select l3_scan(now() - interval '24 hours')")" 0
+chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select l3_scan()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
 chk "decyzja awizacji: aplikacja, e-mail tylko jako skrót" "$(Q "select (count(*) filter (where channel='IN_APP') > 0)::text||'/'||count(*) filter (where channel<>'IN_APP' and status is distinct from 'DIGEST') from notifications n where n.template='DECISION_OPEN' and n.load_id='$L2'")" "true/0"
-chk "ponowny skan: bez duplikatów" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/1"
+chk "ponowny skan: bez duplikatów" "$(Q "select l3_scan()")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/1"
 val "przewoźnik widzi ryzyko swojego transportu" $SCX "select count(*) from risk_signals where load_id='$L2' and resolved_at is null and detail->>'rule'='L3_AWIZ'" 1
 val "KSH (klient) nie widzi ryzyka zasobów przewoźnika" $KSH "select count(*) from risk_signals where load_id='$L2' and detail->>'rule'='L3_AWIZ'" 0
-chk "12 h przed załadunkiem: ta sama decyzja, poziom krytyczny" "$(Q "select (detect_resource_deadlines(now() + interval '20 hours') >= 1)::text")/$(Q "select severity::text from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")/$(Q "select detail->>'level' from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "true/CRITICAL/1/critical"
+chk "12 h przed załadunkiem: ta sama decyzja, poziom krytyczny" "$(Q "select (l3_scan(now() + interval '20 hours') >= 1)::text")/$(Q "select severity::text from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")/$(Q "select detail->>'level' from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "true/CRITICAL/1/critical"
 $PSQL -c "update loads set driver_name='Kierowca Test', driver_phone='+48600000999' where id='$L2'" >/dev/null
-chk "sam kierowca nie zamyka alarmu — brakuje ciągnika i naczepy" "$(Q "select detect_resource_deadlines()")/$(Q "select detail->>'rule' from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "0/L3_AWIZ"
+chk "sam kierowca nie zamyka alarmu — brakuje ciągnika i naczepy" "$(Q "select l3_scan()")/$(Q "select detail->>'rule' from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "0/L3_AWIZ"
 $PSQL -c "update loads set tractor_plate='PO 100', trailer_plate='NA 100' where id='$L2'" >/dev/null
-chk "awizacja uzupełniona: alarm zamknięty, decyzja nieaktualna" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select resolution_note from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/0/nieaktualna — warunek ustał"
+chk "awizacja uzupełniona: alarm zamknięty, decyzja nieaktualna" "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")/$(Q "select resolution_note from decisions where detail->>'event_key'='l3:NO_AWIZACJA:$L2'")" "0/0/nieaktualna — warunek ustał"
 $PSQL -c "set session_replication_role=replica; update loads set plan_load_from=now() + interval '10 hours' where id='$L2'" >/dev/null
-chk "brak polisy 10 h przed załadunkiem: jeden alarm dokumentów (ostrzeżenie)" "$(Q "select detect_resource_deadlines()")/$(Q "select severity::text from risk_signals where dedup_key='l3:DOC_MISSING:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:DOC_MISSING:$L2'")" "1/HIGH/1"
-chk "pg_cron: tower-zasoby co 15 min (w migracji)" "$(grep -c "cron.schedule('tower-zasoby', '7,22,37,52 \* \* \* \*'" supabase/migrations/0073_resource_deadlines.sql)" 1
+chk "brak polisy 10 h przed załadunkiem: jeden alarm dokumentów (ostrzeżenie)" "$(Q "select l3_scan()")/$(Q "select severity::text from risk_signals where dedup_key='l3:DOC_MISSING:$L2' and resolved_at is null")/$(Q "select count(*) from decisions where detail->>'event_key'='l3:DOC_MISSING:$L2'")" "1/HIGH/1"
+chk "pg_cron: tower-zasoby w 0073; A9 wyłącza, skan = tower-l3 (0236)" "$(grep -c "cron.schedule('tower-zasoby', '7,22,37,52 \* \* \* \*'" supabase/migrations/0073_resource_deadlines.sql)/$(grep -c "cron.schedule('tower-l3'" supabase/migrations/0236_ksh_scx_l13_workflow.sql)" "1/1"
 err "KSH: zmiana terminów odrzucona" $KSH "update resource_deadlines set lead_h=1 where kind='DRIVER' returning kind" "permission denied"
 $PSQL -c "delete from notifications where template='RESOURCE_DEADLINE'; delete from risk_signals where dedup_key like 'RES:%'; set session_replication_role=replica; update loads set status='PLANNED', carrier_org_id=null, driver_name=null, driver_phone=null, plan_load_from=null where id='$L2'" >/dev/null
 echo; echo "[I-23] odsiewanie duplikatów powiadomień (unikalny dedup_key)"
@@ -636,31 +639,35 @@ $PSQL -c "delete from import_column_templates where header_signature='qty|shipme
 fi # tower-i2-part 3
 
 if _i2_part_ok 4; then
-echo; echo "[III-6] wymagalność i terminy dokumentów, wersje, widoczność per organizacja (0078)"
-chk "projekt ma 7 wymagań startowych (seed przez wyzwalacz projektu)" "$(Q "select count(*) from doc_requirements where project_id='$P'")" "7"
+echo; echo "[III-6] wymagalność i terminy dokumentów, wersje, widoczność per organizacja (0078 / A3)"
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+chk "projekt ma 4 wymagania startowe (A7: PERMIT_PL+PERMIT_SE+CMR+INSURANCE)" "$(Q "select count(*) from doc_requirements where project_id='$P'")" "4"
 err "KSH: zmiana wymagalności odrzucona" $KSH "select doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',48)" "wyłącznie HHL"
+err "HHL_OPS: zmiana wymagalności odrzucona (A3)" $OPS "select doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',48)" "wyłącznie HHL"
 err "HHL: nieznane zdarzenie odniesienia odrzucone" $HHL "select doc_requirement_set('$P','CMR',true,'CARRIER','KIEDYS',4)" "Nieznane zdarzenie"
 err "HHL: CMR AT_LOAD odrzucony (0231 / D-1740)" $HHL "select doc_requirement_set('$P','CMR',true,'CARRIER','AT_LOAD',4)" "CMR tylko po rozładunku"
 val "HHL: CMR 48 h po rozładunku zapisane" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',48) is not null)::text" true commit
 chk "wartość zmieniona + audit_log DOC_REQUIREMENT_SET ze starą wartością" "$(Q "select r.anchor||'/'||r.offset_hours||'/'||(select (old_value->>'offset_hours') from audit_log where action='DOC_REQUIREMENT_SET' order by id desc limit 1) from doc_requirements r where project_id='$P' and category='CMR'")" "AFTER_UNLOAD/48/24"
-val "KSH i SCX czytają wymagania (konfiguracja)" $SCX "select count(*) from doc_requirements where project_id='$P'" 7
+val "KSH i SCX czytają wymagania (konfiguracja)" $SCX "select count(*) from doc_requirements where project_id='$P'" 4
 L9=33333333-0000-0000-0000-0000000006c9
-$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date, plan_delivery_date) values ('$L9','$P','00000000-0000-0000-0000-00000000a003','KSH/9', current_date-3, current_date+2)" >/dev/null
-$PSQL -c "update loads set plan_load_date=current_date-3, plan_delivery_date=current_date+2 where id='$L9'" >/dev/null
+# A7: PERMIT_* w statusie tylko dla Trasa (Firma = zezwolenie firmowe poza listą dokumentów)
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date, plan_delivery_date, permit_kind) values ('$L9','$P','00000000-0000-0000-0000-00000000a003','KSH/9', current_date-3, current_date+2, 'TRASA') on conflict (id) do update set plan_load_date=excluded.plan_load_date, plan_delivery_date=excluded.plan_delivery_date, permit_kind='TRASA'" >/dev/null
+$PSQL -c "update loads set plan_load_date=current_date-3, plan_delivery_date=current_date+2, permit_kind='TRASA' where id='$L9'" >/dev/null
 val "SCX: zezwolenie PL transportu z załadunkiem 3 dni temu = OVERDUE" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='PERMIT_PL'" OVERDUE
-val "SCX: POD przed dostawą = MISSING (termin nie minął)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='POD'" MISSING
+val "SCX: POD nie jest wymaganiem (A3)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='POD'" 0
 val "SCX: CMR przed Dostarczone bez pliku = brak wiersza (0231)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
-val "stan wymaganych per transport przed CMR/dostawą (bez polisy, bez CMR): 5" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
+val "stan wymaganych per transport przed CMR/dostawą (Trasa: PERMIT_PL+PERMIT_SE): 2" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 2
 val "SCX: wgranie CMR przed dostawą (create_document)" $SCX "select count(*) from create_document('$L9','CMR','cmr-zaladunek.pdf','application/pdf',100)" 1 commit
 $PSQL -c "update documents set uploaded_at=now()-interval '48 hours' where load_id='$L9' and file_name='cmr-zaladunek.pdf'" >/dev/null
 val "…CMR z załadunku = brak wiersza (0233 / #312 B1)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" 0
-val "stan nadal 5 (CMR z załadunku nie liczy)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 5
+val "stan nadal 2 (CMR z załadunku nie liczy)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 2
 val "HHL: CMR z powrotem 24 h (seed)" $HHL "select (doc_requirement_set('$P','CMR',true,'CARRIER','AFTER_UNLOAD',24) is not null)::text" true commit
 $PSQL -c "set session_replication_role=replica; update loads set actual_delivery_at=now()-interval '25 hours', status='DELIVERED' where id='$L9'; set session_replication_role=origin" >/dev/null
 val "SCX: CMR z załadunku po dostawie −25 h = OVERDUE (0233)" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OVERDUE
 val "SCX: ponowne wgranie CMR po dostawie" $SCX "select count(*) from create_document('$L9','CMR','cmr1.pdf','application/pdf',100)" 1 commit
 val "…CMR = OK" $SCX "select state from doc_requirements_status('$P') where load_id='$L9' and category='CMR'" OK
-val "stan po CMR OK: 6 na transport" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 6
+val "stan po CMR OK: 3 na transport (2×PERMIT + CMR)" $SCX "select count(*) from doc_requirements_status('$P') where load_id='$L9'" 3
 val "SCX: druga rejestracja CMR" $SCX "select count(*) from create_document('$L9','CMR','cmr2.pdf','application/pdf',100)" 1 commit
 D1=$(Q "select id from documents where load_id='$L9' and file_name='cmr1.pdf'"); D2=$(Q "select id from documents where load_id='$L9' and file_name='cmr2.pdf'")
 err "KSH: oznaczenie cudzego pliku jako nowej wersji odrzucone" $KSH "select document_supersede('$D2','$D1')" "tylko autor"
@@ -672,7 +679,8 @@ $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-000
   insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-000000000009','00000000-0000-0000-0000-00000000a009','cx2@test','CARRIER_DISPATCH') on conflict do nothing;
   insert into documents (project_id, category, storage_path, file_name, uploaded_by) values ('$P','INSURANCE','-','polisa-cx2.pdf',(select id from app_users where email='cx2@test'))" >/dev/null
 val "SCX nie widzi polisy innego przewoźnika (dokument bez transportu)" $SCX "select count(*) from documents where file_name='polisa-cx2.pdf'" 0
-val "KSH widzi polisę przewoźnika (visible_to: CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
+val "KSH nie widzi polisy SCX (A7 F7 P9 — bez CLIENT)" $KSH "select count(*) from documents where file_name='polisa-cx2.pdf'" 0
+val "HHL widzi polisę przewoźnika" $HHL "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 val "drugi przewoźnik widzi własną polisę" 11111111-0000-0000-0000-000000000009 "select count(*) from documents where file_name='polisa-cx2.pdf'" 1
 $PSQL -c "delete from documents where load_id='$L9' or file_name='polisa-cx2.pdf'; update loads set status='CANCELLED' where id='$L9'; delete from app_users where email='cx2@test'; delete from organizations where code='CX2'" >/dev/null
 echo; echo "[III-7] ścieżka sporu i akceptacji faktury (0079)"
@@ -792,7 +800,8 @@ chk "load_escorts: anon 0 uprawnień, authenticated tylko SELECT (kolumnowo od 0
 err "SCX nie wstawia bezpośrednio do load_escorts" $SCX "insert into load_escorts (load_id, seq, company, plate) values ('$LE',1,'X','AB1')" "permission denied"
 val "SCX: zezwolenie z 2 pilotami powiązane" $SCX "select (load_permit_save('$LE','PL','PL/E34',current_date,current_date+30,null,null,null,null,2) is not null)::text" true commit
 val "stan: wymagane 2, awizowane 0, brak 2" $KSH "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/0/2"
-chk "awizacja: brak pilotów 24 h przed załadunkiem → RESOURCE_MISSING ESCORT (rk_res_escort)" "$(Q "select detect_resource_deadlines() >= 1")/$(Q "select severity||':'||title_key from risk_signals where dedup_key='RES:ESCORT:$LE' and resolved_at is null")" "t/HIGH:rk_res_escort"
+chk "A9: brak pilotów → PILOTS w awiz_missing (blokuje Gotowy; bez RES:ESCORT)" "$(Q "select exists(select 1 from jsonb_array_elements(awiz_missing('$LE')) g where g->>'kind'='PILOTS')")" t
+chk "A9: brak pilotów w oknie → alarm L3_AWIZ (F7 runda 2)" "$(Q "select (l3_scan() >= 1)::text")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$LE' and resolved_at is null")" "true/1"
 err "KSH nie awizuje pilotów" $KSH "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 err "inny przewoźnik nie awizuje pilotów cudzego transportu" 11111111-0000-0000-0000-00000000000b "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
@@ -805,7 +814,9 @@ val "SCX awizuje 2 pilotów (tablica wielkimi literami, kolejność 1–2)" $SCX
 chk "zapis: 2 wiersze, loads.escort_vehicles = 2, audit_log ESCORTS_SET" "$(Q "select string_agg(seq||':'||plate||':'||scope, ',' order by seq) from load_escorts where load_id='$LE'")/$(Q "select escort_vehicles from loads where id='$LE'")/$(Q "select count(*) from audit_log where action='ESCORTS_SET' and entity_id='$LE'")" "1:PO 12345:PL,2:ABC 123:SE/2/1"
 val "KSH widzi pilotów transportu (tylko odczyt)" $KSH "select count(*) from load_escorts where load_id='$LE'" 2
 val "stan: wymagane 2, awizowane 2, brak 0" $SCX "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/2/0"
-chk "awizacja kompletna → ryzyko ESCORT zamknięte automatycznie" "$(Q "select detect_resource_deadlines()")/$(Q "select count(*) from risk_signals where dedup_key='RES:ESCORT:$LE' and resolved_at is null")" "0/0"
+chk "A9: piloci uzupełnieni → brak PILOTS w awiz_missing" "$(Q "select exists(select 1 from jsonb_array_elements(awiz_missing('$LE')) g where g->>'kind'='PILOTS')")" f
+$PSQL -c "select l3_scan()" >/dev/null
+chk "A9: po pilotach → alarm L3_AWIZ zamknięty" "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$LE' and resolved_at is null")" 0
 val "HHL zmienia listę na 1 pilota (zastąpienie, audit_log ze starą listą)" $HHL "select load_escorts_set('$LE','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 12345\"}]')" 1 commit
 chk "po zmianie: 1 wiersz, escort_vehicles 1, stara lista w audit_log (2 pozycje)" "$(Q "select count(*) from load_escorts where load_id='$LE'")/$(Q "select escort_vehicles from loads where id='$LE'")/$(Q "select jsonb_array_length(old_value) from audit_log where action='ESCORTS_SET' and entity_id='$LE' order by id desc limit 1")" "1/1/2"
 $PSQL -c "update loads set status='CANCELLED' where id='$LE'" >/dev/null 2>&1
@@ -873,9 +884,9 @@ err "imię ponad 120 znaków → odmowa" $SCX "select load_escorts_set('$LP',jso
 val "SCX awizuje pilota z kierowcą (telefon ze spacjami → krajowy) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
 val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 val "HHL widzi kontakt" $HHL "select count(*) from load_escort_contacts() where load_id='$LP'" 1
-val "KSH: load_escort_contacts → 0 wierszy" $KSH "select count(*) from load_escort_contacts()" 0
+val "KSH: load_escort_contacts z imieniem i telefonem (D-1243)" $KSH "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 err "KSH: bezpośredni odczyt driver_phone → brak uprawnień" $KSH "select driver_phone from load_escorts where load_id='$LP'" "permission denied"
-val "KSH nadal widzi pojazdy (firma, tablica) bez danych osobowych" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
+val "KSH widzi pojazdy (firma, tablica) z load_escorts" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 kontaktów" 11111111-0000-0000-0000-00000000000b "select count(*) from load_escort_contacts() where load_id='$LP'" 0
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
@@ -1000,6 +1011,67 @@ fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
 chk "II-7: >2 km od korytarza → ryzyko rk_off_corridor" "$(Q "select title_key from risk_signals where load_id='$L7' and dedup_key='OFF_CORRIDOR:$L7' and resolved_at is null")" "rk_off_corridor"
 $PSQL -c "update loads set status='CANCELLED' where id='$L7'" >/dev/null 2>&1
+
+echo; echo "[D-1118] permit_fits masa/KIND + awiz_pilots_set"
+L_D1=33333333-0000-0000-0000-00000000d111
+L_D2=33333333-0000-0000-0000-00000000d112
+PM_F=$(Q "select id from permits where permit_no='13/GD/2026' and scope='FIRMA' limit 1")
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_D1','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-SG','DOCS_PENDING','SG','FIRMA',
+  21.69, 2.45, 3.75, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_D1','$PM_F')" >/dev/null
+chk "D-1118 SG+13/GD: ok bez combo_weight (cargo z symboli)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_D1','$PM_F')")" "true/"
+val "D-1118 permit_fits jako HHL" $HHL "select ok::text from permit_fits('$L_D1','$PM_F')" true
+val "D-1118 permit_fits jako KSH" $KSH "select ok::text from permit_fits('$L_D1','$PM_F')" true
+val "D-1118 permit_fits jako SCX" $SCX "select ok::text from permit_fits('$L_D1','$PM_F')" true
+chk "D-1118 FIRMA: missing_countries puste (nie SE)" \
+  "$(Q "select coalesce(array_to_string(missing_countries,','),'') from load_permit_status() where load_id='$L_D1'")" ""
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_D2','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-KR','DOCS_PENDING','KR','TRASA',
+  23.00, 3.40, 3.90, 28.4, current_date+3, 2)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_D2','$PM_F')" >/dev/null
+chk "D-1118 KR+13/GD: KIND (rodzaj)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_D2','$PM_F')")" "false/KIND"
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values
+ ('11111111-0000-0000-0000-00000000d0f5','00000000-0000-0000-0000-00000000a001','ops-d1118@test','HHL_OPS',true)
+ on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+OPS_D=11111111-0000-0000-0000-00000000d0f5
+err "D-1118 KSH odmowa awiz_pilots_set" $KSH "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
+err "D-1118 HHL_OPS odmowa awiz_pilots_set" $OPS_D "select awiz_pilots_set('$L_D2','PO1','Jan Pilot','ABC12','Erik Pilot')" "Pilotów awizuje"
+err "D-1118 SG bez wymogu pilotów → 22023" $SCX "select awiz_pilots_set('$L_D1','PO1','Jan','ABC','Erik')" "bez wymogu pilotów"
+err "D-1118 imię bez tablicy → 22023" $SCX "select awiz_pilots_set('$L_D2',null,'Jan Pilot',null,null)" "numer rejestracyjny"
+# PL_SE z load_escorts_set — awiz_pilots_set nie może go skasować
+# telefon krajowy (0111), nie E.164 — inaczej INSERT ginie w /dev/null i asercja PL_SE jest fałszywa
+$PSQL -c "insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
+ values ('$L_D2', 1, 'Firma Pilot', 'XX99', 'PL_SE', 'Sekret', '111222333', 'PL',
+         (select id from app_users where auth_id='$SCX'))" >/dev/null
+val "D-1118 SCX awizuje Pilot PL/SE" $SCX "select (awiz_pilots_set('$L_D2','po 11','Jan Pilot','se 22','Erik Pilot')->>'ok')" true commit
+chk "D-1118 escort_vehicles bez zmian po awizacji" \
+  "$(Q "select escort_vehicles::text from loads where id='$L_D2'")" "2"
+chk "D-1118 load_escorts PL+SE + zachowany PL_SE" \
+  "$(Q "select string_agg(scope||':'||plate, ',' order by scope, seq) from load_escorts where load_id='$L_D2'")" "PL:PO 11,PL_SE:XX99,SE:SE 22"
+chk "D-1118 audit z imieniem pilota (D-1243)" \
+  "$(Q "select (new_value::text like '%Jan Pilot%' and new_value::text not like '%[dane osobowe]%')::text from audit_log where action='AWIZ_PILOTS_SET' and entity_id='$L_D2' order by created_at desc limit 1")" "true"
+chk "D-1118 load_events z imieniem (D-1243)" \
+  "$(Q "select (payload::text like '%Jan Pilot%' and payload::text not like '%[dane osobowe]%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1")" "true"
+val "D-1118 KSH czyta PILOTS_SET z imieniem (D-1243)" $KSH \
+  "select (payload::text like '%Jan Pilot%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1" true
+val "D-1118 puste pola usuwają strony PL/SE" $SCX "select (awiz_pilots_set('$L_D2',null,null,null,null)->>'ok')" true commit
+chk "D-1118 po wyczyszczeniu PL_SE zostaje" \
+  "$(Q "select string_agg(scope||':'||plate, ',' order by seq) from load_escorts where load_id='$L_D2'")" "PL_SE:XX99"
+# Gotowy + przełącznik: FIRMA z 13/GD nie blokowany brakiem SE
+$PSQL -c "update security_flags set enabled=true where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t)
+ values ('$P','$L_D1','D1118-SG-1','DIMENSIONED',21.69,2.45,3.75,10)
+ on conflict (project_id, shipment_code) do update set load_id=excluded.load_id, cargo_class='DIMENSIONED'" >/dev/null
+$PSQL -c "update loads set hhl_order_no='HHL/D1118-SG' where id='$L_D1'" >/dev/null
+val "D-1118 FIRMA+13/GD przy włączonym wymogu → READY" $HHL \
+  "select load_status_set('$L_D1','READY',now(),null); select status from loads where id='$L_D1'" READY commit
+$PSQL -c "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_D1','$L_D2')" >/dev/null
 
 fi # tower-i2-part 5
 

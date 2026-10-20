@@ -36,7 +36,8 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
       sb.from('load_escorts').select('seq,company,plate,scope').eq('load_id', loadId).order('seq'),
       sb.rpc('load_escort_status').eq('load_id', loadId),
     ]);
-    const c = canWrite ? await sb.rpc('load_escort_contacts').eq('load_id', loadId) : { data: [] };
+    /* D-20261020-1243-01: kontakty pilotów widzą HHL, SCX i KSH (zgody RODO) — zapis dalej tylko HHL i SCX */
+    const c = await sb.rpc('load_escort_contacts').eq('load_id', loadId);
     const contacts = new Map(((c.data ?? []) as { seq: number; driver_name: string | null; driver_phone: string | null }[]).map((x) => [x.seq, x]));
     const list = ((e.data ?? []) as (Row & { seq: number })[]).map((r) => ({
       company: r.company,
@@ -51,7 +52,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
     const st = (Array.isArray(s.data) ? s.data[0] : null) as { required?: number } | null;
     setReq(st?.required ?? 0);
     setDirty(false);
-  }, [loadId, canWrite]);
+  }, [loadId]);
 
   useEffect(() => {
     void refresh();
@@ -117,7 +118,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
             {rows.map((r, i) => (
               <div key={i} style={{ display: 'contents' }}>
                 <dt>{tp(locale, 'e34_n', { n: String(i + 1) })}</dt>
-                <dd><span className="mono" data-content>{r.plate}</span> · {r.company} · {t(locale, `e34_scope_${r.scope}`)}</dd>
+                <dd><span className="mono" data-content>{r.plate}</span> · {r.company} · {t(locale, `e34_scope_${r.scope}`)}{r.driver_name ? <> · {r.driver_name}</> : null}{r.driver_phone ? <> · <span className="mono" data-content>{r.driver_phone}</span></> : null}</dd>
               </div>
             ))}
           </dl>

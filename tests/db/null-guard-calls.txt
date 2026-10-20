@@ -20,6 +20,7 @@ issue_driver_token | GUARD | select issue_driver_token('$L2') | wyłącznie prze
 keep_alive | GUARD | select keep_alive('test') | Brak aktywnego konta
 mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyłącznie HHL
 register_invoice | GUARD | select register_invoice('{"direction":"PRZYCHOD"}'::jsonb) | Brak konta organizacji
+update_invoice | GUARD | select update_invoice('00000000-0000-0000-0000-00000000ffff', '{}'::jsonb) | Brak aktywnego konta
 report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyłącznie
 revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyłącznie
 revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywnego konta
@@ -81,6 +82,7 @@ document_supersede | GUARD | select document_supersede(gen_random_uuid(), gen_ra
 invoice_dispute_reply | GUARD | select invoice_dispute_reply('$INV', 'x') | Brak aktywnego konta
 load_permit_link | GUARD | select load_permit_link('$L1', '$PERMIT') | HHL albo przewoźnik transportu
 load_permit_status | EMPTY | select count(*) from load_permit_status() | 0
+awiz_pilots_set | GUARD | select awiz_pilots_set('$L1', null, null, null, null) | Pilotów awizuje
 load_escorts_set | GUARD | select load_escorts_set('$L1', '[]'::jsonb) | HHL albo przewoźnik transportu
 carrier_rate_load | GUARD | select carrier_rate_load('$L1', 5) | wyłącznie HHL
 carrier_scorecard | GUARD | select count(*) from carrier_scorecard() | wyłącznie dla HHL
@@ -163,3 +165,9 @@ h4_schedule_remaining | PURE | select 1 | 1
 h4_driver_state_from_gps | PURE | select 1 | 1
 h4_record_eta_observation | PURE | select 1 | 1
 load_order_numbers | EMPTY | select count(*)::text from load_order_numbers() | 0
+load_ready_gaps | EMPTY | select count(*)::text from load_ready_gaps() | 0
+a7_permits_list | GUARD | select a7_permits_list() | Brak aktywnego konta
+a7_policies_list | GUARD | select a7_policies_list() | Brak aktywnego konta
+a7_apply_symbol | GUARD | select a7_apply_symbol('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta
+symbol_resolve_code | PURE | select symbol_resolve_code('SG-03') | SG
+symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | true

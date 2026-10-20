@@ -2,7 +2,7 @@
  * M6 — faktury, model trzech stron (MECHANIZM_PIENIEDZY §6; baza: 0003 + 0014 `register_invoice`).
  *   KOSZT    — wystawca SCX, odbiorca HHL; widzą HHL i SCX, KSH nigdy.
  *   PRZYCHOD — wystawca HHL, odbiorca KSH; widzą HHL i KSH, SCX nigdy.
- * Netto / VAT / brutto przepisane z dokumentu (system nie liczy VAT). Kurs per pozycja (PLN)
+ * Netto z dokumentu; VAT 23% i brutto liczy baza (A4). Kurs per pozycja (PLN)
  * podpowiadany z reguły W3, wystawca potwierdza albo poprawia. Kontrole = te same co w bazie.
  * Dwa niezależne statusy: weryfikacja (odbiorca) i płatność (wyłącznie HHL).
  */
