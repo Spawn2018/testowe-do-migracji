@@ -136,7 +136,8 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, 
   ('$L6','$P','$CAR','KSH/6','HHL/6','SCX/6','READY_TO_INVOICE','2026-09-22T12:00:00Z'),
   ('$L7','$P','$CAR','KSH/7','HHL/7','SCX/7','READY_TO_INVOICE','2026-09-23T10:00:00Z')"
 sys "insert into fx_rates (currency, rate_date, rate_pln, table_no) values ('EUR','2026-09-21',4.2500,'183/A/NBP/2026') on conflict do nothing"
-sys "insert into load_cost (load_id, base_amount, computed_total_eur) values ('$L5',1000,1000),('$L6',800,800),('$L7',500,500); insert into load_revenue (load_id, base_amount, computed_total_eur) values ('$L5',1300,1300),('$L6',1100,1100),('$L7',700,700)"
+# REALIZACJA wprost: INSERT z actual_delivery_at nie odpala migawki FX (ta jest na UPDATE) — inaczej least_tier = PROGNOZA
+sys "insert into load_cost (load_id, base_amount, computed_total_eur, pricing_tier) values ('$L5',1000,1000,'REALIZACJA'),('$L6',800,800,'REALIZACJA'),('$L7',500,500,'REALIZACJA'); insert into load_revenue (load_id, base_amount, computed_total_eur, pricing_tier) values ('$L5',1300,1300,'REALIZACJA'),('$L6',1100,1100,'REALIZACJA'),('$L7',700,700,'REALIZACJA')"
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L5','CMR','test/m6-cmr5.pdf','cmr.pdf','application/pdf',100,'2026-09-22T11:00:00Z'),
             ('$P','$L6','CMR','test/m6-cmr6.pdf','cmr.pdf','application/pdf',100,'2026-09-22T13:00:00Z'),
