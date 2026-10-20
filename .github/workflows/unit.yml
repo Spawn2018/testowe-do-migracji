@@ -15,4 +15,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Kontrola typów jak w `npm run build` (deploy-main): błąd TS wychodzi w PR, nie dopiero przy wdrożeniu (F7 #348 B1)
+      - name: npx tsc -b
+        run: npx tsc -b
       - run: npm run test:unit
