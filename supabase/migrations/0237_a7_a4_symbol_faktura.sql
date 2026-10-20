@@ -1100,7 +1100,7 @@ begin
     v_issuer := v_org; v_carrier := v_org;
     select id into v_recipient from organizations where kind = 'FORWARDER' order by code limit 1;
   else
-    if not is_hhl() then raise exception 'Fakturę przychodową rejestruje HHL (wystawca)' using errcode = '42501'; end if;
+    if (is_hhl() is not true) then raise exception 'Fakturę przychodową rejestruje HHL (wystawca)' using errcode = '42501'; end if;
     v_issuer := v_org;
     select client_org_id into v_recipient from projects where id = v_project;
   end if;
@@ -1585,7 +1585,7 @@ begin
       from invoice_lines where invoice_id = p_invoice;
 
     foreach v_lid in array v_old_loads loop
-      if not (v_lid = any (v_new_loads)) then
+      if (v_lid = any (v_new_loads)) is not true then
         if inv.direction = 'KOSZT' then
           update load_cost set invoiced_total_eur = null where load_id = v_lid;
         else
@@ -1609,7 +1609,7 @@ begin
   values (p_invoice, v_doc, 'FAKTURA_PDF')
   on conflict do nothing;
 
-  if not v_accepted and v_is_issuer then
+  if (v_accepted is not true) and v_is_issuer then
     insert into invoice_dispute_events (invoice_id, kind, status_to, note, actor_user, actor_org)
     values (p_invoice, 'CORRECTION', 'DO_WERYFIKACJI', coalesce(v_note, 'korekta wystawcy'), v_me, v_org);
   end if;
