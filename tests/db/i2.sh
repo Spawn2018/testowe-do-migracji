@@ -448,6 +448,31 @@ chk "ryzyko LATE_DATE_CHANGE (HHL+przewoźnik)" "$(Q "select audience::text||'/'
 val "SCX widzi ryzyko późnej zmiany" $SCX "select count(*) from risk_signals where kind='LATE_DATE_CHANGE' and load_id='$LD' and resolved_at is null" 1
 chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select has_function_privilege('anon','ksh_confirm_dates(uuid,date,date,timestamptz,timestamptz,timestamptz,timestamptz)','execute')::text||has_function_privilege('authenticated','detect_unconfirmed_dates(timestamptz)','execute')::text")" "falsefalse"
 
+echo; echo "[#356] import_quiet_hours — ciche uzupełnienie godzin (D-20261020-1157-01)"
+chk "próg import_quiet_hours = 1" "$(Q "select value_num::int::text from ops_thresholds where key='import_quiet_hours'")" "1"
+DIQ1=$(_dcal 30); DIQ2=$(_dcal 35)
+ROWIQ() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWIQT() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"$3\",\"delivery_date\":\"$2\",\"delivery_time\":\"$4\"}]"; }
+IMPIQ() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $2)"; }
+val "IQH-1: import bez godzin" $HHL "select jsonb_array_length(r->'added') from ($(IMPIQ "$(ROWIQ $DIQ1 $DIQ2)" false)) s(r)" 1 commit
+LQ=$(Q "select load_id from shipment_items where shipment_code='IQH-1'")
+$PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LQ'" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LQ'; delete from load_events where load_id='$LQ' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL')" >/dev/null
+val "IQH-1: ciche uzupełnienie godzin (quiet=1)" $HHL "select (r->'changed'->0->>'quiet_hours')||'/'||(r->'changed'->0->>'critical') from ($(IMPIQ "$(ROWIQT $DIQ1 $DIQ2 08:00 12:00)" false)) s(r)" "true/false" commit
+chk "IQH-1: godziny ustawione, bez PLAN_DATES_CHANGED" "$(Q "select (plan_load_from is not null)::text||'/'||(plan_delivery_to is not null)::text||'/'||(select count(*)::text from load_events where load_id='$LQ' and event_type='PLAN_DATES_CHANGED')||'/'||(select count(*)::text from notifications where load_id='$LQ' and template='PLAN_DATES_CHANGED')"")" "true/true/0/0"
+chk "IQH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LQ' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+val "IQH-1: zmiana 08:00→10:00 przy quiet=1 → powiadomienie" $HHL "select (r->'changed'->0->>'quiet_hours') from ($(IMPIQ "$(ROWIQT $DIQ1 $DIQ2 10:00 12:00)" false)) s(r)" "false" commit
+chk "IQH-1: PLAN_DATES_CHANGED po zmianie godziny" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ' and event_type='PLAN_DATES_CHANGED'")" "true"
+val "HHL_ADMIN wyłącza import_quiet_hours" $HHL "select admin_ops_threshold_set('import_quiet_hours', 0); select value_num::int from ops_thresholds where key='import_quiet_hours'" 0 commit
+ROWIQ2() { echo "[{\"code\":\"IQH-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWIQ2T() { echo "[{\"code\":\"IQH-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
+val "IQH-2: import bez godzin (quiet=0)" $HHL "select jsonb_array_length(r->'added') from ($(IMPIQ "$(ROWIQ2 $DIQ1 $DIQ2)" false)) s(r)" 1 commit
+LQ2=$(Q "select load_id from shipment_items where shipment_code='IQH-2'")
+$PSQL -c "delete from notifications where load_id='$LQ2'; delete from load_events where load_id='$LQ2' and event_type='PLAN_DATES_CHANGED'" >/dev/null
+val "IQH-2: uzupełnienie godzin przy quiet=0 → nie cicho" $HHL "select coalesce(r->'changed'->0->>'quiet_hours','false') from ($(IMPIQ "$(ROWIQ2T $DIQ1 $DIQ2)" false)) s(r)" "false" commit
+chk "IQH-2: PLAN_DATES_CHANGED przy quiet=0" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ2' and event_type='PLAN_DATES_CHANGED'")" "true"
+val "HHL_ADMIN włącza z powrotem import_quiet_hours" $HHL "select admin_ops_threshold_set('import_quiet_hours', 1); select value_num::int from ops_thresholds where key='import_quiet_hours'" 1 commit
+
 fi # tower-i2-part 2
 
 if _i2_part_ok 3; then

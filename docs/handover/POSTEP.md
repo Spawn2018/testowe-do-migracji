@@ -3518,3 +3518,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Scalanie: #357 ‚Äî brak ‚ÄûF7: gotowe‚Äù; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie ‚Äî bez scalenia.
 - Bie≈ºƒÖca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
 
+
+## 2026-10-20 14:20 ó #357 scalone; start #356 import_quiet_hours
+
+- Skrzynka: #353 zamkniete (D-1118 zrobione). #358/#359/#356/#324/#323/#322/#320 otwarte, w planie; bez etykiety `pilne` ó bez przerwania.
+- Scalanie: #357 ó F7 po `374e62c`, CI zielone (db/unit/visual) õ merge `b21524b8`. #360 wyglad bez F7. #317/#259 konflikt.
+- Biezaca **#356** (`pakiet/import-godziny-cicho`): migracja 0240 ó `ops_thresholds.import_quiet_hours=1`, `trg_plan_dates_notify` szanuje `tower.bulk_quiet`, `import_schedule` ciche pierwsze uzupelnienie godzin; i2 584 (+12). Wylaczenie: `admin_ops_threshold_set('import_quiet_hours', 0)`.
