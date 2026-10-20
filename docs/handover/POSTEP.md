@@ -3375,3 +3375,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - e25: polisa na `plan_load_date` a901; PERMIT off + STANDARD; asercja kinds przy lukach; **EXPIRED przez `decision_expire`** (CHECK 0102: `EXPIRED`+`resolved_at` psuło UPDATE → sprawa zostawała NEW, ensure zwracał null). e25 69.
 - Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
 
+## 2026-10-20 04:35 — #345 e25: UUID rejsu hex + reopen w dwóch komendach
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a1197b30`. `db` `39357785497` czerwone (e25 66/4 FAIL); visual/unit zielone.
+- Przyczyna: UUID `…s901` (litera **s** poza hex) → INSERT/SELECT padają z `invalid input syntax for type uuid` (w logu sam `^`); stąd AWIZ+SAILING i PLANNED. Reopen: jeden SELECT z `ensure||status` mógł czytać EXPIRED sprzed UPDATE — rozdzielone; `a3_ensure` reopen z `IF NOT FOUND` + reopen gdy `open_from_event` zwróci zamkniętą.
+- e25 70. Czeka na zielone CI i „F7: gotowe do scalenia”.
+

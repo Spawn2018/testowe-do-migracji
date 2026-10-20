@@ -688,11 +688,18 @@ begin
        set status = 'NEW',
            resolved_at = null,
            resolution_code = null,
+           resolution_note = null,
            expired_reason = null,
+           snooze_until = null,
            title = v_title,
            due_at = now() + make_interval(hours => v_off),
            updated_at = now()
-     where id = v_id;
+     where id = v_id
+       and status in ('RESOLVED', 'EXPIRED');
+    if not found then
+      raise exception 'A3: reopen CMR_UPLOAD % status % — UPDATE 0 wierszy', v_id, v_st
+        using errcode = 'P0001';
+    end if;
     insert into decision_events (decision_id, actor_id, action, payload)
     values (v_id, null, 'OPEN', jsonb_build_object('type', 'CMR_UPLOAD', 'event_key', v_key, 'via', 'A3_REOPEN'));
     return v_id;
@@ -727,14 +734,32 @@ begin
     p_load,
     null
   );
-  /* F7 P9: due_at z offset_hours projektu (Opcje), nie sztywne 24. */
+  /* F7 P9: due_at z offset_hours projektu (Opcje), nie sztywne 24.
+     Gdy open_from_event zwróci zamkniętą sprawę (ten sam event_key) — reopen. */
   if v_id is not null then
     update decisions
-       set due_at = now() + make_interval(hours => v_off),
+       set status = 'NEW',
+           resolved_at = null,
+           resolution_code = null,
+           resolution_note = null,
+           expired_reason = null,
+           snooze_until = null,
+           due_at = now() + make_interval(hours => v_off),
            title = v_title,
            updated_at = now()
      where id = v_id
-       and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+       and status in ('RESOLVED', 'EXPIRED');
+    if found then
+      insert into decision_events (decision_id, actor_id, action, payload)
+      values (v_id, null, 'OPEN', jsonb_build_object('type', 'CMR_UPLOAD', 'event_key', v_key, 'via', 'A3_REOPEN'));
+    else
+      update decisions
+         set due_at = now() + make_interval(hours => v_off),
+             title = v_title,
+             updated_at = now()
+       where id = v_id
+         and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+    end if;
   end if;
   return v_id;
 end $$;
