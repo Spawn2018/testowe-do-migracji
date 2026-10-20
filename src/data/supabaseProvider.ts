@@ -352,6 +352,48 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         }
         return { id: String(res.data) };
       }
+      case 'bill.update': {
+        // A4 / D-20261020-0115-01: edycja faktury — nowy PDF (opcjonalnie) → Storage, potem `update_invoice`
+        // (uprawnienia, VAT, co do grosza, CMR, historia „było → jest” i powiadomienia — w bazie, jedna transakcja)
+        await ensureContext();
+        let docId = m.bill.pdfDocId ?? null;
+        let uploaded: { id: string; bucket: string; objectPath: string } | null = null;
+        if (m.file) {
+          if (!projectId) throw new Error('faktura: brak projektu');
+          const created = await sb.rpc('create_document', {
+            p_load_id: null, p_category: 'INVOICE', p_file_name: m.bill.pdfName ?? 'faktura.pdf',
+            p_mime: 'application/pdf', p_size: m.file.size, p_project_id: projectId,
+          });
+          const row = (Array.isArray(created.data) ? created.data[0] : created.data) as { id: string; bucket: string; object_path: string } | null;
+          if (created.error || !row) throw new Error(`faktura PDF: ${created.error?.message ?? 'brak rejestracji'}`);
+          const stored = safeStorageTarget(row.bucket, row.object_path);
+          const objectPath = stored.objectPath.replace(/\.\.\//g, '');
+          const up = await sb.storage.from(stored.bucket).upload(objectPath, m.file, { contentType: 'application/pdf', upsert: false });
+          if (up.error) {
+            await sb.rpc('discard_document', { p_id: row.id });
+            throw new Error(`faktura PDF: ${up.error.message}`);
+          }
+          uploaded = { id: row.id, bucket: stored.bucket, objectPath };
+          docId = row.id;
+        }
+        const { lines, ...patch } = billToRpc(m.bill, docId ?? '');
+        delete patch.direction; // kierunku faktury nie zmienia się (wystawca i odbiorca bez zmian)
+        /* F7 #347 P2: pełna treść nagłówka, bez „null = licz sam” — termin zawsze jawnie, z flagą „z dokumentu” */
+        const res = await sb.rpc('update_invoice', {
+          p_invoice: m.billId,
+          p_patch: { ...patch, due_date: m.bill.dueDate, due_date_from_document: m.bill.dueFromDocument, document_id: docId },
+          p_lines: lines,
+          p_note: m.note,
+        });
+        if (res.error) {
+          if (uploaded) {
+            await sb.storage.from(uploaded.bucket).remove([uploaded.objectPath]);
+            await sb.rpc('discard_document', { p_id: uploaded.id });
+          }
+          throw new Error(res.error.message);
+        }
+        return;
+      }
       case 'bill.verify': {
         const res = await sb.from('invoices').update({
           verification_status: m.verification, dispute_note: m.note, decided_at: now(),

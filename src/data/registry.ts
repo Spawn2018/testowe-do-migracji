@@ -32,7 +32,7 @@ function targetId(m: DataMutation): string | null {
     case 'geofence.delete': return m.id;
     case 'prefs.save': return null; // ustawienia bieżącego użytkownika (bez id encji)
     case 'bill.register': return m.bill.lines[0]?.loadId ?? ''; // pozycje = transporty z serwera
-    case 'bill.verify': case 'bill.paid': case 'bill.unpaid': return m.billId;
+    case 'bill.verify': case 'bill.paid': case 'bill.unpaid': case 'bill.update': return m.billId;
     case 'notifications.read': return null; // własne powiadomienia (id liczbowe z serwera)
     case 'sailing.save': return m.isNew ? null : m.sailing.id; // nowy rejs = wstawienie; zmiana tylko rejsu z serwera
     case 'loads.importCancel': return m.loadIds.every(isServerId) ? m.loadIds[0] ?? '' : ''; // tylko transporty z serwera

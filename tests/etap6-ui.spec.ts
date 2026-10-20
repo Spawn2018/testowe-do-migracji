@@ -102,6 +102,30 @@ test.describe('A4 — faktura po terminie', () => {
     await expect(page.locator('[data-bill-detail="bill-k-2026-W38"]')).toBeVisible()
   })
 
+  test('A4 / D-20261020-0115-01: edycja faktury — Administrator HHL zmienia fakturę SCX, KSH nie ma przycisku', async ({ page }) => {
+    await freshLate(page, '/finanse/faktury/bill-k-2026-W38')
+    const detail = page.locator('[data-bill-detail="bill-k-2026-W38"]')
+    await expect(detail).toBeVisible()
+    await detail.locator('[data-bill-edit]').click()
+    const form = page.locator('[data-bill-edit-form="bill-k-2026-W38"]')
+    await expect(form).toBeVisible()
+    await expect(form.locator('[data-w="vat"]')).not.toHaveValue('—')
+    /* F7 #347 P5: zmiana waluty nie odznacza pozycji tej faktury */
+    await form.locator('[data-cur="EUR"]').click()
+    await form.locator('[data-cur="PLN"]').click()
+    await expect(form.locator('tr[data-w-line] input.inv-check:checked')).toHaveCount(await form.locator('tr[data-w-line]').count())
+    await form.locator('[data-w="number"]').fill('SCX/FV/2026/0938-K')
+    await form.locator('[data-w="reason"]').fill('błędny numer')
+    await form.locator('[data-w="submit"]').click()
+    await expect(form).toHaveCount(0)
+    await expect(page.locator('tr[data-bill="bill-k-2026-W38"]')).toContainText('SCX/FV/2026/0938-K')
+    /* KSH: faktura HHL → KSH bez przycisku edycji (tylko Akceptuj / Sporna) */
+    await page.click('#roleSeg button[data-role="KSH"]')
+    await page.goto(late('/finanse/faktury/bill-p-2026-W37'), { waitUntil: 'networkidle' })
+    await expect(page.locator('[data-bill-detail="bill-p-2026-W37"]')).toBeVisible()
+    await expect(page.locator('[data-bill-edit]')).toHaveCount(0)
+  })
+
   test('martwy link do faktury i szybkie przejście z menu — adres idzie za widokiem, link nie wraca', async ({ page }) => {
     await freshLate(page, '/')
     await page.goto(late('/finanse/faktury/nie-ma-takiej'), { waitUntil: 'networkidle' })
