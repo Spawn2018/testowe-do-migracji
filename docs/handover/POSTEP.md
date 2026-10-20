@@ -3458,3 +3458,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   3. insurance: boolean bez `::text` (`f` nie `false`).
 - Opis PR #348 uzupełniony liczbami P3. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 09:55 — #348 scalone; start A5 (0238)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #348 — „F7: gotowe do scalenia” po `708f3000` (07:50Z), CI zielone (db `39387282216`, unit, visual), bez konfliktu. Merge `0f7765a7`. `deploy-main` nie czekamy (D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A5** (`pakiet/a5-rejs-prom`): migracja `0238_a5_rejs_prom_port.sql` — `geofences.route`, `promote_ferry_departures` / `apply_geofence_status` / `compute_load_eta` (PORT według rejsu, `ferry_eta_at`/`wait_ais`, READY_TO_INVOICE jak DELIVERED). Testy status **130** (+9 A5).
+
