@@ -3530,3 +3530,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Skrzynka: #359/#358/#356/#324/#323/#322/#320 ? w planie; bez `pilne`.
 - Scalanie: #361 bez F7; #360 visual zielone, bez F7; #317 konflikt z main (koordynator: wci?gnij main ? po zako?czeniu CI #361 / G-15).
 - Fix #356: `i2.sh` ? zagnie?d?one cudzys?owy w IQH ? WYNIK brak; wzorzec jak IMP18T. `dec6.sh` ? 22 progi (+`import_quiet_hours`).
+
+## 2026-10-20 15:00 ó #360 scalone; fix IQH-1 chk (FROM loads)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 ó w planie; bez etykiety `pilne`.
+- Scalanie: #360 ó F7 po `adefd1c`, CI zielone õ merge `953f3ee1`. #361 db FAIL (IQH-1). #317/#259 konflikt.
+- Fix #356: `i2.sh` IQH-1 chk ó brak `from loads where id` (jak linia godzin D18); CI db `583 OK, 1 FAIL` õ oczekiwane 584.
