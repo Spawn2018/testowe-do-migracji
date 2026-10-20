@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 67, // F7 runda 2 + poprawka CI: UUID ee01/ee02, rejs e25a, CMR a903 przez UPDATE status
+  e25: 69, // +2: rejs s901 w bazie; po decision_expire EXPIRED (CHECK 0102 bez resolved_at)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

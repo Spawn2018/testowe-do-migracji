@@ -3368,3 +3368,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - e25: UUID `ee01`/`ee02` (hex); rejs własny vessel `e25a` (unikat departure); a903 DELIVERED z numerami HHL/SCX; status A1 W4 → daty XI (nie „dziś” po 03:00).
 - Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
 
+## 2026-10-20 04:15 — #345 e25 po F7: komplet A9 + reopen EXPIRED
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `ed161f7f`. `db` `39355584107` czerwone (e25 65/67); visual zielony.
+- e25: polisa na `plan_load_date` a901; PERMIT off + STANDARD; asercja kinds przy lukach; **EXPIRED przez `decision_expire`** (CHECK 0102: `EXPIRED`+`resolved_at` psuło UPDATE → sprawa zostawała NEW, ensure zwracał null). e25 69.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
