@@ -9,6 +9,7 @@
  * są przyjmowane jako tekst — pasek liczy je poprawnie od chwili, gdy dane je podadzą.
  */
 import type { CorridorStage, Load } from '../types';
+import { trackingNoLink } from './trackerLink';
 
 export type StageTile =
   | 'PREP' | 'LOADING' | 'ROAD_PL' | 'PORT_PL' | 'FERRY' | 'PORT_SE' | 'ROAD_SE' | 'SITE' | 'DELIVERED' | 'SETTLE';
@@ -120,6 +121,8 @@ export function nextTrackingStarts(
   const groups = new Map<string, Load[]>();
   for (const l of loads) {
     if (trackingPhase(l, nowIso) !== 'before') continue;
+    /* bez linku śledzenie się nie włączy (decyzja 20.10 20:01) */
+    if (trackingNoLink(l, l.trackingLink)) continue;
     const day = (l.plannedLoadDate ?? '').slice(0, 10);
     if (!day) continue;
     groups.set(day, [...(groups.get(day) ?? []), l]);

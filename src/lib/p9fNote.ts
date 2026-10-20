@@ -6,6 +6,7 @@
 import type { Load } from '../types';
 import { stageTileOf, trackingPhase } from './stageTiles';
 import { formatCalendarDay } from './time';
+import { trackingNoLink } from './trackerLink';
 
 /** `lines` — P11 (e1, e32): dopisek w kilku liniach jak na makiecie; `alert` — numer linii na czerwono (brak linku śledzenia). */
 export type DrawerNote = { kind: 'before' | 'after' | 'nopos' | 'site'; text: string; lines: string[]; alert?: number };
@@ -49,6 +50,11 @@ export function linkWhy(l: Pick<Load, 'trackingLink'>, tx: NoteCtx['tx'], phase:
 
 export function drawerMapNote(l: Load, ctx: NoteCtx): DrawerNote | null {
   const phase = trackingPhase(l, ctx.nowIso);
+  /* decyzja właściciela 20.10 20:01: bez linku nie ma śledzenia — powód zamiast „Śledzenie od …” */
+  if ((phase === 'before' || phase === 'on') && trackingNoLink(l, l.trackingLink, ctx.prod)) {
+    const why = ctx.tx('p9f_why_link');
+    return note('nopos', [ctx.tx('p9f_nopos'), why], why);
+  }
   if (phase === 'before') {
     const day = (l.plannedLoadDate ?? '').slice(0, 10);
     const from = /^\d{4}-\d{2}-\d{2}$/.test(day)

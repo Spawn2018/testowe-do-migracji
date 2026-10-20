@@ -8,7 +8,7 @@ import { t, tp } from '../i18n/messages';
 import { trackingPhase } from './stageTiles';
 import { buildStatusAxis, dayOnly, dayTime, isoMs } from './statusAxis';
 import { hasAwizacja } from './awizacjaState';
-import { trackerKind } from './trackerLink';
+import { trackerKind, trackingNoLink } from './trackerLink';
 import { rioStartsLate, trackerBarRio } from './p4c';
 import { transportLabel } from './transportName';
 import type { OrgKind } from '../types';
@@ -56,6 +56,11 @@ export function trackingStateLines(
   const phase = trackingPhase(load, nowIso);
   const tracker = trackerText(load, locale, trackingLink, nowIso);
   const trailer = (load.resources.trailerPlate ?? '').trim();
+
+  /* decyzja właściciela 20.10 20:01 — bez linku śledzenie nie trwa (B9: ten sam stan co pasek w panelu) */
+  if ((phase === 'before' || phase === 'on') && trackingNoLink(load, trackingLink)) {
+    return { head: `${label} · ${t(locale, 'p4b_trk_nolink')}`, sub: t(locale, 'p4b_trk_nolink_sub') };
+  }
 
   if (phase === 'before') {
     const sub = [

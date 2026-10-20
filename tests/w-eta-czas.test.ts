@@ -22,7 +22,7 @@ describe('W-eta-czas — format czasu ETA', () => {
     expect(etaDuration(1440 * 2 + 30)).toBe('2 d 30 min');
   });
   it('pasmo ± w bloku ETA używa formatu d/h/min', () => {
-    expect(tp('pl', 'p4b_eta_band', { m: etaDuration(435), word: 'Niska' })).toBe('± 7 h 15 min · Niska');
+    expect(tp('pl', 'p4b_eta_band', { m: etaDuration(435), word: 'Niska' })).toBe('niepewność ± 7 h 15 min · Niska');
     const src = readFileSync('src/components/drawer/EtaBlock.tsx', 'utf8');
     expect(src).toContain("tp(locale, 'p4b_eta_band', { m: etaDuration(load.etaConfMin), word })");
   });
