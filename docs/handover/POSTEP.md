@@ -3416,3 +3416,14 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe” po `25c1a98c`. Unit/visual zielone; db `39376792710` czerwone: **baf** 45/46 — asercja „combo_* puste” po A7 (trigger wypełnia combo z `symbol_specs`).
 - Poprawka: usunięta asercja i zbędne czyszczenie combo w `baf.sh` (wycena i tak `dims_source=CARGO` z pozycji); `gate-suites` baf **45**. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 08:20 — #350 scalone; #348 F7 runda 2 poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #350 (`wyglad/W-a10-zrodlo`) — „F7: gotowe do scalenia” po `383f55b`, CI zielone, merge `d0e6f8d4`. `deploy-main` nie czekamy.
+- #348 CI na `6b663338` zielone (unit/visual/db); F7 runda 2 **niegotowe** — ten krok:
+  - B2: `load_events` bez `source=SYSTEM`; `guard_load_update` pozwala INVOICED→READY w `tower.invoice_edit`;
+  - B3: `trg_shipment_items_a7_symbol` przywraca `bulk_quiet`; P8 wymiary w wyzwalaczu;
+  - P4: `visible_to` tylko polisy CARRIER; P5: `dispute_track` pomija przy edycji; P7: INSERT tylko z `register_invoice`;
+  - P6: money +13 (PRZYCHOD/ZGODNA/usunięcie/OPLATA/B3/P7) → **162**.
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+

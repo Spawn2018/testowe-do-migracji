@@ -277,21 +277,26 @@ end $$;
 revoke all on function public.a7_apply_symbol(uuid, text) from public, anon;
 grant execute on function public.a7_apply_symbol(uuid, text) to authenticated;
 
-/* Import / pozycja ładunku: symbol z shipment_code — F7 P9. */
+/* Import / pozycja ładunku: symbol z shipment_code i wymiarów — F7 B3/P8. */
 create or replace function public.trg_shipment_items_a7_symbol()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_prev text;
 begin
   if (new.load_id is not null) is not true then
     return new;
   end if;
   begin
+    v_prev := current_setting('tower.bulk_quiet', true);
     perform set_config('tower.bulk_quiet', 'on', true);
     perform public.a7_apply_symbol(new.load_id, 'A7 przy imporcie / pozycja ładunku');
+    perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
   exception when others then
+    perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
     raise exception 'A7 symbol (load %): %', new.load_id, sqlerrm
       using errcode = sqlstate;
   end;
@@ -300,12 +305,13 @@ end $$;
 
 drop trigger if exists trg_shipment_items_a7_symbol on public.shipment_items;
 create trigger trg_shipment_items_a7_symbol
-  after insert or update of shipment_code, load_id on public.shipment_items
+  after insert or update of shipment_code, load_id, length_m, width_m, height_m, total_weight_t
+  on public.shipment_items
   for each row execute function public.trg_shipment_items_a7_symbol();
 
 revoke all on function public.trg_shipment_items_a7_symbol() from public, anon, authenticated;
 
-/* Polisa SCX: bez widoczności KSH (F7 P9). */
+/* Polisa SCX (przewoźnik): bez widoczności KSH. Polisa HHL zostaje widoczna dla KSH — F7 P4. */
 create or replace function public.trg_documents_insurance_visibility()
 returns trigger
 language plpgsql
@@ -313,7 +319,19 @@ security definer
 set search_path = public
 as $$
 begin
-  if new.category = 'INSURANCE' then
+  if new.category = 'INSURANCE'
+     and (
+       exists (
+         select 1 from public.app_users u
+         join public.organizations o on o.id = u.org_id
+         where u.id = new.uploaded_by and o.kind = 'CARRIER'
+       )
+       or exists (
+         select 1 from public.insurance_policies ip
+         join public.organizations o on o.id = ip.org_id
+         where ip.document_id = new.id and o.kind = 'CARRIER'
+       )
+     ) then
     new.visible_to := array['FORWARDER', 'CARRIER']::org_kind[];
   end if;
   return new;
@@ -321,13 +339,25 @@ end $$;
 
 drop trigger if exists trg_documents_insurance_visibility on public.documents;
 create trigger trg_documents_insurance_visibility
-  before insert or update of category, visible_to on public.documents
+  before insert or update of category, visible_to, uploaded_by on public.documents
   for each row execute function public.trg_documents_insurance_visibility();
 
-update public.documents
+update public.documents d
    set visible_to = array['FORWARDER', 'CARRIER']::org_kind[]
- where category = 'INSURANCE'
-   and 'CLIENT'::org_kind = any (visible_to);
+ where d.category = 'INSURANCE'
+   and 'CLIENT'::org_kind = any (d.visible_to)
+   and (
+     exists (
+       select 1 from public.app_users u
+       join public.organizations o on o.id = u.org_id
+       where u.id = d.uploaded_by and o.kind = 'CARRIER'
+     )
+     or exists (
+       select 1 from public.insurance_policies ip
+       join public.organizations o on o.id = ip.org_id
+       where ip.document_id = d.id and o.kind = 'CARRIER'
+     )
+   );
 
 revoke all on function public.trg_documents_insurance_visibility() from public, anon, authenticated;
 
@@ -828,12 +858,40 @@ $$;
 alter function public.notify_event_key(text, jsonb) set search_path = public;
 revoke all on function public.notify_event_key(text, jsonb) from public, anon, authenticated;
 
--- KSH nie wystawia faktur
+-- KSH nie wystawia faktur; INSERT tylko z register_invoice (F7 P7).
 drop policy if exists invoices_insert on invoices;
 create policy invoices_insert on invoices for insert to authenticated with check (
-  (current_org_kind() is distinct from 'CLIENT')
+  current_setting('tower.register_invoice', true) = 'on'
+  and (current_org_kind() is distinct from 'CLIENT')
   and (is_hhl() or issuer_org_id = current_org_id())
 );
+
+/* F7 P5: korekta wystawcy (SPORNA→DO_WERYFIKACJI) nie wysyła „Spór zamknięty”. */
+create or replace function public.invoices_dispute_track() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_kind text; v_ev bigint; v_user uuid := current_app_user_id(); v_org uuid := current_org_id();
+begin
+  if current_setting('tower.invoice_edit', true) = 'on' then
+    return new;
+  end if;
+  if new.verification_status is not distinct from old.verification_status then return new; end if;
+  v_kind := case
+    when new.verification_status = 'SPORNA' then 'OPENED'
+    when old.verification_status = 'SPORNA' and new.verification_status in ('ZGODNA', 'ZAAKCEPTOWANA') then 'RESOLVED'
+    when old.verification_status = 'SPORNA' then 'WITHDRAWN'
+    else null end;
+  if v_kind is null then return new; end if;
+  insert into invoice_dispute_events (invoice_id, kind, status_to, note, actor_user, actor_org)
+  values (new.id, v_kind, new.verification_status, case when v_kind = 'OPENED' then new.dispute_note end, v_user, v_org)
+  returning id into v_ev;
+  if new.issuer_org_id is not null then
+    perform invoice_dispute_notify(new.issuer_org_id,
+      case v_kind when 'OPENED' then 'INVOICE_DISPUTED' else 'INVOICE_DISPUTE_RESOLVED' end,
+      new, v_ev, case when v_kind = 'OPENED' then new.dispute_note end);
+  end if;
+  return new;
+end $$;
+revoke all on function public.invoices_dispute_track() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- Sprawa INVOICE_OVERDUE
@@ -1226,6 +1284,8 @@ begin
   if v_gross_in is not null and abs(v_gross_in - v_gross) >= 0.01 then
     raise exception 'Brutto liczy baza: oczekiwane %, podano %', v_gross, v_gross_in;
   end if;
+
+  perform set_config('tower.register_invoice', 'on', true);
 
   insert into invoices (project_id, carrier_org_id, period_start, period_end, currency, direction,
                         issuer_org_id, recipient_org_id, invoice_number, issue_date, receipt_date, week_key,
@@ -1719,15 +1779,16 @@ begin
           update load_revenue set invoiced_total_eur = null where load_id = v_lid;
         end if;
         perform public.c17_try_billing_status(v_lid, '{}'::jsonb);
-        /* usunięty → READY_TO_INVOICE ze ścieżką statusu + load_events (F7 P8) */
+        /* usunięty → READY_TO_INVOICE ze ścieżką statusu + load_events (F7 B2).
+           source: enum position_source — bez SYSTEM; jak C17. */
         if exists (select 1 from loads l where l.id = v_lid and l.status = 'INVOICED')
            and public.c17_invoice_pair_ok(v_lid) is null then
           perform set_config('tower.status_ctx', 'on', true);
           update loads set status = 'READY_TO_INVOICE', updated_at = now()
            where id = v_lid and status = 'INVOICED';
-          insert into load_events (load_id, event_type, occurred_at, source, payload, dedup_key)
+          insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
           values (
-            v_lid, 'STATUS_AUTO', now(), 'SYSTEM',
+            v_lid, 'STATUS_AUTO', now(),
             jsonb_build_object(
               'from', 'INVOICED', 'to', 'READY_TO_INVOICE',
               'powod', 'usunięcie z faktury', 'actor', v_actor, 'source', 'INVOICE_EDIT'
@@ -1803,6 +1864,157 @@ grant execute on function public.update_invoice(uuid, jsonb, jsonb, text) to aut
 
 comment on function public.update_invoice(uuid, jsonb, jsonb, text) is
   'A4 / D-0115: edycja faktury — pełny nagłówek, VAT w bazie, role SCX/HHL/HHL_ADMIN.';
+
+/* F7 B2: SCX może cofnąć INVOICED → READY_TO_INVOICE w kontekście update_invoice. */
+create or replace function public.guard_load_update()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_changed  text[];
+  v_bad      text[];
+  v_ctx      text;
+  v_carrier  text[] := array[
+    'tractor_plate','trailer_plate','trailer_type','driver_name','driver_phone',
+    'escort_vehicles','telematics_vehicle_id','telematics_provider',
+    'ferry_booking_ref','sailing_id','carrier_order_no',
+    'combo_length_m','combo_width_m','combo_height_m','combo_weight_t',
+    'actual_load_at','actual_delivery_at','status','updated_at'];
+begin
+  if current_setting('tower.eta_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['eta_site','eta_confidence_min','eta_basis','eta_computed_at','delay_minutes','updated_at']::text[]) is not true then
+      raise exception 'Przeliczenie ETA może zmienić wyłącznie kolumny eta_* (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.track_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Okno śledzenia może zmienić wyłącznie tracking_opened_at (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['plan_load_date','plan_load_from','plan_load_to','plan_delivery_date','plan_delivery_from','plan_delivery_to',
+                           'plan_dates_status','plan_dates_confirmed_by','plan_dates_confirmed_at','tracking_opened_at','updated_at']::text[]) is not true then
+      raise exception 'Potwierdzenie dat może zmienić wyłącznie daty planu (zmienione: %)', array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
+  if auth.uid() is not null and (new.plan_dates_status, new.plan_dates_confirmed_by, new.plan_dates_confirmed_at)
+       is distinct from (old.plan_dates_status, old.plan_dates_confirmed_by, old.plan_dates_confirmed_at) then
+    raise exception 'Status dat planu zmienia wyłącznie potwierdzenie KSH („Potwierdź daty”)';
+  end if;
+
+  if new.status = 'CANCELLED' and old.status is distinct from 'CANCELLED' then
+    v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
+    if v_ctx = 'IMPORT' then
+      if exists (select 1 from invoice_lines where load_id = old.id) then
+        raise exception 'Import nie anuluje transportu na fakturze (%)', coalesce(old.order_no, left(old.id::text, 8));
+      end if;
+      if old.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+        raise exception 'Import nie anuluje transportu w statusie % — od AT_LOADING wyłącznie HHL ręcznie, z powodem', old.status;
+      end if;
+    elsif v_ctx = 'MANUAL' then
+      null;
+    elsif auth.uid() is not null then
+      raise exception 'Anulować transport może wyłącznie HHL — przez cancel_load() z powodem albo import harmonogramu';
+    end if;
+  end if;
+
+  if new.status = 'UNLOADED' and new.actual_delivery_at is null then
+    raise exception 'Status UNLOADED wymaga daty rozładunku — to data realizacji usługi';
+  end if;
+
+  if new.actual_delivery_at is distinct from old.actual_delivery_at then
+    if auth.uid() is not null and is_hhl() is not true
+       and exists (select 1 from invoice_lines where load_id = old.id) then
+      raise exception 'Data rozładunku transportu na fakturze jest zamrożona — zmiana wyłącznie przez HHL';
+    end if;
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values ((select id from app_users where auth_id = auth.uid()),
+            'LOAD_DELIVERY_DATE_CHANGE', 'loads', old.id::text,
+            jsonb_build_object('actual_delivery_at', old.actual_delivery_at),
+            jsonb_build_object('actual_delivery_at', new.actual_delivery_at));
+  end if;
+
+  if auth.uid() is null then return new; end if;
+
+  v_ctx := coalesce(current_setting('tower.cancel_ctx', true), '');
+  if (
+    (new.status is distinct from old.status or new.actual_delivery_at is distinct from old.actual_delivery_at)
+    and current_setting('tower.status_ctx', true) is distinct from 'on'
+    and v_ctx not in ('MANUAL', 'IMPORT')
+  ) then
+    raise exception 'Status i datę rozładunku zmienia wyłącznie load_status_set albo automat'
+      using errcode = '42501';
+  end if;
+
+  select coalesce(array_agg(n.key), '{}') into v_changed
+    from jsonb_each(to_jsonb(new)) n
+   where n.value is distinct from (to_jsonb(old) -> n.key);
+
+  if is_hhl() is true then
+    if new.carrier_order_no is distinct from old.carrier_order_no then
+      raise exception 'Numer zlecenia przewoźnika wpisuje wyłącznie przewoźnik';
+    end if;
+    if (
+      (new.plan_load_date, new.plan_load_from, new.plan_load_to,
+       new.plan_delivery_date, new.plan_delivery_from, new.plan_delivery_to)
+      is not distinct from
+      (old.plan_load_date, old.plan_load_from, old.plan_load_to,
+       old.plan_delivery_date, old.plan_delivery_from, old.plan_delivery_to)
+      or current_setting('tower.import_ctx', true) = 'on'
+      or current_app_role() = 'HHL_ADMIN'
+    ) is not true then
+      raise exception 'Daty i godziny załadunku i rozładunku zmienia wyłącznie KSH Użytkownik (G-20)'
+        using errcode = '42501';
+    end if;
+    return new;
+  end if;
+
+  if (current_org_kind() = 'CARRIER' and old.carrier_org_id = current_org_id()) is true then
+    select coalesce(array_agg(c), '{}') into v_bad from unnest(v_changed) c where c <> all (v_carrier);
+    if cardinality(v_bad) > 0 then
+      raise exception 'Przewoźnik nie może zmieniać: %', array_to_string(v_bad, ', ');
+    end if;
+    if new.status is distinct from old.status then
+      if new.status = 'CANCELLED' then
+        raise exception 'Anulować transport może wyłącznie HHL';
+      end if;
+      if old.status <> 'CANCELLED' and new.status < old.status then
+        /* Edycja faktury: usunięcie pozycji wraca INVOICED → READY_TO_INVOICE. */
+        if current_setting('tower.invoice_edit', true) = 'on'
+           and old.status = 'INVOICED'
+           and new.status = 'READY_TO_INVOICE' then
+          null;
+        else
+          raise exception 'Status nie może się cofnąć: % → %', old.status, new.status;
+        end if;
+      end if;
+    end if;
+    if new.sailing_id is distinct from old.sailing_id and old.status >= 'FERRY' then
+      raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL';
+    end if;
+    return new;
+  end if;
+
+  raise exception 'Brak uprawnień do zmiany transportu';
+end $$;
+
 create or replace function public.load_status_set(
   p_load uuid,
   p_status text,
