@@ -22,7 +22,7 @@ import { sampleDecisionsOf } from '../../lib/p6Source';
 import { issueTexts, type CardCtx } from '../risks/TodoCard';
 import { awizDeadline, awizMissing, awizState, dayLong, dmHm, hourWindow, warsawDay } from '../../lib/p7Awiz';
 import { activeLeg, driverPhoneView } from '../../lib/activeDriver';
-import { canFixAwizOf, pilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
+import { canFixAwizOf, pilotsOf, savePilotsOf, saveSetOf, symbolSpecOf, type SetDims } from '../../lib/p7Source';
 import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
 import { visibleDriverPhone } from '../../lib/permissions';
@@ -260,7 +260,8 @@ export function PanelOverview(p: Props) {
   const pilotsReq = !!spec?.pilots;
   const pilots = pilotsReq ? pilotsOf(load) : null;
   const r = load.resources;
-  const missing = awizMissing(r, pilotsReq, pilots);
+  /* F7 #355 B2: brak pilotów liczy się w awizacji dopiero, gdy okno „Uzupełnij awizację” może je zapisać (`AWIZ_PILOTS`) */
+  const missing = awizMissing(r, pilotsReq && !!savePilotsOf(), pilots);
   const awiz = awizState(r, missing);
   const deadline = awizDeadline(load.plannedLoadDate, nowIso, load.planDates?.loadFrom ?? null);
   const today = warsawDay(nowIso) === (load.plannedLoadDate ?? '').slice(0, 10);
@@ -475,13 +476,9 @@ export function PanelOverview(p: Props) {
         <summary>
           <span className="po-fold-t">
             <b>{phone ? pt(locale, 'p7_ph_plan') : pt(locale, 'p7_plan_h')}</b>
-            {/* P11 (e32): telefon — daty z rokiem bez dnia tygodnia, w drugiej linii ETA albo „Na placu od …” */}
+            {/* P11 (e32): daty z rokiem bez dnia tygodnia; ETA w ramce pod spodem (zawsze widoczna) */}
             <span className="po-fold-s">{` · ${ptp(locale, 'p7_plan_line', { a: dmy(load.plannedLoadDate), b: dmy(load.plannedDeliverDate) })}`}</span>
-            {phone ? (
-              <span className="po-fold-s2" data-plan-eta>
-                {siteSincePh ? ptp(locale, 'p7_ph_site', { v: dmHm(siteSincePh) }) : ptp(locale, 'p7_ph_eta', { v: etaShort })}
-              </span>
-            ) : null}
+
           </span>
           <span className="po-fold-i" aria-hidden="true">▾</span>
         </summary>

@@ -151,3 +151,17 @@ describe('Historia — zapis pilotów (#357)', () => {
     expect(r.head).toBe('Piloci w awizacji zapisani');
   });
 });
+
+describe('Harmonogram › Dokumenty przy zezwoleniu firmowym (F7 #355 B1)', () => {
+  it('ważne zezwolenie firmowe — „komplet” zamiast „–” przed dostawą; po terminie CMR — „brak”', async () => {
+    const { firmDocRows } = await import('../src/lib/permitKind');
+    const firm = [{ id: 'p', scope: 'FIRMA' as const, country: 'PL' as const, number: '13/GD/2026', validFrom: '2026-01-25', validTo: '2028-01-25', limits: null, pilot: null, appliesTo: 'Firma', loads: 1 }];
+    const L = { id: 'L', plannedLoadDate: '2026-10-21' };
+    expect(docCell(firmDocRows([], L, firm), [])).toEqual({ tone: 'ok' });
+    expect(docCell(firmDocRows([], L, []), [])).toEqual({ tone: 'none' });
+    const cmr = [{ loadId: 'L', category: 'CMR' as const, dueAt: '2026-10-25T10:00:00Z', state: 'OVERDUE' as const }];
+    expect(docCell(firmDocRows(cmr, L, firm), []).tone).toBe('bad');
+    const pl = [{ loadId: 'L', category: 'PERMIT_PL' as const, dueAt: null, state: 'MISSING' as const }];
+    expect(docCell(firmDocRows(pl, L, firm), [])).toEqual({ tone: 'ok' });
+  });
+});

@@ -24,8 +24,8 @@ const TABLE: Record<string, SymbolSpec> = {
 };
 
 export function demoSymbolSpec(load: Pick<Load, 'code' | 'dims'>): SymbolSpec | null {
-  const prefix = load.code.replace(/-\d.*$/, '').toUpperCase();
+  const prefix = (load.code ?? '').replace(/-\d.*$/, '').toUpperCase();
   if (prefix === 'K' || prefix === 'KR') return TABLE.KR;
-  if (prefix === 'P' || prefix === 'PL') return load.dims.widthM >= 3.2 ? TABLE['PL-B'] : TABLE['PL-A'];
+  if (prefix === 'P' || prefix === 'PL') return (load.dims?.widthM ?? 0) >= 3.2 ? TABLE['PL-B'] : TABLE['PL-A'];
   return TABLE[prefix] ?? null;
 }

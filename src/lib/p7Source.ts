@@ -64,9 +64,11 @@ export function setPilotsFromServer(rows: readonly { loadId: string; scope: stri
   if (!rows) { prodPilots = null; return; }
   const m = new Map<string, Pilots>();
   for (const r of rows) {
-    const side = r.scope === 'SE' ? 'se' : r.scope === 'PL' ? 'pl' : null;
-    if (!side) continue;
     const cur = m.get(r.loadId) ?? { pl: { plate: null, name: null }, se: { plate: null, name: null } };
+    /* starsze wpisy `load_escorts_set` (zakres PL_SE): pierwszy wolny — PL, potem SE (F7 #355 P3) */
+    const side = r.scope === 'SE' ? 'se' : r.scope === 'PL' ? 'pl'
+      : r.scope === 'PL_SE' ? (!cur.pl.plate ? 'pl' : !cur.se.plate ? 'se' : null) : null;
+    if (!side) continue;
     cur[side] = { plate: r.plate || null, name: r.name || null };
     m.set(r.loadId, cur);
   }

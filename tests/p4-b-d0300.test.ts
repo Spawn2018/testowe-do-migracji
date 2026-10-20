@@ -94,6 +94,7 @@ describe('B7 ops thresholds ETA', () => {
 });
 
 describe('B5 readyGaps piloci z symbolu', () => {
+  /* D-20261020-1118-01: pilot tylko przy symbolu z wymogiem (KR, PL-B) — przykład na KR; SG bez pilota mimo wpisu w zezwoleniu */
   it('plPilotsRequired > 0 bez tablicy → PILOTS', () => {
     const docs: Document[] = [{
       id: 'd1', loadId: 'l1', category: 'INSURANCE', fileName: 'p.pdf',
@@ -106,9 +107,12 @@ describe('B5 readyGaps piloci z symbolu', () => {
         plPilotsRequired: 1, plOver: [], sePath: 'NONE', seNotes: [],
       },
       permitFits: true,
+      code: 'KR-01',
       resources: { ...baseLoad().resources, escort: false, escortPlate: null },
     }), docs);
     expect(gaps.some((g) => g.kind === 'PILOTS')).toBe(true);
+    const sg = computeReadyGaps(baseLoad({ code: 'SG-01', resources: { ...baseLoad().resources, escort: true, escortPlate: null } }), docs);
+    expect(sg.some((g) => g.kind === 'PILOTS')).toBe(false);
   });
 });
 

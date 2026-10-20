@@ -193,7 +193,15 @@ export function StatusAxisTab({
             <div className="sax-gh">
               <span>{t(locale, `p4b_g_${key}`)}</span>
               {foldable ? (
-                <button type="button" className="sax-more" aria-expanded={isOpen} data-axis-fold={key} onClick={() => setOpen((v) => ({ ...v, [key]: !v[key] }))}>
+                <button
+                  type="button"
+                  className="sax-more"
+                  aria-expanded={isOpen}
+                  aria-controls={`sax-${key}-${load.id}`}
+                  aria-label={`${t(locale, isOpen ? 'p4b_g_collapse' : 'p4b_g_expand').replace(/\s*[▾▴]$/, '')} — ${t(locale, `p4b_g_${key}`)}`}
+                  data-axis-fold={key}
+                  onClick={() => setOpen((v) => ({ ...v, [key]: !v[key] }))}
+                >
                   {t(locale, isOpen ? 'p4b_g_collapse' : 'p4b_g_expand')}
                 </button>
               ) : (
@@ -201,7 +209,7 @@ export function StatusAxisTab({
               )}
             </div>
             {shown.length === 0 ? null : (
-              <ol className="sax-list">
+              <ol className="sax-list" id={`sax-${key}-${load.id}`}>
                 {shown.map((r) => {
                   const sub0 = rowSub(r, load, geofences, hits, phone, locale, readyGaps, settle);
                   /* bez powtórzenia nazwy („Na promie · Na promie”) */

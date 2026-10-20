@@ -64,7 +64,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   const firmPermit = firm ? firmPermitFor(load, permitsOf([load])) : null;
   const reqCats = firm ? REQ_FIRM : REQ;
   /* ten sam odczyt co strona Dokumenty (baza); w demo — wartości startowe; w produkcji bez odczytu — bez terminów */
-  const cached = useDocReqCache(docs.length);
+  const cached = useDocReqCache(`${docs.length}|${load.id}|${load.status}`);
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
   const reqs = cached?.reqs ?? docRequirementsStart();
   const rows = useMemo(
@@ -163,7 +163,7 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
         <div className="pd-act">
           {ok ? <span className="fin-tag go">{ft(locale, 'p5_pd_auto')}</span>
             : !file && canUpload ? <button type="button" className="btn ghost" data-pd-upload="PERMIT_FIRM" onClick={() => setUpload(REQ)}>{ft(locale, 'p5_pd_upload')}</button>
-              : !file ? <span className="fin-tag plain">HHL</span> : null}
+              : !file ? <span className="fin-tag plain">SCX</span> : null}
         </div>
       </li>
     );

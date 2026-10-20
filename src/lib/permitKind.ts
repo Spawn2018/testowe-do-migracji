@@ -9,7 +9,8 @@ import { symbolSpecOf } from './p7Source';
 
 /** Transport z zezwoleniem firmowym (tabela symboli); bez symbolu w tabeli — jak dotąd (PL i SE). */
 export function firmPermitLoad(load: Load): boolean {
-  return symbolSpecOf(load)?.permit === 'FIRMA';
+  /* rodzaj z bazy (`loads.permit_kind`) ma pierwszeństwo — nie zależy od odczytu tabeli symboli (F7 #355 P2) */
+  return (load.permitKind ?? symbolSpecOf(load)?.permit) === 'FIRMA';
 }
 
 const ROUTE_PERMITS: ReadonlySet<DocCategory> = new Set<DocCategory>(['PERMIT_PL', 'PERMIT_SE']);
@@ -17,6 +18,18 @@ const ROUTE_PERMITS: ReadonlySet<DocCategory> = new Set<DocCategory>(['PERMIT_PL
 /** Przy zezwoleniu firmowym wiersze „Zezwolenie PL / SE” nie należą do transportu. */
 export function withoutRoutePermits<T extends { category: DocCategory }>(rows: readonly T[], firm: boolean): T[] {
   return firm ? rows.filter((r) => !ROUTE_PERMITS.has(r.category)) : [...rows];
+}
+
+/**
+ * Wiersze stanu dokumentów transportu z zezwoleniem firmowym (Harmonogram › Dokumenty, F7 #355 B1):
+ * bez „zezwolenie PL / SE”; ważne zezwolenie firmowe liczy się jako dokument w porządku (bez „–” przed dostawą).
+ */
+export function firmDocRows<T extends { loadId: string; category: DocCategory; dueAt: string | null; state: 'OK' | 'MISSING' | 'OVERDUE' }>(
+  rows: readonly T[], load: Pick<Load, 'id' | 'plannedLoadDate'>, permits: readonly PermitView[] | null,
+): (T | { loadId: string; category: DocCategory; dueAt: null; state: 'OK' })[] {
+  const out: (T | { loadId: string; category: DocCategory; dueAt: null; state: 'OK' })[] = withoutRoutePermits(rows, true);
+  if (firmPermitFor(load, permits)) out.push({ loadId: load.id, category: 'PERMIT_PL', dueAt: null, state: 'OK' });
+  return out;
 }
 
 /** Zezwolenie firmowe ważne w dniu załadunku (najdłużej ważne pierwsze); null — brak. */
