@@ -69,6 +69,7 @@ begin
   update notifications n
      set read_at = coalesce(n.read_at, now())
    where n.read_at is null
+     and n.channel = 'IN_APP'
      and n.template = 'RISK_OPEN'
      and n.dedup_key like 'risk:RISK_OPEN:%'
      and exists (

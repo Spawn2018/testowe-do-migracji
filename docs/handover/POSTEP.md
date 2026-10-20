@@ -3669,3 +3669,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: **#374** (Spawn2018, `dla-cursora`, PILNE w tytule) — wpisane: PLAN §3/§4/§8, dopisek `D-20261020-2355-01.md`. #365/#359/#358/#324/#323/#322/#320 — w planie. Bez etykiety `pilne`.
 - Scalanie: F7 00:15 na #375 — kolejność: najpierw #370 (0243), potem #371, #375→0244. #370 F7 gotowe (`c13251e`) → merge `b44660c7`. #371 F7 → merge `a6e217a5`. #317/#259 konflikt.
 - Bieżąca: **HOTFIX #374** — rebase na main, migracja **0244**; asercja money `::text` → `true`; money **178**. Czekam na CI i F7.
+
+## 2026-10-21 00:50 — HOTFIX #374: F7 drobne (PR #375)
+
+- Skrzynka: #374 nadal otwarte (PILNE); reszta w planie, bez `pilne`.
+- Scalanie: CI na `ed388785` zielone (db/unit/visual). Brak „F7: gotowe” po head — drobne F7 w tym kroku. #317/#259 bez F7 po ostatnim commicie / konflikt.
+- Bieżąca: **HOTFIX #374** — `channel = 'IN_APP'` przy oznaczaniu dzwonków; money +1 asercja „wznowienie bez nowego RISK_OPEN”; money **179**. Push → czekam na CI i F7.

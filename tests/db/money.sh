@@ -322,9 +322,11 @@ chk "system: ryzyko transportu bierze projekt z transportu"             "$(Q "se
 sys "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')"
 FLICK=$(Q "select id from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")
 sys "update risk_signals set resolved_at = now() - interval '5 minutes' where id='$FLICK'"
+N_FLICK=$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$FLICK'")
 chk "#374: wznowienie w 60 min → false (bez nowego wiersza)"            "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker','{}','SOURCE_DOWN:FLICKER_TEST')")" f
 chk "#374: ten sam id znów otwarty"                                     "$(Q "select (id='$FLICK' and resolved_at is null)::text from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' order by detected_at desc limit 1")" true
 chk "#374: bez drugiego otwartego wiersza"                              "$(Q "select count(*) from risk_signals where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null")" 1
+chk "#374: wznowienie bez nowego RISK_OPEN"                             "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$FLICK'")" "$N_FLICK"
 sys "update risk_signals set resolved_at = now() - interval '90 minutes' where dedup_key='SOURCE_DOWN:FLICKER_TEST'"
 chk "#374: po 60 min → nowy wiersz (true)"                              "$(Q "select raise_integration_risk('$P',null,'JOB_FAILURE','MEDIUM','Źródło niedostępne: test flicker 2','{}','SOURCE_DOWN:FLICKER_TEST')")" t
 sys "update risk_signals set resolved_at = now() where dedup_key='SOURCE_DOWN:FLICKER_TEST' and resolved_at is null"
