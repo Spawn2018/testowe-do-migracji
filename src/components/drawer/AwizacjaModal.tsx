@@ -49,6 +49,8 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const pushToast = useTowerStore((s) => s.pushToast);
 
   const orderSide = editableOrderSide(role);
+  /* D-20261020-1501-01 (15:48): Administrator HHL wpisuje w awizacji także „Nr zlecenia SCX” (jak SCX) */
+  const carrierEdit = orderSide === 'CARRIER' || (role === 'HHL' && canFixAwizOf(role));
   const nowIso = getNowIso();
   const curSailing = sailings.find((x) => x.id === load.sailingId);
   const account = accountRole(role);
@@ -159,7 +161,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
     if (pilotsOn && savePilots) savePilots(convoy.length ? convoy.map((l) => l.code) : [load.code], pil);
 
-    if (orderSide === 'CARRIER') {
+    if (carrierEdit) {
       const v = carrierOrder.trim() || null;
       if (v !== (load.carrierOrderNo ?? null)) setOrderNo(load.id, 'CARRIER', v);
     }
@@ -374,7 +376,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <div className="am-2">
               <label className="form-field am-f">
                 <span>{pt(locale, 'p7_m_scx_no')}</span>
-                {orderSide === 'CARRIER' ? (
+                {carrierEdit ? (
                   <input className={`input mono${carrierOrder.trim() ? '' : ' am-need'}`} value={carrierOrder} onChange={(e) => setCarrierOrder(e.target.value)} autoComplete="off" />
                 ) : (
                   <span className="am-ro mono">{load.carrierOrderNo || '—'}</span>

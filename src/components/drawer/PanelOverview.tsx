@@ -627,7 +627,7 @@ export function PanelOverview(p: Props) {
             </dd>
             <dt>SCX</dt>
             <dd data-order="scx">
-              {orderSide === 'CARRIER' ? (
+              {orderSide === 'CARRIER' || (role === 'HHL' && canFixAwizOf(role)) ? (
                 <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} locale={locale} />
               ) : scxNo ? <b className="mono">{scxNo}</b> : <><span className="po-miss">{pt(locale, 'p7_num_missing')}</span><span className="po-muted">{` · ${pt(locale, 'p7_num_by_scx')}`}</span></>}
             </dd>
