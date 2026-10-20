@@ -799,6 +799,7 @@ err "SCX nie wstawia bezpośrednio do load_escorts" $SCX "insert into load_escor
 val "SCX: zezwolenie z 2 pilotami powiązane" $SCX "select (load_permit_save('$LE','PL','PL/E34',current_date,current_date+30,null,null,null,null,2) is not null)::text" true commit
 val "stan: wymagane 2, awizowane 0, brak 2" $KSH "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/0/2"
 chk "A9: brak pilotów → PILOTS w awiz_missing (blokuje Gotowy; bez RES:ESCORT)" "$(Q "select exists(select 1 from jsonb_array_elements(awiz_missing('$LE')) g where g->>'kind'='PILOTS')")" t
+chk "A9: brak pilotów w oknie → alarm L3_AWIZ (F7 runda 2)" "$(Q "select (l3_scan() >= 1)::text")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$LE' and resolved_at is null")" "true/1"
 err "KSH nie awizuje pilotów" $KSH "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 err "inny przewoźnik nie awizuje pilotów cudzego transportu" 11111111-0000-0000-0000-00000000000b "select load_escorts_set('$LE','[]')" "HHL albo przewoźnik transportu"
@@ -812,6 +813,8 @@ chk "zapis: 2 wiersze, loads.escort_vehicles = 2, audit_log ESCORTS_SET" "$(Q "s
 val "KSH widzi pilotów transportu (tylko odczyt)" $KSH "select count(*) from load_escorts where load_id='$LE'" 2
 val "stan: wymagane 2, awizowane 2, brak 0" $SCX "select required||'/'||assigned||'/'||missing from load_escort_status() where load_id='$LE'" "2/2/0"
 chk "A9: piloci uzupełnieni → brak PILOTS w awiz_missing" "$(Q "select exists(select 1 from jsonb_array_elements(awiz_missing('$LE')) g where g->>'kind'='PILOTS')")" f
+$PSQL -c "select l3_scan()" >/dev/null
+chk "A9: po pilotach → alarm L3_AWIZ zamknięty" "$(Q "select count(*) from risk_signals where dedup_key='l3:NO_AWIZACJA:$LE' and resolved_at is null")" 0
 val "HHL zmienia listę na 1 pilota (zastąpienie, audit_log ze starą listą)" $HHL "select load_escorts_set('$LE','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 12345\"}]')" 1 commit
 chk "po zmianie: 1 wiersz, escort_vehicles 1, stara lista w audit_log (2 pozycje)" "$(Q "select count(*) from load_escorts where load_id='$LE'")/$(Q "select escort_vehicles from loads where id='$LE'")/$(Q "select jsonb_array_length(old_value) from audit_log where action='ESCORTS_SET' and entity_id='$LE' order by id desc limit 1")" "1/1/2"
 $PSQL -c "update loads set status='CANCELLED' where id='$LE'" >/dev/null 2>&1

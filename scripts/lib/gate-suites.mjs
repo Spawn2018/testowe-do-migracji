@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
   nullguard: 662, // A9: load_ready_gaps + asercje bramy (CI 662)
-  i2: 550, // A3: +1 err HHL_OPS; A9: I-21/III-4 → l3_scan / awiz_missing (liczba asercji bez zmian)
+  i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 46,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 58, // A9 + F7: UPLOAD_CMR kept_open, POLICY_SCX bez carrier, EXPIRED nietknięty; cron via to_regclass shell
+  e25: 67, // F7 runda 2: CARRIER, EXPIRED×2, telefon SE=1, Gotowy, CMR SCX, reopen, RES:*, P8
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
 };

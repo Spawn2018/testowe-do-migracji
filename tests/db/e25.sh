@@ -227,7 +227,55 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_l
 sval "A9: bez POLICY_SCX gdy brak carrier" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a902')) g
    where g->>'kind'='POLICY_SCX')" f
-sval "A3: EXPIRED DOC_MISSING nietknięty (B1)" "select count(*) from decisions where type_code='DOC_MISSING' and status='EXPIRED' and resolution_code='A3_STALE_REQ'" 0
+sval "A9: CARRIER gdy brak przewoźnika (F7 P3)" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a902')) g
+   where g->>'kind'='CARRIER')" t
+# F7 P8: EXPIRED — wstaw, puść zamknięcie A3 (tylko NEW/ASSIGNED/SNOOZED), status zostaje.
+sys "delete from decisions where id in ('33333333-0000-0000-0000-00000000ex01','33333333-0000-0000-0000-00000000ex02')" >/dev/null
+sys "insert into decisions (id, project_id, type_code, title, status, expired_reason, detail)
+     values ('33333333-0000-0000-0000-00000000ex01','$P','DOC_MISSING','CMR po terminie','EXPIRED','termin minął',
+             '{\"category\":\"CMR\",\"event_key\":\"e25:exp:doc\"}'::jsonb),
+            ('33333333-0000-0000-0000-00000000ex02','$P','NO_AWIZACJA','brak awizacji','EXPIRED','termin minął',
+             '{\"event_key\":\"e25:exp:awiz\"}'::jsonb)" >/dev/null
+sys "update decisions d set status='RESOLVED', resolved_at=now(), resolution_code='A3_STALE_REQ', expired_reason=null, updated_at=now()
+     where d.type_code='DOC_MISSING' and d.status in ('NEW','ASSIGNED','SNOOZED')
+       and coalesce(d.detail->>'category','') in ('POD','SPEC','LASHING_PHOTO','PERMIT_SE','CMR')" >/dev/null
+sval "A3: EXPIRED DOC_MISSING nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ex01'" "EXPIRED|termin minął"
+sval "A3: EXPIRED NO_AWIZACJA nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ex02'" "EXPIRED|termin minął"
+sval "A9: brak telefonu SE → dokładnie 1 pozycja AWIZ" "select jsonb_array_length(g->'items') from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ'" 1
+# Komplet → Gotowy: uzupełnij braki a901 (telefon SE, rejs, polisa); PERMIT wyłączony w teście.
+sys "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at)
+     values ('33333333-0000-0000-0000-00000000s901','$P','55555555-0000-0000-0000-000000000001',
+             '2026-10-21 20:00:00+00','2026-10-22 08:00:00+00')
+     on conflict (id) do nothing" >/dev/null
+sys "insert into insurance_policies (org_id, policy_no, insurer, valid_from, valid_until, approval_status)
+     select '$SCXO', 'POL-E25-A901', 'Test', '2026-01-01', '2027-12-31', 'APPROVED'
+     where not exists (
+       select 1 from insurance_policies where org_id='$SCXO' and approval_status='APPROVED'
+         and valid_from<='2026-10-20' and valid_until>='2026-10-20')" >/dev/null
+sys "update loads set driver_delivery_phone='0700111222', sailing_id='33333333-0000-0000-0000-00000000s901'
+     where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+sval "A9: po komplecie awiz_missing puste" "select coalesce(jsonb_array_length(awiz_missing('33333333-0000-0000-0000-00000000a901')),0)" 0
+# Wyzwalacz a9_trg_loads_ready ustawia READY przy UPDATE; a9_try_ready potem = 0 zmian.
+sval "A9: komplet → Gotowy sam" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
+# CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date)
+     values ('33333333-0000-0000-0000-00000000a903','$P','$SCXO','123456/2026/A903','DELIVERED','2026-10-10','2026-10-15')
+     on conflict (id) do update set status='DELIVERED', carrier_org_id=excluded.carrier_org_id" >/dev/null
+sys "select a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903')" >/dev/null
+val "A3: CMR_UPLOAD widoczna dla SCX" $SCX "select count(*) from decisions where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 1
+sys "update decisions set status='EXPIRED', expired_reason='termin minął', resolved_at=now()
+     where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD'" >/dev/null
+sval "A3: reopen EXPIRED CMR_UPLOAD → NEW bez expired_reason" "select (a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903') is not null)::text||'|'||(
+  select status::text||'|'||(expired_reason is null)::text from decisions
+   where load_id='33333333-0000-0000-0000-00000000a903' and type_code='CMR_UPLOAD'
+   order by updated_at desc limit 1)" "true|NEW|true"
+sval "A3: drugi a3_ensure na otwartej = null (0 zmian)" "select a3_ensure_cmr_upload('33333333-0000-0000-0000-00000000a903') is null" t
+sval "A9: brak otwartych RES:* (Do zrobienia spójne)" "select count(*) from decisions
+  where status in ('NEW','ASSIGNED','SNOOZED')
+    and (coalesce(detail->>'event_key','') like 'RES:%' or coalesce(detail->>'event_key','') like 'l3:RES:%')" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

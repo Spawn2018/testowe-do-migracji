@@ -93,8 +93,8 @@ create or replace function wf_action(p_wf workflows, p_run workflow_runs, p_act 
 language plpgsql security definer set search_path = public as $$
 declare v_n int; v_client uuid; v_carrier uuid; v_project uuid; v_code text := coalesce(p_ctx #>> '{load,code}', '');
         v_sms text := nullif(public.load_sms_code(p_run.load_id), '—');
-        /* F7 P2: tytuł ryzyka/decyzji dla CARRIER = kod transportu, nie order_no (KSH). */
-        v_head text := coalesce(v_sms, nullif(v_code, ''));
+        /* F7 P2 runda 2: tylko kod SMS — bez order_no (tytuł WSZYSCY/CARRIER). Bez kodu = bez dopisku (jak l3_headed). */
+        v_head text := v_sms;
         v_show text;
         v_ev text := wf_event_key(p_run); v_aud text; v_id uuid; v_st text; v_crit boolean; r record; v_stats jsonb := '{}'::jsonb;
 begin
@@ -124,7 +124,7 @@ begin
       return jsonb_build_object('type', 'risk', 'kind', p_act ->> 'kind', 'status', 'JUZ_OTWARTE');
     end if;
     perform raise_risk(p_run.load_id, (p_act ->> 'kind')::risk_kind, (p_act ->> 'severity')::risk_severity,
-                       coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_head,
+                       public.l3_headed(v_head, coalesce(nullif(p_act ->> 'title', ''), p_wf.name)),
                        jsonb_build_object('rule', p_wf.name, 'rule_code', p_wf.code, 'event', p_ctx ->> 'event_type',
                                           'title_key', 'rk_workflow',
                                           'params', jsonb_build_object('rule', p_wf.name, 'code', v_head,
@@ -138,7 +138,7 @@ begin
       return jsonb_build_object('type', 'decision', 'decision_type', p_act ->> 'decision_type', 'status', 'JUZ_OTWARTA');
     end if;
     v_id := decision_open_from_event(v_project, p_act ->> 'decision_type', left('WF:' || v_ev || ':' || (p_act ->> 'decision_type'), 200),
-                                     coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_head,
+                                     public.l3_headed(v_head, coalesce(nullif(p_act ->> 'title', ''), p_wf.name)),
                                      jsonb_build_object('rule', p_wf.name, 'rule_id', p_wf.id, 'event', p_ctx ->> 'event_type'),
                                      p_run.load_id, null);
     return jsonb_build_object('type', 'decision', 'decision_type', p_act ->> 'decision_type', 'decision_id', v_id);
@@ -528,8 +528,8 @@ values (
   'dec_type_CMR_UPLOAD',
   'CARRIER',
   '[{"code":"UPLOAD_CMR","label_key":"dec_opt_UPLOAD_CMR","requires_comment":false,"effect":"OPEN_DOC"}]'::jsonb,
-  /* F7 P9: termin z Opcji (doc_requirements.offset_hours CMR), nie 24 na sztywno. */
-  (select coalesce(max(offset_hours), 24) from doc_requirements where category = 'CMR' and required is true),
+  /* F7 P9 / D runda 2: offset z Opcji; minimum 1 h (0 = „teraz” odpada). */
+  (select greatest(coalesce(max(offset_hours), 24), 1) from doc_requirements where category = 'CMR' and required is true),
   'po Dostarczone bez CMR z podpisem',
   'WARNING',
   36
@@ -670,7 +670,7 @@ begin
   /* F7 P1: nigdy left(id,8) — l3_headed + load_sms_code. */
   v_code := nullif(public.load_sms_code(p_load), '—');
   v_title := public.l3_headed(v_code, 'Wgraj CMR');
-  select coalesce(max(offset_hours), 24) into v_off
+  select greatest(coalesce(max(offset_hours), 24), 1) into v_off
     from doc_requirements
    where project_id = v_load.project_id and category = 'CMR' and required is true;
   select id, status::text into v_id, v_st
@@ -678,8 +678,9 @@ begin
    where detail->>'event_key' = v_key
    order by created_at desc
    limit 1;
+  /* F7 D runda 2: już otwarta — null (nie licz jako opened w backfillu). */
   if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
-    return v_id;
+    return null;
   end if;
   /* F7 B1: EXPIRED/RESOLVED → NEW z expired_reason = null (CHECK). */
   if v_id is not null and v_st in ('RESOLVED', 'EXPIRED') then
@@ -810,7 +811,9 @@ declare
   n_open int := 0;
   n_close int := 0;
   n_batch int := 0;
-  v_title_re text := '(\yPOD\y|\ySPEC\y|\yLASHING\y|mocowan|zezwolenie SE|\yCMR\y)';
+  /* F7 D runda 2: POD/SPEC/CMR z wielkością liter (~); LASHING/mocowan/zezwolenie — ~*. */
+  v_title_re_cs text := '(\yPOD\y|\ySPEC\y|\yCMR\y)';
+  v_title_re_ci text := '(\yLASHING\y|mocowan|zezwolenie SE)';
 begin
   perform set_config('tower.bulk_quiet', 'on', true);
 
@@ -840,7 +843,8 @@ begin
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* v_title_re
+       or coalesce(d.title, '') ~ v_title_re_cs
+       or coalesce(d.title, '') ~* v_title_re_ci
        or (l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'))
      );
 
@@ -856,7 +860,8 @@ begin
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* v_title_re
+       or coalesce(d.title, '') ~ v_title_re_cs
+       or coalesce(d.title, '') ~* v_title_re_ci
        or l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED')
      );
   get diagnostics n_batch = row_count;
@@ -873,7 +878,8 @@ begin
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* v_title_re
+       or coalesce(d.title, '') ~ v_title_re_cs
+       or coalesce(d.title, '') ~* v_title_re_ci
      );
   get diagnostics n_batch = row_count;
   n_close := n_close + n_batch;
@@ -892,7 +898,8 @@ begin
      and resolved_at is null
      and (
        coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(title, '') ~* v_title_re
+       or coalesce(title, '') ~ v_title_re_cs
+       or coalesce(title, '') ~* v_title_re_ci
      );
 
   update risk_signals
@@ -901,7 +908,8 @@ begin
      and resolved_at is null
      and (
        coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(title, '') ~* v_title_re
+       or coalesce(title, '') ~ v_title_re_cs
+       or coalesce(title, '') ~* v_title_re_ci
      );
 
   /* Limit: tylko decyzje (F7 D) — ryzyka poza limitem 80. */
@@ -948,6 +956,13 @@ begin
   end if;
   if l.status::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING') then
     return '[]'::jsonb;
+  end if;
+
+  /* F7 P3 runda 2: bez przewoźnika → CARRIER (nie READY z pustą listą). */
+  if l.carrier_org_id is null then
+    gaps := gaps || jsonb_build_array(jsonb_build_object(
+      'kind', 'CARRIER', 'items', jsonb_build_array('Brak przewoźnika'), 'who', 'HHL'
+    ));
   end if;
 
   if coalesce(btrim(l.driver_name), '') = '' then awiz := array_append(awiz, 'kierowca'); end if;
@@ -1031,7 +1046,7 @@ end $$;
 
 revoke all on function public.awiz_missing(uuid) from public, anon, authenticated;
 comment on function public.awiz_missing(uuid) is
-  'A9: braki do Gotowy (AWIZ/SAILING/PILOTS/ORDER_*/POLICY_SCX/PERMIT). Mapowanie D-20261017-1715-01.';
+  'A9: braki do Gotowy (CARRIER/AWIZ/SAILING/PILOTS/ORDER_*/POLICY_SCX/PERMIT). Mapowanie D-20261017-1715-01.';
 
 create or replace function public.load_ready_gaps()
 returns table (load_id uuid, gaps jsonb)
@@ -1127,6 +1142,29 @@ begin
   return new;
 end $$;
 revoke all on function public.a9_trg_loads_ready() from public, anon, authenticated;
+
+-- F7 P5 runda 2: wycisz kolejkę workflow przy jednorazowym READY.
+create or replace function public.wf_enqueue_status() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return null;
+  end if;
+  if new.status is not distinct from old.status then return null; end if;
+  insert into workflow_runs (workflow_id, load_id, status, attempts, next_attempt_at, dedup_key, payload)
+  select w.id, new.id, 'QUEUED', 0, now(),
+         'wf:' || w.id || ':st:' || new.id || ':' || new.status || ':' || (extract(epoch from clock_timestamp()) * 1000)::bigint,
+         jsonb_build_object('event_type', 'STATUS_CHANGED', 'occurred_at', now(),
+                            'payload', jsonb_build_object('status', new.status, 'old_status', old.status))
+    from workflows w
+   where w.enabled and w.trigger_type = 'STATUS_CHANGED' and w.project_id = new.project_id
+  on conflict (dedup_key) where dedup_key is not null do nothing;
+  return null;
+exception when others then
+  raise warning 'wf_enqueue_status: %', sqlerrm;
+  return null;
+end $$;
+revoke all on function public.wf_enqueue_status() from public, anon, authenticated;
 
 -- F7 P5: wycisz LOAD_STATUS_CHANGED przy jednorazowym READY.
 create or replace function public.trg_load_status_matrix_notify() returns trigger
@@ -1234,9 +1272,10 @@ begin
     v_code := public.load_sms_code(r.id);
     v_anchor := l3_anchor(r.plan_load_date, r.plan_load_from);
     v_gaps := public.awiz_missing(r.id);
+    /* F7 B runda 2: brak pilotów też alarm awizacji (PLAN:841). */
     v_missing := exists (
       select 1 from jsonb_array_elements(v_gaps) g
-       where g ->> 'kind' = 'AWIZ'
+       where g ->> 'kind' in ('AWIZ', 'PILOTS')
     );
     v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
     v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');

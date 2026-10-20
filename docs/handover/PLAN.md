@@ -603,6 +603,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
   - KSH nie zmienia treści żadnej faktury i nie wystawia (`invoices_insert` bez `CLIENT`); tylko weryfikacja / akceptacja / spór.
   - `HHL_OPS` nie zmienia treści faktury SCX (może weryfikować jako odbiorca).
   - RPC `update_invoice(p_invoice, p_patch, p_lines, p_note)`: te same reguły co `register_invoice` (VAT, CMR C17, tolerancja 0); historia; przed akceptacją → `DO_WERYFIKACJI` + `INVOICE_UPDATED`; po akceptacji przez `HHL_ADMIN` → `INVOICE_CORRECTED`. Mutacja ekranu `bill.update`.
+  - **Uzupełnienie #346 (po #347):** `p_patch` = pełna treść nagłówka (nie częściowa; `null` = puste); `p_lines` jak `register_invoice`. Wystawca → `INVOICE_UPDATED` / po akceptacji `INVOICE_CORRECTED` do odbiorcy; `HHL_ADMIN` na fakturze SCX → `INVOICE_CORRECTED` do wystawcy, status bez zmian. `dispute_note` zostaje. Allowlista + `grant execute` do `authenticated`. Stary PDF = zastąpiony. Po wdrożeniu `INVOICE_EDIT: true` w `serverRules.ts`.
   - `guard_invoice_update` według tabeli ról; testy bramy `db` dla każdej roli i stanu.
 - **Z przeglądu #310 / #312 (P1–P2, decyzja koordynatora → A4):**
   - `load_status_set` przy ręcznym `READY_TO_INVOICE` ma wymagać CMR jak C17 (`c17_cmr_after_delivery`), nie dowolnego CMR — dziś rozjazd z automatem C17.

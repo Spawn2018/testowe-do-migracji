@@ -3354,3 +3354,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Ten krok (F7 niegotowe + brama): B1 bez ruszania EXPIRED; P1 `l3_headed`/`load_sms_code`; P2 tytuł WF = kod; P3 `dates_ctx` + POLICY_SCX tylko z carrier; P4 UPLOAD_CMR = `kept_open`; P5 `tower.bulk_quiet`; P6 zamknięcie RES:*; P9 `offset_hours`; D `\y…\y`; e25 cron jak insurance.sh; e25 58.
 - Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
 
+## 2026-10-20 03:20 — #345 F7 niegotowe runda 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Uzupełnienie #346 (kontrakt `update_invoice`) — do A4, nie przerywa.
+- Scalanie: CI na `03d428d1` zielone (unit/visual/db); F7: niegotowe runda 2.
+- Poprawki w 0236 + testy: B alarm pilotów (`AWIZ`+`PILOTS`); P2 tylko `load_sms_code`; P3 luka `CARRIER`; P5 `wf_enqueue_status` + `bulk_quiet`; P8 e25 (EXPIRED, Gotowy, CMR SCX, reopen); D POD/`~` + min 1 h + `n_open` bez już otwartych. i2 552, e25 67.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
