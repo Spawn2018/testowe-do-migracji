@@ -3524,3 +3524,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Skrzynka: #353 zamkniete (D-1118 zrobione). #358/#359/#356/#324/#323/#322/#320 otwarte, w planie; bez etykiety `pilne` ó bez przerwania.
 - Scalanie: #357 ó F7 po `374e62c`, CI zielone (db/unit/visual) õ merge `b21524b8`. #360 wyglad bez F7. #317/#259 konflikt.
 - Biezaca **#356** (`pakiet/import-godziny-cicho`): migracja 0240 ó `ops_thresholds.import_quiet_hours=1`, `trg_plan_dates_notify` szanuje `tower.bulk_quiet`, `import_schedule` ciche pierwsze uzupelnienie godzin; i2 584 (+12). Wylaczenie: `admin_ops_threshold_set('import_quiet_hours', 0)`.
+
+## 2026-10-20 14:45 ? #356 fix CI db (i2 sk?adnia, dec6 22 progi)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 ? w planie; bez `pilne`.
+- Scalanie: #361 bez F7; #360 visual zielone, bez F7; #317 konflikt z main (koordynator: wci?gnij main ? po zako?czeniu CI #361 / G-15).
+- Fix #356: `i2.sh` ? zagnie?d?one cudzys?owy w IQH ? WYNIK brak; wzorzec jak IMP18T. `dec6.sh` ? 22 progi (+`import_quiet_hours`).
