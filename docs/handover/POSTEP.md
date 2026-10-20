@@ -3347,3 +3347,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #347 (`686064b7`, F7 po `f85afdd`) — wygląd edycji faktury. #345 bez F7 (para w toku). #317 i #259 konflikt z `main`.
 - Brama `db` na `41348842` czerwona: i2 8× `detect_resource_deadlines` (A9 = no-op) + e25 `cron.job` bez pg_cron w CI. Poprawka: i2 I-21 → `l3_scan`, III-4 → `awiz_missing` PILOTS; e25 `to_regclass('cron.job')`; cron `tower-l3` w 0236; nullguard 662.
 
+## 2026-10-20 02:45 — A3+A9 F7 B1/P1–P9 + e25 cron (shell)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 bez „F7: gotowe” po `a3a3b652`. `db` czerwone (e25 cron: CASE WHEN i `cron.job` — parse w CI). Visual zielony. #317/#259 konflikt.
+- Ten krok (F7 niegotowe + brama): B1 bez ruszania EXPIRED; P1 `l3_headed`/`load_sms_code`; P2 tytuł WF = kod; P3 `dates_ctx` + POLICY_SCX tylko z carrier; P4 UPLOAD_CMR = `kept_open`; P5 `tower.bulk_quiet`; P6 zamknięcie RES:*; P9 `offset_hours`; D `\y…\y`; e25 cron jak insurance.sh; e25 58.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+

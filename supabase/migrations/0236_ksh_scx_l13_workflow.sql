@@ -36,6 +36,10 @@ begin
     'status', d.status, 'event', 'OPEN', 'severity', v_sev,
     'bundle_key', v_bundle, 'level', case when v_kind = 'critical' then 'critical' else 'info' end
   );
+  -- F7 P5: jednorazowe A3/A9 bez e-maila L-13.
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return;
+  end if;
   for r in
     select distinct u.id as user_id, u.email::text as recipient, u.locale, o.kind as org_kind
       from app_users u
@@ -89,6 +93,8 @@ create or replace function wf_action(p_wf workflows, p_run workflow_runs, p_act 
 language plpgsql security definer set search_path = public as $$
 declare v_n int; v_client uuid; v_carrier uuid; v_project uuid; v_code text := coalesce(p_ctx #>> '{load,code}', '');
         v_sms text := nullif(public.load_sms_code(p_run.load_id), '—');
+        /* F7 P2: tytuł ryzyka/decyzji dla CARRIER = kod transportu, nie order_no (KSH). */
+        v_head text := coalesce(v_sms, nullif(v_code, ''));
         v_show text;
         v_ev text := wf_event_key(p_run); v_aud text; v_id uuid; v_st text; v_crit boolean; r record; v_stats jsonb := '{}'::jsonb;
 begin
@@ -118,10 +124,10 @@ begin
       return jsonb_build_object('type', 'risk', 'kind', p_act ->> 'kind', 'status', 'JUZ_OTWARTE');
     end if;
     perform raise_risk(p_run.load_id, (p_act ->> 'kind')::risk_kind, (p_act ->> 'severity')::risk_severity,
-                       coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_code,
+                       coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_head,
                        jsonb_build_object('rule', p_wf.name, 'rule_code', p_wf.code, 'event', p_ctx ->> 'event_type',
                                           'title_key', 'rk_workflow',
-                                          'params', jsonb_build_object('rule', p_wf.name, 'code', v_code,
+                                          'params', jsonb_build_object('rule', p_wf.name, 'code', v_head,
                                                                        'title', coalesce(nullif(p_act ->> 'title', ''), p_wf.name))),
                        'WF:' || p_wf.id || ':' || p_run.load_id);
     return jsonb_build_object('type', 'risk', 'kind', p_act ->> 'kind');
@@ -132,7 +138,7 @@ begin
       return jsonb_build_object('type', 'decision', 'decision_type', p_act ->> 'decision_type', 'status', 'JUZ_OTWARTA');
     end if;
     v_id := decision_open_from_event(v_project, p_act ->> 'decision_type', left('WF:' || v_ev || ':' || (p_act ->> 'decision_type'), 200),
-                                     coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_code,
+                                     coalesce(nullif(p_act ->> 'title', ''), p_wf.name) || ' · ' || v_head,
                                      jsonb_build_object('rule', p_wf.name, 'rule_id', p_wf.id, 'event', p_ctx ->> 'event_type'),
                                      p_run.load_id, null);
     return jsonb_build_object('type', 'decision', 'decision_type', p_act ->> 'decision_type', 'decision_id', v_id);
@@ -522,7 +528,8 @@ values (
   'dec_type_CMR_UPLOAD',
   'CARRIER',
   '[{"code":"UPLOAD_CMR","label_key":"dec_opt_UPLOAD_CMR","requires_comment":false,"effect":"OPEN_DOC"}]'::jsonb,
-  24,
+  /* F7 P9: termin z Opcji (doc_requirements.offset_hours CMR), nie 24 na sztywno. */
+  (select coalesce(max(offset_hours), 24) from doc_requirements where category = 'CMR' and required is true),
   'po Dostarczone bez CMR z podpisem',
   'WARNING',
   36
@@ -535,6 +542,66 @@ on conflict (code) do update set
   due_note = excluded.due_note,
   severity_default = excluded.severity_default,
   active = true;
+
+-- F7 P4: UPLOAD_CMR tylko otwiera okno wgrywania — bez zamykania sprawy (zamyka C17).
+create or replace function decision_resolve(p_decision uuid, p_option text, p_note text default null)
+returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_me uuid; d decisions%rowtype; v_opt jsonb; v_need boolean;
+  v_role text;
+  v_fx jsonb;
+begin
+  if (current_app_user_id() is not null) is not true then
+    raise exception 'Rozstrzygnięcie — tylko wskazana firma albo administrator' using errcode = '42501';
+  end if;
+  select id into v_me from app_users where id = current_app_user_id() and active;
+  select * into d from decisions where id = p_decision for update;
+  if not found then raise exception 'Brak decyzji' using errcode = '22023'; end if;
+  if (d.status in ('NEW','ASSIGNED','SNOOZED')) is not true then
+    raise exception 'Decyzja już zamknięta' using errcode = '22023';
+  end if;
+  select decider_role into v_role from decision_types where code = d.type_code;
+  if (public.l2_may_resolve(v_role)) is not true then
+    raise exception 'Rozstrzygnięcie — tylko wskazana firma albo administrator' using errcode = '42501';
+  end if;
+  select o into v_opt
+    from decision_types t, jsonb_array_elements(t.options) o
+   where t.code = d.type_code and o->>'code' = p_option;
+  if v_opt is null then
+    raise exception 'Nieznana opcja %', p_option using errcode = '22023';
+  end if;
+  v_need := coalesce((v_opt->>'requires_comment')::boolean, false);
+  if v_need and length(coalesce(nullif(trim(p_note), ''), '')) < 3 then
+    raise exception 'Ta opcja wymaga komentarza' using errcode = '22023';
+  end if;
+  if d.type_code = 'DELIVERED_CHECK' then
+    return public.delivered_check_apply(d.id, p_option = 'DELIVERED_YES', p_note);
+  end if;
+  /* A3: klik „Wgraj CMR” nie zamyka — tylko ui_hint OPEN_DOC; C17 zamyka po pliku. */
+  if d.type_code = 'CMR_UPLOAD' and p_option = 'UPLOAD_CMR' then
+    v_fx := jsonb_build_object('ui_hint', 'OPEN_DOC', 'applied', false, 'kept_open', true);
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (p_decision, v_me, 'HINT',
+            jsonb_build_object('option', p_option, 'effect', 'OPEN_DOC', 'note', p_note, 'result', v_fx));
+    return v_fx;
+  end if;
+  update decisions set status = 'RESOLVED', resolved_at = now(), resolved_by = v_me,
+    resolution_code = p_option, resolution_note = nullif(trim(p_note), ''),
+    snooze_until = null, updated_at = now()
+   where id = p_decision;
+  v_fx := public.decision_apply_effect(p_decision, coalesce(v_opt->>'effect', 'ACCEPT'), p_option, p_note);
+  insert into decision_events (decision_id, actor_id, action, payload)
+  values (p_decision, v_me, 'RESOLVE',
+          jsonb_build_object('option', p_option, 'effect', v_opt->>'effect', 'note', p_note, 'result', v_fx));
+  insert into audit_log (user_id, action, entity, entity_id, new_value)
+  values (v_me, 'DECISION_RESOLVE', 'decisions', p_decision::text,
+          jsonb_build_object('option', p_option, 'effect', v_opt->>'effect', 'type', d.type_code, 'result', v_fx));
+  perform decision_notify(p_decision, 'RESOLVE');
+  return v_fx;
+end $$;
+revoke all on function decision_resolve(uuid, text, text) from public, anon;
+grant execute on function decision_resolve(uuid, text, text) to authenticated;
 
 create or replace function public.a3_resolve_cmr_upload(p_load uuid, p_via text default 'C17')
 returns int
@@ -579,8 +646,10 @@ as $$
 declare
   v_load loads%rowtype;
   v_code text;
+  v_title text;
   v_id uuid;
   v_st text;
+  v_off int;
   v_key text := 'cmr-upload:' || p_load::text;
 begin
   select * into v_load from loads where id = p_load;
@@ -598,7 +667,12 @@ begin
     perform public.a3_resolve_cmr_upload(p_load, 'C17');
     return null;
   end if;
-  v_code := coalesce(nullif(public.load_sms_code(p_load), '—'), left(p_load::text, 8));
+  /* F7 P1: nigdy left(id,8) — l3_headed + load_sms_code. */
+  v_code := nullif(public.load_sms_code(p_load), '—');
+  v_title := public.l3_headed(v_code, 'Wgraj CMR');
+  select coalesce(max(offset_hours), 24) into v_off
+    from doc_requirements
+   where project_id = v_load.project_id and category = 'CMR' and required is true;
   select id, status::text into v_id, v_st
     from decisions
    where detail->>'event_key' = v_key
@@ -607,23 +681,43 @@ begin
   if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
     return v_id;
   end if;
+  /* F7 B1: EXPIRED/RESOLVED → NEW z expired_reason = null (CHECK). */
   if v_id is not null and v_st in ('RESOLVED', 'EXPIRED') then
     update decisions
        set status = 'NEW',
            resolved_at = null,
            resolution_code = null,
-           title = v_code || ': Wgraj CMR',
+           expired_reason = null,
+           title = v_title,
+           due_at = now() + make_interval(hours => v_off),
            updated_at = now()
      where id = v_id;
     insert into decision_events (decision_id, actor_id, action, payload)
     values (v_id, null, 'OPEN', jsonb_build_object('type', 'CMR_UPLOAD', 'event_key', v_key, 'via', 'A3_REOPEN'));
     return v_id;
   end if;
+  /* F7 P5: jednorazowy przebieg — sprawa bez dzwonka i e-maila L-13. */
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    insert into decisions (project_id, type_code, title, detail, load_id, due_at)
+    values (
+      v_load.project_id, 'CMR_UPLOAD', v_title,
+      jsonb_build_object(
+        'event_key', v_key, 'category', 'CMR',
+        'params', jsonb_build_object('code', v_code),
+        'via', 'A3', 'opened_by', 'A3_BULK'
+      ),
+      p_load, now() + make_interval(hours => v_off)
+    )
+    returning id into v_id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (v_id, null, 'OPEN', jsonb_build_object('type', 'CMR_UPLOAD', 'event_key', v_key, 'via', 'A3_BULK'));
+    return v_id;
+  end if;
   v_id := public.decision_open_from_event(
     v_load.project_id,
     'CMR_UPLOAD',
     v_key,
-    v_code || ': Wgraj CMR',
+    v_title,
     jsonb_build_object(
       'category', 'CMR',
       'params', jsonb_build_object('code', v_code),
@@ -632,6 +726,15 @@ begin
     p_load,
     null
   );
+  /* F7 P9: due_at z offset_hours projektu (Opcje), nie sztywne 24. */
+  if v_id is not null then
+    update decisions
+       set due_at = now() + make_interval(hours => v_off),
+           title = v_title,
+           updated_at = now()
+     where id = v_id
+       and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+  end if;
   return v_id;
 end $$;
 revoke all on function public.a3_ensure_cmr_upload(uuid) from public, anon, authenticated;
@@ -699,13 +802,18 @@ end $$;
 revoke all on function public.c17_try_ready_to_invoice(uuid, jsonb) from public, anon, authenticated;
 
 -- Jednorazowo: otwórz CMR_UPLOAD dla Dostarczonych bez CMR; zamknij stare DOC_MISSING ze starego wymagania.
+-- F7 B1: nie ruszaj EXPIRED (zamknięta historia / CHECK expired_reason).
+-- F7 P5: bez powiadomień. F7 D: \y…\y przy POD/SPEC/CMR (nie polskie „pod…”).
 do $a3close$
 declare
   r record;
   n_open int := 0;
   n_close int := 0;
   n_batch int := 0;
+  v_title_re text := '(\yPOD\y|\ySPEC\y|\yLASHING\y|mocowan|zezwolenie SE|\yCMR\y)';
 begin
+  perform set_config('tower.bulk_quiet', 'on', true);
+
   for r in
     select id from loads
      where status = 'DELIVERED'
@@ -729,28 +837,27 @@ begin
     from decisions d
     left join loads l on l.id = d.load_id
    where d.type_code = 'DOC_MISSING'
-     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
+       or coalesce(d.title, '') ~* v_title_re
        or (l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'))
-       or d.status = 'EXPIRED'
      );
 
   update decisions d
      set status = 'RESOLVED',
          resolved_at = now(),
          resolution_code = 'A3_STALE_REQ',
+         expired_reason = null,
          updated_at = now()
     from loads l
    where d.load_id = l.id
      and d.type_code = 'DOC_MISSING'
-     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
+       or coalesce(d.title, '') ~* v_title_re
        or l.status in ('DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED')
-       or d.status = 'EXPIRED'
      );
   get diagnostics n_batch = row_count;
   n_close := n_close + n_batch;
@@ -759,14 +866,14 @@ begin
      set status = 'RESOLVED',
          resolved_at = now(),
          resolution_code = 'A3_STALE_REQ',
+         expired_reason = null,
          updated_at = now()
    where d.load_id is null
      and d.type_code = 'DOC_MISSING'
-     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED', 'EXPIRED')
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and (
        coalesce(d.detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(d.title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|\yCMR\y)'
-       or d.status = 'EXPIRED'
+       or coalesce(d.title, '') ~* v_title_re
      );
   get diagnostics n_batch = row_count;
   n_close := n_close + n_batch;
@@ -785,7 +892,7 @@ begin
      and resolved_at is null
      and (
        coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|CMR)'
+       or coalesce(title, '') ~* v_title_re
      );
 
   update risk_signals
@@ -794,9 +901,10 @@ begin
      and resolved_at is null
      and (
        coalesce(detail->>'category', '') in ('POD', 'SPEC', 'LASHING_PHOTO', 'PERMIT_SE', 'CMR')
-       or coalesce(title, '') ~* '(POD|SPEC|LASHING|mocowan|zezwolenie SE|CMR)'
+       or coalesce(title, '') ~* v_title_re
      );
 
+  /* Limit: tylko decyzje (F7 D) — ryzyka poza limitem 80. */
   if n_close > 80 then
     raise exception '0236-A3: zbyt wiele DOC_MISSING do zamknięcia (%) — przerwane', n_close;
   end if;
@@ -806,6 +914,8 @@ begin
     null, 'A3_CMR_UPLOAD_BACKFILL', 'decisions', 'batch',
     jsonb_build_object('opened_cmr_upload', n_open, 'closed_doc_missing', n_close, 'via', '0236-A3')
   );
+
+  perform set_config('tower.bulk_quiet', '', true);
 end
 $a3close$;
 
@@ -885,17 +995,19 @@ begin
     gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'ORDER_HHL', 'who', 'HHL'));
   end if;
 
-  /* Polisa SCX z insurance_policies (nie z documents.load_id) — koniec fałszywego POLICY_SCX. */
+  /* Polisa SCX z insurance_policies. F7 P3: bez POLICY_SCX gdy brak przewoźnika. */
   v_anchor := coalesce(l.plan_load_date, (now() at time zone 'Europe/Warsaw')::date);
-  v_has_policy := l.carrier_org_id is not null and exists (
-    select 1 from public.insurance_policies ip
-     where ip.org_id = l.carrier_org_id
-       and ip.approval_status = 'APPROVED'
-       and ip.valid_from <= v_anchor
-       and ip.valid_until >= v_anchor
-  );
-  if v_has_policy is not true then
-    gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'POLICY_SCX', 'who', 'SCX'));
+  if l.carrier_org_id is not null then
+    v_has_policy := exists (
+      select 1 from public.insurance_policies ip
+       where ip.org_id = l.carrier_org_id
+         and ip.approval_status = 'APPROVED'
+         and ip.valid_from <= v_anchor
+         and ip.valid_until >= v_anchor
+    );
+    if v_has_policy is not true then
+      gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'POLICY_SCX', 'who', 'SCX'));
+    end if;
   end if;
 
   /* Do A7: Trasa = brak PL lub SE; Firma podpięta w A7. */
@@ -971,6 +1083,10 @@ declare
   v_status public.load_status;
   v_gaps jsonb;
 begin
+  /* F7 P3: w dates_ctx (ksh_confirm_dates) nie zmieniaj statusu — guard_load_update / fałszywe AUTO_STATUS. */
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    return false;
+  end if;
   select status into v_status from public.loads where id = p_load for update;
   if not found then
     return false;
@@ -1003,10 +1119,36 @@ security definer
 set search_path = public
 as $$
 begin
+  /* F7 P3: daty KSH — bez przeliczania READY w tym samym UPDATE. */
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    return new;
+  end if;
   perform public.a9_try_ready(new.id);
   return new;
 end $$;
 revoke all on function public.a9_trg_loads_ready() from public, anon, authenticated;
+
+-- F7 P5: wycisz LOAD_STATUS_CHANGED przy jednorazowym READY.
+create or replace function public.trg_load_status_matrix_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return null;
+  end if;
+  if new.status is not distinct from old.status then
+    return null;
+  end if;
+  perform public.matrix_notify(
+    'LOAD_STATUS', 'LOAD_STATUS_CHANGED', new.id, new.project_id,
+    jsonb_build_object(
+      'load_id', new.id, 'from', old.status, 'to', new.status,
+      'code', public.load_sms_code(new.id), 'hhl_order_no', new.hhl_order_no
+    ),
+    'load-st:' || new.id::text || ':' || coalesce(old.status::text, '-') || '>' || new.status::text
+  );
+  return null;
+end $$;
+revoke all on function public.trg_load_status_matrix_notify() from public, anon, authenticated;
 
 drop trigger if exists trg_a9_loads_ready on public.loads;
 create trigger trg_a9_loads_ready
@@ -1170,7 +1312,13 @@ $a9cron$;
 do $a9close$
 declare
   n_close int := 0;
+  n_dec int := 0;
+  n_ready int := 0;
+  r record;
 begin
+  /* F7 P5: bez dzwonka / e-maila / LOAD_STATUS_CHANGED. */
+  perform set_config('tower.bulk_quiet', 'on', true);
+
   insert into audit_log (action, entity, entity_id, old_value)
   select 'A9_RESOURCE_MISSING_CLOSE', 'risk_signals', id::text,
          jsonb_build_object(
@@ -1183,27 +1331,68 @@ begin
          )
     from risk_signals
    where kind = 'RESOURCE_MISSING'
-     and resolved_at is null;
+     and resolved_at is null
+     and coalesce(dedup_key, '') not like 'l3:NO_AWIZACJA:%';
 
   update risk_signals
      set resolved_at = now()
    where kind = 'RESOURCE_MISSING'
-     and resolved_at is null;
+     and resolved_at is null
+     and coalesce(dedup_key, '') not like 'l3:NO_AWIZACJA:%';
   get diagnostics n_close = row_count;
+
+  /* F7 P6: zamknij sprawy L-1 RES:* (nie NO_AWIZACJA). „Do zrobienia” = jedna liczba. */
+  insert into audit_log (action, entity, entity_id, old_value)
+  select 'A9_RES_DECISION_CLOSE', 'decisions', d.id::text,
+         jsonb_build_object(
+           'type_code', d.type_code, 'title', d.title, 'status', d.status,
+           'event_key', d.detail->>'event_key', 'via', '0236-A9'
+         )
+    from decisions d
+   where d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+     and (
+       coalesce(d.detail->>'event_key', '') like 'RES:%'
+       or coalesce(d.detail->>'event_key', '') like 'l3:RES:%'
+     );
+
+  update decisions d
+     set status = 'RESOLVED',
+         resolved_at = now(),
+         resolution_code = 'A9_STALE_RES',
+         expired_reason = null,
+         updated_at = now()
+   where d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+     and (
+       coalesce(d.detail->>'event_key', '') like 'RES:%'
+       or coalesce(d.detail->>'event_key', '') like 'l3:RES:%'
+     );
+  get diagnostics n_dec = row_count;
 
   if n_close > 150 then
     raise exception '0236-A9: zbyt wiele RESOURCE_MISSING do zamknięcia (%) — przerwane', n_close;
   end if;
 
+  /* Jednorazowo: READY na przygotowaniu z kompletem — po cichu. */
+  for r in
+    select id from loads
+     where status::text in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING')
+  loop
+    if public.a9_try_ready(r.id) is true then
+      n_ready := n_ready + 1;
+    end if;
+  end loop;
+
   insert into audit_log (user_id, action, entity, entity_id, new_value)
   values (
     null, 'A9_READY_BACKFILL', 'risk_signals', 'batch',
-    jsonb_build_object('closed_resource_missing', n_close, 'via', '0236-A9')
+    jsonb_build_object(
+      'closed_resource_missing', n_close,
+      'closed_res_decisions', n_dec,
+      'ready_set', n_ready,
+      'via', '0236-A9'
+    )
   );
 
-  /* Jednorazowo: spróbuj READY na przygotowaniu z kompletem. */
-  perform public.a9_try_ready(l.id)
-    from loads l
-   where l.status::text in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING');
+  perform set_config('tower.bulk_quiet', '', true);
 end
 $a9close$;

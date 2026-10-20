@@ -53,6 +53,10 @@ val "UNLOADED → DELIVERED" $HHL "select load_status_set('$L2','UNLOADED',now()
 sval "actual_delivery_at po Dostarczone" "select (actual_delivery_at is not null) from loads where id='$L2'" t
 sval "A3: po Dostarczone bez CMR → sprawa CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 1
 sval "A3: typ CMR_UPLOAD ma opcję UPLOAD_CMR" "select options->0->>'code' from decision_types where code='CMR_UPLOAD'" UPLOAD_CMR
+# F7 P4: przed C17 — klik UPLOAD_CMR tylko otwiera okno, sprawa zostaje NEW.
+val "A3: UPLOAD_CMR nie zamyka sprawy" $SCX "select (decision_resolve(
+  (select id from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED') limit 1),
+  'UPLOAD_CMR')->>'kept_open')||'|'||(select status::text from decisions where load_id='$L2' and type_code='CMR_UPLOAD' order by created_at desc limit 1)" "true|NEW" commit
 # A5: DELIVERED nadpisuje wybraną godzinę (W3)
 val "DELIVERED: korekta dopiskiem i actual_delivery_at" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','korekta godziny'); select (
   (select actual_delivery_at = timestamptz '2026-10-07 10:19:54+00' from loads where id='$L2')
@@ -202,12 +206,28 @@ sval "A9: brak telefonu SE w awiz_missing" "select exists (
                jsonb_array_elements_text(g->'items') i
    where g->>'kind'='AWIZ' and i='telefon SE')" t
 sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
-# CI bez pg_cron: to_regclass null → 0; produkcja: job tower-zasoby usunięty.
-sval "A9: cron tower-zasoby wyłączony" "select case when to_regclass('cron.job') is null then 0 else (select count(*) from cron.job where jobname='tower-zasoby') end" 0
+# CI bez pg_cron: CASE WHEN nie chroni przed parse cron.job — jak insurance.sh / workflows.sh.
+if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; then
+  sval "A9: cron tower-zasoby wyłączony" "select count(*) from cron.job where jobname='tower-zasoby'" 0
+else
+  ok=$((ok+1)); echo "  OK    A9: cron tower-zasoby wyłączony"
+fi
 val "A9: HHL widzi load_ready_gaps" $HHL "select (gaps @> '[{\"kind\":\"AWIZ\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
 sval "A9: SAILING gdy brak sailing_id" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
    where g->>'kind'='SAILING')" t
+# F7 P3/P8: bez fałszywego POLICY_SCX gdy brak przewoźnika; UPLOAD_CMR nie zamyka.
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
+     driver_name, driver_phone, tractor_plate, trailer_plate, trailer_swap,
+     hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000a902','$P',null,'123456/2026/A902','PLANNED','2026-10-20',
+     'Jan A9b','600111223','WGM1A2','GDA1A2',false,
+     'HHL/A902','SCX/A902')
+     on conflict (id) do update set status='PLANNED', carrier_org_id=null" >/dev/null
+sval "A9: bez POLICY_SCX gdy brak carrier" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a902')) g
+   where g->>'kind'='POLICY_SCX')" f
+sval "A3: EXPIRED DOC_MISSING nietknięty (B1)" "select count(*) from decisions where type_code='DOC_MISSING' and status='EXPIRED' and resolution_code='A3_STALE_REQ'" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]
