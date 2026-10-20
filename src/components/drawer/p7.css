@@ -17,7 +17,11 @@
 
 /* mapa (E1 — P9) */
 /* właściciel 19.10, 15:27: telefon znów 220 px (jak przed E32, gdy zmniejszono do 150 px); komputer 220 px bez zmian */
-.po-map{position:relative;height:220px}
+/* D-20261020-1118-01 (właściciel 20.10, 11:18): mapa wyższa — komputer 340 px, telefon 300 px */
+.po-map{position:relative;height:340px}
+.po-map.is-phone{height:300px}
+/* D-20261020-1118-01: ramka ETA pod zwiniętym „Planem i ETA” */
+.po-eta{display:flex;flex-direction:column;gap:8px;min-width:0}
 /* F7 #325 D4: „Czy dostarczono?” pod mapą — odstęp z `gap` sekcji, bez własnego marginesu */
 .po > .dcc-jump{margin:0}
 

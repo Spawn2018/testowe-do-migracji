@@ -4,7 +4,9 @@
 --      bez masy — limit masy nie jest naruszeniem; KIND gdy scope FIRMA a transport TRASA.
 --   2. load_permit_status + trg_loads_permit_gate: przy FIRMA wystarczy ważne zezwolenie FIRMA.
 --   3. awiz_pilots_set: pola awizacji Pilot PL/SE; bez zmiany loads.escort_vehicles;
---      audit/load_events bez imion (D-22); tylko scope PL/SE.
+--      audit/load_events z jawnym imieniem (D-1243 / #358; uchyla D-22 dla pilotów);
+--      tylko scope PL/SE.
+--   4. load_escort_contacts: także CLIENT_* (projekt KSH) — D-1243.
 --   Idempotentna.
 -- =====================================================================
 
@@ -360,13 +362,12 @@ begin
     raise exception 'Imię i nazwisko pilota SE do 120 znaków' using errcode = '22023';
   end if;
 
-  /* Audit/zdarzenie: plate + kontakt; imię = „[dane osobowe]” (D-22 / 0090). */
+  /* Audit/zdarzenie: plate + imię jawne (D-1243 / #358 — uchyla D-22 dla pilotów). */
   select coalesce(jsonb_agg(jsonb_build_object(
       'seq', e.seq,
       'scope', e.scope,
       'plate', e.plate,
-      'kontakt', case when e.driver_name is not null then 'tak' else 'nie' end,
-      'driver_name', case when e.driver_name is not null then '[dane osobowe]' else null end
+      'driver_name', e.driver_name
     ) order by e.seq), '[]'::jsonb)
     into v_old
     from public.load_escorts e
@@ -397,8 +398,7 @@ begin
       'seq', e.seq,
       'scope', e.scope,
       'plate', e.plate,
-      'kontakt', case when e.driver_name is not null then 'tak' else 'nie' end,
-      'driver_name', case when e.driver_name is not null then '[dane osobowe]' else null end
+      'driver_name', e.driver_name
     ) order by e.seq), '[]'::jsonb)
     into v_new
     from public.load_escorts e
@@ -424,4 +424,52 @@ revoke all on function public.awiz_pilots_set(uuid, text, text, text, text) from
 grant execute on function public.awiz_pilots_set(uuid, text, text, text, text) to authenticated;
 
 comment on function public.awiz_pilots_set(uuid, text, text, text, text) is
-  'D-1118: awizacja Pilot PL/SE; bez zmiany escort_vehicles; audit bez imion; tylko HHL_ADMIN lub przewoźnik.';
+  'D-1118/D-1243: awizacja Pilot PL/SE; bez zmiany escort_vehicles; audit z imieniem; HHL_ADMIN lub przewoźnik.';
+
+-- ---------------------------------------------------------------------
+-- load_escort_contacts — także CLIENT_* (D-1243 / #358)
+-- ---------------------------------------------------------------------
+create or replace function public.load_escort_contacts()
+returns table (load_id uuid, seq smallint, driver_name text, driver_phone text, driver_phone_country char(2))
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_role user_role;
+  v_org uuid;
+begin
+  select u.role, u.org_id into v_role, v_org
+    from app_users u where u.auth_id = auth.uid() and u.active;
+  if v_role is null then return; end if;
+
+  if v_role in ('HHL_ADMIN', 'HHL_OPS') then
+    return query
+      select e.load_id, e.seq, e.driver_name, e.driver_phone, e.driver_phone_country
+        from load_escorts e
+       where e.driver_name is not null or e.driver_phone is not null;
+  elsif v_role in ('CARRIER_DISPATCH', 'CARRIER_USER') then
+    return query
+      select e.load_id, e.seq, e.driver_name, e.driver_phone, e.driver_phone_country
+        from load_escorts e
+        join loads l on l.id = e.load_id
+       where l.carrier_org_id = v_org
+         and (e.driver_name is not null or e.driver_phone is not null);
+  elsif v_role::text like 'CLIENT_%' then
+    return query
+      select e.load_id, e.seq, e.driver_name, e.driver_phone, e.driver_phone_country
+        from load_escorts e
+        join loads l on l.id = e.load_id
+        join projects p on p.id = l.project_id
+       where p.client_org_id = v_org
+         and (e.driver_name is not null or e.driver_phone is not null);
+  end if;
+end;
+$$;
+
+revoke all on function public.load_escort_contacts() from public, anon;
+grant execute on function public.load_escort_contacts() to authenticated;
+
+comment on function public.load_escort_contacts() is
+  'D-1243: imię/telefon pilota dla HHL, przewoźnika transportu i CLIENT_* projektu; anon bez EXECUTE.';

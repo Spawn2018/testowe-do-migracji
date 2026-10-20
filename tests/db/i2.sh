@@ -884,9 +884,9 @@ err "imię ponad 120 znaków → odmowa" $SCX "select load_escorts_set('$LP',jso
 val "SCX awizuje pilota z kierowcą (telefon ze spacjami → krajowy) i drugiego bez kontaktu" $SCX "select load_escorts_set('$LP','[{\"company\":\"Pilot-Trans\",\"plate\":\"PO 22\",\"driver_name\":\"Adam Pilot\",\"driver_phone\":\"+48 600 100 200\"},{\"company\":\"Följebil AB\",\"plate\":\"SE 22\"}]')" 2 commit
 val "SCX (przewoźnik transportu) widzi kontakt przez load_escort_contacts" $SCX "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 val "HHL widzi kontakt" $HHL "select count(*) from load_escort_contacts() where load_id='$LP'" 1
-val "KSH: load_escort_contacts → 0 wierszy" $KSH "select count(*) from load_escort_contacts()" 0
+val "KSH: load_escort_contacts z imieniem i telefonem (D-1243)" $KSH "select string_agg(seq||':'||driver_name||':'||driver_phone, ',') from load_escort_contacts() where load_id='$LP'" "1:Adam Pilot:600100200"
 err "KSH: bezpośredni odczyt driver_phone → brak uprawnień" $KSH "select driver_phone from load_escorts where load_id='$LP'" "permission denied"
-val "KSH nadal widzi pojazdy (firma, tablica) bez danych osobowych" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
+val "KSH widzi pojazdy (firma, tablica) z load_escorts" $KSH "select string_agg(plate, ',' order by seq) from load_escorts where load_id='$LP'" "PO 22,SE 22"
 $PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER') on conflict do nothing; insert into app_users (auth_id, org_id, email, role) values ('11111111-0000-0000-0000-00000000000b','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH') on conflict do nothing" >/dev/null
 val "inny przewoźnik: 0 kontaktów" 11111111-0000-0000-0000-00000000000b "select count(*) from load_escort_contacts() where load_id='$LP'" 0
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'" >/dev/null
@@ -1053,10 +1053,12 @@ chk "D-1118 escort_vehicles bez zmian po awizacji" \
   "$(Q "select escort_vehicles::text from loads where id='$L_D2'")" "2"
 chk "D-1118 load_escorts PL+SE + zachowany PL_SE" \
   "$(Q "select string_agg(scope||':'||plate, ',' order by scope, seq) from load_escorts where load_id='$L_D2'")" "PL:PO 11,PL_SE:XX99,SE:SE 22"
-chk "D-1118 audit bez imienia pilota" \
-  "$(Q "select (new_value::text not like '%Jan Pilot%' and new_value::text like '%[dane osobowe]%')::text from audit_log where action='AWIZ_PILOTS_SET' and entity_id='$L_D2' order by created_at desc limit 1")" "true"
-chk "D-1118 load_events bez imienia" \
-  "$(Q "select (payload::text not like '%Jan Pilot%' and payload::text like '%[dane osobowe]%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1")" "true"
+chk "D-1118 audit z imieniem pilota (D-1243)" \
+  "$(Q "select (new_value::text like '%Jan Pilot%' and new_value::text not like '%[dane osobowe]%')::text from audit_log where action='AWIZ_PILOTS_SET' and entity_id='$L_D2' order by created_at desc limit 1")" "true"
+chk "D-1118 load_events z imieniem (D-1243)" \
+  "$(Q "select (payload::text like '%Jan Pilot%' and payload::text not like '%[dane osobowe]%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1")" "true"
+val "D-1118 KSH czyta PILOTS_SET z imieniem (D-1243)" $KSH \
+  "select (payload::text like '%Jan Pilot%')::text from load_events where load_id='$L_D2' and event_type='PILOTS_SET' order by occurred_at desc limit 1" true
 val "D-1118 puste pola usuwają strony PL/SE" $SCX "select (awiz_pilots_set('$L_D2',null,null,null,null)->>'ok')" true commit
 chk "D-1118 po wyczyszczeniu PL_SE zostaje" \
   "$(Q "select string_agg(scope||':'||plate, ',' order by seq) from load_escorts where load_id='$L_D2'")" "PL_SE:XX99"

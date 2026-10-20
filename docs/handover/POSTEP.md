@@ -3506,3 +3506,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #357 — brak „F7: gotowe”; db FAIL (i2 569/2: PL_SE). #355 visual w toku wcześniej. #317/#259 konflikt.
 - Fix: insert testowy PL_SE z telefonem krajowym (0111), nie E.164 — wcześniej INSERT padał w `/dev/null`. nullguard EXPECTED 690. Czeka na zielone CI i F7.
 
+## 2026-10-20 13:20 — #355 scalone; D-1243 w #357; #358/#359 w planie
+
+- Skrzynka: #358 (`Spawn2018`, `dla-cursora`, bez `pilne`) — D-1243 dane osobowe widoczne; razem z D-1118. #359 (`Spawn2018`, `dla-cursora`, bez `pilne`, treść „pilne przed A10”) — OKQ8 7 dni / Orlen 5 publ. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1243-01.md`, `D-20261020-1300-01.md`. Bieżącej D-1118 nie przerywam (#359 bez etykiety `pilne`).
+- Scalanie: #355 — F7 po `8a9637a`, CI zielone → merge `e7842326`. #357 CI zielone na `4bae611f`, bez F7 (czekają poprawki D-1243). #317/#259 konflikt.
+- Ten commit (#357): `awiz_pilots_set` — imię jawne w audit/`load_events`; `load_escort_contacts` CLIENT_*; test KSH `PILOTS_SET`; i2 572; merge main po #355, `AWIZ_PILOTS: true`.
+

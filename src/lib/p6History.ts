@@ -41,7 +41,7 @@ export function histCat(type: string): HistCat {
   if (/FEE|PRIC|SURCHARGE|MARGIN/.test(type)) return 'CENA';
   if (type.startsWith('STATUS_') || STATUS_WORDS.has(type)) return 'STATUS';
   if (type.startsWith('GEOFENCE') || type.startsWith('POSITION_') || ROUTE_WORDS.has(type)) return 'TRASA';
-  if (type.startsWith('RESOURCES_') || type === 'AWIZACJA_UPDATED' || type === 'SCX_ASSIGNED' || type === 'ESCORTS_UPDATED') return 'ZASOBY';
+  if (type.startsWith('RESOURCES_') || type === 'AWIZACJA_UPDATED' || type === 'SCX_ASSIGNED' || type === 'ESCORTS_UPDATED' || type === 'PILOTS_SET') return 'ZASOBY';
   if (type === 'ORDER_NO_UPDATED') return 'NUMER';
   if (type.startsWith('DOC_') || type.startsWith('PERMIT_')) return 'DOKUMENT';
   if (type === 'SCHEDULE_IMPORTED') return 'IMPORT';

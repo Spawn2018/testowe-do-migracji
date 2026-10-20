@@ -338,6 +338,9 @@ export interface Load {
   itemType: string;
   dims: Dimensions;
   qty: number;
+  /** A7 (0237) — symbol z tabeli właściciela (`loads.symbol`) i rodzaj zezwolenia (`loads.permit_kind`); tylko produkcja. */
+  symbol?: string | null;
+  permitKind?: 'FIRMA' | 'TRASA' | null;
   status: LoadStatus;
   stage: CorridorStage;
   progress: number; // 0..1 along corridor
