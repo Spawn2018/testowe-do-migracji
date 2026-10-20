@@ -142,3 +142,12 @@ describe('Status — zwinięte sekcje pokazują bieżący status sekcji', async 
     expect(rows(h, 'prep')).toEqual(['READY']);
   });
 });
+
+describe('Historia — zapis pilotów (#357)', () => {
+  it('PILOTS_SET: kategoria Zasoby, polski nagłówek', async () => {
+    const { histCat, histRow } = await import('../src/lib/p6History');
+    expect(histCat('PILOTS_SET')).toBe('ZASOBY');
+    const r = histRow({ id: 'ev-1', loadId: 'L', type: 'PILOTS_SET', at: '2026-10-20T10:00:00Z', actor: 'Jan Testowy // SCX', payload: { pl: { plate: 'WX 00001', kontakt: true } } }, 'pl');
+    expect(r.head).toBe('Piloci w awizacji zapisani');
+  });
+});

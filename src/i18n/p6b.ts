@@ -58,6 +58,8 @@ const PL: Record<string, string> = {
   p6b_ev_zone_none: '(strefa bez nazwy)',
   p6b_ev_RESOURCES_UPDATED: 'Zasoby: {fields}',
   p6b_ev_RESOURCES_ASSIGNED: 'Zasoby przypisane',
+  /* D-20261020-1118-01 (#357): zapis pilotów z okna „Uzupełnij awizację” */
+  p6b_ev_PILOTS_SET: 'Piloci w awizacji zapisani',
   p6b_ev_ORDER_NO_UPDATED: 'Numer zlecenia',
   p6b_ev_ORDER_NO_HHL: 'Nr zlecenia HHL',
   p6b_ev_ORDER_NO_SCX: 'Nr zlecenia SCX',
