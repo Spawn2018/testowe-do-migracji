@@ -755,7 +755,7 @@ comment on column public.load_events.detached_load_id is
   'D-1710: transport, z którego odłączono zdarzenie (load_id = null).';
 
 -- -------------------------------------------------------------------------
--- 7) telm_infer_phase_from_position — tylko po starcie (F7 #373 pkt 6)
+-- 7) telm_infer_phase_from_position — tylko po starcie / poza załadunkiem (F7 #373)
 -- -------------------------------------------------------------------------
 create or replace function public.telm_infer_phase_from_position(
   p_load uuid, p_lat float8, p_lon float8, p_ts timestamptz default now()
@@ -779,13 +779,22 @@ begin
          coalesce(nullif(btrim(trailer_plate), ''), nullif(btrim(tractor_plate), ''))
     into v_status, v_actual, v_tracker, v_plate
     from loads where id = p_load;
-  -- D-1710: dla PLANNED…READY bez załadunku nie zmieniać statusu (fałszywe Droga PL).
-  if v_actual is null and (v_status is null or v_status < 'AT_LOADING') then
+  -- F7 #373: ≤ AT_LOADING bez actual_load_at — bez wnioskowania (Droga PL w trakcie załadunku).
+  -- AT_LOADING → IN_TRANSIT_PL tylko z prawdziwego EXIT strefy LOADING (process_position).
+  if v_actual is null and (v_status is null or v_status <= 'AT_LOADING') then
     return null;
   end if;
   if v_status is null or v_status in (
     'CANCELLED', 'UNLOADED', 'DELIVERED', 'AT_SITE',
     'IN_TRANSIT_SE', 'AT_PORT_NYNASHAMN', 'FERRY'
+  ) then
+    return null;
+  end if;
+  -- Tylko pierwsze podłączenie (aktywny wiersz telm_attach_phase blokuje).
+  if exists (
+    select 1 from telm_attach_phase t
+     where t.load_id = p_load
+       and coalesce(t.source, '') is distinct from 'D1710_RESET'
   ) then
     return null;
   end if;
@@ -798,9 +807,16 @@ begin
     return null;
   end if;
 
-  insert into telm_attach_phase (load_id, phase, observed_at, lat, lon)
-  values (p_load, v_phase, v_ts, p_lat, p_lon)
-  on conflict (load_id) do nothing;
+  insert into telm_attach_phase (load_id, phase, observed_at, lat, lon, note, source)
+  values (p_load, v_phase, v_ts, p_lat, p_lon, 'faza z pozycji przy podłączeniu', 'TELM_PHASE_INFER')
+  on conflict (load_id) do update
+    set phase = excluded.phase,
+        observed_at = excluded.observed_at,
+        lat = excluded.lat,
+        lon = excluded.lon,
+        note = excluded.note,
+        source = excluded.source
+  where telm_attach_phase.source = 'D1710_RESET';
 
   select id into v_gid from geofences
    where kind = 'LOADING' and active
@@ -1227,10 +1243,11 @@ declare
   v_note text;
   v_from text;
   v_to text;
-  v_pos_ids uuid[] := '{}';
+  v_pos_ids bigint[] := '{}';
   v_ev_ids bigint[] := '{}';
   v_load_ids uuid[] := '{}';
   v_t0 timestamptz;
+  v_closed_ids uuid[];
 begin
   perform set_config('tower.bulk_quiet', 'on', true);
   perform set_config('tower.status_ctx', 'on', true);
@@ -1257,72 +1274,108 @@ begin
   values (null, 'D1710_CLEAR_TRACKING_OPEN', 'loads', null,
           jsonb_build_object('cleared', v_n, 'note', 'D-20261020-1710-01'));
 
-  -- B) transporty do naprawy — po dowodzie fałszywego automatu
+  -- B) transporty do naprawy — tylko fałszywy TELM / pozycje bez linku (F7 #373)
   create temporary table if not exists _d1710_targets (
     load_id uuid primary key,
     reason text not null,
-    restore_to text
+    restore_to text,
+    restore_status boolean not null default true
   ) on commit drop;
   delete from _d1710_targets;
 
-  insert into _d1710_targets (load_id, reason, restore_to)
+  -- B1: STATUS_AUTO→IN_TRANSIT_* z TELM_PHASE_* + syntetyczny EXIT przed oknem
+  insert into _d1710_targets (load_id, reason, restore_to, restore_status)
   select distinct l.id,
-         case
-           when nullif(btrim(l.telematics_vehicle_id), '') is null then 'NO_LINK'
-           else 'BEFORE_WINDOW'
-         end,
+         'BEFORE_WINDOW',
          coalesce(
            (select e.payload->>'from'
               from load_events e
              where e.load_id = l.id
                and e.event_type = 'STATUS_AUTO'
-               and e.payload->>'to' in ('IN_TRANSIT_PL', 'IN_TRANSIT_SE')
+               and e.payload->>'to' like 'IN_TRANSIT_%'
                and (
-                 nullif(btrim(l.telematics_vehicle_id), '') is null
-                 or (l.plan_load_date is not null
-                     and e.occurred_at < public.tracking_window_start(l.plan_load_date))
+                 coalesce(e.payload->>'zrodlo', '') in ('TELM_PHASE_INFER')
+                 or e.dedup_key like 'TELM_PHASE_%'
                )
+               and l.plan_load_date is not null
+               and e.occurred_at < public.tracking_window_start(l.plan_load_date)
              order by e.occurred_at desc
              limit 1),
            'READY'
-         )
+         ),
+         true
     from loads l
    where l.actual_load_at is null
      and l.status in (
        'AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
        'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
      )
-     and (
-       exists (
-         select 1 from load_events e
-          where e.load_id = l.id
-            and (
-              e.event_type = 'STATUS_AUTO'
-              or e.dedup_key like 'STATUS_AUTO:' || l.id::text || ':%'
-              or e.dedup_key like 'TELM_PHASE_EXIT_LOAD:' || l.id::text
-              or e.dedup_key like 'TELM_PHASE_INFER:' || l.id::text || ':%'
-              or (e.event_type = 'GEOFENCE_EXIT'
-                  and e.payload->>'geofence_kind' = 'LOADING'
-                  and coalesce((e.payload->>'synthetic')::boolean, false) is true)
-            )
-            and (
-              nullif(btrim(l.telematics_vehicle_id), '') is null
-              or (l.plan_load_date is not null
-                  and e.occurred_at < public.tracking_window_start(l.plan_load_date))
-            )
-       )
-       or exists (
-         select 1 from positions p
-          where p.load_id = l.id
-            and nullif(btrim(l.telematics_vehicle_id), '') is null
-       )
+     and nullif(btrim(l.telematics_vehicle_id), '') is not null
+     and exists (
+       select 1 from load_events e
+        where e.load_id = l.id
+          and e.event_type = 'STATUS_AUTO'
+          and e.payload->>'to' like 'IN_TRANSIT_%'
+          and (
+            coalesce(e.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+            or e.dedup_key like 'TELM_PHASE_%'
+          )
+          and l.plan_load_date is not null
+          and e.occurred_at < public.tracking_window_start(l.plan_load_date)
      )
+     and exists (
+       select 1 from load_events g
+        where g.load_id = l.id
+          and g.event_type = 'GEOFENCE_EXIT'
+          and g.payload->>'geofence_kind' = 'LOADING'
+          and coalesce((g.payload->>'synthetic')::boolean, false) is true
+          and (
+            coalesce(g.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+            or g.dedup_key like 'TELM_PHASE_%'
+          )
+          and l.plan_load_date is not null
+          and g.occurred_at < public.tracking_window_start(l.plan_load_date)
+     )
+  on conflict (load_id) do nothing;
+
+  -- B2: pozycje przy transporcie bez linku — dowolny status (F7 drobne)
+  insert into _d1710_targets (load_id, reason, restore_to, restore_status)
+  select distinct l.id,
+         'NO_LINK',
+         case
+           when l.status in (
+             'AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
+             'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
+           ) and l.actual_load_at is null
+           then coalesce(
+             (select e.payload->>'from'
+                from load_events e
+               where e.load_id = l.id
+                 and e.event_type = 'STATUS_AUTO'
+                 and e.payload->>'to' like 'IN_TRANSIT_%'
+                 and (
+                   coalesce(e.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+                   or e.dedup_key like 'TELM_PHASE_%'
+                 )
+               order by e.occurred_at desc
+               limit 1),
+             'READY'
+           )
+           else l.status::text
+         end,
+         (l.status in (
+            'AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
+            'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
+          ) and l.actual_load_at is null)
+    from loads l
+   where nullif(btrim(l.telematics_vehicle_id), '') is null
+     and exists (select 1 from positions p where p.load_id = l.id)
   on conflict (load_id) do nothing;
 
   select coalesce(array_agg(load_id), '{}') into v_load_ids from _d1710_targets;
 
-  -- C) najpierw przywróć status
-  for r in select * from _d1710_targets
+  -- C) najpierw przywróć status (tylko gdy restore_status)
+  for r in select * from _d1710_targets where restore_status
   loop
     v_to := coalesce(nullif(r.restore_to, ''), 'READY');
     if v_to not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
@@ -1334,6 +1387,18 @@ begin
       else 'Korekta: sledzenie otwarte przed dniem zaladunku (D-20261020-1710-01)'
     end;
     select status::text into v_from from loads where id = r.load_id;
+    if v_from is not distinct from v_to then
+      update public.loads
+         set tracking_opened_at = null,
+             eta_site = null,
+             eta_confidence_min = null,
+             eta_basis = null,
+             eta_computed_at = null,
+             delay_minutes = null,
+             updated_at = now()
+       where id = r.load_id;
+      continue;
+    end if;
     update public.loads
        set status = v_to::load_status,
            tracking_opened_at = null,
@@ -1379,6 +1444,7 @@ begin
     )
     select coalesce(array_agg(id), '{}') into v_pos_ids from p;
 
+    -- Tylko fałszywy TELM / GEOFENCE; nie ruszać prawidłowego STATUS_AUTO→READY (A9).
     with e as (
       update public.load_events ev
          set detached_load_id = ev.load_id,
@@ -1391,9 +1457,26 @@ begin
         from _d1710_targets t
        where ev.load_id = t.load_id
          and (
-           ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO')
-           or ev.dedup_key like 'STATUS_AUTO:' || t.load_id::text || ':%'
+           (
+             ev.event_type = 'STATUS_AUTO'
+             and ev.payload->>'to' like 'IN_TRANSIT_%'
+             and (
+               coalesce(ev.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+               or ev.dedup_key like 'TELM_PHASE_%'
+             )
+           )
+           or (
+             ev.event_type = 'GEOFENCE_EXIT'
+             and ev.payload->>'geofence_kind' = 'LOADING'
+             and coalesce((ev.payload->>'synthetic')::boolean, false) is true
+             and (
+               coalesce(ev.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+               or ev.dedup_key like 'TELM_PHASE_%'
+             )
+           )
+           or ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_DWELL')
            or ev.dedup_key like 'TELM_PHASE_%'
+           or ev.dedup_key like 'STATUS_AUTO:' || t.load_id::text || ':IN_TRANSIT_%'
          )
          and (
            t.reason = 'NO_LINK'
@@ -1408,8 +1491,25 @@ begin
     )
     select coalesce(array_agg(id), '{}') into v_ev_ids from e;
 
-    delete from telm_attach_phase p using _d1710_targets t where p.load_id = t.load_id;
-    delete from geofence_states s using _d1710_targets t where s.load_id = t.load_id;
+    -- Bez DELETE: reset stanu (F7 #373 pkt 5)
+    update telm_attach_phase p
+       set phase = 'RESET',
+           note = 'korekta D-1710',
+           source = 'D1710_RESET',
+           observed_at = now(),
+           lat = null,
+           lon = null
+      from _d1710_targets t
+     where p.load_id = t.load_id;
+
+    update geofence_states s
+       set state = 'OUTSIDE',
+           consec_fixes = 0,
+           entered_at = null,
+           exited_at = null,
+           last_eval_at = now()
+      from _d1710_targets t
+     where s.load_id = t.load_id;
 
     alter table public.load_events enable trigger trg_load_events_immutable;
   exception when others then
@@ -1421,21 +1521,21 @@ begin
   values (null, 'D1710_DETACH', 'loads', null,
           jsonb_build_object(
             'loads', v_load_ids,
-            'positions', v_pos_ids,
-            'events', v_ev_ids,
+            'positions', to_jsonb(v_pos_ids),
+            'events', to_jsonb(v_ev_ids),
             'note', 'D-20261020-1710-01'
           ));
 
-  -- E) zamknij ryzyka/sprawy tylko naprawionych, od pierwszej odłączonej chwili
+  -- E) ryzyka/sprawy: v_t0 = min(ts/occurred_at) odłączonych wierszy (F7 #373 pkt 3)
   for r in select * from _d1710_targets
   loop
-    select coalesce(
-      least(
-        (select min(detached_at) from positions where detached_load_id = r.load_id),
-        (select min(detached_at) from load_events where detached_load_id = r.load_id)
-      ),
-      now() - interval '7 days'
+    select least(
+      (select min(ts) from positions where detached_load_id = r.load_id),
+      (select min(occurred_at) from load_events where detached_load_id = r.load_id)
     ) into v_t0;
+    if v_t0 is null then
+      continue;
+    end if;
 
     update public.risk_signals s
        set resolved_at = coalesce(s.resolved_at, now()),
@@ -1448,43 +1548,48 @@ begin
          s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
          or s.kind::text like 'ROAD_%'
          or s.dedup_key like 'OFF_CORRIDOR:%'
-         or coalesce(s.detail->>'title_key', s.title_key, '') in ('rk_off_corridor', 'rk_silent_vehicle')
-       );
-
-    update public.decisions d
-       set status = 'RESOLVED',
-           resolution_code = coalesce(d.resolution_code, 'MANUAL_STATUS'),
-           resolution_note = coalesce(d.resolution_note, 'D-20261020-1710-01'),
-           resolved_at = coalesce(d.resolved_at, now()),
-           updated_at = now()
-     where d.load_id = r.load_id
-       and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
-       and d.created_at >= v_t0
-       and (
-         coalesce(d.detail->>'zrodlo', '') in ('TELM_PHASE_INFER', 'AUTO_STATUS')
-         or d.risk_id in (
-           select s.id from risk_signals s
-            where s.load_id = r.load_id
-              and s.detected_at >= v_t0
-              and (
-                s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
-                or s.dedup_key like 'OFF_CORRIDOR:%'
-              )
+         or coalesce(s.detail->>'title_key', s.title_key, '') in (
+           'rk_off_corridor', 'rk_silent_vehicle', 'rk_eta_after_latest'
          )
        );
 
+    with closed as (
+      update public.decisions d
+         set status = 'RESOLVED',
+             resolution_code = coalesce(d.resolution_code, 'MANUAL_STATUS'),
+             resolution_note = coalesce(d.resolution_note, 'D-20261020-1710-01'),
+             resolved_at = coalesce(d.resolved_at, now()),
+             updated_at = now()
+       where d.load_id = r.load_id
+         and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+         and d.created_at >= v_t0
+         and (
+           coalesce(d.detail->>'zrodlo', '') in ('TELM_PHASE_INFER', 'AUTO_STATUS')
+           or d.type_code in ('ETA_AFTER_LATEST', 'ETA_BREACH')
+           or d.risk_id in (
+             select s.id from risk_signals s
+              where s.load_id = r.load_id
+                and s.detected_at >= v_t0
+                and (
+                  s.kind in ('SILENT_VEHICLE', 'ETA_BREACH', 'AUTO_STATUS', 'ROAD_PL', 'ROAD_SE')
+                  or s.dedup_key like 'OFF_CORRIDOR:%'
+                  or coalesce(s.detail->>'title_key', s.title_key, '') = 'rk_eta_after_latest'
+                )
+           )
+         )
+      returning d.id
+    )
+    select coalesce(array_agg(id), '{}') into v_closed_ids from closed;
+
     insert into decision_events (decision_id, action, payload)
-    select d.id, 'RESOLVE',
+    select cid, 'RESOLVE',
            jsonb_build_object('note', 'D-20261020-1710-01', 'korekta', true, 'option', 'MANUAL_STATUS')
-      from decisions d
-     where d.load_id = r.load_id
-       and d.resolution_note = 'D-20261020-1710-01'
-       and d.resolved_at >= now() - interval '1 minute'
-       and not exists (
-         select 1 from decision_events de
-          where de.decision_id = d.id and de.action = 'RESOLVE'
-            and de.payload->>'note' = 'D-20261020-1710-01'
-       );
+      from unnest(v_closed_ids) as cid
+     where not exists (
+       select 1 from decision_events de
+        where de.decision_id = cid and de.action = 'RESOLVE'
+          and de.payload->>'note' = 'D-20261020-1710-01'
+     );
   end loop;
 
   perform set_config('tower.bulk_quiet', 'off', true);

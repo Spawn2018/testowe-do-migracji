@@ -287,8 +287,6 @@ chk "A1 L17 nowy po terminie: sprawa z powiadomieniem" "select public.tracking_d
 q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values ('$P','$W3','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}','SILENT:$W3')" >/dev/null
 chk "A1 cisza poza oknem się zamyka" "select public.detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$W3'" true
 chk "A1 po teście brak klucza ciszy w bazie statusów" "delete from decision_events where decision_id in (select d.id from decisions d join risk_signals s on s.id=d.risk_id where s.title_key='rk_silent_vehicle' or s.kind='SILENT_VEHICLE' or s.dedup_key like 'SILENT:%'); delete from decisions where risk_id in (select id from risk_signals where title_key='rk_silent_vehicle' or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'); delete from risk_signals where title_key='rk_silent_vehicle' or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'; select count(*) from risk_signals where title_key='rk_silent_vehicle'" 0
-# D-1710: sprzątanie LATE_DATE z przesunięć dat w A1 (risks.sh liczy klucze automatu).
-q "delete from risk_signals where title_key='rk_late_date_change' or dedup_key like 'LATE_DATE%'" >/dev/null
 chk "A1 process_position ma bramę okna" "select strpos(pg_get_functiondef(p.oid), 'load_in_tracking_window') > 0 from pg_proc p where p.proname='process_position'" t
 chk "A1 cisza bez twardego źródła TELEMATICS_API" "select strpos(pg_get_functiondef(p.oid), 'TELEMATICS_API') = 0 from pg_proc p where p.proname='detect_silent_vehicles'" t
 chk "A1 strażnik: anulowanie z cancel_ctx nadal dozwolone" "select (pg_get_functiondef('guard_load_update()'::regprocedure) like '%v_ctx not in (''MANUAL'', ''IMPORT'')%')::text" true
@@ -311,6 +309,37 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier
  ('$Wscx','$P','$SCXO','KSH/A1SCX','HHL/A1SCX','SCX/A1SCX','READY','2026-10-05','TEL-SCX-1')" >/dev/null
 chk "D-1710 TELM: READY bez fazy z pozycji" "select coalesce(telm_infer_phase_from_position('$Wscx', 52.1, 17.0, public.tracking_window_start('2026-10-05'))::text,'∅')" "∅"
 chk "D-1710 SCX: usunięcie linku OK (tracking_opened_at)" "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set telematics_vehicle_id=null where id='$Wscx'; select (telematics_vehicle_id is null)::text from loads where id='$Wscx'; commit" true
+# F7 #373: d1710_repair — SG-17 (TELM przed oknem), SG-15 (bez linku), nietknięty w trasie z linkiem.
+R17=$(L 6a); R15=$(L 6b); Rok=$(L 6c); Rdel=$(L 6d)
+TW17=$(q "select public.tracking_window_start('2026-10-22'::date)")
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id,tracking_opened_at) values
+ ('$R17','$P','$SCXO','KSH/R17','HHL/R17','SCX/R17','IN_TRANSIT_PL','2026-10-22','https://emtrack.eu/app/', ('$TW17'::timestamptz - interval '1 day')),
+ ('$R15','$P','$SCXO','KSH/R15','HHL/R15','SCX/R15','READY','2026-10-22',null,null),
+ ('$Rok','$P','$SCXO','KSH/ROK','HHL/ROK','SCX/ROK','IN_TRANSIT_SE','2026-10-05','TEL-ROK', public.tracking_window_start('2026-10-05'::date)),
+ ('$Rdel','$P','$SCXO','KSH/RDEL','HHL/RDEL','SCX/RDEL','DELIVERED','2026-09-01','https://emtrack.eu/app/',null)" >/dev/null
+q "insert into load_events (load_id,event_type,occurred_at,payload,dedup_key) values
+ ('$R17','STATUS_AUTO',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('from','READY','to','IN_TRANSIT_PL','zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_INFER:$R17:IN_TRANSIT_PL'),
+ ('$R17','GEOFENCE_EXIT',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('geofence_kind','LOADING','synthetic',true,'zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_EXIT_LOAD:$R17'),
+ ('$Rok','STATUS_AUTO','2026-10-04 12:00+00', jsonb_build_object('from','DOCS_PENDING','to','READY','zrodlo','A9'),'STATUS_AUTO:$Rok:READY')" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$R17', ('$TW17'::timestamptz - interval '90 minutes'), st_setsrid(st_makepoint(18.65, 54.35), 4326), 'TELEMATICS_API'),
+ ('$R15', '2026-10-20 10:00+00', st_setsrid(st_makepoint(17.02, 52.09), 4326), 'TELEMATICS_API'),
+ ('$Rok', '2026-10-06 10:00+00', st_setsrid(st_makepoint(17.2, 60.5), 4326), 'TELEMATICS_API'),
+ ('$Rdel', '2026-09-02 10:00+00', st_setsrid(st_makepoint(17.2, 60.5), 4326), 'TELEMATICS_API')" >/dev/null
+q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at) values
+ ('$P','$R17','ETA_BREACH','HIGH','Opóźnienie','rk_eta_after_latest','{\"l3\":\"1\"}','ETA:$R17', ('$TW17'::timestamptz - interval '80 minutes'))" >/dev/null
+q "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon) values ('$R17','IN_TRANSIT_PL',('$TW17'::timestamptz - interval '2 hours'), 54.35, 18.65)" >/dev/null
+q "select public.d1710_repair()" >/dev/null
+chk "D-1710 repair: SG-17 → READY" "select status from loads where id='$R17'" READY
+chk "D-1710 repair: pozycja SG-17 odłączona" "select count(*) from positions where detached_load_id='$R17'" 1
+chk "D-1710 repair: pozycje bez linku = 0" "select count(*) from positions p join loads l on l.id=p.load_id where nullif(btrim(l.telematics_vehicle_id),'') is null" 0
+chk "D-1710 repair: ryzyko ETA zamknięte" "select (resolved_at is not null)::text from risk_signals where dedup_key='ETA:$R17'" true
+chk "D-1710 repair: w trasie z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rok' group by status" "IN_TRANSIT_SE/1"
+chk "D-1710 repair: DELIVERED z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rdel' group by status" "DELIVERED/1"
+chk "D-1710 repair: STATUS_AUTO→READY zostaje na osi" "select count(*) from load_events where load_id='$Rok' and payload->>'to'='READY'" 1
+chk "D-1710 repair: telm_attach_phase zresetowany" "select source from telm_attach_phase where load_id='$R17'" D1710_RESET
+# F7: sprzątanie LATE_DATE po testach D-1710 (risks.sh liczy klucze automatu).
+q "delete from risk_signals where title_key='rk_late_date_change' or dedup_key like 'LATE_DATE%'" >/dev/null
 HHL=11111111-0000-0000-0000-000000000001
 W8=$(L 4b)
 q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date,telematics_vehicle_id) values ('$W8','$P','$SCXO','KSH/A1W8','PLANNED','2026-11-20','TEL-A1W8')" >/dev/null
