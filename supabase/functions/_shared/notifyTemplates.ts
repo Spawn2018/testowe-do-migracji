@@ -63,20 +63,20 @@ export const DECISION_LEAD: Record<NotifyLocale, string> = {
 const STATUS_TXT: Record<NotifyLocale, Record<string, string>> = {
   pl: {
     PLANNED: 'zaplanowany', RESOURCES_PENDING: 'czeka na zasoby', DOCS_PENDING: 'czeka na dokumenty', READY: 'gotowy',
-    AT_LOADING: 'na załadunku', IN_TRANSIT_PL: 'w drodze PL', AT_PORT_GDANSK: 'w porcie Gdańsk', FERRY: 'na promie',
-    AT_PORT_NYNASHAMN: 'w porcie Nynäshamn', IN_TRANSIT_SE: 'w drodze SE', AT_SITE: 'na placu', UNLOADED: 'rozładowany',
+    AT_LOADING: 'na załadunku', IN_TRANSIT_PL: 'w drodze PL', AT_PORT_GDANSK: 'w porcie PL', FERRY: 'na promie',
+    AT_PORT_NYNASHAMN: 'w porcie SE', IN_TRANSIT_SE: 'w drodze SE', AT_SITE: 'na placu', UNLOADED: 'rozładowany',
     DELIVERED: 'dostarczony', CANCELLED: 'anulowany',
   },
   en: {
     PLANNED: 'planned', RESOURCES_PENDING: 'awaiting resources', DOCS_PENDING: 'awaiting documents', READY: 'ready',
-    AT_LOADING: 'loading', IN_TRANSIT_PL: 'in transit PL', AT_PORT_GDANSK: 'at port Gdańsk', FERRY: 'on ferry',
-    AT_PORT_NYNASHAMN: 'at port Nynäshamn', IN_TRANSIT_SE: 'in transit SE', AT_SITE: 'on site', UNLOADED: 'unloaded',
+    AT_LOADING: 'loading', IN_TRANSIT_PL: 'in transit PL', AT_PORT_GDANSK: 'at port PL', FERRY: 'on ferry',
+    AT_PORT_NYNASHAMN: 'at port SE', IN_TRANSIT_SE: 'in transit SE', AT_SITE: 'on site', UNLOADED: 'unloaded',
     DELIVERED: 'delivered', CANCELLED: 'cancelled',
   },
   sv: {
     PLANNED: 'planerad', RESOURCES_PENDING: 'väntar på resurser', DOCS_PENDING: 'väntar på dokument', READY: 'klar',
-    AT_LOADING: 'lastas', IN_TRANSIT_PL: 'på väg PL', AT_PORT_GDANSK: 'i hamn Gdańsk', FERRY: 'på färja',
-    AT_PORT_NYNASHAMN: 'i hamn Nynäshamn', IN_TRANSIT_SE: 'på väg SE', AT_SITE: 'på plats', UNLOADED: 'lossad',
+    AT_LOADING: 'lastas', IN_TRANSIT_PL: 'på väg PL', AT_PORT_GDANSK: 'i hamn PL', FERRY: 'på färja',
+    AT_PORT_NYNASHAMN: 'i hamn SE', IN_TRANSIT_SE: 'på väg SE', AT_SITE: 'på plats', UNLOADED: 'lossad',
     DELIVERED: 'levererad', CANCELLED: 'avbokad',
   },
 };

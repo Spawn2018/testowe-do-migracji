@@ -124,7 +124,7 @@ Cel: każda zmiana trafia do planu, a plan jest wykonywany dalej. Poprawki nie m
 
 Jeden wykonawca, jeden folder, jeden czat agenta naraz (decyzja właściciela 08.10.2026 16:44: „Budujemy z 1 folderu w cursor”; dopisek D-20261008-1646-01). Wyjątek: wygląd robi koordynator na gałęziach `wyglad/*` w swojej kopii repozytorium; Cursor scala te PR i wdraża (FRONT-KOORDYNATOR, D-20261013-1835-01 F2). Paczki po kolei, w kolejności poniżej. Przed bramą końcową rebase na `main`.
 
-**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~ → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
+**Kolejność:** P0-CI → P0a → P0b → P1 → P2 → Poprawki P2 — wygląd → Poprawki P2 — wygląd 2 → P3 → Poprawki P3 → P4 → **Poprawki P2–P3 (audyt 15.10)** (C1–C3, C12, C14, C16, C16-H, C17 na produkcji; C3-p i dalej w Naprawach) → **Naprawy audytu 17.10** (BLOKER przed C4; D-20261017-0730-01): ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312 / D-1740 B1, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~ → ~~A3+A9~~ → ~~A7+A4~~ → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01)** → C4 → C5 → C6 → C7 → C8 → C9 → C10 → C11 → C13 → **P4-u** → **P3-d** → P5 → P6 → P7 → P8 → P10a → P9 → P10b → P11 (P0-CI przed Dniem 1; P0-CI i P0a już scalone; decyzje 17.10 07:20: 1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A)
 
 - Każda paczka: gałąź `pakiet/P<n>-<nazwa>` → brama (§1 pkt 3) → scalenie → wdrożenie → wpis w `POSTEP.md` (czas pracy i czas poprawek); potem od razu następna.
 - Bez drugiego czatu agenta w tym folderze, bez trybu worktree i bez równoległych agentów Cursora.
@@ -401,9 +401,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (…A1 NA PRODUKCJI — przyjęte; dalej A2…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (A7+A4 scalone #348; dalej A5…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → A3+A9 → A7+A4 → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → A5 → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -565,7 +565,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `doc_requirement_set`: zmienia tylko Administrator HHL (E9), sprawdzenie roli w funkcji.
 - Test: SG-03 po „Dostarczone” → sprawa „Wgraj CMR” u SCX; wgranie CMR → sprawa znika, transport „Gotowe do fakturowania” (C17); Operacje HHL nie zmienią terminów.
 
-### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — W TOKU (`pakiet/a7-a4` / #348, migracja 0237; A7 na gałęzi, A4 w tym samym PR)
+### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — SCALONE (#348 `0f7765a7`, 20.10.2026 09:53; `deploy-main` w toku; para A7+A4, migracja 0237)
 - **D-20261020-0010-01:** jeden PR z A4 (jedna migracja, osobny commit na pozycję, jedno F7).
 - **A7 w 0237:** `symbol_specs` (10), `symbol_spec_of` / `a7_apply_symbol`, kolumny `loads.symbol`/`permit_kind`, `permits.scope`, zezwolenie `13/GD/2026` + polisa `1106707356` (metadane), `awiz_missing` Firma/Trasa, `doc_requirements_status` bez PERMIT_* dla Firmy, RPC `a7_permits_list` / `a7_policies_list`, widok `p5Source` + `permitScopeOf`. PDF → `scripts/a7-seed-docs.mjs` (poza CI).
 - Tabela symboli w bazie (`symbol_specs`) i `symbol_spec_of(load)`:
@@ -595,7 +595,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
-### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5) — W TOKU (`pakiet/a7-a4` / #348, 0237)
+### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5) — SCALONE (#348 `0f7765a7`, 20.10.2026 09:53; para A7+A4, 0237; `deploy-main` w toku)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
 - Baza: `register_invoice` + `INVOICE_A4: true` / `INVOICE_EDIT: true` w `src/lib/serverRules.ts`.
 - **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
@@ -627,7 +627,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - Test „co do grosza” na TEST; transport bez CMR niedostępny w kreatorze; po rejestracji „Zafakturowano” samo.
 - Nowe sprawdzenia uprawnień w widoku: `accountRole(role)`, nie `getAuthProfile()?.role` (D-20261017-1220-01 §2).
 
-### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8)
+### A5 · Rejs w awizacji → statusy „Prom” i „Port SE” same (B8, C8) — W TOKU (`pakiet/a5-rejs-prom`, migracja 0238)
 - D-20261017-1450-01: bez zmian zakresu (kody spraw i faktura są w A2, A3, A4, A6, B5).
 - Okno Awizacja zapisuje `sailing_id`: wybór rejsu i armatora z `sailings` do Szwecji według daty. Wymagany do „Gotowy” przy trasie promowej (A9, brak `SAILING`). Jeśli baza sprawdza rejs przy zapisie awizacji — ta sama reguła co widok: rejs nie wcześniej niż późniejsze z okna awizacji i dnia załadunku z planu (+ czas na port) (D-20261017-1715-01 §2 pkt 3). Wyglądu okna nie zmieniasz.
 - `promote_ferry_departures` dla obu przepraw (Gdańsk–Nynäshamn i Gdynia–Karlskrona). Statusy portów według `geofences.route`.

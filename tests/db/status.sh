@@ -16,13 +16,13 @@ L() { printf '55555555-0000-0000-0000-0000000000%s' "$1"; }
 A=$(L 0a); B=$(L 0b); C=$(L 0c); D=$(L 0d); E=$(L 0e); F=$(L 0f); G=$(L 1a); Hh=$(L 1b); I=$(L 1c); J=$(L 1d); K=$(L 1e)
 
 q "
-insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country) values
- ('$P','Załadunek test','LOADING',     make_circle_fence(52.0900,17.0200,  800), 200,   0, 2,'PL'),
- ('$P','Bufor Gdańsk',  'PRE_PORT',    make_circle_fence(54.4030,18.6800,20000), 500,   0, 2,'PL'),
- ('$P','Port Gdańsk',   'PORT_OUT',    make_circle_fence(54.4030,18.6800,  800), 200, 900, 2,'PL'),
- ('$P','Port Nynäshamn','PORT_IN',     make_circle_fence(58.9350,17.9500,  800), 200, 600, 2,'SE'),
- ('$P','Bufor Boden',   'PRE_ARRIVAL', make_circle_fence(65.8054,21.7591,50000),1000,   0, 2,'SE'),
- ('$P','Plac Stegra',   'SITE',        make_circle_fence(65.8054,21.7591, 1500), 300, 600, 2,'SE');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route) values
+ ('$P','Załadunek test','LOADING',     make_circle_fence(52.0900,17.0200,  800), 200,   0, 2,'PL', null),
+ ('$P','Bufor Gdańsk',  'PRE_PORT',    make_circle_fence(54.4030,18.6800,20000), 500,   0, 2,'PL', 'POLFERRIES'),
+ ('$P','Port Gdańsk',   'PORT_OUT',    make_circle_fence(54.4030,18.6800,  800), 200, 900, 2,'PL', 'POLFERRIES'),
+ ('$P','Port Nynäshamn','PORT_IN',     make_circle_fence(58.9350,17.9500,  800), 200, 600, 2,'SE', 'POLFERRIES'),
+ ('$P','Bufor Boden',   'PRE_ARRIVAL', make_circle_fence(65.8054,21.7591,50000),1000,   0, 2,'SE', null),
+ ('$P','Plac Stegra',   'SITE',        make_circle_fence(65.8054,21.7591, 1500), 300, 600, 2,'SE', null);
 insert into vessels (id,name,operator) values
  ('66666666-0000-0000-0000-000000000001','M/F Wawel','Polferries'),
  ('66666666-0000-0000-0000-000000000002','M/F Nova Star','Polferries');
@@ -379,6 +379,67 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier
  ('$SG8','$P','$SCXO','KSH/SG12','HHL/SG12','SCX/SG12','AT_SITE','2026-10-05')" >/dev/null
 q "select decision_open_from_event('$P','DELIVERED_CHECK','L14:$SG8','SG-12: wyjazd z placu po 6 min — czy dostarczono?', '{\"exit_at\":\"2026-10-10 16:00:00+00\",\"dwell_min\":6,\"zone\":\"Plac Stegra\",\"threshold_min\":10}'::jsonb, '$SG8', null)" >/dev/null
 chk "A2 L14 + anulowanie: RESOLVED/CANCELLED i 0 otwartych" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select load_status_set('$SG8','CANCELLED','2026-10-18 08:00+00','test A2'); select status||'/'||resolution_code||'/'||(select count(*) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK' and status in ('NEW','ASSIGNED','SNOOZED')) from decisions where load_id='$SG8' and type_code='DELIVERED_CHECK'; commit" "RESOLVED/CANCELLED/0"
+
+# A5 (PLAN §4): Stena Gdynia–Karlskrona — prom i port SE z geofences.route
+echo; echo "[A5] Stena Gdynia–Karlskrona — prom i ETA portu SE"
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-0000000000a5','Stena Spirit','Stena Line')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-0000000000a5','$P','66666666-0000-0000-0000-0000000000a5','GDY-KAA',
+  '2026-10-05 12:00+00','2026-10-05 22:00+00','ZAPLANOWANY','STENA');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route) values
+ ('$P','Port Gdynia A5',   'PORT_OUT', make_circle_fence(54.53321,18.54425, 800), 200, 900, 2,'PL','STENA'),
+ ('$P','Port Karlskrona A5','PORT_IN',  make_circle_fence(56.16460,15.63080, 800), 200, 600, 2,'SE','STENA');
+" >/dev/null
+S_A5=77777777-0000-0000-0000-0000000000a5
+L_A5=$(L 70)
+mk $L_A5 A5S "'HHL/A5S'" "'SCX/A5S'" IN_TRANSIT_PL "'$S_A5'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L_A5','MILESTONE_LOADED','2026-10-04 08:00+00')" >/dev/null
+# Obcy port Polferries nie zmienia statusu przy rejsie Stena
+pos $L_A5 54.4030 18.6800 "2026-10-05 10:00+00"; pos $L_A5 54.4031 18.6801 "2026-10-05 10:05+00"
+chk "A5 Stena: wjazd Gdańsk (POLFERRIES) bez zmiany statusu" "$(st $L_A5)" IN_TRANSIT_PL
+# Własny port Gdynia → AT_PORT_GDANSK
+pos $L_A5 54.53321 18.54425 "2026-10-05 11:00+00"; pos $L_A5 54.5333 18.5443 "2026-10-05 11:05+00"
+chk "A5 Stena: wjazd Gdynia → AT_PORT_GDANSK" "$(st $L_A5)" AT_PORT_GDANSK
+chk "A5 Stena: odejście rejsu → FERRY" "select promote_ferry_departures('2026-10-05 12:01+00')" 1
+chk "A5 Stena: status FERRY" "$(st $L_A5)" FERRY
+pos $L_A5 56.16460 15.63080 "2026-10-05 22:10+00"; pos $L_A5 56.1647 15.6309 "2026-10-05 22:15+00"
+chk "A5 Stena: wjazd Karlskrona → AT_PORT_NYNASHAMN" "$(st $L_A5)" AT_PORT_NYNASHAMN
+# ETA: PORT_IN z trasy rejsu (Karlskrona ≈ 56.16, nie Nynäshamn ≈ 58.94)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L_A5'" >/dev/null
+q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+ ('66666666-0000-0000-0000-0000000000a5', 55.5, 17.0, 16, now(), 'DIGITRAFFIC')" >/dev/null
+q "select refresh_load_eta('$L_A5')" >/dev/null
+chk "A5 Stena: eta_basis port_route=STENA" "select eta_basis->>'port_route' from loads where id='$L_A5'" STENA
+chk "A5 Stena: wait_ais=false i ferry_eta_at ustawione" \
+  "select (eta_basis->>'wait_ais')||'/'||(eta_basis ? 'ferry_eta_at')::text from loads where id='$L_A5'" "false/true"
+# Polferries nadal Nynäshamn
+L_PF=$(L 71)
+mk $L_PF A5P "'HHL/A5P'" "'SCX/A5P'" FERRY "'$S1'"
+q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+ ('66666666-0000-0000-0000-000000000001', 56.5, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
+q "select refresh_load_eta('$L_PF')" >/dev/null
+chk "A5 Polferries: eta_basis port_route=POLFERRIES" "select eta_basis->>'port_route' from loads where id='$L_PF'" POLFERRIES
+chk "A5 READY_TO_INVOICE: ETA jak DELIVERED (segment DONE)" \
+  "select basis->>'segment' from compute_load_eta('$C17A')" DONE
+# F7: source w STATUS_AUTO (kontrakt A10); ETA plac Stena > Polferries
+chk "A5 Stena STATUS_AUTO FERRY source=SCHEDULE" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" SCHEDULE
+chk "A5 Stena STATUS_AUTO AT_PORT_NYNASHAMN source=GPS" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" GPS
+q "select set_config('tower.status_ctx','on',true); update loads set status='AT_PORT_NYNASHAMN' where id in ('$L_A5','$L_PF')" >/dev/null
+# Świeże GPS (compute_load_eta: GPS_FRESH_MIN) — stałe daty z października były martwe w CI
+q "select process_position('$L_A5', 56.16460, 15.63080, now() - interval '5 minutes');
+    select process_position('$L_A5', 56.1647, 15.6309, now() - interval '1 minute');
+    select process_position('$L_PF', 58.9044, 17.9480, now() - interval '5 minutes');
+    select process_position('$L_PF', 58.9045, 17.9481, now() - interval '1 minute')" >/dev/null
+q "select refresh_load_eta('$L_A5'); select refresh_load_eta('$L_PF')" >/dev/null
+chk "A5 Stena: eta_site nie null w porcie SE" "select (eta_site is not null)::text from loads where id='$L_A5'" true
+chk "A5 Polferries: eta_site nie null w porcie SE" "select (eta_site is not null)::text from loads where id='$L_PF'" true
+chk "A5 ETA plac Stena > Polferries (SE_ROAD_KAA 21,5 > SE_ROAD 17)" \
+  "select (s.eta_site > p.eta_site)::text from loads s join loads p on true where s.id='$L_A5' and p.id='$L_PF'" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

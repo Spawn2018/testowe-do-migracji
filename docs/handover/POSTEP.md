@@ -3458,3 +3458,33 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   3. insurance: boolean bez `::text` (`f` nie `false`).
 - Opis PR #348 uzupełniony liczbami P3. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 09:55 — #348 scalone; start A5 (0238)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #348 — „F7: gotowe do scalenia” po `708f3000` (07:50Z), CI zielone (db `39387282216`, unit, visual), bez konfliktu. Merge `0f7765a7`. `deploy-main` nie czekamy (D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A5** (`pakiet/a5-rejs-prom`): migracja `0238_a5_rejs_prom_port.sql` — `geofences.route`, `promote_ferry_departures` / `apply_geofence_status` / `compute_load_eta` (PORT według rejsu, `ferry_eta_at`/`wait_ais`, READY_TO_INVOICE jak DELIVERED). Testy status **130** (+9 A5).
+
+## 2026-10-20 10:25 — A5: db czerwone → cień rekordu `s` w compute_load_eta
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 bez F7; #317/#259 konflikt — bez scalenia.
+- Brama `db` `39390843961` czerwona: status 96/34, i2 546/7 (`trg_eta_after_load`), workflows/h3/e25/ferry-status/risks.
+- Przyczyna: w `compute_load_eta` rekord `s` + alias `FROM sailings s` przy odczycie `s.route` (nieprzypisany rekord) → błąd przy każdym `sailing_id`. Port/prom/ETA i przypisanie rejsu padały.
+- Poprawka w tej samej 0238 (jeszcze nie na produkcji): `v_sail` / alias `sa`. Czeka na zielone CI i F7.
+
+## 2026-10-20 11:10 — #352 scalone; A5 db: ETA Stena vs Polferries (świeże GPS)
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #352 (`wyglad/W-a5-port`) — „F7: gotowe do scalenia” po `dcd4681`, CI zielone, merge `f8c2f39b`. `deploy-main` nie czekamy.
+- #351 na `51dc06cb`: unit/visual zielone; db `39396573337` czerwone — status **132/1**: „A5 ETA plac Stena > Polferries” dostało pusty wynik (oba `eta_site` null).
+- Przyczyna: pozycje GPS w teście z `2026-10-06` poza `GPS_FRESH_MIN` względem `now()` w CI → `compute_load_eta` zwraca null przy `AT_PORT_NYNASHAMN`.
+- Poprawka: `process_position(…, now() − 5/1 min)` w `tests/db/status.sh`. Oczekiwane status nadal **133**. Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 11:30 — A5: db zielone na `b0b7f607`; F7 runda 2 → asercje eta_site
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 — F7 runda 2 niegotowe (przed poprawką GPS); #352 scalone wcześniej. #317/#259 konflikt — bez scalenia.
+- CI na `b0b7f607`: db `39398905684` / unit / visual **zielone** (status 133).
+- F7 runda 2: dopisane `chk` `eta_site is not null` dla Stena i Polferries przed porównaniem. Oczekiwane status **135**. Czeka na zielone CI i „F7: gotowe do scalenia”.
+
