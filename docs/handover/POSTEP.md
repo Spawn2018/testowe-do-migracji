@@ -3382,3 +3382,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Przyczyna: UUID `…s901` (litera **s** poza hex) → INSERT/SELECT padają z `invalid input syntax for type uuid` (w logu sam `^`); stąd AWIZ+SAILING i PLANNED. Reopen: jeden SELECT z `ensure||status` mógł czytać EXPIRED sprzed UPDATE — rozdzielone; `a3_ensure` reopen z `IF NOT FOUND` + reopen gdy `open_from_event` zwróci zamkniętą.
 - e25 70. Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-20 04:55 — #345 e25: oczekiwane 71 (licznik bramy)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `3449a9c8`. Unit i visual zielone; `db` `39360005068` czerwone: e25 **71/71 OK**, ale `gate-suites.mjs` oczekiwał 70.
+- Poprawka: `e25: 71` (asercja „rejs f901 w bazie” + reopen w dwóch komendach). Czeka na zielone CI i „F7: gotowe do scalenia”.
+
