@@ -29,7 +29,7 @@ val "KSH nie widzi wierszy w load_cost (RLS)"        $KSH "select count(*) from 
 val "SCX nie widzi wierszy w load_revenue (RLS)"     $SCX "select count(*) from load_revenue" 0
 
 echo; echo "[3] Kto może zmieniać co na fakturze"
-err "KSH nie zmieni kwoty faktury HHL"               $KSH "update invoices set net_total=1 where id='$INVP'" "weryfikowa"
+err "KSH nie zmieni kwoty faktury HHL"               $KSH "update invoices set net_total=1 where id='$INVP'" "weryfikowa|KSH nie|Edytuj fakturę"
 val "KSH może oznaczyć fakturę HHL jako sporną"      $KSH "with u as (update invoices set verification_status='SPORNA', dispute_note='test' where id='$INVP' returning 1) select count(*) from u" 1
 val "KSH nie dosięgnie faktury kosztowej"            $KSH "with u as (update invoices set dispute_note='x' where id='$INVK' returning 1) select count(*) from u" 0
 err "SCX nie zweryfikuje własnej faktury"            $SCX "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INVK'" "Wystawca nie weryfikuje"
@@ -127,7 +127,8 @@ psql "$PGURL" -q -c "insert into documents (project_id, load_id, category, stora
   ('22222222-0000-0000-0000-000000000001','33333333-0000-0000-0000-000000000001','PERMIT_PL','dokumenty/t/p.pdf','zezwolenie.pdf'),
   ('22222222-0000-0000-0000-000000000001',null,'INSURANCE','dokumenty/t/i.pdf','polisa.pdf')" >/dev/null 2>&1
 val "HHL widzi zezwolenie i polisę (documents)"          $HHL "select count(*) from documents where category in ('PERMIT_PL','INSURANCE')" 2
-val "permits: 0 wierszy dla HHL (RLS bez polityk); insurance_policies: bez SELECT dla authenticated (0097 — tylko przez insurance_policies_list)" $HHL "select (select count(*) from permits)||':'||has_table_privilege('authenticated','public.insurance_policies','select')::text" "0:false"
+# A7: seed 13/GD/2026 — HHL widzi zezwolenia (permits_read / is_hhl, 0081); polisy nadal bez SELECT tabeli.
+val "permits: 1 wiersz dla HHL (A7 FIRMA); insurance_policies: bez SELECT dla authenticated (0097 — tylko przez listę)" $HHL "select (select count(*) from permits)||':'||has_table_privilege('authenticated','public.insurance_policies','select')::text" "1:false"
 chk6 "driver_tokens, system_heartbeat: brak SELECT dla anon/authenticated; rate_cards, rate_rules: brak SELECT dla anon (I-19/0065: authenticated czyta, RLS tylko HHL); baf_* usunięte (I-14/0066)" "$(psql "$PGURL" -Atq -c "select bool_or(has_table_privilege(r, 'public.'||t, 'select')) or (select bool_or(has_table_privilege('anon', 'public.'||t, 'select')) from unnest(array['rate_cards','rate_rules']) t) or to_regclass('public.baf_definitions') is not null from unnest(array['driver_tokens','system_heartbeat']) t cross join unnest(array['anon','authenticated']) r")" f
 
 echo; echo "[W1] spatial_ref_sys tylko do odczytu dla ról API (0031) — test bez dotykania danych"

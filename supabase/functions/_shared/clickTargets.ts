@@ -110,7 +110,7 @@ put(['FUEL_READING_MISSING'], () => ({ kind: 'options', path: '/opcje/cennik' })
 put(['SMS_GATEWAY_SILENT', 'SMS_UNDELIVERED'], () => system('bramka-sms'));
 put(['ZONE_LIMIT'], () => ({ kind: 'options', path: '/opcje/odbiorcy-sms' }));
 
-put(['INVOICE_NEW', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED', 'PAYMENT_REMINDER', 'INVOICE'], (i) => invoice(i.invoiceId));
+put(['INVOICE_NEW', 'INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED', 'PAYMENT_REMINDER', 'INVOICE', 'INVOICE_OVERDUE', 'INVOICE_UPDATED', 'INVOICE_CORRECTED'], (i) => invoice(i.invoiceId));
 
 put(['FEE_PROPOSED'], (i) => transport(i.loadCode, 'ceny'));
 put(['FEE_DECIDED'], (i) => transport(i.loadCode, 'ceny'));

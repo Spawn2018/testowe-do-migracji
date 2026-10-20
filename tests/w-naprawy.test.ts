@@ -76,7 +76,7 @@ describe('A4 · faktura tylko z CMR (kreator)', () => {
     expect(s).toMatch(/\.filter\(\(l\) => !onBill\.has\(l\.id\) && \(!invoiceA4On\(\) \|\| billReady\(l, documents\)\)\)/);
     expect(s).toContain('export const BILL_TOLERANCE_A4 = 0.01;');
     expect(s).toContain('export const BILL_TOLERANCE = { abs: 1, pct: 0.002 };');
-    expect(read('src/lib/serverRules.ts')).toContain('INVOICE_A4: false /* A4 register_invoice */,');
+    expect(read('src/lib/serverRules.ts')).toContain('INVOICE_A4: true /* A4 register_invoice */,');
     expect(read('src/views/BillsPanel.tsx')).toContain('checkBill(draft, loads, bills, today, documents)');
     expect(read('src/store/useTowerStore.ts')).toContain('checkBill(draft, s.loads, s.bills, today, s.documents)');
   });

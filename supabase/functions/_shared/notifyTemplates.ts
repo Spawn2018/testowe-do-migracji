@@ -120,13 +120,42 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       return { subject, body, severity: off > 0 ? 'HIGH' : 'MEDIUM', view: 'inv' };
     }
     case 'INVOICE_NEW': {
-      const amount = formatInvoiceAmount(p.gross, p.currency, locale);
+      const amount = formatInvoiceAmount(p.gross ?? p.amount, p.currency, locale);
       const due = formatDay(p.due);
       const subject = locale === 'en' ? `New invoice ${num} to verify` : locale === 'sv' ? `Ny faktura ${num} att granska` : `Nowa faktura ${num} do weryfikacji`;
       const body = locale === 'en'
         ? `Invoice ${num} (${String(p.week ?? '')}), ${amount}, due ${due}.`
         : locale === 'sv' ? `Faktura ${num} (${String(p.week ?? '')}), ${amount}, förfallodag ${due}.` : `Faktura ${num} (${String(p.week ?? '')}), ${amount}, termin ${due}.`;
       return { subject, body, severity: 'MEDIUM', view: 'inv' };
+    }
+    case 'INVOICE_OVERDUE': {
+      const amount = formatInvoiceAmount(p.amount ?? p.gross, p.currency, locale);
+      const due = formatDay(p.due);
+      const subject = locale === 'en'
+        ? `Invoice ${num} unpaid after due date ${due}`
+        : locale === 'sv' ? `Faktura ${num} obetald efter förfallodag ${due}`
+        : `Faktura ${num} nieopłacona po terminie ${due}`;
+      const body = locale === 'en'
+        ? `Invoice ${num} (${String(p.week ?? '')}), ${amount}: payment due date ${due} has passed and the invoice is not marked paid.`
+        : locale === 'sv'
+          ? `Faktura ${num} (${String(p.week ?? '')}), ${amount}: förfallodagen ${due} har passerat och fakturan är inte markerad som betald.`
+          : `Faktura ${num} (${String(p.week ?? '')}), ${amount}: termin płatności ${due} minął, a faktura nie jest oznaczona jako opłacona. Sprawdź płatność i oznacz fakturę.`;
+      return { subject, body, severity: 'HIGH', view: 'inv' };
+    }
+    case 'INVOICE_UPDATED': {
+      const firm = String(p.firm ?? '');
+      const subject = locale === 'en'
+        ? `Invoice ${num} changed by ${firm}`
+        : locale === 'sv' ? `Faktura ${num} ändrad av ${firm}`
+        : `Faktura ${num} zmieniona przez ${firm}`;
+      return { subject, body: subject, severity: 'MEDIUM', view: 'inv' };
+    }
+    case 'INVOICE_CORRECTED': {
+      const subject = locale === 'en'
+        ? `Invoice ${num} corrected by HHL Administrator`
+        : locale === 'sv' ? `Faktura ${num} rättad av HHL-administratör`
+        : `Faktura ${num} poprawiona przez Administratora HHL`;
+      return { subject, body: subject, severity: 'MEDIUM', view: 'inv' };
     }
     case 'INVOICE_DISPUTED':
     case 'INVOICE_DISPUTE_REPLY':

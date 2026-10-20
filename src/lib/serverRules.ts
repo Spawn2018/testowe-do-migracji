@@ -22,8 +22,8 @@ const ON_IN_PRODUCTION: Record<ServerRule, boolean> = {
   DETOUR_E49: false /* P6 E49 Z3 */,
   ROAD_PL_HERE: false /* P6 E2 */,
   ROAD_SITUATIONS_MAP: false /* P9 E29 pkt 3 */,
-  INVOICE_A4: false /* A4 register_invoice */,
-  INVOICE_EDIT: false /* A4 update_invoice (D-20261020-0115-01) */,
+  INVOICE_A4: true /* A4 register_invoice */,
+  INVOICE_EDIT: true /* A4 update_invoice (D-20261020-0115-01) */,
 };
 
 export function serverRuleOn(rule: ServerRule): boolean {

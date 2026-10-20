@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 118, // A8 +3: emtrack_login_state bez SELECT, zero SOURCE_DOWN:EMTRACK_WEB:%
   status: 121, // A2 + 1100 + 1130: L14 zamyka się przy DELIVERED/CANCELLED (116 chk + 5 ok++; definicja chk nie liczy się)
   storage: 37,
-  money: 135,
+  money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -24,8 +24,8 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 662, // A9: load_ready_gaps + asercje bramy (CI 662)
-  i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
+  nullguard: 685, // A4: +update_invoice GUARD (+4 vs 681)
+  i2: 553, // A7 F7 P9: KSH bez polisy SCX + asercja HHL widzi
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
@@ -35,7 +35,7 @@ export const EXPECTED_LOCAL = {
   adm10: 8,
   hist11: 11,
   workflows: 67,
-  insurance: 42,
+  insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
   'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
@@ -48,12 +48,12 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 46,
+  baf: 45,
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 71, // +1 vs 70: asercja „rejs f901 w bazie” (obok reopen w dwóch komendach)
+  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 26, // C3-p: macierz, czat, osobne wiersze, dec_new email off/on
+  c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };
 
 /**

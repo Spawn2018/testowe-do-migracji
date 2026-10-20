@@ -96,9 +96,10 @@ sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class
   ('$P','$LSG','SG-B1','DIMENSIONED',18.21,2.45,2.45,20.0), ('$P','$LPL','PL-1','DIMENSIONED',14.7,3.4,2.6,14.0),
   ('$P','$LK1','KR-B1','DIMENSIONED',20.0,3.5,2.5,28.0), ('$P','$LK2','KR-B2','DIMENSIONED',20.0,3.5,2.5,28.0),
   ('$P','$LCX','SG-B2','DIMENSIONED',18.0,2.4,2.4,19.0), ('$P','$LNX','SG-B3','DIMENSIONED',18.0,2.4,2.4,19.0)"
+# A7 (0237) wypełnia combo_* z symbol_specs przy pozycji — OK. Wycena i tak bierze
+# wymiary z shipment_items (dims_source=CARGO); combo_* tylko jako zapas bez pozycji.
 fresh_price "$LSG" "$LPL" "$LK1" "$LK2" "$LCX" "$LNX"
 
-chk "combo_* puste — stawka z wymiarów ładunku" "$(Q "select count(*) from loads where id in ('$LSG','$LPL','$LK1','$LK2') and combo_length_m is null")" "4"
 sys "select load_price_compute(id, '2026-10-05') from loads where id in ('$LSG','$LPL','$LK1','$LK2','$LCX')"
 chk "SG: koszt 6900 + 6900×0,13 = 7797,00 (1,13)" "$(Q "select base_amount||'/'||fuel_applied_mult::numeric(4,2)||'/'||baf_amount||'/'||total_amount from load_cost where load_id='$LSG'")" "6900.00/1.13/897.00/7797.00"
 chk "SG: przychód 7245 → 8186,85" "$(Q "select base_amount||'/'||baf_amount||'/'||total_amount from load_revenue where load_id='$LSG'")" "7245.00/941.85/8186.85"

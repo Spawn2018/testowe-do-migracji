@@ -69,20 +69,22 @@ val "SCX: godzina DELIVERED na własnym transporcie (P2)" $SCX "select load_stat
 )::text" true commit
 # A5: READY_TO_INVOICE bez CMR
 err "READY_TO_INVOICE bez CMR" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
-# A5 ręcznie: CMR sprzed dostawy (C17 auto nie rusza) → STATUS_READY_TO_INVOICE
+# A4: CMR sprzed dostawy nie wystarcza także przy ręcznym READY (jak C17)
 sys "delete from documents where load_id='$L2' and category='CMR' and storage_path like 'test/e25-cmr%'" >/dev/null
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L2','CMR','test/e25-cmr-early.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-06 08:00:00+00')" >/dev/null
 sval "C17 wczesny CMR: nadal DELIVERED" "select status::text from loads where id='$L2'" DELIVERED
-val "SCX → READY_TO_INVOICE + zdarzenie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
-# C17: CMR po dostawie na świeżym DELIVERED → STATUS_AUTO (cofnięcie ręczne + supersede wczesnego)
-val "HHL cofa do DELIVERED (A5)" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','cofka e25'); select status::text from loads where id='$L2'" DELIVERED commit
+err "A4: READY_TO_INVOICE z CMR sprzed dostawy — odmowa" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null)" "CMR"
+# C17: CMR po dostawie → STATUS_AUTO READY_TO_INVOICE
 sys "update documents set superseded_at=now() where load_id='$L2' and category='CMR' and superseded_at is null" >/dev/null
 sys "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_at)
      values ('$P','$L2','CMR','test/e25-cmr-auto.pdf','cmr.pdf','application/pdf',100,
              timestamptz '2026-10-07 12:00:00+00')" >/dev/null
 sval "C17 CMR po dostawie → READY STATUS_AUTO" "select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1"
+# A4: ręczne READY przy CMR po dostawie (HHL cofa, SCX ustawia READY)
+val "HHL cofa do DELIVERED (A4)" $HHL "select load_status_set('$L2','DELIVERED',timestamptz '2026-10-07 10:19:54+00','cofka e25'); select status::text from loads where id='$L2'" DELIVERED commit
+val "A4: SCX → READY_TO_INVOICE przy CMR po dostawie" $SCX "select load_status_set('$L2','READY_TO_INVOICE',now(),null); select status::text || '|' || (select count(*)::text from load_events where load_id='$L2' and event_type='STATUS_READY_TO_INVOICE') from loads where id='$L2'" "READY_TO_INVOICE|1" commit
 sval "A3: C17 zamyka CMR_UPLOAD" "select count(*) from decisions where load_id='$L2' and type_code='CMR_UPLOAD' and status in ('NEW','ASSIGNED','SNOOZED')" 0
 # A5: INVOICED bez faktur
 sys "delete from invoice_lines where load_id='$L2'" >/dev/null
@@ -302,6 +304,39 @@ sval "A3: drugi a3_ensure na otwartej = null (0 zmian)" "select a3_ensure_cmr_up
 sval "A9: brak otwartych RES:* (Do zrobienia spójne)" "select count(*) from decisions
   where status in ('NEW','ASSIGNED','SNOOZED')
     and (coalesce(detail->>'event_key','') like 'RES:%' or coalesce(detail->>'event_key','') like 'l3:RES:%')" 0
+
+# --- A7: symbol_specs, zezwolenie firmowe, polisa HHL ---
+sys "select a7_seed_firm_assets()" >/dev/null
+sval "A7: symbol_specs = 10" "select count(*) from symbol_specs" 10
+sval "A7: zezwolenie 13/GD/2026 FIRMA" "select count(*) from permits where permit_no='13/GD/2026' and scope='FIRMA'" 1
+sval "A7: polisa HHL PZU 1106707356" "select count(*) from insurance_policies ip
+  join organizations o on o.id=ip.org_id
+ where ip.policy_no='1106707356' and o.kind='FORWARDER'" 1
+# UUID tylko hex (a7sg/a7kr były niepoprawne → błąd składni uuid).
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+     values ('33333333-0000-0000-0000-00000000a701','$P','$SCXO','123456/2026/A7SG','PLANNED','2026-06-01')
+     on conflict (id) do update set status='PLANNED', plan_load_date=excluded.plan_load_date" >/dev/null
+sys "delete from shipment_items where shipment_code='SG-A7';
+     insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class)
+     values ('$P','33333333-0000-0000-0000-00000000a701','SG-A7',18.21,2.45,2.45,'DIMENSIONED')" >/dev/null
+sys "select set_config('tower.bulk_quiet','on',true); select a7_apply_symbol('33333333-0000-0000-0000-00000000a701','e25'); select set_config('tower.bulk_quiet','',true)" >/dev/null
+sval "A7: SG → symbol SG, FIRMA, wymiary" "select symbol||'|'||permit_kind||'|'||combo_length_m::text||'|'||combo_width_m::text||'|'||escort_vehicles::text
+  from loads where id='33333333-0000-0000-0000-00000000a701'" "SG|FIRMA|21.69|2.45|0"
+sval "A7: SG ma load_permits firmowe" "select count(*) from load_permits lp
+  join permits p on p.id=lp.permit_id
+ where lp.load_id='33333333-0000-0000-0000-00000000a701' and p.scope='FIRMA'" 1
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+     values ('33333333-0000-0000-0000-00000000a702','$P','$SCXO','123456/2026/A7KR','PLANNED','2026-06-01')
+     on conflict (id) do update set status='PLANNED', plan_load_date=excluded.plan_load_date" >/dev/null
+sys "delete from shipment_items where shipment_code='KR-A7';
+     insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class)
+     values ('$P','33333333-0000-0000-0000-00000000a702','KR-A7',20.20,3.52,2.60,'DIMENSIONED')" >/dev/null
+sys "select set_config('tower.bulk_quiet','on',true); select a7_apply_symbol('33333333-0000-0000-0000-00000000a702','e25'); select set_config('tower.bulk_quiet','',true)" >/dev/null
+sval "A7: KR → TRASA, pilot 2" "select symbol||'|'||permit_kind||'|'||escort_vehicles::text
+  from loads where id='33333333-0000-0000-0000-00000000a702'" "KR|TRASA|2"
+sys "update security_flags set enabled=true where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+sval "A7: KR bez zezwoleń trasy → PERMIT" "select count(*) from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a702')) g where g->>'kind'='PERMIT'" 1
+sys "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

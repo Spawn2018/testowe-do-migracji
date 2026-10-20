@@ -40,3 +40,7 @@ select
 where not exists (
   select 1 from geofences where name = 'Bufor przed Sremem'
 );
+
+-- A7: zezwolenie firmowe + polisa HHL (0237 przy pustej bazie nic nie wstawia — orgs/projekty są tu)
+select a7_seed_firm_assets();
+select doc_requirements_seed(id) from projects;

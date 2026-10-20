@@ -27,24 +27,23 @@ const load = {
 } as unknown as Parameters<typeof sampleOf>[0];
 
 describe('spis wiadomości (E43 „Jeden ekran”)', () => {
-  it('4 SMS, 35 rodzajów e-maili i wpisów w dzwonku (28 z serwera + 6 nowych zdarzeń + A4 „Faktura po terminie”), 2 e-maile paczki (E40), 5 e-maili logowania — razem 46, id bez powtórzeń', () => {
+  it('4 SMS, 37 rodzajów e-maili i wpisów w dzwonku (A4: OVERDUE + UPDATED + CORRECTED), 2 e-maile paczki (E40), 5 e-maili logowania — razem 48, id bez powtórzeń', () => {
     expect(MESSAGES.filter((m) => m.channel === 'SMS')).toHaveLength(4);
-    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell)).toHaveLength(35);
+    expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell)).toHaveLength(37);
     expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && m.noBell).map((m) => m.id)).toEqual(['ACCOUNTING_KSH', 'ACCOUNTING_HHL']);
     expect(MESSAGES.filter((m) => m.channel === 'LOGIN')).toHaveLength(5);
     expect(new Set(MESSAGES.map((m) => m.id)).size).toBe(MESSAGES.length);
   });
 
-  it('34 rodzaje = rodzaje powiadomień z notifyTemplates.ts (L53 + C3) — id wiadomości to nazwa rodzaju; A4 „planned”, dopóki wykonawca nie doda rodzaju', () => {
+  it('rodzaje = notifyTemplates.ts (L53 + C3 + A4 OVERDUE/UPDATED/CORRECTED); bez planned', () => {
     const src = readFileSync('supabase/functions/_shared/notifyTemplates.ts', 'utf8');
     const kinds = [...src.matchAll(/case '([A-Z_]+)':/g)].map((m) => m[1])
       .filter((k) => k !== 'DECISION_ESCALATED_BATCH')
       .sort();
     const planned = MESSAGES.filter((m) => m.planned).map((m) => m.id);
-    /* wyglad/W-faktura-termin (D-20261017-2130-01): wykonawca dodaje INVOICE_OVERDUE w notifyTemplates.ts i usuwa `planned`. */
-    /* D-20261018-1610-01: temat zbiorczy jest tytułem z payloadu, nie pozycją listy P8. */
-    expect(planned.every((id) => id === 'INVOICE_OVERDUE')).toBe(true);
-    expect(kinds).toHaveLength(34 + 1 - planned.length);
+    /* A4 (D-20261017-2130-01): INVOICE_OVERDUE bez planned; + INVOICE_UPDATED / INVOICE_CORRECTED. */
+    expect(planned).toEqual([]);
+    expect(kinds).toHaveLength(37);
     expect(MESSAGES.filter((m) => m.channel === 'EMAIL' && !m.noBell && !m.planned).map((m) => m.id).sort()).toEqual(kinds);
   });
 
@@ -217,9 +216,9 @@ describe('ekran — prawa (E43 „Bezpiecznie”)', () => {
     expect(html).toContain('data-mt-insert="code"');
     expect(html).toContain('contentEditable="true"');
     expect(html).not.toContain('data-mt-ro');
-    /* lista: 46 pozycji (39 + 6 nowych zdarzeń, wyglad/audyt-E, + A4 „Faktura po terminie”), jedna w kolejności Tab */
-    expect(html.match(/data-mt-item=/g)).toHaveLength(46);
-    expect(html.match(/tabindex="-1"/g)).toHaveLength(45);
+    /* lista: 48 pozycji (A4 + INVOICE_UPDATED / INVOICE_CORRECTED), jedna w kolejności Tab */
+    expect(html.match(/data-mt-item=/g)).toHaveLength(48);
+    expect(html.match(/tabindex="-1"/g)).toHaveLength(47);
   });
 
   it('Operacje HHL: tylko podgląd — bez zapisu, próbnej wysyłki i przycisków „Wstaw dane”', async () => {

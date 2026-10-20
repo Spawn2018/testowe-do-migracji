@@ -21,6 +21,7 @@ import {
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
+import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
@@ -78,7 +79,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
@@ -110,6 +111,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('ops_thresholds').select('key,value_num'),
       /* A9: braki do Gotowy z bazy; brak RPC (przed migracją) → widok liczy sam */
       sb.rpc('load_ready_gaps'),
+      /* A7: zezwolenia i polisy z bazy (KSH tylko HHL; SCX tylko własna) */
+      sb.rpc('a7_permits_list'),
+      sb.rpc('a7_policies_list'),
     ]);
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
@@ -122,6 +126,26 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
     if (gapsQ.error && !/load_ready_gaps|PGRST202|schema cache|Could not find/i.test(gapsQ.error.message ?? '')) {
       throw new Error(`load_ready_gaps: ${gapsQ.error.message}`);
+    }
+    if (a7PermitsQ.error && !/a7_permits_list|PGRST202|schema cache|Could not find/i.test(a7PermitsQ.error.message ?? '')) {
+      throw new Error(`a7_permits_list: ${a7PermitsQ.error.message}`);
+    }
+    if (a7PoliciesQ.error && !/a7_policies_list|PGRST202|schema cache|Could not find/i.test(a7PoliciesQ.error.message ?? '')) {
+      throw new Error(`a7_policies_list: ${a7PoliciesQ.error.message}`);
+    }
+    if (!a7PermitsQ.error) {
+      const raw = a7PermitsQ.data;
+      const rows = (Array.isArray(raw) ? raw : raw ?? []) as PermitView[];
+      setPermitsFromServer(Array.isArray(rows) ? rows : []);
+    } else {
+      setPermitsFromServer([]);
+    }
+    if (!a7PoliciesQ.error) {
+      const raw = a7PoliciesQ.data;
+      const rows = (Array.isArray(raw) ? raw : raw ?? []) as PolicyView[];
+      setPoliciesFromServer(Array.isArray(rows) ? rows : []);
+    } else {
+      setPoliciesFromServer([]);
     }
     const orderBy = new Map(((orderNos.error ? [] : orderNos.data ?? []) as { load_id: string; hhl_order_no: string | null; carrier_order_no: string | null }[])
       .map((r) => [r.load_id, r]));

@@ -3388,3 +3388,73 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe” po `3449a9c8`. Unit i visual zielone; `db` `39360005068` czerwone: e25 **71/71 OK**, ale `gate-suites.mjs` oczekiwał 70.
 - Poprawka: `e25: 71` (asercja „rejs f901 w bazie” + reopen w dwóch komendach). Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-20 05:30 — #345 scalone; start A7+A4 (0237)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 — „F7: gotowe do scalenia” po `a4b2cfa4` (03:15Z), CI zielone (db `39361912023`, unit, visual), bez konfliktu. Merge `7589dbef`. `deploy-main` `39364557245` w toku (nie czekamy — D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A7+A4** (`pakiet/a7-a4`): migracja `0237_a7_a4_symbol_faktura.sql` — A7 (symbol_specs, Firma/Trasa, 13/GD/2026, PZU 1106707356, RPC, widok). A4 w następnym commicie tej samej migracji. Testy e25 79, nullguard 666.
+
+## 2026-10-20 06:45 — A4 w 0237 (#348)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po A7 (`41f486ed`); CI A7 zielone (db/unit/visual). #317/#259 konflikt — bez scalenia.
+- **A4** (ten commit, ta sama migracja 0237 / PR #348): `register_invoice` (READY+CMR C17, VAT 23%, tolerancja 0, INVOICE_NEW także KOSZT), `update_invoice`, `guard_invoice_update`, `invoices_insert` bez CLIENT, `INVOICE_OVERDUE` + macierz `inv_overdue`, `load_status_set` = `c17_cmr_after_delivery`, `INVOICE_A4`/`INVOICE_EDIT: true`.
+- Oczekiwane bramy: money 138, nullguard 681, e25 79. Unit lokalnie: p8/c3/w-naprawy/w-faktura-termin **58/58**.
+
+## 2026-10-20 07:45 — #349 scalone; F7 niegotowe #348 → poprawki bramy db
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #349 (`ci/typecheck`) — „F7: gotowe do scalenia” po `a3836f9`, CI zielone, merge `786d46c3`. `deploy-main` nie czekamy.
+- #348 F7 niegotowe (`d68d81e`): poprawki w `ffaa25ca`/`f57e4941`; brama db `39374679867` czerwona (security/money/i2/baf/e18).
+- Ten krok: money (rola HHL_OPS przez `sys`, `commit` po akceptacji), security (wzorzec „Edytuj fakturę”), i2 (KSH bez polisy SCX + HHL widzi; i2=553), baf (czyszczenie combo po triggerze A7), e18 (READY przed shipment_items), komunikat błędu w triggerze A7.
+- Czeka na zielone CI i „F7: gotowe do scalenia” po ostatnim commicie. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:05 — #348 brama db: baf 45 (A7 combo)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `25c1a98c`. Unit/visual zielone; db `39376792710` czerwone: **baf** 45/46 — asercja „combo_* puste” po A7 (trigger wypełnia combo z `symbol_specs`).
+- Poprawka: usunięta asercja i zbędne czyszczenie combo w `baf.sh` (wycena i tak `dims_source=CARGO` z pozycji); `gate-suites` baf **45**. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:20 — #350 scalone; #348 F7 runda 2 poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #350 (`wyglad/W-a10-zrodlo`) — „F7: gotowe do scalenia” po `383f55b`, CI zielone, merge `d0e6f8d4`. `deploy-main` nie czekamy.
+- #348 CI na `6b663338` zielone (unit/visual/db); F7 runda 2 **niegotowe** — ten krok:
+  - B2: `load_events` bez `source=SYSTEM`; `guard_load_update` pozwala INVOICED→READY w `tower.invoice_edit`;
+  - B3: `trg_shipment_items_a7_symbol` przywraca `bulk_quiet`; P8 wymiary w wyzwalaczu;
+  - P4: `visible_to` tylko polisy CARRIER; P5: `dispute_track` pomija przy edycji; P7: INSERT tylko z `register_invoice`;
+  - P6: money +13 (PRZYCHOD/ZGODNA/usunięcie/OPLATA/B3/P7) → **162**.
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 08:50 — #348 money 3 FAIL po F7 runda 2 → poprawki testów
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `9688bd14`. Unit/visual zielone; db `39380884619` czerwone: money **159/3**.
+- Poprawki `money.sh` (bez migracji):
+  1. OPLATA_PALIWOWA — `::text` dawało `true`, `val` oczekuje `t` (jak inne boolean);
+  2. Z4 — ta sama data co w INSERT L7 = no-op; data `2026-09-24`;
+  3. HHL_OPS nie podbija `due_date` HHL/FV (zostawało 26.10 → refresh 26.10 nie dawał PO_TERMINIE).
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 09:05 — #348 F7 runda 3: OPLATA + P2/P4
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `a224f6ca`. Unit zielone; db `39382941105` czerwone: money **161/1** — zapytanie OPLATA bez `FROM invoice_lines` (błąd poprzedniej poprawki).
+- Ten krok (F7 runda 3 B1 + P2 + P4):
+  1. OPLATA — przywrócony `FROM invoice_lines … load_id=L7` (boolean bez `::text` → `t`);
+  2. P2: wyzwalacz `trg_insurance_policies_doc_visibility` — po `document_id` polisy CARRIER `visible_to` bez CLIENT; test w `insurance.sh` (+2 → 44);
+  3. P4: money — SCX usuwa L5, HHL usuwa L6 z PRZYCHOD, zmiana kwoty L7, edycja opłaconej (HHL_ADMIN + SCX przed akceptacją) → **172**;
+  4. U: `dedup_key` STATUS_AUTO z epoch (ponowne usunięcie).
+- P3 (opis PR z liczbami ROLLBACK) — w komentarzu PR po pushu. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+
+## 2026-10-20 09:20 — #348 db FAIL po F7 runda 3 → poprawki
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `324a3a4b`. Unit/visual zielone; db `39384899533` czerwone: money **166/6**, insurance **43/1**.
+- Poprawki:
+  1. `update_invoice` zwraca `payment_status` / `paid_at` (testy opłaconej czytały pusty klucz);
+  2. money: przywróć L5 na KOSZT → INVOICED, zmiana kwoty na L5 (L7 nigdy nie był w parze); `mark_invoice_paid` 39/1 z `commit`; edycja SCX 39/8 bez zmiany `due_date` (M7 −3 od 30.10); money **174**;
+  3. insurance: boolean bez `::text` (`f` nie `false`).
+- Opis PR #348 uzupełniony liczbami P3. Czeka na zielone CI i F7. #317/#259 konflikt — bez scalenia.
+

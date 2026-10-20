@@ -553,7 +553,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - **D-20261020-0010-01 (#341):** po tej pozycji pary PR **A3+A9**, potem **A7+A4**, potem A5, potem A10. Terminy pośrednie w §3. Wydanie 28.10.2026 20:00 bez zmian.
 - Scalone #340 `c2c22989` (F7 po `0d4b0bcc`). `deploy-main` `39337027018`: migracja `0235_l3_kod_i_korekta_statusu.sql`, Edge bez zmian, Vercel `HUPS6L9PepsMLfynhra6XhAiqf2y` (alias `tower.log-mar.pl`). Dalej A3+A9 (migracja 0236).
 
-### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — W TOKU (`pakiet/a3-a9`, PR #345)
+### A3 · CMR z rozładunku i zadanie „Wgraj CMR” (E31, L26 — przeniesione z P5) — NA PRODUKCJI (scalenie #345 `7589dbef`, 20.10.2026 03:29; `deploy-main` w toku)
 - **D-20261020-0010-01:** jeden PR z A9 (jedna migracja, osobny commit na pozycję, jedno F7). Ekranu nie zmieniasz.
 - **D-20261020-0040-01 (#343), pierwszy commit, ta sama migracja 0236:** `l13_decision_email` i e-mail reguły workflow dla CARRIER biorą `nullif(load_sms_code, '—')`, nie `order_no` i nie `left(id, 8)`. Opisy `matrix_notify` i `ksh_confirm_dates` wracają do tekstu C3-p / D-0005 z dopiskiem D-0930. Test `e25`: `poprzednio` po `STATUS_AUTO` i korekta bez wpisu (`zastepuje` null). **ZROBIONE** (`663d953c` / `d11c7d42`).
 - **A3 w 0236:** seed bez POD/SPEC/LASHING/PERMIT_SE; `doc_requirement_set` → `is_hhl_admin`; sprawa `CMR_UPLOAD` / `UPLOAD_CMR` po Dostarczone bez CMR; C17 zamyka; stare DOC_MISSING z kopią. **ZROBIONE** (`e5ad7b53`); dec2 katalog 20 typów.
@@ -565,8 +565,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `doc_requirement_set`: zmienia tylko Administrator HHL (E9), sprawdzenie roli w funkcji.
 - Test: SG-03 po „Dostarczone” → sprawa „Wgraj CMR” u SCX; wgranie CMR → sprawa znika, transport „Gotowe do fakturowania” (C17); Operacje HHL nie zmienią terminów.
 
-### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`)
+### A7 · Tabela symboli, polisa PZU i zezwolenie firmowe (D1, D2 — przeniesione z P5; pliki W44 są w `D:\Watch Tower\dane\`) — W TOKU (`pakiet/a7-a4` / #348, migracja 0237; A7 na gałęzi, A4 w tym samym PR)
 - **D-20261020-0010-01:** jeden PR z A4 (jedna migracja, osobny commit na pozycję, jedno F7).
+- **A7 w 0237:** `symbol_specs` (10), `symbol_spec_of` / `a7_apply_symbol`, kolumny `loads.symbol`/`permit_kind`, `permits.scope`, zezwolenie `13/GD/2026` + polisa `1106707356` (metadane), `awiz_missing` Firma/Trasa, `doc_requirements_status` bez PERMIT_* dla Firmy, RPC `a7_permits_list` / `a7_policies_list`, widok `p5Source` + `permitScopeOf`. PDF → `scripts/a7-seed-docs.mjs` (poza CI).
 - Tabela symboli w bazie (`symbol_specs`) i `symbol_spec_of(load)`:
   - wymiary zestawu, piloci PL/SE (PL-A / PL-B po szerokości), rodzaj zezwolenia „Firma” / „Trasa”;
   - uzupełnianie `loads.combo_*` przy imporcie.
@@ -578,8 +579,8 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - `p5Source.ts` `permitsOf` / `policiesOf` / `permitScopeOf` → produkcja z bazy.
 - Test: `permits = 1`, `insurance_policies = 2`; każdy transport ma wymiary, pilota i rodzaj zezwolenia; KSH widzi polisę HHL, nie widzi polisy SCX; „Zezwolenie SE” brakuje tylko przy KR.
 
-### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — W TOKU (ta sama migracja 0236 / PR #345)
-- **A9 w 0236:** `awiz_missing`, `load_ready_gaps`, READY z bazy, `tower-zasoby` → `tower-l3` (`l3_scan`), zamknięcie `RESOURCE_MISSING` z kopią. **ZROBIONE** (`41348842` + poprawka bramy i2/e25).
+### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — NA PRODUKCJI (ta sama migracja 0236 / #345 `7589dbef`)
+- **A9 w 0236:** `awiz_missing`, `load_ready_gaps`, READY z bazy, `tower-zasoby` → `tower-l3` (`l3_scan`), zamknięcie `RESOURCE_MISSING` z kopią. **ZROBIONE** (F7 po `a4b2cfa4`).
 - Jedna funkcja kompletu awizacji `awiz_missing(load)`:
   - kierowca PL i SE (przy przepięciu) z telefonem, ciągnik, naczepa;
   - rejs przy trasie promowej;
@@ -594,9 +595,9 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - Wyłączasz `tower-zasoby` i zamykasz 93 RESOURCE_MISSING z kopią (E18 P12).
 - Test: komplet → „Gotowy” sam; brak telefonu kierowcy SE → brak „Gotowy” i jedna pozycja w brakach; koniec fałszywego braku „POLICY_SCX”; jedna liczba „Do zrobienia” w menu, Kokpicie i dzwonku.
 
-### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5)
+### A4 · Faktura tylko z CMR, co do grosza, z VAT (E4, B7 — przeniesione z P5) — W TOKU (`pakiet/a7-a4` / #348, 0237)
 - Kreator, „Do wystawienia”, menu i Kokpit — `wyglad/W-naprawy` (#289, D-20261017-1450-01). `billReady` jest lustrem `c17_cmr_after_delivery`. Gdy zmieniasz ten warunek w bazie — sygnał, koordynator zmieni widok. Tych ekranów już nie zmieniasz (`billCandidates`, `pendingWeekLoads`, `invoiceTodoCount`, `BillsPanel`).
-- Baza: `register_invoice` + przy wdrożeniu przestawienie `INVOICE_A4: true` w `src/lib/serverRules.ts` (jedyna zmiana w widoku).
+- Baza: `register_invoice` + `INVOICE_A4: true` / `INVOICE_EDIT: true` w `src/lib/serverRules.ts`.
 - **D-20261020-0115-01 (#346) — edycja faktur (baza w A4; ekran `wyglad/W-faktura-edycja` u koordynatora):**
   - SCX → HHL (`KOSZT`): przed akceptacją HHL zmienia SCX i `HHL_ADMIN`; po `ZAAKCEPTOWANA` — tylko `HHL_ADMIN`.
   - HHL → KSH (`PRZYCHOD`): przed akceptacją KSH zmienia wystawca HHL (`HHL_ADMIN`, `HHL_OPS`); po — tylko `HHL_ADMIN`.
