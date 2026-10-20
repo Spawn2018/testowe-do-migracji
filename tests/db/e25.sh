@@ -303,5 +303,36 @@ sval "A9: brak otwartych RES:* (Do zrobienia spójne)" "select count(*) from dec
   where status in ('NEW','ASSIGNED','SNOOZED')
     and (coalesce(detail->>'event_key','') like 'RES:%' or coalesce(detail->>'event_key','') like 'l3:RES:%')" 0
 
+# --- A7: symbol_specs, zezwolenie firmowe, polisa HHL ---
+sval "A7: symbol_specs = 10" "select count(*) from symbol_specs" 10
+sval "A7: zezwolenie 13/GD/2026 FIRMA" "select count(*) from permits where permit_no='13/GD/2026' and scope='FIRMA'" 1
+sval "A7: polisa HHL PZU 1106707356" "select count(*) from insurance_policies ip
+  join organizations o on o.id=ip.org_id
+ where ip.policy_no='1106707356' and o.kind='FORWARDER'" 1
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+     values ('33333333-0000-0000-0000-00000000a7sg','$P','$SCXO','123456/2026/A7SG','PLANNED','2026-06-01')
+     on conflict (id) do update set status='PLANNED', plan_load_date=excluded.plan_load_date" >/dev/null
+sys "delete from shipment_items where shipment_code='SG-A7';
+     insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class)
+     values ('$P','33333333-0000-0000-0000-00000000a7sg','SG-A7',18.21,2.45,2.45,'DIMENSIONED')" >/dev/null
+sys "select set_config('tower.bulk_quiet','on',true); select a7_apply_symbol('33333333-0000-0000-0000-00000000a7sg','e25'); select set_config('tower.bulk_quiet','',true)" >/dev/null
+sval "A7: SG → symbol SG, FIRMA, wymiary" "select symbol||'|'||permit_kind||'|'||combo_length_m::text||'|'||combo_width_m::text||'|'||escort_vehicles::text
+  from loads where id='33333333-0000-0000-0000-00000000a7sg'" "SG|FIRMA|21.69|2.45|0"
+sval "A7: SG ma load_permits firmowe" "select count(*) from load_permits lp
+  join permits p on p.id=lp.permit_id
+ where lp.load_id='33333333-0000-0000-0000-00000000a7sg' and p.scope='FIRMA'" 1
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+     values ('33333333-0000-0000-0000-00000000a7kr','$P','$SCXO','123456/2026/A7KR','PLANNED','2026-06-01')
+     on conflict (id) do update set status='PLANNED', plan_load_date=excluded.plan_load_date" >/dev/null
+sys "delete from shipment_items where shipment_code='KR-A7';
+     insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class)
+     values ('$P','33333333-0000-0000-0000-00000000a7kr','KR-A7',20.20,3.52,2.60,'DIMENSIONED')" >/dev/null
+sys "select set_config('tower.bulk_quiet','on',true); select a7_apply_symbol('33333333-0000-0000-0000-00000000a7kr','e25'); select set_config('tower.bulk_quiet','',true)" >/dev/null
+sval "A7: KR → TRASA, pilot 2" "select symbol||'|'||permit_kind||'|'||escort_vehicles::text
+  from loads where id='33333333-0000-0000-0000-00000000a7kr'" "KR|TRASA|2"
+sys "update security_flags set enabled=true where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+sval "A7: KR bez zezwoleń trasy → PERMIT" "select count(*) from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a7kr')) g where g->>'kind'='PERMIT'" 1
+sys "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL${bad}"
 [ "$fail" -eq 0 ]

@@ -3388,3 +3388,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak „F7: gotowe” po `3449a9c8`. Unit i visual zielone; `db` `39360005068` czerwone: e25 **71/71 OK**, ale `gate-suites.mjs` oczekiwał 70.
 - Poprawka: `e25: 71` (asercja „rejs f901 w bazie” + reopen w dwóch komendach). Czeka na zielone CI i „F7: gotowe do scalenia”.
 
+## 2026-10-20 05:30 — #345 scalone; start A7+A4 (0237)
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #345 — „F7: gotowe do scalenia” po `a4b2cfa4` (03:15Z), CI zielone (db `39361912023`, unit, visual), bez konfliktu. Merge `7589dbef`. `deploy-main` `39364557245` w toku (nie czekamy — D-20261020-0010-01).
+- #317 / #259: konflikt z `main` — bez scalenia.
+- Bieżąca **A7+A4** (`pakiet/a7-a4`): migracja `0237_a7_a4_symbol_faktura.sql` — A7 (symbol_specs, Firma/Trasa, 13/GD/2026, PZU 1106707356, RPC, widok). A4 w następnym commicie tej samej migracji. Testy e25 79, nullguard 666.
+

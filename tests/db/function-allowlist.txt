@@ -157,6 +157,11 @@ authenticated money_least_tier
 authenticated my_mfa_status
 authenticated load_order_numbers
 authenticated load_ready_gaps
+authenticated a7_permits_list
+authenticated a7_policies_list
+authenticated a7_apply_symbol
+authenticated symbol_spec_of
+authenticated symbol_resolve_code
 authenticated my_profile
 authenticated my_sessions
 authenticated my_session_revoke

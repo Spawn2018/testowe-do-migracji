@@ -77,9 +77,18 @@ export interface PermitView {
   appliesTo: string;
   loads: number;
 }
-/** null = nie podłączone (tabela „Zezwolenia” ukryta; zezwolenia dodaje się jak dziś w panelu transportu). */
+/**
+ * null = nie podłączone (tabela „Zezwolenia” ukryta).
+ * Produkcja A7: lista z RPC `a7_permits_list` (podłącza `supabaseProvider` / store).
+ * Do czasu podpięcia w store zostaje pusta tablica (nie demo).
+ */
+let prodPermits: PermitView[] | null | undefined;
+export function setPermitsFromServer(rows: PermitView[] | null): void {
+  prodPermits = rows;
+}
 export function permitsOf(loads: Load[]): PermitView[] | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPermits(loads) : null;
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoPermits(loads);
+  return prodPermits === undefined ? [] : prodPermits;
 }
 /**
  * „+ Dodaj” przy „Inne pliki” i rodzaj „Inne” w oknie „Wgraj dokument” (E31 pkt 5; D-20261014-2005-01 S4 pkt 7).
@@ -89,9 +98,9 @@ export function permitsOf(loads: Load[]): PermitView[] | null {
 export function otherDocsOn(): boolean {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase';
 }
-/** Wybór „Firma / Trasa” w oknie „Wgraj dokument” — po podłączeniu rodzaju zezwolenia w bazie. */
+/** Wybór „Firma / Trasa” w oknie „Wgraj dokument” — A7: włączone także na produkcji. */
 export function permitScopeOf(): boolean {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase';
+  return true;
 }
 
 /**
@@ -113,9 +122,16 @@ export function docsSeenOf<D extends Pick<Document, 'visibleTo'>>(docs: readonly
 
 /** E31 — polisy dodawane raz (G-21): OCP przewoźnika (SCX, zatwierdza HHL) i polisa HHL. */
 export interface PolicyView { org: 'SCX' | 'HHL'; name: string; number: string; validTo: string; approved: boolean }
-/** null = nie podłączone: w uwagach liczba transportów z ważną polisą (jak dziś), bez numeru polisy. */
+/**
+ * null = nie podłączone. Produkcja A7: `a7_policies_list` (KSH tylko HHL, SCX tylko własna).
+ */
+let prodPolicies: PolicyView[] | null | undefined;
+export function setPoliciesFromServer(rows: PolicyView[] | null): void {
+  prodPolicies = rows;
+}
 export function policiesOf(): PolicyView[] | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPolicies() : null;
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoPolicies();
+  return prodPolicies === undefined ? [] : prodPolicies;
 }
 
 /** E33 — zasady cennika w panelu „Ceny” (czas wolny, stawki postoju, procenty anulowania). null = nie podłączone. */
