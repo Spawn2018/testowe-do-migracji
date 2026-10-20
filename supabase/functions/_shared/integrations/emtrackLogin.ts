@@ -10,6 +10,17 @@ export type EmtrackLoginState = {
   secretFp: string | null;
 };
 
+/** Zdejmuje jedną warstwę otaczających `'` / `"` (wpis w Secrets albo `.env`). */
+export function unquoteSecret(raw: string): string {
+  const t = raw.trim();
+  if (t.length >= 2) {
+    const a = t[0];
+    const b = t[t.length - 1];
+    if ((a === "'" && b === "'") || (a === '"' && b === '"')) return t.slice(1, -1);
+  }
+  return t;
+}
+
 /** Odcisk loginu i hasła — tylko po to, żeby zauważyć zmianę sekretu. Nie jest hasłem. */
 export function emtrackSecretFp(login: string, password: string): string {
   let h = 5381;

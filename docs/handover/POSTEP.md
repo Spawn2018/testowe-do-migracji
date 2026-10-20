@@ -3675,3 +3675,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #374 nadal otwarte (PILNE); reszta w planie, bez `pilne`.
 - Scalanie: CI na `ed388785` zielone (db/unit/visual). Brak „F7: gotowe” po head — drobne F7 w tym kroku. #317/#259 bez F7 po ostatnim commicie / konflikt.
 - Bieżąca: **HOTFIX #374** — `channel = 'IN_APP'` przy oznaczaniu dzwonków; money +1 asercja „wznowienie bez nowego RISK_OPEN”; money **179**. Push → czekam na CI i F7.
+
+## 2026-10-21 01:20 — C15-emtrack LOGIN wait (#365)
+
+- Skrzynka: #365 otwarte (`Spawn2018`, `dla-cursora`); #374 zamknięte po merge. #359/#358/#324/#323/#322/#320 — w planie. Bez etykiety `pilne`.
+- Scalanie: #375 SCALONE `5a67a23b` (F7 na `61da3d3`, deploy-main OK). #317 CONFLICTING (bez F7 po ostatnim merge main). #259 bez F7.
+- Ops #365: `emtrack_login_state` fail_streak=0; od ~22:52 UTC `emtrack-web` ok=true, objects=7, version 6.33.0 (sekrety Edge poprawione wcześniej). local `.env` z otaczającymi `'` → FP ≠ Edge; po `unquoteSecret` FP=Edge.
+- Bieżąca: **C15-emtrack** (`pakiet/c15-emtrack-login-wait`) — czekanie na LOGIN_RESPONSE+sessionId, ignorowanie ostrzeżeń (tylko `type` w logu), wait+1× LOGIN, `unquoteSecret`. vitest emtrack-web **18/18**.
