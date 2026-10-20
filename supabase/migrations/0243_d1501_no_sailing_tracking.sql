@@ -1,8 +1,10 @@
--- 0242 — D-20261020-1501-01 (#362) + D-20261020-1525-01 cz.2 (#364):
+-- 0243 — D-20261020-1501-01 (#362) + D-20261020-1525-01 cz.2 (#364):
 -- NO_SAILING / NO_TRACKING (l3_scan), rejs historyczny tylko HHL_ADMIN,
 -- SE nie w awiz_missing / load_ready_gaps (sprawa NO_AWIZ_SE, próg AWIZ_EARLY_H).
+-- Po 0242 (D-1710): NO_TRACKING = brak linku + warunek czasu (bez load_in_tracking_window);
+-- guard_load_update na bazie 0242 (SCX tracking_opened_at) + reguły rejsu D-1501.
 -- Bazuje na: awiz_missing 0237, l3_scan 0236, l3_upsert_alarm 0235,
--- guard_load_update 0240, l1_decision_type 0143, risk_is_predelivery 0229.
+-- guard_load_update 0242, l1_decision_type 0143, risk_is_predelivery 0229.
 
 -- ---------------------------------------------------------------------
 -- 1. Katalog decyzji (jak NO_AWIZACJA)
@@ -433,19 +435,19 @@ begin
       p_now
     );
 
-    /* D-1501 / F7 N4+N5 + decyzja właściciela 20:01 (#368):
-       NO_TRACKING = brak linku (telematics_vehicle_id) w oknie śledzenia.
-       Pozycje nie wyciszają (wycofane D1/N6 — dopasowanie po naczepie bez linku).
-       N5: do #368 — bez plan_load_date w przyszłości (fałszywe okno);
-       N4: due = start okna + 2 h (CRITICAL od wtedy, wcześniej HIGH);
-       F7 #370: bez v_past_idle (miniona dostawa i brak actual_load_at). */
+    /* D-1501 / F7 N4+N5 + decyzja właściciela 20:01 (#368) + F7 #373 po 0242:
+       NO_TRACKING = brak linku w oknie czasu (nie load_in_tracking_window —
+       po D-1710 okno bez linku jest zawsze zamknięte).
+       Pozycje nie wyciszają. N5: plan_load_date ≤ dziś; N4: due = start+2 h;
+       F7 #370: bez v_past_idle. */
+    v_warn := coalesce(r.tracking_opened_at, public.tracking_window_start(r.plan_load_date));
     v_track_missing := r.status < 'AT_SITE'
       and r.plan_load_date is not null
       and r.plan_load_date <= (p_now at time zone 'Europe/Warsaw')::date
-      and public.load_in_tracking_window(r.id, p_now) is true
+      and v_warn is not null
+      and p_now >= v_warn
       and nullif(btrim(r.telematics_vehicle_id), '') is null
       and v_past_idle is not true;
-    v_warn := coalesce(r.tracking_opened_at, public.tracking_window_start(r.plan_load_date));
     v_crit := case when v_warn is not null then v_warn + interval '2 hours' else null end;
     n := n + l3_upsert_alarm(
       r.project_id, r.id, 'RESOURCE_MISSING', 'l3:NO_TRACKING:' || r.id,
@@ -696,7 +698,11 @@ begin
   end if;
 
   if (current_org_kind() = 'CARRIER' and old.carrier_org_id = current_org_id()) is true then
-    select coalesce(array_agg(c), '{}') into v_bad from unnest(v_changed) c where c <> all (v_carrier);
+    -- D-1710 / 0242: freeze przy zmianie linku ustawia tracking_opened_at — nie blokuj SCX.
+    select coalesce(array_agg(c), '{}') into v_bad
+      from unnest(v_changed) c
+     where c <> all (v_carrier)
+       and c is distinct from 'tracking_opened_at';
     if cardinality(v_bad) > 0 then
       raise exception 'Przewoźnik nie może zmieniać: %', array_to_string(v_bad, ', ');
     end if;
@@ -721,7 +727,7 @@ begin
 end $$;
 
 comment on function public.guard_load_update() is
-  'D-1501/0242: rejs historyczny tylko HHL_ADMIN; F7 B3 blokada po FERRY; D-1525 biała lista SCX.';
+  'D-1501/0243: rejs historyczny tylko HHL_ADMIN; F7 B3 po FERRY; SCX tracking_opened_at (0242); D-1525 biała lista.';
 
 -- F7 D2+N3: decision_open_from_event respektuje tower.bulk_quiet (bez DECISION_OPEN).
 create or replace function public.decision_open_from_event(

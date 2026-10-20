@@ -1131,7 +1131,7 @@ val "D-1118 FIRMA+13/GD przy włączonym wymogu → READY" $HHL \
 $PSQL -c "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
 $PSQL -c "update loads set status='CANCELLED' where id in ('$L_D1','$L_D2')" >/dev/null
 
-echo; echo "[D-1501] NO_SAILING / NO_TRACKING / rejs historyczny (#362, 0242)"
+echo; echo "[D-1501] NO_SAILING / NO_TRACKING / rejs historyczny (#362, 0243)"
 L_D15=33333333-0000-0000-0000-00000000d150
 OPS_D15=aaaaaaaa-0000-0000-0000-00000000d150
 SCXORG_D15=$(Q "select org_id from app_users where auth_id='$SCX'")
