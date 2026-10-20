@@ -3651,3 +3651,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #368/#365/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`.
 - Scalanie: CI na `9cb8a547` zielone (unit/visual/db); brak „F7: gotowe” (trzecie F7: prawie). #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
 - Bieżąca: **D-1710 F7 r3** — przy odłączaniu `dedup_key || ':d1710'`; fixture `STATUS_AUTO:<id>:IN_TRANSIT_PL`; asercja prawdziwego STATUS_AUTO po `auto_set_status`; NO_AWIZACJA + brak nowych notifications/workflow_runs. status **155**.
+
+## 2026-10-20 23:45 — #373 D-1710 SCALONE; rebase D-1501 → 0243
+
+- Skrzynka: #368/#365/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`.
+- Scalanie: #373 F7: gotowe (head `abca2bc`) po ostatnim commicie, CI 8/8 → merge `c4779dc1`. #370 F7 stare unieważnione rebase; #371 po #370; #317/#259 konflikt.
+- Bieżąca: **D-1501** — rebase na main, migracja **0243**; NO_TRACKING = brak linku + warunek czasu (bez `load_in_tracking_window`); `guard_load_update` na bazie 0242 D-1710.

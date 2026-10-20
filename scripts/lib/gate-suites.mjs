@@ -22,10 +22,10 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
+  risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
   import: 66,
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 592, // #356 import_quiet_hours: +20 (B1 KSH, mix data+godz., OPS, critical, decisions)
+  i2: 604, // D-1501 (#362): +12 NO_SAILING/NO_TRACKING/NO_AWIZ_SE + rejs historyczny
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 47, // D-1710 F7: +AT_LOADING bez fazy; SE dopiero w trasie
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
+  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa; D-1525: SE→AWIZ_SE (liczba asercji bez zmian)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 118, // 122 − 4 SKIP (B6)
-  risks: 31, // 33 − 2 SKIP (C1)
+  risks: 32, // 34 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

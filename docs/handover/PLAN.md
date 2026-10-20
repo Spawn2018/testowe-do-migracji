@@ -401,9 +401,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**D-1710 #368** migracja 0242; potem #370→0243; #372 SCALONE; #356/#367 SCALONE; potem D-1300, A10…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**D-1501 #370** migracja 0243; ~~D-1710 #368/0242 SCALONE~~; #372 SCALONE; potem C15/D-1300, A10…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → **D-1710 (#368, 0242)** (okno + śledzenie tylko przy linku, SG-15/16) → **D-1501 (#362 / #370, 0243 po rebase) + HOTFIX cz.2 NO_AWIZ_SE** (ekran #363 SCALONE; #371 po #370) → C15-emtrack (#365) → D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322) → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368, 0242)~~ → **D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE** (ekran #363 SCALONE; #371 po #370) → C15-emtrack (#365) → D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322) → A10 · Automat wszystkich statusów (D-20261019-1540-01) → B4 → B5 → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -646,13 +646,13 @@ Przełącznik `ops_thresholds.import_quiet_hours` (domyślnie 1). Ekran Opcje �
 Migracja 0239. `permit_fits`, `awiz_pilots_set`, `load_escort_contacts` CLIENT_*, `AWIZ_PILOTS: true`.
 
 ### HOTFIX D-1525 · `trailer_swap` + SE + `carrier_order_no` HHL_ADMIN (D-20261020-1525-01, #364) — CZĘŚĆ 1 NA PRODUKCJI (scalenie #367 `e92d4ba6`, migracja 0240); cz.2 W TOKU z #362
-Część 1: `guard_load_update` — biała lista SCX (`trailer_swap`, `driver_phone_country`, pola SE); **HHL_ADMIN** może `carrier_order_no` (HHL_OPS nie). Część 2 (`NO_AWIZ_SE`, luka AWIZ_SE) — w 0242 z #362. Ekran: #363 SCALONE (`70a67701`).
+Część 1: `guard_load_update` — biała lista SCX (`trailer_swap`, `driver_phone_country`, pola SE); **HHL_ADMIN** może `carrier_order_no` (HHL_OPS nie). Część 2 (`NO_AWIZ_SE`, luka AWIZ_SE) — w 0243 z #362/#370. Ekran: #363 SCALONE (`70a67701`).
 
-### D-1710 · Okno śledzenia + tylko przy linku (D-20261020-1710-01 + 1959/2001, #368; **scalenie przed #370**) — W TOKU (`pakiet/d1710-tracking-window-link`, migracja **0242**)
+### D-1710 · Okno śledzenia + tylko przy linku (D-20261020-1710-01 + 1959/2001, #368; **scalenie przed #370**) — SCALONE (#373 `c4779dc1`, migracja **0242**)
 `loads_freeze_tracking_open` tylko po starcie; naprawa 7 transportów + SG-17 READY; odłączenie pozycji SG-15/16 bez linku i przed oknem; strażnik EXIT/ETA; emtrack tylko przy `telematics_vehicle_id`. Ekran: #369 + #372 SCALONE.
 
-### D-1501 · Awizacja HHL_ADMIN, rejsy historyczne, NO_SAILING/NO_TRACKING (D-20261020-1501-01, #362; scalenie **po #368**) — F7 gotowe, czeka #368 (`pakiet/d1501-no-sailing-tracking`, migracja **0243** po rebase, PR #370)
-Baza: `l3:NO_SAILING` / `l3:NO_TRACKING` (= brak linku) / `l3:NO_AWIZ_SE`, rejs historyczny tylko HHL_ADMIN, AWIZ_SE poza Gotowy. Ekran #363 SCALONE; komunikaty #371 po #370.
+### D-1501 · Awizacja HHL_ADMIN, rejsy historyczne, NO_SAILING/NO_TRACKING (D-20261020-1501-01, #362; scalenie **po #368**) — W TOKU (`pakiet/d1501-no-sailing-tracking`, migracja **0243**, PR #370)
+Baza: `l3:NO_SAILING` / `l3:NO_TRACKING` (= brak linku, warunek czasu bez `load_in_tracking_window`) / `l3:NO_AWIZ_SE`, rejs historyczny tylko HHL_ADMIN, AWIZ_SE poza Gotowy. Ekran #363 SCALONE; komunikaty #371 po #370.
 
 ### C15-emtrack · `login_failed` po zmianie hasła (#365; przy HOTFIX; bez `pilne`)
 Ops: zdjąć przerwę 6 h, jedna próba, raport bez sekretów; kod: czekaj przed LOGIN + skrót sekretu kasuje przerwę.
@@ -1215,3 +1215,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 20.10.2026 17:17 | #361 SCALONE (`cd06c89f`, 0241); #366 SCALONE; #363 SCALONE; start D-1501 (#362, 0242) | pętla |
 | 20.10.2026 17:10 | D-20261020-1710-01 (#368): okno śledzenia po przesunięciu daty (SG-17) + ETA; po D-1501 przed C15/D-1300 | właściciel 17:10/17:13; koordynator |
 | 20.10.2026 20:01 | #368: śledzenie tylko przy linku (SG-15/16); F7 #370: NO_TRACKING=brak linku; kolejność merge #368→#370→#371 | właściciel 19:59/20:01; F7 20:05/20:21 |
+| 20.10.2026 23:42 | #373 D-1710 SCALONE (`c4779dc1`, 0242). Start rebase #370 → 0243 | pętla |

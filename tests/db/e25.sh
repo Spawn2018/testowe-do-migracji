@@ -203,10 +203,10 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_l
      'HHL/A901','SCX/A901')
      on conflict (id) do update set status='PLANNED', trailer_swap=true,
        driver_delivery_phone=null, hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
-sval "A9: brak telefonu SE w awiz_missing" "select exists (
+sval "A9: brak telefonu SE w awiz_missing (AWIZ_SE, D-1525)" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g,
                jsonb_array_elements_text(g->'items') i
-   where g->>'kind'='AWIZ' and i='telefon SE')" t
+   where g->>'kind'='AWIZ_SE' and i='telefon SE')" t
 sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
 # CI bez pg_cron: CASE WHEN nie chroni przed parse cron.job — jak insurance.sh / workflows.sh.
 if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; then
@@ -214,7 +214,7 @@ if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; th
 else
   ok=$((ok+1)); echo "  OK    A9: cron tower-zasoby wyłączony"
 fi
-val "A9: HHL widzi load_ready_gaps" $HHL "select (gaps @> '[{\"kind\":\"AWIZ\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
+val "A9: HHL widzi load_ready_gaps AWIZ_SE" $HHL "select (gaps @> '[{\"kind\":\"AWIZ_SE\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
 sval "A9: SAILING gdy brak sailing_id" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
    where g->>'kind'='SAILING')" t
@@ -244,8 +244,9 @@ sys "update decisions d set status='RESOLVED', resolved_at=now(), resolution_cod
        and coalesce(d.detail->>'category','') in ('POD','SPEC','LASHING_PHOTO','PERMIT_SE','CMR')" >/dev/null
 sval "A3: EXPIRED DOC_MISSING nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee01'" "EXPIRED|termin minął"
 sval "A3: EXPIRED NO_AWIZACJA nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee02'" "EXPIRED|termin minął"
-sval "A9: brak telefonu SE → dokładnie 1 pozycja AWIZ" "select jsonb_array_length(g->'items') from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ'" 1
-# Komplet → Gotowy: telefon SE + rejs + polisa na plan_load_date a901; PERMIT wyłączony.
+sval "A9: brak telefonu SE → 1 pozycja AWIZ_SE (D-1525)" "select jsonb_array_length(g->'items') from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ_SE'" 1
+sval "A9: SE poza AWIZ — brak kind AWIZ przy pełnym PL" "select exists (select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ')" f
+# Komplet → Gotowy: rejs + polisa; SE nie blokuje READY (D-1525); PERMIT wyłączony.
 # UUID rejsu tylko hex (s901 było nielegalne → cast uuid → „^” w logu CI).
 sys "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
 sys "delete from shipment_items where load_id='33333333-0000-0000-0000-00000000a901' and shipment_code='E25-A901';
@@ -266,16 +267,10 @@ sys "delete from insurance_policies where policy_no='POL-E25-A901';
             coalesce((select plan_load_date from loads where id='33333333-0000-0000-0000-00000000a901'), current_date) - 30,
             coalesce((select plan_load_date from loads where id='33333333-0000-0000-0000-00000000a901'), current_date) + 400,
             'APPROVED'" >/dev/null
-sys "update loads set driver_delivery_phone='0700111222', sailing_id='33333333-0000-0000-0000-00000000f901', escort_vehicles=0
+# Bez telefonu SE (AWIZ_SE) + rejs + polisa → READY (AWIZ_SE nie blokuje Gotowy).
+sys "update loads set sailing_id='33333333-0000-0000-0000-00000000f901', escort_vehicles=0
      where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
-# Przy FAIL w logu widać kinds (nie samą liczbę).
-sval "A9: po komplecie awiz_missing puste" "select case
-  when coalesce(jsonb_array_length(awiz_missing('33333333-0000-0000-0000-00000000a901')),0)=0 then '0'
-  else (select string_agg(g->>'kind', ',' order by g->>'kind')
-          from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g)
-end" 0
-# Wyzwalacz a9_trg_loads_ready ustawia READY przy UPDATE; a9_try_ready potem = 0 zmian.
-sval "A9: komplet → Gotowy sam" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sval "A9: komplet bez SE → Gotowy sam (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
 sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
 # CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
 # DELIVERED wymaga hhl_order_no + carrier_order_no (0003) — bez nich INSERT padał i SCX widział 0 spraw.
