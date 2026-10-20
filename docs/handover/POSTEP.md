@@ -3512,3 +3512,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #355 — F7 po `8a9637a`, CI zielone → merge `e7842326`. #357 CI zielone na `4bae611f`, bez F7 (czekają poprawki D-1243). #317/#259 konflikt.
 - Ten commit (#357): `awiz_pilots_set` — imię jawne w audit/`load_events`; `load_escort_contacts` CLIENT_*; test KSH `PILOTS_SET`; i2 572; merge main po #355, `AWIZ_PILOTS: true`.
 
+## 2026-10-20 13:55 — #357 CI zielone; D-1322 w planie
+
+- Skrzynka: #359 komentarz D-20261020-1322-01 v3 (`Spawn2018`, bez `pilne`) — obie tabele paliwowe „od progu”. Wpisane: PLAN §4 (D-1300 + 1322), §8, dopisek `D-20261020-1322-01.md`; dopisek 1300 pkt 3 → odwołanie do 1322. #358/#356/#353/#324/#323/#322/#320 w planie.
+- Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
+- Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
+
