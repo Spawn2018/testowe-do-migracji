@@ -113,7 +113,7 @@ export function EtaBlock({
 
   /* pasmo ± minut i słowo pewności (E15-3) */
   const word = etaConfidenceLabel(load.etaConfidence, locale);
-  const band = load.etaConfMin != null ? tp(locale, 'p4b_eta_band', { m: load.etaConfMin, word }) : word;
+  const band = load.etaConfMin != null ? tp(locale, 'p4b_eta_band', { m: etaDuration(load.etaConfMin), word }) : word;
   const lastFix = d?.lastFixAt ?? null;
 
   let lbl: string;

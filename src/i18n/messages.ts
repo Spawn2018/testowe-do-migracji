@@ -361,7 +361,7 @@ const pl: Dict = {
   p4b_eta_ferry_in: 'wpłynięcie promu {at} (AIS)',
   p4b_eta_phone_lbl: 'ETA Boden',
   p4b_eta_none: 'ETA: –',
-  p4b_eta_band: '± {m} min · {word}',
+  p4b_eta_band: '± {m} · {word}',
   p4b_eta_rest_pill: 'Kierowca odpoczywa',
   p4b_eta_wait_val: 'Na miejscu od {time}',
   p4b_eta_gps: 'z GPS {ago}',
