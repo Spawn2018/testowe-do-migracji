@@ -2560,7 +2560,7 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
  * wyglad/P7-a — panel transportu › Przegląd i okno Awizacja (E32, img/e32-after; piloci D-20261009-1233-01, konwój R1).
  * Kolejność sekcji, „Do zrobienia przy tym transporcie” / linia stanu KSH, daty z dniem tygodnia i pochodzeniem, bez „Kontroli
  * trasy”, „Przeszkód” i czerwonego baneru zezwolenia; okno Awizacja z „Brakuje: …” i terminem, zapis części; piloci przy KR.
- * Telefon: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 220 px (właściciel 19.10), okno na cały ekran — 0 w bramie E8.
+ * Telefon: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 300 px (właściciel 20.10, D-20261020-1118-01), okno na cały ekran — 0 w bramie E8.
  */
 test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)', () => {
   test.describe.configure({ mode: 'serial', timeout: 300_000 });
@@ -2662,7 +2662,7 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
   });
 
   for (const role of ['HHL', 'SCX', 'KSH'] as const) {
-    test(`telefon ${role}: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 220 px; okno Awizacja na cały ekran — 0 w bramie E8`, async ({ page }) => {
+    test(`telefon ${role}: strzałka wstecz, sekcje zwinięte z linią stanu, mapa 300 px; okno Awizacja na cały ekran — 0 w bramie E8`, async ({ page }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await boot(page, role, false, NOW_URL);
       const hits: Hit[] = [];
@@ -2686,8 +2686,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
       await expect(page.locator('.drawer details[data-po="plan"] > summary')).toContainText('17.10.2026 → 22.10.2026'); /* P11 (e32): bez dnia tygodnia — linia mieści się na telefonie */
       await expect(page.locator('.drawer details[data-po="awiz"] > summary')).toContainText('brak');
       const map = await page.locator('.drawer [data-load-map]').boundingBox();
-      /* właściciel 19.10, 15:27: mapa na samej górze Przeglądu, 220 px (jak przed zmniejszeniem do 150 px) */
-      expect(map && Math.round(map.height)).toBe(220);
+      /* właściciel 19.10, 15:27: mapa na samej górze Przeglądu; D-20261020-1118-01 (20.10, 11:18): wyższa — telefon 300 px */
+      expect(map && Math.round(map.height)).toBe(300);
       expect(await page.locator('.drawer [data-overview] > *').first().getAttribute('data-load-map')).not.toBeNull();
       for (const s of await page.locator('.drawer details.po-fold > summary').all()) {
         const b = await s.boundingBox();
