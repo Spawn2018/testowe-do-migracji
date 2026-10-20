@@ -231,13 +231,14 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier
  ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05'),
  ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05'),
  ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24'),
- ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-10-20'),
+ ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05'),
  ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05'),
  ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01')" >/dev/null
 T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
 T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
-T20=$(q "select public.tracking_window_start('2026-10-20'::date)")
-T22=$(q "select public.tracking_window_start('2026-10-22'::date)")
+# W4: daty w przyszłości (nie „dziś”) — po 03:00 w dniu planu okno już startuje i zamraża tracking_opened_at.
+T05=$(q "select public.tracking_window_start('2026-11-05'::date)")
+T07=$(q "select public.tracking_window_start('2026-11-07'::date)")
 pos $W1 52.09 17.02 "$T59"
 chk "A1 02:59 bez pozycji" "select count(*) from positions where load_id='$W1'" 0
 pos $W1 52.09 17.02 "$T00"
@@ -246,10 +247,10 @@ pos $W2 52.09 17.02 "$T00"
 chk "A1 Dostarczone bez pozycji" "select count(*) from positions where load_id='$W2'" 0
 pos $W3 52.09 17.02 "2026-10-17 12:00:00+00"
 chk "A1 przyszły tydzień bez pozycji" "select count(*) from positions where load_id='$W3'" 0
-q "update loads set plan_load_date='2026-10-22' where id='$W4'" >/dev/null
-pos $W4 52.09 17.02 "$T20"
+q "update loads set plan_load_date='2026-11-07' where id='$W4'" >/dev/null
+pos $W4 52.09 17.02 "$T05"
 chk "A1 zmiana daty przed startem nie otwiera starego dnia" "select count(*) from positions where load_id='$W4'" 0
-pos $W4 52.09 17.02 "$T22"
+pos $W4 52.09 17.02 "$T07"
 chk "A1 nowy dzień załadunku otwiera okno" "select count(*) from positions where load_id='$W4'" 1
 pos $W5 52.09 17.02 "$T00"
 q "update loads set plan_load_date='2026-12-01' where id='$W5'" >/dev/null

@@ -3361,3 +3361,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Poprawki w 0236 + testy: B alarm pilotów (`AWIZ`+`PILOTS`); P2 tylko `load_sms_code`; P3 luka `CARRIER`; P5 `wf_enqueue_status` + `bulk_quiet`; P8 e25 (EXPIRED, Gotowy, CMR SCX, reopen); D POD/`~` + min 1 h + `n_open` bez już otwartych. i2 552, e25 67.
 - Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
 
+## 2026-10-20 03:45 — #345 poprawka bramy db po F7 rundzie 2
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `585b277d`. `db` `39353345803` czerwone (e25 6 FAIL + status A1×2). Visual zielony.
+- e25: UUID `ee01`/`ee02` (hex); rejs własny vessel `e25a` (unikat departure); a903 DELIVERED z numerami HHL/SCX; status A1 W4 → daty XI (nie „dziś” po 03:00).
+- Czeka na zielone CI i „F7: gotowe do scalenia” po tym commicie.
+
