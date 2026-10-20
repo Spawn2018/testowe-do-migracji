@@ -24,8 +24,8 @@ hhl "select admin_sms_zone_recipient_set('LOAD_SREM',1,'Anna Test','601111222','
 hhl "select admin_sms_zone_recipient_set('LOAD_SREM',2,'Bartek Test','601333444','PL',true)"
 hhl "select admin_sms_zone_recipient_set('UNLOAD_BODEN',1,'Carla SE','0701112233','SE',true)"
 hhl "select admin_sms_zone_recipient_set('UNLOAD_BODEN',2,'David SE','0704445566','SE',true)"
-sys "update loads set tractor_plate='PO 1234', driver_name='Jan Kowalski' where id='$L1'" >/dev/null
-sys "update loads set tractor_plate='WX 999', driver_name='Eva Nilsson' where id='$L2'" >/dev/null
+sys "update loads set tractor_plate='PO 1234', driver_name='Jan Kowalski', plan_load_date=current_date - 1, telematics_vehicle_id='TEL-SMS-L1' where id='$L1'" >/dev/null
+sys "update loads set tractor_plate='WX 999', driver_name='Eva Nilsson', plan_load_date=current_date - 1, telematics_vehicle_id='TEL-SMS-L2' where id='$L2'" >/dev/null
 
 val "brak GPS: brak SMS" "select sms_ksh_1h_consider('$L2')" "0"
 val "brak GPS: zero wierszy" "select count(*) from sms_outbox where load_id='$L2' and kind='ZONE_APPROACH'" "0"

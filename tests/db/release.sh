@@ -223,7 +223,7 @@ err "anon nie wywoła usage_measure"                      "" "set local role ano
 
 echo; echo "[PR5] Pozycje GPS — limit 60 s w process_position, retencja 30 dni po rozładunku, bajty na 1000"
 L8=33333333-0000-0000-0000-000000000008; L9=33333333-0000-0000-0000-000000000009; L10=33333333-0000-0000-0000-00000000000a
-for x in $L8 $L9 $L10; do sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date) values ('$x','$P','00000000-0000-0000-0000-00000000a003','KSH/${x: -2}','2026-09-01')"; done
+for x in $L8 $L9 $L10; do sys "insert into loads (id, project_id, carrier_org_id, order_no, plan_load_date, telematics_vehicle_id) values ('$x','$P','00000000-0000-0000-0000-00000000a003','KSH/${x: -2}','2026-09-01','TEL-${x: -2}')"; done
 T0="2026-09-20 10:00:00+00"
 ROLE=service_role val "pierwszy punkt zapisany"          "" "select count(*) from process_position('$L8', 53.0, 18.0, '$T0'); select count(*) from positions where load_id='$L8'" 1 commit
 ROLE=service_role val "punkt po 30 s pominięty (bez zapisu)" "" "select count(*) from process_position('$L8', 53.001, 18.0, timestamptz '$T0' + interval '30 seconds'); select count(*) from positions where load_id='$L8'" 1 commit

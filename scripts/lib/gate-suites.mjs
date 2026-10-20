@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
-  status: 135, // A5: +9 + F7 source/ETA Stena>Polferries + eta_site not null ×2
+  status: 155, // D-1710 F7 r3: +8 repair +6 (dedup :d1710, NO_AWIZ, notif/wf, STATUS_AUTO×2)
   storage: 37,
   money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
@@ -48,7 +48,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 45,
+  baf: 47, // D-1710 F7: +AT_LOADING bez fazy; SE dopiero w trasie
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa
