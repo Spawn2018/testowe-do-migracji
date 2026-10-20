@@ -1195,6 +1195,9 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       password,
       auth: (deps.env.EMTRACK_AUTH_TYPE as 'INTERNAL' | 'DIRECT' | undefined) ?? 'INTERNAL',
       WebSocketImpl: deps.WebSocketImpl,
+      ...(deps.env.EMTRACK_WS_TIMEOUT_MS
+        ? { timeoutMs: Number(deps.env.EMTRACK_WS_TIMEOUT_MS) }
+        : {}),
     });
     objects = r.objects;
     sentLog = r.sentLog;

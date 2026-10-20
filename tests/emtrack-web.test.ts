@@ -404,15 +404,26 @@ describe('C15/#365 LOGIN: ostrzeżenie ≠ odmowa, wait, unquote', () => {
     expect(isLoginHardFail({ type: 'LOGIN_WARNING', data: { message: 'x' } })).toBe(false);
     expect(isLoginHardFail({ type: 'ERROR_400', data: { code: 400 } })).toBe(true);
     expect(isLoginHardFail({ type: 'LOGIN_RESPONSE', data: { success: false } })).toBe(true);
+    // F7 B1: z NOTICE/WARNING tylko type — bez code/waitSec/tekstu.
+    expect(summarizeLoginFrame({
+      type: 'NOTICE',
+      data: { status: 'Z powodu nieuregulowanych naleznosci…', waitSeconds: 8, code: 1 },
+    })).toEqual({ type: 'NOTICE', dataKeys: [] });
     const sum = summarizeLoginFrame({
-      type: 'LOGIN_WARNING',
-      data: { message: 'naleznosci', waitSeconds: 8, sessionId: 'secret', code: 1 },
+      type: 'LOGIN_RESPONSE',
+      data: { success: false, waitSeconds: 8, sessionId: 'secret', code: 1, message: 'x' },
     });
-    expect(sum).toMatchObject({ type: 'LOGIN_WARNING', waitSec: 8, code: 1 });
+    expect(sum).toMatchObject({ type: 'LOGIN_RESPONSE', waitSec: 8, code: 1, success: false });
     expect(sum.dataKeys).not.toContain('sessionId');
     expect(sum.dataKeys).not.toContain('message');
+    expect(summarizeLoginFrame({
+      type: 'LOGIN_RESPONSE',
+      data: { status: 'Z powodu nieuregulowanych naleznosci dostęp…' },
+    }).code).toBeUndefined();
     expect(extractWaitSeconds({ wait: '10' })).toBe(10);
-    expect(extractWaitSeconds({ message: 'poczekaj 5 s' })).toBe(5);
+    // D1: tekst nie daje wait (np. „Faktura za 2026 saldo” → fałszywe 60 s).
+    expect(extractWaitSeconds({ message: 'poczekaj 5 s' })).toBeNull();
+    expect(extractWaitSeconds({ message: 'Faktura za 2026 saldo' })).toBeNull();
   });
 
   it('unquoteSecret zdejmuje otaczające cudzysłowy; FP jak na Edge', () => {
@@ -529,5 +540,126 @@ describe('C15/#365 LOGIN: ostrzeżenie ≠ odmowa, wait, unquote', () => {
     expect(r.loginOk).toBe(true);
     expect(logins).toBe(2);
     expect(r.loginFrames.some((f) => f.waitSec === 0.01)).toBe(true);
+  });
+
+  it('F7 D4: wynik joba bez tekstu ostrzeżenia; wait → max 2 LOGIN; timeout bez fail_streak', async () => {
+    const WARN = 'Z powodu nieuregulowanych naleznosci blokada za 8 dni';
+    class WarnJobWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      constructor(_url: string) {
+        queueMicrotask(() => this.onopen?.());
+      }
+      send(raw: string) {
+        const msg = JSON.parse(raw) as { id: number; type: string };
+        queueMicrotask(() => {
+          const frame = (body: unknown) => new MessageEvent('message', { data: JSON.stringify(body) });
+          if (msg.type === 'SELECT_PROTOCOL') {
+            this.onmessage?.(frame({ id: msg.id, type: 'PROTOCOL', data: { protocol: 'accepted' } }));
+          } else if (msg.type === 'LOGIN') {
+            this.onmessage?.(frame({ type: 'NOTICE', data: { status: WARN, message: WARN } }));
+            this.onmessage?.(frame({ id: msg.id, type: 'LOGIN_RESPONSE', data: { sessionId: 's1' } }));
+          } else if (msg.type === 'GET_TRACKING_OBJECTS') {
+            this.onmessage?.(frame({ id: msg.id, type: 'TRACKING_OBJECTS', data: { trackingObjects: [] } }));
+          } else if (msg.type === 'LOGOUT') {
+            this.onmessage?.(frame({ id: msg.id, type: 'ACK', data: {} }));
+          }
+        });
+      }
+      close() {}
+    }
+    const emptyStore = () => ({
+      async projectId() { return 'p'; },
+      async vessels() { return []; },
+      async sailingsSince() { return []; },
+      async insertSailings() {},
+      async updateSailing() { return false; },
+      async raiseRisk() { return false; },
+      async latestPositions() { return []; },
+      async lastRun() { return null; },
+      async resolveRisks() { return 0; },
+      async recordRun() {},
+      async saveVesselPosition() {},
+      async telmEmtrackWebEnabled() { return true; },
+      async listActiveLoadsForTelematics() { return []; },
+      async emtrackLoginState() { return null; },
+      async saveEmtrackLoginState() {},
+    });
+    const job = await runEmtrackWeb({
+      store: emptyStore(),
+      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p' },
+      now: () => new Date('2026-10-21T01:00:00Z'),
+      WebSocketImpl: WarnJobWs as unknown as typeof WebSocket,
+    });
+    expect(job.ok).toBe(true);
+    expect(JSON.stringify(job)).not.toContain(WARN);
+    expect(JSON.stringify(job)).not.toContain('naleznosci');
+
+    let logins = 0;
+    class AlwaysWaitFail {
+      onopen: (() => void) | null = null;
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      constructor(_url: string) {
+        queueMicrotask(() => this.onopen?.());
+      }
+      send(raw: string) {
+        const msg = JSON.parse(raw) as { id: number; type: string };
+        queueMicrotask(() => {
+          const frame = (body: unknown) => new MessageEvent('message', { data: JSON.stringify(body) });
+          if (msg.type === 'SELECT_PROTOCOL') {
+            this.onmessage?.(frame({ id: msg.id, type: 'PROTOCOL', data: { protocol: 'accepted' } }));
+          } else if (msg.type === 'LOGIN') {
+            logins += 1;
+            this.onmessage?.(frame({
+              id: msg.id, type: 'LOGIN_RESPONSE', data: { success: false, waitSeconds: 0.01 },
+            }));
+          }
+        });
+      }
+      close() {}
+    }
+    const r = await fetchTrackingObjectsReadOnly({
+      login: 'u', password: 'p',
+      WebSocketImpl: AlwaysWaitFail as unknown as typeof WebSocket,
+    });
+    expect(r.loginOk).toBe(false);
+    expect(logins).toBe(2);
+
+    let state: { failStreak: number; skippedUntil: string | null; secretFp: string | null } | null = {
+      failStreak: 0, skippedUntil: null, secretFp: emtrackSecretFp('u', 'p'),
+    };
+    class TimeoutWs {
+      onopen: (() => void) | null = null;
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      constructor(_url: string) {
+        queueMicrotask(() => this.onopen?.());
+      }
+      send(raw: string) {
+        const msg = JSON.parse(raw) as { id: number; type: string };
+        queueMicrotask(() => {
+          const frame = (body: unknown) => new MessageEvent('message', { data: JSON.stringify(body) });
+          if (msg.type === 'SELECT_PROTOCOL') {
+            this.onmessage?.(frame({ id: msg.id, type: 'PROTOCOL', data: { protocol: 'accepted' } }));
+          }
+          // LOGIN: brak odpowiedzi → timeout
+        });
+      }
+      close() {}
+    }
+    const timed = await runEmtrackWeb({
+      store: {
+        ...emptyStore(),
+        async emtrackLoginState() { return state; },
+        async saveEmtrackLoginState(s) { state = s; },
+      },
+      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_WS_TIMEOUT_MS: '40' },
+      now: () => new Date('2026-10-21T01:00:00Z'),
+      WebSocketImpl: TimeoutWs as unknown as typeof WebSocket,
+    });
+    expect(timed.ok).toBe(false);
+    expect(String(timed.warnings?.[0] ?? '')).toMatch(/timeout/i);
+    expect(state?.failStreak).toBe(0);
   });
 });

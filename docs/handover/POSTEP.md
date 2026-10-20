@@ -3682,3 +3682,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #375 SCALONE `5a67a23b` (F7 na `61da3d3`, deploy-main OK). #317 CONFLICTING (bez F7 po ostatnim merge main). #259 bez F7.
 - Ops #365: `emtrack_login_state` fail_streak=0; od ~22:52 UTC `emtrack-web` ok=true, objects=7, version 6.33.0 (sekrety Edge poprawione wcześniej). local `.env` z otaczającymi `'` → FP ≠ Edge; po `unquoteSecret` FP=Edge.
 - Bieżąca: **C15-emtrack** (`pakiet/c15-emtrack-login-wait`) — czekanie na LOGIN_RESPONSE+sessionId, ignorowanie ostrzeżeń (tylko `type` w logu), wait+1× LOGIN, `unquoteSecret`. vitest emtrack-web **18/18**.
+
+## 2026-10-21 01:45 — C15 F7 prawie: B1/D1/D4 (#376)
+
+- Skrzynka: #365 otwarte; #362/#364/#358 zamknięte. #359… w planie; bez `pilne`.
+- Scalanie: #376 F7 „prawie” (B1 tekst w login_code, D1 extractWaitSeconds z tekstu, D4 testy). #317 main wciągnięty — czeka F7.
+- Bieżąca: **C15** — code/waitSec tylko z LOGIN_RESPONSE (safe code); wait bez parsowania tekstu; max 2 LOGIN; timeout bez fail_streak. vitest emtrack-web **19/19**.

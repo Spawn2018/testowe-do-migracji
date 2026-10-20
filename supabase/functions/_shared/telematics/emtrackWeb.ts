@@ -112,7 +112,9 @@ function clampWaitSec(n: number): number {
   return Math.min(n < 1 ? n : Math.ceil(n), 60);
 }
 
-/** Czas oczekiwania z pól liczbowych albo z krótkiego wzorca w komunikacie (bez zapisu treści). */
+const SAFE_LOGIN_CODE = /^[A-Z0-9_.-]{1,32}$/;
+
+/** Tylko pole liczbowe (number albo czysty string cyfr) — bez parsowania tekstu komunikatu (F7 #376 D1). */
 export function extractWaitSeconds(data: Record<string, unknown>): number | null {
   for (const k of ['waitSeconds', 'waitSec', 'wait', 'delay', 'delaySeconds']) {
     const v = data[k];
@@ -125,27 +127,31 @@ export function extractWaitSeconds(data: Record<string, unknown>): number | null
       if (n > 0) return n;
     }
   }
-  for (const k of ['message', 'msg', 'text', 'detail']) {
-    const v = data[k];
-    if (typeof v !== 'string') continue;
-    const m = v.match(/(?:wait|poczekaj|odczekaj|za)\s*(\d+)\s*s/i)
-      ?? v.match(/(\d+)\s*(?:sek(?:und(?:y|ę)?)?|seconds?)/i);
-    if (m) {
-      const n = clampWaitSec(Number(m[1]));
-      if (n > 0) return n;
-    }
-  }
   return null;
 }
 
+function sanitizeLoginCode(raw: unknown): string | number | undefined {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string' && SAFE_LOGIN_CODE.test(raw)) return raw;
+  return undefined;
+}
+
+/**
+ * F7 #376 B1: z ramek innych niż LOGIN_RESPONSE — wyłącznie `type`.
+ * Z LOGIN_RESPONSE: `code`/`waitSec` tylko bezpieczne (bez treści ostrzeżeń).
+ */
 export function summarizeLoginFrame(msg: EmtrackWsFrame): EmtrackLoginFrameSummary {
+  const type = String(msg.type || '');
+  if (type !== 'LOGIN_RESPONSE') {
+    return { type, dataKeys: [] };
+  }
   const data = msg.data ?? {};
   const summary: EmtrackLoginFrameSummary = {
-    type: String(msg.type || ''),
+    type,
     dataKeys: Object.keys(data).filter((k) => !OMIT_LOGIN_KEY.test(k)),
   };
-  const code = data.code ?? data.errorCode ?? data.status;
-  if (typeof code === 'string' || typeof code === 'number') summary.code = code;
+  const code = sanitizeLoginCode(data.code ?? data.errorCode ?? data.status);
+  if (code !== undefined) summary.code = code;
   const waitSec = extractWaitSeconds(data);
   if (waitSec != null) summary.waitSec = waitSec;
   if (typeof data.success === 'boolean') summary.success = data.success;
@@ -306,8 +312,8 @@ export async function fetchTrackingObjectsReadOnly(
     let login = await send('LOGIN', loginPayload);
     loginFrames.push(summarizeLoginFrame(login));
     if (!isLoginSuccess(login)) {
-      const waitSec = extractWaitSeconds(login.data ?? {})
-        ?? loginFrames.map((f) => f.waitSec).find((w) => w != null && w > 0);
+      // F7 #376 D1: wait tylko z liczbowego pola LOGIN_RESPONSE — bez tekstu, bez side-frames.
+      const waitSec = login.type === 'LOGIN_RESPONSE' ? extractWaitSeconds(login.data ?? {}) : null;
       if (waitSec != null && waitSec > 0) {
         await sleep(waitSec * 1000);
         login = await send('LOGIN', loginPayload);

@@ -10,7 +10,10 @@ export type EmtrackLoginState = {
   secretFp: string | null;
 };
 
-/** Zdejmuje jedną warstwę otaczających `'` / `"` (wpis w Secrets albo `.env`). */
+/**
+ * Zdejmuje jedną warstwę otaczających `'` / `"` (wpis w Secrets albo `.env`).
+ * Świadomie: hasło zaczynające się i kończące tym samym cudzysłowem zostałoby obcięte (F7 #376).
+ */
 export function unquoteSecret(raw: string): string {
   const t = raw.trim();
   if (t.length >= 2) {
