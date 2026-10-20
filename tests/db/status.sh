@@ -424,6 +424,17 @@ q "select refresh_load_eta('$L_PF')" >/dev/null
 chk "A5 Polferries: eta_basis port_route=POLFERRIES" "select eta_basis->>'port_route' from loads where id='$L_PF'" POLFERRIES
 chk "A5 READY_TO_INVOICE: ETA jak DELIVERED (segment DONE)" \
   "select basis->>'segment' from compute_load_eta('$C17A')" DONE
+# F7: source w STATUS_AUTO (kontrakt A10); ETA plac Stena > Polferries
+chk "A5 Stena STATUS_AUTO FERRY source=SCHEDULE" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" SCHEDULE
+chk "A5 Stena STATUS_AUTO AT_PORT_NYNASHAMN source=GPS" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" GPS
+q "select set_config('tower.status_ctx','on',true); update loads set status='AT_PORT_NYNASHAMN' where id in ('$L_A5','$L_PF')" >/dev/null
+pos $L_A5 56.16460 15.63080 "2026-10-06 08:00+00"; pos $L_A5 56.1647 15.6309 "2026-10-06 08:05+00"
+pos $L_PF 58.9044 17.9480 "2026-10-06 08:00+00"; pos $L_PF 58.9045 17.9481 "2026-10-06 08:05+00"
+q "select refresh_load_eta('$L_A5'); select refresh_load_eta('$L_PF')" >/dev/null
+chk "A5 ETA plac Stena > Polferries (SE_ROAD_KAA 21,5 > SE_ROAD 17)" \
+  "select (s.eta_site > p.eta_site)::text from loads s join loads p on true where s.id='$L_A5' and p.id='$L_PF'" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

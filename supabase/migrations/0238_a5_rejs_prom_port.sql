@@ -6,7 +6,9 @@
 -- 2) promote_ferry_departures — PORT_OUT dopasowany do operatora rejsu
 -- 3) apply_geofence_status — porty tylko gdy trasa strefy = trasa rejsu
 -- 4) compute_load_eta — PORT_IN/OUT z trasy; ferry_eta_at / wait_ais;
---    READY_TO_INVOICE / INVOICED jak DELIVERED
+--    READY_TO_INVOICE / INVOICED jak DELIVERED; SE_ROAD vs SE_ROAD_KAA
+-- 5) payload.source: SCHEDULE (promote) / GPS (geofence) — kontrakt A10
+-- 6) jednorazowe refresh_load_eta dla READY_TO_INVOICE / INVOICED
 -- =====================================================================
 
 alter table public.geofences
@@ -85,7 +87,7 @@ begin
     if r.status = 'AT_PORT_GDANSK' and v_inside then
       if auto_set_status(r.load_id, 'AT_PORT_GDANSK', 'FERRY', 'odejście przypisanego rejsu', r.dep,
            jsonb_build_object('sailing_id', r.sailing_id, 'statek', r.vessel, 'odejscie', r.dep,
-                              'route', r.sailing_route, 'operator', v_op)) then
+                              'route', r.sailing_route, 'operator', v_op, 'source', 'SCHEDULE')) then
         n := n + 1;
       end if;
     else
@@ -153,7 +155,8 @@ begin
     'geofence_id', new.payload->>'geofence_id',
     'geofence_kind', v_kind,
     'geofence_name', coalesce(nullif(new.payload->>'geofence_name', ''), v_name),
-    'zdarzenie', new.event_type
+    'zdarzenie', new.event_type,
+    'source', 'GPS'
   );
 
   if new.event_type = 'GEOFENCE_ENTER' then
@@ -372,8 +375,19 @@ begin
   h_cross := coalesce(h_cross, 18); sp_cross := coalesce(sp_cross, 0.15);
   fresh_h := coalesce(fresh_h, 1.5);
 
+  -- A5 F7: droga SE według trasy rejsu (geofences.route PORT_IN).
+  -- Źródło SE_ROAD_KAA: 0160 FERRY-STATUS — Karlskrona → E22 → E4 → Boden = 21,5 h
+  -- (dłużej niż SE_ROAD Nynäshamn–Boden = 17 h). PL: PL_ROAD_GDY = 8,2 h.
+  if v_op = 'STENA' then
+    select hours, spread_pct / 100 into h_road, sp_road from eta_segment_params where code = 'SE_ROAD_KAA';
+    h_road := coalesce(h_road, 21.5); sp_road := coalesce(sp_road, 0.2);
+    select hours, spread_pct / 100 into h_pl, sp_pl from eta_segment_params where code = 'PL_ROAD_GDY';
+    h_pl := coalesce(h_pl, 8.2); sp_pl := coalesce(sp_pl, 0.25);
+  end if;
+
   select slowdown_mult, reason into v_slow, v_slow_reason
-    from corridor_conditions where corridor = 'SE_E4';
+    from corridor_conditions
+   where corridor = case when v_op = 'STENA' then 'SE_E22' else 'SE_E4' end;
   v_slow := coalesce(v_slow, 1.00);
   if v_slow > 1.00 then
     v_weather_pct := round((v_slow - 1) * 100);
@@ -517,7 +531,8 @@ begin
     v_frac := 1;
     if v_status = 'IN_TRANSIT_SE' then
       if p.ts is not null and p.ts >= p_now - make_interval(mins => (fresh_h * 60)::int) then
-        select * into cp from corridor_progress('SE_E4', p.g);
+        select * into cp from corridor_progress(
+          case when v_op = 'STENA' then 'SE_E22' else 'SE_E4' end, p.g);
         if found and cp.remaining_frac is not null then
           v_frac := cp.remaining_frac;
           v_off := cp.off_m;
@@ -712,3 +727,17 @@ begin
 end $function$;
 
 revoke execute on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
+
+-- F7 P4: READY_TO_INVOICE / INVOICED miały eta_basis.segment = status zamiast DONE
+do $refresh$
+declare
+  r record;
+begin
+  for r in
+    select id from public.loads
+     where status in ('READY_TO_INVOICE', 'INVOICED')
+  loop
+    perform public.refresh_load_eta(r.id);
+  end loop;
+end
+$refresh$;
