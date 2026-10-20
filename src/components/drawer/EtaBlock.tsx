@@ -113,7 +113,7 @@ export function EtaBlock({
 
   /* pasmo ± minut i słowo pewności (E15-3) */
   const word = etaConfidenceLabel(load.etaConfidence, locale);
-  const band = load.etaConfMin != null ? tp(locale, 'p4b_eta_band', { m: load.etaConfMin, word }) : word;
+  const band = load.etaConfMin != null ? tp(locale, 'p4b_eta_band', { m: etaDuration(load.etaConfMin), word }) : word;
   const lastFix = d?.lastFixAt ?? null;
 
   let lbl: string;
@@ -159,7 +159,7 @@ export function EtaBlock({
       : null;
     sub = [
       lastFix ? tp(locale, 'p4b_eta_gps', { ago: ago(lastFix, nowIso, locale) }) : null,
-      d?.distanceKm != null ? tp(locale, 'p4b_eta_km', { km: Math.round(d.distanceKm) }) : null,
+      d?.distanceKm != null ? tp(locale, d.distanceTo === 'PORT' ? 'p4b_eta_km_port' : 'p4b_eta_km', { km: Math.round(d.distanceKm) }) : null,
       phone ? null : drive,
       winText,
       reasons,

@@ -270,6 +270,8 @@ export interface EtaDetail {
   /** czas ostatniej pozycji użytej do ETA (E15 pkt 3 „wiek pozycji”) */
   lastFixAt?: string | null;
   distanceKm?: number | null;
+  /** W-eta-czas (20.10, SG-17): do czego liczone km — PORT = koniec odcinka PL (port wypłynięcia), SITE = plac w Boden */
+  distanceTo?: 'PORT' | 'SITE' | null;
   /** jazda do placu w minutach */
   driveMin?: number | null;
   /** czy przed Boden potrzebny jest odpoczynek */
