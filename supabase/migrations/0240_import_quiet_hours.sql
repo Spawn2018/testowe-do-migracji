@@ -1,7 +1,8 @@
 -- 0240 — D-20261020-1157-01 (#356): ciche uzupelnienie godzin importu (import_quiet_hours).
--- Przelacznik ops_thresholds.import_quiet_hours=1 (wlaczone). Wylaczenie 26.10:
---   select admin_ops_threshold_set('import_quiet_hours', 0);  -- HHL_ADMIN
--- albo migracja: update ops_thresholds set value_num=0 where key='import_quiet_hours';
+-- Przelacznik ops_thresholds.import_quiet_hours=1 (wlaczone).
+-- Wylaczenie 26.10: Administrator HHL na ekranie Opcje › Progi (wyglad/* — koordynator);
+-- RPC admin_ops_threshold_set bez zmian (wymaga sesji HHL_ADMIN / auth.uid()).
+-- Nie wywolywac samego SQL w edytorze bez JWT — 42501.
 
 do $$
 declare
@@ -30,11 +31,7 @@ alter table public.ops_thresholds
 
 insert into public.ops_thresholds (key, value_num, unit, label_pl) values
   ('import_quiet_hours', 1, 'flag', 'Import: ciche pierwsze uzupełnienie godzin (bez PLAN_DATES_CHANGED)')
-on conflict (key) do update
-  set value_num = excluded.value_num,
-      unit = excluded.unit,
-      label_pl = excluded.label_pl,
-      updated_at = now();
+on conflict (key) do nothing;
 
 -- Flaga 0/1: admin_ops_threshold_set pozwala 0 tylko dla import_quiet_hours.
 create or replace function public.admin_ops_threshold_set(p_key text, p_value numeric)
@@ -250,6 +247,7 @@ begin
   -- nowe i zmienione
   for r in
     select i.code, i.row as inc, si.id as item_id, si.load_id, l.status, l.carrier_org_id, l.hhl_order_no,
+           l.plan_load_from, l.plan_load_to, l.plan_delivery_from, l.plan_delivery_to,
            coalesce(l.plan_dates_status = 'POTWIERDZONA', false) as confirmed,
            (l.plan_load_from is not null or l.plan_load_to is not null
             or l.plan_delivery_from is not null or l.plan_delivery_to is not null
@@ -330,18 +328,21 @@ begin
     end if;
 
     -- D-20261020-1157-01: ciche pierwsze uzupelnienie pustych godzin (import_quiet_hours).
+    -- B1 F7: puste takze w loads (nie tylko w schedule_row) — godziny wpisane przez KSH/HHL nie nadpisywac cicho.
     v_quiet_fill := v_quiet_on
       and cardinality(v_fields) > 0
       and v_fields <@ array['load_time','delivery_time']::text[]
       and (
         not ('load_time' = any (v_fields))
         or (nullif(btrim(r.prev->>'load_time'), '') is null
-            and nullif(btrim(r.inc->>'load_time'), '') is not null)
+            and nullif(btrim(r.inc->>'load_time'), '') is not null
+            and r.plan_load_from is null and r.plan_load_to is null)
       )
       and (
         not ('delivery_time' = any (v_fields))
         or (nullif(btrim(r.prev->>'delivery_time'), '') is null
-            and nullif(btrim(r.inc->>'delivery_time'), '') is not null)
+            and nullif(btrim(r.inc->>'delivery_time'), '') is not null
+            and r.plan_delivery_from is null and r.plan_delivery_to is null)
       );
     v_crit := case
       when v_quiet_fill then '{}'::text[]

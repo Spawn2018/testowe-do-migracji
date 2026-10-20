@@ -450,23 +450,42 @@ chk "anon bez EXECUTE ksh_confirm_dates / detect_unconfirmed_dates" "$(Q "select
 
 echo; echo "[#356] import_quiet_hours — ciche uzupełnienie godzin (D-20261020-1157-01)"
 chk "próg import_quiet_hours = 1" "$(Q "select value_num::int::text from ops_thresholds where key='import_quiet_hours'")" "1"
-DIQ1=$(_dcal 30); DIQ2=$(_dcal 35)
+err "HHL_OPS odmowa import_quiet_hours" $OPS_I2 "select admin_ops_threshold_set('import_quiet_hours', 0)" "wyłącznie administrator HHL"
+DIQ1=$(_dcal 30); DIQ2=$(_dcal 35); DIQ1b=$(_dcal 31)
 # Jak ROWT/IMP18T — godziny w funkcji, bez zagnieżdżonych cudzysłowów w val.
 ROWIQ() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
 ROWIQ08() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
 ROWIQ10() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"10:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
+ROWIQMIX() { echo "[{\"code\":\"IQH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"11:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
 IMPIQ() { echo "select import_schedule('$P', '$(ROWIQ $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
 IMPIQ08() { echo "select import_schedule('$P', '$(ROWIQ08 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
 IMPIQ10() { echo "select import_schedule('$P', '$(ROWIQ10 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
+IMPIQMIX() { echo "select import_schedule('$P', '$(ROWIQMIX $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
 val "IQH-1: import bez godzin" $HHL "select jsonb_array_length(r->'added') from ($(IMPIQ $DIQ1 $DIQ2 false)) s(r)" 1 commit
 LQ=$(Q "select load_id from shipment_items where shipment_code='IQH-1'")
 $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LQ'" >/dev/null
-$PSQL -c "delete from notifications where load_id='$LQ'; delete from load_events where load_id='$LQ' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL')" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LQ'; delete from load_events where load_id='$LQ' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL'); delete from decision_events where decision_id in (select id from decisions where load_id='$LQ'); delete from decisions where load_id='$LQ'; delete from risk_signals where load_id='$LQ'" >/dev/null
+NDEC0=$(Q "select count(*) from decisions where load_id='$LQ'"); NRISK0=$(Q "select count(*) from risk_signals where load_id='$LQ'")
 val "IQH-1: ciche uzupełnienie godzin (quiet=1)" $HHL "select (r->'changed'->0->>'quiet_hours')||'/'||(r->'changed'->0->>'critical') from ($(IMPIQ08 $DIQ1 $DIQ2 false)) s(r)" "true/false" commit
 chk "IQH-1: godziny ustawione, bez PLAN_DATES_CHANGED" "$(Q "select (plan_load_from is not null)::text||'/'||(plan_delivery_to is not null)::text||'/'||(select count(*)::text from load_events where load_id='$LQ' and event_type='PLAN_DATES_CHANGED')||'/'||(select count(*)::text from notifications where load_id='$LQ' and template='PLAN_DATES_CHANGED') from loads where id='$LQ'")" "true/true/0/0"
-chk "IQH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LQ' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
-val "IQH-1: zmiana 08:00→10:00 przy quiet=1 → powiadomienie" $HHL "select (r->'changed'->0->>'quiet_hours') from ($(IMPIQ10 $DIQ1 $DIQ2 false)) s(r)" "false" commit
+chk "IQH-1: bez SCHEDULE_DATE_CRITICAL po cichym" "$(Q "select count(*)::text from load_events where load_id='$LQ' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+chk "IQH-1: bez nowych decisions/risk po cichym" "$(Q "select ((select count(*) from decisions where load_id='$LQ')=$NDEC0 and (select count(*) from risk_signals where load_id='$LQ')=$NRISK0)::text")" "true"
+val "IQH-1: zmiana 08:00→10:00 przy quiet=1 → powiadomienie (awizowany)" $HHL "select (r->'changed'->0->>'quiet_hours')||'/'||(r->'changed'->0->>'critical') from ($(IMPIQ10 $DIQ1 $DIQ2 false)) s(r)" "false/true" commit
 chk "IQH-1: PLAN_DATES_CHANGED po zmianie godziny" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ' and event_type='PLAN_DATES_CHANGED'")" "true"
+chk "IQH-1: SCHEDULE_DATE_CRITICAL po zmianie na awizowanym" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ' and event_type='SCHEDULE_DATE_CRITICAL'")" "true"
+val "IQH-1: godziny + zmiana daty w jednym pliku → nie cicho" $HHL "select coalesce(r->'changed'->0->>'quiet_hours','false') from ($(IMPIQMIX $DIQ1b $DIQ2 false)) s(r)" "false" commit
+# B1: godziny wpisane przez KSH (loads), plik bez godzin w schedule_row — import nie nadpisuje cicho
+ROWIQ3() { echo "[{\"code\":\"IQH-3\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWIQ3T() { echo "[{\"code\":\"IQH-3\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"06:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"14:00\"}]"; }
+IMPIQ3() { echo "select import_schedule('$P', '$(ROWIQ3 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
+IMPIQ3T() { echo "select import_schedule('$P', '$(ROWIQ3T $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iqh.xlsx\"}'::jsonb, $3)"; }
+val "IQH-3: import bez godzin (B1)" $HHL "select jsonb_array_length(r->'added') from ($(IMPIQ3 $DIQ1 $DIQ2 false)) s(r)" 1 commit
+LQ3=$(Q "select load_id from shipment_items where shipment_code='IQH-3'")
+$PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LQ3'" >/dev/null
+val "IQH-3: KSH wpisuje godziny w loads" $KSH "select (ksh_confirm_dates('$LQ3','$DIQ1','$DIQ2','$DIQ1 10:00+01','$DIQ1 12:00+01','$DIQ2 09:00+01','$DIQ2 13:00+01')->>'changed')" true commit
+$PSQL -c "delete from notifications where load_id='$LQ3'; delete from load_events where load_id='$LQ3' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL')" >/dev/null
+val "IQH-3: import innej godziny po KSH → nie cicho (B1)" $HHL "select coalesce(r->'changed'->0->>'quiet_hours','false') from ($(IMPIQ3T $DIQ1 $DIQ2 false)) s(r)" "false" commit
+chk "IQH-3: PLAN_DATES_CHANGED po imporcie nad KSH" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ3' and event_type='PLAN_DATES_CHANGED'")" "true"
 val "HHL_ADMIN wyłącza import_quiet_hours" $HHL "select admin_ops_threshold_set('import_quiet_hours', 0); select value_num::int from ops_thresholds where key='import_quiet_hours'" 0 commit
 ROWIQ2() { echo "[{\"code\":\"IQH-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
 ROWIQ2T() { echo "[{\"code\":\"IQH-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
