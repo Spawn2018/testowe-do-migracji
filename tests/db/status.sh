@@ -30,9 +30,11 @@ insert into sailings (id,project_id,vessel_id,departure_at,arrival_at,delayed_de
  ('77777777-0000-0000-0000-000000000001','$P','66666666-0000-0000-0000-000000000001','2026-10-01 12:00+00','2026-10-02 06:00+00',null,null,'ZAPLANOWANY'),
  ('77777777-0000-0000-0000-000000000002','$P','66666666-0000-0000-0000-000000000002','2026-10-01 20:00+00','2026-10-02 14:00+00',null,null,'ODWOLANY'),
  ('77777777-0000-0000-0000-000000000003','$P','66666666-0000-0000-0000-000000000001','2026-10-01 16:00+00','2026-10-02 10:00+00','2026-10-01 19:00+00','2026-10-02 13:00+00','OPOZNIONY'),
- ('77777777-0000-0000-0000-000000000004','$P','66666666-0000-0000-0000-000000000002','2026-10-01 14:00+00','2026-10-02 08:00+00',null,null,'ZAPLANOWANY');
+ ('77777777-0000-0000-0000-000000000004','$P','66666666-0000-0000-0000-000000000002','2026-10-01 14:00+00','2026-10-02 08:00+00',null,null,'ZAPLANOWANY'),
+ ('77777777-0000-0000-0000-000000000005','$P','66666666-0000-0000-0000-000000000001', now() + interval '7 days', now() + interval '7 days 18 hours',null,null,'ZAPLANOWANY');
 " >/dev/null
 S1=77777777-0000-0000-0000-000000000001; S2=77777777-0000-0000-0000-000000000002; S3=77777777-0000-0000-0000-000000000003; S4=77777777-0000-0000-0000-000000000004
+S5=77777777-0000-0000-0000-000000000005
 # D-1710: process_position wymaga linku śledzenia (telematics_vehicle_id).
 mk() { q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,telematics_vehicle_id)
           values ('$1','$P','$SCXO','KSH/$2',$3,$4,'$5',$6,'2026-09-30','TEL-$2')" >/dev/null; }
@@ -132,10 +134,23 @@ chk "pełna ścieżka A w dzienniku zdarzeń" \
 echo; echo "[8] Uprawnienia"
 as() { $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK)$' | tail -1; }
 out=$(as $SCX "select promote_ferry_departures('2099-01-01')"); echo "$out" | grep -q "permission denied" && { ok=$((ok+1)); echo "  OK    użytkownik nie wywoła przełączania PROMU"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
-chk "KSH widzi rozkład rejsów"  "select 4" "$(as $KSH "select count(*) from sailings")"
-chk "SCX przypisuje rejs do swojego transportu" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S4' where id='$B' returning 1) select count(*) from u")"
-chk "KSH nie przypisze rejsu"   "select 0" "$(as $KSH "with u as (update loads set sailing_id='$S4' where id='$B' returning 1) select count(*) from u")"
+chk "KSH widzi rozkład rejsów"  "select 5" "$(as $KSH "select count(*) from sailings")"
+# D-1501 / F7 B2: SCX przypisuje przyszły (S5) na transport bez wypłyniętego rejsu.
+# UUID 63 — nie 5b (5b = SG-03 w [12] A2).
+Lfut=$(L 63)
+mk $Lfut FUT "'HHL/FUT'" "'SCX/FUT'" READY null
+chk "SCX przypisuje przyszły rejs do swojego transportu" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
+chk "KSH nie przypisze rejsu"   "select 0" "$(as $KSH "with u as (update loads set sailing_id='$S5' where id='$Lfut' returning 1) select count(*) from u")"
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S4' where id='$Lfut'; rollback;" 2>&1)
+echo "$out" | grep -q "jeszcze nie wypłynął" && { ok=$((ok+1)); echo "  OK    SCX nie przypisze rejsu wypłyniętego"; } || { fail=$((fail+1)); echo "  FAIL  wypłynięty: $out"; }
+# F7 B3: B ma S1 wypłynięty — SCX nie przepnie nawet na przyszły S5.
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S5' where id='$B'; rollback;" 2>&1)
+echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    SCX nie zmieni rejsu gdy stary wypłynął"; } || { fail=$((fail+1)); echo "  FAIL  stary rejs: $out"; }
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S4' where id='$A'; rollback;" 2>&1); echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    przewoźnik nie zmieni rejsu po wypłynięciu"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
+# F7 N2: SCX przepina z odwołanego (godzina minęła) na przyszły.
+Lcan=$(L 64)
+mk $Lcan CAN "'HHL/CAN'" "'SCX/CAN'" READY "'$S2'"
+chk "SCX przepina z odwołanego na przyszły" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lcan' returning 1) select count(*) from u")"
 
 echo; echo "[9] Strefy w prawdziwych metrach — różnica od zadanego promienia poniżej 1%"
 chk "port Gdańsk: 800 m"   "select abs(round(st_distance(st_centroid(geom)::geography, st_exteriorring(geom)::geography)::numeric) - 800) < 8   from geofences where name='Port Gdańsk'"   t
