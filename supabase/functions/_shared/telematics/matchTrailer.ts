@@ -39,10 +39,16 @@ export function trackingWindowStartMs(planLoadDate: string): number {
   return utc;
 }
 
-/** E27 / A1: od 03:00 dnia załadunku do „Dostarczone”. */
+/** D-1710: niepusty link śledzenia (telematics_vehicle_id). */
+export function hasTrackingLink(load: LoadMatchRow): boolean {
+  return Boolean(String(load.telematics_vehicle_id ?? '').trim());
+}
+
+/** E27 / A1: od 03:00 dnia załadunku do „Dostarczone”; D-1710: tylko przy linku. */
 export function loadInTrackingWindow(load: LoadMatchRow, atIso: string): boolean {
   const status = String(load.status ?? '').toUpperCase();
   if (CLOSED.has(status)) return false;
+  if (!hasTrackingLink(load)) return false;
   const at = Date.parse(atIso);
   if (!Number.isFinite(at)) return false;
   if (load.trackingOpenedAt) {
@@ -63,7 +69,10 @@ export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]
   return n > 1 ? n : 0;
 }
 
-/** Preferuj telematics_vehicle_id, potem rejestracja naczepy. Ta sama naczepa → wcześniejszy niedostarczony w oknie. */
+/**
+ * D-1710 / #368: dopasowanie tylko po linku (telematics_vehicle_id).
+ * Koniec dopasowania po samym numerze naczepy.
+ */
 export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): LoadMatchRow | null {
   const plate = normalizePlate(fix.textId);
   const idStr = String(fix.trackingObjectId);
@@ -72,11 +81,9 @@ export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): Lo
     .filter((l) => loadInTrackingWindow(l, at))
     .sort((a, b) => (a.plannedLoadDate ?? '').localeCompare(b.plannedLoadDate ?? '') || a.id.localeCompare(b.id));
   const hit = (l: LoadMatchRow) => {
-    const t = String(l.telematics_vehicle_id ?? '');
+    const t = String(l.telematics_vehicle_id ?? '').trim();
+    if (!t) return false;
     return t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate);
   };
-  const byTel = active.find(hit);
-  if (byTel) return byTel;
-  if (!plate) return null;
-  return active.find((l) => normalizePlate(l.trailer_plate) === plate) ?? null;
+  return active.find(hit) ?? null;
 }

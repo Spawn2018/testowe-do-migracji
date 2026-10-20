@@ -40,36 +40,36 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(pollIntervalSec({ ...fix, speedKmh: 0, ignition: false }, 120, 900)).toBe(900);
   });
 
-  it('matchFixToLoad: telematics_vehicle_id albo trailer_plate', () => {
+  it('D-1710: matchFixToLoad tylko po linku (bez naczepy samej)', () => {
     const fix = parseCurrentSnapshot({
       trackingObjectId: 11008, name: 'x', textId: 'GD035YX', type: 'TRAILER',
       currentSnapshot: { ts: Date.now(), d: { C: { v: { lat: 1, lng: 2 } } } },
     });
-    const loads = [
-      { id: 'a', trailer_plate: 'OTHER', telematics_vehicle_id: null, status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
+    // Sam numer naczepy bez linku — brak dopasowania (SG-15/16).
+    expect(matchFixToLoad(fix, [
       { id: 'b', trailer_plate: 'GD 035 YX', telematics_vehicle_id: null, status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
-    ];
-    expect(matchFixToLoad(fix, loads)?.id).toBe('b');
+    ])).toBeNull();
     expect(matchFixToLoad(fix, [
       { id: 'c', trailer_plate: null, telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT', plannedLoadDate: '2020-01-01' },
     ])?.id).toBe('c');
     expect(matchFixToLoad(fix, [
-      { id: 'd', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'DONE', plannedLoadDate: '2020-01-01' },
+      { id: 'd', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'DONE', plannedLoadDate: '2020-01-01' },
     ])).toBeNull();
   });
 
-  it('E27: okno od 03:00 dnia załadunku; ta sama naczepa → wcześniejszy niedostarczony', () => {
+  it('E27/D-1710: okno od 03:00 + link; ta sama naczepa z linkiem → wcześniejszy', () => {
     const day = '2026-10-05';
     const start = new Date(trackingWindowStartMs(day)).toISOString();
     const before = new Date(trackingWindowStartMs(day) - 60_000).toISOString();
-    const row = { id: 'e', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: day };
+    const row = { id: 'e', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: day };
+    expect(loadInTrackingWindow({ ...row, telematics_vehicle_id: null }, start)).toBe(false);
     expect(loadInTrackingWindow(row, before)).toBe(false);
     expect(loadInTrackingWindow(row, start)).toBe(true);
     expect(loadInTrackingWindow({ ...row, status: 'DELIVERED' }, start)).toBe(false);
     expect(loadInTrackingWindow({ ...row, plannedLoadDate: '2026-10-20' }, start)).toBe(false);
     expect(loadInTrackingWindow({ ...row, plannedLoadDate: '2026-12-01', trackingOpenedAt: start }, '2026-10-06T08:00:00.000Z')).toBe(true);
-    const early = { id: 'early', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-05' };
-    const late = { id: 'late', trailer_plate: 'GD035YX', telematics_vehicle_id: null, status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-06' };
+    const early = { id: 'early', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-05' };
+    const late = { id: 'late', trailer_plate: 'GD035YX', telematics_vehicle_id: 'GD035YX', status: 'IN_TRANSIT_PL', plannedLoadDate: '2026-10-06' };
     const at = new Date(trackingWindowStartMs('2026-10-06') + 60_000).toISOString();
     const fix = parseCurrentSnapshot({
       trackingObjectId: 1, name: 'x', textId: 'GD035YX', type: 'TRAILER',

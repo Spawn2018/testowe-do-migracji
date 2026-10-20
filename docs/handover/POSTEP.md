@@ -3566,3 +3566,57 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #364/#362/#365/#356 — w planie; bez etykiety `pilne` przerywającej. #364 część 1 zrobiona (merge); część 2 NO_AWIZ_SE zostaje z #362.
 - Scalanie: #367 — F7 gotowe po `14b90710`, CI zielone (db `39440605672`, unit, visual `39440605710`) → merge `e92d4ba6`. #361 — wciągnięty main, migracja przemianowana **0240→0241**; czeka na CI i ponowne F7. #366 po #361. #317 bez F7 po `f89b59d9`.
 - Bieżąca pozycja: **Import godziny cicho** (#361, 0241).
+
+## 2026-10-20 17:17 — #361+#366+#363 SCALONE; start D-1501 (#362, 0242)
+
+- Skrzynka: #365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`. #356 zamknięte po scaleniu.
+- Scalanie: #363 F7 po `dd1f122` → `70a67701`. #361 F7 po `5b228efd`, CI zielone → `cd06c89f` (0241). #366 F7 po #361 → `e641bcc7`. #317 bez F7 po `f89b59d9`.
+- Bieżąca: **D-1501** — gałąź `pakiet/d1501-no-sailing-tracking`, migracja **0242**: NO_SAILING / NO_TRACKING / NO_AWIZ_SE, rejs historyczny tylko HHL_ADMIN, AWIZ_SE poza Gotowy. i2 604 (+12), risks 34, dec2 23 typów.
+
+## 2026-10-20 17:45 — D-1501: poprawka I-21 UUID; #368 wpisane do planu
+
+- Skrzynka: #368 (D-1710, `Spawn2018`, `dla-cursora`, PILNE w tytule, **bez** etykiety `pilne`) — wpisane: PLAN §3/§4/§8, dopisek `D-20261020-1710-01.md`. Kolejność: po #370 (D-1501), przed C15/D-1300. #365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie.
+- Scalanie: #370 bez F7; db padło (i2 597/7 — I-21). #369/#317 bez F7 po ostatnim commicie. #259 bez F7.
+- Bieżąca: **D-1501** — I-21: UUID `…i21a` → `…a21a` (hex); L1 bez `plan_load_*` przy skanie, żeby `l3_scan` = 1.
+
+## 2026-10-20 18:20 — #369 SCALONE; D-1501: kolizja UUID Lfut/SG w status.sh
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#364/#362/#359… w planie.
+- Scalanie: #369 F7 po `a50ace88`, CI 7/7 → merge `4fdb8489`. #370: db `39455271674` — status 126/11 (A2), nie F7. #317 CONFLICTING, bez F7 po ostatnim. #259 bez F7.
+- Bieżąca: **D-1501** — `Lfut` z `L 5b` → `L 63` (kolizja z SG-03 w [12] A2 psuła INSERT i 11 asercji).
+
+## 2026-10-20 18:45 — D-1501: F7 N2–N7 (po zielonej bramie na 5aa87a6d)
+
+- Skrzynka: bez nowych `pilne`; #368 po #370; #317 bez F7 po ostatnim (CONFLICTING).
+- Scalanie: #370 db+unit+visual zielone na `5aa87a6d`, F7 „jeszcze NIE” (N2–N7). Bez F7 → bez merge.
+- Bieżąca: **D-1501** — N2 ODWOLANY→przyszły; N3 pierwszy skan (escalated_at, bez DECISION_OPEN); N4 due=okno+2h; N5 data załadunku ≤ dziś; N6 tylko telematyka; N7 testy. status 138, i2 618.
+
+## 2026-10-20 19:00 — D-1501: N3 filtr czasu (clock_timestamp → now)
+
+- Skrzynka: bez nowych `pilne`; #368/#365/#364/#362/#359… w planie (`Spawn2018`).
+- Scalanie: #370 db `39460223216` — i2 616/2 FAIL (pierwszy skan: 24× DECISION_OPEN, escalated_at=false). #317 CONFLICTING, bez F7. #371 wygląd bez F7. Bez merge.
+- Bieżąca: **D-1501** — N3: `v_t0 := now()` (nie `clock_timestamp()`); delete DECISION_OPEN także po `load_id`. i2 618.
+
+## 2026-10-20 19:45 — D-1501: CI zielone na 76353f09, czekam na F7
+
+- Skrzynka: #368/#365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. #368 PILNE w tytule — nie przerywa #370.
+- Scalanie: #370 unit+visual+db zielone na `76353f09` (db `39466224169`, visual `39466224176`); **brak** „F7: gotowe do scalenia” po ostatnim commicie → bez merge. #371 F7 po `dca8866` (scalać po #370). #317 CONFLICTING, bez F7. #259 bez F7.
+- Bieżąca: **D-1501** — F7 N3 pełne: `l3_scan_first_deploy_quiet`, `bulk_quiet` w `decision_open_from_event`, `escalated_at` tylko gdy `due_at<=now()`, bez DELETE; i2 619. SELECT liczb pierwszego skanu na produkcji — przed `db push` (MCP Supabase tu bez auth).
+
+## 2026-10-20 20:00 — D-1501: F7 #370 miniona dostawa bez załadunku
+
+- Skrzynka: #368/#365/#364/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. #368 po #370.
+- Scalanie: czwarty F7 #370 — jeszcze NIE. Jedna zmiana: NO_SAILING i NO_TRACKING nie powstają, gdy `plan_delivery_date` < dziś (Warszawa) i `actual_load_at` jest puste. i2 621 (+2). Bez merge do zielonego CI i „F7: gotowe”.
+- Bieżąca: **D-1501** — filtr w `l3_scan` (0242). SELECT produkcji (odczyt, 20.10): aktywne 92; NO_SAILING otworzy **2** (było 19 w oknie; odcięte 17), NO_TRACKING otworzy **0** (odcięte 16), NO_AWIZ_SE 0. Zostają dwa PLANNED z załadunkiem 22.10 i dostawą 28–29.10.
+
+## 2026-10-20 20:50 — D-1501: F7 NO_TRACKING = brak linku; kolejność #368→#370
+
+- Skrzynka: #368 rozszerzone (właściciel 19:59/20:01 — śledzenie tylko przy linku, SG-15/16); `#368`/`#365`/`#362`… w planie; bez etykiety `pilne`.
+- Scalanie: F7 #370 20:21 — jeszcze NIE (brak zmiany linku). #371 F7 po #370. Kolejność merge: **#368 → #370 → #371**.
+- Bieżąca: **D-1501** — wycofane D1/N6: `v_track_missing` bez `not exists (positions…)`; test: pozycja telematyczna bez linku nie wycisza, link wycisza. i2 **620**. SELECT NO_TRACKING na produkcji — ponowić przed `db push`.
+
+## 2026-10-20 21:20 � #372 SCALONE; start D-1710 (#368, 0242)
+
+- Skrzynka: #368/#365/#364/#362/#359� � w planie (Spawn2018, dla-cursora); bez etykiety `pilne`.
+- Scalanie: #372 SCALONE (bbd4c7c, wyglad sledzenie bez linku). #370 F7: gotowe (head `18de74c`) � **po #368**. #371 po #370.
+- Biezaca: **D-1710** � galaz `pakiet/d1710-tracking-window-link`, migracja **0242**: okno tylko przy linku, freeze po starcie, odlaczenie pozycji/zdarzen, READY dla falszywego Droga PL, matchTrailer bez naczepy samej. D-1501 (#370) po rebase � **0243**.
