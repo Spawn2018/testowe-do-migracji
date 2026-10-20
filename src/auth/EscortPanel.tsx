@@ -36,7 +36,8 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
       sb.from('load_escorts').select('seq,company,plate,scope').eq('load_id', loadId).order('seq'),
       sb.rpc('load_escort_status').eq('load_id', loadId),
     ]);
-    const c = canWrite ? await sb.rpc('load_escort_contacts').eq('load_id', loadId) : { data: [] };
+    /* D-20261020-1243-01: kontakty pilotów widzą HHL, SCX i KSH (zgody RODO) — zapis dalej tylko HHL i SCX */
+    const c = await sb.rpc('load_escort_contacts').eq('load_id', loadId);
     const contacts = new Map(((c.data ?? []) as { seq: number; driver_name: string | null; driver_phone: string | null }[]).map((x) => [x.seq, x]));
     const list = ((e.data ?? []) as (Row & { seq: number })[]).map((r) => ({
       company: r.company,
