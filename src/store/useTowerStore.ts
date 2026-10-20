@@ -835,7 +835,7 @@ export const useTowerStore = create<TowerState>()(
         const locale = get().locale;
         /* D-20261020-1501-01 (15:48): numer zlecenia SCX wpisuje też Administrator HHL (awizacja jak SCX); Operacje HHL — nie */
         const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX')
-          || (side === 'CARRIER' && role === 'HHL' && accountRole(role) !== 'HHL_OPS');
+          || (side === 'CARRIER' && role === 'HHL' && (import.meta.env.VITE_AUTH_MODE === 'supabase' ? accountRole(role) === 'HHL_ADMIN' : accountRole(role) !== 'HHL_OPS'));
         /* B5: w Podglądzie bez zmiany „na niby” (D-20261020-1501-01) */
         if (!allowed || isPreviewReadOnly({ viewRole: role })) {
           get().pushToast(orderEditDeniedMessage(side, locale), 'HIGH', loadId);

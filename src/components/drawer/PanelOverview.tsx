@@ -27,6 +27,7 @@ import { checkSet, setFieldValue, type SetKey } from '../../lib/p7bSet';
 import { whoOf } from '../../lib/p6History';
 import { visibleDriverPhone } from '../../lib/permissions';
 import { editableOrderSide } from '../../lib/orderNumbers';
+import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { SITES } from '../../lib/status';
 import { effArrival, effDeparture, fmtLocal, sailingStatusLabel } from '../../lib/sailings';
 import { trackingLinkOf } from '../../lib/p4cSource';
@@ -627,7 +628,8 @@ export function PanelOverview(p: Props) {
             </dd>
             <dt>SCX</dt>
             <dd data-order="scx">
-              {orderSide === 'CARRIER' || (role === 'HHL' && canFixAwizOf(role)) ? (
+              {/* B5: w Podglądzie bez „Edytuj” — zapis i tak nic nie zmienia (F7 #363 P4) */}
+              {(orderSide === 'CARRIER' && !isPreviewReadOnly({ viewRole: role })) || (role === 'HHL' && canFixAwizOf(role)) ? (
                 <OrderNoField key={`scx-${load.id}`} value={load.carrierOrderNo} onSave={(v) => setOrderNo(load.id, 'CARRIER', v)} locale={locale} />
               ) : scxNo ? <b className="mono">{scxNo}</b> : <><span className="po-miss">{pt(locale, 'p7_num_missing')}</span><span className="po-muted">{` · ${pt(locale, 'p7_num_by_scx')}`}</span></>}
             </dd>
