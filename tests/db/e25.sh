@@ -203,10 +203,10 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_l
      'HHL/A901','SCX/A901')
      on conflict (id) do update set status='PLANNED', trailer_swap=true,
        driver_delivery_phone=null, hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
-sval "A9: brak telefonu SE w awiz_missing (AWIZ_SE, D-1525)" "select exists (
-  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g,
-               jsonb_array_elements_text(g->'items') i
-   where g->>'kind'='AWIZ_SE' and i='telefon SE')" t
+# F7 B4: AWIZ_SE nie wraca w awiz_missing / load_ready_gaps (sprawa L3 NO_AWIZ_SE).
+sval "A9: brak AWIZ_SE w awiz_missing (F7 B4)" "select exists (
+  select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
+   where g->>'kind'='AWIZ_SE')" f
 sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
 # CI bez pg_cron: CASE WHEN nie chroni przed parse cron.job — jak insurance.sh / workflows.sh.
 if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; then
@@ -214,7 +214,7 @@ if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; th
 else
   ok=$((ok+1)); echo "  OK    A9: cron tower-zasoby wyłączony"
 fi
-val "A9: HHL widzi load_ready_gaps AWIZ_SE" $HHL "select (gaps @> '[{\"kind\":\"AWIZ_SE\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
+val "A9: HHL bez AWIZ_SE w load_ready_gaps (F7 B4)" $HHL "select (gaps @> '[{\"kind\":\"AWIZ_SE\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" false
 sval "A9: SAILING gdy brak sailing_id" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
    where g->>'kind'='SAILING')" t
@@ -244,9 +244,9 @@ sys "update decisions d set status='RESOLVED', resolved_at=now(), resolution_cod
        and coalesce(d.detail->>'category','') in ('POD','SPEC','LASHING_PHOTO','PERMIT_SE','CMR')" >/dev/null
 sval "A3: EXPIRED DOC_MISSING nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee01'" "EXPIRED|termin minął"
 sval "A3: EXPIRED NO_AWIZACJA nietknięty (B1/P8)" "select status::text||'|'||coalesce(expired_reason,'') from decisions where id='33333333-0000-0000-0000-00000000ee02'" "EXPIRED|termin minął"
-sval "A9: brak telefonu SE → 1 pozycja AWIZ_SE (D-1525)" "select jsonb_array_length(g->'items') from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ_SE'" 1
+sval "A9: SE poza lukami — 0× AWIZ_SE (F7 B4)" "select count(*) from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ_SE'" 0
 sval "A9: SE poza AWIZ — brak kind AWIZ przy pełnym PL" "select exists (select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g where g->>'kind'='AWIZ')" f
-# Komplet → Gotowy: rejs + polisa; SE nie blokuje READY (D-1525); PERMIT wyłączony.
+# Komplet → Gotowy: rejs + polisa; SE nie w lukach (F7 B4); PERMIT wyłączony.
 # UUID rejsu tylko hex (s901 było nielegalne → cast uuid → „^” w logu CI).
 sys "update security_flags set enabled=false where key='PERMIT_REQUIRED_NON_STANDARD'" >/dev/null
 sys "delete from shipment_items where load_id='33333333-0000-0000-0000-00000000a901' and shipment_code='E25-A901';

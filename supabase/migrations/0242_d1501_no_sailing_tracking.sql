@@ -1,6 +1,6 @@
 -- 0242 — D-20261020-1501-01 (#362) + D-20261020-1525-01 cz.2 (#364):
 -- NO_SAILING / NO_TRACKING (l3_scan), rejs historyczny tylko HHL_ADMIN,
--- AWIZ_SE poza luką AWIZ (nie blokuje Gotowy), sprawa NO_AWIZ_SE 48 h przed dostawą.
+-- SE nie w awiz_missing / load_ready_gaps (sprawa NO_AWIZ_SE, próg AWIZ_EARLY_H).
 -- Bazuje na: awiz_missing 0237, l3_scan 0236, l3_upsert_alarm 0235,
 -- guard_load_update 0240, l1_decision_type 0143, risk_is_predelivery 0229.
 
@@ -22,7 +22,7 @@ values
  (
    'NO_AWIZ_SE', 'dec_type_NO_AWIZ_SE', 'CARRIER',
    '[{"code":"ADD_AWIZACJA","label_key":"dec_opt_ADD_AWIZACJA","requires_comment":false,"effect":"OPEN_AWIZACJA"},{"code":"REPORT_PROBLEM","label_key":"dec_opt_REPORT_PROBLEM","requires_comment":true,"effect":"ESCALATE"}]'::jsonb,
-   null, '48 h przed dostawą', 'WARNING', 42
+   null, 'AWIZ_EARLY_H przed dostawą', 'WARNING', 42
  )
 on conflict (code) do update set
   title_key = excluded.title_key,
@@ -191,7 +191,6 @@ declare
   l public.loads%rowtype;
   gaps jsonb := '[]'::jsonb;
   awiz text[] := array[]::text[];
-  se text[] := array[]::text[];
   v_pilots int;
   v_escorts int;
   v_items jsonb;
@@ -224,17 +223,7 @@ begin
     ));
   end if;
 
-  /* D-1525 cz.2: Odcinek SE osobno — nie w AWIZ, nie blokuje Gotowy (a9_try_ready). */
-  if l.trailer_swap is true then
-    if coalesce(btrim(l.driver_delivery_name), '') = '' then se := array_append(se, 'kierowca SE'); end if;
-    if coalesce(btrim(l.driver_delivery_phone), '') = '' then se := array_append(se, 'telefon SE'); end if;
-    if coalesce(btrim(l.tractor_delivery_plate), '') = '' then se := array_append(se, 'ciągnik SE'); end if;
-    if coalesce(array_length(se, 1), 0) > 0 then
-      gaps := gaps || jsonb_build_array(jsonb_build_object(
-        'kind', 'AWIZ_SE', 'items', to_jsonb(se), 'who', 'SCX'
-      ));
-    end if;
-  end if;
+  /* F7 B4: SE nie wraca w lukach Gotowy — sprawa l3:NO_AWIZ_SE w l3_scan. */
 
   if l.sailing_id is null then
     gaps := gaps || jsonb_build_array(jsonb_build_object('kind', 'SAILING', 'who', 'SCX'));
@@ -321,9 +310,9 @@ end $$;
 
 revoke all on function public.awiz_missing(uuid) from public, anon, authenticated;
 comment on function public.awiz_missing(uuid) is
-  'A9+A7+D-1525: braki do Gotowy; AWIZ_SE osobno (nie blokuje Gotowy); PERMIT Firma/Trasa.';
+  'A9+A7+D-1525/F7 B4: braki do Gotowy (bez SE); PERMIT Firma/Trasa.';
 
--- Gotowy ignoruje AWIZ_SE (SE = sprawa 48 h przed dostawą, nie luka READY).
+-- F7 B4: dowolna luka w awiz_missing blokuje Gotowy; SE = sprawa L3, nie luka.
 create or replace function public.a9_try_ready(p_load uuid)
 returns boolean
 language plpgsql
@@ -333,7 +322,6 @@ as $$
 declare
   v_status public.load_status;
   v_gaps jsonb;
-  v_block boolean;
 begin
   if current_setting('tower.dates_ctx', true) = 'on' then
     return false;
@@ -346,11 +334,7 @@ begin
     return false;
   end if;
   v_gaps := public.awiz_missing(p_load);
-  v_block := exists (
-    select 1 from jsonb_array_elements(v_gaps) g
-     where g ->> 'kind' is distinct from 'AWIZ_SE'
-  );
-  if v_block is true then
+  if jsonb_array_length(v_gaps) > 0 then
     return false;
   end if;
   return public.auto_set_status(
@@ -365,7 +349,7 @@ end $$;
 
 revoke all on function public.a9_try_ready(uuid) from public, anon, authenticated;
 comment on function public.a9_try_ready(uuid) is
-  'A9: → READY gdy awiz_missing bez luk poza AWIZ_SE (D-1525).';
+  'A9: → READY gdy awiz_missing puste (F7 B4: SE poza lukami).';
 
 -- ---------------------------------------------------------------------
 -- 4. l3_scan — NO_SAILING / NO_TRACKING / NO_AWIZ_SE
@@ -422,7 +406,7 @@ begin
       p_now
     );
 
-    /* D-1501: brak rejsu — progi jak AWIZ; status przed FERRY. */
+    /* D-1501 / F7 D2: brak rejsu — tylko przed FERRY; progi jak AWIZ. */
     v_sail_missing := r.sailing_id is null and r.status < 'FERRY';
     v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
     v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');
@@ -438,9 +422,16 @@ begin
       p_now
     );
 
-    /* D-1501: brak linku / telematyki (kolumna telematics_vehicle_id). */
-    v_track_missing := nullif(btrim(r.telematics_vehicle_id), '') is null
-      and r.status < 'UNLOADED';
+    /* D-1501 / F7 D1+D2: przed AT_SITE, w oknie śledzenia;
+       śledzony = telematics_vehicle_id LUB pozycja 6 h (emtrack po naczepie
+       zapisuje positions.load_id — to jest „dopasowanie naczepy”). */
+    v_track_missing := r.status < 'AT_SITE'
+      and public.load_in_tracking_window(r.id, p_now) is true
+      and nullif(btrim(r.telematics_vehicle_id), '') is null
+      and not exists (
+        select 1 from public.positions p
+         where p.load_id = r.id and p.ts >= p_now - interval '6 hours'
+      );
     v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
     v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');
     n := n + l3_upsert_alarm(
@@ -455,19 +446,14 @@ begin
       p_now
     );
 
-    /* D-1525 cz.2: Odcinek SE — termin = plan_delivery_from − 48 h; ostrzeżenie od −36 h. */
-    v_se := exists (
-      select 1 from jsonb_array_elements(v_gaps) g where g ->> 'kind' = 'AWIZ_SE'
-    );
-    /* Poza przygotowaniem awiz_missing = [] — sprawdź pola wprost gdy trailer_swap. */
-    if v_se is not true and r.trailer_swap is true
-       and r.status not in ('CANCELLED', 'DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED') then
-      v_se := coalesce(btrim(r.driver_delivery_name), '') = ''
-           or coalesce(btrim(r.driver_delivery_phone), '') = ''
-           or coalesce(btrim(r.tractor_delivery_plate), '') = '';
-    end if;
-    v_due := case when r.plan_delivery_from is not null
-      then r.plan_delivery_from - interval '48 hours' else null end;
+    /* D-1525 / F7 B4+B5+D3: SE z pól; termin = l3_anchor(dostawa) − AWIZ_EARLY_H. */
+    v_se := r.trailer_swap is true
+      and (
+        coalesce(btrim(r.driver_delivery_name), '') = ''
+        or coalesce(btrim(r.driver_delivery_phone), '') = ''
+        or coalesce(btrim(r.tractor_delivery_plate), '') = ''
+      );
+    v_due := l3_moment(l3_anchor(r.plan_delivery_date, r.plan_delivery_from), 'AWIZ_EARLY_H');
     v_warn := case when v_due is not null then v_due - interval '36 hours' else null end;
     n := n + l3_upsert_alarm(
       r.project_id, r.id, 'RESOURCE_MISSING', 'l3:NO_AWIZ_SE:' || r.id,
@@ -477,7 +463,7 @@ begin
       v_due is not null and p_now >= v_due,
       v_due,
       jsonb_build_object('rule', 'L3_NO_AWIZ_SE', 'due', v_due,
-        'params', jsonb_build_object('code', v_code, 'h', 48)),
+        'params', jsonb_build_object('code', v_code, 'h', l3_ops('AWIZ_EARLY_H'))),
       p_now
     );
 
@@ -639,17 +625,26 @@ begin
       using errcode = '42501';
   end if;
 
-  /* D-1501: przypisanie / zdjęcie rejsu — reguły ról. */
+  /* D-1501 / F7 B3: nie-HHL_ADMIN — żadnej zmiany sailing_id po FERRY
+     albo gdy dotychczasowy rejs już wypłynął. */
   if new.sailing_id is distinct from old.sailing_id then
-    if new.sailing_id is null then
-      if current_app_role() is distinct from 'HHL_ADMIN' and old.status >= 'FERRY' then
+    if current_app_role() is distinct from 'HHL_ADMIN' then
+      if old.status >= 'FERRY' then
         raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator';
       end if;
-    else
+      if old.sailing_id is not null then
+        select coalesce(s.delayed_departure_at, s.departure_at) into v_dep
+          from public.sailings s where s.id = old.sailing_id;
+        if v_dep is not null and v_dep <= now() then
+          raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator';
+        end if;
+      end if;
+    end if;
+    if new.sailing_id is not null then
       select s.status::text, coalesce(s.delayed_departure_at, s.departure_at)
         into v_sail_st, v_dep
         from public.sailings s where s.id = new.sailing_id;
-      if v_dep is null then
+      if not found or v_dep is null then
         raise exception 'Nie znaleziono rejsu';
       end if;
       if v_sail_st = 'ODWOLANY' then
@@ -711,4 +706,18 @@ begin
 end $$;
 
 comment on function public.guard_load_update() is
-  'D-1501/0242: rejs historyczny tylko HHL_ADMIN; D-1525 biała lista SCX; reszta jak 0240.';
+  'D-1501/0242: rejs historyczny tylko HHL_ADMIN; F7 B3 blokada po FERRY; D-1525 biała lista SCX.';
+
+-- F7 D2: pierwszy skan po migracji bez e-maili / dzwonków (tower.bulk_quiet).
+do $d1501scan$
+declare
+  v_prev text;
+  v_n int;
+begin
+  v_prev := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+  v_n := public.l3_scan(now());
+  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+  raise notice '0242 D-1501: l3_scan(bulk_quiet)=%', v_n;
+end
+$d1501scan$;

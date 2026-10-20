@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
-  status: 155, // D-1710 F7 r3: +8 repair +6 (dedup :d1710, NO_AWIZ, notif/wf, STATUS_AUTO×2)
+  status: 157, // D-1710 155 + D-1501 F7 B2/B3: +2 SCX przyszły / wypłynięty / stary rejs
   storage: 37,
   money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
   import: 66,
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 604, // D-1501 (#362): +12 NO_SAILING/NO_TRACKING/NO_AWIZ_SE + rejs historyczny
+  i2: 611, // D-1501 F7 D6: +7 HIGH SE, duplikaty, CANCELLED/DELIVERED, OPS/SCX odwołany
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 47, // D-1710 F7: +AT_LOADING bez fazy; SE dopiero w trasie
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 79, // A4: +1 READY z CMR sprzed dostawy → odmowa; D-1525: SE→AWIZ_SE (liczba asercji bez zmian)
+  e25: 79, // F7 B4: AWIZ_SE poza lukami (asercje odwrócone, liczba bez zmian)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };
