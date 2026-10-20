@@ -21,10 +21,8 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
     !r.driverPhone?.trim() ? 'telefon' : null,
     !r.tractorPlate?.trim() ? 'ciągnik' : null,
     !r.trailerPlate?.trim() ? 'naczepa' : null,
-    /* A9 (audyt 17.10): przy przepięciu naczepy także kierowca SE z telefonem */
-    r.trailerSwap && !r.driverDeliveryName?.trim() ? 'kierowca SE' : null,
-    r.trailerSwap && !r.driverDeliveryPhone?.trim() ? 'telefon SE' : null,
-    r.trailerSwap && !r.tractorDeliveryPlate?.trim() ? 'ciągnik SE' : null,
+    /* D-20261020-1525-01 (właściciel 15:25): Odcinek SE nie blokuje „Gotowy” — osobny termin 48 h przed dostawą
+       (sprawa „Brak awizacji kierowcy SE”); wcześniej A9 liczył go tutaj */
   ].filter(Boolean) as string[];
   if (awiz.length) gaps.push({ kind: 'AWIZ', items: awiz, who: 'SCX' });
   /* A9 + A5: rejs przy trasie promowej (każdy transport Śrem → Boden płynie promem) — SCX wybiera w awizacji */

@@ -25,7 +25,7 @@ import { accountRole } from '../../lib/accountRole';
 import { getNowIso } from '../../lib/frozenNow';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { TrackingLinkField } from './TrackingLinkField';
-import { awizDeadline, awizMissing, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
+import { awizDeadline, awizMissing, awizMissingSe, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
 import { canFixAwizOf, pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
 import { transportLabel } from '../../lib/transportName';
 import { pt, ptp } from '../../i18n/p7';
@@ -182,6 +182,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
   };
 
   /* „Brakuje: …” z bieżących pól okna — ta sama definicja co w Przeglądzie (E32 pkt 6) */
+  const missingSe = awizMissingSe({ driverName, driverPhone, tractorPlate, trailerPlate, trailerSwap, driverDeliveryName, driverDeliveryPhone, tractorDeliveryPlate });
   const missing = awizMissing(
     { driverName, driverPhone, tractorPlate, trailerPlate, trailerSwap, driverDeliveryName, driverDeliveryPhone, tractorDeliveryPlate },
     pilotsOn,
@@ -280,9 +281,11 @@ export function AwizacjaModal({ load, onClose }: Props) {
           {twoSeg ? (
             <fieldset className="am-box" data-awiz-seg="SE">
               <legend className="am-lg">{pt(locale, 'p7_m_seg_se')}</legend>
+              {/* D-20261020-1525-01: pola SE nieobowiązkowe przy zapisie; termin 48 h przed dostawą */}
+              <small className="am-hint" data-awiz-se-later>{missingSe.length ? ptp(locale, 'p7_m_se_later_miss', { what: missingSe.map((m) => pt(locale, `p7_miss_${m}`)).join(', ') }) : pt(locale, 'p7_m_se_later')}</small>
               <label className="form-field am-f">
                 <span>{pt(locale, 'p7_m_name')}</span>
-                <input className={`input${driverDeliveryName.trim() ? '' : ' am-need'}`} value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
+                <input className={`input${driverDeliveryName.trim() ? '' : ' am-later'}`} value={driverDeliveryName} onChange={(e) => setDriverDeliveryName(e.target.value)} autoComplete="off" />
               </label>
               <div className="am-2">
                 <label className="form-field am-f">
@@ -292,12 +295,12 @@ export function AwizacjaModal({ load, onClose }: Props) {
                       <option value="PL">PL</option>
                       <option value="SE">SE</option>
                     </select>
-                    <input className={`input mono${driverDeliveryPhone.trim() ? '' : ' am-need'}`} type="tel" inputMode="numeric" value={driverDeliveryPhone} onChange={(e) => setDriverDeliveryPhone(e.target.value)} placeholder="701234567" autoComplete="off" />
+                    <input className={`input mono${driverDeliveryPhone.trim() ? '' : ' am-later'}`} type="tel" inputMode="numeric" value={driverDeliveryPhone} onChange={(e) => setDriverDeliveryPhone(e.target.value)} placeholder="701234567" autoComplete="off" />
                   </div>
                 </label>
                 <label className="form-field am-f">
                   <span>{pt(locale, 'p7_m_tractor')}</span>
-                  <input className={`input mono${tractorDeliveryPlate.trim() ? '' : ' am-need'}`} value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
+                  <input className={`input mono${tractorDeliveryPlate.trim() ? '' : ' am-later'}`} value={tractorDeliveryPlate} onChange={(e) => setTractorDeliveryPlate(e.target.value)} autoComplete="off" />
                 </label>
               </div>
             </fieldset>

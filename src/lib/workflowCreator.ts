@@ -41,7 +41,7 @@ export const DECISION_TYPES = ['FERRY_CANCELLED', 'ETA_AFTER_LATEST', 'KSH_DATE_
   'KSH_DATES_CHECK', 'DELIVERED_CHECK', 'CMR_UPLOAD',
   /* A1 L17 (D-20261017-2130-01 §5) */
   /* D-20261020-1501-01: brak rejsu i brak linku śledzenia w awizacji */
-  'NO_SAILING', 'NO_TRACKING',
+  'NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE',
   'DELIVERY_UNCONFIRMED'] as const;
 
 export type Audience = 'HHL' | 'KSH' | 'CARRIER';

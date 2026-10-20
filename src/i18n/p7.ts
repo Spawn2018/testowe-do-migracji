@@ -182,6 +182,9 @@ const PL: Record<string, string> = {
   /* D-20261020-1501-01: Podgląd (B5) — tylko do odczytu; rejs i link śledzenia można dodać później */
   p7_m_ro_preview: 'Podgląd — tylko do odczytu. Awizację zapisujesz w swoim widoku HHL.',
   p7_m_sailing_hist: 'Rejsy, które już dopłynęły do Szwecji',
+  /* D-20261020-1525-01: Odcinek SE — puste pola dozwolone; kierowcę SE awizuje się najpóźniej 48 h przed dostawą */
+  p7_m_se_later: 'Można zapisać puste: inny kierowca i ciągnik od promu. Kierowcę SE trzeba awizować najpóźniej 48\u00a0h przed dostawą.',
+  p7_m_se_later_miss: 'Do uzupełnienia najpóźniej 48\u00a0h przed dostawą: {what}. Do tego czasu sprawa „Brak awizacji kierowcy SE”.',
   p7_m_sailing_later: 'Rejs można dodać później. Do tego czasu w Do zrobienia jest sprawa „Brak rejsu promu”.',
   p7_m_track_later: 'Link nie jest wymagany do zapisu. Bez linku w Do zrobienia jest sprawa „Brak linku śledzenia”.',
   p7_m_pilots_h: 'Piloci',

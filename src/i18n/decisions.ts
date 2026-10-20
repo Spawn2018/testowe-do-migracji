@@ -11,6 +11,8 @@ const pl: Dict = {
   /* D-20261020-1501-01: rejs i link śledzenia nieobowiązkowe przy zapisie awizacji — ich brak to sprawa do zamknięcia */
   dec_type_NO_SAILING: 'Brak rejsu promu w awizacji',
   dec_type_NO_TRACKING: 'Brak linku śledzenia',
+  /* D-20261020-1525-01: Odcinek SE — kierowca SE najpóźniej 48 h przed dostawą */
+  dec_type_NO_AWIZ_SE: 'Brak awizacji kierowcy SE (48\u00a0h przed dostawą)',
   dec_type_DOC_MISSING: 'Brak zezwolenia lub dokumentu przed „Gotowy”',
   dec_type_KSH_ROW_GONE: 'Wiersz zniknął z pliku KSH',
   dec_type_TOWER_KSH_CONFLICT: 'Konflikt Watch Tower ↔ plik KSH',
