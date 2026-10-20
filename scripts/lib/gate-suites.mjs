@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
-  status: 149, // D-1710 F7: +8 d1710_repair (SG-17/15, nietknięte, RESET)
+  status: 155, // D-1710 F7 r3: +8 repair +6 (dedup :d1710, NO_AWIZ, notif/wf, STATUS_AUTO×2)
   storage: 37,
   money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,

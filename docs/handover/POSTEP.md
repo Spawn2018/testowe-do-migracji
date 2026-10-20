@@ -3645,3 +3645,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
 - CI na `465f547e`: unit/visual zielone; `db` FAIL — `risks` 8 kluczy zamiast 6 (`rk_eta_after_latest`, `rk_late_date_change`): DELETE bez kaskady na `decisions.risk_id`.
 - Bieżąca: sprzątanie w `status.sh` z `decision_events`→`decisions`→`risk_signals` (LATE_DATE + ETA z testu repair). Czekam na zieloną `db` i F7.
+
+## 2026-10-20 23:15 — D-1710 (#373): F7 r3 dedup_key :d1710
+
+- Skrzynka: #368/#365/#362/#359/#358/#324/#323/#322/#320 — w planie (`Spawn2018`); bez etykiety `pilne`.
+- Scalanie: CI na `9cb8a547` zielone (unit/visual/db); brak „F7: gotowe” (trzecie F7: prawie). #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
+- Bieżąca: **D-1710 F7 r3** — przy odłączaniu `dedup_key || ':d1710'`; fixture `STATUS_AUTO:<id>:IN_TRANSIT_PL`; asercja prawdziwego STATUS_AUTO po `auto_set_status`; NO_AWIZACJA + brak nowych notifications/workflow_runs. status **155**.

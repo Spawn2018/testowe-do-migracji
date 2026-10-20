@@ -317,7 +317,9 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier
  ('$R15','$P','$SCXO','KSH/R15','HHL/R15','SCX/R15','READY','2026-10-22',null,null),
  ('$Rok','$P','$SCXO','KSH/ROK','HHL/ROK','SCX/ROK','IN_TRANSIT_SE','2026-10-05','TEL-ROK', public.tracking_window_start('2026-10-05'::date)),
  ('$Rdel','$P','$SCXO','KSH/RDEL','HHL/RDEL','SCX/RDEL','DELIVERED','2026-09-01','https://emtrack.eu/app/',null)" >/dev/null
+# STATUS_AUTO:<id>:IN_TRANSIT_PL jak z auto_set_status w telm_infer — bez :d1710 blokuje prawdziwy wyjazd.
 q "insert into load_events (load_id,event_type,occurred_at,payload,dedup_key) values
+ ('$R17','STATUS_AUTO',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('from','READY','to','IN_TRANSIT_PL','zrodlo','TELM_PHASE_INFER'),'STATUS_AUTO:$R17:IN_TRANSIT_PL'),
  ('$R17','STATUS_AUTO',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('from','READY','to','IN_TRANSIT_PL','zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_INFER:$R17:IN_TRANSIT_PL'),
  ('$R17','GEOFENCE_EXIT',('$TW17'::timestamptz - interval '2 hours'), jsonb_build_object('geofence_kind','LOADING','synthetic',true,'zrodlo','TELM_PHASE_INFER'),'TELM_PHASE_EXIT_LOAD:$R17'),
  ('$Rok','STATUS_AUTO','2026-10-04 12:00+00', jsonb_build_object('from','DOCS_PENDING','to','READY','zrodlo','A9'),'STATUS_AUTO:$Rok:READY')" >/dev/null
@@ -329,6 +331,10 @@ q "insert into positions (load_id, ts, geom_raw, source) values
 q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at) values
  ('$P','$R17','ETA_BREACH','HIGH','Opóźnienie','rk_eta_after_latest','{\"l3\":\"1\"}','ETA:$R17', ('$TW17'::timestamptz - interval '80 minutes'))" >/dev/null
 q "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon) values ('$R17','IN_TRANSIT_PL',('$TW17'::timestamptz - interval '2 hours'), 54.35, 18.65)" >/dev/null
+# Prawidłowa sprawa NO_AWIZACJA na R15 — naprawa nie może jej zamknąć (F7).
+q "select decision_open_from_event('$P','NO_AWIZACJA','AWIZ:$R15','R15: brak awizacji', '{}'::jsonb, '$R15', null)" >/dev/null
+Nbef=$(q "select count(*) from notifications")
+Wbef=$(q "select count(*) from workflow_runs")
 q "select public.d1710_repair()" >/dev/null
 chk "D-1710 repair: SG-17 → READY" "select status from loads where id='$R17'" READY
 chk "D-1710 repair: pozycja SG-17 odłączona" "select count(*) from positions where detached_load_id='$R17'" 1
@@ -338,6 +344,14 @@ chk "D-1710 repair: w trasie z linkiem nietknięty" "select status||'/'||count(*
 chk "D-1710 repair: DELIVERED z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rdel' group by status" "DELIVERED/1"
 chk "D-1710 repair: STATUS_AUTO→READY zostaje na osi" "select count(*) from load_events where load_id='$Rok' and payload->>'to'='READY'" 1
 chk "D-1710 repair: telm_attach_phase zresetowany" "select source from telm_attach_phase where load_id='$R17'" D1710_RESET
+chk "D-1710 repair: dedup_key odłączonych z :d1710" "select count(*) from load_events where detached_load_id='$R17' and dedup_key like '%:d1710'" 3
+chk "D-1710 repair: NO_AWIZACJA nietknięta" "select status from decisions where load_id='$R15' and type_code='NO_AWIZACJA' order by created_at desc limit 1" NEW
+chk "D-1710 repair: bez nowych notifications" "select (count(*)=$Nbef)::text from notifications" true
+chk "D-1710 repair: bez nowych workflow_runs" "select (count(*)=$Wbef)::text from workflow_runs" true
+# Po naprawie prawdziwy wyjazd musi trafić na oś (dedup STATUS_AUTO:<id>:IN_TRANSIT_PL wolny).
+q "select auto_set_status('$R17','READY','IN_TRANSIT_PL','wyjazd ze strefy załadunku', now(), jsonb_build_object('powod','test D-1710'))" >/dev/null
+chk "D-1710 repair: prawdziwy STATUS_AUTO po wyjeździe" "select count(*) from load_events where load_id='$R17' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_PL' and dedup_key='STATUS_AUTO:$R17:IN_TRANSIT_PL'" 1
+chk "D-1710 repair: status po prawdziwym wyjeździe" "select status from loads where id='$R17'" IN_TRANSIT_PL
 # F7: sprzątanie LATE_DATE + ETA z D-1710 (risks.sh liczy klucze automatu w tower_test_status).
 # decisions.risk_id → risk_signals bez CASCADE — najpierw decision_events/decisions.
 q "delete from decision_events where decision_id in (

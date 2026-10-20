@@ -1445,11 +1445,18 @@ begin
     select coalesce(array_agg(id), '{}') into v_pos_ids from p;
 
     -- Tylko fałszywy TELM / GEOFENCE; nie ruszać prawidłowego STATUS_AUTO→READY (A9).
+    -- F7 #373: dedup_key || ':d1710' — globalny UNIQUE; bez tego prawdziwy STATUS_AUTO
+    -- / TELM_PHASE_* po wyjeździe pada na on conflict do nothing.
     with e as (
       update public.load_events ev
          set detached_load_id = ev.load_id,
              detached_at = now(),
              load_id = null,
+             dedup_key = case
+               when ev.dedup_key is not null and ev.dedup_key not like '%:d1710'
+               then ev.dedup_key || ':d1710'
+               else ev.dedup_key
+             end,
              payload = coalesce(ev.payload, '{}'::jsonb) || jsonb_build_object(
                'd1710_detached', true,
                'd1710_note', 'D-20261020-1710-01'
@@ -1463,6 +1470,7 @@ begin
              and (
                coalesce(ev.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
                or ev.dedup_key like 'TELM_PHASE_%'
+               or ev.dedup_key like 'STATUS_AUTO:' || t.load_id::text || ':IN_TRANSIT_%'
              )
            )
            or (
