@@ -1143,16 +1143,21 @@ $PSQL -c "insert into vessels (id, name, operator) values
  ('55555555-0000-0000-0000-00000000d15b','D150 Fut','Polferries'),
  ('55555555-0000-0000-0000-00000000d15c','D150 Can','Polferries')
  on conflict (id) do update set name=excluded.name" >/dev/null
+$PSQL -c "insert into vessels (id, name, operator) values
+ ('55555555-0000-0000-0000-00000000d15d','D150 CanPast','Polferries')
+ on conflict (id) do update set name=excluded.name" >/dev/null
 $PSQL -c "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
  ('66666666-0000-0000-0000-00000000d15a','$P','55555555-0000-0000-0000-00000000d15a','GDN-NYN',
   now() - interval '5 days', now() - interval '4 days 6 hours','ZAPLANOWANY','RECZNIE'),
  ('66666666-0000-0000-0000-00000000d15b','$P','55555555-0000-0000-0000-00000000d15b','GDN-NYN',
   now() + interval '4 days', now() + interval '4 days 18 hours','ZAPLANOWANY','RECZNIE'),
  ('66666666-0000-0000-0000-00000000d15c','$P','55555555-0000-0000-0000-00000000d15c','GDN-NYN',
-  now() + interval '5 days', now() + interval '5 days 18 hours','ODWOLANY','RECZNIE')
+  now() + interval '5 days', now() + interval '5 days 18 hours','ODWOLANY','RECZNIE'),
+ ('66666666-0000-0000-0000-00000000d15d','$P','55555555-0000-0000-0000-00000000d15d','GDN-NYN',
+  now() - interval '2 days', now() - interval '1 day 6 hours','ODWOLANY','RECZNIE')
  on conflict (id) do update set departure_at=excluded.departure_at, arrival_at=excluded.arrival_at,
   status=excluded.status, vessel_id=excluded.vessel_id" >/dev/null
-# plan_load_date = dziś → okno śledzenia otwarte (F7 D2); załadunek za 20 h → AWIZ HIGH.
+# F7 N4: tracking_opened_at = now−1h → HIGH (due = opened+2h); załadunek za 20 h → AWIZ HIGH.
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_load_from,
      hhl_order_no, carrier_order_no, driver_name, driver_phone, tractor_plate, trailer_plate)
  values ('$L_D15','$P','$SCXORG_D15','123456/2026/D150','PLANNED',
@@ -1160,12 +1165,13 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, p
         'HHL/D150','SCX/D150','Jan D150','600150150','PO150','NA150')
  on conflict (id) do update set status='PLANNED', sailing_id=null, telematics_vehicle_id=null,
    plan_load_from=excluded.plan_load_from, plan_load_date=excluded.plan_load_date,
-   plan_delivery_date=null, plan_delivery_from=null,
+   plan_delivery_date=null, plan_delivery_from=null, tracking_opened_at=null,
    trailer_swap=false, driver_delivery_name=null, driver_delivery_phone=null, tractor_delivery_plate=null" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set tracking_opened_at = now() - interval '1 hour' where id='$L_D15'" >/dev/null
 chk "D-1501: NO_SAILING ostrzeżenie w oknie 48 h" \
   "$(Q "select (l3_scan() >= 1)::text")/$(Q "select detail->>'rule'||':'||severity from risk_signals where dedup_key='l3:NO_SAILING:$L_D15' and resolved_at is null")" \
   "true/L3_NO_SAILING:HIGH"
-chk "D-1501: NO_TRACKING ostrzeżenie w oknie 48 h" \
+chk "D-1501: NO_TRACKING HIGH przed terminem (okno+2h)" \
   "$(Q "select detail->>'rule'||':'||severity from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
   "L3_NO_TRACKING:HIGH"
 chk "D-1501: decyzje NO_SAILING i NO_TRACKING otwarte" \
@@ -1193,15 +1199,86 @@ $PSQL -c "set session_replication_role=replica; update loads set sailing_id=null
 err "D-1501: SCX + rejs odwołany → odmowa" $SCX \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15c' where id='$L_D15'" \
   "odwołany|ODWOLANY"
+# F7 N2: odwołany z minioną godziną — SCX może przepiąć na przyszły.
+$PSQL -c "set session_replication_role=replica; update loads set sailing_id='66666666-0000-0000-0000-00000000d15d' where id='$L_D15'" >/dev/null
+val "D-1501: SCX przepina z odwołanego (minionego) na przyszły" $SCX \
+  "update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15' returning 1" 1 commit
 val "D-1501: HHL_OPS + przyszły rejs → zgoda" $OPS_D15 \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15' returning 1" 1 commit
 $PSQL -c "set session_replication_role=replica; update loads set sailing_id=null where id='$L_D15'" >/dev/null
 val "D-1501: SCX przypisuje rejs przyszły" $SCX \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15' returning 1" 1 commit
+# F7 N6: MANUAL nie wycisza; telematyka wycisza.
+$PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L_D15', now() - interval '30 minutes', st_setsrid(st_makepoint(18.0, 54.0),4326), 'MANUAL')" >/dev/null
+chk "D-1501: pozycja MANUAL nie wycisza NO_TRACKING" \
+  "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
+  "0/1"
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L_D15', now() - interval '20 minutes', st_setsrid(st_makepoint(18.1, 54.1),4326), 'EMTRACK_WEB')" >/dev/null
+chk "D-1501: pozycja telematyczna wycisza NO_TRACKING" \
+  "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
+  "0/0"
+$PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
 $PSQL -c "update loads set telematics_vehicle_id='rio:d1501' where id='$L_D15'" >/dev/null
 chk "D-1501: po linku NO_TRACKING zamknięte" \
   "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
   "0/0"
+# F7 N4 CRITICAL + N5/N7 poza oknem i pierwszy skan.
+$PSQL -c "update loads set telematics_vehicle_id=null where id='$L_D15'" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set tracking_opened_at = now() - interval '3 hours' where id='$L_D15'" >/dev/null
+chk "D-1501: NO_TRACKING CRITICAL po terminie (okno+2h)" \
+  "$(Q "select (l3_scan() >= 1)::text")/$(Q "select severity::text from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15' and resolved_at is null")" \
+  "true/CRITICAL"
+L_D15w=33333333-0000-0000-0000-00000000d152
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_load_from,
+     hhl_order_no, carrier_order_no)
+ values ('$L_D15w','$P','$SCXORG_D15','123456/2026/D152','PLANNED',
+        current_date + 3, now() + interval '3 days',
+        'HHL/D152','SCX/D152')
+ on conflict (id) do update set status='PLANNED', sailing_id=null, telematics_vehicle_id=null,
+   plan_load_date=excluded.plan_load_date, plan_load_from=excluded.plan_load_from, tracking_opened_at=null" >/dev/null
+chk "D-1501: poza oknem śledzenia brak NO_TRACKING" \
+  "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15w' and resolved_at is null")" \
+  "0/0"
+# N7: symulacja bloku DO migracji — bez DECISION_OPEN, z escalated_at.
+L_D15n=33333333-0000-0000-0000-00000000d153
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_load_from,
+     hhl_order_no, carrier_order_no)
+ values ('$L_D15n','$P','$SCXORG_D15','123456/2026/D153','PLANNED',
+        current_date, now() + interval '20 hours',
+        'HHL/D153','SCX/D153')
+ on conflict (id) do update set status='PLANNED', sailing_id=null, telematics_vehicle_id=null,
+   plan_load_date=excluded.plan_load_date, tracking_opened_at=null" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set tracking_opened_at = now() - interval '3 hours' where id='$L_D15n'" >/dev/null
+$PSQL -c "
+do \$\$
+declare v_t0 timestamptz := clock_timestamp(); v_prev text;
+begin
+  v_prev := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+  perform public.l3_scan(now());
+  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+  update decisions set escalated_at = coalesce(escalated_at, now()), updated_at = now()
+   where type_code in ('NO_SAILING','NO_TRACKING','NO_AWIZ_SE')
+     and status in ('NEW','ASSIGNED','SNOOZED') and created_at >= v_t0
+     and load_id = '$L_D15n';
+  delete from notifications n
+   where n.template = 'DECISION_OPEN' and n.created_at >= v_t0
+     and exists (
+       select 1 from decisions d
+        where d.id = nullif(n.payload->>'decision_id','')::uuid
+          and d.load_id = '$L_D15n' and d.created_at >= v_t0);
+end \$\$;
+" >/dev/null
+chk "D-1501: pierwszy skan bez DECISION_OPEN" \
+  "$(Q "select count(*) from notifications where template='DECISION_OPEN' and load_id='$L_D15n'")" \
+  "0"
+chk "D-1501: pierwszy skan — decyzje z escalated_at" \
+  "$(Q "select (count(*) filter (where escalated_at is not null) = count(*))::text from decisions where load_id='$L_D15n' and type_code in ('NO_SAILING','NO_TRACKING') and status in ('NEW','ASSIGNED')")" \
+  "true"
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_D15w','$L_D15n')" >/dev/null
 # NO_AWIZ_SE HIGH: dostawa za 60 h → due=now+12h, warn=due−36h=now−24h → w oknie ostrzeżenia.
 $PSQL -c "set session_replication_role=replica; update loads set status='READY', trailer_swap=true,
   driver_delivery_name=null, driver_delivery_phone=null, tractor_delivery_plate=null,

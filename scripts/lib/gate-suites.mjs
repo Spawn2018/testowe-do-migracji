@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
-  status: 157, // D-1710 155 + D-1501 F7 B2/B3: +2 SCX przyszły / wypłynięty / stary rejs
+  status: 158, // D-1710 155 + D-1501 B2/B3 +2 + N2 +1 (ODWOLANY→przyszły)
   storage: 37,
   money: 174, // A4 F7: +przywróć L5 / INVOICED przed zmianą kwoty (+2)
   release: 146,
@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
   import: 66,
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 611, // D-1501 F7 D6: +7 HIGH SE, duplikaty, CANCELLED/DELIVERED, OPS/SCX odwołany
+  i2: 618, // D-1501 F7 N2/N4/N6/N7: +7 (odwołany→przyszły, MANUAL/tel, CRITICAL, poza oknem, skan cisza ×2)
   i30: 10,
   i31: 9,
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian

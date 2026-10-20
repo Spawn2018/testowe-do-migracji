@@ -17,7 +17,7 @@ values
  (
    'NO_TRACKING', 'dec_type_NO_TRACKING', 'CARRIER',
    '[{"code":"ADD_AWIZACJA","label_key":"dec_opt_ADD_AWIZACJA","requires_comment":false,"effect":"OPEN_AWIZACJA"},{"code":"REPORT_PROBLEM","label_key":"dec_opt_REPORT_PROBLEM","requires_comment":true,"effect":"ESCALATE"}]'::jsonb,
-   null, 'termin awizacji', 'WARNING', 41
+   null, 'start okna śledzenia + 2 h', 'WARNING', 41
  ),
  (
    'NO_AWIZ_SE', 'dec_type_NO_AWIZ_SE', 'CARRIER',
@@ -422,27 +422,32 @@ begin
       p_now
     );
 
-    /* D-1501 / F7 D1+D2: przed AT_SITE, w oknie śledzenia;
-       śledzony = telematics_vehicle_id LUB pozycja 6 h (emtrack po naczepie
-       zapisuje positions.load_id — to jest „dopasowanie naczepy”). */
+    /* D-1501 / F7 N4+N5+N6: przed AT_SITE, w oknie śledzenia;
+       N5: do #368 — bez plan_load_date w przyszłości (fałszywe okno);
+       N4: due = start okna + 2 h (CRITICAL od wtedy, wcześniej HIGH);
+       N6: pozycja wycisza tylko telematykę (nie MANUAL / DRIVER_PWA). */
     v_track_missing := r.status < 'AT_SITE'
+      and r.plan_load_date is not null
+      and r.plan_load_date <= (p_now at time zone 'Europe/Warsaw')::date
       and public.load_in_tracking_window(r.id, p_now) is true
       and nullif(btrim(r.telematics_vehicle_id), '') is null
       and not exists (
         select 1 from public.positions p
-         where p.load_id = r.id and p.ts >= p_now - interval '6 hours'
+         where p.load_id = r.id
+           and p.ts >= p_now - interval '6 hours'
+           and p.source not in ('MANUAL', 'DRIVER_PWA')
       );
-    v_warn := l3_moment(v_anchor, 'AWIZ_EARLY_H');
-    v_crit := l3_moment(v_anchor, 'AWIZ_LATE_H');
+    v_warn := coalesce(r.tracking_opened_at, public.tracking_window_start(r.plan_load_date));
+    v_crit := case when v_warn is not null then v_warn + interval '2 hours' else null end;
     n := n + l3_upsert_alarm(
       r.project_id, r.id, 'RESOURCE_MISSING', 'l3:NO_TRACKING:' || r.id,
       public.l3_headed(v_code, 'brak linku śledzenia'),
       'rk_no_tracking',
-      v_anchor is not null and v_track_missing and p_now >= v_warn,
+      v_track_missing and v_warn is not null and p_now >= v_warn,
       v_crit is not null and p_now >= v_crit,
       v_crit,
-      jsonb_build_object('rule', 'L3_NO_TRACKING', 'due', v_anchor,
-        'params', jsonb_build_object('code', v_code, 'h', l3_ops('AWIZ_EARLY_H'))),
+      jsonb_build_object('rule', 'L3_NO_TRACKING', 'due', v_crit,
+        'params', jsonb_build_object('code', v_code, 'h', 2)),
       p_now
     );
 
@@ -625,17 +630,19 @@ begin
       using errcode = '42501';
   end if;
 
-  /* D-1501 / F7 B3: nie-HHL_ADMIN — żadnej zmiany sailing_id po FERRY
-     albo gdy dotychczasowy rejs już wypłynął. */
+  /* D-1501 / F7 B3+N2: nie-HHL_ADMIN — żadnej zmiany sailing_id po FERRY
+     albo gdy dotychczasowy rejs już wypłynął (wyjątek: ODWOLANY — FERRY_CANCELLED). */
   if new.sailing_id is distinct from old.sailing_id then
     if current_app_role() is distinct from 'HHL_ADMIN' then
       if old.status >= 'FERRY' then
         raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator';
       end if;
       if old.sailing_id is not null then
-        select coalesce(s.delayed_departure_at, s.departure_at) into v_dep
+        select s.status::text, coalesce(s.delayed_departure_at, s.departure_at)
+          into v_sail_st, v_dep
           from public.sailings s where s.id = old.sailing_id;
-        if v_dep is not null and v_dep <= now() then
+        if v_sail_st is distinct from 'ODWOLANY'
+           and v_dep is not null and v_dep <= now() then
           raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator';
         end if;
       end if;
@@ -708,16 +715,49 @@ end $$;
 comment on function public.guard_load_update() is
   'D-1501/0242: rejs historyczny tylko HHL_ADMIN; F7 B3 blokada po FERRY; D-1525 biała lista SCX.';
 
--- F7 D2: pierwszy skan po migracji bez e-maili / dzwonków (tower.bulk_quiet).
+-- F7 D2+N3: pierwszy skan — bulk_quiet + escalated_at (bez dec_late) + bez DECISION_OPEN.
+-- bulk_quiet nie wycisza dzwonków DECISION_OPEN ani eskalacji decision_escalate_overdue.
 do $d1501scan$
 declare
   v_prev text;
   v_n int;
+  v_t0 timestamptz := clock_timestamp();
 begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
   v_n := public.l3_scan(now());
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-  raise notice '0242 D-1501: l3_scan(bulk_quiet)=%', v_n;
+
+  update public.decisions d
+     set escalated_at = coalesce(d.escalated_at, now()),
+         updated_at = now()
+   where d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+     and d.created_at >= v_t0;
+
+  delete from public.notifications n
+   where n.template = 'DECISION_OPEN'
+     and n.created_at >= v_t0
+     and exists (
+       select 1 from public.decisions d
+        where d.id = nullif(n.payload->>'decision_id', '')::uuid
+          and d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
+          and d.created_at >= v_t0
+     );
+
+  update public.workflow_runs wr
+     set status = 'SKIPPED',
+         finished_at = now(),
+         result = jsonb_build_object('reason', '0242 first l3_scan quiet (F7 N3)')
+   where wr.status = 'QUEUED'
+     and wr.ran_at >= v_t0
+     and exists (
+       select 1 from public.risk_signals rs
+        where rs.detected_at >= v_t0
+          and rs.dedup_key like 'l3:NO_%'
+          and wr.dedup_key = 'wf:' || wr.workflow_id::text || ':risk:' || rs.id::text
+     );
+
+  raise notice '0242 D-1501: l3_scan(bulk_quiet+N3)=%', v_n;
 end
 $d1501scan$;

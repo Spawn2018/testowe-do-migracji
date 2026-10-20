@@ -147,6 +147,10 @@ echo "$out" | grep -q "jeszcze nie wypłynął" && { ok=$((ok+1)); echo "  OK   
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S5' where id='$B'; rollback;" 2>&1)
 echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    SCX nie zmieni rejsu gdy stary wypłynął"; } || { fail=$((fail+1)); echo "  FAIL  stary rejs: $out"; }
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; update loads set sailing_id='$S4' where id='$A'; rollback;" 2>&1); echo "$out" | grep -q "po wypłynięciu" && { ok=$((ok+1)); echo "  OK    przewoźnik nie zmieni rejsu po wypłynięciu"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
+# F7 N2: SCX przepina z odwołanego (godzina minęła) na przyszły.
+Lcan=$(L 64)
+mk $Lcan CAN "'HHL/CAN'" "'SCX/CAN'" READY "'$S2'"
+chk "SCX przepina z odwołanego na przyszły" "select 1" "$(as $SCX "with u as (update loads set sailing_id='$S5' where id='$Lcan' returning 1) select count(*) from u")"
 
 echo; echo "[9] Strefy w prawdziwych metrach — różnica od zadanego promienia poniżej 1%"
 chk "port Gdańsk: 800 m"   "select abs(round(st_distance(st_centroid(geom)::geography, st_exteriorring(geom)::geography)::numeric) - 800) < 8   from geofences where name='Port Gdańsk'"   t
