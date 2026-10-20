@@ -1,6 +1,6 @@
 /**
  * M10 — rejsy (STATUSY_AUTOMATYCZNE §3.2, §4): jedno źródło prawdy o rejsie (`sailings`),
- * przypisanie rejsu do transportu (HHL i przewoźnik; po wypłynięciu wyłącznie HHL),
+ * przypisanie rejsu do transportu (HHL i przewoźnik; po wypłynięciu wyłącznie Administrator HHL),
  * rozkład zmienia HHL (dodanie, opóźnienie, odwołanie). Źródło Polferries — decyzja właściciela;
  * do tego czasu dane startowe + ręcznie.
  */
@@ -15,7 +15,10 @@ export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(e
 /** Statusy „na promie lub dalej” — rejsu nie zmienia już przewoźnik (lustro wyzwalacza 0008). */
 const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
 
-export type SailingDenied = 'ROLE' | 'DEPARTED' | 'CANCELLED' | null;
+/** Statusy, w których przewoźnik i Operacje HHL nie zmieniają rejsu — lustro `old.status >= 'FERRY'` w guard_load_update (0242). */
+const SAILING_LOCKED_STATUSES: ReadonlySet<LoadStatus> = new Set<LoadStatus>([...AFTER_FERRY, 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED']);
+
+export type SailingDenied = 'ROLE' | 'DEPARTED' | 'CANCELLED' | 'NOT_FOUND' | null;
 /**
  * Kto może zmienić przypisanie rejsu transportu. D-20261020-1501-01 (właściciel 15:01): rejs, który już wypłynął,
  * przypisuje tylko Administrator HHL (`account` = HHL_ADMIN; w demo konto HHL bez „Operacji”); SCX i Operacje HHL —
@@ -26,9 +29,11 @@ export function sailingAssignDenied(
 ): SailingDenied {
   if (target && target.status === 'ODWOLANY') return role === 'HHL' || role === 'SCX' ? 'CANCELLED' : 'ROLE';
   /* 0242 (D-1501): Administrator HHL — także rejsy historyczne i zmiana po wypłynięciu; Operacje HHL jak przewoźnik */
-  if (role === 'HHL' && account !== 'HHL_OPS') return null;
+  /* w produkcji (supabase) Administrator tylko przy jawnym HHL_ADMIN; w demo konto HHL bez roli = Administrator */
+  const admin = account === 'HHL_ADMIN' || (account == null && import.meta.env.VITE_AUTH_MODE !== 'supabase');
+  if (role === 'HHL' && admin) return null;
   if (role !== 'SCX' && role !== 'HHL') return 'ROLE';
-  if (AFTER_FERRY.has(load.status) || (current && hasDeparted(current, nowIso) && current.status !== 'ODWOLANY')) return 'DEPARTED';
+  if (SAILING_LOCKED_STATUSES.has(load.status) || (current && hasDeparted(current, nowIso) && current.status !== 'ODWOLANY')) return 'DEPARTED';
   if (target && hasDeparted(target, nowIso)) return 'DEPARTED';
   return null;
 }

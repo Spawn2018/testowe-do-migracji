@@ -1578,6 +1578,8 @@ export const useTowerStore = create<TowerState>()(
         if (!load) return 'ROLE';
         const current = st.sailings.find((x) => x.id === load.sailingId);
         const target = sailingId ? st.sailings.find((x) => x.id === sailingId) ?? null : null;
+        /* nieznany rejs nie może oznaczać „zdejmij rejs” (F7 #371) */
+        if (sailingId && !target) return 'NOT_FOUND';
         /* B5: w Podglądzie rejs się nie zmienia — także lokalnie (D-20261020-1501-01) */
         if (isPreviewReadOnly({ viewRole: st.role })) return 'ROLE';
         const denied = sailingAssignDenied(st.role, load, current, target, getNowIso(), accountRole(st.role));

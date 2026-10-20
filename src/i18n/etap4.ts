@@ -65,6 +65,7 @@ const pl: Dict = {
   sail_deny_DEPARTED: 'Po wypłynięciu rejs zmienia wyłącznie Administrator HHL',
   sail_deny_CANCELLED: 'Rejs jest odwołany — wybierz inny',
   sail_deny_ROLE: 'Rejs przypisuje HHL albo przewoźnik transportu',
+  sail_deny_NOT_FOUND: 'Nie znaleziono wybranego rejsu — odśwież listę rejsów',
   tl_auto: 'Zmiana automatyczna',
   risk_code: 'Rodzaj',
   drv_title: 'Kierowca',

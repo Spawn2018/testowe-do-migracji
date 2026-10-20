@@ -131,4 +131,15 @@ describe('W-rejs-komunikaty — Operacje HHL i teksty 0242', () => {
     expect(friendlyDbError('Nie znaleziono rejsu')).toMatch(/odśwież listę rejsów/);
     expect(friendlyDbError('Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator')).toBe('Rejs po wypłynięciu może zmienić wyłącznie Administrator HHL.');
   });
+  it('Operacje HHL: docelowy wypłynięty bez bieżącego → DEPARTED; zdjęcie przed promem → wolno', () => {
+    expect(sailingAssignDenied('HHL', base2, undefined, past2, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+    expect(sailingAssignDenied('HHL', base2, fut2, null, NOW2, 'HHL_OPS')).toBeNull();
+  });
+  it('anulowany i rozliczany transport: przewoźnik i Operacje HHL nie zmieniają rejsu (jak baza: status >= FERRY)', () => {
+    for (const st of ['CANCELLED', 'READY_TO_INVOICE', 'INVOICED'] as const) {
+      expect(sailingAssignDenied('SCX', { ...base2, status: st } as Load, fut2, null, NOW2)).toBe('DEPARTED');
+      expect(sailingAssignDenied('HHL', { ...base2, status: st } as Load, fut2, null, NOW2, 'HHL_OPS')).toBe('DEPARTED');
+      expect(sailingAssignDenied('HHL', { ...base2, status: st } as Load, fut2, null, NOW2, 'HHL_ADMIN')).toBeNull();
+    }
+  });
 });
