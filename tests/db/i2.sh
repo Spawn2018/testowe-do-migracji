@@ -1254,8 +1254,9 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, p
 $PSQL -c "set session_replication_role=replica; update loads set tracking_opened_at = now() - interval '3 hours' where id='$L_D15n'" >/dev/null
 $PSQL -c "
 do \$\$
-declare v_t0 timestamptz := clock_timestamp(); v_prev text;
+declare v_t0 timestamptz := now(); v_prev text;
 begin
+  /* now() jak created_at; clock_timestamp() psuje filtr (CI: 24 DECISION_OPEN, escalated_at=false). */
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
   perform public.l3_scan(now());
@@ -1266,10 +1267,13 @@ begin
      and load_id = '$L_D15n';
   delete from notifications n
    where n.template = 'DECISION_OPEN' and n.created_at >= v_t0
-     and exists (
-       select 1 from decisions d
-        where d.id = nullif(n.payload->>'decision_id','')::uuid
-          and d.load_id = '$L_D15n' and d.created_at >= v_t0);
+     and (
+       exists (
+         select 1 from decisions d
+          where d.id = nullif(n.payload->>'decision_id','')::uuid
+            and d.load_id = '$L_D15n' and d.created_at >= v_t0)
+       or n.load_id = '$L_D15n'
+     );
 end \$\$;
 " >/dev/null
 chk "D-1501: pierwszy skan bez DECISION_OPEN" \

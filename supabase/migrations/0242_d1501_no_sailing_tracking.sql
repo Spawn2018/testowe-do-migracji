@@ -721,7 +721,8 @@ do $d1501scan$
 declare
   v_prev text;
   v_n int;
-  v_t0 timestamptz := clock_timestamp();
+  /* now() = created_at decyzji w tej transakcji; clock_timestamp() jest później → filtr psuje N3. */
+  v_t0 timestamptz := now();
 begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
@@ -738,11 +739,19 @@ begin
   delete from public.notifications n
    where n.template = 'DECISION_OPEN'
      and n.created_at >= v_t0
-     and exists (
-       select 1 from public.decisions d
-        where d.id = nullif(n.payload->>'decision_id', '')::uuid
-          and d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
-          and d.created_at >= v_t0
+     and (
+       exists (
+         select 1 from public.decisions d
+          where d.id = nullif(n.payload->>'decision_id', '')::uuid
+            and d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
+            and d.created_at >= v_t0
+       )
+       or n.load_id in (
+         select d.load_id from public.decisions d
+          where d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
+            and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+            and d.created_at >= v_t0
+       )
      );
 
   update public.workflow_runs wr
