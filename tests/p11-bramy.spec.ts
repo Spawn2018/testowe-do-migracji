@@ -543,6 +543,8 @@ test.describe('P11 pkt 3 — E10 kontrast', () => {
         }
         if (role === 'KSH') {
           await openLoad(page, at('/transport/SG-19'))
+          /* D-20261020-1118-01: „Plan i ETA” domyślnie zwinięte — rozwinięcie przed „Edytuj” */
+          await page.locator('.drawer details[data-po="plan"] > summary').click()
           await dialog('Daty KSH', () => page.locator('.drawer [data-ksh-edit]').click())
         }
         expect(bad, bad.join('\n')).toEqual([])

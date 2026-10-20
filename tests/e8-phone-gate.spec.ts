@@ -224,6 +224,13 @@ async function measure(page: Page, view: string, width: number, role: string): P
   ].filter((x): x is Hit => x !== null);
 }
 
+
+/** D-20261020-1118-01: „Przygotowanie” i „Rozliczenie” na osi Status są domyślnie zwinięte — rozwinięcie przed sprawdzeniem wszystkich wierszy. */
+async function expandAxis(page: Page) {
+  const folds = page.locator('.drawer [data-axis-fold][aria-expanded="false"]');
+  while (await folds.count()) await folds.first().click();
+}
+
 test.describe('brama E8 telefon', () => {
   test.describe.configure({ mode: 'serial', timeout: 600_000 });
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
@@ -2023,6 +2030,7 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
     await expect(axis.locator('[data-axis-group]')).toHaveCount(3);
     const groups = await axis.locator('[data-axis-group]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.axisGroup));
     expect(groups).toEqual(['prep', 'route', 'after']);
+    await expandAxis(page);
     const names = await axis.locator('[data-axis-row]').evaluateAll((els) => els.flatMap((e) => ((e as HTMLElement).dataset.axisRow ?? '').split(' ')));
     expect(names).toHaveLength(14);
     await expect(axis.locator('[data-axis-kind="current"]')).toHaveCount(1);
@@ -2089,7 +2097,9 @@ test.describe('wyglad/P4-b panel transportu — Status E25 (img/e25-after), pase
       await statusTab(page);
       const groups = await page.locator('.drawer [data-axis-group]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.axisGroup));
       expect(groups).toEqual(['route', 'after', 'prep']);
-      await expect(page.locator('.drawer [data-axis-group="prep"] [data-axis-row]')).toHaveCount(0);
+      /* D-20261020-1118-01: zwinięte „Przygotowanie” pokazuje tylko najbardziej aktualny status sekcji */
+      await expect(page.locator('.drawer [data-axis-group="prep"]')).toHaveAttribute('data-axis-open', 'false');
+      await expect(page.locator('.drawer [data-axis-group="prep"] [data-axis-row]')).toHaveCount(1);
       /* E8 pkt 4: w panelu (pasek śledzenia i oś) tekst ≥ 12 px, przyciski ≥ 44 px */
       const tiny = async (sel: string) => page.locator(sel).evaluateAll((roots) => roots.flatMap((root) => {
         const out: string[] = [];
@@ -2223,6 +2233,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await boot(page, 'SCX');
     await openCode(page, 'D-02');
     await tab(page, 1);
+    await expandAxis(page);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('Brakuje:');
     await page.locator('.drawer [data-action="change-status"]').click();
     const modal = page.locator('[data-status-change-modal]');
@@ -2249,6 +2260,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveText('dzień i godzina rejsu jeszcze niewybrane — wybiera SCX w awizacji');
     await expect(page.locator('.drawer [data-awiz-nosail]')).toHaveText('kompletna · bez rejsu');
     await tab(page, 1);
+    await expandAxis(page);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('rejs');
     await tab(page, 0);
     await page.locator('.drawer [data-awiz-open]').click();
@@ -2262,6 +2274,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     await page.locator('[data-awiz-save]').click();
     await expect(page.locator('.drawer [data-sail-unpicked]')).toHaveCount(0);
     await tab(page, 1);
+    await expandAxis(page);
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).toContainText('Brakuje:');
     await expect(page.locator('.drawer [data-axis-row="READY"] .sax-sub')).not.toContainText('rejs');
     /* F7 runda 2: „rejs niewybrany” tylko w przygotowaniu — SG-03 (na promie) pokazuje sam statek */
@@ -2568,7 +2581,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(page.locator('.drawer [data-hd-deliver]')).toHaveText('czw. 22.10.2026 · t43');
     const order = await page.locator('.drawer [data-overview] [data-po]').evaluateAll((els) => els.map((e) => e.getAttribute('data-po')));
     /* właściciel 19.10, 15:27: mapa na górze, pod nią „Do zrobienia” (zwinięte); bez „Dokumentów” i PDF */
-    expect(order).toEqual(['todo', 'plan', 'awiz', 'cargo', 'numbers']);
+    /* D-20261020-1118-01: „Plan i ETA” zwinięte, ramka ETA (`eta`) pod nim poza zwijaniem */
+    expect(order).toEqual(['todo', 'plan', 'eta', 'awiz', 'cargo', 'numbers']);
     expect(await page.locator('.drawer [data-overview] > *').first().getAttribute('data-load-map')).not.toBeNull();
     expect(await page.locator('.drawer details[data-po="todo"]').evaluate((d) => (d as HTMLDetailsElement).open)).toBe(false);
     await expect(page.locator('.drawer [data-route-check], .drawer [data-corridor-obstacles], .drawer [data-plan-dates], .drawer .banner[data-permit]')).toHaveCount(0);
@@ -2723,7 +2737,10 @@ test.describe('wyglad/P5 panel transportu — Ceny (E33) i Dokumenty (E31 pkt 5)
     await page.keyboard.press('Escape');
     await expect(page.locator('[data-fee-modal]')).toHaveCount(0);
     await openTab(page, 'SG-03', 2);
-    await expect(page.locator('.drawer [data-pd-req]')).toHaveCount(5);
+    /* D-20261020-1118-01: SG — zezwolenie firmowe (jeden wiersz) zamiast „Zezwolenie PL / SE” */
+    await expect(page.locator('.drawer [data-pd-req]')).toHaveCount(4);
+    await expect(page.locator('.drawer [data-pd-req="PERMIT_FIRM"]')).toHaveCount(1);
+    await expect(page.locator('.drawer [data-pd-req="PERMIT_PL"], .drawer [data-pd-req="PERMIT_SE"]')).toHaveCount(0);
     await expect(page.locator('.drawer [data-pd-zip]')).toBeVisible();
     for (const r of ['KSH', 'SCX'] as const) {
       await boot(page, r);
