@@ -834,7 +834,8 @@ export const useTowerStore = create<TowerState>()(
         const role = get().role;
         const locale = get().locale;
         const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX');
-        if (!allowed) {
+        /* B5: w Podglądzie bez zmiany „na niby” (D-20261020-1501-01) */
+        if (!allowed || isPreviewReadOnly({ viewRole: role })) {
           get().pushToast(orderEditDeniedMessage(side, locale), 'HIGH', loadId);
           return false;
         }
@@ -1574,7 +1575,9 @@ export const useTowerStore = create<TowerState>()(
         if (!load) return 'ROLE';
         const current = st.sailings.find((x) => x.id === load.sailingId);
         const target = sailingId ? st.sailings.find((x) => x.id === sailingId) ?? null : null;
-        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso());
+        /* B5: w Podglądzie rejs się nie zmienia — także lokalnie (D-20261020-1501-01) */
+        if (isPreviewReadOnly({ viewRole: st.role })) return 'ROLE';
+        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso(), accountRole(st.role));
         if (denied) return denied;
         const ref = bookingRef?.trim() || null;
         set((s2) => ({

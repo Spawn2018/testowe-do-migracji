@@ -179,6 +179,11 @@ const PL: Record<string, string> = {
   p7_m_close: 'Zamknij',
   p7_m_save: 'Zapisz',
   p7_m_ro: 'Awizację robi SCX. Ty ją oglądasz.',
+  /* D-20261020-1501-01: Podgląd (B5) — tylko do odczytu; rejs i link śledzenia można dodać później */
+  p7_m_ro_preview: 'Podgląd — tylko do odczytu. Awizację zapisujesz w swoim widoku HHL.',
+  p7_m_sailing_hist: 'Rejsy, które już dopłynęły do Szwecji',
+  p7_m_sailing_later: 'Rejs można dodać później. Do tego czasu w Do zrobienia jest sprawa „Brak rejsu promu”.',
+  p7_m_track_later: 'Link nie jest wymagany do zapisu. Bez linku w Do zrobienia jest sprawa „Brak linku śledzenia”.',
   p7_m_pilots_h: 'Piloci',
   p7_m_pilots_lead: '{kind}: zestaw {set}. Tabela HHL: „PL + SE” — wymagany pilot PL i pilot SE (dwóch różnych). Załadunek {day}.',
   p7_m_pilots_missing: '{n} brakują',

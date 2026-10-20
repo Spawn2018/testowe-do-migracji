@@ -2597,7 +2597,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
     await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toBeVisible();
     await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
+    /* D-20261020-1501-01: Administrator HHL — ten sam przycisk co SCX */
+    await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText(/^(Uzupełnij|Edytuj) awizację$/);
     await expect(page.locator('.drawer [data-action="export-load-pdf-map"], .drawer [data-po="docs"]')).toHaveCount(0);
     await closeDrawer(page);
 

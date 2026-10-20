@@ -19,7 +19,9 @@ import {
   type FerryOperatorId,
 } from '../../lib/awizacjaState';
 import { isPlausibleNational, toNationalPhone } from '../../lib/phoneNational';
-import { effArrival, effDeparture, fmtLocal, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
+import { effArrival, effDeparture, fmtLocal, historicalSailings, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
+import { isPreviewReadOnly } from '../../lib/prodFacade';
+import { accountRole } from '../../lib/accountRole';
 import { getNowIso } from '../../lib/frozenNow';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { TrackingLinkField } from './TrackingLinkField';
@@ -49,7 +51,10 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const orderSide = editableOrderSide(role);
   const nowIso = getNowIso();
   const curSailing = sailings.find((x) => x.id === load.sailingId);
-  const sailingLock = sailingAssignDenied(role, load, curSailing, null, nowIso);
+  const account = accountRole(role);
+  /* B5 (D-20261019-1525-01): Podgląd innej firmy — okno tylko do odczytu, bez zapisu „na niby” (D-20261020-1501-01) */
+  const preview = isPreviewReadOnly({ viewRole: role });
+  const sailingLock = sailingAssignDenied(role, load, curSailing, null, nowIso, account);
 
   const [driverName, setDriverName] = useState(load.resources.driverName ?? '');
   const [driverPhone, setDriverPhone] = useState(load.resources.driverPhone ?? '');
@@ -94,6 +99,12 @@ export function AwizacjaModal({ load, onClose }: Props) {
     () => reachableSailings(sailings, load, nowIso, operator),
     [sailings, load, nowIso, operator],
   );
+  /* D-20261020-1501-01: rejsy, które już wypłynęły i dopłynęły — tylko Administrator HHL (SCX i Operacje HHL: przyszłe) */
+  const histOn = role === 'HHL' && canFixAwizOf(role);
+  const historyOptions = useMemo(
+    () => (histOn ? historicalSailings(sailings, nowIso, operator).filter((s) => !sailingOptions.some((o) => o.id === s.id)) : []),
+    [histOn, sailings, nowIso, operator, sailingOptions],
+  );
 
   const dupCode = awizacjaDuplicateWarning(loads, load.id, { driverName, tractorPlate });
 
@@ -109,6 +120,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
   const save = () => {
     setErr(null);
+    if (preview) return;
     const name = driverName.trim();
     const plate = tractorPlate.trim().toUpperCase();
     if (!name) {
@@ -179,7 +191,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
   /* E6: odcinek SE tylko przy przepięciu naczepy */
   const twoSeg = trailerSwap;
   /* E32 pkt 6: SCX robi, HHL Administrator poprawia (canFixAwizOf), HHL Operacje i KSH tylko oglądają */
-  const readOnly = role === 'KSH' || (role === 'HHL' && !canFixAwizOf(role));
+  const readOnly = role === 'KSH' || (role === 'HHL' && !canFixAwizOf(role)) || preview;
   const missText = missing.map((m) => pt(locale, `p7_miss_${m}`)).join(', ');
   const pilotsMiss = pilotsMissingCount(missing);
   const setPilot = (side: 'pl' | 'se', key: 'plate' | 'name', v: string) => setPil((x) => ({ ...x, [side]: { ...x[side], [key]: v } }));
@@ -225,7 +237,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           ) : null}
           {err ? <div className="am-err" role="alert">{err}</div> : null}
 
-          {readOnly ? <p className="am-note" data-awiz-ro>{pt(locale, 'p7_m_ro')}</p> : null}
+          {readOnly ? <p className="am-note" data-awiz-ro>{pt(locale, preview ? 'p7_m_ro_preview' : 'p7_m_ro')}</p> : null}
           <fieldset className="am-all" disabled={readOnly}>
           <fieldset className="am-box" data-awiz-seg={twoSeg ? 'PL' : 'one'}>
             <legend className="am-lg">{pt(locale, twoSeg ? 'p7_m_seg_pl' : 'p7_m_seg_one')}</legend>
@@ -318,6 +330,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 }
               }}
           />
+          <small className="am-hint" data-awiz-track-later>{pt(locale, 'p7_m_track_later')}</small>
 
           <div className="am-2">
             <label className="form-field am-f">
@@ -339,7 +352,17 @@ export function AwizacjaModal({ load, onClose }: Props) {
                       {o.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(o.status, locale)}` : ''}
                     </option>
                   ))}
+                  {historyOptions.length ? (
+                    <optgroup label={pt(locale, 'p7_m_sailing_hist')} data-awiz-sailing-hist>
+                      {historyOptions.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
                 </select>
+                <small className="am-hint" data-awiz-sailing-later>{pt(locale, 'p7_m_sailing_later')}</small>
               </label>
             )}
           </div>

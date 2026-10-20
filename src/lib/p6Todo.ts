@@ -87,7 +87,7 @@ export function riskGo(r: Risk): IssueGo {
   return r.loadId ? 'OPEN' : 'NONE';
 }
 
-const DEC_GO: Record<string, IssueGo> = { NO_AWIZACJA: 'AWIZACJA', DOC_MISSING: 'DOCS', DWELL_OVER_FREE: 'PRICING', INSURANCE_EXPIRING: 'DOCS' };
+const DEC_GO: Record<string, IssueGo> = { NO_AWIZACJA: 'AWIZACJA', NO_SAILING: 'AWIZACJA', NO_TRACKING: 'AWIZACJA', DOC_MISSING: 'DOCS', DWELL_OVER_FREE: 'PRICING', INSURANCE_EXPIRING: 'DOCS' };
 
 export function riskIssue(r: Risk, nowIso: string): TodoIssue {
   void nowIso;
