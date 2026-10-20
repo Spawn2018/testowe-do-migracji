@@ -52,7 +52,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
     const st = (Array.isArray(s.data) ? s.data[0] : null) as { required?: number } | null;
     setReq(st?.required ?? 0);
     setDirty(false);
-  }, [loadId, canWrite]);
+  }, [loadId]);
 
   useEffect(() => {
     void refresh();
@@ -118,7 +118,7 @@ export default function EscortPanel({ loadId }: { loadId: string }) {
             {rows.map((r, i) => (
               <div key={i} style={{ display: 'contents' }}>
                 <dt>{tp(locale, 'e34_n', { n: String(i + 1) })}</dt>
-                <dd><span className="mono" data-content>{r.plate}</span> · {r.company} · {t(locale, `e34_scope_${r.scope}`)}</dd>
+                <dd><span className="mono" data-content>{r.plate}</span> · {r.company} · {t(locale, `e34_scope_${r.scope}`)}{r.driver_name ? <> · {r.driver_name}</> : null}{r.driver_phone ? <> · <span className="mono" data-content>{r.driver_phone}</span></> : null}</dd>
               </div>
             ))}
           </dl>

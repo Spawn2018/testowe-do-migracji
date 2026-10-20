@@ -63,9 +63,11 @@ let prodPilots: Map<string, Pilots> | null = null;
 export function setPilotsFromServer(rows: readonly { loadId: string; scope: string; plate: string | null; name: string | null }[] | null): void {
   if (!rows) { prodPilots = null; return; }
   const m = new Map<string, Pilots>();
-  for (const r of rows) {
+  /* najpierw wpisy z zakresem PL / SE (awizacja), potem starsze `load_escorts_set` z zakresem PL_SE na wolne miejsca:
+     pierwszy wolny — PL, potem SE (F7 #355 P3, #360 P5 — PL_SE nie zajmuje strony, którą ma wpis PL lub SE) */
+  const ordered = [...rows.filter((r) => r.scope !== 'PL_SE'), ...rows.filter((r) => r.scope === 'PL_SE')];
+  for (const r of ordered) {
     const cur = m.get(r.loadId) ?? { pl: { plate: null, name: null }, se: { plate: null, name: null } };
-    /* starsze wpisy `load_escorts_set` (zakres PL_SE): pierwszy wolny — PL, potem SE (F7 #355 P3) */
     const side = r.scope === 'SE' ? 'se' : r.scope === 'PL' ? 'pl'
       : r.scope === 'PL_SE' ? (!cur.pl.plate ? 'pl' : !cur.se.plate ? 'se' : null) : null;
     if (!side) continue;
