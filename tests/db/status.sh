@@ -338,8 +338,19 @@ chk "D-1710 repair: w trasie z linkiem nietknięty" "select status||'/'||count(*
 chk "D-1710 repair: DELIVERED z linkiem nietknięty" "select status||'/'||count(*) from loads l join positions p on p.load_id=l.id where l.id='$Rdel' group by status" "DELIVERED/1"
 chk "D-1710 repair: STATUS_AUTO→READY zostaje na osi" "select count(*) from load_events where load_id='$Rok' and payload->>'to'='READY'" 1
 chk "D-1710 repair: telm_attach_phase zresetowany" "select source from telm_attach_phase where load_id='$R17'" D1710_RESET
-# F7: sprzątanie LATE_DATE po testach D-1710 (risks.sh liczy klucze automatu).
-q "delete from risk_signals where title_key='rk_late_date_change' or dedup_key like 'LATE_DATE%'" >/dev/null
+# F7: sprzątanie LATE_DATE + ETA z D-1710 (risks.sh liczy klucze automatu w tower_test_status).
+# decisions.risk_id → risk_signals bez CASCADE — najpierw decision_events/decisions.
+q "delete from decision_events where decision_id in (
+      select d.id from decisions d join risk_signals s on s.id=d.risk_id
+       where s.title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or s.dedup_key like 'LATE_DATE%' or s.dedup_key like 'ETA:%');
+    delete from decisions where risk_id in (
+      select id from risk_signals
+       where title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%');
+    delete from risk_signals
+     where title_key in ('rk_late_date_change','rk_eta_after_latest')
+        or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%'" >/dev/null
 HHL=11111111-0000-0000-0000-000000000001
 W8=$(L 4b)
 q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_date,telematics_vehicle_id) values ('$W8','$P','$SCXO','KSH/A1W8','PLANNED','2026-11-20','TEL-A1W8')" >/dev/null

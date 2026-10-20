@@ -3638,3 +3638,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `pilne`; #368/#365/#362… w planie (`Spawn2018`).
 - Scalanie: #373 F7 ponownie niegotowe (db czerwone: risks 2, baf 7); #370/#371 czekają.
 - Bieżąca: **D-1710 F7 r2** — `v_pos_ids bigint[]`; dowód tylko TELM IN_TRANSIT+synt. EXIT / pozycje bez linku; `v_t0` z ts/occurred_at; decision_events z RETURNING; telm ≤AT_LOADING bez actual → null; reset telm/geofence bez DELETE; baf AT_LOADING→∅, SE w trasie; LATE_DATE po D-1710; test repair; status 149 / baf 47.
+
+## 2026-10-20 22:50 — D-1710 (#373): db risks — sprzątanie FK
+
+- Skrzynka: #368 PILNE (bieżąca); pozostałe `dla-cursora` w planie. Bez F7 „gotowe” na #373.
+- Scalanie: #370 F7 gotowe **po #368**; #371 po #370; #317/#259 konflikt — bez scalenia.
+- CI na `465f547e`: unit/visual zielone; `db` FAIL — `risks` 8 kluczy zamiast 6 (`rk_eta_after_latest`, `rk_late_date_change`): DELETE bez kaskady na `decisions.risk_id`.
+- Bieżąca: sprzątanie w `status.sh` z `decision_events`→`decisions`→`risk_signals` (LATE_DATE + ETA z testu repair). Czekam na zieloną `db` i F7.
