@@ -38,22 +38,31 @@ function pilotMiss(p: Pilot, side: 'Pl' | 'Se'): MissKey[] {
   return [...(plate ? [] : [`pilot${side}Plate` as MissKey]), ...(name ? [] : [`pilot${side}Name` as MissKey])];
 }
 
-/** Braki awizacji według jednej definicji (E32 pkt 6, D-20261009-1233-01 pkt 2). */
+/**
+ * Braki awizacji według jednej definicji (E32 pkt 6, D-20261009-1233-01 pkt 2). Odcinek SE (przepięcie naczepy) NIE
+ * liczy się tutaj — D-20261020-1525-01 (właściciel 15:25): pola SE nieobowiązkowe przy zapisie, osobny termin
+ * 48 h przed dostawą (`awizMissingSe`, sprawa „Brak awizacji kierowcy SE”).
+ */
 export function awizMissing(r: AwizFields, pilotsRequired: boolean, pilots: Pilots | null): MissKey[] {
   const out: MissKey[] = [];
   if (!has(r.driverName)) out.push('driver');
   if (!has(r.driverPhone)) out.push('phone');
   if (!has(r.tractorPlate)) out.push('tractor');
   if (!has(r.trailerPlate)) out.push('trailer');
-  if (r.trailerSwap) {
-    if (!has(r.driverDeliveryName)) out.push('driverSe');
-    if (!has(r.driverDeliveryPhone)) out.push('phoneSe');
-    if (!has(r.tractorDeliveryPlate)) out.push('tractorSe');
-  }
   if (pilotsRequired) {
     const p = pilots ?? NO_PILOTS;
     out.push(...pilotMiss(p.pl, 'Pl'), ...pilotMiss(p.se, 'Se'));
   }
+  return out;
+}
+
+/** D-20261020-1525-01: braki Odcinka SE (tylko przy przepięciu naczepy) — termin 48 h przed dostawą, nie blokują zapisu. */
+export function awizMissingSe(r: AwizFields): MissKey[] {
+  if (!r.trailerSwap) return [];
+  const out: MissKey[] = [];
+  if (!has(r.driverDeliveryName)) out.push('driverSe');
+  if (!has(r.driverDeliveryPhone)) out.push('phoneSe');
+  if (!has(r.tractorDeliveryPlate)) out.push('tractorSe');
   return out;
 }
 

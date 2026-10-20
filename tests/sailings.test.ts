@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import {
   autoRiskCode, autoStatusText, buildSeedSailings, cancelledSailingRisks, checkSailingDraft, effDeparture,
-  ferryFromSailing, sailingAssignDenied, selectableSailings,
+  ferryFromSailing, historicalSailings, sailingAssignDenied, selectableSailings,
 } from '../src/lib/sailings';
 import { sailingFromRow, riskFromRow } from '../src/data/mappers';
 import type { Load, Sailing } from '../src/types';
@@ -85,5 +85,23 @@ describe('M10 dane z bazy', () => {
   it('oś zdarzeń: zmiana automatyczna z powodem', () => {
     expect(autoStatusText({ from: 'AT_PORT_GDANSK', to: 'FERRY', powod: 'odejście przypisanego rejsu' })).toBe('AT_PORT_GDANSK → FERRY · odejście przypisanego rejsu');
     expect(autoStatusText(undefined)).toBeNull();
+  });
+});
+
+describe('D-20261020-1501-01 — rejsy historyczne tylko dla Administratora HHL', () => {
+  const past = S({ id: 'h1', departureAt: '2026-09-20T16:00:00Z', arrivalAt: '2026-09-21T10:00:00Z' });
+  const onSea = S({ id: 'h2', departureAt: '2026-09-23T10:00:00Z', arrivalAt: '2026-09-24T06:00:00Z' });
+  it('Administrator HHL przypisuje rejs, który dopłynął; Operacje HHL i SCX — nie; odwołany — nikt', () => {
+    expect(sailingAssignDenied('HHL', base, undefined, past, NOW, 'HHL_ADMIN')).toBeNull();
+    expect(sailingAssignDenied('HHL', base, undefined, past, NOW, 'HHL_OPS')).toBe('DEPARTED');
+    expect(sailingAssignDenied('SCX', base, undefined, past, NOW, 'CARRIER_DISPATCH')).toBe('DEPARTED');
+    expect(sailingAssignDenied('SCX', base, undefined, S({ id: 's9' }), NOW, 'CARRIER_DISPATCH')).toBeNull();
+    expect(sailingAssignDenied('HHL', base, undefined, S({ id: 'x', status: 'ODWOLANY', departureAt: '2026-09-20T16:00:00Z' }), NOW, 'HHL_ADMIN')).toBe('CANCELLED');
+    expect(sailingAssignDenied('KSH', base, undefined, S({ status: 'ODWOLANY' }), NOW)).toBe('ROLE');
+  });
+  it('lista historyczna: wypłynęły i dopłynęły (nie te w rejsie), bez odwołanych, najnowsze pierwsze', () => {
+    const all = [past, onSea, S({ id: 'h3', departureAt: '2026-09-18T16:00:00Z', arrivalAt: '2026-09-19T10:00:00Z' }),
+      S({ id: 'h4', departureAt: '2026-09-17T16:00:00Z', arrivalAt: '2026-09-18T10:00:00Z', status: 'ODWOLANY' }), S({ id: 'f1' })];
+    expect(historicalSailings(all, NOW).map((s) => s.id)).toEqual(['h1', 'h3']);
   });
 });

@@ -833,8 +833,11 @@ export const useTowerStore = create<TowerState>()(
       setOrderNo: (loadId, side, value) => {
         const role = get().role;
         const locale = get().locale;
-        const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX');
-        if (!allowed) {
+        /* D-20261020-1501-01 (15:48): numer zlecenia SCX wpisuje też Administrator HHL (awizacja jak SCX); Operacje HHL — nie */
+        const allowed = (side === 'HHL' && role === 'HHL') || (side === 'CARRIER' && role === 'SCX')
+          || (side === 'CARRIER' && role === 'HHL' && (import.meta.env.VITE_AUTH_MODE === 'supabase' ? accountRole(role) === 'HHL_ADMIN' : accountRole(role) !== 'HHL_OPS'));
+        /* B5: w Podglądzie bez zmiany „na niby” (D-20261020-1501-01) */
+        if (!allowed || isPreviewReadOnly({ viewRole: role })) {
           get().pushToast(orderEditDeniedMessage(side, locale), 'HIGH', loadId);
           return false;
         }
@@ -1574,7 +1577,9 @@ export const useTowerStore = create<TowerState>()(
         if (!load) return 'ROLE';
         const current = st.sailings.find((x) => x.id === load.sailingId);
         const target = sailingId ? st.sailings.find((x) => x.id === sailingId) ?? null : null;
-        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso());
+        /* B5: w Podglądzie rejs się nie zmienia — także lokalnie (D-20261020-1501-01) */
+        if (isPreviewReadOnly({ viewRole: st.role })) return 'ROLE';
+        const denied = sailingAssignDenied(st.role, load, current, target, getNowIso(), accountRole(st.role));
         if (denied) return denied;
         const ref = bookingRef?.trim() || null;
         set((s2) => ({

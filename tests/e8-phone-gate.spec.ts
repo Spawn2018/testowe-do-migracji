@@ -2597,7 +2597,8 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     /* E32 pkt 2 / E9 krok 5: numer HHL wpisuje HHL w „Numerach zleceń”, bez okna Awizacja */
     await expect(page.locator('.drawer [data-order="hhl"] [data-order-edit]')).toBeVisible();
     await expect(page.locator('.drawer [data-awiz-open]')).toHaveCount(0);
-    await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText('Popraw awizację');
+    /* D-20261020-1501-01: Administrator HHL — ten sam przycisk co SCX */
+    await expect(page.locator('.drawer [data-awiz-fix]')).toHaveText(/^(Uzupełnij|Edytuj) awizację$/);
     await expect(page.locator('.drawer [data-action="export-load-pdf-map"], .drawer [data-po="docs"]')).toHaveCount(0);
     await closeDrawer(page);
 
@@ -2618,7 +2619,10 @@ test.describe('wyglad/P7-a panel transportu — Przegląd i okno Awizacja (E32)'
     await expect(modal.locator('[data-awiz-missing]')).toContainText('Brakuje: telefon, naczepa.');
     await modal.locator('[data-awiz-swap]').check();
     await expect(modal.locator('[data-awiz-seg="SE"]')).toBeVisible();
-    await expect(modal.locator('[data-awiz-missing]')).toContainText('kierowca odcinka SE');
+    /* D-20261020-1525-01: odcinek SE nieobowiązkowy przy zapisie — termin 48 h przed dostawą, osobna podpowiedź */
+    await expect(modal.locator('[data-awiz-missing]')).not.toContainText('odcinka SE');
+    await expect(modal.locator('[data-awiz-se-later]')).toContainText('kierowca odcinka SE');
+    await expect(modal.locator('[data-awiz-seg="SE"] .am-need')).toHaveCount(0);
     await modal.locator('[data-awiz-swap]').uncheck();
     await modal.locator('[data-awiz-save]').click();
     await expect(modal).toHaveCount(0);

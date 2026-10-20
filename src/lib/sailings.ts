@@ -16,13 +16,45 @@ export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(e
 const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
 
 export type SailingDenied = 'ROLE' | 'DEPARTED' | 'CANCELLED' | null;
-/** Kto może zmienić przypisanie rejsu transportu. */
-export function sailingAssignDenied(role: OrgKind, load: Load, current: Sailing | undefined, target: Sailing | null, nowIso: string): SailingDenied {
-  if (role === 'HHL') return target && target.status === 'ODWOLANY' ? 'CANCELLED' : null;
+/**
+ * Kto może zmienić przypisanie rejsu transportu. D-20261020-1501-01 (właściciel 15:01): rejs, który już wypłynął,
+ * przypisuje tylko Administrator HHL (`account` = HHL_ADMIN; w demo konto HHL bez „Operacji”); SCX i Operacje HHL —
+ * tylko rejsy jeszcze przed wypłynięciem. `account` pominięty = jak dotąd (HHL bez ograniczeń poza odwołanym).
+ */
+export function sailingAssignDenied(
+  role: OrgKind, load: Load, current: Sailing | undefined, target: Sailing | null, nowIso: string, account?: string | null,
+): SailingDenied {
+  if (target && target.status === 'ODWOLANY') return role === 'HHL' || role === 'SCX' ? 'CANCELLED' : 'ROLE';
+  if (role === 'HHL') return account === 'HHL_OPS' && target && hasDeparted(target, nowIso) ? 'DEPARTED' : null;
   if (role !== 'SCX') return 'ROLE';
   if (AFTER_FERRY.has(load.status) || (current && hasDeparted(current, nowIso) && current.status !== 'ODWOLANY')) return 'DEPARTED';
-  if (target && target.status === 'ODWOLANY') return 'CANCELLED';
+  if (target && hasDeparted(target, nowIso)) return 'DEPARTED';
   return null;
+}
+
+/**
+ * D-20261020-1501-01: rejsy historyczne do wyboru dla Administratora HHL — trasa armatora, nieodwołane, już
+ * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze, z ostatnich `days` dni.
+ */
+export function historicalSailings(
+  all: Sailing[],
+  nowIso: string,
+  operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
+  days = 60,
+): Sailing[] {
+  const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
+  const now = Date.parse(nowIso);
+  const from = now - days * 86_400_000;
+  return all
+    .filter((s) => {
+      if (s.route !== outbound || s.status === 'ODWOLANY') return false;
+      const arr = Date.parse(effArrival(s));
+      if (!(arr <= now) || arr < from) return false;
+      const op = (s.operator ?? '').toLowerCase();
+      if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA';
+      return !op.includes('stena');
+    })
+    .sort((a, b) => Date.parse(effDeparture(b)) - Date.parse(effDeparture(a)));
 }
 
 /** Rejsy do wyboru w szufladzie: trasa armatora, przyszłe i nieodwołane (+ bieżący). */

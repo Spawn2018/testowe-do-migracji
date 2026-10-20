@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { awizDeadline, awizMissing, awizState, convoyOf, dayLong, dayShort, dmHm, hourWindow, isoWeek, NO_PILOTS, pilotsMissingCount, segmentNow, warsawInstant } from '../src/lib/p7Awiz'
+import { awizDeadline, awizMissing, awizMissingSe, awizState, convoyOf, dayLong, dayShort, dmHm, hourWindow, isoWeek, NO_PILOTS, pilotsMissingCount, segmentNow, warsawInstant } from '../src/lib/p7Awiz'
 import { demoSymbolSpec } from '../src/lib/p7Demo'
 import { pt, ptHas } from '../src/i18n/p7'
 
@@ -28,9 +28,11 @@ describe('E32 pkt 6 — kompletna awizacja (jedna definicja)', () => {
     expect(awizState(FULL, [])).toBe('ok')
     expect(awizMissing({ ...FULL, trailerPlate: '  ' }, false, null)).toEqual(['trailer'])
   })
-  it('przepięcie naczepy wymaga odcinka SE (E6)', () => {
-    expect(awizMissing({ ...FULL, trailerSwap: true }, false, null)).toEqual(['driverSe', 'phoneSe', 'tractorSe'])
-    expect(awizMissing({ ...FULL, trailerSwap: true, driverDeliveryName: 'Erik Test', driverDeliveryPhone: '700000001', tractorDeliveryPlate: 'ABC 001' }, false, null)).toEqual([])
+  it('przepięcie naczepy: odcinek SE osobno, nie blokuje awizacji (D-20261020-1525-01; wcześniej E6)', () => {
+    expect(awizMissing({ ...FULL, trailerSwap: true }, false, null)).toEqual([])
+    expect(awizMissingSe({ ...FULL, trailerSwap: true })).toEqual(['driverSe', 'phoneSe', 'tractorSe'])
+    expect(awizMissingSe({ ...FULL, trailerSwap: true, driverDeliveryName: 'Erik Test', driverDeliveryPhone: '700000001', tractorDeliveryPlate: 'ABC 001' })).toEqual([])
+    expect(awizMissingSe({ ...FULL, trailerSwap: false })).toEqual([])
   })
   it('piloci tylko przy „PL + SE”: numer rejestracyjny oraz imię i nazwisko (D-20261009-1233-01)', () => {
     expect(awizMissing(FULL, true, null)).toEqual(['pilotPl', 'pilotSe'])
@@ -113,8 +115,9 @@ describe('I-0 / F8 — źródło danych P7-a', () => {
     for (const line of lines) {
       expect(line).toMatch(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase' \? /)
     }
-    /* audyt-AF F-07: w demo według rodzaju konta (Operacje HHL bez poprawiania); produkcja nadal false */
-    expect(src).toMatch(/role === 'HHL' && accountRole\(role\) !== 'HHL_OPS' : false/)
+    /* audyt-AF F-07: w demo według rodzaju konta (Operacje HHL bez poprawiania); produkcja (D-20261020-1501-01):
+       tylko konto HHL_ADMIN we własnym widoku, nigdy w Podglądzie */
+    expect(src).toMatch(/role === 'HHL' && accountRole\(role\) !== 'HHL_OPS' : role === 'HHL' && accountRole\(role\) === 'HHL_ADMIN' && !isPreviewReadOnly\(\{ viewRole: role \}\)/)
   })
   it('bez zapytań i zapisów do bazy w nowych plikach', () => {
     /* AwizacjaModal.tsx poza listą: zapis awizacji i „Otwórz w RIO” (PR #203, E44) należą do wykonawcy */
