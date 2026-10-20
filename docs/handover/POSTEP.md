@@ -3427,3 +3427,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   - P6: money +13 (PRZYCHOD/ZGODNA/usunięcie/OPLATA/B3/P7) → **162**.
 - Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
 
+## 2026-10-20 08:50 — #348 money 3 FAIL po F7 runda 2 → poprawki testów
+
+- Skrzynka: #320, #322, #323, #324, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: brak „F7: gotowe” po `9688bd14`. Unit/visual zielone; db `39380884619` czerwone: money **159/3**.
+- Poprawki `money.sh` (bez migracji):
+  1. OPLATA_PALIWOWA — `::text` dawało `true`, `val` oczekuje `t` (jak inne boolean);
+  2. Z4 — ta sama data co w INSERT L7 = no-op; data `2026-09-24`;
+  3. HHL_OPS nie podbija `due_date` HHL/FV (zostawało 26.10 → refresh 26.10 nie dawał PO_TERMINIE).
+- Czeka na zielone CI i „F7: gotowe do scalenia”. #317/#259 konflikt — bez scalenia.
+

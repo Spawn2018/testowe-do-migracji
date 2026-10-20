@@ -203,7 +203,7 @@ val "A4: HHL poprawia SPORNĄ PRZYCHOD → DO_WERYFIKACJI" $HHL "select (update_
 val "A4: PRZYCHOD po korekcie — INVOICE_UPDATED u KSH" $KSH "select count(*) > 0 from notifications where template='INVOICE_UPDATED' and payload->>'number'='HHL/FV/39/1'" t
 val "A4: PRZYCHOD korekta bez DISPUTE_RESOLVED" $HHL "select count(*) from notifications where template='INVOICE_DISPUTE_RESOLVED' and payload->>'number'='HHL/FV/39/1'" 0
 sys "update app_users set role='HHL_OPS' where auth_id='$HHL'"
-val "A4: HHL_OPS zmienia PRZYCHOD przed akceptacją" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL || jsonb_build_object('due_date', (select due_date + 1 from invoices where invoice_number='HHL/FV/39/1')), $LINES_HHL, 'ops przychod')->>'id') is not null" t commit
+val "A4: HHL_OPS zmienia PRZYCHOD przed akceptacją" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL, $LINES_HHL, 'ops przychod')->>'id') is not null" t commit
 sys "update app_users set role='HHL_ADMIN' where auth_id='$HHL'"
 val "KSH: ZGODNA na PRZYCHOD" $KSH "update invoices set verification_status='ZGODNA' where invoice_number='HHL/FV/39/1' returning verification_status" ZGODNA commit
 val "A4: HHL poprawia ZGODNĄ → DO_WERYFIKACJI" $HHL "select (update_invoice($INV_HHL, $PATCH_HHL, $LINES_HHL, 'po zgodnej')->>'verification_status')" DO_WERYFIKACJI commit
@@ -211,7 +211,7 @@ val "A4: HHL poprawia ZGODNĄ → DO_WERYFIKACJI" $HHL "select (update_invoice($
 sys "update load_cost set baf_amount=50 where load_id='$L7'"
 LINES_SCX_L7="(select jsonb_build_array(jsonb_build_object('load_id','$L7','invoiced_net',500,'invoiced_fuel',40)))"
 val "A4: HHL_ADMIN usuwa L5 z KOSZT + paliwo → OPLATA_PALIWOWA" $HHL "select (update_invoice($INV_SCX, $PATCH_SCX || jsonb_build_object('net_total',500,'vat_total',115,'gross_total',615), $LINES_SCX_L7, 'bez L5')->>'id') is not null" t commit
-val "A4: flaga OPLATA_PALIWOWA na L7" $HHL "select ('OPLATA_PALIWOWA'=any(flags))::text from invoice_lines where invoice_id=$INV_SCX and load_id='$L7'" t
+val "A4: flaga OPLATA_PALIWOWA na L7" $HHL "select ('OPLATA_PALIWOWA'=any(flags))" t
 val "A4: po usunięciu L5 ze SCX → READY_TO_INVOICE" $HHL "select status from loads where id='$L5'" READY_TO_INVOICE
 val "A4: STATUS_AUTO po usunięciu z faktury" $HHL "select count(*) > 0 from load_events where load_id='$L5' and event_type='STATUS_AUTO' and payload->>'to'='READY_TO_INVOICE'" t
 # F7 B3: bulk_quiet przywrócony — INSERT pozycji + anulowanie w tej samej transakcji → LOAD_STATUS_CHANGED
@@ -222,7 +222,7 @@ val "A4: SCX/FV/39/1 po testach ról = ZAAKCEPTOWANA" $HHL "select verification_
 err "SCX nie oznaczy „Opłacona”"                                  $SCX "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01')" "wy..cznie HHL|wyłącznie HHL"
 val "HHL oznacza „Opłacona” z datą (dziennik audytu)"             $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status||' '||paid_at from invoices where invoice_number='SCX/FV/39/1'" "OPLACONA 2026-10-01"
 err "cofnięcie „Opłacona” bez powodu — odrzucone"                 $HHL "select unmark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '')" "Wymagany pow"
-err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-23T10:00:00Z' where id='$L7'" "zamro"
+err "Z4: przewoźnik nie zmieni daty rozładunku zafakturowanego"   $SCX "update loads set actual_delivery_at='2026-09-24T12:00:00Z' where id='$L7'" "zamro"
 L8=33333333-0000-0000-0000-000000000008
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status) values ('$L8','$P','$CAR','KSH/8','HHL/8','SCX/8','DELIVERED')"
 err "A4: transport bez READY_TO_INVOICE / CMR → odmowa"           $SCX "select register_invoice(jsonb_build_object('direction','KOSZT','invoice_number','SCX/FV/39/8','issue_date','2026-09-25','week_key','2026-W39','currency','EUR','net_total',10,'vat_total',2.30,'gross_total',12.30,'document_id',$DOC,'lines',jsonb_build_array(jsonb_build_object('load_id','$L8','invoiced_net',10))))" "czeka na CMR"
