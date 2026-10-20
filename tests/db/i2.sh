@@ -1044,8 +1044,9 @@ err "D-1118 HHL_OPS odmowa awiz_pilots_set" $OPS_D "select awiz_pilots_set('$L_D
 err "D-1118 SG bez wymogu pilotów → 22023" $SCX "select awiz_pilots_set('$L_D1','PO1','Jan','ABC','Erik')" "bez wymogu pilotów"
 err "D-1118 imię bez tablicy → 22023" $SCX "select awiz_pilots_set('$L_D2',null,'Jan Pilot',null,null)" "numer rejestracyjny"
 # PL_SE z load_escorts_set — awiz_pilots_set nie może go skasować
-$PSQL -c "insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, updated_by)
- values ('$L_D2', 1, 'Firma Pilot', 'XX99', 'PL_SE', 'Sekret', '+48111222333',
+# telefon krajowy (0111), nie E.164 — inaczej INSERT ginie w /dev/null i asercja PL_SE jest fałszywa
+$PSQL -c "insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
+ values ('$L_D2', 1, 'Firma Pilot', 'XX99', 'PL_SE', 'Sekret', '111222333', 'PL',
          (select id from app_users where auth_id='$SCX'))" >/dev/null
 val "D-1118 SCX awizuje Pilot PL/SE" $SCX "select (awiz_pilots_set('$L_D2','po 11','Jan Pilot','se 22','Erik Pilot')->>'ok')" true commit
 chk "D-1118 escort_vehicles bez zmian po awizacji" \

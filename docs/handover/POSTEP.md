@@ -3500,3 +3500,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #354 — F7 po `17601dc`, CI zielone → merge `a1366549`. #357 bez F7 (db FAIL). #317 konflikt — bez scalenia. #259 bez F7.
 - D-1118 fix (ten commit): `permit_fits` bez `select *` (GRANT kolumn 0076); `PILOTS_SET` w CHECK `load_events`; UUID OPS w teście; init `awiz_pilots_set` w BEGIN. Po zielonym CI — kolejna pozycja **#356** (`pakiet/import-godziny-cicho`); #357 zostaje otwarte.
 
+## 2026-10-20 12:55 — D-1118: i2 PL_SE + nullguard 690
+
+- Skrzynka: #356/#353/#324/#323/#322/#320 — w planie, bez `pilne`.
+- Scalanie: #357 — brak „F7: gotowe”; db FAIL (i2 569/2: PL_SE). #355 visual w toku wcześniej. #317/#259 konflikt.
+- Fix: insert testowy PL_SE z telefonem krajowym (0111), nie E.164 — wcześniej INSERT padał w `/dev/null`. nullguard EXPECTED 690. Czeka na zielone CI i F7.
+
