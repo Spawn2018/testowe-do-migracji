@@ -297,7 +297,7 @@ create or replace function public.compute_load_eta(p_load uuid, p_now timestamp 
 as $function$
 declare
   l          record;
-  s          record;
+  v_sail     record;
   p          record;
   h_pl       numeric; sp_pl numeric;
   h_ci       numeric;
@@ -353,8 +353,8 @@ begin
   v_status := l.status;
   v_op := 'POLFERRIES';
   if l.sailing_id is not null then
-    select case when s.route in ('GDY-KAA','KAA-GDY') then 'STENA' else 'POLFERRIES' end
-      into v_op from sailings s where s.id = l.sailing_id;
+    select case when sa.route in ('GDY-KAA','KAA-GDY') then 'STENA' else 'POLFERRIES' end
+      into v_op from sailings sa where sa.id = l.sailing_id;
     v_op := coalesce(v_op, 'POLFERRIES');
   end if;
 
@@ -566,19 +566,19 @@ begin
   else
     select coalesce(x.delayed_departure_at, x.departure_at) as dep, coalesce(x.delayed_arrival_at, x.arrival_at) as arr,
            x.status, x.id, (x.delayed_departure_at is not null or x.status = 'OPOZNIONY') as delayed
-      into s from sailings x where x.id = l.sailing_id;
+      into v_sail from sailings x where x.id = l.sailing_id;
     v_has := found;
-    if v_has and s.status = 'ODWOLANY' then
+    if v_has and v_sail.status = 'ODWOLANY' then
       v_flags := array_append(v_flags, 'przypisany rejs odwołany'::text); v_has := false;
-    elsif v_has and v_status < 'FERRY' and s.dep < p_now then
+    elsif v_has and v_status < 'FERRY' and v_sail.dep < p_now then
       v_flags := array_append(v_flags, 'przypisany rejs odpłynął bez transportu'::text); v_has := false;
     end if;
 
     if v_status = 'FERRY' then
       if v_has then
-        v_arr := s.arr; v_sail_src := 'przypisany';
+        v_arr := v_sail.arr; v_sail_src := 'przypisany';
         v_var := v_var + (30)^2; v_sum := v_sum + (30); v_comp := v_comp || jsonb_build_object('code','SAILING','min',round(30));
-        if s.delayed then v_var := v_var + (60)^2; v_sum := v_sum + (60); v_comp := v_comp || jsonb_build_object('code','SAILING_DELAYED','min',round(60)); end if;
+        if v_sail.delayed then v_var := v_var + (60)^2; v_sum := v_sum + (60); v_comp := v_comp || jsonb_build_object('code','SAILING_DELAYED','min',round(60)); end if;
       else
         v_arr := p_now + make_interval(secs => (h_cross * 0.5 * 3600)::int);
         v_var := v_var + (h_cross * 60 * 0.5)^2; v_sum := v_sum + (h_cross * 60 * 0.5);
@@ -623,9 +623,9 @@ begin
       v_segs := v_segs || jsonb_build_object('code','PL_ROAD','hours',round(h_pl * v_frac, 1),'spread_pct',round(sp_pl * 100));
       v_start := v_start + make_interval(secs => ((h_pl * v_frac + v_checkin_h) * 3600)::int);
       if v_has then
-        v_dep := s.dep; v_arr := s.arr; v_sail_src := 'przypisany';
+        v_dep := v_sail.dep; v_arr := v_sail.arr; v_sail_src := 'przypisany';
         v_var := v_var + (30)^2; v_sum := v_sum + (30); v_comp := v_comp || jsonb_build_object('code','SAILING','min',round(30));
-        if s.delayed then v_var := v_var + (60)^2; v_sum := v_sum + (60); v_comp := v_comp || jsonb_build_object('code','SAILING_DELAYED','min',round(60)); end if;
+        if v_sail.delayed then v_var := v_var + (60)^2; v_sum := v_sum + (60); v_comp := v_comp || jsonb_build_object('code','SAILING_DELAYED','min',round(60)); end if;
         if v_start > v_dep then
           v_flags := array_append(v_flags, 'rejs zagrożony — dojazd i check-in po odejściu'::text);
           v_var := v_var + (12 * 60)^2; v_sum := v_sum + (12 * 60); v_comp := v_comp || jsonb_build_object('code','SAILING_AT_RISK','min',round(12 * 60));

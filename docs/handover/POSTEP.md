@@ -3465,3 +3465,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #317 / #259: konflikt z `main` — bez scalenia.
 - Bieżąca **A5** (`pakiet/a5-rejs-prom`): migracja `0238_a5_rejs_prom_port.sql` — `geofences.route`, `promote_ferry_departures` / `apply_geofence_status` / `compute_load_eta` (PORT według rejsu, `ferry_eta_at`/`wait_ais`, READY_TO_INVOICE jak DELIVERED). Testy status **130** (+9 A5).
 
+## 2026-10-20 10:25 — A5: db czerwone → cień rekordu `s` w compute_load_eta
+
+- Skrzynka: #320, #322, #323, #324 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #351 bez F7; #317/#259 konflikt — bez scalenia.
+- Brama `db` `39390843961` czerwona: status 96/34, i2 546/7 (`trg_eta_after_load`), workflows/h3/e25/ferry-status/risks.
+- Przyczyna: w `compute_load_eta` rekord `s` + alias `FROM sailings s` przy odczycie `s.route` (nieprzypisany rekord) → błąd przy każdym `sailing_id`. Port/prom/ETA i przypisanie rejsu padały.
+- Poprawka w tej samej 0238 (jeszcze nie na produkcji): `v_sail` / alias `sa`. Czeka na zielone CI i F7.
+
