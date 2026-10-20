@@ -67,10 +67,19 @@ export function parseDate(v: unknown): string | null {
 /** "07:30" / "7:30" / Excel fraction -> "HH:MM" */
 export function parseTime(v: unknown): string | null {
   if (v == null || v === '') return null;
-  if (typeof v === 'number' && v >= 0 && v < 1) {
-    const mins = Math.round(v * 24 * 60);
-    return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+  const hm = (mins: number) => {
+    const m = ((Math.round(mins) % 1440) + 1440) % 1440;
+    return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  };
+  /* Właściciel 20.10, 11:35: komórka „Godzina (…)” w formacie czasu — ExcelJS podaje datę (1899-12-30 08:00 UTC),
+     a nie tekst; godzina = czas zegarowy komórki (składowe UTC, jak przy datach z pliku) */
+  if (v instanceof Date) {
+    if (Number.isNaN(v.getTime())) return null;
+    return hm(v.getUTCHours() * 60 + v.getUTCMinutes() + v.getUTCSeconds() / 60);
   }
+  /* ułamek doby; liczba seryjna Excela z datą (> 1000) — godzina to część ułamkowa */
+  if (typeof v === 'number' && v >= 0 && v < 1) return hm(v * 24 * 60);
+  if (typeof v === 'number' && v > 1000) return hm((v % 1) * 24 * 60);
   const m = String(v).trim().match(/^(\d{1,2})[:.](\d{2})/);
   return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null;
 }
