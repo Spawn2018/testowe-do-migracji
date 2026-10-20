@@ -202,7 +202,8 @@ sval "A9: brak telefonu SE w awiz_missing" "select exists (
                jsonb_array_elements_text(g->'items') i
    where g->>'kind'='AWIZ' and i='telefon SE')" t
 sval "A9: detect_resource_deadlines = 0" "select detect_resource_deadlines()" 0
-sval "A9: cron tower-zasoby wyłączony" "select count(*) from cron.job where jobname='tower-zasoby'" 0
+# CI bez pg_cron: to_regclass null → 0; produkcja: job tower-zasoby usunięty.
+sval "A9: cron tower-zasoby wyłączony" "select case when to_regclass('cron.job') is null then 0 else (select count(*) from cron.job where jobname='tower-zasoby') end" 0
 val "A9: HHL widzi load_ready_gaps" $HHL "select (gaps @> '[{\"kind\":\"AWIZ\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" true
 sval "A9: SAILING gdy brak sailing_id" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g

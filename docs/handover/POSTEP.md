@@ -3341,3 +3341,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Poprzedni `db` na `e5ad7b53` czerwony: `dec2` katalog 19→20 (CMR_UPLOAD). Poprawione.
 - **A9** w `0236_ksh_scx_l13_workflow.sql`: `awiz_missing`, `load_ready_gaps`, `a9_try_ready` + wyzwalacze, L3 z lukami, `tower-zasoby` wyłączony, zamknięcie `RESOURCE_MISSING` z kopią. Widok: `load.readyGaps` z RPC. Testy: `e25` 55, `nullguard` 658. Czeka na bramę `db`.
 
+## 2026-10-20 02:25 — #347 scalone; poprawka bramy A9 (i2/e25)
+
+- Skrzynka: #320, #322, #323, #324, #343, #346 w planie, bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #347 (`686064b7`, F7 po `f85afdd`) — wygląd edycji faktury. #345 bez F7 (para w toku). #317 i #259 konflikt z `main`.
+- Brama `db` na `41348842` czerwona: i2 8× `detect_resource_deadlines` (A9 = no-op) + e25 `cron.job` bez pg_cron w CI. Poprawka: i2 I-21 → `l3_scan`, III-4 → `awiz_missing` PILOTS; e25 `to_regclass('cron.job')`; cron `tower-l3` w 0236; nullguard 662.
+

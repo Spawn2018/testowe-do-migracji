@@ -1153,7 +1153,11 @@ comment on function public.detect_resource_deadlines(timestamptz) is
 
 do $a9cron$
 begin
+  /* Stary cron RESOURCE_MISSING z terminów zasobów — wyłączony (A9 / E18 P12). */
   perform cron.unschedule(jobid) from cron.job where jobname = 'tower-zasoby';
+  /* L3 (awiz_missing) nadal co 15 min — ten sam rytm, nowa nazwa. */
+  perform cron.unschedule(jobid) from cron.job where jobname = 'tower-l3';
+  perform cron.schedule('tower-l3', '7,22,37,52 * * * *', 'select public.l3_scan()');
 exception when undefined_table then
   null;
 when others then

@@ -579,6 +579,7 @@ F7 #306 runda 3: P-1, P-2 i wyciek numeru KSH do SCX — migracja **0235**.
 - Test: `permits = 1`, `insurance_policies = 2`; każdy transport ma wymiary, pilota i rodzaj zezwolenia; KSH widzi polisę HHL, nie widzi polisy SCX; „Zezwolenie SE” brakuje tylko przy KR.
 
 ### A9 · „Gotowy” w bazie (E25 L6/L9/L29, B4) — W TOKU (ta sama migracja 0236 / PR #345)
+- **A9 w 0236:** `awiz_missing`, `load_ready_gaps`, READY z bazy, `tower-zasoby` → `tower-l3` (`l3_scan`), zamknięcie `RESOURCE_MISSING` z kopią. **ZROBIONE** (`41348842` + poprawka bramy i2/e25).
 - Jedna funkcja kompletu awizacji `awiz_missing(load)`:
   - kierowca PL i SE (przy przepięciu) z telefonem, ciągnik, naczepa;
   - rejs przy trasie promowej;
