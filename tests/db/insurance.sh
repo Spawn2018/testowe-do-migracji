@@ -48,7 +48,8 @@ err "ujemna suma" $HHL "select insurance_policy_save('$SCXO', 'OCP/2', current_d
 err "dokument spoza kategorii INSURANCE odrzucony" $HHL "select insurance_policy_save('$SCXO', 'OCP/2', current_date, current_date + 1, null, false, false, null, 'EUR', '$DOCCMR')" "nie jest polisą"
 val "HHL zapisuje polisę innego przewoźnika (commit)" $HHL "select (select $(SAVE $SCX2O OCP/9 200)) is not null" t commit
 chk "audit_log INSURANCE_SAVE z numerem i datą, bez sumy" "$(Q "select count(*)||':'||bool_and(new_value ? 'valid_until')::text||':'||bool_and(not new_value ? 'sum_insured')::text from audit_log where action='INSURANCE_SAVE'")" "1:true:true"
-val "HHL: lista — wszystkie polisy" $HHL "select count(*) from insurance_policies_list()" 1
+# A7: seed polisy HHL PZU 1106707356 + OCP/9 z bloku wyżej → 2.
+val "HHL: lista — wszystkie polisy" $HHL "select count(*) from insurance_policies_list()" 2
 val "przewoźnik: lista — tylko własne (0)" $SCX "select count(*) from insurance_policies_list()" 0
 val "KSH: lista pusta" $KSH "select count(*) from insurance_policies_list()" 0
 err "HHL: wprost z tabeli → permission denied" $HHL "select count(*) from insurance_policies" "permission denied"

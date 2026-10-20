@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 33, // +6 D-20261018-1215-01 (w tym RES:DRIVER); wcześniej 27 (C1)
   import: 66,
-  nullguard: 681, // A7: +a7_* GUARD, symbol_spec_of EMPTY, symbol_resolve_code PURE (+completeness)
+  nullguard: 680, // A7: +a7_* GUARD, symbol_spec_of EMPTY, symbol_resolve_code PURE (+completeness)
   i2: 552, // F7 runda 2: +2 III-4 alarm L3_AWIZ przy braku/po pilotach
   i30: 10,
   i31: 9,
