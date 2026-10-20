@@ -69,6 +69,13 @@ export function currentAxisIndex(l: Pick<Load, 'status' | 'stage'>): number {
 }
 
 export type AxisSource = 'auto' | 'manual' | 'import';
+/**
+ * Źródło automatu (E17 + A10, D-20261019-1540-01 §3 — „automatycznie (GPS / strefa / prom / dokumenty / import)”):
+ * GPS — lokalizator i strefy; AIS — pozycja promu; SCHEDULE — rozkład promu (A5);
+ * DATA — dane awizacji i zasoby (Przygotowanie: Brak zasobów / Brak dokumentów / Gotowy);
+ * DOC — dokumenty (zezwolenia, polisy, CMR); DRIVER — aplikacja kierowcy; INVOICE — faktury.
+ */
+export type AxisChannel = 'GPS' | 'AIS' | 'SCHEDULE' | 'DATA' | 'DOC' | 'DRIVER' | 'INVOICE';
 
 export interface AxisHit {
   status: LoadStatus;
@@ -85,7 +92,7 @@ export interface AxisHit {
   /** B4: `payload.tracker_on` (NACZEPA / CIAGNIK_*) */
   trackerOn: string | null;
   /** wyglad/P6-c (E17): skąd automat wziął status — GPS (lokalizator) albo AIS (prom); null = nie wiadomo */
-  channel: 'GPS' | 'AIS' | null;
+  channel: AxisChannel | null;
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
   /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
@@ -135,14 +142,20 @@ function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; w
   return { list: gone.size ? events.filter((e) => !gone.has(e.id)) : [...events], was };
 }
 
-/** E17: źródło automatu z `payload.source` (GPS / AIS — dane wykonawcy), a bez niego z rodzaju zdarzenia. */
-export function hitChannel(type: string, p: Record<string, unknown>, status: LoadStatus | null): 'GPS' | 'AIS' | null {
+/** E17 + A10: źródło automatu z `payload.source` (dane wykonawcy), a bez niego z rodzaju zdarzenia. */
+export function hitChannel(type: string, p: Record<string, unknown>, status: LoadStatus | null): AxisChannel | null {
   /* całe słowa, nie fragmenty („PRIORITY” to nie RIO, „RAISE” to nie AIS) */
   const words = new Set(['source', 'kanal', 'channel', 'zrodlo', 'provider']
     .flatMap((k) => (typeof p[k] === 'string' ? (p[k] as string).toUpperCase().split(/[^A-Z0-9]+/) : [])));
   const has = (...w: string[]) => w.some((x) => words.has(x));
   /* pozycja statku (AIS, Digitraffic, Stena) — przed sprawdzeniem `lat`, bo pozycja promu też ma współrzędne */
   if (has('AIS', 'AISSTREAM', 'DIGITRAFFIC', 'STENA')) return 'AIS';
+  /* A10: rozkład promu (A5), dane awizacji, dokumenty, kierowca, faktury — przed `lat`, bo wpis może mieć pozycję */
+  if (has('SCHEDULE', 'ROZKLAD', 'TIMETABLE')) return 'SCHEDULE';
+  if (has('DOC', 'DOCS', 'DOKUMENTY', 'CMR', 'PERMIT', 'ZEZWOLENIE', 'POLICY', 'POLISA', 'INSURANCE')) return 'DOC';
+  if (has('DATA', 'DANE', 'AWIZ', 'AWIZACJA', 'RESOURCES', 'ZASOBY', 'READINESS')) return 'DATA';
+  if (has('DRIVER', 'KIEROWCA', 'PWA')) return 'DRIVER';
+  if (has('INVOICE', 'FAKTURA')) return 'INVOICE';
   if (has('GPS', 'EMTRACK', 'RIO', 'TELM', 'GEOFENCE') || typeof p.geofence_id === 'string' || typeof p.lat === 'number') return 'GPS';
   /* Tylko demo (I-0): zdarzenia przykładowe bez `source`. Na produkcji bez `source` znacznik zostaje „AUTO” —
      wykonawca zapisuje `payload.source` przy statusie z automatu (dopisek P6-c). */

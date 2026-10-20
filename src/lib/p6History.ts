@@ -233,8 +233,11 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     const from = str(p.from) ? statusName(str(p.from), locale) : null;
     const to = str(p.to) ? statusName(str(p.to), locale) : null;
     const why = cleanNote(str(p.powod ?? p.reason), e.type, locale) ?? note;
-    if (!from && !to) return { ...base, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
-    return { ...base, head: '', from, to: to ?? '—', tail: why };
+    /* A10 (D-20261019-1540-01 §3): źródło automatu jak na osi — rozkład promu, dane awizacji, dokumenty, kierowca, faktury */
+    const ch = base.src ? null : hitChannel(e.type, p, null);
+    const src = ch && ch !== 'GPS' && ch !== 'AIS' ? ht(locale, `p6b_src_${ch}`) : base.src;
+    if (!from && !to) return { ...base, src, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
+    return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_CHANGED') {
     const to = statusName(e.type.slice(7), locale);

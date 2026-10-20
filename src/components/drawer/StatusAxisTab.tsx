@@ -200,7 +200,7 @@ export function StatusAxisTab({
                   /* bez powtórzenia nazwy („Na promie · Na promie”) */
                   const sub = sub0 && sub0.trim().toLocaleLowerCase('pl') !== rowName(r, locale).toLocaleLowerCase('pl') ? sub0 : null;
                   const waiting = r.kind === 'pending' && r.statuses[0] === 'READY_TO_INVOICE' && axis.current === 'DELIVERED';
-                  /* E17: źródło przy statusie — IMPORT / RĘCZNIE / GPS / AIS (AUTO, gdy automat nie podał źródła) */
+                  /* E17 + A10: źródło przy statusie — IMPORT / RĘCZNIE / GPS / AIS / ROZKŁAD / DANE / DOKUMENTY / KIEROWCA / FAKTURA (AUTO, gdy automat nie podał źródła) */
                   const tag = r.hit && (r.kind === 'done' || r.kind === 'current')
                     ? r.hit.source === 'manual' ? 'manual' : r.hit.source === 'import' ? 'IMPORT' : r.hit.channel ?? 'auto'
                     : null;
