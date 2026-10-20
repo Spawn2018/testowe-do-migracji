@@ -98,6 +98,8 @@ export interface LoadRow {
   tractor_plate: string | null; trailer_plate: string | null; driver_name: string | null; driver_phone: string | null;
   driver_phone_country?: string | null;
   escort_vehicles: number | null; ferry_booking_ref: string | null; sailing_id?: string | null;
+  /** A7 (0237): symbol z tabeli właściciela i rodzaj zezwolenia */
+  symbol?: string | null; permit_kind?: string | null;
   telematics_vehicle_id?: string | null;
   /** E44 / H4 — bez `rio_secret` (kolumna bez SELECT dla authenticated). */
   rio_tracking_id?: string | null;
@@ -247,6 +249,8 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
     itemType: item?.item_type ?? '',
     dims,
     qty: item?.qty ?? 1,
+    symbol: row.symbol ?? null,
+    permitKind: row.permit_kind === 'FIRMA' || row.permit_kind === 'TRASA' ? row.permit_kind : null,
     status, stage, progress,
     plannedLoadDate: row.plan_load_date ?? '',
     plannedDeliverDate: row.plan_delivery_date ?? '',

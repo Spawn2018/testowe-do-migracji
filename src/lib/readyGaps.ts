@@ -4,6 +4,7 @@
  * Polisa HHL nie blokuje (L6). Używane w demo i w produkcji, dopóki baza nie zwraca gotowej listy.
  * D-20261014-1320-01 K2.2.
  */
+import { symbolSpecOf } from './p7Source';
 import type { Document, Load, LoadStatus, ReadyGap } from '../types';
 import { isReadyBlocked } from './permits';
 
@@ -32,7 +33,9 @@ export function computeReadyGaps(load: Load, docs: readonly Document[]): ReadyGa
   /* B5 / D-0300: piloci z wymogu symbolu (`permit.plPilotsRequired`), nie z wierszy zezwoleń (0).
    * Do tabeli symboli (D1) — gdy wymóg > 0 albo awizacja ma escort bez tablicy. */
   const pilotsNeed = Math.max(0, Number(load.permit?.plPilotsRequired ?? 0));
-  if (pilotsNeed > 0 || (r.escort && !r.escortPlate?.trim())) {
+  /* D-20261020-1118-01: pilot tylko przy symbolu z wymogiem (KR, PL-B) — przy pozostałych nigdzie w panelu */
+  const spec = symbolSpecOf(load);
+  if (spec ? spec.pilots : pilotsNeed > 0 || (r.escort && !r.escortPlate?.trim())) {
     if (!r.escortPlate?.trim()) {
       gaps.push({
         kind: 'PILOTS',

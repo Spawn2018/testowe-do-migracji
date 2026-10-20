@@ -242,3 +242,7 @@ Odświeżone migawki Playwright (`tests/__screenshots__/`) z przebiegu `visual.y
 ## AUD-03 (06.10.2026) — Harmonogram KSH bez „Zmień ciągnik”
 
 Zamierzona zmiana UI (polecenie AUD-03: „Zmień ciągnik” niewidoczny dla roli KSH; baza i tak odmawia — `tests/db/aud03.sh`). gate:visual na `b52dcc5`: 274/280, zmienione wyłącznie `harmonogram__ksh__pl__{1280,1440,1920}__{dark,light-default}` (6). Odświeżono te 6 ujęć z przebiegu bramy (kolejność pełnej matrycy). Innych ujęć nie ruszano.
+
+## wyglad/W-1118 (20.10.2026) — oś Status: „Przygotowanie” i „Rozliczenie” zwinięte
+
+Zamierzona zmiana UI (D-20261020-1118-01, decyzja właściciela 20.10.2026, 11:18). Migawka odświeżona z przebiegu `visual.yml` `update=true` (run 39404184157, gałąź `wyglad/W-1118`). Zmieniona wyłącznie `stan-zablokowany-dark.png`: na osi Status sekcje „Przygotowanie” i „Rozliczenie” są zwinięte i pokazują bieżący status, a legenda zawiera źródła A10. Innych migawek ani matrycy 280 ujęć nie ruszano.

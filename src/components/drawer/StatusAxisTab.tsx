@@ -160,8 +160,9 @@ export function StatusAxisTab({
   /* po dostawie: rozliczenie z danych firmy (A5); wcześniej — dotychczasowe zdania */
   const afterDelivery = axis.current === 'DELIVERED' || axis.current === 'READY_TO_INVOICE' || axis.current === 'INVOICED';
   const settle = role && afterDelivery ? (s: LoadStatus) => settleText(s, load.id, role, documents, bills, canStatus, locale) : null;
-  /* telefon: „Przygotowanie” rozwinięte, gdy transport jeszcze w nim jest (widać „Brakuje: …” przy „Gotowy”) */
-  const [prepOpen, setPrepOpen] = useState(() => axis.groups.find((g) => g.key === 'prep')?.rows.some((r) => r.kind === 'current') ?? false);
+  /* D-20261020-1118-01 (właściciel 20.10, 11:18): „Przygotowanie” i „Rozliczenie” zwinięte domyślnie (komputer i telefon);
+     zwinięte pokazują tylko najbardziej aktualny status sekcji, po rozwinięciu — wszystkie */
+  const [open, setOpen] = useState<{ prep: boolean; after: boolean }>({ prep: false, after: false });
   const hits = new Map<LoadStatus, AxisHit | null>();
   for (const g of axis.groups) for (const r of g.rows) if (r.hit) hits.set(r.statuses[0], r.hit);
   const order = phone ? (['route', 'after', 'prep'] as const) : (['prep', 'route', 'after'] as const);
@@ -180,22 +181,36 @@ export function StatusAxisTab({
       ) : null}
       {order.map((key) => {
         const g = axis.groups.find((x) => x.key === key)!;
-        const collapsed = phone && key === 'prep' && !prepOpen;
+        const foldable = key === 'prep' || key === 'after';
+        const isOpen = foldable ? open[key] : true;
+        /* zwinięta sekcja: bieżący status sekcji, a bez niego — ostatni osiągnięty, a bez niego — pierwszy oczekujący */
+        const latest = g.rows.find((r) => r.kind === 'current')
+          ?? [...g.rows].reverse().find((r) => r.kind === 'done' || r.kind === 'skipped')
+          ?? g.rows[0];
+        const shown = isOpen ? g.rows : latest ? [latest] : [];
         return (
-          <section key={key} className="sax-grp" data-axis-group={key}>
+          <section key={key} className="sax-grp" data-axis-group={key} data-axis-open={foldable ? String(isOpen) : undefined}>
             <div className="sax-gh">
               <span>{t(locale, `p4b_g_${key}`)}</span>
-              {phone && key === 'prep' ? (
-                <button type="button" className="sax-more" aria-expanded={prepOpen} onClick={() => setPrepOpen((v) => !v)}>
-                  {t(locale, prepOpen ? 'p4b_g_collapse' : 'p4b_g_expand')}
+              {foldable ? (
+                <button
+                  type="button"
+                  className="sax-more"
+                  aria-expanded={isOpen}
+                  aria-controls={`sax-${key}-${load.id}`}
+                  aria-label={`${t(locale, isOpen ? 'p4b_g_collapse' : 'p4b_g_expand').replace(/\s*[▾▴]$/, '')} — ${t(locale, `p4b_g_${key}`)}`}
+                  data-axis-fold={key}
+                  onClick={() => setOpen((v) => ({ ...v, [key]: !v[key] }))}
+                >
+                  {t(locale, isOpen ? 'p4b_g_collapse' : 'p4b_g_expand')}
                 </button>
               ) : (
                 <span className="sax-gr">{t(locale, key === 'route' && phone ? 'p4b_g_route_r_ph' : `p4b_g_${key}_r`)}</span>
               )}
             </div>
-            {collapsed ? null : (
-              <ol className="sax-list">
-                {g.rows.map((r) => {
+            {shown.length === 0 ? null : (
+              <ol className="sax-list" id={`sax-${key}-${load.id}`}>
+                {shown.map((r) => {
                   const sub0 = rowSub(r, load, geofences, hits, phone, locale, readyGaps, settle);
                   /* bez powtórzenia nazwy („Na promie · Na promie”) */
                   const sub = sub0 && sub0.trim().toLocaleLowerCase('pl') !== rowName(r, locale).toLocaleLowerCase('pl') ? sub0 : null;
