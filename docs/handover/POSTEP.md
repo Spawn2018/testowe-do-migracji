@@ -3518,15 +3518,51 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #357 — brak „F7: gotowe”; CI na `00f41360` zielone (db `39416345323`, unit, visual `39416345221`). #317/#259 konflikt / bez F7 po ostatnim commitcie — bez scalenia.
 - Bieżąca D-1118 (#357): kod + D-1243 w PR gotowe; czeka na F7. Bez przerwania.
 
+
+## 2026-10-20 14:20 — #357 scalone; start #356 import_quiet_hours
+
+- Skrzynka: #353 zamknięte (D-1118 zrobione). #358/#359/#356/#324/#323/#322/#320 otwarte, w planie; bez etykiety `pilne` — bez przerwania.
+- Scalanie: #357 — F7 po `374e62c`, CI zielone (db/unit/visual) → merge `b21524b8`. #360 wygląd bez F7. #317/#259 konflikt.
+- Bieżąca **#356** (`pakiet/import-godziny-cicho`): migracja (wtedy 0240) — `ops_thresholds.import_quiet_hours=1`, `trg_plan_dates_notify` szanuje `tower.bulk_quiet`, `import_schedule` ciche pierwsze uzupełnienie godzin; i2 584 (+12). Wyłączenie: `admin_ops_threshold_set('import_quiet_hours', 0)`.
+
+## 2026-10-20 14:45 — #356 fix CI db (i2 składnia, dec6 22 progi)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez `pilne`.
+- Scalanie: #361 bez F7; #360 visual zielone, bez F7; #317 konflikt z main (koordynator: wciągnij main — po zakończeniu CI #361 / G-15).
+- Fix #356: `i2.sh` — zagnieżdżone cudzysłowy w IQH → WYNIK brak; wzorzec jak IMP18T. `dec6.sh` — 22 progi (+`import_quiet_hours`).
+
+## 2026-10-20 15:00 — #360 scalone; fix IQH-1 chk (FROM loads)
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez etykiety `pilne`.
+- Scalanie: #360 — F7 po `adefd1c`, CI zielone → merge `953f3ee1`. #361 db FAIL (IQH-1). #317/#259 konflikt.
+- Fix #356: `i2.sh` IQH-1 chk — brak `from loads where id` (jak linia godzin D18); CI db `583 OK, 1 FAIL` → oczekiwane 584.
+
+## 2026-10-20 15:40 — #361 F7 niegotowe: B1 + P1–P4
+
+- Skrzynka: #359/#358/#356/#324/#323/#322/#320 — w planie; bez `pilne`.
+- Scalanie: #361 F7: niegotowe (15:35). #317 main wciągnięty (`f89b59d9`), czeka na F7. #259 konflikt.
+- Poprawki #356 (i2): B1 — quiet tylko gdy `plan_*` w loads puste; P1 komentarz wyłączenia na ekranie; P2 `on conflict do nothing`; P3 testy (KSH, mix, OPS, critical, decisions/risk); P4 UTF-8 w POSTEP. i2 592.
+
+## 2026-10-20 16:00 — #361 CI zielone; skrzynka #362/#364/#365 w planie
+
+- Skrzynka: #364 (D-1525 HOTFIX `trailer_swap`+SE+`carrier_order_no`), #362 (D-1501 awizacja HHL), #365 (emtrack login_failed) — `Spawn2018`, `dla-cursora`, **bez** etykiety `pilne`. Wpisane: PLAN §3/§4/§8, dopiski `D-20261020-1525-01.md`, `D-20261020-1501-01.md`. Kolejność po #356: HOTFIX → D-1501 → C15-emtrack → D-1300. Bieżącej #361 nie przerywam.
+- Scalanie: #361 — CI na `7986ef6f` zielone (db `39431301503`, unit, visual `39431301490`); czeka na „F7: gotowe do scalenia” runda 2. #363 wygląd bez F7. #317 czeka na F7 po `f89b59d9`. #259 konflikt.
+- Bieżąca #356: poprawki F7 B1+P1–P4 na SHA; bez nowego kodu do F7.
+
 ## 2026-10-20 16:05 — HOTFIX D-1525 start (F7 #361: przed #356)
 
-- Skrzynka: #364/#362/#365/`#356` — w planie; #364 bez `pilne`, ale F7 #361 każe scalić HOTFIX przed #361. #317 — CI zielone, bez F7 po ostatnim merge main.
+- Skrzynka: #364/#362/#365/#356 — w planie; #364 bez `pilne`, ale F7 #361 każe scalić HOTFIX przed #361. #317 — CI zielone, bez F7 po ostatnim merge main.
 - Scalanie: #361 — F7 gotowe (`7ddf16ba`), CI w toku; merge dopiero po HOTFIX. #366/#363 wygląd bez F7. #317 bez F7 po `f89b59d9`.
-- Ten krok: `pakiet/hotfix-d1525-trailer-swap` — migracja **0240** `guard_load_update` (lista SCX + HHL_ADMIN `carrier_order_no`); security 122 / TEST 118; money bez zmiany liczby. Część 2 NO_AWIZ_SE — następny krok. Po scaleniu #356 → migracja 0241.
+- HOTFIX: `pakiet/hotfix-d1525-trailer-swap` — migracja **0240** `guard_load_update` (lista SCX + HHL_ADMIN `carrier_order_no`); security 122 / TEST 118. Część 2 NO_AWIZ_SE — z #362. Po scaleniu HOTFIX #356 → migracja 0241.
 
 ## 2026-10-20 16:40 — HOTFIX #367 F7 B1 (test security)
 
 - Skrzynka: #364/#362/#365/#356 — bez nowych; #362 PILNE w tytule, bez etykiety `pilne` — nie przerywa HOTFIX.
 - Scalanie: #367 — F7 niegotowe (tylko test); db 121/1 FAIL; unit+visual zielone. #361 F7 gotowe po HOTFIX; #366 po #361; #317 bez F7 po `f89b59d9`.
-- Ten krok: `security.sh` — puste SE: `driver_delivery_phone_country='PL'` (NOT NULL; jak ekran). Czekam na zielone CI / F7 gotowe.
+- Poprawka: `security.sh` — puste SE: `driver_delivery_phone_country='PL'` (NOT NULL; jak ekran).
 
+## 2026-10-20 16:54 — HOTFIX #367 SCALONE; #361 → 0241
+
+- Skrzynka: #364/#362/#365/#356 — w planie; bez etykiety `pilne` przerywającej. #364 część 1 zrobiona (merge); część 2 NO_AWIZ_SE zostaje z #362.
+- Scalanie: #367 — F7 gotowe po `14b90710`, CI zielone (db `39440605672`, unit, visual `39440605710`) → merge `e92d4ba6`. #361 — wciągnięty main, migracja przemianowana **0240→0241**; czeka na CI i ponowne F7. #366 po #361. #317 bez F7 po `f89b59d9`.
+- Bieżąca pozycja: **Import godziny cicho** (#361, 0241).
