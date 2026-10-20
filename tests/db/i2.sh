@@ -1242,7 +1242,8 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, p
 chk "D-1501: poza oknem śledzenia brak NO_TRACKING" \
   "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where dedup_key='l3:NO_TRACKING:$L_D15w' and resolved_at is null")" \
   "0/0"
-# N7: symulacja bloku DO migracji — bez DECISION_OPEN, z escalated_at.
+# N7: ten sam mechanizm co migracja (l3_scan_first_deploy_quiet) — bez DECISION_OPEN;
+# escalated_at tylko gdy due_at <= now() (F7 N3); count(*) > 0.
 L_D15n=33333333-0000-0000-0000-00000000d153
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_load_from,
      hhl_order_no, carrier_order_no)
@@ -1252,35 +1253,18 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, p
  on conflict (id) do update set status='PLANNED', sailing_id=null, telematics_vehicle_id=null,
    plan_load_date=excluded.plan_load_date, tracking_opened_at=null" >/dev/null
 $PSQL -c "set session_replication_role=replica; update loads set tracking_opened_at = now() - interval '3 hours' where id='$L_D15n'" >/dev/null
-$PSQL -c "
-do \$\$
-declare v_t0 timestamptz := now(); v_prev text;
-begin
-  /* now() jak created_at; clock_timestamp() psuje filtr (CI: 24 DECISION_OPEN, escalated_at=false). */
-  v_prev := current_setting('tower.bulk_quiet', true);
-  perform set_config('tower.bulk_quiet', 'on', true);
-  perform public.l3_scan(now());
-  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-  update decisions set escalated_at = coalesce(escalated_at, now()), updated_at = now()
-   where type_code in ('NO_SAILING','NO_TRACKING','NO_AWIZ_SE')
-     and status in ('NEW','ASSIGNED','SNOOZED') and created_at >= v_t0
-     and load_id = '$L_D15n';
-  delete from notifications n
-   where n.template = 'DECISION_OPEN' and n.created_at >= v_t0
-     and (
-       exists (
-         select 1 from decisions d
-          where d.id = nullif(n.payload->>'decision_id','')::uuid
-            and d.load_id = '$L_D15n' and d.created_at >= v_t0)
-       or n.load_id = '$L_D15n'
-     );
-end \$\$;
-" >/dev/null
+$PSQL -c "select public.l3_scan_first_deploy_quiet(now())" >/dev/null
 chk "D-1501: pierwszy skan bez DECISION_OPEN" \
   "$(Q "select count(*) from notifications where template='DECISION_OPEN' and load_id='$L_D15n'")" \
   "0"
-chk "D-1501: pierwszy skan — decyzje z escalated_at" \
-  "$(Q "select (count(*) filter (where escalated_at is not null) = count(*))::text from decisions where load_id='$L_D15n' and type_code in ('NO_SAILING','NO_TRACKING') and status in ('NEW','ASSIGNED')")" \
+chk "D-1501: pierwszy skan — są decyzje NO_*" \
+  "$(Q "select (count(*) > 0)::text from decisions where load_id='$L_D15n' and type_code in ('NO_SAILING','NO_TRACKING') and status in ('NEW','ASSIGNED')")" \
+  "true"
+chk "D-1501: pierwszy skan — escalated_at tylko po terminie" \
+  "$(Q "select (count(*) filter (where due_at <= now() and escalated_at is null) = 0
+           and count(*) filter (where due_at > now() and escalated_at is not null) = 0
+           and count(*) filter (where due_at <= now()) > 0)::text
+        from decisions where load_id='$L_D15n' and type_code in ('NO_SAILING','NO_TRACKING') and status in ('NEW','ASSIGNED')")" \
   "true"
 $PSQL -c "update loads set status='CANCELLED' where id in ('$L_D15w','$L_D15n')" >/dev/null
 # NO_AWIZ_SE HIGH: dostawa za 60 h → due=now+12h, warn=due−36h=now−24h → w oknie ostrzeżenia.

@@ -715,18 +715,110 @@ end $$;
 comment on function public.guard_load_update() is
   'D-1501/0242: rejs historyczny tylko HHL_ADMIN; F7 B3 blokada po FERRY; D-1525 biała lista SCX.';
 
--- F7 D2+N3: pierwszy skan — bulk_quiet + escalated_at (bez dec_late) + bez DECISION_OPEN.
--- bulk_quiet nie wycisza dzwonków DECISION_OPEN ani eskalacji decision_escalate_overdue.
-do $d1501scan$
+-- F7 D2+N3: decision_open_from_event respektuje tower.bulk_quiet (bez DECISION_OPEN).
+create or replace function public.decision_open_from_event(
+  p_project uuid,
+  p_type text,
+  p_event_key text,
+  p_title text,
+  p_detail jsonb default '{}'::jsonb,
+  p_load uuid default null,
+  p_risk uuid default null
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_hours numeric;
+  v_role text;
+  v_due timestamptz;
+  v_detail jsonb;
+  v_group text := 'DECISION';
+begin
+  if p_event_key is null or length(btrim(p_event_key)) = 0 then
+    raise exception 'L-1: zdarzenie bez klucza' using errcode = '22023';
+  end if;
+  select id into v_id
+    from decisions
+   where detail->>'event_key' = p_event_key
+   limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+  select due_hours, decider_role into v_hours, v_role
+    from decision_types
+   where code = p_type and active;
+  if v_role is null then
+    raise exception 'Nieznany typ decyzji %', p_type using errcode = '22023';
+  end if;
+  if v_hours is not null then
+    v_due := now() + (v_hours::text || ' hours')::interval;
+  end if;
+  v_detail := coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('event_key', p_event_key, 'opened_by', 'L-1');
+  begin
+    insert into decisions (project_id, type_code, title, detail, load_id, risk_id, due_at)
+    values (p_project, p_type, p_title, v_detail, p_load, p_risk, v_due)
+    returning id into v_id;
+  exception when unique_violation then
+    select id into v_id from decisions where detail->>'event_key' = p_event_key limit 1;
+    return v_id;
+  end;
+  insert into decision_events (decision_id, actor_id, action, payload)
+  values (v_id, null, 'OPEN', jsonb_build_object('type', p_type, 'event_key', p_event_key));
+  /* F7 N3: przy bulk_quiet bez dzwonka IN_APP (e-mail wycisza l13_decision_email).
+     Join po roli jak po 0201 (nie org_kind z 0149). */
+  if current_setting('tower.bulk_quiet', true) is distinct from 'on' then
+    insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+    select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, p_load, 'DECISION_OPEN',
+           jsonb_build_object(
+             'decision_id', v_id, 'type', p_type, 'title', p_title,
+             'status', 'NEW', 'event', 'OPEN', 'locale', u.locale
+           ),
+           left('dec:OPEN:' || v_id::text || ':IN:' || u.id::text, 200)
+      from app_users u
+      join organizations o on o.id = u.org_id
+      join notification_matrix m
+        on m.event_group = v_group and m.role = u.role and m.in_app
+     where u.active
+       and (
+         o.kind = 'FORWARDER'
+         or (o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+              p_load is null
+              or exists (select 1 from loads l where l.id = p_load and l.carrier_org_id = o.id)))
+         or (o.kind = 'CLIENT' and (
+              p_project is null
+              or exists (select 1 from projects pr where pr.id = p_project and pr.client_org_id = o.id)
+              or exists (select 1 from loads l join projects pr on pr.id = l.project_id
+                          where l.id = p_load and pr.client_org_id = o.id)))
+       )
+    on conflict (dedup_key) where dedup_key is not null do nothing;
+  end if;
+  perform public.l13_decision_email(v_id);
+  return v_id;
+end $$;
+comment on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) is
+  'L-1: otwiera decyzję. F7 N3/0242: bulk_quiet = bez DECISION_OPEN IN_APP.';
+revoke all on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) from public, anon, authenticated;
+
+-- F7 N3: wspólny mechanizm pierwszego skanu (migracja + test i2).
+-- escalated_at tylko gdy due_at <= now(); bez DELETE na notifications.
+create or replace function public.l3_scan_first_deploy_quiet(p_now timestamptz default now())
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
   v_prev text;
   v_n int;
-  /* now() = created_at decyzji w tej transakcji; clock_timestamp() jest później → filtr psuje N3. */
+  /* now() = created_at w tej transakcji; clock_timestamp() psuje filtr (F7 N3). */
   v_t0 timestamptz := now();
 begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
-  v_n := public.l3_scan(now());
+  v_n := public.l3_scan(coalesce(p_now, now()));
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
 
   update public.decisions d
@@ -734,9 +826,15 @@ begin
          updated_at = now()
    where d.type_code in ('NO_SAILING', 'NO_TRACKING', 'NO_AWIZ_SE')
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
-     and d.created_at >= v_t0;
+     and d.created_at >= v_t0
+     and d.due_at is not null
+     and d.due_at <= now();
 
-  delete from public.notifications n
+  /* Pas bezpieczeństwa: gdyby dzwonek powstał inną ścieżką — przeczytany, bez DELETE. */
+  update public.notifications n
+     set read_at = coalesce(n.read_at, now()),
+         payload = coalesce(n.payload, '{}'::jsonb)
+                   || jsonb_build_object('quiet_first_scan', true, 'reason', '0242 first l3_scan')
    where n.template = 'DECISION_OPEN'
      and n.created_at >= v_t0
      and (
@@ -767,6 +865,17 @@ begin
           and wr.dedup_key = 'wf:' || wr.workflow_id::text || ':risk:' || rs.id::text
      );
 
-  raise notice '0242 D-1501: l3_scan(bulk_quiet+N3)=%', v_n;
+  return v_n;
+end $$;
+revoke all on function public.l3_scan_first_deploy_quiet(timestamptz) from public, anon, authenticated;
+comment on function public.l3_scan_first_deploy_quiet(timestamptz) is
+  'D-1501/0242 F7 N3: l3_scan z bulk_quiet; escalated_at tylko po terminie; bez DELETE.';
+
+do $d1501scan$
+declare
+  v_n int;
+begin
+  v_n := public.l3_scan_first_deploy_quiet(now());
+  raise notice '0242 D-1501: l3_scan_first_deploy_quiet=%', v_n;
 end
 $d1501scan$;
