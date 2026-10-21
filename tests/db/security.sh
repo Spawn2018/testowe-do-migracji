@@ -234,7 +234,10 @@ err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko 
 
 echo; echo "[B6] e-mail na osobę, płatność, rio_secret, limit anon, loads_read (0225)"
 HHLID=$(sys "select id from app_users where email='hhl@test'")
-# #402: bramka (a_gate przed budżetem) wymaga event_key — B6T* mapujemy przez matrix_event (dates: e-mail HHL włączony).
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push/money/import.
+# Bramka (a_gate przed budżetem) wymaga event_key — B6T* przez matrix_event=dates.
+sys "update notification_matrix set email=true where event_key='dates' and role='HHL_ADMIN'" >/dev/null
+sys "update notification_matrix set email=true where event_key='email_budget' and role='HHL_ADMIN'" >/dev/null
 sys "
 do \$\$
 declare i int; u uuid := '$HHLID';

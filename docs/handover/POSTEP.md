@@ -3968,3 +3968,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych; #412 dopiski (2FA/Orlen) nadal przy pozycji. #402/#411/#405/#400/#409/#412/#413 w planie.
 - Scalanie: #417 F7 gotowe → merge `3d380cdf`; #416 F7 gotowe → merge `ba9aed43`. #408 wstrzymane. #418 bez F7 (visual w toku). #406 CI zielone na `42fc2914`, F7: nie nadpisuj `inv_overdue`/`dates`. Bez push na `main`.
 - Bieżąca: **HOTFIX #402** PR #406 — `insert … on conflict do nothing`; usunięte UPDATE `inv_overdue`/`dates`; money/import/i2 włączają kanał w prep.
+
+## 2026-10-21 23:00 — #418 SCALONE; #402 db B6: dates.email w prep
+
+- Skrzynka: bez nowych `dla-cursora`; #402/#411/#405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #418 F7 gotowe (`1ab3640`) → merge `2d8aa5f2`. #408 wstrzymane. #406 `db` FAIL na `dc4dbe15`: security B6 (0 e-maili — seed `dates.email` off po usunięciu UPDATE migracji). Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `security.sh` B6 włącza `dates`/`email_budget` e-mail dla HHL_ADMIN w prep (jak c16/money/import).
