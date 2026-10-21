@@ -26,3 +26,27 @@ describe('Kto co dostaje — produkcja', () => {
     expect(o).not.toContain("import('../auth/NotificationMatrixForm')");
   });
 });
+
+/* F7 #404: tylko odczyt dla Operacji / Podglądu, karty bez kanałów stałych, nieznane klucze z bazy, wybrany wiersz po zapisie */
+import { channelOn, unknownKeys } from '../src/auth/LiveWhoGets';
+describe('Kto co dostaje — F7 #404', () => {
+  it('Operacje HHL i Podgląd — tylko odczyt', () => {
+    const o = readFileSync(new URL('../src/views/OptionsView.tsx', import.meta.url), 'utf8');
+    expect(o).toContain('block(<NotificationMatrixForm readOnly={ro} />)');
+    const l = readFileSync(new URL('../src/auth/LiveWhoGets.tsx', import.meta.url), 'utf8');
+    expect(l).toContain('readOnly={readOnly} onToggle={onToggle} onCard={onCard}');
+  });
+  it('karta „włączone” bez kanałów stałych', () => {
+    expect(channelOn([row('src_down', 'HHL_ADMIN', true, true, true, { fixed_email: true, fixed_push: true })], 'email')).toBe(false);
+    expect(channelOn([row('dec_late', 'HHL_OPS', true, true, false)], 'email')).toBe(true);
+  });
+  it('klucz z bazy spoza katalogu jest zgłaszany', () => {
+    expect(unknownKeys(NOTIFY_CATALOG, [row('nowe_zdarzenie', 'HHL_ADMIN', true, false, false), row('dec_new', 'HHL_ADMIN', true, false, false)])).toEqual(['nowe_zdarzenie']);
+  });
+  it('ekran bierze nowe dane bez ponownego montowania (wybrany wiersz zostaje)', () => {
+    const w = readFileSync(new URL('../src/components/options/WhoGetsScreen.tsx', import.meta.url), 'utf8');
+    expect(w).toContain('useEffect(() => { setGroups(initial); }, [initial]);');
+    const l = readFileSync(new URL('../src/auth/LiveWhoGets.tsx', import.meta.url), 'utf8');
+    expect(l).not.toContain('key={ver}');
+  });
+});

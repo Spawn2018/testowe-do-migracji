@@ -195,7 +195,7 @@ export function OptionsView() {
     screens: [
       scr('who', (
         <>
-          {pick('who', NotificationMatrixForm ? block(<NotificationMatrixForm />) : null)}
+          {pick('who', NotificationMatrixForm ? block(<NotificationMatrixForm readOnly={ro} />) : null)}
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),
