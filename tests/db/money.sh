@@ -281,6 +281,15 @@ chk "refresh w obie strony: po terminie → PO_TERMINIE"                "$(Q "se
 err "użytkownik nie uruchomi przypomnień (zadanie systemowe)"         $HHL "select send_payment_reminders('2027-01-01')" "permission denied"
 val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER')) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP')::int" t
 val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "select mark_notifications_read(array(select id from notifications where user_id=(select id from app_users where email='hhl@test')))" 0
+# #411: klik push → przeczytany bliźniak IN_APP (dedup :WP: ↔ :IN:)
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'IN_APP', u.email, u.id, 'RISK_OPEN', '{}'::jsonb, '411-twin:IN:'||u.id::text
+   from app_users u where u.email='ksh@test';
+ insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'WEB_PUSH', u.email, u.id, 'RISK_OPEN', '{}'::jsonb, '411-twin:WP:'||u.id::text
+   from app_users u where u.email='ksh@test'"
+val "#411: mark_notification_read_any(WP) czyści bliźniaka IN" $KSH "select mark_notification_read_any((select id from notifications where dedup_key like '411-twin:WP:%' limit 1)); select count(*) from notifications where dedup_key like '411-twin:%' and read_at is not null" 2
+val "#411: mark_notification_read_any nie rusza cudzych" $KSH "select mark_notification_read_any((select n.id from notifications n join app_users u on u.id=n.user_id where u.email='hhl@test' and n.channel='WEB_PUSH' order by n.id desc limit 1))" 0
 
 echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
 L9=33333333-0000-0000-0000-000000000009

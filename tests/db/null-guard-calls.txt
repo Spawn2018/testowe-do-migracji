@@ -43,6 +43,7 @@ current_app_user_id | EMPTY | select coalesce(current_app_user_id()::text, '∅'
 current_org_id | EMPTY | select coalesce(current_org_id()::text, '∅') | ∅
 current_org_kind | EMPTY | select coalesce(current_org_kind()::text, '∅') | ∅
 discard_document | EMPTY | select discard_document('$DOC') | f
+mark_notification_read_any | EMPTY | select mark_notification_read_any($NOTIF) | 0
 mark_notifications_read | EMPTY | select mark_notifications_read(array[$NOTIF]::bigint[]) | 0
 my_profile | EMPTY | select count(*) filter (where active) from my_profile() | 0
 my_sessions | EMPTY | select count(*) from my_sessions() | 0

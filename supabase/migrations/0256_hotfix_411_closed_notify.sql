@@ -152,6 +152,64 @@ comment on function public.notify_mark_case_closed(text, uuid, uuid) is
   '#411: zamknięcie decyzji/ryzyka → read_at + SUPPRESSED oczekujących.';
 
 -- ---------------------------------------------------------------------------
+-- Klik push (WEB_PUSH) → przeczytany też bliźniak IN_APP (:WP: ↔ :IN:)
+-- mark_notifications_read filtruje channel=IN_APP; ekran (#410) przejdzie tu.
+-- ---------------------------------------------------------------------------
+create or replace function public.mark_notification_read_any(p_id bigint)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := public.current_app_user_id();
+  v_ch text;
+  v_key text;
+  v_twin text;
+  v_n int := 0;
+  v_k int := 0;
+begin
+  if v_uid is null or p_id is null then
+    return 0;
+  end if;
+
+  select n.channel, n.dedup_key
+    into v_ch, v_key
+    from public.notifications n
+   where n.id = p_id
+     and n.user_id = v_uid;
+  if not found then
+    return 0;
+  end if;
+
+  update public.notifications
+     set read_at = coalesce(read_at, now())
+   where id = p_id
+     and user_id = v_uid;
+  get diagnostics v_n = row_count;
+
+  if v_ch = 'WEB_PUSH'
+     and v_key is not null
+     and position(':WP:' in v_key) > 0 then
+    v_twin := replace(v_key, ':WP:', ':IN:');
+    update public.notifications
+       set read_at = coalesce(read_at, now())
+     where user_id = v_uid
+       and channel = 'IN_APP'
+       and dedup_key = v_twin
+       and id is distinct from p_id;
+    get diagnostics v_k = row_count;
+    v_n := v_n + v_k;
+  end if;
+
+  return v_n;
+end $$;
+revoke all on function public.mark_notification_read_any(bigint) from public, anon;
+grant execute on function public.mark_notification_read_any(bigint) to authenticated;
+comment on function public.mark_notification_read_any(bigint) is
+  '#411: przeczytanie WEB_PUSH oznacza też bliźniaka IN_APP (:WP:↔:IN:).';
+
+-- ---------------------------------------------------------------------------
 -- decision_notify: RESOLVE nie tworzy DECISION_RESOLVED — oznacza powiązane
 -- ---------------------------------------------------------------------------
 create or replace function public.decision_notify(p_decision uuid, p_event text)

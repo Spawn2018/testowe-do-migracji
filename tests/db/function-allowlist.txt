@@ -152,6 +152,7 @@ authenticated map_display_state
 authenticated here_tiles_report
 authenticated mark_invoice_paid
 authenticated mark_load_message_read
+authenticated mark_notification_read_any
 authenticated mark_notifications_read
 authenticated money_effective_eur
 authenticated money_least_tier
