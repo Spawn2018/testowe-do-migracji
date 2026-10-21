@@ -10,9 +10,13 @@ import type { Load, LoadEvent, LoadMessage, OrgKind } from '../types';
 import { getAuthProfile } from '../auth/profile';
 import { demoActors, demoChat, demoHistoryEvents, demoMeId } from './p6bDemo';
 
-/** E17 (20:57): HHL i SCX wybierają „HHL, SCX, KSH” albo „tylko HHL i SCX”. Produkcja — po podłączeniu `visible_to` w aplikacji. */
+/**
+ * E17 (20:57) / B4: HHL i SCX wybierają „HHL, SCX, KSH” albo „tylko HHL i SCX”; KSH pisze tylko do wszystkich.
+ * Produkcja włączona (właściciel 21.10.2026 19:34): zapis `visible_to` przy wysyłce, odczyt z `list_load_messages_ui`;
+ * baza pilnuje dozwolonych zbiorów (`set_message_author`) i odczytu (RLS `msgs_read`).
+ */
 export function chatVisibilityOn(): boolean {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase';
+  return true;
 }
 
 /**
