@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 122, // D-1525 +4: HHL_ADMIN carrier_order_no ×2, HHL_OPS odmowa, SCX trailer_swap ×2 (−1 stary err)
-  status: 158, // D-1710 155 + D-1501 B2/B3 +2 + N2 +1 (ODWOLANY→przyszły)
+  status: 160, // +2 A10 F7 W12: auto READY bez HHL + rk_auto_status_blocked
   storage: 37,
   money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
   release: 146,
@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 64, // D-1300 F7-2: SOURCE = brak odczytów; kontrprzykład odczyty bez publikacji
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 82, // A10: demotion + ponowny READY (+3)
+  e25: 86, // A10 F7: a9_try jawny, ręczny bez cofnięcia, W12 blocked (+4)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };

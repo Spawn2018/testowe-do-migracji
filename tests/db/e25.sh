@@ -215,9 +215,10 @@ else
   ok=$((ok+1)); echo "  OK    A9: cron tower-zasoby wyłączony"
 fi
 val "A9: HHL bez AWIZ_SE w load_ready_gaps (F7 B4)" $HHL "select (gaps @> '[{\"kind\":\"AWIZ_SE\"}]')::text from load_ready_gaps() where load_id='33333333-0000-0000-0000-00000000a901'" false
-sval "A9: SAILING gdy brak sailing_id" "select exists (
+# A10 F7: rejs poza lukami Przygotowania (NO_SAILING z #370, nie blokada Gotowy).
+sval "A10: SAILING poza awiz_missing" "select exists (
   select 1 from jsonb_array_elements(awiz_missing('33333333-0000-0000-0000-00000000a901')) g
-   where g->>'kind'='SAILING')" t
+   where g->>'kind'='SAILING')" f
 # F7 P3/P8: bez fałszywego POLICY_SCX gdy brak przewoźnika; UPLOAD_CMR nie zamyka.
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
      driver_name, driver_phone, tractor_plate, trailer_plate, trailer_swap,
@@ -268,11 +269,14 @@ sys "delete from insurance_policies where policy_no='POL-E25-A901';
             coalesce((select plan_load_date from loads where id='33333333-0000-0000-0000-00000000a901'), current_date) + 400,
             'APPROVED'" >/dev/null
 # Bez telefonu SE (AWIZ_SE) + rejs + polisa → READY (AWIZ_SE nie blokuje Gotowy).
+# A10 F7: sys na wyzwalaczu nie rusza PLANNED — jawne a9_try_ready (bez a10_trg).
 sys "update loads set sailing_id='33333333-0000-0000-0000-00000000f901', escort_vehicles=0
      where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
-sval "A9: komplet bez SE → Gotowy sam (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sval "A9: a9_try_ready po komplecie" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" t
+sval "A9: komplet bez SE → Gotowy (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
 sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
 # A10: demotion READY → RESOURCES_PENDING po usunięciu kierowcy; ponowny READY = nowy STATUS_AUTO.
+# Usunięcie kierowcy: sys na wyzwalaczu — last STATUS_AUTO pozwala cofnąć.
 sys "update loads set driver_name=null where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
 sval "A10: bez kierowcy → RESOURCES_PENDING" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" RESOURCES_PENDING
 sys "update loads set driver_name='Jan A9' where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
@@ -280,6 +284,20 @@ sval "A10: kierowca z powrotem → READY" "select status::text from loads where 
 sval "A10: ponowny READY ma ≥2 STATUS_AUTO→READY" "select count(*) >= 2 from load_events
   where load_id='33333333-0000-0000-0000-00000000a901' and event_type='STATUS_AUTO'
     and payload->>'to'='READY'" t
+# A10 F7: ręczny READY + edycja awizacji → bez cofnięcia.
+sys "select set_config('tower.status_ctx','on',true); update loads set status='READY', driver_name='Jan A9'
+     where id='33333333-0000-0000-0000-00000000a901';
+     insert into load_events (load_id, event_type, occurred_at, payload)
+     values ('33333333-0000-0000-0000-00000000a901','STATUS_READY',now(),
+             jsonb_build_object('manual', true, 'to', 'READY'));
+     select set_config('tower.status_ctx','',true)" >/dev/null
+sys "update loads set driver_phone=null where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+sval "A10: ręczny READY + edycja → bez cofnięcia" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sys "update loads set driver_phone='600111222' where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+# A10 F7: automat nie ustawia READY bez hhl_order_no (W12) — ryzyko rk_auto_status_blocked (risks.sh).
+sys "update loads set status='PLANNED', hhl_order_no=null where id='33333333-0000-0000-0000-00000000a902'" >/dev/null
+sval "A10: auto READY bez HHL → zablokowane" "select auto_set_status('33333333-0000-0000-0000-00000000a902','PLANNED'::load_status,'READY'::load_status,'test W12',now(),'{}'::jsonb)" f
+sval "A10: ryzyko rk_auto_status_blocked" "select count(*) from risk_signals where load_id='33333333-0000-0000-0000-00000000a902' and title_key='rk_auto_status_blocked'" 1
 # CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
 # DELIVERED wymaga hhl_order_no + carrier_order_no (0003) — bez nich INSERT padał i SCX widział 0 spraw.
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,

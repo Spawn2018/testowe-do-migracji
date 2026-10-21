@@ -3753,3 +3753,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #359 zamknięte (D-1300). #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #377 F7 „gotowe do scalenia” po `44f54cad`, CI unit/visual/db zielone → merge `e5e2aa69`. #259 konflikt / bez F7.
 - Bieżąca: **A10** (`pakiet/a10-automat-statusow`) — migracja **0246**: prep w obie strony, geofence z wcześniejszych statusów, zapas FERRY (b/c), billing po DELIVERED, dedup STATUS_AUTO z czasem; testy `status`/`e25`.
+
+## 2026-10-21 05:45 — A10 (#324 / #378): F7 po czerwonej db
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — unit/visual zielone na `362e7c6e`; db czerwone (risks 5/6, e18 SG-24, e25 LOADING 08:30). F7 „NIE” + uwagi 05:25. #259 konflikt / bez F7.
+- Bieżąca: **A10** — F7: SAILING poza lukami; cofnięcie tylko po STATUS_AUTO; PLANNED na wyzwalaczu sys bez ruchu; JWT clear przy auto_set_status; READY bez HHL zablokowane (W12); cron ferry; cisza powiadomień w prep; testy security/aud03/release przywrócone; status 160 / e25 86.

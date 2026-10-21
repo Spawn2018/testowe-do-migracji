@@ -55,6 +55,12 @@ chk "A10 niegotowy: ryzyko Załadunek bez gotowości"          "$(rk $E LOADING_
 chk "A10 bez numeru SCX: AT_LOADING (bez blokady)"           "$(st $D)" AT_LOADING
 chk "A10 bez numeru SCX: ryzyko Załadunek bez gotowości"     "$(rk $D LOADING_NOT_READY)" 1
 chk "blokada statusu NIE przerwała zapisu pozycji"           "select count(*) from positions where load_id='$D'" 2
+# A10 F7: READY bez numeru HHL nadal zablokowane dla automatu (W12) → rk_auto_status_blocked (risks.sh).
+Lblk=$(L 9b)
+mk $Lblk W12 null null RESOURCES_PENDING null
+q "select auto_set_status('$Lblk','RESOURCES_PENDING'::load_status,'READY'::load_status,'test W12',now(),'{}'::jsonb)" >/dev/null
+chk "A10 W12: auto READY bez HHL — status bez zmian"         "$(st $Lblk)" RESOURCES_PENDING
+chk "A10 W12: ryzyko rk_auto_status_blocked"                 "select count(*) from risk_signals where load_id='$Lblk' and title_key='rk_auto_status_blocked'" 1
 # A2: wyjazd LOADING po ≥ 5 min → Droga PL + actual_load_at, bez loaded_confirmed / LEFT_LOADING_UNCONFIRMED
 for x in $F; do pos $x 52.30 17.30 "2026-09-30 11:00+00"; pos $x 52.31 17.31 "2026-09-30 11:05+00"; done
 chk "A2 wyjazd załadunku bez MILESTONE → IN_TRANSIT_PL"      "$(st $F)" IN_TRANSIT_PL

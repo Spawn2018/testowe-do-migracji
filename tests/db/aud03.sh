@@ -51,8 +51,8 @@ sys "update loads set plan_load_date='2026-11-11', plan_delivery_date='2026-11-1
      where id='$L1'" >/dev/null
 val "KSH zmienia datę i godziny"                           $KSH "select (ksh_confirm_dates('$L1','2026-11-12','2026-11-16','2026-11-12 08:00+01','2026-11-12 14:00+01','2026-11-16 09:00+01','2026-11-16 13:00+01')->>'changed')" true commit
 sval "daty i okna zapisane"                                "select plan_load_date||'|'||plan_delivery_date||'|'||to_char(plan_load_from at time zone 'Europe/Warsaw','HH24:MI')||'|'||to_char(plan_delivery_to at time zone 'Europe/Warsaw','HH24:MI') from loads where id='$L1'" "2026-11-12|2026-11-16|08:00|13:00"
-# A10: tractor_plate w sys = start awizacji → PLANNED→RESOURCES_PENDING; ciągnik bez zmian przy edycji dat.
-sval "inne pola bez zmian (ciągnik, status)"               "select tractor_plate||'|'||status from loads where id='$L1'" "PO1111A|RESOURCES_PENDING"
+# A10 F7: sys/tractor przy edycji dat ≠ start awizacji użytkownika — PLANNED zostaje.
+sval "inne pola bez zmian (ciągnik, status)"               "select tractor_plate||'|'||status from loads where id='$L1'" "PO1111A|PLANNED"
 sval "status dat POTWIERDZONA, autor KSH"                  "select l.plan_dates_status||'|'||(l.plan_dates_confirmed_by = u.id)::text from loads l, app_users u where l.id='$L1' and u.auth_id='$KSH'" "POTWIERDZONA|true"
 sval "Historia: jeden wpis PLAN_DATES_CHANGED „Anna Testowa // KSH”" "select count(*)||'|'||max(payload->>'actor')||'|'||max(payload->>'by') from load_events where load_id='$L1' and event_type='PLAN_DATES_CHANGED' and payload->>'by'='KSH'" "1|Anna Testowa // KSH|KSH"
 sval "DEC-4: powiadomienie HHL i przewoźnika (IN_APP), autor bez" "select string_agg(distinct o.code, ',' order by o.code) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.load_id='$L1' and n.template='PLAN_DATES_CHANGED' and n.channel='IN_APP' and n.payload->>'by'='KSH'" "HHL,SCX"
