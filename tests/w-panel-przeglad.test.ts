@@ -19,4 +19,11 @@ describe('panel transportu — domyślnie Przegląd', () => {
     expect(src).toContain("if (id && id !== lastId.current && !useTowerStore.getState().drawerTab) setTab('overview');");
     expect(readFileSync('src/hooks/useRouteSync.ts', 'utf8')).toContain('search: carrySearch(cur.search)');
   });
+  it('F7 #394: zakładka spoza panelu nie zostaje w sklepie; zimny start z linku stosuje zakładkę; faktury bez parametrów jednorazowych', () => {
+    const drawer = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
+    expect(drawer).toMatch(/} else if \(drawerTab\) \{[\s\S]{0,200}setDrawerTab\(null\);/);
+    const sync = readFileSync('src/hooks/useRouteSync.ts', 'utf8');
+    expect(sync).toContain('applyUrlToStore(cur.pathname, cur.search, pendingCode);');
+    expect(sync).not.toContain('search: cur.search }');
+  });
 });

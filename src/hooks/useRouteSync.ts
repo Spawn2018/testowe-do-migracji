@@ -159,7 +159,7 @@ export function useRouteSync() {
       if (st.openInvoiceId) st.setOpenInvoiceId(null);
       const open = st.selectedLoadId ? st.loads.find((x) => x.id === st.selectedLoadId) : null;
       const target = buildRoute(st.view, open?.code ?? null);
-      if (target !== cur.pathname) navigate({ pathname: target, search: cur.search }, { replace: true });
+      if (target !== cur.pathname) navigate({ pathname: target, search: carrySearch(cur.search) }, { replace: true });
       return;
     }
     if (r.kind === 'unknown' || r.kind === 'decision' || r.kind === 'system' || r.kind === 'options' || r.kind === 'denied' || r.kind === 'entry' || r.kind === 'sms' || r.kind === 'workflow') return;
@@ -169,6 +169,8 @@ export function useRouteSync() {
       if (l) {
         pendingCode.current = null;
         st.selectLoad(l.id);
+        /* F7 #394: zimny start z linku (dane jeszcze się wczytywały) — zakładka z linku jak przy zwykłym wejściu */
+        applyUrlToStore(cur.pathname, cur.search, pendingCode);
         return;
       }
       if (!st.loads.length) return; // dane jeszcze się wczytują

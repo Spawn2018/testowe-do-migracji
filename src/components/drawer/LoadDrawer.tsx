@@ -100,6 +100,9 @@ export function LoadDrawer() {
       setTab(drawerTab as Tab);
       if (drawerTab === 'overview') setAwizOpen(true);
       setDrawerTab(null);
+    } else if (drawerTab) {
+      /* F7 #394: zakładka spoza panelu (np. „margin” z powiadomienia demo) nie może zostać w sklepie — inaczej blokuje powrót na Przegląd */
+      setDrawerTab(null);
     }
   }, [drawerTab, setDrawerTab]);
 
