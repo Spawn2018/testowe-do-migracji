@@ -3747,3 +3747,33 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #377 — CI zielone na `cd487035`; F7 runda 2 „jeszcze NIE” (SOURCE odwrotnie, Orlen TDZ, cron UTC). #259 konflikt / bez F7.
 - Bieżąca: **D-1300** — `sefs_sek_daily_avg`: SOURCE = brak odczytów (period); cron `15 * * * *` + godzina PL w funkcji; Orlen `orlenIngestPayload` (bez TDZ); próby 20 s / timeout 240 s; baf 64 + unit ingest.
+
+## 2026-10-21 04:45 — D-1300 SCALONE; start A10 (#324)
+
+- Skrzynka: #359 zamknięte (D-1300). #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #377 F7 „gotowe do scalenia” po `44f54cad`, CI unit/visual/db zielone → merge `e5e2aa69`. #259 konflikt / bez F7.
+- Bieżąca: **A10** (`pakiet/a10-automat-statusow`) — migracja **0246**: prep w obie strony, geofence z wcześniejszych statusów, zapas FERRY (b/c), billing po DELIVERED, dedup STATUS_AUTO z czasem; testy `status`/`e25`.
+
+## 2026-10-21 05:45 — A10 (#324 / #378): F7 po czerwonej db
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — unit/visual zielone na `362e7c6e`; db czerwone (risks 5/6, e18 SG-24, e25 LOADING 08:30). F7 „NIE” + uwagi 05:25. #259 konflikt / bez F7.
+- Bieżąca: **A10** — F7: SAILING poza lukami; cofnięcie tylko po STATUS_AUTO; PLANNED na wyzwalaczu sys bez ruchu; JWT clear przy auto_set_status; READY bez HHL zablokowane (W12); cron ferry; cisza powiadomień w prep; testy security/aud03/release przywrócone; status 160 / e25 86.
+
+## 2026-10-21 06:25 — A10 (#324 / #378): F7 „prawie” — JWT/guard + PLANNED bez daty
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — CI zielone na `8ea860db` (unit/visual/db); F7 „prawie” (JWT clear nieskuteczne na produkcji + uwagi). #259 konflikt / bez F7. Bez „gotowe do scalenia”.
+- Bieżąca: **A10** — F7: `guard_load_update` przepuszcza tylko `status`+`updated_at` przy `tower.auto_status` (bez podmiany JWT; flagi zerowane po UPDATE); stub `auth.uid` jak PostgREST (`claims->>'sub'`); PLANNED bez `plan_load_date` zostaje; wahanie = tylko przejście odwrotne < 10 min; e25 90.
+
+## 2026-10-21 06:50 — A10 (#324 / #378): db e25 4 FAIL → poprawka
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — unit/visual zielone na `a3b94952`; db czerwone (e25 86/90). F7 „czekam na zielone CI”. #259 konflikt / bez F7.
+- Bieżąca: **A10** — PLANNED bez daty przed `awiz_started` (numery zleceń nie ruszają); wahanie GPS tylko poza Przygotowaniem (prep zawsze STATUS_AUTO na osi).
+
+## 2026-10-21 07:05 — A10 (#324 / #378): F7 — usuń ochronę przed wahaniem
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — CI zielone na `4a05ed15` (unit/visual/db); F7 „usunąć ochronę całkowicie” (04:49 UTC). #259 konflikt / bez F7. Bez „gotowe do scalenia”.
+- Bieżąca: **A10** — `auto_set_status` zawsze zapisuje STATUS_AUTO (`v_osc` usunięte); histereza tylko w `apply_geofence_status`; e25 93 (+3 wahanie trasy A→B→A).

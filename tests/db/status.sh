@@ -49,11 +49,18 @@ for x in $A $B $C $Hh $I $K; do q "insert into load_events (load_id,event_type,o
 echo; echo "[1] Strefa załadunku"
 for x in $D $E $F $G; do pos $x 52.0900 17.0200 "2026-09-30 09:00+00"; pos $x 52.0901 17.0201 "2026-09-30 09:05+00"; done
 chk "READY + wjazd → AT_LOADING"                            "$(st $F)" AT_LOADING
-chk "transport niegotowy: status bez zmian"                  "$(st $E)" DOCS_PENDING
-chk "transport niegotowy: ryzyko wysokie"                    "$(rk $E LOADING_NOT_READY)" 1
-chk "brak numeru przewoźnika: zmiana zablokowana"            "$(st $D)" READY
-chk "brak numeru przewoźnika: ryzyko z przyczyną"            "select count(*) from risk_signals where load_id='$D' and title like '%przewoźnika%'" 1
+chk "A10 niegotowy + wjazd → AT_LOADING"                     "$(st $E)" AT_LOADING
+chk "A10 niegotowy: ryzyko Załadunek bez gotowości"          "$(rk $E LOADING_NOT_READY)" 1
+# A10 (#324): załadunek bez gotowości / bez numeru SCX — ryzyko, bez blokady (nie zostaje READY).
+chk "A10 bez numeru SCX: AT_LOADING (bez blokady)"           "$(st $D)" AT_LOADING
+chk "A10 bez numeru SCX: ryzyko Załadunek bez gotowości"     "$(rk $D LOADING_NOT_READY)" 1
 chk "blokada statusu NIE przerwała zapisu pozycji"           "select count(*) from positions where load_id='$D'" 2
+# A10 F7: READY bez numeru HHL nadal zablokowane dla automatu (W12) → rk_auto_status_blocked (risks.sh).
+Lblk=$(L 9b)
+mk $Lblk W12 null null RESOURCES_PENDING null
+q "select auto_set_status('$Lblk','RESOURCES_PENDING'::load_status,'READY'::load_status,'test W12',now(),'{}'::jsonb)" >/dev/null
+chk "A10 W12: auto READY bez HHL — status bez zmian"         "$(st $Lblk)" RESOURCES_PENDING
+chk "A10 W12: ryzyko rk_auto_status_blocked"                 "select count(*) from risk_signals where load_id='$Lblk' and title_key='rk_auto_status_blocked'" 1
 # A2: wyjazd LOADING po ≥ 5 min → Droga PL + actual_load_at, bez loaded_confirmed / LEFT_LOADING_UNCONFIRMED
 for x in $F; do pos $x 52.30 17.30 "2026-09-30 11:00+00"; pos $x 52.31 17.31 "2026-09-30 11:05+00"; done
 chk "A2 wyjazd załadunku bez MILESTONE → IN_TRANSIT_PL"      "$(st $F)" IN_TRANSIT_PL
@@ -365,7 +372,8 @@ chk "D-1710 repair: bez nowych notifications" "select (count(*)=$Nbef)::text fro
 chk "D-1710 repair: bez nowych workflow_runs" "select (count(*)=$Wbef)::text from workflow_runs" true
 # Po naprawie prawdziwy wyjazd musi trafić na oś (dedup STATUS_AUTO:<id>:IN_TRANSIT_PL wolny).
 q "select auto_set_status('$R17','READY','IN_TRANSIT_PL','wyjazd ze strefy załadunku', now(), jsonb_build_object('powod','test D-1710'))" >/dev/null
-chk "D-1710 repair: prawdziwy STATUS_AUTO po wyjeździe" "select count(*) from load_events where load_id='$R17' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_PL' and dedup_key='STATUS_AUTO:$R17:IN_TRANSIT_PL'" 1
+# A10: dedup_key STATUS_AUTO ma czas (ponowny automat po cofnięciu) — like, nie stały klucz.
+chk "D-1710 repair: prawdziwy STATUS_AUTO po wyjeździe" "select count(*) from load_events where load_id='$R17' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_PL' and dedup_key like 'STATUS_AUTO:$R17:IN_TRANSIT_PL%'" 1
 chk "D-1710 repair: status po prawdziwym wyjeździe" "select status from loads where id='$R17'" IN_TRANSIT_PL
 # F7: sprzątanie LATE_DATE + ETA z D-1710 (risks.sh liczy klucze automatu w tower_test_status).
 # decisions.risk_id → risk_signals bez CASCADE — najpierw decision_events/decisions.
