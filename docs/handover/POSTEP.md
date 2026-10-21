@@ -3795,3 +3795,27 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #380 — F7 „jeszcze NIE” na `67d1a0a` (05:43); po `fc71cb87` unit/visual zielone, `db` czerwone: security 138/131. #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4 cz.1** — `EXPECTED_LOCAL.security` 131→138 (+7 F7); TEST 134.
+
+## 2026-10-21 08:45 — B4 cz.1 SCALONE; start B4 cz.2 (dokumenty)
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #380 F7 „gotowe do scalenia” po `74371d77` (06:41 UTC), CI unit/visual/db zielone → merge `31179814` (0247). #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** (`pakiet/b4-docs-visible-to`, **0248**) — CHECK `documents_visible_to_chk`; polityki `load_message_reads` z dostępem do transportu; testy ALL own / doc HHL+SCX (paczka) / macierz przywrócona; security 138→147.
+
+## 2026-10-21 09:05 — B4 cz.2: fixture CAR2B4 przez sys (db 146/147)
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #381 — unit/visual zielone, `db` FAIL: security 146 OK / 1 FAIL (`SCX nie wstawi odczytu…` — pusty id po rollback fixture). Bez F7. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** — fixture `b4-cudzy-all` / CAR2B4 przez `sys` (commit), nie w `val` (rollback).
+
+## 2026-10-21 09:20 — B4 cz.2 F7 #381: CHECK + wyzwalacz + DOC_UPLOADED
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #381 — F7 „jeszcze NIE” (07:00 UTC, head `5ea5b55`); po fixture `0528ca2` CI unit/visual/db zielone, bez ponownego „gotowe”. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** — F7: CHECK tylko ALL/HHL+SCX; `set_document_visible_to` (KSH→ALL); `load_events.visible_to` + filtr `events_read` dla DOC_UPLOADED; security 147→155.
+
+## 2026-10-21 09:40 — B4 cz.2: CI zielone na 226bdee1; czeka F7
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #381 — CI unit/visual/db zielone na `226bdee1` (db `39561683717`, visual `39561683837`); MERGEABLE. F7 „jeszcze NIE” było na `5ea5b55`; po poprawkach komentarz „czekam na zielone CI i ponowne gotowe” — **brak** „F7: gotowe do scalenia” po `226bdee1` → bez merge. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** (#381 / 0248) — kod F7 gotowy; czekam na „F7: gotowe do scalenia”. Potem B5.
