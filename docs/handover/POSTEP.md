@@ -3717,3 +3717,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #376 — CI zielone na `84a7c5d0` (unit/visual/db), MERGEABLE CLEAN. F7 „gotowe” było na `0ce32ae`; po merge main nowy head → bez ponownego F7 = bez merge. #259 konflikt / bez F7.
 - Bieżąca: **C15-emtrack** (#365 / #376) — kod gotowy; czekam na „F7: gotowe do scalenia” po `84a7c5d0`. Potem D-1300 (#359).
+
+## 2026-10-21 02:45 — C15 SCALONE; start D-1300 (#359)
+
+- Skrzynka: #365 zamknięte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #376 SCALONE `78c77bbd` (F7 na `12f0673`, CI unit/visual/db zielone). #259 konflikt / bez F7.
+- Bieżąca: **D-1300** (`pakiet/d1300-paliwo-okq8-7dni`) — migracja **0245**: OKQ8 7 dni (`sefs_sek_daily_avg`), lookup „od progu” (D-1322), over_table + krok, przeliczenie niezafakturowanych + `SEFS_INVOICE_DIFF` przy fakturze; `fuel-prices` źródła osobno; testy `baf`/`i31` za decyzją.

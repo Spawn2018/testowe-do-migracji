@@ -50,14 +50,15 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
 chk "data publikacji przy każdym odczycie" "$(Q "select count(*) filter (where published_on is null) from fuel_index_readings where project_id='$P'")" "0"
 chk "kopia 03.10 SEK → publikacja 01.10" "$(Q "select published_on from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-03'")" "2026-10-01"
 
+# D-1300 (#359): OKQ8 = 7 cen dziennych; D-1322: mnożnik „od progu”. Etap D-1300 / decyzja właściciela 20.10.
 W41="sefs_week_calc('$P','2026-10-06','2026-10-05')"
-chk "tydz. 41: SEK publikacje 22,74/22,54/22,09/23,14 → 22,63 → 1,13" "$(Q "select ($W41->>'n_sek')||'/'||($W41->>'avg_sek')||'/'||($W41->>'mult_sek')")" "4/22.63/1.13"
-chk "tydz. 41: PLN 5 publikacji → 7,22 → 1,15" "$(Q "select ($W41->>'n_pln')||'/'||($W41->>'avg_pln')||'/'||($W41->>'mult_pln')")" "5/7.22/1.15"
+chk "tydz. 41: SEK 7 dni → 22,99 → 1,13 (od progu)" "$(Q "select ($W41->>'n_sek')||'/'||($W41->>'avg_sek')||'/'||($W41->>'mult_sek')")" "7/22.99/1.13"
+chk "tydz. 41: PLN 5 publikacji → 7,22 → 1,14 (od progu)" "$(Q "select ($W41->>'n_pln')||'/'||($W41->>'avg_pln')||'/'||($W41->>'mult_pln')")" "5/7.22/1.14"
 chk "tydz. 41: wynik 1,13 OSTATECZNY" "$(Q "select ($W41->>'applied_mult')||'/'||($W41->>'status')")" "1.13/OSTATECZNY"
 W40="sefs_week_calc('$P','2026-10-01','2026-10-05')"
-chk "tydz. 40: SEK 23,34/22,54/22,94/23,34 → 23,04 → 1,14" "$(Q "select ($W40->>'n_sek')||'/'||($W40->>'avg_sek')||'/'||($W40->>'mult_sek')")" "4/23.04/1.14"
-chk "tydz. 40: PLN 7,440/7,347/7,342/7,483/7,442 → 7,41 → 1,17" "$(Q "select ($W40->>'n_pln')||'/'||($W40->>'avg_pln')||'/'||($W40->>'mult_pln')")" "5/7.41/1.17"
-chk "tydz. 40: wynik 1,14" "$(Q "select $W40->>'applied_mult'")" "1.14"
+chk "tydz. 40: SEK 7 dni → 23,05 → 1,13 (od progu)" "$(Q "select ($W40->>'n_sek')||'/'||($W40->>'avg_sek')||'/'||($W40->>'mult_sek')")" "7/23.05/1.13"
+chk "tydz. 40: PLN 5 publ. → 7,41 → 1,16 (od progu)" "$(Q "select ($W40->>'n_pln')||'/'||($W40->>'avg_pln')||'/'||($W40->>'mult_pln')")" "5/7.41/1.16"
+chk "tydz. 40: wynik 1,13" "$(Q "select $W40->>'applied_mult'")" "1.13"
 
 # Tydzień bez publikacji: odczyty 12–18.10 to kopie (cena bez zmian) → ostatnia opublikowana
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
@@ -65,8 +66,9 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
   select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 6.943, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'kopia' from generate_series('2026-10-06'::date,'2026-10-18'::date,'1 day') d"
 W43="sefs_week_calc('$P','2026-10-19','2026-10-19')"
-chk "tydzień bez publikacji → ostatnia opublikowana (22,29 z 05.10)" "$(Q "select ($W43->>'n_sek')||'/'||($W43->>'fallback_last_sek')||'/'||($W43->>'avg_sek')||'/'||($W43->'pubs_sek'->0->>'published_on')")" "0/true/22.29/2026-10-05"
-chk "brak odczytów w tygodniu → SOURCE_FAILURE (bez zgadywania)" "$(Q "select sefs_week_calc('$P','2026-12-07','2026-12-07')->>'reason'")" "SOURCE_FAILURE"
+# D-1300: brak nowej publikacji w tygodniu ≠ fallback — 7 dni z ceną z 05.10
+chk "tydzień bez nowej publikacji SEK → 7 dni ×22,29 z 05.10" "$(Q "select ($W43->>'n_sek')||'/'||($W43->>'fallback_last_sek')||'/'||($W43->>'avg_sek')||'/'||($W43->'days_sek'->0->>'published_on')")" "7/false/22.29/2026-10-05"
+chk "brak jakiejkolwiek ceny SEK/PLN → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-12-07','2026-12-07')->>'reason'")" "SOURCE_FAILURE"
 
 # Niepełny tydzień → wstępny; po niedzieli → ostateczny
 chk "tydzień niepełny (dziś 08.10, załadunek 12.10) → PROGNOZA" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'status'")" "PROGNOZA"
@@ -185,11 +187,11 @@ chk "TELM: rzeczywisty załadunek pusty po podłączeniu" "$(Q "select coalesce(
 chk "TELM: faza zapisana osobno z adnotacją" "$(Q "select phase||'/'||note from telm_attach_phase where load_id='$LTM'")" "IN_TRANSIT_SE/faza z pozycji przy podłączeniu"
 chk "TELM: data paliwa = plan KSH 01.10 (tydz. 40)" "$(Q "select fuel_load_date('$LTM')")" "2026-10-01"
 sys "select load_price_compute('$LTM', '2026-10-05')"
-chk "TELM: mnożnik 1,14 OSTATECZNY" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LTM'")" "1.14/OSTATECZNY"
+chk "TELM: mnożnik 1,13 OSTATECZNY" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LTM'")" "1.13/OSTATECZNY"
 # Stara ścieżka 0176 (actual = chwila podłączenia) → korekta
 sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
 chk "korekta: poprawiono 1 transport (BAF/TM)" "$(Q "select string_agg(order_no, ',') from telm_fix_attach_actual_load()")" "BAF/TM"
-chk "korekta: actual pusty, mnożnik 1,14" "$(Q "select coalesce(l.actual_load_at::text,'∅')||'/'||c.fuel_applied_mult::numeric(4,2) from loads l join load_cost c on c.load_id=l.id where l.id='$LTM'")" "∅/1.14"
+chk "korekta: actual pusty, mnożnik 1,13" "$(Q "select coalesce(l.actual_load_at::text,'∅')||'/'||c.fuel_applied_mult::numeric(4,2) from loads l join load_cost c on c.load_id=l.id where l.id='$LTM'")" "∅/1.13"
 # Rzeczywisty wyjazd ze strefy (niesyntetyczny) nie jest kasowany
 sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$LTM','GEOFENCE_EXIT','2026-10-01 18:00+02','{\"geofence_kind\":\"LOADING\"}')"

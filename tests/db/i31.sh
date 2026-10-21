@@ -52,8 +52,10 @@ sys "begin; set local request.jwt.claim.sub='$HHL'; set local role authenticated
     'note','I-31 test'
   )); commit"
 
-val "lookup na progu" $HHL "select sefs_lookup_mult(23.1, (select tiers_sek from sefs_parameters where project_id='$P' order by version desc limit 1))" "1.14"
-val "tydzień testowy 23.05/7.41 → 1.14" $HHL "select sefs_compute_hybrid('$P',23.05,7.41)->>'applied_mult'" "1.14"
+# D-1322: lte = próg „od”; 23.05 → 1,13 (wiersz 23,0), nie 1,14
+val "lookup na progu (od)" $HHL "select sefs_lookup_mult(23.1, (select tiers_sek from sefs_parameters where project_id='$P' order by version desc limit 1))" "1.14"
+val "lookup 23,05 → 1,13 (od progu)" $HHL "select sefs_lookup_mult(23.05, (select tiers_sek from sefs_parameters where project_id='$P' order by version desc limit 1))" "1.13"
+val "hybrid 23.05/7.41 → 1.13" $HHL "select sefs_compute_hybrid('$P',23.05,7.41)->>'applied_mult'" "1.13"
 val "over_table flaga przy SEK powyżej" $HHL "select sefs_compute_hybrid('$P',99,7.41)->>'over_table_sek'" "true"
 err "KSH nie liczy SEFS" $KSH "select sefs_compute_hybrid('$P',23.05,7.41)" "wyłącznie HHL"
 
@@ -69,20 +71,20 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
     from generate_series('2026-09-28'::date, '2026-10-04'::date, '1 day') d
   on conflict do nothing"
 
-val "sefs_week_for_load 2026-10-05 → 1.14" $HHL "select sefs_week_for_load('$P','2026-10-05')->>'applied_mult'" "1.14"
-# 0187: tydzień już zamknięty bez odczytów = awaria źródła (tydzień przyszły → szacunek WSTEPNY z ostatniej publikacji)
+# D-1300: n_sek=7; D-1322: 23.05 → 1,13
+val "sefs_week_for_load 2026-10-05 → 1.13" $HHL "select sefs_week_for_load('$P','2026-10-05')->>'applied_mult'" "1.13"
 ROLE=postgres val "awaria źródła bez odczytów (tydzień zamknięty)" $HHL "select sefs_week_calc('$P','2026-11-02','2026-11-03')->>'reason'" "SOURCE_FAILURE"
 
 
-# SEFS-KOREKTA (0166): korekta publikacji 2026-09-28 (0187: średnia z publikacji; dni 29.09–04.10 to kopie) SEK 23.05→29.00 — średnia z korektą ≠ średnia z samych oryginałów
+# SEFS-KOREKTA (0166) + D-1300: korekta 28.09 23.05→29.00 wchodzi w cenę dnia 28.09; n_sek zostaje 7
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
   select r.project_id, r.index_code, r.period, r.reading_date, 29.00, r.source_url, 'korekta test 0166', r.id, 'SEFS-KOREKTA test'
     from fuel_index_readings r
    where r.project_id='22222222-0000-0000-0000-000000000001' and r.index_code='SEK' and r.period='2026-09-28' and r.corrects_id is null
      and not exists (select 1 from fuel_index_readings c where c.corrects_id=r.id)"
-val "korekta: nadal 1 publikacja SEK (0187)" $HHL "select (sefs_week_for_load('$P','2026-10-05')->>'n_sek')::int" "1"
-# bez korekty avg=23.05 → 1.14; z korektą 29: (6*23.05+29)/7≈23.90 → inny próg
-val "korekta wchodzi do średniej (mnożnik ≠ 1.14)" $HHL "select case when (sefs_week_for_load('$P','2026-10-05')->>'applied_mult') = '1.14' then 'same' else 'changed' end" "changed"
+val "korekta: nadal 7 dni SEK (D-1300)" $HHL "select (sefs_week_for_load('$P','2026-10-05')->>'n_sek')::int" "7"
+# bez korekty avg=23.05 → 1.13; z korektą 29 w dniu 28.09 średnia rośnie → inny próg
+val "korekta wchodzi do średniej (mnożnik ≠ 1.13)" $HHL "select case when (sefs_week_for_load('$P','2026-10-05')->>'applied_mult') = '1.13' then 'same' else 'changed' end" "changed"
 val "historia korekty zapisana" $HHL "select count(*)::text from fuel_index_readings where corrects_id is not null and correction_reason='SEFS-KOREKTA test'" "1"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
