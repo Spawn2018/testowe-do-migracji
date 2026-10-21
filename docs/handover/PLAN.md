@@ -698,7 +698,7 @@ Przerywa B5. Kolejność: ~~pkt 1~~ → ~~2–4~~ → ~~5–6~~ (+ pkt 7–8). P
 2. ~~**`KSH_DATE_LT_5D`:** SCALONE #388 `da77c46a`, migracja **0250**.~~
 3. ~~**Import pusta kolumna HHL:** SCALONE #388 / 0250.~~
 4. ~~**Import historyczne / jedna godzina:** SCALONE #388 / 0250.~~
-5. ~~**`PROPOSE_DATE`:** SCALONE #389 `1a232014`, **0251** — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; sygnatura w PR (ekran #390).~~
+5. ~~**`PROPOSE_DATE`:** SCALONE #389 `1a232014`, **0251** — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; ekran #390 SCALONE (`8f995121`).~~
 6. ~~**Po terminie:** SCALONE #389 — `l2_may_resolve` + `HHL_OPS` po eskalacji / po terminie.~~
 7. **`decisions_read` przewoźnik:** tylko własne transporty (po 5–6).
 8. **Aktor w `DECISION_*`:** `actor` / `decider` / `by_org` + `visible_to` (po 5–6).
@@ -1251,3 +1251,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 16:06 | D-20261021-1606-01 (#392, `pilne`): RIO przyklejony (SG-18); migracja **0252**; przed D-1535 | właściciel 16:06; koordynator |
 | 21.10.2026 16:59 | #389 SCALONE (`1a232014`, 0251); #395 CI zielone — czekam F7; D-1535 → 0253, B5 → 0254 | pętla |
 | 21.10.2026 17:39 | #395 RIO SCALONE (`e13067e4`, 0252); #393+#394 SCALONE; start D-1535 (#391, 0253) | pętla |
+| 21.10.2026 18:05 | #390 SCALONE (`8f995121`); D-1535 #396 — poprawka baf (format + TELM ×1,14) | pętla |

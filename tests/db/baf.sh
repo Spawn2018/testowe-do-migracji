@@ -57,9 +57,10 @@ chk "tydz. 41: PLN 5 publikacji → 7,22 → 1,14 (od progu)" "$(Q "select ($W41
 chk "tydz. 41: wynik 1,13 OSTATECZNY" "$(Q "select ($W41->>'applied_mult')||'/'||($W41->>'status')")" "1.13/OSTATECZNY"
 W40="sefs_week_calc('$P','2026-10-01','2026-10-05')"
 # D-1535 (#391): t40 nadpisane decyzją właściciela → SE 1,14 / PL 1,17 / stosowany 1,14 (średnie z D-1300 zostają).
-chk "tydz. 40: SEK 7 dni → 23,05 → 1,14 (D-1535)" "$(Q "select ($W40->>'n_sek')||'/'||($W40->>'avg_sek')||'/'||($W40->>'mult_sek')")" "7/23.05/1.14"
-chk "tydz. 40: PLN 5 publ. → 7,41 → 1,17 (D-1535)" "$(Q "select ($W40->>'n_pln')||'/'||($W40->>'avg_pln')||'/'||($W40->>'mult_pln')")" "5/7.41/1.17"
-chk "tydz. 40: wynik 1,14 OSTATECZNY (D-1535)" "$(Q "select ($W40->>'applied_mult')||'/'||($W40->>'status')||'/'||($W40->>'owner_override')")" "1.14/OSTATECZNY/true"
+# numeric(6,4) z overrides → jsonb „1.1400”; porównanie przez numeric(4,2) jak w pozostałych chk.
+chk "tydz. 40: SEK 7 dni → 23,05 → 1,14 (D-1535)" "$(Q "select ($W40->>'n_sek')||'/'||($W40->>'avg_sek')||'/'||(($W40->>'mult_sek')::numeric(4,2))")" "7/23.05/1.14"
+chk "tydz. 40: PLN 5 publ. → 7,41 → 1,17 (D-1535)" "$(Q "select ($W40->>'n_pln')||'/'||($W40->>'avg_pln')||'/'||(($W40->>'mult_pln')::numeric(4,2))")" "5/7.41/1.17"
+chk "tydz. 40: wynik 1,14 OSTATECZNY (D-1535)" "$(Q "select (($W40->>'applied_mult')::numeric(4,2))||'/'||($W40->>'status')||'/'||($W40->>'owner_override')")" "1.14/OSTATECZNY/true"
 chk "D-1535: t41 bez nadpisania (1,13)" "$(Q "select ($W41->>'applied_mult')||'/'||coalesce($W41->>'owner_override','∅')")" "1.13/∅"
 
 # D-1300 F7: tydzień 05–11.10 (wskaźniki t42) — jedna publikacja OKQ8 22,80 + Orlen 7,00
@@ -241,11 +242,12 @@ chk "TELM: rzeczywisty załadunek pusty po podłączeniu" "$(Q "select coalesce(
 chk "TELM: faza zapisana osobno z adnotacją" "$(Q "select phase||'/'||note from telm_attach_phase where load_id='$LTM'")" "IN_TRANSIT_SE/faza z pozycji przy podłączeniu"
 chk "TELM: data paliwa = plan KSH 01.10 (tydz. 40)" "$(Q "select fuel_load_date('$LTM')")" "2026-10-01"
 sys "select load_price_compute('$LTM', '2026-10-05')"
-chk "TELM: mnożnik 1,13 OSTATECZNY" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LTM'")" "1.13/OSTATECZNY"
+# D-1535: t40 (01.10) → ×1,14 (było 1,13 z D-1300 przed nadpisaniem).
+chk "TELM: mnożnik 1,14 OSTATECZNY (D-1535 t40)" "$(Q "select fuel_applied_mult::numeric(4,2)||'/'||fuel_status from load_cost where load_id='$LTM'")" "1.14/OSTATECZNY"
 # Stara ścieżka 0176 (actual = chwila podłączenia) → korekta
 sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
 chk "korekta: poprawiono 1 transport (BAF/TM)" "$(Q "select string_agg(order_no, ',') from telm_fix_attach_actual_load()")" "BAF/TM"
-chk "korekta: actual pusty, mnożnik 1,13" "$(Q "select coalesce(l.actual_load_at::text,'∅')||'/'||c.fuel_applied_mult::numeric(4,2) from loads l join load_cost c on c.load_id=l.id where l.id='$LTM'")" "∅/1.13"
+chk "korekta: actual pusty, mnożnik 1,14 (D-1535)" "$(Q "select coalesce(l.actual_load_at::text,'∅')||'/'||c.fuel_applied_mult::numeric(4,2) from loads l join load_cost c on c.load_id=l.id where l.id='$LTM'")" "∅/1.14"
 # Rzeczywisty wyjazd ze strefy (niesyntetyczny) nie jest kasowany
 sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$LTM','GEOFENCE_EXIT','2026-10-01 18:00+02','{\"geofence_kind\":\"LOADING\"}')"

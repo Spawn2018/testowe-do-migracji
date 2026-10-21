@@ -3908,3 +3908,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #392 zamknięte (SCALONE); #391 `pilne` (bieżąca); #384/#323/#322/#320 w planie.
 - Scalanie: #394 F7 → `3135f351`; #393 F7 → `9d3f1b00`; #395 F7 (`65fdc10`, po CI) → `e13067e4` (0252). Bez push na `main`.
 - Bieżąca: **D-1535** (`pakiet/d1535-t40-fuel-114`, migracja **0253**) — `sefs_week_overrides` t40 ×1,14/1,17; przeliczenie; `SEFS_INVOICE_DIFF` → `OWNER_DECISION`; baf 67.
+
+## 2026-10-21 18:05 — #390 SCALONE; D-1535 F7 db (baf)
+
+- Skrzynka: #391 `pilne` (bieżąca); #384/#323/#322/#320 w planie (bez `pilne` — nie przerywam).
+- Scalanie: #390 F7 „gotowe” (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone → merge `8f995121`. #396 bez F7. Bez push na `main`.
+- Bieżąca: **D-1535** PR #396 — `db` 62/67 (format `1.1400` + TELM t40 oczekiwało 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta → 1,14 za D-1535.

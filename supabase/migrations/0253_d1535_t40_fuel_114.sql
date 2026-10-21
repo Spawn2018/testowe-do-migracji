@@ -73,7 +73,8 @@ begin
           'days_sek', s->'days',
           'fallback_last_sek', coalesce((s->>'fallback_last')::boolean, false),
           'fallback_last_pln', (p->>'fallback_last')::boolean,
-          'mult_sek', v_osek, 'mult_pln', v_opln, 'applied_mult', v_oapp,
+          'mult_sek', v_osek::numeric(4,2), 'mult_pln', v_opln::numeric(4,2),
+          'applied_mult', v_oapp::numeric(4,2),
           'status', 'OSTATECZNY', 'final', true,
           'owner_override', true, 'owner_note', v_onote,
           'computed_on', v_today
@@ -82,7 +83,8 @@ begin
     end if;
     return jsonb_build_object(
       'ok', true,
-      'mult_sek', v_osek, 'mult_pln', v_opln, 'applied_mult', v_oapp,
+      'mult_sek', v_osek::numeric(4,2), 'mult_pln', v_opln::numeric(4,2),
+      'applied_mult', v_oapp::numeric(4,2),
       'load_week_start', v_week_start, 'load_week_end', v_week_end,
       'load_prev_week_start', v_prev_start, 'load_prev_week_end', v_prev_end,
       'status', 'OSTATECZNY', 'final', true,
