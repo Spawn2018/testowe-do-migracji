@@ -3813,3 +3813,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #381 — F7 „jeszcze NIE” (07:00 UTC, head `5ea5b55`); po fixture `0528ca2` CI unit/visual/db zielone, bez ponownego „gotowe”. #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4 cz.2** — F7: CHECK tylko ALL/HHL+SCX; `set_document_visible_to` (KSH→ALL); `load_events.visible_to` + filtr `events_read` dla DOC_UPLOADED; security 147→155.
+
+## 2026-10-21 09:40 — B4 cz.2: CI zielone na 226bdee1; czeka F7
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #381 — CI unit/visual/db zielone na `226bdee1` (db `39561683717`, visual `39561683837`); MERGEABLE. F7 „jeszcze NIE” było na `5ea5b55`; po poprawkach komentarz „czekam na zielone CI i ponowne gotowe” — **brak** „F7: gotowe do scalenia” po `226bdee1` → bez merge. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** (#381 / 0248) — kod F7 gotowy; czekam na „F7: gotowe do scalenia”. Potem B5.
