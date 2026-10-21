@@ -3771,3 +3771,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #378 — unit/visual zielone na `a3b94952`; db czerwone (e25 86/90). F7 „czekam na zielone CI”. #259 konflikt / bez F7.
 - Bieżąca: **A10** — PLANNED bez daty przed `awiz_started` (numery zleceń nie ruszają); wahanie GPS tylko poza Przygotowaniem (prep zawsze STATUS_AUTO na osi).
+
+## 2026-10-21 07:05 — A10 (#324 / #378): F7 — usuń ochronę przed wahaniem
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — CI zielone na `4a05ed15` (unit/visual/db); F7 „usunąć ochronę całkowicie” (04:49 UTC). #259 konflikt / bez F7. Bez „gotowe do scalenia”.
+- Bieżąca: **A10** — `auto_set_status` zawsze zapisuje STATUS_AUTO (`v_osc` usunięte); histereza tylko w `apply_geofence_status`; e25 93 (+3 wahanie trasy A→B→A).

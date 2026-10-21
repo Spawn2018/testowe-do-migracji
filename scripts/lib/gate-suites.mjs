@@ -51,7 +51,7 @@ export const EXPECTED_LOCAL = {
   baf: 64, // D-1300 F7-2: SOURCE = brak odczytów; kontrprzykład odczyty bez publikacji
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
-  e25: 90, // A10 F7: +PLANNED bez daty (3) + SCX claims auto (1)
+  e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
 };

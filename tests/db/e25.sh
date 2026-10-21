@@ -276,7 +276,7 @@ sval "A9: a9_try_ready po komplecie" "select a9_try_ready('33333333-0000-0000-00
 sval "A9: komplet bez SE → Gotowy (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
 sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
 # A10: demotion READY → RESOURCES_PENDING po usunięciu kierowcy; ponowny READY = nowy STATUS_AUTO.
-# W Przygotowaniu brak wahania GPS — każdy automatyczny powrót ma wpis na osi (F7).
+# F7 #378: każda zmiana automatu ma STATUS_AUTO na osi (bez pomijania wahania).
 sys "update loads set driver_name=null where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
 sval "A10: bez kierowcy → RESOURCES_PENDING" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" RESOURCES_PENDING
 sys "update loads set driver_name='Jan A9' where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
@@ -284,6 +284,21 @@ sval "A10: kierowca z powrotem → READY" "select status::text from loads where 
 sval "A10: ponowny READY ma ≥2 STATUS_AUTO→READY" "select count(*) >= 2 from load_events
   where load_id='33333333-0000-0000-0000-00000000a901' and event_type='STATUS_AUTO'
     and payload->>'to'='READY'" t
+# A10 F7: A→B→A na trasie < 10 min — oba STATUS_AUTO (bez ochrony przed wahaniem).
+sys "select set_config('tower.status_ctx','on',true);
+     update loads set status='AT_SITE', hhl_order_no=coalesce(hhl_order_no,'HHL/A901'),
+       carrier_order_no=coalesce(carrier_order_no,'SCX/A901')
+       where id='33333333-0000-0000-0000-00000000a901';
+     select set_config('tower.status_ctx','off',true)" >/dev/null
+sval "A10: trasa A→B zapisuje STATUS_AUTO" "select auto_set_status(
+  '33333333-0000-0000-0000-00000000a901','AT_SITE'::load_status,'IN_TRANSIT_SE'::load_status,
+  'test wahanie', now(), '{}'::jsonb)" t
+sval "A10: trasa B→A też STATUS_AUTO" "select auto_set_status(
+  '33333333-0000-0000-0000-00000000a901','IN_TRANSIT_SE'::load_status,'AT_SITE'::load_status,
+  'test wahanie powrot', now(), '{}'::jsonb)" t
+sval "A10: wahanie trasy = 2 STATUS_AUTO na osi" "select count(*) from load_events
+  where load_id='33333333-0000-0000-0000-00000000a901' and event_type='STATUS_AUTO'
+    and payload->>'powod' like 'test wahanie%'" 2
 # A10 F7: ręczny READY + edycja awizacji → bez cofnięcia.
 sys "select set_config('tower.status_ctx','on',true); update loads set status='READY', driver_name='Jan A9'
      where id='33333333-0000-0000-0000-00000000a901';

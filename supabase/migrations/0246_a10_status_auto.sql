@@ -154,26 +154,10 @@ as $function$
 declare
   v_dedup text;
   v_ts timestamptz := coalesce(p_ts, clock_timestamp());
-  v_osc boolean;
   v_updated boolean;
 begin
-  /*
-    Wahanie (GPS/strefy): pomijamy STATUS_AUTO przy A→B→A < 10 min poza Przygotowaniem.
-    W Przygotowaniu zawsze wpis na osi (demotion/promotion z danych; F7 po HHL też).
-  */
-  v_osc := false;
-  if p_from::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY')
-     and p_to::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY') then
-    select exists (
-      select 1 from public.load_events e
-       where e.load_id = p_load
-         and e.event_type = 'STATUS_AUTO'
-         and e.payload->>'from' = p_to::text
-         and e.payload->>'to' = p_from::text
-         and e.occurred_at >= v_ts - interval '10 minutes'
-    ) into v_osc;
-  end if;
-
+  /* F7 #378: bez ochrony przed wahaniem — każda zmiana automatu zapisuje STATUS_AUTO
+     (oś i Historia = status w loads). Histereza strefy: apply_geofence_status. */
   begin
     perform set_config('tower.status_ctx', 'on', true);
     perform set_config('tower.auto_status', 'on', true);
@@ -193,9 +177,6 @@ begin
       'AUTOSTATUS:' || p_load || ':' || p_to);
     return false;
   end;
-  if v_osc is true then
-    return true;
-  end if;
   /* A10: czas w dedup_key — oś pokazuje nową godzinę po cofnięciu HHL.
      Epoch z ułamkami — dwa auto w tej samej sekundzie nie kolidują.
      Prefiks STATUS_AUTO:<id>:<to> zachowany dla D-1710 (like …IN_TRANSIT_PL%). */
