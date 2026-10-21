@@ -293,10 +293,10 @@ val "B4: SCX widzi wiadomość tylko HHL+SCX" $SCX "select count(*) from load_me
 val "B4: HHL widzi wiadomość tylko HHL+SCX" $HHL "select count(*) from load_messages where body='b4-tylko-hhl-scx'" 1
 val "B4: list_ui KSH bez HHL+SCX" $KSH "select count(*) from list_load_messages_ui() where body='b4-tylko-hhl-scx'" 0
 val "B4: list_ui SCX widzi HHL+SCX" $SCX "select count(*) from list_load_messages_ui() where body='b4-tylko-hhl-scx'" 1
-val "B4: list_ui zwraca visible_to bez CLIENT" $HHL "select (visible_to = '{FORWARDER,CARRIER}'::org_kind[])::text from list_load_messages_ui() where body='b4-tylko-hhl-scx'" t
+val "B4: list_ui zwraca visible_to bez CLIENT" $HHL "select (visible_to = '{FORWARDER,CARRIER}'::org_kind[])::text from list_load_messages_ui() where body='b4-tylko-hhl-scx'" true
 err "B4: HHL nie ustawi visible_to bez CARRIER" $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-zla', '{FORWARDER,CLIENT}')" "Widoczność|dozwolone|tylko HHL"
 run $KSH "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-ksh-force', '{FORWARDER,CARRIER}')" commit >/dev/null
-val "B4: KSH zawsze ALL mimo żądania HHL+SCX" $HHL "select ('CLIENT'::org_kind = any (visible_to))::text from load_messages where body='b4-ksh-force'" t
+val "B4: KSH zawsze ALL mimo żądania HHL+SCX" $HHL "select ('CLIENT'::org_kind = any (visible_to))::text from load_messages where body='b4-ksh-force'" true
 # Macierz chat włączona dla KSH — nadal 0 powiadomień przy HHL+SCX (Cz25)
 sys "update notification_matrix set in_app=true, push=true, email=false where event_key='chat' and role='CLIENT_USER'" >/dev/null
 KSHU=$(sys "select id from app_users where email='ksh@test'")
