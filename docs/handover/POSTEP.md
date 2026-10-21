@@ -3932,3 +3932,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ™. Szacunek szczytu po skrÃ³cie: 34. Ma
 - Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §3/§4/§8, dopisek `D-20261021-1952-01.md` (0255; #400 › 0256; B5 › 0257). #400/#384/#323/#322/#320 w planie.
 - Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) › merge `6e76bce9` (0254). #398 zamkniête. #401/#403/#382 bez F7. Bez push na `main`.
 - Bie¿¹ca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) — `notify_person_on` bez ominiêcia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramkê; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
+
+## 2026-10-21 20:40 â€” #402 CI fix; #405 wpisane (SMS strefy / 0256)
+
+- Skrzynka: #405 (Spawn2018, `dla-cursora`+`pilne`) â€” wpisane PLAN Â§3/Â§4/Â§8, dopisek `D-20261021-2014-01.md` (#402â†’0255, #405â†’0256, #400â†’0257, B5â†’0258). #402/#400/#384/#323/#322/#320 w planie.
+- Scalanie: brak `F7: gotowe do scalenia`. #406 `db` czerwone (workflow poza bramkÄ…, c16/l13/c3) â€” poprawka w tym przebiegu. Bez push na `main`.
+- BieÅ¼Ä…ca: **HOTFIX #402** PR #406 â€” `WORKFLOW_ALERT`â†’`workflow` w macierzy; c16 wÅ‚Ä…cza mail `dates`; l13 wÅ‚Ä…cza mail `dec_new` dla KSH; c3 asercja po `user_id`. Potem #405.

@@ -103,8 +103,8 @@ sys "delete from notifications where dedup_key like 'c402-risk:%'" >/dev/null
 sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
   jsonb_build_object('kind','ETA_BREACH','severity','CRITICAL','title_key','rk_eta'),
   'c402-risk', null)" >/dev/null
-sval "#402: risk_crit mail off → 0 EMAIL" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'c402-risk:%'" 0
-sval "#402: risk_crit mail off → 0 push_fallback EMAIL" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'push_fallback:%c402-risk%'" 0
+sval "#402: risk_crit mail off → 0 EMAIL (osoba)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-risk:%'" 0
+sval "#402: risk_crit mail off → 0 push_fallback EMAIL" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'push_fallback:%c402-risk%'" 0
 sys "update notification_matrix set email=false where event_key='sms_gw'" >/dev/null
 sys "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT') and dedup_key like 'c402-sms%'" >/dev/null
 sval "#402: SMS_FALLBACK mail off → SUPPRESSED" "select public.l13_queue_email('critical','SMS_FALLBACK','$HHLU','hhl@test','$L','X',

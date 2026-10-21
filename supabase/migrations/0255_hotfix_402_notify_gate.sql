@@ -2,6 +2,23 @@
 -- 1) prefs osoby wygrywają nad fixed_*; 2) bez push_fallback→EMAIL; 3) l13_queue_email + sms_watchdog
 --    przez macierz; 4) ponowna kontrola przy wysyłce (notify_email_still_allowed).
 
+-- Kreator reguł (WORKFLOW_ALERT) — wiersz macierzy, da się wyłączyć w Opcjach.
+insert into public.notification_matrix (
+  event_key, event_group, role, in_app, email, push,
+  fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
+) values
+('workflow','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','SYSTEM','CLIENT_USER',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','SYSTEM','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)')
+on conflict (event_key, role) do update
+  set event_group = excluded.event_group,
+      label_pl = excluded.label_pl,
+      in_app = excluded.in_app,
+      email = excluded.email,
+      push = excluded.push;
+
 -- Pref zawsze wygrywa; fixed_* = tylko domyślna wartość macierzy, gdy brak wpisu w „Co dostaję”.
 create or replace function public.notify_person_on(
   p_user uuid, p_event text, p_channel text, p_matrix boolean, p_fixed boolean
@@ -73,6 +90,7 @@ as $$
          or p_template in ('JOB_FAILURE', 'SOURCE_DOWN') then 'src_down'
     when p_template = 'APP_ERROR' then 'app_err'
     when p_template in ('SMS_GATEWAY_SILENT', 'SMS_UNDELIVERED', 'SMS_FALLBACK', 'ZONE_LIMIT') then 'sms_gw'
+    when p_template = 'WORKFLOW_ALERT' then 'workflow'
     when p_template in ('DAILY_DIGEST', 'ADMIN_DIGEST') then 'daily'
     when p_template = 'INVOICE_NEW' then 'inv_check'
     when p_template = 'INVOICE_UPDATED' then 'inv_updated'
