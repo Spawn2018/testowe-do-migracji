@@ -512,6 +512,10 @@ export interface Risk {
   invoiceId?: string;
   /** wyglad/W-todo-jedna-sprawa (#384): ryzyko o decyzji (`detail.decision_id`, np. „Decyzja po terminie”). */
   decisionId?: string;
+  /** wyglad/W-cele-przejsc: braki z `detail` sprawy DOC_MISSING (0243: `rule`, `permit` — brak zezwolenia, `policy` — brak polisy SCX) */
+  docRule?: string;
+  docPermit?: boolean;
+  docPolicy?: boolean;
 }
 
 export interface RateRule {

@@ -21,6 +21,9 @@ import { DemoMark } from '../ui/DemoMark';
 import { riskText, t } from '../../i18n/messages';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { lazyRetry } from '../../lib/lazyRetry';
+import { useTowerStore } from '../../store/useTowerStore';
+import { ferryRowSailing } from '../../lib/goTarget';
+import { navForRole } from '../../lib/permissions';
 
 const PROD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 /* komunikat armatora zapisuje w bazie — tylko produkcja (paczka demo bez klienta Supabase, I-2) */
@@ -51,7 +54,7 @@ interface Props {
   withHead?: boolean;
 }
 
-function FerryRow({ r, locale, phone }: { r: FerryRowView; locale: Locale; phone: boolean }) {
+function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Locale; phone: boolean; onOpen?: () => void }) {
   const a = ferryAlert(r);
   const ports = LINE_PORTS[r.line];
   const time = hm(r.depIso);
@@ -69,7 +72,16 @@ function FerryRow({ r, locale, phone }: { r: FerryRowView; locale: Locale; phone
         tw: s.thrWaveM != null ? formatPlNumber(s.thrWaveM, 1) : '—', tg: s.thrGustKn != null ? formatPlNumber(s.thrGustKn, 0) : '—',
       })}${s.at ? ` · ${hm(s.at)}` : ''}`;
   return (
-    <li className="rk-ferry" data-ferry-row={r.line}>
+    <li
+      className={onOpen ? 'rk-ferry is-link' : 'rk-ferry'}
+      data-ferry-row={r.line}
+      /* W-cele-przejsc (d), E7 pkt 4: klik — rejs w Harmonogramie › Rejsy (historia rejsu: status, opóźnienia, transporty) */
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      title={onOpen ? rt(locale, 'p6_ferry_open') : undefined}
+      onClick={onOpen}
+      onKeyDown={onOpen ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } } : undefined}
+    >
       <span className="rk-box">{ports.from}</span>
       <span className="rk-ferry-tx">
         <b>{phone
@@ -91,7 +103,16 @@ export function RoutePanel({
   parts = ['ferry', 'roads', 'system'], withHead = true,
 }: Props) {
   const navigate = useNavigate();
+  const setView = useTowerStore((s) => s.setView);
+  const setSailingFocus = useTowerStore((s) => s.setSailingFocus);
   const [allRoads, setAllRoads] = useState(false);
+  const openFerry = (r: FerryRowView) => {
+    /* rola bez Harmonogramu — nie zostawiamy celu w sklepie */
+    if (!navForRole(role).includes('sched')) { setSailingFocus(null); return; }
+    /* '*' — rejs spoza rozkładu: sama zakładka Rejsy */
+    setSailingFocus(ferryRowSailing(r, sailings) ?? '*');
+    setView('sched');
+  };
   const nowMs = Date.parse(nowIso);
 
   /* promy */
@@ -180,7 +201,7 @@ export function RoutePanel({
           {rows.length && !phone ? <span className="rk-sec-sub">{rtn(locale, 'p6_onboard', onBoard)}</span> : null}
         </div>
         {rows.length ? (
-          <ul className="rk-ferries">{rows.map((r) => <FerryRow key={r.id} r={r} locale={locale} phone={phone} />)}</ul>
+          <ul className="rk-ferries">{rows.map((r) => <FerryRow key={r.id} r={r} locale={locale} phone={phone} onOpen={() => openFerry(r)} />)}</ul>
         ) : <p className="rk-muted">{rt(locale, PROD && sailings.length === 0 ? 'p6_ferries_nodata' : 'p6_ferries_none')}</p>}
         {rr.ferry.length ? (
           <div className="rk-sub" data-ferry-warn>

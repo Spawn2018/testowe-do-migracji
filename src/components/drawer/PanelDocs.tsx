@@ -7,7 +7,7 @@
  * „Pobierz wszystkie (ZIP)” z kodem w nazwie.
  * „Wgraj” otwiera okno „Wgraj dokument” z wybranym transportem. Zapis jak dziś (`attachDocumentFile`).
  */
-import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { DocCategory, Document, Load, Locale } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { DocFileRow } from '../ui/DocFileRow';
@@ -63,6 +63,29 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   const firm = firmPermitLoad(load);
   const firmPermit = firm ? firmPermitFor(load, permitsOf([load])) : null;
   const reqCats = firm ? REQ_FIRM : REQ;
+  /* wyglad/W-cele-przejsc (b): „Wgraj” ze sprawy w „Do zrobienia” — okno „Wgraj dokument” z tym transportem i rodzajem.
+     Polisa (INSURANCE) nie wgrywa się tym oknem — wtedy sama zakładka z wierszem polisy. */
+  const uploadReq = useTowerStore((s) => s.uploadReq);
+  const [upCat, setUpCat] = useState<DocCategory | null>(null);
+  useEffect(() => {
+    if (!uploadReq || uploadReq.loadId !== load.id) return;
+    useTowerStore.getState().setUploadReq(null);
+    if (uploadReq.category === 'INSURANCE') {
+      /* brak polisy SCX (0243 `policy`) — wiersz polisy na tej zakładce, bez okna wgrywania */
+      window.requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>('.drawer [data-pd-req="INSURANCE"]');
+        if (!el) return;
+        el.scrollIntoView({ block: 'center' });
+        el.classList.add('is-go-target');
+        window.setTimeout(() => el.classList.remove('is-go-target'), 2400);
+      });
+      return;
+    }
+    if (!canUpload) return;
+    const cat = uploadReq.category && reqCats.includes(uploadReq.category) ? uploadReq.category : null;
+    setUpCat(cat);
+    setUpload(reqCats);
+  }, [uploadReq, load.id, canUpload, reqCats]);
   /* ten sam odczyt co strona Dokumenty (baza); w demo — wartości startowe; w produkcji bez odczytu — bez terminów */
   const cached = useDocReqCache(`${docs.length}|${load.id}|${load.status}`);
   const prod = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -225,7 +248,8 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
             statusRows={rows}
             allowed={upload}
             loadId={load.id}
-            onClose={() => setUpload(null)}
+            category={upCat}
+            onClose={() => { setUpload(null); setUpCat(null); }}
           />
         </Suspense>
       ) : null}
