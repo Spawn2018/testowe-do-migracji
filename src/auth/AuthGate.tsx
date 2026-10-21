@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { BrandLogo } from './BrandLogo';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
@@ -42,12 +43,10 @@ type State =
   | { kind: 'ready'; session: Session; profile: AuthProfile };
 
 function Brand() {
-  const theme = useTowerStore((s) => s.theme);
   const locale = useTowerStore((s) => s.locale);
-  const src = theme === 'light' ? '/brand/watchtower-logo-full.png' : '/brand/watchtower-logo-full-dark.png';
   return (
     <div className="brand auth-brand">
-      <img src={src} alt={t(locale, 'brand')} width={240} height={80} />
+      <BrandLogo alt={t(locale, 'brand')} />
       <span>Stegra Boden · H&amp;H Logistics</span>
     </div>
   );
@@ -426,12 +425,15 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [anonMode, setAnonMode] = useState<'login' | 'forgot'>('login');
   const [recoveryOnce, setRecoveryOnce] = useState(false);
   const loadRef = useRef<(session: Session | null, opts?: { forcePassword?: boolean }) => Promise<void>>(async () => {});
+  /* Właściciel 21.10.2026 19:52: aplikacja nie przeładowuje się po powrocie na kartę — konto, dla którego dane już są na ekranie */
+  const readyUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let alive = true;
     let unsub: (() => void) | undefined;
     const load = async (session: Session | null, opts?: { forcePassword?: boolean }) => {
       if (!session) {
+        readyUserRef.current = null;
         setAuthProfile(null);
         void import('../data/supabaseBridge').then((b) => b.disconnectSupabaseData());
         const ended = sessionEndReason(Date.now());
@@ -468,7 +470,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       setAuthProfile(profile);
       const st = useTowerStore.getState();
       if (st.role !== viewRole) st.setRole(viewRole);
-      if (alive) setState({ kind: 'loading' });
+      /* to samo konto już na ekranie — odśwież dane w tle, bez ekranu „Ładowanie danych…” */
+      const silent = readyUserRef.current === session.user.id;
+      if (alive && !silent) setState({ kind: 'loading' });
       try {
         const bridge = await import('../data/supabaseBridge');
         await bridge.connectSupabaseData(sb);
@@ -477,7 +481,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         return;
       }
       /* wyglad/P10b-d (E37 pkt 9): konto bez telefonu — krok 3 przy logowaniu */
-      if (alive) setState(firstEntryReady() && needsPhone(profile) ? { kind: 'first-entry', session, profile, steps: ['details'], help: false } : { kind: 'ready', session, profile });
+      const first = firstEntryReady() && needsPhone(profile);
+      readyUserRef.current = first ? null : session.user.id;
+      if (alive) setState(first ? { kind: 'first-entry', session, profile, steps: ['details'], help: false } : { kind: 'ready', session, profile });
       /* C16 N6: odśwież zapis urządzenia push po zalogowaniu */
       void import('../lib/webPush').then((wp) => {
         void wp.syncWebPush();
@@ -496,6 +502,11 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           void load(session, { forcePassword: true });
           return;
         }
+        /* Supabase zgłasza SIGNED_IN także po powrocie na kartę (odzyskanie sesji) — to samo konto: tylko ciche odświeżenie danych */
+        if (event === 'SIGNED_IN' && session && readyUserRef.current === session.user.id) {
+          void import('../data/supabaseBridge').then((b) => b.refreshFromServer({ keepSelection: true })).catch(() => undefined);
+          return;
+        }
         if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'MFA_CHALLENGE_VERIFIED') {
           void load(session, recoveryOnce ? { forcePassword: true } : undefined);
         }
@@ -506,6 +517,21 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     // link-pending / recoveryOnce — celowo: po Dalej przeładujemy efekt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.kind === 'link-pending' ? 'pending' : state.kind === 'expired' ? 'expired' : 'go', recoveryOnce]);
+
+  /* Powrót na kartę po ≥ 30 s: dane odświeżają się w tle (bez przeładowania strony i bez ekranu ładowania). */
+  useEffect(() => {
+    if (state.kind !== 'ready') return;
+    let hiddenAt: number | null = null;
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
+      if (hiddenAt != null && Date.now() - hiddenAt >= 30_000) {
+        void import('../data/supabaseBridge').then((b) => b.refreshFromServer({ keepSelection: true })).catch(() => undefined);
+      }
+      hiddenAt = null;
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [state.kind]);
 
   useEffect(() => {
     const onReload = () => {
@@ -534,12 +560,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [state]);
 
   if (state.kind === 'loading') {
-    const theme = useTowerStore.getState().theme;
-    const src = theme === 'light' ? '/brand/watchtower-logo-full.png' : '/brand/watchtower-logo-full-dark.png';
     return (
       <div className="auth-screen" data-auth="loading">
         <div className="auth-card panel">
-          <img className="auth-boot-logo" src={src} alt={t(locale, 'brand')} width={240} height={80} />
+          <BrandLogo className="auth-boot-logo" alt={t(locale, 'brand')} />
           <div className="auth-msg">{t(locale, 'a6_auth_loading')}</div>
         </div>
       </div>
