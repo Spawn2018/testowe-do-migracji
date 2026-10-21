@@ -498,6 +498,37 @@ val "IQH-2: uzupełnienie godzin przy quiet=0 → nie cicho" $HHL "select coales
 chk "IQH-2: PLAN_DATES_CHANGED przy quiet=0" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ2' and event_type='PLAN_DATES_CHANGED'")" "true"
 val "HHL_ADMIN włącza z powrotem import_quiet_hours" $HHL "select admin_ops_threshold_set('import_quiet_hours', 1); select value_num::int from ops_thresholds where key='import_quiet_hours'" 1 commit
 
+echo; echo "[#384 pkt 4] okno „do” + historyczne cicho"
+# 4a: plik z jedną godziną nie kasuje plan_load_to / plan_delivery_from
+DIW1=$(_dcal 40); DIW2=$(_dcal 45)
+ROWIW() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
+ROWIW2() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"09:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"13:00\"}]"; }
+IMPIW() { echo "select import_schedule('$P', '$(ROWIW $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+IMPIW2() { echo "select import_schedule('$P', '$(ROWIW2 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+val "IW-1: import z godzinami" $HHL "select jsonb_array_length(r->'added') from ($(IMPIW $DIW1 $DIW2 false)) s(r)" 1 commit
+LW=$(Q "select load_id from shipment_items where shipment_code='IW-1'")
+$PSQL -c "update loads set plan_load_to=plan_load_from + interval '2 hours', plan_delivery_from=plan_delivery_to - interval '2 hours', carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LW'" >/dev/null
+TO_BEFORE=$(Q "select plan_load_to::text from loads where id='$LW'")
+FROM_BEFORE=$(Q "select plan_delivery_from::text from loads where id='$LW'")
+val "IW-1: zmiana godziny nie kasuje okna „do”" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW2 $DIW1 $DIW2 false)) s(r)" "IW-1" commit
+chk "IW-1: plan_load_to zachowane" "$(Q "select (plan_load_to::text = '$TO_BEFORE')::text from loads where id='$LW'")" "true"
+chk "IW-1: plan_delivery_from zachowane" "$(Q "select (plan_delivery_from::text = '$FROM_BEFORE')::text from loads where id='$LW'")" "true"
+
+# 4b: minięta dostawa → bulk_quiet (bez PLAN_DATES_CHANGED / SCHEDULE_DATE_CRITICAL)
+DIH1=$(Q "select (current_date - 20)::text"); DIH2=$(Q "select (current_date - 15)::text")
+DIH1b=$(Q "select (current_date - 19)::text"); DIH2b=$(Q "select (current_date - 14)::text")
+ROWHIST() { echo "[{\"code\":\"IH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWHIST2() { echo "[{\"code\":\"IH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+IMPHIST() { echo "select import_schedule('$P', '$(ROWHIST $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"ih.xlsx\"}'::jsonb, $3)"; }
+IMPHIST2() { echo "select import_schedule('$P', '$(ROWHIST2 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"ih.xlsx\"}'::jsonb, $3)"; }
+val "IH-1: transport historyczny" $HHL "select jsonb_array_length(r->'added') from ($(IMPHIST $DIH1 $DIH2 false)) s(r)" 1 commit
+LH=$(Q "select load_id from shipment_items where shipment_code='IH-1'")
+$PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003', status='DELIVERED' where id='$LH'" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LH'; delete from load_events where load_id='$LH' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL'); delete from decisions where load_id='$LH'; delete from risk_signals where load_id='$LH'" >/dev/null
+val "IH-1: zmiana daty na historycznym → quiet_hist" $HHL "select coalesce(r->'changed'->0->>'quiet_hist','false')||'/'||coalesce(r->'changed'->0->>'critical','true') from ($(IMPHIST2 $DIH1b $DIH2b false)) s(r)" "true/false" commit
+chk "IH-1: bez PLAN_DATES_CHANGED" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='PLAN_DATES_CHANGED'")" "0"
+chk "IH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+
 fi # tower-i2-part 2
 
 if _i2_part_ok 3; then

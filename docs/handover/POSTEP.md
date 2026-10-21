@@ -3836,3 +3836,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 
 - CI `e6a566f4`: dec-fx 8 OK / 3 FAIL ‚Äî ACCEPT/KEEP_TOWER zielone; litera≈Çy `{0,1200}` poza limitem ARE; UUID `‚Ä¶dfs2` nie-hex.
 - Poprawka: UUID `df01`/`df11`/`df02`/`df12`; litera≈Çy = 255 znak√≥w po `insert into load_events` + wzorzec `'TYP', now()`.
+
+## 2026-10-21 13:25 ó #384 pkt 1 SCALONE; start pkt 2ñ4
+
+- Skrzynka: #384 pilne (bieøπca); #323/#322/#320 w planie, bez pilne.
+- Scalanie: #386 F7 Ñgotoweî po `a35243c` + CI unit/visual/db zielone õ merge `ea71bc9e` (0249). #385 merge `c83f8ced`. #387 merge `d2e09ba9`. #382/#383 bez F7 gotowe. Bez push na `main`.
+- Bieøπca: **HOTFIX #384 pkt 2ñ4** (`pakiet/hotfix-384-pkt2-4`, migracja **0250**) ó `l3_ksh_lead` tylko przysz≥a <5 dni; `l1b` puste file + `orderNo` w mapie; import okno Ñdoî + hist quiet; AUTO_CLOSED. B5 õ 0251.

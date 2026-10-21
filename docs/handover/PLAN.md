@@ -402,7 +402,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #384**; ~~B4 #380/#381 0247–0248 SCALONE~~; B5 czeka; ~~A10 #324/#378 SCALONE~~; ~~D-1300 #359/#377 SCALONE~~; ~~C15-emtrack #365/#376 SCALONE~~; ~~HOTFIX #374 #375/0244 SCALONE~~; ~~D-1501 #370/0243 SCALONE~~; ~~#371 SCALONE~~; ~~D-1710 #373/0242 SCALONE~~; potem B5…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #384** pkt 2–4; ~~pkt 1 #386/0249 SCALONE~~; ~~B4 #380/#381 0247–0248 SCALONE~~; B5 czeka na 0251; ~~A10 #324/#378 SCALONE~~; ~~D-1300 #359/#377 SCALONE~~; ~~C15-emtrack #365/#376 SCALONE~~; ~~HOTFIX #374 #375/0244 SCALONE~~; ~~D-1501 #370/0243 SCALONE~~; ~~#371 SCALONE~~; ~~D-1710 #373/0242 SCALONE~~; potem B5…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
 **Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **HOTFIX #384 · decyzje/CHECK (D-20261021-1130-01, 0249)** → B5 (0250) → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
@@ -692,16 +692,18 @@ Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każ
 - **~~cz.1 — czat (0247, #380 SCALONE 21.10)~~:** `set_message_author` pilnuje Cz1 (KSH→ALL; tylko ALL / HHL+SCX); CHECK `load_messages_visible_to_chk`; `list_load_messages_ui` zwraca `visible_to` i filtruje dostęp do transportu jak 0208; `mark_load_message_read` z widocznością. Powiadomienia Cz25 już w C3. UI (`message.send`, `chatVisibilityOn`) — P6.
 - **cz.2 — dokumenty (0248, ten PR):** CHECK `documents_visible_to_chk` ściśle ALL / HHL+SCX; `set_document_visible_to` (KSH→ALL); polityki `load_message_reads` jak 0208; DOC_UPLOADED dziedziczy `visible_to`, `events_read` filtruje; test KSH widzi ALL ze swojego transportu; dokument HHL+SCX niewidoczny dla KSH (paczka/eksport = SELECT); macierz chat zapamiętana i przywrócona. UI paczki — P5 (RLS).
 
-### HOTFIX #384 · Decyzje / CHECK load_events (D-20261021-1130-01, `pilne`) — W TOKU (`pakiet/hotfix-384-decision-events`, migracja **0249**)
-Przerywa B5. Kolejność w zgłoszeniu: **pkt 1** (ten PR) → 2–4 → 5–6.
-1. **BLOKER (pkt 1):** dopisać `DECISION_EFFECT`, `DECISION_SAILING`, `DECISION_KEEP_TOWER` do `load_events_event_type_known`. Test `dec-fx`: każdy aktywny `decision_types` × opcja `decision_resolve` na danych testowych; każdy literał `event_type` w `insert into load_events` w funkcjach `public` ⊆ CHECK.
+### HOTFIX #384 · Decyzje / CHECK load_events (D-20261021-1130-01, `pilne`) — W TOKU (pkt 1 SCALONE #386/`0249`; pkt 2–4 `pakiet/hotfix-384-pkt2-4`, migracja **0250**)
+Przerywa B5. Kolejność: ~~pkt 1~~ → **2–4** → 5–6 (+ pkt 7–8 z przeglądów).
+1. ~~**BLOKER (pkt 1):** SCALONE #386 `ea71bc9e`, migracja **0249**, `dec-fx` 12/12.~~ Także wygląd #385/#387 SCALONE.
 2. **`KSH_DATE_LT_5D`:** `l3_ksh_lead` tylko gdy nowa data załadunku w przyszłości i < 5 dni; otwarte poza warunkiem → `AUTO_CLOSED` + `audit_log`.
-3. **Import pusta kolumna HHL:** `l1b_note_conflict` null przy pustym `p_file`; wołanie tylko gdy kolumna w `column_map`; 23× `TOWER_KSH_CONFLICT` → `AUTO_CLOSED` + powiadomienia przeczytane (jak B8).
+3. **Import pusta kolumna HHL:** `l1b_note_conflict` null przy pustym `p_file`; wołanie tylko gdy `orderNo` w `column_map`; 23× `TOWER_KSH_CONFLICT` → `AUTO_CLOSED` + powiadomienia przeczytane (jak B8).
 4. **Import historyczne / jedna godzina:** (a) brak „do” nie kasuje istniejącej; (b) minięta dostawa lub status ≥ `DELIVERED`/`UNLOADED` → `tower.bulk_quiet`.
 5. **`PROPOSE_DATE`:** `decision_resolve` + `p_payload`; data załadunku wymagana; `KSH_DATE_COUNTER` dla KSH. Sygnatura w PR (ekran `wyglad/*`).
 6. **Po terminie:** `l2_may_resolve` dopuszcza `HHL_OPS` po eskalacji / po terminie.
+7. **`decisions_read` przewoźnik:** tylko decyzje własnych transportów (po 2–4; przegląd #385).
+8. **Aktor w `DECISION_*`:** `actor` / `decider` / `by_org` + `visible_to` (po 1–4; przegląd #387).
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na HOTFIX #384 (migracja **0250** po rebase)
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na HOTFIX #384 (migracja **0251** po rebase)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1237,3 +1239,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 01:11 | #375 HOTFIX #374 SCALONE (`5a67a23b`, 0244). Start C15-emtrack (#365) | pętla |
 | 21.10.2026 02:42 | #376 C15 SCALONE (`78c77bbd`). Start D-1300 (#359, migracja 0245) | pętla |
 | 21.10.2026 11:40 | D-20261021-1130-01 (#384, `pilne`): HOTFIX decyzji/CHECK przed B5; pkt 1 = 0249 + `dec-fx`; B5 → 0250 | właściciel 11:30/11:35; koordynator |
+| 21.10.2026 13:25 | #384 pkt 1 SCALONE (#386 `ea71bc9e`, 0249); #385+#387 SCALONE; start pkt 2–4 (0250); B5 → 0251 | pętla |
