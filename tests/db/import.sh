@@ -26,9 +26,10 @@ chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((f
 
 # trzy wiersze harmonogramu; L1 z seed ma pozycję SG-00 (na fakturze), L2 bez pozycji
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values ('$P','$L1','SG-00',10,2.5,2.5)" >/dev/null
-R3='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-09-30","delivery_date":"2026-10-05"},
-     {"code":"SG-02","length_m":"18.21","width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-09-30","delivery_date":"2026-10-05","order_no":"KSH/77"},
-     {"code":"T-01","length_m":14.62,"width_m":2.45,"height_m":2.45,"qty":55,"total_weight_t":20.17,"load_date":"2026-09-30","delivery_date":"2026-10-05"}]'
+# #384 pkt 4: daty w przyszłości — inaczej import wycisza SCHEDULE_DATE_CRITICAL (bulk_quiet hist).
+R3='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15"},
+     {"code":"SG-02","length_m":"18.21","width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15","order_no":"KSH/77"},
+     {"code":"T-01","length_m":14.62,"width_m":2.45,"height_m":2.45,"qty":55,"total_weight_t":20.17,"load_date":"2026-11-10","delivery_date":"2026-11-15"}]'
 IMP() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"name\":\"h.xlsx\",\"hash\":\"abc\",\"path\":\"harmonogramy/x/abc.xlsx\"}'::jsonb, $2)"; }
 
 echo; echo "[I-1] uprawnienia"
@@ -49,7 +50,7 @@ chk "podgląd nic nie zapisał" "$(Q "select count(*) from loads")/$(Q "select c
 echo; echo "[I-1] zapis"
 val "import: 3 transporty, wersja 1" $HHL "select jsonb_array_length(r->'added')||'/'||(r->>'version') from ($(IMP "$R3" false)) s(r)" "3/1" commit
 chk "loads +3 (PLANNED, przewoźnik SCX), pozycje 3 z wierszem kanonicznym" "$(Q "select count(*) filter (where status='PLANNED' and carrier_org_id='00000000-0000-0000-0000-00000000a003') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code in ('SG-01','SG-02','T-01') and si.schedule_row is not null")" 3
-chk "numer zlecenia KSH i daty planu" "$(Q "select l.order_no||' '||l.plan_load_date||' '||l.plan_delivery_date from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "KSH/77 2026-09-30 2026-10-05"
+chk "numer zlecenia KSH i daty planu" "$(Q "select l.order_no||' '||l.plan_load_date||' '||l.plan_delivery_date from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "KSH/77 2026-11-10 2026-11-15"
 chk "I-25: import nie ustawia okna dostawy ani załadunku (okno tylko od KSH)" "$(Q "select count(*) from loads l join shipment_items si on si.load_id=l.id where si.shipment_code in ('SG-01','SG-02','T-01') and (l.plan_delivery_from is not null or l.plan_delivery_to is not null or l.plan_load_from is not null or l.plan_load_to is not null)")" 0
 chk "wersja w schedule_imports: plik, skrót, statystyki" "$(Q "select version||' '||file_name||' '||file_hash||' '||file_path||' '||(stats->>'added') from schedule_imports")" "1 h.xlsx abc harmonogramy/x/abc.xlsx 3"
 chk "zdarzenia SCHEDULE_IMPORTED ×3" "$(Q "select count(*) from load_events where event_type='SCHEDULE_IMPORTED' and payload->>'action'='ADDED'")" 3
@@ -62,13 +63,13 @@ chk "brak nowej wersji i zdarzeń" "$(Q "select count(*) from schedule_imports")
 
 echo; echo "[I-1] zmiany, awizacja (3.7), anulowanie"
 SG1=$(Q "select load_id from shipment_items where shipment_code='SG-01'"); T1=$(Q "select load_id from shipment_items where shipment_code='T-01'")
-$PSQL -c "update loads set plan_load_from='2026-09-30 08:00+02', plan_load_to='2026-09-30 12:00+02' where id='$SG1'" >/dev/null
-R2='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-10-01","delivery_date":"2026-10-06"},
-     {"code":"SG-02","length_m":18.5,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-09-30","delivery_date":"2026-10-05","order_no":"KSH/77"},
-     {"code":"SG-03","length_m":12,"width_m":2.45,"height_m":2.45,"qty":1,"total_weight_t":10,"load_date":"2026-10-02","delivery_date":"2026-10-07"}]'
+$PSQL -c "update loads set plan_load_from='2026-11-10 08:00+01', plan_load_to='2026-11-10 12:00+01' where id='$SG1'" >/dev/null
+R2='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-11","delivery_date":"2026-11-16"},
+     {"code":"SG-02","length_m":18.5,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15","order_no":"KSH/77"},
+     {"code":"SG-03","length_m":12,"width_m":2.45,"height_m":2.45,"qty":1,"total_weight_t":10,"load_date":"2026-11-12","delivery_date":"2026-11-17"}]'
 val "podgląd: +1 ~2, krytyczna SG-01, kandydat T-01" $HHL "select jsonb_array_length(r->'added')||'/'||jsonb_array_length(r->'changed')||'/'||(r->'critical'->0->>'code')||'/'||(r->'cancel_candidates'->0->>'code') from ($(IMP "$R2" true)) s(r)" "1/2/SG-01/T-01"
 val "zapis bez zgody na anulowanie: T-01 zostaje" $HHL "select jsonb_array_length(r->'cancelled')||'/'||(r->>'version') from ($(IMP "$R2" false)) s(r)" "0/2" commit
-chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "2026-10-01 2026-10-06 true"
+chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "2026-11-11 2026-11-16 true"
 chk "SG-02: długość 18.50 w pozycji" "$(Q "select length_m from shipment_items where shipment_code='SG-02'")" "18.50"
 chk "SCHEDULE_DATE_CRITICAL dla SG-01" "$(Q "select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL' and load_id='$SG1'")" 1
 chk "powiadomienia w aplikacji: HHL + SCX" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 2

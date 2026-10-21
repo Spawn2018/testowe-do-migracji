@@ -3837,8 +3837,14 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - CI `e6a566f4`: dec-fx 8 OK / 3 FAIL ‚Äî ACCEPT/KEEP_TOWER zielone; litera≈Çy `{0,1200}` poza limitem ARE; UUID `‚Ä¶dfs2` nie-hex.
 - Poprawka: UUID `df01`/`df11`/`df02`/`df12`; litera≈Çy = 255 znak√≥w po `insert into load_events` + wzorzec `'TYP', now()`.
 
-## 2026-10-21 13:25 ó #384 pkt 1 SCALONE; start pkt 2ñ4
+## 2026-10-21 13:25 ? #384 pkt 1 SCALONE; start pkt 2?4
 
-- Skrzynka: #384 pilne (bieøπca); #323/#322/#320 w planie, bez pilne.
-- Scalanie: #386 F7 Ñgotoweî po `a35243c` + CI unit/visual/db zielone õ merge `ea71bc9e` (0249). #385 merge `c83f8ced`. #387 merge `d2e09ba9`. #382/#383 bez F7 gotowe. Bez push na `main`.
-- Bieøπca: **HOTFIX #384 pkt 2ñ4** (`pakiet/hotfix-384-pkt2-4`, migracja **0250**) ó `l3_ksh_lead` tylko przysz≥a <5 dni; `l1b` puste file + `orderNo` w mapie; import okno Ñdoî + hist quiet; AUTO_CLOSED. B5 õ 0251.
+- Skrzynka: #384 pilne (bie??ca); #323/#322/#320 w planie, bez pilne.
+- Scalanie: #386 F7 ?gotowe? po `a35243c` + CI unit/visual/db zielone ? merge `ea71bc9e` (0249). #385 merge `c83f8ced`. #387 merge `d2e09ba9`. #382/#383 bez F7 gotowe. Bez push na `main`.
+- Bie??ca: **HOTFIX #384 pkt 2?4** (`pakiet/hotfix-384-pkt2-4`, migracja **0250**) ? `l3_ksh_lead` tylko przysz?a <5 dni; `l1b` puste file + `orderNo` w mapie; import okno ?do? + hist quiet; AUTO_CLOSED. B5 ? 0251.
+
+## 2026-10-21 14:00 ? #384 pkt 2?4: poprawka CI db
+
+- Skrzynka: #384 `pilne` (bie??ca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #388 db FAIL (`39592830759`) ? brak F7. #382 konflikt / bez F7. #383 ?nie scala? jeszcze?. Bez push na `main`.
+- Bie??ca: **HOTFIX #384 pkt 2?4** ? naprawa po czerwonym CI: UTF-8 w `import_schedule` (testy ?apa?y ?wy??cznie HHL?); `l3_lead_alarm` tylko przysz?a data; `quiet_hist` w JSON; import.sh daty przysz?o?ci (hist quiet); sprz?tanie IW-1/IH-1 w i2.

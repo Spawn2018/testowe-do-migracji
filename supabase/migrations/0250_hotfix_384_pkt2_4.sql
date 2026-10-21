@@ -199,7 +199,25 @@ end
 $cleanup$;
 
 -- ---------------------------------------------------------------------------
--- pkt 3–4: import_schedule
+-- pkt 2: l3_lead_alarm — tylko przyszla data w oknie LEAD_DAYS
+-- ---------------------------------------------------------------------------
+create or replace function public.l3_lead_alarm(p_earlier timestamptz, p_now timestamptz)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p_earlier is not null
+     and p_now is not null
+     and l3_ops('LEAD_DAYS') is not null
+     and p_earlier > p_now
+     and p_earlier < p_now + make_interval(days => l3_ops('LEAD_DAYS')::int)
+$$;
+revoke all on function public.l3_lead_alarm(timestamptz, timestamptz) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- pkt 3-4: import_schedule
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.import_schedule(p_project uuid, p_rows jsonb, p_cancel_codes text[] DEFAULT '{}'::text[], p_file jsonb DEFAULT '{}'::jsonb, p_dry_run boolean DEFAULT true)
  RETURNS jsonb
@@ -240,8 +258,8 @@ declare
   v_fnames    text[] := array['item_type','cargo_class','length_m','width_m','height_m','unit_weight_t','qty','total_weight_t',
                               'load_date','load_time','delivery_date','delivery_time','order_no','assembly_seq'];
 begin
-  -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users â€” NULL nie moĹĽe przepuĹ›ciÄ‡
-  if is_hhl() is not true then raise exception 'Import harmonogramu wyĹ‚Ä…cznie HHL'; end if;
+  -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users — NULL nie może przepuścić
+  if is_hhl() is not true then raise exception 'Import harmonogramu wyłącznie HHL'; end if;
   if not exists (select 1 from projects where id = p_project) then raise exception 'Nieznany projekt'; end if;
   if p_rows is null or jsonb_typeof(p_rows) <> 'array' then raise exception 'Wiersze importu: oczekiwana tablica'; end if;
   perform pg_advisory_xact_lock(hashtext('import_schedule:' || p_project::text));
@@ -252,54 +270,54 @@ begin
   -- HOTFIX #384 pkt 3: kolumna HHL w mapie (A6: hhlOrderNo); bez niej nie wolamy konfliktu.
   v_has_hhl_col := (nullif(btrim(coalesce(v_cmap->>'hhlOrderNo', v_cmap->>'hhl_order_no', '')), '') is not null);
 
-  -- przewoĹşnik nowych transportĂłw: jedyny przewoĹşnik w systemie (inaczej HHL przypisuje rÄ™cznie)
+  -- przewoźnik nowych transportów: jedyny przewoźnik w systemie (inaczej HHL przypisuje ręcznie)
   select case when count(*) = 1 then min(id::text)::uuid end, case when count(*) = 1 then min(name) end
     into v_carrier, v_carrier_n from organizations where kind = 'CARRIER';
 
-  -- walidacja wejĹ›cia (druga linia za parserem w przeglÄ…darce): bĹ‚Ä…d = caĹ‚a transakcja wycofana
+  -- walidacja wejścia (druga linia za parserem w przeglądarce): błąd = cała transakcja wycofana
   create temp table if not exists _imp (code text primary key, row jsonb not null) on commit drop;
   truncate _imp;
   for r in select value as v, ordinality as i from jsonb_array_elements(p_rows) with ordinality loop
-    -- B-8-IMP: TYP = STANDARD (klasa albo item_type) to Ĺ‚adunek NTG â€” pomijamy, nie bĹ‚Ä…d, nie zapis
+    -- B-8-IMP: TYP = STANDARD (klasa albo item_type) to ładunek NTG — pomijamy, nie błąd, nie zapis
     if upper(btrim(coalesce(r.v->>'cargo_class', ''))) = 'STANDARD'
        or upper(btrim(coalesce(r.v->>'item_type', ''))) = 'STANDARD' then
       v_skipped := v_skipped + 1;
       continue;
     end if;
-    if coalesce(btrim(r.v->>'code'), '') = '' then raise exception 'Wiersz %: brak kodu â€žWysyĹ‚kaâ€ť', r.i; end if;
+    if coalesce(btrim(r.v->>'code'), '') = '' then raise exception 'Wiersz %: brak kodu „Wysyłka”', r.i; end if;
     begin
       c := null;
       select schedule_row_canon(r.v) as canon into c;
     exception when others then
-      raise exception 'Wiersz % (%): nieprawidĹ‚owa wartoĹ›Ä‡ â€” %', r.i, r.v->>'code', sqlerrm;
+      raise exception 'Wiersz % (%): nieprawidłowa wartość — %', r.i, r.v->>'code', sqlerrm;
     end;
-    -- I-2C: klasa Ĺ‚adunku â€” STANDARD (normatywny) bez wymiarĂłw; kaĹĽda inna klasa: wymiary wymagane i dodatnie
+    -- I-2C: klasa ładunku — STANDARD (normatywny) bez wymiarów; każda inna klasa: wymiary wymagane i dodatnie
     if coalesce(upper(btrim(r.v->>'cargo_class')), 'DIMENSIONED') not in ('STANDARD', 'DIMENSIONED') then
-      raise exception 'Wiersz % (%): nieznana klasa Ĺ‚adunku %', r.i, r.v->>'code', r.v->>'cargo_class';
+      raise exception 'Wiersz % (%): nieznana klasa ładunku %', r.i, r.v->>'code', r.v->>'cargo_class';
     end if;
     if c.canon->>'cargo_class' = 'STANDARD' then
       if coalesce(c.canon->>'length_m', c.canon->>'width_m', c.canon->>'height_m') is not null then
-        raise exception 'Wiersz % (%): klasa STANDARD â€” wymiary muszÄ… byÄ‡ puste', r.i, r.v->>'code';
+        raise exception 'Wiersz % (%): klasa STANDARD — wymiary muszą być puste', r.i, r.v->>'code';
       end if;
     elsif ((c.canon->>'length_m')::numeric > 0 and (c.canon->>'width_m')::numeric > 0
            and (c.canon->>'height_m')::numeric > 0) is not true then
-      raise exception 'Wiersz % (%): wymiary muszÄ… byÄ‡ dodatnie (wymagane dla klasy innej niĹĽ STANDARD)', r.i, r.v->>'code';
+      raise exception 'Wiersz % (%): wymiary muszą być dodatnie (wymagane dla klasy innej niż STANDARD)', r.i, r.v->>'code';
     end if;
-    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): iloĹ›Ä‡ musi byÄ‡ dodatnia', r.i, r.v->>'code'; end if;
+    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): ilość musi być dodatnia', r.i, r.v->>'code'; end if;
     if (c.canon->>'delivery_date')::date < (c.canon->>'load_date')::date then
-      raise exception 'Wiersz % (%): data dostawy przed datÄ… zaĹ‚adunku', r.i, r.v->>'code';
+      raise exception 'Wiersz % (%): data dostawy przed datą załadunku', r.i, r.v->>'code';
     end if;
     begin
       insert into _imp values (btrim(r.v->>'code'), c.canon);
     exception when unique_violation then
-      raise exception 'Kod % wystÄ™puje w pliku wiÄ™cej niĹĽ raz', btrim(r.v->>'code');
+      raise exception 'Kod % występuje w pliku więcej niż raz', btrim(r.v->>'code');
     end;
   end loop;
 
-  -- DATY-67: plik KSH = ĹşrĂłdĹ‚o dat â€” zawsze nadpisuje (bez overwrite_confirmed)
+  -- DATY-67: plik KSH = źródło dat — zawsze nadpisuje (bez overwrite_confirmed)
   v_over := '{}'::text[];
 
-  -- wersja (tylko przy zapisie; nadawana dopiero, gdy sÄ… zmiany)
+  -- wersja (tylko przy zapisie; nadawana dopiero, gdy są zmiany)
   if p_dry_run is false then
     select coalesce(max(version), 0) + 1 into v_version from schedule_imports where project_id = p_project;
   end if;
@@ -307,7 +325,6 @@ begin
   -- nowe i zmienione
   for r in
     select i.code, i.row as inc, si.id as item_id, si.load_id, l.status, l.carrier_org_id, l.hhl_order_no,
-           l.plan_load_date, l.plan_delivery_date,
            l.plan_load_from, l.plan_load_to, l.plan_delivery_from, l.plan_delivery_to,
            coalesce(l.plan_dates_status = 'POTWIERDZONA', false) as confirmed,
            (l.plan_load_from is not null or l.plan_load_to is not null
@@ -363,7 +380,7 @@ begin
 
     select coalesce(array_agg(f order by f), '{}') into v_fields
       from unnest(v_fnames) f where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb);
-    -- L-1b / HOTFIX #384 pkt 3: konflikt tylko gdy mapa ma kolumnÄ™ HHL i plik ma niepustÄ… wartoĹ›Ä‡.
+    -- L-1b / HOTFIX #384 pkt 3: konflikt tylko gdy mapa ma kolumne HHL i plik ma niepusta wartosc.
     if p_dry_run is false
        and v_has_hhl_col
        and nullif(btrim(r.hhl_order_no), '') is not null
@@ -378,7 +395,7 @@ begin
 
     if r.status = 'CANCELLED' then
       v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
-                     'message', 'Transport anulowany â€” przywrĂłcenie wyĹ‚Ä…cznie rÄ™cznie przez HHL');
+                     'message', 'Transport anulowany — przywrócenie wyłącznie ręcznie przez HHL');
       continue;
     end if;
 
@@ -395,7 +412,7 @@ begin
     end if;
 
     -- D-20261020-1157-01: ciche pierwsze uzupelnienie pustych godzin (import_quiet_hours).
-    -- B1 F7: puste takze w loads (nie tylko w schedule_row) â€” godziny wpisane przez KSH/HHL nie nadpisywac cicho.
+    -- B1 F7: puste takze w loads (nie tylko w schedule_row) — godziny wpisane przez KSH/HHL nie nadpisywac cicho.
     v_quiet_fill := v_quiet_on
       and cardinality(v_fields) > 0
       and v_fields <@ array['load_time','delivery_time']::text[]
@@ -411,8 +428,15 @@ begin
             and nullif(btrim(r.inc->>'delivery_time'), '') is not null
             and r.plan_delivery_from is null and r.plan_delivery_to is null)
       );
+    -- HOTFIX #384 pkt 4b: historyczne / dostarczone — cicho (przed critical JSON).
+    v_historic := (
+      (r.plan_delivery_date is not null
+        and r.plan_delivery_date < (now() at time zone 'Europe/Warsaw')::date)
+      or (r.status is not null
+        and public.load_status_rank(r.status) >= public.load_status_rank('DELIVERED'::public.load_status))
+    );
     v_crit := case
-      when v_quiet_fill then '{}'::text[]
+      when v_quiet_fill or v_historic then '{}'::text[]
       when r.awizowany then
         array(select f from unnest(v_fields) f where f in ('load_date','load_time','delivery_date','delivery_time'))
       else '{}'::text[]
@@ -421,7 +445,8 @@ begin
                    'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
                    'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
                    'critical', cardinality(v_crit) > 0,
-                   'quiet_hours', v_quiet_fill);
+                   'quiet_hours', v_quiet_fill,
+                   'quiet_hist', v_historic);
     if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
 
     if p_dry_run is false then
@@ -436,27 +461,19 @@ begin
         height_m = (r.inc->>'height_m')::numeric, unit_weight_t = (r.inc->>'unit_weight_t')::numeric,
         qty = (r.inc->>'qty')::int, total_weight_t = (r.inc->>'total_weight_t')::numeric,
         assembly_seq = (r.inc->>'assembly_seq')::int,
-        -- zachowana data potwierdzona: w schedule_row zostajÄ… poprzednie daty, wiÄ™c rĂłĹĽnica (i ostrzeĹĽenie) wraca przy kolejnym imporcie
+        -- zachowana data potwierdzona: w schedule_row zostają poprzednie daty, więc różnica (i ostrzeżenie) wraca przy kolejnym imporcie
         schedule_row = r.inc,
         last_seen_import = v_import, updated_at = now()
        where id = r.item_id;
       if 'load_date' = any (v_fields) or 'delivery_date' = any (v_fields) or 'order_no' = any (v_fields)
          or 'load_time' = any (v_fields) or 'delivery_time' = any (v_fields) then
-        -- G-20 / D-20261014-0015-01 R1: kontekst importu â€” straĹĽnik przepuszcza daty z pliku
+        -- G-20 / D-20261014-0015-01 R1: kontekst importu — strażnik przepuszcza daty z pliku
         perform set_config('tower.import_ctx', 'on', true);
-        -- HOTFIX #384 pkt 4b: historyczne / dostarczone â€” cicho.
-        v_historic := (
-          (r.plan_delivery_date is not null
-            and r.plan_delivery_date < (now() at time zone 'Europe/Warsaw')::date)
-          or (r.status is not null
-            and public.load_status_rank(r.status) >= public.load_status_rank('DELIVERED'::public.load_status))
-        );
         if v_quiet_fill or v_historic then
           v_prev_quiet := current_setting('tower.bulk_quiet', true);
           perform set_config('tower.bulk_quiet', 'on', true);
         end if;
         -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
-        -- HOTFIX #384 pkt 4a: brak godziny do w pliku nie kasuje istniejÄ…cej.
         update loads set
           plan_load_date = coalesce((r.inc->>'load_date')::date, plan_load_date),
           plan_delivery_date = coalesce((r.inc->>'delivery_date')::date, plan_delivery_date),
@@ -465,6 +482,7 @@ begin
               then public.schedule_cell_ts(coalesce((r.inc->>'load_date')::date, plan_load_date), r.inc->>'load_time', 'Europe/Warsaw')
             when 'load_time' = any (v_fields) then null
             else plan_load_from end,
+          -- HOTFIX #384 pkt 4a: brak godziny do w pliku nie kasuje istniejacej.
           plan_load_to = plan_load_to,
           plan_delivery_from = plan_delivery_from,
           plan_delivery_to = case
@@ -504,7 +522,7 @@ begin
     end if;
   end loop;
 
-  -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjÄ™te wiersze)
+  -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjęte wiersze)
   if jsonb_array_length(p_rows) > 0 then
     for c in
       select si.shipment_code as code, l.id as load_id, l.status,
@@ -523,7 +541,7 @@ begin
                        'message', 'Transport jest na fakturze');
       elsif c.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
         v_blocked := v_blocked || jsonb_build_object('code', c.code, 'load_id', c.load_id, 'reason', 'STATUS',
-                       'message', 'Transport od wjazdu na zaĹ‚adunek â€” anuluje wyĹ‚Ä…cznie HHL rÄ™cznie, z powodem');
+                       'message', 'Transport od wjazdu na załadunek — anuluje wyłącznie HHL ręcznie, z powodem');
       else
         v_cands := v_cands || jsonb_build_object('code', c.code, 'load_id', c.load_id);
         if p_dry_run is false and c.code = any (coalesce(p_cancel_codes, '{}')) then
@@ -538,11 +556,11 @@ begin
           perform set_config('tower.cancel_ctx', '', true);
           insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
           values (v_user, 'LOAD_CANCEL_IMPORT', 'loads', c.load_id::text, jsonb_build_object('status', c.status),
-                  jsonb_build_object('status', 'CANCELLED', 'reason', 'UsuniÄ™ty z harmonogramu (' || coalesce(p_file->>'name', 'import') || ')',
+                  jsonb_build_object('status', 'CANCELLED', 'reason', 'Usunięty z harmonogramu (' || coalesce(p_file->>'name', 'import') || ')',
                                      'version', v_version));
           insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
           values (c.load_id, 'STATUS_CANCELLED', now(), v_user,
-                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'UsuniÄ™ty z harmonogramu', 'file', p_file->>'name'));
+                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'Usunięty z harmonogramu', 'file', p_file->>'name'));
           v_cancelled := v_cancelled || jsonb_build_object('code', c.code, 'load_id', c.load_id);
         end if;
       end if;
@@ -581,5 +599,3 @@ begin
     'skipped_standard', v_skipped + coalesce((p_file->>'skipped_standard')::int, 0),
     'ms', round(extract(epoch from clock_timestamp() - t0) * 1000));
 end $function$;
-
-

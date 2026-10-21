@@ -528,6 +528,13 @@ $PSQL -c "delete from notifications where load_id='$LH'; delete from load_events
 val "IH-1: zmiana daty na historycznym → quiet_hist" $HHL "select coalesce(r->'changed'->0->>'quiet_hist','false')||'/'||coalesce(r->'changed'->0->>'critical','true') from ($(IMPHIST2 $DIH1b $DIH2b false)) s(r)" "true/false" commit
 chk "IH-1: bez PLAN_DATES_CHANGED" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='PLAN_DATES_CHANGED'")" "0"
 chk "IH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+# sprzątanie — IW-1/IH-1 nie mogą psuć l3_scan w części 3 (załadunek za 54 h)
+$PSQL -c "delete from notifications where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
+  delete from load_events where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
+  delete from risk_signals where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
+  delete from decisions where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
+  delete from shipment_items where shipment_code in ('IW-1','IH-1');
+  delete from loads where id in ('$LW','$LH')" >/dev/null
 
 fi # tower-i2-part 2
 
