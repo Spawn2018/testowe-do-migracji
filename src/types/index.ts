@@ -387,6 +387,8 @@ export interface Load {
   delayed: boolean;
   docMissing: boolean;
   permitFits: boolean | null;
+  /** Kokpit „Zezwolenia 7 dni” (właściciel 21.10.2026 20:14): zezwolenia podpięte i komplet (FIRMA albo PL+SE, bez naruszeń) — z `load_permit_status`; brak = nieznane (demo: dokumenty). */
+  permitComplete?: boolean | null;
   permit?: LoadPermit;
   /** KSH order no from schedule import ("Nr zlecenia") */
   orderNo?: string | null;
