@@ -696,7 +696,7 @@ Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każ
 Przerywa B5. Kolejność: ~~pkt 1~~ → **2–4** → 5–6 (+ pkt 7–8 z przeglądów).
 1. ~~**BLOKER (pkt 1):** SCALONE #386 `ea71bc9e`, migracja **0249**, `dec-fx` 12/12.~~ Także wygląd #385/#387 SCALONE.
 2. **`KSH_DATE_LT_5D`:** `l3_ksh_lead` tylko gdy nowa data załadunku w przyszłości i < 5 dni; otwarte poza warunkiem → `AUTO_CLOSED` + `audit_log`.
-3. **Import pusta kolumna HHL:** `l1b_note_conflict` null przy pustym `p_file`; wołanie tylko gdy `orderNo` w `column_map`; 23× `TOWER_KSH_CONFLICT` → `AUTO_CLOSED` + powiadomienia przeczytane (jak B8).
+3. **Import pusta kolumna HHL:** `l1b_note_conflict` null przy pustym `p_file`; wołanie tylko gdy `hhlOrderNo` w `column_map` (A6); 23× `TOWER_KSH_CONFLICT` → `AUTO_CLOSED` + powiadomienia przeczytane (jak B8).
 4. **Import historyczne / jedna godzina:** (a) brak „do” nie kasuje istniejącej; (b) minięta dostawa lub status ≥ `DELIVERED`/`UNLOADED` → `tower.bulk_quiet`.
 5. **`PROPOSE_DATE`:** `decision_resolve` + `p_payload`; data załadunku wymagana; `KSH_DATE_COUNTER` dla KSH. Sygnatura w PR (ekran `wyglad/*`).
 6. **Po terminie:** `l2_may_resolve` dopuszcza `HHL_OPS` po eskalacji / po terminie.

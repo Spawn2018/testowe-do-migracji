@@ -325,6 +325,7 @@ begin
       left join loads l on l.id = si.load_id
      order by i.code
   loop
+    v_historic := false;
     if r.item_id is null or r.load_id is null then
       v_added := v_added || jsonb_build_object('code', r.code);
       if p_dry_run is false then
