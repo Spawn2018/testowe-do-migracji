@@ -409,9 +409,10 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
                     <td>{weekKeyLabel(w.weekKey)}</td>
                     <td className="fin-muted">{ft(locale, 'p5_inv_not_issued')}</td>
                     <td className="num">{w.loads.length}</td>
-                    <td className="num"><b>{formatPlNumber(w.netEur, 2)}</b></td>
-                    <td className="num">{formatPlNumber(vatGrossOf(w.netEur).vat, 2)}</td>
-                    <td className="num"><b>{formatPlNumber(vatGrossOf(w.netEur).gross, 2)}</b></td>
+                    {/* W-audyt-ekrany (E4 img/e4-after: kwoty wiersza „jeszcze nie wystawiona” tym samym krojem co wiersze faktur) */}
+                    <td className="num"><span className="mono">{formatPlNumber(w.netEur, 2)}</span></td>
+                    <td className="num"><span className="mono">{formatPlNumber(vatGrossOf(w.netEur).vat, 2)}</span></td>
+                    <td className="num"><span className="mono">{formatPlNumber(vatGrossOf(w.netEur).gross, 2)}</span></td>
                     <td>—</td>
                     <td><StatusTag status="DO_WYSTAWIENIA" /></td>
                     <td className="fin-muted">{ftp(locale, 'p5_inv_waits', { who: ISSUER[direction] })}</td>
