@@ -183,6 +183,39 @@ $$;
 revoke all on function public.l1_decision_type(text, jsonb) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- SMS: cisza naczepy emtrack (≥ SILENT_MIN_EMTRACK) bez GPS_SILENT
+-- ---------------------------------------------------------------------------
+create or replace function public.trg_sms_gps_silent() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  l loads%rowtype;
+  v_last timestamptz;
+  v_min int;
+  v_to text;
+begin
+  if new.kind <> 'SILENT_VEHICLE' or new.load_id is null then return new; end if;
+  -- #398: emtrack naczepa — bez SMS (reguła: bez e-maila i SMS)
+  if coalesce(new.detail->>'emtrack_trailer', '') = '1' then
+    return new;
+  end if;
+  select * into l from loads where id = new.load_id;
+  v_to := driver_phone_e164(l.driver_phone, l.driver_phone_country);
+  if (found and v_to is not null
+      and l.status in ('AT_LOADING', 'IN_TRANSIT_PL', 'AT_PORT_GDANSK', 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE')
+      and sms_has_driver_link(l.id)) is not true then
+    return new;
+  end if;
+  select max(ts) into v_last from positions where load_id = l.id;
+  v_min := greatest(coalesce(round(extract(epoch from (now() - v_last)) / 60)::int, 0), 1);
+  perform sms_enqueue('GPS_SILENT', l.id, v_to, l.driver_locale,
+    jsonb_build_object('nr', coalesce(l.order_no, '—'), 'min', v_min::text),
+    100, 'GPS_SILENT:' || l.id || ':' || floor(extract(epoch from now()) / 10800)::bigint);
+  return new;
+end $$;
+
+revoke all on function public.trg_sms_gps_silent() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
 -- 2. detect_silent_vehicles — gałąź EMTRACK_WEB
 -- ---------------------------------------------------------------------------
 create or replace function public.detect_silent_vehicles(p_minutes integer default 90)
@@ -464,6 +497,7 @@ begin
     end if;
     if v_close then
       update risk_signals set resolved_at = p_now where id = r.id and resolved_at is null;
+      perform l3_lapse(r.dedup_key, p_now);
     end if;
   end loop;
 
@@ -678,6 +712,7 @@ begin
       update notifications n
          set read_at = coalesce(n.read_at, v_now)
        where n.read_at is null
+         and n.channel = 'IN_APP'
          and (
            n.payload->>'decision_id' = any (select x::text from unnest(v_dec_ids) x)
            or n.dedup_key like any (select '%:' || x::text || '%' from unnest(v_dec_ids) x)

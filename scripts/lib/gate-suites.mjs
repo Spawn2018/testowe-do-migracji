@@ -22,7 +22,7 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 42, // #398: +8 loaded_confirmed/emtrack/ETA/ORDERNO
+  risks: 43, // #398: +8 +1 SMS emtrack ≥12h bez GPS_SILENT
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 156, // 160 − 4 SKIP (B6)
-  risks: 40, // 42 − 2 SKIP (C1)
+  risks: 41, // 43 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

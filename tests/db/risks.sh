@@ -166,7 +166,12 @@ chk "398: emtrack <12h → 0 otwartych SILENT" \
   "$(Q "select count(*) from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" 0
 chk "398: emtrack <12h → 0 nowych NO_POSITION" \
   "$(Q "select count(*) - $NDEC0 from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and load_id='$L1'")" 0
-# emtrack ≥ 12 h → 1× LOW, bez decyzji
+# emtrack ≥ 12 h → 1× LOW, bez decyzji, bez SMS (nawet przy telefonie + linku kierowcy)
+fx "update loads set driver_phone='600111222', driver_phone_country='PL', driver_locale='pl' where id='$L1'"
+$PSQL -c "insert into driver_tokens (load_id, token_hash, expires_at)
+  values ('$L1', driver_token_hash('wt_398emtrack'), now() + interval '1 day')
+  on conflict do nothing" >/dev/null
+$PSQL -c "delete from sms_outbox where kind='GPS_SILENT' and load_id='$L1'" >/dev/null
 $PSQL -c "delete from positions where load_id='$L1'" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '13 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
 Q "select detect_silent_vehicles(90)" >/dev/null
@@ -174,6 +179,10 @@ chk "398: emtrack ≥12h → 1 SILENT LOW" \
   "$(Q "select count(*)||'/'||max(severity::text)||'/'||max(audience::text)||'/'||max(detail->>'emtrack_trailer') from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" "1/LOW/HHL/1"
 chk "398: emtrack ≥12h → 0 decyzji NO_POSITION" \
   "$(Q "select count(*) from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and (detail->>'event_key')='SILENT:$L1'")" 0
+chk "398: emtrack ≥12h → 0 SMS GPS_SILENT" \
+  "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$L1'")" 0
+$PSQL -c "delete from driver_tokens where load_id='$L1' and token_hash = driver_token_hash('wt_398emtrack')" >/dev/null
+fx "update loads set driver_phone=null, driver_phone_country='PL', driver_locale=null where id='$L1'"
 # ETA po dostawie
 fx "update loads set status='READY_TO_INVOICE', actual_delivery_at=now()-interval '1 day', plan_delivery_date=current_date-2 where id='$L1'"
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)

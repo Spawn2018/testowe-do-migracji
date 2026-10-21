@@ -87,7 +87,8 @@ chk "wjazd w strefę portu → AT_PORT_GDANSK"                   "$(st $A)" AT_P
 chk "port bez potwierdzenia załadunku: ryzyko, status się zmienia" "$(rk $J PORT_NO_LOADED)" 1
 # #398: actual_load_at (GPS) = potwierdzony załadunek → brak PORT_NO_LOADED
 # bez sailing_id — inaczej Lgps wchodzi w promote_ferry_departures (S1) i psuje licznik 3→4
-Lgps=$(L 2a)
+# L 98 — nie 2a: C17A=L 2a (kolizja ID → C17A zostawał AT_PORT_GDANSK)
+Lgps=$(L 98)
 mk $Lgps GPS "'HHL/GPS'" "'SCX/GPS'" IN_TRANSIT_PL null
 q "set session_replication_role=replica; update loads set actual_load_at='2026-09-30 11:10+00' where id='$Lgps'; set session_replication_role=origin" >/dev/null
 pos $Lgps 54.4030 18.6800 "2026-10-01 10:00+00"; pos $Lgps 54.4031 18.6801 "2026-10-01 10:05+00"
