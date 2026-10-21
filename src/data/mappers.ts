@@ -174,7 +174,9 @@ export const vesselToDb = (v: string | null | undefined): string | null => {
 export function trackingLinkFromRow(row: LoadRow): TrackingLinkInfo | null | undefined {
   const ref = row.telematics_vehicle_id ?? null;
   const kind = trackerKind(ref);
-  const hasRio = Boolean(row.rio_tracking_id) || kind === 'rio';
+  /* #392 (SG-18, właściciel 21.10.2026 16:06): o rodzaju decyduje zapisany link. Po zmianie RIO → emtrack / inny
+     baza mogła zostawić stare `rio_tracking_id` — to nie czyni transportu „RIO” (pusty link też nie). */
+  const hasRio = kind === 'rio';
   if (!hasRio && kind === 'none') return undefined;
   if (!hasRio && kind === 'emtrack') {
     return { provider: 'EMTRACK', check: { state: 'ok' } };
