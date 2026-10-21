@@ -27,7 +27,7 @@ export const EXPECTED_LOCAL = {
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
   i2: 620, // D-1501 F7 #370: miniona dostawa; NO_TRACKING=brak linku (bez chk MANUAL)
   i30: 10,
-  i31: 9,
+  i31: 10, // D-1300: +korekta n_sek=7
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
   dec3: 13,
   dec5: 11,

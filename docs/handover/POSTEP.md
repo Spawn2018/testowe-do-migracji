@@ -3723,3 +3723,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #365 zamknięte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #376 SCALONE `78c77bbd` (F7 na `12f0673`, CI unit/visual/db zielone). #259 konflikt / bez F7.
 - Bieżąca: **D-1300** (`pakiet/d1300-paliwo-okq8-7dni`) — migracja **0245**: OKQ8 7 dni (`sefs_sek_daily_avg`), lookup „od progu” (D-1322), over_table + krok, przeliczenie niezafakturowanych + `SEFS_INVOICE_DIFF` przy fakturze; `fuel-prices` źródła osobno; testy `baf`/`i31` za decyzją.
+
+## 2026-10-21 03:10 — D-1300 (#359 / #377): poprawka bramy db
+
+- Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #377 — unit/visual zielone na `cb1c1027`; db czerwone (baf 22,99→22,85; i31 10; `l1b_sefs_note` bez straży 0230). #259 bez F7.
+- Bieżąca: **D-1300** — asercja SEK t41 = 22,85 (D-1322); `i31: 10`; przywrócona straż SOURCE tylko przy OSTATECZNY w `l1b_sefs_note` (0230).

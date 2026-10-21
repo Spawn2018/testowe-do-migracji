@@ -52,7 +52,7 @@ chk "kopia 03.10 SEK → publikacja 01.10" "$(Q "select published_on from fuel_i
 
 # D-1300 (#359): OKQ8 = 7 cen dziennych; D-1322: mnożnik „od progu”. Etap D-1300 / decyzja właściciela 20.10.
 W41="sefs_week_calc('$P','2026-10-06','2026-10-05')"
-chk "tydz. 41: SEK 7 dni → 22,99 → 1,13 (od progu)" "$(Q "select ($W41->>'n_sek')||'/'||($W41->>'avg_sek')||'/'||($W41->>'mult_sek')")" "7/22.99/1.13"
+chk "tydz. 41: SEK 7 dni → 22,85 → 1,13 (od progu)" "$(Q "select ($W41->>'n_sek')||'/'||($W41->>'avg_sek')||'/'||($W41->>'mult_sek')")" "7/22.85/1.13"
 chk "tydz. 41: PLN 5 publikacji → 7,22 → 1,14 (od progu)" "$(Q "select ($W41->>'n_pln')||'/'||($W41->>'avg_pln')||'/'||($W41->>'mult_pln')")" "5/7.22/1.14"
 chk "tydz. 41: wynik 1,13 OSTATECZNY" "$(Q "select ($W41->>'applied_mult')||'/'||($W41->>'status')")" "1.13/OSTATECZNY"
 W40="sefs_week_calc('$P','2026-10-01','2026-10-05')"

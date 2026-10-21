@@ -285,11 +285,13 @@ create or replace function public.l1b_sefs_note(p_project uuid, p_load_date date
 returns text
 language plpgsql security definer set search_path = public as $l1b$
 declare
-  v_res jsonb; v_reason text; v_prev_start date;
+  v_res jsonb; v_reason text; v_prev_start date; v_final boolean; v_title text;
 begin
   if p_project is null or p_load_date is null then return null; end if;
   v_res := sefs_week_calc(p_project, p_load_date);
   v_prev_start := (p_load_date - ((extract(isodow from p_load_date)::int) - 1)) - 7;
+  v_final := coalesce((v_res->>'final')::boolean, false)
+    or coalesce(v_res->>'status', '') = 'OSTATECZNY';
   if coalesce(v_res->>'ok', '') <> 'true' then
     v_reason := 'SOURCE';
   elsif coalesce((v_res->>'over_table_sek')::boolean, false)
@@ -298,12 +300,22 @@ begin
   else
     v_reason := 'OK';
   end if;
+  -- 0230: tydzień otwarty / przyszły — brak cen = prognoza, nie sprawa (D-1300 bez zmian).
+  if v_reason = 'SOURCE' and v_final is not true then
+    return v_reason;
+  end if;
   if v_reason in ('SOURCE', 'OVER') then
+    v_title := case
+      when v_reason = 'SOURCE' then
+        'Opłata paliwowa: brak cen paliwa z tygodnia t'
+        || ltrim(to_char(v_prev_start, 'IW'), '0')
+        || ' (' || to_char(v_prev_start, 'DD.MM') || '–' || to_char(v_prev_start + 6, 'DD.MM') || ')'
+      else 'Opłata paliwowa: indeks poza tabelą progów'
+    end;
     perform decision_open_from_event(
       p_project, 'SEFS_OUT_OF_TABLE',
       'l1b:sefs:' || p_project::text || ':' || v_prev_start::text || ':' || v_reason,
-      case when v_reason = 'SOURCE' then 'Opłata paliwowa: brak źródła indeksu'
-           else 'Opłata paliwowa: indeks poza tabelą progów' end,
+      v_title,
       jsonb_build_object('reason', v_reason, 'prev_week_start', v_prev_start, 'load_date', p_load_date),
       null, null
     );
