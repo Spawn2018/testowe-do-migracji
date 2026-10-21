@@ -165,7 +165,20 @@ begin
       returning id into v_load;
 
       v_dec := decision_open('$P', r.code, 'dfx ' || r.code || ' ' || r.opt, v_detail, v_load);
-      perform decision_resolve(v_dec, r.opt, v_note);
+      -- #384 pkt 5: KSH_DATE_COUNTER ACCEPT czyta proposal z detail; PROPOSE wymaga p_payload
+      if r.code = 'KSH_DATE_COUNTER' then
+        update decisions
+           set detail = coalesce(detail, '{}'::jsonb)
+             || jsonb_build_object('proposal', jsonb_build_object('load_date', (current_date + 10)::text))
+         where id = v_dec;
+      end if;
+      perform decision_resolve(
+        v_dec, r.opt, v_note,
+        case when r.effect = 'PROPOSE'
+          then jsonb_build_object('load_date', (current_date + 10)::text)
+          else null
+        end
+      );
       n_ok := n_ok + 1;
     exception when others then
       get stacked diagnostics err = message_text;

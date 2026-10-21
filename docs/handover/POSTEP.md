@@ -3860,3 +3860,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #388 CI db FAIL na `75d153f8` — i2 „za 54 h: bez ryzyka” = 2 (reszta zielona: import 72, g20 15, dec-auto 83). Brak „F7: gotowe”. #382 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: i2 — `decision_events` przed delete decisions; IH status przez replica; przed I-21 anuluj importy poza L1/L2 (jak L7/A1).
+
+## 2026-10-21 15:00 — #384 pkt 2–4 SCALONE; start pkt 5–6
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #388 F7 gotowe (`ad1a572`) → merge `da77c46a` (0250). #382 czeka (0252 po pkt 5–6). Bez push na `main`.
+- Bieżąca: **HOTFIX #384 pkt 5–6** (`pakiet/hotfix-384-pkt5-6`, migracja **0251**) — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; `l2_may_resolve` + HHL_OPS po eskalacji/terminie.

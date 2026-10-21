@@ -25,7 +25,7 @@ val() { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | 
 err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
 
 echo; echo "[DEC-2] katalog + proces decyzji"
-val "katalog 23 typów" $HHL "select count(*) from decision_types where active" 23 # D-1501 +NO_SAILING/NO_TRACKING/NO_AWIZ_SE
+val "katalog 24 typów" $HHL "select count(*) from decision_types where active" 24 # #384 +KSH_DATE_COUNTER
 
 D=$(run "$HHL" "select decision_open('$P','SEFS_INVOICE_DIFF','SEFS na fakturze', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "open → NEW" $HHL "select status::text from decisions where id='$D'" NEW
@@ -122,6 +122,24 @@ err "operacje HHL nie rozstrzygają typu CARRIER" $OPS "select decision_resolve(
 DAd=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia ops', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 err "operacje HHL nie rozstrzygają typu ADMIN" $OPS "select decision_resolve('$DAd','RETRY_NOW')" "wskazana firma|Rozstrzyg"
 val "administrator rozstrzyga typ ADMIN" $HHL "select decision_resolve('$DAd','RETRY_NOW')->>'ui_hint'" BACKUP_RETRY commit
+
+# #384 pkt 5–6: PROPOSE_DATE + HHL_OPS po terminie
+sys "update loads set plan_load_date = current_date + 3, plan_delivery_date = current_date + 7,
+     plan_load_from = (current_date + 3)::timestamp + time '08:00',
+     plan_delivery_from = (current_date + 7)::timestamp + time '12:00'
+     where id='$L'" >/dev/null
+DP=$(run "$HHL" "select decision_open('$P','KSH_DATE_LT_5D','późna data', '{}'::jsonb, '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+err "PROPOSE bez load_date odrzucone" $SCX "select decision_resolve('$DP','PROPOSE_DATE','propozycja SCX', '{}'::jsonb)" "daty załadunku|Propozycja wymaga"
+LD_PROP=$(sys "select (current_date + 10)::text" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+val "PROPOSE z load_date → KSH_DATE_COUNTER" $SCX "select (decision_resolve('$DP','PROPOSE_DATE','propozycja SCX', jsonb_build_object('load_date','$LD_PROP'))->>'ui_hint')" KSH_DATE_COUNTER commit
+DCNT=$(sys "select id from decisions where type_code='KSH_DATE_COUNTER' and detail->>'parent_decision_id'='$DP' and status in ('NEW','ASSIGNED','SNOOZED') limit 1" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+val "KSH widzi KSH_DATE_COUNTER" $KSH "select count(*) from decisions where id='$DCNT'" 1
+val "KSH Przyjmuję → daty z propozycji" $KSH "select (decision_resolve('$DCNT','ACCEPT')->>'dates_applied')::text; select plan_load_date::text from loads where id='$L'" "$LD_PROP" commit
+
+DOps=$(run "$HHL" "select decision_open('$P','NO_POSITION','brak GPS ops', '{}'::jsonb, '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+err "HHL_OPS bez eskalacji nie rozstrzyga CARRIER" $OPS "select decision_resolve('$DOps','MANUAL_STATUS','ops przed')" "wskazana firma|Rozstrzyg"
+sys "update decisions set escalated_at = now(), due_at = now() - interval '1 hour' where id='$DOps'" >/dev/null
+val "HHL_OPS po eskalacji rozstrzyga CARRIER" $OPS "select (decision_resolve('$DOps','MANUAL_STATUS','ops po terminie')->>'applied'); select status::text from decisions where id='$DOps'" RESOLVED commit
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
