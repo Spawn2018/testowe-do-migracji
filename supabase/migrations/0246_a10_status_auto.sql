@@ -158,17 +158,21 @@ declare
   v_updated boolean;
 begin
   /*
-    Wahanie: pomijamy STATUS_AUTO tylko przy przejściu odwrotnym < 10 min (A→B potem B→A).
-    Po ręcznym cofnięciu HHL ponowny automat zawsze zapisuje wpis na osi.
+    Wahanie (GPS/strefy): pomijamy STATUS_AUTO przy A→B→A < 10 min poza Przygotowaniem.
+    W Przygotowaniu zawsze wpis na osi (demotion/promotion z danych; F7 po HHL też).
   */
-  select exists (
-    select 1 from public.load_events e
-     where e.load_id = p_load
-       and e.event_type = 'STATUS_AUTO'
-       and e.payload->>'from' = p_to::text
-       and e.payload->>'to' = p_from::text
-       and e.occurred_at >= v_ts - interval '10 minutes'
-  ) into v_osc;
+  v_osc := false;
+  if p_from::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY')
+     and p_to::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY') then
+    select exists (
+      select 1 from public.load_events e
+       where e.load_id = p_load
+         and e.event_type = 'STATUS_AUTO'
+         and e.payload->>'from' = p_to::text
+         and e.payload->>'to' = p_from::text
+         and e.occurred_at >= v_ts - interval '10 minutes'
+    ) into v_osc;
+  end if;
 
   begin
     perform set_config('tower.status_ctx', 'on', true);
@@ -282,13 +286,17 @@ begin
     return l.status;
   end if;
 
+  /*
+    F7: PLANNED bez daty załadunku zostaje — czeka na plik KSH.
+    Także gdy są numery zleceń (a10_prep_awiz_started); skan wymaga daty.
+  */
+  if l.status = 'PLANNED'::public.load_status and l.plan_load_date is null then
+    return 'PLANNED'::public.load_status;
+  end if;
+
   v_gaps := public.awiz_missing(p_load);
 
   if public.a10_prep_awiz_started(p_load) is not true then
-    /* F7: bez daty załadunku — zostaje PLANNED (czeka na plik KSH). */
-    if l.plan_load_date is null then
-      return 'PLANNED'::public.load_status;
-    end if;
     begin
       v_early := public.l3_moment(
         public.l3_anchor(l.plan_load_date, l.plan_load_from),

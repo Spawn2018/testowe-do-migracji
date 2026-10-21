@@ -3765,3 +3765,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #378 — CI zielone na `8ea860db` (unit/visual/db); F7 „prawie” (JWT clear nieskuteczne na produkcji + uwagi). #259 konflikt / bez F7. Bez „gotowe do scalenia”.
 - Bieżąca: **A10** — F7: `guard_load_update` przepuszcza tylko `status`+`updated_at` przy `tower.auto_status` (bez podmiany JWT; flagi zerowane po UPDATE); stub `auth.uid` jak PostgREST (`claims->>'sub'`); PLANNED bez `plan_load_date` zostaje; wahanie = tylko przejście odwrotne < 10 min; e25 90.
+
+## 2026-10-21 06:50 — A10 (#324 / #378): db e25 4 FAIL → poprawka
+
+- Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #378 — unit/visual zielone na `a3b94952`; db czerwone (e25 86/90). F7 „czekam na zielone CI”. #259 konflikt / bez F7.
+- Bieżąca: **A10** — PLANNED bez daty przed `awiz_started` (numery zleceń nie ruszają); wahanie GPS tylko poza Przygotowaniem (prep zawsze STATUS_AUTO na osi).

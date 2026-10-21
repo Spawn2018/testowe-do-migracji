@@ -276,7 +276,7 @@ sval "A9: a9_try_ready po komplecie" "select a9_try_ready('33333333-0000-0000-00
 sval "A9: komplet bez SE → Gotowy (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
 sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
 # A10: demotion READY → RESOURCES_PENDING po usunięciu kierowcy; ponowny READY = nowy STATUS_AUTO.
-# Usunięcie kierowcy: sys na wyzwalaczu — last STATUS_AUTO pozwala cofnąć.
+# W Przygotowaniu brak wahania GPS — każdy automatyczny powrót ma wpis na osi (F7).
 sys "update loads set driver_name=null where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
 sval "A10: bez kierowcy → RESOURCES_PENDING" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" RESOURCES_PENDING
 sys "update loads set driver_name='Jan A9' where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
@@ -298,13 +298,14 @@ sys "update loads set driver_phone='600111222' where id='33333333-0000-0000-0000
 sys "update loads set status='PLANNED', hhl_order_no=null where id='33333333-0000-0000-0000-00000000a902'" >/dev/null
 sval "A10: auto READY bez HHL → zablokowane" "select auto_set_status('33333333-0000-0000-0000-00000000a902','PLANNED'::load_status,'READY'::load_status,'test W12',now(),'{}'::jsonb)" f
 sval "A10: ryzyko rk_auto_status_blocked" "select count(*) from risk_signals where load_id='33333333-0000-0000-0000-00000000a902' and title_key='rk_auto_status_blocked'" 1
-# A10 F7: PLANNED bez daty załadunku — skan nie przenosi do Brak zasobów.
+# A10 F7: PLANNED bez daty załadunku zostaje — także z numerami zleceń (produkcja).
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
      hhl_order_no, carrier_order_no)
      values ('33333333-0000-0000-0000-00000000a904','$P','$SCXO','123456/2026/A904','PLANNED',null,
      'HHL/A904','SCX/A904')
      on conflict (id) do update set status='PLANNED', plan_load_date=null,
-       hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
+       hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no,
+       driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null" >/dev/null
 sval "A10: PLANNED bez daty → target PLANNED" "select a10_prep_target_status('33333333-0000-0000-0000-00000000a904')::text" PLANNED
 sval "A10: skan PLANNED bez daty = bez zmian" "select set_config('tower.a10_prep_scan','on',true);
   select a10_try_prep_status('33333333-0000-0000-0000-00000000a904')" f
