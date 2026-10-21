@@ -420,6 +420,7 @@ function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
           </tbody>
         </table>
       </div>
+      {p.at ? null : <p className="sys-note" data-sys-perf-pending>{sy(locale, 'sys_perf_pending')}</p>}
     </section>
   );
 }

@@ -92,6 +92,7 @@ const PL: Record<string, string> = {
   sys_perf_bad: 'ponad próg',
   sys_perf_none: 'bez pomiaru',
   sys_none: 'Brak danych.',
+  sys_perf_pending: 'Pomiary jeszcze się nie zapisują — wyniki pojawią się po pierwszym pomiarze po wdrożeniu.',
 };
 
 export function sy(locale: Locale, key: string): string {
