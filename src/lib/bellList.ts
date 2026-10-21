@@ -8,12 +8,16 @@ export interface BellItem {
   id: string;
   read: boolean;
   roleScope?: readonly string[];
+  kind?: string;
 }
+
+/** Właściciel 21.10.2026 20:14 (pkt 6): zamknięta sprawa nie wraca do dzwonka jako „zamknięta” — znika. */
+export const BELL_HIDDEN_KINDS = new Set(['DECISION_RESOLVED', 'RISK_RESOLVED']);
 
 export function bellVisible<T extends BellItem>(items: readonly T[], role: string): T[] {
   return items.filter((n) => {
     const scoped = !n.roleScope || n.roleScope.length === 0 || n.roleScope.includes(role);
-    return scoped && !n.read;
+    return scoped && !n.read && !(n.kind && BELL_HIDDEN_KINDS.has(n.kind));
   });
 }
 
