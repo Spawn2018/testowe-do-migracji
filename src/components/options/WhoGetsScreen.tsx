@@ -14,7 +14,8 @@ import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, typ
 
 export type WhoGetsCards = {
   mail: { on: boolean; used: number; max: number; reserve: number };
-  push: { on: boolean; devices: number };
+  /** own — liczba tylko z własnych wierszy (RLS `push_subscriptions`), bez liczby wszystkich osób */
+  push: { on: boolean; devices: number; own?: boolean };
   last: { when: string; text: string };
 };
 
@@ -129,7 +130,12 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
               <b className="ox-card-v">{t(locale, pushOn ? 'p3c_on' : 'p3c_off')}</b>
               <CardSwitch label={t(locale, 'p3c_push_title')} on={pushOn} readOnly={readOnly} onChange={(next) => card('push', next)} />
             </span>
-            <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>
+            {cards.push.own ? (
+              <>
+                <span className="ox-card-sub" data-push-devices="own">{tp(locale, 'p3c_push_devices_own', { n: cards.push.devices })}</span>
+                <span className="ox-card-sub">{t(locale, 'p3c_push_devices_all')}</span>
+              </>
+            ) : <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>}
           </div>
           <div className="ox-card">
             <span className="ox-eyebrow">{t(locale, 'p3c_last_title')}</span>

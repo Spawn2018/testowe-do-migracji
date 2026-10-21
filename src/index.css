@@ -1090,6 +1090,10 @@ img,video{max-width:100%;height:auto}
 .bell-hd .bell-x{margin-left:4px}
 .bell-hd .btn.bell-all{border:0;background:none;padding:0;min-height:0;color:var(--sea);text-decoration:underline;font-size:13px;font-weight:400}
 .bell-scroll{overflow-y:auto;flex:1}
+/* Właściciel 21.10.2026 20:14 (pkt 5): lista dzwonka na telefonie — podstawa „auto”, nie 0% (WebKit przy wysokości
+   panelu tylko z max-height liczył 0% jako 0 i lista się zwijała); przewijanie w środku bez przewijania strony pod spodem */
+.bell-pop .bell-scroll{flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.bell-pop .bell-hd{flex:0 0 auto}
 .bell-sec{border-bottom:1px solid var(--rule)}
 .bell-sec-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0;padding:10px 14px 4px;
   font-family:var(--font-cond);font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}

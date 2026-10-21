@@ -282,3 +282,16 @@ export function withLoadCode(path: string, code: string | undefined): string {
   const q = path.indexOf('?');
   return `/transport/${encodeURIComponent(code)}${q >= 0 ? path.slice(q) : ''}`;
 }
+
+/**
+ * Właściciel 21.10.2026 20:14 (pkt 5): „Na komórce nie wyświetlają się powiadomienia z dzwoneczka”.
+ * Aplikacja na telefonie (iOS, ekran początkowy) nie jest przeładowywana — dzwonek miał tylko wpisy z chwili logowania.
+ * Odświeżenie samego dzwonka: wpisy z serwera (kolejność serwera), przeczytane lokalnie zostają przeczytane
+ * (zapis na serwer mógł jeszcze nie dojść), wpisy spoza odpowiedzi serwera (np. dodane z push) zostają na końcu.
+ */
+export function mergeBellRefresh<T extends BellItem>(local: readonly T[], server: readonly T[]): T[] {
+  const readLocal = new Set(local.filter((n) => n.read).map((n) => n.id));
+  const fromServer = new Set(server.map((n) => n.id));
+  const merged = server.map((n) => (!n.read && readLocal.has(n.id) ? { ...n, read: true } : n));
+  return [...merged, ...local.filter((n) => !fromServer.has(n.id))];
+}

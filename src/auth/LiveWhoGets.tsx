@@ -81,6 +81,7 @@ export default function LiveWhoGets({ readOnly = false }: { readOnly?: boolean }
     const b = await sb.rpc('email_budget_status');
     const j = (b.error ? null : b.data) as { immediate_n?: number; digest_n?: number; operational_limit?: number; auth_reserve?: number } | null;
     if (j) setBudget({ used: (j.immediate_n ?? 0) + (j.digest_n ?? 0), max: j.operational_limit ?? 90, reserve: j.auth_reserve ?? 10 });
+    /* RLS `push_subscriptions_own` — liczba tylko urządzeń zalogowanej osoby (karta: „Twoje urządzenia: N”) */
     const d = await sb.from('push_subscriptions').select('id', { count: 'exact', head: true });
     setDevices(d.error ? null : d.count ?? 0);
   }, []);
@@ -91,7 +92,7 @@ export default function LiveWhoGets({ readOnly = false }: { readOnly?: boolean }
   const unknown = useMemo(() => (rows ? unknownKeys(NOTIFY_CATALOG, rows) : []), [rows]);
 
   const cards: WhoGetsCards | undefined = useMemo(() => (rows && budget
-    ? { mail: { on: channelOn(rows, 'email'), ...budget }, push: { on: channelOn(rows, 'push'), devices: devices ?? 0 }, last: { when: '—', text: '' } }
+    ? { mail: { on: channelOn(rows, 'email'), ...budget }, push: { on: channelOn(rows, 'push'), devices: devices ?? 0, own: true }, last: { when: '—', text: '' } }
     : undefined), [rows, budget, devices]);
 
   /* zapis jednej komórki: najpierw stan lokalny (kolejne kliknięcia liczą od niego), potem RPC w kolejce */

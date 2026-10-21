@@ -166,6 +166,9 @@ const pl: Dict = {
   p3c_off: 'Wyłączone',
   p3c_mail_quota: 'Dziś {used} z {max} · {reserve} zostaje na zaproszenia i reset hasła',
   p3c_push_devices: 'Wysyłane tylko tam, gdzie zaznaczony telefon · {n~urządzenie zapisane|urządzenia zapisane|urządzeń zapisanych}',
+  /* Właściciel 21.10.2026: baza (RLS push_subscriptions) pokazuje tylko własne urządzenia — nie zgadujemy liczby wszystkich */
+  p3c_push_devices_own: 'Wysyłane tylko tam, gdzie zaznaczony telefon · Twoje urządzenia: {n}',
+  p3c_push_devices_all: 'Liczbę urządzeń wszystkich osób poda wykonawca (#412).',
   p3c_col_event: 'Zdarzenie',
   p3c_firm_HHL: 'HHL',
   p3c_firm_KSH: 'KSH',

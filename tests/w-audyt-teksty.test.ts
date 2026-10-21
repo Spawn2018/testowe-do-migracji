@@ -39,14 +39,16 @@ describe('W-audyt-teksty', () => {
     expect(auto.title).toBe('Automatyzacje');
     const wf = auto.rows.find((x) => x.id === 'workflow')!;
     expect(wf.title).toBe('Alert automatyzacji (reguła zgłosiła problem)');
-    expect(wf.pendingDb).toBe(true);
+    /* 0255 na produkcji (SELECT 22.10.2026) — bez `pendingDb`; dzwonek domyślnie u wszystkich, jak w bazie */
+    expect(wf.pendingDb).toBeUndefined();
+    for (const k of ['CLIENT_USER', 'CARRIER_DISPATCH', 'CARRIER_USER'] as const) expect(wf.cells[k]!.bell, k).toBe(true);
     for (const k of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH', 'CARRIER_USER'] as const) expect(wf.cells[k], k).not.toBeNull();
     const sys = NOTIFY_CATALOG.find((g) => g.id === 'system')!.rows;
     expect(sys.find((x) => x.id === 'workflow')).toBeUndefined();
     for (const id of ['email_budget', 'fuel_miss', 'ext_mail']) {
       const r = sys.find((x) => x.id === id)!;
       expect(r, id).toBeTruthy();
-      expect(r.pendingDb).toBe(true);
+      expect(r.pendingDb).toBeUndefined();
       expect(r.cells.CLIENT_USER).toBeNull();
       expect(r.cells.CARRIER_DISPATCH).toBeNull();
       expect(r.cells.CARRIER_USER).toBeNull();
@@ -56,24 +58,29 @@ describe('W-audyt-teksty', () => {
     expect(ext.cells.HHL_ADMIN).toEqual({ bell: false, push: false, mail: true });
   });
 
-  it('(e) przed wdrożeniem 0255: ekran ich nie pokazuje i nie zgłasza; po wdrożeniu — wiersze z bazy, bez komunikatu', () => {
-    const before = matrixFromDb(NOTIFY_CATALOG, [row('dec_new', 'HHL_ADMIN', true, false)]).flatMap((g) => g.rows.map((r) => r.id));
-    for (const id of NEW) expect(before).not.toContain(id);
-    /* pusta grupa „Automatyzacje” nie rysuje się przed wdrożeniem */
-    expect(matrixFromDb(NOTIFY_CATALOG, []).map((g) => g.id)).not.toContain('automation');
-    expect(NOTIFY_CATALOG_READY.map((g) => g.id)).not.toContain('automation');
+  it('(e) po wdrożeniu 0255 (produkcja, 22.10.2026): wiersze z bazy, bez komunikatu o nieznanych kluczach', () => {
     const db = NEW.map((k) => row(k, 'HHL_ADMIN', true, true));
     const after = matrixFromDb(NOTIFY_CATALOG, db).flatMap((g) => g.rows);
     for (const id of NEW) expect(after.map((r) => r.id)).toContain(id);
     expect(after.find((r) => r.id === 'workflow')!.cells.HHL_ADMIN).toEqual({ bell: true, push: false, mail: true });
     expect(unknownKeys(NOTIFY_CATALOG, db)).toEqual([]);
+    /* „Automatyzacje” w „Kto co dostaje” z wierszami dla HHL, KSH i SCX */
+    const auto = matrixFromDb(NOTIFY_CATALOG, ['HHL_ADMIN', 'CLIENT_USER', 'CARRIER_DISPATCH'].map((r) => row('workflow', r, true, false)))
+      .find((g) => g.id === 'automation')!;
+    expect(auto.rows[0].cells.CLIENT_USER).toEqual({ bell: true, push: false, mail: false });
+    expect(auto.rows[0].cells.CARRIER_DISPATCH).toEqual({ bell: true, push: false, mail: false });
   });
 
-  it('(e) „Co dostaję” i lista kluczy migracji bez czekających kluczy', () => {
+  it('(e) „Co dostaję” i lista kluczy migracji z kluczami 0255; „Automatyzacje” dla HHL, KSH i SCX', () => {
     const ready = NOTIFY_CATALOG_READY.flatMap((g) => g.rows.map((r) => r.id));
     for (const id of NEW) {
-      expect(ready).not.toContain(id);
-      expect(NOTIFY_EVENT_IDS).not.toContain(id);
+      expect(ready).toContain(id);
+      expect(NOTIFY_EVENT_IDS).toContain(id);
+    }
+    const auto = NOTIFY_CATALOG_READY.find((g) => g.id === 'automation')!;
+    for (const k of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH'] as const) {
+      const c = auto.rows[0].cells[k]!;
+      expect(c.bell || c.push || c.mail, k).toBe(true);
     }
     expect(read('src/views/OptionsView.tsx')).toContain('groups={NOTIFY_CATALOG_READY}');
     expect(read('src/views/SettingsView.tsx')).toContain('groups={NOTIFY_CATALOG_READY}');
