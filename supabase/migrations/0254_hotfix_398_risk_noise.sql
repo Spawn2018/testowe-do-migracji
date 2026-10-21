@@ -196,6 +196,7 @@ declare
   v_src text;
   v_em_due boolean;
   v_rid uuid;
+  v_rows int;
 begin
   perform l1b_scan();
   perform dwell_scan(null, now());
@@ -267,8 +268,10 @@ begin
           ),
           'SILENT:' || r.id,
           now()
-        );
-        n := n + 1;
+        )
+        on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
+        get diagnostics v_rows = row_count;
+        n := n + v_rows;
       else
         update risk_signals
            set severity = 'LOW',
