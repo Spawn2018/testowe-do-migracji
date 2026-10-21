@@ -353,7 +353,37 @@ val "B4: KSH widzi dokument ALL (paczka tygodnia)" $KSH "select count(*) from do
 err "B4: puste visible_to dokumentu odrzucone" $HHL \
   "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
    values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-empty.pdf','b4-empty.pdf','application/pdf',1,'{}')" \
-  "check constraint|visible_to|documents_visible_to"
+  "check constraint|visible_to|documents_visible_to|Widoczność"
+err "B4: CHECK odrzuca {CLIENT} samego" $HHL \
+  "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-client.pdf','b4-client-only.pdf','application/pdf',1,'{CLIENT}')" \
+  "check constraint|visible_to|documents_visible_to|Widoczność"
+err "B4: CHECK odrzuca {FORWARDER,CLIENT}" $HHL \
+  "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-fc.pdf','b4-fwd-client.pdf','application/pdf',1,'{FORWARDER,CLIENT}')" \
+  "check constraint|visible_to|documents_visible_to|Widoczność"
+# KSH zawsze ALL (wyzwalacz), SCX może HHL+SCX
+run $KSH "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-ksh-fc.pdf','b4-ksh-force-hhl-scx.pdf','application/pdf',1,'{FORWARDER,CARRIER}')" commit >/dev/null
+val "B4: KSH wstawia HHL+SCX → ALL" $HHL \
+  "select ('CLIENT'::org_kind = any (visible_to))::text from documents where file_name='b4-ksh-force-hhl-scx.pdf'" true
+run $KSH "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-ksh-hide.pdf','b4-ksh-force-hide.pdf','application/pdf',1,'{FORWARDER,CLIENT}')" commit >/dev/null
+val "B4: KSH wstawia FORWARDER+CLIENT → ALL" $HHL \
+  "select (cardinality(visible_to)=3 and 'CARRIER'::org_kind = any (visible_to))::text from documents where file_name='b4-ksh-force-hide.pdf'" true
+run $SCX "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-scx-hs.pdf','b4-scx-hhl-scx.pdf','application/pdf',1,'{FORWARDER,CARRIER}')" commit >/dev/null
+val "B4: SCX wstawia HHL+SCX → zostaje" $HHL \
+  "select (visible_to = '{FORWARDER,CARRIER}'::org_kind[])::text from documents where file_name='b4-scx-hhl-scx.pdf'" true
+# DOC_UPLOADED HHL+SCX: KSH nie widzi zdarzenia (ani nazwy pliku na osi)
+run $HHL "insert into load_events (load_id, event_type, occurred_at, payload)
+   values ('$L1','DOC_UPLOADED',now(), jsonb_build_object('documentId','$B4DOC','filename','b4-doc-hhl-scx.pdf','category','OTHER'))" commit >/dev/null
+val "B4: KSH nie widzi DOC_UPLOADED dokumentu HHL+SCX" $KSH \
+  "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 0
+val "B4: SCX widzi DOC_UPLOADED dokumentu HHL+SCX" $SCX \
+  "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 1
+val "B4: HHL widzi DOC_UPLOADED dokumentu HHL+SCX" $HHL \
+  "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

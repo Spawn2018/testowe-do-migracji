@@ -3807,3 +3807,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #381 — unit/visual zielone, `db` FAIL: security 146 OK / 1 FAIL (`SCX nie wstawi odczytu…` — pusty id po rollback fixture). Bez F7. #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4 cz.2** — fixture `b4-cudzy-all` / CAR2B4 przez `sys` (commit), nie w `val` (rollback).
+
+## 2026-10-21 09:20 — B4 cz.2 F7 #381: CHECK + wyzwalacz + DOC_UPLOADED
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #381 — F7 „jeszcze NIE” (07:00 UTC, head `5ea5b55`); po fixture `0528ca2` CI unit/visual/db zielone, bez ponownego „gotowe”. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** — F7: CHECK tylko ALL/HHL+SCX; `set_document_visible_to` (KSH→ALL); `load_events.visible_to` + filtr `events_read` dla DOC_UPLOADED; security 147→155.
