@@ -298,6 +298,38 @@ sys "update loads set driver_phone='600111222' where id='33333333-0000-0000-0000
 sys "update loads set status='PLANNED', hhl_order_no=null where id='33333333-0000-0000-0000-00000000a902'" >/dev/null
 sval "A10: auto READY bez HHL → zablokowane" "select auto_set_status('33333333-0000-0000-0000-00000000a902','PLANNED'::load_status,'READY'::load_status,'test W12',now(),'{}'::jsonb)" f
 sval "A10: ryzyko rk_auto_status_blocked" "select count(*) from risk_signals where load_id='33333333-0000-0000-0000-00000000a902' and title_key='rk_auto_status_blocked'" 1
+# A10 F7: PLANNED bez daty załadunku — skan nie przenosi do Brak zasobów.
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date,
+     hhl_order_no, carrier_order_no)
+     values ('33333333-0000-0000-0000-00000000a904','$P','$SCXO','123456/2026/A904','PLANNED',null,
+     'HHL/A904','SCX/A904')
+     on conflict (id) do update set status='PLANNED', plan_load_date=null,
+       hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no" >/dev/null
+sval "A10: PLANNED bez daty → target PLANNED" "select a10_prep_target_status('33333333-0000-0000-0000-00000000a904')::text" PLANNED
+sval "A10: skan PLANNED bez daty = bez zmian" "select set_config('tower.a10_prep_scan','on',true);
+  select a10_try_prep_status('33333333-0000-0000-0000-00000000a904')" f
+sval "A10: PLANNED bez daty zostaje" "select status::text from loads where id='33333333-0000-0000-0000-00000000a904'" PLANNED
+# A10 F7: auto w sesji SCX z request.jwt.claims (jak PostgREST) — bez „Status nie może się cofnąć”.
+sys "select set_config('tower.status_ctx','on',true);
+     update loads set status='READY', driver_name='Jan A9', driver_phone='600111222'
+       where id='33333333-0000-0000-0000-00000000a901';
+     insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+     values ('33333333-0000-0000-0000-00000000a901','STATUS_AUTO',now(),
+             jsonb_build_object('from','RESOURCES_PENDING','to','READY','powod','setup F7 claims'),
+             'STATUS_AUTO:33333333-0000-0000-0000-00000000a901:READY:f7claims');
+     select set_config('tower.status_ctx','off',true)" >/dev/null
+sval "A10: SCX+claims auto cofa bez ryzyka" "begin;
+  set local role authenticated;
+  set local request.jwt.claim.sub='$SCX';
+  set local request.jwt.claims='{\"sub\":\"$SCX\",\"role\":\"authenticated\"}';
+  update loads set driver_name=null where id='33333333-0000-0000-0000-00000000a901';
+  select status::text || '|' || (
+    select count(*)::text from risk_signals
+     where load_id='33333333-0000-0000-0000-00000000a901'
+       and title_key='rk_auto_status_blocked'
+       and coalesce(detail->>'blad','') ilike '%cofn%')
+  from loads where id='33333333-0000-0000-0000-00000000a901';
+commit" "RESOURCES_PENDING|0"
 # CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
 # DELIVERED wymaga hhl_order_no + carrier_order_no (0003) — bez nich INSERT padał i SCX widział 0 spraw.
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
