@@ -34,9 +34,16 @@ describe('W-audyt-teksty', () => {
     expect(read('src/components/zones/zones.css')).toContain('.zv.is-phone .zv-item{border:1px solid var(--rule)');
   });
 
-  it('(e) cztery klucze z 0255 w grupie System, tylko HHL; ext_mail tylko Administrator HHL i e-mail', () => {
+  it('(e) workflow — własna grupa „Automatyzacje” dla HHL, KSH i SCX; trzy klucze SYSTEM tylko HHL', () => {
+    const auto = NOTIFY_CATALOG.find((g) => g.id === 'automation')!;
+    expect(auto.title).toBe('Automatyzacje');
+    const wf = auto.rows.find((x) => x.id === 'workflow')!;
+    expect(wf.title).toBe('Alert automatyzacji (reguła zgłosiła problem)');
+    expect(wf.pendingDb).toBe(true);
+    for (const k of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH', 'CARRIER_USER'] as const) expect(wf.cells[k], k).not.toBeNull();
     const sys = NOTIFY_CATALOG.find((g) => g.id === 'system')!.rows;
-    for (const id of NEW) {
+    expect(sys.find((x) => x.id === 'workflow')).toBeUndefined();
+    for (const id of ['email_budget', 'fuel_miss', 'ext_mail']) {
       const r = sys.find((x) => x.id === id)!;
       expect(r, id).toBeTruthy();
       expect(r.pendingDb).toBe(true);
@@ -44,7 +51,6 @@ describe('W-audyt-teksty', () => {
       expect(r.cells.CARRIER_DISPATCH).toBeNull();
       expect(r.cells.CARRIER_USER).toBeNull();
     }
-    expect(sys.find((x) => x.id === 'workflow')!.title).toBe('Alert automatyzacji (reguła zgłosiła problem)');
     const ext = sys.find((x) => x.id === 'ext_mail')!;
     expect(ext.cells.HHL_OPS).toBeNull();
     expect(ext.cells.HHL_ADMIN).toEqual({ bell: false, push: false, mail: true });
@@ -53,6 +59,9 @@ describe('W-audyt-teksty', () => {
   it('(e) przed wdrożeniem 0255: ekran ich nie pokazuje i nie zgłasza; po wdrożeniu — wiersze z bazy, bez komunikatu', () => {
     const before = matrixFromDb(NOTIFY_CATALOG, [row('dec_new', 'HHL_ADMIN', true, false)]).flatMap((g) => g.rows.map((r) => r.id));
     for (const id of NEW) expect(before).not.toContain(id);
+    /* pusta grupa „Automatyzacje” nie rysuje się przed wdrożeniem */
+    expect(matrixFromDb(NOTIFY_CATALOG, []).map((g) => g.id)).not.toContain('automation');
+    expect(NOTIFY_CATALOG_READY.map((g) => g.id)).not.toContain('automation');
     const db = NEW.map((k) => row(k, 'HHL_ADMIN', true, true));
     const after = matrixFromDb(NOTIFY_CATALOG, db).flatMap((g) => g.rows);
     for (const id of NEW) expect(after.map((r) => r.id)).toContain(id);

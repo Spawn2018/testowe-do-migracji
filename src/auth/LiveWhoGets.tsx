@@ -48,7 +48,7 @@ export function matrixFromDb(catalog: readonly MatrixGroup[], rows: readonly DbR
       }
       return { ...row, cells };
     }),
-  }));
+  })).filter((g) => g.rows.length > 0);
 }
 
 /** Klucze z bazy, których ekran nie pokazuje (brak w katalogu) — komunikat zamiast cichego pominięcia. */

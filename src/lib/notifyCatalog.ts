@@ -71,6 +71,13 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
     ],
   },
   {
+    /* audyt-teksty (e): grupa w bazie `AUTOMATION` (0255, #406); reguła może wskazać HHL, KSH i SCX. Do wdrożenia — `pendingDb`. */
+    id: 'automation', title: 'Automatyzacje', rows: [
+      { id: 'workflow', title: 'Alert automatyzacji (reguła zgłosiła problem)', sub: 'reguła z kreatora w Automatyzacjach · dostają role wskazane w regule', target: 'Automatyzacje', pendingDb: true,
+        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(false), CARRIER_USER: c(false) } },
+    ],
+  },
+  {
     id: 'system', title: 'System', sub: 'tylko HHL', rows: [
       { id: 'sms_gw', title: 'Bramka SMS milczy albo SMS niedoręczony', sub: 'SMS niewysłany w 10 min · e-mail do Operacji HHL', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
@@ -82,9 +89,7 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'daily', title: 'Raport dzienny', sub: 'podsumowanie doby', target: 'Kokpit',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
-      /* audyt-teksty (e): klucze z migracji 0255 (#406) — do jej wdrożenia `pendingDb` (bez wiersza w bazie ekran ich nie pokazuje) */
-      { id: 'workflow', title: 'Alert automatyzacji (reguła zgłosiła problem)', sub: 'reguła z kreatora w Automatyzacjach', target: 'Automatyzacje', pendingDb: true,
-        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      /* audyt-teksty (e): klucze SYSTEM z migracji 0255 (#406), tylko HHL — do jej wdrożenia `pendingDb` (bez wiersza w bazie ekran ich nie pokazuje) */
       { id: 'email_budget', title: 'Limit maili wyczerpany / bliski limitu', sub: 'dzienny limit wysyłki e-maili', target: 'Opcje › Stan systemu', pendingDb: true,
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'fuel_miss', title: 'Brak odczytu ceny paliwa (OKQ8 / Orlen)', sub: 'opłata paliwowa liczy się z ostatniego odczytu', target: 'Opcje › Cennik', pendingDb: true,
@@ -99,4 +104,4 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
 export const NOTIFY_EVENT_IDS: readonly string[] = NOTIFY_CATALOG.flatMap((g) => g.rows.filter((r) => !r.pendingDb).map((r) => r.id));
 
 /** „Co dostaję” (zapis `my_notify_set`): bez zdarzeń, których baza jeszcze nie zna (migracja niewdrożona). */
-export const NOTIFY_CATALOG_READY: MatrixGroup[] = NOTIFY_CATALOG.map((g) => ({ ...g, rows: g.rows.filter((r) => !r.pendingDb) }));
+export const NOTIFY_CATALOG_READY: MatrixGroup[] = NOTIFY_CATALOG.map((g) => ({ ...g, rows: g.rows.filter((r) => !r.pendingDb) })).filter((g) => g.rows.length > 0);
