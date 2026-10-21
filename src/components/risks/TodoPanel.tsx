@@ -303,7 +303,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     onResolved: (i, hint) => {
       setOpenIssue(null);
       if (hint === 'BACKUP_RETRY') navigate({ pathname: '/opcje/stan-systemu', search: 'kopia=1' });
-      else if (i.loadId && hint) {
+      else if (i.loadId && hint && hint !== 'KSH_DATE_COUNTER') {
         selectLoad(i.loadId);
         setDrawerTab(hint === 'OPEN_AWIZACJA' || hint === 'PICK_SAILING' ? 'overview' : hint === 'OPEN_DOC' ? 'docs' : hint === 'ADD_FEE' ? 'pricing' : null);
       }
