@@ -3962,3 +3962,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora`; pozycje #402/#411/#405/#400/#409/#412/#413 w planie.
 - Scalanie: #414 F7 gotowe → merge `dc2e08eb`. #415 F7 gotowe, po #414 mergeable (visual w toku). #406 `db` FAIL: security B6 (25/0 zamiast 20/1 — a_gate przed budżetem tłumi B6T* bez event_key) + risks C1 RISK_OPEN. Bez push na `main`.
 - Bieżąca: **HOTFIX #402** PR #406 — test B6 z `matrix_event=dates`; C1: org/macierz risk_route + asercja po `risk_id`.
+
+## 2026-10-21 22:40 — #402 F7: bez nadpisu macierzy; #417/#416 SCALONE
+
+- Skrzynka: bez nowych; #412 dopiski (2FA/Orlen) nadal przy pozycji. #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #417 F7 gotowe → merge `3d380cdf`; #416 F7 gotowe → merge `ba9aed43`. #408 wstrzymane. #418 bez F7 (visual w toku). #406 CI zielone na `42fc2914`, F7: nie nadpisuj `inv_overdue`/`dates`. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `insert … on conflict do nothing`; usunięte UPDATE `inv_overdue`/`dates`; money/import/i2 włączają kanał w prep.

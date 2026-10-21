@@ -29,12 +29,7 @@ insert into public.notification_matrix (
 ('ext_mail','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
 ('ext_mail','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
 ('ext_mail','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji')
-on conflict (event_key, role) do update
-  set event_group = excluded.event_group,
-      label_pl = excluded.label_pl,
-      in_app = excluded.in_app,
-      email = excluded.email,
-      push = excluded.push;
+on conflict (event_key, role) do nothing;
 
 -- Pref zawsze wygrywa; fixed_* = tylko domyślna wartość macierzy, gdy brak wpisu w „Co dostaję”.
 create or replace function public.notify_person_on(
@@ -61,15 +56,8 @@ update public.notification_matrix
    set fixed_email = false, fixed_push = false, fixed_in_app = false
  where fixed_email is true or fixed_push is true or fixed_in_app is true;
 
--- Przypomnienia płatności i e-maile o datach: domyślnie włączone (wyłączalne w Opcjach).
-update public.notification_matrix
-   set in_app = true, email = true
- where event_key = 'inv_overdue'
-   and role in ('HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH');
-update public.notification_matrix
-   set email = true
- where event_key = 'dates'
-   and role in ('HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER');
+-- #402 F7: nie nadpisuj istniejących in_app/email/push (wybory z „Kto co dostaje”).
+-- Nowe klucze: insert … on conflict do nothing powyżej. Testy włączają kanał w prep.
 
 -- Jak 0237 + SCHEDULE_DATE_CRITICAL → dates; DECISION_ESCALATED_BATCH → dec_late.
 create or replace function public.notify_event_key(p_template text, p_payload jsonb)

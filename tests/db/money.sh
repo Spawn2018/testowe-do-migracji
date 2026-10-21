@@ -259,6 +259,9 @@ val "A4: cofnięcie Opłacona 39/8 przed M7" $HHL "select unmark_invoice_paid($I
 echo; echo "[M7] Terminy i przypomnienia: kadencja −3/0/+1/+7/+14, tylko płatnik i wierzyciel, opłacona → cisza"
 Q() { $PSQL -c "$1" 2>&1 | tail -1; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
+# #402 F7: migracja nie włącza inv_overdue — test włącza kanały jak c16-push/l13.
+sys "update notification_matrix set in_app=true, email=true
+ where event_key='inv_overdue' and role in ('HHL_ADMIN','CLIENT_USER','CARRIER_DISPATCH')" >/dev/null
 sys "update app_users set locale='sv' where email='scx@test'"
 val "HHL: SCX/FV/39/1 „Opłacona” (utrwalone dla M7)"                 $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status from invoices where invoice_number='SCX/FV/39/1'" OPLACONA commit
 NPR="from notifications n join app_users u on u.id=n.user_id where n.template='PAYMENT_REMINDER'"
