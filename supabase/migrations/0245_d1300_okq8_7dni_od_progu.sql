@@ -83,49 +83,15 @@ begin
   );
 end $$;
 
+-- 0155: cienka nakładka HHL → sys (parametry przez sefs_params_for / dziś).
 create or replace function public.sefs_compute_hybrid(p_project uuid, p_avg_sek numeric, p_avg_pln numeric)
 returns jsonb
 language plpgsql stable security definer set search_path = public as $$
-declare
-  p sefs_parameters%rowtype;
-  v_sek numeric; v_pln numeric; v_app numeric;
-  v_over_sek boolean := false; v_over_pln boolean := false;
-  v_max_sek numeric; v_max_pln numeric;
-  v_step_sek numeric := 0.30; v_step_pln numeric := 0.10;
 begin
   if (is_hhl()) is not true then
     raise exception 'SEFS — wyłącznie HHL' using errcode = '42501';
   end if;
-  select * into p from sefs_parameters where project_id = p_project order by version desc limit 1;
-  if not found then
-    return jsonb_build_object('ok', false, 'reason', 'NO_SEFS_PARAMS',
-      'message', 'Brak parametrów SEFS — wycena paliwowa wstrzymana');
-  end if;
-  select max((t->>'lte')::numeric) into v_max_sek from jsonb_array_elements(p.tiers_sek) t;
-  select max((t->>'lte')::numeric) into v_max_pln from jsonb_array_elements(p.tiers_pln) t;
-  if p_avg_sek is not null and v_max_sek is not null
-     and round(p_avg_sek::numeric, 2) >= v_max_sek + v_step_sek then
-    v_over_sek := true;
-  end if;
-  if p_avg_pln is not null and v_max_pln is not null
-     and round(p_avg_pln::numeric, 2) >= v_max_pln + v_step_pln then
-    v_over_pln := true;
-  end if;
-  v_sek := sefs_lookup_mult(round(p_avg_sek::numeric, 2), p.tiers_sek);
-  v_pln := sefs_lookup_mult(round(p_avg_pln::numeric, 2), p.tiers_pln);
-  v_app := least(v_sek, v_pln);
-  return jsonb_build_object(
-    'ok', true,
-    'avg_sek', round(p_avg_sek::numeric, 2),
-    'avg_pln', round(p_avg_pln::numeric, 2),
-    'mult_sek', v_sek,
-    'mult_pln', v_pln,
-    'applied_mult', v_app,
-    'over_table_sek', v_over_sek,
-    'over_table_pln', v_over_pln,
-    'params_version', p.version,
-    'cycle', p.cycle
-  );
+  return sefs_compute_hybrid_sys(p_project, p_avg_sek, p_avg_pln);
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -141,9 +107,12 @@ declare
   v_sum numeric := 0;
   v_n int := 0;
   v_days jsonb := '[]'::jsonb;
+  v_pubs jsonb := '[]'::jsonb;
+  v_pub_keys text[] := array[]::text[];
+  v_any_in_week boolean := false;
 begin
   -- D-1300: cena dnia = ostatnia publikacja OKQ8 (published_on) ≤ dzień;
-  -- wartość publikacji z korektą (jak sefs_pub_avg), bez kopiowania starych odczytów.
+  -- F7: bez żadnej publikacji w pn–nd tygodnia → no_readings (nie ciągnąć cicho całego tygodnia ze starej ceny).
   for v_day in select d::date from generate_series(p_from, p_to, '1 day') d loop
     with pubs as (
       select distinct on (coalesce(c.published_on, r.published_on))
@@ -163,21 +132,29 @@ begin
      limit 1;
     if v_val is null then
       return jsonb_build_object(
-        'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_days,
+        'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_pubs,
         'fallback_last', false, 'no_readings', true);
+    end if;
+    if v_pub >= p_from and v_pub <= p_to then
+      v_any_in_week := true;
     end if;
     v_sum := v_sum + v_val;
     v_n := v_n + 1;
     v_days := v_days || jsonb_build_array(jsonb_build_object(
       'day', v_day, 'value', v_val, 'published_on', v_pub));
+    if v_pub is not null and not (v_pub::text = any (v_pub_keys)) then
+      v_pub_keys := array_append(v_pub_keys, v_pub::text);
+      v_pubs := v_pubs || jsonb_build_array(jsonb_build_object(
+        'published_on', v_pub, 'value', v_val));
+    end if;
   end loop;
-  if v_n < 7 then
+  if v_n < 7 or v_any_in_week is not true then
     return jsonb_build_object(
-      'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_days,
+      'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_pubs,
       'fallback_last', false, 'no_readings', true);
   end if;
   return jsonb_build_object(
-    'avg', v_sum / v_n, 'n', v_n, 'days', v_days, 'pubs', v_days,
+    'avg', v_sum / v_n, 'n', v_n, 'days', v_days, 'pubs', v_pubs,
     'fallback_last', false);
 end $$;
 revoke all on function public.sefs_sek_daily_avg(uuid, date, date) from public, anon, authenticated;
@@ -280,63 +257,74 @@ end $$;
 comment on function public.sefs_week_calc(uuid, date) is
   'D-1300/D-1322: OKQ8 = średnia 7 cen dziennych; Orlen = publikacje; mnożnik „od progu”; inaczej PROGNOZA = ostatni OSTATECZNY.';
 
--- l1b: over_table z krokiem (jak compute)
-create or replace function public.l1b_sefs_note(p_project uuid, p_load_date date)
-returns text
-language plpgsql security definer set search_path = public as $l1b$
-declare
-  v_res jsonb; v_reason text; v_prev_start date; v_final boolean; v_title text;
-begin
-  if p_project is null or p_load_date is null then return null; end if;
-  v_res := sefs_week_calc(p_project, p_load_date);
-  v_prev_start := (p_load_date - ((extract(isodow from p_load_date)::int) - 1)) - 7;
-  v_final := coalesce((v_res->>'final')::boolean, false)
-    or coalesce(v_res->>'status', '') = 'OSTATECZNY';
-  if coalesce(v_res->>'ok', '') <> 'true' then
-    v_reason := 'SOURCE';
-  elsif coalesce((v_res->>'over_table_sek')::boolean, false)
-     or coalesce((v_res->>'over_table_pln')::boolean, false) then
-    v_reason := 'OVER';
-  else
-    v_reason := 'OK';
-  end if;
-  -- 0230: tydzień otwarty / przyszły — brak cen = prognoza, nie sprawa (D-1300 bez zmian).
-  if v_reason = 'SOURCE' and v_final is not true then
-    return v_reason;
-  end if;
-  if v_reason in ('SOURCE', 'OVER') then
-    v_title := case
-      when v_reason = 'SOURCE' then
-        'Opłata paliwowa: brak cen paliwa z tygodnia t'
-        || ltrim(to_char(v_prev_start, 'IW'), '0')
-        || ' (' || to_char(v_prev_start, 'DD.MM') || '–' || to_char(v_prev_start + 6, 'DD.MM') || ')'
-      else 'Opłata paliwowa: indeks poza tabelą progów'
-    end;
-    perform decision_open_from_event(
-      p_project, 'SEFS_OUT_OF_TABLE',
-      'l1b:sefs:' || p_project::text || ':' || v_prev_start::text || ':' || v_reason,
-      v_title,
-      jsonb_build_object('reason', v_reason, 'prev_week_start', v_prev_start, 'load_date', p_load_date),
-      null, null
-    );
-  end if;
-  return v_reason;
-end
-$l1b$;
+-- l1b_sefs_note: zostaje wersja z 0230 (straż SOURCE przy PROGNOZA + ltrim numeru tygodnia).
+-- over_table z krokiem jest w sefs_compute_hybrid_sys → sefs_week_calc.
 
 -- ---------------------------------------------------------------------
--- 5. Przeliczenie niezafakturowanych + sprawa przy fakturze
+-- 5. Sprawa przy fakturze z innym mnożnikiem (bez autozmiany faktur)
 -- ---------------------------------------------------------------------
-do $$
+create or replace function public.sefs_scan_invoice_mult_diff()
+returns jsonb
+language plpgsql security definer set search_path = public as $$
 declare
   r record;
-  v_n int := 0;
   v_inv int := 0;
   v_w jsonb;
   v_fuel date;
   v_old numeric;
   v_new numeric;
   v_week text;
+begin
+  for r in
+    select l.id, l.project_id, l.hhl_order_no, l.order_no,
+           coalesce(c.fuel_applied_mult, rv.fuel_applied_mult) as old_mult
+      from loads l
+      left join load_cost c on c.load_id = l.id and c.invoiced_total_eur is not null
+      left join load_revenue rv on rv.load_id = l.id and rv.invoiced_total_eur is not null
+     where c.load_id is not null or rv.load_id is not null
+  loop
+    v_fuel := public.fuel_load_date(r.id);
+    if v_fuel is null then continue; end if;
+    v_w := public.sefs_week_calc(r.project_id, v_fuel);
+    if coalesce(v_w->>'ok', '') <> 'true' then continue; end if;
+    v_new := (v_w->>'applied_mult')::numeric;
+    v_old := r.old_mult;
+    if v_old is null or v_new is null or v_old = v_new then continue; end if;
+    v_week := ltrim(to_char(v_fuel - ((extract(isodow from v_fuel)::int) - 1), 'IW'), '0');
+    perform decision_open_from_event(
+      r.project_id, 'SEFS_INVOICE_DIFF',
+      'd1300:invoice:' || r.id::text,
+      format(
+        'Opłata paliwowa na fakturze różni się od wyliczenia (t%s: ×%s → ×%s)',
+        v_week,
+        trim(to_char(v_old, '990.99')),
+        trim(to_char(v_new, '990.99'))
+      ),
+      jsonb_build_object(
+        'load_id', r.id,
+        'hhl_order_no', r.hhl_order_no,
+        'order_no', r.order_no,
+        'old_mult', v_old,
+        'new_mult', v_new,
+        'load_date', v_fuel,
+        'source', '0245_d1300'
+      ),
+      r.id, null
+    );
+    v_inv := v_inv + 1;
+  end loop;
+  return jsonb_build_object('invoice_cases', v_inv);
+end $$;
+revoke all on function public.sefs_scan_invoice_mult_diff() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6. Przeliczenie niezafakturowanych + skan faktur + cron fuel-prices
+-- ---------------------------------------------------------------------
+do $$
+declare
+  r record;
+  v_n int := 0;
+  v_scan jsonb;
 begin
   perform set_config('tower.audit_source', 'migracja 0245 (D-1300/D-1322)', true);
 
@@ -367,49 +355,44 @@ begin
     v_n := v_n + 1;
   end loop;
 
-  -- Zafakturowane z innym mnożnikiem niż nowe wyliczenie → sprawa HHL (bez autozmiany faktur)
-  for r in
-    select l.id, l.project_id, l.hhl_order_no, l.order_no,
-           coalesce(c.fuel_applied_mult, rv.fuel_applied_mult) as old_mult
-      from loads l
-      left join load_cost c on c.load_id = l.id and c.invoiced_total_eur is not null
-      left join load_revenue rv on rv.load_id = l.id and rv.invoiced_total_eur is not null
-     where c.load_id is not null or rv.load_id is not null
-  loop
-    v_fuel := public.fuel_load_date(r.id);
-    if v_fuel is null then continue; end if;
-    v_w := public.sefs_week_calc(r.project_id, v_fuel);
-    if coalesce(v_w->>'ok', '') <> 'true' then continue; end if;
-    v_new := (v_w->>'applied_mult')::numeric;
-    v_old := r.old_mult;
-    if v_old is null or v_new is null or v_old = v_new then continue; end if;
-    v_week := to_char(v_fuel - ((extract(isodow from v_fuel)::int) - 1), 'IW');
-    perform decision_open_from_event(
-      r.project_id, 'SEFS_INVOICE_DIFF',
-      'd1300:invoice:' || r.id::text,
-      format(
-        'Opłata paliwowa na fakturze różni się od wyliczenia (t%s: ×%s → ×%s)',
-        v_week,
-        trim(to_char(v_old, '990.99')),
-        trim(to_char(v_new, '990.99'))
-      ),
-      jsonb_build_object(
-        'load_id', r.id,
-        'hhl_order_no', r.hhl_order_no,
-        'order_no', r.order_no,
-        'old_mult', v_old,
-        'new_mult', v_new,
-        'load_date', v_fuel,
-        'source', '0245_d1300'
-      ),
-      r.id, null
-    );
-    v_inv := v_inv + 1;
-  end loop;
+  v_scan := public.sefs_scan_invoice_mult_diff();
 
   insert into audit_log (user_id, action, entity, entity_id, new_value)
   values (
     null, 'FUEL_RECALC_D1300', 'loads', 'd1300-0245',
-    jsonb_build_object('recomputed', v_n, 'invoice_cases', v_inv, 'source', '0245_d1300')
+    jsonb_build_object(
+      'recomputed', v_n,
+      'invoice_cases', coalesce((v_scan->>'invoice_cases')::int, 0),
+      'source', '0245_d1300',
+      'note', 'także PROGNOZA (t44–t51) — ostatni OSTATECZNY po D-1322'
+    )
   );
 end $$;
+
+-- D-1300 F7: 07:15 / 09:15 / 13:15 czasu polskiego (UTC lato: 05:15 / 07:15 / 11:15); ponowienie pomija źródło już zapisane.
+do $cron$
+declare
+  v_sql text := $c$
+    select net.http_post(
+      url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url')
+             || '/functions/v1/fuel-prices',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')
+      ),
+      timeout_milliseconds := 180000)
+  $c$;
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname in (
+      'tower-fuel-prices', 'tower-fuel-prices-0915', 'tower-fuel-prices-1315'
+    );
+    perform cron.schedule('tower-fuel-prices', '15 5 * * *', v_sql);
+    perform cron.schedule('tower-fuel-prices-0915', '15 7 * * *', v_sql);
+    perform cron.schedule('tower-fuel-prices-1315', '15 11 * * *', v_sql);
+  else
+    raise notice '0245: pg_cron niedostępne — cron fuel-prices do zaplanowania ręcznie';
+  end if;
+exception when others then
+  raise notice '0245 cron fuel-prices: %', sqlerrm;
+end
+$cron$;

@@ -3729,3 +3729,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #377 — unit/visual zielone na `cb1c1027`; db czerwone (baf 22,99→22,85; i31 10; `l1b_sefs_note` bez straży 0230). #259 bez F7.
 - Bieżąca: **D-1300** — asercja SEK t41 = 22,85 (D-1322); `i31: 10`; przywrócona straż SOURCE tylko przy OSTATECZNY w `l1b_sefs_note` (0230).
+
+## 2026-10-21 03:25 — D-1300 (#359 / #377): F7 runda 2
+
+- Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #377 — CI zielone na `b09d1bd4`; F7 „jeszcze NIE” (lista blokująca). #259 bez F7.
+- Bieżąca: **D-1300** — usunięty `l1b_sefs_note` z 0245 (zostaje 0230); cienki `sefs_compute_hybrid`; `sefs_sek_daily_avg` bez cichego tygodnia bez publikacji + `pubs_sek` bez duplikatów; `sefs_scan_invoice_mult_diff`; cron 07:15/09:15/13:15 PL; `fuel-prices` 3 próby, ingest osobno, `integration_runs.ok` tylko gdy oba źródła OK; `baf` 62.

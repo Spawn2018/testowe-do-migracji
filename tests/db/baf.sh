@@ -60,15 +60,43 @@ chk "tydz. 40: SEK 7 dni → 23,05 → 1,13 (od progu)" "$(Q "select ($W40->>'n_
 chk "tydz. 40: PLN 5 publ. → 7,41 → 1,16 (od progu)" "$(Q "select ($W40->>'n_pln')||'/'||($W40->>'avg_pln')||'/'||($W40->>'mult_pln')")" "5/7.41/1.16"
 chk "tydz. 40: wynik 1,13" "$(Q "select $W40->>'applied_mult'")" "1.13"
 
-# Tydzień bez publikacji: odczyty 12–18.10 to kopie (cena bez zmian) → ostatnia opublikowana
-sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
-  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 22.29, 'https://www.okq8.se/foretag/priser/', 'kopia' from generate_series('2026-10-06'::date,'2026-10-18'::date,'1 day') d"
-sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note)
-  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 6.943, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'kopia' from generate_series('2026-10-06'::date,'2026-10-18'::date,'1 day') d"
+# D-1300 F7: tydzień 05–11.10 (wskaźniki t42) — jedna publikacja OKQ8 22,80 + Orlen 7,00
+sys "delete from fuel_index_readings where project_id='$P' and reading_date >= '2026-10-05'"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 22.80, 'https://www.okq8.se/foretag/priser/', 't42', '2026-10-05'::date
+    from generate_series('2026-10-05'::date,'2026-10-11'::date,'1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', d, d::date, 7.00, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 't42', pub::date from (values
+   ('2026-10-06','2026-10-06'),('2026-10-07','2026-10-07'),('2026-10-08','2026-10-08'),
+   ('2026-10-09','2026-10-09'),('2026-10-10','2026-10-10')) t(d, pub)"
+# tydzień 12–18.10 (wskaźniki t43) — OKQ8 23,10 + Orlen 7,11
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.10, 'https://www.okq8.se/foretag/priser/', 't43', '2026-10-12'::date
+    from generate_series('2026-10-12'::date,'2026-10-18'::date,'1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', d, d::date, 7.11, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 't43', pub::date from (values
+   ('2026-10-13','2026-10-13'),('2026-10-14','2026-10-14'),('2026-10-15','2026-10-15'),
+   ('2026-10-16','2026-10-16'),('2026-10-17','2026-10-17')) t(d, pub)"
+
+W42="sefs_week_calc('$P','2026-10-12','2026-10-12')"
+chk "tydz. 42: załadunek 12.10 → 1,12 OSTATECZNY" "$(Q "select ($W42->>'applied_mult')||'/'||($W42->>'status')")" "1.12/OSTATECZNY"
 W43="sefs_week_calc('$P','2026-10-19','2026-10-19')"
-# D-1300: brak nowej publikacji w tygodniu ≠ fallback — 7 dni z ceną z 05.10
-chk "tydzień bez nowej publikacji SEK → 7 dni ×22,29 z 05.10" "$(Q "select ($W43->>'n_sek')||'/'||($W43->>'fallback_last_sek')||'/'||($W43->>'avg_sek')||'/'||($W43->'days_sek'->0->>'published_on')")" "7/false/22.29/2026-10-05"
+chk "tydz. 43: SEK 23,10 / PLN 7,11 → 1,13" "$(Q "select ($W43->>'avg_sek')||'/'||($W43->>'avg_pln')||'/'||($W43->>'applied_mult')")" "23.10/7.11/1.13"
+chk "tydz. 43: n_sek=7, jedna publikacja w pubs_sek" "$(Q "select ($W43->>'n_sek')||'/'||jsonb_array_length($W43->'pubs_sek')")" "7/1"
+chk "jedna publikacja OKQ8 (cena bez zmian 7 dni) → średnia OK" "$(Q "select ($W42->>'n_sek')||'/'||($W42->>'avg_sek')||'/'||($W42->'days_sek'->6->>'published_on')")" "7/22.80/2026-10-05"
+# F7: przeciąganie starej ceny bez publikacji w tygodniu → SOURCE
+chk "brak publikacji OKQ8 w tygodniu → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-11-02','2026-11-03')->>'reason'")" "SOURCE_FAILURE"
 chk "brak jakiejkolwiek ceny SEK/PLN → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-12-07','2026-12-07')->>'reason'")" "SOURCE_FAILURE"
+
+# D-1322 F7: progi PLN „od progu” + poniżej pierwszego + granica over_table
+chk "PLN 7,00 → 1,12" "$(Q "select sefs_lookup_mult(7.00, '$TP'::jsonb)")" "1.12"
+chk "PLN 7,10 → 1,13" "$(Q "select sefs_lookup_mult(7.10, '$TP'::jsonb)")" "1.13"
+chk "PLN 7,19 → 1,13" "$(Q "select sefs_lookup_mult(7.19, '$TP'::jsonb)")" "1.13"
+chk "PLN 7,20 → 1,14" "$(Q "select sefs_lookup_mult(7.20, '$TP'::jsonb)")" "1.14"
+chk "PLN poniżej pierwszego progu → 1,11" "$(Q "select sefs_lookup_mult(6.50, '$TP'::jsonb)")" "1.11"
+chk "over_table SEK: ostatni+0,29 → nie" "$(Q "select (sefs_compute_hybrid_sys('$P',23.99,7.00,'2026-10-06')->>'over_table_sek')")" "false"
+chk "over_table SEK: ostatni+0,30 → tak" "$(Q "select (sefs_compute_hybrid_sys('$P',24.00,7.00,'2026-10-06')->>'over_table_sek')")" "true"
+chk "over_table PLN: ostatni+0,10 → tak" "$(Q "select (sefs_compute_hybrid_sys('$P',22.80,7.60,'2026-10-06')->>'over_table_pln')")" "true"
 
 # Niepełny tydzień → wstępny; po niedzieli → ostateczny
 chk "tydzień niepełny (dziś 08.10, załadunek 12.10) → PROGNOZA" "$(Q "select sefs_week_calc('$P','2026-10-12','2026-10-08')->>'status'")" "PROGNOZA"
@@ -196,6 +224,19 @@ chk "korekta: actual pusty, mnożnik 1,13" "$(Q "select coalesce(l.actual_load_a
 sys "update loads set actual_load_at = '2026-10-05 13:21+02' where id='$LTM'"
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$LTM','GEOFENCE_EXIT','2026-10-01 18:00+02','{\"geofence_kind\":\"LOADING\"}')"
 chk "korekta: rzeczywisty wyjazd GPS zostaje" "$(Q "select count(*) from telm_fix_attach_actual_load()")" "0"
+
+# D-1300 F7: przeliczenie + SEFS_INVOICE_DIFF (jedna, idempotentna)
+LINV=33333333-0000-0000-0000-0000000bafin
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, plan_load_date) values
+  ('$LINV','$P','$CAR','BAF/INV','HHL/INV','2026-10-06')"
+sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values
+  ('$P','$LINV','SG-INV','DIMENSIONED',18.21,2.45,2.45,20.0)"
+fresh_price "$LINV"
+sys "select load_price_compute('$LINV', '2026-10-12')"
+sys "update load_cost set invoiced_total_eur = total_amount, fuel_applied_mult = 1.14 where load_id='$LINV'"
+chk "SEFS_INVOICE_DIFF: skan znajduje 1" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
+chk "SEFS_INVOICE_DIFF: drugi skan nadal 1 (mismatch)" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
+chk "SEFS_INVOICE_DIFF: jedna sprawa (idempotent)" "$(Q "select count(*) from decisions where detail->>'event_key'='d1300:invoice:$LINV'")" "1"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
