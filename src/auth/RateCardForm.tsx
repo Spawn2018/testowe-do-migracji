@@ -28,7 +28,9 @@ interface LogRow { at: string; actor: string; entity_id: string; old_value: { ru
 const fmt = (n: number) => String(Number(n)).replace('.', ',');
 
 /** readOnly (W-konta, audyt 17.10 sekcja 07 N2 — F7): Operacje HHL przełączają Stronę i Firmę (oglądają każdą kartę), bez edycji. */
-export default function RateCardForm({ readOnly = false }: { readOnly?: boolean } = {}) {
+/** `onSaved` / `reload` (F7 #415): w Opcjach na produkcji formularz leży pod tabelą `LiveRateCard` — zapis tutaj odświeża
+ *  tabelę, zapis w tabeli (nowy `reload`) odświeża formularz. */
+export default function RateCardForm({ readOnly = false, onSaved, reload = 0 }: { readOnly?: boolean; onSaved?: () => void; reload?: number } = {}) {
   const locale = useTowerStore((s) => s.locale);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [orgs, setOrgs] = useState<Org[]>([]);
@@ -91,7 +93,7 @@ export default function RateCardForm({ readOnly = false }: { readOnly?: boolean 
       setValidFrom(''); setRows([]);
     }
   }, [projectId, side, orgId]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); }, [refresh, reload]);
 
   const cur = cards[0] ?? null;
   const setRow = (i: number, k: keyof SymbolFormRow, v: string) => setRows((x) => x.map((r, j) => {
@@ -115,7 +117,7 @@ export default function RateCardForm({ readOnly = false }: { readOnly?: boolean 
     const { data, error } = await sb.rpc('rate_card_save', { p_project: projectId, p_side: side, p_org: orgId, p: { valid_from: validFrom, note: reason, rules: b.rules } });
     setBusy(false);
     setMsg(error ? { ok: false, text: authErrorPl(error.message) } : { ok: true, text: tp(locale, 'i19_saved', { v: String(data) }) });
-    if (!error) await refresh();
+    if (!error) { await refresh(); onSaved?.(); }
   };
 
   const orgCode = (id: string) => orgs.find((o) => o.id === id)?.code ?? '?';

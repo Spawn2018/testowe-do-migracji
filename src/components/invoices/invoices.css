@@ -137,3 +137,11 @@
 .fact-ex-h{margin:6px 0 0;font-family:var(--font-cond);font-size:13px;letter-spacing:.02em;color:var(--ink-2)}
 /* audyt-C C-09 (img/e4-faktury-desk): VAT 23 % i brutto — tylko do odczytu, liczone przez system */
 .inv-field .input.inv-auto{background:var(--go-bg);border-color:var(--go);color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+
+/* W-opcje-live-2 (img/e4-faktury-desk, E44): „Nowa faktura” w osobnym panelu pod listą. Przy 1280–1366 px okna pozycje
+   (z polem „Na fakturze” i kontrolami) mają całą szerokość, pola faktury pod nimi — bez przewijania tabeli w bok */
+.inv-new-panel .inv-form{border-bottom:0}
+.inv-form{container-type:inline-size}
+@container (max-width:1199px){
+  .inv-form-grid{grid-template-columns:minmax(0,1fr)}
+}

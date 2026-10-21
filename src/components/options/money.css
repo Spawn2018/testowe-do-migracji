@@ -84,9 +84,15 @@
 .pm-add .ox-seg{flex:0 0 auto}
 .pm-add-err{flex-basis:100%;font-size:13.5px}
 
-/* panel Opcji ma ok. 950 px przy 1440 px okna — ceny i tabela mnożników jedna pod drugą (jak na telefonie) */
-@media (max-width:1680px){
+/* W-opcje-live-2 (img/e3-opcje-desk): ceny 2 tygodni i tabela mnożników obok siebie, gdy panel ma miejsce
+   (od ok. 800 px szerokości ekranu Opcji — 1280–1366 px okna); węższy panel — jedna pod drugą (jak na telefonie) */
+.pm-fuel{container-type:inline-size}
+@container (max-width:799px){
   .pm-two{grid-template-columns:minmax(0,1fr)}
+}
+/* obok cen zostaje ok. 330 px — dwie tabele mnożników jedna pod drugą, bez ucięcia kolumny „Mnożnik” */
+@container (min-width:800px) and (max-width:1099px){
+  .pm-tiers-2{grid-template-columns:minmax(0,1fr)}
 }
 @media (max-width:1100px){
   .pm-cards,.pm-cards.pm-cards-2{grid-template-columns:minmax(0,1fr)}

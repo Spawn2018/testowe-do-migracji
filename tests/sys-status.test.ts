@@ -41,11 +41,12 @@ describe('Stan systemu — dane', () => {
     expect(perfResults(NOW)!.rows.some((r) => r.limit.includes('LCP ≤ 2,5 s'))).toBe(true);
   });
 
-  it('produkcja przed podłączeniem: dzisiejszy panel stanu (warunek trybu wpisany wprost, I-0)', () => {
+  it('produkcja: „Źródła danych” z bazy (LiveStatus), dzisiejszy panel pod listą (warunek trybu wpisany wprost, I-0)', () => {
     const src = readFileSync('src/lib/sysSource.ts', 'utf8');
     expect(src.match(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase'/g)?.length).toBeGreaterThanOrEqual(7);
     const ov = readFileSync('src/views/OptionsView.tsx', 'utf8');
     expect(ov).toMatch(/sourceHealth\(getNowIso\(\)\)\s*\?\s*<StatusScreen/);
-    expect(ov).toMatch(/SystemStatusPanel \? block\(<SystemStatusPanel \/>\)/);
+    expect(ov).toMatch(/LiveStatus \? block\(<LiveStatus admin=\{isHhlAdmin\} \/>\)/);
+    expect(readFileSync('src/auth/LiveStatus.tsx', 'utf8')).toContain("import('./SystemStatusPanel')");
   });
 });

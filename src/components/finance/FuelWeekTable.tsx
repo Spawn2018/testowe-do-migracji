@@ -4,7 +4,7 @@
  * OKQ8 i Orlen ze średnią i liczbą publikacji, stosowany mnożnik, stan, liczba transportów.
  * Wiersz rozwija listę transportów i publikacji cen. Telefon: karty (E8).
  */
-import { Fragment, useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
 import { formatCalendarDay } from '../../lib/time';
@@ -16,11 +16,16 @@ import { PROD_BUILD } from '../../lib/prodFacade';
 const x = (n: number) => `×${formatPlNumber(n, 2)}`;
 const dm = (day: string) => formatCalendarDay(day.slice(0, 10));
 
-function src(locale: Locale, key: 'p5_fuel_okq8' | 'p5_fuel_orlen', s: FuelSrc | null): string {
+/* F7 #415 (1280 px): „19,12 SEK/l (4 publ.)” i „→ ×1,05” jako dwa nierozdzielne kawałki — łamanie tylko między nimi,
+   ze spacją przed „(4 publ.)” */
+function src(locale: Locale, key: 'p5_fuel_okq8' | 'p5_fuel_orlen', s: FuelSrc | null): ReactNode {
   if (!s) return '—';
   if (s.avg == null) return x(s.mult);
-  const publ = s.n != null ? ftp(locale, 'p5_fuel_publ', { n: s.n }) : '';
-  return ftp(locale, key, { avg: formatPlNumber(s.avg, 2), mult: formatPlNumber(s.mult, 2), publ });
+  const publ = s.n != null ? ` ${ftp(locale, 'p5_fuel_publ', { n: s.n }).trim()}` : '';
+  const full = ftp(locale, key, { avg: formatPlNumber(s.avg, 2), mult: formatPlNumber(s.mult, 2), publ });
+  const at = full.indexOf(' → ');
+  if (at < 0) return <span className="fin-nw">{full}</span>;
+  return <><span className="fin-nw">{full.slice(0, at)}</span> <span className="fin-nw">{full.slice(at + 1)}</span></>;
 }
 
 function stateTag(locale: Locale, r: FuelWeekRow) {
@@ -42,6 +47,13 @@ function idxText(locale: Locale, r: FuelWeekRow): string {
   if (!r.idx) return '—';
   const label = weekLabel(r.idx, r.idxLast);
   return r.running ? ftp(locale, 'p5_fuel_idx_running', { label }) : label;
+}
+
+/** F7 #415 (1280 px): „t36 · 31.08.2026–06.09.2026” łamie się tylko po „·” — tydzień i daty w całości. */
+function brk(text: string): ReactNode {
+  const at = text.indexOf(' · ');
+  if (at < 0) return text;
+  return <><span className="fin-nw">{text.slice(0, at + 2)}</span> <span className="fin-nw">{text.slice(at + 3)}</span></>;
 }
 
 /** E41: nazwa transportu według firmy (z widoku Finanse); bez niej — kod. */
@@ -132,10 +144,10 @@ export function FuelWeekTable({ rows, locale, phone, nameOf }: { rows: FuelWeekR
                     {/* klawiatura i czytnik: przycisk w pierwszej komórce (wiersz klikalny myszą) */}
                     <td>
                       <button type="button" className="fuel-row-btn" data-fuel-toggle aria-expanded={open === r.key} onClick={(e) => { e.stopPropagation(); toggle(r.key); }}>
-                        <b data-content>{weekText(locale, r)}</b>
+                        <b data-content>{brk(weekText(locale, r))}</b>
                       </button>
                     </td>
-                    <td data-content>{idxText(locale, r)}</td>
+                    <td data-content>{brk(idxText(locale, r))}</td>
                     <td className="num">{src(locale, 'p5_fuel_okq8', r.okq8)}</td>
                     <td className="num">{src(locale, 'p5_fuel_orlen', r.orlen)}</td>
                     <td className="num"><b>{r.applied == null ? '—' : x(r.applied)}</b></td>

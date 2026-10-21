@@ -48,15 +48,19 @@ function savedText(locale: Locale, code: string): string {
 const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveUsers'))) : null;
 /** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
-const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/BafForm'))) : null;
+/* E3 (W-opcje-live-2): Opłata paliwowa na produkcji — ekran z audytu; BafForm (wersje, ceny ręczne, dziennik) rozwijany pod nim */
+const LiveFuel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFuel'))) : null;
 /* E11 (właściciel 21.10.2026 19:52): „Kto co dostaje” na produkcji w wyglądzie z audytu — ten sam ekran co w demo, dane z bazy */
 const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveWhoGets'))) : null;
-const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/RateCardForm'))) : null;
-const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SmsGateway'))) : null;
-const SmsZoneRecipients = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SmsZoneRecipients'))) : null;
+/* E33/E-06 (W-opcje-live-2): Cennik na produkcji — tabela symboli z audytu, pełny formularz RateCardForm rozwijany pod nią */
+const LiveRateCard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveRateCard'))) : null;
+/* E42 (W-opcje-live-2): SMS przy miejscach na produkcji — ekran z audytu; wyzwalacze, SMS testowe, bramka i strefy rozwijane pod nim */
+const LiveSmsPlaces = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveSmsPlaces'))) : null;
+/* E33 (W-opcje-live-2): Dopłaty na produkcji — ekran z audytu, dane i zapis jak w DwellOptionsForm (ops_thresholds) */
+const LiveDwell = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveDwell'))) : null;
+/* E23 (W-opcje-live-2): Stan systemu na produkcji — „Źródła danych” z audytu, dzisiejszy panel rozwijany pod listą */
+const LiveStatus = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveStatus'))) : null;
 const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveThresholds'))) : null;
-const DwellOptionsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/OpsThresholdsForm').then((m) => ({ default: m.DwellOptionsForm })))) : null;
-const SystemStatusPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SystemStatusPanel'))) : null;
 const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveLogins'))) : null;
 const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveBroadcast'))) : null;
 const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveExport'))) : null;
@@ -200,6 +204,24 @@ export function OptionsView() {
     return n >= c.needed ? t(locale, 'cal_meta_same') : tp(locale, 'cal_meta_wait', { n, need: c.needed });
   };
 
+  /* strefy (włącz / wyłącz) — pod ekranem SMS przy miejscach */
+  const zoneList = (
+    <div className="settings-list" style={{ marginTop: 10 }} data-live-sms-zones>
+      {geofences.map((g) => (
+        <div className="settings-row" key={g.id}>
+          <div>
+            <b data-content>{geofenceDisplayName(g.name, locale)}</b>
+            <span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span>
+          </div>
+          {/* F7 #415: Operacje HHL — tylko podgląd (E12-1A), przełącznik nieaktywny */}
+          <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} disabled={ro} onClick={() => { if (ro) return; saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
+            <i />{g.active ? t(locale, 'on') : t(locale, 'off')}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   const groups: OptGroup[] = [];
 
   if (isHhlAdmin) {
@@ -221,24 +243,10 @@ export function OptionsView() {
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),
-      scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : (
+      scr('zones', smsPlacesReady() ? <SmsPlaces readOnly={ro} /> : LiveSmsPlaces ? block(<LiveSmsPlaces readOnly={ro}>{zoneList}</LiveSmsPlaces>) : (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_zones" />
-          {SmsZoneRecipients ? block(<SmsZoneRecipients readOnly={ro} />) : null}
-          {SmsGateway ? roBlock(<SmsGateway />) : null}
-          <div className="settings-list" style={{ marginTop: 10 }}>
-            {geofences.map((g) => (
-              <div className="settings-row" key={g.id}>
-                <div>
-                  <b data-content>{geofenceDisplayName(g.name, locale)}</b>
-                  <span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span>
-                </div>
-                <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
-                  <i />{g.active ? t(locale, 'on') : t(locale, 'off')}
-                </button>
-              </div>
-            ))}
-          </div>
+          {zoneList}
         </>
       ), { right: change }),
       scr('bcast', pick('bcast', BroadcastForm ? block(<BroadcastForm readOnly={ro} admin={isHhlAdmin} />) : null), { right: change }),
@@ -271,7 +279,7 @@ export function OptionsView() {
     scr('rates', PROD_BUILD ? (
       <>
         {ratesExtras}
-        {RateCardForm ? block(<RateCardForm readOnly={ro} />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
+        {LiveRateCard ? block(<LiveRateCard readOnly={ro} />) : <div className="note option-note">{t(locale, 'i2_rates_no_source')}</div>}
       </>
     ) : (
       <>
@@ -281,26 +289,23 @@ export function OptionsView() {
         {rateCard ? block(
           <RateCard locale={locale} view={rateCard} today={localDateOf(getNowIso())} nowIso={getNowIso()} readOnly={ro} onSave={rateCardSaverOf()} />,
         ) : null}
-        {RateCardForm ? block(<RateCardForm readOnly={ro} />) : null}
       </>
     ), { right: change, mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('surch', dwell
       ? block(<DwellScreen locale={locale} rules={dwell} readOnly={ro} onSave={dwellSaverOf()} />)
-      : DwellOptionsForm ? roBlock(<DwellOptionsForm />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change, mark: dwell && !PROD_BUILD ? <DemoMark /> : undefined }),
+      : LiveDwell ? block(<LiveDwell readOnly={ro} />) : <Soon locale={locale} tipKey="opt_acc_dwell_note" />, { right: change, mark: dwell && !PROD_BUILD ? <DemoMark /> : undefined }),
     scr('fuel', fuelView ? block(
       <FuelScreen locale={locale} view={fuelView} actions={fuelActionsOf()} readOnly={ro} />,
-    ) : (
+    ) : LiveFuel ? block(<LiveFuel readOnly={ro} />) : (
       <>
         <OptionsHowTo locale={locale} k="b6_howto_sefs" />
-        {BafForm ? roBlock(<BafForm />) : (
-          <>
+        <>
             <div className="fuel-grid">
               <div><h4 className="sec">{t(locale, 'opt_index_read')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(0, 6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
               <div><h4 className="sec">{t(locale, 'opt_billing_rules')}</h4><dl className="kv options-kv fuel-kv">{bafFields.slice(6).map((field) => <div className="kv-row" key={String(field.key)}><dt>{t(locale, field.labelKey)}</dt><dd><div className="input-unit"><input className="input full" type={field.type ?? 'text'} step={field.step} value={String(baf[field.key])} readOnly disabled title={t(locale, 'opt_baf_facade_title')} onChange={(e) => updateBafField(field.key, e.target.value)} onBlur={() => saveMark('BAF')} />{field.suffix ? <span>{t(locale, field.suffix)}</span> : null}</div></dd></div>)}</dl></div>
             </div>
             <div className="note option-note" data-facade="baf-options">{t(locale, 'opt_baf_facade_note')}</div>
-          </>
-        )}
+        </>
       </>
     ), {
       right: change,
@@ -377,11 +382,11 @@ export function OptionsView() {
         <SmsFallbackEntry />
         {sourceHealth(getNowIso())
           ? <StatusScreen locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
-          : (
+          : LiveStatus ? block(<LiveStatus admin={isHhlAdmin} />) : (
             <>
               {/* wyglad/P7-e2: wiersz „Plik KSH (SharePoint)” także nad dzisiejszym panelem (W13 zasady 15–16) */}
               <KshSyncSourceBlock locale={locale} nowIso={getNowIso()} admin={isHhlAdmin} />
-              {SystemStatusPanel ? block(<SystemStatusPanel />) : <Soon locale={locale} tipKey="opt_acc_sys_soon" />}
+              <Soon locale={locale} tipKey="opt_acc_sys_soon" />
             </>
           )}
       </>
