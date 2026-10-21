@@ -16,8 +16,17 @@ PSQL="psql $URL -Atq"
 HHL=11111111-0000-0000-0000-000000000001
 P=22222222-0000-0000-0000-000000000001
 L=33333333-0000-0000-0000-000000000001
+SCXO=00000000-0000-0000-0000-00000000a003
+V1=55555555-0000-0000-0000-00000000dfx1
+S1=55555555-0000-0000-0000-00000000dfs1
+V2=55555555-0000-0000-0000-00000000dfx2
+S2=55555555-0000-0000-0000-00000000dfs2
 ok=0; fail=0
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
+run() {
+  local end="rollback"; [ "$3" = "commit" ] && end="commit"
+  $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; $end;" 2>&1
+}
 
 echo; echo "[dec-fx] CHECK + literały + resolve wszystkich opcji (#384)"
 
@@ -35,21 +44,24 @@ for t in DECISION_EFFECT DECISION_SAILING DECISION_KEEP_TOWER; do
   fi
 done
 
+# Tylko zwykłe funkcje (prokind=f) — pg_get_functiondef na agregatach → „array_agg is an aggregate”.
 MISS=$(sys "
 with defs as (
   select pg_get_functiondef(p.oid) as def
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
+     and p.prokind = 'f'
      and pg_get_functiondef(p.oid) ~* 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events'
 ),
 chunks as (
-  select distinct (regexp_matches(
+  select distinct m[1] as lit
+    from defs,
+         lateral regexp_matches(
            def,
-           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[\\s\\S]{0,800}?''([A-Z][A-Z0-9_]*)''',
+           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[^;]{0,1200}?''([A-Z][A-Z0-9_]*)''',
            'gi'
-         ))[2] as lit
-    from defs
+         ) as m
 ),
 allowed as (
   select (regexp_matches(pg_get_constraintdef(oid), '''([A-Z][A-Z0-9_]*)''', 'g'))[1] as t
@@ -65,16 +77,17 @@ if [ "$MISS" = "0" ]; then ok=$((ok+1)); echo "  OK    literały event_type ⊆ 
 with defs as (
   select p.proname, pg_get_functiondef(p.oid) as def
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public'
+   where n.nspname = 'public' and p.prokind = 'f'
      and pg_get_functiondef(p.oid) ~* 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events'
 ),
 chunks as (
-  select distinct proname, (regexp_matches(
+  select distinct proname, m[1] as lit
+    from defs,
+         lateral regexp_matches(
            def,
-           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[\\s\\S]{0,800}?''([A-Z][A-Z0-9_]*)''',
+           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[^;]{0,1200}?''([A-Z][A-Z0-9_]*)''',
            'gi'
-         ))[2] as lit
-    from defs
+         ) as m
 ),
 allowed as (
   select (regexp_matches(pg_get_constraintdef(oid), '''([A-Z][A-Z0-9_]*)''', 'g'))[1] as t
@@ -86,17 +99,15 @@ select proname || ':' || lit from chunks x
 " | head -25
 fi
 
-# Fixture rejsu (postgres) + resolve wszystkich aktywnych opcji jako HHL_ADMIN
+# Fixture rejsu + resolve wszystkich aktywnych opcji jako HHL_ADMIN (l2: admin rozstrzyga każdy typ).
+sys "insert into vessels (id, name, operator) values ('$V1', 'DFX Ferry', 'Test') on conflict (id) do nothing" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
+     values ('$S1', '$P', '$V1', 'GDN-NYN', now() + interval '2 days', now() + interval '2 days 18 hours', 'RECZNIE')
+     on conflict (id) do nothing" >/dev/null
+
 RES=$(sys "
+begin;
 create temporary table dec_fx_result (pairs int, ok_n int, fail_n int);
-insert into vessels (id, name, operator)
-values ('55555555-0000-0000-0000-00000000dfx1', 'DFX Ferry', 'Test')
-on conflict (id) do nothing;
-insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
-values (
-  '55555555-0000-0000-0000-00000000dfs1', '$P', '55555555-0000-0000-0000-00000000dfx1', 'GDN-NYN',
-  now() + interval '2 days', now() + interval '2 days 18 hours', 'RECZNIE'
-) on conflict (id) do nothing;
 do \$\$
 declare
   r record;
@@ -104,7 +115,7 @@ declare
   v_dec uuid;
   v_note text;
   v_detail jsonb;
-  v_sail uuid := '55555555-0000-0000-0000-00000000dfs1';
+  v_sail uuid := '$S1';
   n_ok int := 0;
   n_fail int := 0;
   n_pairs int := 0;
@@ -124,7 +135,7 @@ begin
 
     insert into loads (id, project_id, carrier_org_id, order_no, status)
     values (
-      gen_random_uuid(), '$P', '00000000-0000-0000-0000-00000000a003',
+      gen_random_uuid(), '$P', '$SCXO',
       'DFX-' || substr(md5(random()::text), 1, 6),
       case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end
     )
@@ -143,17 +154,19 @@ begin
       perform set_config('request.jwt.claim.sub', '$HHL', true);
       v_dec := decision_open('$P', r.code, 'dfx ' || r.code || ' ' || r.opt, v_detail, v_load);
       perform decision_resolve(v_dec, r.opt, v_note);
+      perform set_config('role', 'none', true);
       n_ok := n_ok + 1;
     exception when others then
       get stacked diagnostics err = message_text;
       n_fail := n_fail + 1;
+      begin perform set_config('role', 'none', true); exception when others then null; end;
       raise notice 'FAIL %/%: %', r.code, r.opt, err;
     end;
-    perform set_config('role', 'none', true);
   end loop;
   insert into dec_fx_result values (n_pairs, n_ok, n_fail);
 end \$\$;
 select fail_n::text || '/' || pairs::text || '/' || ok_n::text from dec_fx_result;
+commit;
 " 2>&1)
 RES_LINE=$(printf '%s\n' "$RES" | grep -E '^[0-9]+/[0-9]+/[0-9]+$' | tail -1 | tr -d '\r')
 FAIL_N=${RES_LINE%%/*}
@@ -161,7 +174,7 @@ REST=${RES_LINE#*/}
 PAIRS=${REST%%/*}
 OK_N=${REST#*/}
 if [ -z "$RES_LINE" ]; then
-  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku)"; printf '%s\n' "$RES" | tail -8
+  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku)"; printf '%s\n' "$RES" | tail -12
 else
   if [ "$FAIL_N" = "0" ]; then ok=$((ok+1)); echo "  OK    resolve-all fail=0 (pary=$PAIRS ok=$OK_N)"; else
     fail=$((fail+1)); echo "  FAIL  resolve-all fail=$FAIL_N / pary=$PAIRS"; printf '%s\n' "$RES" | grep 'NOTICE:' | head -25
@@ -171,68 +184,47 @@ else
   fi
 fi
 
-out=$(sys "
-create temporary table dec_fx_one (n int);
-do \$\$
-declare d uuid; n int;
-begin
-  perform set_config('role', 'authenticated', true);
-  perform set_config('request.jwt.claim.sub', '$HHL', true);
-  d := decision_open('$P','SEFS_INVOICE_DIFF','efekt', '{}'::jsonb, '$L');
-  perform decision_resolve(d, 'ACCEPT', 'akceptacja z load_id');
-  select count(*) into n from load_events
-   where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'decision_id'=d::text;
-  insert into dec_fx_one values (n);
-end \$\$;
-select n from dec_fx_one;
-" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
-if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    ACCEPT+load → DECISION_EFFECT"; else
-  fail=$((fail+1)); echo "  FAIL  ACCEPT+load → DECISION_EFFECT (otrzymano: $out)"
+# Trzy skutki z load_id — resolve jako authenticated, odczyt zdarzeń jako postgres.
+out=$(run "$HHL" "
+  select decision_resolve(
+    decision_open('$P','SEFS_INVOICE_DIFF','efekt', '{}'::jsonb, '$L'),
+    'ACCEPT', 'akceptacja z load_id'
+  );
+" commit 2>&1)
+CNT=$(sys "select count(*) from load_events
+  where load_id='$L' and event_type='DECISION_EFFECT'
+    and payload->>'note' = 'akceptacja z load_id'" | tail -1 | tr -d '\r')
+if [ "$CNT" = "1" ]; then ok=$((ok+1)); echo "  OK    ACCEPT+load → DECISION_EFFECT"; else
+  fail=$((fail+1)); echo "  FAIL  ACCEPT+load → DECISION_EFFECT (otrzymano: $CNT; resolve: $(echo "$out" | grep -iE 'ERROR|exception' | head -1))"
 fi
 
-out=$(sys "
-create temporary table dec_fx_one (n int);
-do \$\$
-declare d uuid; n int;
-begin
-  perform set_config('role', 'authenticated', true);
-  perform set_config('request.jwt.claim.sub', '$HHL', true);
-  d := decision_open('$P','TOWER_KSH_CONFLICT','keep', jsonb_build_object('field','hhl_order_no'), '$L');
-  perform decision_resolve(d, 'KEEP_TOWER', null);
-  select count(*) into n from load_events
-   where load_id='$L' and event_type='DECISION_KEEP_TOWER' and payload->>'decision_id'=d::text;
-  insert into dec_fx_one values (n);
-end \$\$;
-select n from dec_fx_one;
-" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
-if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    KEEP_TOWER → DECISION_KEEP_TOWER"; else
-  fail=$((fail+1)); echo "  FAIL  KEEP_TOWER → DECISION_KEEP_TOWER (otrzymano: $out)"
+out=$(run "$HHL" "
+  select decision_resolve(
+    decision_open('$P','TOWER_KSH_CONFLICT','keep', jsonb_build_object('field','hhl_order_no'), '$L'),
+    'KEEP_TOWER', null
+  );
+" commit 2>&1)
+CNT=$(sys "select count(*) from load_events
+  where load_id='$L' and event_type='DECISION_KEEP_TOWER'" | tail -1 | tr -d '\r')
+if [ "$CNT" = "1" ]; then ok=$((ok+1)); echo "  OK    KEEP_TOWER → DECISION_KEEP_TOWER"; else
+  fail=$((fail+1)); echo "  FAIL  KEEP_TOWER → DECISION_KEEP_TOWER (otrzymano: $CNT; resolve: $(echo "$out" | grep -iE 'ERROR|exception' | head -1))"
 fi
 
-out=$(sys "
-insert into vessels (id, name, operator)
-values ('55555555-0000-0000-0000-00000000dfx2','DFX2','Test') on conflict (id) do nothing;
-insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
-values (
-  '55555555-0000-0000-0000-00000000dfs2', '$P', '55555555-0000-0000-0000-00000000dfx2', 'GDN-NYN',
-  now() + interval '3 days', now() + interval '3 days 18 hours', 'RECZNIE'
-) on conflict (id) do nothing;
-create temporary table dec_fx_one (n int);
-do \$\$
-declare d uuid; n int; sid uuid := '55555555-0000-0000-0000-00000000dfs2';
-begin
-  perform set_config('role', 'authenticated', true);
-  perform set_config('request.jwt.claim.sub', '$HHL', true);
-  d := decision_open('$P','FERRY_CANCELLED','sail', jsonb_build_object('sailing_id', sid::text), '$L');
-  perform decision_resolve(d, 'NEXT_SAME', null);
-  select count(*) into n from load_events
-   where load_id='$L' and event_type='DECISION_SAILING' and payload->>'decision_id'=d::text;
-  insert into dec_fx_one values (n);
-end \$\$;
-select n from dec_fx_one;
-" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
-if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    CHANGE_SAILING → DECISION_SAILING"; else
-  fail=$((fail+1)); echo "  FAIL  CHANGE_SAILING → DECISION_SAILING (otrzymano: $out)"
+sys "insert into vessels (id, name, operator) values ('$V2','DFX2','Test') on conflict (id) do nothing" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, source)
+     values ('$S2', '$P', '$V2', 'GDN-NYN', now() + interval '3 days', now() + interval '3 days 18 hours', 'RECZNIE')
+     on conflict (id) do nothing" >/dev/null
+out=$(run "$HHL" "
+  select decision_resolve(
+    decision_open('$P','FERRY_CANCELLED','sail', jsonb_build_object('sailing_id', '$S2'), '$L'),
+    'NEXT_SAME', null
+  );
+" commit 2>&1)
+CNT=$(sys "select count(*) from load_events
+  where load_id='$L' and event_type='DECISION_SAILING'
+    and payload->>'sailing_id' = '$S2'" | tail -1 | tr -d '\r')
+if [ "$CNT" = "1" ]; then ok=$((ok+1)); echo "  OK    CHANGE_SAILING → DECISION_SAILING"; else
+  fail=$((fail+1)); echo "  FAIL  CHANGE_SAILING → DECISION_SAILING (otrzymano: $CNT; resolve: $(echo "$out" | grep -iE 'ERROR|exception' | head -1))"
 fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

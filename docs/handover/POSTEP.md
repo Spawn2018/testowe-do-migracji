@@ -3825,3 +3825,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 (`Spawn2018`, `dla-cursora`+`pilne`) — przerywa B5. Wpisane: PLAN §3/§4/§8, dopisek `D-20261021-1130-01.md`. #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie (#382 czeka CI/F7; #383 „nie scalać jeszcze”; #385 CI w toku; #259 konflikt). Bez push na `main`.
 - Bieżąca: **HOTFIX #384 pkt 1** (`pakiet/hotfix-384-decision-events`, migracja **0249**) — `DECISION_EFFECT`/`DECISION_SAILING`/`DECISION_KEEP_TOWER` w CHECK; zestaw `dec-fx` (12 OK). B5 → 0250 po rebase.
+
+## 2026-10-21 12:05 — #384 pkt 1: poprawka `dec-fx` po czerwonym CI
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #386 db FAIL (dec-fx 6/5); brak F7. #382 db FAIL (B5 czeka na HOTFIX). #383/#385 bez „F7: gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #384 pkt 1** — `dec-fx`: `prokind='f'` (bez `pg_get_functiondef` na agregatach), resolve przez `set local role` / odczyt zdarzeń jako postgres. Push → CI.
