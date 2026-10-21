@@ -110,6 +110,10 @@ create or replace function public.risk_audience_for(p_kind text, p_detail jsonb)
 returns risk_audience language plpgsql stable security definer set search_path = public as $$
 declare v_dir text; v_inv text;
 begin
+  if auth.uid() is not null and current_app_user_id() is null then
+    raise exception 'Brak aktywnego konta' using errcode = '42501';
+  end if;
+  -- #398: cisza naczepy emtrack → tylko HHL (bez przewoźnika)
   if p_kind = 'SILENT_VEHICLE' and coalesce(p_detail->>'emtrack_trailer', '') = '1' then
     return 'HHL';
   end if;
@@ -121,10 +125,10 @@ begin
     return 'HHL';
   end if;
   if p_kind in ('SILENT_VEHICLE', 'AUTO_STATUS', 'LOADING_UNCONFIRMED', 'RESOURCE_MISSING',
-                'DOC_MISSING', 'PERMIT', 'INSURANCE') then
+                'DOC_MISSING', 'PERMIT', 'INSURANCE', 'LATE_DATE_CHANGE', 'ROUTE_OBSTACLE') then
     return 'HHL_PRZEWOZNIK';
   end if;
-  if p_kind = 'SEQUENCE' then
+  if p_kind in ('SEQUENCE', 'DATES_UNCONFIRMED') then
     return 'HHL_KLIENT';
   end if;
   if p_kind = 'INVOICE_MISMATCH' then
@@ -141,7 +145,9 @@ begin
   return 'HHL';
 end $$;
 
-revoke all on function public.risk_audience_for(text, jsonb) from public, anon, authenticated;
+-- jak 0020: authenticated woła (nullguard / allowlista); anon bez EXECUTE
+revoke all on function public.risk_audience_for(text, jsonb) from public, anon;
+grant execute on function public.risk_audience_for(text, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- l1_decision_type: emtrack LONG SILENT bez NO_POSITION
@@ -289,6 +295,8 @@ begin
                )
          where id = v_rid;
       end if;
+      -- bez decyzji NO_POSITION (także zaległych z poprzedniego progu SILENT_MIN)
+      perform l3_lapse('SILENT:' || r.id, now());
       continue;
     end if;
 

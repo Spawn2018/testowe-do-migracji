@@ -149,11 +149,14 @@ echo; echo "[398] szum ryzyk — loaded_confirmed / emtrack / ETA / ORDERNO (D-2
 chk "398: SILENT_MIN_EMTRACK = 720" \
   "$(Q "select value_num::int from ops_thresholds where key='SILENT_MIN_EMTRACK'")" 720
 fx "update loads set actual_load_at = now() - interval '2 hours' where id='$L1'"
-chk "398: loaded_confirmed true (GPS actual_load_at)" "$(Q "select loaded_confirmed('$L1')::text")" t
+chk "398: loaded_confirmed true (GPS actual_load_at)" "$(Q "select loaded_confirmed('$L1')::text")" true
 fx "update loads set actual_load_at = null where id='$L1'"
 # emtrack < 12 h: cisza 3 h, źródło EMTRACK_WEB → 0 SILENT / 0 NO_POSITION
 $PSQL -c "update risk_signals set resolved_at=now() where dedup_key='SILENT:$L1' and resolved_at is null" >/dev/null
-$PSQL -c "delete from decisions where detail->>'event_key'='SILENT:$L1' or risk_id in (select id from risk_signals where dedup_key='SILENT:$L1')" >/dev/null 2>&1
+$PSQL -c "update decisions set status='EXPIRED', expired_reason='398 test cleanup', updated_at=now()
+  where status in ('NEW','ASSIGNED','SNOOZED')
+    and (detail->>'event_key'='SILENT:$L1'
+         or risk_id in (select id from risk_signals where dedup_key='SILENT:$L1'))" >/dev/null 2>&1
 fx "update loads set status='IN_TRANSIT_PL', tractor_plate='EMT 1', telematics_vehicle_id='TEL-EMT-1', plan_load_date=current_date - 1, actual_load_at=now()-interval '1 day' where id='$L1'"
 $PSQL -c "delete from positions where load_id='$L1'" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
