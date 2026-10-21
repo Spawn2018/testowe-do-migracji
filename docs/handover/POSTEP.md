@@ -3902,3 +3902,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #392 `pilne` (bieżąca); #391 `pilne` (0253); #384/#323/#322/#320 w planie.
 - Scalanie: #389 F7 „gotowe” (`048cbbf`, Spawn2018, po ostatnim commicie) + CI zielone → merge `1a232014` (0251). #395 (RIO 0252): unit/visual/db zielone na `2550da2e`; wciągnięty main. Czekam na ponowne CI i `F7: gotowe do scalenia`. #390/#382/#393/#394 bez F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #392** PR #395 — po F7 wdroży `deploy-main`; potem D-1535 #391 / 0253.
+
+## 2026-10-21 17:39 — #392 SCALONE; start D-1535 (#391 / 0253)
+
+- Skrzynka: #392 zamknięte (SCALONE); #391 `pilne` (bieżąca); #384/#323/#322/#320 w planie.
+- Scalanie: #394 F7 → `3135f351`; #393 F7 → `9d3f1b00`; #395 F7 (`65fdc10`, po CI) → `e13067e4` (0252). Bez push na `main`.
+- Bieżąca: **D-1535** (`pakiet/d1535-t40-fuel-114`, migracja **0253**) — `sefs_week_overrides` t40 ×1,14/1,17; przeliczenie; `SEFS_INVOICE_DIFF` → `OWNER_DECISION`; baf 67.
