@@ -2,17 +2,17 @@
 -- 1) prefs osoby wygrywają nad fixed_*; 2) bez push_fallback→EMAIL; 3) l13_queue_email + sms_watchdog
 --    przez macierz; 4) ponowna kontrola przy wysyłce (notify_email_still_allowed).
 
--- Kreator reguł (WORKFLOW_ALERT), budżet e-mail, brak odczytu paliwa — wiersze macierzy.
+-- Kreator reguł (WORKFLOW_ALERT): grupa LOAD_STATUS (nie SYSTEM) — reguły celują też w KSH/SCX.
+-- SYSTEM zostaje tylko HHL (email_budget, fuel_miss, ext_mail) jak notification_matrix_org_kind.
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
   fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
 ) values
-('workflow','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
--- SYSTEM tylko HHL (jak notification_matrix_org_kind).
-('workflow','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','LOAD_STATUS','HHL_ADMIN',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','LOAD_STATUS','HHL_OPS',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','LOAD_STATUS','CLIENT_USER',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','LOAD_STATUS','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','LOAD_STATUS','CARRIER_USER',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('email_budget','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Budżet e-maili'),
 ('email_budget','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Budżet e-maili'),
 ('email_budget','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Budżet e-maili'),
@@ -22,7 +22,13 @@ insert into public.notification_matrix (
 ('fuel_miss','SYSTEM','HHL_OPS',true,false,false,false,false,false,false,'Brak odczytu paliwa'),
 ('fuel_miss','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Brak odczytu paliwa'),
 ('fuel_miss','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Brak odczytu paliwa'),
-('fuel_miss','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Brak odczytu paliwa')
+('fuel_miss','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Brak odczytu paliwa'),
+-- Maile na adres bez konta (księgowość itd.): przełącznik HHL_ADMIN, domyślnie włączony.
+('ext_mail','SYSTEM','HHL_ADMIN',false,true,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
+('ext_mail','SYSTEM','HHL_OPS',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
+('ext_mail','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
+('ext_mail','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji'),
+('ext_mail','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Maile do adresów spoza aplikacji')
 on conflict (event_key, role) do update
   set event_group = excluded.event_group,
       label_pl = excluded.label_pl,
@@ -106,6 +112,12 @@ as $$
            coalesce(p_payload->>'title_key', '') in ('rk_order_no', 'rk_test_orderno')
            or coalesce(p_payload->>'kind', '') in ('ORDER_NO', 'HHL_ORDER_MISSING', 'CARRIER_ORDER_MISSING')
          ) then 'order_no'
+    when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
+         and coalesce(p_payload->>'kind', '') = 'LATE_DATE_CHANGE' then 'dates'
+    when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
+         and coalesce(p_payload->>'kind', '') in (
+           'SILENT_VEHICLE', 'LOADING_UNCONFIRMED', 'AUTO_STATUS'
+         ) then 'status'
     when p_template = 'SOURCE_BACK' then 'src_back'
     when coalesce(p_payload->>'kind', '') in ('USAGE_LIMIT', 'JOB_FAILURE')
          or p_template in ('JOB_FAILURE', 'SOURCE_DOWN') then 'src_down'
@@ -123,7 +135,7 @@ as $$
     when p_template = 'INSURANCE_EXPIRY' then 'cmr'
     when p_template = 'L17_BACKLOG' then 'status'
     when p_template in ('ETA_NOTIFY_KSH', 'DECISION_EMAIL_KSH') then 'status'
-    when p_template = 'KSH_DATE_COUNTER_RESULT' then 'dates'
+    when p_template = 'KSH_DATE_COUNTER_RESULT' then 'dec_new'
     when p_template in ('WEEK_CLOSED', 'INVOICE_WEEK') then 'week'
     when p_template like 'FACTOR%' then 'factoring'
     when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
@@ -168,10 +180,15 @@ begin
     return false;
   end if;
   -- Auth poza Opcjami (nie w macierzy zdarzeń C3).
-  if p_template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET') then
+  if p_template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET')
+     or p_template like 'INVITE%' then
     return true;
   end if;
-  v_event := public.notify_event_key(p_template, coalesce(p_payload, '{}'::jsonb));
+  -- F7: zapasowo payload.matrix_event (gdy szablon bez mapowania w notify_event_key).
+  v_event := coalesce(
+    public.notify_event_key(p_template, coalesce(p_payload, '{}'::jsonb)),
+    nullif(coalesce(p_payload, '{}'::jsonb)->>'matrix_event', '')
+  );
   if (v_event is not null) is not true then
     return false;
   end if;
@@ -823,22 +840,41 @@ update public.notifications n
    and public.notify_channel_allowed(n.user_id, n.template, n.payload, 'mail') is not true;
 
 -- F7: wstawienia poza matrix_notify / l13_queue_email też przez bramkę (IN_APP, EMAIL).
+-- Bez user_id: AUTH/INVITE zawsze; inne EMAIL → wiersz ext_mail (HHL_ADMIN.email).
 create or replace function public.trg_notifications_gate()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_ext boolean;
 begin
-  -- Bez user_id: EXTERNAL_MESSAGING / L13_FILL / testy — nie nadpisuj statusu.
   if NEW.user_id is null then
+    if NEW.channel = 'EMAIL' then
+      if NEW.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET')
+         or NEW.template like 'INVITE%' then
+        return NEW;
+      end if;
+      if NEW.status in ('SUPPRESSED', 'SENT', 'ERROR', 'CANCELLED', 'BLOCKED_R2') then
+        return NEW;
+      end if;
+      select m.email into v_ext
+        from public.notification_matrix m
+       where m.event_key = 'ext_mail' and m.role = 'HHL_ADMIN';
+      if coalesce(v_ext, false) is not true then
+        NEW.status := 'SUPPRESSED';
+        NEW.error := left(coalesce(NEW.error || '; ', '') || 'gate:ext_mail_off', 500);
+      end if;
+    end if;
     return NEW;
   end if;
   if NEW.channel = 'EMAIL' then
-    if NEW.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET') then
+    if NEW.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET')
+       or NEW.template like 'INVITE%' then
       return NEW;
     end if;
-    if NEW.status in ('SUPPRESSED', 'SENT', 'ERROR', 'CANCELLED') then
+    if NEW.status in ('SUPPRESSED', 'SENT', 'ERROR', 'CANCELLED', 'BLOCKED_R2') then
       return NEW;
     end if;
     if public.notify_channel_allowed(NEW.user_id, NEW.template, coalesce(NEW.payload, '{}'::jsonb), 'mail') is not true then
@@ -858,11 +894,13 @@ end $$;
 
 revoke all on function public.trg_notifications_gate() from public, anon, authenticated;
 drop trigger if exists trg_notifications_gate on public.notifications;
-create trigger trg_notifications_gate
+-- Nazwa a_* przed email_budget alfabetycznie: najpierw ustawienia, potem budżet (F7).
+drop trigger if exists trg_notifications_a_gate on public.notifications;
+create trigger trg_notifications_a_gate
   before insert on public.notifications
   for each row execute function public.trg_notifications_gate();
 comment on function public.trg_notifications_gate() is
-  '#402 F7: IN_APP/EMAIL przy wstawieniu przez bramkę (także poza matrix_notify).';
+  '#402 F7: IN_APP/EMAIL przez bramkę; bez user_id → ext_mail; przed email_budget.';
 
 -- F7 pkt 4–5: ponowna kontrola push przy wysyłce (web-push-send).
 create or replace function public.notify_push_still_allowed(p_id bigint)

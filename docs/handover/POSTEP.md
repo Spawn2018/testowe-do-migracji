@@ -3950,3 +3950,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #413 `pilne` — wpisane PLAN §3/§4/§8 + `D-20261021-2057-01.md` (po #402/#411 → **0261** po B5). #402 bieżąca; #411/#405/#400/#409/#412/#384/#323/#322/#320 w planie.
 - Scalanie: #410 F7 gotowe → merge `e27ce061`; #403 F7 gotowe → merge `e1dd2ef9`. #406 `db` FAIL (status/money/import/i2/dec2/insurance/l13) — trigger nadpisywał L13_FILL bez `user_id` + brak mapowań szablonów. #408 wstrzymane. #414 bez F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #402** PR #406 — `trg` skip przy `user_id` null / status SENT; mapowania `INSURANCE_EXPIRY`/`L17_BACKLOG`/`ETA_NOTIFY_KSH`/`KSH_DATE_COUNTER_RESULT`; `inv_overdue`+`dates.email` domyślnie on; workflow CLIENT/CARRIER off.
+
+## 2026-10-21 21:45 — #402 F7: workflow LOAD_STATUS, ext_mail, mapowania RISK
+
+- Skrzynka: bez nowych; #413/#411/#405/#400/#409/#412 już w planie. #412 ma dopiski (2FA, paliwo Orlen) — do rozszerzenia zakresu przy pozycji.
+- Scalanie: brak `F7: gotowe do scalenia` po ostatnim commicie. #406 `db` FAIL: workflows 3 + dec-auto 1 (WORKFLOW_ALERT KSH/SCX blokowane przez SYSTEM=tylko HHL) + nullguard 689/690. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `workflow`→`LOAD_STATUS` (KSH/SCX z reguł); `ext_mail`; `matrix_event` w bramce; LATE_DATE/SILENT/AUTO→dates/status; `trg_notifications_a_gate` przed budżetem; nullguard bootstrap poza triggerem.

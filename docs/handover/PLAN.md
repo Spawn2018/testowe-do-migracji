@@ -1304,3 +1304,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 20:35 | #405 `pilne` — SMS tylko strefy → **0256**; #400 → **0257**; B5 → **0258**; #402 CI: workflow w macierzy + testy c16/l13/c3 | pętla |
 | 21.10.2026 20:50 | #407/#401/#404 SCALONE (F7); #402 F7: firma+trigger+push; #411→0256, #405→0257, #400→0258, #409→0259, B5→0260, #412 w kolejce | pętla |
 | 21.10.2026 21:15 | #410+#403 SCALONE (F7); #402 db FAIL→bramka bez user_id + mapowania; #413 wpisane (0261 po B5) | pętla |
+| 21.10.2026 21:45 | #402 F7: workflow→LOAD_STATUS (KSH/SCX), ext_mail, matrix_event, mapowania RISK, a_gate przed budżetem | pętla |
