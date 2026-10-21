@@ -3872,3 +3872,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #389 db FAIL (status 158/160: A2 L14 KSH/OPS odmowa → „Brak otwartej sprawy”). `deploy-main` po #388 ponowiony → sukces (0250 na produkcji). Brak F7. Bez push na `main`.
 - Bieżąca: `delivered_check_resolve` — przy braku otwartej sprawy najpierw `l2_may_resolve(CARRIER,null)` → 42501 (jak A2), potem komunikat braku sprawy.
+
+## 2026-10-21 15:40 — #384 pkt 5–6: F7 #389 poprawki
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #389 CI zielone na `56e09e65`, F7 „jeszcze NIE” (13:18 UTC) → bez merge. #382 konflikt / 0252. Bez push na `main`.
+- Bieżąca: F7 — ACCEPT przez `ksh_confirm_dates` + `counter_accept` (bez `l3_ksh_lead`); przesunięcie od/do; `l2_may_resolve` CLIENT=projekt, HHL_OPS tylko CARRIER/HHL; walidacja `p_payload`; notify SCX; `delivered_check` kolejność; dec2 48→62.
