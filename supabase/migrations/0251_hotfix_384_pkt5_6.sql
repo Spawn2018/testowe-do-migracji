@@ -154,6 +154,7 @@ declare
   v_proposer uuid;
   v_has_lf boolean;
   v_has_df boolean;
+  v_delta integer;
 begin
   select * into d from decisions where id = p_decision;
   if not found then
@@ -215,6 +216,12 @@ begin
           raise exception 'Transport nie istnieje' using errcode = '42501';
         end if;
         v_dd := nullif(btrim(coalesce(v_prop->>'delivery_date', '')), '')::date;
+        -- Samej load_date: przesuń dostawę o różnicę dni (inaczej v_dd < v_ld → wyjątek w ksh_confirm_dates).
+        if v_dd is null and l.plan_load_date is not null and v_ld is distinct from l.plan_load_date
+           and l.plan_delivery_date is not null then
+          v_delta := v_ld - l.plan_load_date;
+          v_dd := l.plan_delivery_date + v_delta;
+        end if;
         v_dd := coalesce(v_dd, l.plan_delivery_date, v_ld);
         v_has_lf := nullif(btrim(coalesce(v_prop->>'load_from', '')), '') is not null;
         v_has_df := nullif(btrim(coalesce(v_prop->>'delivery_from', '')), '') is not null;

@@ -3878,3 +3878,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #389 CI zielone na `56e09e65`, F7 „jeszcze NIE” (13:18 UTC) → bez merge. #382 konflikt / 0252. Bez push na `main`.
 - Bieżąca: F7 — ACCEPT przez `ksh_confirm_dates` + `counter_accept` (bez `l3_ksh_lead`); przesunięcie od/do; `l2_may_resolve` CLIENT=projekt, HHL_OPS tylko CARRIER/HHL; walidacja `p_payload`; notify SCX; `delivered_check` kolejność; dec2 48→62.
+
+## 2026-10-21 16:00 — #384 pkt 5–6: dec2 ACCEPT + wpis #391
+
+- Skrzynka: #384 `pilne` (bieżąca); **#391** `pilne` (D-1535 t40 ×1,14) wpisane do PLAN §3/§4/§8 + dopisek; po #389 → 0252, B5 → 0253. #323/#322/#320 w planie.
+- Scalanie: #389 db FAIL (dec2 58/62: ACCEPT licznika — `v_dd < v_ld` przy samej `load_date`). Brak F7. Bez push na `main`.
+- Bieżąca: przy samej `load_date` w propozycji przesuń `plan_delivery_date` (+ okna) o różnicę dni, potem `ksh_confirm_dates`.
