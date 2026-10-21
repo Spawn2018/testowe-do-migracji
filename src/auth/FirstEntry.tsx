@@ -4,8 +4,8 @@
  * pracuję” otwartym raz. Krok 4 można pominąć („Zaczynam” bez włączania). Konto bez telefonu dostaje sam krok 3 przy
  * następnym logowaniu. Ekrany tylko pokazują — zapisy przychodzą z zewnątrz (`firstEntrySource.ts`, logowanie w AuthGate).
  */
-import { BrandLogo } from './BrandLogo';
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { BrandLogo } from './BrandLogo';
 import type { Locale } from '../types';
 import { fe, fep } from '../i18n/first';
 import { ft } from '../i18n/p6f';
