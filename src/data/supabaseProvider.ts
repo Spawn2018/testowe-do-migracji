@@ -83,7 +83,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
-      sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
+      sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
       sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
@@ -363,7 +363,10 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         return { id: String((must(res, 'zdarzenie') as { id: number }).id) };
       }
       case 'message.send': {
-        const res = await sb.from('load_messages').insert({ load_id: m.loadId, body: m.text }).select('id').single();
+        /* B4: „tylko HHL i SCX” → {FORWARDER,CARRIER}; bez wyboru — domyślnie wszyscy (baza normalizuje, KSH zawsze wszyscy) */
+        const row: { load_id: string; body: string; visible_to?: string[] } = { load_id: m.loadId, body: m.text };
+        if (m.visibleTo === 'HHL_SCX') row.visible_to = ['FORWARDER', 'CARRIER'];
+        const res = await sb.from('load_messages').insert(row).select('id').single();
         return { id: String((must(res, 'wiadomość') as { id: number }).id) };
       }
       case 'load.orderNo':
