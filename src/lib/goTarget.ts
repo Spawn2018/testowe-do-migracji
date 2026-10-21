@@ -15,7 +15,10 @@ import type { TodoIssue } from './p6Todo';
 export type DrawerGo = 'overview' | 'timeline' | 'docs' | 'pricing' | 'sailing' | null;
 
 type IssueLike = Pick<TodoIssue, 'go'> & {
-  risk?: { id: string; type?: string; kind?: string; code?: string; titleKey?: string; title?: string } | undefined;
+  risk?: {
+    id: string; type?: string; kind?: string; code?: string; titleKey?: string; title?: string;
+    docPermit?: boolean; docPolicy?: boolean;
+  } | undefined;
   decision?: { typeCode: string } | undefined;
 };
 
@@ -60,19 +63,33 @@ export function hintDrawerGo(hint: string | null | undefined): DrawerGo {
   return null;
 }
 
-/** Rodzaj dokumentu do wstępnego wybrania w oknie „Wgraj dokument” (null — pierwszy brak transportu, jak dotąd). */
-export function issueUploadCategory(i: IssueLike): DocCategory | null {
+/** Transport sprawy: zezwolenie „Firma” (podpina się samo) i których zezwoleń „Trasa” brakuje (kolejność trasy: PL, SE). */
+export interface UploadLoadCtx { firm: boolean; missingPermits: readonly ('PERMIT_PL' | 'PERMIT_SE')[] }
+
+/**
+ * Rodzaj dokumentu do wstępnego wybrania w oknie „Wgraj dokument” (null — pierwszy brak transportu, jak dotąd).
+ * Pierwszeństwo mają dane sprawy z bazy (0243, `detail.policy` / `detail.permit`): polisa → `INSURANCE` (wiersz polisy,
+ * bez okna; przy obu brakach polisa jest pierwszą czynnością); zezwolenie → brakujący kraj z danych transportu,
+ * przy zezwoleniu „Firma” — null. Tytuł tylko jako ostatnia deska, ze słowem „zezwolenie”/„permit” obok PL/SE
+ * (symbole PL-A / PL-B nie są krajem zezwolenia).
+ */
+export function issueUploadCategory(i: IssueLike, load?: UploadLoadCtx | null): DocCategory | null {
   if (i.go !== 'DOCS') return null;
   if (i.decision?.typeCode === 'INSURANCE_EXPIRING') return 'INSURANCE';
   const r = i.risk;
   if (!r) return null;
   if (r.kind === 'INSURANCE') return 'INSURANCE';
+  if (r.docPolicy === true) return 'INSURANCE';
+  if (r.docPermit === true) {
+    if (!load || load.firm) return null;
+    return load.missingPermits[0] ?? 'PERMIT_PL';
+  }
+  if (r.docPolicy === false && r.docPermit === false) return null;
   const txt = `${r.titleKey ?? ''} ${r.title ?? ''}`.toLowerCase();
-  if (/cmr/.test(txt)) return 'CMR';
-  if (/(\bse\b|_se\b|szwed|sweden|trafikverket)/.test(txt)) return 'PERMIT_SE';
-  if (/(\bpl\b|_pl\b|gddkia|polsk)/.test(txt)) return 'PERMIT_PL';
-  /* zezwolenie bez kraju (np. „niezgodne z zestawem”) — najpierw PL, jak w kolejności trasy */
-  if (/(zezwol|permit)/.test(txt)) return 'PERMIT_PL';
+  if (/\bcmr\b/.test(txt)) return 'CMR';
+  if (/(zezwol\S*|permit\S*)[\s_]+se\b(?!-)|\bse[\s_]+(zezwol|permit)/.test(txt)) return 'PERMIT_SE';
+  if (/(zezwol\S*|permit\S*)[\s_]+pl\b(?!-)|\bpl[\s_]+(zezwol|permit)/.test(txt)) return 'PERMIT_PL';
+  if (/(zezwol|permit)/.test(txt)) return load?.firm ? null : (load?.missingPermits[0] ?? 'PERMIT_PL');
   return null;
 }
 

@@ -7,7 +7,7 @@
  */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Geofence, Load, Locale, Risk } from '../../types';
+import type { DocCategory, Geofence, Load, Locale, Risk } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { buildTodo, countedFor, defaultScope, scopeCards, visibleTodoRisks, type CaseEvent, type CasePerson, type TodoIssue, type TodoScope } from '../../lib/p6Todo';
 import { todoRisks, type AccountKind } from '../../lib/cockpitE9';
@@ -27,7 +27,8 @@ import type { FeeDecision } from '../../lib/p5Fees';
 import type { DecisionsApi } from './useDecisions';
 import { TodoCardView, type CardCtx } from './TodoCard';
 import { accountRole } from '../../lib/accountRole';
-import { hintDrawerGo, issueDrawerGo, issueUploadCategory } from '../../lib/goTarget';
+import { hintDrawerGo, issueDrawerGo, issueUploadCategory, type UploadLoadCtx } from '../../lib/goTarget';
+import { firmPermitLoad } from '../../lib/permitKind';
 
 const FeeModal = lazy(lazyRetry(() => import('../drawer/FeeModal').then((m) => ({ default: m.FeeModal }))));
 
@@ -118,6 +119,15 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     }
     return extras.length ? buildTodo({ risks: joined.risks, decisions: decs, extras, nowIso }) : base;
   }, [visRisks, decs, nowIso, loads, geofences, role, feeDone, checkDone, detourDone, events]);
+
+  /* W-cele-przejsc (F7 B1): rodzaj zezwolenia transportu i brakujące zezwolenia „Trasa” (dokumenty ze sklepu) */
+  const uploadCtxOf = (loadId: string): UploadLoadCtx | null => {
+    const l = loadById.get(loadId);
+    if (!l) return null;
+    const docs = useTowerStore.getState().documents;
+    const have = (c: DocCategory) => docs.some((d) => d.loadId === loadId && d.category === c && (d.status === 'UPLOADED' || d.status === 'MISMATCH') && !d.superseded);
+    return { firm: firmPermitLoad(l), missingPermits: (['PERMIT_PL', 'PERMIT_SE'] as const).filter((c) => !have(c)) };
+  };
 
   const assigneeOf = (id: string): CasePerson | null => {
     const pid = assign?.[id];
@@ -230,7 +240,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       }
       selectLoad(i.loadId);
       /* W-cele-przejsc (b): „Wgraj” — okno „Wgraj dokument” z tym transportem i rodzajem (E31 pkt 6), nie sama zakładka */
-      if (i.go === 'DOCS') setUploadReq({ loadId: i.loadId, category: issueUploadCategory(i) });
+      if (i.go === 'DOCS') setUploadReq({ loadId: i.loadId, category: issueUploadCategory(i, uploadCtxOf(i.loadId)) });
       /* W-cele-przejsc (c): ETA / „najpóźniej do” / GPS → Status; prom → wiersz rejsu; reszta jak dotąd (`goTarget.ts`) */
       setDrawerTab(issueDrawerGo(i));
     },

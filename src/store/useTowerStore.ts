@@ -545,6 +545,7 @@ export const useTowerStore = create<TowerState>()(
       navigateTo: (opts) => {
         set((s) => ({
           view: (opts.view as ViewKey) ?? s.view,
+          sailingFocus: ((opts.view as ViewKey) ?? s.view) === 'sched' ? s.sailingFocus : null,
           drawerTab: opts.tab !== undefined ? opts.tab : s.drawerTab,
           selectedLoadId: opts.loadId !== undefined ? opts.loadId : s.selectedLoadId,
           stageFilter: opts.stage !== undefined ? opts.stage : s.stageFilter,
@@ -615,7 +616,8 @@ export const useTowerStore = create<TowerState>()(
         get().markNotificationRead(id);
       },
 
-      setView: (view) => set({ view }),
+      /* W-cele-przejsc: cel „rejs w Harmonogramie › Rejsy” nie czeka na inny widok */
+      setView: (view) => set(view === 'sched' ? { view } : { view, sailingFocus: null }),
       setStageFilter: (stage) =>
         set((s) => ({
           stageFilter: stage === null ? null : s.stageFilter === stage ? null : stage,

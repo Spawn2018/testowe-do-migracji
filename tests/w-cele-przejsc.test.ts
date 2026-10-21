@@ -4,6 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { riskFromRow } from '../src/data/mappers';
 import { awizOpenAfter, ferryRowSailing, hintDrawerGo, issueDrawerGo, issueUploadCategory, isFerryIssue, isTrackingIssue } from '../src/lib/goTarget';
 
 const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
@@ -55,10 +56,54 @@ describe('W-cele-przejsc — cele spraw', () => {
     const s = src('src/components/risks/TodoPanel.tsx');
     expect(s).toContain('setDrawerTab(issueDrawerGo(i))');
     expect(s).toContain('setDrawerTab(hintDrawerGo(hint))');
-    expect(s).toMatch(/setUploadReq\(\{ loadId: i\.loadId, category: issueUploadCategory\(i\) \}\)/);
+    expect(s).toContain('setUploadReq({ loadId: i.loadId, category: issueUploadCategory(i, uploadCtxOf(i.loadId)) })');
     const d = src('src/components/drawer/PanelDocs.tsx');
     expect(d).toContain('category={upCat}');
     expect(src('src/components/docs/UploadDocModal.tsx')).toMatch(/category && allowed\.includes\(category\)/);
+  });
+});
+
+describe('W-cele-przejsc — F7 B1: sprawa DOC_MISSING z produkcji (0243)', () => {
+  const prodRow = (detail: Record<string, unknown>) => ({
+    id: 'r-77', load_id: 'l-1', kind: 'DOC_MISSING', severity: 'HIGH',
+    title: 'HHL/2026/1307: brak wymaganego dokumentu przed załadunkiem', title_key: 'rk_res_docs',
+    detail, detected_at: '2026-10-21T10:00:00Z', dedup_key: 'l3:DOC_MISSING:l-1',
+  });
+  const issue = (detail: Record<string, unknown>) => ({ go: 'DOCS' as const, risk: riskFromRow(prodRow(detail), '2026-10-21T12:00:00Z') });
+  const route = { firm: false, missingPermits: ['PERMIT_SE'] as const };
+
+  it('mapper przenosi rule / permit / policy z detail', () => {
+    const r = riskFromRow(prodRow({ rule: 'L3_DOC', permit: false, policy: true }), '2026-10-21T12:00:00Z');
+    expect(r).toMatchObject({ type: 'DOC', docRule: 'L3_DOC', docPermit: false, docPolicy: true });
+  });
+  it('policy=true → wiersz polisy (INSURANCE), bez okna — także gdy brakuje i zezwolenia', () => {
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: false, policy: true }), route)).toBe('INSURANCE');
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: true, policy: true }), route)).toBe('INSURANCE');
+  });
+  it('permit=true → brakujący kraj z danych transportu; „Firma” → null', () => {
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: true, policy: false }), route)).toBe('PERMIT_SE');
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: true, policy: false }), { firm: false, missingPermits: ['PERMIT_PL', 'PERMIT_SE'] })).toBe('PERMIT_PL');
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: true, policy: false }), { firm: true, missingPermits: [] })).toBeNull();
+  });
+  it('oba false → null (pierwszy brak transportu); tytuł bez kraju nie zgaduje', () => {
+    expect(issueUploadCategory(issue({ rule: 'L3_DOC', permit: false, policy: false }), route)).toBeNull();
+  });
+  it('tytuł — ostatnia deska: symbole PL-A / PL-B nie są krajem zezwolenia', () => {
+    const t = (title: string) => issueUploadCategory({ go: 'DOCS', risk: risk({ type: 'DOC', title }) }, route);
+    expect(t('SG-03 (PL-A): brak dokumentu')).toBeNull();
+    expect(t('Zestaw PL-B: brak zezwolenia')).toBe('PERMIT_SE');
+    expect(t('Zezwolenie PL-A wygasa')).toBe('PERMIT_SE');
+    expect(t('Brak zezwolenia SE')).toBe('PERMIT_SE');
+    expect(t('Brak zezwolenia PL')).toBe('PERMIT_PL');
+  });
+});
+
+describe('W-cele-przejsc — sailingFocus nie czeka na inny widok', () => {
+  it('setView / navigateTo poza Harmonogramem czyszczą cel; RoutePanel sprawdza rolę', () => {
+    const st = src('src/store/useTowerStore.ts');
+    expect(st).toContain("setView: (view) => set(view === 'sched' ? { view } : { view, sailingFocus: null }),");
+    expect(st).toContain("sailingFocus: ((opts.view as ViewKey) ?? s.view) === 'sched' ? s.sailingFocus : null,");
+    expect(src('src/components/risks/RoutePanel.tsx')).toContain("if (!navForRole(role).includes('sched')) { setSailingFocus(null); return; }");
   });
 });
 

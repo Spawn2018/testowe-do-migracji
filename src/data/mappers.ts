@@ -481,6 +481,10 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     invoiceId: str(d.invoice_id) || undefined,
     /* wyglad/W-todo-jedna-sprawa (#384): „Decyzja po terminie” wskazuje decyzję (`detail.decision_id`) */
     decisionId: str(d.decision_id) || undefined,
+    /* wyglad/W-cele-przejsc (F7 B1): czego brakuje w sprawie dokumentowej — cel „Wgraj” (0243: permit / policy) */
+    docRule: str(d.rule) || undefined,
+    docPermit: typeof d.permit === 'boolean' ? d.permit : undefined,
+    docPolicy: typeof d.policy === 'boolean' ? d.policy : undefined,
   };
 }
 

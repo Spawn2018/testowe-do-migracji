@@ -70,7 +70,18 @@ export function PanelDocs({ load, role, locale, phone, nowMs, docs, insAuto, onP
   useEffect(() => {
     if (!uploadReq || uploadReq.loadId !== load.id) return;
     useTowerStore.getState().setUploadReq(null);
-    if (!canUpload || uploadReq.category === 'INSURANCE') return;
+    if (uploadReq.category === 'INSURANCE') {
+      /* brak polisy SCX (0243 `policy`) — wiersz polisy na tej zakładce, bez okna wgrywania */
+      window.requestAnimationFrame(() => {
+        const el = document.querySelector<HTMLElement>('.drawer [data-pd-req="INSURANCE"]');
+        if (!el) return;
+        el.scrollIntoView({ block: 'center' });
+        el.classList.add('is-go-target');
+        window.setTimeout(() => el.classList.remove('is-go-target'), 2400);
+      });
+      return;
+    }
+    if (!canUpload) return;
     const cat = uploadReq.category && reqCats.includes(uploadReq.category) ? uploadReq.category : null;
     setUpCat(cat);
     setUpload(reqCats);

@@ -23,6 +23,7 @@ import { rt, rtn, rtp } from '../../i18n/p6';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { useTowerStore } from '../../store/useTowerStore';
 import { ferryRowSailing } from '../../lib/goTarget';
+import { navForRole } from '../../lib/permissions';
 
 const PROD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 /* komunikat armatora zapisuje w bazie — tylko produkcja (paczka demo bez klienta Supabase, I-2) */
@@ -106,6 +107,8 @@ export function RoutePanel({
   const setSailingFocus = useTowerStore((s) => s.setSailingFocus);
   const [allRoads, setAllRoads] = useState(false);
   const openFerry = (r: FerryRowView) => {
+    /* rola bez Harmonogramu — nie zostawiamy celu w sklepie */
+    if (!navForRole(role).includes('sched')) { setSailingFocus(null); return; }
     /* '*' — rejs spoza rozkładu: sama zakładka Rejsy */
     setSailingFocus(ferryRowSailing(r, sailings) ?? '*');
     setView('sched');
