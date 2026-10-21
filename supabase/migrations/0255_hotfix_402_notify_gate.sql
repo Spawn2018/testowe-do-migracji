@@ -2,7 +2,7 @@
 -- 1) prefs osoby wygrywają nad fixed_*; 2) bez push_fallback→EMAIL; 3) l13_queue_email + sms_watchdog
 --    przez macierz; 4) ponowna kontrola przy wysyłce (notify_email_still_allowed).
 
--- Kreator reguł (WORKFLOW_ALERT) — wiersz macierzy, da się wyłączyć w Opcjach.
+-- Kreator reguł (WORKFLOW_ALERT), budżet e-mail, brak odczytu paliwa — wiersze macierzy.
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
   fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
@@ -11,7 +11,17 @@ insert into public.notification_matrix (
 ('workflow','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('workflow','SYSTEM','CLIENT_USER',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('workflow','SYSTEM','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)')
+('workflow','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
+('email_budget','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Budżet e-maili'),
+('email_budget','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Budżet e-maili'),
+('email_budget','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Budżet e-maili'),
+('email_budget','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Budżet e-maili'),
+('email_budget','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Budżet e-maili'),
+('fuel_miss','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Brak odczytu paliwa'),
+('fuel_miss','SYSTEM','HHL_OPS',true,false,false,false,false,false,false,'Brak odczytu paliwa'),
+('fuel_miss','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Brak odczytu paliwa'),
+('fuel_miss','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Brak odczytu paliwa'),
+('fuel_miss','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Brak odczytu paliwa')
 on conflict (event_key, role) do update
   set event_group = excluded.event_group,
       label_pl = excluded.label_pl,
@@ -96,7 +106,9 @@ as $$
     when p_template = 'INVOICE_UPDATED' then 'inv_updated'
     when p_template = 'INVOICE_CORRECTED' then 'inv_corrected'
     when p_template in ('INVOICE_DISPUTED', 'INVOICE_DISPUTE_REPLY', 'INVOICE_DISPUTE_RESOLVED') then 'inv_dispute'
-    when p_template = 'INVOICE_OVERDUE' then 'inv_overdue'
+    when p_template in ('INVOICE_OVERDUE', 'PAYMENT_REMINDER') then 'inv_overdue'
+    when p_template = 'FUEL_READING_MISSING' then 'fuel_miss'
+    when p_template = 'EMAIL_BUDGET' then 'email_budget'
     when p_template in ('WEEK_CLOSED', 'INVOICE_WEEK') then 'week'
     when p_template like 'FACTOR%' then 'factoring'
     when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
@@ -116,7 +128,7 @@ $$;
 alter function public.notify_event_key(text, jsonb) set search_path = public;
 revoke all on function public.notify_event_key(text, jsonb) from public, anon, authenticated;
 
--- Bramka: czy użytkownik może dostać kanał dla szablonu (macierz + pref).
+-- Bramka: firma (org_kind) → rola (macierz) → osoba (pref).
 create or replace function public.notify_channel_allowed(
   p_user uuid, p_template text, p_payload jsonb, p_channel text
 ) returns boolean
@@ -128,6 +140,9 @@ as $$
 declare
   v_event text;
   v_role user_role;
+  v_org text;
+  v_group text;
+  v_org_ok boolean;
   v_matrix boolean;
   v_fixed boolean;
 begin
@@ -137,17 +152,41 @@ begin
   if (p_channel in ('bell', 'mail', 'push')) is not true then
     return false;
   end if;
-  -- Auth / systemowe poza Opcjami (nie w macierzy zdarzeń C3).
-  if p_template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET', 'EMAIL_BUDGET') then
+  -- Auth poza Opcjami (nie w macierzy zdarzeń C3).
+  if p_template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET') then
     return true;
   end if;
   v_event := public.notify_event_key(p_template, coalesce(p_payload, '{}'::jsonb));
   if (v_event is not null) is not true then
     return false;
   end if;
-  select u.role into v_role from public.app_users u where u.id = p_user and u.active;
+  select u.role, o.kind::text
+    into v_role, v_org
+    from public.app_users u
+    join public.organizations o on o.id = u.org_id
+   where u.id = p_user and u.active;
   if (v_role is not null) is not true then
     return false;
+  end if;
+  -- Poziom firmy (archiwum notification_matrix_org_kind): wyłączony kanał = stop.
+  if to_regclass('public.notification_matrix_org_kind') is not null then
+    select m.event_group into v_group
+      from public.notification_matrix m
+     where m.event_key = v_event
+     limit 1;
+    if v_group is not null then
+      select case p_channel
+               when 'mail' then ok.email
+               when 'bell' then ok.in_app
+               when 'push' then ok.in_app  -- brak kolumny push: ta sama reguła co dzwonek firmy
+             end
+        into v_org_ok
+        from public.notification_matrix_org_kind ok
+       where ok.event_group = v_group and ok.org_kind = v_org;
+      if found and v_org_ok is not true then
+        return false;
+      end if;
+    end if;
   end if;
   select
     case p_channel when 'bell' then m.in_app when 'mail' then m.email when 'push' then m.push end,
@@ -163,7 +202,7 @@ end $$;
 
 revoke all on function public.notify_channel_allowed(uuid, text, jsonb, text) from public, anon, authenticated;
 comment on function public.notify_channel_allowed(uuid, text, jsonb, text) is
-  '#402: jedna bramka — macierz × pref; AUTH_* poza Opcjami.';
+  '#402: bramka firma→rola→osoba; AUTH_* poza Opcjami.';
 
 -- Ponowna kontrola w chwili wysyłki (kolejka mogła powstać przed wyłączeniem).
 create or replace function public.notify_email_still_allowed(p_id bigint)
@@ -231,7 +270,6 @@ begin
   end if;
   if p_template is distinct from 'AUTH_INVITE'
      and p_template is distinct from 'AUTH_PASSWORD_RESET'
-     and p_template is distinct from 'EMAIL_BUDGET'
      and public.notify_channel_allowed(p_user, p_template, coalesce(p_payload, '{}'::jsonb), 'mail') is not true then
     v_key := left(coalesce(p_dedup, 'gate:' || p_template || ':' || p_user::text), 200);
     insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, error)
@@ -437,7 +475,7 @@ begin
    where u.active
      and u.role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER')
      and (p_only_org_kind is null or o.kind::text = p_only_org_kind)
-     and public.notify_person_on(u.id, v_event, 'bell', m.in_app, m.fixed_in_app) is true
+     and public.notify_channel_allowed(u.id, p_template, v_payload, 'bell') is true
      and public.notify_audience_ok(u.id, u.role::text, o.kind::text, p_template, v_payload)
      and (
        o.kind = 'FORWARDER'
@@ -459,10 +497,10 @@ begin
       join organizations o on o.id = u.org_id
       join notification_matrix m
         on m.event_key = v_event and m.role = u.role and m.risks_only is not true
-       and public.notify_person_on(u.id, v_event, 'mail', m.email, m.fixed_email) is true
      where u.active and u.email is not null
        and u.role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER')
        and (p_only_org_kind is null or o.kind::text = p_only_org_kind)
+       and public.notify_channel_allowed(u.id, p_template, v_payload, 'mail') is true
        and public.notify_audience_ok(u.id, u.role::text, o.kind::text, p_template, v_payload)
        and v_legacy_job is not true
        and v_src_bell_only is not true
@@ -499,25 +537,28 @@ begin
     or coalesce(v_payload->>'kind', '') in ('JOB_FAILURE', 'SOURCE_DOWN')
     or p_template in ('SOURCE_DOWN', 'JOB_FAILURE')
   );
-  v_has_push_target := p_load_id is not null or v_decision is not null or v_source_alarm;
+  -- #402 F7: push według macierzy / „Co dostaję”, nie tylko krytyczne.
+  v_has_push_target := p_load_id is not null or v_decision is not null or v_source_alarm or v_event in ('chat', 'app_err', 'daily');
   v_push_ok := v_legacy_job is not true and v_src_bell_only is not true
-    and ((v_critical is true and v_has_push_target is true) or v_event = 'chat' or v_event = 'app_err');
+    and (v_has_push_target is true or v_critical is true);
   if v_push_ok is true then
   insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status)
   select 'WEB_PUSH', coalesce(u.email::text, u.id::text), u.id, p_load_id, p_template,
          v_payload || jsonb_build_object('locale', u.locale)
-           || case when v_event = 'chat' then '{}'::jsonb
-                   else jsonb_build_object('critical', true) end,
+           || case when v_critical is true or v_event in ('chat', 'app_err') then
+                   case when v_event = 'chat' then '{}'::jsonb
+                        else jsonb_build_object('critical', true) end
+                   else '{}'::jsonb end,
          left(p_dedup_prefix || ':WP:' || u.id::text, 200),
          'PENDING'
     from app_users u
     join organizations o on o.id = u.org_id
     join notification_matrix m
       on m.event_key = v_event and m.role = u.role and m.risks_only is not true
-     and public.notify_person_on(u.id, v_event, 'push', m.push, m.fixed_push) is true
     left join user_preferences pref on pref.user_id = u.id
    where u.active
      and u.role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER')
+     and public.notify_channel_allowed(u.id, p_template, v_payload, 'push') is true
      and public.notify_audience_ok(u.id, u.role::text, o.kind::text, p_template, v_payload)
      and coalesce(pref.web_push_enabled, true) is true
      and exists (select 1 from push_subscriptions ps where ps.user_id = u.id)
@@ -546,7 +587,7 @@ end $$;
 
 revoke all on function public.matrix_notify(text, text, uuid, uuid, jsonb, text, text) from public, anon, authenticated;
 comment on function public.matrix_notify(text, text, uuid, uuid, jsonb, text, text) is
-  '#402: macierz bez push_fallback EMAIL; prefs wygrywają nad fixed_*.';
+  '#402 F7: bramka firma→rola→osoba; push wg macierzy (nie tylko krytyczne).';
 
 -- sms_watchdog: e-maile tylko przez bramkę sms_gw.
 create or replace function public.sms_watchdog(p_now timestamptz default now()) returns jsonb
@@ -727,12 +768,14 @@ begin
   if r.status is distinct from 'ERROR' and r.status is distinct from 'SENT' then
     return false;
   end if;
+  v_dedup := left('push_fallback:' || r.id::text, 200);
+  if exists (select 1 from public.notifications where dedup_key = v_dedup) then
+    return false;
+  end if;
   -- #402: zapasowy e-mail tylko przy włączonym kanale mail (nie przy samym push).
   if public.notify_channel_allowed(r.user_id, r.template, coalesce(r.payload, '{}'::jsonb), 'mail') is not true then
     return false;
   end if;
-
-  v_dedup := left('push_fallback:' || r.id::text, 200);
   v_title := coalesce(r.payload->>'title', 'Watch Tower');
   v_body := coalesce(r.payload->>'body', r.template);
   v_url := coalesce(nullif(r.payload->>'url', ''), nullif(r.payload->>'href', ''), '/');
@@ -761,5 +804,79 @@ update public.notifications n
        error = left(coalesce(n.error || '; ', '') || 'gate:mail_off_bulk', 500)
  where n.channel = 'EMAIL'
    and n.status in ('PENDING', 'DIGEST')
-   and n.template not in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET', 'EMAIL_BUDGET')
+   and n.template not in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET')
    and public.notify_channel_allowed(n.user_id, n.template, n.payload, 'mail') is not true;
+
+-- F7: wstawienia poza matrix_notify / l13_queue_email też przez bramkę (IN_APP, EMAIL).
+create or replace function public.trg_notifications_gate()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if NEW.channel = 'EMAIL' then
+    if NEW.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET') then
+      return NEW;
+    end if;
+    if NEW.status = 'SUPPRESSED' then
+      return NEW;
+    end if;
+    if public.notify_channel_allowed(NEW.user_id, NEW.template, coalesce(NEW.payload, '{}'::jsonb), 'mail') is not true then
+      NEW.status := 'SUPPRESSED';
+      NEW.error := left(coalesce(NEW.error || '; ', '') || 'gate:mail_off', 500);
+    end if;
+    return NEW;
+  end if;
+  if NEW.channel = 'IN_APP' then
+    if public.notify_channel_allowed(NEW.user_id, NEW.template, coalesce(NEW.payload, '{}'::jsonb), 'bell') is not true then
+      return null;
+    end if;
+    return NEW;
+  end if;
+  return NEW;
+end $$;
+
+revoke all on function public.trg_notifications_gate() from public, anon, authenticated;
+drop trigger if exists trg_notifications_gate on public.notifications;
+create trigger trg_notifications_gate
+  before insert on public.notifications
+  for each row execute function public.trg_notifications_gate();
+comment on function public.trg_notifications_gate() is
+  '#402 F7: IN_APP/EMAIL przy wstawieniu przez bramkę (także poza matrix_notify).';
+
+-- F7 pkt 4–5: ponowna kontrola push przy wysyłce (web-push-send).
+create or replace function public.notify_push_still_allowed(p_id bigint)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n public.notifications%rowtype;
+begin
+  select * into n from public.notifications where id = p_id;
+  if not found then
+    return false;
+  end if;
+  if n.channel is distinct from 'WEB_PUSH' then
+    return false;
+  end if;
+  if n.status is distinct from 'PENDING' and n.status is distinct from 'DIGEST' then
+    return n.status = 'SENT';
+  end if;
+  if public.notify_channel_allowed(n.user_id, n.template, n.payload, 'push') is true then
+    return true;
+  end if;
+  update public.notifications
+     set status = 'SUPPRESSED',
+         error = left(coalesce(error || '; ', '') || 'gate:push_off', 500)
+   where id = p_id
+     and status in ('PENDING', 'DIGEST');
+  return false;
+end $$;
+
+revoke all on function public.notify_push_still_allowed(bigint) from public, anon, authenticated;
+grant execute on function public.notify_push_still_allowed(bigint) to service_role;
+comment on function public.notify_push_still_allowed(bigint) is
+  '#402 F7: przed web-push — jeśli push wyłączony → SUPPRESSED.';

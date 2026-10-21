@@ -24,6 +24,7 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, 
 
 # #402: zapas z push tylko gdy mail włączony (SCHEDULE_DATE_CRITICAL → dates).
 sys "update notification_matrix set email=true where event_key='dates' and role='HHL_ADMIN'" >/dev/null
+sys "update notification_matrix_org_kind set email=true, in_app=true where org_kind='FORWARDER'" >/dev/null
 
 # 1) ERROR no_sub → wpis zapasowy od razu (po granicy, critical)
 sys "insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key, status, error, created_at)

@@ -44,3 +44,6 @@ where not exists (
 -- A7: zezwolenie firmowe + polisa HHL (0237 przy pustej bazie nic nie wstawia — orgs/projekty są tu)
 select a7_seed_firm_assets();
 select doc_requirements_seed(id) from projects;
+
+-- #402: w bramie testowej kanały firmy włączone (na produkcji właściciel ma wyłączone w org_kind).
+update notification_matrix_org_kind set in_app = true, email = true;

@@ -3938,3 +3938,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ™. Szacunek szczytu po skrÃ³cie: 34. Ma
 - Skrzynka: #405 (Spawn2018, `dla-cursora`+`pilne`) â€” wpisane PLAN Â§3/Â§4/Â§8, dopisek `D-20261021-2014-01.md` (#402â†’0255, #405â†’0256, #400â†’0257, B5â†’0258). #402/#400/#384/#323/#322/#320 w planie.
 - Scalanie: brak `F7: gotowe do scalenia`. #406 `db` czerwone (workflow poza bramkÄ…, c16/l13/c3) â€” poprawka w tym przebiegu. Bez push na `main`.
 - BieÅ¼Ä…ca: **HOTFIX #402** PR #406 â€” `WORKFLOW_ALERT`â†’`workflow` w macierzy; c16 wÅ‚Ä…cza mail `dates`; l13 wÅ‚Ä…cza mail `dec_new` dla KSH; c3 asercja po `user_id`. Potem #405.
+
+## 2026-10-21 20:50 — #402 F7 (firma/trigger/push); skrzynka #411/#409/#412; scalenia wygl¹du
+
+- Skrzynka: #411 `pilne` › PLAN + `D-20261021-2038-01.md` (**0256**); #405›**0257**; #400›**0258**; #409 › `D-20261021-2030-01.md` (**0259**); #412 › `D-20261021-2040-01.md` (po B5); B5›**0260**.
+- Scalanie: #407, #401, #404 — `F7: gotowe do scalenia` po ostatnim commicie, CI zielone › merge. #408 wstrzymane. #406 F7 „jeszcze nie” › poprawka. Bez push na `main`.
+- Bie¿¹ca: **HOTFIX #402** PR #406 — `notification_matrix_org_kind` w bramce; `trg_notifications_gate` IN_APP/EMAIL; `notify_push_still_allowed` + web-push-send; push nie tylko krytyczne; `email_budget`/`fuel_miss`; c3 31 kluczy + test firmy; c16 dedup fallback.
