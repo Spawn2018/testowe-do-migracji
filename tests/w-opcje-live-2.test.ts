@@ -9,6 +9,7 @@ import { dwellFromDb, dwellPatchToDb } from '../src/auth/LiveDwell';
 import { rateViewFromDb, rulesWithPrices, ruleKey, type DbCard } from '../src/auth/LiveRateCard';
 import { liveOtherJobs, liveSourceRows, limitText } from '../src/auth/LiveStatus';
 import { placesFromDb } from '../src/auth/LiveSmsPlaces';
+import { tierOf } from '../src/lib/p5bFuel';
 import { fetchDay, hhlFuelView, mondayOf, partyFuelView, tiersFromDb, type FuelRun, type WeekCalc } from '../src/auth/liveFuel';
 import { hasKey } from '../src/i18n/messages';
 import type { Load } from '../src/types';
@@ -117,7 +118,7 @@ describe('Opłata paliwowa — sefs_week_for_load, sefs_parameters, fuel-prices'
     { ran_at: '2026-10-18T05:15:00Z', ok: false, result: { error: 'x' } },
   ];
   it('tabela załącznika „do X” → przedziały od–do', () => {
-    expect(tiersFromDb([{ lte: 22.5, mult: 1.12 }, { lte: 22.2, mult: 1.11 }])).toEqual([{ from: 0, to: 22.2, mult: 1.11 }, { from: 22.21, to: 22.5, mult: 1.12 }]);
+    expect(tiersFromDb([{ lte: 22.5, mult: 1.12 }, { lte: 22.2, mult: 1.11 }])).toEqual([{ from: 22.2, to: 22.49, mult: 1.11 }, { from: 22.5, to: 22.79, mult: 1.12 }]);
   });
   it('HHL: tydzień, średnie i mnożniki z bazy; dni z publikacji; pobieranie z fuel-prices', () => {
     const v = hhlFuelView({ today: '2026-10-21', params: { version: 3, valid_from: '2026-09-28', agreed_with_carrier: true, tiers_sek: [], tiers_pln: [] }, cur, next: null, curDays: null, runs, exampleBaseEur: 6900, missWhy: 'brak publikacji' });
@@ -259,3 +260,22 @@ describe('F7 #415 — odczyt i zapis', () => {
     expect(read('src/views/OptionsView.tsx')).toContain("disabled={ro} onClick={() => { if (ro) return; saveGeofence(");
   });
 });
+
+/* D-20261020-1322-01: próg „od” — wiersz podświetlony tak, jak liczy baza (sefs_week_calc 19.10.2026: SEK 23,10 → ×1,14, PLN 7,11 → ×1,13) */
+describe('W-paliwo-progi: tabela mnożników czytana „od progu”', () => {
+  const pln = tiersFromDb([{ lte: 7.0, mult: 1.12 }, { lte: 7.1, mult: 1.13 }, { lte: 7.2, mult: 1.14 }, { lte: 7.3, mult: 1.15 }]);
+  const sek = tiersFromDb([{ lte: 22.8, mult: 1.13 }, { lte: 23.1, mult: 1.14 }, { lte: 23.4, mult: 1.15 }]);
+  const at = (tiers: ReturnType<typeof tiersFromDb>, v: number) => tiers[tierOf(tiers, v)].mult;
+  it('PLN jak w dopisku', () => {
+    expect([7.0, 7.1, 7.11, 7.19, 7.2].map((v) => at(pln, v))).toEqual([1.12, 1.13, 1.13, 1.13, 1.14]);
+    expect(at(pln, 6.5)).toBe(1.12);
+    expect(at(pln, 9.9)).toBe(1.15);
+  });
+  it('SEK jak w dopisku', () => {
+    expect([22.8, 22.85, 23.09, 23.1, 23.12].map((v) => at(sek, v))).toEqual([1.13, 1.13, 1.13, 1.14, 1.14]);
+  });
+  it('przedziały na ekranie: od progu do następnego minus 0,01', () => {
+    expect(pln.map((r) => [r.from, r.to])).toEqual([[7, 7.09], [7.1, 7.19], [7.2, 7.29], [7.3, 7.39]]);
+  });
+});
+

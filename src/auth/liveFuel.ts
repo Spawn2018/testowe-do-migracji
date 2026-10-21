@@ -20,10 +20,16 @@ export function mondayOf(d: string): string {
 }
 
 export type Tier = { lte: number; mult: number };
-/** Tabela załącznika „do X → ×m” jako przedziały „od–do” (jak w demo). */
+/**
+ * Tabela załącznika jako przedziały „od–do”. Pole `lte` w bazie to próg „od” (D-20261020-1322-01:
+ * mnożnik = wiersz o najwyższym progu ≤ średnia; poniżej pierwszego progu → pierwszy wiersz),
+ * więc wiersz trwa od swojego progu do progu następnego minus 0,01. Ostatni — o jeden krok tabeli.
+ */
 export function tiersFromDb(t: readonly Tier[] | null | undefined): FuelTier[] {
   const list = [...(t ?? [])].map((x) => ({ lte: Number(x.lte), mult: Number(x.mult) })).sort((a, b) => a.lte - b.lte);
-  return list.map((x, i) => ({ from: i === 0 ? 0 : Math.round((list[i - 1].lte + 0.01) * 100) / 100, to: x.lte, mult: x.mult }));
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const step = list.length > 1 ? list[list.length - 1].lte - list[list.length - 2].lte : 0.1;
+  return list.map((x, i) => ({ from: x.lte, to: r2((i + 1 < list.length ? list[i + 1].lte : x.lte + step) - 0.01), mult: x.mult }));
 }
 
 /** Wynik `sefs_week_calc` (pola, których używa ekran). */
