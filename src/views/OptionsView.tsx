@@ -46,7 +46,8 @@ const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 /** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
 const BafForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/BafForm'))) : null;
-const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/NotificationMatrixForm'))) : null;
+/* E11 (właściciel 21.10.2026 19:52): „Kto co dostaje” na produkcji w wyglądzie z audytu — ten sam ekran co w demo, dane z bazy */
+const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveWhoGets'))) : null;
 const RateCardForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/RateCardForm'))) : null;
 const SmsGateway = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SmsGateway'))) : null;
 const SmsZoneRecipients = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SmsZoneRecipients'))) : null;
