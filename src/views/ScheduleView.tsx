@@ -70,7 +70,10 @@ function useDismiss(open: boolean, close: () => void, ref: { current: HTMLElemen
 
 export function ScheduleView() {
   /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
-  const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>('loads');
+  /* wyglad/W-cele-przejsc (d): wiersz promu z „Sytuacji na trasie” otwiera Rejsy */
+  const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>(() => (useTowerStore.getState().sailingFocus ? 'sailings' : 'loads'));
+  const sailingFocus = useTowerStore((s) => s.sailingFocus);
+  useEffect(() => { if (sailingFocus) setSchedTab('sailings'); }, [sailingFocus]);
   const loads = useTowerStore((s) => s.loads);
   const documents = useTowerStore((s) => s.documents);
   const role = useTowerStore((s) => s.role);

@@ -27,6 +27,7 @@ import type { FeeDecision } from '../../lib/p5Fees';
 import type { DecisionsApi } from './useDecisions';
 import { TodoCardView, type CardCtx } from './TodoCard';
 import { accountRole } from '../../lib/accountRole';
+import { hintDrawerGo, issueDrawerGo, issueUploadCategory } from '../../lib/goTarget';
 
 const FeeModal = lazy(lazyRetry(() => import('../drawer/FeeModal').then((m) => ({ default: m.FeeModal }))));
 
@@ -52,6 +53,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
   const navigate = useNavigate();
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const setDrawerTab = useTowerStore((s) => s.setDrawerTab);
+  const setUploadReq = useTowerStore((s) => s.setUploadReq);
   const setView = useTowerStore((s) => s.setView);
   const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
   const openDecisionId = useTowerStore((s) => s.openDecisionId);
@@ -227,7 +229,10 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
         return;
       }
       selectLoad(i.loadId);
-      setDrawerTab(i.go === 'AWIZACJA' ? 'overview' : i.go === 'DOCS' ? 'docs' : i.go === 'PRICING' ? 'pricing' : null);
+      /* W-cele-przejsc (b): „Wgraj” — okno „Wgraj dokument” z tym transportem i rodzajem (E31 pkt 6), nie sama zakładka */
+      if (i.go === 'DOCS') setUploadReq({ loadId: i.loadId, category: issueUploadCategory(i) });
+      /* W-cele-przejsc (c): ETA / „najpóźniej do” / GPS → Status; prom → wiersz rejsu; reszta jak dotąd (`goTarget.ts`) */
+      setDrawerTab(issueDrawerGo(i));
     },
     onFee: (i) => setFeeFor(i),
     checkHandlers: (i) => {
@@ -305,7 +310,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       if (hint === 'BACKUP_RETRY') navigate({ pathname: '/opcje/stan-systemu', search: 'kopia=1' });
       else if (i.loadId && hint && hint !== 'KSH_DATE_COUNTER') {
         selectLoad(i.loadId);
-        setDrawerTab(hint === 'OPEN_AWIZACJA' || hint === 'PICK_SAILING' ? 'overview' : hint === 'OPEN_DOC' ? 'docs' : hint === 'ADD_FEE' ? 'pricing' : null);
+        setDrawerTab(hintDrawerGo(hint));
       }
     },
   };

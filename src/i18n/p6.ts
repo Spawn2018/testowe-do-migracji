@@ -135,6 +135,8 @@ const PL: Record<string, string> = {
   p6_kn_2: '{n} węzły',
   p6_kn_5: '{n} węzłów',
   p6_sea_none: 'bez pomiaru morza',
+  p6_ferry_open: 'Pokaż rejs w Harmonogramie › Rejsy',
+  p6_ksh_open: 'Otwórz transport',
   p6_ferries_note: 'Jeden wiersz na rejs, najnowszy pomiar. „Statek w porcie” trafia do historii rejsu, nie na tę listę.',
   p6_ferries_none: 'Brak rejsów do Szwecji w rozkładzie na najbliższe dni.',
   p6_ferries_nodata: 'Brak danych o rejsach.',

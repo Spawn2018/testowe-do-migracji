@@ -14,6 +14,7 @@ import { mayResolveDecision } from '../../lib/decisionAccess';
 import { transportLabel } from '../../lib/transportName';
 import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { useTowerStore } from '../../store/useTowerStore';
+import { rt } from '../../i18n/p6';
 
 export function kshProposalsOf(rows: readonly TodoDecision[]): TodoDecision[] {
   return rows.filter((d) => d.decider === 'KSH');
@@ -51,7 +52,15 @@ function Row({ d, api, locale, load, userRole }: { d: TodoDecision; api: Decisio
   const prop = proposalOfDetail(d.detail);
   return (
     <li className="rk-ksh-prop" data-ksh-proposal={d.id}>
-      <p className="rk-ksh-prop-hd"><b>{load ? transportLabel(load, 'KSH') : d.title}</b>{prop ? ` · ${prop}` : ''}</p>
+      <p className="rk-ksh-prop-hd">
+        {/* W-cele-przejsc (d): nazwa transportu otwiera jego panel */}
+        {d.loadId ? (
+          <button type="button" className="linkbtn rk-ksh-prop-open" data-ksh-open={d.loadId} title={rt(locale, 'p6_ksh_open')} onClick={() => useTowerStore.getState().selectLoad(d.loadId ?? null)}>
+            <b>{load ? transportLabel(load, 'KSH') : d.title}</b>
+          </button>
+        ) : <b>{d.title}</b>}
+        {prop ? ` · ${prop}` : ''}
+      </p>
       {can ? (
         <>
           {confirmAccept ? (

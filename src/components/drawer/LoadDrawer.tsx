@@ -31,6 +31,7 @@ import { PROD_BUILD } from '../../lib/prodFacade';
 import { delayPillMinutes } from '../../lib/prodDash';
 import { accountRole } from '../../lib/accountRole';
 import { hhlAdminDates } from '../../lib/adminDates';
+import { awizOpenAfter } from '../../lib/goTarget';
 /* SCOPE 6.4 — formularz zezwoleń: tylko build Supabase, chunk leniwy (paczka demo bez niego) */
 const PermitForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../../auth/PermitForm'))) : null;
 /* wyglad/P4-c: okna awizacji i „Zmień status” poza pierwszym wczytaniem (budżet 400 kB gzip, scripts/bundle-size.mjs) */
@@ -89,22 +90,60 @@ export function LoadDrawer() {
   /* Właściciel 21.10.2026, 16:27: panel transportu domyślnie otwiera się na „Przegląd”. Szuflada jest stale zamontowana,
      więc przy innym transporcie (albo ponownym otwarciu) wracamy do „Przeglądu”; link z zakładką ustawia ją niżej. */
   const lastId = useRef<string | null>(null);
+  /* wyglad/W-cele-przejsc: przewinięcie do wiersza rejsu w Przeglądzie (sprawa promu) */
+  const [ferryFocus, setFerryFocus] = useState(0);
   useLayoutEffect(() => {
     if (id && id !== lastId.current && !useTowerStore.getState().drawerTab) setTab('overview');
+    /* W-cele-przejsc (a): okno Awizacja nie przechodzi na inny transport ani na ponowne otwarcie panelu
+       (np. po zamknięciu panelu przyciskiem Wstecz przy otwartej Awizacji) — otwiera się tylko na wyraźne żądanie */
+    const prevId = lastId.current;
+    /* „Wgraj” ze sprawy dotyczy jednego transportu — nie czeka na inny */
+    const up = useTowerStore.getState().uploadReq;
+    if (up && up.loadId !== id) useTowerStore.getState().setUploadReq(null);
+    setAwizOpen((prev) => awizOpenAfter(prev, { type: 'load', prevId, nextId: id }));
     lastId.current = id;
   }, [id]);
 
   useEffect(() => {
     const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
-    if (drawerTab && (allowed as string[]).includes(drawerTab)) {
+    if (drawerTab === 'sailing') {
+      /* W-cele-przejsc (c): sprawa promu — Przegląd z wierszem rejsu, bez okna Awizacji */
+      setTab('overview');
+      setFerryFocus((n) => n + 1);
+      setDrawerTab(null);
+    } else if (drawerTab && (allowed as string[]).includes(drawerTab)) {
       setTab(drawerTab as Tab);
-      if (drawerTab === 'overview') setAwizOpen(true);
+      const req = drawerTab;
+      setAwizOpen((prev) => awizOpenAfter(prev, { type: 'tab', tab: req }));
       setDrawerTab(null);
     } else if (drawerTab) {
       /* F7 #394: zakładka spoza panelu (np. „margin” z powiadomienia demo) nie może zostać w sklepie — inaczej blokuje powrót na Przegląd */
       setDrawerTab(null);
     }
   }, [drawerTab, setDrawerTab]);
+
+  useEffect(() => {
+    if (!ferryFocus) return undefined;
+    let n = 0;
+    let raf = 0;
+    const find = () => {
+      const el = document.querySelector<HTMLElement>('.drawer [data-overview] [data-ferry-row]');
+      if (el) {
+        const fold = el.closest('details');
+        if (fold && !fold.open) fold.open = true;
+        const row = (el.previousElementSibling as HTMLElement | null) ?? el;
+        row.scrollIntoView({ block: 'center' });
+        el.classList.add('is-go-target');
+        row.classList.add('is-go-target');
+        window.setTimeout(() => { el.classList.remove('is-go-target'); row.classList.remove('is-go-target'); }, 2400);
+        return;
+      }
+      /* Przegląd ładuje się leniwie — czekamy do ok. 2 s */
+      if (++n < 120) raf = window.requestAnimationFrame(find);
+    };
+    raf = window.requestAnimationFrame(find);
+    return () => window.cancelAnimationFrame(raf);
+  }, [ferryFocus]);
 
   const load = loads.find((l) => l.id === id);
   const loadEvents = useMemo(
