@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
+  security: 185, // B5 0254: +25 Podgląd; było 160 (#392)
   status: 160, // +2 A10 F7 W12: auto READY bez HHL + rk_auto_status_blocked
   storage: 37,
   money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
-  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
+  nullguard: 708, // B5: +18 (preview_start/stop GUARD×2 +4+1; assert/is_preview EMPTY×2 +4); było 690
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 156, // 160 − 4 SKIP (B6)
+  security: 181, // 185 − 4 SKIP (B6)
   risks: 32, // 34 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

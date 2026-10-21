@@ -3914,3 +3914,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #391 `pilne` (bieżąca); #384/#323/#322/#320 w planie (bez `pilne` — nie przerywam).
 - Scalanie: #390 F7 „gotowe” (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone → merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bieżąca: **D-1535** PR #396 — `db` 62/67 (format `1.1400` + TELM t40 oczekiwało 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta → 1,14 za D-1535.
+
+## 2026-10-21 18:25 — #396 D-1535 SCALONE; start B5 (0254)
+
+- Skrzynka: #391 zamknięte (SCALONE); #384/#323/#322/#320 w planie (bez `pilne`).
+- Scalanie: #396 F7 „gotowe do scalenia” (`7f21a0a`, Spawn2018, po ostatnim commicie) + CI zielone (unit/visual/db) → merge `1a7ba86d` (0253). `deploy-main` w toku. Bez push na `main`.
+- Bieżąca: **B5** (`pakiet/b5-podglad`, migracja **0254**) — rebase na `main` po 0253; Podgląd read_only; security 185 / nullguard 708; F7 otwarte z #382.
