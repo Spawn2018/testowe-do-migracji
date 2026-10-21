@@ -3687,8 +3687,33 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: CI na `ed388785` zielone (db/unit/visual). Brak „F7: gotowe” po head — drobne F7 w tym kroku. #317/#259 bez F7 po ostatnim commicie / konflikt.
 - Bieżąca: **HOTFIX #374** — `channel = 'IN_APP'` przy oznaczaniu dzwonków; money +1 asercja „wznowienie bez nowego RISK_OPEN”; money **179**. Push → czekam na CI i F7.
 
+## 2026-10-21 01:20 — C15-emtrack LOGIN wait (#365)
+
+- Skrzynka: #365 otwarte (`Spawn2018`, `dla-cursora`); #374 zamknięte po merge. #359/#358/#324/#323/#322/#320 — w planie. Bez etykiety `pilne`.
+- Scalanie: #375 SCALONE `5a67a23b` (F7 na `61da3d3`, deploy-main OK). #317 CONFLICTING (bez F7 po ostatnim merge main). #259 bez F7.
+- Ops #365: `emtrack_login_state` fail_streak=0; od ~22:52 UTC `emtrack-web` ok=true, objects=7, version 6.33.0 (sekrety Edge poprawione wcześniej). local `.env` z otaczającymi `'` → FP ≠ Edge; po `unquoteSecret` FP=Edge.
+- Bieżąca: **C15-emtrack** (`pakiet/c15-emtrack-login-wait`) — czekanie na LOGIN_RESPONSE+sessionId, ignorowanie ostrzeżeń (tylko `type` w logu), wait+1× LOGIN, `unquoteSecret`. vitest emtrack-web **18/18**.
+
 ## 2026-10-21 01:40 — pętla: C15 CI zielone; #317 main; skrzynka zamknięta
 
 - Skrzynka: #362/#364/#358 zamknięte (pozycje SCALONE). #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #376 C15 — CI zielone na `cf641647` (unit/visual/db), MERGEABLE; **brak** „F7: gotowe do scalenia” → bez merge. #317 — ten commit: main wciągnięty, konflikt POSTEP (obie strony + pkt 14.5). #259 konflikt / bez F7.
 - Bieżąca: **C15-emtrack** (#365 / #376) — kod gotowy, czeka na F7. Potem D-1300 (#359).
+
+## 2026-10-21 01:45 — C15 F7 prawie: B1/D1/D4 (#376)
+
+- Skrzynka: #365 otwarte; #362/#364/#358 zamknięte. #359… w planie; bez `pilne`.
+- Scalanie: #376 F7 „prawie” (B1 tekst w login_code, D1 extractWaitSeconds z tekstu, D4 testy). #317 main wciągnięty — czeka F7.
+- Bieżąca: **C15** — code/waitSec tylko z LOGIN_RESPONSE (safe code); wait bez parsowania tekstu; max 2 LOGIN; timeout bez fail_streak. vitest emtrack-web **19/19**.
+
+## 2026-10-21 02:00 — pętla: #317 SCALONE; #376 main (konflikt POSTEP)
+
+- Skrzynka: #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #317 SCALONE `4e6528e6` (F7 na `ef28a55`, unit/visual zielone). #376 po F7 B1/D1/D4 (`0ce32ae7`) — CI zielone (unit/visual/db), potem CONFLICTING po #317 → ten commit: main wciągnięty, konflikt POSTEP (obie strony). #259 konflikt / bez F7.
+- Bieżąca: **C15-emtrack** (#365 / #376) — push merge; czekam na zielone CI i „F7: gotowe do scalenia”. Potem D-1300 (#359).
+
+## 2026-10-21 02:20 — pętla: #376 CI zielone na 84a7c5d0; czeka F7
+
+- Skrzynka: #365 otwarte (C15). #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #376 — CI zielone na `84a7c5d0` (unit/visual/db), MERGEABLE CLEAN. F7 „gotowe” było na `0ce32ae`; po merge main nowy head → bez ponownego F7 = bez merge. #259 konflikt / bez F7.
+- Bieżąca: **C15-emtrack** (#365 / #376) — kod gotowy; czekam na „F7: gotowe do scalenia” po `84a7c5d0`. Potem D-1300 (#359).

@@ -42,6 +42,7 @@ import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
 import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
   emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
+  unquoteSecret,
 } from './emtrackLogin.ts';
 import {
   isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk,
@@ -1132,8 +1133,8 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
 }
 
 export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
-  const login = deps.env.EMTRACK_LOGIN?.trim();
-  const password = deps.env.EMTRACK_PASSWORD?.trim();
+  const login = unquoteSecret(deps.env.EMTRACK_LOGIN ?? '');
+  const password = unquoteSecret(deps.env.EMTRACK_PASSWORD ?? '');
   if (!login || !password) {
     return {
       job: 'emtrack-web', mode: 'DEMO', ok: true,
@@ -1176,16 +1177,31 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
 
   let objects: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['objects'] = [];
   let sentLog: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['sentLog'] = [];
+  let loginFrames: Awaited<ReturnType<typeof fetchTrackingObjectsReadOnly>>['loginFrames'] = [];
   let loginOk = false;
+  const loginObs = () => ({
+    sentTypes: sentLog.map((s) => s.type).join(','),
+    login_types: loginFrames.map((f) => f.type).join(','),
+    ...(loginFrames.some((f) => f.waitSec != null)
+      ? { login_wait_sec: String(loginFrames.find((f) => f.waitSec != null)?.waitSec) }
+      : {}),
+    ...(loginFrames.find((f) => f.code != null)
+      ? { login_code: String(loginFrames.find((f) => f.code != null)?.code) }
+      : {}),
+  });
   try {
     const r = await fetchTrackingObjectsReadOnly({
       login,
       password,
       auth: (deps.env.EMTRACK_AUTH_TYPE as 'INTERNAL' | 'DIRECT' | undefined) ?? 'INTERNAL',
       WebSocketImpl: deps.WebSocketImpl,
+      ...(deps.env.EMTRACK_WS_TIMEOUT_MS
+        ? { timeoutMs: Number(deps.env.EMTRACK_WS_TIMEOUT_MS) }
+        : {}),
     });
     objects = r.objects;
     sentLog = r.sentLog;
+    loginFrames = r.loginFrames;
     loginOk = r.loginOk;
   } catch (e) {
     const w = e instanceof Error ? e.message : String(e);
@@ -1196,7 +1212,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: [w],
       observations: {
-        sentTypes: sentLog.map((s) => s.type).join(','),
+        ...loginObs(),
         fail_streak: String(loginState.failStreak),
         ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
       },
@@ -1209,7 +1225,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     return {
       job: 'emtrack-web', mode: 'LIVE', ok: false, risks: 1, warnings: ['login_failed'],
       observations: {
-        sentTypes: sentLog.map((s) => s.type).join(','),
+        ...loginObs(),
         fail_streak: String(loginState.failStreak),
         ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
       },
@@ -1298,7 +1314,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       phaseInferred: String(phaseInferred),
       skippedInterval: String(skippedInterval),
       ambiguous_trailer: String(ambiguousTrailer),
-      sentTypes: sentLog.map((s) => s.type).join(','),
+      ...loginObs(),
       ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
     },
   };
