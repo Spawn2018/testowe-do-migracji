@@ -29,6 +29,7 @@ export const EXPECTED_LOCAL = {
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
+  'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
   dec3: 13,
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -95,6 +96,7 @@ export const SUITE_FILE = {
   i30: 'i30.sh',
   i31: 'i31.sh',
   dec2: 'dec2.sh',
+  'dec-fx': 'dec-fx.sh',
   dec3: 'dec3.sh',
   dec5: 'dec5.sh',
   dec6: 'dec6.sh',
@@ -141,6 +143,7 @@ export const LOCAL_RUN = {
   i30: 'boot',
   i31: 'boot',
   dec2: 'boot',
+  'dec-fx': 'boot',
   dec3: 'boot',
   dec5: 'tower',
   dec6: 'tower',
@@ -171,7 +174,7 @@ export const LOCAL_RUN = {
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
 export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
-  'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
+  'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec-fx', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
   'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3',
 ];
@@ -267,7 +270,7 @@ export function gateSteps() {
     order.push(name);
   }
   const rest = [
-    'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
+    'i30', 'i31', 'dec2', 'dec-fx', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
     'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3', 'backup',
   ];
   for (const name of rest) {
