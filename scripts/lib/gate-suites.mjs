@@ -28,7 +28,7 @@ export const EXPECTED_LOCAL = {
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
+  dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
   'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
   dec3: 13,
   dec5: 11,

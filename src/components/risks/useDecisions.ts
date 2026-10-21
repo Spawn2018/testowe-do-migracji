@@ -36,8 +36,13 @@ export interface DecisionsApi {
   rows: TodoDecision[];
   error: string | null;
   refresh: () => Promise<void>;
-  /** wynik `decision_resolve` (ui_hint) albo błąd */
-  resolve: (id: string, option: string, note: string | null) => Promise<{ hint: string | null; error: string | null }>;
+  /** wynik `decision_resolve` (ui_hint) albo błąd; `payload` = daty przy PROPOSE_DATE (#384) */
+  resolve: (
+    id: string,
+    option: string,
+    note: string | null,
+    payload?: Record<string, unknown> | null,
+  ) => Promise<{ hint: string | null; error: string | null }>;
   snooze: (id: string, hours: number) => Promise<string | null>;
 }
 
@@ -68,11 +73,18 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     void refresh();
   }, [refresh]);
 
-  const resolve = useCallback(async (id: string, option: string, note: string | null) => {
+  const resolve = useCallback(async (
+    id: string,
+    option: string,
+    note: string | null,
+    payload?: Record<string, unknown> | null,
+  ) => {
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return { hint: null, error: null };
     const { getSupabase } = await import('../../auth/client');
     const sb = await getSupabase();
-    const { data, error: e } = await sb.rpc('decision_resolve', { p_decision: id, p_option: option, p_note: note });
+    const args: Record<string, unknown> = { p_decision: id, p_option: option, p_note: note };
+    if (payload != null) args.p_payload = payload;
+    const { data, error: e } = await sb.rpc('decision_resolve', args);
     if (e) return { hint: null, error: e.message };
     await refresh();
     return { hint: (data as { ui_hint?: string } | null)?.ui_hint ?? null, error: null };
