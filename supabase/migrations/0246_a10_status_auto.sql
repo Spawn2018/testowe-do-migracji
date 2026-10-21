@@ -573,9 +573,18 @@ begin
 
     if v_kind = 'LOADING'
        and v_status in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
-      /* A10: Załadunek z każdego statusu Przygotowania; ryzyko gdy nie Gotowy. */
-      if v_status is distinct from 'READY' then
-        v_gaps := public.awiz_missing(new.load_id);
+      /*
+        A10: Załadunek z każdego statusu Przygotowania.
+        Ryzyko gdy nie Gotowy — albo Gotowy bez numeru HHL/SCX
+        (wyjątek enforce_order_numbers dla trasy: status pokazuje jazdę, F7 W12).
+      */
+      v_gaps := public.awiz_missing(new.load_id);
+      if v_status is distinct from 'READY'
+         or exists (
+           select 1
+             from jsonb_array_elements(coalesce(v_gaps, '[]'::jsonb)) g
+            where g->>'kind' in ('ORDER_SCX', 'ORDER_HHL')
+         ) then
         v_gaps_txt := public.a10_prep_gaps_text(v_gaps);
         perform raise_risk(new.load_id, 'AUTO_STATUS', 'HIGH',
           case when coalesce(v_gaps_txt, '') = '' then
