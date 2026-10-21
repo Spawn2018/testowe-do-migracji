@@ -142,7 +142,9 @@ export function ZonesView() {
   }
 
   const zone = zones.find((z) => z.id === sel) ?? null;
-  const groups = groupZones(zones);
+  /* audyt-teksty (d), makieta E34 telefon: na telefonie Boden pierwszy, dalej według trasy */
+  const byRoute = groupZones(zones);
+  const groups = phone ? [...byRoute.filter((g) => g.group === 'boden'), ...byRoute.filter((g) => g.group !== 'boden')] : byRoute;
   const open = (id: string) => { setSel(id); setAdding(false); setNote(''); setFocusId(null); setReveal((n) => n + 1); };
   const back = () => {
     const id = sel;
@@ -184,8 +186,9 @@ export function ZonesView() {
   const header = (
     <header className="zv-hd">
       <h2>{p8ct('p8c_title')}</h2>
-      <span className="zv-sub">{p8ct('p8c_sub', { n: zones.length })}</span>
-      {canEdit && !adding ? (
+      {/* makieta E34 telefon: w nagłówku sama liczba stref; „+ Strefa” pod listą */}
+      <span className="zv-sub" data-zone-count>{phone ? zones.length : p8ct('p8c_sub', { n: zones.length })}</span>
+      {canEdit && !adding && !phone ? (
         <button ref={addRef} type="button" className="btn zv-add" onClick={() => { setAdding(true); setNote(''); setReveal((n) => n + 1); }} data-zone-add>{p8ct('p8c_add')}</button>
       ) : null}
     </header>
@@ -246,6 +249,11 @@ export function ZonesView() {
           <ZonesMap mode="all" zones={zones} label={p8ct('p8c_map_label')} />
         </Suspense>
         {list}
+        {canEdit && !adding ? (
+          <div className="zv-add-row">
+            <button ref={addRef} type="button" className="btn zv-add" onClick={() => { setAdding(true); setNote(''); setReveal((n) => n + 1); }} data-zone-add>{p8ct('p8c_add')}</button>
+          </div>
+        ) : null}
         <p className="zv-foot">{p8ct('p8c_phone_note')}</p>
       </div>
     );

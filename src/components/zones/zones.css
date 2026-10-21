@@ -106,6 +106,13 @@ button.zv-hist-b:hover{background:var(--surface-2)}
   .zv-params,.zv-fields{grid-template-columns:minmax(0,1fr)}
   .zv-field .input{font-size:16px;min-height:44px}
   .zv-item{min-height:56px;padding:10px 12px}
+  /* audyt-teksty (d), makieta E34 telefon: karty z ramką według miejsca, nagłówek grupy jako pasek */
+  .zv.is-phone .zv-grp-h{margin-top:8px;padding:6px 12px 4px;background:var(--surface-2);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule-2);color:var(--ink-2)}
+  .zv.is-phone .zv-grp ul{display:flex;flex-direction:column;gap:6px;padding:6px 12px 0}
+  .zv.is-phone .zv-item{border:1px solid var(--rule);padding:9px 11px}
+  .zv.is-phone .zv-item.is-cur{border-left:3px solid var(--go)}
+  .zv-add-row{display:flex;padding:12px 12px 0}
+  .zv-add-row .zv-add{margin-left:0;flex:1 1 auto;min-height:48px;font-size:16px}
   .zv-last{display:none}
   .zv-hist-b{min-height:44px}
   .zv-form-acts .btn,.zv-ask-acts .btn{min-height:48px;font-size:16px;flex:1 1 0}

@@ -23,6 +23,8 @@ export type MatrixRow = {
   fixedNote?: boolean;
   /** Średnio zdarzeń na dobę z ostatnich 7 dni (z danych) — prognoza e-maili w podglądzie wiersza (E11). */
   perDay?: number;
+  /** Zdarzenie z migracji jeszcze niewdrożonej (np. 0255): w „Kto co dostaje” widać je dopiero, gdy baza ma ten klucz; „Co dostaję” — po zdjęciu znacznika. */
+  pendingDb?: boolean;
   cells: Record<AccountKind, MatrixCell>;
 };
 
