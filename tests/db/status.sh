@@ -85,6 +85,13 @@ echo; echo "[2] Port Gdańsk — wjazd w strefę"
 for x in $A $I $J; do pos $x 54.4030 18.6800 "2026-10-01 10:00+00"; pos $x 54.4031 18.6801 "2026-10-01 10:05+00"; done
 chk "wjazd w strefę portu → AT_PORT_GDANSK"                   "$(st $A)" AT_PORT_GDANSK
 chk "port bez potwierdzenia załadunku: ryzyko, status się zmienia" "$(rk $J PORT_NO_LOADED)" 1
+# #398: actual_load_at (GPS) = potwierdzony załadunek → brak PORT_NO_LOADED
+Lgps=$(L 2a)
+mk $Lgps GPS "'HHL/GPS'" "'SCX/GPS'" IN_TRANSIT_PL "'$S1'"
+q "set session_replication_role=replica; update loads set actual_load_at='2026-09-30 11:10+00' where id='$Lgps'; set session_replication_role=origin" >/dev/null
+pos $Lgps 54.4030 18.6800 "2026-10-01 10:00+00"; pos $Lgps 54.4031 18.6801 "2026-10-01 10:05+00"
+chk "398: port z actual_load_at → AT_PORT_GDANSK"           "$(st $Lgps)" AT_PORT_GDANSK
+chk "398: port z actual_load_at → 0 PORT_NO_LOADED"         "$(rk $Lgps PORT_NO_LOADED)" 0
 chk "strefa bufora 20 km nie zmienia statusu"                 "select count(*) from load_events where load_id='$A' and event_type='STATUS_AUTO'" 1
 
 echo; echo "[3] PROM — czas odejścia przypisanego rejsu"

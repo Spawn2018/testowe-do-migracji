@@ -402,9 +402,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**D-1535 #391** t40 paliwo / **0253** `pilne`; ~~#392 RIO / 0252 SCALONE~~; ~~#389 pkt 5–6 / 0251 SCALONE~~; B5 czeka na **0254**; ~~pkt 2–4 #388/0250~~; ~~pkt 1 #386/0249~~; ~~B4 #380/#381 0247–0248~~; ~~A10 #324/#378~~; ~~D-1300 #359/#377~~; ~~C15-emtrack #365/#376~~; ~~HOTFIX #374 #375/0244~~; ~~D-1501 #370/0243~~; ~~#371~~; ~~D-1710 #373/0242~~; potem B5…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #398** szum ryzyk / **0254** `pilne`; ~~D-1535 #391 / 0253 SCALONE~~; ~~#392 RIO / 0252~~; ~~#389 / 0251~~; B5 czeka na **0255**; ~~#384 0249–0251~~; ~~B4 0247–0248~~; potem B5…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **D-1535 · t40 paliwo ×1,14 (#391, 0253, `pilne`)** → B5 (**0254**) → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **~~D-1535 · t40 paliwo ×1,14 (#391/#396, 0253)~~** → **HOTFIX #398 · szum ryzyk (0254, `pilne`)** → B5 (**0255**) → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -706,10 +706,18 @@ Przerywa B5. Kolejność: ~~pkt 1~~ → ~~2–4~~ → ~~5–6~~ (+ pkt 7–8). P
 ### HOTFIX #392 · RIO „przyklejony” (D-20261021-1606-01, #392, `pilne`) — SCALONE (`e13067e4` PR #395, 0252; wygląd #393)
 Przed D-1535. `loads_rio_sanitize` czyści `rio_*` przy nie-RIO i A→B; SG-18 jednorazowo; security +5. Ekran #393 SCALONE.
 
-### D-1535 · t40 paliwo ×1,14 (D-20261021-1535-01, #391, `pilne`) — W TOKU (`pakiet/d1535-t40-fuel-114`, migracja **0253**)
+### D-1535 · t40 paliwo ×1,14 (D-20261021-1535-01, #391, `pilne`) — SCALONE (`1a7ba86d` PR #396, 0253)
 Po #392, przed B5. Decyzja właściciela 21.10.2026 15:35: t40 = SE 1,14 / PL 1,17 / stosowany 1,14 OSTATECZNY; t41+ bez zmian; `sefs_week_overrides`; `SEFS_INVOICE_DIFF` → `OWNER_DECISION`. Szczegóły: `dopiski/D-20261021-1535-01.md`.
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na D-1535 (migracja **0254** po rebase)
+### HOTFIX #398 · Szum w ryzykach (D-20261021-1820-01, `pilne`) — W TOKU (`pakiet/hotfix-398-risk-noise`, migracja **0254**)
+Przerywa B5. Właściciel 21.10.2026 18:20 — fałszywe ryzyka/decyzje. Jedna migracja **0254**; B5 → **0255**.
+1. **SG-17:** `loaded_confirmed` = `MILESTONE_LOADED` **lub** `actual_load_at`; zamknąć `PORT_NO_LOADED` z `actual_load_at`.
+2. **SG-23 emtrack:** przy ostatniej pozycji `EMTRACK_WEB` brak `SILENT_VEHICLE`/`NO_POSITION` (próg `SILENT_MIN`); wyjątek ≥ `SILENT_MIN_EMTRACK` (720) → 1× LOW HHL bez decyzji/e-mail/SMS; sprzątanie + `AUDYT17_MARK_READ`.
+3. **SG-03 ETA:** brak `ETA_BREACH` gdy `actual_delivery_at` albo rank ≥ `AT_SITE` / `CANCELLED`.
+4. **KR-01 ORDERNO:** zamykanie poza oknem 48 h / statusem poza `PLANNED`…`READY`.
+Testy: `risks` +2 status (port z `actual_load_at`). Odbiór SELECT po wdrożeniu (koordynator).
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #398 (migracja **0255** po rebase)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1252,3 +1260,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 16:59 | #389 SCALONE (`1a232014`, 0251); #395 CI zielone — czekam F7; D-1535 → 0253, B5 → 0254 | pętla |
 | 21.10.2026 17:39 | #395 RIO SCALONE (`e13067e4`, 0252); #393+#394 SCALONE; start D-1535 (#391, 0253) | pętla |
 | 21.10.2026 18:05 | #390 SCALONE (`8f995121`); D-1535 #396 — poprawka baf (format + TELM ×1,14) | pętla |
+| 21.10.2026 18:35 | D-20261021-1820-01 (#398, `pilne`): szum ryzyk SG-17/emtrack/ETA/ORDERNO; migracja **0254**; B5 → **0255** | właściciel 18:20; koordynator |

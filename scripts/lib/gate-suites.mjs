@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
-  status: 160, // +2 A10 F7 W12: auto READY bez HHL + rk_auto_status_blocked
+  status: 162, // #398: +2 port z actual_load_at (bez PORT_NO_LOADED)
   storage: 37,
   money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
   release: 146,
@@ -22,7 +22,7 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
+  risks: 42, // #398: +8 loaded_confirmed/emtrack/ETA/ORDERNO
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 156, // 160 − 4 SKIP (B6)
-  risks: 32, // 34 − 2 SKIP (C1)
+  risks: 40, // 42 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

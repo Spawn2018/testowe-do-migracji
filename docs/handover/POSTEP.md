@@ -3914,3 +3914,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Skrzynka: #391 `pilne` (bie≈ºƒÖca); #384/#323/#322/#320 w planie (bez `pilne` ‚Äî nie przerywam).
 - Scalanie: #390 F7 ‚Äûgotowe‚Äù (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone ‚Üí merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bie≈ºƒÖca: **D-1535** PR #396 ‚Äî `db` 62/67 (format `1.1400` + TELM t40 oczekiwa≈Ço 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta ‚Üí 1,14 za D-1535.
+
+## 2026-10-21 18:35 ó #398 `pilne`: szum ryzyk (przerywa B5)
+
+- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) ó przerywa B5. Wpisane: PLAN ß3/ß4/ß8, dopisek `D-20261021-1820-01.md`. #384 pkt 7ñ8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
+- Scalanie: brak PR z `F7: gotowe do scalenia`. #382/#383 bez F7. #397 visual zielone, bez F7. Bez push na `main`.
+- Bieøπca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) ó `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprzπtanie bulk_quiet. B5 õ **0255**.

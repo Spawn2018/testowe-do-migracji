@@ -145,4 +145,49 @@ $PSQL -c "update loads set status='INVOICED' where id='$L2'" >/dev/null
 chk "1215: faktura po terminie zostaje przy INVOICED" \
   "$(Q "select count(*) from risk_signals where dedup_key='invoice-overdue:$L2' and resolved_at is null")" 1
 
+echo; echo "[398] szum ryzyk — loaded_confirmed / emtrack / ETA / ORDERNO (D-20261021-1820-01)"
+chk "398: SILENT_MIN_EMTRACK = 720" \
+  "$(Q "select value_num::int from ops_thresholds where key='SILENT_MIN_EMTRACK'")" 720
+fx "update loads set actual_load_at = now() - interval '2 hours' where id='$L1'"
+chk "398: loaded_confirmed true (GPS actual_load_at)" "$(Q "select loaded_confirmed('$L1')::text")" t
+fx "update loads set actual_load_at = null where id='$L1'"
+# emtrack < 12 h: cisza 3 h, źródło EMTRACK_WEB → 0 SILENT / 0 NO_POSITION
+$PSQL -c "update risk_signals set resolved_at=now() where dedup_key='SILENT:$L1' and resolved_at is null" >/dev/null
+$PSQL -c "delete from decisions where detail->>'event_key'='SILENT:$L1' or risk_id in (select id from risk_signals where dedup_key='SILENT:$L1')" >/dev/null 2>&1
+fx "update loads set status='IN_TRANSIT_PL', tractor_plate='EMT 1', telematics_vehicle_id='TEL-EMT-1', plan_load_date=current_date - 1, actual_load_at=now()-interval '1 day' where id='$L1'"
+$PSQL -c "delete from positions where load_id='$L1'" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
+NDEC0=$(Q "select count(*) from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and load_id='$L1'")
+Q "select detect_silent_vehicles(90)" >/dev/null
+chk "398: emtrack <12h → 0 otwartych SILENT" \
+  "$(Q "select count(*) from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" 0
+chk "398: emtrack <12h → 0 nowych NO_POSITION" \
+  "$(Q "select count(*) - $NDEC0 from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and load_id='$L1'")" 0
+# emtrack ≥ 12 h → 1× LOW, bez decyzji
+$PSQL -c "delete from positions where load_id='$L1'" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '13 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
+Q "select detect_silent_vehicles(90)" >/dev/null
+chk "398: emtrack ≥12h → 1 SILENT LOW" \
+  "$(Q "select count(*)||'/'||max(severity::text)||'/'||max(audience::text)||'/'||max(detail->>'emtrack_trailer') from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" "1/LOW/HHL/1"
+chk "398: emtrack ≥12h → 0 decyzji NO_POSITION" \
+  "$(Q "select count(*) from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and (detail->>'event_key')='SILENT:$L1'")" 0
+# ETA po dostawie
+fx "update loads set status='READY_TO_INVOICE', actual_delivery_at=now()-interval '1 day', plan_delivery_date=current_date-2 where id='$L1'"
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L1','ETA_BREACH','CRITICAL','Opóźnienie test','rk_eta_breach','{\"l3\":\"1\"}','ETA_BREACH:$L1')
+  on conflict do nothing" >/dev/null 2>&1
+$PSQL -c "update risk_signals set resolved_at=null, detected_at=now() where dedup_key='ETA_BREACH:$L1'" >/dev/null 2>&1
+Q "select refresh_load_eta('$L1')" >/dev/null
+chk "398: ETA_BREACH zamknięte po READY_TO_INVOICE" \
+  "$(Q "select count(*) from risk_signals where dedup_key='ETA_BREACH:$L1' and resolved_at is null")" 0
+# ORDERNO poza oknem
+fx "update loads set status='PLANNED', plan_load_date=current_date + 30, plan_load_from=null, hhl_order_no=null, carrier_order_no=null, actual_delivery_at=null where id='$L2'"
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L2','RESOURCE_MISSING','HIGH','brak HHL','rk_order_no_hhl',
+    '{\"rule\":\"ORDER_NO\",\"side\":\"HHL\"}','ORDERNO:HHL:$L2')
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing" >/dev/null
+Q "select detect_missing_order_numbers(now(), 48)" >/dev/null
+chk "398: ORDERNO zamknięte gdy załadunek za >48 h" \
+  "$(Q "select count(*) from risk_signals where dedup_key='ORDERNO:HHL:$L2' and resolved_at is null")" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
