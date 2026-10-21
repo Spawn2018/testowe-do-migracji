@@ -35,6 +35,8 @@ import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 import { accountRole } from '../lib/accountRole';
+import { OPTIONS_CHANGED_EVENT } from '../lib/optionsChanged';
+import type { LiveMeta } from '../auth/liveOptionsMeta';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */
 function savedText(locale: Locale, code: string): string {
@@ -42,7 +44,8 @@ function savedText(locale: Locale, code: string): string {
   return hasKey(locale, k) ? t(locale, k) : code;
 }
 
-const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/UsersAdmin'))) : null;
+/* wyglad/W-opcje-live-1: ekrany Opcji na produkcji w wyglądzie z audytu (te same ekrany co w demo, dane i RPC z dawnych formularzy) */
+const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveUsers'))) : null;
 /** D-20261014-0700-01 J3 pkt 1: AccountScreen zamiast MyAccount + Mfa + MyDevices. */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
 /* E3 (W-opcje-live-2): Opłata paliwowa na produkcji — ekran z audytu; BafForm (wersje, ceny ręczne, dziennik) rozwijany pod nim */
@@ -53,15 +56,19 @@ const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && 
 const LiveRateCard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveRateCard'))) : null;
 /* E42 (W-opcje-live-2): SMS przy miejscach na produkcji — ekran z audytu; wyzwalacze, SMS testowe, bramka i strefy rozwijane pod nim */
 const LiveSmsPlaces = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveSmsPlaces'))) : null;
-const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/OpsThresholdsForm'))) : null;
 /* E33 (W-opcje-live-2): Dopłaty na produkcji — ekran z audytu, dane i zapis jak w DwellOptionsForm (ops_thresholds) */
 const LiveDwell = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveDwell'))) : null;
 /* E23 (W-opcje-live-2): Stan systemu na produkcji — „Źródła danych” z audytu, dzisiejszy panel rozwijany pod listą */
 const LiveStatus = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveStatus'))) : null;
-const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/AuthLoginLog'))) : null;
-const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/BroadcastForm'))) : null;
-const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/DataExportPanel'))) : null;
-const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/ChangeHistoryPanel'))) : null;
+const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveThresholds'))) : null;
+const AuthLoginLog = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveLogins'))) : null;
+const BroadcastForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveBroadcast'))) : null;
+const DataExportPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveExport'))) : null;
+const ChangeHistoryPanel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveHistory'))) : null;
+const SecurityFlags = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFlags'))) : null;
+const LiveCalib = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveCalib'))) : null;
+/* stany w menu z bazy — moduł tylko w buildzie produkcyjnym (strażnik I-2: demo bez klienta Supabase) */
+const loadLiveMeta = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? () => import('../auth/liveOptionsMeta') : null;
 const PermitRequirement = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/PermitRequirement'))) : null;
 /* wyglad/P5 (E31, E12, L26): terminy dokumentów — przeniesione ze strony Dokumenty, zapis bez zmian */
 const DocTerms = lazy(lazyRetry(() => import('../components/docs/DocTerms')));
@@ -116,6 +123,21 @@ export function OptionsView() {
   const [request, setRequest] = useState<{ screen: OptScreenId; seq: number } | null>(null);
   /* wyglad/W-eta: wersja zatwierdzona w Kalibracji ETA — ten sam stan na ekranie i w menu bocznym (F7 P2) */
   const [calibApproved, setCalibApproved] = useState<CalibVersion | null>(null);
+  /* wyglad/W-opcje-live-1: stany w menu i na kafelkach z bazy (produkcja); odświeżane po zapisie w ekranie */
+  const [liveMeta, setLiveMeta] = useState<LiveMeta | null>(null);
+  const metaAdmin = accountRole(role) !== 'HHL_OPS';
+  useEffect(() => {
+    if (!loadLiveMeta || role !== 'HHL') return undefined;
+    let alive = true;
+    const load = () => {
+      void loadLiveMeta()
+        .then((m) => m.loadOptionsMeta(locale, metaAdmin))
+        .then((v) => { if (alive) setLiveMeta(v); }, () => { /* bez stanów — zostają nazwy ekranów */ });
+    };
+    load();
+    window.addEventListener(OPTIONS_CHANGED_EVENT, load);
+    return () => { alive = false; window.removeEventListener(OPTIONS_CHANGED_EVENT, load); };
+  }, [locale, metaAdmin, role]);
   useEffect(() => {
     const go = (screen: OptionsScreen | null) => {
       if (!screen) return;
@@ -167,8 +189,8 @@ export function OptionsView() {
   const scr = (id: OptScreenId, body: ReactNode, extra: Partial<OptScreen> = {}): OptScreen => ({
     id,
     body,
-    meta: demo?.meta[id]?.meta,
-    metaTone: demo?.meta[id]?.tone,
+    meta: demo?.meta[id]?.meta ?? liveMeta?.meta[id]?.meta,
+    metaTone: demo?.meta[id]?.tone ?? liveMeta?.meta[id]?.tone,
     ...extra,
   });
   const block = (el: ReactNode) => <SuspenseBlock>{el}</SuspenseBlock>;
@@ -227,7 +249,7 @@ export function OptionsView() {
           {zoneList}
         </>
       ), { right: change }),
-      scr('bcast', pick('bcast', BroadcastForm ? roBlock(<BroadcastForm />) : null), { right: change }),
+      scr('bcast', pick('bcast', BroadcastForm ? block(<BroadcastForm readOnly={ro} admin={isHhlAdmin} />) : null), { right: change }),
       /* P11 (e11/e12, G-11): „Treści wiadomości” ostatnie w grupie Powiadomienia */
       scr('texts', <MessageTexts readOnly={ro} />, { right: change }),
     ],
@@ -326,7 +348,7 @@ export function OptionsView() {
       scr('thr', (
         <>
           <OptionsHowTo locale={locale} k="b6_howto_thresh" />
-          {pick('thr', OpsThresholdsForm ? roBlock(<OpsThresholdsForm />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
+          {pick('thr', OpsThresholdsForm ? block(<OpsThresholdsForm readOnly={ro} />) : <Soon locale={locale} tipKey="opt_acc_thresh_soon" />)}
         </>
       ), { right: change }),
       scr('permits', (
@@ -343,10 +365,10 @@ export function OptionsView() {
           <Suspense fallback={null}>
             <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} />
           </Suspense>
-        ) : noSource, {
+        ) : LiveCalib ? block(<LiveCalib readOnly={ro} />) : noSource, {
           right: change,
           mark: calib && !PROD_BUILD ? <DemoMark /> : undefined,
-          meta: calib ? calibMeta(calib) : undefined,
+          meta: calib ? calibMeta(calib) : liveMeta?.meta.calib?.meta,
         });
       })(),
     ],
@@ -369,10 +391,10 @@ export function OptionsView() {
           )}
       </>
     ), { mark: PROD_BUILD ? undefined : <DemoMark /> }),
-    scr('flags', pick('flags', null), { right: change }),
+    scr('flags', pick('flags', SecurityFlags ? block(<SecurityFlags readOnly={ro} />) : null), { right: change }),
   ];
   if (isHhlAdmin) system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null)));
-  system.push(scr('export', pick('export', DataExportPanel ? block(<DataExportPanel />) : null), { right: 'download' }));
+  system.push(scr('export', pick('export', DataExportPanel ? block(<DataExportPanel admin={isHhlAdmin} />) : null), { right: 'download' }));
   groups.push({ id: 'system', screens: system });
 
   const forme: OptScreen[] = [
@@ -393,7 +415,7 @@ export function OptionsView() {
   groups.push({ id: 'forme', screens: forme });
 
   for (const g of groups) {
-    const s = demo?.summaries[g.id];
+    const s = demo?.summaries[g.id] ?? liveMeta?.summaries[g.id];
     /* P11 (e3): „paliwo × …” w opisie grupy Pieniądze — ta sama liczba co przy pozycji menu */
     if (s) { g.summary = g.id === 'money' ? s.text.replace('{fuel}', fuelMeta ?? '—') : s.text; g.summaryTone = s.tone; }
   }

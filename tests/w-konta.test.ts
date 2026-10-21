@@ -99,7 +99,7 @@ describe('stare formularze Opcji na produkcji u Operacji HHL (audyt 17.10 sekcja
   it('fieldset disabled + ukryte przyciski zmian dla 6 formularzy', () => {
     const v = read('src/views/OptionsView.tsx');
     expect(v).toMatch(/const roBlock = \(el: ReactNode\) => block\(ro \? <fieldset disabled className="opt-ro" data-opt-ro>\{el\}<\/fieldset> : el\);/);
-    for (const f of ['OpsThresholdsForm', 'BroadcastForm', 'PermitRequirement']) {
+    for (const f of ['PermitRequirement']) {
       expect(v, f).toContain(`roBlock(<${f} />)`);
       expect(v, f).not.toContain(` block(<${f} />)`);
     }
@@ -107,6 +107,9 @@ describe('stare formularze Opcji na produkcji u Operacji HHL (audyt 17.10 sekcja
     for (const f of ['LiveDwell', 'LiveFuel']) expect(v, f).toContain(`block(<${f} readOnly={ro} />)`);
     expect(read('src/auth/LiveFuel.tsx')).toContain('<fieldset disabled className="opt-ro" data-opt-ro><BafForm /></fieldset>');
     expect(read('src/auth/LiveSmsPlaces.tsx')).toContain('<fieldset disabled className="opt-ro" data-opt-ro><SmsGateway /></fieldset>');
+    /* wyglad/W-opcje-live-1: Progi i Komunikat na produkcji w ekranach z audytu — tylko odczyt przez `readOnly` */
+    expect(v).toContain('block(<OpsThresholdsForm readOnly={ro} />)');
+    expect(v).toContain('block(<BroadcastForm readOnly={ro} admin={isHhlAdmin} />)');
     expect(read('src/index.css')).toContain('.opt-ro :is(button[type="submit"],.btn,.chipbtn,[data-action]){display:none}');
   });
   it('Cennik (F7): Operacje HHL przełączają Stronę i Firmę — każda karta do obejrzenia; pola edycji nieaktywne, bez „Zapisz”, „Dodaj”, „Usuń”', () => {
