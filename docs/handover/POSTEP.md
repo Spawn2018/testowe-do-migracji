@@ -3777,3 +3777,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #378 — CI zielone na `4a05ed15` (unit/visual/db); F7 „usunąć ochronę całkowicie” (04:49 UTC). #259 konflikt / bez F7. Bez „gotowe do scalenia”.
 - Bieżąca: **A10** — `auto_set_status` zawsze zapisuje STATUS_AUTO (`v_osc` usunięte); histereza tylko w `apply_geofence_status`; e25 93 (+3 wahanie trasy A→B→A).
+
+## 2026-10-21 07:30 — A10 SCALONE; start B4
+
+- Skrzynka: #324 zamknięte (A10). #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`.
+- Scalanie: #378 F7 „gotowe do scalenia” po `bddb2afe`, CI unit/visual/db zielone → merge `19e33069` (0246). #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4** (`pakiet/b4-visible-to`) — migracja **0247**: Cz1 w `set_message_author`, Cz2 `visible_to` w `list_load_messages_ui`; security +9 (131).
