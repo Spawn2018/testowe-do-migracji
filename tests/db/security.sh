@@ -178,7 +178,8 @@ out=$(sys "begin; $GW insert into load_events (load_id,event_type,occurred_at,pa
 [ "$out" = "AT_LOADING" ] && { ok=$((ok+1)); echo "  OK    strefa LOADING z treścią SITE → AT_LOADING (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (1): $out"; }
 out=$(sys "begin; $GW insert into load_events (load_id,event_type,occurred_at,payload) values ('99999999-0000-0000-0000-0000000000b1','GEOFENCE_ENTER',now(),
  '{\"geofence_id\":\"99999999-0000-0000-0000-0000000000a2\",\"geofence_kind\":\"LOADING\"}'); select status from loads where id='99999999-0000-0000-0000-0000000000b1'; rollback;" | grep -vE '^(BEGIN|ROLLBACK|INSERT.*)$' | tail -1)
-[ "$out" = "READY" ] && { ok=$((ok+1)); echo "  OK    strefa SITE z treścią LOADING → status bez zmian (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (2): $out"; }
+# A10: INSERT READY bez awizacji → demotion RESOURCES_PENDING; SITE i tak nie zmienia statusu.
+[ "$out" = "RESOURCES_PENDING" ] && { ok=$((ok+1)); echo "  OK    strefa SITE z treścią LOADING → status bez zmian (wg tabeli)"; } || { fail=$((fail+1)); echo "  FAIL  niezgodny geofence_kind (2): $out"; }
 
 echo; echo "[0034] Zaproszenie ważne 7 dni (wyzwalacz nowego konta; atrapa auth.users w transakcji)"
 if [ -n "${TOWER_HOSTED_READY:-}" ]; then

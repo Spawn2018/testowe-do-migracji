@@ -34,7 +34,8 @@ chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((f
 echo; echo "[2.1] Import nie kasuje transportów — anulowanie, blokada od AT_LOADING i na fakturze"
 L3=33333333-0000-0000-0000-000000000003
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no) values ('$L3','$P','00000000-0000-0000-0000-00000000a003','KSH/3','HHL/3')"
-sys "update loads set status='READY' where id='$L3'"
+# A10: bez bulk_quiet demotion zdejmie READY (braki awizacji). Test anulowania wymaga READY.
+sys "select set_config('tower.bulk_quiet','on',true); update loads set status='READY' where id='$L3'; select set_config('tower.bulk_quiet','',true)"
 val "podgląd: READY niezafakturowany → CANCEL"          $HHL "select verdict from import_removal_check(array['$L3']::uuid[])" CANCEL
 val "podgląd: zafakturowany → BLOCKED_INVOICED z powodem" $HHL "select verdict||' / '||reason from import_removal_check(array['$L1']::uuid[])" "BLOCKED_INVOICED / Transport jest na fakturze"
 val "podgląd niczego nie zmienia"                        $HHL "select count(*) from import_removal_check(array['$L3']::uuid[]); select status from loads where id='$L3'" READY

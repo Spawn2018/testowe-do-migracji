@@ -158,6 +158,8 @@ declare
 begin
   begin
     perform set_config('tower.status_ctx', 'on', true);
+    /* A10: załadunek bez blokady numerów — tylko ścieżka auto_set_status. */
+    perform set_config('tower.auto_status', 'on', true);
     update loads set status = p_to where id = p_load and status = p_from;
     if not found then return false; end if;
   exception when others then
@@ -168,9 +170,10 @@ begin
       'AUTOSTATUS:' || p_load || ':' || p_to);
     return false;
   end;
-  /* A10: czas w dedup_key — oś pokazuje nową godzinę po cofnięciu HHL. */
+  /* A10: czas w dedup_key — oś pokazuje nową godzinę po cofnięciu HHL.
+     Epoch z ułamkami — dwa auto w tej samej sekundzie nie kolidują. */
   v_dedup := 'STATUS_AUTO:' || p_load || ':' || p_to || ':'
-    || to_char(coalesce(p_ts, now()) at time zone 'UTC', 'YYYYMMDDHH24MISS');
+    || replace(extract(epoch from coalesce(p_ts, clock_timestamp()))::text, '.', '');
   insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
   values (p_load, 'STATUS_AUTO', coalesce(p_ts, now()),
           coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('from', p_from, 'to', p_to, 'powod', p_reason),
@@ -216,6 +219,7 @@ create or replace function public.a10_prep_gaps_text(p_gaps jsonb)
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select coalesce(string_agg(x, ', ' order by x), '')
     from (
@@ -318,12 +322,24 @@ begin
   if current_setting('tower.bulk_quiet', true) = 'on' then
     return false;
   end if;
+  if current_setting('tower.import_ctx', true) = 'on' then
+    return false;
+  end if;
   select status into v_status from public.loads where id = p_load for update;
   if not found then
     return false;
   end if;
   /* Tylko wewnątrz Przygotowania — poza nim nie cofamy. */
   if v_status::text not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY') then
+    return false;
+  end if;
+  /*
+    Zaplanowany bez awizacji: import/nowy transport bez zmian na wyzwalaczu.
+    Wyjście z PLANNED dopiero gdy SCX zacznie awizację albo skan 48 h (a10_scan_prep).
+  */
+  if v_status = 'PLANNED'::public.load_status
+     and public.a10_prep_awiz_started(p_load) is not true
+     and current_setting('tower.a10_prep_scan', true) is distinct from 'on' then
     return false;
   end if;
   v_target := public.a10_prep_target_status(p_load);
@@ -557,6 +573,8 @@ begin
       perform auto_set_status(new.load_id, v_status, 'AT_SITE',
         'wjazd na plac budowy', new.occurred_at, v_detail);
 
+    -- Awaryjnie: GPS zgubił wyjazd z portu SE albo cały pobyt w porcie
+    -- (sygnał wraca dopiero na lądzie). Auto na drogach SE nie może być na promie.
     elsif v_kind in ('CHECKPOINT','PRE_ARRIVAL') and v_country = 'SE'
           and v_status in ('FERRY','AT_PORT_NYNASHAMN') then
       perform auto_set_status(new.load_id, v_status, 'IN_TRANSIT_SE',
@@ -647,6 +665,8 @@ begin
         format('wyjazd ze strefy portu SE (%s)', coalesce(v_name, v_op)),
         new.occurred_at, v_detail);
     end if;
+    -- Wyjazd ze strefy portu Gdańsk po przełączeniu na PROM (statek
+    -- odpływa) celowo niczego nie zmienia.
   end if;
   return null;
 end $function$;
@@ -818,6 +838,7 @@ grant execute on function public.a10_scan_ferry_backup(timestamptz) to service_r
 
 -- ---------------------------------------------------------------------
 -- 6. Po DELIVERED → c17_try_billing_status
+--    Nie nadpisuj ręcznego cofnięcia z READY_TO_INVOICE / INVOICED (A10 pkt 2).
 -- ---------------------------------------------------------------------
 create or replace function public.a10_trg_loads_billing()
 returns trigger
@@ -829,7 +850,8 @@ begin
   if new.status is not distinct from old.status then
     return new;
   end if;
-  if new.status = 'DELIVERED' then
+  if new.status = 'DELIVERED'
+     and public.load_status_rank(old.status) < public.load_status_rank('DELIVERED'::public.load_status) then
     perform public.c17_try_billing_status(new.id, jsonb_build_object('source', 'A10'));
   end if;
   return new;
@@ -842,3 +864,77 @@ create trigger trg_a10_loads_billing
   after update of status on public.loads
   for each row
   execute function public.a10_trg_loads_billing();
+
+-- ---------------------------------------------------------------------
+-- 7. Załadunek bez blokady numerów (A10) — przy automacie (status_ctx)
+-- ---------------------------------------------------------------------
+create or replace function public.enforce_order_numbers()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  /* A10: tylko auto_set_status — załadunek bez numerów: ryzyko, bez blokady. */
+  if current_setting('tower.auto_status', true) = 'on' then
+    return new;
+  end if;
+  if new.status in ('READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
+                    'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE','UNLOADED','DELIVERED') then
+    if new.hhl_order_no is null or btrim(new.hhl_order_no) = '' then
+      raise exception 'Transport % bez numeru zlecenia HHL nie może przejść do statusu %', new.id, new.status;
+    end if;
+  end if;
+  if new.status in ('AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY',
+                    'AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE','UNLOADED','DELIVERED') then
+    if new.carrier_order_no is null or btrim(new.carrier_order_no) = '' then
+      raise exception 'Transport % bez numeru zlecenia przewoźnika nie może przejść do statusu %', new.id, new.status;
+    end if;
+  end if;
+  return new;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 8. Skan Przygotowania — PLANNED bez awizacji po oknie 48 h → Brak zasobów
+-- ---------------------------------------------------------------------
+create or replace function public.a10_scan_prep(p_now timestamptz default now())
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  n int := 0;
+begin
+  perform set_config('tower.a10_prep_scan', 'on', true);
+  for r in
+    select id from loads
+     where status = 'PLANNED'
+  loop
+    if public.a10_try_prep_status(r.id) then
+      n := n + 1;
+    end if;
+  end loop;
+  return n;
+end $$;
+
+revoke all on function public.a10_scan_prep(timestamptz) from public, anon, authenticated;
+grant execute on function public.a10_scan_prep(timestamptz) to service_role;
+comment on function public.a10_scan_prep(timestamptz) is
+  'A10: PLANNED bez awizacji po terminie 48 h → RESOURCES_PENDING.';
+
+do $cron$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid)
+      from cron.job where jobname = 'tower-a10-prep';
+    perform cron.schedule(
+      'tower-a10-prep',
+      '*/15 * * * *',
+      $job$select public.a10_scan_prep()$job$
+    );
+  end if;
+exception when others then
+  null;
+end $cron$;
