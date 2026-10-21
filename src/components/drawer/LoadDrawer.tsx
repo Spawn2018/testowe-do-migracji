@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { CorridorMap } from '../map/LazyCorridorMap';
 import { StatusPill } from '../ui/StatusPill';
@@ -86,11 +86,22 @@ export function LoadDrawer() {
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
 
+  /* Właściciel 21.10.2026, 16:27: panel transportu domyślnie otwiera się na „Przegląd”. Szuflada jest stale zamontowana,
+     więc przy innym transporcie (albo ponownym otwarciu) wracamy do „Przeglądu”; link z zakładką ustawia ją niżej. */
+  const lastId = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (id && id !== lastId.current && !useTowerStore.getState().drawerTab) setTab('overview');
+    lastId.current = id;
+  }, [id]);
+
   useEffect(() => {
     const allowed: Tab[] = ['overview', 'timeline', 'history', 'docs', 'pricing', 'chat'];
     if (drawerTab && (allowed as string[]).includes(drawerTab)) {
       setTab(drawerTab as Tab);
       if (drawerTab === 'overview') setAwizOpen(true);
+      setDrawerTab(null);
+    } else if (drawerTab) {
+      /* F7 #394: zakładka spoza panelu (np. „margin” z powiadomienia demo) nie może zostać w sklepie — inaczej blokuje powrót na Przegląd */
       setDrawerTab(null);
     }
   }, [drawerTab, setDrawerTab]);
