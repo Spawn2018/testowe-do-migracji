@@ -15,6 +15,7 @@ type DecRow = {
   due_at: string | null;
   escalated_at: string | null;
   load_id: string | null;
+  risk_id?: string | null;
   decision_types: { title_key: string; options: DecisionOption[]; decider_role: string } | null;
 };
 
@@ -27,6 +28,7 @@ export function decisionFromRow(r: DecRow): TodoDecision {
     dueAt: r.due_at, escalatedAt: r.escalated_at, loadId: r.load_id,
     decider: (role && ORG[role]) || 'HHL', deciderRole: role, status: r.status,
     options: r.decision_types?.options ?? [],
+    riskId: r.risk_id ?? null,
   };
 }
 
@@ -50,7 +52,7 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     const sb = await getSupabase();
     const q = await sb
       .from('decisions')
-      .select('id,type_code,status,title,due_at,escalated_at,load_id,decision_types(title_key,options,decider_role)')
+      .select('id,type_code,status,title,due_at,escalated_at,load_id,risk_id,decision_types(title_key,options,decider_role)')
       .in('status', ['NEW', 'ASSIGNED', 'SNOOZED'])
       .order('due_at', { ascending: true, nullsFirst: false })
       .limit(50);

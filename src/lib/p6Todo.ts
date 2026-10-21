@@ -34,6 +34,8 @@ export interface TodoDecision {
   deciderRole: string | null;
   status: string;
   options: DecisionOption[];
+  /** wyglad/W-todo-jedna-sprawa (#384): ryzyko, z którego decyzja powstała (`decisions.risk_id`) */
+  riskId?: string | null;
 }
 
 export interface TodoIssue {
@@ -129,7 +131,12 @@ export interface TodoInput {
 export function buildTodo({ risks, decisions = [], extras = [], nowIso }: TodoInput): TodoCard[] {
   const issues: TodoIssue[] = [];
   const infos: TodoInfo[] = [];
+  /* wyglad/W-todo-jedna-sprawa (#384): ryzyko z otwartą decyzją to ta sama sprawa — zostaje karta decyzji
+     z przyciskami (np. „Późna zmiana daty” pod „KSH zmieniło datę < 5 dni”, „Decyzja po terminie” pod decyzją) */
+  const decIds = new Set(decisions.map((d) => d.id));
+  const decRiskIds = new Set(decisions.map((d) => d.riskId).filter((x): x is string => !!x));
   for (const r of risks) {
+    if (decRiskIds.has(r.id) || (r.decisionId && decIds.has(r.decisionId))) continue;
     if (r.loadId && isTimeBan(r)) infos.push({ id: r.id, loadId: r.loadId, risk: r });
     else if (isTodoRisk(r)) issues.push(riskIssue(r, nowIso));
   }

@@ -508,6 +508,8 @@ export interface Risk {
   kind?: string;
   /** wyglad/W-faktura-termin (A4): faktura sprawy „po terminie płatności” (`detail.invoice_id`) — przycisk „Otwórz fakturę”. */
   invoiceId?: string;
+  /** wyglad/W-todo-jedna-sprawa (#384): ryzyko o decyzji (`detail.decision_id`, np. „Decyzja po terminie”). */
+  decisionId?: string;
 }
 
 export interface RateRule {
