@@ -15,6 +15,8 @@ describe('powiadomienia — cel i zamknięte sprawy', () => {
     expect(inAppTwinKey(null)).toBeNull();
     const src = readFileSync(new URL('../src/lib/pushOpen.ts', import.meta.url), 'utf8');
     expect(src).toContain(".eq('channel', 'IN_APP').eq('dedup_key', twin)");
+    /* push bez bliźniaka: wpis trafia do store jako przeczytany, żeby openNotification miał co otworzyć */
+    expect(src).toContain('const add = isBell ? n : { ...n, read: true };');
   });
   it('odczyt ?pn tylko liczbowy', () => {
     expect(pushNidFromSearch('?pn=123')).toBe(123);

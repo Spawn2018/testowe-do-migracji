@@ -45,7 +45,11 @@ async function openFromPush(nid: number): Promise<void> {
   const st = useTowerStore.getState();
   const n = notificationFromRow(row as never, st.locale);
   const isBell = row.channel == null || row.channel === 'IN_APP';
-  if (isBell && !st.notifications.some((x) => x.id === n.id)) useTowerStore.setState((s) => ({ notifications: [n, ...s.notifications] }));
+  /* openNotification szuka wpisu w store (także „Szczegóły wpisu”) — push bez bliźniaka w dzwonku dodajemy jako przeczytany */
+  if (!st.notifications.some((x) => x.id === n.id)) {
+    const add = isBell ? n : { ...n, read: true };
+    useTowerStore.setState((s) => ({ notifications: [add, ...s.notifications] }));
+  }
   useTowerStore.getState().openNotification(n.id);
   const ids = Array.from(new Set([row.id, nid]));
   void sb.rpc('mark_notifications_read', { p_ids: ids }).then(() => undefined, () => undefined);
