@@ -125,6 +125,7 @@ authenticated_security_definer_function_executable	public.load_status_set	E19 �
 authenticated_security_definer_function_executable	public.map_display_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.mark_invoice_paid	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.mark_load_message_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.mark_notification_read_any	E19 — allowlista RPC; #411; własne wpisy + bliźniak :WP:↔:IN:
 authenticated_security_definer_function_executable	public.mark_notifications_read	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_mfa_status	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.my_notify_get	E19 — allowlista RPC; C3; własne ustawienia, sprawdzenie konta w funkcji

@@ -279,8 +279,28 @@ chk "opłacona → w dniu terminu (30.10) przypomnienie nie wychodzi"   "$(Q "se
 chk "przychodowa +1 dzień (26.10 dla terminu 25.10): KSH płatnik, HHL wierzyciel, SCX nic" "$(Q "select count(*) from (select send_payment_reminders('2026-10-26')) x; select string_agg(distinct u.email||':'||(n.payload->>'party'), ',' order by u.email||':'||(n.payload->>'party')) $NPR and n.payload->>'invoice_id'=(select id::text from invoices where invoice_number='HHL/FV/39/1')")" "hhl@test:PAYEE,ksh@test:PAYER"
 chk "refresh w obie strony: po terminie → PO_TERMINIE"                "$(Q "select payment_status from invoices where invoice_number='HHL/FV/39/1'")" PO_TERMINIE
 err "użytkownik nie uruchomi przypomnień (zadanie systemowe)"         $HHL "select send_payment_reminders('2027-01-01')" "permission denied"
-val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER')) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP')::int" t
+val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER' and channel='IN_APP' and user_id=current_app_user_id())) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP' and user_id=current_app_user_id())::int" t
 val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "select mark_notifications_read(array(select id from notifications where user_id=(select id from app_users where email='hhl@test')))" 0
+# #411 F7 B3: mark_notifications_read (front) — para :WP:↔:IN: w obie strony.
+# Szablon PAYMENT_REMINDER (nie RISK_OPEN): bramka #402 kasuje IN_APP, gdy bell off dla roli.
+sys "delete from notifications where dedup_key like '411-twin:%' or dedup_key like '411-twin2:%'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'IN_APP', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin:IN:'||u.id::text
+   from app_users u where u.email='ksh@test'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+ select 'WEB_PUSH', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin:WP:'||u.id::text, 'PENDING'
+   from app_users u where u.email='ksh@test'"
+val "#411: para 411-twin istnieje (IN+WP)" $KSH "select count(*) from notifications where dedup_key like '411-twin:%'" 2
+val "#411: mark_notifications_read(WP) czyści bliźniaka IN" $KSH "select mark_notifications_read(array(select id from notifications where dedup_key like '411-twin:WP:%' and user_id=current_app_user_id())); select count(*) from notifications where dedup_key like '411-twin:%' and read_at is not null" 2 commit
+sys "delete from notifications where dedup_key like '411-twin2:%'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'IN_APP', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin2:IN:'||u.id::text
+   from app_users u where u.email='ksh@test'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+ select 'WEB_PUSH', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin2:WP:'||u.id::text, 'PENDING'
+   from app_users u where u.email='ksh@test'"
+val "#411: mark_notifications_read(IN) czyści bliźniaka WP" $KSH "select mark_notifications_read(array(select id from notifications where dedup_key like '411-twin2:IN:%' and user_id=current_app_user_id())); select count(*) from notifications where dedup_key like '411-twin2:%' and read_at is not null" 2 commit
+val "#411: mark_notifications_read nie rusza cudzych" $KSH "select mark_notifications_read(array(select n.id from notifications n join app_users u on u.id=n.user_id where u.email='hhl@test' order by n.id desc limit 5))" 0
 
 echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
 L9=33333333-0000-0000-0000-000000000009

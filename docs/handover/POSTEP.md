@@ -3974,3 +3974,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora`; #402/#411/#405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
 - Scalanie: #418 F7 gotowe (`1ab3640`) → merge `2d8aa5f2`. #408 wstrzymane. #406 `db` FAIL na `dc4dbe15`: security B6 (0 e-maili — seed `dates.email` off po usunięciu UPDATE migracji). Bez push na `main`.
 - Bieżąca: **HOTFIX #402** PR #406 — `security.sh` B6 włącza `dates`/`email_budget` e-mail dla HHL_ADMIN w prep (jak c16/money/import).
+
+## 2026-10-21 23:25 — #406 SCALONE; start #411 (0256)
+
+- Skrzynka: bez nowych `dla-cursora`; #411/#405/#400/#409/#412/#413 w planie (#402 zamknięte).
+- Scalanie: #406 F7 gotowe (`a63f238`) → merge `2352a0fe` (0255). #408 wstrzymane (czekają fuel_publications). Bez push na `main`.
+- Bieżąca: **HOTFIX #411** (`pakiet/hotfix-411-closed-notify`, migracja **0256**) — bez `*_RESOLVED`; `notify_mark_case_closed`; WEB_PUSH `url`; sprzątanie bulk + AUDYT17_MARK_READ.
