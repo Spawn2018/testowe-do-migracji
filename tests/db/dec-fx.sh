@@ -126,12 +126,14 @@ declare
   v_dec uuid;
   v_note text;
   v_detail jsonb;
-  v_sail uuid := '$S1';
+  v_sail uuid := '$S1'::uuid;
   n_ok int := 0;
   n_fail int := 0;
   n_pairs int := 0;
   err text;
 begin
+  -- security definer + auth.uid() z JWT; rola postgres (superuser) wystarczy — bez set role.
+  perform set_config('request.jwt.claim.sub', '$HHL', true);
   for r in
     select t.code, o->>'code' as opt,
            coalesce((o->>'requires_comment')::boolean, false) as need_note,
@@ -141,36 +143,31 @@ begin
      order by t.code, o->>'code'
   loop
     n_pairs := n_pairs + 1;
-    v_note := case when r.need_note then 'komentarz testowy hotfix 384' else null end;
-    v_detail := '{}'::jsonb;
-
-    insert into loads (id, project_id, carrier_org_id, order_no, status)
-    values (
-      gen_random_uuid(), '$P', '$SCXO',
-      'DFX-' || substr(md5(random()::text), 1, 6),
-      case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end
-    )
-    returning id into v_load;
-
-    if r.effect = 'CHANGE_SAILING' then
-      v_detail := jsonb_build_object('sailing_id', v_sail::text);
-    elsif r.effect = 'TAKE_FILE' then
-      v_detail := jsonb_build_object('field', 'hhl_order_no', 'file_value', 'HHL-DFX-1');
-    elsif r.code = 'DELIVERED_CHECK' then
-      v_detail := jsonb_build_object('exit_at', now()::text, 'dwell_min', 12);
-    end if;
-
     begin
-      perform set_config('role', 'authenticated', true);
-      perform set_config('request.jwt.claim.sub', '$HHL', true);
+      v_note := case when r.need_note then 'komentarz testowy hotfix 384' else null end;
+      v_detail := '{}'::jsonb;
+      if r.effect = 'CHANGE_SAILING' then
+        v_detail := jsonb_build_object('sailing_id', v_sail::text);
+      elsif r.effect = 'TAKE_FILE' then
+        v_detail := jsonb_build_object('field', 'hhl_order_no', 'file_value', 'HHL-DFX-1');
+      elsif r.code = 'DELIVERED_CHECK' then
+        v_detail := jsonb_build_object('exit_at', now()::text, 'dwell_min', 12);
+      end if;
+
+      insert into loads (id, project_id, carrier_org_id, order_no, status)
+      values (
+        gen_random_uuid(), '$P', '$SCXO',
+        'DFX-' || substr(md5(random()::text), 1, 6),
+        case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end
+      )
+      returning id into v_load;
+
       v_dec := decision_open('$P', r.code, 'dfx ' || r.code || ' ' || r.opt, v_detail, v_load);
       perform decision_resolve(v_dec, r.opt, v_note);
-      perform set_config('role', 'none', true);
       n_ok := n_ok + 1;
     exception when others then
       get stacked diagnostics err = message_text;
       n_fail := n_fail + 1;
-      begin perform set_config('role', 'none', true); exception when others then null; end;
       raise notice 'FAIL %/%: %', r.code, r.opt, err;
     end;
   end loop;
@@ -185,9 +182,9 @@ REST=${RES_LINE#*/}
 PAIRS=${REST%%/*}
 OK_N=${REST#*/}
 if [ -z "$RES_LINE" ]; then
-  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku)"
-  printf '%s\n' "$RES" | grep -iE 'ERROR|NOTICE: FAIL|FATAL' | head -20
-  printf '%s\n' "$RES" | tail -8
+  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku); bajtow RES=${#RES}"
+  printf '%s\n' "$RES" | grep -iE 'ERROR|NOTICE|FATAL|HINT' | head -30
+  printf '%s\n' "$RES" | tail -15
 else
   if [ "$FAIL_N" = "0" ]; then ok=$((ok+1)); echo "  OK    resolve-all fail=0 (pary=$PAIRS ok=$OK_N)"; else
     fail=$((fail+1)); echo "  FAIL  resolve-all fail=$FAIL_N / pary=$PAIRS"; printf '%s\n' "$RES" | grep 'NOTICE:' | head -25
