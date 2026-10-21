@@ -3890,3 +3890,15 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384/#391 `pilne`; #391 już w planie. Bez F7 „gotowe”.
 - Scalanie: #389 db FAIL na `ccfbabb7` (dec2: `true` vs `t` przy od/do; LATE z setup D+3). Visual jeszcze w toku — push poprawki po FAIL db. Bez push na `main`.
 - Bieżąca: wynik licznika → `carrier_org_id` (CARRIER_*); bez gałęzi HHL_OPS w `ksh_confirm_dates`; test LATE na D+2 + `detected_at` po znaczniku; PLAN_DATES `by=KSH`; dec2 64.
+
+## 2026-10-21 16:35 — #392 `pilne`: RIO przyklejony (SG-18); #389 czeka F7
+
+- Skrzynka: #392 (Spawn2018, `dla-cursora`+`pilne`) — przerywa (załadunek dziś). #391 `pilne` w planie jako 0253. #384/#323/#322/#320 w planie.
+- Scalanie: #389 CI zielone (`048cbbf9`, unit/visual/db) — F7 „gotowe” było; merge w następnym przebiegu. #390 wygląd bez F7. #382 konflikt. Bez push na `main`.
+- Bieżąca: **HOTFIX #392** (`pakiet/hotfix-392-rio-sanitize`, migracja **0252**) — `loads_rio_sanitize` czyści `rio_*` przy linku nie-RIO; A→B bez klucza; jednorazowe czyszczenie + audit; security +5. D-1535 → 0253, B5 → 0254.
+
+## 2026-10-21 17:05 — #389 SCALONE; #395 CI zielone, main wciągnięty
+
+- Skrzynka: #392 `pilne` (bieżąca); #391 `pilne` (0253); #384/#323/#322/#320 w planie.
+- Scalanie: #389 F7 „gotowe” (`048cbbf`, Spawn2018, po ostatnim commicie) + CI zielone → merge `1a232014` (0251). #395 (RIO 0252): unit/visual/db zielone na `2550da2e`; wciągnięty main. Czekam na ponowne CI i `F7: gotowe do scalenia`. #390/#382/#393/#394 bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #392** PR #395 — po F7 wdroży `deploy-main`; potem D-1535 #391 / 0253.

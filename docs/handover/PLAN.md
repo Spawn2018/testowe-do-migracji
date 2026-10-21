@@ -402,9 +402,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #384** pkt 5–6 / 0251; potem **D-1535 #391 / 0252** `pilne`; B5 czeka na **0253**; ~~pkt 2–4 #388/0250~~; ~~pkt 1 #386/0249~~; ~~B4 #380/#381 0247–0248~~; ~~A10 #324/#378~~; ~~D-1300 #359/#377~~; ~~C15-emtrack #365/#376~~; ~~HOTFIX #374 #375/0244~~; ~~D-1501 #370/0243~~; ~~#371~~; ~~D-1710 #373/0242~~; potem B5…)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #392** RIO / **0252** `pilne`; ~~#389 pkt 5–6 / 0251 SCALONE~~; potem **D-1535 #391 / 0253** `pilne`; B5 czeka na **0254**; ~~pkt 2–4 #388/0250~~; ~~pkt 1 #386/0249~~; ~~B4 #380/#381 0247–0248~~; ~~A10 #324/#378~~; ~~D-1300 #359/#377~~; ~~C15-emtrack #365/#376~~; ~~HOTFIX #374 #375/0244~~; ~~D-1501 #370/0243~~; ~~#371~~; ~~D-1710 #373/0242~~; potem B5…)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **HOTFIX #384 · decyzje/CHECK (D-20261021-1130-01, 0249–0251)** → **D-1535 · t40 paliwo ×1,14 (#391, 0252, `pilne`)** → B5 (**0253**) → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **HOTFIX #392 · RIO sanitize (#392, 0252, `pilne`)** → **D-1535 · t40 paliwo ×1,14 (#391, 0253, `pilne`)** → B5 (**0254**) → B7 → B8 → B9 → A6 (odczyt SharePoint + zapis na pliku testowym, D-20261019-1420-01).
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -692,21 +692,28 @@ Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każ
 - **~~cz.1 — czat (0247, #380 SCALONE 21.10)~~:** `set_message_author` pilnuje Cz1 (KSH→ALL; tylko ALL / HHL+SCX); CHECK `load_messages_visible_to_chk`; `list_load_messages_ui` zwraca `visible_to` i filtruje dostęp do transportu jak 0208; `mark_load_message_read` z widocznością. Powiadomienia Cz25 już w C3. UI (`message.send`, `chatVisibilityOn`) — P6.
 - **cz.2 — dokumenty (0248, ten PR):** CHECK `documents_visible_to_chk` ściśle ALL / HHL+SCX; `set_document_visible_to` (KSH→ALL); polityki `load_message_reads` jak 0208; DOC_UPLOADED dziedziczy `visible_to`, `events_read` filtruje; test KSH widzi ALL ze swojego transportu; dokument HHL+SCX niewidoczny dla KSH (paczka/eksport = SELECT); macierz chat zapamiętana i przywrócona. UI paczki — P5 (RLS).
 
-### HOTFIX #384 · Decyzje / CHECK load_events (D-20261021-1130-01, `pilne`) — W TOKU (~~pkt 1 #386/0249~~; ~~pkt 2–4 #388/0250~~; **pkt 5–6** `pakiet/hotfix-384-pkt5-6`, migracja **0251**)
-Przerywa B5. Kolejność: ~~pkt 1~~ → ~~2–4~~ → **5–6** (+ pkt 7–8 z przeglądów). Po 5–6: **D-1535 #391** (`pilne`), potem B5.
+### HOTFIX #384 · Decyzje / CHECK load_events (D-20261021-1130-01, `pilne`) — NA PRODUKCJI w toku (~~pkt 1 #386/0249~~; ~~pkt 2–4 #388/0250~~; ~~pkt 5–6 #389/0251~~ `1a232014`)
+Przerywa B5. Kolejność: ~~pkt 1~~ → ~~2–4~~ → ~~5–6~~ (+ pkt 7–8). Po 5–6: **#392 RIO**, potem **D-1535 #391**, potem B5.
 1. ~~**BLOKER (pkt 1):** SCALONE #386 `ea71bc9e`, migracja **0249**, `dec-fx` 12/12.~~ Także wygląd #385/#387 SCALONE.
 2. ~~**`KSH_DATE_LT_5D`:** SCALONE #388 `da77c46a`, migracja **0250**.~~
 3. ~~**Import pusta kolumna HHL:** SCALONE #388 / 0250.~~
 4. ~~**Import historyczne / jedna godzina:** SCALONE #388 / 0250.~~
-5. **`PROPOSE_DATE`:** `decision_resolve(..., p_payload jsonb)`; data załadunku wymagana; `KSH_DATE_COUNTER` dla KSH (Przyjmuję → dates_ctx; Odrzucam; Eskaluj). Sygnatura w PR (ekran `wyglad/*`).
-6. **Po terminie:** `l2_may_resolve(role, decision)` dopuszcza `HHL_OPS` po `escalated_at` / po `due_at`.
-7. **`decisions_read` przewoźnik:** tylko decyzje własnych transportów (po 5–6; przegląd #385).
-8. **Aktor w `DECISION_*`:** `actor` / `decider` / `by_org` + `visible_to` (po 5–6; przegląd #387).
+5. ~~**`PROPOSE_DATE`:** SCALONE #389 `1a232014`, **0251** — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; sygnatura w PR (ekran #390).~~
+6. ~~**Po terminie:** SCALONE #389 — `l2_may_resolve` + `HHL_OPS` po eskalacji / po terminie.~~
+7. **`decisions_read` przewoźnik:** tylko własne transporty (po 5–6).
+8. **Aktor w `DECISION_*`:** `actor` / `decider` / `by_org` + `visible_to` (po 5–6).
 
-### D-1535 · t40 paliwo ×1,14 (D-20261021-1535-01, #391, `pilne`) — czeka na scalenie #389; migracja **0252**
-Po #384 pkt 5–6, przed B5. Decyzja właściciela 21.10.2026 15:35: t40 (załadunek 28.09–04.10) = SE 1,14 / PL 1,17 / stosowany 1,14 OSTATECZNY dla wszystkich 9 transportów (koszt i przychód); t41+ bez zmian; trwałe nadpisanie tygodnia (cron/`fuel-prices`/D-1300); SG-02 bez zmian; `SEFS_INVOICE_DIFF` → `OWNER_DECISION` + audit; powiadomienia cicho. Szczegóły: `dopiski/D-20261021-1535-01.md`.
+### HOTFIX #392 · RIO „przyklejony” (D-20261021-1606-01, #392, `pilne`) — W TOKU (`pakiet/hotfix-392-rio-sanitize`, PR #395, migracja **0252**)
+Przerywa kolejkę (SG-18 Gotowy, załadunek dziś). Main z 0251 wciągnięty. Przed D-1535.
+1. `loads_rio_sanitize`: link nie-RIO → wyczyść wszystkie `rio_*`; RIO A→B bez klucza → `secret` null + `pending` + reset lokalizatora; ten sam `rio:` → bez zmian.
+2. Jednorazowo: transporty z `rio_tracking_id` przy linku nie-RIO (SG-18 = `1122`) + `audit_log` `HOTFIX_392_RIO_CLEAR` bez wartości klucza.
+3. Test `security` (+5). Ekran: `wyglad/W-link-rio` (koordynator).
+Szczegóły: `dopiski/D-20261021-1606-01.md`.
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #384 i D-1535 (migracja **0253** po rebase)
+### D-1535 · t40 paliwo ×1,14 (D-20261021-1535-01, #391, `pilne`) — czeka na #392; migracja **0253**
+Po #392, przed B5. Decyzja właściciela 21.10.2026 15:35: t40 = SE 1,14 / PL 1,17 / stosowany 1,14 OSTATECZNY; t41+ bez zmian; trwałe nadpisanie; `SEFS_INVOICE_DIFF` → `OWNER_DECISION`. Szczegóły: `dopiski/D-20261021-1535-01.md`.
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #392 i D-1535 (migracja **0254** po rebase)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1243,4 +1250,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 02:42 | #376 C15 SCALONE (`78c77bbd`). Start D-1300 (#359, migracja 0245) | pętla |
 | 21.10.2026 11:40 | D-20261021-1130-01 (#384, `pilne`): HOTFIX decyzji/CHECK przed B5; pkt 1 = 0249 + `dec-fx`; B5 → 0250 | właściciel 11:30/11:35; koordynator |
 | 21.10.2026 13:25 | #384 pkt 1 SCALONE (#386 `ea71bc9e`, 0249); #385+#387 SCALONE; start pkt 2–4 (0250); B5 → 0251 | pętla |
-| 21.10.2026 15:35 | D-20261021-1535-01 (#391, `pilne`): t40 paliwo ×1,14; po #384 pkt 5–6; migracja 0252; B5 → 0253 | właściciel 15:35; koordynator |
+| 21.10.2026 15:00 | #384 pkt 2–4 SCALONE (#388 `da77c46a`, 0250); start pkt 5–6 (#389, 0251); B5 → 0252 | pętla |
+| 21.10.2026 15:35 | D-20261021-1535-01 (#391, `pilne`): t40 paliwo ×1,14; migracja **0253** (po #392); B5 → **0254** | właściciel 15:35; koordynator |
+| 21.10.2026 16:06 | D-20261021-1606-01 (#392, `pilne`): RIO przyklejony (SG-18); migracja **0252**; przed D-1535 | właściciel 16:06; koordynator |
+| 21.10.2026 16:59 | #389 SCALONE (`1a232014`, 0251); #395 CI zielone — czekam F7; D-1535 → 0253, B5 → 0254 | pętla |
