@@ -21,3 +21,12 @@ describe('#392 — zmiana linku z RIO na inny', () => {
     expect(trackingLinkFromRow({ ...stale, telematics_vehicle_id: 'rio:dc8b4cca-3a9c-45c0-8724-97db97d0ceae' } as LoadRow)?.provider).toBe('RIO');
   });
 });
+
+describe('#392 — po zapisie ekran od razu zna nowy rodzaj linku (F7 #393 2b)', () => {
+  it('updateResources ustawia trackingLink z nowego linku', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync('src/store/useTowerStore.ts', 'utf8');
+    expect(src).toContain("const kind = trackerKind(resources.trackingRef);");
+    expect(src).toContain("kind === 'emtrack' ? { provider: 'EMTRACK' as const");
+  });
+});

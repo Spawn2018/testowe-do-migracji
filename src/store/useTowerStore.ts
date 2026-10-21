@@ -72,6 +72,7 @@ import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, s
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
 import { isPreviewReadOnly } from '../lib/prodFacade';
+import { trackerKind } from '../lib/trackerLink';
 import { accountRole } from '../lib/accountRole';
 import { INVOICE_OVERDUE_KIND, refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
@@ -908,6 +909,17 @@ export const useTowerStore = create<TowerState>()(
             const resources = { ...l.resources, ...safePatch };
             /* po zapisie RIO w stanie lokalnym zostaje rio:<uuid>, nie URL z kluczem */
             if ('trackingRef' in patch) resources.trackingRef = redactTrackingRef(patch.trackingRef);
+            /* #392 (F7 #393 2b): rodzaj linku od razu po zapisie, bez czekania na dane z serwera (np. przy zablokowanym rejsie,
+               gdy nie ma ponownego pobrania) — RIO → emtrack / inny / pusty przestaje być „RIO” w oknie i na pasku. */
+            if ('trackingRef' in patch) {
+              const kind = trackerKind(resources.trackingRef);
+              const trackingLink = kind === 'none' ? undefined
+                : kind === 'emtrack' ? { provider: 'EMTRACK' as const, check: { state: 'ok' as const } }
+                  : kind === 'other' ? { provider: 'OTHER' as const, check: { state: 'ok' as const } }
+                    : l.trackingLink?.provider === 'RIO' && resources.trackingRef === l.resources.trackingRef ? l.trackingLink
+                      : { provider: 'RIO' as const, check: { state: 'pending' as const } };
+              return { ...l, resources, trackingLink };
+            }
             return { ...l, resources };
           });
           const updated = loads.find((l) => l.id === loadId);
