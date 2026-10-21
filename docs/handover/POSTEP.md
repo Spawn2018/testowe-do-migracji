@@ -3866,3 +3866,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #388 F7 gotowe (`ad1a572`) → merge `da77c46a` (0250). #382 czeka (0252 po pkt 5–6). Bez push na `main`.
 - Bieżąca: **HOTFIX #384 pkt 5–6** (`pakiet/hotfix-384-pkt5-6`, migracja **0251**) — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; `l2_may_resolve` + HHL_OPS po eskalacji/terminie.
+
+## 2026-10-21 15:15 — #384 pkt 5–6: CI status A2 L14
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #389 db FAIL (status 158/160: A2 L14 KSH/OPS odmowa → „Brak otwartej sprawy”). `deploy-main` po #388 ponowiony → sukces (0250 na produkcji). Brak F7. Bez push na `main`.
+- Bieżąca: `delivered_check_resolve` — przy braku otwartej sprawy najpierw `l2_may_resolve(CARRIER,null)` → 42501 (jak A2), potem komunikat braku sprawy.

@@ -471,6 +471,8 @@ begin
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
 
+  -- Brak otwartej sprawy: kto i tak nie może rozstrzygać (KSH, HHL_OPS bez
+  -- eskalacji) dostaje 42501 — jak status.sh A2 L14 odmowa na zamkniętej SG3.
   select id into d_id
     from decisions
    where load_id = p_load
@@ -480,6 +482,9 @@ begin
    limit 1
    for update;
   if d_id is null then
+    if (public.l2_may_resolve('CARRIER', null)) is not true then
+      raise exception 'Rozstrzygnięcie — tylko wskazana firma albo administrator' using errcode = '42501';
+    end if;
     raise exception 'Brak otwartej sprawy „czy dostarczono?”' using errcode = '22023';
   end if;
   if (public.l2_may_resolve('CARRIER', d_id)) is not true then
