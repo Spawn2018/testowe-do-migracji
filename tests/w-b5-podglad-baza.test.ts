@@ -7,7 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { setAuthProfile, type AuthProfile } from '../src/auth/profile';
 import { canSwitchView, dbPreviewOn, isPreviewReadOnly, switchRoleOf } from '../src/lib/prodFacade';
-import { previewErrorPl, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
+import { clearStalePreview, previewErrorPl, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
+import { registerRemoteSink, writeThrough } from '../src/data/registry';
 import { useTowerStore } from '../src/store/useTowerStore';
 
 const base: AuthProfile = {
@@ -62,16 +63,30 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     expect(call).toHaveBeenLastCalledWith('admin_preview_start', { p_side: 'SCX' });
   });
 
-  it('HHL w Podglądzie → admin_preview_stop; HHL bez Podglądu → tylko widok, bez bazy', async () => {
+  it('HHL w Podglądzie → admin_preview_stop i przeładowanie; HHL bez Podglądu → stop w bazie (sprzątanie), widok bez przeładowania', async () => {
     const call = mk(); const reload = vi.fn();
     await switchViewRole('HHL', { prod: true, call, reload, dbPreview: true });
     expect(call).toHaveBeenCalledWith('admin_preview_stop');
     expect(reload).toHaveBeenCalledTimes(1);
     const call2 = mk(); const reload2 = vi.fn();
     await switchViewRole('HHL', { prod: true, call: call2, reload: reload2, dbPreview: false });
-    expect(call2).not.toHaveBeenCalled();
+    expect(call2).toHaveBeenCalledWith('admin_preview_stop');
     expect(reload2).not.toHaveBeenCalled();
     expect(useTowerStore.getState().role).toBe('HHL');
+  });
+
+  it('jedno przełączenie naraz — drugie kliknięcie w trakcie jest pomijane (F7 #383 B3)', async () => {
+    let release: () => void = () => {};
+    const call = vi.fn(() => new Promise<{ data: unknown; error: null }>((r) => { release = () => r({ data: null, error: null }); }));
+    const reload = vi.fn();
+    const first = switchViewRole('KSH', { prod: true, call, reload, dbPreview: false });
+    await Promise.resolve();
+    expect(await switchViewRole('SCX', { prod: true, call, reload, dbPreview: false })).toBeNull();
+    release();
+    await first;
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledWith('admin_preview_start', { p_side: 'KSH' });
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('odmowa bazy → komunikat zdaniem, widok bez zmian, bez przeładowania', async () => {
@@ -97,9 +112,35 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     expect(previewErrorPl('Could not find the function public.admin_preview_start')).toBe('Podgląd będzie dostępny po aktualizacji bazy.');
   });
 
-  it('read_only czyta is_preview_read_only; błąd = brak Podglądu', async () => {
+  it('read_only czyta is_preview_read_only; błąd odczytu = Podgląd, brak funkcji (przed 0249) = nie (F7 Ś1)', async () => {
     expect(await readPreviewRo(vi.fn(async () => ({ data: true, error: null })))).toBe(true);
-    expect(await readPreviewRo(vi.fn(async () => ({ data: null, error: { message: 'x' } })))).toBe(false);
+    expect(await readPreviewRo(vi.fn(async () => ({ data: false, error: null })))).toBe(false);
+    expect(await readPreviewRo(vi.fn(async () => ({ data: null, error: { message: 'Failed to fetch' } })))).toBe(true);
+    expect(await readPreviewRo(vi.fn(async () => ({ data: null, error: { message: 'Could not find the function public.is_preview_read_only' } })))).toBe(false);
+  });
+
+  it('pozostały Podgląd przy własnym widoku admina jest kończony (F7 B2)', async () => {
+    const on = vi.fn(async (fn: string) => ({ data: fn === 'is_preview_read_only' ? true : null, error: null }));
+    await clearStalePreview(on);
+    expect(on).toHaveBeenCalledWith('admin_preview_stop');
+    const off = vi.fn(async () => ({ data: false, error: null }));
+    await clearStalePreview(off);
+    expect(off).toHaveBeenCalledTimes(1);
+  });
+
+  it('w Podglądzie z bazy nic nie idzie do zapisu — także przeczytania i ustawienia (F7 B1)', () => {
+    const sink = vi.fn();
+    registerRemoteSink(sink);
+    setAuthProfile(preview);
+    writeThrough({ type: 'notifications.read', ids: [1] } as never);
+    writeThrough({ type: 'prefs.save', prefs: {} } as never);
+    expect(sink).not.toHaveBeenCalled();
+    registerRemoteSink(null);
+  });
+
+  it('„Działaj jako” nie dostaje przełącznika nawet dla konta HHL_ADMIN (F7 Ś2)', () => {
+    setAuthProfile({ ...base, role: 'HHL_ADMIN', org_code: 'HHL', acting_as: true, preview_ro: false, real_role: 'HHL_ADMIN' });
+    expect(canSwitchView(true)).toBe(false);
   });
 
   it('ekrany przełączają przez switchViewRole; pasek „Działasz jako” nie dubluje paska Podglądu', () => {
@@ -107,6 +148,8 @@ describe('B5 — przełączanie funkcjami bazy', () => {
       expect(readFileSync(f, 'utf8')).toContain('switchViewRole(');
     }
     expect(readFileSync('src/auth/ImpersonationBanner.tsx', 'utf8')).toContain('me.preview_ro');
-    expect(readFileSync('src/auth/AuthGate.tsx', 'utf8').match(/readPreviewRo\(\)/g)?.length).toBe(2);
+    const gate = readFileSync('src/auth/AuthGate.tsx', 'utf8');
+    expect(gate).toContain('p.preview_ro = await readPreviewRo()');
+    expect(gate).toContain('await clearStalePreview()');
   });
 });

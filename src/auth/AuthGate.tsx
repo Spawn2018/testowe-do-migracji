@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
-import { readPreviewRo } from './previewSwitch';
+import { clearStalePreview, readPreviewRo } from './previewSwitch';
 import { sendRecoveryLink } from './sendAuthEmail';
 import { t, tp } from '../i18n/messages';
 import { getAuthProfile, setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
@@ -448,6 +448,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
       /* B5 (0249): „acting_as” to albo Podgląd (tylko odczyt), albo „Działaj jako” — rozróżnia baza */
       if (p.acting_as) p.preview_ro = await readPreviewRo();
+      else if (p.role === 'HHL_ADMIN') await clearStalePreview();
       if (!alive) return;
       const viewRole = viewRoleForOrg(p.org_code);
       if (!viewRole) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_view').replace('{org}', p.org_code) }); return; }

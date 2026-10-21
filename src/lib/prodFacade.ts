@@ -51,7 +51,13 @@ export function canManageWorkflows(prod: boolean = PROD_BUILD, role: string | nu
  * widoków) w produkcji wyłącznie dla roli HHL_ADMIN. HHL_OPS, KSH i przewoźnik nie widzą przełącznika — rola
  * widoku wynika z konta. Demo (bez logowania) — przełącznik jest sposobem prezentacji.
  */
-export function canSwitchView(prod: boolean = PROD_BUILD, role: string | null | undefined = switchRoleOf()): boolean {
+export function canSwitchView(
+  prod: boolean = PROD_BUILD,
+  role: string | null | undefined = switchRoleOf(),
+  p: AuthProfile | null = getAuthProfile(),
+): boolean {
+  /* F7 #383 Ś2: w trakcie „Działaj jako” przełącznik nie nadpisuje impersonacji Podglądem */
+  if (prod && p?.acting_as === true && !dbPreviewOn(p)) return false;
   return !prod || role === 'HHL_ADMIN';
 }
 
