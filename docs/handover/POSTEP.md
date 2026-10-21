@@ -3741,3 +3741,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
 - Scalanie: #377 — unit/visual zielone na `747292a3`; db czerwone (baf 57/62, money 178/179). #259 konflikt / bez F7.
 - Bieżąca: **D-1300** — `baf`: wyłączenie `trg_fuel_readings_immutable` przed DELETE seeda t42; UUID LINV hex; `sefs_last_ostateczny` szuka wstecz tygodnia z publikacją OKQ8 (money PROGNOZA); `baf` 63.
+
+## 2026-10-21 04:15 — D-1300 (#359 / #377): F7 runda 3 → poprawki F7-2
+
+- Skrzynka: #359/#324/#323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez etykiety `pilne`.
+- Scalanie: #377 — CI zielone na `cd487035`; F7 runda 2 „jeszcze NIE” (SOURCE odwrotnie, Orlen TDZ, cron UTC). #259 konflikt / bez F7.
+- Bieżąca: **D-1300** — `sefs_sek_daily_avg`: SOURCE = brak odczytów (period); cron `15 * * * *` + godzina PL w funkcji; Orlen `orlenIngestPayload` (bez TDZ); próby 20 s / timeout 240 s; baf 64 + unit ingest.

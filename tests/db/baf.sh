@@ -87,8 +87,19 @@ W43="sefs_week_calc('$P','2026-10-19','2026-10-19')"
 chk "tydz. 43: SEK 23,10 / PLN 7,11 → 1,13" "$(Q "select ($W43->>'avg_sek')||'/'||($W43->>'avg_pln')||'/'||($W43->>'applied_mult')")" "23.10/7.11/1.13"
 chk "tydz. 43: n_sek=7, jedna publikacja w pubs_sek" "$(Q "select ($W43->>'n_sek')||'/'||jsonb_array_length($W43->'pubs_sek')")" "7/1"
 chk "jedna publikacja OKQ8 (cena bez zmian 7 dni) → średnia OK" "$(Q "select ($W42->>'n_sek')||'/'||($W42->>'avg_sek')||'/'||($W42->'days_sek'->6->>'published_on')")" "7/22.80/2026-10-05"
-# F7: przeciąganie starej ceny bez publikacji w tygodniu → SOURCE
-chk "brak publikacji OKQ8 w tygodniu → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-11-02','2026-11-03')->>'reason'")" "SOURCE_FAILURE"
+# F7-2: SOURCE tylko bez odczytów (period); odczyty bez nowej publikacji → OK
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.10, 'https://www.okq8.se/foretag/priser/', 'carry', '2026-10-16'::date
+    from generate_series('2026-10-26'::date,'2026-11-01'::date,'1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', d, d::date, 7.11, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'carry', pub::date from (values
+   ('2026-10-27','2026-10-27'),('2026-10-28','2026-10-28'),('2026-10-29','2026-10-29'),
+   ('2026-10-30','2026-10-30'),('2026-10-31','2026-10-31')) t(d, pub)"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+W44="sefs_week_calc('$P','2026-11-02','2026-11-02')"
+chk "odczyty bez nowej publikacji OKQ8 → średnia OK (nie SOURCE)" "$(Q "select ($W44->>'n_sek')||'/'||($W44->>'avg_sek')||'/'||coalesce($W44->>'reason','∅')")" "7/23.10/∅"
+chk "brak odczytów OKQ8 w tygodniu → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-11-16','2026-11-16')->>'reason'")" "SOURCE_FAILURE"
 chk "brak jakiejkolwiek ceny SEK/PLN → SOURCE_FAILURE" "$(Q "select sefs_week_calc('$P','2026-12-07','2026-12-07')->>'reason'")" "SOURCE_FAILURE"
 
 # D-1322 F7: progi PLN „od progu” + poniżej pierwszego + granica over_table

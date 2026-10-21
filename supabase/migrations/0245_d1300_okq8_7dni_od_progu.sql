@@ -111,10 +111,20 @@ declare
   v_days jsonb := '[]'::jsonb;
   v_pubs jsonb := '[]'::jsonb;
   v_pub_keys text[] := array[]::text[];
-  v_any_in_week boolean := false;
 begin
-  -- D-1300: cena dnia = ostatnia publikacja OKQ8 (published_on) ≤ dzień;
-  -- F7: bez żadnej publikacji w pn–nd tygodnia → no_readings (nie ciągnąć cicho całego tygodnia ze starej ceny).
+  -- D-1300: cena dnia = ostatnia publikacja OKQ8 (published_on) ≤ dzień (także z poprzedniego tygodnia).
+  -- F7-2: SOURCE (no_readings) tylko gdy w pn–nd brak jakiegokolwiek odczytu SEK (period) —
+  -- jak sefs_pub_avg; tydzień z odczytami bez zmiany ceny → 7 dni ceną obowiązującą, ok.
+  if (exists (
+        select 1 from fuel_index_readings r
+         where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
+           and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+           and r.period::date between p_from and p_to
+      )) is not true then
+    return jsonb_build_object(
+      'avg', null, 'n', 0, 'days', '[]'::jsonb, 'pubs', '[]'::jsonb,
+      'fallback_last', false, 'no_readings', true);
+  end if;
   for v_day in select d::date from generate_series(p_from, p_to, '1 day') d loop
     with pubs as (
       select distinct on (coalesce(c.published_on, r.published_on))
@@ -137,9 +147,6 @@ begin
         'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_pubs,
         'fallback_last', false, 'no_readings', true);
     end if;
-    if v_pub >= p_from and v_pub <= p_to then
-      v_any_in_week := true;
-    end if;
     v_sum := v_sum + v_val;
     v_n := v_n + 1;
     v_days := v_days || jsonb_build_array(jsonb_build_object(
@@ -150,7 +157,7 @@ begin
         'published_on', v_pub, 'value', v_val));
     end if;
   end loop;
-  if v_n < 7 or v_any_in_week is not true then
+  if v_n < 7 then
     return jsonb_build_object(
       'avg', null, 'n', v_n, 'days', v_days, 'pubs', v_pubs,
       'fallback_last', false, 'no_readings', true);
@@ -161,7 +168,7 @@ begin
 end $$;
 revoke all on function public.sefs_sek_daily_avg(uuid, date, date) from public, anon, authenticated;
 comment on function public.sefs_sek_daily_avg(uuid, date, date) is
-  'D-1300: OKQ8 — średnia z 7 cen dziennych pn–nd (cena dnia = ostatnia publikacja ≤ dzień).';
+  'D-1300/F7-2: OKQ8 — średnia 7 cen dziennych; SOURCE tylko bez odczytów (period) w pn–nd.';
 
 -- ---------------------------------------------------------------------
 -- 4. Tydzień / prognoza — SEK z daily avg
@@ -176,7 +183,8 @@ declare
   v_i int;
 begin
   -- Kotwica = poniedziałek bieżącego tygodnia; szukamy wstecz zamkniętego tygodnia
-  -- z publikacją OKQ8 w pn–nd (F7: bez cichego przeciągania). PLN: pub_avg + last_published.
+  -- z odczytami OKQ8 (period) w pn–nd (F7-2: SOURCE = brak odczytów, nie brak publikacji).
+  -- PLN: pub_avg + last_published.
   v_anchor := v_today - ((extract(isodow from v_today)::int) - 1);
   s := jsonb_build_object('avg', null, 'n', 0);
   p := jsonb_build_object('avg', null, 'n', 0);
@@ -385,7 +393,7 @@ begin
   );
 end $$;
 
--- D-1300 F7: 07:15 / 09:15 / 13:15 czasu polskiego (UTC lato: 05:15 / 07:15 / 11:15); ponowienie pomija źródło już zapisane.
+-- D-1300 F7-2: cron co godzinę o :15; funkcja sama sprawdza godzinę Europe/Warsaw (7/9/13).
 do $cron$
 declare
   v_sql text := $c$
@@ -395,20 +403,17 @@ declare
       headers := jsonb_build_object(
         'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')
       ),
-      timeout_milliseconds := 180000)
+      timeout_milliseconds := 240000)
   $c$;
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     perform cron.unschedule(jobid) from cron.job where jobname in (
       'tower-fuel-prices', 'tower-fuel-prices-0915', 'tower-fuel-prices-1315'
     );
-    perform cron.schedule('tower-fuel-prices', '15 5 * * *', v_sql);
-    perform cron.schedule('tower-fuel-prices-0915', '15 7 * * *', v_sql);
-    perform cron.schedule('tower-fuel-prices-1315', '15 11 * * *', v_sql);
-  else
-    raise notice '0245: pg_cron niedostępne — cron fuel-prices do zaplanowania ręcznie';
+    perform cron.schedule('tower-fuel-prices', '15 * * * *', v_sql);
   end if;
+  -- bez pg_cron (CI): pomijamy; błąd planowania przy obecnym pg_cron → wyjątek (F7-2).
 exception when others then
-  raise notice '0245 cron fuel-prices: %', sqlerrm;
+  raise exception '0245 cron fuel-prices: %', sqlerrm;
 end
 $cron$;

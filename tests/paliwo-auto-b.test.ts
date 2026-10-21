@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { orlenM3ToLitre, pickOnEkodiesel } from '../supabase/functions/_shared/fuel/orlen.ts';
 import { parseOkq8GoEasyDiesel } from '../supabase/functions/_shared/fuel/okq8.ts';
+import {
+  isFuelPriceHour,
+  orlenIngestPayload,
+} from '../supabase/functions/_shared/fuel/ingest.ts';
 
 describe('PALIWO-AUTO-B parsers', () => {
   it('Orlen m³ → PLN/l', () => {
@@ -13,6 +17,27 @@ describe('PALIWO-AUTO-B parsers', () => {
       { productName: 'ONEkodiesel', effectiveDate: '2026-10-03T00:00:00', value: 6943 },
     ]);
     expect(row?.value).toBe(6943);
+  });
+
+  // D-1300 F7-2: gałąź Orlen — return { row: r, … }, nie TDZ na zewnętrznym `row`.
+  it('orlenIngestPayload: row.r + wartość m³, PLN/l w wierszu', () => {
+    const { row, value } = orlenIngestPayload('2026-10-18', {
+      value: 7110,
+      effectiveDate: '2026-10-17T00:00:00',
+    });
+    expect(value).toBe(7110);
+    expect(row.index_code).toBe('PLN');
+    expect(row.value).toBe(7.11);
+    expect(row.published_on).toBe('2026-10-17');
+    expect(row.period).toBe('2026-10-18');
+  });
+
+  it('okno godzin PL: 7/9/13', () => {
+    expect(isFuelPriceHour(7)).toBe(true);
+    expect(isFuelPriceHour(9)).toBe(true);
+    expect(isFuelPriceHour(13)).toBe(true);
+    expect(isFuelPriceHour(8)).toBe(false);
+    expect(isFuelPriceHour(5)).toBe(false);
   });
 
   it('OKQ8 GoEasy Diesel firmowa 22,29 wprost + data publikacji (nie Q8 Trucks)', () => {

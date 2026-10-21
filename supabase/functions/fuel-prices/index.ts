@@ -1,21 +1,25 @@
 /**
  * PALIWO-AUTO-B — codzienne odczyty OKQ8 (GoEasy Diesel, cena listowa firmowa, SEK/l wprost; 0187) i Orlen
  * (ONEkodiesel, PLN/m³ netto → PLN/l) do fuel_index_readings. Przełącznik FUEL_SE_PL_INGEST.
- * D-1300: źródła osobno — błąd Orlen nie blokuje OKQ8 i odwrotnie (E3); 3 próby / 30 s;
- * ponowienia cron 07:15/09:15/13:15 PL pomijają źródło już zapisane tego dnia.
+ * D-1300 / F7-2: źródła osobno; 3 próby / 20 s; cron co godzinę, funkcja tylko o 7/9/13 Europe/Warsaw;
+ * ponowienia pomijają źródło już zapisane tego dnia.
  * Wywołanie: pg_cron → pg_net, klucz service role. User-Agent: Watch Tower.
  */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 import {
   ORLEN_CURRENT_URL,
-  ORLEN_SOURCE_PAGE,
   ORLEN_UA,
-  orlenM3ToLitre,
   pickOnEkodiesel,
   type OrlenRow,
 } from '../_shared/fuel/orlen.ts';
 import { OKQ8_PRICES_URL, OKQ8_UA, parseOkq8GoEasyDiesel } from '../_shared/fuel/okq8.ts';
+import {
+  isFuelPriceHour,
+  orlenIngestPayload,
+  warsawHour,
+  type FuelSourceRow,
+} from '../_shared/fuel/ingest.ts';
 
 function warsawToday(d = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -25,16 +29,6 @@ function warsawToday(d = new Date()): string {
     day: '2-digit',
   }).format(d);
 }
-
-type SourceRow = {
-  index_code: string;
-  period: string;
-  reading_date: string;
-  value: number;
-  source_url: string;
-  published_on: string | null;
-  source_note: string;
-};
 
 type SourceResult = {
   ok: boolean;
@@ -46,7 +40,7 @@ type SourceResult = {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function withRetries<T>(fn: () => Promise<T>, attempts = 3, delayMs = 30_000): Promise<T> {
+async function withRetries<T>(fn: () => Promise<T>, attempts = 3, delayMs = 20_000): Promise<T> {
   let last: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -90,6 +84,12 @@ Deno.serve(async (req) => {
     return Response.json({ ok: true, skipped: 'FUEL_SE_PL_INGEST wyłączone' });
   }
 
+  // F7-2: cron co godzinę; poza 7/9/13 PL — cicho, bez ok=false.
+  const hour = warsawHour();
+  if (!isFuelPriceHour(hour)) {
+    return Response.json({ ok: true, skipped: 'hour', hour });
+  }
+
   const log = (ok: boolean, result: Record<string, unknown>) =>
     sb.from('integration_runs').insert({ job: 'fuel-prices', ok, result });
 
@@ -109,30 +109,21 @@ Deno.serve(async (req) => {
     if (await hasReading(sb, proj.id, 'PLN', period)) {
       sources.orlen = { ok: true, skipped: 'already' };
     } else {
-      const row = await withRetries(async () => {
+      const fetched = await withRetries(async () => {
         const orlenRes = await fetch(ORLEN_CURRENT_URL, { headers: { 'User-Agent': ORLEN_UA } });
         if (!orlenRes.ok) throw new Error(`Orlen: HTTP ${orlenRes.status}`);
         const orlenRows = (await orlenRes.json()) as OrlenRow[];
         const orlen = pickOnEkodiesel(orlenRows);
         if (!orlen) throw new Error('Orlen: brak ONEkodiesel');
-        const r: SourceRow = {
-          index_code: 'PLN',
-          period,
-          reading_date: period,
-          value: orlenM3ToLitre(orlen.value),
-          source_url: ORLEN_SOURCE_PAGE,
-          published_on: String(orlen.effectiveDate ?? '').slice(0, 10) || null,
-          source_note: `ORLEN ONEkodiesel ${orlen.value} PLN/m³ netto (effective ${orlen.effectiveDate}); zapis ${orlenM3ToLitre(orlen.value)} PLN/l`,
-        };
-        return { row, value: orlen.value };
+        return orlenIngestPayload(period, orlen);
       });
       const { data, error } = await sb.rpc('fuel_se_pl_ingest', {
         p_project: proj.id,
-        p_rows: [row.row],
+        p_rows: [fetched.row],
       });
       if (error) throw new Error(error.message);
       ingest.orlen = data;
-      sources.orlen = { ok: true, value: row.value, ingest: data };
+      sources.orlen = { ok: true, value: fetched.value, ingest: data };
     }
   } catch (e) {
     sources.orlen = { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -143,11 +134,11 @@ Deno.serve(async (req) => {
     if (await hasReading(sb, proj.id, 'SEK', period)) {
       sources.okq8 = { ok: true, skipped: 'already' };
     } else {
-      const row = await withRetries(async () => {
+      const fetched = await withRetries(async () => {
         const okq8Res = await fetch(OKQ8_PRICES_URL, { headers: { 'User-Agent': OKQ8_UA } });
         if (!okq8Res.ok) throw new Error(`OKQ8: HTTP ${okq8Res.status}`);
         const okq8 = parseOkq8GoEasyDiesel(await okq8Res.text());
-        const r: SourceRow = {
+        const r: FuelSourceRow = {
           index_code: 'SEK',
           period,
           reading_date: period,
@@ -160,11 +151,11 @@ Deno.serve(async (req) => {
       });
       const { data, error } = await sb.rpc('fuel_se_pl_ingest', {
         p_project: proj.id,
-        p_rows: [row.row],
+        p_rows: [fetched.row],
       });
       if (error) throw new Error(error.message);
       ingest.okq8 = data;
-      sources.okq8 = { ok: true, value: row.value, ingest: data };
+      sources.okq8 = { ok: true, value: fetched.value, ingest: data };
     }
   } catch (e) {
     sources.okq8 = { ok: false, error: e instanceof Error ? e.message : String(e) };
