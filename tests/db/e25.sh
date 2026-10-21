@@ -272,6 +272,14 @@ sys "update loads set sailing_id='33333333-0000-0000-0000-00000000f901', escort_
      where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
 sval "A9: komplet bez SE → Gotowy sam (D-1525)" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
 sval "A9: drugi a9_try_ready = 0 zmian" "select a9_try_ready('33333333-0000-0000-0000-00000000a901')" f
+# A10: demotion READY → RESOURCES_PENDING po usunięciu kierowcy; ponowny READY = nowy STATUS_AUTO.
+sys "update loads set driver_name=null where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+sval "A10: bez kierowcy → RESOURCES_PENDING" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" RESOURCES_PENDING
+sys "update loads set driver_name='Jan A9' where id='33333333-0000-0000-0000-00000000a901'" >/dev/null
+sval "A10: kierowca z powrotem → READY" "select status::text from loads where id='33333333-0000-0000-0000-00000000a901'" READY
+sval "A10: ponowny READY ma ≥2 STATUS_AUTO→READY" "select count(*) >= 2 from load_events
+  where load_id='33333333-0000-0000-0000-00000000a901' and event_type='STATUS_AUTO'
+    and payload->>'to'='READY'" t
 # CMR_UPLOAD widoczna dla SCX + reopen EXPIRED + idempotentność.
 # DELIVERED wymaga hhl_order_no + carrier_order_no (0003) — bez nich INSERT padał i SCX widział 0 spraw.
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,

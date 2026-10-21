@@ -49,8 +49,8 @@ for x in $A $B $C $Hh $I $K; do q "insert into load_events (load_id,event_type,o
 echo; echo "[1] Strefa załadunku"
 for x in $D $E $F $G; do pos $x 52.0900 17.0200 "2026-09-30 09:00+00"; pos $x 52.0901 17.0201 "2026-09-30 09:05+00"; done
 chk "READY + wjazd → AT_LOADING"                            "$(st $F)" AT_LOADING
-chk "transport niegotowy: status bez zmian"                  "$(st $E)" DOCS_PENDING
-chk "transport niegotowy: ryzyko wysokie"                    "$(rk $E LOADING_NOT_READY)" 1
+chk "A10 niegotowy + wjazd → AT_LOADING"                     "$(st $E)" AT_LOADING
+chk "A10 niegotowy: ryzyko Załadunek bez gotowości"          "$(rk $E LOADING_NOT_READY)" 1
 chk "brak numeru przewoźnika: zmiana zablokowana"            "$(st $D)" READY
 chk "brak numeru przewoźnika: ryzyko z przyczyną"            "select count(*) from risk_signals where load_id='$D' and title like '%przewoźnika%'" 1
 chk "blokada statusu NIE przerwała zapisu pozycji"           "select count(*) from positions where load_id='$D'" 2
