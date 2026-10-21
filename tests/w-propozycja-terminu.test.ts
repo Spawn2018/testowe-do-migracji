@@ -63,3 +63,20 @@ describe('#384 pkt 5–6 — kto rozstrzyga', () => {
     expect(bellSection({ kind: 'KSH_DATE_COUNTER_RESULT', loadId: 'L1', severity: 'MEDIUM', href: null } as never)).toBe('mine');
   });
 });
+
+/* F7 #390 — drobne: potwierdzenie „Przyjmuję”, brak szuflady po wysłaniu propozycji, pola daty na wąskim ekranie */
+describe('w-propozycja-terminu — drobne po F7', () => {
+  const src = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
+  it('KSH: „Przyjmuję” wymaga potwierdzenia i daje komunikat', () => {
+    const s = src('src/components/risks/KshProposals.tsx');
+    expect(s).toContain("code === 'ACCEPT' && !confirmAccept");
+    expect(s).toContain('data-ksh-confirm-yes');
+    expect(s).toContain('dec_ksh_done_accept');
+  });
+  it('po wysłaniu propozycji nie otwiera szuflady transportu', () => {
+    expect(src('src/components/risks/TodoPanel.tsx')).toContain("hint !== 'KSH_DATE_COUNTER'");
+  });
+  it('pola daty mieszczą się w kolumnie', () => {
+    expect(src('src/components/risks/risks.css')).toContain('.rk-propose-grid .input{width:100%;min-width:0}');
+  });
+});

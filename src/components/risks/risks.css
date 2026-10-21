@@ -200,6 +200,7 @@
 .rk-propose legend{padding:0 4px;font-weight:600}
 .rk-propose-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
 .rk-propose-grid label{display:grid;gap:4px;min-width:0}
+.rk-propose-grid .input{width:100%;min-width:0}
 .rk-ksh-props{margin:12px 0}
 .rk-ksh-props ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
 .rk-ksh-prop{display:grid;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--rule-2)}
