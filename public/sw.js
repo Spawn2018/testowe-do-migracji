@@ -1,6 +1,6 @@
 /* Watch Tower — PWA (§14). CACHE bump przy każdej zmianie precache / offline. */
 /* C16: push ack, pushsubscriptionchange, notificationclick openWindow, icon/badge */
-const CACHE = 'wt-static-v2026-10-15-c16-push';
+const CACHE = 'wt-static-v2026-10-21-push-cel';
 const PRECACHE = [
   '/',
   '/offline.html',
@@ -108,7 +108,9 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const raw = (event.notification.data && event.notification.data.url) || '/';
+  const d = event.notification.data || {};
+  /* 21.10.2026 (właściciel, pkt 5/7): wpis bez adresu → aplikacja sama liczy cel z wpisu (`?pn=<id>`, src/lib/pushOpen.ts) */
+  const raw = (d.url && d.url !== '/') ? d.url : (d.nid ? `/?pn=${encodeURIComponent(d.nid)}` : '/');
   const target = new URL(raw, self.location.origin).href;
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
