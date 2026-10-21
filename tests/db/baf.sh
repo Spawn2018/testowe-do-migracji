@@ -61,7 +61,10 @@ chk "tydz. 40: PLN 5 publ. → 7,41 → 1,16 (od progu)" "$(Q "select ($W40->>'n
 chk "tydz. 40: wynik 1,13" "$(Q "select $W40->>'applied_mult'")" "1.13"
 
 # D-1300 F7: tydzień 05–11.10 (wskaźniki t42) — jedna publikacja OKQ8 22,80 + Orlen 7,00
+# trg_fuel_readings_immutable blokuje DELETE — jak w 0187 wyłączamy na czas podmiany seeda testu.
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
 sys "delete from fuel_index_readings where project_id='$P' and reading_date >= '2026-10-05'"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
   select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 22.80, 'https://www.okq8.se/foretag/priser/', 't42', '2026-10-05'::date
     from generate_series('2026-10-05'::date,'2026-10-11'::date,'1 day') d"
@@ -226,7 +229,8 @@ sys "insert into load_events (load_id, event_type, occurred_at, payload) values 
 chk "korekta: rzeczywisty wyjazd GPS zostaje" "$(Q "select count(*) from telm_fix_attach_actual_load()")" "0"
 
 # D-1300 F7: przeliczenie + SEFS_INVOICE_DIFF (jedna, idempotentna)
-LINV=33333333-0000-0000-0000-0000000bafin
+# UUID tylko hex (…bafin było nielegalne → insert cichy przez sys).
+LINV=33333333-0000-0000-0000-0000000baf1f
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, plan_load_date) values
   ('$LINV','$P','$CAR','BAF/INV','HHL/INV','2026-10-06')"
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, total_weight_t) values
@@ -234,6 +238,7 @@ sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class
 fresh_price "$LINV"
 sys "select load_price_compute('$LINV', '2026-10-12')"
 sys "update load_cost set invoiced_total_eur = total_amount, fuel_applied_mult = 1.14 where load_id='$LINV'"
+chk "SEFS_INVOICE_DIFF: setup (zafakturowane ×1,14)" "$(Q "select coalesce(fuel_applied_mult::numeric(4,2)::text,'∅')||'/'||(invoiced_total_eur is not null) from load_cost where load_id='$LINV'")" "1.14/true"
 chk "SEFS_INVOICE_DIFF: skan znajduje 1" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
 chk "SEFS_INVOICE_DIFF: drugi skan nadal 1 (mismatch)" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
 chk "SEFS_INVOICE_DIFF: jedna sprawa (idempotent)" "$(Q "select count(*) from decisions where detail->>'event_key'='d1300:invoice:$LINV'")" "1"

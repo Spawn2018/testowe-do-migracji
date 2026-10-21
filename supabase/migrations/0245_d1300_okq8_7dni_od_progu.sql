@@ -91,7 +91,9 @@ begin
   if (is_hhl()) is not true then
     raise exception 'SEFS — wyłącznie HHL' using errcode = '42501';
   end if;
-  return sefs_compute_hybrid_sys(p_project, p_avg_sek, p_avg_pln);
+  return sefs_compute_hybrid_sys(
+    p_project, p_avg_sek, p_avg_pln,
+    (timezone('Europe/Warsaw', now()))::date);
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -171,13 +173,25 @@ declare
   v_today date := coalesce(p_today, (timezone('Europe/Warsaw', now()))::date);
   v_anchor date; v_prev_start date; v_prev_end date;
   s jsonb; p jsonb; v_res jsonb;
+  v_i int;
 begin
+  -- Kotwica = poniedziałek bieżącego tygodnia; szukamy wstecz zamkniętego tygodnia
+  -- z publikacją OKQ8 w pn–nd (F7: bez cichego przeciągania). PLN: pub_avg + last_published.
   v_anchor := v_today - ((extract(isodow from v_today)::int) - 1);
+  s := jsonb_build_object('avg', null, 'n', 0);
+  p := jsonb_build_object('avg', null, 'n', 0);
   v_prev_start := v_anchor - 7;
   v_prev_end := v_anchor - 1;
-  s := sefs_sek_daily_avg(p_project, v_prev_start, v_prev_end);
-  p := sefs_pub_avg(p_project, 'PLN', v_prev_start, v_prev_end);
-  if (p->>'avg') is null then p := sefs_last_published(p_project, 'PLN', v_prev_end); end if;
+  for v_i in 0..51 loop
+    v_prev_start := v_anchor - 7 - (v_i * 7);
+    v_prev_end := v_anchor - 1 - (v_i * 7);
+    s := sefs_sek_daily_avg(p_project, v_prev_start, v_prev_end);
+    p := sefs_pub_avg(p_project, 'PLN', v_prev_start, v_prev_end);
+    if (p->>'avg') is null then
+      p := sefs_last_published(p_project, 'PLN', v_prev_end);
+    end if;
+    exit when (s->>'avg') is not null and (p->>'avg') is not null;
+  end loop;
   if ((s->>'avg') is not null and (p->>'avg') is not null) is not true then
     return jsonb_build_object(
       'ok', false, 'reason', 'SOURCE_FAILURE',
@@ -186,7 +200,9 @@ begin
       'n_sek', coalesce((s->>'n')::int, 0), 'n_pln', coalesce((p->>'n')::int, 0),
       'status', 'PROGNOZA');
   end if;
-  v_res := sefs_compute_hybrid_sys(p_project, (s->>'avg')::numeric, (p->>'avg')::numeric, v_anchor);
+  -- parametry jak dla poniedziałku tygodnia załadunku odpowiadającego znalezionemu prev
+  v_res := sefs_compute_hybrid_sys(
+    p_project, (s->>'avg')::numeric, (p->>'avg')::numeric, v_prev_end + 1);
   return v_res || jsonb_build_object(
     'anchor_week_start', v_anchor,
     'prev_week_start', v_prev_start, 'prev_week_end', v_prev_end,
