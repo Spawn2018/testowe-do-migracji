@@ -7,6 +7,7 @@
  * HHL: na końcu „Paczka tygodnia dla księgowości” (E40, img/e40-after) — gdy baza poda adresy i dziennik wysyłek.
  * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
  */
+import { useFuelPublications } from '../lib/fuelPublSource';
 import { useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
@@ -64,7 +65,9 @@ export function FinanceView() {
   const fin = useMemo(() => financeOf(loads, side), [loads, side]);
   const threshold = side === 'both' ? marginThresholdOf() : null;
   const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
-  const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today]);
+  const publV = useFuelPublications();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- publV: publikacje z bazy wczytane później
+  const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today, publV]);
   /** E41: nazwa transportu według firmy, która patrzy. */
   const nameOf = (id: string, code: string) => { const l = loads.find((x) => x.id === id); return l ? transportLabel(l, role) : code; };
 

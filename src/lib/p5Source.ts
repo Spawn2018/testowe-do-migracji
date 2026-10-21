@@ -9,6 +9,7 @@ import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSi
 import { demoAccountingPack, demoDocRequirements, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
 import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 import type { FeeRules, FeeSuggestion } from './p5Fees';
+import { fuelPublicationsIn } from './fuelPublSource';
 
 /** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
 export function marginThresholdOf(): number | null {
@@ -26,7 +27,14 @@ export function belowOf(loads: Load[], thresholdPct: number | null): FinBelowRow
 /** E39 — tabela tygodni. Średnie cen i publikacje: w produkcji z bazy (`fuel_basis`), dziś „—”. */
 export function fuelWeeksOf(loads: Load[], side: FinSide, today: string): FuelWeekRow[] {
   const rows = fuelWeeks(loads, side, today);
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelEnrich(rows, today) : rows;
+  const demo = import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelEnrich(rows, today) : null;
+  if (demo) return demo;
+  /* produkcja: publikacje cen z tygodnia wskaźników z bazy (`fuel_index_readings`, `useFuelPublications`) */
+  return rows.map((r) => {
+    if (!r.idx || r.weekLast) return r;
+    const pub = fuelPublicationsIn(r.idx.from, r.idx.to < today ? r.idx.to : today);
+    return pub ? { ...r, publications: pub } : r;
+  });
 }
 
 /** E4b — oferta faktoringu HHL (Opcje › Pieniądze › Faktoring, wersja z datą). W produkcji z bazy — wykonawca. */
