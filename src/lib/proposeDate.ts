@@ -32,7 +32,8 @@ export function proposalPayload(f: ProposalForm, now: Date): { payload: Record<s
   if (!DAY.test(ld) || (f.loadTime && !HM.test(f.loadTime)) || (f.deliveryDate && !DAY.test(f.deliveryDate)) || (f.deliveryTime && !HM.test(f.deliveryTime))) {
     return { error: 'BAD_FORMAT' };
   }
-  if (ld < warsawDay(now)) return { error: 'PAST' };
+  /* jak baza (0251: load_date > dziś) — propozycja na dziś nie ma sensu */
+  if (ld <= warsawDay(now)) return { error: 'PAST' };
   const dd = f.deliveryDate.trim();
   if (dd && dd < ld) return { error: 'DELIVERY_BEFORE_LOAD' };
   const payload: Record<string, string> = { load_date: ld };

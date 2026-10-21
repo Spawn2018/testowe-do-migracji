@@ -8,6 +8,7 @@ import { proposalOfDetail, proposalPayload, proposalSummary, EMPTY_PROPOSAL } fr
 import { mayResolveDecision } from '../src/lib/decisionAccess';
 import { kshProposalsOf } from '../src/components/risks/KshProposals';
 import type { TodoDecision } from '../src/lib/p6Todo';
+import { bellSection } from '../src/lib/bellList';
 
 const NOW = new Date('2026-10-21T13:00:00Z'); // 21.10, 15:00 w Warszawie
 
@@ -17,8 +18,9 @@ describe('#384 pkt 5 — formularz terminu', () => {
     expect(proposalPayload({ ...EMPTY_PROPOSAL, loadDate: '2026-10-20' }, NOW)).toEqual({ error: 'PAST' });
     expect(proposalPayload({ ...EMPTY_PROPOSAL, loadDate: '2026-10-25', deliveryDate: '2026-10-24' }, NOW)).toEqual({ error: 'DELIVERY_BEFORE_LOAD' });
   });
-  it('dziś jest dozwolone; godzina PL dla załadunku, SE dla dostawy (z przesunięciem strefy)', () => {
-    expect(proposalPayload({ ...EMPTY_PROPOSAL, loadDate: '2026-10-21' }, NOW)).toEqual({ payload: { load_date: '2026-10-21' } });
+  it('dziś nie (jak baza), jutro tak; godzina PL dla załadunku, SE dla dostawy (z przesunięciem strefy)', () => {
+    expect(proposalPayload({ ...EMPTY_PROPOSAL, loadDate: '2026-10-21' }, NOW)).toEqual({ error: 'PAST' });
+    expect(proposalPayload({ ...EMPTY_PROPOSAL, loadDate: '2026-10-22' }, NOW)).toEqual({ payload: { load_date: '2026-10-22' } });
     const r = proposalPayload({ loadDate: '2026-10-24', loadTime: '08:00', deliveryDate: '2026-10-29', deliveryTime: '07:30' }, NOW);
     expect(r).toEqual({ payload: {
       load_date: '2026-10-24', load_from: '2026-10-24T08:00:00+02:00',
@@ -56,5 +58,8 @@ describe('#384 pkt 5–6 — kto rozstrzyga', () => {
     const d = (id: string, decider: TodoDecision['decider']) => ({ id, decider } as TodoDecision);
     expect(kshProposalsOf([d('a', 'KSH'), d('b', 'SCX'), d('c', 'HHL')]).map((x) => x.id)).toEqual(['a']);
     expect(readFileSync('src/views/RisksView.tsx', 'utf8')).toContain('<KshProposals');
+  });
+  it('wynik propozycji (KSH_DATE_COUNTER_RESULT) w dzwonku SCX to informacja „Moje transporty”, nie „Do zrobienia”', () => {
+    expect(bellSection({ kind: 'KSH_DATE_COUNTER_RESULT', loadId: 'L1', severity: 'MEDIUM', href: null } as never)).toBe('mine');
   });
 });

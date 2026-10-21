@@ -65,6 +65,8 @@ const INFO_KINDS = new Set([
   'ZONE_EXIT', 'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'AWIZACJA', 'PLAN_DATES_CHANGED', 'FEE_DECIDED',
   'DECISION_RESOLVED', 'INVOICE_DISPUTE_RESOLVED', 'RISK_OPEN', 'RISK_RESOLVED', 'ROAD_PL', 'ROAD_SE', 'WEATHER',
   'FERRY', 'ROUTE_OBSTACLE', 'WORKFLOW_ALERT',
+  /* #384 pkt 5: wynik propozycji terminu (KSH przyjął / odrzucił) — informacja dla SCX */
+  'KSH_DATE_COUNTER_RESULT',
 ]);
 
 /** P11 (e5, E5): informacje bez działania i bez transportu („Faktura zaakceptowana”, „Import harmonogramu zatwierdzony”) —

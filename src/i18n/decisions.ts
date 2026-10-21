@@ -49,7 +49,7 @@ const pl: Dict = {
   dec_prop_hint: 'Propozycja trafi do KSH do przyjęcia albo odrzucenia. Daty planu zmienią się dopiero po przyjęciu przez KSH.',
   dec_prop_send: 'Wyślij propozycję do KSH',
   dec_prop_err_NO_LOAD_DATE: 'Podaj datę załadunku.',
-  dec_prop_err_PAST: 'Data załadunku nie może być w przeszłości.',
+  dec_prop_err_PAST: 'Proponowany załadunek musi być najwcześniej jutro.',
   dec_prop_err_DELIVERY_BEFORE_LOAD: 'Dostawa nie może być przed załadunkiem.',
   dec_prop_err_BAD_FORMAT: 'Sprawdź format daty i godziny.',
   dec_opt_ESCALATE_HHL: 'Eskaluj do HHL',
