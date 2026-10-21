@@ -186,7 +186,10 @@ export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | '
     const d = dayKey(l.plannedLoadDate);
     return notDeparted(l) && d != null && d < today;
   });
-  const permitsOk7 = loads7.filter((l) => hasDoc(documents, l.id, 'PERMIT_PL') && hasDoc(documents, l.id, 'PERMIT_SE')).length;
+  /* zezwolenia z bazy (podpięte automatycznie, FIRMA albo TRASA PL+SE); bez danych z bazy — dokumenty PL i SE (demo) */
+  const permitsOk7 = loads7.filter((l) => (l.permitComplete != null
+    ? l.permitComplete
+    : hasDoc(documents, l.id, 'PERMIT_PL') && hasDoc(documents, l.id, 'PERMIT_SE'))).length;
   const atSite = loads.filter(onSite);
   const inTransit = loads.filter((l) => !notDeparted(l) && !delivered(l));
   const done = loads.filter(delivered);

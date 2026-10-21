@@ -166,6 +166,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       .map((r) => [r.load_id, Array.isArray(r.gaps) ? r.gaps : []]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
+    /* Kokpit „Zezwolenia 7 dni”: komplet = podpięte, pasują do zestawu i nie brakuje kraju (FIRMA — jedno zezwolenie) */
+    const permitDone = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean; missing_countries: string[] | null }[])
+      .map((p) => [p.load_id, p.permits_linked > 0 && p.ok === true && (p.missing_countries ?? []).length === 0]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
       load_id: string; driver_name: string | null; driver_phone: string | null; driver_phone_country?: string | null;
       driver_delivery_name?: string | null; driver_delivery_phone?: string | null; driver_delivery_phone_country?: string | null;
@@ -205,7 +208,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         trailer_swap: drivers.get(r.id)?.trailer_swap ?? false,
       }))
       .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
-      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l));
+      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l))
+      .map((l) => (permitDone.has(l.id) ? { ...l, permitComplete: permitDone.get(l.id) ?? null } : l));
     /* B5 K2.1: usedBy — inne transporty z tym samym rio_tracking_id */
     const rioGroups = new Map<string, Load[]>();
     for (const l of mappedLoads) {
