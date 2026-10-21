@@ -206,6 +206,6 @@
 .rk-ksh-prop{display:grid;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--rule-2)}
 .rk-ksh-prop-hd{margin:0}
 /* wyglad/W-cele-przejsc (d): wiersz promu prowadzi do rejsu w Harmonogramie › Rejsy */
-.rk-ferry.is-link{cursor:pointer;border-radius:6px}
+.rk-ferry.is-link{cursor:pointer;border-radius:2px}
 .rk-ferry.is-link:hover{background:var(--hover, rgba(127,127,127,.08))}
 .rk-ferry.is-link:focus-visible{outline:2px solid var(--focus);outline-offset:2px}

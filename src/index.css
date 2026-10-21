@@ -1923,4 +1923,4 @@ img,video{max-width:100%;height:auto}
 .mlist .filters .map-search{flex:1 1 230px;min-width:0}
 .map-e29 td[data-map-name] .map-cell-sub{white-space:nowrap}
 /* wyglad/W-cele-przejsc: miejsce, do którego prowadzi sprawa albo wiersz promu (wiersz rejsu w Przeglądzie, rejs w Harmonogramie › Rejsy) */
-.is-go-target{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.is-go-target{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
