@@ -5,9 +5,9 @@ import { pushNidFromSearch } from '../src/lib/pushOpen';
 import { bellVisible } from '../src/lib/bellList';
 
 describe('powiadomienia — cel i zamknięte sprawy', () => {
-  it('service worker: wpis bez adresu otwiera aplikację z ?pn=<id>', () => {
+  it('service worker: wpis z id zawsze otwiera ?pn=<id> (także gdy baza dała url — #411), url tylko bez id', () => {
     const sw = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-    expect(sw).toContain("(d.nid ? `/?pn=${encodeURIComponent(d.nid)}` : '/')");
+    expect(sw).toContain("const raw = d.nid ? `/?pn=${encodeURIComponent(d.nid)}` : ((d.url && d.url !== '/') ? d.url : '/');");
   });
   it('odczyt ?pn tylko liczbowy', () => {
     expect(pushNidFromSearch('?pn=123')).toBe(123);
