@@ -26,10 +26,20 @@ chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((f
 
 # trzy wiersze harmonogramu; L1 z seed ma pozycję SG-00 (na fakturze), L2 bez pozycji
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m) values ('$P','$L1','SG-00',10,2.5,2.5)" >/dev/null
-# #384 pkt 4: daty w przyszłości — inaczej import wycisza SCHEDULE_DATE_CRITICAL (bulk_quiet hist).
-R3='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15"},
-     {"code":"SG-02","length_m":"18.21","width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15","order_no":"KSH/77"},
-     {"code":"T-01","length_m":14.62,"width_m":2.45,"height_m":2.45,"qty":55,"total_weight_t":20.17,"load_date":"2026-11-10","delivery_date":"2026-11-15"}]'
+# #384 pkt 4: daty od current_date — stałe 11.2026 padną po 16.11; hist → bulk_quiet.
+D1=$(Q "select (current_date + 20)::text")
+D2=$(Q "select (current_date + 25)::text")
+D1b=$(Q "select (current_date + 21)::text")
+D2b=$(Q "select (current_date + 26)::text")
+D1c=$(Q "select (current_date + 22)::text")
+D2c=$(Q "select (current_date + 27)::text")
+DH1=$(Q "select (current_date - 20)::text")
+DH2=$(Q "select (current_date - 15)::text")
+DH1b=$(Q "select (current_date - 19)::text")
+DH2b=$(Q "select (current_date - 14)::text")
+R3="[{\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"},
+     {\"code\":\"SG-02\",\"length_m\":\"18.21\",\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"order_no\":\"KSH/77\"},
+     {\"code\":\"T-01\",\"length_m\":14.62,\"width_m\":2.45,\"height_m\":2.45,\"qty\":55,\"total_weight_t\":20.17,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
 IMP() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"name\":\"h.xlsx\",\"hash\":\"abc\",\"path\":\"harmonogramy/x/abc.xlsx\"}'::jsonb, $2)"; }
 
 echo; echo "[I-1] uprawnienia"
@@ -50,7 +60,7 @@ chk "podgląd nic nie zapisał" "$(Q "select count(*) from loads")/$(Q "select c
 echo; echo "[I-1] zapis"
 val "import: 3 transporty, wersja 1" $HHL "select jsonb_array_length(r->'added')||'/'||(r->>'version') from ($(IMP "$R3" false)) s(r)" "3/1" commit
 chk "loads +3 (PLANNED, przewoźnik SCX), pozycje 3 z wierszem kanonicznym" "$(Q "select count(*) filter (where status='PLANNED' and carrier_org_id='00000000-0000-0000-0000-00000000a003') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code in ('SG-01','SG-02','T-01') and si.schedule_row is not null")" 3
-chk "numer zlecenia KSH i daty planu" "$(Q "select l.order_no||' '||l.plan_load_date||' '||l.plan_delivery_date from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "KSH/77 2026-11-10 2026-11-15"
+chk "numer zlecenia KSH i daty planu" "$(Q "select l.order_no||' '||l.plan_load_date||' '||l.plan_delivery_date from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "KSH/77 $D1 $D2"
 chk "I-25: import nie ustawia okna dostawy ani załadunku (okno tylko od KSH)" "$(Q "select count(*) from loads l join shipment_items si on si.load_id=l.id where si.shipment_code in ('SG-01','SG-02','T-01') and (l.plan_delivery_from is not null or l.plan_delivery_to is not null or l.plan_load_from is not null or l.plan_load_to is not null)")" 0
 chk "wersja w schedule_imports: plik, skrót, statystyki" "$(Q "select version||' '||file_name||' '||file_hash||' '||file_path||' '||(stats->>'added') from schedule_imports")" "1 h.xlsx abc harmonogramy/x/abc.xlsx 3"
 chk "zdarzenia SCHEDULE_IMPORTED ×3" "$(Q "select count(*) from load_events where event_type='SCHEDULE_IMPORTED' and payload->>'action'='ADDED'")" 3
@@ -63,13 +73,13 @@ chk "brak nowej wersji i zdarzeń" "$(Q "select count(*) from schedule_imports")
 
 echo; echo "[I-1] zmiany, awizacja (3.7), anulowanie"
 SG1=$(Q "select load_id from shipment_items where shipment_code='SG-01'"); T1=$(Q "select load_id from shipment_items where shipment_code='T-01'")
-$PSQL -c "update loads set plan_load_from='2026-11-10 08:00+01', plan_load_to='2026-11-10 12:00+01' where id='$SG1'" >/dev/null
-R2='[{"code":"SG-01","length_m":18.21,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-11","delivery_date":"2026-11-16"},
-     {"code":"SG-02","length_m":18.5,"width_m":2.45,"height_m":2.45,"qty":7,"total_weight_t":20.74,"load_date":"2026-11-10","delivery_date":"2026-11-15","order_no":"KSH/77"},
-     {"code":"SG-03","length_m":12,"width_m":2.45,"height_m":2.45,"qty":1,"total_weight_t":10,"load_date":"2026-11-12","delivery_date":"2026-11-17"}]'
+$PSQL -c "update loads set plan_load_from=('$D1 08:00'::timestamp at time zone 'Europe/Warsaw'), plan_load_to=('$D1 12:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG1'" >/dev/null
+R2="[{\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1b\",\"delivery_date\":\"$D2b\"},
+     {\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"order_no\":\"KSH/77\"},
+     {\"code\":\"SG-03\",\"length_m\":12,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1c\",\"delivery_date\":\"$D2c\"}]"
 val "podgląd: +1 ~2, krytyczna SG-01, kandydat T-01" $HHL "select jsonb_array_length(r->'added')||'/'||jsonb_array_length(r->'changed')||'/'||(r->'critical'->0->>'code')||'/'||(r->'cancel_candidates'->0->>'code') from ($(IMP "$R2" true)) s(r)" "1/2/SG-01/T-01"
 val "zapis bez zgody na anulowanie: T-01 zostaje" $HHL "select jsonb_array_length(r->'cancelled')||'/'||(r->>'version') from ($(IMP "$R2" false)) s(r)" "0/2" commit
-chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "2026-11-11 2026-11-16 true"
+chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "$D1b $D2b true"
 chk "SG-02: długość 18.50 w pozycji" "$(Q "select length_m from shipment_items where shipment_code='SG-02'")" "18.50"
 chk "SCHEDULE_DATE_CRITICAL dla SG-01" "$(Q "select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL' and load_id='$SG1'")" 1
 chk "powiadomienia w aplikacji: HHL + SCX" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 2
@@ -92,7 +102,7 @@ chk "po błędach: bez nowych transportów" "$(Q "select count(*) from shipment_
 val "pusty plik: 0 kandydatów do anulowania" $HHL "select jsonb_array_length(r->'cancel_candidates') from ($(IMP '[]' true)) s(r)" 0
 
 echo; echo "[B-8-IMP] TYP STANDARD pomijany (ładunek NTG, nie błąd)"
-RS='[{"code":"T-03","cargo_class":"STANDARD","length_m":null,"width_m":null,"height_m":null,"qty":27,"total_weight_t":20.81,"load_date":"2026-10-02","delivery_date":"2026-10-07"}]'
+RS="[{\"code\":\"T-03\",\"cargo_class\":\"STANDARD\",\"length_m\":null,\"width_m\":null,\"height_m\":null,\"qty\":27,\"total_weight_t\":20.81,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
 val "STANDARD bez wymiarów: 0 nowych, skipped 1" $HHL "select jsonb_array_length(r->'added')||'/'||(r->>'skipped_standard') from ($(IMP "$RS" true)) s(r)" "0/1"
 chk "T-03 nie został zapisany" "$(Q "select count(*) from shipment_items where shipment_code='T-03'")" 0
 val "STANDARD z wymiarami — też pominięty, nie błąd" $HHL "select r->>'skipped_standard' from ($(IMP '[{"code":"X","cargo_class":"STANDARD","length_m":10,"width_m":2,"height_m":2}]' true)) s(r)" 1
@@ -122,6 +132,23 @@ err "HHL: INSERT wersji z pominięciem import_schedule odrzucony" $HHL "insert i
 chk "polityki schedule_imports: tylko odczyt (schedule_imports_hhl_read)" "$(Q "select string_agg(polname||':'||polcmd::text, ',') from pg_policy where polrelid='schedule_imports'::regclass")" "schedule_imports_hhl_read:r"
 chk "unikalna para (project_id, version) — dwa importy nie dostaną tej samej wersji" "$(Q "select count(*) from pg_constraint where conrelid='schedule_imports'::regclass and contype='u' and pg_get_constraintdef(oid)='UNIQUE (project_id, version)'")" 1
 V36=$(Q "select coalesce(max(version),0) from schedule_imports where project_id='$P'")
-R36='[{"code":"SG-36-1","length_m":12.0,"width_m":2.45,"height_m":2.45,"qty":1,"total_weight_t":9.5,"load_date":"2026-11-02","delivery_date":"2026-11-06"}]'
+R36="[{\"code\":\"SG-36-1\",\"length_m\":12.0,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":9.5,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
 val "HHL: import_schedule (SECURITY DEFINER) nadal dopisuje kolejną wersję z plikiem i skrótem" $HHL "$(IMP "$R36" false); select version||':'||file_name||':'||file_hash from schedule_imports where project_id='$P' order by version desc limit 1" "$((V36+1)):h.xlsx:abc"
+
+echo; echo "[#384 pkt 4b] import historyczny → quiet_hist, bez critical"
+RH1="[{\"code\":\"IH-IMP\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DH1\",\"delivery_date\":\"$DH2\"}]"
+RH2="[{\"code\":\"IH-IMP\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DH1b\",\"delivery_date\":\"$DH2b\"}]"
+val "IH-IMP: dodanie historycznego" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RH1" false)) s(r)" 1 commit
+LIH=$(Q "select load_id from shipment_items where shipment_code='IH-IMP'")
+$PSQL -c "update loads set status='DELIVERED', carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LIH'" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LIH'; delete from load_events where load_id='$LIH' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL')" >/dev/null
+val "IH-IMP: zmiana daty → quiet_hist + critical false" $HHL "select coalesce(r->'changed'->0->>'quiet_hist','false')||'/'||coalesce(r->'changed'->0->>'critical','true') from ($(IMP "$RH2" false)) s(r)" "true/false" commit
+chk "IH-IMP: bez PLAN_DATES_CHANGED" "$(Q "select count(*)::text from load_events where load_id='$LIH' and event_type='PLAN_DATES_CHANGED'")" "0"
+chk "IH-IMP: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LIH' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+# zmiana istniejącego (regresja SELECT plan_*_date) — tylko IH-IMP w pliku + SG-36-1 żeby nie kasować
+RCHG="[{\"code\":\"IH-IMP\",\"length_m\":18.1,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DH1b\",\"delivery_date\":\"$DH2b\"},
+       {\"code\":\"SG-36-1\",\"length_m\":12.0,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":9.5,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
+val "IH-IMP: zmiana długości na istniejącym → changed" $HHL "select (r->'changed'->0->>'code')||'/'||coalesce(r->'changed'->0->>'quiet_hist','false') from ($(IMP "$RCHG" false)) s(r)" "IH-IMP/true" commit
+chk "IH-IMP: długość 18.10 po zmianie" "$(Q "select length_m::text from shipment_items where shipment_code='IH-IMP'")" "18.10"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

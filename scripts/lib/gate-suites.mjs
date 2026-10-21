@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
-  import: 66,
+  import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
   i30: 10,

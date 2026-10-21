@@ -29,7 +29,8 @@ begin
   end if;
   v_n := l3_ops('LEAD_DAYS')::int;
   v_days := (v_new at time zone 'Europe/Warsaw')::date - (p_now at time zone 'Europe/Warsaw')::date;
-  if v_days < 0 or v_days >= v_n then
+  -- v_new > p_now już wyżej — v_days nie bywa ujemne
+  if v_days >= v_n then
     return;
   end if;
   v_code := public.load_sms_code(p_load.id);
@@ -95,10 +96,13 @@ do $cleanup$
 declare
   r record;
   v_ids uuid[] := '{}';
+  v_lead_ids uuid[] := '{}';
   v_n int;
   v_lead int;
   v_anchor timestamptz;
   v_now timestamptz := now();
+  v_wave_from timestamptz := timestamptz '2026-10-21 09:15:00+00';
+  v_wave_to   timestamptz := timestamptz '2026-10-21 09:30:00+00';
 begin
   v_lead := coalesce(public.l3_ops('LEAD_DAYS')::int, 5);
 
@@ -123,6 +127,7 @@ begin
          where id = r.decision_id and status in ('NEW','ASSIGNED','SNOOZED');
         insert into decision_events (decision_id, actor_id, action, payload)
         values (r.decision_id, null, 'RESOLVE', jsonb_build_object('option', 'AUTO_CLOSED', 'effect', 'AUTO_CLOSED', 'hotfix', '0250'));
+        v_lead_ids := array_append(v_lead_ids, r.decision_id);
         insert into audit_log (user_id, action, entity, entity_id, new_value)
         values (null, 'DECISION_AUTO_CLOSED', 'decisions', r.decision_id::text,
                 jsonb_build_object('reason', 'KSH_DATE_LT_5D poza oknem', 'hotfix', '0250', 'risk_id', r.risk_id));
@@ -153,19 +158,47 @@ begin
        where id = r.id and status in ('NEW','ASSIGNED','SNOOZED');
       insert into decision_events (decision_id, actor_id, action, payload)
       values (r.id, null, 'RESOLVE', jsonb_build_object('option', 'AUTO_CLOSED', 'effect', 'AUTO_CLOSED', 'hotfix', '0250'));
+      v_lead_ids := array_append(v_lead_ids, r.id);
       insert into audit_log (user_id, action, entity, entity_id, new_value)
       values (null, 'DECISION_AUTO_CLOSED', 'decisions', r.id::text,
               jsonb_build_object('reason', 'KSH_DATE_LT_5D poza oknem', 'hotfix', '0250'));
     end if;
   end loop;
 
-  -- pkt 3: TOWER_KSH_CONFLICT z pustym file
+  -- pkt 2: DECISION_OPEN zamykanych KSH_DATE_LT_5D → przeczytane (jak B8)
+  if cardinality(v_lead_ids) > 0 then
+    with marked as (
+      update notifications n
+         set read_at = coalesce(n.read_at, v_now)
+       where n.channel = 'IN_APP'
+         and n.read_at is null
+         and n.template = 'DECISION_OPEN'
+         and (
+           n.payload->>'decision_id' = any (select x::text from unnest(v_lead_ids) x)
+           or n.dedup_key like any (select '%:' || x::text || '%' from unnest(v_lead_ids) x)
+         )
+      returning n.id
+    )
+    insert into audit_log (user_id, action, entity, entity_id, new_value)
+    select null, 'AUDYT17_MARK_READ', 'notifications', 'hotfix-0250-lead',
+           jsonb_build_object(
+             'count', count(*),
+             'notification_ids', coalesce(jsonb_agg(id), '[]'::jsonb),
+             'decision_ids', to_jsonb(v_lead_ids),
+             'hotfix', '0250',
+             'reason', 'KSH_DATE_LT_5D AUTO_CLOSED')
+      from marked;
+  end if;
+
+  -- pkt 3: TOWER_KSH_CONFLICT z pustym file — tylko fala importu v3 (21.10 09:21 UTC)
   for r in
     select d.id
       from decisions d
      where d.type_code = 'TOWER_KSH_CONFLICT'
        and d.status in ('NEW','ASSIGNED','SNOOZED')
        and nullif(btrim(coalesce(d.detail->>'file', '')), '') is null
+       and d.created_at >= v_wave_from
+       and d.created_at < v_wave_to
   loop
     update decisions
        set status = 'RESOLVED', resolution_code = 'AUTO_CLOSED', resolved_at = v_now, updated_at = v_now
@@ -175,7 +208,7 @@ begin
     v_ids := array_append(v_ids, r.id);
     insert into audit_log (user_id, action, entity, entity_id, new_value)
     values (null, 'DECISION_AUTO_CLOSED', 'decisions', r.id::text,
-            jsonb_build_object('reason', 'TOWER_KSH_CONFLICT puste file', 'hotfix', '0250'));
+            jsonb_build_object('reason', 'TOWER_KSH_CONFLICT puste file (import v3)', 'hotfix', '0250'));
   end loop;
 
   if cardinality(v_ids) > 0 then
@@ -190,10 +223,15 @@ begin
          )
       returning n.id
     )
-    select count(*) into v_n from marked;
     insert into audit_log (user_id, action, entity, entity_id, new_value)
-    values (null, 'AUDYT17_MARK_READ', 'notifications', 'hotfix-0250',
-            jsonb_build_object('count', coalesce(v_n, 0), 'decision_ids', to_jsonb(v_ids), 'hotfix', '0250'));
+    select null, 'AUDYT17_MARK_READ', 'notifications', 'hotfix-0250',
+           jsonb_build_object(
+             'count', count(*),
+             'notification_ids', coalesce(jsonb_agg(id), '[]'::jsonb),
+             'decision_ids', to_jsonb(v_ids),
+             'hotfix', '0250',
+             'reason', 'TOWER_KSH_CONFLICT import v3')
+      from marked;
   end if;
 end
 $cleanup$;
@@ -255,6 +293,13 @@ declare
   v_historic boolean := false;
   v_cmap jsonb := '{}'::jsonb;
   v_has_hhl_col boolean := false;
+  v_new_load_date date;
+  v_new_del_date date;
+  v_new_load_from timestamptz;
+  v_new_load_to timestamptz;
+  v_new_del_from timestamptz;
+  v_new_del_to timestamptz;
+  v_today date := (now() at time zone 'Europe/Warsaw')::date;
   v_fnames    text[] := array['item_type','cargo_class','length_m','width_m','height_m','unit_weight_t','qty','total_weight_t',
                               'load_date','load_time','delivery_date','delivery_time','order_no','assembly_seq'];
 begin
@@ -325,6 +370,7 @@ begin
   -- nowe i zmienione
   for r in
     select i.code, i.row as inc, si.id as item_id, si.load_id, l.status, l.carrier_org_id, l.hhl_order_no,
+           l.plan_load_date, l.plan_delivery_date,
            l.plan_load_from, l.plan_load_to, l.plan_delivery_from, l.plan_delivery_to,
            coalesce(l.plan_dates_status = 'POTWIERDZONA', false) as confirmed,
            (l.plan_load_from is not null or l.plan_load_to is not null
@@ -428,12 +474,16 @@ begin
             and nullif(btrim(r.inc->>'delivery_time'), '') is not null
             and r.plan_delivery_from is null and r.plan_delivery_to is null)
       );
-    -- HOTFIX #384 pkt 4b: historyczne / dostarczone — cicho (przed critical JSON).
+    -- HOTFIX #384 pkt 4b: cicho gdy status ≥ DELIVERED albo stara i nowa dostawa minione.
     v_historic := (
-      (r.plan_delivery_date is not null
-        and r.plan_delivery_date < (now() at time zone 'Europe/Warsaw')::date)
-      or (r.status is not null
+      (r.status is not null
         and public.load_status_rank(r.status) >= public.load_status_rank('DELIVERED'::public.load_status))
+      or (
+        r.plan_delivery_date is not null
+        and r.plan_delivery_date < v_today
+        and nullif(btrim(r.inc->>'delivery_date'), '') is not null
+        and (r.inc->>'delivery_date')::date < v_today
+      )
     );
     v_crit := case
       when v_quiet_fill or v_historic then '{}'::text[]
@@ -474,22 +524,63 @@ begin
           perform set_config('tower.bulk_quiet', 'on', true);
         end if;
         -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
+        v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
+        v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
+        v_new_load_from := case
+          when nullif(btrim(r.inc->>'load_time'), '') is not null
+            then public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw')
+          when 'load_time' = any (v_fields) then null
+          else r.plan_load_from end;
+        -- pkt 4a: przy zmianie godziny — „do” tylko ta sama data i do > nowe od;
+        -- puste od → puste do; inaczej przesuń / wyczyść. Bez godziny w pliku — okno nietknięte.
+        if nullif(btrim(r.inc->>'load_time'), '') is not null or 'load_time' = any (v_fields) then
+          v_new_load_to := case
+            when v_new_load_from is null then null
+            when r.plan_load_to is not null
+                 and (r.plan_load_to at time zone 'Europe/Warsaw')::date = v_new_load_date
+                 and r.plan_load_to > v_new_load_from
+              then r.plan_load_to
+            when r.plan_load_to is not null and r.plan_load_from is not null and v_new_load_date is not null then
+              r.plan_load_to + make_interval(days => (
+                v_new_load_date - (r.plan_load_from at time zone 'Europe/Warsaw')::date))
+            else null
+          end;
+          if v_new_load_to is not null and v_new_load_to <= v_new_load_from then
+            v_new_load_to := null;
+          end if;
+        else
+          v_new_load_to := r.plan_load_to;
+        end if;
+        v_new_del_to := case
+          when nullif(btrim(r.inc->>'delivery_time'), '') is not null
+            then public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm')
+          when 'delivery_time' = any (v_fields) then null
+          else r.plan_delivery_to end;
+        if nullif(btrim(r.inc->>'delivery_time'), '') is not null or 'delivery_time' = any (v_fields) then
+          v_new_del_from := case
+            when v_new_del_to is null then null
+            when r.plan_delivery_from is not null
+                 and (r.plan_delivery_from at time zone 'Europe/Stockholm')::date = v_new_del_date
+                 and r.plan_delivery_from < v_new_del_to
+              then r.plan_delivery_from
+            when r.plan_delivery_from is not null and r.plan_delivery_to is not null and v_new_del_date is not null then
+              r.plan_delivery_from + make_interval(days => (
+                v_new_del_date - (r.plan_delivery_to at time zone 'Europe/Stockholm')::date))
+            else null
+          end;
+          if v_new_del_from is not null and v_new_del_from >= v_new_del_to then
+            v_new_del_from := null;
+          end if;
+        else
+          v_new_del_from := r.plan_delivery_from;
+        end if;
         update loads set
-          plan_load_date = coalesce((r.inc->>'load_date')::date, plan_load_date),
-          plan_delivery_date = coalesce((r.inc->>'delivery_date')::date, plan_delivery_date),
-          plan_load_from = case
-            when nullif(btrim(r.inc->>'load_time'), '') is not null
-              then public.schedule_cell_ts(coalesce((r.inc->>'load_date')::date, plan_load_date), r.inc->>'load_time', 'Europe/Warsaw')
-            when 'load_time' = any (v_fields) then null
-            else plan_load_from end,
-          -- HOTFIX #384 pkt 4a: brak godziny do w pliku nie kasuje istniejacej.
-          plan_load_to = plan_load_to,
-          plan_delivery_from = plan_delivery_from,
-          plan_delivery_to = case
-            when nullif(btrim(r.inc->>'delivery_time'), '') is not null
-              then public.schedule_cell_ts(coalesce((r.inc->>'delivery_date')::date, plan_delivery_date), r.inc->>'delivery_time', 'Europe/Stockholm')
-            when 'delivery_time' = any (v_fields) then null
-            else plan_delivery_to end,
+          plan_load_date = coalesce(v_new_load_date, plan_load_date),
+          plan_delivery_date = coalesce(v_new_del_date, plan_delivery_date),
+          plan_load_from = v_new_load_from,
+          plan_load_to = v_new_load_to,
+          plan_delivery_from = v_new_del_from,
+          plan_delivery_to = v_new_del_to,
           order_no = coalesce(r.inc->>'order_no', order_no),
           updated_at = now()
          where id = r.load_id;
