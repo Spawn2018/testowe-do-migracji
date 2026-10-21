@@ -244,15 +244,12 @@ comment on function public.sms_unload_confirm_scan(timestamptz) is
   '#405: wyłączone — SMS tylko ZONE_* / TEST.';
 
 -- F7: cron tower-sms-rozladunek wołał skan co 10 min → zawsze 0; wyłączamy harmonogram.
+-- Brama lokalna (tower_boot) bez rozszerzenia pg_cron — bez schematu cron (jak 0069).
 do $$
 begin
-  perform cron.unschedule('tower-sms-rozladunek');
-exception
-  when undefined_table then null; -- brak pg_cron (stub CI)
-  when others then
-    if sqlerrm not like '%could not find valid entry%' and sqlerrm not like '%tower-sms-rozladunek%' then
-      raise;
-    end if;
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.unschedule(jobid) from cron.job where jobname = 'tower-sms-rozladunek';
+  end if;
 end $$;
 
 -- ---------------------------------------------------------------------------

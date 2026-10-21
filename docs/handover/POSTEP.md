@@ -3992,3 +3992,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #421/#422 (Spawn2018, `dla-cursora`+`pilne`) — PLAN §3/§4/§8, dopiski `D-20261022-0105-01.md` / `D-20261022-0113-01.md`; #400→0260, #409→0261, B5→0262, #413→0263.
 - Scalanie: #424 CI zielone na `780ff80`; F7 „jeszcze nie” → poprawka B1 (TEST na strefy) + B2 (pilot tylko ZONE_*) + unschedule `tower-sms-rozladunek`; i2 628→632. #408 wstrzymane. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** PR #424 — F7 runda 2; potem #421.
+
+## 2026-10-22 01:50 — #405 CI: pg_cron guard; #425+#426 w planie
+
+- Skrzynka: #425 (`pilne`, kolejka) + #426 (import `p_quiet`) — PLAN §4/§8, dopiski `D-20261022-0130-01.md` / `D-20261022-0138-01.md`. Kolejność: #405→#421→#426(0259)→#400(0260)→#384(0261)→#409(0262)→#413(0263)→#422(0264)→#412→B5(0265).
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #424 `db` FAIL: `schema cron does not exist` przy `cron.unschedule` w tower_boot → guard `pg_extension`. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — poprawka CI; potem F7.
