@@ -523,16 +523,19 @@ IMPHIST() { echo "select import_schedule('$P', '$(ROWHIST $1 $2)'::jsonb, '{}'::
 IMPHIST2() { echo "select import_schedule('$P', '$(ROWHIST2 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"ih.xlsx\"}'::jsonb, $3)"; }
 val "IH-1: transport historyczny" $HHL "select jsonb_array_length(r->'added') from ($(IMPHIST $DIH1 $DIH2 false)) s(r)" 1 commit
 LH=$(Q "select load_id from shipment_items where shipment_code='IH-1'")
-$PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003', status='DELIVERED' where id='$LH'" >/dev/null
-$PSQL -c "delete from notifications where load_id='$LH'; delete from load_events where load_id='$LH' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL'); delete from decisions where load_id='$LH'; delete from risk_signals where load_id='$LH'" >/dev/null
+# status przez replica — bez load_status_set; inaczej PLANNED z minioną datą → 2 ryzyka w l3_scan (jak L7/A1)
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003', status='DELIVERED' where id='$LH'; set session_replication_role=origin" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LH'; delete from load_events where load_id='$LH' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL'); delete from decision_events where decision_id in (select id from decisions where load_id='$LH'); delete from decisions where load_id='$LH'; delete from risk_signals where load_id='$LH'" >/dev/null
 val "IH-1: zmiana daty na historycznym → quiet_hist" $HHL "select coalesce(r->'changed'->0->>'quiet_hist','false')||'/'||coalesce(r->'changed'->0->>'critical','true') from ($(IMPHIST2 $DIH1b $DIH2b false)) s(r)" "true/false" commit
 chk "IH-1: bez PLAN_DATES_CHANGED" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='PLAN_DATES_CHANGED'")" "0"
 chk "IH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
-# sprzątanie — IW-1/IH-1 nie mogą psuć l3_scan w części 3 (załadunek za 54 h)
-$PSQL -c "delete from notifications where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
-  delete from load_events where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
-  delete from risk_signals where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
-  delete from decisions where load_id in (select load_id from shipment_items where shipment_code in ('IW-1','IH-1'));
+# sprzątanie — IW-1/IH-1 nie mogą psuć l3_scan w części 3 (załadunek za 54 h); decision_events przed decisions
+$PSQL -v ON_ERROR_STOP=1 -c "
+  delete from notifications where load_id in ('$LW','$LH');
+  delete from load_events where load_id in ('$LW','$LH');
+  delete from risk_signals where load_id in ('$LW','$LH');
+  delete from decision_events where decision_id in (select id from decisions where load_id in ('$LW','$LH'));
+  delete from decisions where load_id in ('$LW','$LH');
   delete from shipment_items where shipment_code in ('IW-1','IH-1');
   delete from loads where id in ('$LW','$LH')" >/dev/null
 
@@ -681,6 +684,8 @@ $PSQL -c "insert into sailings (id, project_id, vessel_id, route, departure_at, 
  on conflict (id) do update set departure_at=excluded.departure_at, arrival_at=excluded.arrival_at, status='ZAPLANOWANY'" >/dev/null
 # L1 bez okna awizacji — inaczej NO_SAILING/NO_TRACKING L1 psuje oczekiwane „1” z l3_scan.
 $PSQL -c "set session_replication_role=replica; update loads set plan_load_from=null, plan_load_date=null where id='$L1'; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', plan_load_date=(now() + interval '30 hours')::date, driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null, sailing_id='66666666-0000-0000-0000-00000000a21a', telematics_vehicle_id='rio:i21-test' where id='$L2'" >/dev/null
+# Izolacja jak L7/A1: importy części 2 (D18/IQH/IW/IH) poza L1/L2 nie mogą dawać awizacji+dokumentów w l3_scan.
+$PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where project_id='$P' and id not in ('$L1','$L2') and status not in ('CANCELLED','DELIVERED','UNLOADED','READY_TO_INVOICE','INVOICED'); set session_replication_role=origin" >/dev/null
 chk "progi awizacji i dokumentów tylko w Opcjach; duplikaty DRIVER/VEHICLE/DOCS usunięte" "$(Q "select (select value_num::int from ops_thresholds where key='AWIZ_EARLY_H')||'/'||(select value_num::int from ops_thresholds where key='AWIZ_LATE_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_WARN_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_CRIT_H')||'/'||(select count(*) from resource_deadlines where kind in ('DRIVER','VEHICLE','DOCS'))")" "48/12/24/6/0"
 chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select l3_scan(now() - interval '24 hours')")" 0
 chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select l3_scan()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
