@@ -152,10 +152,10 @@ comment on function public.notify_mark_case_closed(text, uuid, uuid) is
   '#411: zamknięcie decyzji/ryzyka → read_at + SUPPRESSED oczekujących.';
 
 -- ---------------------------------------------------------------------------
--- Klik push (WEB_PUSH) → przeczytany też bliźniak IN_APP (:WP: ↔ :IN:)
--- mark_notifications_read filtruje channel=IN_APP; ekran (#410) przejdzie tu.
+-- mark_notifications_read: dowolny kanał + bliźniak :WP: ↔ :IN: (F7 B3).
+-- Front (dzwonek / ?pn=) woła tę funkcję — bez filtra channel=IN_APP.
 -- ---------------------------------------------------------------------------
-create or replace function public.mark_notification_read_any(p_id bigint)
+create or replace function public.mark_notifications_read(p_ids bigint[])
 returns int
 language plpgsql
 security definer
@@ -163,51 +163,75 @@ set search_path = public
 as $$
 declare
   v_uid uuid := public.current_app_user_id();
-  v_ch text;
-  v_key text;
-  v_twin text;
   v_n int := 0;
   v_k int := 0;
+  r record;
+  v_twin text;
 begin
-  if v_uid is null or p_id is null then
-    return 0;
-  end if;
-
-  select n.channel, n.dedup_key
-    into v_ch, v_key
-    from public.notifications n
-   where n.id = p_id
-     and n.user_id = v_uid;
-  if not found then
+  if v_uid is null or p_ids is null then
     return 0;
   end if;
 
   update public.notifications
      set read_at = coalesce(read_at, now())
-   where id = p_id
+   where id = any(p_ids)
      and user_id = v_uid;
   get diagnostics v_n = row_count;
 
-  if v_ch = 'WEB_PUSH'
-     and v_key is not null
-     and position(':WP:' in v_key) > 0 then
-    v_twin := replace(v_key, ':WP:', ':IN:');
+  for r in
+    select n.id, n.dedup_key
+      from public.notifications n
+     where n.id = any(p_ids)
+       and n.user_id = v_uid
+       and n.dedup_key is not null
+       and (
+         position(':WP:' in n.dedup_key) > 0
+         or position(':IN:' in n.dedup_key) > 0
+       )
+  loop
+    if position(':WP:' in r.dedup_key) > 0 then
+      v_twin := replace(r.dedup_key, ':WP:', ':IN:');
+    else
+      v_twin := replace(r.dedup_key, ':IN:', ':WP:');
+    end if;
     update public.notifications
        set read_at = coalesce(read_at, now())
      where user_id = v_uid
-       and channel = 'IN_APP'
        and dedup_key = v_twin
-       and id is distinct from p_id;
+       and id is distinct from r.id
+       and read_at is null;
     get diagnostics v_k = row_count;
     v_n := v_n + v_k;
-  end if;
+  end loop;
 
   return v_n;
+end $$;
+revoke all on function public.mark_notifications_read(bigint[]) from public, anon;
+grant execute on function public.mark_notifications_read(bigint[]) to authenticated;
+comment on function public.mark_notifications_read(bigint[]) is
+  '#411 F7: własne wpisy (wszystkie kanały) + bliźniak :WP:↔:IN:.';
+
+create or replace function public.mark_notification_read_any(p_id bigint)
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_id is null then
+    return 0;
+  end if;
+  return public.mark_notifications_read(array[p_id]::bigint[]);
 end $$;
 revoke all on function public.mark_notification_read_any(bigint) from public, anon;
 grant execute on function public.mark_notification_read_any(bigint) to authenticated;
 comment on function public.mark_notification_read_any(bigint) is
-  '#411: przeczytanie WEB_PUSH oznacza też bliźniaka IN_APP (:WP:↔:IN:).';
+  '#411: alias — mark_notifications_read(array[id]) z bliźniakiem :WP:↔:IN:.';
+
+-- Indeks pod sprzątanie / bliźniaki przy rosnącej tabeli (F7 drobne)
+create index if not exists notifications_unread_dedup_idx
+  on public.notifications (dedup_key)
+  where read_at is null and dedup_key is not null;
 
 -- ---------------------------------------------------------------------------
 -- decision_notify: RESOLVE nie tworzy DECISION_RESOLVED — oznacza powiązane
@@ -278,6 +302,32 @@ end $$;
 revoke all on function public.decision_notify(uuid, text) from public, anon, authenticated;
 comment on function public.decision_notify(uuid, text) is
   '#411: RESOLVE bez DECISION_RESOLVED; OPEN/ESCALATE z url w payload.';
+
+-- ---------------------------------------------------------------------------
+-- F7 B1: zamknięcie decyzji bezpośrednim UPDATE (bez decision_notify)
+-- → też czyści dzwonek. Enum: NEW/ASSIGNED/SNOOZED/RESOLVED/EXPIRED (bez CANCELLED).
+-- ---------------------------------------------------------------------------
+create or replace function public.trg_decision_mark_case_closed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status is distinct from old.status
+     and new.status in ('RESOLVED', 'EXPIRED')
+     and old.status is distinct from new.status then
+    perform public.notify_mark_case_closed('sprawa zamknięta', new.id, new.risk_id);
+  end if;
+  return new;
+end $$;
+revoke all on function public.trg_decision_mark_case_closed() from public, anon, authenticated;
+
+drop trigger if exists trg_decision_mark_case_closed on public.decisions;
+create trigger trg_decision_mark_case_closed
+  after update of status on public.decisions
+  for each row
+  execute function public.trg_decision_mark_case_closed();
 
 -- ---------------------------------------------------------------------------
 -- Ryzyko: resolve → wszystkie kanały (nie tylko IN_APP RISK_OPEN)

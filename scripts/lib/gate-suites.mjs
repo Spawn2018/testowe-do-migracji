@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
   status: 162, // #398: +2 port z actual_load_at (bez PORT_NO_LOADED)
   storage: 37,
-  money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
+  money: 183, // #411 F7: +4 mark_notifications_read WP↔IN (para + obie strony + cudze); było 179
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
@@ -24,13 +24,13 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
-  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
+  nullguard: 695, // #411: +mark_notification_read_any (CI 695); było 690
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
   'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
-  dec3: 14, // #411: RESOLVE → 0× DECISION_RESOLVED + OPEN przeczytany (było 1 asercja)
+  dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
