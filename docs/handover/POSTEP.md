@@ -3783,3 +3783,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #324 zamknięte (A10). #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`.
 - Scalanie: #378 F7 „gotowe do scalenia” po `bddb2afe`, CI unit/visual/db zielone → merge `19e33069` (0246). #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4** (`pakiet/b4-visible-to`) — migracja **0247**: Cz1 w `set_message_author`, Cz2 `visible_to` w `list_load_messages_ui`; security +9 (131).
+
+## 2026-10-21 08:05 — B4 F7 #380 (jeszcze NIE → poprawki w PR)
+
+- Skrzynka: #323/#322/#320 w planie; bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #380 — CI unit/visual/db zielone na `b15ef7f2`, ale F7 „jeszcze NIE” (05:43 UTC) — bez scalenia. #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.1 (czat)** — F7: CHECK `visible_to`; `list_load_messages_ui` dostęp jak 0208; `mark_load_message_read` z widocznością; testy SCX/puste/SITE/UPDATE/cudzy transport/ALL→KSH; PLAN: cz.2 = dokumenty po scaleniu cz.1.

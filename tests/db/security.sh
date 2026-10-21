@@ -294,15 +294,39 @@ val "B4: HHL widzi wiadomość tylko HHL+SCX" $HHL "select count(*) from load_me
 val "B4: list_ui KSH bez HHL+SCX" $KSH "select count(*) from list_load_messages_ui() where body='b4-tylko-hhl-scx'" 0
 val "B4: list_ui SCX widzi HHL+SCX" $SCX "select count(*) from list_load_messages_ui() where body='b4-tylko-hhl-scx'" 1
 val "B4: list_ui zwraca visible_to bez CLIENT" $HHL "select (visible_to = '{FORWARDER,CARRIER}'::org_kind[])::text from list_load_messages_ui() where body='b4-tylko-hhl-scx'" true
-err "B4: HHL nie ustawi visible_to bez CARRIER" $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-zla', '{FORWARDER,CLIENT}')" "Widoczność|dozwolone|tylko HHL"
+err "B4: HHL nie ustawi visible_to bez CARRIER" $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-zla', '{FORWARDER,CLIENT}')" "Widoczność|dozwolone|tylko HHL|check constraint|visible_to"
+err "B4: puste visible_to odrzucone" $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-puste', '{}')" "Widoczność|dozwolone|check constraint|visible_to"
+err "B4: SITE w visible_to odrzucone" $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-site', '{FORWARDER,CARRIER,SITE}')" "Widoczność|dozwolone|check constraint|visible_to"
+run $SCX "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-scx-hhl-scx', '{FORWARDER,CARRIER}')" commit >/dev/null
+val "B4: SCX wysyła HHL+SCX" $SCX "select count(*) from load_messages where body='b4-scx-hhl-scx'" 1
+val "B4: SCX nie zmieni visible_to (0 wierszy)" $SCX "with u as (update load_messages set visible_to='{FORWARDER,CLIENT,CARRIER}' where body='b4-tylko-hhl-scx' returning 1) select count(*) from u" 0
 run $KSH "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-ksh-force', '{FORWARDER,CARRIER}')" commit >/dev/null
 val "B4: KSH zawsze ALL mimo żądania HHL+SCX" $HHL "select ('CLIENT'::org_kind = any (visible_to))::text from load_messages where body='b4-ksh-force'" true
-# Macierz chat włączona dla KSH — nadal 0 powiadomień przy HHL+SCX (Cz25)
+B4MID=$(sys "select id from load_messages where body='b4-tylko-hhl-scx' limit 1" | tr -d '\r')
+err "B4: KSH nie oznaczy HHL+SCX jako przeczytanej" $KSH "select mark_load_message_read($B4MID)" "niedostęp|42501|Wiadomość"
+# Drugi przewoźnik: list_ui nie pokazuje ALL z cudzego transportu (security definer jak 0208)
+B4W="reset role;
+ insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a014','CAR2B4','Drugi przewoźnik B4','CARRIER')
+   on conflict (id) do nothing;
+ insert into loads (id, project_id, carrier_org_id, order_no) values
+   ('33333333-0000-0000-0000-000000000019','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a014','KSH/B4')
+   on conflict (id) do nothing;
+ insert into load_messages (load_id, author_id, body, visible_to)
+   select '33333333-0000-0000-0000-000000000019', id, 'b4-cudzy-all', '{FORWARDER,CLIENT,CARRIER}'
+     from app_users where email='hhl@test'
+    and not exists (select 1 from load_messages where body='b4-cudzy-all');
+ set local role authenticated;"
+val "B4: list_ui SCX bez wiadomości cudzego transportu" $SCX "$B4W select count(*) from list_load_messages_ui() where body='b4-cudzy-all'" 0
+# Macierz chat: HHL+SCX → 0 dla KSH; ALL → ≥1 (kontrola pozytywna); potem przywróć domyślne
 sys "update notification_matrix set in_app=true, push=true, email=false where event_key='chat' and role='CLIENT_USER'" >/dev/null
-KSHU=$(sys "select id from app_users where email='ksh@test'")
+KSHU=$(sys "select id from app_users where email='ksh@test'" | tr -d '\r')
 run $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-matrix-ksh', '{FORWARDER,CARRIER}')" commit >/dev/null
 out=$(sys "select count(*) from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='b4-matrix-ksh' and n.user_id='$KSHU'")
 [ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    B4: macierz KSH włączona → 0 powiadomień HHL+SCX"; } || { fail=$((fail+1)); echo "  FAIL  B4: powiadomienia KSH (otrzymano: $out)"; }
+run $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-matrix-all', '{FORWARDER,CLIENT,CARRIER}')" commit >/dev/null
+out=$(sys "select count(*) from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='b4-matrix-all' and n.user_id='$KSHU'")
+[ "$out" != "0" ] && { ok=$((ok+1)); echo "  OK    B4: wiadomość ALL → powiadomienie KSH ($out)"; } || { fail=$((fail+1)); echo "  FAIL  B4: brak powiadomienia KSH przy ALL"; }
+sys "update notification_matrix set in_app=true, push=true, email=false where event_key='chat' and role='CLIENT_USER'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

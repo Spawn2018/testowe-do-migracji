@@ -689,7 +689,8 @@ Każdy status osi ma automat. Ręczna zmiana zostaje: Administrator HHL — każ
 - Zapis `visible_to` przy wiadomości czatu i dokumencie oraz sprawdzenie w RLS i w odbiorcach powiadomień.
 - Rozmowa „tylko HHL i SCX” nigdy nie trafia do KSH: ani w czacie, ani w „Przeczytali”, dzwonku, e-mailu, telefonie czy eksporcie.
 - Test `security`: KSH czyta czat transportu → bez wiadomości „tylko HHL i SCX”; macierz z włączonym KSH → 0 powiadomień KSH dla tych wiadomości.
-- **0247 (ten krok):** `set_message_author` pilnuje Cz1 (KSH→ALL; tylko ALL / HHL+SCX); `list_load_messages_ui` zwraca `visible_to` (Cz2). Powiadomienia Cz25 już w C3. UI (`message.send`, `chatVisibilityOn`) — P6.
+- **cz.1 — czat (0247, ten PR):** `set_message_author` pilnuje Cz1 (KSH→ALL; tylko ALL / HHL+SCX); CHECK `load_messages_visible_to_chk`; `list_load_messages_ui` zwraca `visible_to` i filtruje dostęp do transportu jak 0208; `mark_load_message_read` z widocznością. Powiadomienia Cz25 już w C3. UI (`message.send`, `chatVisibilityOn`) — P6.
+- **cz.2 — dokumenty (następny krok po scaleniu cz.1):** `visible_to` przy dokumencie + test eksportu/paczki (F7 #380).
 
 ### B5 · Podgląd (W38 — przeniesione z P6)
 - Według D-20261015-0330-01 pkt 6:
