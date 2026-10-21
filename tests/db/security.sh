@@ -265,6 +265,25 @@ err "B6: SCX nie zapisze rio_secret wprost" $SCX "update loads set rio_secret='t
 sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
 out=$(sys "select rio_secret from loads where id='$L1'")
 echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
+
+echo; echo "[#392] RIO sanitize — zmiana linku czyści / resetuje pola RIO (0252)"
+sys "update loads set telematics_vehicle_id='https://emtrack.eu/app/' where id='$L1'" >/dev/null
+out=$(sys "select (rio_tracking_id is null and rio_check_state is null)::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    392: RIO→emtrack — rio_tracking_id i check_state puste"; } || { fail=$((fail+1)); echo "  FAIL  392 RIO→emtrack pola: $out"; }
+out=$(sys "select rio_secret from loads where id='$L1'")
+[ -z "$out" ] && { ok=$((ok+1)); echo "  OK    392: RIO→emtrack — rio_secret puste"; } || { fail=$((fail+1)); echo "  FAIL  392 rio_secret po emtrack: $out"; }
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-a' where id='$L1'" >/dev/null
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' where id='$L1'" >/dev/null
+out=$(sys "select coalesce(rio_secret,'') || '|' || coalesce(rio_check_state,'') || '|' || coalesce(rio_tracking_id,'') from loads where id='$L1'")
+[ "$out" = "|pending|bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee" ] && { ok=$((ok+1)); echo "  OK    392: RIO A→B bez klucza — secret null, pending, id B"; } || { fail=$((fail+1)); echo "  FAIL  392 A→B: $out"; }
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-same' where id='$L1'" >/dev/null
+sys "update loads set telematics_vehicle_id='rio:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' where id='$L1'" >/dev/null
+out=$(sys "select rio_secret from loads where id='$L1'")
+echo "$out" | grep -qx "klucz-same" && { ok=$((ok+1)); echo "  OK    392: rio: ten sam id — secret bez zmian"; } || { fail=$((fail+1)); echo "  FAIL  392 ten sam rio:: $out"; }
+sys "update loads set telematics_vehicle_id=null where id='$L1'" >/dev/null
+out=$(sys "select (rio_tracking_id is null and rio_secret is null and rio_check_state is null)::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    392: RIO→pusty — pola RIO puste"; } || { fail=$((fail+1)); echo "  FAIL  392 RIO→pusty: $out"; }
+
 out=$(sys "select position('SITE' in pg_get_expr(polqual, polrelid)) from pg_policy where polname='loads_read'")
 [ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    B6: loads_read bez SITE"; } || { fail=$((fail+1)); echo "  FAIL  B6 loads_read: $out"; }
 

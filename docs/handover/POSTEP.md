@@ -3860,3 +3860,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #388 CI db FAIL na `75d153f8` — i2 „za 54 h: bez ryzyka” = 2 (reszta zielona: import 72, g20 15, dec-auto 83). Brak „F7: gotowe”. #382 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: i2 — `decision_events` przed delete decisions; IH status przez replica; przed I-21 anuluj importy poza L1/L2 (jak L7/A1).
+
+## 2026-10-21 16:35 — #392 `pilne`: RIO przyklejony (SG-18); #389 czeka F7
+
+- Skrzynka: #392 (Spawn2018, `dla-cursora`+`pilne`) — przerywa (załadunek dziś). #391 `pilne` w planie jako 0253. #384/#323/#322/#320 w planie.
+- Scalanie: #389 CI zielone (`048cbbf9`, unit/visual/db) — brak `F7: gotowe do scalenia` po ostatnim commicie → bez merge. #390 wygląd bez F7. #382 konflikt. Bez push na `main`.
+- Bieżąca: **HOTFIX #392** (`pakiet/hotfix-392-rio-sanitize`, migracja **0252**) — `loads_rio_sanitize` czyści `rio_*` przy linku nie-RIO; A→B bez klucza; jednorazowe czyszczenie + audit; security +5. D-1535 → 0253, B5 → 0254.
