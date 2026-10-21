@@ -642,24 +642,33 @@ begin
   loop
     update risk_signals set resolved_at = v_now where id = r.risk_id and resolved_at is null;
     v_risk_ids := array_append(v_risk_ids, r.risk_id);
-    perform l3_lapse('SILENT:' || r.load_id, v_now);
+    /* F7: AUTO_CLOSED przed l3_lapse (l3_lapse → EXPIRE; bez pary EXPIRE+RESOLVE). */
     if r.decision_id is not null then
       update decisions
-         set status = 'RESOLVED', resolution_code = 'AUTO_CLOSED', resolved_at = v_now, updated_at = v_now
+         set status = 'RESOLVED',
+             resolution_code = 'AUTO_CLOSED',
+             resolution_note = 'emtrack — brak sygnału naczepy',
+             resolved_at = v_now,
+             updated_at = v_now
        where id = r.decision_id and status in ('NEW','ASSIGNED','SNOOZED');
-      insert into decision_events (decision_id, actor_id, action, payload)
-      values (r.decision_id, null, 'RESOLVE',
-              jsonb_build_object('option', 'AUTO_CLOSED', 'effect', 'AUTO_CLOSED',
-                                 'hotfix', '0254', 'reason', 'emtrack — brak sygnału naczepy'));
-      v_dec_ids := array_append(v_dec_ids, r.decision_id);
-      insert into audit_log (user_id, action, entity, entity_id, new_value)
-      values (null, 'DECISION_AUTO_CLOSED', 'decisions', r.decision_id::text,
-              jsonb_build_object('reason', 'emtrack SILENT', 'hotfix', '0254', 'risk_id', r.risk_id));
+      if found then
+        insert into decision_events (decision_id, actor_id, action, payload)
+        values (r.decision_id, null, 'RESOLVE',
+                jsonb_build_object('option', 'AUTO_CLOSED', 'effect', 'AUTO_CLOSED',
+                                   'hotfix', '0254', 'reason', 'emtrack — brak sygnału naczepy'));
+        v_dec_ids := array_append(v_dec_ids, r.decision_id);
+        insert into audit_log (user_id, action, entity, entity_id, new_value)
+        values (null, 'DECISION_AUTO_CLOSED', 'decisions', r.decision_id::text,
+                jsonb_build_object('reason', 'emtrack — brak sygnału naczepy',
+                                   'hotfix', '0254', 'risk_id', r.risk_id));
+      end if;
     else
       insert into audit_log (user_id, action, entity, entity_id, new_value)
       values (null, 'RISK_AUTO_CLOSED', 'risk_signals', r.risk_id::text,
               jsonb_build_object('reason', 'emtrack SILENT', 'hotfix', '0254'));
     end if;
+    /* Po RESOLVED l3_lapse nie rusza tej decyzji (filtr status). */
+    perform l3_lapse('SILENT:' || r.load_id, v_now);
   end loop;
 
   -- decision-overdue powiązane z zamkniętymi decyzjami NO_POSITION
