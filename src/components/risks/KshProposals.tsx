@@ -3,7 +3,7 @@
  * KSH nie ma listy „Do zrobienia” (E9) — tu tylko te decyzje, z wyborem z katalogu (Przyjmuję / Odrzucam / Eskaluj do HHL).
  * Daty planu zmienia baza po przyjęciu (0251). Pusta lista — nic nie rysujemy.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Load, Locale } from '../../types';
 import type { DecisionsApi } from './useDecisions';
 import type { TodoDecision } from '../../lib/p6Todo';
@@ -25,6 +25,7 @@ function Row({ d, api, locale, load, userRole }: { d: TodoDecision; api: Decisio
   const [msg, setMsg] = useState<string | null>(null);
   /* „Przyjmuję” zmienia daty planu — najpierw potwierdzenie (F7 #390) */
   const [confirmAccept, setConfirmAccept] = useState(false);
+  const acceptBtn = useRef<HTMLButtonElement | null>(null);
   /* Podgląd KSH (B5) — bez rozstrzygania */
   const can = mayResolveDecision(d.deciderRole, userRole) && !isPreviewReadOnly({ viewRole: 'KSH' });
   const pick = async (code: string, needsNote: boolean) => {
@@ -54,15 +55,15 @@ function Row({ d, api, locale, load, userRole }: { d: TodoDecision; api: Decisio
       {can ? (
         <>
           {confirmAccept ? (
-            <div className="rk-acts" role="group" data-ksh-confirm>
-              <p className="rk-muted">{decText(locale, 'dec_ksh_accept_confirm')}{prop ? ` ${prop}.` : ''}</p>
-              <button type="button" className="btn" disabled={busy} data-ksh-confirm-yes onClick={() => void pick('ACCEPT', false)}>{decText(locale, 'dec_ksh_confirm_yes')}</button>
-              <button type="button" className="btn" disabled={busy} onClick={() => setConfirmAccept(false)}>{decText(locale, 'dec_ksh_confirm_no')}</button>
+            <div className="rk-acts" role="group" aria-label={decText(locale, 'dec_ksh_confirm_yes')} data-ksh-confirm>
+              <p className="rk-muted" aria-live="polite">{decText(locale, 'dec_ksh_accept_confirm')}{prop ? ` ${prop}.` : ''}</p>
+              <button type="button" className="btn" disabled={busy} data-ksh-confirm-yes autoFocus onClick={() => void pick('ACCEPT', false)}>{decText(locale, 'dec_ksh_confirm_yes')}</button>
+              <button type="button" className="btn" disabled={busy} onClick={() => { setConfirmAccept(false); requestAnimationFrame(() => acceptBtn.current?.focus()); }}>{decText(locale, 'dec_ksh_confirm_no')}</button>
             </div>
           ) : null}
           <div className="rk-acts" hidden={confirmAccept}>
             {d.options.map((o) => (
-              <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code} onClick={() => void pick(o.code, o.requires_comment)}>
+              <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code} ref={o.code === 'ACCEPT' ? acceptBtn : undefined} onClick={() => void pick(o.code, o.requires_comment)}>
                 {decText(locale, o.label_key, o.code)}{o.requires_comment ? ' *' : ''}
               </button>
             ))}

@@ -45,7 +45,7 @@ const pl: Dict = {
   dec_ksh_accept_confirm: 'Po przyjęciu daty planu zmienią się na:',
   dec_ksh_confirm_yes: 'Tak, przyjmuję',
   dec_ksh_confirm_no: 'Anuluj',
-  dec_ksh_done_accept: 'Przyjęto propozycję — daty planu zmienione, przewoźnik dostał powiadomienie.',
+  dec_ksh_done_accept: 'Przyjęto propozycję — daty planu zmienione, przewoźnik zostanie powiadomiony.',
   dec_ksh_done_other: 'Odpowiedź wysłana.',
   dec_prop_load_date: 'Data załadunku',
   dec_prop_load_time: 'Godzina załadunku (PL)',
