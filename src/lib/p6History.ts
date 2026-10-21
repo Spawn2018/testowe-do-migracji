@@ -12,10 +12,11 @@ import { statusFromDb } from '../data/mappers';
 import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
+import { decText } from '../i18n/decisions';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 import { dayTime, hitChannel } from './statusAxis';
 
-export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
+export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'DECYZJA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
 export const HIST_FILTERS: HistFilter[] = ['ALL', 'ROUTE', 'RES', 'NUM', 'DOC', 'PRICE'];
 type Role = 'HHL' | 'KSH' | 'SCX';
@@ -48,6 +49,8 @@ export function histCat(type: string): HistCat {
   if (type.startsWith('PLAN_DATES') || type.startsWith('SCHEDULE_')) return 'PLAN';
   if (type === 'READY_BLOCKED') return 'PROBA';
   if (type === 'NOTE') return 'NOTATKA';
+  /* #384: rozstrzygnięcia decyzji (decision_apply_effect) */
+  if (type.startsWith('DECISION_')) return 'DECYZJA';
   return 'INNE';
 }
 
@@ -131,6 +134,9 @@ export function visibleFor(e: LoadEvent, role: Role): boolean {
   if (role === 'HHL') return true;
   const cat = histCat(e.type);
   if (cat === 'NUMER') return role !== 'KSH';
+  /* F7 #387: decyzje widzą HHL i decydujący. KSH nie dostaje decyzji (decisions_read), SCX — tylko rozstrzygnięcia SCX
+     (nie widzi decyzji tylko-HHL ani ich komentarzy). */
+  if (cat === 'DECYZJA') return role === 'SCX' && /\/\/\s*SCX\b/.test(String(e.actor ?? ''));
   if (cat !== 'CENA') return true;
   const side = String(e.payload?.side ?? '').toUpperCase();
   return role === 'KSH' ? SIDE_KSH.has(side) : SIDE_SCX.has(side);
@@ -298,6 +304,14 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
       ? [ver ? htp(locale, 'p6b_import_ver', { v: ver }) : null, file ? htp(locale, 'p6b_import_file', { f: file }) : null].filter(Boolean).join(', ')
       : note && !/^KSH import\b/i.test(note) ? note : null;
     return { ...base, head: ht(locale, 'p6b_ev_SCHEDULE_IMPORTED'), from: null, to: null, tail };
+  }
+  if (e.type.startsWith('DECISION_') && htHas(`p6b_ev_${e.type}`)) {
+    /* #384: wybrana opcja i komentarz z rozstrzygnięcia („Przyjmuję · komentarz”) */
+    const opt = str(p.option);
+    const optLabel = opt ? decText(locale, `dec_opt_${opt}`, '') : '';
+    const dnote = str(p.note);
+    const tail = [optLabel, dnote].filter(Boolean).join(' · ') || null;
+    return { ...base, head: ht(locale, `p6b_ev_${e.type}`), from: null, to: null, tail };
   }
   const head = htHas(`p6b_ev_${e.type}`) ? ht(locale, `p6b_ev_${e.type}`)
     : cat === 'CENA' ? ht(locale, e.type.includes('FEE') ? 'p6b_ev_FEE' : 'p6b_ev_PRICE')
