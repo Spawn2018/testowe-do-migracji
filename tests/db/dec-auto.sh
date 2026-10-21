@@ -106,6 +106,9 @@ val "KSH mniej niż 5 dni" "select l3_lead_alarm(now() + interval '4 days', now(
 $PSQL -c "update ops_thresholds set value_num = 3 where key = 'LEAD_DAYS'" >/dev/null
 val "krótsze wyprzedzenie KSH gasi alarm" "select l3_lead_alarm(now() + interval '4 days', now())" f
 $PSQL -c "update ops_thresholds set value_num = 5 where key = 'LEAD_DAYS'" >/dev/null
+# #384 pkt 2: miniona / ≥5 dni — bez alarmu
+val "KSH miniona data → bez alarmu" "select l3_lead_alarm(now() - interval '1 day', now())" f
+val "KSH za 10 dni → bez alarmu" "select l3_lead_alarm(now() + interval '10 days', now())" f
 val "cisza GPS tylko przy źródle i ruchu" "select l3_silent_alarm(now() - interval '30 minutes', now(), false, true)" f
 # B7 / E15: SILENT_MIN = 30; alarm gdy cisza > progu
 val "cisza 45 min przy progu 30" "select l3_silent_alarm(now() - interval '45 minutes', now(), true, true)" t
@@ -141,7 +144,11 @@ val "konflikt numeru HHL → decyzja" "select (l1b_note_conflict('$P','$L','SG-C
 $PSQL -c "select l1b_note_conflict('$P','$L','SG-C','HHL/1','KSH/2')" >/dev/null
 val "konflikt drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:conflict:$P:SG-C:hhl_order_no'" 1
 val "ten sam numer → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C2','HHL/1','HHL/1') is null)" t
+# #384 pkt 3: pusta wartość w pliku ≠ konflikt
+val "konflikt puste file → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C3','HHL/9','') is null)" t
+val "konflikt file null → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C4','HHL/9',null) is null)" t
 val "import woła konflikt" "select (position('l1b_note_conflict' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
+val "import sprawdza column_map hhlOrderNo" "select (position('hhlOrderNo' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
 
 val "plik nieczytelny → decyzja" "select (l1b_ksh_file_unreadable('$P','zly.xlsx') is not null)" t
 $PSQL -c "select l1b_ksh_file_unreadable('$P','zly.xlsx')" >/dev/null

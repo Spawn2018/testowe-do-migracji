@@ -23,9 +23,9 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
-  import: 66,
+  import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 620, // D-1501 F7 #370: miniona dostawa; NO_TRACKING=brak linku (bez chk MANUAL)
+  i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
@@ -37,7 +37,7 @@ export const EXPECTED_LOCAL = {
   hist11: 11,
   workflows: 67,
   insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
-  'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
+  'dec-auto': 83, // #384 pkt 2–3: +5 lead past/far + empty file + column_map
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,

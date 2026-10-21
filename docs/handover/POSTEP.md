@@ -3836,3 +3836,27 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 
 - CI `e6a566f4`: dec-fx 8 OK / 3 FAIL — ACCEPT/KEEP_TOWER zielone; literały `{0,1200}` poza limitem ARE; UUID `…dfs2` nie-hex.
 - Poprawka: UUID `df01`/`df11`/`df02`/`df12`; literały = 255 znaków po `insert into load_events` + wzorzec `'TYP', now()`.
+
+## 2026-10-21 13:25 ? #384 pkt 1 SCALONE; start pkt 2?4
+
+- Skrzynka: #384 pilne (bie??ca); #323/#322/#320 w planie, bez pilne.
+- Scalanie: #386 F7 ?gotowe? po `a35243c` + CI unit/visual/db zielone ? merge `ea71bc9e` (0249). #385 merge `c83f8ced`. #387 merge `d2e09ba9`. #382/#383 bez F7 gotowe. Bez push na `main`.
+- Bie??ca: **HOTFIX #384 pkt 2?4** (`pakiet/hotfix-384-pkt2-4`, migracja **0250**) ? `l3_ksh_lead` tylko przysz?a <5 dni; `l1b` puste file + `orderNo` w mapie; import okno ?do? + hist quiet; AUTO_CLOSED. B5 ? 0251.
+
+## 2026-10-21 14:00 — #384 pkt 2–4: poprawka CI db
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #388 db FAIL — brak F7. #382 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #384 pkt 2–4** — UTF-8, `l3_lead_alarm` przyszła, `quiet_hist`, import.sh daty przyszłości, sprzątanie IW-1/IH-1.
+
+## 2026-10-21 14:15 — #384 pkt 2–4: F7 runda (SELECT, okno, notify)
+
+- Skrzynka: #384 `pilne`; #323/#322/#320 w planie.
+- Scalanie: #388 F7 „jeszcze NIE” (head `0a91474`); db FAIL (brak `plan_*_date` w SELECT → import/g20/i2). #382 bez F7 gotowe. Bez push na `main`.
+- Bieżąca: poprawki F7 w 0250 — SELECT `plan_load_date`/`plan_delivery_date`; okno 4a (ta sama data + do > od); `v_historic` = DELIVERED lub stara+nowa dostawa minione; `notification_ids` + DECISION_OPEN dla lead; pkt 3 zawężony do fali 21.10 09:21 UTC; import.sh daty od `current_date` + hist (+6, oczekiwane 72).
+
+## 2026-10-21 14:30 — #384 pkt 2–4: i2 izolacja 54 h
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #388 CI db FAIL na `75d153f8` — i2 „za 54 h: bez ryzyka” = 2 (reszta zielona: import 72, g20 15, dec-auto 83). Brak „F7: gotowe”. #382 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: i2 — `decision_events` przed delete decisions; IH status przez replica; przed I-21 anuluj importy poza L1/L2 (jak L7/A1).
