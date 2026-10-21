@@ -9,8 +9,9 @@ insert into public.notification_matrix (
 ) values
 ('workflow','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('workflow','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','CLIENT_USER',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
-('workflow','SYSTEM','CARRIER_DISPATCH',true,true,false,false,false,false,false,'Alert z reguły (kreator)'),
+-- SYSTEM tylko HHL (jak notification_matrix_org_kind).
+('workflow','SYSTEM','CLIENT_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
+('workflow','SYSTEM','CARRIER_DISPATCH',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('workflow','SYSTEM','CARRIER_USER',false,false,false,false,false,false,false,'Alert z reguły (kreator)'),
 ('email_budget','SYSTEM','HHL_ADMIN',true,true,false,false,false,false,false,'Budżet e-maili'),
 ('email_budget','SYSTEM','HHL_OPS',true,true,false,false,false,false,false,'Budżet e-maili'),
@@ -53,6 +54,16 @@ comment on function public.notify_person_on(uuid, text, text, boolean, boolean) 
 update public.notification_matrix
    set fixed_email = false, fixed_push = false, fixed_in_app = false
  where fixed_email is true or fixed_push is true or fixed_in_app is true;
+
+-- Przypomnienia płatności i e-maile o datach: domyślnie włączone (wyłączalne w Opcjach).
+update public.notification_matrix
+   set in_app = true, email = true
+ where event_key = 'inv_overdue'
+   and role in ('HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH');
+update public.notification_matrix
+   set email = true
+ where event_key = 'dates'
+   and role in ('HHL_ADMIN', 'HHL_OPS', 'CARRIER_DISPATCH', 'CARRIER_USER');
 
 -- Jak 0237 + SCHEDULE_DATE_CRITICAL → dates; DECISION_ESCALATED_BATCH → dec_late.
 create or replace function public.notify_event_key(p_template text, p_payload jsonb)
@@ -109,6 +120,10 @@ as $$
     when p_template in ('INVOICE_OVERDUE', 'PAYMENT_REMINDER') then 'inv_overdue'
     when p_template = 'FUEL_READING_MISSING' then 'fuel_miss'
     when p_template = 'EMAIL_BUDGET' then 'email_budget'
+    when p_template = 'INSURANCE_EXPIRY' then 'cmr'
+    when p_template = 'L17_BACKLOG' then 'status'
+    when p_template in ('ETA_NOTIFY_KSH', 'DECISION_EMAIL_KSH') then 'status'
+    when p_template = 'KSH_DATE_COUNTER_RESULT' then 'dates'
     when p_template in ('WEEK_CLOSED', 'INVOICE_WEEK') then 'week'
     when p_template like 'FACTOR%' then 'factoring'
     when p_template in ('RISK_OPEN', 'RISK_SEVERITY')
@@ -815,11 +830,15 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Bez user_id: EXTERNAL_MESSAGING / L13_FILL / testy — nie nadpisuj statusu.
+  if NEW.user_id is null then
+    return NEW;
+  end if;
   if NEW.channel = 'EMAIL' then
     if NEW.template in ('AUTH_INVITE', 'AUTH_PASSWORD_RESET') then
       return NEW;
     end if;
-    if NEW.status = 'SUPPRESSED' then
+    if NEW.status in ('SUPPRESSED', 'SENT', 'ERROR', 'CANCELLED') then
       return NEW;
     end if;
     if public.notify_channel_allowed(NEW.user_id, NEW.template, coalesce(NEW.payload, '{}'::jsonb), 'mail') is not true then

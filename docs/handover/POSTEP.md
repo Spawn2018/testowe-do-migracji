@@ -3915,11 +3915,11 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Scalanie: #390 F7 ‚Äûgotowe‚Äù (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone ‚Üí merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bie≈ºƒÖca: **D-1535** PR #396 ‚Äî `db` 62/67 (format `1.1400` + TELM t40 oczekiwa≈Ço 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta ‚Üí 1,14 za D-1535.
 
-## 2026-10-21 18:35 ó #398 `pilne`: szum ryzyk (przerywa B5)
+## 2026-10-21 18:35 ÔøΩ #398 `pilne`: szum ryzyk (przerywa B5)
 
-- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) ó przerywa B5. Wpisane: PLAN ß3/ß4/ß8, dopisek `D-20261021-1820-01.md`. #384 pkt 7ñ8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
+- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) ÔøΩ przerywa B5. Wpisane: PLAN ÔøΩ3/ÔøΩ4/ÔøΩ8, dopisek `D-20261021-1820-01.md`. #384 pkt 7ÔøΩ8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
 - Scalanie: brak PR z `F7: gotowe do scalenia`. #382/#383 bez F7. #397 visual zielone, bez F7. Bez push na `main`.
-- Bieøπca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) ó `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprzπtanie bulk_quiet. B5 õ **0255**.
+- BieÔøΩÔøΩca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) ÔøΩ `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprzÔøΩtanie bulk_quiet. B5 ÔøΩ **0255**.
 
 ## 2026-10-21 19:50 ‚Äî #399 F7 sprzƒÖtanie SILENT; #400 w planie; #397 SCALONE
 
@@ -3927,11 +3927,11 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Scalanie: #397 F7 gotowe ‚Üí merge `f4abce86`. #399 CI zielone na `d2548603`, F7 ‚Äûjeszcze nie‚Äù (para EXPIRE+RESOLVE) ‚Üí poprawka wariantu 1. #382 bez F7. Bez push na `main`.
 - Bie≈ºƒÖca: **HOTFIX #398** PR #399 ‚Äî sprzƒÖtanie SILENT: AUTO_CLOSED + `if found` przed `l3_lapse`; pow√≥d ‚Äûemtrack ‚Äî brak sygna≈Çu naczepy‚Äù.
 
-## 2026-10-21 20:20 ó #399 SCALONE; start #402 (jedna bramka powiadomieÒ / 0255)
+## 2026-10-21 20:20 ÔøΩ #399 SCALONE; start #402 (jedna bramka powiadomieÔøΩ / 0255)
 
-- Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) ó wpisane PLAN ß3/ß4/ß8, dopisek `D-20261021-1952-01.md` (0255; #400 õ 0256; B5 õ 0257). #400/#384/#323/#322/#320 w planie.
-- Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) õ merge `6e76bce9` (0254). #398 zamkniÍte. #401/#403/#382 bez F7. Bez push na `main`.
-- Bieøπca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) ó `notify_person_on` bez ominiÍcia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramkÍ; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
+- Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) ÔøΩ wpisane PLAN ÔøΩ3/ÔøΩ4/ÔøΩ8, dopisek `D-20261021-1952-01.md` (0255; #400 ÔøΩ 0256; B5 ÔøΩ 0257). #400/#384/#323/#322/#320 w planie.
+- Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) ÔøΩ merge `6e76bce9` (0254). #398 zamkniÔøΩte. #401/#403/#382 bez F7. Bez push na `main`.
+- BieÔøΩÔøΩca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) ÔøΩ `notify_person_on` bez ominiÔøΩcia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramkÔøΩ; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
 
 ## 2026-10-21 20:40 ‚Äî #402 CI fix; #405 wpisane (SMS strefy / 0256)
 
@@ -3939,8 +3939,14 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Scalanie: brak `F7: gotowe do scalenia`. #406 `db` czerwone (workflow poza bramkƒÖ, c16/l13/c3) ‚Äî poprawka w tym przebiegu. Bez push na `main`.
 - Bie≈ºƒÖca: **HOTFIX #402** PR #406 ‚Äî `WORKFLOW_ALERT`‚Üí`workflow` w macierzy; c16 w≈ÇƒÖcza mail `dates`; l13 w≈ÇƒÖcza mail `dec_new` dla KSH; c3 asercja po `user_id`. Potem #405.
 
-## 2026-10-21 20:50 ó #402 F7 (firma/trigger/push); skrzynka #411/#409/#412; scalenia wyglπdu
+## 2026-10-21 20:50 ÔøΩ #402 F7 (firma/trigger/push); skrzynka #411/#409/#412; scalenia wyglÔøΩdu
 
-- Skrzynka: #411 `pilne` õ PLAN + `D-20261021-2038-01.md` (**0256**); #405õ**0257**; #400õ**0258**; #409 õ `D-20261021-2030-01.md` (**0259**); #412 õ `D-20261021-2040-01.md` (po B5); B5õ**0260**.
-- Scalanie: #407, #401, #404 ó `F7: gotowe do scalenia` po ostatnim commicie, CI zielone õ merge. #408 wstrzymane. #406 F7 Ñjeszcze nieî õ poprawka. Bez push na `main`.
-- Bieøπca: **HOTFIX #402** PR #406 ó `notification_matrix_org_kind` w bramce; `trg_notifications_gate` IN_APP/EMAIL; `notify_push_still_allowed` + web-push-send; push nie tylko krytyczne; `email_budget`/`fuel_miss`; c3 31 kluczy + test firmy; c16 dedup fallback.
+- Skrzynka: #411 `pilne` ÔøΩ PLAN + `D-20261021-2038-01.md` (**0256**); #405ÔøΩ**0257**; #400ÔøΩ**0258**; #409 ÔøΩ `D-20261021-2030-01.md` (**0259**); #412 ÔøΩ `D-20261021-2040-01.md` (po B5); B5ÔøΩ**0260**.
+- Scalanie: #407, #401, #404 ÔøΩ `F7: gotowe do scalenia` po ostatnim commicie, CI zielone ÔøΩ merge. #408 wstrzymane. #406 F7 ÔøΩjeszcze nieÔøΩ ÔøΩ poprawka. Bez push na `main`.
+- BieÔøΩÔøΩca: **HOTFIX #402** PR #406 ÔøΩ `notification_matrix_org_kind` w bramce; `trg_notifications_gate` IN_APP/EMAIL; `notify_push_still_allowed` + web-push-send; push nie tylko krytyczne; `email_budget`/`fuel_miss`; c3 31 kluczy + test firmy; c16 dedup fallback.
+
+## 2026-10-21 21:15 ‚Äî #402 db: bramka bez user_id; #410/#403 SCALONE; #413 w planie
+
+- Skrzynka: #413 `pilne` ‚Äî wpisane PLAN ¬ß3/¬ß4/¬ß8 + `D-20261021-2057-01.md` (po #402/#411 ‚Üí **0261** po B5). #402 bie≈ºƒÖca; #411/#405/#400/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #410 F7 gotowe ‚Üí merge `e27ce061`; #403 F7 gotowe ‚Üí merge `e1dd2ef9`. #406 `db` FAIL (status/money/import/i2/dec2/insurance/l13) ‚Äî trigger nadpisywa≈Ç L13_FILL bez `user_id` + brak mapowa≈Ñ szablon√≥w. #408 wstrzymane. #414 bez F7. Bez push na `main`.
+- Bie≈ºƒÖca: **HOTFIX #402** PR #406 ‚Äî `trg` skip przy `user_id` null / status SENT; mapowania `INSURANCE_EXPIRY`/`L17_BACKLOG`/`ETA_NOTIFY_KSH`/`KSH_DATE_COUNTER_RESULT`; `inv_overdue`+`dates.email` domy≈õlnie on; workflow CLIENT/CARRIER off.
