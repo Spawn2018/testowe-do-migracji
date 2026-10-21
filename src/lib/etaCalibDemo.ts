@@ -56,7 +56,7 @@ function quantile(xs: number[], q: number): number {
   return s[lo] + (s[Math.min(lo + 1, s.length - 1)] - s[lo]) * (pos - lo);
 }
 
-function measured(code: string, name: string, currentMin: number, values: number[]): CalibSegment {
+export function measured(code: string, name: string, currentMin: number, values: number[]): CalibSegment {
   const n = values.length;
   if (n < CALIB_NEEDED) return { code, name, currentMin, verdict: 'few', medianMin: null, spreadMin: null, devPct: null, n };
   const medianMin = round5(quantile(values, 0.5));
@@ -65,7 +65,7 @@ function measured(code: string, name: string, currentMin: number, values: number
   const devPct = Math.round(((medianMin - currentMin) / currentMin) * 100);
   return { code, name, currentMin, verdict: Math.abs(devPct) <= CALIB_SAME_PCT ? 'same' : 'propose', medianMin, spreadMin, devPct, n };
 }
-const fixed = (code: string, name: string, currentMin: number, note: string): CalibSegment => (
+export const fixed = (code: string, name: string, currentMin: number, note: string): CalibSegment => (
   { code, name, currentMin, verdict: 'fixed', medianMin: null, spreadMin: null, devPct: null, n: 0, note }
 );
 

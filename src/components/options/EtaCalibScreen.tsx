@@ -34,7 +34,7 @@ const meanAbs = (xs: Array<number | null>) => {
 };
 const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
 
-export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, onApproved, mark }: {
+export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, onApproved, mark, frozen, onFreeze, note }: {
   locale: Locale;
   data: EtaCalibration;
   readOnly?: boolean;
@@ -44,6 +44,11 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
   approved?: CalibVersion | null;
   onApproved?: (v: CalibVersion) => void;
   mark?: ReactNode;
+  /** Produkcja: zamrożenie kalibracji (`app_parameters.ETA_CALIBRATION_FROZEN`) — przy zamrożeniu nic nie zatwierdzisz. */
+  frozen?: boolean;
+  onFreeze?: (next: boolean) => void;
+  /** Zdanie nad pomiarami (produkcja: czego baza jeszcze nie mierzy). */
+  note?: string;
 }) {
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -94,6 +99,15 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
         </span>
         {mark}
       </div>
+      {frozen !== undefined ? (
+        <div className="ox-count-line" data-cal-frozen={frozen ? 'on' : 'off'}>
+          <label className="ox-switchline">
+            <button type="button" className="ox-switch" role="switch" aria-checked={frozen} disabled={readOnly || !onFreeze} onClick={() => onFreeze?.(!frozen)}><span className="ox-track"><i /></span></button>
+            <span>{t(locale, frozen ? 'cal_frozen_on' : 'cal_frozen_off')}</span>
+          </label>
+        </div>
+      ) : null}
+      {note ? <p className="ox-panel-note cal-note" data-cal-live-note>{note}</p> : null}
 
       <section className="ox-panel" data-cal-obs>
         <div className="ox-panel-hd"><h3>{t(locale, 'cal_obs_h')}</h3></div>
@@ -207,7 +221,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
           ) : (
             <span className="cal-ask">
               <span>{t(locale, 'cal_prop_rule')}</span>
-              <button type="button" className="btn ox-btn" disabled={!onApprove} onClick={() => setAsk(true)} data-cal-approve>{t(locale, 'cal_approve')}</button>
+              <button type="button" className="btn ox-btn" disabled={!onApprove || frozen === true} onClick={() => setAsk(true)} data-cal-approve>{t(locale, 'cal_approve')}</button>
             </span>
           )}
           {failed ? <span className="ox-alert" role="alert">{t(locale, 'cal_failed')}</span> : null}

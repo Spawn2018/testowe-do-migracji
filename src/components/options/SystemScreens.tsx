@@ -3,7 +3,7 @@
  * System › Eksport danych, Zasady transportu › Progi alarmów.
  * Tylko wygląd. Odczyt i zapis (`admin_security_flag_set`, historia, eksport, progi) podłącza wykonawca.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { E49_THR } from '../../i18n/e49Thr';
@@ -31,6 +31,9 @@ export type SecurityFlagRow = {
   by: string | null;
 };
 
+const namedFlags = (locale: Locale, rows: SecurityFlagRow[]) =>
+  rows.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) }));
+
 export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark, blocked }: {
   locale: Locale;
   flags: SecurityFlagRow[];
@@ -40,7 +43,9 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
   /** wyglad/2fa: przełącznik zablokowany z powodem (np. MFA_HHL_ADMIN — konto bez 2FA na dwóch urządzeniach albo sesja bez kodu) */
   blocked?: Partial<Record<string, string>>;
 }) {
-  const [flags, setFlags] = useState(() => initialRaw.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) })));
+  const [flags, setFlags] = useState(() => namedFlags(locale, initialRaw));
+  /* produkcja: po zapisie przychodzi nowy stan z bazy (stan i ostatnia zmiana) */
+  useEffect(() => { setFlags(namedFlags(locale, initialRaw)); }, [initialRaw, locale]);
   const [ask, setAsk] = useState<(SecurityFlagRow & { name: string; does: string }) | null>(null);
   const last = (f: SecurityFlagRow & { name: string }) => `${f.when} · ${f.by ?? t(locale, 'p3c_by_command')}`;
   const confirm = () => {
@@ -107,35 +112,61 @@ export type HistoryEntry = {
   is?: string;
 };
 
-export function HistoryScreen({ locale, entries, techCount, people, areas, range, mark, onDownload }: {
+/** Filtry Historii zmian (produkcja: sterowane — każdy wybór pobiera wpisy z bazy). */
+export type HistoryFilters = { from: string; to: string; who: string; what: string; q: string };
+type Opt = { value: string; label: string };
+
+export function HistoryScreen({ locale, entries, techCount, people, areas, range, mark, onDownload, filters, onFilters, tech: techIn, onTech, onRefresh, busy, note }: {
   locale: Locale;
   entries: HistoryEntry[];
   /** Liczba zmian technicznych ukrytych domyślnie. */
   techCount?: number;
-  people: string[];
-  areas: string[];
+  people: Array<string | Opt>;
+  areas: Array<string | Opt>;
   range: { from: string; to: string };
   mark?: ReactNode;
   onDownload?: (fmt: 'csv' | 'xlsx') => void;
+  /** Produkcja: filtry sterowane z zewnątrz (z polem „Szukaj”). */
+  filters?: HistoryFilters;
+  onFilters?: (f: HistoryFilters) => void;
+  tech?: boolean;
+  onTech?: (on: boolean) => void;
+  onRefresh?: () => void;
+  busy?: boolean;
+  note?: string;
 }) {
-  const [tech, setTech] = useState(false);
+  const [techOwn, setTechOwn] = useState(false);
+  const tech = techIn ?? techOwn;
+  const setTech = (on: boolean) => { setTechOwn(on); onTech?.(on); };
+  const opt = (o: string | Opt): Opt => (typeof o === 'string' ? { value: o, label: o } : o);
+  const f = filters;
+  const set = (patch: Partial<HistoryFilters>) => { if (f) onFilters?.({ ...f, ...patch }); };
   return (
     <div className="ox-hist">
       <div className="ox-filters">
-        <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span><input className="input" type="date" defaultValue={range.from} /></label>
-        <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span><input className="input" type="date" defaultValue={range.to} /></label>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span>{f
+          ? <input className="input" type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} />
+          : <input className="input" type="date" defaultValue={range.from} />}</label>
+        <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span>{f
+          ? <input className="input" type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} />
+          : <input className="input" type="date" defaultValue={range.to} />}</label>
         <label className="ox-field"><span>{t(locale, 'p3c_hist_who')}</span>
-          <select className="input" defaultValue="">
+          <select className="input" {...(f ? { value: f.who, onChange: (e) => set({ who: e.target.value }) } : { defaultValue: '' })}>
             <option value="">{t(locale, 'p3c_hist_all')}</option>
-            {people.map((p) => <option key={p} value={p}>{p}</option>)}
+            {people.map(opt).map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </label>
         <label className="ox-field"><span>{t(locale, 'p3c_hist_what')}</span>
-          <select className="input" defaultValue="">
+          <select className="input" {...(f ? { value: f.what, onChange: (e) => set({ what: e.target.value }) } : { defaultValue: '' })}>
             <option value="">{t(locale, 'p3c_hist_all_what')}</option>
-            {areas.map((a) => <option key={a} value={a}>{a}</option>)}
+            {areas.map(opt).map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
           </select>
         </label>
+        {f ? (
+          <label className="ox-field"><span>{t(locale, 'opt_acc_hist_search')}</span>
+            <input className="input" type="search" value={f.q} placeholder={t(locale, 'opt_acc_hist_search_ph')} onChange={(e) => set({ q: e.target.value })} />
+          </label>
+        ) : null}
       </div>
       <div className="ox-count-line">
         {techCount != null ? (
@@ -164,9 +195,11 @@ export function HistoryScreen({ locale, entries, techCount, people, areas, range
         </ol>
       ) : <p className="ox-empty">{t(locale, 'p3c_hist_empty')}</p>}
       <div className="ox-actions ox-actions-start">
-        <button type="button" className="btn ghost ox-btn" onClick={() => onDownload?.('csv')}>{t(locale, 'p3c_dl_csv')}</button>
-        <button type="button" className="btn ghost ox-btn" onClick={() => onDownload?.('xlsx')}>{t(locale, 'p3c_dl_xlsx')}</button>
+        {onRefresh ? <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={onRefresh}>{t(locale, 'opt_acc_hist_refresh')}</button> : null}
+        <button type="button" className="btn ghost ox-btn" disabled={busy || (!!f && !entries.length)} onClick={() => onDownload?.('csv')}>{t(locale, 'p3c_dl_csv')}</button>
+        <button type="button" className="btn ghost ox-btn" disabled={busy || (!!f && !entries.length)} onClick={() => onDownload?.('xlsx')}>{t(locale, 'p3c_dl_xlsx')}</button>
       </div>
+      {note ? <p className="ox-foot">{note}</p> : null}
     </div>
   );
 }
@@ -176,7 +209,7 @@ export function HistoryScreen({ locale, entries, techCount, people, areas, range
 export type ExportKind = 'loads' | 'hist' | 'risks' | 'fin';
 const EXPORT_KEY: Record<ExportKind, string> = { loads: 'p3c_exp_loads', hist: 'p3c_exp_hist', risks: 'p3c_exp_risks', fin: 'p3c_exp_fin' };
 
-export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
+export function ExportScreen({ locale, kinds, range, fileName, onDownload, onRange, fileNote, busy, labels }: {
   locale: Locale;
   /** Co ta rola może pobrać (Faktury i finanse — tylko HHL; Historia zmian — bez Operacji, E12-1). */
   kinds: ExportKind[];
@@ -184,6 +217,13 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
   /** np. „WatchTower_Transporty_01.10.2026–08.10.2026.xlsx” */
   fileName: (kind: ExportKind) => string;
   onDownload?: (kind: ExportKind, fmt: 'xlsx' | 'csv') => void;
+  /** Produkcja: zakres sterowany (puste pola = wszystko). */
+  onRange?: (r: { from: string; to: string }) => void;
+  /** Zamiast „bez limitu wierszy” (produkcja: limit pobrania). */
+  fileNote?: (kind: ExportKind) => string;
+  busy?: boolean;
+  /** Własna nazwa rodzaju (produkcja: „Sprawy” = decyzje). */
+  labels?: Partial<Record<ExportKind, string>>;
 }) {
   const [kind, setKind] = useState<ExportKind>(kinds[0] ?? 'loads');
   return (
@@ -194,7 +234,7 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
           <div className="ox-seg" role="radiogroup" aria-label={t(locale, 'p3c_exp_what')}>
             {kinds.map((k) => (
               <button key={k} type="button" role="radio" aria-checked={k === kind} onClick={() => setKind(k)}>
-                {t(locale, EXPORT_KEY[k])}{k === 'fin' ? <small> ({t(locale, 'p3c_exp_fin_note')})</small> : null}
+                {labels?.[k] ?? t(locale, EXPORT_KEY[k])}{k === 'fin' ? <small> ({t(locale, 'p3c_exp_fin_note')})</small> : null}
               </button>
             ))}
           </div>
@@ -202,18 +242,22 @@ export function ExportScreen({ locale, kinds, range, fileName, onDownload }: {
         <dt>{t(locale, 'p3c_exp_range')}</dt>
         <dd>
           <div className="ox-range">
-            <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span><input className="input" type="date" defaultValue={range.from} /></label>
-            <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span><input className="input" type="date" defaultValue={range.to} /></label>
+            <label className="ox-field"><span>{t(locale, 'p3c_hist_from')}</span>{onRange
+              ? <input className="input" type="date" value={range.from} onChange={(e) => onRange({ ...range, from: e.target.value })} />
+              : <input className="input" type="date" defaultValue={range.from} />}</label>
+            <label className="ox-field"><span>{t(locale, 'p3c_hist_to')}</span>{onRange
+              ? <input className="input" type="date" value={range.to} onChange={(e) => onRange({ ...range, to: e.target.value })} />
+              : <input className="input" type="date" defaultValue={range.to} />}</label>
           </div>
           <small className="ox-muted">{t(locale, 'p3c_exp_range_note')}</small>
         </dd>
         <dt>{t(locale, 'p3c_exp_cols')}</dt><dd>{t(locale, 'p3c_exp_cols_note')}</dd>
         <dt>{t(locale, 'p3c_exp_who')}</dt><dd>{t(locale, 'p3c_exp_who_note')}</dd>
-        <dt>{t(locale, 'p3c_exp_file')}</dt><dd><span className="ox-file" data-content>„{fileName(kind)}”</span> · {t(locale, 'p3c_exp_no_limit')}</dd>
+        <dt>{t(locale, 'p3c_exp_file')}</dt><dd><span className="ox-file" data-content>„{fileName(kind)}”</span> · {fileNote ? fileNote(kind) : t(locale, 'p3c_exp_no_limit')}</dd>
       </dl>
       <div className="ox-actions ox-actions-start">
-        <button type="button" className="btn ox-btn" onClick={() => onDownload?.(kind, 'xlsx')}>{t(locale, 'p3c_dl_xlsx')}</button>
-        <button type="button" className="btn ghost ox-btn" onClick={() => onDownload?.(kind, 'csv')}>{t(locale, 'p3c_dl_csv')}</button>
+        <button type="button" className="btn ox-btn" disabled={busy} onClick={() => onDownload?.(kind, 'xlsx')}>{t(locale, 'p3c_dl_xlsx')}</button>
+        <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={() => onDownload?.(kind, 'csv')}>{t(locale, 'p3c_dl_csv')}</button>
       </div>
     </div>
   );
@@ -239,24 +283,45 @@ export type ThresholdRow = {
 /** P11 (E21): procent bez odstępu („4%”), inne jednostki z odstępem („30 min”). */
 const withUnit = (v: string, unit: string) => (unit === '%' ? `${v}%` : `${v} ${unit}`);
 
-export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
+/** Przełącznik 0/1 nad progami (produkcja: `import_quiet_hours` — ciche uzupełnienie godzin z pliku KSH). */
+export type ThresholdToggle = { key: string; label: string; note: string; on: boolean };
+
+export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles, onToggle, labels }: {
   locale: Locale;
   rows: ThresholdRow[];
   readOnly?: boolean;
   /** Zapis po potwierdzeniu (wykonawca: admin_ops_threshold_set). */
   onSave?: (key: string, value: number) => void;
   mark?: ReactNode;
+  toggles?: ThresholdToggle[];
+  onToggle?: (key: string, on: boolean) => void;
+  /** Etykieta i zdanie o skutku spoza słownika (produkcja: próg z bazy bez wpisu — nazwa z `label_pl`). */
+  labels?: Partial<Record<string, { label: string; fx: string }>>;
 }) {
   const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(rows.map((r) => [r.key, r.value])));
+  /* produkcja: po zapisie i odświeżeniu przychodzą wartości z bazy */
+  useEffect(() => { setVals(Object.fromEntries(rows.map((r) => [r.key, r.value]))); }, [rows]);
   const [edit, setEdit] = useState<{ key: string; draft: string; ask: boolean } | null>(null);
   const fmt = (n: number) => new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(n);
   const num = (d: string) => Number(d.replace(',', '.'));
   return (
     <div className="ox-thr">
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
+      {toggles?.length ? (
+        <ul className="ox-thr-list" data-thr-toggles>
+          {toggles.map((g) => (
+            <li key={g.key} data-threshold-toggle={g.key} data-on={g.on ? 'on' : 'off'}>
+              <span className="ox-thr-label">{g.label}</span>
+              <span className="ox-thr-val"><span>{g.note}</span></span>
+              <button type="button" className="ox-switch" role="switch" aria-checked={g.on} aria-label={g.label} disabled={readOnly} onClick={() => onToggle?.(g.key, !g.on)}><span className="ox-track"><i /></span></button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <ul className="ox-thr-list">
         {rows.map((r) => {
-          const label = E49_THR[r.key] ?? t(locale, `p3c_thr_${r.key}`);
+          const label = labels?.[r.key]?.label ?? E49_THR[r.key] ?? t(locale, `p3c_thr_${r.key}`);
+          const fx = labels?.[r.key]?.fx ?? E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`);
           const editing = edit?.key === r.key;
           const v = vals[r.key];
           return (
@@ -269,10 +334,10 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark }: {
                   ) : (
                     <label className="ox-thr-input"><input className="input" inputMode="decimal" aria-label={label} value={edit.draft} onChange={(e) => setEdit({ ...edit, draft: e.target.value })} /><span>{r.unit}</span></label>
                   )}
-                  <span className="ox-thr-val"><span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                  <span className="ox-thr-val"><span>— {fx}</span></span>
                 </span>
               ) : (
-                <span className="ox-thr-val"><b data-content>{withUnit(fmt(v), r.unit)}</b> <span>— {E49_THR[`${r.key}_fx`] ?? t(locale, `p3c_thr_${r.key}_fx`)}</span></span>
+                <span className="ox-thr-val"><b data-content>{withUnit(fmt(v), r.unit)}</b> <span>— {fx}</span></span>
               )}
               {readOnly ? null : editing ? (
                 <span className="ox-thr-btns">

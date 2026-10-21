@@ -28,7 +28,8 @@ export type PersonRow = {
   phone: string | null;
   /** „dziś, 08:12” */
   last: string | null;
-  mfa: boolean;
+  /** null = stan nieznany (produkcja: baza nie podaje 2FA innych kont) — „—”. */
+  mfa: boolean | null;
   /** false = konto wyłączone (szare, „Włącz”). */
   active?: boolean;
   /** konto osoby, która ogląda (bez „Wyłącz”, „Działaj jako”). */
@@ -65,7 +66,7 @@ function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
 }
 
-export function UsersScreen({ locale, counts, people, invites, readOnly, mark, onInvite, onAction, onPerson }: {
+export function UsersScreen({ locale, counts, people, invites, readOnly, mark, onInvite, onAction, onPerson, kindsFor }: {
   locale: Locale;
   /** `noPassword` — konta bez ustawionego hasła (podtytuł „Konta i zaproszenia”, obraz E37) */
   counts: { total: number; active: number; withPhone: number; named: number; noPassword?: number };
@@ -76,6 +77,8 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   onInvite?: (v: { first: string; last: string; phone: string; mail: string; kind: AccountKind }) => void;
   onAction?: (id: string, action: string) => void;
   onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void;
+  /** Rodzaje kont do wyboru przy osobie (produkcja: tylko rodzaje firmy tej osoby). Domyślnie wszystkie 5. */
+  kindsFor?: (p: PersonRow) => readonly AccountKind[];
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const firms = (['HHL', 'KSH', 'SCX'] as const).map((f) => ({ f, rows: people.filter((p) => FIRM_OF[p.kind] === f) })).filter((x) => x.rows.length);
@@ -100,7 +103,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
                 <td data-label={t(locale, 'p3c_u_kind')}>{t(locale, `p3c_kind_${p.kind}`)}</td>
                 <td data-label={t(locale, 'p3c_u_tel')} className="ox-nowrap">{p.phone ? <span data-content>{p.phone}</span> : <span className="ox-alert">{t(locale, 'p3c_u_no_phone')}</span>}</td>
                 <td data-label={t(locale, 'p3c_u_last')} data-content>{p.last ?? '—'}</td>
-                <td data-label={t(locale, 'p3c_u_2fa')} className={p.mfa ? 'ox-go' : undefined}>{t(locale, p.mfa ? 'p3c_yes' : 'p3c_no')}</td>
+                <td data-label={t(locale, 'p3c_u_2fa')} className={p.mfa ? 'ox-go' : undefined}>{p.mfa == null ? '—' : t(locale, p.mfa ? 'p3c_yes' : 'p3c_no')}</td>
                 <td className="ox-call-cell">
                   <span className="ox-row-act">
                     {p.phone ? <a className="ox-callbtn" href={telHref(p.phone)} aria-label={t(locale, 'p3c_u_call').replace('{name}', p.name)}><IcoCall /></a> : null}
@@ -113,7 +116,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
               open === p.id && !readOnly ? (
                 <tr key={`${p.id}-act`} className="ox-person-act">
                   <td colSpan={6}>
-                    <PersonActions locale={locale} p={p} onPerson={onPerson} />
+                    <PersonActions locale={locale} p={p} onPerson={onPerson} kinds={kindsFor?.(p) ?? ACCOUNT_KINDS} />
                   </td>
                 </tr>
               ) : null,
@@ -152,14 +155,14 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   );
 }
 
-function PersonActions({ locale, p, onPerson }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void }) {
+function PersonActions({ locale, p, onPerson, kinds }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void; kinds: readonly AccountKind[] }) {
   const [kind, setKind] = useState<AccountKind>(p.kind);
   return (
     <div className="ox-person-panel" data-person-actions={p.id}>
       <label className="ox-field ox-field-inline">
         <span>{t(locale, 'p3c_u_kind')}</span>
         <select className="input" value={kind} disabled={p.self} onChange={(e) => setKind(e.target.value as AccountKind)}>
-          {ACCOUNT_KINDS.map((k) => <option key={k} value={k}>{t(locale, `p3c_role_${k}`)}</option>)}
+          {kinds.map((k) => <option key={k} value={k}>{t(locale, `p3c_role_${k}`)}</option>)}
         </select>
       </label>
       <div className="ox-actions ox-actions-start">
@@ -207,10 +210,24 @@ function InviteForm({ locale, onInvite }: { locale: Locale; onInvite?: (v: { fir
 
 export type LoginRow = { id: string; when: string; who: string; kind: AccountKind | null; ok: boolean; where: string };
 
-export function LoginsScreen({ locale, rows, mark }: { locale: Locale; rows: LoginRow[]; mark?: ReactNode }) {
+export function LoginsScreen({ locale, rows, mark, onRefresh, busy, note }: {
+  locale: Locale;
+  rows: LoginRow[];
+  mark?: ReactNode;
+  /** Produkcja: „Odśwież” (jak dawny dziennik logowań). */
+  onRefresh?: () => void;
+  busy?: boolean;
+  /** Zdanie pod tabelą (produkcja: skąd lista i ile ostatnich logowań). */
+  note?: string;
+}) {
   return (
     <div className="ox-logins">
-      {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
+      {mark || onRefresh ? (
+        <div className="ox-count-line">
+          {onRefresh ? <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={onRefresh} data-logins-refresh>{t(locale, 'opt_acc_authlog_refresh')}</button> : <span />}
+          {mark}
+        </div>
+      ) : null}
       <table className="ox-table ox-cards-phone" data-opt-table="logins">
         <thead><tr><th>{t(locale, 'p3c_l_when')}</th><th>{t(locale, 'p3c_l_who')}</th><th>{t(locale, 'p3c_l_result')}</th><th>{t(locale, 'p3c_l_where')}</th></tr></thead>
         <tbody>
@@ -224,6 +241,8 @@ export function LoginsScreen({ locale, rows, mark }: { locale: Locale; rows: Log
           ))}
         </tbody>
       </table>
+      {rows.length ? null : <p className="ox-empty">{t(locale, 'opt_acc_authlog_empty')}</p>}
+      {note ? <p className="ox-foot">{note}</p> : null}
     </div>
   );
 }
@@ -233,18 +252,34 @@ export function LoginsScreen({ locale, rows, mark }: { locale: Locale; rows: Log
 /** `test` — komunikat próbny (obraz E37: „próbny” po prawej). */
 export type BroadcastHistoryRow = { id: string; when: string; who: string; text: string; line: string; test?: boolean };
 
-export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPublish }: {
+export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPublish, active, onClear, busy }: {
   locale: Locale;
   draft: { text: string; firms: Array<'HHL' | 'KSH' | 'SCX'>; until: string };
   history: BroadcastHistoryRow[];
   readOnly?: boolean;
   mark?: ReactNode;
   onPublish?: (v: { text: string; firms: Array<'HHL' | 'KSH' | 'SCX'>; until: string }) => void;
+  /** Produkcja: komunikat widoczny teraz (baner) i „Zdejmij komunikat”. */
+  active?: { text: string; until: string; firms: string } | null;
+  onClear?: () => void;
+  busy?: boolean;
 }) {
   const [v, setV] = useState(draft);
   const toggle = (f: 'HHL' | 'KSH' | 'SCX') => setV({ ...v, firms: v.firms.includes(f) ? v.firms.filter((x) => x !== f) : [...v.firms, f] });
   return (
     <div className="ox-bcast">
+      {active !== undefined ? (
+        <section className="ox-panel" data-bcast-active={active ? 'on' : 'off'}>
+          <div className="ox-panel-bd">
+            {active ? (
+              <div className="ox-row-act" style={{ justifyContent: 'space-between', width: '100%' }}>
+                <span className="ox-tile-copy"><b>{t(locale, 'opt_acc_bcast_active')}</b><span data-content>„{active.text}” · {active.until} · {active.firms}</span></span>
+                {readOnly || !onClear ? null : <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={onClear}>{t(locale, 'opt_acc_bcast_clear')}</button>}
+              </div>
+            ) : <span className="ox-muted">{t(locale, 'opt_acc_bcast_none')}</span>}
+          </div>
+        </section>
+      ) : null}
       <section className="ox-panel">
         <div className="ox-panel-bd">
           <label className="ox-field"><span>{t(locale, 'p3c_b_text')}</span>
@@ -269,7 +304,7 @@ export function BroadcastScreen({ locale, draft, history, readOnly, mark, onPubl
           {readOnly ? null : (
             <div className="ox-actions">
               <button type="button" className="btn ghost ox-btn">{t(locale, 'p3c_b_preview')}</button>
-              <button type="button" className="btn ox-btn" onClick={() => onPublish?.(v)}>{t(locale, 'p3c_b_publish')}</button>
+              <button type="button" className="btn ox-btn" disabled={busy || !v.text.trim() || !v.firms.length} onClick={() => onPublish?.(v)}>{t(locale, 'p3c_b_publish')}</button>
             </div>
           )}
         </div>

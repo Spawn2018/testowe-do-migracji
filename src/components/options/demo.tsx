@@ -248,7 +248,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           locale={locale}
           mark={mark}
           me={{ first: first ?? '', last: rest.join(' '), phone: me.phone ?? '', mail: me.mail, kind, lastLogin: me.last }}
-          mfa={me.mfa}
+          mfa={me.mfa === true}
           mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '22.09.2026' }] : undefined}
           mfaCode
           onMfaAdd={() => undefined}
