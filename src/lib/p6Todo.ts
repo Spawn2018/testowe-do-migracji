@@ -36,6 +36,8 @@ export interface TodoDecision {
   options: DecisionOption[];
   /** wyglad/W-todo-jedna-sprawa (#384): ryzyko, z którego decyzja powstała (`decisions.risk_id`) */
   riskId?: string | null;
+  /** #384 pkt 5: szczegóły decyzji z bazy (np. `proposal` przy KSH_DATE_COUNTER) */
+  detail?: Record<string, unknown> | null;
 }
 
 export interface TodoIssue {

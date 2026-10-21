@@ -76,7 +76,7 @@ describe('#384 — jedna sprawa zamiast ryzyka bez przycisków', () => {
       id: 'd', type_code: 'KSH_DATE_LT_5D', status: 'NEW', title: 't', due_at: null, escalated_at: null, load_id: 'L', risk_id: 'r1',
       decision_types: null,
     }).riskId).toBe('r1');
-    expect(readFileSync('src/components/risks/useDecisions.ts', 'utf8')).toContain('load_id,risk_id,decision_types(');
+    expect(readFileSync('src/components/risks/useDecisions.ts', 'utf8')).toContain('load_id,risk_id,detail,decision_types(');
     const r = riskFromRow({
       id: 'r2', load_id: 'L', kind: 'JOB_FAILURE', severity: 'HIGH', title: 'Decyzja po terminie', title_key: 'rk_decision_overdue',
       detail: { decision_id: 'd9', type: 'DELIVERY_UNCONFIRMED' }, detected_at: NOW,
