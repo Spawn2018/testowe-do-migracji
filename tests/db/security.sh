@@ -304,19 +304,16 @@ run $KSH "insert into load_messages (load_id, body, visible_to) values ('$L1', '
 val "B4: KSH zawsze ALL mimo żądania HHL+SCX" $HHL "select ('CLIENT'::org_kind = any (visible_to))::text from load_messages where body='b4-ksh-force'" true
 B4MID=$(sys "select id from load_messages where body='b4-tylko-hhl-scx' limit 1" | tr -d '\r')
 err "B4: KSH nie oznaczy HHL+SCX jako przeczytanej" $KSH "select mark_load_message_read($B4MID)" "niedostęp|42501|Wiadomość"
-# Drugi przewoźnik: list_ui nie pokazuje ALL z cudzego transportu (security definer jak 0208)
-B4W="reset role;
- insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a014','CAR2B4','Drugi przewoźnik B4','CARRIER')
-   on conflict (id) do nothing;
+# Drugi przewoźnik: fixture przez sys (commit) — val domyślnie rollback, więc B4W w val ginął przed cz.2
+sys "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a014','CAR2B4','Drugi przewoźnik B4','CARRIER') on conflict (id) do nothing;
  insert into loads (id, project_id, carrier_org_id, order_no) values
    ('33333333-0000-0000-0000-000000000019','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a014','KSH/B4')
    on conflict (id) do nothing;
  insert into load_messages (load_id, author_id, body, visible_to)
    select '33333333-0000-0000-0000-000000000019', id, 'b4-cudzy-all', '{FORWARDER,CLIENT,CARRIER}'
      from app_users where email='hhl@test'
-    and not exists (select 1 from load_messages where body='b4-cudzy-all');
- set local role authenticated;"
-val "B4: list_ui SCX bez wiadomości cudzego transportu" $SCX "$B4W select count(*) from list_load_messages_ui() where body='b4-cudzy-all'" 0
+    and not exists (select 1 from load_messages where body='b4-cudzy-all');" >/dev/null
+val "B4: list_ui SCX bez wiadomości cudzego transportu" $SCX "select count(*) from list_load_messages_ui() where body='b4-cudzy-all'" 0
 # Macierz chat: zapamiętaj → HHL+SCX → 0 dla KSH; ALL → ≥1; przywróć
 B4MAT=$(sys "select coalesce(in_app,false)::text||'|'||coalesce(push,false)::text||'|'||coalesce(email,false)::text from notification_matrix where event_key='chat' and role='CLIENT_USER'" | tr -d '\r')
 B4MAT_IN=$(echo "$B4MAT" | cut -d'|' -f1); B4MAT_PU=$(echo "$B4MAT" | cut -d'|' -f2); B4MAT_EM=$(echo "$B4MAT" | cut -d'|' -f3)
