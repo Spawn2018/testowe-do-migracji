@@ -59,6 +59,8 @@ export interface TodoIssue {
   check?: DeliveredCheck;
   /** wyglad/E49: zamknięty most albo droga — „Objazd czy postój?” (SCX) */
   detour?: DetourCase;
+  /** wyglad/W-todo-jedna-sprawa (#384): id ryzyk schowanych pod tą decyzją — liczą się jak ona (menu, „Moja firma”, linki) */
+  coveredIds?: string[];
 }
 
 export interface TodoInfo { id: string; loadId: string; risk: Risk }
@@ -133,17 +135,26 @@ export function buildTodo({ risks, decisions = [], extras = [], nowIso }: TodoIn
   const infos: TodoInfo[] = [];
   /* wyglad/W-todo-jedna-sprawa (#384): ryzyko z otwartą decyzją to ta sama sprawa — zostaje karta decyzji
      z przyciskami (np. „Późna zmiana daty” pod „KSH zmieniło datę < 5 dni”, „Decyzja po terminie” pod decyzją) */
-  const decIds = new Set(decisions.map((d) => d.id));
-  const decRiskIds = new Set(decisions.map((d) => d.riskId).filter((x): x is string => !!x));
+  /* Chowamy tylko pod decyzją z tej samej listy (widoczną dla konta); DELIVERED_CHECK nie ma własnej karty (L14). */
+  const shown = decisions.filter((d) => d.typeCode !== 'DELIVERED_CHECK');
+  const decIds = new Set(shown.map((d) => d.id));
+  const byRisk = new Map(shown.filter((d) => d.riskId).map((d) => [d.riskId as string, d.id]));
+  const covered = new Map<string, string[]>();
   for (const r of risks) {
-    if (decRiskIds.has(r.id) || (r.decisionId && decIds.has(r.decisionId))) continue;
+    const under = byRisk.get(r.id) ?? (r.decisionId && decIds.has(r.decisionId) ? r.decisionId : null);
+    if (under) {
+      covered.set(under, [...(covered.get(under) ?? []), r.id]);
+      continue;
+    }
     if (r.loadId && isTimeBan(r)) infos.push({ id: r.id, loadId: r.loadId, risk: r });
     else if (isTodoRisk(r)) issues.push(riskIssue(r, nowIso));
   }
   for (const d of decisions) {
     /* D-20261018-1100-01: L14 jest kartą CHECK, nie drugą decyzją DELIVERED_CHECK */
     if (d.typeCode === 'DELIVERED_CHECK') continue;
-    issues.push(decisionIssue(d, nowIso));
+    const di = decisionIssue(d, nowIso);
+    const cov = covered.get(d.id);
+    issues.push(cov ? { ...di, coveredIds: cov } : di);
   }
   issues.push(...extras);
 
@@ -228,8 +239,15 @@ export function scopeCards(
   counted?: ReadonlySet<string>,
 ): TodoCard[] {
   if (scope === 'ALL') return [...cards];
-  const keep = (i: TodoIssue) => (scope === 'FIRM' ? i.owner === org : !!meId && assigneeOf(i.id)?.id === meId);
-  const isCounted = (i: TodoIssue) => !!counted && (counted.has(i.risk?.id ?? '') || !!i.mergedIds?.some((id) => counted.has(id)));
+  const isCounted = (i: TodoIssue) => !!counted && (
+    counted.has(i.risk?.id ?? '')
+    || !!i.mergedIds?.some((id) => counted.has(id))
+    || !!i.coveredIds?.some((id) => counted.has(id))
+  );
+  /* #384: decyzja ze schowanym ryzykiem tej firmy zostaje w „Moja firma” (liczba = menu i Kokpit) */
+  const keep = (i: TodoIssue) => (scope === 'FIRM'
+    ? i.owner === org || isCounted(i)
+    : !!meId && assigneeOf(i.id)?.id === meId);
   /* waga, termin i kolejność z widocznych spraw — karta nie zostaje czerwona przez sprawę innej firmy */
   return cards
     .filter((c) => scope !== 'FIRM' || !counted || c.issues.some(isCounted))

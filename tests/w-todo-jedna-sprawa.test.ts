@@ -6,7 +6,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Risk } from '../src/types';
-import { buildTodo, type TodoDecision } from '../src/lib/p6Todo';
+import { buildTodo, countedFor, scopeCards, type TodoDecision } from '../src/lib/p6Todo';
+import { todoQueue, todoRisks } from '../src/lib/cockpitE9';
 import { decisionFromRow } from '../src/components/risks/useDecisions';
 import { riskFromRow } from '../src/data/mappers';
 
@@ -46,6 +47,28 @@ describe('#384 — jedna sprawa zamiast ryzyka bez przycisków', () => {
       nowIso: NOW,
     });
     expect(cards.flatMap((c) => c.issues.map((i) => i.id))).toContain('late');
+  });
+
+  it('Operacje HHL: „Moja firma” pokazuje tyle kart, ile liczy menu (ryzyko HHL schowane pod decyzją SCX)', () => {
+    const risks = [
+      risk({ id: 'late', kind: 'LATE_DATE_CHANGE', loadId: 'L12', owner: 'HHL', title: 'SG-12: późna zmiana daty' }),
+      risk({ id: 'od', loadId: 'L12', owner: 'HHL', titleKey: 'rk_decision_overdue', decisionId: 'd3', title: 'Decyzja po terminie: SG-12' }),
+    ];
+    const decisions = [dec({ id: 'd1', riskId: 'late' }), dec({ id: 'd3', typeCode: 'DELIVERY_UNCONFIRMED' })];
+    const cards = buildTodo({ risks, decisions, nowIso: NOW });
+    const counted = countedFor('HHL_OPS', todoRisks('HHL', risks, 'HHL_OPS'));
+    const firm = scopeCards(cards, 'FIRM', 'HHL', () => null, null, counted);
+    expect(firm).toHaveLength(todoQueue('HHL', risks, 'HHL_OPS')!.total);
+    expect(firm[0].issues.map((i) => i.id).sort()).toEqual(['d1', 'd3']);
+  });
+
+  it('DELIVERED_CHECK (karta L14) nie chowa ryzyka', () => {
+    const cards = buildTodo({
+      risks: [risk({ id: 'od', loadId: 'L12', titleKey: 'rk_decision_overdue', decisionId: 'dc' })],
+      decisions: [dec({ id: 'dc', typeCode: 'DELIVERED_CHECK', riskId: 'x' })],
+      nowIso: NOW,
+    });
+    expect(cards.flatMap((c) => c.issues.map((i) => i.id))).toContain('od');
   });
 
   it('dane z bazy: risk_id decyzji i detail.decision_id ryzyka', () => {

@@ -15,7 +15,7 @@ type DecRow = {
   due_at: string | null;
   escalated_at: string | null;
   load_id: string | null;
-  risk_id?: string | null;
+  risk_id: string | null;
   decision_types: { title_key: string; options: DecisionOption[]; decider_role: string } | null;
 };
 
