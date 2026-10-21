@@ -78,38 +78,46 @@ export default function LiveRateCard({ readOnly = false }: { readOnly?: boolean 
   const [ver, setVer] = useState(0);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const [formReload, setFormReload] = useState(0);
+
   const refresh = useCallback(async () => {
-    const sb = await getSupabase();
-    const [pr, og] = await Promise.all([
-      sb.from('projects').select('id, code').in('code', [...PROJECT_CODES]),
-      sb.from('organizations').select('id, code, kind').in('code', ['KSH', 'SCX']),
-    ]);
-    const projects = (pr.data ?? []) as { id: string; code: string }[];
-    const projectId = (projects.find((p) => p.code === 'STEGRA_BODEN') ?? projects[0])?.id ?? null;
-    const orgs = (og.data ?? []) as { id: string; code: string; kind: string }[];
-    const org: Record<Side, string | null> = {
-      KSH: orgs.find((o) => o.code === 'KSH' && o.kind === 'CLIENT')?.id ?? null,
-      SCX: orgs.find((o) => o.code === 'SCX' && o.kind === 'CARRIER')?.id ?? null,
-    };
-    if (!projectId) { setView(null); return; }
-    const last = async (side: 'REVENUE' | 'COST', orgId: string | null) => {
-      if (!orgId) return null;
-      const c = await sb.from('rate_cards').select('id, version, valid_from, note, created_at, rate_rules(*)')
-        .eq('project_id', projectId).eq('side', side).eq('org_id', orgId).order('version', { ascending: false }).limit(1);
-      if (c.error) setMsg(c.error.message);
-      return ((c.data ?? []) as DbCard[])[0] ?? null;
-    };
-    const [ksh, scx, log] = await Promise.all([
-      last('REVENUE', org.KSH), last('COST', org.SCX),
-      sb.rpc('rate_card_change_log', { p_project: projectId, p_limit: 30 }),
-    ]);
-    /* autor ostatniej wersji z dziennika zmian (ten sam co w formularzu) */
-    const rows = (log.data ?? []) as { actor: string; entity_id: string; new_value: { version?: number } | null }[];
-    const byOf = (side: 'REVENUE' | 'COST', c: DbCard | null) => rows.find((l) => l.entity_id.split(':')[1] === side && l.new_value?.version === c?.version)?.actor ?? '';
-    setCtx({ projectId, org, card: { KSH: ksh, SCX: scx } });
-    setView(rateViewFromDb(ksh, scx, { ksh: byOf('REVENUE', ksh), scx: byOf('COST', scx) }));
-    setVer((v) => v + 1);
-  }, []);
+    try {
+      const sb = await getSupabase();
+      const [pr, og] = await Promise.all([
+        sb.from('projects').select('id, code').in('code', [...PROJECT_CODES]),
+        sb.from('organizations').select('id, code, kind').in('code', ['KSH', 'SCX']),
+      ]);
+      const projects = (pr.data ?? []) as { id: string; code: string }[];
+      const projectId = (projects.find((p) => p.code === 'STEGRA_BODEN') ?? projects[0])?.id ?? null;
+      const orgs = (og.data ?? []) as { id: string; code: string; kind: string }[];
+      const org: Record<Side, string | null> = {
+        KSH: orgs.find((o) => o.code === 'KSH' && o.kind === 'CLIENT')?.id ?? null,
+        SCX: orgs.find((o) => o.code === 'SCX' && o.kind === 'CARRIER')?.id ?? null,
+      };
+      if (!projectId) { setView(null); return; }
+      const last = async (side: 'REVENUE' | 'COST', orgId: string | null) => {
+        if (!orgId) return null;
+        const c = await sb.from('rate_cards').select('id, version, valid_from, note, created_at, rate_rules(*)')
+          .eq('project_id', projectId).eq('side', side).eq('org_id', orgId).order('version', { ascending: false }).limit(1);
+        if (c.error) setMsg(c.error.message);
+        return ((c.data ?? []) as DbCard[])[0] ?? null;
+      };
+      const [ksh, scx, log] = await Promise.all([
+        last('REVENUE', org.KSH), last('COST', org.SCX),
+        sb.rpc('rate_card_change_log', { p_project: projectId, p_limit: 30 }),
+      ]);
+      /* autor ostatniej wersji z dziennika zmian (ten sam co w formularzu) */
+      const rows = (log.data ?? []) as { actor: string; entity_id: string; new_value: { version?: number } | null }[];
+      const byOf = (side: 'REVENUE' | 'COST', c: DbCard | null) => rows.find((l) => l.entity_id.split(':')[1] === side && l.new_value?.version === c?.version)?.actor ?? '';
+      setCtx({ projectId, org, card: { KSH: ksh, SCX: scx } });
+      setView(rateViewFromDb(ksh, scx, { ksh: byOf('REVENUE', ksh), scx: byOf('COST', scx) }));
+      setVer((v) => v + 1);
+    } catch (e) {
+      /* F7 #415: wyjątek przy odczycie — komunikat zamiast pustego ekranu */
+      setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      setView((v) => (v === undefined ? null : v));
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const save = useCallback(async (side: Side, from: string, prices: Record<string, number>, note: string): Promise<boolean> => {
@@ -123,6 +131,8 @@ export default function LiveRateCard({ readOnly = false }: { readOnly?: boolean 
     if (error) { setMsg(error.message); return false; }
     setMsg(null);
     void refresh();
+    /* pełny formularz pod tabelą bierze nową wersję */
+    setFormReload((n) => n + 1);
     return true;
   }, [readOnly, ctx, locale, refresh]);
 
@@ -134,7 +144,7 @@ export default function LiveRateCard({ readOnly = false }: { readOnly?: boolean 
       {view ? <RateCard key={ver} locale={locale} view={view} today={localDateOf(nowIso)} nowIso={nowIso} readOnly={readOnly} onSave={readOnly ? null : save} /> : null}
       <details className="ol2-more" data-live-rate-more>
         <summary>{t(locale, 'ol2_rate_more')}</summary>
-        <Suspense fallback={null}><RateCardForm readOnly={readOnly} /></Suspense>
+        <Suspense fallback={null}><RateCardForm readOnly={readOnly} reload={formReload} onSaved={() => void refresh()} /></Suspense>
       </details>
     </div>
   );

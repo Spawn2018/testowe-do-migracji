@@ -380,6 +380,8 @@ export function eventToRow(e: Omit<LoadEvent, 'id'>): Record<string, unknown> {
 export interface MessageRow {
   id: number | string; load_id: string; body: string; created_at: string; author_org: string | null;
   author_display?: string | null;
+  /** B4: odbiorcy wiadomości (`org_kind[]`); bez CLIENT = „tylko HHL i SCX” */
+  visible_to?: string[] | null;
   reads?: { userId?: string; user_id?: string; name?: string; org?: string; at?: string }[] | null;
 }
 export function messageFromRow(r: MessageRow): LoadMessage {
@@ -399,6 +401,7 @@ export function messageFromRow(r: MessageRow): LoadMessage {
     author: (r.author_display && String(r.author_display).trim()) || org,
     org,
     text: r.body,
+    ...(Array.isArray(r.visible_to) && r.visible_to.length > 0 && !r.visible_to.includes('CLIENT') ? { visibleTo: 'HHL_SCX' as const } : {}),
     ...(reads?.length ? { reads } : {}),
   };
 }

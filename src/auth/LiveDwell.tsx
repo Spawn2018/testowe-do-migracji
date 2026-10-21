@@ -59,11 +59,17 @@ export default function LiveDwell({ readOnly = false }: { readOnly?: boolean }) 
   const [msg, setMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const sb = await getSupabase();
-    const q = await sb.from('ops_thresholds').select('key,value_num,updated_at').like('key', 'DWELL_%');
-    if (q.error) { setMsg(q.error.message); setRules(null); return; }
-    setRules(dwellFromDb((q.data ?? []) as Row[]));
-  }, []);
+    try {
+      const sb = await getSupabase();
+      const q = await sb.from('ops_thresholds').select('key,value_num,updated_at').like('key', 'DWELL_%');
+      if (q.error) { setMsg(q.error.message); setRules(null); return; }
+      setRules(dwellFromDb((q.data ?? []) as Row[]));
+    } catch (e) {
+      /* F7 #415: wyjątek przy odczycie — komunikat zamiast pustego ekranu */
+      setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      setRules(null);
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const save = useCallback(async (patch: DwellPatch): Promise<boolean> => {

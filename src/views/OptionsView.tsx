@@ -47,7 +47,8 @@ const UsersAdmin = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUT
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
 /* E3 (W-opcje-live-2): Opłata paliwowa na produkcji — ekran z audytu; BafForm (wersje, ceny ręczne, dziennik) rozwijany pod nim */
 const LiveFuel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFuel'))) : null;
-const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/NotificationMatrixForm'))) : null;
+/* E11 (właściciel 21.10.2026 19:52): „Kto co dostaje” na produkcji w wyglądzie z audytu — ten sam ekran co w demo, dane z bazy */
+const NotificationMatrixForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveWhoGets'))) : null;
 /* E33/E-06 (W-opcje-live-2): Cennik na produkcji — tabela symboli z audytu, pełny formularz RateCardForm rozwijany pod nią */
 const LiveRateCard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveRateCard'))) : null;
 /* E42 (W-opcje-live-2): SMS przy miejscach na produkcji — ekran z audytu; wyzwalacze, SMS testowe, bramka i strefy rozwijane pod nim */
@@ -190,7 +191,8 @@ export function OptionsView() {
             <b data-content>{geofenceDisplayName(g.name, locale)}</b>
             <span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span>
           </div>
-          <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} onClick={() => { saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
+          {/* F7 #415: Operacje HHL — tylko podgląd (E12-1A), przełącznik nieaktywny */}
+          <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} disabled={ro} onClick={() => { if (ro) return; saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
             <i />{g.active ? t(locale, 'on') : t(locale, 'off')}
           </button>
         </div>
@@ -215,7 +217,7 @@ export function OptionsView() {
     screens: [
       scr('who', (
         <>
-          {pick('who', NotificationMatrixForm ? block(<NotificationMatrixForm />) : null)}
+          {pick('who', NotificationMatrixForm ? block(<NotificationMatrixForm readOnly={ro} />) : null)}
           <OptionsHowTo locale={locale} k="b6_howto_notif" />
         </>
       ), { right: change }),

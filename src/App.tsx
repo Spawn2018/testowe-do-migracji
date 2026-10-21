@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { usePushOpen } from './lib/pushOpen';
 import { NewVersionBar } from './components/shell/NewVersionBar';
 import { PartBoundary } from './components/shell/PartBoundary';
 import { HashRouter, Routes, Route } from 'react-router-dom';
@@ -67,6 +68,7 @@ function TowerShell() {
 
   usePageSectionDnD();
   useRouteSync();
+  usePushOpen();
   usePhoneTableLabels();
 
   // D14: nowy widok zaczyna się od góry (przewinięcie poprzedniego widoku nie przechodzi dalej).

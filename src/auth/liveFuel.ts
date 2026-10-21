@@ -42,6 +42,9 @@ export interface WeekCalc {
   load_week_end?: string;
   prev_week_start?: string;
   prev_week_end?: string;
+  /** prognoza (przyszły tydzień): `prev_week_*` to tydzień kotwicy (ostatni zamknięty), tydzień wskaźników jest tutaj */
+  load_prev_week_start?: string;
+  load_prev_week_end?: string;
   days_sek?: { day: string; value: number | string; published_on: string }[] | null;
   pubs_pln?: { value: number | string; published_on: string }[] | null;
 }
@@ -50,9 +53,11 @@ const n = (v: unknown): number | null => (v == null || v === '' || !Number.isFin
 
 export function weekFromCalc(c: WeekCalc | null, loadMon: string): FuelWeekView {
   const from = c?.load_week_start ?? loadMon;
-  const idxFrom = c?.prev_week_start ?? addDays(loadMon, -7);
+  /* F7 #415: tydzień wskaźników = tydzień przed tygodniem załadunku — przy prognozie `load_prev_week_*`, nie kotwica */
+  const idxFrom = c?.load_prev_week_start ?? c?.prev_week_start ?? addDays(loadMon, -7);
+  const idxTo = c?.load_prev_week_end ?? c?.prev_week_end ?? addDays(idxFrom, 6);
   return {
-    from, to: c?.load_week_end ?? addDays(from, 6), idxFrom, idxTo: c?.prev_week_end ?? addDays(idxFrom, 6),
+    from, to: c?.load_week_end ?? addDays(from, 6), idxFrom, idxTo,
     okq8: { avg: n(c?.avg_sek), n: Number(c?.n_sek ?? 0), mult: n(c?.mult_sek) },
     orlen: { avg: n(c?.avg_pln), n: Number(c?.n_pln ?? 0), mult: n(c?.mult_pln) },
     applied: n(c?.applied_mult),
@@ -93,9 +98,14 @@ export function runTimes(runs: readonly FuelRun[], date: string): string[] {
 }
 
 /** Dni tygodnia wskaźników (pn–nd, do dziś) z publikacji wyniku `sefs_week_calc`. */
-export function daysFromCalc(c: WeekCalc | null, from: string, today: string, runs: readonly FuelRun[], closed: FuelDayGroup['closed'], missWhy = ''): FuelDayGroup {
+export function daysFromCalc(
+  c: WeekCalc | null, from: string, today: string, runs: readonly FuelRun[], closed: FuelDayGroup['closed'], missWhy = '',
+  /** publikacje Orlen spoza tygodnia (np. sobota poprzedniego) — poniedziałek bierze ostatnią wcześniejszą cenę */
+  extraPln: readonly { value: number | string; published_on: string }[] = [],
+): FuelDayGroup {
   const sek = new Map((c?.days_sek ?? []).map((d) => [d.day, d]));
-  const pln = [...(c?.pubs_pln ?? [])].sort((a, b) => a.published_on.localeCompare(b.published_on));
+  const byPub = new Map([...extraPln, ...(c?.pubs_pln ?? [])].map((x) => [x.published_on, x]));
+  const pln = [...byPub.values()].sort((a, b) => a.published_on.localeCompare(b.published_on));
   const rows: FuelDayRow[] = [];
   for (let i = 6; i >= 0; i--) {
     const date = addDays(from, i);
@@ -127,6 +137,13 @@ export function hhlFuelView(args: {
   params: { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek: Tier[]; tiers_pln: Tier[] } | null;
   cur: WeekCalc | null;
   next: WeekCalc | null;
+  /**
+   * Publikacje tygodnia bieżącego (liczy przyszły tydzień): `sefs_week_for_load` dla załadunku w przyszłym tygodniu
+   * z „dziś” = poniedziałek przyszłego tygodnia — wtedy tydzień wskaźników to tydzień bieżący (prognoza bierze kotwicę).
+   */
+  curDays: WeekCalc | null;
+  /** odczyty Orlen z ostatnich tygodni (`fuel_index_readings`, PLN) — cena obowiązująca w dniu bez publikacji */
+  plnPubs?: readonly { value: number | string; published_on: string }[];
   runs: readonly FuelRun[];
   exampleBaseEur: number;
   /** tekst przy dniu bez ceny („brak publikacji”) */
@@ -154,8 +171,8 @@ export function hhlFuelView(args: {
     fetch: { at: times[0] ?? '—', retries: times.slice(1), today: tDay, yesterday: yDay },
     exampleBaseEur: args.exampleBaseEur,
     days: [
-      daysFromCalc(next, nx.idxFrom, today, runs, null, args.missWhy),
-      daysFromCalc(cur, current.idxFrom, today, runs, { okq8: current.okq8.avg, orlen: current.orlen.avg, mult: current.applied }, args.missWhy),
+      daysFromCalc(args.curDays, mon, today, runs, null, args.missWhy, [...(cur?.pubs_pln ?? []), ...(args.plnPubs ?? [])]),
+      daysFromCalc(cur, current.idxFrom, today, runs, { okq8: current.okq8.avg, orlen: current.orlen.avg, mult: current.applied }, args.missWhy, args.plnPubs ?? []),
     ],
     tiers: { sek: tiersFromDb(params?.tiers_sek), pln: tiersFromDb(params?.tiers_pln) },
   };

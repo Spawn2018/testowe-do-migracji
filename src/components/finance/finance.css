@@ -143,6 +143,8 @@ table.fin-table{width:100%;border-collapse:collapse;font-size:14px;font-variant-
 
 /* W-opcje-live-2 (E39, E44): tabela tygodni opłaty paliwowej mieści się w 1280–1366 px bez przewijania w bok —
    średnia z liczbą publikacji i dopisek stanu łamią się w komórce zamiast poszerzać tabelę */
-.fin-table[data-fuel-table] td.num{white-space:normal}
-.fin-table[data-fuel-table] td{overflow-wrap:anywhere}
+.fin-table[data-fuel-table] td,.fin-table[data-fuel-table] td.num{white-space:normal}
 .fin-table[data-fuel-table] td.num:last-child{white-space:nowrap}
+/* F7 #415: kawałki komórki („19,12 SEK/l (4 publ.)”, „→ ×1,05”) bez łamania w środku */
+.fin-nw{white-space:nowrap}
+.fin-table[data-fuel-table] thead th{white-space:normal}

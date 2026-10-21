@@ -120,7 +120,7 @@ describe('Opłata paliwowa — sefs_week_for_load, sefs_parameters, fuel-prices'
     expect(tiersFromDb([{ lte: 22.5, mult: 1.12 }, { lte: 22.2, mult: 1.11 }])).toEqual([{ from: 0, to: 22.2, mult: 1.11 }, { from: 22.21, to: 22.5, mult: 1.12 }]);
   });
   it('HHL: tydzień, średnie i mnożniki z bazy; dni z publikacji; pobieranie z fuel-prices', () => {
-    const v = hhlFuelView({ today: '2026-10-21', params: { version: 3, valid_from: '2026-09-28', agreed_with_carrier: true, tiers_sek: [], tiers_pln: [] }, cur, next: null, runs, exampleBaseEur: 6900, missWhy: 'brak publikacji' });
+    const v = hhlFuelView({ today: '2026-10-21', params: { version: 3, valid_from: '2026-09-28', agreed_with_carrier: true, tiers_sek: [], tiers_pln: [] }, cur, next: null, curDays: null, runs, exampleBaseEur: 6900, missWhy: 'brak publikacji' });
     expect(v.current).toMatchObject({ from: '2026-10-19', idxFrom: '2026-10-12', applied: 1.14, final: true, okq8: { avg: 23.04, n: 4, mult: 1.14 } });
     expect(v.fetch.at).toBe('07:15');
     expect(v.fetch.today).toEqual({ date: '2026-10-21', okq8: true, orlen: true });
@@ -161,7 +161,12 @@ describe('Opłata paliwowa — sefs_week_for_load, sefs_parameters, fuel-prices'
 
 describe('Finanse — wygląd (E4, E39, E44)', () => {
   it('tabela tygodni opłaty paliwowej łamie komórki zamiast poszerzać tabelę', () => {
-    expect(read('src/components/finance/finance.css')).toContain('.fin-table[data-fuel-table] td.num{white-space:normal}');
+    const c = read('src/components/finance/finance.css');
+    expect(c).toContain('.fin-table[data-fuel-table] td,.fin-table[data-fuel-table] td.num{white-space:normal}');
+    expect(c).toContain('.fin-nw{white-space:nowrap}');
+    const f = read('src/components/finance/FuelWeekTable.tsx');
+    expect(f).toContain('<span className="fin-nw">{full.slice(0, at)}</span> <span className="fin-nw">{full.slice(at + 1)}</span>');
+    expect(f).toContain("const publ = s.n != null ? ` ${ftp(locale, 'p5_fuel_publ', { n: s.n }).trim()}` : '';");
   });
   it('„Nowa faktura” w osobnym panelu pod listą; pozycje na całą szerokość przy węższym panelu', () => {
     const b = read('src/views/BillsPanel.tsx');
@@ -176,5 +181,81 @@ describe('teksty w słowniku', () => {
     for (const k of ['ol2_status_more', 'ol2_src_why_stale', 'ol2_src_smsgw', 'ol2_rate_more', 'ol2_fuel_more', 'ol2_fuel_more_party', 'ol2_sms_more', 'ol2_sms_triggers_h']) {
       expect(hasKey('pl', k), k).toBe(true);
     }
+  });
+});
+
+describe('F7 #415 — opłata paliwowa, prawdziwy kształt odpowiedzi sefs_week_calc (produkcja 21.10.2026)', () => {
+  /* odpowiedzi z bazy (skrócone do pól ekranu): tydzień bieżący (OSTATECZNY), przyszły (PROGNOZA z kotwicą 12.10)
+     i „na poniedziałek 26.10” — jedyne źródło dni tygodnia 19–25.10 */
+  const cur: WeekCalc = {
+    ok: true, final: true, status: 'OSTATECZNY', n_pln: 5, n_sek: 7, avg_pln: 7.11, avg_sek: 23.1, mult_pln: 1.13, mult_sek: 1.14, applied_mult: 1.13,
+    load_week_start: '2026-10-19', load_week_end: '2026-10-25', prev_week_start: '2026-10-12', prev_week_end: '2026-10-18',
+    days_sek: [
+      { day: '2026-10-12', value: 23.14, published_on: '2026-10-12' }, { day: '2026-10-13', value: 22.94, published_on: '2026-10-13' },
+      { day: '2026-10-17', value: 23.04, published_on: '2026-10-16' }, { day: '2026-10-18', value: 23.04, published_on: '2026-10-16' },
+    ],
+    pubs_pln: [{ value: 7.089, published_on: '2026-10-13' }, { value: 7.081, published_on: '2026-10-17' }],
+  };
+  const next: WeekCalc = {
+    ok: true, final: false, status: 'PROGNOZA', n_pln: 5, n_sek: 7, avg_pln: 7.11, avg_sek: 23.1, mult_pln: 1.13, mult_sek: 1.14, applied_mult: 1.13,
+    load_week_start: '2026-10-26', load_week_end: '2026-11-01', prev_week_start: '2026-10-12', prev_week_end: '2026-10-18',
+    load_prev_week_start: '2026-10-19', load_prev_week_end: '2026-10-25',
+    days_sek: cur.days_sek, pubs_pln: cur.pubs_pln,
+  };
+  const curDays: WeekCalc = {
+    ok: true, final: true, status: 'OSTATECZNY', load_week_start: '2026-10-26', prev_week_start: '2026-10-19', prev_week_end: '2026-10-25',
+    days_sek: [
+      { day: '2026-10-19', value: 22.69, published_on: '2026-10-19' }, { day: '2026-10-20', value: 23.09, published_on: '2026-10-20' },
+      { day: '2026-10-21', value: 23.09, published_on: '2026-10-20' }, { day: '2026-10-22', value: 23.09, published_on: '2026-10-20' },
+    ],
+    pubs_pln: [{ value: 7.092, published_on: '2026-10-20' }, { value: 7.127, published_on: '2026-10-21' }],
+  };
+  const v = hhlFuelView({
+    today: '2026-10-21', params: null, cur, next, curDays,
+    plnPubs: [{ value: 7.124, published_on: '2026-10-10' }, { value: 7.081, published_on: '2026-10-17' }],
+    runs: [], exampleBaseEur: 6900, missWhy: 'brak publikacji',
+  });
+  it('bieżący tydzień: OKQ8 23,10 (n=7, ×1,14), Orlen 7,11 (n=5, ×1,13), stosowany ×1,13 ostateczny', () => {
+    expect(v.current).toMatchObject({ from: '2026-10-19', idxFrom: '2026-10-12', idxTo: '2026-10-18', applied: 1.13, final: true,
+      okq8: { avg: 23.1, n: 7, mult: 1.14 }, orlen: { avg: 7.11, n: 5, mult: 1.13 } });
+  });
+  it('przyszły tydzień: wskaźniki z load_prev_week_* (19–25.10), nie z kotwicy (12.10)', () => {
+    expect(v.next).toMatchObject({ from: '2026-10-26', idxFrom: '2026-10-19', idxTo: '2026-10-25', forecast: 1.13, finalOn: '2026-10-26' });
+  });
+  it('dwie listy cen: 19–25.10 (do dziś) z wywołania „na poniedziałek”, 12–18.10 z tygodnia bieżącego', () => {
+    expect(v.days.map((g) => [g.from, g.to, g.rows.map((r) => r.date)])).toEqual([
+      ['2026-10-19', '2026-10-25', ['2026-10-21', '2026-10-20', '2026-10-19']],
+      ['2026-10-12', '2026-10-18', ['2026-10-18', '2026-10-17', '2026-10-16', '2026-10-15', '2026-10-14', '2026-10-13', '2026-10-12']],
+    ]);
+    const d19 = v.days[0].rows.find((r) => r.date === '2026-10-19')!;
+    /* poniedziałek bez publikacji Orlen — cena z soboty 17.10 */
+    expect(d19).toMatchObject({ okq8: 22.69, orlen: 7.081, orlenPub: '2026-10-17' });
+    expect(v.days[0].rows.find((r) => r.date === '2026-10-21')!).toMatchObject({ okq8: 23.09, okq8Pub: '2026-10-20', orlen: 7.127, orlenPub: null });
+    expect(v.days[1].rows.find((r) => r.date === '2026-10-12')!).toMatchObject({ orlen: 7.124, orlenPub: '2026-10-10' });
+    expect(v.days[1].closed).toEqual({ okq8: 23.1, orlen: 7.11, mult: 1.13 });
+  });
+  it('LiveFuel pyta o ceny tygodnia bieżącego osobnym wywołaniem (dziś = poniedziałek przyszłego tygodnia)', () => {
+    expect(read('src/auth/LiveFuel.tsx')).toContain("sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: nextMon, p_today: nextMon })");
+  });
+});
+
+describe('F7 #415 — odczyt i zapis', () => {
+  it('SMS: błąd odczytu — komunikat i zapis wstrzymany', () => {
+    const l = read('src/auth/LiveSmsPlaces.tsx');
+    expect(l).toContain('const err = r.error ?? f.error ?? n.error ?? d.error;');
+    expect(l).toContain("if (blockedRef.current) return { ok: false, error: t(locale, 'ol2_sms_blocked') };");
+    expect(l).toContain('readOnly={readOnly || !!readErr}');
+  });
+  it('wyjątek przy odświeżaniu — komunikat (Cennik, Paliwo, Dopłaty, Stan systemu)', () => {
+    for (const f of ['LiveRateCard', 'LiveFuel', 'LiveDwell', 'LiveStatus']) expect(read(`src/auth/${f}.tsx`), f).toMatch(/\} catch \(e\) \{\s*\/\* F7 #415/);
+  });
+  it('Cennik: zapis w tabeli odświeża formularz i odwrotnie', () => {
+    expect(read('src/auth/LiveRateCard.tsx')).toContain('<RateCardForm readOnly={readOnly} reload={formReload} onSaved={() => void refresh()} />');
+    const f = read('src/auth/RateCardForm.tsx');
+    expect(f).toContain('useEffect(() => { void refresh(); }, [refresh, reload]);');
+    expect(f).toContain('if (!error) { await refresh(); onSaved?.(); }');
+  });
+  it('strefy pod SMS — Operacje HHL tylko podgląd', () => {
+    expect(read('src/views/OptionsView.tsx')).toContain("disabled={ro} onClick={() => { if (ro) return; saveGeofence(");
   });
 });

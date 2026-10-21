@@ -133,21 +133,27 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const sb = await getSupabase();
-    /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
-    const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at').eq('job', job).order('ran_at', { ascending: false }).limit(20)));
-    const err = per.find((r) => r.error)?.error ?? null;
-    const [d, b] = await Promise.all([
-      sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
-      sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),
-    ]);
-    setMsg(err ? err.message : null);
-    setData({
-      runs: per.flatMap((r) => (r.data ?? []) as RunRow[]),
-      devices: (d.data ?? []) as DeviceRow[],
-      backups: (b.data ?? []) as BackupRow[],
-    });
-  }, []);
+    try {
+      const sb = await getSupabase();
+      /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
+      const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at').eq('job', job).order('ran_at', { ascending: false }).limit(20)));
+      const [d, b] = await Promise.all([
+        sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
+        sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),
+      ]);
+      const err = per.find((r) => r.error)?.error ?? d.error ?? b.error ?? null;
+      setMsg(err ? err.message : null);
+      setData({
+        runs: per.flatMap((r) => (r.data ?? []) as RunRow[]),
+        devices: (d.data ?? []) as DeviceRow[],
+        backups: (b.data ?? []) as BackupRow[],
+      });
+    } catch (e) {
+      /* F7 #415: wyjątek przy odczycie — komunikat zamiast stałego „Wczytywanie…” */
+      setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      setData((x) => x ?? { runs: [], devices: [], backups: [] });
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const nowIso = getNowIso();

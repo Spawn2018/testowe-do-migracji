@@ -88,21 +88,38 @@ function Extras({ readOnly }: { readOnly: boolean }) {
 export default function LiveSmsPlaces({ readOnly = false, children }: { readOnly?: boolean; children?: ReactNode }) {
   const locale = useTowerStore((s) => s.locale);
   const rowsRef = useRef<RecRow[]>([]);
+  const blockedRef = useRef(false);
+  const [readErr, setReadErr] = useState<string | null>(null);
+  const [noList, setNoList] = useState(false);
 
   const source: SmsPlacesSource = useMemo(() => ({
     kindsFixed: true,
     setSending: null,
     state: async () => {
-      const sb = await getSupabase();
-      const [r, f, n, d] = await Promise.all([
-        sb.from('sms_zone_recipients').select('list_key,slot,display_name,phone_national,country,active').order('list_key').order('slot'),
-        sb.rpc('sms_external_messaging_state'),
-        sb.from('sms_test_numbers').select('to_e164').order('created_at').limit(1),
-        sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused,day_sent,day_limit'),
-      ]);
-      rowsRef.current = (r.data ?? []) as RecRow[];
-      const testTo = ((n.data ?? []) as { to_e164: string }[])[0]?.to_e164 ?? null;
-      return placesFromDb(rowsRef.current, f.data === true, testTo, (d.data ?? []) as DevRow[], new Date().toISOString());
+      /* F7 #415: błąd któregokolwiek odczytu — komunikat i zapis zablokowany (inaczej nowa osoba nadpisałaby slot,
+         którego nie widać); bez listy odbiorców ekranu nie ma */
+      try {
+        const sb = await getSupabase();
+        const [r, f, n, d] = await Promise.all([
+          sb.from('sms_zone_recipients').select('list_key,slot,display_name,phone_national,country,active').order('list_key').order('slot'),
+          sb.rpc('sms_external_messaging_state'),
+          sb.from('sms_test_numbers').select('to_e164').order('created_at').limit(1),
+          sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused,day_sent,day_limit'),
+        ]);
+        const err = r.error ?? f.error ?? n.error ?? d.error;
+        blockedRef.current = !!err;
+        setReadErr(err ? err.message : null);
+        if (r.error) throw new Error(r.error.message);
+        rowsRef.current = (r.data ?? []) as RecRow[];
+        const testTo = ((n.data ?? []) as { to_e164: string }[])[0]?.to_e164 ?? null;
+        return placesFromDb(rowsRef.current, f.data === true, testTo, (d.data ?? []) as DevRow[], new Date().toISOString());
+      } catch (e) {
+        blockedRef.current = true;
+        const m = e instanceof Error ? e.message : t(locale, 'ol2_read_fail');
+        setReadErr(m);
+        setNoList(true);
+        throw e;
+      }
     },
     users: async () => {
       const sb = await getSupabase();
@@ -111,6 +128,7 @@ export default function LiveSmsPlaces({ readOnly = false, children }: { readOnly
         .map((x): ZoneUser => ({ id: x.id, name: x.full_name || [x.first_name, x.last_name].filter(Boolean).join(' ') || '—', phone: x.phone }));
     },
     savePerson: readOnly ? null : async (place, slot, person) => {
+      if (blockedRef.current) return { ok: false, error: t(locale, 'ol2_sms_blocked') };
       const sb = await getSupabase();
       /* usunięcie = osoba nieaktywna (te same imię i numer), jak w bazie */
       const cur = rowsRef.current.find((x) => x.list_key === place && x.slot === slot) ?? null;
@@ -125,11 +143,12 @@ export default function LiveSmsPlaces({ readOnly = false, children }: { readOnly
       rowsRef.current = [...rowsRef.current.filter((x) => !(x.list_key === place && x.slot === slot)), next];
       return { ok: true };
     },
-  }), [readOnly]);
+  }), [readOnly, locale]);
 
   return (
     <div data-panel="live-sms-places">
-      <SmsPlaces readOnly={readOnly} source={source} />
+      {readErr ? <div className="note" role="alert" data-live-sms-error>{t(locale, 'ol2_sms_blocked')} {readErr}</div> : null}
+      {noList ? null : <SmsPlaces readOnly={readOnly || !!readErr} source={source} />}
       <details className="ol2-more" data-live-sms-more>
         <summary>{t(locale, 'ol2_sms_more')}</summary>
         <Extras readOnly={readOnly} />

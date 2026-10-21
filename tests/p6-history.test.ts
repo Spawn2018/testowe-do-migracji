@@ -208,7 +208,9 @@ describe('Demo i strażnik I-0', () => {
     const lines = src.split('\n').filter((x) => /\bdemo[A-Z]\w+\(/.test(x));
     expect(lines.length).toBe(3);
     for (const x of lines) expect(x).toMatch(/import\.meta\.env\.VITE_AUTH_MODE !== 'supabase' \? /);
-    for (const f of ['chatVisibilityOn', 'chatReadsOn']) {
+    /* B4 (21.10.2026): wybór odbiorców włączony także na produkcji */
+    expect(src).toMatch(/export function chatVisibilityOn\(\): boolean \{\s*return true;/);
+    for (const f of ['chatReadsOn']) {
       expect(src).toMatch(new RegExp(`export function ${f}\\(\\): boolean \\{\\s*return import\\.meta\\.env\\.VITE_AUTH_MODE !== 'supabase';`));
     }
     for (const f of ['src/components/drawer/LoadDrawer.tsx', 'src/components/drawer/PanelHistory.tsx', 'src/components/drawer/PanelChat.tsx']) {

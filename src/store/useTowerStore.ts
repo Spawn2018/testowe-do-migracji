@@ -1040,7 +1040,7 @@ export const useTowerStore = create<TowerState>()(
           ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}),
         };
         set((s) => ({ messages: [...s.messages, msg] }));
-        writeThrough({ type: 'message.send', loadId, text });
+        writeThrough({ type: 'message.send', loadId, text, ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}) });
       },
 
       uploadDocument: (loadId, category, name, opts) => {

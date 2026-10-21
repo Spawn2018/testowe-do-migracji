@@ -35,6 +35,8 @@ export function ImpersonationBanner() {
         setBusy(false);
         return;
       }
+      /* F7 #403 B1: bez odmontowania paska (ciche wczytanie) przycisk musi wrócić */
+      setBusy(false);
       requestAuthReload();
     } catch (e) {
       setErr(authErrorPl(e instanceof Error ? e.message : String(e)));

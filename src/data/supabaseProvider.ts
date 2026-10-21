@@ -83,7 +83,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
-      sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
+      sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
       sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
@@ -166,6 +166,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       .map((r) => [r.load_id, Array.isArray(r.gaps) ? r.gaps : []]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
+    /* Kokpit „Zezwolenia 7 dni”: komplet = podpięte, pasują do zestawu i nie brakuje kraju (FIRMA — jedno zezwolenie) */
+    const permitDone = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean; missing_countries: string[] | null }[])
+      .map((p) => [p.load_id, p.permits_linked > 0 && p.ok === true && (p.missing_countries ?? []).length === 0]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
       load_id: string; driver_name: string | null; driver_phone: string | null; driver_phone_country?: string | null;
       driver_delivery_name?: string | null; driver_delivery_phone?: string | null; driver_delivery_phone_country?: string | null;
@@ -205,7 +208,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         trailer_swap: drivers.get(r.id)?.trailer_swap ?? false,
       }))
       .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
-      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l));
+      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l))
+      .map((l) => (permitDone.has(l.id) ? { ...l, permitComplete: permitDone.get(l.id) ?? null } : l));
     /* B5 K2.1: usedBy — inne transporty z tym samym rio_tracking_id */
     const rioGroups = new Map<string, Load[]>();
     for (const l of mappedLoads) {
@@ -363,7 +367,10 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         return { id: String((must(res, 'zdarzenie') as { id: number }).id) };
       }
       case 'message.send': {
-        const res = await sb.from('load_messages').insert({ load_id: m.loadId, body: m.text }).select('id').single();
+        /* B4: „tylko HHL i SCX” → {FORWARDER,CARRIER}; bez wyboru — domyślnie wszyscy (baza normalizuje, KSH zawsze wszyscy) */
+        const row: { load_id: string; body: string; visible_to?: string[] } = { load_id: m.loadId, body: m.text };
+        if (m.visibleTo === 'HHL_SCX') row.visible_to = ['FORWARDER', 'CARRIER'];
+        const res = await sb.from('load_messages').insert(row).select('id').single();
         return { id: String((must(res, 'wiadomość') as { id: number }).id) };
       }
       case 'load.orderNo':

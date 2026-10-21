@@ -21,6 +21,7 @@ const pl: Dict = {
   a6_auth_invite_only: 'Dostęp wyłącznie na zaproszenie administratora HHL.',
   a6_auth_link_sent: 'Link do logowania został wysłany. Sprawdź skrzynkę i otwórz go w tej przeglądarce.',
   a6_auth_loading: 'Ładowanie danych…',
+  a6_auth_bg_fail: 'Nie udało się odświeżyć danych — spróbuję przy następnym powrocie do aplikacji.',
   a6_auth_logout: 'Wyloguj',
   a6_auth_no_org: 'Konto nie jest przypisane do żadnej organizacji. Skontaktuj się z administratorem HHL.',
   a6_auth_no_view: 'Organizacja {org} nie ma jeszcze widoku w aplikacji.',

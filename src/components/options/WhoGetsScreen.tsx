@@ -4,7 +4,7 @@
  * po prawej „Podgląd wiersza” i „Zasady”. Telefon: zdarzenia jako karty; wybrane rozwinięte z 5 rodzajami kont.
  * Dane i zapis podłącza wykonawca (`notification_matrix`, `admin_notification_matrix_set`) — tu tylko wygląd.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
@@ -79,6 +79,9 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
   const [groups, setGroups] = useState(initial);
   const [mailOn, setMailOn] = useState(cards?.mail.on ?? false);
   const [pushOn, setPushOn] = useState(cards?.push.on ?? false);
+  /* F7 #404: dane z bazy po zapisie — ekran bierze nowy stan bez ponownego montowania (wybrany wiersz zostaje) */
+  useEffect(() => { setGroups(initial); }, [initial]);
+  useEffect(() => { setMailOn(cards?.mail.on ?? false); setPushOn(cards?.push.on ?? false); }, [cards?.mail.on, cards?.push.on]);
   const card = (which: 'mail' | 'push', next: boolean) => {
     (which === 'mail' ? setMailOn : setPushOn)(next);
     onCard?.(which, next);

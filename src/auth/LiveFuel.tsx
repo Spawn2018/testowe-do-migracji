@@ -28,37 +28,57 @@ export default function LiveFuel({ readOnly = false, party }: { readOnly?: boole
   const loads = useTowerStore((s) => s.loads);
   const today = localDateOf(getNowIso());
   const [params, setParams] = useState<Params | null | undefined>(undefined);
-  const [calc, setCalc] = useState<{ cur: WeekCalc | null; next: WeekCalc | null; runs: FuelRun[] } | null>(null);
+  const [calc, setCalc] = useState<{ cur: WeekCalc | null; next: WeekCalc | null; curDays: WeekCalc | null; plnPubs: { value: number; published_on: string }[]; runs: FuelRun[] } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLDetailsElement>(null);
 
   const refresh = useCallback(async () => {
-    const sb = await getSupabase();
-    const p = await sb.from('sefs_parameters').select('version,valid_from,agreed_with_carrier,tiers_sek,tiers_pln').order('version', { ascending: false }).limit(1);
-    if (p.error) setMsg(p.error.message);
-    setParams(((p.data ?? []) as Params[])[0] ?? null);
-    if (party) return;
-    const pr = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
-    const pid = (pr.data as { id: string } | null)?.id ?? null;
-    if (!pid) { setCalc({ cur: null, next: null, runs: [] }); return; }
-    const mon = mondayOf(today);
-    const [c, n, r] = await Promise.all([
-      sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: mon, p_today: today }),
-      sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: addDays(mon, 7), p_today: today }),
-      sb.from('integration_runs').select('ran_at,ok,result').eq('job', 'fuel-prices').order('ran_at', { ascending: false }).limit(30),
-    ]);
-    const err = c.error ?? n.error ?? r.error;
-    if (err) setMsg(err.message);
-    setCalc({ cur: (c.data ?? null) as WeekCalc | null, next: (n.data ?? null) as WeekCalc | null, runs: (r.data ?? []) as FuelRun[] });
-  }, [party, today]);
+    try {
+      const sb = await getSupabase();
+      const p = await sb.from('sefs_parameters').select('version,valid_from,agreed_with_carrier,tiers_sek,tiers_pln').order('version', { ascending: false }).limit(1);
+      if (p.error) setMsg(p.error.message);
+      setParams(((p.data ?? []) as Params[])[0] ?? null);
+      if (party) return;
+      const pr = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
+      const pid = (pr.data as { id: string } | null)?.id ?? null;
+      if (!pid) { setCalc({ cur: null, next: null, curDays: null, plnPubs: [], runs: [] }); return; }
+      const mon = mondayOf(today);
+      const nextMon = addDays(mon, 7);
+      const [c, n, d, pl, r] = await Promise.all([
+        sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: mon, p_today: today }),
+        sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: nextMon, p_today: today }),
+        /* F7 #415: ceny tygodnia bieżącego — wskaźniki dla załadunku w przyszłym tygodniu liczone „na poniedziałek”
+           (prognoza z dzisiejszym „dziś” bierze tydzień kotwicy, nie bieżący); z wyniku tylko lista dni do dziś */
+        sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: nextMon, p_today: nextMon }),
+        sb.from('fuel_index_readings').select('value,published_on,corrects_id').eq('project_id', pid).eq('index_code', 'PLN')
+          .gte('published_on', addDays(mon, -21)).order('published_on'),
+        sb.from('integration_runs').select('ran_at,ok,result').eq('job', 'fuel-prices').order('ran_at', { ascending: false }).limit(30),
+      ]);
+      const err = c.error ?? n.error ?? d.error ?? pl.error ?? r.error;
+      setMsg(err ? err.message : null);
+      setCalc({
+        cur: (c.data ?? null) as WeekCalc | null,
+        next: (n.data ?? null) as WeekCalc | null,
+        curDays: (d.data ?? null) as WeekCalc | null,
+        plnPubs: ((pl.data ?? []) as { value: number; published_on: string | null; corrects_id: number | null }[])
+          .filter((x) => x.published_on && x.corrects_id == null).map((x) => ({ value: x.value, published_on: x.published_on! })),
+        runs: (r.data ?? []) as FuelRun[],
+      });
+    } catch (e) {
+      /* F7 #415: wyjątek przy odczycie — komunikat zamiast pustego ekranu */
+      setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      setParams((x) => (x === undefined ? null : x));
+      setCalc((x) => x ?? { cur: null, next: null, curDays: null, plnPubs: [], runs: [] });
+    }
+  }, [party, today, locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const view = useMemo(() => {
     if (params === undefined) return null;
     if (party) return partyFuelView({ today, side: party === 'KSH' ? 'rev' : 'cost', loads, params });
     if (!calc) return null;
-    return hhlFuelView({ today, params, cur: calc.cur, next: calc.next, runs: calc.runs, exampleBaseEur: exampleBaseOf(loads, 'cost'), missWhy: t(locale, 'ol2_fuel_no_price') });
+    return hhlFuelView({ today, params, cur: calc.cur, next: calc.next, curDays: calc.curDays, plnPubs: calc.plnPubs, runs: calc.runs, exampleBaseEur: exampleBaseOf(loads, 'cost'), missWhy: t(locale, 'ol2_fuel_no_price') });
   }, [params, calc, party, today, loads, locale]);
 
   /* „Nowa wersja umowy”: rozwija dzisiejszy formularz załącznika pod ekranem */

@@ -114,9 +114,9 @@ describe('stare formularze Opcji na produkcji u Operacji HHL (audyt 17.10 sekcja
     expect(v).not.toContain('roBlock(<RateCardForm');
     /* W-opcje-live-2: produkcja — LiveRateCard (tabela z audytu), pełny RateCardForm z readOnly rozwijany pod nią */
     expect(v).toContain('block(<LiveRateCard readOnly={ro} />)');
-    expect(read('src/auth/LiveRateCard.tsx')).toContain('<RateCardForm readOnly={readOnly} />');
+    expect(read('src/auth/LiveRateCard.tsx')).toContain('<RateCardForm readOnly={readOnly} reload={formReload}');
     const f = read('src/auth/RateCardForm.tsx');
-    expect(f).toMatch(/export default function RateCardForm\(\{ readOnly = false \}/);
+    expect(f).toMatch(/export default function RateCardForm\(\{ readOnly = false[,}]/);
     /* Strona i Firma bez disabled */
     expect(f).toMatch(/<select className="input" value=\{side\} onChange=/);
     expect(f).toMatch(/<select className="input" value=\{orgId\} onChange=/);

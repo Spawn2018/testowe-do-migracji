@@ -153,6 +153,9 @@ const pl: Dict = {
   p3c_ch_push: 'Powiadomienie na telefonie',
   p3c_ch_mail: 'E-mail',
   p3c_ch_hint: 'Kliknięcie ikony włącza albo wyłącza kanał dla całego rodzaju konta.',
+  p3c_card_on_rows: 'Włącz kanał w wybranych wierszach poniżej — z karty można tylko wyłączyć wszystko naraz.',
+  p3c_card_off_part: 'Wyłączono {n} z {all} — reszta bez zmian: {err}',
+  p3c_unknown_rows: 'W bazie są zdarzenia, których ten ekran jeszcze nie pokazuje: {keys}.',
   p3c_ch_state_on: '{ch}: włączone',
   p3c_ch_state_off: '{ch}: wyłączone',
   p3c_ch_fixed: '{ch}: zawsze, nie do wyłączenia',
@@ -455,6 +458,8 @@ const pl: Dict = {
 
   /* W-opcje-live-2 — ekrany Opcji na produkcji w wyglądzie z audytu, dane z bazy */
   ol2_loading: 'Wczytywanie…',
+  ol2_read_fail: 'Nie udało się odczytać danych. Odśwież stronę.',
+  ol2_sms_blocked: 'Nie udało się odczytać ustawień SMS — zapis jest wstrzymany, żeby nie nadpisać odbiorców.',
   ol2_status_more: 'Limity usług, kopie zapasowe i przebiegi zadań',
   ol2_src_why_fail: 'Ostatnia próba zakończyła się błędem. Ekran pokazuje dane z ostatniego udanego pobrania.',
   ol2_src_why_stale: 'Brak nowych danych dłużej niż {n}.',
