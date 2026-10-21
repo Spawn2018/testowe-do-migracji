@@ -85,6 +85,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
     2. **Scalanie bez promptu.** „F7: gotowe do scalenia” od `Spawn2018` **po** ostatnim commicie PR + zielone CI → scalasz sam (`gh pr merge --merge`). Nowy commit po „gotowe” = czekaj na ponowne. Nigdy PR z forka. „niegotowe” → poprawiasz w tym samym PR. Wdrożenie: na razie ręczne z `main` (D-1110); po pozycji „Automat wdrożenia” — workflow GitHub.
     3. **Nigdy nie czekasz na właściciela.** Niejasność → `pytanie-do-koordynatora` z opcjami i rekomendacją → od razu następna pozycja; po 60 min bez odpowiedzi przyjmujesz rekomendację. Wyjątki właściciela: usuwanie danych na produkcji, sekrety, płatności, cięcie zakresu, data wydania.
     4. **Pętla nocna:** każdy przebieg zaczyna od `ZASADY_CIAGLEJ_PRACY.md` i robi jeden logiczny krok (commit + push na gałąź PR), bez pytań do człowieka.
+    5. **Daty w planie to terminy najpóźniejsze, nie daty rozpoczęcia** (#315, decyzja koordynatora 19.10.2026 12:46). Po zakończeniu pozycji od razu następna z §4 — także pozycje zaplanowane na kolejne dni (po A5 od razu B4, B5, B7, B8, B9, A6, odczyt SharePoint, C4–C13, P4-u, P3-d …). Nie czekasz na dzień z planu ani na punkt kontrolny.
 
 ## §2. Wprowadzanie zmian i poprawek do planu (obowiązkowe)
 
@@ -1181,6 +1182,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 19.10.2026 12:10 | #314 F7: ZASADY — autor polecenia tylko Spawn2018; „F7: gotowe” tylko po ostatnim commicie; bez merge z forka | koordynator F7 12:02; pętla |
 | 19.10.2026 10:50 | D-20261019-1050-01: praca ciągła — skrzynka `dla-cursora`, scalanie bez promptu (F7), decyzje koordynatora, pętla nocna; `ZASADY_CIAGLEJ_PRACY.md`; pozycja Automat wdrożenia po poprawce #312; kolejka: #312 → Automat → D-0005 (#313) → D-0930 → A3… | właściciel ~10:50; koordynator |
 | 19.10.2026 10:50 | D-1740 / #310 **0231 NA PRODUKCJI** (`39116fbb`, `dpl_C829eZRWFdVgf8rQqyjtCiT6x2jC`); F7 B1 otwarte jako #312 (has_doc jak C17) | wykonawca |
+| 19.10.2026 12:46 | #315: daty w planie to terminy najpóźniejsze, nie daty rozpoczęcia (§1 pkt 14.5). Po pozycji od razu następna z §4, bez czekania na dzień ani punkt kontrolny | koordynator; zgłoszenie #315 |
 | 19.10.2026 14:20 | D-20261019-1420-01 (#320): A6 = odczyt SharePoint + zapis na pliku testowym; plik produkcyjny bez zapisu do akceptacji właściciela. II-10 i W13: plik testowy dostępny 19.10. Kolejka bez zmian (po B9, przed C4) | właściciel 14:19; koordynator |
 | 19.10.2026 15:15 | D-20261019-1515-01 (#322): B9 zawężone — DeepL i tłumaczenia komunikatów SV/EN → PL zostają; usuwany tylko wybór języka ekranów; zero braków (ponawianie, „Tłumaczenie w toku”, alarm 15 min) | właściciel 15:10; koordynator |
 | 19.10.2026 15:25 | D-20261019-1525-01 (#323): Podgląd innych kont i widoków wyłącznie dla Administratora HHL. W B5, termin bez zmian | właściciel 15:14; koordynator |
