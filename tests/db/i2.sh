@@ -280,6 +280,8 @@ $PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where d
 val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
 
 echo; echo "[I-10] e-mail o zmianie daty awizowanego (0056)"
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push.
+$PSQL -c "update notification_matrix set email=true where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH','CLIENT_USER')" >/dev/null
 $PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{\"code\":\"T-X\"}', 'T-I10-1' from app_users where auth_id='$SCX'" >/dev/null
 chk "IN_APP SCHEDULE_DATE_CRITICAL → 1 e-mail na adres konta" "$(Q "select count(*)||'/'||min(recipient) from notifications where dedup_key='EMAIL:T-I10-1'")" "1/$(Q "select email from app_users where auth_id='$SCX'")"
 $PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{}', 'T-I10-1' from app_users where auth_id='$SCX' on conflict do nothing" >/dev/null

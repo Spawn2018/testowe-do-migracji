@@ -3915,14 +3915,62 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #390 F7 „gotowe” (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone → merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bieżąca: **D-1535** PR #396 — `db` 62/67 (format `1.1400` + TELM t40 oczekiwało 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta → 1,14 za D-1535.
 
-## 2026-10-21 18:35 � #398 `pilne`: szum ryzyk (przerywa B5)
+## 2026-10-21 18:35 � #398 `pilne`: szum ryzyk (przerywa B5)
 
-- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) � przerywa B5. Wpisane: PLAN �3/�4/�8, dopisek `D-20261021-1820-01.md`. #384 pkt 7�8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
+- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) � przerywa B5. Wpisane: PLAN �3/�4/�8, dopisek `D-20261021-1820-01.md`. #384 pkt 7�8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
 - Scalanie: brak PR z `F7: gotowe do scalenia`. #382/#383 bez F7. #397 visual zielone, bez F7. Bez push na `main`.
-- Bie��ca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) � `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprz�tanie bulk_quiet. B5 � **0255**.
+- Bie��ca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) � `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprz�tanie bulk_quiet. B5 � **0255**.
 
 ## 2026-10-21 19:50 — #399 F7 sprzątanie SILENT; #400 w planie; #397 SCALONE
 
 - Skrzynka: #398/#400 `pilne` (bieżąca #398); #400 wpisane PLAN §3/§4/§8 + dopisek `D-20261021-1929-01.md` (po #398 → 0255, B5 → 0256). #384/#323/#322/#320 w planie.
 - Scalanie: #397 F7 gotowe → merge `f4abce86`. #399 CI zielone na `d2548603`, F7 „jeszcze nie” (para EXPIRE+RESOLVE) → poprawka wariantu 1. #382 bez F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #398** PR #399 — sprzątanie SILENT: AUTO_CLOSED + `if found` przed `l3_lapse`; powód „emtrack — brak sygnału naczepy”.
+
+## 2026-10-21 20:20 � #399 SCALONE; start #402 (jedna bramka powiadomie� / 0255)
+
+- Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) � wpisane PLAN �3/�4/�8, dopisek `D-20261021-1952-01.md` (0255; #400 � 0256; B5 � 0257). #400/#384/#323/#322/#320 w planie.
+- Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) � merge `6e76bce9` (0254). #398 zamkni�te. #401/#403/#382 bez F7. Bez push na `main`.
+- Bie��ca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) � `notify_person_on` bez omini�cia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramk�; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
+
+## 2026-10-21 20:40 — #402 CI fix; #405 wpisane (SMS strefy / 0256)
+
+- Skrzynka: #405 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §3/§4/§8, dopisek `D-20261021-2014-01.md` (#402→0255, #405→0256, #400→0257, B5→0258). #402/#400/#384/#323/#322/#320 w planie.
+- Scalanie: brak `F7: gotowe do scalenia`. #406 `db` czerwone (workflow poza bramką, c16/l13/c3) — poprawka w tym przebiegu. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `WORKFLOW_ALERT`→`workflow` w macierzy; c16 włącza mail `dates`; l13 włącza mail `dec_new` dla KSH; c3 asercja po `user_id`. Potem #405.
+
+## 2026-10-21 20:50 � #402 F7 (firma/trigger/push); skrzynka #411/#409/#412; scalenia wygl�du
+
+- Skrzynka: #411 `pilne` � PLAN + `D-20261021-2038-01.md` (**0256**); #405�**0257**; #400�**0258**; #409 � `D-20261021-2030-01.md` (**0259**); #412 � `D-20261021-2040-01.md` (po B5); B5�**0260**.
+- Scalanie: #407, #401, #404 � `F7: gotowe do scalenia` po ostatnim commicie, CI zielone � merge. #408 wstrzymane. #406 F7 �jeszcze nie� � poprawka. Bez push na `main`.
+- Bie��ca: **HOTFIX #402** PR #406 � `notification_matrix_org_kind` w bramce; `trg_notifications_gate` IN_APP/EMAIL; `notify_push_still_allowed` + web-push-send; push nie tylko krytyczne; `email_budget`/`fuel_miss`; c3 31 kluczy + test firmy; c16 dedup fallback.
+
+## 2026-10-21 21:15 — #402 db: bramka bez user_id; #410/#403 SCALONE; #413 w planie
+
+- Skrzynka: #413 `pilne` — wpisane PLAN §3/§4/§8 + `D-20261021-2057-01.md` (po #402/#411 → **0261** po B5). #402 bieżąca; #411/#405/#400/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #410 F7 gotowe → merge `e27ce061`; #403 F7 gotowe → merge `e1dd2ef9`. #406 `db` FAIL (status/money/import/i2/dec2/insurance/l13) — trigger nadpisywał L13_FILL bez `user_id` + brak mapowań szablonów. #408 wstrzymane. #414 bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `trg` skip przy `user_id` null / status SENT; mapowania `INSURANCE_EXPIRY`/`L17_BACKLOG`/`ETA_NOTIFY_KSH`/`KSH_DATE_COUNTER_RESULT`; `inv_overdue`+`dates.email` domyślnie on; workflow CLIENT/CARRIER off.
+
+## 2026-10-21 21:45 — #402 F7: workflow LOAD_STATUS, ext_mail, mapowania RISK
+
+- Skrzynka: bez nowych; #413/#411/#405/#400/#409/#412 już w planie. #412 ma dopiski (2FA, paliwo Orlen) — do rozszerzenia zakresu przy pozycji.
+- Scalanie: brak `F7: gotowe do scalenia` po ostatnim commicie. #406 `db` FAIL: workflows 3 + dec-auto 1 (WORKFLOW_ALERT KSH/SCX blokowane przez SYSTEM=tylko HHL) + nullguard 689/690. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `workflow`→`LOAD_STATUS` (KSH/SCX z reguł); `ext_mail`; `matrix_event` w bramce; LATE_DATE/SILENT/AUTO→dates/status; `trg_notifications_a_gate` przed budżetem; nullguard bootstrap poza triggerem.
+
+## 2026-10-21 22:05 — #402 db: B6/C1 po a_gate; #414 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora`; pozycje #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #414 F7 gotowe → merge `dc2e08eb`. #415 F7 gotowe, po #414 mergeable (visual w toku). #406 `db` FAIL: security B6 (25/0 zamiast 20/1 — a_gate przed budżetem tłumi B6T* bez event_key) + risks C1 RISK_OPEN. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — test B6 z `matrix_event=dates`; C1: org/macierz risk_route + asercja po `risk_id`.
+
+## 2026-10-21 22:40 — #402 F7: bez nadpisu macierzy; #417/#416 SCALONE
+
+- Skrzynka: bez nowych; #412 dopiski (2FA/Orlen) nadal przy pozycji. #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #417 F7 gotowe → merge `3d380cdf`; #416 F7 gotowe → merge `ba9aed43`. #408 wstrzymane. #418 bez F7 (visual w toku). #406 CI zielone na `42fc2914`, F7: nie nadpisuj `inv_overdue`/`dates`. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `insert … on conflict do nothing`; usunięte UPDATE `inv_overdue`/`dates`; money/import/i2 włączają kanał w prep.
+
+## 2026-10-21 23:00 — #418 SCALONE; #402 db B6: dates.email w prep
+
+- Skrzynka: bez nowych `dla-cursora`; #402/#411/#405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #418 F7 gotowe (`1ab3640`) → merge `2d8aa5f2`. #408 wstrzymane. #406 `db` FAIL na `dc4dbe15`: security B6 (0 e-maili — seed `dates.email` off po usunięciu UPDATE migracji). Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `security.sh` B6 włącza `dates`/`email_budget` e-mail dla HHL_ADMIN w prep (jak c16/money/import).

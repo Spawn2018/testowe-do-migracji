@@ -130,6 +130,8 @@ done
 val "5 transportów → 1 e-mail na odbiorcę" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'bundle:sail-9:EM:%'" 1
 val "lista ma 5 transportów" "select jsonb_array_length(payload->'transports') from notifications where dedup_key like 'bundle:sail-9:EM:%'" 5
 KSHU=$(sys "select id from app_users where email='ksh@test'" | tail -1)
+# #402: l13_queue_email przez bramkę — włącz mail dec_new dla KSH na czas testu bundla.
+sys "update notification_matrix set email=true where event_key='dec_new' and role='CLIENT_USER'" >/dev/null
 for i in 1 2 3 4 5; do
   sys "select l13_queue_email('critical','DECISION_OPEN','$KSHU','ksh@test','33333333-0000-0000-0000-00000000b10$i','L13-B$i','{}'::jsonb,'l13-ksh-$i','sail-9')" >/dev/null
 done
