@@ -3861,8 +3861,44 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #388 CI db FAIL na `75d153f8` — i2 „za 54 h: bez ryzyka” = 2 (reszta zielona: import 72, g20 15, dec-auto 83). Brak „F7: gotowe”. #382 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: i2 — `decision_events` przed delete decisions; IH status przez replica; przed I-21 anuluj importy poza L1/L2 (jak L7/A1).
 
+## 2026-10-21 15:00 — #384 pkt 2–4 SCALONE; start pkt 5–6
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #388 F7 gotowe (`ad1a572`) → merge `da77c46a` (0250). #382 czeka (0252 po pkt 5–6). Bez push na `main`.
+- Bieżąca: **HOTFIX #384 pkt 5–6** (`pakiet/hotfix-384-pkt5-6`, migracja **0251**) — `decision_resolve(..., p_payload)`; `KSH_DATE_COUNTER`; `l2_may_resolve` + HHL_OPS po eskalacji/terminie.
+
+## 2026-10-21 15:15 — #384 pkt 5–6: CI status A2 L14
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #389 db FAIL (status 158/160: A2 L14 KSH/OPS odmowa → „Brak otwartej sprawy”). `deploy-main` po #388 ponowiony → sukces (0250 na produkcji). Brak F7. Bez push na `main`.
+- Bieżąca: `delivered_check_resolve` — przy braku otwartej sprawy najpierw `l2_may_resolve(CARRIER,null)` → 42501 (jak A2), potem komunikat braku sprawy.
+
+## 2026-10-21 15:40 — #384 pkt 5–6: F7 #389 poprawki
+
+- Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: #389 CI zielone na `56e09e65`, F7 „jeszcze NIE” (13:18 UTC) → bez merge. #382 konflikt / 0252. Bez push na `main`.
+- Bieżąca: F7 — ACCEPT przez `ksh_confirm_dates` + `counter_accept` (bez `l3_ksh_lead`); przesunięcie od/do; `l2_may_resolve` CLIENT=projekt, HHL_OPS tylko CARRIER/HHL; walidacja `p_payload`; notify SCX; `delivered_check` kolejność; dec2 48→62.
+
+## 2026-10-21 16:00 — #384 pkt 5–6: dec2 ACCEPT + wpis #391
+
+- Skrzynka: #384 `pilne` (bieżąca); **#391** `pilne` (D-1535 t40 ×1,14) wpisane do PLAN §3/§4/§8 + dopisek; po #389 → 0252, B5 → 0253. #323/#322/#320 w planie.
+- Scalanie: #389 db FAIL (dec2 58/62: ACCEPT licznika — `v_dd < v_ld` przy samej `load_date`). Brak F7. Bez push na `main`.
+- Bieżąca: przy samej `load_date` w propozycji przesuń `plan_delivery_date` (+ okna) o różnicę dni, potem `ksh_confirm_dates`.
+
+## 2026-10-21 16:15 — #384 pkt 5–6: F7 drobne + dec2 60/62
+
+- Skrzynka: #384/#391 `pilne`; #391 już w planie. Bez F7 „gotowe”.
+- Scalanie: #389 db FAIL na `ccfbabb7` (dec2: `true` vs `t` przy od/do; LATE z setup D+3). Visual jeszcze w toku — push poprawki po FAIL db. Bez push na `main`.
+- Bieżąca: wynik licznika → `carrier_org_id` (CARRIER_*); bez gałęzi HHL_OPS w `ksh_confirm_dates`; test LATE na D+2 + `detected_at` po znaczniku; PLAN_DATES `by=KSH`; dec2 64.
+
 ## 2026-10-21 16:35 — #392 `pilne`: RIO przyklejony (SG-18); #389 czeka F7
 
 - Skrzynka: #392 (Spawn2018, `dla-cursora`+`pilne`) — przerywa (załadunek dziś). #391 `pilne` w planie jako 0253. #384/#323/#322/#320 w planie.
-- Scalanie: #389 CI zielone (`048cbbf9`, unit/visual/db) — brak `F7: gotowe do scalenia` po ostatnim commicie → bez merge. #390 wygląd bez F7. #382 konflikt. Bez push na `main`.
+- Scalanie: #389 CI zielone (`048cbbf9`, unit/visual/db) — F7 „gotowe” było; merge w następnym przebiegu. #390 wygląd bez F7. #382 konflikt. Bez push na `main`.
 - Bieżąca: **HOTFIX #392** (`pakiet/hotfix-392-rio-sanitize`, migracja **0252**) — `loads_rio_sanitize` czyści `rio_*` przy linku nie-RIO; A→B bez klucza; jednorazowe czyszczenie + audit; security +5. D-1535 → 0253, B5 → 0254.
+
+## 2026-10-21 17:05 — #389 SCALONE; #395 CI zielone, main wciągnięty
+
+- Skrzynka: #392 `pilne` (bieżąca); #391 `pilne` (0253); #384/#323/#322/#320 w planie.
+- Scalanie: #389 F7 „gotowe” (`048cbbf`, Spawn2018, po ostatnim commicie) + CI zielone → merge `1a232014` (0251). #395 (RIO 0252): unit/visual/db zielone na `2550da2e`; wciągnięty main. Czekam na ponowne CI i `F7: gotowe do scalenia`. #390/#382/#393/#394 bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #392** PR #395 — po F7 wdroży `deploy-main`; potem D-1535 #391 / 0253.

@@ -7,6 +7,7 @@ const pl: Dict = {
   dec_type_FERRY_CANCELLED: 'Rejs odwołany albo sztorm na trasie',
   dec_type_ETA_AFTER_LATEST: 'ETA po godzinie „najpóźniej do”',
   dec_type_KSH_DATE_LT_5D: 'KSH zmieniło datę < 5 dni przed załadunkiem',
+  dec_type_KSH_DATE_COUNTER: 'Propozycja innego terminu',
   dec_type_NO_AWIZACJA: 'Brak awizacji w terminie',
   /* D-20261020-1501-01: rejs i link śledzenia nieobowiązkowe przy zapisie awizacji — ich brak to sprawa do zamknięcia */
   dec_type_NO_SAILING: 'Brak rejsu promu w awizacji',
@@ -37,6 +38,7 @@ const pl: Dict = {
   dec_opt_ESCALATE_CARRIER: 'Eskaluj do przewoźnika',
   dec_opt_ACCEPT: 'Przyjmuję',
   dec_opt_PROPOSE_DATE: 'Proponuję inny termin',
+  dec_opt_REJECT_DATE: 'Odrzucam — zostaje data KSH',
   dec_opt_ESCALATE_HHL: 'Eskaluj do HHL',
   dec_opt_ADD_AWIZACJA: 'Dodaj awizację',
   dec_opt_REPORT_PROBLEM: 'Zgłoś problem',
