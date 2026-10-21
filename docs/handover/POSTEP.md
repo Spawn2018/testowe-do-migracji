@@ -3914,3 +3914,15 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #391 `pilne` (bieżąca); #384/#323/#322/#320 w planie (bez `pilne` — nie przerywam).
 - Scalanie: #390 F7 „gotowe” (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone → merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bieżąca: **D-1535** PR #396 — `db` 62/67 (format `1.1400` + TELM t40 oczekiwało 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta → 1,14 za D-1535.
+
+## 2026-10-21 18:35 � #398 `pilne`: szum ryzyk (przerywa B5)
+
+- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) � przerywa B5. Wpisane: PLAN �3/�4/�8, dopisek `D-20261021-1820-01.md`. #384 pkt 7�8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
+- Scalanie: brak PR z `F7: gotowe do scalenia`. #382/#383 bez F7. #397 visual zielone, bez F7. Bez push na `main`.
+- Bie��ca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) � `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprz�tanie bulk_quiet. B5 � **0255**.
+
+## 2026-10-21 19:50 — #399 F7 sprzątanie SILENT; #400 w planie; #397 SCALONE
+
+- Skrzynka: #398/#400 `pilne` (bieżąca #398); #400 wpisane PLAN §3/§4/§8 + dopisek `D-20261021-1929-01.md` (po #398 → 0255, B5 → 0256). #384/#323/#322/#320 w planie.
+- Scalanie: #397 F7 gotowe → merge `f4abce86`. #399 CI zielone na `d2548603`, F7 „jeszcze nie” (para EXPIRE+RESOLVE) → poprawka wariantu 1. #382 bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #398** PR #399 — sprzątanie SILENT: AUTO_CLOSED + `if found` przed `l3_lapse`; powód „emtrack — brak sygnału naczepy”.
