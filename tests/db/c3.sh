@@ -91,7 +91,25 @@ sval "50 km Śrem: matrix_event" "select payload->>'matrix_event' from notificat
 
 run "$KSH" "select my_notify_set('status','mail',false)" commit >/dev/null
 sval "osoba KSH: e-mail statusu wyłączony, było puste" "select (p.on_value is false)::text||'/'||(a.old_value->>'on' is null)::text from user_notify_pref p join audit_log a on a.entity='user_notify_pref' and a.user_id=p.user_id where p.user_id='$KSHU' and p.event_key='status' and p.channel='mail' order by a.id desc limit 1" "true/true"
-err "kanał zawsze: src_down mail" $HHL "select my_notify_set('src_down','mail',false)" "zawsze"
+
+# #402 / D-20261021-1952-01: bez „zawsze”; prefs wygrywają; bez push_fallback→EMAIL.
+run "$HHL" "select my_notify_set('src_down','mail',false)" commit >/dev/null
+sval "#402: src_down mail da się wyłączyć" "select on_value::text from user_notify_pref where user_id='$HHLU' and event_key='src_down' and channel='mail'" false
+sval "#402: 0 fixed_* w macierzy" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 0
+sys "update notification_matrix set email=true, push=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
+run "$HHL" "select my_notify_set('risk_crit','mail',false)" commit >/dev/null
+run "$HHL" "select my_notify_set('risk_crit','push',true)" commit >/dev/null
+sys "delete from notifications where dedup_key like 'c402-risk:%'" >/dev/null
+sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
+  jsonb_build_object('kind','ETA_BREACH','severity','CRITICAL','title_key','rk_eta'),
+  'c402-risk', null)" >/dev/null
+sval "#402: risk_crit mail off → 0 EMAIL" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'c402-risk:%'" 0
+sval "#402: risk_crit mail off → 0 push_fallback EMAIL" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'push_fallback:%c402-risk%'" 0
+sys "update notification_matrix set email=false where event_key='sms_gw'" >/dev/null
+sys "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT') and dedup_key like 'c402-sms%'" >/dev/null
+sval "#402: SMS_FALLBACK mail off → SUPPRESSED" "select public.l13_queue_email('critical','SMS_FALLBACK','$HHLU','hhl@test','$L','X',
+  '{}'::jsonb,'c402-sms-fb',null)" SUPPRESSED
+sval "#402: SCHEDULE_DATE_CRITICAL → dates" "select public.notify_event_key('SCHEDULE_DATE_CRITICAL','{}'::jsonb)" dates
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -3926,3 +3926,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ™. Szacunek szczytu po skrÃ³cie: 34. Ma
 - Skrzynka: #398/#400 `pilne` (bieÅ¼Ä…ca #398); #400 wpisane PLAN Â§3/Â§4/Â§8 + dopisek `D-20261021-1929-01.md` (po #398 â†’ 0255, B5 â†’ 0256). #384/#323/#322/#320 w planie.
 - Scalanie: #397 F7 gotowe â†’ merge `f4abce86`. #399 CI zielone na `d2548603`, F7 â€jeszcze nieâ€ (para EXPIRE+RESOLVE) â†’ poprawka wariantu 1. #382 bez F7. Bez push na `main`.
 - BieÅ¼Ä…ca: **HOTFIX #398** PR #399 â€” sprzÄ…tanie SILENT: AUTO_CLOSED + `if found` przed `l3_lapse`; powÃ³d â€emtrack â€” brak sygnaÅ‚u naczepyâ€.
+
+## 2026-10-21 20:20 — #399 SCALONE; start #402 (jedna bramka powiadomieñ / 0255)
+
+- Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §3/§4/§8, dopisek `D-20261021-1952-01.md` (0255; #400 › 0256; B5 › 0257). #400/#384/#323/#322/#320 w planie.
+- Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) › merge `6e76bce9` (0254). #398 zamkniête. #401/#403/#382 bez F7. Bez push na `main`.
+- Bie¿¹ca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) — `notify_person_on` bez ominiêcia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramkê; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
