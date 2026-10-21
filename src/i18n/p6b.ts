@@ -88,6 +88,11 @@ const PL: Record<string, string> = {
   p6b_ev_RISK_RAISED: 'Nowe ryzyko',
   p6b_ev_SILENT_VEHICLE: 'Brak sygnału z pojazdu',
   p6b_ev_PLAN_DATES_CONFIRMED: 'Daty planu potwierdzone',
+  /* #384: skutki rozstrzygnięć decyzji (decision_apply_effect) */
+  p6b_ev_DECISION_EFFECT: 'Decyzja rozstrzygnięta',
+  p6b_ev_DECISION_HOLD: 'Decyzja wstrzymana',
+  p6b_ev_DECISION_SAILING: 'Decyzja: zmiana rejsu',
+  p6b_ev_DECISION_KEEP_TOWER: 'Decyzja: zostaje wartość z Watch Tower',
   p6b_ev_DOC_UPLOADED: 'Wgrano dokument',
   p6b_ev_NOTE: 'Notatka',
   p6b_st_CANCELLED: 'Anulowany',

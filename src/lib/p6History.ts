@@ -12,6 +12,7 @@ import { statusFromDb } from '../data/mappers';
 import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
+import { decText } from '../i18n/decisions';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 import { dayTime, hitChannel } from './statusAxis';
 
@@ -298,6 +299,14 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
       ? [ver ? htp(locale, 'p6b_import_ver', { v: ver }) : null, file ? htp(locale, 'p6b_import_file', { f: file }) : null].filter(Boolean).join(', ')
       : note && !/^KSH import\b/i.test(note) ? note : null;
     return { ...base, head: ht(locale, 'p6b_ev_SCHEDULE_IMPORTED'), from: null, to: null, tail };
+  }
+  if (e.type.startsWith('DECISION_') && htHas(`p6b_ev_${e.type}`)) {
+    /* #384: wybrana opcja i komentarz z rozstrzygnięcia („Przyjmuję · komentarz”) */
+    const opt = str(p.option);
+    const optLabel = opt ? decText(locale, `dec_opt_${opt}`, '') : '';
+    const dnote = str(p.note);
+    const tail = [optLabel, dnote].filter(Boolean).join(' · ') || null;
+    return { ...base, head: ht(locale, `p6b_ev_${e.type}`), from: null, to: null, tail };
   }
   const head = htHas(`p6b_ev_${e.type}`) ? ht(locale, `p6b_ev_${e.type}`)
     : cat === 'CENA' ? ht(locale, e.type.includes('FEE') ? 'p6b_ev_FEE' : 'p6b_ev_PRICE')
