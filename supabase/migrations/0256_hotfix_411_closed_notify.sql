@@ -566,7 +566,7 @@ begin
                and exists (
                  select 1 from decisions d
                   where d.id::text = coalesce(n.payload->>'decision_id', n.payload->>'decisionId')
-                    and d.status in ('RESOLVED','EXPIRED','CANCELLED')
+                    and d.status in ('RESOLVED','EXPIRED')
                )),
            'unread_closed_risk',
            (select count(*) from notifications n
@@ -607,7 +607,7 @@ begin
                 d.id::text = coalesce(n.payload->>'decision_id', n.payload->>'decisionId')
                 or coalesce(n.payload->'decision_ids', '[]'::jsonb) ? d.id::text
               )
-                and d.status in ('RESOLVED', 'EXPIRED', 'CANCELLED')
+                and d.status in ('RESOLVED', 'EXPIRED')
            )
          )
          or (
