@@ -154,11 +154,13 @@ begin
         v_detail := jsonb_build_object('exit_at', now()::text, 'dwell_min', 12);
       end if;
 
-      insert into loads (id, project_id, carrier_org_id, order_no, status)
+      insert into loads (id, project_id, carrier_org_id, order_no, status, hhl_order_no, carrier_order_no)
       values (
         gen_random_uuid(), '$P', '$SCXO',
         'DFX-' || substr(md5(random()::text), 1, 6),
-        case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end
+        case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end,
+        'HHL-DFX-' || substr(md5(random()::text), 1, 4),
+        'SCX-DFX-' || substr(md5(random()::text), 1, 4)
       )
       returning id into v_load;
 
