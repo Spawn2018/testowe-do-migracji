@@ -474,6 +474,8 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     metaParams: params,
     /* wyglad/W-faktura-termin (A4): sprawa „Faktura po terminie płatności” prowadzi do tej faktury */
     invoiceId: str(d.invoice_id) || undefined,
+    /* wyglad/W-todo-jedna-sprawa (#384): „Decyzja po terminie” wskazuje decyzję (`detail.decision_id`) */
+    decisionId: str(d.decision_id) || undefined,
   };
 }
 

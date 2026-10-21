@@ -138,9 +138,9 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
 
   /* E7-6: stare linki `/#/decyzje/<id>` i dzwonek — karta sprawy otwarta w „Do zrobienia” */
   const focusIssue = (issueId: string): boolean => {
-    const c = cards.find((x) => x.issues.some((i) => i.id === issueId || i.mergedIds?.includes(issueId)));
+    const c = cards.find((x) => x.issues.some((i) => i.id === issueId || i.mergedIds?.includes(issueId) || i.coveredIds?.includes(issueId)));
     if (!c) return false;
-    const target = c.issues.find((i) => i.id === issueId || i.mergedIds?.includes(issueId))!;
+    const target = c.issues.find((i) => i.id === issueId || i.mergedIds?.includes(issueId) || i.coveredIds?.includes(issueId))!;
     setScope('ALL');
     setShowAll(true);
     setExpanded(new Set([...open, c.key]));
