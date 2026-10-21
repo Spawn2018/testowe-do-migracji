@@ -3819,3 +3819,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #381 — CI unit/visual/db zielone na `226bdee1` (db `39561683717`, visual `39561683837`); MERGEABLE. F7 „jeszcze NIE” było na `5ea5b55`; po poprawkach komentarz „czekam na zielone CI i ponowne gotowe” — **brak** „F7: gotowe do scalenia” po `226bdee1` → bez merge. #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4 cz.2** (#381 / 0248) — kod F7 gotowy; czekam na „F7: gotowe do scalenia”. Potem B5.
+
+## 2026-10-21 11:40 — #384 `pilne`: HOTFIX decyzji/CHECK (pkt 1)
+
+- Skrzynka: #384 (`Spawn2018`, `dla-cursora`+`pilne`) — przerywa B5. Wpisane: PLAN §3/§4/§8, dopisek `D-20261021-1130-01.md`. #323/#322/#320 w planie, bez `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie (#382 czeka CI/F7; #383 „nie scalać jeszcze”; #385 CI w toku; #259 konflikt). Bez push na `main`.
+- Bieżąca: **HOTFIX #384 pkt 1** (`pakiet/hotfix-384-decision-events`, migracja **0249**) — `DECISION_EFFECT`/`DECISION_SAILING`/`DECISION_KEEP_TOWER` w CHECK; zestaw `dec-fx` (12 OK). B5 → 0250 po rebase.
