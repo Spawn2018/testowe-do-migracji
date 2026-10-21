@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { LoadEvent } from '../src/types';
-import { histRow } from '../src/lib/p6History';
+import { histCat, histRow, visibleFor } from '../src/lib/p6History';
 
 const ev = (type: string, payload: Record<string, unknown>): LoadEvent => ({
   id: type, loadId: 'L', type, at: '2026-10-21T10:00:00Z', actor: 'Jan Kowalski // SCX', payload,
@@ -26,5 +26,15 @@ describe('#384 — Historia: rozstrzygnięcia decyzji', () => {
     for (const t of ['DECISION_EFFECT', 'DECISION_HOLD', 'DECISION_SAILING', 'DECISION_KEEP_TOWER']) {
       expect(histRow(ev(t, {}), 'pl').head).not.toBe('Zmiana w transporcie');
     }
+  });
+  it('F7 #387: KSH nie widzi decyzji; SCX tylko rozstrzygnięcia SCX; HHL wszystkie', () => {
+    const scx = { ...ev('DECISION_EFFECT', { option: 'ACCEPT', note: 'x' }), actor: 'Jan Kowalski // SCX' } as LoadEvent;
+    const hhl = { ...ev('DECISION_EFFECT', { option: 'DISPUTE', note: 'spór' }), actor: 'Anna Nowak // HHL' } as LoadEvent;
+    expect(histCat('DECISION_HOLD')).toBe('DECYZJA');
+    expect(visibleFor(scx, 'KSH')).toBe(false);
+    expect(visibleFor(hhl, 'KSH')).toBe(false);
+    expect(visibleFor(scx, 'SCX')).toBe(true);
+    expect(visibleFor(hhl, 'SCX')).toBe(false);
+    expect(visibleFor(hhl, 'HHL')).toBe(true);
   });
 });

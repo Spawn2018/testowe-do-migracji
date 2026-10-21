@@ -16,7 +16,7 @@ import { decText } from '../i18n/decisions';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 import { dayTime, hitChannel } from './statusAxis';
 
-export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
+export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'DECYZJA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
 export const HIST_FILTERS: HistFilter[] = ['ALL', 'ROUTE', 'RES', 'NUM', 'DOC', 'PRICE'];
 type Role = 'HHL' | 'KSH' | 'SCX';
@@ -49,6 +49,8 @@ export function histCat(type: string): HistCat {
   if (type.startsWith('PLAN_DATES') || type.startsWith('SCHEDULE_')) return 'PLAN';
   if (type === 'READY_BLOCKED') return 'PROBA';
   if (type === 'NOTE') return 'NOTATKA';
+  /* #384: rozstrzygnięcia decyzji (decision_apply_effect) */
+  if (type.startsWith('DECISION_')) return 'DECYZJA';
   return 'INNE';
 }
 
@@ -132,6 +134,9 @@ export function visibleFor(e: LoadEvent, role: Role): boolean {
   if (role === 'HHL') return true;
   const cat = histCat(e.type);
   if (cat === 'NUMER') return role !== 'KSH';
+  /* F7 #387: decyzje widzą HHL i decydujący. KSH nie dostaje decyzji (decisions_read), SCX — tylko rozstrzygnięcia SCX
+     (nie widzi decyzji tylko-HHL ani ich komentarzy). */
+  if (cat === 'DECYZJA') return role === 'SCX' && /\/\/\s*SCX\b/.test(String(e.actor ?? ''));
   if (cat !== 'CENA') return true;
   const side = String(e.payload?.side ?? '').toUpperCase();
   return role === 'KSH' ? SIDE_KSH.has(side) : SIDE_SCX.has(side);

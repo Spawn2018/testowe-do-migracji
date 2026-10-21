@@ -25,6 +25,7 @@ const PL: Record<string, string> = {
   p6b_tag_IMPORT: 'Import',
   p6b_tag_PROBA: 'Próba',
   p6b_tag_NOTATKA: 'Notatka',
+  p6b_tag_DECYZJA: 'Decyzja',
   p6b_tag_INNE: 'Zmiana',
   p6b_hist_empty: 'Brak wpisów w tym zakresie.',
   p6b_hidden_1: '{n} dawny zapis bez zmiany ukryty (np. ten sam numer, zasoby bez zmian, „Gotowy → Gotowy”).',
