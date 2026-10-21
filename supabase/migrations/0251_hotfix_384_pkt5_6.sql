@@ -151,7 +151,6 @@ declare
   v_label text;
   v_actor uuid := current_app_user_id();
   v_parent uuid;
-  v_proposer uuid;
   v_has_lf boolean;
   v_has_df boolean;
   v_delta integer;
@@ -303,29 +302,28 @@ begin
         )
         on conflict (dedup_key) where dedup_key is not null do nothing;
       end if;
-      -- F7: powiadom autora propozycji (SCX) o przyjęciu / odrzuceniu licznika
-      if d.type_code = 'KSH_DATE_COUNTER' and p_effect in ('ACCEPT', 'SKIP') then
+      -- F7: wynik licznika → przewoźnik transportu (nie resolved_by; HHL po terminie nie dostaje)
+      if d.type_code = 'KSH_DATE_COUNTER' and p_effect in ('ACCEPT', 'SKIP') and d.load_id is not null then
         v_parent := nullif(btrim(coalesce(d.detail->>'parent_decision_id', '')), '')::uuid;
-        if v_parent is not null then
-          select resolved_by into v_proposer from decisions where id = v_parent;
-          if v_proposer is not null then
-            insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
-            select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, d.load_id,
-                   'KSH_DATE_COUNTER_RESULT',
-                   jsonb_build_object(
-                     'decision_id', d.id, 'parent_decision_id', v_parent,
-                     'option', p_option, 'effect', p_effect,
-                     'title', case when p_effect = 'ACCEPT'
-                               then 'KSH przyjęła propozycję terminu'
-                               else 'KSH odrzuciła propozycję terminu' end,
-                     'locale', u.locale
-                   ),
-                   'ksh-counter-res:' || d.id::text || ':' || p_option || ':' || u.id::text
-              from app_users u
-             where u.id = v_proposer and u.active
-            on conflict (dedup_key) where dedup_key is not null do nothing;
-          end if;
-        end if;
+        insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+        select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, d.load_id,
+               'KSH_DATE_COUNTER_RESULT',
+               jsonb_build_object(
+                 'decision_id', d.id, 'parent_decision_id', v_parent,
+                 'option', p_option, 'effect', p_effect,
+                 'title', case when p_effect = 'ACCEPT'
+                           then 'KSH przyjęła propozycję terminu'
+                           else 'KSH odrzuciła propozycję terminu' end,
+                 'locale', u.locale
+               ),
+               'ksh-counter-res:' || d.id::text || ':' || p_option || ':' || u.id::text
+          from app_users u
+          join loads ld on ld.id = d.load_id
+         where ld.carrier_org_id is not null
+           and u.org_id = ld.carrier_org_id
+           and u.role in ('CARRIER_DISPATCH', 'CARRIER_USER')
+           and u.active
+        on conflict (dedup_key) where dedup_key is not null do nothing;
       end if;
 
     when p_effect = 'NOTIFY' then
@@ -700,7 +698,7 @@ begin
      or (v_df >= v_lf) is false then
     v_dates_odd := true;
   end if;
-  if v_dates_odd and v_admin is not true and (v_from_counter and current_app_role() = 'HHL_OPS') is not true then
+  if v_dates_odd and v_admin is not true then
     if (v_dd >= v_ld) is not true then
       raise exception 'Data rozładunku przed datą załadunku' using errcode = '22023';
     end if;
@@ -718,7 +716,7 @@ begin
   end if;
 
   v_by := case
-    when v_admin or (v_from_counter and current_app_role() = 'HHL_OPS') then 'HHL_ADMIN'
+    when v_admin then 'HHL_ADMIN'
     else 'KSH'
   end;
   if v_by = 'HHL_ADMIN' then

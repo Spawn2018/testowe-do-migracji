@@ -141,12 +141,29 @@ val "KSH widzi KSH_DATE_COUNTER" $KSH "select count(*) from decisions where id='
 err "SCX nie rozstrzyga KSH_DATE_COUNTER" $SCX "select decision_resolve('$DCNT','ACCEPT')" "wskazana firma|Rozstrzyg"
 err "HHL_OPS przed terminem nie rozstrzyga licznika" $OPS "select decision_resolve('$DCNT','ACCEPT')" "wskazana firma|Rozstrzyg"
 val "KSH Przyjmuję → daty z propozycji" $KSH "select (decision_resolve('$DCNT','ACCEPT')->>'dates_applied')::text; select plan_load_date::text from loads where id='$L'" "$LD_PROP" commit
-val "ACCEPT: od/do przesunięte na nowy dzień" $HHL "select ((plan_load_from at time zone 'Europe/Warsaw')::date = '$LD_PROP'::date and (plan_load_to at time zone 'Europe/Warsaw')::date = '$LD_PROP'::date and extract(hour from plan_load_from at time zone 'Europe/Warsaw') = 8)::text from loads where id='$L'" t
-val "ACCEPT: powiadomienie SCX (autor)" $SCX "select count(*) from notifications where template='KSH_DATE_COUNTER_RESULT' and payload->>'decision_id'='$DCNT' and payload->>'effect'='ACCEPT'" 1
-val "ACCEPT: PLAN_DATES_CHANGED do SCX" $SCX "select count(*) > 0 from notifications where template='PLAN_DATES_CHANGED' and load_id='$L'" t
-val "ACCEPT: bez nowego LATE_DATE_CHANGE" $HHL "select count(*) from risk_signals where load_id='$L' and kind='LATE_DATE_CHANGE' and resolved_at is null and detected_at > now() - interval '1 minute'" 0
+val "ACCEPT: od/do przesunięte na nowy dzień" $HHL "select ((plan_load_from at time zone 'Europe/Warsaw')::date = '$LD_PROP'::date and (plan_load_to at time zone 'Europe/Warsaw')::date = '$LD_PROP'::date and extract(hour from plan_load_from at time zone 'Europe/Warsaw') = 8) from loads where id='$L'" t
+val "ACCEPT: powiadomienie SCX (przewoźnik)" $SCX "select count(*) from notifications where template='KSH_DATE_COUNTER_RESULT' and payload->>'decision_id'='$DCNT' and payload->>'effect'='ACCEPT'" 1
+val "ACCEPT: PLAN_DATES_CHANGED do SCX" $SCX "select count(*) > 0 from notifications where template='PLAN_DATES_CHANGED' and load_id='$L' and payload->>'by' = 'KSH'" t
 
-# REJECT + powiadomienie SCX
+# F7: propozycja < 5 dni — bez LATE_DATE_CHANGE po ACCEPT (counter_accept); tylko detected_at po znaczniku
+sys "update risk_signals set resolved_at = coalesce(resolved_at, now()) where load_id='$L' and kind='LATE_DATE_CHANGE' and resolved_at is null" >/dev/null
+sys "update loads set plan_load_date = current_date + 8, plan_delivery_date = current_date + 12,
+     plan_load_from = ((current_date + 8)::timestamp + time '08:00') at time zone 'Europe/Warsaw',
+     plan_load_to = ((current_date + 8)::timestamp + time '12:00') at time zone 'Europe/Warsaw',
+     plan_delivery_from = ((current_date + 12)::timestamp + time '12:00') at time zone 'Europe/Stockholm',
+     plan_delivery_to = ((current_date + 12)::timestamp + time '16:00') at time zone 'Europe/Stockholm',
+     status = 'PLANNED'
+     where id='$L'" >/dev/null
+sys "update risk_signals set resolved_at = coalesce(resolved_at, now()) where load_id='$L' and kind='LATE_DATE_CHANGE' and resolved_at is null" >/dev/null
+LD2=$(sys "select (current_date + 2)::text" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+DP_LATE=$(run "$HHL" "select decision_open('$P','KSH_DATE_LT_5D','późna late', '{}'::jsonb, '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "PROPOSE D+2 → counter" $SCX "select (decision_resolve('$DP_LATE','PROPOSE_DATE','prop late', jsonb_build_object('load_date','$LD2'))->>'ui_hint')" KSH_DATE_COUNTER commit
+DCNT_LATE=$(sys "select id from decisions where type_code='KSH_DATE_COUNTER' and detail->>'parent_decision_id'='$DP_LATE' and status in ('NEW','ASSIGNED','SNOOZED') limit 1" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+TS_LATE=$(sys "select clock_timestamp()::text" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+val "ACCEPT D+2 → daty" $KSH "select (decision_resolve('$DCNT_LATE','ACCEPT')->>'dates_applied')::text; select plan_load_date::text from loads where id='$L'" "$LD2" commit
+val "ACCEPT: bez nowego LATE_DATE_CHANGE" $HHL "select count(*) from risk_signals where load_id='$L' and kind='LATE_DATE_CHANGE' and resolved_at is null and detected_at >= '$TS_LATE'::timestamptz" 0
+
+# REJECT + powiadomienie SCX (przewoźnik)
 sys "update loads set plan_load_date = current_date + 3, plan_delivery_date = current_date + 7,
      plan_load_from = ((current_date + 3)::timestamp + time '08:00') at time zone 'Europe/Warsaw',
      plan_delivery_from = ((current_date + 7)::timestamp + time '12:00') at time zone 'Europe/Stockholm'

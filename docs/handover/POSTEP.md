@@ -3884,3 +3884,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); **#391** `pilne` (D-1535 t40 ×1,14) wpisane do PLAN §3/§4/§8 + dopisek; po #389 → 0252, B5 → 0253. #323/#322/#320 w planie.
 - Scalanie: #389 db FAIL (dec2 58/62: ACCEPT licznika — `v_dd < v_ld` przy samej `load_date`). Brak F7. Bez push na `main`.
 - Bieżąca: przy samej `load_date` w propozycji przesuń `plan_delivery_date` (+ okna) o różnicę dni, potem `ksh_confirm_dates`.
+
+## 2026-10-21 16:15 — #384 pkt 5–6: F7 drobne + dec2 60/62
+
+- Skrzynka: #384/#391 `pilne`; #391 już w planie. Bez F7 „gotowe”.
+- Scalanie: #389 db FAIL na `ccfbabb7` (dec2: `true` vs `t` przy od/do; LATE z setup D+3). Visual jeszcze w toku — push poprawki po FAIL db. Bez push na `main`.
+- Bieżąca: wynik licznika → `carrier_org_id` (CARRIER_*); bez gałęzi HHL_OPS w `ksh_confirm_dates`; test LATE na D+2 + `detected_at` po znaczniku; PLAN_DATES `by=KSH`; dec2 64.
