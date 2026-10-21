@@ -14,6 +14,7 @@ import { nextGdnSailing } from '../../lib/voyage';
 import { portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
+import { switchViewRole } from '../../auth/previewSwitch';
 import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
 import { formatListDateTime } from '../../lib/format';
 import { lazyRetry } from '../../lib/lazyRetry';
@@ -209,7 +210,7 @@ export function Topbar() {
               type="button"
               data-role={r}
               aria-pressed={role === r}
-              onClick={() => setRole(r)}
+              onClick={() => void switchViewRole(r)}
               title={ROLE_META[r].name}
             >
               {ROLE_META[r].short}

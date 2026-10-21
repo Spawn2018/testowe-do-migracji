@@ -23,6 +23,8 @@ export interface AuthProfile {
   real_full_name?: string | null;
   real_role?: UserRole | null;
   acting_as?: boolean;
+  /** B5 (0249): `impersonation_state.read_only` — Podgląd w bazie (tylko odczyt); false = „Działaj jako”. */
+  preview_ro?: boolean;
   /** wyglad/P3 (E37): „ostatnie logowanie” w menu konta — pole wypełnia logika profilu (gdy jest). */
   last_sign_in_at?: string | null;
 }

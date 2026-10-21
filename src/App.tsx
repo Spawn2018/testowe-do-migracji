@@ -35,6 +35,7 @@ import { usePageSectionDnD } from './hooks/usePageSectionDnD';
 import { useRouteSync } from './hooks/useRouteSync';
 import { SUPABASE_AUTH_ENABLED } from './auth/config';
 import { canSwitchView } from './lib/prodFacade';
+import { switchViewRole } from './auth/previewSwitch';
 import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessNote';
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
@@ -105,7 +106,7 @@ function TowerShell() {
       if (e.shiftKey && (e.key === 'R' || e.key === 'r') && canSwitchView()) {
         const order: Array<'HHL' | 'KSH' | 'SCX'> = ['HHL', 'KSH', 'SCX'];
         const i = order.indexOf(store.role);
-        store.setRole(order[(i + 1) % order.length]);
+        void switchViewRole(order[(i + 1) % order.length]);
         return;
       }
       const map: Record<string, typeof store.view> = {

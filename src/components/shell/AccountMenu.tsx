@@ -10,6 +10,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { hasKey, t } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
 import { canSwitchView } from '../../lib/prodFacade';
+import { switchViewRole } from '../../auth/previewSwitch';
 import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile';
 import { markManualLogout } from '../../auth/sessionYear';
 import { openOptionsScreen } from '../../lib/openOptions';
@@ -187,7 +188,7 @@ export function AccountMenu() {
               <div className="seg acc-seg" role="group" aria-label={t(locale, 'p3a_preview_lbl')} data-preview-seg>
                 {PREVIEW_ROLES.map((r) => (
                   <button key={r} type="button" data-role={r} aria-pressed={role === r} title={ROLE_META[r].name}
-                    onClick={() => { setRole(r); close(); }}>
+                    onClick={() => { void switchViewRole(r); close(); }}>
                     {ROLE_META[r].short}
                   </button>
                 ))}
