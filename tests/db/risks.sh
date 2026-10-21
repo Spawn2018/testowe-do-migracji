@@ -109,6 +109,13 @@ chk "C1: resolve → 0 RISK_RESOLVED" \
 chk "C1: resolve → RISK_OPEN oznaczony przeczytany" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and read_at is not null and payload->>'c1_resolved' = 'true'")" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID'")"
+# #411: matrix_notify('RISK_RESOLVED') → 0; OPEN z url
+chk "#411: matrix RISK_RESOLVED → 0" \
+  "$(Q "select matrix_notify('RISK_FERRY_WEATHER','RISK_RESOLVED','$L1','$P',jsonb_build_object('risk_id','$RID'),'411-rr')")" 0
+chk "#411: matrix DECISION_RESOLVED → 0" \
+  "$(Q "select matrix_notify('DECISION','DECISION_RESOLVED','$L1','$P',jsonb_build_object('decision_id',gen_random_uuid()),'411-dr')")" 0
+chk "#411: RISK_OPEN ma url" \
+  "$(Q "select case when coalesce(payload->>'url','') like '%/#/%' then 1 else 0 end from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and channel='IN_APP' limit 1")" 1
 
 echo; echo "[1215] zamknięcie alarmów panelu (D-20261018-1215-01)"
 DID=$(Q "insert into decisions (project_id, type_code, status, title) values ('$P','FERRY_CANCELLED','NEW','1215-overdue') returning id")

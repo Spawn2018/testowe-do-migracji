@@ -22,7 +22,7 @@ export const EXPECTED_LOCAL = {
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 43, // #398: +8 +1 SMS emtrack ≥12h bez GPS_SILENT
+  risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
   i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
@@ -30,7 +30,7 @@ export const EXPECTED_LOCAL = {
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
   'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
-  dec3: 13,
+  dec3: 14, // #411: RESOLVE → 0× DECISION_RESOLVED + OPEN przeczytany (było 1 asercja)
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 156, // 160 − 4 SKIP (B6)
-  risks: 41, // 43 − 2 SKIP (C1)
+  risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

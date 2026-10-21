@@ -92,7 +92,8 @@ val "94 z krytycznym przekracza 90 i jest cięte do limitu operacyjnego" "select
 
 # Macierz: niekrytyczny e-mail = DIGEST, nie PENDING. Nic nie wychodzi do Resend.
 # E5: payload z decision_id (albo load_id — tu oba); reguły C1 bez zmian pod stary test.
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+# #411: DECISION_RESOLVED zablokowane — skrót z niekrytycznego DECISION_OPEN
+sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P',
   jsonb_build_object('title','l13','decision_id','$DEC_L13'),'l13-nc','FORWARDER')" >/dev/null
 val "niekrytyczny e-mail macierzy to jeden skrót" "select count(*)||status from notifications where channel='EMAIL' and dedup_key like 'digest:%' group by status" "1DIGEST"
 
@@ -148,7 +149,7 @@ val "stan systemu: ile i do kogo" "begin; select set_config('request.jwt.claim.s
 sys "delete from notifications where channel='EMAIL' and (template in ('L13_FILL','AUTH_INVITE') or status in ('PENDING','DIGEST','SUPPRESSED'));" >/dev/null
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
  select 'EMAIL','hhl@test','L13_FILL','SENT','l13-ord-'||g from generate_series(1,84) g" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P',
   jsonb_build_object('title','skrot','decision_id','$DEC_L13'),'l13-ord-d','FORWARDER')" >/dev/null
 sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P',
   jsonb_build_object('level','critical','decision_id','$DEC_L13'),'l13-ord-c','FORWARDER')" >/dev/null
