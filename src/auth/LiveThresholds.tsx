@@ -10,7 +10,7 @@ import { getSupabase } from './client';
 import { useTowerStore } from '../store/useTowerStore';
 import { hasKey, t, tp } from '../i18n/messages';
 import { THRESHOLD_KEYS, ThresholdsScreen, type ThresholdRow } from '../components/options/SystemScreens';
-import { announceOptionsChanged, QUIET_KEY } from './liveOpts';
+import { announceOptionsChanged, errText, QUIET_KEY, useBusy } from './liveOpts';
 
 type Db = { key: string; value_num: number | string; unit: string; label_pl: string };
 
@@ -38,34 +38,41 @@ export default function LiveThresholds({ readOnly = false }: { readOnly?: boolea
   const locale = useTowerStore((s) => s.locale);
   const [rows, setRows] = useState<Db[] | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const { busy, guard } = useBusy((e) => setMsg(errText(locale, e)));
 
   const refresh = useCallback(async () => {
+    try {
     const sb = await getSupabase();
     const q = await sb.from('ops_thresholds').select('key,value_num,unit,label_pl');
-    if (q.error) { setMsg(q.error.message); setRows([]); return; }
+    if (q.error) { setMsg(errText(locale, q.error)); setRows([]); return; }
     setRows((q.data ?? []) as Db[]);
-  }, []);
+    } catch (e) {
+      setMsg(errText(locale, e));
+      setRows((cur) => cur ?? []);
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const save = (key: string, value: number) => {
     if (readOnly) return;
     if (!(value > 0)) { setMsg(t(locale, 'opt_acc_thresh_bad')); return; }
-    void (async () => {
+    void guard(async () => {
       const sb = await getSupabase();
       const { error } = await sb.rpc('admin_ops_threshold_set', { p_key: key, p_value: value });
-      setMsg(error ? tp(locale, 'p3l_err', { err: error.message }) : null);
+      setMsg(error ? errText(locale, error) : null);
       if (!error) announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
   const toggle = (key: string, on: boolean) => {
     if (readOnly || key !== QUIET_KEY) return;
-    void (async () => {
+    void guard(async () => {
       const sb = await getSupabase();
       const { error } = await sb.rpc('admin_ops_threshold_set', { p_key: QUIET_KEY, p_value: on ? 1 : 0 });
-      setMsg(error ? tp(locale, 'p3l_err', { err: error.message }) : null);
+      setMsg(error ? errText(locale, error) : null);
+      if (!error) announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
 
   const list = useMemo(() => thresholdRows(rows ?? []), [rows]);
@@ -91,6 +98,7 @@ export default function LiveThresholds({ readOnly = false }: { readOnly?: boolea
           on: Number(quiet.value_num) === 1,
         }] : undefined}
         onToggle={toggle}
+        busy={busy}
       />
     </div>
   );

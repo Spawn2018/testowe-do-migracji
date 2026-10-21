@@ -10,7 +10,7 @@ import { t, tp } from '../i18n/messages';
 import { formatListDateTime } from '../lib/format';
 import { uaLabel } from '../lib/userAgent';
 import { LoginsScreen, type LoginRow } from '../components/options/PeopleScreens';
-import { kindOf, personName, type PersonDb } from './liveOpts';
+import { errText, kindOf, personName, type PersonDb } from './liveOpts';
 
 const LIMIT = 50;
 
@@ -46,6 +46,7 @@ export default function LiveLogins() {
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
+    try {
     setBusy(true);
     const sb = await getSupabase();
     const [l, u] = await Promise.all([
@@ -53,11 +54,15 @@ export default function LiveLogins() {
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id'),
     ]);
     setBusy(false);
-    if (l.error) { setMsg(l.error.message); setRows([]); return; }
+    if (l.error) { setMsg(errText(locale, l.error)); setRows([]); return; }
     setMsg(null);
     setRows((l.data ?? []) as Row[]);
     setPeople((u.data ?? []) as PersonDb[]);
-  }, []);
+    } catch (e) {
+      setBusy(false);
+      setMsg(errText(locale, e));
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   return (

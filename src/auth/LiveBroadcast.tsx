@@ -10,7 +10,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import { formatListDateTime } from '../lib/format';
 import { BroadcastScreen, type BroadcastHistoryRow } from '../components/options/PeopleScreens';
-import { announceOptionsChanged, personName, type PersonDb } from './liveOpts';
+import { announceOptionsChanged, errText, personName, useBusy, type PersonDb } from './liveOpts';
 
 type Firm = 'HHL' | 'KSH' | 'SCX';
 type Db = { id: number; body: string; expires_at: string; for_forwarder: boolean; for_carrier: boolean; for_client: boolean; created_at: string; created_by: string | null; cleared_at: string | null };
@@ -31,10 +31,11 @@ export default function LiveBroadcast({ readOnly = false, admin = true }: { read
   const [active, setActive] = useState<{ text: string; until: string; firms: string } | null | undefined>(undefined);
   const [history, setHistory] = useState<BroadcastHistoryRow[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const { busy, guard } = useBusy((e) => setMsg(errText(locale, e)));
   const [ver, setVer] = useState(0);
 
   const refresh = useCallback(async () => {
+    try {
     const sb = await getSupabase();
     if (!admin) {
       const c = await sb.rpc('system_broadcast_current');
@@ -47,7 +48,7 @@ export default function LiveBroadcast({ readOnly = false, admin = true }: { read
         .order('created_at', { ascending: false }).limit(10),
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id'),
     ]);
-    if (q.error) { setMsg(q.error.message); setActive(null); return; }
+    if (q.error) { setMsg(errText(locale, q.error)); setActive(null); return; }
     const rows = (q.data ?? []) as Db[];
     const people = new Map(((u.data ?? []) as PersonDb[]).map((p) => [p.id, p]));
     const now = Date.now();
@@ -66,13 +67,16 @@ export default function LiveBroadcast({ readOnly = false, admin = true }: { read
           : tp(locale, 'p3l_b_until', { d: formatListDateTime(r.expires_at) })}`,
       };
     }));
+    } catch (e) {
+      setMsg(errText(locale, e));
+      setActive((cur) => (cur === undefined ? null : cur));
+    }
   }, [admin, locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const publish = (v: { text: string; firms: Firm[]; until: string }) => {
     if (readOnly) return;
-    void (async () => {
-      setBusy(true);
+    void guard(async () => {
       const sb = await getSupabase();
       const { error } = await sb.rpc('admin_broadcast_set', {
         p_body: v.text,
@@ -81,26 +85,24 @@ export default function LiveBroadcast({ readOnly = false, admin = true }: { read
         p_carrier: v.firms.includes('SCX'),
         p_client: v.firms.includes('KSH'),
       });
-      setBusy(false);
-      if (error) { setMsg(error.message); return; }
+      if (error) { setMsg(errText(locale, error)); return; }
       setMsg(t(locale, 'opt_acc_bcast_saved'));
       setVer((n) => n + 1);
       announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
 
   const clear = () => {
     if (readOnly) return;
-    void (async () => {
-      setBusy(true);
+    void guard(async () => {
       const sb = await getSupabase();
       const { error } = await sb.rpc('admin_broadcast_clear');
-      setBusy(false);
-      if (error) { setMsg(error.message); return; }
+      if (error) { setMsg(errText(locale, error)); return; }
       setMsg(t(locale, 'opt_acc_bcast_cleared'));
+      announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
 
   if (active === undefined) return <div className="note" role="status">{msg ?? t(locale, 'p3l_loading')}</div>;

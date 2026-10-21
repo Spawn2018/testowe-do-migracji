@@ -35,7 +35,7 @@ import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
 import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 import { accountRole } from '../lib/accountRole';
-import { OPTIONS_CHANGED_EVENT } from '../auth/liveOpts';
+import { OPTIONS_CHANGED_EVENT } from '../lib/optionsChanged';
 import type { LiveMeta } from '../auth/liveOptionsMeta';
 
 /** A6-T2 — znacznik „Zapisano · …” w aktywnym języku (PL bez zmian). */

@@ -66,7 +66,7 @@ function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
 }
 
-export function UsersScreen({ locale, counts, people, invites, readOnly, mark, onInvite, onAction, onPerson, kindsFor }: {
+export function UsersScreen({ locale, counts, people, invites, readOnly, mark, onInvite, onAction, onPerson, kindsFor, busy }: {
   locale: Locale;
   /** `noPassword` — konta bez ustawionego hasła (podtytuł „Konta i zaproszenia”, obraz E37) */
   counts: { total: number; active: number; withPhone: number; named: number; noPassword?: number };
@@ -79,6 +79,8 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void;
   /** Rodzaje kont do wyboru przy osobie (produkcja: tylko rodzaje firmy tej osoby). Domyślnie wszystkie 5. */
   kindsFor?: (p: PersonRow) => readonly AccountKind[];
+  /** Operacja w toku (produkcja): przyciski zmian wyłączone — bez podwójnego zaproszenia czy zapisu. */
+  busy?: boolean;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const firms = (['HHL', 'KSH', 'SCX'] as const).map((f) => ({ f, rows: people.filter((p) => FIRM_OF[p.kind] === f) })).filter((x) => x.rows.length);
@@ -116,7 +118,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
               open === p.id && !readOnly ? (
                 <tr key={`${p.id}-act`} className="ox-person-act">
                   <td colSpan={6}>
-                    <PersonActions locale={locale} p={p} onPerson={onPerson} kinds={kindsFor?.(p) ?? ACCOUNT_KINDS} />
+                    <PersonActions locale={locale} p={p} onPerson={onPerson} kinds={kindsFor?.(p) ?? ACCOUNT_KINDS} busy={busy} />
                   </td>
                 </tr>
               ) : null,
@@ -126,7 +128,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
       </table>
 
       <div className="ox-users-split">
-        {readOnly ? null : <InviteForm locale={locale} onInvite={onInvite} />}
+        {readOnly ? null : <InviteForm locale={locale} onInvite={onInvite} busy={busy} />}
         <section className="ox-panel">
           <header className="ox-panel-hd">
             <h3>{t(locale, 'p3c_u_list')}</h3>
@@ -142,7 +144,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
                 <span className="ox-invite-act">
                   <span className={`ox-tag ox-tag-${iv.status}`}>{t(locale, STATUS_KEY[iv.status])}</span>
                   {readOnly ? null : STATUS_ACTIONS[iv.status].map((a) => (
-                    <button key={a} type="button" className="btn ghost ox-btn" onClick={() => onAction?.(iv.id, a)}>{t(locale, a)}</button>
+                    <button key={a} type="button" className="btn ghost ox-btn" disabled={busy} onClick={() => onAction?.(iv.id, a)}>{t(locale, a)}</button>
                   ))}
                 </span>
               </li>
@@ -155,7 +157,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   );
 }
 
-function PersonActions({ locale, p, onPerson, kinds }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void; kinds: readonly AccountKind[] }) {
+function PersonActions({ locale, p, onPerson, kinds, busy }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void; kinds: readonly AccountKind[]; busy?: boolean }) {
   const [kind, setKind] = useState<AccountKind>(p.kind);
   return (
     <div className="ox-person-panel" data-person-actions={p.id}>
@@ -166,16 +168,16 @@ function PersonActions({ locale, p, onPerson, kinds }: { locale: Locale; p: Pers
         </select>
       </label>
       <div className="ox-actions ox-actions-start">
-        <button type="button" className="btn ox-btn" disabled={p.self || kind === p.kind} onClick={() => onPerson?.(p.id, 'kind', kind)}>{t(locale, 'p3c_u_kind_save')}</button>
-        <button type="button" className="btn ghost ox-btn" disabled={p.self} onClick={() => onPerson?.(p.id, p.active === false ? 'activate' : 'deactivate')}>{t(locale, p.active === false ? 'p3c_u_on' : 'p3c_u_off')}</button>
-        <button type="button" className="btn ghost ox-btn" onClick={() => onPerson?.(p.id, 'logout')}>{t(locale, 'p3c_u_logout')}</button>
-        <button type="button" className="btn ghost ox-btn" disabled={p.self || p.active === false} onClick={() => onPerson?.(p.id, 'actas')}>{t(locale, 'p3c_u_actas')}</button>
+        <button type="button" className="btn ox-btn" disabled={busy || p.self || kind === p.kind} onClick={() => onPerson?.(p.id, 'kind', kind)}>{t(locale, 'p3c_u_kind_save')}</button>
+        <button type="button" className="btn ghost ox-btn" disabled={busy || p.self} onClick={() => onPerson?.(p.id, p.active === false ? 'activate' : 'deactivate')}>{t(locale, p.active === false ? 'p3c_u_on' : 'p3c_u_off')}</button>
+        <button type="button" className="btn ghost ox-btn" disabled={busy || p.self} onClick={() => onPerson?.(p.id, 'logout')}>{t(locale, 'p3c_u_logout')}</button>
+        <button type="button" className="btn ghost ox-btn" disabled={busy || p.self || p.active === false} onClick={() => onPerson?.(p.id, 'actas')}>{t(locale, 'p3c_u_actas')}</button>
       </div>
     </div>
   );
 }
 
-function InviteForm({ locale, onInvite }: { locale: Locale; onInvite?: (v: { first: string; last: string; phone: string; mail: string; kind: AccountKind }) => void }) {
+function InviteForm({ locale, onInvite, busy }: { locale: Locale; onInvite?: (v: { first: string; last: string; phone: string; mail: string; kind: AccountKind }) => void; busy?: boolean }) {
   const [v, setV] = useState({ first: '', last: '', phone: '', mail: '', kind: 'CLIENT_USER' as AccountKind });
   return (
     <section className="ox-panel ox-invite" data-opt-invite>
@@ -199,7 +201,7 @@ function InviteForm({ locale, onInvite }: { locale: Locale; onInvite?: (v: { fir
         <p className="ox-note-box">{t(locale, 'p3c_inv_note')}</p>
         <div className="ox-actions">
           <button type="button" className="btn ghost ox-btn" onClick={() => setV({ first: '', last: '', phone: '', mail: '', kind: 'CLIENT_USER' })}>{t(locale, 'p3c_cancel')}</button>
-          <button type="button" className="btn ox-btn" onClick={() => onInvite?.(v)}>{t(locale, 'p3c_inv_send')}</button>
+          <button type="button" className="btn ox-btn" disabled={busy} onClick={() => onInvite?.(v)}>{t(locale, 'p3c_inv_send')}</button>
         </div>
       </div>
     </section>

@@ -12,7 +12,7 @@ import { exportLoadsXlsx, exportRows } from '../lib/xlsxExport';
 import { transportLabel } from '../lib/transportName';
 import { ExportScreen, type ExportKind } from '../components/options/SystemScreens';
 import type { Load } from '../types';
-import { downloadTable, toCsv, triggerDownload, personName, type PersonDb } from './liveOpts';
+import { downloadTable, errText, toCsv, triggerDownload, personName, type PersonDb } from './liveOpts';
 
 const LIMIT = 2000;
 const BASE: Record<'loads' | 'hist' | 'risks', string> = {
@@ -92,7 +92,7 @@ export default function LiveExport({ admin = true }: { admin?: boolean }) {
         await downloadTable(all, base, fmt, kind === 'hist' ? 'Historia' : 'Sprawy');
         setMsg(tp(locale, 'opt_acc_export_ok', { n: all.length - 1 }));
       } catch (e) {
-        setMsg(e instanceof Error ? e.message : String(e));
+        setMsg(errText(locale, e));
       } finally {
         setBusy(false);
       }

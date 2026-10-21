@@ -34,7 +34,7 @@ export type SecurityFlagRow = {
 const namedFlags = (locale: Locale, rows: SecurityFlagRow[]) =>
   rows.map((f) => ({ ...f, name: t(locale, `p3c_flag_${f.key}`), does: t(locale, `p3c_flag_${f.key}_fx`) }));
 
-export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark, blocked }: {
+export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mark, blocked, busy }: {
   locale: Locale;
   flags: SecurityFlagRow[];
   readOnly?: boolean;
@@ -42,6 +42,8 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
   mark?: ReactNode;
   /** wyglad/2fa: przełącznik zablokowany z powodem (np. MFA_HHL_ADMIN — konto bez 2FA na dwóch urządzeniach albo sesja bez kodu) */
   blocked?: Partial<Record<string, string>>;
+  /** Zapis w toku (produkcja): przełączniki i „Tak, zmień” wyłączone. */
+  busy?: boolean;
 }) {
   const [flags, setFlags] = useState(() => namedFlags(locale, initialRaw));
   /* produkcja: po zapisie przychodzi nowy stan z bazy (stan i ostatnia zmiana) */
@@ -61,7 +63,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
       role="switch"
       aria-checked={f.on}
       aria-label={f.name}
-      disabled={readOnly || (!!blocked?.[f.key] && !f.on)}
+      disabled={readOnly || busy || (!!blocked?.[f.key] && !f.on)}
       onClick={() => setAsk(f)}
     ><span className="ox-track"><i /></span></button>
   );
@@ -89,7 +91,7 @@ export function FlagsScreen({ locale, flags: initialRaw, readOnly, onToggle, mar
             <p><b>{t(locale, 'p3c_effect')}</b> {ask.does}</p>
             <div className="ox-actions">
               <button type="button" className="btn ghost ox-btn" onClick={() => setAsk(null)}>{t(locale, 'p3c_cancel')}</button>
-              <button type="button" className="btn ox-btn" onClick={confirm}>{t(locale, 'p3c_yes_change')}</button>
+              <button type="button" className="btn ox-btn" disabled={busy} onClick={confirm}>{t(locale, 'p3c_yes_change')}</button>
             </div>
           </div>
         </div>
@@ -286,7 +288,7 @@ const withUnit = (v: string, unit: string) => (unit === '%' ? `${v}%` : `${v} ${
 /** Przełącznik 0/1 nad progami (produkcja: `import_quiet_hours` — ciche uzupełnienie godzin z pliku KSH). */
 export type ThresholdToggle = { key: string; label: string; note: string; on: boolean };
 
-export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles, onToggle, labels }: {
+export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles, onToggle, labels, busy }: {
   locale: Locale;
   rows: ThresholdRow[];
   readOnly?: boolean;
@@ -297,6 +299,8 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles
   onToggle?: (key: string, on: boolean) => void;
   /** Etykieta i zdanie o skutku spoza słownika (produkcja: próg z bazy bez wpisu — nazwa z `label_pl`). */
   labels?: Partial<Record<string, { label: string; fx: string }>>;
+  /** Zapis w toku (produkcja): „Zmień”, „Tak, zmień” i przełącznik wyłączone. */
+  busy?: boolean;
 }) {
   const [vals, setVals] = useState<Record<string, number>>(() => Object.fromEntries(rows.map((r) => [r.key, r.value])));
   /* produkcja: po zapisie i odświeżeniu przychodzą wartości z bazy */
@@ -313,7 +317,7 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles
             <li key={g.key} data-threshold-toggle={g.key} data-on={g.on ? 'on' : 'off'}>
               <span className="ox-thr-label">{g.label}</span>
               <span className="ox-thr-val"><span>{g.note}</span></span>
-              <button type="button" className="ox-switch" role="switch" aria-checked={g.on} aria-label={g.label} disabled={readOnly} onClick={() => onToggle?.(g.key, !g.on)}><span className="ox-track"><i /></span></button>
+              <button type="button" className="ox-switch" role="switch" aria-checked={g.on} aria-label={g.label} disabled={readOnly || busy} onClick={() => onToggle?.(g.key, !g.on)}><span className="ox-track"><i /></span></button>
             </li>
           ))}
         </ul>
@@ -343,13 +347,13 @@ export function ThresholdsScreen({ locale, rows, readOnly, onSave, mark, toggles
                 <span className="ox-thr-btns">
                   <button type="button" className="btn ghost ox-btn" onClick={() => setEdit(null)}>{t(locale, 'p3c_cancel')}</button>
                   {edit.ask ? (
-                    <button type="button" className="btn ox-btn" onClick={() => { setVals({ ...vals, [r.key]: num(edit.draft) }); onSave?.(r.key, num(edit.draft)); setEdit(null); }}>{t(locale, 'p3c_yes_change')}</button>
+                    <button type="button" className="btn ox-btn" disabled={busy} onClick={() => { setVals({ ...vals, [r.key]: num(edit.draft) }); onSave?.(r.key, num(edit.draft)); setEdit(null); }}>{t(locale, 'p3c_yes_change')}</button>
                   ) : (
                     <button type="button" className="btn ox-btn" disabled={!(num(edit.draft) > 0) || num(edit.draft) === v} onClick={() => setEdit({ ...edit, ask: true })}>{t(locale, 'p3c_m_save')}</button>
                   )}
                 </span>
               ) : (
-                <button type="button" className="btn ghost ox-btn" onClick={() => setEdit({ key: r.key, draft: fmt(v), ask: false })}>{t(locale, 'p3c_thr_change')}</button>
+                <button type="button" className="btn ghost ox-btn" disabled={busy} onClick={() => setEdit({ key: r.key, draft: fmt(v), ask: false })}>{t(locale, 'p3c_thr_change')}</button>
               )}
             </li>
           );

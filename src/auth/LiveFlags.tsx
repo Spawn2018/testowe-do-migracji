@@ -13,7 +13,7 @@ import { t, tp } from '../i18n/messages';
 import { m2 } from '../i18n/mfa2';
 import { formatListDateTime } from '../lib/format';
 import { FlagsScreen, SECURITY_FLAG_KEYS, type SecurityFlagRow } from '../components/options/SystemScreens';
-import { announceOptionsChanged, personName, type PersonDb } from './liveOpts';
+import { announceOptionsChanged, errText, personName, useBusy, type PersonDb } from './liveOpts';
 
 type Db = { key: string; enabled: boolean; note: string | null; updated_at: string | null; updated_by: string | null };
 
@@ -46,14 +46,16 @@ export default function LiveFlags({ readOnly = false }: { readOnly?: boolean }) 
   const [people, setPeople] = useState<PersonDb[]>([]);
   const [mfaBlock, setMfaBlock] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const { busy, guard } = useBusy((e) => setMsg(errText(locale, e)));
 
   const refresh = useCallback(async () => {
+    try {
     const sb = await getSupabase();
     const [f, u] = await Promise.all([
       sb.rpc('security_flags_list'),
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id'),
     ]);
-    if (f.error) { setMsg(f.error.message); setRows([]); return; }
+    if (f.error) { setMsg(errText(locale, f.error)); setRows([]); return; }
     setRows(((f.data ?? []) as Db[]));
     setPeople((u.data ?? []) as PersonDb[]);
     /* 2FA dla Administratorów: włączysz przy 2FA na dwóch urządzeniach i sesji z kodem (jak `admin_set_mfa_enforcement`) */
@@ -65,7 +67,11 @@ export default function LiveFlags({ readOnly = false }: { readOnly?: boolean }) 
     } catch {
       setMfaBlock(null);
     }
-  }, []);
+    } catch (e) {
+      setMsg(errText(locale, e));
+      setRows((cur) => cur ?? []);
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
@@ -76,14 +82,14 @@ export default function LiveFlags({ readOnly = false }: { readOnly?: boolean }) 
 
   const onToggle = (key: string, next: boolean) => {
     if (readOnly) return;
-    void (async () => {
+    void guard(async () => {
       const sb = await getSupabase();
       const { fn, args } = flagRpc(key, next);
       const { error } = await sb.rpc(fn, args);
-      setMsg(error ? tp(locale, 'p3l_err', { err: error.message }) : null);
+      setMsg(error ? errText(locale, error) : null);
       if (!error) announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
 
   if (!rows) return <div className="note" role="status">{msg ?? t(locale, 'p3l_loading')}</div>;
@@ -96,6 +102,7 @@ export default function LiveFlags({ readOnly = false }: { readOnly?: boolean }) 
           flags={flags}
           readOnly={readOnly}
           onToggle={onToggle}
+          busy={busy}
           blocked={mfaBlock ? { MFA_HHL_ADMIN: mfaBlock } : undefined}
         />
       ) : <p className="ox-empty">{t(locale, 'p3l_flags_none')}</p>}

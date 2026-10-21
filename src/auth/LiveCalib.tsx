@@ -14,7 +14,7 @@ import { EtaCalibScreen } from '../components/options/EtaCalibScreen';
 import { CALIB_NEEDED, CALIB_SAME_PCT, fixed, measured } from '../lib/etaCalibDemo';
 import type { CalibObservation, CalibSegment, CalibVersion, EtaCalibration } from '../lib/etaCalibSource';
 import type { Load, Locale } from '../types';
-import { announceOptionsChanged, personName, type PersonDb } from './liveOpts';
+import { announceOptionsChanged, errText, personName, useBusy, type PersonDb } from './liveOpts';
 
 type Param = { code: string; label: string; hours: number | string };
 type Obs = { id: number; load_id: string; corridor: string; hours_observed: number | string | null; exclude_reason: string | null; observed_at: string };
@@ -92,8 +92,10 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
   const [db, setDb] = useState<{ params: Param[]; obs: Obs[]; vers: Ver[]; frozen: boolean } | null>(null);
   const [people, setPeople] = useState<PersonDb[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const { busy, guard } = useBusy((e) => setMsg(errText(locale, e)));
 
   const refresh = useCallback(async () => {
+    try {
     const sb = await getSupabase();
     const [p, o, v, f, u] = await Promise.all([
       sb.from('eta_segment_params').select('code,label,hours').order('code'),
@@ -103,7 +105,7 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id'),
     ]);
     const err = p.error ?? o.error ?? v.error;
-    if (err) { setMsg(err.message); }
+    if (err) { setMsg(errText(locale, err)); }
     setDb({
       params: (p.data ?? []) as Param[],
       obs: (o.data ?? []) as Obs[],
@@ -111,7 +113,11 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
       frozen: Number((f.data as { value?: number | string } | null)?.value ?? 0) === 1,
     });
     setPeople((u.data ?? []) as PersonDb[]);
-  }, []);
+    } catch (e) {
+      setMsg(errText(locale, e));
+      setDb((cur) => cur ?? { params: [], obs: [], vers: [], frozen: false });
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const byId = useMemo(() => new Map(people.map((x) => [x.id, x])), [people]);
@@ -123,7 +129,7 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
   const approve = useCallback(async (id: string) => {
     const sb = await getSupabase();
     const { error } = await sb.rpc('apply_eta_calibration_version', { p_version: Number(id) });
-    if (error) { setMsg(tp(locale, 'p3l_err', { err: error.message })); return { ok: false }; }
+    if (error) { setMsg(errText(locale, error)); return { ok: false }; }
     announceOptionsChanged();
     await refresh();
     /* nowa wersja przychodzi z bazy po odświeżeniu (`approved={null}` niżej — ekran nie dopisuje jej drugi raz) */
@@ -132,12 +138,13 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
 
   const freeze = (next: boolean) => {
     if (readOnly) return;
-    void (async () => {
+    void guard(async () => {
       const sb = await getSupabase();
       const { error } = await sb.rpc('admin_set_eta_calibration_frozen', { p_frozen: next });
-      setMsg(error ? tp(locale, 'p3l_err', { err: error.message }) : null);
+      setMsg(error ? errText(locale, error) : null);
+      if (!error) announceOptionsChanged();
       await refresh();
-    })();
+    });
   };
 
   if (!data || !db) return <div className="note" role="status">{msg ?? t(locale, 'p3l_loading')}</div>;
@@ -152,7 +159,7 @@ export default function LiveCalib({ readOnly = false }: { readOnly?: boolean }) 
         onApprove={readOnly ? null : approve}
         approved={null}
         frozen={db.frozen}
-        onFreeze={readOnly ? undefined : freeze}
+        onFreeze={readOnly || busy ? undefined : freeze}
         note={`${t(locale, 'p3l_cal_note')}${pending ? ` ${t(locale, 'p3l_cal_no_prop')}` : ''}`}
       />
     </div>

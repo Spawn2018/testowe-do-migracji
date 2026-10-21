@@ -12,7 +12,7 @@ import { formatListDateTime } from '../lib/format';
 import { transportLabel } from '../lib/transportName';
 import { HistoryScreen, type HistoryEntry, type HistoryFilters } from '../components/options/SystemScreens';
 import type { Locale } from '../types';
-import { downloadTable, personName, type PersonDb } from './liveOpts';
+import { downloadTable, errText, personName, type PersonDb } from './liveOpts';
 
 export const HISTORY_LIMIT = 200;
 
@@ -53,6 +53,7 @@ export default function LiveHistory() {
   const [f, setF] = useState<HistoryFilters>({ from: '', to: '', who: '', what: '', q: '' });
 
   const refresh = useCallback(async () => {
+    try {
     setBusy(true);
     const sb = await getSupabase();
     const [h, u] = await Promise.all([
@@ -69,11 +70,15 @@ export default function LiveHistory() {
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id').order('created_at'),
     ]);
     setBusy(false);
-    if (h.error) { setMsg(h.error.message); setRows([]); return; }
+    if (h.error) { setMsg(errText(locale, h.error)); setRows([]); return; }
     setMsg(null);
     setRows((h.data ?? []) as Row[]);
     setPeople((u.data ?? []) as PersonDb[]);
-  }, [f]);
+    } catch (e) {
+      setBusy(false);
+      setMsg(errText(locale, e));
+    }
+  }, [f, locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const byId = useMemo(() => new Map(people.map((p) => [p.id, p])), [people]);
@@ -109,8 +114,12 @@ export default function LiveHistory() {
     void (async () => {
       const head = [t(locale, 'p3c_l_when'), t(locale, 'p3c_hist_who'), t(locale, 'p3c_hist_what'), t(locale, 'p3c_hist_was'), t(locale, 'p3c_hist_is')];
       const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value) ?? '', fmtVal(locale, r.new_value) ?? '']);
-      await downloadTable([head, ...data], 'WATCH_TOWER_historia_zmian', fmt, 'Historia');
-      setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: data.length }));
+      try {
+        await downloadTable([head, ...data], 'WATCH_TOWER_historia_zmian', fmt, 'Historia');
+        setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: data.length }));
+      } catch (e) {
+        setMsg(errText(locale, e));
+      }
     })();
   };
 

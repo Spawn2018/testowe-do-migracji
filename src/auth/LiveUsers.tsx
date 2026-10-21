@@ -17,7 +17,7 @@ import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import { UsersScreen, type InviteRow, type PersonAction, type PersonRow } from '../components/options/PeopleScreens';
 import { ACCOUNT_KINDS, type AccountKind } from '../components/options/types';
-import { announceOptionsChanged, kindOf, personName, type PersonDb } from './liveOpts';
+import { announceOptionsChanged, errText, kindOf, personName, useBusy, type PersonDb } from './liveOpts';
 
 type InviteDb = { id: string; email: string; role: string; org_id: string; created_at: string; first_name: string | null; last_name: string | null; full_name: string | null };
 type OrgDb = { id: string; code: string };
@@ -60,20 +60,28 @@ export default function LiveUsers() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [form, setForm] = useState(0);
 
+  const { busy, guard } = useBusy((e) => setMsg({ ok: false, text: errText(locale, e) }));
+
   const refresh = useCallback(async () => {
+    try {
     const sb = await getSupabase();
     const [u, i, o, l] = await Promise.all([
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id,must_set_password').order('created_at'),
       sb.from('user_invites').select('id,email,role,org_id,created_at,first_name,last_name,full_name').is('accepted_at', null).order('created_at'),
       sb.from('organizations').select('id,code').order('code'),
+      /* F7 #414 pkt 4: baza nie ma RPC „ostatnie logowanie każdej osoby” — dziennik ma limit 200 (najnowsze); starsze logowania → „—” */
       sb.rpc('admin_auth_login_log', { p_limit: 200 }),
     ]);
-    if (u.error) setMsg({ ok: false, text: authErrorPl(u.error.message) });
+    if (u.error) setMsg({ ok: false, text: errText(locale, u.error) });
     setUsers((u.data ?? []) as PersonDb[]);
     setInvites((i.data ?? []) as InviteDb[]);
     setOrgs(((o.data ?? []) as OrgDb[]).filter((x) => x.code in ROLES_FOR_ORG));
     setLogins(lastLoginByEmail((l.error ? [] : l.data ?? []) as LoginDb[]));
-  }, []);
+    } catch (e) {
+      setMsg({ ok: false, text: errText(locale, e) });
+      setUsers((cur) => cur ?? []);
+    }
+  }, [locale]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const orgCode = useCallback((id: string) => orgs.find((x) => x.id === id)?.code ?? '', [orgs]);
@@ -129,7 +137,8 @@ export default function LiveUsers() {
     if (!first || !last) { setMsg({ ok: false, text: t(locale, 'a6_ua_name_required') }); return; }
     if (!isE164(phone)) { setMsg({ ok: false, text: t(locale, 'a6_ua_phone_e164') }); return; }
     if (!addr) { setMsg({ ok: false, text: t(locale, 'p3l_inv_mail') }); return; }
-    void getSupabase().then(async (sb) => {
+    void guard(async () => {
+      const sb = await getSupabase();
       const done = await run(() => sb.rpc('admin_invite_user', {
         p_email: addr, p_org_code: ORG_OF[v.kind], p_role: v.kind, p_first_name: first, p_last_name: last, p_phone: phone,
       }), t(locale, 'a6_ua_saved'));
@@ -142,17 +151,21 @@ export default function LiveUsers() {
   const onAction = (id: string, action: string) => {
     const inv = invites.find((i) => i.id === id);
     if (!inv) return;
-    if (action === 'p3c_a_revoke') {
-      void getSupabase().then((sb) => run(() => sb.rpc('admin_revoke_invite', { p_invite: id }), t(locale, 'a6_ua_revoked')));
-    } else if (action === 'p3c_a_resend') {
-      void sendMail(inv.email);
-    }
+    void guard(async () => {
+      if (action === 'p3c_a_revoke') {
+        const sb = await getSupabase();
+        await run(() => sb.rpc('admin_revoke_invite', { p_invite: id }), t(locale, 'a6_ua_revoked'));
+      } else if (action === 'p3c_a_resend') {
+        await sendMail(inv.email);
+      }
+    });
   };
 
   const onPerson = (id: string, action: PersonAction, kind?: AccountKind) => {
     const u = byId.get(id);
     if (!u || u.id === me.user_id) return;
-    void getSupabase().then(async (sb) => {
+    void guard(async () => {
+      const sb = await getSupabase();
       if (action === 'kind' && kind) await run(() => sb.rpc('admin_set_user_role', { p_user: id, p_role: kind }), t(locale, 'a6_ua_role_changed'));
       if (action === 'activate' || action === 'deactivate') {
         await run(() => sb.rpc('admin_set_user_active', { p_user: id, p_active: action === 'activate' }), t(locale, action === 'activate' ? 'a6_ua_act_done' : 'a6_ua_deact_done'));
@@ -188,6 +201,7 @@ export default function LiveUsers() {
         onAction={onAction}
         onPerson={onPerson}
         kindsFor={kindsFor}
+        busy={busy}
       />
       {inviteRows.length ? null : <p className="ox-empty">{t(locale, 'p3l_inv_none')}</p>}
     </div>

@@ -3,7 +3,11 @@
  * rodzaj konta, pobieranie pliku, CSV i sygnał „ustawienia się zmieniły” (stany w menu i na kafelkach).
  * Tylko odczyt i te same RPC co dawne formularze w `src/auth/*`.
  */
+import { useCallback, useRef, useState } from 'react';
 import type { AccountKind } from '../components/options/types';
+import type { Locale } from '../types';
+import { tp } from '../i18n/messages';
+import { authErrorPl } from './config';
 
 export type PersonDb = {
   id: string;
@@ -74,7 +78,46 @@ export async function downloadTable(all: (string | number)[][], base: string, fm
 export const QUIET_KEY = 'import_quiet_hours';
 
 /** Po zapisie w ekranie: Opcje odświeżają stany przy pozycjach menu i na kafelkach telefonu. */
-export const OPTIONS_CHANGED_EVENT = 'wt-options-changed';
-export function announceOptionsChanged(): void {
-  if (typeof window !== 'undefined') window.dispatchEvent(new Event(OPTIONS_CHANGED_EVENT));
+export { OPTIONS_CHANGED_EVENT, announceOptionsChanged } from '../lib/optionsChanged';
+
+/** Błąd bazy albo wyjątek → polski komunikat („Nie udało się: …”). */
+export function errText(locale: Locale, e: unknown): string {
+  const m = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e ?? '');
+  return tp(locale, 'p3l_err', { err: authErrorPl(m) });
+}
+
+/**
+ * Blokada „w toku”: druga operacja, póki pierwsza trwa, nie startuje (np. podwójne „Zaproś” = dwa e-maile).
+ * Bez Reacta — do testu; `useBusy` dokłada stan do wyłączenia przycisków.
+ */
+export function makeOnce() {
+  let on = false;
+  return {
+    get busy() { return on; },
+    async run<T>(fn: () => Promise<T>): Promise<T | undefined> {
+      if (on) return undefined;
+      on = true;
+      try { return await fn(); } finally { on = false; }
+    },
+  };
+}
+
+/** `busy` do przycisków + `guard(fn)`: jedna operacja naraz; wyjątek → `onError`. */
+export function useBusy(onError: (e: unknown) => void) {
+  const once = useRef(makeOnce()).current;
+  const [busy, setBusy] = useState(false);
+  const err = useRef(onError);
+  err.current = onError;
+  const guard = useCallback(async (fn: () => Promise<unknown>) => {
+    if (once.busy) return;
+    setBusy(true);
+    try {
+      await once.run(fn);
+    } catch (e) {
+      err.current(e);
+    } finally {
+      setBusy(false);
+    }
+  }, [once]);
+  return { busy, guard };
 }

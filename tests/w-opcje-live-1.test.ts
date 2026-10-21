@@ -165,3 +165,48 @@ describe('Przełączniki bezpieczeństwa i Kalibracja ETA', () => {
     expect(withVer.segments[0]).toMatchObject({ medianMin: 1140, verdict: 'propose' });
   });
 });
+
+/* F7 #414: blokada „w toku”, błędy po polsku, sygnał zmiany po każdym zapisie */
+import { errText, makeOnce } from '../src/auth/liveOpts';
+describe('F7 #414 — jedna operacja naraz i błędy', () => {
+  it('drugie kliknięcie w trakcie zapisu nie startuje drugiej operacji (np. dwa e-maile z zaproszeniem)', async () => {
+    const once = makeOnce();
+    let calls = 0;
+    let release!: () => void;
+    const op = () => new Promise<void>((r) => { calls += 1; release = r; });
+    const a = once.run(op);
+    const b = once.run(op);
+    expect(once.busy).toBe(true);
+    expect(await b).toBeUndefined();
+    release();
+    await a;
+    expect(calls).toBe(1);
+    expect(once.busy).toBe(false);
+    await once.run(async () => { calls += 1; });
+    expect(calls).toBe(2);
+  });
+  it('po wyjątku blokada zwolniona', async () => {
+    const once = makeOnce();
+    await expect(once.run(async () => { throw new Error('x'); })).rejects.toThrow('x');
+    expect(once.busy).toBe(false);
+  });
+  it('błąd bazy po polsku z prefiksem', () => {
+    expect(errText('pl', { message: 'permission denied' })).toMatch(/^Nie udało się: /);
+    expect(errText('pl', new Error('Invalid login credentials'))).toBe('Nie udało się: Nieprawidłowy e-mail lub hasło.');
+  });
+  it('ekrany: busy przy zapisach, try/catch w refresh, announceOptionsChanged po zapisie', () => {
+    for (const f of ['LiveUsers', 'LiveThresholds', 'LiveFlags', 'LiveBroadcast', 'LiveCalib']) {
+      const s = read(`src/auth/${f}.tsx`);
+      expect(s, f).toContain('useBusy(');
+      expect(s, f).toContain('void guard(async () => {');
+      expect(s, f).toContain('busy');
+    }
+    for (const f of ['LiveUsers', 'LiveLogins', 'LiveBroadcast', 'LiveThresholds', 'LiveHistory', 'LiveFlags', 'LiveCalib']) {
+      expect(read(`src/auth/${f}.tsx`), f).toMatch(/const refresh = useCallback\(async \(\) => \{\n    try \{/);
+    }
+    expect(read('src/auth/LiveThresholds.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
+    expect(read('src/auth/LiveCalib.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
+    expect(read('src/auth/LiveBroadcast.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
+    expect(read('src/auth/LiveUsers.tsx')).not.toContain('void getSupabase().then(');
+  });
+});
