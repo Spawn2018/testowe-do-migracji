@@ -30,9 +30,11 @@ const DB_FIELD: Record<Channel, 'in_app' | 'email' | 'push'> = { bell: 'in_app',
 /** Katalog × wiersze z bazy → macierz ekranu. Komórka katalogu `null` zostaje „—”; brak wiersza w bazie = wszystko wyłączone. */
 export function matrixFromDb(catalog: readonly MatrixGroup[], rows: readonly DbRow[]): MatrixGroup[] {
   const by = new Map(rows.map((r) => [`${r.event_key}|${r.role}`, r]));
+  /* zdarzenie z niewdrożonej migracji (`pendingDb`) bez żadnego wiersza w bazie — nie pokazujemy (zapis by się nie udał) */
+  const inDb = new Set(rows.map((r) => r.event_key));
   return catalog.map((g) => ({
     ...g,
-    rows: g.rows.map((row) => {
+    rows: g.rows.filter((row) => !row.pendingDb || inDb.has(row.id)).map((row) => {
       if (row.risksOnly) return row;
       const cells = {} as Record<AccountKind, MatrixCell>;
       for (const k of ACCOUNT_KINDS) {

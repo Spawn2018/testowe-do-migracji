@@ -129,7 +129,7 @@ export function demoPermits(loads: Load[]): PermitView[] {
  */
 export const demoPolicies = (): PolicyView[] => [
   { org: 'SCX', name: 'OCP przewoźnika', number: 'OCP/SCX/2026/04417', validTo: '2027-03-29', approved: true },
-  { org: 'HHL', name: 'Polisa HHL', number: 'PZU 1106707356', validTo: '2027-04-22', approved: true },
+  { org: 'HHL', name: 'OC przewoźnika — PZU', number: 'PZU 1106707356', validTo: '2027-04-22', approved: true },
 ];
 
 let docReqs: DocRequirement[] | null = null;

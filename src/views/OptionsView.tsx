@@ -32,7 +32,7 @@ import {
 import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusScreen';
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
-import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
+import { NOTIFY_CATALOG_READY } from '../lib/notifyCatalog';
 import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 import { accountRole } from '../lib/accountRole';
 
@@ -373,7 +373,7 @@ export function OptionsView() {
   const forme: OptScreen[] = [
     scr('account', pick('account', LiveAccount ? block(<LiveAccount />) : null), { right: 'own' }),
     scr('forme', pick('forme', live
-      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG} prefs={live.prefs} onSave={live.save} />
+      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG_READY} prefs={live.prefs} onSave={live.save} />
       : <ForMeScreen locale={locale} kind={null} groups={null} />), { right: 'own' }),
     scr('look', (
       <>

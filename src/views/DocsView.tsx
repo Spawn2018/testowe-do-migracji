@@ -46,7 +46,9 @@ const UPLOAD_KINDS: DocCategory[] = otherDocsOn() ? ['PERMIT_PL', 'PERMIT_SE', '
 const FILE_KINDS: DocCategory[] = otherDocsOn()
   ? ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE', 'OTHER']
   : ['PERMIT_PL', 'PERMIT_SE', 'CMR', 'INSURANCE', 'INVOICE'];
-const MAX_FILES = 60;
+/* audyt-teksty (c): lista plików — na ekranie 20 wierszy (komputer) / 10 kart (telefon), reszta pod „Pokaż wszystkie (N)”; filtry działają na całości */
+const MAX_FILES_DESK = 20;
+const MAX_FILES_PHONE = 10;
 
 /* rok zawsze — właściciel 16.10.2026: „08.10.2026”, „08.10.2026, 12:00”, „01.10.2026–31.10.2026” */
 const dmy = (iso: string) => fmtDate(iso);
@@ -206,6 +208,9 @@ export function DocsView() {
   const weekShort = (w: string) => weekKeyLabel(w);
 
   const files = useMemo(() => filterFiles(documents, loads, filter), [documents, loads, filter]);
+  const [allFiles, setAllFiles] = useState(false);
+  useEffect(() => setAllFiles(false), [filter]);
+  const fileLimit = allFiles ? files.length : phone ? MAX_FILES_PHONE : MAX_FILES_DESK;
   const fileLoads = useMemo(() => {
     const ids = new Set(documents.filter((d) => d.loadId && (d.status === 'UPLOADED' || d.status === 'MISMATCH')).map((d) => d.loadId));
     return loads.filter((l) => ids.has(l.id));
@@ -419,7 +424,7 @@ export function DocsView() {
         <p className="fin-muted doc-pad">{ft(locale, 'p5_doc_files_empty')}</p>
       ) : phone ? (
         <div className="doc-pad doc-file-rows">
-          {files.slice(0, MAX_FILES).map((d) => (
+          {files.slice(0, fileLimit).map((d) => (
             <DocFileRow key={d.id} doc={d} label={`${d.loadId ? nameOf(d.loadId) : ft(locale, 'p5_doc_whole')} · ${docLabel(locale, d.category)}`} onPreview={setPreviewDoc} />
           ))}
         </div>
@@ -436,7 +441,7 @@ export function DocsView() {
               </tr>
             </thead>
             <tbody>
-              {files.slice(0, MAX_FILES).map((d) => (
+              {files.slice(0, fileLimit).map((d) => (
                 <tr key={d.id} data-doc-file={d.id} className={d.status === 'MISMATCH' ? 'is-warn' : undefined}>
                   <td data-content>
                     <button type="button" className="linkbtn" onClick={() => setPreviewDoc(d)}>{d.name}</button>
@@ -451,7 +456,12 @@ export function DocsView() {
           </table>
         </div>
       )}
-      {files.length > MAX_FILES ? <p className="fin-muted doc-pad">{ftp(locale, 'p5_doc_files_more', { n: MAX_FILES, all: files.length })}</p> : null}
+      {files.length > fileLimit ? (
+        <p className="fin-muted doc-pad" data-doc-files-more>
+          {ftp(locale, 'p5_doc_files_more', { n: fileLimit, all: files.length })}{' '}
+          <button type="button" className="linkbtn" data-doc-files-all onClick={() => setAllFiles(true)}>{ftp(locale, 'p5_doc_files_all', { all: files.length })}</button>
+        </p>
+      ) : null}
       <p className="fin-muted doc-pad">{ft(locale, 'p5_doc_files_note')}</p>
     </section>
   );

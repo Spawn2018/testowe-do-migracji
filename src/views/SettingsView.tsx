@@ -16,7 +16,7 @@ import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
-import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
+import { NOTIFY_CATALOG_READY } from '../lib/notifyCatalog';
 import { fuelScreenOf } from '../lib/p5bSource';
 import { DEMO_EXAMPLE_BASE_EUR } from '../lib/p5bDemo';
 import { getNowIso } from '../lib/frozenNow';
@@ -68,7 +68,7 @@ export function SettingsView() {
   const forme: OptScreen[] = [
     { id: 'account', right: 'own', body: demo?.bodies.account ?? (LiveAccount ? block(<LiveAccount />) : noSource) },
     { id: 'forme', right: 'own', body: demo?.bodies.forme ?? (live
-      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG} prefs={live.prefs} onSave={live.save} />
+      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG_READY} prefs={live.prefs} onSave={live.save} />
       : <ForMeScreen locale={locale} kind={null} groups={null} />) },
     {
       id: 'look',

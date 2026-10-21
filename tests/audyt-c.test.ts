@@ -83,8 +83,8 @@ describe('C-03…C-07 — Dokumenty (E31)', () => {
     expect(demoReadyGaps(prep, [], docs).some((g) => g.kind === 'POLICY_SCX')).toBe(false);
     expect(demoReadyGaps(prep, [], []).some((g) => g.kind === 'POLICY_SCX')).toBe(true);
   });
-  it('C-07: „Polisa HHL” PZU 1106707356 jak polisa SCX; tekst braku bez „wgrywa HHL”', () => {
-    expect(ft('pl', 'p5_doc_r_OCS')).toBe('Polisa HHL');
+  it('C-07: „OC przewoźnika — PZU” (dawniej „Polisa HHL”) PZU 1106707356 jak polisa SCX; tekst braku bez „wgrywa HHL”', () => {
+    expect(ft('pl', 'p5_doc_r_OCS')).toBe('OC przewoźnika — PZU');
     expect(policiesOf()?.find((p) => p.org === 'HHL')).toMatchObject({ number: 'PZU 1106707356', approved: true });
     expect(ft('pl', 'p5_pd_policy_none_OCS')).not.toContain('wgrywa HHL');
   });
