@@ -449,6 +449,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       const { data, error } = await sb.rpc('my_profile');
       const p = (Array.isArray(data) ? data[0] : null) as AuthProfile | null;
       if (!alive) return;
+      /* F7 #403: błąd sieci przy cichym wczytaniu (np. telefon po wybudzeniu) — ekran zostaje, tylko komunikat */
+      if (error && prevKey) { readyKeyRef.current = prevKey; useTowerStore.getState().pushToast(t(useTowerStore.getState().locale, 'a6_auth_bg_fail'), 'LOW'); return; }
       if (error || !p) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_org') }); return; }
       if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
       const viewRole = viewRoleForOrg(p.org_code);
@@ -476,7 +478,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (st.role !== viewRole) st.setRole(viewRole);
       /* to samo konto, profil i widok już na ekranie — tylko ciche odświeżenie danych (otwarty transport zostaje) */
       const key = [session.user.id, p.user_id, p.role, p.org_code, viewRole, p.acting_as ? 'as' : '', p.real_user_id ?? '',
-        p.full_name ?? '', p.phone ?? '', p.active ? '1' : '0'].join('|');
+        p.full_name ?? '', p.phone ?? '', p.email ?? '', p.active ? '1' : '0'].join('|');
       const silent = prevKey === key;
       if (alive && !silent) setState({ kind: 'loading' });
       try {
@@ -484,6 +486,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         if (silent) await bridge.refreshFromServer({ keepSelection: true });
         else await bridge.connectSupabaseData(sb);
       } catch (e) {
+        if (silent) { readyKeyRef.current = key; useTowerStore.getState().pushToast(t(useTowerStore.getState().locale, 'a6_auth_bg_fail'), 'LOW'); return; }
         if (alive) setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_fetch_fail').replace('{err}', e instanceof Error ? e.message : String(e)) });
         return;
       }

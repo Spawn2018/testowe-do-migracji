@@ -9,7 +9,7 @@ const css = readFileSync(new URL('../src/auth/auth.css', import.meta.url), 'utf8
 
 describe('bez przeładowania po powrocie na kartę', () => {
   it('klucz obejmuje konto widoku, rolę, „Działaj jako”, imię, telefon i aktywność', () => {
-    expect(gate).toMatch(/const key = \[session\.user\.id, p\.user_id, p\.role, p\.org_code, viewRole, p\.acting_as \? 'as' : '', p\.real_user_id \?\? '',\s*p\.full_name \?\? '', p\.phone \?\? '', p\.active \? '1' : '0'\]\.join\('\|'\);/);
+    expect(gate).toMatch(/const key = \[session\.user\.id, p\.user_id, p\.role, p\.org_code, viewRole, p\.acting_as \? 'as' : '', p\.real_user_id \?\? '',\s*p\.full_name \?\? '', p\.phone \?\? '', p\.email \?\? '', p\.active \? '1' : '0'\]\.join\('\|'\);/);
   });
   it('każde wczytanie czyści klucz; wraca tylko po „ready”', () => {
     expect(gate).toContain('const prevKey = readyKeyRef.current;\n      readyKeyRef.current = null;');
@@ -22,6 +22,10 @@ describe('bez przeładowania po powrocie na kartę', () => {
   it('SIGNED_IN po powrocie na kartę przechodzi przez load (sprawdza profil), bez osobnego skrótu', () => {
     expect(gate).not.toContain('readyUserRef');
     expect(gate).not.toContain("document.addEventListener('visibilitychange'");
+  });
+  it('błąd sieci przy cichym wczytaniu — ekran zostaje, tylko komunikat', () => {
+    expect(gate).toContain("if (error && prevKey) { readyKeyRef.current = prevKey;");
+    expect(gate).toContain("if (silent) { readyKeyRef.current = key;");
   });
   it('pasek „Działasz jako” zwalnia przycisk po zakończeniu', () => {
     expect(banner).toMatch(/setBusy\(false\);\s*requestAuthReload\(\);/);
