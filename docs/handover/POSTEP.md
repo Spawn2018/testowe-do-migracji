@@ -3956,3 +3956,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych; #413/#411/#405/#400/#409/#412 już w planie. #412 ma dopiski (2FA, paliwo Orlen) — do rozszerzenia zakresu przy pozycji.
 - Scalanie: brak `F7: gotowe do scalenia` po ostatnim commicie. #406 `db` FAIL: workflows 3 + dec-auto 1 (WORKFLOW_ALERT KSH/SCX blokowane przez SYSTEM=tylko HHL) + nullguard 689/690. Bez push na `main`.
 - Bieżąca: **HOTFIX #402** PR #406 — `workflow`→`LOAD_STATUS` (KSH/SCX z reguł); `ext_mail`; `matrix_event` w bramce; LATE_DATE/SILENT/AUTO→dates/status; `trg_notifications_a_gate` przed budżetem; nullguard bootstrap poza triggerem.
+
+## 2026-10-21 22:05 — #402 db: B6/C1 po a_gate; #414 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora`; pozycje #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #414 F7 gotowe → merge `dc2e08eb`. #415 F7 gotowe, po #414 mergeable (visual w toku). #406 `db` FAIL: security B6 (25/0 zamiast 20/1 — a_gate przed budżetem tłumi B6T* bez event_key) + risks C1 RISK_OPEN. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — test B6 z `matrix_event=dates`; C1: org/macierz risk_route + asercja po `risk_id`.
