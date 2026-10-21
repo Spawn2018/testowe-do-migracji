@@ -33,6 +33,12 @@ export function previewErrorPl(message: string | undefined): string {
   return m || 'Nie udało się przełączyć Podglądu.';
 }
 
+/** Stan Podglądu z profilu (`my_profile.preview_read_only`, 0249); bez pola w bazie — dopytanie `is_preview_read_only`. */
+export async function previewRoOf(p: { preview_read_only?: boolean | null }, call?: Rpc): Promise<boolean> {
+  if (typeof p.preview_read_only === 'boolean') return p.preview_read_only;
+  return readPreviewRo(call);
+}
+
 /**
  * Po wczytaniu profilu z „acting_as”: czy to Podgląd (tylko odczyt), a nie „Działaj jako”.
  * F7 #383 Ś1: błąd odczytu = Podgląd (bezpieczniej: brak zapisu); brak funkcji w bazie (przed 0249) = nie.
