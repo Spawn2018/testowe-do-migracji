@@ -17,10 +17,10 @@ HHL=11111111-0000-0000-0000-000000000001
 P=22222222-0000-0000-0000-000000000001
 L=33333333-0000-0000-0000-000000000001
 SCXO=00000000-0000-0000-0000-00000000a003
-V1=55555555-0000-0000-0000-00000000dfx1
-S1=55555555-0000-0000-0000-00000000dfs1
-V2=55555555-0000-0000-0000-00000000dfx2
-S2=55555555-0000-0000-0000-00000000dfs2
+V1=55555555-0000-0000-0000-00000000df01
+S1=55555555-0000-0000-0000-00000000df11
+V2=55555555-0000-0000-0000-00000000df02
+S2=55555555-0000-0000-0000-00000000df12
 ok=0; fail=0
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
 run() {
@@ -44,23 +44,31 @@ for t in DECISION_EFFECT DECISION_SAILING DECISION_KEEP_TOWER; do
   fi
 done
 
-# Tylko zwykłe funkcje (prokind=f) — pg_get_functiondef na agregatach → „array_agg is an aggregate”.
+# Tylko zwykłe funkcje (prokind=f). Po „insert into load_events” bierzemy max 255 znaków
+# (limit kwantyfikatora ARE w PG) i literały 'UPPER_CASE'.
 MISS=$(sys "
 with defs as (
-  select pg_get_functiondef(p.oid) as def
+  select p.proname, pg_get_functiondef(p.oid) as def
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public'
      and p.prokind = 'f'
      and pg_get_functiondef(p.oid) ~* 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events'
 ),
+parts as (
+  select proname, left(chunk, 255) as chunk
+    from defs,
+         lateral unnest(regexp_split_to_array(def, 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events', 'i'))
+           with ordinality as u(chunk, ord)
+   where ord > 1
+),
 chunks as (
   select distinct m[1] as lit
-    from defs,
+    from parts,
          lateral regexp_matches(
-           def,
-           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[^;]{0,1200}?''([A-Z][A-Z0-9_]*)''',
-           'gi'
+           chunk,
+           '''([A-Z][A-Z0-9_]*)''[[:space:]]*,[[:space:]]*now\(\)',
+           'g'
          ) as m
 ),
 allowed as (
@@ -80,14 +88,17 @@ with defs as (
    where n.nspname = 'public' and p.prokind = 'f'
      and pg_get_functiondef(p.oid) ~* 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events'
 ),
+parts as (
+  select proname, left(chunk, 255) as chunk
+    from defs,
+         lateral unnest(regexp_split_to_array(def, 'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events', 'i'))
+           with ordinality as u(chunk, ord)
+   where ord > 1
+),
 chunks as (
   select distinct proname, m[1] as lit
-    from defs,
-         lateral regexp_matches(
-           def,
-           'insert[[:space:]]+into[[:space:]]+(public\\.)?load_events[^;]{0,1200}?''([A-Z][A-Z0-9_]*)''',
-           'gi'
-         ) as m
+    from parts,
+         lateral regexp_matches(chunk, '''([A-Z][A-Z0-9_]*)''[[:space:]]*,[[:space:]]*now\(\)', 'g') as m
 ),
 allowed as (
   select (regexp_matches(pg_get_constraintdef(oid), '''([A-Z][A-Z0-9_]*)''', 'g'))[1] as t
@@ -174,7 +185,9 @@ REST=${RES_LINE#*/}
 PAIRS=${REST%%/*}
 OK_N=${REST#*/}
 if [ -z "$RES_LINE" ]; then
-  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku)"; printf '%s\n' "$RES" | tail -12
+  fail=$((fail+1)); echo "  FAIL  resolve-all (brak wyniku)"
+  printf '%s\n' "$RES" | grep -iE 'ERROR|NOTICE: FAIL|FATAL' | head -20
+  printf '%s\n' "$RES" | tail -8
 else
   if [ "$FAIL_N" = "0" ]; then ok=$((ok+1)); echo "  OK    resolve-all fail=0 (pary=$PAIRS ok=$OK_N)"; else
     fail=$((fail+1)); echo "  FAIL  resolve-all fail=$FAIL_N / pary=$PAIRS"; printf '%s\n' "$RES" | grep 'NOTICE:' | head -25

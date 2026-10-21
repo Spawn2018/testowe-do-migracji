@@ -3831,3 +3831,8 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #384 `pilne` (bieżąca); #323/#322/#320 w planie, bez `pilne`.
 - Scalanie: #386 db FAIL (dec-fx 6/5); brak F7. #382 db FAIL (B5 czeka na HOTFIX). #383/#385 bez „F7: gotowe”. Bez push na `main`.
 - Bieżąca: **HOTFIX #384 pkt 1** — `dec-fx`: `prokind='f'` (bez `pg_get_functiondef` na agregatach), resolve przez `set local role` / odczyt zdarzeń jako postgres. Push → CI.
+
+## 2026-10-21 12:25 — #384 pkt 1: UUID hex + literały ARE ≤255
+
+- CI `e6a566f4`: dec-fx 8 OK / 3 FAIL — ACCEPT/KEEP_TOWER zielone; literały `{0,1200}` poza limitem ARE; UUID `…dfs2` nie-hex.
+- Poprawka: UUID `df01`/`df11`/`df02`/`df12`; literały = 255 znaków po `insert into load_events` + wzorzec `'TYP', now()`.
