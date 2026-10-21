@@ -317,7 +317,9 @@ B4W="reset role;
     and not exists (select 1 from load_messages where body='b4-cudzy-all');
  set local role authenticated;"
 val "B4: list_ui SCX bez wiadomości cudzego transportu" $SCX "$B4W select count(*) from list_load_messages_ui() where body='b4-cudzy-all'" 0
-# Macierz chat: HHL+SCX → 0 dla KSH; ALL → ≥1 (kontrola pozytywna); potem przywróć domyślne
+# Macierz chat: zapamiętaj → HHL+SCX → 0 dla KSH; ALL → ≥1; przywróć
+B4MAT=$(sys "select coalesce(in_app,false)::text||'|'||coalesce(push,false)::text||'|'||coalesce(email,false)::text from notification_matrix where event_key='chat' and role='CLIENT_USER'" | tr -d '\r')
+B4MAT_IN=$(echo "$B4MAT" | cut -d'|' -f1); B4MAT_PU=$(echo "$B4MAT" | cut -d'|' -f2); B4MAT_EM=$(echo "$B4MAT" | cut -d'|' -f3)
 sys "update notification_matrix set in_app=true, push=true, email=false where event_key='chat' and role='CLIENT_USER'" >/dev/null
 KSHU=$(sys "select id from app_users where email='ksh@test'" | tr -d '\r')
 run $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-matrix-ksh', '{FORWARDER,CARRIER}')" commit >/dev/null
@@ -326,7 +328,35 @@ out=$(sys "select count(*) from notifications n join load_messages m on n.dedup_
 run $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-matrix-all', '{FORWARDER,CLIENT,CARRIER}')" commit >/dev/null
 out=$(sys "select count(*) from notifications n join load_messages m on n.dedup_key like 'CHAT:'||m.id::text||':%' where m.body='b4-matrix-all' and n.user_id='$KSHU'")
 [ "$out" != "0" ] && { ok=$((ok+1)); echo "  OK    B4: wiadomość ALL → powiadomienie KSH ($out)"; } || { fail=$((fail+1)); echo "  FAIL  B4: brak powiadomienia KSH przy ALL"; }
-sys "update notification_matrix set in_app=true, push=true, email=false where event_key='chat' and role='CLIENT_USER'" >/dev/null
+sys "update notification_matrix set in_app='$B4MAT_IN'::boolean, push='$B4MAT_PU'::boolean, email='$B4MAT_EM'::boolean where event_key='chat' and role='CLIENT_USER'" >/dev/null
+
+echo; echo "[B4 cz.2] dokumenty visible_to + odczyty z dostępem do transportu (0248)"
+run $HHL "insert into load_messages (load_id, body, visible_to) values ('$L1', 'b4-all-own', '{FORWARDER,CLIENT,CARRIER}')" commit >/dev/null
+val "B4: KSH widzi wiadomość ALL ze swojego transportu" $KSH "select count(*) from load_messages where body='b4-all-own'" 1
+val "B4: list_ui KSH widzi ALL ze swojego transportu" $KSH "select count(*) from list_load_messages_ui() where body='b4-all-own'" 1
+B4ALL=$(sys "select id from load_messages where body='b4-all-own' limit 1" | tr -d '\r')
+run $KSH "select mark_load_message_read($B4ALL)" commit >/dev/null
+val "B4: KSH widzi własny odczyt ALL (reads + transport)" $KSH "select count(*) from load_message_reads where message_id=$B4ALL" 1
+# SCX (przewoźnik L1) nie wstawia odczytu wiadomości ALL z cudzego transportu (CAR2B4)
+B4CUDZY=$(sys "select id from load_messages where body='b4-cudzy-all' limit 1" | tr -d '\r')
+err "B4: SCX nie wstawi odczytu wiadomości cudzego transportu" $SCX \
+  "insert into load_message_reads (message_id, user_id) select $B4CUDZY, id from app_users where email='scx@test'" \
+  "row-level security|policy|42501"
+# Dokument HHL+SCX: KSH 0 w SELECT (= paczka/eksport nie dostanie pliku)
+B4DOC=$(sys "select gen_random_uuid()" | tr -d '\r')
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+     values ('$B4DOC','22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-hhl-scx.pdf','b4-doc-hhl-scx.pdf','application/pdf',100,'{FORWARDER,CARRIER}')" >/dev/null
+val "B4: KSH nie widzi dokumentu HHL+SCX (paczka/eksport)" $KSH "select count(*) from documents where file_name='b4-doc-hhl-scx.pdf'" 0
+val "B4: SCX widzi dokument HHL+SCX" $SCX "select count(*) from documents where file_name='b4-doc-hhl-scx.pdf'" 1
+val "B4: HHL widzi dokument HHL+SCX" $HHL "select count(*) from documents where file_name='b4-doc-hhl-scx.pdf'" 1
+B4DOC2=$(sys "select gen_random_uuid()" | tr -d '\r')
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+     values ('$B4DOC2','22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-all.pdf','b4-doc-all.pdf','application/pdf',100,'{FORWARDER,CLIENT,CARRIER}')" >/dev/null
+val "B4: KSH widzi dokument ALL (paczka tygodnia)" $KSH "select count(*) from documents where file_name='b4-doc-all.pdf'" 1
+err "B4: puste visible_to dokumentu odrzucone" $HHL \
+  "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, visible_to)
+   values ('22222222-0000-0000-0000-000000000001','$L1','OTHER','test/b4-empty.pdf','b4-empty.pdf','application/pdf',1,'{}')" \
+  "check constraint|visible_to|documents_visible_to"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

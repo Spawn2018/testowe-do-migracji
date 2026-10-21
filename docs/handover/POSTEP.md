@@ -3795,3 +3795,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
 - Scalanie: #380 — F7 „jeszcze NIE” na `67d1a0a` (05:43); po `fc71cb87` unit/visual zielone, `db` czerwone: security 138/131. #259 konflikt / bez F7. Bez push na `main`.
 - Bieżąca: **B4 cz.1** — `EXPECTED_LOCAL.security` 131→138 (+7 F7); TEST 134.
+
+## 2026-10-21 08:45 — B4 cz.1 SCALONE; start B4 cz.2 (dokumenty)
+
+- Skrzynka: #323/#322/#320 w planie (`Spawn2018`, `dla-cursora`); bez `pilne`. Nowych zgłoszeń nie ma.
+- Scalanie: #380 F7 „gotowe do scalenia” po `74371d77` (06:41 UTC), CI unit/visual/db zielone → merge `31179814` (0247). #259 konflikt / bez F7. Bez push na `main`.
+- Bieżąca: **B4 cz.2** (`pakiet/b4-docs-visible-to`, **0248**) — CHECK `documents_visible_to_chk`; polityki `load_message_reads` z dostępem do transportu; testy ALL own / doc HHL+SCX (paczka) / macierz przywrócona; security 138→147.
