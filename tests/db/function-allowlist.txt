@@ -230,3 +230,7 @@ authenticated workflow_rule_history
 authenticated workflow_rule_write
 authenticated workflow_rule_set_enabled
 authenticated workflow_rule_soft_delete
+authenticated admin_preview_start
+authenticated admin_preview_stop
+authenticated assert_not_preview
+authenticated is_preview_read_only

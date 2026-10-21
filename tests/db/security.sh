@@ -1337,5 +1337,106 @@ sys "delete from sailings where id='$SAIL530'" >/dev/null
 sys "delete from vessels where id='$VES530'" >/dev/null
 sys "delete from load_escorts where load_id='$L2'" >/dev/null
 
+echo; echo "[B5] Podgląd read_only — tylko HHL_ADMIN (0300)"
+OPS_B5=11111111-0000-0000-0000-0000000000b5
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS_B5','00000000-0000-0000-0000-00000000a001','ops-b5@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+KSHID_B5=$(sys "select id from app_users where auth_id='$KSH'" | tr -d '\r')
+HHLID_B5=$(sys "select id from app_users where auth_id='$HHL'" | tr -d '\r')
+err "B5: HHL_OPS nie zaczyna Działaj jako" $OPS_B5 \
+  "select admin_impersonate_start('$KSHID_B5'::uuid)" "Tylko administrator HHL|42501"
+err "B5: HHL_OPS nie zaczyna Podglądu" $OPS_B5 \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+err "B5: KSH nie zaczyna Podglądu" $KSH \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+# MFA: przy włączonej fladze aal1 → 42501 (jak current_* / mfa_satisfied).
+sys "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
+err "B5: Podgląd aal1 przy MFA_HHL_ADMIN" $HHL \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+sys "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
+err "B5: bezpośredni INSERT impersonation_state" $HHL \
+  "insert into impersonation_state (admin_user_id, target_user_id, read_only)
+   values ('$HHLID_B5'::uuid,'$KSHID_B5'::uuid,true)" "permission denied|42501"
+err "B5: bezpośredni UPDATE impersonation_state" $HHL \
+  "update impersonation_state set read_only=true where admin_user_id='$HHLID_B5'::uuid" "permission denied|42501"
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+val "B5: Podgląd KSH → current_role CLIENT_USER" $HHL "select current_app_role()::text" CLIENT_USER
+val "B5: Podgląd → is_preview_read_only" $HHL "select is_preview_read_only()::text" true
+val "B5: my_profile.preview_read_only" $HHL "select preview_read_only::text from my_profile()" true
+# KSH nie dosięga UPDATE loads (0 wierszy, bez wyjątku) — assert + zapis invoices (KSH może spór).
+err "B5: Podgląd KSH — assert_not_preview" $HHL \
+  "select assert_not_preview()" "Podgląd"
+err "B5: Podgląd KSH — zapis invoices odmowa" $HHL \
+  "update invoices set verification_status='SPORNA', dispute_note='b5-preview' where id='$INVP'" "Podgląd"
+err "B5: Podgląd — mark_notifications_read odmowa" $HHL \
+  "select mark_notifications_read(array[]::bigint[])" "Podgląd"
+# Cron / sys bez auth.uid() — wyzwalacz nie blokuje (aktywny Podgląd w tle).
+out=$(sys "with u as (update loads set driver_name=driver_name where id='$L1' returning 1) select count(*) from u")
+[ "$(echo "$out" | tail -1)" = "1" ] && { ok=$((ok+1)); echo "  OK    B5: cron bez auth.uid() przy aktywnym Podglądzie"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B5: cron bez auth.uid() przy aktywnym Podglądzie → $out"; }
+run $HHL "select admin_preview_stop()" commit >/dev/null
+val "B5: po stop role HHL_ADMIN" $HHL "select current_app_role()::text" HHL_ADMIN
+# void w PG17 nie jest NULL; no-op = bez wyjątku; count przez sys (authenticated bez SELECT na state).
+run $HHL "select admin_preview_stop()" commit >/dev/null
+out=$(sys "select count(*)::text from impersonation_state i
+  join app_users a on a.id = i.admin_user_id where a.auth_id = '$HHL'")
+[ "$(echo "$out" | tail -1)" = "0" ] && { ok=$((ok+1)); echo "  OK    B5: stop bez wiersza (idempotentny)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B5: stop bez wiersza (idempotentny) (otrzymano: $out, oczekiwano: 0)"; }
+# TTL 8 h: po 9 h current_* = admin, bez blokady Podglądu (wiersz sprząta start/stop).
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+sys "update impersonation_state set started_at = now() - interval '9 hours'
+     where admin_user_id = '$HHLID_B5'" >/dev/null
+val "B5: TTL 9h → current_role HHL_ADMIN" $HHL "select current_app_role()::text" HHL_ADMIN
+val "B5: TTL 9h → acting_as false" $HHL "select acting_as::text from my_profile()" false
+val "B5: TTL 9h → assert_not_preview OK" $HHL "select assert_not_preview(); select 'ok'" ok
+run $HHL "select admin_preview_stop()" commit >/dev/null
+run $HHL "select admin_preview_start('SCX')" commit >/dev/null
+val "B5: Podgląd SCX → CARRIER_DISPATCH" $HHL "select current_app_role()::text" CARRIER_DISPATCH
+# SCX może zmienić driver_name na L2 — wyzwalacz aaa_b5_preview musi odrzucić.
+err "B5: Podgląd SCX — zapis loads odmowa" $HHL \
+  "update loads set driver_name='B5-PREVIEW' where id='$L2'" "Podgląd"
+err "B5: Podgląd SCX — report_position odmowa" $HHL \
+  "select report_position('$L2'::uuid, 52.0, 17.0, now(), 10, null, null)" "Podgląd"
+run $HHL "select admin_preview_stop()" commit >/dev/null
+# Działaj jako (read_only=false) — zapis nadal dozwolony.
+run $HHL "select admin_impersonate_start('$KSHID_B5'::uuid)" commit >/dev/null
+val "B5: Działaj jako → nie Podgląd" $HHL "select is_preview_read_only()::text" false
+val "B5: Działaj jako — KSH spór faktury OK" $HHL \
+  "with u as (update invoices set verification_status='SPORNA', dispute_note='b5-act-as' where id='$INVP' returning 1) select count(*) from u" 1 commit
+run $HHL "select admin_impersonate_stop()" commit >/dev/null
+# Strażnicy: assert jako PIERWSZA instrukcja po pierwszym BEGIN; wyjątki odczytowe F7.
+val "B5: strażnik RPC — 0 zapisujących bez assert na początku" $HHL \
+  "select count(*)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and p.prosecdef
+     and p.prolang=(select oid from pg_language where lanname='plpgsql')
+     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+     and p.proname not in (
+       'admin_preview_stop','admin_impersonate_stop','keep_alive',
+       'report_client_error','report_csp_violation',
+       'assert_not_preview','is_preview_read_only','guard_preview_write',
+       'b5_preview_cleanup_expired','admin_preview_start','admin_impersonate_start',
+       'map_display_state','rio_tracking_open','email_budget_status','my_notify_get')
+     and p.proname !~ '^driver_'
+     and (p.proname in ('report_position','delivered_check_resolve')
+          or p.prosrc ~* 'insert[[:space:]]+into'
+          or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
+          or p.prosrc ~* 'delete[[:space:]]+from')
+     and not (regexp_replace(p.prosrc, E'^.*?\\\\ybegin\\\\y', '', 'in')
+              ~* '^[[:space:]]*perform[[:space:]]+public\\.assert_not_preview')" 0
+val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
+  "select count(*)::text from (
+     select distinct n.nspname, c.relname
+       from pg_policy p
+       join pg_class c on c.oid=p.polrelid
+       join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname in ('public','storage') and p.polcmd in ('a','w','d','*')
+        and c.relkind='r' and c.relname not in ('audit_log','impersonation_state')
+        and not exists (
+          select 1 from pg_trigger t
+           where t.tgrelid=c.oid and not t.tgisinternal
+             and t.tgname='aaa_b5_preview')
+   ) x" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

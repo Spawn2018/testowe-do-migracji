@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 416, // #525: +4 DEL/U+2028/U+2029 + button w temacie; było 412 (#519)
+  security: 441, // B5 0300: +25 Podglad; bylo 416 (#525/#540)
   status: 251, // #540 F7: +1 c17_try_invoiced bez FOR UPDATE; było 250 (+4 NO KEY / lock_timeout / 0 deadlock)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
-  nullguard: 810, // #412e43 0289: +15 (3 GUARD × 5); było 795 (#412m)
+  nullguard: 828, // B5 0300: +18 (preview_start/stop + assert/is_preview); bylo 810 (#412e43)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 412, // 416 − 4 SKIP (B6); #525
+  security: 437, // 441 - 4 SKIP (B6); B5 0300
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

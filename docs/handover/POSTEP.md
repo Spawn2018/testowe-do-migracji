@@ -4992,4 +4992,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#544/#540** — CI unit/db/visual zielone na `4ded3dc5` (status **250**); F7: jeszcze nie — poprawka testów (podpowłoka/`wait`, chk `c17_try_invoiced`). Migracja 0299 bez uwag. Bez push na main.
 - Bieżąca: **#540** — F7 r2: `$PSQL … &` + `wait` PID; +chk `c17_try_invoiced`; status **251**. Push → CI; ponowne F7. Prod `FOR UPDATE` na loads w RPC (cancel/decision/…) → §8, ocena przy B5/P6.
 
+## 2026-10-25 08:33 — #545+#540 SCALONE; start B5 (0300)
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). **#540** zamknięte. Bez `pilne` przerywających.
+- Scalanie: **#545** `d98d8e7f` (wyglad J-17 pozycja szacowana; F7 gotowe `54ff35f`, CI unit/visual). **#544/#540** `5dcb716a` (F7 gotowe `9401f8de`, CI unit/db/visual, migracja **0299**). Bez push na main — `deploy-main`.
+- Bieżąca: **B5** (#323 / PR #382) — rebase na main; migracja **0254→0300**; F7: assert regex `[[:space:]]*` / `^\s*perform` (bez `ltrim`); security **441** (+25), nullguard **828** (+18). Push → CI; czekam F7.
 
