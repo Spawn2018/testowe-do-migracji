@@ -19,7 +19,7 @@ import {
   personPhone, personSummary, samePhone,
   type PlaceId, type PlaceView, type SmsKind, type SmsPlacesState, type ZonePerson, type ZoneUser,
 } from '../../lib/p8bPlaces';
-import { smsPlacesOf } from '../../lib/p8bSource';
+import { smsPlacesOf, type SmsPlacesSource } from '../../lib/p8bSource';
 import { p8bt } from '../../i18n/p8b';
 import './smsPlaces.css';
 
@@ -27,8 +27,12 @@ type Note = { text: string; bad: boolean; field?: 'phone' | 'kinds' } | null;
 
 const sortIds = (s: SmsPlacesState): PlaceId[] => [...s.places].sort((a, b) => peopleCount(a) - peopleCount(b)).map((x) => x.id);
 
-export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
-  const src = useMemo(() => smsPlacesOf(), []);
+export function SmsPlaces({ readOnly, source }: {
+  readOnly: boolean;
+  /** W-opcje-live-2: produkcja podaje źródło z bazy (`src/auth/LiveSmsPlaces.tsx`); bez niego — `smsPlacesOf()` (demo) */
+  source?: SmsPlacesSource | null;
+}) {
+  const src = useMemo(() => source ?? smsPlacesOf(), [source]);
   const phone = useIsPhone();
   const loads = useTowerStore((s) => s.loads);
   const nowMin = Math.floor(getNow().getTime() / 60_000);
@@ -170,6 +174,7 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
           readOnly={ro}
           phone={phone}
           affected={peopleCount(p) === 0 ? affectedLoads(p.id, loads, nowIso).map((l) => l.code) : []}
+          kindsFixed={!!src.kindsFixed}
           onSave={(slot, person) => savePerson(p.id, slot, person)}
         />
       ))}
@@ -181,6 +186,7 @@ export function SmsPlaces({ readOnly }: { readOnly: boolean }) {
         {' '}{p8bt('p8b_fallback')}
       </p>
       {!phone ? <p className="sp-foot">{p8bt('p8b_kinds_note', { lead: LEAD_MIN })}</p> : null}
+      {src.kindsFixed ? <p className="sp-foot" data-sp-kinds-fixed>{p8bt('p8b_kinds_fixed')}</p> : null}
     </section>
   );
 }
@@ -194,7 +200,8 @@ function affectsText(codes: readonly string[]): string {
   return p8bt('p8b_affects_many', { n: codes.length, word: plPlural(codes.length, 'transportu', 'transportów', 'transportów'), codes: codes.slice(0, 2).join(', ') });
 }
 
-function Place({ place, users, readOnly, phone, affected, onSave }: {
+function Place({ place, users, readOnly, phone, affected, kindsFixed = false, onSave }: {
+  kindsFixed?: boolean;
   place: PlaceView;
   users: readonly ZoneUser[] | null;
   readOnly: boolean;
@@ -247,6 +254,7 @@ function Place({ place, users, readOnly, phone, affected, onSave }: {
               users={users}
               readOnly={readOnly}
               phone={phone}
+              kindsFixed={kindsFixed}
               onSave={(person) => onSave(slot, person)}
             />
           ))}
@@ -256,7 +264,9 @@ function Place({ place, users, readOnly, phone, affected, onSave }: {
   );
 }
 
-function PersonRow({ place, slot, person, other, users, readOnly, phone, onSave }: {
+function PersonRow({ place, slot, person, other, users, readOnly, phone, kindsFixed = false, onSave }: {
+  /** rodzaje A–D bez wyboru: w bazie każda osoba dostaje wszystkie rodzaje miejsca */
+  kindsFixed?: boolean;
   place: PlaceId;
   slot: 1 | 2;
   person: ZonePerson | null;
@@ -281,7 +291,7 @@ function PersonRow({ place, slot, person, other, users, readOnly, phone, onSave 
   const errId = `${id}-err`;
   const placeName = p8bt(`p8b_place_short_${place}`);
   const who = p8bt('p8b_person', { slot });
-  const kinds = person ? person.kinds : draftKinds;
+  const kinds = person ? (kindsFixed ? avail : person.kinds) : draftKinds;
   const savedText = person ? nationalText(person) : '';
   const dirty = manual && (person
     ? (person.userId ? raw.trim() !== '' : raw !== savedText || country !== person.country)
@@ -423,7 +433,7 @@ function PersonRow({ place, slot, person, other, users, readOnly, phone, onSave 
             <input
               type="checkbox"
               checked={on}
-              disabled={readOnly || busy || na || (!!person && editing)}
+              disabled={readOnly || busy || na || kindsFixed || (!!person && editing)}
               onChange={() => toggle(k)}
               aria-label={p8bt('p8b_kind_aria', { vis, label, place: placeName, slot })}
               aria-describedby={note?.bad && note.field === 'kinds' ? errId : undefined}

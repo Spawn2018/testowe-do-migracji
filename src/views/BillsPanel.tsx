@@ -6,7 +6,7 @@
  *         ZGODNA / SPORNA (z uzasadnieniem) / ZAAKCEPTOWANA, termin i status płatności.
  * Kwoty w walucie faktury → `data-deur-exempt="invoice-currency"`.
  */
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Load, Locale } from '../types';
@@ -289,6 +289,9 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const loads = useTowerStore((s) => s.loads);
   const verifyBill = useTowerStore((s) => s.verifyBill);
   const [wizard, setWizard] = useState(false);
+  /* formularz pod listą — po otwarciu przewinięcie do niego, żeby było widać, co się otworzyło */
+  const wizardRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (wizard) wizardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); }, [wizard]);
   const [openId, setOpenId] = useState<string | null>(null);
   const openInvoiceId = useTowerStore((s) => s.openInvoiceId);
   const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
@@ -358,7 +361,6 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
           ) : null}
         </header>
         )}
-        {wizard ? <BillWizard direction={direction} onDone={(id) => { setWizard(false); if (id) setOpenId(id); }} /> : null}
         {list.length === 0 && pending.length === 0 ? (
           <p className="fin-muted fin-pad">{ft(locale, 'p5_inv_empty')}</p>
         ) : phone ? (
@@ -449,6 +451,12 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
           </div>
         )}
       </section>
+      {/* W-opcje-live-2 (img/e4-faktury-desk): „Nowa faktura · tydzień …” jako osobny panel pod listą faktur */}
+      {wizard ? (
+        <section className="panel fin-panel inv-new-panel" ref={wizardRef} data-bill-new-panel={direction}>
+          <BillWizard direction={direction} onDone={(id) => { setWizard(false); if (id) setOpenId(id); }} />
+        </section>
+      ) : null}
     </div>
   );
 }
