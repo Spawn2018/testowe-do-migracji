@@ -3980,3 +3980,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora`; #411/#405/#400/#409/#412/#413 w planie (#402 zamknięte).
 - Scalanie: #406 F7 gotowe (`a63f238`) → merge `2352a0fe` (0255). #408 wstrzymane (czekają fuel_publications). Bez push na `main`.
 - Bieżąca: **HOTFIX #411** (`pakiet/hotfix-411-closed-notify`, migracja **0256**) — bez `*_RESOLVED`; `notify_mark_case_closed`; WEB_PUSH `url`; sprzątanie bulk + AUDYT17_MARK_READ.
+
+## 2026-10-22 00:56 — #420+#419 SCALONE; start #405 (0257)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #411 zamknięte; #405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #420 F7 gotowe (`e099872`) → merge `8a4d00e3`; #419 F7 gotowe (`b5322e5`) → merge `30459c4a` (0256). Bez push na `main`.
+- Bieżąca: **HOTFIX #405** (`pakiet/hotfix-405-sms-zones`, migracja **0257**) — `sms_enqueue` tylko ZONE_*/TEST; triggery kierowcy OFF; `issue_driver_token_sms` bez SMS; i2 I-3 za decyzją.

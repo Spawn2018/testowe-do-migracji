@@ -562,73 +562,81 @@ chk "anon: zły token urządzenia odrzucony" "$(AN "select count(*) from sms_pul
 chk "anon: brak tokenu odrzucony" "$(AN "select count(*) from sms_pull()" | grep -c 'Brak tokenu')" 1
 chk "authenticated: brak EXECUTE sms_pull (tylko anon)" "$(Q "select has_function_privilege('authenticated','sms_pull(text,int)','execute')::text || has_function_privilege('anon','sms_pull(text,int)','execute')::text")" "falsetrue"
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone='0701234567', driver_phone_country='SE', driver_locale=null, status='PLANNED', actual_delivery_at=null, sailing_id=null where id='$SL'" >/dev/null
+# #405 (D-20261021-2014-01): SMS tylko ZONE_*/TEST — bez SMS do kierowcy; testy idą za decyzją.
 err "link SMS bez numeru kierowcy odrzucony" $HHL "select issue_driver_token_sms('$L2')" "Brak numeru telefonu"
 $PSQL -c "update security_flags set enabled = true where key = 'DRIVER_LINK_ACCEPT'" >/dev/null
-val "HHL: link kierowcy + SMS w jednej transakcji" $HHL "select (r->>'token' like 'wt_%')::text || (r->>'sms_id' is not null)::text from (select issue_driver_token_sms('$SL') r) x" "truetrue" commit
-chk "DRIVER_LINK: sv z prefiksu +46, sekret, priorytet 100; w sms_outbox.body „[link usunięty]”, bez tokenu" "$(Q "select locale||'/'||contains_secret||'/'||priority||'/'||(body like '%forarlank [link usuniety]%')::text||'/'||(body !~ 'wt_|https?://')::text from sms_outbox where kind='DRIVER_LINK' and load_id='$SL'")" "sv/true/100/true/true"
-chk "DRIVER_LINK: pełna treść z linkiem tylko w sms_outbox_secret (brak uprawnień ról API)" "$(Q "select count(*)||'/'||bool_and(s.body like '%forarlank https://tower.log-mar.pl/#/driver/wt_%')::text||'/'||has_table_privilege('authenticated','public.sms_outbox_secret','select')::text||has_table_privilege('anon','public.sms_outbox_secret','select')::text from sms_outbox_secret s join sms_outbox o on o.id=s.sms_id where o.kind='DRIVER_LINK'")" "1/true/falsefalse"
+val "HHL: link kierowcy bez SMS (#405)" $HHL "select (r->>'token' like 'wt_%')::text || (r->>'sms_id' is null)::text from (select issue_driver_token_sms('$SL') r) x" "truetrue" commit
+chk "#405: 0× DRIVER_LINK po issue_driver_token_sms" "$(Q "select count(*) from sms_outbox where kind='DRIVER_LINK' and load_id='$SL'")" 0
+chk "#405: sms_outbox_secret puste po linku bez SMS" "$(Q "select count(*) from sms_outbox_secret")" 0
 val "HHL: select body z kolejki bez tokenu" $HHL "select count(*) from sms_outbox where body ~ 'wt_|https?://'" 0
 err "HHL: brak dostępu do sms_outbox_secret" $HHL "select count(*) from sms_outbox_secret" "permission denied"
 err "KSH: link SMS odrzucony" $KSH "select issue_driver_token_sms('$SL')" "wyłącznie przewoźnik transportu albo HHL"
-chk "telefon pobiera 1 SMS (CLAIMED) z pełnym linkiem" "$(AN "select count(*)||'/'||bool_and(body like '%forarlank https://tower.log-mar.pl/#/driver/wt_%') from sms_pull('$DEVTOK', 5)")/$(Q "select status from sms_outbox where kind='DRIVER_LINK'")" "1/true/CLAIMED"
+# Przepływ telefonu na TEST (dozwolony rodzaj) — bez osobnych val (liczba asercji = EXPECTED)
+$PSQL -c "insert into sms_test_numbers (to_e164, label) values ('+46701234567','i3 pull') on conflict do nothing; select sms_enqueue('TEST', null, '+46701234567', 'pl', '{}'::jsonb, 100, 'i3-pull-test', false)" >/dev/null
+chk "telefon pobiera 1 SMS TEST (CLAIMED)" "$(AN "select count(*)||'/'||bool_and(body like '%SMS testowy%' or body like '%test-SMS%') from sms_pull('$DEVTOK', 5)")/$(Q "select status from sms_outbox where kind='TEST' and to_e164='+46701234567'")" "1/true/CLAIMED"
 chk "drugie pobranie: 0 (bez podwójnego wydania)" "$(AN "select count(*) from sms_pull('$DEVTOK', 5)")" 0
-SID=$(Q "select id from sms_outbox where kind='DRIVER_LINK'")
+SID=$(Q "select id from sms_outbox where kind='TEST' and to_e164='+46701234567'")
 chk "raport SENT: status i licznik dzienny" "$(AN "select sms_report('$DEVTOK', '$SID', 'SENT', null, 1)" >/dev/null; Q "select o.status||'/'||d.day_sent from sms_outbox o join sms_devices d on d.id=o.device_id where o.id='$SID'")" "SENT/1"
-chk "po SENT: sekret usunięty natychmiast (0 wierszy), body bez tokenu" "$(Q "select (select count(*) from sms_outbox_secret)||'/'||(select count(*) from sms_outbox where body ~ 'wt_')")" "0/0"
+chk "po SENT: brak sekretów / tokenów w body" "$(Q "select (select count(*) from sms_outbox_secret)||'/'||(select count(*) from sms_outbox where body ~ 'wt_')")" "0/0"
 chk "powtórzony raport SENT bez błędu i bez podwójnego licznika" "$(AN "select sms_report('$DEVTOK', '$SID', 'SENT')" >/dev/null; Q "select day_sent from sms_devices where revoked_at is null")" 1
 chk "przejście wstecz SENT → CLAIMED odrzucone" "$(AN "select sms_report('$DEVTOK', '$SID', 'CLAIMED')" | grep -c 'Niedozwolone przejście')" 1
 chk "heartbeat: konfiguracja z bazy (poll 15 s, limit 150)" "$(AN "select (r->>'poll_s')||'/'||(r->>'day_limit')||'/'||(r->>'paused') from (select sms_heartbeat('$DEVTOK', '{\"battery\":80}') r) x")" "15/150/false"
 $PSQL -c "update loads set plan_load_from = coalesce(plan_load_from, now() + interval '2 days') + interval '10 minutes', plan_load_to = coalesce(plan_load_to, now() + interval '2 days 8 hours') + interval '10 minutes' where id='$SL'" >/dev/null
 chk "zmiana okna < 30 min: bez SMS" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update loads set plan_load_from = plan_load_from + interval '2 hours', plan_load_to = plan_load_to + interval '2 hours' where id='$SL'" >/dev/null
-chk "zmiana okna załadunku ≥ 30 min: WINDOW_CHANGE (sv, lastningsfonster)" "$(Q "select count(*)||'/'||bool_and(body like '%ANDRAT lastningsfonster:%') from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" "1/true"
+chk "#405: zmiana okna ≥ 30 min → 0 WINDOW_CHANGE (trigger off)" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update loads set plan_load_from = plan_load_from - interval '1 second' + interval '1 second' where id='$SL'" >/dev/null
-chk "to samo okno ponownie: bez duplikatu" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 1
+chk "#405: ponowna zmiana okna → nadal 0 WINDOW_CHANGE" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 SA=66666666-0000-0000-0000-0000000000e3
-# Część 3 osobno: vessels wstawia tylko część 1. sailings.vessel_id NOT NULL — bez statku rejs (i SMS rejsu) nie powstaje.
+# Część 3 osobno: vessels wstawia tylko część 1. sailings.vessel_id NOT NULL — bez statku rejs nie powstaje.
 $PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
 $PSQL -c "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at) values ('$SA','$P','55555555-0000-0000-0000-000000000001', now() + interval '3 days', now() + interval '3 days 18 hours')" >/dev/null
 $PSQL -c "update loads set sailing_id='$SA' where id='$SL'" >/dev/null
-chk "przypisanie rejsu: SAILING_CHANGE" "$(Q "select count(*) from sms_outbox where kind='SAILING_CHANGE' and load_id='$SL'")" 1
+chk "#405: przypisanie rejsu → 0 SAILING_CHANGE" "$(Q "select count(*) from sms_outbox where kind='SAILING_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update sailings set status='ODWOLANY' where id='$SA'" >/dev/null
-chk "rejs odwołany: SAILING_CANCELLED dla transportu z linkiem" "$(Q "select count(*) from sms_outbox where kind='SAILING_CANCELLED' and load_id='$SL'")" 1
+chk "#405: rejs odwołany → 0 SAILING_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='SAILING_CANCELLED' and load_id='$SL'")" 0
+# Seed 3× TEST do strażnika (dawniej WINDOW/SAILING z triggerów)
+$PSQL -c "insert into sms_outbox (kind, to_e164, locale, body, priority, created_at) values
+ ('TEST','+46701234567','sv','Watch Tower: straznik A', 100, now() - interval '11 minutes'),
+ ('TEST','+46701234567','sv','Watch Tower: straznik B', 100, now() - interval '11 minutes'),
+ ('TEST','+46701234567','sv','Watch Tower: straznik C', 100, now() - interval '11 minutes')" >/dev/null
 $PSQL -c "update sms_devices set paused=true" >/dev/null
 chk "pauza urządzenia: pobranie zwraca 0" "$(AN "select count(*) from sms_pull('$DEVTOK', 5)")" 0
-$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'; update sms_outbox set created_at = now() - interval '11 minutes' where status='QUEUED'" >/dev/null
+$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'" >/dev/null
 chk "strażnik: cisza > 30 min → ryzyko JOB_FAILURE HIGH (sms-gateway)" "$(Q "select (sms_watchdog()->>'cisza')") $(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null and severity='HIGH'")" "true 1"
 chk "strażnik: SMS > 10 min → e-mail zastępczy SMS_FALLBACK (bez duplikatu przy drugim przebiegu)" "$(Q "select count(*) filter (where fallback_at is not null) from sms_outbox where status='QUEUED'")/$(Q "select sms_watchdog()->>'fallback'")" "3/0"
 chk "e-mail zastępczy: do HHL (zdarzenia automatyczne), bez cen, ostatnie 3 cyfry numeru" "$(Q "select count(*) > 0 and bool_and(payload->>'to_tail' = '567') from notifications where template='SMS_FALLBACK'")" t
 chk "sygnał wraca: ryzyko zamknięte" "$($PSQL -c "update sms_devices set last_seen_at = now()" >/dev/null; Q "select sms_watchdog()->>'cisza'")/$(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null")" "false/0"
 $PSQL -c "update sms_devices set last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'" >/dev/null
 chk "cooldown 60 min: ponowna cisza zaraz po zamknięciu → bez nowego ryzyka" "$(Q "select (sms_watchdog()->>'cisza')||'/'||(sms_watchdog()->>'nowe_ryzyka')||'/'||(select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null)")" "true/0/0"
-$PSQL -c "update sms_outbox set expires_at = now() - interval '1 minute' where kind='SAILING_CHANGE'; update sms_outbox set sent_at = now() - interval '25 hours' where kind='DRIVER_LINK'" >/dev/null
-chk "strażnik: przeterminowany → EXPIRED; body wysłanego SMS bez linku" "$(Q "select (r->>'przeterminowane')||'/'||(r->>'wyczyszczone_linki') from (select sms_watchdog() r) x")/$(Q "select body from sms_outbox where kind='DRIVER_LINK'")" "1/1/[link usunięty]"
+$PSQL -c "update sms_outbox set expires_at = now() - interval '1 minute' where body like 'Watch Tower: straznik A%'" >/dev/null
+chk "strażnik: przeterminowany → EXPIRED" "$(Q "select (r->>'przeterminowane') from (select sms_watchdog() r) x")" 1
 val "HHL: kolejka widoczna" $HHL "select count(*) > 0 from sms_outbox" t
 val "KSH: kolejka niewidoczna (RLS)" $KSH "select count(*) from sms_outbox" 0
 err "przewoźnik: bez dostępu do tabeli urządzeń" $SCX "select count(*) from sms_devices where label is not null" "0|permission denied"
-echo "  [I-3 P0] SMS 8 GPS_SILENT i 9 UNLOAD_CONFIRM (0069)"
-chk "CHECK kind: GPS_SILENT i UNLOAD_CONFIRM dozwolone, inne odrzucone" "$(Q "select pg_get_constraintdef(oid) ~ 'GPS_SILENT' and pg_get_constraintdef(oid) ~ 'UNLOAD_CONFIRM' from pg_constraint where conname='sms_outbox_kind_check'")/$($PSQL -c "insert into sms_outbox (kind, to_e164, locale, body) values ('ROAD_SE','+46700000001','sv','x')" 2>&1 | grep -c sms_outbox_kind_check)" "t/1"
+echo "  [I-3 P0 / #405] GPS_SILENT i UNLOAD_CONFIRM wyłączone"
+chk "CHECK kind: GPS_SILENT i UNLOAD_CONFIRM dozwolone w CHECK, inne odrzucone" "$(Q "select pg_get_constraintdef(oid) ~ 'GPS_SILENT' and pg_get_constraintdef(oid) ~ 'UNLOAD_CONFIRM' from pg_constraint where conname='sms_outbox_kind_check'")/$($PSQL -c "insert into sms_outbox (kind, to_e164, locale, body) values ('ROAD_SE','+46700000001','sv','x')" 2>&1 | grep -c sms_outbox_kind_check)" "t/1"
 chk "szablony 8 i 9: PL bez polskich znaków, ≤ 160 znaków (nr 9 znaków, 9999 min)" "$(Q "with r as (select lc, sms_render(k, lc, jsonb_build_object('nr','SG-01-001','min','9999')) b from unnest(array['GPS_SILENT','UNLOAD_CONFIRM']) k cross join unnest(array['pl','en','sv']) lc) select count(*)||'/'||bool_and(lc <> 'pl' or b !~ '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]')::text || (max(char_length(b)) <= 160)::text from r")" "6/truetrue"
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$SL'; insert into positions (load_id, ts, geom_raw, source, raw) values ('$SL', now() - interval '47 minutes', st_setsrid(st_makepoint(18.65,54.35),4326), 'DRIVER_PWA', '{\"test\":\"i3p0\"}')" >/dev/null
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-1' from loads where id='$SL'" >/dev/null
-chk "ryzyko SILENT_VEHICLE w ruchu: GPS_SILENT (sv, 47 min od ostatniej pozycji)" "$(Q "select count(*)||'/'||bool_and(body ~ '^Watch Tower .*: ingen GPS-position pa 4[78] min')::text from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" "1/true"
+chk "#405: SILENT_VEHICLE → 0 GPS_SILENT (trigger off)" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 0
 $PSQL -c "update risk_signals set resolved_at=now() where dedup_key='test-gps-1'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-2' from loads where id='$SL'" >/dev/null
-chk "drugie ryzyko w ciągu 3 h: bez drugiego SMS" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 1
-$PSQL -c "set session_replication_role=replica; update loads set status='FERRY' where id='$SL'; set session_replication_role=origin; delete from sms_outbox where kind='GPS_SILENT'; update risk_signals set resolved_at=now() where dedup_key='test-gps-2'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-3' from loads where id='$SL'" >/dev/null
+chk "#405: drugie SILENT → nadal 0 GPS_SILENT" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 0
+$PSQL -c "set session_replication_role=replica; update loads set status='FERRY' where id='$SL'; set session_replication_role=origin; update risk_signals set resolved_at=now() where dedup_key='test-gps-2'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-3' from loads where id='$SL'" >/dev/null
 chk "na promie (FERRY): bez GPS_SILENT" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT'")" 0
 $PSQL -c "set session_replication_role=replica; update loads set status='AT_SITE', updated_at=now() - interval '3 hours' where id='$SL'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'STATUS_AUTO', now() - interval '30 minutes', '{\"to\":\"AT_SITE\"}')" >/dev/null
 chk "AT_SITE od 30 min: skan bez UNLOAD_CONFIRM" "$(Q "select sms_unload_confirm_scan()")" 0
-chk "AT_SITE od ≥ 2 h bez MILESTONE_UNLOADED: UNLOAD_CONFIRM (sv); ponowny skan bez duplikatu" "$(Q "select sms_unload_confirm_scan(now() + interval '2 hours')")/$(Q "select sms_unload_confirm_scan(now() + interval '3 hours')")/$(Q "select count(*)||'/'||bool_and(body like '%du ar pa Stegra Boden. Bekrafta LOSSAD%')::text from sms_outbox where kind='UNLOAD_CONFIRM' and load_id='$SL'")" "1/0/1/true"
-$PSQL -c "delete from sms_outbox where kind='UNLOAD_CONFIRM'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'MILESTONE_UNLOADED', now(), '{}')" >/dev/null
-chk "po MILESTONE_UNLOADED (data usługi, kurs faktury): bez prośby" "$(Q "select sms_unload_confirm_scan(now() + interval '5 hours')")" 0
+chk "#405: AT_SITE ≥ 2 h → skan 0 / 0 UNLOAD_CONFIRM" "$(Q "select sms_unload_confirm_scan(now() + interval '2 hours')")/$(Q "select sms_unload_confirm_scan(now() + interval '3 hours')")/$(Q "select count(*) from sms_outbox where kind='UNLOAD_CONFIRM' and load_id='$SL'")" "0/0/0"
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'MILESTONE_UNLOADED', now(), '{}')" >/dev/null
+chk "po MILESTONE_UNLOADED: bez prośby" "$(Q "select sms_unload_confirm_scan(now() + interval '5 hours')")" 0
 chk "pg_cron: tower-sms-rozladunek co 10 min (w migracji; atrapa bez pg_cron)" "$(grep -c "cron.schedule('tower-sms-rozladunek', '\*/10 \* \* \* \*'" supabase/migrations/0069_sms_8_9_secret.sql)" 1
 $PSQL -c "delete from risk_signals where dedup_key like 'test-gps-%'; set session_replication_role=replica; delete from load_events where load_id='$SL' and (event_type='MILESTONE_UNLOADED' or (event_type='STATUS_AUTO' and payload->>'to'='AT_SITE')); delete from positions where load_id='$SL' and raw->>'test'='i3p0'; set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$SL'" >/dev/null
 val "HHL: anulowanie transportu z linkiem" $HHL "select cancel_load('$SL', 'TEST I-3')::text" CANCELLED commit
-chk "anulowanie: LOAD_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='LOAD_CANCELLED' and load_id='$SL'")" 1
+chk "#405: anulowanie → 0 LOAD_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='LOAD_CANCELLED' and load_id='$SL'")" 0
 DID=$(Q "select id from sms_devices where revoked_at is null")
 val "HHL: odwołanie urządzenia" $HHL "select sms_revoke_device('$DID')::text" true commit
 chk "odwołane urządzenie: pobranie odrzucone" "$(AN "select count(*) from sms_pull('$DEVTOK')" | grep -c 'odwołane urządzenie')" 1
-$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, driver_phone_country='PL', sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
+$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; delete from sms_test_numbers; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, driver_phone_country='PL', sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
 
 echo; echo "[R-2] blokada wiadomości do osób zewnętrznych przed umowami RODO (0068)"
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'" >/dev/null
@@ -638,7 +646,7 @@ err "SMS testowy na numer spoza listy odrzucony" $HHL "select sms_send_test('+48
 err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+48600000001','x')" "wyłącznie HHL"
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
-chk "przed R-2 telefon dostaje tylko SMS testowy (SMS do kierowcy zostaje w kolejce)" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./QUEUED"
+chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"
 chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
@@ -648,7 +656,7 @@ chk "0133: e-mail do aktywnego zaproszenia: PENDING" "$(Q "insert into notificat
 chk "centrum powiadomień (IN_APP) bez zmian" "$(Q "insert into notifications (channel, recipient, template) values ('IN_APP','dispo@scx.example','TEST') returning status")" PENDING
 err "KSH: włączenie wiadomości zewnętrznych odrzucone" $KSH "select admin_set_external_messaging(true)" "wyłącznie administrator HHL"
 val "HHL_ADMIN: włączenie (po R-2) z wpisem w dzienniku" $HHL "select admin_set_external_messaging(true)::text" true commit
-chk "po włączeniu: e-mail zewnętrzny PENDING, SMS do kierowcy wydawany" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/1/1"
+chk "po włączeniu: e-mail zewnętrzny PENDING; spoza ZONE/TEST nie wychodzi" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/0/1"
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl','invitee@example.com') or recipient in (select email::text from app_users where email='hhl@test'); delete from user_invites where email='invitee@example.com'; delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
 chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 
