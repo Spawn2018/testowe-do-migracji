@@ -3986,3 +3986,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #411 zamknięte; #405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
 - Scalanie: #420 F7 gotowe (`e099872`) → merge `8a4d00e3`; #419 F7 gotowe (`b5322e5`) → merge `30459c4a` (0256). Bez push na `main`.
 - Bieżąca: **HOTFIX #405** (`pakiet/hotfix-405-sms-zones`, migracja **0257**) — `sms_enqueue` tylko ZONE_*/TEST; triggery kierowcy OFF; `issue_driver_token_sms` bez SMS; i2 I-3 za decyzją.
+
+## 2026-10-22 01:25 — #405 F7 B1/B2; #421+#422 wpisane (0258–0259)
+
+- Skrzynka: #421/#422 (Spawn2018, `dla-cursora`+`pilne`) — PLAN §3/§4/§8, dopiski `D-20261022-0105-01.md` / `D-20261022-0113-01.md`; #400→0260, #409→0261, B5→0262, #413→0263.
+- Scalanie: #424 CI zielone na `780ff80`; F7 „jeszcze nie” → poprawka B1 (TEST na strefy) + B2 (pilot tylko ZONE_*) + unschedule `tower-sms-rozladunek`; i2 628→632. #408 wstrzymane. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — F7 runda 2; potem #421.

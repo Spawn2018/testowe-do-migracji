@@ -1,9 +1,10 @@
 -- HOTFIX #405 / D-20261021-2014-01: SMS tylko do osób na załadunku i rozładunku
--- (ZONE_* → sms_zone_recipients) oraz TEST → sms_test_numbers.
--- Po 0256 (#411), przed #400 (0258).
+-- (ZONE_* → sms_zone_recipients) oraz TEST → sms_test_numbers / lista stref.
+-- F7: TEST także na aktywne sms_zone_recipients; pilot redirect tylko dla ZONE_* (R-2).
+-- Po 0256 (#411), przed #421 (0258) / #400 (0260).
 
 -- ---------------------------------------------------------------------------
--- 1. Bramka w sms_enqueue — jedyne dozwolone rodzaje i numery
+-- 1. Bramka w sms_enqueue — ZONE_*/TEST (+ pilot tylko dla ZONE_*)
 -- ---------------------------------------------------------------------------
 create or replace function public.sms_enqueue(
   p_kind text, p_load uuid, p_to text, p_locale text, p jsonb,
@@ -11,19 +12,36 @@ create or replace function public.sms_enqueue(
 ) returns uuid language plpgsql security definer set search_path = public as $$
 declare
   v_id uuid; v_loc char(2); v_full text; v_to text; v_ok boolean := false;
+  v_redir record; v_pilot boolean := false;
 begin
   v_to := p_to;
+
+  -- F7 B2: przekierowanie pilota wyłącznie dla ZONE_* (E42 / R-2)
+  if p_kind in ('ZONE_APPROACH', 'ZONE_ENTER') and p_load is not null then
+    select * into v_redir from pilot_redirect_for_load(p_load);
+    if found then
+      v_to := v_redir.owner_phone_e164;
+      v_pilot := true;
+    end if;
+  end if;
+
   if (v_to ~ '^\+[1-9][0-9]{7,14}$') is not true then return null; end if;
 
-  -- #405: bez przekierowania pilota — tylko lista stref albo numer testowy.
   if p_kind = 'TEST' then
-    v_ok := exists (select 1 from sms_test_numbers t where t.to_e164 = v_to);
+    -- F7 B1: test listy stref (admin_sms_zone_test) + numery testowe
+    v_ok := exists (select 1 from sms_test_numbers t where t.to_e164 = v_to)
+         or exists (
+              select 1 from sms_zone_recipients r
+               where r.active is true
+                 and sms_zone_e164(r.phone_national, r.country) = v_to
+            );
   elsif p_kind in ('ZONE_APPROACH', 'ZONE_ENTER') then
-    v_ok := exists (
-      select 1 from sms_zone_recipients r
-       where r.active is true
-         and sms_zone_e164(r.phone_national, r.country) = v_to
-    );
+    v_ok := v_pilot
+         or exists (
+              select 1 from sms_zone_recipients r
+               where r.active is true
+                 and sms_zone_e164(r.phone_national, r.country) = v_to
+            );
   else
     v_ok := false;
   end if;
@@ -47,10 +65,10 @@ end $$;
 revoke all on function public.sms_enqueue(text, uuid, text, text, jsonb, int, text, boolean) from public, anon, authenticated;
 
 comment on function public.sms_enqueue(text, uuid, text, text, jsonb, int, text, boolean) is
-  '#405: tylko ZONE_APPROACH/ZONE_ENTER → sms_zone_recipients oraz TEST → sms_test_numbers; reszta null.';
+  '#405: ZONE_*/TEST; TEST→sms_test_numbers|sms_zone_recipients; ZONE_*→lista lub pilot (R-2).';
 
 -- ---------------------------------------------------------------------------
--- 2. sms_pull — tylko dozwolone rodzaje; stare spoza listy → EXPIRED
+-- 2. sms_pull — tylko ZONE_*/TEST; pilot phone OK dla ZONE_*; reszta → EXPIRED
 -- ---------------------------------------------------------------------------
 create or replace function public.sms_pull(p_token text default null, p_limit int default 5)
 returns table (id uuid, to_e164 text, body text, attempts smallint, expires_at timestamptz)
@@ -75,6 +93,11 @@ begin
        or (
          o.kind = 'TEST'
          and not exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
+         and not exists (
+           select 1 from sms_zone_recipients r
+            where r.active is true
+              and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         )
        )
        or (
          o.kind in ('ZONE_APPROACH', 'ZONE_ENTER')
@@ -82,6 +105,12 @@ begin
            select 1 from sms_zone_recipients r
             where r.active is true
               and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         )
+         and not exists (
+           select 1 from pilot_notify_redirect r
+            where r.active is true
+              and r.owner_phone_e164 = o.to_e164
+              and (o.load_id is null or o.load_id = r.load_id)
          )
        )
      );
@@ -103,7 +132,33 @@ begin
        and o.kind in ('ZONE_APPROACH', 'ZONE_ENTER', 'TEST')
        and (
          v_ext
-         or (o.kind = 'TEST' and exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164))
+         or (
+           o.kind = 'TEST'
+           and (
+             exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
+             or exists (
+               select 1 from sms_zone_recipients r
+                where r.active is true
+                  and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+             )
+           )
+         )
+         or (
+           o.kind in ('ZONE_APPROACH', 'ZONE_ENTER')
+           and (
+             exists (
+               select 1 from sms_zone_recipients r
+                where r.active is true
+                  and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+             )
+             or exists (
+               select 1 from pilot_notify_redirect r
+                where r.active is true
+                  and r.owner_phone_e164 = o.to_e164
+                  and (o.load_id is null or o.load_id = r.load_id)
+             )
+           )
+         )
        )
      order by o.priority desc, o.created_at
      limit least(greatest(coalesce(p_limit, 5), 0), 5, v_left)
@@ -124,7 +179,7 @@ revoke all on function public.sms_pull(text, int) from public, authenticated;
 grant execute on function public.sms_pull(text, int) to anon;
 
 comment on function public.sms_pull(text, int) is
-  '#405: pull tylko ZONE_*/TEST; spoza listy → EXPIRED przed pobraniem.';
+  '#405: pull tylko ZONE_*/TEST (+ pilot dla ZONE_*); spoza listy → EXPIRED.';
 
 -- ---------------------------------------------------------------------------
 -- 3. Wyłączyć (nie usuwać) triggery SMS do kierowców
@@ -188,17 +243,74 @@ revoke all on function public.sms_unload_confirm_scan(timestamptz) from public, 
 comment on function public.sms_unload_confirm_scan(timestamptz) is
   '#405: wyłączone — SMS tylko ZONE_* / TEST.';
 
+-- F7: cron tower-sms-rozladunek wołał skan co 10 min → zawsze 0; wyłączamy harmonogram.
+do $$
+begin
+  perform cron.unschedule('tower-sms-rozladunek');
+exception
+  when undefined_table then null; -- brak pg_cron (stub CI)
+  when others then
+    if sqlerrm not like '%could not find valid entry%' and sqlerrm not like '%tower-sms-rozladunek%' then
+      raise;
+    end if;
+end $$;
+
 -- ---------------------------------------------------------------------------
--- 6. pilot_redirect_dry_run — bez SMS poza listą stref
+-- 6. pilot_redirect_dry_run — ZONE_* z przekierowaniem (F7 B2), wynik oznaczony EXPIRED
 -- ---------------------------------------------------------------------------
 create or replace function public.pilot_redirect_dry_run(p_load uuid default '963e19dd-fe83-4690-9306-5c7fc4b95468')
 returns jsonb
 language plpgsql security definer set search_path = public as $$
+declare
+  v_sms uuid;
+  v_mail_id bigint;
+  v_to text;
+  v_rcpt text;
+  v_owner_phone text;
+  v_owner_email text;
 begin
-  -- #405: dry-run wysyłał ZONE_APPROACH na numer poza sms_zone_recipients — wyłączone
+  select owner_phone_e164, owner_email into v_owner_phone, v_owner_email
+    from pilot_notify_redirect where load_id = p_load and active;
+  if v_owner_phone is null then
+    return jsonb_build_object('ok', false, 'error', 'brak aktywnego redirectu');
+  end if;
+
+  -- SMS na fikcyjny numer → ma zostać przepisany na pilota (tylko ZONE_*)
+  v_sms := sms_enqueue(
+    'ZONE_APPROACH', p_load, '+48111222333', 'pl',
+    jsonb_build_object('kto', 'TEST', 'rej', 'GD035YX', 'wysylka', 'DRY', 'miejsce', 'Boden', 'eta', '—'),
+    10, 'PILOT_DRY_SMS:' || p_load::text || ':' || floor(extract(epoch from now()))::text, false
+  );
+  select to_e164 into v_to from sms_outbox where id = v_sms;
+
+  insert into notifications (channel, recipient, load_id, template, payload, dedup_key, status)
+  values (
+    'EMAIL', 'ksh-fake@example.com', p_load, 'SMS_FALLBACK',
+    jsonb_build_object('kind', 'ZONE_LIMIT', 'text', 'test na sucho — nie wysyłać dalej'),
+    'PILOT_DRY_MAIL:' || p_load::text || ':' || floor(extract(epoch from now()))::text,
+    'PENDING'
+  )
+  on conflict (dedup_key) where dedup_key is not null do nothing
+  returning id, recipient into v_mail_id, v_rcpt;
+  if v_mail_id is null then
+    select id, recipient into v_mail_id, v_rcpt from notifications
+     where dedup_key like 'PILOT_DRY_MAIL:' || p_load::text || ':%'
+     order by id desc limit 1;
+  end if;
+
+  update notifications set status = 'BLOCKED_R2', error = 'pilot dry-run — nie wysyłać'
+   where id = v_mail_id;
+  update sms_outbox set status = 'EXPIRED', error = 'pilot dry-run — nie wysyłać'
+   where id = v_sms;
+
   return jsonb_build_object(
-    'ok', false,
-    'error', '405: pilot_redirect_dry_run wyłączony — SMS tylko do sms_zone_recipients / TEST'
+    'ok', (v_to = v_owner_phone and lower(v_rcpt) = lower(v_owner_email)),
+    'sms_id', v_sms,
+    'sms_to', v_to,
+    'expected_phone', v_owner_phone,
+    'mail_id', v_mail_id,
+    'mail_to', v_rcpt,
+    'expected_email', v_owner_email
   );
 end $$;
 
@@ -206,7 +318,7 @@ revoke all on function public.pilot_redirect_dry_run(uuid) from public, anon;
 grant execute on function public.pilot_redirect_dry_run(uuid) to service_role;
 
 comment on function public.pilot_redirect_dry_run(uuid) is
-  '#405: wyłączony — nie kolejuje SMS poza listą stref.';
+  '#405 F7: dry-run ZONE_* → numer pilota; wynik oznaczony EXPIRED (bez wysyłki).';
 
 -- ---------------------------------------------------------------------------
 -- 7. Sprzątanie jednorazowe: kolejka spoza ZONE/TEST → EXPIRED
@@ -224,6 +336,11 @@ begin
        or (
          o.kind = 'TEST'
          and not exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
+         and not exists (
+           select 1 from sms_zone_recipients r
+            where r.active is true
+              and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         )
        )
        or (
          o.kind in ('ZONE_APPROACH', 'ZONE_ENTER')
@@ -231,6 +348,12 @@ begin
            select 1 from sms_zone_recipients r
             where r.active is true
               and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         )
+         and not exists (
+           select 1 from pilot_notify_redirect r
+            where r.active is true
+              and r.owner_phone_e164 = o.to_e164
+              and (o.load_id is null or o.load_id = r.load_id)
          )
        )
      );
