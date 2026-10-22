@@ -46,6 +46,8 @@ export const LIVE_OTHER_JOBS = [
   'security-advisor-snapshot', 'security-advisor-snapshot-edge',
 ] as const;
 const SMS_MAX_MIN = 15;
+/** Ile ostatnich przebiegów każdego zadania czyta ekran. */
+export const RUN_LIMIT = 20;
 const BACKUP_MAX_MIN = 26 * 60;
 
 /** „10 min”, „3 h”, „8 dni” */
@@ -65,13 +67,17 @@ function runsOf(runs: readonly RunRow[], jobs: readonly string[]): RunRow[] {
 
 function stateOf(rs: readonly RunRow[], maxMin: number | null, nowIso: string): { state: SourceState; lastAt: string | null; since: string | null; why: 'fail' | 'stale' | 'old' | 'off' | null } {
   if (!rs.length) return { state: 'nosource', lastAt: null, since: null, why: null };
-  const lastOk = rs.find((r) => r.ok) ?? null;
+  /* F7 #451 D1: przebieg przy wyłączonej fladze (ok, ale bez odczytu) nie jest „danymi z” */
+  const lastOk = rs.find((r) => r.ok && r.disabled !== true) ?? null;
   const lastAt = lastOk?.ran_at ?? null;
-  /* #446: wyłączone przełącznikiem — nie „działa” i nie „nie działa”; od kiedy = pierwszy przebieg serii wyłączonych */
+  /* #446: wyłączone flagą — nie „działa” i nie „nie działa”; od kiedy = pierwszy przebieg serii wyłączonych.
+     F7 #451 P1: gdy seria wypełnia całe okno odczytu (RUN_LIMIT), początek jest nieznany — bez „od”.
+     Wyłączone zadanie nie przechodzi w „Nie działa” po czasie (świeżość nie jest wtedy sprawdzana). */
   if (rs[0].disabled === true) {
     let i = 0;
     while (i + 1 < rs.length && rs[i + 1].disabled === true) i += 1;
-    return { state: 'nomeasure', lastAt: rs.find((r) => r.ok && r.disabled !== true)?.ran_at ?? null, since: rs[i].ran_at, why: 'off' };
+    const whole = i === rs.length - 1 && rs.length >= RUN_LIMIT;
+    return { state: 'nomeasure', lastAt, since: whole ? null : rs[i].ran_at, why: 'off' };
   }
   if (!rs[0].ok) {
     let i = 0;
@@ -147,7 +153,7 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
     try {
       const sb = await getSupabase();
       /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
-      const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at,disabled:result->disabled').eq('job', job).order('ran_at', { ascending: false }).limit(20)));
+      const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at,disabled:result->disabled').eq('job', job).order('ran_at', { ascending: false }).limit(RUN_LIMIT)));
       const [d, b] = await Promise.all([
         sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
         sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),

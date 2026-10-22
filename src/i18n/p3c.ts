@@ -467,7 +467,7 @@ const pl: Dict = {
   ol2_src_why_fail: 'Ostatnia próba zakończyła się błędem. Ekran pokazuje dane z ostatniego udanego pobrania.',
   ol2_src_why_stale: 'Brak nowych danych dłużej niż {n}.',
   ol2_src_why_old: 'Zadanie nie ma harmonogramu, więc stary wynik nie jest błędem.',
-  ol2_src_why_off: 'Wyłączone przełącznikiem — zadanie działa, ale niczego nie pobiera.',
+  ol2_src_why_off: 'Odczyt wyłączony flagą (dla linków RIO: TELM_RIO_LINKS) — zadanie uruchamia się według harmonogramu, ale niczego nie pobiera.',
   ol2_src_why_none: 'Zadanie nie zapisało jeszcze żadnego przebiegu.',
   ol2_src_why_backup_old: 'Ostatnia kopia jest starsza niż doba.',
   ol2_src_smsgw_none: 'Brak telefonu bramki SMS.',
