@@ -4214,8 +4214,15 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Scalanie: #436 F7 r5 ‚Äûgotowe‚Äù na `060b5ee`, ale CONFLICTING z main (#451/#452) i brak `db` na tym SHA ‚Äî bez scalenia. #454 F7 ‚Äûgotowe‚Äù, visual w toku. Bez push na `main`.
 - Bie≈ºƒÖca: **#384 zaleg≈Çe** PR #436 ‚Äî merge main (konflikt PLAN/POSTEP); #455 w planie; po push: `db` + czekam na ponowne F7.
 
-## 2026-10-22 18:05 ó #436 SCALONE; start #453 RIO_NO_POSITION
+## 2026-10-22 18:05 ÔøΩ #436 SCALONE; start #453 RIO_NO_POSITION
 
-- Skrzynka: #455/#453/#446/#425 (Spawn2018) ó juø w planie; #384 zaleg≥e SCALONE. Bez nowych pilne.
-- Scalanie: #436 F7 Ñgotowe do scaleniaî po c9133f8 + CI unit/db/visual zielone õ MERGED `490d8b25` (0267). #454 visual w toku ó bez scalenia. Bez push na `main`.
-- Bieøπca: **#453** (pakiet/hotfix-453-rio-no-position) ó `runRioLinks`: `no_position` õ `RIO_NO_POSITION:<load_id>` (SCX+HHL); `SOURCE_DOWN`/`ok:false` tylko wszystkie linki sieÊ/5xx; testy rio-links 31/31. Bez migracji.
+- Skrzynka: #455/#453/#446/#425 (Spawn2018) ÔøΩ juÔøΩ w planie; #384 zalegÔøΩe SCALONE. Bez nowych pilne.
+- Scalanie: #436 F7 ÔøΩgotowe do scaleniaÔøΩ po c9133f8 + CI unit/db/visual zielone ÔøΩ MERGED `490d8b25` (0267). #454 visual w toku ÔøΩ bez scalenia. Bez push na `main`.
+- BieÔøΩÔøΩca: **#453** (pakiet/hotfix-453-rio-no-position) ÔøΩ `runRioLinks`: `no_position` ÔøΩ `RIO_NO_POSITION:<load_id>` (SCX+HHL); `SOURCE_DOWN`/`ok:false` tylko wszystkie linki sieÔøΩ/5xx; testy rio-links 31/31. Bez migracji.
+
+## 2026-10-22 18:50 ‚Äî #454+#453 SCALONE; start #455
+
+- Skrzynka: #455/#446/#425 (Spawn2018) ‚Äî ju≈º w planie; #453 zamkniƒôte. Bez nowych pilne.
+- Scalanie: #454 F7 + CI ‚Üí MERGED c08ceb41. #456 F7 (c7526c4) + CI unit/db/visual ‚Üí MERGED ea216a2. Bez push na main.
+- Bie≈ºƒÖca: **#455** (pakiet/hotfix-455-db-tests) ‚Äî testy: Dzia≈Çaj jako ‚Üí 
+eal_app_user_id; ujemne hotfix_384_restore_windows; KSH = HHL w dec2. Bez migracji.

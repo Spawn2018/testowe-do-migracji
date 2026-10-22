@@ -209,9 +209,36 @@ val "pkt 7: SCX nadal widzi decyzję bez load_id" $SCX "select count(*) from dec
 val "pkt 8: PROPOSE → actor // SCX" $HHL "select ((payload->>'actor') like '% // SCX' and payload->>'decider'='CARRIER' and payload->>'by_org'='CARRIER')::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
 # F7 r2/r3 B1: visible_to NULL = wszyscy w projekcie (w tym KSH)
 val "pkt 8: visible_to NULL (wszyscy w projekcie)" $HHL "select (visible_to is null)::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
-# Na $L jest kilka PROPOSE_DATE z wcześniejszych kroków — liczy się widoczność (≥1), nie dokładnie 1.
-val "pkt 8: KSH widzi DECISION_EFFECT CARRIER" $KSH "select (count(*) >= 1)::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" true
+# #455 / F7 r4 P4: KSH widzi tyle samo DECISION_EFFECT CARRIER co HHL (nie „≥ 1”).
+N_EFF_HHL=$(run "$HHL" "select count(*) from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+N_EFF_KSH=$(run "$KSH" "select count(*) from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+if [ "$N_EFF_HHL" = "$N_EFF_KSH" ] && [ "${N_EFF_HHL:-0}" -ge 1 ] 2>/dev/null; then
+  ok=$((ok+1)); echo "  OK    pkt 8: KSH = HHL DECISION_EFFECT CARRIER ($N_EFF_KSH)"
+else
+  fail=$((fail+1)); echo "  FAIL  pkt 8: KSH = HHL DECISION_EFFECT CARRIER (KSH=$N_EFF_KSH HHL=$N_EFF_HHL)"
+fi
 val "pkt 8: HHL_OPS widzi decyzje (is_hhl)" $OPS "select count(*) from decisions where id='$D3'" 1
+
+# #455 / F7 r4 P3: „Działaj jako” → real_app_user_id prawdziwego admina w payload (0267 l. 108–109)
+echo; echo "[#455] Działaj jako → real_app_user_id"
+HHL_UID=$(sys "select id::text from app_users where auth_id='$HHL'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+SCX_UID=$(sys "select id::text from app_users where auth_id='$SCX'" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+sys "update loads set plan_load_date = current_date + 6, plan_delivery_date = current_date + 11,
+     plan_load_from = ((current_date + 6)::timestamp + time '08:00') at time zone 'Europe/Warsaw',
+     plan_load_to = ((current_date + 6)::timestamp + time '12:00') at time zone 'Europe/Warsaw',
+     plan_delivery_from = ((current_date + 11)::timestamp + time '12:00') at time zone 'Europe/Stockholm',
+     plan_delivery_to = ((current_date + 11)::timestamp + time '16:00') at time zone 'Europe/Stockholm',
+     status = 'PLANNED'
+     where id='$L'" >/dev/null
+DImp=$(run "$HHL" "select decision_open('$P','KSH_DATE_LT_5D','impersonacja 455', '{}'::jsonb, '$L')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select admin_impersonate_start('$SCX_UID'::uuid); commit;" >/dev/null
+LD_IMP=$(sys "select (current_date + 14)::text" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+val "#455: PROPOSE jako SCX (impersonacja HHL)" $HHL "select (decision_resolve('$DImp','PROPOSE_DATE','imp 455', jsonb_build_object('load_date','$LD_IMP'))->>'ui_hint')" KSH_DATE_COUNTER commit
+val "#455: real_app_user_id = admin HHL" $HHL "select (payload->>'real_app_user_id' = '$HHL_UID')::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' and payload->>'real_app_user_id' is not null order by occurred_at desc limit 1" true
+sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
+     select admin_impersonate_stop(); commit;" >/dev/null
+$PSQL -c "delete from impersonation_state" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
