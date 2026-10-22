@@ -158,6 +158,7 @@ val "IH-IMP: zmiana długości na istniejącym → changed" $HHL "select (r->'ch
 chk "IH-IMP: długość 18.10 po zmianie" "$(Q "select length_m::text from shipment_items where shipment_code='IH-IMP'")" "18.10"
 
 echo; echo "[#426] import p_quiet — F7: 0 powiadomień / decyzji / SMS / ryzyk / workflow"
+# F7#1: działanie SMS nie da się tu sprawdzić — trg_loads_sms wyłączony w 0257; tylko prosrc (e164 + quiet).
 chk "F7#1: trg_sms_load_changes ma driver_phone_e164" "$(Q "select (prosrc like '%driver_phone_e164%')::text from pg_proc where proname='trg_sms_load_changes'")" "true"
 chk "F7#1: trg_sms_load_changes ma bulk_quiet" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='trg_sms_load_changes'")" "true"
 chk "F7#3: l3_ksh_lead ma bulk_quiet" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='l3_ksh_lead'")" "true"
@@ -206,29 +207,54 @@ chk "IQ-426: stats.quiet + payload.quiet" "$(Q "select (s.stats->>'quiet')||'/'|
 chk "IQ-426: data planu zmieniona mimo quiet" "$(Q "select plan_load_date||' '||plan_delivery_date from loads where id='$LIQ'")" "$DQ1b $DQ2b"
 val "F7: bulk_quiet nie zostaje on po imporcie" $HHL "select import_schedule('$P', '$RQ2'::jsonb, '{}'::text[], '{\"name\":\"q426b.xlsx\",\"hash\":\"q426b\"}'::jsonb, true, true); select coalesce(nullif(current_setting('tower.bulk_quiet', true), ''), '-')" "-" 
 
-# F7#3: quiet add z datą w LEAD_DAYS → 0 LATE_DATE_CHANGE
-N1=$(Q "select count(*) from notifications"); D1c=$(Q "select count(*) from decisions"); R1=$(Q "select count(*) from risk_signals where kind='LATE_DATE_CHANGE'")
+# F7#3: kontrola dodatnia — ten sam bliski termin bez quiet → LATE_DATE_CHANGE; quiet → 0
+RQN_POS="[{\"code\":\"IQ-426P\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"}]"
+R0=$(Q "select count(*) from risk_signals where kind='LATE_DATE_CHANGE'")
+val "F7#3+: add blisko bez quiet → 1 added" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RQN_POS" false)) s(r)" 1 commit
+chk "F7#3+: ≥1 LATE_DATE_CHANGE bez quiet" "$(Q "select (count(*) - $R0 >= 1)::text from risk_signals where kind='LATE_DATE_CHANGE'")" "true"
+N1=$(Q "select count(*) from notifications"); DecB3=$(Q "select count(*) from decisions"); R1=$(Q "select count(*) from risk_signals where kind='LATE_DATE_CHANGE'")
 val "F7#3: quiet add blisko → 1 added" $HHL "select jsonb_array_length(r->'added') from ($(IMPQ "$RQN" false)) s(r)" 1 commit
 chk "F7#3: 0 nowych LATE_DATE_CHANGE" "$(Q "select (count(*) - $R1)::text from risk_signals where kind='LATE_DATE_CHANGE'")" "0"
 chk "F7#3: 0 nowych notifications po add" "$(Q "select (count(*) - $N1)::text from notifications")" "0"
-chk "F7#3: 0 nowych decisions po add" "$(Q "select (count(*) - $D1c)::text from decisions")" "0"
+chk "F7#3: 0 nowych decisions po add" "$(Q "select (count(*) - $DecB3)::text from decisions")" "0"
 
-# F7#2+#4: quiet — zniknięcie wiersza + anulowanie: 0 KSH_ROW_GONE, 0 workflow STATUS_CANCELLED
+# F7 drobne: cichy import z innym numerem HHL → 0 TOWER_KSH_CONFLICT (wymaga column_map hhlOrderNo)
+$PSQL -c "update loads set hhl_order_no='HHL/426-OLD' where id='$LIQ'" >/dev/null
+RQCONF="[{\"code\":\"IQ-426A\",\"length_m\":18.01,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\",\"hhlOrderNo\":\"HHL/426-NEW\"}]"
+IMPQMAP() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"name\":\"q426c.xlsx\",\"hash\":\"q426c\",\"path\":\"harmonogramy/x/q426c.xlsx\",\"column_map\":{\"hhlOrderNo\":\"Nr HHL\"}}'::jsonb, $2, true)"; }
+DecConf=$(Q "select count(*) from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")
+val "F7: quiet + inny hhlOrderNo → changed" $HHL "select jsonb_array_length(r->'changed') from ($(IMPQMAP "$RQCONF" false)) s(r)" 1 commit
+chk "F7: 0 TOWER_KSH_CONFLICT przy quiet" "$(Q "select (count(*) - $DecConf)::text from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")" "0"
+
+# F7#2+#4: START-7 musi istnieć i być włączone (0094 sieje tylko dla projektów z chwili migracji, enabled=false)
+$PSQL -c "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
+  select '$P', 'START-7', 'Transport anulowany', 'test #426', 'STATUS_CANCELLED', 'true'::jsonb,
+         '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
+   where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
+$PSQL -c "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
 RQC0="[{\"code\":\"IQ-426C\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
+RQD0="[{\"code\":\"IQ-426D\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
 val "F7#4: dodanie IQ-426C (quiet)" $HHL "select jsonb_array_length(r->'added') from ($(IMPQ "$RQC0" false)) s(r)" 1 commit
+val "F7#4+: dodanie IQ-426D (bez quiet)" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RQD0" false)) s(r)" 1 commit
 LIC=$(Q "select load_id from shipment_items where shipment_code='IQ-426C'")
-# plik z dotychczasowymi kodami (bez IQ-426C) — brakujące = kandydat; cancel tylko IQ-426C
-RQKEEP="[{\"code\":\"IQ-426A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\"},
+LID=$(Q "select load_id from shipment_items where shipment_code='IQ-426D'")
+# plik z dotychczasowymi kodami (bez IQ-426C/D) — brakujące = kandydat
+RQKEEP="[{\"code\":\"IQ-426A\",\"length_m\":18.01,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\"},
          {\"code\":\"IQ-426N\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"},
+         {\"code\":\"IQ-426P\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"},
          {\"code\":\"SG-36-1\",\"length_m\":12.0,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":9.5,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"},
          {\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1b\",\"delivery_date\":\"$D2b\"},
          {\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"order_no\":\"KSH/77\"},
          {\"code\":\"SG-03\",\"length_m\":12,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1c\",\"delivery_date\":\"$D2c\"},
          {\"code\":\"IH-IMP\",\"length_m\":18.1,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DH1b\",\"delivery_date\":\"$DH2b\"},
          {\"code\":\"SG-00\",\"length_m\":10,\"width_m\":2.5,\"height_m\":2.5,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
-D2c=$(Q "select count(*) from decisions"); W1=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
+W0=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
+val "F7#4+: cancel IQ-426D bez quiet → 1 cancelled" $HHL "select jsonb_array_length(r->'cancelled') from ($(IMP "$RQKEEP" false "'{IQ-426D}'")) s(r)" 1 commit
+chk "F7#4+: +1 workflow STATUS_CANCELLED bez quiet" "$(Q "select (count(*) - $W0)::text from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" "1"
+chk "F7#4+: IQ-426D CANCELLED" "$(Q "select status from loads where id='$LID'")" "CANCELLED"
+DecB4=$(Q "select count(*) from decisions"); W1=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
 val "F7#2+#4: quiet cancel IQ-426C → 0 spraw / 0 wf" $HHL "select jsonb_array_length(r->'cancelled') from ($(IMPQ "$RQKEEP" false "'{IQ-426C}'")) s(r)" 1 commit
-chk "F7#2: 0 nowych decisions po quiet cancel" "$(Q "select (count(*) - $D2c)::text from decisions")" "0"
+chk "F7#2: 0 nowych decisions po quiet cancel" "$(Q "select (count(*) - $DecB4)::text from decisions")" "0"
 chk "F7#4: 0 nowych workflow STATUS_CANCELLED" "$(Q "select (count(*) - $W1)::text from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" "0"
 chk "F7#4: IQ-426C CANCELLED" "$(Q "select status from loads where id='$LIC'")" "CANCELLED"
 

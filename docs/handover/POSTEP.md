@@ -4052,3 +4052,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian. #431 wygląd bez F7.
 - Scalanie: #432 CI zielone (`6688886f`), F7 „jeszcze nie” (4 blokery) → poprawki w tym samym PR. Bez push na `main`.
 - Bieżąca: **#426 F7** — (1) `trg_sms_load_changes` z 0111+e164+quiet; (2) pomijanie `l1b_note_*` / `l1b_kr_check` przy quiet; (3) `l3_ksh_lead` × bulk_quiet; (4) `wf_enqueue_event` × bulk_quiet; dry_run pokazuje critical; stats/payload `quiet`; audit tylko przy zapisie; import 81→99. `l3_scan` później może otworzyć NO_AWIZ/NO_TRACKING (stan) — dopuszczalne.
+
+## 2026-10-22 06:10 — #426 F7 r2: poprawki testów B3/B4
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426/#425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7.
+- Scalanie: brak „F7: gotowe”; #432 db czerwone (shadow `D1c` w RQKEEP) + F7 r2 (2 poprawki testów) → ten commit. Bez push na `main`.
+- Bieżąca: **#426 F7 r2** — `DecB3`/`DecB4` zamiast `D1c`/`D2c`; B3+ LATE bez quiet; B4+ START-7 włączone + cancel bez quiet → +1 wf; quiet hhlOrderNo → 0 conflict; import 99→106.
