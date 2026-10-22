@@ -1,9 +1,13 @@
 -- =====================================================================
 -- TOWER — Migracja 0260: #400 / D-20261021-1929-01 (pilne)
 --   A. permit_fits: wymiary L×W×H pole po polu
---      coalesce(loads.combo_*_m, symbol_specs.combo_*_m) — jak masa.
---   B. audit_row_change: bez maski „[dane osobowe]” na PII;
---      rio_secret nadal „••••”. Starych wpisów nie odtwarzamy.
+--      coalesce(nullif(loads.combo_*_m,0), symbol_specs.combo_*_m) — jak masa.
+--   B. audit_row_change: jawne tylko driver_name/driver_phone na loads
+--      i load_escorts (D-1243); pozostałe PII z 0215 nadal „[dane osobowe]”;
+--      rio_secret nadal „••••”; źródło tower.audit_source='rodo' maskuje też
+--      kierowcę (purge). Starych wpisów nie odtwarzamy.
+--   C. purge_personal_data: czyści driver_* w audit_log po retencji;
+--      własne UPDATE-y z audit_source=rodo.
 --   Idempotentna.
 -- =====================================================================
 
@@ -33,6 +37,9 @@ declare
   v_kind text;
   v_breaches text[] := '{}';
   v_dims_unknown boolean := false;
+  v_sym_len numeric;
+  v_sym_wid numeric;
+  v_sym_hei numeric;
 begin
   select l.id, l.permit_kind, l.symbol, l.combo_length_m, l.combo_width_m, l.combo_height_m,
          l.combo_weight_t, l.plan_load_date
@@ -58,9 +65,13 @@ begin
 
   /* #400: wymiary zestawu — transport, potem tabela symboli (pole po polu). */
   if v_symbol is not null then
-    v_len := coalesce(v_len, (select ss.combo_length_m from public.symbol_specs ss where ss.symbol = v_symbol));
-    v_wid := coalesce(v_wid, (select ss.combo_width_m from public.symbol_specs ss where ss.symbol = v_symbol));
-    v_hei := coalesce(v_hei, (select ss.combo_height_m from public.symbol_specs ss where ss.symbol = v_symbol));
+    select ss.combo_length_m, ss.combo_width_m, ss.combo_height_m
+      into v_sym_len, v_sym_wid, v_sym_hei
+      from public.symbol_specs ss
+     where ss.symbol = v_symbol;
+    v_len := coalesce(nullif(v_len, 0), v_sym_len);
+    v_wid := coalesce(nullif(v_wid, 0), v_sym_wid);
+    v_hei := coalesce(nullif(v_hei, 0), v_sym_hei);
   end if;
 
   /* Rodzaj: zezwolenie firmowe tylko przy permit_kind FIRMA (KR + 13/GD → KIND). */
@@ -117,10 +128,11 @@ revoke all on function public.permit_fits(uuid, uuid) from public, anon;
 grant execute on function public.permit_fits(uuid, uuid) to authenticated;
 
 comment on function public.permit_fits(uuid, uuid) is
-  'D-1118+#400: L×W×H coalesce(load, symbol_specs); masa z fallbackiem; KIND dla FIRMA vs TRASA.';
+  'D-1118+#400: L×W×H coalesce(nullif(load,0), symbol_specs); masa z fallbackiem; KIND dla FIRMA vs TRASA.';
 
 -- ---------------------------------------------------------------------
--- audit_row_change: D-1243 / #400 — PII jawne; tylko rio_secret maskowany
+-- audit_row_change: D-1243 / #400 — jawne driver_* tylko loads/load_escorts;
+-- pozostałe PII z 0215 zamaskowane; rio_secret = ••••; źródło rodo maskuje też kierowcę.
 -- ---------------------------------------------------------------------
 create or replace function public.audit_row_change() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -130,7 +142,13 @@ declare
     'updated_at', 'eta_site', 'eta_confidence_min', 'eta_basis', 'eta_computed_at',
     'delay_minutes', 'fetched_at', 'beat_at', 'beats', 'last_seen_at'
   ];
+  v_pii  constant text[] := array[
+    'driver_name', 'driver_phone', 'phone_national', 'phone', 'contact_phone',
+    'contact_name', 'email_personal', 'rio_secret'
+  ];
   v_id text; v_user uuid; v_source text; v_row jsonb;
+  v_mask text;
+  v_driver_clear boolean;
 begin
   o := case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end;
   n := case when tg_op in ('UPDATE', 'INSERT') then to_jsonb(new) end;
@@ -147,13 +165,28 @@ begin
     v_old := o; v_new := n;
   end if;
 
-  /* Tylko rio_secret (E44) — PII kierowcy/kontaktu bez maski (D-1243 / #400). */
-  if v_old ? 'rio_secret' and jsonb_typeof(v_old -> 'rio_secret') <> 'null' then
-    v_old := jsonb_set(v_old, array['rio_secret'], '"••••"'::jsonb);
-  end if;
-  if v_new ? 'rio_secret' and jsonb_typeof(v_new -> 'rio_secret') <> 'null' then
-    v_new := jsonb_set(v_new, array['rio_secret'], '"••••"'::jsonb);
-  end if;
+  v_source := nullif(btrim(current_setting('tower.audit_source', true)), '');
+  /* D-1243: imię/telefon kierowcy i pilota jawne — tylko loads/load_escorts, nie przy purge. */
+  v_driver_clear := tg_table_name in ('loads', 'load_escorts')
+    and (v_source = 'rodo') is not true;
+
+  foreach k in array v_pii loop
+    if k = 'rio_secret' then
+      v_mask := '"••••"';
+    elsif k in ('driver_name', 'driver_phone') and v_driver_clear then
+      v_mask := null; /* D-1243: bez maski */
+    else
+      v_mask := '"[dane osobowe]"';
+    end if;
+    if v_mask is not null then
+      if v_old ? k and jsonb_typeof(v_old -> k) <> 'null' then
+        v_old := jsonb_set(v_old, array[k], v_mask::jsonb);
+      end if;
+      if v_new ? k and jsonb_typeof(v_new -> k) <> 'null' then
+        v_new := jsonb_set(v_new, array[k], v_mask::jsonb);
+      end if;
+    end if;
+  end loop;
 
   v_row := coalesce(n, o);
   v_id := coalesce(
@@ -175,7 +208,6 @@ begin
     v_user := null;
   end;
 
-  v_source := nullif(btrim(current_setting('tower.audit_source', true)), '');
   if v_user is null then
     v_source := coalesce(v_source, 'system');
   end if;
@@ -188,4 +220,119 @@ end $$;
 revoke all on function public.audit_row_change() from public, anon, authenticated;
 
 comment on function public.audit_row_change() is
-  'HIST-11 + A7 + #400 (D-1243): rio_secret = ••••; PII (kierowca/kontakt) bez maski.';
+  'HIST-11 + A7 + #400: rio••••; driver_* jawne na loads/load_escorts (nie przy source=rodo); reszta PII zamaskowana.';
+
+-- ---------------------------------------------------------------------
+-- purge_personal_data: audit_source=rodo + scrub driver_* w audit_log po retencji
+-- ---------------------------------------------------------------------
+create or replace function public.purge_personal_data(p_days integer default 90)
+returns integer
+language plpgsql
+set search_path to 'public', 'extensions'
+as $function$
+declare
+  n int; n_c int; n_pos int; n_pos_c int; n_pos_d int; n_tok int; n_esc int; n_aud int := 0;
+  r record;
+  v_old jsonb; v_new jsonb;
+begin
+  if (p_days >= 0) is not true then raise exception 'p_days musi być ≥ 0' using errcode = '22023'; end if;
+
+  perform set_config('tower.audit_source', 'rodo', true);
+
+  update loads set driver_name = null, driver_phone = null
+  where actual_delivery_at is not null
+    and actual_delivery_at < now() - make_interval(days => p_days)
+    and (driver_name is not null or driver_phone is not null);
+  get diagnostics n = row_count;
+
+  update loads set driver_name = null, driver_phone = null
+  where status = 'CANCELLED' and actual_delivery_at is null
+    and updated_at < now() - make_interval(days => p_days)
+    and (driver_name is not null or driver_phone is not null);
+  get diagnostics n_c = row_count;
+
+  update load_escorts e set driver_name = null, driver_phone = null
+    from loads l
+   where l.id = e.load_id
+     and (e.driver_name is not null or e.driver_phone is not null)
+     and ((l.actual_delivery_at is not null and l.actual_delivery_at < now() - make_interval(days => p_days))
+       or (l.status = 'CANCELLED' and l.actual_delivery_at is null and l.updated_at < now() - make_interval(days => p_days)));
+  get diagnostics n_esc = row_count;
+
+  /* Retencja: jawne driver_* w dzienniku (po D-1243) — zamaskuj po terminie. */
+  for r in
+    select a.id, a.old_value, a.new_value
+      from public.audit_log a
+     where a.entity in ('loads', 'load_escorts')
+       and a.created_at < now() - make_interval(days => p_days)
+       and (
+         (a.old_value ? 'driver_name' and jsonb_typeof(a.old_value -> 'driver_name') <> 'null'
+           and a.old_value ->> 'driver_name' is distinct from '[dane osobowe]')
+         or (a.old_value ? 'driver_phone' and jsonb_typeof(a.old_value -> 'driver_phone') <> 'null'
+           and a.old_value ->> 'driver_phone' is distinct from '[dane osobowe]')
+         or (a.new_value ? 'driver_name' and jsonb_typeof(a.new_value -> 'driver_name') <> 'null'
+           and a.new_value ->> 'driver_name' is distinct from '[dane osobowe]')
+         or (a.new_value ? 'driver_phone' and jsonb_typeof(a.new_value -> 'driver_phone') <> 'null'
+           and a.new_value ->> 'driver_phone' is distinct from '[dane osobowe]')
+       )
+  loop
+    v_old := r.old_value;
+    v_new := r.new_value;
+    if v_old is not null then
+      if v_old ? 'driver_name' and jsonb_typeof(v_old -> 'driver_name') <> 'null' then
+        v_old := jsonb_set(v_old, array['driver_name'], '"[dane osobowe]"'::jsonb);
+      end if;
+      if v_old ? 'driver_phone' and jsonb_typeof(v_old -> 'driver_phone') <> 'null' then
+        v_old := jsonb_set(v_old, array['driver_phone'], '"[dane osobowe]"'::jsonb);
+      end if;
+    end if;
+    if v_new is not null then
+      if v_new ? 'driver_name' and jsonb_typeof(v_new -> 'driver_name') <> 'null' then
+        v_new := jsonb_set(v_new, array['driver_name'], '"[dane osobowe]"'::jsonb);
+      end if;
+      if v_new ? 'driver_phone' and jsonb_typeof(v_new -> 'driver_phone') <> 'null' then
+        v_new := jsonb_set(v_new, array['driver_phone'], '"[dane osobowe]"'::jsonb);
+      end if;
+    end if;
+    update public.audit_log
+       set old_value = v_old, new_value = v_new
+     where id = r.id;
+    n_aud := n_aud + 1;
+  end loop;
+
+  delete from positions p
+  using loads l
+  where l.id = p.load_id
+    and l.actual_delivery_at is not null
+    and l.actual_delivery_at < now() - interval '30 days';
+  get diagnostics n_pos = row_count;
+
+  delete from positions p
+  using loads l
+  where l.id = p.load_id and l.status = 'CANCELLED' and l.actual_delivery_at is null
+    and l.updated_at < now() - make_interval(days => p_days);
+  get diagnostics n_pos_c = row_count;
+
+  -- D-1710: odłączone pozycje — 30 dni od detached_at
+  delete from positions
+   where detached_load_id is not null
+     and load_id is null
+     and detached_at is not null
+     and detached_at < now() - interval '30 days';
+  get diagnostics n_pos_d = row_count;
+
+  delete from driver_tokens
+  where coalesce(revoked_at, expires_at) < now() - make_interval(days => p_days);
+  get diagnostics n_tok = row_count;
+
+  insert into integration_runs (job, ok, result)
+  values ('rodo', true, jsonb_build_object('dni', p_days, 'kierowcy_rozladowane', n, 'kierowcy_anulowane', n_c,
+          'piloci', n_esc, 'pozycje_rozladowane', n_pos, 'pozycje_anulowane', n_pos_c,
+          'pozycje_odlaczone', n_pos_d, 'linki_kierowcy', n_tok, 'audit_kierowca', n_aud));
+  return n + n_c + n_esc;
+end $function$;
+
+revoke all on function public.purge_personal_data(integer) from public, anon, authenticated;
+
+comment on function public.purge_personal_data(integer) is
+  'I-7 + D-1710 + #400: retencja kierowcy/pilota; scrub driver_* w audit_log; UPDATE z audit_source=rodo.';
