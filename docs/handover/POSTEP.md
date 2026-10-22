@@ -4156,3 +4156,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #448 F7 "niegotowe" (B1: enum+uzycie w jednej transakcji) → poprawka w tym samym PR. Inne PR bez "gotowe" po head.
 - Biezaca: **#446 F7** — **0263** tylko `ALTER TYPE`; **0264** funkcja+trigger (takze `of status`) + backfill; test OPOZNIONY→DOPLYNAL (+1 → 170). #384→0265 … B5→0269, indeks→0270+. Bez push na `main`.
 
+## 2026-10-22 14:25 - #448 CI: kolizja ID testu #446
+
+- Skrzynka: #446 biezaca; #425/#422/#413/`pilne` w kolejce. Bez nowych `pilne`.
+- Scalanie: #448 F7 "gotowe" po `d163e318`, ale `db` czerwone (ODWOLANY→W_REJSIE): ID 446/447 zajęte przez #445 → INSERT cichy. Poprawka: ID 448/449 + EXPECTED status 170. Nowy commit → czekam na ponowne F7. Bez push na `main`.
+- Biezaca: **#446 pkt 1** — fix testów; potem pkt 2 indeks dzwonka (0270+).
+

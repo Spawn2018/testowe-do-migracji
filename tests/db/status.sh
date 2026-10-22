@@ -619,9 +619,10 @@ chk "#445: departure minął, AIS 10 km, auto ≤2 km → FERRY" \
   "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
 
 # #446 pkt 1: actual_departure_at → W_REJSIE; actual_arrival_at → DOPLYNAL; ODWOLANY bez zmian
+# ID 448/449 — nie 446/447 (#445 S445b/S445c już je zajmuje; INSERT cichy → fałszywy W_REJSIE)
 echo; echo "[#446] sailings.status po actual_departure/arrival"
-S446=77777777-0000-0000-0000-000000000446
-S446b=77777777-0000-0000-0000-000000000447
+S446=77777777-0000-0000-0000-000000000448
+S446b=77777777-0000-0000-0000-000000000449
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
  ('$S446','$P','66666666-0000-0000-0000-000000000001','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ZAPLANOWANY','POLFERRIES'),
  ('$S446b','$P','66666666-0000-0000-0000-000000000002','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ODWOLANY','POLFERRIES')" >/dev/null
