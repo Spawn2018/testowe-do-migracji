@@ -23,8 +23,11 @@ describe('W-dzwonek-tel (22.10.2026)', () => {
     expect(mergeBellRefresh([n('srv-1')], [n('srv-1', true)])[0].read).toBe(true);
   });
 
-  it('odświeżanie: powrót do aplikacji, otwarcie dzwonka, co minutę; tylko w trybie Supabase', () => {
+  it('odświeżanie: powrót do aplikacji (najwyżej co 30 s), otwarcie dzwonka, co 5 min, jedno zapytanie naraz; tylko w trybie Supabase', () => {
     const br = read('src/data/supabaseBridge.ts');
+    expect(br).toContain('const BELL_EVERY_MS = 5 * 60_000;');
+    expect(br).toContain('const BELL_RETURN_MIN_MS = 30_000;');
+    expect(br).toContain('if (bellInFlight) return bellInFlight;');
     expect(br).toContain("addEventListener('visibilitychange'");
     expect(br).toContain("addEventListener('pageshow'");
     expect(br).toContain('startBellRefresh();');
