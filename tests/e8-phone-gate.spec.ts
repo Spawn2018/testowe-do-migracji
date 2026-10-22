@@ -2525,7 +2525,10 @@ test.describe('wyglad/P5 Dokumenty — E31', () => {
     await expect(page.locator('[data-doc-upload]')).toHaveCount(0);
     await expect(page.locator('tr[data-docreq="INSURANCE"]')).toHaveCount(0);
     await expect(page.locator('tr[data-docreq="OCS"]')).toHaveCount(1);
-    await expect(page.locator('[data-doc-permits]')).toHaveCount(0);
+    /* E31 pkt 9 (decyzja koordynatora 22.10.2026): KSH widzi zezwolenia przypięte do swoich transportów, tylko do odczytu */
+    await expect(page.locator('[data-doc-permits]')).toHaveCount(1);
+    await expect(page.locator('[data-doc-permit-add]')).toHaveCount(0);
+    await expect(page.locator('[data-doc-permits] tbody tr')).toHaveCount(2);
   });
 
   for (const role of ['HHL', 'KSH', 'SCX'] as const) {
