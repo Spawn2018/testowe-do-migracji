@@ -126,10 +126,28 @@ describe('P9-e dymek i lista', () => {
   it('odmiana, nazwa statku, nazwa transportu, demo', () => {
     expect([1, 2, 4, 5, 12, 14, 22, 25].map(carsWord)).toEqual(['one', 'few', 'few', 'many', 'many', 'many', 'few', 'many']);
     expect(vesselKey('Nova Star')).toBe(vesselKey('NOVA  STAR'));
+    /* 22.10.2026: AIS „M/F Wawel” = rejs „Wawel” (SG-17 na promie, nie w porcie) */
+    expect(vesselKey('M/F Wawel')).toBe(vesselKey('Wawel'));
+    expect(vesselKey('M/F Stena Ebba')).toBe('stena ebba');
+    expect(vesselKey('MS Nova Star')).toBe('nova star');
+    expect(vesselKey('Msta')).toBe('msta');
     expect(splitLabel('SG-03')).toEqual({ code: 'SG-03', num: null });
     expect(demoStageAnchor('SITE', ZONES)).toEqual({ lat: 65.81273, lng: 21.78898 });
     expect(demoStageAnchor('PORT_PL', ZONES)).toEqual({ lat: 54.40372, lng: 18.6813 });
     expect(demoStageAnchor('ROAD_SE', ZONES)).toBeNull();
     expect(demoStageAnchor('FERRY', ZONES)).not.toBeNull();
+  });
+});
+
+describe('22.10.2026: auto „Na promie” na pozycji statku z AIS (SG-17)', () => {
+  it('CorridorMap: pozycja floty z shipOf dla etapu FERRY, statek bez drugiego znacznika; błędy odczytu promów', async () => {
+    const { readFileSync } = await import('node:fs');
+    const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(m).toContain("stageTileOf(l) === 'FERRY' ? ferryKeyOf(l) : null");
+    expect(m).toContain('takenShips.add(vesselKey(ship.vessel));');
+    expect(m.indexOf('const shipOf = ')).toBeLessThan(m.indexOf('const fleet = PROD_BUILD'));
+    expect(m.indexOf('const fleet = PROD_BUILD')).toBeLessThan(m.indexOf("if (slot === 'drawer')"));
+    const a = readFileSync('src/lib/aisDb.ts', 'utf8');
+    expect(a).toContain('fails >= 3) onUpdate([])');
   });
 });
