@@ -4064,3 +4064,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426 zamknięte; #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7 (kolejność z F7 #432: #431→deploy→#432→#433 — #431 niewykonalne bez F7).
 - Scalanie: #432 F7 „gotowe” (`dd0a86d`) + CI zielone (unit/db/visual) → merge `a9189bb1` (0259). Bez push na `main`.
 - Bieżąca: **#400** (`pakiet/hotfix-400-dims-pii`, migracja **0260**) — `permit_fits` coalesce L×W×H z `symbol_specs`; `audit_row_change` bez maski PII, `rio_secret` = ••••; i2 634→639.
+
+## 2026-10-22 06:55 — #400 CI db: prosrc + dec-fx
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433/#434 bez F7.
+- Scalanie: brak „F7: gotowe”. #434 unit/visual zielone; db FAIL (i2 asercja prosrc + dec-fx `loads_carrier_order_no_uq`). Bez push na `main`.
+- Bieżąca: **#400** — komentarz w `audit_row_change` bez litery „[dane osobowe]” (asercja i2); `dec-fx` numery zleceń z `n_pairs`+md5(8).

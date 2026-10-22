@@ -147,7 +147,7 @@ begin
     v_old := o; v_new := n;
   end if;
 
-  /* Tylko rio_secret (E44) — bez „[dane osobowe]” (D-1243 / #400). */
+  /* Tylko rio_secret (E44) — PII kierowcy/kontaktu bez maski (D-1243 / #400). */
   if v_old ? 'rio_secret' and jsonb_typeof(v_old -> 'rio_secret') <> 'null' then
     v_old := jsonb_set(v_old, array['rio_secret'], '"••••"'::jsonb);
   end if;

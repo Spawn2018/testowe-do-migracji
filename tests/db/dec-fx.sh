@@ -154,13 +154,14 @@ begin
         v_detail := jsonb_build_object('exit_at', now()::text, 'dwell_min', 12);
       end if;
 
+      -- Unikalne numery: n_pairs + md5 — krótkie 4 znaki kolidowały (loads_carrier_order_no_uq).
       insert into loads (id, project_id, carrier_org_id, order_no, status, hhl_order_no, carrier_order_no)
       values (
         gen_random_uuid(), '$P', '$SCXO',
-        'DFX-' || substr(md5(random()::text), 1, 6),
+        'DFX-' || n_pairs::text || '-' || substr(md5(random()::text), 1, 8),
         case when r.code = 'DELIVERED_CHECK' then 'AT_SITE'::load_status else 'PLANNED'::load_status end,
-        'HHL-DFX-' || substr(md5(random()::text), 1, 4),
-        'SCX-DFX-' || substr(md5(random()::text), 1, 4)
+        'HHL-DFX-' || n_pairs::text || '-' || substr(md5(random()::text), 1, 8),
+        'SCX-DFX-' || n_pairs::text || '-' || substr(md5(random()::text), 1, 8)
       )
       returning id into v_load;
 
