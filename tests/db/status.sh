@@ -735,16 +735,28 @@ chk "#461: RIO blokuje escalate tylko NO_POSITION" \
   "select (escalated_at is null)::text from decisions where id='$D461np'" true
 chk "#461: RIO nie blokuje escalate SEFS" \
   "select (escalated_at is not null)::text from decisions where id='$D461sf'" true
-# F7: sprzątanie jak A1 — risks.sh liczy title_key w tower_test_status
+# F7: sprzątanie globalne jak A1 — detect_silent_vehicles(90) i escalate zostawiają
+# klucze poza L461r; risks.sh liczy title_key w całej tower_test_status (baseline 5).
 chk "#461 po teście brak kluczy RIO/SILENT/overdue" \
-  "delete from decision_events where decision_id in (select id from decisions where load_id='$L461r');
-   delete from decisions where load_id='$L461r';
-   delete from risk_signals where load_id='$L461r'
-     and (title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
-          or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'SILENT:%'
-          or dedup_key like 'decision-overdue:%');
-   select count(*) from risk_signals where load_id='$L461r'
-     and title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')" 0
+  "delete from decision_events where decision_id in (
+      select d.id from decisions d
+       where d.load_id='$L461r'
+          or d.risk_id in (select id from risk_signals
+            where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+               or kind in ('SILENT_VEHICLE','RESOURCE_MISSING')
+               or dedup_key like 'SILENT:%' or dedup_key like 'RIO_NO_POSITION:%'
+               or dedup_key like 'decision-overdue:%'));
+   delete from decisions where load_id='$L461r'
+      or risk_id in (select id from risk_signals
+        where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+           or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'
+           or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'decision-overdue:%');
+   delete from risk_signals
+    where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+       or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'
+       or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'decision-overdue:%';
+   select count(*) from risk_signals
+    where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
