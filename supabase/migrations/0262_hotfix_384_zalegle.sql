@@ -1,5 +1,5 @@
 -- HOTFIX #384 zaległe / D-20261022-0130-01 (#425): pkt 7–8 + okno importu + dane SG.
--- Migracja 0261. SMS×bulk_quiet już w 0259 — tu bez zmian.
+-- Migracja 0262 (#438 zabrało 0261 na E44 RIO). SMS×bulk_quiet już w 0259 — tu bez zmian.
 -- 1) decisions_read: CARRIER tylko własne transporty (carrier_org_id)
 -- 2) decision_apply_effect: payload actor/decider/by_org + visible_to
 -- 3) import_schedule: zmiana daty bez godziny → przesuń okno
@@ -971,6 +971,6 @@ begin
 
   perform set_config('tower.import_ctx', '', true);
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-  raise notice '0261: przywrócono okno dla % transportów SG-01/02/T-01', v_n;
+  raise notice '0262: przywrócono okno dla % transportów SG-01/02/T-01', v_n;
 end
 $restore$;
