@@ -707,11 +707,13 @@ chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_valu
 HHL_UID=$(Q "select id from app_users where auth_id='$HHL'")
 $PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
 chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
-# slot 1–2 (0106); slot 1 mógł zostać po F7 B1 — używamy 2; filtr entity_id = list_key:slot.
-$PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
- values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)
- on conflict (list_key, slot) do update set phone_national='000000001', display_name='Test 400', active=true" >/dev/null
-chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='LOAD_SREM:2' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
+# slot 1–2 (0106); tabela ma uuid id → entity_id = id::text (nie list_key:slot).
+# Najpierw delete, żeby INSERT zawsze zapisał phone_national w dzienniku (nie no-op UPDATE).
+$PSQL -c "delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2;
+ insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
+ values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)" >/dev/null
+SZR_ID=$(Q "select id::text from sms_zone_recipients where list_key='LOAD_SREM' and slot=2")
+chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='$SZR_ID' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
 $PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
 chk "D-1243/#400: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
 chk "D-1243/#400: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
