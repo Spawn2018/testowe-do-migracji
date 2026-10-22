@@ -4185,3 +4185,14 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #449 F7 „gotowe do scalenia” po `c81d17ab` + CI zielone (unit/db/visual) → MERGED `b7b049be`. Bez push na `main`.
 - Bieżąca: **#446 pkt 3–4** — migracja **0266** `tower_cron_ferry_schedule_invoke` (`to_regclass('vault.decrypted_secrets')`); Edge: odrzucony `lastPortPosition` → zapas tylko 3–10 km; RIO `RIO_UNKNOWN_ASSET` tylko NIEZNANY→znany; `TELM_RIO_LINKS=off` → `result.disabled=true`. #384→**0267** … B5→**0271**. Testy unit integrations+rio-links 70/70.
 
+## 2026-10-22 16:45 — #450 SCALONE; #446 pkt 5 SELECT
+
+- Skrzynka: #446 (Spawn2018) — pkt 1–5; #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #450 F7 „gotowe do scalenia” po `34f25242` + CI zielone (unit/db/visual) → MERGED `5c6ab459` (0266). Bez push na `main`. `deploy-main` nie czekamy.
+- **#446 pkt 5 (produkcja, odczyt ~16:45 Europe/Warsaw):**
+  - otwarte `risk_signals` NO_TRACKING (`l3:NO_TRACKING:%` / `L3_NO_TRACKING`): **0** (także `detected_at >= 22.10 12:00+02`);
+  - otwarte `decisions` `NO_TRACKING` (NEW/ASSIGNED): **0** (także po 12:00);
+  - `tower-tracking-guard` (`15 6 * * *` UTC): ostatni przebieg 22.10 08:15 Waw = **failed** (`job startup timeout`); wcześniej 21.10 = succeeded.
+- **#446 pkt 6:** wpisy `failed` z rana 22.10 w `cron.job_run_details` zostają (historia); sprawdzenie następnego przebiegu z harmonogramu — **23.10 rano** (po 08:15 Waw) → wpis w POSTEP.
+- Bieżąca dalej: **#384 zaległe** (`pakiet/hotfix-384-zalegle`, migracja **0267**); PR #436 — F7 niegotowe (przenumerować 0262→0267 + uwagi F7 r2/r3).
+
