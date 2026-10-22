@@ -698,11 +698,13 @@ chk "D-1243/#400: kierowca w dzienniku z imieniem i telefonem" "$(Q "select coun
 $PSQL -c "delete from load_escorts where load_id='$L1'; insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
  values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '+48000000222', 'PL',
          (select id from app_users where auth_id='$HHL'))" >/dev/null
-chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select new_value->>'driver_name'||'/'||new_value->>'driver_phone' from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/+48000000222"
+# Nawiasy: || ma wyższy priorytet niż ->> (bez nich: (text||jsonb)->>'…' → brak operatora).
+chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/+48000000222"
 $PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
 chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
+# slot 1–2 (0106); slot 1 mógł zostać po F7 B1 — używamy 2.
 $PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
- values ('LOAD_SREM', 9, 'Test 400', '000000001', 'PL', true)
+ values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)
  on conflict (list_key, slot) do update set phone_national='000000001', display_name='Test 400', active=true" >/dev/null
 chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
 $PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
@@ -713,7 +715,7 @@ $PSQL -c "insert into audit_log (action, entity, entity_id, old_value, new_value
  values ('ROW_UPDATE','loads','$L1','{\"driver_name\":\"Stary Kierowca\",\"driver_phone\":\"+48000000999\"}'::jsonb,
          '{\"driver_name\":\"Nowy Kierowca\"}'::jsonb, now() - interval '100 days')" >/dev/null
 chk "D-1243/#400: purge maskuje driver_* w starym audit_log" "$(Q "select purge_personal_data(); select (old_value->>'driver_name'='[dane osobowe]' and old_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text from audit_log where entity='loads' and entity_id='$L1' and created_at < now() - interval '90 days' order by created_at limit 1")" "true"
-$PSQL -c "delete from load_escorts where load_id='$L1'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=9; update app_users set phone=null where auth_id='$HHL'" >/dev/null
+$PSQL -c "delete from load_escorts where load_id='$L1'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2; update app_users set phone=null where auth_id='$HHL'" >/dev/null
 $PSQL -c "set session_replication_role=replica; update loads set rio_secret=null where id='$L1'" >/dev/null
 # Część 3 osobno: shipment_items nie ma w seed.sql. Wstawia je część 1 (i kasuje) oraz część 5.
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$L2','I2P3-S1','STANDARD')" >/dev/null

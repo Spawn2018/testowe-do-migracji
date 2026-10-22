@@ -4070,3 +4070,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433/#434 bez F7.
 - Scalanie: brak „F7: gotowe”. #434 unit/visual zielone; db FAIL (i2 asercja prosrc + dec-fx `loads_carrier_order_no_uq`). Bez push na `main`.
 - Bieżąca: **#400** — komentarz w `audit_row_change` bez litery „[dane osobowe]” (asercja i2); `dec-fx` numery zleceń z `n_pairs`+md5(8).
+
+## 2026-10-22 07:35 — #400 CI db: i2 escorts/sms_zone
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7. #431 SCALONE na main (`e8480e1e`).
+- Scalanie: brak „F7: gotowe”. #434 db FAIL na `4ec8db68` (i2 644/646): (1) `||` vs `->>` w asercji load_escorts; (2) slot 9 poza CHECK 1–2 w sms_zone_recipients. Bez push na `main`.
+- Bieżąca: **#400** — nawiasy w SELECT escorts; slot=2 dla maski phone_national.
