@@ -4118,8 +4118,29 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ™. Szacunek szczytu po skrÃ³cie: 34. Ma
 - Scalanie: brak â€žF7: gotoweâ€ po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
 - BieÅ¼Ä…ca: **#442** â€” test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.
 
-## 2026-10-22 12:50 — #445 pilne: A10_b FERRY tylko po odejœciu rejsu
+## 2026-10-22 12:15 - #442 NA PRODUKCJI; #441 pkt 1-2; poprawka deploy-main
 
-- Skrzynka: #445 (pilne) + #446 (Spawn2018) › PLAN §4/§8 + dopisek D-20261022-1235-01. #441/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
-- Scalanie: #444 F7 „gotowe” po 125d175a; CI visual czêœci jeszcze w toku — bez merge. Bez push na `main`.
-- Bie¿¹ca: **#445** — migracja **0262** (10_try_ferry_backup + korekta SG-17 bulk_quiet); testy status +4 (166); #384›0263 … B5›0267. Ga³¹Ÿ `pakiet/hotfix-445-a10-ferry`. #441 PR #444 czeka na koniec visual.
+- Skrzynka: #442/#441 `pilne` (Spawn2018); #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: **#443** F7 "gotowe" po `0e89ccd` + CI zielone -> merge `8f9d7270` (bez push na `main`). #436 F7 r3 niegotowe. #408/#383 czekaja na F7.
+- **#442:** `deploy-main` `39760618480` (Edge wszystkie + Vercel); `rio-links` `ok: true` od 10:08 (queried/written 1); wczesniej `shipment_code` -> `ok: false`.
+- **#441 pkt 1-2:** `ferry-schedule` `ok: true` (inserted 15); `tracking_delivery_guard` + nocne SQL + `security_advisor_snapshot_tick` + `daily_admin_digest` OK; `usage-check` `ok: true`.
+- Biezaca: **#441 pkt 3** - `deploy-main` porownuje Edge z SHA ostatniego udanego przebiegu (`pakiet/hotfix-441-deploy-edge`).
+
+## 2026-10-22 12:40 - #441 F7 #444: brak bazy = wszystkie Edge; baza tylko po kroku Edge
+
+- Skrzynka: #441/`pilne` biezaca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych poza juz wpisanymi.
+- Scalanie: #444 F7 "prawie" (niegotowe) po `9bfb293` - poprawki w tym samym PR. #436 F7 niegotowe. #408/#383 bez "gotowe". Bez push na `main`.
+- Biezaca: **#441 pkt 3 F7** - (1) pusta/niedostepna baza -> wdroz wszystkie funkcje; (2) baza = ostatni sukces z conclusion kroku Edge=`success` (nie `skip=true`); log: liczba + lista + SHA.
+
+## 2026-10-22 12:50 - #445 pilne: A10_b FERRY tylko po odejÅ›ciu rejsu
+
+- Skrzynka: #445 (pilne) + #446 (Spawn2018) -> PLAN Â§4/Â§8 + dopisek D-20261022-1235-01. #441/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #444 F7 "gotowe" po `125d175a` -> SCALONE. #447 F7 "gotowe" po `8d73b169`, ale CONFLICT z main - merge main.
+- Biezaca: **#445** - migracja **0262** (`a10_try_ferry_backup` + korekta SG-17 bulk_quiet); testy status +4 (166); #384->0263 ... B5->0267. Galaz `pakiet/hotfix-445-a10-ferry` / PR #447.
+
+## 2026-10-22 13:20 - #447: merge main (po #444); konflikt PLAN/POSTEP
+
+- Skrzynka: #445 `pilne` biezaca; #446 wpisane. Bez nowych `pilne`.
+- Scalanie: #444 juz MERGED. #447 - konflikt z main rozwiazany (PLAN #441 SCALONE + Â§8; POSTEP obie strony). Po pushie: CI + ponowne F7 (commit po "gotowe"). Bez push na `main`.
+- Biezaca: **#445** - push merge-commita na `pakiet/hotfix-445-a10-ferry`.
+

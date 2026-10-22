@@ -753,13 +753,13 @@ Po #426, przed #437. Szczegóły: `dopiski/D-20261021-1929-01.md`.
 ### #437 · E44 RIO — odczyt pozycji z linku (D-20261022-0858-01, `pilne`) — SCALONE (#438 `6f6336b5`, migracja **0261**, 22.10.2026 09:13 UTC); front #440 SCALONE
 SG-19. Adapter `rioPositionSharing.ts`, Edge `rio-links`, cron `tower-rio-links`, `SUBCONTRACTOR_LINK`. Front Stan systemu — #440 (`21132617`).
 
-### HOTFIX #442 · rio-links: `loads.shipment_code` nie istnieje (`pilne`) — NA PRODUKCJI (scalenie #443 `8f9d7270`, 22.10.2026 10:06 UTC)
-`listRioLoadsForPoll` bez `shipment_code` na `loads`; test DB przez `sys`; `rio-links` `ok: true`.
+### HOTFIX #442 · rio-links: `loads.shipment_code` nie istnieje (`pilne`) — NA PRODUKCJI (scalenie #443 `8f9d7270`, 22.10.2026 10:06 UTC; `deploy-main` `39760618480`; `rio-links` `ok: true` od 10:08)
+`listRioLoadsForPoll` bez `shipment_code` na `loads`; test DB przez `sys` (18 kolumn / brak `shipment_code`).
 
-### HOTFIX #441 · wdrożyć Edge z #430 + zadania po awarii (`pilne`) — W TOKU (PR #444 F7 `125d175a`)
-1. ~~Wdrożenie Edge~~ — `deploy-main` po #443.
-2. ~~Ręczne: ferry-schedule, tracking-guard, nocne, usage-check~~ — OK.
-3. Poprawka `deploy-main`: baza = ostatni sukces z krokiem Edge; brak bazy → wszystkie funkcje — czekam CI/scalenie #444.
+### HOTFIX #441 · wdrożyć Edge z #430 + zadania po awarii (`pilne`) — SCALONE (#444 `125d175a`, 22.10.2026)
+1. ~~Wdrożenie Edge~~ — zrobione w `deploy-main` po #443 (m.in. `rio-links`, `ferry-schedule`, `ferry-ais`, …).
+2. ~~Ręczne: `ferry-schedule`, `tracking-guard`, nocne, `usage-check`~~ — `ferry-schedule` `ok: true` (inserted 15); SQL nocne + `tracking_delivery_guard` OK; `usage-check` `ok: true`.
+3. ~~Poprawka `deploy-main`~~ — SHA ostatniego **udanego** deployu z krokiem Edge; brak bazy → wszystkie funkcje — scalenie #444.
 
 ### HOTFIX #445 · A10_b FERRY tylko po odejściu rejsu (D-20261022-1235-01, `pilne`) — W TOKU (`pakiet/hotfix-445-a10-ferry`, migracja **0262**)
 SG-17 fałszywy „Prom” przed wypłynięciem Wawla. `a10_try_ferry_backup`: FERRY tylko gdy rejs odszedł; AIS w PORT_OUT nigdy; bez furtki `AT_PORT_GDANSK`; korekta SG-17 `bulk_quiet`. Testy `status.sh` (+4 → 166).
@@ -1354,4 +1354,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 22.10.2026 06:30 | #426 SCALONE (#432 `a9189bb1`, 0259); #431/#433 bez F7; start #400 (0260) | pętla |
 | 22.10.2026 09:02 | D-20261022-0858-01 (#437, `pilne`): E44 RIO odczyt pozycji (SG-19); zgoda RIO na piśmie; migracja **0261**; #384→**0262**, #409→**0263**, #413→**0264**, #422→**0265**, B5→**0266**; przerywa #384 | właściciel 08:58/09:02; koordynator; pętla |
 | 22.10.2026 11:23 | #433+#439+#440 SCALONE (F7); #442 `pilne` (rio-links `shipment_code`) przerywa #384; #441 w planie (Edge/cron) | pętla |
+| 22.10.2026 12:15 | #442 SCALONE (#443 `8f9d7270`); `rio-links`/`ferry-schedule` `ok: true`; #441 pkt 1–2 wykonane; pkt 3 (`deploy-main` SHA) w `pakiet/hotfix-441-deploy-edge` | pętla |
+| 22.10.2026 12:40 | #444 F7 niegotowe: brak bazy → wszystkie Edge; baza tylko po kroku Edge success (nie skip) | pętla |
 | 22.10.2026 12:45 | #445 `pilne` (A10_b FERRY przed wypłynięciem SG-17) → **0262**; #446 drobne po #445; #384→**0263**, #409→**0264**, #413→**0265**, #422→**0266**, B5→**0267**; start `pakiet/hotfix-445-a10-ferry` | właściciel ~12:35; pętla |
+| 22.10.2026 13:15 | #444 SCALONE (`125d175a`); merge main → #447 (konflikt PLAN/POSTEP) | pętla |
