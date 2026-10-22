@@ -676,7 +676,11 @@ nav button{padding:8px 14px}
 /* arrow-in-dot markers */
 .wt-marker{background:transparent;border:0}
 .wt-marker-ferry-stale{opacity:.45}
+/* #429 C: pozycja szacowana z rozkładu — przerywany obrys */
+.wt-marker-ferry-est{opacity:.85}
 .wt-dot{position:relative;border-radius:50%;outline:1px solid rgba(0,0,0,.25);box-sizing:border-box}
+/* #429 C: przerywany obrys pozycji szacowanej (po .wt-dot — inaczej jego outline wygrywa) */
+.wt-marker-ferry-est .wt-dot{outline:2px dashed #6BA8D6;outline-offset:2px}
 .wt-arrow{position:absolute;left:50%;top:50%;width:0;height:0;
   border-left:3.5px solid transparent;border-right:3.5px solid transparent;
   border-bottom:7px solid #fff;pointer-events:none}
@@ -1883,6 +1887,10 @@ img,video{max-width:100%;height:auto}
 .wt-mk-grp{position:relative;width:30px;height:30px}
 .wt-mk.is-grp{width:30px;height:30px}
 .wt-mk.is-noais{opacity:.55}
+/* #429 C: grupa aut na promie z pozycją szacowaną z rozkładu */
+.wt-mk.is-est{outline:2px dashed #6BA8D6;outline-offset:2px}
+/* opóźnienie ważniejsze niż „szacowana” — czerwony obrys zostaje (F7 #439 r2) */
+.wt-mk.is-est.is-late{outline:3px solid var(--red);outline-offset:0}
 .wt-mk-n{position:absolute;right:-11px;top:-11px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:50%;border:2px solid var(--surface);background:var(--amber);color:var(--surface);font:700 12px/16px var(--font-cond);text-align:center}
 .mk-dot.is-grp{position:relative;background:var(--sea)}
 .mk-dot.is-grp::after{content:'';position:absolute;right:-4px;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
