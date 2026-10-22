@@ -19,7 +19,12 @@ import { formatCalendarDay } from '../time';
 
 /** status (0189): PROGNOZA = prev tydzień niezamknięty (ostatni OSTATECZNY); OSTATECZNY = migawka; BRAK; WSTEPNY = legacy 0187. */
 export type FuelMultStatus = 'PROGNOZA' | 'WSTEPNY' | 'OSTATECZNY' | 'BRAK';
-export interface MoneyFuelSnap { refDate: string; multSek: number; multPln: number; applied: number; status?: FuelMultStatus }
+/** #409 / 0268: podstawa mnożnika z bazy (`fuel_basis`) — średnie, liczby i publikacje cen z tygodnia wskaźników. */
+export interface MoneyFuelBasis {
+  avgSek: number | null; avgPln: number | null; nSek: number | null; nPln: number | null;
+  pubs: { date: string; source: 'OKQ8' | 'ORLEN'; price: number }[];
+}
+export interface MoneyFuelSnap { refDate: string; multSek: number; multPln: number; applied: number; status?: FuelMultStatus; basis?: MoneyFuelBasis }
 export interface MoneyFxSnap { tableNo: string; mid: number; date: string; provisional: boolean }
 
 export interface MoneySideV2 {

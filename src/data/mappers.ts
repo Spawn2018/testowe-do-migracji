@@ -2,7 +2,7 @@
  * BK3 — mapowanie wierszy Supabase (schemat 0001/0006) ↔ typy aplikacji.
  * Czyste funkcje (bez klienta Supabase) — testowane jednostkowo.
  */
-import { mechanismIssue, type MoneySideV2 } from '../lib/money/loadMoney';
+import { mechanismIssue, type MoneyFuelBasis, type MoneySideV2 } from '../lib/money/loadMoney';
 import { plSeLocation } from '../lib/pl/seLocation';
 import { formatListDateTime } from '../lib/format';
 import type {
@@ -570,6 +570,8 @@ export interface PriceViewRow {
   computed_total_eur: number | string | null; invoiced_total_eur: number | string | null; effective_total_eur: number | string | null;
   fuel_ref_date: string | null; fuel_mult_sek: number | string | null; fuel_mult_pln: number | string | null; fuel_applied_mult: number | string | null;
   fuel_status?: string | null;
+  /** #409 / 0268 — `fuel_basis` (jsonb): avg_*, n_*, pubs_* (`[{published_on, value}]`). */
+  fuel_basis?: unknown;
   fx_table_no: string | null; fx_effective_date: string | null; fx_rate_pln: number | string | null; fx_provisional: boolean | null;
 }
 
@@ -577,7 +579,32 @@ export interface PriceViewRow {
 export const PRICE_VIEW_COLUMNS_LEGACY =
   'load_id,pricing_tier,base_amount,baf_amount,extras_amount,computed_total_eur,invoiced_total_eur,effective_total_eur,' +
   'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional';
-export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
+export const PRICE_VIEW_COLUMNS_NO_BASIS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
+/** #409 / 0268: `fuel_basis` w widokach cen; przed migracją — zapas `PRICE_VIEW_COLUMNS_NO_BASIS`. */
+export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_NO_BASIS + ',fuel_basis';
+
+const basisNum = (v: unknown): number | null => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
+/** `fuel_basis` → średnie, liczby i publikacje (SEK = OKQ8, PLN = Orlen); zły kształt → null. */
+export function fuelBasisFromDb(raw: unknown): MoneyFuelBasis | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const pubs: MoneyFuelBasis['pubs'] = [];
+  for (const [key, source] of [['pubs_sek', 'OKQ8'], ['pubs_pln', 'ORLEN']] as const) {
+    const arr = Array.isArray(o[key]) ? (o[key] as unknown[]) : [];
+    for (const p of arr) {
+      if (!p || typeof p !== 'object') continue;
+      const q = p as Record<string, unknown>;
+      const date = typeof q.published_on === 'string' ? q.published_on.slice(0, 10) : null;
+      const price = basisNum(q.value);
+      if (date && price != null) pubs.push({ date, source, price });
+    }
+  }
+  pubs.sort((a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source));
+  return { avgSek: basisNum(o.avg_sek), avgPln: basisNum(o.avg_pln), nSek: basisNum(o.n_sek), nPln: basisNum(o.n_pln), pubs };
+}
 
 const TIERS = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'] as const;
 type Tier = (typeof TIERS)[number];
@@ -593,6 +620,7 @@ function sideFromView(r: PriceViewRow): MoneySideV2 {
       refDate: r.fuel_ref_date ?? '',
       multSek: num(r.fuel_mult_sek) ?? 1, multPln: num(r.fuel_mult_pln) ?? 1, applied: num(r.fuel_applied_mult) ?? 1,
       ...(r.fuel_status === 'PROGNOZA' || r.fuel_status === 'WSTEPNY' || r.fuel_status === 'OSTATECZNY' || r.fuel_status === 'BRAK' ? { status: r.fuel_status as 'PROGNOZA' | 'WSTEPNY' | 'OSTATECZNY' | 'BRAK' } : {}),
+      ...(() => { const b = fuelBasisFromDb(r.fuel_basis); return b ? { basis: b } : {}; })(),
     },
     fx: { tableNo: r.fx_table_no ?? '', mid: num(r.fx_rate_pln) ?? 0, date: r.fx_effective_date ?? '', provisional: Boolean(r.fx_provisional) },
   };
