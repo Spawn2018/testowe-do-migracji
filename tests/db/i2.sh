@@ -357,6 +357,9 @@ for x in c1 d1 e1; do SYS "insert into positions (load_id, ts, geom_raw, source)
 SYS "insert into driver_tokens (load_id, token_hash, expires_at) values ('$(R e1)', 'stary1', now() - interval '91 days'), ('$(R e1)', 'swiezy', now() - interval '89 days')"
 SYS "insert into driver_tokens (load_id, token_hash, expires_at, revoked_at) values ('$(R e1)', 'odwolany', now() + interval '1 day', now() - interval '100 days')"
 chk "przebieg: anonimizacja 2 (rozładowany 91 d + anulowany 91 d)" "$(Q "select purge_personal_data()")" "2"
+# #400 F7 r3: UPDATE-y RODO maskują kierowcę w dzienniku (source=rodo); retencja od created_at wpisu.
+chk "D-1243/#400: UPDATE RODO — source=rodo i maska kierowcy (R a1)" "$(Q "select (count(*) > 0 and bool_and(source = 'rodo' and old_value->>'driver_name' = '[dane osobowe]'))::text from audit_log where entity='loads' and entity_id='$(R a1)' and old_value ? 'driver_name'")" "true"
+chk "D-1243/#400: dziennik R a1/c1 bez Jan Kowalski / 600100200" "$(Q "select count(*) from audit_log where entity='loads' and entity_id in ('$(R a1)','$(R c1)') and (coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%Jan Kowalski%' or coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%600100200%')")" "0"
 chk "rozładowany 91 d: imię i telefon usunięte" "$(Q "select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id='$(R a1)'")" "∅/∅"
 chk "rozładowany 89 d: dane zostają" "$(Q "select driver_name from loads where id='$(R b1)'")" "Jan Kowalski"
 chk "anulowany 91 d: dane i pozycje usunięte (NOWE)" "$(Q "select coalesce(driver_phone,'∅') from loads where id='$(R c1)'")/$(Q "select count(*) from positions where load_id='$(R c1)'")" "∅/0"
@@ -692,8 +695,35 @@ val "HHL: zmiana transportu (numer rezerwacji promu)" $HHL "update loads set fer
 chk "ROW_UPDATE loads: kto (HHL), tylko zmieniona kolumna, stara i nowa wartość" "$(Q "select count(*)||'/'||bool_and(u.auth_id='$HHL')::text||'/'||bool_and(a.new_value->>'ferry_booking_ref'='AUD-20' and a.old_value ? 'ferry_booking_ref' and not a.new_value ? 'status')::text from audit_log a join app_users u on u.id=a.user_id where a.action='ROW_UPDATE' and a.entity='loads' and a.entity_id='$L1'")" "1/true/true"
 $PSQL -c "select set_config('tower.eta_ctx','on',false); update loads set eta_site=now(), delay_minutes=5, eta_computed_at=now() where id='$L1'" >/dev/null
 chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q "select count(*) from audit_log where action='ROW_UPDATE' and entity='loads' and entity_id='$L1'")" 1
-$PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48600111222', driver_name='Jan Test' where id='$L1'" >/dev/null
-chk "dane osobowe kierowcy: w dzienniku „[dane osobowe]”, nie numer" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text||'/'||(select count(*) from audit_log where new_value::text like '%600111222%' or old_value::text like '%Jan Test%') from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+$PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48000000111', driver_name='Jan Test' where id='$L1'" >/dev/null
+# #400 / D-1243: loads.driver_* jawne w historii; inne tabele nadal maskowane.
+chk "D-1243/#400: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48000000111' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# F7 r3: driver_phone krajowy (0111 ^[0-9]{7,12}$), nie E.164 — jak i2 ok. 1181.
+$PSQL -c "delete from load_escorts where load_id='$L1'; insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
+ values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '000000222', 'PL',
+         (select id from app_users where auth_id='$HHL'))" >/dev/null
+# Nawiasy: || ma wyższy priorytet niż ->> (bez nich: (text||jsonb)->>'…' → brak operatora).
+chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/000000222"
+HHL_UID=$(Q "select id from app_users where auth_id='$HHL'")
+$PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
+chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
+# slot 1–2 (0106); tabela ma uuid id → entity_id = id::text (nie list_key:slot).
+# Najpierw delete, żeby INSERT zawsze zapisał phone_national w dzienniku (nie no-op UPDATE).
+$PSQL -c "delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2;
+ insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
+ values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)" >/dev/null
+SZR_ID=$(Q "select id::text from sms_zone_recipients where list_key='LOAD_SREM' and slot=2")
+chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='$SZR_ID' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
+$PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
+chk "D-1243/#400: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
+chk "D-1243/#400: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
+# RODO: historyczny jawny wpis → purge maskuje; własne UPDATE z source=rodo też maskują
+$PSQL -c "insert into audit_log (action, entity, entity_id, old_value, new_value, created_at)
+ values ('ROW_UPDATE','loads','$L1','{\"driver_name\":\"Stary Kierowca\",\"driver_phone\":\"+48000000999\"}'::jsonb,
+         '{\"driver_name\":\"Nowy Kierowca\"}'::jsonb, now() - interval '100 days')" >/dev/null
+chk "D-1243/#400: purge maskuje driver_* w starym audit_log" "$(Q "select purge_personal_data(); select (old_value->>'driver_name'='[dane osobowe]' and old_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text from audit_log where entity='loads' and entity_id='$L1' and created_at < now() - interval '90 days' order by created_at limit 1")" "true"
+$PSQL -c "delete from load_escorts where load_id='$L1'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2; update app_users set phone=null where auth_id='$HHL'" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set rio_secret=null where id='$L1'" >/dev/null
 # Część 3 osobno: shipment_items nie ma w seed.sql. Wstawia je część 1 (i kasuje) oraz część 5.
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$L2','I2P3-S1','STANDARD')" >/dev/null
 $PSQL -c "update shipment_items set qty = qty + 1 where id=(select id from shipment_items order by id limit 1); update shipment_items set qty = qty - 1 where id=(select id from shipment_items order by id limit 1)" >/dev/null
@@ -1161,6 +1191,40 @@ val "D-1118 permit_fits jako KSH" $KSH "select ok::text from permit_fits('$L_D1'
 val "D-1118 permit_fits jako SCX" $SCX "select ok::text from permit_fits('$L_D1','$PM_F')" true
 chk "D-1118 FIRMA: missing_countries puste (nie SE)" \
   "$(Q "select coalesce(array_to_string(missing_countries,','),'') from load_permit_status() where load_id='$L_D1'")" ""
+# #400 / D-1118 8b: fallback wymiarów z symbol_specs (produkcja: 0002/0003/0005 DIMS_UNKNOWN)
+L_400a=33333333-0000-0000-0000-00000000400a
+L_400b=33333333-0000-0000-0000-00000000400b
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400a','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG0','DOCS_PENDING','SG','FIRMA',
+  null, null, null, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400a','$PM_F')" >/dev/null
+chk "#400 SG bez combo_* → ok z symbol_specs (21,69×2,45×3,75)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400a','$PM_F')")" "true/"
+chk "#400 load_permit_status SG bez combo_* → ok" \
+  "$(Q "select ok::text from load_permit_status() where load_id='$L_400a'")" "true"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400b','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG-partial','DOCS_PENDING','SG','FIRMA',
+  21.00, null, 4.00, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400b','$PM_F')" >/dev/null
+chk "#400 L/H z transportu, W z symbolu → ok (jak 0002)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400b','$PM_F')")" "true/"
+$PSQL -c "update loads set combo_length_m=25.00 where id='$L_400b'" >/dev/null
+chk "#400 L z transportu ponad limit → LENGTH (nie wymiary z symbolu)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400b','$PM_F')")" "false/LENGTH"
+$PSQL -c "update loads set combo_length_m=21.00, combo_height_m=4.50 where id='$L_400b'" >/dev/null
+chk "#400 H z transportu ponad 4,30 → HEIGHT" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400b','$PM_F')")" "false/HEIGHT"
+L_400c=33333333-0000-0000-0000-00000000400c
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400c','$P','00000000-0000-0000-0000-00000000a003','KSH/400-KR-FIRMA','DOCS_PENDING','KR','FIRMA',
+  null, null, null, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400c','$PM_F')" >/dev/null
+chk "#400 KR FIRMA bez combo_* → LENGTH,WIDTH z symbol_specs (23,69×3,52)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400c','$PM_F')")" "false/LENGTH,WIDTH"
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_400a','$L_400b','$L_400c')" >/dev/null
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
   combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
  values ('$L_D2','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-KR','DOCS_PENDING','KR','TRASA',
