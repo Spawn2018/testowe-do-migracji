@@ -191,5 +191,24 @@ DAd2=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','kopia po terminie'
 sys "update decisions set escalated_at = now(), due_at = now() - interval '1 hour' where id='$DAd2'" >/dev/null
 err "HHL_OPS po terminie nie rozstrzyga ADMIN" $OPS "select decision_resolve('$DAd2','RETRY_NOW')" "wskazana firma|Rozstrzyg"
 
+# #384 zaległe pkt 7–8: decisions_read × carrier_org_id; actor w DECISION_*
+echo; echo "[#384 zaległe] decisions_read + actor"
+OTH=11111111-0000-0000-0000-000000000099
+OTH_ORG=00000000-0000-0000-0000-00000000a099
+sys "insert into organizations (id, code, name, kind) values ('$OTH_ORG','OTH','Other Carrier','CARRIER')
+     on conflict (id) do nothing" >/dev/null
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OTH','$OTH_ORG','oth@test','CARRIER_DISPATCH', true)
+     on conflict (auth_id) do update set org_id=excluded.org_id, role=excluded.role, active=true" >/dev/null
+LOTH=$(sys "insert into loads (project_id, carrier_org_id, order_no, status, hhl_order_no, carrier_order_no)
+     values ('$P','$OTH_ORG','OTH-1','PLANNED','HHL-OTH-1','OTH/1') returning id" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+DOTH=$(run "$HHL" "select decision_open('$P','NO_POSITION','cudzy transport', '{}'::jsonb, '$LOTH')" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "pkt 7: SCX nie widzi decyzji cudzego transportu" $SCX "select count(*) from decisions where id='$DOTH'" 0
+val "pkt 7: OTH widzi decyzję własnego transportu" $OTH "select count(*) from decisions where id='$DOTH'" 1
+val "pkt 7: SCX nadal widzi decyzję bez load_id" $SCX "select count(*) from decisions where id='$D3'" 1
+val "pkt 8: PROPOSE → actor // SCX" $HHL "select ((payload->>'actor') like '% // SCX' and payload->>'decider'='CARRIER' and payload->>'by_org'='CARRIER')::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
+val "pkt 8: visible_to FORWARDER+CARRIER (bez CLIENT)" $HHL "select (visible_to = array['FORWARDER','CARRIER']::org_kind[])::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
+val "pkt 8: KSH nie widzi DECISION_EFFECT CARRIER" $KSH "select count(*) from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

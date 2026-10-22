@@ -25,11 +25,11 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 106, // #426 F7 r2: +8 (B3+/B4+ kontrole, hhlOrderNo quiet, START-7); było 98 przy shadow D1c
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
-  i2: 648, // #400 F7-3: +2 asercje RODO source/maska po purge (R a1/c1); było 646
+  i2: 651, // #384 zaległe: +3 IW-1 przesunięcie okna przy samej dacie; było 648 (#400)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
-  'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
+  dec2: 70, // #384 zaległe: +6 pkt 7–8 (cudzy carrier, actor, visible_to, KSH); było 64
+  'dec-fx': 13, // #384 zaległe: +1 actor/visible_to; resolve-all = count(*) (zamiast ≥40)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23

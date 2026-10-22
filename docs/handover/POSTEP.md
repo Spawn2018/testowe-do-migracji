@@ -4082,3 +4082,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7.
 - Scalanie: brak „F7: gotowe”. #434 db FAIL `0f61e8a3` (i2 645/646): INSERT load_escorts z E.164 łamał `driver_phone_national_chk`. Bez push na `main`.
 - Bieżąca: **#400** F7 r3 — `driver_phone='000000222'` (krajowy); filtr `entity_id` w asercjach app_users/sms_zone; +2 testy RODO po purge; `purge` przywraca `audit_source` i scrub jednym UPDATE (retencja od `created_at`); i2 646→648.
+
+## 2026-10-22 08:35 — #400 SCALONE; start #384 zaległe (0261)
+
+- Skrzynka: #400 zamknięte; #425/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433 bez F7.
+- Scalanie: #434 F7 „gotowe do scalenia” (`85a97f9`, Spawn2018 06:27Z) + CI unit/db/visual zielone → merge `9a250dd6` (0260). Bez push na `main`. F7: nie wdrażać, dopóki produkcja nie wróci (awaria połączeń #425).
+- Bieżąca: **#384 zaległe** (`pakiet/hotfix-384-zalegle`, migracja **0261**) — `decisions_read` × `carrier_org_id`; `decision_apply_effect` actor/decider/by_org + `visible_to`; `import_schedule` przesuwa okno przy zmianie daty bez godziny; przywrócenie SG-01/02/T-01 z historii; `resolve-all` = `count(*)`; SMS quiet już w 0259. dec2 64→70; dec-fx 12→13; i2 648→651.

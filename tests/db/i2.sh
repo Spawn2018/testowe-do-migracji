@@ -519,6 +519,14 @@ val "IW-1: zmiana godziny nie kasuje okna „do”" $HHL "select (r->'changed'->
 chk "IW-1: plan_load_to zachowane" "$(Q "select (plan_load_to::text = '$TO_BEFORE')::text from loads where id='$LW'")" "true"
 chk "IW-1: plan_delivery_from zachowane" "$(Q "select (plan_delivery_from::text = '$FROM_BEFORE')::text from loads where id='$LW'")" "true"
 
+# #384 zaległe: sama zmiana daty (bez load_time) → przesuń okno o różnicę dni
+DIW1c=$(_dcal 42); DIW2c=$(_dcal 47)
+ROWIW3() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+IMPIW3() { echo "select import_schedule('$P', '$(ROWIW3 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+val "IW-1: zmiana samej daty (bez godziny)" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW3 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
+chk "IW-1: okno załadunku na nowej dacie" "$(Q "select ((plan_load_from at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and (plan_load_to at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and extract(hour from plan_load_from at time zone 'Europe/Warsaw') = 9)::text from loads where id='$LW'")" "true"
+chk "IW-1: okno dostawy na nowej dacie" "$(Q "select ((plan_delivery_from at time zone 'Europe/Stockholm')::date = '$DIW2c'::date and (plan_delivery_to at time zone 'Europe/Stockholm')::date = '$DIW2c'::date)::text from loads where id='$LW'")" "true"
+
 # 4b: minięta dostawa → bulk_quiet (bez PLAN_DATES_CHANGED / SCHEDULE_DATE_CRITICAL)
 DIH1=$(Q "select (current_date - 20)::text"); DIH2=$(Q "select (current_date - 15)::text")
 DIH1b=$(Q "select (current_date - 19)::text"); DIH2b=$(Q "select (current_date - 14)::text")
