@@ -15,7 +15,7 @@ import {
 } from '../ferry/stenaFreight.ts';
 import {
   DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin,
-  departurePortForRoute, portCoords, distanceKm, type VesselFix,
+  departurePortForRoute, arrivalPortForRoute, portCoords, distanceKm, type VesselFix,
 } from '../ferry/digitraffic.ts';
 import { collectAisstreamFixes, type AisstreamStats } from '../ferry/aisstream.ts';
 import {
@@ -543,13 +543,17 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
         }
       }
     }
-    // #421: dopłynął — w porcie docelowym → delayed_arrival_at.
-    if (s.delayed_arrival_at == null && (obs === 'W_PORCIE_NYNASHAMN' || obs === 'W_PORCIE_KARLSKRONA')) {
-      const ok = await deps.store.updateSailing(s.id, { delayed_arrival_at: fix.timestampUtc });
-      if (ok) {
-        s.delayed_arrival_at = fix.timestampUtc;
-        departures++;
-        observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
+    // #421: dopłynął — w porcie docelowym (także GDN/GDY przy SE→PL) → delayed_arrival_at.
+    if (s.delayed_arrival_at == null) {
+      const arrHub = portCoords(arrivalPortForRoute(s.route));
+      const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
+      if (arrived || obs === 'W_PORCIE_NYNASHAMN' || obs === 'W_PORCIE_KARLSKRONA') {
+        const ok = await deps.store.updateSailing(s.id, { delayed_arrival_at: fix.timestampUtc });
+        if (ok) {
+          s.delayed_arrival_at = fix.timestampUtc;
+          departures++;
+          observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
+        }
       }
     }
 
@@ -603,11 +607,10 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   // #421 / D-20261022-0105-01 pkt 3 skreślony: bez ryzyka AIS_GAP o starej pozycji.
   await deps.store.resolveRisks('AIS_GAP:');
 
-  if (departures > 0) {
-    await deps.store.recordRun('ferry-departures', true, {
-      job: 'ferry-departures', mode: 'LIVE', ok: true, departures, observations,
-    });
-  }
+  // Zawsze wpis w integration_runs — Stan systemu widzi ostatni przebieg (#421 pkt 6).
+  await deps.store.recordRun('ferry-departures', true, {
+    job: 'ferry-departures', mode: 'LIVE', ok: true, departures, observations,
+  });
   return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations, departures };
 }
 

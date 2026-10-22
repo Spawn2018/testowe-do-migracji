@@ -4022,3 +4022,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405 zamknięte; #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie.
 - Scalanie: #427 F7 gotowe (`ff3bde3`) → merge `e0edff5c`; #428 F7 gotowe (`07f478c`) → merge `0712b8f3`; #424 F7 gotowe (`feee9d1`) → merge `87104ff1` (0257). Bez push na `main`.
 - Bieżąca: **HOTFIX #421** (`pakiet/hotfix-421-ferry-ais`, migracja **0258**) — AIS Nova Star/Stena, rozkład codzienny, wypłynięcia/dopłynięcia, bez AIS_GAP.
+
+## 2026-10-22 03:50 — #421 RPC mapy + ponowienie deploy-main (#424)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #429 decyzja A+C.
+- Scalanie: #430 CI zielone (unit/db/visual) na `2f4b680e` — bez F7. deploy-main po #424 padł na połączeniu pooler → ponowienie `39707535827`. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — `ferry_sailings_map()` (departed_at/arrived_at, porty, AIS bez filtra wieku), dopłynięcie GDN/GDY, zawsze `ferry-departures`.

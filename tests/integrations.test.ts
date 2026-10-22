@@ -308,14 +308,17 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     // #421: poza portem odejścia + ruch → delayed_departure_at (obserwacja DEP).
     expect(r.observations?.['M/F Nova Star:DEP']).toMatch(/^WYPŁYNĄŁ_/);
     expect(st.risks).toHaveLength(0);
+    // #421: ferry-departures zawsze w integration_runs (Stan systemu).
+    expect(st.runs.some((x) => x.job === 'ferry-departures' && x.ok)).toBe(true);
   });
-  it('postój w porcie Nynäshamn → informacja (INFO) z atrybucją CC BY 4.0; sygnał >1 h → brak wniosku o statku', async () => {
+  it('postój w porcie Nynäshamn → delayed_arrival_at + INFO CC BY 4.0; sygnał >1 h → bez AIS_GAP', async () => {
     const st = new MemStore();
     st.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
     const inPort = AIS.replace('17.850695, 57.980348', '17.9562, 58.9046').replace('"sog" : 17.1', '"sog" : 0.2');
     await runFerryAis(deps(st, { 'digitraffic.fi': inPort }, {}, new Date('2026-09-24T19:40:00Z')).d);
     expect(st.risks[0]).toMatchObject({ kind: 'FERRY', severity: 'INFO' });
     expect(String(st.risks[0].detail.atrybucja)).toBe('Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0');
+    expect(st.sailings.find((s) => s.vessel_id === NS)?.delayed_arrival_at).toBeTruthy();
     const st2 = new MemStore();
     st2.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
     const r = await runFerryAis(deps(st2, { 'digitraffic.fi': inPort }, {}, new Date('2026-09-25T09:00:00Z')).d);
@@ -323,6 +326,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     expect(st2.risks.some((x) => x.dedup.startsWith('AIS_NYN:'))).toBe(false);
     // #421: bez ryzyka o starej pozycji (AIS_GAP skreślone w D-20261022-0105-01).
     expect(st2.risks.some((x) => x.titleKey === 'rk_ais_gap')).toBe(false);
+    expect(st2.runs.some((x) => x.job === 'ferry-departures')).toBe(true);
   });
 });
 

@@ -22,6 +22,9 @@ val "anon nie czyta stanu mapy" "select has_function_privilege('anon','map_displ
 val "zalogowany czyta stan mapy" "select has_function_privilege('authenticated','map_display_state()','execute')::text" "true"
 val "anon nie bierze próbki promu" "select has_function_privilege('anon','ferry_track_sample()','execute')::text" "false"
 val "zalogowany bierze próbkę promu" "select has_function_privilege('authenticated','ferry_track_sample()','execute')::text" "true"
+# #421/#429: ferry_sailings_map — departed_at/arrived_at + porty + AIS bez filtra świeżości
+val "anon nie czyta ferry_sailings_map" "select has_function_privilege('anon','ferry_sailings_map()','execute')::text" "false"
+val "zalogowany czyta ferry_sailings_map" "select has_function_privilege('authenticated','ferry_sailings_map()','execute')::text" "true"
 err "zła usługa HERE odrzucona" "select here_note_service('spam', 1, 0, '2026-10-15 12:00+00')" "Zła usługa"
 # D-78: koszt tylko ponad pulę — w teście zerujemy pulę kafelków i stawiamy stawkę 1 USD
 sys "update app_parameters set value=0 where key='HERE_TILES_FREE'; update app_parameters set value=1 where key='HERE_TILES_RATE_USD'" >/dev/null

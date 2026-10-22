@@ -104,6 +104,14 @@ export function departurePortForRoute(route: string): DeparturePort {
   return 'GDN';
 }
 
+/** Port docelowy trasy (do delayed_arrival_at z AIS — #421). */
+export function arrivalPortForRoute(route: string): DeparturePort {
+  if (route === 'GDY-KAA') return 'KAA';
+  if (route === 'KAA-GDY') return 'GDY';
+  if (route === 'NYN-GDN') return 'GDN';
+  return 'NYN';
+}
+
 export function portCoords(port: DeparturePort): { lat: number; lon: number } {
   if (port === 'GDY') return GDYNIA;
   if (port === 'NYN') return NYNASHAMN;
