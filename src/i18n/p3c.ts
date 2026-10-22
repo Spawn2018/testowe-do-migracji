@@ -370,6 +370,8 @@ const pl: Dict = {
   p3c_flag_SMS_ZONE_ENTER_fx: 'SMS przy wjeździe na załadunek i rozładunek.',
   p3c_flag_TELM_EMTRACK_WEB: 'Odczyt pozycji z emtrack',
   p3c_flag_TELM_EMTRACK_WEB_fx: 'Pozycje naczep co 2\u00a0min.',
+  p3c_flag_TELM_RIO_LINKS: 'Odczyt pozycji z linków RIO',
+  p3c_flag_TELM_RIO_LINKS_fx: 'Pozycje aut podwykonawców SCX z linku RIO co 2\u00a0min, tylko w oknie ważności linku.',
   p3c_flag_DRIVER_LINK_ACCEPT: 'Stary link kierowcy',
   p3c_flag_DRIVER_LINK_ACCEPT_fx: 'Wejście kierowcy z linku. Aplikacji kierowcy nie zmieniamy.',
   p3c_flag_FUEL_SE_PL_INGEST: 'Codzienne ceny paliwa',
