@@ -550,5 +550,73 @@ chk "A5 Polferries: eta_site nie null w porcie SE" "select (eta_site is not null
 chk "A5 ETA plac Stena > Polferries (SE_ROAD_KAA 21,5 > SE_ROAD 17)" \
   "select (s.eta_site > p.eta_site)::text from loads s join loads p on true where s.id='$L_A5' and p.id='$L_PF'" true
 
+# #445 / D-20261022-1235-01: A10_b FERRY tylko po odejściu rejsu (nie przy zbieżności AIS w porcie)
+echo; echo "[#445] A10_b — FERRY tylko po odejściu rejsu"
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000445','M/F Wawel 445','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000445','$P','66666666-0000-0000-0000-000000000445','GDN-NYN',
+  now() + interval '6 hours', now() + interval '24 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445=77777777-0000-0000-0000-000000000445
+V445=66666666-0000-0000-0000-000000000445
+L445=$(L 72)
+mk $L445 A445 "'HHL/A445'" "'SCX/A445'" AT_PORT_GDANSK "'$S445'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445','MILESTONE_LOADED', now() - interval '1 day')" >/dev/null
+# auto i statek w PORT_OUT (≤ 2 km), rejs za 6 h
+q "select process_position('$L445', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L445', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4032, 18.6802, 0, now() - interval '2 minutes', 'DIGITRAFFIC')" >/dev/null
+chk "#445: PORT_OUT + AIS ≤2 km, rejs za 6 h → bez FERRY" \
+  "select a10_try_ferry_backup('$L445', now()); select status from loads where id='$L445'" AT_PORT_GDANSK
+# po actual_departure_at + GPS na morzu (wyjazd PORT_OUT) → FERRY
+q "update sailings set actual_departure_at = now() - interval '5 minutes' where id='$S445';
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 12, now() - interval '1 minute', 'DIGITRAFFIC');
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L445','GEOFENCE_EXIT', now() - interval '20 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'));
+    select process_position('$L445', 55.00, 18.90, now() - interval '3 minutes');
+    select process_position('$L445', 55.01, 18.91, now() - interval '1 minute')" >/dev/null
+chk "#445: po actual_departure_at + GPS morze → FERRY" \
+  "select a10_try_ferry_backup('$L445', now()); select status from loads where id='$L445'" FERRY
+
+# departure_at minął, AIS w porcie (opóźnienie) → bez FERRY
+L445b=$(L 73)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000446','$P','$V445','GDN-NYN',
+  now() - interval '2 hours', now() + interval '16 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445b=77777777-0000-0000-0000-000000000446
+mk $L445b A445b "'HHL/A445b'" "'SCX/A445b'" AT_PORT_GDANSK "'$S445b'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445b','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L445b', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L445b', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4030, 18.6800, 0, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#445: departure minął, AIS w porcie → bez FERRY" \
+  "select a10_try_ferry_backup('$L445b', now()); select status from loads where id='$L445b'" AT_PORT_GDANSK
+
+# departure_at minął, AIS 10 km, auto ≤ 2 km od AIS → FERRY
+L445c=$(L 74)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000447','$P','$V445','GDN-NYN',
+  now() - interval '3 hours', now() + interval '15 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445c=77777777-0000-0000-0000-000000000447
+mk $L445c A445c "'HHL/A445c'" "'SCX/A445c'" AT_PORT_GDANSK "'$S445c'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445c','MILESTONE_LOADED', now() - interval '1 day');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 10, now() - interval '1 minute', 'DIGITRAFFIC');
+    select process_position('$L445c', 54.4925, 18.6805, now() - interval '3 minutes');
+    select process_position('$L445c', 54.4928, 18.6802, now() - interval '1 minute')" >/dev/null
+chk "#445: departure minął, AIS 10 km, auto ≤2 km → FERRY" \
+  "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
