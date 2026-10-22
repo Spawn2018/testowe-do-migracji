@@ -685,20 +685,20 @@ begin
         -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
         v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
         v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
+        -- #384: przy zmianie daty bez nowej godziny — przesuń okno PRZED clear z v_fields
+        -- (wiersz bez load_time vs schedule_row z godziną inaczej kasował od/do).
         v_new_load_from := case
           when nullif(btrim(r.inc->>'load_time'), '') is not null
             then public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw')
-          when 'load_time' = any (v_fields) then null
-          -- #384 zaległe: zmiana daty bez godziny → przesuń „od” o różnicę dni
           when v_new_load_date is distinct from r.plan_load_date
                and r.plan_load_from is not null and v_new_load_date is not null then
             r.plan_load_from + make_interval(days => (
               v_new_load_date - (r.plan_load_from at time zone 'Europe/Warsaw')::date))
+          when 'load_time' = any (v_fields) then null
           else r.plan_load_from end;
-        -- pkt 4a: przy zmianie godziny — „do” tylko ta sama data i do > nowe od;
-        -- puste od → puste do; inaczej przesuń / wyczyść.
-        -- Bez godziny w pliku + zmiana daty → przesuń „do” (nie null, nie stary dzień).
-        if nullif(btrim(r.inc->>'load_time'), '') is not null or 'load_time' = any (v_fields) then
+        -- pkt 4a: przy nowej godzinie — „do” ta sama data i do > nowe od; puste od → puste do.
+        -- Zmiana daty bez godziny → przesuń „do”. Sam clear load_time → null.
+        if nullif(btrim(r.inc->>'load_time'), '') is not null then
           v_new_load_to := case
             when v_new_load_from is null then null
             when r.plan_load_to is not null
@@ -717,19 +717,21 @@ begin
               and r.plan_load_to is not null and v_new_load_date is not null then
           v_new_load_to := r.plan_load_to + make_interval(days => (
             v_new_load_date - (r.plan_load_to at time zone 'Europe/Warsaw')::date));
+        elsif 'load_time' = any (v_fields) then
+          v_new_load_to := null;
         else
           v_new_load_to := r.plan_load_to;
         end if;
         v_new_del_to := case
           when nullif(btrim(r.inc->>'delivery_time'), '') is not null
             then public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm')
-          when 'delivery_time' = any (v_fields) then null
           when v_new_del_date is distinct from r.plan_delivery_date
                and r.plan_delivery_to is not null and v_new_del_date is not null then
             r.plan_delivery_to + make_interval(days => (
               v_new_del_date - (r.plan_delivery_to at time zone 'Europe/Stockholm')::date))
+          when 'delivery_time' = any (v_fields) then null
           else r.plan_delivery_to end;
-        if nullif(btrim(r.inc->>'delivery_time'), '') is not null or 'delivery_time' = any (v_fields) then
+        if nullif(btrim(r.inc->>'delivery_time'), '') is not null then
           v_new_del_from := case
             when v_new_del_to is null then null
             when r.plan_delivery_from is not null
@@ -748,6 +750,8 @@ begin
               and r.plan_delivery_from is not null and v_new_del_date is not null then
           v_new_del_from := r.plan_delivery_from + make_interval(days => (
             v_new_del_date - (r.plan_delivery_from at time zone 'Europe/Stockholm')::date));
+        elsif 'delivery_time' = any (v_fields) then
+          v_new_del_from := null;
         else
           v_new_del_from := r.plan_delivery_from;
         end if;
