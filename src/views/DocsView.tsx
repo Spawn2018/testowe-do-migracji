@@ -29,7 +29,7 @@ import { weekKeyLabel } from '../lib/p5Invoices';
 import {
   cmrKind, codesParts, filterFiles, reqCount, reqVisible, REQ_KEYS, responsibleOrg, seenBy, type FileFilter, type ReqKey,
 } from '../lib/p5Docs';
-import { docRequirementsStart, docsSeenOf, otherDocsOn, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
+import { docRequirementsStart, docsSeenOf, otherDocsOn, permitsForRole, permitsOf, policiesOf, type PolicyView } from '../lib/p5Source';
 import { docLabel, UploadDocModal } from '../components/docs/UploadDocModal';
 import '../components/finance/finance.css';
 import '../components/docs/docs.css';
@@ -145,7 +145,8 @@ export function DocsView() {
   const statusRows = useMemo(() => cmrAfterDelivery(serverStatus ?? docStatusRows(loads, documents, reqs, nowMs), (id) => byId.get(id)?.status), [serverStatus, loads, documents, reqs, nowMs, byId]);
   const nameOf = (id: string) => { const l = byId.get(id); return l ? transportLabel(l, role) : id; };
   const policies = policiesOf();
-  const permits = useMemo(() => permitsOf(loads), [loads]);
+  /* E31 pkt 9: KSH — tylko zezwolenia przypięte do jego transportów, bez przycisków (canUpload = false) */
+  const permits = useMemo(() => permitsForRole(permitsOf(loads), role), [loads, role]);
   const canUpload = role === 'HHL' || role === 'SCX';
 
   const rows: ReqRow[] = useMemo(() => {
@@ -347,7 +348,7 @@ export function DocsView() {
     </div>
   );
 
-  const permitBlock = permits && role !== 'KSH' ? (
+  const permitBlock = permits && (role !== 'KSH' || permits.length > 0) ? (
     <section className="doc-sec" aria-labelledby="doc-perm-h" data-doc-permits>
       <header className="doc-sec-hd">
         <h3 id="doc-perm-h">{ft(locale, 'p5_doc_perm_h')}</h3>

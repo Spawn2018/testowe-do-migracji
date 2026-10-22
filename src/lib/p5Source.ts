@@ -90,6 +90,16 @@ export function permitsOf(loads: Load[]): PermitView[] | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPermits(loads) : (prodPermits === undefined ? [] : prodPermits);
 }
 /**
+ * E31 pkt 9 (decyzja koordynatora 22.10.2026): KSH widzi zezwolenia swoich transportów — tylko do odczytu,
+ * wyłącznie zezwolenia przypięte do co najmniej jednego transportu z jego listy. HHL i SCX — bez zmian.
+ * Produkcja: lista z `a7_permits_list` (KSH = CLIENT dostaje dziś tylko „Firma”); RLS `permits_read` daje KSH odczyt
+ * zezwoleń przypiętych do jego transportów (`load_permits` → `loads`).
+ */
+export function permitsForRole(permits: readonly PermitView[] | null, role: Document['visibleTo'][number]): PermitView[] | null {
+  if (!permits) return null;
+  return role === 'KSH' ? permits.filter((p) => p.loads > 0) : [...permits];
+}
+/**
  * „+ Dodaj” przy „Inne pliki” i rodzaj „Inne” w oknie „Wgraj dokument” (E31 pkt 5; D-20261014-2005-01 S4 pkt 7).
  * Demo: włączone. Produkcja: po podłączeniu rodzaju `OTHER` (odczyt w `documentFromRow`, wiele plików bez wersji,
  * uprawnienia HHL i SCX) — wykonawca zmienia tylko ten warunek (D-20261016-2130-01 pkt 3.1).
