@@ -13,7 +13,7 @@ import { safeStorageTarget } from './storagePath';
 import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
-  PRICE_VIEW_COLUMNS, PRICE_VIEW_COLUMNS_LEGACY, applyPriceViews, type PriceViewRow,
+  PRICE_VIEW_COLUMNS, PRICE_VIEW_COLUMNS_LEGACY, PRICE_VIEW_COLUMNS_NO_BASIS, applyPriceViews, type PriceViewRow,
   BILL_COLUMNS, billFromRow, billToRpc, type BillRow, notificationFromRow, type NotificationRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
@@ -77,8 +77,14 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     await ensureContext();
     const at = now();
     // 0187: fuel_status (wstępny/ostateczny); przed nałożeniem migracji widok nie ma kolumny → zapas bez niej
+    // #409 / 0268: fuel_basis; przed migracją widok nie ma kolumny → zapas bez niej
     const selectPriceView = async (view: string) => {
       const r = await sb.from(view).select(PRICE_VIEW_COLUMNS);
+      if (r.error && /fuel_basis/.test(r.error.message ?? '')) {
+        const r2 = await sb.from(view).select(PRICE_VIEW_COLUMNS_NO_BASIS);
+        if (r2.error && /fuel_status/.test(r2.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
+        return r2;
+      }
       if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
       return r;
     };

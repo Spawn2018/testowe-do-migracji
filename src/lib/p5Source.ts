@@ -24,17 +24,38 @@ export function belowOf(loads: Load[], thresholdPct: number | null): FinBelowRow
   return belowThreshold(loads, thresholdPct);
 }
 
-/** E39 — tabela tygodni. Średnie cen i publikacje: w produkcji z bazy (`fuel_basis`), dziś „—”. */
+/** E39 — tabela tygodni. Produkcja: średnie i liczby publikacji z `fuel_basis` (#409 / 0268, widok ceny strony),
+ *  lista publikacji z `fuel_index_readings` (HHL), a gdy jej nie ma (KSH, SCX) — z `fuel_basis.pubs_*` transportów tygodnia. */
 export function fuelWeeksOf(loads: Load[], side: FinSide, today: string): FuelWeekRow[] {
   const rows = fuelWeeks(loads, side, today);
   const demo = import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelEnrich(rows, today) : null;
   if (demo) return demo;
-  /* produkcja: publikacje cen z tygodnia wskaźników z bazy (`fuel_index_readings`, `useFuelPublications`) */
-  return rows.map((r) => {
-    if (!r.idx || r.weekLast) return r;
-    const pub = fuelPublicationsIn(r.idx.from, r.idx.to < today ? r.idx.to : today);
-    return pub ? { ...r, publications: pub } : r;
-  });
+  return rows.map((r) => enrichFromBasis(r, loads, side, today));
+}
+
+/** Wiersz tygodnia + dane z bazy (czysta funkcja, test). Prognoza i scalony zakres — bez średnich i bez listy, jak w demo. */
+export function enrichFromBasis(r: FuelWeekRow, loads: readonly Load[], side: FinSide, today: string): FuelWeekRow {
+  if (!r.idx || r.weekLast) return r;
+  const ids = new Set(r.loads.map((x) => x.id));
+  const basis = loads
+    .filter((l) => ids.has(l.id))
+    .map((l) => {
+      const m = l.pricing?.money && l.pricing.money.v === 2 ? l.pricing.money : null;
+      return m ? (side === 'rev' ? m.rev : m.cost).fuel.basis ?? null : null;
+    })
+    .find((b) => b != null) ?? null;
+  const out: FuelWeekRow = { ...r };
+  if (basis) {
+    if (out.okq8) out.okq8 = { ...out.okq8, avg: basis.avgSek, n: basis.nSek };
+    if (out.orlen) out.orlen = { ...out.orlen, avg: basis.avgPln, n: basis.nPln };
+  }
+  const to = r.idx.to < today ? r.idx.to : today;
+  const fromReadings = fuelPublicationsIn(r.idx.from, to);
+  const fromBasis = basis ? basis.pubs.filter((p) => p.date >= r.idx!.from && p.date <= to) : null;
+  /* RLS: KSH i SCX dostają z `fuel_index_readings` pustą listę (nie błąd) — wtedy publikacje z `fuel_basis` */
+  const pub = fromReadings && fromReadings.length ? fromReadings : fromBasis ?? fromReadings;
+  if (pub) out.publications = pub;
+  return out;
 }
 
 /** E4b — oferta faktoringu HHL (Opcje › Pieniądze › Faktoring, wersja z datą). W produkcji z bazy — wykonawca. */
