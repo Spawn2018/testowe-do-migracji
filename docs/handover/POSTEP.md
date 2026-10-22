@@ -4082,17 +4082,23 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7.
 - Scalanie: brak „F7: gotowe”. #434 db FAIL `0f61e8a3` (i2 645/646): INSERT load_escorts z E.164 łamał `driver_phone_national_chk`. Bez push na `main`.
 - Bieżąca: **#400** F7 r3 — `driver_phone='000000222'` (krajowy); filtr `entity_id` w asercjach app_users/sms_zone; +2 testy RODO po purge; `purge` przywraca `audit_source` i scrub jednym UPDATE (retencja od `created_at`); i2 646→648.
+
+## 2026-10-22 08:35 — #400 SCALONE; start #384 zaległe (0261→0262)
+
+- Skrzynka: #400 zamknięte; #425/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433 bez F7.
+- Scalanie: #434 F7 „gotowe do scalenia” → merge `9a250dd6` (0260). Bez push na `main`.
+- Bieżąca: **#384 zaległe** — potem #437 pilne przerwało; migracja przenumerowana na **0262**.
+
 ## 2026-10-22 09:25 — #437 pilne E44 RIO (przerywa #384)
 
-- Skrzynka: #437 (`dla-cursora`+`pilne`, Spawn2018) — brak adaptera/crona RIO; SG-19 dziś; zgoda RIO na piśmie 09:02. Wpisane: PLAN §4 (#437 / 0261 przed #384), §8, dopisek D-20261022-0858-01.
-- Scalanie: #436 F7 „jeszcze nie” (blokery); CI unit/db/visual zielone na `ded34457` — bez merge. #433/#408/#382 bez „gotowe”. Bez push na `main`.
-- Bieżąca: **#437 E44** (`pakiet/e44-rio-437`, migracja **0261**) — adapter `rioPositionSharing.ts`, Edge `rio-links`, cron `tower-rio-links`, job `rio-links`, `SUBCONTRACTOR_LINK`.
+- Skrzynka: #437 (`dla-cursora`+`pilne`, Spawn2018) — brak adaptera/crona RIO; SG-19 dziś; zgoda RIO na piśmie 09:02.
+- Bieżąca: **#437 E44** (`pakiet/e44-rio-437`, migracja **0261**).
 
-## 2026-10-22 09:50 — #437 CI zielone, czekam na F7
+## 2026-10-22 11:13 — #438 SCALONE (0261 E44); powrót #384 (0262)
 
-- Skrzynka: #437/#425/#422/#413/#409/#412/#323/#322/#320 (Spawn2018) — w planie; #437 `pilne` bieżąca. Bez nowych do wpisania.
-- Scalanie: brak „F7: gotowe do scalenia”. #436 F7 r2 „jeszcze nie” (visible_to + clear godziny); #433/#408/#383/#382 bez „gotowe”. Bez push na `main`.
-- Bieżąca: **#437 E44** PR #438 head `0b03c7df` — unit×2, `db`, visual (wszystkie części) **zielone**. Zakres dopisku (adapter, cron, SUBCONTRACTOR_LINK, błędy/sprawy, secret poza logami) w PR. Front Stan systemu — koordynator. **Czekam na F7.**
+- Skrzynka: #437 zamknięte; #425/#384/#422/#413/#409/#412/#323/#322/#320 w planie. #440 wygląd RIO bez F7.
+- Scalanie: #438 F7 „gotowe” (`1fd05f4`) + CI zielone → merge `6f6336b5` (0261). #436 przenumerowane 0261→0262. Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 (`pakiet/hotfix-384-zalegle`, **0262**) — F7 niegotowe; merge main po E44.
 
 ## 2026-10-22 10:20 — #438 F7: poprawki E44 RIO (BLOKER secret + obciążenie)
 
@@ -4196,3 +4202,14 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - **#446 pkt 6:** wpisy `failed` z rana 22.10 w `cron.job_run_details` zostają (historia); sprawdzenie następnego przebiegu z harmonogramu — **23.10 rano** (po 08:15 Waw) → wpis w POSTEP.
 - Bieżąca dalej: **#384 zaległe** (`pakiet/hotfix-384-zalegle`, migracja **0267**); PR #436 — F7 niegotowe (przenumerować 0262→0267 + uwagi F7 r2/r3).
 
+## 2026-10-22 17:05 — #451+#452 SCALONE; #453 wpisane; #436 CI db
+
+- Skrzynka: #453 (Spawn2018, `dla-cursora`, bez `pilne`) — RIO link bez pozycji ≠ SOURCE_DOWN. Wpisane: PLAN §3/§4/§8, dopisek `D-20261022-1655-01.md` (po #384, przed #409). #446/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #451 F7 „gotowe do scalenia” → MERGED `0230985c`. #452 F7 „gotowe do scalenia” → MERGED (docs #446 pkt 5). Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — `db` czerwone (import F7 (d)+ restore; dec2 KSH count 4≠1). Poprawka: `before_*` filtr po dacie planu; test KSH `count >= 1`; event testowy `now()+1s`.
+
+## 2026-10-22 17:35 — #455 wpisane; merge main → #436
+
+- Skrzynka: #455 (Spawn2018, `dla-cursora`, bez `pilne`) — testy bazy po #436 (Działaj jako, ujemne restore, KSH=HHL). Wpisane: PLAN §3/§4/§8 (po #453, przed #409). #453/#446/#425/`pilne` + reszta w planie.
+- Scalanie: #436 F7 r5 „gotowe” na `060b5ee`, ale CONFLICTING z main (#451/#452) i brak `db` na tym SHA — bez scalenia. #454 F7 „gotowe”, visual w toku. Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — merge main (konflikt PLAN/POSTEP); #455 w planie; po push: `db` + czekam na ponowne F7.

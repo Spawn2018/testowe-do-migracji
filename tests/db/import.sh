@@ -85,7 +85,8 @@ R2="[{\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\
      {\"code\":\"SG-03\",\"length_m\":12,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1c\",\"delivery_date\":\"$D2c\"}]"
 val "podgląd: +1 ~2, krytyczna SG-01, kandydat T-01" $HHL "select jsonb_array_length(r->'added')||'/'||jsonb_array_length(r->'changed')||'/'||(r->'critical'->0->>'code')||'/'||(r->'cancel_candidates'->0->>'code') from ($(IMP "$R2" true)) s(r)" "1/2/SG-01/T-01"
 val "zapis bez zgody na anulowanie: T-01 zostaje" $HHL "select jsonb_array_length(r->'cancelled')||'/'||(r->>'version') from ($(IMP "$R2" false)) s(r)" "0/2" commit
-chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "$D1b $D2b true"
+# #384 zaległe: zmiana daty bez godziny → okno przesunięte na nowy dzień (nie null, nie stary dzień)
+chk "SG-01: nowe daty + okno przesunięte (#384)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||((plan_load_from at time zone 'Europe/Warsaw')::date = plan_load_date and (plan_load_to at time zone 'Europe/Warsaw')::date = plan_load_date) from loads where id='$SG1'")" "$D1b $D2b true"
 chk "SG-02: długość 18.50 w pozycji" "$(Q "select length_m from shipment_items where shipment_code='SG-02'")" "18.50"
 chk "SCHEDULE_DATE_CRITICAL dla SG-01" "$(Q "select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL' and load_id='$SG1'")" 1
 chk "powiadomienia w aplikacji: HHL + SCX" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 2
@@ -260,5 +261,68 @@ chk "F7#4: IQ-426C CANCELLED" "$(Q "select status from loads where id='$LIC'")" 
 
 # cofnij email=true z testu (jak F7 drobne)
 $PSQL -c "update notification_matrix set email=false where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
+
+echo; echo "[#384 F7] przywrócenie okien (d) — hotfix_384_restore_windows"
+# Pozytywne: SG-01 w STEGRA z null to/from + PLAN_DATES_CHANGED before_*; confirmed_* zostaje
+SG_R=$(Q "select load_id from shipment_items where shipment_code='SG-01' and project_id='$P' limit 1")
+KSH_UID=$(Q "select id::text from app_users where auth_id='$KSH'")
+# dates_ctx + bulk_quiet: bez skasowania confirmed_* i bez zbędnego PLAN_DATES_CHANGED z UPDATE
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_date = '$D1b'::date,
+  plan_delivery_date = '$D2b'::date,
+  plan_load_from = ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_to = ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'),
+  plan_delivery_from = null,
+  plan_dates_status = 'POTWIERDZONA',
+  plan_dates_confirmed_by = '$KSH_UID'::uuid,
+  plan_dates_confirmed_at = '2026-10-01 12:00:00+00'::timestamptz
+ where id='$SG_R';
+insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+values (
+  '$SG_R', 'PLAN_DATES_CHANGED', now() + interval '1 second', null,
+  jsonb_build_object(
+    'before_load_to', ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_from', ('$D2b 10:00'::timestamp at time zone 'Europe/Stockholm'),
+    'before_load_from', ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_to', ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm')
+  )
+);
+commit;" >/dev/null
+N_REST=$(Q "select public.hotfix_384_restore_windows()")
+if [ "${N_REST:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    F7 (d)+: przywrócono ≥1 (SG-01)"; else fail=$((fail+1)); echo "  FAIL  F7 (d)+: przywrócono ≥1 (otrzymano: $N_REST)"; fi
+chk "F7 (d)+: SG-01 ma plan_load_to i plan_delivery_from" "$(Q "select (plan_load_to is not null and plan_delivery_from is not null)::text from loads where id='$SG_R'")" "true"
+chk "F7 (d)+: potwierdzenie KSH zachowane" "$(Q "select (plan_dates_confirmed_by = '$KSH_UID'::uuid and plan_dates_status = 'POTWIERDZONA')::text from loads where id='$SG_R'")" "true"
+
+# Ujemne: inny projekt, ten sam kod SG-01 — nie przywracaj
+P2=22222222-0000-0000-0000-000000000099
+$PSQL -c "
+  insert into projects (id, code, name, client_org_id)
+  values ('$P2', 'OTHER_P', 'Inny projekt', '00000000-0000-0000-0000-00000000a002')
+  on conflict (id) do nothing" >/dev/null
+L_OTH=$(Q "insert into loads (project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
+    plan_load_from, plan_load_to, plan_delivery_to, plan_delivery_from)
+  values ('$P2', '00000000-0000-0000-0000-00000000a003', 'OTH-SG01', 'PLANNED',
+    '$D1b'::date, '$D2b'::date,
+    ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'), null,
+    ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'), null)
+  returning id")
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  values ('$P2', '$L_OTH', 'SG-01', 18, 2.4, 2.4)" >/dev/null
+$PSQL -c "
+  insert into load_events (load_id, event_type, occurred_at, payload)
+  values (
+    '$L_OTH', 'PLAN_DATES_CHANGED', now() - interval '30 minutes',
+    jsonb_build_object(
+      'before_load_to', ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+      'before_delivery_from', ('$D2b 10:00'::timestamp at time zone 'Europe/Stockholm')
+    )
+  )" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "F7 (d)-: inny projekt SG-01 bez przywrócenia" "$(Q "select (plan_load_to is null and plan_delivery_from is null)::text from loads where id='$L_OTH'")" "true"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

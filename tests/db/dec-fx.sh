@@ -205,8 +205,11 @@ else
   if [ "$FAIL_N" = "0" ]; then ok=$((ok+1)); echo "  OK    resolve-all fail=0 (pary=$PAIRS ok=$OK_N)"; else
     fail=$((fail+1)); echo "  FAIL  resolve-all fail=$FAIL_N / pary=$PAIRS"; printf '%s\n' "$RES" | grep 'NOTICE:' | head -25
   fi
-  if [ "${PAIRS:-0}" -ge 40 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    resolve-all pary>=40 ($PAIRS)"; else
-    fail=$((fail+1)); echo "  FAIL  resolve-all pary>=40 (otrzymano: ${PAIRS:-})"
+  # #384 zaległe: pary = count(*) aktywnych typów × opcji (nie próg ≥40)
+  EXPECTED_PAIRS=$(sys "select count(*) from decision_types t, jsonb_array_elements(t.options) o where t.active" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+  if [ "${PAIRS:-}" = "${EXPECTED_PAIRS:-}" ] && [ -n "${PAIRS:-}" ]; then
+    ok=$((ok+1)); echo "  OK    resolve-all pary=count(*) ($PAIRS)"; else
+    fail=$((fail+1)); echo "  FAIL  resolve-all pary=count(*) (otrzymano: ${PAIRS:-}, oczekiwano: ${EXPECTED_PAIRS:-})"
   fi
 fi
 
@@ -222,6 +225,18 @@ CNT=$(sys "select count(*) from load_events
     and payload->>'note' = 'akceptacja z load_id'" | tail -1 | tr -d '\r')
 if [ "$CNT" = "1" ]; then ok=$((ok+1)); echo "  OK    ACCEPT+load → DECISION_EFFECT"; else
   fail=$((fail+1)); echo "  FAIL  ACCEPT+load → DECISION_EFFECT (otrzymano: $CNT; resolve: $(echo "$out" | grep -iE 'ERROR|exception' | head -1))"
+fi
+# #384 pkt 8 / F7 r2: actor / decider / by_org; visible_to NULL (KSH też widzi)
+ACT_OK=$(sys "select (
+    (payload->>'actor') like '% // HHL'
+    and payload->>'decider' = 'HHL'
+    and payload->>'by_org' = 'FORWARDER'
+    and visible_to is null
+  )::text
+  from load_events where load_id='$L' and event_type='DECISION_EFFECT'
+    and payload->>'note' = 'akceptacja z load_id' order by occurred_at desc limit 1" | tail -1 | tr -d '\r')
+if [ "$ACT_OK" = "true" ]; then ok=$((ok+1)); echo "  OK    #384 actor/decider/visible_to NULL w DECISION_EFFECT"; else
+  fail=$((fail+1)); echo "  FAIL  #384 actor/decider/visible_to NULL w DECISION_EFFECT (otrzymano: $ACT_OK)"
 fi
 
 out=$(run "$HHL" "
