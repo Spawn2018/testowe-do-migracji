@@ -1,0 +1,189 @@
+/**
+ * E44 — odczyt ostatniej pozycji z publicznego API RIO Position Sharing.
+ * Secret nigdy w logach / URL zapisanym w integration_runs (pkt 8).
+ * Zgoda RIO na piśmie — właściciel, 22.10.2026 09:02 (dokument u właściciela).
+ */
+import { normalizePlate } from './emtrackWeb.ts';
+
+export const RIO_API_HOST = 'https://api.position-sharing.rio.cloud';
+export const RIO_UA = 'WatchTower-HHL';
+export const RIO_TIMEOUT_MS = 10_000;
+
+export type RioTrackerOn = 'NACZEPA' | 'CIAGNIK_PL' | 'CIAGNIK_SE' | 'NIEZNANY';
+
+export type RioPositionOk = {
+  ok: true;
+  id: string;
+  name: string | null;
+  assetName: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  lat: number;
+  lon: number;
+  observedAt: string;
+};
+
+export type RioPositionErr = {
+  ok: false;
+  kind: 'invalid' | 'down';
+  status: number | null;
+  warning: string;
+};
+
+export type RioPositionResult = RioPositionOk | RioPositionErr;
+
+/** Adres zapytania bez secret — do logów / integration_runs. */
+export function rioPositionUrlSafe(trackingId: string): string {
+  return `${RIO_API_HOST}/trackings/${encodeURIComponent(trackingId)}/position`;
+}
+
+export function rioPositionUrl(trackingId: string, secret: string): string {
+  return `${rioPositionUrlSafe(trackingId)}?secret=${encodeURIComponent(secret)}`;
+}
+
+/** E44 pkt 6: asset_name vs rejestracje z awizacji. */
+export function inferRioTrackerOn(
+  assetName: string | null | undefined,
+  plates: { trailer?: string | null; tractorPl?: string | null; tractorSe?: string | null },
+): RioTrackerOn {
+  const asset = normalizePlate(assetName);
+  if (!asset) return 'NIEZNANY';
+  if (normalizePlate(plates.trailer) === asset) return 'NACZEPA';
+  if (normalizePlate(plates.tractorPl) === asset) return 'CIAGNIK_PL';
+  if (normalizePlate(plates.tractorSe) === asset) return 'CIAGNIK_SE';
+  return 'NIEZNANY';
+}
+
+/** Prędkość z dystansu i czasu względem poprzedniej pozycji (> 5 km/h = ruch). */
+export function speedKmhFromPrev(
+  prev: { lat: number; lon: number; ts: string } | null,
+  curr: { lat: number; lon: number; ts: string },
+): number | null {
+  if (!prev) return null;
+  const dtSec = (Date.parse(curr.ts) - Date.parse(prev.ts)) / 1000;
+  if (!(dtSec > 0) || !Number.isFinite(dtSec)) return null;
+  const R = 6371;
+  const rad = Math.PI / 180;
+  const dLat = (curr.lat - prev.lat) * rad;
+  const dLon = (curr.lon - prev.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(prev.lat * rad) * Math.cos(curr.lat * rad) * Math.sin(dLon / 2) ** 2;
+  const km = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  if (!Number.isFinite(km)) return null;
+  return (km / dtSec) * 3600;
+}
+
+function isoOrNull(v: unknown): string | null {
+  if (typeof v !== 'string' || !v.trim()) return null;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
+/** Parsuje JSON odpowiedzi RIO; bez secret w wyniku. */
+export function parseRioPositionPayload(raw: unknown): RioPositionResult {
+  if (raw == null || typeof raw !== 'object') {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak JSON' };
+  }
+  const o = raw as Record<string, unknown>;
+  const pos = o.position;
+  if (pos == null || typeof pos !== 'object') {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position' };
+  }
+  const p = pos as Record<string, unknown>;
+  const lat = Number(p.latitude);
+  const lon = Number(p.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak latitude/longitude' };
+  }
+  const observedAt = isoOrNull(p.timestamp);
+  if (!observedAt) {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position.timestamp' };
+  }
+  return {
+    ok: true,
+    id: typeof o.id === 'string' ? o.id : '',
+    name: typeof o.name === 'string' ? o.name : null,
+    assetName: typeof o.asset_name === 'string' ? o.asset_name : null,
+    validFrom: isoOrNull(o.start),
+    validTo: isoOrNull(o.end),
+    lat,
+    lon,
+    observedAt,
+  };
+}
+
+/**
+ * GET pozycji. Timeout 10 s. Status 401/403/404 → invalid; 5xx / sieć / zły format → down.
+ */
+export async function fetchRioPosition(opts: {
+  trackingId: string;
+  secret: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
+}): Promise<RioPositionResult> {
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const timeoutMs = opts.timeoutMs ?? RIO_TIMEOUT_MS;
+  const url = rioPositionUrl(opts.trackingId, opts.secret);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(url, {
+      method: 'GET',
+      headers: { 'User-Agent': RIO_UA, Accept: 'application/json' },
+      signal: ctrl.signal,
+    });
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
+      return {
+        ok: false,
+        kind: 'invalid',
+        status: res.status,
+        warning: `RIO HTTP ${res.status}`,
+      };
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        kind: 'down',
+        status: res.status,
+        warning: `RIO HTTP ${res.status}`,
+      };
+    }
+    let json: unknown;
+    try {
+      json = await res.json();
+    } catch {
+      return { ok: false, kind: 'down', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
+    }
+    return parseRioPositionPayload(json);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const aborted = /abort/i.test(msg);
+    return {
+      ok: false,
+      kind: 'down',
+      status: null,
+      warning: aborted ? 'RIO: timeout 10 s' : `RIO: sieć ${msg}`,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Czy teraz mieści się w ważności linku (start–end). Brak granic → true (jeszcze nie sprawdzono). */
+export function rioLinkValidNow(
+  nowIso: string,
+  validFrom: string | null | undefined,
+  validTo: string | null | undefined,
+): boolean {
+  const now = Date.parse(nowIso);
+  if (!Number.isFinite(now)) return false;
+  if (validFrom) {
+    const a = Date.parse(validFrom);
+    if (Number.isFinite(a) && now < a) return false;
+  }
+  if (validTo) {
+    const b = Date.parse(validTo);
+    if (Number.isFinite(b) && now > b) return false;
+  }
+  return true;
+}

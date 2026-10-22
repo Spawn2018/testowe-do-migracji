@@ -36,7 +36,11 @@ import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import {
   EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
 } from '../telematics/emtrackWeb.ts';
-import { ambiguousMatchCount, matchFixToLoad } from '../telematics/matchTrailer.ts';
+import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad } from '../telematics/matchTrailer.ts';
+import {
+  fetchRioPosition, inferRioTrackerOn, rioLinkValidNow, rioPositionUrlSafe,
+  speedKmhFromPrev, type RioTrackerOn,
+} from '../telematics/rioPositionSharing.ts';
 import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
@@ -59,6 +63,37 @@ export const DIGITRAFFIC_USER = 'TOWER-WatchTower/HHL';
 export const STENA_IRM_UA = 'Watch Tower (https://tower.log-mar.pl; ferry positions)';
 
 export interface VehiclePos { load_id: string; code: string; lat: number; lon: number; ts: string }
+
+/** E44 — wiersz do odpytania RIO (secret tylko w Edge / service_role). */
+export interface RioLoadRow {
+  id: string;
+  code: string | null;
+  rio_tracking_id: string;
+  rio_secret: string;
+  rio_check_state: string | null;
+  rio_valid_from: string | null;
+  rio_valid_to: string | null;
+  rio_error_streak: number;
+  trailer_plate: string | null;
+  tractor_plate: string | null;
+  tractor_delivery_plate: string | null;
+  status: string | null;
+  plannedLoadDate: string | null;
+  trackingOpenedAt: string | null;
+  telematics_vehicle_id: string | null;
+}
+
+export interface RioLoadPatch {
+  rio_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+  rio_check_at?: string;
+  rio_asset_name?: string | null;
+  rio_tracker_on?: RioTrackerOn | null;
+  rio_valid_from?: string | null;
+  rio_valid_to?: string | null;
+  rio_last_fix_at?: string;
+  rio_error_streak?: number;
+}
+
 export interface SyncStore {
   projectId(): Promise<string>;
   vessels(): Promise<VesselRow[]>;
@@ -117,6 +152,12 @@ export interface SyncStore {
   /** A8: licznik błędów logowania emtrack i pauza 6 h. */
   emtrackLoginState?(): Promise<import('./emtrackLogin.ts').EmtrackLoginState | null>;
   saveEmtrackLoginState?(state: import('./emtrackLogin.ts').EmtrackLoginState): Promise<void>;
+  /** E44: transporty z linkiem RIO (secret tylko service_role). */
+  listRioLoadsForPoll?(): Promise<RioLoadRow[]>;
+  /** E44: wynik odczytu — bez secret w patch. */
+  updateRioLoadState?(loadId: string, patch: RioLoadPatch): Promise<void>;
+  /** Ostatnia pozycja z lat/lon (do prędkości RIO). */
+  lastPositionFix?(loadId: string, source: string): Promise<{ lat: number; lon: number; ts: string } | null>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -1414,12 +1455,207 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   };
 }
 
+/**
+ * E44 — odczyt pozycji z linku RIO (podwykonawca SCX).
+ * Cron `tower-rio-links` co 2 min. Job w integration_runs: `rio-links`.
+ * Secret nigdy w observations / warnings / URL.
+ */
+export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
+  const nowIso = deps.now().toISOString();
+  const loads = deps.store.listRioLoadsForPoll ? await deps.store.listRioLoadsForPoll() : [];
+  let queried = 0;
+  let written = 0;
+  let skippedWindow = 0;
+  let skippedValidity = 0;
+  let skippedDup = 0;
+  let invalid = 0;
+  let down = 0;
+  let pendingOk = 0;
+  let sourceFailStreak = 0;
+  const warnings: string[] = [];
+  let risks = 0;
+
+  for (const load of loads) {
+    const pending = load.rio_check_state === 'pending' || load.rio_check_state == null;
+    const matchRow = {
+      id: load.id,
+      trailer_plate: load.trailer_plate,
+      telematics_vehicle_id: load.telematics_vehicle_id ?? `rio:${load.rio_tracking_id}`,
+      status: load.status,
+      plannedLoadDate: load.plannedLoadDate,
+      trackingOpenedAt: load.trackingOpenedAt,
+    };
+    if (!pending && !loadInTrackingWindow(matchRow, nowIso)) {
+      skippedWindow++;
+      continue;
+    }
+    if (!pending && !rioLinkValidNow(nowIso, load.rio_valid_from, load.rio_valid_to)) {
+      skippedValidity++;
+      continue;
+    }
+
+    queried++;
+    const res = await fetchRioPosition({
+      trackingId: load.rio_tracking_id,
+      secret: load.rio_secret,
+      fetchImpl: deps.fetch,
+    });
+
+    if (!res.ok) {
+      if (res.kind === 'invalid') {
+        invalid++;
+        if (deps.store.updateRioLoadState) {
+          await deps.store.updateRioLoadState(load.id, {
+            rio_check_state: 'invalid',
+            rio_check_at: nowIso,
+            rio_last_fix_at: nowIso,
+            rio_error_streak: 0,
+          });
+        }
+        if (await deps.store.raiseRisk({
+          kind: 'JOB_FAILURE',
+          severity: 'HIGH',
+          title: 'Link RIO nieprawidłowy',
+          titleKey: 'rk_rio_invalid',
+          params: {},
+          detail: { zrodlo: 'RIO', loadId: load.id, status: res.status, url: rioPositionUrlSafe(load.rio_tracking_id) },
+          dedup: `RIO_INVALID:${load.id}`,
+          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+          loadId: load.id,
+        })) risks++;
+        continue;
+      }
+      down++;
+      const streak = (load.rio_error_streak ?? 0) + 1;
+      if (streak > sourceFailStreak) sourceFailStreak = streak;
+      if (deps.store.updateRioLoadState) {
+        await deps.store.updateRioLoadState(load.id, {
+          rio_check_state: pending ? 'down' : (load.rio_check_state as 'ok' | 'pending' | 'invalid' | 'down') ?? 'down',
+          rio_check_at: nowIso,
+          rio_last_fix_at: nowIso,
+          rio_error_streak: streak,
+        });
+      }
+      warnings.push(res.warning);
+      if (streak >= 3) {
+        if (await deps.store.raiseRisk(sourceDownRisk(
+          'RIO',
+          warnings.slice(-5),
+          nowIso,
+          rioPositionUrlSafe(load.rio_tracking_id),
+        ))) risks++;
+      }
+      continue;
+    }
+
+    const trackerOn = inferRioTrackerOn(res.assetName, {
+      trailer: load.trailer_plate,
+      tractorPl: load.tractor_plate,
+      tractorSe: load.tractor_delivery_plate,
+    });
+    if (deps.store.updateRioLoadState) {
+      await deps.store.updateRioLoadState(load.id, {
+        rio_check_state: 'ok',
+        rio_check_at: nowIso,
+        rio_asset_name: res.assetName,
+        rio_tracker_on: trackerOn,
+        rio_valid_from: res.validFrom,
+        rio_valid_to: res.validTo,
+        rio_last_fix_at: nowIso,
+        rio_error_streak: 0,
+      });
+    }
+    if (pending) pendingOk++;
+    await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
+    await deps.store.resolveRisks('SOURCE_DOWN:RIO');
+
+    if (trackerOn === 'NIEZNANY' && res.assetName) {
+      if (await deps.store.raiseRisk({
+        kind: 'JOB_FAILURE',
+        severity: 'MEDIUM',
+        title: `Link RIO dotyczy pojazdu ${res.assetName}, którego nie ma w awizacji`,
+        titleKey: 'rk_rio_unknown_asset',
+        params: { asset: res.assetName },
+        detail: { zrodlo: 'RIO', loadId: load.id, asset: res.assetName },
+        dedup: `RIO_UNKNOWN_ASSET:${load.id}`,
+        sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+        loadId: load.id,
+      })) risks++;
+    }
+
+    // Poza oknem E27 — tylko zapytanie testowe (pending), bez zapisu pozycji.
+    if (pending && !loadInTrackingWindow(matchRow, nowIso)) continue;
+    if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
+      skippedValidity++;
+      continue;
+    }
+
+    const last = deps.store.lastPositionAt
+      ? await deps.store.lastPositionAt(load.id, 'SUBCONTRACTOR_LINK')
+      : null;
+    if (last && Date.parse(last) >= Date.parse(res.observedAt)) {
+      skippedDup++;
+      continue;
+    }
+
+    const prevFix = deps.store.lastPositionFix
+      ? await deps.store.lastPositionFix(load.id, 'SUBCONTRACTOR_LINK')
+      : null;
+    const speed = speedKmhFromPrev(prevFix, { lat: res.lat, lon: res.lon, ts: res.observedAt });
+
+    if (deps.store.processPosition) {
+      await deps.store.processPosition({
+        loadId: load.id,
+        lat: res.lat,
+        lon: res.lon,
+        ts: res.observedAt,
+        source: 'SUBCONTRACTOR_LINK',
+        speed,
+        heading: null,
+        ignition: null,
+        raw: {
+          provider: 'RIO',
+          trackingId: load.rio_tracking_id,
+          asset_name: res.assetName,
+          name: res.name,
+          url: rioPositionUrlSafe(load.rio_tracking_id),
+        },
+      });
+      written++;
+    }
+    if (deps.store.inferPhaseFromPosition) {
+      await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+    }
+  }
+
+  return {
+    job: 'rio-links',
+    mode: 'LIVE',
+    ok: down === 0 || sourceFailStreak < 3,
+    risks,
+    warnings: warnings.slice(0, 20),
+    observations: {
+      candidates: String(loads.length),
+      queried: String(queried),
+      written: String(written),
+      pending_ok: String(pendingOk),
+      invalid: String(invalid),
+      down: String(down),
+      skipped_window: String(skippedWindow),
+      skipped_validity: String(skippedValidity),
+      skipped_dup: String(skippedDup),
+      fail_streak_max: String(sourceFailStreak),
+    },
+  };
+}
+
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
   'ferry-ais-listen': runFerryAisListen,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
   'emtrack-web': runEmtrackWeb,
+  'rio-links': runRioLinks,
   'route-hazards': runRouteHazards,
 } as const;
 export type JobName = keyof typeof JOBS;
@@ -1427,7 +1663,7 @@ export type JobName = keyof typeof JOBS;
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'route-hazards': 60,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2, 'route-hazards': 60,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */
