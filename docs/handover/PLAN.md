@@ -787,8 +787,8 @@ CTE `u` w 0258: kolumny bez aliasu vs OUT `RETURNS TABLE` → ambiguous `vessel_
 ### HOTFIX #461 · „Prom” AIS albo plan+1 h (D-20261022-2045-01, `pilne`) — SCALONE (#469 `7e77540a`, 22.10.2026 22:51); migracja **0270**
 `promote_ferry_departures`: AIS albo `SCHEDULE_ASSUMED` (+1 h); bez `NO_DEPARTURE`/`MISSED_SAILING`; A10 (c) tylko po AIS; sprzątanie SG-17/18/23; SILENT/eskalacja nie przy `RIO_NO_POSITION`. Szczegóły: `dopiski/D-20261022-2045-01.md`.
 
-### HOTFIX #463 · kopia zapasowa 3× ERROR + cron po awarii (D-20261022-2110-01, `pilne`) — W TOKU (`pakiet/hotfix-463-backup-cron`); po #461, przed #409
-Przyczyna: COPY Edge zawieszał się na dużych tabelach (`notifications`/`sms_heartbeats`/…). Ręcznie: backup **#37 OK** (`daily/2026-10-22-225919/`, 96 tabel, 25 plików); polisy·kolejność·ferry-schedule odpalone. Kod: stronicowanie ctid + timeout COPY. `email-budget` = trigger (bez crona); `usage-check` OK. Szczegóły: `dopiski/D-20261022-2110-01.md`.
+### HOTFIX #463 · kopia zapasowa 3× ERROR + cron po awarii (D-20261022-2110-01, `pilne`) — W TOKU (`pakiet/hotfix-463-backup-cron` / PR #472); po #461, przed #409
+Przyczyna: COPY Edge zawieszał się na dużych tabelach (`notifications`/`sms_heartbeats`/…). Ręcznie: backup **#37 OK** (stary kod Edge, bez stronicowania). F7: strony z `pg_relation_size`, ostatni zakres otwarty, RR + `csvRowCount`=`count(*)`. Polisy·kolejność·ferry-schedule odpalone. `email-budget` = trigger; `usage-check` OK. Szczegóły: `dopiski/D-20261022-2110-01.md`.
 
 ### #409 · `fuel_basis` w widokach cen (D-20261021-2030-01) — W TOKU (`pakiet/hotfix-409-fuel-basis`); po #463, przed #413
 Migracja **0271** (F7 #469: 0269 zarezerwowane pod #458 przy rebase; po #461/#463). Kolumna `fuel_basis` w `v_load_price_*`; allowlista bez `owner_note` dla SCX/KSH. Szczegóły: `dopiski/D-20261021-2030-01.md`. Ekran #408 SCALONE (`00611f7e`).

@@ -17,9 +17,9 @@
 import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
-  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, TABLE_COPY_TIMEOUT_MS, backupTables, copyCtidRangeSql,
-  csvRowCount, ctidPageRanges, dailyPrefix, manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex,
-  shouldChunkByEstimate, writerClient,
+  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, TABLE_COPY_TIMEOUT_MS, assertCsvMatchesDbCount,
+  assertSafeIdent, backupTables, copyCtidRangeSql, csvRowCount, ctidPageRanges, dailyPrefix, heapPagesFromBytes,
+  manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex, shouldChunkByEstimate, writerClient,
 } from '../_shared/backup/core.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
@@ -62,43 +62,60 @@ function readCopyStream(stream: { on: (ev: string, fn: (...args: unknown[]) => v
   });
 }
 
-/** Jedna tabela: mała → jeden COPY; duża (szacunek wierszy) → kawałki ctid. */
+/**
+ * Jedna tabela w jednej transakcji repeatable read (F7 #472):
+ * mała → jeden COPY; duża → kawałki ctid (ostatni bez górnej granicy);
+ * na końcu csvRowCount = count(*) albo ERROR.
+ */
 async function copyTableCsv(
   sql: ReturnType<typeof postgres>,
   table: string,
   selectList: string | null,
 ): Promise<Uint8Array> {
-  const [meta] = await sql<{ est: string | number; pages: number }[]>`
-    select c.reltuples::bigint as est, greatest(c.relpages, 1)::int as pages
-      from pg_class c
-      join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'public' and c.relname = ${table}`;
-  const est = Number(meta?.est ?? 0);
-  if (!shouldChunkByEstimate(est)) {
-    const copySql = selectList
-      ? `copy (select ${selectList} from public.${table}) to stdout with (format csv, header true)`
-      : `copy public.${table} to stdout with (format csv, header true)`;
-    const stream = await sql.unsafe(copySql).readable();
-    return readCopyStream(stream, table);
-  }
-  const parts: Uint8Array[] = [];
-  let header = true;
-  for (const { from, to } of ctidPageRanges(Number(meta?.pages ?? 1))) {
-    const copySql = copyCtidRangeSql(table, from, to, selectList, header);
-    const stream = await sql.unsafe(copySql).readable();
-    const part = await readCopyStream(stream, `${table}[${from},${to})`);
-    if (part.byteLength) parts.push(part);
-    header = false;
-  }
-  if (!parts.length) {
-    // pusta duża tabela — sam nagłówek
-    const copySql = selectList
-      ? `copy (select ${selectList} from public.${table} where false) to stdout with (format csv, header true)`
-      : `copy (select * from public.${table} where false) to stdout with (format csv, header true)`;
-    const stream = await sql.unsafe(copySql).readable();
-    return readCopyStream(stream, `${table}[empty]`);
-  }
-  return new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
+  const t = assertSafeIdent(table);
+  return sql.begin('isolation level repeatable read', async (tx) => {
+    const [meta] = await tx<{ est: string | number; bytes: string | number; block: number }[]>`
+      select c.reltuples::bigint as est,
+             pg_relation_size(c.oid)::bigint as bytes,
+             current_setting('block_size')::int as block
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+       where n.nspname = 'public' and c.relname = ${table}`;
+    const est = Number(meta?.est ?? 0);
+    const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
+    let csv: Uint8Array;
+    if (!shouldChunkByEstimate(est)) {
+      const copySql = selectList
+        ? `copy (select ${selectList} from public.${t}) to stdout with (format csv, header true)`
+        : `copy public.${t} to stdout with (format csv, header true)`;
+      const stream = await tx.unsafe(copySql).readable();
+      csv = await readCopyStream(stream, t);
+    } else {
+      const parts: Uint8Array[] = [];
+      let header = true;
+      for (const { from, to } of ctidPageRanges(pages)) {
+        const copySql = copyCtidRangeSql(t, from, to, selectList, header);
+        const stream = await tx.unsafe(copySql).readable();
+        const label = to === null ? `${t}[${from},∞)` : `${t}[${from},${to})`;
+        const part = await readCopyStream(stream, label);
+        if (part.byteLength) parts.push(part);
+        header = false;
+      }
+      if (!parts.length) {
+        // pusta duża tabela — sam nagłówek
+        const copySql = selectList
+          ? `copy (select ${selectList} from public.${t} where false) to stdout with (format csv, header true)`
+          : `copy (select * from public.${t} where false) to stdout with (format csv, header true)`;
+        const stream = await tx.unsafe(copySql).readable();
+        csv = await readCopyStream(stream, `${t}[empty]`);
+      } else {
+        csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
+      }
+    }
+    const [cnt] = await tx.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
+    assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), Number(cnt?.n ?? -1), t);
+    return csv;
+  });
 }
 
 Deno.serve(async (req) => {
