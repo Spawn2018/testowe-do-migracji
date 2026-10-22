@@ -4243,3 +4243,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463 (Spawn2018, `dla-cursora`+`pilne`) — backup 3× ERROR + cron po awarii. Wpisane: PLAN §4/§8, dopisek `D-20261022-2110-01.md`. Kolejka: #461 → #463 → #409.
 - Scalanie: #462 F7 + CI zielone → MERGED `045d9bd7` (0268). Issue #460 zamknięte. Bez push na `main`.
 - Bieżąca: **#461** (`pakiet/hotfix-461-ferry-actual-dep`, migracja **0269**) — Prom dopiero przy `actual_departure_at`; status 178; `rk_no_departure`.
+
+## 2026-10-22 22:00 — F7 #469: #461 SCHEDULE_ASSUMED; skrzynka #464–#467
+
+- Skrzynka: #464/#465/#466/#467 (Spawn2018, `dla-cursora`) — wpisane PLAN §4/§8. #463 już w planie (pilne, po #461).
+- Scalanie: brak F7 „gotowe” (PR #469: F7 „jeszcze nie” po `aa33562`).
+- Bieżąca: **#461** F7 — migracja **0270**, AIS albo plan+1 h (`SCHEDULE_ASSUMED`), bez `NO_DEPARTURE`/`MISSED_SAILING`, korekta SG-17/18/23, SILENT/eskalacja nie przy `RIO_NO_POSITION`; status **184**. #409→**0271**. Bez push na `main`.

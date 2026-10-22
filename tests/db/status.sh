@@ -96,17 +96,29 @@ chk "398: port z actual_load_at → AT_PORT_GDANSK"           "$(st $Lgps)" AT_P
 chk "398: port z actual_load_at → 0 PORT_NO_LOADED"         "$(rk $Lgps PORT_NO_LOADED)" 0
 chk "strefa bufora 20 km nie zmienia statusu"                 "select count(*) from load_events where load_id='$A' and event_type='STATUS_AUTO'" 1
 
-echo; echo "[3] PROM — #461: FERRY dopiero po actual_departure_at (AIS)"
+echo; echo "[3] PROM — #461: AIS albo plan+1h (SCHEDULE_ASSUMED); bez MISSED/NO_DEPARTURE"
 chk "minuta przed odejściem: nic"                             "select promote_ferry_departures('2026-10-01 11:59+00')" 0
-chk "#461: plan minął, brak actual_departure → bez FERRY"     "select promote_ferry_departures('2026-10-01 12:01+00')" 0
+chk "#461: plan minął, brak actual, przed +1h → bez FERRY"   "select promote_ferry_departures('2026-10-01 12:01+00')" 0
 chk "#461: status A nadal AT_PORT_GDANSK"                     "$(st $A)" AT_PORT_GDANSK
-q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
-chk "#461: po actual_departure: trzy auta w strefie → PROM"   "select promote_ferry_departures('2026-10-01 12:01+00')" 3
-chk "status A = FERRY"                                        "$(st $A)" FERRY
-chk "#461: STATUS_AUTO FERRY source=AIS" \
-  "select payload->>'source' from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" AIS
-chk "auto poza strefą w chwili odejścia: status bez zmian"    "$(st $B)" IN_TRANSIT_PL
-chk "auto poza strefą: ryzyko wysokie"                        "$(rk $B MISSED_SAILING)" 1
+# SCHEDULE_ASSUMED: plan 12:00 + 1 h → FERRY o 13:00, bez spraw i bez powiadomień
+Nbell=$(q "select count(*) from notifications")
+chk "#461: plan+1h bez AIS → FERRY (SCHEDULE_ASSUMED)"       "select promote_ferry_departures('2026-10-01 13:01+00')" 4
+chk "#461: status A = FERRY (rozkład)"                        "$(st $A)" FERRY
+chk "#461: source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+chk "#461: auto poza strefą też FERRY (bez MISSED)"           "$(st $B)" FERRY
+chk "#461: 0 MISSED_SAILING przy nieodwołanym"                "$(rk $B MISSED_SAILING)" 0
+chk "#461: 0 NO_DEPARTURE"                                    "$(rk $A NO_DEPARTURE)" 0
+chk "#461: SCHEDULE_ASSUMED bez nowych powiadomień" \
+  "select (count(*) = $Nbell)::text from notifications" true
+# AIS później → korekta godziny na actual (bez nowych powiadomień)
+Nbell2=$(q "select count(*) from notifications")
+q "update sailings set actual_departure_at = '2026-10-01 12:15+00' where id='$S1'" >/dev/null
+chk "#461: AIS po SCHEDULE_ASSUMED → 0 nowych FERRY (korekta)" "select promote_ferry_departures('2026-10-01 13:05+00')" 0
+chk "#461: po AIS source=AIS i godzina 12:15" \
+  "select (payload->>'source')||'/'||to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" "AIS/12:15"
+chk "#461: korekta AIS bez nowych powiadomień" \
+  "select (count(*) = $Nbell2)::text from notifications" true
 pos $A 55.50 18.90 "2026-10-01 12:30+00"; pos $A 55.51 18.91 "2026-10-01 12:35+00"
 chk "statek odpływa, auto opuszcza strefę: status nadal PROM" "$(st $A)" FERRY
 
@@ -118,18 +130,18 @@ chk "auto było w strefie w chwili odejścia — przełączone mimo opóźnienia
 chk "status H = FERRY"                                        "$(st $Hh)" FERRY
 chk "brak fałszywego ryzyka przegapionego rejsu"             "$(rk $Hh MISSED_SAILING)" 0
 
-echo; echo "[5] PROM — rejs opóźniony i odwołany (#461: bez actual = bez FERRY)"
+echo; echo "[5] PROM — rejs opóźniony (SCHEDULE_ASSUMED od delayed+1h) i odwołany"
 pos $K 54.4030 18.6800 "2026-10-01 15:00+00"; pos $K 54.4031 18.6801 "2026-10-01 15:05+00"
 q "select promote_ferry_departures('2026-10-01 16:30+00')" >/dev/null
 chk "rozkładowa godzina minęła, rejs opóźniony: auto czeka w porcie" "$(st $K)" AT_PORT_GDANSK
 chk "brak fałszywego ryzyka przy opóźnieniu"                  "$(rk $K MISSED_SAILING)" 0
 q "select promote_ferry_departures('2026-10-01 19:01+00')" >/dev/null
-chk "#461: opóźniony plan minął, brak actual → bez FERRY"     "$(st $K)" AT_PORT_GDANSK
-q "select promote_ferry_departures('2026-10-01 21:01+00')" >/dev/null
-chk "#461: 2 h bez wypłynięcia → NO_DEPARTURE"               "$(rk $K NO_DEPARTURE)" 1
-q "update sailings set actual_departure_at = '2026-10-01 19:00+00' where id='$S3'" >/dev/null
-chk "#461: po actual na opóźnionym → PROM"                   "select promote_ferry_departures('2026-10-01 19:01+00')" 1
+chk "#461: delayed minął, przed +1h → bez FERRY"              "$(st $K)" AT_PORT_GDANSK
+chk "#461: delayed+1h → FERRY SCHEDULE_ASSUMED"               "select promote_ferry_departures('2026-10-01 20:01+00')" 1
 chk "status K = FERRY"                                        "$(st $K)" FERRY
+chk "#461: K source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$K' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+chk "#461: 0 NO_DEPARTURE przy delayed"                       "$(rk $K NO_DEPARTURE)" 0
 q "select promote_ferry_departures('2026-10-01 20:01+00')" >/dev/null
 chk "rejs odwołany: status bez zmian"                        "$(st $C)" IN_TRANSIT_PL
 chk "rejs odwołany: ryzyko"                                  "$(rk $C SAILING_CANCELLED)" 1
