@@ -174,7 +174,10 @@ export function carsWord(n: number): 'one' | 'few' | 'many' {
 
 /** Nazwa statku do porównania z AIS (bez wielkości liter i znaków diakrytycznych). */
 export function vesselKey(name: string | null | undefined): string {
-  return String(name ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  /* 22.10.2026 (SG-17 „stoi w porcie”): AIS i rejsy z bazy mają „M/F Wawel”, a rejs w aplikacji „Wawel” —
+     przedrostek statku (M/F, MF, M/S, MS) pomijany, żeby auto na promie stało na pozycji statku z AIS. */
+  return String(name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    .replace(/^(m f|mf|m s|ms) /, '');
 }
 
 /* ── widok grupy: dymek i lista (E45 pkt 5 „najechanie — rejs i kody; kliknięcie — lista transportów”) ── */

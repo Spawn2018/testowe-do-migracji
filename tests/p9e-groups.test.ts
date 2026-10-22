@@ -126,6 +126,11 @@ describe('P9-e dymek i lista', () => {
   it('odmiana, nazwa statku, nazwa transportu, demo', () => {
     expect([1, 2, 4, 5, 12, 14, 22, 25].map(carsWord)).toEqual(['one', 'few', 'few', 'many', 'many', 'many', 'few', 'many']);
     expect(vesselKey('Nova Star')).toBe(vesselKey('NOVA  STAR'));
+    /* 22.10.2026: AIS „M/F Wawel” = rejs „Wawel” (SG-17 na promie, nie w porcie) */
+    expect(vesselKey('M/F Wawel')).toBe(vesselKey('Wawel'));
+    expect(vesselKey('M/F Stena Ebba')).toBe('stena ebba');
+    expect(vesselKey('MS Nova Star')).toBe('nova star');
+    expect(vesselKey('Msta')).toBe('msta');
     expect(splitLabel('SG-03')).toEqual({ code: 'SG-03', num: null });
     expect(demoStageAnchor('SITE', ZONES)).toEqual({ lat: 65.81273, lng: 21.78898 });
     expect(demoStageAnchor('PORT_PL', ZONES)).toEqual({ lat: 54.40372, lng: 18.6813 });
