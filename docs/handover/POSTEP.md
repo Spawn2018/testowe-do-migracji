@@ -4082,3 +4082,26 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7.
 - Scalanie: brak „F7: gotowe”. #434 db FAIL `0f61e8a3` (i2 645/646): INSERT load_escorts z E.164 łamał `driver_phone_national_chk`. Bez push na `main`.
 - Bieżąca: **#400** F7 r3 — `driver_phone='000000222'` (krajowy); filtr `entity_id` w asercjach app_users/sms_zone; +2 testy RODO po purge; `purge` przywraca `audit_source` i scrub jednym UPDATE (retencja od `created_at`); i2 646→648.
+## 2026-10-22 09:25 — #437 pilne E44 RIO (przerywa #384)
+
+- Skrzynka: #437 (`dla-cursora`+`pilne`, Spawn2018) — brak adaptera/crona RIO; SG-19 dziś; zgoda RIO na piśmie 09:02. Wpisane: PLAN §4 (#437 / 0261 przed #384), §8, dopisek D-20261022-0858-01.
+- Scalanie: #436 F7 „jeszcze nie” (blokery); CI unit/db/visual zielone na `ded34457` — bez merge. #433/#408/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **#437 E44** (`pakiet/e44-rio-437`, migracja **0261**) — adapter `rioPositionSharing.ts`, Edge `rio-links`, cron `tower-rio-links`, job `rio-links`, `SUBCONTRACTOR_LINK`.
+
+## 2026-10-22 09:50 — #437 CI zielone, czekam na F7
+
+- Skrzynka: #437/#425/#422/#413/#409/#412/#323/#322/#320 (Spawn2018) — w planie; #437 `pilne` bieżąca. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia”. #436 F7 r2 „jeszcze nie” (visible_to + clear godziny); #433/#408/#383/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **#437 E44** PR #438 head `0b03c7df` — unit×2, `db`, visual (wszystkie części) **zielone**. Zakres dopisku (adapter, cron, SUBCONTRACTOR_LINK, błędy/sprawy, secret poza logami) w PR. Front Stan systemu — koordynator. **Czekam na F7.**
+
+## 2026-10-22 10:20 — #438 F7: poprawki E44 RIO (BLOKER secret + obciążenie)
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia”. #438 F7 r1/r2 „jeszcze nie” → ten commit. #436 BLOKER numeru (0261→0262) — następny krok po push. Bez push na `main`.
+- Bieżąca: **#437 F7** — secret poza komunikatem sieci; `rio_last_fix_at` tylko przy ok; UPDATE tylko przy zmianie; audit skip `rio_check_at`/`rio_last_fix_at`; `resolveRisks` SOURCE_DOWN po pętli; budżet 40 s + abort po 3 błędach sieci + lock; recheck wygasły/invalid co 30 min + `RIO_EXPIRED`; `RESOURCE_MISSING` dla SCX; TELM_RIO_LINKS; streak=0 przy nowym linku; 400/410→invalid; fixture zmyślone; testy 23/23.
+
+## 2026-10-22 10:45 — #438 F7 r3: lock bez audytu + patch
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe”. #438 F7 r3 „prawie” (2 blokery) → ten commit. #436 → 0262 zaraz po push. Bez push na `main`.
+- Bieżąca: **#437 F7 r3** — `rio_links_lock` (tabela bez audytu, token); `rio_check_at` nie liczy się jako zmiana (+00 przez `rioParseMs`); `resolveRisks` INVALID/EXPIRED tylko przy przejściu; SOURCE_DOWN bez zamknięcia przy abort; ok→down; zamknięcie `RIO_UNKNOWN_ASSET`; testy 26/26.
