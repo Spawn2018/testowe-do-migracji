@@ -91,6 +91,7 @@ describe('grupa aut na promie', () => {
     const css = readFileSync('src/index.css', 'utf8');
     expect(css.indexOf('.wt-marker-ferry-est .wt-dot{outline:2px dashed')).toBeGreaterThan(css.indexOf('.wt-dot{position:relative'));
     expect(css).toContain('.wt-mk.is-est{outline:2px dashed');
+    expect(css.indexOf('.wt-mk.is-est.is-late{outline:3px solid var(--red)')).toBeGreaterThan(css.indexOf('.wt-mk.is-est{'));
   });
 });
 
