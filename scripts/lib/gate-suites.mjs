@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
+  import: 81, // #426: +9 p_quiet (OPS odmowa + dodanie + quiet 0 notify/dec/sms + audit + data)
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
   i2: 634, // #405 F7: R-2 TEST stref (off/on) + admin_sms_zone_test + pilot + pull 2 kinds
   i30: 10,

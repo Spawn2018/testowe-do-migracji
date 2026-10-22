@@ -4040,3 +4040,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian (#421 W TOKU).
 - Scalanie: #430 CI zielone na `60ce13ed` (unit/db/visual); F7 r2 „jeszcze nie” (bloker okno lastPortPosition + track_sample obciążenie). #431 wygląd bez F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #421** — F7 r2: `acceptActualDepartureAt` [plan−2h, teraz] + po prev `actual_arrival`; dopłynięcie wiek≤15 i po dep; `ferry_track_sample` = 48 h ∪ 1 latest active; jednorazowy rozkład tylko gdy Vault ma sekrety; `actual_*` mimo RECZNIE; etykieta KAA-GDY → KAA. unit integrations 42/42.
+
+## 2026-10-22 05:20 — #421 SCALONE; start #426 (0259)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421 zamknięte; #425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431 bez F7.
+- Scalanie: #430 F7 r3 „gotowe” (`3dc52c2`) + CI zielone (unit/db/visual) → merge `00fd4986` (0258). Bez push na `main`.
+- Bieżąca: **#426** (`pakiet/hotfix-426-import-quiet`, migracja **0259**) — `import_schedule(..., p_quiet)`; tylko HHL_ADMIN; `tower.bulk_quiet` na cały import; audit `SCHEDULE_IMPORT_QUIET`; `trg_sms_load_changes` × quiet; import 72→81.
