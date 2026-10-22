@@ -41,6 +41,12 @@ describe('estimateFerryPositions', () => {
     expect(estimateFerryPositions([row({ status: 'ODWOLANY' })], now)).toEqual([]);
   });
 
+  it('bez departed_at: AIS w porcie odejścia albo brak AIS → brak szacunku (prom mógł nie wypłynąć)', () => {
+    const now = at('2026-10-23T01:00:00Z');
+    expect(estimateFerryPositions([row({ ais_lat: 54.41, ais_lon: 18.69 })], now)).toEqual([]);
+    expect(estimateFerryPositions([row({ ais_lat: null, ais_lon: null, ais_observed_at: null })], now)).toEqual([]);
+  });
+
   it('rzeczywiste wypłynięcie przesuwa początek; brak AIS → lastAisTs null', () => {
     const [e] = estimateFerryPositions([row({ departed_at: '2026-10-22T18:00:00Z', ais_observed_at: null })], at('2026-10-22T18:00:00Z'));
     expect(e.lat).toBeCloseTo(GDN.lat, 5);
@@ -61,9 +67,30 @@ describe('withEstimates', () => {
   });
 
   it('dodaje prom, którego nie ma w pozycjach (luka AIS > 48 h)', () => {
-    const out = withEstimates([], [row({ ais_observed_at: null })], at('2026-10-23T01:00:00Z'));
+    const out = withEstimates([], [row({ departed_at: '2026-10-22T16:10:00Z', ais_observed_at: null, ais_lat: null, ais_lon: null })], at('2026-10-23T01:00:00Z'));
     expect(out).toHaveLength(1);
     expect(out[0].estimated?.lastAisTs).toBeNull();
+  });
+});
+
+describe('grupa aut na promie', () => {
+  it('pozycja szacowana → ais „est”, opis „szacowana z rozkładu”, nie „z AIS”', async () => {
+    const { placeMarkers } = await import('../src/lib/p9eGroups');
+    const items = [{ id: 'L1', lat: 54, lng: 18, tile: 'FERRY', ferryKey: 'NS-1', lastFixAt: null, late: false }] as never;
+    const ship = { lat: 56.6, lng: 18.3, ts: '2026-10-22T18:00:00Z', stale: false, vessel: 'M/F Nova Star', estimated: { lastAisTs: '2026-10-22T18:00:00Z' } };
+    const [grp] = placeMarkers(items, { zones: [], shipOf: () => ship, grouping: true });
+    expect(grp).toMatchObject({ kind: 'ferry', ais: 'est', at: '2026-10-22T18:00:00Z', lat: 56.6 });
+    const g = readFileSync('src/lib/p9eGroups.ts', 'utf8');
+    expect(g).toContain("ais: ship ? (ship.estimated ? 'est' : ship.stale ? 'stale' : 'ok') : 'none'");
+    expect(g).toContain("g.ais === 'est' ? (g.at ? ctx.tx('p9e_ais_est'");
+    expect(readFileSync('src/i18n/p9e.ts', 'utf8')).toContain("p9e_ais_est: 'pozycja szacowana z rozkładu · ostatni AIS {t}'");
+    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toContain("vessel: p.name, estimated: p.estimated }");
+  });
+
+  it('CSS: przerywany obrys po regule .wt-dot', () => {
+    const css = readFileSync('src/index.css', 'utf8');
+    expect(css.indexOf('.wt-marker-ferry-est .wt-dot{outline:2px dashed')).toBeGreaterThan(css.indexOf('.wt-dot{position:relative'));
+    expect(css).toContain('.wt-mk.is-est{outline:2px dashed');
   });
 });
 

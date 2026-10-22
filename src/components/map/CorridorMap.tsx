@@ -120,6 +120,7 @@ function groupIcon(g: Extract<Placed, { kind: 'ferry' | 'zone' }>): L.DivIcon {
     'wt-mk', 'is-grp', `is-${tone}`,
     g.kind === 'ferry' ? 'is-ship' : '',
     g.kind === 'ferry' && g.ais === 'none' ? 'is-noais' : '',
+    g.kind === 'ferry' && g.ais === 'est' ? 'is-est' : '',
     g.late ? 'is-late' : '',
   ].filter(Boolean).join(' ');
   return L.divIcon({
@@ -604,7 +605,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
         const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
         if (!p) return null;
-        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name };
+        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name, estimated: p.estimated };
       };
       const groupItems: GroupItem[] = fleet.map((f) => {
         const row = rowOf(f.id);

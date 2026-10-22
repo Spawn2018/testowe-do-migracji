@@ -40,6 +40,14 @@ export interface FerryEstimate {
 /** Ostatni AIS starszy niż ten próg → pozycja szacowana. */
 export const ESTIMATE_AIS_STALE_MIN = 30;
 const PL_PORTS = new Set(['GDN', 'GDY']);
+/** Bez potwierdzonego wypłynięcia szacujemy tylko, gdy ostatni AIS jest już poza portem odejścia. */
+export const LEFT_PORT_KM = 10;
+
+function km(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const r = Math.PI / 180;
+  const a = Math.sin(((lat2 - lat1) * r) / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin(((lon2 - lon1) * r) / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(a));
+}
 
 function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const r = Math.PI / 180;
@@ -62,6 +70,12 @@ export function estimateFerryPositions(rows: readonly SailingMapRow[], nowMs: nu
     if (nowMs < dep || nowMs >= arr) continue;
     const aisMs = r.ais_observed_at ? Date.parse(r.ais_observed_at) : NaN;
     if (Number.isFinite(aisMs) && nowMs - aisMs <= ESTIMATE_AIS_STALE_MIN * 60_000) continue;
+    /* F7 #439 pkt 3: bez departed_at prom mógł nie wypłynąć (opóźnienie) — szacunek tylko, gdy AIS jest już poza portem */
+    if (!r.departed_at) {
+      if (r.ais_lat == null || r.ais_lon == null) continue;
+      if (km(r.ais_lat, r.ais_lon, r.dep_lat, r.dep_lon) <= LEFT_PORT_KM) continue;
+      if (!Number.isFinite(aisMs) || aisMs < dep - 2 * 3600_000) continue;
+    }
     const f = Math.min(1, Math.max(0, (nowMs - dep) / (arr - dep)));
     out.set(r.vessel_id, {
       vesselId: r.vessel_id,
