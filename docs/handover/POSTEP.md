@@ -4191,16 +4191,25 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #449 F7 „gotowe do scalenia” po `c81d17ab` + CI zielone (unit/db/visual) → MERGED `b7b049be`. Bez push na `main`.
 - Bieżąca: **#446 pkt 3–4** — migracja **0266** `tower_cron_ferry_schedule_invoke` (`to_regclass('vault.decrypted_secrets')`); Edge: odrzucony `lastPortPosition` → zapas tylko 3–10 km; RIO `RIO_UNKNOWN_ASSET` tylko NIEZNANY→znany; `TELM_RIO_LINKS=off` → `result.disabled=true`. #384→**0267** … B5→**0271**. Testy unit integrations+rio-links 70/70.
 
-## 2026-10-22 16:45 — #450 SCALONE; #446 pkt 5; powrót #384 (0267)
+## 2026-10-22 16:45 — #450 SCALONE; #446 pkt 5 SELECT
 
-- Skrzynka: #446 (pkt 6 jutro); #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie.
-- Scalanie: #450 F7 „gotowe” po `34f25242` + CI zielone → MERGED `5c6ab459` (0266). PR docs #452. Bez push na `main`.
-- **#446 pkt 5 (produkcja ~16:45):** otwarte NO_TRACKING ryzyka i decyzje **0** (także po 12:00). `tower-tracking-guard` 08:15 Waw = failed (`job startup timeout`).
-- **#446 pkt 6:** sprawdzenie 23.10 rano.
-- Bieżąca: **#384 zaległe** PR #436 — merge main (#450); migracja **0262→0267**; F7 r2/r3 (visible_to NULL, pusta godzina = bez zmiany, przywrócenie (d)).
+- Skrzynka: #446 (Spawn2018) — pkt 1–5; #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #450 F7 „gotowe do scalenia” po `34f25242` + CI zielone (unit/db/visual) → MERGED `5c6ab459` (0266). Bez push na `main`. `deploy-main` nie czekamy.
+- **#446 pkt 5 (produkcja, odczyt ~16:45 Europe/Warsaw):**
+  - otwarte `risk_signals` NO_TRACKING (`l3:NO_TRACKING:%` / `L3_NO_TRACKING`): **0** (także `detected_at >= 22.10 12:00+02`);
+  - otwarte `decisions` `NO_TRACKING` (NEW/ASSIGNED): **0** (także po 12:00);
+  - `tower-tracking-guard` (`15 6 * * *` UTC): ostatni przebieg 22.10 08:15 Waw = **failed** (`job startup timeout`); wcześniej 21.10 = succeeded.
+- **#446 pkt 6:** wpisy `failed` z rana 22.10 w `cron.job_run_details` zostają (historia); sprawdzenie następnego przebiegu z harmonogramu — **23.10 rano** (po 08:15 Waw) → wpis w POSTEP.
+- Bieżąca dalej: **#384 zaległe** (`pakiet/hotfix-384-zalegle`, migracja **0267**); PR #436 — F7 niegotowe (przenumerować 0262→0267 + uwagi F7 r2/r3).
 
 ## 2026-10-22 17:05 — #451+#452 SCALONE; #453 wpisane; #436 CI db
 
 - Skrzynka: #453 (Spawn2018, `dla-cursora`, bez `pilne`) — RIO link bez pozycji ≠ SOURCE_DOWN. Wpisane: PLAN §3/§4/§8, dopisek `D-20261022-1655-01.md` (po #384, przed #409). #446/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
 - Scalanie: #451 F7 „gotowe do scalenia” → MERGED `0230985c`. #452 F7 „gotowe do scalenia” → MERGED (docs #446 pkt 5). Bez push na `main`.
 - Bieżąca: **#384 zaległe** PR #436 — `db` czerwone (import F7 (d)+ restore; dec2 KSH count 4≠1). Poprawka: `before_*` filtr po dacie planu; test KSH `count >= 1`; event testowy `now()+1s`.
+
+## 2026-10-22 17:35 — #455 wpisane; merge main → #436
+
+- Skrzynka: #455 (Spawn2018, `dla-cursora`, bez `pilne`) — testy bazy po #436 (Działaj jako, ujemne restore, KSH=HHL). Wpisane: PLAN §3/§4/§8 (po #453, przed #409). #453/#446/#425/`pilne` + reszta w planie.
+- Scalanie: #436 F7 r5 „gotowe” na `060b5ee`, ale CONFLICTING z main (#451/#452) i brak `db` na tym SHA — bez scalenia. #454 F7 „gotowe”, visual w toku. Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — merge main (konflikt PLAN/POSTEP); #455 w planie; po push: `db` + czekam na ponowne F7.
