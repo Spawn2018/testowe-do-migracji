@@ -4150,3 +4150,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #447 F7 "gotowe" po `3ef91201` + CI zielone (unit/db/visual) → MERGED `dcf58431`. Bez push na `main`.
 - Biezaca: **#446 pkt 1** — migracja **0263** (`W_REJSIE`/`DOPLYNAL` + trigger); Edge `ferry-departures` ustawia status; sync nie cofa; testy status +3 (169). #384→0264 … B5→0268. Galaz `pakiet/hotfix-446-drobne`.
 
+## 2026-10-22 14:00 - #448 F7: split 0263/0264 (enum osobno)
+
+- Skrzynka: #446 biezaca; #425/#422/#413/`pilne` w kolejce po #446. Bez nowych `pilne` przerywajacych.
+- Scalanie: #448 F7 "niegotowe" (B1: enum+uzycie w jednej transakcji) → poprawka w tym samym PR. Inne PR bez "gotowe" po head.
+- Biezaca: **#446 F7** — **0263** tylko `ALTER TYPE`; **0264** funkcja+trigger (takze `of status`) + backfill; test OPOZNIONY→DOPLYNAL (+1 → 170). #384→0265 … B5→0269, indeks→0270+. Bez push na `main`.
+

@@ -97,6 +97,7 @@ export function planSailingSync(o: {
     if (iso(cur.arrival_at) !== iso(inc.arrivalUtc)) want.arrival_at = new Date(inc.arrivalUtc).toISOString();
     if (inc.status) {
       // #446: W_REJSIE/DOPLYNAL (albo actual_*) nie cofamy do ZAPLANOWANY z rozkładu; ODWOLANY wygrywa.
+      // ETA (compute_load_eta): po W_REJSIE „opóźniony” = delayed_departure_at (tu ustawiane z OPOZNIONY).
       const inTrip = cur.status === 'W_REJSIE' || cur.status === 'DOPLYNAL'
         || cur.actual_departure_at != null || cur.actual_arrival_at != null;
       if (status === 'ODWOLANY' || !inTrip) want.status = status;

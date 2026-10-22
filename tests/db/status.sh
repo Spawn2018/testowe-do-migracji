@@ -634,6 +634,10 @@ chk "#446: actual_arrival_at → DOPLYNAL" \
 q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S446b'" >/dev/null
 chk "#446: ODWOLANY + actual_departure → bez zmiany statusu" \
   "select status from sailings where id='$S446b'" ODWOLANY
+# F7: actual_* chroni W_REJSIE przed OPOZNIONY (operator_notice_apply / sync)
+q "update sailings set status = 'OPOZNIONY' where id='$S446'" >/dev/null
+chk "#446 F7: OPOZNIONY przy actual_* → zostaje DOPLYNAL" \
+  "select status from sailings where id='$S446'" DOPLYNAL
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
