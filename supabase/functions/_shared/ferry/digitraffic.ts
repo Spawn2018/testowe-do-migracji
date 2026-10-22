@@ -38,7 +38,8 @@ export async function fetchVesselFix(mmsi: number, appId: string): Promise<Vesse
 }
 
 export function parseDigitrafficLocations(json: any, mmsi: number): VesselFix | null {
-  const f = (json?.features ?? []).find((x: any) => x?.mmsi === mmsi);
+  // Digitraffic: mmsi bywa na feature i w properties — obu szukamy (#421).
+  const f = (json?.features ?? []).find((x: any) => Number(x?.mmsi ?? x?.properties?.mmsi) === mmsi);
   if (!f) return null;
   const [lon, lat] = f.geometry.coordinates;
   const p = f.properties ?? {};

@@ -292,7 +292,8 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     expect(early.skipped).toBe(true);
     const later = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, new Date(NOW.getTime() + 15 * 60000)).d);
     expect(later.skipped).toBeUndefined();
-    expect(st.runs.map((r) => r.job)).toEqual(['ferry-status', 'ferry-status']);
+    // #421: po zmianie statusu odświeżany jest też ferry-schedule (zapis przed recordRun statusu).
+    expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status']);
   });
 });
 
@@ -302,7 +303,10 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const st = new MemStore();
     st.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'), sail(WAW, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
     const r = await runFerryAis(deps(st, { 'digitraffic.fi': AIS }, {}, new Date('2026-09-24T19:40:00Z')).d);
-    expect(r.observations).toEqual({ 'M/F Nova Star': 'W_REJSIE', 'M/F Wawel': 'BRAK_MMSI' });
+    expect(r.observations?.['M/F Nova Star']).toBe('W_REJSIE');
+    expect(r.observations?.['M/F Wawel']).toBe('BRAK_MMSI');
+    // #421: poza portem odejścia + ruch → delayed_departure_at (obserwacja DEP).
+    expect(r.observations?.['M/F Nova Star:DEP']).toMatch(/^WYPŁYNĄŁ_/);
     expect(st.risks).toHaveLength(0);
   });
   it('postój w porcie Nynäshamn → informacja (INFO) z atrybucją CC BY 4.0; sygnał >1 h → brak wniosku o statku', async () => {
@@ -317,7 +321,8 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const r = await runFerryAis(deps(st2, { 'digitraffic.fi': inPort }, {}, new Date('2026-09-25T09:00:00Z')).d);
     expect(r.observations?.['M/F Nova Star']).toBe('BRAK_SWIEZEGO_SYGNALU');
     expect(st2.risks.some((x) => x.dedup.startsWith('AIS_NYN:'))).toBe(false);
-    expect(st2.risks.some((x) => x.titleKey === 'rk_ais_gap')).toBe(true);
+    // #421: bez ryzyka o starej pozycji (AIS_GAP skreślone w D-20261022-0105-01).
+    expect(st2.risks.some((x) => x.titleKey === 'rk_ais_gap')).toBe(false);
   });
 });
 
@@ -638,9 +643,12 @@ describe('AIS-SRC — trzy źródła, bez filtra Q-18', () => {
     d.collectAisstream = async () => olderAis;
     await runFerryAis(d);
     const spirit = st.vesselPositions.filter((p) => p.vesselId === SPIRIT);
-    expect(spirit).toHaveLength(1);
-    expect(spirit[0]).toMatchObject({ lat: 55.09783936, lon: 18.12014198, source: 'STENA', etaAt: '2026-10-05T06:00:00.000Z' });
-    expect(spirit[0].lat).not.toBe(55.1);
+    // #421: zapisujemy każde źródło (STENA + starszy AISSTREAM), nie tylko zwycięzcę.
+    expect(spirit).toHaveLength(2);
+    const stena = spirit.find((p) => p.source === 'STENA')!;
+    expect(stena).toMatchObject({ lat: 55.09783936, lon: 18.12014198, source: 'STENA', etaAt: '2026-10-05T06:00:00.000Z' });
+    expect(stena.lat).not.toBe(55.1);
+    expect(spirit.some((p) => p.source === 'AISSTREAM' && p.lat === 54.5)).toBe(true);
   });
   it('awaria aisstream → pozycja z Digitraffic, bez wyjątku', async () => {
     const { resetStenaIrmCache } = await import('../supabase/functions/_shared/integrations/jobs');
@@ -697,9 +705,10 @@ describe('FERRY-STATUS — Freight główne, AEM zapas', () => {
     }, {}, new Date('2026-10-05T12:00:00Z'));
     const r = await runFerryStatus(d);
     expect(r.ok).toBe(true);
-    expect(calls.some((c) => c.includes('_jcr_content.timetable.'))).toBe(false);
+    // Zapas statusu (AEM) nie jest wołany gdy Freight OK; #421 może wołać timetable przy odświeżeniu rozkładu.
     expect(st.sailings.find((s) => s.vessel_id === 'v-ebba')).toMatchObject({ status: 'ODWOLANY', source: 'STENA', route: 'GDY-KAA' });
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_STATUS:'))).toBe(false);
+    expect(calls.some((c) => c.includes('admin-ajax.php'))).toBe(true);
   });
   it('błąd Freight → ryzyko i przejście na JSON AEM, bez wyjątku', async () => {
     const { resetStenaFreightCache } = await import('../supabase/functions/_shared/integrations/jobs');

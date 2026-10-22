@@ -4016,3 +4016,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: F7 na `7463257`: jeszcze nie — (1) numer fikcyjny `+48600999888`, (2) TEST na `sms_zone_recipients` tylko przy EXTERNAL on + `admin_sms_zone_test` wyjątek R-2, (3) pull 2 z kontrolą rodzaju. Archiwum TELM: numer → „[numer właściciela]”.
 - Scalanie: #424 CI zielone na `649ad51e` (tylko numer); bez „gotowe”. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** — 0257 + i2 634; czeka CI i F7.
+
+## 2026-10-22 03:20 — #405+#427+#428 SCALONE; start #421
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405 zamknięte; #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie.
+- Scalanie: #427 F7 gotowe (`ff3bde3`) → merge `e0edff5c`; #428 F7 gotowe (`07f478c`) → merge `0712b8f3`; #424 F7 gotowe (`feee9d1`) → merge `87104ff1` (0257). Bez push na `main`.
+- Bieżąca: **HOTFIX #421** (`pakiet/hotfix-421-ferry-ais`, migracja **0258**) — AIS Nova Star/Stena, rozkład codzienny, wypłynięcia/dopłynięcia, bez AIS_GAP.
