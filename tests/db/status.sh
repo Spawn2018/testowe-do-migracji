@@ -690,5 +690,42 @@ q "update sailings set status = 'OPOZNIONY' where id='$S446'" >/dev/null
 chk "#446 F7: OPOZNIONY przy actual_* → zostaje DOPLYNAL" \
   "select status from sailings where id='$S446'" DOPLYNAL
 
+# #461 F7: Prom tylko z READY…AT_PORT_GDANSK — PLANNED nie „wypływa”
+echo; echo "[#461] zakres statusów + RIO_NO_POSITION"
+L461p=$(L 77)
+S461p=77777777-0000-0000-0000-000000000477
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,status,source) values
+ ('$S461p','$P','$V445','GDN-NYN',
+  now() - interval '3 hours', now() + interval '15 hours', now() - interval '2 hours','W_REJSIE','RECZNIE')" >/dev/null
+mk $L461p P461 "'HHL/P461'" "'SCX/P461'" PLANNED "'$S461p'"
+chk "#461: PLANNED + rejs odpłynął → bez FERRY" \
+  "select promote_ferry_departures(now()); select status from loads where id='$L461p'" PLANNED
+
+# RIO_NO_POSITION: blokuje SILENT; escalate tylko NO_POSITION/SILENT (nie SEFS)
+L461r=$(L 78)
+mk $L461r R461 "'HHL/R461'" "'SCX/R461'" IN_TRANSIT_PL null
+q "update loads set plan_load_date = current_date, plan_delivery_date = current_date + 5,
+       tracking_opened_at = public.tracking_window_start(current_date)
+     where id='$L461r'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+     ('$L461r', now() - interval '3 hours', ST_SetSRID(ST_MakePoint(17.02, 52.09), 4326), 'TELEMATICS_API')" >/dev/null
+q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values
+     ('$P','$L461r','RESOURCE_MISSING','HIGH','RIO brak pozycji','rk_rio_no_position','{}'::jsonb,'RIO_NO_POSITION:$L461r'),
+     ('$P','$L461r','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}'::jsonb,'SILENT:$L461r')" >/dev/null
+chk "#461: RIO_NO_POSITION zamyka istniejące SILENT" \
+  "select detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$L461r'" true
+chk "#461: RIO_NO_POSITION blokuje nowe SILENT" \
+  "select count(*) from risk_signals where dedup_key='SILENT:$L461r' and resolved_at is null" 0
+D461np=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
+  values ('$P','NO_POSITION','NEW','#461 NO_POSITION','$L461r', now() - interval '1 hour',
+          jsonb_build_object('event_key','SILENT:$L461r')) returning id")
+D461sf=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
+  values ('$P','SEFS_OUT_OF_TABLE','NEW','#461 SEFS','$L461r', now() - interval '1 hour', '{}'::jsonb) returning id")
+q "select decision_escalate_overdue()" >/dev/null
+chk "#461: RIO blokuje escalate tylko NO_POSITION" \
+  "select (escalated_at is null)::text from decisions where id='$D461np'" true
+chk "#461: RIO nie blokuje escalate SEFS" \
+  "select (escalated_at is not null)::text from decisions where id='$D461sf'" true
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

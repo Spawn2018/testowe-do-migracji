@@ -17,7 +17,7 @@ declare
   v_src text;
   v_reason text;
   v_prev text;
-  v_ev uuid;
+  v_ev bigint;
   v_ev_at timestamptz;
   v_ev_src text;
   n int := 0;
@@ -47,7 +47,8 @@ begin
       'SAILING_CANCELLED:' || r.load_id || ':' || r.sailing_id);
   end loop;
 
-  /* Prom: AIS albo plan+1 h (brak odwołania). Bez spraw MISSED/NO_DEPARTURE. */
+  /* Prom: AIS albo plan+1 h (brak odwołania). Bez spraw MISSED/NO_DEPARTURE.
+     F7: tylko READY…AT_PORT_GDANSK (+ FERRY do korekty AIS) — nie PLANNED/DOCS/RESOURCES. */
   for r in
     select l.id as load_id, l.project_id, l.status, s.id as sailing_id,
            s.route as sailing_route, v.name as vessel,
@@ -57,8 +58,7 @@ begin
       join sailings s on s.id = l.sailing_id and s.route in ('GDN-NYN', 'GDY-KAA')
       join vessels  v on v.id = s.vessel_id
      where s.status is distinct from 'ODWOLANY'
-       and l.status in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY',
-                        'AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY')
+       and l.status in ('READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY')
   loop
     v_dep := null;
     v_src := null;
@@ -413,7 +413,8 @@ begin
       from loads l
      where public.load_in_tracking_window(l.id, now())
   loop
-    /* #461: jedna sprawa na przyczynę — RIO_NO_POSITION pokrywa brak pozycji. */
+    /* #461: jedna sprawa na przyczynę — RIO_NO_POSITION pokrywa brak pozycji.
+       l3_lapse zawsze (idempotentne) — inaczej decyzja-sierota zostaje „Nowa”. */
     if exists (
       select 1 from risk_signals s
        where s.dedup_key = 'RIO_NO_POSITION:' || r.id::text
@@ -421,9 +422,7 @@ begin
     ) then
       update risk_signals set resolved_at = now()
        where dedup_key = 'SILENT:' || r.id and resolved_at is null;
-      if found then
-        perform l3_lapse('SILENT:' || r.id, now());
-      end if;
+      perform l3_lapse('SILENT:' || r.id, now());
       continue;
     end if;
 
@@ -525,7 +524,8 @@ end $$;
 revoke all on function public.detect_silent_vehicles(integer) from public, anon, authenticated;
 grant execute on function public.detect_silent_vehicles(integer) to service_role;
 
--- #461 F7 pkt 5: nie eskaluj „Decyzja po terminie” gdy otwarte RIO_NO_POSITION tego transportu.
+-- #461 F7: nie eskaluj „Decyzja po terminie” tej samej przyczyny przy otwartym RIO_NO_POSITION
+-- (NO_POSITION / SILENT:…); inne decyzje transportu (SEFS, dokumenty…) eskalują normalnie.
 create or replace function public.decision_escalate_overdue()
 returns int
 language plpgsql
@@ -571,9 +571,13 @@ begin
        and d.due_at < now()
        and d.escalated_at is null
        and (d.status <> 'SNOOZED' or d.snooze_until is null or d.snooze_until < now())
-       and (
-         d.load_id is null
-         or not exists (
+       and not (
+         d.load_id is not null
+         and (
+           d.type_code = 'NO_POSITION'
+           or coalesce(d.detail->>'event_key', '') like 'SILENT:%'
+         )
+         and exists (
            select 1 from risk_signals s
             where s.dedup_key = 'RIO_NO_POSITION:' || d.load_id::text
               and s.resolved_at is null
@@ -722,7 +726,7 @@ end $$;
 
 revoke all on function public.decision_escalate_overdue() from public, anon, authenticated;
 comment on function public.decision_escalate_overdue() is
-  'Eskalacja decyzji po terminie. #461: pomija transport z otwartym RIO_NO_POSITION (jedna sprawa na przyczynę).';
+  'Eskalacja decyzji po terminie. #461: przy RIO_NO_POSITION pomija tylko NO_POSITION/SILENT tej samej przyczyny.';
 
 -- Jednorazowo: SG-17 / SG-18 / SG-23 (produkcja; TEST bez wierszy → no-op).
 do $fix461$
@@ -732,7 +736,7 @@ declare
   v_load uuid;
   v_dep timestamptz;
   v_status text;
-  v_ev uuid;
+  v_ev bigint;
   v_ev_at timestamptz;
   v_ok boolean;
   v_sailing uuid;
@@ -765,6 +769,8 @@ begin
          or dedup_key = 'SILENT:' || v_load::text
          or dedup_key like 'decision-overdue:%'
        );
+    /* F7: l3_lapse przy zamknięciu SILENT — inaczej decyzja NO_POSITION zostaje „Nowa”. */
+    perform public.l3_lapse('SILENT:' || v_load::text, now());
 
     /* F7: kopia przeczytania powiadomień przy zamkniętych sprawach SG-18. */
     insert into public.audit_log (user_id, action, entity, entity_id, new_value)

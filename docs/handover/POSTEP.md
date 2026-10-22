@@ -4249,3 +4249,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #464/#465/#466/#467 (Spawn2018, `dla-cursora`) — wpisane PLAN §4/§8. #463 już w planie (pilne, po #461).
 - Scalanie: brak F7 „gotowe” (PR #469: F7 „jeszcze nie” po `aa33562`).
 - Bieżąca: **#461** F7 — migracja **0270**, AIS albo plan+1 h (`SCHEDULE_ASSUMED`), bez `NO_DEPARTURE`/`MISSED_SAILING`, korekta SG-17/18/23, SILENT/eskalacja nie przy `RIO_NO_POSITION`; status **184**. #409→**0271**. Bez push na `main`.
+
+## 2026-10-22 22:45 — #471: #459+#470 SCALONE; #461 F7 r4
+
+- Skrzynka: #471 (Spawn2018, `dla-cursora`+`pilne`) — scalić #459 potem #470. Wykonane; #471 zamknięte.
+- Scalanie: #459 F7 + CI → MERGED `9ca7ee08`; #470 F7 + CI → MERGED `f064a005`. Bez push na `main`.
+- Bieżąca: **#461** / PR #469 F7 r4 — `v_ev bigint` (CI: uuid „44”), FERRY tylko READY…AT_PORT_GDANSK, `l3_lapse` zawsze przy RIO, escalate tylko NO_POSITION/SILENT, testy +5 → status **189**. Czekam CI + F7.

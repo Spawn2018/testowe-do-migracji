@@ -1398,3 +1398,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 22.10.2026 20:45 | #408 SCALONE (`00611f7e`); #460 `pilne` (ferry_track_sample 42702) → **0268**; #461 `pilne` (Prom=AIS) → **0269**; #409→**0270**, #413→**0271**, #422→**0272**, B5→**0273**; przerywa #409 | właściciel 20:42/20:45; pętla |
 | 22.10.2026 21:25 | #462/#460 SCALONE (`045d9bd7`, 0268); #463 `pilne` (backup/cron) po #461; start #461 → **0269** | pętla |
 | 22.10.2026 22:00 | F7 #469 niegotowe (decyzja 20:47): #461 → **0270** SCHEDULE_ASSUMED +1h, bez NO_DEPARTURE/MISSED; #409→**0271**; #464–#467 wpisane | pętla |
+| 22.10.2026 22:45 | #471 `pilne`: #459 SCALONE (`9ca7ee08`) → #470 SCALONE (`f064a005`); #471 zamknięte; #461 F7 r4 (v_ev bigint, zakres READY…, escalate zawężony, status 189) | pętla |
