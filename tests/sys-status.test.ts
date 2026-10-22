@@ -50,3 +50,12 @@ describe('Stan systemu — dane', () => {
     expect(readFileSync('src/auth/LiveStatus.tsx', 'utf8')).toContain("import('./SystemStatusPanel')");
   });
 });
+
+/* Właściciel 22.10.2026 01:13: Wydajność na produkcji nie może być pustym ekranem — plan pomiarów E46 z „bez pomiaru” */
+import { PERF_PLAN } from '../src/lib/sysSource';
+describe('Stan systemu › Wydajność bez źródła', () => {
+  it('plan pomiarów E46 ma 5 pozycji z limitami', () => {
+    expect(PERF_PLAN.map((r) => r.id)).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+    expect(PERF_PLAN.every((r) => r.limit.length > 0)).toBe(true);
+  });
+});

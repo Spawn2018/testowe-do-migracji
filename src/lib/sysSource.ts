@@ -101,9 +101,21 @@ export function securityRows(nowIso: string): SecRow[] | null {
   return null;
 }
 
+/**
+ * E46 — co mierzymy i jakie są limity. Właściciel 22.10.2026, 01:13: na produkcji zakładka była pusta.
+ * Dopóki baza nie zapisuje pomiarów (#422), produkcja pokazuje plan pomiarów z wynikiem „bez pomiaru”.
+ */
+export const PERF_PLAN: readonly Omit<PerfRow, 'result' | 'ok'>[] = [
+  { id: 'p1', what: 'Kokpit · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p2', what: 'Mapa · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p3', what: 'Harmonogram w układzie pliku · komputer', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p4', what: 'Funkcje list w bazie', how: 'p95', limit: 'p95 ≤ 500 ms' },
+  { id: 'p5', what: 'Równoczesność', how: '20 sesji przez 10 min', limit: '0 błędów' },
+];
+
 export function perfResults(nowIso: string): Perf | null {
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoPerf(nowIso);
-  return null;
+  return { at: null, rows: PERF_PLAN.map((r) => ({ ...r, result: '—', ok: null })) };
 }
 
 /** E23 pkt 3: progi „Nie działa” (zmienia Administrator HHL). */
