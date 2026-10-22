@@ -759,7 +759,7 @@ SG-19. Adapter `rioPositionSharing.ts`, Edge `rio-links`, cron `tower-rio-links`
 ### HOTFIX #441 · wdrożyć Edge z #430 + zadania po awarii (`pilne`) — W TOKU (`pakiet/hotfix-441-deploy-edge`)
 1. ~~Wdrożenie Edge~~ — zrobione w `deploy-main` po #443 (m.in. `rio-links`, `ferry-schedule`, `ferry-ais`, …).
 2. ~~Ręczne: `ferry-schedule`, `tracking-guard`, nocne, `usage-check`~~ — `ferry-schedule` `ok: true` (inserted 15); SQL nocne + `tracking_delivery_guard` OK; `usage-check` `ok: true`.
-3. Poprawka `deploy-main`: SHA ostatniego **udanego** deployu, nie HEAD~1 — w tej gałęzi.
+3. Poprawka `deploy-main`: SHA ostatniego **udanego** deployu z wykonanym krokiem Edge (nie `skip=true` / HEAD~1); brak bazy → wszystkie funkcje — PR #444 F7.
 
 ### #384 zaległe · pkt 7–8 + import/okno + SMS quiet + resolve-all (D-20261022-0130-01 / #425) — W TOKU (`pakiet/hotfix-384-zalegle`, migracja **0262**); przerwane przez #442
 Po #442, przed #409. `decisions_read` z `carrier_org_id`; aktor w `DECISION_*`; `load_to`/`delivery_from` SG-01/02/T-01; import bez godziny → przesunięcie okna; `trg_sms_load_changes` × `bulk_quiet` (już 0259); `resolve-all` = `count(*)`. PR #436 — F7 niegotowe; CI w toku po merge main.
@@ -1345,3 +1345,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 22.10.2026 09:02 | D-20261022-0858-01 (#437, `pilne`): E44 RIO odczyt pozycji (SG-19); zgoda RIO na piśmie; migracja **0261**; #384→**0262**, #409→**0263**, #413→**0264**, #422→**0265**, B5→**0266**; przerywa #384 | właściciel 08:58/09:02; koordynator; pętla |
 | 22.10.2026 11:23 | #433+#439+#440 SCALONE (F7); #442 `pilne` (rio-links `shipment_code`) przerywa #384; #441 w planie (Edge/cron) | pętla |
 | 22.10.2026 12:15 | #442 SCALONE (#443 `8f9d7270`); `rio-links`/`ferry-schedule` `ok: true`; #441 pkt 1–2 wykonane; pkt 3 (`deploy-main` SHA) w `pakiet/hotfix-441-deploy-edge` | pętla |
+| 22.10.2026 12:40 | #444 F7 niegotowe: brak bazy → wszystkie Edge; baza tylko po kroku Edge success (nie skip) | pętla |
