@@ -41,6 +41,36 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
   return (res.data ?? ([] as unknown as T));
 }
 
+/**
+ * 22.10.2026 (właściciel 21:38): statusy SG-03 i innych zafakturowanych zniknęły z osi Status — zrzut brał tylko
+ * 500 najnowszych zdarzeń całego projektu, a od 20.10 starsze (październikowe statusy z GPS) wypadały.
+ * Teraz wszystkie zdarzenia, stronami po 1000 (limit odpowiedzi API, `max_rows`); `cap` tylko dla testów.
+ * Nowe zdarzenie między stronami przesuwa wiersze — powtórzony wiersz odrzucany po `id`.
+ */
+export async function fetchAllLoadEvents(
+  sb: SupabaseClient,
+  cap: number = Infinity,
+): Promise<{ data: EventRow[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: EventRow[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('load_events').select('id,load_id,event_type,occurred_at,payload')
+      .order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    const rows = (r.data ?? []) as EventRow[];
+    for (const row of rows) {
+      const k = String((row as { id: unknown }).id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
 export interface SupabaseProviderOptions {
   now?: () => string;
   eventLimit?: number;
@@ -73,24 +103,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     return (must(await notificationsQuery(), 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r));
   }
 
-  /* 22.10.2026 (właściciel 21:38): statusy SG-03 i innych zafakturowanych zniknęły z osi Status — zrzut brał tylko
-     500 najnowszych zdarzeń całego projektu, a od 20.10 starsze (październikowe statusy z GPS) wypadały.
-     Teraz wszystkie zdarzenia, stronami po 1000 (limit odpowiedzi API); `eventLimit` tylko dla testów. */
-  async function fetchAllEvents(): Promise<{ data: EventRow[] | null; error: { message: string } | null }> {
-    const PAGE = 1000;
-    const cap = opts.eventLimit ?? Infinity;
-    const out: EventRow[] = [];
-    for (let from = 0; from < cap; from += PAGE) {
-      const to = Math.min(from + PAGE, cap) - 1;
-      const r = await sb.from('load_events').select('id,load_id,event_type,occurred_at,payload')
-        .order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
-      if (r.error) return { data: null, error: r.error };
-      const rows = (r.data ?? []) as EventRow[];
-      out.push(...rows);
-      if (rows.length < to - from + 1) break;
-    }
-    return { data: out, error: null };
-  }
+  /* 22.10.2026 (właściciel 21:38): wszystkie zdarzenia zamiast 500 najnowszych — patrz fetchAllLoadEvents. */
+  const fetchAllEvents = () => fetchAllLoadEvents(sb, opts.eventLimit);
 
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
