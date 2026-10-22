@@ -4265,3 +4265,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   - Ręcznie: backup **#37 OK** `daily/2026-10-22-225919/` (96 tabel, 25 plików); polisy 0; kolejność 1; ferry-schedule ok w `integration_runs`.
   - Kod: stronicowanie `ctid` + timeout COPY; `backup-core` 13/13. Edge po scaleniu/`deploy-main`.
   - `email-budget`: brak crona (trigger); `usage-check` OK. #446 pkt 6: ferry-schedule z crona — 23.10 05:00 UTC.
+
+## 2026-10-23 00:05 — #472/#463 SCALONE; wznowienie #409 (0271)
+
+- Skrzynka: #463 zamknięte; #409/#464–#467/#446/#425/#413/#422 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #472 F7 „gotowe do scalenia” (head `b199168`) + CI unit/db/visual zielone → MERGED `24012262`. Issue #463 zamknięte. Bez push na `main`.
+- Bieżąca: **#409** (`pakiet/hotfix-409-fuel-basis` / PR #458) — rebase na main; migracja **0271** (0268=#460); `fuel_basis_public` + `set search_path = public, pg_temp`; allowlista bez `owner_note` dla SCX/KSH; money **191**.
