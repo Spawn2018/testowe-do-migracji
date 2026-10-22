@@ -57,7 +57,7 @@ sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local ro
      select admin_impersonate_stop(); commit;" >/dev/null
 
 echo; echo "[g20] import_schedule — kontekst i zmiana daty"
-sval "import_schedule ustawia tower.import_ctx" "select (prosrc like '%tower.import_ctx%')::text from pg_proc where proname='import_schedule' and pronargs=5" "true"
+sval "import_schedule ustawia tower.import_ctx" "select (prosrc like '%tower.import_ctx%')::text from pg_proc where proname='import_schedule' and pronargs=6" "true"
 sys "delete from shipment_items where shipment_code='SG-G20'" >/dev/null
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, qty, total_weight_t, schedule_row)
      values ('$P','$L2','SG-G20','DIMENSIONED',10,2.5,2.5,1,10,
