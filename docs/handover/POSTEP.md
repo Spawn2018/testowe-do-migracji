@@ -4076,3 +4076,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7. #431 SCALONE na main (`e8480e1e`).
 - Scalanie: brak „F7: gotowe”. #434 db FAIL na `4ec8db68` (i2 644/646): (1) `||` vs `->>` w asercji load_escorts; (2) slot 9 poza CHECK 1–2 w sms_zone_recipients. Bez push na `main`.
 - Bieżąca: **#400** — nawiasy w SELECT escorts; slot=2 dla maski phone_national.
+
+## 2026-10-22 07:50 — #400 F7 r3: telefon pilota + RODO + scrub
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7.
+- Scalanie: brak „F7: gotowe”. #434 db FAIL `0f61e8a3` (i2 645/646): INSERT load_escorts z E.164 łamał `driver_phone_national_chk`. Bez push na `main`.
+- Bieżąca: **#400** F7 r3 — `driver_phone='000000222'` (krajowy); filtr `entity_id` w asercjach app_users/sms_zone; +2 testy RODO po purge; `purge` przywraca `audit_source` i scrub jednym UPDATE (retencja od `created_at`); i2 646→648.

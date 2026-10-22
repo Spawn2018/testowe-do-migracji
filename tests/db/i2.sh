@@ -357,6 +357,9 @@ for x in c1 d1 e1; do SYS "insert into positions (load_id, ts, geom_raw, source)
 SYS "insert into driver_tokens (load_id, token_hash, expires_at) values ('$(R e1)', 'stary1', now() - interval '91 days'), ('$(R e1)', 'swiezy', now() - interval '89 days')"
 SYS "insert into driver_tokens (load_id, token_hash, expires_at, revoked_at) values ('$(R e1)', 'odwolany', now() + interval '1 day', now() - interval '100 days')"
 chk "przebieg: anonimizacja 2 (rozładowany 91 d + anulowany 91 d)" "$(Q "select purge_personal_data()")" "2"
+# #400 F7 r3: UPDATE-y RODO maskują kierowcę w dzienniku (source=rodo); retencja od created_at wpisu.
+chk "D-1243/#400: UPDATE RODO — source=rodo i maska kierowcy (R a1)" "$(Q "select (count(*) > 0 and bool_and(source = 'rodo' and old_value->>'driver_name' = '[dane osobowe]'))::text from audit_log where entity='loads' and entity_id='$(R a1)' and old_value ? 'driver_name'")" "true"
+chk "D-1243/#400: dziennik R a1/c1 bez Jan Kowalski / 600100200" "$(Q "select count(*) from audit_log where entity='loads' and entity_id in ('$(R a1)','$(R c1)') and (coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%Jan Kowalski%' or coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%600100200%')")" "0"
 chk "rozładowany 91 d: imię i telefon usunięte" "$(Q "select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id='$(R a1)'")" "∅/∅"
 chk "rozładowany 89 d: dane zostają" "$(Q "select driver_name from loads where id='$(R b1)'")" "Jan Kowalski"
 chk "anulowany 91 d: dane i pozycje usunięte (NOWE)" "$(Q "select coalesce(driver_phone,'∅') from loads where id='$(R c1)'")/$(Q "select count(*) from positions where load_id='$(R c1)'")" "∅/0"
@@ -695,18 +698,20 @@ chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48000000111', driver_name='Jan Test' where id='$L1'" >/dev/null
 # #400 / D-1243: loads.driver_* jawne w historii; inne tabele nadal maskowane.
 chk "D-1243/#400: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48000000111' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# F7 r3: driver_phone krajowy (0111 ^[0-9]{7,12}$), nie E.164 — jak i2 ok. 1181.
 $PSQL -c "delete from load_escorts where load_id='$L1'; insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
- values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '+48000000222', 'PL',
+ values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '000000222', 'PL',
          (select id from app_users where auth_id='$HHL'))" >/dev/null
 # Nawiasy: || ma wyższy priorytet niż ->> (bez nich: (text||jsonb)->>'…' → brak operatora).
-chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/+48000000222"
+chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/000000222"
+HHL_UID=$(Q "select id from app_users where auth_id='$HHL'")
 $PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
-chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
-# slot 1–2 (0106); slot 1 mógł zostać po F7 B1 — używamy 2.
+chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
+# slot 1–2 (0106); slot 1 mógł zostać po F7 B1 — używamy 2; filtr entity_id = list_key:slot.
 $PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
  values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)
  on conflict (list_key, slot) do update set phone_national='000000001', display_name='Test 400', active=true" >/dev/null
-chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
+chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='LOAD_SREM:2' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
 $PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
 chk "D-1243/#400: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
 chk "D-1243/#400: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"

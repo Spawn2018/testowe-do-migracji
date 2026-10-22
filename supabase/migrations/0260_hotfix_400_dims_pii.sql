@@ -232,11 +232,11 @@ set search_path to 'public', 'extensions'
 as $function$
 declare
   n int; n_c int; n_pos int; n_pos_c int; n_pos_d int; n_tok int; n_esc int; n_aud int := 0;
-  r record;
-  v_old jsonb; v_new jsonb;
+  v_prev_source text;
 begin
   if (p_days >= 0) is not true then raise exception 'p_days musi być ≥ 0' using errcode = '22023'; end if;
 
+  v_prev_source := nullif(btrim(current_setting('tower.audit_source', true)), '');
   perform set_config('tower.audit_source', 'rodo', true);
 
   update loads set driver_name = null, driver_phone = null
@@ -259,46 +259,46 @@ begin
        or (l.status = 'CANCELLED' and l.actual_delivery_at is null and l.updated_at < now() - make_interval(days => p_days)));
   get diagnostics n_esc = row_count;
 
-  /* Retencja: jawne driver_* w dzienniku (po D-1243) — zamaskuj po terminie. */
-  for r in
-    select a.id, a.old_value, a.new_value
-      from public.audit_log a
-     where a.entity in ('loads', 'load_escorts')
-       and a.created_at < now() - make_interval(days => p_days)
-       and (
-         (a.old_value ? 'driver_name' and jsonb_typeof(a.old_value -> 'driver_name') <> 'null'
-           and a.old_value ->> 'driver_name' is distinct from '[dane osobowe]')
-         or (a.old_value ? 'driver_phone' and jsonb_typeof(a.old_value -> 'driver_phone') <> 'null'
-           and a.old_value ->> 'driver_phone' is distinct from '[dane osobowe]')
-         or (a.new_value ? 'driver_name' and jsonb_typeof(a.new_value -> 'driver_name') <> 'null'
-           and a.new_value ->> 'driver_name' is distinct from '[dane osobowe]')
-         or (a.new_value ? 'driver_phone' and jsonb_typeof(a.new_value -> 'driver_phone') <> 'null'
-           and a.new_value ->> 'driver_phone' is distinct from '[dane osobowe]')
-       )
-  loop
-    v_old := r.old_value;
-    v_new := r.new_value;
-    if v_old is not null then
-      if v_old ? 'driver_name' and jsonb_typeof(v_old -> 'driver_name') <> 'null' then
-        v_old := jsonb_set(v_old, array['driver_name'], '"[dane osobowe]"'::jsonb);
-      end if;
-      if v_old ? 'driver_phone' and jsonb_typeof(v_old -> 'driver_phone') <> 'null' then
-        v_old := jsonb_set(v_old, array['driver_phone'], '"[dane osobowe]"'::jsonb);
-      end if;
-    end if;
-    if v_new is not null then
-      if v_new ? 'driver_name' and jsonb_typeof(v_new -> 'driver_name') <> 'null' then
-        v_new := jsonb_set(v_new, array['driver_name'], '"[dane osobowe]"'::jsonb);
-      end if;
-      if v_new ? 'driver_phone' and jsonb_typeof(v_new -> 'driver_phone') <> 'null' then
-        v_new := jsonb_set(v_new, array['driver_phone'], '"[dane osobowe]"'::jsonb);
-      end if;
-    end if;
-    update public.audit_log
-       set old_value = v_old, new_value = v_new
-     where id = r.id;
-    n_aud := n_aud + 1;
-  end loop;
+  /* Po trzech UPDATE-ach przywróć poprzednie źródło (scrub dziennika bez wyzwalacza). */
+  perform set_config('tower.audit_source', coalesce(v_prev_source, ''), true);
+
+  /* Retencja dziennika od created_at wpisu — jeden UPDATE (bez pętli). */
+  update public.audit_log a
+     set old_value = case when a.old_value is null then null else
+           a.old_value
+           || case when a.old_value ? 'driver_name'
+                    and jsonb_typeof(a.old_value -> 'driver_name') <> 'null'
+                    and a.old_value ->> 'driver_name' is distinct from '[dane osobowe]'
+               then jsonb_build_object('driver_name', '[dane osobowe]') else '{}'::jsonb end
+           || case when a.old_value ? 'driver_phone'
+                    and jsonb_typeof(a.old_value -> 'driver_phone') <> 'null'
+                    and a.old_value ->> 'driver_phone' is distinct from '[dane osobowe]'
+               then jsonb_build_object('driver_phone', '[dane osobowe]') else '{}'::jsonb end
+         end,
+         new_value = case when a.new_value is null then null else
+           a.new_value
+           || case when a.new_value ? 'driver_name'
+                    and jsonb_typeof(a.new_value -> 'driver_name') <> 'null'
+                    and a.new_value ->> 'driver_name' is distinct from '[dane osobowe]'
+               then jsonb_build_object('driver_name', '[dane osobowe]') else '{}'::jsonb end
+           || case when a.new_value ? 'driver_phone'
+                    and jsonb_typeof(a.new_value -> 'driver_phone') <> 'null'
+                    and a.new_value ->> 'driver_phone' is distinct from '[dane osobowe]'
+               then jsonb_build_object('driver_phone', '[dane osobowe]') else '{}'::jsonb end
+         end
+   where a.entity in ('loads', 'load_escorts')
+     and a.created_at < now() - make_interval(days => p_days)
+     and (
+       (a.old_value ? 'driver_name' and jsonb_typeof(a.old_value -> 'driver_name') <> 'null'
+         and a.old_value ->> 'driver_name' is distinct from '[dane osobowe]')
+       or (a.old_value ? 'driver_phone' and jsonb_typeof(a.old_value -> 'driver_phone') <> 'null'
+         and a.old_value ->> 'driver_phone' is distinct from '[dane osobowe]')
+       or (a.new_value ? 'driver_name' and jsonb_typeof(a.new_value -> 'driver_name') <> 'null'
+         and a.new_value ->> 'driver_name' is distinct from '[dane osobowe]')
+       or (a.new_value ? 'driver_phone' and jsonb_typeof(a.new_value -> 'driver_phone') <> 'null'
+         and a.new_value ->> 'driver_phone' is distinct from '[dane osobowe]')
+     );
+  get diagnostics n_aud = row_count;
 
   delete from positions p
   using loads l
@@ -335,4 +335,4 @@ end $function$;
 revoke all on function public.purge_personal_data(integer) from public, anon, authenticated;
 
 comment on function public.purge_personal_data(integer) is
-  'I-7 + D-1710 + #400: retencja kierowcy/pilota; scrub driver_* w audit_log; UPDATE z audit_source=rodo.';
+  'I-7 + D-1710 + #400: retencja kierowcy/pilota; scrub driver_* w audit_log od created_at wpisu; UPDATE z audit_source=rodo.';
