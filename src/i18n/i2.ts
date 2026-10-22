@@ -21,6 +21,11 @@ const pl: Dict = {
   i18_imp_consent: "Daty z pliku KSH nadpisują plan (DATY-67)",
   i18_imp_dates: "Import zmienia daty z pliku KSH ({n}):",
   i18_imp_dates_note: "Plik jest źródłem — daty zostaną zapisane. Zmiana < 5 dni przed załadunkiem → ryzyko „późna zmiana”.",
+  // #426 — import bez powiadomień (tylko Administrator HHL, decyzja 22.10 01:38)
+  i426_quiet: "Import bez powiadomień",
+  i426_quiet_on: "Nikt nie dostanie maila, dzwonka ani SMS, a zmiany z pliku nie otworzą spraw w Ryzykach. W historii zostanie wpis „import bez powiadomień”.",
+  i426_quiet_off: "Zmiany z pliku wyślą powiadomienia według Opcji › Kto co dostaje.",
+  i426_saved_quiet: "bez powiadomień",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Zapisz konto Watch Tower w drugiej aplikacji uwierzytelniającej (np. na zapasowym telefonie). Każde urządzenie ma własny kod i działa niezależnie.",
   i17_add: "Dodaj drugie urządzenie",
