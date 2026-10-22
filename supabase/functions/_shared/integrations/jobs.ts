@@ -1613,6 +1613,7 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
       const inWindow = loadInTrackingWindow(matchRow, nowIso);
       const linkValid = rioLinkValidNow(nowIso, load.rio_valid_from, load.rio_valid_to);
       const wasInvalid = load.rio_check_state === 'invalid';
+      const wasDown = load.rio_check_state === 'down';
       const wasExpired = !pending && !wasInvalid && !linkValid
         && (load.rio_valid_from != null || load.rio_valid_to != null);
 
@@ -1664,31 +1665,36 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
           })) risks++;
           continue;
         }
-        // #453: 200 bez pozycji → sprawa transportu (SCX+HHL), nie SOURCE_DOWN.
+        // #453: 200 JSON bez pozycji → sprawa transportu (SCX+HHL), nie SOURCE_DOWN.
+        // F7 #456 P2: sprawa HIGH dopiero od 3. kolejnego no_position (~6 min), jak streak przy down.
         if (res.kind === 'no_position') {
           down++;
           noPosition++;
+          const streak = (load.rio_error_streak ?? 0) + 1;
           await applyPatch(load, {
             rio_check_state: 'down',
             rio_check_at: nowIso,
-            rio_error_streak: 0,
+            rio_error_streak: streak,
           });
           warnings.push(res.warning);
-          if (await deps.store.raiseRisk({
-            kind: 'RESOURCE_MISSING',
-            severity: 'HIGH',
-            title: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
-            titleKey: 'rk_rio_no_position',
-            params: {},
-            detail: {
-              zrodlo: 'RIO', loadId: load.id, status: res.status,
-              url: rioPositionUrlSafe(load.rio_tracking_id),
-              warning: res.warning,
-            },
-            dedup: `RIO_NO_POSITION:${load.id}`,
-            sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
-            loadId: load.id,
-          })) risks++;
+          if (streak >= 3) {
+            if (await deps.store.raiseRisk({
+              kind: 'RESOURCE_MISSING',
+              severity: 'HIGH',
+              title: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
+              titleKey: 'rk_rio_no_position',
+              params: {},
+              detail: {
+                zrodlo: 'RIO', loadId: load.id, status: res.status,
+                url: rioPositionUrlSafe(load.rio_tracking_id),
+                warning: res.warning,
+                streak,
+              },
+              dedup: `RIO_NO_POSITION:${load.id}`,
+              sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+              loadId: load.id,
+            })) risks++;
+          }
           continue;
         }
         // sieć / 5xx — liczy się do awarii źródła dopiero gdy wszystkie linki tak padną (#453).
@@ -1725,10 +1731,10 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
         rio_error_streak: 0,
       });
       if (pending) pendingOk++;
-      // resolveRisks tylko przy przejściu ze stanu invalid / wygasłego (F7 r3).
+      // resolveRisks tylko przy przejściu ze stanu invalid / wygasłego / down (F7 r3; F7 #456 D).
       if (wasInvalid) await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
       if (wasExpired) await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
-      await deps.store.resolveRisks(`RIO_NO_POSITION:${load.id}`);
+      if (wasDown) await deps.store.resolveRisks(`RIO_NO_POSITION:${load.id}`);
 
       if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
         skippedValidity++;

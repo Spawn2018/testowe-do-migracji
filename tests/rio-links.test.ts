@@ -156,6 +156,22 @@ describe('E44 RIO adapter', () => {
     expect(r.ok).toBe(true);
     expect(JSON.stringify(r)).not.toMatch(/SEKRET/);
   });
+
+  it('F7 #456 P1: 200 nie-JSON → down (nie no_position)', async () => {
+    const r = await fetchRioPosition({
+      trackingId: 'x', secret: 's',
+      fetchImpl: async () => new Response('<html>maintenance</html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+    });
+    expect(r).toMatchObject({ ok: false, kind: 'down', warning: 'RIO: odpowiedź nie-JSON' });
+  });
+
+  it('F7 #456 P1: null / nie-obiekt → down', () => {
+    expect(parseRioPositionPayload(null)).toMatchObject({ ok: false, kind: 'down', warning: 'RIO: brak JSON' });
+    expect(parseRioPositionPayload('x')).toMatchObject({ ok: false, kind: 'down', warning: 'RIO: brak JSON' });
+  });
 });
 
 describe('E44 runRioLinks', () => {
@@ -391,7 +407,7 @@ describe('E44 runRioLinks', () => {
     expect(okPatches[0]).toMatchObject({ rio_error_streak: 0 });
   });
 
-  it('#453: 2 linki, jeden bez position → ok, sprawa z load_id, bez SOURCE_DOWN', async () => {
+  it('#453: 2 linki, jeden bez position (streak≥3) → ok, sprawa z load_id, bez SOURCE_DOWN', async () => {
     const risks: { dedup: string; loadId?: string }[] = [];
     const loads = [
       baseLoad({
@@ -399,6 +415,7 @@ describe('E44 runRioLinks', () => {
         code: 'SG-18',
         rio_tracking_id: 'track-18',
         rio_check_state: 'ok',
+        rio_error_streak: 2,
         rio_valid_from: SAMPLE.start,
         rio_valid_to: SAMPLE.end,
       }),
@@ -435,6 +452,54 @@ describe('E44 runRioLinks', () => {
     expect(res.observations?.down).toBe('1');
     expect(risks.some((r) => r.dedup === 'RIO_NO_POSITION:sg-18' && r.loadId === 'sg-18')).toBe(true);
     expect(risks.some((r) => r.dedup === 'SOURCE_DOWN:RIO')).toBe(false);
+  });
+
+  it('F7 #456 P2: 2× no_position → bez sprawy; 3× → sprawa', async () => {
+    const risks: string[] = [];
+    const load = baseLoad({
+      rio_check_state: 'ok',
+      rio_error_streak: 0,
+      rio_valid_from: SAMPLE.start,
+      rio_valid_to: SAMPLE.end,
+    });
+    const emptyPos = async () =>
+      new Response(JSON.stringify({ id: 'x', name: 'x' }), { status: 200 });
+    const runOnce = async () => runRioLinks({
+      store: store([load], {
+        raiseRisk: async (r) => { risks.push(r.dedup); return true; },
+        update: async (_id, p) => { Object.assign(load, p); },
+      }),
+      fetch: emptyPos,
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    await runOnce();
+    expect(load.rio_error_streak).toBe(1);
+    expect(risks.some((d) => d.startsWith('RIO_NO_POSITION:'))).toBe(false);
+    await runOnce();
+    expect(load.rio_error_streak).toBe(2);
+    expect(risks.some((d) => d.startsWith('RIO_NO_POSITION:'))).toBe(false);
+    await runOnce();
+    expect(load.rio_error_streak).toBe(3);
+    expect(risks).toContain('RIO_NO_POSITION:load-1');
+  });
+
+  it('F7 #456 D: resolve RIO_NO_POSITION tylko przy przejściu z down', async () => {
+    const resolved: string[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        resolveRisks: async (prefix) => { resolved.push(prefix); return 0; },
+        processPosition: async () => {},
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved.some((p) => p.startsWith('RIO_NO_POSITION:'))).toBe(false);
   });
 
   it('#453: wszystkie linki bez odpowiedzi → SOURCE_DOWN, ok:false', async () => {

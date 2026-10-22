@@ -96,13 +96,17 @@ function isBlankCoord(v: unknown): boolean {
   return v == null || v === '';
 }
 
-/** Parsuje JSON odpowiedzi RIO; bez secret w wyniku. Błędy payloadu = no_position (#453). */
+/**
+ * Parsuje JSON odpowiedzi RIO; bez secret w wyniku.
+ * Poprawny JSON bez użytecznej pozycji → no_position (#453).
+ * null / nie-obiekt → down (F7 #456 P1 — to nie jest „link bez pozycji”).
+ */
 export function parseRioPositionPayload(
   raw: unknown,
   nowMs: number = Date.now(),
 ): RioPositionResult {
   if (raw == null || typeof raw !== 'object') {
-    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak JSON' };
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak JSON' };
   }
   const o = raw as Record<string, unknown>;
   const pos = o.position;
@@ -186,10 +190,11 @@ export async function fetchRioPosition(opts: {
     try {
       json = await res.json();
     } catch {
-      return { ok: false, kind: 'no_position', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
+      // F7 #456 P1: HTML/konserwacja z kodem 200 = awaria źródła, nie sprawa transportu.
+      return { ok: false, kind: 'down', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
     }
     const parsed = parseRioPositionPayload(json, opts.nowMs ?? Date.now());
-    if (!parsed.ok && parsed.kind === 'no_position') {
+    if (!parsed.ok) {
       return { ...parsed, status: res.status };
     }
     return parsed;
