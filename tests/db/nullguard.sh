@@ -28,9 +28,10 @@ if [ -z "$DOC" ]; then
   DOC=$($PSQL -c "insert into documents (project_id, load_id, category, storage_path, file_name, mime_type, size_bytes, uploaded_by) values ('$P','$L2','CMR','dokumenty/t/ng.pdf','ng.pdf','application/pdf',100,'$HHLID') returning id" | head -1)
 fi
 DOCOBJ=t/ng.pdf
-NOTIF=$($PSQL -c "select id from notifications where template='TEST' and user_id='$HHLID' limit 1" | head -1)
+# #402: bramka tłumi IN_APP bez event_key — bootstrap z matrix_event / poza triggerami.
+NOTIF=$($PSQL -c "select id from notifications where user_id='$HHLID' and channel='IN_APP' limit 1" | head -1)
 if [ -z "$NOTIF" ]; then
-  NOTIF=$($PSQL -c "insert into notifications (channel, recipient, user_id, template) values ('IN_APP','hhl@test','$HHLID','TEST') returning id" | head -1)
+  NOTIF=$($PSQL -c "set session_replication_role=replica; insert into notifications (channel, recipient, user_id, template, payload) values ('IN_APP','hhl@test','$HHLID','TEST','{\"matrix_event\":\"status\"}'::jsonb) returning id; set session_replication_role=origin" | head -1)
 fi
 PERMIT=$($PSQL -c "select id from permits where project_id='$P' and permit_no='P-1' limit 1" | head -1)
 if [ -z "$PERMIT" ]; then

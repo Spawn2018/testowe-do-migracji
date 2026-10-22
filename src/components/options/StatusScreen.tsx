@@ -19,7 +19,7 @@ import { kshSyncOf, kshSyncSourceRow } from '../../lib/kshSyncView';
 import { useTowerStore } from '../../store/useTowerStore';
 import {
   appErrors, checkSource, otherJobs, perfResults, saveSourceThreshold, securityRows, sourceHealth, sourceThresholds, sysActionsReady,
-  type AppErrors, type CheckResult, type ErrorGroup, type SourceRow, type SourceState, type SourceThreshold,
+  type AppErrors, type CheckResult, type ErrorGroup, type OtherJob, type SourceRow, type SourceState, type SourceThreshold,
 } from '../../lib/sysSource';
 
 type SysTab = 'sources' | 'errors' | 'security' | 'perf';
@@ -64,7 +64,7 @@ function Dot({ state }: { state: SourceState | 'ok' | 'warn' | 'bad' }) {
 
 /* ── Źródła danych (E23) ─────────────────────────────────────────────────────────────── */
 
-function Sources({ locale, rows, nowIso, canCheck, admin }: { locale: Locale; rows: SourceRow[]; nowIso: string; canCheck: boolean; admin: boolean }) {
+function Sources({ locale, rows, nowIso, canCheck, admin, jobs: jobsIn }: { locale: Locale; rows: SourceRow[]; nowIso: string; canCheck: boolean; admin: boolean; jobs?: OtherJob[] | null }) {
   const phone = useIsPhone();
   const [checks, setChecks] = useState<Record<string, CheckResult | 'busy'>>({});
   const [open, setOpen] = useState<string | null>(null);
@@ -150,7 +150,7 @@ function Sources({ locale, rows, nowIso, canCheck, admin }: { locale: Locale; ro
     );
   }
 
-  const jobs = otherJobs(nowIso) ?? [];
+  const jobs = jobsIn ?? otherJobs(nowIso) ?? [];
   return (
     <section className="sys-sec" data-sys-sources>
       {head}
@@ -420,6 +420,7 @@ function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
           </tbody>
         </table>
       </div>
+      {p.at ? null : <p className="sys-note" data-sys-perf-pending>{sy(locale, 'sys_perf_pending')}</p>}
     </section>
   );
 }
@@ -438,12 +439,19 @@ export function KshSyncSourceBlock({ locale, nowIso, admin }: { locale: Locale; 
   );
 }
 
-export function StatusScreen({ locale, nowIso, admin, mark }: { locale: Locale; nowIso: string; admin: boolean; mark?: ReactNode }) {
+/**
+ * `live` (wyglad/W-opcje-live-2, E23): produkcja podaje wiersze źródeł i pozostałe zadania z bazy (`src/auth/LiveStatus.tsx`);
+ * bez `live` — dane z `sysSource.ts` (demo).
+ */
+export function StatusScreen({ locale, nowIso, admin, mark, live }: {
+  locale: Locale; nowIso: string; admin: boolean; mark?: ReactNode;
+  live?: { rows: SourceRow[]; jobs: OtherJob[] };
+}) {
   const [tab, setTab] = useState<SysTab>('sources');
   const phone = useIsPhone();
   /* wyglad/P7-e (W13 zasady 15–16): wiersz „Plik KSH (SharePoint)”, gdy wykonawca poda stan synchronizacji */
   const kshSync = useTowerStore((s) => kshSyncOf(s));
-  const rows0 = sourceHealth(nowIso);
+  const rows0 = live ? live.rows : sourceHealth(nowIso);
   const rows = rows0 && kshSync ? [kshSyncSourceRow(kshSync, nowIso), ...rows0] : rows0;
   const errs = appErrors(nowIso);
   if (!rows) return null;
@@ -459,7 +467,7 @@ export function StatusScreen({ locale, nowIso, admin, mark }: { locale: Locale; 
           <button key={k} type="button" role="tab" aria-selected={tab === k} data-sys-tab={k} onClick={() => setTab(k)}>{label(k)}</button>
         ))}
       </div>
-      {tab === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} /> : null}
+      {tab === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} jobs={live?.jobs} /> : null}
       {tab === 'errors' && errs ? <Errors locale={locale} data={errs} nowIso={nowIso} /> : null}
       {tab === 'security' && admin ? <Security locale={locale} nowIso={nowIso} /> : null}
       {tab === 'perf' ? <PerfView locale={locale} nowIso={nowIso} /> : null}

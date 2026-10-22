@@ -35,6 +35,7 @@ import { sailTime } from '../lib/sailView';
 import { effDeparture } from '../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
+import { accountRole } from '../lib/accountRole';
 import { importSkipText, standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
@@ -70,7 +71,10 @@ function useDismiss(open: boolean, close: () => void, ref: { current: HTMLElemen
 
 export function ScheduleView() {
   /* M10 — rozkład rejsów jako druga zakładka harmonogramu (seg) */
-  const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>('loads');
+  /* wyglad/W-cele-przejsc (d): wiersz promu z „Sytuacji na trasie” otwiera Rejsy */
+  const [schedTab, setSchedTab] = useState<'loads' | 'sailings'>(() => (useTowerStore.getState().sailingFocus ? 'sailings' : 'loads'));
+  const sailingFocus = useTowerStore((s) => s.sailingFocus);
+  useEffect(() => { if (sailingFocus) setSchedTab('sailings'); }, [sailingFocus]);
   const loads = useTowerStore((s) => s.loads);
   const documents = useTowerStore((s) => s.documents);
   const role = useTowerStore((s) => s.role);
@@ -96,6 +100,9 @@ export function ScheduleView() {
   const [dryRun, setDryRun] = useState<ImportDiff | null>(null);
   /* D26 — usunięcia wyłącznie za wyraźną zgodą (domyślnie odznaczone, reset przy każdym pliku) */
   const [allowRemovals, setAllowRemovals] = useState(false);
+  /* #426: import bez powiadomień — tylko Administrator HHL (baza sprawdza to samo). */
+  const [quietImport, setQuietImport] = useState(false);
+  const canQuietImport = SERVER_IMPORT && accountRole(role) === 'HHL_ADMIN';
   const [dateChangeRows, setDateChangeRows] = useState<NonNullable<ServerImportDraft['preview']['confirmed']>>([]);
   const serverDraft = useRef<ServerImportDraft | null>(null);
   const [serverNote, setServerNote] = useState<string | null>(null);
@@ -225,6 +232,7 @@ export function ScheduleView() {
     setParseError(null);
     setDryRun(null);
     setAllowRemovals(false);
+    setQuietImport(false);
     setDateChangeRows([]);
     setParsing(true);
     serverDraft.current = null;
@@ -649,6 +657,22 @@ export function ScheduleView() {
                   </div>
                 </div>
               ) : null}
+              {canQuietImport ? (
+                <div data-import-quiet style={{ fontSize: 12, margin: '0 0 8px' }}>
+                  <label className="switchline">
+                    <input
+                      type="checkbox"
+                      checked={quietImport}
+                      data-import-quiet-toggle
+                      onChange={(e) => setQuietImport(e.target.checked)}
+                    />
+                    <span>{t(locale, 'i426_quiet')}</span>
+                  </label>
+                  <div style={{ color: quietImport ? 'var(--amber-ink)' : 'var(--ink-3)', marginTop: 4 }}>
+                    {t(locale, quietImport ? 'i426_quiet_on' : 'i426_quiet_off')}
+                  </div>
+                </div>
+              ) : null}
               <button
                 type="button"
                 className="btn"
@@ -677,13 +701,15 @@ export function ScheduleView() {
                           draft,
                           allowRemovals ? dryRun.removalCandidates.map((c) => c.code) : [],
                           [],
+                          canQuietImport && quietImport,
                         );
                         const note = standardSkipMessage(draft.meta.accepted, draft.meta.skippedStandard, { carrier: dryRun.skippedCarrier, empty: dryRun.skippedEmpty });
                         setServerNote(
                           res.version == null
                             ? t(locale, 'i1_nochange') + ' · ' + note
                             : note + ' · ' + tp(locale, 'i1_saved', { v: String(res.version), a: String(res.added.length), c: String(res.changed.length), x: String(res.cancelled.length), ms: String(res.ms) }) +
-                              (res.critical.length ? ' · ' + tp(locale, 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : ''),
+                              (res.critical.length ? ' · ' + tp(locale, canQuietImport && quietImport ? 'i426_crit_quiet' : 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : '') +
+                              (canQuietImport && quietImport ? ' · ' + t(locale, 'i426_saved_quiet') : ''),
                         );
                         const { refreshFromServer } = await import('../data/supabaseBridge');
                         await refreshFromServer();

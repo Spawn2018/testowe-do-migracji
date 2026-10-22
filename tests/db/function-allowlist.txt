@@ -104,6 +104,7 @@ authenticated driver_post_position
 authenticated email_budget_status
 authenticated fee_catalog_hints
 authenticated ferry_track_sample
+authenticated ferry_sailings_map
 authenticated fuel_add_reading
 authenticated fx_rate_before
 authenticated h1_route_check_state
@@ -152,6 +153,7 @@ authenticated map_display_state
 authenticated here_tiles_report
 authenticated mark_invoice_paid
 authenticated mark_load_message_read
+authenticated mark_notification_read_any
 authenticated mark_notifications_read
 authenticated money_effective_eur
 authenticated money_least_tier

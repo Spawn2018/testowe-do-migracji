@@ -49,9 +49,13 @@ err "konto bez wiersza app_users (is_hhl() = NULL) nie importuje" 99999999-0000-
 $PSQL -c "update app_users set active=false where auth_id='$HHL'" >/dev/null
 err "HHL nieaktywny (is_hhl() = NULL) nie importuje" $HHL "$(IMP "$R3" true)" "wyłącznie HHL"
 $PSQL -c "update app_users set active=true where auth_id='$HHL'" >/dev/null
-chk "anon: brak EXECUTE import_schedule"   "$(Q "select has_function_privilege('anon','import_schedule(uuid,jsonb,text[],jsonb,boolean)','execute')")" f
+chk "anon: brak EXECUTE import_schedule"   "$(Q "select has_function_privilege('anon','import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" f
 chk "authenticated: brak EXECUTE schedule_row_canon" "$(Q "select has_function_privilege('authenticated','schedule_row_canon(jsonb)','execute')")" f
 chk "funkcja SECURITY DEFINER z search_path" "$(Q "select prosecdef||':'||array_to_string(proconfig,',') from pg_proc where proname='import_schedule'")" "true:search_path=public"
+# #426: p_quiet tylko HHL_ADMIN
+$PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
+err "HHL_OPS: p_quiet=true odrzucone" $HHL "select import_schedule('$P', '[]'::jsonb, '{}'::text[], '{}'::jsonb, true, true)" "Administratora HHL"
+$PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
 
 echo; echo "[I-1] podgląd bez zapisu"
 val "podgląd: 3 nowe, 0 zmian, kandydat SG-00 zablokowany (faktura)" $HHL "select (r->'added')::text is not null and jsonb_array_length(r->'added')=3 and jsonb_array_length(r->'changed')=0 and jsonb_array_length(r->'blocked')=1 and r->'blocked'->0->>'reason'='INVOICED' from ($(IMP "$R3" true)) s(r)" t
@@ -73,13 +77,16 @@ chk "brak nowej wersji i zdarzeń" "$(Q "select count(*) from schedule_imports")
 
 echo; echo "[I-1] zmiany, awizacja (3.7), anulowanie"
 SG1=$(Q "select load_id from shipment_items where shipment_code='SG-01'"); T1=$(Q "select load_id from shipment_items where shipment_code='T-01'")
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push (I-10: e-mail HHL+SCX).
+$PSQL -c "update notification_matrix set email=true where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
 $PSQL -c "update loads set plan_load_from=('$D1 08:00'::timestamp at time zone 'Europe/Warsaw'), plan_load_to=('$D1 12:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG1'" >/dev/null
 R2="[{\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1b\",\"delivery_date\":\"$D2b\"},
      {\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"order_no\":\"KSH/77\"},
      {\"code\":\"SG-03\",\"length_m\":12,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1c\",\"delivery_date\":\"$D2c\"}]"
 val "podgląd: +1 ~2, krytyczna SG-01, kandydat T-01" $HHL "select jsonb_array_length(r->'added')||'/'||jsonb_array_length(r->'changed')||'/'||(r->'critical'->0->>'code')||'/'||(r->'cancel_candidates'->0->>'code') from ($(IMP "$R2" true)) s(r)" "1/2/SG-01/T-01"
 val "zapis bez zgody na anulowanie: T-01 zostaje" $HHL "select jsonb_array_length(r->'cancelled')||'/'||(r->>'version') from ($(IMP "$R2" false)) s(r)" "0/2" commit
-chk "SG-01: nowe daty planu, okno awizacji nietknięte (ANEKS 2)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||(plan_load_from is not null) from loads where id='$SG1'")" "$D1b $D2b true"
+# #384 zaległe: zmiana daty bez godziny → okno przesunięte na nowy dzień (nie null, nie stary dzień)
+chk "SG-01: nowe daty + okno przesunięte (#384)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||((plan_load_from at time zone 'Europe/Warsaw')::date = plan_load_date and (plan_load_to at time zone 'Europe/Warsaw')::date = plan_load_date) from loads where id='$SG1'")" "$D1b $D2b true"
 chk "SG-02: długość 18.50 w pozycji" "$(Q "select length_m from shipment_items where shipment_code='SG-02'")" "18.50"
 chk "SCHEDULE_DATE_CRITICAL dla SG-01" "$(Q "select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL' and load_id='$SG1'")" 1
 chk "powiadomienia w aplikacji: HHL + SCX" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 2
@@ -150,5 +157,247 @@ RCHG="[{\"code\":\"IH-IMP\",\"length_m\":18.1,\"width_m\":2.4,\"height_m\":2.4,\
        {\"code\":\"SG-36-1\",\"length_m\":12.0,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":9.5,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
 val "IH-IMP: zmiana długości na istniejącym → changed" $HHL "select (r->'changed'->0->>'code')||'/'||coalesce(r->'changed'->0->>'quiet_hist','false') from ($(IMP "$RCHG" false)) s(r)" "IH-IMP/true" commit
 chk "IH-IMP: długość 18.10 po zmianie" "$(Q "select length_m::text from shipment_items where shipment_code='IH-IMP'")" "18.10"
+
+echo; echo "[#426] import p_quiet — F7: 0 powiadomień / decyzji / SMS / ryzyk / workflow"
+# F7#1: działanie SMS nie da się tu sprawdzić — trg_loads_sms wyłączony w 0257; tylko prosrc (e164 + quiet).
+chk "F7#1: trg_sms_load_changes ma driver_phone_e164" "$(Q "select (prosrc like '%driver_phone_e164%')::text from pg_proc where proname='trg_sms_load_changes'")" "true"
+chk "F7#1: trg_sms_load_changes ma bulk_quiet" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='trg_sms_load_changes'")" "true"
+chk "F7#3: l3_ksh_lead ma bulk_quiet" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='l3_ksh_lead'")" "true"
+chk "F7#4: wf_enqueue_event ma bulk_quiet" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='wf_enqueue_event'")" "true"
+
+# Działaj jako HHL_OPS → odmowa p_quiet (current_app_role = OPS)
+OPS_AUTH=11111111-0000-0000-0000-00000000d426
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active)
+  values ('$OPS_AUTH','00000000-0000-0000-0000-00000000a001','ops-426@test','HHL_OPS',true)
+  on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+OPS_ID=$(Q "select id::text from app_users where auth_id='$OPS_AUTH'")
+err "F7: Działaj jako HHL_OPS → p_quiet odmowa" $HHL "select admin_impersonate_start('$OPS_ID'::uuid); select import_schedule('$P', '[]'::jsonb, '{}'::text[], '{}'::jsonb, true, true)" "Administratora HHL"
+$PSQL -c "delete from impersonation_state" >/dev/null
+
+DQ1=$(Q "select (current_date + 30)::text")
+DQ2=$(Q "select (current_date + 35)::text")
+DQ1b=$(Q "select (current_date + 31)::text")
+DQ2b=$(Q "select (current_date + 36)::text")
+# Bloker 3: data w LEAD_DAYS (domyślnie 5) — quiet add nie tworzy LATE_DATE_CHANGE
+DN1=$(Q "select (current_date + 2)::text")
+DN2=$(Q "select (current_date + 7)::text")
+RQ1="[{\"code\":\"IQ-426A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
+RQ2="[{\"code\":\"IQ-426A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\"}]"
+RQN="[{\"code\":\"IQ-426N\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"}]"
+IMPQ() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"name\":\"q426.xlsx\",\"hash\":\"q426\",\"path\":\"harmonogramy/x/q426.xlsx\"}'::jsonb, $2, true)"; }
+
+# F7#7: dry_run quiet pokazuje critical (awizowany + zmiana daty)
+val "IQ-426: dodanie (bez quiet, dalekie daty)" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RQ1" false)) s(r)" 1 commit
+LIQ=$(Q "select load_id from shipment_items where shipment_code='IQ-426A'")
+$PSQL -c "update loads set plan_load_from=('$DQ1 08:00'::timestamp at time zone 'Europe/Warsaw'), plan_load_to=('$DQ1 12:00'::timestamp at time zone 'Europe/Warsaw'), carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LIQ'" >/dev/null
+$PSQL -c "update notification_matrix set email=true where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
+val "F7#7: dry_run quiet → critical widoczne" $HHL "select jsonb_array_length(r->'critical')||'/'||(r->>'quiet') from ($(IMPQ "$RQ2" true)) s(r)" "1/true"
+
+N0=$(Q "select count(*) from notifications")
+D0=$(Q "select count(*) from decisions")
+S0=$(Q "select count(*) from sms_outbox")
+C0=$(Q "select count(*) from load_events where load_id='$LIQ' and event_type='SCHEDULE_DATE_CRITICAL'")
+# zapis quiet: critical w odpowiedzi (jak w dry_run), ale 0 zdarzeń/powiadomień
+val "IQ-426: p_quiet zapis → quiet + critical w odpowiedzi + changed" $HHL "select (r->>'quiet')||'/'||jsonb_array_length(r->'critical')||'/'||jsonb_array_length(r->'changed') from ($(IMPQ "$RQ2" false)) s(r)" "true/1/1" commit
+chk "IQ-426: 0 nowych SCHEDULE_DATE_CRITICAL" "$(Q "select (count(*) - $C0)::text from load_events where load_id='$LIQ' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+chk "IQ-426: 0 nowych notifications" "$(Q "select (count(*) - $N0)::text from notifications")" "0"
+chk "IQ-426: 0 nowych decisions" "$(Q "select (count(*) - $D0)::text from decisions")" "0"
+chk "IQ-426: 0 nowych sms_outbox" "$(Q "select (count(*) - $S0)::text from sms_outbox")" "0"
+chk "IQ-426: audit import bez powiadomień" "$(Q "select count(*)::text from audit_log where action='SCHEDULE_IMPORT_QUIET' and new_value->>'note'='import bez powiadomień' and new_value ? 'import_id'")" "1"
+chk "IQ-426: stats.quiet + payload.quiet" "$(Q "select (s.stats->>'quiet')||'/'||(e.payload->>'quiet') from schedule_imports s join load_events e on e.payload->>'code'='IQ-426A' and e.event_type='SCHEDULE_IMPORTED' and e.payload->>'action'='CHANGED' where s.file_hash='q426' order by e.occurred_at desc limit 1")" "true/true"
+chk "IQ-426: data planu zmieniona mimo quiet" "$(Q "select plan_load_date||' '||plan_delivery_date from loads where id='$LIQ'")" "$DQ1b $DQ2b"
+val "F7: bulk_quiet nie zostaje on po imporcie" $HHL "select import_schedule('$P', '$RQ2'::jsonb, '{}'::text[], '{\"name\":\"q426b.xlsx\",\"hash\":\"q426b\"}'::jsonb, true, true); select coalesce(nullif(current_setting('tower.bulk_quiet', true), ''), '-')" "-" 
+
+# F7#3: kontrola dodatnia — ten sam bliski termin bez quiet → LATE_DATE_CHANGE; quiet → 0
+RQN_POS="[{\"code\":\"IQ-426P\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"}]"
+R0=$(Q "select count(*) from risk_signals where kind='LATE_DATE_CHANGE'")
+val "F7#3+: add blisko bez quiet → 1 added" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RQN_POS" false)) s(r)" 1 commit
+chk "F7#3+: ≥1 LATE_DATE_CHANGE bez quiet" "$(Q "select (count(*) - $R0 >= 1)::text from risk_signals where kind='LATE_DATE_CHANGE'")" "true"
+N1=$(Q "select count(*) from notifications"); DecB3=$(Q "select count(*) from decisions"); R1=$(Q "select count(*) from risk_signals where kind='LATE_DATE_CHANGE'")
+val "F7#3: quiet add blisko → 1 added" $HHL "select jsonb_array_length(r->'added') from ($(IMPQ "$RQN" false)) s(r)" 1 commit
+chk "F7#3: 0 nowych LATE_DATE_CHANGE" "$(Q "select (count(*) - $R1)::text from risk_signals where kind='LATE_DATE_CHANGE'")" "0"
+chk "F7#3: 0 nowych notifications po add" "$(Q "select (count(*) - $N1)::text from notifications")" "0"
+chk "F7#3: 0 nowych decisions po add" "$(Q "select (count(*) - $DecB3)::text from decisions")" "0"
+
+# F7 drobne: cichy import z innym numerem HHL → 0 TOWER_KSH_CONFLICT (wymaga column_map hhlOrderNo)
+$PSQL -c "update loads set hhl_order_no='HHL/426-OLD' where id='$LIQ'" >/dev/null
+RQCONF="[{\"code\":\"IQ-426A\",\"length_m\":18.01,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\",\"hhlOrderNo\":\"HHL/426-NEW\"}]"
+IMPQMAP() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"name\":\"q426c.xlsx\",\"hash\":\"q426c\",\"path\":\"harmonogramy/x/q426c.xlsx\",\"column_map\":{\"hhlOrderNo\":\"Nr HHL\"}}'::jsonb, $2, true)"; }
+DecConf=$(Q "select count(*) from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")
+val "F7: quiet + inny hhlOrderNo → changed" $HHL "select jsonb_array_length(r->'changed') from ($(IMPQMAP "$RQCONF" false)) s(r)" 1 commit
+chk "F7: 0 TOWER_KSH_CONFLICT przy quiet" "$(Q "select (count(*) - $DecConf)::text from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")" "0"
+
+# F7#2+#4: START-7 musi istnieć i być włączone (0094 sieje tylko dla projektów z chwili migracji, enabled=false)
+$PSQL -c "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
+  select '$P', 'START-7', 'Transport anulowany', 'test #426', 'STATUS_CANCELLED', 'true'::jsonb,
+         '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
+   where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
+$PSQL -c "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
+RQC0="[{\"code\":\"IQ-426C\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
+RQD0="[{\"code\":\"IQ-426D\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
+val "F7#4: dodanie IQ-426C (quiet)" $HHL "select jsonb_array_length(r->'added') from ($(IMPQ "$RQC0" false)) s(r)" 1 commit
+val "F7#4+: dodanie IQ-426D (bez quiet)" $HHL "select jsonb_array_length(r->'added') from ($(IMP "$RQD0" false)) s(r)" 1 commit
+LIC=$(Q "select load_id from shipment_items where shipment_code='IQ-426C'")
+LID=$(Q "select load_id from shipment_items where shipment_code='IQ-426D'")
+# plik z dotychczasowymi kodami (bez IQ-426C/D) — brakujące = kandydat
+RQKEEP="[{\"code\":\"IQ-426A\",\"length_m\":18.01,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\"},
+         {\"code\":\"IQ-426N\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"},
+         {\"code\":\"IQ-426P\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DN1\",\"delivery_date\":\"$DN2\"},
+         {\"code\":\"SG-36-1\",\"length_m\":12.0,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":9.5,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"},
+         {\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1b\",\"delivery_date\":\"$D2b\"},
+         {\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"order_no\":\"KSH/77\"},
+         {\"code\":\"SG-03\",\"length_m\":12,\"width_m\":2.45,\"height_m\":2.45,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1c\",\"delivery_date\":\"$D2c\"},
+         {\"code\":\"IH-IMP\",\"length_m\":18.1,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DH1b\",\"delivery_date\":\"$DH2b\"},
+         {\"code\":\"SG-00\",\"length_m\":10,\"width_m\":2.5,\"height_m\":2.5,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
+W0=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
+val "F7#4+: cancel IQ-426D bez quiet → 1 cancelled" $HHL "select jsonb_array_length(r->'cancelled') from ($(IMP "$RQKEEP" false "'{IQ-426D}'")) s(r)" 1 commit
+chk "F7#4+: +1 workflow STATUS_CANCELLED bez quiet" "$(Q "select (count(*) - $W0)::text from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" "1"
+chk "F7#4+: IQ-426D CANCELLED" "$(Q "select status from loads where id='$LID'")" "CANCELLED"
+DecB4=$(Q "select count(*) from decisions"); W1=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
+val "F7#2+#4: quiet cancel IQ-426C → 0 spraw / 0 wf" $HHL "select jsonb_array_length(r->'cancelled') from ($(IMPQ "$RQKEEP" false "'{IQ-426C}'")) s(r)" 1 commit
+chk "F7#2: 0 nowych decisions po quiet cancel" "$(Q "select (count(*) - $DecB4)::text from decisions")" "0"
+chk "F7#4: 0 nowych workflow STATUS_CANCELLED" "$(Q "select (count(*) - $W1)::text from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" "0"
+chk "F7#4: IQ-426C CANCELLED" "$(Q "select status from loads where id='$LIC'")" "CANCELLED"
+
+# cofnij email=true z testu (jak F7 drobne)
+$PSQL -c "update notification_matrix set email=false where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
+
+echo; echo "[#384 F7] przywrócenie okien (d) — hotfix_384_restore_windows"
+# Pozytywne: SG-01 w STEGRA z null to/from + PLAN_DATES_CHANGED before_*; confirmed_* zostaje
+SG_R=$(Q "select load_id from shipment_items where shipment_code='SG-01' and project_id='$P' limit 1")
+KSH_UID=$(Q "select id::text from app_users where auth_id='$KSH'")
+# dates_ctx + bulk_quiet: bez skasowania confirmed_* i bez zbędnego PLAN_DATES_CHANGED z UPDATE
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_date = '$D1b'::date,
+  plan_delivery_date = '$D2b'::date,
+  plan_load_from = ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_to = ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'),
+  plan_delivery_from = null,
+  plan_dates_status = 'POTWIERDZONA',
+  plan_dates_confirmed_by = '$KSH_UID'::uuid,
+  plan_dates_confirmed_at = '2026-10-01 12:00:00+00'::timestamptz
+ where id='$SG_R';
+insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+values (
+  '$SG_R', 'PLAN_DATES_CHANGED', now() + interval '1 second', null,
+  jsonb_build_object(
+    'before_load_to', ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_from', ('$D2b 10:00'::timestamp at time zone 'Europe/Stockholm'),
+    'before_load_from', ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_to', ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm')
+  )
+);
+commit;" >/dev/null
+N_REST=$(Q "select public.hotfix_384_restore_windows()")
+if [ "${N_REST:-0}" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    F7 (d)+: przywrócono ≥1 (SG-01)"; else fail=$((fail+1)); echo "  FAIL  F7 (d)+: przywrócono ≥1 (otrzymano: $N_REST)"; fi
+chk "F7 (d)+: SG-01 ma plan_load_to i plan_delivery_from" "$(Q "select (plan_load_to is not null and plan_delivery_from is not null)::text from loads where id='$SG_R'")" "true"
+chk "F7 (d)+: potwierdzenie KSH zachowane" "$(Q "select (plan_dates_confirmed_by = '$KSH_UID'::uuid and plan_dates_status = 'POTWIERDZONA')::text from loads where id='$SG_R'")" "true"
+
+# Ujemne: inny projekt, ten sam kod SG-01 — nie przywracaj
+P2=22222222-0000-0000-0000-000000000099
+$PSQL -c "
+  insert into projects (id, code, name, client_org_id)
+  values ('$P2', 'OTHER_P', 'Inny projekt', '00000000-0000-0000-0000-00000000a002')
+  on conflict (id) do nothing" >/dev/null
+L_OTH=$(Q "insert into loads (project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
+    plan_load_from, plan_load_to, plan_delivery_to, plan_delivery_from)
+  values ('$P2', '00000000-0000-0000-0000-00000000a003', 'OTH-SG01', 'PLANNED',
+    '$D1b'::date, '$D2b'::date,
+    ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'), null,
+    ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'), null)
+  returning id")
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  values ('$P2', '$L_OTH', 'SG-01', 18, 2.4, 2.4)" >/dev/null
+$PSQL -c "
+  insert into load_events (load_id, event_type, occurred_at, payload)
+  values (
+    '$L_OTH', 'PLAN_DATES_CHANGED', now() - interval '30 minutes',
+    jsonb_build_object(
+      'before_load_to', ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+      'before_delivery_from', ('$D2b 10:00'::timestamp at time zone 'Europe/Stockholm')
+    )
+  )" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "F7 (d)-: inny projekt SG-01 bez przywrócenia" "$(Q "select (plan_load_to is null and plan_delivery_from is null)::text from loads where id='$L_OTH'")" "true"
+
+# #455 / F7 r4: ujemne hotfix_384_restore_windows — before_* innej daty; do <= od; >3 dopasowań
+echo; echo "[#455] ujemne hotfix_384_restore_windows"
+SG_R2=$(Q "select load_id from shipment_items where shipment_code='SG-02' and project_id='$P' limit 1")
+# (1) before_* z innym dniem niż bieżący plan → pominięty
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_date = '$D1b'::date,
+  plan_delivery_date = '$D2b'::date,
+  plan_load_from = ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_to = ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'),
+  plan_delivery_from = null
+ where id='$SG_R2';
+insert into load_events (load_id, event_type, occurred_at, payload)
+values (
+  '$SG_R2', 'PLAN_DATES_CHANGED', now() + interval '2 seconds',
+  jsonb_build_object(
+    'before_load_to', (('$D1b'::date + 5) + time '12:00') at time zone 'Europe/Warsaw',
+    'before_delivery_from', (('$D2b'::date + 5) + time '10:00') at time zone 'Europe/Stockholm'
+  )
+);
+commit;" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "#455: before_* innej daty → bez przywrócenia" "$(Q "select (plan_load_to is null and plan_delivery_from is null)::text from loads where id='$SG_R2'")" "true"
+
+# (2) do <= od (before_load_to <= plan_load_from, ta sama data) → pominięty
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_from = ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_from = null
+ where id='$SG_R2';
+insert into load_events (load_id, event_type, occurred_at, payload)
+values (
+  '$SG_R2', 'PLAN_DATES_CHANGED', now() + interval '3 seconds',
+  jsonb_build_object(
+    'before_load_to', ('$D1b 10:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_from', ('$D2b 18:00'::timestamp at time zone 'Europe/Stockholm')
+  )
+);
+commit;" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "#455: do <= od → plan_load_to bez przywrócenia" "$(Q "select (plan_load_to is null)::text from loads where id='$SG_R2'")" "true"
+
+# (3) >3 dopasowań SG-01/02/T-01 w STEGRA → wyjątek (strażnik 0267 l. 957).
+# UNIQUE(project_id, shipment_code) blokuje drugi SG-01 w $P — wiersz si z innym
+# project_id (strażnik liczy po l.project_id + si.shipment_code, join po load_id).
+P3=22222222-0000-0000-0000-000000000097
+$PSQL -c "
+  insert into projects (id, code, name, client_org_id)
+  values ('$P3', 'GUARD_455', 'Strażnik 455', '00000000-0000-0000-0000-00000000a002')
+  on conflict (id) do nothing" >/dev/null
+L_EXTRA=$(Q "insert into loads (project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
+    plan_load_from, plan_load_to, plan_delivery_to, plan_delivery_from)
+  values ('$P', '00000000-0000-0000-0000-00000000a003', 'EXTRA-SG', 'PLANNED',
+    '$D1b'::date, '$D2b'::date,
+    ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'), null,
+    ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'), null)
+  returning id")
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  values ('$P3', '$L_EXTRA', 'SG-01', 18, 2.4, 2.4)" >/dev/null
+OUT_GT3=$($PSQL -c "select public.hotfix_384_restore_windows()" 2>&1)
+if echo "$OUT_GT3" | grep -qiE 'za dużo dopasowań|P0001'; then
+  ok=$((ok+1)); echo "  OK    #455: >3 dopasowań → wyjątek"
+else
+  fail=$((fail+1)); echo "  FAIL  #455: >3 dopasowań → wyjątek (otrzymano: $(echo "$OUT_GT3" | tail -1))"
+fi
+$PSQL -c "delete from shipment_items where load_id='$L_EXTRA'; delete from loads where id='$L_EXTRA'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

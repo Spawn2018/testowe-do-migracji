@@ -380,6 +380,8 @@ export function eventToRow(e: Omit<LoadEvent, 'id'>): Record<string, unknown> {
 export interface MessageRow {
   id: number | string; load_id: string; body: string; created_at: string; author_org: string | null;
   author_display?: string | null;
+  /** B4: odbiorcy wiadomości (`org_kind[]`); bez CLIENT = „tylko HHL i SCX” */
+  visible_to?: string[] | null;
   reads?: { userId?: string; user_id?: string; name?: string; org?: string; at?: string }[] | null;
 }
 export function messageFromRow(r: MessageRow): LoadMessage {
@@ -399,6 +401,7 @@ export function messageFromRow(r: MessageRow): LoadMessage {
     author: (r.author_display && String(r.author_display).trim()) || org,
     org,
     text: r.body,
+    ...(Array.isArray(r.visible_to) && r.visible_to.length > 0 && !r.visible_to.includes('CLIENT') ? { visibleTo: 'HHL_SCX' as const } : {}),
     ...(reads?.length ? { reads } : {}),
   };
 }
@@ -478,6 +481,10 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     invoiceId: str(d.invoice_id) || undefined,
     /* wyglad/W-todo-jedna-sprawa (#384): „Decyzja po terminie” wskazuje decyzję (`detail.decision_id`) */
     decisionId: str(d.decision_id) || undefined,
+    /* wyglad/W-cele-przejsc (F7 B1): czego brakuje w sprawie dokumentowej — cel „Wgraj” (0243: permit / policy) */
+    docRule: str(d.rule) || undefined,
+    docPermit: typeof d.permit === 'boolean' ? d.permit : undefined,
+    docPolicy: typeof d.policy === 'boolean' ? d.policy : undefined,
   };
 }
 
@@ -509,7 +516,11 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
     route: ferryRouteFromDb(r.route),
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
-    status: r.status === 'ODWOLANY' ? 'ODWOLANY' : r.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY',
+    status: r.status === 'ODWOLANY' ? 'ODWOLANY'
+      : r.status === 'OPOZNIONY' ? 'OPOZNIONY'
+        : r.status === 'W_REJSIE' ? 'W_REJSIE'
+          : r.status === 'DOPLYNAL' ? 'DOPLYNAL'
+            : 'ZAPLANOWANY',
     source: src,
   };
 }

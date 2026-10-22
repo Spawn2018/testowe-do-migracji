@@ -12,25 +12,25 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
-  status: 162, // #398: +2 port z actual_load_at (bez PORT_NO_LOADED)
+  security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
+  status: 170, // #446: +4 sailings W_REJSIE/DOPLYNAL + F7 OPOZNIONY; było 166 (#445)
   storage: 37,
-  money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
+  money: 183, // #411 F7: +4 mark_notifications_read WP↔IN (para + obie strony + cudze); było 179
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 43, // #398: +8 +1 SMS emtrack ≥12h bez GPS_SILENT
-  import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
-  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 628, // #384 pkt 4: +8 okno „do” + hist quiet (IW/IH)
+  risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
+  import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
+  nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
+  i2: 654, // #384 F7 B2: +3 ta sama data + pusta godzina (val+val+chk); było 651
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
-  'dec-fx': 12, // #384 HOTFIX: CHECK DECISION_* + literały + resolve-all + 3 skutki
-  dec3: 13,
+  dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
+  'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
+  dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 33,
+  bmapa: 35, // #421: +2 ferry_sailings_map (anon / authenticated)
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
@@ -54,7 +54,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
+  c3: 32, // #402 F7: 32 event_key (+workflow/fuel_miss/email_budget/ext_mail); +firma mail off
 };
 
 /**
@@ -65,8 +65,8 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 156, // 160 − 4 SKIP (B6)
-  risks: 41, // 43 − 2 SKIP (C1)
+  security: 158, // 162 − 4 SKIP (B6); #442 +2
+  risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
   backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)

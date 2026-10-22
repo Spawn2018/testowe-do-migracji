@@ -30,6 +30,9 @@ Deno.serve(async (req) => {
   if (mails.length) users.push(...((await sb.from('app_users').select('id,email,locale').in('email', mails)).data ?? []));
   let sent = 0, failed = 0;
   for (const r of rows ?? []) {
+    // #402: ponowna bramka (Opcje / „Co dostaję”) tuż przed Resend → SUPPRESSED gdy mail off
+    const { data: gateOk } = await sb.rpc('notify_email_still_allowed', { p_id: r.id });
+    if (gateOk !== true) continue;
     // ponowne sprawdzenie tuż przed wysyłką: anulowane (opłacona) w międzyczasie → pomiń
     const { data: fresh } = await sb.from('notifications').select('status').eq('id', r.id).single();
     if (fresh?.status !== 'PENDING') continue;

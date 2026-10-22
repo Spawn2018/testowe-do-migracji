@@ -13,7 +13,10 @@ import {
   STENA_FREIGHT_AJAX, STENA_FREIGHT_PAGE, STENA_FREIGHT_UA,
   freightSecurityToken, freightWindow, parseStenaFreightTimetable,
 } from '../ferry/stenaFreight.ts';
-import { DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin, type VesselFix } from '../ferry/digitraffic.ts';
+import {
+  DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin,
+  departurePortForRoute, arrivalPortForRoute, portCoords, distanceKm, type VesselFix,
+} from '../ferry/digitraffic.ts';
 import { collectAisstreamFixes, type AisstreamStats } from '../ferry/aisstream.ts';
 import {
   STENA_FERRIES_URL, STENA_IMO, STENA_MMSI, isTrackedMmsi, parseStenaFerries, pickNewerFix,
@@ -33,7 +36,11 @@ import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import {
   EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
 } from '../telematics/emtrackWeb.ts';
-import { ambiguousMatchCount, matchFixToLoad } from '../telematics/matchTrailer.ts';
+import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad } from '../telematics/matchTrailer.ts';
+import {
+  fetchRioPosition, inferRioTrackerOn, rioLinkValidNow, rioPositionUrlSafe,
+  speedKmhFromPrev, type RioTrackerOn,
+} from '../telematics/rioPositionSharing.ts';
 import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
@@ -56,6 +63,88 @@ export const DIGITRAFFIC_USER = 'TOWER-WatchTower/HHL';
 export const STENA_IRM_UA = 'Watch Tower (https://tower.log-mar.pl; ferry positions)';
 
 export interface VehiclePos { load_id: string; code: string; lat: number; lon: number; ts: string }
+
+/** E44 — wiersz do odpytania RIO (secret tylko w Edge / service_role). */
+export interface RioLoadRow {
+  id: string;
+  code: string | null;
+  rio_tracking_id: string;
+  rio_secret: string;
+  rio_check_state: string | null;
+  rio_check_at: string | null;
+  rio_valid_from: string | null;
+  rio_valid_to: string | null;
+  rio_asset_name: string | null;
+  rio_tracker_on: string | null;
+  rio_last_fix_at: string | null;
+  rio_error_streak: number;
+  trailer_plate: string | null;
+  tractor_plate: string | null;
+  tractor_delivery_plate: string | null;
+  status: string | null;
+  plannedLoadDate: string | null;
+  trackingOpenedAt: string | null;
+  telematics_vehicle_id: string | null;
+}
+
+const RIO_BUDGET_MS = 40_000;
+const RIO_NET_ABORT_AFTER = 3;
+const RIO_RECHECK_MS = 30 * 60_000;
+
+const RIO_DATE_KEYS = new Set<keyof RioLoadPatch>([
+  'rio_check_at', 'rio_last_fix_at', 'rio_valid_from', 'rio_valid_to',
+]);
+
+/** Postgres / JSON czasem daje `+00` zamiast `+00:00` — Date.parse wtedy = NaN. */
+function rioParseMs(s: string): number {
+  const t = Date.parse(s);
+  if (Number.isFinite(t)) return t;
+  const fixed = s.replace(/([+-]\d{2})$/, '$1:00');
+  const t2 = Date.parse(fixed);
+  return Number.isFinite(t2) ? t2 : NaN;
+}
+
+function rioSameInstant(a: unknown, b: unknown): boolean {
+  if (a == null && b == null) return true;
+  if (typeof a === 'string' && typeof b === 'string') {
+    const ta = rioParseMs(a);
+    const tb = rioParseMs(b);
+    if (Number.isFinite(ta) && Number.isFinite(tb)) return ta === tb;
+  }
+  return a === b;
+}
+
+/** F7 r3: rio_check_at nie liczy się jako zmiana; daty przez Date.parse (+00 vs Z). */
+function rioPatchChanged(load: RioLoadRow, patch: RioLoadPatch): boolean {
+  for (const [k, v] of Object.entries(patch) as [keyof RioLoadPatch, unknown][]) {
+    if (k === 'rio_check_at') continue;
+    const cur = (load as unknown as Record<string, unknown>)[k];
+    if (RIO_DATE_KEYS.has(k)) {
+      if (!rioSameInstant(cur, v)) return true;
+      continue;
+    }
+    if (cur !== v) return true;
+  }
+  return false;
+}
+
+function rioCheckedRecently(load: RioLoadRow, nowMs: number): boolean {
+  if (!load.rio_check_at) return false;
+  const t = rioParseMs(load.rio_check_at);
+  return Number.isFinite(t) && nowMs - t < RIO_RECHECK_MS;
+}
+
+export interface RioLoadPatch {
+  rio_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+  rio_check_at?: string;
+  rio_asset_name?: string | null;
+  rio_tracker_on?: RioTrackerOn | null;
+  rio_valid_from?: string | null;
+  rio_valid_to?: string | null;
+  rio_last_fix_at?: string;
+  rio_error_streak?: number;
+}
+
 export interface SyncStore {
   projectId(): Promise<string>;
   vessels(): Promise<VesselRow[]>;
@@ -77,6 +166,8 @@ export interface SyncStore {
   latestVesselObserved?(): Promise<{ vesselId: string; observedAt: string }[]>;
   /** AIS-POLF: ostatnia pozycja AISSTREAM każdego statku od sinceIso (zapis: ferry-ais-listen co minutę). */
   latestAisstreamFixes?(sinceIso: string): Promise<{ vesselId: string; fix: VesselFix }[]>;
+  /** #421 F7: ostatnia pozycja w strefie portu (promień km) → observed_at; do godziny wypłynięcia. */
+  lastPortPosition?(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number): Promise<string | null>;
   /** II-6: współczynnik spowolnienia SE (E4) dla silnika ETA II-7 */
   saveCorridorCondition?(row: {
     corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
@@ -100,6 +191,11 @@ export interface SyncStore {
   }): Promise<void>;
   lastPositionAt?(loadId: string, source: string): Promise<string | null>;
   telmEmtrackWebEnabled?(): Promise<boolean>;
+  /** E44: flaga TELM_RIO_LINKS — wyłącza odczyt linków RIO. */
+  telmRioLinksEnabled?(): Promise<boolean>;
+  /** E44: blokada nakładania się przebiegów rio-links (TTL + token właściciela). */
+  rioLinksLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
+  rioLinksLockRelease?(token?: string): Promise<void>;
   /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
   saveOrphanPosition?(row: {
     plate: string; trackingObjectId?: string | null;
@@ -112,6 +208,12 @@ export interface SyncStore {
   /** A8: licznik błędów logowania emtrack i pauza 6 h. */
   emtrackLoginState?(): Promise<import('./emtrackLogin.ts').EmtrackLoginState | null>;
   saveEmtrackLoginState?(state: import('./emtrackLogin.ts').EmtrackLoginState): Promise<void>;
+  /** E44: transporty z linkiem RIO (secret tylko service_role). */
+  listRioLoadsForPoll?(): Promise<RioLoadRow[]>;
+  /** E44: wynik odczytu — bez secret w patch. */
+  updateRioLoadState?(loadId: string, patch: RioLoadPatch): Promise<void>;
+  /** Ostatnia pozycja z lat/lon (do prędkości RIO). */
+  lastPositionFix?(loadId: string, source: string): Promise<{ lat: number; lon: number; ts: string } | null>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
@@ -149,6 +251,10 @@ export interface JobResult {
   job: string; mode: 'LIVE' | 'DEMO'; ok: boolean; reason?: string;
   inserted?: number; updated?: number; manualKept?: number; unchanged?: number; unknown?: number; risks?: number;
   warnings?: string[]; observations?: Record<string, string>;
+  /** #421: liczba rejsów z ustawionym delayed_departure/arrival z AIS. */
+  departures?: number;
+  /** #446: flaga wyłączona — Stan systemu nie pokazuje „działa” (front: result.disabled). */
+  disabled?: boolean;
 }
 
 async function readText(deps: JobDeps, url: string, init?: RequestInit): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
@@ -390,28 +496,65 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
   }
 
-  return {
+  const result: JobResult = {
     job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail),
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
   };
+  // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).
+  if (updated > 0 || inserted > 0) {
+    const lastSched = await deps.store.lastRun('ferry-schedule');
+    const gapMin = lastSched ? (deps.now().getTime() - Date.parse(lastSched)) / 60_000 : 999;
+    if (gapMin >= 60) {
+      try {
+        const sched = await runFerrySchedule(deps);
+        await deps.store.recordRun('ferry-schedule', sched.ok, sched);
+        if (sched.warnings?.length) warnings.push(...sched.warnings.map((w) => `po statusie→rozkład: ${w}`));
+      } catch (e) {
+        warnings.push(`po statusie→rozkład: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } else {
+      warnings.push(`po statusie→rozkład: pominięte (ostatni ${Math.round(gapMin)} min temu, limit 60)`);
+    }
+  }
+  return result;
 }
 
-/** ferry-ais — AIS-SRC. Stena IRM (3 statki, co 3 min), aisstream (5 MMSI), Digitraffic jako zapas.
- *  Nowsza pozycja wygrywa, źródło jest zapisane. Q-18 (kierunek) nie filtruje zapisu.
- *  II-9 i ETA biorą pełne dane, także gdy prom byłby niewidoczny na mapie. */
-let stenaIrmCache: { at: number; text: string } | null = null;
-export function resetStenaIrmCache(): void { stenaIrmCache = null; }
+/** ferry-ais — AIS-SRC. Stena IRM (co przebieg, bez cache), aisstream (5 MMSI), Digitraffic jako zapas.
+ *  Zapisujemy Digitraffic/STENA/żywy AISSTREAM (nie ponownie z bazy). Q-18 nie filtruje zapisu.
+ *  #421 F7: actual_* przy wypłynięciu/dopłynięciu; integration_runs ferry-departures zawsze. */
+/** F7 r2: godzina wypłynięcia tylko w [plan−2 h, teraz] i po poprzednim actual_arrival tego statku. */
+export function acceptActualDepartureAt(
+  depAtIso: string, planDepIso: string, nowMs: number, prevActualArrivalIso: string | null,
+): boolean {
+  const t = Date.parse(depAtIso);
+  if (!Number.isFinite(t)) return false;
+  const plan = Date.parse(planDepIso);
+  if (!Number.isFinite(plan)) return false;
+  if (t < plan - 2 * 3600_000) return false;
+  if (t > nowMs) return false;
+  if (prevActualArrivalIso != null && t <= Date.parse(prevActualArrivalIso)) return false;
+  return true;
+}
 
-async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null }> {
-  if (stenaIrmCache && nowMs - stenaIrmCache.at < 3 * 60_000) {
-    return parseStenaFerries(JSON.parse(stenaIrmCache.text));
+/** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7). */
+let stenaIrmBackoffUntilMs = 0;
+
+async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null; suppressRisk?: boolean }> {
+  if (nowMs < stenaIrmBackoffUntilMs) {
+    return { fixes: [], warning: null, suppressRisk: true };
   }
   const r = await readText(deps, STENA_FERRIES_URL, { headers: { 'User-Agent': STENA_IRM_UA, Accept: 'application/json' } });
-  if (!r.ok) return { fixes: [], warning: r.warning };
+  if (!r.ok) {
+    if (/HTTP 403|HTTP 429/.test(r.warning)) {
+      const wasBacking = nowMs < stenaIrmBackoffUntilMs;
+      stenaIrmBackoffUntilMs = nowMs + 15 * 60_000;
+      return { fixes: [], warning: r.warning, suppressRisk: wasBacking };
+    }
+    return { fixes: [], warning: r.warning };
+  }
+  stenaIrmBackoffUntilMs = 0;
   try {
-    const parsed = parseStenaFerries(JSON.parse(r.text));
-    if (!parsed.warning) stenaIrmCache = { at: nowMs, text: r.text };
-    return parsed;
+    return parseStenaFerries(JSON.parse(r.text));
   } catch {
     return { fixes: [], warning: 'Stena IRM: nieczytelna odpowiedź (zmiana formatu?)' };
   }
@@ -421,7 +564,10 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const nowD = deps.now(); const now = nowD.toISOString();
   const [vessels, sailings] = await Promise.all([deps.store.vessels(), deps.store.sailingsSince(new Date(nowD.getTime() - 2 * 864e5).toISOString())]);
   const tracked = vessels.filter((v) => isTrackedMmsi(v.mmsi) || (v.imo != null && STENA_IMO.has(v.imo)));
-  const eff = (s: DbSailing) => ({ dep: Date.parse(s.delayed_departure_at ?? s.departure_at), arr: Date.parse(s.delayed_arrival_at ?? s.arrival_at) });
+  const eff = (s: DbSailing) => ({
+    dep: Date.parse(s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at),
+    arr: Date.parse(s.actual_arrival_at ?? s.delayed_arrival_at ?? s.arrival_at),
+  });
   const inProgress = sailings.filter((s) => s.status !== 'ODWOLANY' && eff(s).dep <= nowD.getTime() && nowD.getTime() <= eff(s).arr + 3 * 36e5);
   const upcoming = sailings.filter((s) => {
     if (s.status === 'ODWOLANY') return false;
@@ -432,6 +578,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const warnings: string[] = [];
   let risks = 0;
   const byVessel = new Map<string, VesselFix[]>();
+  const aisstreamFromDb = new Set<string>();
   const pushFix = (vesselId: string, fix: VesselFix | null) => {
     if (!fix) return;
     const list = byVessel.get(vesselId) ?? [];
@@ -444,9 +591,11 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     const stena = await readStenaIrm(deps, nowD.getTime());
     if (stena.warning) {
       warnings.push(stena.warning);
-      await deps.store.raiseRisk(sourceDownRisk('STENA_IRM', [stena.warning], now, STENA_FERRIES_URL));
-      risks++;
-    } else {
+      if (!stena.suppressRisk) {
+        await deps.store.raiseRisk(sourceDownRisk('STENA_IRM', [stena.warning], now, STENA_FERRIES_URL));
+        risks++;
+      }
+    } else if (stena.fixes.length || !stena.suppressRisk) {
       await deps.store.resolveRisks('SOURCE_DOWN:STENA_IRM:');
     }
     for (const fix of stena.fixes) {
@@ -456,7 +605,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   }
 
   // AIS-POLF (05.10): WebSocket słucha osobna funkcja ferry-ais-listen (co minutę, ~50 s).
-  // Tu tylko jej ostatnie pozycje z bazy (≤ 10 min) — porównanie „nowsza wygrywa” i ryzyka mają pełny obraz.
+  // Tu tylko jej ostatnie pozycje z bazy (≤ 10 min) — porównanie „nowsza wygrywa”; bez ponownego zapisu (F7).
   const allow = tracked.map((v) => v.mmsi).filter((m): m is number => isTrackedMmsi(m)).map(String);
   if (deps.collectAisstream) {
     if (deps.env.AISSTREAM_API_KEY && allow.length) {
@@ -475,7 +624,10 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     try {
       const recent = await deps.store.latestAisstreamFixes(new Date(nowD.getTime() - 10 * 60_000).toISOString());
       for (const r of recent) {
-        if (tracked.some((v) => v.id === r.vesselId)) pushFix(r.vesselId, { ...r.fix, source: 'AISSTREAM' });
+        if (tracked.some((v) => v.id === r.vesselId)) {
+          aisstreamFromDb.add(r.vesselId);
+          pushFix(r.vesselId, { ...r.fix, source: 'AISSTREAM' });
+        }
       }
     } catch {
       warnings.push('aisstream: odczyt z bazy nieudany — zapas Digitraffic');
@@ -500,23 +652,94 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const chosen = new Map<string, VesselFix>();
   for (const v of tracked) {
     const list = byVessel.get(v.id) ?? [];
+    // #421 F7: zapis Digitraffic/STENA/żywy AISSTREAM; bez ponownego zapisu AISSTREAM z bazy.
+    for (const f of list) {
+      if (f.source === 'AISSTREAM' && aisstreamFromDb.has(v.id)) continue;
+      await deps.store.saveVesselPosition(v.id, f);
+    }
     const stenaEta = list.find((f) => f.source === 'STENA' && f.etaAt)?.etaAt ?? null;
     const win = pickNewerFix(list);
     if (!win) continue;
     const fix = stenaEta && !win.etaAt ? { ...win, etaAt: stenaEta } : win;
     chosen.set(v.id, fix);
-    await deps.store.saveVesselPosition(v.id, fix);
   }
 
+  let departures = 0;
   for (const s of inProgress) {
     const v = vessels.find((x) => x.id === s.vessel_id);
     if (!v) continue;
     if (!v.mmsi && !(v.imo != null && STENA_IMO.has(v.imo))) { observations[v.name] = 'BRAK_MMSI'; continue; }
     const fix = chosen.get(v.id);
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
-    const port = (s.route === 'GDY-KAA' || s.route === 'KAA-GDY') ? 'KAA' : 'NYN';
-    const obs = interpretFix(fix, now, 60, port);
+    const arrPort = arrivalPortForRoute(s.route);
+    const depPort = departurePortForRoute(s.route);
+    // F7 r2: etykieta SE z portu SE na trasie (KAA-GDY → KAA, nie NYN).
+    const seObsPort: 'NYN' | 'KAA' =
+      arrPort === 'NYN' || arrPort === 'KAA' ? arrPort
+        : depPort === 'NYN' || depPort === 'KAA' ? depPort
+          : 'NYN';
+    const obs = interpretFix(fix, now, 60, seObsPort);
     observations[v.name] = obs;
+
+    // #421 F7: wypłynął → actual_departure_at; wiek ≤15 min; 3–10 km (preferuj ostatnią w porcie) albo poza >3 km z lastPortPosition.
+    if (s.actual_departure_at == null) {
+      const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
+      if (ageMin <= 15) {
+        const depHub = portCoords(depPort);
+        const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
+        const moving = (fix.sogKn ?? 0) >= 3;
+        const prevArr = sailings
+          .filter((x) => x.vessel_id === s.vessel_id && x.id !== s.id && x.actual_arrival_at)
+          .map((x) => x.actual_arrival_at!)
+          .sort()
+          .at(-1) ?? null;
+        let depAt: string | null = null;
+        if (moving && dist > 3) {
+          // F7 r2: najpierw ostatnia pozycja w porcie; #446: odrzucona (null / poza oknem) → zapas tylko 3–10 km.
+          if (deps.store.lastPortPosition) {
+            depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
+          }
+          if (depAt != null && !acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
+            depAt = null;
+          }
+          if (depAt == null && dist <= 10) depAt = fix.timestampUtc;
+        }
+        if (depAt && acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
+          // #446: status W_REJSIE przy actual_departure_at (ODWOLANY bez zmian — updateSailing / trigger).
+          const ok = await deps.store.updateSailing(s.id, {
+            actual_departure_at: depAt,
+            ...(s.status === 'ODWOLANY' ? {} : { status: 'W_REJSIE' }),
+          });
+          if (ok) {
+            s.actual_departure_at = depAt;
+            if (s.status !== 'ODWOLANY') s.status = 'W_REJSIE';
+            departures++;
+            observations[`${v.name}:DEP`] = `WYPŁYNĄŁ_${depAt}`;
+          }
+        }
+      }
+    }
+    // #421 F7 r2: dopłynął — port docelowy; wiek ≤15 min; po wypłynięciu (actual albo plan).
+    if (s.actual_arrival_at == null) {
+      const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
+      const arrHub = portCoords(arrPort);
+      const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
+      const depRef = s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at;
+      if (arrived && ageMin <= 15 && Date.parse(fix.timestampUtc) > Date.parse(depRef)) {
+        // #446: status DOPLYNAL przy actual_arrival_at (ODWOLANY bez zmian).
+        const ok = await deps.store.updateSailing(s.id, {
+          actual_arrival_at: fix.timestampUtc,
+          ...(s.status === 'ODWOLANY' ? {} : { status: 'DOPLYNAL' }),
+        });
+        if (ok) {
+          s.actual_arrival_at = fix.timestampUtc;
+          if (s.status !== 'ODWOLANY') s.status = 'DOPLYNAL';
+          departures++;
+          observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
+        }
+      }
+    }
+
     if (obs === 'W_PORCIE_NYNASHAMN' && s.route === 'GDN-NYN') {
       const ok = await deps.store.raiseRisk({
         kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)`,
@@ -526,7 +749,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       });
       if (ok) risks++;
     }
-    if (obs === 'W_PORCIE_KARLSKRONA' && (s.route === 'GDY-KAA' || s.route === 'KAA-GDY')) {
+    if (obs === 'W_PORCIE_KARLSKRONA' && s.route === 'GDY-KAA') {
       const ok = await deps.store.raiseRisk({
         kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Karlskrona — potwierdzenie przypłynięcia (informacja)`,
         titleKey: 'rk_ais_arrived_kaa', params: { vessel: v.name },
@@ -545,7 +768,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       observations[`${v.name}:II9`] = 'BRAK_POZYCJI_NIE_OPOZNIENIE';
       continue;
     }
-    const delayMin = aisDepartureDelayMin(fix, now, s.delayed_departure_at ?? s.departure_at, s.route);
+    const delayMin = aisDepartureDelayMin(fix, now, s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at, s.route);
     if (delayMin == null || delayMin <= 0) continue;
     observations[`${v.name}:II9`] = `OPOZNIENIE_WYPŁYNIECIA_${delayMin}min`;
     const ok = await deps.store.raiseRisk({
@@ -564,28 +787,11 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     if (ok) risks++;
   }
 
-  const latest = deps.store.latestVesselObserved ? await deps.store.latestVesselObserved() : [];
-  const latestById = new Map(latest.map((r) => [r.vesselId, r.observedAt]));
-  for (const v of tracked) {
-    if (!v.mmsi) continue;
-    const saved = chosen.get(v.id);
-    const cands = [saved?.timestampUtc, latestById.get(v.id)].filter((x): x is string => !!x && Number.isFinite(Date.parse(x)));
-    const obsAt = cands.length ? cands.reduce((a, b) => (Date.parse(a) >= Date.parse(b) ? a : b)) : null;
-    const ageMin = obsAt ? (nowD.getTime() - Date.parse(obsAt)) / 60000 : Infinity;
-    if (ageMin > 60) {
-      const ok = await deps.store.raiseRisk({
-        kind: 'FERRY', severity: 'MEDIUM',
-        title: `Brak pozycji AIS: ${v.name} — ostatni sygnał starszy niż godzina`,
-        titleKey: 'rk_ais_gap', params: { vessel: v.name },
-        detail: { statek: v.name, mmsi: v.mmsi, ostatni: obsAt, zrodlo: 'AIS-SRC' },
-        dedup: `AIS_GAP:${v.mmsi}:${now.slice(0, 10)}`,
-      });
-      if (ok) risks++;
-    } else {
-      await deps.store.resolveRisks(`AIS_GAP:${v.mmsi}:`);
-    }
-  }
-  return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations };
+  // Zawsze wpis w integration_runs — Stan systemu widzi ostatni przebieg (#421 F7 pkt 6).
+  await deps.store.recordRun('ferry-departures', true, {
+    job: 'ferry-departures', mode: 'LIVE', ok: true, departures, observations,
+  });
+  return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations, departures };
 }
 
 /** ferry-ais-listen — AIS-POLF (05.10). Nasłuch aisstream co minutę przez ~50 s (limit ścienny funkcji Edge
@@ -1320,12 +1526,347 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   };
 }
 
+/**
+ * E44 — odczyt pozycji z linku RIO (podwykonawca SCX).
+ * Cron `tower-rio-links` co 2 min. Job w integration_runs: `rio-links`.
+ * Secret nigdy w observations / warnings / URL.
+ */
+export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
+  const started = deps.now().getTime();
+  const nowIso = new Date(started).toISOString();
+
+  const enabled = deps.store.telmRioLinksEnabled
+    ? await deps.store.telmRioLinksEnabled()
+    : true;
+  if (!enabled) {
+    return {
+      job: 'rio-links', mode: 'LIVE', ok: true,
+      disabled: true,
+      reason: 'Flaga TELM_RIO_LINKS wyłączona — bez zapisu pozycji',
+      observations: { flag: 'false', links: '0', disabled: 'true' },
+    };
+  }
+
+  const lockToken = crypto.randomUUID();
+  if (deps.store.rioLinksLockTry) {
+    const got = await deps.store.rioLinksLockTry(90, lockToken);
+    if (!got) {
+      return {
+        job: 'rio-links', mode: 'LIVE', ok: true,
+        reason: 'Nakładający się przebieg rio-links — pominięto',
+        observations: { links: '0', overlap: '1' },
+      };
+    }
+  }
+
+  try {
+    const loads = deps.store.listRioLoadsForPoll ? await deps.store.listRioLoadsForPoll() : [];
+    let queried = 0;
+    let written = 0;
+    let skippedWindow = 0;
+    let skippedValidity = 0;
+    let skippedDup = 0;
+    let skippedRecheck = 0;
+    let invalid = 0;
+    let down = 0;
+    let hardDown = 0;
+    let noPosition = 0;
+    let pendingOk = 0;
+    let sourceFailStreak = 0;
+    let anyHardStreakGe3 = false;
+    let netFails = 0;
+    let abortedBudget = false;
+    let abortedNet = false;
+    const warnings: string[] = [];
+    let risks = 0;
+
+    const applyPatch = async (load: RioLoadRow, patch: RioLoadPatch) => {
+      if (!deps.store.updateRioLoadState) return;
+      const meaningful = rioPatchChanged(load, patch);
+      // Samo rio_check_at: odświeżaj najwyżej co 30 min (F7 r3).
+      if (!meaningful) {
+        if (patch.rio_check_at == null || rioCheckedRecently(load, started)) return;
+      }
+      await deps.store.updateRioLoadState(load.id, patch);
+      Object.assign(load, patch);
+    };
+
+    for (const load of loads) {
+      if (deps.now().getTime() - started > RIO_BUDGET_MS) {
+        abortedBudget = true;
+        break;
+      }
+      if (netFails >= RIO_NET_ABORT_AFTER) {
+        abortedNet = true;
+        break;
+      }
+
+      const pending = load.rio_check_state === 'pending' || load.rio_check_state == null;
+      const matchRow = {
+        id: load.id,
+        trailer_plate: load.trailer_plate,
+        telematics_vehicle_id: load.telematics_vehicle_id ?? `rio:${load.rio_tracking_id}`,
+        status: load.status,
+        plannedLoadDate: load.plannedLoadDate,
+        trackingOpenedAt: load.trackingOpenedAt,
+      };
+      const inWindow = loadInTrackingWindow(matchRow, nowIso);
+      const linkValid = rioLinkValidNow(nowIso, load.rio_valid_from, load.rio_valid_to);
+      const wasInvalid = load.rio_check_state === 'invalid';
+      const wasDown = load.rio_check_state === 'down';
+      const wasExpired = !pending && !wasInvalid && !linkValid
+        && (load.rio_valid_from != null || load.rio_valid_to != null);
+
+      if (!pending && !inWindow && !wasInvalid && !wasExpired) {
+        skippedWindow++;
+        continue;
+      }
+
+      // Wygasły / invalid: ponów co 30 min (podwykonawca mógł przedłużyć end).
+      if (!pending && (wasExpired || wasInvalid)) {
+        if (rioCheckedRecently(load, started)) {
+          skippedRecheck++;
+          continue;
+        }
+      } else if (!pending && !linkValid) {
+        skippedValidity++;
+        continue;
+      }
+
+      queried++;
+      const res = await fetchRioPosition({
+        trackingId: load.rio_tracking_id,
+        secret: load.rio_secret,
+        fetchImpl: deps.fetch,
+        nowMs: started,
+      });
+
+      if (!res.ok) {
+        if (res.kind === 'invalid') {
+          invalid++;
+          await applyPatch(load, {
+            rio_check_state: 'invalid',
+            rio_check_at: nowIso,
+            rio_error_streak: 0,
+          });
+          if (await deps.store.raiseRisk({
+            kind: 'RESOURCE_MISSING',
+            severity: 'HIGH',
+            title: 'Link RIO nieprawidłowy',
+            titleKey: 'rk_rio_invalid',
+            params: {},
+            detail: {
+              zrodlo: 'RIO', loadId: load.id, status: res.status,
+              url: rioPositionUrlSafe(load.rio_tracking_id),
+            },
+            dedup: `RIO_INVALID:${load.id}`,
+            sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+            loadId: load.id,
+          })) risks++;
+          continue;
+        }
+        // #453: 200 JSON bez pozycji → sprawa transportu (SCX+HHL), nie SOURCE_DOWN.
+        // F7 #456 P2: sprawa HIGH dopiero od 3. kolejnego no_position (~6 min), jak streak przy down.
+        if (res.kind === 'no_position') {
+          down++;
+          noPosition++;
+          const streak = (load.rio_error_streak ?? 0) + 1;
+          await applyPatch(load, {
+            rio_check_state: 'down',
+            rio_check_at: nowIso,
+            rio_error_streak: streak,
+          });
+          warnings.push(res.warning);
+          if (streak >= 3) {
+            if (await deps.store.raiseRisk({
+              kind: 'RESOURCE_MISSING',
+              severity: 'HIGH',
+              title: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
+              titleKey: 'rk_rio_no_position',
+              params: {},
+              detail: {
+                zrodlo: 'RIO', loadId: load.id, status: res.status,
+                url: rioPositionUrlSafe(load.rio_tracking_id),
+                warning: res.warning,
+                streak,
+              },
+              dedup: `RIO_NO_POSITION:${load.id}`,
+              sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+              loadId: load.id,
+            })) risks++;
+          }
+          continue;
+        }
+        // sieć / 5xx — liczy się do awarii źródła dopiero gdy wszystkie linki tak padną (#453).
+        down++;
+        hardDown++;
+        netFails++;
+        const streak = (load.rio_error_streak ?? 0) + 1;
+        if (streak > sourceFailStreak) sourceFailStreak = streak;
+        if (streak >= 3) anyHardStreakGe3 = true;
+        // ok → down zawsze ustawia 'down' (F7 r3).
+        await applyPatch(load, {
+          rio_check_state: 'down',
+          rio_check_at: nowIso,
+          rio_error_streak: streak,
+        });
+        warnings.push(res.warning);
+        continue;
+      }
+
+      const wasUnknownAsset = load.rio_tracker_on === 'NIEZNANY';
+      const trackerOn = inferRioTrackerOn(res.assetName, {
+        trailer: load.trailer_plate,
+        tractorPl: load.tractor_plate,
+        tractorSe: load.tractor_delivery_plate,
+      });
+      await applyPatch(load, {
+        rio_check_state: 'ok',
+        rio_check_at: nowIso,
+        rio_asset_name: res.assetName,
+        rio_tracker_on: trackerOn,
+        rio_valid_from: res.validFrom,
+        rio_valid_to: res.validTo,
+        rio_last_fix_at: res.observedAt,
+        rio_error_streak: 0,
+      });
+      if (pending) pendingOk++;
+      // resolveRisks tylko przy przejściu ze stanu invalid / wygasłego / down (F7 r3; F7 #456 D).
+      if (wasInvalid) await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
+      if (wasExpired) await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
+      if (wasDown) await deps.store.resolveRisks(`RIO_NO_POSITION:${load.id}`);
+
+      if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
+        skippedValidity++;
+        if (await deps.store.raiseRisk({
+          kind: 'RESOURCE_MISSING',
+          severity: 'HIGH',
+          title: 'Link RIO wygasł',
+          titleKey: 'rk_rio_expired',
+          params: {},
+          detail: {
+            zrodlo: 'RIO', loadId: load.id,
+            validTo: res.validTo,
+            url: rioPositionUrlSafe(load.rio_tracking_id),
+          },
+          dedup: `RIO_EXPIRED:${load.id}`,
+          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+          loadId: load.id,
+        })) risks++;
+        continue;
+      }
+
+      if (trackerOn === 'NIEZNANY' && res.assetName) {
+        if (await deps.store.raiseRisk({
+          kind: 'RESOURCE_MISSING',
+          severity: 'MEDIUM',
+          title: `Link RIO dotyczy pojazdu ${res.assetName}, którego nie ma w awizacji`,
+          titleKey: 'rk_rio_unknown_asset',
+          params: { asset: res.assetName },
+          detail: { zrodlo: 'RIO', loadId: load.id, asset: res.assetName },
+          dedup: `RIO_UNKNOWN_ASSET:${load.id}`,
+          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+          loadId: load.id,
+        })) risks++;
+      } else if (wasUnknownAsset && trackerOn !== 'NIEZNANY') {
+        // #446: resolveRisks RIO_UNKNOWN_ASSET tylko NIEZNANY → znany (nie przy każdym przebiegu).
+        await deps.store.resolveRisks(`RIO_UNKNOWN_ASSET:${load.id}`);
+      }
+
+      // Poza oknem E27 — tylko zapytanie testowe (pending) / recheck, bez zapisu pozycji.
+      if (!inWindow) {
+        if (pending) { /* pending check poza oknem — OK */ }
+        else skippedWindow++;
+        continue;
+      }
+
+      const prevFix = deps.store.lastPositionFix
+        ? await deps.store.lastPositionFix(load.id, 'SUBCONTRACTOR_LINK')
+        : null;
+      if (prevFix && Date.parse(prevFix.ts) >= Date.parse(res.observedAt)) {
+        skippedDup++;
+        continue;
+      }
+      const speed = speedKmhFromPrev(prevFix, { lat: res.lat, lon: res.lon, ts: res.observedAt });
+
+      if (deps.store.processPosition) {
+        await deps.store.processPosition({
+          loadId: load.id,
+          lat: res.lat,
+          lon: res.lon,
+          ts: res.observedAt,
+          source: 'SUBCONTRACTOR_LINK',
+          speed,
+          heading: null,
+          ignition: null,
+          raw: {
+            provider: 'RIO',
+            trackingId: load.rio_tracking_id,
+            asset_name: res.assetName,
+            name: res.name,
+            url: rioPositionUrlSafe(load.rio_tracking_id),
+          },
+        });
+        written++;
+      }
+      if (deps.store.inferPhaseFromPosition) {
+        await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+      }
+    }
+
+    // #453: SOURCE_DOWN tylko gdy żaden link nie odpowiada (sieć/5xx dla wszystkich) albo abortedNet.
+    const allHardDown = queried > 0 && hardDown === queried;
+    const sourceDown = abortedNet || (allHardDown && anyHardStreakGe3);
+    if (sourceDown) {
+      if (await deps.store.raiseRisk(sourceDownRisk(
+        'RIO',
+        warnings.slice(-5),
+        nowIso,
+      ))) risks++;
+    } else if (!abortedBudget) {
+      // Także zamyka fałszywy SOURCE_DOWN gdy choć jeden link zapisuje pozycję (SG-19).
+      await deps.store.resolveRisks('SOURCE_DOWN:RIO');
+    }
+
+    return {
+      job: 'rio-links',
+      mode: 'LIVE',
+      ok: !sourceDown,
+      risks,
+      warnings: warnings.slice(0, 20),
+      observations: {
+        candidates: String(loads.length),
+        links: String(loads.length),
+        queried: String(queried),
+        written: String(written),
+        pending_ok: String(pendingOk),
+        invalid: String(invalid),
+        down: String(down),
+        hard_down: String(hardDown),
+        no_position: String(noPosition),
+        skipped_window: String(skippedWindow),
+        skipped_validity: String(skippedValidity),
+        skipped_recheck: String(skippedRecheck),
+        skipped_dup: String(skippedDup),
+        fail_streak_max: String(sourceFailStreak),
+        aborted_budget: abortedBudget ? '1' : '0',
+        aborted_net: abortedNet ? '1' : '0',
+      },
+    };
+  } finally {
+    if (deps.store.rioLinksLockRelease) {
+      await deps.store.rioLinksLockRelease(lockToken);
+    }
+  }
+}
+
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
   'ferry-ais-listen': runFerryAisListen,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
   'emtrack-web': runEmtrackWeb,
+  'rio-links': runRioLinks,
   'route-hazards': runRouteHazards,
 } as const;
 export type JobName = keyof typeof JOBS;
@@ -1333,7 +1874,7 @@ export type JobName = keyof typeof JOBS;
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'route-hazards': 60,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2, 'route-hazards': 60,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */

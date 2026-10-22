@@ -45,6 +45,11 @@ Deno.serve(async (req) => {
 
   let sent = 0, failed = 0;
   for (const r of rows ?? []) {
+    // #402 F7: ponowna bramka push w chwili wysyłki (Opcje / „Co dostaję”).
+    const { data: pushOk } = await sb.rpc('notify_push_still_allowed', { p_id: r.id });
+    if (pushOk !== true) {
+      continue;
+    }
     const { data: subs } = await sb.from('push_subscriptions').select('*').eq('user_id', r.user_id);
     if (!subs?.length) {
       await sb.from('notifications').update({ status: 'ERROR', error: 'no_sub' }).eq('id', r.id);

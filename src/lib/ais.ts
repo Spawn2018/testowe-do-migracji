@@ -11,6 +11,8 @@ export interface AisPosition {
   cog?: number;
   ts: string;
   source: 'live' | 'seed' | 'db';
+  /** #429 C: pozycja szacowana z rozkładu (AIS starszy niż 30 min); `lastAisTs` = ostatni sygnał AIS albo null. */
+  estimated?: { lastAisTs: string | null };
 }
 
 const MMSI_TO_ID: Record<string, FerryVesselId> = {

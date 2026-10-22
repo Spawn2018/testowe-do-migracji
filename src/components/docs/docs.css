@@ -13,7 +13,8 @@
 .doc-code{white-space:nowrap}
 .doc-req td{vertical-align:top}
 .doc-req tbody td{white-space:normal}
-.doc-req td:first-child,.doc-req td:nth-child(2),.doc-req td:nth-child(4),.doc-req td:nth-child(5){white-space:nowrap}
+/* W-audyt-ekrany (E31 img/e31-after): „Kto wgrywa” i „Termin” w jednej linii, łamią się tylko „Uwagi” */
+.doc-req td:first-child,.doc-req td:nth-child(2),.doc-req td:nth-child(3),.doc-req td:nth-child(4),.doc-req td:nth-child(5){white-space:nowrap}
 .doc-count{min-width:32px;min-height:28px;padding:0 6px;border:1px solid transparent;background:none;color:inherit;font:inherit;font-weight:700;text-align:right;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .doc-count.neg{color:var(--red)}
 .doc-count:hover,.doc-count[aria-expanded="true"]{border-color:var(--rule);background:var(--surface)}

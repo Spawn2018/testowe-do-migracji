@@ -28,7 +28,7 @@ sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
 sval() { out=$(sys "$2" | tail -1 | tr -d '\r'); if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $3)"; fi; }
 
 echo; echo "[C3] macierz po zdarzeniu"
-sval "28 zdarzeń w katalogu" "select count(distinct event_key) from notification_matrix" 28
+sval "32 zdarzeń w katalogu" "select count(distinct event_key) from notification_matrix" 32
 sval "czat: 5 ról, telefon, bez e-maila" "select count(*) from notification_matrix where event_key='chat' and in_app and push and email is false" 5
 sval "W39 status HHL_ADMIN bez e-maila" "select email::text from notification_matrix where event_key='status' and role='HHL_ADMIN'" false
 sval "strefa KSH wyłączona" "select in_app::text from notification_matrix where event_key='zone' and role='CLIENT_USER'" false
@@ -91,7 +91,35 @@ sval "50 km Śrem: matrix_event" "select payload->>'matrix_event' from notificat
 
 run "$KSH" "select my_notify_set('status','mail',false)" commit >/dev/null
 sval "osoba KSH: e-mail statusu wyłączony, było puste" "select (p.on_value is false)::text||'/'||(a.old_value->>'on' is null)::text from user_notify_pref p join audit_log a on a.entity='user_notify_pref' and a.user_id=p.user_id where p.user_id='$KSHU' and p.event_key='status' and p.channel='mail' order by a.id desc limit 1" "true/true"
-err "kanał zawsze: src_down mail" $HHL "select my_notify_set('src_down','mail',false)" "zawsze"
+
+# #402 / D-20261021-1952-01: bez „zawsze”; prefs wygrywają; bez push_fallback→EMAIL.
+run "$HHL" "select my_notify_set('src_down','mail',false)" commit >/dev/null
+sval "#402: src_down mail da się wyłączyć" "select on_value::text from user_notify_pref where user_id='$HHLU' and event_key='src_down' and channel='mail'" false
+sval "#402: 0 fixed_* w macierzy" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 0
+sys "update notification_matrix set email=true, push=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
+run "$HHL" "select my_notify_set('risk_crit','mail',false)" commit >/dev/null
+run "$HHL" "select my_notify_set('risk_crit','push',true)" commit >/dev/null
+sys "delete from notifications where dedup_key like 'c402-risk:%'" >/dev/null
+sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
+  jsonb_build_object('kind','ETA_BREACH','severity','CRITICAL','title_key','rk_eta'),
+  'c402-risk', null)" >/dev/null
+sval "#402: risk_crit mail off → 0 EMAIL (osoba, bez SUPPRESSED)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-risk:%' and status <> 'SUPPRESSED'" 0
+sval "#402: risk_crit mail off → 0 push_fallback EMAIL" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'push_fallback:%c402-risk%'" 0
+sys "update notification_matrix set email=false where event_key='sms_gw'" >/dev/null
+sys "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT') and dedup_key like 'c402-sms%'" >/dev/null
+sval "#402: SMS_FALLBACK mail off → SUPPRESSED" "select public.l13_queue_email('critical','SMS_FALLBACK','$HHLU','hhl@test','$L','X',
+  '{}'::jsonb,'c402-sms-fb',null)" SUPPRESSED
+sval "#402: SCHEDULE_DATE_CRITICAL → dates" "select public.notify_event_key('SCHEDULE_DATE_CRITICAL','{}'::jsonb)" dates
+# F7: poziom firmy — e-mail wyłączony w org_kind → 0 EMAIL także bez prefs osoby.
+sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_crit'" >/dev/null
+sys "update notification_matrix set email=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
+sys "update notification_matrix_org_kind set email=false where org_kind='FORWARDER' and event_group='RISK_FERRY_WEATHER'" >/dev/null
+sys "delete from notifications where dedup_key like 'c402-org:%'" >/dev/null
+sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
+  jsonb_build_object('kind','ETA_BREACH','severity','CRITICAL','title_key','rk_eta'),
+  'c402-org', null)" >/dev/null
+sval "#402 F7: firma mail off → 0 EMAIL (bez prefs)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-org:%' and status <> 'SUPPRESSED'" 0
+sys "update notification_matrix_org_kind set email=true where org_kind='FORWARDER' and event_group='RISK_FERRY_WEATHER'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

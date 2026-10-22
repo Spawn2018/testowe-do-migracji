@@ -100,7 +100,7 @@ export const DEMO_MATRIX: MatrixGroup[] = [
 
 export const DEMO_ACCOUNTS: Record<AccountKind, number> = { HHL_ADMIN: 4, HHL_OPS: 2, CLIENT_USER: 0, CARRIER_DISPATCH: 2, CARRIER_USER: 0 };
 
-/** 9 przełączników — nazwy i zdania z obrazu E12, stany i ostatnie zmiany z bazy 08.10; bez „Kontroli trasy”,
+/** 10 przełączników — nazwy i zdania z obrazu E12, stany i ostatnie zmiany z bazy 08.10; bez „Kontroli trasy”,
  *  „Przeszkód” (16.10, 01:13) i „E-maila o decyzjach automatycznych” (E5, E11 — e-mail ustawia „Kto co dostaje”). */
 export const DEMO_FLAGS: SecurityFlagRow[] = [
   { key: 'EXTERNAL_MESSAGING', on: false, when: '15.09.2026, 18:43', by: null },
@@ -109,6 +109,7 @@ export const DEMO_FLAGS: SecurityFlagRow[] = [
   { key: 'SMS_ZONE_APPROACH', on: true, when: '14.09.2026, 23:01', by: null },
   { key: 'SMS_ZONE_ENTER', on: true, when: '14.09.2026, 23:01', by: null },
   { key: 'TELM_EMTRACK_WEB', on: true, when: '18.09.2026, 13:18', by: null },
+  { key: 'TELM_RIO_LINKS', on: true, when: '22.10.2026, 09:10', by: null },
   { key: 'DRIVER_LINK_ACCEPT', on: false, when: '16.09.2026, 23:52', by: null },
   { key: 'FUEL_SE_PL_INGEST', on: true, when: '18.09.2026, 11:07', by: null },
   { key: 'FUEL_WOB_INGEST', on: false, when: '11.09.2026, 09:58', by: null },
@@ -248,7 +249,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
           locale={locale}
           mark={mark}
           me={{ first: first ?? '', last: rest.join(' '), phone: me.phone ?? '', mail: me.mail, kind, lastLogin: me.last }}
-          mfa={me.mfa}
+          mfa={me.mfa === true}
           mfaDevices={me.mfa ? [{ id: 'f1', name: 'Telefon 1', since: '22.09.2026' }] : undefined}
           mfaCode
           onMfaAdd={() => undefined}
@@ -281,7 +282,7 @@ export function demoBodies(locale: Locale, opts: { kind: AccountKind; readOnly: 
       notify: { text: 'SMS przy miejscach: Boden brak' },
       money: { text: 'Cennik KSH v2 · paliwo {fuel}' },
       rules: { text: '10 progów · wymóg zezwoleń wył.' },
-      system: { text: '1 źródło nie działa · 9 przełączników', tone: 'alert' },
+      system: { text: '1 źródło nie działa · 10 przełączników', tone: 'alert' },
       forme: { text: 'motyw, waluta, 2FA' },
     },
   };

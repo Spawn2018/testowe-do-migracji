@@ -253,8 +253,9 @@ describe('I-0 i podłączenie w Opcjach', () => {
     expect(v).toMatch(/scr\('fuel', fuelView \? block\(/);
     expect(v).toMatch(/scr\('surch', dwell\s*\? block\(<DwellScreen/);
     expect(v).toMatch(/if \(terms \|\| addresses\) \{\s*money\.push\(scr\('terms'/);
-    expect(v).toContain('BafForm');
-    expect(v).toContain('DwellOptionsForm');
+    /* W-opcje-live-2: produkcja — te same ekrany z danymi z bazy (LiveFuel z BafForm, LiveDwell z ops_thresholds) */
+    expect(v).toContain("import('../auth/LiveFuel')");
+    expect(v).toContain("import('../auth/LiveDwell')");
     const types = readFileSync(new URL('../src/components/options/types.ts', import.meta.url), 'utf8');
     expect(types).toMatch(/terms: 'p3c_s_terms'/);
   });

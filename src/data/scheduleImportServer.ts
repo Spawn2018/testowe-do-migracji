@@ -34,9 +34,11 @@ async function projectId(): Promise<string> {
   return (r.data as { id: string }).id;
 }
 
-async function call(pid: string, rows: RpcRow[], cancel: string[], file: Record<string, unknown>, dryRun: boolean): Promise<ImportRpcResult> {
+async function call(pid: string, rows: RpcRow[], cancel: string[], file: Record<string, unknown>, dryRun: boolean, quiet = false): Promise<ImportRpcResult> {
   const sb = await getSupabase();
-  const r = await sb.rpc('import_schedule', { p_project: pid, p_rows: rows, p_cancel_codes: cancel, p_file: file, p_dry_run: dryRun });
+  /* #426: p_quiet tylko przy imporcie bez powiadomień (baza: wyłącznie HHL_ADMIN). */
+  const args = { p_project: pid, p_rows: rows, p_cancel_codes: cancel, p_file: file, p_dry_run: dryRun, ...(quiet ? { p_quiet: true } : {}) };
+  const r = await sb.rpc('import_schedule', args);
   if (r.error) throw new Error(r.error.message);
   return r.data as ImportRpcResult;
 }
@@ -59,8 +61,9 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
   return { diff: rpcToDiff(preview, meta), preview, rows, meta, hash, buf, projectId: pid, map };
 }
 
-/** overwriteCodes — I-18: kody, dla których HHL świadomie nadpisuje daty potwierdzone przez KSH (osobna zgoda). */
-export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], overwriteCodes: string[] = []): Promise<ImportRpcResult> {
+/** overwriteCodes — I-18: kody, dla których HHL świadomie nadpisuje daty potwierdzone przez KSH (osobna zgoda).
+ *  quiet — #426: import bez powiadomień (tylko Administrator HHL). */
+export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], overwriteCodes: string[] = [], quiet = false): Promise<ImportRpcResult> {
   if (d.meta.accepted === 0) throw new Error('Plik bez poprawnych wierszy — nic nie zapisano');
   const sb = await getSupabase();
   const path = `${d.projectId}/${d.hash}.xlsx`.replace(/\.\.\//g, '');
@@ -71,7 +74,7 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], 
     column_map: d.map ?? COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
     skipped_standard: d.meta.skippedStandard,
     ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
-  }, false);
+  }, false, quiet);
 }
 
 /** I-22: zapisane szablony mapowania (RLS: tylko HHL). */

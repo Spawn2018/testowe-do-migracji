@@ -38,7 +38,8 @@ export async function fetchVesselFix(mmsi: number, appId: string): Promise<Vesse
 }
 
 export function parseDigitrafficLocations(json: any, mmsi: number): VesselFix | null {
-  const f = (json?.features ?? []).find((x: any) => x?.mmsi === mmsi);
+  // Digitraffic: mmsi bywa na feature i w properties — obu szukamy (#421).
+  const f = (json?.features ?? []).find((x: any) => Number(x?.mmsi ?? x?.properties?.mmsi) === mmsi);
   if (!f) return null;
   const [lon, lat] = f.geometry.coordinates;
   const p = f.properties ?? {};
@@ -101,6 +102,14 @@ export function departurePortForRoute(route: string): DeparturePort {
   if (route === 'KAA-GDY') return 'KAA';
   if (route === 'NYN-GDN') return 'NYN';
   return 'GDN';
+}
+
+/** Port docelowy trasy (do delayed_arrival_at z AIS — #421). */
+export function arrivalPortForRoute(route: string): DeparturePort {
+  if (route === 'GDY-KAA') return 'KAA';
+  if (route === 'KAA-GDY') return 'GDY';
+  if (route === 'NYN-GDN') return 'GDN';
+  return 'NYN';
 }
 
 export function portCoords(port: DeparturePort): { lat: number; lon: number } {

@@ -234,24 +234,30 @@ err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko 
 
 echo; echo "[B6] e-mail na osobę, płatność, rio_secret, limit anon, loads_read (0225)"
 HHLID=$(sys "select id from app_users where email='hhl@test'")
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push/money/import.
+# Bramka (a_gate przed budżetem) wymaga event_key — B6T* przez matrix_event=dates.
+sys "update notification_matrix set email=true where event_key='dates' and role='HHL_ADMIN'" >/dev/null
+sys "update notification_matrix set email=true where event_key='email_budget' and role='HHL_ADMIN'" >/dev/null
 sys "
 do \$\$
 declare i int; u uuid := '$HHLID';
 begin
   for i in 1..25 loop
     insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
-    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text, '{}'::jsonb, 'b6mail:' || i, 'PENDING');
+    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text,
+            jsonb_build_object('matrix_event', 'dates'), 'b6mail:' || i, 'PENDING');
   end loop;
 end \$\$;
 " >/dev/null
-val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%'" 20
+val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%' and status is distinct from 'SUPPRESSED'" 20
 val "B6: 1 wiadomość zbiorcza" $HHL "select count(*) from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" 1
 val "B6: tytuł limitu" $HHL "select payload->>'title' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Limit e-maili na dziś"
 val "B6: treść limitu" $HHL "select payload->>'body' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Dziś dostałeś już 20 e-maili z Watch Tower. Kolejne powiadomienia z dzisiaj są w dzwonku i w aplikacji na telefonie. E-maile wrócą jutro."
 val "B6: EMAIL_BUDGET w treściach" $HHL "select subject_pl from notification_copy where id='EMAIL_BUDGET'" "Limit e-maili na dziś"
 sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
-     values ('EMAIL', 'hhl@test', '$HHLID', 'B6PILNY', '{\"push_fallback\":true}'::jsonb, 'b6mail:pilny', 'PENDING')" >/dev/null
-val "B6: e-mail zapasowy poza limitem" $HHL "select count(*) from notifications where user_id='$HHLID' and template='B6PILNY'" 1
+     values ('EMAIL', 'hhl@test', '$HHLID', 'B6PILNY',
+             '{\"push_fallback\":true,\"matrix_event\":\"dates\"}'::jsonb, 'b6mail:pilny', 'PENDING')" >/dev/null
+val "B6: e-mail zapasowy poza limitem" $HHL "select count(*) from notifications where user_id='$HHLID' and template='B6PILNY' and status is distinct from 'SUPPRESSED'" 1
 
 out=$(sys "begin; grant update (paid_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$KSH'; update invoices set paid_at=current_date where id='$INVP'; rollback;")
 echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: KSH nie zmieni paid_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_at: $out"; }
@@ -265,6 +271,16 @@ err "B6: SCX nie zapisze rio_secret wprost" $SCX "update loads set rio_secret='t
 sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
 out=$(sys "select rio_secret from loads where id='$L1'")
 echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
+
+echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
+# Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
+# Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani
+# tracking_opened_at (brak grant select) w information_schema.columns — Edge i tak idzie service_role.
+RIO_POLL_COLS='id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id'
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name = any(string_to_array('$RIO_POLL_COLS',','))")
+[ "$out" = "18" ] && { ok=$((ok+1)); echo "  OK    #442: 18 kolumn poll RIO w loads"; } || { fail=$((fail+1)); echo "  FAIL  #442: 18 kolumn poll RIO w loads  (otrzymano: $out, oczekiwano: 18)"; }
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name='shipment_code'")
+[ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    #442: loads bez shipment_code"; } || { fail=$((fail+1)); echo "  FAIL  #442: loads bez shipment_code  (otrzymano: $out, oczekiwano: 0)"; }
 
 echo; echo "[#392] RIO sanitize — zmiana linku czyści / resetuje pola RIO (0252)"
 sys "update loads set telematics_vehicle_id='https://emtrack.eu/app/' where id='$L1'" >/dev/null

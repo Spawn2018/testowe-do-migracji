@@ -676,7 +676,11 @@ nav button{padding:8px 14px}
 /* arrow-in-dot markers */
 .wt-marker{background:transparent;border:0}
 .wt-marker-ferry-stale{opacity:.45}
+/* #429 C: pozycja szacowana z rozkładu — przerywany obrys */
+.wt-marker-ferry-est{opacity:.85}
 .wt-dot{position:relative;border-radius:50%;outline:1px solid rgba(0,0,0,.25);box-sizing:border-box}
+/* #429 C: przerywany obrys pozycji szacowanej (po .wt-dot — inaczej jego outline wygrywa) */
+.wt-marker-ferry-est .wt-dot{outline:2px dashed #6BA8D6;outline-offset:2px}
 .wt-arrow{position:absolute;left:50%;top:50%;width:0;height:0;
   border-left:3.5px solid transparent;border-right:3.5px solid transparent;
   border-bottom:7px solid #fff;pointer-events:none}
@@ -1090,6 +1094,10 @@ img,video{max-width:100%;height:auto}
 .bell-hd .bell-x{margin-left:4px}
 .bell-hd .btn.bell-all{border:0;background:none;padding:0;min-height:0;color:var(--sea);text-decoration:underline;font-size:13px;font-weight:400}
 .bell-scroll{overflow-y:auto;flex:1}
+/* Właściciel 21.10.2026 20:14 (pkt 5): lista dzwonka na telefonie — podstawa „auto”, nie 0% (WebKit przy wysokości
+   panelu tylko z max-height liczył 0% jako 0 i lista się zwijała); przewijanie w środku bez przewijania strony pod spodem */
+.bell-pop .bell-scroll{flex:1 1 auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.bell-pop .bell-hd{flex:0 0 auto}
 .bell-sec{border-bottom:1px solid var(--rule)}
 .bell-sec-hd{display:flex;justify-content:space-between;align-items:baseline;margin:0;padding:10px 14px 4px;
   font-family:var(--font-cond);font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
@@ -1879,6 +1887,10 @@ img,video{max-width:100%;height:auto}
 .wt-mk-grp{position:relative;width:30px;height:30px}
 .wt-mk.is-grp{width:30px;height:30px}
 .wt-mk.is-noais{opacity:.55}
+/* #429 C: grupa aut na promie z pozycją szacowaną z rozkładu */
+.wt-mk.is-est{outline:2px dashed #6BA8D6;outline-offset:2px}
+/* opóźnienie ważniejsze niż „szacowana” — czerwony obrys zostaje (F7 #439 r2) */
+.wt-mk.is-est.is-late{outline:3px solid var(--red);outline-offset:0}
 .wt-mk-n{position:absolute;right:-11px;top:-11px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:50%;border:2px solid var(--surface);background:var(--amber);color:var(--surface);font:700 12px/16px var(--font-cond);text-align:center}
 .mk-dot.is-grp{position:relative;background:var(--sea)}
 .mk-dot.is-grp::after{content:'';position:absolute;right:-4px;top:-4px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
@@ -1922,3 +1934,5 @@ img,video{max-width:100%;height:auto}
 }
 .mlist .filters .map-search{flex:1 1 230px;min-width:0}
 .map-e29 td[data-map-name] .map-cell-sub{white-space:nowrap}
+/* wyglad/W-cele-przejsc: miejsce, do którego prowadzi sprawa albo wiersz promu (wiersz rejsu w Przeglądzie, rejs w Harmonogramie › Rejsy) */
+.is-go-target{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}

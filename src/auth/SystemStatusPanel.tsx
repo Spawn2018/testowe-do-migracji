@@ -37,7 +37,7 @@ const SILENT_MS = 15 * 60 * 1000;
 
 /** Zadania integracji zapisujące integration_runs (ostatni przebieg każdego — także rzadkich, raz na dobę). */
 export const KNOWN_JOBS = [
-  'send-notifications', 'ferry-ais', 'ferry-ais-listen', 'ferry-status', 'ferry-schedule', 'ferry-weather',
+  'send-notifications', 'rio-links', 'ferry-ais', 'ferry-ais-listen', 'ferry-status', 'ferry-schedule', 'ferry-departures', 'ferry-weather',
   'road-se', 'road-pl', 'daily-admin-digest', 'email-budget', 'rodo', 'usage-check', 'fuel-wob',
 ] as const;
 

@@ -21,18 +21,18 @@ const html = (el: ReturnType<typeof createElement>) => renderToStaticMarkup(el);
 const read = (p: string) => readFileSync(p, 'utf8');
 const row = (id: string) => DEMO_MATRIX.flatMap((g) => g.rows).find((r) => r.id === id);
 
-describe('E-01, N-01: Przełączniki bezpieczeństwa — 9, bez „Kontroli trasy”, „Przeszkód” i e-maila decyzji', () => {
-  it('lista i dane demo: te same 9 kluczy, w tej samej kolejności', () => {
-    expect(SECURITY_FLAG_KEYS).toHaveLength(9);
+describe('E-01, N-01: Przełączniki bezpieczeństwa — 10 (z RIO, #446), bez „Kontroli trasy”, „Przeszkód” i e-maila decyzji', () => {
+  it('lista i dane demo: te same 10 kluczy, w tej samej kolejności', () => {
+    expect(SECURITY_FLAG_KEYS).toHaveLength(10);
     expect(DEMO_FLAGS.map((f) => f.key)).toEqual([...SECURITY_FLAG_KEYS]);
     for (const k of ['H1_ROUTE_CHECK', 'H3_CORRIDOR_OBSTACLES', 'H6_MAP_OBSTACLES', 'AUTOMATIC_DECISION_EMAIL']) {
       expect(SECURITY_FLAG_KEYS as readonly string[]).not.toContain(k);
       expect(t('pl', `p3c_flag_${k}`)).toBe(`p3c_flag_${k}`);
     }
   });
-  it('kafelek „System” na telefonie: „9 przełączników”; nigdzie „Czeka na wymiary”', () => {
+  it('kafelek „System” na telefonie: „10 przełączników”; nigdzie „Czeka na wymiary”', () => {
     const d = demoBodies('pl', { kind: 'HHL_ADMIN', readOnly: false, mark: null });
-    expect(d.summaries.system?.text).toBe('1 źródło nie działa · 9 przełączników');
+    expect(d.summaries.system?.text).toBe('1 źródło nie działa · 10 przełączników');
     expect(read('src/components/options/demo.tsx') + read('src/i18n/p3c.ts')).not.toContain('Czeka na wymiary');
   });
 });

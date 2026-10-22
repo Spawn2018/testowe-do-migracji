@@ -20,6 +20,8 @@ export interface SmsPlacesSource {
    * (inne konta, Operacje HHL). Baza i tak odmawia innym kontom.
    */
   setSending: ((on: boolean) => Promise<{ ok: boolean }>) | null;
+  /** true — rodzaje A–D nie do wyboru przy osobie (baza: każda osoba dostaje wszystkie rodzaje miejsca) */
+  kindsFixed?: boolean;
 }
 
 export function smsPlacesOf(): SmsPlacesSource | null {

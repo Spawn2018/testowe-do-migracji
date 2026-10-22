@@ -13,6 +13,7 @@ import type {
   Bill,
   BillVerification,
   BafParams,
+  DocCategory,
   Document,
   FactoringOffer,
   FerryBooking,
@@ -238,6 +239,10 @@ interface TowerState {
 
   navCollapsed: boolean;
   drawerTab: string | null;
+  /** wyglad/W-cele-przejsc: „Wgraj” ze sprawy — okno „Wgraj dokument” w panelu z tym transportem i rodzajem (jednorazowe) */
+  uploadReq: { loadId: string; category: DocCategory | null } | null;
+  /** wyglad/W-cele-przejsc: wiersz promu z „Sytuacji na trasie” — Harmonogram › Rejsy z tym rejsem (jednorazowe) */
+  sailingFocus: string | null;
   openDecisionId: string | null;
   openInvoiceId: string | null;
   accessMessage: string | null;
@@ -252,6 +257,8 @@ interface TowerState {
   setRole: (role: RoleId) => void;
   setNavCollapsed: (v: boolean, opts?: { persist?: boolean }) => void;
   setDrawerTab: (tab: string | null) => void;
+  setUploadReq: (r: { loadId: string; category: DocCategory | null } | null) => void;
+  setSailingFocus: (id: string | null) => void;
   setOpenDecisionId: (id: string | null) => void;
   setOpenInvoiceId: (id: string | null) => void;
   setAccessMessage: (msg: string | null) => void;
@@ -400,6 +407,8 @@ export const useTowerStore = create<TowerState>()(
       navCollapsed:
         typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wtNavCollapsed') === '1',
       drawerTab: null,
+      uploadReq: null,
+      sailingFocus: null,
       openDecisionId: null,
       openInvoiceId: null,
       accessMessage: null,
@@ -524,6 +533,8 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setDrawerTab: (drawerTab) => set({ drawerTab }),
+      setUploadReq: (uploadReq) => set({ uploadReq }),
+      setSailingFocus: (sailingFocus) => set({ sailingFocus }),
       setOpenDecisionId: (openDecisionId) => set({ openDecisionId }),
       setOpenInvoiceId: (openInvoiceId) => set({ openInvoiceId }),
       setAccessMessage: (accessMessage) => set({ accessMessage }),
@@ -534,6 +545,7 @@ export const useTowerStore = create<TowerState>()(
       navigateTo: (opts) => {
         set((s) => ({
           view: (opts.view as ViewKey) ?? s.view,
+          sailingFocus: ((opts.view as ViewKey) ?? s.view) === 'sched' ? s.sailingFocus : null,
           drawerTab: opts.tab !== undefined ? opts.tab : s.drawerTab,
           selectedLoadId: opts.loadId !== undefined ? opts.loadId : s.selectedLoadId,
           stageFilter: opts.stage !== undefined ? opts.stage : s.stageFilter,
@@ -604,7 +616,8 @@ export const useTowerStore = create<TowerState>()(
         get().markNotificationRead(id);
       },
 
-      setView: (view) => set({ view }),
+      /* W-cele-przejsc: cel „rejs w Harmonogramie › Rejsy” nie czeka na inny widok */
+      setView: (view) => set(view === 'sched' ? { view } : { view, sailingFocus: null }),
       setStageFilter: (stage) =>
         set((s) => ({
           stageFilter: stage === null ? null : s.stageFilter === stage ? null : stage,
@@ -1040,7 +1053,7 @@ export const useTowerStore = create<TowerState>()(
           ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}),
         };
         set((s) => ({ messages: [...s.messages, msg] }));
-        writeThrough({ type: 'message.send', loadId, text });
+        writeThrough({ type: 'message.send', loadId, text, ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}) });
       },
 
       uploadDocument: (loadId, category, name, opts) => {

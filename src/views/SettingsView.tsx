@@ -2,7 +2,7 @@
  * Ustawienia (KSH, SCX) — wyglad/P3-c: ten sam układ co Opcje HHL (E11, E12 pkt 1: KSH i SCX tylko „Dla mnie”).
  * Ekrany: Moje konto (E37, E6), Co dostaję (E11), Wygląd i waluta, Instrukcja oraz
  * Pieniądze › Opłata paliwowa tylko do odczytu (I-13; decyzja właściciela 17.10.2026, 07:20 — 5B: KSH i SCX widzą ją
- * tylko do odczytu, w demo i na produkcji; zmienia E12 pkt 1). Produkcja — `SefsReadOnly`, demo — ekran E39 bez zapisu.
+ * tylko do odczytu, w demo i na produkcji; zmienia E12 pkt 1). Produkcja — ten sam ekran z danymi z bazy (`LiveFuel`, wersje z `SefsReadOnly` rozwijane pod nim), demo — ekran E39 bez zapisu.
  */
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
@@ -16,7 +16,7 @@ import { useDemoOptions } from '../components/options/useDemoOptions';
 import { ForMeScreen } from '../components/options/ForMeScreen';
 import { DeviceScreen } from '../components/options/DeviceScreen';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
-import { NOTIFY_CATALOG } from '../lib/notifyCatalog';
+import { NOTIFY_CATALOG_READY } from '../lib/notifyCatalog';
 import { fuelScreenOf } from '../lib/p5bSource';
 import { DEMO_EXAMPLE_BASE_EUR } from '../lib/p5bDemo';
 import { getNowIso } from '../lib/frozenNow';
@@ -25,7 +25,8 @@ import { lazyRetry } from '../lib/lazyRetry';
 import { accountRole } from '../lib/accountRole';
 
 /* I-13: parametry SEFS tylko do odczytu (zakres wg RLS) — wyłącznie produkcja */
-const SefsReadOnly = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/SefsReadOnly'))) : null;
+/* 5B (W-opcje-live-2): na produkcji ekran z audytu z danymi z bazy (tylko odczyt, bez spraw HHL) */
+const LiveFuel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFuel'))) : null;
 /** D-20261014-0700-01 J3 pkt 1: Moje konto KSH/SCX (Podgląd = tylko odczyt w LiveAccountScreen). */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
 
@@ -68,7 +69,7 @@ export function SettingsView() {
   const forme: OptScreen[] = [
     { id: 'account', right: 'own', body: demo?.bodies.account ?? (LiveAccount ? block(<LiveAccount />) : noSource) },
     { id: 'forme', right: 'own', body: demo?.bodies.forme ?? (live
-      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG} prefs={live.prefs} onSave={live.save} />
+      ? <ForMeScreen locale={locale} kind={kind} groups={NOTIFY_CATALOG_READY} prefs={live.prefs} onSave={live.save} />
       : <ForMeScreen locale={locale} kind={null} groups={null} />) },
     {
       id: 'look',
@@ -87,9 +88,9 @@ export function SettingsView() {
   const groups: OptGroup[] = [];
   /* P11 (e12, 5B): „Dla mnie” pierwsza (Moje konto na starcie), Pieniądze › Opłata paliwowa (tylko odczyt) niżej */
   groups.push({ id: 'forme', screens: forme, summary: demo?.summaries.forme?.text });
-  const fuelDemo = SefsReadOnly ? null : fuelScreenOf(localDateOf(getNowIso()), getNowIso());
+  const fuelDemo = LiveFuel ? null : fuelScreenOf(localDateOf(getNowIso()), getNowIso());
   if (role === 'KSH' || role === 'SCX') {
-    if (SefsReadOnly) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<SefsReadOnly />) }] });
+    if (LiveFuel) groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<LiveFuel readOnly party={role} />) }] });
     else if (fuelDemo) {
       /* F7 (17.10): przykład opłaty na własnej stawce — KSH stawka KSH (przychód HHL), SCX stawka SCX; bez spraw HHL */
       const view = { ...fuelDemo, exampleBaseEur: role === 'KSH' ? DEMO_EXAMPLE_BASE_EUR.rev : DEMO_EXAMPLE_BASE_EUR.cost };

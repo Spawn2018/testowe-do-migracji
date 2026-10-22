@@ -3915,14 +3915,319 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #390 F7 „gotowe” (`de097e1`, Spawn2018, po ostatnim commicie) + CI zielone → merge `8f995121`. #396 bez F7. Bez push na `main`.
 - Bieżąca: **D-1535** PR #396 — `db` 62/67 (format `1.1400` + TELM t40 oczekiwało 1,13); poprawka: cast `numeric(4,2)` w overrides i asercjach; TELM/korekta → 1,14 za D-1535.
 
-## 2026-10-21 18:35 � #398 `pilne`: szum ryzyk (przerywa B5)
+## 2026-10-21 18:35 � #398 `pilne`: szum ryzyk (przerywa B5)
 
-- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) � przerywa B5. Wpisane: PLAN �3/�4/�8, dopisek `D-20261021-1820-01.md`. #384 pkt 7�8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
+- Skrzynka: #398 (Spawn2018, `dla-cursora`+`pilne`) � przerywa B5. Wpisane: PLAN �3/�4/�8, dopisek `D-20261021-1820-01.md`. #384 pkt 7�8 w planie (bez `pilne` na nowym). #323/#322/#320 w planie.
 - Scalanie: brak PR z `F7: gotowe do scalenia`. #382/#383 bez F7. #397 visual zielone, bez F7. Bez push na `main`.
-- Bie��ca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) � `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprz�tanie bulk_quiet. B5 � **0255**.
+- Bie��ca: **HOTFIX #398** (`pakiet/hotfix-398-risk-noise`, migracja **0254**) � `loaded_confirmed`+GPS; emtrack `SILENT_MIN_EMTRACK`; ETA po dostawie; ORDERNO zamykanie; sprz�tanie bulk_quiet. B5 � **0255**.
 
 ## 2026-10-21 19:50 — #399 F7 sprzątanie SILENT; #400 w planie; #397 SCALONE
 
 - Skrzynka: #398/#400 `pilne` (bieżąca #398); #400 wpisane PLAN §3/§4/§8 + dopisek `D-20261021-1929-01.md` (po #398 → 0255, B5 → 0256). #384/#323/#322/#320 w planie.
 - Scalanie: #397 F7 gotowe → merge `f4abce86`. #399 CI zielone na `d2548603`, F7 „jeszcze nie” (para EXPIRE+RESOLVE) → poprawka wariantu 1. #382 bez F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #398** PR #399 — sprzątanie SILENT: AUTO_CLOSED + `if found` przed `l3_lapse`; powód „emtrack — brak sygnału naczepy”.
+
+## 2026-10-21 20:20 � #399 SCALONE; start #402 (jedna bramka powiadomie� / 0255)
+
+- Skrzynka: #402 (Spawn2018, `dla-cursora`+`pilne`) � wpisane PLAN �3/�4/�8, dopisek `D-20261021-1952-01.md` (0255; #400 � 0256; B5 � 0257). #400/#384/#323/#322/#320 w planie.
+- Scalanie: #399 F7 `gotowe do scalenia` (`77d0240`, po CI) � merge `6e76bce9` (0254). #398 zamkni�te. #401/#403/#382 bez F7. Bez push na `main`.
+- Bie��ca: **HOTFIX #402** (`pakiet/hotfix-402-notify-gate`, migracja **0255**) � `notify_person_on` bez omini�cia prefs; bez `push_fallback` EMAIL; `l13_queue_email` + `sms_watchdog` przez bramk�; `notify_email_still_allowed` w send-notifications; testy c3 +5 netto.
+
+## 2026-10-21 20:40 — #402 CI fix; #405 wpisane (SMS strefy / 0256)
+
+- Skrzynka: #405 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §3/§4/§8, dopisek `D-20261021-2014-01.md` (#402→0255, #405→0256, #400→0257, B5→0258). #402/#400/#384/#323/#322/#320 w planie.
+- Scalanie: brak `F7: gotowe do scalenia`. #406 `db` czerwone (workflow poza bramką, c16/l13/c3) — poprawka w tym przebiegu. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `WORKFLOW_ALERT`→`workflow` w macierzy; c16 włącza mail `dates`; l13 włącza mail `dec_new` dla KSH; c3 asercja po `user_id`. Potem #405.
+
+## 2026-10-21 20:50 � #402 F7 (firma/trigger/push); skrzynka #411/#409/#412; scalenia wygl�du
+
+- Skrzynka: #411 `pilne` � PLAN + `D-20261021-2038-01.md` (**0256**); #405�**0257**; #400�**0258**; #409 � `D-20261021-2030-01.md` (**0259**); #412 � `D-20261021-2040-01.md` (po B5); B5�**0260**.
+- Scalanie: #407, #401, #404 � `F7: gotowe do scalenia` po ostatnim commicie, CI zielone � merge. #408 wstrzymane. #406 F7 �jeszcze nie� � poprawka. Bez push na `main`.
+- Bie��ca: **HOTFIX #402** PR #406 � `notification_matrix_org_kind` w bramce; `trg_notifications_gate` IN_APP/EMAIL; `notify_push_still_allowed` + web-push-send; push nie tylko krytyczne; `email_budget`/`fuel_miss`; c3 31 kluczy + test firmy; c16 dedup fallback.
+
+## 2026-10-21 21:15 — #402 db: bramka bez user_id; #410/#403 SCALONE; #413 w planie
+
+- Skrzynka: #413 `pilne` — wpisane PLAN §3/§4/§8 + `D-20261021-2057-01.md` (po #402/#411 → **0261** po B5). #402 bieżąca; #411/#405/#400/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #410 F7 gotowe → merge `e27ce061`; #403 F7 gotowe → merge `e1dd2ef9`. #406 `db` FAIL (status/money/import/i2/dec2/insurance/l13) — trigger nadpisywał L13_FILL bez `user_id` + brak mapowań szablonów. #408 wstrzymane. #414 bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `trg` skip przy `user_id` null / status SENT; mapowania `INSURANCE_EXPIRY`/`L17_BACKLOG`/`ETA_NOTIFY_KSH`/`KSH_DATE_COUNTER_RESULT`; `inv_overdue`+`dates.email` domyślnie on; workflow CLIENT/CARRIER off.
+
+## 2026-10-21 21:45 — #402 F7: workflow LOAD_STATUS, ext_mail, mapowania RISK
+
+- Skrzynka: bez nowych; #413/#411/#405/#400/#409/#412 już w planie. #412 ma dopiski (2FA, paliwo Orlen) — do rozszerzenia zakresu przy pozycji.
+- Scalanie: brak `F7: gotowe do scalenia` po ostatnim commicie. #406 `db` FAIL: workflows 3 + dec-auto 1 (WORKFLOW_ALERT KSH/SCX blokowane przez SYSTEM=tylko HHL) + nullguard 689/690. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `workflow`→`LOAD_STATUS` (KSH/SCX z reguł); `ext_mail`; `matrix_event` w bramce; LATE_DATE/SILENT/AUTO→dates/status; `trg_notifications_a_gate` przed budżetem; nullguard bootstrap poza triggerem.
+
+## 2026-10-21 22:05 — #402 db: B6/C1 po a_gate; #414 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora`; pozycje #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #414 F7 gotowe → merge `dc2e08eb`. #415 F7 gotowe, po #414 mergeable (visual w toku). #406 `db` FAIL: security B6 (25/0 zamiast 20/1 — a_gate przed budżetem tłumi B6T* bez event_key) + risks C1 RISK_OPEN. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — test B6 z `matrix_event=dates`; C1: org/macierz risk_route + asercja po `risk_id`.
+
+## 2026-10-21 22:40 — #402 F7: bez nadpisu macierzy; #417/#416 SCALONE
+
+- Skrzynka: bez nowych; #412 dopiski (2FA/Orlen) nadal przy pozycji. #402/#411/#405/#400/#409/#412/#413 w planie.
+- Scalanie: #417 F7 gotowe → merge `3d380cdf`; #416 F7 gotowe → merge `ba9aed43`. #408 wstrzymane. #418 bez F7 (visual w toku). #406 CI zielone na `42fc2914`, F7: nie nadpisuj `inv_overdue`/`dates`. Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `insert … on conflict do nothing`; usunięte UPDATE `inv_overdue`/`dates`; money/import/i2 włączają kanał w prep.
+
+## 2026-10-21 23:00 — #418 SCALONE; #402 db B6: dates.email w prep
+
+- Skrzynka: bez nowych `dla-cursora`; #402/#411/#405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #418 F7 gotowe (`1ab3640`) → merge `2d8aa5f2`. #408 wstrzymane. #406 `db` FAIL na `dc4dbe15`: security B6 (0 e-maili — seed `dates.email` off po usunięciu UPDATE migracji). Bez push na `main`.
+- Bieżąca: **HOTFIX #402** PR #406 — `security.sh` B6 włącza `dates`/`email_budget` e-mail dla HHL_ADMIN w prep (jak c16/money/import).
+
+## 2026-10-21 23:25 — #406 SCALONE; start #411 (0256)
+
+- Skrzynka: bez nowych `dla-cursora`; #411/#405/#400/#409/#412/#413 w planie (#402 zamknięte).
+- Scalanie: #406 F7 gotowe (`a63f238`) → merge `2352a0fe` (0255). #408 wstrzymane (czekają fuel_publications). Bez push na `main`.
+- Bieżąca: **HOTFIX #411** (`pakiet/hotfix-411-closed-notify`, migracja **0256**) — bez `*_RESOLVED`; `notify_mark_case_closed`; WEB_PUSH `url`; sprzątanie bulk + AUDYT17_MARK_READ.
+
+## 2026-10-22 00:56 — #420+#419 SCALONE; start #405 (0257)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #411 zamknięte; #405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #420 F7 gotowe (`e099872`) → merge `8a4d00e3`; #419 F7 gotowe (`b5322e5`) → merge `30459c4a` (0256). Bez push na `main`.
+- Bieżąca: **HOTFIX #405** (`pakiet/hotfix-405-sms-zones`, migracja **0257**) — `sms_enqueue` tylko ZONE_*/TEST; triggery kierowcy OFF; `issue_driver_token_sms` bez SMS; i2 I-3 za decyzją.
+
+## 2026-10-22 01:25 — #405 F7 B1/B2; #421+#422 wpisane (0258–0259)
+
+- Skrzynka: #421/#422 (Spawn2018, `dla-cursora`+`pilne`) — PLAN §3/§4/§8, dopiski `D-20261022-0105-01.md` / `D-20261022-0113-01.md`; #400→0260, #409→0261, B5→0262, #413→0263.
+- Scalanie: #424 CI zielone na `780ff80`; F7 „jeszcze nie” → poprawka B1 (TEST na strefy) + B2 (pilot tylko ZONE_*) + unschedule `tower-sms-rozladunek`; i2 628→632. #408 wstrzymane. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — F7 runda 2; potem #421.
+
+## 2026-10-22 01:50 — #405 CI: pg_cron guard; #425+#426 w planie
+
+- Skrzynka: #425 (`pilne`, kolejka) + #426 (import `p_quiet`) — PLAN §4/§8, dopiski `D-20261022-0130-01.md` / `D-20261022-0138-01.md`. Kolejność: #405→#421→#426(0259)→#400(0260)→#384(0261)→#409(0262)→#413(0263)→#422(0264)→#412→B5(0265).
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #424 `db` FAIL: `schema cron does not exist` przy `cron.unschedule` w tower_boot → guard `pg_extension`. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — poprawka CI; potem F7.
+
+## 2026-10-22 02:15 — #405 i2 F7 asercje; #423 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405/#421/#425/#426/#400/#384/#409/#413/#422/#412 w planie.
+- Scalanie: #423 F7 gotowe (`5553439`) → merge `2e446fc5` (wygląd Wydajność). #424/#427/#428/#382 bez „gotowe” po head. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — `db` FAIL i2 627/5: `::text`→`true` (nie `t`); `sms_enqueue` w WHERE 2× (dedup→null) → osobny SELECT + cleanup kolejki F7 przed pull.
+
+## 2026-10-22 02:35 — #405 CI zielone; F7: numer testowy pilota
+
+- Skrzynka: bez nowych. F7 na `d2cfb32` (przed poprawką): format `true`, enqueue 2×, pull 2 z F7 ZONE/TEST (nie „spoza listy”), prawdziwy numer w teście.
+- Scalanie: #424 `db`/`unit`/`visual` zielone na `74632573`. Czeka na ponowne F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — pilot w i2: `+48000000001` (bez numeru właściciela).
+
+## 2026-10-22 02:55 — #405 F7 runda 3 (R-2 TEST stref)
+
+- Skrzynka: F7 na `7463257`: jeszcze nie — (1) numer fikcyjny `+48600999888`, (2) TEST na `sms_zone_recipients` tylko przy EXTERNAL on + `admin_sms_zone_test` wyjątek R-2, (3) pull 2 z kontrolą rodzaju. Archiwum TELM: numer → „[numer właściciela]”.
+- Scalanie: #424 CI zielone na `649ad51e` (tylko numer); bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — 0257 + i2 634; czeka CI i F7.
+
+## 2026-10-22 03:20 — #405+#427+#428 SCALONE; start #421
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405 zamknięte; #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie.
+- Scalanie: #427 F7 gotowe (`ff3bde3`) → merge `e0edff5c`; #428 F7 gotowe (`07f478c`) → merge `0712b8f3`; #424 F7 gotowe (`feee9d1`) → merge `87104ff1` (0257). Bez push na `main`.
+- Bieżąca: **HOTFIX #421** (`pakiet/hotfix-421-ferry-ais`, migracja **0258**) — AIS Nova Star/Stena, rozkład codzienny, wypłynięcia/dopłynięcia, bez AIS_GAP.
+
+## 2026-10-22 03:50 — #421 RPC mapy + ponowienie deploy-main (#424)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #429 decyzja A+C.
+- Scalanie: #430 CI zielone (unit/db/visual) na `2f4b680e` — bez F7. deploy-main po #424 padł na połączeniu pooler → ponowienie `39707535827`. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — `ferry_sailings_map()` (departed_at/arrived_at, porty, AIS bez filtra wieku), dopłynięcie GDN/GDY, zawsze `ferry-departures`.
+
+## 2026-10-22 04:20 — #421 F7: actual_*, wiek, timeout, liczniki
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian.
+- Scalanie: #430 — F7 „jeszcze nie” (blokery 1–7); CI `db` padło na licznikach (nullguard 700, bmapa 35). #408/#383/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** PR #430 — F7: `actual_departure_at`/`actual_arrival_at`; wypłynięcie wiek≤15 + 3–10 km; dopłynięcie tylko port docelowy; cron timeout 120 s + jednorazowy `ferry-schedule`; rozkład po statusie max co 60 min; `ferry_track_sample` bez limitu 48 h dla rejsu w drodze; Stena 403/429 backoff; gate nullguard 700 / bmapa 35.
+
+## 2026-10-22 04:55 — #421 F7 runda 2
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian (#421 W TOKU).
+- Scalanie: #430 CI zielone na `60ce13ed` (unit/db/visual); F7 r2 „jeszcze nie” (bloker okno lastPortPosition + track_sample obciążenie). #431 wygląd bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — F7 r2: `acceptActualDepartureAt` [plan−2h, teraz] + po prev `actual_arrival`; dopłynięcie wiek≤15 i po dep; `ferry_track_sample` = 48 h ∪ 1 latest active; jednorazowy rozkład tylko gdy Vault ma sekrety; `actual_*` mimo RECZNIE; etykieta KAA-GDY → KAA. unit integrations 42/42.
+
+## 2026-10-22 05:20 — #421 SCALONE; start #426 (0259)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421 zamknięte; #425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431 bez F7.
+- Scalanie: #430 F7 r3 „gotowe” (`3dc52c2`) + CI zielone (unit/db/visual) → merge `00fd4986` (0258). Bez push na `main`.
+- Bieżąca: **#426** (`pakiet/hotfix-426-import-quiet`, migracja **0259**) — `import_schedule(..., p_quiet)`; tylko HHL_ADMIN; `tower.bulk_quiet` na cały import; audit `SCHEDULE_IMPORT_QUIET`; `trg_sms_load_changes` × quiet; import 72→81.
+
+## 2026-10-22 05:45 — #426 F7 niegotowe: 4 blokery
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian. #431 wygląd bez F7.
+- Scalanie: #432 CI zielone (`6688886f`), F7 „jeszcze nie” (4 blokery) → poprawki w tym samym PR. Bez push na `main`.
+- Bieżąca: **#426 F7** — (1) `trg_sms_load_changes` z 0111+e164+quiet; (2) pomijanie `l1b_note_*` / `l1b_kr_check` przy quiet; (3) `l3_ksh_lead` × bulk_quiet; (4) `wf_enqueue_event` × bulk_quiet; dry_run pokazuje critical; stats/payload `quiet`; audit tylko przy zapisie; import 81→99. `l3_scan` później może otworzyć NO_AWIZ/NO_TRACKING (stan) — dopuszczalne.
+
+## 2026-10-22 06:10 — #426 F7 r2: poprawki testów B3/B4
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426/#425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7.
+- Scalanie: brak „F7: gotowe”; #432 db czerwone (shadow `D1c` w RQKEEP) + F7 r2 (2 poprawki testów) → ten commit. Bez push na `main`.
+- Bieżąca: **#426 F7 r2** — `DecB3`/`DecB4` zamiast `D1c`/`D2c`; B3+ LATE bez quiet; B4+ START-7 włączone + cancel bez quiet → +1 wf; quiet hhlOrderNo → 0 conflict; import 99→106.
+
+## 2026-10-22 06:30 — #426 SCALONE; start #400 (0260)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426 zamknięte; #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7 (kolejność z F7 #432: #431→deploy→#432→#433 — #431 niewykonalne bez F7).
+- Scalanie: #432 F7 „gotowe” (`dd0a86d`) + CI zielone (unit/db/visual) → merge `a9189bb1` (0259). Bez push na `main`.
+- Bieżąca: **#400** (`pakiet/hotfix-400-dims-pii`, migracja **0260**) — `permit_fits` coalesce L×W×H z `symbol_specs`; `audit_row_change` bez maski PII, `rio_secret` = ••••; i2 634→639.
+
+## 2026-10-22 06:55 — #400 CI db: prosrc + dec-fx
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433/#434 bez F7.
+- Scalanie: brak „F7: gotowe”. #434 unit/visual zielone; db FAIL (i2 asercja prosrc + dec-fx `loads_carrier_order_no_uq`). Bez push na `main`.
+- Bieżąca: **#400** — komentarz w `audit_row_change` bez litery „[dane osobowe]” (asercja i2); `dec-fx` numery zleceń z `n_pairs`+md5(8).
+
+## 2026-10-22 07:35 — #400 CI db: i2 escorts/sms_zone
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7. #431 SCALONE na main (`e8480e1e`).
+- Scalanie: brak „F7: gotowe”. #434 db FAIL na `4ec8db68` (i2 644/646): (1) `||` vs `->>` w asercji load_escorts; (2) slot 9 poza CHECK 1–2 w sms_zone_recipients. Bez push na `main`.
+- Bieżąca: **#400** — nawiasy w SELECT escorts; slot=2 dla maski phone_national.
+
+## 2026-10-22 07:50 — #400 F7 r3: telefon pilota + RODO + scrub
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433/#434 bez F7.
+- Scalanie: brak „F7: gotowe”. #434 db FAIL `0f61e8a3` (i2 645/646): INSERT load_escorts z E.164 łamał `driver_phone_national_chk`. Bez push na `main`.
+- Bieżąca: **#400** F7 r3 — `driver_phone='000000222'` (krajowy); filtr `entity_id` w asercjach app_users/sms_zone; +2 testy RODO po purge; `purge` przywraca `audit_source` i scrub jednym UPDATE (retencja od `created_at`); i2 646→648.
+
+## 2026-10-22 08:35 — #400 SCALONE; start #384 zaległe (0261→0262)
+
+- Skrzynka: #400 zamknięte; #425/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #433 bez F7.
+- Scalanie: #434 F7 „gotowe do scalenia” → merge `9a250dd6` (0260). Bez push na `main`.
+- Bieżąca: **#384 zaległe** — potem #437 pilne przerwało; migracja przenumerowana na **0262**.
+
+## 2026-10-22 09:25 — #437 pilne E44 RIO (przerywa #384)
+
+- Skrzynka: #437 (`dla-cursora`+`pilne`, Spawn2018) — brak adaptera/crona RIO; SG-19 dziś; zgoda RIO na piśmie 09:02.
+- Bieżąca: **#437 E44** (`pakiet/e44-rio-437`, migracja **0261**).
+
+## 2026-10-22 11:13 — #438 SCALONE (0261 E44); powrót #384 (0262)
+
+- Skrzynka: #437 zamknięte; #425/#384/#422/#413/#409/#412/#323/#322/#320 w planie. #440 wygląd RIO bez F7.
+- Scalanie: #438 F7 „gotowe” (`1fd05f4`) + CI zielone → merge `6f6336b5` (0261). #436 przenumerowane 0261→0262. Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 (`pakiet/hotfix-384-zalegle`, **0262**) — F7 niegotowe; merge main po E44.
+
+## 2026-10-22 10:20 — #438 F7: poprawki E44 RIO (BLOKER secret + obciążenie)
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia”. #438 F7 r1/r2 „jeszcze nie” → ten commit. #436 BLOKER numeru (0261→0262) — następny krok po push. Bez push na `main`.
+- Bieżąca: **#437 F7** — secret poza komunikatem sieci; `rio_last_fix_at` tylko przy ok; UPDATE tylko przy zmianie; audit skip `rio_check_at`/`rio_last_fix_at`; `resolveRisks` SOURCE_DOWN po pętli; budżet 40 s + abort po 3 błędach sieci + lock; recheck wygasły/invalid co 30 min + `RIO_EXPIRED`; `RESOURCE_MISSING` dla SCX; TELM_RIO_LINKS; streak=0 przy nowym linku; 400/410→invalid; fixture zmyślone; testy 23/23.
+
+## 2026-10-22 10:45 — #438 F7 r3: lock bez audytu + patch
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe”. #438 F7 r3 „prawie” (2 blokery) → ten commit. #436 → 0262 zaraz po push. Bez push na `main`.
+- Bieżąca: **#437 F7 r3** — `rio_links_lock` (tabela bez audytu, token); `rio_check_at` nie liczy się jako zmiana (+00 przez `rioParseMs`); `resolveRisks` INVALID/EXPIRED tylko przy przejściu; SOURCE_DOWN bez zamknięcia przy abort; ok→down; zamknięcie `RIO_UNKNOWN_ASSET`; testy 26/26.
+
+## 2026-10-22 11:23 — #442 pilne: rio-links bez `loads.shipment_code`
+
+- Skrzynka: #442+#441 (`pilne`, Spawn2018) → PLAN §4/§8; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #433+#439+#440 F7 „gotowe” po ostatnim commicie + CI zielone → merge. #436 CI w toku, bez F7. Bez push na `main`.
+- Bieżąca: **#442** — usunięto `shipment_code` z `listRioLoadsForPoll`; `code: null`; security +2 (kolumny poll / brak `shipment_code`). Gałąź `pakiet/hotfix-442-rio-shipment-code`. Po scaleniu: wdrożyć Edge `rio-links`; #441 `ferry-schedule`.
+
+## 2026-10-22 11:45 — #442: CI db — test kolumn przez sys
+
+- Skrzynka: bez nowych `pilne` poza #442/#441/#425/#422/#413.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
+- Bieżąca: **#442** — test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.
+
+## 2026-10-22 12:15 - #442 NA PRODUKCJI; #441 pkt 1-2; poprawka deploy-main
+
+- Skrzynka: #442/#441 `pilne` (Spawn2018); #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: **#443** F7 "gotowe" po `0e89ccd` + CI zielone -> merge `8f9d7270` (bez push na `main`). #436 F7 r3 niegotowe. #408/#383 czekaja na F7.
+- **#442:** `deploy-main` `39760618480` (Edge wszystkie + Vercel); `rio-links` `ok: true` od 10:08 (queried/written 1); wczesniej `shipment_code` -> `ok: false`.
+- **#441 pkt 1-2:** `ferry-schedule` `ok: true` (inserted 15); `tracking_delivery_guard` + nocne SQL + `security_advisor_snapshot_tick` + `daily_admin_digest` OK; `usage-check` `ok: true`.
+- Biezaca: **#441 pkt 3** - `deploy-main` porownuje Edge z SHA ostatniego udanego przebiegu (`pakiet/hotfix-441-deploy-edge`).
+
+## 2026-10-22 12:40 - #441 F7 #444: brak bazy = wszystkie Edge; baza tylko po kroku Edge
+
+- Skrzynka: #441/`pilne` biezaca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych poza juz wpisanymi.
+- Scalanie: #444 F7 "prawie" (niegotowe) po `9bfb293` - poprawki w tym samym PR. #436 F7 niegotowe. #408/#383 bez "gotowe". Bez push na `main`.
+- Biezaca: **#441 pkt 3 F7** - (1) pusta/niedostepna baza -> wdroz wszystkie funkcje; (2) baza = ostatni sukces z conclusion kroku Edge=`success` (nie `skip=true`); log: liczba + lista + SHA.
+
+## 2026-10-22 12:50 - #445 pilne: A10_b FERRY tylko po odejściu rejsu
+
+- Skrzynka: #445 (pilne) + #446 (Spawn2018) -> PLAN §4/§8 + dopisek D-20261022-1235-01. #441/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #444 F7 "gotowe" po `125d175a` -> SCALONE. #447 F7 "gotowe" po `8d73b169`, ale CONFLICT z main - merge main.
+- Biezaca: **#445** - migracja **0262** (`a10_try_ferry_backup` + korekta SG-17 bulk_quiet); testy status +4 (166); #384->0263 ... B5->0267. Galaz `pakiet/hotfix-445-a10-ferry` / PR #447.
+
+## 2026-10-22 13:20 - #447: merge main (po #444); konflikt PLAN/POSTEP
+
+- Skrzynka: #445 `pilne` biezaca; #446 wpisane. Bez nowych `pilne`.
+- Scalanie: #444 juz MERGED. #447 - konflikt z main rozwiazany (PLAN #441 SCALONE + §8; POSTEP obie strony). Po pushie: CI + ponowne F7 (commit po "gotowe"). Bez push na `main`.
+- Biezaca: **#445** - push merge-commita na `pakiet/hotfix-445-a10-ferry`.
+
+## 2026-10-22 13:45 - #447 SCALONE; #446 pkt 1 (0263)
+
+- Skrzynka: #445 zamkniete (SCALONE); #446 biezaca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne`.
+- Scalanie: #447 F7 "gotowe" po `3ef91201` + CI zielone (unit/db/visual) → MERGED `dcf58431`. Bez push na `main`.
+- Biezaca: **#446 pkt 1** — migracja **0263** (`W_REJSIE`/`DOPLYNAL` + trigger); Edge `ferry-departures` ustawia status; sync nie cofa; testy status +3 (169). #384→0264 … B5→0268. Galaz `pakiet/hotfix-446-drobne`.
+
+## 2026-10-22 14:00 - #448 F7: split 0263/0264 (enum osobno)
+
+- Skrzynka: #446 biezaca; #425/#422/#413/`pilne` w kolejce po #446. Bez nowych `pilne` przerywajacych.
+- Scalanie: #448 F7 "niegotowe" (B1: enum+uzycie w jednej transakcji) → poprawka w tym samym PR. Inne PR bez "gotowe" po head.
+- Biezaca: **#446 F7** — **0263** tylko `ALTER TYPE`; **0264** funkcja+trigger (takze `of status`) + backfill; test OPOZNIONY→DOPLYNAL (+1 → 170). #384→0265 … B5→0269, indeks→0270+. Bez push na `main`.
+
+## 2026-10-22 14:25 - #448 CI: kolizja ID testu #446
+
+- Skrzynka: #446 biezaca; #425/#422/#413/`pilne` w kolejce. Bez nowych `pilne`.
+- Scalanie: #448 F7 "gotowe" po `d163e318`, ale `db` czerwone (ODWOLANY→W_REJSIE): ID 446/447 zajęte przez #445 → INSERT cichy. Poprawka: ID 448/449 + EXPECTED status 170. Nowy commit → czekam na ponowne F7. Bez push na `main`.
+- Biezaca: **#446 pkt 1** — fix testów; potem pkt 2 indeks dzwonka (0270+).
+
+## 2026-10-22 15:00 - #448 SCALONE; #446 pkt 2 indeks dzwonka (0270)
+
+- Skrzynka: #446 bieżąca; #425/#422/#413/`pilne` w kolejce po #446. Bez nowych `pilne` przerywających.
+- Scalanie: #448 F7 „gotowe do scalenia” po `0fd25bc7` + CI zielone (unit/db/visual) → MERGED `0e79a914`. Bez push na `main`.
+- Bieżąca: **#446 pkt 2** — migracja **0270** `notifications_bell_user_channel_created_idx (user_id, channel, created_at desc)`.
+  - Bez `CONCURRENTLY` w pliku migracji: `supabase db push` (deploy-main) → SQLSTATE 25001; zwykły `CREATE INDEX IF NOT EXISTS`.
+  - EXPLAIN ANALYZE na TEST (`notifications` = 1 wiersz po prep; planer i tak Seq Scan):
+    - **przed:** `Seq Scan` + Sort, Planning 4,6 ms, Execution 0,075 ms, buffers hit=4.
+    - **po** (indeks zbudowany `CONCURRENTLY` poza migracją na TEST): nadal `Seq Scan` (1 wiersz), Planning 1,7 ms, Execution 0,051 ms, buffers hit=1. Odbiór na produkcji po wdrożeniu — przy większej tabeli Index Scan / Index Only.
+  - Dalej w #446: pkt 3 (#430), 4 (RIO), 5–6 (POSTEP jutro). #384→0265 … B5→0269.
+
+## 2026-10-22 15:15 - #449 F7: indeks 0270→0265
+
+- Skrzynka: #446 bieżąca; #425/#422/#413/`pilne` w kolejce. Bez nowych `pilne`.
+- Scalanie: #449 F7 „niegotowe” (B1: 0270 przed nienałożonymi 0265–0269) → poprawka w tym samym PR. CI unit/db/visual zielone na `a6df26e7`. Bez push na `main`.
+- Bieżąca: **#446 pkt 2 F7** — `git mv` **0270→0265** `hotfix_446_bell_index.sql`; #384→**0266**, #409→**0267**, #413→**0268**, #422→**0269**, B5→**0270**. Czekam na ponowne F7.
+
+## 2026-10-22 15:55 - #449 SCALONE; #446 pkt 3–4 (0266)
+
+- Skrzynka: #446 bieżąca (Spawn2018); #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #449 F7 „gotowe do scalenia” po `c81d17ab` + CI zielone (unit/db/visual) → MERGED `b7b049be`. Bez push na `main`.
+- Bieżąca: **#446 pkt 3–4** — migracja **0266** `tower_cron_ferry_schedule_invoke` (`to_regclass('vault.decrypted_secrets')`); Edge: odrzucony `lastPortPosition` → zapas tylko 3–10 km; RIO `RIO_UNKNOWN_ASSET` tylko NIEZNANY→znany; `TELM_RIO_LINKS=off` → `result.disabled=true`. #384→**0267** … B5→**0271**. Testy unit integrations+rio-links 70/70.
+
+## 2026-10-22 16:45 — #450 SCALONE; #446 pkt 5 SELECT
+
+- Skrzynka: #446 (Spawn2018) — pkt 1–5; #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #450 F7 „gotowe do scalenia” po `34f25242` + CI zielone (unit/db/visual) → MERGED `5c6ab459` (0266). Bez push na `main`. `deploy-main` nie czekamy.
+- **#446 pkt 5 (produkcja, odczyt ~16:45 Europe/Warsaw):**
+  - otwarte `risk_signals` NO_TRACKING (`l3:NO_TRACKING:%` / `L3_NO_TRACKING`): **0** (także `detected_at >= 22.10 12:00+02`);
+  - otwarte `decisions` `NO_TRACKING` (NEW/ASSIGNED): **0** (także po 12:00);
+  - `tower-tracking-guard` (`15 6 * * *` UTC): ostatni przebieg 22.10 08:15 Waw = **failed** (`job startup timeout`); wcześniej 21.10 = succeeded.
+- **#446 pkt 6:** wpisy `failed` z rana 22.10 w `cron.job_run_details` zostają (historia); sprawdzenie następnego przebiegu z harmonogramu — **23.10 rano** (po 08:15 Waw) → wpis w POSTEP.
+- Bieżąca dalej: **#384 zaległe** (`pakiet/hotfix-384-zalegle`, migracja **0267**); PR #436 — F7 niegotowe (przenumerować 0262→0267 + uwagi F7 r2/r3).
+
+## 2026-10-22 17:05 — #451+#452 SCALONE; #453 wpisane; #436 CI db
+
+- Skrzynka: #453 (Spawn2018, `dla-cursora`, bez `pilne`) — RIO link bez pozycji ≠ SOURCE_DOWN. Wpisane: PLAN §3/§4/§8, dopisek `D-20261022-1655-01.md` (po #384, przed #409). #446/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #451 F7 „gotowe do scalenia” → MERGED `0230985c`. #452 F7 „gotowe do scalenia” → MERGED (docs #446 pkt 5). Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — `db` czerwone (import F7 (d)+ restore; dec2 KSH count 4≠1). Poprawka: `before_*` filtr po dacie planu; test KSH `count >= 1`; event testowy `now()+1s`.
+
+## 2026-10-22 17:35 — #455 wpisane; merge main → #436
+
+- Skrzynka: #455 (Spawn2018, `dla-cursora`, bez `pilne`) — testy bazy po #436 (Działaj jako, ujemne restore, KSH=HHL). Wpisane: PLAN §3/§4/§8 (po #453, przed #409). #453/#446/#425/`pilne` + reszta w planie.
+- Scalanie: #436 F7 r5 „gotowe” na `060b5ee`, ale CONFLICTING z main (#451/#452) i brak `db` na tym SHA — bez scalenia. #454 F7 „gotowe”, visual w toku. Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — merge main (konflikt PLAN/POSTEP); #455 w planie; po push: `db` + czekam na ponowne F7.
+
+## 2026-10-22 18:05 � #436 SCALONE; start #453 RIO_NO_POSITION
+
+- Skrzynka: #455/#453/#446/#425 (Spawn2018) � ju� w planie; #384 zaleg�e SCALONE. Bez nowych pilne.
+- Scalanie: #436 F7 �gotowe do scalenia� po c9133f8 + CI unit/db/visual zielone � MERGED `490d8b25` (0267). #454 visual w toku � bez scalenia. Bez push na `main`.
+- Bie��ca: **#453** (pakiet/hotfix-453-rio-no-position) � `runRioLinks`: `no_position` � `RIO_NO_POSITION:<load_id>` (SCX+HHL); `SOURCE_DOWN`/`ok:false` tylko wszystkie linki sie�/5xx; testy rio-links 31/31. Bez migracji.
+
+## 2026-10-22 18:50 — #454+#453 SCALONE; start #455
+
+- Skrzynka: #455/#446/#425 (Spawn2018) — już w planie; #453 zamknięte. Bez nowych pilne.
+- Scalanie: #454 F7 + CI → MERGED c08ceb41. #456 F7 (c7526c4) + CI unit/db/visual → MERGED fea216a2. Bez push na main.
+- Bieżąca: **#455** (pakiet/hotfix-455-db-tests) — testy: Działaj jako → real_app_user_id; ujemne hotfix_384_restore_windows; KSH = HHL w dec2. Bez migracji.
+
+## 2026-10-22 19:10 — #455 poprawka CI (import >3)
+
+- Skrzynka: #455/#446/#425 (Spawn2018) — już w planie; bez nowych. `pilne` #413/#422/#425 w kolejce po #409.
+- Scalanie: brak F7 „gotowe do scalenia” po ostatnim commicie. Bez push na main.
+- Bieżąca: **#455** PR #457 — `db` czerwone: UNIQUE(project_id, shipment_code) blokował 4. SG-01; strażnik przez si z innym project_id. EXPECTED import 113, dec2 73.

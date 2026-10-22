@@ -4,7 +4,7 @@
  * domyślnie przyszłe rejsy do Szwecji, „Pokaż powroty”, kolumny Odejście · Statek · Trasa · Przypłynięcie · Źródło
  * · Transporty (kody — kliknięcie filtruje Harmonogram), pod tabelą zasięg rozkładów. Telefon: karty (E8).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { sv, svp } from '../i18n/sail7';
@@ -44,6 +44,25 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const [err, setErr] = useState<string | null>(null);
 
   const rows = useMemo(() => sailRows(sailings, loads, now, { future, returns }), [sailings, loads, now, future, returns]);
+  /* wyglad/W-cele-przejsc (d), E7 pkt 4: wejście z wiersza promu — ten rejs widoczny (także po odejściu), przewinięty i wyróżniony */
+  const sailingFocus = useTowerStore((s) => s.sailingFocus);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!sailingFocus) return;
+    useTowerStore.getState().setSailingFocus(null);
+    if (!sailings.some((x) => x.id === sailingFocus)) return;
+    if (!sailRows(sailings, loads, now, { future, returns }).some((r) => r.sailing.id === sailingFocus)) {
+      setFuture(false);
+      setReturns(true);
+    }
+    setFocusId(sailingFocus);
+  }, [sailingFocus]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!focusId) return undefined;
+    const raf = window.requestAnimationFrame(() => document.querySelector(`[data-sailings] [data-sailing="${CSS.escape(focusId)}"]`)?.scrollIntoView({ block: 'center' }));
+    const tm = window.setTimeout(() => setFocusId(null), 2400);
+    return () => { window.cancelAnimationFrame(raf); window.clearTimeout(tm); };
+  }, [focusId]);
   const reach = useMemo(() => reachOf(sailings), [sailings]);
   const reachLine = reach.length
     ? svp(locale, 'sv_reach', { list: reach.map((r) => svp(locale, 'sv_reach_item', { line: sv(locale, `sv_reach_${r.line}`), date: sailDay(r.untilIso) })).join(', ') })
@@ -191,7 +210,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
       ) : phone ? (
         <ul className="sv-cards" data-sail-cards>
           {rows.map((r) => (
-            <li key={r.sailing.id} className={`sv-card${r.sailing.status === 'ODWOLANY' ? ' is-off' : ''}`} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
+            <li key={r.sailing.id} className={`sv-card${r.sailing.status === 'ODWOLANY' ? ' is-off' : ''}${focusId === r.sailing.id ? ' is-go-target' : ''}`} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
               <div className="sv-c1"><b>{depCell(r)}</b><span>· {r.sailing.vessel}</span>{pills(r)}</div>
               <div className="sv-c2">{ROUTE_SHORT[r.sailing.route]} · {svp(locale, 'sv_arr', { t: sailTime(r.arr) })}</div>
               <div className="sv-c3"><span>{sv(locale, sourceKey(r.sailing.source))}</span><span>·</span><span>{sv(locale, 'sv_loads_l')}</span>{codesBtn(r)}</div>
@@ -215,7 +234,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.sailing.id} className={r.sailing.status === 'ODWOLANY' ? 'is-off' : undefined} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
+                <tr key={r.sailing.id} className={[r.sailing.status === 'ODWOLANY' ? 'is-off' : '', focusId === r.sailing.id ? 'is-go-target' : ''].filter(Boolean).join(' ') || undefined} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
                   <td className="sv-time"><span className="sv-dep">{depCell(r)}</span>{pills(r)}</td>
                   <td>{r.sailing.vessel}</td>
                   <td className="sv-route">{ROUTE_SHORT[r.sailing.route]}</td>

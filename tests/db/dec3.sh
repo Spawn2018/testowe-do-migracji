@@ -32,7 +32,14 @@ val "KSH nie czyta macierzy" $KSH "select count(*) from notification_matrix" 0
 D=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','test powiadomienia', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
 val "OPEN → powiadomienie IN_APP HHL" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D'" 1
 val "resolve → audit DECISION_RESOLVE" $HHL "select decision_resolve('$D','RETRY_NOW'); select count(*) from audit_log where action='DECISION_RESOLVE' and entity_id='$D'" 1 commit
-val "RESOLVE → powiadomienie" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_RESOLVED' and payload->>'decision_id'='$D'" 1
+# #411 / D-20261021-2038-01: RESOLVE nie tworzy DECISION_RESOLVED — oznacza OPEN jako przeczytany
+val "RESOLVE → 0× DECISION_RESOLVED" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_RESOLVED' and payload->>'decision_id'='$D'" 0
+val "RESOLVE → DECISION_OPEN przeczytany" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D' and read_at is not null" 1
+# #411 F7 B1: bezpośredni UPDATE statusu (jak a3_resolve_cmr_upload) → trigger czyści dzwonek
+D2=$(run "$HHL" "select decision_open('$P','BACKUP_FAILED','test trigger zamkniecia', '{}'::jsonb)" commit | grep -vE '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+val "OPEN2 → DECISION_OPEN" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D2' and read_at is null" 1
+$PSQL -c "update decisions set status='RESOLVED', resolved_at=now(), resolution_code='UPLOAD_CMR', updated_at=now() where id='$D2'" >/dev/null
+val "UPDATE→RESOLVED → DECISION_OPEN przeczytany (trigger)" $HHL "select count(*) from notifications where channel='IN_APP' and template='DECISION_OPEN' and payload->>'decision_id'='$D2' and read_at is not null" 1
 # DEC-4 / E11 admin macierz (po roli)
 val "admin ustawia e-mail DECISION HHL_ADMIN" $HHL "select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,true); select email::text from notification_matrix where event_group='DECISION' and role='HHL_ADMIN'" true commit
 err "SYSTEM nie dla CLIENT_USER" $HHL "select admin_notification_matrix_set('SYSTEM','CLIENT_USER',true,false)" "tylko HHL|systemowe"

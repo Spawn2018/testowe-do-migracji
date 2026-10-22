@@ -86,6 +86,10 @@ else
 fi
 
 echo; echo "[C1] zalew dzwonka — E5 (D-20261015-0300-01)"
+# #402: bramka czyta risk_route/risk_crit; org + macierz + bez pref wyłączających dzwonek.
+$PSQL -c "update notification_matrix_org_kind set in_app = true where event_group = 'RISK_FERRY_WEATHER'" >/dev/null
+$PSQL -c "update notification_matrix set in_app = true where event_key in ('risk_route','risk_crit')" >/dev/null
+$PSQL -c "delete from user_notify_pref where event_key in ('risk_route','risk_crit') and channel = 'bell'" >/dev/null
 # (1) FERRY bez load_id → 0 nowych IN_APP RISK_OPEN
 N0=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN'")
 $PSQL -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail)
@@ -93,12 +97,11 @@ $PSQL -c "insert into risk_signals (project_id, kind, severity, title, title_key
 chk "C1: FERRY bez load_id → 0 nowych RISK_OPEN IN_APP" \
   "$(Q "select count(*) - $N0 from notifications where channel='IN_APP' and template='RISK_OPEN'")" 0
 # (1b) FERRY z transportem → RISK_OPEN IN_APP (macierz RISK_FERRY_WEATHER; para do C1 bez load_id)
-N1=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1'")
 RID=$(Q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail)
   values ('$P','$L1','FERRY','HIGH','C1 ferry load','rk_c1_ferry_load','{\"title_key\":\"rk_c1_ferry_load\",\"kind\":\"FERRY\"}'::jsonb)
-  returning id")
+  returning id" | tr -d '\r')
 chk "C1: ryzyko z load_id → RISK_OPEN IN_APP" \
-  "$(Q "select case when count(*) > $N1 then 1 else 0 end from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1' and (payload->>'risk_id')='$RID'")" 1
+  "$(Q "select case when count(*) >= 1 then 1 else 0 end from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1' and (payload->>'risk_id')='$RID'")" 1
 # (2) resolve → 0 RISK_RESOLVED; istniejący RISK_OPEN przeczytany
 $PSQL -c "update risk_signals set resolved_at = now() where id = '$RID'" >/dev/null
 chk "C1: resolve → 0 RISK_RESOLVED" \
@@ -106,6 +109,13 @@ chk "C1: resolve → 0 RISK_RESOLVED" \
 chk "C1: resolve → RISK_OPEN oznaczony przeczytany" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and read_at is not null and payload->>'c1_resolved' = 'true'")" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID'")"
+# #411: matrix_notify('RISK_RESOLVED') → 0; OPEN z url
+chk "#411: matrix RISK_RESOLVED → 0" \
+  "$(Q "select matrix_notify('RISK_FERRY_WEATHER','RISK_RESOLVED','$L1','$P',jsonb_build_object('risk_id','$RID'),'411-rr')")" 0
+chk "#411: matrix DECISION_RESOLVED → 0" \
+  "$(Q "select matrix_notify('DECISION','DECISION_RESOLVED','$L1','$P',jsonb_build_object('decision_id',gen_random_uuid()),'411-dr')")" 0
+chk "#411: RISK_OPEN ma url" \
+  "$(Q "select case when coalesce(payload->>'url','') like '%/#/%' then 1 else 0 end from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and channel='IN_APP' limit 1")" 1
 
 echo; echo "[1215] zamknięcie alarmów panelu (D-20261018-1215-01)"
 DID=$(Q "insert into decisions (project_id, type_code, status, title) values ('$P','FERRY_CANCELLED','NEW','1215-overdue') returning id")

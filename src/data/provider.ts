@@ -54,7 +54,7 @@ export type DataMutation =
   | { type: 'load.awizacja'; loadId: string; patch: Partial<Awizacja> }
   | { type: 'load.ferry'; loadId: string; patch: Partial<FerryBooking> }
   | { type: 'event.append'; event: Omit<LoadEvent, 'id'> }
-  | { type: 'message.send'; loadId: string; text: string }
+  | { type: 'message.send'; loadId: string; text: string; visibleTo?: 'ALL' | 'HHL_SCX' }
   | { type: 'geofence.save'; geofence: Geofence }
   | { type: 'geofence.delete'; id: string }
   | { type: 'prefs.save'; prefs: UserPrefsPatch }

@@ -313,6 +313,8 @@ export function FuelScreen({ locale, view, actions, readOnly, party }: {
       <div className="pm-two">
         <section className="pm-days">
           <h4 className="ox-eyebrow pm-h">{fb(locale, 'p5b_f_days_h')}</h4>
+          {/* W-opcje-live-2 (5B): KSH i SCX nie widzą publikacji cen w bazie — zamiast pustej tabeli zdanie */}
+          {view.days.length === 0 ? <p className="ox-muted" data-pm-days-none>{fb(locale, 'p5b_f_days_none')}</p> : (
           <div className="pm-scroll">
             <table className="ox-table pm-days-t">
               <thead>
@@ -350,6 +352,7 @@ export function FuelScreen({ locale, view, actions, readOnly, party }: {
               ))}
             </table>
           </div>
+          )}
           <p className="ox-foot">{fb(locale, 'p5b_f_days_note')}</p>
         </section>
 
