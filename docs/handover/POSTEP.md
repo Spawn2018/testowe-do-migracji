@@ -4214,8 +4214,20 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #436 F7 r5 „gotowe” na `060b5ee`, ale CONFLICTING z main (#451/#452) i brak `db` na tym SHA — bez scalenia. #454 F7 „gotowe”, visual w toku. Bez push na `main`.
 - Bieżąca: **#384 zaległe** PR #436 — merge main (konflikt PLAN/POSTEP); #455 w planie; po push: `db` + czekam na ponowne F7.
 
-## 2026-10-22 18:05 � #436 SCALONE; start #453 RIO_NO_POSITION
+## 2026-10-22 18:05 � #436 SCALONE; start #453 RIO_NO_POSITION
 
-- Skrzynka: #455/#453/#446/#425 (Spawn2018) � ju� w planie; #384 zaleg�e SCALONE. Bez nowych pilne.
-- Scalanie: #436 F7 �gotowe do scalenia� po c9133f8 + CI unit/db/visual zielone � MERGED `490d8b25` (0267). #454 visual w toku � bez scalenia. Bez push na `main`.
-- Bie��ca: **#453** (pakiet/hotfix-453-rio-no-position) � `runRioLinks`: `no_position` � `RIO_NO_POSITION:<load_id>` (SCX+HHL); `SOURCE_DOWN`/`ok:false` tylko wszystkie linki sie�/5xx; testy rio-links 31/31. Bez migracji.
+- Skrzynka: #455/#453/#446/#425 (Spawn2018) � ju� w planie; #384 zaleg�e SCALONE. Bez nowych pilne.
+- Scalanie: #436 F7 �gotowe do scalenia� po c9133f8 + CI unit/db/visual zielone � MERGED `490d8b25` (0267). #454 visual w toku � bez scalenia. Bez push na `main`.
+- Bie��ca: **#453** (pakiet/hotfix-453-rio-no-position) � `runRioLinks`: `no_position` � `RIO_NO_POSITION:<load_id>` (SCX+HHL); `SOURCE_DOWN`/`ok:false` tylko wszystkie linki sie�/5xx; testy rio-links 31/31. Bez migracji.
+
+## 2026-10-22 18:50 — #454+#453 SCALONE; start #455
+
+- Skrzynka: #455/#446/#425 (Spawn2018) — już w planie; #453 zamknięte. Bez nowych pilne.
+- Scalanie: #454 F7 + CI → MERGED c08ceb41. #456 F7 (c7526c4) + CI unit/db/visual → MERGED fea216a2. Bez push na main.
+- Bieżąca: **#455** (pakiet/hotfix-455-db-tests) — testy: Działaj jako → real_app_user_id; ujemne hotfix_384_restore_windows; KSH = HHL w dec2. Bez migracji.
+
+## 2026-10-22 19:10 — #455 poprawka CI (import >3)
+
+- Skrzynka: #455/#446/#425 (Spawn2018) — już w planie; bez nowych. `pilne` #413/#422/#425 w kolejce po #409.
+- Scalanie: brak F7 „gotowe do scalenia” po ostatnim commicie. Bez push na main.
+- Bieżąca: **#455** PR #457 — `db` czerwone: UNIQUE(project_id, shipment_code) blokował 4. SG-01; strażnik przez si z innym project_id. EXPECTED import 113, dec2 73.

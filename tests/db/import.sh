@@ -325,4 +325,79 @@ $PSQL -c "
 $PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
 chk "F7 (d)-: inny projekt SG-01 bez przywrócenia" "$(Q "select (plan_load_to is null and plan_delivery_from is null)::text from loads where id='$L_OTH'")" "true"
 
+# #455 / F7 r4: ujemne hotfix_384_restore_windows — before_* innej daty; do <= od; >3 dopasowań
+echo; echo "[#455] ujemne hotfix_384_restore_windows"
+SG_R2=$(Q "select load_id from shipment_items where shipment_code='SG-02' and project_id='$P' limit 1")
+# (1) before_* z innym dniem niż bieżący plan → pominięty
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_date = '$D1b'::date,
+  plan_delivery_date = '$D2b'::date,
+  plan_load_from = ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_to = ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'),
+  plan_delivery_from = null
+ where id='$SG_R2';
+insert into load_events (load_id, event_type, occurred_at, payload)
+values (
+  '$SG_R2', 'PLAN_DATES_CHANGED', now() + interval '2 seconds',
+  jsonb_build_object(
+    'before_load_to', (('$D1b'::date + 5) + time '12:00') at time zone 'Europe/Warsaw',
+    'before_delivery_from', (('$D2b'::date + 5) + time '10:00') at time zone 'Europe/Stockholm'
+  )
+);
+commit;" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "#455: before_* innej daty → bez przywrócenia" "$(Q "select (plan_load_to is null and plan_delivery_from is null)::text from loads where id='$SG_R2'")" "true"
+
+# (2) do <= od (before_load_to <= plan_load_from, ta sama data) → pominięty
+$PSQL -v ON_ERROR_STOP=1 -c "
+begin;
+select set_config('tower.dates_ctx', 'on', true);
+select set_config('tower.bulk_quiet', 'on', true);
+update loads set
+  plan_load_from = ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = null,
+  plan_delivery_from = null
+ where id='$SG_R2';
+insert into load_events (load_id, event_type, occurred_at, payload)
+values (
+  '$SG_R2', 'PLAN_DATES_CHANGED', now() + interval '3 seconds',
+  jsonb_build_object(
+    'before_load_to', ('$D1b 10:00'::timestamp at time zone 'Europe/Warsaw'),
+    'before_delivery_from', ('$D2b 18:00'::timestamp at time zone 'Europe/Stockholm')
+  )
+);
+commit;" >/dev/null
+$PSQL -c "select public.hotfix_384_restore_windows()" >/dev/null
+chk "#455: do <= od → plan_load_to bez przywrócenia" "$(Q "select (plan_load_to is null)::text from loads where id='$SG_R2'")" "true"
+
+# (3) >3 dopasowań SG-01/02/T-01 w STEGRA → wyjątek (strażnik 0267 l. 957).
+# UNIQUE(project_id, shipment_code) blokuje drugi SG-01 w $P — wiersz si z innym
+# project_id (strażnik liczy po l.project_id + si.shipment_code, join po load_id).
+P3=22222222-0000-0000-0000-000000000097
+$PSQL -c "
+  insert into projects (id, code, name, client_org_id)
+  values ('$P3', 'GUARD_455', 'Strażnik 455', '00000000-0000-0000-0000-00000000a002')
+  on conflict (id) do nothing" >/dev/null
+L_EXTRA=$(Q "insert into loads (project_id, carrier_org_id, order_no, status, plan_load_date, plan_delivery_date,
+    plan_load_from, plan_load_to, plan_delivery_to, plan_delivery_from)
+  values ('$P', '00000000-0000-0000-0000-00000000a003', 'EXTRA-SG', 'PLANNED',
+    '$D1b'::date, '$D2b'::date,
+    ('$D1b 08:00'::timestamp at time zone 'Europe/Warsaw'), null,
+    ('$D2b 16:00'::timestamp at time zone 'Europe/Stockholm'), null)
+  returning id")
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  values ('$P3', '$L_EXTRA', 'SG-01', 18, 2.4, 2.4)" >/dev/null
+OUT_GT3=$($PSQL -c "select public.hotfix_384_restore_windows()" 2>&1)
+if echo "$OUT_GT3" | grep -qiE 'za dużo dopasowań|P0001'; then
+  ok=$((ok+1)); echo "  OK    #455: >3 dopasowań → wyjątek"
+else
+  fail=$((fail+1)); echo "  FAIL  #455: >3 dopasowań → wyjątek (otrzymano: $(echo "$OUT_GT3" | tail -1))"
+fi
+$PSQL -c "delete from shipment_items where load_id='$L_EXTRA'; delete from loads where id='$L_EXTRA'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

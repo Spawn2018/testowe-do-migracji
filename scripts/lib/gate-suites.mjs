@@ -23,12 +23,12 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 110, // #384 F7 r2/r3: +4 przywrócenie okien (d)+/− + confirmed; było 106 (#426)
+  import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
   i2: 654, // #384 F7 B2: +3 ta sama data + pusta godzina (val+val+chk); było 651
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 71, // #384 F7 r2/r3: +1 HHL_OPS widzi decyzje; visible_to NULL / KSH widzi (odwrócone)
+  dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
