@@ -96,10 +96,15 @@ chk "398: port z actual_load_at → AT_PORT_GDANSK"           "$(st $Lgps)" AT_P
 chk "398: port z actual_load_at → 0 PORT_NO_LOADED"         "$(rk $Lgps PORT_NO_LOADED)" 0
 chk "strefa bufora 20 km nie zmienia statusu"                 "select count(*) from load_events where load_id='$A' and event_type='STATUS_AUTO'" 1
 
-echo; echo "[3] PROM — czas odejścia przypisanego rejsu"
+echo; echo "[3] PROM — #461: FERRY dopiero po actual_departure_at (AIS)"
 chk "minuta przed odejściem: nic"                             "select promote_ferry_departures('2026-10-01 11:59+00')" 0
-chk "odejście rejsu: trzy auta w strefie → PROM"              "select promote_ferry_departures('2026-10-01 12:01+00')" 3
+chk "#461: plan minął, brak actual_departure → bez FERRY"     "select promote_ferry_departures('2026-10-01 12:01+00')" 0
+chk "#461: status A nadal AT_PORT_GDANSK"                     "$(st $A)" AT_PORT_GDANSK
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+chk "#461: po actual_departure: trzy auta w strefie → PROM"   "select promote_ferry_departures('2026-10-01 12:01+00')" 3
 chk "status A = FERRY"                                        "$(st $A)" FERRY
+chk "#461: STATUS_AUTO FERRY source=AIS" \
+  "select payload->>'source' from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" AIS
 chk "auto poza strefą w chwili odejścia: status bez zmian"    "$(st $B)" IN_TRANSIT_PL
 chk "auto poza strefą: ryzyko wysokie"                        "$(rk $B MISSED_SAILING)" 1
 pos $A 55.50 18.90 "2026-10-01 12:30+00"; pos $A 55.51 18.91 "2026-10-01 12:35+00"
@@ -108,17 +113,23 @@ chk "statek odpływa, auto opuszcza strefę: status nadal PROM" "$(st $A)" FERRY
 echo; echo "[4] PROM — zadanie uruchomione z opóźnieniem, statek już na morzu"
 pos $Hh 54.4030 18.6800 "2026-10-01 13:00+00"; pos $Hh 54.4031 18.6801 "2026-10-01 13:05+00"
 pos $Hh 55.50 18.90 "2026-10-01 14:30+00";    pos $Hh 55.51 18.91 "2026-10-01 14:35+00"
+q "update sailings set actual_departure_at = '2026-10-01 14:00+00' where id='$S4'" >/dev/null
 chk "auto było w strefie w chwili odejścia — przełączone mimo opóźnienia zadania" "select promote_ferry_departures('2026-10-01 16:30+00')" 1
 chk "status H = FERRY"                                        "$(st $Hh)" FERRY
 chk "brak fałszywego ryzyka przegapionego rejsu"             "$(rk $Hh MISSED_SAILING)" 0
 
-echo; echo "[5] PROM — rejs opóźniony i odwołany"
+echo; echo "[5] PROM — rejs opóźniony i odwołany (#461: bez actual = bez FERRY)"
 pos $K 54.4030 18.6800 "2026-10-01 15:00+00"; pos $K 54.4031 18.6801 "2026-10-01 15:05+00"
 q "select promote_ferry_departures('2026-10-01 16:30+00')" >/dev/null
 chk "rozkładowa godzina minęła, rejs opóźniony: auto czeka w porcie" "$(st $K)" AT_PORT_GDANSK
 chk "brak fałszywego ryzyka przy opóźnieniu"                  "$(rk $K MISSED_SAILING)" 0
 q "select promote_ferry_departures('2026-10-01 19:01+00')" >/dev/null
-chk "opóźnione odejście: → PROM"                             "$(st $K)" FERRY
+chk "#461: opóźniony plan minął, brak actual → bez FERRY"     "$(st $K)" AT_PORT_GDANSK
+q "select promote_ferry_departures('2026-10-01 21:01+00')" >/dev/null
+chk "#461: 2 h bez wypłynięcia → NO_DEPARTURE"               "$(rk $K NO_DEPARTURE)" 1
+q "update sailings set actual_departure_at = '2026-10-01 19:00+00' where id='$S3'" >/dev/null
+chk "#461: po actual na opóźnionym → PROM"                   "select promote_ferry_departures('2026-10-01 19:01+00')" 1
+chk "status K = FERRY"                                        "$(st $K)" FERRY
 q "select promote_ferry_departures('2026-10-01 20:01+00')" >/dev/null
 chk "rejs odwołany: status bez zmian"                        "$(st $C)" IN_TRANSIT_PL
 chk "rejs odwołany: ryzyko"                                  "$(rk $C SAILING_CANCELLED)" 1
@@ -512,7 +523,8 @@ chk "A5 Stena: wjazd Gdańsk (POLFERRIES) bez zmiany statusu" "$(st $L_A5)" IN_T
 # Własny port Gdynia → AT_PORT_GDANSK
 pos $L_A5 54.53321 18.54425 "2026-10-05 11:00+00"; pos $L_A5 54.5333 18.5443 "2026-10-05 11:05+00"
 chk "A5 Stena: wjazd Gdynia → AT_PORT_GDANSK" "$(st $L_A5)" AT_PORT_GDANSK
-chk "A5 Stena: odejście rejsu → FERRY" "select promote_ferry_departures('2026-10-05 12:01+00')" 1
+q "update sailings set actual_departure_at = '2026-10-05 12:00+00' where id='$S_A5'" >/dev/null
+chk "A5 Stena: odejście rejsu (AIS) → FERRY" "select promote_ferry_departures('2026-10-05 12:01+00')" 1
 chk "A5 Stena: status FERRY" "$(st $L_A5)" FERRY
 pos $L_A5 56.16460 15.63080 "2026-10-05 22:10+00"; pos $L_A5 56.1647 15.6309 "2026-10-05 22:15+00"
 chk "A5 Stena: wjazd Karlskrona → AT_PORT_NYNASHAMN" "$(st $L_A5)" AT_PORT_NYNASHAMN
@@ -534,8 +546,8 @@ chk "A5 Polferries: eta_basis port_route=POLFERRIES" "select eta_basis->>'port_r
 chk "A5 READY_TO_INVOICE: ETA jak DELIVERED (segment DONE)" \
   "select basis->>'segment' from compute_load_eta('$C17A')" DONE
 # F7: source w STATUS_AUTO (kontrakt A10); ETA plac Stena > Polferries
-chk "A5 Stena STATUS_AUTO FERRY source=SCHEDULE" \
-  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" SCHEDULE
+chk "A5 Stena STATUS_AUTO FERRY source=AIS" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" AIS
 chk "A5 Stena STATUS_AUTO AT_PORT_NYNASHAMN source=GPS" \
   "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" GPS
 q "select set_config('tower.status_ctx','on',true); update loads set status='AT_PORT_NYNASHAMN' where id in ('$L_A5','$L_PF')" >/dev/null
@@ -617,6 +629,25 @@ q "insert into load_events (load_id,event_type,occurred_at) values ('$L445c','MI
     select process_position('$L445c', 54.4928, 18.6802, now() - interval '1 minute')" >/dev/null
 chk "#445: departure minął, AIS 10 km, auto ≤2 km → FERRY" \
   "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
+
+# #461: ścieżka (c) bez actual_departure_at → bez FERRY (plan minął, brak pozycji w porcie)
+echo; echo "[#461] A10_c — tylko po actual_departure_at"
+L461c=$(L 75)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000461','$P','$V445','GDN-NYN',
+  now() - interval '4 hours', now() + interval '14 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S461c=77777777-0000-0000-0000-000000000461
+mk $L461c A461c "'HHL/A461c'" "'SCX/A461c'" AT_PORT_GDANSK "'$S461c'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L461c','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L461c', 54.4030, 18.6800, now() - interval '2 hours');
+    select process_position('$L461c', 54.4031, 18.6801, now() - interval '90 minutes')" >/dev/null
+chk "#461: A10_c bez actual_departure → bez FERRY" \
+  "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" AT_PORT_GDANSK
+q "update sailings set actual_departure_at = now() - interval '45 minutes' where id='$S461c'" >/dev/null
+chk "#461: A10_c po actual_departure + 30 min bez portu → FERRY" \
+  "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" FERRY
 
 # #446 pkt 1: actual_departure_at → W_REJSIE; actual_arrival_at → DOPLYNAL; ODWOLANY bez zmian
 # ID 448/449 — nie 446/447 (#445 S445b/S445c już je zajmuje; INSERT cichy → fałszywy W_REJSIE)

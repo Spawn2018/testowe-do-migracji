@@ -4237,3 +4237,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ™. Szacunek szczytu po skrÃ³cie: 34. Ma
 - Skrzynka: #460/#461 (Spawn2018, `dla-cursora`+`pilne`) — promy z mapy (ambiguous vessel_id) + Prom dopiero przy actual_departure_at. Wpisane: PLAN §4/§8, dopiski `D-20261022-2043-01.md` / `D-20261022-2045-01.md`. #409›**0270**, #413›**0271**, #422›**0272**, B5›**0273**.
 - Scalanie: #408 F7 „gotowe do scalenia” + CI unit/visual zielone › MERGED `00611f7e`. #458 (#409) db FAIL (security: fuel_basis_public bez search_path) — wstrzymane przez #460. Bez push na `main`.
 - Bie¿¹ca: **#460** (`pakiet/hotfix-460-ferry-track-sample`, migracja **0268**) — aliasy w CTE `u`; bmapa +1 › 36.
+
+## 2026-10-22 21:25 â€” #460 SCALONE; start #461; #463 w planie
+
+- Skrzynka: #463 (Spawn2018, `dla-cursora`+`pilne`) â€” backup 3Ã— ERROR + cron po awarii. Wpisane: PLAN Â§4/Â§8, dopisek `D-20261022-2110-01.md`. Kolejka: #461 â†’ #463 â†’ #409.
+- Scalanie: #462 F7 + CI zielone â†’ MERGED `045d9bd7` (0268). Issue #460 zamkniÄ™te. Bez push na `main`.
+- BieÅ¼Ä…ca: **#461** (`pakiet/hotfix-461-ferry-actual-dep`, migracja **0269**) â€” Prom dopiero przy `actual_departure_at`; status 178; `rk_no_departure`.

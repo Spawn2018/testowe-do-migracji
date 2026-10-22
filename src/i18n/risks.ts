@@ -32,6 +32,8 @@ const pl: Dict = {
   rk_ferry_overdue: 'Transport nadal w statusie „Prom”, choć {vessel} miał przypłynąć {arr}',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
+  /* #461: 2 h po planie bez actual_departure_at (AIS) */
+  rk_no_departure: 'Brak potwierdzenia wypłynięcia rejsu {vessel} {dep}',
   rk_silent_vehicle: 'Brak pozycji pojazdu {plate} od {minutes} min',
   rk_sequence: 'Rozjazd kolejności montażu: {early} (poz. {early_seq}) przyjedzie po {late} (poz. {late_seq})',
   rk_order_no_hhl: '{code}: brak numeru zlecenia HHL',

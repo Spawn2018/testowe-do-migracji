@@ -77,10 +77,10 @@ if [ -n "${TOWER_HOSTED_READY:-}" ]; then
   echo "  SKIP  automat: klucze funkcji — j.w."
 elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
   # A2 (E26): brak LEFT_LOADING_UNCONFIRMED — wyjazd ze Śremu bez loaded_confirmed
-  chk "automat statusów/promów (tower_test_status): 6 kluczy, 0 generycznych" \
-    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "6/0"
+  chk "automat statusów/promów (tower_test_status): 7 kluczy, 0 generycznych" \
+    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "7/0"
   chk "automat: klucze funkcji" "$(psql "$ST" -Atqc "select string_agg(distinct title_key, ',' order by title_key) from risk_signals")" \
-    "rk_auto_status_blocked,rk_ferry_overdue,rk_loading_not_ready,rk_missed_sailing,rk_port_no_loaded,rk_sailing_cancelled"
+    "rk_auto_status_blocked,rk_ferry_overdue,rk_loading_not_ready,rk_missed_sailing,rk_no_departure,rk_port_no_loaded,rk_sailing_cancelled"
 else
   fail=$((fail+2)); echo "  FAIL  brak bazy tower_test_status — uruchom najpierw tests/db/run.sh"
 fi
