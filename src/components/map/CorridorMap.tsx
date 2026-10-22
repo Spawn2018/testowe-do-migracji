@@ -604,7 +604,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
         const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
         if (!p) return null;
-        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name };
+        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name };
       };
       const groupItems: GroupItem[] = fleet.map((f) => {
         const row = rowOf(f.id);
@@ -731,6 +731,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         if (p.source === 'seed') continue;
         if (takenShips.has(vesselKey(p.name))) continue;
         const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
+        const loc = useTowerStore.getState().locale;
+        if (p.estimated) {
+          /* #429 C: pozycja szacowana z rozkładu — znacznik przerywany, opis z godziną ostatniego AIS */
+          const last = p.estimated.lastAisTs;
+          const est = last
+            ? t(loc, 'i429_est_tip').replace('{d}', formatOpsDateTime(last))
+            : t(loc, 'i429_est_tip_none');
+          L.marker([p.lat, p.lng], {
+            icon: ferryDivIcon('#6BA8D6', heading, false, true),
+            keyboard: false,
+          })
+            .bindTooltip(`${p.name || p.mmsi} · ${est}`, { direction: 'top', offset: [0, -10] })
+            .addTo(layers.ais);
+          continue;
+        }
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
         const tip = stale

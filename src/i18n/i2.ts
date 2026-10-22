@@ -64,6 +64,9 @@ const pl: Dict = {
   i5_enforce_needs_aal2: 'zmiana po zalogowaniu kodem z aplikacji',
   i2_ais_read_at: 'odczyt AIS {d}',
   i2_ais_stale: 'ostatnia pozycja {d}',
+  // #429 C — pozycja szacowana z rozkładu
+  i429_est_tip: 'szacowana z rozkładu · ostatni AIS {d}',
+  i429_est_tip_none: 'szacowana z rozkładu · brak AIS',
   i2_detect_samples: 'mediana · n = {n} (30 dni)',
   i2_detect_none: 'brak zdarzeń z czasem (30 dni)',
   i2_ais_db: 'z bazy, ostatni odczyt {d}',
