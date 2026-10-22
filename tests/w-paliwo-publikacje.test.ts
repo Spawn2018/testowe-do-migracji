@@ -28,7 +28,6 @@ describe('publikacje cen paliwa z bazy', () => {
     for (const f of ['../src/views/FinanceView.tsx', '../src/components/drawer/PanelPrices.tsx']) {
       expect(readFileSync(new URL(f, import.meta.url), 'utf8')).toContain('useFuelPublications()');
     }
-    expect(readFileSync(new URL('../src/lib/p5Source.ts', import.meta.url), 'utf8')).toContain('fuelPublicationsIn(r.idx.from, to)');
   });
 
   it('#409 / 0268: fuel_basis z widoku ceny → średnie, liczby, publikacje; zły kształt pominięty', () => {
@@ -69,7 +68,32 @@ describe('publikacje cen paliwa z bazy', () => {
     expect(out.publications?.map((p) => p.date)).toEqual(['2026-10-13', '2026-10-14']);
     const prog = enrichFromBasis({ ...row, state: 'PROGNOZA', okq8: null, orlen: null }, [load], 'rev', '2026-10-22');
     expect(prog.okq8).toBeNull();
-    expect(readFileSync(new URL('../src/lib/p5Source.ts', import.meta.url), 'utf8')).toContain('fromReadings && fromReadings.length ? fromReadings : fromBasis');
     expect(enrichFromBasis({ ...row, weekLast: row.week }, [load], 'rev', '2026-10-22')).toEqual({ ...row, weekLast: row.week });
+  });
+
+  it('F7 #408 B1: notowania HHL po dniu publikacji (kopie z dni bez publikacji raz), okres inny niż dzień pominięty', () => {
+    const out = publicationsFromReadings([
+      { ...r('a', 'SEK', '2026-10-17', 22.5, '2026-10-17T10:00:00Z'), published_on: '2026-10-16' },
+      { ...r('b', 'SEK', '2026-10-18', 22.5, '2026-10-18T10:00:00Z'), published_on: '2026-10-16' },
+      { ...r('c', 'SEK', '2026-10-16', 22.5, '2026-10-16T10:00:00Z'), published_on: '2026-10-16' },
+      { ...r('d', 'PLN', '2026-10-01', 7, '2026-10-01T10:00:00Z'), period: '2026-10' },
+    ]);
+    expect(out).toEqual([{ date: '2026-10-16', source: 'OKQ8', price: 22.5 }]);
+  });
+
+  it('F7 #408 B1/P2: publikacje z fuel_basis mają pierwszeństwo; tydzień bez publikacji — ostatnia cena sprzed tygodnia', () => {
+    const mk = (basis: object) => {
+      const side = { tier: 'PROGNOZA', computedEur: 1, invoicedEur: null, fuel: { refDate: '2026-10-20', multSek: 1, multPln: 1, applied: 1, basis }, fx: { tableNo: '', mid: 0, date: '', provisional: true } };
+      return { id: 'L1', code: 'SG-01', pricing: { money: { v: 2, tier: 'PROGNOZA', cost: side, rev: side } } } as unknown as Load;
+    };
+    const row: FuelWeekRow = {
+      key: 'k', week: { no: 43, from: '2026-10-19', to: '2026-10-25' } as never, idx: { no: 42, from: '2026-10-12', to: '2026-10-18' } as never,
+      okq8: { avg: null, n: null, mult: 1 }, orlen: { avg: null, n: null, mult: 1 }, applied: 1, state: 'OSTATECZNA',
+      finalFrom: null, running: false, loads: [{ id: 'L1', code: 'SG-01' }],
+    };
+    const fallback = { avgSek: 22, avgPln: 7, nSek: 0, nPln: 0, pubs: [{ date: '2026-10-09', source: 'OKQ8' as const, price: 22 }] };
+    expect(enrichFromBasis(row, [mk(fallback)], 'cost', '2026-10-22').publications).toEqual(fallback.pubs);
+    const none = { avgSek: null, avgPln: null, nSek: null, nPln: null, pubs: [] };
+    expect(enrichFromBasis(row, [mk(none)], 'cost', '2026-10-22').publications).toEqual([]);
   });
 });
