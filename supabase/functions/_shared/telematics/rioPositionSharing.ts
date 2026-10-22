@@ -8,6 +8,10 @@ import { normalizePlate } from './emtrackWeb.ts';
 export const RIO_API_HOST = 'https://api.position-sharing.rio.cloud';
 export const RIO_UA = 'WatchTower-HHL';
 export const RIO_TIMEOUT_MS = 10_000;
+/** Skok GPS powyżej tej prędkości — nie licz prędkości (F7 #438). */
+export const RIO_SPEED_CAP_KMH = 130;
+/** Przy odstępie > 1 h nie licz prędkości. */
+export const RIO_SPEED_MAX_GAP_SEC = 3600;
 
 export type RioTrackerOn = 'NACZEPA' | 'CIAGNIK_PL' | 'CIAGNIK_SE' | 'NIEZNANY';
 
@@ -41,6 +45,11 @@ export function rioPositionUrl(trackingId: string, secret: string): string {
   return `${rioPositionUrlSafe(trackingId)}?secret=${encodeURIComponent(secret)}`;
 }
 
+/** Wytnij secret=… z komunikatu błędu (Deno fetch bywa zawiera pełny URL). */
+export function scrubRioSecret(msg: string): string {
+  return msg.replace(/([?&]secret=)[^&\s)'"`]+/gi, '$1***');
+}
+
 /** E44 pkt 6: asset_name vs rejestracje z awizacji. */
 export function inferRioTrackerOn(
   assetName: string | null | undefined,
@@ -62,6 +71,7 @@ export function speedKmhFromPrev(
   if (!prev) return null;
   const dtSec = (Date.parse(curr.ts) - Date.parse(prev.ts)) / 1000;
   if (!(dtSec > 0) || !Number.isFinite(dtSec)) return null;
+  if (dtSec > RIO_SPEED_MAX_GAP_SEC) return null;
   const R = 6371;
   const rad = Math.PI / 180;
   const dLat = (curr.lat - prev.lat) * rad;
@@ -70,7 +80,9 @@ export function speedKmhFromPrev(
     + Math.cos(prev.lat * rad) * Math.cos(curr.lat * rad) * Math.sin(dLon / 2) ** 2;
   const km = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
   if (!Number.isFinite(km)) return null;
-  return (km / dtSec) * 3600;
+  const sp = (km / dtSec) * 3600;
+  if (!Number.isFinite(sp) || sp > RIO_SPEED_CAP_KMH) return null;
+  return sp;
 }
 
 function isoOrNull(v: unknown): string | null {
@@ -79,8 +91,15 @@ function isoOrNull(v: unknown): string | null {
   return Number.isFinite(t) ? new Date(t).toISOString() : null;
 }
 
+function isBlankCoord(v: unknown): boolean {
+  return v == null || v === '';
+}
+
 /** Parsuje JSON odpowiedzi RIO; bez secret w wyniku. */
-export function parseRioPositionPayload(raw: unknown): RioPositionResult {
+export function parseRioPositionPayload(
+  raw: unknown,
+  nowMs: number = Date.now(),
+): RioPositionResult {
   if (raw == null || typeof raw !== 'object') {
     return { ok: false, kind: 'down', status: null, warning: 'RIO: brak JSON' };
   }
@@ -90,14 +109,23 @@ export function parseRioPositionPayload(raw: unknown): RioPositionResult {
     return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position' };
   }
   const p = pos as Record<string, unknown>;
+  if (isBlankCoord(p.latitude) || isBlankCoord(p.longitude)) {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak latitude/longitude' };
+  }
   const lat = Number(p.latitude);
   const lon = Number(p.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return { ok: false, kind: 'down', status: null, warning: 'RIO: brak latitude/longitude' };
   }
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: lat/lon poza zakresem' };
+  }
   const observedAt = isoOrNull(p.timestamp);
   if (!observedAt) {
     return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position.timestamp' };
+  }
+  if (Date.parse(observedAt) > nowMs + 5 * 60_000) {
+    return { ok: false, kind: 'down', status: null, warning: 'RIO: timestamp z przyszłości' };
   }
   return {
     ok: true,
@@ -113,13 +141,15 @@ export function parseRioPositionPayload(raw: unknown): RioPositionResult {
 }
 
 /**
- * GET pozycji. Timeout 10 s. Status 401/403/404 → invalid; 5xx / sieć / zły format → down.
+ * GET pozycji. Timeout 10 s.
+ * 401/403/404/400/410 → invalid; 5xx / sieć / zły format → down.
  */
 export async function fetchRioPosition(opts: {
   trackingId: string;
   secret: string;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  nowMs?: number;
 }): Promise<RioPositionResult> {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const timeoutMs = opts.timeoutMs ?? RIO_TIMEOUT_MS;
@@ -132,7 +162,10 @@ export async function fetchRioPosition(opts: {
       headers: { 'User-Agent': RIO_UA, Accept: 'application/json' },
       signal: ctrl.signal,
     });
-    if (res.status === 401 || res.status === 403 || res.status === 404) {
+    if (
+      res.status === 401 || res.status === 403 || res.status === 404
+      || res.status === 400 || res.status === 410
+    ) {
       return {
         ok: false,
         kind: 'invalid',
@@ -154,15 +187,17 @@ export async function fetchRioPosition(opts: {
     } catch {
       return { ok: false, kind: 'down', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
     }
-    return parseRioPositionPayload(json);
+    return parseRioPositionPayload(json, opts.nowMs ?? Date.now());
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    const raw = e instanceof Error ? e.message : String(e);
+    const msg = scrubRioSecret(raw);
     const aborted = /abort/i.test(msg);
+    const name = e instanceof Error && e.name ? e.name : 'Error';
     return {
       ok: false,
       kind: 'down',
       status: null,
-      warning: aborted ? 'RIO: timeout 10 s' : `RIO: sieć ${msg}`,
+      warning: aborted ? 'RIO: timeout 10 s' : `RIO: sieć ${name}`,
     };
   } finally {
     clearTimeout(timer);

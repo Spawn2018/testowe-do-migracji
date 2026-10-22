@@ -71,8 +71,12 @@ export interface RioLoadRow {
   rio_tracking_id: string;
   rio_secret: string;
   rio_check_state: string | null;
+  rio_check_at: string | null;
   rio_valid_from: string | null;
   rio_valid_to: string | null;
+  rio_asset_name: string | null;
+  rio_tracker_on: string | null;
+  rio_last_fix_at: string | null;
   rio_error_streak: number;
   trailer_plate: string | null;
   tractor_plate: string | null;
@@ -81,6 +85,24 @@ export interface RioLoadRow {
   plannedLoadDate: string | null;
   trackingOpenedAt: string | null;
   telematics_vehicle_id: string | null;
+}
+
+const RIO_BUDGET_MS = 40_000;
+const RIO_NET_ABORT_AFTER = 3;
+const RIO_RECHECK_MS = 30 * 60_000;
+
+function rioPatchChanged(load: RioLoadRow, patch: RioLoadPatch): boolean {
+  for (const [k, v] of Object.entries(patch) as [keyof RioLoadPatch, unknown][]) {
+    const cur = (load as unknown as Record<string, unknown>)[k];
+    if (cur !== v) return true;
+  }
+  return false;
+}
+
+function rioCheckedRecently(load: RioLoadRow, nowMs: number): boolean {
+  if (!load.rio_check_at) return false;
+  const t = Date.parse(load.rio_check_at);
+  return Number.isFinite(t) && nowMs - t < RIO_RECHECK_MS;
 }
 
 export interface RioLoadPatch {
@@ -140,6 +162,11 @@ export interface SyncStore {
   }): Promise<void>;
   lastPositionAt?(loadId: string, source: string): Promise<string | null>;
   telmEmtrackWebEnabled?(): Promise<boolean>;
+  /** E44: flaga TELM_RIO_LINKS — wyłącza odczyt linków RIO. */
+  telmRioLinksEnabled?(): Promise<boolean>;
+  /** E44: blokada nakładania się przebiegów rio-links (TTL). */
+  rioLinksLockTry?(ttlSec?: number): Promise<boolean>;
+  rioLinksLockRelease?(): Promise<void>;
   /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
   saveOrphanPosition?(row: {
     plate: string; trackingObjectId?: string | null;
@@ -1461,192 +1488,280 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
  * Secret nigdy w observations / warnings / URL.
  */
 export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
-  const nowIso = deps.now().toISOString();
-  const loads = deps.store.listRioLoadsForPoll ? await deps.store.listRioLoadsForPoll() : [];
-  let queried = 0;
-  let written = 0;
-  let skippedWindow = 0;
-  let skippedValidity = 0;
-  let skippedDup = 0;
-  let invalid = 0;
-  let down = 0;
-  let pendingOk = 0;
-  let sourceFailStreak = 0;
-  const warnings: string[] = [];
-  let risks = 0;
+  const started = deps.now().getTime();
+  const nowIso = new Date(started).toISOString();
 
-  for (const load of loads) {
-    const pending = load.rio_check_state === 'pending' || load.rio_check_state == null;
-    const matchRow = {
-      id: load.id,
-      trailer_plate: load.trailer_plate,
-      telematics_vehicle_id: load.telematics_vehicle_id ?? `rio:${load.rio_tracking_id}`,
-      status: load.status,
-      plannedLoadDate: load.plannedLoadDate,
-      trackingOpenedAt: load.trackingOpenedAt,
+  const enabled = deps.store.telmRioLinksEnabled
+    ? await deps.store.telmRioLinksEnabled()
+    : true;
+  if (!enabled) {
+    return {
+      job: 'rio-links', mode: 'LIVE', ok: true,
+      reason: 'Flaga TELM_RIO_LINKS wyłączona — bez zapisu pozycji',
+      observations: { flag: 'false', links: '0' },
     };
-    if (!pending && !loadInTrackingWindow(matchRow, nowIso)) {
-      skippedWindow++;
-      continue;
-    }
-    if (!pending && !rioLinkValidNow(nowIso, load.rio_valid_from, load.rio_valid_to)) {
-      skippedValidity++;
-      continue;
-    }
+  }
 
-    queried++;
-    const res = await fetchRioPosition({
-      trackingId: load.rio_tracking_id,
-      secret: load.rio_secret,
-      fetchImpl: deps.fetch,
-    });
+  if (deps.store.rioLinksLockTry) {
+    const got = await deps.store.rioLinksLockTry(90);
+    if (!got) {
+      return {
+        job: 'rio-links', mode: 'LIVE', ok: true,
+        reason: 'Nakładający się przebieg rio-links — pominięto',
+        observations: { links: '0', overlap: '1' },
+      };
+    }
+  }
 
-    if (!res.ok) {
-      if (res.kind === 'invalid') {
-        invalid++;
-        if (deps.store.updateRioLoadState) {
-          await deps.store.updateRioLoadState(load.id, {
-            rio_check_state: 'invalid',
-            rio_check_at: nowIso,
-            rio_last_fix_at: nowIso,
-            rio_error_streak: 0,
-          });
-        }
-        if (await deps.store.raiseRisk({
-          kind: 'JOB_FAILURE',
-          severity: 'HIGH',
-          title: 'Link RIO nieprawidłowy',
-          titleKey: 'rk_rio_invalid',
-          params: {},
-          detail: { zrodlo: 'RIO', loadId: load.id, status: res.status, url: rioPositionUrlSafe(load.rio_tracking_id) },
-          dedup: `RIO_INVALID:${load.id}`,
-          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
-          loadId: load.id,
-        })) risks++;
+  try {
+    const loads = deps.store.listRioLoadsForPoll ? await deps.store.listRioLoadsForPoll() : [];
+    let queried = 0;
+    let written = 0;
+    let skippedWindow = 0;
+    let skippedValidity = 0;
+    let skippedDup = 0;
+    let skippedRecheck = 0;
+    let invalid = 0;
+    let down = 0;
+    let pendingOk = 0;
+    let sourceFailStreak = 0;
+    let anyStreakGe3 = false;
+    let netFails = 0;
+    let abortedBudget = false;
+    let abortedNet = false;
+    const warnings: string[] = [];
+    let risks = 0;
+
+    const applyPatch = async (load: RioLoadRow, patch: RioLoadPatch) => {
+      if (!deps.store.updateRioLoadState || !rioPatchChanged(load, patch)) return;
+      await deps.store.updateRioLoadState(load.id, patch);
+      Object.assign(load, patch);
+    };
+
+    for (const load of loads) {
+      if (deps.now().getTime() - started > RIO_BUDGET_MS) {
+        abortedBudget = true;
+        break;
+      }
+      if (netFails >= RIO_NET_ABORT_AFTER) {
+        abortedNet = true;
+        break;
+      }
+
+      const pending = load.rio_check_state === 'pending' || load.rio_check_state == null;
+      const matchRow = {
+        id: load.id,
+        trailer_plate: load.trailer_plate,
+        telematics_vehicle_id: load.telematics_vehicle_id ?? `rio:${load.rio_tracking_id}`,
+        status: load.status,
+        plannedLoadDate: load.plannedLoadDate,
+        trackingOpenedAt: load.trackingOpenedAt,
+      };
+      const inWindow = loadInTrackingWindow(matchRow, nowIso);
+      const linkValid = rioLinkValidNow(nowIso, load.rio_valid_from, load.rio_valid_to);
+      const wasInvalid = load.rio_check_state === 'invalid';
+      const wasExpired = !pending && !wasInvalid && !linkValid
+        && (load.rio_valid_from != null || load.rio_valid_to != null);
+
+      if (!pending && !inWindow && !wasInvalid && !wasExpired) {
+        skippedWindow++;
         continue;
       }
-      down++;
-      const streak = (load.rio_error_streak ?? 0) + 1;
-      if (streak > sourceFailStreak) sourceFailStreak = streak;
-      if (deps.store.updateRioLoadState) {
-        await deps.store.updateRioLoadState(load.id, {
-          rio_check_state: pending ? 'down' : (load.rio_check_state as 'ok' | 'pending' | 'invalid' | 'down') ?? 'down',
+
+      // Wygasły / invalid: ponów co 30 min (podwykonawca mógł przedłużyć end).
+      if (!pending && (wasExpired || wasInvalid)) {
+        if (rioCheckedRecently(load, started)) {
+          skippedRecheck++;
+          continue;
+        }
+      } else if (!pending && !linkValid) {
+        skippedValidity++;
+        continue;
+      }
+
+      queried++;
+      const res = await fetchRioPosition({
+        trackingId: load.rio_tracking_id,
+        secret: load.rio_secret,
+        fetchImpl: deps.fetch,
+        nowMs: started,
+      });
+
+      if (!res.ok) {
+        if (res.kind === 'invalid') {
+          invalid++;
+          await applyPatch(load, {
+            rio_check_state: 'invalid',
+            rio_check_at: nowIso,
+            rio_error_streak: 0,
+          });
+          if (await deps.store.raiseRisk({
+            kind: 'RESOURCE_MISSING',
+            severity: 'HIGH',
+            title: 'Link RIO nieprawidłowy',
+            titleKey: 'rk_rio_invalid',
+            params: {},
+            detail: {
+              zrodlo: 'RIO', loadId: load.id, status: res.status,
+              url: rioPositionUrlSafe(load.rio_tracking_id),
+            },
+            dedup: `RIO_INVALID:${load.id}`,
+            sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+            loadId: load.id,
+          })) risks++;
+          continue;
+        }
+        down++;
+        netFails++;
+        const streak = (load.rio_error_streak ?? 0) + 1;
+        if (streak > sourceFailStreak) sourceFailStreak = streak;
+        if (streak >= 3) anyStreakGe3 = true;
+        await applyPatch(load, {
+          rio_check_state: pending
+            ? 'down'
+            : ((load.rio_check_state as 'ok' | 'pending' | 'invalid' | 'down') ?? 'down'),
           rio_check_at: nowIso,
-          rio_last_fix_at: nowIso,
           rio_error_streak: streak,
         });
+        warnings.push(res.warning);
+        if (streak >= 3) {
+          if (await deps.store.raiseRisk(sourceDownRisk(
+            'RIO',
+            warnings.slice(-5),
+            nowIso,
+            rioPositionUrlSafe(load.rio_tracking_id),
+          ))) risks++;
+        }
+        continue;
       }
-      warnings.push(res.warning);
-      if (streak >= 3) {
-        if (await deps.store.raiseRisk(sourceDownRisk(
-          'RIO',
-          warnings.slice(-5),
-          nowIso,
-          rioPositionUrlSafe(load.rio_tracking_id),
-        ))) risks++;
-      }
-      continue;
-    }
 
-    const trackerOn = inferRioTrackerOn(res.assetName, {
-      trailer: load.trailer_plate,
-      tractorPl: load.tractor_plate,
-      tractorSe: load.tractor_delivery_plate,
-    });
-    if (deps.store.updateRioLoadState) {
-      await deps.store.updateRioLoadState(load.id, {
+      const trackerOn = inferRioTrackerOn(res.assetName, {
+        trailer: load.trailer_plate,
+        tractorPl: load.tractor_plate,
+        tractorSe: load.tractor_delivery_plate,
+      });
+      await applyPatch(load, {
         rio_check_state: 'ok',
         rio_check_at: nowIso,
         rio_asset_name: res.assetName,
         rio_tracker_on: trackerOn,
         rio_valid_from: res.validFrom,
         rio_valid_to: res.validTo,
-        rio_last_fix_at: nowIso,
+        rio_last_fix_at: res.observedAt,
         rio_error_streak: 0,
       });
-    }
-    if (pending) pendingOk++;
-    await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
-    await deps.store.resolveRisks('SOURCE_DOWN:RIO');
+      if (pending) pendingOk++;
+      await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
+      await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
 
-    if (trackerOn === 'NIEZNANY' && res.assetName) {
-      if (await deps.store.raiseRisk({
-        kind: 'JOB_FAILURE',
-        severity: 'MEDIUM',
-        title: `Link RIO dotyczy pojazdu ${res.assetName}, którego nie ma w awizacji`,
-        titleKey: 'rk_rio_unknown_asset',
-        params: { asset: res.assetName },
-        detail: { zrodlo: 'RIO', loadId: load.id, asset: res.assetName },
-        dedup: `RIO_UNKNOWN_ASSET:${load.id}`,
-        sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
-        loadId: load.id,
-      })) risks++;
+      if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
+        skippedValidity++;
+        if (await deps.store.raiseRisk({
+          kind: 'RESOURCE_MISSING',
+          severity: 'HIGH',
+          title: 'Link RIO wygasł',
+          titleKey: 'rk_rio_expired',
+          params: {},
+          detail: {
+            zrodlo: 'RIO', loadId: load.id,
+            validTo: res.validTo,
+            url: rioPositionUrlSafe(load.rio_tracking_id),
+          },
+          dedup: `RIO_EXPIRED:${load.id}`,
+          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+          loadId: load.id,
+        })) risks++;
+        continue;
+      }
+
+      if (trackerOn === 'NIEZNANY' && res.assetName) {
+        if (await deps.store.raiseRisk({
+          kind: 'RESOURCE_MISSING',
+          severity: 'MEDIUM',
+          title: `Link RIO dotyczy pojazdu ${res.assetName}, którego nie ma w awizacji`,
+          titleKey: 'rk_rio_unknown_asset',
+          params: { asset: res.assetName },
+          detail: { zrodlo: 'RIO', loadId: load.id, asset: res.assetName },
+          dedup: `RIO_UNKNOWN_ASSET:${load.id}`,
+          sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+          loadId: load.id,
+        })) risks++;
+      }
+
+      // Poza oknem E27 — tylko zapytanie testowe (pending) / recheck, bez zapisu pozycji.
+      if (!inWindow) {
+        if (pending) { /* pending check poza oknem — OK */ }
+        else skippedWindow++;
+        continue;
+      }
+
+      const prevFix = deps.store.lastPositionFix
+        ? await deps.store.lastPositionFix(load.id, 'SUBCONTRACTOR_LINK')
+        : null;
+      if (prevFix && Date.parse(prevFix.ts) >= Date.parse(res.observedAt)) {
+        skippedDup++;
+        continue;
+      }
+      const speed = speedKmhFromPrev(prevFix, { lat: res.lat, lon: res.lon, ts: res.observedAt });
+
+      if (deps.store.processPosition) {
+        await deps.store.processPosition({
+          loadId: load.id,
+          lat: res.lat,
+          lon: res.lon,
+          ts: res.observedAt,
+          source: 'SUBCONTRACTOR_LINK',
+          speed,
+          heading: null,
+          ignition: null,
+          raw: {
+            provider: 'RIO',
+            trackingId: load.rio_tracking_id,
+            asset_name: res.assetName,
+            name: res.name,
+            url: rioPositionUrlSafe(load.rio_tracking_id),
+          },
+        });
+        written++;
+      }
+      if (deps.store.inferPhaseFromPosition) {
+        await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+      }
     }
 
-    // Poza oknem E27 — tylko zapytanie testowe (pending), bez zapisu pozycji.
-    if (pending && !loadInTrackingWindow(matchRow, nowIso)) continue;
-    if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
-      skippedValidity++;
-      continue;
+    // SOURCE_DOWN:RIO zamykaj po pętli tylko gdy żaden transport nie ma serii ≥ 3.
+    if (!anyStreakGe3) {
+      await deps.store.resolveRisks('SOURCE_DOWN:RIO');
     }
 
-    const last = deps.store.lastPositionAt
-      ? await deps.store.lastPositionAt(load.id, 'SUBCONTRACTOR_LINK')
-      : null;
-    if (last && Date.parse(last) >= Date.parse(res.observedAt)) {
-      skippedDup++;
-      continue;
-    }
-
-    const prevFix = deps.store.lastPositionFix
-      ? await deps.store.lastPositionFix(load.id, 'SUBCONTRACTOR_LINK')
-      : null;
-    const speed = speedKmhFromPrev(prevFix, { lat: res.lat, lon: res.lon, ts: res.observedAt });
-
-    if (deps.store.processPosition) {
-      await deps.store.processPosition({
-        loadId: load.id,
-        lat: res.lat,
-        lon: res.lon,
-        ts: res.observedAt,
-        source: 'SUBCONTRACTOR_LINK',
-        speed,
-        heading: null,
-        ignition: null,
-        raw: {
-          provider: 'RIO',
-          trackingId: load.rio_tracking_id,
-          asset_name: res.assetName,
-          name: res.name,
-          url: rioPositionUrlSafe(load.rio_tracking_id),
-        },
-      });
-      written++;
-    }
-    if (deps.store.inferPhaseFromPosition) {
-      await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+    return {
+      job: 'rio-links',
+      mode: 'LIVE',
+      ok: (down === 0 || sourceFailStreak < 3) && !abortedNet,
+      risks,
+      warnings: warnings.slice(0, 20),
+      observations: {
+        candidates: String(loads.length),
+        links: String(loads.length),
+        queried: String(queried),
+        written: String(written),
+        pending_ok: String(pendingOk),
+        invalid: String(invalid),
+        down: String(down),
+        skipped_window: String(skippedWindow),
+        skipped_validity: String(skippedValidity),
+        skipped_recheck: String(skippedRecheck),
+        skipped_dup: String(skippedDup),
+        fail_streak_max: String(sourceFailStreak),
+        aborted_budget: abortedBudget ? '1' : '0',
+        aborted_net: abortedNet ? '1' : '0',
+      },
+    };
+  } finally {
+    if (deps.store.rioLinksLockRelease) {
+      await deps.store.rioLinksLockRelease();
     }
   }
-
-  return {
-    job: 'rio-links',
-    mode: 'LIVE',
-    ok: down === 0 || sourceFailStreak < 3,
-    risks,
-    warnings: warnings.slice(0, 20),
-    observations: {
-      candidates: String(loads.length),
-      queried: String(queried),
-      written: String(written),
-      pending_ok: String(pendingOk),
-      invalid: String(invalid),
-      down: String(down),
-      skipped_window: String(skippedWindow),
-      skipped_validity: String(skippedValidity),
-      skipped_dup: String(skippedDup),
-      fail_streak_max: String(sourceFailStreak),
-    },
-  };
 }
 
 export const JOBS = {

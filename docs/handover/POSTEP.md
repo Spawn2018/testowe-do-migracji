@@ -4093,3 +4093,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #437/#425/#422/#413/#409/#412/#323/#322/#320 (Spawn2018) — w planie; #437 `pilne` bieżąca. Bez nowych do wpisania.
 - Scalanie: brak „F7: gotowe do scalenia”. #436 F7 r2 „jeszcze nie” (visible_to + clear godziny); #433/#408/#383/#382 bez „gotowe”. Bez push na `main`.
 - Bieżąca: **#437 E44** PR #438 head `0b03c7df` — unit×2, `db`, visual (wszystkie części) **zielone**. Zakres dopisku (adapter, cron, SUBCONTRACTOR_LINK, błędy/sprawy, secret poza logami) w PR. Front Stan systemu — koordynator. **Czekam na F7.**
+
+## 2026-10-22 10:20 — #438 F7: poprawki E44 RIO (BLOKER secret + obciążenie)
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia”. #438 F7 r1/r2 „jeszcze nie” → ten commit. #436 BLOKER numeru (0261→0262) — następny krok po push. Bez push na `main`.
+- Bieżąca: **#437 F7** — secret poza komunikatem sieci; `rio_last_fix_at` tylko przy ok; UPDATE tylko przy zmianie; audit skip `rio_check_at`/`rio_last_fix_at`; `resolveRisks` SOURCE_DOWN po pętli; budżet 40 s + abort po 3 błędach sieci + lock; recheck wygasły/invalid co 30 min + `RIO_EXPIRED`; `RESOURCE_MISSING` dla SCX; TELM_RIO_LINKS; streak=0 przy nowym linku; 400/410→invalid; fixture zmyślone; testy 23/23.

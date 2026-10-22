@@ -124,6 +124,7 @@ const pl: Dict = {
   rk_src_EMTRACK_WEB: 'telematyka naczep (emtrack web)',
   rk_src_RIO: 'RIO',
   rk_rio_invalid: 'Link RIO nieprawidłowy',
+  rk_rio_expired: 'Link RIO wygasł',
   rk_rio_unknown_asset: 'Link RIO dotyczy pojazdu {asset}, którego nie ma w awizacji',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',

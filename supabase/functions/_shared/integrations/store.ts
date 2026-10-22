@@ -295,6 +295,20 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);
       return r.data === true;
     },
+    async telmRioLinksEnabled() {
+      const r = await sb.rpc('telm_rio_links_enabled');
+      if (r.error) throw new Error(`telm_rio_links_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockTry(ttlSec = 90) {
+      const r = await sb.rpc('rio_links_lock_try', { p_ttl_sec: ttlSec });
+      if (r.error) throw new Error(`rio_links_lock_try: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockRelease() {
+      const r = await sb.rpc('rio_links_lock_release');
+      if (r.error) throw new Error(`rio_links_lock_release: ${r.error.message}`);
+    },
     async saveOrphanPosition(row: {
       plate: string; trackingObjectId?: string | null;
       lat: number; lon: number; ts: string;
@@ -323,7 +337,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async listRioLoadsForPoll() {
       const r = await sb.from('loads').select(
-        'id,shipment_code,rio_tracking_id,rio_secret,rio_check_state,rio_valid_from,rio_valid_to,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
+        'id,shipment_code,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
       )
         .not('rio_tracking_id', 'is', null)
         .not('rio_secret', 'is', null)
@@ -335,8 +349,12 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         rio_tracking_id: String(row.rio_tracking_id),
         rio_secret: String(row.rio_secret),
         rio_check_state: (row.rio_check_state as string | null) ?? null,
+        rio_check_at: (row.rio_check_at as string | null) ?? null,
         rio_valid_from: (row.rio_valid_from as string | null) ?? null,
         rio_valid_to: (row.rio_valid_to as string | null) ?? null,
+        rio_asset_name: (row.rio_asset_name as string | null) ?? null,
+        rio_tracker_on: (row.rio_tracker_on as string | null) ?? null,
+        rio_last_fix_at: (row.rio_last_fix_at as string | null) ?? null,
         rio_error_streak: Number(row.rio_error_streak ?? 0),
         trailer_plate: (row.trailer_plate as string | null) ?? null,
         tractor_plate: (row.tractor_plate as string | null) ?? null,

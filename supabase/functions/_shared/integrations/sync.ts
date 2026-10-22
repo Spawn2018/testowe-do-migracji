@@ -33,7 +33,7 @@ export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
 }
-export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE';
+export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE' | 'RESOURCE_MISSING';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface RiskInput {
   kind: RiskKind; severity: RiskSeverity; title: string; detail: Record<string, unknown>;
