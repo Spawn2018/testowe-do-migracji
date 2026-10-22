@@ -4004,3 +4004,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405/#421/#425/#426/#400/#384/#409/#413/#422/#412 w planie.
 - Scalanie: #423 F7 gotowe (`5553439`) → merge `2e446fc5` (wygląd Wydajność). #424/#427/#428/#382 bez „gotowe” po head. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** PR #424 — `db` FAIL i2 627/5: `::text`→`true` (nie `t`); `sms_enqueue` w WHERE 2× (dedup→null) → osobny SELECT + cleanup kolejki F7 przed pull.
+
+## 2026-10-22 02:35 — #405 CI zielone; F7: numer testowy pilota
+
+- Skrzynka: bez nowych. F7 na `d2cfb32` (przed poprawką): format `true`, enqueue 2×, pull 2 z F7 ZONE/TEST (nie „spoza listy”), prawdziwy numer w teście.
+- Scalanie: #424 `db`/`unit`/`visual` zielone na `74632573`. Czeka na ponowne F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — pilot w i2: `+48000000001` (bez numeru właściciela).

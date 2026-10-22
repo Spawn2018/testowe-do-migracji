@@ -656,12 +656,12 @@ $PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_n
         country=excluded.country, active=true" >/dev/null
 chk "F7 B1: TEST na numer z sms_zone_recipients" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test', false) is not null)::text")" true
 $PSQL -c "insert into pilot_notify_redirect (load_id, owner_email, owner_phone_e164, active, note)
-  values ('$SL', 'pilot-f7@test', '+48695637907', true, 'i3 f7 #405')
+  values ('$SL', 'pilot-f7@test', '+48000000001', true, 'i3 f7 #405')
   on conflict (load_id) do update
     set owner_email=excluded.owner_email, owner_phone_e164=excluded.owner_phone_e164,
         active=true, note=excluded.note, updated_at=now()" >/dev/null
 F7Z=$(Q "select sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")
-chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48695637907"
+chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48000000001"
 chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" true
 chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
 # F7 zostawiło ZONE/TEST w kolejce — przed sprawdzeniem „0 spoza listy” czyścimy (inaczej pull przy EXTERNAL on > 0)
