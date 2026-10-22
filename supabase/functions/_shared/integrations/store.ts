@@ -295,6 +295,23 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);
       return r.data === true;
     },
+    async telmRioLinksEnabled() {
+      const r = await sb.rpc('telm_rio_links_enabled');
+      if (r.error) throw new Error(`telm_rio_links_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockTry(ttlSec = 90, token?: string) {
+      const r = await sb.rpc('rio_links_lock_try', {
+        p_ttl_sec: ttlSec,
+        p_token: token ?? null,
+      });
+      if (r.error) throw new Error(`rio_links_lock_try: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockRelease(token?: string) {
+      const r = await sb.rpc('rio_links_lock_release', { p_token: token ?? null });
+      if (r.error) throw new Error(`rio_links_lock_release: ${r.error.message}`);
+    },
     async saveOrphanPosition(row: {
       plate: string; trackingObjectId?: string | null;
       lat: number; lon: number; ts: string;
@@ -320,6 +337,55 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       });
       if (r.error) throw new Error(`telm_infer_phase_from_position: ${r.error.message}`);
       return r.data == null ? null : String(r.data);
+    },
+    async listRioLoadsForPoll() {
+      const r = await sb.from('loads').select(
+        'id,shipment_code,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
+      )
+        .not('rio_tracking_id', 'is', null)
+        .not('rio_secret', 'is', null)
+        .not('status', 'in', '("CANCELLED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+      if (r.error) throw new Error(`loads rio: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        id: row.id as string,
+        code: (row.shipment_code as string | null) ?? null,
+        rio_tracking_id: String(row.rio_tracking_id),
+        rio_secret: String(row.rio_secret),
+        rio_check_state: (row.rio_check_state as string | null) ?? null,
+        rio_check_at: (row.rio_check_at as string | null) ?? null,
+        rio_valid_from: (row.rio_valid_from as string | null) ?? null,
+        rio_valid_to: (row.rio_valid_to as string | null) ?? null,
+        rio_asset_name: (row.rio_asset_name as string | null) ?? null,
+        rio_tracker_on: (row.rio_tracker_on as string | null) ?? null,
+        rio_last_fix_at: (row.rio_last_fix_at as string | null) ?? null,
+        rio_error_streak: Number(row.rio_error_streak ?? 0),
+        trailer_plate: (row.trailer_plate as string | null) ?? null,
+        tractor_plate: (row.tractor_plate as string | null) ?? null,
+        tractor_delivery_plate: (row.tractor_delivery_plate as string | null) ?? null,
+        status: (row.status as string | null) ?? null,
+        plannedLoadDate: (row.plan_load_date as string | null) ?? null,
+        trackingOpenedAt: (row.tracking_opened_at as string | null) ?? null,
+        telematics_vehicle_id: (row.telematics_vehicle_id as string | null) ?? null,
+      }));
+    },
+    async updateRioLoadState(loadId: string, patch: {
+      rio_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+      rio_check_at?: string;
+      rio_asset_name?: string | null;
+      rio_tracker_on?: string | null;
+      rio_valid_from?: string | null;
+      rio_valid_to?: string | null;
+      rio_last_fix_at?: string;
+      rio_error_streak?: number;
+    }) {
+      must(await sb.from('loads').update(patch).eq('id', loadId), 'loads rio state');
+    },
+    async lastPositionFix(loadId: string, source: string) {
+      const r = await sb.from('positions').select('lat,lon,ts').eq('load_id', loadId).eq('source', source)
+        .order('ts', { ascending: false }).limit(1).maybeSingle();
+      if (r.error || !r.data) return null;
+      const d = r.data as { lat: number; lon: number; ts: string };
+      return { lat: Number(d.lat), lon: Number(d.lon), ts: String(d.ts) };
     },
   };
 }

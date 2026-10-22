@@ -33,7 +33,7 @@ export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
 }
-export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE';
+export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE' | 'RESOURCE_MISSING';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface RiskInput {
   kind: RiskKind; severity: RiskSeverity; title: string; detail: Record<string, unknown>;
@@ -131,7 +131,7 @@ export type SourceId =
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
   | 'DIGITRAFFIC' | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
-  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB';
+  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB' | 'RIO';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
@@ -141,13 +141,14 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
   HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   EMTRACK_WEB: 'telematyka naczep (emtrack web)',
+  RIO: 'RIO',
 };
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
   DIGITRAFFIC: 'FERRY', STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
-  HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE',
+  HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',
 };
 
 const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
@@ -156,21 +157,21 @@ const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(utc));
 
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce, nigdy cicha pustka.
- *  Emtrack (A8): jeden klucz bez daty, w tytule „od kiedy”. Reszta źródeł: jeden klucz na dzień. */
+ *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień. */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
-  const emtrack = src === 'EMTRACK_WEB';
+  const sticky = src === 'EMTRACK_WEB' || src === 'RIO';
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
     severity: src.startsWith('POLFERRIES') || src.startsWith('STENA') ? 'HIGH' : 'MEDIUM',
-    title: emtrack
+    title: sticky
       ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`
       : `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
     titleKey: 'rk_source_down', params: { source: SOURCE_LABEL[src], source_key: `rk_src_${src}` },
-    detail: emtrack
+    detail: sticky
       ? { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso, od_kiedy: nowIso }
       : { zrodlo: src, ostrzezenia: warnings.slice(0, 10), czas: nowIso },
-    dedup: emtrack ? `SOURCE_DOWN:${src}` : `SOURCE_DOWN:${src}:${nowIso.slice(0, 10)}`,
+    dedup: sticky ? `SOURCE_DOWN:${src}` : `SOURCE_DOWN:${src}:${nowIso.slice(0, 10)}`,
     sourceUrl: url ?? null,
   };
 }
