@@ -516,7 +516,11 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
     route: ferryRouteFromDb(r.route),
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
-    status: r.status === 'ODWOLANY' ? 'ODWOLANY' : r.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY',
+    status: r.status === 'ODWOLANY' ? 'ODWOLANY'
+      : r.status === 'OPOZNIONY' ? 'OPOZNIONY'
+        : r.status === 'W_REJSIE' ? 'W_REJSIE'
+          : r.status === 'DOPLYNAL' ? 'DOPLYNAL'
+            : 'ZAPLANOWANY',
     source: src,
   };
 }
