@@ -648,20 +648,24 @@ val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001',
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
 chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"
 # F7 #424 B1/B2: TEST na listę stref; pilot tylko dla ZONE_* przy EXTERNAL_MESSAGING=false
+# ::text na boolean → true/false (nie t/f); sms_enqueue w WHERE może być wołane 2× (dedup→null) — osobny SELECT.
 $PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
   values ('LOAD_SREM', 1, 'F7 strefa', '600111222', 'PL', true)
   on conflict (list_key, slot) do update
     set display_name=excluded.display_name, phone_national=excluded.phone_national,
         country=excluded.country, active=true" >/dev/null
-chk "F7 B1: TEST na numer z sms_zone_recipients" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test', false) is not null)::text")" t
+chk "F7 B1: TEST na numer z sms_zone_recipients" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test', false) is not null)::text")" true
 $PSQL -c "insert into pilot_notify_redirect (load_id, owner_email, owner_phone_e164, active, note)
   values ('$SL', 'pilot-f7@test', '+48695637907', true, 'i3 f7 #405')
   on conflict (load_id) do update
     set owner_email=excluded.owner_email, owner_phone_e164=excluded.owner_phone_e164,
         active=true, note=excluded.note, updated_at=now()" >/dev/null
-chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id = sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")" "+48695637907"
-chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" t
-chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" t
+F7Z=$(Q "select sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")
+chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48695637907"
+chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" true
+chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
+# F7 zostawiło ZONE/TEST w kolejce — przed sprawdzeniem „0 spoza listy” czyścimy (inaczej pull przy EXTERNAL on > 0)
+$PSQL -c "delete from sms_outbox where dedup_key in ('i3-f7-zone-test','i3-f7-zone-pilot') or id='$F7Z'" >/dev/null
 chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2

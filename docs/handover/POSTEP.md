@@ -3998,3 +3998,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #425 (`pilne`, kolejka) + #426 (import `p_quiet`) — PLAN §4/§8, dopiski `D-20261022-0130-01.md` / `D-20261022-0138-01.md`. Kolejność: #405→#421→#426(0259)→#400(0260)→#384(0261)→#409(0262)→#413(0263)→#422(0264)→#412→B5(0265).
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #424 `db` FAIL: `schema cron does not exist` przy `cron.unschedule` w tower_boot → guard `pg_extension`. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** PR #424 — poprawka CI; potem F7.
+
+## 2026-10-22 02:15 — #405 i2 F7 asercje; #423 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405/#421/#425/#426/#400/#384/#409/#413/#422/#412 w planie.
+- Scalanie: #423 F7 gotowe (`5553439`) → merge `2e446fc5` (wygląd Wydajność). #424/#427/#428/#382 bez „gotowe” po head. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — `db` FAIL i2 627/5: `::text`→`true` (nie `t`); `sms_enqueue` w WHERE 2× (dedup→null) → osobny SELECT + cleanup kolejki F7 przed pull.
