@@ -1569,9 +1569,11 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
     let skippedRecheck = 0;
     let invalid = 0;
     let down = 0;
+    let hardDown = 0;
+    let noPosition = 0;
     let pendingOk = 0;
     let sourceFailStreak = 0;
-    let anyStreakGe3 = false;
+    let anyHardStreakGe3 = false;
     let netFails = 0;
     let abortedBudget = false;
     let abortedNet = false;
@@ -1662,11 +1664,40 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
           })) risks++;
           continue;
         }
+        // #453: 200 bez pozycji → sprawa transportu (SCX+HHL), nie SOURCE_DOWN.
+        if (res.kind === 'no_position') {
+          down++;
+          noPosition++;
+          await applyPatch(load, {
+            rio_check_state: 'down',
+            rio_check_at: nowIso,
+            rio_error_streak: 0,
+          });
+          warnings.push(res.warning);
+          if (await deps.store.raiseRisk({
+            kind: 'RESOURCE_MISSING',
+            severity: 'HIGH',
+            title: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
+            titleKey: 'rk_rio_no_position',
+            params: {},
+            detail: {
+              zrodlo: 'RIO', loadId: load.id, status: res.status,
+              url: rioPositionUrlSafe(load.rio_tracking_id),
+              warning: res.warning,
+            },
+            dedup: `RIO_NO_POSITION:${load.id}`,
+            sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
+            loadId: load.id,
+          })) risks++;
+          continue;
+        }
+        // sieć / 5xx — liczy się do awarii źródła dopiero gdy wszystkie linki tak padną (#453).
         down++;
+        hardDown++;
         netFails++;
         const streak = (load.rio_error_streak ?? 0) + 1;
         if (streak > sourceFailStreak) sourceFailStreak = streak;
-        if (streak >= 3) anyStreakGe3 = true;
+        if (streak >= 3) anyHardStreakGe3 = true;
         // ok → down zawsze ustawia 'down' (F7 r3).
         await applyPatch(load, {
           rio_check_state: 'down',
@@ -1674,14 +1705,6 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
           rio_error_streak: streak,
         });
         warnings.push(res.warning);
-        if (streak >= 3) {
-          if (await deps.store.raiseRisk(sourceDownRisk(
-            'RIO',
-            warnings.slice(-5),
-            nowIso,
-            rioPositionUrlSafe(load.rio_tracking_id),
-          ))) risks++;
-        }
         continue;
       }
 
@@ -1705,6 +1728,7 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
       // resolveRisks tylko przy przejściu ze stanu invalid / wygasłego (F7 r3).
       if (wasInvalid) await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
       if (wasExpired) await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
+      await deps.store.resolveRisks(`RIO_NO_POSITION:${load.id}`);
 
       if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
         skippedValidity++;
@@ -1784,15 +1808,24 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
       }
     }
 
-    // SOURCE_DOWN:RIO — nie zamykaj przy przebiegu przerwanym budżetem / siecią (F7 r3).
-    if (!anyStreakGe3 && !abortedBudget && !abortedNet) {
+    // #453: SOURCE_DOWN tylko gdy żaden link nie odpowiada (sieć/5xx dla wszystkich) albo abortedNet.
+    const allHardDown = queried > 0 && hardDown === queried;
+    const sourceDown = abortedNet || (allHardDown && anyHardStreakGe3);
+    if (sourceDown) {
+      if (await deps.store.raiseRisk(sourceDownRisk(
+        'RIO',
+        warnings.slice(-5),
+        nowIso,
+      ))) risks++;
+    } else if (!abortedBudget) {
+      // Także zamyka fałszywy SOURCE_DOWN gdy choć jeden link zapisuje pozycję (SG-19).
       await deps.store.resolveRisks('SOURCE_DOWN:RIO');
     }
 
     return {
       job: 'rio-links',
       mode: 'LIVE',
-      ok: (down === 0 || sourceFailStreak < 3) && !abortedNet,
+      ok: !sourceDown,
       risks,
       warnings: warnings.slice(0, 20),
       observations: {
@@ -1803,6 +1836,8 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
         pending_ok: String(pendingOk),
         invalid: String(invalid),
         down: String(down),
+        hard_down: String(hardDown),
+        no_position: String(noPosition),
         skipped_window: String(skippedWindow),
         skipped_validity: String(skippedValidity),
         skipped_recheck: String(skippedRecheck),

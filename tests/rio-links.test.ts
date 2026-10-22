@@ -45,42 +45,47 @@ describe('E44 RIO adapter', () => {
     expect(r.validTo).toBe('2026-10-12T04:00:00.000Z');
   });
 
-  it('latitude: null → down', () => {
+  it('latitude: null → no_position (#453)', () => {
     const r = parseRioPositionPayload({
       id: 'x',
       position: { timestamp: '2026-10-09T03:21:05Z', latitude: null, longitude: 17 },
     });
-    expect(r).toMatchObject({ ok: false, kind: 'down' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position' });
   });
 
-  it('latitude: "" → down', () => {
+  it('latitude: "" → no_position (#453)', () => {
     const r = parseRioPositionPayload({
       id: 'x',
       position: { timestamp: '2026-10-09T03:21:05Z', latitude: '', longitude: 17 },
     });
-    expect(r).toMatchObject({ ok: false, kind: 'down' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position' });
   });
 
-  it('lat poza zakresem → down', () => {
+  it('lat poza zakresem → no_position (#453)', () => {
     const r = parseRioPositionPayload({
       id: 'x',
       position: { timestamp: '2026-10-09T03:21:05Z', latitude: 95, longitude: 17 },
     });
-    expect(r).toMatchObject({ ok: false, kind: 'down' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position' });
   });
 
-  it('timestamp z przyszłości (> +5 min) → down', () => {
+  it('timestamp z przyszłości (> +5 min) → no_position (#453)', () => {
     const future = new Date(Date.now() + 10 * 60_000).toISOString();
     const r = parseRioPositionPayload({
       id: 'x',
       position: { timestamp: future, latitude: 52, longitude: 17 },
     }, Date.now());
-    expect(r).toMatchObject({ ok: false, kind: 'down' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position' });
   });
 
-  it('brak position.latitude → down (zmieniony format)', () => {
+  it('brak position.latitude → no_position (#453)', () => {
     const r = parseRioPositionPayload({ id: 'x', position: { timestamp: '2026-10-09T03:21:05Z' } });
-    expect(r).toMatchObject({ ok: false, kind: 'down' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position' });
+  });
+
+  it('brak position → no_position (#453)', () => {
+    const r = parseRioPositionPayload({ id: 'x', name: 'x' });
+    expect(r).toMatchObject({ ok: false, kind: 'no_position', warning: 'RIO: brak position' });
   });
 
   it('inferRioTrackerOn: naczepa / ciągnik / nieznany', () => {
@@ -334,7 +339,7 @@ describe('E44 runRioLinks', () => {
     expect(risk.dedup).toBe('SOURCE_DOWN:RIO');
 
     const risks2: string[] = [];
-    await runRioLinks({
+    const res2 = await runRioLinks({
       store: store([baseLoad({
         rio_check_state: 'ok',
         rio_error_streak: 1,
@@ -348,10 +353,11 @@ describe('E44 runRioLinks', () => {
       now: () => new Date('2026-10-09T03:30:00Z'),
     });
     expect(risks2).not.toContain('SOURCE_DOWN:RIO');
+    expect(res2.ok).toBe(true);
 
     const risks3: string[] = [];
     const patches: unknown[] = [];
-    await runRioLinks({
+    const res3 = await runRioLinks({
       store: store([baseLoad({
         rio_check_state: 'ok',
         rio_error_streak: 2,
@@ -366,6 +372,7 @@ describe('E44 runRioLinks', () => {
       now: () => new Date('2026-10-09T03:30:00Z'),
     });
     expect(risks3).toContain('SOURCE_DOWN:RIO');
+    expect(res3.ok).toBe(false);
 
     const okPatches: unknown[] = [];
     await runRioLinks({
@@ -382,6 +389,104 @@ describe('E44 runRioLinks', () => {
       now: () => new Date('2026-10-09T03:30:00Z'),
     });
     expect(okPatches[0]).toMatchObject({ rio_error_streak: 0 });
+  });
+
+  it('#453: 2 linki, jeden bez position → ok, sprawa z load_id, bez SOURCE_DOWN', async () => {
+    const risks: { dedup: string; loadId?: string }[] = [];
+    const loads = [
+      baseLoad({
+        id: 'sg-18',
+        code: 'SG-18',
+        rio_tracking_id: 'track-18',
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      }),
+      baseLoad({
+        id: 'sg-19',
+        code: 'SG-19',
+        rio_tracking_id: SAMPLE.id,
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+        trailer_plate: SAMPLE.asset_name,
+      }),
+    ];
+    const res = await runRioLinks({
+      store: store(loads, {
+        raiseRisk: async (r) => {
+          risks.push({ dedup: r.dedup, loadId: r.loadId });
+          return true;
+        },
+        processPosition: async () => {},
+      }),
+      fetch: async (url) => {
+        if (String(url).includes('track-18')) {
+          return new Response(JSON.stringify({ id: 'track-18', name: 'x' }), { status: 200 });
+        }
+        return new Response(JSON.stringify(SAMPLE), { status: 200 });
+      },
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(res.ok).toBe(true);
+    expect(res.observations?.written).toBe('1');
+    expect(res.observations?.no_position).toBe('1');
+    expect(res.observations?.down).toBe('1');
+    expect(risks.some((r) => r.dedup === 'RIO_NO_POSITION:sg-18' && r.loadId === 'sg-18')).toBe(true);
+    expect(risks.some((r) => r.dedup === 'SOURCE_DOWN:RIO')).toBe(false);
+  });
+
+  it('#453: wszystkie linki bez odpowiedzi → SOURCE_DOWN, ok:false', async () => {
+    const risks: string[] = [];
+    const loads = [
+      baseLoad({
+        id: 'a',
+        rio_tracking_id: 'a',
+        rio_check_state: 'ok',
+        rio_error_streak: 2,
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      }),
+      baseLoad({
+        id: 'b',
+        rio_tracking_id: 'b',
+        rio_check_state: 'ok',
+        rio_error_streak: 2,
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      }),
+    ];
+    const res = await runRioLinks({
+      store: store(loads, {
+        raiseRisk: async (r) => { risks.push(r.dedup); return true; },
+      }),
+      fetch: async () => new Response('err', { status: 503 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.observations?.hard_down).toBe('2');
+    expect(risks).toContain('SOURCE_DOWN:RIO');
+    expect(risks.some((d) => d.startsWith('RIO_NO_POSITION:'))).toBe(false);
+  });
+
+  it('#453: pozycja zamyka RIO_NO_POSITION', async () => {
+    const resolved: string[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_check_state: 'down',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        resolveRisks: async (prefix) => { resolved.push(prefix); return 0; },
+        processPosition: async () => {},
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved).toContain('RIO_NO_POSITION:load-1');
   });
 
   it('rio_last_fix_at tylko przy ok (nie przy błędzie)', async () => {

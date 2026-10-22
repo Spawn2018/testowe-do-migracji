@@ -29,7 +29,8 @@ export type RioPositionOk = {
 
 export type RioPositionErr = {
   ok: false;
-  kind: 'invalid' | 'down';
+  /** invalid = 4xx link; down = sieć/5xx; no_position = 200 bez użytecznej pozycji (sprawa transportu). */
+  kind: 'invalid' | 'down' | 'no_position';
   status: number | null;
   warning: string;
 };
@@ -95,37 +96,37 @@ function isBlankCoord(v: unknown): boolean {
   return v == null || v === '';
 }
 
-/** Parsuje JSON odpowiedzi RIO; bez secret w wyniku. */
+/** Parsuje JSON odpowiedzi RIO; bez secret w wyniku. Błędy payloadu = no_position (#453). */
 export function parseRioPositionPayload(
   raw: unknown,
   nowMs: number = Date.now(),
 ): RioPositionResult {
   if (raw == null || typeof raw !== 'object') {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak JSON' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak JSON' };
   }
   const o = raw as Record<string, unknown>;
   const pos = o.position;
   if (pos == null || typeof pos !== 'object') {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak position' };
   }
   const p = pos as Record<string, unknown>;
   if (isBlankCoord(p.latitude) || isBlankCoord(p.longitude)) {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak latitude/longitude' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak latitude/longitude' };
   }
   const lat = Number(p.latitude);
   const lon = Number(p.longitude);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak latitude/longitude' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak latitude/longitude' };
   }
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: lat/lon poza zakresem' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: lat/lon poza zakresem' };
   }
   const observedAt = isoOrNull(p.timestamp);
   if (!observedAt) {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: brak position.timestamp' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: brak position.timestamp' };
   }
   if (Date.parse(observedAt) > nowMs + 5 * 60_000) {
-    return { ok: false, kind: 'down', status: null, warning: 'RIO: timestamp z przyszłości' };
+    return { ok: false, kind: 'no_position', status: null, warning: 'RIO: timestamp z przyszłości' };
   }
   return {
     ok: true,
@@ -142,7 +143,7 @@ export function parseRioPositionPayload(
 
 /**
  * GET pozycji. Timeout 10 s.
- * 401/403/404/400/410 → invalid; 5xx / sieć / zły format → down.
+ * 401/403/404/400/410 → invalid; 5xx / sieć → down; 200 bez pozycji → no_position (#453).
  */
 export async function fetchRioPosition(opts: {
   trackingId: string;
@@ -185,9 +186,13 @@ export async function fetchRioPosition(opts: {
     try {
       json = await res.json();
     } catch {
-      return { ok: false, kind: 'down', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
+      return { ok: false, kind: 'no_position', status: res.status, warning: 'RIO: odpowiedź nie-JSON' };
     }
-    return parseRioPositionPayload(json, opts.nowMs ?? Date.now());
+    const parsed = parseRioPositionPayload(json, opts.nowMs ?? Date.now());
+    if (!parsed.ok && parsed.kind === 'no_position') {
+      return { ...parsed, status: res.status };
+    }
+    return parsed;
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     const msg = scrubRioSecret(raw);
