@@ -4117,3 +4117,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `pilne` poza #442/#441/#425/#422/#413.
 - Scalanie: brak „F7: gotowe” po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
 - Bieżąca: **#442** — test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.
+
+## 2026-10-22 12:15 — #442 NA PRODUKCJI; #441 pkt 1–2; poprawka deploy-main
+
+- Skrzynka: #442/#441 `pilne` (Spawn2018); #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: **#443** F7 „gotowe” po `0e89ccd` + CI zielone → merge `8f9d7270` (bez push na `main`). #436 F7 r3 niegotowe. #408/#383 czekają na F7.
+- **#442:** `deploy-main` `39760618480` (Edge wszystkie + Vercel); `rio-links` `ok: true` od 10:08 (queried/written 1); wcześniej `shipment_code` → `ok: false`.
+- **#441 pkt 1–2:** `ferry-schedule` `ok: true` (inserted 15); `tracking_delivery_guard` + nocne SQL + `security_advisor_snapshot_tick` + `daily_admin_digest` OK; `usage-check` `ok: true`.
+- Bieżąca: **#441 pkt 3** — `deploy-main` porównuje Edge z SHA ostatniego udanego przebiegu (`pakiet/hotfix-441-deploy-edge`).

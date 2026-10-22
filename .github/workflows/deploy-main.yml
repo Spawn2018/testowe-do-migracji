@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   deploy:
@@ -112,11 +113,25 @@ jobs:
       - name: Edge
         if: steps.keys.outputs.skip != 'true'
         env:
-          BEFORE: ${{ github.event.before }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           set +x
-          before="${BEFORE:-}"
+          # #441: porównuj z SHA ostatniego *udanego* deploy-main, nie z HEAD~1 pusha.
+          # Gdy push A (Edge) padnie przed krokiem Edge, a push B (docs) użyje before=A,
+          # diff B..HEAD nie zawiera plików z A — funkcje nie wrócą na produkcję.
+          before=""
+          if command -v gh >/dev/null 2>&1; then
+            before="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-main.yml/runs?branch=main&status=success&per_page=10" \
+              --jq "[.workflow_runs[] | select(.head_sha != \"${GITHUB_SHA}\")][0].head_sha // empty" 2>/dev/null || true)"
+          fi
+          if [ -n "$before" ]; then
+            echo "Edge: baza porównania = ostatni udany deploy ($before)"
+          else
+            before="${PUSH_BEFORE:-}"
+            echo "Edge: brak udanego deployu w API — fallback github.event.before"
+          fi
           if [ -z "$before" ] || printf '%s' "$before" | grep -Eq '^0+$'; then
             echo "Brak poprzedniego commita — funkcje Edge bez zmian."
             exit 0
