@@ -65,7 +65,8 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
     sb.rpc('ferry_track_sample'),
     sb.rpc('ferry_sailings_map').then((r) => r, () => ({ data: null, error: true })),
   ]);
-  if (res.error || !Array.isArray(res.data)) return [];
+  /* 22.10.2026: błąd odczytu = wyjątek — mapa zostawia ostatnie pozycje promów zamiast pustej listy */
+  if (res.error || !Array.isArray(res.data)) throw new Error(res.error?.message ?? 'ferry_track_sample: brak danych');
   const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
   return withEstimates(markersFromTrack(res.data), sailRows, Date.now());
 }
@@ -136,7 +137,7 @@ export function subscribeAisDb(onUpdate: (pos: AisPosition[]) => void, everyMs =
   const tick = () => {
     fetchMapFerryMarkers().then(
       (p) => { if (!stopped) onUpdate(p); },
-      () => { if (!stopped) onUpdate([]); },
+      () => { /* 22.10.2026: chwilowy błąd — zostają ostatnie pozycje (do następnego odczytu za 2 min) */ },
     );
   };
   tick();

@@ -138,3 +138,19 @@ describe('P9-e dymek i lista', () => {
     expect(demoStageAnchor('FERRY', ZONES)).not.toBeNull();
   });
 });
+
+describe('22.10.2026: auto na promie bez grupowania (Przegląd, tryb skupienia)', () => {
+  it('pozycja statku z AIS zamiast ostatniej pozycji trackera; auto poza promem bez zmian', () => {
+    const items = [
+      { id: 'SG17', lat: 54.404, lng: 18.681, tile: 'FERRY', ferryKey: 'S1', lastFixAt: '2026-10-22T16:25:00Z', late: false },
+      { id: 'SG19', lat: 52.1, lng: 17.0, tile: 'IN_TRANSIT_PL', ferryKey: null, lastFixAt: null, late: false },
+    ] as never;
+    const ship = { lat: 54.85, lng: 18.94, ts: '2026-10-22T18:07:00Z', stale: false, vessel: 'M/F Wawel' };
+    const out = placeMarkers(items, { zones: [], shipOf: (k) => (k === 'S1' ? ship : null), grouping: false });
+    expect(out).toEqual([
+      { kind: 'one', id: 'SG17', lat: 54.85, lng: 18.94 },
+      { kind: 'one', id: 'SG19', lat: 52.1, lng: 17.0 },
+    ]);
+  });
+});
+
