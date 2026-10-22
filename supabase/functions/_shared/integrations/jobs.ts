@@ -91,9 +91,38 @@ const RIO_BUDGET_MS = 40_000;
 const RIO_NET_ABORT_AFTER = 3;
 const RIO_RECHECK_MS = 30 * 60_000;
 
+const RIO_DATE_KEYS = new Set<keyof RioLoadPatch>([
+  'rio_check_at', 'rio_last_fix_at', 'rio_valid_from', 'rio_valid_to',
+]);
+
+/** Postgres / JSON czasem daje `+00` zamiast `+00:00` — Date.parse wtedy = NaN. */
+function rioParseMs(s: string): number {
+  const t = Date.parse(s);
+  if (Number.isFinite(t)) return t;
+  const fixed = s.replace(/([+-]\d{2})$/, '$1:00');
+  const t2 = Date.parse(fixed);
+  return Number.isFinite(t2) ? t2 : NaN;
+}
+
+function rioSameInstant(a: unknown, b: unknown): boolean {
+  if (a == null && b == null) return true;
+  if (typeof a === 'string' && typeof b === 'string') {
+    const ta = rioParseMs(a);
+    const tb = rioParseMs(b);
+    if (Number.isFinite(ta) && Number.isFinite(tb)) return ta === tb;
+  }
+  return a === b;
+}
+
+/** F7 r3: rio_check_at nie liczy się jako zmiana; daty przez Date.parse (+00 vs Z). */
 function rioPatchChanged(load: RioLoadRow, patch: RioLoadPatch): boolean {
   for (const [k, v] of Object.entries(patch) as [keyof RioLoadPatch, unknown][]) {
+    if (k === 'rio_check_at') continue;
     const cur = (load as unknown as Record<string, unknown>)[k];
+    if (RIO_DATE_KEYS.has(k)) {
+      if (!rioSameInstant(cur, v)) return true;
+      continue;
+    }
     if (cur !== v) return true;
   }
   return false;
@@ -101,7 +130,7 @@ function rioPatchChanged(load: RioLoadRow, patch: RioLoadPatch): boolean {
 
 function rioCheckedRecently(load: RioLoadRow, nowMs: number): boolean {
   if (!load.rio_check_at) return false;
-  const t = Date.parse(load.rio_check_at);
+  const t = rioParseMs(load.rio_check_at);
   return Number.isFinite(t) && nowMs - t < RIO_RECHECK_MS;
 }
 
@@ -164,9 +193,9 @@ export interface SyncStore {
   telmEmtrackWebEnabled?(): Promise<boolean>;
   /** E44: flaga TELM_RIO_LINKS — wyłącza odczyt linków RIO. */
   telmRioLinksEnabled?(): Promise<boolean>;
-  /** E44: blokada nakładania się przebiegów rio-links (TTL). */
-  rioLinksLockTry?(ttlSec?: number): Promise<boolean>;
-  rioLinksLockRelease?(): Promise<void>;
+  /** E44: blokada nakładania się przebiegów rio-links (TTL + token właściciela). */
+  rioLinksLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
+  rioLinksLockRelease?(token?: string): Promise<void>;
   /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
   saveOrphanPosition?(row: {
     plate: string; trackingObjectId?: string | null;
@@ -1502,8 +1531,9 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
     };
   }
 
+  const lockToken = crypto.randomUUID();
   if (deps.store.rioLinksLockTry) {
-    const got = await deps.store.rioLinksLockTry(90);
+    const got = await deps.store.rioLinksLockTry(90, lockToken);
     if (!got) {
       return {
         job: 'rio-links', mode: 'LIVE', ok: true,
@@ -1533,7 +1563,12 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
     let risks = 0;
 
     const applyPatch = async (load: RioLoadRow, patch: RioLoadPatch) => {
-      if (!deps.store.updateRioLoadState || !rioPatchChanged(load, patch)) return;
+      if (!deps.store.updateRioLoadState) return;
+      const meaningful = rioPatchChanged(load, patch);
+      // Samo rio_check_at: odświeżaj najwyżej co 30 min (F7 r3).
+      if (!meaningful) {
+        if (patch.rio_check_at == null || rioCheckedRecently(load, started)) return;
+      }
       await deps.store.updateRioLoadState(load.id, patch);
       Object.assign(load, patch);
     };
@@ -1616,10 +1651,9 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
         const streak = (load.rio_error_streak ?? 0) + 1;
         if (streak > sourceFailStreak) sourceFailStreak = streak;
         if (streak >= 3) anyStreakGe3 = true;
+        // ok → down zawsze ustawia 'down' (F7 r3).
         await applyPatch(load, {
-          rio_check_state: pending
-            ? 'down'
-            : ((load.rio_check_state as 'ok' | 'pending' | 'invalid' | 'down') ?? 'down'),
+          rio_check_state: 'down',
           rio_check_at: nowIso,
           rio_error_streak: streak,
         });
@@ -1651,8 +1685,9 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
         rio_error_streak: 0,
       });
       if (pending) pendingOk++;
-      await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
-      await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
+      // resolveRisks tylko przy przejściu ze stanu invalid / wygasłego (F7 r3).
+      if (wasInvalid) await deps.store.resolveRisks(`RIO_INVALID:${load.id}`);
+      if (wasExpired) await deps.store.resolveRisks(`RIO_EXPIRED:${load.id}`);
 
       if (!rioLinkValidNow(nowIso, res.validFrom, res.validTo)) {
         skippedValidity++;
@@ -1686,6 +1721,9 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
           sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
           loadId: load.id,
         })) risks++;
+      } else {
+        // Po poprawieniu rejestracji zamykaj sprawę nieznanego pojazdu.
+        await deps.store.resolveRisks(`RIO_UNKNOWN_ASSET:${load.id}`);
       }
 
       // Poza oknem E27 — tylko zapytanie testowe (pending) / recheck, bez zapisu pozycji.
@@ -1729,8 +1767,8 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
       }
     }
 
-    // SOURCE_DOWN:RIO zamykaj po pętli tylko gdy żaden transport nie ma serii ≥ 3.
-    if (!anyStreakGe3) {
+    // SOURCE_DOWN:RIO — nie zamykaj przy przebiegu przerwanym budżetem / siecią (F7 r3).
+    if (!anyStreakGe3 && !abortedBudget && !abortedNet) {
       await deps.store.resolveRisks('SOURCE_DOWN:RIO');
     }
 
@@ -1759,7 +1797,7 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
     };
   } finally {
     if (deps.store.rioLinksLockRelease) {
-      await deps.store.rioLinksLockRelease();
+      await deps.store.rioLinksLockRelease(lockToken);
     }
   }
 }

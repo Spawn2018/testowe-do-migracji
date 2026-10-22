@@ -50,66 +50,87 @@ comment on function public.telm_rio_links_enabled() is
   'E44 / #438: czy cron rio-links może odpytywać API RIO (flaga HHL).';
 
 -- ---------------------------------------------------------------------
--- Blokada nakładania się przebiegów (TTL w app_parameters; bez session advisory — pooler).
+-- Blokada nakładania się przebiegów — osobna tabela bez audytu (F7 r3).
+-- Nie app_parameters: value nie jest w v_skip → 2× audit_log co 2 min ≈ 1440/doba.
 -- ---------------------------------------------------------------------
-insert into public.app_parameters (key, value, label, source) values
-  ('RIO_LINKS_LOCK_UNTIL', 0, 'Epoch s — blokada przebiegu rio-links', 'E44 #438 F7')
-on conflict (key) do nothing;
+create table if not exists public.rio_links_lock (
+  id int primary key,
+  locked_until timestamptz,
+  token text,
+  updated_at timestamptz not null default now(),
+  constraint rio_links_lock_one check (id = 1)
+);
 
-create or replace function public.rio_links_lock_try(p_ttl_sec integer default 90)
+insert into public.rio_links_lock (id) values (1)
+on conflict (id) do nothing;
+
+alter table public.rio_links_lock enable row level security;
+revoke all on table public.rio_links_lock from public, anon, authenticated;
+
+comment on table public.rio_links_lock is
+  'E44 F7 r3: blokada przebiegu rio-links (TTL + token). Bez audytu — unika spamu audit_log.';
+
+-- Sprzątanie wersji z app_parameters (wcześniejszy draft tej migracji / Preview).
+delete from public.app_parameters where key = 'RIO_LINKS_LOCK_UNTIL';
+
+drop function if exists public.rio_links_lock_try(integer);
+drop function if exists public.rio_links_lock_release();
+
+create or replace function public.rio_links_lock_try(p_ttl_sec integer default 90, p_token text default null)
 returns boolean
 language plpgsql
 security definer
 set search_path = public
 as $$
 declare
-  v_now numeric := extract(epoch from now());
-  v_until numeric;
   v_n int;
+  v_tok text := nullif(btrim(coalesce(p_token, '')), '');
 begin
   if (p_ttl_sec is null) or p_ttl_sec < 1 then
     p_ttl_sec := 90;
   end if;
-  select coalesce(value, 0) into v_until
-    from public.app_parameters where key = 'RIO_LINKS_LOCK_UNTIL';
-  if v_until is null then
-    insert into public.app_parameters (key, value, label, source)
-    values ('RIO_LINKS_LOCK_UNTIL', v_now + p_ttl_sec,
-            'Epoch s — blokada przebiegu rio-links', 'E44 #438 F7');
-    return true;
-  end if;
-  if v_until > v_now then
+  if v_tok is null then
     return false;
   end if;
-  update public.app_parameters
-     set value = v_now + p_ttl_sec, updated_at = now()
-   where key = 'RIO_LINKS_LOCK_UNTIL'
-     and coalesce(value, 0) <= v_now;
+  insert into public.rio_links_lock (id) values (1)
+  on conflict (id) do nothing;
+  update public.rio_links_lock
+     set locked_until = now() + make_interval(secs => p_ttl_sec),
+         token = v_tok,
+         updated_at = now()
+   where id = 1
+     and (locked_until is null or locked_until <= now());
   get diagnostics v_n = row_count;
   return v_n > 0;
 end
 $$;
-revoke all on function public.rio_links_lock_try(integer) from public, anon, authenticated;
+revoke all on function public.rio_links_lock_try(integer, text) from public, anon, authenticated;
 
-create or replace function public.rio_links_lock_release()
+create or replace function public.rio_links_lock_release(p_token text default null)
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_tok text := nullif(btrim(coalesce(p_token, '')), '');
 begin
-  update public.app_parameters
-     set value = 0, updated_at = now()
-   where key = 'RIO_LINKS_LOCK_UNTIL';
+  if v_tok is null then
+    return;
+  end if;
+  -- Zwalniaj tylko własną blokadę (token z tego przebiegu).
+  update public.rio_links_lock
+     set locked_until = null, token = null, updated_at = now()
+   where id = 1 and token = v_tok;
 end
 $$;
-revoke all on function public.rio_links_lock_release() from public, anon, authenticated;
+revoke all on function public.rio_links_lock_release(text) from public, anon, authenticated;
 
 do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
-    grant execute on function public.rio_links_lock_try(integer) to service_role;
-    grant execute on function public.rio_links_lock_release() to service_role;
+    grant execute on function public.rio_links_lock_try(integer, text) to service_role;
+    grant execute on function public.rio_links_lock_release(text) to service_role;
   end if;
 end $$;
 

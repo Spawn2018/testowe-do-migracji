@@ -4099,3 +4099,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
 - Scalanie: brak „F7: gotowe do scalenia”. #438 F7 r1/r2 „jeszcze nie” → ten commit. #436 BLOKER numeru (0261→0262) — następny krok po push. Bez push na `main`.
 - Bieżąca: **#437 F7** — secret poza komunikatem sieci; `rio_last_fix_at` tylko przy ok; UPDATE tylko przy zmianie; audit skip `rio_check_at`/`rio_last_fix_at`; `resolveRisks` SOURCE_DOWN po pętli; budżet 40 s + abort po 3 błędach sieci + lock; recheck wygasły/invalid co 30 min + `RIO_EXPIRED`; `RESOURCE_MISSING` dla SCX; TELM_RIO_LINKS; streak=0 przy nowym linku; 400/410→invalid; fixture zmyślone; testy 23/23.
+
+## 2026-10-22 10:45 — #438 F7 r3: lock bez audytu + patch
+
+- Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe”. #438 F7 r3 „prawie” (2 blokery) → ten commit. #436 → 0262 zaraz po push. Bez push na `main`.
+- Bieżąca: **#437 F7 r3** — `rio_links_lock` (tabela bez audytu, token); `rio_check_at` nie liczy się jako zmiana (+00 przez `rioParseMs`); `resolveRisks` INVALID/EXPIRED tylko przy przejściu; SOURCE_DOWN bez zamknięcia przy abort; ok→down; zamknięcie `RIO_UNKNOWN_ASSET`; testy 26/26.

@@ -300,13 +300,16 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_rio_links_enabled: ${r.error.message}`);
       return r.data === true;
     },
-    async rioLinksLockTry(ttlSec = 90) {
-      const r = await sb.rpc('rio_links_lock_try', { p_ttl_sec: ttlSec });
+    async rioLinksLockTry(ttlSec = 90, token?: string) {
+      const r = await sb.rpc('rio_links_lock_try', {
+        p_ttl_sec: ttlSec,
+        p_token: token ?? null,
+      });
       if (r.error) throw new Error(`rio_links_lock_try: ${r.error.message}`);
       return r.data === true;
     },
-    async rioLinksLockRelease() {
-      const r = await sb.rpc('rio_links_lock_release');
+    async rioLinksLockRelease(token?: string) {
+      const r = await sb.rpc('rio_links_lock_release', { p_token: token ?? null });
       if (r.error) throw new Error(`rio_links_lock_release: ${r.error.message}`);
     },
     async saveOrphanPosition(row: {

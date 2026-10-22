@@ -441,6 +441,85 @@ describe('E44 runRioLinks', () => {
     expect(fetches).toBe(0);
     expect(res.observations?.flag).toBe('false');
   });
+
+  it('F7 r3: bez UPDATE gdy tylko rio_check_at (+00 vs Z) i stan bez zmian', async () => {
+    const updates: unknown[] = [];
+    const load = baseLoad({
+      rio_check_state: 'ok',
+      rio_check_at: '2026-10-09T03:20:00+00',
+      rio_asset_name: SAMPLE.asset_name,
+      rio_tracker_on: 'NACZEPA',
+      rio_valid_from: SAMPLE.start,
+      rio_valid_to: SAMPLE.end,
+      rio_last_fix_at: SAMPLE.position.timestamp,
+      rio_error_streak: 0,
+    });
+    await runRioLinks({
+      store: store([load], {
+        update: async (_id, p) => { updates.push(p); },
+        lastPositionFix: async () => ({
+          lat: SAMPLE.position.latitude,
+          lon: SAMPLE.position.longitude,
+          ts: SAMPLE.position.timestamp,
+        }),
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      // 10 min po ostatnim check — poniżej 30 min → bez odświeżenia samego check_at
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(updates).toHaveLength(0);
+  });
+
+  it('F7 r3: ok → down ustawia rio_check_state=down', async () => {
+    const patches: Record<string, unknown>[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        update: async (_id, p) => { patches.push(p as Record<string, unknown>); },
+      }),
+      fetch: async () => new Response('err', { status: 503 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(patches[0]?.rio_check_state).toBe('down');
+  });
+
+  it('F7 r3: resolveRisks RIO_INVALID tylko przy przejściu z invalid', async () => {
+    const resolved: string[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        resolveRisks: async (prefix) => { resolved.push(prefix); return 0; },
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved.filter((p) => p.startsWith('RIO_INVALID:'))).toHaveLength(0);
+
+    const resolved2: string[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_check_state: 'invalid',
+        rio_check_at: '2026-10-09T02:00:00Z',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        resolveRisks: async (prefix) => { resolved2.push(prefix); return 0; },
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved2).toContain('RIO_INVALID:load-1');
+  });
 });
 
 void vi;
