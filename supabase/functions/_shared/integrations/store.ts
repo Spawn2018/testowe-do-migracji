@@ -8,7 +8,7 @@ import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } fro
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
-const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source';
+const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source';
 
 export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncStore {
   let pid: string | null = null;
@@ -73,6 +73,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const best = new Map<string, string>();
       for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
+    },
+    async lastPortPosition(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number) {
+      // Przybliżenie haversine w SQL: 1° szer. ≈ 111 km; długość × cos(lat).
+      const dLat = radiusKm / 111;
+      const dLon = radiusKm / (111 * Math.max(0.2, Math.cos((hub.lat * Math.PI) / 180)));
+      const rows = must(await sb.from('vessel_positions')
+        .select('observed_at,lat,lon')
+        .eq('vessel_id', vesselId)
+        .gte('lat', hub.lat - dLat).lte('lat', hub.lat + dLat)
+        .gte('lon', hub.lon - dLon).lte('lon', hub.lon + dLon)
+        .order('observed_at', { ascending: false }).limit(20), 'vessel_positions port') as { observed_at: string; lat: number; lon: number }[];
+      const R = 6371, rad = Math.PI / 180;
+      for (const r of rows) {
+        const dLatR = (r.lat - hub.lat) * rad, dLonR = (r.lon - hub.lon) * rad;
+        const h = Math.sin(dLatR / 2) ** 2 + Math.cos(hub.lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLonR / 2) ** 2;
+        if (2 * R * Math.asin(Math.sqrt(h)) <= radiusKm) return new Date(r.observed_at).toISOString();
+      }
+      return null;
     },
     async latestAisstreamFixes(sinceIso: string) {
       const rows = must(await sb.from('vessel_positions')

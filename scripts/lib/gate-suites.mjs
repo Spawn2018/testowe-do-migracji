@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
-  nullguard: 695, // #411: +mark_notification_read_any (CI 695); było 690
+  nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
   i2: 634, // #405 F7: R-2 TEST stref (off/on) + admin_sms_zone_test + pilot + pull 2 kinds
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 33,
+  bmapa: 35, // #421: +2 ferry_sailings_map (anon / authenticated)
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)

@@ -4028,3 +4028,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #429 decyzja A+C.
 - Scalanie: #430 CI zielone (unit/db/visual) na `2f4b680e` — bez F7. deploy-main po #424 padł na połączeniu pooler → ponowienie `39707535827`. Bez push na `main`.
 - Bieżąca: **HOTFIX #421** — `ferry_sailings_map()` (departed_at/arrived_at, porty, AIS bez filtra wieku), dopłynięcie GDN/GDY, zawsze `ferry-departures`.
+
+## 2026-10-22 04:20 — #421 F7: actual_*, wiek, timeout, liczniki
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian.
+- Scalanie: #430 — F7 „jeszcze nie” (blokery 1–7); CI `db` padło na licznikach (nullguard 700, bmapa 35). #408/#383/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** PR #430 — F7: `actual_departure_at`/`actual_arrival_at`; wypłynięcie wiek≤15 + 3–10 km; dopłynięcie tylko port docelowy; cron timeout 120 s + jednorazowy `ferry-schedule`; rozkład po statusie max co 60 min; `ferry_track_sample` bez limitu 48 h dla rejsu w drodze; Stena 403/429 backoff; gate nullguard 700 / bmapa 35.

@@ -1,9 +1,19 @@
 -- 0258 — HOTFIX #421 / D-20261022-0105-01: promy AIS + rozkład codzienny.
--- 1) ferry-schedule: cron codziennie 05:00 UTC (było: poniedziałek).
+-- 1) ferry-schedule: cron codziennie 05:00 UTC + timeout 120 s + jednorazowe pobranie.
 -- 2) Zamknięcie otwartych AIS_GAP (dopisek: bez ryzyka o starej pozycji).
--- 3) RPC ferry_sailings_map — rejs + porty lat/lon + ostatni AIS bez filtra świeżości (#429 A+C).
--- Edge (ten sam PR): zapis wszystkich źródeł AIS; Stena IRM bez cache 3 min;
--- rozkład po zmianie statusu; delayed_* z pozycji; integration_runs ferry-departures.
+-- 3) actual_departure_at / actual_arrival_at — AIS; delayed_* zostaje dla ferry-status (F7).
+-- 4) RPC ferry_sailings_map — rejs + porty + ostatni AIS bez filtra świeżości (#429 A+C).
+-- 5) ferry_track_sample — dla rejsu w drodze ostatnia pozycja bez limitu 48 h (F7 #7).
+-- Edge (ten sam PR): AIS multi-source; rozkład po statusie max co 60 min; ferry-departures zawsze.
+
+alter table public.sailings
+  add column if not exists actual_departure_at timestamptz,
+  add column if not exists actual_arrival_at timestamptz;
+
+comment on column public.sailings.actual_departure_at is
+  '#421: rzeczywiste wypłynięcie z AIS (nie mylić z delayed_* z komunikatu armatora).';
+comment on column public.sailings.actual_arrival_at is
+  '#421: rzeczywiste dopłynięcie z AIS (nie mylić z delayed_* z komunikatu armatora).';
 
 do $body$
 begin
@@ -18,9 +28,19 @@ begin
         headers := jsonb_build_object(
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'),
           'Content-Type', 'application/json'),
-        body    := '{}'::jsonb
+        body    := '{}'::jsonb,
+        timeout_milliseconds := 120000
       );
     $c$);
+    -- Od razu po wdrożeniu (rozkład z 19.10, próg 26 h — bez czekania do jutra).
+    perform net.http_post(
+      url     := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/ferry-schedule',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'),
+        'Content-Type', 'application/json'),
+      body    := '{}'::jsonb,
+      timeout_milliseconds := 120000
+    );
   else
     raise notice '0258: pg_cron lub pg_net niedostępne — tower-ferry-schedule codziennie do zaplanowania ręcznie';
   end if;
@@ -32,7 +52,7 @@ update risk_signals
  where resolved_at is null
    and (dedup_key like 'AIS_GAP:%' or title_key = 'rk_ais_gap');
 
--- #429 A+C: odczyt rejsów do mapy (departed_at/arrived_at, plan, porty, ostatni AIS bez filtra wieku).
+-- #429 A+C: odczyt rejsów do mapy (departed_at/arrived_at = actual_*, plan, porty, ostatni AIS bez filtra wieku).
 create or replace function public.ferry_sailings_map()
 returns table (
   sailing_id uuid,
@@ -85,8 +105,8 @@ begin
       s.status::text as status,
       s.departure_at,
       s.arrival_at,
-      s.delayed_departure_at as departed_at,
-      s.delayed_arrival_at as arrived_at,
+      s.actual_departure_at as departed_at,
+      s.actual_arrival_at as arrived_at,
       case
         when s.route = 'GDY-KAA' then 'GDY'
         when s.route = 'KAA-GDY' then 'KAA'
@@ -102,8 +122,8 @@ begin
     from sailings s
     join vessels ves on ves.id = s.vessel_id
     where s.status is distinct from 'ODWOLANY'
-      and coalesce(s.delayed_departure_at, s.departure_at) <= now() + interval '6 hours'
-      and coalesce(s.delayed_arrival_at, s.arrival_at) >= now() - interval '6 hours'
+      and coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at) <= now() + interval '6 hours'
+      and coalesce(s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at) >= now() - interval '6 hours'
   ),
   latest_ais as (
     select distinct on (vp.vessel_id)
@@ -151,4 +171,61 @@ revoke all on function public.ferry_sailings_map() from public, anon;
 grant execute on function public.ferry_sailings_map() to authenticated;
 
 comment on function public.ferry_sailings_map() is
-  '#421/#429: rejsy do mapy — departed_at/arrived_at (= delayed_*), plan, porty lat/lon, ostatni AIS bez filtra świeżości (szacowana pozycja = front).';
+  '#421/#429: rejsy do mapy — departed_at/arrived_at (= actual_*), plan, porty lat/lon, ostatni AIS bez filtra świeżości.';
+
+-- F7 #7: rejs w drodze — ostatnia pozycja bez limitu 48 h (inaczej mapa gubi prom po luce AIS).
+create or replace function public.ferry_track_sample()
+returns table (
+  vessel_id uuid,
+  name text,
+  mmsi bigint,
+  lat double precision,
+  lon double precision,
+  observed_at timestamptz,
+  cog real,
+  sog_kn real
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if (public.current_app_user_id() is null) then
+    raise exception 'Brak aktywnego konta' using errcode = '42501';
+  end if;
+  return query
+  with active as (
+    select s.vessel_id
+      from sailings s
+     where s.status is distinct from 'ODWOLANY'
+       and coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at) <= now() + interval '6 hours'
+       and coalesce(s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at) >= now() - interval '6 hours'
+  ),
+  s as (
+    select
+      v.vessel_id,
+      ves.name,
+      ves.mmsi,
+      v.lat,
+      v.lon,
+      v.observed_at,
+      v.cog,
+      v.sog_kn,
+      row_number() over (
+        partition by v.vessel_id, date_bin('15 minutes', v.observed_at, timestamptz '2000-01-01')
+        order by v.observed_at desc
+      ) as rn
+    from vessel_positions v
+    join vessels ves on ves.id = v.vessel_id
+    where v.observed_at >= now() - interval '48 hours'
+       or v.vessel_id in (select a.vessel_id from active a)
+  )
+  select s.vessel_id, s.name, s.mmsi, s.lat, s.lon, s.observed_at, s.cog, s.sog_kn
+    from s
+   where s.rn = 1
+   order by s.observed_at;
+end $$;
+
+revoke all on function public.ferry_track_sample() from public, anon;
+grant execute on function public.ferry_track_sample() to authenticated;
