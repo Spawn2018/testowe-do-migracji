@@ -665,7 +665,14 @@ q "insert into load_events (load_id,event_type,occurred_at) values ('$L461c','MI
     select process_position('$L461c', 54.4031, 18.6801, now() - interval '90 minutes')" >/dev/null
 chk "#461: A10_c bez actual_departure → bez FERRY" \
   "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" AT_PORT_GDANSK
-q "update sailings set actual_departure_at = now() - interval '45 minutes' where id='$S461c'" >/dev/null
+# F7: wyjazd ze strefy PORT_OUT (v_in_port jak na produkcji) — pozycje w porcie zostawiają INSIDE.
+q "update sailings set actual_departure_at = now() - interval '45 minutes' where id='$S461c';
+    update geofence_states gs set state = 'OUTSIDE', exited_at = now() - interval '40 minutes'
+      from geofences g
+     where g.id = gs.geofence_id and gs.load_id = '$L461c' and g.kind = 'PORT_OUT';
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L461c','GEOFENCE_EXIT', now() - interval '40 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'))" >/dev/null
 chk "#461: A10_c po actual_departure + 30 min bez portu → FERRY" \
   "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" FERRY
 
@@ -717,9 +724,10 @@ chk "#461: RIO_NO_POSITION zamyka istniejące SILENT" \
   "select detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$L461r'" true
 chk "#461: RIO_NO_POSITION blokuje nowe SILENT" \
   "select count(*) from risk_signals where dedup_key='SILENT:$L461r' and resolved_at is null" 0
+# Bez event_key SILENT:… — trigger przy SILENT już zajął decisions_event_key_uidx.
 D461np=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
   values ('$P','NO_POSITION','NEW','461 RIO block escalate','$L461r', now() - interval '1 hour',
-          jsonb_build_object('event_key', 'SILENT:' || '$L461r')) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
+          '{}'::jsonb) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
 D461sf=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
   values ('$P','SEFS_OUT_OF_TABLE','NEW','461 SEFS escalate','$L461r', now() - interval '1 hour', '{}'::jsonb) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
 q "select decision_escalate_overdue()" >/dev/null
@@ -727,6 +735,16 @@ chk "#461: RIO blokuje escalate tylko NO_POSITION" \
   "select (escalated_at is null)::text from decisions where id='$D461np'" true
 chk "#461: RIO nie blokuje escalate SEFS" \
   "select (escalated_at is not null)::text from decisions where id='$D461sf'" true
+# F7: sprzątanie jak A1 — risks.sh liczy title_key w tower_test_status
+chk "#461 po teście brak kluczy RIO/SILENT/overdue" \
+  "delete from decision_events where decision_id in (select id from decisions where load_id='$L461r');
+   delete from decisions where load_id='$L461r';
+   delete from risk_signals where load_id='$L461r'
+     and (title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+          or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'SILENT:%'
+          or dedup_key like 'decision-overdue:%');
+   select count(*) from risk_signals where load_id='$L461r'
+     and title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

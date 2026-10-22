@@ -193,6 +193,7 @@ declare
   v_sailing_departed boolean;
   v_ais_within_3km boolean;
   v_ais_in_port_out boolean;
+  v_in_port boolean;
 begin
   select * into l from public.loads where id = p_load;
   if l.id is null then return false; end if;
@@ -333,31 +334,45 @@ begin
     );
   end if;
 
-  /* (c) #461: tylko po actual_departure_at — brak świeżej pozycji w porcie PL (≥ 30 min).
-     Stary stan geofence INSIDE nie blokuje (tracker mógł milczeć po wypłynięciu). */
-  if v_actual_dep is not null and v_actual_dep <= p_now
-     and l.status = 'AT_PORT_GDANSK'
-     and (v_pos_at is null or v_pos_at <= p_now - interval '30 minutes') then
-    if not exists (
-      select 1 from positions p
-       where p.load_id = l.id
-         and p.ts >= p_now - interval '30 minutes'
-         and exists (
-           select 1 from geofences g
-            where g.project_id = l.project_id and g.kind = 'PORT_OUT' and g.active
-              and ST_DWithin(
-                g.geom::geography,
-                p.geom_raw::geography,
-                coalesce(g.hysteresis_m, 200)
-              )
-         )
-    ) then
-      return public.auto_set_status(
-        l.id, l.status, 'FERRY',
-        'statek odpłynął — brak pozycji w porcie PL od 30 min',
-        coalesce(v_actual_dep, p_now),
-        jsonb_build_object('actor', 'system', 'source', 'AIS', 'path', 'A10_c')
-      );
+  /* (c) #461: jak produkcja 0262, tylko v_dep → v_actual_dep (F7: przywróć v_in_port). */
+  if v_actual_dep is not null and v_actual_dep <= p_now then
+    select exists (
+      select 1 from geofence_states gs
+        join geofences g on g.id = gs.geofence_id
+       where gs.load_id = l.id and g.kind = 'PORT_OUT' and g.active
+         and gs.state in ('INSIDE','PENDING_OUT')
+         and (gs.entered_at is null or gs.entered_at <= p_now - interval '30 minutes')
+    ) into v_in_port;
+    if v_in_port is not true
+       and (v_pos_at is null or v_pos_at <= p_now - interval '30 minutes'
+            or not exists (
+              select 1 from geofence_states gs
+                join geofences g on g.id = gs.geofence_id
+               where gs.load_id = l.id and g.kind = 'PORT_OUT' and g.active
+                 and gs.state in ('INSIDE','PENDING_OUT')
+            ))
+       and l.status = 'AT_PORT_GDANSK' then
+      if not exists (
+        select 1 from positions p
+         where p.load_id = l.id
+           and p.ts >= p_now - interval '30 minutes'
+           and exists (
+             select 1 from geofences g
+              where g.project_id = l.project_id and g.kind = 'PORT_OUT' and g.active
+                and ST_DWithin(
+                  g.geom::geography,
+                  p.geom_raw::geography,
+                  coalesce(g.hysteresis_m, 200)
+                )
+           )
+      ) then
+        return public.auto_set_status(
+          l.id, l.status, 'FERRY',
+          'statek odpłynął — brak pozycji w porcie PL od 30 min',
+          coalesce(v_actual_dep, p_now),
+          jsonb_build_object('actor', 'system', 'source', 'AIS', 'path', 'A10_c')
+        );
+      end if;
     end if;
   end if;
 
