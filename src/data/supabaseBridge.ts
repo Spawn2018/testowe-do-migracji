@@ -25,8 +25,11 @@ export async function refreshFromServer(opts: { keepSelection?: boolean } = {}):
 
 /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek z serwera (telefon: aplikacja wraca z tła bez przeładowania). */
 export async function refreshNotifications(): Promise<void> {
-  if (!active) return;
-  const server = await active.loadNotifications();
+  const p = active;
+  if (!p) return;
+  const server = await p.loadNotifications();
+  /* w trakcie zapytania zmieniło się konto (wylogowanie, „Działaj jako”) — nie mieszaj dzwonków */
+  if (p !== active) return;
   useTowerStore.setState((s) => ({ notifications: mergeBellRefresh(s.notifications, server) }));
 }
 
