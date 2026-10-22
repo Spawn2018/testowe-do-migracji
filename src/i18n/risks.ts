@@ -126,6 +126,7 @@ const pl: Dict = {
   rk_rio_invalid: 'Link RIO nieprawidłowy',
   rk_rio_expired: 'Link RIO wygasł',
   rk_rio_unknown_asset: 'Link RIO dotyczy pojazdu {asset}, którego nie ma w awizacji',
+  rk_rio_no_position: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',
   rk_road_se: 'E4: {event}',
