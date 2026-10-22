@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
+  security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
   status: 162, // #398: +2 port z actual_load_at (bez PORT_NO_LOADED)
   storage: 37,
   money: 183, // #411 F7: +4 mark_notifications_read WP↔IN (para + obie strony + cudze); było 179
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 156, // 160 − 4 SKIP (B6)
+  security: 158, // 162 − 4 SKIP (B6); #442 +2
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

@@ -4105,3 +4105,15 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #437 pilne bieżąca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych do wpisania.
 - Scalanie: brak „F7: gotowe”. #438 F7 r3 „prawie” (2 blokery) → ten commit. #436 → 0262 zaraz po push. Bez push na `main`.
 - Bieżąca: **#437 F7 r3** — `rio_links_lock` (tabela bez audytu, token); `rio_check_at` nie liczy się jako zmiana (+00 przez `rioParseMs`); `resolveRisks` INVALID/EXPIRED tylko przy przejściu; SOURCE_DOWN bez zamknięcia przy abort; ok→down; zamknięcie `RIO_UNKNOWN_ASSET`; testy 26/26.
+
+## 2026-10-22 11:23 — #442 pilne: rio-links bez `loads.shipment_code`
+
+- Skrzynka: #442+#441 (`pilne`, Spawn2018) → PLAN §4/§8; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #433+#439+#440 F7 „gotowe” po ostatnim commicie + CI zielone → merge. #436 CI w toku, bez F7. Bez push na `main`.
+- Bieżąca: **#442** — usunięto `shipment_code` z `listRioLoadsForPoll`; `code: null`; security +2 (kolumny poll / brak `shipment_code`). Gałąź `pakiet/hotfix-442-rio-shipment-code`. Po scaleniu: wdrożyć Edge `rio-links`; #441 `ferry-schedule`.
+
+## 2026-10-22 11:45 — #442: CI db — test kolumn przez sys
+
+- Skrzynka: bez nowych `pilne` poza #442/#441/#425/#422/#413.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
+- Bieżąca: **#442** — test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.
