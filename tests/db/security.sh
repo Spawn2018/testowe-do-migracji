@@ -272,6 +272,12 @@ sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/
 out=$(sys "select rio_secret from loads where id='$L1'")
 echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
 
+echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
+# Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
+RIO_POLL_COLS='id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id'
+val "#442: 18 kolumn poll RIO w loads" $HHL "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name = any(string_to_array('$RIO_POLL_COLS',','))" 18
+val "#442: loads bez shipment_code" $HHL "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name='shipment_code'" 0
+
 echo; echo "[#392] RIO sanitize — zmiana linku czyści / resetuje pola RIO (0252)"
 sys "update loads set telematics_vehicle_id='https://emtrack.eu/app/' where id='$L1'" >/dev/null
 out=$(sys "select (rio_tracking_id is null and rio_check_state is null)::text from loads where id='$L1'")
