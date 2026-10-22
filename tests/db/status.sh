@@ -173,8 +173,9 @@ chk "postój na placu: nadal AT_SITE, NIGDY UNLOADED"         "$(st $A)" AT_SITE
 pos $A 58.9350 17.9500 "2026-10-04 06:00+00"; pos $A 58.9351 17.9501 "2026-10-04 06:05+00"
 chk "A2 wyjazd z placu ≥ 10 min → DELIVERED"                 "$(st $A)" DELIVERED
 chk "A2 actual_delivery_at = czas wyjazdu"                   "select to_char(actual_delivery_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from loads where id='$A'" "2026-10-04 06:05"
+# #461: korekta AIS zostawia stare FERRY z zastepuje — oś bez zastąpionych
 chk "pełna ścieżka A w dzienniku zdarzeń" \
-  "select string_agg(payload->>'to', ' → ' order by occurred_at) from load_events where load_id='$A' and event_type='STATUS_AUTO'" \
+  "select string_agg(payload->>'to', ' → ' order by occurred_at) from load_events e where e.load_id='$A' and e.event_type='STATUS_AUTO' and not exists (select 1 from load_events z where z.load_id=e.load_id and z.payload->>'zastepuje'=e.id::text)" \
   "AT_PORT_GDANSK → FERRY → AT_PORT_NYNASHAMN → IN_TRANSIT_SE → AT_SITE → DELIVERED"
 
 echo; echo "[8] Uprawnienia"
@@ -717,10 +718,10 @@ chk "#461: RIO_NO_POSITION zamyka istniejące SILENT" \
 chk "#461: RIO_NO_POSITION blokuje nowe SILENT" \
   "select count(*) from risk_signals where dedup_key='SILENT:$L461r' and resolved_at is null" 0
 D461np=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
-  values ('$P','NO_POSITION','NEW','#461 NO_POSITION','$L461r', now() - interval '1 hour',
-          jsonb_build_object('event_key','SILENT:$L461r')) returning id")
+  values ('$P','NO_POSITION','NEW','461 RIO block escalate','$L461r', now() - interval '1 hour',
+          jsonb_build_object('event_key', 'SILENT:' || '$L461r')) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
 D461sf=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
-  values ('$P','SEFS_OUT_OF_TABLE','NEW','#461 SEFS','$L461r', now() - interval '1 hour', '{}'::jsonb) returning id")
+  values ('$P','SEFS_OUT_OF_TABLE','NEW','461 SEFS escalate','$L461r', now() - interval '1 hour', '{}'::jsonb) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
 q "select decision_escalate_overdue()" >/dev/null
 chk "#461: RIO blokuje escalate tylko NO_POSITION" \
   "select (escalated_at is null)::text from decisions where id='$D461np'" true
