@@ -693,7 +693,12 @@ chk "ROW_UPDATE loads: kto (HHL), tylko zmieniona kolumna, stara i nowa wartoś�
 $PSQL -c "select set_config('tower.eta_ctx','on',false); update loads set eta_site=now(), delay_minutes=5, eta_computed_at=now() where id='$L1'" >/dev/null
 chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q "select count(*) from audit_log where action='ROW_UPDATE' and entity='loads' and entity_id='$L1'")" 1
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48600111222', driver_name='Jan Test' where id='$L1'" >/dev/null
-chk "dane osobowe kierowcy: w dzienniku „[dane osobowe]”, nie numer" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text||'/'||(select count(*) from audit_log where new_value::text like '%600111222%' or old_value::text like '%Jan Test%') from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# #400 / D-1243: bez maski „[dane osobowe]” — imię i telefon w historii (etap 8c).
+chk "D-1243/#400: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48600111222' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+$PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
+chk "D-1243/#400: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
+chk "D-1243/#400: audit_row_change bez maski [dane osobowe]" "$(Q "select (prosrc not like '%[dane osobowe]%')::text from pg_proc where proname='audit_row_change'")" "true"
+$PSQL -c "set session_replication_role=replica; update loads set rio_secret=null where id='$L1'" >/dev/null
 # Część 3 osobno: shipment_items nie ma w seed.sql. Wstawia je część 1 (i kasuje) oraz część 5.
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$L2','I2P3-S1','STANDARD')" >/dev/null
 $PSQL -c "update shipment_items set qty = qty + 1 where id=(select id from shipment_items order by id limit 1); update shipment_items set qty = qty - 1 where id=(select id from shipment_items order by id limit 1)" >/dev/null
@@ -1161,6 +1166,27 @@ val "D-1118 permit_fits jako KSH" $KSH "select ok::text from permit_fits('$L_D1'
 val "D-1118 permit_fits jako SCX" $SCX "select ok::text from permit_fits('$L_D1','$PM_F')" true
 chk "D-1118 FIRMA: missing_countries puste (nie SE)" \
   "$(Q "select coalesce(array_to_string(missing_countries,','),'') from load_permit_status() where load_id='$L_D1'")" ""
+# #400 / D-1118 8b: fallback wymiarów z symbol_specs (produkcja: 0002/0003/0005 DIMS_UNKNOWN)
+L_400a=33333333-0000-0000-0000-00000000400a
+L_400b=33333333-0000-0000-0000-00000000400b
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400a','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG0','DOCS_PENDING','SG','FIRMA',
+  null, null, null, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400a','$PM_F')" >/dev/null
+chk "#400 SG bez combo_* → ok z symbol_specs (21,69×2,45×3,75)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400a','$PM_F')")" "true/"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400b','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG-partial','DOCS_PENDING','SG','FIRMA',
+  21.00, null, 4.00, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400b','$PM_F')" >/dev/null
+chk "#400 L/H z transportu, W z symbolu → ok (jak 0002)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400b','$PM_F')")" "true/"
+$PSQL -c "update loads set combo_length_m=25.00 where id='$L_400b'" >/dev/null
+chk "#400 L z transportu ponad limit → LENGTH (nie wymiary z symbolu)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400b','$PM_F')")" "false/LENGTH"
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_400a','$L_400b')" >/dev/null
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
   combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
  values ('$L_D2','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-KR','DOCS_PENDING','KR','TRASA',

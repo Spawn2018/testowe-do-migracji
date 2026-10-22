@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 106, // #426 F7 r2: +8 (B3+/B4+ kontrole, hhlOrderNo quiet, START-7); było 98 przy shadow D1c
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
-  i2: 634, // #405 F7: R-2 TEST stref (off/on) + admin_sms_zone_test + pilot + pull 2 kinds
+  i2: 639, // #400: +5 (PII jawne, rio••••, prosrc, SG fallback×3); było 634 (#405)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)

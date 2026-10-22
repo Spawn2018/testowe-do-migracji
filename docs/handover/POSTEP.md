@@ -4058,3 +4058,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426/#425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7.
 - Scalanie: brak „F7: gotowe”; #432 db czerwone (shadow `D1c` w RQKEEP) + F7 r2 (2 poprawki testów) → ten commit. Bez push na `main`.
 - Bieżąca: **#426 F7 r2** — `DecB3`/`DecB4` zamiast `D1c`/`D2c`; B3+ LATE bez quiet; B4+ START-7 włączone + cancel bez quiet → +1 wf; quiet hhlOrderNo → 0 conflict; import 99→106.
+
+## 2026-10-22 06:30 — #426 SCALONE; start #400 (0260)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #426 zamknięte; #425/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431/#433 bez F7 (kolejność z F7 #432: #431→deploy→#432→#433 — #431 niewykonalne bez F7).
+- Scalanie: #432 F7 „gotowe” (`dd0a86d`) + CI zielone (unit/db/visual) → merge `a9189bb1` (0259). Bez push na `main`.
+- Bieżąca: **#400** (`pakiet/hotfix-400-dims-pii`, migracja **0260**) — `permit_fits` coalesce L×W×H z `symbol_specs`; `audit_row_change` bez maski PII, `rio_secret` = ••••; i2 634→639.
