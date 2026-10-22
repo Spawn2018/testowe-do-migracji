@@ -4087,3 +4087,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #437 (`dla-cursora`+`pilne`, Spawn2018) — brak adaptera/crona RIO; SG-19 dziś; zgoda RIO na piśmie 09:02. Wpisane: PLAN §4 (#437 / 0261 przed #384), §8, dopisek D-20261022-0858-01.
 - Scalanie: #436 F7 „jeszcze nie” (blokery); CI unit/db/visual zielone na `ded34457` — bez merge. #433/#408/#382 bez „gotowe”. Bez push na `main`.
 - Bieżąca: **#437 E44** (`pakiet/e44-rio-437`, migracja **0261**) — adapter `rioPositionSharing.ts`, Edge `rio-links`, cron `tower-rio-links`, job `rio-links`, `SUBCONTRACTOR_LINK`.
+
+## 2026-10-22 09:50 — #437 CI zielone, czekam na F7
+
+- Skrzynka: #437/#425/#422/#413/#409/#412/#323/#322/#320 (Spawn2018) — w planie; #437 `pilne` bieżąca. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia”. #436 F7 r2 „jeszcze nie” (visible_to + clear godziny); #433/#408/#383/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **#437 E44** PR #438 head `0b03c7df` — unit×2, `db`, visual (wszystkie części) **zielone**. Zakres dopisku (adapter, cron, SUBCONTRACTOR_LINK, błędy/sprawy, secret poza logami) w PR. Front Stan systemu — koordynator. **Czekam na F7.**
