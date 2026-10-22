@@ -4,7 +4,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_BUCKETS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, backupTables, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
+import {
+  BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, backupTables,
+  copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip, retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
+} from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
 
@@ -36,6 +39,20 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(csvRowCount('a,b\n1,2\n3,"x\ny"\n')).toBe(2);
     expect(csvRowCount('a,b\n')).toBe(0);
     expect(csvRowCount('')).toBe(0);
+  });
+
+  // #463 / D-20261022-2110-01 — stronicowanie dużych tabel (I-33)
+  it('#463: shouldChunkByEstimate od progu; zakresy ctid bez luk', () => {
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS - 1)).toBe(false);
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS)).toBe(true);
+    expect(ctidPageRanges(0)).toEqual([{ from: 0, to: 1 }]);
+    expect(ctidPageRanges(32)).toEqual([{ from: 0, to: 32 }]);
+    expect(ctidPageRanges(33)).toEqual([{ from: 0, to: 32 }, { from: 32, to: 33 }]);
+    expect(copyCtidRangeSql('notifications', 0, 32, null, true)).toContain("header true");
+    expect(copyCtidRangeSql('notifications', 32, 64, null, false)).toContain("header false");
+    expect(copyCtidRangeSql('loads', 0, 8, '"id", "code"', true)).toContain('"id", "code"');
+    expect(() => copyCtidRangeSql('x;drop', 0, 1, null, true)).toThrow(/niedozwolona/);
+    expect(() => copyCtidRangeSql('loads', 5, 5, null, true)).toThrow(/zakres/);
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {

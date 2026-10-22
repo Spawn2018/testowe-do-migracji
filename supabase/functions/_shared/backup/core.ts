@@ -52,6 +52,53 @@ export const BUCKET_OBJECTS_SQL = `select o.id::text as id, o.bucket_id || '/' |
 
 export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
+/**
+ * #463 / D-20261022-2110-01 — duże tabele (notifications, integration_runs, sms_heartbeats…)
+ * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie po ctid + limit czasu na kawałek.
+ */
+export const CHUNK_EST_ROWS = 2_500;
+export const CTID_PAGES_PER_CHUNK = 32;
+export const TABLE_COPY_TIMEOUT_MS = 120_000;
+
+export function assertSafeIdent(name: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error(`kopia: niedozwolona nazwa: ${name}`);
+  return name;
+}
+
+export function shouldChunkByEstimate(estRows: number): boolean {
+  return Number.isFinite(estRows) && estRows >= CHUNK_EST_ROWS;
+}
+
+/** Zakresy stron heap [from, to) — puste relpages → jeden zakres 0..1 (nagłówek CSV). */
+export function ctidPageRanges(relpages: number, pagesPerChunk = CTID_PAGES_PER_CHUNK): { from: number; to: number }[] {
+  const pages = Math.max(1, Math.floor(Math.max(0, relpages)));
+  const out: { from: number; to: number }[] = [];
+  for (let from = 0; from < pages; from += pagesPerChunk) {
+    out.push({ from, to: Math.min(pages, from + pagesPerChunk) });
+  }
+  return out;
+}
+
+/**
+ * COPY jednego zakresu ctid. `selectList` = lista kolumn (np. loads bez rio_secret) albo null (= *).
+ * Nagłówek CSV tylko przy `header === true` (pierwszy kawałek).
+ */
+export function copyCtidRangeSql(
+  table: string,
+  pageFrom: number,
+  pageTo: number,
+  selectList: string | null,
+  header: boolean,
+): string {
+  const t = assertSafeIdent(table);
+  if (!Number.isInteger(pageFrom) || !Number.isInteger(pageTo) || pageFrom < 0 || pageTo <= pageFrom) {
+    throw new Error(`kopia: zły zakres ctid ${pageFrom}..${pageTo}`);
+  }
+  const cols = selectList && selectList.trim() ? selectList : '*';
+  const fmt = header ? 'format csv, header true' : 'format csv, header false';
+  return `copy (select ${cols} from public.${t} where ctid >= '(${pageFrom},0)'::tid and ctid < '(${pageTo},0)'::tid) to stdout with (${fmt})`;
+}
+
 export async function gzip(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
   return new Uint8Array(await new Response(stream).arrayBuffer());

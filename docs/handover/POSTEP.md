@@ -4255,3 +4255,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #471 (Spawn2018, `dla-cursora`+`pilne`) — scalić #459 potem #470. Wykonane; #471 zamknięte.
 - Scalanie: #459 F7 + CI → MERGED `9ca7ee08`; #470 F7 + CI → MERGED `f064a005`. Bez push na `main`.
 - Bieżąca: **#461** / PR #469 F7 r4 — `v_ev bigint` (CI: uuid „44”), FERRY tylko READY…AT_PORT_GDANSK, `l3_lapse` zawsze przy RIO, escalate tylko NO_POSITION/SILENT, testy +5 → status **189**. Czekam CI + F7.
+
+## 2026-10-22 23:05 — #461 SCALONE; start #463 (backup/cron)
+
+- Skrzynka: #463 `pilne` bieżąca; #464–#467/#409/#446/#425 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #469 F7 „gotowe do scalenia” + CI unit/db/visual zielone → MERGED `7e77540a` (0270). Issue #461 zamknięte. Bez push na `main`.
+- Bieżąca: **#463** (`pakiet/hotfix-463-backup-cron`):
+  - Diagnoza: I-33 na COPY dużych tabel (`notifications`, `sms_heartbeats`, …); awaria crona 22.10 rano.
+  - Ręcznie: backup **#37 OK** `daily/2026-10-22-225919/` (96 tabel, 25 plików); polisy 0; kolejność 1; ferry-schedule ok w `integration_runs`.
+  - Kod: stronicowanie `ctid` + timeout COPY; `backup-core` 13/13. Edge po scaleniu/`deploy-main`.
+  - `email-budget`: brak crona (trigger); `usage-check` OK. #446 pkt 6: ferry-schedule z crona — 23.10 05:00 UTC.

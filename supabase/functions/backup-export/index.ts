@@ -17,7 +17,9 @@
 import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
-  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, backupTables, csvRowCount, dailyPrefix, manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex, writerClient,
+  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, TABLE_COPY_TIMEOUT_MS, backupTables, copyCtidRangeSql,
+  csvRowCount, ctidPageRanges, dailyPrefix, manifest, monthlyPrefix, rerunPrefix, sealTable, sha256Hex,
+  shouldChunkByEstimate, writerClient,
 } from '../_shared/backup/core.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
@@ -35,6 +37,68 @@ async function loadColumnsWithoutRioSecret(sql: ReturnType<typeof postgres>): Pr
      order by ordinal_position`;
   if (!cols.length) throw new Error('kopia: brak kolumn loads');
   return cols.map((c) => `"${String(c.column_name).replace(/"/g, '""')}"`).join(', ');
+}
+
+/** Odczyt strumienia COPY z limitem czasu (#463 — bez wiszenia do I-33). */
+function readCopyStream(stream: { on: (ev: string, fn: (...args: unknown[]) => void) => void }, label: string, timeoutMs = TABLE_COPY_TIMEOUT_MS): Promise<Uint8Array> {
+  const chunks: Uint8Array[] = [];
+  return new Promise<Uint8Array>((res, rej) => {
+    const timer = setTimeout(() => rej(new Error(`kopia: timeout COPY ${label} po ${timeoutMs} ms`)), timeoutMs);
+    stream.on('data', (c: unknown) => chunks.push(c as Uint8Array));
+    stream.on('end', () => {
+      clearTimeout(timer);
+      void (async () => {
+        try {
+          res(new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer()));
+        } catch (e) {
+          rej(e);
+        }
+      })();
+    });
+    stream.on('error', (e: unknown) => {
+      clearTimeout(timer);
+      rej(e);
+    });
+  });
+}
+
+/** Jedna tabela: mała → jeden COPY; duża (szacunek wierszy) → kawałki ctid. */
+async function copyTableCsv(
+  sql: ReturnType<typeof postgres>,
+  table: string,
+  selectList: string | null,
+): Promise<Uint8Array> {
+  const [meta] = await sql<{ est: string | number; pages: number }[]>`
+    select c.reltuples::bigint as est, greatest(c.relpages, 1)::int as pages
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relname = ${table}`;
+  const est = Number(meta?.est ?? 0);
+  if (!shouldChunkByEstimate(est)) {
+    const copySql = selectList
+      ? `copy (select ${selectList} from public.${table}) to stdout with (format csv, header true)`
+      : `copy public.${table} to stdout with (format csv, header true)`;
+    const stream = await sql.unsafe(copySql).readable();
+    return readCopyStream(stream, table);
+  }
+  const parts: Uint8Array[] = [];
+  let header = true;
+  for (const { from, to } of ctidPageRanges(Number(meta?.pages ?? 1))) {
+    const copySql = copyCtidRangeSql(table, from, to, selectList, header);
+    const stream = await sql.unsafe(copySql).readable();
+    const part = await readCopyStream(stream, `${table}[${from},${to})`);
+    if (part.byteLength) parts.push(part);
+    header = false;
+  }
+  if (!parts.length) {
+    // pusta duża tabela — sam nagłówek
+    const copySql = selectList
+      ? `copy (select ${selectList} from public.${table} where false) to stdout with (format csv, header true)`
+      : `copy (select * from public.${table} where false) to stdout with (format csv, header true)`;
+    const stream = await sql.unsafe(copySql).readable();
+    return readCopyStream(stream, `${table}[empty]`);
+  }
+  return new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
 }
 
 Deno.serve(async (req) => {
@@ -66,20 +130,11 @@ Deno.serve(async (req) => {
     let bytes = 0;
     const catalog = (await sql.unsafe(CATALOG_TABLES_SQL)).map((r) => String(r.name));
     const tables = backupTables(catalog);
+    // loads bez rio_secret — raz na przebieg (A7 / E44)
+    const loadsCols = tables.includes('loads') ? await loadColumnsWithoutRioSecret(sql) : null;
     for (const t of tables) {
-      const chunks: Uint8Array[] = [];
-      // A7 / E44: loads bez kolumny rio_secret (klucz RIO nie w kopii R2)
-      const copySql = t === 'loads'
-        ? `copy (select ${await loadColumnsWithoutRioSecret(sql)} from public.loads) to stdout with (format csv, header true)`
-        : `copy public.${t} to stdout with (format csv, header true)`;
-      const stream = await sql.unsafe(copySql).readable();
-      // zdarzenia zamiast `for await`: w Edge Runtime iterator strumienia COPY zawieszał się na tabelach > ~16 kB (PR2, 27.09)
-      await new Promise<void>((res, rej) => {
-        stream.on('data', (c: Uint8Array) => chunks.push(c));
-        stream.on('end', () => res());
-        stream.on('error', rej);
-      });
-      const csv = new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());
+      // #463: duże tabele stronicowane po ctid; każdy kawałek z timeoutem (zamiast wiszenia do I-33)
+      const csv = await copyTableCsv(sql, t, t === 'loads' ? loadsCols : null);
       counts[t] = csvRowCount(new TextDecoder().decode(csv));
       const sealed = await sealTable(csv, encrypt);
       bytes += sealed.byteLength;
