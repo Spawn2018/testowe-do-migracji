@@ -4237,3 +4237,21 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #460/#461 (Spawn2018, `dla-cursora`+`pilne`) � promy z mapy (ambiguous vessel_id) + Prom dopiero przy actual_departure_at. Wpisane: PLAN �4/�8, dopiski `D-20261022-2043-01.md` / `D-20261022-2045-01.md`. #409�**0270**, #413�**0271**, #422�**0272**, B5�**0273**.
 - Scalanie: #408 F7 �gotowe do scalenia� + CI unit/visual zielone � MERGED `00611f7e`. #458 (#409) db FAIL (security: fuel_basis_public bez search_path) � wstrzymane przez #460. Bez push na `main`.
 - Bie��ca: **#460** (`pakiet/hotfix-460-ferry-track-sample`, migracja **0268**) � aliasy w CTE `u`; bmapa +1 � 36.
+
+## 2026-10-22 21:25 — #460 SCALONE; start #461; #463 w planie
+
+- Skrzynka: #463 (Spawn2018, `dla-cursora`+`pilne`) — backup 3× ERROR + cron po awarii. Wpisane: PLAN §4/§8, dopisek `D-20261022-2110-01.md`. Kolejka: #461 → #463 → #409.
+- Scalanie: #462 F7 + CI zielone → MERGED `045d9bd7` (0268). Issue #460 zamknięte. Bez push na `main`.
+- Bieżąca: **#461** (`pakiet/hotfix-461-ferry-actual-dep`, migracja **0269**) — Prom dopiero przy `actual_departure_at`; status 178; `rk_no_departure`.
+
+## 2026-10-22 22:00 — F7 #469: #461 SCHEDULE_ASSUMED; skrzynka #464–#467
+
+- Skrzynka: #464/#465/#466/#467 (Spawn2018, `dla-cursora`) — wpisane PLAN §4/§8. #463 już w planie (pilne, po #461).
+- Scalanie: brak F7 „gotowe” (PR #469: F7 „jeszcze nie” po `aa33562`).
+- Bieżąca: **#461** F7 — migracja **0270**, AIS albo plan+1 h (`SCHEDULE_ASSUMED`), bez `NO_DEPARTURE`/`MISSED_SAILING`, korekta SG-17/18/23, SILENT/eskalacja nie przy `RIO_NO_POSITION`; status **184**. #409→**0271**. Bez push na `main`.
+
+## 2026-10-22 22:45 — #471: #459+#470 SCALONE; #461 F7 r4
+
+- Skrzynka: #471 (Spawn2018, `dla-cursora`+`pilne`) — scalić #459 potem #470. Wykonane; #471 zamknięte.
+- Scalanie: #459 F7 + CI → MERGED `9ca7ee08`; #470 F7 + CI → MERGED `f064a005`. Bez push na `main`.
+- Bieżąca: **#461** / PR #469 F7 r4 — `v_ev bigint` (CI: uuid „44”), FERRY tylko READY…AT_PORT_GDANSK, `l3_lapse` zawsze przy RIO, escalate tylko NO_POSITION/SILENT, testy +5 → status **189**. Czekam CI + F7.
