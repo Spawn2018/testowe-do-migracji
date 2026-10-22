@@ -7,7 +7,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataMutation, DataProvider, DataSnapshot, UserPrefsPatch } from './provider';
 import { emptySnapshot } from './provider';
-import type { FerryBooking } from '../types';
+import type { FerryBooking, Notification } from '../types';
 import { isServerId } from './registry';
 import { safeStorageTarget } from './storagePath';
 import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
@@ -48,6 +48,7 @@ export interface SupabaseProviderOptions {
 
 export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProviderOptions = {}): DataProvider & {
   context(): { orgs: OrgRow[]; projectId: string | null };
+  loadNotifications(): Promise<Notification[]>;
 } {
   const now = opts.now ?? (() => new Date().toISOString());
   let orgs: OrgRow[] = [];
@@ -61,6 +62,15 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     ]);
     orgs = must(o, 'organizations') as OrgRow[];
     projectId = (must(p, 'projects') as { id: string } | null)?.id ?? null;
+  }
+
+  /* M7 — centrum powiadomień: własne wiersze IN_APP (RLS notifications_read_own), najnowsze 200 */
+  const notificationsQuery = () => sb.from('notifications').select('id,template,payload,load_id,created_at,read_at')
+    .eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200);
+
+  /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek, bez całego zrzutu — odświeżanie po powrocie do aplikacji na telefonie. */
+  async function loadNotifications(): Promise<Notification[]> {
+    return (must(await notificationsQuery(), 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r));
   }
 
   async function loadSnapshot(): Promise<DataSnapshot> {
@@ -94,7 +104,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
       sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
-      sb.from('notifications').select('id,template,payload,load_id,created_at,read_at').eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200),
+      notificationsQuery(),
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
       sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
@@ -510,5 +520,5 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
   }
 
-  return { kind: 'supabase', loadSnapshot, apply, loadPreferences, context: () => ({ orgs, projectId }) };
+  return { kind: 'supabase', loadSnapshot, loadNotifications, apply, loadPreferences, context: () => ({ orgs, projectId }) };
 }

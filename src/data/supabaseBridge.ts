@@ -10,6 +10,7 @@ import { emptySnapshot, type DataMutation } from './provider';
 import { registerAfterFileUpload, registerFileSink, registerRemoteSink } from './registry';
 import { createStorageSink } from './storageFiles';
 import { friendlyDbError } from '../lib/orderNumbers';
+import { mergeBellRefresh } from '../lib/bellList';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
@@ -22,11 +23,57 @@ export async function refreshFromServer(opts: { keepSelection?: boolean } = {}):
   useTowerStore.setState({ ...snap, selectedLoadId: keep });
 }
 
+/** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek z serwera (telefon: aplikacja wraca z tła bez przeładowania). */
+export async function refreshNotifications(): Promise<void> {
+  const p = active;
+  if (!p) return;
+  const server = await p.loadNotifications();
+  /* w trakcie zapytania zmieniło się konto (wylogowanie, „Działaj jako”) — nie mieszaj dzwonków */
+  if (p !== active) return;
+  useTowerStore.setState((s) => ({ notifications: mergeBellRefresh(s.notifications, server) }));
+}
+
+let bellTimer: ReturnType<typeof setInterval> | null = null;
+let bellUnlisten: (() => void) | null = null;
+const BELL_EVERY_MS = 60_000;
+
+/** Powrót do karty / aplikacji (visibilitychange, pageshow, focus) i co minutę, gdy widoczna — odśwież dzwonek. */
+function startBellRefresh(): void {
+  stopBellRefresh();
+  if (typeof document === 'undefined' || typeof window === 'undefined') return;
+  let last = Date.now();
+  const tick = (force = false) => {
+    if (document.visibilityState !== 'visible') return;
+    if (!force && Date.now() - last < 5_000) return;
+    last = Date.now();
+    void refreshNotifications().catch(() => undefined);
+  };
+  const onVis = () => tick();
+  const onShow = () => tick();
+  document.addEventListener('visibilitychange', onVis);
+  window.addEventListener('pageshow', onShow);
+  window.addEventListener('focus', onShow);
+  bellTimer = setInterval(() => tick(true), BELL_EVERY_MS);
+  bellUnlisten = () => {
+    document.removeEventListener('visibilitychange', onVis);
+    window.removeEventListener('pageshow', onShow);
+    window.removeEventListener('focus', onShow);
+  };
+}
+
+function stopBellRefresh(): void {
+  if (bellTimer) clearInterval(bellTimer);
+  bellTimer = null;
+  bellUnlisten?.();
+  bellUnlisten = null;
+}
+
 export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   registerAfterFileUpload(() => refreshFromServer({ keepSelection: true }));
   await refreshFromServer();
+  startBellRefresh();
   // M4: ustawienia użytkownika z serwera (waluta, motyw; język — zawsze polski, B9) — bez ponownego zapisu
   try {
     const prefs = active.loadPreferences ? await active.loadPreferences() : null;
@@ -68,6 +115,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 }
 
 export function disconnectSupabaseData(): void {
+  stopBellRefresh();
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);

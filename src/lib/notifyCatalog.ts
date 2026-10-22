@@ -71,10 +71,12 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
     ],
   },
   {
-    /* audyt-teksty (e): grupa w bazie `AUTOMATION` (0255, #406); reguła może wskazać HHL, KSH i SCX. Do wdrożenia — `pendingDb`. */
+    /* audyt-teksty (e): klucz `workflow` z migracji 0255 (#406) — na produkcji od 22.10.2026 (SELECT `notification_matrix`: wiersze
+       dla 5 ról); reguła może wskazać HHL, KSH i SCX, więc wiersz jest dla wszystkich firm (bez „—”). */
     id: 'automation', title: 'Automatyzacje', rows: [
-      { id: 'workflow', title: 'Alert automatyzacji (reguła zgłosiła problem)', sub: 'reguła z kreatora w Automatyzacjach · dostają role wskazane w regule', target: 'Automatyzacje', pendingDb: true,
-        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: c(false), CARRIER_DISPATCH: c(false), CARRIER_USER: c(false) } },
+      { id: 'workflow', title: 'Alert automatyzacji (reguła zgłosiła problem)', sub: 'reguła z kreatora w Automatyzacjach · dostają role wskazane w regule', target: 'Automatyzacje',
+        /* jak w bazie (0255): dzwonek dla wszystkich ról, e-mail Administrator HHL — „Co dostaję” pokazuje wiersz w HHL, KSH i SCX */
+        cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: c(true), CARRIER_DISPATCH: c(true), CARRIER_USER: c(true) } },
     ],
   },
   {
@@ -89,12 +91,12 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true, true, true, ['push', 'mail']), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'daily', title: 'Raport dzienny', sub: 'podsumowanie doby', target: 'Kokpit',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: c(false), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
-      /* audyt-teksty (e): klucze SYSTEM z migracji 0255 (#406), tylko HHL — do jej wdrożenia `pendingDb` (bez wiersza w bazie ekran ich nie pokazuje) */
-      { id: 'email_budget', title: 'Limit maili wyczerpany / bliski limitu', sub: 'dzienny limit wysyłki e-maili', target: 'Opcje › Stan systemu', pendingDb: true,
+      /* audyt-teksty (e): klucze SYSTEM z migracji 0255 (#406), tylko HHL — na produkcji od 22.10.2026, `pendingDb` zdjęty */
+      { id: 'email_budget', title: 'Limit maili wyczerpany / bliski limitu', sub: 'dzienny limit wysyłki e-maili', target: 'Opcje › Stan systemu',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true, false, true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
-      { id: 'fuel_miss', title: 'Brak odczytu ceny paliwa (OKQ8 / Orlen)', sub: 'opłata paliwowa liczy się z ostatniego odczytu', target: 'Opcje › Cennik', pendingDb: true,
+      { id: 'fuel_miss', title: 'Brak odczytu ceny paliwa (OKQ8 / Orlen)', sub: 'opłata paliwowa liczy się z ostatniego odczytu', target: 'Opcje › Cennik',
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
-      { id: 'ext_mail', title: 'Maile do adresów spoza aplikacji (np. księgowość)', sub: 'tylko e-mail · tylko Administrator HHL', pendingDb: true,
+      { id: 'ext_mail', title: 'Maile do adresów spoza aplikacji (np. księgowość)', sub: 'tylko e-mail · tylko Administrator HHL',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: null, CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
     ],
   },

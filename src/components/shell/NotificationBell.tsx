@@ -48,11 +48,12 @@ export function NotificationBell() {
   const general = bellGeneralCount(notifications, role, nowMs);
 
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
+    const onDoc = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    /* telefon (iOS Safari): dotknięcie obok nie zawsze daje „mousedown” — pointerdown działa dla myszy i dotyku */
+    document.addEventListener('pointerdown', onDoc);
+    return () => document.removeEventListener('pointerdown', onDoc);
   }, []);
 
   /* P11 (e5, e13): Esc zamyka dzwonek i wraca na przycisk — jak Pomoc i menu konta */
@@ -119,7 +120,13 @@ export function NotificationBell() {
         className="iconbtn bell-trigger" aria-haspopup="dialog"
         aria-label={t(locale, 'notifications')}
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          /* Właściciel 21.10.2026 20:14 (pkt 5): otwarcie dzwonka dociąga nowe wpisy z serwera (telefon bez przeładowania) */
+          if (!open && import.meta.env.VITE_AUTH_MODE === 'supabase') {
+            void import('../../data/supabaseBridge').then((b) => b.refreshNotifications()).catch(() => undefined);
+          }
+          setOpen((v) => !v);
+        }}
         style={{ width: 32, padding: 0 }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
