@@ -12,8 +12,8 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 160, // #392: +5 RIO sanitize (emtrack/A→B/same/pusty); było 155 (B4 cz.2)
-  status: 162, // #398: +2 port z actual_load_at (bez PORT_NO_LOADED)
+  security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
+  status: 170, // #446: +4 sailings W_REJSIE/DOPLYNAL + F7 OPOZNIONY; było 166 (#445)
   storage: 37,
   money: 183, // #411 F7: +4 mark_notifications_read WP↔IN (para + obie strony + cudze); było 179
   release: 146,
@@ -23,13 +23,13 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 106, // #426 F7 r2: +8 (B3+/B4+ kontrole, hhlOrderNo quiet, START-7); było 98 przy shadow D1c
+  import: 110, // #384 F7 r2/r3: +4 przywrócenie okien (d)+/− + confirmed; było 106 (#426)
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
-  i2: 651, // #384 zaległe: +3 IW-1 przesunięcie okna przy samej dacie; było 648 (#400)
+  i2: 654, // #384 F7 B2: +3 ta sama data + pusta godzina (val+val+chk); było 651
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 70, // #384 zaległe: +6 pkt 7–8 (cudzy carrier, actor, visible_to, KSH); było 64
-  'dec-fx': 13, // #384 zaległe: +1 actor/visible_to; resolve-all = count(*) (zamiast ≥40)
+  dec2: 71, // #384 F7 r2/r3: +1 HHL_OPS widzi decyzje; visible_to NULL / KSH widzi (odwrócone)
+  'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 156, // 160 − 4 SKIP (B6)
+  security: 158, // 162 − 4 SKIP (B6); #442 +2
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

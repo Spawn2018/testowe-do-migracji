@@ -18,6 +18,8 @@ const PL: Record<string, string> = {
   p9e_ais_stale: 'ostatni odczyt AIS {t}',
   p9e_ais_none: 'brak AIS · ostatnia pozycja auta {t}',
   p9e_ais_none_bare: 'brak AIS',
+  p9e_ais_est: 'pozycja szacowana z rozkładu · ostatni AIS {t}',
+  p9e_ais_est_none: 'pozycja szacowana z rozkładu · brak AIS',
   p9e_zone_title: '{zone} · {cars}',
   p9e_zone_LOADING: 'miejsce załadunku',
   p9e_zone_PORT_OUT: 'port PL',

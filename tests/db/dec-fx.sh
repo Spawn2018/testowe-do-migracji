@@ -226,17 +226,17 @@ CNT=$(sys "select count(*) from load_events
 if [ "$CNT" = "1" ]; then ok=$((ok+1)); echo "  OK    ACCEPT+load → DECISION_EFFECT"; else
   fail=$((fail+1)); echo "  FAIL  ACCEPT+load → DECISION_EFFECT (otrzymano: $CNT; resolve: $(echo "$out" | grep -iE 'ERROR|exception' | head -1))"
 fi
-# #384 pkt 8: actor / decider / by_org w payload (HHL_ADMIN → „// HHL”, decider HHL, by_org FORWARDER)
+# #384 pkt 8 / F7 r2: actor / decider / by_org; visible_to NULL (KSH też widzi)
 ACT_OK=$(sys "select (
     (payload->>'actor') like '% // HHL'
     and payload->>'decider' = 'HHL'
     and payload->>'by_org' = 'FORWARDER'
-    and visible_to = array['FORWARDER','CARRIER']::org_kind[]
+    and visible_to is null
   )::text
   from load_events where load_id='$L' and event_type='DECISION_EFFECT'
     and payload->>'note' = 'akceptacja z load_id' order by occurred_at desc limit 1" | tail -1 | tr -d '\r')
-if [ "$ACT_OK" = "true" ]; then ok=$((ok+1)); echo "  OK    #384 actor/decider/visible_to w DECISION_EFFECT"; else
-  fail=$((fail+1)); echo "  FAIL  #384 actor/decider/visible_to w DECISION_EFFECT (otrzymano: $ACT_OK)"
+if [ "$ACT_OK" = "true" ]; then ok=$((ok+1)); echo "  OK    #384 actor/decider/visible_to NULL w DECISION_EFFECT"; else
+  fail=$((fail+1)); echo "  FAIL  #384 actor/decider/visible_to NULL w DECISION_EFFECT (otrzymano: $ACT_OK)"
 fi
 
 out=$(run "$HHL" "

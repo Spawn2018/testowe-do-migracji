@@ -1,9 +1,9 @@
 -- HOTFIX #384 zaległe / D-20261022-0130-01 (#425): pkt 7–8 + okno importu + dane SG.
--- Migracja 0262 (#438 zabrało 0261 na E44 RIO). SMS×bulk_quiet już w 0259 — tu bez zmian.
--- 1) decisions_read: CARRIER tylko własne transporty (carrier_org_id)
--- 2) decision_apply_effect: payload actor/decider/by_org + visible_to
--- 3) import_schedule: zmiana daty bez godziny → przesuń okno
--- 4) jednorazowo: plan_load_to / plan_delivery_from SG-01/02/T-01 z historii zdarzeń
+-- Migracja 0267 (po #446: 0262–0266 zajęte; wcześniej 0261/0262). SMS×bulk_quiet już w 0259.
+-- 1) decisions_read: CARRIER tylko własne transporty (carrier_org_id); load_id null → po projekcie
+-- 2) decision_apply_effect: actor/decider/by_org; visible_to NULL (wszyscy w projekcie, w tym KSH)
+-- 3) import_schedule: zmiana daty bez godziny → przesuń okno; pusta godzina = bez zmiany
+-- 4) jednorazowo: plan_load_to / plan_delivery_from SG-01/02/T-01 z historii PLAN_DATES_CHANGED
 
 -- ---------------------------------------------------------------------------
 -- 1) RLS decisions_read — przewoźnik tylko swoje load_id
@@ -18,7 +18,12 @@ create policy decisions_read on public.decisions for select to authenticated usi
            where t.code = decisions.type_code
              and t.decider_role in ('CARRIER', 'HHL')
              and (
-               decisions.load_id is null
+               -- F7 drobne: decyzje bez load_id — tylko gdy przewoźnik ma transport w projekcie
+               (decisions.load_id is null
+                and exists (
+                  select 1 from loads l
+                   where l.project_id = decisions.project_id
+                     and l.carrier_org_id = current_org_id()))
                or exists (
                  select 1 from loads l
                   where l.id = decisions.load_id
@@ -75,7 +80,10 @@ begin
     return jsonb_build_object('effect', p_effect, 'applied', false, 'error', 'missing');
   end if;
 
-  -- #384 pkt 8: aktor w payload DECISION_* (jak daty 0235) + visible_to bez CLIENT dla CARRIER/HHL
+  -- #384 pkt 8: aktor w payload DECISION_* (jak daty 0235).
+  -- decider = decision_types.decider_role (CLIENT|CARRIER|HHL|ADMIN);
+  -- by_org = current_org_kind (CLIENT|CARRIER|FORWARDER|…|SYSTEM) — kto kliknął (dwa słowniki celowo).
+  -- visible_to NULL = wszyscy w projekcie (w tym KSH); decyzja właściciela 20.10 / F7 r2–r3.
   select t.decider_role into v_decider from decision_types t where t.code = d.type_code;
   v_by_org := coalesce(current_org_kind()::text, 'SYSTEM');
   select coalesce(nullif(btrim(u.full_name), ''), split_part(u.email::text, '@', 1), '—')
@@ -90,15 +98,16 @@ begin
     left join organizations o on o.id = u.org_id
    where u.id = v_actor;
   v_actor_label := coalesce(v_actor_label, 'system');
-  v_vis := case
-    when v_decider = 'CLIENT' then null
-    else array['FORWARDER', 'CARRIER']::org_kind[]
-  end;
+  v_vis := null;
   v_base := jsonb_build_object(
     'actor', v_actor_label,
     'decider', v_decider,
     'by_org', v_by_org
   );
+  -- „Działaj jako”: prawdziwy wykonawca w payload (historia)
+  if real_app_user_id() is not null and real_app_user_id() is distinct from v_actor then
+    v_base := v_base || jsonb_build_object('real_app_user_id', real_app_user_id());
+  end if;
 
   if d.risk_id is not null then
     update risk_signals
@@ -177,13 +186,15 @@ begin
           end if;
         elsif l.plan_load_from is not null and l.plan_load_date is not null
               and v_ld is distinct from l.plan_load_date then
-          -- F7: przy samej load_date przesuń od/do o różnicę dni (jak okno 4a)
-          v_lf := l.plan_load_from + make_interval(days => (
-            v_ld - (l.plan_load_from at time zone 'Europe/Warsaw')::date));
+          -- F7: wspólna delta względem plan_load_date (od i do razem); strażnik do > od
+          v_delta := v_ld - l.plan_load_date;
+          v_lf := l.plan_load_from + make_interval(days => v_delta);
           v_lt := case when l.plan_load_to is not null then
-            l.plan_load_to + make_interval(days => (
-              v_ld - (l.plan_load_to at time zone 'Europe/Warsaw')::date))
+            l.plan_load_to + make_interval(days => v_delta)
           else null end;
+          if v_lt is not null and v_lf is not null and v_lt <= v_lf then
+            v_lt := null;
+          end if;
         else
           v_lf := l.plan_load_from;
           v_lt := l.plan_load_to;
@@ -200,12 +211,14 @@ begin
           end if;
         elsif l.plan_delivery_from is not null and l.plan_delivery_date is not null
               and v_dd is distinct from l.plan_delivery_date then
-          v_df := l.plan_delivery_from + make_interval(days => (
-            v_dd - (l.plan_delivery_from at time zone 'Europe/Stockholm')::date));
+          v_delta := v_dd - l.plan_delivery_date;
+          v_df := l.plan_delivery_from + make_interval(days => v_delta);
           v_dt := case when l.plan_delivery_to is not null then
-            l.plan_delivery_to + make_interval(days => (
-              v_dd - (l.plan_delivery_to at time zone 'Europe/Stockholm')::date))
+            l.plan_delivery_to + make_interval(days => v_delta)
           else null end;
+          if v_dt is not null and v_df is not null and v_dt <= v_df then
+            v_df := null;
+          end if;
         else
           v_df := l.plan_delivery_from;
           v_dt := l.plan_delivery_to;
@@ -393,7 +406,7 @@ revoke all on function public.decision_apply_effect(uuid, text, text, text, json
   from public, anon, authenticated;
 
 comment on function public.decision_apply_effect(uuid, text, text, text, jsonb) is
-  '#384 pkt 8: DECISION_* z actor/decider/by_org; visible_to FORWARDER+CARRIER (CLIENT null).';
+  '#384 pkt 8: DECISION_* z actor/decider/by_org (decider=rola z katalogu, by_org=org_kind klikającego); visible_to NULL = wszyscy w projekcie; przy „Działaj jako” real_app_user_id w payload.';
 
 -- ---------------------------------------------------------------------------
 -- 3) import_schedule — przesunięcie okna przy zmianie daty bez godziny
@@ -685,74 +698,66 @@ begin
         -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
         v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
         v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
-        -- #384: przy zmianie daty bez nowej godziny — przesuń okno PRZED clear z v_fields
-        -- (wiersz bez load_time vs schedule_row z godziną inaczej kasował od/do).
-        v_new_load_from := case
-          when nullif(btrim(r.inc->>'load_time'), '') is not null
-            then public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw')
-          when v_new_load_date is distinct from r.plan_load_date
-               and r.plan_load_from is not null and v_new_load_date is not null then
-            r.plan_load_from + make_interval(days => (
-              v_new_load_date - (r.plan_load_from at time zone 'Europe/Warsaw')::date))
-          when 'load_time' = any (v_fields) then null
-          else r.plan_load_from end;
-        -- pkt 4a: przy nowej godzinie — „do” ta sama data i do > nowe od; puste od → puste do.
-        -- Zmiana daty bez godziny → przesuń „do”. Sam clear load_time → null.
+        -- #384 F7 r2/r3: pusta komórka godziny = bez zmiany (nie null).
+        -- Zmiana daty bez godziny → wspólna delta (v_new_date − plan_*_date) dla od i do; strażnik do > od.
         if nullif(btrim(r.inc->>'load_time'), '') is not null then
+          v_new_load_from := public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw');
           v_new_load_to := case
             when v_new_load_from is null then null
             when r.plan_load_to is not null
                  and (r.plan_load_to at time zone 'Europe/Warsaw')::date = v_new_load_date
                  and r.plan_load_to > v_new_load_from
               then r.plan_load_to
-            when r.plan_load_to is not null and r.plan_load_from is not null and v_new_load_date is not null then
-              r.plan_load_to + make_interval(days => (
-                v_new_load_date - (r.plan_load_from at time zone 'Europe/Warsaw')::date))
+            when r.plan_load_to is not null and r.plan_load_date is not null and v_new_load_date is not null then
+              r.plan_load_to + make_interval(days => (v_new_load_date - r.plan_load_date))
             else null
           end;
-          if v_new_load_to is not null and v_new_load_to <= v_new_load_from then
+          if v_new_load_to is not null and v_new_load_from is not null and v_new_load_to <= v_new_load_from then
             v_new_load_to := null;
           end if;
         elsif v_new_load_date is distinct from r.plan_load_date
-              and r.plan_load_to is not null and v_new_load_date is not null then
-          v_new_load_to := r.plan_load_to + make_interval(days => (
-            v_new_load_date - (r.plan_load_to at time zone 'Europe/Warsaw')::date));
-        elsif 'load_time' = any (v_fields) then
-          v_new_load_to := null;
+              and r.plan_load_date is not null and v_new_load_date is not null then
+          v_new_load_from := case when r.plan_load_from is not null then
+            r.plan_load_from + make_interval(days => (v_new_load_date - r.plan_load_date))
+          else null end;
+          v_new_load_to := case when r.plan_load_to is not null then
+            r.plan_load_to + make_interval(days => (v_new_load_date - r.plan_load_date))
+          else null end;
+          if v_new_load_from is not null and v_new_load_to is not null and v_new_load_to <= v_new_load_from then
+            v_new_load_to := null;
+          end if;
         else
+          v_new_load_from := r.plan_load_from;
           v_new_load_to := r.plan_load_to;
         end if;
-        v_new_del_to := case
-          when nullif(btrim(r.inc->>'delivery_time'), '') is not null
-            then public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm')
-          when v_new_del_date is distinct from r.plan_delivery_date
-               and r.plan_delivery_to is not null and v_new_del_date is not null then
-            r.plan_delivery_to + make_interval(days => (
-              v_new_del_date - (r.plan_delivery_to at time zone 'Europe/Stockholm')::date))
-          when 'delivery_time' = any (v_fields) then null
-          else r.plan_delivery_to end;
         if nullif(btrim(r.inc->>'delivery_time'), '') is not null then
+          v_new_del_to := public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm');
           v_new_del_from := case
             when v_new_del_to is null then null
             when r.plan_delivery_from is not null
                  and (r.plan_delivery_from at time zone 'Europe/Stockholm')::date = v_new_del_date
                  and r.plan_delivery_from < v_new_del_to
               then r.plan_delivery_from
-            when r.plan_delivery_from is not null and r.plan_delivery_to is not null and v_new_del_date is not null then
-              r.plan_delivery_from + make_interval(days => (
-                v_new_del_date - (r.plan_delivery_to at time zone 'Europe/Stockholm')::date))
+            when r.plan_delivery_from is not null and r.plan_delivery_date is not null and v_new_del_date is not null then
+              r.plan_delivery_from + make_interval(days => (v_new_del_date - r.plan_delivery_date))
             else null
           end;
-          if v_new_del_from is not null and v_new_del_from >= v_new_del_to then
+          if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
             v_new_del_from := null;
           end if;
         elsif v_new_del_date is distinct from r.plan_delivery_date
-              and r.plan_delivery_from is not null and v_new_del_date is not null then
-          v_new_del_from := r.plan_delivery_from + make_interval(days => (
-            v_new_del_date - (r.plan_delivery_from at time zone 'Europe/Stockholm')::date));
-        elsif 'delivery_time' = any (v_fields) then
-          v_new_del_from := null;
+              and r.plan_delivery_date is not null and v_new_del_date is not null then
+          v_new_del_to := case when r.plan_delivery_to is not null then
+            r.plan_delivery_to + make_interval(days => (v_new_del_date - r.plan_delivery_date))
+          else null end;
+          v_new_del_from := case when r.plan_delivery_from is not null then
+            r.plan_delivery_from + make_interval(days => (v_new_del_date - r.plan_delivery_date))
+          else null end;
+          if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
+            v_new_del_from := null;
+          end if;
         else
+          v_new_del_to := r.plan_delivery_to;
           v_new_del_from := r.plan_delivery_from;
         end if;
         update loads set
@@ -907,53 +912,124 @@ REVOKE ALL ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolea
 GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) TO authenticated;
 
 COMMENT ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) IS
-  'I-1 import KSH. #426+#384: p_quiet HHL_ADMIN; zmiana daty bez godziny przesuwa okno; dry_run pokazuje critical.';
+  'I-1 import KSH. #426+#384: p_quiet HHL_ADMIN; zmiana daty bez godziny przesuwa okno (wspólna delta); pusta godzina = bez zmiany; dry_run pokazuje critical.';
 
 -- ---------------------------------------------------------------------------
--- 4) Jednorazowe przywrócenie okien SG-01 / SG-02 / T-01 (import 21.10 skasował)
---    Źródło: ostatni PLAN_DATES_CHANGED / SCHEDULE_IMPORTED z before_* w payload.
---    bulk_quiet — bez powiadomień. Brak before_* → pomija wiersz.
+-- 4) Przywrócenie okien SG-01 / SG-02 / T-01 (import 21.10 skasował do/od).
+--    Funkcja testowalna; DO woła raz przy migracji (produkcja). F7 P4–P9.
 -- ---------------------------------------------------------------------------
-do $restore$
+create or replace function public.hotfix_384_restore_windows()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $restore_fn$
 declare
   v_prev text;
+  v_prev_dates text;
+  v_prev_import text;
   v_n int := 0;
+  v_cnt int;
+  v_proj uuid;
   r record;
   v_to timestamptz;
   v_df timestamptz;
+  v_status text;
+  v_confirmed_by uuid;
+  v_confirmed_at timestamptz;
 begin
+  select id into v_proj
+    from projects
+   where code in ('STEGRA_BODEN', 'STEGRA')
+   order by case code when 'STEGRA_BODEN' then 0 else 1 end
+   limit 1;
+  if v_proj is null then
+    raise notice '0267: brak projektu STEGRA_BODEN/STEGRA — pomijam przywrócenie okien';
+    return 0;
+  end if;
+
+  select count(distinct l.id) into v_cnt
+    from loads l
+    join shipment_items si on si.load_id = l.id
+   where l.project_id = v_proj
+     and si.shipment_code in ('SG-01', 'SG-02', 'T-01');
+  if v_cnt > 3 then
+    raise exception '0267: przywrócenie okien — za dużo dopasowań (%) dla SG-01/02/T-01', v_cnt
+      using errcode = 'P0001';
+  end if;
+
   v_prev := current_setting('tower.bulk_quiet', true);
+  v_prev_dates := current_setting('tower.dates_ctx', true);
+  v_prev_import := current_setting('tower.import_ctx', true);
   perform set_config('tower.bulk_quiet', 'on', true);
   perform set_config('tower.import_ctx', 'on', true);
+  -- F7 P7: dates_ctx → trg_plan_dates_before nie zmienia statusu / confirmed_*
+  perform set_config('tower.dates_ctx', 'on', true);
 
   for r in
-    select l.id, l.plan_load_to, l.plan_delivery_from, si.shipment_code
+    select distinct on (l.id)
+           l.id, l.plan_load_to, l.plan_delivery_from, l.plan_load_from, l.plan_delivery_to,
+           l.plan_load_date, l.plan_delivery_date,
+           l.plan_dates_status, l.plan_dates_confirmed_by, l.plan_dates_confirmed_at,
+           si.shipment_code
       from loads l
       join shipment_items si on si.load_id = l.id
-     where si.shipment_code in ('SG-01', 'SG-02', 'T-01')
+     where l.project_id = v_proj
+       and si.shipment_code in ('SG-01', 'SG-02', 'T-01')
        and (l.plan_load_to is null or l.plan_delivery_from is null)
+     order by l.id, si.shipment_code
   loop
-    select
-      nullif(coalesce(e.payload->>'before_load_to', e.payload #>> '{before,load_to}'), '')::timestamptz,
-      nullif(coalesce(e.payload->>'before_delivery_from', e.payload #>> '{before,delivery_from}'), '')::timestamptz
-      into v_to, v_df
+    -- F7 P5: per pole ostatnia niepusta before_* tylko z PLAN_DATES_CHANGED
+    -- (JSON null przechodzi przez ? 'before_load_to'; SCHEDULE_* nie ma before_*)
+    select nullif(e.payload->>'before_load_to', '')::timestamptz
+      into v_to
       from load_events e
      where e.load_id = r.id
-       and e.event_type in ('PLAN_DATES_CHANGED', 'SCHEDULE_IMPORTED', 'SCHEDULE_DATE_CRITICAL')
-       and (
-         e.payload ? 'before_load_to'
-         or e.payload ? 'before_delivery_from'
-         or (e.payload->'before') ? 'load_to'
-         or (e.payload->'before') ? 'delivery_from'
-       )
+       and e.event_type = 'PLAN_DATES_CHANGED'
+       and nullif(e.payload->>'before_load_to', '') is not null
      order by e.occurred_at desc
      limit 1;
 
+    select nullif(e.payload->>'before_delivery_from', '')::timestamptz
+      into v_df
+      from load_events e
+     where e.load_id = r.id
+       and e.event_type = 'PLAN_DATES_CHANGED'
+       and nullif(e.payload->>'before_delivery_from', '') is not null
+     order by e.occurred_at desc
+     limit 1;
+
+    -- F7 P6: spójność z bieżącą datą planu i do > od
+    if v_to is not null then
+      if r.plan_load_date is null
+         or (v_to at time zone 'Europe/Warsaw')::date is distinct from r.plan_load_date
+         or (r.plan_load_from is not null and v_to <= r.plan_load_from) then
+        raise notice '0267: pomijam plan_load_to dla % (%) — niespójne z datą/od',
+          r.shipment_code, r.id;
+        v_to := null;
+      end if;
+    end if;
+    if v_df is not null then
+      if r.plan_delivery_date is null
+         or (v_df at time zone 'Europe/Stockholm')::date is distinct from r.plan_delivery_date
+         or (r.plan_delivery_to is not null and v_df >= r.plan_delivery_to) then
+        raise notice '0267: pomijam plan_delivery_from dla % (%) — niespójne z datą/do',
+          r.shipment_code, r.id;
+        v_df := null;
+      end if;
+    end if;
+
     if (r.plan_load_to is null and v_to is not null)
        or (r.plan_delivery_from is null and v_df is not null) then
+      v_status := r.plan_dates_status;
+      v_confirmed_by := r.plan_dates_confirmed_by;
+      v_confirmed_at := r.plan_dates_confirmed_at;
       update loads set
         plan_load_to = case when plan_load_to is null then v_to else plan_load_to end,
         plan_delivery_from = case when plan_delivery_from is null then v_df else plan_delivery_from end,
+        plan_dates_status = coalesce(v_status, plan_dates_status),
+        plan_dates_confirmed_by = v_confirmed_by,
+        plan_dates_confirmed_at = v_confirmed_at,
         updated_at = now()
        where id = r.id;
       v_n := v_n + 1;
@@ -969,8 +1045,21 @@ begin
     end if;
   end loop;
 
-  perform set_config('tower.import_ctx', '', true);
+  perform set_config('tower.dates_ctx', coalesce(v_prev_dates, ''), true);
+  perform set_config('tower.import_ctx', coalesce(v_prev_import, ''), true);
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-  raise notice '0262: przywrócono okno dla % transportów SG-01/02/T-01', v_n;
+  raise notice '0267: przywrócono okno dla % transportów SG-01/02/T-01', v_n;
+  return v_n;
+end
+$restore_fn$;
+
+revoke all on function public.hotfix_384_restore_windows() from public, anon, authenticated;
+
+comment on function public.hotfix_384_restore_windows() is
+  '#384 F7: jednorazowe / testowalne przywrócenie plan_load_to i plan_delivery_from SG-01/02/T-01 w STEGRA_BODEN (lub STEGRA).';
+
+do $restore$
+begin
+  perform public.hotfix_384_restore_windows();
 end
 $restore$;

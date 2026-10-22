@@ -339,8 +339,9 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return r.data == null ? null : String(r.data);
     },
     async listRioLoadsForPoll() {
+      // #442: bez shipment_code — kolumna jest w shipment_items, nie w loads (RioLoadRow.code nieużywane).
       const r = await sb.from('loads').select(
-        'id,shipment_code,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
+        'id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
       )
         .not('rio_tracking_id', 'is', null)
         .not('rio_secret', 'is', null)
@@ -348,7 +349,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`loads rio: ${r.error.message}`);
       return (r.data ?? []).map((row) => ({
         id: row.id as string,
-        code: (row.shipment_code as string | null) ?? null,
+        code: null as string | null,
         rio_tracking_id: String(row.rio_tracking_id),
         rio_secret: String(row.rio_secret),
         rio_check_state: (row.rio_check_state as string | null) ?? null,

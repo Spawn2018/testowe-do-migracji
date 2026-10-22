@@ -440,6 +440,44 @@ describe('E44 runRioLinks', () => {
     });
     expect(fetches).toBe(0);
     expect(res.observations?.flag).toBe('false');
+    expect(res.disabled).toBe(true); // #446: Stan systemu nie pokazuje „działa”
+    expect(res.observations?.disabled).toBe('true');
+  });
+
+  it('#446: resolveRisks RIO_UNKNOWN_ASSET tylko NIEZNANY → znany', async () => {
+    const resolved: string[] = [];
+    // Już znany — bez resolve przy każdym przebiegu.
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_tracker_on: 'NACZEPA',
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+      })], {
+        resolveRisks: async (prefix) => { resolved.push(prefix); return 0; },
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved.filter((p) => p.startsWith('RIO_UNKNOWN_ASSET:'))).toHaveLength(0);
+
+    const resolved2: string[] = [];
+    await runRioLinks({
+      store: store([baseLoad({
+        rio_tracker_on: 'NIEZNANY',
+        rio_check_state: 'ok',
+        rio_valid_from: SAMPLE.start,
+        rio_valid_to: SAMPLE.end,
+        trailer_plate: SAMPLE.asset_name,
+      })], {
+        resolveRisks: async (prefix) => { resolved2.push(prefix); return 0; },
+      }),
+      fetch: async () => new Response(JSON.stringify(SAMPLE), { status: 200 }),
+      env: {},
+      now: () => new Date('2026-10-09T03:30:00Z'),
+    });
+    expect(resolved2).toContain('RIO_UNKNOWN_ASSET:load-1');
   });
 
   it('F7 r3: bez UPDATE gdy tylko rio_check_at (+00 vs Z) i stan bez zmian', async () => {

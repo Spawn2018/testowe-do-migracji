@@ -336,6 +336,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const near = AIS.replace('17.850695, 57.980348', '18.70, 54.45').replace('"sog" : 17.1', '"sog" : 8');
     await runFerryAis(deps(st, { 'digitraffic.fi': near }, {}, new Date('2026-09-24T19:40:00Z')).d);
     expect(st.sailings.find((s) => s.vessel_id === NS)?.actual_departure_at).toBeTruthy();
+    expect(st.sailings.find((s) => s.vessel_id === NS)?.status).toBe('W_REJSIE'); // #446
     const st2 = new MemStore();
     st2.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z'));
     await runFerryAis(deps(st2, { 'digitraffic.fi': near }, {}, new Date('2026-09-24T20:00:00Z')).d);
@@ -353,6 +354,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const inGdn = AIS.replace('17.850695, 57.980348', '18.68130, 54.40372').replace('"sog" : 17.1', '"sog" : 0.2');
     await runFerryAis(deps(st2, { 'digitraffic.fi': inGdn }, {}, new Date('2026-09-24T19:40:00Z')).d);
     expect(st2.sailings.find((s) => s.route === 'NYN-GDN')?.actual_arrival_at).toBeTruthy();
+    expect(st2.sailings.find((s) => s.route === 'NYN-GDN')?.status).toBe('DOPLYNAL'); // #446
     expect(st2.runs.some((x) => x.job === 'ferry-departures')).toBe(true);
   });
   it('F7 r2: lastPortPosition sprzed dni → bez actual_departure; dopiero w oknie [plan−2h, teraz]', async () => {
@@ -370,6 +372,17 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     st2.vesselPositions.push({ vesselId: NS, lat: 54.53321, lon: 18.54425, observedAt: '2026-10-22T07:55:00.000Z' });
     await runFerryAis(deps(st2, { 'digitraffic.fi': far }, {}, new Date('2026-10-22T08:12:00Z')).d);
     expect(st2.sailings.find((s) => s.vessel_id === NS)?.actual_departure_at).toBe('2026-10-22T07:55:00.000Z');
+  });
+  it('#446: odrzucony lastPortPosition + bieżąca 3–10 km → actual_departure z fix', async () => {
+    const st = new MemStore();
+    st.sailings.push(sail(NS, '2026-10-22T08:00:00.000Z', '2026-10-22T20:00:00.000Z', 'GDY-KAA'));
+    // Stara w porcie (odrzucona oknem) + świeża ~5 km od GDY (pasmo zapasu).
+    st.vesselPositions.push({ vesselId: NS, lat: 54.53321, lon: 18.54425, observedAt: '2026-10-19T06:00:00.000Z' });
+    const mid = AIS.replace('17.850695, 57.980348', '18.62, 54.55').replace('"sog" : 17.1', '"sog" : 8')
+      .replace('1790278580817', String(Date.parse('2026-10-22T08:10:00.000Z')));
+    await runFerryAis(deps(st, { 'digitraffic.fi': mid }, {}, new Date('2026-10-22T08:12:00Z')).d);
+    expect(st.sailings.find((s) => s.vessel_id === NS)?.actual_departure_at).toBe('2026-10-22T08:10:00.000Z');
+    expect(st.sailings.find((s) => s.vessel_id === NS)?.status).toBe('W_REJSIE');
   });
   it('F7 r2: dopłynięcie starsze niż wypłynięcie / >15 min → bez actual_arrival', async () => {
     const st = new MemStore();
@@ -390,6 +403,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
       .replace('1790278580817', String(Date.parse('2026-09-24T19:35:00.000Z')));
     await runFerryAis(deps(st2, { 'digitraffic.fi': okArr }, {}, new Date('2026-09-24T19:40:00Z')).d);
     expect(st2.sailings.find((x) => x.route === 'KAA-GDY')?.actual_arrival_at).toBeTruthy();
+    expect(st2.sailings.find((x) => x.route === 'KAA-GDY')?.status).toBe('DOPLYNAL'); // #446
   });
   it('postój w porcie Nynäshamn → actual_arrival_at + INFO CC BY 4.0; sygnał >1 h → bez AIS_GAP', async () => {
     const st = new MemStore();

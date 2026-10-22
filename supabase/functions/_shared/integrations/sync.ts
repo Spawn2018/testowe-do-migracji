@@ -10,7 +10,7 @@ import type { FerryRoute, FerryStatus } from '../ferry/polferries.ts';
 
 export type SailingSource = 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES' | 'STENA';
 export type AutoSailingSource = 'POLFERRIES' | 'STENA';
-export type DbSailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
+export type DbSailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export const SOURCE_RANK: Record<SailingSource, number> = {
   DANE_STARTOWE: 1, POLFERRIES: 2, STENA: 2, RECZNIE: 3,
 };
@@ -96,7 +96,11 @@ export function planSailingSync(o: {
     if (cur.vessel_id !== vesselId) want.vessel_id = vesselId;
     if (iso(cur.arrival_at) !== iso(inc.arrivalUtc)) want.arrival_at = new Date(inc.arrivalUtc).toISOString();
     if (inc.status) {
-      want.status = status;
+      // #446: W_REJSIE/DOPLYNAL (albo actual_*) nie cofamy do ZAPLANOWANY z rozkładu; ODWOLANY wygrywa.
+      // ETA (compute_load_eta): po W_REJSIE „opóźniony” = delayed_departure_at (tu ustawiane z OPOZNIONY).
+      const inTrip = cur.status === 'W_REJSIE' || cur.status === 'DOPLYNAL'
+        || cur.actual_departure_at != null || cur.actual_arrival_at != null;
+      if (status === 'ODWOLANY' || !inTrip) want.status = status;
       want.delayed_departure_at = delayed.dep;
       want.delayed_arrival_at = delayed.arr;
     }
