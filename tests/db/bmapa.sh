@@ -22,6 +22,14 @@ val "anon nie czyta stanu mapy" "select has_function_privilege('anon','map_displ
 val "zalogowany czyta stan mapy" "select has_function_privilege('authenticated','map_display_state()','execute')::text" "true"
 val "anon nie bierze próbki promu" "select has_function_privilege('anon','ferry_track_sample()','execute')::text" "false"
 val "zalogowany bierze próbkę promu" "select has_function_privilege('authenticated','ferry_track_sample()','execute')::text" "true"
+# #460: wywołanie (nie tylko privilege) — 0258 miało 42702 ambiguous vessel_id w CTE u
+HHL_BM=11111111-0000-0000-0000-000000000001
+V460=55555555-0000-0000-0000-00000000460a
+sys "insert into vessels (id, name, operator, mmsi) values ('$V460','M/F Test 460','Polferries',999460001) on conflict (id) do update set name=excluded.name, mmsi=excluded.mmsi" >/dev/null
+sys "delete from vessel_positions where vessel_id='$V460'" >/dev/null
+sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source) values ('$V460', 54.4, 18.7, 12, 10, now(), 'AIS')" >/dev/null
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM'; select count(*) from ferry_track_sample(); commit;" | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" -ge 1 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    ferry_track_sample() authenticated ≥ 1 (#460)"; else fail=$((fail+1)); echo "  FAIL  ferry_track_sample() → $o (oczekiwano ≥ 1)"; fi
 # #421/#429: ferry_sailings_map — departed_at/arrived_at + porty + AIS bez filtra świeżości
 val "anon nie czyta ferry_sailings_map" "select has_function_privilege('anon','ferry_sailings_map()','execute')::text" "false"
 val "zalogowany czyta ferry_sailings_map" "select has_function_privilege('authenticated','ferry_sailings_map()','execute')::text" "true"

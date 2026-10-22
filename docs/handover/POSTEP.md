@@ -4231,3 +4231,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Skrzynka: #455/#446/#425 (Spawn2018) ‚Äî ju≈º w planie; bez nowych. `pilne` #413/#422/#425 w kolejce po #409.
 - Scalanie: brak F7 ‚Äûgotowe do scalenia‚Äù po ostatnim commicie. Bez push na main.
 - Bie≈ºƒÖca: **#455** PR #457 ‚Äî `db` czerwone: UNIQUE(project_id, shipment_code) blokowa≈Ç 4. SG-01; stra≈ºnik przez si z innym project_id. EXPECTED import 113, dec2 73.
+
+## 2026-10-22 20:50 ó #460 pilne: ferry_track_sample 42702; #408 SCALONE; #409 wstrzymane
+
+- Skrzynka: #460/#461 (Spawn2018, `dla-cursora`+`pilne`) ó promy z mapy (ambiguous vessel_id) + Prom dopiero przy actual_departure_at. Wpisane: PLAN ß4/ß8, dopiski `D-20261022-2043-01.md` / `D-20261022-2045-01.md`. #409õ**0270**, #413õ**0271**, #422õ**0272**, B5õ**0273**.
+- Scalanie: #408 F7 Ñgotowe do scaleniaî + CI unit/visual zielone õ MERGED `00611f7e`. #458 (#409) db FAIL (security: fuel_basis_public bez search_path) ó wstrzymane przez #460. Bez push na `main`.
+- Bieøπca: **#460** (`pakiet/hotfix-460-ferry-track-sample`, migracja **0268**) ó aliasy w CTE `u`; bmapa +1 õ 36.
