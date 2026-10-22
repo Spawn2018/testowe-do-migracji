@@ -4010,3 +4010,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych. F7 na `d2cfb32` (przed poprawką): format `true`, enqueue 2×, pull 2 z F7 ZONE/TEST (nie „spoza listy”), prawdziwy numer w teście.
 - Scalanie: #424 `db`/`unit`/`visual` zielone na `74632573`. Czeka na ponowne F7. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** — pilot w i2: `+48000000001` (bez numeru właściciela).
+
+## 2026-10-22 02:55 — #405 F7 runda 3 (R-2 TEST stref)
+
+- Skrzynka: F7 na `7463257`: jeszcze nie — (1) numer fikcyjny `+48600999888`, (2) TEST na `sms_zone_recipients` tylko przy EXTERNAL on + `admin_sms_zone_test` wyjątek R-2, (3) pull 2 z kontrolą rodzaju. Archiwum TELM: numer → „[numer właściciela]”.
+- Scalanie: #424 CI zielone na `649ad51e` (tylko numer); bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — 0257 + i2 634; czeka CI i F7.

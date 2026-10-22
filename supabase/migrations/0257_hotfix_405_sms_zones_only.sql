@@ -1,6 +1,7 @@
 -- HOTFIX #405 / D-20261021-2014-01: SMS tylko do osób na załadunku i rozładunku
 -- (ZONE_* → sms_zone_recipients) oraz TEST → sms_test_numbers / lista stref.
--- F7: TEST także na aktywne sms_zone_recipients; pilot redirect tylko dla ZONE_* (R-2).
+-- F7: TEST na sms_test_numbers zawsze; TEST na sms_zone_recipients tylko przy EXTERNAL_MESSAGING;
+--      pilot redirect tylko dla ZONE_* (R-2).
 -- Po 0256 (#411), przed #421 (0258) / #400 (0260).
 
 -- ---------------------------------------------------------------------------
@@ -12,9 +13,10 @@ create or replace function public.sms_enqueue(
 ) returns uuid language plpgsql security definer set search_path = public as $$
 declare
   v_id uuid; v_loc char(2); v_full text; v_to text; v_ok boolean := false;
-  v_redir record; v_pilot boolean := false;
+  v_redir record; v_pilot boolean := false; v_ext boolean;
 begin
   v_to := p_to;
+  v_ext := external_messaging_enabled();
 
   -- F7 B2: przekierowanie pilota wyłącznie dla ZONE_* (E42 / R-2)
   if p_kind in ('ZONE_APPROACH', 'ZONE_ENTER') and p_load is not null then
@@ -28,12 +30,15 @@ begin
   if (v_to ~ '^\+[1-9][0-9]{7,14}$') is not true then return null; end if;
 
   if p_kind = 'TEST' then
-    -- F7 B1: test listy stref (admin_sms_zone_test) + numery testowe
+    -- sms_test_numbers zawsze; lista stref = osoby zewnętrzne → tylko przy EXTERNAL_MESSAGING (R-2)
     v_ok := exists (select 1 from sms_test_numbers t where t.to_e164 = v_to)
-         or exists (
-              select 1 from sms_zone_recipients r
-               where r.active is true
-                 and sms_zone_e164(r.phone_national, r.country) = v_to
+         or (
+              v_ext
+              and exists (
+                select 1 from sms_zone_recipients r
+                 where r.active is true
+                   and sms_zone_e164(r.phone_national, r.country) = v_to
+              )
             );
   elsif p_kind in ('ZONE_APPROACH', 'ZONE_ENTER') then
     v_ok := v_pilot
@@ -65,7 +70,7 @@ end $$;
 revoke all on function public.sms_enqueue(text, uuid, text, text, jsonb, int, text, boolean) from public, anon, authenticated;
 
 comment on function public.sms_enqueue(text, uuid, text, text, jsonb, int, text, boolean) is
-  '#405: ZONE_*/TEST; TEST→sms_test_numbers|sms_zone_recipients; ZONE_*→lista lub pilot (R-2).';
+  '#405: ZONE_*/TEST; TEST→sms_test_numbers (zawsze) | sms_zone_recipients (tylko EXTERNAL on); ZONE_*→lista lub pilot (R-2).';
 
 -- ---------------------------------------------------------------------------
 -- 2. sms_pull — tylko ZONE_*/TEST; pilot phone OK dla ZONE_*; reszta → EXPIRED
@@ -93,10 +98,13 @@ begin
        or (
          o.kind = 'TEST'
          and not exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
-         and not exists (
-           select 1 from sms_zone_recipients r
-            where r.active is true
-              and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         and (
+           v_ext is not true
+           or not exists (
+             select 1 from sms_zone_recipients r
+              where r.active is true
+                and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+           )
          )
        )
        or (
@@ -136,10 +144,13 @@ begin
            o.kind = 'TEST'
            and (
              exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
-             or exists (
-               select 1 from sms_zone_recipients r
-                where r.active is true
-                  and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+             or (
+               v_ext
+               and exists (
+                 select 1 from sms_zone_recipients r
+                  where r.active is true
+                    and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+               )
              )
            )
          )
@@ -318,11 +329,43 @@ comment on function public.pilot_redirect_dry_run(uuid) is
   '#405 F7: dry-run ZONE_* → numer pilota; wynik oznaczony EXPIRED (bez wysyłki).';
 
 -- ---------------------------------------------------------------------------
--- 7. Sprzątanie jednorazowe: kolejka spoza ZONE/TEST → EXPIRED
+-- 7. admin_sms_zone_test — R-2: bez EXTERNAL_MESSAGING czytelny komunikat
+-- ---------------------------------------------------------------------------
+create or replace function public.admin_sms_zone_test(p_list text) returns int
+language plpgsql security definer set search_path = public as $$
+declare r record; n int := 0; v_to text; v_id uuid;
+begin
+  if (current_app_role() = 'HHL_ADMIN') is not true then
+    raise exception 'Tylko administrator HHL' using errcode = '42501';
+  end if;
+  if (p_list in ('LOAD_SREM', 'UNLOAD_BODEN')) is not true then
+    raise exception 'Lista niepoprawna' using errcode = '22023';
+  end if;
+  if external_messaging_enabled() is not true then
+    raise exception 'wysyłka zewnętrzna wyłączona — R-2' using errcode = 'P0001';
+  end if;
+  for r in select * from sms_zone_recipients where list_key = p_list and active is true order by slot loop
+    v_to := sms_zone_e164(r.phone_national, r.country);
+    if v_to is null then continue; end if;
+    v_id := sms_enqueue('TEST', null, v_to, case when r.country = 'SE' then 'sv' else 'pl' end, '{}'::jsonb, 100,
+                        'ZONE_TEST:' || p_list || ':' || r.slot::text || ':' || to_char(now(), 'YYYYMMDDHH24MI'), false);
+    if v_id is not null then n := n + 1; end if;
+  end loop;
+  return n;
+end $$;
+revoke all on function public.admin_sms_zone_test(text) from public, anon;
+grant execute on function public.admin_sms_zone_test(text) to authenticated;
+
+comment on function public.admin_sms_zone_test(text) is
+  '#405 F7: TEST listy stref tylko przy EXTERNAL_MESSAGING; inaczej wyjątek R-2.';
+
+-- ---------------------------------------------------------------------------
+-- 8. Sprzątanie jednorazowe: kolejka spoza ZONE/TEST → EXPIRED
 -- ---------------------------------------------------------------------------
 do $$
 declare
   n int;
+  v_ext boolean := external_messaging_enabled();
 begin
   update sms_outbox o
      set status = 'EXPIRED',
@@ -333,10 +376,13 @@ begin
        or (
          o.kind = 'TEST'
          and not exists (select 1 from sms_test_numbers t where t.to_e164 = o.to_e164)
-         and not exists (
-           select 1 from sms_zone_recipients r
-            where r.active is true
-              and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+         and (
+           v_ext is not true
+           or not exists (
+             select 1 from sms_zone_recipients r
+              where r.active is true
+                and sms_zone_e164(r.phone_national, r.country) = o.to_e164
+           )
          )
        )
        or (

@@ -647,25 +647,26 @@ err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+4860000000
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
 chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"
-# F7 #424 B1/B2: TEST na listę stref; pilot tylko dla ZONE_* przy EXTERNAL_MESSAGING=false
-# ::text na boolean → true/false (nie t/f); sms_enqueue w WHERE może być wołane 2× (dedup→null) — osobny SELECT.
+# F7 #424: TEST stref tylko przy EXTERNAL on (R-2); pilot tylko ZONE_*; numer fikcyjny.
+# ::text boolean → true/false; sms_enqueue poza WHERE (dedup 2×).
 $PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
   values ('LOAD_SREM', 1, 'F7 strefa', '600111222', 'PL', true)
   on conflict (list_key, slot) do update
     set display_name=excluded.display_name, phone_national=excluded.phone_national,
         country=excluded.country, active=true" >/dev/null
-chk "F7 B1: TEST na numer z sms_zone_recipients" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test', false) is not null)::text")" true
+chk "F7 B1: TEST na sms_zone_recipients przy EXTERNAL off → null" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test-off', false) is null)::text")" true
+err "F7 B1: admin_sms_zone_test przy EXTERNAL off → R-2" $HHL "select admin_sms_zone_test('LOAD_SREM')" "wysyłka zewnętrzna wyłączona|R-2"
 $PSQL -c "insert into pilot_notify_redirect (load_id, owner_email, owner_phone_e164, active, note)
-  values ('$SL', 'pilot-f7@test', '+48000000001', true, 'i3 f7 #405')
+  values ('$SL', 'pilot-f7@test', '+48600999888', true, 'i3 f7 #405')
   on conflict (load_id) do update
     set owner_email=excluded.owner_email, owner_phone_e164=excluded.owner_phone_e164,
         active=true, note=excluded.note, updated_at=now()" >/dev/null
 F7Z=$(Q "select sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")
-chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48000000001"
+chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48600999888"
 chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" true
 chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
-# F7 zostawiło ZONE/TEST w kolejce — przed sprawdzeniem „0 spoza listy” czyścimy (inaczej pull przy EXTERNAL on > 0)
-$PSQL -c "delete from sms_outbox where dedup_key in ('i3-f7-zone-test','i3-f7-zone-pilot') or id='$F7Z'" >/dev/null
+# 1× ZONE (F7Z) + 1× TEST (lista testowa) — zostają do pull po włączeniu EXTERNAL
+$PSQL -c "insert into sms_test_numbers (to_e164, label) values ('+48600000002','i3 f7 pull') on conflict do nothing; select sms_enqueue('TEST', null, '+48600000002', 'pl', '{}'::jsonb, 100, 'i3-f7-test-pull', false)" >/dev/null
 chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
@@ -675,7 +676,9 @@ chk "0133: e-mail do aktywnego zaproszenia: PENDING" "$(Q "insert into notificat
 chk "centrum powiadomień (IN_APP) bez zmian" "$(Q "insert into notifications (channel, recipient, template) values ('IN_APP','dispo@scx.example','TEST') returning status")" PENDING
 err "KSH: włączenie wiadomości zewnętrznych odrzucone" $KSH "select admin_set_external_messaging(true)" "wyłącznie administrator HHL"
 val "HHL_ADMIN: włączenie (po R-2) z wpisem w dzienniku" $HHL "select admin_set_external_messaging(true)::text" true commit
-chk "po włączeniu: e-mail zewnętrzny PENDING; spoza ZONE/TEST nie wychodzi" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/0/1"
+chk "F7 B1: TEST na sms_zone_recipients przy EXTERNAL on" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test-on', false) is not null)::text")" true
+$PSQL -c "delete from sms_outbox where dedup_key='i3-f7-zone-test-on'" >/dev/null
+chk "po włączeniu: e-mail PENDING; pull 2 (ZONE+TEST) z kontrolą rodzaju" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) filter (where kind='ZONE_ENTER' and status='CLAIMED') from sms_outbox where dedup_key='i3-f7-zone-pilot'")/$(Q "select count(*) filter (where kind='TEST' and status='CLAIMED') from sms_outbox where dedup_key='i3-f7-test-pull'")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/2/1/1/1"
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl','invitee@example.com') or recipient in (select email::text from app_users where email='hhl@test'); delete from user_invites where email='invitee@example.com'; delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from pilot_notify_redirect where load_id='$SL'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=1; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
 chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 

@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 72, // #384 F7: +6 hist quiet/zmiana istniejącego (daty od current_date)
   nullguard: 695, // #411: +mark_notification_read_any (CI 695); było 690
-  i2: 632, // #405 F7: +4 TEST strefy + pilot ZONE + DRIVER/WINDOW null
+  i2: 634, // #405 F7: R-2 TEST stref (off/on) + admin_sms_zone_test + pilot + pull 2 kinds
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 64, // #384 F7 #389: +14; F7-2: +2 LATE D+2 / timestamp (+ od/do bez ::text, by=KSH, carrier notify)
