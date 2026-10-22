@@ -4179,3 +4179,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #449 F7 „niegotowe” (B1: 0270 przed nienałożonymi 0265–0269) → poprawka w tym samym PR. CI unit/db/visual zielone na `a6df26e7`. Bez push na `main`.
 - Bieżąca: **#446 pkt 2 F7** — `git mv` **0270→0265** `hotfix_446_bell_index.sql`; #384→**0266**, #409→**0267**, #413→**0268**, #422→**0269**, B5→**0270**. Czekam na ponowne F7.
 
+## 2026-10-22 15:55 - #449 SCALONE; #446 pkt 3–4 (0266)
+
+- Skrzynka: #446 bieżąca (Spawn2018); #425/`pilne` + #422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #449 F7 „gotowe do scalenia” po `c81d17ab` + CI zielone (unit/db/visual) → MERGED `b7b049be`. Bez push na `main`.
+- Bieżąca: **#446 pkt 3–4** — migracja **0266** `tower_cron_ferry_schedule_invoke` (`to_regclass('vault.decrypted_secrets')`); Edge: odrzucony `lastPortPosition` → zapas tylko 3–10 km; RIO `RIO_UNKNOWN_ASSET` tylko NIEZNANY→znany; `TELM_RIO_LINKS=off` → `result.disabled=true`. #384→**0267** … B5→**0271**. Testy unit integrations+rio-links 70/70.
+

@@ -253,6 +253,8 @@ export interface JobResult {
   warnings?: string[]; observations?: Record<string, string>;
   /** #421: liczba rejsów z ustawionym delayed_departure/arrival z AIS. */
   departures?: number;
+  /** #446: flaga wyłączona — Stan systemu nie pokazuje „działa” (front: result.disabled). */
+  disabled?: boolean;
 }
 
 async function readText(deps: JobDeps, url: string, init?: RequestInit): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
@@ -686,19 +688,22 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
         const depHub = portCoords(depPort);
         const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
         const moving = (fix.sogKn ?? 0) >= 3;
-        let depAt: string | null = null;
-        if (moving && dist > 3) {
-          // F7 r2 drobne: w pasmie 3–10 km najpierw ostatnia pozycja w porcie, potem bieżąca.
-          if (deps.store.lastPortPosition) {
-            depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
-          }
-          if (depAt == null && dist <= 10) depAt = fix.timestampUtc;
-        }
         const prevArr = sailings
           .filter((x) => x.vessel_id === s.vessel_id && x.id !== s.id && x.actual_arrival_at)
           .map((x) => x.actual_arrival_at!)
           .sort()
           .at(-1) ?? null;
+        let depAt: string | null = null;
+        if (moving && dist > 3) {
+          // F7 r2: najpierw ostatnia pozycja w porcie; #446: odrzucona (null / poza oknem) → zapas tylko 3–10 km.
+          if (deps.store.lastPortPosition) {
+            depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
+          }
+          if (depAt != null && !acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
+            depAt = null;
+          }
+          if (depAt == null && dist <= 10) depAt = fix.timestampUtc;
+        }
         if (depAt && acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
           // #446: status W_REJSIE przy actual_departure_at (ODWOLANY bez zmian — updateSailing / trigger).
           const ok = await deps.store.updateSailing(s.id, {
@@ -1536,8 +1541,9 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
   if (!enabled) {
     return {
       job: 'rio-links', mode: 'LIVE', ok: true,
+      disabled: true,
       reason: 'Flaga TELM_RIO_LINKS wyłączona — bez zapisu pozycji',
-      observations: { flag: 'false', links: '0' },
+      observations: { flag: 'false', links: '0', disabled: 'true' },
     };
   }
 
@@ -1679,6 +1685,7 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
         continue;
       }
 
+      const wasUnknownAsset = load.rio_tracker_on === 'NIEZNANY';
       const trackerOn = inferRioTrackerOn(res.assetName, {
         trailer: load.trailer_plate,
         tractorPl: load.tractor_plate,
@@ -1731,8 +1738,8 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
           sourceUrl: rioPositionUrlSafe(load.rio_tracking_id),
           loadId: load.id,
         })) risks++;
-      } else {
-        // Po poprawieniu rejestracji zamykaj sprawę nieznanego pojazdu.
+      } else if (wasUnknownAsset && trackerOn !== 'NIEZNANY') {
+        // #446: resolveRisks RIO_UNKNOWN_ASSET tylko NIEZNANY → znany (nie przy każdym przebiegu).
         await deps.store.resolveRisks(`RIO_UNKNOWN_ASSET:${load.id}`);
       }
 
