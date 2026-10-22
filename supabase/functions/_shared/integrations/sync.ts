@@ -18,14 +18,17 @@ export const SOURCE_RANK: Record<SailingSource, number> = {
 export interface VesselRow { id: string; name: string; mmsi: number | null; imo?: number | null }
 export interface DbSailing {
   id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
-  delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: SailingSource;
+  delayed_departure_at: string | null; delayed_arrival_at: string | null;
+  /** #421 F7: rzeczywiste wypłynięcie/dopłynięcie z AIS — ferry-status nie nadpisuje. */
+  actual_departure_at?: string | null; actual_arrival_at?: string | null;
+  status: DbSailingStatus; source: SailingSource;
 }
 export interface IncomingSailing {
   route: FerryRoute; vessel: string; departureUtc: string; arrivalUtc: string;
   /** tylko odczyt komunikatów (ferry-status); rozkład (ferry-schedule) nie zmienia statusu */
   status?: FerryStatus; expectedDepartureUtc?: string; expectedArrivalUtc?: string;
 }
-export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'status' | 'source'>>;
+export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source'>>;
 export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;

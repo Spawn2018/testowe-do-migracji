@@ -8,7 +8,7 @@ import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } fro
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
-const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source';
+const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source';
 
 export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncStore {
   let pid: string | null = null;
@@ -31,8 +31,29 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       must(await sb.from('sailings').upsert(rows, { onConflict: 'vessel_id,departure_at', ignoreDuplicates: true }), 'sailings insert');
     },
     async updateSailing(id: string, patch: SailingPatch) {
-      const r = must(await sb.from('sailings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).neq('source', 'RECZNIE').select('id'), 'sailings update') as unknown[];
-      return r.length > 0;
+      // F7 #421 r2: RECZNIE chroni delayed_*/status/plan; actual_* z AIS wolno dopisać także po ręcznej edycji.
+      const { actual_departure_at, actual_arrival_at, ...rest } = patch;
+      const at = new Date().toISOString();
+      const restKeys = Object.keys(rest) as (keyof typeof rest)[];
+      let wrote = false;
+      if (restKeys.length) {
+        const r = must(
+          await sb.from('sailings').update({ ...rest, updated_at: at }).eq('id', id).neq('source', 'RECZNIE').select('id'),
+          'sailings update',
+        ) as unknown[];
+        wrote = r.length > 0;
+      }
+      const actual: Record<string, string | null> = {};
+      if (actual_departure_at !== undefined) actual.actual_departure_at = actual_departure_at;
+      if (actual_arrival_at !== undefined) actual.actual_arrival_at = actual_arrival_at;
+      if (Object.keys(actual).length) {
+        const r = must(
+          await sb.from('sailings').update({ ...actual, updated_at: at }).eq('id', id).select('id'),
+          'sailings update actual',
+        ) as unknown[];
+        wrote = wrote || r.length > 0;
+      }
+      return wrote;
     },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
@@ -73,6 +94,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const best = new Map<string, string>();
       for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
+    },
+    async lastPortPosition(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number) {
+      // Przybliżenie haversine w SQL: 1° szer. ≈ 111 km; długość × cos(lat).
+      const dLat = radiusKm / 111;
+      const dLon = radiusKm / (111 * Math.max(0.2, Math.cos((hub.lat * Math.PI) / 180)));
+      const rows = must(await sb.from('vessel_positions')
+        .select('observed_at,lat,lon')
+        .eq('vessel_id', vesselId)
+        .gte('lat', hub.lat - dLat).lte('lat', hub.lat + dLat)
+        .gte('lon', hub.lon - dLon).lte('lon', hub.lon + dLon)
+        .order('observed_at', { ascending: false }).limit(20), 'vessel_positions port') as { observed_at: string; lat: number; lon: number }[];
+      const R = 6371, rad = Math.PI / 180;
+      for (const r of rows) {
+        const dLatR = (r.lat - hub.lat) * rad, dLonR = (r.lon - hub.lon) * rad;
+        const h = Math.sin(dLatR / 2) ** 2 + Math.cos(hub.lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLonR / 2) ** 2;
+        if (2 * R * Math.asin(Math.sqrt(h)) <= radiusKm) return new Date(r.observed_at).toISOString();
+      }
+      return null;
     },
     async latestAisstreamFixes(sinceIso: string) {
       const rows = must(await sb.from('vessel_positions')

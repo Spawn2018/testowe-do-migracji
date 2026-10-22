@@ -4016,3 +4016,27 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: F7 na `7463257`: jeszcze nie — (1) numer fikcyjny `+48600999888`, (2) TEST na `sms_zone_recipients` tylko przy EXTERNAL on + `admin_sms_zone_test` wyjątek R-2, (3) pull 2 z kontrolą rodzaju. Archiwum TELM: numer → „[numer właściciela]”.
 - Scalanie: #424 CI zielone na `649ad51e` (tylko numer); bez „gotowe”. Bez push na `main`.
 - Bieżąca: **HOTFIX #405** — 0257 + i2 634; czeka CI i F7.
+
+## 2026-10-22 03:20 — #405+#427+#428 SCALONE; start #421
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405 zamknięte; #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie.
+- Scalanie: #427 F7 gotowe (`ff3bde3`) → merge `e0edff5c`; #428 F7 gotowe (`07f478c`) → merge `0712b8f3`; #424 F7 gotowe (`feee9d1`) → merge `87104ff1` (0257). Bez push na `main`.
+- Bieżąca: **HOTFIX #421** (`pakiet/hotfix-421-ferry-ais`, migracja **0258**) — AIS Nova Star/Stena, rozkład codzienny, wypłynięcia/dopłynięcia, bez AIS_GAP.
+
+## 2026-10-22 03:50 — #421 RPC mapy + ponowienie deploy-main (#424)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421/#425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #429 decyzja A+C.
+- Scalanie: #430 CI zielone (unit/db/visual) na `2f4b680e` — bez F7. deploy-main po #424 padł na połączeniu pooler → ponowienie `39707535827`. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — `ferry_sailings_map()` (departed_at/arrived_at, porty, AIS bez filtra wieku), dopłynięcie GDN/GDY, zawsze `ferry-departures`.
+
+## 2026-10-22 04:20 — #421 F7: actual_*, wiek, timeout, liczniki
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian.
+- Scalanie: #430 — F7 „jeszcze nie” (blokery 1–7); CI `db` padło na licznikach (nullguard 700, bmapa 35). #408/#383/#382 bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** PR #430 — F7: `actual_departure_at`/`actual_arrival_at`; wypłynięcie wiek≤15 + 3–10 km; dopłynięcie tylko port docelowy; cron timeout 120 s + jednorazowy `ferry-schedule`; rozkład po statusie max co 60 min; `ferry_track_sample` bez limitu 48 h dla rejsu w drodze; Stena 403/429 backoff; gate nullguard 700 / bmapa 35.
+
+## 2026-10-22 04:55 — #421 F7 runda 2
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian (#421 W TOKU).
+- Scalanie: #430 CI zielone na `60ce13ed` (unit/db/visual); F7 r2 „jeszcze nie” (bloker okno lastPortPosition + track_sample obciążenie). #431 wygląd bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — F7 r2: `acceptActualDepartureAt` [plan−2h, teraz] + po prev `actual_arrival`; dopłynięcie wiek≤15 i po dep; `ferry_track_sample` = 48 h ∪ 1 latest active; jednorazowy rozkład tylko gdy Vault ma sekrety; `actual_*` mimo RECZNIE; etykieta KAA-GDY → KAA. unit integrations 42/42.
