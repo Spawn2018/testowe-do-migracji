@@ -4117,3 +4117,9 @@ Suma od razu: 175 / 7 d√≥b = 25,0 na dobƒô. Szacunek szczytu po skr√≥cie: 34. Ma
 - Skrzynka: bez nowych `pilne` poza #442/#441/#425/#422/#413.
 - Scalanie: brak ‚ÄûF7: gotowe‚Äù po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
 - Bie≈ºƒÖca: **#442** ‚Äî test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.
+
+## 2026-10-22 12:50 ó #445 pilne: A10_b FERRY tylko po odejúciu rejsu
+
+- Skrzynka: #445 (pilne) + #446 (Spawn2018) õ PLAN ß4/ß8 + dopisek D-20261022-1235-01. #441/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #444 F7 Ñgotoweî po 125d175a; CI visual czÍúci jeszcze w toku ó bez merge. Bez push na `main`.
+- Bieøπca: **#445** ó migracja **0262** (10_try_ferry_backup + korekta SG-17 bulk_quiet); testy status +4 (166); #384õ0263 Ö B5õ0267. Ga≥πü `pakiet/hotfix-445-a10-ferry`. #441 PR #444 czeka na koniec visual.
