@@ -1,22 +1,28 @@
 -- HOTFIX #426 / D-20261022-0138-01: import_schedule(p_quiet) — HHL_ADMIN, tower.bulk_quiet.
--- trg_sms_load_changes respektuje bulk_quiet (także #384 zaległe pkt SMS).
+-- F7: SMS z 0111+quiet; 0 decyzji L1b; l3_ksh_lead×quiet; wf_enqueue_event×quiet.
 -- Migracja 0259.
+-- Uwaga: l3_scan (cron) może później otworzyć NO_AWIZ / NO_TRACKING ze stanu danych — dopuszczalne.
 
--- 1) SMS: bez enqueue przy tower.bulk_quiet
+-- 1) SMS: treść z 0111 (TEL-1 e164) + wyjście przy tower.bulk_quiet
 CREATE OR REPLACE FUNCTION public.trg_sms_load_changes() RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $sms$
-declare s record; v_nr text;
+declare
+  s record;
+  v_nr text;
+  v_to text;
 begin
   if current_setting('tower.bulk_quiet', true) = 'on' then
     return new;
   end if;
   if (new.driver_phone is not null and sms_has_driver_link(new.id)) is not true then return new; end if;
+  v_to := driver_phone_e164(new.driver_phone, new.driver_phone_country);
+  if (v_to is not null) is not true then return new; end if;
   v_nr := coalesce(new.order_no, '—');
   if new.status = 'CANCELLED' and old.status is distinct from 'CANCELLED' then
-    perform sms_enqueue('LOAD_CANCELLED', new.id, new.driver_phone, new.driver_locale, jsonb_build_object('nr', v_nr),
+    perform sms_enqueue('LOAD_CANCELLED', new.id, v_to, new.driver_locale, jsonb_build_object('nr', v_nr),
                         100, 'LOAD_CANCELLED:' || new.id);
     return new;
   end if;
@@ -25,21 +31,21 @@ begin
      and (abs(extract(epoch from (new.plan_load_from - coalesce(old.plan_load_from, new.plan_load_from)))) >= 1800
           or abs(extract(epoch from (new.plan_load_to - coalesce(old.plan_load_to, new.plan_load_to)))) >= 1800)
      and new.status in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY') then
-    perform sms_enqueue('WINDOW_CHANGE', new.id, new.driver_phone, new.driver_locale,
+    perform sms_enqueue('WINDOW_CHANGE', new.id, v_to, new.driver_locale,
       jsonb_build_object('nr', v_nr, 'okno', 'LOAD', 'dt', sms_fmt_dt(new.plan_load_from), 't2', to_char(new.plan_load_to at time zone 'Europe/Warsaw', 'HH24:MI')),
       100, 'WINDOW_CHANGE:LOAD:' || new.id || ':' || new.plan_load_from || ':' || new.plan_load_to);
   end if;
   if new.plan_delivery_from is not null and new.plan_delivery_to is not null
      and (abs(extract(epoch from (new.plan_delivery_from - coalesce(old.plan_delivery_from, new.plan_delivery_from)))) >= 1800
           or abs(extract(epoch from (new.plan_delivery_to - coalesce(old.plan_delivery_to, new.plan_delivery_to)))) >= 1800) then
-    perform sms_enqueue('WINDOW_CHANGE', new.id, new.driver_phone, new.driver_locale,
+    perform sms_enqueue('WINDOW_CHANGE', new.id, v_to, new.driver_locale,
       jsonb_build_object('nr', v_nr, 'okno', 'DELIVERY', 'dt', sms_fmt_dt(new.plan_delivery_from), 't2', to_char(new.plan_delivery_to at time zone 'Europe/Warsaw', 'HH24:MI')),
       100, 'WINDOW_CHANGE:DELIVERY:' || new.id || ':' || new.plan_delivery_from || ':' || new.plan_delivery_to);
   end if;
   if new.sailing_id is distinct from old.sailing_id and new.sailing_id is not null then
     select v.name as statek, coalesce(sa.delayed_departure_at, sa.departure_at) as dep into s
       from sailings sa left join vessels v on v.id = sa.vessel_id where sa.id = new.sailing_id;
-    perform sms_enqueue('SAILING_CHANGE', new.id, new.driver_phone, new.driver_locale,
+    perform sms_enqueue('SAILING_CHANGE', new.id, v_to, new.driver_locale,
       jsonb_build_object('nr', v_nr, 'statek', coalesce(s.statek, '—'), 'dt', coalesce(sms_fmt_dt(s.dep), '—'), 'ref', coalesce(new.ferry_booking_ref, '—')),
       100, 'SAILING_CHANGE:' || new.id || ':' || new.sailing_id || ':' || coalesce(s.dep::text, ''));
   end if;
@@ -49,7 +55,87 @@ $sms$;
 
 REVOKE ALL ON FUNCTION public.trg_sms_load_changes() FROM public, anon, authenticated;
 
--- 2) import_schedule: nowy parametr p_quiet (stara sygnatura 5-arg → DROP)
+-- 2) LATE_DATE_CHANGE / ryzyka z insertu — bez zapisu przy tower.bulk_quiet (F7 #3)
+CREATE OR REPLACE FUNCTION public.l3_ksh_lead(p_load loads, p_old_date date, p_old_from timestamptz, p_now timestamptz default now())
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+declare
+  v_new timestamptz;
+  v_days int;
+  v_n int;
+  v_code text;
+begin
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return;
+  end if;
+  v_new := l3_anchor(p_load.plan_load_date, p_load.plan_load_from);
+  if v_new is null or v_new <= p_now then
+    return;
+  end if;
+  if l3_lead_alarm(v_new, p_now) is not true then
+    return;
+  end if;
+  if p_load.status not in ('PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY') then
+    return;
+  end if;
+  v_n := l3_ops('LEAD_DAYS')::int;
+  v_days := (v_new at time zone 'Europe/Warsaw')::date - (p_now at time zone 'Europe/Warsaw')::date;
+  if v_days >= v_n then
+    return;
+  end if;
+  v_code := public.load_sms_code(p_load.id);
+  insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values (
+    p_load.project_id, p_load.id, 'LATE_DATE_CHANGE',
+    (case when v_days <= 2 then 'HIGH' else 'MEDIUM' end)::risk_severity,
+    public.l3_headed(v_code, 'późna zmiana daty — załadunek ' || coalesce(to_char(p_load.plan_load_date, 'DD.MM.YYYY'), to_char(v_new at time zone 'Europe/Warsaw', 'DD.MM.YYYY HH24:MI'))),
+    'rk_late_date_change',
+    jsonb_build_object(
+      'params', jsonb_build_object('code', v_code, 'date', to_char(p_load.plan_load_date, 'DD.MM.YYYY'), 'days', v_n,
+                                   'before', to_char(p_old_date, 'DD.MM.YYYY'),
+                                   'after', to_char(p_load.plan_load_date, 'DD.MM.YYYY')),
+      'text', 'Zmiana daty w pliku KSH, do wcześniejszej daty załadunku zostało mniej niż ' || v_n || ' dni',
+      'text_key', 'rk_late_date_change_text',
+      'next_action_key', 'rk_late_date_change_next',
+      'next_action', 'Przewoźnik: sprawdź awizację i zasoby; HHL: potwierdź z KSH'),
+    'late_date:' || p_load.id || ':' || coalesce(p_load.plan_load_date::text, '') || ':' || coalesce(p_load.plan_delivery_date::text, ''),
+    p_now)
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing;
+end $$;
+REVOKE ALL ON FUNCTION public.l3_ksh_lead(loads, date, timestamptz, timestamptz) FROM public, anon, authenticated;
+
+-- 3) workflow z load_events — bez kolejki przy tower.bulk_quiet (F7 #4; jak wf_enqueue_status)
+CREATE OR REPLACE FUNCTION public.wf_enqueue_event() RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+begin
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return null;
+  end if;
+  if (coalesce(new.payload->>'korekta', '') = 'true') is true then
+    return null;
+  end if;
+  insert into workflow_runs (workflow_id, load_id, event_id, status, attempts, next_attempt_at, dedup_key, payload)
+  select w.id, new.load_id, new.id, 'QUEUED', 0, now(), 'wf:' || w.id || ':ev:' || new.id,
+         jsonb_build_object('event_type', new.event_type, 'occurred_at', new.occurred_at, 'payload', new.payload)
+    from workflows w join loads l on l.id = new.load_id
+   where w.enabled and w.trigger_type = new.event_type and w.project_id = l.project_id
+  on conflict (dedup_key) where dedup_key is not null do nothing;
+  return null;
+exception when others then
+  raise warning 'wf_enqueue_event: %', sqlerrm;
+  return null;
+end $$;
+REVOKE ALL ON FUNCTION public.wf_enqueue_event() FROM public, anon, authenticated;
+COMMENT ON FUNCTION public.wf_enqueue_event() IS
+  'D-0005 P1 + #426 F7: bulk_quiet bez workflow_runs; korekta bez kolejki; reszta jak 0094/0234.';
+
+-- 4) import_schedule: nowy parametr p_quiet (stara sygnatura 5-arg → DROP)
 DROP FUNCTION IF EXISTS public.import_schedule(uuid, jsonb, text[], jsonb, boolean);
 
 CREATE OR REPLACE FUNCTION public.import_schedule(p_project uuid, p_rows jsonb, p_cancel_codes text[] DEFAULT '{}'::text[], p_file jsonb DEFAULT '{}'::jsonb, p_dry_run boolean DEFAULT true, p_quiet boolean DEFAULT false)
@@ -99,6 +185,7 @@ declare
   v_today date := (now() at time zone 'Europe/Warsaw')::date;
   v_fnames    text[] := array['item_type','cargo_class','length_m','width_m','height_m','unit_weight_t','qty','total_weight_t',
                               'load_date','load_time','delivery_date','delivery_time','order_no','assembly_seq'];
+  v_crit_suppressed int := 0;
 begin
   -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users — NULL nie może przepuścić
   if is_hhl() is not true then raise exception 'Import harmonogramu wyłącznie HHL'; end if;
@@ -224,7 +311,8 @@ begin
         end if;
         insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
         values (v_load, 'SCHEDULE_IMPORTED', now(), v_user,
-                jsonb_build_object('action', 'ADDED', 'code', r.code, 'version', v_version, 'file', p_file->>'name'));
+                jsonb_build_object('action', 'ADDED', 'code', r.code, 'version', v_version, 'file', p_file->>'name',
+                                   'quiet', v_run_quiet));
       end if;
       continue;
     end if;
@@ -232,7 +320,9 @@ begin
     select coalesce(array_agg(f order by f), '{}') into v_fields
       from unnest(v_fnames) f where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb);
     -- L-1b / HOTFIX #384 pkt 3: konflikt tylko gdy mapa ma kolumne HHL i plik ma niepusta wartosc.
+    -- F7 #2: przy p_quiet nie otwieraj spraw TOWER_KSH_CONFLICT.
     if p_dry_run is false
+       and v_run_quiet is not true
        and v_has_hhl_col
        and nullif(btrim(r.hhl_order_no), '') is not null
        and nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') is not null
@@ -290,12 +380,16 @@ begin
         and (r.inc->>'delivery_date')::date < v_today
       )
     );
+    -- F7 #7: w dry_run pokazuj critical także przy quiet; wycisz zdarzenia dopiero przy zapisie.
     v_crit := case
-      when v_quiet_fill or v_historic or v_run_quiet then '{}'::text[]
+      when v_quiet_fill or v_historic then '{}'::text[]
       when r.awizowany then
         array(select f from unnest(v_fields) f where f in ('load_date','load_time','delivery_date','delivery_time'))
       else '{}'::text[]
     end;
+    if v_run_quiet and p_dry_run is false and cardinality(v_crit) > 0 then
+      v_crit_suppressed := v_crit_suppressed + 1;
+    end if;
     v_changed := v_changed || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'fields', to_jsonb(v_fields),
                    'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
                    'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
@@ -398,7 +492,8 @@ begin
       values (r.load_id, 'SCHEDULE_IMPORTED', now(), v_user,
               jsonb_build_object('action', 'CHANGED', 'code', r.code, 'version', v_version, 'fields', to_jsonb(v_fields),
                                  'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
-                                 'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f)));
+                                 'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
+                                 'quiet', v_run_quiet));
       if cardinality(v_crit) > 0 and v_historic is not true and v_run_quiet is not true then
         insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
         values (r.load_id, 'SCHEDULE_DATE_CRITICAL', now(), v_user,
@@ -429,7 +524,8 @@ begin
          and not exists (select 1 from _imp i where i.code = si.shipment_code)
        order by si.shipment_code
     loop
-      if p_dry_run is false then
+      -- F7 #2: przy p_quiet nie otwieraj spraw KSH_ROW_GONE.
+      if p_dry_run is false and v_run_quiet is not true then
         perform l1b_note_row_gone(p_project, c.load_id, c.code);
       end if;
       if c.invoiced then
@@ -456,14 +552,16 @@ begin
                                      'version', v_version));
           insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
           values (c.load_id, 'STATUS_CANCELLED', now(), v_user,
-                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'Usunięty z harmonogramu', 'file', p_file->>'name'));
+                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'Usunięty z harmonogramu', 'file', p_file->>'name',
+                                     'quiet', v_run_quiet));
           v_cancelled := v_cancelled || jsonb_build_object('code', c.code, 'load_id', c.load_id);
         end if;
       end if;
     end loop;
   end if;
 
-  if p_dry_run is false then
+  -- F7 #2: przy p_quiet nie otwieraj spraw KR_OVER_3.
+  if p_dry_run is false and v_run_quiet is not true then
     for r in
       select distinct (i.row->>'load_date')::date as d
         from _imp i
@@ -480,23 +578,29 @@ begin
         'blocked', jsonb_array_length(v_blocked), 'critical', jsonb_array_length(v_critical),
         'confirmed_kept', (select count(*) from jsonb_array_elements(v_confirmed) x where not (x->>'overwrite')::boolean),
         'rows', jsonb_array_length(p_rows), 'rejected', coalesce((p_file->>'rejected')::int, 0),
-        'skipped_standard', v_skipped + coalesce((p_file->>'skipped_standard')::int, 0))
+        'skipped_standard', v_skipped + coalesce((p_file->>'skipped_standard')::int, 0),
+        'quiet', v_run_quiet)
      where id = v_import;
   end if;
 
-  if v_run_quiet and p_dry_run is false then
+  -- F7 #5: audyt tylko gdy coś zapisano; import_id / cancelled / critical_suppressed.
+  if v_run_quiet and p_dry_run is false and v_import is not null then
     insert into audit_log (user_id, action, entity, entity_id, new_value)
     values (
       v_user,
       'SCHEDULE_IMPORT_QUIET',
       'schedule_imports',
-      coalesce(v_import::text, p_project::text),
+      v_import::text,
       jsonb_build_object(
         'note', 'import bez powiadomień',
+        'import_id', v_import,
+        'project_id', p_project,
         'version', v_version,
         'file', p_file->>'name',
         'added', jsonb_array_length(v_added),
-        'changed', jsonb_array_length(v_changed)
+        'changed', jsonb_array_length(v_changed),
+        'cancelled', jsonb_array_length(v_cancelled),
+        'critical_suppressed', v_crit_suppressed
       )
     );
   end if;
@@ -521,4 +625,4 @@ REVOKE ALL ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolea
 GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) TO authenticated;
 
 COMMENT ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) IS
-  'I-1 import KSH. #426: p_quiet tylko HHL_ADMIN — cały przebieg w tower.bulk_quiet + audit SCHEDULE_IMPORT_QUIET.';
+  'I-1 import KSH. #426: p_quiet tylko HHL_ADMIN — cały przebieg w tower.bulk_quiet + audit SCHEDULE_IMPORT_QUIET; dry_run pokazuje critical.';

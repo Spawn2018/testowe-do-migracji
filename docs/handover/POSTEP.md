@@ -4046,3 +4046,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #421 zamknięte; #425/#426/#400/#384/#409/#413/#422/#412/#323/#322/#320 w planie. #431 bez F7.
 - Scalanie: #430 F7 r3 „gotowe” (`3dc52c2`) + CI zielone (unit/db/visual) → merge `00fd4986` (0258). Bez push na `main`.
 - Bieżąca: **#426** (`pakiet/hotfix-426-import-quiet`, migracja **0259**) — `import_schedule(..., p_quiet)`; tylko HHL_ADMIN; `tower.bulk_quiet` na cały import; audit `SCHEDULE_IMPORT_QUIET`; `trg_sms_load_changes` × quiet; import 72→81.
+
+## 2026-10-22 05:45 — #426 F7 niegotowe: 4 blokery
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian. #431 wygląd bez F7.
+- Scalanie: #432 CI zielone (`6688886f`), F7 „jeszcze nie” (4 blokery) → poprawki w tym samym PR. Bez push na `main`.
+- Bieżąca: **#426 F7** — (1) `trg_sms_load_changes` z 0111+e164+quiet; (2) pomijanie `l1b_note_*` / `l1b_kr_check` przy quiet; (3) `l3_ksh_lead` × bulk_quiet; (4) `wf_enqueue_event` × bulk_quiet; dry_run pokazuje critical; stats/payload `quiet`; audit tylko przy zapisie; import 81→99. `l3_scan` później może otworzyć NO_AWIZ/NO_TRACKING (stan) — dopuszczalne.
