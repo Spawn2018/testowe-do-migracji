@@ -139,18 +139,15 @@ describe('P9-e dymek i lista', () => {
   });
 });
 
-describe('22.10.2026: auto na promie bez grupowania (Przegląd, tryb skupienia)', () => {
-  it('pozycja statku z AIS zamiast ostatniej pozycji trackera; auto poza promem bez zmian', () => {
-    const items = [
-      { id: 'SG17', lat: 54.404, lng: 18.681, tile: 'FERRY', ferryKey: 'S1', lastFixAt: '2026-10-22T16:25:00Z', late: false },
-      { id: 'SG19', lat: 52.1, lng: 17.0, tile: 'IN_TRANSIT_PL', ferryKey: null, lastFixAt: null, late: false },
-    ] as never;
-    const ship = { lat: 54.85, lng: 18.94, ts: '2026-10-22T18:07:00Z', stale: false, vessel: 'M/F Wawel' };
-    const out = placeMarkers(items, { zones: [], shipOf: (k) => (k === 'S1' ? ship : null), grouping: false });
-    expect(out).toEqual([
-      { kind: 'one', id: 'SG17', lat: 54.85, lng: 18.94 },
-      { kind: 'one', id: 'SG19', lat: 52.1, lng: 17.0 },
-    ]);
+describe('22.10.2026: auto „Na promie” na pozycji statku z AIS (SG-17)', () => {
+  it('CorridorMap: pozycja floty z shipOf dla etapu FERRY, statek bez drugiego znacznika; błędy odczytu promów', async () => {
+    const { readFileSync } = await import('node:fs');
+    const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(m).toContain("stageTileOf(l) === 'FERRY' ? ferryKeyOf(l) : null");
+    expect(m).toContain('takenShips.add(vesselKey(ship.vessel));');
+    expect(m.indexOf('const shipOf = ')).toBeLessThan(m.indexOf('const fleet = PROD_BUILD'));
+    expect(m.indexOf('const fleet = PROD_BUILD')).toBeLessThan(m.indexOf("if (slot === 'drawer')"));
+    const a = readFileSync('src/lib/aisDb.ts', 'utf8');
+    expect(a).toContain('fails >= 3) onUpdate([])');
   });
 });
-

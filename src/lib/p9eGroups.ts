@@ -94,13 +94,7 @@ export function placeMarkers(
   items: readonly GroupItem[],
   opts: { zones: readonly GroupZone[]; shipOf: (ferryKey: string) => ShipFix | null; grouping: boolean },
 ): Placed[] {
-  /* 22.10.2026 (SG-17 w panelu): bez grupowania (Przegląd, tryb skupienia) auto na promie też stoi na pozycji statku z AIS */
-  if (!opts.grouping) {
-    return items.map((it) => {
-      const ship = it.tile === 'FERRY' && it.ferryKey ? opts.shipOf(it.ferryKey) : null;
-      return { kind: 'one' as const, id: it.id, lat: ship ? ship.lat : it.lat, lng: ship ? ship.lng : it.lng };
-    });
-  }
+  if (!opts.grouping) return items.map((it) => ({ kind: 'one', id: it.id, lat: it.lat, lng: it.lng }));
   const out: Placed[] = [];
   const ferry = new Map<string, GroupItem[]>();
   const zoneIds = new Map<string, { zone: GroupZone; items: GroupItem[] }>();

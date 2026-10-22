@@ -552,7 +552,41 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         const a = l ? demoStageAnchor(stageTileOf(l), zones) : null;
         return a ? { ...f, lat: a.lat, lng: a.lng } : f;
       });
-      const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
+      const ferryKeyOf = (l: Load | undefined): string | null => {
+        if (!l) return null;
+        if (l.sailingId) return l.sailingId;
+        /* bez przypisanego rejsu: statek (jeden statek płynie w danej chwili jednym rejsem) */
+        return l.ferry.vessel ? `v:${vesselKey(l.ferry.vessel)}` : null;
+      };
+      const ferryInfo = (fk: string): FerryInfo | null => {
+        const s = sailings.find((x) => x.id === fk);
+        if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
+        const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
+        if (!l) return null;
+        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
+        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
+      };
+      const shipOf = (fk: string): ShipFix | null => {
+        const v = vesselKey(ferryInfo(fk)?.vessel);
+        if (!v) return null;
+        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
+        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
+        if (!p) return null;
+        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, getNowIso()) === 'stale', vessel: p.name, estimated: p.estimated };
+      };
+      const fleet0 = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
+      /* 22.10.2026 (SG-17 „stoi w porcie”): tracker milknie na promie — auto „Na promie” stoi na pozycji statku z AIS
+         (Mapa, Kokpit, Przegląd i tryb skupienia; centrowanie Przeglądu za statkiem). Statek nie jest rysowany drugi raz. */
+      const fleet = PROD_BUILD
+        ? fleet0.map((f) => {
+          const l = loadOf.get(f.id);
+          const fk = l && stageTileOf(l) === 'FERRY' ? ferryKeyOf(l) : null;
+          const ship = fk ? shipOf(fk) : null;
+          if (!ship) return f;
+          takenShips.add(vesselKey(ship.vessel));
+          return { ...f, lat: ship.lat, lng: ship.lng };
+        })
+        : fleet0;
       /* E29 pkt 4 i 7: etap, opóźnienie, brak GPS i dymek z tych samych danych co tabela Mapy */
       const loc = useTowerStore.getState().locale;
       const nowIso = getNowIso();
@@ -585,28 +619,6 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       /* wyglad/P9-e (E45 pkt 5, R5): auta jednego rejsu na promie — jeden znacznik na statku z AIS; więcej niż 1 auto
          w strefie załadunku, portu PL, portu SE albo placu — jeden znacznik z liczbą. Przegląd i tryb skupienia bez grup. */
       const fleetById = new Map(fleet.map((f) => [f.id, f]));
-      const ferryKeyOf = (l: Load | undefined): string | null => {
-        if (!l) return null;
-        if (l.sailingId) return l.sailingId;
-        /* bez przypisanego rejsu: statek (jeden statek płynie w danej chwili jednym rejsem) */
-        return l.ferry.vessel ? `v:${vesselKey(l.ferry.vessel)}` : null;
-      };
-      const ferryInfo = (fk: string): FerryInfo | null => {
-        const s = sailings.find((x) => x.id === fk);
-        if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
-        const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
-        if (!l) return null;
-        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
-        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
-      };
-      const shipOf = (fk: string): ShipFix | null => {
-        const v = vesselKey(ferryInfo(fk)?.vessel);
-        if (!v) return null;
-        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
-        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
-        if (!p) return null;
-        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name, estimated: p.estimated };
-      };
       const groupItems: GroupItem[] = fleet.map((f) => {
         const row = rowOf(f.id);
         return {

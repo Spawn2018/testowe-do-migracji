@@ -134,10 +134,12 @@ function markersFromTrack(data: unknown[]): AisPosition[] {
 
 export function subscribeAisDb(onUpdate: (pos: AisPosition[]) => void, everyMs = 120_000): () => void {
   let stopped = false;
+  let fails = 0;
   const tick = () => {
     fetchMapFerryMarkers().then(
-      (p) => { if (!stopped) onUpdate(p); },
-      () => { /* 22.10.2026: chwilowy błąd — zostają ostatnie pozycje (do następnego odczytu za 2 min) */ },
+      (p) => { fails = 0; if (!stopped) onUpdate(p); },
+      /* 22.10.2026: chwilowy błąd — zostają ostatnie pozycje; po 3 błędach z rzędu (~6 min) mapa bez promów */
+      () => { fails += 1; if (!stopped && fails >= 3) onUpdate([]); },
     );
   };
   tick();
