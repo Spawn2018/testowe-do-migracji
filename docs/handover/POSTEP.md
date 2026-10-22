@@ -3980,3 +3980,39 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora`; #411/#405/#400/#409/#412/#413 w planie (#402 zamknięte).
 - Scalanie: #406 F7 gotowe (`a63f238`) → merge `2352a0fe` (0255). #408 wstrzymane (czekają fuel_publications). Bez push na `main`.
 - Bieżąca: **HOTFIX #411** (`pakiet/hotfix-411-closed-notify`, migracja **0256**) — bez `*_RESOLVED`; `notify_mark_case_closed`; WEB_PUSH `url`; sprzątanie bulk + AUDYT17_MARK_READ.
+
+## 2026-10-22 00:56 — #420+#419 SCALONE; start #405 (0257)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #411 zamknięte; #405/#400/#409/#412/#413/#384/#323/#322/#320 w planie.
+- Scalanie: #420 F7 gotowe (`e099872`) → merge `8a4d00e3`; #419 F7 gotowe (`b5322e5`) → merge `30459c4a` (0256). Bez push na `main`.
+- Bieżąca: **HOTFIX #405** (`pakiet/hotfix-405-sms-zones`, migracja **0257**) — `sms_enqueue` tylko ZONE_*/TEST; triggery kierowcy OFF; `issue_driver_token_sms` bez SMS; i2 I-3 za decyzją.
+
+## 2026-10-22 01:25 — #405 F7 B1/B2; #421+#422 wpisane (0258–0259)
+
+- Skrzynka: #421/#422 (Spawn2018, `dla-cursora`+`pilne`) — PLAN §3/§4/§8, dopiski `D-20261022-0105-01.md` / `D-20261022-0113-01.md`; #400→0260, #409→0261, B5→0262, #413→0263.
+- Scalanie: #424 CI zielone na `780ff80`; F7 „jeszcze nie” → poprawka B1 (TEST na strefy) + B2 (pilot tylko ZONE_*) + unschedule `tower-sms-rozladunek`; i2 628→632. #408 wstrzymane. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — F7 runda 2; potem #421.
+
+## 2026-10-22 01:50 — #405 CI: pg_cron guard; #425+#426 w planie
+
+- Skrzynka: #425 (`pilne`, kolejka) + #426 (import `p_quiet`) — PLAN §4/§8, dopiski `D-20261022-0130-01.md` / `D-20261022-0138-01.md`. Kolejność: #405→#421→#426(0259)→#400(0260)→#384(0261)→#409(0262)→#413(0263)→#422(0264)→#412→B5(0265).
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie. #424 `db` FAIL: `schema cron does not exist` przy `cron.unschedule` w tower_boot → guard `pg_extension`. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — poprawka CI; potem F7.
+
+## 2026-10-22 02:15 — #405 i2 F7 asercje; #423 SCALONE
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #405/#421/#425/#426/#400/#384/#409/#413/#422/#412 w planie.
+- Scalanie: #423 F7 gotowe (`5553439`) → merge `2e446fc5` (wygląd Wydajność). #424/#427/#428/#382 bez „gotowe” po head. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** PR #424 — `db` FAIL i2 627/5: `::text`→`true` (nie `t`); `sms_enqueue` w WHERE 2× (dedup→null) → osobny SELECT + cleanup kolejki F7 przed pull.
+
+## 2026-10-22 02:35 — #405 CI zielone; F7: numer testowy pilota
+
+- Skrzynka: bez nowych. F7 na `d2cfb32` (przed poprawką): format `true`, enqueue 2×, pull 2 z F7 ZONE/TEST (nie „spoza listy”), prawdziwy numer w teście.
+- Scalanie: #424 `db`/`unit`/`visual` zielone na `74632573`. Czeka na ponowne F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — pilot w i2: `+48000000001` (bez numeru właściciela).
+
+## 2026-10-22 02:55 — #405 F7 runda 3 (R-2 TEST stref)
+
+- Skrzynka: F7 na `7463257`: jeszcze nie — (1) numer fikcyjny `+48600999888`, (2) TEST na `sms_zone_recipients` tylko przy EXTERNAL on + `admin_sms_zone_test` wyjątek R-2, (3) pull 2 z kontrolą rodzaju. Archiwum TELM: numer → „[numer właściciela]”.
+- Scalanie: #424 CI zielone na `649ad51e` (tylko numer); bez „gotowe”. Bez push na `main`.
+- Bieżąca: **HOTFIX #405** — 0257 + i2 634; czeka CI i F7.

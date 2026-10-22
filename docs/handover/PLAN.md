@@ -402,9 +402,9 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #411** dzwonek zamkniętych / **0256** `pilne`; **#405** SMS / **0257**; **#400** / **0258**; **#409** fuel_publications / **0259**; B5 **0260**; **#413** Automatyzacje/Strefy / **0261**; ~~#402/0255~~; ~~#398/0254~~)
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (**HOTFIX #405** SMS tylko strefy / **0257** `pilne`; **#421** promy / **0258**; **#426** import quiet / **0259**; **#400** / **0260**; **#384 zaległe** / **0261**; **#409** / **0262**; **#413** / **0263**; **#422** / **0264**; B5 **0265**; ~~#411/0256~~; ~~#402/0255~~; ~~#398/0254~~) — kolejka #425
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
-**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **~~D-1535 · t40 paliwo ×1,14 (#391/#396, 0253)~~** → **~~HOTFIX #398 · szum ryzyk (0254)~~** → **~~HOTFIX #402 · jedna bramka powiadomień (0255)~~** → **HOTFIX #411 · zamknięta sprawa / dzwonek (0256, `pilne`)** → **HOTFIX #405 · SMS tylko strefy (0257, `pilne`)** → **#400 · 8b/8c DIMS + historia PII (0258, `pilne`)** → **#409 · fuel_publications (0259)** → B5 (**0260**) → **#413 · Automatyzacje/Strefy (0261, `pilne`)** → B7 → B8 → B9 → A6 → **#412 źródła Opcje/Finanse**.
+**Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **~~D-1535 · t40 paliwo ×1,14 (#391/#396, 0253)~~** → **~~HOTFIX #398 · szum ryzyk (0254)~~** → **~~HOTFIX #402 · jedna bramka powiadomień (0255)~~** → **~~HOTFIX #411 · zamknięta sprawa / dzwonek (0256)~~** → **HOTFIX #405 · SMS tylko strefy (0257, `pilne`)** → **#421 · promy AIS/rozkład (0258, `pilne`)** → **#426 · import KSH bez powiadomień (0259)** → **#400 · 8b/8c DIMS + historia PII (0260, `pilne`)** → **#384 zaległe (0261)** → **#409 · fuel_publications (0262)** → **#413 · Automatyzacje/Strefy (0263, `pilne`)** → **#422 · wydajność/błędy (0264, `pilne`)** → **#412 źródła Opcje/Finanse** → B5 (**0265**) → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
 Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury — wynik w `POSTEP.md` jako „próba R-3 na TEST” (dopisek §6).
 
@@ -722,39 +722,57 @@ Po #398, przed #411. Właściciel 21.10.2026 19:52 — maile/push mimo wyłącze
 3. Ponowna kontrola przy wysyłce z kolejki (`notify_email_still_allowed`, `notify_push_still_allowed`); testy: kanał off → 0 wysyłek.
 4. Odbiór: 1 h przy email off → 0× `EMAIL`/`SENT`.
 
-### HOTFIX #411 · Zamknięta sprawa znika z dzwonka; bez „zamknięte”; push z URL (D-20261021-2038-01, `pilne`) — W TOKU (`pakiet/hotfix-411-closed-notify`, migracja **0256**)
+### HOTFIX #411 · Zamknięta sprawa znika z dzwonka; bez „zamknięte”; push z URL (D-20261021-2038-01, `pilne`) — SCALONE (#419 `30459c4a`, 21.10.2026 23:12, migracja **0256**; `deploy-main` w toku); wygląd push #420 `8a4d00e3`
 Po #402, przed #405. Szczegóły: `dopiski/D-20261021-2038-01.md`.
 1. 0× `DECISION_RESOLVED` / `RISK_RESOLVED` w kolejce.
 2. Zamknięcie sprawy → przeczytane powiązane IN_APP/WEB_PUSH/EMAIL (oczekujące → SUPPRESSED).
 3. WEB_PUSH z `url` celu; dzwonek nie zamyka sprawy w Ryzykach.
 4. Sprzątanie jednorazowe starych `*_RESOLVED`.
 
-### HOTFIX #405 · SMS tylko do osób na załadunku i rozładunku (D-20261021-2014-01, `pilne`) — po #411, przed #400
-Migracja **0257**. Szczegóły: `dopiski/D-20261021-2014-01.md`.
-1. Bramka w `sms_enqueue`: tylko `ZONE_APPROACH` / `ZONE_ENTER` → `sms_zone_recipients` oraz `TEST` → `sms_test_numbers`.
-2. Wyłączyć (nie usuwać) SMS do kierowców/pilotów: load/sailing/GPS/unload/driver_link; sprawdzić `pilot_redirect_*`.
-3. Testy: wyłączone rodzaje → 0 nowych do wysyłki; przełącznik SMS off = 0.
+### HOTFIX #405 · SMS tylko do osób na załadunku i rozładunku (D-20261021-2014-01, `pilne`) — W TOKU (`pakiet/hotfix-405-sms-zones`, migracja **0257**, PR #424)
+Po #411, przed #421. Szczegóły: `dopiski/D-20261021-2014-01.md`. F7: TEST także na `sms_zone_recipients`; pilot redirect tylko dla ZONE_* (R-2). CI: `cron.unschedule` tylko gdy `pg_cron` (brama lokalna bez schematu cron).
+1. Bramka w `sms_enqueue`: tylko `ZONE_APPROACH` / `ZONE_ENTER` → `sms_zone_recipients` (lub pilot) oraz `TEST` → `sms_test_numbers` / lista stref.
+2. Wyłączyć (nie usuwać) SMS do kierowców: load/sailing/GPS/unload/driver_link; pilot zostaje dla ZONE_*.
+3. Testy: wyłączone rodzaje → 0 nowych do wysyłki; przełącznik SMS off = 0; F7 B1/B2.
 4. Odbiór: od wdrożenia tylko ZONE_* + TEST.
 
-### #400 · 8b/8c niedomknięte: DIMS_UNKNOWN + „[dane osobowe]” (D-20261021-1929-01, `pilne`) — po #405, przed B5
-Migracja **0258**. Szczegóły: `dopiski/D-20261021-1929-01.md`.
+### HOTFIX #421 · Promy: AIS Nova Star/Stena, rozkład codzienny, wypłynięcia (D-20261022-0105-01, `pilne`) — po #405, przed #426
+Migracja **0258**. Szczegóły: `dopiski/D-20261022-0105-01.md`.
+1. Nova Star — drugie źródło; Stena — częstsze pozycje (Q-18).
+2. `ferry-schedule` ≥ codziennie + po zmianie statusu; status wypłynął/dopłynął z pozycji.
+3. `integration_runs` widoczne w Stanie systemu. Bez ryzyka o starej pozycji. Front — koordynator.
+
+### #426 · Import KSH bez powiadomień (`p_quiet`) (D-20261022-0138-01) — po #421, przed #400
+Migracja **0259**. Szczegóły: `dopiski/D-20261022-0138-01.md`. Tylko HHL_ADMIN; `tower.bulk_quiet`; audit „import bez powiadomień”. Front — koordynator.
+
+### #400 · 8b/8c niedomknięte: DIMS_UNKNOWN + „[dane osobowe]” (D-20261021-1929-01, `pilne`) — po #426, przed #384 zaległe
+Migracja **0260**. Szczegóły: `dopiski/D-20261021-1929-01.md`.
 1. **`permit_fits`:** wymiary pole po polu `coalesce(loads.combo_*_m, symbol_specs.combo_*_m)`; masa jak dziś. Odbiór: 0× `not ok` w `load_permit_status()`; 0002 z L/H z transportu.
 2. **`audit_row_change`:** bez maski `[dane osobowe]` na polach PII; **`rio_secret` nadal `••••`**. Starych wpisów nie odtwarzamy. Sprawdź historię / eksport.
 
-### #409 · `fuel_publications` dla KSH/SCX (D-20261021-2030-01) — po #400, przed B5
-Migracja **0259**. Szczegóły: `dopiski/D-20261021-2030-01.md`. Odczyt publikacji cen paliwa bez RLS-only `fuel_index_readings`.
+### #384 zaległe · pkt 7–8 + import/okno + SMS quiet + resolve-all (D-20261022-0130-01 / #425) — po #400, przed #409
+Migracja **0261**. `decisions_read` z `carrier_org_id`; aktor w `DECISION_*`; `load_to`/`delivery_from` SG-01/02/T-01; import bez godziny → przesunięcie okna; `trg_sms_load_changes` × `bulk_quiet`; `resolve-all` = `count(*)`.
 
-### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — po B5 / według kolejki
-Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43, liczba urządzeń push — `dopiski/D-20261021-2040-01.md`.
+### #409 · `fuel_publications` dla KSH/SCX (D-20261021-2030-01) — po #384 zaległe, przed #413
+Migracja **0262**. Szczegóły: `dopiski/D-20261021-2030-01.md`. Odczyt publikacji cen paliwa bez RLS-only `fuel_index_readings`.
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #402/#411
-Migracja **0261** (po B5 **0260**, rebase). Szczegóły: `dopiski/D-20261021-2057-01.md`.
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #409, przed #422
+Migracja **0263**. Szczegóły: `dopiski/D-20261021-2057-01.md`.
 1. P8-d: `rulesReady()` + źródło reguł; usunięcie START (E35).
 2. P8-c: `zonesReady()` + źródło stref; HHL_OPS bez edycji (E34 pkt 6).
 3. HHL_OPS: podgląd Automatyzacji bez przycisków (E35 pkt 5).
 Ekran / cele przejść — koordynator (`wyglad/*`).
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #402, #411, #405, #400 (migracja **0260** po rebase)
+### HOTFIX #422 · Wydajność i Błędy aplikacji — źródło w bazie (D-20261022-0113-01, `pilne`) — po #413, przed #412
+Migracja **0264**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
+1. Tabela `perf_results` + RPC `perf_results_latest()` (HHL).
+2. Zasilanie: Lighthouse po deploy-main; p95 z `pg_stat_statements`; równoczesność lub „brak pomiaru”.
+3. RPC odczytu `client_errors` (7 dni, grupowanie). Front — koordynator (#423).
+
+### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — po #422, przed B5
+Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43, liczba urządzeń push — `dopiski/D-20261021-2040-01.md`.
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #405, #400, #384 zaległe (migracja **0265** po rebase)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1307,3 +1325,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 21.10.2026 21:45 | #402 F7: workflow→LOAD_STATUS (KSH/SCX), ext_mail, matrix_event, mapowania RISK, a_gate przed budżetem | pętla |
 | 21.10.2026 23:00 | #418 SCALONE (`2d8aa5f2`); #402 db B6 — dates.email w prep security (po F7 bez nadpisu macierzy) | pętla |
 | 21.10.2026 23:21 | #406 SCALONE (`2352a0fe`, 0255); start #411 (zamknięta sprawa / 0256) | pętla |
+| 21.10.2026 23:12–23:56 | #420 SCALONE (`8a4d00e3`); #419/#411 SCALONE (`30459c4a`, 0256); start #405 (0257) | pętla |
+| 22.10.2026 01:25 | #421 `pilne` (promy AIS/rozkład) → **0258**; #422 `pilne` (wydajność) → **0259**; #400→**0260**, #409→**0261**, B5→**0262**, #413→**0263**; #405 F7 B1/B2 | pętla |
+| 22.10.2026 01:50 | #425 kolejka: #405→#421→#426→#400→#384→#409→#413→#422→#412→B5; #426 `p_quiet` → **0259**; #422→**0264**, B5→**0265**; #405 CI: pg_cron guard | pętla |
