@@ -19,6 +19,7 @@ declare
   v_prev text;
   v_ev uuid;
   v_ev_at timestamptz;
+  v_ev_src text;
   n int := 0;
 begin
   /* Odwołany rejs — jak dotąd, względem planu (nie AIS). */
@@ -62,6 +63,9 @@ begin
     v_dep := null;
     v_src := null;
     v_reason := null;
+    v_ev := null;
+    v_ev_at := null;
+    v_ev_src := null;
 
     if r.actual_dep is not null and r.actual_dep <= p_now then
       v_dep := r.actual_dep;
@@ -81,51 +85,54 @@ begin
 
     v_op := case when r.sailing_route in ('GDY-KAA', 'KAA-GDY') then 'STENA' else 'POLFERRIES' end;
 
-    /* Już Prom z rozkładu — AIS koryguje godzinę (bez powiadomień). */
+    /* Już Prom — AIS koryguje godzinę osi (bez powiadomień, jak 0235). */
     if r.status = 'FERRY' and v_src = 'AIS' then
-      select e.id, e.occurred_at into v_ev, v_ev_at
-        from load_events e
-       where e.load_id = r.load_id
-         and e.event_type = 'STATUS_AUTO'
-         and e.payload->>'to' = 'FERRY'
-         and not exists (
-           select 1 from load_events z
-            where z.load_id = e.load_id
-              and z.payload->>'zastepuje' = e.id::text
-         )
-       order by e.id desc
-       limit 1;
-      if v_ev is not null
-         and (
-           v_ev_at is distinct from v_dep
-           or coalesce((select payload->>'source' from load_events where id = v_ev), '')
-              is distinct from 'AIS'
-         ) then
-        v_prev := current_setting('tower.bulk_quiet', true);
-        perform set_config('tower.bulk_quiet', 'on', true);
-        insert into load_events (load_id, event_type, occurred_at, payload)
-        values (
-          r.load_id,
-          'STATUS_AUTO',
-          v_dep,
-          jsonb_build_object(
-            'from', 'FERRY',
-            'to', 'FERRY',
-            'reason', v_reason,
-            'sailing_id', r.sailing_id,
-            'statek', r.vessel,
-            'odejscie', v_dep,
-            'route', r.sailing_route,
-            'operator', v_op,
-            'source', 'AIS',
-            'korekta', true,
-            'zastepuje', v_ev,
-            'poprzednio', v_ev_at,
-            'actor', 'system'
-          )
-        );
-        perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-      end if;
+      begin
+        select e.id, e.occurred_at, e.payload->>'source'
+          into v_ev, v_ev_at, v_ev_src
+          from load_events e
+         where e.load_id = r.load_id
+           and (
+             e.event_type = 'STATUS_FERRY'
+             or (e.event_type = 'STATUS_AUTO' and e.payload->>'to' = 'FERRY')
+           )
+           and not exists (
+             select 1 from load_events z
+              where z.load_id = e.load_id
+                and z.payload->>'zastepuje' = e.id::text
+           )
+         order by e.id desc
+         limit 1;
+        if v_ev is not null
+           and (v_ev_at is distinct from v_dep or coalesce(v_ev_src, '') is distinct from 'AIS') then
+          v_prev := current_setting('tower.bulk_quiet', true);
+          perform set_config('tower.bulk_quiet', 'on', true);
+          insert into load_events (load_id, event_type, occurred_at, payload)
+          values (
+            r.load_id,
+            'STATUS_AUTO',
+            v_dep,
+            jsonb_build_object(
+              'from', 'FERRY',
+              'to', 'FERRY',
+              'reason', v_reason,
+              'sailing_id', r.sailing_id,
+              'statek', r.vessel,
+              'odejscie', v_dep,
+              'route', r.sailing_route,
+              'operator', v_op,
+              'source', 'AIS',
+              'korekta', true,
+              'zastepuje', v_ev,
+              'poprzednio', v_ev_at,
+              'actor', 'system'
+            )
+          );
+          perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+        end if;
+      exception when others then
+        raise exception 'promote_ferry_departures AIS korekta load=%: %', r.load_id, sqlerrm;
+      end;
       continue;
     end if;
 
@@ -133,6 +140,9 @@ begin
       continue;
     end if;
 
+    /* #461: bez dzwonka przy AIS / SCHEDULE_ASSUMED (trg_load_status_matrix_notify × bulk_quiet). */
+    v_prev := current_setting('tower.bulk_quiet', true);
+    perform set_config('tower.bulk_quiet', 'on', true);
     if public.auto_set_status(
          r.load_id, r.status, 'FERRY', v_reason, v_dep,
          jsonb_build_object(
@@ -147,6 +157,7 @@ begin
        ) then
       n := n + 1;
     end if;
+    perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
   end loop;
   return n;
 end $function$;
@@ -174,7 +185,6 @@ declare
   v_ais_lon double precision;
   v_ais_at timestamptz;
   v_ais_sog real;
-  v_in_port boolean;
   v_sea boolean;
   v_near_ais boolean;
   v_dist_m double precision;
@@ -323,45 +333,31 @@ begin
     );
   end if;
 
-  /* (c) #461: tylko po actual_departure_at — bez furtki z rozkładu. */
-  if v_actual_dep is not null and v_actual_dep <= p_now then
-    select exists (
-      select 1 from geofence_states gs
-        join geofences g on g.id = gs.geofence_id
-       where gs.load_id = l.id and g.kind = 'PORT_OUT' and g.active
-         and gs.state in ('INSIDE','PENDING_OUT')
-         and (gs.entered_at is null or gs.entered_at <= p_now - interval '30 minutes')
-    ) into v_in_port;
-    if v_in_port is not true
-       and (v_pos_at is null or v_pos_at <= p_now - interval '30 minutes'
-            or not exists (
-              select 1 from geofence_states gs
-                join geofences g on g.id = gs.geofence_id
-               where gs.load_id = l.id and g.kind = 'PORT_OUT' and g.active
-                 and gs.state in ('INSIDE','PENDING_OUT')
-            ))
-       and l.status = 'AT_PORT_GDANSK' then
-      if not exists (
-        select 1 from positions p
-         where p.load_id = l.id
-           and p.ts >= p_now - interval '30 minutes'
-           and exists (
-             select 1 from geofences g
-              where g.project_id = l.project_id and g.kind = 'PORT_OUT' and g.active
-                and ST_DWithin(
-                  g.geom::geography,
-                  p.geom_raw::geography,
-                  coalesce(g.hysteresis_m, 200)
-                )
-           )
-      ) then
-        return public.auto_set_status(
-          l.id, l.status, 'FERRY',
-          'statek odpłynął — brak pozycji w porcie PL od 30 min',
-          coalesce(v_actual_dep, p_now),
-          jsonb_build_object('actor', 'system', 'source', 'AIS', 'path', 'A10_c')
-        );
-      end if;
+  /* (c) #461: tylko po actual_departure_at — brak świeżej pozycji w porcie PL (≥ 30 min).
+     Stary stan geofence INSIDE nie blokuje (tracker mógł milczeć po wypłynięciu). */
+  if v_actual_dep is not null and v_actual_dep <= p_now
+     and l.status = 'AT_PORT_GDANSK'
+     and (v_pos_at is null or v_pos_at <= p_now - interval '30 minutes') then
+    if not exists (
+      select 1 from positions p
+       where p.load_id = l.id
+         and p.ts >= p_now - interval '30 minutes'
+         and exists (
+           select 1 from geofences g
+            where g.project_id = l.project_id and g.kind = 'PORT_OUT' and g.active
+              and ST_DWithin(
+                g.geom::geography,
+                p.geom_raw::geography,
+                coalesce(g.hysteresis_m, 200)
+              )
+         )
+    ) then
+      return public.auto_set_status(
+        l.id, l.status, 'FERRY',
+        'statek odpłynął — brak pozycji w porcie PL od 30 min',
+        coalesce(v_actual_dep, p_now),
+        jsonb_build_object('actor', 'system', 'source', 'AIS', 'path', 'A10_c')
+      );
     end if;
   end if;
 

@@ -8,7 +8,13 @@ SCX=11111111-0000-0000-0000-000000000003; KSH=11111111-0000-0000-0000-0000000000
 ok=0; fail=0
 q()   { $PSQL -c "$1" 2>&1; }
 pos() { q "select count(*) from process_position('$1', $2, $3, '$4')" >/dev/null; }   # ładunek, szer., dł., czas
-chk() { got=$(q "$2" | tail -1); if [ "$got" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $3)"; fi; }
+chk() {
+  out=$(q "$2")
+  got=$(printf '%s\n' "$out" | grep -E '^ERROR:' | head -1)
+  if [ -z "$got" ]; then got=$(printf '%s\n' "$out" | tail -1); fi
+  if [ "$got" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"
+  else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $3)"; fi
+}
 st()  { echo "select status from loads where id='$1'"; }
 rk()  { echo "select count(*) from risk_signals where load_id='$1' and dedup_key like '$2%'"; }
 
@@ -153,7 +159,8 @@ pos $A 59.3300 18.0600 "2026-10-02 06:40+00"; pos $A 59.3301 18.0601 "2026-10-02
 chk "wyjazd ze strefy portu SE → IN_TRANSIT_SE"              "$(st $A)" IN_TRANSIT_SE
 pos $I 65.5000 21.7000 "2026-10-02 07:00+00"; pos $I 65.5001 21.7001 "2026-10-02 07:05+00"
 chk "GPS zgubił port SE, auto już na trasie → IN_TRANSIT_SE" "$(st $I)" IN_TRANSIT_SE
-chk "przeterminowany PROM: tylko auto bez sygnału po przypłynięciu" "select detect_ferry_overdue('2026-10-02 09:00+00')" 1
+# #461: SCHEDULE_ASSUMED stawia FERRY także poza strefą (B i J na S1) — 2× FERRY_OVERDUE zamiast 1.
+chk "przeterminowany PROM: B+J bez sygnału po przypłynięciu" "select detect_ferry_overdue('2026-10-02 09:00+00')" 2
 chk "ryzyko przeterminowanego PROMU dla właściwego auta"     "$(rk $J FERRY_OVERDUE)" 1
 
 echo; echo "[7] Plac budowy — A2: wyjazd ≥ 10 min → Dostarczone (nigdy UNLOADED)"
