@@ -73,6 +73,25 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     return (must(await notificationsQuery(), 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r));
   }
 
+  /* 22.10.2026 (właściciel 21:38): statusy SG-03 i innych zafakturowanych zniknęły z osi Status — zrzut brał tylko
+     500 najnowszych zdarzeń całego projektu, a od 20.10 starsze (październikowe statusy z GPS) wypadały.
+     Teraz wszystkie zdarzenia, stronami po 1000 (limit odpowiedzi API); `eventLimit` tylko dla testów. */
+  async function fetchAllEvents(): Promise<{ data: EventRow[] | null; error: { message: string } | null }> {
+    const PAGE = 1000;
+    const cap = opts.eventLimit ?? Infinity;
+    const out: EventRow[] = [];
+    for (let from = 0; from < cap; from += PAGE) {
+      const to = Math.min(from + PAGE, cap) - 1;
+      const r = await sb.from('load_events').select('id,load_id,event_type,occurred_at,payload')
+        .order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
+      if (r.error) return { data: null, error: r.error };
+      const rows = (r.data ?? []) as EventRow[];
+      out.push(...rows);
+      if (rows.length < to - from + 1) break;
+    }
+    return { data: out, error: null };
+  }
+
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
@@ -98,7 +117,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
-      sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
+      fetchAllEvents(),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
       sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
