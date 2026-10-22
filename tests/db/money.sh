@@ -55,9 +55,9 @@ val "KSH widzi fuel_basis.n_pln z widoku przychodu (#409)" $KSH "select (fuel_ba
 val "SCX nie widzi fuel_basis przychodu (#409)" $SCX "select count(*) from v_load_price_client where fuel_basis is not null" 0
 val "KSH nie widzi fuel_basis kosztu (#409)" $KSH "select count(*) from v_load_price_carrier where fuel_basis is not null" 0
 val "HHL widzi pubs_sek[0].value z widoku kosztu (#409)" $HHL "select (fuel_basis->'pubs_sek'->0->>'value') from v_load_price_carrier where load_id='$L1'" 19.5
-val "SCX nie widzi owner_note w fuel_basis (#409 F7)" $SCX "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" f
-val "KSH nie widzi owner_note w fuel_basis (#409 F7)" $KSH "select (fuel_basis ? 'owner_note')::text from v_load_price_client where load_id='$L1'" f
-val "HHL widzi owner_note w fuel_basis (#409 F7)" $HHL "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" t
+val "SCX nie widzi owner_note w fuel_basis (#409 F7)" $SCX "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" false
+val "KSH nie widzi owner_note w fuel_basis (#409 F7)" $KSH "select (fuel_basis ? 'owner_note')::text from v_load_price_client where load_id='$L1'" false
+val "HHL widzi owner_note w fuel_basis (#409 F7)" $HHL "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" true
 
 echo; echo "[M2] Z1 — faktura nie nadpisuje wyliczonej wartości"
 sys "update load_cost set invoiced_total_eur=2100 where load_id='$L1'"
