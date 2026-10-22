@@ -4162,3 +4162,14 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #448 F7 "gotowe" po `d163e318`, ale `db` czerwone (ODWOLANY→W_REJSIE): ID 446/447 zajęte przez #445 → INSERT cichy. Poprawka: ID 448/449 + EXPECTED status 170. Nowy commit → czekam na ponowne F7. Bez push na `main`.
 - Biezaca: **#446 pkt 1** — fix testów; potem pkt 2 indeks dzwonka (0270+).
 
+## 2026-10-22 15:00 - #448 SCALONE; #446 pkt 2 indeks dzwonka (0270)
+
+- Skrzynka: #446 bieżąca; #425/#422/#413/`pilne` w kolejce po #446. Bez nowych `pilne` przerywających.
+- Scalanie: #448 F7 „gotowe do scalenia” po `0fd25bc7` + CI zielone (unit/db/visual) → MERGED `0e79a914`. Bez push na `main`.
+- Bieżąca: **#446 pkt 2** — migracja **0270** `notifications_bell_user_channel_created_idx (user_id, channel, created_at desc)`.
+  - Bez `CONCURRENTLY` w pliku migracji: `supabase db push` (deploy-main) → SQLSTATE 25001; zwykły `CREATE INDEX IF NOT EXISTS`.
+  - EXPLAIN ANALYZE na TEST (`notifications` = 1 wiersz po prep; planer i tak Seq Scan):
+    - **przed:** `Seq Scan` + Sort, Planning 4,6 ms, Execution 0,075 ms, buffers hit=4.
+    - **po** (indeks zbudowany `CONCURRENTLY` poza migracją na TEST): nadal `Seq Scan` (1 wiersz), Planning 1,7 ms, Execution 0,051 ms, buffers hit=1. Odbiór na produkcji po wdrożeniu — przy większej tabeli Index Scan / Index Only.
+  - Dalej w #446: pkt 3 (#430), 4 (RIO), 5–6 (POSTEP jutro). #384→0265 … B5→0269.
+
