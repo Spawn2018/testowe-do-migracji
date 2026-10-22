@@ -700,9 +700,14 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
           .sort()
           .at(-1) ?? null;
         if (depAt && acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
-          const ok = await deps.store.updateSailing(s.id, { actual_departure_at: depAt });
+          // #446: status W_REJSIE przy actual_departure_at (ODWOLANY bez zmian — updateSailing / trigger).
+          const ok = await deps.store.updateSailing(s.id, {
+            actual_departure_at: depAt,
+            ...(s.status === 'ODWOLANY' ? {} : { status: 'W_REJSIE' }),
+          });
           if (ok) {
             s.actual_departure_at = depAt;
+            if (s.status !== 'ODWOLANY') s.status = 'W_REJSIE';
             departures++;
             observations[`${v.name}:DEP`] = `WYPŁYNĄŁ_${depAt}`;
           }
@@ -716,9 +721,14 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
       const depRef = s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at;
       if (arrived && ageMin <= 15 && Date.parse(fix.timestampUtc) > Date.parse(depRef)) {
-        const ok = await deps.store.updateSailing(s.id, { actual_arrival_at: fix.timestampUtc });
+        // #446: status DOPLYNAL przy actual_arrival_at (ODWOLANY bez zmian).
+        const ok = await deps.store.updateSailing(s.id, {
+          actual_arrival_at: fix.timestampUtc,
+          ...(s.status === 'ODWOLANY' ? {} : { status: 'DOPLYNAL' }),
+        });
         if (ok) {
           s.actual_arrival_at = fix.timestampUtc;
+          if (s.status !== 'ODWOLANY') s.status = 'DOPLYNAL';
           departures++;
           observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
         }

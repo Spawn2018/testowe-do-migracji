@@ -618,5 +618,22 @@ q "insert into load_events (load_id,event_type,occurred_at) values ('$L445c','MI
 chk "#445: departure minął, AIS 10 km, auto ≤2 km → FERRY" \
   "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
 
+# #446 pkt 1: actual_departure_at → W_REJSIE; actual_arrival_at → DOPLYNAL; ODWOLANY bez zmian
+echo; echo "[#446] sailings.status po actual_departure/arrival"
+S446=77777777-0000-0000-0000-000000000446
+S446b=77777777-0000-0000-0000-000000000447
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('$S446','$P','66666666-0000-0000-0000-000000000001','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ZAPLANOWANY','POLFERRIES'),
+ ('$S446b','$P','66666666-0000-0000-0000-000000000002','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ODWOLANY','POLFERRIES')" >/dev/null
+q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S446'" >/dev/null
+chk "#446: actual_departure_at → W_REJSIE" \
+  "select status from sailings where id='$S446'" W_REJSIE
+q "update sailings set actual_arrival_at = now() - interval '5 minutes' where id='$S446'" >/dev/null
+chk "#446: actual_arrival_at → DOPLYNAL" \
+  "select status from sailings where id='$S446'" DOPLYNAL
+q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S446b'" >/dev/null
+chk "#446: ODWOLANY + actual_departure → bez zmiany statusu" \
+  "select status from sailings where id='$S446b'" ODWOLANY
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

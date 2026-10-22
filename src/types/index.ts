@@ -114,7 +114,7 @@ export interface Awizacja {
 
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
 export type FerryRoute = 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY';
-export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
+export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export interface Sailing {
   id: string;
   vessel: string;

@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
-  status: 166, // #445: +4 A10_b FERRY tylko po odejściu rejsu; było 162 (#398)
+  status: 169, // #446: +3 sailings W_REJSIE/DOPLYNAL; było 166 (#445)
   storage: 37,
   money: 183, // #411 F7: +4 mark_notifications_read WP↔IN (para + obie strony + cudze); było 179
   release: 146,

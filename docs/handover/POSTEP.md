@@ -4144,3 +4144,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: #444 juz MERGED. #447 - konflikt z main rozwiazany (PLAN #441 SCALONE + §8; POSTEP obie strony). Po pushie: CI + ponowne F7 (commit po "gotowe"). Bez push na `main`.
 - Biezaca: **#445** - push merge-commita na `pakiet/hotfix-445-a10-ferry`.
 
+## 2026-10-22 13:45 - #447 SCALONE; #446 pkt 1 (0263)
+
+- Skrzynka: #445 zamkniete (SCALONE); #446 biezaca; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie. Bez nowych `pilne`.
+- Scalanie: #447 F7 "gotowe" po `3ef91201` + CI zielone (unit/db/visual) → MERGED `dcf58431`. Bez push na `main`.
+- Biezaca: **#446 pkt 1** — migracja **0263** (`W_REJSIE`/`DOPLYNAL` + trigger); Edge `ferry-departures` ustawia status; sync nie cofa; testy status +3 (169). #384→0264 … B5→0268. Galaz `pakiet/hotfix-446-drobne`.
+
