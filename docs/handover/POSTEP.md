@@ -4034,3 +4034,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian.
 - Scalanie: #430 — F7 „jeszcze nie” (blokery 1–7); CI `db` padło na licznikach (nullguard 700, bmapa 35). #408/#383/#382 bez „gotowe”. Bez push na `main`.
 - Bieżąca: **HOTFIX #421** PR #430 — F7: `actual_departure_at`/`actual_arrival_at`; wypłynięcie wiek≤15 + 3–10 km; dopłynięcie tylko port docelowy; cron timeout 120 s + jednorazowy `ferry-schedule`; rozkład po statusie max co 60 min; `ferry_track_sample` bez limitu 48 h dla rejsu w drodze; Stena 403/429 backoff; gate nullguard 700 / bmapa 35.
+
+## 2026-10-22 04:55 — #421 F7 runda 2
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); kolejka #425 bez zmian (#421 W TOKU).
+- Scalanie: #430 CI zielone na `60ce13ed` (unit/db/visual); F7 r2 „jeszcze nie” (bloker okno lastPortPosition + track_sample obciążenie). #431 wygląd bez F7. Bez push na `main`.
+- Bieżąca: **HOTFIX #421** — F7 r2: `acceptActualDepartureAt` [plan−2h, teraz] + po prev `actual_arrival`; dopłynięcie wiek≤15 i po dep; `ferry_track_sample` = 48 h ∪ 1 latest active; jednorazowy rozkład tylko gdy Vault ma sekrety; `actual_*` mimo RECZNIE; etykieta KAA-GDY → KAA. unit integrations 42/42.

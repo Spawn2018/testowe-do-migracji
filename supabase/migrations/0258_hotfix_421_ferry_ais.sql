@@ -3,7 +3,7 @@
 -- 2) Zamknięcie otwartych AIS_GAP (dopisek: bez ryzyka o starej pozycji).
 -- 3) actual_departure_at / actual_arrival_at — AIS; delayed_* zostaje dla ferry-status (F7).
 -- 4) RPC ferry_sailings_map — rejs + porty + ostatni AIS bez filtra świeżości (#429 A+C).
--- 5) ferry_track_sample — dla rejsu w drodze ostatnia pozycja bez limitu 48 h (F7 #7).
+-- 5) ferry_track_sample — okno 48 h + jedna ostatnia pozycja promu w rejsie (F7 r2 #3; bez całej historii).
 -- Edge (ten sam PR): AIS multi-source; rozkład po statusie max co 60 min; ferry-departures zawsze.
 
 alter table public.sailings
@@ -33,14 +33,21 @@ begin
       );
     $c$);
     -- Od razu po wdrożeniu (rozkład z 19.10, próg 26 h — bez czekania do jutra).
-    perform net.http_post(
-      url     := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/ferry-schedule',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'),
-        'Content-Type', 'application/json'),
-      body    := '{}'::jsonb,
-      timeout_milliseconds := 120000
-    );
+    -- F7 r2: bez sekretów Vault (TEST/CI) URL=null → cała migracja pada — pomijamy.
+    if exists (select 1 from vault.decrypted_secrets where name = 'project_url' and decrypted_secret is not null and decrypted_secret <> '')
+       and exists (select 1 from vault.decrypted_secrets where name = 'service_role_key' and decrypted_secret is not null and decrypted_secret <> '')
+    then
+      perform net.http_post(
+        url     := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/ferry-schedule',
+        headers := jsonb_build_object(
+          'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key'),
+          'Content-Type', 'application/json'),
+        body    := '{}'::jsonb,
+        timeout_milliseconds := 120000
+      );
+    else
+      raise notice '0258: brak project_url/service_role_key w Vault — jednorazowy ferry-schedule pominięty';
+    end if;
   else
     raise notice '0258: pg_cron lub pg_net niedostępne — tower-ferry-schedule codziennie do zaplanowania ręcznie';
   end if;
@@ -202,7 +209,7 @@ begin
        and coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at) <= now() + interval '6 hours'
        and coalesce(s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at) >= now() - interval '6 hours'
   ),
-  s as (
+  sampled as (
     select
       v.vessel_id,
       ves.name,
@@ -219,12 +226,30 @@ begin
     from vessel_positions v
     join vessels ves on ves.id = v.vessel_id
     where v.observed_at >= now() - interval '48 hours'
-       or v.vessel_id in (select a.vessel_id from active a)
+  ),
+  latest_active as (
+    select distinct on (v.vessel_id)
+      v.vessel_id,
+      ves.name,
+      ves.mmsi,
+      v.lat,
+      v.lon,
+      v.observed_at,
+      v.cog,
+      v.sog_kn
+    from vessel_positions v
+    join vessels ves on ves.id = v.vessel_id
+    where v.vessel_id in (select a.vessel_id from active a)
+    order by v.vessel_id, v.observed_at desc
+  ),
+  u as (
+    select vessel_id, name, mmsi, lat, lon, observed_at, cog, sog_kn from sampled where rn = 1
+    union
+    select vessel_id, name, mmsi, lat, lon, observed_at, cog, sog_kn from latest_active
   )
-  select s.vessel_id, s.name, s.mmsi, s.lat, s.lon, s.observed_at, s.cog, s.sog_kn
-    from s
-   where s.rn = 1
-   order by s.observed_at;
+  select u.vessel_id, u.name, u.mmsi, u.lat, u.lon, u.observed_at, u.cog, u.sog_kn
+    from u
+   order by u.observed_at;
 end $$;
 
 revoke all on function public.ferry_track_sample() from public, anon;

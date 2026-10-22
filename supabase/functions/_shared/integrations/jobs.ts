@@ -423,6 +423,20 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
 /** ferry-ais — AIS-SRC. Stena IRM (co przebieg, bez cache), aisstream (5 MMSI), Digitraffic jako zapas.
  *  Zapisujemy Digitraffic/STENA/żywy AISSTREAM (nie ponownie z bazy). Q-18 nie filtruje zapisu.
  *  #421 F7: actual_* przy wypłynięciu/dopłynięciu; integration_runs ferry-departures zawsze. */
+/** F7 r2: godzina wypłynięcia tylko w [plan−2 h, teraz] i po poprzednim actual_arrival tego statku. */
+export function acceptActualDepartureAt(
+  depAtIso: string, planDepIso: string, nowMs: number, prevActualArrivalIso: string | null,
+): boolean {
+  const t = Date.parse(depAtIso);
+  if (!Number.isFinite(t)) return false;
+  const plan = Date.parse(planDepIso);
+  if (!Number.isFinite(plan)) return false;
+  if (t < plan - 2 * 3600_000) return false;
+  if (t > nowMs) return false;
+  if (prevActualArrivalIso != null && t <= Date.parse(prevActualArrivalIso)) return false;
+  return true;
+}
+
 /** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7). */
 let stenaIrmBackoffUntilMs = 0;
 
@@ -559,23 +573,36 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     const fix = chosen.get(v.id);
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
     const arrPort = arrivalPortForRoute(s.route);
-    const seArrPort = arrPort === 'NYN' || arrPort === 'KAA' ? arrPort : 'NYN';
-    const obs = interpretFix(fix, now, 60, seArrPort);
+    const depPort = departurePortForRoute(s.route);
+    // F7 r2: etykieta SE z portu SE na trasie (KAA-GDY → KAA, nie NYN).
+    const seObsPort: 'NYN' | 'KAA' =
+      arrPort === 'NYN' || arrPort === 'KAA' ? arrPort
+        : depPort === 'NYN' || depPort === 'KAA' ? depPort
+          : 'NYN';
+    const obs = interpretFix(fix, now, 60, seObsPort);
     observations[v.name] = obs;
 
-    // #421 F7: wypłynął → actual_departure_at; wiek ≤15 min; dystans 3–10 km ALBO ostatnia pozycja w porcie.
+    // #421 F7: wypłynął → actual_departure_at; wiek ≤15 min; 3–10 km (preferuj ostatnią w porcie) albo poza >3 km z lastPortPosition.
     if (s.actual_departure_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
       if (ageMin <= 15) {
-        const depHub = portCoords(departurePortForRoute(s.route));
+        const depHub = portCoords(depPort);
         const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
         const moving = (fix.sogKn ?? 0) >= 3;
         let depAt: string | null = null;
-        if (moving && dist > 3 && dist <= 10) depAt = fix.timestampUtc;
-        else if (moving && dist > 3 && deps.store.lastPortPosition) {
-          depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
+        if (moving && dist > 3) {
+          // F7 r2 drobne: w pasmie 3–10 km najpierw ostatnia pozycja w porcie, potem bieżąca.
+          if (deps.store.lastPortPosition) {
+            depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
+          }
+          if (depAt == null && dist <= 10) depAt = fix.timestampUtc;
         }
-        if (depAt) {
+        const prevArr = sailings
+          .filter((x) => x.vessel_id === s.vessel_id && x.id !== s.id && x.actual_arrival_at)
+          .map((x) => x.actual_arrival_at!)
+          .sort()
+          .at(-1) ?? null;
+        if (depAt && acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
           const ok = await deps.store.updateSailing(s.id, { actual_departure_at: depAt });
           if (ok) {
             s.actual_departure_at = depAt;
@@ -585,11 +612,13 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
         }
       }
     }
-    // #421 F7: dopłynął — wyłącznie port docelowy trasy (także GDN/GDY przy SE→PL) → actual_arrival_at.
+    // #421 F7 r2: dopłynął — port docelowy; wiek ≤15 min; po wypłynięciu (actual albo plan).
     if (s.actual_arrival_at == null) {
+      const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
       const arrHub = portCoords(arrPort);
       const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
-      if (arrived) {
+      const depRef = s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at;
+      if (arrived && ageMin <= 15 && Date.parse(fix.timestampUtc) > Date.parse(depRef)) {
         const ok = await deps.store.updateSailing(s.id, { actual_arrival_at: fix.timestampUtc });
         if (ok) {
           s.actual_arrival_at = fix.timestampUtc;

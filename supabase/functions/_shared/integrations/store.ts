@@ -31,8 +31,29 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       must(await sb.from('sailings').upsert(rows, { onConflict: 'vessel_id,departure_at', ignoreDuplicates: true }), 'sailings insert');
     },
     async updateSailing(id: string, patch: SailingPatch) {
-      const r = must(await sb.from('sailings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).neq('source', 'RECZNIE').select('id'), 'sailings update') as unknown[];
-      return r.length > 0;
+      // F7 #421 r2: RECZNIE chroni delayed_*/status/plan; actual_* z AIS wolno dopisać także po ręcznej edycji.
+      const { actual_departure_at, actual_arrival_at, ...rest } = patch;
+      const at = new Date().toISOString();
+      const restKeys = Object.keys(rest) as (keyof typeof rest)[];
+      let wrote = false;
+      if (restKeys.length) {
+        const r = must(
+          await sb.from('sailings').update({ ...rest, updated_at: at }).eq('id', id).neq('source', 'RECZNIE').select('id'),
+          'sailings update',
+        ) as unknown[];
+        wrote = r.length > 0;
+      }
+      const actual: Record<string, string | null> = {};
+      if (actual_departure_at !== undefined) actual.actual_departure_at = actual_departure_at;
+      if (actual_arrival_at !== undefined) actual.actual_arrival_at = actual_arrival_at;
+      if (Object.keys(actual).length) {
+        const r = must(
+          await sb.from('sailings').update({ ...actual, updated_at: at }).eq('id', id).select('id'),
+          'sailings update actual',
+        ) as unknown[];
+        wrote = wrote || r.length > 0;
+      }
+      return wrote;
     },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
