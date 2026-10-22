@@ -980,13 +980,16 @@ begin
      order by l.id, si.shipment_code
   loop
     -- F7 P5: per pole ostatnia niepusta before_* tylko z PLAN_DATES_CHANGED
-    -- (JSON null przechodzi przez ? 'before_load_to'; SCHEDULE_* nie ma before_*)
+    -- dopasowana do bieżącej daty planu (nowsze zdarzenie z innym dniem = po przesunięciu importu).
     select nullif(e.payload->>'before_load_to', '')::timestamptz
       into v_to
       from load_events e
      where e.load_id = r.id
        and e.event_type = 'PLAN_DATES_CHANGED'
        and nullif(e.payload->>'before_load_to', '') is not null
+       and r.plan_load_date is not null
+       and (nullif(e.payload->>'before_load_to', '')::timestamptz
+              at time zone 'Europe/Warsaw')::date = r.plan_load_date
      order by e.occurred_at desc
      limit 1;
 
@@ -996,6 +999,9 @@ begin
      where e.load_id = r.id
        and e.event_type = 'PLAN_DATES_CHANGED'
        and nullif(e.payload->>'before_delivery_from', '') is not null
+       and r.plan_delivery_date is not null
+       and (nullif(e.payload->>'before_delivery_from', '')::timestamptz
+              at time zone 'Europe/Stockholm')::date = r.plan_delivery_date
      order by e.occurred_at desc
      limit 1;
 

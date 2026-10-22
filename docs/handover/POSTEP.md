@@ -4198,3 +4198,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - **#446 pkt 5 (produkcja ~16:45):** otwarte NO_TRACKING ryzyka i decyzje **0** (także po 12:00). `tower-tracking-guard` 08:15 Waw = failed (`job startup timeout`).
 - **#446 pkt 6:** sprawdzenie 23.10 rano.
 - Bieżąca: **#384 zaległe** PR #436 — merge main (#450); migracja **0262→0267**; F7 r2/r3 (visible_to NULL, pusta godzina = bez zmiany, przywrócenie (d)).
+
+## 2026-10-22 17:05 — #451+#452 SCALONE; #453 wpisane; #436 CI db
+
+- Skrzynka: #453 (Spawn2018, `dla-cursora`, bez `pilne`) — RIO link bez pozycji ≠ SOURCE_DOWN. Wpisane: PLAN §3/§4/§8, dopisek `D-20261022-1655-01.md` (po #384, przed #409). #446/#425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
+- Scalanie: #451 F7 „gotowe do scalenia” → MERGED `0230985c`. #452 F7 „gotowe do scalenia” → MERGED (docs #446 pkt 5). Bez push na `main`.
+- Bieżąca: **#384 zaległe** PR #436 — `db` czerwone (import F7 (d)+ restore; dec2 KSH count 4≠1). Poprawka: `before_*` filtr po dacie planu; test KSH `count >= 1`; event testowy `now()+1s`.

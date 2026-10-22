@@ -284,7 +284,7 @@ update loads set
  where id='$SG_R';
 insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
 values (
-  '$SG_R', 'PLAN_DATES_CHANGED', now() - interval '1 hour', null,
+  '$SG_R', 'PLAN_DATES_CHANGED', now() + interval '1 second', null,
   jsonb_build_object(
     'before_load_to', ('$D1b 12:00'::timestamp at time zone 'Europe/Warsaw'),
     'before_delivery_from', ('$D2b 10:00'::timestamp at time zone 'Europe/Stockholm'),

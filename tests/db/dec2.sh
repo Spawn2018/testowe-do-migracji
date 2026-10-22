@@ -209,7 +209,8 @@ val "pkt 7: SCX nadal widzi decyzję bez load_id" $SCX "select count(*) from dec
 val "pkt 8: PROPOSE → actor // SCX" $HHL "select ((payload->>'actor') like '% // SCX' and payload->>'decider'='CARRIER' and payload->>'by_org'='CARRIER')::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
 # F7 r2/r3 B1: visible_to NULL = wszyscy w projekcie (w tym KSH)
 val "pkt 8: visible_to NULL (wszyscy w projekcie)" $HHL "select (visible_to is null)::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE' order by occurred_at desc limit 1" true
-val "pkt 8: KSH widzi DECISION_EFFECT CARRIER" $KSH "select count(*) from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" 1
+# Na $L jest kilka PROPOSE_DATE z wcześniejszych kroków — liczy się widoczność (≥1), nie dokładnie 1.
+val "pkt 8: KSH widzi DECISION_EFFECT CARRIER" $KSH "select (count(*) >= 1)::text from load_events where load_id='$L' and event_type='DECISION_EFFECT' and payload->>'option'='PROPOSE_DATE'" true
 val "pkt 8: HHL_OPS widzi decyzje (is_hhl)" $OPS "select count(*) from decisions where id='$D3'" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
