@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   deploy:
@@ -112,48 +113,82 @@ jobs:
       - name: Edge
         if: steps.keys.outputs.skip != 'true'
         env:
-          BEFORE: ${{ github.event.before }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           set +x
-          before="${BEFORE:-}"
+          # #441: porównuj z SHA ostatniego *udanego* deploy-main, w którym krok Edge
+          # faktycznie się wykonał (nie przebieg z skip=true / brak kluczy). Nie HEAD~1.
+          # Gdy push A (Edge) padnie przed krokiem Edge, a push B (docs) użyje before=A,
+          # diff B..HEAD nie zawiera plików z A — funkcje nie wrócą na produkcję.
+          before=""
+          deploy_all=0
+          if command -v gh >/dev/null 2>&1; then
+            while IFS=$'\t' read -r run_id sha; do
+              [ -z "${run_id:-}" ] && continue
+              [ "$sha" = "${GITHUB_SHA}" ] && continue
+              edge_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                --jq '[.jobs[].steps[]? | select(.name == "Edge") | .conclusion][0] // empty' 2>/dev/null || true)"
+              # success = krok Edge się wykonał; skipped = brak kluczy (nie baza porównania)
+              if [ "$edge_concl" = "success" ]; then
+                before="$sha"
+                break
+              fi
+            done < <(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-main.yml/runs?branch=main&status=success&per_page=20" \
+              --jq '.workflow_runs[] | [.id, .head_sha] | @tsv' 2>/dev/null || true)
+          fi
+          if [ -n "$before" ]; then
+            echo "Edge: baza porównania = ostatni udany deploy z krokiem Edge ($before)"
+          else
+            before="${PUSH_BEFORE:-}"
+            echo "Edge: brak udanego deployu z Edge w API — fallback github.event.before"
+          fi
           if [ -z "$before" ] || printf '%s' "$before" | grep -Eq '^0+$'; then
-            echo "Brak poprzedniego commita — funkcje Edge bez zmian."
-            exit 0
+            echo "Brak poprzedniego commita — wdrażam wszystkie funkcje Edge."
+            deploy_all=1
+          elif ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            echo "Poprzedni commit niedostępny — wdrażam wszystkie funkcje Edge."
+            deploy_all=1
           fi
-          if ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
-            echo "Poprzedni commit niedostępny — funkcje Edge bez zmian."
-            exit 0
-          fi
-          mapfile -t files < <(git diff --name-only "$before" "$GITHUB_SHA" -- supabase/functions)
-          shared=0
-          declare -A seen=()
           names=()
-          for f in "${files[@]}"; do
-            [ -z "$f" ] && continue
-            rest="${f#supabase/functions/}"
-            name="${rest%%/*}"
-            if [ "$name" = "_shared" ]; then
-              shared=1
-              continue
-            fi
-            if [ -f "supabase/functions/${name}/index.ts" ] && [ -z "${seen[$name]:-}" ]; then
-              seen[$name]=1
-              names+=("$name")
-            fi
-          done
-          if [ "$shared" = 1 ]; then
-            names=()
+          if [ "$deploy_all" = 1 ]; then
             for d in supabase/functions/*/index.ts; do
               name="$(basename "$(dirname "$d")")"
               [ "$name" = "_shared" ] && continue
               names+=("$name")
             done
+          else
+            mapfile -t files < <(git diff --name-only "$before" "$GITHUB_SHA" -- supabase/functions)
+            shared=0
+            declare -A seen=()
+            for f in "${files[@]}"; do
+              [ -z "$f" ] && continue
+              rest="${f#supabase/functions/}"
+              name="${rest%%/*}"
+              if [ "$name" = "_shared" ]; then
+                shared=1
+                continue
+              fi
+              if [ -f "supabase/functions/${name}/index.ts" ] && [ -z "${seen[$name]:-}" ]; then
+                seen[$name]=1
+                names+=("$name")
+              fi
+            done
+            if [ "$shared" = 1 ]; then
+              names=()
+              for d in supabase/functions/*/index.ts; do
+                name="$(basename "$(dirname "$d")")"
+                [ "$name" = "_shared" ] && continue
+                names+=("$name")
+              done
+            fi
           fi
           if [ "${#names[@]}" -eq 0 ]; then
-            echo "Funkcje Edge bez zmian."
+            echo "Funkcje Edge bez zmian (baza ${before:-brak})."
             exit 0
           fi
+          echo "Edge: wdrażam ${#names[@]} funkcji (baza ${before:-brak}): ${names[*]}"
           for name in "${names[@]}"; do
             echo "Wdrażam funkcję: ${name}"
             supabase functions deploy "$name" --project-ref "$PROJECT_REF" --use-api --yes
