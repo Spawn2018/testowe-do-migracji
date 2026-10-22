@@ -708,7 +708,7 @@ export function ScheduleView() {
                           res.version == null
                             ? t(locale, 'i1_nochange') + ' · ' + note
                             : note + ' · ' + tp(locale, 'i1_saved', { v: String(res.version), a: String(res.added.length), c: String(res.changed.length), x: String(res.cancelled.length), ms: String(res.ms) }) +
-                              (res.critical.length ? ' · ' + tp(locale, 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : '') +
+                              (res.critical.length ? ' · ' + tp(locale, canQuietImport && quietImport ? 'i426_crit_quiet' : 'i1_crit', { codes: res.critical.map((k) => k.code).join(', ') }) : '') +
                               (canQuietImport && quietImport ? ' · ' + t(locale, 'i426_saved_quiet') : ''),
                         );
                         const { refreshFromServer } = await import('../data/supabaseBridge');

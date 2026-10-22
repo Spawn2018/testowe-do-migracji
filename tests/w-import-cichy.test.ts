@@ -21,6 +21,8 @@ describe('#426 import bez powiadomień', () => {
     expect(v).toContain('{canQuietImport ? (');
     expect(v).toContain('data-import-quiet-toggle');
     expect(v).toContain('canQuietImport && quietImport,');
+    /* F7 #432 r2 pkt 6: zmiany krytyczne po cichym zapisie jako wyciszone, nie „powiadomiono” */
+    expect(v).toContain("canQuietImport && quietImport ? 'i426_crit_quiet' : 'i1_crit'");
     expect(v).toMatch(/setAllowRemovals\(false\);\n {4}setQuietImport\(false\);/);
   });
 
@@ -29,5 +31,6 @@ describe('#426 import bez powiadomień', () => {
     expect(pl.i426_quiet).toBe('Import bez powiadomień');
     expect(pl.i426_quiet_on).toContain('Nikt nie dostanie maila, dzwonka ani SMS');
     expect(pl.i426_quiet_off).toContain('Kto co dostaje');
+    expect(pl.i426_crit_quiet).toContain('wyciszone');
   });
 });

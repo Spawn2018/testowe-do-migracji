@@ -26,6 +26,7 @@ const pl: Dict = {
   i426_quiet_on: "Nikt nie dostanie maila, dzwonka ani SMS, a zmiany z pliku nie otworzą spraw w Ryzykach. W historii zostanie wpis „import bez powiadomień”.",
   i426_quiet_off: "Zmiany z pliku wyślą powiadomienia według Opcji › Kto co dostaje.",
   i426_saved_quiet: "bez powiadomień",
+  i426_crit_quiet: "zmiana daty na awizowanym: {codes} — bez powiadomień (wyciszone)",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Zapisz konto Watch Tower w drugiej aplikacji uwierzytelniającej (np. na zapasowym telefonie). Każde urządzenie ma własny kod i działa niezależnie.",
   i17_add: "Dodaj drugie urządzenie",
