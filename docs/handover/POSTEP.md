@@ -4173,3 +4173,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
     - **po** (indeks zbudowany `CONCURRENTLY` poza migracją na TEST): nadal `Seq Scan` (1 wiersz), Planning 1,7 ms, Execution 0,051 ms, buffers hit=1. Odbiór na produkcji po wdrożeniu — przy większej tabeli Index Scan / Index Only.
   - Dalej w #446: pkt 3 (#430), 4 (RIO), 5–6 (POSTEP jutro). #384→0265 … B5→0269.
 
+## 2026-10-22 15:15 - #449 F7: indeks 0270→0265
+
+- Skrzynka: #446 bieżąca; #425/#422/#413/`pilne` w kolejce. Bez nowych `pilne`.
+- Scalanie: #449 F7 „niegotowe” (B1: 0270 przed nienałożonymi 0265–0269) → poprawka w tym samym PR. CI unit/db/visual zielone na `a6df26e7`. Bez push na `main`.
+- Bieżąca: **#446 pkt 2 F7** — `git mv` **0270→0265** `hotfix_446_bell_index.sql`; #384→**0266**, #409→**0267**, #413→**0268**, #422→**0269**, B5→**0270**. Czekam na ponowne F7.
+
