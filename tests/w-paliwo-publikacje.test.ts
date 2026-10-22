@@ -93,6 +93,12 @@ describe('publikacje cen paliwa z bazy', () => {
     };
     const fallback = { avgSek: 22, avgPln: 7, nSek: 0, nPln: 0, pubs: [{ date: '2026-10-09', source: 'OKQ8' as const, price: 22 }] };
     expect(enrichFromBasis(row, [mk(fallback)], 'cost', '2026-10-22').publications).toEqual(fallback.pubs);
+    const mixed = { avgSek: 22, avgPln: 7, nSek: 1, nPln: 0, pubs: [
+      { date: '2026-10-09', source: 'ORLEN' as const, price: 7 },
+      { date: '2026-10-14', source: 'OKQ8' as const, price: 22 },
+    ] };
+    expect(enrichFromBasis(row, [mk(mixed)], 'cost', '2026-10-22').publications?.map((p) => p.source)).toEqual(['ORLEN', 'OKQ8']);
+    expect(enrichFromBasis({ ...row, state: 'PROGNOZA', okq8: null, orlen: null }, [mk(fallback)], 'cost', '2026-10-22').publications ?? []).toEqual([]);
     const none = { avgSek: null, avgPln: null, nSek: null, nPln: null, pubs: [] };
     expect(enrichFromBasis(row, [mk(none)], 'cost', '2026-10-22').publications).toEqual([]);
   });

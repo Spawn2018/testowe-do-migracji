@@ -51,9 +51,15 @@ export function enrichFromBasis(r: FuelWeekRow, loads: readonly Load[], side: Fi
   }
   const to = r.idx.to < today ? r.idx.to : today;
   const fromReadings = fuelPublicationsIn(r.idx.from, to);
-  const inRange = basis ? basis.pubs.filter((p) => p.date >= r.idx!.from && p.date <= to) : null;
-  /* F7 #408 P2: tydzień bez publikacji — baza bierze ostatnią cenę sprzed tygodnia (n = 0); pokazujemy ją zamiast „brak listy” */
-  const fromBasis = basis && inRange && !inRange.length && basis.pubs.length && (basis.nSek === 0 || basis.nPln === 0) ? basis.pubs : inRange;
+  /* F7 #408 P2: źródło bez publikacji w tygodniu (n = 0) — baza bierze jego ostatnią cenę sprzed tygodnia; pokazujemy ją
+     (każde źródło osobno), tylko w tygodniu ostatecznym — prognoza KSH/SCX bez listy (decyzja koordynatora) */
+  const fromBasis = basis
+    ? basis.pubs.filter((p) => {
+      const n = p.source === 'OKQ8' ? basis.nSek : basis.nPln;
+      if (n === 0 && r.state === 'OSTATECZNA') return true;
+      return p.date >= r.idx!.from && p.date <= to;
+    })
+    : null;
   /* F7 #408 B1: najpierw publikacje, z których baza policzyła średnią (`fuel_basis`), dla każdej roli; notowania HHL
      (`fuel_index_readings`; KSH i SCX dostają pustą listę przez RLS) tylko gdy bazy brak — np. prognoza bieżącego tygodnia */
   const pub = fromBasis && fromBasis.length ? fromBasis : fromReadings && fromReadings.length ? fromReadings : fromBasis ?? fromReadings;
