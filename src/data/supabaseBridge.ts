@@ -24,7 +24,16 @@ export async function refreshFromServer(opts: { keepSelection?: boolean } = {}):
 }
 
 /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek z serwera (telefon: aplikacja wraca z tła bez przeładowania). */
-export async function refreshNotifications(): Promise<void> {
+let bellInFlight: Promise<void> | null = null;
+
+/** Jedno zapytanie naraz — kolejne wywołania w trakcie czekają na to samo (22.10: przeciążenie bazy). */
+export function refreshNotifications(): Promise<void> {
+  if (bellInFlight) return bellInFlight;
+  bellInFlight = doRefreshNotifications().finally(() => { bellInFlight = null; });
+  return bellInFlight;
+}
+
+async function doRefreshNotifications(): Promise<void> {
   const p = active;
   if (!p) return;
   const server = await p.loadNotifications();
@@ -35,16 +44,18 @@ export async function refreshNotifications(): Promise<void> {
 
 let bellTimer: ReturnType<typeof setInterval> | null = null;
 let bellUnlisten: (() => void) | null = null;
-const BELL_EVERY_MS = 60_000;
+/* 22.10.2026: co 60 s przeciążało bazę — co 5 min; powrót do aplikacji najwyżej raz na 30 s. */
+const BELL_EVERY_MS = 5 * 60_000;
+const BELL_RETURN_MIN_MS = 30_000;
 
-/** Powrót do karty / aplikacji (visibilitychange, pageshow, focus) i co minutę, gdy widoczna — odśwież dzwonek. */
+/** Powrót do karty / aplikacji (visibilitychange, pageshow, focus) i co 5 min, gdy widoczna — odśwież dzwonek. */
 function startBellRefresh(): void {
   stopBellRefresh();
   if (typeof document === 'undefined' || typeof window === 'undefined') return;
   let last = Date.now();
   const tick = (force = false) => {
     if (document.visibilityState !== 'visible') return;
-    if (!force && Date.now() - last < 5_000) return;
+    if (!force && Date.now() - last < BELL_RETURN_MIN_MS) return;
     last = Date.now();
     void refreshNotifications().catch(() => undefined);
   };
