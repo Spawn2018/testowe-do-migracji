@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
   status: 190, // #461 F7 r6: +1 sprzątanie RIO/SILENT; było 189; wcześniej 184/170
   storage: 37,
-  money: 188, // #409: +5 fuel_basis w v_load_price_* (SCX/KSH/HHL + krzyżowe 0); było 183
+  money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH f, HHL t); było 188 (+5 fuel_basis)
   release: 146,
   backup: 29,
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
