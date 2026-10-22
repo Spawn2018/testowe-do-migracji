@@ -4111,3 +4111,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #442+#441 (`pilne`, Spawn2018) → PLAN §4/§8; #425/#422/#413/#409/#412/#384/#323/#322/#320 w planie.
 - Scalanie: #433+#439+#440 F7 „gotowe” po ostatnim commicie + CI zielone → merge. #436 CI w toku, bez F7. Bez push na `main`.
 - Bieżąca: **#442** — usunięto `shipment_code` z `listRioLoadsForPoll`; `code: null`; security +2 (kolumny poll / brak `shipment_code`). Gałąź `pakiet/hotfix-442-rio-shipment-code`. Po scaleniu: wdrożyć Edge `rio-links`; #441 `ferry-schedule`.
+
+## 2026-10-22 11:45 — #442: CI db — test kolumn przez sys
+
+- Skrzynka: bez nowych `pilne` poza #442/#441/#425/#422/#413.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie. #443 unit/visual zielone; db FAIL (161/162). #436 F7 r3 niegotowe (przerwane). Bez push na `main`.
+- Bieżąca: **#442** — test #442 przez `sys` (HHL nie widzi `rio_secret` / `tracking_opened_at` w information_schema). PR #443.

@@ -274,9 +274,13 @@ echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer
 
 echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
 # Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
+# Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani
+# tracking_opened_at (brak grant select) w information_schema.columns — Edge i tak idzie service_role.
 RIO_POLL_COLS='id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id'
-val "#442: 18 kolumn poll RIO w loads" $HHL "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name = any(string_to_array('$RIO_POLL_COLS',','))" 18
-val "#442: loads bez shipment_code" $HHL "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name='shipment_code'" 0
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name = any(string_to_array('$RIO_POLL_COLS',','))")
+[ "$out" = "18" ] && { ok=$((ok+1)); echo "  OK    #442: 18 kolumn poll RIO w loads"; } || { fail=$((fail+1)); echo "  FAIL  #442: 18 kolumn poll RIO w loads  (otrzymano: $out, oczekiwano: 18)"; }
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name='shipment_code'")
+[ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    #442: loads bez shipment_code"; } || { fail=$((fail+1)); echo "  FAIL  #442: loads bez shipment_code  (otrzymano: $out, oczekiwano: 0)"; }
 
 echo; echo "[#392] RIO sanitize — zmiana linku czyści / resetuje pola RIO (0252)"
 sys "update loads set telematics_vehicle_id='https://emtrack.eu/app/' where id='$L1'" >/dev/null
