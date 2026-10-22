@@ -135,9 +135,10 @@ describe('Przełączniki bezpieczeństwa i Kalibracja ETA', () => {
     expect(flagRpc('PERMIT_REQUIRED_NON_STANDARD', false).fn).toBe('admin_set_permit_requirement');
     expect(flagRpc('SMS_ZONE_ENTER', true)).toEqual({ fn: 'admin_sms_zone_trigger_set', args: { p_key: 'SMS_ZONE_ENTER', p_enabled: true } });
     expect(flagRpc('EXTERNAL_MESSAGING', true).fn).toBe('admin_set_external_messaging');
+    expect(flagRpc('TELM_RIO_LINKS', false)).toEqual({ fn: 'admin_security_flag_set', args: { p_key: 'TELM_RIO_LINKS', p_enabled: false } }); // #446
     expect(flagRpc('TELM_EMTRACK_WEB', false)).toEqual({ fn: 'admin_security_flag_set', args: { p_key: 'TELM_EMTRACK_WEB', p_enabled: false } });
   });
-  it('9 przełączników ekranu; usunięte klucze z bazy pominięte; autor z app_users albo „polecenie w bazie”', () => {
+  it('10 przełączników ekranu; usunięte klucze z bazy pominięte; autor z app_users albo „polecenie w bazie”', () => {
     const rows = flagRows([
       { key: 'H1_ROUTE_CHECK', enabled: false, note: null, updated_at: null, updated_by: null },
       { key: 'MFA_HHL_ADMIN', enabled: false, note: null, updated_at: '2026-09-27T19:25:00Z', updated_by: null },

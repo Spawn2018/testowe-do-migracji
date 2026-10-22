@@ -12,14 +12,15 @@ import { openOptionsScreen } from '../../lib/openOptions';
 /* ---------- Przełączniki bezpieczeństwa ---------- */
 
 /**
- * 9 kluczy `security_flags` w kolejności ekranu; nazwa i zdanie: p3c_flag_<KEY> / p3c_flag_<KEY>_fx.
+ * 10 kluczy `security_flags` w kolejności ekranu; nazwa i zdanie: p3c_flag_<KEY> / p3c_flag_<KEY>_fx.
  * wyglad/P9-b (decyzja 16.10 01:13): H1_ROUTE_CHECK, H3_CORRIDOR_OBSTACLES, H6_MAP_OBSTACLES usunięte na stałe.
  * wyglad/audyt-E (E5 07.10 12:52, E11 13:21 „jeden przełącznik na sprawę”, C3): AUTOMATIC_DECISION_EMAIL nie ma —
  * e-mail o decyzji ustawia tylko „Kto co dostaje”.
+ * #446 / F7 #451: TELM_RIO_LINKS (E44, odczyt pozycji z linków RIO; zgoda RIO 22.10) obok emtrack.
  */
 export const SECURITY_FLAG_KEYS = [
   'EXTERNAL_MESSAGING', 'MFA_HHL_ADMIN', 'PERMIT_REQUIRED_NON_STANDARD', 'SMS_ZONE_APPROACH', 'SMS_ZONE_ENTER',
-  'TELM_EMTRACK_WEB', 'DRIVER_LINK_ACCEPT', 'FUEL_SE_PL_INGEST', 'FUEL_WOB_INGEST',
+  'TELM_EMTRACK_WEB', 'TELM_RIO_LINKS', 'DRIVER_LINK_ACCEPT', 'FUEL_SE_PL_INGEST', 'FUEL_WOB_INGEST',
 ] as const;
 
 export type SecurityFlagRow = {

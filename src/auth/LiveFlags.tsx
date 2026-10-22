@@ -26,7 +26,7 @@ export function flagRpc(key: string, on: boolean): { fn: string; args: Record<st
   return { fn: 'admin_security_flag_set', args: { p_key: key, p_enabled: on } };
 }
 
-/** Tylko przełączniki z ekranu E12 (9; pozostałe klucze w bazie usunięte decyzją 16.10 i E11), w kolejności ekranu. */
+/** Tylko przełączniki z ekranu E12 (10 z TELM_RIO_LINKS, #446; pozostałe klucze w bazie usunięte decyzją 16.10 i E11), w kolejności ekranu. */
 export function flagRows(rows: readonly Db[], nameOf: (id: string) => string | null): SecurityFlagRow[] {
   const by = new Map(rows.map((r) => [r.key, r]));
   return SECURITY_FLAG_KEYS.filter((k) => by.has(k)).map((k) => {
