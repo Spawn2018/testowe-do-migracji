@@ -686,6 +686,8 @@ chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$S
 chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
 # 1× ZONE (F7Z) + 1× TEST (lista testowa) — po EXTERNAL on: ZONE pull; TEST testowy → EXPIRED (#467)
 $PSQL -c "insert into sms_test_numbers (to_e164, label) values ('+48600000002','i3 f7 pull') on conflict do nothing; select sms_enqueue('TEST', null, '+48600000002', 'pl', '{}'::jsonb, 100, 'i3-f7-test-pull', false)" >/dev/null
+# #467: macierz CARRIER domyślnie email=false → SUPPRESSED przed R2; na test R-2 włączamy rodzaj.
+$PSQL -c "update notification_matrix set email=true where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
 chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template, payload) values ('EMAIL','dispo@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
