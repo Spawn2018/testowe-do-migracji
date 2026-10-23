@@ -1,5 +1,6 @@
 -- #489 / PILNE: po odpięciu rejsu status FERRY (z AIS/SCHEDULE) wraca do poprzedniego.
 -- Trigger na loads.sailing_id → null lub inny rejs; bez powiadomień i spraw.
+-- F7 #493: łańcuch korekty AIS (zastepuje + cofniete_ids); bez korekta:true na cofnięciu.
 -- Naprawa SG-18 + inne z sailing_id null i statusem z rejsu. Migracja 0276.
 
 -- ---------------------------------------------------------------------------
@@ -22,10 +23,13 @@ declare
   v_from_st public.load_status;
   v_src text;
   v_sail text;
+  v_korekta boolean;
   v_prev text;
   v_actor text;
   v_ok boolean := false;
   v_ts timestamptz := coalesce(p_ts, now());
+  v_head_id bigint;
+  v_chain_ids bigint[];
 begin
   if p_load is null or p_old_sailing is null then
     return false;
@@ -41,8 +45,9 @@ begin
   select e.id,
          e.payload->>'from',
          e.payload->>'source',
-         e.payload->>'sailing_id'
-    into v_ev_id, v_from, v_src, v_sail
+         e.payload->>'sailing_id',
+         coalesce(e.payload->>'korekta', '') = 'true'
+    into v_ev_id, v_from, v_src, v_sail, v_korekta
     from public.load_events e
    where e.load_id = p_load
      and (
@@ -61,7 +66,51 @@ begin
     return false;
   end if;
 
-  /* Ręczny STATUS_<status> albo GPS — nie cofać. */
+  v_head_id := v_ev_id;
+  v_chain_ids := array[v_ev_id];
+
+  /*
+   * F7 B1: korekta AIS (FERRY→FERRY, korekta) — iść wstecz po zastepuje do korzenia
+   * i wziąć jego from (np. AT_PORT_GDANSK). Korzeń nie z rejsu → nie cofać.
+   */
+  if (v_korekta is true) or (v_from is not distinct from v_status) then
+    with recursive chain as (
+      select e.id,
+             e.payload,
+             e.payload->>'from' as frm,
+             e.payload->>'source' as src,
+             e.payload->>'sailing_id' as sail,
+             1 as depth
+        from public.load_events e
+       where e.id = v_ev_id
+         and e.load_id = p_load
+      union all
+      select p.id,
+             p.payload,
+             p.payload->>'from',
+             p.payload->>'source',
+             p.payload->>'sailing_id',
+             c.depth + 1
+        from chain c
+        join public.load_events p
+          on p.load_id = p_load
+         and p.id = nullif(c.payload->>'zastepuje', '')::bigint
+       where nullif(c.payload->>'zastepuje', '') is not null
+         and c.depth < 50
+         and (
+           coalesce(c.payload->>'korekta', '') = 'true'
+           or coalesce(c.payload->>'from', '') = v_status
+         )
+    )
+    select array_agg(c.id order by c.depth),
+           (array_agg(c.frm order by c.depth desc))[1],
+           (array_agg(c.src order by c.depth desc))[1],
+           (array_agg(c.sail order by c.depth desc))[1]
+      into v_chain_ids, v_from, v_src, v_sail
+      from chain c;
+  end if;
+
+  /* Ręczny STATUS_<status> albo GPS — nie cofać (korzeń / najświeższy). */
   if v_src is null
      or v_src not in ('AIS', 'SCHEDULE', 'SCHEDULE_ASSUMED') then
     return false;
@@ -72,7 +121,7 @@ begin
     return false;
   end if;
 
-  if v_from is null then
+  if v_from is null or v_from is not distinct from v_status then
     return false;
   end if;
   begin
@@ -99,6 +148,7 @@ begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
 
+  /* F7: zastepuje = głowa łańcucha; cofniete_ids = cały łańcuch; bez korekta:true. */
   v_ok := public.auto_set_status(
     p_load,
     v_status::public.load_status,
@@ -108,7 +158,8 @@ begin
     jsonb_build_object(
       'source', 'SAILING_REMOVED',
       'sailing_id', p_old_sailing,
-      'zastepuje', v_ev_id,
+      'zastepuje', v_head_id,
+      'cofniete_ids', to_jsonb(coalesce(v_chain_ids, array[v_head_id])),
       'cofniete', true,
       'actor', v_actor
     )
@@ -124,7 +175,7 @@ revoke all on function public.revert_status_after_sailing_removed(uuid, uuid, ti
 grant execute on function public.revert_status_after_sailing_removed(uuid, uuid, timestamptz, text)
   to service_role;
 comment on function public.revert_status_after_sailing_removed(uuid, uuid, timestamptz, text) is
-  '#489: cofnięcie FERRY/portu z AIS/SCHEDULE po odpięciu rejsu; bez powiadomień.';
+  '#489: cofnięcie FERRY/portu z AIS/SCHEDULE po odpięciu rejsu (łańcuch korekty); bez powiadomień.';
 
 -- ---------------------------------------------------------------------------
 -- 2. Trigger: zmiana sailing_id (null albo inny rejs)
@@ -142,9 +193,6 @@ begin
     return new;
   end if;
   if old.sailing_id is null then
-    return new;
-  end if;
-  if new.sailing_id is not distinct from old.sailing_id then
     return new;
   end if;
 
@@ -170,6 +218,7 @@ drop trigger if exists trg_loads_sailing_removed_status on public.loads;
 create trigger trg_loads_sailing_removed_status
   after update of sailing_id on public.loads
   for each row
+  when (old.sailing_id is distinct from new.sailing_id)
   execute function public.trg_loads_sailing_removed_status();
 
 revoke all on function public.trg_loads_sailing_removed_status() from public, anon, authenticated;
@@ -188,12 +237,14 @@ declare
   v_ev bigint;
   v_ok boolean;
   v_ts timestamptz := timestamptz '2026-10-23 11:05:13+00';
+  v_actor text := 'system';
+  v_ts_ev timestamptz;
   n_fix int := 0;
 begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
 
-  /* SG-18 — godzina odpięcia z zgłoszenia. */
+  /* SG-18 — actor i godzina z ostatniego SAILING_ASSIGNED „rejs usunięty” (F7). */
   select l.id, l.status::text
     into v_load, v_status
     from public.loads l
@@ -202,6 +253,19 @@ begin
    limit 1;
 
   if v_load is not null and v_status = 'FERRY' then
+    select nullif(btrim(e.payload->>'actor'), ''), e.occurred_at
+      into v_actor, v_ts_ev
+      from public.load_events e
+     where e.load_id = v_load
+       and e.event_type = 'SAILING_ASSIGNED'
+       and coalesce(e.payload->>'note', '') = 'rejs usunięty'
+     order by e.occurred_at desc, e.id desc
+     limit 1;
+    if v_ts_ev is not null then
+      v_ts := v_ts_ev;
+    end if;
+    v_actor := coalesce(nullif(btrim(v_actor), ''), 'system');
+
     select e.id,
            nullif(e.payload->>'from', ''),
            nullif(e.payload->>'sailing_id', '')::uuid
@@ -227,17 +291,17 @@ begin
         null, 'HOTFIX_489_BEFORE', 'loads', v_load::text,
         jsonb_build_object(
           'code', 'SG-18', 'status', v_status, 'from', v_from,
-          'sailing_id', v_sail, 'ev', v_ev
+          'sailing_id', v_sail, 'ev', v_ev, 'actor', v_actor, 'at', v_ts
         )
       );
-      v_ok := public.revert_status_after_sailing_removed(v_load, v_sail, v_ts, 'system');
+      v_ok := public.revert_status_after_sailing_removed(v_load, v_sail, v_ts, v_actor);
       if v_ok is true then
         n_fix := n_fix + 1;
       end if;
       insert into public.audit_log (user_id, action, entity, entity_id, new_value)
       values (
         null, 'HOTFIX_489_SG18', 'loads', v_load::text,
-        jsonb_build_object('ok', v_ok, 'to', coalesce(v_from, 'IN_TRANSIT_PL'), 'at', v_ts, 'hotfix', '0276')
+        jsonb_build_object('ok', v_ok, 'to', coalesce(v_from, 'IN_TRANSIT_PL'), 'at', v_ts, 'actor', v_actor, 'hotfix', '0276')
       );
     end if;
   end if;
@@ -269,19 +333,34 @@ begin
        and l.status in ('FERRY', 'AT_PORT_GDANSK', 'AT_PORT_NYNASHAMN')
        and (v_load is null or l.id is distinct from v_load)
   loop
+    v_actor := 'system';
+    v_ts := now();
+    select nullif(btrim(e.payload->>'actor'), ''), e.occurred_at
+      into v_actor, v_ts_ev
+      from public.load_events e
+     where e.load_id = r.load_id
+       and e.event_type = 'SAILING_ASSIGNED'
+       and coalesce(e.payload->>'note', '') = 'rejs usunięty'
+     order by e.occurred_at desc, e.id desc
+     limit 1;
+    if v_ts_ev is not null then
+      v_ts := v_ts_ev;
+    end if;
+    v_actor := coalesce(nullif(btrim(v_actor), ''), 'system');
+
     insert into public.audit_log (user_id, action, entity, entity_id, new_value)
     values (
       null, 'HOTFIX_489_BEFORE', 'loads', r.load_id::text,
       jsonb_build_object(
         'status', r.status, 'from', r.prev_from,
-        'sailing_id', r.sailing_id, 'ev', r.ev_id
+        'sailing_id', r.sailing_id, 'ev', r.ev_id, 'actor', v_actor, 'at', v_ts
       )
     );
     v_ok := public.revert_status_after_sailing_removed(
       r.load_id,
       coalesce(r.sailing_id, '00000000-0000-0000-0000-000000000489'::uuid),
-      now(),
-      'system'
+      v_ts,
+      v_actor
     );
     if v_ok is true then
       n_fix := n_fix + 1;

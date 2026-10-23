@@ -893,9 +893,14 @@ echo; echo "[#489] Odpięcie rejsu → powrót statusu (SAILING_REMOVED)"
 L489a=$(L 8f)
 L489b=$(L 90)
 L489c=$(L 91)
+L489d=$(L 92)
+L489e=$(L 93)
+L489f=$(L 94)
 S489b=77777777-0000-0000-0000-000000000489
+S489e=77777777-0000-0000-0000-00000000049e
 q "insert into sailings (id,project_id,vessel_id,departure_at,arrival_at,actual_departure_at,status,route) values
- ('$S489b','$P','66666666-0000-0000-0000-000000000001','2026-10-01 18:00+00','2026-10-02 12:00+00','2026-10-01 18:05+00','ZAPLANOWANY','GDN-NYN')" >/dev/null
+ ('$S489b','$P','66666666-0000-0000-0000-000000000001','2026-10-01 18:00+00','2026-10-02 12:00+00','2026-10-01 18:05+00','ZAPLANOWANY','GDN-NYN'),
+ ('$S489e','$P','66666666-0000-0000-0000-000000000001','2026-10-01 10:00+00','2026-10-02 04:00+00',null,'ZAPLANOWANY','GDN-NYN')" >/dev/null
 # a) FERRY z AIS → odpięcie → IN_TRANSIT_PL; 0 powiadomień; FERRY z zastepuje
 mk $L489a A489 "'HHL/A489'" "'SCX/A489'" IN_TRANSIT_PL "'$S1'"
 q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
@@ -919,6 +924,17 @@ q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
 chk "#489: ręczny FERRY przed odpięciem" "$(st $L489b)" FERRY
 chk "#489: odpięcie przy FERRY ręcznym → bez zmian" \
   "update loads set sailing_id = null where id='$L489b'; select status from loads where id='$L489b'" FERRY
+# b') FERRY z AIS, potem ręczna godzina FERRY → odpięcie bez zmian (F7)
+mk $L489f F489 "'HHL/F489'" "'SCX/F489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+chk "#489: b' promote → FERRY (AIS)" \
+  "select promote_ferry_departures('2026-10-01 12:30+00'); select status from loads where id='$L489f'" FERRY
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select load_status_set('$L489f','FERRY','2026-10-01 13:00+00',null);
+   commit" >/dev/null
+chk "#489: b' po load_status_set nadal FERRY" "$(st $L489f)" FERRY
+chk "#489: b' odpięcie po ręcznej godzinie → bez zmian" \
+  "update loads set sailing_id = null where id='$L489f'; select status from loads where id='$L489f'" FERRY
 # c) zmiana rejsu → cofnięcie, potem nowy rejs ustawia FERRY
 mk $L489c C489 "'HHL/C489'" "'SCX/C489'" IN_TRANSIT_PL "'$S1'"
 q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
@@ -930,6 +946,30 @@ chk "#489: po promote nowego rejsu → FERRY" \
   "select promote_ferry_departures('2026-10-01 18:30+00'); select status from loads where id='$L489c'" FERRY
 chk "#489: nowy FERRY ma sailing_id S489b" \
   "select payload->>'sailing_id' from load_events where load_id='$L489c' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" "$S489b"
+# d) FERRY z AIS, potem AT_PORT_NYNASHAMN z GPS → odpięcie bez zmian (F7)
+mk $L489d D489 "'HHL/D489'" "'SCX/D489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+chk "#489: d promote → FERRY (AIS)" \
+  "select promote_ferry_departures('2026-10-01 12:30+00'); select status from loads where id='$L489d'" FERRY
+pos $L489d 58.9350 17.9500 "2026-10-02 06:10+00"; pos $L489d 58.9351 17.9501 "2026-10-02 06:15+00"
+chk "#489: d GPS → AT_PORT_NYNASHAMN" "$(st $L489d)" AT_PORT_NYNASHAMN
+chk "#489: d odpięcie przy porcie SE GPS → bez zmian" \
+  "update loads set sailing_id = null where id='$L489d'; select status from loads where id='$L489d'" AT_PORT_NYNASHAMN
+# e) SCHEDULE_ASSUMED → korekta AIS → odpięcie → AT_PORT_GDANSK (F7 B1)
+mk $L489e E489 "'HHL/E489'" "'SCX/E489'" AT_PORT_GDANSK "'$S489e'"
+chk "#489: e SCHEDULE_ASSUMED → FERRY" \
+  "select promote_ferry_departures('2026-10-01 11:00+00'); select status from loads where id='$L489e'" FERRY
+chk "#489: e source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+q "update sailings set actual_departure_at = '2026-10-01 10:15+00' where id='$S489e'" >/dev/null
+chk "#489: e AIS korekta (korekta=true)" \
+  "select promote_ferry_departures('2026-10-01 11:30+00'); select (payload->>'korekta') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" true
+chk "#489: e odpięcie po korekcie → AT_PORT_GDANSK" \
+  "update loads set sailing_id = null where id='$L489e'; select status from loads where id='$L489e'" AT_PORT_GDANSK
+chk "#489: e cofniete_ids ma 2 (korzeń + korekta)" \
+  "select jsonb_array_length(payload->'cofniete_ids') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'source'='SAILING_REMOVED' order by id desc limit 1" 2
+chk "#489: e cofnięcie bez korekta:true" \
+  "select coalesce(payload->>'korekta','') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'source'='SAILING_REMOVED' order by id desc limit 1" ""
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
