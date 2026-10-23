@@ -4406,3 +4406,27 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: **#490** `e911ad74` (F7 gotowe po `775700ce`, CI zielone) — oś Status AIS. #488 F7 r3 „jeszcze nie” (B2: zgubiony Norrköping); #478 nie scalać (→**0277**).
 - CI #488 na `0129b073`: unit/db/visual zielone.
 - F7 B2: 16.637=Västervik; brak 16.32/58.48 i 16.183/58.594 → SG-23 16.3186/58.4792 = 33,5 km. Poprawka: Söderköping+Norrköping(+Gamleby); `total_km` z `geom`; test Söderköping; OFFROUTE_KM przywrócone; status **207**.
+
+## 2026-10-23 14:40 — #487 SCALONE + start #489 (0276)
+
+- Skrzynka: #489 `pilne` bieżąca; #487 zamknięte; #484/#467 w planie (#478 → **0277**, nie scalać przed #489).
+- Scalanie: **#488** `53c66026` (F7 gotowe na `4e386f4c`, CI zielone); **#491** `6b824f6a` (wygląd statusy, F7 gotowe).
+- Bieżąca: **#489** `pakiet/hotfix-489-sailing-removed-status`, migracja **0276**: `revert_status_after_sailing_removed` + trigger na `sailing_id`; naprawa SG-18; testy status **218** (+11).
+
+## 2026-10-23 15:05 — #489 CI zielone + #492 w planie
+
+- Skrzynka: #492 (Spawn2018, niepilne) — `loads.updated_at` przy zasobach z ekranu (po #491); wpisane PLAN §4 po #484, przed B5. #489 `pilne` nadal bieżąca.
+- Scalanie: brak — PR #493 bez F7; #478 wstrzymane (→**0277** po #489); #382/#383 niegotowe.
+- CI #493 na `6a335941`: unit / db / visual **zielone** (status 218). Czekam na „F7: gotowe do scalenia”.
+
+## 2026-10-23 15:30 — #489 F7 B1/B2 (łańcuch korekty AIS)
+
+- Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie (bez nowych).
+- Scalanie: brak — F7 #493 „jeszcze nie” (B1/B2); CI docs `bfb80182` unit/db/visual zielone przed poprawką; #478/#494 nie scalać przed bazą.
+- F7: `revert_status_after_sailing_removed` — CTE po `zastepuje` przy `korekta` / `from=status`; `cofniete_ids`; trigger `WHEN (old.sailing_id is distinct from new.sailing_id)`; naprawa actor/godzina z SAILING_ASSIGNED „rejs usunięty”; testy b'/d/e; status **230**.
+
+## 2026-10-23 16:00 — #489 F7 r2 B3 (ręczna korekta godziny)
+
+- Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie; #494 wygląd F7 gotowe (czeka na bazę).
+- Scalanie: brak — F7 #493 „jeszcze nie” (B3); CI `3fa2849e` db FAIL b' (IN_TRANSIT_PL zamiast FERRY).
+- F7 B3: głowa `STATUS_*` / bez source → `return false`; CTE wstecz tylko przez `STATUS_AUTO`+`source=AIS`; łańcuch z wpisem ręcznym → bez cofania; naprawa bez placeholder `sailing_id` (null). Status **230**.
