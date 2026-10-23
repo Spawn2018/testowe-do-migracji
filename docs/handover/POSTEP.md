@@ -4288,3 +4288,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 
 - Skrzynka: bez nowych `pilne`; #465–#467/#446/#425 w planie. Scalanie: brak „F7: gotowe” (F7 #474: jeszcze nie — zakres okrojony).
 - Bieżąca: **#465** PR #474 — F7: dopisane 25 RPC ze zrzutu aplikacji + `rpc_denied` (42501 vs błąd definicji); EXPECTED bmapa **141** (+105). CI poprzedniego SHA zielone; push poprawki.
+
+## 2026-10-23 03:45 — #474/#465 SCALONE; start #463 cz.2 (backup continue)
+
+- Skrzynka: #463 ponownie otwarte (F7 #474: nocna kopia id 38 — Edge 502 ~147 s). #465 zamknięte. #259 zamknięte bez scalenia (F7 #382).
+- Scalanie: #474 F7 „gotowe do scalenia” (head `ae1214a6`) + CI unit/db/visual zielone → MERGED `8569f78b`. Bez push na `main`.
+- Bieżąca: **#463 cz.2** (`pakiet/hotfix-463-backup-continue`) — `WALL_BUDGET_MS` 90 s, timeout kawałka 40 s, samowywołanie `{ continue_run }`, log po tabeli; unit backup-core 14/14.

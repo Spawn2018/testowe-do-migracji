@@ -6,8 +6,9 @@ import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
   BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES,
-  assertCsvMatchesDbCount, backupTables, copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip,
-  heapPagesFromBytes, retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
+  TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS, assertCsvMatchesDbCount, backupTables, copyCtidRangeSql,
+  csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget, remainingTables,
+  retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
@@ -64,6 +65,17 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(() => copyCtidRangeSql('loads', 5, 5, null, true)).toThrow(/zakres/);
     expect(() => assertCsvMatchesDbCount(10, 10, 'loads')).not.toThrow();
     expect(() => assertCsvMatchesDbCount(9, 10, 'notifications')).toThrow(/niekompletna.*notifications.*csv=9.*db=10/);
+  });
+
+  // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel
+  it('#463: remainingTables / pastWallBudget / timeout kawałka < wall', () => {
+    expect(TABLE_COPY_TIMEOUT_MS).toBeLessThan(WALL_BUDGET_MS);
+    expect(WALL_BUDGET_MS).toBeLessThan(150_000);
+    expect(remainingTables(['a', 'b', 'c'], { a: 1 })).toEqual(['b', 'c']);
+    expect(remainingTables(['a', 'b'], null)).toEqual(['a', 'b']);
+    expect(remainingTables(['a'], { a: 0 })).toEqual([]);
+    expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS - 1)).toBe(false);
+    expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS)).toBe(true);
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {
