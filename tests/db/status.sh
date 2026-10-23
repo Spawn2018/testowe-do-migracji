@@ -833,5 +833,33 @@ q "insert into load_events (load_id,event_type,occurred_at) values ('$L485e','MI
 pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
 chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
 
+# #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
+echo; echo "[#487] korytarz E22 po Karlskronie (OFF_CORRIDOR)"
+L487a=$(L 8d)
+mk $L487a A487 "'HHL/A487'" "'SCX/A487'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L487a';
+   delete from positions where load_id='$L487a';
+   set session_replication_role=origin;" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(16.4, 57.0),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(16.4, 57.0),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#487: E22 (57.0,16.4) po Karlskronie → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+L487b=$(L 8e)
+mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L487b';
+   delete from positions where load_id='$L487b';
+   set session_replication_role=origin;" >/dev/null
+# ~50+ km od E22 i E4 (zachód, Kattegat)
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487b', now() - interval '15 minutes', st_setsrid(st_makepoint(12.0, 57.0),4326), 'TELEMATICS_API'),
+  ('$L487b', now(), st_setsrid(st_makepoint(12.0, 57.0),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487b')" >/dev/null
+chk "#487: 50+ km od E22/E4 → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
+chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
+  "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

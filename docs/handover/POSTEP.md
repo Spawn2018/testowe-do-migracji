@@ -4232,11 +4232,11 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak F7 „gotowe do scalenia” po ostatnim commicie. Bez push na main.
 - Bieżąca: **#455** PR #457 — `db` czerwone: UNIQUE(project_id, shipment_code) blokował 4. SG-01; strażnik przez si z innym project_id. EXPECTED import 113, dec2 73.
 
-## 2026-10-22 20:50 � #460 pilne: ferry_track_sample 42702; #408 SCALONE; #409 wstrzymane
+## 2026-10-22 20:50 � #460 pilne: ferry_track_sample 42702; #408 SCALONE; #409 wstrzymane
 
-- Skrzynka: #460/#461 (Spawn2018, `dla-cursora`+`pilne`) � promy z mapy (ambiguous vessel_id) + Prom dopiero przy actual_departure_at. Wpisane: PLAN �4/�8, dopiski `D-20261022-2043-01.md` / `D-20261022-2045-01.md`. #409�**0270**, #413�**0271**, #422�**0272**, B5�**0273**.
-- Scalanie: #408 F7 �gotowe do scalenia� + CI unit/visual zielone � MERGED `00611f7e`. #458 (#409) db FAIL (security: fuel_basis_public bez search_path) � wstrzymane przez #460. Bez push na `main`.
-- Bie��ca: **#460** (`pakiet/hotfix-460-ferry-track-sample`, migracja **0268**) � aliasy w CTE `u`; bmapa +1 � 36.
+- Skrzynka: #460/#461 (Spawn2018, `dla-cursora`+`pilne`) � promy z mapy (ambiguous vessel_id) + Prom dopiero przy actual_departure_at. Wpisane: PLAN �4/�8, dopiski `D-20261022-2043-01.md` / `D-20261022-2045-01.md`. #409�**0270**, #413�**0271**, #422�**0272**, B5�**0273**.
+- Scalanie: #408 F7 �gotowe do scalenia� + CI unit/visual zielone � MERGED `00611f7e`. #458 (#409) db FAIL (security: fuel_basis_public bez search_path) � wstrzymane przez #460. Bez push na `main`.
+- Bie��ca: **#460** (`pakiet/hotfix-460-ferry-track-sample`, migracja **0268**) � aliasy w CTE `u`; bmapa +1 � 36.
 
 ## 2026-10-22 21:25 — #460 SCALONE; start #461; #463 w planie
 
@@ -4371,3 +4371,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #485 `pilne`; #484 wpisane PLAN §4 (po #412, przed B5); #467 F7 „gotowe” treścią — scalenie po #485 + renumeracja 0275.
 - Scalanie: brak „F7: gotowe” na głowie #486 po B1–B4; #478 nie scalać (0274 koliduje z #486).
 - CI `db` FAIL na `2ba3cac8`: security „każda funkcja public ma ustaloną search_path” (1) → `sweden_land_geom` + `set search_path to 'public'`. `status` 200/200 OK.
+
+## 2026-10-23 12:45 — #487 PILNE: OFF_CORRIDOR Karlskrona / E22 (przerywa #467)
+
+- Skrzynka: #487 `pilne` (Spawn2018) — fałszywa CRITICAL OFF_CORRIDOR SG-23 (SE_E4 zamiast E22); przed #478. #484 już w planie. #467 PR #478: F7 „gotowe” na e7bf6ae, CI w toku — nie scalane (#487 pierwsze).
+- Scalanie: brak PR do scalenia (F7 #478 czeka na #487 + zielone CI).
+- Bieżąca: **#487** `pakiet/hotfix-487-corridor-e22`, migracja **0275**: `refresh_load_eta` — STENA→SE_E22, POLFERRIES→SE_E4; bez korytarza → bez sprawy; zamknięcie 518c010e… + PENDING + L3; testy `status.sh`.
+- Numery: #467→**0276**, #413→**0277**, #422→**0278**, B5→**0279**.
