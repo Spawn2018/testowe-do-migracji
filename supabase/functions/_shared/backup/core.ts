@@ -60,7 +60,24 @@ export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
  */
 export const CHUNK_EST_ROWS = 2_500;
 export const CTID_PAGES_PER_CHUNK = 32;
-export const TABLE_COPY_TIMEOUT_MS = 120_000;
+/** Timeout jednego kawałka COPY — musi być << limitu wall-clock Edge (~150 s), inaczej 502 przed końcem tabeli. */
+export const TABLE_COPY_TIMEOUT_MS = 40_000;
+/**
+ * Budżet jednego wywołania Edge (#463 id 38: 502 ~147 s). Po przekroczeniu
+ * funkcja kończy odpowiedź i woła się ponownie z `continue_run` (stan w backup_runs).
+ */
+export const WALL_BUDGET_MS = 90_000;
+
+/** Tabele jeszcze nie zapisane w `backup_runs.tables` (klucze = ukończone). */
+export function remainingTables(all: readonly string[], done: Record<string, number> | null | undefined): string[] {
+  const have = done && typeof done === 'object' ? done : {};
+  return all.filter((t) => !Object.prototype.hasOwnProperty.call(have, t));
+}
+
+/** Czy czas na kontynuację w kolejnym wywołaniu (po ukończonej tabeli / przed kolejną). */
+export function pastWallBudget(startedAtMs: number, nowMs = Date.now(), budgetMs = WALL_BUDGET_MS): boolean {
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs >= budgetMs;
+}
 
 /** Zakres ctid: `to === null` = od `from` wzwyż (ostatni kawałek, bez górnej granicy). */
 export type CtidRange = { from: number; to: number | null };
