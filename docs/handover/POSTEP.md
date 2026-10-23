@@ -4385,3 +4385,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak (CI #488 czerwone; #478 nie scalać przed #487).
 - CI `db` FAIL na `d3601c0e`: status 204/205 — punkt 57.0/16.4 ~3 km od polilinii SE_E22 przy OFFROUTE_KM=2; risks 44/46 — `rk_off_corridor` z L487b w `tower_test_status`.
 - Poprawka: wierzchołek SE_E22 (16.637,57.758); sprzątanie `rk_off_corridor`; status **206**.
+
+## 2026-10-23 13:35 — #487 F7 runda 2 + #489 w planie (PR #488)
+
+- Skrzynka: #489 `pilne` (Spawn2018) — SG-18 po odpięciu rejsu status zostaje FERRY; wpisane PLAN §4 (po #487, przed #467, **0276**). #484 w planie.
+- Scalanie: brak — #488 F7 „jeszcze nie” (bloker 2–3 migracji); #478 F7 treścią, ale numer → **0277** po #487+#489 (nie scalać).
+- CI #488 na `04d06b7a`: unit/db/visual zielone.
+- F7 poprawki w 0275: `518c010e` bez warunku `resolved_at` + adnotacja; PENDING tylko `payload.risk_id` → `SUPPRESSED`; test ~50 km Småland (15.79/57.76).

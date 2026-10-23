@@ -133,23 +133,25 @@ revoke all on function public.refresh_load_eta(uuid) from public, anon, authenti
 
 -- ---------------------------------------------------------------------------
 -- 2. Zamknięcie fałszywej sprawy SG-23 (518c010e…) + Stena + SE_E4
+-- F7: 518c010e bez warunku resolved_at (idempotentnie); SUPPRESSED tylko po risk_id.
 -- ---------------------------------------------------------------------------
 do $$
 declare
   r record;
+  v_false uuid := '518c010e-b632-4dbb-92b8-4b29c10b3d02';
 begin
   for r in
     select s.id, s.dedup_key, s.load_id
       from risk_signals s
       join loads l on l.id = s.load_id
       left join sailings sa on sa.id = l.sailing_id
-     where s.resolved_at is null
-       and s.title_key = 'rk_off_corridor'
+     where s.title_key = 'rk_off_corridor'
        and s.dedup_key like 'OFF_CORRIDOR:%'
        and (
-         s.id::text like '518c010e%'
+         s.id = v_false
          or (
-           coalesce(s.detail->'params'->>'corridor', '') = 'SE_E4'
+           s.resolved_at is null
+           and coalesce(s.detail->'params'->>'corridor', '') = 'SE_E4'
            and sa.route in ('GDY-KAA', 'KAA-GDY')
          )
        )
@@ -164,16 +166,12 @@ begin
 
     perform l3_lapse(r.dedup_key, now());
 
+    /* Tylko powiadomienia tej sprawy — nie FERRY_OVERDUE / eskalacje SG-23. */
     update notifications
-       set status = 'CANCELLED',
+       set status = 'SUPPRESSED',
            error = coalesce(nullif(error, ''), 'fałszywa OFF_CORRIDOR #487')
      where status = 'PENDING'
-       and load_id = r.load_id
-       and (
-         template in ('RISK_OPEN', 'DECISION_ESCALATED', 'DECISION_ESCALATED_BATCH')
-         or coalesce(payload->>'event_key', '') = r.dedup_key
-         or coalesce(dedup_key, '') like '%' || r.dedup_key || '%'
-       );
+       and payload->>'risk_id' = r.id::text;
 
     insert into audit_log (user_id, action, entity, entity_id, new_value)
     values (

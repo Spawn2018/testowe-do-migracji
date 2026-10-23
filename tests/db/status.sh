@@ -854,12 +854,12 @@ q "set session_replication_role=replica;
    update loads set status='IN_TRANSIT_SE' where id='$L487b';
    delete from positions where load_id='$L487b';
    set session_replication_role=origin;" >/dev/null
-# ~50+ km od E22 i E4 (zachód, Kattegat)
+# ~50 km od E22 w Smålandzie (zachód od wierzchołka 16.637/57.758; nie Kattegat)
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L487b', now() - interval '15 minutes', st_setsrid(st_makepoint(12.0, 57.0),4326), 'TELEMATICS_API'),
-  ('$L487b', now(), st_setsrid(st_makepoint(12.0, 57.0),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L487b', now() - interval '15 minutes', st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API'),
+  ('$L487b', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487b')" >/dev/null
-chk "#487: 50+ km od E22/E4 → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
+chk "#487: ~50 km od E22 (Småland) → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
 chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
   "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
 # F7: risks.sh liczy title_key w całej tower_test_status (baseline 5) — bez rk_off_corridor.
