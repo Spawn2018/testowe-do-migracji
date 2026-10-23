@@ -21,7 +21,7 @@ import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
   BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS,
-  assertCsvMatchesDbCount, assertSafeIdent, backupTables, copyCtidRangeSql, csvRowCount, ctidPageRanges,
+  assertCsvInCountWindow, assertSafeIdent, backupTables, copyCtidRangeSql, csvRowCount, ctidPageRanges,
   dailyPrefix, heapPagesFromBytes, manifest, monthlyPrefix, pastWallBudget, remainingTables, rerunPrefix,
   sealTable, sha256Hex, shouldChunkByEstimate, writerClient,
 } from '../_shared/backup/core.ts';
@@ -114,8 +114,8 @@ function readCopyStream(stream: CopyReadable, label: string, timeoutMs = TABLE_C
  * IDLE_TIMEOUT 150 s na pierwszej tabeli po `audit_log` (`auth_login_events`, 85 wierszy /
  * 24 kB) — `continue_run` bez postępu. `await query` w Deno nie domyka COPY; w `catch`
  * po timeout 40 s też wisi → brak ERROR w `backup_runs`. Bez `begin`: każdy COPY to
- * osobna niejawna transakcja (jak id 37). count(*) przed COPY (osobne zapytanie) —
- * dopuszczalny TOCTOU względem F7 RR; backup nie jest migawką księgową.
+ * osobna niejawna transakcja (jak id 37). count przed i po COPY → przedział
+ * `assertCsvInCountWindow` (F7 #480); kopia nie jest migawką między tabelami.
  */
 async function copySqlToCsv(
   db: { unsafe: (s: string) => Promise<unknown> & { readable: () => Promise<CopyReadable> } },
@@ -148,8 +148,8 @@ async function copyTableCsv(
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public' and c.relname = ${table}`;
-  const [cntRow] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
-  const dbCount = Number(cntRow?.n ?? -1);
+  const [cnt0] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
+  const n0 = Number(cnt0?.n ?? -1);
   const est = Number(meta?.est ?? 0);
   const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
   let csv: Uint8Array;
@@ -177,7 +177,9 @@ async function copyTableCsv(
       csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
     }
   }
-  assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), dbCount, t);
+  const [cnt1] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
+  const n1 = Number(cnt1?.n ?? -1);
+  assertCsvInCountWindow(csvRowCount(new TextDecoder().decode(csv)), n0, n1, t);
   return csv;
 }
 

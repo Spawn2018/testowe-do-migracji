@@ -1409,4 +1409,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 04:55 | #463 cz.3: id 39 hang po COPY (idle in transaction) — `await query` + count przed COPY; PR #477 | pętla |
 | 23.10.2026 05:02 | #476/#466 SCALONE (`343a7042`, 0273); rebase #477 na main (konflikt PLAN/POSTEP) | pętla |
 | 23.10.2026 05:45 | #477/#463 cz.3 SCALONE (`b76da833`); start #467 → **0274**; #413→**0275**, #422→**0276**, B5→**0277** | pętla |
-| 23.10.2026 06:05 | #479 `pilne`: po #477 brak OK kopii — id 40 hang jak 39; cz.4 bez `begin`/`await query` (wzór id 37); PR na `pakiet/hotfix-479-backup-copy-complete` | pętla |
+| 23.10.2026 06:05 | #479 `pilne`: po #477 brak OK kopii — id 40 hang jak 39; cz.4 bez `begin`/`await query` (wzór id 37); PR #480 | pętla |
+| 23.10.2026 06:15 | F7 #480 niegotowe → `assertCsvInCountWindow` (n0/n1); dopisek D-20261023-0615-01; kopia ≠ migawka między tabelami | pętla |

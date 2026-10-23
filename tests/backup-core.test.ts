@@ -6,8 +6,8 @@ import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
   BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES,
-  TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS, assertCsvMatchesDbCount, backupTables, copyCtidRangeSql,
-  csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget, remainingTables,
+  TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS, assertCsvInCountWindow, assertCsvMatchesDbCount, backupTables,
+  copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget, remainingTables,
   retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
@@ -65,6 +65,21 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(() => copyCtidRangeSql('loads', 5, 5, null, true)).toThrow(/zakres/);
     expect(() => assertCsvMatchesDbCount(10, 10, 'loads')).not.toThrow();
     expect(() => assertCsvMatchesDbCount(9, 10, 'notifications')).toThrow(/niekompletna.*notifications.*csv=9.*db=10/);
+  });
+
+  // #479 F7: poza RR — przedział n0/n1 (wstawki / retencja w trakcie); brak wierszy → ERROR
+  it('#479: assertCsvInCountWindow — wstawki, usunięcia, ubytek w CSV', () => {
+    expect(() => assertCsvInCountWindow(100, 100, 100, 'loads')).not.toThrow();
+    expect(() => assertCsvInCountWindow(105, 100, 110, 'integration_runs')).not.toThrow(); // wstawki
+    expect(() => assertCsvInCountWindow(95, 100, 90, 'sms_heartbeats')).not.toThrow(); // retencja
+    expect(() => assertCsvInCountWindow(100, 110, 90, 'notifications')).not.toThrow(); // n0>n1, csv w środku
+    expect(() => assertCsvInCountWindow(89, 100, 90, 'audit_log')).toThrow(
+      /niekompletna.*audit_log.*csv=89.*n0=100.*n1=90/,
+    ); // csv < lo
+    expect(() => assertCsvInCountWindow(111, 100, 110, 'vessel_positions')).toThrow(
+      /niekompletna.*vessel_positions.*csv=111.*n0=100.*n1=110/,
+    ); // csv > hi
+    expect(() => assertCsvInCountWindow(0, 5, 5, 'app_users')).toThrow(/csv=0.*n0=5.*n1=5/);
   });
 
   // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel

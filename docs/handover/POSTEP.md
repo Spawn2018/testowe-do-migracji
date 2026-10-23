@@ -4330,4 +4330,4 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #479 `pilne` (przerywa #467/PR #478) — po wdrożeniu #477 brak przebiegu OK; id 39 ERROR, id 37 ostatnia OK.
 - Ręczny `backup-export` jak cron: **id 40** RUNNING → te same 4 tabele → IDLE_TIMEOUT 150 s; `continue_run=40` → znowu 150 s, 0 postępu. `auth_login_events` 85 wierszy / 24 kB. Brak `idle in transaction` po zabiciu Edge.
 - Diagnoza: `await query` po `.readable()` w `sql.begin` RR (#477) wiesza Deno; w `catch` po timeout COPY też. Naprawa cz.4: strumień data/end jak id 37 / PR2 — **bez** `begin` i **bez** `await query`; count(*) osobnym zapytaniem.
-- id 40 → ERROR. Gałąź `pakiet/hotfix-479-backup-copy-complete`. Po F7/deploy-main: ponowna kopia + wpis id/status/continue w #463.
+- id 40 → ERROR. Gałąź `pakiet/hotfix-479-backup-copy-complete` (PR #480). F7 „jeszcze nie”: przedział `assertCsvInCountWindow(n0,n1)` zamiast równości; dopisek D-20261023-0615-01. Po ponownym F7/deploy-main: kopia + wpis w #463.
