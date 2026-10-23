@@ -4465,3 +4465,8 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - **#501 / #498:** CI unit/db/visual zielone na `dc970998`; F7 „jeszcze nie” → B1 lease + cron ≥2 min; B2 `recordTableParts` (1×5000); catch tylko `RUNNING`. `deploy-main`: Baza przed Edge — OK.
 - **#499 prognoza (najpóźniej, bez cięcia 28.10 20:00):** #498 dziś przed 00:30 UTC; #413+#422+#412 24.10; #484+#492+#496 25.10; B5 25–26.10; B7/B8/B9 26.10; A6+SharePoint 26–27.10; C4–C13 27.10; P4-u/P3-d 27–28.10.
 - Dalej: push F7 B1/B2, czekam ponowne „F7: gotowe”.
+
+## 2026-10-23 19:15 — #501 db: backup 32/32 (gate-suites)
+
+- CI `db` czerwone na `ddcaf0cb`: backup 32 OK, oczekiwano 29 (`gate-suites.mjs`).
+- Poprawka: LOCAL 32, TEST 24 (32−8 SKIP). Unit/visual już zielone. Czekam CI + F7 „gotowe”.
