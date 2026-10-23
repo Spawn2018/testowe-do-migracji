@@ -42,11 +42,27 @@ describe('W-odswiez-statusy — statusy z automatu bez przeładowania', () => {
     vi.unstubAllGlobals();
   });
 
+  it('zmiana statusu tuż po zalogowaniu — pierwsze sprawdzenie od razu pobiera zrzut (F7: wersja nie zerowana po starcie)', async () => {
+    const noop = () => undefined;
+    vi.stubGlobal('document', { visibilityState: 'visible', addEventListener: noop, removeEventListener: noop });
+    vi.stubGlobal('window', { addEventListener: noop, removeEventListener: noop });
+    const b = await import('../src/data/supabaseBridge');
+    version = 'v-login';
+    await b.connectSupabaseData({} as never);
+    snapshots.mockClear();
+    version = 'v-auto';
+    await b.refreshIfLoadsChanged();
+    expect(snapshots).toHaveBeenCalledTimes(1);
+    b.disconnectSupabaseData();
+    vi.unstubAllGlobals();
+  });
+
   it('w kodzie: co 2 min przy widocznej karcie i przy powrocie do aplikacji; nie w trakcie własnego zapisu', async () => {
     const { readFileSync } = await import('node:fs');
     const br = readFileSync(new URL('../src/data/supabaseBridge.ts', import.meta.url), 'utf8');
     expect(br).toContain('const LIVE_EVERY_MS = 2 * 60_000;');
     expect(br).toContain('void refreshIfLoadsChanged().catch(() => undefined);');
     expect(br).toContain('if (writesPending > 0) return;');
+    expect(br).toContain('if (opts.background && (writesPending > 0 || writesSeq !== seq)) return;');
   });
 });

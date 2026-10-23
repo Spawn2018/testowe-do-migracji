@@ -15,16 +15,24 @@ import { mergeBellRefresh } from '../lib/bellList';
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
 /** keepSelection — I-18: szuflada zostaje otwarta na tym samym transporcie (o ile nadal jest widoczny). */
-export async function refreshFromServer(opts: { keepSelection?: boolean } = {}): Promise<void> {
+export async function refreshFromServer(opts: { keepSelection?: boolean; background?: boolean } = {}): Promise<void> {
   if (!active) return;
   const p = active;
+  const seq = writesSeq;
   /* wersja PRZED zrzutem: zmiana w trakcie zrzutu da przy następnym sprawdzeniu nowszą wersję, więc nie zginie */
   const v = await p.loadsVersion().catch(() => null);
   const snap = await p.loadSnapshot();
   if (p !== active) return;
+  /* odświeżenie w tle: zapis użytkownika w trakcie zrzutu — zrzut może być starszy niż ekran; następne sprawdzenie ponowi */
+  if (opts.background && (writesPending > 0 || writesSeq !== seq)) return;
   if (v != null) lastLoadsVersion = v;
   const sel = useTowerStore.getState().selectedLoadId;
   const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
+  if (opts.background) {
+    /* dzwonek scalony jak przy samym dzwonku (przeczytane lokalnie zostają przeczytane, wpisy z push zostają) */
+    useTowerStore.setState((s) => ({ ...snap, notifications: mergeBellRefresh(s.notifications, snap.notifications), selectedLoadId: keep }));
+    return;
+  }
   useTowerStore.setState({ ...snap, selectedLoadId: keep });
 }
 
@@ -54,6 +62,7 @@ async function doRefreshNotifications(): Promise<void> {
  */
 let lastLoadsVersion: string | null = null;
 let writesPending = 0;
+let writesSeq = 0;
 let liveInFlight: Promise<void> | null = null;
 export function refreshIfLoadsChanged(): Promise<void> {
   if (liveInFlight) return liveInFlight;
@@ -66,7 +75,7 @@ export function refreshIfLoadsChanged(): Promise<void> {
     if (v === lastLoadsVersion) return;
     /* własny zapis w toku — odświeży się po nim (nie nadpisuj zmiany, która jeszcze idzie na serwer) */
     if (writesPending > 0) return;
-    await refreshFromServer({ keepSelection: true });
+    await refreshFromServer({ keepSelection: true, background: true });
   })().finally(() => { liveInFlight = null; });
   return liveInFlight;
 }
@@ -112,7 +121,6 @@ function stopBellRefresh(): void {
   bellTimer = null;
   if (liveTimer) clearInterval(liveTimer);
   liveTimer = null;
-  lastLoadsVersion = null;
   bellUnlisten?.();
   bellUnlisten = null;
 }
@@ -121,6 +129,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   registerAfterFileUpload(() => refreshFromServer({ keepSelection: true }));
+  lastLoadsVersion = null;
   await refreshFromServer();
   startBellRefresh();
   // M4: ustawienia użytkownika z serwera (waluta, motyw; język — zawsze polski, B9) — bez ponownego zapisu
@@ -136,6 +145,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
     const provider = active;
     if (!provider) return;
     writesPending += 1;
+    writesSeq += 1;
     chain = chain.then(async () => {
       try {
         const res = await provider.apply(m);
@@ -168,6 +178,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 
 export function disconnectSupabaseData(): void {
   stopBellRefresh();
+  lastLoadsVersion = null;
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);
