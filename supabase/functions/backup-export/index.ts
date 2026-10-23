@@ -1,5 +1,5 @@
 /**
- * ANEKS 4 PR2 — codzienna kopia zapasowa (02:30, pg_cron → pg_net → ta funkcja, klucz service role).
+ * ANEKS 4 PR2 — codzienna kopia zapasowa (00:30 UTC, pg_cron → pg_net → ta funkcja, klucz service role).
  *  1. Każda tabela schematu public z katalogu minus jawne wyłączenia (I-2B; bez surowych pozycji GPS)
  *     → CSV (select porcjami + składanie w kodzie), gzip, szyfrowanie age X25519
  *     KLUCZEM PUBLICZNYM (BACKUP_AGE_RECIPIENT); klucz prywatny wyłącznie u właściciela, offline.
@@ -26,11 +26,11 @@
 import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
-  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, PART_MAX_ROWS, SELECT_BATCH_ROWS,
+  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, LEASE_SECONDS, PART_MAX_ROWS, SELECT_BATCH_ROWS,
   WALL_BUDGET_MS, assertSafeCtid, assertSafeIdent, backupTables, csvEscapeField, csvRowCount,
   assertCsvInCountWindow, dailyPrefix, manifest, monthlyPrefix, parseBackupProgress, parseSelectColumns,
-  partObjectKey, pastWallBudget, remainingTables, rerunPrefix, rowsToCsv, sealTable, selectTextCastSql,
-  sha256Hex, writerClient, type BackupTableProgress,
+  partObjectKey, pastWallBudget, recordTableParts, remainingTables, rerunPrefix, rowsToCsv, sealTable,
+  selectTextCastSql, sha256Hex, writerClient, type BackupTableProgress,
 } from '../_shared/backup/core.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
@@ -200,18 +200,23 @@ Deno.serve(async (req) => {
 
   try {
     if (continueRun != null) {
+      // F7 B1: lease — równoległy continue → 409, bez scheduleContinue (cron / waitUntil).
       const [row] = await sql<{
-        id: number; status: string; prefix: string | null;
+        id: number; prefix: string;
         tables: Record<string, number> | null; bytes: string | number | null;
         progress: unknown; parts: unknown;
-      }[]>`select id, status, prefix, tables, bytes, progress, parts from backup_runs where id = ${continueRun}`;
-      if (!row || row.status !== 'RUNNING') {
-        return new Response(JSON.stringify({ ok: false, error: `continue_run ${continueRun}: brak RUNNING` }), {
-          status: 409, headers: { 'Content-Type': 'application/json' },
-        });
-      }
-      if (!row.prefix) {
-        return new Response(JSON.stringify({ ok: false, error: `continue_run ${continueRun}: brak prefix` }), {
+      }[]>`
+        update backup_runs
+           set lease_until = now() + make_interval(secs => ${LEASE_SECONDS})
+         where id = ${continueRun}
+           and status = 'RUNNING'
+           and prefix is not null
+           and (lease_until is null or lease_until < now())
+         returning id, prefix, tables, bytes, progress, parts`;
+      if (!row) {
+        return new Response(JSON.stringify({
+          ok: false, error: `continue_run ${continueRun}: brak RUNNING albo lease zajęty`,
+        }), {
           status: 409, headers: { 'Content-Type': 'application/json' },
         });
       }
@@ -244,7 +249,12 @@ Deno.serve(async (req) => {
       const probe = new TextEncoder().encode(JSON.stringify({ run: runId, at: now.toISOString() }));
       prefixes = await Promise.all(prefixes.map(async (p) => ((await writer0(`${p}_run.json`, probe)) === 'CREATED' ? p : rerunPrefix(p, now))));
       for (const p of prefixes) if (/-\d{6}\/$/.test(p)) await writer0(`${p}_run.json`, probe).then(() => undefined);
-      await sql`update backup_runs set prefix = ${prefixes[0]}, progress_at = now() where id = ${runId}`;
+      await sql`
+        update backup_runs
+           set prefix = ${prefixes[0]},
+               progress_at = now(),
+               lease_until = now() + make_interval(secs => ${LEASE_SECONDS})
+         where id = ${runId}`;
       console.log(JSON.stringify({ backup: 'start', runId, prefix: prefixes[0], budgetMs: WALL_BUDGET_MS }));
     }
 
@@ -272,15 +282,22 @@ Deno.serve(async (req) => {
       nextParts: PartsMap,
       nextBytes: number,
     ) => {
-      await sql`
+      // F7 B1: tylko przy ważnym lease — inaczej lost update z równoległego łańcucha.
+      const [ok] = await sql`
         update backup_runs set
           tables = ${sql.json(nextCounts)},
           parts = ${sql.json(nextParts)},
           bytes = ${nextBytes},
           prefix = ${prefixes[0]},
           progress = ${next == null ? null : sql.json(next)},
-          progress_at = now()
-        where id = ${runId!}`;
+          progress_at = now(),
+          lease_until = now() + make_interval(secs => ${LEASE_SECONDS})
+        where id = ${runId!}
+          and status = 'RUNNING'
+          and lease_until is not null
+          and lease_until > now()
+        returning id`;
+      if (!ok) throw new Error(`kopia: utracono lease run=${runId}`);
     };
 
     const continueResponse = () => {
@@ -339,14 +356,22 @@ Deno.serve(async (req) => {
       );
 
       if (part.rows === 0 && part.done) {
-        // Koniec po pełnej poprzedniej części (ta próba pusta) albo anomalia — finalizuj stan.
+        // Koniec po pełnej poprzedniej części (dokładnie PART_MAX_ROWS → druga próba pusta).
+        // F7 B2: zawsze table_parts (także 1×5000) — inaczej brak t.csv.gz.age i restore pada.
         counts[t] = progress.rows_so_far;
-        if (progress.parts.length > 1) partsMap[t] = progress.parts;
+        const [cnt1Empty] = await sql.unsafe(
+          `select count(*)::bigint as n from public.${assertSafeIdent(t)}`,
+        ) as { n: string | number }[];
+        const n1Empty = Number(cnt1Empty?.n ?? -1);
+        assertCsvInCountWindow(progress.rows_so_far, progress.n0, n1Empty, t);
+        const n0Empty = progress.n0;
+        const recorded = recordTableParts(progress.parts);
+        if (recorded) partsMap[t] = recorded;
         progress = null;
         await persistProgress(null, counts, partsMap, bytes);
         console.log(JSON.stringify({
-          backup: 'table', runId, table: t, rows: counts[t], parts: partsMap[t]?.length ?? 1,
-          ms: Date.now() - t0, wallMs: Date.now() - wallStarted,
+          backup: 'table', runId, table: t, rows: counts[t], parts: partsMap[t]?.length ?? 0,
+          n0: n0Empty, n1: n1Empty, ms: Date.now() - t0, wallMs: Date.now() - wallStarted,
         }));
         continue;
       }
@@ -370,11 +395,12 @@ Deno.serve(async (req) => {
         const n1 = Number(cnt1?.n ?? -1);
         assertCsvInCountWindow(progress.rows_so_far, progress.n0, n1, t);
         counts[t] = progress.rows_so_far;
+        // Jedna część < PART_MAX: także klasyczny t.csv.gz.age; zawsze table_parts (F7 B2).
         if (progress.parts.length === 1) {
           for (const p of prefixes) await putTable(`${p}${t}.csv.gz.age`, sealed);
-        } else {
-          partsMap[t] = progress.parts;
         }
+        const recorded = recordTableParts(progress.parts);
+        if (recorded) partsMap[t] = recorded;
         console.log(JSON.stringify({
           backup: 'table', runId, table: t, rows: counts[t], parts: progress.parts.length,
           n0: progress.n0, n1, ms: Date.now() - t0, wallMs: Date.now() - wallStarted,
@@ -423,9 +449,20 @@ Deno.serve(async (req) => {
       2,
     ));
     for (const p of prefixes) await putNew(`${p}manifest.json.age`, await encrypt(man));
-    await sql`update backup_runs set status = 'OK', finished_at = now(), prefix = ${prefixes[0]},
-              tables = ${sql.json(counts)}, parts = ${sql.json(partsMap)}, files = ${files.length},
-              bytes = ${bytes}, progress = null, progress_at = now() where id = ${runId}`;
+    // F7 B1: OK tylko gdy nadal RUNNING (drugi łańcuch nie nadpisuje po EXISTS na manifeście).
+    const [okRow] = await sql`
+      update backup_runs
+         set status = 'OK', finished_at = now(), prefix = ${prefixes[0]},
+             tables = ${sql.json(counts)}, parts = ${sql.json(partsMap)}, files = ${files.length},
+             bytes = ${bytes}, progress = null, progress_at = now(), lease_until = null
+       where id = ${runId} and status = 'RUNNING'
+       returning id`;
+    if (!okRow) {
+      console.log(JSON.stringify({ backup: 'ok_skip', runId, reason: 'status_not_RUNNING' }));
+      return new Response(JSON.stringify({
+        ok: true, already_done: true, run: runId, tables: counts, bytes,
+      }), { headers: { 'Content-Type': 'application/json' } });
+    }
     console.log(JSON.stringify({
       backup: 'ok', runId, tables: Object.keys(counts).length, files: files.length, bytes, ms: Date.now() - wallStarted,
     }));
@@ -436,7 +473,11 @@ Deno.serve(async (req) => {
     const msg = e instanceof Error ? e.message : String(e);
     try {
       if (runId != null) {
-        await sql`update backup_runs set status = 'ERROR', finished_at = now(), error = ${msg.slice(0, 1000)} where id = ${runId}`;
+        // F7 B1: nie nadpisuj OK drugim łańcuchem po EXISTS na manifeście.
+        await sql`
+          update backup_runs
+             set status = 'ERROR', finished_at = now(), error = ${msg.slice(0, 1000)}, lease_until = null
+           where id = ${runId} and status = 'RUNNING'`;
       }
     } catch { /* ignore */ }
     return new Response(JSON.stringify({ ok: false, error: msg }), { status: 500 });

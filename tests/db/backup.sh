@@ -120,6 +120,16 @@ psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at) val
 chk "strażnik: świeży progress_at — bez przerwania" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 0
 chk "anon/authenticated bez EXECUTE backup_stale_watchdog" "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_stale_watchdog(timestamptz,interval)','execute') or has_function_privilege('authenticated','backup_stale_watchdog(timestamptz,interval)','execute')")" f
 
+echo; echo "[#498 F7 B1] lease_until + backup_continue_pending tylko po 2 min bez postępu"
+psql "$SRC" -q -c "delete from backup_runs" >/dev/null
+chk "kolumna lease_until istnieje" "$(psql "$SRC" -Atq -c "select count(*) from information_schema.columns where table_schema='public' and table_name='backup_runs' and column_name='lease_until'")" 1
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at, prefix, lease_until)
+  values ('RUNNING', now() - interval '1 hour', now() - interval '30 seconds', 'daily/test/', now() + interval '1 minute')" >/dev/null
+chk "continue_pending: świeży progress + lease → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
+# świeży progress mimo wolnego lease → nadal 0 (filtr 2 min)
+psql "$SRC" -q -c "update backup_runs set lease_until = null" >/dev/null
+chk "continue_pending: progress < 2 min → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
+
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
 head -c 200000 /dev/urandom > "$TMP/pliki/a.pdf"; printf 'Zażółć gęślą jaźń\n' > "$TMP/pliki/b.txt"

@@ -75,6 +75,18 @@ export const SELECT_BATCH_ROWS = 2_000;
 export const PART_MAX_ROWS = 5_000;
 /** Budżet wall-clock jednego wywołania Edge (#498 — krócej, częstsze continue). */
 export const WALL_BUDGET_MS = 45_000;
+/** #498 F7 B1: lease continue_run (sekundy) — cron dopiero po wygaśnięciu + 2 min bez postępu. */
+export const LEASE_SECONDS = 90;
+
+/**
+ * #498 F7 B2: każda tabela z zapisanymi częściami (także dokładnie 1× PART_MAX_ROWS)
+ * musi trafić do `table_parts` — inaczej restore szuka `t.csv.gz.age` i pada.
+ */
+export function recordTableParts(
+  parts: { part: number; rows: number; key: string }[],
+): { part: number; rows: number; key: string }[] | null {
+  return parts.length >= 1 ? parts : null;
+}
 
 /** Stan niedokończonej tabeli w `backup_runs.progress` (#498). */
 export type BackupTableProgress = {

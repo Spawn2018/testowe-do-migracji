@@ -6,11 +6,12 @@ import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
   BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, REST_CSV_MAX_ROWS,
-  PART_MAX_ROWS, SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS, WALL_BUDGET_MS,
-  assertCsvInCountWindow, assertCsvMatchesDbCount, assertSafeCtid, backupTables, copyCtidRangeSql,
-  csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, parseBackupProgress,
-  parseSelectColumns, partObjectKey, pastWallBudget, postgrestSelectParam, remainingTables,
-  retentionDeletes, rowsToCsv, sealTable, selectTextCastSql, sha256Hex, shouldChunkByEstimate,
+  LEASE_SECONDS, PART_MAX_ROWS, SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS,
+  WALL_BUDGET_MS, assertCsvInCountWindow, assertCsvMatchesDbCount, assertSafeCtid, backupTables,
+  copyCtidRangeSql, csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes,
+  parseBackupProgress, parseSelectColumns, partObjectKey, pastWallBudget, postgrestSelectParam,
+  recordTableParts, remainingTables, retentionDeletes, rowsToCsv, sealTable, selectTextCastSql,
+  sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
@@ -131,6 +132,7 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
   it('#498: PART_MAX_ROWS / partObjectKey / parseBackupProgress', () => {
     expect(PART_MAX_ROWS).toBe(5_000);
     expect(PART_MAX_ROWS).toBeGreaterThan(SELECT_BATCH_ROWS);
+    expect(LEASE_SECONDS).toBe(90);
     expect(partObjectKey('integration_runs', 1)).toBe('integration_runs.part0001.csv.gz.age');
     expect(partObjectKey('notifications', 12)).toBe('notifications.part0012.csv.gz.age');
     expect(() => partObjectKey('x;drop', 1)).toThrow(/niedozwolona/);
@@ -145,6 +147,18 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(p?.rows_so_far).toBe(10_000);
     expect(parseBackupProgress(null)).toBeNull();
     expect(parseBackupProgress({ table: 'bad;x', next_part: 1, n0: 1, rows_so_far: 0 })).toBeNull();
+  });
+
+  // #498 F7 B2: dokładnie 5000 wierszy = 1 część → nadal table_parts (nie gubić pliku)
+  it('#498 F7 B2: recordTableParts — 1×PART_MAX_ROWS też do table_parts', () => {
+    expect(recordTableParts([])).toBeNull();
+    const one = [{ part: 1, rows: PART_MAX_ROWS, key: 't.part0001.csv.gz.age' }];
+    expect(recordTableParts(one)).toEqual(one);
+    const two = [
+      { part: 1, rows: PART_MAX_ROWS, key: 't.part0001.csv.gz.age' },
+      { part: 2, rows: 12, key: 't.part0002.csv.gz.age' },
+    ];
+    expect(recordTableParts(two)).toEqual(two);
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {

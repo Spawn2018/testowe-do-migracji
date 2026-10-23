@@ -9,7 +9,8 @@
 alter table public.backup_runs
   add column if not exists progress jsonb,
   add column if not exists progress_at timestamptz,
-  add column if not exists parts jsonb;
+  add column if not exists parts jsonb,
+  add column if not exists lease_until timestamptz;
 
 comment on column public.backup_runs.progress is
   '#498: stan niedokończonej tabeli {table, after_ctid, next_part, n0, rows_so_far, parts[]}';
@@ -17,6 +18,8 @@ comment on column public.backup_runs.progress_at is
   '#498: ostatni postęp (część / tabela); I-33 liczy od tego, nie od started_at';
 comment on column public.backup_runs.parts is
   '#498: ukończone części do manifestu { tabela: [{part, rows, key}, ...] }';
+comment on column public.backup_runs.lease_until is
+  '#498 F7: lease continue_run — bez równoległych łańcuchów; wolny gdy null lub < now()';
 
 -- I-33: brak postępu > 10 min (nie 30 min od startu całego przebiegu).
 create or replace function public.backup_stale_watchdog(
@@ -163,10 +166,13 @@ begin
     return jsonb_build_object('continued', 0, 'error', 'missing_vault');
   end if;
 
+  -- F7 B1: tylko gdy brak postępu ≥ 2 min (Edge samowywołanie ma pierwszeństwo; bez drugiego łańcucha).
   for r in
     select id from backup_runs
      where status = 'RUNNING'
        and prefix is not null
+       and coalesce(progress_at, started_at) < now() - interval '2 minutes'
+       and (lease_until is null or lease_until < now())
      order by started_at
      limit 3
   loop
@@ -178,7 +184,7 @@ begin
         'Authorization', 'Bearer ' || v_key,
         'apikey', v_key
       ),
-      timeout_milliseconds := 120000
+      timeout_milliseconds := 10000
     ) into v_req;
     v_n := v_n + 1;
     v_ids := array_append(v_ids, r.id);
