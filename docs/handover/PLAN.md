@@ -821,8 +821,16 @@ Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery test
 3. Manifest `table_parts` + kontrola n0/n1 na sumie części; `restore.sh` składa części.
 4. I-33: brak postępu 10 min (`progress_at`), nie 30 min od startu.
 5. Testy unit + brama backup (strażnik).
+6. F7 B1': przed `scheduleContinue` zwolnij `lease_until` (dziecko bez 409).
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #498; PR #495 (F7 runda 2); migracje **0279**+**0280** po rebase
+### HOTFIX #502 · PILNE — fałszywy „Prom” A10_b w porcie + powiadomienia FERRY (T-11) — po #498, przed #413
+Źródło: zgłoszenie #502 (`dla-cursora`, `pilne`). Odbiór #469 nieudany. Migracja po rebase (#498 = 0278).
+1. A10_b tylko gdy statek płynie: `W_REJSIE` / `actual_departure_at` **albo** AIS > 3 kn i ≥ 1 km od PORT_OUT; w porcie przy zacumowanym — nigdy.
+2. Status FERRY z automatu (A10_b / AIS / SCHEDULE / SCHEDULE_ASSUMED) bez powiadomień `status` (jak #469) — albo potwierdzić źródło 12× IN_APP.
+3. Naprawa danych T-11: usunąć fałszywy wpis 14:07 z osi; 12 PENDING → SUPPRESSED.
+4. Test: PORT_OUT + statek `W_PORCIE`/`ZAPLANOWANY` v=0 → bez zmiany; po `actual_departure_at` → FERRY, 0 powiadomień.
+
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #498+#502; PR #495 (F7 runda 2); migracje po rebase
 Szczegóły: `dopiski/D-20261021-2057-01.md`. CI zielone na `d495b295` — nie scalać do ponownego „F7: gotowe”.
 1. P8-d: `rulesReady()` + źródło reguł — dalej; usunięcie START (E35) — soft-delete w PR.
 2. P8-c: `zonesReady()` + źródło stref — dalej; HHL_OPS bez edycji (E34 pkt 6) — w PR.
@@ -851,7 +859,7 @@ Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_I
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
 
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
-Kolejność: #498 → #413 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13.
+Kolejność: #498 → #502 → #413 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13.
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #413, #422, #412, #484, #492 (migracja **0282** po rebase; #409/#463/#479/#485/#467 SCALONE)
 - Według D-20261015-0330-01 pkt 6:
@@ -1457,3 +1465,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 16:00 | #489 F7 r2 B3: `STATUS_*`/ręczna godzina → bez cofania; łańcuch tylko AUTO/AIS; bez placeholder sailing_id | pętla |
 | 23.10.2026 16:40 | #489/#493+#494 SCALONE (`8e03d704`/`67e18e62`, 0276); #467 merge main → **0277** (PR #478) | pętla |
 | 23.10.2026 18:20 | #498 `pilne` (backup części) przerywa #413; migracja **0278**; #413→0279+0280, #422→0281, B5→0282; skrzynka #496/#499/#500 | pętla |
+| 23.10.2026 19:45 | #501 F7 B1': zwolnij lease przed scheduleContinue; CI zielone na 9b1c6a95; #502 `pilne` wpisane §4 (po #498, przed #413) | pętla |

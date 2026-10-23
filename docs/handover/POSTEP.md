@@ -4470,3 +4470,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 - CI `db` czerwone na `ddcaf0cb`: backup 32 OK, oczekiwano 29 (`gate-suites.mjs`).
 - Poprawka: LOCAL 32, TEST 24 (32−8 SKIP). Unit/visual już zielone. Czekam CI + F7 „gotowe”.
+
+## 2026-10-23 19:45 — #501 F7 B1'; #502 w planie
+
+- Skrzynka: **#502** `pilne` — wpisane §4 (po #498, przed #413); nie przerywa #498 (termin 00:30 UTC).
+- Scalanie: brak F7 „gotowe” na #501; #495/#382 bez „gotowe”.
+- **#501 / #498:** CI unit/db/visual zielone na `9b1c6a95`. F7 r2 B1': przed `scheduleContinue` `lease_until = null` (dziecko bez 409). Czekam ponowne F7.

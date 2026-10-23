@@ -300,7 +300,13 @@ Deno.serve(async (req) => {
       if (!ok) throw new Error(`kopia: utracono lease run=${runId}`);
     };
 
-    const continueResponse = () => {
+    // F7 B1': zwolnij lease przed samowywołaniem — inaczej dziecko dostaje 409
+    // (persistProgress przedłużył lease_until o LEASE_SECONDS) i zostaje tylko cron.
+    const continueResponse = async () => {
+      await sql`
+        update backup_runs
+           set lease_until = null
+         where id = ${runId!} and status = 'RUNNING'`;
       scheduleContinue(runId!);
       return new Response(JSON.stringify({
         ok: true, continued: true, run: runId, tables: counts, bytes, ms: Date.now() - wallStarted,
@@ -315,7 +321,7 @@ Deno.serve(async (req) => {
           backup: 'budget', runId, ms: Date.now() - wallStarted, done: Object.keys(counts).length,
           next: progress?.table ?? remainingTables(tables, counts)[0] ?? null,
         }));
-        return continueResponse();
+        return await continueResponse();
       }
 
       if (!progress) {
@@ -413,7 +419,7 @@ Deno.serve(async (req) => {
           backup: 'part', runId, table: t, part: partNum, rows: part.rows,
           soFar: progress.rows_so_far, ms: Date.now() - t0, wallMs: Date.now() - wallStarted,
         }));
-        return continueResponse();
+        return await continueResponse();
       }
     }
 

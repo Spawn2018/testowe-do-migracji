@@ -75,7 +75,10 @@ export const SELECT_BATCH_ROWS = 2_000;
 export const PART_MAX_ROWS = 5_000;
 /** Budżet wall-clock jednego wywołania Edge (#498 — krócej, częstsze continue). */
 export const WALL_BUDGET_MS = 45_000;
-/** #498 F7 B1: lease continue_run (sekundy) — cron dopiero po wygaśnięciu + 2 min bez postępu. */
+/**
+ * #498 F7 B1: lease continue_run (sekundy) — cron dopiero po wygaśnięciu + 2 min bez postępu.
+ * Przed scheduleContinue lease_until = null (F7 B1'), żeby dziecko nie dostało 409.
+ */
 export const LEASE_SECONDS = 90;
 
 /**
