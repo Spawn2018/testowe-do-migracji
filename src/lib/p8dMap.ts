@@ -276,8 +276,10 @@ export function histFromServer(
     if (r.action === 'UTWORZONO') action = 'created';
     else if (r.action === 'USUNIĘTO' || po.removed === true || po.removed_at) action = 'removed';
     else if (typeof po.enabled === 'boolean' && po.enabled !== przed.enabled) action = po.enabled ? 'on' : 'off';
-    const reason = typeof po.reason === 'string' ? po.reason
-      : typeof r.changes.reason === 'string' ? String(r.changes.reason) : null;
+    /* #505 F7: audit_row_change pisze _reason (nie kolumna reason). */
+    const reason = typeof po._reason === 'string' ? po._reason
+      : typeof po.reason === 'string' ? po.reason
+        : typeof r.changes.reason === 'string' ? String(r.changes.reason) : null;
     const what = typeof po.what === 'string' ? po.what : null;
     return {
       at: r.at,

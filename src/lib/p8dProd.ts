@@ -4,6 +4,8 @@
  */
 import { getSupabase } from '../auth/client';
 import { statusToDb } from '../data/mappers';
+import { isServerId } from '../data/registry';
+import { workflowToDb } from '../data/workflowMap';
 import { loadRuleHistory } from '../data/workflowServer';
 import { useTowerStore } from '../store/useTowerStore';
 import { getNowIso } from './frozenNow';
@@ -14,6 +16,7 @@ import {
 } from './p8dRules';
 import { canManageWorkflows } from './prodFacade';
 
+const PROJECT_CODE = 'STEGRA_BODEN';
 const since30 = (now: string) => Date.parse(now) - 30 * 86_400_000;
 
 function storeRules(): OwnRule[] {
@@ -111,16 +114,48 @@ async function prodCheck(d: RuleDraft, selfId: string | null): Promise<CheckResu
   };
 }
 
+/** F7 #506 pkt 4: await RPC — ok dopiero po odpowiedzi bazy (nie writeThrough). */
 async function prodSave(id: string | null, d: RuleDraft, reason: string | null): Promise<{ ok: boolean; rule?: OwnRule; error?: string }> {
   const patch = draftToWorkflow(d);
-  const store = useTowerStore.getState();
+  const row = workflowToDb(patch);
   try {
-    if (id) {
-      store.updateWorkflow(id, patch, reason);
-      const rule = workflowToOwn({ ...patch, id, runCount: store.workflows.find((w) => w.id === id)?.runCount ?? 0 }, store.workflowRuns, since30(getNowIso()));
+    const sb = await getSupabase();
+    let projectId: string | null = null;
+    const serverId = id && isServerId(id) ? id : null;
+    if (!serverId) {
+      const p = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
+      if (p.error) return { ok: false, error: p.error.message };
+      if (!p.data) return { ok: false, error: 'reguła: brak projektu' };
+      projectId = (p.data as { id: string }).id;
+    }
+    const res = await sb.rpc('workflow_rule_write', {
+      p_id: serverId,
+      p_project: projectId,
+      p_name: row.name ?? null,
+      p_description: row.description ?? null,
+      p_trigger_type: row.trigger_type ?? null,
+      p_condition: row.condition ?? null,
+      p_actions: row.actions ?? null,
+      p_enabled: row.enabled ?? null,
+      p_reason: reason?.trim() || null,
+    });
+    if (res.error) return { ok: false, error: res.error.message };
+    const newId = String(res.data);
+    const store = useTowerStore.getState();
+    if (serverId) {
+      useTowerStore.setState((s) => ({
+        workflows: s.workflows.map((w) => (w.id === serverId ? { ...w, ...patch } : w)),
+      }));
+      const rule = workflowToOwn(
+        { ...patch, id: serverId, runCount: store.workflows.find((w) => w.id === serverId)?.runCount ?? 0 },
+        store.workflowRuns,
+        since30(getNowIso()),
+      );
       return rule ? { ok: true, rule } : { ok: true };
     }
-    const newId = store.createWorkflow(patch, reason);
+    useTowerStore.setState((s) => ({
+      workflows: [{ ...patch, id: newId, runCount: 0 }, ...s.workflows],
+    }));
     const rule: OwnRule = {
       id: newId, name: d.name.trim(), when: d.when, then: { ...d.then, notify: [...d.then.notify] },
       enabled: d.enabled, runs30: 0, lastRunAt: null,

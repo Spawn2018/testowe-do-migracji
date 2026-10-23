@@ -20,9 +20,13 @@ grant select on public.v_geofences_circle to authenticated;
 revoke all on public.v_geofences_circle from anon;
 
 -- ── 2) upsert_geofence_circle: p_route + p_reason ───────────────────────────
+-- Idempotentne: drop starej i nowej sygnatury (re-apply w workflows.sh po 0165).
 drop function if exists public.upsert_geofence_circle(
   uuid, uuid, text, geofence_kind, double precision, double precision,
   int, int, int, int, boolean, boolean, boolean, uuid[], boolean, char);
+drop function if exists public.upsert_geofence_circle(
+  uuid, uuid, text, geofence_kind, double precision, double precision,
+  int, int, int, int, boolean, boolean, boolean, uuid[], boolean, char, text, text);
 
 create function public.upsert_geofence_circle(
   p_id uuid, p_project uuid, p_name text, p_kind geofence_kind,
@@ -45,9 +49,9 @@ begin
   end if;
   v_country := p_country;
   v_route := p_route;
-  if nullif(btrim(coalesce(p_reason, '')), '') is not null then
-    perform set_config('tower.audit_reason', btrim(p_reason), true);
-  end if;
+  /* F7 #506: zawsze czyść/ustaw (bez wycieku na kolejne RPC w transakcji); max 500 znaków. */
+  perform set_config('tower.audit_reason',
+    left(coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), 500), true);
   v_geom := st_buffer(st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography, p_radius_m, 32)::geometry;
   if p_id is null then
     insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes,
@@ -61,7 +65,8 @@ begin
            notify_enter = p_notify_enter, notify_exit = p_notify_exit, notify_dwell = p_notify_dwell,
            notify_orgs = coalesce(p_notify_orgs, '{}'), active = p_active,
            country = coalesce(v_country, country),
-           route = case when p_kind in ('PORT_OUT', 'PRE_PORT', 'PORT_IN') then v_route else route end
+           /* F7 #506 pkt 8: nieportowa → null (nie zostawiaj starej trasy). */
+           route = case when p_kind in ('PORT_OUT', 'PRE_PORT', 'PORT_IN') then v_route else null end
      where id = p_id
     returning id into v_id;
   end if;
@@ -114,8 +119,9 @@ begin
   end if;
 
   v_reason := nullif(btrim(current_setting('tower.audit_reason', true)), '');
+  /* F7 #506 pkt 7: _reason — nie nadpisuje kolumny reason w diffie. */
   if v_reason is not null then
-    v_new := coalesce(v_new, '{}'::jsonb) || jsonb_build_object('reason', v_reason);
+    v_new := coalesce(v_new, '{}'::jsonb) || jsonb_build_object('_reason', v_reason);
   end if;
 
   v_source := nullif(btrim(current_setting('tower.audit_source', true)), '');
@@ -171,7 +177,7 @@ end $$;
 revoke all on function public.audit_row_change() from public, anon, authenticated;
 
 comment on function public.audit_row_change() is
-  'HIST-11 + #466 D1 + #505: PII jawne; rio_secret ••••; tower.audit_reason → new_value.reason.';
+  'HIST-11 + #466 D1 + #505: PII jawne; rio_secret ••••; tower.audit_reason → new_value._reason.';
 
 -- ── 4) workflow_rule_history: HHL_OPS + po przy ROW_DELETE ──────────────────
 create or replace function public.workflow_rule_history(p_workflow uuid default null, p_limit int default 100)
@@ -219,9 +225,8 @@ begin
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'Zapis reguł — tylko HHL_ADMIN' using errcode = '42501';
   end if;
-  if nullif(btrim(coalesce(p_reason, '')), '') is not null then
-    perform set_config('tower.audit_reason', btrim(p_reason), true);
-  end if;
+  perform set_config('tower.audit_reason',
+    left(coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), 500), true);
   if p_id is null then
     if p_project is null then
       raise exception 'Brak projektu' using errcode = '22023';
@@ -257,9 +262,8 @@ begin
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'Zapis reguł — tylko HHL_ADMIN' using errcode = '42501';
   end if;
-  if nullif(btrim(coalesce(p_reason, '')), '') is not null then
-    perform set_config('tower.audit_reason', btrim(p_reason), true);
-  end if;
+  perform set_config('tower.audit_reason',
+    left(coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), 500), true);
   update workflows set enabled = p_enabled
    where id = p_id and removed_at is null;
   get diagnostics n = row_count;
@@ -278,9 +282,8 @@ begin
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'Zapis reguł — tylko HHL_ADMIN' using errcode = '42501';
   end if;
-  if nullif(btrim(coalesce(p_reason, '')), '') is not null then
-    perform set_config('tower.audit_reason', btrim(p_reason), true);
-  end if;
+  perform set_config('tower.audit_reason',
+    left(coalesce(nullif(btrim(coalesce(p_reason, '')), ''), ''), 500), true);
   update workflows set enabled = false, removed_at = now()
    where id = p_id and removed_at is null;
   get diagnostics n = row_count;

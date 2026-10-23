@@ -574,14 +574,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         return;
       }
       case 'workflow.delete': {
-        /* #505: soft-delete z powodem (E35 Z1); hard DELETE zostaje dla Legacy bez reason */
-        if (m.reason != null) {
-          const res = await sb.rpc('workflow_rule_soft_delete', { p_id: m.id, p_reason: m.reason.trim() || null });
-          if (res.error) throw new Error(res.error.message);
-          return;
-        }
-        const res = await sb.from('workflows').delete().eq('id', m.id).select('id');
-        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: usuwa wyłącznie administrator HHL');
+        /* #505 F7 #506 pkt 9: zawsze soft-delete (hard DELETE kasował workflow_runs). */
+        const res = await sb.rpc('workflow_rule_soft_delete', {
+          p_id: m.id,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
         return;
       }
       case 'geofence.save': {

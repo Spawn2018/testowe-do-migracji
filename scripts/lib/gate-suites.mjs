@@ -35,7 +35,7 @@ export const EXPECTED_LOCAL = {
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
   hist11: 11,
-  workflows: 86, // #505: +route/powód/historia OPS (8 asercji; było 78)
+  workflows: 90, // #505 F7: +route null/OPS set_enabled|soft_delete/po/_reason/re-apply (było 86)
   insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
   'dec-auto': 83, // #384 pkt 2–3: +5 lead past/far + empty file + column_map
   dwell: 17,
