@@ -104,10 +104,10 @@ begin
     - albo 10–80 km od PORT_IN (pierwsza pozycja zaraz poza strefą, bez ENTER).
     Morze / PL: wcześniej odfiltrowane albo poza tymi progami.
   */
-  if not (
+  if (
        (v_arrived and v_port_m <= 2000000)
     or (v_port_m >= 10000 and v_port_m <= 80000)
-  ) then
+  ) is not true then
     return;
   end if;
 
