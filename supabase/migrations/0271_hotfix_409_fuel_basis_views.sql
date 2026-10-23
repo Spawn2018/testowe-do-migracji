@@ -3,6 +3,7 @@
 -- z load_cost.fuel_basis / load_revenue.fuel_basis, z regułami widoczności widoków.
 -- F7 (#458): SCX/KSH dostają tylko dozwolone klucze (bez owner_note / owner_override /
 -- params_version / params_valid_from i innych wewnętrznych HHL).
+-- Numer: 0268 zajęte (#460), 0270 (#461) — po rebase = 0271 (F7 #458).
 -- Funkcja fuel_publications z pierwszej wersji zgłoszenia nie jest potrzebna.
 
 drop view if exists v_load_price_carrier;
