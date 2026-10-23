@@ -1,6 +1,7 @@
 -- #489 / PILNE: po odpięciu rejsu status FERRY (z AIS/SCHEDULE) wraca do poprzedniego.
 -- Trigger na loads.sailing_id → null lub inny rejs; bez powiadomień i spraw.
 -- F7 #493: łańcuch korekty AIS (zastepuje + cofniete_ids); bez korekta:true na cofnięciu.
+-- F7 r2 B3: łańcuch tylko przez STATUS_AUTO/AIS; ręczna korekta godziny → bez cofania.
 -- Naprawa SG-18 + inne z sailing_id null i statusem z rejsu. Migracja 0276.
 
 -- ---------------------------------------------------------------------------
@@ -19,11 +20,13 @@ as $fn$
 declare
   v_status text;
   v_ev_id bigint;
+  v_ev_type text;
   v_from text;
   v_from_st public.load_status;
   v_src text;
   v_sail text;
   v_korekta boolean;
+  v_chain_manual boolean := false;
   v_prev text;
   v_actor text;
   v_ok boolean := false;
@@ -31,7 +34,8 @@ declare
   v_head_id bigint;
   v_chain_ids bigint[];
 begin
-  if p_load is null or p_old_sailing is null then
+  /* p_old_sailing null OK przy naprawie (zdarzenie bez sailing_id w payload). */
+  if p_load is null then
     return false;
   end if;
 
@@ -43,11 +47,12 @@ begin
 
   /* Najświeższy aktywny wpis osi dla bieżącego statusu. */
   select e.id,
+         e.event_type,
          e.payload->>'from',
          e.payload->>'source',
          e.payload->>'sailing_id',
          coalesce(e.payload->>'korekta', '') = 'true'
-    into v_ev_id, v_from, v_src, v_sail, v_korekta
+    into v_ev_id, v_ev_type, v_from, v_src, v_sail, v_korekta
     from public.load_events e
    where e.load_id = p_load
      and (
@@ -66,16 +71,28 @@ begin
     return false;
   end if;
 
+  /*
+   * F7 B3: ręczny STATUS_<X> (np. load_status_set tej samej godziny z korekta)
+   * albo brak source — nie cofać, nawet gdy zastepuje wskazuje AIS.
+   */
+  if v_ev_type is distinct from 'STATUS_AUTO'
+     or v_src is null
+     or v_src not in ('AIS', 'SCHEDULE', 'SCHEDULE_ASSUMED') then
+    return false;
+  end if;
+
   v_head_id := v_ev_id;
   v_chain_ids := array[v_ev_id];
 
   /*
-   * F7 B1: korekta AIS (FERRY→FERRY, korekta) — iść wstecz po zastepuje do korzenia
-   * i wziąć jego from (np. AT_PORT_GDANSK). Korzeń nie z rejsu → nie cofać.
+   * F7 B1/B3: korekta automatu AIS (FERRY→FERRY) — wstecz po zastepuje tylko
+   * przez STATUS_AUTO/source=AIS. Korzeń SCHEDULE(_ASSUMED)/AIS → jego from.
+   * Wpis ręczny w łańcuchu → nie cofać.
    */
   if (v_korekta is true) or (v_from is not distinct from v_status) then
     with recursive chain as (
       select e.id,
+             e.event_type,
              e.payload,
              e.payload->>'from' as frm,
              e.payload->>'source' as src,
@@ -86,6 +103,7 @@ begin
          and e.load_id = p_load
       union all
       select p.id,
+             p.event_type,
              p.payload,
              p.payload->>'from',
              p.payload->>'source',
@@ -97,6 +115,8 @@ begin
          and p.id = nullif(c.payload->>'zastepuje', '')::bigint
        where nullif(c.payload->>'zastepuje', '') is not null
          and c.depth < 50
+         and c.event_type = 'STATUS_AUTO'
+         and coalesce(c.payload->>'source', '') = 'AIS'
          and (
            coalesce(c.payload->>'korekta', '') = 'true'
            or coalesce(c.payload->>'from', '') = v_status
@@ -105,19 +125,29 @@ begin
     select array_agg(c.id order by c.depth),
            (array_agg(c.frm order by c.depth desc))[1],
            (array_agg(c.src order by c.depth desc))[1],
-           (array_agg(c.sail order by c.depth desc))[1]
-      into v_chain_ids, v_from, v_src, v_sail
+           (array_agg(c.sail order by c.depth desc))[1],
+           bool_or(
+             c.event_type is distinct from 'STATUS_AUTO'
+             or coalesce(c.src, '') not in ('AIS', 'SCHEDULE', 'SCHEDULE_ASSUMED')
+           )
+      into v_chain_ids, v_from, v_src, v_sail, v_chain_manual
       from chain c;
+
+    if v_chain_manual is true then
+      return false;
+    end if;
   end if;
 
-  /* Ręczny STATUS_<status> albo GPS — nie cofać (korzeń / najświeższy). */
+  /* Korzeń / wynik łańcucha bez source z rejsu — nie cofać. */
   if v_src is null
      or v_src not in ('AIS', 'SCHEDULE', 'SCHEDULE_ASSUMED') then
     return false;
   end if;
 
-  /* Status z innego rejsu — nie ten odpięty. */
-  if v_sail is not null and v_sail is distinct from p_old_sailing::text then
+  /* Status z innego rejsu — nie ten odpięty (gdy znamy oba id). */
+  if p_old_sailing is not null
+     and v_sail is not null
+     and v_sail is distinct from p_old_sailing::text then
     return false;
   end if;
 
@@ -155,14 +185,14 @@ begin
     v_from_st,
     'rejs odpięty — powrót do poprzedniego statusu',
     v_ts,
-    jsonb_build_object(
+    jsonb_strip_nulls(jsonb_build_object(
       'source', 'SAILING_REMOVED',
       'sailing_id', p_old_sailing,
       'zastepuje', v_head_id,
       'cofniete_ids', to_jsonb(coalesce(v_chain_ids, array[v_head_id])),
       'cofniete', true,
       'actor', v_actor
-    )
+    ))
   );
 
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
@@ -283,9 +313,8 @@ begin
      order by e.id desc
      limit 1;
 
-    /* 0270 mógł zapisać FERRY bez sailing_id w payload — wtedy placeholder. */
+    /* 0270 mógł zapisać FERRY bez sailing_id — wtedy null (F7: bez placeholder). */
     if v_ev is not null then
-      v_sail := coalesce(v_sail, '00000000-0000-0000-0000-000000000489'::uuid);
       insert into public.audit_log (user_id, action, entity, entity_id, new_value)
       values (
         null, 'HOTFIX_489_BEFORE', 'loads', v_load::text,
@@ -358,7 +387,7 @@ begin
     );
     v_ok := public.revert_status_after_sailing_removed(
       r.load_id,
-      coalesce(r.sailing_id, '00000000-0000-0000-0000-000000000489'::uuid),
+      r.sailing_id,
       v_ts,
       v_actor
     );

@@ -4424,3 +4424,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie (bez nowych).
 - Scalanie: brak — F7 #493 „jeszcze nie” (B1/B2); CI docs `bfb80182` unit/db/visual zielone przed poprawką; #478/#494 nie scalać przed bazą.
 - F7: `revert_status_after_sailing_removed` — CTE po `zastepuje` przy `korekta` / `from=status`; `cofniete_ids`; trigger `WHEN (old.sailing_id is distinct from new.sailing_id)`; naprawa actor/godzina z SAILING_ASSIGNED „rejs usunięty”; testy b'/d/e; status **230**.
+
+## 2026-10-23 16:00 — #489 F7 r2 B3 (ręczna korekta godziny)
+
+- Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie; #494 wygląd F7 gotowe (czeka na bazę).
+- Scalanie: brak — F7 #493 „jeszcze nie” (B3); CI `3fa2849e` db FAIL b' (IN_TRANSIT_PL zamiast FERRY).
+- F7 B3: głowa `STATUS_*` / bez source → `return false`; CTE wstecz tylko przez `STATUS_AUTO`+`source=AIS`; łańcuch z wpisem ręcznym → bez cofania; naprawa bez placeholder `sailing_id` (null). Status **230**.
