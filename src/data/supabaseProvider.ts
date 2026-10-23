@@ -79,6 +79,7 @@ export interface SupabaseProviderOptions {
 export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProviderOptions = {}): DataProvider & {
   context(): { orgs: OrgRow[]; projectId: string | null };
   loadNotifications(): Promise<Notification[]>;
+  loadsVersion(): Promise<string | null>;
 } {
   const now = opts.now ?? (() => new Date().toISOString());
   let orgs: OrgRow[] = [];
@@ -101,6 +102,17 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek, bez całego zrzutu — odświeżanie po powrocie do aplikacji na telefonie. */
   async function loadNotifications(): Promise<Notification[]> {
     return (must(await notificationsQuery(), 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r));
+  }
+
+  /**
+   * Właściciel 23.10.2026 13:43: statusy z automatu (GPS, AIS) zmieniają się na serwerze, a ekran pokazywał stary stan
+   * do przeładowania. Jedno lekkie zapytanie: najnowsza zmiana wiersza transportu widocznego dla konta (RLS).
+   */
+  async function loadsVersion(): Promise<string | null> {
+    const r = await sb.from('loads').select('updated_at').order('updated_at', { ascending: false, nullsFirst: false }).limit(1);
+    if (r.error) return null;
+    const row = (r.data ?? [])[0] as { updated_at?: string | null } | undefined;
+    return row?.updated_at ?? null;
   }
 
   /* 22.10.2026 (właściciel 21:38): wszystkie zdarzenia zamiast 500 najnowszych — patrz fetchAllLoadEvents. */
@@ -559,5 +571,5 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
   }
 
-  return { kind: 'supabase', loadSnapshot, loadNotifications, apply, loadPreferences, context: () => ({ orgs, projectId }) };
+  return { kind: 'supabase', loadSnapshot, loadNotifications, loadsVersion, apply, loadPreferences, context: () => ({ orgs, projectId }) };
 }

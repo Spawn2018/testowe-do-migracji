@@ -4372,6 +4372,83 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 ## 2026-10-23 12:31 — #485 SCALONE; powrót #467 jako 0275
 
-- Skrzynka: #485 zamknięte; #467 bieżąca; #484 w kolejce po #412.
-- Scalanie: #486 F7 „gotowe do scalenia” (head `b91a3e48`) + CI unit/db/visual zielone → MERGED `88134e34`. Bez push na `main`.
-- Bieżąca: **#467** PR #478 — rebase na main po #485; migracja **0274→0275**; czekam na CI + nowe F7.
+- Skrzynka: #485 w toku; #484 wpisane w #478 (po #412, przed B5); #467 F7 „gotowe” wstrzymane do rebase 0274→0275 po #485.
+- Scalanie: #478 nie — konflikt numeru migracji z #486; nowe F7 po renumeracji.
+- CI `db` FAIL na `4bfdece8`: A2 komentarz POPRAWKA 24.09 w `process_position` (zgubiony przy CREATE OR REPLACE) → przywrócony; `status` 190→**196** (+6 #485).
+
+## 2026-10-23 11:15 — #485 F7 B1–B4 (jeszcze nie → poprawki)
+
+- Skrzynka: #485 `pilne` bieżąca; #467 F7 „gotowe” wstrzymane (0274→0275 po #485); #484 w kolejce po #412.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie #486 (F7: jeszcze nie, B1–B3).
+- F7 #486: `sweden_land_geom`; DOPLYNAL wymaga lądu SE + `p_ts ≥ arrival` + ≥2 km od PORT_IN; bez DOPLYNAL tylko ląd SE (bez limitu 80 km); naprawa = pierwsza pozycja poza portem na lądzie; `debounce_fixes=1` dla PORT_IN SE; `status` **200**.
+
+## 2026-10-23 11:40 — #485 CI: search_path na sweden_land_geom
+
+- Skrzynka: #485 `pilne`; #484 wpisane PLAN §4 (po #412, przed B5); #467 F7 „gotowe” treścią — scalenie po #485 + renumeracja 0275.
+- Scalanie: brak „F7: gotowe” na głowie #486 po B1–B4; #478 nie scalać (0274 koliduje z #486).
+- CI `db` FAIL na `2ba3cac8`: security „każda funkcja public ma ustaloną search_path” (1) → `sweden_land_geom` + `set search_path to 'public'`. `status` 200/200 OK.
+
+## 2026-10-23 12:45 — #487 PILNE: OFF_CORRIDOR Karlskrona / E22 (przerywa #467)
+
+- Skrzynka: #487 `pilne` (Spawn2018) — fałszywa CRITICAL OFF_CORRIDOR SG-23 (SE_E4 zamiast E22); przed #478. #484 już w planie. #467 PR #478: F7 „gotowe” na e7bf6ae, CI w toku — nie scalane (#487 pierwsze).
+- Scalanie: brak PR do scalenia (F7 #478 czeka na #487 + zielone CI).
+- Bieżąca: **#487** `pakiet/hotfix-487-corridor-e22`, migracja **0275**: `refresh_load_eta` — STENA→SE_E22, POLFERRIES→SE_E4; bez korytarza → bez sprawy; zamknięcie 518c010e… + PENDING + L3; testy `status.sh`.
+- Numery: #467→**0276**, #413→**0277**, #422→**0278**, B5→**0279**.
+
+## 2026-10-23 13:15 — #487 CI FAIL → poprawka testów (PR #488)
+
+- Skrzynka: #487 `pilne` bieżąca; #484 w planie; #467 F7 treścią — nie scalać (kolizja 0275→0276 po #487; komentarz koordynatora 10:49).
+- Scalanie: brak (CI #488 czerwone; #478 nie scalać przed #487).
+- CI `db` FAIL na `d3601c0e`: status 204/205 — punkt 57.0/16.4 ~3 km od polilinii SE_E22 przy OFFROUTE_KM=2; risks 44/46 — `rk_off_corridor` z L487b w `tower_test_status`.
+- Poprawka: wierzchołek SE_E22 (16.637,57.758); sprzątanie `rk_off_corridor`; status **206**.
+
+## 2026-10-23 13:35 — #487 F7 runda 2 + #489 w planie (PR #488)
+
+- Skrzynka: #489 `pilne` (Spawn2018) — SG-18 po odpięciu rejsu status zostaje FERRY; wpisane PLAN §4 (po #487, przed #467, **0276**). #484 w planie.
+- Scalanie: brak — #488 F7 „jeszcze nie” (bloker 2–3 migracji); #478 F7 treścią, ale numer → **0277** po #487+#489 (nie scalać).
+- CI #488 na `04d06b7a`: unit/db/visual zielone.
+- F7 poprawki w 0275: `518c010e` bez warunku `resolved_at` + adnotacja; PENDING tylko `payload.risk_id` → `SUPPRESSED`; test ~50 km Småland (15.79/57.76).
+
+## 2026-10-23 14:00 — #487 F7 runda 3: geometria SE_E22 (PR #488)
+
+- Skrzynka: #487/#489 `pilne` bieżące; #484/#467 w planie; nowe bez `pilne` nie przerywają.
+- Scalanie: brak — F7 #488 „jeszcze nie” (B1 polilinia); #478 nie scalać (0275→**0277** po #487+#489).
+- CI #488 na `09a53cc5`: unit/db/visual zielone; F7 B1: Karlshamn 14.862 cofa linię — SG-23 15.9423/56.2523 = 24 km od polilinii.
+- Poprawka 0275: `UPDATE SE_E22` — Jämjö/Brömsebro/Nyköping, bez 14.862; `audit_log` tylko przy zmianie; test Jämjö przy OFFROUTE_KM=20; sprzątanie tylko L487a/b.
+
+## 2026-10-23 14:20 — #487 F7 runda 4: Norrköping + #490 SCALONE (PR #488)
+
+- Skrzynka: #487/#489 `pilne`; #484/#467 w planie.
+- Scalanie: **#490** `e911ad74` (F7 gotowe po `775700ce`, CI zielone) — oś Status AIS. #488 F7 r3 „jeszcze nie” (B2: zgubiony Norrköping); #478 nie scalać (→**0277**).
+- CI #488 na `0129b073`: unit/db/visual zielone.
+- F7 B2: 16.637=Västervik; brak 16.32/58.48 i 16.183/58.594 → SG-23 16.3186/58.4792 = 33,5 km. Poprawka: Söderköping+Norrköping(+Gamleby); `total_km` z `geom`; test Söderköping; OFFROUTE_KM przywrócone; status **207**.
+
+## 2026-10-23 14:40 — #487 SCALONE + start #489 (0276)
+
+- Skrzynka: #489 `pilne` bieżąca; #487 zamknięte; #484/#467 w planie (#478 → **0277**, nie scalać przed #489).
+- Scalanie: **#488** `53c66026` (F7 gotowe na `4e386f4c`, CI zielone); **#491** `6b824f6a` (wygląd statusy, F7 gotowe).
+- Bieżąca: **#489** `pakiet/hotfix-489-sailing-removed-status`, migracja **0276**: `revert_status_after_sailing_removed` + trigger na `sailing_id`; naprawa SG-18; testy status **218** (+11).
+
+## 2026-10-23 15:05 — #489 CI zielone + #492 w planie
+
+- Skrzynka: #492 (Spawn2018, niepilne) — `loads.updated_at` przy zasobach z ekranu (po #491); wpisane PLAN §4 po #484, przed B5. #489 `pilne` nadal bieżąca.
+- Scalanie: brak — PR #493 bez F7; #478 wstrzymane (→**0277** po #489); #382/#383 niegotowe.
+- CI #493 na `6a335941`: unit / db / visual **zielone** (status 218). Czekam na „F7: gotowe do scalenia”.
+
+## 2026-10-23 15:30 — #489 F7 B1/B2 (łańcuch korekty AIS)
+
+- Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie (bez nowych).
+- Scalanie: brak — F7 #493 „jeszcze nie” (B1/B2); CI docs `bfb80182` unit/db/visual zielone przed poprawką; #478/#494 nie scalać przed bazą.
+- F7: `revert_status_after_sailing_removed` — CTE po `zastepuje` przy `korekta` / `from=status`; `cofniete_ids`; trigger `WHEN (old.sailing_id is distinct from new.sailing_id)`; naprawa actor/godzina z SAILING_ASSIGNED „rejs usunięty”; testy b'/d/e; status **230**.
+
+## 2026-10-23 16:00 — #489 F7 r2 B3 (ręczna korekta godziny)
+
+- Skrzynka: #489 `pilne` bieżąca; #492/#484/#467 w planie; #494 wygląd F7 gotowe (czeka na bazę).
+- Scalanie: brak — F7 #493 „jeszcze nie” (B3); CI `3fa2849e` db FAIL b' (IN_TRANSIT_PL zamiast FERRY).
+- F7 B3: głowa `STATUS_*` / bez source → `return false`; CTE wstecz tylko przez `STATUS_AUTO`+`source=AIS`; łańcuch z wpisem ręcznym → bez cofania; naprawa bez placeholder `sailing_id` (null). Status **230**.
+
+## 2026-10-23 16:40 — #489 SCALONE; #467 → 0277 (merge main)
+
+- Skrzynka: #489 zamknięte; #492/#484 w planie; #467 bieżąca (PR #478).
+- Scalanie: **#494** `67e18e62` (F7 gotowe, CI zielone); **#493** `8e03d704` (F7 gotowe na `952ef2d6`, CI unit/db/visual zielone, status 230).
+- Bieżąca: **#467** `pakiet/hotfix-467-d3-mail-sms-settings` — merge `main` po #489; migracja **0275→0277**; czekam na CI + F7: gotowe do scalenia.

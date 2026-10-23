@@ -96,9 +96,11 @@ export interface AxisHit {
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
   /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
-  korekta?: { poprzednio: string | null; przez: string | null } | null;
+  korekta?: { poprzednio: string | null; przez: string | null; auto?: boolean; zRozkladu?: boolean } | null;
   /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
   seq?: number;
+  /** #489 (0276): odpięty rejs — godzina odpięcia (wiersz zostaje z pierwotną godziną statusu, do którego wrócił) */
+  cofniecieAt?: string | null;
 }
 
 /** Numer zdarzenia z bazy („ev-123” → 123); inne identyfikatory (demo) — NaN. */
@@ -119,6 +121,17 @@ function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; w
   const groups = new Map<string, { e: LoadEvent; i: number }[]>();
   events.forEach((e, i) => {
     const p = (e.payload ?? {}) as Record<string, unknown>;
+    /* #489 (0276): odpięty rejs cofa status — wpisy z tego rejsu („Prom”, porty) (`zastepuje`, `cofniete_ids`) znikają z osi;
+       bez grupowania z korektami godziny (inne korekty STATUS_AUTO zostają) */
+    if (p.cofniete === true) {
+      const ids = [p.zastepuje, ...(Array.isArray(p.cofniete_ids) ? p.cofniete_ids : [])];
+      for (const id of ids) {
+        if (typeof id !== 'number' && typeof id !== 'string') continue;
+        gone.add(`ev-${id}`);
+        gone.add(String(id));
+      }
+      return;
+    }
     if (p.korekta !== true) return;
     if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') {
       gone.add(`ev-${p.zastepuje}`);
@@ -181,6 +194,14 @@ const isSystemActor = (a: string | null | undefined) =>
   !a || a === 'system' || a.startsWith('workflow:') || a === 'driver-pwa';
 
 /** Zdarzenia, które ustawiły status (od najstarszego). */
+/** `payload.source` wpisu zastąpionego korektą (`payload.zastepuje` = numer zdarzenia z bazy). */
+function replacedSource(events: readonly LoadEvent[], id: unknown): string | null {
+  if (typeof id !== 'number' && typeof id !== 'string') return null;
+  const e = events.find((x) => x.id === `ev-${id}` || x.id === String(id));
+  const src = (e?.payload as Record<string, unknown> | undefined)?.source;
+  return typeof src === 'string' ? src.toUpperCase() : null;
+}
+
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
   const { list, was } = withoutSuperseded(events);
@@ -196,7 +217,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
     } else if (e.type === 'STATUS_AUTO') {
       const to = axisStatus(str('to'));
       const from = axisStatus(str('from'));
-      if (!to || to === from) continue;
+      /* #461 (0270): korekta godziny „Prom” z AIS zapisuje FERRY → FERRY i zastępuje wpis z rozkładu — nie pomijać */
+      if (!to || (to === from && !korekta)) continue;
       status = to;
       source = 'auto';
     } else if (e.type.startsWith('STATUS_')) {
@@ -225,8 +247,17 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
-      korekta: korekta ? { poprzednio: was.get(e.id) ?? str('poprzednio'), przez: str('przez') } : null,
+      korekta: korekta
+        ? {
+            poprzednio: was.get(e.id) ?? str('poprzednio'),
+            przez: str('przez'),
+            ...(e.type === 'STATUS_AUTO' && isSystemActor(e.actor) ? { auto: true } : {}),
+            /* „z rozkładu było …” tylko gdy zastąpiony wpis był z rozkładu (0270 może zastąpić też korektę osoby) */
+            ...(replacedSource(events, p.zastepuje) === 'SCHEDULE' ? { zRozkladu: true } : {}),
+          }
+        : null,
       seq: evSeq(e.id),
+      ...(p.cofniete === true ? { cofniecieAt: e.at } : {}),
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
@@ -274,6 +305,8 @@ export function buildStatusAxis(
     const prev = last.get(h.status);
     /* D-0005: korekta (np. na 09:00) nie znika pod wcześniej zapisanym wpisem z późniejszą godziną (np. STATUS_AUTO 13:00) */
     if (prev?.korekta && !h.korekta && (h.seq ?? NaN) < (prev.seq ?? NaN)) continue;
+    /* #489: powrót po odpięciu rejsu do statusu, który już był — zostaje jego pierwotna godzina, z dopiskiem odpięcia */
+    if (h.cofniecieAt && prev) { last.set(h.status, { ...prev, cofniecieAt: h.cofniecieAt }); continue; }
     last.set(h.status, h);
   }
   const cur = currentAxisIndex(l);
