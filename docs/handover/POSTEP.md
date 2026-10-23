@@ -4299,7 +4299,8 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 
 - Skrzynka: #463 otwarte do odbioru SELECT (F7); #466/#467/#446/#425/#413/#422 w planie. Bez nowych `pilne` przerywających.
 - Scalanie: #475 F7 „gotowe do scalenia” (head `713d7d0`) + CI unit/db/visual zielone → MERGED `df81cb13`. Bez push na `main`.
-- Bieżąca: **#466** (`pakiet/hotfix-466-pii-historia`, migracja **0273**) — `audit_row_change`: PII jawne; `rio_secret` → ••••; maska tylko `source=rodo`. i2 **664** (+4 role). #413→0274, #422→0275, B5→0276.
+- Bieżąca: **#466** (`pakiet/hotfix-466-pii-historia`, migracja **0273**) — `audit_row_change`: PII jawne; `rio_secret` → ••••; maska tylko `source=rodo`. i2 **665** (+5 role przez `load_driver_contacts`, nie SELECT kolumn). #413→0274, #422→0275, B5→0276.
+- CI `db` na `2f6a173b`: i2 661/3 FAIL — testy ról brały `loads.driver_*` wprost (0076 bez SELECT). Poprawka: RPC + HHL_ADMIN.
 
 ### Przegląd maskowań PII (#466 / D-1243 pkt 2)
 | Miejsce | Było | Po #466 |

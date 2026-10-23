@@ -733,15 +733,17 @@ chk "D-1243/#466: sms_zone_recipients.phone_national jawny" "$(Q "select new_val
 $PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
 chk "D-1243/#466: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
 chk "D-1243/#466: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
-# Role: KSH / HHL_OPS / SCX widzą dane osobowe na swoim transporcie; anon — nic (#466 pkt 2/5).
+# Role: KSH / HHL_ADMIN / HHL_OPS / SCX widzą PII przez load_driver_contacts (0076: bez SELECT kolumn);
+# anon — nic. Historia (audit) już sprawdzona wyżej — jawne wpisy (#466 pkt 2/5).
 # Część 3 osobno: OPS z części 2 może nie istnieć.
 OPS=11111111-0000-0000-0000-0000000000b5
 $PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
 $PSQL -c "update loads set driver_name='Jan Test', driver_phone='+48000000111' where id='$L1'" >/dev/null
-val "D-1243/#466: KSH widzi kierowcę" $KSH "select driver_name||'/'||driver_phone from loads where id='$L1'" "Jan Test/+48000000111"
-val "D-1243/#466: HHL_OPS widzi kierowcę" $OPS "select driver_name||'/'||driver_phone from loads where id='$L1'" "Jan Test/+48000000111"
-val "D-1243/#466: SCX widzi kierowcę" $SCX "select driver_name||'/'||driver_phone from loads where id='$L1'" "Jan Test/+48000000111"
-err "D-1243/#466: anon bez SELECT loads" $HHL "set local role anon; select driver_name from loads where id='$L1'" "permission denied"
+val "D-1243/#466: KSH widzi kierowcę (RPC)" $KSH "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_ADMIN widzi kierowcę (RPC)" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_OPS widzi kierowcę (RPC)" $OPS "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: SCX widzi kierowcę (RPC)" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+err "D-1243/#466: anon bez SELECT driver_name" $HHL "set local role anon; select driver_name from loads where id='$L1'" "permission denied"
 # RODO: historyczny jawny wpis → purge maskuje; własne UPDATE z source=rodo też maskują
 $PSQL -c "insert into audit_log (action, entity, entity_id, old_value, new_value, created_at)
  values ('ROW_UPDATE','loads','$L1','{\"driver_name\":\"Stary Kierowca\",\"driver_phone\":\"+48000000999\"}'::jsonb,
