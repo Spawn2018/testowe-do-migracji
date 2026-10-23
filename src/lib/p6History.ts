@@ -118,6 +118,8 @@ function oldNew(p: Record<string, unknown>, locale: Locale): { from: string | nu
 export function isNoChange(e: LoadEvent): boolean {
   const p = e.payload ?? {};
   const on = oldNew(p, 'pl');
+  /* #461 (0270): korekta godziny „Prom” z AIS (Prom → Prom) to nie wpis bez zmiany */
+  if (p.korekta === true) return false;
   if (on.has && on.from != null && on.from === on.to) return true;
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_AUTO' && str(p.from) && statusName(str(p.from), 'pl') === statusName(e.type.slice(7), 'pl')) return true;
   return false;
@@ -248,6 +250,11 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     const ch = hitChannel(e.type, p, null);
     const src = ch === 'GPS' ? posSource(p, locale) : ch === 'AIS' ? ht(locale, 'p6b_src_AIS') : ch ? ht(locale, `p6b_src_${ch}`) : base.src;
     if (!from && !to) return { ...base, src, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
+    /* #461 (0270): korekta godziny z AIS — „wypłynięcie według AIS (było …)” */
+    if (p.korekta === true && SYSTEM_ACTOR(e.actor)) {
+      const was = str(p.poprzednio);
+      return { ...base, src, head: '', from: null, to: to ?? '—', tail: was ? htp(locale, 'p6b_korekta_ais', { was: dayTime(was) }) : why };
+    }
     return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_CHANGED') {

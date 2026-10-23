@@ -96,7 +96,7 @@ export interface AxisHit {
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
   /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
-  korekta?: { poprzednio: string | null; przez: string | null } | null;
+  korekta?: { poprzednio: string | null; przez: string | null; auto?: boolean; zRozkladu?: boolean } | null;
   /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
   seq?: number;
 }
@@ -181,6 +181,14 @@ const isSystemActor = (a: string | null | undefined) =>
   !a || a === 'system' || a.startsWith('workflow:') || a === 'driver-pwa';
 
 /** Zdarzenia, które ustawiły status (od najstarszego). */
+/** `payload.source` wpisu zastąpionego korektą (`payload.zastepuje` = numer zdarzenia z bazy). */
+function replacedSource(events: readonly LoadEvent[], id: unknown): string | null {
+  if (typeof id !== 'number' && typeof id !== 'string') return null;
+  const e = events.find((x) => x.id === `ev-${id}` || x.id === String(id));
+  const src = (e?.payload as Record<string, unknown> | undefined)?.source;
+  return typeof src === 'string' ? src.toUpperCase() : null;
+}
+
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
   const { list, was } = withoutSuperseded(events);
@@ -196,7 +204,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
     } else if (e.type === 'STATUS_AUTO') {
       const to = axisStatus(str('to'));
       const from = axisStatus(str('from'));
-      if (!to || to === from) continue;
+      /* #461 (0270): korekta godziny „Prom” z AIS zapisuje FERRY → FERRY i zastępuje wpis z rozkładu — nie pomijać */
+      if (!to || (to === from && !korekta)) continue;
       status = to;
       source = 'auto';
     } else if (e.type.startsWith('STATUS_')) {
@@ -225,7 +234,15 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
-      korekta: korekta ? { poprzednio: was.get(e.id) ?? str('poprzednio'), przez: str('przez') } : null,
+      korekta: korekta
+        ? {
+            poprzednio: was.get(e.id) ?? str('poprzednio'),
+            przez: str('przez'),
+            ...(e.type === 'STATUS_AUTO' && isSystemActor(e.actor) ? { auto: true } : {}),
+            /* „z rozkładu było …” tylko gdy zastąpiony wpis był z rozkładu (0270 może zastąpić też korektę osoby) */
+            ...(replacedSource(events, p.zastepuje) === 'SCHEDULE' ? { zRozkladu: true } : {}),
+          }
+        : null,
       seq: evSeq(e.id),
     });
   }
