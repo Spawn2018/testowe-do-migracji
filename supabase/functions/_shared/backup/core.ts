@@ -54,14 +54,18 @@ export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
 /**
  * #463 / D-20261022-2110-01 — duże tabele (notifications, integration_runs, sms_heartbeats…)
- * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie po ctid + limit czasu na kawałek.
- * F7 #472: strony z pg_relation_size (nie relpages); ostatni zakres bez górnej granicy;
- * kompletność = csvRowCount vs count(*) w tej samej transakcji RR.
+ * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie + limit czasu.
+ * #479 F7 A: bez COPY — `select` porcjami (keyset ctid) + CSV w kodzie; `TABLE_*_TIMEOUT`
+ * na całą tabelę (ERROR z nazwą, nie wiszenie do I-33).
  */
 export const CHUNK_EST_ROWS = 2_500;
 export const CTID_PAGES_PER_CHUNK = 32;
-/** Timeout jednego kawałka COPY — musi być << limitu wall-clock Edge (~150 s), inaczej 502 przed końcem tabeli. */
-export const TABLE_COPY_TIMEOUT_MS = 40_000;
+/** Limit czasu na całą tabelę (select+CSV) — << wall-clock Edge (~150 s). */
+export const TABLE_COPY_TIMEOUT_MS = 60_000;
+/** Alias semantyczny (#479 F7 A) — ten sam limit co `TABLE_COPY_TIMEOUT_MS`. */
+export const TABLE_SELECT_TIMEOUT_MS = TABLE_COPY_TIMEOUT_MS;
+/** Porcje keyset po ctid (#479 F7 A). */
+export const SELECT_BATCH_ROWS = 2_000;
 /**
  * Budżet jednego wywołania Edge (#463 id 38: 502 ~147 s). Po przekroczeniu
  * funkcja kończy odpowiedź i woła się ponownie z `continue_run` (stan w backup_runs).
@@ -167,6 +171,77 @@ export function assertCsvInCountWindow(csvRows: number, n0: number, n1: number, 
     throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} n0=${n0} n1=${n1}`);
   }
 }
+
+/**
+ * #479: lista kolumn COPY (`"id", "code"`) → parametr `select` PostgREST (`id,code`).
+ * `null` / pusty = `*` (cała tabela). Zachowane pod testy / ewentualny REST.
+ */
+export function postgrestSelectParam(selectList: string | null | undefined): string {
+  if (!selectList || !selectList.trim()) return '*';
+  const cols = selectList.split(',').map((c) => {
+    const s = c.trim().replace(/^"|"$/g, '');
+    if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`kopia: zła kolumna select: ${c.trim()}`);
+    return s;
+  });
+  if (!cols.length) return '*';
+  return cols.join(',');
+}
+
+/**
+ * #479 F7 A: `"id", "code"` / `null` → nazwy kolumn (kolejność zachowana).
+ */
+export function parseSelectColumns(selectList: string | null | undefined): string[] | null {
+  if (!selectList || !selectList.trim()) return null;
+  const cols = selectList.split(',').map((c) => {
+    const s = c.trim().replace(/^"|"$/g, '');
+    if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`kopia: zła kolumna select: ${c.trim()}`);
+    return s;
+  });
+  if (!cols.length) throw new Error('kopia: pusta lista kolumn');
+  return cols;
+}
+
+/** ctid tekstowy z PG: `(strona,indeks)`. */
+export function assertSafeCtid(s: string): string {
+  if (!/^\(\d+,\d+\)$/.test(s)) throw new Error(`kopia: zły ctid: ${s}`);
+  return s;
+}
+
+/**
+ * #479 F7 A: lista kolumn → ` "id"::text as "id", … ` (reprezentacja jak COPY text/CSV).
+ */
+export function selectTextCastSql(columns: readonly string[]): string {
+  if (!columns.length) throw new Error('kopia: brak kolumn do select');
+  return columns.map((c) => {
+    const n = assertSafeIdent(c);
+    return `"${n}"::text as "${n}"`;
+  }).join(', ');
+}
+
+/**
+ * CSV jak `COPY … (format csv)`: NULL = puste pole; pusty string = `""`;
+ * cudzysłów / przecinek / NL → pole w cudzysłowach.
+ */
+export function csvEscapeField(value: string | null): string {
+  if (value === null) return '';
+  if (value.length === 0 || /[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/** Nagłówek + wiersze → CSV z końcowym `\n` (jak COPY TO STDOUT). */
+export function rowsToCsv(headers: readonly string[], rows: readonly (readonly (string | null)[])[]): string {
+  const head = headers.map((h) => csvEscapeField(h)).join(',');
+  if (!rows.length) return `${head}\n`;
+  const body = rows.map((r) => r.map((c) => csvEscapeField(c)).join(',')).join('\n');
+  return `${head}\n${body}\n`;
+}
+
+/**
+ * Dawny próg PostgREST (cz.5) — zostawiony dla testów; ścieżka Edge = tylko select (#479 F7 A).
+ */
+export const REST_CSV_MAX_ROWS = 1_000;
 
 export async function gzip(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
