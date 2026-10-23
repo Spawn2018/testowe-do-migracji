@@ -4406,3 +4406,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: **#490** `e911ad74` (F7 gotowe po `775700ce`, CI zielone) — oś Status AIS. #488 F7 r3 „jeszcze nie” (B2: zgubiony Norrköping); #478 nie scalać (→**0277**).
 - CI #488 na `0129b073`: unit/db/visual zielone.
 - F7 B2: 16.637=Västervik; brak 16.32/58.48 i 16.183/58.594 → SG-23 16.3186/58.4792 = 33,5 km. Poprawka: Söderköping+Norrköping(+Gamleby); `total_km` z `geom`; test Söderköping; OFFROUTE_KM przywrócone; status **207**.
+
+## 2026-10-23 14:40 — #487 SCALONE + start #489 (0276)
+
+- Skrzynka: #489 `pilne` bieżąca; #487 zamknięte; #484/#467 w planie (#478 → **0277**, nie scalać przed #489).
+- Scalanie: **#488** `53c66026` (F7 gotowe na `4e386f4c`, CI zielone); **#491** `6b824f6a` (wygląd statusy, F7 gotowe).
+- Bieżąca: **#489** `pakiet/hotfix-489-sailing-removed-status`, migracja **0276**: `revert_status_after_sailing_removed` + trigger na `sailing_id`; naprawa SG-18; testy status **218** (+11).
