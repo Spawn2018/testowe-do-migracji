@@ -93,9 +93,10 @@ run "$KSH" "select my_notify_set('status','mail',false)" commit >/dev/null
 sval "osoba KSH: e-mail statusu wyłączony, było puste" "select (p.on_value is false)::text||'/'||(a.old_value->>'on' is null)::text from user_notify_pref p join audit_log a on a.entity='user_notify_pref' and a.user_id=p.user_id where p.user_id='$KSHU' and p.event_key='status' and p.channel='mail' order by a.id desc limit 1" "true/true"
 
 # #402 / D-20261021-1952-01: bez „zawsze”; prefs wygrywają; bez push_fallback→EMAIL.
+# #467 / F7 #478: wyjątek — sms_gw × CARRIER_*/CLIENT_USER ma fixed_*=true (tylko Admin HHL).
 run "$HHL" "select my_notify_set('src_down','mail',false)" commit >/dev/null
 sval "#402: src_down mail da się wyłączyć" "select on_value::text from user_notify_pref where user_id='$HHLU' and event_key='src_down' and channel='mail'" false
-sval "#402: 0 fixed_* w macierzy" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 0
+sval "#467: 3 fixed_* (sms_gw CARRIER_*/CLIENT_USER)" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 3
 sys "update notification_matrix set email=true, push=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
 run "$HHL" "select my_notify_set('risk_crit','mail',false)" commit >/dev/null
 run "$HHL" "select my_notify_set('risk_crit','push',true)" commit >/dev/null
