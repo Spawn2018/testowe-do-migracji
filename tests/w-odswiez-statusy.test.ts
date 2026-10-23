@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let version = '2026-10-23T10:31:51Z';
 const snapshots = vi.fn();
+let applyImpl: () => Promise<unknown> = async () => ({});
 vi.mock('../src/data/supabaseProvider', () => ({
   createSupabaseProvider: () => ({
     kind: 'supabase',
@@ -14,7 +15,7 @@ vi.mock('../src/data/supabaseProvider', () => ({
     loadNotifications: async () => [],
     loadsVersion: async () => version,
     loadPreferences: async () => null,
-    apply: async () => ({}),
+    apply: () => applyImpl(),
     context: () => ({ orgs: [], projectId: null }),
   }),
 }));
@@ -62,7 +63,32 @@ describe('W-odswiez-statusy — statusy z automatu bez przeładowania', () => {
     const br = readFileSync(new URL('../src/data/supabaseBridge.ts', import.meta.url), 'utf8');
     expect(br).toContain('const LIVE_EVERY_MS = 2 * 60_000;');
     expect(br).toContain('void refreshIfLoadsChanged().catch(() => undefined);');
-    expect(br).toContain('if (writesPending > 0) return;');
-    expect(br).toContain('if (opts.background && (writesPending > 0 || writesSeq !== seq)) return;');
+    expect(br).toContain('WRITE_STUCK_MS');
+  });
+
+  it('zapis w toku wstrzymuje odświeżanie w tle; zawieszony > 2 min — już nie blokuje', async () => {
+    const noop = () => undefined;
+    vi.stubGlobal('document', { visibilityState: 'visible', addEventListener: noop, removeEventListener: noop });
+    vi.stubGlobal('window', { addEventListener: noop, removeEventListener: noop });
+    const b = await import('../src/data/supabaseBridge');
+    const { writeThrough } = await import('../src/data/registry');
+    version = 'w-0';
+    await b.connectSupabaseData({} as never);
+    snapshots.mockClear();
+    applyImpl = () => new Promise(() => undefined); /* zapis, który nie wraca (sieć) */
+    const t0 = Date.now();
+    const now = vi.spyOn(Date, 'now').mockReturnValue(t0);
+    writeThrough({ type: 'message.send', loadId: '95ab7218-69cc-490d-8b68-b379c3ed9aae' } as never);
+    await new Promise((r) => setTimeout(r, 0));
+    version = 'w-1';
+    await b.refreshIfLoadsChanged();
+    expect(snapshots).not.toHaveBeenCalled();
+    now.mockReturnValue(t0 + 3 * 60_000);
+    await b.refreshIfLoadsChanged();
+    expect(snapshots).toHaveBeenCalledTimes(1);
+    now.mockRestore();
+    applyImpl = async () => ({});
+    b.disconnectSupabaseData();
+    vi.unstubAllGlobals();
   });
 });

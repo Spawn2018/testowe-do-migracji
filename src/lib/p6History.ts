@@ -253,7 +253,9 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     /* #461 (0270): korekta godziny z AIS — „wypłynięcie według AIS (było …)” */
     if (p.korekta === true && SYSTEM_ACTOR(e.actor)) {
       const was = str(p.poprzednio);
-      return { ...base, src, head: '', from: null, to: to ?? '—', tail: was ? htp(locale, 'p6b_korekta_ais', { was: dayTime(was) }) : why };
+      /* tylko korekta z AIS pisze „według AIS”; inny automat — ogólne „korekta godziny (było …)” */
+      const key = ch === 'AIS' ? 'p6b_korekta_ais' : 'p6b_korekta_hist';
+      return { ...base, src, head: '', from: null, to: to ?? '—', tail: was ? htp(locale, key, { was: dayTime(was) }) : why };
     }
     return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }

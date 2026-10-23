@@ -169,7 +169,9 @@ export function LoadDrawer() {
       })
       .catch(() => { if (alive) setInsAuto(null); });
     return () => { alive = false; };
-  }, [load]);
+    /* #491: odświeżenie w tle podmienia obiekt transportu — polisa tylko przy zmianie transportu (jedno RPC) */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load?.id]);
   const loadMsgs = useMemo(
     () => (load ? messages.filter((m) => m.loadId === load.id) : []),
     [messages, load],
