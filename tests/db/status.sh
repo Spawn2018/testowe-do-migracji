@@ -804,24 +804,34 @@ insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actu
   '2026-10-07 12:00+00','2026-10-07 22:00+00','2026-10-07 12:00+00','W_REJSIE','STENA');
 " >/dev/null
 S486=77777777-0000-0000-0000-000000000486
-# (2) W_REJSIE + morze ~40 km od PORT_IN → FERRY (B2)
+# (2) W_REJSIE przed planowym przypłynięciem + morze → FERRY (F7 r2)
 L485c=$(L 87)
 mk $L485c C485 "'HHL/C485'" "'SCX/C485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485c','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485c 55.90 15.90 "2026-10-07 14:00+00"
 chk "#485: W_REJSIE + morze 40 km od PORT_IN → FERRY" "$(st $L485c)" FERRY
+L485n=$(L 8b)
+mk $L485n N485 "'HHL/N485'" "'SCX/N485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485n','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485n 58.60 18.00 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Nynäshamn → FERRY" "$(st $L485n)" FERRY
+L485k=$(L 8c)
+mk $L485k K485 "'HHL/K485'" "'SCX/K485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485k','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485k 56.138 15.635 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Karlskrona → FERRY" "$(st $L485k)" FERRY
 # PL (Gdańsk) przy FERRY
 L485d=$(L 88)
 mk $L485d D485 "'HHL/D485'" "'SCX/D485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485d','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485d 54.4030 18.6800 "2026-10-07 13:00+00"
 chk "#485: pozycja w PL przy FERRY → bez zmiany" "$(st $L485d)" FERRY
-# (4) bez DOPLYNAL + 200 km w głąb SE → IN_TRANSIT_SE (B2)
+# (4) po planowym przypłynięciu bez actual + ląd SE (E4) → IN_TRANSIT_SE (F7 r2)
 L485e=$(L 8a)
 mk $L485e E485 "'HHL/E485'" "'SCX/E485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485e','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
-pos $L485e 57.50 15.00 "2026-10-07 16:00+00"
-chk "#485: W_REJSIE + 200 km ląd SE → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
+pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
+chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

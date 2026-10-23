@@ -1,19 +1,20 @@
 -- #485 PILNE: FERRY → Port SE / Droga SE z pozycji (nie tylko GEOFENCE_ENTER).
--- F7 #486: ląd SE (wielokąt), p_ts ≥ dopłynięcie, bez morza przy W_REJSIE,
--- naprawa = pierwsza pozycja poza PORT_IN; debounce PORT_IN SE = 1.
+-- F7 #486 r2: każde przejście wymaga p_ts ≥ arrival (actual|plan); ląd SE;
+-- naprawa = pierwsza poza PORT_IN ≥ 2 km; debounce PORT_IN SE = 1.
 
 -- Uproszczony ląd Szwecji (bez Bałtyku PL↔SE). Lon/lat WGS84.
+-- F7 r2: krawędź N (Umeå/Skellefteå) przesunięta na wschód.
 create or replace function public.sweden_land_geom()
 returns geometry
 language sql
 immutable
 parallel safe
-set search_path to 'public'
+set search_path to 'public', 'extensions'
 as $f$
   select st_setsrid(st_geomfromtext(
     'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.55 56.10,'
     ' 16.00 56.25, 17.00 56.80, 18.50 57.50, 19.20 59.00, 19.00 60.50,'
-    ' 18.50 63.00, 20.50 65.00, 24.20 65.60, 24.00 69.06, 17.50 68.50,'
+    ' 21.00 63.00, 21.50 65.00, 24.20 65.60, 24.00 69.06, 17.50 68.50,'
     ' 11.50 63.00, 11.00 59.00, 10.95 55.90))'
   ), 4326);
 $f$;
@@ -31,7 +32,7 @@ create or replace function public.apply_ferry_se_from_position(
 ) returns void
 language plpgsql
 security definer
-set search_path to 'public'
+set search_path to 'public', 'extensions'
 as $function$
 declare
   v_status     load_status;
@@ -42,7 +43,6 @@ declare
   v_in_port    boolean := false;
   v_port_m     double precision;
   v_on_land_se boolean := false;
-  v_arrived    boolean := false;
   v_arr_at     timestamptz;
   v_arr_src    text;
   v_dep_at     timestamptz;
@@ -64,12 +64,11 @@ begin
 
   v_op := 'POLFERRIES';
   select case when s.route in ('GDY-KAA', 'KAA-GDY') then 'STENA' else 'POLFERRIES' end,
-         s.status = 'DOPLYNAL' or s.actual_arrival_at is not null,
          s.actual_arrival_at,
          coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at),
          coalesce(s.delayed_arrival_at, s.arrival_at),
          coalesce(s.delayed_departure_at, s.departure_at)
-    into v_op, v_arrived, v_arr_at, v_dep_at, v_plan_arr, v_plan_dep
+    into v_op, v_arr_at, v_dep_at, v_plan_arr, v_plan_dep
     from loads l
     left join sailings s on s.id = l.sailing_id
    where l.id = p_load_id;
@@ -88,6 +87,11 @@ begin
   else
     v_arr_at := v_plan_arr;
     v_arr_src := 'plan';
+  end if;
+
+  /* F7 r2: każde przejście wymaga p_ts ≥ arrival (actual albo plan). */
+  if (v_arr_at is not null and p_ts >= v_arr_at) is not true then
+    return;
   end if;
 
   v_pt := st_setsrid(st_makepoint(p_lon, p_lat), 4326);
@@ -131,21 +135,13 @@ begin
     return;
   end if;
 
-  /* Poza portem: tylko ląd SE (B1/B2). Morze / PL → bez zmiany. */
+  /* Poza portem: tylko ląd SE; ≥ 2 km od krawędzi (jitter w terminalu). */
   if v_on_land_se is not true then
     return;
   end if;
-
-  if v_arrived then
-    /* DOPLYNAL: pozycja nie wcześniejsza niż dopłynięcie; ≥ 2 km od krawędzi (jitter). */
-    if (v_arr_at is not null and p_ts >= v_arr_at) is not true then
-      return;
-    end if;
-    if (v_port_m >= 2000) is not true then
-      return;
-    end if;
+  if (v_port_m >= 2000) is not true then
+    return;
   end if;
-  /* Bez DOPLYNAL: ląd SE wystarczy (bez górnej granicy km) — B2. */
 
   /* Uzupełnienie pominiętego Port SE — bez powiadomień (jak synthetic FERRY). */
   if v_status = 'FERRY' then
@@ -432,7 +428,7 @@ begin
      order by g.name
      limit 1;
 
-    /* Pierwsza pozycja po dopłynięciu poza strefą PORT_IN na lądzie SE. */
+    /* Pierwsza pozycja po dopłynięciu: poza PORT_IN, ≥ 2 km, ląd SE (F7 r2). */
     select st_y(p.geom_raw::geometry), st_x(p.geom_raw::geometry), p.ts
       into v_lat, v_lon, v_ts
       from public.positions p
@@ -440,7 +436,10 @@ begin
        and (v_arr is null or p.ts >= v_arr)
        and (
          v_port is null
-         or st_contains(v_port, p.geom_raw::geometry) is not true
+         or (
+           st_contains(v_port, p.geom_raw::geometry) is not true
+           and st_distance(v_port::geography, p.geom_raw::geography) >= 2000
+         )
        )
        and st_covers(public.sweden_land_geom(), p.geom_raw::geometry)
      order by p.ts asc
