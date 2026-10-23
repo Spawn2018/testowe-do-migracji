@@ -119,6 +119,17 @@ function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; w
   const groups = new Map<string, { e: LoadEvent; i: number }[]>();
   events.forEach((e, i) => {
     const p = (e.payload ?? {}) as Record<string, unknown>;
+    /* #489 (0276): odpięty rejs cofa status — wpisy „Prom” z tego rejsu (`zastepuje`, `cofniete_ids`) znikają z osi;
+       bez grupowania z korektami godziny (inne korekty STATUS_AUTO zostają) */
+    if (p.cofniete === true) {
+      const ids = [p.zastepuje, ...(Array.isArray(p.cofniete_ids) ? p.cofniete_ids : [])];
+      for (const id of ids) {
+        if (typeof id !== 'number' && typeof id !== 'string') continue;
+        gone.add(`ev-${id}`);
+        gone.add(String(id));
+      }
+      return;
+    }
     if (p.korekta !== true) return;
     if (typeof p.zastepuje === 'number' || typeof p.zastepuje === 'string') {
       gone.add(`ev-${p.zastepuje}`);
