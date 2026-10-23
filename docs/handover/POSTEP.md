@@ -4271,3 +4271,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463 zamknięte; #409/#464–#467/#446/#425/#413/#422 w planie. Bez nowych `pilne` przerywających.
 - Scalanie: #472 F7 „gotowe do scalenia” (head `b199168`) + CI unit/db/visual zielone → MERGED `24012262`. Issue #463 zamknięte. Bez push na `main`.
 - Bieżąca: **#409** (`pakiet/hotfix-409-fuel-basis` / PR #458) — rebase na main; migracja **0271** (0268=#460); `fuel_basis_public` + `set search_path = public, pg_temp`; allowlista bez `owner_note` dla SCX/KSH; money **191**.
+
+## 2026-10-23 02:25 — #458/#409 SCALONE; start #464 (0272)
+
+- Skrzynka: #464–#467/#446/#425/#413/#422 (Spawn2018) — już w planie; #409 zamknięte. Bez nowych `pilne` przerywających.
+- Scalanie: #458 F7 „gotowe do scalenia” (head `7ce5c44`) + CI unit/db/visual zielone → MERGED `75653b46` (0271). Bez push na `main`. `deploy-main` nie czekamy.
+- Bieżąca: **#464** (`pakiet/hotfix-464-a7-permits-ksh`) — migracja **0272**: `a7_permits_list` dla KSH = Firma+Trasa z `load_permits` własnych transportów; `loads` tylko własne; i2 +6 → **660**. #413→**0273**, #422→**0274**, B5→**0275**.

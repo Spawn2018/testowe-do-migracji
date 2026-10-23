@@ -130,8 +130,8 @@ export function permitsOf(loads: Load[]): PermitView[] | null {
 /**
  * E31 pkt 9 (decyzja koordynatora 22.10.2026): KSH widzi zezwolenia swoich transportów — tylko do odczytu,
  * wyłącznie zezwolenia przypięte do co najmniej jednego transportu z jego listy. HHL i SCX — bez zmian.
- * Produkcja: lista z `a7_permits_list` (KSH = CLIENT dostaje dziś tylko „Firma”); RLS `permits_read` daje KSH odczyt
- * zezwoleń przypiętych do jego transportów (`load_permits` → `loads`).
+ * Produkcja (#464 / 0272): `a7_permits_list` zwraca KSH tylko Firma i Trasa z `load_permits`
+ * własnych transportów (loads już zawężone). Filtr `loads > 0` zostaje jako zabezpieczenie UI.
  */
 export function permitsForRole(permits: readonly PermitView[] | null, role: Document['visibleTo'][number]): PermitView[] | null {
   if (!permits) return null;
