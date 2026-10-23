@@ -159,6 +159,11 @@ create or replace function public.process_position(
   p_raw      jsonb default '{}'::jsonb
 ) returns table (event_type text, geofence_id uuid, geofence_name text)
 language plpgsql security definer set search_path = public as $$
+-- POPRAWKA 24.09.2026: kolumny wyniku (event_type, geofence_id) mają te same
+-- nazwy co kolumny tabel geofence_states i load_events. Bez tej dyrektywy
+-- każde wywołanie ze strefą w zasięgu kończyło się błędem „column reference
+-- is ambiguous", a cała transakcja — razem z pozycją — była wycofywana.
+-- Funkcja w tej postaci nigdy nie przetworzyła punktu w strefie.
 #variable_conflict use_column
 declare
   v_pt        geometry(Point, 4326);
@@ -308,6 +313,9 @@ begin
         v_payload,
         v_dedup
       )
+      -- POPRAWKA 24.09.2026: indeks unikalny na dedup_key jest częściowy
+      -- (where dedup_key is not null) — bez tego warunku Postgres odrzucał
+      -- zapis i żadne zdarzenie wjazdu ani wyjazdu nie mogło powstać.
       on conflict (dedup_key) where dedup_key is not null do nothing;
 
       event_type    := v_emit;

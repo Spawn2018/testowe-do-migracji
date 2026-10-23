@@ -4353,3 +4353,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
   - PORT_IN → `AT_PORT_NYNASHAMN`; poza portem (DOPLYNAL lub 10–80 km) → `IN_TRANSIT_SE` + synthetic Port SE (bulk_quiet);
   - naprawa FERRY/AT_PORT + DOPLYNAL (SG-23 i analogiczne);
   - testy `status.sh` [#485]; dopisek D-20261023-0955-01.
+
+## 2026-10-23 10:50 — #485 CI: przywrócenie POPRAWKA 24.09 w process_position
+
+- Skrzynka: #485 w toku; #484 wpisane w #478 (po #412, przed B5); #467 F7 „gotowe” wstrzymane do rebase 0274→0275 po #485.
+- Scalanie: #478 nie — konflikt numeru migracji z #486; nowe F7 po renumeracji.
+- CI `db` FAIL na `4bfdece8`: A2 komentarz POPRAWKA 24.09 w `process_position` (zgubiony przy CREATE OR REPLACE) → przywrócony; `status` 190→**196** (+6 #485).
