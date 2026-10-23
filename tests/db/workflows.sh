@@ -12,10 +12,11 @@ psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
 # projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094–0096 (idempotentne) dodaje reguły startowe.
+# 0279 (#413 E35 Z1) soft-delete START po re-seedzie 0094 (inaczej START wracają bez removed_at).
 # 0097 nie re-apply: po 0125 cron tower-polisy istnieje → DO w 0097 rzuca wyjątek.
 # Hosted: TOWER_ALLOW_MIG_REAPPLY=1 — shim inaczej no-opuje pliki migracji.
 export TOWER_ALLOW_MIG_REAPPLY=1
-for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql supabase/migrations/0165_*.sql; do
+for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql supabase/migrations/0165_*.sql supabase/migrations/0279_*.sql; do
   psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }
 done
 unset TOWER_ALLOW_MIG_REAPPLY
@@ -43,9 +44,10 @@ chk "missing: brak pola = prawda, jest = fałsz" "$(L '{"missing":["permit"]}' '
 chk "porównanie liczby z null → fałsz (bez wyjątku)" "$(L '{"<":[{"var":"brak"},3]}' '{}')" "f"
 chk "nieznany operator → wyjątek"           "$($PSQL -c "select wf_logic('{\"xyz\":[1]}'::jsonb, '{}'::jsonb)" 2>&1 | grep -c 'nieobsługiwany operator')" 1
 
-echo; echo "[9.3] reguły startowe"
-chk "7 reguł START-1…7 w projekcie, wszystkie wyłączone" "$(Q "select count(*)||'/'||count(*) filter (where enabled) from workflows where project_id='$P' and code like 'START-%'")" "7/0"
-chk "wyłączone reguły nie kolejkują przebiegów" "$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}' >/dev/null; Q "select count(*) from workflow_runs")" 0
+echo; echo "[9.3] reguły START — E35 Z1 (#413 / 0279): soft-delete, przebiegi zostają"
+chk "START-1…7 usunięte (removed_at) albo brak — żadna włączona" "$(Q "select count(*) filter (where removed_at is null)||'/'||count(*) filter (where enabled) from workflows where project_id='$P' and code like 'START-%'")" "0/0"
+chk "macierz E11 ma Auto 50 km / Auto 20 km (START-1/2)" "$(Q "select count(distinct event_key) from notification_matrix where event_key in ('pre_arrival_site','pre_arrival_srem','pre_port')")" 3
+chk "wyłączone/usunięte nie kolejkują przebiegów" "$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}' >/dev/null; Q "select count(*) from workflow_runs")" 0
 
 echo; echo "[9.4] zapis reguł — uprawnienia i walidacja (kreator przez API)"
 val "HHL_ADMIN tworzy regułę" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 't', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]') returning 'ok'" ok
@@ -60,13 +62,16 @@ err "warunek z nieznanym operatorem odrzucony przy zapisie" $HHL "insert into wo
 chk "authenticated/anon: brak EXECUTE workflow_worker i funkcji silnika" "$(Q "select bool_or(has_function_privilege(r, p.oid, 'execute'))::text from pg_proc p cross join unnest(array['anon','authenticated']) r where p.proname in ('workflow_worker','wf_action','wf_enqueue_event','wf_load_context','wf_logic','wf_truthy','wf_validate','wf_trigger_types')")" false
 err "SCX nie zapisze przebiegu reguły" $SCX "insert into workflow_runs (workflow_id, status) values (gen_random_uuid(), 'OK')" "permission denied"
 
-echo; echo "[9.1/9.2] zdarzenie → kolejka → wykonanie"
-$PSQL -c "update workflows set enabled = true where project_id='$P' and code in ('START-1','START-7')" >/dev/null
+echo; echo "[9.1/9.2] zdarzenie → kolejka → wykonanie (reguły testowe T-S1 / T-S7 — #413 po usunięciu START)"
+$PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values
+  ('$P', 'T-S1', 'test dojazd', 'GEOFENCE_ENTER', '{\"==\":[{\"var\":\"payload.geofence_kind\"},\"PRE_ARRIVAL\"]}'::jsonb, '[{\"type\":\"notify\",\"audience\":\"KSH\"},{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true),
+  ('$P', 'T-S7', 'test anulowanie', 'STATUS_CANCELLED', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"CARRIER\"},{\"type\":\"risk\",\"kind\":\"RESOURCE_MISSING\",\"severity\":\"MEDIUM\",\"title\":\"Transport anulowany\"}]'::jsonb, true)
+  on conflict (project_id, code) where code is not null do update set enabled=true, removed_at=null, condition=excluded.condition, actions=excluded.actions" >/dev/null
 E1=$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}')
 E2=$(EV GEOFENCE_ENTER '{"geofence_kind":"PORT_OUT"}')
-chk "2 zdarzenia GEOFENCE_ENTER → 2 przebiegi QUEUED START-1" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-1' and r.status='QUEUED'")" 2
+chk "2 zdarzenia GEOFENCE_ENTER → 2 przebiegi QUEUED T-S1" "$(Q "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-S1' and r.status='QUEUED'")" 2
 chk "ponowne dopisanie przebiegu dla tego samego zdarzenia odsiane (dedup_key)" "$(Q "insert into workflow_runs (workflow_id, load_id, event_id, status, dedup_key) select workflow_id, load_id, event_id, 'QUEUED', dedup_key from workflow_runs where event_id=$E1 on conflict (dedup_key) where dedup_key is not null do nothing; select count(*) from workflow_runs where event_id=$E1")" 1
-chk "inne zdarzenie (MILESTONE_LOADED) nie kolejkuje START-1" "$(EV MILESTONE_LOADED '{}' >/dev/null; Q "select count(*) from workflow_runs")" 2
+chk "inne zdarzenie (MILESTONE_LOADED) nie kolejkuje T-S1" "$(EV MILESTONE_LOADED '{}' >/dev/null; Q "select count(*) from workflow_runs")" 2
 chk "worker: 1 OK (PRE_ARRIVAL), 1 SKIPPED (warunek niespełniony)" "$(Q "select workflow_worker(50, now())")" '{"ok": 1, "dead": 0, "retry": 0, "skipped": 1}'
 chk "akcje OK: powiadomienia w aplikacji dla KSH i przewoźnika transportu (WORKFLOW_ALERT)" "$(Q "select string_agg(distinct o.code, ',' order by o.code) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='WORKFLOW_ALERT'")" "KSH,SCX"
 chk "HHL nie dostał (reguła do KSH i przewoźnika)" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and u.auth_id='$HHL'")" 0
@@ -74,8 +79,8 @@ chk "wynik przebiegu zapisany (akcje, liczba odbiorców)" "$(Q "select result->'
 chk "drugi przebieg workera: kolejka pusta, bez nowych powiadomień" "$(Q "select workflow_worker(50, now())")/$(Q "select count(*) from notifications where template='WORKFLOW_ALERT'")" '{"ok": 0, "dead": 0, "retry": 0, "skipped": 0}/2'
 E3=$(EV STATUS_CANCELLED '{}')
 Q "select workflow_worker(50, now())" >/dev/null
-chk "START-7: akcja risk → otwarty sygnał ryzyka z kluczem reguły i tytułem rk_workflow (0095)" "$(Q "select count(*)||':'||max(title_key) from risk_signals where dedup_key like 'WF:%' and resolved_at is null")" "1:rk_workflow"
-chk "reguła wyłączona po zakolejkowaniu → SKIPPED" "$(E4=$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}'); $PSQL -c "update workflows set enabled=false where code='START-1'" >/dev/null; Q "select workflow_worker(50, now())" >/dev/null; Q "select status||':'||(result->>'reason') from workflow_runs where event_id=$E4")" "SKIPPED:reguła wyłączona"
+chk "T-S7: akcja risk → otwarty sygnał ryzyka z kluczem reguły i tytułem rk_workflow (0095)" "$(Q "select count(*)||':'||max(title_key) from risk_signals where dedup_key like 'WF:%' and resolved_at is null")" "1:rk_workflow"
+chk "reguła wyłączona po zakolejkowaniu → SKIPPED" "$(E4=$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}'); $PSQL -c "update workflows set enabled=false where code='T-S1'" >/dev/null; Q "select workflow_worker(50, now())" >/dev/null; Q "select status||':'||(result->>'reason') from workflow_runs where event_id=$E4")" "SKIPPED:reguła wyłączona"
 
 echo; echo "[9.2] ponawianie: błąd → RETRY (2^n min), po 5 próbach DEAD"
 # warunek z nieznanym operatorem: przy zapisie short-circuit and nie wywołuje xyz (ctx pusty);
@@ -130,7 +135,8 @@ val "HHL_ADMIN zapisuje STATUS_CHANGED i RISK_RAISED" $HHL "insert into workflow
 val "HHL_ADMIN zapisuje decision + email + sms (zasady stref)" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'dec', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\"},{\"type\":\"sms\",\"list\":\"LOAD_SREM\",\"kind\":\"ZONE_ENTER\"}]') returning 'ok'" ok
 err "sms poza listą stref odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"sms\",\"list\":\"OTHER\",\"kind\":\"ZONE_ENTER\"}]')" "sms tylko według zasad stref"
 err "decision z nieznanym typem odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"XX\"}]')" "decision wymaga"
-err "START-* nie usuwa się" $HHL "delete from workflows where code='START-1'" "nie usuwa się"
+err "START-* hard-delete nadal zablokowany (soft-delete 0279)" $HHL "delete from workflows where code='START-1'" "nie usuwa się"
+err "START po Z1 nie włącza się" $HHL "update workflows set enabled=true where code='START-1'" "nie włącza się|E35 Z1"
 
 # zdarzenie testowe: reguła CREATED → worker → decyzja; wyłączona → SKIPPED
 $PSQL -c "delete from workflow_runs" -c "delete from notifications" -c "delete from decision_events" -c "delete from decisions" -c "delete from risk_signals where dedup_key like 'WF:%'" >/dev/null
@@ -173,9 +179,10 @@ err "KSH nie wywoła wf_duplicate_check" $KSH "select wf_duplicate_check('DELAY_
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update workflows set name = name || ' hist' where code='T-B5'; commit" >/dev/null
 val "B5: historia zmian reguły (kto, kiedy, co)" $HHL "select (who is not null and action = 'ZMIENIONO' and changes ? 'po')::text from workflow_rule_history((select id from workflows where code='T-B5'), 5) order by at desc limit 1" true
 
-# START wyłączone (ONE-MECH)
+# START soft-delete (0279) — 0165 idempotentna; START pozostają removed i wyłączone
 export TOWER_ALLOW_MIG_REAPPLY=1; psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0165_b5_workflow_creator.sql >/dev/null 2>&1; R165=$?; unset TOWER_ALLOW_MIG_REAPPLY
-chk "B5: 0165 ponownie (idempotentna) wyłącza START-1…7 (ONE-MECH)" "$R165/$(Q "select count(*) filter (where enabled) from workflows where code like 'START-%'")" "0/0"
+chk "B5: 0165 ponownie OK; START removed/wyłączone (#413 Z1)" "$R165/$(Q "select count(*) filter (where enabled) from workflows where code like 'START-%'")" "0/0"
+chk "#413: audit ROW_DELETE dla START z powodem" "$(Q "select count(*)>=1 from audit_log where entity='workflows' and action='ROW_DELETE' and source like '%0279%'")" t
 if [ "$(Q "select to_regclass('cron.job') is null")" = "t" ]; then CRN=2; else CRN=$(Q "select count(*) from cron.job where jobname in ('tower-reguly','tower-reguly-dzien')"); fi
 chk "B5: zadania tower-reguly i tower-reguly-dzien (gdy pg_cron)" "$CRN" 2
 chk "B5: wf_daily_tick tylko o 06:xx Europe/Warsaw" "$(Q "select wf_daily_tick('2026-10-05 03:30+00')")" 0

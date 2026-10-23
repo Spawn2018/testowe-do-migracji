@@ -227,12 +227,12 @@ DecConf=$(Q "select count(*) from decisions where detail->>'event_key' like 'l1b
 val "F7: quiet + inny hhlOrderNo → changed" $HHL "select jsonb_array_length(r->'changed') from ($(IMPQMAP "$RQCONF" false)) s(r)" 1 commit
 chk "F7: 0 TOWER_KSH_CONFLICT przy quiet" "$(Q "select (count(*) - $DecConf)::text from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")" "0"
 
-# F7#2+#4: START-7 musi istnieć i być włączone (0094 sieje tylko dla projektów z chwili migracji, enabled=false)
+# F7#2+#4 / #413: START-7 usunięte (E35 Z1) — reguła testowa T-CANCEL na STATUS_CANCELLED
 $PSQL -c "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
-  select '$P', 'START-7', 'Transport anulowany', 'test #426', 'STATUS_CANCELLED', 'true'::jsonb,
+  select '$P', 'T-CANCEL', 'Transport anulowany (test)', 'test #426', 'STATUS_CANCELLED', 'true'::jsonb,
          '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
-   where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
-$PSQL -c "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
+   where not exists (select 1 from workflows where project_id='$P' and code='T-CANCEL' and removed_at is null)" >/dev/null
+$PSQL -c "update workflows set enabled=true, removed_at=null where code='T-CANCEL' and project_id='$P'" >/dev/null
 RQC0="[{\"code\":\"IQ-426C\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
 RQD0="[{\"code\":\"IQ-426D\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1\",\"delivery_date\":\"$DQ2\"}]"
 val "F7#4: dodanie IQ-426C (quiet)" $HHL "select jsonb_array_length(r->'added') from ($(IMPQ "$RQC0" false)) s(r)" 1 commit

@@ -127,16 +127,16 @@ err "anulowanie bez powodu" $HHL "select load_status_set('$L1','CANCELLED',now()
 err "SCX nie anuluje" $SCX "select load_status_set('$L1','CANCELLED',now(),'x')" "Anulowanie"
 val "HHL anuluje z powodem" $HHL "select load_status_set('$L1','CANCELLED',now(),'test e25'); select status::text from loads where id='$L1'" CANCELLED commit
 # P1: korekta czasu nie kolejkuje STATUS_CANCELLED (automatyzacja włączona tylko w teście).
-# Reguły START-* powstają w 0094, zanim seed wstawi projekt — w zestawie tower trzeba je dopisać.
+# #413 E35 Z1: START-7 usunięte — reguła testowa T-CANCEL (nie START-*).
 sys "insert into workflows (project_id, code, name, description, trigger_type, condition, actions, enabled)
-     select '$P', 'START-7', 'Transport anulowany', 'test e25', 'STATUS_CANCELLED', 'true'::jsonb,
+     select '$P', 'T-CANCEL', 'Transport anulowany (test)', 'test e25', 'STATUS_CANCELLED', 'true'::jsonb,
             '[{\"type\":\"notify\",\"audience\":\"CARRIER\"}]'::jsonb, true
-      where not exists (select 1 from workflows where project_id='$P' and code='START-7')" >/dev/null
-sys "update workflows set enabled=true where code='START-7' and project_id='$P'" >/dev/null
+      where not exists (select 1 from workflows where project_id='$P' and code='T-CANCEL' and removed_at is null)" >/dev/null
+sys "update workflows set enabled=true, removed_at=null where code='T-CANCEL' and project_id='$P'" >/dev/null
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','STATUS_CANCELLED',now(),'{}'::jsonb)" >/dev/null
-sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
+sval "STATUS_CANCELLED bez korekty kolejkuje przebieg" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-CANCEL' and r.load_id='$L1'" 1
 val "HHL_ADMIN: korekta czasu CANCELLED" $HHL "select load_status_set('$L1','CANCELLED',timestamptz '2026-10-09 08:00:00+00','korekta osi'); select (payload->>'korekta') from load_events where load_id='$L1' and event_type='STATUS_CANCELLED' order by id desc limit 1" true commit
-sval "korekta CANCELLED nie dodaje przebiegu" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='START-7' and r.load_id='$L1'" 1
+sval "korekta CANCELLED nie dodaje przebiegu" "select count(*) from workflow_runs r join workflows w on w.id=r.workflow_id where w.code='T-CANCEL' and r.load_id='$L1'" 1
 sval "audit LOAD_STATUS_SET" "select count(*)>=1 from audit_log where action='LOAD_STATUS_SET' and entity_id='$L2'" t
 # D-2315 / F7 #340: druga korekta wskazuje dopisek; korekta po STATUS_AUTO; imię i firma.
 sys "update app_users set full_name='Anna Admin' where auth_id='$HHL'" >/dev/null

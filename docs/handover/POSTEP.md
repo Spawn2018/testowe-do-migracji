@@ -4458,3 +4458,8 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #492/#484/#413/#422/#412 w planie; zamknięte #463 (kopia OK), #466 (0273), #467 (0277). Bez nowych `dla-cursora` do wpisania.
 - Scalanie: **#478** `37c455a7` (F7 gotowe po `d2a84363`, CI unit/db/visual zielone) — #467 D3 / migracja **0277**.
 - Bieżąca: **#413** `pakiet/hotfix-413-automatyzacje-strefy`, migracja **0278**: `workflows_read_ops` (HHL_OPS SELECT); `canSeeWorkflows` + `canEditGeofence`/`canEditWorkflow` (OPS bez edycji). Dalej: START Z1, `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
+
+## 2026-10-23 17:45 — #413 krok 2: START Z1 (0279)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #492/#484/#413/#422/#412/#323/#322/#320 w planie. CI #495 (0278) zielone; bez F7 „gotowe”.
+- Bieżąca: **#413** migracja **0279** — soft-delete START-1…7 (`removed_at`), enqueue/worker pomija usunięte; audit z powodami E35; testy `workflows`/`e25`/`import` → T-S1/T-S7/T-CANCEL. #422→**0280**, B5→**0281**. Dalej: `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
