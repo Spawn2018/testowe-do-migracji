@@ -4294,3 +4294,20 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463 ponownie otwarte (F7 #474: nocna kopia id 38 — Edge 502 ~147 s). #465 zamknięte. #259 zamknięte bez scalenia (F7 #382).
 - Scalanie: #474 F7 „gotowe do scalenia” (head `ae1214a6`) + CI unit/db/visual zielone → MERGED `8569f78b`. Bez push na `main`.
 - Bieżąca: **#463 cz.2** (`pakiet/hotfix-463-backup-continue`) — `WALL_BUDGET_MS` 90 s, timeout kawałka 40 s, samowywołanie `{ continue_run }`, log po tabeli; unit backup-core 14/14.
+
+## 2026-10-23 04:15 — #475/#463 cz.2 SCALONE; start #466 (D1 PII)
+
+- Skrzynka: #463 otwarte do odbioru SELECT (F7); #466/#467/#446/#425/#413/#422 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #475 F7 „gotowe do scalenia” (head `713d7d0`) + CI unit/db/visual zielone → MERGED `df81cb13`. Bez push na `main`.
+- Bieżąca: **#466** (`pakiet/hotfix-466-pii-historia`, migracja **0273**) — `audit_row_change`: PII jawne; `rio_secret` → ••••; maska tylko `source=rodo`. i2 **664** (+4 role). #413→0274, #422→0275, B5→0276.
+
+### Przegląd maskowań PII (#466 / D-1243 pkt 2)
+| Miejsce | Było | Po #466 |
+|---|---|---|
+| `audit_row_change` — phone/name/email (app_users, sms_zone_recipients, loads, load_escorts, …) | `[dane osobowe]` (poza driver_* na loads/escorts) | jawne |
+| `audit_row_change` — `rio_secret` | `••••` | bez zmian (sekret) |
+| `audit_row_change` — `source=rodo` (purge) | maska kierowcy | bez zmian (retencja) |
+| `purge_personal_data` — stare wpisy audit_log | maska po 90 d | bez zmian |
+| `load_escort_contacts` / `awiz_pilots_set` | już jawne (#358/#0239) | bez zmian |
+| `driver_tokens` | poza `trg_audit_row` | OK (sekret poza historią wierszy) |
+| Wpisy archiwalne `[dane osobowe]` | nieodtwarzalne | bez zmian |

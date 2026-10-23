@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
-  i2: 660, // #464: +6 a7_permits_list KSH Firma/Trasa + loads; było 654
+  i2: 664, // #466: +4 role PII (KSH/OPS/SCX/anon); było 660 (#464)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
