@@ -99,7 +99,7 @@ async function prodCheck(d: RuleDraft, selfId: string | null): Promise<CheckResu
         const got = String(e.payload?.to ?? e.payload?.status ?? '');
         return got === want;
       })
-      .map((e) => ({ code: codeOf.get(e.loadId) ?? e.loadId, at: e.at }));
+      .map((e) => ({ code: codeOf.get(e.loadId) ?? e.loadId, loadId: e.loadId, at: e.at }));
   } else {
     /* issue / daily: bez pewnego źródła w store → puste hits (lepiej pusto niż zmyślone; E35 check). */
     hits = [];
