@@ -107,17 +107,28 @@ sleep 2
 chk "…z wpisem „blokada zajęta”; pierwszy przebieg RUNNING" "$(psql "$SRC" -Atq -c "select count(*) from backup_runs where error like 'równoległy start%'"):$(grep -c RUNNING "$TMP/lockA")" "1:1"
 chk "anon/authenticated bez EXECUTE backup_run_begin"  "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_run_begin(interval)','execute') or has_function_privilege('authenticated','backup_run_begin(interval)','execute')")" f
 
-echo; echo "[I-33] Strażnik zawieszonej kopii — RUNNING > 30 min → ERROR + ryzyko (+ e-mail gdy Vault)"
+echo; echo "[I-33] Strażnik zawieszonej kopii — brak postępu > 10 min → ERROR + ryzyko (#498)"
 psql "$SRC" -q -c "delete from risk_signals where dedup_key like 'backup-stale:%'; delete from backup_runs" >/dev/null
-psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '31 minutes')" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '11 minutes')" >/dev/null
 STALE_ID=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
-chk "strażnik: RUNNING > 30 min → przerwane=1" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 1
+chk "strażnik: brak postępu > 10 min → przerwane=1" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 1
 chk "strażnik: status ERROR + finished_at + komunikat I-33" "$(psql "$SRC" -Atq -c "select status||'/'||(finished_at is not null)||'/'||(error like '%strażnik I-33%') from backup_runs where id=$STALE_ID")" "ERROR/true/true"
 chk "strażnik: ryzyko JOB_FAILURE HHL (dedup backup-stale)" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where kind='JOB_FAILURE' and dedup_key like 'backup-stale:'||$STALE_ID||':%' and resolved_at is null")" 1
 chk "strażnik: ponowne wywołanie bez duplikatu (przerwane=0)" "$(psql "$SRC" -Atq -c "select (backup_stale_watchdog()->>'przerwane')||'/'||(select count(*) from risk_signals where dedup_key like 'backup-stale:'||$STALE_ID||':%' and resolved_at is null)")" "0/1"
-psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '10 minutes')" >/dev/null
-chk "strażnik: RUNNING < 30 min — bez przerwania" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 0
+# #498: długi przebieg z świeżym progress_at nie jest przerywany; stary started_at bez progress_at — tak
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at) values ('RUNNING', now() - interval '2 hours', now() - interval '2 minutes')" >/dev/null
+chk "strażnik: świeży progress_at — bez przerwania" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 0
 chk "anon/authenticated bez EXECUTE backup_stale_watchdog" "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_stale_watchdog(timestamptz,interval)','execute') or has_function_privilege('authenticated','backup_stale_watchdog(timestamptz,interval)','execute')")" f
+
+echo; echo "[#498 F7 B1] lease_until + backup_continue_pending tylko po 2 min bez postępu"
+psql "$SRC" -q -c "delete from backup_runs" >/dev/null
+chk "kolumna lease_until istnieje" "$(psql "$SRC" -Atq -c "select count(*) from information_schema.columns where table_schema='public' and table_name='backup_runs' and column_name='lease_until'")" 1
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at, prefix, lease_until)
+  values ('RUNNING', now() - interval '1 hour', now() - interval '30 seconds', 'daily/test/', now() + interval '1 minute')" >/dev/null
+chk "continue_pending: świeży progress + lease → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
+# świeży progress mimo wolnego lease → nadal 0 (filtr 2 min)
+psql "$SRC" -q -c "update backup_runs set lease_until = null" >/dev/null
+chk "continue_pending: progress < 2 min → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
 
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"

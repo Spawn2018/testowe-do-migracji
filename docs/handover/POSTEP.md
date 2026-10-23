@@ -4452,3 +4452,27 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #489 zamknięte; #492/#484 w planie; #467 bieżąca (PR #478).
 - Scalanie: **#494** `67e18e62` (F7 gotowe, CI zielone); **#493** `8e03d704` (F7 gotowe na `952ef2d6`, CI unit/db/visual zielone, status 230).
 - Bieżąca: **#467** `pakiet/hotfix-467-d3-mail-sms-settings` — merge `main` po #489; migracja **0275→0277**; czekam na CI + F7: gotowe do scalenia.
+
+## 2026-10-23 18:20 — #498 pilne (backup części); skrzynka; #413 wstrzymane
+
+- Skrzynka: **#498** `pilne` — bieżąca (przerywa #413); #496/#499/#500 wpisane §4; #492/#484/#413/#422 w kolejce.
+- Scalanie: **brak** — #495 F7 odwołane po commit 0279 (`d495b295`); CI unit/db/visual zielone, czekam rundę 2; #497 wygląd bez F7; #382 konflikt.
+- Bieżąca: **#498** `pakiet/hotfix-498-backup-parts`, migracja **0278**: części `PART_MAX_ROWS=5000`, `progress`/`progress_at`, cron `tower-backup-continue`, I-33 = 10 min bez postępu; `restore.sh` + unit. #413→0279+0280 po rebase.
+
+## 2026-10-23 18:50 — #497 SCALONE; #501 F7 B1/B2; prognoza #499
+
+- Scalanie: **#497** `6640f4c8` (F7 gotowe na `4620e6a`, CI zielone) — wygląd drobne F7.
+- **#501 / #498:** CI unit/db/visual zielone na `dc970998`; F7 „jeszcze nie” → B1 lease + cron ≥2 min; B2 `recordTableParts` (1×5000); catch tylko `RUNNING`. `deploy-main`: Baza przed Edge — OK.
+- **#499 prognoza (najpóźniej, bez cięcia 28.10 20:00):** #498 dziś przed 00:30 UTC; #413+#422+#412 24.10; #484+#492+#496 25.10; B5 25–26.10; B7/B8/B9 26.10; A6+SharePoint 26–27.10; C4–C13 27.10; P4-u/P3-d 27–28.10.
+- Dalej: push F7 B1/B2, czekam ponowne „F7: gotowe”.
+
+## 2026-10-23 19:15 — #501 db: backup 32/32 (gate-suites)
+
+- CI `db` czerwone na `ddcaf0cb`: backup 32 OK, oczekiwano 29 (`gate-suites.mjs`).
+- Poprawka: LOCAL 32, TEST 24 (32−8 SKIP). Unit/visual już zielone. Czekam CI + F7 „gotowe”.
+
+## 2026-10-23 19:45 — #501 F7 B1'; #502 w planie
+
+- Skrzynka: **#502** `pilne` — wpisane §4 (po #498, przed #413); nie przerywa #498 (termin 00:30 UTC).
+- Scalanie: brak F7 „gotowe” na #501; #495/#382 bez „gotowe”.
+- **#501 / #498:** CI unit/db/visual zielone na `9b1c6a95`. F7 r2 B1': przed `scheduleContinue` `lease_until = null` (dziecko bez 409). Czekam ponowne F7.
