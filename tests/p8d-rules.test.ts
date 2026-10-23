@@ -145,15 +145,19 @@ describe('teksty i źródło', () => {
     expect(all).not.toContain('mailto:');
     expect(all).not.toContain('supabase');
   });
-  it('produkcja przed podłączeniem: Automatyzacje zostają przy dzisiejszym widoku', async () => {
+  it('produkcja (#413): źródło P8-d podłączone — rulesReady = rulesOf() !== null', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     try {
+      vi.resetModules();
       const { rulesOf } = await import('../src/lib/p8dSource');
       const { rulesReady } = await import('../src/lib/p8dReady');
-      expect(rulesOf()).toBeNull();
-      expect(rulesReady()).toBe(false);
+      expect(rulesOf()).not.toBeNull();
+      expect(rulesReady()).toBe(true);
+      expect(rulesReady()).toBe(rulesOf() !== null);
+      expect(rulesOf()!.save).toBeNull(); /* bez profilu HHL_ADMIN — tylko podgląd */
     } finally {
       vi.unstubAllEnvs();
+      vi.resetModules();
     }
   });
   it('demo: strona E35 i źródło reguł włączają się razem (p8dReady = p8dSource)', async () => {

@@ -1,7 +1,7 @@
 /**
  * wyglad/P8-d — dane demo Automatyzacji (E35): po zmianie lista własnych reguł jest pusta (reguły START znikają albo
  * przechodzą do „Kto co dostaje”); przebiegi i historia jak w bazie 08.10 (E35 „Fakty”), pobyty w strefach SG-03 i SG-24
- * jak w `load_events` (E34). Zapis w pamięci strony. Tylko demo — `rulesOf()` w produkcji zwraca `null`.
+ * jak w `load_events` (E34). Zapis w pamięci strony. Tylko demo — produkcja: `p8dProd` (#413).
  */
 import {
   builtinOverlap, dwellHits, sameRules, type CheckHit, type CheckResult, type OwnRule, type RuleDraft, type RuleHist,
@@ -12,16 +12,16 @@ import { getNowIso } from './frozenNow';
 const ME = 'Anna Wiśniewska';
 
 const ZONES: ZoneOption[] = [
-  { id: 'z-srem-buf', name: 'Bufor 50 km przed Śremem', type: 'PRE_ARRIVAL' },
-  { id: 'z-srem', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING' },
-  { id: 'z-gda-buf', name: 'Bufor 20 km przed Gdańskiem', type: 'PRE_PORT' },
-  { id: 'z-gda', name: 'Terminal Polferries Gdańsk', type: 'PORT_OUT' },
-  { id: 'z-gdy-buf', name: 'Bufor 20 km przed Gdynią', type: 'PRE_PORT' },
-  { id: 'z-gdy', name: 'Terminal Stena Line Gdynia', type: 'PORT_OUT' },
-  { id: 'z-nyn', name: 'Terminal Nynäshamn', type: 'PORT_IN' },
-  { id: 'z-kar', name: 'Terminal Stena Line Karlskrona', type: 'PORT_IN' },
-  { id: 'z-bod-buf', name: 'Bufor 50 km przed Boden', type: 'PRE_ARRIVAL' },
-  { id: 'z-bod', name: 'Plac budowy Stegra Boden', type: 'SITE' },
+  { id: 'z-srem-buf', name: 'Bufor 50 km przed Śremem', type: 'PRE_ARRIVAL', dwellMin: 10 },
+  { id: 'z-srem', name: 'KSH Śrem · Grunwaldzka 27C', type: 'LOADING', dwellMin: 30 },
+  { id: 'z-gda-buf', name: 'Bufor 20 km przed Gdańskiem', type: 'PRE_PORT', dwellMin: 10 },
+  { id: 'z-gda', name: 'Terminal Polferries Gdańsk', type: 'PORT_OUT', dwellMin: 15 },
+  { id: 'z-gdy-buf', name: 'Bufor 20 km przed Gdynią', type: 'PRE_PORT', dwellMin: 10 },
+  { id: 'z-gdy', name: 'Terminal Stena Line Gdynia', type: 'PORT_OUT', dwellMin: 15 },
+  { id: 'z-nyn', name: 'Terminal Nynäshamn', type: 'PORT_IN', dwellMin: 15 },
+  { id: 'z-kar', name: 'Terminal Stena Line Karlskrona', type: 'PORT_IN', dwellMin: 15 },
+  { id: 'z-bod-buf', name: 'Bufor 50 km przed Boden', type: 'PRE_ARRIVAL', dwellMin: 10 },
+  { id: 'z-bod', name: 'Plac budowy Stegra Boden', type: 'SITE', dwellMin: 180 },
 ];
 
 /* E34 „Zdarzenia stref” (przegląd 18.10, B5: przed zegarem demo 23.09, 16:32, te same transporty co oś Status):

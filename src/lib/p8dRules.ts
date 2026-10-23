@@ -60,7 +60,7 @@ export interface OwnRule extends RuleDraft {
   lastRunAt: string | null;
 }
 
-export interface ZoneOption { id: string; name: string; type: string }
+export interface ZoneOption { id: string; name: string; type: string; /** dwell strefy (min) — próg UI = ten próg (E35 / #413 F7) */ dwellMin?: number }
 
 export type RunResult =
   | { kind: 'done'; notify: { who: Who; n: number }[]; todo?: Who | null; email?: number; smsN?: number }

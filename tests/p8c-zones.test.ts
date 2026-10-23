@@ -124,15 +124,18 @@ describe('teksty i źródło', () => {
     expect(all).not.toContain('mailto:');
     expect(P8C_PL.p8c_g_gdansk).toBe('Gdańsk · Polferries → Nynäshamn');
   });
-  it('produkcja przed podłączeniem: strona Strefy zostaje przy dzisiejszej tabeli', async () => {
+  it('produkcja (#413): źródło P8-c podłączone — zonesReady = zonesOf() !== null', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     try {
+      vi.resetModules();
       const { zonesOf } = await import('../src/lib/p8cSource');
       const { zonesReady } = await import('../src/lib/p8cReady');
-      expect(zonesOf()).toBeNull();
-      expect(zonesReady()).toBe(false);
+      expect(zonesOf()).not.toBeNull();
+      expect(zonesReady()).toBe(true);
+      expect(zonesReady()).toBe(zonesOf() !== null);
     } finally {
       vi.unstubAllEnvs();
+      vi.resetModules();
     }
   });
   it('demo: menu Strefy i źródło stref włączają się razem (p8cReady = p8cSource)', async () => {

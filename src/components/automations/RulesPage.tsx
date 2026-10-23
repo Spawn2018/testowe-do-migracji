@@ -42,7 +42,6 @@ function useList<T>(get: (() => Promise<T>) | null, rev: number, initial: T | nu
 }
 
 export function RulesPage() {
-  const src = useMemo(() => rulesOf(), []);
   const phone = useIsPhone();
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
@@ -50,8 +49,11 @@ export function RulesPage() {
   const events = useTowerStore((s) => s.events);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const workflowFocus = useTowerStore((s) => s.workflowFocus);
+  const acct = accountRole(role);
+  /* #413: źródło zależne od konta (save tylko HHL_ADMIN) */
+  const src = useMemo(() => rulesOf(), [acct]);
   /* E9, E35 pkt 5: zmienia tylko Administrator HHL; Operacje HHL — podgląd */
-  const canEdit = role === 'HHL' && accountRole(role) !== 'HHL_OPS' && !!src?.save;
+  const canEdit = role === 'HHL' && acct !== 'HHL_OPS' && !!src?.save;
   const [tab, setTab] = useState<Tab>(workflowFocus ? 'own' : 'auto');
   const [rev, setRev] = useState(0);
   const [rules, retryRules] = useList(src?.rules ?? null, rev, src?.initial ?? null);
