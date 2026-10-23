@@ -4343,3 +4343,13 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463/#467/#446/#425/`dla-cursora` — w planie; #479 bieżąca (`pilne`). Bez nowego `pilne` poza kolejką.
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie (#481 F7 „jeszcze nie” `5b3aec6`). CI #481 zielone — nie scalać.
 - Bieżąca: **#479 cz.6** PR #481 — usunięte COPY/`.readable()` i PostgREST z Edge; `select` keyset ctid (`SELECT_BATCH_ROWS` 2000) + `rowsToCsv`; timeout całej tabeli 60 s; dopisek `D-20261023-0705-01`.
+
+## 2026-10-23 09:55 — #485 PILNE: Port SE / Droga SE z pozycji (przerywa #467)
+
+- Skrzynka: #485 `pilne` (Spawn2018) — SG-23 FERRY mimo pozycji EMTRACK w SE; F7 #478: najpierw #485. #467 CI zielone na `5150fb86`, bez „F7: gotowe” — nie scalane.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po ostatnim commicie.
+- Bieżąca: **#485** `pakiet/hotfix-485-ferry-se-position`, migracja **0274**:
+  - `apply_ferry_se_from_position` + wywołanie z `process_position`;
+  - PORT_IN → `AT_PORT_NYNASHAMN`; poza portem (DOPLYNAL lub 10–80 km) → `IN_TRANSIT_SE` + synthetic Port SE (bulk_quiet);
+  - naprawa FERRY/AT_PORT + DOPLYNAL (SG-23 i analogiczne);
+  - testy `status.sh` [#485]; dopisek D-20261023-0955-01.
