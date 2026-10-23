@@ -4283,3 +4283,8 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #465–#467/#446/#425/#413/#422/#463 (Spawn2018) — w planie; #464 zamknięte. Bez nowych `pilne` przerywających.
 - Scalanie: #473 F7 „gotowe do scalenia” (head `d8cf6f7`) + CI unit/db/visual zielone → MERGED `85f9049b` (0272). Bez push na `main`. `deploy-main` nie czekamy.
 - Bieżąca: **#465** (`pakiet/hotfix-465-map-rpc-auth`) — `bmapa.sh` +26: RPC mapy/Stanu jako HHL/KSH/SCX (lekcja 42702); EXPECTED bmapa **62**.
+
+## 2026-10-23 03:15 — #465 F7 #474: pełna lista RPC + rpc_denied
+
+- Skrzynka: bez nowych `pilne`; #465–#467/#446/#425 w planie. Scalanie: brak „F7: gotowe” (F7 #474: jeszcze nie — zakres okrojony).
+- Bieżąca: **#465** PR #474 — F7: dopisane 25 RPC ze zrzutu aplikacji + `rpc_denied` (42501 vs błąd definicji); EXPECTED bmapa **141** (+105). CI poprzedniego SHA zielone; push poprawki.

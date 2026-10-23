@@ -796,8 +796,8 @@ Przyczyna: COPY Edge zawieszał się na dużych tabelach. Ręcznie: backup **#37
 ### #464 · `a7_permits_list` — KSH tylko swoje Firma/Trasa (#425 poz. 4b) — SCALONE (#473 `85f9049b`, 23.10.2026 02:53, migracja **0272**); po #409
 KSH: zezwolenia przypięte do jego transportów; liczba transportów tylko własne. Test jako `authenticated` KSH. Szczegóły: zgłoszenie #464.
 
-### #465 · Brama: RPC mapy i Stanu systemu jako zalogowany (lekcja 42702) — W TOKU (`pakiet/hotfix-465-map-rpc-auth`); po #464
-`tests/db/bmapa.sh`: 26 wywołań RPC mapy/Stanu (`ferry_track_sample`, `ferry_sailings_map`, `map_display_state`, `latest_vehicle_fixes`, `here_tiles_report`, `h1_route_check_state`, `h3_corridor_state`, `load_track` × HHL/KSH/SCX + `here_budget_view`/`deepl_usage_view` HHL) z `authenticated` + JWT. bmapa **62**. Szczegóły: zgłoszenie #465.
+### #465 · Brama: RPC mapy i Stanu systemu jako zalogowany (lekcja 42702) — W TOKU (`pakiet/hotfix-465-map-rpc-auth` PR #474); po #464
+`tests/db/bmapa.sh`: pełna lista RPC mapy/Stanu (F7 #474) + `rpc_denied` (42501) dla funkcji tylko-HHL; 27×HHL/KSH/SCX + 7×(HHL ok / KSH·SCX denied) + `carrier_scorecard`. bmapa **141**. Szczegóły: zgłoszenie #465.
 
 ### #466 · D1 — dane osobowe jawne w Historii (dokończenie D-1243) — po #465
 Zdjąć maskę PII z `audit_row_change` (telefony, imiona, maile); zostają sekrety. Testy ról. Szczegóły: zgłoszenie #466 / decyzja właściciela 22.10 21:25.
@@ -1403,3 +1403,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 00:00 | #472/#463 SCALONE (`24012262`); wznowienie #409 → migracja **0271** + `search_path` na `fuel_basis_public` | pętla |
 | 23.10.2026 02:25 | #458/#409 SCALONE (`75653b46`, 0271); start #464 → **0272**; #413→**0273**, #422→**0274**, B5→**0275** | pętla |
 | 23.10.2026 02:53 | #473/#464 SCALONE (`85f9049b`, 0272); start #465 — bmapa RPC jako zalogowany (+26 → 62) | pętla |
+| 23.10.2026 03:15 | #465 F7 #474: pełna lista RPC + rpc_denied; bmapa **141** | pętla |
