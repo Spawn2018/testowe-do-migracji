@@ -4452,3 +4452,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #489 zamknięte; #492/#484 w planie; #467 bieżąca (PR #478).
 - Scalanie: **#494** `67e18e62` (F7 gotowe, CI zielone); **#493** `8e03d704` (F7 gotowe na `952ef2d6`, CI unit/db/visual zielone, status 230).
 - Bieżąca: **#467** `pakiet/hotfix-467-d3-mail-sms-settings` — merge `main` po #489; migracja **0275→0277**; czekam na CI + F7: gotowe do scalenia.
+
+## 2026-10-23 17:05 — #467 SCALONE; start #413 (0278)
+
+- Skrzynka: #492/#484/#413/#422/#412 w planie; zamknięte #463 (kopia OK), #466 (0273), #467 (0277). Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **#478** `37c455a7` (F7 gotowe po `d2a84363`, CI unit/db/visual zielone) — #467 D3 / migracja **0277**.
+- Bieżąca: **#413** `pakiet/hotfix-413-automatyzacje-strefy`, migracja **0278**: `workflows_read_ops` (HHL_OPS SELECT); `canSeeWorkflows` + `canEditGeofence`/`canEditWorkflow` (OPS bez edycji). Dalej: START Z1, `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
