@@ -164,8 +164,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('load_driver_contacts'),
       // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
       sb.rpc('load_permit_status'),
-      // 9.4 (0094): reguły automatyzacji — RLS wf_all: tylko HHL_ADMIN (pozostali: 0 wierszy); przebiegi — odczyt HHL
-      sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
+      // 9.4 (0094) / #413 E35 Z1: bez soft-delete (removed_at); RLS: HHL_ADMIN + HHL_OPS odczyt
+      sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').is('removed_at', null).order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
       sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
       /* E41: KSH dostaje null. Brak funkcji (okno przed migracją) nie gasi całego zrzutu. */
       sb.rpc('load_order_numbers'),

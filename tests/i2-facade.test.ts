@@ -77,12 +77,13 @@ describe('I-2a: przełącznik widoku i import', () => {
 })
 
 describe('9.4: Automatyzacje (dawniej I-2c)', () => {
-  it('produkcja: wf tylko dla HHL_ADMIN; bez profilu i inne role — brak; demo HHL ma wf', () => {
+  it('produkcja: wf dla HHL_ADMIN i HHL_OPS (#413 E35); bez profilu i inne role — brak; demo HHL ma wf', () => {
     for (const r of ['HHL', 'KSH', 'SCX'] as const) expect(navForRole(r, true, null)).not.toContain('wf')
     expect(navForRole('HHL', true, 'HHL_ADMIN')).toContain('wf')
-    expect(navForRole('HHL', true, 'HHL_OPS')).not.toContain('wf')
+    expect(navForRole('HHL', true, 'HHL_OPS')).toContain('wf')
     expect(navForRole('HHL', false)).toContain('wf')
     expect(canSeeWorkflows(true, 'HHL_ADMIN')).toBe(true)
+    expect(canSeeWorkflows(true, 'HHL_OPS')).toBe(true)
     expect(canSeeWorkflows(true, 'KSH_USER')).toBe(false)
     expect(canSeeWorkflows(false, null)).toBe(true)
   })

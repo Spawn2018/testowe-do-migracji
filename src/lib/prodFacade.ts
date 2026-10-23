@@ -31,11 +31,11 @@ export function shows(_key: FacadeKey, prod: boolean = PROD_BUILD): boolean {
 }
 
 /**
- * 9.4 (28.09) — Automatyzacje na danych z bazy (silnik 0094): w produkcji widoczne wyłącznie dla HHL_ADMIN
- * (RLS `wf_all`); pozostałe role nie widzą modułu. Demo — bez zmian (dane demo).
+ * 9.4 / #413 (E35 pkt 5): Automatyzacje w produkcji dla HHL_ADMIN i HHL_OPS (OPS — podgląd; zapis canManageWorkflows).
+ * RLS: odczyt `workflows_read_ops` + `wf_all`; pozostałe role bez modułu. Demo — bez zmian.
  */
 export function canSeeWorkflows(prod: boolean = PROD_BUILD, role: string | null | undefined = getAuthProfile()?.role): boolean {
-  return !prod || role === 'HHL_ADMIN';
+  return !prod || role === 'HHL_ADMIN' || role === 'HHL_OPS';
 }
 
 /**

@@ -4453,6 +4453,17 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#494** `67e18e62` (F7 gotowe, CI zielone); **#493** `8e03d704` (F7 gotowe na `952ef2d6`, CI unit/db/visual zielone, status 230).
 - Bieżąca: **#467** `pakiet/hotfix-467-d3-mail-sms-settings` — merge `main` po #489; migracja **0275→0277**; czekam na CI + F7: gotowe do scalenia.
 
+## 2026-10-23 17:05 — #467 SCALONE; start #413 (0278)
+
+- Skrzynka: #492/#484/#413/#422/#412 w planie; zamknięte #463 (kopia OK), #466 (0273), #467 (0277). Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **#478** `37c455a7` (F7 gotowe po `d2a84363`, CI unit/db/visual zielone) — #467 D3 / migracja **0277**.
+- Bieżąca: **#413** `pakiet/hotfix-413-automatyzacje-strefy`, migracja **0278**: `workflows_read_ops` (HHL_OPS SELECT); `canSeeWorkflows` + `canEditGeofence`/`canEditWorkflow` (OPS bez edycji). Dalej: START Z1, `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
+
+## 2026-10-23 17:45 — #413 krok 2: START Z1 (0279)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #492/#484/#413/#422/#412/#323/#322/#320 w planie. CI #495 (0278) zielone; bez F7 „gotowe”.
+- Bieżąca: **#413** migracja **0279** — soft-delete START-1…7 (`removed_at`), enqueue/worker pomija usunięte; audit z powodami E35; testy `workflows`/`e25`/`import` → T-S1/T-S7/T-CANCEL. #422→**0280**, B5→**0281**. Dalej: `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
+
 ## 2026-10-23 18:20 — #498 pilne (backup części); skrzynka; #413 wstrzymane
 
 - Skrzynka: **#498** `pilne` — bieżąca (przerywa #413); #496/#499/#500 wpisane §4; #492/#484/#413/#422 w kolejce.
@@ -4488,3 +4499,15 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #502 `pilne` (F7 #503 B1–B4); #500/#499/#496/#492/#484/#413 bez przerwania.
 - Scalanie: brak F7 „gotowe”; #495 konflikt; #383 wygląd bez F7.
 - Bieżąca: **#502** F7: (B1) GPS↔AIS ≤15 min + godzina z actual/AIS; (B2) plan ≤ now+30 min przy SOG; (B3) `bulk_quiet` synthetic SCHEDULE w `apply_geofence_status`; (B4) +5 testów; status **238**; AIS SOG świeżość 20 min.
+
+## 2026-10-23 21:20 — #502 SCALONE; #413 → 0280/0281 (F7 r2)
+
+- Skrzynka: #502 zamknięte; #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422 w kolejce.
+- Scalanie: **#503** `86e80a41` (F7 gotowe na `fa4efcdb`, CI unit/db/visual zielone, status 238).
+- Bieżąca: **#413** merge main; migracje **0280** (OPS read) + **0281** (START Z1 + `trg_geofence_matrix_notify` geofence_kind/country → pre_arrival_*/pre_port; testy B2). #422→**0282**, B5→**0283**.
+
+## 2026-10-23 21:50 — #413 db FAIL → poprawka workflows (78)
+
+- Skrzynka: #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422/#412 w planie (bez nowych do wpisania).
+- Scalanie: brak — #495 bez „F7: gotowe” po `c89b4fdc`; CI `db` czerwone (workflows 76/78).
+- Bieżąca: **#413** `workflows.sh`: (1) OPS read — `::text` → oczekiwane `true`; (2) B5 e-mail krytyczny — filtr `auth_id` HHL (OPS w audience HHL). Dalej: CI + F7; potem `rulesReady`/`zonesReady`.
