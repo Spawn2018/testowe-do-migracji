@@ -4517,3 +4517,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #413 `pilne` (fragment pozostały po #495); #422 dalej w kolejce.
 - Scalanie: **#495** `6334c919` (F7 gotowe na `41bc353d`, CI zielone) — 0280+0281 na main.
 - Bieżąca: **#413** `pakiet/hotfix-413-rules-zones-ready` — `rulesOf`/`zonesOf` produkcja (store + `workflow_rule_history` / soft-delete / `upsert_geofence_circle`); `rulesReady`/`zonesReady` = true; zapis tylko `HHL_ADMIN`. Testy `p8d-rules`, `p8c-zones`, `b5-workflow-creator` (E35).
+
+## 2026-10-23 23:00 — #413 F7 #504 poprawki 1–4, 6, 8
+
+- Skrzynka: #500/#499/#496/#492/#484 w planie (wpisane); bez `pilne` poza #413.
+- Scalanie: brak F7 „gotowe”; F7 #504 „do poprawy” (head `b3d803f`).
+- Bieżąca: **#413** F7: (1) daily `load.*` + `WSTEPNA`; (2) próg strefy = dwell UI (select disabled); (3) prodCheck `payload.to` + `statusToDb`; (4) soft-delete `.select` / 0 wierszy → ok:false; (6) near `edgeM<=5km` + lastFixAt; (8) testy `p8d-map-prod` 52/52. **5/7** (route w upsert + powód/`workflow_rule_history` OPS) — migracja, w komentarzu PR.

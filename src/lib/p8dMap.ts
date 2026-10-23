@@ -6,7 +6,7 @@
  * (np. SILENT_VEHICLE + decision) — **pomijane** na liście „Własne reguły” (kreator zdaniami; pełny B-5
  * zostaje w Legacy do usunięcia w tej samej linii produktu).
  */
-import { statusToDb } from '../data/mappers';
+import { statusFromDb, statusToDb } from '../data/mappers';
 import type { LoadStatus, WorkflowRule, WorkflowRun } from '../types';
 import type {
   DailyCheck, IssueKind, OwnRule, RuleDraft, RuleHist, RuleRun, RuleThen, RuleWhen, Who,
@@ -38,7 +38,7 @@ const ISSUE_TO_RISK: Record<IssueKind, string> = {
   DATES: 'DATES_UNCONFIRMED',
   DWELL: 'ETA_BREACH',
   GPS: 'SILENT_VEHICLE',
-  DELAY: 'ETA_BREACH',
+  DELAY: 'ETA_BREACH', /* drobne F7: ten sam kind co DWELL — osobny kind wymaga migracji risk_signals */
   FERRY: 'FERRY',
 };
 
@@ -96,14 +96,16 @@ function actionsFromThen(then: RuleThen): string[] {
 function engineOf(when: RuleWhen): { trigger: string; condition: string } {
   switch (when.kind) {
     case 'zone':
-      /* GEOFENCE_DWELL + id strefy; próg minut — w blobie / check() (silnik: dwell strefy). */
+      /* GEOFENCE_DWELL odpala po dwell_seconds strefy (0274) — próg minut w UI = dwell strefy (blob). */
       return {
         trigger: 'GEOFENCE_DWELL',
         condition: JSON.stringify({ '==': [{ var: 'payload.geofence_id' }, when.zoneId] }),
       };
     case 'status': {
       if (when.status === 'ANY') return { trigger: 'STATUS_CHANGED', condition: 'true' };
-      const db = statusToDb(when.status) ?? when.status;
+      const db = statusToDb(when.status);
+      /* DELAYED/SILENT nie są statusami w bazie — bez warunku statusu (tylko ANY albo pomiń). */
+      if (!db) return { trigger: 'STATUS_CHANGED', condition: 'true' };
       return {
         trigger: 'STATUS_CHANGED',
         condition: JSON.stringify({ '==': [{ var: 'payload.status' }, db] }),
@@ -115,10 +117,11 @@ function engineOf(when: RuleWhen): { trigger: string; condition: string } {
         condition: JSON.stringify({ '==': [{ var: 'payload.kind' }, ISSUE_TO_RISK[when.issue]] }),
       };
     case 'daily': {
-      const field = when.check === 'DELIVERY_WITHIN' ? 'hours_to_delivery'
-        : when.check === 'LOAD_WITHIN' ? 'hours_to_load' : 'plan_dates_status';
+      /* kontekst silnika: payload || { load: wf_load_context() } — pola w load.* (0236/0281). */
+      const field = when.check === 'DELIVERY_WITHIN' ? 'load.hours_to_delivery'
+        : when.check === 'LOAD_WITHIN' ? 'load.hours_to_load' : 'load.plan_dates_status';
       const cond = when.check === 'DATES_UNCONFIRMED'
-        ? { '==': [{ var: field }, 'UNCONFIRMED'] }
+        ? { '==': [{ var: field }, 'WSTEPNA'] }
         : { '<=': [{ var: field }, when.hours] };
       return { trigger: 'CRON_DAILY_06', condition: JSON.stringify(cond) };
     }
@@ -185,9 +188,9 @@ function reverseMap(w: WorkflowRule): { when: RuleWhen; then: RuleThen } | null 
     return { when: { kind: 'zone', zoneId, minutes: 180 }, then };
   }
   if (t === 'STATUS_CHANGED' || t === 'STATUS_AUTO') {
-    const st = pickVar(cond, 'payload.status');
+    const st = pickVar(cond, 'payload.status') ?? pickVar(cond, 'payload.to');
     if (!st || cond === true) return { when: { kind: 'status', status: 'ANY' }, then };
-    return { when: { kind: 'status', status: st as LoadStatus }, then };
+    return { when: { kind: 'status', status: statusFromDb(st) }, then };
   }
   if (t === 'RISK_RAISED') {
     const kind = pickVar(cond, 'payload.kind');
@@ -196,8 +199,10 @@ function reverseMap(w: WorkflowRule): { when: RuleWhen; then: RuleThen } | null 
     return { when: { kind: 'issue', issue }, then };
   }
   if (t === 'CRON_DAILY_06') {
-    const check: DailyCheck = pickVar(cond, 'plan_dates_status') != null ? 'DATES_UNCONFIRMED'
-      : pickVar(cond, 'hours_to_delivery') != null ? 'DELIVERY_WITHIN' : 'LOAD_WITHIN';
+    const check: DailyCheck = pickVar(cond, 'load.plan_dates_status') != null || pickVar(cond, 'plan_dates_status') != null
+      ? 'DATES_UNCONFIRMED'
+      : pickVar(cond, 'load.hours_to_delivery') != null || pickVar(cond, 'hours_to_delivery') != null
+        ? 'DELIVERY_WITHIN' : 'LOAD_WITHIN';
     const hours = Number(pickRight(cond) ?? 48) || 48;
     return { when: { kind: 'daily', check, hours }, then };
   }

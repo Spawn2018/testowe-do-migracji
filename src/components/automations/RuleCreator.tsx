@@ -162,7 +162,12 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
           <div className="rl-row2">
             <div className="rl-f">
               <label htmlFor={`${id}-zone`}>{p8dt('p8d_c_zone')}</label>
-              <select ref={reg('zone')} id={`${id}-zone`} className="input" value={w.zoneId} {...desc('zone')} onChange={(e) => setWhen({ ...w, zoneId: e.target.value })} data-rule-f="zone">
+              <select ref={reg('zone')} id={`${id}-zone`} className="input" value={w.zoneId} {...desc('zone')} onChange={(e) => {
+                const zoneId = e.target.value;
+                const dwell = zones.find((z) => z.id === zoneId)?.dwellMin;
+                /* #413 F7: GEOFENCE_DWELL = dwell strefy — UI nie udaje osobnego progu */
+                setWhen({ ...w, zoneId, minutes: dwell && dwell > 0 ? dwell : w.minutes });
+              }} data-rule-f="zone">
                 {!w.zoneId ? <option value="">{p8dt('p8d_c_zone_pick')}</option> : null}
                 {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
               </select>
@@ -170,7 +175,8 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
             </div>
             <div className="rl-f">
               <label htmlFor={`${id}-min`}>{p8dt('p8d_c_longer')}</label>
-              <select id={`${id}-min`} className="input" value={w.minutes} onChange={(e) => setWhen({ ...w, minutes: Number(e.target.value) })} data-rule-f="minutes">
+              <select id={`${id}-min`} className="input" value={w.minutes} disabled data-rule-f="minutes" title="Próg = czas postoju wybranej strefy">
+                {!(DWELL_STEPS as readonly number[]).includes(w.minutes) ? <option value={w.minutes}>{durText(w.minutes)}</option> : null}
                 {DWELL_STEPS.map((m) => <option key={m} value={m}>{durText(m)}</option>)}
               </select>
             </div>

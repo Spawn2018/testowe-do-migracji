@@ -67,15 +67,28 @@ async function prodNear(id: string): Promise<NearPos[]> {
     if (status === 'AT_PORT' || status === 'AT_PORT_SE' || status === 'ON_FERRY') return 'postój';
     return 'w drodze';
   };
-  return s.loads
-    .filter((l) => trackingPhase(l, now) === 'on')
+  return pickNearLoads(
+    s.loads.filter((l) => trackingPhase(l, now) === 'on'),
+    z,
+    labelOf,
+  );
+}
+
+/** #413 F7: edgeM ≤ 5 km (także wnętrze dużych stref); tylko z lastFixAt. */
+export function pickNearLoads(
+  loads: { code: string; lat: number; lng: number; status: string; etaDetail?: { lastFixAt?: string | null } | null }[],
+  z: { lat: number; lng: number; radiusM: number },
+  labelOf: (status: string) => string,
+): NearPos[] {
+  return loads
     .filter((l) => (l.lat !== 0 || l.lng !== 0) && Number.isFinite(l.lat) && Number.isFinite(l.lng))
-    .filter((l) => Math.abs(edgeM(l, z)) <= 5_000)
+    .filter((l) => Boolean(l.etaDetail?.lastFixAt))
+    .filter((l) => edgeM(l, z) <= 5_000)
     .map((l) => ({
       code: l.code,
       lat: l.lat,
       lng: l.lng,
-      at: l.etaDetail?.lastFixAt ?? now,
+      at: l.etaDetail!.lastFixAt!,
       label: labelOf(l.status),
     }));
 }
