@@ -4378,3 +4378,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak PR do scalenia (F7 #478 czeka na #487 + zielone CI).
 - Bieżąca: **#487** `pakiet/hotfix-487-corridor-e22`, migracja **0275**: `refresh_load_eta` — STENA→SE_E22, POLFERRIES→SE_E4; bez korytarza → bez sprawy; zamknięcie 518c010e… + PENDING + L3; testy `status.sh`.
 - Numery: #467→**0276**, #413→**0277**, #422→**0278**, B5→**0279**.
+
+## 2026-10-23 13:15 — #487 CI FAIL → poprawka testów (PR #488)
+
+- Skrzynka: #487 `pilne` bieżąca; #484 w planie; #467 F7 treścią — nie scalać (kolizja 0275→0276 po #487; komentarz koordynatora 10:49).
+- Scalanie: brak (CI #488 czerwone; #478 nie scalać przed #487).
+- CI `db` FAIL na `d3601c0e`: status 204/205 — punkt 57.0/16.4 ~3 km od polilinii SE_E22 przy OFFROUTE_KM=2; risks 44/46 — `rk_off_corridor` z L487b w `tower_test_status`.
+- Poprawka: wierzchołek SE_E22 (16.637,57.758); sprzątanie `rk_off_corridor`; status **206**.

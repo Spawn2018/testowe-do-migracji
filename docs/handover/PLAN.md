@@ -805,8 +805,8 @@ Zdjąć maskę PII z `audit_row_change` (telefony, imiona, maile); zostają sekr
 ### #485 · PILNE — po promie Port SE / Droga SE z pozycji (SG-23) — SCALONE (#486 `88134e34`, 23.10.2026 12:31, migracja **0274**)
 `apply_ferry_se_from_position` w `process_position`: ląd SE + `p_ts ≥ arrival`; PORT_IN → `AT_PORT_NYNASHAMN`; poza portem ≥2 km → `IN_TRANSIT_SE` + synthetic Port SE; naprawa SG-23. Odbiór: SG-23 → Droga SE; SG-17/SG-18 przy pierwszej pozycji SE.
 
-### #487 · PILNE — fałszywa OFF_CORRIDOR po Karlskronie (brak E22) — W TOKU (przerywa #467/#478; migracja **0275**)
-Korytarz SE z trasy rejsu: STENA/Karlskrona → `SE_E22`; POLFERRIES/Nynäshamn → `SE_E4`; bez geometrii korytarza — bez sprawy. Zamknięcie `518c010e…` + PENDING + L3. Test `status.sh`: E22 (57.0,16.4) → 0; 50+ km → OFF_CORRIDOR/`SE_E22`. Szczegóły: zgłoszenie #487.
+### #487 · PILNE — fałszywa OFF_CORRIDOR po Karlskronie (brak E22) — W TOKU (przerywa #467/#478; migracja **0275**; PR #488)
+Korytarz SE z trasy rejsu: STENA/Karlskrona → `SE_E22`; POLFERRIES/Nynäshamn → `SE_E4`; bez geometrii korytarza — bez sprawy. Zamknięcie `518c010e…` + PENDING + L3. Test `status.sh`: wierzchołek SE_E22 → 0; 50+ km → OFF_CORRIDOR/`SE_E22`; sprzątanie `rk_off_corridor` (risks.sh). Szczegóły: zgłoszenie #487.
 
 ### #467 · D3 — maile wg ustawień; SMS testowe tylko bez EXTERNAL (22.10 21:25) — W TOKU (PR #478; migracja **0276** po #487); wstrzymane na #487
 Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery testowe SMS tylko przy wyłączonej EXTERNAL_MESSAGING. Szczegóły: zgłoszenie #467.
