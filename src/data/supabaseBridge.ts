@@ -62,6 +62,8 @@ async function doRefreshNotifications(): Promise<void> {
  */
 let lastLoadsVersion: string | null = null;
 let writesPending = 0;
+/** pokolenie połączenia — zapis z poprzedniej sesji (np. przed „Działaj jako”) nie zmienia licznika nowej */
+let connGen = 0;
 /** start najstarszego zapisu w toku — zawieszony zapis (sieć) nie blokuje odświeżania w tle na stałe */
 let writesSince = 0;
 const WRITE_STUCK_MS = 2 * 60_000;
@@ -147,6 +149,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   registerRemoteSink((m: DataMutation) => {
     const provider = active;
     if (!provider) return;
+    const gen = connGen;
     writesPending += 1;
     writesSeq += 1;
     chain = chain.then(async () => {
@@ -175,7 +178,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);
       } finally {
-        writesPending = Math.max(0, writesPending - 1);
+        if (gen === connGen) writesPending = Math.max(0, writesPending - 1);
       }
     });
   });
@@ -185,6 +188,7 @@ export function disconnectSupabaseData(): void {
   stopBellRefresh();
   lastLoadsVersion = null;
   writesPending = 0;
+  connGen += 1;
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);
