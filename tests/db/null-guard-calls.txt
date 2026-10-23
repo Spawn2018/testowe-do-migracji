@@ -58,6 +58,7 @@ invoice_week_local | PURE | select invoice_week_local(now()) | -
 make_circle_fence | PURE | select st_npoints(make_circle_fence(59.3, 18.0, 100)) | -
 money_effective_eur | PURE | select money_effective_eur(1, 2, 3) | -
 money_least_tier | PURE | select money_least_tier('A', 'B') | -
+fuel_basis_public | PURE | select fuel_basis_public('{"n_sek":7,"owner_note":"x"}'::jsonb)->>'n_sek' | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL

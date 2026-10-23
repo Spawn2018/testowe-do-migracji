@@ -46,6 +46,19 @@ sys "update app_users set role='CARRIER_USER' where auth_id='$SCX'"
 val "SCX Użytkownik (CARRIER_USER) widzi koszt swojego transportu" $SCX "select count(*) from v_load_price_carrier where load_id='$L1'" 1
 sys "update app_users set role='CARRIER_DISPATCH' where auth_id='$SCX'"
 
+# #409 / 0271: fuel_basis w widokach cen (średnie, n, pubs) — E39; bez fuel_publications
+# F7: SCX/KSH — allowlista (bez owner_note / params_*); HHL widzi pełny JSON
+sys "update load_cost set fuel_basis='{\"avg_sek\":19.5,\"avg_pln\":7.1,\"n_sek\":7,\"n_pln\":5,\"pubs_sek\":[{\"published_on\":\"2026-09-22\",\"value\":19.5}],\"pubs_pln\":[{\"published_on\":\"2026-09-23\",\"value\":7.1}],\"owner_note\":\"Decyzja wlasciciela test\",\"owner_override\":true,\"params_version\":9}'::jsonb where load_id='$L1'"
+sys "update load_revenue set fuel_basis='{\"avg_sek\":19.5,\"avg_pln\":7.1,\"n_sek\":7,\"n_pln\":5,\"pubs_sek\":[{\"published_on\":\"2026-09-22\",\"value\":19.5}],\"pubs_pln\":[{\"published_on\":\"2026-09-23\",\"value\":7.1}],\"owner_note\":\"Decyzja wlasciciela test\",\"owner_override\":true,\"params_version\":9}'::jsonb where load_id='$L1'"
+val "SCX widzi fuel_basis.n_sek z widoku kosztu (#409)" $SCX "select (fuel_basis->>'n_sek') from v_load_price_carrier where load_id='$L1'" 7
+val "KSH widzi fuel_basis.n_pln z widoku przychodu (#409)" $KSH "select (fuel_basis->>'n_pln') from v_load_price_client where load_id='$L1'" 5
+val "SCX nie widzi fuel_basis przychodu (#409)" $SCX "select count(*) from v_load_price_client where fuel_basis is not null" 0
+val "KSH nie widzi fuel_basis kosztu (#409)" $KSH "select count(*) from v_load_price_carrier where fuel_basis is not null" 0
+val "HHL widzi pubs_sek[0].value z widoku kosztu (#409)" $HHL "select (fuel_basis->'pubs_sek'->0->>'value') from v_load_price_carrier where load_id='$L1'" 19.5
+val "SCX nie widzi owner_note w fuel_basis (#409 F7)" $SCX "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" false
+val "KSH nie widzi owner_note w fuel_basis (#409 F7)" $KSH "select (fuel_basis ? 'owner_note')::text from v_load_price_client where load_id='$L1'" false
+val "HHL widzi owner_note w fuel_basis (#409 F7)" $HHL "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" true
+
 echo; echo "[M2] Z1 — faktura nie nadpisuje wyliczonej wartości"
 sys "update load_cost set invoiced_total_eur=2100 where load_id='$L1'"
 val "po fakturze: obie wartości zachowane"         $HHL "select cost_computed_eur||'/'||cost_invoiced_eur||'/'||cost_effective_eur from v_load_financials_hhl where load_id='$L1'" "2000.00/2100.00/2100.00"

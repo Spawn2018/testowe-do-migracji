@@ -157,6 +157,7 @@ authenticated mark_notification_read_any
 authenticated mark_notifications_read
 authenticated money_effective_eur
 authenticated money_least_tier
+authenticated fuel_basis_public
 authenticated my_mfa_status
 authenticated load_order_numbers
 authenticated load_ready_gaps
