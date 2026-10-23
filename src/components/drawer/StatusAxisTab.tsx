@@ -86,6 +86,13 @@ function rowSub(
   if (h.source === 'import') return t(locale, 'p4b_sub_import');
   /* B5: zapis w Podglądzie — ten sam autor co w Historii („… jako … // KSH”) */
   const actor = h.previewAs && h.actor ? `${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}` : axisActor(h.actor);
+  /* #461 (0270): godzina „Prom” poprawiona automatycznie z AIS — „według AIS (z rozkładu było …)” */
+  if (h.korekta?.auto) {
+    const was = h.korekta.poprzednio ? dayTime(h.korekta.poprzednio) : null;
+    const src = h.channel === 'AIS' ? 'ais' : 'auto';
+    return was ? tp(locale, `p4b_sub_fix_${src}_was`, { was }) : t(locale, `p4b_sub_fix_${src}`);
+  }
+  if (s === 'ON_FERRY' && h.channel === 'AIS') return t(locale, 'p4b_sub_ferry_ais');
   /* D-0005 (0234): godzina poprawiona przez Administratora HHL — „poprawił Administrator HHL (było 07.10.2026, 14:00)” */
   if (h.korekta) {
     const who = h.previewAs ? actor : axisActor(h.actor);

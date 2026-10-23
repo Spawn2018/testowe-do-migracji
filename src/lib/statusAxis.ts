@@ -96,7 +96,7 @@ export interface AxisHit {
   /** wyglad/W-naprawy · B5: zapis w Podglądzie — „jako <osoba // firma>” (`payload.preview_as`) */
   previewAs?: string | null;
   /** D-0005 (0234): korekta godziny przez Administratora HHL — dopisek `payload.korekta` zastępuje wcześniejszy wpis */
-  korekta?: { poprzednio: string | null; przez: string | null } | null;
+  korekta?: { poprzednio: string | null; przez: string | null; auto?: boolean } | null;
   /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
   seq?: number;
 }
@@ -196,7 +196,8 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
     } else if (e.type === 'STATUS_AUTO') {
       const to = axisStatus(str('to'));
       const from = axisStatus(str('from'));
-      if (!to || to === from) continue;
+      /* #461 (0270): korekta godziny „Prom” z AIS zapisuje FERRY → FERRY i zastępuje wpis z rozkładu — nie pomijać */
+      if (!to || (to === from && !korekta)) continue;
       status = to;
       source = 'auto';
     } else if (e.type.startsWith('STATUS_')) {
@@ -225,7 +226,13 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
       geofenceId: str('geofence_id'),
       trackerOn: str('tracker_on') ?? str('trackerOn'),
       channel: source === 'auto' ? hitChannel(e.type, p, status) : null,
-      korekta: korekta ? { poprzednio: was.get(e.id) ?? str('poprzednio'), przez: str('przez') } : null,
+      korekta: korekta
+        ? {
+            poprzednio: was.get(e.id) ?? str('poprzednio'),
+            przez: str('przez'),
+            ...(e.type === 'STATUS_AUTO' && isSystemActor(e.actor) ? { auto: true } : {}),
+          }
+        : null,
       seq: evSeq(e.id),
     });
   }
