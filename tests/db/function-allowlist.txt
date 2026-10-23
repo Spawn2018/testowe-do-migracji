@@ -59,6 +59,8 @@ authenticated admin_set_external_messaging
 authenticated admin_security_flag_set
 authenticated security_flags_list
 authenticated security_advisor_snapshot_latest
+authenticated perf_results_latest
+authenticated app_errors_recent
 authenticated load_status_rank
 authenticated load_status_set
 authenticated admin_set_mfa_enforcement

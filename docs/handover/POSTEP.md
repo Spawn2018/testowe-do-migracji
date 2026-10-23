@@ -4547,3 +4547,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #505/#500/#499/#496/#492/#484/#422 (Spawn2018) — już w planie; bez `pilne` przerywających.
 - Scalanie: brak F7 „gotowe”; unit/visual zielone na `3527b0a8`; db FAIL workflows 89/90 — `workflow_rule_history` przez `Q()` bez JWT → RAISE.
 - Bieżąca: **#505** — asercja „po w historii (ROW_UPDATE)” przez `val $HHL` (jak powód w `po`). Push → CI.
+
+## 2026-10-24 01:36 — #505 SCALONE; start #422 (0283)
+
+- Skrzynka: #505 zamknięte; #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce.
+- Scalanie: **#506** `069aaac1` (F7 „gotowe do scalenia” na `2ebb6fa1`, CI unit/db/visual zielone).
+- Bieżąca: **#422** `pakiet/hotfix-422-perf-errors`, migracja **0283**: `perf_results` + RLS HHL, `perf_results_latest` / `app_errors_recent`, `perf_result_record` (service_role), `perf_p95_lists_ingest` + cron `tower-perf-p95`, seed p5 „brak pomiaru”; security **172**, nullguard **725**. Lighthouse w deploy-main — następny krok.
