@@ -4357,7 +4357,12 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 - Skrzynka: #467 bieżąca; #463 otwarte do odbioru kopii po deploy-main #481; #446/#413/#422 w planie.
 - Scalanie: #481 F7 „gotowe do scalenia” (head `70c8d5c`) + CI unit/db/visual zielone → MERGED `602e7287`. Bez push na `main`.
-- Bieżąca: **#467** PR #478 — rebase na main; F7: wiersze macierzy ról bez konta, org z roli, `sms_send_test` → `is_hhl_admin`, E42 pilot payload.
+- Bieżąca: **#467** PR #478 — rebase na main + F7:
+  - wiersze macierzy `CARRIER_*`/`CLIENT_USER` (brakujące, `email=false`);
+  - org z roli w `notify_orphan_email_allowed`;
+  - `sms_send_test` → `is_hhl_admin()`;
+  - E42 `pilot_redirect_dry_run` + `matrix_role`;
+  - dopisek: wyjątek `usage-check` (Resend poza bramką).
 
 ## 2026-10-23 09:55 — #485 PILNE: Port SE / Droga SE z pozycji (przerywa #467)
 
