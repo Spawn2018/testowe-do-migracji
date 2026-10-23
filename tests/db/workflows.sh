@@ -208,6 +208,19 @@ err "KSH nie wywoła wf_duplicate_check" $KSH "select wf_duplicate_check('DELAY_
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update workflows set name = name || ' hist' where code='T-B5'; commit" >/dev/null
 val "B5: historia zmian reguły (kto, kiedy, co)" $HHL "select (who is not null and action = 'ZMIENIONO' and changes ? 'po')::text from workflow_rule_history((select id from workflows where code='T-B5'), 5) order by at desc limit 1" true
 
+echo; echo "[#505] route strefy + powód audytu + historia HHL_OPS"
+val "#505: v_geofences_circle zwraca route" $HHL "select (count(*) filter (where route is not null) >= 0)::text from v_geofences_circle" true
+GID505=$(Q "select upsert_geofence_circle(null, '$P', 'Port test #505', 'PORT_OUT', 54.53, 18.52, 800, 100, 600, 2, true, false, false, '{}', true, 'PL', 'STENA', 'trasa Stena test')")
+chk "#505: zapis STENA → odczyt STENA" "$(Q "select route from v_geofences_circle where id='$GID505'")" STENA
+chk "#505: powód w audit geofences" "$(Q "select (new_value->>'reason') from audit_log where entity='geofences' and entity_id='$GID505' and action='ROW_INSERT' order by created_at desc limit 1")" "trasa Stena test"
+val "#505: HHL_OPS czyta historię reguł" $OPS "select (count(*) >= 0)::text from workflow_rule_history(null, 5)" true
+err "#505: HHL_OPS nie zapisuje reguł (RPC)" $OPS "select workflow_rule_write(null, '$P', 'ops-x', '', 'DELAY_DETECTED', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'::jsonb, true, 'x')" "Zapis reguł|42501"
+WR505=$(Q "select workflow_rule_write(null, '$P', 'powod-505', '', 'DELAY_DETECTED', 'true'::jsonb, '[{\"type\":\"notify\",\"audience\":\"HHL\"}]'::jsonb, true, 'powod zmiany E35')")
+chk "#505: powód w audit workflows (write)" "$(Q "select (new_value->>'reason') from audit_log where entity='workflows' and entity_id='$WR505' and action='ROW_INSERT' order by created_at desc limit 1")" "powod zmiany E35"
+Q "select workflow_rule_soft_delete('$WR505', 'usuniecie z powodem')" >/dev/null
+chk "#505: soft-delete — powód w po (historia)" "$(Q "select (changes->'po'->>'reason') from workflow_rule_history('$WR505', 5) where action='ZMIENIONO' order by at desc limit 1")" "usuniecie z powodem"
+err "#505: KSH nie czyta historii reguł" $KSH "select count(*) from workflow_rule_history(null, 5)" "HHL_ADMIN|HHL_OPS|42501"
+
 # START soft-delete (0281) — 0165 idempotentna; START pozostają removed i wyłączone
 export TOWER_ALLOW_MIG_REAPPLY=1; psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0165_b5_workflow_creator.sql >/dev/null 2>&1; R165=$?; unset TOWER_ALLOW_MIG_REAPPLY
 chk "B5: 0165 ponownie OK; START removed/wyłączone (#413 Z1)" "$R165/$(Q "select count(*) filter (where enabled) from workflows where code like 'START-%'")" "0/0"

@@ -1,7 +1,7 @@
 /**
  * #413 / E34 Z1–Z2 — źródło Stref na produkcji (store + upsert_geofence_circle).
+ * #505: route z bazy (v_geofences_circle / p_route); powód → tower.audit_reason.
  * Historia: brak RPC audit dla geofences → pusta tablica (lepiej pusto niż zmyślone).
- * Powód z UI: przyjmujemy; bez migracji nie ma osobnego pola reason w audycie strefy.
  */
 import { useTowerStore } from '../store/useTowerStore';
 import type { Geofence, GeofenceType, LoadEvent } from '../types';
@@ -37,10 +37,10 @@ function lastFor(zoneId: string, events: LoadEvent[], codeOf: Map<string, string
 }
 
 function toRow(g: Geofence, events: LoadEvent[], codeOf: Map<string, string>): ZoneRow {
-  /* route: kolumna w bazie (0238); widok v_geofences_circle jej nie zwraca — routeOf() z nazwy (E34). */
+  /* #505: route z kolumny; routeOf tylko gdy baza null (stare wiersze / nieportowe). */
   return {
     ...g,
-    route: routeOf({ name: g.name, type: g.type, route: null }),
+    route: routeOf({ name: g.name, type: g.type, route: g.route ?? null }),
     last: lastFor(g.id, events, codeOf),
   };
 }
@@ -96,10 +96,11 @@ export function pickNearLoads(
 async function prodSaveZone(
   id: string | null,
   z: ZoneDraft,
-  _reason: string,
+  reason: string,
 ): Promise<{ ok: boolean; zone?: ZoneRow; error?: string }> {
   const store = useTowerStore.getState();
   const old = id ? store.geofences.find((g) => g.id === id) : null;
+  const port = z.type === 'PORT_OUT' || z.type === 'PRE_PORT' || z.type === 'PORT_IN';
   const row: Geofence = {
     id: old?.id ?? `geo-${Date.now().toString(36)}`,
     name: z.name,
@@ -112,6 +113,7 @@ async function prodSaveZone(
     samplesRequired: z.samplesRequired,
     dwellMin: z.dwellMin,
     country: z.country,
+    route: port ? z.route : null,
     notifyHhl: old?.notifyHhl ?? false,
     notifyKsh: old?.notifyKsh ?? false,
     notifyScx: old?.notifyScx ?? false,
@@ -119,20 +121,20 @@ async function prodSaveZone(
     trigger: old?.trigger ?? 'ENTER',
   };
   try {
-    store.saveGeofence(row);
+    store.saveGeofence(row, reason);
     const codeOf = new Map(store.loads.map((l) => [l.id, l.code]));
-    return { ok: true, zone: { ...toRow(row, store.events, codeOf), route: z.route } };
+    return { ok: true, zone: toRow(row, store.events, codeOf) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'zapis nieudany' };
   }
 }
 
-async function prodSetActive(id: string, active: boolean, _reason: string): Promise<{ ok: boolean }> {
+async function prodSetActive(id: string, active: boolean, reason: string): Promise<{ ok: boolean }> {
   const store = useTowerStore.getState();
   const g = store.geofences.find((x) => x.id === id);
   if (!g) return { ok: false };
   try {
-    store.saveGeofence({ ...g, active });
+    store.saveGeofence({ ...g, active }, reason);
     return { ok: true };
   } catch {
     return { ok: false };

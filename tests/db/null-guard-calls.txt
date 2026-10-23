@@ -150,7 +150,10 @@ here_tiles_report | GUARD | select here_tiles_report(1) | Brak aktywnego konta
 ferry_track_sample | GUARD | select count(*) from ferry_track_sample() | Brak aktywnego konta
 ferry_sailings_map | GUARD | select count(*) from ferry_sailings_map() | Brak aktywnego konta
 wf_duplicate_check | GUARD | select wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[]'::jsonb, null)::text | tylko HHL_ADMIN
-workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN
+workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN|HHL_OPS
+workflow_rule_write | GUARD | select workflow_rule_write(null, '$P', 'x', '', 'DELAY_DETECTED', 'true'::jsonb, '[{"type":"notify","audience":"HHL"}]'::jsonb, true, null) | Zapis reguł|42501
+workflow_rule_set_enabled | GUARD | select workflow_rule_set_enabled((select id from workflows limit 1), false, null) | Zapis reguł|42501
+workflow_rule_soft_delete | GUARD | select workflow_rule_soft_delete((select id from workflows where code is null limit 1), null) | Zapis reguł|42501
 csp_status_view | PURE | select 1 | 1
 list_load_messages_ui | PURE | select 1 | 1
 load_agreed_fee_accept | PURE | select 1 | 1

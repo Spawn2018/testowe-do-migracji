@@ -55,7 +55,7 @@ export type DataMutation =
   | { type: 'load.ferry'; loadId: string; patch: Partial<FerryBooking> }
   | { type: 'event.append'; event: Omit<LoadEvent, 'id'> }
   | { type: 'message.send'; loadId: string; text: string; visibleTo?: 'ALL' | 'HHL_SCX' }
-  | { type: 'geofence.save'; geofence: Geofence }
+  | { type: 'geofence.save'; geofence: Geofence; reason?: string | null }
   | { type: 'geofence.delete'; id: string }
   | { type: 'prefs.save'; prefs: UserPrefsPatch }
   /** M5 — numer zlecenia własnej strony (HHL → hhl_order_no, przewoźnik → carrier_order_no) */
@@ -76,9 +76,9 @@ export type DataMutation =
   /** ANEKS 3 §2.1 — import: anulowanie (nigdy DELETE) → import_cancel_loads(); baza sprawdza status i faktury */
   | { type: 'loads.importCancel'; loadIds: string[]; reason: string }
   /** 9.4 — Automatyzacje (0094): zapis reguł przez API (RLS wf_all — HHL_ADMIN; walidacja wf_validate w bazie) */
-  | { type: 'workflow.create'; rule: Omit<WorkflowRule, 'id' | 'runCount'> }
-  | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>> }
-  | { type: 'workflow.delete'; id: string };
+  | { type: 'workflow.create'; rule: Omit<WorkflowRule, 'id' | 'runCount'>; reason?: string | null }
+  | { type: 'workflow.update'; id: string; patch: Partial<Omit<WorkflowRule, 'id' | 'runCount'>>; reason?: string | null }
+  | { type: 'workflow.delete'; id: string; reason?: string | null };
 
 /** M4 — ustawienia użytkownika (`user_preferences`); motyw null = domyślny dla roli. B9: bez języka (panel tylko PL). */
 export interface UserPrefsPatch {

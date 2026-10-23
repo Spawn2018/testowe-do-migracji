@@ -417,6 +417,8 @@ export interface Geofence {
   lng: number;
   /** Kraj strefy. SMS załadunku i placu czyta tę wartość, nie sam środek koła. */
   country?: GeofenceCountry;
+  /** #505 / E34: trasa portu (POLFERRIES / STENA); null = nieportowa albo jak POLFERRIES w silniku. */
+  route?: 'POLFERRIES' | 'STENA' | null;
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;

@@ -333,14 +333,14 @@ interface TowerState {
   /** BK4: dokument już zapisany w Supabase Storage (bajty nie trafiają do przeglądarki). */
   addStoredDocument: (doc: Document, actor?: string) => void;
 
-  saveGeofence: (g: Geofence) => void;
+  saveGeofence: (g: Geofence, reason?: string | null) => void;
   deleteGeofence: (id: string) => void;
   assignScx: (loadId: string, rateNote?: string) => void;
   triggerGeofence: (loadId: string, geofenceId: string) => void;
   toggleWorkflow: (id: string) => void;
-  createWorkflow: (rule: Omit<WorkflowRule, 'id' | 'runCount'>) => string;
-  updateWorkflow: (id: string, patch: Partial<WorkflowRule>) => void;
-  deleteWorkflow: (id: string) => void;
+  createWorkflow: (rule: Omit<WorkflowRule, 'id' | 'runCount'>, reason?: string | null) => string;
+  updateWorkflow: (id: string, patch: Partial<WorkflowRule>, reason?: string | null) => void;
+  deleteWorkflow: (id: string, reason?: string | null) => void;
   runWorkflowNow: (id: string) => void;
 
   updateRate: (side: 'COST' | 'REVENUE', id: string, baseRate: number) => void;
@@ -1120,14 +1120,14 @@ export const useTowerStore = create<TowerState>()(
         get().pushToast(t(get().locale, 'bk4_file_saved').replace('{name}', doc.name), 'MEDIUM', loadId);
       },
 
-      saveGeofence: (g) => {
+      saveGeofence: (g, reason) => {
         set((s) => {
           const exists = s.geofences.some((x) => x.id === g.id);
           return {
             geofences: exists ? s.geofences.map((x) => (x.id === g.id ? g : x)) : [...s.geofences, g],
           };
         });
-        writeThrough({ type: 'geofence.save', geofence: g });
+        writeThrough({ type: 'geofence.save', geofence: g, reason: reason ?? null });
         get().pushToast(tp(get().locale, 'a6_ts_zone_saved', { name: g.name }), 'MEDIUM');
         const roles: RoleId[] = [];
         if (g.notifyHhl) roles.push('HHL');
@@ -1250,29 +1250,29 @@ export const useTowerStore = create<TowerState>()(
         if (cur) writeThrough({ type: 'workflow.update', id, patch: { enabled: !cur.enabled } });
       },
 
-      createWorkflow: (rule) => {
+      createWorkflow: (rule, reason) => {
         const id = uid('wf');
         const workflow: WorkflowRule = { ...rule, id, runCount: 0 };
         set((s) => ({ workflows: [workflow, ...s.workflows] }));
-        writeThrough({ type: 'workflow.create', rule }); // 9.4 — baza waliduje (wf_validate) i nadaje id
+        writeThrough({ type: 'workflow.create', rule, reason: reason ?? null }); // 9.4 + #505 powód
         get().pushToast(tp(get().locale, 'a6_ts_rule_added', { name: workflow.name }), 'MEDIUM');
         return id;
       },
 
-      updateWorkflow: (id, patch) => {
+      updateWorkflow: (id, patch, reason) => {
         set((s) => ({
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
         }));
         const { runCount: _rc, id: _id, ...dbPatch } = patch as Partial<WorkflowRule>;
-        writeThrough({ type: 'workflow.update', id, patch: dbPatch });
+        writeThrough({ type: 'workflow.update', id, patch: dbPatch, reason: reason ?? null });
         get().pushToast(t(get().locale, 'a6_ts_wf_updated'), 'MEDIUM');
       },
 
-      deleteWorkflow: (id) => {
+      deleteWorkflow: (id, reason) => {
         const cur = get().workflows.find((w) => w.id === id);
         if (!cur) return;
         set((s) => ({ workflows: s.workflows.filter((w) => w.id !== id) }));
-        writeThrough({ type: 'workflow.delete', id }); // B-5 — baza: RLS HHL_ADMIN, START-* nieusuwalne, audit_log
+        writeThrough({ type: 'workflow.delete', id, reason: reason ?? null }); // B-5 / #505 soft-delete z powodem
         get().pushToast(tp(get().locale, 'b5_ts_deleted', { name: cur.name }), 'MEDIUM');
       },
 

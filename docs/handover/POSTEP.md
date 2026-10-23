@@ -4529,3 +4529,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#505** (Spawn2018) — wpisane PLAN §4 po #413 (migr. **0282**; #422→0283, B5→0284), §8, tu; nie przerywa #504.
 - Scalanie: brak F7 „gotowe”; CI visual zielone na `503ab23f`; F7 r2: 2 drobne przed „gotowe”.
 - Bieżąca: **#413** / PR #504 — (1) trasa w prod `disabled` + hint do #505; (2) strefa `dwellMin` ≤ 0 → „bez progu (od razu po wjeździe)”. Po push: czekam F7 „gotowe do scalenia”.
+
+## 2026-10-23 23:50 — #504 SCALONE; start #505 (0282)
+
+- Skrzynka: #505 bieżąca; #500/#499/#496/#492/#484/#422 w kolejce (bez `pilne` przerywających).
+- Scalanie: **#504** `c007736f` (F7 „gotowe do scalenia” na `c47c74f1`, CI unit/visual zielone).
+- Bieżąca: **#505** `pakiet/hotfix-505-route-ops-history`, migracja **0282**: `v_geofences_circle.route`, `upsert` `p_route`/`p_reason`, `audit_reason` → `new_value.reason`, `workflow_rule_history` dla HHL_OPS + `po` przy DELETE, RPC `workflow_rule_write`/`set_enabled`/`soft_delete`; front route odblokowany; workflows **86**.

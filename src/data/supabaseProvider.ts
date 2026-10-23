@@ -541,16 +541,45 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       case 'workflow.create': {
         await ensureContext();
         if (!projectId) throw new Error('reguła: brak projektu');
-        const res = await sb.from('workflows').insert({ ...workflowToDb(m.rule), project_id: projectId }).select('id').single();
-        return { id: (must(res, 'reguła') as { id: string }).id };
+        const row = workflowToDb(m.rule);
+        const res = await sb.rpc('workflow_rule_write', {
+          p_id: null,
+          p_project: projectId,
+          p_name: row.name,
+          p_description: row.description ?? '',
+          p_trigger_type: row.trigger_type,
+          p_condition: row.condition ?? true,
+          p_actions: row.actions ?? [],
+          p_enabled: row.enabled ?? true,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
+        return { id: String(res.data) };
       }
       case 'workflow.update': {
-        const res = await sb.from('workflows').update(workflowToDb(m.patch)).eq('id', m.id).select('id');
-        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: zmienia wyłącznie administrator HHL');
+        const row = workflowToDb(m.patch);
+        const res = await sb.rpc('workflow_rule_write', {
+          p_id: m.id,
+          p_project: null,
+          p_name: row.name ?? null,
+          p_description: row.description ?? null,
+          p_trigger_type: row.trigger_type ?? null,
+          p_condition: row.condition ?? null,
+          p_actions: row.actions ?? null,
+          p_enabled: row.enabled ?? null,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
+        if (!res.data) throw new Error('reguła: zmienia wyłącznie administrator HHL');
         return;
       }
       case 'workflow.delete': {
-        // B-5 — usuwa wyłącznie HHL_ADMIN (RLS wf_all); reguł START-* baza nie usuwa (0165); wpis zostaje w audit_log
+        /* #505: soft-delete z powodem (E35 Z1); hard DELETE zostaje dla Legacy bez reason */
+        if (m.reason != null) {
+          const res = await sb.rpc('workflow_rule_soft_delete', { p_id: m.id, p_reason: m.reason.trim() || null });
+          if (res.error) throw new Error(res.error.message);
+          return;
+        }
         const res = await sb.from('workflows').delete().eq('id', m.id).select('id');
         if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: usuwa wyłącznie administrator HHL');
         return;
@@ -559,7 +588,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         await ensureContext();
         if (!projectId) throw new Error('strefa: brak projektu');
         const serverId = isServerId(m.geofence.id) ? m.geofence.id : null;
-        const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(m.geofence, projectId, orgs, serverId));
+        const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(m.geofence, projectId, orgs, serverId, m.reason));
         return { id: String(must(res, 'strefa')) };
       }
       case 'geofence.delete': {
