@@ -24,7 +24,7 @@ export async function refreshFromServer(opts: { keepSelection?: boolean; backgro
   const snap = await p.loadSnapshot();
   if (p !== active) return;
   /* odświeżenie w tle: zapis użytkownika w trakcie zrzutu — zrzut może być starszy niż ekran; następne sprawdzenie ponowi */
-  if (opts.background && (writesPending > 0 || writesSeq !== seq)) return;
+  if (opts.background && ((writesPending > 0 && Date.now() - writesSince < WRITE_STUCK_MS) || writesSeq !== seq)) return;
   if (v != null) lastLoadsVersion = v;
   const sel = useTowerStore.getState().selectedLoadId;
   const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
@@ -62,6 +62,11 @@ async function doRefreshNotifications(): Promise<void> {
  */
 let lastLoadsVersion: string | null = null;
 let writesPending = 0;
+/** pokolenie połączenia — zapis z poprzedniej sesji (np. przed „Działaj jako”) nie zmienia licznika nowej */
+let connGen = 0;
+/** start najstarszego zapisu w toku — zawieszony zapis (sieć) nie blokuje odświeżania w tle na stałe */
+let writesSince = 0;
+const WRITE_STUCK_MS = 2 * 60_000;
 let writesSeq = 0;
 let liveInFlight: Promise<void> | null = null;
 export function refreshIfLoadsChanged(): Promise<void> {
@@ -74,7 +79,7 @@ export function refreshIfLoadsChanged(): Promise<void> {
     if (lastLoadsVersion == null) { lastLoadsVersion = v; return; }
     if (v === lastLoadsVersion) return;
     /* własny zapis w toku — odświeży się po nim (nie nadpisuj zmiany, która jeszcze idzie na serwer) */
-    if (writesPending > 0) return;
+    if (writesPending > 0 && Date.now() - writesSince < WRITE_STUCK_MS) return;
     await refreshFromServer({ keepSelection: true, background: true });
   })().finally(() => { liveInFlight = null; });
   return liveInFlight;
@@ -144,9 +149,12 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   registerRemoteSink((m: DataMutation) => {
     const provider = active;
     if (!provider) return;
+    const gen = connGen;
     writesPending += 1;
     writesSeq += 1;
     chain = chain.then(async () => {
+      /* start zapisu, który teraz trwa (nie najstarszego w serii) — próg „zawieszony” liczony od niego */
+      writesSince = Date.now();
       try {
         const res = await provider.apply(m);
         if (m.type === 'geofence.save' && res && res.id && res.id !== m.geofence.id) {
@@ -170,7 +178,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);
       } finally {
-        writesPending = Math.max(0, writesPending - 1);
+        if (gen === connGen) writesPending = Math.max(0, writesPending - 1);
       }
     });
   });
@@ -179,6 +187,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 export function disconnectSupabaseData(): void {
   stopBellRefresh();
   lastLoadsVersion = null;
+  writesPending = 0;
+  connGen += 1;
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);

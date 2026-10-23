@@ -193,7 +193,6 @@ const ms = isoMs;
 const isSystemActor = (a: string | null | undefined) =>
   !a || a === 'system' || a.startsWith('workflow:') || a === 'driver-pwa';
 
-/** Zdarzenia, które ustawiły status (od najstarszego). */
 /** `payload.source` wpisu zastąpionego korektą (`payload.zastepuje` = numer zdarzenia z bazy). */
 function replacedSource(events: readonly LoadEvent[], id: unknown): string | null {
   if (typeof id !== 'number' && typeof id !== 'string') return null;
@@ -202,6 +201,7 @@ function replacedSource(events: readonly LoadEvent[], id: unknown): string | nul
   return typeof src === 'string' ? src.toUpperCase() : null;
 }
 
+/** Zdarzenia, które ustawiły status (od najstarszego). */
 export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
   const out: AxisHit[] = [];
   const { list, was } = withoutSuperseded(events);
@@ -253,7 +253,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
             przez: str('przez'),
             ...(e.type === 'STATUS_AUTO' && isSystemActor(e.actor) ? { auto: true } : {}),
             /* „z rozkładu było …” tylko gdy zastąpiony wpis był z rozkładu (0270 może zastąpić też korektę osoby) */
-            ...(replacedSource(events, p.zastepuje) === 'SCHEDULE' ? { zRozkladu: true } : {}),
+            ...(['SCHEDULE', 'SCHEDULE_ASSUMED'].includes(replacedSource(events, p.zastepuje) ?? '') ? { zRozkladu: true } : {}),
           }
         : null,
       seq: evSeq(e.id),
