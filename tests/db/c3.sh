@@ -93,9 +93,15 @@ run "$KSH" "select my_notify_set('status','mail',false)" commit >/dev/null
 sval "osoba KSH: e-mail statusu wyłączony, było puste" "select (p.on_value is false)::text||'/'||(a.old_value->>'on' is null)::text from user_notify_pref p join audit_log a on a.entity='user_notify_pref' and a.user_id=p.user_id where p.user_id='$KSHU' and p.event_key='status' and p.channel='mail' order by a.id desc limit 1" "true/true"
 
 # #402 / D-20261021-1952-01: bez „zawsze”; prefs wygrywają; bez push_fallback→EMAIL.
+# #467 / F7 #478: sms_gw × CARRIER_*/CLIENT_USER z fixed_*=false; włącza Admin HHL.
 run "$HHL" "select my_notify_set('src_down','mail',false)" commit >/dev/null
 sval "#402: src_down mail da się wyłączyć" "select on_value::text from user_notify_pref where user_id='$HHLU' and event_key='src_down' and channel='mail'" false
-sval "#402: 0 fixed_* w macierzy" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 0
+sval "#402/#467: 0 fixed_*" "select count(*) from notification_matrix where fixed_email or fixed_push or fixed_in_app" 0
+err "#467: Admin nie włącza src_down×CARRIER" $HHL "select admin_notification_matrix_set('src_down','CARRIER_DISPATCH',true,true,false)" "Zdarzenia systemowe"
+err "#467: SCX my_notify_set sms_gw odmowa" $SCX "select my_notify_set('sms_gw','mail',true)" "Zdarzenia systemowe"
+run "$HHL" "select admin_notification_matrix_set('sms_gw','CARRIER_DISPATCH',false,true,false)" commit >/dev/null
+sval "#467: Admin włącza sms_gw×CARRIER_DISPATCH" "select email::text from notification_matrix where event_key='sms_gw' and role='CARRIER_DISPATCH'" true
+sys "update notification_matrix set email=false where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
 sys "update notification_matrix set email=true, push=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
 run "$HHL" "select my_notify_set('risk_crit','mail',false)" commit >/dev/null
 run "$HHL" "select my_notify_set('risk_crit','push',true)" commit >/dev/null
@@ -120,6 +126,15 @@ sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
   'c402-org', null)" >/dev/null
 sval "#402 F7: firma mail off → 0 EMAIL (bez prefs)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-org:%' and status <> 'SUPPRESSED'" 0
 sys "update notification_matrix_org_kind set email=true where org_kind='FORWARDER' and event_group='RISK_FERRY_WEATHER'" >/dev/null
+
+# #467 D3: maile bez konta przez rodzaj (nie ext_mail); ext_mail.email = false.
+sval "#467: ext_mail.email wyłączone (bez domyślnie on)" "select bool_and(email is false)::text from notification_matrix where event_key='ext_mail'" true
+sys "update notification_matrix set email=false where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+sval "#467: orphan SMS_FALLBACK + rola, sms_gw off → SUPPRESSED" "insert into notifications (channel, recipient, template, payload) values ('EMAIL','c467-orphan@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status" SUPPRESSED
+run "$HHL" "select admin_notification_matrix_set('sms_gw','CARRIER_DISPATCH',false,true,false)" commit >/dev/null
+sys "update security_flags set enabled=true where key='EXTERNAL_MESSAGING'" >/dev/null
+sval "#467: orphan po Admin set sms_gw on → PENDING" "insert into notifications (channel, recipient, template, payload) values ('EMAIL','c467-orphan2@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status" PENDING
+sys "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient like 'c467-orphan%'; update notification_matrix set email=false where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
