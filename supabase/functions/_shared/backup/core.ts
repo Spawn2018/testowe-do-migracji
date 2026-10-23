@@ -52,6 +52,85 @@ export const BUCKET_OBJECTS_SQL = `select o.id::text as id, o.bucket_id || '/' |
 
 export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
+/**
+ * #463 / D-20261022-2110-01 — duże tabele (notifications, integration_runs, sms_heartbeats…)
+ * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie po ctid + limit czasu na kawałek.
+ * F7 #472: strony z pg_relation_size (nie relpages); ostatni zakres bez górnej granicy;
+ * kompletność = csvRowCount vs count(*) w tej samej transakcji RR.
+ */
+export const CHUNK_EST_ROWS = 2_500;
+export const CTID_PAGES_PER_CHUNK = 32;
+export const TABLE_COPY_TIMEOUT_MS = 120_000;
+
+/** Zakres ctid: `to === null` = od `from` wzwyż (ostatni kawałek, bez górnej granicy). */
+export type CtidRange = { from: number; to: number | null };
+
+export function assertSafeIdent(name: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error(`kopia: niedozwolona nazwa: ${name}`);
+  return name;
+}
+
+export function shouldChunkByEstimate(estRows: number): boolean {
+  return Number.isFinite(estRows) && estRows >= CHUNK_EST_ROWS;
+}
+
+/** Liczba stron heap z bajtów relacji (jak `pg_relation_size / block_size`), min. 1. */
+export function heapPagesFromBytes(bytes: number, blockSize = 8192): number {
+  if (!Number.isFinite(bytes) || bytes < 0 || !Number.isFinite(blockSize) || blockSize <= 0) {
+    throw new Error('kopia: zły rozmiar relacji');
+  }
+  return Math.max(1, Math.ceil(bytes / blockSize));
+}
+
+/**
+ * Zakresy stron heap. Ostatni zawsze bez górnej granicy (`to: null`), żeby wiersze
+ * na stronach po ostatnim ANALYZE / dopisane w trakcie też weszły.
+ */
+export function ctidPageRanges(pages: number, pagesPerChunk = CTID_PAGES_PER_CHUNK): CtidRange[] {
+  const n = Math.max(1, Math.floor(Math.max(0, pages)));
+  const out: CtidRange[] = [];
+  for (let from = 0; from < n; from += pagesPerChunk) {
+    const end = Math.min(n, from + pagesPerChunk);
+    out.push({ from, to: end >= n ? null : end });
+  }
+  return out;
+}
+
+/**
+ * COPY jednego zakresu ctid. `selectList` = lista kolumn (np. loads bez rio_secret) albo null (= *).
+ * Nagłówek CSV tylko przy `header === true` (pierwszy kawałek).
+ * `pageTo === null` → tylko `ctid >= '(from,0)'` (ostatni kawałek).
+ */
+export function copyCtidRangeSql(
+  table: string,
+  pageFrom: number,
+  pageTo: number | null,
+  selectList: string | null,
+  header: boolean,
+): string {
+  const t = assertSafeIdent(table);
+  if (!Number.isInteger(pageFrom) || pageFrom < 0) {
+    throw new Error(`kopia: zły zakres ctid ${pageFrom}..${pageTo}`);
+  }
+  if (pageTo !== null && (!Number.isInteger(pageTo) || pageTo <= pageFrom)) {
+    throw new Error(`kopia: zły zakres ctid ${pageFrom}..${pageTo}`);
+  }
+  const cols = selectList && selectList.trim() ? selectList : '*';
+  const fmt = header ? 'format csv, header true' : 'format csv, header false';
+  const where = pageTo === null
+    ? `ctid >= '(${pageFrom},0)'::tid`
+    : `ctid >= '(${pageFrom},0)'::tid and ctid < '(${pageTo},0)'::tid`;
+  return `copy (select ${cols} from public.${t} where ${where}) to stdout with (${fmt})`;
+}
+
+/** Po COPY: liczba wierszy CSV musi = count(*) z tej samej transakcji RR — inaczej ERROR (nie ciche OK). */
+export function assertCsvMatchesDbCount(csvRows: number, dbCount: number, table: string): void {
+  const t = assertSafeIdent(table);
+  if (!Number.isFinite(csvRows) || !Number.isFinite(dbCount) || csvRows !== dbCount) {
+    throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} db=${dbCount}`);
+  }
+}
+
 export async function gzip(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
   return new Uint8Array(await new Response(stream).arrayBuffer());

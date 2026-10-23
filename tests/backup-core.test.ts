@@ -4,7 +4,11 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_BUCKETS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, backupTables, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
+import {
+  BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES,
+  assertCsvMatchesDbCount, backupTables, copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip,
+  heapPagesFromBytes, retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
+} from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
 
@@ -36,6 +40,30 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(csvRowCount('a,b\n1,2\n3,"x\ny"\n')).toBe(2);
     expect(csvRowCount('a,b\n')).toBe(0);
     expect(csvRowCount('')).toBe(0);
+  });
+
+  // #463 / D-20261022-2110-01 + F7 #472 — stronicowanie; ostatni zakres otwarty; kompletność
+  it('#463: shouldChunkByEstimate od progu; zakresy ctid — ostatni bez górnej granicy', () => {
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS - 1)).toBe(false);
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS)).toBe(true);
+    expect(heapPagesFromBytes(0)).toBe(1);
+    expect(heapPagesFromBytes(8192)).toBe(1);
+    expect(heapPagesFromBytes(8193)).toBe(2);
+    expect(heapPagesFromBytes(2049 * 8192)).toBe(2049);
+    expect(heapPagesFromBytes(2310 * 8192)).toBe(2310);
+    expect(ctidPageRanges(0)).toEqual([{ from: 0, to: null }]);
+    expect(ctidPageRanges(32)).toEqual([{ from: 0, to: null }]);
+    expect(ctidPageRanges(33)).toEqual([{ from: 0, to: 32 }, { from: 32, to: null }]);
+    expect(copyCtidRangeSql('notifications', 0, 32, null, true)).toContain('header true');
+    expect(copyCtidRangeSql('notifications', 0, 32, null, true)).toContain("ctid < '(32,0)'");
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).toContain('header false');
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).toMatch(/ctid >= '\(32,0\)'::tid\)/);
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).not.toContain('ctid <');
+    expect(copyCtidRangeSql('loads', 0, 8, '"id", "code"', true)).toContain('"id", "code"');
+    expect(() => copyCtidRangeSql('x;drop', 0, 1, null, true)).toThrow(/niedozwolona/);
+    expect(() => copyCtidRangeSql('loads', 5, 5, null, true)).toThrow(/zakres/);
+    expect(() => assertCsvMatchesDbCount(10, 10, 'loads')).not.toThrow();
+    expect(() => assertCsvMatchesDbCount(9, 10, 'notifications')).toThrow(/niekompletna.*notifications.*csv=9.*db=10/);
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {
