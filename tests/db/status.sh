@@ -834,8 +834,9 @@ pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
 chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
 
 # #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
-# F7 r3: geometria bez Karlshamn; Jämjö 15.9423/56.2523 przy OFFROUTE_KM=20 → 0.
+# F7 r3/r4: Jämjö; Söderköping 16.3186/58.4792; OFFROUTE_KM przywrócone (nie sztywne 2).
 echo; echo "[#487] korytarz E22 po Karlskronie (OFF_CORRIDOR)"
+PREV_OFFROUTE=$(q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")
 L487a=$(L 8d)
 mk $L487a A487 "'HHL/A487'" "'SCX/A487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
@@ -849,14 +850,21 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Jämjö 15.9423/56.2523 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
-q "update ops_thresholds set value_num = 2 where key = 'OFFROUTE_KM'" >/dev/null
+# SG-23 12:02 UTC — Söderköping (wcześniej 33,5 km bez wierzchołków 0160)
+q "delete from positions where load_id='$L487a'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
 L487b=$(L 8e)
 mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
    update loads set status='IN_TRANSIT_SE' where id='$L487b';
    delete from positions where load_id='$L487b';
    set session_replication_role=origin;" >/dev/null
-# ~50 km od E22 w Smålandzie (zachód od wierzchołka 16.637/57.758; nie Kattegat)
+# ~50 km od E22 w Smålandzie (zachód od Västervik 16.637/57.758; nie Kattegat)
 q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487b', now() - interval '15 minutes', st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API'),
   ('$L487b', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null

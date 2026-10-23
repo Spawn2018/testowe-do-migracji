@@ -4399,3 +4399,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak — F7 #488 „jeszcze nie” (B1 polilinia); #478 nie scalać (0275→**0277** po #487+#489).
 - CI #488 na `09a53cc5`: unit/db/visual zielone; F7 B1: Karlshamn 14.862 cofa linię — SG-23 15.9423/56.2523 = 24 km od polilinii.
 - Poprawka 0275: `UPDATE SE_E22` — Jämjö/Brömsebro/Nyköping, bez 14.862; `audit_log` tylko przy zmianie; test Jämjö przy OFFROUTE_KM=20; sprzątanie tylko L487a/b.
+
+## 2026-10-23 14:20 — #487 F7 runda 4: Norrköping + #490 SCALONE (PR #488)
+
+- Skrzynka: #487/#489 `pilne`; #484/#467 w planie.
+- Scalanie: **#490** `e911ad74` (F7 gotowe po `775700ce`, CI zielone) — oś Status AIS. #488 F7 r3 „jeszcze nie” (B2: zgubiony Norrköping); #478 nie scalać (→**0277**).
+- CI #488 na `0129b073`: unit/db/visual zielone.
+- F7 B2: 16.637=Västervik; brak 16.32/58.48 i 16.183/58.594 → SG-23 16.3186/58.4792 = 33,5 km. Poprawka: Söderköping+Norrköping(+Gamleby); `total_km` z `geom`; test Söderköping; OFFROUTE_KM przywrócone; status **207**.

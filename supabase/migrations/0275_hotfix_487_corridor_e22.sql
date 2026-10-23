@@ -132,8 +132,9 @@ end $$;
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 1b. Geometria SE_E22: bez Karlshamn (14.862), z Jämjö / Brömsebro / Nyköping
---     (F7: prawdziwa E22 Jämjö–Brömsebro była 20–25 km od polilinii 0160).
+-- 1b. Geometria SE_E22: bez Karlshamn (14.862); Jämjö/Brömsebro; Västervik→
+--     Söderköping/Norrköping (F7 r3: 16.637 to Västervik, nie Norrköping).
+--     total_km z geom (drugi UPDATE) — listy punktów się nie rozjeżdżają.
 -- ---------------------------------------------------------------------------
 update public.corridor_polylines
    set geom = st_setsrid(st_makeline(array[
@@ -141,7 +142,10 @@ update public.corridor_polylines
          st_makepoint(15.95,   56.25),    -- Jämjö (E22)
          st_makepoint(16.10,   56.30),    -- Brömsebro (E22)
          st_makepoint(16.366,  56.663),   -- Kalmar
-         st_makepoint(16.637,  57.758),   -- Norrköping → E4
+         st_makepoint(16.637,  57.758),   -- Västervik (E22)
+         st_makepoint(16.40,   57.89),    -- Gamleby (E22)
+         st_makepoint(16.32,   58.48),    -- Söderköping (E22)
+         st_makepoint(16.183,  58.594),   -- Norrköping → E4
          st_makepoint(17.008,  58.753),   -- Nyköping (E4)
          st_makepoint(18.0686, 59.3293),
          st_makepoint(17.6389, 59.8586),
@@ -156,15 +160,12 @@ update public.corridor_polylines
          st_makepoint(22.1547, 65.5848),
          st_makepoint(21.7591, 65.8054)   -- Boden
        ]), 4326),
-       total_km = round((st_length(st_setsrid(st_makeline(array[
-         st_makepoint(15.5866, 56.1616), st_makepoint(15.95, 56.25), st_makepoint(16.10, 56.30),
-         st_makepoint(16.366, 56.663), st_makepoint(16.637, 57.758), st_makepoint(17.008, 58.753),
-         st_makepoint(18.0686, 59.3293), st_makepoint(17.6389, 59.8586), st_makepoint(17.1413, 60.6749),
-         st_makepoint(17.1056, 61.7274), st_makepoint(17.3069, 62.3908), st_makepoint(17.9379, 62.6323),
-         st_makepoint(18.7153, 63.2909), st_makepoint(20.2630, 63.8258), st_makepoint(20.9528, 64.7507),
-         st_makepoint(21.4794, 65.3172), st_makepoint(22.1547, 65.5848), st_makepoint(21.7591, 65.8054)
-       ]), 4326)::geography) / 1000.0)::numeric, 2),
-       source = 'OSM / ODbL — Karlskrona → E22 (Jämjö/Brömsebro) → Norrköping → E4 (Nyköping) → Boden (#487)',
+       source = 'OSM / ODbL — Karlskrona → E22 (Jämjö…Norrköping) → E4 (Nyköping) → Boden (#487)',
+       updated_at = now()
+ where code = 'SE_E22';
+
+update public.corridor_polylines
+   set total_km = round((st_length(geom::geography) / 1000.0)::numeric, 2),
        updated_at = now()
  where code = 'SE_E22';
 
