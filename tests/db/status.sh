@@ -647,8 +647,89 @@ q "insert into load_events (load_id,event_type,occurred_at) values ('$L445c','MI
      ('$V445', 54.4930, 18.6800, 10, now() - interval '1 minute', 'DIGITRAFFIC');
     select process_position('$L445c', 54.4925, 18.6805, now() - interval '3 minutes');
     select process_position('$L445c', 54.4928, 18.6802, now() - interval '1 minute')" >/dev/null
-chk "#445: departure minął, AIS 10 km, auto ≤2 km → FERRY" \
+chk "#445: departure minął, AIS 10 km sog>3, auto ≤2 km → FERRY" \
   "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
+
+# #502: A10_b tylko gdy statek płynie; FERRY bez powiadomień status
+echo; echo "[#502] A10_b — W_PORCIE/ZAPLANOWANY v=0 bez FERRY; po actual_dep FERRY 0 notif"
+L502=$(L 76)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000502','$P','$V445','GDN-NYN',
+  now() - interval '30 minutes', now() + interval '18 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502=77777777-0000-0000-0000-000000000502
+mk $L502 A502 "'HHL/A502'" "'SCX/A502'" AT_PORT_GDANSK "'$S502'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L502', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4032, 18.6802, 0, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502: PORT_OUT + ZAPLANOWANY sog=0 (plan minął) → bez FERRY" \
+  "select a10_try_ferry_backup('$L502', now()); select status from loads where id='$L502'" AT_PORT_GDANSK
+N502=$(q "select count(*) from notifications where load_id='$L502' and template='LOAD_STATUS_CHANGED'")
+q "update sailings set actual_departure_at = now() - interval '5 minutes' where id='$S502';
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 12, now() - interval '1 minute', 'DIGITRAFFIC');
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L502','GEOFENCE_EXIT', now() - interval '20 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'));
+    select process_position('$L502', 55.00, 18.90, now() - interval '3 minutes');
+    select process_position('$L502', 55.01, 18.91, now() - interval '1 minute')" >/dev/null
+chk "#502: po actual_departure_at + GPS morze → FERRY" \
+  "select a10_try_ferry_backup('$L502', now()); select status from loads where id='$L502'" FERRY
+chk "#502: FERRY A10_b bez nowych LOAD_STATUS_CHANGED" \
+  "select (count(*)=$N502)::text from notifications where load_id='$L502' and template='LOAD_STATUS_CHANGED'" true
+
+# #502 F7 B4: T-11 — stary GPS naczepy + statek płynący → bez FERRY (czas GPS↔AIS)
+echo; echo "[#502 F7] B4 — stary GPS / wpływający / SCHEDULE cicho"
+L502a=$(L 95)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000503','$P','$V445','GDN-NYN',
+  now() - interval '1 hour', now() + interval '17 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502a=77777777-0000-0000-0000-000000000503
+mk $L502a A502a "'HHL/A502a'" "'SCX/A502a'" AT_PORT_GDANSK "'$S502a'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502a','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502a', 54.4030, 18.6800, now() - interval '2 hours 5 minutes');
+    select process_position('$L502a', 54.4031, 18.6801, now() - interval '2 hours');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4140, 18.6800, 6.9, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502 F7: GPS sprzed 2 h + AIS 6,9 kn 1,2 km → bez FERRY" \
+  "select a10_try_ferry_backup('$L502a', now()); select status from loads where id='$L502a'" AT_PORT_GDANSK
+
+# B4(2): statek wpływający — plan w przyszłości, sog>3, 1–2 km → bez FERRY
+L502b=$(L 96)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000504','$P','$V445','GDN-NYN',
+  now() + interval '6 hours', now() + interval '24 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502b=77777777-0000-0000-0000-000000000504
+mk $L502b A502b "'HHL/A502b'" "'SCX/A502b'" AT_PORT_GDANSK "'$S502b'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502b','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502b', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L502b', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4140, 18.6900, 6.8, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502 F7: wpływający (plan +6 h, sog>3, 1–2 km) → bez FERRY" \
+  "select a10_try_ferry_backup('$L502b', now()); select status from loads where id='$L502b'" AT_PORT_GDANSK
+
+# B4(3): syntetyczny SCHEDULE przy PORT_IN → 0 LOAD_STATUS_CHANGED dla FERRY
+L502c=$(L 97)
+G502c=$(q "select id from geofences where project_id='$P' and kind='PORT_IN' and name='Port Nynäshamn' order by id limit 1")
+mk $L502c A502c "'HHL/A502c'" "'SCX/A502c'" IN_TRANSIT_PL "'$S1'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502c','MILESTONE_LOADED', now() - interval '1 day')" >/dev/null
+N502c=$(q "select count(*) from notifications where load_id='$L502c' and template='LOAD_STATUS_CHANGED' and coalesce(payload->>'to','')='FERRY'")
+q "insert into load_events (load_id, event_type, occurred_at, payload) values
+ ('$L502c','GEOFENCE_ENTER', now(),
+  jsonb_build_object('geofence_id','$G502c','geofence_kind','PORT_IN','geofence_name','Port Nynäshamn'))" >/dev/null
+chk "#502 F7: SCHEDULE synthetic_ferry → AT_PORT_NYNASHAMN" "$(st $L502c)" AT_PORT_NYNASHAMN
+chk "#502 F7: SCHEDULE FERRY bez LOAD_STATUS_CHANGED" \
+  "select (count(*)=$N502c)::text from notifications where load_id='$L502c' and template='LOAD_STATUS_CHANGED' and coalesce(payload->>'to','')='FERRY'" true
+chk "#502 F7: synthetic_ferry w osi" \
+  "select (count(*)>0)::text from load_events where load_id='$L502c' and event_type='STATUS_AUTO' and coalesce((payload->>'synthetic_ferry')::boolean,false)" true
 
 # #461: ścieżka (c) bez actual_departure_at → bez FERRY (plan minął, brak pozycji w porcie)
 echo; echo "[#461] A10_c — tylko po actual_departure_at"

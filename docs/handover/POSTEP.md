@@ -4476,3 +4476,15 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#502** `pilne` — wpisane §4 (po #498, przed #413); nie przerywa #498 (termin 00:30 UTC).
 - Scalanie: brak F7 „gotowe” na #501; #495/#382 bez „gotowe”.
 - **#501 / #498:** CI unit/db/visual zielone na `9b1c6a95`. F7 r2 B1': przed `scheduleContinue` `lease_until = null` (dziecko bez 409). Czekam ponowne F7.
+
+## 2026-10-23 20:15 — #501 SCALONE; start #502 (0279)
+
+- Skrzynka: #502 `pilne` bieżąca; #498 zamknięte; #413/#422/#412/#484/#492/#496/#499/#500 w kolejce.
+- Scalanie: **#501** `8d3b19c0` (F7 gotowe na `78f53c0d`, CI unit/db/visual zielone, backup 32/32). `deploy-main` baza→Edge.
+- Bieżąca: **#502** `pakiet/hotfix-502-ferry-a10b`, migracja **0279**: A10_b tylko W_REJSIE/actual_dep lub AIS>3kn ≥1km; `bulk_quiet` na A10_b/c; T-11 zastepuje+SUPPRESSED; status **233** (+3).
+
+## 2026-10-23 20:50 — #502 F7 B1–B4 (jeszcze nie → poprawka)
+
+- Skrzynka: #502 `pilne` (F7 #503 B1–B4); #500/#499/#496/#492/#484/#413 bez przerwania.
+- Scalanie: brak F7 „gotowe”; #495 konflikt; #383 wygląd bez F7.
+- Bieżąca: **#502** F7: (B1) GPS↔AIS ≤15 min + godzina z actual/AIS; (B2) plan ≤ now+30 min przy SOG; (B3) `bulk_quiet` synthetic SCHEDULE w `apply_geofence_status`; (B4) +5 testów; status **238**; AIS SOG świeżość 20 min.
