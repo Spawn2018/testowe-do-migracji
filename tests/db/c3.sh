@@ -121,5 +121,14 @@ sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
 sval "#402 F7: firma mail off → 0 EMAIL (bez prefs)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-org:%' and status <> 'SUPPRESSED'" 0
 sys "update notification_matrix_org_kind set email=true where org_kind='FORWARDER' and event_group='RISK_FERRY_WEATHER'" >/dev/null
 
+# #467 D3: maile bez konta przez rodzaj (nie ext_mail); ext_mail.email = false.
+sval "#467: ext_mail.email wyłączone (bez domyślnie on)" "select bool_and(email is false)::text from notification_matrix where event_key='ext_mail'" true
+sys "update notification_matrix set email=false where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+sval "#467: orphan SMS_FALLBACK + rola, sms_gw off → SUPPRESSED" "insert into notifications (channel, recipient, template, payload) values ('EMAIL','c467-orphan@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status" SUPPRESSED
+sys "update notification_matrix set email=true where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+sys "update security_flags set enabled=true where key='EXTERNAL_MESSAGING'" >/dev/null
+sval "#467: orphan + rola, sms_gw on, EXTERNAL on → PENDING" "insert into notifications (channel, recipient, template, payload) values ('EMAIL','c467-orphan2@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status" PENDING
+sys "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient like 'c467-orphan%'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

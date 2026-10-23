@@ -351,6 +351,7 @@ const pl: Dict = {
   i3_test_added: "Dodano numer testowy.",
   i3_test_send: "Wyślij SMS testowy",
   i3_test_sent: "SMS testowy w kolejce.",
+  i3_test_ext_on: "Przy włączonej wysyłce zewnętrznej numery testowe nic nie dostają — SMS idą na listę stref.",
   i3_queue_h: "Ostatnie SMS",
   i3_queue_none: "Kolejka pusta.",
   i3_fallback: "wysłano e-mail zastępczy",

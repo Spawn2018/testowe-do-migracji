@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
   nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
-  i2: 665, // #466: +5 role PII (KSH/HHL/OPS/SCX/anon przez RPC); było 660 (#464)
+  i2: 669, // #467: +4 D3 (orphan mail off/norole, sms_send_test EXT on, TEST testowy null); było 665 (#466)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
@@ -54,7 +54,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 32, // #402 F7: 32 event_key (+workflow/fuel_miss/email_budget/ext_mail); +firma mail off
+  c3: 35, // #467: +3 orphan/ext_mail; było 32 (#402 F7)
 };
 
 /**
