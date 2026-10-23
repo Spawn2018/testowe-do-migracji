@@ -7,6 +7,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { buildStatusAxis } from '../src/lib/statusAxis';
+import { histRow, isNoChange } from '../src/lib/p6History';
 import { StatusAxisTab } from '../src/components/drawer/StatusAxisTab';
 import { eventFromRow } from '../src/data/mappers';
 import type { Load, LoadEvent } from '../src/types';
@@ -46,5 +47,24 @@ describe('#461 — „Na promie” po korekcie z AIS', () => {
   it('FERRY → FERRY bez korekty nadal nie tworzy wiersza', () => {
     const plain = [ev(1, 'STATUS_AUTO', AIS, { from: 'FERRY', to: 'FERRY', source: 'AIS' })];
     expect(buildStatusAxis({ ...load, status: 'FERRY' } as Load, plain).groups.flatMap((g) => g.rows).find((r) => r.statuses.includes('ON_FERRY'))?.hit).toBeNull();
+  });
+
+  it('„z rozkładu” tylko gdy zastąpiony wpis był z rozkładu; inaczej samo „było …”', () => {
+    const manual = events.map((e) => (e.id === 'ev-2294' ? { ...e, payload: { ...e.payload, source: 'GPS' } } : e));
+    const html = renderToStaticMarkup(createElement(StatusAxisTab, { load, events: manual, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
+    expect(html).toContain('wypłynięcie według AIS · było 22.10.2026, 20:00');
+    expect(html).not.toContain('z rozkładu było');
+  });
+
+  it('„Na promie” z AIS z własnym powodem (A10_b) — powód zostaje', () => {
+    const a10 = [ev(1, 'STATUS_AUTO', AIS, { from: 'AT_PORT_GDANSK', to: 'FERRY', source: 'AIS', powod: 'pozycja zbieżna z AIS statku (≤ 2 km)' })];
+    const html = renderToStaticMarkup(createElement(StatusAxisTab, { load: { ...load, status: 'FERRY' } as Load, events: a10, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
+    expect(html).toContain('Pozycja zbieżna z AIS statku');
+  });
+
+  it('Historia: korekta z AIS widoczna („według AIS, było …”), nie „bez zmian”', () => {
+    const fix = events.find((e) => e.id === 'ev-2297')!;
+    expect(isNoChange(fix)).toBe(false);
+    expect(histRow(fix, 'pl').tail).toBe('wypłynięcie według AIS (było 22.10.2026, 20:00)');
   });
 });

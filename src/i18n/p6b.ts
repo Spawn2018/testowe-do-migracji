@@ -49,6 +49,7 @@ const PL: Record<string, string> = {
   p6b_korekta_axis: 'poprawił Administrator HHL (było {was})',
   p6b_korekta_axis_who: 'poprawka godziny: {who} (było {was})',
   p6b_korekta_hist: 'korekta godziny (było {was})',
+  p6b_korekta_ais: 'wypłynięcie według AIS (było {was})',
 
   /* nazwy zdarzeń (E17-2) — bez kodów */
   p6b_ev_STATUS: 'Status: {to}',

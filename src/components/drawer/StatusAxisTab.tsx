@@ -90,9 +90,11 @@ function rowSub(
   if (h.korekta?.auto) {
     const was = h.korekta.poprzednio ? dayTime(h.korekta.poprzednio) : null;
     const src = h.channel === 'AIS' ? 'ais' : 'auto';
-    return was ? tp(locale, `p4b_sub_fix_${src}_was`, { was }) : t(locale, `p4b_sub_fix_${src}`);
+    const key = was ? `p4b_sub_fix_${src}_${h.korekta.zRozkladu ? 'sched' : 'was'}` : `p4b_sub_fix_${src}`;
+    return was ? tp(locale, key, { was }) : t(locale, key);
   }
-  if (s === 'ON_FERRY' && h.channel === 'AIS') return t(locale, 'p4b_sub_ferry_ais');
+  /* bez własnego powodu (np. A10_b „pozycja zbieżna z AIS statku”) — ogólny dopisek */
+  if (s === 'ON_FERRY' && h.channel === 'AIS' && !h.why && !h.note) return t(locale, 'p4b_sub_ferry_ais');
   /* D-0005 (0234): godzina poprawiona przez Administratora HHL — „poprawił Administrator HHL (było 07.10.2026, 14:00)” */
   if (h.korekta) {
     const who = h.previewAs ? actor : axisActor(h.actor);
