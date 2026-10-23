@@ -4463,3 +4463,45 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #492/#484/#413/#422/#412/#323/#322/#320 w planie. CI #495 (0278) zielone; bez F7 „gotowe”.
 - Bieżąca: **#413** migracja **0279** — soft-delete START-1…7 (`removed_at`), enqueue/worker pomija usunięte; audit z powodami E35; testy `workflows`/`e25`/`import` → T-S1/T-S7/T-CANCEL. #422→**0280**, B5→**0281**. Dalej: `rulesReady`/`zonesReady` + źródła P8-d/P8-c.
+
+## 2026-10-23 18:20 — #498 pilne (backup części); skrzynka; #413 wstrzymane
+
+- Skrzynka: **#498** `pilne` — bieżąca (przerywa #413); #496/#499/#500 wpisane §4; #492/#484/#413/#422 w kolejce.
+- Scalanie: **brak** — #495 F7 odwołane po commit 0279 (`d495b295`); CI unit/db/visual zielone, czekam rundę 2; #497 wygląd bez F7; #382 konflikt.
+- Bieżąca: **#498** `pakiet/hotfix-498-backup-parts`, migracja **0278**: części `PART_MAX_ROWS=5000`, `progress`/`progress_at`, cron `tower-backup-continue`, I-33 = 10 min bez postępu; `restore.sh` + unit. #413→0279+0280 po rebase.
+
+## 2026-10-23 18:50 — #497 SCALONE; #501 F7 B1/B2; prognoza #499
+
+- Scalanie: **#497** `6640f4c8` (F7 gotowe na `4620e6a`, CI zielone) — wygląd drobne F7.
+- **#501 / #498:** CI unit/db/visual zielone na `dc970998`; F7 „jeszcze nie” → B1 lease + cron ≥2 min; B2 `recordTableParts` (1×5000); catch tylko `RUNNING`. `deploy-main`: Baza przed Edge — OK.
+- **#499 prognoza (najpóźniej, bez cięcia 28.10 20:00):** #498 dziś przed 00:30 UTC; #413+#422+#412 24.10; #484+#492+#496 25.10; B5 25–26.10; B7/B8/B9 26.10; A6+SharePoint 26–27.10; C4–C13 27.10; P4-u/P3-d 27–28.10.
+- Dalej: push F7 B1/B2, czekam ponowne „F7: gotowe”.
+
+## 2026-10-23 19:15 — #501 db: backup 32/32 (gate-suites)
+
+- CI `db` czerwone na `ddcaf0cb`: backup 32 OK, oczekiwano 29 (`gate-suites.mjs`).
+- Poprawka: LOCAL 32, TEST 24 (32−8 SKIP). Unit/visual już zielone. Czekam CI + F7 „gotowe”.
+
+## 2026-10-23 19:45 — #501 F7 B1'; #502 w planie
+
+- Skrzynka: **#502** `pilne` — wpisane §4 (po #498, przed #413); nie przerywa #498 (termin 00:30 UTC).
+- Scalanie: brak F7 „gotowe” na #501; #495/#382 bez „gotowe”.
+- **#501 / #498:** CI unit/db/visual zielone na `9b1c6a95`. F7 r2 B1': przed `scheduleContinue` `lease_until = null` (dziecko bez 409). Czekam ponowne F7.
+
+## 2026-10-23 20:15 — #501 SCALONE; start #502 (0279)
+
+- Skrzynka: #502 `pilne` bieżąca; #498 zamknięte; #413/#422/#412/#484/#492/#496/#499/#500 w kolejce.
+- Scalanie: **#501** `8d3b19c0` (F7 gotowe na `78f53c0d`, CI unit/db/visual zielone, backup 32/32). `deploy-main` baza→Edge.
+- Bieżąca: **#502** `pakiet/hotfix-502-ferry-a10b`, migracja **0279**: A10_b tylko W_REJSIE/actual_dep lub AIS>3kn ≥1km; `bulk_quiet` na A10_b/c; T-11 zastepuje+SUPPRESSED; status **233** (+3).
+
+## 2026-10-23 20:50 — #502 F7 B1–B4 (jeszcze nie → poprawka)
+
+- Skrzynka: #502 `pilne` (F7 #503 B1–B4); #500/#499/#496/#492/#484/#413 bez przerwania.
+- Scalanie: brak F7 „gotowe”; #495 konflikt; #383 wygląd bez F7.
+- Bieżąca: **#502** F7: (B1) GPS↔AIS ≤15 min + godzina z actual/AIS; (B2) plan ≤ now+30 min przy SOG; (B3) `bulk_quiet` synthetic SCHEDULE w `apply_geofence_status`; (B4) +5 testów; status **238**; AIS SOG świeżość 20 min.
+
+## 2026-10-23 21:20 — #502 SCALONE; #413 → 0280/0281 (F7 r2)
+
+- Skrzynka: #502 zamknięte; #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422 w kolejce.
+- Scalanie: **#503** `86e80a41` (F7 gotowe na `fa4efcdb`, CI unit/db/visual zielone, status 238).
+- Bieżąca: **#413** merge main; migracje **0280** (OPS read) + **0281** (START Z1 + `trg_geofence_matrix_notify` geofence_kind/country → pre_arrival_*/pre_port; testy B2). #422→**0282**, B5→**0283**.

@@ -1,8 +1,9 @@
 -- #413 / E35 Z1 — porządki reguł START-1…7 (D-20261021-2057-01, D-20261016-0220-01).
 -- Soft-delete (`removed_at`): przebiegi i historia zostają (FK workflow_runs ON DELETE CASCADE).
--- START-1/2 → już w macierzy E11 (0222/0223: pre_arrival_*, pre_port); START-3…7 zbędne (wbudowane / bez POD).
+-- START-1/2 → macierz E11 (pre_arrival_*/pre_port) + F7 B1: trg_geofence_matrix_notify przekazuje kind/country;
+-- START-3…7 zbędne (wbudowane / bez POD). Cofnięcie START wymaga migracji (strażnik blokuje też service_role).
 
-select set_config('tower.audit_source', 'migracja 0279 (#413 E35 Z1 START)', true);
+select set_config('tower.audit_source', 'migracja 0281 (#413 E35 Z1 START)', true);
 
 alter table public.workflows add column if not exists removed_at timestamptz;
 comment on column public.workflows.removed_at is
@@ -201,7 +202,7 @@ declare
 begin
   if (select count(*) from notification_matrix
         where event_key in ('pre_arrival_site', 'pre_arrival_srem', 'pre_port')) < 10 then
-    raise exception '0279: brak zdarzeń E11 dla START-1/2 (pre_arrival_*/pre_port)';
+    raise exception '0281: brak zdarzeń E11 dla START-1/2 (pre_arrival_*/pre_port)';
   end if;
 
   for r in
@@ -232,19 +233,83 @@ begin
       null, 'ROW_DELETE', 'workflows', r.id::text,
       jsonb_build_object('code', r.code, 'name', r.name),
       jsonb_build_object('removed', true, 'reason', v_reason, 'what', v_what, 'code', r.code, 'name', r.name),
-      'migracja 0279 (#413 E35 Z1)'
+      'migracja 0281 (#413 E35 Z1)'
     );
     v_n := v_n + 1;
   end loop;
 
   if (select count(*) from workflows where code like 'START-%' and removed_at is null) <> 0 then
-    raise exception '0279: zostały aktywne reguły START';
+    raise exception '0281: zostały aktywne reguły START';
   end if;
   if (select count(*) from workflows where code like 'START-%' and enabled) <> 0 then
-    raise exception '0279: START nie mogą być włączone';
+    raise exception '0281: START nie mogą być włączone';
   end if;
-  if (select count(*) from workflows where code like 'START-%' and removed_at is not null) < 1 and v_n = 0 then
-    -- idempotentnie: brak START w tej bazie (np. świeży seed bez 0094) — OK
-    null;
-  end if;
+  -- Idempotentnie: brak START (świeży seed bez 0094) = v_n=0, bez wyjątku.
 end $z1$;
+
+-- F7 #495 runda 2 B1: payload do macierzy z geofence_kind + geofence_country
+-- (notify_event_key → pre_arrival_site / pre_arrival_srem / pre_port zamiast zone).
+create or replace function public.trg_geofence_matrix_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_proj uuid;
+  v_tpl text;
+  v_fence text;
+  v_gid uuid;
+  v_kind text;
+  v_country text;
+  v_name text;
+begin
+  if new.event_type not in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT') then
+    return null;
+  end if;
+  v_tpl := case new.event_type when 'GEOFENCE_ENTER' then 'ZONE_ENTER' else 'ZONE_EXIT' end;
+
+  begin
+    v_gid := nullif(new.payload->>'geofence_id', '')::uuid;
+  exception when others then
+    v_gid := null;
+  end;
+
+  if v_gid is not null then
+    select g.kind::text, g.country, g.name
+      into v_kind, v_country, v_name
+      from geofences g
+     where g.id = v_gid;
+  end if;
+
+  v_kind := coalesce(nullif(v_kind, ''), nullif(new.payload->>'geofence_kind', ''));
+  v_country := coalesce(
+    nullif(v_country, ''),
+    nullif(new.payload->>'geofence_country', ''),
+    nullif(new.payload->>'country', '')
+  );
+  v_name := coalesce(
+    nullif(v_name, ''),
+    nullif(new.payload->>'geofence_name', ''),
+    nullif(new.payload->>'name', '')
+  );
+
+  v_fence := coalesce(
+    nullif(new.payload->>'geofence_id', ''),
+    coalesce(v_kind, '') || ':' || coalesce(v_name, ''),
+    'x'
+  );
+  select project_id into v_proj from loads where id = new.load_id;
+  perform public.matrix_notify(
+    'LOAD_STATUS', v_tpl, new.load_id, v_proj,
+    jsonb_build_object(
+      'load_id', new.load_id,
+      'event', new.event_type,
+      'geofence_id', new.payload->>'geofence_id',
+      'geofence_name', v_name,
+      'geofence_kind', v_kind,
+      'geofence_country', v_country
+    ),
+    'zone:' || new.event_type || ':' || new.load_id::text || ':' || v_fence
+  );
+  return null;
+end $$;
+revoke all on function public.trg_geofence_matrix_notify() from public, anon, authenticated;
+comment on function public.trg_geofence_matrix_notify() is
+  '#413 F7: ZONE_* z geofence_kind/country → pre_arrival_*/pre_port w macierzy E11.';

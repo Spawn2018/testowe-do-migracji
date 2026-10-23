@@ -67,4 +67,16 @@ describe('#461 — „Na promie” po korekcie z AIS', () => {
     expect(isNoChange(fix)).toBe(false);
     expect(histRow(fix, 'pl').tail).toBe('wypłynięcie według AIS (było 22.10.2026, 20:00)');
   });
+
+  it('„z rozkładu” także przy zastąpionym wpisie SCHEDULE_ASSUMED (plan + 1 h)', () => {
+    const assumed = events.map((e) => (e.id === 'ev-2294' ? { ...e, payload: { ...e.payload, source: 'SCHEDULE_ASSUMED' } } : e));
+    const html = renderToStaticMarkup(createElement(StatusAxisTab, { load, events: assumed, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
+    expect(html).toContain('wypłynięcie według AIS · z rozkładu było 22.10.2026, 20:00');
+  });
+
+  it('Historia: korekta automatu spoza AIS — „korekta godziny (było …)”', () => {
+    const fix = events.find((e) => e.id === 'ev-2297')!;
+    const other = { ...fix, payload: { ...fix.payload, source: 'SCHEDULE' } };
+    expect(histRow(other, 'pl').tail).toBe('korekta godziny (było 22.10.2026, 20:00)');
+  });
 });

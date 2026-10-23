@@ -222,7 +222,7 @@ P0a i bramy niedzielne zmieniają tylko dokumenty: status P0a `NA PRODUKCJI — 
 
 ### P0b · Narzędzia bramy — NA PRODUKCJI — narzędzia, bez wdrożenia aplikacji (scalenie `832cca5a`, 12.10.2026 21:43)
 Tylko `tests/`, `scripts/`, `.githooks/`; bez aplikacji i bez migracji. Pierwszy commit: włączenie dopisków D-20261011-2135-01, D-20261011-2254-01, D-20261012-0105-01 (PLAN §2).
-1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh`. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4, risks −2, **dec6 −4**: SKIP wstawek `auth.sessions` dla kont seeda — FK `sessions_user_id_fkey` na hosted; lokalnie/CI stub bez FK; **backup −8**: SKIP eksportu/odtworzenia wymagającego CREATE DATABASE / harness — pełne 29 w CI `db.yml`, D-86); `session` i `l13` — znany dług, jak dziś.
+1. `scripts/lib/gate-suites.mjs`: oczekiwane liczby zgodne z `tests/db/gate.sh`. **Jedno źródło liczb:** `gate.sh` czyta oczekiwane z `gate-suites.mjs`; dla TEST osobna kolumna z udokumentowanymi różnicami (security −4, risks −2, **dec6 −4**: SKIP wstawek `auth.sessions` dla kont seeda — FK `sessions_user_id_fkey` na hosted; lokalnie/CI stub bez FK; **backup −8**: SKIP eksportu/odtworzenia wymagającego CREATE DATABASE / harness — pełne 32 w CI `db.yml`, D-86; #498); `session` i `l13` — znany dług, jak dziś.
 2. `tests/db/gate.sh`: zmienna `SUITES=a,b` uruchamia tylko wskazane zestawy (z szablonem `tower`); bez zmiennej — wszystkie.
 3. Konta testowe 5 rodzajów (HHL Administrator, HHL Operacje, KSH Użytkownik, SCX Dyspozytor, SCX Użytkownik) na bazie TEST `emkbykwenwrjmbprydml`; skrypt odmawia uruchomienia dla `nglnnrmzmhusvxslousq` i jest wywoływany po każdym kroku `prep` bramy TEST (krok czyści schemat).
 4. Sprawdzić `git lfs version` i `git config core.hooksPath` (= `.githooks`). Brak = wpis w §5, bez `--no-verify`.
@@ -402,7 +402,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
-### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (~~#445 A10_b FERRY / 0262~~; **#446 drobne** / ~~0263–0266~~ + pkt 5 SELECT / pkt 6 jutro; ~~#384 zaległe / 0267~~; ~~#453 RIO_NO_POSITION~~; ~~#455~~; ~~#460~~ ferry_track / **0268**; ~~#461~~ Prom AIS/SCHEDULE_ASSUMED / **0270**; ~~#463~~ / ~~#479~~ backup; ~~#409~~ / **0271**; ~~#464~~ / **0272**; ~~#465~~; ~~#466~~ / **0273**; ~~#485~~ po promie Port SE / **0274**; ~~**#487** korytarz E22 Karlskrona (`pilne`) / **0275**~~; ~~**#489** odpięcie rejsu→status (`pilne`) / **0276**~~; ~~**#467** D3 / **0277**~~; **#413**/**0278**+**0279**; **#422**/**0280**; B5/**0281**; **#492** `loads.updated_at` (po #484, przed B5); ~~#441~~; ~~#442~~; ~~#437/0261~~; ~~#400/0260~~; ~~#426/0259~~; ~~#421/0258~~; ~~#405/0257~~; ~~#411/0256~~; ~~#402/0255~~; ~~#398/0254~~) — kolejka #413 → #422…
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (~~#445 A10_b FERRY / 0262~~; **#446 drobne** / ~~0263–0266~~ + pkt 5 SELECT / pkt 6 jutro; ~~#384 zaległe / 0267~~; ~~#453 RIO_NO_POSITION~~; ~~#455~~; ~~#460~~ ferry_track / **0268**; ~~#461~~ Prom AIS/SCHEDULE_ASSUMED / **0270**; ~~#463~~ / ~~#479~~ backup; ~~#409~~ / **0271**; ~~#464~~ / **0272**; ~~#465~~; ~~#466~~ / **0273**; ~~#485~~ po promie Port SE / **0274**; ~~**#487** korytarz E22 Karlskrona (`pilne`) / **0275**~~; ~~**#489** odpięcie rejsu→status (`pilne`) / **0276**~~; ~~**#467** D3 / **0277**~~; ~~**#498**/**0278**~~; ~~**#502**/**0279**~~; **#413**/**0280**+**0281**; **#422**/**0282**; B5/**0283**; **#492** `loads.updated_at` (po #484, przed B5); ~~#441~~; ~~#442~~; ~~#437/0261~~; ~~#400/0260~~; ~~#426/0259~~; ~~#421/0258~~; ~~#405/0257~~; ~~#411/0256~~; ~~#402/0255~~; ~~#398/0254~~) — kolejka #413 → #422…
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
 **Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **~~D-1535 · t40 paliwo ×1,14 (#391/#396, 0253)~~** → **~~HOTFIX #398 · szum ryzyk (0254)~~** → **~~HOTFIX #402 · jedna bramka powiadomień (0255)~~** → **~~HOTFIX #411 · zamknięta sprawa / dzwonek (0256)~~** → **~~HOTFIX #405 · SMS tylko strefy (0257)~~** → **~~#421 · promy AIS/rozkład (0258)~~** → **~~#426 · import KSH bez powiadomień (0259)~~** → **~~#400 · 8b/8c DIMS + historia PII (0260)~~** → **~~#437 · E44 RIO (0261)~~** → **~~#442 rio-links `shipment_code`~~** → **~~#441 Edge/cron~~** → **~~#445 A10_b FERRY (0262)~~** → **#446 drobne (0263–0266)** → **#384 zaległe (0267)** → **#453 · RIO link bez pozycji** → **#455 · testy bazy po #436** → **~~#460 · ferry_track_sample 42702 (`pilne`, 0268)~~** → **#461 · Prom AIS/SCHEDULE_ASSUMED (`pilne`, 0270)** → **~~#463 cz.1 · backup + cron (`pilne`)~~** → **~~#409 · fuel_basis (0271)~~** → **~~#464 a7_permits KSH (0272)~~** → **~~#465 brama RPC mapy~~** → **~~#463 cz.2 · backup continue (`pilne`)~~** → **#463 cz.3 · COPY hang (`pilne`)** → **~~#466 D1 PII (0273)~~** → **~~#479 backup cz.6~~** → **~~#485 · po promie Port SE / Droga SE (`pilne`, 0274)~~** → **~~#487 · korytarz E22 Karlskrona (`pilne`, 0275)~~** → ~~**#489 · odpięcie rejsu→status (`pilne`, 0276)**~~ → ~~**#467 D3 maile/SMS (0277)**~~ → **#413 · Automatyzacje/Strefy (`pilne`, 0278)** → **#422 · wydajność/błędy (`pilne`, 0279)** → **#412 źródła Opcje/Finanse** → **#484 Historia zmian** → **#492 `loads.updated_at` (ekran)** → B5 (0280) → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
@@ -814,15 +814,31 @@ Trigger `trg_loads_sailing_removed_status` + `revert_status_after_sailing_remove
 ### #467 · D3 — maile wg ustawień; SMS testowe tylko bez EXTERNAL (22.10 21:25) — SCALONE (#478 `37c455a7`, 23.10.2026 17:01, migracja **0277**)
 Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery testowe SMS milczą przy **włączonej** EXTERNAL_MESSAGING; ZONE_* na listę stref także przy EXTERNAL off (P1). Szczegóły: zgłoszenie #467.
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — W TOKU (po #467; migracje **0278** + **0279**)
-Szczegóły: `dopiski/D-20261021-2057-01.md`. PR #495.
-1. P8-d: `rulesReady()` + źródło reguł — **dalej**; ~~usunięcie START (E35 Z1)~~ — **0279** (soft-delete `removed_at`, macierz E11 już ma Auto 50/20 km).
-2. P8-c: `zonesReady()` + źródło stref — **dalej**; ~~HHL_OPS bez edycji (E34 pkt 6)~~ — UI `canEditGeofence` (0278).
-3. ~~HHL_OPS: podgląd Automatyzacji bez przycisków (E35 pkt 5)~~ — `canSeeWorkflows` + RLS `workflows_read_ops` (**0278**).
+### HOTFIX #498 · PILNE — kopia zapasowa w częściach + auto-continue — SCALONE (#501 `8d3b19c0`, 23.10.2026 18:11 UTC, migracja **0278**; `deploy-main` w toku)
+Źródło: zgłoszenie #498 (`dla-cursora`, `pilne`). id 46 ERROR (I-33); ostatni OK bez ręcznej pomocy = id 37.
+1. Duże tabele w częściach: ≤ `PART_MAX_ROWS` (5000) / wywołanie; pliki `tabela.part0001.csv.gz.age`…; stan `backup_runs.progress` + ctid.
+2. Automatyczne `continue_run` (samowywołanie + cron `tower-backup-continue` co 1 min).
+3. Manifest `table_parts` + kontrola n0/n1 na sumie części; `restore.sh` składa części.
+4. I-33: brak postępu 10 min (`progress_at`), nie 30 min od startu.
+5. Testy unit + brama backup (strażnik).
+6. F7 B1': przed `scheduleContinue` zwolnij `lease_until` (dziecko bez 409).
+
+### HOTFIX #502 · PILNE — fałszywy „Prom” A10_b w porcie + powiadomienia FERRY (T-11) — SCALONE (#503 `86e80a41`, 23.10.2026 21:19, migracja **0279**; `deploy-main` w toku)
+Źródło: zgłoszenie #502 (`dla-cursora`, `pilne`). Odbiór #469 nieudany.
+1. A10_b tylko gdy statek płynie: `W_REJSIE` / `actual_departure_at` **albo** AIS > 3 kn i ≥ 1 km od PORT_OUT **i** plan ≤ now (+okno −30 min); GPS↔AIS ≤ 15 min; godzina = `actual_departure_at` / AIS (nie stara GPS).
+2. Status FERRY z automatu (A10_b / AIS / SCHEDULE / SCHEDULE_ASSUMED) bez powiadomień `status` (jak #469) — w tym `apply_geofence_status` synthetic_ferry.
+3. Naprawa danych T-11: usunąć fałszywy wpis 14:07 z osi; 12 PENDING → SUPPRESSED.
+4. Test: PORT_OUT + v=0 → bez; po actual_dep → FERRY 0 notif; F7 B4: stary GPS / wpływający / SCHEDULE cicho.
+
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — W TOKU (po #502; PR #495 F7 runda 2; migracje **0280** + **0281**)
+Szczegóły: `dopiski/D-20261021-2057-01.md`.
+1. P8-d: `rulesReady()` + źródło reguł — dalej; ~~usunięcie START (E35 Z1)~~ — **0281** soft-delete + F7 B1: `trg_geofence_matrix_notify` → `geofence_kind`/`country` (pre_arrival_*/pre_port).
+2. P8-c: `zonesReady()` + źródło stref — dalej; ~~HHL_OPS bez edycji (E34 pkt 6)~~ — UI `canEditGeofence` (**0280**).
+3. ~~HHL_OPS: podgląd Automatyzacji bez przycisków (E35 pkt 5)~~ — `canSeeWorkflows` + RLS `workflows_read_ops` (**0280**).
 Ekran / cele przejść — koordynator (`wyglad/*`).
 
 ### HOTFIX #422 · Wydajność i Błędy aplikacji — źródło w bazie (D-20261022-0113-01, `pilne`) — po #413, przed #412
-Migracja **0280**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
+Migracja **0282** (po rebase). Szczegóły: `dopiski/D-20261022-0113-01.md`.
 1. Tabela `perf_results` + RPC `perf_results_latest()` (HHL).
 2. Zasilanie: Lighthouse po deploy-main; p95 z `pg_stat_statements`; równoczesność lub „brak pomiaru”.
 3. RPC odczytu `client_errors` (7 dni, grupowanie). Front — koordynator (#423).
@@ -836,7 +852,16 @@ Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43,
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — po #484, przed B5 (niepilne, przed wydaniem 28.10)
 Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja) — **nie** przy `refresh_load_eta` / `process_position` / stanie RIO. Test: update zasobów → `updated_at` rośnie; refresh ETA → bez zmiany. Szczegóły: zgłoszenie #492.
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #413, #422, #412, #484, #492 (migracja **0281** po rebase; #409/#463/#479/#485/#467 SCALONE)
+### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — po #492, przed B5 (przed 28.10)
+Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. Front — koordynator. Szczegóły: #496.
+
+### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
+`a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
+
+### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
+Kolejność: #498 → #502 → #413 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13.
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #413, #422, #412, #484, #492 (migracja **0283** po rebase; #409/#463/#479/#485/#467 SCALONE)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1440,4 +1465,9 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 16:00 | #489 F7 r2 B3: `STATUS_*`/ręczna godzina → bez cofania; łańcuch tylko AUTO/AIS; bez placeholder sailing_id | pętla |
 | 23.10.2026 16:40 | #489/#493+#494 SCALONE (`8e03d704`/`67e18e62`, 0276); #467 merge main → **0277** (PR #478) | pętla |
 | 23.10.2026 17:05 | #467/#478 SCALONE (`37c455a7`, 0277); start #413 → **0278** (HHL_OPS read + canEdit); #463/#466/#467 zamknięte | pętla |
-| 23.10.2026 17:45 | #413 krok 2: **0279** E35 Z1 soft-delete START; #422→**0280**, B5→**0281**; dalej rulesReady/zonesReady | pętla |
+| 23.10.2026 17:45 | #413 krok 2: soft-delete START (wtedy 0279); #498/#502 przerwały — numery po rebase | pętla |
+| 23.10.2026 18:20 | #498 `pilne` (backup części) przerywa #413; migracja **0278**; skrzynka #496/#499/#500 | pętla |
+| 23.10.2026 19:45 | #501 F7 B1': zwolnij lease przed scheduleContinue; CI zielone na 9b1c6a95; #502 `pilne` wpisane §4 | pętla |
+| 23.10.2026 20:15 | #501 SCALONE (`8d3b19c0`, 0278); start #502 → **0279**; #413→0280+, #422→0281, B5→0282 | pętla |
+| 23.10.2026 20:50 | #502 F7 #503 B1–B4: GPS↔AIS ≤15 min, plan/−30 min, SCHEDULE quiet, +5 testów (status 238) | pętla |
+| 23.10.2026 21:20 | #502/#503 SCALONE (`86e80a41`, 0279); #413 → **0280**+**0281** (F7 r2: geofence_kind w macierzy) | pętla |

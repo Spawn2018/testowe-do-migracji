@@ -12,11 +12,11 @@ psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/supabase_stub.sql
 for f in supabase/migrations/*.sql; do psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "MIGRACJA $f: błąd"; exit 1; }; done
 psql "$URL" -q -v ON_ERROR_STOP=1 -f tests/db/seed.sql
 # projekty z seed.sql powstają po migracjach — ponowne nałożenie 0094–0096 (idempotentne) dodaje reguły startowe.
-# 0279 (#413 E35 Z1) soft-delete START po re-seedzie 0094 (inaczej START wracają bez removed_at).
+# 0281 (#413 E35 Z1) soft-delete START po re-seedzie 0094 (inaczej START wracają bez removed_at).
 # 0097 nie re-apply: po 0125 cron tower-polisy istnieje → DO w 0097 rzuca wyjątek.
 # Hosted: TOWER_ALLOW_MIG_REAPPLY=1 — shim inaczej no-opuje pliki migracji.
 export TOWER_ALLOW_MIG_REAPPLY=1
-for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql supabase/migrations/0165_*.sql supabase/migrations/0279_*.sql; do
+for f in supabase/migrations/0094_*.sql supabase/migrations/0095_*.sql supabase/migrations/0096_*.sql supabase/migrations/0165_*.sql supabase/migrations/0281_*.sql; do
   psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>&1 || { echo "$f ponownie: błąd"; exit 1; }
 done
 unset TOWER_ALLOW_MIG_REAPPLY
@@ -44,10 +44,38 @@ chk "missing: brak pola = prawda, jest = fałsz" "$(L '{"missing":["permit"]}' '
 chk "porównanie liczby z null → fałsz (bez wyjątku)" "$(L '{"<":[{"var":"brak"},3]}' '{}')" "f"
 chk "nieznany operator → wyjątek"           "$($PSQL -c "select wf_logic('{\"xyz\":[1]}'::jsonb, '{}'::jsonb)" 2>&1 | grep -c 'nieobsługiwany operator')" 1
 
-echo; echo "[9.3] reguły START — E35 Z1 (#413 / 0279): soft-delete, przebiegi zostają"
+echo; echo "[9.3] reguły START — E35 Z1 (#413 / 0281): soft-delete, przebiegi zostają"
 chk "START-1…7 usunięte (removed_at) albo brak — żadna włączona" "$(Q "select count(*) filter (where removed_at is null)||'/'||count(*) filter (where enabled) from workflows where project_id='$P' and code like 'START-%'")" "0/0"
 chk "macierz E11 ma Auto 50 km / Auto 20 km (START-1/2)" "$(Q "select count(distinct event_key) from notification_matrix where event_key in ('pre_arrival_site','pre_arrival_srem','pre_port')")" 3
 chk "wyłączone/usunięte nie kolejkują przebiegów" "$(EV GEOFENCE_ENTER '{"geofence_kind":"PRE_ARRIVAL"}' >/dev/null; Q "select count(*) from workflow_runs")" 0
+
+OPS=11111111-0000-0000-0000-0000000000aa
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active)
+  values ('$OPS','00000000-0000-0000-0000-00000000a001','ops-wf@test','HHL_OPS',true)
+  on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+echo; echo "[#413] HHL_OPS: odczyt Automatyzacji, bez zapisu workflows/geofences"
+val "HHL_OPS czyta workflows" $OPS "select (count(*) >= 0)::text from workflows" t
+err "HHL_OPS nie tworzy reguł (RLS)" $OPS "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'ops-x', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]')" "row-level security"
+chk "HHL_OPS update geofences → 0 wierszy" "$(run "$OPS" "with u as (update geofences set name = name where project_id='$P' returning 1) select count(*)::text from u" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" 0
+
+echo; echo "[#413 F7 B2] GEOFENCE_ENTER → macierz pre_arrival_*/pre_port (nie zone)"
+G_SREM=$(Q "select id from geofences where project_id='$P' and kind='PRE_ARRIVAL' and country='PL' limit 1")
+G_SITE=$(Q "insert into geofences (project_id, name, kind, country, geom, hysteresis_m, dwell_seconds, debounce_fixes, notify_enter, notify_exit, notify_dwell, notify_orgs, active, sort_order)
+  values ('$P','Bufor Boden F7','PRE_ARRIVAL','SE', make_circle_fence(65.8054,21.7591,50000), 1000,0,2, true,false,false,'{}',true,6) returning id")
+G_PORT=$(Q "insert into geofences (project_id, name, kind, country, geom, hysteresis_m, dwell_seconds, debounce_fixes, notify_enter, notify_exit, notify_dwell, notify_orgs, active, sort_order)
+  values ('$P','Bufor port F7','PRE_PORT','PL', make_circle_fence(54.40,18.67,20000), 500,0,2, true,false,false,'{}',true,7) returning id")
+G_LOAD=$(Q "insert into geofences (project_id, name, kind, country, geom, hysteresis_m, dwell_seconds, debounce_fixes, notify_enter, notify_exit, notify_dwell, notify_orgs, active, sort_order)
+  values ('$P','Plac F7','LOADING','PL', make_circle_fence(52.07,17.02,500), 100,0,2, true,false,false,'{}',true,8) returning id")
+$PSQL -c "delete from notifications where load_id='$L1' and template in ('ZONE_ENTER','ZONE_EXIT')" >/dev/null
+EV GEOFENCE_ENTER "{\"geofence_id\":\"$G_SITE\"}" >/dev/null
+chk "F7 B2: PRE_ARRIVAL SE → pre_arrival_site (KSH)" "$(Q "select count(*)>0 from notifications n join app_users u on u.id=n.user_id where n.load_id='$L1' and n.template='ZONE_ENTER' and n.payload->>'matrix_event'='pre_arrival_site' and u.role='CLIENT_USER'")" t
+chk "F7 B2: PRE_ARRIVAL SE → pre_arrival_site (SCX)" "$(Q "select count(*)>0 from notifications n join app_users u on u.id=n.user_id where n.load_id='$L1' and n.template='ZONE_ENTER' and n.payload->>'matrix_event'='pre_arrival_site' and u.role='CARRIER_DISPATCH'")" t
+EV GEOFENCE_ENTER "{\"geofence_id\":\"$G_SREM\"}" >/dev/null
+chk "F7 B2: PRE_ARRIVAL PL Śrem → pre_arrival_srem (KSH)" "$(Q "select count(*)>0 from notifications n join app_users u on u.id=n.user_id where n.load_id='$L1' and n.template='ZONE_ENTER' and n.payload->>'matrix_event'='pre_arrival_srem' and u.role='CLIENT_USER'")" t
+EV GEOFENCE_ENTER "{\"geofence_id\":\"$G_PORT\"}" >/dev/null
+chk "F7 B2: PRE_PORT → pre_port (HHL)" "$(Q "select count(*)>0 from notifications n join app_users u on u.id=n.user_id where n.load_id='$L1' and n.template='ZONE_ENTER' and n.payload->>'matrix_event'='pre_port' and u.org_id='00000000-0000-0000-0000-00000000a001'")" t
+EV GEOFENCE_ENTER "{\"geofence_id\":\"$G_LOAD\"}" >/dev/null
+chk "F7 B2: LOADING → nadal zone" "$(Q "select count(*)>0 from notifications n where n.load_id='$L1' and n.template='ZONE_ENTER' and n.payload->>'matrix_event'='zone' and n.payload->>'geofence_id'='$G_LOAD'")" t
 
 echo; echo "[9.4] zapis reguł — uprawnienia i walidacja (kreator przez API)"
 val "HHL_ADMIN tworzy regułę" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 't', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]') returning 'ok'" ok
@@ -135,7 +163,7 @@ val "HHL_ADMIN zapisuje STATUS_CHANGED i RISK_RAISED" $HHL "insert into workflow
 val "HHL_ADMIN zapisuje decision + email + sms (zasady stref)" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'dec', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\"},{\"type\":\"sms\",\"list\":\"LOAD_SREM\",\"kind\":\"ZONE_ENTER\"}]') returning 'ok'" ok
 err "sms poza listą stref odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"sms\",\"list\":\"OTHER\",\"kind\":\"ZONE_ENTER\"}]')" "sms tylko według zasad stref"
 err "decision z nieznanym typem odrzucone" $HHL "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'x', 'DELAY_DETECTED', 'true', '[{\"type\":\"decision\",\"decision_type\":\"XX\"}]')" "decision wymaga"
-err "START-* hard-delete nadal zablokowany (soft-delete 0279)" $HHL "delete from workflows where code='START-1'" "nie usuwa się"
+err "START-* hard-delete nadal zablokowany (soft-delete 0281)" $HHL "delete from workflows where code='START-1'" "nie usuwa się"
 err "START po Z1 nie włącza się" $HHL "update workflows set enabled=true where code='START-1'" "nie włącza się|E35 Z1"
 
 # zdarzenie testowe: reguła CREATED → worker → decyzja; wyłączona → SKIPPED
@@ -179,10 +207,10 @@ err "KSH nie wywoła wf_duplicate_check" $KSH "select wf_duplicate_check('DELAY_
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update workflows set name = name || ' hist' where code='T-B5'; commit" >/dev/null
 val "B5: historia zmian reguły (kto, kiedy, co)" $HHL "select (who is not null and action = 'ZMIENIONO' and changes ? 'po')::text from workflow_rule_history((select id from workflows where code='T-B5'), 5) order by at desc limit 1" true
 
-# START soft-delete (0279) — 0165 idempotentna; START pozostają removed i wyłączone
+# START soft-delete (0281) — 0165 idempotentna; START pozostają removed i wyłączone
 export TOWER_ALLOW_MIG_REAPPLY=1; psql "$URL" -q -v ON_ERROR_STOP=1 -f supabase/migrations/0165_b5_workflow_creator.sql >/dev/null 2>&1; R165=$?; unset TOWER_ALLOW_MIG_REAPPLY
 chk "B5: 0165 ponownie OK; START removed/wyłączone (#413 Z1)" "$R165/$(Q "select count(*) filter (where enabled) from workflows where code like 'START-%'")" "0/0"
-chk "#413: audit ROW_DELETE dla START z powodem" "$(Q "select count(*)>=1 from audit_log where entity='workflows' and action='ROW_DELETE' and source like '%0279%'")" t
+chk "#413: audit ROW_DELETE dla START z powodem" "$(Q "select count(*)>=1 from audit_log where entity='workflows' and action='ROW_DELETE' and source like '%0281%'")" t
 if [ "$(Q "select to_regclass('cron.job') is null")" = "t" ]; then CRN=2; else CRN=$(Q "select count(*) from cron.job where jobname in ('tower-reguly','tower-reguly-dzien')"); fi
 chk "B5: zadania tower-reguly i tower-reguly-dzien (gdy pg_cron)" "$CRN" 2
 chk "B5: wf_daily_tick tylko o 06:xx Europe/Warsaw" "$(Q "select wf_daily_tick('2026-10-05 03:30+00')")" 0
