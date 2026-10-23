@@ -5,9 +5,10 @@
  */
 import { useTowerStore } from '../store/useTowerStore';
 import type { Geofence, GeofenceType, LoadEvent } from '../types';
+import { accountRole } from './accountRole';
 import { getNowIso } from './frozenNow';
 import { canEditGeofence } from './permissions';
-import { edgeM, routeOf, type ZoneRoute, type ZoneRow } from './p8cZones';
+import { edgeM, routeOf, type ZoneChange, type ZoneRoute, type ZoneRow } from './p8cZones';
 import { trackingPhase } from './stageTiles';
 
 type NearPos = { code: string; lat: number; lng: number; at: string; label: string };
@@ -126,7 +127,8 @@ async function prodSetActive(id: string, active: boolean, _reason: string): Prom
 }
 
 export function prodZonesSource() {
-  const admin = canEditGeofence('HHL');
+  /* jak canManageWorkflows w p8dProd: zapis tylko Administrator HHL (profil), nie sam widok HHL */
+  const admin = canEditGeofence('HHL') && accountRole('HHL') === 'HHL_ADMIN';
   return {
     zones: prodZones,
     history: prodHistory,

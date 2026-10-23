@@ -830,7 +830,7 @@ Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery test
 3. Naprawa danych T-11: usunąć fałszywy wpis 14:07 z osi; 12 PENDING → SUPPRESSED.
 4. Test: PORT_OUT + v=0 → bez; po actual_dep → FERRY 0 notif; F7 B4: stary GPS / wpływający / SCHEDULE cicho.
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — W TOKU (po #502; PR #495 F7 runda 2; migracje **0280** + **0281**)
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — W TOKU (~~#495~~ **0280**+**0281** SCALONE `6334c919`; źródła P8 — `pakiet/hotfix-413-rules-zones-ready`)
 Szczegóły: `dopiski/D-20261021-2057-01.md`.
 1. P8-d: ~~`rulesReady()` + źródło reguł~~ — podłączone (store/RPC, mapowanie E35); ~~usunięcie START (E35 Z1)~~ — **0281** soft-delete + F7 B1: `trg_geofence_matrix_notify` → `geofence_kind`/`country` (pre_arrival_*/pre_port).
 2. P8-c: ~~`zonesReady()` + źródło stref~~ — podłączone (store + upsert); ~~HHL_OPS bez edycji (E34 pkt 6)~~ — UI `canEditGeofence` (**0280**).
