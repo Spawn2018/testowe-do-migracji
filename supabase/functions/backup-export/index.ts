@@ -12,6 +12,7 @@
  *     funkcja niczego nie usuwa ani nie listuje. Przebieg w backup_runs (historia, błędy).
  *  5. #463 (F7 po #472): limit wall-clock Edge ~150 s → po WALL_BUDGET_MS kończymy wywołanie i
  *     samowywołanie z `{ continue_run }` (stan: backup_runs.tables / prefix / bytes). Cron bez zmian.
+ *  6. #479: COPY bez `sql.begin` i bez `await query` po `.readable()` (wzór id 37 / PR2).
  * Sekrety: BACKUP_AGE_RECIPIENT, BACKUP_WRITER_URL, BACKUP_WRITER_SECRET.
  * SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL — platforma.
  * Utrata danych w najgorszym razie: do 24 h (kopia raz na dobę).
@@ -107,32 +108,32 @@ function readCopyStream(stream: CopyReadable, label: string, timeoutMs = TABLE_C
 }
 
 /**
- * COPY TO STDOUT przez readable — po skończeniu strumienia trzeba domknąć Promise zapytania
- * (postgres.js), inaczej transakcja zostaje „idle in transaction” / ClientRead (#463 id 39:
- * hang na count po auth_login_events).
+ * COPY TO STDOUT — wyłącznie zdarzenia data/end (PR2 `ccbfd8b5`, id 37 OK w 62 s).
+ *
+ * #479 / id 40: po #477 (`await query` po `.readable()` w `sql.begin` RR) Edge nadal
+ * IDLE_TIMEOUT 150 s na pierwszej tabeli po `audit_log` (`auth_login_events`, 85 wierszy /
+ * 24 kB) — `continue_run` bez postępu. `await query` w Deno nie domyka COPY; w `catch`
+ * po timeout 40 s też wisi → brak ERROR w `backup_runs`. Bez `begin`: każdy COPY to
+ * osobna niejawna transakcja (jak id 37). count(*) przed COPY (osobne zapytanie) —
+ * dopuszczalny TOCTOU względem F7 RR; backup nie jest migawką księgową.
  */
 async function copySqlToCsv(
-  tx: { unsafe: (s: string) => Promise<unknown> & { readable: () => Promise<CopyReadable> } },
+  db: { unsafe: (s: string) => Promise<unknown> & { readable: () => Promise<CopyReadable> } },
   copySql: string,
   label: string,
 ): Promise<Uint8Array> {
-  const query = tx.unsafe(copySql);
-  const stream = await query.readable();
+  const stream = await db.unsafe(copySql).readable();
   try {
-    const csv = await readCopyStream(stream, label);
-    await query;
-    return csv;
+    return await readCopyStream(stream, label);
   } catch (e) {
     try { stream.destroy?.(e instanceof Error ? e : undefined); } catch { /* ignore */ }
-    try { await query; } catch { /* ignore */ }
     throw e;
   }
 }
 
 /**
- * Jedna tabela w jednej transakcji repeatable read (F7 #472):
- * najpierw count(*) w RR, potem COPY (mała → jeden; duża → kawałki ctid);
- * csvRowCount musi równać count z tej samej migawki.
+ * Jedna tabela: count(*) → COPY (mała = jeden strzał; duża = kawałki ctid) → assert liczby.
+ * Bez `sql.begin` — patrz komentarz przy `copySqlToCsv` (#479).
  */
 async function copyTableCsv(
   sql: ReturnType<typeof postgres>,
@@ -140,46 +141,44 @@ async function copyTableCsv(
   selectList: string | null,
 ): Promise<Uint8Array> {
   const t = assertSafeIdent(table);
-  return sql.begin('isolation level repeatable read', async (tx) => {
-    const [meta] = await tx<{ est: string | number; bytes: string | number; block: number }[]>`
-      select c.reltuples::bigint as est,
-             pg_relation_size(c.oid)::bigint as bytes,
-             current_setting('block_size')::int as block
-        from pg_class c
-        join pg_namespace n on n.oid = c.relnamespace
-       where n.nspname = 'public' and c.relname = ${table}`;
-    const [cntRow] = await tx.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
-    const dbCount = Number(cntRow?.n ?? -1);
-    const est = Number(meta?.est ?? 0);
-    const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
-    let csv: Uint8Array;
-    if (!shouldChunkByEstimate(est)) {
-      const copySql = selectList
-        ? `copy (select ${selectList} from public.${t}) to stdout with (format csv, header true)`
-        : `copy public.${t} to stdout with (format csv, header true)`;
-      csv = await copySqlToCsv(tx, copySql, t);
-    } else {
-      const parts: Uint8Array[] = [];
-      let header = true;
-      for (const { from, to } of ctidPageRanges(pages)) {
-        const copySql = copyCtidRangeSql(t, from, to, selectList, header);
-        const label = to === null ? `${t}[${from},∞)` : `${t}[${from},${to})`;
-        const part = await copySqlToCsv(tx, copySql, label);
-        if (part.byteLength) parts.push(part);
-        header = false;
-      }
-      if (!parts.length) {
-        const copySql = selectList
-          ? `copy (select ${selectList} from public.${t} where false) to stdout with (format csv, header true)`
-          : `copy (select * from public.${t} where false) to stdout with (format csv, header true)`;
-        csv = await copySqlToCsv(tx, copySql, `${t}[empty]`);
-      } else {
-        csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
-      }
+  const [meta] = await sql<{ est: string | number; bytes: string | number; block: number }[]>`
+    select c.reltuples::bigint as est,
+           pg_relation_size(c.oid)::bigint as bytes,
+           current_setting('block_size')::int as block
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relname = ${table}`;
+  const [cntRow] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
+  const dbCount = Number(cntRow?.n ?? -1);
+  const est = Number(meta?.est ?? 0);
+  const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
+  let csv: Uint8Array;
+  if (!shouldChunkByEstimate(est)) {
+    const copySql = selectList
+      ? `copy (select ${selectList} from public.${t}) to stdout with (format csv, header true)`
+      : `copy public.${t} to stdout with (format csv, header true)`;
+    csv = await copySqlToCsv(sql, copySql, t);
+  } else {
+    const parts: Uint8Array[] = [];
+    let header = true;
+    for (const { from, to } of ctidPageRanges(pages)) {
+      const copySql = copyCtidRangeSql(t, from, to, selectList, header);
+      const label = to === null ? `${t}[${from},∞)` : `${t}[${from},${to})`;
+      const part = await copySqlToCsv(sql, copySql, label);
+      if (part.byteLength) parts.push(part);
+      header = false;
     }
-    assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), dbCount, t);
-    return csv;
-  });
+    if (!parts.length) {
+      const copySql = selectList
+        ? `copy (select ${selectList} from public.${t} where false) to stdout with (format csv, header true)`
+        : `copy (select * from public.${t} where false) to stdout with (format csv, header true)`;
+      csv = await copySqlToCsv(sql, copySql, `${t}[empty]`);
+    } else {
+      csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
+    }
+  }
+  assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), dbCount, t);
+  return csv;
 }
 
 Deno.serve(async (req) => {
