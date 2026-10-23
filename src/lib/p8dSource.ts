@@ -1,10 +1,10 @@
 /**
  * wyglad/P8-d — skąd Automatyzacje (E35) biorą własne reguły, przebiegi, historię i sprawdzenie „na ostatnich 30 dniach”
- * oraz jak zapisują zmianę z powodem. Produkcja: `null` = nie podłączone — zakładka „Własne reguły” zostaje przy dzisiejszej
- * liście i kreatorze do Twojego podłączenia w P8 (dopisek do PR wyglad/P8-d). Demo: zapis w pamięci strony.
- * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0). Bez zapytań.
+ * oraz jak zapisują zmianę z powodem. Demo: pamięć strony. Produkcja (#413): store + RPC historii / soft-delete.
+ * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0).
  */
 import { demoRuleCheck, demoRuleHistory, demoRuleRemove, demoRuleRuns, demoRuleSave, demoRuleSetEnabled, demoRules, demoRulesNow, demoRuleZones } from './p8dDemo';
+import { prodRulesSource } from './p8dProd';
 import type { CheckResult, OwnRule, RuleDraft, RuleHist, RuleRun, ZoneOption } from './p8dRules';
 
 export interface RulesSource {
@@ -26,10 +26,10 @@ export interface RulesSource {
 }
 
 export function rulesOf(): RulesSource | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase'
-    ? {
+  return import.meta.env.VITE_AUTH_MODE === 'supabase'
+    ? prodRulesSource()
+    : {
       rules: demoRules, initial: demoRulesNow(), runs: demoRuleRuns, history: demoRuleHistory, zones: demoRuleZones,
       check: demoRuleCheck, save: demoRuleSave, setEnabled: demoRuleSetEnabled, remove: demoRuleRemove,
-    }
-    : null;
+    };
 }

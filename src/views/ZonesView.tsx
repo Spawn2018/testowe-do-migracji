@@ -86,14 +86,16 @@ const edgeText = (m: number) => (m > 0 ? p8ct('p8c_impact_out', { m: radiusText(
 const countryOf = (z: Pick<ZoneRow, 'country' | 'lat'>): 'PL' | 'SE' => (z.country ? (z.country === 'SE' ? 'SE' : 'PL') : z.lat > 56 ? 'SE' : 'PL');
 
 export function ZonesView() {
-  const src = useMemo(() => zonesOf(), []);
   const phone = useIsPhone();
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
+  const acct = accountRole(role);
+  /* #413: źródło zależne od konta (saveZone tylko Administrator HHL) */
+  const src = useMemo(() => zonesOf(), [acct]);
   /* E9: zmienia tylko Administrator HHL; Operacje HHL — podgląd */
-  const canEdit = role === 'HHL' && accountRole(role) !== 'HHL_OPS' && !!src?.saveZone;
+  const canEdit = role === 'HHL' && acct !== 'HHL_OPS' && !!src?.saveZone;
   const [zones, setZones] = useState<ZoneRow[] | null>(src?.initial ?? null);
   const [loadErr, setLoadErr] = useState(false);
   const [rev, setRev] = useState(0);

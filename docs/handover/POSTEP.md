@@ -4511,3 +4511,8 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422/#412 w planie (bez nowych do wpisania).
 - Scalanie: brak — #495 bez „F7: gotowe” po `c89b4fdc`; CI `db` czerwone (workflows 76/78).
 - Bieżąca: **#413** `workflows.sh`: (1) OPS read — `::text` → oczekiwane `true`; (2) B5 e-mail krytyczny — filtr `auth_id` HHL (OPS w audience HHL). Dalej: CI + F7; potem `rulesReady`/`zonesReady`.
+
+## 2026-10-23 22:30 — #413 rulesReady/zonesReady (P8-d/P8-c na produkcji)
+
+- Skrzynka: #413 `pilne` (fragment pozostały po #495); #422 dalej w kolejce.
+- Bieżąca: **#413** `rulesOf`/`zonesOf` produkcja (store + `workflow_rule_history` / soft-delete / `upsert_geofence_circle`); `rulesReady`=`rulesOf()!==null`, to samo dla stref; zapis tylko HHL_ADMIN. Testy `p8d-rules`, `p8c-zones`, `b5-workflow-creator` (E35).

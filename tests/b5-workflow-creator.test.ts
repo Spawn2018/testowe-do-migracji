@@ -19,40 +19,37 @@ vi.mock('../src/lib/prodFacade', async (orig) => ({ ...(await orig<typeof import
 
 const profile = (role: string) => ({ user_id: 'u', email: 'a@log-mar.pl', full_name: 'A', role, org_code: 'HHL', org_name: 'HHL', locale: 'pl', active: true }) as never;
 
-/* wyglad/P8-d (E35, decyzja 08.10.2026, 12:14): w demo Automatyzacje to strona E35 (tests/p8d-rules.test.ts,
-   e8-phone-gate „wyglad/P8-d”); widok B-5 zostaje w produkcji do podłączenia źródła reguł w P8 — tu sprawdzany
-   w trybie produkcji (VITE_AUTH_MODE=supabase, rulesReady() = false). */
-describe('B-5: przycisk „Nowa automatyzacja” (produkcja)', () => {
-  /*
-   * Po P8-d store w supabase startuje pusty (BK3); SSR zustanda nie widzi setState, więc wierszy
-   * z wf-edit / .sw może nie być. Przycisk i brak przycisku sprawdzamy w HTML; edycję/włączniki — w kodzie Legacy.
-   */
+/* wyglad/P8-d (E35) / #413: produkcja ma rulesReady() — strona RulesPage zamiast Legacy B-5. */
+describe('E35 / #413: Automatyzacje na produkcji (RulesPage)', () => {
   beforeEach(() => { vi.stubEnv('VITE_AUTH_MODE', 'supabase'); });
-  afterEach(() => { setAuthProfile(null); vi.unstubAllEnvs(); });
-  it('HHL_ADMIN: przycisk; w Legacy — edycja i włączniki bez disabled dla manage', async () => {
-    setAuthProfile(profile('HHL_ADMIN'));
-    const { WorkflowsView } = await import('../src/views/WorkflowsView');
-    const html = renderToStaticMarkup(createElement(WorkflowsView));
-    expect(html).toContain('data-wf-new');
-    expect(html).toContain('>Nowa automatyzacja<');
-    const src = readFileSync(new URL('../src/views/WorkflowsView.tsx', import.meta.url), 'utf8');
-    expect(src).toContain('className="chipbtn wf-edit"');
-    expect(src).toMatch(/className="sw"[\s\S]*?disabled=\{!manage\}/);
-    const sw = [...html.matchAll(/<button[^>]*class="sw"[^>]*>/g)].map((m) => m[0]);
-    for (const s of sw) expect(s).not.toContain('disabled');
+  afterEach(async () => {
+    const { setAuthProfile: clear } = await import('../src/auth/profile');
+    clear(null);
+    vi.unstubAllEnvs();
+    vi.resetModules();
   });
-  it('inna rola (HHL_DISPATCH): bez przycisku i edycji; włączniki zablokowane gdy są wiersze', async () => {
-    setAuthProfile(profile('HHL_DISPATCH'));
+  it('HHL_ADMIN: „+ Nowa reguła”; bez Legacy data-wf-new', async () => {
+    vi.resetModules();
+    const { setAuthProfile: set } = await import('../src/auth/profile');
+    set(profile('HHL_ADMIN'));
     const { WorkflowsView } = await import('../src/views/WorkflowsView');
     const html = renderToStaticMarkup(createElement(WorkflowsView));
+    expect(html).toContain('data-rule-new');
+    expect(html).toContain('+ Nowa reguła');
     expect(html).not.toContain('data-wf-new');
-    expect(html).not.toContain('wf-edit');
-    for (const s of [...html.matchAll(/<button[^>]*class="sw"[^>]*>/g)].map((m) => m[0])) expect(s).toContain('disabled');
   });
-  it('kod: kreator w oknie z czterema grupami wyzwalaczy, akcjami, usuwaniem i historią', () => {
+  it('HHL_OPS: Tylko podgląd — bez „+ Nowa reguła”', async () => {
+    vi.resetModules();
+    const { setAuthProfile: set } = await import('../src/auth/profile');
+    set(profile('HHL_OPS'));
+    const { WorkflowsView } = await import('../src/views/WorkflowsView');
+    const html = renderToStaticMarkup(createElement(WorkflowsView));
+    expect(html).toContain('Tylko podgląd');
+    expect(html).not.toContain('data-rule-new');
+  });
+  it('kod Legacy B-5 zostaje w pliku (do usunięcia w osobnej paczce)', () => {
     const src = readFileSync(new URL('../src/views/WorkflowsView.tsx', import.meta.url), 'utf8');
-    for (const k of ['data-wf-creator', 'data-wf-act="notify"', 'data-wf-act="decision"', 'data-wf-act="email"', 'data-wf-act="sms"', 'data-wf-delete', 'data-wf-dup', 'b5_history']) expect(src).toContain(k);
-    expect(src).toMatch(/GROUPS: TriggerGroup\[\] = \['event', 'status', 'risk', 'deadline'\]/);
+    for (const k of ['data-wf-creator', 'data-wf-act="notify"', 'LegacyWorkflowsView']) expect(src).toContain(k);
   });
 });
 

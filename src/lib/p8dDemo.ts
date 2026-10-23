@@ -1,7 +1,7 @@
 /**
  * wyglad/P8-d — dane demo Automatyzacji (E35): po zmianie lista własnych reguł jest pusta (reguły START znikają albo
  * przechodzą do „Kto co dostaje”); przebiegi i historia jak w bazie 08.10 (E35 „Fakty”), pobyty w strefach SG-03 i SG-24
- * jak w `load_events` (E34). Zapis w pamięci strony. Tylko demo — `rulesOf()` w produkcji zwraca `null`.
+ * jak w `load_events` (E34). Zapis w pamięci strony. Tylko demo — produkcja: `p8dProd` (#413).
  */
 import {
   builtinOverlap, dwellHits, sameRules, type CheckHit, type CheckResult, type OwnRule, type RuleDraft, type RuleHist,

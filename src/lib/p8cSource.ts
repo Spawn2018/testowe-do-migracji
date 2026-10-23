@@ -1,10 +1,10 @@
 /**
  * wyglad/P8-c — skąd strona Strefy (E34) bierze strefy, historię zmian i ostatnie pozycje przy strefie oraz jak zapisuje
- * zmianę z powodem. Produkcja: `null` = nie podłączone — menu Strefy zostaje przy dzisiejszej tabeli do Twojego
- * podłączenia w P8 (dopisek do PR wyglad/P8-c). Demo: zapis w pamięci strony.
- * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0). Bez zapytań.
+ * zmianę z powodem. Demo: pamięć strony. Produkcja (#413): store + upsert_geofence_circle.
+ * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0).
  */
 import { demoZoneHistory, demoZoneNear, demoZoneSave, demoZoneSetActive, demoZones, demoZonesNow } from './p8cDemo';
+import { prodZonesSource } from './p8cProd';
 import type { GeofenceType } from '../types';
 import type { ZoneChange, ZoneRoute, ZoneRow } from './p8cZones';
 
@@ -40,8 +40,7 @@ export interface ZonesSource {
 }
 
 export function zonesOf(): ZonesSource | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase'
-    ? { zones: demoZones, initial: demoZonesNow(), history: demoZoneHistory, near: demoZoneNear, saveZone: demoZoneSave, setActive: demoZoneSetActive }
-    : null;
+  return import.meta.env.VITE_AUTH_MODE === 'supabase'
+    ? prodZonesSource()
+    : { zones: demoZones, initial: demoZonesNow(), history: demoZoneHistory, near: demoZoneNear, saveZone: demoZoneSave, setActive: demoZoneSetActive };
 }
-
