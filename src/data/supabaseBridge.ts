@@ -18,9 +18,10 @@ let active: ReturnType<typeof createSupabaseProvider> | null = null;
 export async function refreshFromServer(opts: { keepSelection?: boolean } = {}): Promise<void> {
   if (!active) return;
   const p = active;
-  const ver = p.loadsVersion().catch(() => null);
+  /* wersja PRZED zrzutem: zmiana w trakcie zrzutu da przy następnym sprawdzeniu nowszą wersję, więc nie zginie */
+  const v = await p.loadsVersion().catch(() => null);
   const snap = await p.loadSnapshot();
-  const v = await ver;
+  if (p !== active) return;
   if (v != null) lastLoadsVersion = v;
   const sel = useTowerStore.getState().selectedLoadId;
   const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
