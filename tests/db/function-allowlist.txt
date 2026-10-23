@@ -208,3 +208,6 @@ authenticated unmark_invoice_paid
 authenticated upsert_geofence_circle
 authenticated wf_duplicate_check
 authenticated workflow_rule_history
+authenticated workflow_rule_write
+authenticated workflow_rule_set_enabled
+authenticated workflow_rule_soft_delete

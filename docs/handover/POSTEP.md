@@ -4529,3 +4529,21 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#505** (Spawn2018) — wpisane PLAN §4 po #413 (migr. **0282**; #422→0283, B5→0284), §8, tu; nie przerywa #504.
 - Scalanie: brak F7 „gotowe”; CI visual zielone na `503ab23f`; F7 r2: 2 drobne przed „gotowe”.
 - Bieżąca: **#413** / PR #504 — (1) trasa w prod `disabled` + hint do #505; (2) strefa `dwellMin` ≤ 0 → „bez progu (od razu po wjeździe)”. Po push: czekam F7 „gotowe do scalenia”.
+
+## 2026-10-23 23:50 — #504 SCALONE; start #505 (0282)
+
+- Skrzynka: #505 bieżąca; #500/#499/#496/#492/#484/#422 w kolejce (bez `pilne` przerywających).
+- Scalanie: **#504** `c007736f` (F7 „gotowe do scalenia” na `c47c74f1`, CI unit/visual zielone).
+- Bieżąca: **#505** `pakiet/hotfix-505-route-ops-history`, migracja **0282**: `v_geofences_circle.route`, `upsert` `p_route`/`p_reason`, `audit_reason` → `new_value.reason`, `workflow_rule_history` dla HHL_OPS + `po` przy DELETE, RPC `workflow_rule_write`/`set_enabled`/`soft_delete`; front route odblokowany; workflows **86**.
+
+## 2026-10-24 00:25 — #505 CI: unit + workflows (PR #506)
+
+- Skrzynka: bez `pilne`; kolejka bez zmian (#505 bieżąca).
+- Scalanie: brak F7 „gotowe”; CI na `bb8d76f7`: unit FAIL (`CheckHit.loadId`), db FAIL (workflows 83/86), visual OK.
+- Bieżąca: **#505** — (1) `p8dProd` status hits + `loadId`; (2) re-apply **0282** po 0165 w `workflows.sh`; (3) zapis/soft-delete z JWT HHL + commit; historia soft-delete przez `val` HHL; (4) nullguard **715** (+3 GUARD ×5). Push → CI.
+
+## 2026-10-24 01:15 — #505 db FAIL: historia soft-delete przez Q() (PR #506)
+
+- Skrzynka: #505/#500/#499/#496/#492/#484/#422 (Spawn2018) — już w planie; bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe”; unit/visual zielone na `3527b0a8`; db FAIL workflows 89/90 — `workflow_rule_history` przez `Q()` bez JWT → RAISE.
+- Bieżąca: **#505** — asercja „po w historii (ROW_UPDATE)” przez `val $HHL` (jak powód w `po`). Push → CI.

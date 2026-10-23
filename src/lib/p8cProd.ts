@@ -1,15 +1,21 @@
 /**
  * #413 / E34 Z1–Z2 — źródło Stref na produkcji (store + upsert_geofence_circle).
+ * #505: route z bazy (v_geofences_circle / p_route); powód → tower.audit_reason.
  * Historia: brak RPC audit dla geofences → pusta tablica (lepiej pusto niż zmyślone).
- * Powód z UI: przyjmujemy; bez migracji nie ma osobnego pola reason w audycie strefy.
  */
+import { getSupabase } from '../auth/client';
+import { geofenceToRpc, type OrgRow } from '../data/mappers';
+import { isServerId } from '../data/registry';
 import { useTowerStore } from '../store/useTowerStore';
+
 import type { Geofence, GeofenceType, LoadEvent } from '../types';
 import { accountRole } from './accountRole';
 import { getNowIso } from './frozenNow';
 import { canEditGeofence } from './permissions';
 import { edgeM, routeOf, type ZoneChange, type ZoneRoute, type ZoneRow } from './p8cZones';
 import { trackingPhase } from './stageTiles';
+
+const PROJECT_CODE = 'STEGRA_BODEN';
 
 type NearPos = { code: string; lat: number; lng: number; at: string; label: string };
 type ZoneDraft = {
@@ -37,10 +43,10 @@ function lastFor(zoneId: string, events: LoadEvent[], codeOf: Map<string, string
 }
 
 function toRow(g: Geofence, events: LoadEvent[], codeOf: Map<string, string>): ZoneRow {
-  /* route: kolumna w bazie (0238); widok v_geofences_circle jej nie zwraca — routeOf() z nazwy (E34). */
+  /* #505: route z kolumny; routeOf tylko gdy baza null (stare wiersze / nieportowe). */
   return {
     ...g,
-    route: routeOf({ name: g.name, type: g.type, route: null }),
+    route: routeOf({ name: g.name, type: g.type, route: g.route ?? null }),
     last: lastFor(g.id, events, codeOf),
   };
 }
@@ -93,13 +99,27 @@ export function pickNearLoads(
     }));
 }
 
+async function loadGeoContext(): Promise<{ projectId: string; orgs: OrgRow[] }> {
+  const sb = await getSupabase();
+  const [orgsRes, projRes] = await Promise.all([
+    sb.from('organizations').select('id,code,kind'),
+    sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle(),
+  ]);
+  if (orgsRes.error) throw new Error(orgsRes.error.message);
+  if (projRes.error) throw new Error(projRes.error.message);
+  if (!projRes.data) throw new Error('strefa: brak projektu');
+  return { projectId: (projRes.data as { id: string }).id, orgs: (orgsRes.data ?? []) as OrgRow[] };
+}
+
+/** F7 #506 pkt 4: await RPC — ok dopiero po odpowiedzi bazy (nie writeThrough). */
 async function prodSaveZone(
   id: string | null,
   z: ZoneDraft,
-  _reason: string,
+  reason: string,
 ): Promise<{ ok: boolean; zone?: ZoneRow; error?: string }> {
   const store = useTowerStore.getState();
   const old = id ? store.geofences.find((g) => g.id === id) : null;
+  const port = z.type === 'PORT_OUT' || z.type === 'PRE_PORT' || z.type === 'PORT_IN';
   const row: Geofence = {
     id: old?.id ?? `geo-${Date.now().toString(36)}`,
     name: z.name,
@@ -112,6 +132,7 @@ async function prodSaveZone(
     samplesRequired: z.samplesRequired,
     dwellMin: z.dwellMin,
     country: z.country,
+    route: port ? z.route : null,
     notifyHhl: old?.notifyHhl ?? false,
     notifyKsh: old?.notifyKsh ?? false,
     notifyScx: old?.notifyScx ?? false,
@@ -119,20 +140,43 @@ async function prodSaveZone(
     trigger: old?.trigger ?? 'ENTER',
   };
   try {
-    store.saveGeofence(row);
+    const sb = await getSupabase();
+    const { projectId, orgs } = await loadGeoContext();
+    const serverId = id && isServerId(id) ? id : null;
+    const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(row, projectId, orgs, serverId, reason));
+    if (res.error) return { ok: false, error: res.error.message };
+    const savedId = String(res.data);
+    const saved: Geofence = { ...row, id: savedId };
+    useTowerStore.setState((s) => {
+      const exists = s.geofences.some((x) => x.id === savedId || (id != null && x.id === id));
+      return {
+        geofences: exists
+          ? s.geofences.map((x) => (x.id === savedId || x.id === id ? saved : x))
+          : [...s.geofences, saved],
+      };
+    });
     const codeOf = new Map(store.loads.map((l) => [l.id, l.code]));
-    return { ok: true, zone: { ...toRow(row, store.events, codeOf), route: z.route } };
+    return { ok: true, zone: toRow(saved, store.events, codeOf) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'zapis nieudany' };
   }
 }
 
-async function prodSetActive(id: string, active: boolean, _reason: string): Promise<{ ok: boolean }> {
-  const store = useTowerStore.getState();
-  const g = store.geofences.find((x) => x.id === id);
+async function prodSetActive(id: string, active: boolean, reason: string): Promise<{ ok: boolean }> {
+  const g = useTowerStore.getState().geofences.find((x) => x.id === id);
   if (!g) return { ok: false };
   try {
-    store.saveGeofence({ ...g, active });
+    const sb = await getSupabase();
+    const { projectId, orgs } = await loadGeoContext();
+    const next = { ...g, active };
+    const res = await sb.rpc(
+      'upsert_geofence_circle',
+      geofenceToRpc(next, projectId, orgs, isServerId(id) ? id : null, reason),
+    );
+    if (res.error) return { ok: false };
+    useTowerStore.setState((s) => ({
+      geofences: s.geofences.map((x) => (x.id === id ? next : x)),
+    }));
     return { ok: true };
   } catch {
     return { ok: false };

@@ -1,9 +1,11 @@
 /**
  * #413 / E35 Z2–Z3 — źródło Automatyzacji na produkcji (store + RPC historii / soft-delete).
- * Powód z UI: przyjmujemy; audit_log z triggera nie ma pola reason bez migracji — nie zmyślamy wpisu.
+ * #505: powód UI → tower.audit_reason (RPC workflow_rule_*); historia także dla HHL_OPS.
  */
 import { getSupabase } from '../auth/client';
 import { statusToDb } from '../data/mappers';
+import { isServerId } from '../data/registry';
+import { workflowToDb } from '../data/workflowMap';
 import { loadRuleHistory } from '../data/workflowServer';
 import { useTowerStore } from '../store/useTowerStore';
 import { getNowIso } from './frozenNow';
@@ -14,6 +16,7 @@ import {
 } from './p8dRules';
 import { canManageWorkflows } from './prodFacade';
 
+const PROJECT_CODE = 'STEGRA_BODEN';
 const since30 = (now: string) => Date.parse(now) - 30 * 86_400_000;
 
 function storeRules(): OwnRule[] {
@@ -111,17 +114,48 @@ async function prodCheck(d: RuleDraft, selfId: string | null): Promise<CheckResu
   };
 }
 
-async function prodSave(id: string | null, d: RuleDraft, _reason: string | null): Promise<{ ok: boolean; rule?: OwnRule; error?: string }> {
-  /* _reason: E35 Z3 — UI wymaga przy zmianie; bez migracji audit nie ma pola reason. */
+/** F7 #506 pkt 4: await RPC — ok dopiero po odpowiedzi bazy (nie writeThrough). */
+async function prodSave(id: string | null, d: RuleDraft, reason: string | null): Promise<{ ok: boolean; rule?: OwnRule; error?: string }> {
   const patch = draftToWorkflow(d);
-  const store = useTowerStore.getState();
+  const row = workflowToDb(patch);
   try {
-    if (id) {
-      store.updateWorkflow(id, patch);
-      const rule = workflowToOwn({ ...patch, id, runCount: store.workflows.find((w) => w.id === id)?.runCount ?? 0 }, store.workflowRuns, since30(getNowIso()));
+    const sb = await getSupabase();
+    let projectId: string | null = null;
+    const serverId = id && isServerId(id) ? id : null;
+    if (!serverId) {
+      const p = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
+      if (p.error) return { ok: false, error: p.error.message };
+      if (!p.data) return { ok: false, error: 'reguła: brak projektu' };
+      projectId = (p.data as { id: string }).id;
+    }
+    const res = await sb.rpc('workflow_rule_write', {
+      p_id: serverId,
+      p_project: projectId,
+      p_name: row.name ?? null,
+      p_description: row.description ?? null,
+      p_trigger_type: row.trigger_type ?? null,
+      p_condition: row.condition ?? null,
+      p_actions: row.actions ?? null,
+      p_enabled: row.enabled ?? null,
+      p_reason: reason?.trim() || null,
+    });
+    if (res.error) return { ok: false, error: res.error.message };
+    const newId = String(res.data);
+    const store = useTowerStore.getState();
+    if (serverId) {
+      useTowerStore.setState((s) => ({
+        workflows: s.workflows.map((w) => (w.id === serverId ? { ...w, ...patch } : w)),
+      }));
+      const rule = workflowToOwn(
+        { ...patch, id: serverId, runCount: store.workflows.find((w) => w.id === serverId)?.runCount ?? 0 },
+        store.workflowRuns,
+        since30(getNowIso()),
+      );
       return rule ? { ok: true, rule } : { ok: true };
     }
-    const newId = store.createWorkflow(patch);
+    useTowerStore.setState((s) => ({
+      workflows: [{ ...patch, id: newId, runCount: 0 }, ...s.workflows],
+    }));
     const rule: OwnRule = {
       id: newId, name: d.name.trim(), when: d.when, then: { ...d.then, notify: [...d.then.notify] },
       enabled: d.enabled, runs30: 0, lastRunAt: null,
@@ -132,9 +166,14 @@ async function prodSave(id: string | null, d: RuleDraft, _reason: string | null)
   }
 }
 
-async function prodSetEnabled(id: string, on: boolean, _reason: string): Promise<{ ok: boolean }> {
+async function prodSetEnabled(id: string, on: boolean, reason: string): Promise<{ ok: boolean }> {
   try {
-    useTowerStore.getState().updateWorkflow(id, { enabled: on });
+    const sb = await getSupabase();
+    const res = await sb.rpc('workflow_rule_set_enabled', { p_id: id, p_enabled: on, p_reason: reason.trim() || null });
+    if (res.error) return { ok: false };
+    useTowerStore.setState((s) => ({
+      workflows: s.workflows.map((w) => (w.id === id ? { ...w, enabled: on } : w)),
+    }));
     return { ok: true };
   } catch {
     return { ok: false };
@@ -146,16 +185,12 @@ export function softDeleteTouched(data: { id: string }[] | null | undefined, err
   return !error && Boolean(data?.length);
 }
 
-async function prodRemove(id: string, _reason: string): Promise<{ ok: boolean }> {
-  /* E35 Z3: soft-delete (removed_at) — przebiegi zostają; hard DELETE kasowałby workflow_runs.
-   * .select('id'): przy odmowie RLS 0 wierszy bez error → ok:false (jak supabaseProvider workflow.update). */
+async function prodRemove(id: string, reason: string): Promise<{ ok: boolean }> {
+  /* #505: soft-delete przez RPC z powodem (audit_reason w tej samej sesji). */
   try {
     const sb = await getSupabase();
-    const res = await sb.from('workflows')
-      .update({ enabled: false, removed_at: new Date().toISOString() })
-      .eq('id', id)
-      .select('id');
-    if (!softDeleteTouched(res.data, res.error)) return { ok: false };
+    const res = await sb.rpc('workflow_rule_soft_delete', { p_id: id, p_reason: reason.trim() || null });
+    if (res.error) return { ok: false };
     useTowerStore.setState((s) => ({ workflows: s.workflows.filter((w) => w.id !== id) }));
     return { ok: true };
   } catch {

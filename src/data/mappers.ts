@@ -411,12 +411,15 @@ export interface GeofenceRow {
   id: string; name: string; kind: string; hysteresis_m: number; dwell_seconds: number; debounce_fixes: number;
   notify_enter: boolean; notify_exit: boolean; notify_dwell: boolean; notify_orgs: string[] | null;
   active: boolean; lat: number; lng: number; radius_m: number; country?: string | null;
+  route?: string | null;
 }
 const GEO_KINDS: GeofenceType[] = ['LOADING', 'PORT_OUT', 'PRE_PORT', 'PORT_IN', 'CHECKPOINT', 'PRE_ARRIVAL', 'SITE', 'REST'];
 const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE'] as const;
+const GEO_ROUTES = ['POLFERRIES', 'STENA'] as const;
 export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
   const kinds = new Set((r.notify_orgs ?? []).map((id) => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '')));
   const country = (r.country ?? '').trim();
+  const route = (r.route ?? '').trim();
   return {
     id: r.id, name: r.name,
     type: (GEO_KINDS as string[]).includes(r.kind) ? (r.kind as GeofenceType) : 'CHECKPOINT',
@@ -426,10 +429,14 @@ export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
     active: r.active,
     trigger: r.notify_dwell ? 'DWELL_EXCEEDED' : r.notify_exit ? 'EXIT' : 'ENTER',
     ...(GEO_COUNTRIES.includes(country as typeof GEO_COUNTRIES[number]) ? { country: country as typeof GEO_COUNTRIES[number] } : {}),
+    ...(GEO_ROUTES.includes(route as typeof GEO_ROUTES[number]) ? { route: route as typeof GEO_ROUTES[number] } : { route: null }),
   };
 }
-export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], serverId: string | null) {
+export function geofenceToRpc(
+  g: Geofence, projectId: string, orgs: OrgRow[], serverId: string | null, reason?: string | null,
+) {
   const orgIds = (kind: OrgKind) => orgs.filter((o) => orgKindToApp(o.kind) === kind).map((o) => o.id);
+  const port = g.type === 'PORT_OUT' || g.type === 'PRE_PORT' || g.type === 'PORT_IN';
   return {
     p_id: serverId, p_project: projectId, p_name: g.name, p_kind: g.type,
     p_lat: g.lat, p_lng: g.lng, p_radius_m: Math.round(g.radiusM),
@@ -439,6 +446,8 @@ export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], se
     p_notify_orgs: [...(g.notifyHhl ? orgIds('HHL') : []), ...(g.notifyKsh ? orgIds('KSH') : []), ...(g.notifyScx ? orgIds('SCX') : [])],
     p_active: g.active,
     p_country: g.country ?? null,
+    p_route: port ? (g.route === 'STENA' || g.route === 'POLFERRIES' ? g.route : null) : null,
+    p_reason: reason?.trim() || null,
   };
 }
 

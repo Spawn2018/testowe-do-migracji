@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
-  nullguard: 700, // #421: +ferry_sailings_map GUARD (+5 = 4 konta + HHL)
+  nullguard: 715, // #505: +workflow_rule_write/set_enabled/soft_delete GUARD (+15 = 3×5)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -35,7 +35,7 @@ export const EXPECTED_LOCAL = {
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
   hist11: 11,
-  workflows: 78, // #413 F7 r2: +OPS read/write, +B2 pre_arrival_*/pre_port/zone (było 70)
+  workflows: 90, // #505 F7: +route null/OPS set_enabled|soft_delete/po/_reason/re-apply (było 86)
   insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
   'dec-auto': 83, // #384 pkt 2–3: +5 lead past/far + empty file + column_map
   dwell: 17,
