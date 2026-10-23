@@ -4359,3 +4359,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #485 w toku; #484 wpisane w #478 (po #412, przed B5); #467 F7 „gotowe” wstrzymane do rebase 0274→0275 po #485.
 - Scalanie: #478 nie — konflikt numeru migracji z #486; nowe F7 po renumeracji.
 - CI `db` FAIL na `4bfdece8`: A2 komentarz POPRAWKA 24.09 w `process_position` (zgubiony przy CREATE OR REPLACE) → przywrócony; `status` 190→**196** (+6 #485).
+
+## 2026-10-23 11:15 — #485 F7 B1–B4 (jeszcze nie → poprawki)
+
+- Skrzynka: #485 `pilne` bieżąca; #467 F7 „gotowe” wstrzymane (0274→0275 po #485); #484 w kolejce po #412.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie #486 (F7: jeszcze nie, B1–B3).
+- F7 #486: `sweden_land_geom`; DOPLYNAL wymaga lądu SE + `p_ts ≥ arrival` + ≥2 km od PORT_IN; bez DOPLYNAL tylko ląd SE (bez limitu 80 km); naprawa = pierwsza pozycja poza portem na lądzie; `debounce_fixes=1` dla PORT_IN SE; `status` **200**.

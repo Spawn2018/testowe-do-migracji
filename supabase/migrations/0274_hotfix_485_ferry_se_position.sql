@@ -1,6 +1,26 @@
 -- #485 PILNE: FERRY → Port SE / Droga SE z pozycji (nie tylko GEOFENCE_ENTER).
--- Gdy sygnał wraca poza strefą PORT_IN (typowe po promie), status nie zostawał
--- na „Prom” do bufora przed Boden.
+-- F7 #486: ląd SE (wielokąt), p_ts ≥ dopłynięcie, bez morza przy W_REJSIE,
+-- naprawa = pierwsza pozycja poza PORT_IN; debounce PORT_IN SE = 1.
+
+-- Uproszczony ląd Szwecji (bez Bałtyku PL↔SE). Lon/lat WGS84.
+create or replace function public.sweden_land_geom()
+returns geometry
+language sql
+immutable
+parallel safe
+as $f$
+  select st_setsrid(st_geomfromtext(
+    'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.55 56.10,'
+    ' 16.00 56.25, 17.00 56.80, 18.50 57.50, 19.20 59.00, 19.00 60.50,'
+    ' 18.50 63.00, 20.50 65.00, 24.20 65.60, 24.00 69.06, 17.50 68.50,'
+    ' 11.50 63.00, 11.00 59.00, 10.95 55.90))'
+  ), 4326);
+$f$;
+
+revoke all on function public.sweden_land_geom() from public, anon, authenticated;
+grant execute on function public.sweden_land_geom() to service_role;
+comment on function public.sweden_land_geom() is
+  '#485: uproszczony wielokąt lądu SE (Droga SE z pozycji; bez morza).';
 
 create or replace function public.apply_ferry_se_from_position(
   p_load_id uuid,
@@ -13,17 +33,23 @@ security definer
 set search_path to 'public'
 as $function$
 declare
-  v_status   load_status;
-  v_project  uuid;
-  v_op       text;
-  v_pt       geometry(Point, 4326);
-  v_port     record;
-  v_in_port  boolean := false;
-  v_port_m   double precision;
-  v_arrived  boolean := false;
-  v_arr_at   timestamptz;
-  v_prev     text;
-  v_detail   jsonb;
+  v_status     load_status;
+  v_project    uuid;
+  v_op         text;
+  v_pt         geometry(Point, 4326);
+  v_port       record;
+  v_in_port    boolean := false;
+  v_port_m     double precision;
+  v_on_land_se boolean := false;
+  v_arrived    boolean := false;
+  v_arr_at     timestamptz;
+  v_arr_src    text;
+  v_dep_at     timestamptz;
+  v_plan_arr   timestamptz;
+  v_plan_dep   timestamptz;
+  v_voyage     interval;
+  v_prev       text;
+  v_detail     jsonb;
 begin
   if p_lat is null or p_lon is null then
     return;
@@ -38,27 +64,33 @@ begin
   v_op := 'POLFERRIES';
   select case when s.route in ('GDY-KAA', 'KAA-GDY') then 'STENA' else 'POLFERRIES' end,
          s.status = 'DOPLYNAL' or s.actual_arrival_at is not null,
-         coalesce(s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at)
-    into v_op, v_arrived, v_arr_at
+         s.actual_arrival_at,
+         coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at),
+         coalesce(s.delayed_arrival_at, s.arrival_at),
+         coalesce(s.delayed_departure_at, s.departure_at)
+    into v_op, v_arrived, v_arr_at, v_dep_at, v_plan_arr, v_plan_dep
     from loads l
     left join sailings s on s.id = l.sailing_id
    where l.id = p_load_id;
   v_op := coalesce(v_op, 'POLFERRIES');
 
-  v_pt := st_setsrid(st_makepoint(p_lon, p_lat), 4326);
-
-  /* Blisko portu PL — nadal strona polska / morze od Gdańska; bez zmiany. */
-  if exists (
-    select 1
-      from geofences g
-     where g.project_id = v_project
-       and g.active
-       and g.kind = 'PORT_OUT'
-       and coalesce(g.route, 'POLFERRIES') = v_op
-       and st_dwithin(g.geom::geography, v_pt::geography, 50000)
-  ) then
-    return;
+  /* Godzina dopłynięcia: actual; bez actual = odpłynięcie + czas rejsu z planu. */
+  if v_arr_at is not null then
+    v_arr_src := 'actual';
+  elsif v_dep_at is not null and v_plan_arr is not null and v_plan_dep is not null then
+    v_voyage := v_plan_arr - v_plan_dep;
+    if (v_voyage > interval '0') is not true then
+      v_voyage := interval '10 hours';
+    end if;
+    v_arr_at := v_dep_at + v_voyage;
+    v_arr_src := 'plan';
+  else
+    v_arr_at := v_plan_arr;
+    v_arr_src := 'plan';
   end if;
+
+  v_pt := st_setsrid(st_makepoint(p_lon, p_lat), 4326);
+  v_on_land_se := st_covers(public.sweden_land_geom(), v_pt);
 
   select g.id, g.name, g.geom
     into v_port
@@ -98,18 +130,21 @@ begin
     return;
   end if;
 
-  /*
-    Poza portem SE:
-    - rejs DOPLYNAL (albo actual_arrival) i ≤ 2000 km od PORT_IN → Droga SE;
-    - albo 10–80 km od PORT_IN (pierwsza pozycja zaraz poza strefą, bez ENTER).
-    Morze / PL: wcześniej odfiltrowane albo poza tymi progami.
-  */
-  if (
-       (v_arrived and v_port_m <= 2000000)
-    or (v_port_m >= 10000 and v_port_m <= 80000)
-  ) is not true then
+  /* Poza portem: tylko ląd SE (B1/B2). Morze / PL → bez zmiany. */
+  if v_on_land_se is not true then
     return;
   end if;
+
+  if v_arrived then
+    /* DOPLYNAL: pozycja nie wcześniejsza niż dopłynięcie; ≥ 2 km od krawędzi (jitter). */
+    if (v_arr_at is not null and p_ts >= v_arr_at) is not true then
+      return;
+    end if;
+    if (v_port_m >= 2000) is not true then
+      return;
+    end if;
+  end if;
+  /* Bez DOPLYNAL: ląd SE wystarczy (bez górnej granicy km) — B2. */
 
   /* Uzupełnienie pominiętego Port SE — bez powiadomień (jak synthetic FERRY). */
   if v_status = 'FERRY' then
@@ -122,7 +157,8 @@ begin
       v_detail || jsonb_build_object(
         'synthetic', true,
         'synthetic_port_se', true,
-        'powod', 'pozycja na trasie SE po promie'
+        'powod', 'pozycja na trasie SE po promie',
+        'arr_source', coalesce(v_arr_src, 'plan')
       )
     );
     perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
@@ -144,7 +180,14 @@ revoke all on function public.apply_ferry_se_from_position(uuid, double precisio
 grant execute on function public.apply_ferry_se_from_position(uuid, double precision, double precision, timestamptz)
   to service_role;
 comment on function public.apply_ferry_se_from_position(uuid, double precision, double precision, timestamptz) is
-  '#485: z pozycji (nie tylko ENTER) FERRY/AT_PORT_NYNASHAMN → Port SE / Droga SE po promie.';
+  '#485: z pozycji (nie tylko ENTER) FERRY/AT_PORT_NYNASHAMN → Port SE / Droga SE; ląd SE.';
+
+-- Przyczyna źródłowa: jeden punkt w porcie + debounce_fixes=2 → brak GEOFENCE_ENTER.
+update public.geofences
+   set debounce_fixes = 1
+ where kind = 'PORT_IN'
+   and country = 'SE'
+   and (debounce_fixes is distinct from 1);
 
 -- process_position: po ewaluacji stref — reguła #485 (EMTRACK_WEB / RIO / DRIVER_PWA).
 create or replace function public.process_position(
@@ -336,7 +379,7 @@ revoke all on function public.process_position(uuid, double precision, double pr
 grant execute on function public.process_position(uuid, double precision, double precision, timestamptz, position_source, numeric, numeric, boolean, jsonb)
   to service_role;
 
--- Naprawa danych: FERRY z pozycją poza PORT_IN SE (SG-23 i analogiczne).
+-- Naprawa danych: pierwsza pozycja po dopłynięciu poza PORT_IN na lądzie SE (B3).
 do $fix485$
 declare
   v_prev text;
@@ -346,31 +389,67 @@ declare
   v_ts timestamptz;
   v_arr timestamptz;
   v_before text;
+  v_port geometry;
+  v_op text;
 begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
 
   for r in
-    select l.id as load_id, l.status::text as status, si.shipment_code as code,
-           s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at, s.status as sail_status
+    select l.id as load_id, l.status::text as status, l.project_id,
+           si.shipment_code as code,
+           s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at,
+           s.actual_departure_at, s.delayed_departure_at, s.departure_at,
+           s.status as sail_status, s.route
       from public.loads l
       join public.sailings s on s.id = l.sailing_id
       left join public.shipment_items si on si.load_id = l.id
      where l.status in ('FERRY', 'AT_PORT_NYNASHAMN')
        and (s.status = 'DOPLYNAL' or s.actual_arrival_at is not null)
   loop
+    v_op := case when r.route in ('GDY-KAA', 'KAA-GDY') then 'STENA' else 'POLFERRIES' end;
+    v_arr := coalesce(
+      r.actual_arrival_at,
+      case
+        when coalesce(r.actual_departure_at, r.delayed_departure_at, r.departure_at) is not null
+         and coalesce(r.delayed_arrival_at, r.arrival_at) is not null
+         and coalesce(r.delayed_departure_at, r.departure_at) is not null
+        then coalesce(r.actual_departure_at, r.delayed_departure_at, r.departure_at)
+             + (coalesce(r.delayed_arrival_at, r.arrival_at)
+                - coalesce(r.delayed_departure_at, r.departure_at))
+        else coalesce(r.delayed_arrival_at, r.arrival_at)
+      end
+    );
+
+    select g.geom into v_port
+      from public.geofences g
+     where g.project_id = r.project_id
+       and g.active
+       and g.kind = 'PORT_IN'
+       and g.country = 'SE'
+       and coalesce(g.route, 'POLFERRIES') = v_op
+     order by g.name
+     limit 1;
+
+    /* Pierwsza pozycja po dopłynięciu poza strefą PORT_IN na lądzie SE. */
     select st_y(p.geom_raw::geometry), st_x(p.geom_raw::geometry), p.ts
       into v_lat, v_lon, v_ts
       from public.positions p
      where p.load_id = r.load_id
-     order by p.ts desc
+       and (v_arr is null or p.ts >= v_arr)
+       and (
+         v_port is null
+         or st_contains(v_port, p.geom_raw::geometry) is not true
+       )
+       and st_covers(public.sweden_land_geom(), p.geom_raw::geometry)
+     order by p.ts asc
      limit 1;
+
     if v_lat is null then
       continue;
     end if;
 
     v_before := r.status;
-    v_arr := coalesce(r.actual_arrival_at, r.delayed_arrival_at, r.arrival_at);
 
     insert into public.audit_log (user_id, action, entity, entity_id, new_value)
     values (
@@ -381,8 +460,6 @@ begin
       )
     );
 
-    /* bulk_quiet już on — uzupełnienie Port SE ciche; Droga SE też w tej pętli cicho
-       (odbiór: status na mapie; powiadomienie Droga SE przy kolejnej żywej pozycji). */
     perform public.apply_ferry_se_from_position(r.load_id, v_lat, v_lon, v_ts);
 
     insert into public.audit_log (user_id, action, entity, entity_id, new_value)
@@ -392,7 +469,8 @@ begin
         'code', r.code,
         'from', v_before,
         'to', (select status::text from loads where id = r.load_id),
-        'hotfix', '0274'
+        'hotfix', '0274',
+        'pos_at', v_ts
       )
     );
   end loop;
