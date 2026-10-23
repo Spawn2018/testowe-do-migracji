@@ -4277,3 +4277,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #464–#467/#446/#425/#413/#422 (Spawn2018) — już w planie; #409 zamknięte. Bez nowych `pilne` przerywających.
 - Scalanie: #458 F7 „gotowe do scalenia” (head `7ce5c44`) + CI unit/db/visual zielone → MERGED `75653b46` (0271). Bez push na `main`. `deploy-main` nie czekamy.
 - Bieżąca: **#464** (`pakiet/hotfix-464-a7-permits-ksh`) — migracja **0272**: `a7_permits_list` dla KSH = Firma+Trasa z `load_permits` własnych transportów; `loads` tylko własne; i2 +6 → **660**. #413→**0273**, #422→**0274**, B5→**0275**.
+
+## 2026-10-23 02:55 — #473/#464 SCALONE; start #465 (bmapa +26)
+
+- Skrzynka: #465–#467/#446/#425/#413/#422/#463 (Spawn2018) — w planie; #464 zamknięte. Bez nowych `pilne` przerywających.
+- Scalanie: #473 F7 „gotowe do scalenia” (head `d8cf6f7`) + CI unit/db/visual zielone → MERGED `85f9049b` (0272). Bez push na `main`. `deploy-main` nie czekamy.
+- Bieżąca: **#465** (`pakiet/hotfix-465-map-rpc-auth`) — `bmapa.sh` +26: RPC mapy/Stanu jako HHL/KSH/SCX (lekcja 42702); EXPECTED bmapa **62**.

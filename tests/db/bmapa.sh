@@ -76,5 +76,36 @@ sys "update app_parameters set value=0 where key='HERE_TILES_FREE'; update app_p
 sys "select here_note_service('tiles', 80, 0, now())" >/dev/null
 o=$(asu "11111111-0000-0000-0000-000000000003" "select here_tiles_report(1)->>'tiles_open'"); [ "$o" = "false" ] && { ok=$((ok+1)); echo "  OK    od 80% budżetu zgłoszenie zwraca tiles_open=false (zapas)"; } || { fail=$((fail+1)); echo "  FAIL  80% → $o"; }
 
+# #465: wywołanie RPC mapy/Stanu jako authenticated (lekcja 42702 z 0258 — privilege ≠ działa).
+# Lista 26: 8 RPC × HHL/KSH/SCX + here_budget_view/deepl_usage_view tylko HHL.
+echo; echo "[#465] RPC mapy i Stanu systemu — wywołanie jako zalogowany"
+sys "update app_parameters set value=30000 where key='HERE_TILES_FREE'; update app_parameters set value=0.0002 where key='HERE_TILES_RATE_USD'" >/dev/null
+HHL_465=11111111-0000-0000-0000-000000000001
+KSH_465=11111111-0000-0000-0000-000000000002
+SCX_465=11111111-0000-0000-0000-000000000003
+L_465=33333333-0000-0000-0000-000000000001
+rpc_ok() {
+  # $1 etykieta, $2 auth_id, $3 SQL — brak ERROR/42702 = OK
+  out=$($PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$2'; select set_config('request.jwt.claims', json_build_object('sub','$2','role','authenticated')::text, true); $3; commit;" 2>&1)
+  if echo "$out" | grep -qiE 'ERROR:|42702|ambiguous|undefined_(column|function)'; then
+    fail=$((fail+1)); echo "  FAIL  $1 → $(echo "$out" | grep -iE 'ERROR:|42702' | head -1)"
+  else
+    ok=$((ok+1)); echo "  OK    $1"
+  fi
+}
+for role_pair in "HHL:$HHL_465" "KSH:$KSH_465" "SCX:$SCX_465"; do
+  R=${role_pair%%:*}; U=${role_pair##*:}
+  rpc_ok "#465 $R ferry_track_sample" "$U" "select count(*) from ferry_track_sample()"
+  rpc_ok "#465 $R ferry_sailings_map" "$U" "select count(*) from ferry_sailings_map()"
+  rpc_ok "#465 $R map_display_state" "$U" "select map_display_state() is not null"
+  rpc_ok "#465 $R latest_vehicle_fixes" "$U" "select count(*) from latest_vehicle_fixes('{}'::uuid[])"
+  rpc_ok "#465 $R here_tiles_report(0)" "$U" "select here_tiles_report(0) is not null"
+  rpc_ok "#465 $R h1_route_check_state" "$U" "select h1_route_check_state() is not null"
+  rpc_ok "#465 $R h3_corridor_state" "$U" "select h3_corridor_state() is not null"
+  rpc_ok "#465 $R load_track" "$U" "select count(*) from load_track('$L_465')"
+done
+rpc_ok "#465 HHL here_budget_view" "$HHL_465" "select here_budget_view() is not null"
+rpc_ok "#465 HHL deepl_usage_view" "$HHL_465" "select deepl_usage_view() is not null"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
