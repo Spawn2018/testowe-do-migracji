@@ -4343,3 +4343,31 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463/#467/#446/#425/`dla-cursora` — w planie; #479 bieżąca (`pilne`). Bez nowego `pilne` poza kolejką.
 - Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie (#481 F7 „jeszcze nie” `5b3aec6`). CI #481 zielone — nie scalać.
 - Bieżąca: **#479 cz.6** PR #481 — usunięte COPY/`.readable()` i PostgREST z Edge; `select` keyset ctid (`SELECT_BATCH_ROWS` 2000) + `rowsToCsv`; timeout całej tabeli 60 s; dopisek `D-20261023-0705-01`.
+
+## 2026-10-23 09:55 — #485 PILNE: Port SE / Droga SE z pozycji (przerywa #467)
+
+- Skrzynka: #485 `pilne` (Spawn2018) — SG-23 FERRY mimo pozycji EMTRACK w SE; F7 #478: najpierw #485. #467 CI zielone na `5150fb86`, bez „F7: gotowe” — nie scalane.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po ostatnim commicie.
+- Bieżąca: **#485** `pakiet/hotfix-485-ferry-se-position`, migracja **0274**:
+  - `apply_ferry_se_from_position` + wywołanie z `process_position`;
+  - PORT_IN → `AT_PORT_NYNASHAMN`; poza portem (DOPLYNAL lub 10–80 km) → `IN_TRANSIT_SE` + synthetic Port SE (bulk_quiet);
+  - naprawa FERRY/AT_PORT + DOPLYNAL (SG-23 i analogiczne);
+  - testy `status.sh` [#485]; dopisek D-20261023-0955-01.
+
+## 2026-10-23 10:50 — #485 CI: przywrócenie POPRAWKA 24.09 w process_position
+
+- Skrzynka: #485 w toku; #484 wpisane w #478 (po #412, przed B5); #467 F7 „gotowe” wstrzymane do rebase 0274→0275 po #485.
+- Scalanie: #478 nie — konflikt numeru migracji z #486; nowe F7 po renumeracji.
+- CI `db` FAIL na `4bfdece8`: A2 komentarz POPRAWKA 24.09 w `process_position` (zgubiony przy CREATE OR REPLACE) → przywrócony; `status` 190→**196** (+6 #485).
+
+## 2026-10-23 11:15 — #485 F7 B1–B4 (jeszcze nie → poprawki)
+
+- Skrzynka: #485 `pilne` bieżąca; #467 F7 „gotowe” wstrzymane (0274→0275 po #485); #484 w kolejce po #412.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie #486 (F7: jeszcze nie, B1–B3).
+- F7 #486: `sweden_land_geom`; DOPLYNAL wymaga lądu SE + `p_ts ≥ arrival` + ≥2 km od PORT_IN; bez DOPLYNAL tylko ląd SE (bez limitu 80 km); naprawa = pierwsza pozycja poza portem na lądzie; `debounce_fixes=1` dla PORT_IN SE; `status` **200**.
+
+## 2026-10-23 11:40 — #485 CI: search_path na sweden_land_geom
+
+- Skrzynka: #485 `pilne`; #484 wpisane PLAN §4 (po #412, przed B5); #467 F7 „gotowe” treścią — scalenie po #485 + renumeracja 0275.
+- Scalanie: brak „F7: gotowe” na głowie #486 po B1–B4; #478 nie scalać (0274 koliduje z #486).
+- CI `db` FAIL na `2ba3cac8`: security „każda funkcja public ma ustaloną search_path” (1) → `sweden_land_geom` + `set search_path to 'public'`. `status` 200/200 OK.

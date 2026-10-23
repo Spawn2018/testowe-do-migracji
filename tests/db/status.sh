@@ -758,5 +758,80 @@ chk "#461 po teście brak kluczy RIO/SILENT/overdue" \
    select count(*) from risk_signals
     where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')" 0
 
+# #485 / F7 #486: po promie — status z pozycji (ład SE, nie GEOFENCE_ENTER)
+echo; echo "[#485] Port SE / Droga SE z pozycji po promie"
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000485','Stena Ebba 485','Stena Line')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000485','$P','66666666-0000-0000-0000-000000000485','GDY-KAA',
+  '2026-10-06 12:00+00','2026-10-06 22:00+00','2026-10-06 12:00+00','2026-10-06 22:00+00','DOPLYNAL','STENA');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route) values
+ ('$P','Port Karlskrona 485','PORT_IN', make_circle_fence(56.16460,15.63080, 800), 200, 600, 1,'SE','STENA');
+" >/dev/null
+S485=77777777-0000-0000-0000-000000000485
+# (3) DOPLYNAL + E22 (~25 km ląd SE) → IN_TRANSIT_SE z godziną pozycji
+L485a=$(L 85)
+mk $L485a A485 "'HHL/A485'" "'SCX/A485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485a','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485a 56.3949 16.0673 "2026-10-06 22:30+00"
+chk "#485: DOPLYNAL + pozycja poza portem SE → IN_TRANSIT_SE" "$(st $L485a)" IN_TRANSIT_SE
+chk "#485: uzupełniony AT_PORT_NYNASHAMN (synthetic)" \
+  "select count(*) from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true'" 1
+chk "#485: source=GPS na Drodze SE" \
+  "select payload->>'source' from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE' order by occurred_at desc limit 1" GPS
+chk "#485: Droga SE z godziną pozycji" \
+  "select to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE' order by occurred_at desc limit 1" "22:30"
+chk "#485: Port SE synthetic = dopłynięcie (actual)" \
+  "select to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true' order by occurred_at limit 1" "22:00"
+# (5) W strefie portu SE
+L485b=$(L 86)
+mk $L485b B485 "'HHL/B485'" "'SCX/B485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485b','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485b 56.16460 15.63080 "2026-10-06 22:10+00"
+chk "#485: pozycja w porcie SE → AT_PORT_NYNASHAMN" "$(st $L485b)" AT_PORT_NYNASHAMN
+# (1) DOPLYNAL + Warszawa → FERRY (B1: nie zgadywać odległością)
+L485w=$(L 89)
+mk $L485w W485 "'HHL/W485'" "'SCX/W485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485w','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485w 52.4535 20.9018 "2026-10-06 22:40+00"
+chk "#485: DOPLYNAL + pozycja w PL (Warszawa) → FERRY" "$(st $L485w)" FERRY
+# W_REJSIE
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,status,source) values
+ ('77777777-0000-0000-0000-000000000486','$P','66666666-0000-0000-0000-000000000485','GDY-KAA',
+  '2026-10-07 12:00+00','2026-10-07 22:00+00','2026-10-07 12:00+00','W_REJSIE','STENA');
+" >/dev/null
+S486=77777777-0000-0000-0000-000000000486
+# (2) W_REJSIE przed planowym przypłynięciem + morze → FERRY (F7 r2)
+L485c=$(L 87)
+mk $L485c C485 "'HHL/C485'" "'SCX/C485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485c','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485c 55.90 15.90 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE + morze 40 km od PORT_IN → FERRY" "$(st $L485c)" FERRY
+L485n=$(L 8b)
+mk $L485n N485 "'HHL/N485'" "'SCX/N485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485n','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485n 58.60 18.00 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Nynäshamn → FERRY" "$(st $L485n)" FERRY
+L485k=$(L 8c)
+mk $L485k K485 "'HHL/K485'" "'SCX/K485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485k','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485k 56.138 15.635 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Karlskrona → FERRY" "$(st $L485k)" FERRY
+# PL (Gdańsk) przy FERRY
+L485d=$(L 88)
+mk $L485d D485 "'HHL/D485'" "'SCX/D485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485d','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485d 54.4030 18.6800 "2026-10-07 13:00+00"
+chk "#485: pozycja w PL przy FERRY → bez zmiany" "$(st $L485d)" FERRY
+# (4) po planowym przypłynięciu bez actual + ląd SE (E4) → IN_TRANSIT_SE (F7 r2)
+L485e=$(L 8a)
+mk $L485e E485 "'HHL/E485'" "'SCX/E485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485e','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
+chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
