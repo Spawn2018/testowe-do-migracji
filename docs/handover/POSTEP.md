@@ -4365,3 +4365,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #485 `pilne` bieżąca; #467 F7 „gotowe” wstrzymane (0274→0275 po #485); #484 w kolejce po #412.
 - Scalanie: brak „F7: gotowe” po ostatnim commicie #486 (F7: jeszcze nie, B1–B3).
 - F7 #486: `sweden_land_geom`; DOPLYNAL wymaga lądu SE + `p_ts ≥ arrival` + ≥2 km od PORT_IN; bez DOPLYNAL tylko ląd SE (bez limitu 80 km); naprawa = pierwsza pozycja poza portem na lądzie; `debounce_fixes=1` dla PORT_IN SE; `status` **200**.
+
+## 2026-10-23 11:40 — #485 CI: search_path na sweden_land_geom
+
+- Skrzynka: #485 `pilne`; #484 wpisane PLAN §4 (po #412, przed B5); #467 F7 „gotowe” treścią — scalenie po #485 + renumeracja 0275.
+- Scalanie: brak „F7: gotowe” na głowie #486 po B1–B4; #478 nie scalać (0274 koliduje z #486).
+- CI `db` FAIL na `2ba3cac8`: security „każda funkcja public ma ustaloną search_path” (1) → `sweden_land_geom` + `set search_path to 'public'`. `status` 200/200 OK.

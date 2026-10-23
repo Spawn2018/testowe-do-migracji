@@ -8,6 +8,7 @@ returns geometry
 language sql
 immutable
 parallel safe
+set search_path to 'public'
 as $f$
   select st_setsrid(st_geomfromtext(
     'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.55 56.10,'

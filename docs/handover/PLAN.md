@@ -821,10 +821,13 @@ Migracja **0277**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
 2. Zasilanie: Lighthouse po deploy-main; p95 z `pg_stat_statements`; równoczesność lub „brak pomiaru”.
 3. RPC odczytu `client_errors` (7 dni, grupowanie). Front — koordynator (#423).
 
-### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — po #422, przed B5
+### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — po #422, przed #484
 Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43, liczba urządzeń push — `dopiski/D-20261021-2040-01.md`.
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #485, #467, #413, #422, #412 (migracja **0278** po rebase; #409/#463/#479 SCALONE)
+### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — po #412 / #478, przed B5
+`audit_history_scoped` (lub rozszerzenie `admin_audit_history`): HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — wpisy swoich transportów (RLS `loads`); KSH bez numerów zleceń i cen SCX; SCX bez cen klienta/marży; bez zmiany `audit_read` na tabeli. Testy `authenticated`. Front — koordynator (`wyglad/*`). Szczegóły: zgłoszenie #484.
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #485, #467, #413, #422, #412, #484 (migracja **0278** po rebase; #409/#463/#479 SCALONE)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1418,3 +1421,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 07:05 | F7 #481 niegotowe → cz.6 wariant A: bez COPY, select porcjami + CSV; dopisek D-20261023-0705-01 | pętla |
 | 23.10.2026 07:35 | #481/#479 cz.6 SCALONE (`602e7287`); #467 W TOKU (PR #478) | pętla |
 | 23.10.2026 09:55 | #485 `pilne` (SG-23 FERRY mimo pozycji SE) → **0274**; przerywa #467; #467→**0275**, #413→**0276**, #422→**0277**, B5→**0278** | właściciel 09:38; pętla |
+| 23.10.2026 11:40 | #485 CI: `sweden_land_geom` + `search_path` (security FAIL); #484 wpisane §4 (po #412, przed B5) | pętla |
