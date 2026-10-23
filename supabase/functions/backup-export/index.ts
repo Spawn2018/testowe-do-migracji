@@ -69,33 +69,70 @@ async function loadColumnsWithoutRioSecret(sql: ReturnType<typeof postgres>): Pr
   return cols.map((c) => `"${String(c.column_name).replace(/"/g, '""')}"`).join(', ');
 }
 
+type CopyReadable = {
+  on: (ev: string, fn: (...args: unknown[]) => void) => void;
+  destroy?: (err?: Error) => void;
+};
+
 /** Odczyt strumienia COPY z limitem czasu (#463 — bez wiszenia do I-33). */
-function readCopyStream(stream: { on: (ev: string, fn: (...args: unknown[]) => void) => void }, label: string, timeoutMs = TABLE_COPY_TIMEOUT_MS): Promise<Uint8Array> {
+function readCopyStream(stream: CopyReadable, label: string, timeoutMs = TABLE_COPY_TIMEOUT_MS): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
   return new Promise<Uint8Array>((res, rej) => {
-    const timer = setTimeout(() => rej(new Error(`kopia: timeout COPY ${label} po ${timeoutMs} ms`)), timeoutMs);
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try { stream.destroy?.(); } catch { /* ignore */ }
+      fn();
+    };
+    const timer = setTimeout(() => {
+      finish(() => rej(new Error(`kopia: timeout COPY ${label} po ${timeoutMs} ms`)));
+    }, timeoutMs);
     stream.on('data', (c: unknown) => chunks.push(c as Uint8Array));
     stream.on('end', () => {
-      clearTimeout(timer);
       void (async () => {
         try {
-          res(new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer()));
+          const buf = new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());
+          finish(() => res(buf));
         } catch (e) {
-          rej(e);
+          finish(() => rej(e));
         }
       })();
     });
     stream.on('error', (e: unknown) => {
-      clearTimeout(timer);
-      rej(e);
+      finish(() => rej(e instanceof Error ? e : new Error(String(e))));
     });
   });
 }
 
 /**
+ * COPY TO STDOUT przez readable — po skończeniu strumienia trzeba domknąć Promise zapytania
+ * (postgres.js), inaczej transakcja zostaje „idle in transaction” / ClientRead (#463 id 39:
+ * hang na count po auth_login_events).
+ */
+async function copySqlToCsv(
+  tx: { unsafe: (s: string) => Promise<unknown> & { readable: () => Promise<CopyReadable> } },
+  copySql: string,
+  label: string,
+): Promise<Uint8Array> {
+  const query = tx.unsafe(copySql);
+  const stream = await query.readable();
+  try {
+    const csv = await readCopyStream(stream, label);
+    await query;
+    return csv;
+  } catch (e) {
+    try { stream.destroy?.(e instanceof Error ? e : undefined); } catch { /* ignore */ }
+    try { await query; } catch { /* ignore */ }
+    throw e;
+  }
+}
+
+/**
  * Jedna tabela w jednej transakcji repeatable read (F7 #472):
- * mała → jeden COPY; duża → kawałki ctid (ostatni bez górnej granicy);
- * na końcu csvRowCount = count(*) albo ERROR.
+ * najpierw count(*) w RR, potem COPY (mała → jeden; duża → kawałki ctid);
+ * csvRowCount musi równać count z tej samej migawki.
  */
 async function copyTableCsv(
   sql: ReturnType<typeof postgres>,
@@ -111,6 +148,8 @@ async function copyTableCsv(
         from pg_class c
         join pg_namespace n on n.oid = c.relnamespace
        where n.nspname = 'public' and c.relname = ${table}`;
+    const [cntRow] = await tx.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
+    const dbCount = Number(cntRow?.n ?? -1);
     const est = Number(meta?.est ?? 0);
     const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
     let csv: Uint8Array;
@@ -118,16 +157,14 @@ async function copyTableCsv(
       const copySql = selectList
         ? `copy (select ${selectList} from public.${t}) to stdout with (format csv, header true)`
         : `copy public.${t} to stdout with (format csv, header true)`;
-      const stream = await tx.unsafe(copySql).readable();
-      csv = await readCopyStream(stream, t);
+      csv = await copySqlToCsv(tx, copySql, t);
     } else {
       const parts: Uint8Array[] = [];
       let header = true;
       for (const { from, to } of ctidPageRanges(pages)) {
         const copySql = copyCtidRangeSql(t, from, to, selectList, header);
-        const stream = await tx.unsafe(copySql).readable();
         const label = to === null ? `${t}[${from},∞)` : `${t}[${from},${to})`;
-        const part = await readCopyStream(stream, label);
+        const part = await copySqlToCsv(tx, copySql, label);
         if (part.byteLength) parts.push(part);
         header = false;
       }
@@ -135,14 +172,12 @@ async function copyTableCsv(
         const copySql = selectList
           ? `copy (select ${selectList} from public.${t} where false) to stdout with (format csv, header true)`
           : `copy (select * from public.${t} where false) to stdout with (format csv, header true)`;
-        const stream = await tx.unsafe(copySql).readable();
-        csv = await readCopyStream(stream, `${t}[empty]`);
+        csv = await copySqlToCsv(tx, copySql, `${t}[empty]`);
       } else {
         csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
       }
     }
-    const [cnt] = await tx.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
-    assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), Number(cnt?.n ?? -1), t);
+    assertCsvMatchesDbCount(csvRowCount(new TextDecoder().decode(csv)), dbCount, t);
     return csv;
   });
 }
