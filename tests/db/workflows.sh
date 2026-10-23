@@ -226,7 +226,8 @@ WR505=$($PSQL -c "begin; set local role authenticated; set local request.jwt.cla
 chk "#505: powód w audit workflows (write)" "$(Q "select (new_value->>'_reason') from audit_log where entity='workflows' and entity_id='$WR505' and action='ROW_INSERT' order by created_at desc limit 1")" "powod zmiany E35"
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select workflow_rule_soft_delete('$WR505', 'usuniecie z powodem'); commit" >/dev/null
 val "#505: soft-delete — powód w po (historia)" $HHL "select (changes->'po'->>'_reason') from workflow_rule_history('$WR505', 5) where action='ZMIENIONO' order by at desc limit 1" "usuniecie z powodem"
-chk "#505: soft-delete — po w historii (ROW_UPDATE)" "$(Q "select (changes ? 'po')::text from workflow_rule_history('$WR505', 5) where action='ZMIENIONO' order by at desc limit 1")" t
+# Q() bez JWT → current_app_role() NULL → RAISE (jak zapis reguł); historia tylko z JWT HHL/OPS
+val "#505: soft-delete — po w historii (ROW_UPDATE)" $HHL "select (changes ? 'po')::text from workflow_rule_history('$WR505', 5) where action='ZMIENIONO' order by at desc limit 1" true
 err "#505: KSH nie czyta historii reguł" $KSH "select count(*) from workflow_rule_history(null, 5)" "HHL_ADMIN|HHL_OPS|42501"
 
 # START soft-delete (0281) — 0165 idempotentna; potem 0282 (F7: 0165 nadpisuje workflow_rule_history)

@@ -4541,3 +4541,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez `pilne`; kolejka bez zmian (#505 bieżąca).
 - Scalanie: brak F7 „gotowe”; CI na `bb8d76f7`: unit FAIL (`CheckHit.loadId`), db FAIL (workflows 83/86), visual OK.
 - Bieżąca: **#505** — (1) `p8dProd` status hits + `loadId`; (2) re-apply **0282** po 0165 w `workflows.sh`; (3) zapis/soft-delete z JWT HHL + commit; historia soft-delete przez `val` HHL; (4) nullguard **715** (+3 GUARD ×5). Push → CI.
+
+## 2026-10-24 01:15 — #505 db FAIL: historia soft-delete przez Q() (PR #506)
+
+- Skrzynka: #505/#500/#499/#496/#492/#484/#422 (Spawn2018) — już w planie; bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe”; unit/visual zielone na `3527b0a8`; db FAIL workflows 89/90 — `workflow_rule_history` przez `Q()` bez JWT → RAISE.
+- Bieżąca: **#505** — asercja „po w historii (ROW_UPDATE)” przez `val $HHL` (jak powód w `po`). Push → CI.
