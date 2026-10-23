@@ -262,6 +262,7 @@ const pl: Dict = {
   p4b_skip_tracker_pl: 'pominięte — lokalizator podłączony dopiero w Polsce',
   p4b_sub_import: 'Import harmonogramu KSH · System // Watch Tower',
   p4b_sub_ferry_ais: 'wypłynięcie według AIS',
+  p4b_sub_cofniete: 'rejs odpięty {at} — powrót do tego statusu',
   p4b_sub_fix_ais: 'wypłynięcie według AIS',
   p4b_sub_fix_ais_sched: 'wypłynięcie według AIS · z rozkładu było {was}',
   p4b_sub_fix_ais_was: 'wypłynięcie według AIS · było {was}',

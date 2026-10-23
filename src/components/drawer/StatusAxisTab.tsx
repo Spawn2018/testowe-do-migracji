@@ -83,6 +83,13 @@ function rowSub(
   }
   const h = r.hit;
   if (!h) return null;
+  /* #489: „rejs odpięty 23.10.2026, 13:05 — powrót do tego statusu” */
+  if (h.cofniecieAt) {
+    /* pierwotny wpis (autor, strefa, powód) jak zwykle; sam wpis cofnięcia — tylko dopisek */
+    const base = h.cofniecieAt === h.at ? null : rowSub({ ...r, hit: { ...h, cofniecieAt: null } }, load, geofences, hits, phone, locale, readyGaps, settle);
+    const line = tp(locale, 'p4b_sub_cofniete', { at: dayTime(h.cofniecieAt) });
+    return [base, line].filter(Boolean).join(' · ');
+  }
   if (h.source === 'import') return t(locale, 'p4b_sub_import');
   /* B5: zapis w Podglądzie — ten sam autor co w Historii („… jako … // KSH”) */
   const actor = h.previewAs && h.actor ? `${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}` : axisActor(h.actor);
