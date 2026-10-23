@@ -96,6 +96,8 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
   const title = editing ? p8dt('p8d_c_edit', { name: rule!.name }) : p8dt('p8d_c_new');
   const w = draft.when;
   const th = draft.then;
+  const zoneDwell = w.kind === 'zone' ? zones.find((z) => z.id === w.zoneId)?.dwellMin : undefined;
+  const zoneNoDwell = w.kind === 'zone' && !(zoneDwell && zoneDwell > 0);
 
   const checkBox = useMemo(() => {
     if (check.state === 'fail') return <p className="rl-k-line">{p8dt('p8d_k_fail')}</p>;
@@ -165,8 +167,8 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
               <select ref={reg('zone')} id={`${id}-zone`} className="input" value={w.zoneId} {...desc('zone')} onChange={(e) => {
                 const zoneId = e.target.value;
                 const dwell = zones.find((z) => z.id === zoneId)?.dwellMin;
-                /* #413 F7: GEOFENCE_DWELL = dwell strefy — UI nie udaje osobnego progu */
-                setWhen({ ...w, zoneId, minutes: dwell && dwell > 0 ? dwell : w.minutes });
+                /* #413 F7: GEOFENCE_DWELL = dwell strefy; 0/brak → bez progu (od razu) */
+                setWhen({ ...w, zoneId, minutes: dwell && dwell > 0 ? dwell : 0 });
               }} data-rule-f="zone">
                 {!w.zoneId ? <option value="">{p8dt('p8d_c_zone_pick')}</option> : null}
                 {zones.map((z) => <option key={z.id} value={z.id}>{z.name}</option>)}
@@ -175,10 +177,14 @@ export function RuleCreator({ rule, zones, src, phone, onClose }: {
             </div>
             <div className="rl-f">
               <label htmlFor={`${id}-min`}>{p8dt('p8d_c_longer')}</label>
-              <select id={`${id}-min`} className="input" value={w.minutes} disabled data-rule-f="minutes" title="Próg = czas postoju wybranej strefy">
-                {!(DWELL_STEPS as readonly number[]).includes(w.minutes) ? <option value={w.minutes}>{durText(w.minutes)}</option> : null}
-                {DWELL_STEPS.map((m) => <option key={m} value={m}>{durText(m)}</option>)}
-              </select>
+              {zoneNoDwell ? (
+                <p className="rl-hint" id={`${id}-min`} data-rule-f="minutes">{p8dt('p8d_c_no_dwell')}</p>
+              ) : (
+                <select id={`${id}-min`} className="input" value={w.minutes} disabled data-rule-f="minutes" title="Próg = czas postoju wybranej strefy">
+                  {!(DWELL_STEPS as readonly number[]).includes(w.minutes) ? <option value={w.minutes}>{durText(w.minutes)}</option> : null}
+                  {DWELL_STEPS.map((m) => <option key={m} value={m}>{durText(m)}</option>)}
+                </select>
+              )}
             </div>
           </div>
         ) : w.kind === 'status' ? (

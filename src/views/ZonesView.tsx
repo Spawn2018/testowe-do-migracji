@@ -633,10 +633,19 @@ function ZoneForm({ zone, tracked, near, phone, reveal, onCancel, onSave }: {
         {ports ? (
           <div className="zv-field">
             <label htmlFor={`${id}-route`}>{p8ct('p8c_f_route')}</label>
-            <select id={`${id}-route`} className="input" value={route} onChange={(e) => setRoute(e.target.value === 'STENA' ? 'STENA' : 'POLFERRIES')}>
+            {/* #413 F7 #504: do #505 route nie wraca z upsert — w produkcji tylko odczyt z nazwy */}
+            <select
+              id={`${id}-route`}
+              className="input"
+              value={route}
+              disabled={import.meta.env.VITE_AUTH_MODE === 'supabase'}
+              title={import.meta.env.VITE_AUTH_MODE === 'supabase' ? p8ct('p8c_f_route_locked') : undefined}
+              onChange={(e) => setRoute(e.target.value === 'STENA' ? 'STENA' : 'POLFERRIES')}
+            >
               <option value="POLFERRIES">{p8ct('p8c_route_POLFERRIES')}</option>
               <option value="STENA">{p8ct('p8c_route_STENA')}</option>
             </select>
+            {import.meta.env.VITE_AUTH_MODE === 'supabase' ? <p className="zv-hint">{p8ct('p8c_f_route_locked')}</p> : null}
           </div>
         ) : null}
         {field('center', p8ct('p8c_f_center'), { value: center, set: setCenter, mode: 'decimal' })}

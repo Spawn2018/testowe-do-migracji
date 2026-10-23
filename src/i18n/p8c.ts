@@ -73,6 +73,7 @@ const pl = {
   p8c_f_type: 'Rodzaj',
   p8c_f_country: 'Kraj',
   p8c_f_route: 'Trasa promowa',
+  p8c_f_route_locked: 'Trasa z nazwy strefy — zmiana po #505',
   p8c_f_center: 'Środek (szerokość, długość)',
   p8c_f_radius: 'Promień (m)',
   p8c_f_hyst: 'Margines granicy (m)',
