@@ -140,11 +140,31 @@ export function copyCtidRangeSql(
   return `copy (select ${cols} from public.${t} where ${where}) to stdout with (${fmt})`;
 }
 
-/** Po COPY: liczba wierszy CSV musi = count(*) z tej samej transakcji RR — inaczej ERROR (nie ciche OK). */
+/**
+ * Po COPY w jednej transakcji RR: csv = count(*) z tej samej migawki (F7 #472).
+ * Przy kopiowaniu poza transakcją (#479) użyj `assertCsvInCountWindow`.
+ */
 export function assertCsvMatchesDbCount(csvRows: number, dbCount: number, table: string): void {
   const t = assertSafeIdent(table);
   if (!Number.isFinite(csvRows) || !Number.isFinite(dbCount) || csvRows !== dbCount) {
     throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} db=${dbCount}`);
+  }
+}
+
+/**
+ * #479 F7: count(*) przed COPY (`n0`) i po (`n1`); csv ∈ [min(n0,n1), max(n0,n1)].
+ * Wstawki / retencja w trakcie nie dają fałszywego ERROR; brak wierszy w CSV (csv < lo) — tak.
+ * Kopia nie jest migawką spójną między tabelami (dopisek D-20261023-0615-01).
+ */
+export function assertCsvInCountWindow(csvRows: number, n0: number, n1: number, table: string): void {
+  const t = assertSafeIdent(table);
+  const lo = Math.min(n0, n1);
+  const hi = Math.max(n0, n1);
+  if (
+    !Number.isFinite(csvRows) || !Number.isFinite(n0) || !Number.isFinite(n1)
+    || csvRows < lo || csvRows > hi
+  ) {
+    throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} n0=${n0} n1=${n1}`);
   }
 }
 

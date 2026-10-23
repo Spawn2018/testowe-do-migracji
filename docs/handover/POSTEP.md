@@ -4324,3 +4324,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Skrzynka: #463 `pilne` bieżąca; #466 SCALONE (odbiór SELECT po wdrożeniu); #467/#446/#413/#422 w planie. Bez nowych `pilne` przerywających.
 - Scalanie: #476 F7 „gotowe do scalenia” (head `2b7adc8`) + CI unit/db/visual zielone → MERGED `343a7042` (0273). Bez push na `main`.
 - Bieżąca: **#463 cz.3** PR #477 — rebase na `main` po #476 (konflikt PLAN/POSTEP); CI ponownie po push. Czekam na F7.
+
+## 2026-10-23 06:05 — #479 pilne: kopia id 40 hang; cz.4 COPY jak id 37
+
+- Skrzynka: #479 `pilne` (przerywa #467/PR #478) — po wdrożeniu #477 brak przebiegu OK; id 39 ERROR, id 37 ostatnia OK.
+- Ręczny `backup-export` jak cron: **id 40** RUNNING → te same 4 tabele → IDLE_TIMEOUT 150 s; `continue_run=40` → znowu 150 s, 0 postępu. `auth_login_events` 85 wierszy / 24 kB. Brak `idle in transaction` po zabiciu Edge.
+- Diagnoza: `await query` po `.readable()` w `sql.begin` RR (#477) wiesza Deno; w `catch` po timeout COPY też. Naprawa cz.4: strumień data/end jak id 37 / PR2 — **bez** `begin` i **bez** `await query`; count(*) osobnym zapytaniem.
+- id 40 → ERROR. Gałąź `pakiet/hotfix-479-backup-copy-complete` (PR #480). F7 „jeszcze nie”: przedział `assertCsvInCountWindow(n0,n1)` zamiast równości; dopisek D-20261023-0615-01. Po ponownym F7/deploy-main: kopia + wpis w #463.
