@@ -4312,3 +4312,15 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 | `load_escort_contacts` / `awiz_pilots_set` | już jawne (#358/#0239) | bez zmian |
 | `driver_tokens` | poza `trg_audit_row` | OK (sekret poza historią wierszy) |
 | Wpisy archiwalne `[dane osobowe]` | nieodtwarzalne | bez zmian |
+
+## 2026-10-23 04:55 — #463 cz.3: hang COPY→count (id 39 ERROR)
+
+- Skrzynka: #463 `pilne` (odbiór kopii); #466 PR #476 CI zielone, czeka F7; #467/#446/#413/#422 w planie.
+- Ręczny `backup-export` (jak cron, bez `continue_run`): **id 39** RUNNING → 4 tabele (`anon_call_window`…`audit_log`) → EDGE IDLE_TIMEOUT 150 s; `continue_run` bez postępu. Diagnoza: `pg_stat_activity` = `idle in transaction` / ClientRead, ostatnie `count(*)` na `auth_login_events` (postgres.js po `.readable()` nie domyka zapytania → brak COMMIT).
+- id 39 oznaczone ERROR (terminate backend). Naprawa Edge: `await query` po strumieniu COPY + `count(*)` przed COPY w RR. Gałąź `pakiet/hotfix-463-backup-copy-hang`. Po wdrożeniu — ponowna kopia i wpis id/status/continue.
+
+## 2026-10-23 05:05 — #476/#466 SCALONE; rebase #477 (#463 cz.3)
+
+- Skrzynka: #463 `pilne` bieżąca; #466 SCALONE (odbiór SELECT po wdrożeniu); #467/#446/#413/#422 w planie. Bez nowych `pilne` przerywających.
+- Scalanie: #476 F7 „gotowe do scalenia” (head `2b7adc8`) + CI unit/db/visual zielone → MERGED `343a7042` (0273). Bez push na `main`.
+- Bieżąca: **#463 cz.3** PR #477 — rebase na `main` po #476 (konflikt PLAN/POSTEP); CI ponownie po push. Czekam na F7.
