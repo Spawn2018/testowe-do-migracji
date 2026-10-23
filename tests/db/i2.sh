@@ -682,6 +682,8 @@ $PSQL -c "insert into pilot_notify_redirect (load_id, owner_email, owner_phone_e
         active=true, note=excluded.note, updated_at=now()" >/dev/null
 F7Z=$(Q "select sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")
 chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48600999888"
+chk "#467 E42: pilot_redirect_dry_run ok (SMS→pilot, mail bez insertu)" "$(Q "select (pilot_redirect_dry_run('$SL')->>'ok')")" "true"
+
 chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" true
 chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
 # 1× ZONE (F7Z) + 1× TEST (lista testowa) — po EXTERNAL on: ZONE pull; TEST testowy → EXPIRED (#467)

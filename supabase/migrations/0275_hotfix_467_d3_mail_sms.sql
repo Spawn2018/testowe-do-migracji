@@ -1,13 +1,15 @@
--- HOTFIX #467 / D3 (właściciel 22.10 21:25):
+-- HOTFIX #467 / D3 (właściciel 22.10 21:25 + P1 23.10 08:17):
 -- 1) Maile (także na adres bez konta) tylko przez „Kto co dostaje” (firma/rola/rodzaj).
 --    Bez osobnego przełącznika ext_mail „domyślnie włączone”.
--- 2) Numery testowe SMS działają tylko przy wyłączonej EXTERNAL_MESSAGING;
---    przy włączonej — SMS TEST tylko na sms_zone_recipients (numery testowe nic nie dostają).
--- F7 #478: wiersze macierzy dla ról bez konta; org z roli; sms_send_test = HHL_ADMIN; E42 payload.
+-- 2) Numery testowe SMS milczą przy włączonej EXTERNAL_MESSAGING (+ UI).
+--    SMS ZONE_* na listę stref — także przy EXTERNAL off (P1 TAK; bez zmian enqueue/pull).
+-- F7 #478: tylko sms_gw dla ról bez konta (fixed_*); org z roli; sms_send_test = HHL_ADMIN;
+--    E42 dry-run bez insertu maila.
 
 -- ---------------------------------------------------------------------------
--- 0. Wiersze macierzy dla ról przewoźnika/klienta (domyślnie email off)
---    — bez nich update w testach/UI nie ma wiersza → v_matrix null → SUPPRESSED.
+-- 0. Tylko sms_gw × CARRIER_*/CLIENT_USER (maile bez konta: SMS_FALLBACK /
+--    SMS_GATEWAY_* / ZONE_LIMIT → notify_event_key = sms_gw). fixed_* = true —
+--    zmienia wyłącznie Administrator HHL w macierzy (nie my_notify_set).
 -- ---------------------------------------------------------------------------
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
@@ -20,9 +22,9 @@ select
   false,
   false,
   false,
-  false,
-  false,
-  false,
+  true,
+  true,
+  true,
   false,
   m.label_pl
 from public.notification_matrix m
@@ -32,6 +34,7 @@ cross join (values
   ('CLIENT_USER')
 ) as r(role)
 where m.role = 'HHL_ADMIN'
+  and m.event_key = 'sms_gw'
   and not exists (
     select 1
       from public.notification_matrix x
@@ -447,21 +450,27 @@ comment on function public.sms_send_test(text) is
   '#467: SMS na numer testowy tylko przy wyłączonej EXTERNAL_MESSAGING; tylko HHL_ADMIN.';
 
 -- ---------------------------------------------------------------------------
--- 3. E42: pilot_redirect_dry_run — rola w payloadzie (bramka orphan nie SUPPRESS)
+-- 3. E42: pilot_redirect_dry_run — SMS przez enqueue; mail = odczyt bez insertu
+--    (niezależne od bramki #467 / macierzy FORWARDER).
 -- ---------------------------------------------------------------------------
 create or replace function public.pilot_redirect_dry_run(p_load uuid default '963e19dd-fe83-4690-9306-5c7fc4b95468')
 returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
   v_sms uuid;
-  v_mail_id bigint;
   v_to text;
-  v_rcpt text;
   v_owner_phone text;
   v_owner_email text;
+  v_redir record;
 begin
-  select owner_phone_e164, owner_email into v_owner_phone, v_owner_email
-    from pilot_notify_redirect where load_id = p_load and active;
+  select * into v_redir from public.pilot_redirect_for_load(p_load);
+  if not found or v_redir.owner_phone_e164 is null then
+    select owner_phone_e164, owner_email into v_owner_phone, v_owner_email
+      from pilot_notify_redirect where load_id = p_load and active;
+  else
+    v_owner_phone := v_redir.owner_phone_e164;
+    v_owner_email := v_redir.owner_email;
+  end if;
   if v_owner_phone is null then
     return jsonb_build_object('ok', false, 'error', 'brak aktywnego redirectu');
   end if;
@@ -473,38 +482,20 @@ begin
   );
   select to_e164 into v_to from sms_outbox where id = v_sms;
 
-  -- F7 #478: matrix_role — bez roli bramka #467 → SUPPRESSED i trg_pilot nie przekieruje.
-  insert into notifications (channel, recipient, load_id, template, payload, dedup_key, status)
-  values (
-    'EMAIL', 'ksh-fake@example.com', p_load, 'SMS_FALLBACK',
-    jsonb_build_object(
-      'kind', 'ZONE_LIMIT',
-      'text', 'test na sucho — nie wysyłać dalej',
-      'matrix_role', 'HHL_ADMIN'
-    ),
-    'PILOT_DRY_MAIL:' || p_load::text || ':' || floor(extract(epoch from now()))::text,
-    'PENDING'
-  )
-  on conflict (dedup_key) where dedup_key is not null do nothing
-  returning id, recipient into v_mail_id, v_rcpt;
-  if v_mail_id is null then
-    select id, recipient into v_mail_id, v_rcpt from notifications
-     where dedup_key like 'PILOT_DRY_MAIL:' || p_load::text || ':%'
-     order by id desc limit 1;
-  end if;
-
-  update notifications set status = 'BLOCKED_R2', error = 'pilot dry-run — nie wysyłać'
-   where id = v_mail_id;
   update sms_outbox set status = 'EXPIRED', error = 'pilot dry-run — nie wysyłać'
    where id = v_sms;
 
+  -- Bez insertu EMAIL: dry-run nie zależy od notify_orphan_email_allowed / macierzy.
   return jsonb_build_object(
-    'ok', (v_to = v_owner_phone and lower(v_rcpt) = lower(v_owner_email)),
+    'ok', (
+      v_to = v_owner_phone
+      and v_owner_email is not null
+      and length(trim(v_owner_email)) > 0
+    ),
     'sms_id', v_sms,
     'sms_to', v_to,
     'expected_phone', v_owner_phone,
-    'mail_id', v_mail_id,
-    'mail_to', v_rcpt,
+    'mail_to', v_owner_email,
     'expected_email', v_owner_email
   );
 end $$;
@@ -512,4 +503,4 @@ end $$;
 revoke all on function public.pilot_redirect_dry_run(uuid) from public, anon;
 grant execute on function public.pilot_redirect_dry_run(uuid) to service_role;
 comment on function public.pilot_redirect_dry_run(uuid) is
-  '#467 F7: dry-run ZONE_* → pilot; payload matrix_role HHL_ADMIN (bramka orphan); EXPIRED/BLOCKED_R2.';
+  '#467 F7: dry-run ZONE_* → numer pilota; mail = adres z pilot_redirect_for_load (bez insertu).';
