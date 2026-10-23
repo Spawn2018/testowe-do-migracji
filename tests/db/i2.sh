@@ -712,27 +712,38 @@ chk "ROW_UPDATE loads: kto (HHL), tylko zmieniona kolumna, stara i nowa wartoś�
 $PSQL -c "select set_config('tower.eta_ctx','on',false); update loads set eta_site=now(), delay_minutes=5, eta_computed_at=now() where id='$L1'" >/dev/null
 chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q "select count(*) from audit_log where action='ROW_UPDATE' and entity='loads' and entity_id='$L1'")" 1
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48000000111', driver_name='Jan Test' where id='$L1'" >/dev/null
-# #400 / D-1243: loads.driver_* jawne w historii; inne tabele nadal maskowane.
-chk "D-1243/#400: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48000000111' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# #466 / D1: wszystkie PII jawne w historii (D-1243 dokończenie); sekrety nadal ••••.
+chk "D-1243/#466: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48000000111' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
 # F7 r3: driver_phone krajowy (0111 ^[0-9]{7,12}$), nie E.164 — jak i2 ok. 1181.
 $PSQL -c "delete from load_escorts where load_id='$L1'; insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
  values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '000000222', 'PL',
          (select id from app_users where auth_id='$HHL'))" >/dev/null
 # Nawiasy: || ma wyższy priorytet niż ->> (bez nich: (text||jsonb)->>'…' → brak operatora).
-chk "D-1243/#400: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/000000222"
+chk "D-1243/#466: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/000000222"
 HHL_UID=$(Q "select id from app_users where auth_id='$HHL'")
 $PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
-chk "D-1243/#400: app_users.phone zamaskowany" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "[dane osobowe]"
+chk "D-1243/#466: app_users.phone jawny" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "+48000000333"
 # slot 1–2 (0106); tabela ma uuid id → entity_id = id::text (nie list_key:slot).
 # Najpierw delete, żeby INSERT zawsze zapisał phone_national w dzienniku (nie no-op UPDATE).
 $PSQL -c "delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2;
  insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
  values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)" >/dev/null
 SZR_ID=$(Q "select id::text from sms_zone_recipients where list_key='LOAD_SREM' and slot=2")
-chk "D-1243/#400: sms_zone_recipients.phone_national zamaskowany" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='$SZR_ID' and new_value ? 'phone_national' order by created_at desc limit 1")" "[dane osobowe]"
+chk "D-1243/#466: sms_zone_recipients.phone_national jawny" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='$SZR_ID' and new_value ? 'phone_national' order by created_at desc limit 1")" "000000001"
 $PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
-chk "D-1243/#400: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
-chk "D-1243/#400: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
+chk "D-1243/#466: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
+chk "D-1243/#466: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
+# Role: KSH / HHL_ADMIN / HHL_OPS / SCX widzą PII przez load_driver_contacts (0076: bez SELECT kolumn);
+# anon — nic. Historia (audit) już sprawdzona wyżej — jawne wpisy (#466 pkt 2/5).
+# Część 3 osobno: OPS z części 2 może nie istnieć.
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+$PSQL -c "update loads set driver_name='Jan Test', driver_phone='+48000000111' where id='$L1'" >/dev/null
+val "D-1243/#466: KSH widzi kierowcę (RPC)" $KSH "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_ADMIN widzi kierowcę (RPC)" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_OPS widzi kierowcę (RPC)" $OPS "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: SCX widzi kierowcę (RPC)" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+err "D-1243/#466: anon bez SELECT driver_name" $HHL "set local role anon; select driver_name from loads where id='$L1'" "permission denied"
 # RODO: historyczny jawny wpis → purge maskuje; własne UPDATE z source=rodo też maskują
 $PSQL -c "insert into audit_log (action, entity, entity_id, old_value, new_value, created_at)
  values ('ROW_UPDATE','loads','$L1','{\"driver_name\":\"Stary Kierowca\",\"driver_phone\":\"+48000000999\"}'::jsonb,
