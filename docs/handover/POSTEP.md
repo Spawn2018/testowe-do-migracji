@@ -4331,3 +4331,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Ręczny `backup-export` jak cron: **id 40** RUNNING → te same 4 tabele → IDLE_TIMEOUT 150 s; `continue_run=40` → znowu 150 s, 0 postępu. `auth_login_events` 85 wierszy / 24 kB. Brak `idle in transaction` po zabiciu Edge.
 - Diagnoza: `await query` po `.readable()` w `sql.begin` RR (#477) wiesza Deno; w `catch` po timeout COPY też. Naprawa cz.4: strumień data/end jak id 37 / PR2 — **bez** `begin` i **bez** `await query`; count(*) osobnym zapytaniem.
 - id 40 → ERROR. Gałąź `pakiet/hotfix-479-backup-copy-complete` (PR #480). F7 „jeszcze nie”: przedział `assertCsvInCountWindow(n0,n1)` zamiast równości; dopisek D-20261023-0615-01. Po ponownym F7/deploy-main: kopia + wpis w #463.
+
+## 2026-10-23 06:50 — #479 cz.5: id 42 hang readable(); PostgREST CSV dla małych tabel
+
+- #480 SCALONE `c577280c`; deploy-main OK (Edge `backup-export` + `core.ts`).
+- Kopia jak cron: **id 42** RUNNING → 4 tabele / 532 kB → IDLE_TIMEOUT 150 s; `continue_run=42` → 0 postępu. `psql \copy auth_login_events` OK (85 / 20 kB / 0,6 s). Hang: `await .readable()` przed timerem 40 s.
+- id 42 → ERROR. Gałąź `pakiet/hotfix-479-backup-select-small`: małe tabele → PostgREST CSV; COPY + race na `readable()` dla dużych; dopisek D-20261023-0650-01.

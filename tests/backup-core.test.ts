@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
-  BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES,
+  BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, REST_CSV_MAX_ROWS,
   TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS, assertCsvInCountWindow, assertCsvMatchesDbCount, backupTables,
-  copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget, remainingTables,
-  retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
+  copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget,
+  postgrestSelectParam, remainingTables, retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
@@ -80,6 +80,17 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
       /niekompletna.*vessel_positions.*csv=111.*n0=100.*n1=110/,
     ); // csv > hi
     expect(() => assertCsvInCountWindow(0, 5, 5, 'app_users')).toThrow(/csv=0.*n0=5.*n1=5/);
+  });
+
+  // #479 cz.5: małe tabele → PostgREST CSV (hang readable na auth_login_events)
+  it('#479: postgrestSelectParam / REST_CSV_MAX_ROWS', () => {
+    expect(REST_CSV_MAX_ROWS).toBe(1000);
+    expect(REST_CSV_MAX_ROWS).toBeLessThan(CHUNK_EST_ROWS);
+    expect(postgrestSelectParam(null)).toBe('*');
+    expect(postgrestSelectParam('')).toBe('*');
+    expect(postgrestSelectParam('"id", "email"')).toBe('id,email');
+    expect(postgrestSelectParam('id, code')).toBe('id,code');
+    expect(() => postgrestSelectParam('"id";drop')).toThrow(/zła kolumna/);
   });
 
   // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel

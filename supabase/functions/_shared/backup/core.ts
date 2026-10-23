@@ -168,6 +168,28 @@ export function assertCsvInCountWindow(csvRows: number, n0: number, n1: number, 
   }
 }
 
+/**
+ * #479: lista kolumn COPY (`"id", "code"`) → parametr `select` PostgREST (`id,code`).
+ * `null` / pusty = `*` (cała tabela).
+ */
+export function postgrestSelectParam(selectList: string | null | undefined): string {
+  if (!selectList || !selectList.trim()) return '*';
+  const cols = selectList.split(',').map((c) => {
+    const s = c.trim().replace(/^"|"$/g, '');
+    if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`kopia: zła kolumna select: ${c.trim()}`);
+    return s;
+  });
+  if (!cols.length) return '*';
+  return cols.join(',');
+}
+
+/**
+ * #479: małe tabele (bez kawałków ctid) — próg wierszy dla ścieżki PostgREST CSV
+ * zamiast `COPY … readable()` (hang Edge na `auth_login_events` ~20 kB po `audit_log`).
+ * Musi być ≤ limit wierszy PostgREST (domyślnie 1000 na projektach Supabase).
+ */
+export const REST_CSV_MAX_ROWS = 1_000;
+
 export async function gzip(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
