@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 36, // #460: +1 ferry_track_sample() wywołanie ≥1; było 35 (#421)
+  bmapa: 141, // #465 F7: +105 RPC mapy/Stan (pełna lista + rpc_denied); było 62 / 36 (#460)
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
