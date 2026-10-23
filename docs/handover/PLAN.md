@@ -814,7 +814,7 @@ Trigger `trg_loads_sailing_removed_status` + `revert_status_after_sailing_remove
 ### #467 · D3 — maile wg ustawień; SMS testowe tylko bez EXTERNAL (22.10 21:25) — SCALONE (#478 `37c455a7`, 23.10.2026 17:01, migracja **0277**)
 Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery testowe SMS milczą przy **włączonej** EXTERNAL_MESSAGING; ZONE_* na listę stref także przy EXTERNAL off (P1). Szczegóły: zgłoszenie #467.
 
-### HOTFIX #498 · PILNE — kopia zapasowa w częściach + auto-continue (przed 00:30 UTC 24.10) — W TOKU (przerywa #413; migracja **0278**)
+### HOTFIX #498 · PILNE — kopia zapasowa w częściach + auto-continue — SCALONE (#501 `8d3b19c0`, 23.10.2026 18:11 UTC, migracja **0278**; `deploy-main` w toku)
 Źródło: zgłoszenie #498 (`dla-cursora`, `pilne`). id 46 ERROR (I-33); ostatni OK bez ręcznej pomocy = id 37.
 1. Duże tabele w częściach: ≤ `PART_MAX_ROWS` (5000) / wywołanie; pliki `tabela.part0001.csv.gz.age`…; stan `backup_runs.progress` + ctid.
 2. Automatyczne `continue_run` (samowywołanie + cron `tower-backup-continue` co 1 min).
@@ -823,14 +823,14 @@ Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery test
 5. Testy unit + brama backup (strażnik).
 6. F7 B1': przed `scheduleContinue` zwolnij `lease_until` (dziecko bez 409).
 
-### HOTFIX #502 · PILNE — fałszywy „Prom” A10_b w porcie + powiadomienia FERRY (T-11) — po #498, przed #413
-Źródło: zgłoszenie #502 (`dla-cursora`, `pilne`). Odbiór #469 nieudany. Migracja po rebase (#498 = 0278).
+### HOTFIX #502 · PILNE — fałszywy „Prom” A10_b w porcie + powiadomienia FERRY (T-11) — W TOKU (po #498, przed #413; migracja **0279**)
+Źródło: zgłoszenie #502 (`dla-cursora`, `pilne`). Odbiór #469 nieudany.
 1. A10_b tylko gdy statek płynie: `W_REJSIE` / `actual_departure_at` **albo** AIS > 3 kn i ≥ 1 km od PORT_OUT; w porcie przy zacumowanym — nigdy.
 2. Status FERRY z automatu (A10_b / AIS / SCHEDULE / SCHEDULE_ASSUMED) bez powiadomień `status` (jak #469) — albo potwierdzić źródło 12× IN_APP.
 3. Naprawa danych T-11: usunąć fałszywy wpis 14:07 z osi; 12 PENDING → SUPPRESSED.
 4. Test: PORT_OUT + statek `W_PORCIE`/`ZAPLANOWANY` v=0 → bez zmiany; po `actual_departure_at` → FERRY, 0 powiadomień.
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #498+#502; PR #495 (F7 runda 2); migracje po rebase
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #498+#502; PR #495 (F7 runda 2); migracje **0280+** po rebase
 Szczegóły: `dopiski/D-20261021-2057-01.md`. CI zielone na `d495b295` — nie scalać do ponownego „F7: gotowe”.
 1. P8-d: `rulesReady()` + źródło reguł — dalej; usunięcie START (E35) — soft-delete w PR.
 2. P8-c: `zonesReady()` + źródło stref — dalej; HHL_OPS bez edycji (E34 pkt 6) — w PR.
@@ -838,7 +838,7 @@ Szczegóły: `dopiski/D-20261021-2057-01.md`. CI zielone na `d495b295` — nie s
 Ekran / cele przejść — koordynator (`wyglad/*`).
 
 ### HOTFIX #422 · Wydajność i Błędy aplikacji — źródło w bazie (D-20261022-0113-01, `pilne`) — po #413, przed #412
-Migracja **0281**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
+Migracja **0281** (po rebase). Szczegóły: `dopiski/D-20261022-0113-01.md`.
 1. Tabela `perf_results` + RPC `perf_results_latest()` (HHL).
 2. Zasilanie: Lighthouse po deploy-main; p95 z `pg_stat_statements`; równoczesność lub „brak pomiaru”.
 3. RPC odczytu `client_errors` (7 dni, grupowanie). Front — koordynator (#423).
@@ -1466,3 +1466,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 16:40 | #489/#493+#494 SCALONE (`8e03d704`/`67e18e62`, 0276); #467 merge main → **0277** (PR #478) | pętla |
 | 23.10.2026 18:20 | #498 `pilne` (backup części) przerywa #413; migracja **0278**; #413→0279+0280, #422→0281, B5→0282; skrzynka #496/#499/#500 | pętla |
 | 23.10.2026 19:45 | #501 F7 B1': zwolnij lease przed scheduleContinue; CI zielone na 9b1c6a95; #502 `pilne` wpisane §4 (po #498, przed #413) | pętla |
+| 23.10.2026 20:15 | #501 SCALONE (`8d3b19c0`, 0278); start #502 → **0279**; #413→0280+, #422→0281, B5→0282 | pętla |
