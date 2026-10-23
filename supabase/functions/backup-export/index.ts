@@ -1,6 +1,7 @@
 /**
  * ANEKS 4 PR2 — codzienna kopia zapasowa (02:30, pg_cron → pg_net → ta funkcja, klucz service role).
- *  1. COPY każdej tabeli schematu public z katalogu minus jawne wyłączenia (I-2B; bez surowych pozycji GPS) do CSV, gzip, szyfrowanie age X25519
+ *  1. Każda tabela schematu public z katalogu minus jawne wyłączenia (I-2B; bez surowych pozycji GPS)
+ *     → CSV (select porcjami + składanie w kodzie), gzip, szyfrowanie age X25519
  *     KLUCZEM PUBLICZNYM (BACKUP_AGE_RECIPIENT); klucz prywatny wyłącznie u właściciela, offline.
  *  2. Zapis do Cloudflare R2 przez Worker tower-backup-writer (wiązanie R2, tylko PUT nowego obiektu,
  *     nagłówek X-Backup-Secret; bez klucza R2 i bez S3): daily/RRRR-MM-DD/<tabela>.csv.gz.age + manifest.json.age;
@@ -12,10 +13,9 @@
  *     funkcja niczego nie usuwa ani nie listuje. Przebieg w backup_runs (historia, błędy).
  *  5. #463 (F7 po #472): limit wall-clock Edge ~150 s → po WALL_BUDGET_MS kończymy wywołanie i
  *     samowywołanie z `{ continue_run }` (stan: backup_runs.tables / prefix / bytes). Cron bez zmian.
- *  6. #479: COPY bez `sql.begin` i bez `await query` po `.readable()` (wzór id 37 / PR2).
- *  7. #479 cz.5 (id 42): po #480 nadal hang na `await .readable()` przy `auth_login_events`
- *     (~20 kB) — timeout 40 s nie startował. Małe tabele → PostgREST `Accept: text/csv`;
- *     duże → COPY z `Promise.race` na całe `readable()`+odczyt.
+ *  6. #479 F7 A: **bez COPY** w Edge — `select` keyset po ctid (SELECT_BATCH_ROWS), CSV w kodzie
+ *     (csvEscapeField / rowsToCsv); przedział n0/n1; Promise.race na całą tabelę → ERROR z nazwą
+ *     (nie wiszenie do I-33). Przyczyna hangów 35/38–42: `readable()` po kawałkach COPY.
  * Sekrety: BACKUP_AGE_RECIPIENT, BACKUP_WRITER_URL, BACKUP_WRITER_SECRET.
  * SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL — platforma.
  * Utrata danych w najgorszym razie: do 24 h (kopia raz na dobę).
@@ -23,11 +23,10 @@
 import postgres from 'npm:postgres@3';
 import { Encrypter } from 'npm:age-encryption@0.3';
 import {
-  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, REST_CSV_MAX_ROWS, TABLE_COPY_TIMEOUT_MS,
-  WALL_BUDGET_MS, assertCsvInCountWindow, assertSafeIdent, backupTables, copyCtidRangeSql, csvRowCount,
-  ctidPageRanges, dailyPrefix, heapPagesFromBytes, manifest, monthlyPrefix, pastWallBudget,
-  postgrestSelectParam, remainingTables, rerunPrefix, sealTable, sha256Hex, shouldChunkByEstimate,
-  writerClient,
+  BACKUP_BUCKETS, BUCKET_OBJECTS_SQL, CATALOG_TABLES_SQL, SELECT_BATCH_ROWS, TABLE_SELECT_TIMEOUT_MS,
+  WALL_BUDGET_MS, assertCsvInCountWindow, assertSafeCtid, assertSafeIdent, backupTables, csvRowCount,
+  dailyPrefix, manifest, monthlyPrefix, parseSelectColumns, pastWallBudget, remainingTables,
+  rerunPrefix, rowsToCsv, sealTable, selectTextCastSql, sha256Hex, writerClient,
 } from '../_shared/backup/core.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 
@@ -64,7 +63,7 @@ function scheduleContinue(runId: number): void {
   else void p;
 }
 
-/** A7 / E44: lista kolumn `loads` bez `rio_secret` do COPY. */
+/** A7 / E44: lista kolumn `loads` bez `rio_secret` do CSV. */
 async function loadColumnsWithoutRioSecret(sql: ReturnType<typeof postgres>): Promise<string> {
   const cols = await sql<{ column_name: string }[]>`
     select column_name from information_schema.columns
@@ -74,154 +73,76 @@ async function loadColumnsWithoutRioSecret(sql: ReturnType<typeof postgres>): Pr
   return cols.map((c) => `"${String(c.column_name).replace(/"/g, '""')}"`).join(', ');
 }
 
-type CopyReadable = {
-  on: (ev: string, fn: (...args: unknown[]) => void) => void;
-  destroy?: (err?: Error) => void;
-};
-
-/** Odczyt strumienia COPY z limitem czasu (#463 — bez wiszenia do I-33). */
-function readCopyStream(stream: CopyReadable, label: string, timeoutMs = TABLE_COPY_TIMEOUT_MS): Promise<Uint8Array> {
-  const chunks: Uint8Array[] = [];
-  return new Promise<Uint8Array>((res, rej) => {
-    let settled = false;
-    const finish = (fn: () => void) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try { stream.destroy?.(); } catch { /* ignore */ }
-      fn();
-    };
-    const timer = setTimeout(() => {
-      finish(() => rej(new Error(`kopia: timeout COPY ${label} po ${timeoutMs} ms`)));
-    }, timeoutMs);
-    stream.on('data', (c: unknown) => chunks.push(c as Uint8Array));
-    stream.on('end', () => {
-      void (async () => {
-        try {
-          const buf = new Uint8Array(await new Blob(chunks as BlobPart[]).arrayBuffer());
-          finish(() => res(buf));
-        } catch (e) {
-          finish(() => rej(e));
-        }
-      })();
-    });
-    stream.on('error', (e: unknown) => {
-      finish(() => rej(e instanceof Error ? e : new Error(String(e))));
-    });
-  });
-}
-
-/**
- * COPY TO STDOUT — data/end + timeout na całe `readable()` (nie tylko odczyt strumienia).
- *
- * #479 id 40–42: `await db.unsafe(copy).readable()` wiesza Deno na `auth_login_events`
- * po `audit_log` — timer w `readCopyStream` nie startuje. `Promise.race` obejmuje też
- * `readable()`. Małe tabele i tak idą przez PostgREST (patrz `copyTableCsv`).
- */
-async function copySqlToCsv(
-  db: { unsafe: (s: string) => Promise<unknown> & { readable: () => Promise<CopyReadable> } },
-  copySql: string,
-  label: string,
-): Promise<Uint8Array> {
-  const timeoutMs = TABLE_COPY_TIMEOUT_MS;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const work = (async () => {
-    const stream = await db.unsafe(copySql).readable();
-    try {
-      return await readCopyStream(stream, label, timeoutMs);
-    } catch (e) {
-      try { stream.destroy?.(e instanceof Error ? e : undefined); } catch { /* ignore */ }
-      throw e;
-    }
-  })();
-  const timeout = new Promise<never>((_, rej) => {
-    timer = setTimeout(
-      () => rej(new Error(`kopia: timeout COPY ${label} po ${timeoutMs} ms (readable)`)),
-      timeoutMs,
-    );
-  });
-  try {
-    return await Promise.race([work, timeout]);
-  } finally {
-    if (timer != null) clearTimeout(timer);
-  }
-}
-
-/** Mała tabela: CSV przez PostgREST (service_role) — bez postgres.js COPY stream. */
-async function fetchTableCsvRest(
-  table: string,
-  selectList: string | null,
-  supabaseUrl: string,
-  serviceKey: string,
-): Promise<Uint8Array> {
-  const t = assertSafeIdent(table);
-  const base = supabaseUrl.replace(/\/+$/, '');
-  const select = postgrestSelectParam(selectList);
-  const url = `${base}/rest/v1/${t}?select=${encodeURIComponent(select)}`;
-  const r = await fetch(url, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${serviceKey}`,
-      apikey: serviceKey,
-      Accept: 'text/csv',
-      // jawny zakres — bez ucięcia przy db-max-rows=1000, gdy n0 ≤ REST_CSV_MAX_ROWS
-      Range: `0-${REST_CSV_MAX_ROWS - 1}`,
-    },
-  });
-  if (!r.ok) {
-    const body = await r.text().catch(() => '');
-    throw new Error(`kopia: REST CSV ${t} HTTP ${r.status}${body ? `: ${body.slice(0, 160)}` : ''}`);
-  }
-  return new Uint8Array(await r.arrayBuffer());
-}
-
-/**
- * Jedna tabela: count(*) → CSV → assert przedziału n0/n1.
- * Małe (est < CHUNK, n0 ≤ REST_CSV_MAX_ROWS): PostgREST CSV.
- * Duże / powyżej limitu REST: COPY kawałkami ctid + timeout na readable().
- */
-async function copyTableCsv(
+async function tableColumns(
   sql: ReturnType<typeof postgres>,
   table: string,
   selectList: string | null,
-  rest: { url: string; service: string },
+): Promise<string[]> {
+  const parsed = parseSelectColumns(selectList);
+  if (parsed) return parsed;
+  const t = assertSafeIdent(table);
+  const cols = await sql<{ column_name: string }[]>`
+    select column_name from information_schema.columns
+     where table_schema = 'public' and table_name = ${t}
+     order by ordinal_position`;
+  if (!cols.length) throw new Error(`kopia: brak kolumn ${t}`);
+  return cols.map((c) => String(c.column_name));
+}
+
+/**
+ * #479 F7 A: jedna tabela — select porcjami (keyset ctid) + CSV w kodzie.
+ * Bez postgres.js COPY / `.readable()` (hang po audit_log w przebiegach 35, 38–42).
+ */
+async function selectTableCsv(
+  sql: ReturnType<typeof postgres>,
+  table: string,
+  selectList: string | null,
 ): Promise<Uint8Array> {
   const t = assertSafeIdent(table);
-  const [meta] = await sql<{ est: string | number; bytes: string | number; block: number }[]>`
-    select c.reltuples::bigint as est,
-           pg_relation_size(c.oid)::bigint as bytes,
-           current_setting('block_size')::int as block
-      from pg_class c
-      join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'public' and c.relname = ${table}`;
+  const columns = await tableColumns(sql, t, selectList);
+  const casts = selectTextCastSql(columns);
   const [cnt0] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
   const n0 = Number(cnt0?.n ?? -1);
-  const est = Number(meta?.est ?? 0);
-  const pages = heapPagesFromBytes(Number(meta?.bytes ?? 0), Number(meta?.block ?? 8192));
+
+  const work = (async () => {
+    const dataRows: (string | null)[][] = [];
+    let after: string | null = null;
+    for (;;) {
+      const q = after == null
+        ? `select ctid::text as __bk_ctid, ${casts} from public.${t} order by ctid limit ${SELECT_BATCH_ROWS}`
+        : `select ctid::text as __bk_ctid, ${casts} from public.${t} where ctid > '${assertSafeCtid(after)}'::tid order by ctid limit ${SELECT_BATCH_ROWS}`;
+      const batch = await sql.unsafe(q) as Record<string, string | null>[];
+      if (!batch.length) break;
+      for (const row of batch) {
+        const ctid = row.__bk_ctid;
+        if (ctid == null) throw new Error(`kopia: brak ctid w ${t}`);
+        after = assertSafeCtid(String(ctid));
+        dataRows.push(columns.map((c) => {
+          const v = row[c];
+          return v === undefined || v === null ? null : String(v);
+        }));
+      }
+      if (batch.length < SELECT_BATCH_ROWS) break;
+    }
+    const csv = rowsToCsv(columns, dataRows);
+    return new TextEncoder().encode(csv);
+  })();
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutMs = TABLE_SELECT_TIMEOUT_MS;
+  const timeout = new Promise<never>((_, rej) => {
+    timer = setTimeout(
+      () => rej(new Error(`kopia: timeout select ${t} po ${timeoutMs} ms`)),
+      timeoutMs,
+    );
+  });
   let csv: Uint8Array;
-  const useRest = !shouldChunkByEstimate(est) && Number.isFinite(n0) && n0 >= 0 && n0 <= REST_CSV_MAX_ROWS;
-  if (useRest) {
-    if (!rest.url || !rest.service) throw new Error(`kopia: brak URL/klucza REST dla ${t}`);
-    csv = await fetchTableCsvRest(t, selectList, rest.url, rest.service);
-  } else {
-    const parts: Uint8Array[] = [];
-    let header = true;
-    for (const { from, to } of ctidPageRanges(pages)) {
-      const copySql = copyCtidRangeSql(t, from, to, selectList, header);
-      const label = to === null ? `${t}[${from},∞)` : `${t}[${from},${to})`;
-      const part = await copySqlToCsv(sql, copySql, label);
-      if (part.byteLength) parts.push(part);
-      header = false;
-    }
-    if (!parts.length) {
-      const copySql = selectList
-        ? `copy (select ${selectList} from public.${t} where false) to stdout with (format csv, header true)`
-        : `copy (select * from public.${t} where false) to stdout with (format csv, header true)`;
-      csv = await copySqlToCsv(sql, copySql, `${t}[empty]`);
-    } else {
-      csv = new Uint8Array(await new Blob(parts as BlobPart[]).arrayBuffer());
-    }
+  try {
+    csv = await Promise.race([work, timeout]);
+  } finally {
+    if (timer != null) clearTimeout(timer);
   }
+
   const [cnt1] = await sql.unsafe(`select count(*)::bigint as n from public.${t}`) as { n: string | number }[];
   const n1 = Number(cnt1?.n ?? -1);
   assertCsvInCountWindow(csvRowCount(new TextDecoder().decode(csv)), n0, n1, t);
@@ -333,10 +254,7 @@ Deno.serve(async (req) => {
       }
 
       const t0 = Date.now();
-      const csv = await copyTableCsv(sql, t, t === 'loads' ? loadsCols : null, {
-        url: Deno.env.get('SUPABASE_URL') ?? '',
-        service,
-      });
+      const csv = await selectTableCsv(sql, t, t === 'loads' ? loadsCols : null);
       const rows = csvRowCount(new TextDecoder().decode(csv));
       counts[t] = rows;
       const sealed = await sealTable(csv, encrypt);

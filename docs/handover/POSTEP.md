@@ -4337,3 +4337,9 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - #480 SCALONE `c577280c`; deploy-main OK (Edge `backup-export` + `core.ts`).
 - Kopia jak cron: **id 42** RUNNING → 4 tabele / 532 kB → IDLE_TIMEOUT 150 s; `continue_run=42` → 0 postępu. `psql \copy auth_login_events` OK (85 / 20 kB / 0,6 s). Hang: `await .readable()` przed timerem 40 s.
 - id 42 → ERROR. Gałąź `pakiet/hotfix-479-backup-select-small`: małe tabele → PostgREST CSV; COPY + race na `readable()` dla dużych; dopisek D-20261023-0650-01.
+
+## 2026-10-23 07:05 — #479 cz.6: F7 A — bez COPY (select + CSV)
+
+- Skrzynka: #463/#467/#446/#425/`dla-cursora` — w planie; #479 bieżąca (`pilne`). Bez nowego `pilne` poza kolejką.
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commicie (#481 F7 „jeszcze nie” `5b3aec6`). CI #481 zielone — nie scalać.
+- Bieżąca: **#479 cz.6** PR #481 — usunięte COPY/`.readable()` i PostgREST z Edge; `select` keyset ctid (`SELECT_BATCH_ROWS` 2000) + `rowsToCsv`; timeout całej tabeli 60 s; dopisek `D-20261023-0705-01`.

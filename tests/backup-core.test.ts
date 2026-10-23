@@ -6,9 +6,11 @@ import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
   BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, REST_CSV_MAX_ROWS,
-  TABLE_COPY_TIMEOUT_MS, WALL_BUDGET_MS, assertCsvInCountWindow, assertCsvMatchesDbCount, backupTables,
-  copyCtidRangeSql, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, pastWallBudget,
-  postgrestSelectParam, remainingTables, retentionDeletes, sealTable, sha256Hex, shouldChunkByEstimate,
+  SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS, WALL_BUDGET_MS,
+  assertCsvInCountWindow, assertCsvMatchesDbCount, assertSafeCtid, backupTables, copyCtidRangeSql,
+  csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, parseSelectColumns,
+  pastWallBudget, postgrestSelectParam, remainingTables, retentionDeletes, rowsToCsv, sealTable,
+  selectTextCastSql, sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
@@ -82,7 +84,7 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(() => assertCsvInCountWindow(0, 5, 5, 'app_users')).toThrow(/csv=0.*n0=5.*n1=5/);
   });
 
-  // #479 cz.5: małe tabele → PostgREST CSV (hang readable na auth_login_events)
+  // #479 cz.5 (historyczne): próg PostgREST; F7 A — select w Edge, helpery CSV zostają
   it('#479: postgrestSelectParam / REST_CSV_MAX_ROWS', () => {
     expect(REST_CSV_MAX_ROWS).toBe(1000);
     expect(REST_CSV_MAX_ROWS).toBeLessThan(CHUNK_EST_ROWS);
@@ -93,8 +95,28 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(() => postgrestSelectParam('"id";drop')).toThrow(/zła kolumna/);
   });
 
+  // #479 F7 A: bez COPY — select porcjami + CSV w kodzie
+  it('#479 F7 A: select batch / CSV escape / ctid', () => {
+    expect(SELECT_BATCH_ROWS).toBe(2_000);
+    expect(TABLE_SELECT_TIMEOUT_MS).toBe(TABLE_COPY_TIMEOUT_MS);
+    expect(TABLE_SELECT_TIMEOUT_MS).toBeLessThan(WALL_BUDGET_MS);
+    expect(parseSelectColumns(null)).toBeNull();
+    expect(parseSelectColumns('"id", "code"')).toEqual(['id', 'code']);
+    expect(selectTextCastSql(['id', 'code'])).toBe('"id"::text as "id", "code"::text as "code"');
+    expect(assertSafeCtid('(0,1)')).toBe('(0,1)');
+    expect(() => assertSafeCtid('0,1')).toThrow(/zły ctid/);
+    expect(csvEscapeField(null)).toBe('');
+    expect(csvEscapeField('')).toBe('""');
+    expect(csvEscapeField('a,b')).toBe('"a,b"');
+    expect(csvEscapeField('x"y')).toBe('"x""y"');
+    expect(csvEscapeField('plain')).toBe('plain');
+    expect(rowsToCsv(['a', 'b'], [[null, '1'], ['', 'x,y']])).toBe('a,b\n,1\n"","x,y"\n');
+    expect(csvRowCount(rowsToCsv(['a'], []))).toBe(0);
+    expect(csvRowCount(rowsToCsv(['a'], [['1'], ['2']]))).toBe(2);
+  });
+
   // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel
-  it('#463: remainingTables / pastWallBudget / timeout kawałka < wall', () => {
+  it('#463: remainingTables / pastWallBudget / timeout tabeli < wall', () => {
     expect(TABLE_COPY_TIMEOUT_MS).toBeLessThan(WALL_BUDGET_MS);
     expect(WALL_BUDGET_MS).toBeLessThan(150_000);
     expect(remainingTables(['a', 'b', 'c'], { a: 1 })).toEqual(['b', 'c']);
