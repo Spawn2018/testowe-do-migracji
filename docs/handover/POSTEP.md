@@ -4392,3 +4392,10 @@ Suma od razu: 175 / 7 dób = 25,0 na dobę. Szacunek szczytu po skrócie: 34. Ma
 - Scalanie: brak — #488 F7 „jeszcze nie” (bloker 2–3 migracji); #478 F7 treścią, ale numer → **0277** po #487+#489 (nie scalać).
 - CI #488 na `04d06b7a`: unit/db/visual zielone.
 - F7 poprawki w 0275: `518c010e` bez warunku `resolved_at` + adnotacja; PENDING tylko `payload.risk_id` → `SUPPRESSED`; test ~50 km Småland (15.79/57.76).
+
+## 2026-10-23 14:00 — #487 F7 runda 3: geometria SE_E22 (PR #488)
+
+- Skrzynka: #487/#489 `pilne` bieżące; #484/#467 w planie; nowe bez `pilne` nie przerywają.
+- Scalanie: brak — F7 #488 „jeszcze nie” (B1 polilinia); #478 nie scalać (0275→**0277** po #487+#489).
+- CI #488 na `09a53cc5`: unit/db/visual zielone; F7 B1: Karlshamn 14.862 cofa linię — SG-23 15.9423/56.2523 = 24 km od polilinii.
+- Poprawka 0275: `UPDATE SE_E22` — Jämjö/Brömsebro/Nyköping, bez 14.862; `audit_log` tylko przy zmianie; test Jämjö przy OFFROUTE_KM=20; sprzątanie tylko L487a/b.

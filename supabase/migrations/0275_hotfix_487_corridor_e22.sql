@@ -132,13 +132,53 @@ end $$;
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- 1b. Geometria SE_E22: bez Karlshamn (14.862), z Jämjö / Brömsebro / Nyköping
+--     (F7: prawdziwa E22 Jämjö–Brömsebro była 20–25 km od polilinii 0160).
+-- ---------------------------------------------------------------------------
+update public.corridor_polylines
+   set geom = st_setsrid(st_makeline(array[
+         st_makepoint(15.5866, 56.1616),  -- Karlskrona
+         st_makepoint(15.95,   56.25),    -- Jämjö (E22)
+         st_makepoint(16.10,   56.30),    -- Brömsebro (E22)
+         st_makepoint(16.366,  56.663),   -- Kalmar
+         st_makepoint(16.637,  57.758),   -- Norrköping → E4
+         st_makepoint(17.008,  58.753),   -- Nyköping (E4)
+         st_makepoint(18.0686, 59.3293),
+         st_makepoint(17.6389, 59.8586),
+         st_makepoint(17.1413, 60.6749),
+         st_makepoint(17.1056, 61.7274),
+         st_makepoint(17.3069, 62.3908),
+         st_makepoint(17.9379, 62.6323),
+         st_makepoint(18.7153, 63.2909),
+         st_makepoint(20.2630, 63.8258),
+         st_makepoint(20.9528, 64.7507),
+         st_makepoint(21.4794, 65.3172),
+         st_makepoint(22.1547, 65.5848),
+         st_makepoint(21.7591, 65.8054)   -- Boden
+       ]), 4326),
+       total_km = round((st_length(st_setsrid(st_makeline(array[
+         st_makepoint(15.5866, 56.1616), st_makepoint(15.95, 56.25), st_makepoint(16.10, 56.30),
+         st_makepoint(16.366, 56.663), st_makepoint(16.637, 57.758), st_makepoint(17.008, 58.753),
+         st_makepoint(18.0686, 59.3293), st_makepoint(17.6389, 59.8586), st_makepoint(17.1413, 60.6749),
+         st_makepoint(17.1056, 61.7274), st_makepoint(17.3069, 62.3908), st_makepoint(17.9379, 62.6323),
+         st_makepoint(18.7153, 63.2909), st_makepoint(20.2630, 63.8258), st_makepoint(20.9528, 64.7507),
+         st_makepoint(21.4794, 65.3172), st_makepoint(22.1547, 65.5848), st_makepoint(21.7591, 65.8054)
+       ]), 4326)::geography) / 1000.0)::numeric, 2),
+       source = 'OSM / ODbL — Karlskrona → E22 (Jämjö/Brömsebro) → Norrköping → E4 (Nyköping) → Boden (#487)',
+       updated_at = now()
+ where code = 'SE_E22';
+
+-- ---------------------------------------------------------------------------
 -- 2. Zamknięcie fałszywej sprawy SG-23 (518c010e…) + Stena + SE_E4
--- F7: 518c010e bez warunku resolved_at (idempotentnie); SUPPRESSED tylko po risk_id.
+-- F7: 518c010e bez warunku resolved_at (idempotentnie); SUPPRESSED tylko po risk_id;
+--     audit_log tylko przy faktycznej zmianie.
 -- ---------------------------------------------------------------------------
 do $$
 declare
   r record;
   v_false uuid := '518c010e-b632-4dbb-92b8-4b29c10b3d02';
+  v_sig int;
+  v_notif int;
 begin
   for r in
     select s.id, s.dedup_key, s.load_id
@@ -162,7 +202,12 @@ begin
              'closed_by', '#487',
              'closed_note', 'fałszywa — brak korytarza E22 (Karlskrona)'
            )
-     where id = r.id;
+     where id = r.id
+       and (
+         resolved_at is null
+         or coalesce(detail->>'closed_by', '') is distinct from '#487'
+       );
+    get diagnostics v_sig = row_count;
 
     perform l3_lapse(r.dedup_key, now());
 
@@ -172,15 +217,20 @@ begin
            error = coalesce(nullif(error, ''), 'fałszywa OFF_CORRIDOR #487')
      where status = 'PENDING'
        and payload->>'risk_id' = r.id::text;
+    get diagnostics v_notif = row_count;
 
-    insert into audit_log (user_id, action, entity, entity_id, new_value)
-    values (
-      null, 'HOTFIX_487_OFF_CORRIDOR', 'risk_signals', r.id::text,
-      jsonb_build_object(
-        'dedup_key', r.dedup_key,
-        'load_id', r.load_id,
-        'note', 'fałszywa — brak korytarza E22 (Karlskrona)'
-      )
-    );
+    if v_sig > 0 or v_notif > 0 then
+      insert into audit_log (user_id, action, entity, entity_id, new_value)
+      values (
+        null, 'HOTFIX_487_OFF_CORRIDOR', 'risk_signals', r.id::text,
+        jsonb_build_object(
+          'dedup_key', r.dedup_key,
+          'load_id', r.load_id,
+          'note', 'fałszywa — brak korytarza E22 (Karlskrona)',
+          'signals_updated', v_sig,
+          'notifications_suppressed', v_notif
+        )
+      );
+    end if;
   end loop;
 end $$;

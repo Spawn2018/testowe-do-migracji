@@ -806,7 +806,7 @@ Zdjąć maskę PII z `audit_row_change` (telefony, imiona, maile); zostają sekr
 `apply_ferry_se_from_position` w `process_position`: ląd SE + `p_ts ≥ arrival`; PORT_IN → `AT_PORT_NYNASHAMN`; poza portem ≥2 km → `IN_TRANSIT_SE` + synthetic Port SE; naprawa SG-23. Odbiór: SG-23 → Droga SE; SG-17/SG-18 przy pierwszej pozycji SE.
 
 ### #487 · PILNE — fałszywa OFF_CORRIDOR po Karlskronie (brak E22) — W TOKU (przerywa #467/#478; migracja **0275**; PR #488)
-Korytarz SE z trasy rejsu: STENA/Karlskrona → `SE_E22`; POLFERRIES/Nynäshamn → `SE_E4`; bez geometrii korytarza — bez sprawy. Zamknięcie `518c010e…` (idempotentnie, także gdy już `resolved_at`) + PENDING tylko `payload.risk_id` → `SUPPRESSED` + L3. Test `status.sh`: wierzchołek SE_E22 → 0; ~50 km Småland → OFF_CORRIDOR/`SE_E22`; sprzątanie `rk_off_corridor` (risks.sh). Szczegóły: zgłoszenie #487.
+Korytarz SE z trasy rejsu: STENA/Karlskrona → `SE_E22`; POLFERRIES/Nynäshamn → `SE_E4`; bez geometrii korytarza — bez sprawy. Geometria `SE_E22`: bez Karlshamn (14.862), z Jämjö/Brömsebro/Nyköping. Zamknięcie `518c010e…` (idempotentnie) + PENDING tylko `payload.risk_id` → `SUPPRESSED` + L3; `audit_log` tylko przy zmianie. Test `status.sh`: Jämjö 15.9423/56.2523 przy OFFROUTE_KM=20 → 0; ~50 km Småland → OFF_CORRIDOR/`SE_E22`; sprzątanie tylko L487a/b. Szczegóły: zgłoszenie #487.
 
 ### #489 · PILNE — po odpięciu rejsu status wraca z „Prom” (SG-18) — DO ZROBIENIA (po #487, przed #467; migracja **0276**)
 Trigger / zapis `sailing_id → null` (lub inny rejs): jeśli status `FERRY` / port z rejsu (AIS/SCHEDULE/SCHEDULE_ASSUMED, nie GPS/ręczny) — cofnij do `from` ostatniego `STATUS_AUTO` z rejsu, `source=SAILING_REMOVED`, bez powiadomień i spraw; oś Status: cofnięte FERRY. Naprawa danych: SG-18 → `IN_TRANSIT_PL` (11:05:13 UTC) + inne z `sailing_id is null` i statusem z rejsu. Testy `status.sh`. Szczegóły: zgłoszenie #489.
@@ -1431,3 +1431,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 12:31 | #486/#485 SCALONE (`88134e34`, 0274); #467 rebase → **0275** | pętla |
 | 23.10.2026 12:45 | #487 `pilne` (fałszywa OFF_CORRIDOR SG-23 / E22) → **0275**; przerywa #467; #467→**0276**, #413→**0277**, #422→**0278**, B5→**0279** | pętla |
 | 23.10.2026 13:35 | #487 F7: 518c010e idempotentnie + SUPPRESSED po `risk_id`; punkt Småland; #489 `pilne` → **0276**; #467→**0277**, #413→**0278**, #422→**0279**, B5→**0280** | pętla |
+| 23.10.2026 14:00 | #487 F7 r3: geometria SE_E22 (Jämjö/Brömsebro/Nyköping, bez Karlshamn); test 15.9423/56.2523; #488=0275, #489=0276, #478=0277 | pętla |

@@ -834,20 +834,22 @@ pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
 chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
 
 # #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
-# Punkt „na E22” = wierzchołek polilinii SE_E22 (0160); 57.0/16.4 jest ~3 km od
-# grubej OSM i przy OFFROUTE_KM=2 fałszywie alarmuje.
+# F7 r3: geometria bez Karlshamn; Jämjö 15.9423/56.2523 przy OFFROUTE_KM=20 → 0.
 echo; echo "[#487] korytarz E22 po Karlskronie (OFF_CORRIDOR)"
 L487a=$(L 8d)
 mk $L487a A487 "'HHL/A487'" "'SCX/A487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
    update loads set status='IN_TRANSIT_SE' where id='$L487a';
    delete from positions where load_id='$L487a';
+   update ops_thresholds set value_num = 20 where key = 'OFFROUTE_KM';
    set session_replication_role=origin;" >/dev/null
+# SG-23 07:20 UTC — na E22 przy Jämjö (wcześniej 24 km od polilinii z Karlshamn)
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(16.637, 57.758),4326), 'TELEMATICS_API'),
-  ('$L487a', now(), st_setsrid(st_makepoint(16.637, 57.758),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
-chk "#487: E22 (wierzchołek SE_E22) po Karlskronie → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+chk "#487: Jämjö 15.9423/56.2523 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+q "update ops_thresholds set value_num = 2 where key = 'OFFROUTE_KM'" >/dev/null
 L487b=$(L 8e)
 mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
@@ -862,18 +864,22 @@ q "select refresh_load_eta('$L487b')" >/dev/null
 chk "#487: ~50 km od E22 (Småland) → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
 chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
   "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
-# F7: risks.sh liczy title_key w całej tower_test_status (baseline 5) — bez rk_off_corridor.
-chk "#487 po teście brak rk_off_corridor (risks.sh)" \
+# F7: sprzątanie tylko L487a/L487b (nie globalne DELETE) — risks.sh baseline title_key.
+chk "#487 po teście brak rk_off_corridor L487a/b" \
   "delete from decision_events where decision_id in (
       select d.id from decisions d
        where d.risk_id in (select id from risk_signals
-         where title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%'));
+         where load_id in ('$L487a','$L487b')
+           and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%')));
    delete from decisions where risk_id in (
       select id from risk_signals
-       where title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%');
+       where load_id in ('$L487a','$L487b')
+         and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%'));
    delete from risk_signals
-    where title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%';
-   select count(*) from risk_signals where title_key='rk_off_corridor'" 0
+    where load_id in ('$L487a','$L487b')
+      and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%');
+   select count(*) from risk_signals
+    where load_id in ('$L487a','$L487b') and title_key='rk_off_corridor'" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
