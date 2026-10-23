@@ -15,11 +15,24 @@ import { mergeBellRefresh } from '../lib/bellList';
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
 /** keepSelection — I-18: szuflada zostaje otwarta na tym samym transporcie (o ile nadal jest widoczny). */
-export async function refreshFromServer(opts: { keepSelection?: boolean } = {}): Promise<void> {
+export async function refreshFromServer(opts: { keepSelection?: boolean; background?: boolean } = {}): Promise<void> {
   if (!active) return;
-  const snap = await active.loadSnapshot();
+  const p = active;
+  const seq = writesSeq;
+  /* wersja PRZED zrzutem: zmiana w trakcie zrzutu da przy następnym sprawdzeniu nowszą wersję, więc nie zginie */
+  const v = await p.loadsVersion().catch(() => null);
+  const snap = await p.loadSnapshot();
+  if (p !== active) return;
+  /* odświeżenie w tle: zapis użytkownika w trakcie zrzutu — zrzut może być starszy niż ekran; następne sprawdzenie ponowi */
+  if (opts.background && (writesPending > 0 || writesSeq !== seq)) return;
+  if (v != null) lastLoadsVersion = v;
   const sel = useTowerStore.getState().selectedLoadId;
   const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
+  if (opts.background) {
+    /* dzwonek scalony jak przy samym dzwonku (przeczytane lokalnie zostają przeczytane, wpisy z push zostają) */
+    useTowerStore.setState((s) => ({ ...snap, notifications: mergeBellRefresh(s.notifications, snap.notifications), selectedLoadId: keep }));
+    return;
+  }
   useTowerStore.setState({ ...snap, selectedLoadId: keep });
 }
 
@@ -42,8 +55,35 @@ async function doRefreshNotifications(): Promise<void> {
   useTowerStore.setState((s) => ({ notifications: mergeBellRefresh(s.notifications, server) }));
 }
 
+/**
+ * Właściciel 23.10.2026 13:43 (SG-17, SG-23): status zmieniony przez automat (GPS, AIS) — ekran sam pobiera nowy stan
+ * (pasek etapów, „Kierowcy i zestaw” · teraz, „Zadzwoń”), bez przeładowania. Co 2 min, gdy karta widoczna,
+ * i po powrocie do aplikacji (najwyżej raz na 30 s) — jedno lekkie zapytanie o wersję; pełny zrzut tylko po zmianie.
+ */
+let lastLoadsVersion: string | null = null;
+let writesPending = 0;
+let writesSeq = 0;
+let liveInFlight: Promise<void> | null = null;
+export function refreshIfLoadsChanged(): Promise<void> {
+  if (liveInFlight) return liveInFlight;
+  liveInFlight = (async () => {
+    const p = active;
+    if (!p) return;
+    const v = await p.loadsVersion();
+    if (p !== active || v == null) return;
+    if (lastLoadsVersion == null) { lastLoadsVersion = v; return; }
+    if (v === lastLoadsVersion) return;
+    /* własny zapis w toku — odświeży się po nim (nie nadpisuj zmiany, która jeszcze idzie na serwer) */
+    if (writesPending > 0) return;
+    await refreshFromServer({ keepSelection: true, background: true });
+  })().finally(() => { liveInFlight = null; });
+  return liveInFlight;
+}
+const LIVE_EVERY_MS = 2 * 60_000;
+
 let bellTimer: ReturnType<typeof setInterval> | null = null;
 let bellUnlisten: (() => void) | null = null;
+let liveTimer: ReturnType<typeof setInterval> | null = null;
 /* 22.10.2026: co 60 s przeciążało bazę — co 5 min; powrót do aplikacji najwyżej raz na 30 s. */
 const BELL_EVERY_MS = 5 * 60_000;
 const BELL_RETURN_MIN_MS = 30_000;
@@ -58,6 +98,7 @@ function startBellRefresh(): void {
     if (!force && Date.now() - last < BELL_RETURN_MIN_MS) return;
     last = Date.now();
     void refreshNotifications().catch(() => undefined);
+    void refreshIfLoadsChanged().catch(() => undefined);
   };
   const onVis = () => tick();
   const onShow = () => tick();
@@ -65,6 +106,9 @@ function startBellRefresh(): void {
   window.addEventListener('pageshow', onShow);
   window.addEventListener('focus', onShow);
   bellTimer = setInterval(() => tick(true), BELL_EVERY_MS);
+  liveTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') void refreshIfLoadsChanged().catch(() => undefined);
+  }, LIVE_EVERY_MS);
   bellUnlisten = () => {
     document.removeEventListener('visibilitychange', onVis);
     window.removeEventListener('pageshow', onShow);
@@ -75,6 +119,8 @@ function startBellRefresh(): void {
 function stopBellRefresh(): void {
   if (bellTimer) clearInterval(bellTimer);
   bellTimer = null;
+  if (liveTimer) clearInterval(liveTimer);
+  liveTimer = null;
   bellUnlisten?.();
   bellUnlisten = null;
 }
@@ -83,6 +129,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   active = createSupabaseProvider(sb);
   registerFileSink(createStorageSink(sb)); // BK4: pliki → prywatne koszyki Storage
   registerAfterFileUpload(() => refreshFromServer({ keepSelection: true }));
+  lastLoadsVersion = null;
   await refreshFromServer();
   startBellRefresh();
   // M4: ustawienia użytkownika z serwera (waluta, motyw; język — zawsze polski, B9) — bez ponownego zapisu
@@ -97,6 +144,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   registerRemoteSink((m: DataMutation) => {
     const provider = active;
     if (!provider) return;
+    writesPending += 1;
+    writesSeq += 1;
     chain = chain.then(async () => {
       try {
         const res = await provider.apply(m);
@@ -120,6 +169,8 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
       } catch (e) {
         useTowerStore.getState().pushToast(`Nie zapisano na serwerze: ${friendlyDbError(e instanceof Error ? e.message : String(e), useTowerStore.getState().locale)}`, 'HIGH');
         await refreshFromServer().catch(() => undefined);
+      } finally {
+        writesPending = Math.max(0, writesPending - 1);
       }
     });
   });
@@ -127,6 +178,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 
 export function disconnectSupabaseData(): void {
   stopBellRefresh();
+  lastLoadsVersion = null;
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);
