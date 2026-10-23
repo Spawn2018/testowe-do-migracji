@@ -4452,3 +4452,9 @@ Suma od razu: 175 / 7 dÃƒÂ³b = 25,0 na dobÃ„Â™. Szacunek szczytu po skrÃƒÂ³cie: 
 - Skrzynka: #489 zamkniÄ™te; #492/#484 w planie; #467 bieÅ¼Ä…ca (PR #478).
 - Scalanie: **#494** `67e18e62` (F7 gotowe, CI zielone); **#493** `8e03d704` (F7 gotowe na `952ef2d6`, CI unit/db/visual zielone, status 230).
 - BieÅ¼Ä…ca: **#467** `pakiet/hotfix-467-d3-mail-sms-settings` â€” merge `main` po #489; migracja **0275â†’0277**; czekam na CI + F7: gotowe do scalenia.
+
+## 2026-10-23 18:20 — #498 pilne (backup czêœci); skrzynka; #413 wstrzymane
+
+- Skrzynka: **#498** `pilne` › bie¿¹ca (przerywa #413); #496/#499/#500 wpisane §4; #492/#484/#413/#422 w kolejce.
+- Scalanie: **brak** — #495 F7 odwo³ane po commit 0279 (`d495b295`); CI unit/db/visual zielone, czekam rundê 2; #497 wygl¹d bez F7; #382 konflikt.
+- Bie¿¹ca: **#498** `pakiet/hotfix-498-backup-parts`, migracja **0278**: czêœci `PART_MAX_ROWS=5000`, `progress`/`progress_at`, cron `tower-backup-continue`, I-33 = 10 min bez postêpu; `restore.sh` + unit. #413›0279+0280 po rebase.

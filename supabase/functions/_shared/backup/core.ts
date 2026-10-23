@@ -57,6 +57,8 @@ export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
  * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie + limit czasu.
  * #479 F7 A: bez COPY — `select` porcjami (keyset ctid) + CSV w kodzie; `TABLE_*_TIMEOUT`
  * na całą tabelę (ERROR z nazwą, nie wiszenie do I-33).
+ * #498: jedna część ≤ PART_MAX_ROWS / wywołanie; pliki `tabela.part0001.csv.gz.age`;
+ * I-33 = 10 min bez postępu (nie 30 min całości).
  */
 export const CHUNK_EST_ROWS = 2_500;
 export const CTID_PAGES_PER_CHUNK = 32;
@@ -64,13 +66,25 @@ export const CTID_PAGES_PER_CHUNK = 32;
 export const TABLE_COPY_TIMEOUT_MS = 60_000;
 /** Alias semantyczny (#479 F7 A) — ten sam limit co `TABLE_COPY_TIMEOUT_MS`. */
 export const TABLE_SELECT_TIMEOUT_MS = TABLE_COPY_TIMEOUT_MS;
-/** Porcje keyset po ctid (#479 F7 A). */
+/** Porcje keyset po ctid (#479 F7 A) wewnątrz jednej części. */
 export const SELECT_BATCH_ROWS = 2_000;
 /**
- * Budżet jednego wywołania Edge (#463 id 38: 502 ~147 s). Po przekroczeniu
- * funkcja kończy odpowiedź i woła się ponownie z `continue_run` (stan w backup_runs).
+ * #498: max wierszy jednej części R2 (jedno wywołanie ≈ jedna część przy dużych tabelach).
+ * integration_runs ~70k → ~14 continue_run zamiast jednego timeoutu CPU.
  */
-export const WALL_BUDGET_MS = 90_000;
+export const PART_MAX_ROWS = 5_000;
+/** Budżet wall-clock jednego wywołania Edge (#498 — krócej, częstsze continue). */
+export const WALL_BUDGET_MS = 45_000;
+
+/** Stan niedokończonej tabeli w `backup_runs.progress` (#498). */
+export type BackupTableProgress = {
+  table: string;
+  after_ctid: string | null;
+  next_part: number;
+  n0: number;
+  rows_so_far: number;
+  parts: { part: number; rows: number; key: string }[];
+};
 
 /** Tabele jeszcze nie zapisane w `backup_runs.tables` (klucze = ukończone). */
 export function remainingTables(all: readonly string[], done: Record<string, number> | null | undefined): string[] {
@@ -207,6 +221,40 @@ export function assertSafeCtid(s: string): string {
   return s;
 }
 
+/** #498: klucz R2 jednej części tabeli. */
+export function partObjectKey(table: string, part: number): string {
+  const t = assertSafeIdent(table);
+  if (!Number.isInteger(part) || part < 1 || part > 9999) {
+    throw new Error(`kopia: zły numer części ${part}`);
+  }
+  return `${t}.part${String(part).padStart(4, '0')}.csv.gz.age`;
+}
+
+export function parseBackupProgress(raw: unknown): BackupTableProgress | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.table !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(o.table)) return null;
+  const next = Number(o.next_part);
+  const n0 = Number(o.n0);
+  const rows = Number(o.rows_so_far);
+  if (!Number.isInteger(next) || next < 1 || !Number.isFinite(n0) || !Number.isFinite(rows)) return null;
+  const after = o.after_ctid == null || o.after_ctid === ''
+    ? null
+    : assertSafeCtid(String(o.after_ctid));
+  const partsRaw = Array.isArray(o.parts) ? o.parts : [];
+  const parts: BackupTableProgress['parts'] = [];
+  for (const p of partsRaw) {
+    if (!p || typeof p !== 'object') continue;
+    const pr = p as Record<string, unknown>;
+    const part = Number(pr.part);
+    const prow = Number(pr.rows);
+    const key = typeof pr.key === 'string' ? pr.key : '';
+    if (!Number.isInteger(part) || part < 1 || !Number.isFinite(prow) || !key) continue;
+    parts.push({ part, rows: prow, key });
+  }
+  return { table: o.table, after_ctid: after, next_part: next, n0, rows_so_far: rows, parts };
+}
+
 /**
  * #479 F7 A: lista kolumn → ` "id"::text as "id", … ` (reprezentacja jak COPY text/CSV).
  */
@@ -291,6 +339,8 @@ export interface Manifest {
   prefix: string;
   recipient: string;
   tables: Record<string, number>;
+  /** #498: części dużych tabel (suma rows = tables[t]). Brak wpisu = pojedynczy plik `t.csv.gz.age`. */
+  table_parts?: Record<string, { part: number; rows: number; key: string }[]>;
   /** bytes = rozmiar zaszyfrowanego obiektu; size i sha256 = plik PRZED szyfrowaniem (kontrola po odtworzeniu). */
   files: { key: string; document_id?: string; object_id?: string; bytes: number; size?: number; sha256?: string }[];
   excluded: readonly string[];
@@ -298,10 +348,21 @@ export interface Manifest {
   note: string;
 }
 
-export function manifest(prefix: string, recipient: string, tables: Record<string, number>, files: Manifest['files'], at = new Date()): Manifest {
+export function manifest(
+  prefix: string,
+  recipient: string,
+  tables: Record<string, number>,
+  files: Manifest['files'],
+  at = new Date(),
+  tableParts?: Manifest['table_parts'],
+): Manifest {
+  const note = tableParts && Object.keys(tableParts).length
+    ? 'CSV (nagłówek w part0001) → gzip → age. Duże tabele w częściach (#498). Odtworzenie: scripts/restore.sh.'
+    : 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.';
   return {
     created_at: at.toISOString(), prefix, recipient, tables, files, excluded: EXCLUDED_TABLES, buckets: BACKUP_BUCKETS,
-    note: 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.',
+    ...(tableParts && Object.keys(tableParts).length ? { table_parts: tableParts } : {}),
+    note,
   };
 }
 

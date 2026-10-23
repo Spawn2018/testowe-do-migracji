@@ -811,18 +811,26 @@ Korytarz SE z trasy rejsu: STENA/Karlskrona → `SE_E22`; POLFERRIES/Nynäshamn 
 ### #489 · PILNE — po odpięciu rejsu status wraca z „Prom” (SG-18) — SCALONE (#493 `8e03d704` + wygląd #494 `67e18e62`, 23.10.2026 16:38, migracja **0276**)
 Trigger `trg_loads_sailing_removed_status` + `revert_status_after_sailing_removed`: `sailing_id → null` / inny rejs → cofnięcie `FERRY`/portu z AIS/SCHEDULE/SCHEDULE_ASSUMED do `from` korzenia łańcucha (`zastepuje` + `cofniete_ids`, bez `korekta`), `source=SAILING_REMOVED`, `bulk_quiet`; ręczny/`STATUS_*`/GPS bez zmian (F7 B3: łańcuch tylko `STATUS_AUTO`+AIS). Naprawa SG-18 (actor/godzina z „rejs usunięty”; `sailing_id` null bez placeholder) + inne. Testy `status.sh` (+12 F7). Szczegóły: zgłoszenie #489 / F7 #493.
 
-### #467 · D3 — maile wg ustawień; SMS testowe tylko bez EXTERNAL (22.10 21:25) — W TOKU (PR #478; migracja **0277** po #487+#489)
-Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery testowe SMS tylko przy wyłączonej EXTERNAL_MESSAGING. Szczegóły: zgłoszenie #467.
+### #467 · D3 — maile wg ustawień; SMS testowe tylko bez EXTERNAL (22.10 21:25) — SCALONE (#478 `37c455a7`, 23.10.2026 17:01, migracja **0277**)
+Wszystkie maile przez „Kto co dostaje” (także adres bez konta); numery testowe SMS milczą przy **włączonej** EXTERNAL_MESSAGING; ZONE_* na listę stref także przy EXTERNAL off (P1). Szczegóły: zgłoszenie #467.
 
-### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #467, przed #422
-Migracja **0278**. Szczegóły: `dopiski/D-20261021-2057-01.md`.
-1. P8-d: `rulesReady()` + źródło reguł; usunięcie START (E35).
-2. P8-c: `zonesReady()` + źródło stref; HHL_OPS bez edycji (E34 pkt 6).
-3. HHL_OPS: podgląd Automatyzacji bez przycisków (E35 pkt 5).
+### HOTFIX #498 · PILNE — kopia zapasowa w częściach + auto-continue (przed 00:30 UTC 24.10) — W TOKU (przerywa #413; migracja **0278**)
+Źródło: zgłoszenie #498 (`dla-cursora`, `pilne`). id 46 ERROR (I-33); ostatni OK bez ręcznej pomocy = id 37.
+1. Duże tabele w częściach: ≤ `PART_MAX_ROWS` (5000) / wywołanie; pliki `tabela.part0001.csv.gz.age`…; stan `backup_runs.progress` + ctid.
+2. Automatyczne `continue_run` (samowywołanie + cron `tower-backup-continue` co 1 min).
+3. Manifest `table_parts` + kontrola n0/n1 na sumie części; `restore.sh` składa części.
+4. I-33: brak postępu 10 min (`progress_at`), nie 30 min od startu.
+5. Testy unit + brama backup (strażnik).
+
+### #413 · Automatyzacje i Strefy na produkcji (D-20261021-2057-01, `pilne`) — po #498; PR #495 (F7 runda 2); migracje **0279**+**0280** po rebase
+Szczegóły: `dopiski/D-20261021-2057-01.md`. CI zielone na `d495b295` — nie scalać do ponownego „F7: gotowe”.
+1. P8-d: `rulesReady()` + źródło reguł — dalej; usunięcie START (E35) — soft-delete w PR.
+2. P8-c: `zonesReady()` + źródło stref — dalej; HHL_OPS bez edycji (E34 pkt 6) — w PR.
+3. HHL_OPS: podgląd Automatyzacji bez przycisków (E35 pkt 5) — w PR.
 Ekran / cele przejść — koordynator (`wyglad/*`).
 
 ### HOTFIX #422 · Wydajność i Błędy aplikacji — źródło w bazie (D-20261022-0113-01, `pilne`) — po #413, przed #412
-Migracja **0279**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
+Migracja **0281**. Szczegóły: `dopiski/D-20261022-0113-01.md`.
 1. Tabela `perf_results` + RPC `perf_results_latest()` (HHL).
 2. Zasilanie: Lighthouse po deploy-main; p95 z `pg_stat_statements`; równoczesność lub „brak pomiaru”.
 3. RPC odczytu `client_errors` (7 dni, grupowanie). Front — koordynator (#423).
@@ -836,7 +844,16 @@ Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43,
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — po #484, przed B5 (niepilne, przed wydaniem 28.10)
 Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja) — **nie** przy `refresh_load_eta` / `process_position` / stanie RIO. Test: update zasobów → `updated_at` rośnie; refresh ETA → bez zmiany. Szczegóły: zgłoszenie #492.
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #467, #413, #422, #412, #484, #492 (migracja **0280** po rebase; #409/#463/#479/#485 SCALONE)
+### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — po #492, przed B5 (przed 28.10)
+Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. Front — koordynator. Szczegóły: #496.
+
+### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
+`a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
+
+### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
+Kolejność: #498 → #413 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13.
+
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #413, #422, #412, #484, #492 (migracja **0282** po rebase; #409/#463/#479/#485/#467 SCALONE)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1439,3 +1456,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 15:30 | #489 F7 B1/B2: łańcuch korekty AIS + `cofniete_ids` + testy b'/d/e; status 230; PR #493 | pętla |
 | 23.10.2026 16:00 | #489 F7 r2 B3: `STATUS_*`/ręczna godzina → bez cofania; łańcuch tylko AUTO/AIS; bez placeholder sailing_id | pętla |
 | 23.10.2026 16:40 | #489/#493+#494 SCALONE (`8e03d704`/`67e18e62`, 0276); #467 merge main → **0277** (PR #478) | pętla |
+| 23.10.2026 18:20 | #498 `pilne` (backup części) przerywa #413; migracja **0278**; #413→0279+0280, #422→0281, B5→0282; skrzynka #496/#499/#500 | pętla |

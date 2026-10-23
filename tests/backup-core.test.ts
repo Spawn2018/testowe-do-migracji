@@ -6,11 +6,11 @@ import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
 import {
   BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, REST_CSV_MAX_ROWS,
-  SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS, WALL_BUDGET_MS,
+  PART_MAX_ROWS, SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS, WALL_BUDGET_MS,
   assertCsvInCountWindow, assertCsvMatchesDbCount, assertSafeCtid, backupTables, copyCtidRangeSql,
-  csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, parseSelectColumns,
-  pastWallBudget, postgrestSelectParam, remainingTables, retentionDeletes, rowsToCsv, sealTable,
-  selectTextCastSql, sha256Hex, shouldChunkByEstimate,
+  csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes, parseBackupProgress,
+  parseSelectColumns, partObjectKey, pastWallBudget, postgrestSelectParam, remainingTables,
+  retentionDeletes, rowsToCsv, sealTable, selectTextCastSql, sha256Hex, shouldChunkByEstimate,
 } from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
@@ -99,7 +99,8 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
   it('#479 F7 A: select batch / CSV escape / ctid', () => {
     expect(SELECT_BATCH_ROWS).toBe(2_000);
     expect(TABLE_SELECT_TIMEOUT_MS).toBe(TABLE_COPY_TIMEOUT_MS);
-    expect(TABLE_SELECT_TIMEOUT_MS).toBeLessThan(WALL_BUDGET_MS);
+    // #498: wall krótszy — tabela w częściach, timeout całej tabeli historyczny
+    expect(TABLE_SELECT_TIMEOUT_MS).toBeGreaterThanOrEqual(WALL_BUDGET_MS);
     expect(parseSelectColumns(null)).toBeNull();
     expect(parseSelectColumns('"id", "code"')).toEqual(['id', 'code']);
     expect(selectTextCastSql(['id', 'code'])).toBe('"id"::text as "id", "code"::text as "code"');
@@ -117,13 +118,33 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
 
   // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel
   it('#463: remainingTables / pastWallBudget / timeout tabeli < wall', () => {
-    expect(TABLE_COPY_TIMEOUT_MS).toBeLessThan(WALL_BUDGET_MS);
+    expect(TABLE_COPY_TIMEOUT_MS).toBeGreaterThan(WALL_BUDGET_MS); // #498: wall krótszy; tabela w częściach
     expect(WALL_BUDGET_MS).toBeLessThan(150_000);
     expect(remainingTables(['a', 'b', 'c'], { a: 1 })).toEqual(['b', 'c']);
     expect(remainingTables(['a', 'b'], null)).toEqual(['a', 'b']);
     expect(remainingTables(['a'], { a: 0 })).toEqual([]);
     expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS - 1)).toBe(false);
     expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS)).toBe(true);
+  });
+
+  // #498: części ≤ 5000 wierszy; klucz partNNNN; progress w backup_runs
+  it('#498: PART_MAX_ROWS / partObjectKey / parseBackupProgress', () => {
+    expect(PART_MAX_ROWS).toBe(5_000);
+    expect(PART_MAX_ROWS).toBeGreaterThan(SELECT_BATCH_ROWS);
+    expect(partObjectKey('integration_runs', 1)).toBe('integration_runs.part0001.csv.gz.age');
+    expect(partObjectKey('notifications', 12)).toBe('notifications.part0012.csv.gz.age');
+    expect(() => partObjectKey('x;drop', 1)).toThrow(/niedozwolona/);
+    expect(() => partObjectKey('loads', 0)).toThrow(/części/);
+    const p = parseBackupProgress({
+      table: 'integration_runs', after_ctid: '(10,2)', next_part: 3, n0: 70_000, rows_so_far: 10_000,
+      parts: [{ part: 1, rows: 5000, key: 'integration_runs.part0001.csv.gz.age' }],
+    });
+    expect(p?.table).toBe('integration_runs');
+    expect(p?.after_ctid).toBe('(10,2)');
+    expect(p?.next_part).toBe(3);
+    expect(p?.rows_so_far).toBe(10_000);
+    expect(parseBackupProgress(null)).toBeNull();
+    expect(parseBackupProgress({ table: 'bad;x', next_part: 1, n0: 1, rows_so_far: 0 })).toBeNull();
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {
