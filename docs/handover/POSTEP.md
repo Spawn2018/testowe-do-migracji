@@ -4505,3 +4505,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #502 zamknięte; #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422 w kolejce.
 - Scalanie: **#503** `86e80a41` (F7 gotowe na `fa4efcdb`, CI unit/db/visual zielone, status 238).
 - Bieżąca: **#413** merge main; migracje **0280** (OPS read) + **0281** (START Z1 + `trg_geofence_matrix_notify` geofence_kind/country → pre_arrival_*/pre_port; testy B2). #422→**0282**, B5→**0283**.
+
+## 2026-10-23 21:50 — #413 db FAIL → poprawka workflows (78)
+
+- Skrzynka: #413 `pilne` bieżąca; #500/#499/#496/#492/#484/#422/#412 w planie (bez nowych do wpisania).
+- Scalanie: brak — #495 bez „F7: gotowe” po `c89b4fdc`; CI `db` czerwone (workflows 76/78).
+- Bieżąca: **#413** `workflows.sh`: (1) OPS read — `::text` → oczekiwane `true`; (2) B5 e-mail krytyczny — filtr `auth_id` HHL (OPS w audience HHL). Dalej: CI + F7; potem `rulesReady`/`zonesReady`.

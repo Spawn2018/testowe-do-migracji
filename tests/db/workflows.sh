@@ -54,7 +54,7 @@ $PSQL -c "insert into app_users (auth_id, org_id, email, role, active)
   values ('$OPS','00000000-0000-0000-0000-00000000a001','ops-wf@test','HHL_OPS',true)
   on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
 echo; echo "[#413] HHL_OPS: odczyt Automatyzacji, bez zapisu workflows/geofences"
-val "HHL_OPS czyta workflows" $OPS "select (count(*) >= 0)::text from workflows" t
+val "HHL_OPS czyta workflows" $OPS "select (count(*) >= 0)::text from workflows" true
 err "HHL_OPS nie tworzy reguł (RLS)" $OPS "insert into workflows (project_id, name, trigger_type, condition, actions) values ('$P', 'ops-x', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"}]')" "row-level security"
 chk "HHL_OPS update geofences → 0 wierszy" "$(run "$OPS" "with u as (update geofences set name = name where project_id='$P' returning 1) select count(*)::text from u" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" 0
 
@@ -172,7 +172,8 @@ W1=$(Q "insert into workflows (project_id, code, name, trigger_type, condition, 
 E5=$(EV DELAY_DETECTED '{}')
 chk "B5: zdarzenie → QUEUED" "$(Q "select count(*) from workflow_runs where event_id=$E5 and status='QUEUED'")" 1
 chk "B5: worker wykonuje regułę (OK)" "$(Q "select (workflow_worker(50, now())->>'ok')")" 1
-chk "B5: powiadomienie HHL + decyzja ETA_AFTER_LATEST + e-mail krytyczny" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and n.channel='IN_APP' and u.auth_id='$HHL'")/$(Q "select count(*) from decisions where type_code='ETA_AFTER_LATEST' and status='NEW'")/$(Q "select count(*) from notifications where channel='EMAIL' and template='WORKFLOW_ALERT' and status in ('PENDING','DIGEST','SUPPRESSED')")" "1/1/1"
+# E-mail po audience HHL trafia też do OPS (#413); licznik krytycznego — tylko HHL_ADMIN (jak IN_APP).
+chk "B5: powiadomienie HHL + decyzja ETA_AFTER_LATEST + e-mail krytyczny" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='WORKFLOW_ALERT' and n.channel='IN_APP' and u.auth_id='$HHL'")/$(Q "select count(*) from decisions where type_code='ETA_AFTER_LATEST' and status='NEW'")/$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='EMAIL' and n.template='WORKFLOW_ALERT' and n.status in ('PENDING','DIGEST','SUPPRESSED') and u.auth_id='$HHL'")" "1/1/1"
 # druga reguła na to samo zdarzenie — zero podwójnych alarmów
 $PSQL -c "insert into workflows (project_id, code, name, trigger_type, condition, actions, enabled) values ('$P', 'T-B5B', 'B5 dubl', 'DELAY_DETECTED', 'true', '[{\"type\":\"notify\",\"audience\":\"HHL\"},{\"type\":\"decision\",\"decision_type\":\"ETA_AFTER_LATEST\"},{\"type\":\"email\",\"audience\":\"HHL\",\"critical\":true}]', true)" >/dev/null
 E6=$(EV DELAY_DETECTED '{}')
