@@ -3,13 +3,14 @@
 --    Bez osobnego przełącznika ext_mail „domyślnie włączone”.
 -- 2) Numery testowe SMS milczą przy włączonej EXTERNAL_MESSAGING (+ UI).
 --    SMS ZONE_* na listę stref — także przy EXTERNAL off (P1 TAK; bez zmian enqueue/pull).
--- F7 #478: tylko sms_gw dla ról bez konta (fixed_*); org z roli; sms_send_test = HHL_ADMIN;
---    E42 dry-run bez insertu maila.
+-- F7 #478: tylko sms_gw × CARRIER_*/CLIENT_USER (fixed_*=false, #402);
+--    Admin HHL może włączyć sms_gw dla tych ról; my_notify_set SYSTEM nie-HHL = odmowa;
+--    org z roli; sms_send_test = HHL_ADMIN; E42 dry-run bez insertu maila.
 
 -- ---------------------------------------------------------------------------
 -- 0. Tylko sms_gw × CARRIER_*/CLIENT_USER (maile bez konta: SMS_FALLBACK /
---    SMS_GATEWAY_* / ZONE_LIMIT → notify_event_key = sms_gw). fixed_* = true —
---    zmienia wyłącznie Administrator HHL w macierzy (nie my_notify_set).
+--    SMS_GATEWAY_* / ZONE_LIMIT → notify_event_key = sms_gw). fixed_* = false (#402);
+--    włącza Administrator HHL w macierzy; przewoźnik/klient nie przez my_notify_set.
 -- ---------------------------------------------------------------------------
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
@@ -22,9 +23,9 @@ select
   false,
   false,
   false,
-  true,
-  true,
-  true,
+  false,
+  false,
+  false,
   false,
   m.label_pl
 from public.notification_matrix m
@@ -42,6 +43,14 @@ where m.role = 'HHL_ADMIN'
        and x.role = r.role::user_role
   )
 on conflict (event_key, role) do nothing;
+
+-- F7: gdy wiersze powstały wcześniej z fixed_*=true — wróć do #402 (0 fixed).
+update public.notification_matrix
+   set fixed_in_app = false,
+       fixed_email = false,
+       fixed_push = false
+ where event_key = 'sms_gw'
+   and role in ('CARRIER_DISPATCH', 'CARRIER_USER', 'CLIENT_USER');
 
 -- ---------------------------------------------------------------------------
 -- 1. Bramka maili bez konta = ten sam rodzaj co w macierzy (bez ext_mail)
@@ -450,8 +459,158 @@ comment on function public.sms_send_test(text) is
   '#467: SMS na numer testowy tylko przy wyłączonej EXTERNAL_MESSAGING; tylko HHL_ADMIN.';
 
 -- ---------------------------------------------------------------------------
--- 3. E42: pilot_redirect_dry_run — SMS przez enqueue; mail = odczyt bez insertu
---    (niezależne od bramki #467 / macierzy FORWARDER).
+-- 3. Macierz: Admin HHL może sms_gw × CARRIER_*/CLIENT_USER; inne SYSTEM — tylko HHL.
+--    my_notify_set: SYSTEM (w tym sms_gw) dla ról nie-HHL = odmowa.
+-- ---------------------------------------------------------------------------
+create or replace function public.admin_notification_matrix_set(
+  p_event_group text,
+  p_role text,
+  p_in_app boolean,
+  p_email boolean,
+  p_push boolean default false
+) returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_me uuid;
+  v_role text;
+  v_old jsonb;
+  n int;
+  v_sms_gw_orphan boolean;
+begin
+  select id, role::text into v_me, v_role from app_users where auth_id = auth.uid() and active;
+  if (v_me is not null and v_role = 'HHL_ADMIN') is not true then
+    raise exception 'Macierz powiadomień — wyłącznie administrator HHL' using errcode = '42501';
+  end if;
+  if (p_role in ('HHL_ADMIN','HHL_OPS','CLIENT_USER','CARRIER_DISPATCH','CARRIER_USER')) is not true then
+    raise exception 'Nieznana rola macierzy' using errcode = '22023';
+  end if;
+  if (p_event_group is not null and length(trim(p_event_group)) > 0) is not true then
+    raise exception 'Nieznane zdarzenie' using errcode = '22023';
+  end if;
+  -- #467 F7: wyjątek — sms_gw dla ról bez konta (maile z pliku) włącza Admin HHL.
+  v_sms_gw_orphan := (
+    p_event_group = 'sms_gw'
+    and p_role in ('CARRIER_DISPATCH', 'CARRIER_USER', 'CLIENT_USER')
+  );
+  if (
+    p_event_group = 'SYSTEM'
+    or p_event_group in ('sms_gw', 'src_down', 'src_back', 'app_err', 'daily')
+  ) and p_role not in ('HHL_ADMIN', 'HHL_OPS')
+    and v_sms_gw_orphan is not true then
+    raise exception 'Zdarzenia systemowe — tylko HHL' using errcode = '22023';
+  end if;
+
+  select jsonb_agg(jsonb_build_object(
+           'event_key', m.event_key, 'in_app', m.in_app, 'email', m.email, 'push', m.push
+         ))
+    into v_old
+    from notification_matrix m
+   where m.role = p_role::user_role
+     and (m.event_key = p_event_group or m.event_group = p_event_group);
+
+  update notification_matrix m
+     set in_app = case when m.fixed_in_app then m.in_app else coalesce(p_in_app, false) end,
+         email = case when m.fixed_email then m.email else coalesce(p_email, false) end,
+         push = case when m.fixed_push then m.push else coalesce(p_push, false) end
+   where m.role = p_role::user_role
+     and (m.event_key = p_event_group or m.event_group = p_event_group)
+     and m.risks_only is not true;
+  get diagnostics n = row_count;
+  if (n > 0) is not true then
+    raise exception 'Nieznane zdarzenie' using errcode = '22023';
+  end if;
+
+  insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+  values (
+    v_me, 'NOTIFICATION_MATRIX_SET', 'notification_matrix', p_event_group || ':' || p_role,
+    v_old,
+    jsonb_build_object('in_app', p_in_app, 'email', p_email, 'push', p_push)
+  );
+end $$;
+
+revoke all on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) from public, anon;
+grant execute on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) to authenticated;
+comment on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) is
+  '#467 F7: SYSTEM tylko HHL; wyjątek sms_gw × CARRIER_*/CLIENT_USER (maile bez konta).';
+
+create or replace function public.my_notify_set(p_event_key text, p_channel text, p_on boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_me uuid;
+  v_role user_role;
+  v_old boolean;
+  v_fixed boolean;
+  v_matrix boolean;
+  v_group text;
+begin
+  v_me := public.current_app_user_id();
+  if (v_me is not null) is not true then
+    raise exception 'Brak aktywnego konta' using errcode = '42501';
+  end if;
+  if exists (
+    select 1 from public.impersonation_state i
+      join public.app_users a on a.id = i.admin_user_id
+     where a.auth_id = auth.uid()
+  ) then
+    raise exception 'Podgląd — tylko odczyt' using errcode = '42501';
+  end if;
+  if (p_channel in ('bell', 'push', 'mail')) is not true then
+    raise exception 'Nieznany kanał' using errcode = '22023';
+  end if;
+  if (p_on is not null) is not true then
+    raise exception 'Brak wartości kanału' using errcode = '22023';
+  end if;
+  select role into v_role from public.app_users where id = v_me;
+  select
+    case p_channel when 'bell' then in_app when 'push' then push else email end,
+    case p_channel when 'bell' then fixed_in_app when 'push' then fixed_push else fixed_email end,
+    event_group
+    into v_matrix, v_fixed, v_group
+    from public.notification_matrix
+   where event_key = p_event_key and role = v_role;
+  if (v_matrix is not null) is not true then
+    raise exception 'To zdarzenie nie dotyczy Twojego konta' using errcode = '42501';
+  end if;
+  -- #467 F7: SYSTEM (w tym sms_gw) — tylko HHL w „Moje powiadomienia”; SCX/KSH nie.
+  if v_role::text not in ('HHL_ADMIN', 'HHL_OPS')
+     and (
+       v_group = 'SYSTEM'
+       or p_event_key in ('sms_gw', 'src_down', 'src_back', 'app_err', 'daily')
+     ) then
+    raise exception 'Zdarzenia systemowe — tylko HHL' using errcode = '42501';
+  end if;
+  if v_fixed is true then
+    raise exception 'Kanał jest zawsze włączony' using errcode = '42501';
+  end if;
+  select on_value into v_old
+    from public.user_notify_pref
+   where user_id = v_me and event_key = p_event_key and channel = p_channel;
+  insert into public.user_notify_pref (user_id, event_key, channel, on_value)
+  values (v_me, p_event_key, p_channel, p_on)
+  on conflict (user_id, event_key, channel) do update set on_value = excluded.on_value;
+  insert into public.audit_log (user_id, action, entity, entity_id, old_value, new_value)
+  values (
+    v_me, 'MY_NOTIFY_SET', 'user_notify_pref', p_event_key || ':' || p_channel,
+    jsonb_build_object('on', v_old),
+    jsonb_build_object('on', p_on)
+  );
+end $$;
+
+revoke all on function public.my_notify_set(text, text, boolean) from public, anon;
+grant execute on function public.my_notify_set(text, text, boolean) to authenticated;
+comment on function public.my_notify_set(text, text, boolean) is
+  '#467 F7: prefs osoby; SYSTEM/sms_gw dla ról nie-HHL = odmowa (włącza Admin w macierzy).';
+
+-- ---------------------------------------------------------------------------
+-- 4. E42: pilot_redirect_dry_run — SMS przez enqueue; mail = odczyt bez insertu
+--    (nie sprawdza już przekierowania maila przez bramkę #467).
 -- ---------------------------------------------------------------------------
 create or replace function public.pilot_redirect_dry_run(p_load uuid default '963e19dd-fe83-4690-9306-5c7fc4b95468')
 returns jsonb
@@ -465,15 +624,10 @@ declare
 begin
   select * into v_redir from public.pilot_redirect_for_load(p_load);
   if not found or v_redir.owner_phone_e164 is null then
-    select owner_phone_e164, owner_email into v_owner_phone, v_owner_email
-      from pilot_notify_redirect where load_id = p_load and active;
-  else
-    v_owner_phone := v_redir.owner_phone_e164;
-    v_owner_email := v_redir.owner_email;
-  end if;
-  if v_owner_phone is null then
     return jsonb_build_object('ok', false, 'error', 'brak aktywnego redirectu');
   end if;
+  v_owner_phone := v_redir.owner_phone_e164;
+  v_owner_email := v_redir.owner_email;
 
   v_sms := sms_enqueue(
     'ZONE_APPROACH', p_load, '+48111222333', 'pl',
@@ -503,4 +657,4 @@ end $$;
 revoke all on function public.pilot_redirect_dry_run(uuid) from public, anon;
 grant execute on function public.pilot_redirect_dry_run(uuid) to service_role;
 comment on function public.pilot_redirect_dry_run(uuid) is
-  '#467 F7: dry-run ZONE_* → numer pilota; mail = adres z pilot_redirect_for_load (bez insertu).';
+  '#467 F7: dry-run ZONE_* → numer pilota; mail = adres z redirect (bez insertu, bez bramki).';

@@ -663,6 +663,9 @@ DEV2=$(run $HHL "select sms_issue_device('Pixel R2 test')" commit | grep '^sd_')
 $PSQL -c "insert into sms_outbox (kind, to_e164, locale, body, priority) values ('WINDOW_CHANGE','+46701234567','sv','TOWER X: test R2', 100)" >/dev/null
 err "SMS testowy na numer spoza listy odrzucony" $HHL "select sms_send_test('+48600000001')" "listy numerów testowych"
 err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+48600000001','x')" "wyłącznie HHL"
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+err "#467: sms_send_test HHL_OPS → odmowa" $OPS "select sms_send_test('+48600000001')" "Administrator HHL|wyłącznie HHL"
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
 chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"
