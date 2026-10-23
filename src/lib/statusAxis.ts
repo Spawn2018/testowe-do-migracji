@@ -253,7 +253,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
             przez: str('przez'),
             ...(e.type === 'STATUS_AUTO' && isSystemActor(e.actor) ? { auto: true } : {}),
             /* „z rozkładu było …” tylko gdy zastąpiony wpis był z rozkładu (0270 może zastąpić też korektę osoby) */
-            ...((replacedSource(events, p.zastepuje) ?? '').startsWith('SCHEDULE') ? { zRozkladu: true } : {}),
+            ...(['SCHEDULE', 'SCHEDULE_ASSUMED'].includes(replacedSource(events, p.zastepuje) ?? '') ? { zRozkladu: true } : {}),
           }
         : null,
       seq: evSeq(e.id),

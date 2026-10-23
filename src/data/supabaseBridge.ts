@@ -147,10 +147,11 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
   registerRemoteSink((m: DataMutation) => {
     const provider = active;
     if (!provider) return;
-    if (writesPending === 0) writesSince = Date.now();
     writesPending += 1;
     writesSeq += 1;
     chain = chain.then(async () => {
+      /* start zapisu, który teraz trwa (nie najstarszego w serii) — próg „zawieszony” liczony od niego */
+      writesSince = Date.now();
       try {
         const res = await provider.apply(m);
         if (m.type === 'geofence.save' && res && res.id && res.id !== m.geofence.id) {
@@ -183,6 +184,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 export function disconnectSupabaseData(): void {
   stopBellRefresh();
   lastLoadsVersion = null;
+  writesPending = 0;
   registerRemoteSink(null);
   registerFileSink(null);
   registerAfterFileUpload(null);
