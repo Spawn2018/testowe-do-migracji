@@ -3,7 +3,10 @@
  * `cofniete: true`, `zastepuje`, `cofniete_ids`). Oś: wpisy „Prom” z rejsu znikają, bieżący „Droga PL” z godziną odpięcia;
  * inne korekty (np. „Prom” z AIS innego transportu, korekta Administratora HHL) zostają. Układ jak SG-18 (dane uproszczone).
  */
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { StatusAxisTab } from '../src/components/drawer/StatusAxisTab';
 import { buildStatusAxis, statusHits } from '../src/lib/statusAxis';
 import { eventFromRow } from '../src/data/mappers';
 import type { Load, LoadEvent } from '../src/types';
@@ -22,14 +25,23 @@ const load = { id: 'L18', status: 'IN_TRANSIT_PL', stage: 'TO_PORT', unloadedAt:
 const row = (events: LoadEvent[], s: string) => buildStatusAxis(load, events).groups.flatMap((g) => g.rows).find((r) => r.statuses.includes(s as never));
 
 describe('#489 — cofnięty „Prom” po odpięciu rejsu', () => {
-  it('SG-18: „Na promie” bez wpisu, „Droga PL” bieżący z godziną odpięcia i powodem', () => {
+  it('SG-18: „Na promie” bez wpisu, „Droga PL” bieżący z pierwotną godziną i dopiskiem odpięcia', () => {
     const events = [...base, undo(2295)];
     expect(row(events, 'ON_FERRY')?.hit).toBeNull();
     const cur = row(events, 'IN_TRANSIT_PL');
     expect(cur?.kind).toBe('current');
+    expect(cur?.hit?.at).toBe('2026-10-21T09:00:00+00:00');
+    expect(cur?.hit?.cofniecieAt).toBe(OFF);
+    const html = renderToStaticMarkup(createElement(StatusAxisTab, { load, events, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
+    expect(html).toContain('rejs odpięty 23.10.2026, 13:05 — powrót do tego statusu');
+  });
+
+  it('powrót do statusu bez wcześniejszego wpisu — godzina odpięcia i powód', () => {
+    const events = [base[1], undo(2295)];
+    const cur = row(events, 'IN_TRANSIT_PL');
     expect(cur?.hit?.at).toBe(OFF);
-    expect(cur?.hit?.why).toBe('rejs odpięty — powrót do poprzedniego statusu');
-    expect(cur?.hit?.korekta ?? null).toBeNull();
+    const html = renderToStaticMarkup(createElement(StatusAxisTab, { load, events, geofences: [], locale: 'pl', phone: false, canStatus: false, onChange: () => {} }));
+    expect(html).toContain('rejs odpięty 23.10.2026, 13:05 — powrót do tego statusu');
   });
 
   it('łańcuch rozkład → korekta AIS: oba wpisy znikają (cofniete_ids)', () => {

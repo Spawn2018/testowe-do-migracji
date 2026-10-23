@@ -99,6 +99,8 @@ export interface AxisHit {
   korekta?: { poprzednio: string | null; przez: string | null; auto?: boolean; zRozkladu?: boolean } | null;
   /** numer zdarzenia z bazy (NaN w demo) — korekta wygrywa z wcześniej zapisanym wpisem tego samego statusu */
   seq?: number;
+  /** #489 (0276): odpięty rejs — godzina odpięcia (wiersz zostaje z pierwotną godziną statusu, do którego wrócił) */
+  cofniecieAt?: string | null;
 }
 
 /** Numer zdarzenia z bazy („ev-123” → 123); inne identyfikatory (demo) — NaN. */
@@ -119,7 +121,7 @@ function withoutSuperseded(events: readonly LoadEvent[]): { list: LoadEvent[]; w
   const groups = new Map<string, { e: LoadEvent; i: number }[]>();
   events.forEach((e, i) => {
     const p = (e.payload ?? {}) as Record<string, unknown>;
-    /* #489 (0276): odpięty rejs cofa status — wpisy „Prom” z tego rejsu (`zastepuje`, `cofniete_ids`) znikają z osi;
+    /* #489 (0276): odpięty rejs cofa status — wpisy z tego rejsu („Prom”, porty) (`zastepuje`, `cofniete_ids`) znikają z osi;
        bez grupowania z korektami godziny (inne korekty STATUS_AUTO zostają) */
     if (p.cofniete === true) {
       const ids = [p.zastepuje, ...(Array.isArray(p.cofniete_ids) ? p.cofniete_ids : [])];
@@ -255,6 +257,7 @@ export function statusHits(events: readonly LoadEvent[]): AxisHit[] {
           }
         : null,
       seq: evSeq(e.id),
+      ...(p.cofniete === true ? { cofniecieAt: e.at } : {}),
     });
   }
   /* porównanie po czasie, nie po tekście: zdarzenia z okna mają „+02:00”, z bazy „Z” */
@@ -302,6 +305,8 @@ export function buildStatusAxis(
     const prev = last.get(h.status);
     /* D-0005: korekta (np. na 09:00) nie znika pod wcześniej zapisanym wpisem z późniejszą godziną (np. STATUS_AUTO 13:00) */
     if (prev?.korekta && !h.korekta && (h.seq ?? NaN) < (prev.seq ?? NaN)) continue;
+    /* #489: powrót po odpięciu rejsu do statusu, który już był — zostaje jego pierwotna godzina, z dopiskiem odpięcia */
+    if (h.cofniecieAt && prev) { last.set(h.status, { ...prev, cofniecieAt: h.cofniecieAt }); continue; }
     last.set(h.status, h);
   }
   const cur = currentAxisIndex(l);
