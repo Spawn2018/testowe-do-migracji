@@ -1477,6 +1477,38 @@ chk "D-1501: DELIVERED bez spraw NO_*" \
   "0/0"
 $PSQL -c "update loads set status='CANCELLED' where id in ('$L_D15','$L_D15b')" >/dev/null
 
+echo; echo "[#464] a7_permits_list — KSH tylko Firma/Trasa przypięte do jego transportów"
+L_464=33333333-0000-0000-0000-00000000464a
+PM_ORPH=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-ORPH/2026','GDDKiA','IV','FIRMA',
+  23,3.4,4.3,60,0,current_date,current_date+365,'Firma — bez load_permits') returning id")
+PM_F464=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-FIRMA/2026','GDDKiA','IV','FIRMA',
+  23,3.4,4.3,60,0,current_date,current_date+365,'Firma — przypięta') returning id")
+PM_T464=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-TRASA/2026','GDDKiA','IV','TRASA',
+  30,4,4.5,60,1,current_date,current_date+365,'Trasa — przypięta') returning id")
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+ values ('$L_464','$P','00000000-0000-0000-0000-00000000a003','KSH/464','PLANNED', current_date+3)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_464','$PM_F464'), ('$L_464','$PM_T464')" >/dev/null
+val "#464 KSH nie widzi FIRMA bez load_permits" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_ORPH'" 0
+val "#464 HHL widzi FIRMA bez load_permits" $HHL \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_ORPH'" 1
+val "#464 KSH widzi przypiętą FIRMA" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+val "#464 KSH widzi przypiętą TRASA (wcześniej 0)" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_T464'" 1
+val "#464 KSH: loads = tylko własne (1)" $KSH \
+  "select (e->>'loads') from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+val "#464 HHL: loads globalnie (1)" $HHL \
+  "select (e->>'loads') from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+$PSQL -c "delete from load_permits where load_id='$L_464'; update loads set status='CANCELLED' where id='$L_464';
+ delete from permits where id in ('$PM_ORPH','$PM_F464','$PM_T464')" >/dev/null
+
 fi # tower-i2-part 5
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
