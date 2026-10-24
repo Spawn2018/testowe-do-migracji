@@ -4602,3 +4602,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #508/#422 zamknięte scaleniem; #412 bieżąca; #500/#499/#496/#492/#484 w kolejce. Bez nowych `dla-cursora` do wpisania.
 - Scalanie: PR #507 F7 „gotowe do scalenia” po `3229714b`, CI zielone → merge `b2528a80`. #382 CONFLICT (B5), #383 bez F7.
 - Bieżąca: **#412** gałąź `pakiet/hotfix-412-opcje-finanse-zrodla` — migracja **0285**: `payment_terms_options`/`_set`, `accounting_addresses` + get/set; security **204** (+18); nullguard **745** (+20). B5→**0286**. Front bez zmian (koordynator). Następne w #412: paczka E40, faktoring, marża, E43, push count.
+
+## 2026-10-24 05:05 — #412 db FAIL: projekt STEGRA w seedzie bramy
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#425/#413/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających bieżącą.
+- Scalanie: brak F7 „gotowe do scalenia” (PR #510 bez komentarza F7; #509 wygląd; #382 CONFLICT; #383 „Nie scalać jeszcze”).
+- Bieżąca: **#412** PR #510 — CI `db` security 200/204: `payment_terms_options` szukało tylko `STEGRA_BODEN`, seed bramy ma `STEGRA`. Poprawka: lookup `STEGRA_BODEN`/`STEGRA` (jak 0106/0267) w options i options_set. Push → CI.

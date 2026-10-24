@@ -57,7 +57,12 @@ begin
     raise exception 'Terminy płatności — tylko HHL' using errcode = '42501';
   end if;
 
-  select p.id into v_project from public.projects p where p.code = 'STEGRA_BODEN' limit 1;
+  -- Brama: seed.code = STEGRA; produkcja: STEGRA_BODEN (jak 0106/0120/0267).
+  select p.id into v_project
+    from public.projects p
+   where p.code in ('STEGRA_BODEN', 'STEGRA')
+   order by case p.code when 'STEGRA_BODEN' then 0 else 1 end
+   limit 1;
   select o.id into v_ksh from public.organizations o where o.code = 'KSH' limit 1;
   select o.id into v_hhl from public.organizations o where o.code = 'HHL' limit 1;
   select o.id into v_scx from public.organizations o where o.code = 'SCX' limit 1;
@@ -135,7 +140,11 @@ begin
   end if;
 
   select id into v_me from public.app_users where auth_id = auth.uid() and active;
-  select p.id into v_project from public.projects p where p.code = 'STEGRA_BODEN' limit 1;
+  select p.id into v_project
+    from public.projects p
+   where p.code in ('STEGRA_BODEN', 'STEGRA')
+   order by case p.code when 'STEGRA_BODEN' then 0 else 1 end
+   limit 1;
   if (v_project is not null and v_me is not null) is not true then
     raise exception 'Brak projektu lub konta' using errcode = 'P0002';
   end if;
