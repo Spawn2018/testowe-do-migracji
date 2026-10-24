@@ -4783,3 +4783,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych; #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
 - Scalanie: brak F7 `gotowe` (#531–#535 CI zielone; #536 db FAIL). Bez push na main.
 - Bieżąca: **#496** PR #536 — status 240/242 + risks (rk_off_corridor): testy #496 brały L 95/96/97 (= #502 F7 B4); `mk` cicho → stary AT_PORT_GDANSK / rejs GDN-NYN. Poprawka: L 79/7a/7b + `sailing_id` + sprzątanie L496u. Push → CI.
+
+## 2026-10-24 23:55 — #496 F7 #536: do poprawy (geometria / SE_E22 / PORT_IN)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania; #530/#528/#525/#519/#516/#500/#499/#496 w planie. F7 na #531–#535 = „do poprawy” / zgoda wstrzymana (kolejność 0292→0298) — nie przerywa #496.
+- Scalanie: brak F7 `gotowe do scalenia`. Bez push na main.
+- CI na `3bee738b`: unit/visual zielone; db FAIL (1) — PORT_IN przed planem → AT_PORT (oczekiwano FERRY); F7: oczekiwać AT_PORT.
+- Bieżąca: **#496** PR #536 — F7: (1) PORT_IN→AT_PORT_NYNASHAMN; (2) Södertörn w `sweden_land_geom` + test Ösmo; (3) Vagnhärad/Hölö/Järna + Småland na SE_E22; (4) zawężenie Karlskrona-morze + test; `fuel_miss`/`ext_mail` w liście SYSTEM. status **245**. Push → CI; ponowne F7.

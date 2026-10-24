@@ -1521,3 +1521,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |
 | 24.10.2026 15:32 | #492 CI unit/db/visual zielone (`3ad7619a`); czekam F7 „gotowe” | pętla |
 | 24.10.2026 23:05 | #525 CI zielone (`dbaddafa` / 0297); start **#496** → **0298** (SQLSTATE, ląd SE, SE_E22, trasa) | pętla |
+| 24.10.2026 23:55 | #496 F7 #536: PORT_IN→AT_PORT; Södertörn; Vagnhärad/E22; Karlskrona-morze; fuel_miss/ext_mail; status **245** | pętla |

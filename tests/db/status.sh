@@ -905,13 +905,14 @@ mk $L485k K485 "'HHL/K485'" "'SCX/K485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485k','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485k 56.138 15.635 "2026-10-07 14:00+00"
 chk "#485: W_REJSIE przed planem + morze Karlskrona → FERRY" "$(st $L485k)" FERRY
-# #496: w PORT_IN przed planowym przypłynięciem → FERRY
+# #496 F7: w PORT_IN przed planem → AT_PORT_* (wjazd = dowód wcześniejszego przypłynięcia;
+# silnik stref bez warunku godziny — decyzja koordynatora F7 #536).
 # L 79 — nie 95: #502 F7 B4 = L 95 (kolizja → mk cicho, stary AT_PORT_GDANSK).
 L485p=$(L 79)
 mk $L485p P485 "'HHL/P485'" "'SCX/P485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485p','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485p 56.16460 15.63080 "2026-10-07 14:00+00"
-chk "#496: PORT_IN przed planem → FERRY" "$(st $L485p)" FERRY
+chk "#496: PORT_IN przed planem → AT_PORT_NYNASHAMN" "$(st $L485p)" AT_PORT_NYNASHAMN
 # PL (Gdańsk) przy FERRY
 L485d=$(L 88)
 mk $L485d D485 "'HHL/D485'" "'SCX/D485'" FERRY "'$S486'"
@@ -933,6 +934,18 @@ mk $L485s S496 "'HHL/S496'" "'SCX/S496'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485s','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485s 58.60 18.00 "2026-10-07 22:30+00"
 chk "#496: po planie + morze Nynäshamn → FERRY" "$(st $L485s)" FERRY
+# #496 F7: po planie + morze Karlskrona (15.635/56.138) → FERRY (zawężony wielokąt)
+L485m=$(L 7c)
+mk $L485m M496 "'HHL/M496'" "'SCX/M496'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485m','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485m 56.138 15.635 "2026-10-07 22:30+00"
+chk "#496: po planie + morze Karlskrona → FERRY" "$(st $L485m)" FERRY
+# #496 F7: DOPŁYNĄŁ + Ösmo (Södertörn w lądzie) → IN_TRANSIT_SE
+L485o=$(L 7d)
+mk $L485o O496 "'HHL/O496'" "'SCX/O496'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485o','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485o 59.00 17.90 "2026-10-06 22:30+00"
+chk "#496: DOPLYNAL + Ösmo → IN_TRANSIT_SE" "$(st $L485o)" IN_TRANSIT_SE
 
 # #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
 # F7 r3/r4: Jämjö; Söderköping 16.3186/58.4792; OFFROUTE_KM przywrócone (nie sztywne 2).
@@ -959,7 +972,14 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
 q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
+q "delete from positions where load_id='$L487a'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#496: Vagnhärad 17.50/58.95 → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
 L487b=$(L 8e)
 mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
 q "set session_replication_role=replica;

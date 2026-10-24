@@ -45,7 +45,10 @@ begin
   );
   if (
     p_event_group = 'SYSTEM'
-    or p_event_group in ('sms_gw', 'src_down', 'src_back', 'app_err', 'daily', 'email_budget')
+    or p_event_group in (
+      'sms_gw', 'src_down', 'src_back', 'app_err', 'daily',
+      'email_budget', 'fuel_miss', 'ext_mail'
+    )
   ) and p_role not in ('HHL_ADMIN', 'HHL_OPS')
     and v_sms_gw_orphan is not true then
     -- #496: ten sam SQLSTATE co my_notify_set (42501), nie 22023.
@@ -83,7 +86,7 @@ end $$;
 revoke all on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) from public, anon;
 grant execute on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) to authenticated;
 comment on function public.admin_notification_matrix_set(text, text, boolean, boolean, boolean) is
-  '#467+#496: SYSTEM tylko HHL (42501); wyjątek sms_gw × CARRIER_*/CLIENT_USER.';
+  '#467+#496: SYSTEM (+fuel_miss/ext_mail) tylko HHL (42501); wyjątek sms_gw × CARRIER_*/CLIENT_USER.';
 
 -- ---------------------------------------------------------------------------
 -- 2. sweden_land_geom — bez morza przy Nynäshamn / Gotlandii
@@ -95,21 +98,24 @@ immutable
 parallel safe
 set search_path to 'public', 'extensions'
 as $f$
-  -- Wschód: przy Nynäshamn ~17.9/58.9 i południe Gotlandii trzymamy ląd,
-  -- bez Bałtyku (18.0/58.6, 18.5/57.5). Zachód bez zmian (Jönköping w środku).
+  -- Karlskrona: morze 15.635/56.138 poza (krawędź ~56.145); port 15.63/56.16 w środku.
+  -- Södertörn (Ösmo/Västerhaninge) w lądzie; Mysingen / 18.0/58.6 poza.
+  -- Kalmar centrum (16.36/56.66) w lądzie.
   select st_setsrid(st_geomfromtext(
-    'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.55 56.10,'
-    ' 15.85 56.20, 16.20 56.40, 16.50 56.90, 17.00 57.50, 17.30 58.20,'
-    ' 17.55 58.70, 17.85 58.95, 18.15 59.25, 18.40 59.70, 18.70 60.30,'
-    ' 19.00 60.50, 21.00 63.00, 21.50 65.00, 24.20 65.60, 24.00 69.06,'
-    ' 17.50 68.50, 11.50 63.00, 11.00 59.00, 10.95 55.90))'
+    'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.45 56.05,'
+    ' 15.55 56.12, 15.62 56.145, 15.58 56.16, 15.65 56.20, 15.85 56.25,'
+    ' 16.20 56.40, 16.45 56.66, 16.55 56.90, 17.00 57.50, 17.30 58.20,'
+    ' 17.55 58.70, 17.80 58.85, 17.99 58.89, 18.20 59.10, 18.25 59.20,'
+    ' 18.40 59.70, 18.70 60.30, 19.00 60.50, 21.00 63.00, 21.50 65.00,'
+    ' 24.20 65.60, 24.00 69.06, 17.50 68.50, 11.50 63.00, 11.00 59.00,'
+    ' 10.95 55.90))'
   ), 4326);
 $f$;
 
 revoke all on function public.sweden_land_geom() from public, anon, authenticated;
 grant execute on function public.sweden_land_geom() to service_role;
 comment on function public.sweden_land_geom() is
-  '#485+#496: ląd SE bez Bałtyku przy Nynäshamn / wschód Gotlandii.';
+  '#485+#496 F7: ląd SE — Södertörn w, Mysingen/Karlskrona-morze poza.';
 
 -- ---------------------------------------------------------------------------
 -- 3. apply_ferry_se_from_position — znane trasy; bez coalesce→POLFERRIES
@@ -414,7 +420,7 @@ end $$;
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 5. SE_E22 — Söderåkra (~16.06/56.47) + Södertälje (~17.63/59.19)
+-- 5. SE_E22 — Söderåkra + E4 Nyköping→Södertälje (Vagnhärad/Hölö/Järna) + Småland
 -- ---------------------------------------------------------------------------
 update public.corridor_polylines
    set geom = st_setsrid(st_makeline(array[
@@ -422,12 +428,18 @@ update public.corridor_polylines
          st_makepoint(15.95,   56.25),    -- Jämjö (E22)
          st_makepoint(16.10,   56.30),    -- Brömsebro (E22)
          st_makepoint(16.06,   56.47),    -- Söderåkra (E22) #496
+         st_makepoint(16.17,   56.63),    -- Ljungbyholm (E22) F7
          st_makepoint(16.366,  56.663),   -- Kalmar
+         st_makepoint(16.32,   56.87),    -- Rockneby (E22) F7
+         st_makepoint(16.45,   57.26),    -- Oskarshamn (E22) F7
          st_makepoint(16.637,  57.758),   -- Västervik (E22)
          st_makepoint(16.40,   57.89),    -- Gamleby (E22)
          st_makepoint(16.32,   58.48),    -- Söderköping (E22)
          st_makepoint(16.183,  58.594),   -- Norrköping → E4
          st_makepoint(17.008,  58.753),   -- Nyköping (E4)
+         st_makepoint(17.50,   58.95),    -- Vagnhärad (E4) F7
+         st_makepoint(17.54,   59.03),    -- Hölö (E4) F7
+         st_makepoint(17.57,   59.09),    -- Järna (E4) F7
          st_makepoint(17.628,  59.195),   -- Södertälje (E4) #496
          st_makepoint(18.0686, 59.3293),
          st_makepoint(17.6389, 59.8586),
@@ -442,7 +454,7 @@ update public.corridor_polylines
          st_makepoint(22.1547, 65.5848),
          st_makepoint(21.7591, 65.8054)   -- Boden
        ]), 4326),
-       source = 'OSM / ODbL — Karlskrona → E22 (Söderåkra…) → E4 (Södertälje) → Boden (#496)',
+       source = 'OSM / ODbL — Karlskrona → E22 → E4 (Vagnhärad…Södertälje) → Boden (#496 F7)',
        updated_at = now()
  where code = 'SE_E22';
 
