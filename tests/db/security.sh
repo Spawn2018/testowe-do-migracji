@@ -842,5 +842,35 @@ err "#412e43: HHL nie wstawi bezpośrednio" $HHL \
   "permission denied|42501"
 val "#412e43: KSH SELECT message_texts = 0" $KSH "select count(*) from message_texts" 0
 
+echo; echo "[#484] Historia zmian — zakres HHL_OPS / KSH / SCX"
+OPS484=11111111-0000-0000-0000-0000000000c4
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS484','00000000-0000-0000-0000-00000000a001','ops-484@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+sys "delete from audit_log where action like 'HIST484_%'" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_OWN','loads','$L1','{}', jsonb_build_object('status','READY','hhl_order_no','HHL-HIDE','carrier_order_no','SCX-HIDE','margin',12.5)),
+     ('HIST484_OWN','load_cost','$L1','{}', jsonb_build_object('amount',999)),
+     ('HIST484_OWN','load_revenue','$L1','{}', jsonb_build_object('amount',888,'margin',10)),
+     ('HIST484_FOREIGN','loads','33333333-0000-0000-0000-000000000009','{}', jsonb_build_object('status','READY'))" >/dev/null
+val "#484: HHL_OPS widzi wpis" $OPS484 \
+  "select count(*) > 0 from admin_audit_history(null,null,null,null,'HIST484_OWN',null,20,0)" t
+val "#484: KSH widzi swój loads" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,20,0)" 1
+val "#484: KSH nie widzi obcego transportu" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FOREIGN',null,20,0)" 0
+val "#484: KSH bez numerów zleceń" $KSH \
+  "select ((new_value ? 'hhl_order_no') is false and (new_value ? 'carrier_order_no') is false)::text from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" t
+val "#484: KSH nie widzi load_cost" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,'load_cost','HIST484_OWN',null,20,0)" 0
+val "#484: SCX widzi swój loads" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,20,0)" 1
+val "#484: SCX nie widzi load_revenue" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,'load_revenue','HIST484_OWN',null,20,0)" 0
+val "#484: SCX marża zamaskowana w loads" $SCX \
+  "select (new_value->>'margin') from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" "••••"
+err "#484: anon admin_audit_history → 42501" "00000000-0000-0000-0000-000000000000" \
+  "select * from admin_audit_history(null,null,null,null,null,null,5,0)" "Brak|42501|administrator|dostępu"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

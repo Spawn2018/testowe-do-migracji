@@ -4692,3 +4692,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE (otwarte do zamknięcia po odbiorze) — nie przerywają.
 - Scalanie: **#523** `67e21530` (F7 „gotowe do scalenia” na `6dd9c5f`, CI unit/visual) — wygląd E16+E11 marża/push. #522 bez „gotowe” po F7 poprawkach; #382 CONFLICT.
 - Bieżąca: **#412** PR #522 — CI `db` FAIL security 328/329: test „SMS spoza GSM” z `U&'\\+044F'` → HINT Unicode escapes (psql). Poprawka: `chr(1103)` (Я). security **329**. Push → CI; czekam F7.
+
+## 2026-10-24 10:55 — #522 SCALONE (0289 E43); start #484 (0290)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #524 wygląd E43 bez F7 — nie scalane.
+- Scalanie: **#522** `ba77700b` (F7 „gotowe do scalenia” po `dc774b82`, CI unit/db/visual) — E43 **0289**. Drobne F7 (DEL/U+2028, button w temacie) — po scaleniu (jak #519). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#484** gałąź `pakiet/hotfix-484-audit-history` — migracja **0290**: rozszerzenie `admin_audit_history` (HHL_OPS pełne; KSH/SCX zakres transportów + redakcja E41/cen). security **338** (+9); hist11 **13** (+2). B5→**0291**. Front — koordynator.
