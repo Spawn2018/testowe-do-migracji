@@ -1517,3 +1517,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 13:10 | #484 F7 #526 r4: zmiana przewoźnika z/do NULL (IS DISTINCT FROM) + actor_party=CARRIER; security **377** | pętla |
 | 24.10.2026 13:36 | #526/#484 SCALONE (`7607994f`, 0290); F7 „gotowe”; #528 wpisane (N8); start #492 → **0291**; B5→**0292** | pętla |
 | 24.10.2026 14:20 | #492 F7 #529: RODO bez bumpa, symbol/permit_kind, testy UPDATE+SELECT; security **384**; #530 wpisane (loadsVersion) | pętla |
+| 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |

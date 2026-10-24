@@ -4752,3 +4752,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#530** (Spawn2018, z F7 #529) — loadsVersion z tabel powiązanych; wpisane PLAN §4/§8. #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
 - Scalanie: brak F7 „gotowe”. #529 db FAIL (security carrier_order_no SELECT + i2 purge pozycji po bumpie RODO); visual zielone. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — F7: bez bumpa przy `audit_source=rodo`; `symbol`/`permit_kind`; guard kolumn w 0291; testy UPDATE sys + SELECT; security **384** (+7). Push → CI; ponowne F7.
+
+## 2026-10-24 14:45 — #492 db: RODO asercja przez sys (0076)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL: `#492 RODO` — `permission denied` na SELECT `driver_name` (authenticated; 0076). unit/visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — asercja RODO (`updated_at` + `driver_name is null`) przez `sys`, nie HHL. security **384**. Push → CI.

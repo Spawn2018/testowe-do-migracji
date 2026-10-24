@@ -1100,8 +1100,9 @@ val "#492: symbol/permit_kind podnoszą updated_at" $HHL \
 sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name = 'Rodo492' where id='$L2'" >/dev/null
 sys "begin; select set_config('tower.audit_source','rodo',true);
         update loads set driver_name = null where id='$L2'; commit;" >/dev/null
-val "#492: RODO (audit_source) bez bumpa updated_at" $HHL \
-  "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'" true
+# driver_name: authenticated bez SELECT (0076 → load_driver_contacts) — asercja przez sys
+out=$(sys "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #492: RODO (audit_source) bez bumpa updated_at"; } || { fail=$((fail+1)); echo "  FAIL  #492: RODO (audit_source) bez bumpa updated_at  (otrzymano: $out, oczekiwano: true)"; }
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
