@@ -1506,3 +1506,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 10:30 | #523 SCALONE (wygląd marża+push `67e21530`); #522 db FAIL: test SMS spoza GSM `U&` → `chr(1103)` | pętla |
 | 24.10.2026 11:10 | #524 SCALONE (`45b67407`); #525 wpisane (drobne E43 F7); #484 db FAIL: security `true`≠`t`, nullguard Brak sesji | pętla |
 | 24.10.2026 12:20 | #484 F7 #526 do poprawy → 0290: load_id/scope_*, izolacja, szukaj, dopłaty, doc, czas; security **348** | pętla |
+| 24.10.2026 12:50 | #484 db FAIL seed: `load_permits` bez `created_at` → order by `load_id`; rebase #524 | pętla |

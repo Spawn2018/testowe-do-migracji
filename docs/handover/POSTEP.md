@@ -4710,3 +4710,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
 - Scalanie: brak F7 „gotowe” (F7 #526 = **do poprawy**). CI unit/db/visual na `e4d6afc5` było zielone przed poprawką.
 - Bieżąca: **#484** PR #526 — F7 blokujące: szukaj w raw JSON, dopłaty REVENUE dla SCX, historia po przepięciu przewoźnika, wolne zapytanie, e-maile, ocena, `visible_to`, redakcja zagnieżdżona. Poprawka 0290: kolumny `load_id`/`scope_*` + indeksy; `audit_row_change` z pełnego wiersza; filtr po scope; szukaj bez old/new dla nie-HHL; redakcja usuwa klucze (własny `order_no` KSH zostaje); security **348** (+19). Push → CI; ponowne F7.
+
+## 2026-10-24 12:50 — #484 db FAIL: load_permits.created_at
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe”; #526 db FAIL na `3e58b903` (seed `a7_seed_firm_assets` → `audit_row_change` → `audit_history_resolve_load_id`: `lp.created_at` nie istnieje); #527 wygląd bez F7; #382 CONFLICT.
+- Bieżąca: **#484** — `resolve_load_id` dla `permits`: `order by lp.load_id` (tabela tylko PK load_id/permit_id). Rebase na main (#524). Push → CI; czekam F7.

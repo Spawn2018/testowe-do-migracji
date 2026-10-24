@@ -86,10 +86,11 @@ begin
   end if;
 
   if v_ent = 'permits' and coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
+    -- load_permits: tylko (load_id, permit_id), bez created_at
     select lp.load_id into v_lid
       from public.load_permits lp
      where lp.permit_id = p_entity_id::uuid
-     order by lp.created_at desc nulls last
+     order by lp.load_id
      limit 1;
     return v_lid;
   end if;
