@@ -854,8 +854,8 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 4. ~~**0288** E16 próg marży (`margin_threshold_get`/`_set`) + E11 `push_devices_count`~~ — SCALONE (#520 `90341551`). Front — koordynator (#523 SCALONE `67e21530`).
 5. ~~**0289** E43 treści wiadomości~~ — SCALONE (#522 `ba77700b`): `message_texts` + list/set/reset; SMS_WORST/GSM/znaczniki. Front `p8Source` — koordynator (#524 SCALONE `45b67407`); odczyt przy wysyłce — P8. Drobne F7 → **#525**.
 
-### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — W TOKU (migracja **0290**, F7 #526 r3)
-Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — `load_id`/`scope_*` (przewoźnik z chwili wpisu; zmiana → zakres OLD + dla CARRIER tylko fakt zmiany); KSH bez kierowcy/pilotów, bez `hhl_order_no`/`carrier_order_no` i cen SCX; SCX bez cen klienta/marży i bez `comment` oceny; faktury po issuer/recipient; AGREED_FEE także na entity `load`; UUID ścisły (`try_uuid`); `actor_party`/`actor_label`; backfill bez bieżącego carrier; allowlista; BEFORE INSERT; bez `audit_read`. security **367**. Front — koordynator (#527). Szczegóły: #484 / F7 w #526.
+### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — W TOKU (migracja **0290**, F7 #526 r4)
+Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — `load_id`/`scope_*` (przewoźnik z chwili wpisu; zmiana także z/do NULL → zakres `coalesce(OLD,NEW)` + dla CARRIER tylko fakt); KSH bez kierowcy/pilotów, bez `hhl_order_no`/`carrier_order_no` i cen SCX; SCX bez cen klienta/marży i bez `comment` oceny; faktury po issuer/recipient; AGREED_FEE na entity `load`; UUID ścisły; `actor_party` = HHL/KSH/CARRIER + `actor_label`; backfill bez bieżącego carrier; allowlista; BEFORE INSERT; bez `audit_read`. security **377**. Front — koordynator (#527). Szczegóły: #484 / F7 w #526.
 
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — po #484, przed B5 (niepilne, przed wydaniem 28.10)
 Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja) — **nie** przy `refresh_load_eta` / `process_position` / stanie RIO. Test: update zasobów → `updated_at` rośnie; refresh ETA → bez zmiany. Szczegóły: zgłoszenie #492.
@@ -1508,3 +1508,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 12:20 | #484 F7 #526 do poprawy → 0290: load_id/scope_*, izolacja, szukaj, dopłaty, doc, czas; security **348** | pętla |
 | 24.10.2026 12:50 | #484 db FAIL seed: `load_permits` bez `created_at` → order by `load_id`; rebase #524 | pętla |
 | 24.10.2026 14:15 | #484 F7 #526 r2: side/doc z tabeli, zakres OLD, BEFORE INSERT, allowlista; security **358** | pętla |
+| 24.10.2026 13:10 | #484 F7 #526 r4: zmiana przewoźnika z/do NULL (IS DISTINCT FROM) + actor_party=CARRIER; security **377** | pętla |

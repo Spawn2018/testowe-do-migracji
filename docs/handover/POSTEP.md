@@ -4728,3 +4728,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (baza SCALONE) — nie przerywają.
 - Scalanie: brak F7 „gotowe”. CI na `36eb14d8` zielone (unit/db/visual); F7 r3 **do poprawy**.
 - Bieżąca: **#484** PR #526 — F7 r3: N1 swap = fakt dla CARRIER; N2 backfill bez `l.carrier_org_id`; N3 ocena bez `comment`; N4 AGREED_FEE na entity `load`; N5 faktury issuer/recipient; N6 KSH bez kierowcy; N7 `audit_history_try_uuid`; `actor_party`/`actor_label`; security **367** (+9). Push → CI; ponowne F7.
+
+## 2026-10-24 13:10 — #484 F7 r4: zmiana przewoźnika z/do NULL
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie (wpisane). #425/#413 `pilne` otwarte (SCALONE) — nie przerywają.
+- Scalanie: brak F7 „gotowe”. CI na `8d177d46` zielone (unit/db/visual); F7 r4 **do poprawy** (1 bloker).
+- Bieżąca: **#484** PR #526 — F7 r4: wykrywanie zmiany `IS DISTINCT FROM` (także NULL); zakres `coalesce(OLD,NEW)`; redakcja RPC dla CARRIER przy z/do NULL; `actor_party` = `CARRIER` (nie SCX); testy SCX→NULL / NULL→B (preset + live trigger). security **377** (+10). Push → CI; ponowne F7 (tylko pkt 1).

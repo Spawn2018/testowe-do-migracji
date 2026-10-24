@@ -945,6 +945,48 @@ val "#484: B widzi swap B→SCX" $SCXB \
 # F7 r3 N1: B widzi fakt zmiany, bez danych nowego przewoźnika/kierowcy
 val "#484: B swap bez PII nowego" $SCXB \
   "select ((new_value ? 'driver_name') is false and (new_value ? 'carrier_order_no') is false and (new_value ? 'driver_phone') is false and (new_value->>'_carrier_changed')='true' and (old_value ? 'driver_name') is false)::text from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,5,0) limit 1" true
+# F7 r4: SCX→NULL — zakres OLD=SCX; fakt bez PII; B nie widzi
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-P2','driver_name','Sven Post','driver_phone','+462'),
+      jsonb_build_object('carrier_org_id', null),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX widzi swap SCX→NULL" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,20,0)" 1
+val "#484: SCX→NULL bez PII (fakt)" $SCX \
+  "select ((old_value ? 'driver_name') is false and (old_value ? 'carrier_order_no') is false and (old_value->>'_carrier_changed')='true' and (new_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,5,0) limit 1" true
+val "#484: B nie widzi SCX→NULL" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,20,0)" 0
+# F7 r4: NULL→B — zakres NEW=B; B bez PII starego SCX; SCX nie widzi
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP_FROM_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id', null, 'driver_name','Sven Post','driver_phone','+462','carrier_order_no','SCX-P2'),
+      jsonb_build_object('carrier_org_id','$ORG_B','carrier_order_no','B-NEW','driver_name','Kuba B7'),
+      '$L1','$ORG_B','$ORG_KSH')" >/dev/null
+val "#484: B widzi swap NULL→B" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,20,0)" 1
+val "#484: NULL→B bez PII SCX (fakt)" $SCXB \
+  "select ((old_value ? 'driver_name') is false and (old_value ? 'carrier_order_no') is false and (old_value ? 'driver_phone') is false and (new_value ? 'driver_name') is false and (old_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,5,0) limit 1" true
+val "#484: SCX nie widzi NULL→B" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,20,0)" 0
+# F7 r4: live INSERT SCX→NULL — trigger scope=SCX (coalesce OLD)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_LIVE_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_SCX','driver_name','Sven Live','carrier_order_no','SCX-L'),
+      jsonb_build_object('carrier_org_id', null))" >/dev/null
+val "#484: live SCX→NULL — SCX widzi" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_NULL',null,20,0)" 1
+val "#484: live SCX→NULL — B nie widzi" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_NULL',null,20,0)" 0
+# F7 r4: live INSERT NULL→B — trigger scope=B
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_LIVE_FROM_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id', null, 'driver_name','Sven Left','carrier_order_no','SCX-LEFT'),
+      jsonb_build_object('carrier_org_id','$ORG_B','driver_name','Kuba New'))" >/dev/null
+val "#484: live NULL→B — B widzi fakt" $SCXB \
+  "select ((old_value ? 'driver_name') is false and (new_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_LIVE_FROM_NULL',null,5,0) limit 1" true
+val "#484: live NULL→B — SCX nie widzi" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_FROM_NULL',null,20,0)" 0
 # F7 r2 pkt 4: doc UPDATE bez visible_to w JSON — brak CLIENT w tabeli/diff → ukryj
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
      ('HIST484_DOC_UPD','documents','$L1',
@@ -1007,8 +1049,8 @@ sys "insert into audit_log (action, entity, entity_id, old_value, new_value, loa
        from app_users where auth_id='$SCX' limit 1" >/dev/null
 val "#484: KSH actor_label = nazwa firmy" $KSH \
   "select actor_label from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "Scandinavian Express"
-val "#484: KSH actor_party SCX" $KSH \
-  "select actor_party from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "SCX"
+val "#484: KSH actor_party CARRIER (F7 r4)" $KSH \
+  "select actor_party from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "CARRIER"
 val "#484: KSH user_email null (cudzy)" $KSH \
   "select (user_email is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
 val "#484: KSH bez cudzego user_id" $KSH \

@@ -1,9 +1,8 @@
--- #484 / P2 (właściciel 23.10 08:17) + F7 #526 r3: Historia zmian dla HHL_OPS, KSH i SCX.
+-- #484 / P2 (właściciel 23.10 08:17) + F7 #526 r4: Historia zmian dla HHL_OPS, KSH i SCX.
 -- Bez zmiany polityki audit_read. Odczyt tylko przez RPC SECURITY DEFINER.
 -- load_id + scope_* przy zapisie → szybki filtr; widoczność SCX = przewoźnik z chwili wpisu.
--- F7 r3: swap = fakt zmiany dla przewoźników; backfill bez bieżącego carrier; ocena bez comment;
--- faktury issuer/recipient; KSH bez kierowcy/pilotów; AGREED_FEE na entity load; UUID ścisły;
--- actor_party/actor_label; allowlista; BEFORE INSERT.
+-- F7 r4: zmiana przewoźnika także z/do NULL (IS DISTINCT FROM); zakres coalesce(OLD,NEW);
+-- actor_party = CARRIER (nie kod SCX); N1–N7 z r3.
 
 -- ── 0) Bezpieczne UUID (F7 r3 N7 — wyzwalacz audytu nie blokuje zapisu) ─────
 create or replace function public.audit_history_try_uuid(p text)
@@ -560,12 +559,11 @@ begin
   v_old_c := public.audit_history_try_uuid(p_old ->> 'carrier_org_id');
   v_new_c := public.audit_history_try_uuid(p_new ->> 'carrier_org_id');
 
-  -- Zmiana przewoźnika: zakres = OLD (F7 r2/r3) — nowy nie widzi PII starego
+  -- Zmiana przewoźnika (także z/do NULL, F7 r4): zakres = coalesce(OLD, NEW)
+  -- B→SCX → B; SCX→NULL → SCX; NULL→B → B. Redakcja RPC zostawia tylko fakt.
   if p_entity in ('loads', 'load')
-     and v_old_c is not null
-     and v_new_c is not null
      and v_old_c is distinct from v_new_c then
-    v_carrier := v_old_c;
+    v_carrier := coalesce(v_old_c, v_new_c);
   elsif v_carrier is null then
     v_carrier := coalesce(
       v_old_c,
@@ -793,13 +791,16 @@ begin
      where a.id > v_from and a.id <= v_to
        and a.load_id is null;
 
-    -- carrier wyłącznie z JSON (OLD przy zmianie); brak → NULL
+    -- carrier wyłącznie z JSON; zmiana (także z/do NULL) → coalesce(OLD, NEW); brak → NULL
     update public.audit_log a
        set scope_carrier_org_id = case
-             when public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
-              and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
-              and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
-               then public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id')
+             when public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id')
+                  is distinct from
+                  public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
+               then coalesce(
+                 public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id'),
+                 public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
+               )
              else coalesce(
                public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id'),
                public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
@@ -944,10 +945,11 @@ begin
       when aa.org_id = v_org then aa.email::text
       else null
     end,
+    -- F7 r4: rodzaj strony (nie kod SCX dla każdego CARRIER)
     case ou.kind::text
       when 'FORWARDER' then 'HHL'
       when 'CLIENT' then 'KSH'
-      when 'CARRIER' then 'SCX'
+      when 'CARRIER' then 'CARRIER'
       else null
     end,
     case
@@ -960,9 +962,10 @@ begin
     case
       when v_full then a.old_value
       when v_kind = 'CARRIER'
-           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
-           and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
-           and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
+           and a.entity in ('loads', 'load')
+           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id')
+               is distinct from
+               public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
         then public.audit_history_redact_carrier_swap(
                public.audit_history_redact_payload(v_kind, a.entity, a.old_value)
              )
@@ -971,9 +974,10 @@ begin
     case
       when v_full then a.new_value
       when v_kind = 'CARRIER'
-           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
-           and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
-           and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
+           and a.entity in ('loads', 'load')
+           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id')
+               is distinct from
+               public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
         then public.audit_history_redact_carrier_swap(
                public.audit_history_redact_payload(v_kind, a.entity, a.new_value)
              )
@@ -1041,4 +1045,4 @@ grant execute on function public.admin_audit_history(timestamptz, timestamptz, u
   to authenticated;
 
 comment on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int) is
-  '#484/#526 r3: Historia — N1–N7; actor_party/label; scope indeksowany; allowlista.';
+  '#484/#526 r4: Historia — zmiana przewoźnika z/do NULL; actor_party=CARRIER; N1–N7.';
