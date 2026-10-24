@@ -56,9 +56,13 @@ interface Props {
   cfg: PackConfig;
   actions: PackActions | null;
   nowIso: string;
+  /** #412 E40 (0286, produkcja): „Zleć wysyłkę” — wpis w dzienniku bez e-maila (stan „Zlecono”), do czasu wysyłki z serwera. */
+  orderOnly?: boolean;
+  /** Komunikat z bazy po nieudanym zleceniu (np. „Brak CMR — paczka zablokowana”). */
+  notice?: string | null;
 }
 
-export function AccountingPackSection({ locale, phone, loads, bills, documents, cfg, actions, nowIso }: Props) {
+export function AccountingPackSection({ locale, phone, loads, bills, documents, cfg, actions, nowIso, orderOnly = false, notice = null }: Props) {
   const weeks = useMemo(() => packWeeks(bills), [bills]);
   const [picked, setWeek] = useState('');
   /* faktury mogą dojść później — bez wyboru albo po zniknięciu tygodnia: najnowszy tydzień faktury */
@@ -99,13 +103,16 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
     if (p.sent) {
       const { date, time } = sentParts(p.sent);
       const st = ft(locale, `p5_pack_st_${p.sent.status}`);
+      const ordered = p.sent.status === 'ZLECONO';
       return (
         <span className={p.sent.status === 'BLAD' ? 'pack-sent neg' : 'pack-sent'} data-pack-sent={p.sent.status}>
-          {phone ? ftp(locale, 'p5_pack_sent_short', { date, time, status: st }) : ftp(locale, 'p5_pack_sent', { date, time, to: addrText(p.sent.to), status: st, by: p.sent.by })}
+          {phone
+            ? ftp(locale, ordered ? 'p5_pack_ordered_short' : 'p5_pack_sent_short', { date, time, status: st })
+            : ftp(locale, ordered ? 'p5_pack_ordered' : 'p5_pack_sent', { date, time, to: addrText(p.sent.to), status: st, by: p.sent.by })}
         </span>
       );
     }
-    return <span className="fin-muted">{ft(locale, 'p5_pack_not_sent')}</span>;
+    return <span className="fin-muted">{ft(locale, orderOnly ? 'p5_pack_not_ordered' : 'p5_pack_not_sent')}</span>;
   };
 
   const buttons = (p: Pack) => {
@@ -128,7 +135,9 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
               aria-describedby={blocked ? `pack-why-${p.key}` : undefined}
               onClick={() => void send(p)}
             >
-              {p.sent ? ft(locale, 'p5_pack_resend') : ft(locale, `p5_pack_send_${p.key}`)}
+              {p.sent
+                ? ft(locale, orderOnly ? 'p5_pack_reorder' : 'p5_pack_resend')
+                : ft(locale, orderOnly ? `p5_pack_order_${p.key}` : `p5_pack_send_${p.key}`)}
             </button>
           )}
           <button type="button" className="btn ghost" data-pack-zip={p.key} disabled={!actions || !p.bills.length} onClick={() => zip(p)}>
@@ -139,8 +148,8 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
         {phone ? null : why}
         {again ? (
           <div className="pack-again" role="group" aria-label={ft(locale, 'p5_pack_resend')} data-pack-again={p.key}>
-            <span>{ftp(locale, 'p5_pack_again', again)}</span>
-            <button type="button" className="btn" data-pack-again-yes onClick={() => void send(p)}>{ft(locale, 'p5_pack_again_yes')}</button>
+            <span>{ftp(locale, orderOnly ? 'p5_pack_again_order' : 'p5_pack_again', again)}</span>
+            <button type="button" className="btn" data-pack-again-yes onClick={() => void send(p)}>{ft(locale, orderOnly ? 'p5_pack_again_order_yes' : 'p5_pack_again_yes')}</button>
             <button type="button" className="btn ghost" onClick={() => setAsk(null)}>{ft(locale, 'p5_pack_again_no')}</button>
           </div>
         ) : null}
@@ -248,6 +257,7 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
         ) : null}
         {phone ? null : <span className="sub">{ft(locale, 'p5_pack_sub')}</span>}
       </header>
+      {notice ? <p className="note neg" role="alert" data-pack-notice>{notice}</p> : null}
       {!weeks.length ? (
         <p className="fin-muted fin-pad">{ft(locale, 'p5_pack_empty')}</p>
       ) : phone ? (
@@ -255,7 +265,7 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
       ) : (
         <>
           <div className="pack-grid">{packs.map(desktopPack)}</div>
-          <p className="note">{ft(locale, 'p5_pack_note')}</p>
+          <p className="note">{ft(locale, orderOnly ? 'p5_pack_order_note' : 'p5_pack_note')}</p>
         </>
       )}
     </section>
