@@ -42,6 +42,36 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
 }
 
 /**
+ * Audyt 25.10 (F7 #539 pkt A): rozkład rejsów stronami po 1000 (`max_rows`). Jedno zapytanie zwracało 1000 NAJSTARSZYCH
+ * rejsów, więc po przekroczeniu 1000 wierszy (oba armatory, oba kierunki, rozkład na miesiące naprzód) znikałyby
+ * najnowsze i przyszłe — także te do wyboru w awizacji. Kolejność rosnąco po `departure_at`, powtórzony wiersz po `id`.
+ */
+export async function fetchAllSailings<T = Record<string, unknown>>(
+  sb: SupabaseClient,
+  columns: string,
+  cap: number = Infinity,
+): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('sailings').select(columns)
+      .order('departure_at', { ascending: true }).order('id', { ascending: true }).range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    const rows = (r.data ?? []) as unknown as T[];
+    for (const row of rows) {
+      const k = String((row as { id?: unknown }).id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
+/**
  * 22.10.2026 (właściciel 21:38): statusy SG-03 i innych zafakturowanych zniknęły z osi Status — zrzut brał tylko
  * 500 najnowszych zdarzeń całego projektu, a od 20.10 starsze (październikowe statusy z GPS) wypadały.
  * Teraz wszystkie zdarzenia, stronami po 1000 (limit odpowiedzi API, `max_rows`); `cap` tylko dla testów.
@@ -159,7 +189,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
       notificationsQuery(),
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
-      sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
+      fetchAllSailings(sb, SAILING_COLUMNS),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
       sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
       // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
