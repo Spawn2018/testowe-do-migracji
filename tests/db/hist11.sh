@@ -68,9 +68,13 @@ val "filtr entity=ops_thresholds" \
 
 # #484: KSH/SCX/OPS mają dostęp (zakres); anon nadal bez EXECUTE.
 L1=$(sys "select id from loads order by created_at nulls last limit 1" | tr -d '\r')
-sys "insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
-     select '$HHLID', 'HIST11_LOAD', 'loads', '$L1', '{}'::jsonb, jsonb_build_object('status','READY','hhl_order_no','H-SECRET','carrier_order_no','C-SECRET')
-     where not exists (select 1 from audit_log where action='HIST11_LOAD' and entity_id='$L1')" >/dev/null
+sys "insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id)
+     select '$HHLID', 'HIST11_LOAD', 'loads', '$L1', '{}'::jsonb,
+            jsonb_build_object('status','READY','hhl_order_no','H-SECRET','carrier_order_no','C-SECRET'),
+            '$L1'::uuid, l.carrier_org_id, p.client_org_id
+       from loads l join projects p on p.id = l.project_id
+      where l.id = '$L1'
+        and not exists (select 1 from audit_log where action='HIST11_LOAD' and entity_id='$L1')" >/dev/null
 
 OPS_AUTH=11111111-0000-0000-0000-0000000000b1
 sys "insert into app_users (auth_id, org_id, email, role, active)

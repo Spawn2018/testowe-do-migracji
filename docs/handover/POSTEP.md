@@ -4704,3 +4704,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#525** (Spawn2018) — drobne E43 F7 r2 po #522; wpisane PLAN §4/§8, dopisek `D-20261024-1055-01.md`. #519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
 - Scalanie: **#524** `45b67407` (F7 „gotowe” na `1a046c74`, CI unit/visual) — wygląd treści wiadomości. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#484** PR #526 — CI `db` FAIL: security „KSH bez numerów” `true`≠`t`; nullguard `admin_audit_history` oczekuje „Tylko administrator HHL”, funkcja → „Brak sesji”. Poprawka: expected `true` + wzorzec `Brak sesji|Brak dostępu`. Push → CI; czekam F7.
+
+## 2026-10-24 12:20 — #484 F7 #526: poprawki izolacji 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #526 = **do poprawy**). CI unit/db/visual na `e4d6afc5` było zielone przed poprawką.
+- Bieżąca: **#484** PR #526 — F7 blokujące: szukaj w raw JSON, dopłaty REVENUE dla SCX, historia po przepięciu przewoźnika, wolne zapytanie, e-maile, ocena, `visible_to`, redakcja zagnieżdżona. Poprawka 0290: kolumny `load_id`/`scope_*` + indeksy; `audit_row_change` z pełnego wiersza; filtr po scope; szukaj bez old/new dla nie-HHL; redakcja usuwa klucze (własny `order_no` KSH zostaje); security **348** (+19). Push → CI; ponowne F7.

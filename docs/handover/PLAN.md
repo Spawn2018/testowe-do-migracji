@@ -854,8 +854,8 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 4. ~~**0288** E16 próg marży (`margin_threshold_get`/`_set`) + E11 `push_devices_count`~~ — SCALONE (#520 `90341551`). Front — koordynator (#523 SCALONE `67e21530`).
 5. ~~**0289** E43 treści wiadomości~~ — SCALONE (#522 `ba77700b`): `message_texts` + list/set/reset; SMS_WORST/GSM/znaczniki. Front `p8Source` — koordynator (#524 SCALONE `45b67407`); odczyt przy wysyłce — P8. Drobne F7 → **#525**.
 
-### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — W TOKU (migracja **0290**)
-Po #412, przed #492 / B5. Rozszerzenie `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — wpisy swoich transportów; KSH bez numerów zleceń i cen SCX; SCX bez cen klienta/marży; bez zmiany `audit_read`. Testy `authenticated` (security + hist11). Front — koordynator (`wyglad/*`). Szczegóły: zgłoszenie #484.
+### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — W TOKU (migracja **0290**, F7 #526)
+Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — `load_id`/`scope_*` (przewoźnik z chwili wpisu); KSH bez `hhl_order_no`/`carrier_order_no` i cen SCX (własny `order_no` zostaje); SCX bez cen klienta/marży; szukaj bez raw JSON; e-mail obcej firmy → nazwa; dopłaty po `side`; `visible_to` dokumentów; bez `audit_read`. security **348**. Front — koordynator. Szczegóły: #484 / F7 w #526.
 
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — po #484, przed B5 (niepilne, przed wydaniem 28.10)
 Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja) — **nie** przy `refresh_load_eta` / `process_position` / stanie RIO. Test: update zasobów → `updated_at` rośnie; refresh ETA → bez zmiany. Szczegóły: zgłoszenie #492.
@@ -1505,3 +1505,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 09:55 | #521+#520 SCALONE (wygląd faktoring / E16+E11 0288 `90341551`); #522 E43 CI zielone — czekam F7 | pętla |
 | 24.10.2026 10:30 | #523 SCALONE (wygląd marża+push `67e21530`); #522 db FAIL: test SMS spoza GSM `U&` → `chr(1103)` | pętla |
 | 24.10.2026 11:10 | #524 SCALONE (`45b67407`); #525 wpisane (drobne E43 F7); #484 db FAIL: security `true`≠`t`, nullguard Brak sesji | pętla |
+| 24.10.2026 12:20 | #484 F7 #526 do poprawy → 0290: load_id/scope_*, izolacja, szukaj, dopłaty, doc, czas; security **348** | pętla |
