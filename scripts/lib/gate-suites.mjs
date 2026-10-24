@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 385, // #492 F7: +8 updated_at ekran/symbol/combo_weight/RODO vs ETA/RIO/tracking; było 377 (#484)
-  status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
+  status: 242, // #496: +4 PORT_IN przed planem / arr_source=plan / morze Nynäshamn / nieznana trasa; było 238 (#502)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,

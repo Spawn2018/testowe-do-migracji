@@ -21,6 +21,17 @@ run() { local end="rollback"; [ "$3" = "commit" ] && end="commit"
 val() { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
   if [ "$out" = "$4" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $4)"; fi; }
 err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
+# #496: odmowa z SQLSTATE (nie tylko treść).
+errc() {
+  local name="$1" auth="$2" sql="$3" state="$4" msg="${5:-.}"
+  out=$(run "$auth" "do \$\$ begin $sql; raise exception 'NO_RAISE'; exception when others then
+    if sqlstate = '$state' and sqlerrm ~* E'$msg' then raise notice 'ERRC_OK';
+    else raise exception 'ERRC_BAD state=% msg=%', sqlstate, sqlerrm;
+    end if;
+  end \$\$")
+  if echo "$out" | grep -q ERRC_OK; then ok=$((ok+1)); echo "  OK    $name"
+  else fail=$((fail+1)); echo "  FAIL  $name → $(echo "$out" | tail -1)"; fi
+}
 Q() { $PSQL -c "$1" 2>&1 | tail -1; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
 H() { Q "select round(extract(epoch from (eta_site - $2))/3600, 1) from loads where id='$1'"; }   # ETA − punkt odniesienia [h]
@@ -665,7 +676,7 @@ err "SMS testowy na numer spoza listy odrzucony" $HHL "select sms_send_test('+48
 err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+48600000001','x')" "wyłącznie HHL"
 OPS=11111111-0000-0000-0000-0000000000b5
 $PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
-err "#467: sms_send_test HHL_OPS → odmowa" $OPS "select sms_send_test('+48600000001')" "Administrator HHL|wyłącznie HHL"
+errc "#496: sms_send_test HHL_OPS → 42501" $OPS "perform sms_send_test('+48600000001')" 42501 "Administrator HHL|wyłącznie HHL"
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
 chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"

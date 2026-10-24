@@ -4770,3 +4770,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
 - Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
+
+## 2026-10-24 23:05 — #525 CI zielone; start #496 (0298)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
+- Scalanie: brak F7 `gotowe do scalenia` po headach #531/#532/#533/#534/#535 (CI zielone). Bez push na main.
+- **#525** PR #535: unit/db/visual zielone na `dbaddafa` (0297). Czekam F7.
+- Bieżąca (równolegle, D-20261019-1050-01 §2 — nie stoję przy F7): **#496** gałąź `pakiet/hotfix-496-f7-drobne-2310` — migracja **0298**: SYSTEM→42501; `sweden_land_geom` bez Bałtyku; znane trasy korytarza; SE_E22 Söderåkra/Södertälje; testy SQLSTATE + status **242**.

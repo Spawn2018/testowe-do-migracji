@@ -860,7 +860,7 @@ Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko;
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — W TOKU (migracja **0291**)
 Po #484, przed B5 (niepilne, przed wydaniem 28.10). Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind/`combo_weight_t`, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. Test: update zasobów/symbol/masy → `updated_at` rośnie; ETA/RIO-stan/RODO → bez zmiany. security **385** (+8). Szczegóły: zgłoszenie #492.
 
-### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — po #492, przed B5 (przed 28.10)
+### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — W TOKU (migracja **0298**; po #492, przed B5; przed 28.10)
 Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. Front — koordynator. Szczegóły: #496.
 
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
@@ -872,7 +872,7 @@ Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLV
 ### #519 · Faktoring drobne F7 r3 (N2–N4) (D-20261024-0900-01) — po #514, przed 28.10 (nie przerywa)
 Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/`paid_at`; `raise warning`/`app_errors` zamiast połykania; link → Finanse › Faktury. N1 bez zmian (e-mail/push HHL_ADMIN). Szczegóły: #519.
 
-### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — po #522/#524, przed 28.10 (nie przerywa)
+### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — CI zielone, czekam F7 (PR #535 / **0297**; nie przerywa)
 DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
 
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — po #492, przed B5 (nie przerywa)
@@ -1520,3 +1520,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |
 | 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |
 | 24.10.2026 15:32 | #492 CI unit/db/visual zielone (`3ad7619a`); czekam F7 „gotowe” | pętla |
+| 24.10.2026 23:05 | #525 CI zielone (`dbaddafa` / 0297); start **#496** → **0298** (SQLSTATE, ląd SE, SE_E22, trasa) | pętla |
