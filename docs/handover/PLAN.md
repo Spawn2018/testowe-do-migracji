@@ -858,7 +858,7 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — `load_id`/`scope_*` (przewoźnik z chwili wpisu; zmiana także z/do NULL → zakres `coalesce(OLD,NEW)` + dla CARRIER tylko fakt); KSH bez kierowcy/pilotów, bez `hhl_order_no`/`carrier_order_no` i cen SCX; SCX bez cen klienta/marży i bez `comment` oceny; faktury po issuer/recipient; AGREED_FEE na entity `load`; UUID ścisły; `actor_party` = HHL/KSH/CARRIER + `actor_label`; backfill bez bieżącego carrier; allowlista; BEFORE INSERT; bez `audit_read`. security **377**. Front — koordynator (#527, po odbiorze 0290). Drobne F7 r5 → **#528**.
 
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — W TOKU (migracja **0291**)
-Po #484, przed B5 (niepilne, przed wydaniem 28.10). Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. Test: update zasobów/symbol → `updated_at` rośnie; ETA/RIO-stan/RODO → bez zmiany. security **384** (+7). Szczegóły: zgłoszenie #492.
+Po #484, przed B5 (niepilne, przed wydaniem 28.10). Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind/`combo_weight_t`, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. Test: update zasobów/symbol/masy → `updated_at` rośnie; ETA/RIO-stan/RODO → bez zmiany. security **385** (+8). Szczegóły: zgłoszenie #492.
 
 ### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — po #492, przed B5 (przed 28.10)
 Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. Front — koordynator. Szczegóły: #496.
@@ -1518,3 +1518,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 13:36 | #526/#484 SCALONE (`7607994f`, 0290); F7 „gotowe”; #528 wpisane (N8); start #492 → **0291**; B5→**0292** | pętla |
 | 24.10.2026 14:20 | #492 F7 #529: RODO bez bumpa, symbol/permit_kind, testy UPDATE+SELECT; security **384**; #530 wpisane (loadsVersion) | pętla |
 | 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |
+| 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |

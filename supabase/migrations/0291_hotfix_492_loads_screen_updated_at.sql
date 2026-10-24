@@ -23,7 +23,7 @@ begin
     'tractor_delivery_plate', 'trailer_swap', 'trailer_swap_at',
     'escort_vehicles', 'telematics_vehicle_id', 'telematics_provider',
     'sailing_id', 'ferry_booking_ref',
-    'combo_length_m', 'combo_width_m', 'combo_height_m',
+    'combo_length_m', 'combo_width_m', 'combo_height_m', 'combo_weight_t',
     'combo_axle_count', 'combo_axle_load_t',
     'delay_code', 'delay_owner', 'delay_note',
     'symbol', 'permit_kind',
@@ -90,6 +90,7 @@ begin
     or new.combo_length_m is distinct from old.combo_length_m
     or new.combo_width_m is distinct from old.combo_width_m
     or new.combo_height_m is distinct from old.combo_height_m
+    or new.combo_weight_t is distinct from old.combo_weight_t
     or new.combo_axle_count is distinct from old.combo_axle_count
     or new.combo_axle_load_t is distinct from old.combo_axle_load_t
     or new.delay_code is distinct from old.delay_code

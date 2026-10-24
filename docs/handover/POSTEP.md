@@ -4758,3 +4758,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
 - Scalanie: brak F7 „gotowe”. #529 db FAIL: `#492 RODO` — `permission denied` na SELECT `driver_name` (authenticated; 0076). unit/visual zielone. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — asercja RODO (`updated_at` + `driver_name is null`) przez `sys`, nie HHL. security **384**. Push → CI.
+
+## 2026-10-24 14:55 — #492 F7 #529 r3: combo_weight_t + RODO freeze
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). Bez `pilne`.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL (security 383/384 — RODO freeze w jednej instrukcji z `driver_name`); visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — F7 r3: przywrócony `combo_weight_t` w guardzie i wyzwalaczu + test; RODO: najpierw `driver_name`, potem osobny UPDATE `updated_at`. security **385** (+8). Push → CI; ponowne F7.

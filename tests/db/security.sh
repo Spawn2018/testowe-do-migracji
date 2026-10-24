@@ -1097,7 +1097,13 @@ sys "update loads set symbol = case when coalesce(symbol,'') = 'SG' then 'KR' el
      where id='$L2'" >/dev/null
 val "#492: symbol/permit_kind podnoszą updated_at" $HHL \
   "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
-sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name = 'Rodo492' where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set combo_weight_t = coalesce(combo_weight_t, 40) + 0.1 where id='$L2'" >/dev/null
+val "#492: combo_weight_t podnosi updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# F7 #529 r2/r3: najpierw kierowca, potem osobno zamroź updated_at (driver_name = kolumna ekranu → bump).
+sys "update loads set driver_name = 'Rodo492' where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
 sys "begin; select set_config('tower.audit_source','rodo',true);
         update loads set driver_name = null where id='$L2'; commit;" >/dev/null
 # driver_name: authenticated bez SELECT (0076 → load_driver_contacts) — asercja przez sys
