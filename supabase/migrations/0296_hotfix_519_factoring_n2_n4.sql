@@ -116,8 +116,12 @@ begin
     return new;
   end if;
 
+  -- ms: ponowna akceptacja w tej samej sekundzie musi dać nowy klucz.
   v_dedup := 'factoring-acc:' || new.id::text || ':'
-    || coalesce(extract(epoch from new.factoring_accepted_at)::bigint::text, '0');
+    || coalesce(
+         (floor(extract(epoch from new.factoring_accepted_at) * 1000))::bigint::text,
+         '0'
+       );
   v_payload := jsonb_build_object(
     'invoice_id', new.id,
     'number', new.invoice_number,
@@ -222,7 +226,7 @@ begin
   end if;
 
   v_dedup := 'factoring-paid:' || p_invoice::text || ':'
-    || extract(epoch from v_paid_at)::bigint::text;
+    || (floor(extract(epoch from v_paid_at) * 1000))::bigint::text;
   v_payload := jsonb_build_object(
     'invoice_id', p_invoice,
     'number', inv.invoice_number,
@@ -286,7 +290,7 @@ begin
       continue;
     end if;
     v_dedup := 'factoring-overdue:' || r.id::text || ':'
-      || extract(epoch from r.factoring_due_at)::bigint::text;
+      || (floor(extract(epoch from r.factoring_due_at) * 1000))::bigint::text;
     v_payload := jsonb_build_object(
       'invoice_id', r.id,
       'number', r.invoice_number,

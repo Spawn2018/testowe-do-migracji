@@ -745,6 +745,7 @@ err "#412f: HHL nie wstawi oferty bezpośrednio" $HHL \
 
 echo; echo "[#519] Faktoring N2–N4 (0296) — bez linii, dedup, url faktury"
 INV519=44444444-0000-0000-0000-000000000519
+# Linia na L2 (nie L1 z INVK) — unique invoice_lines(load_id, direction).
 sys "delete from notifications where payload->>'invoice_id'='$INV519' and template like 'FACTOR%';
      delete from invoice_lines where invoice_id='$INV519';
      delete from invoices where id='$INV519';
@@ -761,7 +762,7 @@ sys "delete from notifications where payload->>'invoice_id'='$INV519' and templa
 sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
 chk6 "#519 N2: bez invoice_lines → 0 FACTORING_ACCEPTED" "$(sys "select count(*) from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519'" | tail -1)" 0
 sys "insert into invoice_lines (invoice_id, load_id, direction)
-     select '$INV519', load_id, direction from invoice_lines where invoice_id='$INVK' limit 1" >/dev/null
+     values ('$INV519', '$L2', 'KOSZT')" >/dev/null
 sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_accepted_at=null, factoring_due_at=null where id='$INV519'" >/dev/null
 sys "delete from notifications where template like 'FACTOR%' and payload->>'invoice_id'='$INV519'" >/dev/null
 sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
