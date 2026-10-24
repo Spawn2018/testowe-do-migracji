@@ -402,7 +402,8 @@ export function OptionsView() {
     ), { mark: PROD_BUILD ? undefined : <DemoMark /> }),
     scr('flags', pick('flags', SecurityFlags ? block(<SecurityFlags readOnly={ro} />) : null), { right: change }),
   ];
-  if (isHhlAdmin) system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null)));
+  /* #484: Historia zmian także dla Operacji HHL (pełny zakres, tylko odczyt) */
+  system.push(scr('hist', pick('hist', ChangeHistoryPanel ? block(<ChangeHistoryPanel />) : null), { right: isHhlAdmin ? undefined : 'read' }));
   system.push(scr('export', pick('export', DataExportPanel ? block(<DataExportPanel admin={isHhlAdmin} />) : null), { right: 'download' }));
   groups.push({ id: 'system', screens: system });
 

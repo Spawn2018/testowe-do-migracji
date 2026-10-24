@@ -2,7 +2,8 @@
  * Opcje › System › Historia zmian — produkcja w wyglądzie z audytu (E12 „Historia zmian”: filtry po polsku, wpis zdaniem,
  * „było → jest”, zmiany techniczne ukryte pod przełącznikiem). Ekran = `HistoryScreen` (ten sam co w demo).
  * Dane jak w dawnym `ChangeHistoryPanel`: `admin_audit_history` (zakres dat, osoba, obiekt, „Szukaj”, limit 200),
- * eksport CSV/XLSX pobranych wierszy. Tylko Administrator HHL (E12-1A).
+ * eksport CSV/XLSX pobranych wierszy. #484 (0290): Administrator i Operacje HHL — wszystko; KSH i SCX (Ustawienia) — wpisy
+ * swoich transportów, ceny i numery drugiej strony ukrywa baza. Autor z innej firmy: „Inna firma” (bez e-maila).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from './client';
@@ -20,13 +21,36 @@ type Row = {
   id: number; created_at: string; action: string; entity: string; entity_id: string | null;
   user_id: string | null; user_email: string | null; acting_as_user_id: string | null; acting_as_email: string | null;
   source: string | null; is_automatic: boolean; old_value: Record<string, unknown> | null; new_value: Record<string, unknown> | null;
+  /** 0290 (#484): strona autora (HHL / KSH / CARRIER) i podpis — dla KSH/SCX nazwa firmy albo osoba z własnej firmy */
+  actor_party?: string | null; actor_label?: string | null;
 };
 
 /** Zmiana techniczna = zapis wiersza tabeli (wyzwalacz audytu), ukryta domyślnie (E12 pkt 4). */
 export const isTech = (action: string) => /^ROW_/.test(action);
 
-function fmtVal(locale: Locale, v: Record<string, unknown> | null): string | undefined {
+/* #484 F7 #527 (obrona w głębi; główna redakcja — baza 0290): KSH/SCX bez kluczy pieniędzy, numerów zleceń i e-maili,
+   także w zagnieżdżonych obiektach i tablicach */
+const HIDDEN_KEY = /price|cost|revenue|margin|rate|amount|fee|baf|payout|net|gross|total|order_no|email/i;
+/* KSH: bez danych kierowców i pilotów (jak widoki na żywo; decyzja koordynatora F7 #526 r3 N6) */
+const HIDDEN_KSH = /driver|phone|pilot|escort_name|contact/i;
+export function scrubForParty(v: unknown, ksh = false): unknown {
+  if (Array.isArray(v)) return v.map((x) => scrubForParty(x, ksh));
+  if (v && typeof v === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      if (HIDDEN_KEY.test(k) || (ksh && HIDDEN_KSH.test(k))) continue;
+      out[k] = scrubForParty(x, ksh);
+    }
+    return out;
+  }
+  return v;
+}
+
+function fmtVal(locale: Locale, raw: Record<string, unknown> | null, party = false, ksh = false): string | undefined {
+  const v = party && raw ? (scrubForParty(raw, ksh) as Record<string, unknown>) : raw;
   if (!v || Object.keys(v).length === 0) return undefined;
+  /* 0290: wpis zmiany przewoźnika dla stron — sam fakt */
+  if (v._carrier_changed === true && Object.keys(v).length === 1) return t(locale, 'p3l_h_carrier_changed');
   const keys = Object.keys(v);
   /* jedna wartość („enabled”, „value”) — sama wartość; więcej — klucz: wartość */
   const show = (x: unknown) => (typeof x === 'boolean' ? t(locale, x ? 'p3l_val_on' : 'p3l_val_off') : x == null ? '—' : typeof x === 'object' ? JSON.stringify(x) : String(x));
@@ -46,6 +70,7 @@ export default function LiveHistory() {
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const [rows, setRows] = useState<Row[]>([]);
+  const hhl = role === 'HHL';
   const [people, setPeople] = useState<PersonDb[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +95,8 @@ export default function LiveHistory() {
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id').order('created_at'),
     ]);
     setBusy(false);
-    if (h.error) { setMsg(errText(locale, h.error)); setRows([]); return; }
+    /* przed bazą 0290 KSH/SCX/Operacje dostają 42501 „Tylko administrator HHL” — neutralny komunikat */
+    if (h.error) { setMsg((h.error as { code?: string }).code === '42501' ? t(locale, 'p3l_h_unavailable') : errText(locale, h.error)); setRows([]); return; }
     setMsg(null);
     setRows((h.data ?? []) as Row[]);
     setPeople((u.data ?? []) as PersonDb[]);
@@ -85,10 +111,13 @@ export default function LiveHistory() {
   const who = useCallback((r: Row) => {
     if (r.is_automatic || (!r.user_id && r.source)) return `${t(locale, 'p3l_h_auto')}${r.source ? ` · ${r.source}` : ''}`;
     const p = r.user_id ? byId.get(r.user_id) : undefined;
-    const name = p ? personName(p) : (r.user_email || t(locale, 'p3l_h_auto'));
+    /* KSH/SCX: osoby spoza własnej firmy (lista kont z RLS) — bez nazwiska i e-maila */
+    const other = t(locale, 'p3l_h_other');
+    /* KSH/SCX: podpis z bazy (0290) — nazwa firmy albo osoba z własnej firmy; bez niego „Inna firma” */
+    const name = p ? personName(p) : hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.actor_label ? r.actor_label : r.user_id || r.actor_party ? other : t(locale, 'p3l_h_auto');
     const as = r.acting_as_user_id ? byId.get(r.acting_as_user_id) : undefined;
-    return r.acting_as_user_id ? tp(locale, 'p3l_h_as', { who: name, as: as ? personName(as) : (r.acting_as_email ?? '—') }) : name;
-  }, [byId, locale]);
+    return r.acting_as_user_id ? tp(locale, 'p3l_h_as', { who: name, as: as ? personName(as) : hhl ? (r.acting_as_email ?? '—') : other }) : name;
+  }, [byId, locale, hhl]);
   const obj = useCallback((r: Row) => {
     if (r.entity !== 'loads' || !r.entity_id) return '';
     const l = loads.find((x) => x.id === r.entity_id);
@@ -101,19 +130,21 @@ export default function LiveHistory() {
     when: formatListDateTime(r.created_at),
     who: who(r),
     text: historyText(locale, r, obj(r)),
-    was: fmtVal(locale, r.old_value),
-    is: fmtVal(locale, r.new_value),
+    was: fmtVal(locale, r.old_value, !hhl, role === 'KSH'),
+    is: fmtVal(locale, r.new_value, !hhl, role === 'KSH'),
   }));
+  /* KSH/SCX: tylko obszary z ich wpisów (bez list ustawień systemu) */
   const entityList = [...new Set([
-    'app_users', 'user_invites', 'security_flags', 'ops_thresholds', 'notification_matrix', 'rate_cards', 'sefs_parameters',
-    'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents',
+    ...(hhl ? ['app_users', 'user_invites', 'security_flags', 'ops_thresholds', 'notification_matrix', 'rate_cards', 'sefs_parameters',
+      'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents']
+      : ['loads', 'documents', 'shipment_items', 'load_permits', 'load_escorts', 'permits', role === 'KSH' ? 'load_revenue' : 'load_cost']),
     ...rows.map((r) => r.entity),
   ])];
 
   const download = (fmt: 'csv' | 'xlsx') => {
     void (async () => {
       const head = [t(locale, 'p3c_l_when'), t(locale, 'p3c_hist_who'), t(locale, 'p3c_hist_what'), t(locale, 'p3c_hist_was'), t(locale, 'p3c_hist_is')];
-      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value) ?? '', fmtVal(locale, r.new_value) ?? '']);
+      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value, !hhl, role === 'KSH') ?? '', fmtVal(locale, r.new_value, !hhl, role === 'KSH') ?? '']);
       try {
         await downloadTable([head, ...data], 'WATCH_TOWER_historia_zmian', fmt, 'Historia');
         setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: data.length }));
@@ -140,7 +171,7 @@ export default function LiveHistory() {
         onRefresh={() => void refresh()}
         busy={busy}
         onDownload={download}
-        note={`${tp(locale, 'p3l_h_tech_note', { n: HISTORY_LIMIT })} ${t(locale, 'opt_acc_hist_note')}`}
+        note={`${tp(locale, 'p3l_h_tech_note', { n: HISTORY_LIMIT })} ${t(locale, hhl ? 'opt_acc_hist_note' : 'p3l_h_party_note')}`}
       />
     </div>
   );
