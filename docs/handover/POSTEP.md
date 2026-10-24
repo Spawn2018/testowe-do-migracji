@@ -4800,3 +4800,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
 - Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `0dbf4267` (docs; wcześniej `0cf5b896`/`fc08a460`, security **391**). Czekam F7.
+
+## 2026-10-24 17:29 — przełączenie na pętlę; #528 czeka CI+F7
+
+- **Przełączenie na pętlę** (polecenie właściciela 19.10 / D-20261019-1050-01): ten czat się zatrzymuje; dalej `cursor-agent` / `cursor-petla.ps1`. Każdy przebieg od `docs/handover/ZASADY_CIAGLEJ_PRACY.md`.
+- Skrzynka: #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 gałąź `pakiet/hotfix-528-audit-n8` head `5eac6fb0` (docs; kod `fc08a460`, migracja **0292**, security **391**). CI na head: unit/visual·zmiany/zrzuty zielone; **db + visual·bramy/telefon jeszcze pending** (G-15 — bez nowych commitów na tę gałąź do końca bramy). Po zielonym CI: komentarz „czekam F7”; po „F7: gotowe do scalenia” od Spawn2018 → `gh pr merge --merge`. Następna po scaleniu: **#530** albo **B5/0293** wg PLAN §3/§4.
