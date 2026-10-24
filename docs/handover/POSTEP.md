@@ -4857,3 +4857,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #537 wpisane (otwarte do realizacji po #531–#536); #530/#528/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
 - Scalanie: brak F7 `gotowe` po c2c96786; F7 r2 „do poprawy” (pozycje SCX widoczne dla B/KSH; EXISTS→hashed SubPlan). #532–#536 czekają 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 — F7 r2: (1) detach `positions` + TELM `load_events`, clear tracking/eta; (2) skalarne SELECT zamiast EXISTS na docs/fees; (3) opis PR. security **397** (+3). Push → CI; ponowne F7.
+
+## 2026-10-25 01:15 — #538 w planie; #528 db FAIL detach → AFTER
+
+- Skrzynka: **#538** (Spawn2018, `dla-cursora`) — wpisane PLAN §4 (decyzje 25.10 + konta RO), §5 (W2/W3/W7/W18/W23/W25/W46–W50), §6 cz. 3 (Po 1.0), §8, dopisek `D-20261025-0055-01.md`. Bez `pilne`. Nie przerywa #528.
+- Scalanie: brak F7 `gotowe`. #531 CI: unit/visual OK, **db FAIL** security 394/397 — detach GPS w BEFORE nie odłączał pozycji (B/KSH 3/3/1). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — detach `positions`/TELM w **AFTER** `trg_loads_zza_detach_on_carrier_change` (0242 D; `session_replication_role` zamiast ALTER TABLE w triggerze). Push → CI; ponowne F7.

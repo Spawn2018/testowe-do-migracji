@@ -2,7 +2,7 @@
 -- Po 0291 (#492). B5 dostanie numer ≥0299 (po 0292–0298), nie 0293/0294.
 -- 1) N8: przy zmianie carrier_org_id (gdy był poprzedni) zeruj pola przewoźnika
 --    (kierowca/dostawa/tablice/order_no/telematyka/rio_*); phone_country → 'PL';
---    escort_vehicles→0; odłącz positions/load_events TELM (0242 D); tracking/eta_*→null.
+--    escort_vehicles→0; tracking/eta_*→null; AFTER detach positions/TELM (0242 D).
 --    Trigger po strażniku (zz_*), żeby HHL_OPS mógł zmienić przewoźnika przy
 --    istniejącym carrier_order_no (clear nie wchodzi w guard jako „zmiana numeru”).
 -- 2) Redakcja „zmiana przewoźnika” tylko gdy old i new nie-NULL (ROW_UPDATE; nie INSERT/DELETE).
@@ -109,21 +109,56 @@ begin
     new.rio_check_state := null;
   end if;
   -- F7 r2: okno śledzenia i ETA starego pojazdu (wzorzec 0242 D)
+  -- Detach positions/TELM → AFTER (zza_*), nie tu: UPDATE dzieci w BEFORE
+  -- na loads bywa no-op / konflikt FK w trakcie zmiany wiersza rodzica.
   new.tracking_opened_at := null;
   new.eta_site := null;
   new.eta_confidence_min := null;
   new.eta_basis := null;
   new.eta_computed_at := null;
   new.delay_minutes := null;
-  -- F7 r2 BLOKER: odłącz pozycje — inaczej B/KSH widzą ciężarówkę SCX
-  update public.positions
-     set detached_load_id = load_id,
+  return new;
+end;
+$$;
+
+revoke all on function public.trg_loads_clear_on_carrier_change()
+  from public, anon, authenticated;
+
+-- F7 #531: po trg_loads_guard (kolejność alfabetyczna), nie przed — OPS + carrier_order_no
+drop trigger if exists trg_loads_clear_on_carrier_change on public.loads;
+drop trigger if exists trg_loads_zz_clear_on_carrier_change on public.loads;
+create trigger trg_loads_zz_clear_on_carrier_change
+  before update of carrier_org_id on public.loads
+  for each row
+  execute function public.trg_loads_clear_on_carrier_change();
+
+comment on function public.trg_loads_clear_on_carrier_change() is
+  '#528 N8 F7 r2: clear PII/rio; escort_vehicles=0; tracking/eta null; zz_* po guard; NULL→org bez clear. Detach → zza_*.';
+
+-- F7 r2 CI: detach GPS/TELM po zapisie wiersza (AFTER), wzorzec 0242 D
+create or replace function public.trg_loads_detach_on_carrier_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_prev text;
+begin
+  if new.carrier_org_id is not distinct from old.carrier_org_id then
+    return new;
+  end if;
+  if old.carrier_org_id is null then
+    return new;
+  end if;
+  update public.positions pos
+     set detached_load_id = pos.load_id,
          detached_at = now(),
          load_id = null
-   where load_id = new.id;
-  -- F7 r2: zdarzenia telematyczne (jak 0242 D; immutable off)
+   where pos.load_id = new.id;
+  v_prev := current_setting('session_replication_role', true);
+  perform set_config('session_replication_role', 'replica', true);
   begin
-    alter table public.load_events disable trigger trg_load_events_immutable;
     update public.load_events ev
        set detached_load_id = ev.load_id,
            detached_at = now(),
@@ -151,29 +186,26 @@ begin
            )
          )
        );
-    alter table public.load_events enable trigger trg_load_events_immutable;
+    perform set_config('session_replication_role', coalesce(nullif(v_prev, ''), 'origin'), true);
   exception when others then
-    alter table public.load_events enable trigger trg_load_events_immutable;
+    perform set_config('session_replication_role', coalesce(nullif(v_prev, ''), 'origin'), true);
     raise;
   end;
   return new;
 end;
 $$;
 
-revoke all on function public.trg_loads_clear_on_carrier_change()
+revoke all on function public.trg_loads_detach_on_carrier_change()
   from public, anon, authenticated;
 
--- F7 #531: po trg_loads_guard (kolejność alfabetyczna), nie przed — OPS + carrier_order_no
-drop trigger if exists trg_loads_clear_on_carrier_change on public.loads;
-drop trigger if exists trg_loads_zz_clear_on_carrier_change on public.loads;
-create trigger trg_loads_zz_clear_on_carrier_change
-  before update of carrier_org_id on public.loads
+drop trigger if exists trg_loads_zza_detach_on_carrier_change on public.loads;
+create trigger trg_loads_zza_detach_on_carrier_change
+  after update of carrier_org_id on public.loads
   for each row
-  execute function public.trg_loads_clear_on_carrier_change();
+  execute function public.trg_loads_detach_on_carrier_change();
 
-comment on function public.trg_loads_clear_on_carrier_change() is
-  '#528 N8 F7 r2: clear PII/rio; escort_vehicles=0; detach positions/TELM events; tracking/eta null; zz_* po guard; NULL→org bez clear.';
-
+comment on function public.trg_loads_detach_on_carrier_change() is
+  '#528 N8 F7 r2 CI: AFTER detach positions + TELM load_events (0242 D; session_replication_role).';
 -- ── 2) Bez zbędnych indeksów (F7 #531: GIN nie pomaga = any(); side_id dubluje PK)
 drop index if exists public.documents_visible_to_gin;
 drop index if exists public.load_agreed_fees_side_id;
@@ -613,7 +645,7 @@ grant execute on function public.admin_audit_history(timestamptz, timestamptz, u
   to authenticated;
 
 comment on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int) is
-  '#484/#528 F7 r2: N8 clear+detach GPS; ROW_UPDATE swap; skalarne filtry docs/fees; COST 10000 entry_in_scope.';
+  '#484/#528 F7 r2: N8 clear+AFTER detach GPS; ROW_UPDATE swap; skalarne filtry docs/fees; COST 10000 entry_in_scope.';
 
 alter function public.audit_history_entry_in_scope(
   text, uuid, text, text, text, uuid, uuid, uuid, jsonb, jsonb

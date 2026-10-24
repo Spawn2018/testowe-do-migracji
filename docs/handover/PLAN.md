@@ -876,7 +876,7 @@ Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/
 DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
 
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — W TOKU F7 #531 (migracja **0292**)
-Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); detach `positions`/TELM events + clear tracking/eta (F7 r2); trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. security **397** (+3 F7 r2). Front `_carrier_changed` — #527. Szczegóły: #528.
+Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); clear tracking/eta; **AFTER** detach `positions`/TELM (zza_*, 0242 D — BEFORE był no-op w CI); trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. security **397** (+3 F7 r2). Front `_carrier_changed` — #527. Szczegóły: #528.
 
 ### #530 · loadsVersion z tabel powiązanych (F7 #529) — po #492, przed 28.10 (nie przerywa)
 `max(loads.updated_at)` nie obejmuje pilotów/rejsu/dokumentów itd. Wersja z `max(updated_at)` powiązanych **albo** podbicie `loads.updated_at` przy zmianie rodzica. Priorytet: `load_escorts`, `sailings`. ETA/RIO-stan poza bumpem. Szczegóły: #530.
@@ -890,6 +890,17 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 2. **Drobne F7 obiecane „osobno”:** a) #396 paliwo tydzień/`ok:false`/CANCELLED; b) #399 emtrack→RIO; c) #458 (priorytet) ceny `owner_override`/`params_version`/`owner_note`; d) #501/#498 test ≥70 tys. + lease; e) #444/#441 `github.event.before` w deploy-main; f) #377/#359 `force`/fetch/`over_table`; g) #370/#362 NO_TRACKING + `v_past_idle`; h) #357→#358 `permit_fits`/`awiz_pilots_set` (P2–P5) — brakujące zrobić, zrobione oznaczyć w POSTEP.
 3. **Porządki (ten wpis):** D-1525 cz.2 → na produkcji; #446/#492 SCALONE; W37 zamknięte; POSTEP: projekt Supabase wtyczki Cursor; zamknięcie #446/#425.
 4. **Zmiana czasu:** przed 01.11 — unit+db z datą systemową 01.11 i 02.11 (`faketime`/zmienna); szukać sztywnych dat/stref; wynik w POSTEP.
+
+### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
+Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
+1. **1B — pełny zakres, data wydania = realna z prognozy.** Na 28.10 tylko brama bezpieczeństwa: B5, B7, hasła (C11), C9 E19, OWASP z P11. **Do pon. 26.10, 12:00:** prognoza w POSTEP i w #499 dla każdej pozycji spoza produkcji (P4-u, P3-d, reszta P5, P6–P11, B5, B7–B9, A6, C4–C13, #500, #537) z tempa 3 dni + rundy F7 → realna data wydania. Najpierw brama bezpieczeństwa, potem reszta z planu.
+2. **2A** — decyzje koordynatora 1–8 z #517 zaakceptowane → zamknij W-wpisy / #517.
+3. **3A — konta tylko do odczytu na produkcji** (pomiary #422 + odbiór ról): pozycja przed P11 poniżej; W47 (hasła).
+4. **4C** — W46 zamknięte (Grok wcześniej). **5A** — rejsy historyczne HHL_ADMIN bez limitu dni (front koordynator; baza: sprawdź `guard_load_update` / 0243). **6A/7B** — pola 2 px / bez wersalików — front koordynator (7B zamknięte). **8A–10A, 12C–14A** — W18/W23/W25/W48–W50 powyżej.
+5. **11A — porządek gałęzi** (po #531–#536 / gdy właściciel włączy auto-delete): usuń scalone (ahead_by=0); 15 starych bez scalenia → tag `archiwum/<nazwa>` potem usuń; **nie ruszaj** otwartych PR (#531–#536, #382, #383). Wynik w POSTEP.
+
+### Konta tylko do odczytu na produkcji (#538 3A) — przed P11; po B5/bramie bezpieczeństwa
+Po jednym koncie na rolę: KSH, SCX Dyspozytor, SCX Użytkownik, HHL Operacje. Baza: flaga `read_only` w strażnikach i RPC zapisu → 42501. Poza macierzą powiadomień/SMS/e-mail (nie odbiorca). Bez PII w raportach pomiarów. Zaproszenia na adresy właściciela; hasła → GitHub Secrets tylko właściciel (W47). Testy: każda rola 42501 na każdej funkcji zapisu (allowlista security.sh). Wyjątek od „bez kont testowych na produkcji” — tylko te konta.
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — po #528/#496 (migracja **≥0299**; #528→**0292**; #492→**0291** SCALONE)
 - Według D-20261015-0330-01 pkt 6:
@@ -1203,12 +1214,12 @@ Bez ekranów Opcji (te w P10b, po P3).
 | Nr | Co | Kiedy potrzebne | Stan |
 |---|---|---|---|
 | W1 | Ustawienia logowania Supabase: ochrona przed wyciekniętymi hasłami, minimum 12 znaków, „litery i cyfry” — instrukcja: `docs/handover/INSTRUKCJA_W1_USTAWIENIA_LOGOWANIA.md` (D-20261014-0015-01 R4) | po P3 | **zrobione 17.10.2026, 07:28** (dowód: B2 — zgłoszenie `auth_leaked_password_protection` ma zniknąć; D-20261017-0730-01) |
-| W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | czeka |
-| W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | czeka |
+| W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | **zrobione 25.10.2026** (#538; odbiór koordynatora: 12 aktywnych kont, 9 z telefonem; Śrem i Boden po 1 numerze SMS) |
+| W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | **zrobione 25.10.2026** (#538) |
 | W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | **ZAMKNIĘTE 16.10.2026, 01:13**: polisę HHL i zezwolenie 13/GD/2026 wpisuje wykonawca w P5 D2 z plików właściciela (D-20261016-0200-01 Z2) |
 | W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | czeka |
 | W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
-| W7 | Klucz Management API dla „Send Email Hook” albo wklejenie treści e-maili logowania w panelu Supabase (L54) | po P8 | czeka |
+| W7 | E-maile logowania (L54): (1) treści wklejone w Authentication › Emails; (2) hak „Send Email” — **bez** Management API (sekret haka z panelu → Edge Secrets). Po P8: funkcja `send-email-hook` + „W7 TERAZ” w POSTEP | po P8 | **treści wklejone (krok 1); włączenie haka po P8 (krok 2)** (#538, 25.10) |
 | W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48) | P11 | czeka |
 | W9 | Klucz przeglądarkowy HERE ograniczony do domeny (AUD-01d) | P11 | **zamknięte 06.10** (D-20261012-0105-01 R9); P11 sprawdza (Referer `tower.log-mar.pl` → 200; obcy → odmowa) |
 | W10 | Konto testowe Claude (interia.pl) — usunięcie po wszystkich pracach (E18 P1) | po R-4 | czeka |
@@ -1219,14 +1230,14 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W15 | Oficjalne API emtrack (TELM-2, II-4, D-TELM-ETA) i API Stena (D-LATER); do tego czasu odczyt jak dziś (`emtrack-web`, źródło STENA) | gdy będzie | czeka |
 | W16 | Kody opóźnień uzgodnione z SCX (II-2) — po spotkaniu z SCX | gdy będą | czeka |
 | W17 | Data wydania `release-1.0` | przed P11 | **zamknięte 15.10.2026, 03:12 — zastąpione przez W35, potem 2C (28.10, 20:00)** |
-| W18 | Decyzja: e-CMR (6.9), kanał zespołowy Slack/Teams (9.9), kalendarz do subskrypcji (9.10), raport śladu węglowego (10.9), retencja `files/` w R2 (lista „Etap III” starego planu) — w 1.0 czy po 1.0. Od 27.09 „do decyzji właściciela”, decyzji nie było; do decyzji nie są budowane | gdy zdecydujesz | czeka |
+| W18 | e-CMR, Slack/Teams, kalendarz, ślad węglowy, retencja `files/` w R2 — **po 1.0** (właściciel 25.10, #538 8A). Pozycja „Po 1.0” w §4 / §6 cz. 3 | po 1.0 | **zamknięte 25.10.2026 — po 1.0** (#538) |
 | W19 | H-10 (D-84: porywy 15 m/s, silny wiatr wydłuża ETA): o ile wydłużać ETA i które źródło serii wiatru drogowego przyjąć (wykonawca w P4 wpisuje tu, co sprawdził) | po P4 | **ZAMKNIĘTE 16.10.2026, 02:08** — E49 zaakceptowane z odpowiedzią 3 (sprawa SCX z objazdem) — P6 (D-20261016-0230-01; zastępuje „czeka na akceptację” z D-20261016-0200-01 Z5) |
 | W20 | D-18: czy wysłać armatorom e-mail z prośbą o zgodę na odczyt komunikatów (odczyt działa bez zgody od 29.09) | — | **ZAMKNIĘTE 09.10.2026, 13:09**: „mamy wszystkie zgody każdego z armatorów” — nic nie przygotowujesz i nie wysyłasz (D-18 ✅, D-20261009-1309-01 R2) |
 | W21 | P3-APK: uprawnienie `workflow` dla tokenu GitHub — potem wykonawca przypina akcje (SHA) w workflow APK | gdy będzie | **dostarczone 12.10.2026, 02:38** (token ma `workflow` — sprawdzone 11.10 w P0-CI; pin SHA = pozycja „P3-APK — uzupełnienie W21”) |
 | W22 | E18 P3 (decyzja „A: usunąć konta +tower-test z zaproszeniami”) i P2: wiersze 6 kont „+tower-*” wskazuje 11 wpisów dziennika bezpieczeństwa (klucz bez kaskady) | — | **ROZSTRZYGNIĘTE 09.10.2026, 13:09**: „usunąć z odpięciem 11 wpisów dziennika” — robi P1 (`paczki/P1_E18.md`, D-20261009-1309-01 R3) |
-| W23 | Kwoty w dokumentach audytu (E3, E16, E33, E40, `DECYZJE_08_10.md`): zostają w repozytorium (prywatnym) czy usunąć je z dokumentów (G-16) | gdy zdecydujesz | czeka |
+| W23 | Kwoty w dokumentach audytu (E3, E16, E33, E40, `DECYZJE_08_10.md`): zostają w repozytorium (prywatnym) czy usunąć je z dokumentów (G-16) | gdy zdecydujesz | **zamknięte 25.10.2026 — zostają** (#538 12C) |
 | W24 | Sprawdzenie na iPhonie i Androidzie (E8 pkt 8, E13): dolny pasek, karty, dzwonek, instalacja — wynik do koordynatora; odbiór C16 na S24 (D-20261015-1955-01) | po P2 i po P3; po C16 | **dostarczone 15.10.2026, 20:50 (Android S24)** — powiadomienie odebrane w telefonie (N1); pełny odbiór C16 po N3; iPhone = W43 |
-| W25 | Zgoda na jednorazową kopię prawdziwych pozycji SG-03 (czas, współrzędne, prędkość, zapłon; bez nazwisk i tablic) z produkcji na TEST na czas testów P4 i P8, z usunięciem po teście (G-17 pkt 3). Bez zgody testy idą na śladzie zmyślonym | przed P4 | czeka |
+| W25 | Zgoda na jednorazową kopię prawdziwych pozycji SG-03 (czas, współrzędne, prędkość, zapłon; bez nazwisk i tablic) z produkcji na TEST na czas testów P4 i P8, z usunięciem po teście (G-17 pkt 3). Bez zgody testy idą na śladzie zmyślonym | przed P4 | **zgoda 25.10.2026** (#538 13A) — kopia przy testach P8 (SMS ze stref); po testach usuń + dowód w POSTEP |
 | W26 | Piloci: zmiana symbolu ładunku z „PL + SE” na „BRAK” po wpisaniu pilotów — usunąć zapisane wiersze pilotów czy zostawić je ukryte w bazie (D-20261009-1233-01 pyt. 2). Do odpowiedzi: wiersze zostają w bazie, niewyświetlane | przed P7 | **zamknięte 18.10.2026, 21:57** — decyzja właściciela: wiersze pilotów zostają w bazie, niewyświetlane (D-20261018-2200-01) |
 | W27 | Link śledzenia: brak linku od SCX **nie blokuje** kompletnej awizacji ani „Gotowy”; zostaje ostrzeżenie jak dziś (L19). Decyzja 4B (17.10.2026, 07:20) | przed P4 | **ZAMKNIĘTE 17.10.2026, 07:20 (4B, D-20261017-0730-01)** |
 | W28 | Grupowanie na mapie: czy także auta blisko siebie poza strefami E34 (np. parking), a jeśli tak — w jakiej odległości. Do odpowiedzi: tylko strefy (D-20261009-1309-01 R5) | przed P9 | **zamknięte 18.10.2026, 21:57** — decyzja właściciela: grupowanie na mapie tylko w strefach E34 (D-20261018-2200-01) |
@@ -1246,6 +1257,11 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W43 | iPhone do odbioru C16 (właściciel nie ma) + Cz24 pkt 12 (dzwonek i otwarcie aplikacji na iPhonie, D-20261016-0310-01) | C16 odbiór krok 3; P6 Cz24 | czeka na pierwsze konto z iPhone’em — dowód: `push_subscriptions` z `web.push.apple.com` + `last_ack_at`; nie blokuje zamknięcia C16 (D-20261015-1955-01) |
 | W44 | Pliki polisy HHL i zezwolenia 13/GD/2026 w `D:\Watch Tower\dane\` | A7 / P5 D2 | **pliki potwierdzone 17.10.2026, 07:20** (D-20261017-0730-01) |
 | W45 | SCX: czy zezwolenia SE i PL mają warunek pogodowy (wiatr)? Jeśli tak — próg z dokumentu zastępuje 25 m/s | przed pierwszym transportem KR | **zamknięte 18.10.2026, 21:57** — decyzja właściciela: próg wiatru 25 m/s; próg z dokumentu SCX go zastąpi, jeśli SCX go poda (D-20261018-2200-01) |
+| W46 | Dostęp do modelu Grok (koordynator) | — | **zamknięte 25.10.2026** (#538 4C — właściciel: zrobione wcześniej) |
+| W47 | Konta tylko do odczytu na produkcji: nazwy sekretów haseł + instrukcja; hasła ustawia **tylko właściciel** w GitHub Secrets (adresy poda właściciel) | przed kontami RO / P11 | czeka (#538 3A) |
+| W48 | Historia zmian dla Operacji HHL, KSH i SCX — zostaje (właściciel 25.10, #538 9A) | — | **potwierdzone 25.10.2026** |
+| W49 | Próg ciszy emtrack 12 h i daty tygodni z rokiem — zostają (#538 10A) | — | **potwierdzone 25.10.2026** |
+| W50 | Lista 23.10 (#482) pkt 1–6 potwierdzone; P1 TAK — SMS ze stref przy wyłączonej wysyłce zewnętrznej idą na numery z Opcji › Strefy (#538 14A) | — | **potwierdzone 25.10.2026** |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1266,7 +1282,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 - PR7, P2-TILES, B-VERIFY-17.3, KOPIA-D → P11 pkt 4;
 - E-MAIL-TYG, P3-BRACES i zależności deweloperskie z lukami (nie blokują scalenia) → brama niedzielna (§3).
 
-**Część 3 — PO 1.0:** dalej pusta. Tylko pozycje, które właściciel przeniósł swoją decyzją (W18). Stan 17.10: brak.
+**Część 3 — PO 1.0** (#538 8A / W18, 25.10.2026): e-CMR (6.9); kanał zespołowy Slack/Teams (9.9); kalendarz do subskrypcji (9.10); raport śladu węglowego (10.9); retencja `files/` w R2. Nie budować przed `release-1.0`.
 
 **Część 4 — Rezerwa:** **usunięta** (D-20261017-0730-01, 3A i 2C). Kalibracja ETA po 5 dostawach (E15), akcja SMS w kreatorze (E35), test wydajności w skali 3× (E46), E37 „Co nowego” i E24 komunikat — robisz normalnie w swoich paczkach (P4-u / P8 / P11 / P10b / P9).
 
@@ -1541,3 +1557,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 00:20 | #496 CI zielone (`1a58742c`); F7 #531 do poprawy → N8 clear dostawa/rio, zz_* po guard, security **394** | pętla |
 | 25.10.2026 00:25 | #537 wpisane §4 „Zgubione — audyt 25.10”; D-1525/#446 SCALONE; W37 zamknięte; #528 escort_vehicles→0 (db FAIL) | pętla |
 | 25.10.2026 00:55 | #528 F7 r2: detach GPS + clear tracking/eta; skalarne filtry docs/fees; security **397** | pętla |
+| 25.10.2026 01:15 | #538 wpisane §4/§5/§6/§8 (decyzje 25.10 00:55); #528 db FAIL detach→AFTER zza_*; W2/W3/W7/W18/W23/W25/W46–W50 | pętla |
