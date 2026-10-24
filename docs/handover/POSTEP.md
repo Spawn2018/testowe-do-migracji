@@ -4674,3 +4674,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane).
 - Scalanie: **#520** CI unit+db+visual zielone na `46327a16` — czekam F7 „gotowe”; #521 bez F7; #382 CONFLICT.
 - Bieżąca: **#412** gałąź `pakiet/hotfix-412-e43` — migracja **0289**: `message_texts` + `message_texts_list`/`_set`/`_reset` (SMS ≤160, LOGIN `{{button}}`, audit MESSAGE_TEXT_*). security **317** (+21); nullguard **810** (+15). B5→**0290**. Front `p8Source` — koordynator; wysyłka z nadpisań — P8.
+
+## 2026-10-24 09:55 — #521+#520 SCALONE; #522 E43 CI zielone (czekam F7)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: **#521** `adf828d8` (F7 „gotowe” na `6217c67`, CI unit/visual) — wygląd E4b faktoring; **#520** `90341551` (F7 „gotowe” na `46327a16`, CI unit/db/visual) — E16+E11 **0288**. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #522 — CI unit+db+visual zielone na `120f3a79` (**0289** E43). Czekam F7 „gotowe do scalenia”. Po scaleniu #412 → #484.
