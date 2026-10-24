@@ -4668,3 +4668,27 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#519** (Spawn2018) — faktoring N2–N4 po #514; wpisane PLAN §4/§8 + `D-20261024-0900-01.md`. #516/#500/#499/#496/#492/#484/#412 w planie.
 - Scalanie: brak F7 „gotowe” na #520 (head `60afe774`); #521 wygląd faktoring bez F7; #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #520 — CI `db` FAIL: nullguard oczekiwano 783, jest 795 OK. Poprawka: `EXPECTED_LOCAL.nullguard` → **795**. security **296**; nullguard **795**. E43 osobno. Czekam CI + F7.
+
+## 2026-10-24 09:30 — #520 CI zielone; start #412 E43 (0289)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane).
+- Scalanie: **#520** CI unit+db+visual zielone na `46327a16` — czekam F7 „gotowe”; #521 bez F7; #382 CONFLICT.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-e43` — migracja **0289**: `message_texts` + `message_texts_list`/`_set`/`_reset` (SMS ≤160, LOGIN `{{button}}`, audit MESSAGE_TEXT_*). security **317** (+21); nullguard **810** (+15). B5→**0290**. Front `p8Source` — koordynator; wysyłka z nadpisań — P8.
+
+## 2026-10-24 09:55 — #521+#520 SCALONE; #522 E43 CI zielone (czekam F7)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: **#521** `adf828d8` (F7 „gotowe” na `6217c67`, CI unit/visual) — wygląd E4b faktoring; **#520** `90341551` (F7 „gotowe” na `46327a16`, CI unit/db/visual) — E16+E11 **0288**. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #522 — CI unit+db+visual zielone na `120f3a79` (**0289** E43). Czekam F7 „gotowe do scalenia”. Po scaleniu #412 → #484.
+
+## 2026-10-24 10:15 — #522 F7 „do poprawy”: SMS_WORST + GSM + znaczniki
+
+- Skrzynka: bez nowych; #412 bieżąca.
+- Scalanie: brak (F7 #522 **nadal do poprawy** na docs `2e233a60`).
+- Bieżąca: **#412** PR #522 — F7 pkt 1–2 + drobne w **0289**: SMS_WORST (place 28 / link…), GSM_BASIC/EXT (×2), odrzucenie spoza alfabetu; dozwolone klocki w `message_text_kind_meta` (`{{button}}` tylko LOGIN); limity 200/5000 + znaki sterujące w temacie; testy security + `p8-texts` (lista 48 = MESSAGES). security **329** (+12). Push → CI; czekam ponowne F7.
+
+## 2026-10-24 10:30 — #523 SCALONE; #522 db: SMS spoza GSM → chr(1103)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE (otwarte do zamknięcia po odbiorze) — nie przerywają.
+- Scalanie: **#523** `67e21530` (F7 „gotowe do scalenia” na `6dd9c5f`, CI unit/visual) — wygląd E16+E11 marża/push. #522 bez „gotowe” po F7 poprawkach; #382 CONFLICT.
+- Bieżąca: **#412** PR #522 — CI `db` FAIL security 328/329: test „SMS spoza GSM” z `U&'\\+044F'` → HINT Unicode escapes (psql). Poprawka: `chr(1103)` (Я). security **329**. Push → CI; czekam F7.
