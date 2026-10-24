@@ -4,6 +4,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { scrubForParty } from '../src/auth/LiveHistory';
+
+describe('KSH/SCX — obrona w głębi (front)', () => {
+  it('bez kluczy pieniędzy, numerów zleceń i e-maili, także zagnieżdżonych', () => {
+    expect(scrubForParty({ status: 'ON_FERRY', carrier_order_no: 'X', pricing: { margin_eur: 1, note: 'a' }, lines: [{ amount_eur: 5, code: 'SG-1' }], user_email: 'a@b' }))
+      .toEqual({ status: 'ON_FERRY', pricing: { note: 'a' }, lines: [{ code: 'SG-1' }] });
+  });
+});
 
 describe('Historia zmian — role', () => {
   const opt = readFileSync('src/views/OptionsView.tsx', 'utf8');
@@ -20,6 +28,6 @@ describe('Historia zmian — role', () => {
   it('KSH/SCX: osoba z innej firmy → „Inna firma”, bez e-maila; obszary tylko z własnych wpisów', () => {
     expect(live).toContain("hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.user_id ? other : t(locale, 'p3l_h_auto')");
     expect(live).toContain("hhl ? (r.acting_as_email ?? '—') : other");
-    expect(live).toContain(": ['loads', 'documents']),");
+    expect(live).toContain(": ['loads', 'documents', 'shipment_items', 'load_permits', 'load_escorts', 'permits', role === 'KSH' ? 'load_revenue' : 'load_cost']),");
   });
 });

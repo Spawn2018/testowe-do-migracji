@@ -26,7 +26,21 @@ type Row = {
 /** Zmiana techniczna = zapis wiersza tabeli (wyzwalacz audytu), ukryta domyślnie (E12 pkt 4). */
 export const isTech = (action: string) => /^ROW_/.test(action);
 
-function fmtVal(locale: Locale, v: Record<string, unknown> | null): string | undefined {
+/* #484 F7 #527 (obrona w głębi; główna redakcja — baza 0290): KSH/SCX bez kluczy pieniędzy, numerów zleceń i e-maili,
+   także w zagnieżdżonych obiektach i tablicach */
+const HIDDEN_KEY = /price|cost|revenue|margin|rate|amount|fee|baf|payout|net|gross|total|order_no|email/i;
+export function scrubForParty(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(scrubForParty);
+  if (v && typeof v === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) if (!HIDDEN_KEY.test(k)) out[k] = scrubForParty(x);
+    return out;
+  }
+  return v;
+}
+
+function fmtVal(locale: Locale, raw: Record<string, unknown> | null, party = false): string | undefined {
+  const v = party && raw ? (scrubForParty(raw) as Record<string, unknown>) : raw;
   if (!v || Object.keys(v).length === 0) return undefined;
   const keys = Object.keys(v);
   /* jedna wartość („enabled”, „value”) — sama wartość; więcej — klucz: wartość */
@@ -72,7 +86,8 @@ export default function LiveHistory() {
       sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id').order('created_at'),
     ]);
     setBusy(false);
-    if (h.error) { setMsg(errText(locale, h.error)); setRows([]); return; }
+    /* przed bazą 0290 KSH/SCX/Operacje dostają 42501 „Tylko administrator HHL” — neutralny komunikat */
+    if (h.error) { setMsg((h.error as { code?: string }).code === '42501' ? t(locale, 'p3l_h_unavailable') : errText(locale, h.error)); setRows([]); return; }
     setMsg(null);
     setRows((h.data ?? []) as Row[]);
     setPeople((u.data ?? []) as PersonDb[]);
@@ -105,20 +120,21 @@ export default function LiveHistory() {
     when: formatListDateTime(r.created_at),
     who: who(r),
     text: historyText(locale, r, obj(r)),
-    was: fmtVal(locale, r.old_value),
-    is: fmtVal(locale, r.new_value),
+    was: fmtVal(locale, r.old_value, !hhl),
+    is: fmtVal(locale, r.new_value, !hhl),
   }));
   /* KSH/SCX: tylko obszary z ich wpisów (bez list ustawień systemu) */
   const entityList = [...new Set([
     ...(hhl ? ['app_users', 'user_invites', 'security_flags', 'ops_thresholds', 'notification_matrix', 'rate_cards', 'sefs_parameters',
-      'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents'] : ['loads', 'documents']),
+      'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents']
+      : ['loads', 'documents', 'shipment_items', 'load_permits', 'load_escorts', 'permits', role === 'KSH' ? 'load_revenue' : 'load_cost']),
     ...rows.map((r) => r.entity),
   ])];
 
   const download = (fmt: 'csv' | 'xlsx') => {
     void (async () => {
       const head = [t(locale, 'p3c_l_when'), t(locale, 'p3c_hist_who'), t(locale, 'p3c_hist_what'), t(locale, 'p3c_hist_was'), t(locale, 'p3c_hist_is')];
-      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value) ?? '', fmtVal(locale, r.new_value) ?? '']);
+      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value, !hhl) ?? '', fmtVal(locale, r.new_value, !hhl) ?? '']);
       try {
         await downloadTable([head, ...data], 'WATCH_TOWER_historia_zmian', fmt, 'Historia');
         setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: data.length }));
@@ -145,7 +161,7 @@ export default function LiveHistory() {
         onRefresh={() => void refresh()}
         busy={busy}
         onDownload={download}
-        note={`${tp(locale, 'p3l_h_tech_note', { n: HISTORY_LIMIT })} ${t(locale, 'opt_acc_hist_note')}`}
+        note={`${tp(locale, 'p3l_h_tech_note', { n: HISTORY_LIMIT })} ${t(locale, hhl ? 'opt_acc_hist_note' : 'p3l_h_party_note')}`}
       />
     </div>
   );
