@@ -151,7 +151,7 @@ psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now(), files=
   where id=$OK516" >/dev/null
 chk "#516: OK → decyzja BACKUP_FAILED RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and resolution_code='AUTO_CLOSED'")" 1
 chk "#516: OK → ryzyko backup-stale resolved" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where dedup_key like 'backup-stale:%' and resolved_at is null")" 0
-chk "#516: note z id przebiegu OK" "$(psql "$SRC" -Atq -c "select (resolution_note like '%id='||$OK516||'%')::text from decisions where type_code='BACKUP_FAILED' order by resolved_at desc limit 1")" t
+chk "#516: note z id przebiegu OK" "$(psql "$SRC" -Atq -c "select (resolution_note like '%id='||$OK516||'%')::text from decisions where type_code='BACKUP_FAILED' order by resolved_at desc limit 1")" true
 
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
