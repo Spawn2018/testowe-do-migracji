@@ -290,21 +290,23 @@ chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where s
 # D-1710 (#368): okno i pozycje tylko przy telematics_vehicle_id.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
 W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
-# W3 = poza oknem: plan za 14 dni (nie sztywne 2026-10-24 — w dniu tej daty „cisza poza oknem” pada).
+# W3/W4 = poza oknem: plan w przyszłości (nie sztywne daty — w dniu planu „cisza poza oknem” / T05 padają).
 W3_PLAN=$(q "select (current_date + 14)::text")
+W4_PLAN=$(q "select (current_date + 21)::text")
+W4_PLAN2=$(q "select (current_date + 23)::text")
 # Data od razu docelowa: mk() wstawia 30.09, a zmiana daty po starcie okna zamraża śledzenie.
 q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
  ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05','TEL-A1W1'),
  ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05','TEL-A1W2'),
  ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','$W3_PLAN','TEL-A1W3'),
- ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05','TEL-A1W4'),
+ ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','$W4_PLAN','TEL-A1W4'),
  ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05','TEL-A1W5'),
  ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01','TEL-A1W6')" >/dev/null
 T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
 T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
 # W4: daty w przyszłości (nie „dziś”) — po 03:00 w dniu planu okno już startuje i zamraża tracking_opened_at.
-T05=$(q "select public.tracking_window_start('2026-11-05'::date)")
-T07=$(q "select public.tracking_window_start('2026-11-07'::date)")
+T05=$(q "select public.tracking_window_start('$W4_PLAN'::date)")
+T07=$(q "select public.tracking_window_start('$W4_PLAN2'::date)")
 pos $W1 52.09 17.02 "$T59"
 chk "A1 02:59 bez pozycji" "select count(*) from positions where load_id='$W1'" 0
 pos $W1 52.09 17.02 "$T00"
@@ -313,7 +315,7 @@ pos $W2 52.09 17.02 "$T00"
 chk "A1 Dostarczone bez pozycji" "select count(*) from positions where load_id='$W2'" 0
 pos $W3 52.09 17.02 "2026-10-17 12:00:00+00"
 chk "A1 przyszły tydzień bez pozycji" "select count(*) from positions where load_id='$W3'" 0
-q "update loads set plan_load_date='2026-11-07' where id='$W4'" >/dev/null
+q "update loads set plan_load_date='$W4_PLAN2' where id='$W4'" >/dev/null
 pos $W4 52.09 17.02 "$T05"
 chk "A1 zmiana daty przed startem nie otwiera starego dnia" "select count(*) from positions where load_id='$W4'" 0
 pos $W4 52.09 17.02 "$T07"

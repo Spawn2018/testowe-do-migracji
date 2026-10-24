@@ -1483,3 +1483,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 02:15 | #422 db FAIL: `auth.role()` w bramie; zapis p95 przez sesję postgres, `chk6` | pętla |
 | 24.10.2026 02:40 | #422 db FAIL: asercja newCount — JSON null ≠ SQL NULL; test `jsonb_typeof` | pętla |
 | 24.10.2026 03:15 | #508 wpisane (#422 c.d.: Lighthouse p1–p3 + newSince); migr. **0284**; B5→**0285**; A1 W3 = current_date+14 (db FAIL status) | pętla |
+| 24.10.2026 04:10 | #507 F7: zapis LH przez PostgREST/pulę (nie db.* IPv6); etykiety Logowanie/Offline; security 186 | pętla |

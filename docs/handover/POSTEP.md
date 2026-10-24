@@ -4589,3 +4589,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #508 wpisane (komentarz w issue); #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych `dla-cursora` do wpisania.
 - Scalanie: brak F7 „gotowe do scalenia” po head `971c0422` (stare F7 na `ee7fa0e4` unieważnione). #382 CONFLICT, #383 bez F7.
 - CI na `971c0422`: unit OK, `db` gate OK (~12m19s), visual OK (zrzuty/telefon/bramy). Zakres #422+#508 (0283+0284, Lighthouse w deploy-main, newSince) zamknięty w PR #507 — czekam na „F7: gotowe do scalenia”.
+
+## 2026-10-24 04:10 — #507 F7 „do poprawy”: zapis REST/pula, etykiety LH
+
+- Skrzynka: #508/#422 bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych do wpisania.
+- Scalanie: F7 01:38 **do poprawy** (psql na db.* IPv6 → 0 zapisów na prod). CI na `9169ece1` zielone — bez „gotowe”. #382 CONFLICT, #383 bez F7.
+- Bieżąca: **#422+#508** — PostgREST `perf_result_record`/`deploy_success_record` (service_role z Management API) + fallback psql na puli; `--preset=desktop`; etykiety p1/p3 Logowanie, p2 Offline; `shell: false`; LH `12.8.2`; `timeout-minutes: 15`; redact; security **186**; A1 W4/T05 = current_date+21/+23; unit skryptu. Czekam CI i F7.
+  Etykiety ostateczne (dla `PERF_PLAN` koordynatora): `p1` Logowanie · telefon `/`; `p2` Offline · telefon `/offline.html`; `p3` Logowanie · komputer `/`.
