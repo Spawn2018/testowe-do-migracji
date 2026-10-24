@@ -4843,3 +4843,11 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
 - Scalanie: brak F7 `gotowe do scalenia`. #536 unit/db/visual zielone na `1a58742c` — czekam F7 (kolejność po #531–#535). Bez push na main.
 - Bieżąca (nie stoję przy F7 #496): **#528** PR #531 — F7 do poprawy: (1) clear dostawa/trailer_swap/escort/telematyka/rio_*; (2) trigger `zz_*` po guard (HHL_OPS + carrier_order_no); (3) drop zbędnych indeksów, COST 10000, UUID regex; (4) testy authenticated OPS/contacts/rio. security **394**. Push → CI; ponowne F7.
+
+## 2026-10-25 00:35 — #537 w planie; #528 db FAIL escort_vehicles NOT NULL
+
+- Skrzynka: **#537** (Spawn2018, `dla-cursora`) — wpisane PLAN §4 „Zgubione — audyt 25.10”, §8, dopisek `D-20261025-0015-01.md`. Bez `pilne`. Bieżącej #528 nie przerywam (najpierw #531–#536).
+- Porządki #537 pkt 3: D-1525 cz.2 → NA PRODUKCJI (0243); #446 SCALONE; W37 zamknięte (emtrack od 20.10 ~16:40); zamknięcie zgłoszeń #446 i #425.
+- **Wtyczka Supabase w Cursorze:** projekt podłączony = **TEST** `emkbykwenwrjmbprydml` (watch-tower-test); produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu — MCP tylko odczyt (AGENTS.md §6).
+- Scalanie: brak F7 `gotowe` po head `388d93b4`; #532–#536 czekają kolejności 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — CI db: security 390/394 (`escort_vehicles` NOT NULL DEFAULT 0 — clear nie może null). Poprawka 0292: `escort_vehicles := 0`; asercje security `= 0`. Push → CI; ponowne F7.

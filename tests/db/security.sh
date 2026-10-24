@@ -1125,7 +1125,7 @@ out=$(sys "select (driver_name is null and driver_phone is null and tractor_plat
               and trailer_plate is null and carrier_order_no is null
               and driver_delivery_name is null and driver_delivery_phone is null
               and tractor_delivery_plate is null and coalesce(trailer_swap,false) is false
-              and escort_vehicles is null
+              and escort_vehicles = 0
               and telematics_vehicle_id is null and rio_tracking_id is null
               and rio_secret is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 zmiana przewoźnika czyści pola"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 zmiana przewoźnika czyści pola  (otrzymano: $out)"; }
@@ -1152,7 +1152,7 @@ out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is nul
 [ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
      driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL',
-     tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=null,
+     tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=0,
      telematics_vehicle_id=null, telematics_provider=null,
      rio_tracking_id=null, rio_secret=null, rio_asset_name=null, rio_tracker_on=null,
      tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null

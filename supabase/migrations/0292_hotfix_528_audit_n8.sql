@@ -62,8 +62,9 @@ begin
   if new.trailer_swap_at is not distinct from old.trailer_swap_at then
     new.trailer_swap_at := null;
   end if;
+  -- NOT NULL DEFAULT 0 (0001) — nie null
   if new.escort_vehicles is not distinct from old.escort_vehicles then
-    new.escort_vehicles := null;
+    new.escort_vehicles := 0;
   end if;
   -- telematyka + RIO (sanitize/freeze nie odpalą się na NEW z tego triggera)
   if new.telematics_vehicle_id is not distinct from old.telematics_vehicle_id then
@@ -119,7 +120,7 @@ create trigger trg_loads_zz_clear_on_carrier_change
   execute function public.trg_loads_clear_on_carrier_change();
 
 comment on function public.trg_loads_clear_on_carrier_change() is
-  '#528 N8 F7: clear kierowca/dostawa/tablice/order_no/telematyka/rio_*; phone_country=PL; trigger zz_* po guard; NULL→org bez clear.';
+  '#528 N8 F7: clear kierowca/dostawa/tablice/order_no/telematyka/rio_*; escort_vehicles=0; phone_country=PL; zz_* po guard; NULL→org bez clear.';
 
 -- ── 2) Bez zbędnych indeksów (F7 #531: GIN nie pomaga = any(); side_id dubluje PK)
 drop index if exists public.documents_visible_to_gin;
