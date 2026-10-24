@@ -31,7 +31,7 @@ describe('Historia zmian — role', () => {
     expect(set).toContain("{ id: 'hist', right: 'read', body: block(<LiveHistory />) }");
   });
   it('KSH/SCX: osoba z innej firmy → „Inna firma”, bez e-maila; obszary tylko z własnych wpisów', () => {
-    expect(live).toContain("hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.user_id ? other : t(locale, 'p3l_h_auto')");
+    expect(live).toContain("hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.actor_label ? r.actor_label : r.user_id || r.actor_party ? other : t(locale, 'p3l_h_auto')");
     expect(live).toContain("hhl ? (r.acting_as_email ?? '—') : other");
     expect(live).toContain(": ['loads', 'documents', 'shipment_items', 'load_permits', 'load_escorts', 'permits', role === 'KSH' ? 'load_revenue' : 'load_cost']),");
   });

@@ -21,6 +21,8 @@ type Row = {
   id: number; created_at: string; action: string; entity: string; entity_id: string | null;
   user_id: string | null; user_email: string | null; acting_as_user_id: string | null; acting_as_email: string | null;
   source: string | null; is_automatic: boolean; old_value: Record<string, unknown> | null; new_value: Record<string, unknown> | null;
+  /** 0290 (#484): strona autora (HHL / KSH / CARRIER) i podpis — dla KSH/SCX nazwa firmy albo osoba z własnej firmy */
+  actor_party?: string | null; actor_label?: string | null;
 };
 
 /** Zmiana techniczna = zapis wiersza tabeli (wyzwalacz audytu), ukryta domyślnie (E12 pkt 4). */
@@ -109,7 +111,8 @@ export default function LiveHistory() {
     const p = r.user_id ? byId.get(r.user_id) : undefined;
     /* KSH/SCX: osoby spoza własnej firmy (lista kont z RLS) — bez nazwiska i e-maila */
     const other = t(locale, 'p3l_h_other');
-    const name = p ? personName(p) : hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.user_id ? other : t(locale, 'p3l_h_auto');
+    /* KSH/SCX: podpis z bazy (0290) — nazwa firmy albo osoba z własnej firmy; bez niego „Inna firma” */
+    const name = p ? personName(p) : hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.actor_label ? r.actor_label : r.user_id || r.actor_party ? other : t(locale, 'p3l_h_auto');
     const as = r.acting_as_user_id ? byId.get(r.acting_as_user_id) : undefined;
     return r.acting_as_user_id ? tp(locale, 'p3l_h_as', { who: name, as: as ? personName(as) : hhl ? (r.acting_as_email ?? '—') : other }) : name;
   }, [byId, locale, hhl]);
