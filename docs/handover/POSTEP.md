@@ -4770,3 +4770,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
 - Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
+
+## 2026-10-24 15:52 — #529 SCALONE (0291); start #528 (0292)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: **#529** `8c7fcf37` (F7 „gotowe do scalenia” po `c399036f`, CI unit/db/visual) — `loads.updated_at` **0291**. Issue #492 zamknięte. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** gałąź `pakiet/hotfix-528-audit-n8` — migracja **0292**: N8 clear-on-carrier-change; redakcja swap tylko old+new; filtry documents/fees + indeksy; role faktur KSH. security **391** (+6). B5→**0293**.

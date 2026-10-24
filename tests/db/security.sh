@@ -1110,5 +1110,37 @@ sys "begin; select set_config('tower.audit_source','rodo',true);
 out=$(sys "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #492: RODO (audit_source) bez bumpa updated_at"; } || { fail=$((fail+1)); echo "  FAIL  #492: RODO (audit_source) bez bumpa updated_at  (otrzymano: $out, oczekiwano: true)"; }
 
+echo; echo "[#528] N8 zerowanie pól + INSERT ≠ swap (0292)"
+# L2: SCX → B; pola przewoźnika znikają (asercja sys — authenticated bez SELECT driver_*)
+sys "update loads set driver_name='Sven N8', driver_phone='+4800111222', driver_phone_country='PL',
+     tractor_plate='WWW1N8', trailer_plate='WWW2N8', carrier_order_no='SCX-N8',
+     carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (driver_name is null and driver_phone is null and tractor_plate is null
+              and trailer_plate is null and carrier_order_no is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 zmiana przewoźnika czyści pola"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 zmiana przewoźnika czyści pola  (otrzymano: $out)"; }
+val "#528: N8 load_driver_contacts po swap — B bez starego kierowcy" $SCXB \
+  "select coalesce(max(driver_name),'') from load_driver_contacts() where load_id='$L2'" ""
+# ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
+out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
+[ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country=null,
+     tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
+# INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
+sys "delete from audit_log where action='HIST528_INS'" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST528_INS','loads','$L1', null,
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-INS','driver_name','Sven Ins'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#528: INSERT nie jest swap — SCX widzi numer" $SCX \
+  "select new_value->>'carrier_order_no' from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" "SCX-INS"
+val "#528: INSERT nie jest swap — bez _carrier_changed" $SCX \
+  "select ((new_value ? '_carrier_changed') is false and (new_value ? 'driver_name'))::text from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" true
+# szybki filtr documents: KSH nadal nie widzi doc tylko HHL+SCX (regresja)
+val "#528: KSH nadal bez doc HHL+SCX (filtr)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC',null,20,0)" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
