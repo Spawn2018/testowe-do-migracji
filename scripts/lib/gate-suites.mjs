@@ -12,8 +12,8 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 162, // #442: +2 kolumny listRioLoadsForPoll / bez shipment_code; było 160 (#392)
-  status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233
+  security: 186, // #508 F7: +1 newCount bez grupy sprzed wdrożenia; było 185
+  status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
-  nullguard: 715, // #505: +workflow_rule_write/set_enabled/soft_delete GUARD (+15 = 3×5)
+  nullguard: 725, // #422: +perf_results_latest/app_errors_recent GUARD (+10 = 2×5); było 715 (#505)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 158, // 162 − 4 SKIP (B6); #442 +2
+  security: 182, // 186 − 4 SKIP (B6); #508 F7
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

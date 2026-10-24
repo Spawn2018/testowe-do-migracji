@@ -204,3 +204,47 @@ jobs:
             exit 1
           fi
           npx --yes vercel@64.5.0 deploy --prod --yes
+
+      # #508: Lighthouse p1–p3 (login + publiczne) → perf_results; deploy_success_record → newSince.
+      # Zapis: PostgREST (service_role z Management API) albo psql na puli — nie host db.* (IPv6).
+      # Niezaliczony pomiar / błąd LH nie blokuje wdrożenia (continue-on-error).
+      - name: Lighthouse p1–p3
+        if: steps.keys.outputs.skip != 'true'
+        continue-on-error: true
+        timeout-minutes: 15
+        env:
+          DB_URL_FILE: ${{ runner.temp }}/db-url
+          DB_PORT_FILE: ${{ runner.temp }}/db-port
+          DB_PASSWORD_FILE: ${{ runner.temp }}/db-password
+          DB_MODE_FILE: ${{ runner.temp }}/db-mode
+          PERF_BASE_URL: https://tower.log-mar.pl
+          GITHUB_SHA: ${{ github.sha }}
+          PROJECT_REF: nglnnrmzmhusvxslousq
+        run: |
+          set -euo pipefail
+          set +x
+          redact() { python3 scripts/ci/redact.py; }
+          python3 scripts/ci/normalize-db-url.py
+          mode="$(cat "$DB_MODE_FILE")"
+          if [ "$mode" = "pooler" ]; then
+            export SUPABASE_DB_URL="$(cat "$DB_URL_FILE")"
+          else
+            # Fallback psql: pula IPv4 po link (host db.* w sekretcie nie działa z GHA).
+            export SUPABASE_DB_PASSWORD="$(cat "$DB_PASSWORD_FILE")"
+            if [ ! -f supabase/.temp/pooler-url ]; then
+              link_out="$(supabase link --project-ref "$PROJECT_REF" --yes 2>&1)" || true
+              printf '%s\n' "$link_out" | redact
+            fi
+            if [ -f supabase/.temp/pooler-url ]; then
+              export SUPABASE_DB_URL="$(cat supabase/.temp/pooler-url)"
+            fi
+          fi
+          set +e
+          out="$(node scripts/ci/perf-lighthouse-deploy.mjs 2>&1)"
+          code=$?
+          set -e
+          printf '%s\n' "$out" | redact
+          if printf '%s\n' "$out" | grep -q 'writes_ok=0'; then
+            echo "::warning::Lighthouse: żaden zapis do bazy się nie udał (deploy_success / p1–p3)"
+          fi
+          exit "$code"

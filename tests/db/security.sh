@@ -420,5 +420,70 @@ val "B4: SCX widzi DOC_UPLOADED dokumentu HHL+SCX" $SCX \
 val "B4: HHL widzi DOC_UPLOADED dokumentu HHL+SCX" $HHL \
   "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 1
 
+echo; echo "[#422] Wydajność (perf_results) i Błędy aplikacji (app_errors_recent)"
+OPS422=11111111-0000-0000-0000-0000000000a1
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS422','00000000-0000-0000-0000-00000000a001','ops-422@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "#422: HHL_ADMIN czyta perf_results_latest (p5)" $HHL \
+  "select (perf_results_latest()->'rows' @> '[{\"id\":\"p5\"}]')::text" true
+val "#422: HHL_OPS czyta perf_results_latest" $OPS422 \
+  "select (jsonb_typeof(perf_results_latest()->'rows') = 'array')::text" true
+err "#422: KSH nie czyta perf_results_latest" $KSH "select perf_results_latest()" "tylko HHL|42501"
+err "#422: SCX nie czyta perf_results_latest" $SCX "select perf_results_latest()" "tylko HHL|42501"
+chk6 "#422: anon bez SELECT/INSERT na perf_results" "$(sys "select has_table_privilege('anon','perf_results','select')::text||has_table_privilege('anon','perf_results','insert')::text||has_table_privilege('authenticated','perf_results','insert')::text" | tail -1)" "falsefalsefalse"
+chk6 "#422: anon bez EXECUTE perf_results_latest / app_errors_recent" "$(sys "select has_function_privilege('anon','perf_results_latest()','execute')::text||has_function_privilege('anon','app_errors_recent(int)','execute')::text" | tail -1)" "falsefalse"
+chk6 "#422: authenticated bez EXECUTE record / ingest" "$(sys "select has_function_privilege('authenticated','perf_result_record(text,text,text,text,text,boolean,text,timestamptz)','execute')::text||has_function_privilege('authenticated','perf_p95_lists_ingest(timestamptz)','execute')::text" | tail -1)" "falsefalse"
+err "#422: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into perf_results (metric_id, what, how, result_text, limit_text, ok, source) values ('p1','x','y','z','l',true,'t')" \
+  "permission denied|42501"
+err "#422: HHL nie wywoła perf_result_record" $HHL \
+  "select perf_result_record('p1','x','y','z','l',true,'t')" \
+  "permission denied|42501"
+err "#422: HHL nie wywoła perf_p95_lists_ingest" $HHL \
+  "select perf_p95_lists_ingest()" \
+  "permission denied|42501"
+val "#422: HHL_ADMIN app_errors_recent ma groups" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'groups') = 'array')::text" true
+val "#422: app_errors_recent newCount null (brak danych)" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'newCount') = 'null')::text" true
+err "#422: HHL_OPS nie czyta app_errors_recent" $OPS422 "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: KSH nie czyta app_errors_recent" $KSH "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: SCX nie czyta app_errors_recent" $SCX "select app_errors_recent(7)" "Administrator HHL|42501"
+out=$(sys "select perf_p95_lists_ingest()->>'p4_result'"); echo "$out" | grep -qiE 'brak pomiaru|[0-9]+ ms' \
+  && { ok=$((ok+1)); echo "  OK    #422: ingest zapisuje p4 (max_exec_time)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #422: ingest: $out"; }
+val "#422: po ingest HHL widzi p4 w latest" $HHL \
+  "select (perf_results_latest()->'rows' @> '[{\"id\":\"p4\"}]')::text" true
+
+echo; echo "[#508] Lighthouse p1–p3 + newSince od deploy-main"
+chk6 "#508: authenticated bez EXECUTE deploy_success_record" "$(sys "select has_function_privilege('authenticated','deploy_success_record(timestamptz,jsonb)','execute')::text" | tail -1)" "false"
+err "#508: HHL nie wywoła deploy_success_record" $HHL \
+  "select deploy_success_record()" \
+  "permission denied|42501|tylko usługa"
+sys "select deploy_success_record(now() - interval '1 hour', '{\"test\":true}'::jsonb)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-new','error','#508 nowy blad po deploy','/login', now() - interval '30 minutes', now(), 1)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-old','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '90 minutes', 1)" >/dev/null
+val "#508: newSince ustawione po deploy-main" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'newSince') = 'string')::text" true
+val "#508: newCount = 1 (tylko grupy po wdrożeniu)" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+sys "select perf_result_record('p1','Logowanie · telefon','LCP · CLS · TBT','2,0 s · 0,01 · 100 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/:mobile');
+     select perf_result_record('p2','Offline · telefon','LCP · CLS · TBT','2,1 s · 0,02 · 120 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/offline.html:mobile');
+     select perf_result_record('p3','Logowanie · komputer','LCP · CLS · TBT','2,2 s · 0,02 · 150 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',false,'lighthouse:/:desktop')" >/dev/null
+val "#508: perf_results_latest ma p1–p3" $HHL \
+  "select ((perf_results_latest()->'rows' @> '[{\"id\":\"p1\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p2\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p3\"}]'))::text" true
+val "#508: at z pomiaru ok is not null (p1)" $HHL \
+  "select ((perf_results_latest()->'rows' @> '[{\"id\":\"p1\",\"ok\":true}]') and (perf_results_latest()->'at' is not null))::text" true
+# Ten sam message sprzed wdrożenia nie wchodzi do newCount; ok=false w integration_runs ignorowany.
+sys "insert into integration_runs (job, ran_at, ok, result)
+     values ('deploy-main', now() - interval '10 minutes', false, '{\"fail\":true}'::jsonb)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-same','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '5 minutes', 2)" >/dev/null
+val "#508: newCount bez grupy istniejącej przed wdrożeniem" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

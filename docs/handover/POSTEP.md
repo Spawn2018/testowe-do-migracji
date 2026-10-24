@@ -4547,3 +4547,52 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #505/#500/#499/#496/#492/#484/#422 (Spawn2018) — już w planie; bez `pilne` przerywających.
 - Scalanie: brak F7 „gotowe”; unit/visual zielone na `3527b0a8`; db FAIL workflows 89/90 — `workflow_rule_history` przez `Q()` bez JWT → RAISE.
 - Bieżąca: **#505** — asercja „po w historii (ROW_UPDATE)” przez `val $HHL` (jak powód w `po`). Push → CI.
+
+## 2026-10-24 01:36 — #505 SCALONE; start #422 (0283)
+
+- Skrzynka: #505 zamknięte; #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce.
+- Scalanie: **#506** `069aaac1` (F7 „gotowe do scalenia” na `2ebb6fa1`, CI unit/db/visual zielone).
+- Bieżąca: **#422** `pakiet/hotfix-422-perf-errors`, migracja **0283**: `perf_results` + RLS HHL, `perf_results_latest` / `app_errors_recent`, `perf_result_record` (service_role), `perf_p95_lists_ingest` + cron `tower-perf-p95`, seed p5 „brak pomiaru”; security **172**, nullguard **725**. Lighthouse w deploy-main — następny krok.
+
+## 2026-10-24 02:15 — #422 db: p95 bez auth.role() na bramie
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych `dla-cursora`.
+- Scalanie: brak F7 „gotowe” (PR #507, #382, #383). Unit i visual zielone na `d678df58`; db FAIL security 169/172 — `auth.role()` nie istnieje w bramie.
+- Bieżąca: **#422** — zapis p95 najpierw sesja postgres/supabase_admin, `auth.role()` tylko gdy funkcja jest; `chk` → `chk6` (anon bez INSERT). Lighthouse w deploy-main — po zielonym db.
+
+## 2026-10-24 02:25 — #422 F7 r2 pkt 3–6 (PR #507)
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w planie. Bez nowych `dla-cursora`.
+- Scalanie: brak F7 „gotowe”; CI na `7936b5bf` unit/db/visual zielone; F7 r2: nadal 3–6 przed „gotowe”.
+- Bieżąca: **#422** — (3) `app_errors_recent` → `is_hhl_admin()` + testy OPS/SCX/anon; (4) `max_exec_time` loads/load_messages, bez `list_loads`, Δ vs poprzedni; (5) `newCount`/`state` = null; (6) authenticated bez EXECUTE record/ingest; `at` tylko `ok is not null`; retencja 90 dni; security **179**. Lighthouse — osobny krok po F7.
+
+## 2026-10-24 02:40 — #422 db: newCount JSON null vs SQL NULL
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe” (PR #507, #382, #383). Unit/visual zielone na `05d3989e`; db FAIL security 178/179 — asercja `newCount is null` pada na JSON `null`.
+- Bieżąca: **#422** — test `jsonb_typeof(...->'newCount') = 'null'` (F7: JSON null = brak danych). Czekam na CI i F7.
+
+## 2026-10-24 02:55 — #422 CI zielone na ee7fa0e4; czekam F7
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe do scalenia” (PR #507, #382 CONFLICT, #383). **CI zielone** na `ee7fa0e4`: unit, `db` security (gate 12m42s), visual (zrzuty/telefon/bramy).
+- Bieżąca: **#422** PR #507 — F7 r2 pkt 3–6 + poprawka `jsonb_typeof` na head; Lighthouse po deploy-main (osobny krok). Czekam na „F7: gotowe do scalenia”.
+
+## 2026-10-24 03:15 — #508 wpisane; #422 Lighthouse + newSince (0284); A1 W3 data
+
+- Skrzynka: **#508** (Spawn2018, dla-cursora) — Lighthouse p1–p3 po deploy-main + newSince w Błędach; wpisane PLAN §4/§8, dopisek `D-20261024-0315-01.md`. #500/#499/#496/#492/#484/#412 w kolejce.
+- Scalanie: F7 „gotowe” na `ee7fa0e4` unieważnione commitem docs `23dacb8b`; potem db FAIL status 237/238 (A1 cisza — sztywne `2026-10-24` = dziś). #382 CONFLICT, #383 bez F7.
+- Bieżąca: **#422+#508** PR #507 — migracja **0284** (`deploy_success_record`, `app_errors_recent` newSince/newCount), skrypt `scripts/ci/perf-lighthouse-deploy.mjs`, krok w `deploy-main`; A1 W3 = `current_date+14`; security **185**; B5→**0285**. Push → CI; czekam F7.
+
+## 2026-10-24 03:45 — #422+#508 CI zielone na 971c0422; czekam F7
+
+- Skrzynka: #508 wpisane (komentarz w issue); #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe do scalenia” po head `971c0422` (stare F7 na `ee7fa0e4` unieważnione). #382 CONFLICT, #383 bez F7.
+- CI na `971c0422`: unit OK, `db` gate OK (~12m19s), visual OK (zrzuty/telefon/bramy). Zakres #422+#508 (0283+0284, Lighthouse w deploy-main, newSince) zamknięty w PR #507 — czekam na „F7: gotowe do scalenia”.
+
+## 2026-10-24 04:10 — #507 F7 „do poprawy”: zapis REST/pula, etykiety LH
+
+- Skrzynka: #508/#422 bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych do wpisania.
+- Scalanie: F7 01:38 **do poprawy** (psql na db.* IPv6 → 0 zapisów na prod). CI na `9169ece1` zielone — bez „gotowe”. #382 CONFLICT, #383 bez F7.
+- Bieżąca: **#422+#508** — PostgREST `perf_result_record`/`deploy_success_record` (service_role z Management API) + fallback psql na puli; `--preset=desktop`; etykiety p1/p3 Logowanie, p2 Offline; `shell: false`; LH `12.8.2`; `timeout-minutes: 15`; redact; security **186**; A1 W4/T05 = current_date+21/+23; unit skryptu. Czekam CI i F7.
+  Etykiety ostateczne (dla `PERF_PLAN` koordynatora): `p1` Logowanie · telefon `/`; `p2` Offline · telefon `/offline.html`; `p3` Logowanie · komputer `/`.
