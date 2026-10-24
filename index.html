@@ -13,11 +13,12 @@
     <title>Watch Tower — Stegra Boden</title>
     <link rel="stylesheet" href="/fonts/barlow.css" />
     <style>
-      #wt-boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg,#0b1220);z-index:9999}
-      #wt-boot img{width:min(280px,70vw);max-width:360px;height:auto}
-      html[data-theme="light"] #wt-boot{background:#f4f6fa}
-      html[data-theme="light"] #wt-boot img[data-dark]{display:none}
-      html:not([data-theme="light"]) #wt-boot img[data-light]{display:none}
+      /* #274: .wt-boot — ten sam ekran, gdy po zalogowaniu albo w linku kierowcy czekamy na kawałek aplikacji */
+      #wt-boot,.wt-boot{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg,#0b1220);z-index:9999}
+      #wt-boot img,.wt-boot img{width:min(280px,70vw);max-width:360px;height:auto}
+      html[data-theme="light"] #wt-boot,html[data-theme="light"] .wt-boot{background:#f4f6fa}
+      html[data-theme="light"] #wt-boot img[data-dark],html[data-theme="light"] .wt-boot img[data-dark]{display:none}
+      html:not([data-theme="light"]) #wt-boot img[data-light],html:not([data-theme="light"]) .wt-boot img[data-light]{display:none}
     </style>
   </head>
   <body>
