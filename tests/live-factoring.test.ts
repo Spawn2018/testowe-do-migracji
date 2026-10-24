@@ -51,11 +51,12 @@ describe('LiveFactoring — podłączenie', () => {
   const bp = readFileSync('src/views/BillsPanel.tsx', 'utf8');
   it('RPC z 0287 i nazwy parametrów', () => {
     expect(live).toContain("sb.rpc('factoring_offer_get')");
-    expect(live).toContain("sb.rpc('factoring_offer_set', { p_enabled: f.enabled, p_fee_pct: f.feePercent, p_hours: offerHours(f) })");
+    expect(live).toContain("sb.rpc('factoring_offer_set', { p_enabled: f.enabled, p_fee_pct: fee, p_hours: hours })");
     expect(live).toContain("sb.rpc('invoice_factoring_set', { p_invoice: bill.id, p_selected: v === 'FACTORING' })");
     expect(live).toContain("sb.rpc('factoring_tasks')");
     expect(live).toContain("sb.rpc('factoring_mark_paid', { p_invoice: billId })");
     expect(prov).toContain("sb.rpc('invoice_factoring_set', { p_invoice: String(res.data), p_selected: true })");
+    expect(prov).toContain('warning: `Faktura zapisana, ale wybór faktoringu nie');
   });
   it('Opcje: produkcja → oferta z bazy (zapis Administrator HHL), demo — dotychczasowy ekran', () => {
     expect(opt).toContain("if (shows('factoringOffer')) {");
@@ -71,5 +72,15 @@ describe('LiveFactoring — podłączenie', () => {
   it('wybór „Faktoring” nie zostaje bez włączonej oferty; po akceptacji/sporze/opłaceniu tylko odczyt', () => {
     expect(live).toContain("if (!offer && value === 'FACTORING') onChange('STANDARD');");
     expect(live).toContain("bill.verification !== 'ZAAKCEPTOWANA' && bill.verification !== 'SPORNA' && bill.payment !== 'OPLACONA'");
+  });
+  it('F7 #521: warunki z faktury przy wybranym faktoringu, rezygnacja bez oferty, zapis tylko przy zmianie, jednostka bez zmiany terminu', () => {
+    expect(live).toContain('<FactoringFacts bill={bill} locale={locale} />');
+    expect(live).toContain("onClick={() => void set('STANDARD')}");
+    expect(live).toContain('if (l && l.enabled === f.enabled && l.fee === fee && l.hours === hours) return;');
+    const scr = readFileSync('src/components/options/FactoringOfferScreen.tsx', 'utf8');
+    expect(scr).toContain("onChange('payoutDelayValue', u === 'days' ? v / 24 : v * 24);");
+    expect(scr).toContain("if (u === 'days' && v % 24 !== 0) return;");
+    const br = readFileSync('src/data/supabaseBridge.ts', 'utf8');
+    expect(br).toContain("if (res && res.warning) useTowerStore.getState().pushToast(res.warning, 'MEDIUM');");
   });
 });

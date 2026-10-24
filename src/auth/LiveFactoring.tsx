@@ -1,7 +1,7 @@
 /**
  * #412 E4b — faktoring na produkcji (baza 0287). Te same widoki co w demo (`Factoring.tsx`, `FactoringOfferScreen`):
  *  • Opcje › Pieniądze › Faktoring — `factoring_offer_get` / `factoring_offer_set` (zapis tylko Administrator HHL;
- *    zmiana = nowa wersja od dziś, Europe/Warsaw; poprawka tego samego dnia bez nowej wersji);
+ *    zmiana obowiązuje od dziś, Europe/Warsaw; poprawka tego samego dnia bez nowej wersji; zapis tylko przy zmianie);
  *  • wybór przy nowej fakturze SCX (oferta z bazy; zapis wyboru po rejestracji faktury — supabaseProvider);
  *  • szczegóły faktury SCX do akceptacji — zmiana wyboru `invoice_factoring_set` (baza odmawia po akceptacji, w sporze,
  *    po opłaceniu); HHL i SCX widzą wybór, prowizję, wypłatę i termin z bazy;
@@ -82,6 +82,8 @@ export function LiveFactoringOffer({ readOnly, onSaved }: { readOnly: boolean; o
   const [msg, setMsg] = useState<string | null>(null);
   /* najnowsze wartości: przełącznik woła onChange i od razu zapis (stan Reacta jeszcze stary) */
   const cur = useRef<FactoringOffer | null>(null);
+  /* ostatni stan z bazy — zapis tylko przy zmianie (F7 #521: bez nowej wersji i wpisu Historii przy samym wyjściu z pola) */
+  const last = useRef<{ enabled: boolean; fee: number; hours: number } | null>(null);
 
   const apply = useCallback((o: LiveOffer | null) => {
     setView(o);
@@ -89,6 +91,7 @@ export function LiveFactoringOffer({ readOnly, onSaved }: { readOnly: boolean; o
       ? { enabled: o.enabled, feePercent: o.feePct, payoutDelayValue: o.hours % 24 === 0 && o.hours >= 24 ? o.hours / 24 : o.hours, payoutDelayUnit: o.hours % 24 === 0 && o.hours >= 24 ? 'days' : 'hours' }
       : { enabled: false, feePercent: 1, payoutDelayValue: 48, payoutDelayUnit: 'hours' };
     cur.current = f;
+    last.current = o ? { enabled: f.enabled, fee: f.feePercent, hours: offerHours(f) } : null;
     setForm(f);
   }, []);
 
@@ -104,10 +107,15 @@ export function LiveFactoringOffer({ readOnly, onSaved }: { readOnly: boolean; o
   const save = (what: string) => {
     const f = cur.current;
     if (readOnly || !f) return;
+    /* F7 #521: prowizja do 0,01 %, godziny całkowite — bez surowych błędów bazy */
+    const fee = Math.round(f.feePercent * 100) / 100;
+    const hours = Math.round(offerHours(f));
+    const l = last.current;
+    if (l && l.enabled === f.enabled && l.fee === fee && l.hours === hours) return;
     void (async () => {
       try {
         const sb = await getSupabase();
-        const r = await sb.rpc('factoring_offer_set', { p_enabled: f.enabled, p_fee_pct: f.feePercent, p_hours: offerHours(f) });
+        const r = await sb.rpc('factoring_offer_set', { p_enabled: f.enabled, p_fee_pct: fee, p_hours: hours });
         if (r.error) {
           setMsg(r.error.message);
           /* odmowa (np. prowizja poza 0,01–20 %) — ekran wraca do stanu z bazy */
@@ -116,7 +124,9 @@ export function LiveFactoringOffer({ readOnly, onSaved }: { readOnly: boolean; o
           return;
         }
         setMsg(null);
-        apply(offerFromDb(r.data));
+        const saved = offerFromDb(r.data);
+        if (saved) apply(saved);
+        else { const back = await loadOffer(); if (!back.error) apply(back.offer); }
         onSaved(what);
       } catch (e) {
         setMsg(msgOf(e));
@@ -161,14 +171,16 @@ export function LiveFactoringDetail({ bill, canChange, locale }: { bill: Bill; c
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const open = canChange && bill.verification !== 'ZAAKCEPTOWANA' && bill.verification !== 'SPORNA' && bill.payment !== 'OPLACONA';
+  const selected = !!bill.factoring?.selected;
   useEffect(() => {
-    if (!open) return;
+    if (!open || selected) return;
     let live = true;
     void loadOffer().then(({ offer: o }) => { if (live) setOffer(o && o.enabled ? o : null); });
     return () => { live = false; };
-  }, [open]);
+  }, [open, selected]);
 
   const set = async (v: 'STANDARD' | 'FACTORING') => {
+    if (busy) return;
     setBusy(true); setMsg(null);
     try {
       const sb = await getSupabase();
@@ -182,18 +194,31 @@ export function LiveFactoringDetail({ bill, canChange, locale }: { bill: Bill; c
     }
   };
 
-  const f = bill.factoring;
+  /* wybrany faktoring: zawsze warunki zapisane na fakturze (baza), nie bieżąca oferta (F7 #521);
+     rezygnacja do akceptacji — także gdy HHL wyłączył ofertę */
+  if (selected) {
+    return (
+      <div data-fact-detail={bill.id} aria-busy={busy}>
+        {msg ? <div className="note" role="status" data-fact-msg>{msg}</div> : null}
+        <FactoringFacts bill={bill} locale={locale} />
+        {open ? (
+          <button type="button" className="btn ghost" data-fact-optout={bill.id} disabled={busy} onClick={() => void set('STANDARD')}>
+            {ft(locale, 'p5_fl_optout')}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
   if (open && offer) {
     return (
       <div data-fact-detail={bill.id} aria-busy={busy}>
         {msg ? <div className="note" role="status" data-fact-msg>{msg}</div> : null}
         <PaymentChoice offer={offer} net={bill.net} gross={bill.gross} due={bill.dueDate} currency={bill.currency}
-          value={f?.selected ? 'FACTORING' : 'STANDARD'} onChange={(v) => { if (!busy) void set(v); }} />
+          value="STANDARD" onChange={(v) => { if (v === 'FACTORING') void set(v); }} />
       </div>
     );
   }
-  if (!f?.selected) return null;
-  return <FactoringFacts bill={bill} locale={locale} />;
+  return null;
 }
 
 /** Odczyt: „Faktoring HHL · prowizja · wypłata · termin” z bazy. */
@@ -222,14 +247,18 @@ export function LiveFactoringTasks({ nowIso, locale }: { nowIso: string; locale:
   const [gen, setGen] = useState(0);
   const bills = useTowerStore((s) => s.bills);
 
+  /* tylko najnowsza odpowiedź trafia na ekran (F7 #521) */
+  const seq = useRef(0);
   const refresh = useCallback(async () => {
+    const my = ++seq.current;
     try {
       const sb = await getSupabase();
       const r = await sb.rpc('factoring_tasks');
+      if (my !== seq.current) return;
       if (r.error) { setMsg(r.error.message); return; }
       setTasks(tasksFromDb(r.data));
     } catch (e) {
-      setMsg(msgOf(e));
+      if (my === seq.current) setMsg(msgOf(e));
     }
   }, []);
   /* po akceptacji / wypłacie (odświeżenie faktur) lista zadań też się odświeża */
@@ -241,11 +270,12 @@ export function LiveFactoringTasks({ nowIso, locale }: { nowIso: string; locale:
       const sb = await getSupabase();
       const r = await sb.rpc('factoring_mark_paid', { p_invoice: billId });
       if (r.error) setMsg(r.error.message);
+      /* odświeżenie faktur zmienia `bills` → efekt wyżej pobiera zadania */
       await refreshFromServer({ keepSelection: true });
     } catch (e) {
       setMsg(msgOf(e));
+      await refresh();
     }
-    await refresh();
     setGen((g) => g + 1);
   };
 

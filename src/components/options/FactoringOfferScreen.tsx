@@ -64,7 +64,16 @@ export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSave
           <input className="input" type="number" min="1" aria-label={ft(locale, 'p5_fo_payout')} value={offer.payoutDelayValue} disabled={readOnly}
             onChange={(e) => onChange('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => onSaved('termin')} />
           <select className="input" aria-label={ft(locale, 'p5_fo_unit')} value={offer.payoutDelayUnit} disabled={readOnly}
-            onChange={(e) => { onChange('payoutDelayUnit', e.target.value as FactoringOffer['payoutDelayUnit']); onSaved('termin'); }}>
+            onChange={(e) => {
+              /* F7 #521: zmiana jednostki nie zmienia terminu — 2 dni ⇄ 48 h; godziny bez pełnych dni zostają w h */
+              const u = e.target.value as FactoringOffer['payoutDelayUnit'];
+              const v = offer.payoutDelayValue;
+              if (u === offer.payoutDelayUnit) return;
+              if (u === 'days' && v % 24 !== 0) return;
+              onChange('payoutDelayValue', u === 'days' ? v / 24 : v * 24);
+              onChange('payoutDelayUnit', u);
+              onSaved('termin');
+            }}>
             <option value="hours">h</option>
             <option value="days">{ft(locale, 'p5_fo_days')}</option>
           </select>
