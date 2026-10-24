@@ -75,6 +75,7 @@ const PL: Record<string, string> = {
   sys_err_where_all: 'Strony',
   sys_err_roles: 'Role',
   sys_err_none_new: '0 nowych',
+  sys_err_new_unknown: 'nowe od wdrożenia: brak danych',
   sys_err_new_short: '{n} nowych',
   sys_err_line: '{where} · {count} × · {people} os. · ostatnio {t}',
   sys_sec_sub: 'tylko do odczytu',
@@ -82,7 +83,7 @@ const PL: Record<string, string> = {
   sys_sec_col_state: 'Stan',
   sys_sec_col_details: 'Szczegóły',
   sys_sec_note: 'Tylko do odczytu. Zmiany ustawień zostają w ustawieniach bazy i w migracjach.',
-  sys_perf_sub: 'test na TEST przed pilotażem, potem co tydzień · ostatni {t}',
+  sys_perf_sub: 'po każdym wdrożeniu i codziennie o 05:20 · ostatni {t}',
   sys_perf_col_what: 'Co',
   sys_perf_col_how: 'Jak',
   sys_perf_col_result: 'Wynik',
@@ -92,7 +93,7 @@ const PL: Record<string, string> = {
   sys_perf_bad: 'ponad próg',
   sys_perf_none: 'bez pomiaru',
   sys_none: 'Brak danych.',
-  sys_perf_pending: 'Pomiary jeszcze się nie zapisują — wyniki pojawią się po pierwszym pomiarze po wdrożeniu.',
+  sys_perf_pending: 'Jeszcze nie ma pomiaru — wyniki pojawią się po najbliższym wdrożeniu.',
 };
 
 export function sy(locale: Locale, key: string): string {
