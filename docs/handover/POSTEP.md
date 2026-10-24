@@ -4596,3 +4596,27 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: F7 01:38 **do poprawy** (psql na db.* IPv6 → 0 zapisów na prod). CI na `9169ece1` zielone — bez „gotowe”. #382 CONFLICT, #383 bez F7.
 - Bieżąca: **#422+#508** — PostgREST `perf_result_record`/`deploy_success_record` (service_role z Management API) + fallback psql na puli; `--preset=desktop`; etykiety p1/p3 Logowanie, p2 Offline; `shell: false`; LH `12.8.2`; `timeout-minutes: 15`; redact; security **186**; A1 W4/T05 = current_date+21/+23; unit skryptu. Czekam CI i F7.
   Etykiety ostateczne (dla `PERF_PLAN` koordynatora): `p1` Logowanie · telefon `/`; `p2` Offline · telefon `/offline.html`; `p3` Logowanie · komputer `/`.
+
+## 2026-10-24 04:35 — #507 SCALONE; start #412 (0285 E40 terminy+adresy)
+
+- Skrzynka: #508/#422 zamknięte scaleniem; #412 bieżąca; #500/#499/#496/#492/#484 w kolejce. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: PR #507 F7 „gotowe do scalenia” po `3229714b`, CI zielone → merge `b2528a80`. #382 CONFLICT (B5), #383 bez F7.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-opcje-finanse-zrodla` — migracja **0285**: `payment_terms_options`/`_set`, `accounting_addresses` + get/set; security **204** (+18); nullguard **745** (+20). B5→**0286**. Front bez zmian (koordynator). Następne w #412: paczka E40, faktoring, marża, E43, push count.
+
+## 2026-10-24 05:05 — #412 db FAIL: projekt STEGRA w seedzie bramy
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#425/#413/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających bieżącą.
+- Scalanie: brak F7 „gotowe do scalenia” (PR #510 bez komentarza F7; #509 wygląd; #382 CONFLICT; #383 „Nie scalać jeszcze”).
+- Bieżąca: **#412** PR #510 — CI `db` security 200/204: `payment_terms_options` szukało tylko `STEGRA_BODEN`, seed bramy ma `STEGRA`. Poprawka: lookup `STEGRA_BODEN`/`STEGRA` (jak 0106/0267) w options i options_set. Push → CI.
+
+## 2026-10-24 05:25 — #412 F7 #510 „do poprawy”: wersje terminów + e-mail
+
+- Skrzynka: #412 bieżąca; #500/#499/#496/#492/#484/#323/#322/#320 w planie. Bez nowych `dla-cursora`; bez `pilne`.
+- Scalanie: F7 #510 **do poprawy** (po `cca4b19`); CI na `fd470bd4` (STEGRA) zielone unit/db/visual — bez „gotowe”. #509 wygląd; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #510 — F7: `payment_terms_options_set` insert `valid_from=current_date` on conflict (stara wersja dla `issue_date`); regex e-mail `[a-z0-9._%+-]` (+ `looksLikeEmail`); security: asercja zapisu, wersja past, SCX/KSH get/set/SELECT, bez `duplicate` w INSERT; adresy testowe `@test`. Oczek. security **~210**. Push → CI.
+
+## 2026-10-24 05:42 — #509 SCALONE; #412 db: @test bez TLD
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
+- Scalanie: **#509** `ca0a94c2` (F7 „gotowe do scalenia” na `567255e`, CI unit/visual zielone) — wygląd Stan systemu Wydajność/Błędy (#422). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #510 — CI `db` security 209/211 (2 FAIL): `ksiegowosc@test` / `biuro@test` odrzucone przez regex (brak TLD). Poprawka: adresy testowe `@test.pl`; EXPECTED security **211** / TEST **207**. Push → CI; czekam F7.

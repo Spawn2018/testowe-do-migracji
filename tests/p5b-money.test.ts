@@ -44,6 +44,8 @@ describe('E3 — czyste funkcje opłaty paliwowej', () => {
     expect(looksLikeEmail(' ksiegowosc@example.com ')).toBe(true);
     expect(looksLikeEmail('ksiegowosc@example')).toBe(false);
     expect(looksLikeEmail('a b@example.com')).toBe(false);
+    expect(looksLikeEmail('a@b.pl;x')).toBe(false);
+    expect(looksLikeEmail('a@b.pl,x')).toBe(false);
   });
   it('procenty za anulowanie: ≥ 5 dni … dzień załadunku', () => {
     expect([...CANCEL_DAYS]).toEqual([5, 4, 3, 2, 1, 0]);
