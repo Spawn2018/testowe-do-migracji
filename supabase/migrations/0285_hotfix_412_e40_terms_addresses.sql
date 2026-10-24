@@ -254,7 +254,7 @@ begin
           and v_norm ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$') is not true then
         raise exception 'Nieprawidłowy adres e-mail' using errcode = '22023';
       end if;
-      if not (v_norm = any (v_clean)) then
+      if (v_norm = any (v_clean)) is not true then
         v_clean := array_append(v_clean, v_norm);
       end if;
     end loop;
