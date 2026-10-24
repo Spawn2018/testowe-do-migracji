@@ -8,8 +8,8 @@ export function BrandLogo({ alt, className }: { alt: string; className?: string 
   const cls = className ? `${className} ` : '';
   return (
     <>
-      <img className={`${cls}wt-logo-light`} src="/brand/watchtower-logo-full.webp" alt={alt} width={240} height={80} />
-      <img className={`${cls}wt-logo-dark`} src="/brand/watchtower-logo-full-dark.webp" alt={alt} width={240} height={80} />
+      <img className={`${cls}wt-logo-light`} src="/brand/watchtower-logo-full.webp" alt={alt} width={480} height={494} />
+      <img className={`${cls}wt-logo-dark`} src="/brand/watchtower-logo-full-dark.webp" alt={alt} width={480} height={494} />
     </>
   );
 }
