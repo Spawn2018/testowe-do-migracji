@@ -4734,3 +4734,39 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie (wpisane). #425/#413 `pilne` otwarte (SCALONE) — nie przerywają.
 - Scalanie: brak F7 „gotowe”. CI na `8d177d46` zielone (unit/db/visual); F7 r4 **do poprawy** (1 bloker).
 - Bieżąca: **#484** PR #526 — F7 r4: wykrywanie zmiany `IS DISTINCT FROM` (także NULL); zakres `coalesce(OLD,NEW)`; redakcja RPC dla CARRIER przy z/do NULL; `actor_party` = `CARRIER` (nie SCX); testy SCX→NULL / NULL→B (preset + live trigger). security **377** (+10). Push → CI; ponowne F7 (tylko pkt 1).
+
+## 2026-10-24 13:40 — #526 SCALONE (0290); start #492 (0291); #528 wpisane
+
+- Skrzynka: **#528** (Spawn2018) — drobne F7 r5 po #526 (N8 zerowanie pól przewoźnika, INSERT≠swap, wydajność, invoice role); wpisane PLAN §4/§8, dopisek `D-20261024-1335-01.md`. #525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
+- Scalanie: **#526** `7607994f` (F7 „gotowe do scalenia” na `62f9980b`, CI unit/db/visual) — Historia **0290**. Issue #484 zamknięte. Front #527 — po odbiorze 0290 na produkcji (koordynator). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** gałąź `pakiet/hotfix-492-loads-updated-at` — migracja **0291**: `trg_loads_screen_updated_at` (whitelist kolumn ekranu; ETA/RIO-stan/`tracking_opened_at` bez bumpa). security **382** (+5). B5→**0292**.
+
+## 2026-10-24 14:00 — #527 SCALONE; #492 db: bez ferry_vessel
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
+- Scalanie: **#527** `c879ff58` (F7 „gotowe” 11:45Z po `e18e5c30`, unit/visual zielone) — wygląd Historii. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — db FAIL: trigger odwoływał się do `ferry_vessel`/`ferry_departure` (DROP w 0004). Usunięte z 0291; rejs = `sailing_id`+`ferry_booking_ref`. Merge main (#527). Push → CI; czekam F7.
+
+## 2026-10-24 14:20 — #492 F7 #529: RODO + symbol; #530 wpisane
+
+- Skrzynka: **#530** (Spawn2018, z F7 #529) — loadsVersion z tabel powiązanych; wpisane PLAN §4/§8. #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL (security carrier_order_no SELECT + i2 purge pozycji po bumpie RODO); visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — F7: bez bumpa przy `audit_source=rodo`; `symbol`/`permit_kind`; guard kolumn w 0291; testy UPDATE sys + SELECT; security **384** (+7). Push → CI; ponowne F7.
+
+## 2026-10-24 14:45 — #492 db: RODO asercja przez sys (0076)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL: `#492 RODO` — `permission denied` na SELECT `driver_name` (authenticated; 0076). unit/visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — asercja RODO (`updated_at` + `driver_name is null`) przez `sys`, nie HHL. security **384**. Push → CI.
+
+## 2026-10-24 14:55 — #492 F7 #529 r3: combo_weight_t + RODO freeze
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). Bez `pilne`.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL (security 383/384 — RODO freeze w jednej instrukcji z `driver_name`); visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — F7 r3: przywrócony `combo_weight_t` w guardzie i wyzwalaczu + test; RODO: najpierw `driver_name`, potem osobny UPDATE `updated_at`. security **385** (+8). Push → CI; ponowne F7.
+
+## 2026-10-24 15:32 — #492 CI zielone (3ad7619a); czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.

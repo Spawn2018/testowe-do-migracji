@@ -1066,5 +1066,49 @@ val "#484: KSH strona < 8 s przy szumie" $KSH \
 err "#484: anon admin_audit_history → 42501" "00000000-0000-0000-0000-000000000000" \
   "select * from admin_audit_history(null,null,null,null,null,null,5,0)" "Brak|42501|administrator|dostępu"
 
+echo; echo "[#492] loads.updated_at — ekran vs ETA/RIO"
+# Zamroź updated_at: zasoby/kierowca/symbol → bump; ETA / stan RIO / tracking / RODO → bez.
+# F7 #529: UPDATE osobno (sys), potem SELECT; bez CTE with u as (update…) — SCX bez SELECT carrier_order_no.
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set carrier_order_no = coalesce(carrier_order_no,'') || '-492' where id='$L2'" >/dev/null
+val "#492: zasoby (carrier_order_no) podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set eta_site = now() + interval '3 hours', eta_confidence_min = 15,
+        eta_basis = coalesce(eta_basis,'{}'::jsonb) || jsonb_build_object('t','492'),
+        eta_computed_at = now(), delay_minutes = 9 where id='$L2'" >/dev/null
+val "#492: ETA (jak refresh_load_eta) bez bumpa updated_at" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set rio_check_at = now(), rio_last_fix_at = now(),
+        rio_error_streak = coalesce(rio_error_streak,0) + 1,
+        rio_check_state = coalesce(rio_check_state,'ok') where id='$L2'" >/dev/null
+val "#492: stan RIO bez bumpa updated_at" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set tracking_opened_at = coalesce(tracking_opened_at, now()) where id='$L2'" >/dev/null
+val "#492: tracking_opened_at (process_position) bez bumpa" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set driver_name = trim(both from coalesce(driver_name,'') || ' 492') where id='$L2'" >/dev/null
+val "#492: driver_name podnosi updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set symbol = case when coalesce(symbol,'') = 'SG' then 'KR' else 'SG' end,
+        permit_kind = case when coalesce(permit_kind,'') = 'FIRMA' then 'TRASA' else 'FIRMA' end
+     where id='$L2'" >/dev/null
+val "#492: symbol/permit_kind podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set combo_weight_t = coalesce(combo_weight_t, 40) + 0.1 where id='$L2'" >/dev/null
+val "#492: combo_weight_t podnosi updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# F7 #529 r2/r3: najpierw kierowca, potem osobno zamroź updated_at (driver_name = kolumna ekranu → bump).
+sys "update loads set driver_name = 'Rodo492' where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "begin; select set_config('tower.audit_source','rodo',true);
+        update loads set driver_name = null where id='$L2'; commit;" >/dev/null
+# driver_name: authenticated bez SELECT (0076 → load_driver_contacts) — asercja przez sys
+out=$(sys "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #492: RODO (audit_source) bez bumpa updated_at"; } || { fail=$((fail+1)); echo "  FAIL  #492: RODO (audit_source) bez bumpa updated_at  (otrzymano: $out, oczekiwano: true)"; }
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
