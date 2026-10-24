@@ -4571,3 +4571,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
 - Scalanie: brak F7 „gotowe” (PR #507, #382, #383). Unit/visual zielone na `05d3989e`; db FAIL security 178/179 — asercja `newCount is null` pada na JSON `null`.
 - Bieżąca: **#422** — test `jsonb_typeof(...->'newCount') = 'null'` (F7: JSON null = brak danych). Czekam na CI i F7.
+
+## 2026-10-24 02:55 — #422 CI zielone na ee7fa0e4; czekam F7
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe do scalenia” (PR #507, #382 CONFLICT, #383). **CI zielone** na `ee7fa0e4`: unit, `db` security (gate 12m42s), visual (zrzuty/telefon/bramy).
+- Bieżąca: **#422** PR #507 — F7 r2 pkt 3–6 + poprawka `jsonb_typeof` na head; Lighthouse po deploy-main (osobny krok). Czekam na „F7: gotowe do scalenia”.
