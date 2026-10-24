@@ -1519,3 +1519,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:20 | #492 F7 #529: RODO bez bumpa, symbol/permit_kind, testy UPDATE+SELECT; security **384**; #530 wpisane (loadsVersion) | pętla |
 | 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |
 | 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |
+| 24.10.2026 15:32 | #492 CI unit/db/visual zielone (`3ad7619a`); czekam F7 „gotowe” | pętla |

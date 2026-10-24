@@ -4764,3 +4764,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). Bez `pilne`.
 - Scalanie: brak F7 „gotowe”. #529 db FAIL (security 383/384 — RODO freeze w jednej instrukcji z `driver_name`); visual zielone. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — F7 r3: przywrócony `combo_weight_t` w guardzie i wyzwalaczu + test; RODO: najpierw `driver_name`, potem osobny UPDATE `updated_at`. security **385** (+8). Push → CI; ponowne F7.
+
+## 2026-10-24 15:32 — #492 CI zielone (3ad7619a); czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
