@@ -105,14 +105,14 @@ export function securityRows(nowIso: string): SecRow[] | null {
 
 /**
  * E46 — co mierzymy i jakie są limity. Produkcja (#422/#508, 0283–0284): po każdym wdrożeniu Lighthouse mierzy
- * ekran logowania (bez kont testowych) i stronę „Brak połączenia”; codziennie 05:20 — najwolniejsze zapytanie list.
+ * ekran logowania (bez kont testowych) i stronę „Brak połączenia”; codziennie rano — najwolniejsze zapytanie do transportów i wiadomości.
  * Nazwy i progi z planu (po polsku); wynik i stan z bazy (`perf_results_latest`). Brak wiersza w bazie = „—”, bez pomiaru.
  */
 export const PERF_PLAN: readonly Omit<PerfRow, 'result' | 'ok'>[] = [
   { id: 'p1', what: 'Logowanie · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
   { id: 'p2', what: 'Strona „Brak połączenia” · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
   { id: 'p3', what: 'Logowanie · komputer', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
-  { id: 'p4', what: 'Listy transportów i wiadomości w bazie', how: 'najwolniejsze zapytanie', limit: '≤ 500 ms' },
+  { id: 'p4', what: 'Zapytania do transportów i wiadomości w bazie', how: 'najwolniejsze od ostatniego zerowania statystyk', limit: '≤ 500 ms' },
   { id: 'p5', what: 'Równoczesność', how: '20 sesji przez 10 min', limit: '0 błędów' },
 ];
 

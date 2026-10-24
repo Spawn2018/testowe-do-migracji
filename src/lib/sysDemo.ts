@@ -98,10 +98,10 @@ export function demoPerf(nowIso: string): Perf {
   return {
     at: dayAt(nowIso, 2, 22, 0),
     rows: [
-      { id: 'p1', what: 'Kokpit · telefon', how: 'LCP · CLS · TBT', result: '2,1 s · 0,02 · 180 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: true },
-      { id: 'p2', what: 'Mapa · telefon', how: 'LCP · CLS · TBT', result: '2,4 s · 0,01 · 260 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: true },
-      { id: 'p3', what: 'Harmonogram w układzie pliku (420 wierszy) · komputer', how: 'LCP · CLS · TBT', result: '2,9 s · 0,03 · 240 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: false },
-      { id: 'p4', what: 'Funkcje list w bazie', how: 'p95 przy 420 transportach', result: '410 ms', limit: 'p95 ≤ 500 ms', ok: true },
+      { id: 'p1', what: 'Logowanie · telefon', how: 'LCP · CLS · TBT', result: '2,1 s · 0,02 · 180 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: true },
+      { id: 'p2', what: 'Strona „Brak połączenia” · telefon', how: 'LCP · CLS · TBT', result: '0,9 s · 0,00 · 0 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: true },
+      { id: 'p3', what: 'Logowanie · komputer', how: 'LCP · CLS · TBT', result: '2,9 s · 0,03 · 240 ms', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms', ok: false },
+      { id: 'p4', what: 'Zapytania do transportów i wiadomości w bazie', how: 'najwolniejsze od ostatniego zerowania statystyk', result: '410 ms', limit: '≤ 500 ms', ok: true },
       { id: 'p5', what: 'Równoczesność', how: '20 sesji przez 10 min', result: '0 błędów', limit: '0 błędów', ok: true },
     ],
   };

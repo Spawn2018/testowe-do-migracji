@@ -351,6 +351,7 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
           </div>
         </>
       )}
+      {data.groups.length ? null : <p className="sys-note" data-err-empty>{sy(locale, 'sys_err_empty')}</p>}
       <p className="sys-rule" data-err-rule>{sy(locale, 'sys_err_rule')}</p>
     </section>
   );
@@ -399,7 +400,9 @@ function Security({ locale, nowIso }: { locale: Locale; nowIso: string }) {
   );
 }
 
-function PerfView({ locale, nowIso, data }: { locale: Locale; nowIso: string; data?: Perf }) {
+function PerfView({ locale, nowIso, data }: { locale: Locale; nowIso: string; data?: Perf | null }) {
+  /* `data === null` (produkcja): odczyt pomiarów nie powiódł się — bez notki „jeszcze nie ma pomiaru” */
+  if (data === null) return <p className="sys-note" data-sys-perf-fail>{sy(locale, 'sys_perf_read_fail')}</p>;
   const p = data ?? perfResults(nowIso);
   if (!p) return <p className="sys-note">{sy(locale, 'sys_none')}</p>;
   const state = (ok: boolean | null) => (ok == null ? sy(locale, 'sys_perf_none') : ok ? sy(locale, 'sys_perf_ok') : sy(locale, 'sys_perf_bad'));
@@ -449,7 +452,7 @@ export function KshSyncSourceBlock({ locale, nowIso, admin }: { locale: Locale; 
 export function StatusScreen({ locale, nowIso, admin, mark, live }: {
   locale: Locale; nowIso: string; admin: boolean; mark?: ReactNode;
   /* #422: `perf` i `errors` z bazy (`perf_results_latest`, `app_errors_recent` — tylko Administrator HHL; `null` = bez zakładki) */
-  live?: { rows: SourceRow[]; jobs: OtherJob[]; perf?: Perf; errors?: AppErrors | null };
+  live?: { rows: SourceRow[]; jobs: OtherJob[]; perf?: Perf | null; errors?: AppErrors | null };
 }) {
   const [tab, setTab] = useState<SysTab>('sources');
   const phone = useIsPhone();
@@ -460,6 +463,8 @@ export function StatusScreen({ locale, nowIso, admin, mark, live }: {
   const errs = live ? (live.errors ?? null) : appErrors(nowIso);
   if (!rows) return null;
   const tabs: SysTab[] = ['sources', ...(errs ? ['errors' as const] : []), ...(admin && securityRows(nowIso) ? ['security' as const] : []), 'perf'];
+  /* F7 #509: zakładka zniknęła po odświeżeniu (np. błąd odczytu „Błędów aplikacji”) — wróć do „Źródeł danych” */
+  const cur: SysTab = tabs.includes(tab) ? tab : 'sources';
   /* telefon 390: krótsze nazwy, żeby cztery zakładki zmieściły się w jednym wierszu */
   const label = (k: SysTab) => sy(locale, k === 'sources' ? (phone ? 'sys_tab_sources_short' : 'sys_tab_sources')
     : k === 'errors' ? (phone ? 'sys_tab_errors_short' : 'sys_tab_errors') : k === 'security' ? 'sys_tab_security' : 'sys_tab_perf');
@@ -468,13 +473,13 @@ export function StatusScreen({ locale, nowIso, admin, mark, live }: {
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <div className="sys-tabs" role="tablist" aria-label={sy(locale, 'sys_tabs')}>
         {tabs.map((k) => (
-          <button key={k} type="button" role="tab" aria-selected={tab === k} data-sys-tab={k} onClick={() => setTab(k)}>{label(k)}</button>
+          <button key={k} type="button" role="tab" aria-selected={cur === k} data-sys-tab={k} onClick={() => setTab(k)}>{label(k)}</button>
         ))}
       </div>
-      {tab === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} jobs={live?.jobs} /> : null}
-      {tab === 'errors' && errs ? <Errors locale={locale} data={errs} nowIso={nowIso} /> : null}
-      {tab === 'security' && admin ? <Security locale={locale} nowIso={nowIso} /> : null}
-      {tab === 'perf' ? <PerfView locale={locale} nowIso={nowIso} data={live?.perf} /> : null}
+      {cur === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} jobs={live?.jobs} /> : null}
+      {cur === 'errors' && errs ? <Errors locale={locale} data={errs} nowIso={nowIso} /> : null}
+      {cur === 'security' && admin ? <Security locale={locale} nowIso={nowIso} /> : null}
+      {cur === 'perf' ? <PerfView locale={locale} nowIso={nowIso} data={live ? live.perf ?? null : undefined} /> : null}
     </div>
   );
 }

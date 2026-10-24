@@ -148,7 +148,8 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
   const watchBackup = new URLSearchParams(useLocation().search).get('kopia') === '1';
   const [data, setData] = useState<{ runs: RunRow[]; devices: DeviceRow[]; backups: BackupRow[] } | null>(null);
   /* #422/#508: Wydajność (HHL) i Błędy aplikacji (tylko Administrator HHL) — błąd odczytu nie blokuje Źródeł danych */
-  const [perf, setPerf] = useState<Perf>(() => perfFromDb(null));
+  /* `null` — odczyt pomiarów nie powiódł się (ekran: „nie udało się odczytać”, nie „jeszcze nie ma pomiaru”) */
+  const [perf, setPerf] = useState<Perf | null>(() => perfFromDb(null));
   const [errors, setErrors] = useState<AppErrors | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -157,15 +158,13 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
       const sb = await getSupabase();
       /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
       const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at,disabled:result->disabled').eq('job', job).order('ran_at', { ascending: false }).limit(RUN_LIMIT)));
-      const [d, b] = await Promise.all([
+      const [d, b, pr, er] = await Promise.all([
         sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
         sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),
-      ]);
-      const [pr, er] = await Promise.all([
         sb.rpc('perf_results_latest'),
         admin ? sb.rpc('app_errors_recent', { p_days: 7 }) : Promise.resolve({ data: null, error: null }),
       ]);
-      setPerf(perfFromDb(pr.error ? null : pr.data));
+      setPerf(pr.error ? null : perfFromDb(pr.data));
       setErrors(er.error ? null : appErrorsFromDb(er.data));
       const err = per.find((r) => r.error)?.error ?? d.error ?? b.error ?? null;
       setMsg(err ? err.message : null);

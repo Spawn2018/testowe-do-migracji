@@ -83,7 +83,7 @@ const PL: Record<string, string> = {
   sys_sec_col_state: 'Stan',
   sys_sec_col_details: 'Szczegóły',
   sys_sec_note: 'Tylko do odczytu. Zmiany ustawień zostają w ustawieniach bazy i w migracjach.',
-  sys_perf_sub: 'po każdym wdrożeniu i codziennie o 05:20 · ostatni {t}',
+  sys_perf_sub: 'po każdym wdrożeniu i codziennie rano · ostatni {t}',
   sys_perf_col_what: 'Co',
   sys_perf_col_how: 'Jak',
   sys_perf_col_result: 'Wynik',
@@ -93,6 +93,8 @@ const PL: Record<string, string> = {
   sys_perf_bad: 'ponad próg',
   sys_perf_none: 'bez pomiaru',
   sys_none: 'Brak danych.',
+  sys_perf_read_fail: 'Nie udało się odczytać pomiarów — spróbuj odświeżyć stronę.',
+  sys_err_empty: 'Brak błędów aplikacji w ostatnich 7 dniach.',
   sys_perf_pending: 'Jeszcze nie ma pomiaru — wyniki pojawią się po najbliższym wdrożeniu.',
 };
 

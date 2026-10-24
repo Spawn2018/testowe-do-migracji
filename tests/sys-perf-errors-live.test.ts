@@ -12,7 +12,7 @@ describe('Wydajność z bazy (#422/#508)', () => {
       'Logowanie · telefon',
       'Strona „Brak połączenia” · telefon',
       'Logowanie · komputer',
-      'Listy transportów i wiadomości w bazie',
+      'Zapytania do transportów i wiadomości w bazie',
       'Równoczesność',
     ]);
     expect(PERF_PLAN.some((r) => /Kokpit|Mapa|Harmonogram|p95|loads|load_messages|max_exec/.test(`${r.what} ${r.how} ${r.limit}`))).toBe(false);
@@ -33,7 +33,7 @@ describe('Wydajność z bazy (#422/#508)', () => {
     expect(by.p1).toMatchObject({ what: 'Logowanie · telefon', result: '5,8 s · 0,00 · 82 ms', ok: false });
     expect(by.p2).toMatchObject({ result: '—', ok: null });
     expect(by.p3).toMatchObject({ result: '1,1 s · 0,01 · 0 ms', ok: true });
-    expect(by.p4).toMatchObject({ what: 'Listy transportów i wiadomości w bazie', result: '—', ok: null });
+    expect(by.p4).toMatchObject({ what: 'Zapytania do transportów i wiadomości w bazie', result: '—', ok: null });
     expect(by.p5).toMatchObject({ result: '—', ok: null });
   });
 
@@ -43,6 +43,19 @@ describe('Wydajność z bazy (#422/#508)', () => {
       expect(p.at).toBeNull();
       expect(p.rows.map((r) => r.result)).toEqual(['—', '—', '—', '—', '—']);
     }
+  });
+});
+
+describe('Teksty (#509 F7)', () => {
+  it('podtytuł Wydajności bez godziny (cron w UTC — godzina zmienia się ze zmianą czasu)', () => {
+    const t = readFileSync('src/i18n/sys.ts', 'utf8');
+    expect(t).toMatch(/sys_perf_sub: 'po każdym wdrożeniu i codziennie rano · ostatni \{t\}'/);
+    expect(t).not.toMatch(/sys_perf_sub: '[^']*\d{2}:\d{2}/);
+  });
+  it('demo z tymi samymi nazwami co plan produkcji (bez Kokpitu/Mapy/p95)', () => {
+    const d = readFileSync('src/lib/sysDemo.ts', 'utf8');
+    const perf = d.slice(d.indexOf('export function demoPerf'));
+    expect(perf).not.toMatch(/Kokpit · telefon|Mapa · telefon|p95/);
   });
 });
 
@@ -75,5 +88,11 @@ describe('Błędy aplikacji z bazy (#422/#508)', () => {
     const scr = readFileSync('src/components/options/StatusScreen.tsx', 'utf8');
     expect(scr).toContain('if (!g.state) return null;');
     expect(scr).toContain("data.newCount ?? '—'");
+    /* F7 #509: błąd odczytu pomiarów ≠ „jeszcze nie ma pomiaru”; pusta lista błędów z notką; zniknięta zakładka → Źródła */
+    expect(live).toMatch(/setPerf\(pr\.error \? null : perfFromDb\(pr\.data\)\)/);
+    expect(scr).toContain('data-sys-perf-fail');
+    expect(scr).toContain('data-err-empty');
+    expect(scr).toMatch(/const cur: SysTab = tabs\.includes\(tab\) \? tab : 'sources';/);
+
   });
 });
