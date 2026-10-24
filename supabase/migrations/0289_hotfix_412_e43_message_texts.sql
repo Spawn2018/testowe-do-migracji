@@ -271,7 +271,7 @@ begin
     select regexp_matches(v_body, '\{\{([a-zA-Z]+)\}\}', 'g')
   loop
     v_tok := v_m[1];
-    if not (v_tok = any (v_tokens)) then
+    if (v_tok = any (v_tokens)) is not true then
       raise exception 'Niedozwolony znacznik {{%}}', v_tok using errcode = '22023';
     end if;
   end loop;
@@ -305,7 +305,7 @@ begin
       select regexp_matches(v_subj, '\{\{([a-zA-Z]+)\}\}', 'g')
     loop
       v_tok := v_m[1];
-      if not (v_tok = any (v_tokens)) then
+      if (v_tok = any (v_tokens)) is not true then
         raise exception 'Niedozwolony znacznik {{%}}', v_tok using errcode = '22023';
       end if;
     end loop;
