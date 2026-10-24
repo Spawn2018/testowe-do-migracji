@@ -48,7 +48,8 @@ export type ErrorGroup = {
   builds: number;
   firstAt: string;
   lastAt: string;
-  state: ErrorState;
+  /** `null` — baza nie ocenia stanu grupy (#422: bez zmyślonej „obserwacji”); ekran nie pokazuje znacznika. */
+  state: ErrorState | null;
   /** Przy „known”: przyczyna znana, np. „E22: pasek »Jest nowa wersja«”. */
   stateNote?: string | null;
   /** Szczegóły po kliknięciu: stos (fragment), strony, role — bez danych osobowych. */
@@ -62,7 +63,8 @@ export type AppErrors = {
   total7d: number;
   /** Od kiedy liczone „nowe” (ostatnie wdrożenie). */
   newSince: string | null;
-  newCount: number;
+  /** `null` — nie wiadomo (brak zapisu wdrożenia, #508); ekran: „nowe: brak danych”, nie „0”. */
+  newCount: number | null;
 };
 
 export type SecState = 'ok' | 'warn' | 'bad';
@@ -102,20 +104,72 @@ export function securityRows(nowIso: string): SecRow[] | null {
 }
 
 /**
- * E46 — co mierzymy i jakie są limity. Właściciel 22.10.2026, 01:13: na produkcji zakładka była pusta.
- * Dopóki baza nie zapisuje pomiarów (#422), produkcja pokazuje plan pomiarów z wynikiem „bez pomiaru”.
+ * E46 — co mierzymy i jakie są limity. Produkcja (#422/#508, 0283–0284): po każdym wdrożeniu Lighthouse mierzy
+ * ekran logowania (bez kont testowych) i stronę „Brak połączenia”; codziennie rano — najwolniejsze zapytanie do transportów i wiadomości.
+ * Nazwy i progi z planu (po polsku); wynik i stan z bazy (`perf_results_latest`). Brak wiersza w bazie = „—”, bez pomiaru.
  */
 export const PERF_PLAN: readonly Omit<PerfRow, 'result' | 'ok'>[] = [
-  { id: 'p1', what: 'Kokpit · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
-  { id: 'p2', what: 'Mapa · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
-  { id: 'p3', what: 'Harmonogram w układzie pliku · komputer', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
-  { id: 'p4', what: 'Funkcje list w bazie', how: 'p95', limit: 'p95 ≤ 500 ms' },
+  { id: 'p1', what: 'Logowanie · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p2', what: 'Strona „Brak połączenia” · telefon', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p3', what: 'Logowanie · komputer', how: 'LCP · CLS · TBT', limit: 'LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms' },
+  { id: 'p4', what: 'Zapytania do transportów i wiadomości w bazie', how: 'najwolniejsze od ostatniego zerowania statystyk', limit: '≤ 500 ms' },
   { id: 'p5', what: 'Równoczesność', how: '20 sesji przez 10 min', limit: '0 błędów' },
 ];
 
 export function perfResults(nowIso: string): Perf | null {
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoPerf(nowIso);
-  return { at: null, rows: PERF_PLAN.map((r) => ({ ...r, result: '—', ok: null })) };
+  return perfFromDb(null);
+}
+
+type DbPerfRow = { id?: unknown; result?: unknown; ok?: unknown };
+
+/** Wynik `perf_results_latest()` → wiersze planu (nazwy z planu, wynik z bazy). `raw` null — sam plan. */
+export function perfFromDb(raw: unknown): Perf {
+  const obj = raw && typeof raw === 'object' ? (raw as { at?: unknown; rows?: unknown }) : null;
+  const rows = Array.isArray(obj?.rows) ? (obj!.rows as DbPerfRow[]) : [];
+  const byId = new Map(rows.filter((r) => typeof r?.id === 'string').map((r) => [r.id as string, r]));
+  const at = typeof obj?.at === 'string' ? obj.at : null;
+  return {
+    at,
+    rows: PERF_PLAN.map((p) => {
+      const r = byId.get(p.id);
+      const result = typeof r?.result === 'string' && r.result.trim() && r.result !== 'brak pomiaru' ? r.result : '—';
+      const ok = result === '—' ? null : typeof r?.ok === 'boolean' ? r.ok : null;
+      return { ...p, result, ok };
+    }),
+  };
+}
+
+type DbErrGroup = {
+  id?: unknown; message?: unknown; where?: unknown; people?: unknown; count?: unknown; builds?: unknown;
+  firstAt?: unknown; lastAt?: unknown; stack?: unknown;
+};
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+
+/** Wynik `app_errors_recent()` (tylko Administrator HHL) → `AppErrors`; zły kształt → `null` (ekran bez zakładki). */
+export function appErrorsFromDb(raw: unknown): AppErrors | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as { groups?: unknown; total7d?: unknown; newSince?: unknown; newCount?: unknown };
+  if (!Array.isArray(o.groups)) return null;
+  const groups: ErrorGroup[] = (o.groups as DbErrGroup[]).filter((g) => g && typeof g === 'object').map((g, i) => ({
+    id: str(g.id) || `g${i}`,
+    message: str(g.message) || '—',
+    where: str(g.where) || '—',
+    people: num(g.people),
+    count: num(g.count),
+    builds: num(g.builds),
+    firstAt: str(g.firstAt),
+    lastAt: str(g.lastAt),
+    state: null,
+    stack: typeof g.stack === 'string' && g.stack ? g.stack : null,
+  }));
+  return {
+    groups,
+    total7d: num(o.total7d),
+    newSince: typeof o.newSince === 'string' ? o.newSince : null,
+    newCount: typeof o.newCount === 'number' && Number.isFinite(o.newCount) ? o.newCount : null,
+  };
 }
 
 /** E23 pkt 3: progi „Nie działa” (zmienia Administrator HHL). */
