@@ -550,5 +550,34 @@ err "#412: HHL nie wstawi wiersza bezpośrednio" $HHL \
 # Przywróć seed migracji (adresy działowe) po testach @test.
 run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
 
+echo; echo "[#412] E40 paczka tygodnia — dziennik (0286)"
+val "#412p: HHL czyta config (adresy)" $HHL \
+  "select (accounting_pack_config()->'addresses'->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
+val "#412p: HHL_OPS czyta config" $OPS412 \
+  "select (accounting_pack_config()->'addresses'->'KSH'->>0)" "faktury@ksh.pl"
+err "#412p: KSH nie czyta config" $KSH "select accounting_pack_config()" "tylko HHL|42501"
+err "#412p: SCX nie czyta config" $SCX "select accounting_pack_config()" "tylko HHL|42501"
+val "#412p: HHL_ADMIN zapisuje wysyłkę KSH" $HHL \
+  "select (accounting_pack_send('KSH','2026-W41', array['FV_test.pdf'])->>'status')" "WYSLANO" commit
+val "#412p: config.sent po wysyłce" $HHL \
+  "select (accounting_pack_config()->'sent'->'2026-W41:KSH'->>'status')" "WYSLANO"
+val "#412p: audit ACCOUNTING_PACK_SEND" $HHL \
+  "select count(*) from audit_log where action='ACCOUNTING_PACK_SEND' and new_value->>'week'='2026-W41'" 1
+val "#412p: HHL_OPS zapisuje wysyłkę HHL" $OPS412 \
+  "select (accounting_pack_send('HHL','2026-W41')->>'to')::text" 1 commit
+err "#412p: KSH nie wyśle" $KSH "select accounting_pack_send('KSH','2026-W41')" "tylko HHL|42501"
+err "#412p: SCX nie wyśle" $SCX "select accounting_pack_send('HHL','2026-W41')" "tylko HHL|42501"
+err "#412p: zły tydzień" $HHL "select accounting_pack_send('KSH','2026W41')" "Tydzień ISO|22023"
+run $HHL "select accounting_addresses_set('HHL', '{}'::text[])" commit >/dev/null
+err "#412p: brak adresu blokuje" $HHL "select accounting_pack_send('HHL','2026-W42')" "Brak adresu|P0002"
+run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
+val "#412p: KSH SELECT pack_sends = 0" $KSH "select count(*) from accounting_pack_sends" 0
+val "#412p: SCX SELECT pack_sends = 0" $SCX "select count(*) from accounting_pack_sends" 0
+chk6 "#412p: anon bez SELECT/INSERT pack_sends" "$(sys "select has_table_privilege('anon','accounting_pack_sends','select')::text||has_table_privilege('anon','accounting_pack_sends','insert')::text||has_table_privilege('authenticated','accounting_pack_sends','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412p: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into accounting_pack_sends (week_key, pack_key, to_count, emails, status, by_user_id, by_name)
+     values ('2026-W99','KSH',1,'{a@test.pl}','WYSLANO','$HHL','x')" \
+  "permission denied|42501"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

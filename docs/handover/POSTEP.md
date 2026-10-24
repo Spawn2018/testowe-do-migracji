@@ -4620,3 +4620,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
 - Scalanie: **#509** `ca0a94c2` (F7 „gotowe do scalenia” na `567255e`, CI unit/visual zielone) — wygląd Stan systemu Wydajność/Błędy (#422). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #510 — CI `db` security 209/211 (2 FAIL): `ksiegowosc@test` / `biuro@test` odrzucone przez regex (brak TLD). Poprawka: adresy testowe `@test.pl`; EXPECTED security **211** / TEST **207**. Push → CI; czekam F7.
+
+## 2026-10-24 06:10 — #510 SCALONE; #412 paczka tygodnia (0286)
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających.
+- Scalanie: **#510** `e187d2d6` (F7 „gotowe do scalenia” na `43c937c`, CI unit/db/visual zielone) — E40 terminy+adresy **0285**. #511 visual FAIL (telefon); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-paczka-tygodnia` — migracja **0286**: `accounting_pack_sends` + `accounting_pack_config` / `_send` (dziennik; bez Resend — L47/W6). security **227** (+16); nullguard **755** (+10). B5→**0287**. Front — koordynator.
