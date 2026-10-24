@@ -18,7 +18,7 @@ describe('E6: pasek „Uzupełnij telefon”', () => {
     expect(needsPhone({ phone: null, real_user_id: 'admin' })).toBe(false);
   });
   it('pasek pod paskiem górnym, „Uzupełnij” otwiera Moje konto', () => {
-    expect(read('src/App.tsx')).toMatch(/<PhoneMissingBar \/>/);
+    expect(read('src/TowerShell.tsx')).toMatch(/<PhoneMissingBar \/>/);
     expect(read('src/components/shell/PhoneMissingBar.tsx')).toMatch(/openOptionsScreen\('my-account'\)/);
   });
 });

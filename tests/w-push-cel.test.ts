@@ -24,7 +24,7 @@ describe('powiadomienia — cel i zamknięte sprawy', () => {
     expect(pushNidFromSearch('')).toBeNull();
   });
   it('aplikacja wpina otwieranie celu z powiadomienia', () => {
-    expect(readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')).toContain('usePushOpen();');
+    expect(readFileSync(new URL('../src/TowerShell.tsx', import.meta.url), 'utf8')).toContain('usePushOpen();');
   });
   it('dzwonek nie pokazuje „Decyzja zamknięta” ani „Ryzyko zamknięte”', () => {
     const items = [

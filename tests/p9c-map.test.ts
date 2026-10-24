@@ -139,7 +139,7 @@ describe('P9-c · teksty i podpięcie', () => {
     expect(map).toMatch(/setVis\(layers\.poi, false\)/);
   });
   it('strona Mapa poza pierwszym wczytaniem (budżet 400 kB)', () => {
-    expect(readFileSync('src/App.tsx', 'utf8')).toMatch(/import \{ MapViewLazy as MapView \} from '\.\/views\/mapLazy'/);
+    expect(readFileSync('src/TowerShell.tsx', 'utf8')).toMatch(/import \{ MapViewLazy as MapView \} from '\.\/views\/mapLazy'/);
   });
 });
 
