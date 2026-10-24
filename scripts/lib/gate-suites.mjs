@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
-  nullguard: 783, // #412m: +3 GUARD (margin get/set, push_devices_count); było 780 (#412f)
+  nullguard: 795, // #412m 0288: +15 (3 GUARD × asercje null-arg); było 780 (#412f)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

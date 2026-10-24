@@ -4662,3 +4662,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #516/#500/#499/#496/#492/#484/#412 w planie. Komentarz w #412/#516 po scaleniu 0287.
 - Scalanie: **#515** `f233eb03` (F7 gotowe, logo WebP); **#518** `e19ce5f0` (F7 gotowe, wygląd paczki); **#514** `dd238532` (F7 gotowe na `fd018536`, CI unit/db/visual) — E4b **0287**. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** gałąź `pakiet/hotfix-412-e16-e43-e11` — migracja **0288**: `margin_threshold` + get/set (start 4 %, null = wyłącz); `push_devices_count` (own/all). security **296** (+18); nullguard **783** (+3). B5→**0289**. E43 — osobna migracja. Front — koordynator.
+
+## 2026-10-24 09:05 — #519 wpisane; #520 db FAIL → nullguard 795
+
+- Skrzynka: **#519** (Spawn2018) — faktoring N2–N4 po #514; wpisane PLAN §4/§8 + `D-20261024-0900-01.md`. #516/#500/#499/#496/#492/#484/#412 w planie.
+- Scalanie: brak F7 „gotowe” na #520 (head `60afe774`); #521 wygląd faktoring bez F7; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #520 — CI `db` FAIL: nullguard oczekiwano 783, jest 795 OK. Poprawka: `EXPECTED_LOCAL.nullguard` → **795**. security **296**; nullguard **795**. E43 osobno. Czekam CI + F7.

@@ -869,8 +869,11 @@ Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_I
 ### #516 · Kopia: auto-zamykanie decyzji „nieudana” po OK (D-20261024-0755-01) — po #412 / #484 kolejce (nie przerywa)
 Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLVED (id przebiegu); ryzyko backup-stale; 3 otwarte z 23.10 cicho; test `backup.sh` ERROR→NEW, OK→RESOLVED; licznik `backup_runs.files`. Szczegóły: #516.
 
+### #519 · Faktoring drobne F7 r3 (N2–N4) (D-20261024-0900-01) — po #514, przed 28.10 (nie przerywa)
+Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/`paid_at`; `raise warning`/`app_errors` zamiast połykania; link → Finanse › Faktury. N1 bez zmian (e-mail/push HHL_ADMIN). Szczegóły: #519.
+
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
-Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13; #516 po #412 (nie przerywa).
+Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519 po #412 (nie przerywa).
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #412, #484, #492 (migracja **0289** po rebase; #412→**0285**–**0288** + E43)
 - Według D-20261015-0330-01 pkt 6:
@@ -1494,3 +1497,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 07:45 | #513+#512 SCALONE (`30ad76d9` / `8b337e17`, 0286); F7 #514 E4b → **0287**; B5→**0288** | pętla |
 | 24.10.2026 08:05 | #516 wpisane (auto-zamykanie decyzji kopii po OK); #514 db: OPLACONA przed akceptacją + SPORNA dispute_note + nullguard Brak konta | pętla |
 | 24.10.2026 08:55 | #515+#518+#514 SCALONE (logo / paczka wygląd / E4b 0287 `dd238532`); start #412 E16+E11 → **0288**; B5→**0289**; E43 osobno | pętla |
+| 24.10.2026 09:05 | #519 wpisane (faktoring N2–N4 po #514); #520 db FAIL: nullguard 795≠783 → poprawka licznika | pętla |
