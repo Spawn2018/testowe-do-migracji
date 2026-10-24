@@ -860,7 +860,7 @@ val "#484: KSH widzi swój loads" $KSH \
 val "#484: KSH nie widzi obcego transportu" $KSH \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FOREIGN',null,20,0)" 0
 val "#484: KSH bez numerów zleceń" $KSH \
-  "select ((new_value ? 'hhl_order_no') is false and (new_value ? 'carrier_order_no') is false)::text from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" t
+  "select ((new_value ? 'hhl_order_no') is false and (new_value ? 'carrier_order_no') is false)::text from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" true
 val "#484: KSH nie widzi load_cost" $KSH \
   "select count(*) from admin_audit_history(null,null,null,'load_cost','HIST484_OWN',null,20,0)" 0
 val "#484: SCX widzi swój loads" $SCX \

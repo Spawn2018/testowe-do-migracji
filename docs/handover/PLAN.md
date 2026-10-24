@@ -852,7 +852,7 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 2. ~~**0286** Paczka tygodnia — dziennik~~ — SCALONE (#512): `accounting_pack_sends`, config/send (ZLECONO + `_set_status`); bez Resend (L47/W6). Front — koordynator (#518 SCALONE).
 3. ~~**0287** E4b Faktoring~~ — SCALONE (#514 `dd238532`): oferta/wybór/wypłata. Front — koordynator (#521 SCALONE).
 4. ~~**0288** E16 próg marży (`margin_threshold_get`/`_set`) + E11 `push_devices_count`~~ — SCALONE (#520 `90341551`). Front — koordynator (#523 SCALONE `67e21530`).
-5. ~~**0289** E43 treści wiadomości~~ — SCALONE (#522 `ba77700b`): `message_texts` + list/set/reset; SMS_WORST/GSM/znaczniki. Front `p8Source` — koordynator (#524); odczyt przy wysyłce — P8. Drobne F7 (DEL/U+2028, button w temacie, klocki w teście) — po scaleniu, jak #519.
+5. ~~**0289** E43 treści wiadomości~~ — SCALONE (#522 `ba77700b`): `message_texts` + list/set/reset; SMS_WORST/GSM/znaczniki. Front `p8Source` — koordynator (#524 SCALONE `45b67407`); odczyt przy wysyłce — P8. Drobne F7 → **#525**.
 
 ### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — W TOKU (migracja **0290**)
 Po #412, przed #492 / B5. Rozszerzenie `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — wpisy swoich transportów; KSH bez numerów zleceń i cen SCX; SCX bez cen klienta/marży; bez zmiany `audit_read`. Testy `authenticated` (security + hist11). Front — koordynator (`wyglad/*`). Szczegóły: zgłoszenie #484.
@@ -872,8 +872,11 @@ Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLV
 ### #519 · Faktoring drobne F7 r3 (N2–N4) (D-20261024-0900-01) — po #514, przed 28.10 (nie przerywa)
 Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/`paid_at`; `raise warning`/`app_errors` zamiast połykania; link → Finanse › Faktury. N1 bez zmian (e-mail/push HHL_ADMIN). Szczegóły: #519.
 
+### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — po #522/#524, przed 28.10 (nie przerywa)
+DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
+
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
-Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519 po #412 (nie przerywa).
+Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519/#525 po #412 (nie przerywa).
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #484, #492 (migracja **0291** po rebase; #484→**0290**; #412→**0285**–**0289** SCALONE)
 - Według D-20261015-0330-01 pkt 6:
@@ -1501,3 +1504,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 09:30 | #520 CI zielone (46327a16); start #412 E43 → **0289**; B5→**0290** | pętla |
 | 24.10.2026 09:55 | #521+#520 SCALONE (wygląd faktoring / E16+E11 0288 `90341551`); #522 E43 CI zielone — czekam F7 | pętla |
 | 24.10.2026 10:30 | #523 SCALONE (wygląd marża+push `67e21530`); #522 db FAIL: test SMS spoza GSM `U&` → `chr(1103)` | pętla |
+| 24.10.2026 11:10 | #524 SCALONE (`45b67407`); #525 wpisane (drobne E43 F7); #484 db FAIL: security `true`≠`t`, nullguard Brak sesji | pętla |

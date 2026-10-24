@@ -4698,3 +4698,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #524 wygląd E43 bez F7 — nie scalane.
 - Scalanie: **#522** `ba77700b` (F7 „gotowe do scalenia” po `dc774b82`, CI unit/db/visual) — E43 **0289**. Drobne F7 (DEL/U+2028, button w temacie) — po scaleniu (jak #519). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#484** gałąź `pakiet/hotfix-484-audit-history` — migracja **0290**: rozszerzenie `admin_audit_history` (HHL_OPS pełne; KSH/SCX zakres transportów + redakcja E41/cen). security **338** (+9); hist11 **13** (+2). B5→**0291**. Front — koordynator.
+
+## 2026-10-24 11:10 — #524 SCALONE; #525 wpisane; #484 db FAIL → poprawka testów
+
+- Skrzynka: **#525** (Spawn2018) — drobne E43 F7 r2 po #522; wpisane PLAN §4/§8, dopisek `D-20261024-1055-01.md`. #519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: **#524** `45b67407` (F7 „gotowe” na `1a046c74`, CI unit/visual) — wygląd treści wiadomości. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#484** PR #526 — CI `db` FAIL: security „KSH bez numerów” `true`≠`t`; nullguard `admin_audit_history` oczekuje „Tylko administrator HHL”, funkcja → „Brak sesji”. Poprawka: expected `true` + wzorzec `Brak sesji|Brak dostępu`. Push → CI; czekam F7.
