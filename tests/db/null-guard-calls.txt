@@ -132,6 +132,11 @@ accounting_addresses_set | GUARD | select accounting_addresses_set('HHL',array['
 accounting_pack_config | GUARD | select accounting_pack_config() | tylko HHL
 accounting_pack_send | GUARD | select accounting_pack_send('KSH','2026-W41') | tylko HHL
 # accounting_pack_send_set_status — tylko service_role (bez GUARD authenticated)
+factoring_offer_get | GUARD | select factoring_offer_get() | tylko HHL|SCX
+factoring_offer_set | GUARD | select factoring_offer_set(true,1,48) | Administrator HHL
+invoice_factoring_set | GUARD | select invoice_factoring_set('00000000-0000-0000-0000-000000000001',true) | przewoźnik|Nieznana faktura
+factoring_tasks | GUARD | select factoring_tasks() | tylko HHL
+factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-0000-000000000001') | wyłącznie HHL|Nieznana faktura
 admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL

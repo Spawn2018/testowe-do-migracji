@@ -4638,3 +4638,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających.
 - Scalanie: **#511** `f82f579d` (F7 „gotowe do scalenia” na `07c85ad`, CI unit/visual zielone) — logowanie bez powłoki. #512 bez F7 „gotowe”; #514 F7 **do poprawy** (czekam po #512); #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #512 — CI `db` security 226/235: seed `…pk01`/`…cm01` = invalid uuid → insert dokumentów padł cicho, `week_key` nie ustawiony, `accounting_pack_send` → Brak faktury. Poprawka: UUID hex `…a401`/`…a402`, ścieżki `test/pack-412-*.pdf`, bez `>/dev/null`. Push → CI.
+
+## 2026-10-24 07:45 — #513+#512 SCALONE; F7 #514 E4b (0287)
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
+- Scalanie: **#513** `30ad76d9` (F7 „gotowe”, wygląd terminy/adresy); **#512** `8b337e17` (F7 „gotowe” na `96fe6a1a`, CI unit/db/visual) — paczka **0286**. #382 CONFLICT; #383 bez F7; #515 bez F7.
+- Bieżąca: **#412** PR #514 — rebase na main (0286); F7: `factoring_mark_paid` → OPLACONA; przeliczenie przy edycji kwot; asercja `true` nie `t`; testy kolejności / oferty / SPORNA; B5→**0288**. security **260** (+25); nullguard **780**.

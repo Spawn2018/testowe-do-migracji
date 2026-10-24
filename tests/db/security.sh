@@ -610,5 +610,98 @@ err "#412p: HHL nie wstawi wiersza bezpośrednio" $HHL \
      values ('2026-W41','KSH',1,'{a@test.pl}','ZLECONO','$HHL','x')" \
   "permission denied|42501"
 
+echo; echo "[#412] E4b faktoring — oferta + wybór + wypłata (0287)"
+val "#412f: HHL_ADMIN czyta ofertę 1%/48h" $HHL \
+  "select (factoring_offer_get()->>'feePct')||'/'||(factoring_offer_get()->>'hours')" "1.00/48"
+val "#412f: HHL_OPS czyta ofertę" $OPS412 \
+  "select (factoring_offer_get()->>'version')::text" 1
+val "#412f: SCX czyta ofertę (wybór przy fakturze)" $SCX \
+  "select (factoring_offer_get()->>'from')" "2026-10-07"
+err "#412f: KSH nie czyta oferty" $KSH "select factoring_offer_get()" "tylko HHL|SCX|42501"
+val "#412f: HHL_ADMIN ustawia prowizję 1,5%" $HHL \
+  "select (factoring_offer_set(true, 1.5, 48)->>'feePct')" "1.50" commit
+val "#412f: audit FACTORING_OFFER_SET" $HHL \
+  "select count(*) from audit_log where action='FACTORING_OFFER_SET' and new_value->>'feePct'='1.50'" 1
+err "#412f: HHL_OPS nie zmieni oferty" $OPS412 \
+  "select factoring_offer_set(true, 2, 48)" "Administrator HHL|42501"
+err "#412f: KSH nie zmieni oferty" $KSH \
+  "select factoring_offer_set(true, 2, 48)" "Administrator HHL|42501"
+err "#412f: prowizja poza zakresem" $HHL \
+  "select factoring_offer_set(true, 0, 48)" "0,01–20|22023"
+run $HHL "select factoring_offer_set(true, 1, 48)" commit >/dev/null
+sys "update invoices set factoring_selected=false, factoring_fee_pct=null, factoring_fee_amount=null,
+       factoring_net_payout=null, factoring_hours=null, factoring_offer_version=null,
+       factoring_accepted_at=null, factoring_due_at=null, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null,
+       verification_status='DO_WERYFIKACJI'
+     where id='$INVK'" >/dev/null
+val "#412f: SCX wybiera faktoring na KOSZT" $SCX \
+  "select invoice_factoring_set('$INVK', true); select factoring_fee_amount::text from invoices where id='$INVK'" "100.95" commit
+val "#412f: snapshot wypłaty (brutto−prowizja)" $SCX \
+  "select factoring_net_payout::text from invoices where id='$INVK'" "9994.08"
+err "#412f: KSH nie wybierze faktoringu" $KSH \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+err "#412f: HHL nie wybierze faktoringu na KOSZT SCX" $HHL \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+val "#412f: akceptacja HHL startuje 48 h" $HHL \
+  "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INVK'; select (factoring_due_at is not null)::text from invoices where id='$INVK'" true commit
+val "#412f: HHL widzi zadanie wypłaty" $HHL \
+  "select jsonb_array_length(factoring_tasks())" 1
+val "#412f: HHL_OPS widzi zadania" $OPS412 \
+  "select (factoring_tasks()->0->>'number')" "SCX/9/2026"
+err "#412f: KSH nie czyta zadań" $KSH "select factoring_tasks()" "tylko HHL|42501"
+err "#412f: SCX nie czyta zadań" $SCX "select factoring_tasks()" "tylko HHL|42501"
+val "#412f: HHL oznacza wypłatę" $HHL \
+  "select factoring_mark_paid('$INVK'); select payment_status||'|'||(factoring_paid_at is not null)::text from invoices where id='$INVK'" "OPLACONA|true" commit
+val "#412f: po wypłacie lista pusta" $HHL "select jsonb_array_length(factoring_tasks())" 0
+val "#412f: audit FACTORING_MARK_PAID" $HHL \
+  "select count(*) from audit_log where action='FACTORING_MARK_PAID' and entity_id='$INVK'" 1
+err "#412f: ponowna wypłata odmowa" $HHL "select factoring_mark_paid('$INVK')" "opłacona|P0001"
+err "#412f: SCX nie oznaczy wypłaty" $SCX "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
+err "#412f: KSH nie oznaczy wypłaty" $KSH "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
+# Kolejność odwrotna: najpierw mark_invoice_paid, potem factoring.
+sys "update invoices set factoring_selected=true, factoring_fee_pct=1, factoring_fee_amount=100.95,
+       factoring_net_payout=9994.08, factoring_hours=48, factoring_offer_version=1,
+       factoring_accepted_at=now(), factoring_due_at=now()+interval '48 hours', factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, verification_status='ZAAKCEPTOWANA'
+     where id='$INVK'" >/dev/null
+run $HHL "select mark_invoice_paid('$INVK', current_date)" commit >/dev/null
+val "#412f: po mark_invoice_paid brak zadań" $HHL \
+  "select jsonb_array_length(factoring_tasks())" 0
+err "#412f: factoring_mark_paid po OPLACONA odmowa" $HHL \
+  "select factoring_mark_paid('$INVK')" "opłacona|P0001"
+err "#412f: invoice_factoring_set na opłaconej odmowa" $SCX \
+  "select invoice_factoring_set('$INVK', false)" "opłacona|P0001"
+# Przeliczenie przy edycji kwot (zachowany %).
+sys "update invoices set factoring_selected=true, factoring_fee_pct=1, factoring_fee_amount=100.95,
+       factoring_net_payout=9994.08, factoring_hours=48, factoring_offer_version=1,
+       factoring_accepted_at=null, factoring_due_at=null, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI',
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+run $SCX "select invoice_factoring_set('$INVK', true)" commit >/dev/null
+sys "update invoices set net_total=24600, gross_total=24600, currency='EUR' where id='$INVK'" >/dev/null
+val "#412f: po edycji kwot przeliczona prowizja" $SCX \
+  "select factoring_fee_amount::text||'/'||factoring_net_payout::text from invoices where id='$INVK'" "246.00/24354.00"
+run $HHL "select factoring_offer_set(false, 1, 48)" commit >/dev/null
+err "#412f: set przy ofercie wyłączonej" $SCX \
+  "select invoice_factoring_set('$INVK', true)" "wyłączony|wyłączona|oferta|P0001"
+val "#412f: HHL widzi ofertę enabled=false" $HHL \
+  "select (factoring_offer_get()->>'enabled')" "false"
+run $HHL "select factoring_offer_set(true, 1, 48)" commit >/dev/null
+sys "update invoices set verification_status='SPORNA', factoring_selected=false where id='$INVK'" >/dev/null
+err "#412f: SPORNA bez faktoringu" $SCX \
+  "select invoice_factoring_set('$INVK', true)" "sporze|SPORNA|22023"
+sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_selected=false,
+       factoring_fee_pct=null, factoring_fee_amount=null, factoring_net_payout=null,
+       factoring_hours=null, factoring_offer_version=null, factoring_accepted_at=null,
+       factoring_due_at=null, factoring_paid_at=null, payment_status='NIEOPLACONA', paid_at=null,
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+chk6 "#412f: anon bez SELECT/INSERT factoring_offers" "$(sys "select has_table_privilege('anon','factoring_offers','select')::text||has_table_privilege('anon','factoring_offers','insert')::text||has_table_privilege('authenticated','factoring_offers','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412f: HHL nie wstawi oferty bezpośrednio" $HHL \
+  "insert into factoring_offers (version, enabled, fee_pct, hours, valid_from) values (99, true, 1, 48, '2099-01-01')" \
+  "permission denied|42501"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
