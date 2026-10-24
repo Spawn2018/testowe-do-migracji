@@ -4734,3 +4734,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie (wpisane). #425/#413 `pilne` otwarte (SCALONE) — nie przerywają.
 - Scalanie: brak F7 „gotowe”. CI na `8d177d46` zielone (unit/db/visual); F7 r4 **do poprawy** (1 bloker).
 - Bieżąca: **#484** PR #526 — F7 r4: wykrywanie zmiany `IS DISTINCT FROM` (także NULL); zakres `coalesce(OLD,NEW)`; redakcja RPC dla CARRIER przy z/do NULL; `actor_party` = `CARRIER` (nie SCX); testy SCX→NULL / NULL→B (preset + live trigger). security **377** (+10). Push → CI; ponowne F7 (tylko pkt 1).
+
+## 2026-10-24 13:40 — #526 SCALONE (0290); start #492 (0291); #528 wpisane
+
+- Skrzynka: **#528** (Spawn2018) — drobne F7 r5 po #526 (N8 zerowanie pól przewoźnika, INSERT≠swap, wydajność, invoice role); wpisane PLAN §4/§8, dopisek `D-20261024-1335-01.md`. #525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
+- Scalanie: **#526** `7607994f` (F7 „gotowe do scalenia” na `62f9980b`, CI unit/db/visual) — Historia **0290**. Issue #484 zamknięte. Front #527 — po odbiorze 0290 na produkcji (koordynator). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** gałąź `pakiet/hotfix-492-loads-updated-at` — migracja **0291**: `trg_loads_screen_updated_at` (whitelist kolumn ekranu; ETA/RIO-stan/`tracking_opened_at` bez bumpa). security **382** (+5). B5→**0292**.
