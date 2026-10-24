@@ -4656,3 +4656,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #516/#500/#499/#496/#492/#484/#412 w planie. #515/#518 wygląd bez F7 „gotowe”.
 - Scalanie: brak (F7 #514 „nadal do poprawy” na `77be15f1`; CI unit/db/visual zielone na tym SHA — potem poprawki).
 - Bieżąca: **#412** PR #514 — F7 r3: `matrix_notify('MONEY')` + `p_load_id` z `invoice_lines`; `invoice_id`; `unmark_invoice_paid` czyści `factoring_paid_at`; `factoring_overdue_notify` + cron; testy CAR2 / rezygnacja / przed akceptacją / po akceptacji / IN_APP / OVERDUE. security **278** (+10); nullguard **780**.
+
+## 2026-10-24 08:55 — #515+#518+#514 SCALONE; start #412 E16+E11 (0288)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #516/#500/#499/#496/#492/#484/#412 w planie. Komentarz w #412/#516 po scaleniu 0287.
+- Scalanie: **#515** `f233eb03` (F7 gotowe, logo WebP); **#518** `e19ce5f0` (F7 gotowe, wygląd paczki); **#514** `dd238532` (F7 gotowe na `fd018536`, CI unit/db/visual) — E4b **0287**. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-e16-e43-e11` — migracja **0288**: `margin_threshold` + get/set (start 4 %, null = wyłącz); `push_devices_count` (own/all). security **296** (+18); nullguard **783** (+3). B5→**0289**. E43 — osobna migracja. Front — koordynator.

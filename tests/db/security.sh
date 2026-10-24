@@ -743,5 +743,39 @@ err "#412f: HHL nie wstawi oferty bezpośrednio" $HHL \
   "insert into factoring_offers (version, enabled, fee_pct, hours, valid_from) values (99, true, 1, 48, '2099-01-01')" \
   "permission denied|42501"
 
+echo; echo "[#412] E16 próg marży + E11 urządzenia push (0288)"
+val "#412m: HHL_ADMIN czyta próg 4%" $HHL \
+  "select (margin_threshold_get()->>'pct')" "4.0"
+val "#412m: HHL_OPS czyta próg" $OPS412 \
+  "select (margin_threshold_get()->>'pct')" "4.0"
+err "#412m: KSH nie czyta progu" $KSH "select margin_threshold_get()" "tylko HHL|42501"
+err "#412m: SCX nie czyta progu" $SCX "select margin_threshold_get()" "tylko HHL|42501"
+val "#412m: HHL_ADMIN ustawia 5,5%" $HHL \
+  "select (margin_threshold_set(5.55)->>'pct')" "5.6" commit
+val "#412m: audit MARGIN_THRESHOLD_SET" $HHL \
+  "select count(*) from audit_log where action='MARGIN_THRESHOLD_SET' and new_value->>'pct'='5.6'" 1
+err "#412m: HHL_OPS nie ustawi progu" $OPS412 \
+  "select margin_threshold_set(6)" "Administrator HHL|42501"
+err "#412m: KSH nie ustawi progu" $KSH \
+  "select margin_threshold_set(6)" "Administrator HHL|42501"
+err "#412m: próg poza 0–100" $HHL \
+  "select margin_threshold_set(101)" "0–100|22023"
+val "#412m: HHL_ADMIN wyłącza próg (null)" $HHL \
+  "select (margin_threshold_set(null)->'pct')::text" "null" commit
+val "#412m: po wyłączeniu pct null" $HHL \
+  "select (margin_threshold_get()->'pct')::text" "null"
+val "#412m: przywróć 4%" $HHL \
+  "select (margin_threshold_set(4)->>'pct')" "4.0" commit
+chk6 "#412m: anon bez SELECT/INSERT margin_threshold" "$(sys "select has_table_privilege('anon','margin_threshold','select')::text||has_table_privilege('anon','margin_threshold','insert')::text||has_table_privilege('authenticated','margin_threshold','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412m: HHL nie wstawi progu bezpośrednio" $HHL \
+  "insert into margin_threshold (id, pct) values (true, 9) on conflict (id) do update set pct=9" \
+  "permission denied|42501"
+val "#412psh: HHL_ADMIN czyta liczbę urządzeń" $HHL \
+  "select (push_devices_count()->>'own')||'/'||(push_devices_count()->>'all')" "0/0"
+val "#412psh: HHL_OPS czyta liczbę urządzeń" $OPS412 \
+  "select (push_devices_count()->>'all')::text" 0
+err "#412psh: KSH nie czyta liczby urządzeń" $KSH "select push_devices_count()" "tylko HHL|42501"
+err "#412psh: SCX nie czyta liczby urządzeń" $SCX "select push_devices_count()" "tylko HHL|42501"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

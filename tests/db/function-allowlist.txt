@@ -62,6 +62,9 @@ authenticated factoring_offer_get
 authenticated factoring_offer_set
 authenticated factoring_tasks
 authenticated invoice_factoring_set
+authenticated margin_threshold_get
+authenticated margin_threshold_set
+authenticated push_devices_count
 authenticated admin_revoke_invite
 authenticated admin_set_eta_calibration_frozen
 authenticated admin_set_external_messaging

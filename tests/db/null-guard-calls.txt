@@ -137,6 +137,9 @@ factoring_offer_set | GUARD | select factoring_offer_set(true,1,48) | Administra
 invoice_factoring_set | GUARD | select invoice_factoring_set('00000000-0000-0000-0000-000000000001',true) | przewoźnik|Brak konta
 factoring_tasks | GUARD | select factoring_tasks() | tylko HHL
 factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-0000-000000000001') | wyłącznie HHL|Brak konta
+margin_threshold_get | GUARD | select margin_threshold_get() | tylko HHL
+margin_threshold_set | GUARD | select margin_threshold_set(4) | Administrator HHL
+push_devices_count | GUARD | select push_devices_count() | tylko HHL
 admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
