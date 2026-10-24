@@ -21,7 +21,7 @@ import {
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
-import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
+import { marginFromDb, setMarginFromServer, setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
 import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
@@ -141,6 +141,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
+    /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501), równolegle z resztą */
+    const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       fetchAllEvents(),
@@ -191,6 +193,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
+    }
+    {
+      const mq = await marginP;
+      if (!mq) setMarginFromServer(undefined);
+      /* chwilowy błąd odczytu przy odświeżeniu — zostaje ostatnia wartość (sekcja w Opcjach nie znika) */
+      else if (!mq.error) setMarginFromServer(marginFromDb(mq.data));
     }
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
     const okBy = new Map<string, number>();

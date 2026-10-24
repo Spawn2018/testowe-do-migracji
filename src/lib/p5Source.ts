@@ -11,9 +11,26 @@ import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements
 import type { FeeRules, FeeSuggestion } from './p5Fees';
 import { fuelPublicationsIn } from './fuelPublSource';
 
-/** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
+/** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona.
+ *  Produkcja (#412, 0288): `margin_threshold_get` przy wczytaniu danych — tylko HHL; KSH i SCX zawsze null. */
+let prodMargin: number | null | undefined;
+export function setMarginFromServer(pct: number | null | undefined): void {
+  prodMargin = pct;
+}
+/** undefined = nie wczytano (np. inna rola) — Opcje bez pola; null = flaga wyłączona. */
+export function prodMarginState(): number | null | undefined {
+  return prodMargin;
+}
 export function marginThresholdOf(): number | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoMarginThreshold() : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoMarginThreshold() : prodMargin ?? null;
+}
+/** Wynik `margin_threshold_get()` / `_set` → % albo null (wyłączony); zły kształt → undefined (bez zmyślonej wartości). */
+export function marginFromDb(raw: unknown): number | null | undefined {
+  if (!raw || typeof raw !== 'object' || !('pct' in raw)) return undefined;
+  const v = (raw as { pct: unknown }).pct;
+  if (v == null) return null;
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : undefined;
 }
 
 export function financeOf(loads: Load[], side: FinSide): FinSummary {
