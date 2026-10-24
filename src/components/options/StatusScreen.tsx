@@ -19,7 +19,7 @@ import { kshSyncOf, kshSyncSourceRow } from '../../lib/kshSyncView';
 import { useTowerStore } from '../../store/useTowerStore';
 import {
   appErrors, checkSource, otherJobs, perfResults, saveSourceThreshold, securityRows, sourceHealth, sourceThresholds, sysActionsReady,
-  type AppErrors, type CheckResult, type ErrorGroup, type OtherJob, type SourceRow, type SourceState, type SourceThreshold,
+  type AppErrors, type CheckResult, type ErrorGroup, type OtherJob, type Perf, type SourceRow, type SourceState, type SourceThreshold,
 } from '../../lib/sysSource';
 
 type SysTab = 'sources' | 'errors' | 'security' | 'perf';
@@ -263,6 +263,8 @@ function Thresholds({ locale, admin }: { locale: Locale; admin: boolean }) {
 /* ── Błędy aplikacji (E47) ───────────────────────────────────────────────────────────── */
 
 function ErrorStateTag({ locale, g }: { locale: Locale; g: ErrorGroup }) {
+  /* #422: produkcja nie ocenia stanu grupy — bez znacznika zamiast zmyślonej „obserwacji” */
+  if (!g.state) return null;
   const txt = g.state === 'known' ? (g.stateNote ?? '') : sy(locale, `sys_err_st_${g.state}`);
   return <span className={`mtag sys-etag is-${g.state}`} data-err-state={g.state}>{txt.charAt(0).toLocaleUpperCase('pl') + txt.slice(1)}</span>;
 }
@@ -283,7 +285,8 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
     <div className="sys-kpis">
       <div className="sys-kpi"><b>{data.groups.length}</b><span>{sy(locale, 'sys_err_kinds')}</span></div>
       <div className="sys-kpi"><b>{data.total7d}</b><span>{sy(locale, 'sys_err_count')}</span></div>
-      <div className="sys-kpi"><b>{data.newCount}</b><span>{data.newSince ? syp(locale, 'sys_err_new', { t: dt(data.newSince) }) : sy(locale, 'sys_err_none_new')}</span></div>
+      {/* #508: newCount null = nie wiadomo (brak zapisu wdrożenia) — „—”, nie „0” */}
+      <div className="sys-kpi" data-err-new={data.newCount == null ? 'unknown' : data.newCount}><b>{data.newCount ?? '—'}</b><span>{data.newCount == null ? sy(locale, 'sys_err_new_unknown') : data.newSince ? syp(locale, 'sys_err_new', { t: dt(data.newSince) }) : sy(locale, 'sys_err_none_new')}</span></div>
       <div className="sys-kpi"><b>{pages.length}</b><span>{syp(locale, 'sys_err_pages', { list: pages.join(', ') })}</span></div>
     </div>
   );
@@ -291,7 +294,7 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
     <section className="sys-sec" data-sys-errors>
       <div className="sys-hd">
         <b>{sy(locale, 'sys_tab_errors')}</b>
-        <span className="sys-sum">{phone ? syp(locale, 'sys_err_new_short', { n: data.newCount }) : sy(locale, 'sys_err_sub')}</span>
+        <span className="sys-sum">{phone ? (data.newCount == null ? sy(locale, 'sys_err_new_unknown') : syp(locale, 'sys_err_new_short', { n: data.newCount })) : sy(locale, 'sys_err_sub')}</span>
       </div>
       {phone ? (
         <ul className="sys-mlist">
@@ -311,7 +314,7 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
       ) : (
         <>
           {tiles}
-          <div className="sys-tablewrap">
+          {data.groups.length ? <div className="sys-tablewrap">
             <table className="sys-tbl sys-err">
               <thead>
                 <tr>
@@ -345,9 +348,10 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
                 ))}
               </tbody>
             </table>
-          </div>
+          </div> : null}
         </>
       )}
+      {data.groups.length ? null : <p className="sys-note" data-err-empty>{sy(locale, 'sys_err_empty')}</p>}
       <p className="sys-rule" data-err-rule>{sy(locale, 'sys_err_rule')}</p>
     </section>
   );
@@ -396,8 +400,10 @@ function Security({ locale, nowIso }: { locale: Locale; nowIso: string }) {
   );
 }
 
-function PerfView({ locale, nowIso }: { locale: Locale; nowIso: string }) {
-  const p = perfResults(nowIso);
+function PerfView({ locale, nowIso, data }: { locale: Locale; nowIso: string; data?: Perf | null }) {
+  /* `data === null` (produkcja): odczyt pomiarów nie powiódł się — bez notki „jeszcze nie ma pomiaru” */
+  if (data === null) return <p className="sys-note" data-sys-perf-fail>{sy(locale, 'sys_perf_read_fail')}</p>;
+  const p = data ?? perfResults(nowIso);
   if (!p) return <p className="sys-note">{sy(locale, 'sys_none')}</p>;
   const state = (ok: boolean | null) => (ok == null ? sy(locale, 'sys_perf_none') : ok ? sy(locale, 'sys_perf_ok') : sy(locale, 'sys_perf_bad'));
   return (
@@ -445,7 +451,8 @@ export function KshSyncSourceBlock({ locale, nowIso, admin }: { locale: Locale; 
  */
 export function StatusScreen({ locale, nowIso, admin, mark, live }: {
   locale: Locale; nowIso: string; admin: boolean; mark?: ReactNode;
-  live?: { rows: SourceRow[]; jobs: OtherJob[] };
+  /* #422: `perf` i `errors` z bazy (`perf_results_latest`, `app_errors_recent` — tylko Administrator HHL; `null` = bez zakładki) */
+  live?: { rows: SourceRow[]; jobs: OtherJob[]; perf?: Perf | null; errors?: AppErrors | null };
 }) {
   const [tab, setTab] = useState<SysTab>('sources');
   const phone = useIsPhone();
@@ -453,9 +460,11 @@ export function StatusScreen({ locale, nowIso, admin, mark, live }: {
   const kshSync = useTowerStore((s) => kshSyncOf(s));
   const rows0 = live ? live.rows : sourceHealth(nowIso);
   const rows = rows0 && kshSync ? [kshSyncSourceRow(kshSync, nowIso), ...rows0] : rows0;
-  const errs = appErrors(nowIso);
+  const errs = live ? (live.errors ?? null) : appErrors(nowIso);
   if (!rows) return null;
   const tabs: SysTab[] = ['sources', ...(errs ? ['errors' as const] : []), ...(admin && securityRows(nowIso) ? ['security' as const] : []), 'perf'];
+  /* F7 #509: zakładka zniknęła po odświeżeniu (np. błąd odczytu „Błędów aplikacji”) — wróć do „Źródeł danych” */
+  const cur: SysTab = tabs.includes(tab) ? tab : 'sources';
   /* telefon 390: krótsze nazwy, żeby cztery zakładki zmieściły się w jednym wierszu */
   const label = (k: SysTab) => sy(locale, k === 'sources' ? (phone ? 'sys_tab_sources_short' : 'sys_tab_sources')
     : k === 'errors' ? (phone ? 'sys_tab_errors_short' : 'sys_tab_errors') : k === 'security' ? 'sys_tab_security' : 'sys_tab_perf');
@@ -464,13 +473,13 @@ export function StatusScreen({ locale, nowIso, admin, mark, live }: {
       {mark ? <div className="ox-count-line"><span />{mark}</div> : null}
       <div className="sys-tabs" role="tablist" aria-label={sy(locale, 'sys_tabs')}>
         {tabs.map((k) => (
-          <button key={k} type="button" role="tab" aria-selected={tab === k} data-sys-tab={k} onClick={() => setTab(k)}>{label(k)}</button>
+          <button key={k} type="button" role="tab" aria-selected={cur === k} data-sys-tab={k} onClick={() => setTab(k)}>{label(k)}</button>
         ))}
       </div>
-      {tab === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} jobs={live?.jobs} /> : null}
-      {tab === 'errors' && errs ? <Errors locale={locale} data={errs} nowIso={nowIso} /> : null}
-      {tab === 'security' && admin ? <Security locale={locale} nowIso={nowIso} /> : null}
-      {tab === 'perf' ? <PerfView locale={locale} nowIso={nowIso} /> : null}
+      {cur === 'sources' ? <Sources locale={locale} rows={rows} nowIso={nowIso} canCheck admin={admin} jobs={live?.jobs} /> : null}
+      {cur === 'errors' && errs ? <Errors locale={locale} data={errs} nowIso={nowIso} /> : null}
+      {cur === 'security' && admin ? <Security locale={locale} nowIso={nowIso} /> : null}
+      {cur === 'perf' ? <PerfView locale={locale} nowIso={nowIso} data={live ? live.perf ?? null : undefined} /> : null}
     </div>
   );
 }

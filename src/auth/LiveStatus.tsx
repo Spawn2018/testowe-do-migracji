@@ -13,7 +13,7 @@ import { t, tp } from '../i18n/messages';
 import { getNowIso } from '../lib/frozenNow';
 import { lazyRetry } from '../lib/lazyRetry';
 import { StatusScreen } from '../components/options/StatusScreen';
-import type { OtherJob, SourceRow, SourceState } from '../lib/sysSource';
+import { appErrorsFromDb, perfFromDb, type AppErrors, type OtherJob, type Perf, type SourceRow, type SourceState } from '../lib/sysSource';
 import type { Locale } from '../types';
 
 const SystemStatusPanel = lazy(lazyRetry(() => import('./SystemStatusPanel')));
@@ -147,6 +147,10 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
   /* „?kopia=1” (link z powiadomienia o kopii): dzisiejszy panel z listą kopii od razu rozwinięty */
   const watchBackup = new URLSearchParams(useLocation().search).get('kopia') === '1';
   const [data, setData] = useState<{ runs: RunRow[]; devices: DeviceRow[]; backups: BackupRow[] } | null>(null);
+  /* #422/#508: Wydajność (HHL) i Błędy aplikacji (tylko Administrator HHL) — błąd odczytu nie blokuje Źródeł danych */
+  /* `null` — odczyt pomiarów nie powiódł się (ekran: „nie udało się odczytać”, nie „jeszcze nie ma pomiaru”) */
+  const [perf, setPerf] = useState<Perf | null>(() => perfFromDb(null));
+  const [errors, setErrors] = useState<AppErrors | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -154,10 +158,14 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
       const sb = await getSupabase();
       /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
       const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at,disabled:result->disabled').eq('job', job).order('ran_at', { ascending: false }).limit(RUN_LIMIT)));
-      const [d, b] = await Promise.all([
+      const [d, b, pr, er] = await Promise.all([
         sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
         sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),
+        sb.rpc('perf_results_latest'),
+        admin ? sb.rpc('app_errors_recent', { p_days: 7 }) : Promise.resolve({ data: null, error: null }),
       ]);
+      setPerf(pr.error ? null : perfFromDb(pr.data));
+      setErrors(er.error ? null : appErrorsFromDb(er.data));
       const err = per.find((r) => r.error)?.error ?? d.error ?? b.error ?? null;
       setMsg(err ? err.message : null);
       setData({
@@ -168,9 +176,12 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
     } catch (e) {
       /* F7 #415: wyjątek przy odczycie — komunikat zamiast stałego „Wczytywanie…” */
       setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      /* F7 #509 r2: wyjątek — Wydajność „nie udało się odczytać”, bez zakładki Błędów */
+      setPerf(null);
+      setErrors(null);
       setData((x) => x ?? { runs: [], devices: [], backups: [] });
     }
-  }, [locale]);
+  }, [locale, admin]);
   useEffect(() => { void refresh(); }, [refresh]);
 
   const nowIso = getNowIso();
@@ -182,7 +193,7 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
           locale={locale}
           nowIso={nowIso}
           admin={admin}
-          live={{ rows: liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso), jobs: liveOtherJobs(locale, data.runs) }}
+          live={{ rows: liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso), jobs: liveOtherJobs(locale, data.runs), perf, errors }}
         />
       ) : <p className="note" role="status">{t(locale, 'ol2_loading')}</p>}
       <details className="ol2-more" data-live-status-more open={watchBackup || undefined}>
