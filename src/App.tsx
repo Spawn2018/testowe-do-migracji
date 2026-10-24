@@ -20,8 +20,8 @@ const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_
 function BootScreen() {
   return (
     <div className="wt-boot" aria-busy="true" data-boot-wait>
-      <img data-light src="/brand/watchtower-logo-full.png" alt="Watch Tower" width={360} height={120} />
-      <img data-dark src="/brand/watchtower-logo-full-dark.png" alt="Watch Tower" width={360} height={120} />
+      <img data-light src="/brand/watchtower-logo-full.webp" alt="Watch Tower" width={360} height={120} />
+      <img data-dark src="/brand/watchtower-logo-full-dark.webp" alt="Watch Tower" width={360} height={120} />
     </div>
   );
 }
