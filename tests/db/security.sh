@@ -1145,16 +1145,44 @@ val "#528: po OPS swap B bez PII dostawy" $SCXB \
 out=$(sys "select (telematics_vehicle_id is null and rio_tracking_id is null and rio_secret is null
               and carrier_order_no is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: po OPS swap rio/telematics wyczyszczone"; } || { fail=$((fail+1)); echo "  FAIL  #528: po OPS swap rio/telematics wyczyszczone  (otrzymano: $out)"; }
+# F7 r2: pozycje SCX odłączone — B i KSH nie widzą tracku starego pojazdu
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_SCX', telematics_vehicle_id='rio:GPS528',
+     tracking_opened_at=now(), eta_site=now()+interval '2 hours', eta_confidence_min=15,
+     eta_basis='TEST', eta_computed_at=now(), delay_minutes=12
+     where id='$L2'" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, source) values
+     ('$L2', now()-interval '10 minutes', st_setsrid(st_makepoint(17.0, 52.4), 4326), 'TELEMATICS_API'),
+     ('$L2', now()-interval '5 minutes', st_setsrid(st_makepoint(17.1, 52.5), 4326), 'TELEMATICS_API'),
+     ('$L2', now(), st_setsrid(st_makepoint(17.2, 52.6), 4326), 'TELEMATICS_API')" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confidence_min is null
+              and eta_basis is null and eta_computed_at is null and delay_minutes is null
+              and (select count(*) from positions where load_id='$L2')=0
+              and (select count(*) from positions where detached_load_id='$L2')=3)::text
+         from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 detach GPS + clear tracking/eta"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 detach GPS + clear tracking/eta  (otrzymano: $out)"; }
+val "#528: B po swap — 0 track/positions/fixes" $SCXB \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+val "#528: KSH po swap — 0 track/positions/fixes" $KSH \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
 # ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
 out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
 [ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
      driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL',
      tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=0,
      telematics_vehicle_id=null, telematics_provider=null,
      rio_tracking_id=null, rio_secret=null, rio_asset_name=null, rio_tracker_on=null,
+     tracking_opened_at=null, eta_site=null, eta_confidence_min=null, eta_basis=null,
+     eta_computed_at=null, delay_minutes=null,
      tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
 # INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
 sys "delete from audit_log where action='HIST528_INS'" >/dev/null

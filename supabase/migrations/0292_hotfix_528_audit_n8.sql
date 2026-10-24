@@ -1,12 +1,16 @@
 -- #528 / D-20261024-1335-01 — Historia: N8 + ROW_UPDATE + wydajność + role faktur
 -- Po 0291 (#492). B5 dostanie numer ≥0299 (po 0292–0298), nie 0293/0294.
 -- 1) N8: przy zmianie carrier_org_id (gdy był poprzedni) zeruj pola przewoźnika
---    (kierowca/dostawa/tablice/order_no/telematyka/rio_*); phone_country → 'PL'.
+--    (kierowca/dostawa/tablice/order_no/telematyka/rio_*); phone_country → 'PL';
+--    escort_vehicles→0; odłącz positions/load_events TELM (0242 D); tracking/eta_*→null.
 --    Trigger po strażniku (zz_*), żeby HHL_OPS mógł zmienić przewoźnika przy
 --    istniejącym carrier_order_no (clear nie wchodzi w guard jako „zmiana numeru”).
 -- 2) Redakcja „zmiana przewoźnika” tylko gdy old i new nie-NULL (ROW_UPDATE; nie INSERT/DELETE).
--- 3) Szybkie filtry documents/load_agreed_fees (UUID regex, COST 10000 na entry_in_scope).
+-- 3) Filtry documents/fees: podzapytanie skalarne (nie EXISTS→hashed SubPlan); COST 10000.
 -- 4) KSH: invoice_documents.role w dozwolonych (FAKTURA_PDF/CMR/POD/KOREKTA).
+-- Uwagi: HHL_OPS w AT_LOADING+ zostawia pusty carrier_order_no (enforce_order_numbers
+-- nie odpala się przy samej zmianie przewoźnika). IS NOT DISTINCT FROM czyści też
+-- wartość identyczną jak stara wpisaną przez nowego — nieszkodliwe.
 
 -- ── 1) N8: czyszczenie pól przewoźnika ──────────────────────────────────────
 create or replace function public.trg_loads_clear_on_carrier_change()
@@ -104,6 +108,54 @@ begin
   if new.rio_check_state is not distinct from old.rio_check_state then
     new.rio_check_state := null;
   end if;
+  -- F7 r2: okno śledzenia i ETA starego pojazdu (wzorzec 0242 D)
+  new.tracking_opened_at := null;
+  new.eta_site := null;
+  new.eta_confidence_min := null;
+  new.eta_basis := null;
+  new.eta_computed_at := null;
+  new.delay_minutes := null;
+  -- F7 r2 BLOKER: odłącz pozycje — inaczej B/KSH widzą ciężarówkę SCX
+  update public.positions
+     set detached_load_id = load_id,
+         detached_at = now(),
+         load_id = null
+   where load_id = new.id;
+  -- F7 r2: zdarzenia telematyczne (jak 0242 D; immutable off)
+  begin
+    alter table public.load_events disable trigger trg_load_events_immutable;
+    update public.load_events ev
+       set detached_load_id = ev.load_id,
+           detached_at = now(),
+           load_id = null,
+           dedup_key = case
+             when ev.dedup_key is not null and ev.dedup_key not like '%:n8'
+             then ev.dedup_key || ':n8'
+             else ev.dedup_key
+           end,
+           payload = coalesce(ev.payload, '{}'::jsonb) || jsonb_build_object(
+             'n8_detached', true,
+             'n8_note', '#528 carrier change'
+           )
+     where ev.load_id = new.id
+       and (
+         ev.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL')
+         or ev.dedup_key like 'TELM_PHASE_%'
+         or coalesce(ev.payload->>'zrodlo', '') like 'TELM%'
+         or (
+           ev.event_type = 'STATUS_AUTO'
+           and (
+             coalesce(ev.payload->>'zrodlo', '') = 'TELM_PHASE_INFER'
+             or ev.dedup_key like 'TELM_PHASE_%'
+             or ev.dedup_key like 'STATUS_AUTO:' || new.id::text || ':IN_TRANSIT_%'
+           )
+         )
+       );
+    alter table public.load_events enable trigger trg_load_events_immutable;
+  exception when others then
+    alter table public.load_events enable trigger trg_load_events_immutable;
+    raise;
+  end;
   return new;
 end;
 $$;
@@ -120,7 +172,7 @@ create trigger trg_loads_zz_clear_on_carrier_change
   execute function public.trg_loads_clear_on_carrier_change();
 
 comment on function public.trg_loads_clear_on_carrier_change() is
-  '#528 N8 F7: clear kierowca/dostawa/tablice/order_no/telematyka/rio_*; escort_vehicles=0; phone_country=PL; zz_* po guard; NULL→org bez clear.';
+  '#528 N8 F7 r2: clear PII/rio; escort_vehicles=0; detach positions/TELM events; tracking/eta null; zz_* po guard; NULL→org bez clear.';
 
 -- ── 2) Bez zbędnych indeksów (F7 #531: GIN nie pomaga = any(); side_id dubluje PK)
 drop index if exists public.documents_visible_to_gin;
@@ -517,31 +569,31 @@ begin
           (v_kind = 'CLIENT' and a.scope_client_org_id = v_org)
           or (v_kind = 'CARRIER' and a.scope_carrier_org_id = v_org)
         )
-        -- #528 F7: UUID regex + rzutowanie (bez try_uuid / plpgsql na każdy wiersz)
+        -- #528 F7 r2: skalarne SELECT (nie EXISTS→hashed SubPlan / seq scan 150k)
         and not (
           a.entity = 'documents'
           and a.entity_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-          and exists (
-            select 1 from public.documents d
+          and coalesce((
+            select
+              (v_kind = 'CLIENT' and ('CLIENT' = any (d.visible_to)) is not true)
+              or (v_kind = 'CARRIER' and ('CARRIER' = any (d.visible_to)) is not true)
+              from public.documents d
              where d.id = a.entity_id::uuid
-               and (
-                 (v_kind = 'CLIENT' and ('CLIENT' = any (d.visible_to)) is not true)
-                 or (v_kind = 'CARRIER' and ('CARRIER' = any (d.visible_to)) is not true)
-               )
-          )
+          ), false)
         )
         and not (
           a.entity = 'load_agreed_fees'
           and coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)
                 ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-          and exists (
-            select 1 from public.load_agreed_fees f
-             where f.id = coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)::uuid
-               and (
-                 (v_kind = 'CLIENT' and (f.side in ('REVENUE', 'BOTH')) is not true)
-                 or (v_kind = 'CARRIER' and (f.side in ('COST', 'BOTH')) is not true)
-               )
-          )
+          and coalesce((
+            select
+              (v_kind = 'CLIENT' and (f.side in ('REVENUE', 'BOTH')) is not true)
+              or (v_kind = 'CARRIER' and (f.side in ('COST', 'BOTH')) is not true)
+              from public.load_agreed_fees f
+             where f.id = coalesce(
+               a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id
+             )::uuid
+          ), false)
         )
         and public.audit_history_entry_in_scope(
           v_kind, v_org, a.entity, a.action, a.entity_id,
@@ -561,7 +613,7 @@ grant execute on function public.admin_audit_history(timestamptz, timestamptz, u
   to authenticated;
 
 comment on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int) is
-  '#484/#528 F7: Historia — N8 clear; ROW_UPDATE swap; UUID regex + COST 10000 entry_in_scope; N1–N8.';
+  '#484/#528 F7 r2: N8 clear+detach GPS; ROW_UPDATE swap; skalarne filtry docs/fees; COST 10000 entry_in_scope.';
 
 alter function public.audit_history_entry_in_scope(
   text, uuid, text, text, text, uuid, uuid, uuid, jsonb, jsonb

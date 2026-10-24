@@ -876,7 +876,7 @@ Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/
 DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
 
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — W TOKU F7 #531 (migracja **0292**)
-Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0, NOT NULL); trigger `zz_*` po guard (HHL_OPS + `carrier_order_no`); redakcja swap tylko gdy old+new; UUID regex + COST 10000; bez zbędnych indeksów; `invoice_documents.role` dla KSH. security **394** (+3 F7). Front `_carrier_changed` — #527. Szczegóły: #528.
+Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); detach `positions`/TELM events + clear tracking/eta (F7 r2); trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. security **397** (+3 F7 r2). Front `_carrier_changed` — #527. Szczegóły: #528.
 
 ### #530 · loadsVersion z tabel powiązanych (F7 #529) — po #492, przed 28.10 (nie przerywa)
 `max(loads.updated_at)` nie obejmuje pilotów/rejsu/dokumentów itd. Wersja z `max(updated_at)` powiązanych **albo** podbicie `loads.updated_at` przy zmianie rodzica. Priorytet: `load_escorts`, `sailings`. ETA/RIO-stan poza bumpem. Szczegóły: #530.
@@ -1540,3 +1540,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 23:55 | #496 F7 #536: PORT_IN→AT_PORT; Södertörn; E22; Karlskrona-morze; status **245** | pętla |
 | 25.10.2026 00:20 | #496 CI zielone (`1a58742c`); F7 #531 do poprawy → N8 clear dostawa/rio, zz_* po guard, security **394** | pętla |
 | 25.10.2026 00:25 | #537 wpisane §4 „Zgubione — audyt 25.10”; D-1525/#446 SCALONE; W37 zamknięte; #528 escort_vehicles→0 (db FAIL) | pętla |
+| 25.10.2026 00:55 | #528 F7 r2: detach GPS + clear tracking/eta; skalarne filtry docs/fees; security **397** | pętla |

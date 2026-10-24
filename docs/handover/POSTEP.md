@@ -4851,3 +4851,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - **Wtyczka Supabase w Cursorze:** projekt podłączony = **TEST** `emkbykwenwrjmbprydml` (watch-tower-test); produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu — MCP tylko odczyt (AGENTS.md §6).
 - Scalanie: brak F7 `gotowe` po head `388d93b4`; #532–#536 czekają kolejności 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 — CI db: security 390/394 (`escort_vehicles` NOT NULL DEFAULT 0 — clear nie może null). Poprawka 0292: `escort_vehicles := 0`; asercje security `= 0`. Push → CI; ponowne F7.
+
+## 2026-10-25 00:55 — #528 F7 r2: detach GPS + skalarne filtry
+
+- Skrzynka: #537 wpisane (otwarte do realizacji po #531–#536); #530/#528/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po c2c96786; F7 r2 „do poprawy” (pozycje SCX widoczne dla B/KSH; EXISTS→hashed SubPlan). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — F7 r2: (1) detach `positions` + TELM `load_events`, clear tracking/eta; (2) skalarne SELECT zamiast EXISTS na docs/fees; (3) opis PR. security **397** (+3). Push → CI; ponowne F7.
