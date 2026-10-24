@@ -872,8 +872,8 @@ Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLV
 ### #519 · Faktoring drobne F7 r3 (N2–N4) (D-20261024-0900-01) — po #514, przed 28.10 (nie przerywa)
 Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/`paid_at`; `raise warning`/`app_errors` zamiast połykania; link → Finanse › Faktury. N1 bez zmian (e-mail/push HHL_ADMIN). Szczegóły: #519.
 
-### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — po #522/#524, przed 28.10 (nie przerywa)
-DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
+### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — W TOKU (migracja **0297**; po #522/#524, przed 28.10; nie przerywa)
+DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8: `escapeHtml` / `renderSegsHtml`). Szczegóły: #525.
 
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — po #492, przed B5 (nie przerywa)
 N8: zerowanie pól przewoźnika przy zmianie `carrier_org_id` (+ `load_driver_contacts`); redakcja swap tylko `ROW_UPDATE`; wydajność dokumentów/dopłat; `invoice_documents.role` dla KSH. Front `_carrier_changed` — #527. Szczegóły: #528.
@@ -1520,3 +1520,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |
 | 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |
 | 24.10.2026 15:32 | #492 CI unit/db/visual zielone (`3ad7619a`); czekam F7 „gotowe” | pętla |
+| 24.10.2026 22:35 | #519 CI zielone (`f6b00287` / PR #534); start **#525** → **0297** (DEL/U+2028/9, button, tokens, escapeHtml) | pętla |

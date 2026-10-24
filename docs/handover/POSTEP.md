@@ -4770,3 +4770,9 @@ Suma od razu: 175 / 7 d√É¬≥b = 25,0 na dob√Ñ¬ô. Szacunek szczytu po skr√É¬≥cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496/#492 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcze≈õniej) ‚Äî nie przerywajƒÖ.
 - Scalanie: brak F7 ‚Äûgotowe do scalenia‚Äù (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
 - Bie≈ºƒÖca: **#492** PR #529 ‚Äî CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
+
+## 2026-10-24 22:35 ó #519 CI zielone; start #525 (0297)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
+- Scalanie: brak F7 `gotowe do scalenia` po head #531 `73e80726` / #532 `b2b9fb03` / #533 `c754243a` / #534 `f6b00287` (CI zielone). Bez push na main.
+- Bieøπca (rÛwnolegle, D-20261019-1050-01 ß2 ó nie stojÍ przy F7): **#525** ga≥πü `pakiet/hotfix-525-message-texts-f7` ó migracja **0297**: temat DEL/U+2028/U+2029; `{{button}}` tylko w treúci LOGIN; test `tokens`; `escapeHtml`/`renderSegsHtml` pod P8. security **389** (+4).

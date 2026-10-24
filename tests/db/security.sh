@@ -814,6 +814,14 @@ err "#412e43: temat za długi" $HHL \
   "select message_texts_set('RISK_OPEN', repeat('t', 201), 'Tresc')" "200 znakow|200 znaków|22023"
 err "#412e43: temat ze znakami sterującymi" $HHL \
   "select message_texts_set('RISK_OPEN', E'temat\r\nBcc: x', 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z DEL (0x7F)" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(127), 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z U+2028" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(8232), 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z U+2029" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(8233), 'Tresc')" "sterujac|sterując|22023"
+err "#525: {{button}} w temacie LOGIN" $HHL \
+  "select message_texts_set('INVITE', 'Temat {{button}}', 'Witaj {{name}}. {{button}}')" "treści|temacie|Przycisk|Niedozwolony|22023"
 err "#412e43: treść za długa" $HHL \
   "select message_texts_set('RISK_OPEN', 'Temat', repeat('b', 5001))" "5000 znakow|5000 znaków|22023"
 val "#412e43: HHL_ADMIN zapisuje INVITE z przyciskiem" $HHL \

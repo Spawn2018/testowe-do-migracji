@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
-  GROUPS, MESSAGES, SMS_MAX, TOKEN_LABEL, checkMessage, gsmBad, gsmLength, normalize, parseMarkers, previewLines, renderSegs, sampleOf,
+  GROUPS, MESSAGES, SMS_MAX, TOKEN_LABEL, checkMessage, escapeHtml, gsmBad, gsmLength, normalize, parseMarkers, previewLines, renderSegs, renderSegsHtml, sampleOf,
   smsText, smsWorstLength, toMarkers, type Seg,
 } from '../src/lib/p8Texts';
 import { P8_PL } from '../src/i18n/p8';
@@ -251,15 +251,44 @@ describe('ekran — prawa (E43 „Bezpiecznie”)', () => {
 });
 
 describe('#412 E43 / 0289 — lista rodzajów w migracji = MESSAGES', () => {
-  it('message_text_kind_meta: 48 rodzajów, te same id i kanał co p8Texts.MESSAGES', () => {
+  it('message_text_kind_meta: 48 rodzajów, te same id, kanał i tokens co p8Texts.MESSAGES', () => {
     const sql = readFileSync('supabase/migrations/0289_hotfix_412_e43_message_texts.sql', 'utf8');
-    const kinds = [...sql.matchAll(/\('([A-Z0-9_]+)', '(SMS|EMAIL|LOGIN)', (?:true|false), array\[/g)]
-      .map((m) => ({ id: m[1]!, channel: m[2]! }));
+    const kinds = [...sql.matchAll(
+      /\('([A-Z0-9_]+)', '(SMS|EMAIL|LOGIN)', (?:true|false), array\[([^\]]*)\]::text\[\]/g,
+    )].map((m) => ({
+      id: m[1]!,
+      channel: m[2]!,
+      tokens: m[3]!
+        .split(',')
+        .map((s) => s.replace(/'/g, '').trim())
+        .filter(Boolean),
+    }));
     expect(kinds).toHaveLength(MESSAGES.length);
     expect(kinds.map((k) => k.id).sort()).toEqual([...MESSAGES.map((m) => m.id)].sort());
     for (const m of MESSAGES) {
       const row = kinds.find((k) => k.id === m.id);
       expect(row?.channel, m.id).toBe(m.channel);
+      expect(row?.tokens, m.id).toEqual([...m.tokens]);
     }
+  });
+});
+
+describe('#525 — escapowanie HTML po podstawieniu (P8 / message_texts)', () => {
+  it('escapeHtml i renderSegsHtml — nigdy surowy HTML z danych', () => {
+    expect(escapeHtml(`a<b>&"'`)).toBe('a&lt;b&gt;&amp;&quot;&#39;');
+    const dirty = {
+      ...load!,
+      code: 'SG<script>',
+      resources: { trailerPlate: 'AB<>', tractorPlate: 'CD 1111' },
+    } as Parameters<typeof sampleOf>[0];
+    const segs = parseMarkers('Kod {{code}}: <b>{{trailer}}</b>');
+    const raw = renderSegs(segs, sampleOf(dirty));
+    expect(raw).toContain('<script>');
+    expect(raw).toContain('<>');
+    const safe = renderSegsHtml(segs, sampleOf(dirty));
+    expect(safe).toContain('SG&lt;script&gt;');
+    expect(safe).toContain('AB&lt;&gt;');
+    expect(safe).toContain('<b>');
+    expect(safe).not.toContain('<script>');
   });
 });
