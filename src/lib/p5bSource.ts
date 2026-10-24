@@ -9,6 +9,8 @@ import type { PackKey } from './p5Pack';
 import type { CancelRulesView, DwellRulesView, FuelActions, FuelScreenView, FuelSource, PaymentTermsView, RateCardSave, RateCardView } from './p5bFuel';
 import { demoCancelRules, demoDwellRules, demoFuelScreen, demoPaymentTerms, demoRateCard } from './p5bDemo';
 import { demoMarginThreshold } from './p5Demo';
+import { prodMarginState } from './p5Source';
+import { saveMarginDb } from './marginDb';
 
 const ok = async (): Promise<boolean> => true;
 
@@ -48,7 +50,11 @@ export function cancelSaverOf(): ((days: number, pct: number) => Promise<boolean
  *  wyłączona; `save: null` = tylko odczyt). Ta sama wartość co `marginThresholdOf()` w `p5Source.ts` (Finanse). */
 export interface MarginSetting { pct: number | null; save: ((pct: number | null) => Promise<boolean>) | null }
 export function marginSettingOf(): MarginSetting | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? { pct: demoMarginThreshold(), save: ok } : null;
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return { pct: demoMarginThreshold(), save: ok };
+  /* #412 E16 (0288): wartość z bazy (HHL); zapis `margin_threshold_set` — baza przyjmuje tylko od Administratora HHL */
+  const cur = prodMarginState();
+  if (cur === undefined) return null;
+  return { pct: cur, save: saveMarginDb };
 }
 
 /** wyglad/audyt-E (E-06, C-14; E33, E11) — cennik według symboli w wersjach; null = zostaje dzisiejszy formularz

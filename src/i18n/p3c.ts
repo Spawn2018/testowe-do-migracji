@@ -169,6 +169,7 @@ const pl: Dict = {
   /* Właściciel 21.10.2026: baza (RLS push_subscriptions) pokazuje tylko własne urządzenia — nie zgadujemy liczby wszystkich */
   p3c_push_devices_own: 'Wysyłane tylko tam, gdzie zaznaczony telefon · Twoje urządzenia: {n}',
   p3c_push_devices_all: 'Liczbę urządzeń wszystkich osób poda wykonawca (#412).',
+  p3c_push_devices_all_n: 'Wszystkie osoby: {n~urządzenie|urządzenia|urządzeń}',
   p3c_col_event: 'Zdarzenie',
   p3c_firm_HHL: 'HHL',
   p3c_firm_KSH: 'KSH',

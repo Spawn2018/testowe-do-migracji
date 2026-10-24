@@ -21,7 +21,7 @@ import {
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
-import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
+import { marginFromDb, setMarginFromServer, setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
 import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
@@ -191,6 +191,13 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
+    }
+    /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501) */
+    if (isHhl) {
+      const mq = await sb.rpc('margin_threshold_get');
+      setMarginFromServer(mq.error ? undefined : marginFromDb(mq.data));
+    } else {
+      setMarginFromServer(undefined);
     }
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
     const okBy = new Map<string, number>();

@@ -15,7 +15,7 @@ import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, typ
 export type WhoGetsCards = {
   mail: { on: boolean; used: number; max: number; reserve: number };
   /** own — liczba tylko z własnych wierszy (RLS `push_subscriptions`), bez liczby wszystkich osób */
-  push: { on: boolean; devices: number; own?: boolean };
+  push: { on: boolean; devices: number; own?: boolean; /** #412 E11 (0288): urządzenia wszystkich osób (HHL); null = brak liczby */ all?: number | null };
   last: { when: string; text: string };
 };
 
@@ -133,7 +133,9 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
             {cards.push.own ? (
               <>
                 <span className="ox-card-sub" data-push-devices="own">{tp(locale, 'p3c_push_devices_own', { n: cards.push.devices })}</span>
-                <span className="ox-card-sub">{t(locale, 'p3c_push_devices_all')}</span>
+                {cards.push.all != null
+                  ? <span className="ox-card-sub" data-push-devices="all">{tp(locale, 'p3c_push_devices_all_n', { n: cards.push.all })}</span>
+                  : <span className="ox-card-sub">{t(locale, 'p3c_push_devices_all')}</span>}
               </>
             ) : <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>}
           </div>

@@ -70,6 +70,7 @@ export default function LiveWhoGets({ readOnly = false }: { readOnly?: boolean }
   const chain = useRef<Promise<unknown>>(Promise.resolve());
   const [budget, setBudget] = useState<{ used: number; max: number; reserve: number } | null>(null);
   const [devices, setDevices] = useState<number | null>(null);
+  const [devicesAll, setDevicesAll] = useState<number | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -82,8 +83,17 @@ export default function LiveWhoGets({ readOnly = false }: { readOnly?: boolean }
     const j = (b.error ? null : b.data) as { immediate_n?: number; digest_n?: number; operational_limit?: number; auth_reserve?: number } | null;
     if (j) setBudget({ used: (j.immediate_n ?? 0) + (j.digest_n ?? 0), max: j.operational_limit ?? 90, reserve: j.auth_reserve ?? 10 });
     /* RLS `push_subscriptions_own` — liczba tylko urządzeń zalogowanej osoby (karta: „Twoje urządzenia: N”) */
-    const d = await sb.from('push_subscriptions').select('id', { count: 'exact', head: true });
-    setDevices(d.error ? null : d.count ?? 0);
+    /* #412 E11 (0288): `push_devices_count()` — Twoje i wszystkich osób (tylko liczby, tylko HHL); zapasowo RLS (własne) */
+    const pc = await sb.rpc('push_devices_count');
+    const pj = (pc.error ? null : pc.data) as { own?: unknown; all?: unknown } | null;
+    if (pj && typeof pj.own === 'number') {
+      setDevices(pj.own);
+      setDevicesAll(typeof pj.all === 'number' ? pj.all : null);
+    } else {
+      const d = await sb.from('push_subscriptions').select('id', { count: 'exact', head: true });
+      setDevices(d.error ? null : d.count ?? 0);
+      setDevicesAll(null);
+    }
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -92,8 +102,8 @@ export default function LiveWhoGets({ readOnly = false }: { readOnly?: boolean }
   const unknown = useMemo(() => (rows ? unknownKeys(NOTIFY_CATALOG, rows) : []), [rows]);
 
   const cards: WhoGetsCards | undefined = useMemo(() => (rows && budget
-    ? { mail: { on: channelOn(rows, 'email'), ...budget }, push: { on: channelOn(rows, 'push'), devices: devices ?? 0, own: true }, last: { when: '—', text: '' } }
-    : undefined), [rows, budget, devices]);
+    ? { mail: { on: channelOn(rows, 'email'), ...budget }, push: { on: channelOn(rows, 'push'), devices: devices ?? 0, own: true, all: devicesAll }, last: { when: '—', text: '' } }
+    : undefined), [rows, budget, devices, devicesAll]);
 
   /* zapis jednej komórki: najpierw stan lokalny (kolejne kliknięcia liczą od niego), potem RPC w kolejce */
   const save = useCallback((rowId: string, kind: AccountKind, patch: Partial<Pick<DbRow, 'in_app' | 'email' | 'push'>>) => {
