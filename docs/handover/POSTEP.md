@@ -4692,3 +4692,45 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE (otwarte do zamknięcia po odbiorze) — nie przerywają.
 - Scalanie: **#523** `67e21530` (F7 „gotowe do scalenia” na `6dd9c5f`, CI unit/visual) — wygląd E16+E11 marża/push. #522 bez „gotowe” po F7 poprawkach; #382 CONFLICT.
 - Bieżąca: **#412** PR #522 — CI `db` FAIL security 328/329: test „SMS spoza GSM” z `U&'\\+044F'` → HINT Unicode escapes (psql). Poprawka: `chr(1103)` (Я). security **329**. Push → CI; czekam F7.
+
+## 2026-10-24 10:55 — #522 SCALONE (0289 E43); start #484 (0290)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #524 wygląd E43 bez F7 — nie scalane.
+- Scalanie: **#522** `ba77700b` (F7 „gotowe do scalenia” po `dc774b82`, CI unit/db/visual) — E43 **0289**. Drobne F7 (DEL/U+2028, button w temacie) — po scaleniu (jak #519). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#484** gałąź `pakiet/hotfix-484-audit-history` — migracja **0290**: rozszerzenie `admin_audit_history` (HHL_OPS pełne; KSH/SCX zakres transportów + redakcja E41/cen). security **338** (+9); hist11 **13** (+2). B5→**0291**. Front — koordynator.
+
+## 2026-10-24 11:10 — #524 SCALONE; #525 wpisane; #484 db FAIL → poprawka testów
+
+- Skrzynka: **#525** (Spawn2018) — drobne E43 F7 r2 po #522; wpisane PLAN §4/§8, dopisek `D-20261024-1055-01.md`. #519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: **#524** `45b67407` (F7 „gotowe” na `1a046c74`, CI unit/visual) — wygląd treści wiadomości. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#484** PR #526 — CI `db` FAIL: security „KSH bez numerów” `true`≠`t`; nullguard `admin_audit_history` oczekuje „Tylko administrator HHL”, funkcja → „Brak sesji”. Poprawka: expected `true` + wzorzec `Brak sesji|Brak dostępu`. Push → CI; czekam F7.
+
+## 2026-10-24 12:20 — #484 F7 #526: poprawki izolacji 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #526 = **do poprawy**). CI unit/db/visual na `e4d6afc5` było zielone przed poprawką.
+- Bieżąca: **#484** PR #526 — F7 blokujące: szukaj w raw JSON, dopłaty REVENUE dla SCX, historia po przepięciu przewoźnika, wolne zapytanie, e-maile, ocena, `visible_to`, redakcja zagnieżdżona. Poprawka 0290: kolumny `load_id`/`scope_*` + indeksy; `audit_row_change` z pełnego wiersza; filtr po scope; szukaj bez old/new dla nie-HHL; redakcja usuwa klucze (własny `order_no` KSH zostaje); security **348** (+19). Push → CI; ponowne F7.
+
+## 2026-10-24 12:50 — #484 db FAIL: load_permits.created_at
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe”; #526 db FAIL na `3e58b903` (seed `a7_seed_firm_assets` → `audit_row_change` → `audit_history_resolve_load_id`: `lp.created_at` nie istnieje); #527 wygląd bez F7; #382 CONFLICT.
+- Bieżąca: **#484** — `resolve_load_id` dla `permits`: `order by lp.load_id` (tabela tylko PK load_id/permit_id). Rebase na main (#524). Push → CI; czekam F7.
+
+## 2026-10-24 14:15 — #484 F7 r2: 6 blokerów w 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (SCALONE wcześniej) — nie przerywają. Bez nowych do wpisania.
+- Scalanie: brak F7 „gotowe”. CI na `7f629c59` zielone (unit/db/visual) — tylko pkt 1 (`created_at`); F7 r2 nadal **do poprawy** (pkt 2–6).
+- Bieżąca: **#484** PR #526 — F7 r2: (2) side/status dopłat z tabeli + keep w UPDATE; (3) zakres OLD przy B→SCX + backfill bez bieżącego carrier przy wątpliwości; (4) `visible_to`/INVOICE z `documents`; (5) BEFORE INSERT `trg_audit_log_fill_scope`; (6) redakcja = allowlista (case-insensitive). Filtr po `scope_*` indeksowany; bez cudzego `user_id`; security **358** (+10). Push → CI; ponowne F7.
+
+## 2026-10-24 12:40 — #484 F7 r3: N1–N7 w 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (baza SCALONE) — nie przerywają.
+- Scalanie: brak F7 „gotowe”. CI na `36eb14d8` zielone (unit/db/visual); F7 r3 **do poprawy**.
+- Bieżąca: **#484** PR #526 — F7 r3: N1 swap = fakt dla CARRIER; N2 backfill bez `l.carrier_org_id`; N3 ocena bez `comment`; N4 AGREED_FEE na entity `load`; N5 faktury issuer/recipient; N6 KSH bez kierowcy; N7 `audit_history_try_uuid`; `actor_party`/`actor_label`; security **367** (+9). Push → CI; ponowne F7.
+
+## 2026-10-24 13:10 — #484 F7 r4: zmiana przewoźnika z/do NULL
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie (wpisane). #425/#413 `pilne` otwarte (SCALONE) — nie przerywają.
+- Scalanie: brak F7 „gotowe”. CI na `8d177d46` zielone (unit/db/visual); F7 r4 **do poprawy** (1 bloker).
+- Bieżąca: **#484** PR #526 — F7 r4: wykrywanie zmiany `IS DISTINCT FROM` (także NULL); zakres `coalesce(OLD,NEW)`; redakcja RPC dla CARRIER przy z/do NULL; `actor_party` = `CARRIER` (nie SCX); testy SCX→NULL / NULL→B (preset + live trigger). security **377** (+10). Push → CI; ponowne F7 (tylko pkt 1).
