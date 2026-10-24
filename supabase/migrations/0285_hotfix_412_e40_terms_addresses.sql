@@ -126,6 +126,8 @@ declare
   v_payer uuid;
   v_payee uuid;
   v_old int;
+  v_basis text;
+  v_cadence int[];
   v_id uuid;
   v_side text := upper(btrim(coalesce(p_side, '')));
 begin
@@ -157,35 +159,44 @@ begin
     select o.id into v_payee from public.organizations o where o.code = 'SCX' limit 1;
   end if;
 
-  select t.id, t.term_days into v_id, v_old
+  -- Wersja bieżąca (jak odczyt i register_invoice: valid_from ≤ dziś).
+  select t.id, t.term_days, t.basis, t.reminder_cadence
+    into v_id, v_old, v_basis, v_cadence
     from public.payment_terms t
    where t.project_id = v_project
      and t.payer_org_id = v_payer
      and t.payee_org_id = v_payee
+     and t.valid_from <= current_date
    order by t.valid_from desc
    limit 1
    for update;
 
-  if (v_id is not null) is not true then
-    insert into public.payment_terms (project_id, payer_org_id, payee_org_id, term_days, valid_from)
-    values (v_project, v_payer, v_payee, p_days, current_date)
-    returning id into v_id;
-    v_old := null;
-  elsif v_old is distinct from p_days then
-    update public.payment_terms set term_days = p_days where id = v_id;
+  if v_old is not distinct from p_days then
+    return;
   end if;
 
-  if v_old is distinct from p_days then
-    insert into public.audit_log (user_id, action, entity, entity_id, old_value, new_value)
-    values (
-      v_me,
-      'PAYMENT_TERMS_SET',
-      'payment_terms',
-      v_id::text,
-      jsonb_build_object('side', v_side, 'days', v_old),
-      jsonb_build_object('side', v_side, 'days', p_days)
-    );
-  end if;
+  -- Nowa wersja od dziś (albo poprawka tej samej daty); stara zostaje dla faktur z wcześniejszym issue_date.
+  insert into public.payment_terms (
+    project_id, payer_org_id, payee_org_id, term_days, basis, reminder_cadence, valid_from
+  ) values (
+    v_project, v_payer, v_payee, p_days,
+    coalesce(v_basis, 'WYSTAWIENIE'),
+    coalesce(v_cadence, '{-3,0,1,7,14}'::int[]),
+    current_date
+  )
+  on conflict (project_id, payer_org_id, payee_org_id, valid_from)
+  do update set term_days = excluded.term_days
+  returning id into v_id;
+
+  insert into public.audit_log (user_id, action, entity, entity_id, old_value, new_value)
+  values (
+    v_me,
+    'PAYMENT_TERMS_SET',
+    'payment_terms',
+    v_id::text,
+    jsonb_build_object('side', v_side, 'days', v_old),
+    jsonb_build_object('side', v_side, 'days', p_days)
+  );
 end $$;
 
 revoke all on function public.payment_terms_options_set(text, int) from public, anon;
@@ -260,7 +271,7 @@ begin
         continue;
       end if;
       if (char_length(v_norm) <= 200
-          and v_norm ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$') is not true then
+          and v_norm ~* '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$') is not true then
         raise exception 'Nieprawidłowy adres e-mail' using errcode = '22023';
       end if;
       if (v_norm = any (v_clean)) is not true then

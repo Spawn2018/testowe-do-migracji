@@ -4608,3 +4608,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#425/#413/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających bieżącą.
 - Scalanie: brak F7 „gotowe do scalenia” (PR #510 bez komentarza F7; #509 wygląd; #382 CONFLICT; #383 „Nie scalać jeszcze”).
 - Bieżąca: **#412** PR #510 — CI `db` security 200/204: `payment_terms_options` szukało tylko `STEGRA_BODEN`, seed bramy ma `STEGRA`. Poprawka: lookup `STEGRA_BODEN`/`STEGRA` (jak 0106/0267) w options i options_set. Push → CI.
+
+## 2026-10-24 05:25 — #412 F7 #510 „do poprawy”: wersje terminów + e-mail
+
+- Skrzynka: #412 bieżąca; #500/#499/#496/#492/#484/#323/#322/#320 w planie. Bez nowych `dla-cursora`; bez `pilne`.
+- Scalanie: F7 #510 **do poprawy** (po `cca4b19`); CI na `fd470bd4` (STEGRA) zielone unit/db/visual — bez „gotowe”. #509 wygląd; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #510 — F7: `payment_terms_options_set` insert `valid_from=current_date` on conflict (stara wersja dla `issue_date`); regex e-mail `[a-z0-9._%+-]` (+ `looksLikeEmail`); security: asercja zapisu, wersja past, SCX/KSH get/set/SELECT, bez `duplicate` w INSERT; adresy testowe `@test`. Oczek. security **~210**. Push → CI.
