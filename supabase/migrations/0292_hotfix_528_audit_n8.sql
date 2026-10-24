@@ -1,6 +1,7 @@
 -- #528 / D-20261024-1335-01 — Historia: N8 + ROW_UPDATE + wydajność + role faktur
 -- Po 0291 (#492). Przed B5 (0293).
--- 1) N8: przy zmianie carrier_org_id zeruj pola przewoźnika (chyba że w tej samej UPDATE).
+-- 1) N8: przy zmianie carrier_org_id (gdy był poprzedni) zeruj pola przewoźnika
+--    (chyba że w tej samej UPDATE); phone_country → 'PL' (NOT NULL).
 -- 2) Redakcja „zmiana przewoźnika” tylko gdy old i new nie-NULL (ROW_UPDATE; nie INSERT/DELETE).
 -- 3) Szybkie filtry documents/load_agreed_fees + indeksy.
 -- 4) KSH: invoice_documents.role w dozwolonych (FAKTURA_PDF/CMR/POD/KOREKTA).
@@ -16,6 +17,10 @@ begin
   if new.carrier_org_id is not distinct from old.carrier_org_id then
     return new;
   end if;
+  -- pierwsze przypisanie (NULL→org) nie czyści — nie ma poprzedniego przewoźnika
+  if old.carrier_org_id is null then
+    return new;
+  end if;
   -- zostaw wartość tylko gdy ustawiona w tej samej instrukcji (NEW ≠ OLD)
   if new.driver_name is not distinct from old.driver_name then
     new.driver_name := null;
@@ -23,8 +28,9 @@ begin
   if new.driver_phone is not distinct from old.driver_phone then
     new.driver_phone := null;
   end if;
+  -- NOT NULL DEFAULT 'PL' (0111) — nie null
   if new.driver_phone_country is not distinct from old.driver_phone_country then
-    new.driver_phone_country := null;
+    new.driver_phone_country := 'PL';
   end if;
   if new.tractor_plate is not distinct from old.tractor_plate then
     new.tractor_plate := null;
@@ -49,7 +55,7 @@ create trigger trg_loads_clear_on_carrier_change
   execute function public.trg_loads_clear_on_carrier_change();
 
 comment on function public.trg_loads_clear_on_carrier_change() is
-  '#528 N8: zmiana przewoźnika czyści kierowcę/tablice/carrier_order_no (chyba że w tej samej UPDATE).';
+  '#528 N8: zmiana z poprzedniego przewoźnika czyści kierowcę/tablice/order_no; phone_country=PL; NULL→org bez czyszczenia.';
 
 -- ── 2) Indeksy pod filtry historii ──────────────────────────────────────────
 create index if not exists documents_visible_to_gin

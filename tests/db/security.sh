@@ -1126,7 +1126,7 @@ sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor
 sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
 out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
 [ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
-sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country=null,
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
      tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
 # INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
 sys "delete from audit_log where action='HIST528_INS'" >/dev/null
