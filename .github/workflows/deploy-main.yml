@@ -204,3 +204,22 @@ jobs:
             exit 1
           fi
           npx --yes vercel@64.5.0 deploy --prod --yes
+
+      # #508: Lighthouse p1–p3 (login + publiczne) → perf_results; deploy_success_record → newSince.
+      # Niezaliczony pomiar / błąd LH nie blokuje wdrożenia (continue-on-error).
+      - name: Lighthouse p1–p3
+        if: steps.keys.outputs.skip != 'true'
+        continue-on-error: true
+        env:
+          DB_URL_FILE: ${{ runner.temp }}/db-url
+          DB_PORT_FILE: ${{ runner.temp }}/db-port
+          DB_PASSWORD_FILE: ${{ runner.temp }}/db-password
+          DB_MODE_FILE: ${{ runner.temp }}/db-mode
+          PERF_BASE_URL: https://tower.log-mar.pl
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          set +x
+          python3 scripts/ci/normalize-db-url.py
+          export SUPABASE_DB_URL="$(cat "$DB_URL_FILE")"
+          node scripts/ci/perf-lighthouse-deploy.mjs

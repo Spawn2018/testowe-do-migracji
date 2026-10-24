@@ -456,5 +456,27 @@ out=$(sys "select perf_p95_lists_ingest()->>'p4_result'"); echo "$out" | grep -q
 val "#422: po ingest HHL widzi p4 w latest" $HHL \
   "select (perf_results_latest()->'rows' @> '[{\"id\":\"p4\"}]')::text" true
 
+echo; echo "[#508] Lighthouse p1–p3 + newSince od deploy-main"
+chk6 "#508: authenticated bez EXECUTE deploy_success_record" "$(sys "select has_function_privilege('authenticated','deploy_success_record(timestamptz,jsonb)','execute')::text" | tail -1)" "false"
+err "#508: HHL nie wywoła deploy_success_record" $HHL \
+  "select deploy_success_record()" \
+  "permission denied|42501|tylko usługa"
+sys "select deploy_success_record(now() - interval '1 hour', '{\"test\":true}'::jsonb)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-new','error','#508 nowy blad po deploy','/login', now() - interval '30 minutes', now(), 1)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-old','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '90 minutes', 1)" >/dev/null
+val "#508: newSince ustawione po deploy-main" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'newSince') = 'string')::text" true
+val "#508: newCount = 1 (tylko grupy po wdrożeniu)" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+sys "select perf_result_record('p1','Kokpit · telefon','LCP · CLS · TBT','2,0 s · 0,01 · 100 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/:mobile');
+     select perf_result_record('p2','Mapa · telefon','LCP · CLS · TBT','2,1 s · 0,02 · 120 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/offline.html:mobile');
+     select perf_result_record('p3','Harmonogram w układzie pliku · komputer','LCP · CLS · TBT','2,2 s · 0,02 · 150 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',false,'lighthouse:/:desktop')" >/dev/null
+val "#508: perf_results_latest ma p1–p3" $HHL \
+  "select ((perf_results_latest()->'rows' @> '[{\"id\":\"p1\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p2\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p3\"}]'))::text" true
+val "#508: at z pomiaru ok is not null (p1)" $HHL \
+  "select (perf_results_latest()->'at' is not null)::text" true
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

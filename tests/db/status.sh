@@ -290,11 +290,13 @@ chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where s
 # D-1710 (#368): okno i pozycje tylko przy telematics_vehicle_id.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
 W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
+# W3 = poza oknem: plan za 14 dni (nie sztywne 2026-10-24 — w dniu tej daty „cisza poza oknem” pada).
+W3_PLAN=$(q "select (current_date + 14)::text")
 # Data od razu docelowa: mk() wstawia 30.09, a zmiana daty po starcie okna zamraża śledzenie.
 q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
  ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05','TEL-A1W1'),
  ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05','TEL-A1W2'),
- ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24','TEL-A1W3'),
+ ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','$W3_PLAN','TEL-A1W3'),
  ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05','TEL-A1W4'),
  ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05','TEL-A1W5'),
  ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01','TEL-A1W6')" >/dev/null

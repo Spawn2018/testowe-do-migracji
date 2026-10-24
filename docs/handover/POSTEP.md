@@ -4577,3 +4577,9 @@ Suma od razu: 175 / 7 d√É¬≥b = 25,0 na dob√Ñ¬ô. Szacunek szczytu po skr√É¬≥cie: 
 - Skrzynka: #422 `pilne` bie≈ºƒÖca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
 - Scalanie: brak F7 ‚Äûgotowe do scalenia‚Äù (PR #507, #382 CONFLICT, #383). **CI zielone** na `ee7fa0e4`: unit, `db` security (gate 12m42s), visual (zrzuty/telefon/bramy).
 - Bie≈ºƒÖca: **#422** PR #507 ‚Äî F7 r2 pkt 3‚Äì6 + poprawka `jsonb_typeof` na head; Lighthouse po deploy-main (osobny krok). Czekam na ‚ÄûF7: gotowe do scalenia‚Äù.
+
+## 2026-10-24 03:15 ó #508 wpisane; #422 Lighthouse + newSince (0284); A1 W3 data
+
+- Skrzynka: **#508** (Spawn2018, dla-cursora) ó Lighthouse p1ñp3 po deploy-main + newSince w B≥Ídach; wpisane PLAN ß4/ß8, dopisek `D-20261024-0315-01.md`. #500/#499/#496/#492/#484/#412 w kolejce.
+- Scalanie: F7 Ñgotoweî na `ee7fa0e4` uniewaønione commitem docs `23dacb8b`; potem db FAIL status 237/238 (A1 cisza ó sztywne `2026-10-24` = dziú). #382 CONFLICT, #383 bez F7.
+- Bieøπca: **#422+#508** PR #507 ó migracja **0284** (`deploy_success_record`, `app_errors_recent` newSince/newCount), skrypt `scripts/ci/perf-lighthouse-deploy.mjs`, krok w `deploy-main`; A1 W3 = `current_date+14`; security **185**; B5õ**0285**. Push õ CI; czekam F7.
