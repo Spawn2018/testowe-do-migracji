@@ -58,6 +58,8 @@ const LiveRateCard = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_A
 const LiveSmsPlaces = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveSmsPlaces'))) : null;
 /* E33 (W-opcje-live-2): Dopłaty na produkcji — ekran z audytu, dane i zapis jak w DwellOptionsForm (ops_thresholds) */
 const LiveDwell = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveDwell'))) : null;
+/* #412 E40 (0285): terminy płatności i adresy księgowości z bazy — ten sam ekran co w demo */
+const LiveTerms = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveTerms'))) : null;
 /* E23 (W-opcje-live-2): Stan systemu na produkcji — „Źródła danych” z audytu, dzisiejszy panel rozwijany pod listą */
 const LiveStatus = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveStatus'))) : null;
 const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveThresholds'))) : null;
@@ -314,7 +316,9 @@ export function OptionsView() {
       meta: fuelMeta,
     }),
   ];
-  if (terms || addresses) {
+  if (!terms && !addresses && LiveTerms) {
+    money.push(scr('terms', block(<LiveTerms readOnly={ro} />), { right: change }));
+  } else if (terms || addresses) {
     money.push(scr('terms', block(
       <TermsScreen
         locale={locale}
