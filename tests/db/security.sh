@@ -915,11 +915,62 @@ val "#484: SCX nie widzi historii B po przepięciu" $SCX \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_B',null,20,0)" 0
 val "#484: B widzi swoją historię" $SCXB \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_B',null,20,0)" 1
+# F7 r2 pkt 2: UPDATE dopłaty bez side w JSON — strona z wiersza / deny gdy brak
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_FEE_UPD','load_agreed_fees','$L1',
+      jsonb_build_object('amount_eur',777),
+      jsonb_build_object('amount_eur',800),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX bez dopłaty gdy brak side (diff)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_UPD',null,20,0)" 0
+val "#484: KSH bez dopłaty gdy brak side (diff)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_UPD',null,20,0)" 0
+# F7 r2 pkt 2: propozycja SCX (BOTH/PENDING/CARRIER) — KSH nie widzi (RLS)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_FEE_PROP','load_agreed_fees','$L1','{}',
+      jsonb_build_object('side','BOTH','status','PENDING','proposed_by_kind','CARRIER','amount_eur',444),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez propozycji SCX" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_PROP',null,20,0)" 0
+# F7 r2 pkt 3: wpis zmiany B→SCX w zakresie OLD (B)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_B','carrier_order_no','B-ORD-999','driver_name','Jan B','driver_phone','+461'),
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-NEW'),
+      '$L1','$ORG_B','$ORG_KSH')" >/dev/null
+val "#484: SCX nie widzi swap B→SCX (zakres OLD)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 0
+val "#484: B widzi swap B→SCX" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 1
+# F7 r2 pkt 4: doc UPDATE bez visible_to w JSON — brak CLIENT w tabeli/diff → ukryj
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_DOC_UPD','documents','$L1',
+      jsonb_build_object('file_name','Zlecenie_SCX.pdf'),
+      jsonb_build_object('file_name','Zlecenie_SCX_v2.pdf'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez doc UPDATE bez visible_to" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC_UPD',null,20,0)" 0
+# F7 r2 pkt 5: INSERT bez scope_* — trigger BEFORE uzupełnia
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_FN','loads','$L1','{}', jsonb_build_object('status','AT_SITE'))" >/dev/null
+val "#484: KSH widzi wpis z funkcji (scope z triggera)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FN',null,20,0)" 1
+# F7 r2 pkt 6: allowlista — Price / margin_eur / stawka wypadają
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_NEST','loads','$L1','{}',
+      jsonb_build_object('status','READY','Price',10,'stawka',20,'margin_eur',5,'pricing',jsonb_build_object('margin_eur',9,'client_total_eur',100)),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH allowlista bez Price/margin" $KSH \
+  "select ((new_value ? 'Price') is false and (new_value ? 'margin_eur') is false and (new_value ? 'stawka') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
+val "#484: SCX allowlista bez margin/pricing" $SCX \
+  "select ((new_value ? 'margin_eur') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id, user_id)
      select 'HIST484_MAIL','loads','$L1','{}'::jsonb, jsonb_build_object('status','X'), '$L1','$ORG_SCX','$ORG_KSH', id
        from app_users where auth_id='$SCX' limit 1" >/dev/null
 val "#484: KSH autor SCX → nazwa firmy" $KSH \
   "select user_email from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "Scandinavian Express"
+val "#484: KSH bez cudzego user_id" $KSH \
+  "select (user_id is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
 # wydajność: dużo wpisów obcych — filtr po scope_client, limit 8 s (Supabase)
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id)
      select 'HIST484_NOISE','loads','33333333-0000-0000-0000-000000000009','{}'::jsonb,'{}'::jsonb,

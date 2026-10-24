@@ -4716,3 +4716,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. Bez `pilne`.
 - Scalanie: brak F7 „gotowe”; #526 db FAIL na `3e58b903` (seed `a7_seed_firm_assets` → `audit_row_change` → `audit_history_resolve_load_id`: `lp.created_at` nie istnieje); #527 wygląd bez F7; #382 CONFLICT.
 - Bieżąca: **#484** — `resolve_load_id` dla `permits`: `order by lp.load_id` (tabela tylko PK load_id/permit_id). Rebase na main (#524). Push → CI; czekam F7.
+
+## 2026-10-24 14:15 — #484 F7 r2: 6 blokerów w 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (SCALONE wcześniej) — nie przerywają. Bez nowych do wpisania.
+- Scalanie: brak F7 „gotowe”. CI na `7f629c59` zielone (unit/db/visual) — tylko pkt 1 (`created_at`); F7 r2 nadal **do poprawy** (pkt 2–6).
+- Bieżąca: **#484** PR #526 — F7 r2: (2) side/status dopłat z tabeli + keep w UPDATE; (3) zakres OLD przy B→SCX + backfill bez bieżącego carrier przy wątpliwości; (4) `visible_to`/INVOICE z `documents`; (5) BEFORE INSERT `trg_audit_log_fill_scope`; (6) redakcja = allowlista (case-insensitive). Filtr po `scope_*` indeksowany; bez cudzego `user_id`; security **358** (+10). Push → CI; ponowne F7.
