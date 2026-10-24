@@ -32,11 +32,16 @@ describe('LivePack — mapowanie', () => {
 });
 
 describe('LivePack — ZIP', () => {
-  it('tylko wgrane PDF faktur z paczki + CMR', () => {
-    const bills = [{ id: 'b1', pdfDocId: 'd1' }, { id: 'b2', pdfDocId: 'd2' }] as unknown as Bill[];
-    const docs = [{ id: 'd1', status: 'UPLOADED' }, { id: 'd2', status: 'UPLOADED' }, { id: 'd3', status: 'MISSING' }] as unknown as Document[];
+  it('PDF faktur z pliku faktury (dokumentów faktur nie ma w liście) + CMR', () => {
+    const bills = [
+      { id: 'b1', number: 'FV/1', pdfDocId: 'd1', pdfStoragePath: 'docs/fv1.pdf', pdfName: 'FV_1.pdf', lines: [{ loadId: 'l1' }], createdAt: '2026-10-20', issuer: 'SCX', recipient: 'HHL' },
+      { id: 'b2', number: 'FV/2', pdfDocId: 'd2', pdfStoragePath: 'docs/fv2.pdf', lines: [], createdAt: '2026-10-20', issuer: 'SCX', recipient: 'HHL' },
+      { id: 'b3', number: 'FV/3', pdfDocId: null, pdfStoragePath: null, lines: [], createdAt: '2026-10-20', issuer: 'SCX', recipient: 'HHL' },
+    ] as unknown as Bill[];
     const cmr = [{ id: 'c1', status: 'UPLOADED' }] as unknown as Document[];
-    expect(packZipDocs(['b1'], bills, cmr, docs).map((d) => d.id)).toEqual(['d1', 'c1']);
+    const docs = packZipDocs(['b1', 'b3'], bills, cmr);
+    expect(docs.map((d) => d.id)).toEqual(['d1', 'c1']);
+    expect(docs[0]).toMatchObject({ category: 'INVOICE', storagePath: 'docs/fv1.pdf', name: 'FV_1.pdf', status: 'UPLOADED' });
   });
 });
 
@@ -46,6 +51,14 @@ describe('LivePack — podłączenie', () => {
   it('RPC z 0286 i nazwy parametrów', () => {
     expect(live).toContain("sb.rpc('accounting_pack_config')");
     expect(live).toContain("sb.rpc('accounting_pack_send', { p_pack: key, p_week: weekKey, p_files: [], p_resend: resend })");
+  });
+  it('ponowienie: po własnym zleceniu i po błędzie odświeżenie dziennika (F7 #518)', () => {
+    expect(live).toContain('const resend = !!cfg.sent[k] || ordered.current.has(k);');
+    expect(live).toContain('if (r.error) { setNotice(r.error.message); await refresh(true); return null; }');
+  });
+  it('produkcja bez obietnicy zestawienia', () => {
+    const ap = readFileSync('src/components/finance/AccountingPack.tsx', 'utf8');
+    expect(ap).toContain('(orderOnly ? p.files.slice(0, -1) : p.files)');
   });
   it('widok „tylko zlecenie” z komunikatem bazy', () => {
     expect(live).toContain('orderOnly');

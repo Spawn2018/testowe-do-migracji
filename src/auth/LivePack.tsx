@@ -5,7 +5,7 @@
  * ponowne zlecenie tego samego tygodnia tylko po potwierdzeniu (`p_resend`). Blokady (brak faktury, PDF, CMR,
  * sporna, niezaakceptowana) liczy baza — komunikat z bazy nad paczkami. ZIP: prawdziwe PDF faktur i CMR z dokumentów.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabase } from './client';
 import { AccountingPackSection } from '../components/finance/AccountingPack';
 import type { PackConfig, PackKey, PackSent } from '../lib/p5Pack';
@@ -46,10 +46,17 @@ export function packConfigFromDb(raw: unknown): PackConfig | null {
   return { addresses: { KSH: ksh, HHL: hhl }, sent };
 }
 
-/** PDF faktur paczki + CMR transportów (prawdziwe pliki z dokumentów; bez zestawienia demo). */
-export function packZipDocs(billIds: readonly string[], bills: readonly Bill[], cmrDocs: readonly Document[], documents: readonly Document[]): Document[] {
-  const want = new Set(bills.filter((b) => billIds.includes(b.id)).map((b) => b.pdfDocId).filter((x): x is string => !!x));
-  return [...documents.filter((d) => want.has(d.id) && d.status === 'UPLOADED'), ...cmrDocs];
+/** PDF faktur paczki (z faktury: plik w Storage, jak w szczegółach faktury — dokumenty faktur nie mają transportu,
+ * więc nie ma ich w liście dokumentów) + CMR transportów. Bez zestawienia demo. F7 #518. */
+export function packZipDocs(billIds: readonly string[], bills: readonly Bill[], cmrDocs: readonly Document[]): Document[] {
+  const pdfs: Document[] = bills
+    .filter((b) => billIds.includes(b.id) && b.pdfStoragePath && b.pdfDocId)
+    .map((b) => ({
+      id: b.pdfDocId as string, loadId: b.lines[0]?.loadId ?? '', category: 'INVOICE', name: b.pdfName ?? `${b.number}.pdf`,
+      uploadedAt: b.createdAt, deadline: null, status: 'UPLOADED', permitFits: null, visibleTo: [b.issuer, b.recipient],
+      dataUrl: null, mimeType: 'application/pdf', bytes: 0, source: 'tower', storagePath: b.pdfStoragePath,
+    }));
+  return [...pdfs, ...cmrDocs];
 }
 
 export default function LivePack({ locale, phone, loads, bills, documents, nowIso }: {
@@ -58,32 +65,41 @@ export default function LivePack({ locale, phone, loads, bills, documents, nowIs
   const [cfg, setCfg] = useState<PackConfig | null | undefined>(undefined);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  /* zlecenia z tej sesji — ponowienie po własnym zleceniu nawet, gdy odświeżenie dziennika się nie udało (F7 #518) */
+  const ordered = useRef(new Set<string>());
+
+  /* `quiet` (po udanym zleceniu): błąd odczytu nie zastępuje stanu „Zlecono” czerwonym komunikatem */
+  const refresh = useCallback(async (quiet = false) => {
     try {
       const sb = await getSupabase();
       const r = await sb.rpc('accounting_pack_config');
       /* błąd odczytu po wcześniejszym udanym — zostaje ostatni stan i komunikat */
-      if (r.error) { setNotice(r.error.message); setCfg((c) => (c === undefined ? null : c)); return; }
+      if (r.error) { if (!quiet) setNotice(r.error.message); setCfg((c) => (c === undefined ? null : c)); return; }
       setCfg(packConfigFromDb(r.data));
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : String(e));
+      if (!quiet) setNotice(e instanceof Error ? e.message : String(e));
       setCfg((c) => (c === undefined ? null : c));
     }
   }, []);
   useEffect(() => { void refresh(); }, [refresh]);
 
-  if (!cfg) return null;
+  if (cfg === undefined) return null;
+  /* pierwszy odczyt nieudany — komunikat zamiast znikającej sekcji (F7 #518) */
+  if (!cfg) return notice ? <p className="note" role="status" data-pack-notice>{notice}</p> : null;
 
   const actions: PackActions = {
     send: async (key: PackKey, weekKey: string) => {
       setNotice(null);
-      const resend = !!cfg.sent[`${weekKey}:${key}`];
+      const k = `${weekKey}:${key}`;
+      const resend = !!cfg.sent[k] || ordered.current.has(k);
       try {
         const sb = await getSupabase();
         const r = await sb.rpc('accounting_pack_send', { p_pack: key, p_week: weekKey, p_files: [], p_resend: resend });
-        if (r.error) { setNotice(r.error.message); return null; }
+        /* np. ktoś inny zlecił w międzyczasie — odświeżony dziennik pokaże wpis i następne kliknięcie zapyta o ponowienie */
+        if (r.error) { setNotice(r.error.message); await refresh(true); return null; }
+        ordered.current.add(k);
         const s = sentFromDb(r.data);
-        await refresh();
+        await refresh(true);
         return s;
       } catch (e) {
         setNotice(e instanceof Error ? e.message : String(e));
@@ -91,9 +107,14 @@ export default function LivePack({ locale, phone, loads, bills, documents, nowIs
       }
     },
     zip: async (pack, cmrDocs, codeOf) => {
-      const { downloadDocumentsZip } = await import('../lib/zipDocs');
-      const docs = packZipDocs(pack.bills.map((b) => b.id), bills, cmrDocs, documents);
-      await downloadDocumentsZip(docs, `Paczka_t${Number(pack.weekKey.slice(-2))}_${pack.key}.zip`, codeOf);
+      setNotice(null);
+      try {
+        const { downloadDocumentsZip } = await import('../lib/zipDocs');
+        const docs = packZipDocs(pack.bills.map((b) => b.id), bills, cmrDocs);
+        await downloadDocumentsZip(docs, `Paczka_t${Number(pack.weekKey.slice(-2))}_${pack.key}.zip`, codeOf);
+      } catch (e) {
+        setNotice(e instanceof Error ? e.message : String(e));
+      }
     },
   };
 

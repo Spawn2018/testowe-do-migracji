@@ -95,7 +95,7 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
     if (!actions) return;
     const ids = new Set(p.loads.map((l) => l.id));
     const docs = documents.filter((d) => d.loadId && ids.has(d.loadId) && d.category === 'CMR' && d.status === 'UPLOADED');
-    void actions.zip(p, docs, codeOf);
+    void actions.zip(p, docs, codeOf).catch(() => undefined);
   };
 
   const status = (p: Pack) => {
@@ -147,7 +147,7 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
         </div>
         {phone ? null : why}
         {again ? (
-          <div className="pack-again" role="group" aria-label={ft(locale, 'p5_pack_resend')} data-pack-again={p.key}>
+          <div className="pack-again" role="group" aria-label={ft(locale, orderOnly ? 'p5_pack_reorder' : 'p5_pack_resend')} data-pack-again={p.key}>
             <span>{ftp(locale, orderOnly ? 'p5_pack_again_order' : 'p5_pack_again', again)}</span>
             <button type="button" className="btn" data-pack-again-yes onClick={() => void send(p)}>{ft(locale, orderOnly ? 'p5_pack_again_order_yes' : 'p5_pack_again_yes')}</button>
             <button type="button" className="btn ghost" onClick={() => setAsk(null)}>{ft(locale, 'p5_pack_again_no')}</button>
@@ -209,10 +209,11 @@ export function AccountingPackSection({ locale, phone, loads, bills, documents, 
         </dl>
         {p.bills.length ? (
           <ul className="pack-files" data-pack-files={p.key}>
-            {p.files.map((f, i) => (
+            {/* produkcja (orderOnly): zestawienia nie ma ani w ZIP, ani w zleceniu — bez obietnicy pliku (F7 #518) */}
+            {(orderOnly ? p.files.slice(0, -1) : p.files).map((f, i) => (
               <li key={f} data-content>
                 {f}
-                {i === p.files.length - 1 ? <span className="fin-muted"> {ft(locale, `p5_pack_sum_${p.key}`)}</span> : null}
+                {!orderOnly && i === p.files.length - 1 ? <span className="fin-muted"> {ft(locale, `p5_pack_sum_${p.key}`)}</span> : null}
               </li>
             ))}
           </ul>

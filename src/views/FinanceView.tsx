@@ -24,11 +24,11 @@ import { transportLabel } from '../lib/transportName';
 import { AccountingPackSection } from '../components/finance/AccountingPack';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { lazyRetry } from '../lib/lazyRetry';
+import type { Locale } from '../types';
+import '../components/finance/finance.css';
 
 /* #412 E40 (0286): paczka tygodnia z bazy — „Zleć wysyłkę”, dziennik zleceń; demo bez zmian */
 const LivePack = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LivePack'))) : null;
-import type { Locale } from '../types';
-import '../components/finance/finance.css';
 
 const STAGE_TAG: Record<FinStage, string> = { FAKTURA: 'fin-tag go', REALIZACJA: 'fin-tag sea', PROGNOZA: 'fin-tag plain' };
 const PHONE_ORDER: FinStage[] = ['REALIZACJA', 'PROGNOZA', 'FAKTURA'];
