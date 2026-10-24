@@ -4875,3 +4875,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#540** (Spawn2018, `dla-cursora`) — Deadlock `a10_try_prep_status` FOR UPDATE vs INSERT zdarzeń/pozycji; wpisane PLAN §4 Zgubione pkt 9, dopisek `D-20261025-0207-01.md`. Nie przerywa #528. #537/#538/#530/#528/#525/#519/#516/#496 w planie. #413 `pilne` (wygląd SCALONE wcześniej) — nie przerywa.
 - Scalanie: brak F7 `gotowe` po head `7a7af567`; F7 r4 „jedna poprawka”. #532–#536 czekają 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 F7 r4: (1) `forbid_mutation` — `old.load_id is not null` + `=` na GUC/`detached_load_id`; (2) test owner bez flagi → append-only; (3) geofence `exists(...)`. security **400**. Push → CI; ponowne F7.
+
+## 2026-10-25 02:35 — #539+#528 SCALONE; F7 #532 (#530)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #528 zamknięte. Bez `pilne` przerywających.
+- Scalanie: **#539** `b548ed31` (F7 gotowe, bez migracji); **#531/#528** `bf93f0be` (0292, F7 r5 gotowe, CI unit/db/visual). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — F7: `tower.bump_ctx` (strażnik tylko `updated_at`); sailings bez bumpa `CANCELLED`; test SCX notice na wspólnym rejsie + CAR2. security **406**. Rebase na main po #531. Push → CI; ponowne F7.
