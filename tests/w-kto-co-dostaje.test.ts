@@ -1,5 +1,5 @@
 /* E11 (właściciel 21.10.2026 19:52): „Kto co dostaje” na produkcji w wyglądzie z audytu, dane z notification_matrix. */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { matrixFromDb } from '../src/auth/LiveWhoGets';
 import { NOTIFY_CATALOG } from '../src/lib/notifyCatalog';
@@ -24,6 +24,9 @@ describe('Kto co dostaje — produkcja', () => {
     const o = readFileSync(new URL('../src/views/OptionsView.tsx', import.meta.url), 'utf8');
     expect(o).toContain("import('../auth/LiveWhoGets')");
     expect(o).not.toContain("import('../auth/NotificationMatrixForm')");
+    /* audyt 25.10 (U-14): stary formularz usunięty z kodu, nazwa zmiennej bez mylącego aliasu */
+    expect(existsSync(new URL('../src/auth/NotificationMatrixForm.tsx', import.meta.url))).toBe(false);
+    expect(o).not.toContain('NotificationMatrixForm');
   });
 });
 
@@ -32,7 +35,7 @@ import { channelOn, unknownKeys } from '../src/auth/LiveWhoGets';
 describe('Kto co dostaje — F7 #404', () => {
   it('Operacje HHL i Podgląd — tylko odczyt', () => {
     const o = readFileSync(new URL('../src/views/OptionsView.tsx', import.meta.url), 'utf8');
-    expect(o).toContain('block(<NotificationMatrixForm readOnly={ro} />)');
+    expect(o).toContain('block(<LiveWhoGetsForm readOnly={ro} />)');
     const l = readFileSync(new URL('../src/auth/LiveWhoGets.tsx', import.meta.url), 'utf8');
     expect(l).toContain('readOnly={readOnly} onToggle={onToggle} onCard={onCard}');
   });
