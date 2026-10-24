@@ -21,7 +21,8 @@ export interface PackSent {
   at: string;
   /** Liczba adresów, na które poszła wysyłka. */
   to: number;
-  status: 'DORECZONO' | 'WYSLANO' | 'BLAD';
+  /** ZLECONO = wpis w dzienniku bez e-maila; WYSLANO/DORECZONO/BLAD po Edge (F7 #512). */
+  status: 'ZLECONO' | 'DORECZONO' | 'WYSLANO' | 'BLAD';
   by: string;
 }
 

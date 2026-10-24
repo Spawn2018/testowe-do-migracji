@@ -550,5 +550,65 @@ err "#412: HHL nie wstawi wiersza bezpośrednio" $HHL \
 # Przywróć seed migracji (adresy działowe) po testach @test.
 run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
 
+echo; echo "[#412] E40 paczka tygodnia — dziennik (0286)"
+# Faktury seed (W41) + PDF + CMR + akceptacja KOSZT — wymóg serwera (F7 #512).
+# UUID tylko hex (…pk01/…cm01 padały na invalid uuid → Brak faktury w CI).
+PACK_P=22222222-0000-0000-0000-000000000001
+PACK_L=33333333-0000-0000-0000-000000000001
+PACK_DOC=aaaaaaaa-0412-4000-8000-00000000a401
+PACK_CMR=aaaaaaaa-0412-4000-8000-00000000a402
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+       values ('$PACK_DOC','$PACK_P',null,'INVOICE','test/pack-412-fv.pdf','fv.pdf','application/pdf',100),
+              ('$PACK_CMR','$PACK_P','$PACK_L','CMR','test/pack-412-cmr.pdf','cmr.pdf','application/pdf',100)
+     on conflict (id) do nothing"
+sys "update invoices set week_key='2026-W41', document_id='$PACK_DOC',
+            verification_status=case when direction='KOSZT' then 'ZAAKCEPTOWANA'
+              when direction='PRZYCHOD' then 'DO_WERYFIKACJI' else verification_status end
+      where id in ('44444444-0000-0000-0000-00000000000c','44444444-0000-0000-0000-0000000000ee')"
+val "#412p: HHL czyta config (adresy)" $HHL \
+  "select (accounting_pack_config()->'addresses'->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
+val "#412p: HHL_OPS czyta config" $OPS412 \
+  "select (accounting_pack_config()->'addresses'->'KSH'->>0)" "faktury@ksh.pl"
+err "#412p: KSH nie czyta config" $KSH "select accounting_pack_config()" "tylko HHL|42501"
+err "#412p: SCX nie czyta config" $SCX "select accounting_pack_config()" "tylko HHL|42501"
+val "#412p: HHL_ADMIN zleca paczkę KSH (ZLECONO)" $HHL \
+  "select (accounting_pack_send('KSH','2026-W41')->>'status')" "ZLECONO" commit
+val "#412p: config.sent po zleceniu" $HHL \
+  "select (accounting_pack_config()->'sent'->'2026-W41:KSH'->>'status')" "ZLECONO"
+val "#412p: audit ACCOUNTING_PACK_SEND" $HHL \
+  "select count(*) from audit_log where action='ACCOUNTING_PACK_SEND' and new_value->>'week'='2026-W41'" 1
+err "#412p: ponowienie bez p_resend odmowa" $HHL \
+  "select accounting_pack_send('KSH','2026-W41')" "już zlecona|P0001"
+val "#412p: HHL_OPS zleca paczkę HHL" $OPS412 \
+  "select (accounting_pack_send('HHL','2026-W41')->>'to')::text" 1 commit
+err "#412p: KSH nie wyśle" $KSH "select accounting_pack_send('KSH','2026-W41')" "tylko HHL|42501"
+err "#412p: SCX nie wyśle" $SCX "select accounting_pack_send('HHL','2026-W41')" "tylko HHL|42501"
+err "#412p: zły tydzień" $HHL "select accounting_pack_send('KSH','2026W41')" "Tydzień ISO|22023"
+err "#412p: W00 poza 01–53" $HHL "select accounting_pack_send('KSH','2026-W00')" "Tydzień ISO|22023"
+err "#412p: W99 poza 01–53" $HHL "select accounting_pack_send('KSH','2026-W99')" "Tydzień ISO|22023"
+err "#412p: brak faktury w tygodniu" $HHL "select accounting_pack_send('KSH','2026-W42')" "Brak faktury|P0002"
+run $HHL "select accounting_addresses_set('HHL', '{}'::text[])" commit >/dev/null
+err "#412p: brak adresu blokuje" $HHL "select accounting_pack_send('HHL','2026-W41', '{}'::text[], true)" "Brak adresu|P0002"
+run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
+val "#412p: ponowienie z p_resend" $HHL \
+  "select (accounting_pack_send('KSH','2026-W41', '{}'::text[], true)->>'status')" "ZLECONO" commit
+val "#412p: dwa wpisy KSH po resend" $HHL \
+  "select count(*) from accounting_pack_sends where week_key='2026-W41' and pack_key='KSH'" 2
+# Edge: ZLECONO → WYSLANO (session_user postgres w bramie = jak service_role).
+PACK_ID=$(sys "select id::text from accounting_pack_sends where week_key='2026-W41' and pack_key='KSH' order by sent_at desc limit 1" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+out=$(sys "select accounting_pack_send_set_status('$PACK_ID'::uuid, 'WYSLANO'); select status from accounting_pack_sends where id='$PACK_ID'")
+[ "$(echo "$out" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" = "WYSLANO" ] \
+  && { ok=$((ok+1)); echo "  OK    #412p: set_status → WYSLANO"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #412p: set_status → WYSLANO  (otrzymano: $out)"; }
+err "#412p: authenticated bez set_status" $HHL \
+  "select accounting_pack_send_set_status('$PACK_ID'::uuid, 'DORECZONO')" "permission denied|42501|service_role"
+val "#412p: KSH SELECT pack_sends = 0" $KSH "select count(*) from accounting_pack_sends" 0
+val "#412p: SCX SELECT pack_sends = 0" $SCX "select count(*) from accounting_pack_sends" 0
+chk6 "#412p: anon bez SELECT/INSERT pack_sends" "$(sys "select has_table_privilege('anon','accounting_pack_sends','select')::text||has_table_privilege('anon','accounting_pack_sends','insert')::text||has_table_privilege('authenticated','accounting_pack_sends','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412p: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into accounting_pack_sends (week_key, pack_key, to_count, emails, status, by_user_id, by_name)
+     values ('2026-W41','KSH',1,'{a@test.pl}','ZLECONO','$HHL','x')" \
+  "permission denied|42501"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
