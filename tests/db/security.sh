@@ -485,5 +485,44 @@ sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at,
 val "#508: newCount bez grupy istniejącej przed wdrożeniem" $HHL \
   "select (app_errors_recent(7)->>'newCount')" 1
 
+echo; echo "[#412] E40 terminy płatności i adresy księgowości"
+OPS412=11111111-0000-0000-0000-0000000000a2
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS412','00000000-0000-0000-0000-00000000a001','ops-412@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "#412: HHL_ADMIN czyta terminy 30/35" $HHL \
+  "select (payment_terms_options()->>'kshDays')||'/'||(payment_terms_options()->>'scxDays')" "30/35"
+val "#412: HHL_OPS czyta terminy" $OPS412 \
+  "select (payment_terms_options()->>'kshDays')::text" 30
+err "#412: KSH nie czyta terminów" $KSH "select payment_terms_options()" "tylko HHL|42501"
+err "#412: SCX nie czyta terminów" $SCX "select payment_terms_options()" "tylko HHL|42501"
+run $HHL "select payment_terms_options_set('KSH', 45)" commit >/dev/null
+val "#412: HHL_ADMIN ustawia termin KSH=45" $HHL \
+  "select (payment_terms_options()->>'kshDays')" 45
+val "#412: audit PAYMENT_TERMS_SET" $HHL \
+  "select count(*) from audit_log where action='PAYMENT_TERMS_SET' and new_value->>'days'='45'" 1
+err "#412: HHL_OPS nie ustawi terminu" $OPS412 "select payment_terms_options_set('SCX', 40)" "Administrator HHL|42501"
+err "#412: KSH nie ustawi terminu" $KSH "select payment_terms_options_set('KSH', 40)" "Administrator HHL|42501"
+err "#412: dni poza 1–120" $HHL "select payment_terms_options_set('KSH', 0)" "1–120|22023"
+run $HHL "select payment_terms_options_set('KSH', 30)" commit >/dev/null
+val "#412: HHL czyta adresy startowe" $HHL \
+  "select (accounting_addresses_get()->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
+val "#412: HHL_OPS czyta adresy" $OPS412 \
+  "select (accounting_addresses_get()->'KSH'->>0)" "faktury@ksh.pl"
+err "#412: KSH nie czyta adresów" $KSH "select accounting_addresses_get()" "tylko HHL|42501"
+run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl','biuro@hhlogistics.pl'])" commit >/dev/null
+val "#412: HHL_ADMIN zapisuje 2 adresy HHL" $HHL \
+  "select jsonb_array_length(accounting_addresses_get()->'HHL')" 2
+val "#412: audit ACCOUNTING_ADDRESSES_SET" $HHL \
+  "select count(*) from audit_log where action='ACCOUNTING_ADDRESSES_SET' and entity_id='HHL'" 1
+err "#412: HHL_OPS nie zapisze adresów" $OPS412 \
+  "select accounting_addresses_set('KSH', array['a@b.pl'])" "Administrator HHL|42501"
+err "#412: zły e-mail odrzucony" $HHL \
+  "select accounting_addresses_set('HHL', array['nie-email'])" "Nieprawidłowy|22023"
+chk6 "#412: anon bez SELECT/INSERT accounting_addresses" "$(sys "select has_table_privilege('anon','accounting_addresses','select')::text||has_table_privilege('anon','accounting_addresses','insert')::text||has_table_privilege('authenticated','accounting_addresses','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into accounting_addresses (pack_key, emails) values ('HHL', '{x@y.pl}')" \
+  "permission denied|42501|duplicate"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

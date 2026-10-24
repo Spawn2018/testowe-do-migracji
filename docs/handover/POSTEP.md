@@ -4596,3 +4596,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: F7 01:38 **do poprawy** (psql na db.* IPv6 → 0 zapisów na prod). CI na `9169ece1` zielone — bez „gotowe”. #382 CONFLICT, #383 bez F7.
 - Bieżąca: **#422+#508** — PostgREST `perf_result_record`/`deploy_success_record` (service_role z Management API) + fallback psql na puli; `--preset=desktop`; etykiety p1/p3 Logowanie, p2 Offline; `shell: false`; LH `12.8.2`; `timeout-minutes: 15`; redact; security **186**; A1 W4/T05 = current_date+21/+23; unit skryptu. Czekam CI i F7.
   Etykiety ostateczne (dla `PERF_PLAN` koordynatora): `p1` Logowanie · telefon `/`; `p2` Offline · telefon `/offline.html`; `p3` Logowanie · komputer `/`.
+
+## 2026-10-24 04:35 — #507 SCALONE; start #412 (0285 E40 terminy+adresy)
+
+- Skrzynka: #508/#422 zamknięte scaleniem; #412 bieżąca; #500/#499/#496/#492/#484 w kolejce. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: PR #507 F7 „gotowe do scalenia” po `3229714b`, CI zielone → merge `b2528a80`. #382 CONFLICT (B5), #383 bez F7.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-opcje-finanse-zrodla` — migracja **0285**: `payment_terms_options`/`_set`, `accounting_addresses` + get/set; security **204** (+18); nullguard **745** (+20). B5→**0286**. Front bez zmian (koordynator). Następne w #412: paczka E40, faktoring, marża, E43, push count.
