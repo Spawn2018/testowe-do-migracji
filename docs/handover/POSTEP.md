@@ -4578,8 +4578,14 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe do scalenia” (PR #507, #382 CONFLICT, #383). **CI zielone** na `ee7fa0e4`: unit, `db` security (gate 12m42s), visual (zrzuty/telefon/bramy).
 - Bieżąca: **#422** PR #507 — F7 r2 pkt 3–6 + poprawka `jsonb_typeof` na head; Lighthouse po deploy-main (osobny krok). Czekam na „F7: gotowe do scalenia”.
 
-## 2026-10-24 03:15 � #508 wpisane; #422 Lighthouse + newSince (0284); A1 W3 data
+## 2026-10-24 03:15 — #508 wpisane; #422 Lighthouse + newSince (0284); A1 W3 data
 
-- Skrzynka: **#508** (Spawn2018, dla-cursora) � Lighthouse p1�p3 po deploy-main + newSince w B��dach; wpisane PLAN �4/�8, dopisek `D-20261024-0315-01.md`. #500/#499/#496/#492/#484/#412 w kolejce.
-- Scalanie: F7 �gotowe� na `ee7fa0e4` uniewa�nione commitem docs `23dacb8b`; potem db FAIL status 237/238 (A1 cisza � sztywne `2026-10-24` = dzi�). #382 CONFLICT, #383 bez F7.
-- Bie��ca: **#422+#508** PR #507 � migracja **0284** (`deploy_success_record`, `app_errors_recent` newSince/newCount), skrypt `scripts/ci/perf-lighthouse-deploy.mjs`, krok w `deploy-main`; A1 W3 = `current_date+14`; security **185**; B5�**0285**. Push � CI; czekam F7.
+- Skrzynka: **#508** (Spawn2018, dla-cursora) — Lighthouse p1–p3 po deploy-main + newSince w Błędach; wpisane PLAN §4/§8, dopisek `D-20261024-0315-01.md`. #500/#499/#496/#492/#484/#412 w kolejce.
+- Scalanie: F7 „gotowe” na `ee7fa0e4` unieważnione commitem docs `23dacb8b`; potem db FAIL status 237/238 (A1 cisza — sztywne `2026-10-24` = dziś). #382 CONFLICT, #383 bez F7.
+- Bieżąca: **#422+#508** PR #507 — migracja **0284** (`deploy_success_record`, `app_errors_recent` newSince/newCount), skrypt `scripts/ci/perf-lighthouse-deploy.mjs`, krok w `deploy-main`; A1 W3 = `current_date+14`; security **185**; B5→**0285**. Push → CI; czekam F7.
+
+## 2026-10-24 03:45 — #422+#508 CI zielone na 971c0422; czekam F7
+
+- Skrzynka: #508 wpisane (komentarz w issue); #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe do scalenia” po head `971c0422` (stare F7 na `ee7fa0e4` unieważnione). #382 CONFLICT, #383 bez F7.
+- CI na `971c0422`: unit OK, `db` gate OK (~12m19s), visual OK (zrzuty/telefon/bramy). Zakres #422+#508 (0283+0284, Lighthouse w deploy-main, newSince) zamknięty w PR #507 — czekam na „F7: gotowe do scalenia”.
