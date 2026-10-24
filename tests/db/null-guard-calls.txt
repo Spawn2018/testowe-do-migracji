@@ -140,6 +140,9 @@ factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-000
 margin_threshold_get | GUARD | select margin_threshold_get() | tylko HHL
 margin_threshold_set | GUARD | select margin_threshold_set(4) | Administrator HHL
 push_devices_count | GUARD | select push_devices_count() | tylko HHL
+message_texts_list | GUARD | select message_texts_list() | tylko HHL
+message_texts_set | GUARD | select message_texts_set('SMS_A',null,'{{code}}: x.') | Administrator HHL
+message_texts_reset | GUARD | select message_texts_reset('SMS_A') | Administrator HHL
 admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL

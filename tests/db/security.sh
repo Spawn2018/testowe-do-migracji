@@ -777,5 +777,46 @@ val "#412psh: HHL_OPS czyta liczbę urządzeń" $OPS412 \
 err "#412psh: KSH nie czyta liczby urządzeń" $KSH "select push_devices_count()" "tylko HHL|42501"
 err "#412psh: SCX nie czyta liczby urządzeń" $SCX "select push_devices_count()" "tylko HHL|42501"
 
+echo; echo "[#412] E43 treści wiadomości (0289)"
+val "#412e43: lista pusta na starcie" $HHL \
+  "select jsonb_array_length(message_texts_list())" 0
+val "#412e43: HHL_OPS czyta listę" $OPS412 \
+  "select jsonb_array_length(message_texts_list())" 0
+err "#412e43: KSH nie czyta treści" $KSH "select message_texts_list()" "tylko HHL|42501"
+err "#412e43: SCX nie czyta treści" $SCX "select message_texts_list()" "tylko HHL|42501"
+val "#412e43: HHL_ADMIN zapisuje SMS_C" $HHL \
+  "select message_texts_set('SMS_C', null, '{{code}}: auto {{trailer}} stoi przy {{place}} od {{dwell}}.'); select jsonb_array_length(message_texts_list())" 1 commit
+val "#412e43: audit MESSAGE_TEXT_SET" $HHL \
+  "select count(*) from audit_log where action='MESSAGE_TEXT_SET' and entity_id='SMS_C'" 1
+err "#412e43: HHL_OPS nie zapisze" $OPS412 \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
+err "#412e43: KSH nie zapisze" $KSH \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
+err "#412e43: SMS za długi" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('x', 161))" "160 znakow|160 znaków|22023"
+err "#412e43: nieznany kind" $HHL \
+  "select message_texts_set('NO_SUCH', 't', 'b')" "Nieznany|22023"
+err "#412e43: LOGIN bez przycisku" $HHL \
+  "select message_texts_set('INVITE', 'Temat', 'Tresc bez przycisku')" "Przycisk|22023"
+err "#412e43: e-mail bez tematu" $HHL \
+  "select message_texts_set('RISK_OPEN', null, 'Tresc')" "Temat|22023"
+val "#412e43: HHL_ADMIN zapisuje INVITE z przyciskiem" $HHL \
+  "select (message_texts_set('INVITE', 'Watch Tower — zaproszenie', 'Witaj {{name}}. {{button}} Link {{validity}}.')->>'id')" "INVITE" commit
+val "#412e43: lista ma 2 nadpisania" $HHL \
+  "select jsonb_array_length(message_texts_list())" 2
+val "#412e43: przywróć SMS_C" $HHL \
+  "select (message_texts_reset('SMS_C')->>'ok')::text" "true" commit
+val "#412e43: audit MESSAGE_TEXT_RESET" $HHL \
+  "select count(*) from audit_log where action='MESSAGE_TEXT_RESET' and entity_id='SMS_C'" 1
+val "#412e43: po resecie 1 nadpisanie" $HHL \
+  "select jsonb_array_length(message_texts_list())" 1
+val "#412e43: sprzątanie INVITE" $HHL \
+  "select (message_texts_reset('INVITE')->>'ok')::text" "true" commit
+chk6 "#412e43: anon bez SELECT/INSERT message_texts" "$(sys "select has_table_privilege('anon','message_texts','select')::text||has_table_privilege('anon','message_texts','insert')::text||has_table_privilege('authenticated','message_texts','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412e43: HHL nie wstawi bezpośrednio" $HHL \
+  "insert into message_texts (kind, channel, body) values ('SMS_A', 'SMS', 'x')" \
+  "permission denied|42501"
+val "#412e43: KSH SELECT message_texts = 0" $KSH "select count(*) from message_texts" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

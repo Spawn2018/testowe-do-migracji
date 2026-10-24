@@ -4668,3 +4668,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#519** (Spawn2018) — faktoring N2–N4 po #514; wpisane PLAN §4/§8 + `D-20261024-0900-01.md`. #516/#500/#499/#496/#492/#484/#412 w planie.
 - Scalanie: brak F7 „gotowe” na #520 (head `60afe774`); #521 wygląd faktoring bez F7; #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #520 — CI `db` FAIL: nullguard oczekiwano 783, jest 795 OK. Poprawka: `EXPECTED_LOCAL.nullguard` → **795**. security **296**; nullguard **795**. E43 osobno. Czekam CI + F7.
+
+## 2026-10-24 09:30 — #520 CI zielone; start #412 E43 (0289)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane).
+- Scalanie: **#520** CI unit+db+visual zielone na `46327a16` — czekam F7 „gotowe”; #521 bez F7; #382 CONFLICT.
+- Bieżąca: **#412** gałąź `pakiet/hotfix-412-e43` — migracja **0289**: `message_texts` + `message_texts_list`/`_set`/`_reset` (SMS ≤160, LOGIN `{{button}}`, audit MESSAGE_TEXT_*). security **317** (+21); nullguard **810** (+15). B5→**0290**. Front `p8Source` — koordynator; wysyłka z nadpisań — P8.
