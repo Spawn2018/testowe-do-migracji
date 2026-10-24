@@ -43,21 +43,21 @@ export default function LiveTerms({ readOnly = false }: { readOnly?: boolean }) 
   const [addresses, setAddresses] = useState<Record<PackKey, string[]> | null | undefined>(undefined);
   const [msg, setMsg] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  /* `keep` (po zapisie): błąd odczytu nie chowa sekcji — zostaje ostatni stan i komunikat (F7 #513) */
+  const refresh = useCallback(async (keep = false) => {
     try {
       const sb = await getSupabase();
       const [tr, ar] = await Promise.all([sb.rpc('payment_terms_options'), sb.rpc('accounting_addresses_get')]);
-      setTerms(tr.error ? null : termsFromDb(tr.data));
-      setAddresses(ar.error ? null : addressesFromDb(ar.data));
+      if (!tr.error || !keep) setTerms(tr.error ? null : termsFromDb(tr.data));
+      if (!ar.error || !keep) setAddresses(ar.error ? null : addressesFromDb(ar.data));
       setMsg(tr.error?.message ?? ar.error?.message ?? null);
     } catch (e) {
       /* F7 #415: wyjątek przy odczycie — komunikat zamiast pustego ekranu */
       setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
-      setTerms(null);
-      setAddresses(null);
+      if (!keep) { setTerms(null); setAddresses(null); }
     }
   }, [locale]);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(false); }, [refresh]);
 
   const saveTerms = useCallback(async (side: 'KSH' | 'SCX', days: number): Promise<boolean> => {
     if (readOnly) return false;
@@ -65,7 +65,7 @@ export default function LiveTerms({ readOnly = false }: { readOnly?: boolean }) 
     const { error } = await sb.rpc('payment_terms_options_set', { p_side: side, p_days: days });
     if (error) { setMsg(error.message); return false; }
     setMsg(null);
-    await refresh();
+    await refresh(true);
     return true;
   }, [readOnly, refresh]);
 
@@ -75,7 +75,7 @@ export default function LiveTerms({ readOnly = false }: { readOnly?: boolean }) 
     const { error } = await sb.rpc('accounting_addresses_set', { p_pack: key, p_emails: list });
     if (error) { setMsg(error.message); return false; }
     setMsg(null);
-    await refresh();
+    await refresh(true);
     return true;
   }, [readOnly, refresh]);
 
