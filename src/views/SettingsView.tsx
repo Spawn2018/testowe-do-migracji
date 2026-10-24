@@ -29,6 +29,8 @@ import { accountRole } from '../lib/accountRole';
 const LiveFuel = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFuel'))) : null;
 /** D-20261014-0700-01 J3 pkt 1: Moje konto KSH/SCX (Podgląd = tylko odczyt w LiveAccountScreen). */
 const LiveAccount = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveAccountScreen'))) : null;
+/* #484 (właściciel 23.10 08:17): Historia zmian swoich transportów dla KSH i SCX — zakres i ukrywanie liczy baza (0290) */
+const LiveHistory = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveHistory'))) : null;
 
 /* 5B (17.10): demo — ten sam ekran „Opłata paliwowa” co w Opcjach HHL, tylko do odczytu */
 const FuelScreen = lazy(lazyRetry(() => import('../components/options/MoneyScreens').then((m) => ({ default: m.FuelScreen }))));
@@ -96,6 +98,10 @@ export function SettingsView() {
       const view = { ...fuelDemo, exampleBaseEur: role === 'KSH' ? DEMO_EXAMPLE_BASE_EUR.rev : DEMO_EXAMPLE_BASE_EUR.cost };
       groups.push({ id: 'money', screens: [{ id: 'fuel', right: 'read', body: block(<FuelScreen locale={locale} view={view} actions={null} readOnly party={role} />) }] });
     }
+  }
+
+  if (LiveHistory && (role === 'KSH' || role === 'SCX')) {
+    groups.push({ id: 'system', screens: [{ id: 'hist', right: 'read', body: block(<LiveHistory />) }] });
   }
 
   const firm = role === 'KSH' ? 'KSH' : 'SCX';

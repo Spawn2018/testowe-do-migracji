@@ -2,7 +2,8 @@
  * Opcje › System › Historia zmian — produkcja w wyglądzie z audytu (E12 „Historia zmian”: filtry po polsku, wpis zdaniem,
  * „było → jest”, zmiany techniczne ukryte pod przełącznikiem). Ekran = `HistoryScreen` (ten sam co w demo).
  * Dane jak w dawnym `ChangeHistoryPanel`: `admin_audit_history` (zakres dat, osoba, obiekt, „Szukaj”, limit 200),
- * eksport CSV/XLSX pobranych wierszy. Tylko Administrator HHL (E12-1A).
+ * eksport CSV/XLSX pobranych wierszy. #484 (0290): Administrator i Operacje HHL — wszystko; KSH i SCX (Ustawienia) — wpisy
+ * swoich transportów, ceny i numery drugiej strony ukrywa baza. Autor z innej firmy: „Inna firma” (bez e-maila).
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from './client';
@@ -46,6 +47,7 @@ export default function LiveHistory() {
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const [rows, setRows] = useState<Row[]>([]);
+  const hhl = role === 'HHL';
   const [people, setPeople] = useState<PersonDb[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,10 +87,12 @@ export default function LiveHistory() {
   const who = useCallback((r: Row) => {
     if (r.is_automatic || (!r.user_id && r.source)) return `${t(locale, 'p3l_h_auto')}${r.source ? ` · ${r.source}` : ''}`;
     const p = r.user_id ? byId.get(r.user_id) : undefined;
-    const name = p ? personName(p) : (r.user_email || t(locale, 'p3l_h_auto'));
+    /* KSH/SCX: osoby spoza własnej firmy (lista kont z RLS) — bez nazwiska i e-maila */
+    const other = t(locale, 'p3l_h_other');
+    const name = p ? personName(p) : hhl ? (r.user_email || t(locale, 'p3l_h_auto')) : r.user_id ? other : t(locale, 'p3l_h_auto');
     const as = r.acting_as_user_id ? byId.get(r.acting_as_user_id) : undefined;
-    return r.acting_as_user_id ? tp(locale, 'p3l_h_as', { who: name, as: as ? personName(as) : (r.acting_as_email ?? '—') }) : name;
-  }, [byId, locale]);
+    return r.acting_as_user_id ? tp(locale, 'p3l_h_as', { who: name, as: as ? personName(as) : hhl ? (r.acting_as_email ?? '—') : other }) : name;
+  }, [byId, locale, hhl]);
   const obj = useCallback((r: Row) => {
     if (r.entity !== 'loads' || !r.entity_id) return '';
     const l = loads.find((x) => x.id === r.entity_id);
@@ -104,9 +108,10 @@ export default function LiveHistory() {
     was: fmtVal(locale, r.old_value),
     is: fmtVal(locale, r.new_value),
   }));
+  /* KSH/SCX: tylko obszary z ich wpisów (bez list ustawień systemu) */
   const entityList = [...new Set([
-    'app_users', 'user_invites', 'security_flags', 'ops_thresholds', 'notification_matrix', 'rate_cards', 'sefs_parameters',
-    'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents',
+    ...(hhl ? ['app_users', 'user_invites', 'security_flags', 'ops_thresholds', 'notification_matrix', 'rate_cards', 'sefs_parameters',
+      'fuel_index_readings', 'loads', 'decisions', 'risk_signals', 'invoices', 'system_broadcast', 'doc_requirements', 'documents'] : ['loads', 'documents']),
     ...rows.map((r) => r.entity),
   ])];
 

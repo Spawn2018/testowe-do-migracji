@@ -545,6 +545,7 @@ const pl: Dict = {
   p3l_b_firms_none: 'bez firm',
   p3l_h_as: '{who} jako {as}',
   p3l_h_auto: 'System // Watch Tower',
+  p3l_h_other: 'Inna firma',
   p3l_h_tech_note: 'Zmiany techniczne liczone na pobranej stronie ({n} najnowszych wpisów).',
   p3l_h_obj: '{what}: {id}',
   p3l_exp_limit: 'do {n} najnowszych wierszy',
