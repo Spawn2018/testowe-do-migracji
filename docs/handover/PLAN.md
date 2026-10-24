@@ -1527,3 +1527,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 17:16 | #528 CI unit/db/visual zielone na head `0dbf4267`; czekam F7 | pętla |
 | 24.10.2026 17:55 | #528 CI unit/db/visual zielone na head `6aa9eb5a`; czekam F7 | pętla |
 | 24.10.2026 18:10 | #528 CI unit/db/visual zielone na head `69e646b6`; czekam F7 | pętla |
+| 24.10.2026 18:35 | #528 CI unit/db/visual zielone na head `6dfe43a2` (security **391**); czekam F7 | pętla |
