@@ -4553,3 +4553,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #505 zamknięte; #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce.
 - Scalanie: **#506** `069aaac1` (F7 „gotowe do scalenia” na `2ebb6fa1`, CI unit/db/visual zielone).
 - Bieżąca: **#422** `pakiet/hotfix-422-perf-errors`, migracja **0283**: `perf_results` + RLS HHL, `perf_results_latest` / `app_errors_recent`, `perf_result_record` (service_role), `perf_p95_lists_ingest` + cron `tower-perf-p95`, seed p5 „brak pomiaru”; security **172**, nullguard **725**. Lighthouse w deploy-main — następny krok.
+
+## 2026-10-24 02:15 — #422 db: p95 bez auth.role() na bramie
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w kolejce. Bez nowych `dla-cursora`.
+- Scalanie: brak F7 „gotowe” (PR #507, #382, #383). Unit i visual zielone na `d678df58`; db FAIL security 169/172 — `auth.role()` nie istnieje w bramie.
+- Bieżąca: **#422** — zapis p95 najpierw sesja postgres/supabase_admin, `auth.role()` tylko gdy funkcja jest; `chk` → `chk6` (anon bez INSERT). Lighthouse w deploy-main — po zielonym db.

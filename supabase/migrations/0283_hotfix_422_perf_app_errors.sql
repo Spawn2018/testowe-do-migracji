@@ -95,11 +95,17 @@ set search_path = public
 as $$
 declare
   v_id bigint;
+  v_jwt_role text := '';
 begin
-  -- service_role (Edge / CI) albo sesja postgres/cron (pg_cron).
-  if (coalesce(auth.role(), '') = 'service_role') is not true
-     and (session_user in ('postgres', 'supabase_admin')) is not true then
-    raise exception 'Zapis pomiaru wydajności — tylko usługa' using errcode = '42501';
+  -- Brama nie ma auth.role() — wywołanie od razu rzuca 42883, zanim dojdzie sesja postgres.
+  -- Cron i brama: session_user postgres/supabase_admin. PostgREST: auth.role() = service_role.
+  if session_user not in ('postgres', 'supabase_admin') then
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    end if;
+    if (coalesce(v_jwt_role, '') = 'service_role') is not true then
+      raise exception 'Zapis pomiaru wydajności — tylko usługa' using errcode = '42501';
+    end if;
   end if;
   if (p_metric_id ~ '^[a-z0-9_]{1,40}$') is not true then
     raise exception 'Nieprawidłowy metric_id' using errcode = '22023';
@@ -139,10 +145,15 @@ declare
   v_ok boolean;
   v_src text;
   v_id bigint;
+  v_jwt_role text := '';
 begin
-  if (coalesce(auth.role(), '') = 'service_role') is not true
-     and (session_user in ('postgres', 'supabase_admin')) is not true then
-    raise exception 'Zasilanie p95 — tylko usługa / cron' using errcode = '42501';
+  if session_user not in ('postgres', 'supabase_admin') then
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    end if;
+    if (coalesce(v_jwt_role, '') = 'service_role') is not true then
+      raise exception 'Zasilanie p95 — tylko usługa / cron' using errcode = '42501';
+    end if;
   end if;
 
   v_ms := null;

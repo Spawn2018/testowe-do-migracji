@@ -431,7 +431,7 @@ val "#422: HHL_OPS czyta perf_results_latest" $OPS422 \
   "select (jsonb_typeof(perf_results_latest()->'rows') = 'array')::text" true
 err "#422: KSH nie czyta perf_results_latest" $KSH "select perf_results_latest()" "tylko HHL|42501"
 err "#422: SCX nie czyta perf_results_latest" $SCX "select perf_results_latest()" "tylko HHL|42501"
-chk "#422: anon bez SELECT/INSERT na perf_results" "$(sys "select has_table_privilege('anon','perf_results','select')::text||has_table_privilege('anon','perf_results','insert')::text||has_table_privilege('authenticated','perf_results','insert')::text" | tail -1)" "falsefalsefalse"
+chk6 "#422: anon bez SELECT/INSERT na perf_results" "$(sys "select has_table_privilege('anon','perf_results','select')::text||has_table_privilege('anon','perf_results','insert')::text||has_table_privilege('authenticated','perf_results','insert')::text" | tail -1)" "falsefalsefalse"
 err "#422: HHL nie wstawi wiersza bezpośrednio" $HHL \
   "insert into perf_results (metric_id, what, how, result_text, limit_text, ok, source) values ('p1','x','y','z','l',true,'t')" \
   "permission denied|42501"
