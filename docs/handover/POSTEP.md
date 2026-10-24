@@ -4650,3 +4650,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#516** (Spawn2018) — auto-zamykanie decyzji „Kopia nieudana” po OK; wpisane PLAN §4/§8 + `D-20261024-0755-01.md`. #500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE w planie (otwarte do zamknięcia po odbiorze).
 - Scalanie: brak F7 „gotowe” po head `f9346e60` (komentarz „czekam F7”); #515/#518 wygląd bez F7; #382 CONFLICT.
 - Bieżąca: **#412** PR #514 — CI `db` FAIL: security 266/268 (OPLACONA po `mark_invoice_paid` trafiało w „Po akceptacji”; SPORNA bez `dispute_note` → update cichy); nullguard 774/780 (`Brak konta` vs wzorzec `Nieznana faktura` + pozytywny HHL). Poprawka: kolejność OPLACONA→ZAAKCEPTOWANA; SPORNA+`dispute_note`; nullguard `Brak konta`. Push → CI; czekam F7.
+
+## 2026-10-24 08:25 — #514 F7 r3: MONEY + load_id + testy
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #516/#500/#499/#496/#492/#484/#412 w planie. #515/#518 wygląd bez F7 „gotowe”.
+- Scalanie: brak (F7 #514 „nadal do poprawy” na `77be15f1`; CI unit/db/visual zielone na tym SHA — potem poprawki).
+- Bieżąca: **#412** PR #514 — F7 r3: `matrix_notify('MONEY')` + `p_load_id` z `invoice_lines`; `invoice_id`; `unmark_invoice_paid` czyści `factoring_paid_at`; `factoring_overdue_notify` + cron; testy CAR2 / rezygnacja / przed akceptacją / po akceptacji / IN_APP / OVERDUE. security **278** (+10); nullguard **780**.

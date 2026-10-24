@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 268, // #412f 0287 E4b F7: +33 faktoring (było 235 #412p; +25 bazowych +8 F7)
+  security: 278, // #412f 0287 E4b F7 r3: +10 (MONEY/load_id/CAR2/rezygnacja/unmark/OVERDUE); było 268
   status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 264, // 268 − 4 SKIP (B6); #412f 0287
+  security: 274, // 278 − 4 SKIP (B6); #412f 0287 F7 r3
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,

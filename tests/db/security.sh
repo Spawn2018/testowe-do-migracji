@@ -643,8 +643,32 @@ err "#412f: KSH nie wybierze faktoringu" $KSH \
   "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
 err "#412f: HHL nie wybierze faktoringu na KOSZT SCX" $HHL \
   "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+# F7: drugi przewoźnik nie wybiera cudzej faktury SCX.
+CAR2F=11111111-0000-0000-0000-0000000000c2
+sys "insert into organizations (id, code, name, kind)
+       values ('00000000-0000-0000-0000-00000000a004','CAR2','Drugi przewoźnik','CARRIER')
+       on conflict (id) do nothing;
+     insert into app_users (auth_id, org_id, email, role, active)
+       values ('$CAR2F','00000000-0000-0000-0000-00000000a004','car2-412f@test','CARRIER_DISPATCH',true)
+       on conflict (auth_id) do update set role='CARRIER_DISPATCH', active=true,
+         org_id='00000000-0000-0000-0000-00000000a004'" >/dev/null
+err "#412f: drugi przewoźnik nie wybierze faktoringu SCX" $CAR2F \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+# F7: wypłata przed akceptacją.
+err "#412f: wypłata przed akceptacją odmowa" $HHL \
+  "select factoring_mark_paid('$INVK')" "Najpierw akceptacja|22023"
+# F7: rezygnacja przed akceptacją.
+val "#412f: SCX rezygnuje z faktoringu" $SCX \
+  "select invoice_factoring_set('$INVK', false); select factoring_selected::text from invoices where id='$INVK'" "false" commit
+run $SCX "select invoice_factoring_set('$INVK', true)" commit >/dev/null
+sys "delete from notifications where template like 'FACTOR%' and payload->>'invoice_id'='$INVK'" >/dev/null
 val "#412f: akceptacja HHL startuje 48 h" $HHL \
   "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INVK'; select (factoring_due_at is not null)::text from invoices where id='$INVK'" true commit
+err "#412f: zmiana wyboru po akceptacji odmowa" $SCX \
+  "select invoice_factoring_set('$INVK', false)" "Po akceptacji|22023"
+chk6 "#412f: dzwonek FACTORING_ACCEPTED IN_APP HHL" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='IN_APP' and n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.role='HHL_ADMIN'" | tail -1)" 1
+chk6 "#412f: dzwonek FACTORING_ACCEPTED IN_APP SCX" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='IN_APP' and n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.auth_id='$SCX'" | tail -1)" 1
+chk6 "#412f: drugi przewoźnik bez dzwonka akceptacji" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.auth_id='$CAR2F'" | tail -1)" 0
 val "#412f: HHL widzi zadanie wypłaty" $HHL \
   "select jsonb_array_length(factoring_tasks())" 1
 val "#412f: HHL_OPS widzi zadania" $OPS412 \
@@ -653,12 +677,15 @@ err "#412f: KSH nie czyta zadań" $KSH "select factoring_tasks()" "tylko HHL|425
 err "#412f: SCX nie czyta zadań" $SCX "select factoring_tasks()" "tylko HHL|42501"
 val "#412f: HHL oznacza wypłatę" $HHL \
   "select factoring_mark_paid('$INVK'); select payment_status||'|'||(factoring_paid_at is not null)::text from invoices where id='$INVK'" "OPLACONA|true" commit
+chk6 "#412f: dzwonek FACTORING_PAID IN_APP HHL+SCX" "$(sys "select count(*) from notifications where channel='IN_APP' and template='FACTORING_PAID' and payload->>'invoice_id'='$INVK'" | tail -1)" 2
 val "#412f: po wypłacie lista pusta" $HHL "select jsonb_array_length(factoring_tasks())" 0
 val "#412f: audit FACTORING_MARK_PAID" $HHL \
   "select count(*) from audit_log where action='FACTORING_MARK_PAID' and entity_id='$INVK'" 1
 err "#412f: ponowna wypłata odmowa" $HHL "select factoring_mark_paid('$INVK')" "opłacona|P0001"
 err "#412f: SCX nie oznaczy wypłaty" $SCX "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
 err "#412f: KSH nie oznaczy wypłaty" $KSH "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
+val "#412f: unmark czyści factoring_paid_at" $HHL \
+  "select unmark_invoice_paid('$INVK', 'test cofnięcia faktoringu'); select (factoring_paid_at is null and payment_status='NIEOPLACONA')::text from invoices where id='$INVK'" "true" commit
 # Kolejność odwrotna: najpierw mark_invoice_paid, potem factoring.
 sys "update invoices set factoring_selected=true, factoring_fee_pct=1, factoring_fee_amount=100.95,
        factoring_net_payout=9994.08, factoring_hours=48, factoring_offer_version=1,
@@ -693,6 +720,18 @@ sys "update invoices set verification_status='SPORNA', dispute_note='test sporu 
        factoring_selected=false where id='$INVK'" >/dev/null
 err "#412f: SPORNA bez faktoringu" $SCX \
   "select invoice_factoring_set('$INVK', true)" "sporze|SPORNA|22023"
+# F7: po terminie 48 h — dzwonek OVERDUE (due_at osobno: trigger akceptacji nadpisuje now()+48h).
+sys "update invoices set verification_status='ZAAKCEPTOWANA', factoring_selected=true,
+       factoring_fee_pct=1, factoring_fee_amount=100.95, factoring_net_payout=9994.08,
+       factoring_hours=48, factoring_offer_version=1, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, dispute_note=null,
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+sys "update invoices set factoring_accepted_at=now()-interval '3 days',
+       factoring_due_at=now()-interval '1 day' where id='$INVK'" >/dev/null
+sys "delete from notifications where template='FACTORING_OVERDUE' and payload->>'invoice_id'='$INVK'" >/dev/null
+sys "select factoring_overdue_notify()" >/dev/null
+chk6 "#412f: dzwonek FACTORING_OVERDUE po terminie" "$(sys "select (count(*) >= 1)::text from notifications where channel='IN_APP' and template='FACTORING_OVERDUE' and payload->>'invoice_id'='$INVK'" | tail -1)" true
 sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_selected=false,
        factoring_fee_pct=null, factoring_fee_amount=null, factoring_net_payout=null,
        factoring_hours=null, factoring_offer_version=null, factoring_accepted_at=null,

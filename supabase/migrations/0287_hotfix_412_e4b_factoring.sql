@@ -366,12 +366,15 @@ create trigger trg_factoring_on_accept
 revoke all on function public.factoring_on_accept() from public, anon, authenticated;
 
 -- Dzwonek po akceptacji (AFTER — matrix_notify nie w BEFORE).
+-- F7 #514: grupa MONEY (nie FACTORING); p_load_id z invoice_lines; klucz invoice_id.
 create or replace function public.factoring_notify_on_accept()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_lid uuid;
 begin
   if new.factoring_selected is not true then
     return new;
@@ -382,14 +385,19 @@ begin
   if old.verification_status is not distinct from 'ZAAKCEPTOWANA' then
     return new;
   end if;
+  select load_id into v_lid
+    from public.invoice_lines
+   where invoice_id = new.id
+   order by load_id
+   limit 1;
   begin
     perform public.matrix_notify(
-      'FACTORING',
+      'MONEY',
       'FACTORING_ACCEPTED',
-      null,
+      v_lid,
       new.project_id,
       jsonb_build_object(
-        'invoiceId', new.id,
+        'invoice_id', new.id,
         'number', new.invoice_number,
         'payout', new.factoring_net_payout,
         'dueAt', new.factoring_due_at,
@@ -527,6 +535,7 @@ declare
   inv public.invoices%rowtype;
   v_me uuid;
   v_paid date := public.factoring_today();
+  v_lid uuid;
 begin
   if (public.is_hhl()) is not true then
     raise exception 'Wypłatę faktoringu oznacza wyłącznie HHL' using errcode = '42501';
@@ -569,14 +578,19 @@ begin
     )
   );
 
+  select load_id into v_lid
+    from public.invoice_lines
+   where invoice_id = p_invoice
+   order by load_id
+   limit 1;
   begin
     perform public.matrix_notify(
-      'FACTORING',
+      'MONEY',
       'FACTORING_PAID',
-      null,
+      v_lid,
       inv.project_id,
       jsonb_build_object(
-        'invoiceId', p_invoice,
+        'invoice_id', p_invoice,
         'number', inv.invoice_number,
         'payout', inv.factoring_net_payout,
         'matrix_event', 'factoring'
@@ -592,4 +606,119 @@ end $$;
 revoke all on function public.factoring_mark_paid(uuid) from public, anon;
 grant execute on function public.factoring_mark_paid(uuid) to authenticated;
 comment on function public.factoring_mark_paid(uuid) is
-  '#412 E4b: HHL wypłata = factoring_paid_at + OPLACONA; audit + dzwonek.';
+  '#412 E4b: HHL wypłata = factoring_paid_at + OPLACONA; audit + dzwonek MONEY.';
+
+-- ---------------------------------------------------------------------------
+-- Cofnięcie płatności czyści też factoring_paid_at (F7 #514).
+-- ---------------------------------------------------------------------------
+create or replace function public.unmark_invoice_paid(p_invoice uuid, p_reason text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (public.is_hhl()) is not true then
+    raise exception 'Cofnięcie płatności — wyłącznie HHL' using errcode = '42501';
+  end if;
+  if (p_reason is not null and btrim(p_reason) <> '') is not true then
+    raise exception 'Wymagany powód cofnięcia' using errcode = '22023';
+  end if;
+  update public.invoices set
+    payment_status = 'NIEOPLACONA',
+    paid_at = null,
+    paid_marked_by = null,
+    paid_marked_at = null,
+    factoring_paid_at = null
+  where id = p_invoice;
+  insert into public.audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    (select id from public.app_users where auth_id = auth.uid()),
+    'INVOICE_UNMARK_PAID', 'invoices', p_invoice::text,
+    jsonb_build_object('reason', p_reason, 'factoring_paid_at', null)
+  );
+end $$;
+
+revoke all on function public.unmark_invoice_paid(uuid, text) from public, anon;
+grant execute on function public.unmark_invoice_paid(uuid, text) to authenticated;
+comment on function public.unmark_invoice_paid(uuid, text) is
+  '#412 E4b F7: cofnięcie płatności czyści też factoring_paid_at.';
+
+-- ---------------------------------------------------------------------------
+-- Po terminie 48 h — dzwonek FACTORING_OVERDUE (MONEY / factoring), bez SMS.
+-- ---------------------------------------------------------------------------
+create or replace function public.factoring_overdue_notify()
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r record;
+  v_lid uuid;
+  n int := 0;
+  k int;
+begin
+  for r in
+    select i.id, i.project_id, i.invoice_number, i.factoring_net_payout, i.factoring_due_at
+      from public.invoices i
+     where i.factoring_selected is true
+       and i.verification_status = 'ZAAKCEPTOWANA'
+       and i.factoring_due_at is not null
+       and i.factoring_due_at < now()
+       and i.factoring_paid_at is null
+       and i.payment_status is distinct from 'OPLACONA'
+  loop
+    select load_id into v_lid
+      from public.invoice_lines
+     where invoice_id = r.id
+     order by load_id
+     limit 1;
+    begin
+      k := public.matrix_notify(
+        'MONEY',
+        'FACTORING_OVERDUE',
+        v_lid,
+        r.project_id,
+        jsonb_build_object(
+          'invoice_id', r.id,
+          'number', r.invoice_number,
+          'payout', r.factoring_net_payout,
+          'dueAt', r.factoring_due_at,
+          'matrix_event', 'factoring'
+        ),
+        'factoring-overdue:' || r.id::text,
+        null
+      );
+      n := n + coalesce(k, 0);
+    exception when others then
+      null;
+    end;
+  end loop;
+  return n;
+end $$;
+
+revoke all on function public.factoring_overdue_notify() from public, anon, authenticated;
+do $g$ begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.factoring_overdue_notify() to service_role;
+  end if;
+end $g$;
+comment on function public.factoring_overdue_notify() is
+  '#412 E4b F7: dzwonek po przekroczeniu 48 h (cron / service_role).';
+
+do $cron$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    if exists (select 1 from cron.job where jobname = 'tower-faktoring-termin') then
+      perform cron.unschedule('tower-faktoring-termin');
+    end if;
+    perform cron.schedule(
+      'tower-faktoring-termin',
+      '20 * * * *',
+      'select public.factoring_overdue_notify()'
+    );
+  end if;
+exception when others then
+  raise notice 'pg_cron niedostępny — tower-faktoring-termin do zaplanowania ręcznie';
+end $cron$;
