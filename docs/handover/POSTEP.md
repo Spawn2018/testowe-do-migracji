@@ -4614,3 +4614,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412 bieżąca; #500/#499/#496/#492/#484/#323/#322/#320 w planie. Bez nowych `dla-cursora`; bez `pilne`.
 - Scalanie: F7 #510 **do poprawy** (po `cca4b19`); CI na `fd470bd4` (STEGRA) zielone unit/db/visual — bez „gotowe”. #509 wygląd; #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #510 — F7: `payment_terms_options_set` insert `valid_from=current_date` on conflict (stara wersja dla `issue_date`); regex e-mail `[a-z0-9._%+-]` (+ `looksLikeEmail`); security: asercja zapisu, wersja past, SCX/KSH get/set/SELECT, bez `duplicate` w INSERT; adresy testowe `@test`. Oczek. security **~210**. Push → CI.
+
+## 2026-10-24 05:42 — #509 SCALONE; #412 db: @test bez TLD
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
+- Scalanie: **#509** `ca0a94c2` (F7 „gotowe do scalenia” na `567255e`, CI unit/visual zielone) — wygląd Stan systemu Wydajność/Błędy (#422). #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#412** PR #510 — CI `db` security 209/211 (2 FAIL): `ksiegowosc@test` / `biuro@test` odrzucone przez regex (brak TLD). Poprawka: adresy testowe `@test.pl`; EXPECTED security **211** / TEST **207**. Push → CI; czekam F7.

@@ -530,21 +530,22 @@ err "#412: KSH nie czyta adresów" $KSH "select accounting_addresses_get()" "tyl
 err "#412: SCX nie czyta adresów" $SCX "select accounting_addresses_get()" "tylko HHL|42501"
 val "#412: KSH SELECT accounting_addresses = 0" $KSH "select count(*) from accounting_addresses" 0
 val "#412: SCX SELECT accounting_addresses = 0" $SCX "select count(*) from accounting_addresses" 0
-val "#412: HHL_ADMIN zapisuje 2 adresy HHL (@test)" $HHL \
-  "select accounting_addresses_set('HHL', array['ksiegowosc@test','biuro@test']); select jsonb_array_length(accounting_addresses_get()->'HHL')" 2 commit
+# Adresy @test.pl — fikcyjne (F7: nie firmowe); regex wymaga TLD (≥2 litery).
+val "#412: HHL_ADMIN zapisuje 2 adresy HHL (@test.pl)" $HHL \
+  "select accounting_addresses_set('HHL', array['ksiegowosc@test.pl','biuro@test.pl']); select jsonb_array_length(accounting_addresses_get()->'HHL')" 2 commit
 val "#412: audit ACCOUNTING_ADDRESSES_SET" $HHL \
   "select count(*) from audit_log where action='ACCOUNTING_ADDRESSES_SET' and entity_id='HHL'" 1
 err "#412: HHL_OPS nie zapisze adresów" $OPS412 \
-  "select accounting_addresses_set('KSH', array['a@test'])" "Administrator HHL|42501"
+  "select accounting_addresses_set('KSH', array['a@test.pl'])" "Administrator HHL|42501"
 err "#412: KSH nie ustawi adresów" $KSH \
-  "select accounting_addresses_set('KSH', array['a@test'])" "Administrator HHL|42501"
+  "select accounting_addresses_set('KSH', array['a@test.pl'])" "Administrator HHL|42501"
 err "#412: zły e-mail odrzucony" $HHL \
   "select accounting_addresses_set('HHL', array['nie-email'])" "Nieprawidłowy|22023"
 err "#412: e-mail z średnikiem odrzucony" $HHL \
   "select accounting_addresses_set('HHL', array['a@b.pl;x'])" "Nieprawidłowy|22023"
 chk6 "#412: anon bez SELECT/INSERT accounting_addresses" "$(sys "select has_table_privilege('anon','accounting_addresses','select')::text||has_table_privilege('anon','accounting_addresses','insert')::text||has_table_privilege('authenticated','accounting_addresses','insert')::text" | tail -1)" "falsefalsefalse"
 err "#412: HHL nie wstawi wiersza bezpośrednio" $HHL \
-  "insert into accounting_addresses (pack_key, emails) values ('X', '{x@test}')" \
+  "insert into accounting_addresses (pack_key, emails) values ('X', '{x@test.pl}')" \
   "permission denied|42501"
 # Przywróć seed migracji (adresy działowe) po testach @test.
 run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
