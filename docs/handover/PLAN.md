@@ -402,7 +402,11 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C15** — **przeniesione do A8** (D-20261017-0730-01): po 3× `login_failed` emtrack → 1 próba / 6 h; jedna sprawa `SOURCE_DOWN:EMTRACK_WEB`.
 - **Odbiór:** brama `db`, TEST (`risks`, `security`, `e41`, `e9-role`, `nullguard`, dotknięte), doradca TEST i produkcja.
 
+<<<<<<< HEAD
 ### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (~~#445 A10_b FERRY / 0262~~; ~~**#446 drobne** / 0263–0266~~; ~~#384 zaległe / 0267~~; ~~#453 RIO_NO_POSITION~~; ~~#455~~; ~~#460~~ ferry_track / **0268**; ~~#461~~ Prom AIS/SCHEDULE_ASSUMED / **0270**; ~~#463~~ / ~~#479~~ backup; ~~#409~~ / **0271**; ~~#464~~ / **0272**; ~~#465~~; ~~#466~~ / **0273**; ~~#485~~ po promie Port SE / **0274**; ~~**#487** korytarz E22 Karlskrona (`pilne`) / **0275**~~; ~~**#489** odpięcie rejsu→status (`pilne`) / **0276**~~; ~~**#467** D3 / **0277**~~; ~~**#498**/**0278**~~; ~~**#502**/**0279**~~; ~~**#413**/**0280**+**0281**~~; ~~**#505**/**0282**~~; ~~**#422**/**0283**+#508/**0284**~~; ~~**#412**/**0285**~~–~~**0289**~~; ~~**#484**/**0290**~~; ~~**#492**/**0291**~~; ~~**#528**/**0292**~~; **#530**/**0293**; B5/**≥0299**; #537 Zgubione; ~~#441~~; ~~#442~~; ~~#437/0261~~; ~~#400/0260~~; ~~#426/0259~~; ~~#421/0258~~; ~~#405/0257~~; ~~#411/0256~~; ~~#402/0255~~; ~~#398/0254~~) — kolejka #530 → B5…
+=======
+### Naprawy audytu 17.10 — BLOKER przed C4 (D-20261017-0730-01) — W TOKU (~~#445 A10_b FERRY / 0262~~; **#446 drobne** / ~~0263–0266~~ + pkt 5 SELECT / pkt 6 jutro; ~~#384 zaległe / 0267~~; ~~#453 RIO_NO_POSITION~~; ~~#455~~; ~~#460~~ ferry_track / **0268**; ~~#461~~ Prom AIS/SCHEDULE_ASSUMED / **0270**; ~~#463~~ / ~~#479~~ backup; ~~#409~~ / **0271**; ~~#464~~ / **0272**; ~~#465~~; ~~#466~~ / **0273**; ~~#485~~ po promie Port SE / **0274**; ~~**#487** korytarz E22 Karlskrona (`pilne`) / **0275**~~; ~~**#489** odpięcie rejsu→status (`pilne`) / **0276**~~; ~~**#467** D3 / **0277**~~; ~~**#498**/**0278**~~; ~~**#502**/**0279**~~; ~~**#413**/**0280**+**0281**~~; ~~**#505**/**0282**~~; ~~**#422**/**0283**+#508/**0284**~~; ~~**#412**/**0285**~~–~~**0289**~~; ~~**#484**/**0290**~~; ~~**#492**/**0291**~~; **#528**/**0292**; **#530**/**0293**; B5/**0294**; **#516**/**0295**; ~~#441~~; ~~#442~~; ~~#437/0261~~; ~~#400/0260~~; ~~#426/0259~~; ~~#421/0258~~; ~~#405/0257~~; ~~#411/0256~~; ~~#402/0255~~; ~~#398/0254~~) — kolejka #492 SCALONE → #528/#530 (F7) → B5; #516 równolegle…
+>>>>>>> b3682322 (feat(#516): OK kopii zamyka decyzje BACKUP_FAILED (0295).)
 Decyzje właściciela 17.10.2026, 07:20: **1A, 2C, 3A, 4B, 5B, 6A, 7A, 8A**. Gałąź: `pakiet/audyt-17` (osobny commit na pozycję; można dzielić PR po 2–4 pozycje). Każda pozycja: test z odbioru → `POSTEP.md` → wdrożenie. Migracje z kopią. Pozycja czekająca na dane właściciela → „NA PRODUKCJI — bez …, czeka W…” i dalej.
 **Kolejność:** ~~C3-p~~ → ~~B1~~ → ~~B2~~ → ~~B6~~ → ~~A8~~ → ~~A1~~ → ~~A2~~ → ~~Panel › Do zrobienia (D-20261018-1215-01, baza)~~ → **~~Eskalacje decyzji (D-20261018-1610-01)~~ → ~~CMR tylko po rozładunku (D-20261018-1740-01, 0231)~~ → ~~Poprawka CMR has_doc jak C17 (#312, 0233)~~ → ~~Automat wdrożenia z main (D-20261019-1050-01)~~ → ~~Daty bez ograniczeń dla Administratora HHL (D-20261019-0005-01, #313)~~ → ~~Kod transportu w L-3 i E41 w ryzykach (D-20261019-0930-01)~~** → ~~A3+A9~~ → ~~A7+A4~~ → ~~A5~~ → ~~Import godziny cicho (#356, #361, 0241; wygląd #366)~~ → ~~D-1118 + D-1243 (#358)~~ → ~~HOTFIX D-1525 cz.1 (#367, 0240)~~ → ~~D-1710 (#368/#373, 0242)~~ → ~~D-1501 (#362 / #370, 0243) + HOTFIX cz.2 NO_AWIZ_SE~~ (ekran #363 SCALONE; ~~#371 SCALONE~~) → ~~HOTFIX #374 emtrack version/noflicker (#375, 0244)~~ → ~~C15-emtrack (#365/#376)~~ → ~~D-1300 · Opłata paliwowa OKQ8 7 dni + „od progu” (#359, D-1322)~~ → ~~A10 · Automat wszystkich statusów (D-20261019-1540-01, #378, 0246)~~ → **~~B4 · `visible_to` (#380/#381, 0247–0248)~~** → **~~HOTFIX #384 pkt 1–6 (#386/#388/#389, 0249–0251)~~** → **~~HOTFIX #392 · RIO sanitize (#392/#395, 0252)~~** → **~~D-1535 · t40 paliwo ×1,14 (#391/#396, 0253)~~** → **~~HOTFIX #398 · szum ryzyk (0254)~~** → **~~HOTFIX #402 · jedna bramka powiadomień (0255)~~** → **~~HOTFIX #411 · zamknięta sprawa / dzwonek (0256)~~** → **~~HOTFIX #405 · SMS tylko strefy (0257)~~** → **~~#421 · promy AIS/rozkład (0258)~~** → **~~#426 · import KSH bez powiadomień (0259)~~** → **~~#400 · 8b/8c DIMS + historia PII (0260)~~** → **~~#437 · E44 RIO (0261)~~** → **~~#442 rio-links `shipment_code`~~** → **~~#441 Edge/cron~~** → **~~#445 A10_b FERRY (0262)~~** → **#446 drobne (0263–0266)** → **#384 zaległe (0267)** → **#453 · RIO link bez pozycji** → **#455 · testy bazy po #436** → **~~#460 · ferry_track_sample 42702 (`pilne`, 0268)~~** → **#461 · Prom AIS/SCHEDULE_ASSUMED (`pilne`, 0270)** → **~~#463 cz.1 · backup + cron (`pilne`)~~** → **~~#409 · fuel_basis (0271)~~** → **~~#464 a7_permits KSH (0272)~~** → **~~#465 brama RPC mapy~~** → **~~#463 cz.2 · backup continue (`pilne`)~~** → **#463 cz.3 · COPY hang (`pilne`)** → **~~#466 D1 PII (0273)~~** → **~~#479 backup cz.6~~** → **~~#485 · po promie Port SE / Droga SE (`pilne`, 0274)~~** → **~~#487 · korytarz E22 Karlskrona (`pilne`, 0275)~~** → ~~**#489 · odpięcie rejsu→status (`pilne`, 0276)**~~ → ~~**#467 D3 maile/SMS (0277)**~~ → **#413 · Automatyzacje/Strefy (`pilne`, 0278)** → **#422 · wydajność/błędy (`pilne`, 0279)** → **#412 źródła Opcje/Finanse** → **#484 Historia zmian** → **#492 `loads.updated_at` (ekran)** → B5 (0280) → B7 → B8 → B9 → A6.
 Po A6: C4–C11, C13 (zakres bez zmian; C11 = hasło min. 12 znaków **z literami i cyframi** — widok w #291; Auth ustawił właściciel, W1, 17.10.2026 07:28; Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa, „Haslo-testowe-12” → przyjęte; gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”) → P4-u → P3-d → …
@@ -866,8 +870,8 @@ Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_I
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
 
-### #516 · Kopia: auto-zamykanie decyzji „nieudana” po OK (D-20261024-0755-01) — po #412 / #484 kolejce (nie przerywa)
-Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLVED (id przebiegu); ryzyko backup-stale; 3 otwarte z 23.10 cicho; test `backup.sh` ERROR→NEW, OK→RESOLVED; licznik `backup_runs.files`. Szczegóły: #516.
+### #516 · Kopia: auto-zamykanie decyzji „nieudana” po OK (D-20261024-0755-01) — W TOKU (migracja **0295**; #528→0292, #530→0293, B5→0294)
+Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLVED (id przebiegu); ryzyko backup-stale; 3 otwarte z 23.10 cicho; test `backup.sh` ERROR→NEW, OK→RESOLVED; licznik `backup_runs.files` (+ części). Szczegóły: #516.
 
 ### #519 · Faktoring drobne F7 r3 (N2–N4) (D-20261024-0900-01) — po #514, przed 28.10 (nie przerywa)
 Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/`paid_at`; `raise warning`/`app_errors` zamiast połykania; link → Finanse › Faktury. N1 bez zmian (e-mail/push HHL_ADMIN). Szczegóły: #519.
@@ -884,6 +888,7 @@ Po #528 SCALONE. Podbicie `loads.updated_at` z `load_escorts` / `sailings`; `tow
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
 Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → #528 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519/#525/#530 po #412/#492 (nie przerywa).
 
+<<<<<<< HEAD
 ### Zgubione — audyt 25.10 (#537, D-20261025-0015-01) — DO ZROBIENIA po #531–#536 (0292→0298); przed 28.10; nie przerywa bieżącej
 Źródło: skrzynka `dla-cursora` #537 (Spawn2018). Najpierw dokończ #531–#536 rosnąco. Potem bez pomijania:
 1. **#412 z komentarzy 21.10** (poza 5 punktami już SCALONE): a) 2FA innych kont (`admin_users_mfa_status`); b) ważność/doręczenie zaproszeń; c) RPC „Uzupełnij z Orlen”; d) rodzaje SMS A–D w `sms_zone_recipients`; e) cennik D×S×W w `rate_rules`; f) autor/czas progów (`ops_thresholds.updated_by/at`); g) progi świeżości `SRC_*` w bazie. Przeniesienia: 8 progów wiatru/śliskości E49 → **P6**; kalibracja ETA → **P4-u**; przebiegi SMHI/RIO w `integration_runs` → **P10a**; RPC „Sprawdź teraz”/„Bezpieczeństwo” → **P10b**.
@@ -918,6 +923,9 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 Po jednym koncie na rolę: KSH, SCX Dyspozytor, SCX Użytkownik, HHL Operacje. Baza: flaga `read_only` w strażnikach i RPC zapisu → 42501. Poza macierzą powiadomień/SMS/e-mail (nie odbiorca). Bez PII w raportach pomiarów. Zaproszenia na adresy właściciela; hasła → GitHub Secrets tylko właściciel (W47). Testy: każda rola 42501 na każdej funkcji zapisu (allowlista security.sh). Wyjątek od „bez kont testowych na produkcji” — tylko te konta.
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — po #528/#496 (migracja **≥0299**; #528→**0292**; #492→**0291** SCALONE)
+=======
+### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #528 (migracja **0294** po rebase; #516→**0295**; #530→**0293**; #528→**0292**; #492→**0291** SCALONE)
+>>>>>>> b3682322 (feat(#516): OK kopii zamyka decyzje BACKUP_FAILED (0295).)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1560,6 +1568,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:45 | #492 db: RODO asercja przez sys (driver_name bez SELECT authenticated, 0076); security **384** | pętla |
 | 24.10.2026 14:55 | #492 F7 #529 r3: `combo_weight_t` + RODO freeze osobnym UPDATE; security **385** | pętla |
 | 24.10.2026 15:32 | #492 CI unit/db/visual zielone (`3ad7619a`); czekam F7 „gotowe” | pętla |
+<<<<<<< HEAD
 | 24.10.2026 15:52 | #529/#492 SCALONE (`8c7fcf37`, 0291); F7 „gotowe”; start #528 → **0292**; B5→**0293** | pętla |
 | 24.10.2026 16:20 | #528 db: clear tylko old≠NULL; phone_country→PL (NOT NULL); security **391** | pętla |
 | 24.10.2026 16:40 | #528 CI unit/db/visual zielone (`fc08a460`); czekam F7 „gotowe” | pętla |
@@ -1582,3 +1591,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 03:15 | #541 SCALONE (`81c580cc`); #537 uzup. 2 → §4 pkt 10–15, W43 zamknięte, A8 bez W37; #532: `val … commit` (notice); security **406** | pętla |
 | 25.10.2026 03:45 | #537 uzup. 3 → §4 pkt 16–18 + P11 pkt 3; #532 CI unit/db/visual zielone na `4f56ad2a` (security **406**); czekam F7 | pętla |
 | 25.10.2026 04:10 | #538 uzup. 15B+W5 (D-0230): jedna pętla; W5 zamknięte (R-1 ręczne); #532 CI zielone `ce875347` — czekam F7 (commit docs po gotowe) | pętla |
+=======
+| 24.10.2026 21:05 | #529 SCALONE; #528/#530 czekają F7; start **#516** (0295) — auto-close BACKUP_FAILED po OK | pętla |
+>>>>>>> b3682322 (feat(#516): OK kopii zamyka decyzje BACKUP_FAILED (0295).)

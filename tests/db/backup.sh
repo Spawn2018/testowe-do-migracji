@@ -130,6 +130,29 @@ chk "continue_pending: świeży progress + lease → continued=0" "$(psql "$SRC"
 psql "$SRC" -q -c "update backup_runs set lease_until = null" >/dev/null
 chk "continue_pending: progress < 2 min → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
 
+echo; echo "[#516] OK kopii zamyka decyzje BACKUP_FAILED + ryzyko backup-stale"
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code='BACKUP_FAILED');
+  delete from decisions where type_code='BACKUP_FAILED';
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='test #516' where id=$ERR516" >/dev/null
+chk "#516: ERROR → decyzja BACKUP_FAILED NEW" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW' and detail->>'backup_run_id'='$ERR516'")" 1
+# ryzyko stale jak po strażniku I-33
+PROJ516=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values ('$PROJ516', 'JOB_FAILURE', 'HIGH', 'Kopia zapasowa bez postępu (> 10 min)', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$ERR516), 'backup-stale:'||$ERR516||':$PROJ516', now())" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+OK516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now(), files=3,
+  parts=jsonb_build_object('t', jsonb_build_array(jsonb_build_object('part',1), jsonb_build_object('part',2)))
+  where id=$OK516" >/dev/null
+chk "#516: OK → decyzja BACKUP_FAILED RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and resolution_code='AUTO_CLOSED'")" 1
+chk "#516: OK → ryzyko backup-stale resolved" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where dedup_key like 'backup-stale:%' and resolved_at is null")" 0
+chk "#516: note z id przebiegu OK" "$(psql "$SRC" -Atq -c "select (resolution_note like '%id='||$OK516||'%')::text from decisions where type_code='BACKUP_FAILED' order by resolved_at desc limit 1")" t
+
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
 head -c 200000 /dev/urandom > "$TMP/pliki/a.pdf"; printf 'Zażółć gęślą jaźń\n' > "$TMP/pliki/b.txt"
