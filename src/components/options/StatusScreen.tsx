@@ -314,7 +314,7 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
       ) : (
         <>
           {tiles}
-          <div className="sys-tablewrap">
+          {data.groups.length ? <div className="sys-tablewrap">
             <table className="sys-tbl sys-err">
               <thead>
                 <tr>
@@ -348,7 +348,7 @@ function Errors({ locale, data, nowIso }: { locale: Locale; data: AppErrors; now
                 ))}
               </tbody>
             </table>
-          </div>
+          </div> : null}
         </>
       )}
       {data.groups.length ? null : <p className="sys-note" data-err-empty>{sy(locale, 'sys_err_empty')}</p>}

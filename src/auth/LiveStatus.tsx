@@ -176,6 +176,9 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
     } catch (e) {
       /* F7 #415: wyjątek przy odczycie — komunikat zamiast stałego „Wczytywanie…” */
       setMsg(e instanceof Error ? e.message : t(locale, 'ol2_read_fail'));
+      /* F7 #509 r2: wyjątek — Wydajność „nie udało się odczytać”, bez zakładki Błędów */
+      setPerf(null);
+      setErrors(null);
       setData((x) => x ?? { runs: [], devices: [], backups: [] });
     }
   }, [locale, admin]);
