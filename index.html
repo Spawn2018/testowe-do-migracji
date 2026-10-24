@@ -22,9 +22,11 @@
     </style>
   </head>
   <body>
+    <!-- #274: logo WebP 480 px (~40 kB) zamiast PNG 800 px (~260 kB) — największy element ekranu na telefonie -->
     <div id="wt-boot" aria-hidden="true">
-      <img data-light src="/brand/watchtower-logo-full.png" alt="Watch Tower" width="360" height="120" />
-      <img data-dark src="/brand/watchtower-logo-full-dark.png" alt="Watch Tower" width="360" height="120" />
+      <img data-light src="/brand/watchtower-logo-full.webp" alt="Watch Tower" width="480" height="494" fetchpriority="low" />
+      <!-- przed JS brak data-theme → widoczny wariant ciemny: on pierwszy (LCP) -->
+      <img data-dark src="/brand/watchtower-logo-full-dark.webp" alt="Watch Tower" width="480" height="494" fetchpriority="high" />
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

@@ -20,8 +20,8 @@ const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_
 function BootScreen() {
   return (
     <div className="wt-boot" aria-busy="true" data-boot-wait>
-      <img data-light src="/brand/watchtower-logo-full.png" alt="Watch Tower" width={360} height={120} />
-      <img data-dark src="/brand/watchtower-logo-full-dark.png" alt="Watch Tower" width={360} height={120} />
+      <img data-light src="/brand/watchtower-logo-full.webp" alt="Watch Tower" width={480} height={494} />
+      <img data-dark src="/brand/watchtower-logo-full-dark.webp" alt="Watch Tower" width={480} height={494} />
     </div>
   );
 }
@@ -44,7 +44,7 @@ export default function App() {
         <Route path="/driver/:token" element={<Suspense fallback={<BootScreen />}><DriverPwa /></Suspense>} />
         <Route
           path="/*"
-          element={AuthGate ? <Suspense fallback={null}><AuthGate>{shell}</AuthGate></Suspense> : <DemoFirstEntry>{shell}</DemoFirstEntry>}
+          element={AuthGate ? <Suspense fallback={<BootScreen />}><AuthGate>{shell}</AuthGate></Suspense> : <DemoFirstEntry>{shell}</DemoFirstEntry>}
         />
       </Routes>
     </HashRouter>
