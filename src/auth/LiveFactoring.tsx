@@ -249,13 +249,15 @@ export function LiveFactoringTasks({ nowIso, locale }: { nowIso: string; locale:
 
   /* tylko najnowsza odpowiedź trafia na ekran (F7 #521) */
   const seq = useRef(0);
-  const refresh = useCallback(async () => {
+  /* `clear` — udany odczyt zdejmuje stary komunikat; po odmowie wypłaty komunikat zostaje (F7 #521 N2) */
+  const refresh = useCallback(async (clear = true) => {
     const my = ++seq.current;
     try {
       const sb = await getSupabase();
       const r = await sb.rpc('factoring_tasks');
       if (my !== seq.current) return;
       if (r.error) { setMsg(r.error.message); return; }
+      if (clear) setMsg(null);
       setTasks(tasksFromDb(r.data));
     } catch (e) {
       if (my === seq.current) setMsg(msgOf(e));
@@ -266,17 +268,19 @@ export function LiveFactoringTasks({ nowIso, locale }: { nowIso: string; locale:
 
   const markPaid = async (billId: string) => {
     setMsg(null);
+    let refused = false;
     try {
       const sb = await getSupabase();
       const r = await sb.rpc('factoring_mark_paid', { p_invoice: billId });
-      if (r.error) setMsg(r.error.message);
-      /* odświeżenie faktur zmienia `bills` → efekt wyżej pobiera zadania */
+      if (r.error) { setMsg(r.error.message); refused = true; }
       await refreshFromServer({ keepSelection: true });
     } catch (e) {
       setMsg(msgOf(e));
-      await refresh();
+      refused = true;
     }
-    setGen((g) => g + 1);
+    /* najpierw lista z bazy, potem nowa karta — po udanej wypłacie karta znika, nie wraca na chwilę jako niewypłacona (F7 #521 R1) */
+    await refresh(!refused);
+    if (refused) setGen((g) => g + 1);
   };
 
   if (!tasks.length && !msg) return null;
