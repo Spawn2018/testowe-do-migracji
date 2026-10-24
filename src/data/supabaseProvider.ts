@@ -464,6 +464,11 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           await sb.rpc('discard_document', { p_id: row.id });
           throw new Error(res.error.message);
         }
+        /* E4b (0287): wybór „Faktoring HHL” — po zapisie faktury; odmowa nie cofa faktury (wybór można zmienić w szczegółach do akceptacji) */
+        if (m.bill.factoring?.selected && m.bill.direction === 'KOSZT') {
+          const f = await sb.rpc('invoice_factoring_set', { p_invoice: String(res.data), p_selected: true });
+          if (f.error) throw new Error(`Faktura zapisana, ale wybór faktoringu nie: ${f.error.message}`);
+        }
         return { id: String(res.data) };
       }
       case 'bill.update': {

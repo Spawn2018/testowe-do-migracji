@@ -1642,6 +1642,10 @@ export const useTowerStore = create<TowerState>()(
           verification: 'DO_WERYFIKACJI', disputeNote: null, payment: 'NIEOPLACONA', paidAt: null,
           pdfDocId: null, pdfName: draft.pdfName ?? null, lines: chk.lines,
           headerFlags: chk.headerFlags, missingLoadIds: chk.missingLoadIds, createdAt: nowIso(),
+          /* E4b: wybór przewoźnika; prowizję, wypłatę i termin liczy baza (po odświeżeniu) */
+          factoring: draft.factoring && draft.direction === 'KOSZT'
+            ? { selected: true, feePct: null, fee: null, payout: null, hours: null, acceptedAt: null, dueAt: null, paidAt: null }
+            : null,
         };
         bill.payment = billPaymentToday(bill, today);
         set((st) => ({ bills: [bill, ...st.bills] }));

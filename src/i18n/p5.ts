@@ -238,6 +238,13 @@ const PL: Record<string, string> = {
   p5_fact_tl_3d: 'do {at} · po terminie: ryzyko i dzwonek HHL',
   p5_fact_tl_4: 'Wypłacona · SCX widzi status',
   p5_fact_tl_4d: 'prowizja {fee} {cur} zostaje w HHL',
+  p5_fl_loading: 'Wczytywanie oferty faktoringu…',
+  p5_fl_fee: 'Prowizja',
+  p5_fl_payout: 'Wypłata dla przewoźnika',
+  p5_fl_state: 'Stan',
+  p5_fl_wait: 'czeka na akceptację HHL',
+  p5_fl_due: 'do wypłaty do',
+  p5_fl_paid: 'wypłacona',
   /* E40 — paczka tygodnia dla księgowości (Finanse, tylko HHL) */
   p5_pack_h: 'Paczka tygodnia dla księgowości',
   p5_pack_sub: 'tydzień faktury · faktura + CMR każdego zafakturowanego transportu',
