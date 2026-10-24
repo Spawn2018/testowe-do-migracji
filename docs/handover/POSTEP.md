@@ -4782,3 +4782,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora`; #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
 - Scalanie: brak F7 „gotowe” na #531; #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#528** PR #531 — CI db: security 389/391 (N8 UPDATE pada na `driver_phone_country` NOT NULL) + dec-auto 82/83 (NULL→org przy `ksh_confirm` d930). Poprawka 0292: clear tylko gdy `old.carrier_org_id` nie-NULL; `phone_country` → `'PL'`.
+
+## 2026-10-24 16:40 — #528 CI zielone (`fc08a460`); czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na `fc08a460` (clear tylko old≠NULL; phone_country=PL; security **391**). Czekam F7.
