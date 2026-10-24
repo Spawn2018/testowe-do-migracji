@@ -4740,3 +4740,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#528** (Spawn2018) — drobne F7 r5 po #526 (N8 zerowanie pól przewoźnika, INSERT≠swap, wydajność, invoice role); wpisane PLAN §4/§8, dopisek `D-20261024-1335-01.md`. #525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
 - Scalanie: **#526** `7607994f` (F7 „gotowe do scalenia” na `62f9980b`, CI unit/db/visual) — Historia **0290**. Issue #484 zamknięte. Front #527 — po odbiorze 0290 na produkcji (koordynator). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** gałąź `pakiet/hotfix-492-loads-updated-at` — migracja **0291**: `trg_loads_screen_updated_at` (whitelist kolumn ekranu; ETA/RIO-stan/`tracking_opened_at` bez bumpa). security **382** (+5). B5→**0292**.
+
+## 2026-10-24 14:00 — #527 SCALONE; #492 db: bez ferry_vessel
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
+- Scalanie: **#527** `c879ff58` (F7 „gotowe” 11:45Z po `e18e5c30`, unit/visual zielone) — wygląd Historii. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — db FAIL: trigger odwoływał się do `ferry_vessel`/`ferry_departure` (DROP w 0004). Usunięte z 0291; rejs = `sailing_id`+`ferry_booking_ref`. Merge main (#527). Push → CI; czekam F7.

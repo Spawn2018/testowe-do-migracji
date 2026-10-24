@@ -46,8 +46,6 @@ begin
     or new.telematics_provider is distinct from old.telematics_provider
     or new.sailing_id is distinct from old.sailing_id
     or new.ferry_booking_ref is distinct from old.ferry_booking_ref
-    or new.ferry_vessel is distinct from old.ferry_vessel
-    or new.ferry_departure is distinct from old.ferry_departure
     or new.combo_length_m is distinct from old.combo_length_m
     or new.combo_width_m is distinct from old.combo_width_m
     or new.combo_height_m is distinct from old.combo_height_m
