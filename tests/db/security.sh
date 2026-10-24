@@ -552,17 +552,19 @@ run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.p
 
 echo; echo "[#412] E40 paczka tygodnia — dziennik (0286)"
 # Faktury seed (W41) + PDF + CMR + akceptacja KOSZT — wymóg serwera (F7 #512).
+# UUID tylko hex (…pk01/…cm01 padały na invalid uuid → Brak faktury w CI).
 PACK_P=22222222-0000-0000-0000-000000000001
 PACK_L=33333333-0000-0000-0000-000000000001
-PACK_DOC=aaaaaaaa-0412-4000-8000-00000000pk01
-PACK_CMR=aaaaaaaa-0412-4000-8000-00000000cm01
-sys "insert into documents (id, project_id, load_id, category, storage_path, file_name)
-       values ('$PACK_DOC','$PACK_P',null,'INVOICE','pack/#412/fv.pdf','fv.pdf'),
-              ('$PACK_CMR','$PACK_P','$PACK_L','CMR','pack/#412/cmr.pdf','cmr.pdf')
-     on conflict (id) do nothing" >/dev/null
+PACK_DOC=aaaaaaaa-0412-4000-8000-00000000a401
+PACK_CMR=aaaaaaaa-0412-4000-8000-00000000a402
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+       values ('$PACK_DOC','$PACK_P',null,'INVOICE','test/pack-412-fv.pdf','fv.pdf','application/pdf',100),
+              ('$PACK_CMR','$PACK_P','$PACK_L','CMR','test/pack-412-cmr.pdf','cmr.pdf','application/pdf',100)
+     on conflict (id) do nothing"
 sys "update invoices set week_key='2026-W41', document_id='$PACK_DOC',
-            verification_status=case when direction='KOSZT' then 'ZAAKCEPTOWANA' else verification_status end
-      where id in ('44444444-0000-0000-0000-00000000000c','44444444-0000-0000-0000-0000000000ee')" >/dev/null
+            verification_status=case when direction='KOSZT' then 'ZAAKCEPTOWANA'
+              when direction='PRZYCHOD' then 'DO_WERYFIKACJI' else verification_status end
+      where id in ('44444444-0000-0000-0000-00000000000c','44444444-0000-0000-0000-0000000000ee')"
 val "#412p: HHL czyta config (adresy)" $HHL \
   "select (accounting_pack_config()->'addresses'->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
 val "#412p: HHL_OPS czyta config" $OPS412 \
