@@ -45,7 +45,9 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
   const [ver, setVer] = useState<Record<string, number>>({});
   const [flash, setFlash] = useState<{ id: string; text: string } | null>(null);
   const [drafts, setDrafts] = useState<ReadonlyMap<string, Draft>>(new Map());
-  const ro = readOnly || !src?.save;
+  /* F7 #524: odczyt zapisanych treści nieudany — tylko podgląd (inaczej „Zapisz” nadpisałby zapisaną treść domyślną) */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const ro = readOnly || !src?.save || loadFailed;
   const items = useRef(new Map<string, HTMLButtonElement>());
   const edBox = useRef<HTMLDivElement>(null);
   /* null = pierwsze wejście (bez przewijania i bez przenoszenia kursora) */
@@ -76,7 +78,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
     let alive = true;
     void src.saved().then(
       (rows) => { if (alive) { setSaved(new Map(rows.map((r) => [r.id, r]))); setLoaded(true); } },
-      () => { if (alive) setLoaded(true); },
+      () => { if (alive) { setLoadFailed(true); setLoaded(true); } },
     );
     return () => { alive = false; };
   }, [src]);
@@ -160,7 +162,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
           status={status(item, false)}
           loads={loads}
           readOnly={ro}
-          prodPending={!src}
+          prodPending={!src || loadFailed}
           phone={phone}
           onBack={phone ? () => setOpen(false) : null}
           flash={flash?.id === item.id ? flash.text : null}

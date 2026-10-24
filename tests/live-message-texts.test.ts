@@ -8,8 +8,8 @@ import { savedFromDb } from '../src/lib/p8tProd';
 
 describe('treści z bazy — mapowanie', () => {
   it('wiersz z bazy', () => {
-    expect(savedFromDb({ id: 'SMS_A', subject: null, body: 'Dzien dobry {{plate}}', at: '2026-10-24T08:00:00Z', who: 'Anna' }))
-      .toEqual({ id: 'SMS_A', subject: null, body: 'Dzien dobry {{plate}}', at: '2026-10-24T08:00:00Z', who: 'Anna' });
+    expect(savedFromDb({ id: 'SMS_A', subject: null, body: 'Dzien dobry {{trailer}}', at: '2026-10-24T08:00:00Z', who: 'Anna' }))
+      .toEqual({ id: 'SMS_A', subject: null, body: 'Dzien dobry {{trailer}}', at: '2026-10-24T08:00:00Z', who: 'Anna' });
     expect(savedFromDb({ id: 'EM_X', subject: 'Temat', body: 'b', at: null, who: '' })).toEqual({ id: 'EM_X', subject: 'Temat', body: 'b', at: '', who: '—' });
   });
   it('zły kształt → null', () => {
@@ -30,6 +30,11 @@ describe('podłączenie', () => {
   it('produkcja → baza; demo bez zmian (warunek wpisany wprost)', () => {
     expect(src).toContain("return import.meta.env.VITE_AUTH_MODE !== 'supabase'");
     expect(src).toContain(': messageTextsProd();');
+  });
+  it('F7 #524: nieudany odczyt → tylko podgląd; ogólny komunikat poza błędami bazy', () => {
+    expect(ui).toContain('const ro = readOnly || !src?.save || loadFailed;');
+    expect(ui).toContain('() => { if (alive) { setLoadFailed(true); setLoaded(true); } },');
+    expect(prod).toContain("e.code === '22023' || e.code === '42501' || e.code === 'P0002' ? e.message : undefined");
   });
   it('komunikat bazy przy odmowie; informacja o wysyłce (P8)', () => {
     expect(ui).toContain("text: r.error ?? p8t('p8_fail')");

@@ -21,7 +21,8 @@ export function savedFromDb(raw: unknown): SavedText | null {
   };
 }
 
-const msgOf = (e: unknown) => (e instanceof Error ? e.message : String(e));
+/* komunikaty bazy (walidacja 22023, uprawnienia 42501, brak konta P0002) są po polsku; inne (sieć, sesja) — ogólny komunikat ekranu */
+const dbMsg = (e: { code?: string; message: string }) => (e.code === '22023' || e.code === '42501' || e.code === 'P0002' ? e.message : undefined);
 
 export function messageTextsProd(): MessageTextsSource {
   return {
@@ -35,21 +36,21 @@ export function messageTextsProd(): MessageTextsSource {
       try {
         const sb = await getSupabase();
         const r = await sb.rpc('message_texts_set', { p_kind: id, p_subject: subject, p_body: body });
-        if (r.error) return { ok: false, error: r.error.message };
+        if (r.error) return { ok: false, error: dbMsg(r.error) };
         const row = savedFromDb(r.data);
         return row ? { ok: true, row } : { ok: false };
-      } catch (e) {
-        return { ok: false, error: msgOf(e) };
+      } catch {
+        return { ok: false };
       }
     },
     reset: async (id) => {
       try {
         const sb = await getSupabase();
         const r = await sb.rpc('message_texts_reset', { p_kind: id });
-        if (r.error) return { ok: false, error: r.error.message };
+        if (r.error) return { ok: false, error: dbMsg(r.error) };
         return { ok: true };
-      } catch (e) {
-        return { ok: false, error: msgOf(e) };
+      } catch {
+        return { ok: false };
       }
     },
     sendTest: null,
