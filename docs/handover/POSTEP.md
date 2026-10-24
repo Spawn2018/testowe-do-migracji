@@ -4680,3 +4680,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie (wpisane). Bez `pilne` przerywających.
 - Scalanie: **#521** `adf828d8` (F7 „gotowe” na `6217c67`, CI unit/visual) — wygląd E4b faktoring; **#520** `90341551` (F7 „gotowe” na `46327a16`, CI unit/db/visual) — E16+E11 **0288**. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #522 — CI unit+db+visual zielone na `120f3a79` (**0289** E43). Czekam F7 „gotowe do scalenia”. Po scaleniu #412 → #484.
+
+## 2026-10-24 10:15 — #522 F7 „do poprawy”: SMS_WORST + GSM + znaczniki
+
+- Skrzynka: bez nowych; #412 bieżąca.
+- Scalanie: brak (F7 #522 **nadal do poprawy** na docs `2e233a60`).
+- Bieżąca: **#412** PR #522 — F7 pkt 1–2 + drobne w **0289**: SMS_WORST (place 28 / link…), GSM_BASIC/EXT (×2), odrzucenie spoza alfabetu; dozwolone klocki w `message_text_kind_meta` (`{{button}}` tylko LOGIN); limity 200/5000 + znaki sterujące w temacie; testy security + `p8-texts` (lista 48 = MESSAGES). security **329** (+12). Push → CI; czekam ponowne F7.

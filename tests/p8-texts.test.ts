@@ -250,3 +250,17 @@ describe('ekran — prawa (E43 „Bezpiecznie”)', () => {
     }
   });
 });
+
+describe('#412 E43 / 0289 — lista rodzajów w migracji = MESSAGES', () => {
+  it('message_text_kind_meta: 48 rodzajów, te same id i kanał co p8Texts.MESSAGES', () => {
+    const sql = readFileSync('supabase/migrations/0289_hotfix_412_e43_message_texts.sql', 'utf8');
+    const kinds = [...sql.matchAll(/\('([A-Z0-9_]+)', '(SMS|EMAIL|LOGIN)', (?:true|false), array\[/g)]
+      .map((m) => ({ id: m[1]!, channel: m[2]! }));
+    expect(kinds).toHaveLength(MESSAGES.length);
+    expect(kinds.map((k) => k.id).sort()).toEqual([...MESSAGES.map((m) => m.id)].sort());
+    for (const m of MESSAGES) {
+      const row = kinds.find((k) => k.id === m.id);
+      expect(row?.channel, m.id).toBe(m.channel);
+    }
+  });
+});

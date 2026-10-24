@@ -794,16 +794,40 @@ err "#412e43: KSH nie zapisze" $KSH \
   "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
 err "#412e43: SMS za długi" $HHL \
   "select message_texts_set('SMS_A', null, repeat('x', 161))" "160 znakow|160 znaków|22023"
+err "#412e43: SMS place×6 >160 (SMS_WORST)" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('{{place}}', 6))" "160 znakow|160 znaków|22023"
+err "#412e43: SMS spoza GSM" $HHL \
+  "select message_texts_set('SMS_A', null, 'test ' || U&'\\+044F')" "alfabet GSM|niedozwolony|22023"
+err "#412e43: SMS [×81 (GSM_EXT ×2)" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('[', 81))" "160 znakow|160 znaków|22023"
+err "#412e43: niedozwolony znacznik" $HHL \
+  "select message_texts_set('SMS_A', null, '{{secret}} x')" "Niedozwolony|znacznik|22023"
+err "#412e43: {{button}} tylko LOGIN" $HHL \
+  "select message_texts_set('SMS_A', null, '{{code}} {{button}}')" "Niedozwolony|znacznik|22023"
 err "#412e43: nieznany kind" $HHL \
   "select message_texts_set('NO_SUCH', 't', 'b')" "Nieznany|22023"
 err "#412e43: LOGIN bez przycisku" $HHL \
   "select message_texts_set('INVITE', 'Temat', 'Tresc bez przycisku')" "Przycisk|22023"
 err "#412e43: e-mail bez tematu" $HHL \
   "select message_texts_set('RISK_OPEN', null, 'Tresc')" "Temat|22023"
+err "#412e43: temat za długi" $HHL \
+  "select message_texts_set('RISK_OPEN', repeat('t', 201), 'Tresc')" "200 znakow|200 znaków|22023"
+err "#412e43: temat ze znakami sterującymi" $HHL \
+  "select message_texts_set('RISK_OPEN', E'temat\r\nBcc: x', 'Tresc')" "sterujac|sterując|22023"
+err "#412e43: treść za długa" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat', repeat('b', 5001))" "5000 znakow|5000 znaków|22023"
 val "#412e43: HHL_ADMIN zapisuje INVITE z przyciskiem" $HHL \
   "select (message_texts_set('INVITE', 'Watch Tower — zaproszenie', 'Witaj {{name}}. {{button}} Link {{validity}}.')->>'id')" "INVITE" commit
 val "#412e43: lista ma 2 nadpisania" $HHL \
   "select jsonb_array_length(message_texts_list())" 2
+val "#412e43: zapis bez zmiany bez audytu" $HHL \
+  "select message_texts_set('INVITE', 'Watch Tower — zaproszenie', 'Witaj {{name}}. {{button}} Link {{validity}}.'); select count(*) from audit_log where action='MESSAGE_TEXT_SET' and entity_id='INVITE'" 1
+val "#412e43: drugi zapis — old_value" $HHL \
+  "select message_texts_set('INVITE', 'Watch Tower — zaproszenie 2', 'Witaj {{name}}. {{button}} Link {{validity}}.'); select (old_value->>'subject') from audit_log where action='MESSAGE_TEXT_SET' and entity_id='INVITE' order by created_at desc, id desc limit 1" "Watch Tower — zaproszenie" commit
+err "#412e43: HHL_OPS reset → 42501" $OPS412 \
+  "select message_texts_reset('INVITE')" "Administrator HHL|42501"
+err "#412e43: SCX zapis → 42501" $SCX \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
 val "#412e43: przywróć SMS_C" $HHL \
   "select (message_texts_reset('SMS_C')->>'ok')::text" "true" commit
 val "#412e43: audit MESSAGE_TEXT_RESET" $HHL \
