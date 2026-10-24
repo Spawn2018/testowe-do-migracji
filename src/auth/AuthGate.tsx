@@ -3,6 +3,7 @@ import { BrandLogo } from './BrandLogo';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase } from './client';
 import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config';
+import { clearStalePreview, previewRoOf } from './previewSwitch';
 import { sendRecoveryLink } from './sendAuthEmail';
 import { t, tp } from '../i18n/messages';
 import { getAuthProfile, setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
@@ -453,6 +454,10 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (error && prevKey) { readyKeyRef.current = prevKey; useTowerStore.getState().pushToast(t(useTowerStore.getState().locale, 'a6_auth_bg_fail'), 'LOW'); return; }
       if (error || !p) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_org') }); return; }
       if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
+      /* B5 (0249): „acting_as” to albo Podgląd (tylko odczyt), albo „Działaj jako” — rozróżnia baza */
+      if (p.acting_as) p.preview_ro = await previewRoOf(p);
+      else if (p.role === 'HHL_ADMIN') await clearStalePreview();
+      if (!alive) return;
       const viewRole = viewRoleForOrg(p.org_code);
       if (!viewRole) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_view').replace('{org}', p.org_code) }); return; }
 
@@ -607,6 +612,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
               const { data: prof } = await sb.rpc('my_profile');
               const p = (Array.isArray(prof) ? prof[0] : null) as AuthProfile | null;
               if (p && !p.must_set_password) {
+                if (p.acting_as) p.preview_ro = await previewRoOf(p);
                 setState({ kind: 'loading' });
                 // trigger load via fake state flip
                 setRecoveryOnce(false);
