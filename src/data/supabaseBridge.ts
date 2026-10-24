@@ -157,6 +157,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
       writesSince = Date.now();
       try {
         const res = await provider.apply(m);
+        if (res && res.warning) useTowerStore.getState().pushToast(res.warning, 'MEDIUM');
         if (m.type === 'geofence.save' && res && res.id && res.id !== m.geofence.id) {
           const localId = m.geofence.id;
           useTowerStore.setState((s) => ({ geofences: s.geofences.map((g) => (g.id === localId ? { ...g, id: res.id! } : g)) }));

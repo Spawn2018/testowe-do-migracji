@@ -114,6 +114,8 @@ export interface BillDraft {
   /** Rozmiar PDF w bajtach (limit 10 MB jak wszystkie PDF — aneks 4). */
   pdfSize?: number | null;
   lines: BillLineDraft[];
+  /** E4b: przewoźnik wybrał „Faktoring HHL” (zapis w bazie po rejestracji faktury — `invoice_factoring_set`). */
+  factoring?: boolean;
 }
 
 /** Transporty kierunku: KOSZT — przewoźnika (SCX), PRZYCHOD — wszystkie transporty projektu. */

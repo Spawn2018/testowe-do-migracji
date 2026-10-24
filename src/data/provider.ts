@@ -91,7 +91,8 @@ export interface DataProvider {
   /** Pełny odczyt danych widocznych dla bieżącego użytkownika. */
   loadSnapshot(): Promise<DataSnapshot>;
   /** Zapis; demo = no-op (store jest lokalnym źródłem). Zwraca nowe id dla wstawień. */
-  apply(m: DataMutation): Promise<{ id?: string } | void>;
+  /** `warning` — zapis się udał, ale krok dodatkowy nie (komunikat zamiast „Nie zapisano”). */
+  apply(m: DataMutation): Promise<{ id?: string; warning?: string } | void>;
   /** M4 — zapisane ustawienia bieżącego użytkownika (null = brak wiersza / demo). */
   loadPreferences?(): Promise<UserPrefsPatch | null>;
 }

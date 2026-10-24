@@ -682,11 +682,16 @@ export interface BillRow {
   due_date: string | null; due_date_from_document: boolean | null; verification_status: string; dispute_note: string | null;
   payment_status: string; paid_at: string | null; document_id: string | null; check_flags: string[] | null;
   missing_load_ids: string[] | null; submitted_at: string | null; invoice_lines: BillLineRow[] | null;
+  /* E4b (0287) */
+  factoring_selected?: boolean | null; factoring_fee_pct?: number | string | null; factoring_fee_amount?: number | string | null;
+  factoring_net_payout?: number | string | null; factoring_hours?: number | null; factoring_accepted_at?: string | null;
+  factoring_due_at?: string | null; factoring_paid_at?: string | null;
 }
 export const BILL_COLUMNS =
   'id,direction,issuer_org_id,recipient_org_id,invoice_number,issue_date,receipt_date,week_key,currency,net_total,vat_total,' +
   'gross_total,due_date,due_date_from_document,verification_status,dispute_note,payment_status,paid_at,document_id,check_flags,' +
-  'missing_load_ids,submitted_at,invoice_lines(load_id,invoiced_net,invoiced_fuel,fx_table_no,fx_mid,fx_effective_date,expected_amount,flags)';
+  'missing_load_ids,submitted_at,factoring_selected,factoring_fee_pct,factoring_fee_amount,factoring_net_payout,factoring_hours,' +
+  'factoring_accepted_at,factoring_due_at,factoring_paid_at,invoice_lines(load_id,invoiced_net,invoiced_fuel,fx_table_no,fx_mid,fx_effective_date,expected_amount,flags)';
 
 const numOrNull = (v: number | string | null | undefined): number | null => (v == null || v === '' ? null : Number(v));
 const orgKindById = (orgs: OrgRow[], id: string | null): OrgKind => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '') ?? 'HHL';
@@ -710,6 +715,13 @@ export function billFromRow(r: BillRow, orgs: OrgRow[], docs: { id: string; file
       expectedNet: numOrNull(l.expected_amount), flags: (l.flags ?? []) as BillFlag[],
     })),
     headerFlags: r.check_flags ?? [], missingLoadIds: r.missing_load_ids ?? [], createdAt: r.submitted_at ?? '',
+    factoring: r.factoring_selected
+      ? {
+          selected: true, feePct: numOrNull(r.factoring_fee_pct), fee: numOrNull(r.factoring_fee_amount),
+          payout: numOrNull(r.factoring_net_payout), hours: r.factoring_hours ?? null, acceptedAt: r.factoring_accepted_at ?? null,
+          dueAt: r.factoring_due_at ?? null, paidAt: r.factoring_paid_at ?? null,
+        }
+      : null,
   };
 }
 

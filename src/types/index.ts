@@ -629,6 +629,16 @@ export interface BillLine {
   expectedNet?: number | null;
   flags: BillFlag[];
 }
+export interface BillFactoring {
+  selected: boolean;
+  feePct: number | null;
+  fee: number | null;
+  payout: number | null;
+  hours: number | null;
+  acceptedAt: string | null;
+  dueAt: string | null;
+  paidAt: string | null;
+}
 export interface Bill {
   id: string;
   direction: BillDirection;
@@ -654,6 +664,8 @@ export interface Bill {
   /** Tryb Supabase: ścieżka pliku PDF w Storage (link podpisany 15 min). */
   pdfStoragePath?: string | null;
   lines: BillLine[];
+  /** E4b (0287): wybór przewoźnika „Faktoring HHL” i wyliczenie z bazy (prowizja, wypłata, termin 48 h od akceptacji). */
+  factoring?: BillFactoring | null;
   /** Kontrole nagłówka: BRAK_NA_FAKTURZE + pominięte transporty tygodnia. */
   headerFlags: string[];
   missingLoadIds: string[];

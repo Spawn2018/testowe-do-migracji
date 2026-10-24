@@ -238,6 +238,14 @@ const PL: Record<string, string> = {
   p5_fact_tl_3d: 'do {at} · po terminie: ryzyko i dzwonek HHL',
   p5_fact_tl_4: 'Wypłacona · SCX widzi status',
   p5_fact_tl_4d: 'prowizja {fee} {cur} zostaje w HHL',
+  p5_fl_loading: 'Wczytywanie oferty faktoringu…',
+  p5_fl_fee: 'Prowizja',
+  p5_fl_payout: 'Wypłata dla przewoźnika',
+  p5_fl_state: 'Stan',
+  p5_fl_wait: 'czeka na akceptację HHL',
+  p5_fl_due: 'do wypłaty do',
+  p5_fl_paid: 'wypłacona',
+  p5_fl_optout: 'Zrezygnuj z faktoringu',
   /* E40 — paczka tygodnia dla księgowości (Finanse, tylko HHL) */
   p5_pack_h: 'Paczka tygodnia dla księgowości',
   p5_pack_sub: 'tydzień faktury · faktura + CMR każdego zafakturowanego transportu',
@@ -405,7 +413,7 @@ const PL: Record<string, string> = {
   p5_fo_ex_gross: 'Faktura brutto',
   p5_fo_ex_fee: 'Prowizja: {pct}% × {net} netto',
   p5_fo_ex_pay: 'HHL wypłaca przewoźnikowi',
-  p5_fo_note: 'Zmiana oferty tworzy nową wersję. Faktura zostaje przy warunkach z dnia, w którym przewoźnik wybrał faktoring.',
+  p5_fo_note: 'Zmiana oferty obowiązuje od dziś (kolejne zmiany tego samego dnia poprawiają tę samą wersję). Faktura zostaje przy warunkach z dnia, w którym przewoźnik wybrał faktoring.',
   /* E33 — panel „Ceny” */
   p5_pr_h: 'Cena transportu',
   p5_pr_h_KSH: 'Twoja cena',

@@ -60,6 +60,8 @@ const LiveSmsPlaces = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_
 const LiveDwell = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveDwell'))) : null;
 /* #412 E40 (0285): terminy płatności i adresy księgowości z bazy — ten sam ekran co w demo */
 const LiveTerms = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveTerms'))) : null;
+/* #412 E4b (0287): Opcje › Faktoring z bazy — zapis Administrator HHL, wersja od dziś */
+const LiveFactoringOffer = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFactoring').then((m) => ({ default: m.LiveFactoringOffer })))) : null;
 /* E23 (W-opcje-live-2): Stan systemu na produkcji — „Źródła danych” z audytu, dzisiejszy panel rozwijany pod listą */
 const LiveStatus = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveStatus'))) : null;
 const OpsThresholdsForm = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveThresholds'))) : null;
@@ -343,6 +345,9 @@ export function OptionsView() {
         <FactoringOfferScreen locale={locale} offer={factoringOffer} readOnly={ro} onChange={updateFactoring} onSaved={saveMark} />
       </Suspense>
     ), { right: change }));
+  }
+  else if (LiveFactoringOffer) {
+    money.push(scr('fact', block(<LiveFactoringOffer readOnly={ro} onSaved={saveMark} />), { right: change }));
   }
   groups.push({ id: 'money', screens: money });
 

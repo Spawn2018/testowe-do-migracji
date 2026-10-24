@@ -6,7 +6,7 @@
 import type { FactoringOffer, Locale } from '../../types';
 import { formatPlNumber } from '../../lib/format';
 import { factoringPayout } from '../../lib/p5Invoices';
-import { factoringOfferOf } from '../../lib/p5Source';
+import { factoringOfferOf, type FactoringOfferView } from '../../lib/p5Source';
 import { ft, ftp } from '../../i18n/p5';
 import '../finance/finance.css';
 import '../invoices/invoices.css';
@@ -18,13 +18,15 @@ interface Props {
   readOnly: boolean;
   onChange: <K extends keyof FactoringOffer>(key: K, value: FactoringOffer[K]) => void;
   onSaved: (what: string) => void;
+  /** Produkcja (0287): wersja i data z bazy; bez — demo (`factoringOfferOf`). */
+  view?: FactoringOfferView | null;
 }
 
 const n2 = (n: number) => formatPlNumber(n, 2);
 const dmy = (d: string) => formatCalendarDay(d.slice(0, 10));
 
-export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSaved }: Props) {
-  const view = factoringOfferOf();
+export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSaved, view: viewDb }: Props) {
+  const view = viewDb === undefined ? factoringOfferOf() : viewDb;
   /* przykład wyliczenia: okrągła kwota netto, VAT 23 % (E4) — bez danych z faktur */
   const net = 10000;
   const gross = 12300;
@@ -62,7 +64,16 @@ export function FactoringOfferScreen({ locale, offer, readOnly, onChange, onSave
           <input className="input" type="number" min="1" aria-label={ft(locale, 'p5_fo_payout')} value={offer.payoutDelayValue} disabled={readOnly}
             onChange={(e) => onChange('payoutDelayValue', Number(e.target.value) || 1)} onBlur={() => onSaved('termin')} />
           <select className="input" aria-label={ft(locale, 'p5_fo_unit')} value={offer.payoutDelayUnit} disabled={readOnly}
-            onChange={(e) => { onChange('payoutDelayUnit', e.target.value as FactoringOffer['payoutDelayUnit']); onSaved('termin'); }}>
+            onChange={(e) => {
+              /* F7 #521: zmiana jednostki nie zmienia terminu — 2 dni ⇄ 48 h; godziny bez pełnych dni zostają w h */
+              const u = e.target.value as FactoringOffer['payoutDelayUnit'];
+              const v = offer.payoutDelayValue;
+              if (u === offer.payoutDelayUnit) return;
+              if (u === 'days' && v % 24 !== 0) return;
+              onChange('payoutDelayValue', u === 'days' ? v / 24 : v * 24);
+              onChange('payoutDelayUnit', u);
+              onSaved('termin');
+            }}>
             <option value="hours">h</option>
             <option value="days">{ft(locale, 'p5_fo_days')}</option>
           </select>
