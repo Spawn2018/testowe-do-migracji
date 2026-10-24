@@ -8,7 +8,7 @@
  * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
  */
 import { useFuelPublications } from '../lib/fuelPublSource';
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { ft, ftn, ftp } from '../i18n/p5';
@@ -22,8 +22,13 @@ import { accountingPackActionsOf, accountingPackConfigOf, belowOf, financeOf, fu
 import { FuelWeekTable } from '../components/finance/FuelWeekTable';
 import { transportLabel } from '../lib/transportName';
 import { AccountingPackSection } from '../components/finance/AccountingPack';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { lazyRetry } from '../lib/lazyRetry';
 import type { Locale } from '../types';
 import '../components/finance/finance.css';
+
+/* #412 E40 (0286): paczka tygodnia z bazy — „Zleć wysyłkę”, dziennik zleceń; demo bez zmian */
+const LivePack = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LivePack'))) : null;
 
 const STAGE_TAG: Record<FinStage, string> = { FAKTURA: 'fin-tag go', REALIZACJA: 'fin-tag sea', PROGNOZA: 'fin-tag plain' };
 const PHONE_ORDER: FinStage[] = ['REALIZACJA', 'PROGNOZA', 'FAKTURA'];
@@ -60,6 +65,10 @@ export function FinanceView() {
       locale={locale} phone={phone} loads={loads} bills={bills} documents={documents}
       cfg={packCfg} actions={accountingPackActionsOf()} nowIso={nowIso}
     />
+  ) : role === 'HHL' && LivePack ? (
+    <Suspense fallback={null}>
+      <LivePack locale={locale} phone={phone} loads={loads} bills={bills} documents={documents} nowIso={nowIso} />
+    </Suspense>
   ) : null;
 
   const fin = useMemo(() => financeOf(loads, side), [loads, side]);
