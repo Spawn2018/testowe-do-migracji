@@ -181,4 +181,4 @@ authenticated_security_definer_function_executable	public.admin_security_flag_se
 authenticated_security_definer_function_executable	public.security_flags_list	B1 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_user_profile_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.perf_results_latest	#422 — allowlista RPC; sprawdzenie is_hhl w funkcji
-authenticated_security_definer_function_executable	public.app_errors_recent	#422 — allowlista RPC; sprawdzenie is_hhl w funkcji
+authenticated_security_definer_function_executable	public.app_errors_recent	#422 — allowlista RPC; sprawdzenie is_hhl_admin w funkcji (0058)

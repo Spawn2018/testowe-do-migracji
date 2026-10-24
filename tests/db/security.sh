@@ -432,15 +432,27 @@ val "#422: HHL_OPS czyta perf_results_latest" $OPS422 \
 err "#422: KSH nie czyta perf_results_latest" $KSH "select perf_results_latest()" "tylko HHL|42501"
 err "#422: SCX nie czyta perf_results_latest" $SCX "select perf_results_latest()" "tylko HHL|42501"
 chk6 "#422: anon bez SELECT/INSERT na perf_results" "$(sys "select has_table_privilege('anon','perf_results','select')::text||has_table_privilege('anon','perf_results','insert')::text||has_table_privilege('authenticated','perf_results','insert')::text" | tail -1)" "falsefalsefalse"
+chk6 "#422: anon bez EXECUTE perf_results_latest / app_errors_recent" "$(sys "select has_function_privilege('anon','perf_results_latest()','execute')::text||has_function_privilege('anon','app_errors_recent(int)','execute')::text" | tail -1)" "falsefalse"
+chk6 "#422: authenticated bez EXECUTE record / ingest" "$(sys "select has_function_privilege('authenticated','perf_result_record(text,text,text,text,text,boolean,text,timestamptz)','execute')::text||has_function_privilege('authenticated','perf_p95_lists_ingest(timestamptz)','execute')::text" | tail -1)" "falsefalse"
 err "#422: HHL nie wstawi wiersza bezpośrednio" $HHL \
   "insert into perf_results (metric_id, what, how, result_text, limit_text, ok, source) values ('p1','x','y','z','l',true,'t')" \
   "permission denied|42501"
+err "#422: HHL nie wywoła perf_result_record" $HHL \
+  "select perf_result_record('p1','x','y','z','l',true,'t')" \
+  "permission denied|42501"
+err "#422: HHL nie wywoła perf_p95_lists_ingest" $HHL \
+  "select perf_p95_lists_ingest()" \
+  "permission denied|42501"
 val "#422: HHL_ADMIN app_errors_recent ma groups" $HHL \
   "select (jsonb_typeof(app_errors_recent(7)->'groups') = 'array')::text" true
-err "#422: KSH nie czyta app_errors_recent" $KSH "select app_errors_recent(7)" "tylko HHL|42501"
+val "#422: app_errors_recent newCount null (brak danych)" $HHL \
+  "select ((app_errors_recent(7)->'newCount') is null)::text" true
+err "#422: HHL_OPS nie czyta app_errors_recent" $OPS422 "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: KSH nie czyta app_errors_recent" $KSH "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: SCX nie czyta app_errors_recent" $SCX "select app_errors_recent(7)" "Administrator HHL|42501"
 out=$(sys "select perf_p95_lists_ingest()->>'p4_result'"); echo "$out" | grep -qiE 'brak pomiaru|[0-9]+ ms' \
-  && { ok=$((ok+1)); echo "  OK    #422: p95 ingest zapisuje p4"; } \
-  || { fail=$((fail+1)); echo "  FAIL  #422: p95 ingest: $out"; }
+  && { ok=$((ok+1)); echo "  OK    #422: ingest zapisuje p4 (max_exec_time)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #422: ingest: $out"; }
 val "#422: po ingest HHL widzi p4 w latest" $HHL \
   "select (perf_results_latest()->'rows' @> '[{\"id\":\"p4\"}]')::text" true
 

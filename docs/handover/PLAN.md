@@ -844,10 +844,10 @@ Ekran / cele przejść — koordynator (`wyglad/*`).
 3. Odbiór SELECT prod — koordynator po deploy-main.
 
 ### HOTFIX #422 · Wydajność i Błędy aplikacji — źródło w bazie (D-20261022-0113-01, `pilne`) — W TOKU (po #505, przed #412)
-Migracja **0283** (`pakiet/hotfix-422-perf-errors`). Szczegóły: `dopiski/D-20261022-0113-01.md`.
+Migracja **0283** (`pakiet/hotfix-422-perf-errors`, PR #507). Szczegóły: `dopiski/D-20261022-0113-01.md`.
 1. Tabela `perf_results` + RPC `perf_results_latest()` (HHL) + `perf_result_record` (service_role).
-2. Zasilanie: p95 `perf_p95_lists_ingest` + cron `tower-perf-p95`; równoczesność „brak pomiaru”; Lighthouse po deploy-main — następny krok PR.
-3. RPC `app_errors_recent()` (7 dni, grupowanie). Front — koordynator (#423).
+2. Zasilanie: `perf_p95_lists_ingest` = `max_exec_time` zapytań PostgREST `loads`/`load_messages` + cron `tower-perf-p95`; równoczesność „brak pomiaru”; Lighthouse po deploy-main — następny krok PR.
+3. RPC `app_errors_recent()` (7 dni, grupowanie po komunikacie, tylko `HHL_ADMIN` jak 0058; `newCount`/`state` = null bez danych). Front — koordynator (#423).
 
 ### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — po #422, przed #484
 Terminy płatności, paczka księgowości, faktoring, próg marży, treści E43, liczba urządzeń push — `dopiski/D-20261021-2040-01.md`.
