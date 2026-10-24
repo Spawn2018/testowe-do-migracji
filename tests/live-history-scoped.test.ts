@@ -11,6 +11,9 @@ describe('KSH/SCX — obrona w głębi (front)', () => {
     expect(scrubForParty({ status: 'ON_FERRY', carrier_order_no: 'X', pricing: { margin_eur: 1, note: 'a' }, lines: [{ amount_eur: 5, code: 'SG-1' }], user_email: 'a@b' }))
       .toEqual({ status: 'ON_FERRY', pricing: { note: 'a' }, lines: [{ code: 'SG-1' }] });
   });
+  it('wpis zmiany przewoźnika: zdanie zamiast surowego klucza', () => {
+    expect(readFileSync('src/auth/LiveHistory.tsx', 'utf8')).toContain("if (v._carrier_changed === true && Object.keys(v).length === 1) return t(locale, 'p3l_h_carrier_changed');");
+  });
   it('KSH: bez danych kierowców i pilotów; SCX — zostają (własne zasoby)', () => {
     const v = { driver_name: 'Jan', driver_phone: '1', escorts: [{ pilot_name: 'P', plate: 'X1' }], status: 'S' };
     expect(scrubForParty(v, true)).toEqual({ escorts: [{ plate: 'X1' }], status: 'S' });

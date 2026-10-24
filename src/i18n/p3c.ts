@@ -546,6 +546,7 @@ const pl: Dict = {
   p3l_h_as: '{who} jako {as}',
   p3l_h_auto: 'System // Watch Tower',
   p3l_h_other: 'Inna firma',
+  p3l_h_carrier_changed: 'Zmiana przewoźnika',
   p3l_h_unavailable: 'Historia zmian jest jeszcze niedostępna dla tego konta.',
   p3l_h_party_note: 'Widać zmiany Twoich transportów. Ceny i numery zleceń drugiej strony są ukryte.',
   p3l_h_tech_note: 'Zmiany techniczne liczone na pobranej stronie ({n} najnowszych wpisów).',

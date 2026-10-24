@@ -49,6 +49,8 @@ export function scrubForParty(v: unknown, ksh = false): unknown {
 function fmtVal(locale: Locale, raw: Record<string, unknown> | null, party = false, ksh = false): string | undefined {
   const v = party && raw ? (scrubForParty(raw, ksh) as Record<string, unknown>) : raw;
   if (!v || Object.keys(v).length === 0) return undefined;
+  /* 0290: wpis zmiany przewoźnika dla stron — sam fakt */
+  if (v._carrier_changed === true && Object.keys(v).length === 1) return t(locale, 'p3l_h_carrier_changed');
   const keys = Object.keys(v);
   /* jedna wartość („enabled”, „value”) — sama wartość; więcej — klucz: wartość */
   const show = (x: unknown) => (typeof x === 'boolean' ? t(locale, x ? 'p3l_val_on' : 'p3l_val_off') : x == null ? '—' : typeof x === 'object' ? JSON.stringify(x) : String(x));
