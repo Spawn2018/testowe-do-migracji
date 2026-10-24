@@ -865,8 +865,11 @@ Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_I
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
 
+### #516 · Kopia: auto-zamykanie decyzji „nieudana” po OK (D-20261024-0755-01) — po #412 / #484 kolejce (nie przerywa)
+Przy pierwszym OK po błędzie: decyzje „Kopia zapasowa nieudana” → RESOLVED (id przebiegu); ryzyko backup-stale; 3 otwarte z 23.10 cicho; test `backup.sh` ERROR→NEW, OK→RESOLVED; licznik `backup_runs.files`. Szczegóły: #516.
+
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
-Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13.
+Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → B5 → B7/B8/B9 → A6 → C4–C13; #516 po #412 (nie przerywa).
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #412, #484, #492 (migracja **0288** po rebase; #412→**0285**+**0286**+**0287** E4b)
 - Według D-20261015-0330-01 pkt 6:
@@ -1488,3 +1491,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 04:35 | #507 SCALONE (`b2528a80`, 0283+0284); start #412 → **0285** (E40 terminy+adresy); B5→**0286** | pętla |
 | 24.10.2026 06:10 | #510 SCALONE (`e187d2d6`, 0285); start #412 paczka → **0286**; B5→**0287** | pętla |
 | 24.10.2026 07:45 | #513+#512 SCALONE (`30ad76d9` / `8b337e17`, 0286); F7 #514 E4b → **0287**; B5→**0288** | pętla |
+| 24.10.2026 08:05 | #516 wpisane (auto-zamykanie decyzji kopii po OK); #514 db: OPLACONA przed akceptacją + SPORNA dispute_note + nullguard Brak konta | pętla |

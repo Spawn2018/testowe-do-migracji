@@ -4644,3 +4644,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
 - Scalanie: **#513** `30ad76d9` (F7 „gotowe”, wygląd terminy/adresy); **#512** `8b337e17` (F7 „gotowe” na `96fe6a1a`, CI unit/db/visual) — paczka **0286**. #382 CONFLICT; #383 bez F7; #515 bez F7.
 - Bieżąca: **#412** PR #514 — rebase na main (0286); F7: `factoring_mark_paid` → OPLACONA; przeliczenie przy edycji kwot; asercja `true` nie `t`; testy kolejności / oferty / SPORNA; B5→**0288**. security **260** (+25); nullguard **780**.
+
+## 2026-10-24 08:05 — #516 wpisane; #514 db FAIL → poprawki F7/CI
+
+- Skrzynka: **#516** (Spawn2018) — auto-zamykanie decyzji „Kopia nieudana” po OK; wpisane PLAN §4/§8 + `D-20261024-0755-01.md`. #500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE w planie (otwarte do zamknięcia po odbiorze).
+- Scalanie: brak F7 „gotowe” po head `f9346e60` (komentarz „czekam F7”); #515/#518 wygląd bez F7; #382 CONFLICT.
+- Bieżąca: **#412** PR #514 — CI `db` FAIL: security 266/268 (OPLACONA po `mark_invoice_paid` trafiało w „Po akceptacji”; SPORNA bez `dispute_note` → update cichy); nullguard 774/780 (`Brak konta` vs wzorzec `Nieznana faktura` + pozytywny HHL). Poprawka: kolejność OPLACONA→ZAAKCEPTOWANA; SPORNA+`dispute_note`; nullguard `Brak konta`. Push → CI; czekam F7.

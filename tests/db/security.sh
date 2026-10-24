@@ -689,7 +689,8 @@ err "#412f: set przy ofercie wyłączonej" $SCX \
 val "#412f: HHL widzi ofertę enabled=false" $HHL \
   "select (factoring_offer_get()->>'enabled')" "false"
 run $HHL "select factoring_offer_set(true, 1, 48)" commit >/dev/null
-sys "update invoices set verification_status='SPORNA', factoring_selected=false where id='$INVK'" >/dev/null
+sys "update invoices set verification_status='SPORNA', dispute_note='test sporu faktoringu',
+       factoring_selected=false where id='$INVK'" >/dev/null
 err "#412f: SPORNA bez faktoringu" $SCX \
   "select invoice_factoring_set('$INVK', true)" "sporze|SPORNA|22023"
 sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_selected=false,

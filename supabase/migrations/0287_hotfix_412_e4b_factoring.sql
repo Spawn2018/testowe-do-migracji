@@ -259,17 +259,18 @@ begin
       and public.current_org_kind()::text = 'CARRIER') is not true then
     raise exception 'Faktoring wybiera przewoźnik (wystawca)' using errcode = '42501';
   end if;
+  -- OPLACONA przed ZAAKCEPTOWANA: po mark_invoice_paid status zostaje zaakceptowany.
+  if inv.factoring_paid_at is not null
+     or inv.payment_status = 'OPLACONA' then
+    raise exception 'Faktura już opłacona — bez zmiany faktoringu'
+      using errcode = 'P0001';
+  end if;
   if inv.verification_status = 'ZAAKCEPTOWANA' then
     raise exception 'Po akceptacji HHL nie zmienia się wyboru faktoringu'
       using errcode = '22023';
   end if;
   if inv.verification_status = 'SPORNA' then
     raise exception 'Faktura w sporze — faktoring niedostępny' using errcode = '22023';
-  end if;
-  if inv.factoring_paid_at is not null
-     or inv.payment_status = 'OPLACONA' then
-    raise exception 'Faktura już opłacona — bez zmiany faktoringu'
-      using errcode = 'P0001';
   end if;
 
   if p_selected is not true then
