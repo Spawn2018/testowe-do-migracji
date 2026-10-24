@@ -4638,3 +4638,21 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających.
 - Scalanie: **#511** `f82f579d` (F7 „gotowe do scalenia” na `07c85ad`, CI unit/visual zielone) — logowanie bez powłoki. #512 bez F7 „gotowe”; #514 F7 **do poprawy** (czekam po #512); #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** PR #512 — CI `db` security 226/235: seed `…pk01`/`…cm01` = invalid uuid → insert dokumentów padł cicho, `week_key` nie ustawiony, `accounting_pack_send` → Brak faktury. Poprawka: UUID hex `…a401`/`…a402`, ścieżki `test/pack-412-*.pdf`, bez `>/dev/null`. Push → CI.
+
+## 2026-10-24 07:45 — #513+#512 SCALONE; F7 #514 E4b (0287)
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
+- Scalanie: **#513** `30ad76d9` (F7 „gotowe”, wygląd terminy/adresy); **#512** `8b337e17` (F7 „gotowe” na `96fe6a1a`, CI unit/db/visual) — paczka **0286**. #382 CONFLICT; #383 bez F7; #515 bez F7.
+- Bieżąca: **#412** PR #514 — rebase na main (0286); F7: `factoring_mark_paid` → OPLACONA; przeliczenie przy edycji kwot; asercja `true` nie `t`; testy kolejności / oferty / SPORNA; B5→**0288**. security **260** (+25); nullguard **780**.
+
+## 2026-10-24 08:05 — #516 wpisane; #514 db FAIL → poprawki F7/CI
+
+- Skrzynka: **#516** (Spawn2018) — auto-zamykanie decyzji „Kopia nieudana” po OK; wpisane PLAN §4/§8 + `D-20261024-0755-01.md`. #500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE w planie (otwarte do zamknięcia po odbiorze).
+- Scalanie: brak F7 „gotowe” po head `f9346e60` (komentarz „czekam F7”); #515/#518 wygląd bez F7; #382 CONFLICT.
+- Bieżąca: **#412** PR #514 — CI `db` FAIL: security 266/268 (OPLACONA po `mark_invoice_paid` trafiało w „Po akceptacji”; SPORNA bez `dispute_note` → update cichy); nullguard 774/780 (`Brak konta` vs wzorzec `Nieznana faktura` + pozytywny HHL). Poprawka: kolejność OPLACONA→ZAAKCEPTOWANA; SPORNA+`dispute_note`; nullguard `Brak konta`. Push → CI; czekam F7.
+
+## 2026-10-24 08:25 — #514 F7 r3: MONEY + load_id + testy
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #516/#500/#499/#496/#492/#484/#412 w planie. #515/#518 wygląd bez F7 „gotowe”.
+- Scalanie: brak (F7 #514 „nadal do poprawy” na `77be15f1`; CI unit/db/visual zielone na tym SHA — potem poprawki).
+- Bieżąca: **#412** PR #514 — F7 r3: `matrix_notify('MONEY')` + `p_load_id` z `invoice_lines`; `invoice_id`; `unmark_invoice_paid` czyści `factoring_paid_at`; `factoring_overdue_notify` + cron; testy CAR2 / rezygnacja / przed akceptacją / po akceptacji / IN_APP / OVERDUE. security **278** (+10); nullguard **780**.

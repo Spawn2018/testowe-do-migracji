@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 235, // #412p 0286 F7: +8 (ZLECONO/idempotencja/invoice_ids/tydzień/set_status); było 227
+  security: 278, // #412f 0287 E4b F7 r3: +10 (MONEY/load_id/CAR2/rezygnacja/unmark/OVERDUE); było 268
   status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 113, // #455: +3 ujemne restore (before_* / do<=od / >3); było 110 (#384)
-  nullguard: 755, // #412p: +2 GUARD ×5 (pack config/send); było 745 (#412)
+  nullguard: 780, // #412f: +5 GUARD ×5 (offer get/set, invoice set, tasks, mark); było 755 (#412p)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -65,7 +65,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 231, // 235 − 4 SKIP (B6); #412p 0286 F7
+  security: 274, // 278 − 4 SKIP (B6); #412f 0287 F7 r3
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
