@@ -1145,16 +1145,25 @@ val "#528: po OPS swap B bez PII dostawy" $SCXB \
 out=$(sys "select (telematics_vehicle_id is null and rio_tracking_id is null and rio_secret is null
               and carrier_order_no is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: po OPS swap rio/telematics wyczyszczone"; } || { fail=$((fail+1)); echo "  FAIL  #528: po OPS swap rio/telematics wyczyszczone  (otrzymano: $out)"; }
-# F7 r2: pozycje SCX odłączone — B i KSH nie widzą tracku starego pojazdu
+# F7 r2/r3: pozycje SCX odłączone — B i KSH nie widzą tracku starego pojazdu
+# eta_basis = jsonb (nie tekst 'TEST' — invalid json → cichy FAIL 3/3/1)
 sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "delete from telm_attach_phase where load_id='$L2'" >/dev/null
+sys "delete from geofence_states where load_id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_SCX', telematics_vehicle_id='rio:GPS528',
      tracking_opened_at=now(), eta_site=now()+interval '2 hours', eta_confidence_min=15,
-     eta_basis='TEST', eta_computed_at=now(), delay_minutes=12
+     eta_basis=jsonb_build_object('t',1), eta_computed_at=now(), delay_minutes=12
      where id='$L2'" >/dev/null
+out=$(sys "select (carrier_org_id='$ORG_SCX')::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: L2 na SCX przed detach"; } || { fail=$((fail+1)); echo "  FAIL  #528: L2 na SCX przed detach  (otrzymano: $out)"; }
 sys "insert into positions (load_id, ts, geom_raw, source) values
      ('$L2', now()-interval '10 minutes', st_setsrid(st_makepoint(17.0, 52.4), 4326), 'TELEMATICS_API'),
      ('$L2', now()-interval '5 minutes', st_setsrid(st_makepoint(17.1, 52.5), 4326), 'TELEMATICS_API'),
      ('$L2', now(), st_setsrid(st_makepoint(17.2, 52.6), 4326), 'TELEMATICS_API')" >/dev/null
+sys "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon, source)
+     values ('$L2', 'IN_TRANSIT_PL', now(), 52.4, 17.0, 'TELM_PHASE_INFER')" >/dev/null
+sys "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
+     select '$L2', g.id, 'INSIDE', 3, now(), now() from geofences g limit 1" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
 out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confidence_min is null
               and eta_basis is null and eta_computed_at is null and delay_minutes is null
@@ -1170,6 +1179,11 @@ val "#528: KSH po swap — 0 track/positions/fixes" $KSH \
   "select (select count(*) from load_track('$L2'))::text||'/'||
           (select count(*) from positions where load_id='$L2')::text||'/'||
           (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+out=$(sys "select (coalesce((select phase||'/'||source from telm_attach_phase where load_id='$L2'),'')
+              = 'RESET/D1710_RESET'
+              and coalesce((select bool_and(state='OUTSIDE' and consec_fixes=0 and entered_at is null)
+                              from geofence_states where load_id='$L2'), true))::text")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 telm RESET + geofence OUTSIDE"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 telm RESET + geofence OUTSIDE  (otrzymano: $out)"; }
 # ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null

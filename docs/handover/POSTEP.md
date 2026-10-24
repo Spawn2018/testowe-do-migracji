@@ -4863,3 +4863,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#538** (Spawn2018, `dla-cursora`) — wpisane PLAN §4 (decyzje 25.10 + konta RO), §5 (W2/W3/W7/W18/W23/W25/W46–W50), §6 cz. 3 (Po 1.0), §8, dopisek `D-20261025-0055-01.md`. Bez `pilne`. Nie przerywa #528.
 - Scalanie: brak F7 `gotowe`. #531 CI: unit/visual OK, **db FAIL** security 394/397 — detach GPS w BEFORE nie odłączał pozycji (B/KSH 3/3/1). #532–#536 czekają 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 — detach `positions`/TELM w **AFTER** `trg_loads_zza_detach_on_carrier_change` (0242 D; `session_replication_role` zamiast ALTER TABLE w triggerze). Push → CI; ponowne F7.
+
+## 2026-10-25 01:45 — #528 F7 r3; #537 pkt 5–8
+
+- Skrzynka: #537 uzupełnienie (pkt 5–8) → PLAN §4 / dopisek D-0015; #538 W7 krok 1 dostarczony (treści e-mail). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe`. #531 CI na `c744ed5a`: unit/visual OK, **db FAIL** security 394/397 (eta_basis='TEST' ≠ jsonb — F7 r3 pkt 1). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 F7 r3: (1) `eta_basis=jsonb_build_object` + asercja L2 na SCX; (2) `forbid_mutation` + `tower.n8_detach_load` (bez DDL/session_replication_role); (3) telm RESET + geofence OUTSIDE; (4) opis PR. security **399**. Push → CI; ponowne F7.

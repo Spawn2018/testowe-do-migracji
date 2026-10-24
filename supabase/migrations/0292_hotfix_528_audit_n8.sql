@@ -2,7 +2,8 @@
 -- Po 0291 (#492). B5 dostanie numer ≥0299 (po 0292–0298), nie 0293/0294.
 -- 1) N8: przy zmianie carrier_org_id (gdy był poprzedni) zeruj pola przewoźnika
 --    (kierowca/dostawa/tablice/order_no/telematyka/rio_*); phone_country → 'PL';
---    escort_vehicles→0; tracking/eta_*→null; AFTER detach positions/TELM (0242 D).
+--    escort_vehicles→0; tracking/eta_*→null; AFTER detach positions/TELM (0242 D);
+--    telm_attach_phase→RESET, geofence_states→OUTSIDE; bez DDL (flaga n8_detach_load).
 --    Trigger po strażniku (zz_*), żeby HHL_OPS mógł zmienić przewoźnika przy
 --    istniejącym carrier_order_no (clear nie wchodzi w guard jako „zmiana numeru”).
 -- 2) Redakcja „zmiana przewoźnika” tylko gdy old i new nie-NULL (ROW_UPDATE; nie INSERT/DELETE).
@@ -10,7 +11,8 @@
 -- 4) KSH: invoice_documents.role w dozwolonych (FAKTURA_PDF/CMR/POD/KOREKTA).
 -- Uwagi: HHL_OPS w AT_LOADING+ zostawia pusty carrier_order_no (enforce_order_numbers
 -- nie odpala się przy samej zmianie przewoźnika). IS NOT DISTINCT FROM czyści też
--- wartość identyczną jak stara wpisaną przez nowego — nieszkodliwe.
+-- wartość identyczną jak stara wpisaną przez nowego — nieszkodliwe. Po odpięciu
+-- stary ślad GPS znika też dla HHL (RLS po load_id).
 
 -- ── 1) N8: czyszczenie pól przewoźnika ──────────────────────────────────────
 create or replace function public.trg_loads_clear_on_carrier_change()
@@ -135,15 +137,42 @@ create trigger trg_loads_zz_clear_on_carrier_change
 comment on function public.trg_loads_clear_on_carrier_change() is
   '#528 N8 F7 r2: clear PII/rio; escort_vehicles=0; tracking/eta null; zz_* po guard; NULL→org bez clear. Detach → zza_*.';
 
--- F7 r2 CI: detach GPS/TELM po zapisie wiersza (AFTER), wzorzec 0242 D
+-- F7 r3: wąski wyjątek w forbid_mutation (bez DDL / ShareRowExclusiveLock)
+create or replace function public.forbid_mutation()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op = 'UPDATE'
+     and current_setting('tower.n8_detach_load', true) is not distinct from old.load_id::text
+     and current_user = (
+           select t.tableowner
+             from pg_tables t
+            where t.schemaname = 'public'
+              and t.tablename = 'load_events'
+         )
+     and new.load_id is null
+     and new.detached_load_id is not distinct from old.load_id
+     and new.event_type is not distinct from old.event_type
+     and new.occurred_at is not distinct from old.occurred_at
+  then
+    return new;
+  end if;
+  raise exception 'load_events jest append-only';
+end;
+$$;
+
+revoke all on function public.forbid_mutation()
+  from public, anon, authenticated;
+
+-- F7 r2/r3: detach GPS/TELM po zapisie (AFTER); flaga tower.n8_detach_load zamiast ALTER TABLE
 create or replace function public.trg_loads_detach_on_carrier_change()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_prev text;
 begin
   if new.carrier_org_id is not distinct from old.carrier_org_id then
     return new;
@@ -156,8 +185,7 @@ begin
          detached_at = now(),
          load_id = null
    where pos.load_id = new.id;
-  v_prev := current_setting('session_replication_role', true);
-  perform set_config('session_replication_role', 'replica', true);
+  perform set_config('tower.n8_detach_load', new.id::text, true);
   begin
     update public.load_events ev
        set detached_load_id = ev.load_id,
@@ -186,11 +214,27 @@ begin
            )
          )
        );
-    perform set_config('session_replication_role', coalesce(nullif(v_prev, ''), 'origin'), true);
+    perform set_config('tower.n8_detach_load', '', true);
   exception when others then
-    perform set_config('session_replication_role', coalesce(nullif(v_prev, ''), 'origin'), true);
+    perform set_config('tower.n8_detach_load', '', true);
     raise;
   end;
+  -- F7 r3: jak 0242 D — reset fazy TELM i stref starego pojazdu
+  update public.telm_attach_phase p
+     set phase = 'RESET',
+         note = '#528 carrier change',
+         source = 'D1710_RESET',
+         observed_at = now(),
+         lat = null,
+         lon = null
+   where p.load_id = new.id;
+  update public.geofence_states s
+     set state = 'OUTSIDE',
+         consec_fixes = 0,
+         entered_at = null,
+         exited_at = null,
+         last_eval_at = now()
+   where s.load_id = new.id;
   return new;
 end;
 $$;
@@ -205,7 +249,7 @@ create trigger trg_loads_zza_detach_on_carrier_change
   execute function public.trg_loads_detach_on_carrier_change();
 
 comment on function public.trg_loads_detach_on_carrier_change() is
-  '#528 N8 F7 r2 CI: AFTER detach positions + TELM load_events (0242 D; session_replication_role).';
+  '#528 N8 F7 r3: AFTER detach positions/TELM; n8_detach_load (bez DDL); telm/geofence RESET/OUTSIDE.';
 -- ── 2) Bez zbędnych indeksów (F7 #531: GIN nie pomaga = any(); side_id dubluje PK)
 drop index if exists public.documents_visible_to_gin;
 drop index if exists public.load_agreed_fees_side_id;
