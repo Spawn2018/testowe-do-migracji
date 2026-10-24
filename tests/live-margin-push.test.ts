@@ -30,7 +30,10 @@ describe('podłączenie', () => {
   const who = readFileSync('src/auth/LiveWhoGets.tsx', 'utf8');
   const scr = readFileSync('src/components/options/WhoGetsScreen.tsx', 'utf8');
   it('próg wczytuje tylko HHL; KSH i SCX bez wywołania', () => {
-    expect(prov).toMatch(/if \(isHhl\) \{\n\s+const mq = await sb\.rpc\('margin_threshold_get'\);\n\s+setMarginFromServer\(mq\.error \? undefined : marginFromDb\(mq\.data\)\);\n\s+\} else \{\n\s+setMarginFromServer\(undefined\);/);
+    expect(prov).toContain("const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);");
+    expect(prov).toContain('if (!mq) setMarginFromServer(undefined);');
+    expect(prov).toContain('else if (!mq.error) setMarginFromServer(marginFromDb(mq.data));');
+    expect(readFileSync('src/data/supabaseBridge.ts', 'utf8')).toContain('setMarginFromServer(undefined); // #412 E16');
     expect(p5).toContain("demoMarginThreshold() : prodMargin ?? null");
   });
   it('zapis progu: margin_threshold_set(p_pct); wynik z bazy do pamięci', () => {

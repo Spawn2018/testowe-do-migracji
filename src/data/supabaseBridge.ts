@@ -11,6 +11,7 @@ import { registerAfterFileUpload, registerFileSink, registerRemoteSink } from '.
 import { createStorageSink } from './storageFiles';
 import { friendlyDbError } from '../lib/orderNumbers';
 import { mergeBellRefresh } from '../lib/bellList';
+import { setMarginFromServer } from '../lib/p5Source';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
@@ -187,6 +188,7 @@ export async function connectSupabaseData(sb: SupabaseClient): Promise<void> {
 
 export function disconnectSupabaseData(): void {
   stopBellRefresh();
+  setMarginFromServer(undefined); // #412 E16: próg marży HHL nie zostaje po wylogowaniu
   lastLoadsVersion = null;
   writesPending = 0;
   connGen += 1;
