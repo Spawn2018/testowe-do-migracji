@@ -858,7 +858,7 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — `load_id`/`scope_*` (przewoźnik z chwili wpisu; zmiana także z/do NULL → zakres `coalesce(OLD,NEW)` + dla CARRIER tylko fakt); KSH bez kierowcy/pilotów, bez `hhl_order_no`/`carrier_order_no` i cen SCX; SCX bez cen klienta/marży i bez `comment` oceny; faktury po issuer/recipient; AGREED_FEE na entity `load`; UUID ścisły; `actor_party` = HHL/KSH/CARRIER + `actor_label`; backfill bez bieżącego carrier; allowlista; BEFORE INSERT; bez `audit_read`. security **377**. Front — koordynator (#527, po odbiorze 0290). Drobne F7 r5 → **#528**.
 
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — W TOKU (migracja **0291**)
-Po #484, przed B5 (niepilne, przed wydaniem 28.10). Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO. Test: update zasobów → `updated_at` rośnie; ETA/RIO-stan → bez zmiany. security **382** (+5). Szczegóły: zgłoszenie #492.
+Po #484, przed B5 (niepilne, przed wydaniem 28.10). Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. Test: update zasobów/symbol → `updated_at` rośnie; ETA/RIO-stan/RODO → bez zmiany. security **384** (+7). Szczegóły: zgłoszenie #492.
 
 ### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — po #492, przed B5 (przed 28.10)
 Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. Front — koordynator. Szczegóły: #496.
@@ -878,8 +878,11 @@ DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — po #492, przed B5 (nie przerywa)
 N8: zerowanie pól przewoźnika przy zmianie `carrier_org_id` (+ `load_driver_contacts`); redakcja swap tylko `ROW_UPDATE`; wydajność dokumentów/dopłat; `invoice_documents.role` dla KSH. Front `_carrier_changed` — #527. Szczegóły: #528.
 
+### #530 · loadsVersion z tabel powiązanych (F7 #529) — po #492, przed 28.10 (nie przerywa)
+`max(loads.updated_at)` nie obejmuje pilotów/rejsu/dokumentów itd. Wersja z `max(updated_at)` powiązanych **albo** podbicie `loads.updated_at` przy zmianie rodzica. Priorytet: `load_escorts`, `sailings`. ETA/RIO-stan poza bumpem. Szczegóły: #530.
+
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
-Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → #528 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519/#525 po #412 (nie przerywa).
+Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → #528 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519/#525/#530 po #412/#492 (nie przerywa).
 
 ### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #492 (migracja **0292** po rebase; #492→**0291**; #484→**0290** SCALONE)
 - Według D-20261015-0330-01 pkt 6:
@@ -1513,3 +1516,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 14:15 | #484 F7 #526 r2: side/doc z tabeli, zakres OLD, BEFORE INSERT, allowlista; security **358** | pętla |
 | 24.10.2026 13:10 | #484 F7 #526 r4: zmiana przewoźnika z/do NULL (IS DISTINCT FROM) + actor_party=CARRIER; security **377** | pętla |
 | 24.10.2026 13:36 | #526/#484 SCALONE (`7607994f`, 0290); F7 „gotowe”; #528 wpisane (N8); start #492 → **0291**; B5→**0292** | pętla |
+| 24.10.2026 14:20 | #492 F7 #529: RODO bez bumpa, symbol/permit_kind, testy UPDATE+SELECT; security **384**; #530 wpisane (loadsVersion) | pętla |

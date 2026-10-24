@@ -1067,11 +1067,12 @@ err "#484: anon admin_audit_history → 42501" "00000000-0000-0000-0000-00000000
   "select * from admin_audit_history(null,null,null,null,null,null,5,0)" "Brak|42501|administrator|dostępu"
 
 echo; echo "[#492] loads.updated_at — ekran vs ETA/RIO"
-# Zamroź updated_at: zasoby/kierowca → bump; ETA / stan RIO / tracking_opened_at → bez.
+# Zamroź updated_at: zasoby/kierowca/symbol → bump; ETA / stan RIO / tracking / RODO → bez.
+# F7 #529: UPDATE osobno (sys), potem SELECT; bez CTE with u as (update…) — SCX bez SELECT carrier_order_no.
 sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
-val "#492: zasoby (carrier_order_no) podnoszą updated_at" $SCX \
-  "with u as (update loads set carrier_order_no = coalesce(carrier_order_no,'') || '-492' where id='$L2' returning 1)
-   select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true commit
+sys "update loads set carrier_order_no = coalesce(carrier_order_no,'') || '-492' where id='$L2'" >/dev/null
+val "#492: zasoby (carrier_order_no) podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
 sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
 sys "update loads set eta_site = now() + interval '3 hours', eta_confidence_min = 15,
         eta_basis = coalesce(eta_basis,'{}'::jsonb) || jsonb_build_object('t','492'),
@@ -1090,6 +1091,17 @@ sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id
 sys "update loads set driver_name = trim(both from coalesce(driver_name,'') || ' 492') where id='$L2'" >/dev/null
 val "#492: driver_name podnosi updated_at" $HHL \
   "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set symbol = case when coalesce(symbol,'') = 'SG' then 'KR' else 'SG' end,
+        permit_kind = case when coalesce(permit_kind,'') = 'FIRMA' then 'TRASA' else 'FIRMA' end
+     where id='$L2'" >/dev/null
+val "#492: symbol/permit_kind podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name = 'Rodo492' where id='$L2'" >/dev/null
+sys "begin; select set_config('tower.audit_source','rodo',true);
+        update loads set driver_name = null where id='$L2'; commit;" >/dev/null
+val "#492: RODO (audit_source) bez bumpa updated_at" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -4746,3 +4746,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne`.
 - Scalanie: **#527** `c879ff58` (F7 „gotowe” 11:45Z po `e18e5c30`, unit/visual zielone) — wygląd Historii. #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — db FAIL: trigger odwoływał się do `ferry_vessel`/`ferry_departure` (DROP w 0004). Usunięte z 0291; rejs = `sailing_id`+`ferry_booking_ref`. Merge main (#527). Push → CI; czekam F7.
+
+## 2026-10-24 14:20 — #492 F7 #529: RODO + symbol; #530 wpisane
+
+- Skrzynka: **#530** (Spawn2018, z F7 #529) — loadsVersion z tabel powiązanych; wpisane PLAN §4/§8. #528/#525/#519/#516/#500/#499/#496/#492 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe”. #529 db FAIL (security carrier_order_no SELECT + i2 purge pozycji po bumpie RODO); visual zielone. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#492** PR #529 — F7: bez bumpa przy `audit_source=rodo`; `symbol`/`permit_kind`; guard kolumn w 0291; testy UPDATE sys + SELECT; security **384** (+7). Push → CI; ponowne F7.
