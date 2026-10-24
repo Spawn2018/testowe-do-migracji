@@ -743,6 +743,47 @@ err "#412f: HHL nie wstawi oferty bezpośrednio" $HHL \
   "insert into factoring_offers (version, enabled, fee_pct, hours, valid_from) values (99, true, 1, 48, '2099-01-01')" \
   "permission denied|42501"
 
+echo; echo "[#519] Faktoring N2–N4 (0296) — bez linii, dedup, url faktury"
+INV519=44444444-0000-0000-0000-000000000519
+sys "delete from notifications where payload->>'invoice_id'='$INV519' and template like 'FACTOR%';
+     delete from invoice_lines where invoice_id='$INV519';
+     delete from invoices where id='$INV519';
+     insert into invoices (id, project_id, carrier_org_id, period_start, period_end, direction,
+       issuer_org_id, recipient_org_id, invoice_number, currency, net_total, gross_total, due_date,
+       issue_date, verification_status, payment_status,
+       factoring_selected, factoring_fee_pct, factoring_fee_amount, factoring_net_payout,
+       factoring_hours, factoring_offer_version)
+     select '$INV519', project_id, carrier_org_id, period_start, period_end, direction,
+       issuer_org_id, recipient_org_id, 'SCX/519/2026', currency, net_total, gross_total, due_date,
+       coalesce(issue_date, period_start), 'DO_WERYFIKACJI', 'NIEOPLACONA',
+       true, 1, 100.95, 9994.08, 48, 1
+       from invoices where id='$INVK'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
+chk6 "#519 N2: bez invoice_lines → 0 FACTORING_ACCEPTED" "$(sys "select count(*) from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519'" | tail -1)" 0
+sys "insert into invoice_lines (invoice_id, load_id, direction)
+     select '$INV519', load_id, direction from invoice_lines where invoice_id='$INVK' limit 1" >/dev/null
+sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_accepted_at=null, factoring_due_at=null where id='$INV519'" >/dev/null
+sys "delete from notifications where template like 'FACTOR%' and payload->>'invoice_id'='$INV519'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
+chk6 "#519 N2: z linią → dzwonek akceptacji" "$(sys "select (count(*) >= 1)::text from notifications where channel='IN_APP' and template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519'" | tail -1)" true
+chk6 "#519 N4: url payload → finanse/faktury" "$(sys "select (payload->>'url' like '%/finanse/faktury/$INV519%')::text from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP' limit 1" | tail -1)" true
+chk6 "#519 N4: notify_click_url FACTORING" "$(sys "select notify_click_url('FACTORING_PAID', jsonb_build_object('invoice_id','$INV519'), null)" | tail -1)" "/#/finanse/faktury/$INV519"
+# N3: ponowna akceptacja (SPORNA → ZAAKCEPTOWANA) → nowy dedup (accepted_at).
+ACC1=$(sys "select count(*) from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)
+sys "update invoices set verification_status='SPORNA', dispute_note='test #519 N3' where id='$INV519'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA', dispute_note=null where id='$INV519'" >/dev/null
+chk6 "#519 N3: ponowna akceptacja → nowy dzwonek" "$(sys "select (count(*) > $ACC1)::text from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)" true
+# N3: cofnięcie + ponowna wypłata → nowy FACTORING_PAID.
+sys "delete from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519'" >/dev/null
+run $HHL "select factoring_mark_paid('$INV519')" commit >/dev/null
+PAID1=$(sys "select count(*) from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)
+run $HHL "select unmark_invoice_paid('$INV519', 'test #519 N3')" commit >/dev/null
+run $HHL "select factoring_mark_paid('$INV519')" commit >/dev/null
+chk6 "#519 N3: ponowna wypłata → nowy dzwonek" "$(sys "select (count(*) > $PAID1)::text from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)" true
+sys "delete from notifications where payload->>'invoice_id'='$INV519' and template like 'FACTOR%';
+     delete from invoice_lines where invoice_id='$INV519';
+     delete from invoices where id='$INV519'" >/dev/null
+
 echo; echo "[#412] E16 próg marży + E11 urządzenia push (0288)"
 val "#412m: HHL_ADMIN czyta próg 4%" $HHL \
   "select (margin_threshold_get()->>'pct')" "4.0"

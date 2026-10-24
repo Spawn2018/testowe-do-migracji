@@ -40,6 +40,10 @@ describe('L-4 cele kliknięć', () => {
     expect(clickTarget({ type: 'DWELL_OVER_FREE', decisionId: 'abc' }).path).toBe('/decyzje/abc');
     expect(clickTarget({ type: 'GEOFENCE_ENTER', loadCode: 'SG-01' }).path).toBe('/transport/SG-01?zakladka=status');
     expect(clickTarget({ type: 'INVOICE_NEW', invoiceId: 'f1' }).path).toBe('/finanse/faktury/f1');
+    // #519 N4: faktoring → Finanse › Faktury (nie transport)
+    expect(clickTarget({ type: 'FACTORING_ACCEPTED', invoiceId: 'f1' }).path).toBe('/finanse/faktury/f1');
+    expect(clickTarget({ type: 'FACTORING_PAID', invoiceId: 'f1' }).path).toBe('/finanse/faktury/f1');
+    expect(clickTarget({ type: 'FACTORING_OVERDUE', invoiceId: 'f1' }).path).toBe('/finanse/faktury/f1');
     expect(clickTarget({ type: 'SMS_GATEWAY_SILENT' }).path).toBe('/opcje/stan-systemu#bramka-sms');
     expect(clickTarget({ type: 'FUEL_READING_MISSING' }).path).toBe('/opcje/cennik');
   });

@@ -4771,6 +4771,7 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
 
+<<<<<<< HEAD
 ## 2026-10-24 15:52 — #529 SCALONE (0291); start #528 (0292)
 
 - Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
@@ -4923,3 +4924,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
 - Scalanie: CI unit/db/visual zielone na `04f49598` (backup **42**); brak F7 `gotowe` — F7 r2 pkt 3–4. Bez push na main.
 - Bieżąca: **#516** PR #533 — F7 r2: `backup-stale` tylko gdy `split_part(dedup_key,':',2)::bigint < OK`; testy DO ponownie + stale≥OK; `gate-suites` backup **44** / hosted **36**. Kolejka: `dec-auto.sh` PGURL (§8). Push → CI; ponowne F7.
+=======
+## 2026-10-24 21:55 � #516 CI zielone; start #519 (0296)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywaj�cych.
+- Scalanie: brak F7 `gotowe do scalenia` po head #531 `73e80726` / #532 `b2b9fb03` / #533 `c754243a` (CI zielone). Bez push na main.
+- Bie��ca (r�wnolegle, D-20261019-1050-01 �2 � nie stoj� przy F7): **#519** ga��� `pakiet/hotfix-519-factoring-n2-n4` � migracja **0296**: N2 skip bez `invoice_lines`; N3 dedup + `accepted_at`/`paid_at`/`due_at`; N4 `raise warning` + url Finanse�Faktury (`notify_click_url` + `clickTargets`). security **391** (+6).
+>>>>>>> 14189663 (feat(#519): faktoring N2-N4 — skip bez linii, dedup, url faktury (0296).)
