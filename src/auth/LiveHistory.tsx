@@ -29,18 +29,23 @@ export const isTech = (action: string) => /^ROW_/.test(action);
 /* #484 F7 #527 (obrona w głębi; główna redakcja — baza 0290): KSH/SCX bez kluczy pieniędzy, numerów zleceń i e-maili,
    także w zagnieżdżonych obiektach i tablicach */
 const HIDDEN_KEY = /price|cost|revenue|margin|rate|amount|fee|baf|payout|net|gross|total|order_no|email/i;
-export function scrubForParty(v: unknown): unknown {
-  if (Array.isArray(v)) return v.map(scrubForParty);
+/* KSH: bez danych kierowców i pilotów (jak widoki na żywo; decyzja koordynatora F7 #526 r3 N6) */
+const HIDDEN_KSH = /driver|phone|pilot|escort_name|contact/i;
+export function scrubForParty(v: unknown, ksh = false): unknown {
+  if (Array.isArray(v)) return v.map((x) => scrubForParty(x, ksh));
   if (v && typeof v === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, x] of Object.entries(v as Record<string, unknown>)) if (!HIDDEN_KEY.test(k)) out[k] = scrubForParty(x);
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      if (HIDDEN_KEY.test(k) || (ksh && HIDDEN_KSH.test(k))) continue;
+      out[k] = scrubForParty(x, ksh);
+    }
     return out;
   }
   return v;
 }
 
-function fmtVal(locale: Locale, raw: Record<string, unknown> | null, party = false): string | undefined {
-  const v = party && raw ? (scrubForParty(raw) as Record<string, unknown>) : raw;
+function fmtVal(locale: Locale, raw: Record<string, unknown> | null, party = false, ksh = false): string | undefined {
+  const v = party && raw ? (scrubForParty(raw, ksh) as Record<string, unknown>) : raw;
   if (!v || Object.keys(v).length === 0) return undefined;
   const keys = Object.keys(v);
   /* jedna wartość („enabled”, „value”) — sama wartość; więcej — klucz: wartość */
@@ -120,8 +125,8 @@ export default function LiveHistory() {
     when: formatListDateTime(r.created_at),
     who: who(r),
     text: historyText(locale, r, obj(r)),
-    was: fmtVal(locale, r.old_value, !hhl),
-    is: fmtVal(locale, r.new_value, !hhl),
+    was: fmtVal(locale, r.old_value, !hhl, role === 'KSH'),
+    is: fmtVal(locale, r.new_value, !hhl, role === 'KSH'),
   }));
   /* KSH/SCX: tylko obszary z ich wpisów (bez list ustawień systemu) */
   const entityList = [...new Set([
@@ -134,7 +139,7 @@ export default function LiveHistory() {
   const download = (fmt: 'csv' | 'xlsx') => {
     void (async () => {
       const head = [t(locale, 'p3c_l_when'), t(locale, 'p3c_hist_who'), t(locale, 'p3c_hist_what'), t(locale, 'p3c_hist_was'), t(locale, 'p3c_hist_is')];
-      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value, !hhl) ?? '', fmtVal(locale, r.new_value, !hhl) ?? '']);
+      const data = shown.map((r) => [r.created_at, who(r), historyText(locale, r, obj(r)), fmtVal(locale, r.old_value, !hhl, role === 'KSH') ?? '', fmtVal(locale, r.new_value, !hhl, role === 'KSH') ?? '']);
       try {
         await downloadTable([head, ...data], 'WATCH_TOWER_historia_zmian', fmt, 'Historia');
         setMsg(tp(locale, 'opt_acc_hist_export_ok', { n: data.length }));
