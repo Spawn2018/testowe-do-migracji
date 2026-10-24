@@ -4788,3 +4788,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
 - Scalanie: brak F7 „gotowe do scalenia” na #531; #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na `fc08a460` (clear tylko old≠NULL; phone_country=PL; security **391**). Czekam F7.
+
+## 2026-10-24 16:56 — #528 CI zielone też na head `0cf5b896`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `0cf5b896` (docs; brama ważna też z `fc08a460`). Czekam F7.
