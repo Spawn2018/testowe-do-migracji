@@ -297,7 +297,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     const bod = toMarkers(body);
     void src.save(item.id, subj, bod).then((r) => {
       setBusy(false);
-      if (!r.ok || !r.row) { setMsg({ bad: true, text: p8t('p8_fail') }); return; }
+      if (!r.ok || !r.row) { setMsg({ bad: true, text: r.error ?? p8t('p8_fail') }); return; }
       setMsg({ bad: false, text: p8t('p8_saved') });
       onSaved(r.row);
     }, fail);
@@ -310,7 +310,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     setBusy(true);
     void src.reset(item.id).then((r) => {
       setBusy(false);
-      if (!r.ok) { setMsg({ bad: true, text: p8t('p8_fail') }); return; }
+      if (!r.ok) { setMsg({ bad: true, text: r.error ?? p8t('p8_fail') }); return; }
       onReset();
     }, fail);
   };
@@ -338,6 +338,8 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
       </header>
       <p className="mt-note">{sms ? p8t('p8_pl_only') : item.noBell ? p8t('p8_pack_note') : p8t('p8_email_note')}</p>
       {readOnly ? <p className="mt-ro" data-mt-ro>{prodPending ? p8t('p8_ro_prod') : p8t('p8_ro')}</p> : null}
+      {/* #412 E43 (0289): uczciwie — zapis w bazie jest, wysyłka korzysta z niego dopiero po P8 */}
+      {src?.prod ? <p className="mt-note" data-mt-prod-note>{p8t(item.channel === 'LOGIN' ? 'p8_prod_login' : 'p8_prod_store')}</p> : null}
 
       {email ? (
         <div className="mt-field">

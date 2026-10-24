@@ -234,17 +234,16 @@ describe('ekran — prawa (E43 „Bezpiecznie”)', () => {
     expect(html).toContain('contentEditable="false"');
   });
 
-  it('produkcja przed podłączeniem (źródło null): treści domyślne tylko do odczytu z wyjaśnieniem', async () => {
+  it('produkcja (0289): treści z bazy — najpierw wczytywanie, bez próbnej wysyłki i bez zapisu przed wczytaniem', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     try {
       const { renderToStaticMarkup } = await import('react-dom/server');
       const { createElement } = await import('react');
       const { MessageTexts } = await import('../src/components/options/MessageTexts');
       const html = renderToStaticMarkup(createElement(MessageTexts, { readOnly: false }));
-      expect(html).toContain(P8_PL.p8_ro_prod);
+      expect(html).toContain(P8_PL.p8_loading);
       expect(html).not.toContain('data-mt-save');
       expect(html).not.toContain('data-mt-test');
-      expect(html).not.toContain(P8_PL.p8_loading);
     } finally {
       vi.unstubAllEnvs();
     }

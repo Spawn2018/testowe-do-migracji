@@ -45,6 +45,8 @@ const pl = {
   p8_err_no_button: 'Przycisk z linkiem musi być w treści — wstaw go przyciskiem „+ Przycisk z linkiem”.',
   p8_ro: 'Tylko podgląd · zmienia Administrator HHL',
   p8_ro_prod: 'Treści domyślne. Zmiana treści włączy się po aktualizacji serwera (P8).',
+  p8_prod_store: 'Zapisana treść jest w bazie z Historią zmian. Wiadomości wychodzą jeszcze z treścią domyślną — zapisana zacznie obowiązywać po aktualizacji wysyłki (P8).',
+  p8_prod_login: 'Zapisana treść jest w bazie z Historią zmian. E-maile logowania wysyła jeszcze usługa logowania z treścią domyślną — zapisana zacznie obowiązywać po aktualizacji wysyłki (P8).',
   p8_back: 'Wróć do listy wiadomości',
   p8_email_note: 'E-mail i wpis w dzwonku mają tę samą treść.',
   p8_pack_note: 'Tylko e-mail, z załącznikami: faktura, CMR z podpisem i zestawienie. Powyżej 25 MB wychodzi w częściach („część 1 z 2”).',
