@@ -4626,3 +4626,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne` przerywających.
 - Scalanie: **#510** `e187d2d6` (F7 „gotowe do scalenia” na `43c937c`, CI unit/db/visual zielone) — E40 terminy+adresy **0285**. #511 visual FAIL (telefon); #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#412** gałąź `pakiet/hotfix-412-paczka-tygodnia` — migracja **0286**: `accounting_pack_sends` + `accounting_pack_config` / `_send` (dziennik; bez Resend — L47/W6). security **227** (+16); nullguard **755** (+10). B5→**0287**. Front — koordynator.
+
+## 2026-10-24 06:55 — #512 F7: ZLECONO / idempotencja / invoice_ids
+
+- Skrzynka: #412/#500/#499/#496/#492/#484/#323/#322/#320 (Spawn2018) — już w planie; bez nowych; bez `pilne`.
+- Scalanie: brak F7 „gotowe” (PR #512 F7 **do poprawy** na `a3137d24`; #514 E4b CI w toku — bez push na tę gałąź; #511/#382/#383 bez „gotowe”).
+- Bieżąca: **#412** PR #512 — F7: status `ZLECONO` (nie „Wysłano”); `accounting_pack_send_set_status` (service_role); advisory lock + `p_resend`; `invoice_ids`/blokady z serwera; tydzień 01–53; retencja e-mail 5 lat (komentarz); `PackSent` + security **235** (+8). Push → CI; czekam ponowne F7.

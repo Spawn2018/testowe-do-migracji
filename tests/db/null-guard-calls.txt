@@ -131,6 +131,7 @@ accounting_addresses_get | GUARD | select accounting_addresses_get() | tylko HHL
 accounting_addresses_set | GUARD | select accounting_addresses_set('HHL',array['a@test.pl']) | Administrator HHL
 accounting_pack_config | GUARD | select accounting_pack_config() | tylko HHL
 accounting_pack_send | GUARD | select accounting_pack_send('KSH','2026-W41') | tylko HHL
+# accounting_pack_send_set_status — tylko service_role (bez GUARD authenticated)
 admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL

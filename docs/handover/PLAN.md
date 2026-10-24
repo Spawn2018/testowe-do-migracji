@@ -849,7 +849,7 @@ Migracje **0283**+**0284**. Szczegóły: `dopiski/D-20261022-0113-01.md`, zgłos
 ### #412 · Opcje/Finanse — brakujące źródła (D-20261021-2040-01) — W TOKU (~~**0285**~~ SCALONE #510 `e187d2d6`; **0286** paczka dziennik — `pakiet/hotfix-412-paczka-tygodnia`)
 Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 1. ~~**0285** E40 terminy + adresy~~ — SCALONE (#510): `payment_terms_options` / `_set`, `accounting_addresses` get/set. Front — koordynator po wdrożeniu.
-2. **0286** Paczka tygodnia — dziennik: `accounting_pack_sends`, `accounting_pack_config` / `_send` (HHL; bez Resend — L47/W6/Edge osobno). Front — koordynator.
+2. **0286** Paczka tygodnia — dziennik: `accounting_pack_sends`, `accounting_pack_config` / `_send` (HHL; **ZLECONO** + `_set_status` Edge; idempotencja/`p_resend`; `invoice_ids` z serwera — F7 #512); bez Resend (L47/W6). Front — koordynator.
 3. Faktoring E4b, próg marży E16, treści E43, liczba urządzeń push E11 — kolejne migracje / PR.
 
 ### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — po #412 / #478, przed #492 / B5
