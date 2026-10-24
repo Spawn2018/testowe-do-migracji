@@ -1481,3 +1481,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 23.10.2026 23:50 | #504 SCALONE (`c007736f`); start #505 → **0282** (route + audit_reason + historia OPS) | pętla |
 | 24.10.2026 01:36 | #505/#506 SCALONE (`069aaac1`, 0282); start #422 → **0283** (perf_results + app_errors_recent) | pętla |
 | 24.10.2026 02:15 | #422 db FAIL: `auth.role()` w bramie; zapis p95 przez sesję postgres, `chk6` | pętla |
+| 24.10.2026 02:40 | #422 db FAIL: asercja newCount — JSON null ≠ SQL NULL; test `jsonb_typeof` | pętla |

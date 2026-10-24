@@ -4565,3 +4565,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412 w planie. Bez nowych `dla-cursora`.
 - Scalanie: brak F7 „gotowe”; CI na `7936b5bf` unit/db/visual zielone; F7 r2: nadal 3–6 przed „gotowe”.
 - Bieżąca: **#422** — (3) `app_errors_recent` → `is_hhl_admin()` + testy OPS/SCX/anon; (4) `max_exec_time` loads/load_messages, bez `list_loads`, Δ vs poprzedni; (5) `newCount`/`state` = null; (6) authenticated bez EXECUTE record/ingest; `at` tylko `ok is not null`; retencja 90 dni; security **179**. Lighthouse — osobny krok po F7.
+
+## 2026-10-24 02:40 — #422 db: newCount JSON null vs SQL NULL
+
+- Skrzynka: #422 `pilne` bieżąca; #500/#499/#496/#492/#484/#412/#413/#425 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak F7 „gotowe” (PR #507, #382, #383). Unit/visual zielone na `05d3989e`; db FAIL security 178/179 — asercja `newCount is null` pada na JSON `null`.
+- Bieżąca: **#422** — test `jsonb_typeof(...->'newCount') = 'null'` (F7: JSON null = brak danych). Czekam na CI i F7.

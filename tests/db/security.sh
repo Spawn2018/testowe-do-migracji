@@ -446,7 +446,7 @@ err "#422: HHL nie wywoła perf_p95_lists_ingest" $HHL \
 val "#422: HHL_ADMIN app_errors_recent ma groups" $HHL \
   "select (jsonb_typeof(app_errors_recent(7)->'groups') = 'array')::text" true
 val "#422: app_errors_recent newCount null (brak danych)" $HHL \
-  "select ((app_errors_recent(7)->'newCount') is null)::text" true
+  "select (jsonb_typeof(app_errors_recent(7)->'newCount') = 'null')::text" true
 err "#422: HHL_OPS nie czyta app_errors_recent" $OPS422 "select app_errors_recent(7)" "Administrator HHL|42501"
 err "#422: KSH nie czyta app_errors_recent" $KSH "select app_errors_recent(7)" "Administrator HHL|42501"
 err "#422: SCX nie czyta app_errors_recent" $SCX "select app_errors_recent(7)" "Administrator HHL|42501"
