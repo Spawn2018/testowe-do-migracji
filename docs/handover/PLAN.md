@@ -1524,3 +1524,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 16:20 | #528 db: clear tylko old≠NULL; phone_country→PL (NOT NULL); security **391** | pętla |
 | 24.10.2026 16:40 | #528 CI unit/db/visual zielone (`fc08a460`); czekam F7 „gotowe” | pętla |
 | 24.10.2026 16:56 | #528 CI unit/db/visual zielone też na head `0cf5b896`; czekam F7 | pętla |
+| 24.10.2026 17:16 | #528 CI unit/db/visual zielone na head `0dbf4267`; czekam F7 | pętla |
