@@ -94,6 +94,6 @@ describe('filtry, eksport, układ', () => {
   it('Harmonogram bez „Zmień ciągnik”, bez „Zapisz widok” i bez okna przeglądarki (E30 pkt 2 i 5)', () => {
     const v = readFileSync('src/views/ScheduleView.tsx', 'utf8');
     expect(v).not.toMatch(/data-change-tractor|window\.prompt|a6_sch_save_view/);
-    expect(readFileSync('src/App.tsx', 'utf8')).toMatch(/ScheduleViewLazy as ScheduleView/);
+    expect(readFileSync('src/TowerShell.tsx', 'utf8')).toMatch(/ScheduleViewLazy as ScheduleView/);
   });
 });
