@@ -851,8 +851,8 @@ Po #422, przed #484. `dopiski/D-20261021-2040-01.md`.
 1. ~~**0285** E40 terminy + adresy~~ — SCALONE (#510). Front — koordynator (#513 SCALONE).
 2. ~~**0286** Paczka tygodnia — dziennik~~ — SCALONE (#512): `accounting_pack_sends`, config/send (ZLECONO + `_set_status`); bez Resend (L47/W6). Front — koordynator (#518 SCALONE).
 3. ~~**0287** E4b Faktoring~~ — SCALONE (#514 `dd238532`): oferta/wybór/wypłata. Front — koordynator (#521 SCALONE).
-4. ~~**0288** E16 próg marży (`margin_threshold_get`/`_set`) + E11 `push_devices_count`~~ — SCALONE (#520 `90341551`). Front — koordynator (`wyglad/W-marza-urzadzenia`).
-5. **0289** E43 treści wiadomości — `message_texts` + list/set/reset (historia MESSAGE_TEXT_*); domyślne w kodzie. PR #522 (`120f3a79`) — CI unit+db+visual zielone, czekam F7. Front `p8Source` — koordynator; odczyt przy wysyłce — P8.
+4. ~~**0288** E16 próg marży (`margin_threshold_get`/`_set`) + E11 `push_devices_count`~~ — SCALONE (#520 `90341551`). Front — koordynator (#523 SCALONE `67e21530`).
+5. **0289** E43 treści wiadomości — `message_texts` + list/set/reset (historia MESSAGE_TEXT_*); domyślne w kodzie. PR #522 — F7 poprawki (SMS_WORST/GSM/znaczniki); CI po poprawce testu `chr(1103)`. Front `p8Source` — koordynator; odczyt przy wysyłce — P8.
 
 ### #484 · P2 — Historia zmian dla Operacji HHL, KSH i SCX (właściciel 23.10 08:17) — po #412 / #478, przed #492 / B5
 `audit_history_scoped` (lub rozszerzenie `admin_audit_history`): HHL_ADMIN/HHL_OPS — wszystko; KSH/SCX — wpisy swoich transportów (RLS `loads`); KSH bez numerów zleceń i cen SCX; SCX bez cen klienta/marży; bez zmiany `audit_read` na tabeli. Testy `authenticated`. Front — koordynator (`wyglad/*`). Szczegóły: zgłoszenie #484.
@@ -1500,3 +1500,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 09:05 | #519 wpisane (faktoring N2–N4 po #514); #520 db FAIL: nullguard 795≠783 → poprawka licznika | pętla |
 | 24.10.2026 09:30 | #520 CI zielone (46327a16); start #412 E43 → **0289**; B5→**0290** | pętla |
 | 24.10.2026 09:55 | #521+#520 SCALONE (wygląd faktoring / E16+E11 0288 `90341551`); #522 E43 CI zielone — czekam F7 | pętla |
+| 24.10.2026 10:30 | #523 SCALONE (wygląd marża+push `67e21530`); #522 db FAIL: test SMS spoza GSM `U&` → `chr(1103)` | pętla |

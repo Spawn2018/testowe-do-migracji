@@ -4686,3 +4686,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych; #412 bieżąca.
 - Scalanie: brak (F7 #522 **nadal do poprawy** na docs `2e233a60`).
 - Bieżąca: **#412** PR #522 — F7 pkt 1–2 + drobne w **0289**: SMS_WORST (place 28 / link…), GSM_BASIC/EXT (×2), odrzucenie spoza alfabetu; dozwolone klocki w `message_text_kind_meta` (`{{button}}` tylko LOGIN); limity 200/5000 + znaki sterujące w temacie; testy security + `p8-texts` (lista 48 = MESSAGES). security **329** (+12). Push → CI; czekam ponowne F7.
+
+## 2026-10-24 10:30 — #523 SCALONE; #522 db: SMS spoza GSM → chr(1103)
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #519/#516/#500/#499/#496/#492/#484/#412 w planie. #413/#425 `pilne` SCALONE (otwarte do zamknięcia po odbiorze) — nie przerywają.
+- Scalanie: **#523** `67e21530` (F7 „gotowe do scalenia” na `6dd9c5f`, CI unit/visual) — wygląd E16+E11 marża/push. #522 bez „gotowe” po F7 poprawkach; #382 CONFLICT.
+- Bieżąca: **#412** PR #522 — CI `db` FAIL security 328/329: test „SMS spoza GSM” z `U&'\\+044F'` → HINT Unicode escapes (psql). Poprawka: `chr(1103)` (Я). security **329**. Push → CI; czekam F7.

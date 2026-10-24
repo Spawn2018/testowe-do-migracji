@@ -797,7 +797,7 @@ err "#412e43: SMS za długi" $HHL \
 err "#412e43: SMS place×6 >160 (SMS_WORST)" $HHL \
   "select message_texts_set('SMS_A', null, repeat('{{place}}', 6))" "160 znakow|160 znaków|22023"
 err "#412e43: SMS spoza GSM" $HHL \
-  "select message_texts_set('SMS_A', null, 'test ' || U&'\\+044F')" "alfabet GSM|niedozwolony|22023"
+  "select message_texts_set('SMS_A', null, 'test ' || chr(1103))" "alfabet GSM|niedozwolony|22023"
 err "#412e43: SMS [×81 (GSM_EXT ×2)" $HHL \
   "select message_texts_set('SMS_A', null, repeat('[', 81))" "160 znakow|160 znaków|22023"
 err "#412e43: niedozwolony znacznik" $HHL \
