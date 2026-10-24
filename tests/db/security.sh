@@ -942,6 +942,9 @@ val "#484: SCX nie widzi swap B→SCX (zakres OLD)" $SCX \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 0
 val "#484: B widzi swap B→SCX" $SCXB \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 1
+# F7 r3 N1: B widzi fakt zmiany, bez danych nowego przewoźnika/kierowcy
+val "#484: B swap bez PII nowego" $SCXB \
+  "select ((new_value ? 'driver_name') is false and (new_value ? 'carrier_order_no') is false and (new_value ? 'driver_phone') is false and (new_value->>'_carrier_changed')='true' and (old_value ? 'driver_name') is false)::text from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,5,0) limit 1" true
 # F7 r2 pkt 4: doc UPDATE bez visible_to w JSON — brak CLIENT w tabeli/diff → ukryj
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
      ('HIST484_DOC_UPD','documents','$L1',
@@ -950,6 +953,13 @@ sys "insert into audit_log (action, entity, entity_id, old_value, new_value, loa
       '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
 val "#484: KSH bez doc UPDATE bez visible_to" $KSH \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC_UPD',null,20,0)" 0
+# F7 r3 N5: faktura INVOICE bez issuer/recipient = KSH → ukryj
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_INV','documents','$L1','{}',
+      jsonb_build_object('file_name','Faktura_SCX_9_2026_netto_10095.pdf','category','INVOICE','visible_to',jsonb_build_array('FORWARDER','CLIENT','CARRIER')),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez faktury SCX (N5)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_INV',null,20,0)" 0
 # F7 r2 pkt 5: INSERT bez scope_* — trigger BEFORE uzupełnia
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
      ('HIST484_FN','loads','$L1','{}', jsonb_build_object('status','AT_SITE'))" >/dev/null
@@ -964,11 +974,43 @@ val "#484: KSH allowlista bez Price/margin" $KSH \
   "select ((new_value ? 'Price') is false and (new_value ? 'margin_eur') is false and (new_value ? 'stawka') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
 val "#484: SCX allowlista bez margin/pricing" $SCX \
   "select ((new_value ? 'margin_eur') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
+# F7 r3 N3: ocena — SCX bez comment
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_RATE2','carrier_ratings','$L1','{}',
+      jsonb_build_object('score',4,'comment','HHL-POST290: SCX nie wolno tego widziec'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX ocena bez comment (N3)" $SCX \
+  "select ((new_value ? 'comment') is false and (new_value->>'score')='4')::text from admin_audit_history(null,null,null,null,'HIST484_RATE2',null,5,0) limit 1" true
+# F7 r3 N4: AGREED_FEE_ADD entity load — KSH nie widzi COST
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('AGREED_FEE_ADD','load','$L1','{}',
+      jsonb_build_object('fee_id','aaaaaaaa-0000-0000-0000-0000000000fe','kind','EXTRA','amount_eur',50,'side','COST','status','ACCEPTED','by','FORWARDER'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez AGREED_FEE COST na load (N4)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'AGREED_FEE_ADD',null,20,0)" 0
+val "#484: SCX widzi AGREED_FEE COST na load (N4)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'AGREED_FEE_ADD',null,20,0)" 1
+# F7 r3 N6: KSH bez kierowcy
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_DRV','loads','$L1','{}',
+      jsonb_build_object('status','READY','driver_name','Jan Test','driver_phone','+48111','order_no','KSH/1'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez driver_name (N6)" $KSH \
+  "select ((new_value ? 'driver_name') is false and (new_value ? 'driver_phone') is false and new_value->>'order_no'='KSH/1')::text from admin_audit_history(null,null,null,null,'HIST484_DRV',null,5,0) limit 1" true
+# F7 r3 N7: zły „UUID” nie przerywa INSERT
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_BADUUID','loads','------------------------------------:a','{}', jsonb_build_object('status','X','load_id','not-a-uuid-!!!!!!!!!!!!!!!'))" >/dev/null
+val "#484: zły UUID nie blokuje INSERT (N7)" $HHL \
+  "select count(*) from audit_log where action='HIST484_BADUUID'" 1
 sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id, user_id)
      select 'HIST484_MAIL','loads','$L1','{}'::jsonb, jsonb_build_object('status','X'), '$L1','$ORG_SCX','$ORG_KSH', id
        from app_users where auth_id='$SCX' limit 1" >/dev/null
-val "#484: KSH autor SCX → nazwa firmy" $KSH \
-  "select user_email from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "Scandinavian Express"
+val "#484: KSH actor_label = nazwa firmy" $KSH \
+  "select actor_label from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "Scandinavian Express"
+val "#484: KSH actor_party SCX" $KSH \
+  "select actor_party from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "SCX"
+val "#484: KSH user_email null (cudzy)" $KSH \
+  "select (user_email is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
 val "#484: KSH bez cudzego user_id" $KSH \
   "select (user_id is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
 # wydajność: dużo wpisów obcych — filtr po scope_client, limit 8 s (Supabase)

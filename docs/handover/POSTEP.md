@@ -4722,3 +4722,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (SCALONE wcześniej) — nie przerywają. Bez nowych do wpisania.
 - Scalanie: brak F7 „gotowe”. CI na `7f629c59` zielone (unit/db/visual) — tylko pkt 1 (`created_at`); F7 r2 nadal **do poprawy** (pkt 2–6).
 - Bieżąca: **#484** PR #526 — F7 r2: (2) side/status dopłat z tabeli + keep w UPDATE; (3) zakres OLD przy B→SCX + backfill bez bieżącego carrier przy wątpliwości; (4) `visible_to`/INVOICE z `documents`; (5) BEFORE INSERT `trg_audit_log_fill_scope`; (6) redakcja = allowlista (case-insensitive). Filtr po `scope_*` indeksowany; bez cudzego `user_id`; security **358** (+10). Push → CI; ponowne F7.
+
+## 2026-10-24 12:40 — #484 F7 r3: N1–N7 w 0290
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #525/#519/#516/#500/#499/#496/#492/#484 w planie. #425/#413 `pilne` otwarte (baza SCALONE) — nie przerywają.
+- Scalanie: brak F7 „gotowe”. CI na `36eb14d8` zielone (unit/db/visual); F7 r3 **do poprawy**.
+- Bieżąca: **#484** PR #526 — F7 r3: N1 swap = fakt dla CARRIER; N2 backfill bez `l.carrier_org_id`; N3 ocena bez `comment`; N4 AGREED_FEE na entity `load`; N5 faktury issuer/recipient; N6 KSH bez kierowcy; N7 `audit_history_try_uuid`; `actor_party`/`actor_label`; security **367** (+9). Push → CI; ponowne F7.

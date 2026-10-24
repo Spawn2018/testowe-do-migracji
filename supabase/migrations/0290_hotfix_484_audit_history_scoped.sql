@@ -1,8 +1,31 @@
--- #484 / P2 (właściciel 23.10 08:17) + F7 #526 r2: Historia zmian dla HHL_OPS, KSH i SCX.
+-- #484 / P2 (właściciel 23.10 08:17) + F7 #526 r3: Historia zmian dla HHL_OPS, KSH i SCX.
 -- Bez zmiany polityki audit_read. Odczyt tylko przez RPC SECURITY DEFINER.
 -- load_id + scope_* przy zapisie → szybki filtr; widoczność SCX = przewoźnik z chwili wpisu.
--- F7 r2: side/visible_to z wiersza tabeli; zakres OLD przy zmianie przewoźnika;
--- BEFORE INSERT uzupełnia zakres; redakcja = allowlista; bez cudzego user_id.
+-- F7 r3: swap = fakt zmiany dla przewoźników; backfill bez bieżącego carrier; ocena bez comment;
+-- faktury issuer/recipient; KSH bez kierowcy/pilotów; AGREED_FEE na entity load; UUID ścisły;
+-- actor_party/actor_label; allowlista; BEFORE INSERT.
+
+-- ── 0) Bezpieczne UUID (F7 r3 N7 — wyzwalacz audytu nie blokuje zapisu) ─────
+create or replace function public.audit_history_try_uuid(p text)
+returns uuid
+language plpgsql
+immutable
+set search_path = public
+as $$
+begin
+  if p is null or length(p) is distinct from 36 then
+    return null;
+  end if;
+  if p !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then
+    return null;
+  end if;
+  return p::uuid;
+exception when others then
+  return null;
+end;
+$$;
+
+revoke all on function public.audit_history_try_uuid(text) from public, anon, authenticated;
 
 -- ── 1) Kolumny zakresu na audit_log ─────────────────────────────────────────
 alter table public.audit_log
@@ -40,58 +63,58 @@ security definer
 set search_path = public
 as $$
 declare
-  v text;
   v_lid uuid;
+  v_id uuid;
   v_ent text := coalesce(p_entity, '');
 begin
-  v := coalesce(p_new ->> 'load_id', p_old ->> 'load_id');
-  if v ~ '^[0-9a-fA-F-]{36}$' then
-    return v::uuid;
-  end if;
-
-  if v_ent in ('loads', 'load') and coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-    return p_entity_id::uuid;
-  end if;
-
-  if position(':' in coalesce(p_entity_id, '')) > 0 then
-    v := split_part(p_entity_id, ':', 1);
-    if v ~ '^[0-9a-fA-F-]{36}$' then
-      return v::uuid;
-    end if;
-  end if;
-
-  if v_ent in (
-       'load_cost', 'load_revenue', 'load_agreed_fees', 'shipment_items',
-       'load_escorts', 'carrier_ratings'
-     )
-     and coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-    if exists (select 1 from public.loads l where l.id = p_entity_id::uuid) then
-      return p_entity_id::uuid;
-    end if;
-    if v_ent = 'load_agreed_fees' then
-      select f.load_id into v_lid from public.load_agreed_fees f where f.id = p_entity_id::uuid;
-      return v_lid;
-    end if;
-    if v_ent = 'shipment_items' then
-      select s.load_id into v_lid from public.shipment_items s where s.id = p_entity_id::uuid;
-      return v_lid;
-    end if;
-    if v_ent = 'load_escorts' then
-      select e.load_id into v_lid from public.load_escorts e where e.id = p_entity_id::uuid;
-      return v_lid;
-    end if;
-  end if;
-
-  if v_ent = 'documents' and coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-    select d.load_id into v_lid from public.documents d where d.id = p_entity_id::uuid;
+  v_lid := public.audit_history_try_uuid(coalesce(p_new ->> 'load_id', p_old ->> 'load_id'));
+  if v_lid is not null then
     return v_lid;
   end if;
 
-  if v_ent = 'permits' and coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
+  if v_ent in ('loads', 'load') then
+    return public.audit_history_try_uuid(p_entity_id);
+  end if;
+
+  if position(':' in coalesce(p_entity_id, '')) > 0 then
+    v_lid := public.audit_history_try_uuid(split_part(p_entity_id, ':', 1));
+    if v_lid is not null then
+      return v_lid;
+    end if;
+  end if;
+
+  v_id := public.audit_history_try_uuid(p_entity_id);
+  if v_id is not null and v_ent in (
+       'load_cost', 'load_revenue', 'load_agreed_fees', 'shipment_items',
+       'load_escorts', 'carrier_ratings'
+     ) then
+    if exists (select 1 from public.loads l where l.id = v_id) then
+      return v_id;
+    end if;
+    if v_ent = 'load_agreed_fees' then
+      select f.load_id into v_lid from public.load_agreed_fees f where f.id = v_id;
+      return v_lid;
+    end if;
+    if v_ent = 'shipment_items' then
+      select s.load_id into v_lid from public.shipment_items s where s.id = v_id;
+      return v_lid;
+    end if;
+    if v_ent = 'load_escorts' then
+      select e.load_id into v_lid from public.load_escorts e where e.id = v_id;
+      return v_lid;
+    end if;
+  end if;
+
+  if v_id is not null and v_ent = 'documents' then
+    select d.load_id into v_lid from public.documents d where d.id = v_id;
+    return v_lid;
+  end if;
+
+  if v_id is not null and v_ent = 'permits' then
     -- load_permits: tylko (load_id, permit_id), bez created_at
     select lp.load_id into v_lid
       from public.load_permits lp
-     where lp.permit_id = p_entity_id::uuid
+     where lp.permit_id = v_id
      order by lp.load_id
      limit 1;
     return v_lid;
@@ -123,7 +146,8 @@ declare
   v_elem jsonb;
   i int;
   v_ent text := lower(coalesce(p_entity, ''));
-  -- wspólne (status, daty, zasoby, nazwy) — bez kwot
+  -- wspólne (status, daty, zasoby, nazwy) — bez kwot; bez kierowcy (N6: tylko CARRIER);
+  -- bez comment oceny (N3); bez label/note na pieniądzach (F7 r3)
   v_ops constant text[] := array[
     'id', 'load_id', 'project_id', 'status', 'code', 'symbol', 'phase',
     'order_no', 'planned_load_at', 'planned_unload_at', 'load_date', 'unload_date',
@@ -132,15 +156,19 @@ declare
     'ready_at', 'cancelled_at', 'cancel_reason', 'tracking_window_start', 'tracking_window_end',
     'combo_length_m', 'combo_width_m', 'combo_height_m', 'combo_weight_t',
     'length_m', 'width_m', 'height_m', 'weight_t', 'axle_count', 'cargo_class',
-    'route_code', 'corridor_code', 'driver_name', 'driver_phone', 'driver_phone_country',
+    'route_code', 'corridor_code',
     'tractor_plate', 'trailer_plate', 'pilot_plates', 'escort_count',
     'awiz_se_at', 'unloaded_at', 'delivered_at', 'departed_at', 'arrived_at',
     'file_name', 'category', 'mime_type', 'size_bytes', 'visible_to',
-    'kind', 'side', 'note', 'status', 'proposed_by_kind',
-    'score', 'comment', '_reason', 'event_type', 'occurred_at',
-    'name', 'label', 'label_pl', 'count', 'qty', 'quantity', 'pieces',
+    'kind', 'side', 'status', 'proposed_by_kind',
+    'score', '_reason', 'event_type', 'occurred_at', '_carrier_changed',
+    'count', 'qty', 'quantity', 'pieces',
     'permit_no', 'permit_id', 'insurance_id', 'firm', 'trasa', 'valid_from', 'valid_to'
   ];
+  v_carrier_driver constant text[] := array[
+    'driver_name', 'driver_phone', 'driver_phone_country'
+  ];
+  v_money_text constant text[] := array['label', 'note', 'name', 'comment', 'label_pl'];
   v_client_money constant text[] := array[
     'amount', 'amount_eur', 'net_amount', 'gross_amount', 'unit_price',
     'total', 'total_amount', 'base_amount', 'extras_amount', 'baf_amount',
@@ -193,11 +221,15 @@ begin
     v_keep := lower(k) = any (v_ops);
 
     if p_kind = 'CLIENT' then
-      -- własny order_no; bez hhl/carrier
+      -- własny order_no; bez hhl/carrier; bez kierowcy/pilotów (N6)
       if lower(k) = 'order_no' then
         v_keep := true;
       end if;
-      if lower(k) in ('hhl_order_no', 'carrier_order_no') then
+      if lower(k) in (
+        'hhl_order_no', 'carrier_order_no',
+        'driver_name', 'driver_phone', 'driver_phone_country',
+        'contact_phone', 'contact_name', 'phone', 'phone_national', 'email_personal'
+      ) then
         v_keep := false;
       end if;
       -- kwoty tylko load_revenue / dopłaty REVENUE (strona i tak filtruje wpisy)
@@ -208,12 +240,25 @@ begin
       if lower(k) = any (v_carrier_order) then
         v_keep := true;
       end if;
+      if lower(k) = any (v_carrier_driver) then
+        v_keep := true;
+      end if;
       if lower(k) in ('hhl_order_no', 'order_no') then
         v_keep := false;
       end if;
       if v_ent in ('load_cost', 'load_agreed_fees') and lower(k) = any (v_carrier_money) then
         v_keep := true;
       end if;
+      -- N3: ocena bez wewnętrznego komentarza HHL
+      if v_ent = 'carrier_ratings' and lower(k) = 'comment' then
+        v_keep := false;
+      end if;
+    end if;
+
+    -- F7 r3: label/note na wierszach pieniędzy nie dla drugiej strony (ani w ogóle poza HHL)
+    if v_ent in ('load_agreed_fees', 'load_cost', 'load_revenue', 'load')
+       and lower(k) = any (v_money_text) then
+      v_keep := false;
     end if;
 
     if v_keep is not true then
@@ -246,6 +291,42 @@ $$;
 revoke all on function public.audit_history_redact_payload(text, text, jsonb)
   from public, anon, authenticated;
 
+-- F7 r3 N1: zmiana przewoźnika — dla CARRIER tylko fakt (bez wartości obu stron)
+create or replace function public.audit_history_redact_carrier_swap(p jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = public
+as $$
+declare
+  v jsonb := coalesce(p, '{}'::jsonb);
+  k text;
+  v_drop constant text[] := array[
+    'carrier_org_id', 'carrier_order_no', 'hhl_order_no', 'order_no',
+    'driver_name', 'driver_phone', 'driver_phone_country',
+    'tractor_plate', 'trailer_plate', 'pilot_plates',
+    'contact_phone', 'contact_name', 'phone', 'phone_national'
+  ];
+begin
+  if jsonb_typeof(v) is distinct from 'object' then
+    return jsonb_build_object('_carrier_changed', true);
+  end if;
+  foreach k in array v_drop loop
+    v := v - k;
+  end loop;
+  -- usuń też warianty wielkości liter
+  for k in select key from jsonb_each(v) loop
+    if lower(k) = any (v_drop) then
+      v := v - k;
+    end if;
+  end loop;
+  return coalesce(v, '{}'::jsonb) || jsonb_build_object('_carrier_changed', true);
+end;
+$$;
+
+revoke all on function public.audit_history_redact_carrier_swap(jsonb)
+  from public, anon, authenticated;
+
 -- ── 4) Zakres wpisu: side/visible_to/status z wiersza tabeli (nie z diffu) ──
 create or replace function public.audit_history_entry_in_scope(
   p_kind text,
@@ -273,7 +354,14 @@ declare
   v_doc_id uuid;
   v_fee_id uuid;
   v_ent text := coalesce(p_entity, '');
+  v_is_fee boolean;
 begin
+  v_is_fee := v_ent = 'load_agreed_fees'
+    or p_action in (
+      'AGREED_FEE_ADD', 'AGREED_FEE_ACCEPT', 'AGREED_FEE_REJECT',
+      'AGREED_FEE_UPDATE', 'AGREED_FEE_DELETE'
+    );
+
   if p_kind = 'CLIENT' then
     if (coalesce(p_scope_client, '00000000-0000-0000-0000-000000000000'::uuid) = p_org) is not true then
       return false;
@@ -287,10 +375,12 @@ begin
     if v_ent in ('load_cost') then
       return false;
     end if;
-    if v_ent = 'load_agreed_fees' then
+    if v_is_fee then
       v_side := null; v_status := null; v_proposed := null;
-      if coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-        v_fee_id := p_entity_id::uuid;
+      v_fee_id := public.audit_history_try_uuid(
+        coalesce(p_new ->> 'fee_id', p_old ->> 'fee_id', p_entity_id)
+      );
+      if v_fee_id is not null then
         select f.side, f.status, coalesce(f.proposed_by_kind, 'FORWARDER')
           into v_side, v_status, v_proposed
           from public.load_agreed_fees f where f.id = v_fee_id;
@@ -298,7 +388,10 @@ begin
       if v_side is null then
         v_side := coalesce(p_new ->> 'side', p_old ->> 'side');
         v_status := coalesce(p_new ->> 'status', p_old ->> 'status', 'ACCEPTED');
-        v_proposed := coalesce(p_new ->> 'proposed_by_kind', p_old ->> 'proposed_by_kind', 'FORWARDER');
+        v_proposed := coalesce(
+          p_new ->> 'proposed_by_kind', p_old ->> 'proposed_by_kind',
+          p_new ->> 'by', p_old ->> 'by', 'FORWARDER'
+        );
       end if;
       -- jak RLS 0178: KSH tylko REVENUE/BOTH, PENDING/ACCEPTED, propozycja HHL
       if (v_side in ('REVENUE', 'BOTH')) is not true then
@@ -313,22 +406,22 @@ begin
     end if;
     if v_ent = 'documents' then
       v_vis := null; v_cat := null;
-      if coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-        v_doc_id := p_entity_id::uuid;
+      v_doc_id := public.audit_history_try_uuid(p_entity_id);
+      if v_doc_id is not null then
         select d.visible_to::text[], d.category::text
           into v_vis, v_cat
           from public.documents d where d.id = v_doc_id;
-        -- INVOICE: jak docs_scope — KSH tylko faktura ich projektu
+        -- N5: INVOICE — wystawca lub odbiorca (nie client_org projektu)
         if v_cat = 'INVOICE' then
           if not exists (
             select 1 from public.invoice_documents x
             join public.invoices i on i.id = x.invoice_id
-            join public.projects p on p.id = i.project_id
-             where x.document_id = v_doc_id and p.client_org_id = p_org
+             where x.document_id = v_doc_id
+               and (i.issuer_org_id = p_org or i.recipient_org_id = p_org)
           ) and not exists (
             select 1 from public.invoices i
-            join public.projects p on p.id = i.project_id
-             where i.document_id = v_doc_id and p.client_org_id = p_org
+             where i.document_id = v_doc_id
+               and (i.issuer_org_id = p_org or i.recipient_org_id = p_org)
           ) then
             return false;
           end if;
@@ -341,6 +434,10 @@ begin
         exception when others then
           v_vis := null;
         end;
+        v_cat := coalesce(p_new ->> 'category', p_old ->> 'category', v_cat);
+        if v_cat = 'INVOICE' then
+          return false;
+        end if;
       end if;
       -- F7 r2: nieznane visible_to → ukryj (UPDATE bez klucza nie przecieka)
       if (v_vis is null) is true or cardinality(v_vis) = 0
@@ -361,10 +458,13 @@ begin
     if v_ent in ('load_revenue') then
       return false;
     end if;
-    if v_ent = 'load_agreed_fees' then
+    if v_is_fee then
       v_side := null;
-      if coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
-        select f.side into v_side from public.load_agreed_fees f where f.id = p_entity_id::uuid;
+      v_fee_id := public.audit_history_try_uuid(
+        coalesce(p_new ->> 'fee_id', p_old ->> 'fee_id', p_entity_id)
+      );
+      if v_fee_id is not null then
+        select f.side into v_side from public.load_agreed_fees f where f.id = v_fee_id;
       end if;
       if v_side is null then
         v_side := coalesce(p_new ->> 'side', p_old ->> 'side');
@@ -375,18 +475,22 @@ begin
     end if;
     if v_ent = 'documents' then
       v_vis := null; v_cat := null;
-      if coalesce(p_entity_id, '') ~ '^[0-9a-fA-F-]{36}$' then
+      v_doc_id := public.audit_history_try_uuid(p_entity_id);
+      if v_doc_id is not null then
         select d.visible_to::text[], d.category::text
           into v_vis, v_cat
-          from public.documents d where d.id = p_entity_id::uuid;
+          from public.documents d where d.id = v_doc_id;
+        -- N5: issuer/recipient (nie carrier_org_id na invoices — kolumna może nie istnieć)
         if v_cat = 'INVOICE' then
           if not exists (
             select 1 from public.invoice_documents x
             join public.invoices i on i.id = x.invoice_id
-             where x.document_id = p_entity_id::uuid and i.carrier_org_id = p_org
+             where x.document_id = v_doc_id
+               and (i.issuer_org_id = p_org or i.recipient_org_id = p_org)
           ) and not exists (
             select 1 from public.invoices i
-             where i.document_id = p_entity_id::uuid and i.carrier_org_id = p_org
+             where i.document_id = v_doc_id
+               and (i.issuer_org_id = p_org or i.recipient_org_id = p_org)
           ) then
             return false;
           end if;
@@ -399,6 +503,10 @@ begin
         exception when others then
           v_vis := null;
         end;
+        v_cat := coalesce(p_new ->> 'category', p_old ->> 'category', v_cat);
+        if v_cat = 'INVOICE' then
+          return false;
+        end if;
       end if;
       if (v_vis is null) is true or cardinality(v_vis) = 0
          or ('CARRIER' = any (v_vis)) is not true then
@@ -440,8 +548,8 @@ declare
   v_load uuid := p_load;
   v_carrier uuid := p_carrier;
   v_client uuid := p_client;
-  v_old_c text;
-  v_new_c text;
+  v_old_c uuid;
+  v_new_c uuid;
   v_full jsonb;
 begin
   if v_load is null then
@@ -449,23 +557,23 @@ begin
   end if;
 
   v_full := coalesce(p_new, p_old, '{}'::jsonb);
-  v_old_c := p_old ->> 'carrier_org_id';
-  v_new_c := p_new ->> 'carrier_org_id';
+  v_old_c := public.audit_history_try_uuid(p_old ->> 'carrier_org_id');
+  v_new_c := public.audit_history_try_uuid(p_new ->> 'carrier_org_id');
 
-  -- Zmiana przewoźnika: zakres = OLD (F7 r2 pkt 3) — nowy nie widzi PII starego
+  -- Zmiana przewoźnika: zakres = OLD (F7 r2/r3) — nowy nie widzi PII starego
   if p_entity in ('loads', 'load')
-     and v_old_c ~ '^[0-9a-fA-F-]{36}$'
-     and v_new_c ~ '^[0-9a-fA-F-]{36}$'
+     and v_old_c is not null
+     and v_new_c is not null
      and v_old_c is distinct from v_new_c then
-    v_carrier := v_old_c::uuid;
+    v_carrier := v_old_c;
   elsif v_carrier is null then
-    if v_old_c ~ '^[0-9a-fA-F-]{36}$' then
-      v_carrier := v_old_c::uuid;
-    elsif v_new_c ~ '^[0-9a-fA-F-]{36}$' then
-      v_carrier := v_new_c::uuid;
-    elsif (v_full ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$' then
-      v_carrier := (v_full ->> 'carrier_org_id')::uuid;
-    elsif v_load is not null then
+    v_carrier := coalesce(
+      v_old_c,
+      v_new_c,
+      public.audit_history_try_uuid(v_full ->> 'carrier_org_id')
+    );
+    -- live INSERT bez carrier w JSON: bieżący (chwila wpisu). Backfill NIE używa tej ścieżki.
+    if v_carrier is null and v_load is not null then
       select l.carrier_org_id into v_carrier from public.loads l where l.id = v_load;
     end if;
   end if;
@@ -625,7 +733,8 @@ begin
     nullif((v_full ->> 'currency') || ':' || (v_full ->> 'rate_date'), ':'),
     nullif((v_full ->> 'project_id') || ':' || (v_full ->> 'category'), ':'),
     nullif((v_full ->> 'list_key') || ':' || (v_full ->> 'slot'), ':'),
-    case when (v_full ->> 'load_id') ~ '^[0-9a-fA-F-]{36}$' then v_full ->> 'load_id' end,
+    case when public.audit_history_try_uuid(v_full ->> 'load_id') is not null
+      then v_full ->> 'load_id' end,
     tg_table_name
   );
 
@@ -634,12 +743,11 @@ begin
     from public.audit_history_compute_scope(
       tg_table_name, v_id, v_old, v_new, null, null, null
     ) s;
-  if v_load is null and (v_full ->> 'load_id') ~ '^[0-9a-fA-F-]{36}$' then
-    v_load := (v_full ->> 'load_id')::uuid;
+  if v_load is null then
+    v_load := public.audit_history_try_uuid(v_full ->> 'load_id');
   end if;
-  if v_load is null and tg_table_name in ('loads', 'load')
-     and (v_full ->> 'id') ~ '^[0-9a-fA-F-]{36}$' then
-    v_load := (v_full ->> 'id')::uuid;
+  if v_load is null and tg_table_name in ('loads', 'load') then
+    v_load := public.audit_history_try_uuid(v_full ->> 'id');
   end if;
 
   begin
@@ -667,8 +775,8 @@ revoke all on function public.audit_row_change() from public, anon, authenticate
 comment on function public.audit_row_change() is
   'HIST-11 + #466 + #505 + #484: PII; load_id/scope_*; side/visible_to w UPDATE; zakres OLD przy zmianie przewoźnika.';
 
--- ── 7) Backfill: przewoźnik z chwili wpisu; wątpliwość → bez scope_carrier ──
--- Partiami po id (F7: ~300k wierszy — bez jednego UPDATE całego audit_log).
+-- ── 7) Backfill: przewoźnik z chwili wpisu; nieznany → NULL (F7 r3 N2) ──────
+-- Partiami po id. NIGDY nie bierze bieżącego loads.carrier_org_id.
 do $$
 declare
   v_batch int := 5000;
@@ -685,31 +793,28 @@ begin
      where a.id > v_from and a.id <= v_to
        and a.load_id is null;
 
-    -- carrier: OLD przy zmianie; inaczej old→new→null (nie bierze bieżącego loads.carrier)
+    -- carrier wyłącznie z JSON (OLD przy zmianie); brak → NULL
     update public.audit_log a
        set scope_carrier_org_id = case
-             when (a.old_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
-              and (a.new_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
+             when public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
+              and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
               and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
-               then (a.old_value ->> 'carrier_org_id')::uuid
-             when (a.old_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
-               then (a.old_value ->> 'carrier_org_id')::uuid
-             when (a.new_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
-               then (a.new_value ->> 'carrier_org_id')::uuid
-             else null
+               then public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id')
+             else coalesce(
+               public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id'),
+               public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
+             )
            end
      where a.id > v_from and a.id <= v_to
        and a.scope_carrier_org_id is null
        and a.entity in ('loads', 'load');
 
-    -- pozostałe encje z load_id: carrier z payloadu albo bieżący (gdy brak śladu w JSON)
+    -- pozostałe encje: carrier tylko z JSON (bez l.carrier_org_id); klient z projektu OK
     update public.audit_log a
        set scope_carrier_org_id = coalesce(
-             case when (a.old_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
-               then (a.old_value ->> 'carrier_org_id')::uuid end,
-             case when (a.new_value ->> 'carrier_org_id') ~ '^[0-9a-fA-F-]{36}$'
-               then (a.new_value ->> 'carrier_org_id')::uuid end,
-             l.carrier_org_id
+             a.scope_carrier_org_id,
+             public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id'),
+             public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id')
            ),
            scope_client_org_id = coalesce(a.scope_client_org_id, p.client_org_id)
       from public.loads l
@@ -734,7 +839,9 @@ begin
 end $$;
 
 -- ── 8) admin_audit_history ──────────────────────────────────────────────────
-create or replace function public.admin_audit_history(
+drop function if exists public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int);
+
+create function public.admin_audit_history(
   p_from     timestamptz default null,
   p_to       timestamptz default null,
   p_user_id  uuid default null,
@@ -754,6 +861,8 @@ returns table (
   user_email         text,
   acting_as_user_id  uuid,
   acting_as_email    text,
+  actor_party        text,
+  actor_label        text,
   source             text,
   is_automatic       boolean,
   old_value          jsonb,
@@ -819,10 +928,10 @@ begin
       when u.org_id = v_org then a.user_id
       else null
     end,
+    -- prawdziwy e-mail tylko własna firma / HHL (F7: nie mylić z nazwą firmy)
     case
       when v_full then u.email::text
       when u.org_id = v_org then u.email::text
-      when u.org_id is not null then coalesce(ou.name, ou.code, 'inna firma')
       else null
     end,
     case
@@ -833,17 +942,41 @@ begin
     case
       when v_full then aa.email::text
       when aa.org_id = v_org then aa.email::text
-      when aa.org_id is not null then coalesce(oa.name, oa.code, 'inna firma')
+      else null
+    end,
+    case ou.kind::text
+      when 'FORWARDER' then 'HHL'
+      when 'CLIENT' then 'KSH'
+      when 'CARRIER' then 'SCX'
+      else null
+    end,
+    case
+      when v_full or u.org_id = v_org then coalesce(u.full_name, u.email::text)
+      when u.org_id is not null then coalesce(ou.name, ou.code, 'inna firma')
       else null
     end,
     a.source,
     (a.source is not null) as is_automatic,
     case
       when v_full then a.old_value
+      when v_kind = 'CARRIER'
+           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
+           and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
+           and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
+        then public.audit_history_redact_carrier_swap(
+               public.audit_history_redact_payload(v_kind, a.entity, a.old_value)
+             )
       else public.audit_history_redact_payload(v_kind, a.entity, a.old_value)
     end,
     case
       when v_full then a.new_value
+      when v_kind = 'CARRIER'
+           and public.audit_history_try_uuid(a.old_value ->> 'carrier_org_id') is not null
+           and public.audit_history_try_uuid(a.new_value ->> 'carrier_org_id') is not null
+           and (a.old_value ->> 'carrier_org_id') is distinct from (a.new_value ->> 'carrier_org_id')
+        then public.audit_history_redact_carrier_swap(
+               public.audit_history_redact_payload(v_kind, a.entity, a.new_value)
+             )
       else public.audit_history_redact_payload(v_kind, a.entity, a.new_value)
     end
   from audit_log a
@@ -881,11 +1014,15 @@ begin
       v_full
       or (
         a.entity = any (v_load_entities)
+        and a.load_id is not null
+        -- wydajność: ukryte encje wykluczone przed funkcją (F7 r3)
+        and not (v_kind = 'CLIENT' and a.entity in ('load_cost', 'carrier_ratings'))
+        and not (v_kind = 'CLIENT' and a.action in ('CARRIER_RATING', 'CARRIER_RATED'))
+        and not (v_kind = 'CARRIER' and a.entity = 'load_revenue')
         and (
           (v_kind = 'CLIENT' and a.scope_client_org_id = v_org)
           or (v_kind = 'CARRIER' and a.scope_carrier_org_id = v_org)
         )
-        and a.load_id is not null
         and public.audit_history_entry_in_scope(
           v_kind, v_org, a.entity, a.action, a.entity_id,
           a.load_id, a.scope_carrier_org_id, a.scope_client_org_id,
@@ -898,5 +1035,10 @@ begin
 end;
 $$;
 
+revoke all on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int)
+  from public, anon;
+grant execute on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int)
+  to authenticated;
+
 comment on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int) is
-  '#484/#526 r2: Historia — scope indeksowany; side/doc z tabeli; allowlista; bez cudzego user_id.';
+  '#484/#526 r3: Historia — N1–N7; actor_party/label; scope indeksowany; allowlista.';
