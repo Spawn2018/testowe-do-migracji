@@ -875,8 +875,8 @@ Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/
 ### #525 · Treści wiadomości — drobne F7 r2 (D-20261024-1055-01) — po #522/#524, przed 28.10 (nie przerywa)
 DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
 
-### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — W TOKU (migracja **0292**)
-Po #492, przed B5. N8: zerowanie pól przewoźnika przy zmianie `carrier_org_id` (+ `load_driver_contacts`); redakcja swap tylko gdy old+new (nie INSERT/DELETE); szybkie filtry documents/dopłat + indeksy; `invoice_documents.role` dla KSH. security **391** (+6). Front `_carrier_changed` — #527. Szczegóły: #528.
+### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — W TOKU F7 #531 (migracja **0292**)
+Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id`; trigger `zz_*` po guard (HHL_OPS + `carrier_order_no`); redakcja swap tylko gdy old+new; UUID regex + COST 10000; bez zbędnych indeksów; `invoice_documents.role` dla KSH. security **394** (+3 F7). Front `_carrier_changed` — #527. Szczegóły: #528.
 
 ### #530 · loadsVersion z tabel powiązanych (F7 #529) — po #492, przed 28.10 (nie przerywa)
 `max(loads.updated_at)` nie obejmuje pilotów/rejsu/dokumentów itd. Wersja z `max(updated_at)` powiązanych **albo** podbicie `loads.updated_at` przy zmianie rodzica. Priorytet: `load_escorts`, `sailings`. ETA/RIO-stan poza bumpem. Szczegóły: #530.
@@ -884,7 +884,7 @@ Po #492, przed B5. N8: zerowanie pól przewoźnika przy zmianie `carrier_org_id`
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
 Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492 → #528 → B5 → B7/B8/B9 → A6 → C4–C13; #516/#519/#525/#530 po #412/#492 (nie przerywa).
 
-### B5 · Podgląd (W38 — przeniesione z P6) — czeka na #528 (migracja **0293** po rebase; #528→**0292**; #492→**0291** SCALONE)
+### B5 · Podgląd (W38 — przeniesione z P6) — po #528/#496 (migracja **≥0299**; #528→**0292**; #492→**0291** SCALONE)
 - Według D-20261015-0330-01 pkt 6:
   - `impersonation_state.read_only`;
   - start na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor;
@@ -1530,3 +1530,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 24.10.2026 18:35 | #528 CI unit/db/visual zielone na head `6dfe43a2` (security **391**); czekam F7 | pętla |
 | 24.10.2026 18:58 | #528 CI unit/db/visual zielone na head `f9836959` (security **391**); czekam F7 | pętla |
 | 24.10.2026 19:24 | #528 CI unit/db/visual zielone na head `d299a30c` (security **391**); czekam F7 | pętla |
+| 24.10.2026 23:55 | #496 F7 #536: PORT_IN→AT_PORT; Södertörn; E22; Karlskrona-morze; status **245** | pętla |
+| 25.10.2026 00:20 | #496 CI zielone (`1a58742c`); F7 #531 do poprawy → N8 clear dostawa/rio, zz_* po guard, security **394** | pętla |

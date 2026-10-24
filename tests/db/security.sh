@@ -1114,19 +1114,47 @@ echo; echo "[#528] N8 zerowanie pól + INSERT ≠ swap (0292)"
 # L2: SCX → B; pola przewoźnika znikają (asercja sys — authenticated bez SELECT driver_*)
 sys "update loads set driver_name='Sven N8', driver_phone='+4800111222', driver_phone_country='PL',
      tractor_plate='WWW1N8', trailer_plate='WWW2N8', carrier_order_no='SCX-N8',
-     carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+     driver_delivery_name='Sven SE', driver_delivery_phone='+4670111222',
+     driver_delivery_phone_country='SE', tractor_delivery_plate='SE1N8',
+     trailer_swap=true, escort_vehicles=2,
+     telematics_vehicle_id='rio:OLD528', telematics_provider='RIO',
+     rio_tracking_id='OLD528', rio_secret='sekret528', rio_asset_name='asset528',
+     rio_tracker_on=true, carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
 out=$(sys "select (driver_name is null and driver_phone is null and tractor_plate is null
-              and trailer_plate is null and carrier_order_no is null)::text from loads where id='$L2'")
+              and trailer_plate is null and carrier_order_no is null
+              and driver_delivery_name is null and driver_delivery_phone is null
+              and tractor_delivery_plate is null and coalesce(trailer_swap,false) is false
+              and escort_vehicles is null
+              and telematics_vehicle_id is null and rio_tracking_id is null
+              and rio_secret is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 zmiana przewoźnika czyści pola"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 zmiana przewoźnika czyści pola  (otrzymano: $out)"; }
 val "#528: N8 load_driver_contacts po swap — B bez starego kierowcy" $SCXB \
-  "select coalesce(max(driver_name),'') from load_driver_contacts() where load_id='$L2'" ""
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'') from load_driver_contacts() where load_id='$L2'" "/"
+# F7 #531: HHL_OPS swap przy wpisanym carrier_order_no (trigger zz_* po guard)
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Ops Sven', driver_phone='+4800333444',
+     driver_delivery_name='Ops SE', driver_delivery_phone='+4670333444',
+     tractor_plate='OPS1', trailer_plate='OPS2', carrier_order_no='SCX-OPS-N8',
+     telematics_vehicle_id='rio:OPS528', rio_tracking_id='OPS528', rio_secret='ops528'
+     where id='$L2'" >/dev/null
+val "#528: HHL_OPS swap przy carrier_order_no" $OPS_D1525 \
+  "with u as (update loads set carrier_org_id='$ORG_B' where id='$L2' returning 1) select count(*) from u" 1 commit
+val "#528: po OPS swap B bez PII dostawy" $SCXB \
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'')||'/'||coalesce(max(driver_phone),'')
+     from load_driver_contacts() where load_id='$L2'" "//"
+out=$(sys "select (telematics_vehicle_id is null and rio_tracking_id is null and rio_secret is null
+              and carrier_order_no is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: po OPS swap rio/telematics wyczyszczone"; } || { fail=$((fail+1)); echo "  FAIL  #528: po OPS swap rio/telematics wyczyszczone  (otrzymano: $out)"; }
 # ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
 out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
 [ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
 sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
+     driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL',
+     tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=null,
+     telematics_vehicle_id=null, telematics_provider=null,
+     rio_tracking_id=null, rio_secret=null, rio_asset_name=null, rio_tracker_on=null,
      tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
 # INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
 sys "delete from audit_log where action='HIST528_INS'" >/dev/null

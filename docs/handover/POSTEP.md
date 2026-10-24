@@ -4837,3 +4837,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
 - Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7. Bez push na `main`.
 - Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `d299a30c` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
+## 2026-10-25 00:20 — #496 CI zielone; F7 #531 (#528) poprawki
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe do scalenia`. #536 unit/db/visual zielone na `1a58742c` — czekam F7 (kolejność po #531–#535). Bez push na main.
+- Bieżąca (nie stoję przy F7 #496): **#528** PR #531 — F7 do poprawy: (1) clear dostawa/trailer_swap/escort/telematyka/rio_*; (2) trigger `zz_*` po guard (HHL_OPS + carrier_order_no); (3) drop zbędnych indeksów, COST 10000, UUID regex; (4) testy authenticated OPS/contacts/rio. security **394**. Push → CI; ponowne F7.

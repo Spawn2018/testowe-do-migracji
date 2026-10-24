@@ -1,9 +1,11 @@
 -- #528 / D-20261024-1335-01 — Historia: N8 + ROW_UPDATE + wydajność + role faktur
--- Po 0291 (#492). Przed B5 (0293).
+-- Po 0291 (#492). B5 dostanie numer ≥0299 (po 0292–0298), nie 0293/0294.
 -- 1) N8: przy zmianie carrier_org_id (gdy był poprzedni) zeruj pola przewoźnika
---    (chyba że w tej samej UPDATE); phone_country → 'PL' (NOT NULL).
+--    (kierowca/dostawa/tablice/order_no/telematyka/rio_*); phone_country → 'PL'.
+--    Trigger po strażniku (zz_*), żeby HHL_OPS mógł zmienić przewoźnika przy
+--    istniejącym carrier_order_no (clear nie wchodzi w guard jako „zmiana numeru”).
 -- 2) Redakcja „zmiana przewoźnika” tylko gdy old i new nie-NULL (ROW_UPDATE; nie INSERT/DELETE).
--- 3) Szybkie filtry documents/load_agreed_fees + indeksy.
+-- 3) Szybkie filtry documents/load_agreed_fees (UUID regex, COST 10000 na entry_in_scope).
 -- 4) KSH: invoice_documents.role w dozwolonych (FAKTURA_PDF/CMR/POD/KOREKTA).
 
 -- ── 1) N8: czyszczenie pól przewoźnika ──────────────────────────────────────
@@ -41,6 +43,66 @@ begin
   if new.carrier_order_no is not distinct from old.carrier_order_no then
     new.carrier_order_no := null;
   end if;
+  -- F7 #531: pola dostawy / zestaw / piloci (lista v_carrier w guard)
+  if new.driver_delivery_name is not distinct from old.driver_delivery_name then
+    new.driver_delivery_name := null;
+  end if;
+  if new.driver_delivery_phone is not distinct from old.driver_delivery_phone then
+    new.driver_delivery_phone := null;
+  end if;
+  if new.driver_delivery_phone_country is not distinct from old.driver_delivery_phone_country then
+    new.driver_delivery_phone_country := 'PL';
+  end if;
+  if new.tractor_delivery_plate is not distinct from old.tractor_delivery_plate then
+    new.tractor_delivery_plate := null;
+  end if;
+  if new.trailer_swap is not distinct from old.trailer_swap then
+    new.trailer_swap := false;
+  end if;
+  if new.trailer_swap_at is not distinct from old.trailer_swap_at then
+    new.trailer_swap_at := null;
+  end if;
+  if new.escort_vehicles is not distinct from old.escort_vehicles then
+    new.escort_vehicles := null;
+  end if;
+  -- telematyka + RIO (sanitize/freeze nie odpalą się na NEW z tego triggera)
+  if new.telematics_vehicle_id is not distinct from old.telematics_vehicle_id then
+    new.telematics_vehicle_id := null;
+  end if;
+  if new.telematics_provider is not distinct from old.telematics_provider then
+    new.telematics_provider := null;
+  end if;
+  if new.rio_tracking_id is not distinct from old.rio_tracking_id then
+    new.rio_tracking_id := null;
+  end if;
+  if new.rio_secret is not distinct from old.rio_secret then
+    new.rio_secret := null;
+  end if;
+  if new.rio_asset_name is not distinct from old.rio_asset_name then
+    new.rio_asset_name := null;
+  end if;
+  if new.rio_tracker_on is not distinct from old.rio_tracker_on then
+    new.rio_tracker_on := null;
+  end if;
+  if new.rio_valid_from is not distinct from old.rio_valid_from then
+    new.rio_valid_from := null;
+  end if;
+  if new.rio_valid_to is not distinct from old.rio_valid_to then
+    new.rio_valid_to := null;
+  end if;
+  if new.rio_check_at is not distinct from old.rio_check_at then
+    new.rio_check_at := null;
+  end if;
+  if new.rio_last_fix_at is not distinct from old.rio_last_fix_at then
+    new.rio_last_fix_at := null;
+  end if;
+  -- NOT NULL DEFAULT 0 (0261)
+  if new.rio_error_streak is not distinct from old.rio_error_streak then
+    new.rio_error_streak := 0;
+  end if;
+  if new.rio_check_state is not distinct from old.rio_check_state then
+    new.rio_check_state := null;
+  end if;
   return new;
 end;
 $$;
@@ -48,22 +110,20 @@ $$;
 revoke all on function public.trg_loads_clear_on_carrier_change()
   from public, anon, authenticated;
 
+-- F7 #531: po trg_loads_guard (kolejność alfabetyczna), nie przed — OPS + carrier_order_no
 drop trigger if exists trg_loads_clear_on_carrier_change on public.loads;
-create trigger trg_loads_clear_on_carrier_change
+drop trigger if exists trg_loads_zz_clear_on_carrier_change on public.loads;
+create trigger trg_loads_zz_clear_on_carrier_change
   before update of carrier_org_id on public.loads
   for each row
   execute function public.trg_loads_clear_on_carrier_change();
 
 comment on function public.trg_loads_clear_on_carrier_change() is
-  '#528 N8: zmiana z poprzedniego przewoźnika czyści kierowcę/tablice/order_no; phone_country=PL; NULL→org bez czyszczenia.';
+  '#528 N8 F7: clear kierowca/dostawa/tablice/order_no/telematyka/rio_*; phone_country=PL; trigger zz_* po guard; NULL→org bez clear.';
 
--- ── 2) Indeksy pod filtry historii ──────────────────────────────────────────
-create index if not exists documents_visible_to_gin
-  on public.documents using gin (visible_to);
-
-create index if not exists load_agreed_fees_side_id
-  on public.load_agreed_fees (id, side);
-
+-- ── 2) Bez zbędnych indeksów (F7 #531: GIN nie pomaga = any(); side_id dubluje PK)
+drop index if exists public.documents_visible_to_gin;
+drop index if exists public.load_agreed_fees_side_id;
 
 -- ── 3) entry_in_scope: role faktur dla KSH ────────────────────────────────
 create or replace function public.audit_history_entry_in_scope(
@@ -82,6 +142,7 @@ language plpgsql
 stable
 security definer
 set search_path = public
+cost 10000
 as $$
 declare
   v_side text;
@@ -455,13 +516,13 @@ begin
           (v_kind = 'CLIENT' and a.scope_client_org_id = v_org)
           or (v_kind = 'CARRIER' and a.scope_carrier_org_id = v_org)
         )
-        -- #528: szybkie wykluczenie dokumentów/dopłat bez funkcji na wiersz
+        -- #528 F7: UUID regex + rzutowanie (bez try_uuid / plpgsql na każdy wiersz)
         and not (
           a.entity = 'documents'
-          and public.audit_history_try_uuid(a.entity_id) is not null
+          and a.entity_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
           and exists (
             select 1 from public.documents d
-             where d.id = public.audit_history_try_uuid(a.entity_id)
+             where d.id = a.entity_id::uuid
                and (
                  (v_kind = 'CLIENT' and ('CLIENT' = any (d.visible_to)) is not true)
                  or (v_kind = 'CARRIER' and ('CARRIER' = any (d.visible_to)) is not true)
@@ -470,14 +531,11 @@ begin
         )
         and not (
           a.entity = 'load_agreed_fees'
-          and public.audit_history_try_uuid(
-                coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)
-              ) is not null
+          and coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
           and exists (
             select 1 from public.load_agreed_fees f
-             where f.id = public.audit_history_try_uuid(
-                     coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)
-                   )
+             where f.id = coalesce(a.new_value ->> 'fee_id', a.old_value ->> 'fee_id', a.entity_id)::uuid
                and (
                  (v_kind = 'CLIENT' and (f.side in ('REVENUE', 'BOTH')) is not true)
                  or (v_kind = 'CARRIER' and (f.side in ('COST', 'BOTH')) is not true)
@@ -502,4 +560,8 @@ grant execute on function public.admin_audit_history(timestamptz, timestamptz, u
   to authenticated;
 
 comment on function public.admin_audit_history(timestamptz, timestamptz, uuid, text, text, text, int, int) is
-  '#484/#526 r4: Historia — zmiana przewoźnika z/do NULL; actor_party=CARRIER; N1–N7.';
+  '#484/#528 F7: Historia — N8 clear; ROW_UPDATE swap; UUID regex + COST 10000 entry_in_scope; N1–N8.';
+
+alter function public.audit_history_entry_in_scope(
+  text, uuid, text, text, text, uuid, uuid, uuid, jsonb, jsonb
+) cost 10000;
