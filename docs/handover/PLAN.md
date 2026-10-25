@@ -876,7 +876,7 @@ Pominąć `matrix_notify` przy `v_lid is null`; dedup z `factoring_accepted_at`/
 DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `p8-texts`; escapowanie HTML przy wysyłce (P8). Szczegóły: #525.
 
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — W TOKU F7 #531 (migracja **0292**)
-Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); clear tracking/eta; **AFTER** detach `positions`/TELM (zza_*, flaga `tower.n8_detach_load` w `forbid_mutation` — bez DDL); `telm_attach_phase`→RESET, `geofence_states`→OUTSIDE; trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. security **399** (+2 F7 r3). Front `_carrier_changed` — #527. Szczegóły: #528.
+Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); clear tracking/eta; **AFTER** detach `positions`/TELM (zza_*, flaga `tower.n8_detach_load` w `forbid_mutation` — bez DDL); `telm_attach_phase`→RESET, `geofence_states`→OUTSIDE; trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. F7 r4: `forbid_mutation` — `old.load_id is not null` + ścisłe `=` na GUC/`detached_load_id` (właściciel bez flagi → append-only). security **400** (+1 F7 r4). Front `_carrier_changed` — #527. Szczegóły: #528.
 
 ### #530 · loadsVersion z tabel powiązanych (F7 #529) — po #492, przed 28.10 (nie przerywa)
 `max(loads.updated_at)` nie obejmuje pilotów/rejsu/dokumentów itd. Wersja z `max(updated_at)` powiązanych **albo** podbicie `loads.updated_at` przy zmianie rodzica. Priorytet: `load_escorts`, `sailings`. ETA/RIO-stan poza bumpem. Szczegóły: #530.
@@ -894,6 +894,7 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 6. **Drobne z komentarzy PR:** a) #495 — testy strefy SITE, SCX w Śremie, SCX bez `pre_port`; b) #504 pkt 9–11 — `statusFromDb`; DWELL/DELAY→ETA_BREACH; QUEUED pominięte; c) #532 — wyzwalacz eskort na poziomie instrukcji (`load_escorts_set`); `ferry-status.sh:4` / `hist11.sh:4` → PGURL/PGADMIN (nie port 5433 na sztywno); d) #533 — komentarz kolumny `backup_runs.files`; e) #534 — błędy N4→`app_errors`; przewoźnik z `invoices.carrier_org_id`; FACTORING_* w `CELE_KLIKNIEC.md`; f) #535 — C1/bidi w temacie; strażnik tematów przed 0297; martwy warunek; g) #536 — odcinki E22 >2 km (Brömsebro, Ljungbyholm, Rinkabyholm, Rockneby, Oskarshamn) — sprawdź po rundzie 3.
 7. **Kopia zapasowa** (dopisane do #496, nie w #536): `lease_owner` + zwolnienie przy błędzie; testy 5000 i 70 tys. wierszy; budżet czasu wywołania. Osobny PR albo z #533.
 8. **Logowanie na telefonie:** po #515 jeden pomiar 2,6 s (>2,5 s). Zrób 5 pomiarów (jak #509); mediana >2,5 s → przyczyna + poprawka.
+9. **#540 Deadlock a10** (D-20261025-0207-01): `a10_try_prep_status` / inne z wyzwalaczy `loads` — `FOR NO KEY UPDATE` zamiast `FOR UPDATE` (albo bez blokady); test dwóch sesji 0 deadlocków + INSERT bez czekania (`lock_timeout` 1 s). Nie przerywa #531–#536.
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
@@ -1563,3 +1564,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 00:55 | #528 F7 r2: detach GPS + clear tracking/eta; skalarne filtry docs/fees; security **397** | pętla |
 | 25.10.2026 01:15 | #538 wpisane §4/§5/§6/§8 (decyzje 25.10 00:55); #528 db FAIL detach→AFTER zza_*; W2/W3/W7/W18/W23/W25/W46–W50 | pętla |
 | 25.10.2026 01:45 | #528 F7 r3: eta_basis jsonb + n8_detach_load + telm/geofence; #537 pkt 5–8; security **399** | pętla |
+| 25.10.2026 02:07 | #540 wpisane §4 Zgubione pkt 9; #528 F7 r4: forbid_mutation ścisłe `=` + test append-only; security **400** | pętla |

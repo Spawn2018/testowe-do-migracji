@@ -137,7 +137,9 @@ create trigger trg_loads_zz_clear_on_carrier_change
 comment on function public.trg_loads_clear_on_carrier_change() is
   '#528 N8 F7 r2: clear PII/rio; escort_vehicles=0; tracking/eta null; zz_* po guard; NULL→org bez clear. Detach → zza_*.';
 
--- F7 r3: wąski wyjątek w forbid_mutation (bez DDL / ShareRowExclusiveLock)
+-- F7 r3/r4: wąski wyjątek w forbid_mutation (bez DDL / ShareRowExclusiveLock).
+-- r4: old.load_id IS NOT NULL + ścisłe '=' na GUC i detached_load_id —
+--     bez flagi właściciel nie zmienia już odpiętych / zdarzeń bez ładunku.
 create or replace function public.forbid_mutation()
 returns trigger
 language plpgsql
@@ -145,7 +147,8 @@ set search_path = public
 as $$
 begin
   if tg_op = 'UPDATE'
-     and current_setting('tower.n8_detach_load', true) is not distinct from old.load_id::text
+     and old.load_id is not null
+     and current_setting('tower.n8_detach_load', true) = old.load_id::text
      and current_user = (
            select t.tableowner
              from pg_tables t
@@ -153,7 +156,7 @@ begin
               and t.tablename = 'load_events'
          )
      and new.load_id is null
-     and new.detached_load_id is not distinct from old.load_id
+     and new.detached_load_id = old.load_id
      and new.event_type is not distinct from old.event_type
      and new.occurred_at is not distinct from old.occurred_at
   then

@@ -4869,3 +4869,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #537 uzupełnienie (pkt 5–8) → PLAN §4 / dopisek D-0015; #538 W7 krok 1 dostarczony (treści e-mail). Bez `pilne` przerywających.
 - Scalanie: brak F7 `gotowe`. #531 CI na `c744ed5a`: unit/visual OK, **db FAIL** security 394/397 (eta_basis='TEST' ≠ jsonb — F7 r3 pkt 1). #532–#536 czekają 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 F7 r3: (1) `eta_basis=jsonb_build_object` + asercja L2 na SCX; (2) `forbid_mutation` + `tower.n8_detach_load` (bez DDL/session_replication_role); (3) telm RESET + geofence OUTSIDE; (4) opis PR. security **399**. Push → CI; ponowne F7.
+
+## 2026-10-25 02:07 — #540 w planie; #528 F7 r4 forbid_mutation
+
+- Skrzynka: **#540** (Spawn2018, `dla-cursora`) — Deadlock `a10_try_prep_status` FOR UPDATE vs INSERT zdarzeń/pozycji; wpisane PLAN §4 Zgubione pkt 9, dopisek `D-20261025-0207-01.md`. Nie przerywa #528. #537/#538/#530/#528/#525/#519/#516/#496 w planie. #413 `pilne` (wygląd SCALONE wcześniej) — nie przerywa.
+- Scalanie: brak F7 `gotowe` po head `7a7af567`; F7 r4 „jedna poprawka”. #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 F7 r4: (1) `forbid_mutation` — `old.load_id is not null` + `=` na GUC/`detached_load_id`; (2) test owner bez flagi → append-only; (3) geofence `exists(...)`. security **400**. Push → CI; ponowne F7.

@@ -1164,6 +1164,8 @@ sys "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon, sourc
      values ('$L2', 'IN_TRANSIT_PL', now(), 52.4, 17.0, 'TELM_PHASE_INFER')" >/dev/null
 sys "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
      select '$L2', g.id, 'INSIDE', 3, now(), now() from geofences g limit 1" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+     values ('$L2', 'GEOFENCE_ENTER', now(), jsonb_build_object('zrodlo','TELM'), 'TELM_PHASE_N8_528')" >/dev/null
 sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
 out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confidence_min is null
               and eta_basis is null and eta_computed_at is null and delay_minutes is null
@@ -1171,6 +1173,9 @@ out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confi
               and (select count(*) from positions where detached_load_id='$L2')=3)::text
          from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 detach GPS + clear tracking/eta"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 detach GPS + clear tracking/eta  (otrzymano: $out)"; }
+# F7 r4: właściciel tabeli bez flagi n8_detach_load → append-only na odpiętych
+out=$(sys "update load_events set payload='{\"hack\":1}'::jsonb, detached_load_id=null, dedup_key='HACKED' where detached_load_id='$L2'")
+echo "$out" | grep -qi "append-only" && { ok=$((ok+1)); echo "  OK    #528: N8 owner bez flagi — append-only na odpiętych"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 owner bez flagi — append-only na odpiętych  →  $(echo "$out" | tail -1)"; }
 val "#528: B po swap — 0 track/positions/fixes" $SCXB \
   "select (select count(*) from load_track('$L2'))::text||'/'||
           (select count(*) from positions where load_id='$L2')::text||'/'||
@@ -1181,6 +1186,7 @@ val "#528: KSH po swap — 0 track/positions/fixes" $KSH \
           (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
 out=$(sys "select (coalesce((select phase||'/'||source from telm_attach_phase where load_id='$L2'),'')
               = 'RESET/D1710_RESET'
+              and exists(select 1 from geofence_states where load_id='$L2')
               and coalesce((select bool_and(state='OUTSIDE' and consec_fixes=0 and entered_at is null)
                               from geofence_states where load_id='$L2'), true))::text")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 telm RESET + geofence OUTSIDE"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 telm RESET + geofence OUTSIDE  (otrzymano: $out)"; }
