@@ -5041,3 +5041,14 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” na otwartych PR (#551 bez komentarza; #383 „Nie scalać jeszcze”). Bez push na main.
 - Bieżąca: **B8** PR #551 — `db` FAIL security 446/3 (IN_APP fixtures kasowane przez `trg_notifications_a_gate`); fix: `session_replication_role=replica` przy wstawkach testowych. Po zielonym CI czekam F7; potem **#550**.
 
+## 2026-10-25 12:10 — #551/B8 SCALONE; #550 STOP (bez logowania); start B9
+
+- Skrzynka: #550 → etykieta `pytanie-do-koordynatora` + komentarz (pkt 1). #538/#537/#500/#499/#412/#323/#322/#320 w planie. #383 CONFLICTING, „Nie scalać jeszcze”.
+- Scalanie: **#551/B8** `75ee446c` (F7 „gotowe do scalenia” po `54a7777`, CI unit/visual/db zielone). Bez push na main — `deploy-main`.
+- **#550 rozpoznanie formatu (bez konta Google / bez prawdziwego linku):**
+  - `GET …/maps/rpc/locationsharing/read` bez sesji → 200, prefix `)]}'`, tablica z indeksem 0 = `null`, indeks 6 = `GgA=` (brak pozycji).
+  - Token w `pb` nie zmienia wyniku; `preview/…` i `getlocation` → 404.
+  - Znane biblioteki wymagają ciasteczek sesji konta Google.
+  - **STOP** konektora do decyzji A/B/C (rekomendacja A: RIO/emtrack). Opis bez współrzędnych i identyfikatorów.
+- Bieżąca: **B9** (DeepL zostaje; tylko panel PL / `translate-retry` / alarm — wg PLAN §4).
+

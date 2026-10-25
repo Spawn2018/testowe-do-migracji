@@ -958,14 +958,13 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 - CSP Report-Only: `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` i `public/_headers` (podgląd PDF z Storage). Włączenie wymuszenia — W8 (uzupełnienia F7 #549 w §5).
 - `npm run lint:css` w CI (`unit.yml`) — PLAN §4 po C4–C13 / B-pozycje.
 
-### B8 · Stare nieprzeczytane (7A) — W TOKU (`pakiet/b8-stare-nieprzeczytane` / PR #551; migracja **0301**)
+### B8 · Stare nieprzeczytane (7A) — SCALONE (#551 `75ee446c`, 25.10.2026 10:06 UTC; F7 gotowe `54a7777`; migracja **0301**; `deploy-main` w toku)
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane (`b8_mark_stale_in_app_read`).
 - Kopia identyfikatorów w `audit_log` (`action = 'AUDYT17_MARK_READ'`, `entity_id = b8-0301`); liczby przed i po w `POSTEP.md` po wdrożeniu.
-- Po domknięciu CI/F7 #551 → od razu **#550** (`pilne`), potem B9.
 
-### #550 · PILNE: konektor Google „Udostępnianie lokalizacji” dla SG-18 (D-20261025-1022-01) — DO ZROBIENIA (po końcu kroku B8)
+### #550 · PILNE: konektor Google „Udostępnianie lokalizacji” dla SG-18 (D-20261025-1022-01) — STOP (pkt 1: bez logowania się nie da; `pytanie-do-koordynatora` w #550)
 Źródło: skrzynka `dla-cursora` #550 (Spawn2018, etykiety `dla-cursora`+`pilne`). Decyzja właściciela 25.10.2026: wariant **„Nieoficjalny odczyt Google”** (bez gwarancji, może paść, niezgodny z regulaminem Google — świadomie). Link już w `loads.telematics_vehicle_id` SG-18 (dziś `trackerKind` = `other`).
-1. **Rozpoznanie formatu (najpierw, TEST):** jak strona udostępniania bierze pozycję **bez logowania** (np. `maps/rpc/locationsharing/…` + token z linku); opis formatu w POSTEP **bez** prawdziwych współrzędnych i identyfikatorów. Jeśli bez konta Google / ciasteczek **nie da się** → zgłoszenie `pytanie-do-koordynatora` w #550 i STOP tej pozycji (reszta kolejki dalej).
+1. **Rozpoznanie formatu (25.10):** `maps/rpc/locationsharing/read` bez sesji Google → HTTP 200, prefix `)]}'`, indeks 0 = null, indeks 6 = `GgA=` (brak pozycji). Token w `pb` nie odblokowuje; biblioteki wymagają ciasteczek sesji. **STOP** tej pozycji — pytanie A/B/C w #550 (rekomendacja A: RIO/emtrack). Reszta kolejki (B9…) dalej.
 2. **Edge `google-share-poll`** (cron 5 min): tylko transporty z linkiem Google w oknie śledzenia (D-1710); rozwinięcie krótkiego linku (302→`Location`), token, jedno zapytanie / transport; `positions` źródło `GOOGLE_SHARE`, czas pomiaru z odpowiedzi, dokładność, dedup; dalej jak RIO/emtrack (ETA, strefy, statusy GPS).
 3. **Stan linku** jak RIO (`trackingLinkFromRow` / te same kolumny lub RPC — nazwy w PR dla frontu).
 4. **Awaria formatu:** stan „nie odpowiada”, **jedno** ryzyko HHL („Link Google nie daje pozycji”), bez SMS; przełącznik w `ops_thresholds` (lub podobnie); logi bez tokenu.
@@ -1638,3 +1637,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 11:05 | B7 #549: CI unit/visual zielone na `c5d71270`; F7 gotowe na `5febf9f` unieważnione merge+docs → czekam ponowne F7; W8 uzupełnione (F7 #549 pkt 1–3) | pętla |
 | 25.10.2026 11:25 | #549/B7 SCALONE (`6b0b19b3`); F7 gotowe `bd8faba`; start **B8** → migracja **0301** (`b8_mark_stale_in_app_read`); security **449** | pętla |
 | 25.10.2026 11:40 | #550 `pilne` wpisane §4 (Google share SG-18); B8 #551 db FAIL → fix testów (replica przy fixtures IN_APP / bramka #402) | pętla |
+| 25.10.2026 12:10 | #551/B8 SCALONE (`75ee446c`, 0301); #550 pkt 1 STOP — bez logowania Google brak pozycji (`GgA=`); `pytanie-do-koordynatora`; start **B9** | pętla |
