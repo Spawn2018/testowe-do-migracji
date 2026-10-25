@@ -191,7 +191,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
       fetchAllSailings(sb, SAILING_COLUMNS),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
-      sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
+      sb.from('schedule_imports').select('id,version,file_name,stats,imported_at,source').order('version', { ascending: false }).limit(20),
       /* A6: stan SharePoint — HHL; brak RPC / odmowa → null (linia B-09) */
       sb.rpc('ksh_sync_state_get'),
       // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
@@ -360,9 +360,16 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
       sailings: (must(sailQ, 'sailings') as unknown as SailingDbRow[]).map(sailingFromRow),
-      scheduleVersions: ((schedQ.error ? [] : schedQ.data ?? []) as { id: string; version: number; file_name: string | null; stats: Record<string, number> | null; imported_at: string }[])
+      scheduleVersions: ((schedQ.error ? [] : schedQ.data ?? []) as {
+        id: string; version: number; file_name: string | null; stats: Record<string, number> | null;
+        imported_at: string; source?: string | null;
+      }[])
         .map((r) => ({
-          id: r.id, at: r.imported_at, by: `v${r.version}`, filename: r.file_name ?? '',
+          id: r.id,
+          at: r.imported_at,
+          // F7 #556: service_role / SharePoint → stały autor zamiast pustego imported_by
+          by: r.source === 'SHAREPOINT' ? 'Synchronizacja SharePoint' : `v${r.version}`,
+          filename: r.file_name ?? '',
           added: Number(r.stats?.added ?? 0), changed: Number(r.stats?.changed ?? 0),
           removed: Number(r.stats?.cancelled ?? 0), rejected: Number(r.stats?.rejected ?? 0),
           skippedStandard: Number(r.stats?.skipped_standard ?? 0),
@@ -379,6 +386,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           lastReadAt: typeof o.lastReadAt === 'string' ? o.lastReadAt : null,
           lastWriteAt: typeof o.lastWriteAt === 'string' ? o.lastWriteAt : null,
           writeEnabled: o.writeEnabled === true,
+          importEnabled: o.importEnabled === true,
           sourceOk: o.sourceOk === true,
           secretExpiresOn: typeof o.secretExpiresOn === 'string' ? o.secretExpiresOn : null,
           lastRun: run && typeof run === 'object' ? {

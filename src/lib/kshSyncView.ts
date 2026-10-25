@@ -22,6 +22,8 @@ export interface KshSharePointSync {
   lastReadAt: string | null;
   lastWriteAt: string | null;
   writeEnabled: boolean;
+  /** F7 #556: false = cron tylko dry_run (podgląd); true = zapis import_schedule. */
+  importEnabled?: boolean;
   sourceOk: boolean;
   /** Data ważności sekretu aplikacji (ustawienie, nie sekret) — RRRR-MM-DD. */
   secretExpiresOn: string | null;

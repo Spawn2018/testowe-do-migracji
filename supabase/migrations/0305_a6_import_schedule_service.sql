@@ -1,6 +1,7 @@
 -- A6 · import_schedule: Edge SharePoint (service_role) wolno wołać ten sam rdzeń co HHL
 -- (parse→import z ksh-sharepoint-sync). Ciało jak 0303 + brama service_role.
--- Po 0302. Nie edytować nałożonej migracji.
+-- Po 0304. F7 #556: source z p_file (UPLOAD|SHAREPOINT); dedup hash SharePoint.
+-- Nie edytować nałożonej migracji.
 
 -- ---------------------------------------------------------------------------
 -- Kolumna renumeracji + helpery
@@ -162,10 +163,13 @@ declare
                                'tractor_plate','tractor_delivery_plate','trailer_plate'];
   v_jwt_role text;
   v_service boolean := false;
+  v_source text;
+  v_hash text;
 begin
   perform public.assert_not_preview();
   -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
   -- Produkcja: auth.role(); brama bez auth.role — claim.role (jak uid w stub).
+  -- F7: zwykły authenticated z claim.role=authenticated nie dostaje ścieżki service.
   begin
     if to_regprocedure('auth.role()') is not null then
       execute 'select auth.role()' into v_jwt_role;
@@ -182,6 +186,36 @@ begin
     if p_quiet is true and (current_app_role() = 'HHL_ADMIN') is not true then
       raise exception 'Import bez powiadomień wyłącznie dla Administratora HHL';
     end if;
+  end if;
+  -- F7 #556: źródło UPLOAD | SHAREPOINT (domyślnie UPLOAD).
+  v_source := upper(nullif(btrim(coalesce(p_file->>'source', '')), ''));
+  if v_source is null or v_source not in ('UPLOAD', 'SHAREPOINT') then
+    v_source := 'UPLOAD';
+  end if;
+  v_hash := nullif(btrim(coalesce(p_file->>'hash', '')), '');
+  -- F7 BLOKER 2: ten sam hash po realnym imporcie → bez nowego schedule_imports.
+  -- dry_run w last_run nie blokuje (po włączeniu import_enabled trzeba zapisać ten sam plik).
+  if v_source = 'SHAREPOINT'
+     and v_hash is not null
+     and p_dry_run is false
+     and exists (
+       select 1 from public.ksh_sync_state s
+        where s.project_id = p_project
+          and s.source_ok is true
+          and s.last_run->>'hash' = v_hash
+          and coalesce((s.last_run->>'dry_run')::boolean, false) is not true
+     ) then
+    return jsonb_build_object(
+      'dry_run', p_dry_run,
+      'unchanged_file', true,
+      'unchanged', 0,
+      'added', '[]'::jsonb,
+      'changed', '[]'::jsonb,
+      'rows', coalesce(jsonb_array_length(p_rows), 0),
+      'skipped_standard', coalesce((p_file->>'skipped_standard')::int, 0),
+      'skipped_carrier', coalesce((p_file->>'skipped_carrier')::int, 0),
+      'skipped_empty', coalesce((p_file->>'skipped_empty')::int, 0),
+      'dates_check', 0);
   end if;
   v_run_quiet := (p_quiet is true);
   if v_run_quiet then
@@ -336,7 +370,7 @@ begin
       if p_dry_run is false then
         if v_import is null then
           insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
-          values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+          values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
                   coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
           returning id into v_import;
         end if;
@@ -397,7 +431,7 @@ begin
     if p_dry_run is false and r.renum_from is not null then
       if v_import is null then
         insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
-        values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+        values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
                 coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
         returning id into v_import;
       end if;
@@ -509,7 +543,7 @@ begin
     if p_dry_run is false then
       if v_import is null then
         insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
-        values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+        values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
                 coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
         returning id into v_import;
       end if;
@@ -687,7 +721,7 @@ begin
         if p_dry_run is false and c.code = any (coalesce(p_cancel_codes, '{}')) then
           if v_import is null then
             insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
-            values (p_project, v_version, 'UPLOAD', p_file->>'path', p_file->>'hash', p_file->>'name',
+            values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
                     coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
             returning id into v_import;
           end if;
@@ -784,5 +818,5 @@ DO $g$ BEGIN
 END $g$;
 
 COMMENT ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) IS
-  'I-1 import KSH. A6/0305: service_role (SharePoint Edge) albo HHL; L31/zasoby/renumber/p_quiet/B5 jak 0303.';
+  'I-1 import KSH. A6/0305: service_role (SharePoint Edge) albo HHL; source UPLOAD|SHAREPOINT; L31/zasoby/renumber/p_quiet/B5 jak 0303.';
 

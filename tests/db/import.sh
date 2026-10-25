@@ -436,4 +436,35 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: service_role dry_run import_schedule"; else fail=$((fail+1)); echo "  FAIL  A6: service_role dry_run → $out"; fi
 chk "A6: service_role ma EXECUTE import_schedule" "$(Q "select has_function_privilege('service_role','import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" t
 
+# A6 F7 #556: uprawnienia sync + source + dedup hash
+echo; echo "[A6 F7] ksh_sync + SharePoint source/hash"
+chk "A6: authenticated bez EXECUTE ksh_sync_state_upsert" "$(Q "select has_function_privilege('authenticated','ksh_sync_state_upsert(uuid,boolean,timestamptz,timestamptz,jsonb,text,jsonb)','execute')")" f
+val "A6: SCX widzi 0 wierszy ksh_sync_state" $SCX "select count(*) from ksh_sync_state" 0
+val "A6: KSH widzi 0 wierszy ksh_sync_state" $KSH "select count(*) from ksh_sync_state" 0
+$PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
+err "A6: HHL_OPS ksh_sync_import_set odmowa" $HHL "select ksh_sync_import_set(true)" "Administrator HHL"
+err "A6: HHL_OPS ksh_sync_write_set odmowa" $HHL "select ksh_sync_write_set(true)" "Administrator HHL"
+$PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
+val "A6: HHL_ADMIN ksh_sync_import_set" $HHL "select ksh_sync_import_set(true); select import_enabled::text from ksh_sync_state where project_id='$P'" t commit
+chk "A6: audit KSH_SYNC_IMPORT_SET" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_IMPORT_SET' and entity_id='$P'")" t
+val "A6: HHL_ADMIN wyłącza import_enabled" $HHL "select ksh_sync_import_set(false); select import_enabled::text from ksh_sync_state where project_id='$P'" f commit
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+err "A6: Podgląd — ksh_sync_import_set odmowa" $HHL "select ksh_sync_import_set(true)" "Podgląd"
+run $HHL "select admin_preview_stop()" commit >/dev/null
+# claim.role=authenticated (nie service) — nadal brama HHL
+err "A6: claim authenticated bez HHL — odmowa import" $KSH "set local request.jwt.claim.role='authenticated'; $(IMP '[]' true)" "wyłącznie HHL"
+# source SHAREPOINT w schedule_imports + dedup hash po realnym imporcie
+RH="[{\"code\":\"SG-HASH\",\"length_m\":12,\"width_m\":2.5,\"height_m\":2.5,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
+SI_BEFORE=$(Q "select count(*) from schedule_imports where project_id='$P'")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (import_schedule('$P', '$RH'::jsonb, '{}'::text[], '{\"name\":\"h1.xlsx\",\"hash\":\"hash-a6-f7\",\"source\":\"SHAREPOINT\"}'::jsonb, false)->>'version'); commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ -n "$out" ] && [ "$out" != "" ]; then ok=$((ok+1)); echo "  OK    A6: service_role zapis SHAREPOINT"; else fail=$((fail+1)); echo "  FAIL  A6: service_role zapis → $out"; fi
+chk "A6: source SHAREPOINT w schedule_imports" "$(Q "select source from schedule_imports where file_hash='hash-a6-f7' order by version desc limit 1")" "SHAREPOINT"
+$PSQL -c "update ksh_sync_state set source_ok=true, last_run=jsonb_build_object('hash','hash-a6-f7','dry_run',false) where project_id='$P'" >/dev/null
+SI_MID=$(Q "select count(*) from schedule_imports where project_id='$P'")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (import_schedule('$P', '$RH'::jsonb, '{}'::text[], '{\"name\":\"h1.xlsx\",\"hash\":\"hash-a6-f7\",\"source\":\"SHAREPOINT\"}'::jsonb, false)->>'unchanged_file'); commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: dedup hash → unchanged_file"; else fail=$((fail+1)); echo "  FAIL  A6: dedup hash → $out"; fi
+chk "A6: dedup — bez nowego schedule_imports" "$(Q "select count(*) from schedule_imports where project_id='$P'")" "$SI_MID"
+# sanity: przed pierwszym zapisem SharePoint było mniej wierszy
+chk "A6: pierwszy SHAREPOINT dodał wersję" "$(Q "select ($SI_MID > $SI_BEFORE)::text")" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
