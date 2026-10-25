@@ -336,6 +336,10 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
       'NO_SHIPMENT_CODE',
       'DATE_ORDER',
     ]);
+    /* audyt 25.10 (U-129): liczby w komunikacie z przecinkiem dziesiętnym (E21), bez kropki */
+    const w = diff.issues.find((issue) => issue.code === 'WEIGHT_INCONSISTENT')!;
+    expect(w.message).toMatch(/\(\d[\d\s]*(,\d{2})? t\).*\(\d[\d\s]*,\d{2} t\)/);
+    expect(w.message).not.toMatch(/\d\.\d/);
     expect(diff.added.map((row) => row.code)).toEqual(['QA-D23-OK']);
     expect(diff.changed.map((row) => row.id)).toEqual(['load-001']);
 

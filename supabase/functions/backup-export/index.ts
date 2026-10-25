@@ -455,11 +455,17 @@ Deno.serve(async (req) => {
       2,
     ));
     for (const p of prefixes) await putNew(`${p}manifest.json.age`, await encrypt(man));
+    // #516: files = dokumenty/obiekty + części tabel (parts) — nie 0 przy samym partsMap.
+    const partFiles = Object.values(partsMap).reduce(
+      (n, arr) => n + (Array.isArray(arr) ? arr.length : 0),
+      0,
+    );
+    const fileCount = files.length + partFiles;
     // F7 B1: OK tylko gdy nadal RUNNING (drugi łańcuch nie nadpisuje po EXISTS na manifeście).
     const [okRow] = await sql`
       update backup_runs
          set status = 'OK', finished_at = now(), prefix = ${prefixes[0]},
-             tables = ${sql.json(counts)}, parts = ${sql.json(partsMap)}, files = ${files.length},
+             tables = ${sql.json(counts)}, parts = ${sql.json(partsMap)}, files = ${fileCount},
              bytes = ${bytes}, progress = null, progress_at = now(), lease_until = null
        where id = ${runId} and status = 'RUNNING'
        returning id`;
@@ -470,10 +476,10 @@ Deno.serve(async (req) => {
       }), { headers: { 'Content-Type': 'application/json' } });
     }
     console.log(JSON.stringify({
-      backup: 'ok', runId, tables: Object.keys(counts).length, files: files.length, bytes, ms: Date.now() - wallStarted,
+      backup: 'ok', runId, tables: Object.keys(counts).length, files: fileCount, bytes, ms: Date.now() - wallStarted,
     }));
     return new Response(JSON.stringify({
-      ok: true, prefix: prefixes[0], tables: counts, files: files.length, bytes, run: runId,
+      ok: true, prefix: prefixes[0], tables: counts, files: fileCount, bytes, run: runId,
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

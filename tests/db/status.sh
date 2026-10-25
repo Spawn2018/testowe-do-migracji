@@ -940,12 +940,27 @@ mk $L485m M496 "'HHL/M496'" "'SCX/M496'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485m','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485m 56.138 15.635 "2026-10-07 22:30+00"
 chk "#496: po planie + morze Karlskrona → FERRY" "$(st $L485m)" FERRY
-# #496 F7: DOPŁYNĄŁ + Ösmo (Södertörn w lądzie) → IN_TRANSIT_SE
+# #496 F7 r3: Ösmo na rejsie GDN-NYN DOPŁYNĄŁ (nie GDY-KAA — scenariusz rundy 1)
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000496','M/F Wawel 496','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000496','$P','66666666-0000-0000-0000-000000000496','GDN-NYN',
+  '2026-10-05 16:00+00','2026-10-06 10:00+00','2026-10-05 16:00+00','2026-10-06 10:00+00','DOPLYNAL','POLFERRIES');
+" >/dev/null
+S496n=77777777-0000-0000-0000-000000000496
 L485o=$(L 7d)
-mk $L485o O496 "'HHL/O496'" "'SCX/O496'" FERRY "'$S485'"
+mk $L485o O496 "'HHL/O496'" "'SCX/O496'" FERRY "'$S496n'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485o','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
-pos $L485o 59.00 17.90 "2026-10-06 22:30+00"
-chk "#496: DOPLYNAL + Ösmo → IN_TRANSIT_SE" "$(st $L485o)" IN_TRANSIT_SE
+pos $L485o 59.00 17.90 "2026-10-06 10:30+00"
+chk "#496: DOPLYNAL GDN-NYN + Ösmo → IN_TRANSIT_SE" "$(st $L485o)" IN_TRANSIT_SE
+# #496 F7 r3 BLOKER: GDY-KAA DOPŁYNĄŁ + Jämjö (ląd po poprawce Karlskrona) → IN_TRANSIT_SE
+L485j=$(L 7e)
+mk $L485j J496 "'HHL/J496'" "'SCX/J496'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485j','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485j 56.19 15.84 "2026-10-06 22:30+00"
+chk "#496: DOPLYNAL + Jämjö → IN_TRANSIT_SE" "$(st $L485j)" IN_TRANSIT_SE
 
 # #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
 # F7 r3/r4: Jämjö; Söderköping 16.3186/58.4792; OFFROUTE_KM przywrócone (nie sztywne 2).
@@ -959,12 +974,12 @@ q "set session_replication_role=replica;
    delete from positions where load_id='$L487a';
    update ops_thresholds set value_num = 20 where key = 'OFFROUTE_KM';
    set session_replication_role=origin;" >/dev/null
-# SG-23 07:20 UTC — na E22 przy Jämjö (wcześniej 24 km od polilinii z Karlshamn)
+# F7 r3: prawdziwy Jämjö 15.84/56.19 (stary 15.95/56.25 leżał w Kalmarsundzie)
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API'),
-  ('$L487a', now(), st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
-chk "#487: Jämjö 15.9423/56.2523 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+chk "#487: Jämjö 15.84/56.19 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
 # SG-23 12:02 UTC — Söderköping (wcześniej 33,5 km bez wierzchołków 0160)
 q "delete from positions where load_id='$L487a'" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values

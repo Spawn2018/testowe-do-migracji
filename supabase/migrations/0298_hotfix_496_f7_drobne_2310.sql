@@ -98,13 +98,14 @@ immutable
 parallel safe
 set search_path to 'public', 'extensions'
 as $f$
-  -- Karlskrona: morze 15.635/56.138 poza (krawędź ~56.145); port 15.63/56.16 w środku.
+  -- Karlskrona F7 r3: terminal/Trossö/Jämjö/Brömsebro w lądzie; morze 15.635/56.138 poza.
   -- Södertörn (Ösmo/Västerhaninge) w lądzie; Mysingen / 18.0/58.6 poza.
   -- Kalmar centrum (16.36/56.66) w lądzie.
   select st_setsrid(st_geomfromtext(
     'POLYGON((10.95 55.90, 12.70 55.20, 14.50 55.30, 15.20 55.90, 15.45 56.05,'
-    ' 15.55 56.12, 15.62 56.145, 15.58 56.16, 15.65 56.20, 15.85 56.25,'
-    ' 16.20 56.40, 16.45 56.66, 16.55 56.90, 17.00 57.50, 17.30 58.20,'
+    ' 15.55 56.14, 15.60 56.152, 15.625 56.150, 15.66 56.155, 15.75 56.163,'
+    ' 15.84 56.17, 15.96 56.22, 16.06 56.28, 16.10 56.38, 16.20 56.45,'
+    ' 16.45 56.66, 16.55 56.90, 17.00 57.50, 17.30 58.20,'
     ' 17.55 58.70, 17.80 58.85, 17.99 58.89, 18.20 59.10, 18.25 59.20,'
     ' 18.40 59.70, 18.70 60.30, 19.00 60.50, 21.00 63.00, 21.50 65.00,'
     ' 24.20 65.60, 24.00 69.06, 17.50 68.50, 11.50 63.00, 11.00 59.00,'
@@ -115,7 +116,7 @@ $f$;
 revoke all on function public.sweden_land_geom() from public, anon, authenticated;
 grant execute on function public.sweden_land_geom() to service_role;
 comment on function public.sweden_land_geom() is
-  '#485+#496 F7: ląd SE — Södertörn w, Mysingen/Karlskrona-morze poza.';
+  '#485+#496 F7 r3: ląd SE — Södertörn/Karlskrona-port w, Mysingen/morze poza.';
 
 -- ---------------------------------------------------------------------------
 -- 3. apply_ferry_se_from_position — znane trasy; bez coalesce→POLFERRIES
@@ -424,9 +425,10 @@ revoke all on function public.refresh_load_eta(uuid) from public, anon, authenti
 -- ---------------------------------------------------------------------------
 update public.corridor_polylines
    set geom = st_setsrid(st_makeline(array[
-         st_makepoint(15.5866, 56.1616),  -- Karlskrona
-         st_makepoint(15.95,   56.25),    -- Jämjö (E22)
-         st_makepoint(16.10,   56.30),    -- Brömsebro (E22)
+         st_makepoint(15.5866, 56.1616),  -- Karlskrona (Trossö)
+         st_makepoint(15.656,  56.198),   -- Lyckeby (E22) F7 r3
+         st_makepoint(15.84,   56.19),    -- Jämjö (E22) F7 r3
+         st_makepoint(15.99,   56.30),    -- Brömsebro (E22) F7 r3
          st_makepoint(16.06,   56.47),    -- Söderåkra (E22) #496
          st_makepoint(16.17,   56.63),    -- Ljungbyholm (E22) F7
          st_makepoint(16.366,  56.663),   -- Kalmar

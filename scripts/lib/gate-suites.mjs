@@ -12,12 +12,12 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 385, // #492 F7: +8 updated_at ekran/symbol/combo_weight/RODO vs ETA/RIO/tracking; było 377 (#484)
-  status: 245, // #496 F7: +3 morze Karlskrona / Ösmo / Vagnhärad; było 242 (PORT_IN→AT_PORT)
+  security: 416, // #525: +4 DEL/U+2028/U+2029 + button w temacie; było 412 (#519)
+  status: 246, // #496 F7 r3: +1 Jämjö IN_TRANSIT; było 245 (+3 morze/Ösmo/Vagnhärad; +3 PORT_IN)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
-  backup: 32, // #498 F7 B1: +3 lease_until / continue_pending (2 min); było 29
+  backup: 44, // #516 F7 r2: +2 DO ponownie / stale≥OK; było 42 (+6 F7 r1 od 36)
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
@@ -54,22 +54,22 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 38, // #467 F7: +3 Admin sms_gw / src_down odmowa / SCX my_notify; było 35
+  c3: 40, // #496 F7 r3: +2 fuel_miss/ext_mail 42501; było 38 (#467)
 };
 
 /**
  * Oczekiwane OK na hosted TEST.
  * security/risks/backup: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE /
- *   backup: CREATE DATABASE + eksport harness — pełne 32 w CI db.yml, D-86).
+ *   backup: CREATE DATABASE + eksport harness — pełne 44 w CI db.yml, D-86).
  * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 381, // 385 − 4 SKIP (B6); #492 F7
+  security: 412, // 416 − 4 SKIP (B6); #525
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
-  backup: 24, // 32 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #498 +3 lease
+  backup: 36, // 44 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 r2 +2
 };
 
 /** Alias historyczny — brama TEST / summary. */

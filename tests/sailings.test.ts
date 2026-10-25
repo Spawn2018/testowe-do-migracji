@@ -105,6 +105,11 @@ describe('D-20261020-1501-01 — rejsy historyczne tylko dla Administratora HHL'
       S({ id: 'h4', departureAt: '2026-09-17T16:00:00Z', arrivalAt: '2026-09-18T10:00:00Z', status: 'ODWOLANY' }), S({ id: 'f1' })];
     expect(historicalSailings(all, NOW).map((s) => s.id)).toEqual(['h1', 'h3']);
   });
+  it('5A (25.10): rejsy historyczne bez limitu dni — także sprzed pół roku; limit tylko jawnie', () => {
+    const old = S({ id: 'h0', departureAt: '2026-03-01T16:00:00Z', arrivalAt: '2026-03-02T10:00:00Z' });
+    expect(historicalSailings([past, old], NOW).map((s) => s.id)).toEqual(['h1', 'h0']);
+    expect(historicalSailings([past, old], NOW, 'POLFERRIES', 60).map((s) => s.id)).toEqual(['h1']);
+  });
 });
 
 /* 0242 (D-1501) — ekran zgodny z bazą: Operacje HHL jak przewoźnik, komunikaty bazy po polsku */

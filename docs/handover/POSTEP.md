@@ -4771,6 +4771,73 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe do scalenia” (ostatnie F7 = do poprawy na `c8d1785`; head `3ad7619a` zamyka r3). #382 CONFLICT; #383 bez F7.
 - Bieżąca: **#492** PR #529 — CI unit/db/visual zielone na `3ad7619a` (combo_weight_t + RODO freeze osobno; security **385**). Czekam ponowne F7.
 
+## 2026-10-24 15:52 — #529 SCALONE (0291); start #528 (0292)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: **#529** `8c7fcf37` (F7 „gotowe do scalenia” po `c399036f`, CI unit/db/visual) — `loads.updated_at` **0291**. Issue #492 zamknięte. #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** gałąź `pakiet/hotfix-528-audit-n8` — migracja **0292**: N8 clear-on-carrier-change; redakcja swap tylko old+new; filtry documents/fees + indeksy; role faktur KSH. security **391** (+6). B5→**0293**.
+
+## 2026-10-24 16:20 — #528 db FAIL: phone_country NOT NULL + NULL→org
+
+- Skrzynka: bez nowych `dla-cursora`; #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe” na #531; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI db: security 389/391 (N8 UPDATE pada na `driver_phone_country` NOT NULL) + dec-auto 82/83 (NULL→org przy `ksh_confirm` d930). Poprawka 0292: clear tylko gdy `old.carrier_org_id` nie-NULL; `phone_country` → `'PL'`.
+
+## 2026-10-24 16:40 — #528 CI zielone (`fc08a460`); czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531; #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na `fc08a460` (clear tylko old≠NULL; phone_country=PL; security **391**). Czekam F7.
+
+## 2026-10-24 16:56 — #528 CI zielone też na head `0cf5b896`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `0cf5b896` (docs; brama ważna też z `fc08a460`). Czekam F7.
+
+## 2026-10-24 17:16 — #528 CI zielone na head `0dbf4267`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `0dbf4267` (docs; wcześniej `0cf5b896`/`fc08a460`, security **391**). Czekam F7.
+
+## 2026-10-24 17:29 — przełączenie na pętlę; #528 czeka CI+F7
+
+- **Przełączenie na pętlę** (polecenie właściciela 19.10 / D-20261019-1050-01): ten czat się zatrzymuje; dalej `cursor-agent` / `cursor-petla.ps1`. Każdy przebieg od `docs/handover/ZASADY_CIAGLEJ_PRACY.md`.
+- Skrzynka: #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 gałąź `pakiet/hotfix-528-audit-n8` head `5eac6fb0` (docs; kod `fc08a460`, migracja **0292**, security **391**). CI na head: unit/visual·zmiany/zrzuty zielone; **db + visual·bramy/telefon jeszcze pending** (G-15 — bez nowych commitów na tę gałąź do końca bramy). Po zielonym CI: komentarz „czekam F7”; po „F7: gotowe do scalenia” od Spawn2018 → `gh pr merge --merge`. Następna po scaleniu: **#530** albo **B5/0293** wg PLAN §3/§4.
+
+## 2026-10-24 17:55 — #528 CI zielone na head `6aa9eb5a`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `6aa9eb5a` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
+## 2026-10-24 18:10 — #528 CI zielone na head `69e646b6`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `69e646b6` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
+## 2026-10-24 18:35 — #528 CI zielone na head `6dfe43a2`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `6dfe43a2` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
+## 2026-10-24 18:58 — #528 CI zielone na head `f9836959`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7. Bez push na `main`.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `f9836959` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
+## 2026-10-24 19:24 — #528 CI zielone na head `d299a30c`; czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie (wpisane). #413/#425 `pilne` otwarte (SCALONE wcześniej) — nie przerywają.
+- Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7. Bez push na `main`.
+- Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `d299a30c` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
+
 ## 2026-10-24 23:05 — #525 CI zielone; start #496 (0298)
 
 - Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
@@ -4790,3 +4857,115 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 `gotowe do scalenia`. Bez push na main.
 - CI na `3bee738b`: unit/visual zielone; db FAIL (1) — PORT_IN przed planem → AT_PORT (oczekiwano FERRY); F7: oczekiwać AT_PORT.
 - Bieżąca: **#496** PR #536 — F7: (1) PORT_IN→AT_PORT_NYNASHAMN; (2) Södertörn w `sweden_land_geom` + test Ösmo; (3) Vagnhärad/Hölö/Järna + Småland na SE_E22; (4) zawężenie Karlskrona-morze + test; `fuel_miss`/`ext_mail` w liście SYSTEM. status **245**. Push → CI; ponowne F7.
+
+## 2026-10-25 00:20 — #496 CI zielone; F7 #531 (#528) poprawki
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe do scalenia`. #536 unit/db/visual zielone na `1a58742c` — czekam F7 (kolejność po #531–#535). Bez push na main.
+- Bieżąca (nie stoję przy F7 #496): **#528** PR #531 — F7 do poprawy: (1) clear dostawa/trailer_swap/escort/telematyka/rio_*; (2) trigger `zz_*` po guard (HHL_OPS + carrier_order_no); (3) drop zbędnych indeksów, COST 10000, UUID regex; (4) testy authenticated OPS/contacts/rio. security **394**. Push → CI; ponowne F7.
+
+## 2026-10-25 00:35 — #537 w planie; #528 db FAIL escort_vehicles NOT NULL
+
+- Skrzynka: **#537** (Spawn2018, `dla-cursora`) — wpisane PLAN §4 „Zgubione — audyt 25.10”, §8, dopisek `D-20261025-0015-01.md`. Bez `pilne`. Bieżącej #528 nie przerywam (najpierw #531–#536).
+- Porządki #537 pkt 3: D-1525 cz.2 → NA PRODUKCJI (0243); #446 SCALONE; W37 zamknięte (emtrack od 20.10 ~16:40); zamknięcie zgłoszeń #446 i #425.
+- **Wtyczka Supabase w Cursorze:** projekt podłączony = **TEST** `emkbykwenwrjmbprydml` (watch-tower-test); produkcja `nglnnrmzmhusvxslousq` tylko przy wdrożeniu — MCP tylko odczyt (AGENTS.md §6).
+- Scalanie: brak F7 `gotowe` po head `388d93b4`; #532–#536 czekają kolejności 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — CI db: security 390/394 (`escort_vehicles` NOT NULL DEFAULT 0 — clear nie może null). Poprawka 0292: `escort_vehicles := 0`; asercje security `= 0`. Push → CI; ponowne F7.
+
+## 2026-10-25 00:55 — #528 F7 r2: detach GPS + skalarne filtry
+
+- Skrzynka: #537 wpisane (otwarte do realizacji po #531–#536); #530/#528/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po c2c96786; F7 r2 „do poprawy” (pozycje SCX widoczne dla B/KSH; EXISTS→hashed SubPlan). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — F7 r2: (1) detach `positions` + TELM `load_events`, clear tracking/eta; (2) skalarne SELECT zamiast EXISTS na docs/fees; (3) opis PR. security **397** (+3). Push → CI; ponowne F7.
+
+## 2026-10-25 01:15 — #538 w planie; #528 db FAIL detach → AFTER
+
+- Skrzynka: **#538** (Spawn2018, `dla-cursora`) — wpisane PLAN §4 (decyzje 25.10 + konta RO), §5 (W2/W3/W7/W18/W23/W25/W46–W50), §6 cz. 3 (Po 1.0), §8, dopisek `D-20261025-0055-01.md`. Bez `pilne`. Nie przerywa #528.
+- Scalanie: brak F7 `gotowe`. #531 CI: unit/visual OK, **db FAIL** security 394/397 — detach GPS w BEFORE nie odłączał pozycji (B/KSH 3/3/1). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 — detach `positions`/TELM w **AFTER** `trg_loads_zza_detach_on_carrier_change` (0242 D; `session_replication_role` zamiast ALTER TABLE w triggerze). Push → CI; ponowne F7.
+
+## 2026-10-25 01:45 — #528 F7 r3; #537 pkt 5–8
+
+- Skrzynka: #537 uzupełnienie (pkt 5–8) → PLAN §4 / dopisek D-0015; #538 W7 krok 1 dostarczony (treści e-mail). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe`. #531 CI na `c744ed5a`: unit/visual OK, **db FAIL** security 394/397 (eta_basis='TEST' ≠ jsonb — F7 r3 pkt 1). #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 F7 r3: (1) `eta_basis=jsonb_build_object` + asercja L2 na SCX; (2) `forbid_mutation` + `tower.n8_detach_load` (bez DDL/session_replication_role); (3) telm RESET + geofence OUTSIDE; (4) opis PR. security **399**. Push → CI; ponowne F7.
+
+## 2026-10-25 02:07 — #540 w planie; #528 F7 r4 forbid_mutation
+
+- Skrzynka: **#540** (Spawn2018, `dla-cursora`) — Deadlock `a10_try_prep_status` FOR UPDATE vs INSERT zdarzeń/pozycji; wpisane PLAN §4 Zgubione pkt 9, dopisek `D-20261025-0207-01.md`. Nie przerywa #528. #537/#538/#530/#528/#525/#519/#516/#496 w planie. #413 `pilne` (wygląd SCALONE wcześniej) — nie przerywa.
+- Scalanie: brak F7 `gotowe` po head `7a7af567`; F7 r4 „jedna poprawka”. #532–#536 czekają 0292→0298. Bez push na main.
+- Bieżąca: **#528** PR #531 F7 r4: (1) `forbid_mutation` — `old.load_id is not null` + `=` na GUC/`detached_load_id`; (2) test owner bez flagi → append-only; (3) geofence `exists(...)`. security **400**. Push → CI; ponowne F7.
+
+## 2026-10-25 02:35 — #539+#528 SCALONE; F7 #532 (#530)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #528 zamknięte. Bez `pilne` przerywających.
+- Scalanie: **#539** `b548ed31` (F7 gotowe, bez migracji); **#531/#528** `bf93f0be` (0292, F7 r5 gotowe, CI unit/db/visual). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — F7: `tower.bump_ctx` (strażnik tylko `updated_at`); sailings bez bumpa `CANCELLED`; test SCX notice na wspólnym rejsie + CAR2. security **406**. Rebase na main po #531. Push → CI; ponowne F7.
+
+## 2026-10-25 02:55 — #530 testy security (db 403/3 FAIL)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po head `f98d8568`. #532 MERGEABLE; #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — db FAIL security 403/3: (1) L2→IN_TRANSIT_PL bez `carrier_order_no` (enforce) → brak `sailing_id` → bump 0; (2) asercja `driver_name` przez authenticated (0076); (3) cudzy ładunek = RLS 0 wierszy, nie wyjątek. Poprawka testów; security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:15 — #541 SCALONE; #537 uzup. 2; #532 val commit
+
+- Skrzynka: **#537 uzup. 2** → PLAN §4 Zgubione pkt 10–15, W43 zamknięte, A8 bez „czeka W37”, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: **#541** `81c580cc` (F7 gotowe, wygląd U-129/U-128/U-105, bez migracji). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — db FAIL 405/1: `val` notice bez `commit` wycofywał bump. Poprawka: `commit` + dwa kroki carrier/order_no (F7). security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:45 — #537 uzup. 3; #532 CI zielone, czekam F7
+
+- Skrzynka: **#537 uzup. 3** (Spawn2018) → PLAN §4 Zgubione pkt 16–18 + P11 pkt 3, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe do scalenia` po head `4f56ad2a`. #532 MERGEABLE; unit/db/visual zielone (security **406**). #533–#536 CONFLICTING; #382/#383 bez F7. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone na `4f56ad2a`; docs tylko (nie unieważnia bramy). Czekam F7: gotowe do scalenia.
+
+## 2026-10-25 04:10 — #538 15B+W5; #532 CI zielone, czekam F7
+
+- Skrzynka: **#538** komentarz właściciela 02:30 → PLAN §1 pkt 14.4 (15B: jedna pętla do prognozy 26.10 12:00), §5 W5 zamknięte (R-1 ręczne, `schedule_imports` v4), §4/#538 pkt 6, dopisek `D-20261025-0230-01.md`. #540/#537/#530/#525/#519/#516/#496/#413 w planie. #413 `pilne` (wygląd — baza SCALONE) — nie przerywa.
+- Scalanie: F7 `gotowe` było na `4f56ad2a` **przed** docs `ce875347` → wg D-1050 czekam ponowne „gotowe” po head. #532 MERGEABLE; unit/db/visual zielone na `ce875347` (security **406**). #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone; docs (W5/15B). Czekam F7: gotowe do scalenia.
+
+## 2026-10-25 04:27 — #532/#530 SCALONE; start #516 F7 (#533)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #530 zamknięte (pilot+rejs; pozostałe tabele → #537 pkt 5). Bez pilne przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#532** 5f244528 (F7 gotowe po head a1b465c, CI unit/db/visual, migracja **0293**). Bez push na main — deploy-main.
+- Bieżąca: **#516** PR #533 — rebase na main; F7: warunek backup_run_id < OK id, RISK_AUTO_CLOSED, testy, B5≥0299. Push → CI; ponowne F7.
+
+## 2026-10-25 04:55 — #516 db FAIL: backup 42≠41
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: brak F7 `gotowe do scalenia` po head `2d1a7323`. #533 MERGEABLE; unit/visual zielone; **db FAIL** — `backup: oczekiwano 41/41, jest 42 OK` (F7: +6 asercji, nie +5). Bez push na main.
+- Bieżąca: **#516** PR #533 — `gate-suites` backup **42** / hosted **34**. Push → CI; ponowne F7.
+
+## 2026-10-25 05:10 — #516 F7 r2: stale run_id + testy
+
+- Skrzynka: #540/#538/#537/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: CI unit/db/visual zielone na `04f49598` (backup **42**); brak F7 `gotowe` — F7 r2 pkt 3–4. Bez push na main.
+- Bieżąca: **#516** PR #533 — F7 r2: `backup-stale` tylko gdy `split_part(dedup_key,':',2)::bigint < OK`; testy DO ponownie + stale≥OK; `gate-suites` backup **44** / hosted **36**. Kolejka: `dec-auto.sh` PGURL (§8). Push → CI; ponowne F7.
+
+## 2026-10-25 05:32 — #533/#516+#542 SCALONE; rebase #519 (0296)
+
+- Skrzynka: #540/#538/#537/#525/#519/#496/#413 w planie (wpisane). #516 zamknięte. Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#542** `80368fca` (F7 gotowe, wygląd U-231); **#533/#516** `8f0a6f48` (F7 r2 gotowe, CI unit/db/visual, migracja **0295**). Bez push na main — `deploy-main`.
+- Bieżąca: **#519** PR #534 — rebase na main po #533; konflikty PLAN/POSTEP/gate-suites; security **412** (+6 N2–N4). Push → CI; ponowne F7 (kolejność #534→#535→#536).
+
+## 2026-10-25 05:57 — #534/#519 SCALONE (0296); start #525 (0297)
+
+- Skrzynka: #540/#538/#537/#525/#496/#413 w planie (wpisane). #519 zamknięte. Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#534/#519** `62879a45` (F7 „gotowe do scalenia” po `e76c56a7`, CI unit/db/visual, migracja **0296**). Bez push na main — `deploy-main`.
+- Bieżąca: **#525** PR #535 — merge `main` (bez rebase); konflikty PLAN/POSTEP/gate-suites; security **416** (+4 DEL/U+2028/9 + button); migracja **0297**. Push → CI; ponowne F7 (kolejność #535→#536).
+
+## 2026-10-25 05:25 — #525 F7: escapeHtml całego wyniku (także `x.v`)
+
+- Skrzynka: #540/#538/#537/#525/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: brak F7 `gotowe` po `b9048ba3` (CI unit/db/visual zielone na merge main). #536 czeka na F7 r3. Bez push na main.
+- Bieżąca: **#525** PR #535 — F7 uzupełnienie: `renderSegsHtml` escapuje cały wynik (statyczny tekst szablonu też), `\n`→`<br>`; JSDoc: jedno miejsce escapowania (bez `esc(n.body)` przy P8); test `<b>`→`&lt;b&gt;`. Push → CI; ponowne F7.
+
+## 2026-10-25 06:39 — #535/#525 SCALONE (0297); #496 F7 r3
+
+- Skrzynka: #540/#538/#537/#496/#413 w planie (wpisane). #525 zamknięte. Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#535/#525** `1bc24128` (F7 „gotowe do scalenia” po `7c39865e`, CI unit/db/visual, migracja **0297**). Bez push na main — `deploy-main`.
+- Bieżąca: **#496** PR #536 — merge main; F7 r2: Karlskrona-port w `sweden_land_geom`; Lyckeby/Jämjö/Brömsebro na SE_E22; Ösmo na GDN-NYN DOPŁYNĄŁ; test Jämjö→IN_TRANSIT_SE; c3 fuel_miss/ext_mail 42501. status **246**, c3 **40**. Push → CI; ponowne F7.
+
+

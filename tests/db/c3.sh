@@ -112,6 +112,12 @@ sval "#402/#467: 0 fixed_*" "select count(*) from notification_matrix where fixe
 errc "#496: Admin email_budget×CARRIER → 42501" $HHL \
   "perform admin_notification_matrix_set('email_budget','CARRIER_DISPATCH',true,true,false)" \
   42501 "Zdarzenia systemowe"
+errc "#496: Admin fuel_miss×CARRIER → 42501" $HHL \
+  "perform admin_notification_matrix_set('fuel_miss','CARRIER_DISPATCH',true,true,false)" \
+  42501 "Zdarzenia systemowe"
+errc "#496: Admin ext_mail×CARRIER → 42501" $HHL \
+  "perform admin_notification_matrix_set('ext_mail','CARRIER_DISPATCH',true,true,false)" \
+  42501 "Zdarzenia systemowe"
 errc "#496: SCX my_notify_set sms_gw → 42501" $SCX \
   "perform my_notify_set('sms_gw','mail',true)" \
   42501 "Zdarzenia systemowe"

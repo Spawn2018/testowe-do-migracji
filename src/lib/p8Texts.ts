@@ -359,6 +359,31 @@ export function renderSegs(segs: readonly Seg[], sample: Sample, buttonLabel = '
   }).join('');
 }
 
+/**
+ * Escapowanie HTML (#525 / P8): nigdy surowy HTML z `message_texts` (znaczniki ani tekst szablonu).
+ * Wysyłka e-mail/LOGIN używa `renderSegsHtml` (nie `renderSegs`). Jedno miejsce escapowania —
+ * nie wołać ponownie `esc()` na wyniku (np. `notifyTemplates.renderEmail` / `esc(n.body)`).
+ */
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Jak `renderSegs`, ale cały wynik escapowany; `\n` → `<br>` (gotowe do HTML e-maila). */
+export function renderSegsHtml(segs: readonly Seg[], sample: Sample, buttonLabel = 'Dołącz'): string {
+  const plain = segs.map((x) => {
+    if (x.k === 'txt') return x.v;
+    if (x.id === 'button') return `[${buttonLabel}]`;
+    const v = sample[x.id];
+    return v && v.trim() ? v : '—';
+  }).join('');
+  return escapeHtml(plain).replace(/\n/g, '<br>');
+}
+
 const PL: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z', Ą: 'A', Ć: 'C', Ę: 'E', Ł: 'L', Ń: 'N', Ó: 'O', Ś: 'S', Ź: 'Z', Ż: 'Z' };
 
 /**
