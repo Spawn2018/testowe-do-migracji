@@ -274,21 +274,24 @@ describe('#412 E43 / 0289 — lista rodzajów w migracji = MESSAGES', () => {
 });
 
 describe('#525 — escapowanie HTML po podstawieniu (P8 / message_texts)', () => {
-  it('escapeHtml i renderSegsHtml — nigdy surowy HTML z danych', () => {
+  it('escapeHtml i renderSegsHtml — cały wynik escapowany (także tekst szablonu)', () => {
     expect(escapeHtml(`a<b>&"'`)).toBe('a&lt;b&gt;&amp;&quot;&#39;');
     const dirty = {
       ...load!,
       code: 'SG<script>',
       resources: { trailerPlate: 'AB<>', tractorPlate: 'CD 1111' },
     } as Parameters<typeof sampleOf>[0];
-    const segs = parseMarkers('Kod {{code}}: <b>{{trailer}}</b>');
+    const segs = parseMarkers('Kod {{code}}: <b>{{trailer}}</b>\nkoniec');
     const raw = renderSegs(segs, sampleOf(dirty));
     expect(raw).toContain('<script>');
     expect(raw).toContain('<>');
+    expect(raw).toContain('<b>');
     const safe = renderSegsHtml(segs, sampleOf(dirty));
     expect(safe).toContain('SG&lt;script&gt;');
     expect(safe).toContain('AB&lt;&gt;');
-    expect(safe).toContain('<b>');
+    expect(safe).toContain('&lt;b&gt;');
+    expect(safe).toContain('<br>');
     expect(safe).not.toContain('<script>');
+    expect(safe).not.toContain('<b>');
   });
 });

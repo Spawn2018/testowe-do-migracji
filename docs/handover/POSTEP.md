@@ -4935,3 +4935,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#525/#496/#413 w planie (wpisane). #519 zamknięte. Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
 - Scalanie: **#534/#519** `62879a45` (F7 „gotowe do scalenia” po `e76c56a7`, CI unit/db/visual, migracja **0296**). Bez push na main — `deploy-main`.
 - Bieżąca: **#525** PR #535 — merge `main` (bez rebase); konflikty PLAN/POSTEP/gate-suites; security **416** (+4 DEL/U+2028/9 + button); migracja **0297**. Push → CI; ponowne F7 (kolejność #535→#536).
+
+## 2026-10-25 05:25 — #525 F7: escapeHtml całego wyniku (także `x.v`)
+
+- Skrzynka: #540/#538/#537/#525/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: brak F7 `gotowe` po `b9048ba3` (CI unit/db/visual zielone na merge main). #536 czeka na F7 r3. Bez push na main.
+- Bieżąca: **#525** PR #535 — F7 uzupełnienie: `renderSegsHtml` escapuje cały wynik (statyczny tekst szablonu też), `\n`→`<br>`; JSDoc: jedno miejsce escapowania (bez `esc(n.body)` przy P8); test `<b>`→`&lt;b&gt;`. Push → CI; ponowne F7.

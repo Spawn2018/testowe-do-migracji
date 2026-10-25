@@ -360,8 +360,9 @@ export function renderSegs(segs: readonly Seg[], sample: Sample, buttonLabel = '
 }
 
 /**
- * Escapowanie HTML (#525 / P8): po podstawieniu znaczników nigdy surowy HTML z danych.
- * Wysyłka e-mail/LOGIN z `message_texts` używa `renderSegsHtml` (nie `renderSegs`).
+ * Escapowanie HTML (#525 / P8): nigdy surowy HTML z `message_texts` (znaczniki ani tekst szablonu).
+ * Wysyłka e-mail/LOGIN używa `renderSegsHtml` (nie `renderSegs`). Jedno miejsce escapowania —
+ * nie wołać ponownie `esc()` na wyniku (np. `notifyTemplates.renderEmail` / `esc(n.body)`).
  */
 export function escapeHtml(s: string): string {
   return s
@@ -372,14 +373,15 @@ export function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/** Jak `renderSegs`, ale wartości znaczników escapowane (statyczny tekst szablonu bez zmian). */
+/** Jak `renderSegs`, ale cały wynik escapowany; `\n` → `<br>` (gotowe do HTML e-maila). */
 export function renderSegsHtml(segs: readonly Seg[], sample: Sample, buttonLabel = 'Dołącz'): string {
-  return segs.map((x) => {
+  const plain = segs.map((x) => {
     if (x.k === 'txt') return x.v;
-    if (x.id === 'button') return `[${escapeHtml(buttonLabel)}]`;
+    if (x.id === 'button') return `[${buttonLabel}]`;
     const v = sample[x.id];
-    return escapeHtml(v && v.trim() ? v : '—');
+    return v && v.trim() ? v : '—';
   }).join('');
+  return escapeHtml(plain).replace(/\n/g, '<br>');
 }
 
 const PL: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z', Ą: 'A', Ć: 'C', Ę: 'E', Ł: 'L', Ń: 'N', Ó: 'O', Ś: 'S', Ź: 'Z', Ż: 'Z' };
