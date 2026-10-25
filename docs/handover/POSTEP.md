@@ -5268,3 +5268,32 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - CI `ee4f620f`: unit/visual ✔; **db FAIL** import 168/1 — asercja `A6: patch||` mieszała `count(*)` z kolumną `patch` (Postgres: musi GROUP BY / agregat). Caret w logu na `jsonb_exists(patch,…)`.
 - Fix: `bool_and(jsonb_exists…)` w `import.sh`. EXPECTED import nadal **169**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 01:45 — A6 #560 CI zielone; F7; prognoza #538 1B / #499
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `ed98f039`. #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
+- CI #560 `ed98f039`: unit ✔ visual ✔ db ✔ (`40244927734` / `40244927753`). Prośba o `F7: gotowe do scalenia`.
+- Bieżąca: **A6 #560** — czekam F7. Po scaleniu: odbiór zapisu na pliku testowym (liczby w POSTEP), potem C4–C13.
+
+### Prognoza wydania 1.0 (#538 1B — do 26.10 12:00; tempo 23–25.10 + rundy F7)
+
+Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynatora równolegle. Bramę bezpieczeństwa 28.10 (B5, B7, C11, C9, OWASP z P11) da się domknąć: **B5/B7/B8/B9 już SCALONE**; C11 = test Auth; C9 = testy E19; OWASP = wycinek P11.
+
+| Pozycja | Stan / prognoza na produkcji |
+|---|---|
+| B5, B7, B8, B9 | **SCALONE** (25.10) |
+| A6 zapis (#560 / 0308) | **26.10** (CI ✔; +0–1 runda F7; odbiór pliku testowego tego samego dnia) |
+| C4–C13 | **26.10 wieczór – 27.10** (9 pozycji, głównie testy/RPC; ~1 runda F7/pakiet) |
+| #500 | **27.10** |
+| #537 (Cursor: I/J priorytet + drobne; reszta → P4-u/P5/P6/P11) | **27–29.10** |
+| P4-u | **29–30.10** |
+| P3-d | **30.10** |
+| P5 (reszta) | **30.10 – 01.11** |
+| P6 | **01–02.11** |
+| P7 | **02–03.11** |
+| P8 | **03–04.11** |
+| P9 | **04.11** |
+| P10a / P10b | **05.11** |
+| Konta RO (#538 3A) + P11 (jakość/OWASP/wydanie) | **05–06.11** |
+| **Realna data wydania 1.0** | **śr 5.11.2026 – czw 6.11.2026** (jedna pętla; bez cięcia zakresu). Na 28.10 zostaje tylko brama bezpieczeństwa. |

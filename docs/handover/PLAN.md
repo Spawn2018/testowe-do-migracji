@@ -927,7 +927,7 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
-1. **1B — pełny zakres, data wydania = realna z prognozy.** Na 28.10 tylko brama bezpieczeństwa: B5, B7, hasła (C11), C9 E19, OWASP z P11. **Do pon. 26.10, 12:00:** prognoza w POSTEP i w #499 dla każdej pozycji spoza produkcji (P4-u, P3-d, reszta P5, P6–P11, B5, B7–B9, A6, C4–C13, #500, #537) z tempa 3 dni + rundy F7 → realna data wydania. Najpierw brama bezpieczeństwa, potem reszta z planu.
+1. **1B — pełny zakres, data wydania = realna z prognozy.** Na 28.10 tylko brama bezpieczeństwa: B5, B7, hasła (C11), C9 E19, OWASP z P11. **Prognoza 26.10 ~01:45 (POSTEP + #499):** B5–B9 SCALONE; A6 26.10; C4–C13 26–27.10; #500 27.10; #537 27–29.10; P4-u 29–30.10; P3-d 30.10; P5–P11 30.10–06.11 → **realna data 1.0 ≈ 5–6.11.2026**. Najpierw brama bezpieczeństwa, potem reszta z planu.
 2. **2A** — decyzje koordynatora 1–8 z #517 zaakceptowane → zamknij W-wpisy / #517.
 3. **3A — konta tylko do odczytu na produkcji** (pomiary #422 + odbiór ról): pozycja przed P11 poniżej; W47 (hasła).
 4. **4C** — W46 zamknięte (Grok wcześniej). **5A** — rejsy historyczne HHL_ADMIN bez limitu dni (front koordynator; baza: sprawdź `guard_load_update` / 0243). **6A/7B** — pola 2 px / bez wersalików — front koordynator (7B zamknięte). **8A–10A, 12C–14A** — W18/W23/W25/W48–W50 powyżej.
@@ -991,7 +991,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
 5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 niegotowe, 5 blokerów)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — CI zielone `ed98f039`, czekam F7)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
    - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; **F7 niegotowe** (5 blokerów + poprawki). Rebase po #557: **0306→0308**.
@@ -1677,3 +1677,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 23:30 | #564 SCALONE (`fc95a81e`, kurs NBP); #557 PR2 CI `bf0aa1a3` unit/visual/db ✔ — czekam F7 | pętla |
 | 25.10.2026 23:50 | #562/#557 PR2 SCALONE (`7159ab4c`, 0307); powrót A6 #560 — rebase → **0308**, F7 5 blokerów w PLAN §4 | pętla |
 | 26.10.2026 00:55 | #565 SCALONE (`c1e3fca9`); #560 db FAIL import/nullguard — UTF-8 w 0308 (`wyłącznie`); fix + push | pętla |
+| 26.10.2026 01:45 | #560 CI `ed98f039` unit/visual/db ✔; prośba F7; prognoza #538 1B / #499 (realna data 1.0 ≈ 5–6.11) | pętla |
