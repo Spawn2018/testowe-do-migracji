@@ -510,10 +510,10 @@ IMP_NUM=$(Q "select jsonb_agg(jsonb_build_object(
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select (import_schedule('$P','$IMP_NUM'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true)->>'changed') is not null; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    A6: import numerów → 0 outbound"; else fail=$((fail+1)); echo "  FAIL  A6: import outbound → $out"; fi
 # numery bez dates_ctx → pending
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='HHL-SCAN-1' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and patch ? 'carrier_order_no'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='HHL-SCAN-1' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no'); rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: numer → outbound patch"; else fail=$((fail+1)); echo "  FAIL  A6: numer outbound → $out"; fi
-# scalanie patch || (dwa UPDATE → jeden pending)
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='A1' where id='$SG_OUT'; update loads set hhl_order_no='B2' where id='$SG_OUT'; select count(*)||':'||((patch ? 'carrier_order_no') and (patch ? 'hhl_order_no'))::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+# scalanie patch || (dwa UPDATE → jeden pending); jsonb_exists zamiast ? (bash/psql)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='A1' where id='$SG_OUT'; update loads set hhl_order_no='B2' where id='$SG_OUT'; select count(*)||':'||(jsonb_exists(patch,'carrier_order_no') and jsonb_exists(patch,'hhl_order_no'))::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1:true" ]; then ok=$((ok+1)); echo "  OK    A6: patch|| scalanie pending"; else fail=$((fail+1)); echo "  FAIL  A6: patch|| → $out"; fi
 # service_role: sprawa konfliktu + ack
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (l1b_note_file_changed('$P','$SG_OUT','$CODE_OUT') is not null)::text; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
@@ -531,8 +531,8 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 if [ "$out" = "done" ]; then ok=$((ok+1)); echo "  OK    A6: outbound_ack done"; else fail=$((fail+1)); echo "  FAIL  A6: outbound_ack done → $out"; fi
 chk "A6: done → schedule_row load_date" "$(Q "select schedule_row->>'load_date' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1")" "$NEW_LD"
 chk "A6: done → KSH_FILE_OUTBOUND" "$(Q "select count(*) - $EV0 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
-# 42501 dla authenticated na ack
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack(array[1]::bigint[],'done',null); rollback;" 2>&1 | grep -c '42501' || true)
-if [ "$out" -ge 1 ]; then ok=$((ok+1)); echo "  OK    A6: ack authenticated → 42501"; else fail=$((fail+1)); echo "  FAIL  A6: ack 42501 → $out"; fi
+# 42501 / permission denied dla authenticated na ack (brak EXECUTE albo require_service)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack(array[1]::bigint[],'done',null); rollback;" 2>&1 || true)
+if echo "$out" | grep -qiE '42501|permission denied|Tylko synchronizacja'; then ok=$((ok+1)); echo "  OK    A6: ack authenticated → 42501"; else fail=$((fail+1)); echo "  FAIL  A6: ack 42501 → $(echo "$out" | tail -1)"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

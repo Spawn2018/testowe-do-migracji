@@ -1676,3 +1676,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 23:05 | #557 PR2 CI db FAIL status 286/5: L557h=`…5571` = LT12; fix UUID `…5581` | pętla |
 | 25.10.2026 23:30 | #564 SCALONE (`fc95a81e`, kurs NBP); #557 PR2 CI `bf0aa1a3` unit/visual/db ✔ — czekam F7 | pętla |
 | 25.10.2026 23:50 | #562/#557 PR2 SCALONE (`7159ab4c`, 0307); powrót A6 #560 — rebase → **0308**, F7 5 blokerów w PLAN §4 | pętla |
+| 26.10.2026 00:55 | #565 SCALONE (`c1e3fca9`); #560 db FAIL import/nullguard — UTF-8 w 0308 (`wyłącznie`); fix + push | pętla |

@@ -542,9 +542,9 @@ declare
   v_hash text;
 begin
   perform public.assert_not_preview();
-  -- A6/0305: cron Edge (service_role) albo HHL (jak dotÄ…d).
-  -- Produkcja: auth.role(); brama bez auth.role â€” claim.role (jak uid w stub).
-  -- F7: zwykĹ‚y authenticated z claim.role=authenticated nie dostaje Ĺ›cieĹĽki service.
+  -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
+  -- Produkcja: auth.role(); brama bez auth.role — claim.role (jak uid w stub).
+  -- F7: zwykły authenticated z claim.role=authenticated nie dostaje ścieżki service.
   begin
     if to_regprocedure('auth.role()') is not null then
       execute 'select auth.role()' into v_jwt_role;
@@ -556,20 +556,20 @@ begin
     v_service := false;
   end;
   if v_service is not true then
-    -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users â€” NULL nie moĹĽe przepuĹ›ciÄ‡
-    if is_hhl() is not true then raise exception 'Import harmonogramu wyĹ‚Ä…cznie HHL'; end if;
+    -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users — NULL nie może przepuścić
+    if is_hhl() is not true then raise exception 'Import harmonogramu wyłącznie HHL'; end if;
     if p_quiet is true and (current_app_role() = 'HHL_ADMIN') is not true then
-      raise exception 'Import bez powiadomieĹ„ wyĹ‚Ä…cznie dla Administratora HHL';
+      raise exception 'Import bez powiadomień wyłącznie dla Administratora HHL';
     end if;
   end if;
-  -- F7 #556: ĹşrĂłdĹ‚o UPLOAD | SHAREPOINT (domyĹ›lnie UPLOAD).
+  -- F7 #556: źródło UPLOAD | SHAREPOINT (domyślnie UPLOAD).
   v_source := upper(nullif(btrim(coalesce(p_file->>'source', '')), ''));
   if v_source is null or v_source not in ('UPLOAD', 'SHAREPOINT') then
     v_source := 'UPLOAD';
   end if;
   v_hash := nullif(btrim(coalesce(p_file->>'hash', '')), '');
-  -- F7 BLOKER 2: ten sam hash po realnym imporcie â†’ bez nowego schedule_imports.
-  -- dry_run w last_run nie blokuje (po wĹ‚Ä…czeniu import_enabled trzeba zapisaÄ‡ ten sam plik).
+  -- F7 BLOKER 2: ten sam hash po realnym imporcie → bez nowego schedule_imports.
+  -- dry_run w last_run nie blokuje (po włączeniu import_enabled trzeba zapisać ten sam plik).
   if v_source = 'SHAREPOINT'
      and v_hash is not null
      and p_dry_run is false
@@ -607,41 +607,41 @@ begin
   -- HOTFIX #384 pkt 3: kolumna HHL w mapie (A6: hhlOrderNo); bez niej nie wolamy konfliktu.
   v_has_hhl_col := (nullif(btrim(coalesce(v_cmap->>'hhlOrderNo', v_cmap->>'hhl_order_no', '')), '') is not null);
 
-  -- przewoĹşnik nowych transportĂłw: jedyny przewoĹşnik w systemie (inaczej HHL przypisuje rÄ™cznie)
+  -- przewoźnik nowych transportów: jedyny przewoźnik w systemie (inaczej HHL przypisuje ręcznie)
   select case when count(*) = 1 then min(id::text)::uuid end, case when count(*) = 1 then min(name) end
     into v_carrier, v_carrier_n from organizations where kind = 'CARRIER';
 
-  -- walidacja wejĹ›cia (druga linia za parserem w przeglÄ…darce): bĹ‚Ä…d = caĹ‚a transakcja wycofana
+  -- walidacja wejścia (druga linia za parserem w przeglądarce): błąd = cała transakcja wycofana
   create temp table if not exists _imp (code text primary key, row jsonb not null) on commit drop;
   truncate _imp;
   for r in select value as v, ordinality as i from jsonb_array_elements(p_rows) with ordinality loop
-    -- B-8-IMP: TYP = STANDARD (klasa albo item_type) to Ĺ‚adunek NTG â€” pomijamy, nie bĹ‚Ä…d, nie zapis
+    -- B-8-IMP: TYP = STANDARD (klasa albo item_type) to ładunek NTG — pomijamy, nie błąd, nie zapis
     if upper(btrim(coalesce(r.v->>'cargo_class', ''))) = 'STANDARD'
        or upper(btrim(coalesce(r.v->>'item_type', ''))) = 'STANDARD' then
       v_skipped := v_skipped + 1;
       continue;
     end if;
-    if coalesce(btrim(r.v->>'code'), '') = '' then raise exception 'Wiersz %: brak kodu â€žWysyĹ‚kaâ€ť', r.i; end if;
+    if coalesce(btrim(r.v->>'code'), '') = '' then raise exception 'Wiersz %: brak kodu „Wysyłka”', r.i; end if;
     begin
       c := null;
       select schedule_row_canon(r.v) as canon into c;
     exception when others then
-      raise exception 'Wiersz % (%): nieprawidĹ‚owa wartoĹ›Ä‡ â€” %', r.i, r.v->>'code', sqlerrm;
+      raise exception 'Wiersz % (%): nieprawidłowa wartość — %', r.i, r.v->>'code', sqlerrm;
     end;
-    -- I-2C: klasa Ĺ‚adunku â€” STANDARD (normatywny) bez wymiarĂłw; kaĹĽda inna klasa: wymiary wymagane i dodatnie
+    -- I-2C: klasa ładunku — STANDARD (normatywny) bez wymiarów; każda inna klasa: wymiary wymagane i dodatnie
     if coalesce(upper(btrim(r.v->>'cargo_class')), 'DIMENSIONED') not in ('STANDARD', 'DIMENSIONED') then
-      raise exception 'Wiersz % (%): nieznana klasa Ĺ‚adunku %', r.i, r.v->>'code', r.v->>'cargo_class';
+      raise exception 'Wiersz % (%): nieznana klasa ładunku %', r.i, r.v->>'code', r.v->>'cargo_class';
     end if;
     if c.canon->>'cargo_class' = 'STANDARD' then
       if coalesce(c.canon->>'length_m', c.canon->>'width_m', c.canon->>'height_m') is not null then
-        raise exception 'Wiersz % (%): klasa STANDARD â€” wymiary muszÄ… byÄ‡ puste', r.i, r.v->>'code';
+        raise exception 'Wiersz % (%): klasa STANDARD — wymiary muszą być puste', r.i, r.v->>'code';
       end if;
     elsif ((c.canon->>'length_m')::numeric > 0 and (c.canon->>'width_m')::numeric > 0
            and (c.canon->>'height_m')::numeric > 0) is not true then
-      raise exception 'Wiersz % (%): wymiary muszÄ… byÄ‡ dodatnie (wymagane dla klasy innej niĹĽ STANDARD)', r.i, r.v->>'code';
+      raise exception 'Wiersz % (%): wymiary muszą być dodatnie (wymagane dla klasy innej niż STANDARD)', r.i, r.v->>'code';
     end if;
-    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): iloĹ›Ä‡ musi byÄ‡ dodatnia', r.i, r.v->>'code'; end if;
-    -- A6 L31: nie odrzucaj zĹ‚ych dat â€” sprawa KSH_DATES_CHECK przy zapisie.
+    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): ilość musi być dodatnia', r.i, r.v->>'code'; end if;
+    -- A6 L31: nie odrzucaj złych dat — sprawa KSH_DATES_CHECK przy zapisie.
     v_dates_odd := public.a6_import_dates_odd(
       (c.canon->>'load_date')::date, (c.canon->>'delivery_date')::date);
     if v_dates_odd is not true and lower(coalesce(r.v->>'dates_to_check', '')) in ('true', 't', '1') then
@@ -662,14 +662,14 @@ begin
     begin
       insert into _imp values (btrim(r.v->>'code'), c.canon);
     exception when unique_violation then
-      raise exception 'Kod % wystÄ™puje w pliku wiÄ™cej niĹĽ raz', btrim(r.v->>'code');
+      raise exception 'Kod % występuje w pliku więcej niż raz', btrim(r.v->>'code');
     end;
   end loop;
 
-  -- DATY-67: plik KSH = ĹşrĂłdĹ‚o dat â€” zawsze nadpisuje (bez overwrite_confirmed)
+  -- DATY-67: plik KSH = źródło dat — zawsze nadpisuje (bez overwrite_confirmed)
   v_over := '{}'::text[];
 
-  -- A6: mapa renumeracji z komentarza â€žWczeĹ›niej to byĹ‚ SG-â€¦â€ť
+  -- A6: mapa renumeracji z komentarza „Wcześniej to był SG-…”
   create temp table if not exists _renum (
     new_code text primary key,
     old_code text not null,
@@ -698,12 +698,12 @@ begin
     on conflict do nothing;
   end loop;
 
-  -- wersja (tylko przy zapisie; nadawana dopiero, gdy sÄ… zmiany)
+  -- wersja (tylko przy zapisie; nadawana dopiero, gdy są zmiany)
   if p_dry_run is false then
     select coalesce(max(version), 0) + 1 into v_version from schedule_imports where project_id = p_project;
   end if;
 
-  -- nowe i zmienione (takĹĽe po renumeracji: stary kod â†’ nowy)
+  -- nowe i zmienione (także po renumeracji: stary kod → nowy)
   for r in
     select i.code, i.row as inc,
            si.id as item_id,
@@ -738,7 +738,7 @@ begin
     v_historic := false;
     if r.item_id is null or r.load_id is null then
       v_added := v_added || jsonb_build_object('code', r.code);
-      -- F7: dry_run teĹĽ liczy dates_check (bez otwierania sprawy)
+      -- F7: dry_run też liczy dates_check (bez otwierania sprawy)
       if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
         v_dates_check_n := v_dates_check_n + 1;
       end if;
@@ -802,7 +802,7 @@ begin
       continue;
     end if;
 
-    -- A6: renumeracja kodu przy zapisie (Historia byĹ‚o â†’ jest)
+    -- A6: renumeracja kodu przy zapisie (Historia było → jest)
     if p_dry_run is false and r.renum_from is not null then
       if v_import is null then
         insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
@@ -848,7 +848,7 @@ begin
 
     if r.status = 'CANCELLED' then
       v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
-                     'message', 'Transport anulowany â€” przywrĂłcenie wyĹ‚Ä…cznie rÄ™cznie przez HHL');
+                     'message', 'Transport anulowany — przywrócenie wyłącznie ręcznie przez HHL');
       continue;
     end if;
 
@@ -865,7 +865,7 @@ begin
     end if;
 
     -- D-20261020-1157-01: ciche pierwsze uzupelnienie pustych godzin (import_quiet_hours).
-    -- B1 F7: puste takze w loads (nie tylko w schedule_row) â€” godziny wpisane przez KSH/HHL nie nadpisywac cicho.
+    -- B1 F7: puste takze w loads (nie tylko w schedule_row) — godziny wpisane przez KSH/HHL nie nadpisywac cicho.
     v_quiet_fill := v_quiet_on
       and cardinality(v_fields) > 0
       and v_fields <@ array['load_time','delivery_time']::text[]
@@ -881,7 +881,7 @@ begin
             and nullif(btrim(r.inc->>'delivery_time'), '') is not null
             and r.plan_delivery_from is null and r.plan_delivery_to is null)
       );
-    -- HOTFIX #384 pkt 4b: cicho gdy status â‰Ą DELIVERED albo stara i nowa dostawa minione.
+    -- HOTFIX #384 pkt 4b: cicho gdy status ≠ DELIVERED albo stara i nowa dostawa minione.
     v_historic := (
       (r.status is not null
         and public.load_status_rank(r.status) >= public.load_status_rank('DELIVERED'::public.load_status))
@@ -892,7 +892,7 @@ begin
         and (r.inc->>'delivery_date')::date < v_today
       )
     );
-    -- F7 #7: w dry_run pokazuj critical takĹĽe przy quiet; wycisz zdarzenia dopiero przy zapisie.
+    -- F7 #7: w dry_run pokazuj critical także przy quiet; wycisz zdarzenia dopiero przy zapisie.
     v_crit := case
       when v_quiet_fill or v_historic then '{}'::text[]
       when r.awizowany then
@@ -910,7 +910,7 @@ begin
                    'quiet_hist', v_historic);
     if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
 
-    -- F7: dry_run teĹĽ liczy dates_check (zmiana istniejÄ…cego)
+    -- F7: dry_run też liczy dates_check (zmiana istniejącego)
     if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
       v_dates_check_n := v_dates_check_n + 1;
     end if;
@@ -927,13 +927,13 @@ begin
         height_m = (r.inc->>'height_m')::numeric, unit_weight_t = (r.inc->>'unit_weight_t')::numeric,
         qty = (r.inc->>'qty')::int, total_weight_t = (r.inc->>'total_weight_t')::numeric,
         assembly_seq = (r.inc->>'assembly_seq')::int,
-        -- zachowana data potwierdzona: w schedule_row zostajÄ… poprzednie daty, wiÄ™c rĂłĹĽnica (i ostrzeĹĽenie) wraca przy kolejnym imporcie
+        -- zachowana data potwierdzona: w schedule_row zostają poprzednie daty, więc różnica (i ostrzeżenie) wraca przy kolejnym imporcie
         schedule_row = r.inc,
         last_seen_import = v_import, updated_at = now()
        where id = r.item_id;
       if 'load_date' = any (v_fields) or 'delivery_date' = any (v_fields) or 'order_no' = any (v_fields)
          or 'load_time' = any (v_fields) or 'delivery_time' = any (v_fields) then
-        -- G-20 / D-20261014-0015-01 R1: kontekst importu â€” straĹĽnik przepuszcza daty z pliku
+        -- G-20 / D-20261014-0015-01 R1: kontekst importu — strażnik przepuszcza daty z pliku
         perform set_config('tower.import_ctx', 'on', true);
         if v_quiet_fill or v_historic then
           v_prev_quiet := current_setting('tower.bulk_quiet', true);
@@ -942,8 +942,8 @@ begin
         -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
         v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
         v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
-        -- #384 F7 r2/r3: pusta komĂłrka godziny = bez zmiany (nie null).
-        -- Zmiana daty bez godziny â†’ wspĂłlna delta (v_new_date â’ plan_*_date) dla od i do; straĹĽnik do > od.
+        -- #384 F7 r2/r3: pusta komórka godziny = bez zmiany (nie null).
+        -- Zmiana daty bez godziny → wspólna delta (v_new_date - plan_*_date) dla od i do; strażnik do > od.
         if nullif(btrim(r.inc->>'load_time'), '') is not null then
           v_new_load_from := public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw');
           v_new_load_to := case
@@ -1004,7 +1004,7 @@ begin
           v_new_del_to := r.plan_delivery_to;
           v_new_del_from := r.plan_delivery_from;
         end if;
-        -- Jak 0267: daty + order_no; zasoby A6 poniĹĽej (osobny UPDATE gdy sÄ… w v_fields).
+        -- Jak 0267: daty + order_no; zasoby A6 poniżej (osobny UPDATE gdy są w v_fields).
         update loads set
           plan_load_date = coalesce(v_new_load_date, plan_load_date),
           plan_delivery_date = coalesce(v_new_del_date, plan_delivery_date),
@@ -1020,7 +1020,7 @@ begin
         end if;
         perform set_config('tower.import_ctx', '', true);
       end if;
-      -- A6: zasoby/numery (samodzielnie albo razem ze zmianÄ… dat)
+      -- A6: zasoby/numery (samodzielnie albo razem ze zmianą dat)
       if (v_fields && v_res_fields) then
         -- F7 BLOKER 2 (#560): import_ctx także wokół UPDATE zasobów/numerów (bez echa do pliku).
         perform set_config('tower.import_ctx', 'on', true);
@@ -1073,7 +1073,7 @@ begin
     end if;
   end loop;
 
-  -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjÄ™te wiersze)
+  -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjęte wiersze)
   if jsonb_array_length(p_rows) > 0 then
     for c in
       select si.shipment_code as code, l.id as load_id, l.status,
@@ -1093,7 +1093,7 @@ begin
                        'message', 'Transport jest na fakturze');
       elsif c.status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
         v_blocked := v_blocked || jsonb_build_object('code', c.code, 'load_id', c.load_id, 'reason', 'STATUS',
-                       'message', 'Transport od wjazdu na zaĹ‚adunek â€” anuluje wyĹ‚Ä…cznie HHL rÄ™cznie, z powodem');
+                       'message', 'Transport od wjazdu na załadunek — anuluje wyłącznie HHL ręcznie, z powodem');
       else
         v_cands := v_cands || jsonb_build_object('code', c.code, 'load_id', c.load_id);
         if p_dry_run is false and c.code = any (coalesce(p_cancel_codes, '{}')) then
@@ -1108,11 +1108,11 @@ begin
           perform set_config('tower.cancel_ctx', '', true);
           insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
           values (v_user, 'LOAD_CANCEL_IMPORT', 'loads', c.load_id::text, jsonb_build_object('status', c.status),
-                  jsonb_build_object('status', 'CANCELLED', 'reason', 'UsuniÄ™ty z harmonogramu (' || coalesce(p_file->>'name', 'import') || ')',
+                  jsonb_build_object('status', 'CANCELLED', 'reason', 'Usunięty z harmonogramu (' || coalesce(p_file->>'name', 'import') || ')',
                                      'version', v_version));
           insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
           values (c.load_id, 'STATUS_CANCELLED', now(), v_user,
-                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'UsuniÄ™ty z harmonogramu', 'file', p_file->>'name',
+                  jsonb_build_object('code', c.code, 'version', v_version, 'reason', 'Usunięty z harmonogramu', 'file', p_file->>'name',
                                      'quiet', v_run_quiet));
           v_cancelled := v_cancelled || jsonb_build_object('code', c.code, 'load_id', c.load_id);
         end if;
@@ -1146,7 +1146,7 @@ begin
      where id = v_import;
   end if;
 
-  -- F7 #5: audyt tylko gdy coĹ› zapisano; import_id / cancelled / critical_suppressed.
+  -- F7 #5: audyt tylko gdy coś zapisano; import_id / cancelled / critical_suppressed.
   if v_run_quiet and p_dry_run is false and v_import is not null then
     insert into audit_log (user_id, action, entity, entity_id, new_value)
     values (
@@ -1155,7 +1155,7 @@ begin
       'schedule_imports',
       v_import::text,
       jsonb_build_object(
-        'note', 'import bez powiadomieĹ„',
+        'note', 'import bez powiadomień',
         'import_id', v_import,
         'project_id', p_project,
         'version', v_version,

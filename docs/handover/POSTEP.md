@@ -5255,3 +5255,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
   4. ack `done` → `shipment_items.schedule_row` + `KSH_FILE_OUTBOUND`;
   5. `patch = patch || p_patch` + unique pending; JSZip zamiast exceljs; attempts/failed; write_set skip backlog.
 - EXPECTED import **169**; unit: 412 + JSZip round-trip. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 00:55 — #565 SCALONE; A6 #560 db FAIL → fix kodowania 0308
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#565** `wyglad/W-przypnij-rejs` — `F7: gotowe do scalenia` (Spawn2018, po `1d438410`, CI unit/visual ✔) → merge `c1e3fca9`. #383 CONFLICTING. Bez push na main.
+- CI #560 `6b182812`: unit ✔ visual ✔; **db FAIL** import 158/11 + nullguard 848/4 — migracja **0308** miała zepsute UTF-8 w komunikatach `import_schedule` (`wyĹ‚Ä…cznie` zamiast `wyłącznie`); testy `err`/`nullguard` nie łapały odmowy; kaskada na A6 outbound.
+- Fix: naprawa kodowania PL w `0308_a6_ksh_sharepoint_write.sql`; `import.sh` — `jsonb_exists` zamiast `?`, ack authenticated → `permission denied|42501`. Push → CI → prośba F7 po zielonym.
