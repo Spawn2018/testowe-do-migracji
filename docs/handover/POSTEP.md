@@ -5135,3 +5135,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” (#556 po docs+kod; #383 CONFLICTING). Bez push na main.
 - Bieżąca: **A6** — `failed_hash` / skip tylko `source_ok && !last_error`; Graph `arrayBuffer`→`network_download`; `state_read_error`; `ksh_sync_state_get` bez fallbacku; SOURCE_DOWN od `first_error_at`; kontrakt map/phone/formatPl; unit skip+graph. Push → CI → prośba F7.
 
+## 2026-10-25 17:45 — A6 #556 CI zielone; prośba F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe do scalenia” (#556; #383 CONFLICTING). Bez push na main.
+- CI #556 na `e346596b`: unit ×2 ✔, visual ✔, db ✔ (`40206372497`). Prośba o ponowne F7 w PR.
+- Bieżąca: **A6** — czekam F7 #556. Po „gotowe”/scaleniu: zapis na pliku testowym, sprawa „zniknął z pliku” / konflikt WT↔plik.
+
