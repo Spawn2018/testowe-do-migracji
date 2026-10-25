@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 459, // B9 F7: +4 (warn>15min, oldest null przy odrzucone, prefs_pairs, users_pairs); bylo 455
-  status: 251, // #540 F7: +1 c17_try_invoiced bez FOR UPDATE; było 250 (+4 NO KEY / lock_timeout / 0 deadlock)
+  status: 258, // #557 F7: +7 hotfix_557_apply (T-12/SG-21 fikstury + idempotencja); było 251
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,

@@ -2,9 +2,15 @@
 -- Krótki PR: korekta danych (rejs SG-21 = Wawel T-12; przejście SE z pozycji).
 -- Reguły awaryjne (AIS-dopłynięcie, stary punkt emtrack, zły rejs) — osobny PR.
 -- Strefy 10/10 już aktywne (właściciel 25.10) — bez zmiany geofences.
+-- F7: logika w hotfix_557_apply() — CI woła ją z fiksturami (bez T-12 migracja = no-op).
 -- TEST bez tych kodów → no-op. Produkcja: kopia R2 przed db push (jak inne hotfixy).
 
-do $fix557$
+create or replace function public.hotfix_557_apply()
+returns integer
+language plpgsql
+security definer
+set search_path to 'public', 'extensions'
+as $hotfix557$
 declare
   v_prev   text;
   v_t12    uuid;
@@ -42,7 +48,7 @@ begin
   /* Bez T-12 / Wawel na TEST — koniec. */
   if v_t12 is null or v_wawel is null then
     perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-    return;
+    return 0;
   end if;
 
   select s.actual_arrival_at,
@@ -197,4 +203,15 @@ begin
   );
 
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-end $fix557$;
+  return n_fix;
+end $hotfix557$;
+
+revoke all on function public.hotfix_557_apply() from public, anon, authenticated;
+grant execute on function public.hotfix_557_apply() to service_role;
+comment on function public.hotfix_557_apply() is
+  '#557: korekta T-12/SG-21 (rejs Wawel + Port SE); tylko z migracji / testów service_role.';
+
+do $run557$
+begin
+  perform public.hotfix_557_apply();
+end $run557$;

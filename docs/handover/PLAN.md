@@ -986,7 +986,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (`pakiet/557-ferry-t12-sg21`, migracja **0306**; pierwszeństwo przed A6 zapisem #560)
 Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
 1. **PR1 (ta pozycja, 0306):** SG-21 `sailing_id` → Wawel jak T-12 + `SAILING_ASSIGNED`; SG-21 `AT_PORT_GDANSK` → `FERRY` gdy Wawel wypłynął; T-12 i SG-21 → Port SE / Droga SE przez `apply_ferry_se_from_position` (pozycja SE). `tower.bulk_quiet`. TEST bez kodów → no-op.
-   - **F7 (2917154) do poprawy:** logika OK (SELECT prod); CI bez T-12 = no-op, więc gałęzie hotfixu nie są wykonywane. Wydzielić `hotfix_557_apply()` (revoke public/anon/authenticated), wołać z migracji; test `tests/db` z fiksturami T-12/SG-21 + pozycje + idempotencja. W PR2 reguła awaryjna **bez** zależności od `g.active`.
+   - **F7 (2917154):** `hotfix_557_apply()` + test `status.sh` (+7 OK, EXPECTED 258); revoke public/anon/authenticated. W PR2 reguła awaryjna **bez** zależności od `g.active`.
 2. **PR2 (po PR1):** reguła awaryjna AIS-dopłynięcie → SE (strefa nie blokuje); stary punkt emtrack (identyczne współrzędne PL po dopłynięciu); wykrywanie złego rejsu + propozycja (RPC dla frontu). Testy DB wg #557.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
 4. **Front (koordynator):** po PR2 — ryzyko złego rejsu + „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta.
@@ -1660,3 +1660,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 18:05 | #556 SCALONE (`3d348690`); A6 zapis #560 start (outbound) — potem WSTRZYMANY na rzecz #557 | pętla |
 | 25.10.2026 18:35 | #557 PILNE (T-12/SG-21) pierwszeństwo przed #560; D-20261025-1630-01; PR1 korekta danych **0306**; strefy 10/10 OK; #560 F7 po #557 (+ rebase 0307) | pętla |
 | 25.10.2026 19:00 | #557 F7 (2917154): docs — `hotfix_557_apply` + test db przed znakiem; kod w następnym commitcie | pętla |
+| 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |

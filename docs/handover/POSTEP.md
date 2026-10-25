@@ -5154,3 +5154,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie). Bez nowych `pilne` do budowy.
 - Scalanie: brak F7 „gotowe do scalenia”. #561 CI na `29171540` zielone (unit/visual/db) — potem F7 „do poprawy” (brak wykonania gałęzi hotfixu na świeżej bazie).
 - Bieżąca: **#557 PR1** — wpis F7 w PLAN §4; następny commit: `hotfix_557_apply()` + test w `tests/db/status.sh` (fikstury T-12/SG-21, PORT_IN SE, idempotencja).
+
+## 2026-10-25 19:10 — #557 F7: hotfix_557_apply + test status
+
+- Skrzynka: bez zmian. Scalanie: czekam F7 „gotowe” po CI na tym SHA.
+- **0306:** logika w `public.hotfix_557_apply()` (revoke public/anon/authenticated; grant service_role); migracja woła `perform`.
+- **status.sh:** +7 asercji (SG-21→Wawel, status ≥ Port SE, audit HOTFIX_557_*, idempotencja SAILING_ASSIGNED); EXPECTED_LOCAL.status 251→258.
+- Bieżąca: push #561, CI, prośba F7. Potem PR2 reguły / powrót #560.
