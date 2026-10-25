@@ -5262,3 +5262,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#565** `wyglad/W-przypnij-rejs` — `F7: gotowe do scalenia` (Spawn2018, po `1d438410`, CI unit/visual ✔) → merge `c1e3fca9`. #383 CONFLICTING. Bez push na main.
 - CI #560 `6b182812`: unit ✔ visual ✔; **db FAIL** import 158/11 + nullguard 848/4 — migracja **0308** miała zepsute UTF-8 w komunikatach `import_schedule` (`wyĹ‚Ä…cznie` zamiast `wyłącznie`); testy `err`/`nullguard` nie łapały odmowy; kaskada na A6 outbound.
 - Fix: naprawa kodowania PL w `0308_a6_ksh_sharepoint_write.sql`; `import.sh` — `jsonb_exists` zamiast `?`, ack authenticated → `permission denied|42501`. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 01:25 — A6 #560 db FAIL patch|| (GROUP BY) → fix testu
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `ee4f620f`: unit/visual ✔; **db FAIL** import 168/1 — asercja `A6: patch||` mieszała `count(*)` z kolumną `patch` (Postgres: musi GROUP BY / agregat). Caret w logu na `jsonb_exists(patch,…)`.
+- Fix: `bool_and(jsonb_exists…)` w `import.sh`. EXPECTED import nadal **169**. Push → CI → prośba F7 po zielonym.

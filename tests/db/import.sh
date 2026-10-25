@@ -512,8 +512,8 @@ if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    A6: import numerów → 0 
 # numery bez dates_ctx → pending
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='HHL-SCAN-1' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no'); rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: numer → outbound patch"; else fail=$((fail+1)); echo "  FAIL  A6: numer outbound → $out"; fi
-# scalanie patch || (dwa UPDATE → jeden pending); jsonb_exists zamiast ? (bash/psql)
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='A1' where id='$SG_OUT'; update loads set hhl_order_no='B2' where id='$SG_OUT'; select count(*)||':'||(jsonb_exists(patch,'carrier_order_no') and jsonb_exists(patch,'hhl_order_no'))::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+# scalanie patch || (dwa UPDATE → jeden pending); bool_and — count(*) + patch bez GROUP BY (Postgres)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='A1' where id='$SG_OUT'; update loads set hhl_order_no='B2' where id='$SG_OUT'; select count(*)::text || ':' || coalesce(bool_and(jsonb_exists(patch,'carrier_order_no') and jsonb_exists(patch,'hhl_order_no')), false)::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1:true" ]; then ok=$((ok+1)); echo "  OK    A6: patch|| scalanie pending"; else fail=$((fail+1)); echo "  FAIL  A6: patch|| → $out"; fi
 # service_role: sprawa konfliktu + ack
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (l1b_note_file_changed('$P','$SG_OUT','$CODE_OUT') is not null)::text; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
