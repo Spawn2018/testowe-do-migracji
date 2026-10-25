@@ -84,7 +84,7 @@ Właściciel, 08.10.2026 14:43: „nasze postanowienia i plik audyt watch tower 
     1. **Skrzynka** `gh issue list --label dla-cursora --state open` — po każdej pozycji, przed przejściem, co ≤ 30 min, na starcie pętli. Zgłoszenie → PLAN §4/§8/`POSTEP.md` → komentarz „wpisane: \<miejsce\>, \<sha\>” → zamknięcie gdy zrobione. Bieżącej pozycji nie przerywasz (wyjątek: `pilne`).
     2. **Scalanie bez promptu.** „F7: gotowe do scalenia” od `Spawn2018` **po** ostatnim commicie PR + zielone CI → scalasz sam (`gh pr merge --merge`). Nowy commit po „gotowe” = czekaj na ponowne. Nigdy PR z forka. „niegotowe” → poprawiasz w tym samym PR. Wdrożenie: na razie ręczne z `main` (D-1110); po pozycji „Automat wdrożenia” — workflow GitHub.
     3. **Nigdy nie czekasz na właściciela.** Niejasność → `pytanie-do-koordynatora` z opcjami i rekomendacją → od razu następna pozycja; po 60 min bez odpowiedzi przyjmujesz rekomendację. Wyjątki właściciela: usuwanie danych na produkcji, sekrety, płatności, cięcie zakresu, data wydania.
-    4. **Pętla nocna:** każdy przebieg zaczyna od `ZASADY_CIAGLEJ_PRACY.md` i robi jeden logiczny krok (commit + push na gałąź PR), bez pytań do człowieka.
+    4. **Pętla nocna:** każdy przebieg zaczyna od `ZASADY_CIAGLEJ_PRACY.md` i robi jeden logiczny krok (commit + push na gałąź PR), bez pytań do człowieka. **15B (#538, D-20261025-0230-01):** zostaje **jedna** pętla Cursora; do drugiej wracamy po prognozie z **26.10.2026, 12:00**.
     5. **Daty w planie to terminy najpóźniejsze, nie daty rozpoczęcia** (#315, decyzja koordynatora 19.10.2026 12:46). Po zakończeniu pozycji od razu następna z §4 — także pozycje zaplanowane na kolejne dni (po A5 od razu B4, B5, B7, B8, B9, A6, odczyt SharePoint, C4–C13, P4-u, P3-d …). Nie czekasz na dzień z planu ani na punkt kontrolny.
 
 ## §2. Wprowadzanie zmian i poprawek do planu (obowiązkowe)
@@ -878,7 +878,7 @@ DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — SCALONE (#531 `bf93f0be`, migracja **0292**)
 Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); clear tracking/eta; **AFTER** detach `positions`/TELM (zza_*, flaga `tower.n8_detach_load` w `forbid_mutation` — bez DDL); `telm_attach_phase`→RESET, `geofence_states`→OUTSIDE; trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. F7 r5 gotowe. security **400**. Front `_carrier_changed` — #527. Szczegóły: #528.
 
-### #530 · loadsVersion z tabel powiązanych (F7 #529) (D-20261024-2035-01) — W TOKU F7 #532 (migracja **0293**; CI zielone `4f56ad2a`, czekam F7)
+### #530 · loadsVersion z tabel powiązanych (F7 #529) (D-20261024-2035-01) — W TOKU F7 #532 (migracja **0293**; CI zielone `ce875347` / kod `4f56ad2a`, czekam F7 po docs)
 Po #528 SCALONE. Podbicie `loads.updated_at` z `load_escorts` / `sailings`; `tower.bump_ctx` w strażniku (tylko `updated_at` — SCX notice na wspólnym rejsie); sailings bez bumpa `CANCELLED`. ETA/RIO-stan poza bumpem; RODO bez bumpa. Potem (#537 pkt 5): shipment_items, documents, load_permits, koszt/przychód, load_driver_contacts. security **406** (+6). Szczegóły: #530.
 
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
@@ -912,6 +912,7 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 3. **3A — konta tylko do odczytu na produkcji** (pomiary #422 + odbiór ról): pozycja przed P11 poniżej; W47 (hasła).
 4. **4C** — W46 zamknięte (Grok wcześniej). **5A** — rejsy historyczne HHL_ADMIN bez limitu dni (front koordynator; baza: sprawdź `guard_load_update` / 0243). **6A/7B** — pola 2 px / bez wersalików — front koordynator (7B zamknięte). **8A–10A, 12C–14A** — W18/W23/W25/W48–W50 powyżej.
 5. **11A — porządek gałęzi** (po #531–#536 / gdy właściciel włączy auto-delete): usuń scalone (ahead_by=0); 15 starych bez scalenia → tag `archiwum/<nazwa>` potem usuń; **nie ruszaj** otwartych PR (#531–#536, #382, #383). Wynik w POSTEP.
+6. **15B + W5 (D-20261025-0230-01, właściciel 25.10 02:30):** jedna pętla Cursora (druga po prognozie 26.10 12:00); W5 zamknięte — R-1 wgrane ręcznie na produkcji (`schedule_imports` v4).
 
 ### Konta tylko do odczytu na produkcji (#538 3A) — przed P11; po B5/bramie bezpieczeństwa
 Po jednym koncie na rolę: KSH, SCX Dyspozytor, SCX Użytkownik, HHL Operacje. Baza: flaga `read_only` w strażnikach i RPC zapisu → 42501. Poza macierzą powiadomień/SMS/e-mail (nie odbiorca). Bez PII w raportach pomiarów. Zaproszenia na adresy właściciela; hasła → GitHub Secrets tylko właściciel (W47). Testy: każda rola 42501 na każdej funkcji zapisu (allowlista security.sh). Wyjątek od „bez kont testowych na produkcji” — tylko te konta.
@@ -1233,7 +1234,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W2 | Użytkownicy (imię, nazwisko, telefon) i numery SMS Śrem / Boden — wpisuje właściciel w programie | po P3 i P8 | **zrobione 25.10.2026** (#538; odbiór koordynatora: 12 aktywnych kont, 9 z telefonem; Śrem i Boden po 1 numerze SMS) |
 | W3 | SG-01: potwierdzenie daty rozładunku w oknie „Zmień status” | po P4 | **zrobione 25.10.2026** (#538) |
 | W4 | SCX wgrywa zezwolenie 13/GD/2026; HHL wgrywa polisę PZU 1106707356 | po P5 | **ZAMKNIĘTE 16.10.2026, 01:13**: polisę HHL i zezwolenie 13/GD/2026 wpisuje wykonawca w P5 D2 z plików właściciela (D-20261016-0200-01 Z2) |
-| W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | czeka |
+| W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | **zamknięte 25.10.2026** (#538, D-20261025-0230-01) — właściciel wgrał ręcznie najnowszy plik; na produkcji `schedule_imports` v4 (22.10 11:25 PL, 95 wierszy); R-1 zrobione; plik z 08.10 nieaktualny |
 | W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
 | W7 | E-maile logowania (L54): (1) treści wklejone w Authentication › Emails; (2) hak „Send Email” — **bez** Management API (sekret haka z panelu → Edge Secrets). Po P8: funkcja `send-email-hook` + „W7 TERAZ” w POSTEP | po P8 | **treści wklejone (krok 1); włączenie haka po P8 (krok 2)** (#538, 25.10) |
 | W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48) | P11 | czeka |
@@ -1580,3 +1581,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 02:55 | #530/#532: poprawka testów security (order_no, driver_name sys, RLS 0) po db 403/3; security **406** | pętla |
 | 25.10.2026 03:15 | #541 SCALONE (`81c580cc`); #537 uzup. 2 → §4 pkt 10–15, W43 zamknięte, A8 bez W37; #532: `val … commit` (notice); security **406** | pętla |
 | 25.10.2026 03:45 | #537 uzup. 3 → §4 pkt 16–18 + P11 pkt 3; #532 CI unit/db/visual zielone na `4f56ad2a` (security **406**); czekam F7 | pętla |
+| 25.10.2026 04:10 | #538 uzup. 15B+W5 (D-0230): jedna pętla; W5 zamknięte (R-1 ręczne); #532 CI zielone `ce875347` — czekam F7 (commit docs po gotowe) | pętla |

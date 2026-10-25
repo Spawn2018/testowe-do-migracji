@@ -4899,3 +4899,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#537 uzup. 3** (Spawn2018) → PLAN §4 Zgubione pkt 16–18 + P11 pkt 3, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
 - Scalanie: brak F7 `gotowe do scalenia` po head `4f56ad2a`. #532 MERGEABLE; unit/db/visual zielone (security **406**). #533–#536 CONFLICTING; #382/#383 bez F7. Bez push na main.
 - Bieżąca: **#530** PR #532 — CI zielone na `4f56ad2a`; docs tylko (nie unieważnia bramy). Czekam F7: gotowe do scalenia.
+
+## 2026-10-25 04:10 — #538 15B+W5; #532 CI zielone, czekam F7
+
+- Skrzynka: **#538** komentarz właściciela 02:30 → PLAN §1 pkt 14.4 (15B: jedna pętla do prognozy 26.10 12:00), §5 W5 zamknięte (R-1 ręczne, `schedule_imports` v4), §4/#538 pkt 6, dopisek `D-20261025-0230-01.md`. #540/#537/#530/#525/#519/#516/#496/#413 w planie. #413 `pilne` (wygląd — baza SCALONE) — nie przerywa.
+- Scalanie: F7 `gotowe` było na `4f56ad2a` **przed** docs `ce875347` → wg D-1050 czekam ponowne „gotowe” po head. #532 MERGEABLE; unit/db/visual zielone na `ce875347` (security **406**). #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone; docs (W5/15B). Czekam F7: gotowe do scalenia.
