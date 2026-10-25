@@ -4881,3 +4881,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #528 zamknięte. Bez `pilne` przerywających.
 - Scalanie: **#539** `b548ed31` (F7 gotowe, bez migracji); **#531/#528** `bf93f0be` (0292, F7 r5 gotowe, CI unit/db/visual). Bez push na main — `deploy-main`.
 - Bieżąca: **#530** PR #532 — F7: `tower.bump_ctx` (strażnik tylko `updated_at`); sailings bez bumpa `CANCELLED`; test SCX notice na wspólnym rejsie + CAR2. security **406**. Rebase na main po #531. Push → CI; ponowne F7.
+
+## 2026-10-25 02:55 — #530 testy security (db 403/3 FAIL)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po head `f98d8568`. #532 MERGEABLE; #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — db FAIL security 403/3: (1) L2→IN_TRANSIT_PL bez `carrier_order_no` (enforce) → brak `sailing_id` → bump 0; (2) asercja `driver_name` przez authenticated (0076); (3) cudzy ładunek = RLS 0 wierszy, nie wyjątek. Poprawka testów; security **406**. Push → CI; ponowne F7.

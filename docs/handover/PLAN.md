@@ -1566,3 +1566,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 01:45 | #528 F7 r3: eta_basis jsonb + n8_detach_load + telm/geofence; #537 pkt 5–8; security **399** | pętla |
 | 25.10.2026 02:07 | #540 wpisane §4 Zgubione pkt 9; #528 F7 r4: forbid_mutation ścisłe `=` + test append-only; security **400** | pętla |
 | 25.10.2026 02:32 | #539 SCALONE (`b548ed31`); #531/#528 SCALONE (`bf93f0be`, 0292); F7 #532: bump_ctx + CANCELLED; security **406** | pętla |
+| 25.10.2026 02:55 | #530/#532: poprawka testów security (order_no, driver_name sys, RLS 0) po db 403/3; security **406** | pętla |
