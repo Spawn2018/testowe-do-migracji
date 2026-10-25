@@ -1110,5 +1110,113 @@ sys "begin; select set_config('tower.audit_source','rodo',true);
 out=$(sys "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #492: RODO (audit_source) bez bumpa updated_at"; } || { fail=$((fail+1)); echo "  FAIL  #492: RODO (audit_source) bez bumpa updated_at  (otrzymano: $out, oczekiwano: true)"; }
 
+echo; echo "[#528] N8 zerowanie pól + INSERT ≠ swap (0292)"
+# L2: SCX → B; pola przewoźnika znikają (asercja sys — authenticated bez SELECT driver_*)
+sys "update loads set driver_name='Sven N8', driver_phone='+4800111222', driver_phone_country='PL',
+     tractor_plate='WWW1N8', trailer_plate='WWW2N8', carrier_order_no='SCX-N8',
+     driver_delivery_name='Sven SE', driver_delivery_phone='+4670111222',
+     driver_delivery_phone_country='SE', tractor_delivery_plate='SE1N8',
+     trailer_swap=true, escort_vehicles=2,
+     telematics_vehicle_id='rio:OLD528', telematics_provider='RIO',
+     rio_tracking_id='OLD528', rio_secret='sekret528', rio_asset_name='asset528',
+     rio_tracker_on=true, carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (driver_name is null and driver_phone is null and tractor_plate is null
+              and trailer_plate is null and carrier_order_no is null
+              and driver_delivery_name is null and driver_delivery_phone is null
+              and tractor_delivery_plate is null and coalesce(trailer_swap,false) is false
+              and escort_vehicles = 0
+              and telematics_vehicle_id is null and rio_tracking_id is null
+              and rio_secret is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 zmiana przewoźnika czyści pola"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 zmiana przewoźnika czyści pola  (otrzymano: $out)"; }
+val "#528: N8 load_driver_contacts po swap — B bez starego kierowcy" $SCXB \
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'') from load_driver_contacts() where load_id='$L2'" "/"
+# F7 #531: HHL_OPS swap przy wpisanym carrier_order_no (trigger zz_* po guard)
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Ops Sven', driver_phone='+4800333444',
+     driver_delivery_name='Ops SE', driver_delivery_phone='+4670333444',
+     tractor_plate='OPS1', trailer_plate='OPS2', carrier_order_no='SCX-OPS-N8',
+     telematics_vehicle_id='rio:OPS528', rio_tracking_id='OPS528', rio_secret='ops528'
+     where id='$L2'" >/dev/null
+val "#528: HHL_OPS swap przy carrier_order_no" $OPS_D1525 \
+  "with u as (update loads set carrier_org_id='$ORG_B' where id='$L2' returning 1) select count(*) from u" 1 commit
+val "#528: po OPS swap B bez PII dostawy" $SCXB \
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'')||'/'||coalesce(max(driver_phone),'')
+     from load_driver_contacts() where load_id='$L2'" "//"
+out=$(sys "select (telematics_vehicle_id is null and rio_tracking_id is null and rio_secret is null
+              and carrier_order_no is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: po OPS swap rio/telematics wyczyszczone"; } || { fail=$((fail+1)); echo "  FAIL  #528: po OPS swap rio/telematics wyczyszczone  (otrzymano: $out)"; }
+# F7 r2/r3: pozycje SCX odłączone — B i KSH nie widzą tracku starego pojazdu
+# eta_basis = jsonb (nie tekst 'TEST' — invalid json → cichy FAIL 3/3/1)
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "delete from telm_attach_phase where load_id='$L2'" >/dev/null
+sys "delete from geofence_states where load_id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_SCX', telematics_vehicle_id='rio:GPS528',
+     tracking_opened_at=now(), eta_site=now()+interval '2 hours', eta_confidence_min=15,
+     eta_basis=jsonb_build_object('t',1), eta_computed_at=now(), delay_minutes=12
+     where id='$L2'" >/dev/null
+out=$(sys "select (carrier_org_id='$ORG_SCX')::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: L2 na SCX przed detach"; } || { fail=$((fail+1)); echo "  FAIL  #528: L2 na SCX przed detach  (otrzymano: $out)"; }
+sys "insert into positions (load_id, ts, geom_raw, source) values
+     ('$L2', now()-interval '10 minutes', st_setsrid(st_makepoint(17.0, 52.4), 4326), 'TELEMATICS_API'),
+     ('$L2', now()-interval '5 minutes', st_setsrid(st_makepoint(17.1, 52.5), 4326), 'TELEMATICS_API'),
+     ('$L2', now(), st_setsrid(st_makepoint(17.2, 52.6), 4326), 'TELEMATICS_API')" >/dev/null
+sys "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon, source)
+     values ('$L2', 'IN_TRANSIT_PL', now(), 52.4, 17.0, 'TELM_PHASE_INFER')" >/dev/null
+sys "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
+     select '$L2', g.id, 'INSIDE', 3, now(), now() from geofences g limit 1" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+     values ('$L2', 'GEOFENCE_ENTER', now(), jsonb_build_object('zrodlo','TELM'), 'TELM_PHASE_N8_528')" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confidence_min is null
+              and eta_basis is null and eta_computed_at is null and delay_minutes is null
+              and (select count(*) from positions where load_id='$L2')=0
+              and (select count(*) from positions where detached_load_id='$L2')=3)::text
+         from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 detach GPS + clear tracking/eta"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 detach GPS + clear tracking/eta  (otrzymano: $out)"; }
+# F7 r4: właściciel tabeli bez flagi n8_detach_load → append-only na odpiętych
+out=$(sys "update load_events set payload='{\"hack\":1}'::jsonb, detached_load_id=null, dedup_key='HACKED' where detached_load_id='$L2'")
+echo "$out" | grep -qi "append-only" && { ok=$((ok+1)); echo "  OK    #528: N8 owner bez flagi — append-only na odpiętych"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 owner bez flagi — append-only na odpiętych  →  $(echo "$out" | tail -1)"; }
+val "#528: B po swap — 0 track/positions/fixes" $SCXB \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+val "#528: KSH po swap — 0 track/positions/fixes" $KSH \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+out=$(sys "select (coalesce((select phase||'/'||source from telm_attach_phase where load_id='$L2'),'')
+              = 'RESET/D1710_RESET'
+              and exists(select 1 from geofence_states where load_id='$L2')
+              and coalesce((select bool_and(state='OUTSIDE' and consec_fixes=0 and entered_at is null)
+                              from geofence_states where load_id='$L2'), true))::text")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 telm RESET + geofence OUTSIDE"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 telm RESET + geofence OUTSIDE  (otrzymano: $out)"; }
+# ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
+out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
+[ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
+     driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL',
+     tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=0,
+     telematics_vehicle_id=null, telematics_provider=null,
+     rio_tracking_id=null, rio_secret=null, rio_asset_name=null, rio_tracker_on=null,
+     tracking_opened_at=null, eta_site=null, eta_confidence_min=null, eta_basis=null,
+     eta_computed_at=null, delay_minutes=null,
+     tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
+# INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
+sys "delete from audit_log where action='HIST528_INS'" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST528_INS','loads','$L1', null,
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-INS','driver_name','Sven Ins'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#528: INSERT nie jest swap — SCX widzi numer" $SCX \
+  "select new_value->>'carrier_order_no' from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" "SCX-INS"
+val "#528: INSERT nie jest swap — bez _carrier_changed" $SCX \
+  "select ((new_value ? '_carrier_changed') is false and (new_value ? 'driver_name'))::text from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" true
+# szybki filtr documents: KSH nadal nie widzi doc tylko HHL+SCX (regresja)
+val "#528: KSH nadal bez doc HHL+SCX (filtr)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC',null,20,0)" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
