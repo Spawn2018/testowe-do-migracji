@@ -3,7 +3,7 @@
  * Job: ksh-sharepoint-sync. Sekrety SHAREPOINT_* tylko w env; logi = statusy i liczby.
  * SOURCE_DOWN:KSH_SHAREPOINT po 30 min bez udanego odczytu (sticky, przez store.raiseRisk).
  * F7 #556: import_enabled (domyślnie dry_run), dedup hash, DEMO bez sekretów, try/catch handler.
- * Zapis WT→plik — kolejny krok A6.
+ * A6 zapis: write_enabled → kolejka outbound → łatka xlsx → Graph PUT (D-1420).
  */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -15,6 +15,7 @@ import {
 import { parseWorkbookBytes, sha256Hex } from '../_shared/ksh/applyImport.ts';
 import { shouldRaiseKshSourceDown } from '../_shared/ksh/sourceDown.ts';
 import { shouldSkipUnchangedImport } from '../_shared/ksh/skipUnchanged.ts';
+import { processOutboundWrites } from '../_shared/ksh/outboundWrite.ts';
 import { supabaseStore } from '../_shared/integrations/store.ts';
 import { sourceDownRisk } from '../_shared/integrations/sync.ts';
 
@@ -26,6 +27,7 @@ const PROJECT_CODES = ['STEGRA_BODEN', 'STEGRA'] as const;
 type SyncStateRow = {
   last_read_at?: string | null;
   import_enabled?: boolean | null;
+  write_enabled?: boolean | null;
   source_ok?: boolean | null;
   last_error?: string | null;
   last_run?: {
@@ -97,7 +99,7 @@ async function handle(req: Request): Promise<Response> {
   {
     const st = await sb
       .from('ksh_sync_state')
-      .select('last_read_at, import_enabled, last_run, source_ok, last_error')
+      .select('last_read_at, import_enabled, write_enabled, last_run, source_ok, last_error')
       .eq('project_id', projectId)
       .maybeSingle();
     if (st.error) {
@@ -111,9 +113,20 @@ async function handle(req: Request): Promise<Response> {
   }
   const prevReadAt = prev?.last_read_at ?? null;
   const importEnabled = prev?.import_enabled === true;
+  const writeEnabled = prev?.write_enabled === true;
   const prevHash = typeof prev?.last_run?.hash === 'string' ? prev.last_run.hash : null;
   const prevFirstErrorAt =
     typeof prev?.last_run?.first_error_at === 'string' ? prev.last_run.first_error_at : null;
+
+  const maybeWrite = async (
+    fileBytes: Uint8Array,
+    fileSnapshot: Record<string, { ld: string | null; lt: string | null; dd: string | null; dt: string | null }>,
+  ) => {
+    if (!writeEnabled) return null;
+    return processOutboundWrites({
+      sb, env, projectId, fileBytes, fileSnapshot,
+    });
+  };
 
   const raiseDownIfDue = async (warnings: string[]) => {
     // Pierwsza awaria bez first_error_at: zegar startuje w last_run tego przebiegu.
@@ -214,6 +227,7 @@ async function handle(req: Request): Promise<Response> {
     lastError: prev?.last_error,
   });
   if (skipImport) {
+    const writeRes = await maybeWrite(dl.bytes, parsed.snapshot);
     const lastRun = {
       ...(prev?.last_run && typeof prev.last_run === 'object' ? prev.last_run : {}),
       hash,
@@ -222,6 +236,12 @@ async function handle(req: Request): Promise<Response> {
       unchanged: true,
       import_enabled: importEnabled,
       dry_run: !importEnabled,
+      write_enabled: writeEnabled,
+      ...(writeRes ? {
+        write_attempted: true,
+        write_n: writeRes.written,
+        write_conflicts: writeRes.conflicts,
+      } : {}),
     };
     const up = await upsertOk({
       source_ok: true,
@@ -238,6 +258,9 @@ async function handle(req: Request): Promise<Response> {
         mode: dl.mode,
         unchanged: 'true',
         import_enabled: importEnabled ? 'true' : 'false',
+        write_enabled: writeEnabled ? 'true' : 'false',
+        write_n: writeRes ? String(writeRes.written) : '0',
+        write_conflicts: writeRes ? String(writeRes.conflicts) : '0',
       },
     };
     const runOk = await insertRun(sb, true, result);
@@ -315,6 +338,8 @@ async function handle(req: Request): Promise<Response> {
 
   await store.resolveRisks(`${DEDUP_PREFIX}`);
 
+  const writeRes = await maybeWrite(dl.bytes, parsed.snapshot);
+
   const lastRun = {
     created: added,
     changed,
@@ -329,6 +354,12 @@ async function handle(req: Request): Promise<Response> {
     hash,
     dry_run: dryRun,
     import_enabled: importEnabled,
+    write_enabled: writeEnabled,
+    ...(writeRes ? {
+      write_attempted: true,
+      write_n: writeRes.written,
+      write_conflicts: writeRes.conflicts,
+    } : {}),
     // Udany przebieg czyści zegar awarii.
   };
 
@@ -356,6 +387,9 @@ async function handle(req: Request): Promise<Response> {
       cancel_candidates: String(cands),
       dry_run: dryRun ? 'true' : 'false',
       import_enabled: importEnabled ? 'true' : 'false',
+      write_enabled: writeEnabled ? 'true' : 'false',
+      write_n: writeRes ? String(writeRes.written) : '0',
+      write_conflicts: writeRes ? String(writeRes.conflicts) : '0',
     },
   };
   const runOk = await insertRun(sb, true, result);

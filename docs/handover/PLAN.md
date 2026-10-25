@@ -983,34 +983,20 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
 7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
-### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (PR1 SCALONE `121a9021` / **0306**; PR2 `pakiet/557-ferry-rules-pr2` / **0307** PR #562; pierwszeństwo przed A6 #560)
+### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — SCALONE (PR1 `121a9021` / **0306**; PR2 #562 `7159ab4c` / **0307**)
 Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
 1. **PR1 — SCALONE** (`121a9021`, 25.10 ~17:47Z, **0306**): SG-21 → Wawel; FERRY; SE z pozycji; `hotfix_557_apply()` + test status +7.
-2. **PR2 (0307, ta gałąź / #562):** 
-   - `apply_ferry_ais_arrival_backup` — FERRY→Port SE / Droga SE po `actual_arrival_at` + ląd SE, **bez** `geofences.active` (F7 r2 pkt 6);
-   - overdue dopłynięcia: **połącz z** `detect_ferry_overdue` / `rk_ferry_overdue` (cron `tower-prom-opoznienie`) — **bez** osobnego crona `ferry_check_arrival_overdue` (F7 r2 pkt 10);
-   - stary punkt emtrack: `raw.stale_point`, bez faz (F7 r2 pkt 9);
-   - `detect_sailing_mismatch` → `rk_sailing_mismatch`; RPC `sailing_mismatch_suggest` (odczyt) / `sailing_mismatch_assign` (**tylko `is_hhl_admin()` + 2FA**, nie HHL_OPS — F7 r2 pkt 5);
-   - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
+2. **PR2 — SCALONE** (#562 `7159ab4c`, **0307**): backup AIS bez `g.active`; overdue w `detect_ferry_overdue`; `stale_point`; mismatch + suggest/assign (HHL_ADMIN+2FA); F7 r2–r3 (Port SE→Droga SE, dedup, Stena OFF, UUID L557h `…5581`). status **291**; risks **7**.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
-4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign` tylko HHL_ADMIN (przycisk); HHL_OPS widzi ryzyko bez „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
-5. **F7 #562 r2 — zrobione w 0307** (admin assign, Port SE, merge overdue, stale/mismatch).
-6. **F7 #562 r3 — kod w tym PR (0307):**
-   - **BLOKER CI:** Stena — wyłączyć STENA PORT_IN (A5/485) przed testem; Ösmo/prev/UUID już w fiksturach.
-   - **pkt 1:** backup też `AT_PORT_NYNASHAMN` → `IN_TRANSIT_SE` przy ≥2 km (strefa OFF); „w porcie” przed „lądem SE”.
-   - **pkt 2:** `trg_loads_sailing_mismatch_resolve`: `resolved_by = current_app_user_id()` (NULL dla systemu).
-   - **pkt 3:** assign: odrzut ODWOLANY / trasa ≠ GDN-NYN|GDY-KAA; przy IN_TRANSIT_PL|AT_PORT_GDANSK + odejście ≤ now → `auto_set_status` FERRY (quiet, AIS) + reguła SE.
-   - **pkt 4:** `detect_ferry_overdue` — skip gdy dedup już resolved; `SAILING_MISMATCH` dedup z `sailing_id`.
-   - **pkt 5:** testy assign/suggest (ADMIN OK; OPS/KSH/SCX/Podgląd odmowa; event+audit; resolved_by; status; suggest; SE po dopłynięciu bez stale).
-   - status **284** (+13); risks **7** kluczy (+`rk_ferry_check_after_arrival`).
-   - **Uwagi:** propose bez PRE_PORT, bbox PL ≤ 54.45°N; `p_grace` zamiast 2 h; ETA/SMS/cisza + `stale_point` → **W52**.
-7. **F7 #562 r3 — kod + BLOKER UUID zrobione** (`51fa415a` + `bf0aa1a3`): AIS/SCHEDULE source; L557h głośne + PORT_IN OFF; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; L557h UUID `…5581` (≠ LT12 `…5571`). status **291**.
-8. **CI #562 `bf0aa1a3` zielone** (unit/visual/db) — czekam `F7: gotowe do scalenia`.
+4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
+5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 niegotowe, 5 blokerów)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
-   - **SharePoint zapis (pkt 4, #560 — po #557 PR2):** kolejka outbound + Graph PUT; **F7 niegotowe** (5 blokerów). Do poprawy: snapshot po PUT, numery w konflikcie, attempts/failed, JSZip zamiast exceljs, testy db **0306→0308**.
+   - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; **F7 niegotowe** (5 blokerów + poprawki). Rebase po #557: **0306→0308**.
+     - **BLOKERY F7 (68c45a9):** (1) PUT z `If-Match` / 412=`etag_mismatch` (pending, bez sprawy); (2) `import_ctx=on` wokół UPDATE zasobów — import numerów ≠ kolejka; (3) rozładunek z `plan_delivery_to` (nie `from`); tylko zmienione pola; NULL nie czyści komórki; (4) po PUT ack aktualizuje `shipment_items.schedule_row` (bez echo dat); (5) `patch = patch || p_patch` + unikalny indeks pending.
+     - **Do poprawy:** snapshot po PUT; numery w konflikcie; `attempts`/failed + ryzyko; JSZip zamiast exceljs; `done` tylko zapisane kody; wyzwalacz STEGRA_BODEN + historia przy done; testy db (import 161 + ack).
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1689,3 +1675,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 22:30 | #557 PR2 F7 r3 do poprawy (d6486d8): CI 282/2 L557h; PLAN §4 pkt 7 — docs→kod | pętla |
 | 25.10.2026 23:05 | #557 PR2 CI db FAIL status 286/5: L557h=`…5571` = LT12; fix UUID `…5581` | pętla |
 | 25.10.2026 23:30 | #564 SCALONE (`fc95a81e`, kurs NBP); #557 PR2 CI `bf0aa1a3` unit/visual/db ✔ — czekam F7 | pętla |
+| 25.10.2026 23:50 | #562/#557 PR2 SCALONE (`7159ab4c`, 0307); powrót A6 #560 — rebase → **0308**, F7 5 blokerów w PLAN §4 | pętla |

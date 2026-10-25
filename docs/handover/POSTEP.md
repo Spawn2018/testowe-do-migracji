@@ -5236,3 +5236,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: **#564** `wyglad/kurs-nbp-aktualny` — `F7: gotowe` (Spawn2018, po `b02990a`); unit/visual ✔ → merge `fc95a81e`. #560 WSTRZYMANY (F7 po #557); #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
 - Bieżąca: **#557 PR2** #562 `bf0aa1a3` — unit ✔ visual ✔ db ✔ (status 291). PLAN §4 pkt 7–8. Prośba o `F7: gotowe do scalenia`.
+
+## 2026-10-25 23:50 — #557 PR2 SCALONE; powrót A6 #560 (0308 + F7)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#562** F7 „gotowe do scalenia” (Spawn2018, po `4b2d94c8` / kod `bf0aa1a3`) → merge `7159ab4c` (0307). #383 CONFLICTING. Bez push na main.
+- Bieżąca: **A6 #560** — rebase na main, migracja outbound **0306→0308**; F7 5 blokerów + poprawki wpisane w PLAN §4. Następny commit: kod 0308 (If-Match, import_ctx, plan_delivery_to, schedule_row, patch||).
