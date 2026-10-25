@@ -125,3 +125,6 @@ na swoich transportach (pozycji bez transportu nie widzi). Zasobniki: `zdjecia` 
 `tower-retencja-przebiegow` (02:50 UTC, `purge_integration_runs`): `integration_runs` udane > 30 dni i nieudane > 180 dni
 sƒÖ usuwane; ostatni udany przebieg ka≈ºdego zadania zostaje zawsze (stra≈ºnik 0035 liczy od niego okno). Funkcja tylko
 dla zada≈Ñ systemowych (bez EXECUTE dla anon/authenticated).
+
+## 10. SharePoint KSH (A6, E38) ó sekrety tylko po stronie serwera
+Nazwy w `.env.local` i w sekretach Edge (bez `VITE_`): `SHAREPOINT_TENANT_ID`, `SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET`, `SHAREPOINT_FILE_URL`, `SHAREPOINT_TEST_FILE_URL`. Opcjonalnie `SHAREPOINT_FILE_MODE=test` na TEST (wtedy odczyt z pliku testowego). Wartoúci nigdy w repozytorium, zg≥oszeniach, logach CI, `POSTEP` ani w paczce przeglπdarki. Logi Edge: tylko status HTTP i liczby bajtÛw. Zapis do pliku produkcyjnego: `ksh_sync_state.write_enabled` (domyúlnie wy≥πczony).

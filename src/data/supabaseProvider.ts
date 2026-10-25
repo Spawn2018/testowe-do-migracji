@@ -173,7 +173,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
     /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501), równolegle z resztą */
     const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, kshSyncQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
       fetchAllEvents(),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
@@ -192,6 +192,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       fetchAllSailings(sb, SAILING_COLUMNS),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
       sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
+      /* A6: stan SharePoint — HHL; brak RPC / odmowa → null (linia B-09) */
+      sb.rpc('ksh_sync_state_get'),
       // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
       sb.rpc('load_driver_contacts'),
       // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
@@ -365,6 +367,29 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           removed: Number(r.stats?.cancelled ?? 0), rejected: Number(r.stats?.rejected ?? 0),
           skippedStandard: Number(r.stats?.skipped_standard ?? 0),
         })),
+      kshSharePointSync: (() => {
+        if (kshSyncQ.error && !/ksh_sync_state_get|PGRST202|schema cache|Could not find/i.test(kshSyncQ.error.message ?? '')) {
+          throw new Error(`ksh_sync_state_get: ${kshSyncQ.error.message}`);
+        }
+        const raw = kshSyncQ.error ? null : kshSyncQ.data;
+        if (!raw || typeof raw !== 'object') return null;
+        const o = raw as Record<string, unknown>;
+        const run = o.lastRun;
+        return {
+          lastReadAt: typeof o.lastReadAt === 'string' ? o.lastReadAt : null,
+          lastWriteAt: typeof o.lastWriteAt === 'string' ? o.lastWriteAt : null,
+          writeEnabled: o.writeEnabled === true,
+          sourceOk: o.sourceOk === true,
+          secretExpiresOn: typeof o.secretExpiresOn === 'string' ? o.secretExpiresOn : null,
+          lastRun: run && typeof run === 'object' ? {
+            created: Number((run as { created?: number }).created ?? 0),
+            changed: Number((run as { changed?: number }).changed ?? 0),
+            skipped: Number((run as { skipped?: number }).skipped ?? 0),
+            ntg: Number((run as { ntg?: number }).ntg ?? 0),
+            cases: Number((run as { cases?: number }).cases ?? 0),
+          } : null,
+        };
+      })(),
     };
   }
 

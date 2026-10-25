@@ -73,6 +73,7 @@ import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, s
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
 import { isPreviewReadOnly } from '../lib/prodFacade';
+import type { KshSharePointSync } from '../lib/kshSyncView';
 import { trackerKind } from '../lib/trackerLink';
 import { accountRole } from '../lib/accountRole';
 import { INVOICE_OVERDUE_KIND, refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
@@ -232,6 +233,8 @@ interface TowerState {
   sailings: Sailing[];
   factoringOffer: FactoringOffer;
   scheduleVersions: ScheduleVersion[];
+  /** A6 — stan synchronizacji pliku KSH (SharePoint); null poza HHL / przed podłączeniem. */
+  kshSharePointSync: KshSharePointSync | null;
   rateCost: RateRule[];
   rateRev: RateRule[];
   baf: BafParams;
@@ -450,6 +453,7 @@ export const useTowerStore = create<TowerState>()(
       sailings: initialData.sailings,
       factoringOffer: { ...DEFAULT_FACTORING_OFFER },
       scheduleVersions: initialData.scheduleVersions,
+      kshSharePointSync: initialData.kshSharePointSync ?? null,
       rateCost: RATE_COST,
       rateRev: RATE_REV,
       baf: BAF_PARAMS,

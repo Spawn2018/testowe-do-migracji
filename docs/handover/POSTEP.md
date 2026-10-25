@@ -5094,3 +5094,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” (#555 „do poprawy”; #383 CONFLICTING, bez „gotowe”). Bez push na main.
 - Bieżąca: **A6** F7 #555 — domknięty COMMENT 0303; `perform assert_not_preview()` pierwsza instrukcja + test Podgląd; `skipped_carrier`/`skipped_empty` w stats/`p_file`; kreator `MAP_FIELDS_CREATOR` bez `loadDay`/`delivDay` (wzorzec `stan-walidacja__dark`); WARN `CARRIER_SKIP` (NTG z wymiarami) / `CARRIER_EMPTY`; telefon SE `normalizePhone(..., 'SE')`; dry_run liczy `dates_check` (helper + w dniu / >14). Unit `a6-import-map` 6/6. Dalej: zielone CI + wzorzec visual, potem SharePoint Edge (pkt 4).
 
+## 2026-10-25 15:35 — #555 SCALONE; A6 SharePoint start (0304)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (A6/#320 otwarte do SharePoint). Bez nowych `pilne` do budowy.
+- Scalanie: **#555** F7 „gotowe” (`42bfea9`, Spawn2018, po ostatnim commicie) + CI unit/visual/db zielone → merge `e9f9c919` (0303). #383 CONFLICTING, bez „gotowe”. Bez push na main.
+- **Graph (plik testowy, tylko statusy):** token 200; driveItem 200; download 200; bajty 39315. Aplikacja ma dostęp — bez `pytanie-do-koordynatora`.
+- Bieżąca: **A6 pkt 4** `pakiet/a6-sharepoint-sync` — migracja **0304** (`ksh_sync_state`, RPC get/write/upsert, cron `tower-ksh-sharepoint`); Edge `ksh-sharepoint-sync` (odczyt Graph → stan + SOURCE_DOWN:KSH_SHAREPOINT); front `kshSharePointSync` z `ksh_sync_state_get`; nullguard **830**. Dalej: parse→import, zapis testowy, konflikt.
+
