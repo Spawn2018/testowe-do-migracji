@@ -5167,3 +5167,72 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez F7 „gotowe” (#561; #560 niegotowe; #383 CONFLICTING).
 - CI #561 `5bb244a1`: unit ✔ visual ✔; **db FAIL** status 253/5 (oczekiwano 258) — `::text` → `true`, chk oczekuje `t` (jak #556 import).
 - Fix: usunięte `::text` z 5 asercji #557 w `status.sh`. Ponowny push #561.
+
+## 2026-10-25 19:47 — #557 PR1 SCALONE; start PR2 (0307)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#561** F7 „gotowe do scalenia” (Spawn2018, po `83dec117`, CI unit/visual/db zielone) → merge `121a9021`. #560 wstrzymany (rebase → 0308+); #383 CONFLICTING. Bez push na main.
+- Bieżąca: **#557 PR2** `pakiet/557-ferry-rules-pr2` — migracja **0307**: AIS backup bez `g.active`, overdue +2 h, `stale_point`, mismatch + RPC suggest/assign. status EXPECTED 265; nullguard 852. Po F7: powrót #560.
+
+## 2026-10-25 20:05 — #557 PR2 db FAIL → fix (0307 + status/risks)
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne` do budowy. Brak F7 „gotowe” (#562; #560 niegotowe; #383 CONFLICTING).
+- CI #562 `071b68f1`: unit ✔; **db FAIL** — security 458/1 (assert nie pierwsze w `sailing_mismatch_assign`); status 257/8 (S557a=S557c → unique vessel+departure wycofał INSERT rejsów, mk FK puste; brak POPRAWKA 24.09 w `process_position`); risks 44/2 (nowy `rk_ferry_arrival_check`).
+- Fix: assert pierwsze; POPRAWKA 24.09; S557c inny dzień; risks 7 kluczy (+arrival +mismatch). Push → CI → prośba F7.
+
+## 2026-10-25 20:40 — #557 PR2 F7 r2: dokumentacja (przed kodem)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `ba8a6377`. #560 niegotowe / CONFLICTING po rebase; #383 CONFLICTING. Bez push na main.
+- CI #562 `ba8a6377`: unit ✔ visual ✔; **db FAIL** security 458/1 — B5: komentarz `-- B5:…` między `begin` a `perform assert_not_preview` w `sailing_mismatch_assign` (strażnik wymaga assert jako pierwszej instrukcji). status 265/265, risks 46/46.
+- F7 r2 (Spawn2018, 18:14Z na `071b68f`): bloker 1–4 częściowo w `ba8a6377`; pkt 5–12 + uwagi → PLAN §4 #557 pkt 5, §8 20:40. **Następny commit:** kod 0307 (admin-only assign, backup Port SE, merge overdue, propose/mismatch/stale, testy).
+
+## 2026-10-25 21:10 — #557 PR2 F7 r2: kod 0307
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne`. Brak F7 „gotowe” do scalenia. Bez push na main.
+- CI docs `8b4b8a3f`: unit/visual ✔; db security 458/1 (ten sam B5) — oczekiwane przed kodem.
+- Bieżąca: **#557 PR2** — F7 r2 w `0307`: assign HHL_ADMIN+2FA (assert pierwsze); backup Port SE/Droga SE; `detect_ferry_overdue` + drop `ferry_check_arrival_overdue`; stale/mismatch/propose; trigger resolve; status **271**; risks **6** kluczy. Push → CI → prośba F7.
+
+## 2026-10-25 21:25 — #557 PR2: fix fikstur status (db 268/3)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” na #562 po `e34f88bd`. #560 WSTRZYMANY/CONFLICTING; #383 CONFLICTING. Bez push na main.
+- CI #562 `e34f88bd`: unit ✔ visual ✔; **db FAIL** status 268/3 — (1) 58.96 od krawędzi PORT_IN &lt; 2 km → FERRY zamiast IN_TRANSIT_SE; (2) prev pozycji po odejściu → brak `stale_point`; (3) UUID `…557g` niehex.
+- Fix fikstur: Ösmo 59.00/17.90; prev `ts ≤ departure`; L557g `…5570`. EXPECTED status **271** bez zmian. Push → CI → prośba F7.
+
+## 2026-10-25 21:45 — #557 PR2 F7 r3: dokumentacja (przed kodem)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `3f6bc8f0`: unit ✔ visual ✔; **db FAIL** status 270/1 — Stena GDY-KAA w porcie zostaje FERRY (aktywne STENA PORT_IN z A5/485 → backup `return`).
+- F7 r3 (Spawn2018, 19:20Z): PLAN §4 #557 pkt 6 + **W52** (stale w ETA/SMS/ciszy). **Następny commit:** kod 0307 + fikstura Stena OFF + testy assign/suggest.
+
+## 2026-10-25 22:00 — #557 PR2 F7 r3: kod 0307
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Brak F7 „gotowe”. Bez push na main.
+- Bieżąca: **#557 PR2** — F7 r3 w `0307`: Port SE→Droga SE; resolved_by w triggerze; assign FERRY quiet + trasa; overdue/mismatch dedup; Stena OFF; testy assign/suggest; i18n `rk_ferry_check_after_arrival`. status **284**; risks **7**. Push → CI → prośba F7.
+
+## 2026-10-25 22:30 — #557 PR2 F7 r3: docs (do poprawy CI 282/2)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `6eda05b1`: unit ✔ visual ✔; **db FAIL** status 282/2 — `mismatch przed assign` = 0 (L557h) + `resolved_by` puste.
+- F7 r3 (Spawn2018, 20:04Z na `d6486d8`): PLAN §4 #557 pkt 7. **Następny commit:** kod 0307 (AIS/SCHEDULE source, null status) + fikstury L557h głośne / Gdańsk osobny rejs / suggest KSH·SCX / FERRY→SE.
+
+## 2026-10-25 22:45 — #557 PR2 F7 r3: kod (L557h + AIS/SCHEDULE)
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Brak F7 „gotowe”. Bez push na main.
+- Bieżąca: **#557 PR2** — `0307`: assign `source` AIS vs SCHEDULE; backup `v_status is null or …`; `status.sh`: L557h głośne + PORT_IN OFF + port; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; status **291**. Push → CI → prośba F7.
+
+## 2026-10-25 23:05 — #557 PR2: fix UUID L557h (db 286/5)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `51fa415a`: unit ✔ visual ✔; **db FAIL** status 286/5 — L557h=`…5571` koliduje z LT12 (PR1) → loads_pkey; cascade mismatch/assign/AIS.
+- Fix: L557h → `…5581`. EXPECTED status **291** bez zmian. Push → CI → prośba F7.
+
+## 2026-10-25 23:30 — #564 SCALONE; #557 PR2 CI zielone — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#564** `wyglad/kurs-nbp-aktualny` — `F7: gotowe` (Spawn2018, po `b02990a`); unit/visual ✔ → merge `fc95a81e`. #560 WSTRZYMANY (F7 po #557); #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
+- Bieżąca: **#557 PR2** #562 `bf0aa1a3` — unit ✔ visual ✔ db ✔ (status 291). PLAN §4 pkt 7–8. Prośba o `F7: gotowe do scalenia`.

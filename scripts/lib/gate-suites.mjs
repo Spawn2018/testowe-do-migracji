@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 459, // B9 F7: +4 (warn>15min, oldest null przy odrzucone, prefs_pairs, users_pairs); bylo 455
-  status: 258, // #557 F7: +7 hotfix_557_apply (T-12/SG-21 fikstury + idempotencja); było 251
+  status: 291, // #557 PR2 F7 r3 fix: +7 głośne fikstury / suggest KSH·SCX / AIS source; było 284
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 146, // A6 F7 #556: +15 import_enabled/hash/source/claim/upsert/RLS; było 131 (0305)
-  nullguard: 842, // A6 F7: +5 ksh_sync_import_set GUARD; było 837 (write_set mfa)
+  nullguard: 852, // #557 PR2: +10 (2× GUARD ×5: 4 odmowy + pozytywny HHL); było 842
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
