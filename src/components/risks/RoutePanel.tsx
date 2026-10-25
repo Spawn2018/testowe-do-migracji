@@ -91,7 +91,7 @@ function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Local
         <span className="rk-ferry-s" data-content>
           <span className={`rk-alert ${tone}`}>{alertText}</span>
           {' · '}{seaText}
-          {r.onBoard > 0 ? ` · ${rtn(locale, 'p6_onboard', r.onBoard)}` : ''}
+          {r.onBoard > 0 && !phone ? ` · ${rtn(locale, 'p6_onboard', r.onBoard)}` : ''}
         </span>
       </span>
     </li>
@@ -152,8 +152,11 @@ export function RoutePanel({
               <span className={info ? 'rk-road-t rk-info' : 'rk-road-t'}>{riskText(locale, r.title, r.titleKey, r.titleParams)}</span>
               {!info && (meta || r.detail) ? (
                 <span className="rk-road-s">
-                  <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM'))}</span>
-                  {meta ? ` · ${meta}` : ''}
+                  {/* U-100: etykieta wpływu tylko od średniego wzwyż — informacja (LOW) bez „Średni wpływ” */}
+                  {r.severity === 'LOW' ? null : (
+                    <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM'))}</span>
+                  )}
+                  {meta ? `${r.severity === 'LOW' ? '' : ' · '}${meta}` : ''}
                 </span>
               ) : null}
               {!info && r.detail && !phone ? <span className="rk-road-n">{r.detail}</span> : null}
@@ -222,7 +225,7 @@ export function RoutePanel({
                 <p className="rk-alt-why"><b>{rtp(locale, 'p6_alt_list', { line: rt(locale, `p6_line_${alt.to}`) })}</b></p>
                 {alt.kind === 'NODATA' ? <p className="rk-muted">{rt(locale, 'p6_alt_nodata')}</p> : (
                   <ul className="rk-alt-list" data-ferry-line={alt.to.toLowerCase()}>
-                    {alt.sailings.map((s) => (
+                    {(phone ? alt.sailings.slice(0, 1) : alt.sailings).map((s) => (
                       <li key={s.id}>
                         <b>{formatListDateTime(effDeparture(s))}</b> · {s.vessel || '—'}
                         {s.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(s.status, locale)}` : ''}
@@ -230,7 +233,7 @@ export function RoutePanel({
                     ))}
                   </ul>
                 )}
-                <p className="rk-muted">{rt(locale, 'p6_alt_note')}</p>
+                {!phone ? <p className="rk-muted">{rt(locale, 'p6_alt_note')}</p> : null}
               </>
             )}
           </div>

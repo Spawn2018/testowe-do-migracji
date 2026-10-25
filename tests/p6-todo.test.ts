@@ -146,7 +146,13 @@ describe('8.4 / E7-5 — druga przeprawa', () => {
     expect(ferryAlert(row({ delayedIso: '2026-10-07T17:00:00Z' }))).toBe('DELAYED');
   });
   it('promy dziś z rozkładu (bez danych startowych), transporty na pokładzie, najbliższy, gdy dziś brak', () => {
-    const loads = [{ sailingId: 'Nova Star' }, { sailingId: 'Nova Star' }, { sailingId: null }] as unknown as Load[];
+    /* U-100: „na pokładzie” = etap Prom; rezerwacja przed wjazdem (PORT_PL) się nie liczy */
+    const loads = [
+      { sailingId: 'Nova Star', status: 'ON_FERRY', stage: 'FERRY' },
+      { sailingId: 'Nova Star', status: 'ON_FERRY', stage: 'FERRY' },
+      { sailingId: 'Nova Star', status: 'AT_PORT_GDANSK', stage: 'GDANSK' },
+      { sailingId: null, status: 'ON_FERRY', stage: 'FERRY' },
+    ] as unknown as Load[];
     const rows = ferryRowsFromDb([...SCHED, sail('Seed', 'GDN-NYN', 'DANE_STARTOWE', '2026-10-07T15:00:00Z')], [], loads, nowMs);
     expect(rows.map((r) => [r.vessel, r.onBoard])).toEqual([['Nova Star', 2], ['Stena Ebba', 0]]);
   });
@@ -178,5 +184,23 @@ describe('I-0 — przykłady P6 tylko w demo', () => {
   it('strona Ryzyka bez kodów spraw i bez daty z sekundami (E7 pkt 8, E21)', () => {
     const card = readFileSync('src/components/risks/TodoCard.tsx', 'utf8');
     expect(card).not.toMatch(/type_code|>\{[^}]*typeCode\}|toLocaleString\(/);
+  });
+});
+
+describe('U-100 — Sytuacja na trasie zgodnie z makietą E7', () => {
+  it('„statek w porcie” (AIS, informacja) nie trafia do ostrzeżeń rejsów; ostrzeżenie promowe zostaje', () => {
+    const base = { severity: 'LOW', type: 'FERRY', loadId: null, title: 'x', meta: '', detail: '' };
+    const rr = routeRisks([
+      { ...base, id: 'a', titleKey: 'rk_ais_arrived' },
+      { ...base, id: 'b', titleKey: 'rk_ais_arrived_kaa' },
+      { ...base, id: 'c', severity: 'HIGH', titleKey: 'rk_ferry_storm' },
+    ] as unknown as Risk[]);
+    expect(rr.ferry.map((r) => r.id)).toEqual(['c']);
+  });
+  it('RoutePanel: etykieta wpływu tylko od średniego wzwyż; na telefonie bez „na pokładzie” w wierszu i bez noty drugiej przeprawy', () => {
+    const src = readFileSync('src/components/risks/RoutePanel.tsx', 'utf8');
+    expect(src).toContain("r.severity === 'LOW' ? null");
+    expect(src).toContain('r.onBoard > 0 && !phone');
+    expect(src).toContain("{!phone ? <p className=\"rk-muted\">{rt(locale, 'p6_alt_note')}</p> : null}");
   });
 });
