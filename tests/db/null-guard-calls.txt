@@ -204,3 +204,5 @@ admin_preview_start | GUARD | select admin_preview_start('KSH') | Tylko administ
 admin_preview_stop | GUARD | select admin_preview_stop() | Brak aktywnego konta
 assert_not_preview | EMPTY | select assert_not_preview() |
 is_preview_read_only | EMPTY | select is_preview_read_only()::text | false
+sailing_mismatch_suggest | GUARD | select sailing_mismatch_suggest('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta|wyłącznie HHL
+sailing_mismatch_assign | GUARD | select sailing_mismatch_assign('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002') | Brak aktywnego konta|wyłącznie HHL

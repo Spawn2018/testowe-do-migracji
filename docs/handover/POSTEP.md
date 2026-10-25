@@ -5167,3 +5167,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez F7 „gotowe” (#561; #560 niegotowe; #383 CONFLICTING).
 - CI #561 `5bb244a1`: unit ✔ visual ✔; **db FAIL** status 253/5 (oczekiwano 258) — `::text` → `true`, chk oczekuje `t` (jak #556 import).
 - Fix: usunięte `::text` z 5 asercji #557 w `status.sh`. Ponowny push #561.
+
+## 2026-10-25 19:47 — #557 PR1 SCALONE; start PR2 (0307)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#561** F7 „gotowe do scalenia” (Spawn2018, po `83dec117`, CI unit/visual/db zielone) → merge `121a9021`. #560 wstrzymany (rebase → 0308+); #383 CONFLICTING. Bez push na main.
+- Bieżąca: **#557 PR2** `pakiet/557-ferry-rules-pr2` — migracja **0307**: AIS backup bez `g.active`, overdue +2 h, `stale_point`, mismatch + RPC suggest/assign. status EXPECTED 265; nullguard 852. Po F7: powrót #560.

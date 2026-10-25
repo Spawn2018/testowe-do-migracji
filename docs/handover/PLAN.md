@@ -983,18 +983,22 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
 7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
-### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (`pakiet/557-ferry-t12-sg21`, migracja **0306**; pierwszeństwo przed A6 zapisem #560)
+### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (PR1 SCALONE `121a9021` / **0306**; PR2 `pakiet/557-ferry-rules-pr2` / **0307**; pierwszeństwo przed A6 #560)
 Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
-1. **PR1 (ta pozycja, 0306):** SG-21 `sailing_id` → Wawel jak T-12 + `SAILING_ASSIGNED`; SG-21 `AT_PORT_GDANSK` → `FERRY` gdy Wawel wypłynął; T-12 i SG-21 → Port SE / Droga SE przez `apply_ferry_se_from_position` (pozycja SE). `tower.bulk_quiet`. TEST bez kodów → no-op.
-   - **F7 (2917154):** `hotfix_557_apply()` + test `status.sh` (+7 OK, EXPECTED 258); revoke public/anon/authenticated. W PR2 reguła awaryjna **bez** zależności od `g.active`.
-2. **PR2 (po PR1):** reguła awaryjna AIS-dopłynięcie → SE (strefa nie blokuje); stary punkt emtrack (identyczne współrzędne PL po dopłynięciu); wykrywanie złego rejsu + propozycja (RPC dla frontu). Testy DB wg #557.
+1. **PR1 — SCALONE** (`121a9021`, 25.10 ~17:47Z, **0306**): SG-21 → Wawel; FERRY; SE z pozycji; `hotfix_557_apply()` + test status +7.
+2. **PR2 (0307, ta gałąź):** 
+   - `apply_ferry_ais_arrival_backup` — FERRY→`IN_TRANSIT_SE` po `actual_arrival_at` + ląd SE, **bez** `geofences.active`;
+   - `ferry_check_arrival_overdue` (+2 h bez pozycji SE → `rk_ferry_arrival_check`, cron `*/15`);
+   - stary punkt emtrack: `raw.stale_point`, bez faz;
+   - `detect_sailing_mismatch` → `rk_sailing_mismatch`; RPC `sailing_mismatch_suggest` / `sailing_mismatch_assign` (HHL, front „Przypnij rejs”);
+   - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
-4. **Front (koordynator):** po PR2 — ryzyko złego rejsu + „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta.
+4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign(load_id, sailing_id)`; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557; po #557 rebase → migracja **0307+**)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
-   - **SharePoint zapis (pkt 4, #560 — po #557):** kolejka outbound + Graph PUT; **F7 niegotowe** (5 blokerów: If-Match/etag, echo numerów `import_ctx`, `plan_delivery_to`, echo dat/`schedule_row`, merge patch `||` + unique pending). Do poprawy: snapshot po PUT, numery w konflikcie, attempts/failed, JSZip zamiast exceljs, testy db 0306→0307.
+   - **SharePoint zapis (pkt 4, #560 — po #557 PR2):** kolejka outbound + Graph PUT; **F7 niegotowe** (5 blokerów). Do poprawy: snapshot po PUT, numery w konflikcie, attempts/failed, JSZip zamiast exceljs, testy db **0306→0308**.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1662,3 +1666,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 19:00 | #557 F7 (2917154): docs — `hotfix_557_apply` + test db przed znakiem; kod w następnym commitcie | pętla |
 | 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |
 | 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |
+| 25.10.2026 19:47 | #557 PR1 SCALONE (`121a9021`, 0306); F7 gotowe `83dec117`; start PR2 reguły **0307** | pętla |
