@@ -62,6 +62,8 @@
 .po-set-err{margin:0;font-size:13.5px;color:var(--red);font-weight:600}
 .po-set-acts{display:flex;flex-wrap:wrap;gap:6px}
 .po-act{display:flex;gap:8px;flex-wrap:wrap}
+.po-pin{display:grid;gap:8px;margin-top:8px}
+.po-pin p{margin:0}
 .po-go{font-family:var(--font-cond);font-size:15px;color:var(--ink-2);text-decoration:none}
 
 /* kierowcy (E6) */
