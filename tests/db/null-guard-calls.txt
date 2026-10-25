@@ -61,6 +61,9 @@ money_least_tier | PURE | select money_least_tier('A', 'B') | -
 fuel_basis_public | PURE | select fuel_basis_public('{"n_sek":7,"owner_note":"x"}'::jsonb)->>'n_sek' | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
+ksh_sync_state_get | EMPTY | select coalesce(ksh_sync_state_get()::text, '∅') | ∅
+ksh_sync_write_set | GUARD | select ksh_sync_write_set(false) | Administrator HHL|42501
+ksh_sync_import_set | GUARD | select ksh_sync_import_set(false) | Administrator HHL|42501
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL
 rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyłącznie HHL
 rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyłącznie HHL

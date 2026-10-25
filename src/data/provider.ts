@@ -9,6 +9,7 @@ import type {
   Bill, BillVerification, Document, ExceptionItem, Geofence, Invoice, Load, LoadEvent, LoadMessage, LoadStatus,
   LoadResources, Awizacja, FerryBooking, Notification, Risk, Sailing, ScheduleVersion, WorkflowRule, WorkflowRun,
 } from '../types';
+import type { KshSharePointSync } from '../lib/kshSyncView';
 
 export type ProviderKind = 'demo' | 'supabase';
 
@@ -30,17 +31,21 @@ export interface DataSnapshot {
   /** M10 — rozkład rejsów */
   sailings: Sailing[];
   scheduleVersions: ScheduleVersion[];
+  /** A6 E38 — stan sync SharePoint (null = brak / nie HHL). */
+  kshSharePointSync: KshSharePointSync | null;
 }
 
 export const DATA_SNAPSHOT_KEYS = [
   'loads', 'events', 'documents', 'messages', 'risks', 'exceptions', 'geofences',
   'workflows', 'workflowRuns', 'notifications', 'invoices', 'bills', 'scheduleVersions',
+  'kshSharePointSync',
 ] as const satisfies readonly (keyof DataSnapshot)[];
 
 export function emptySnapshot(): DataSnapshot {
   return {
     loads: [], events: [], documents: [], messages: [], risks: [], exceptions: [], geofences: [],
     workflows: [], workflowRuns: [], notifications: [], invoices: [], bills: [], sailings: [], scheduleVersions: [],
+    kshSharePointSync: null,
   };
 }
 

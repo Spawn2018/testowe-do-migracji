@@ -5094,3 +5094,51 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” (#555 „do poprawy”; #383 CONFLICTING, bez „gotowe”). Bez push na main.
 - Bieżąca: **A6** F7 #555 — domknięty COMMENT 0303; `perform assert_not_preview()` pierwsza instrukcja + test Podgląd; `skipped_carrier`/`skipped_empty` w stats/`p_file`; kreator `MAP_FIELDS_CREATOR` bez `loadDay`/`delivDay` (wzorzec `stan-walidacja__dark`); WARN `CARRIER_SKIP` (NTG z wymiarami) / `CARRIER_EMPTY`; telefon SE `normalizePhone(..., 'SE')`; dry_run liczy `dates_check` (helper + w dniu / >14). Unit `a6-import-map` 6/6. Dalej: zielone CI + wzorzec visual, potem SharePoint Edge (pkt 4).
 
+## 2026-10-25 15:35 — #555 SCALONE; A6 SharePoint start (0304)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (A6/#320 otwarte do SharePoint). Bez nowych `pilne` do budowy.
+- Scalanie: **#555** F7 „gotowe” (`42bfea9`, Spawn2018, po ostatnim commicie) + CI unit/visual/db zielone → merge `e9f9c919` (0303). #383 CONFLICTING, bez „gotowe”. Bez push na main.
+- **Graph (plik testowy, tylko statusy):** token 200; driveItem 200; download 200; bajty 39315. Aplikacja ma dostęp — bez `pytanie-do-koordynatora`.
+- Bieżąca: **A6 pkt 4** `pakiet/a6-sharepoint-sync` — migracja **0304** (`ksh_sync_state`, RPC get/write/upsert, cron `tower-ksh-sharepoint`); Edge `ksh-sharepoint-sync` (odczyt Graph → stan + SOURCE_DOWN:KSH_SHAREPOINT); front `kshSharePointSync` z `ksh_sync_state_get`; nullguard **830**. Dalej: parse→import, zapis testowy, konflikt.
+
+## 2026-10-25 15:10 — A6 #556: parse→import + SOURCE_DOWN 30 min (0305)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#556 w toku; #383 bez F7 / CONFLICTING). Bez push na main.
+- CI #556: unit/visual OK; **db FAIL** nullguard — `ksh_sync_write_set` wołał `mfa_satisfied(text)` (brak przeciążenia). Fix w 0304: `user_role` + nullguard **837**.
+- Bieżąca: **A6** migracja **0305** (`import_schedule` dla `service_role`); Edge parse (exceljs + rdzeń A6) → `import_schedule` + snapshot kodów; `SOURCE_DOWN:KSH_SHAREPOINT` sticky po 30 min przez `store.raiseRisk`. Unit: source-down + risk-keys. Dalej: zapis pliku testowego, sprawa znikniętych / konflikt.
+
+## 2026-10-25 16:15 — A6 #556 F7 (import_enabled + Graph)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (A6/#320 otwarte). Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” po `705e8f8` — komentarz „do poprawy” (BLOKER import_enabled + hash + Graph). #383 CONFLICTING. Bez push na main.
+- CI #556 na `705e8f8`: unit ✔, visual ✔, db ✔ (nullguard **837**) — G-15: poprawki dopiero po zielonym CI.
+- Bieżąca: **A6 F7 #556** — `import_enabled` (domyślnie false); dedup hash; Graph try/catch/timeout/10MB; DEMO bez sekretów; `source` SHAREPOINT; projekt `STEGRA_BODEN`; kontrakt parserów; unit graph z fake fetch. Potem ponowne F7.
+
+## 2026-10-25 16:55 — A6 #556 db: boolean t/f w import.sh
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#556; #383 CONFLICTING; #558 wygląd bez F7). Bez push na main.
+- CI #556 na `4e1f4301`: unit ✔, visual ✔, **db FAIL** import 143/146 — `import_enabled::text` i `(a>b)::text` dają `true`/`false`, a `val`/`chk` oczekują `t`/`f` (psql boolean). Fix: bez `::text`.
+- Bieżąca: **A6** push fix testów → ponowne CI → F7. Potem zapis pliku testowego / sprawa znikniętych.
+
+## 2026-10-25 17:05 — #558 SCALONE; A6 #556 F7 docs (4e1f430)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#558** F7 „gotowe” (Spawn2018, po `8712b63`, CI zielone) → merge `d30e7258`. #556 bez „gotowe”; #383 CONFLICTING. Bez push na main.
+- CI #556 na `d91c29b0` (boolean t/f): unit ✔, db ✔, visual ✔.
+- Bieżąca: **A6 F7 #556** — docs w PLAN/POSTEP/SECURITY (BLOKER `failed_hash` + skip tylko po udanym; Graph `arrayBuffer`; `state_read_error`; get bez fallbacku; SOURCE_DOWN od `first_error_at`; retencja `integration_runs` przy unchanged). Następny commit = kod + testy, potem F7.
+
+## 2026-10-25 17:15 — A6 #556 F7 kod (failed_hash + first_error_at)
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne`.
+- Scalanie: brak F7 „gotowe” (#556 po docs+kod; #383 CONFLICTING). Bez push na main.
+- Bieżąca: **A6** — `failed_hash` / skip tylko `source_ok && !last_error`; Graph `arrayBuffer`→`network_download`; `state_read_error`; `ksh_sync_state_get` bez fallbacku; SOURCE_DOWN od `first_error_at`; kontrakt map/phone/formatPl; unit skip+graph. Push → CI → prośba F7.
+
+## 2026-10-25 17:45 — A6 #556 CI zielone; prośba F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe do scalenia” (#556; #383 CONFLICTING). Bez push na main.
+- CI #556 na `e346596b`: unit ×2 ✔, visual ✔, db ✔ (`40206372497`). Prośba o ponowne F7 w PR.
+- Bieżąca: **A6** — czekam F7 #556. Po „gotowe”/scaleniu: zapis na pliku testowym, sprawa „zniknął z pliku” / konflikt WT↔plik.
+

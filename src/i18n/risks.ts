@@ -123,6 +123,7 @@ const pl: Dict = {
   rk_src_HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   rk_src_EMTRACK_WEB: 'telematyka naczep (emtrack web)',
   rk_src_RIO: 'RIO',
+  rk_src_KSH_SHAREPOINT: 'Plik KSH (SharePoint)',
   rk_rio_invalid: 'Link RIO nieprawidłowy',
   rk_rio_expired: 'Link RIO wygasł',
   rk_rio_unknown_asset: 'Link RIO dotyczy pojazdu {asset}, którego nie ma w awizacji',

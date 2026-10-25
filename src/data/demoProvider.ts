@@ -84,6 +84,8 @@ export function buildDemoSnapshot(): DataSnapshot {
     /* M10 — rozkład rejsów (dane startowe); transport ↔ rejs tylko przy zgodnej rezerwacji */
     sailings,
     scheduleVersions: SCHEDULE_VERSIONS,
+    /* A6: demo bez prawdziwego SharePoint — linia sync zostaje przy B-09 (null). */
+    kshSharePointSync: null,
   };
 }
 
