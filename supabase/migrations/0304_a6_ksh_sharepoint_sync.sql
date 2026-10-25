@@ -80,9 +80,7 @@ begin
   if v_pid is not null then
     select * into r from public.ksh_sync_state where project_id = v_pid;
   end if;
-  if r.project_id is null then
-    select * into r from public.ksh_sync_state order by updated_at desc nulls last limit 1;
-  end if;
+  -- F7 #556: bez fallbacku „ostatni wiersz bez filtra projektu”.
   if r.project_id is null then
     return null;
   end if;

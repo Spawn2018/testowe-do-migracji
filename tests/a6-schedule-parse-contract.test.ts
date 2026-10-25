@@ -44,6 +44,26 @@ describe('A6 scheduleParse kontrakt (src ↔ _shared)', () => {
     expect(stripImports(edge)).toBe(stripImports(front));
   });
 
+  it('importColumnMap ciała identyczne', () => {
+    const front = readFileSync(resolve(ROOT, 'src/lib/importColumnMap.ts'), 'utf8');
+    const edge = readFileSync(resolve(ROOT, 'supabase/functions/_shared/ksh/importColumnMap.ts'), 'utf8');
+    expect(stripImports(edge)).toBe(stripImports(front));
+  });
+
+  it('phoneNational ciała identyczne', () => {
+    const front = readFileSync(resolve(ROOT, 'src/lib/phoneNational.ts'), 'utf8');
+    const edge = readFileSync(resolve(ROOT, 'supabase/functions/_shared/ksh/phoneNational.ts'), 'utf8');
+    expect(stripImports(edge)).toBe(stripImports(front));
+  });
+
+  it('formatPlNumber (Edge formatPl ↔ src/format) identyczny', () => {
+    const frontSrc = readFileSync(resolve(ROOT, 'src/lib/format.ts'), 'utf8');
+    const edge = readFileSync(resolve(ROOT, 'supabase/functions/_shared/ksh/formatPl.ts'), 'utf8');
+    const m = frontSrc.match(/export function formatPlNumber\([\s\S]*?\n\}/);
+    expect(m?.[0]).toBeTruthy();
+    expect(stripImports(edge)).toContain(stripImports(m![0]));
+  });
+
   it('ten sam fixture → HH accepted, NTG skippedCarrier', () => {
     const parsed = parseSchedule([hh, ntg, {}]);
     expect(parsed.stats.accepted).toBe(1);

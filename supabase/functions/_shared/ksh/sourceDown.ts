@@ -4,18 +4,28 @@
  */
 export const KSH_SOURCE_DOWN_MIN = 30;
 
-/** Czy podnieść alarm: brak udanego odczytu albo starszy niż próg. */
+/**
+ * Czy podnieść alarm.
+ * - Jest lastReadAt → 30 min od ostatniego udanego odczytu.
+ * - Brak udanego odczytu → 30 min od first_error_at (nie od razu po pierwszej awarii / sekretach).
+ */
 export function shouldRaiseKshSourceDown(
   lastReadAt: string | null | undefined,
   nowIso: string,
   downMin = KSH_SOURCE_DOWN_MIN,
+  firstErrorAt?: string | null,
 ): boolean {
-  if (!lastReadAt) return true;
-  const t = Date.parse(lastReadAt);
-  if (!Number.isFinite(t)) return true;
   const now = Date.parse(nowIso);
   if (!Number.isFinite(now)) return true;
-  return (now - t) >= downMin * 60_000;
+  if (lastReadAt) {
+    const t = Date.parse(lastReadAt);
+    if (!Number.isFinite(t)) return true;
+    return (now - t) >= downMin * 60_000;
+  }
+  if (!firstErrorAt) return false;
+  const fe = Date.parse(firstErrorAt);
+  if (!Number.isFinite(fe)) return false;
+  return (now - fe) >= downMin * 60_000;
 }
 
 /** Migawka HH do konfliktu (kolejny krok): kod → daty/godziny (bez PII). */

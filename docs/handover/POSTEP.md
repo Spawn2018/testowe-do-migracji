@@ -5129,3 +5129,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #556 na `d91c29b0` (boolean t/f): unit ✔, db ✔, visual ✔.
 - Bieżąca: **A6 F7 #556** — docs w PLAN/POSTEP/SECURITY (BLOKER `failed_hash` + skip tylko po udanym; Graph `arrayBuffer`; `state_read_error`; get bez fallbacku; SOURCE_DOWN od `first_error_at`; retencja `integration_runs` przy unchanged). Następny commit = kod + testy, potem F7.
 
+## 2026-10-25 17:15 — A6 #556 F7 kod (failed_hash + first_error_at)
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne`.
+- Scalanie: brak F7 „gotowe” (#556 po docs+kod; #383 CONFLICTING). Bez push na main.
+- Bieżąca: **A6** — `failed_hash` / skip tylko `source_ok && !last_error`; Graph `arrayBuffer`→`network_download`; `state_read_error`; `ksh_sync_state_get` bez fallbacku; SOURCE_DOWN od `first_error_at`; kontrakt map/phone/formatPl; unit skip+graph. Push → CI → prośba F7.
+

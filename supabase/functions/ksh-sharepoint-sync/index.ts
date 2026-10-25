@@ -14,6 +14,7 @@ import {
 } from '../_shared/ksh/graph.ts';
 import { parseWorkbookBytes, sha256Hex } from '../_shared/ksh/applyImport.ts';
 import { shouldRaiseKshSourceDown } from '../_shared/ksh/sourceDown.ts';
+import { shouldSkipUnchangedImport } from '../_shared/ksh/skipUnchanged.ts';
 import { supabaseStore } from '../_shared/integrations/store.ts';
 import { sourceDownRisk } from '../_shared/integrations/sync.ts';
 
@@ -25,7 +26,15 @@ const PROJECT_CODES = ['STEGRA_BODEN', 'STEGRA'] as const;
 type SyncStateRow = {
   last_read_at?: string | null;
   import_enabled?: boolean | null;
-  last_run?: { hash?: string; dry_run?: boolean; [k: string]: unknown } | null;
+  source_ok?: boolean | null;
+  last_error?: string | null;
+  last_run?: {
+    hash?: string;
+    failed_hash?: string;
+    dry_run?: boolean;
+    first_error_at?: string;
+    [k: string]: unknown;
+  } | null;
 };
 
 Deno.serve(async (req: Request) => {
@@ -88,19 +97,35 @@ async function handle(req: Request): Promise<Response> {
   {
     const st = await sb
       .from('ksh_sync_state')
-      .select('last_read_at, import_enabled, last_run')
+      .select('last_read_at, import_enabled, last_run, source_ok, last_error')
       .eq('project_id', projectId)
       .maybeSingle();
+    if (st.error) {
+      const result = {
+        job: JOB, mode: 'LIVE' as const, ok: false, reason: 'state_read_error',
+      };
+      await insertRun(sb, false, result);
+      return Response.json(result, { status: 502 });
+    }
     prev = (st.data as SyncStateRow | null) ?? null;
   }
   const prevReadAt = prev?.last_read_at ?? null;
   const importEnabled = prev?.import_enabled === true;
   const prevHash = typeof prev?.last_run?.hash === 'string' ? prev.last_run.hash : null;
+  const prevFirstErrorAt =
+    typeof prev?.last_run?.first_error_at === 'string' ? prev.last_run.first_error_at : null;
 
   const raiseDownIfDue = async (warnings: string[]) => {
-    if (!shouldRaiseKshSourceDown(prevReadAt, started)) return;
+    // Pierwsza awaria bez first_error_at: zegar startuje w last_run tego przebiegu.
+    const clockStart = prevFirstErrorAt ?? started;
+    if (!shouldRaiseKshSourceDown(prevReadAt, started, undefined, clockStart)) return;
     await store.raiseRisk(sourceDownRisk('KSH_SHAREPOINT', warnings, started));
   };
+
+  const errorRunBase = (extra: Record<string, unknown> = {}) => ({
+    ...extra,
+    first_error_at: prevFirstErrorAt ?? started,
+  });
 
   const upsertOk = async (args: {
     source_ok: boolean;
@@ -126,7 +151,10 @@ async function handle(req: Request): Promise<Response> {
     const up = await upsertOk({
       source_ok: false,
       last_read_at: null,
-      last_run: null,
+      last_run: errorRunBase({
+        mode: env.SHAREPOINT_FILE_MODE === 'test' ? 'test' : 'prod',
+        download_ok: false,
+      }),
       last_error: dl.reason.slice(0, 500),
     });
     await raiseDownIfDue([dl.reason.slice(0, 120)]);
@@ -153,7 +181,12 @@ async function handle(req: Request): Promise<Response> {
     const up = await upsertOk({
       source_ok: false,
       last_read_at: null,
-      last_run: { bytes: dl.bytes.byteLength, mode: dl.mode, parse_ok: false },
+      last_run: errorRunBase({
+        bytes: dl.bytes.byteLength,
+        mode: dl.mode,
+        parse_ok: false,
+        // F7 BLOKER: bez hash — ten sam plik nie maskuje się jako unchanged.
+      }),
       last_error: `parse:${cls}`.slice(0, 500),
     });
     await raiseDownIfDue([`parse:${cls}`.slice(0, 120)]);
@@ -170,10 +203,16 @@ async function handle(req: Request): Promise<Response> {
 
   const hash = await sha256Hex(dl.bytes);
 
-  // Ten sam hash: pomiń import, chyba że poprzednio był tylko dry_run, a teraz import_enabled
-  // (właściciel włączył zapis po podglądzie — F7 BLOKER 1+2).
+  // Ten sam hash tylko po udanym przebiegu (F7 BLOKER — nie po failed_hash).
   const prevDryOnly = prev?.last_run?.dry_run === true;
-  const skipImport = Boolean(prevHash && prevHash === hash && (!importEnabled || !prevDryOnly));
+  const skipImport = shouldSkipUnchangedImport({
+    prevHash,
+    hash,
+    importEnabled,
+    prevDryOnly,
+    sourceOk: prev?.source_ok === true,
+    lastError: prev?.last_error,
+  });
   if (skipImport) {
     const lastRun = {
       ...(prev?.last_run && typeof prev.last_run === 'object' ? prev.last_run : {}),
@@ -237,13 +276,14 @@ async function handle(req: Request): Promise<Response> {
     const up = await upsertOk({
       source_ok: false,
       last_read_at: null,
-      last_run: {
+      last_run: errorRunBase({
         bytes: dl.bytes.byteLength,
         mode: dl.mode,
         parse_ok: true,
         accepted: parsed.meta.accepted,
-        hash,
-      },
+        // F7 BLOKER: failed_hash zamiast hash — następny przebieg nie skipuje.
+        failed_hash: hash,
+      }),
       last_error: errTag.slice(0, 500),
     });
     await raiseDownIfDue([errTag.slice(0, 120)]);
@@ -289,6 +329,7 @@ async function handle(req: Request): Promise<Response> {
     hash,
     dry_run: dryRun,
     import_enabled: importEnabled,
+    // Udany przebieg czyści zegar awarii.
   };
 
   const up = await upsertOk({

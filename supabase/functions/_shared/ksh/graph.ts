@@ -171,7 +171,16 @@ export async function downloadSharePointFile(
       meta: { ...meta, errorCode: 'network_download' },
     };
   }
-  const buf = new Uint8Array(await dl.arrayBuffer());
+  let buf: Uint8Array;
+  try {
+    buf = new Uint8Array(await dl.arrayBuffer());
+  } catch {
+    return {
+      ok: false,
+      reason: 'network_download',
+      meta: { ...meta, downloadHttp: dl.status, errorCode: 'network_download' },
+    };
+  }
   meta.downloadHttp = dl.status;
   meta.bytes = buf.byteLength;
   if (!dl.ok) {

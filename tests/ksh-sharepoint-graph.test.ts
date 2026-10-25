@@ -140,6 +140,99 @@ describe('A6 SharePoint Graph helpers (_shared/ksh/graph)', () => {
     if (!r.ok) expect(r.reason).toBe('network_item');
   });
 
+  it('download: network_download (fetch)', async () => {
+    let n = 0;
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      n += 1;
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem')) {
+        return new Response(JSON.stringify({
+          size: 4,
+          name: 'a.xlsx',
+          '@microsoft.graph.downloadUrl': 'https://example.com/dl?tempauth=SECRET',
+        }), { status: 200 });
+      }
+      throw new TypeError('timeout');
+    }) as unknown as typeof fetch;
+    const r = await downloadSharePointFile(env(), fetchFn);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe('network_download');
+      expect(JSON.stringify(r)).not.toMatch(/tempauth|SECRET/);
+    }
+    expect(n).toBe(3);
+  });
+
+  it('download: network_download (arrayBuffer)', async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem')) {
+        return new Response(JSON.stringify({
+          size: 4,
+          name: 'a.xlsx',
+          '@microsoft.graph.downloadUrl': 'https://example.com/dl',
+        }), { status: 200 });
+      }
+      return {
+        ok: true,
+        status: 200,
+        arrayBuffer: async () => {
+          throw new TypeError('body reset');
+        },
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+    const r = await downloadSharePointFile(env(), fetchFn);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('network_download');
+  });
+
+  it('download: download_http_403', async () => {
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem')) {
+        return new Response(JSON.stringify({
+          size: 4,
+          name: 'a.xlsx',
+          '@microsoft.graph.downloadUrl': 'https://example.com/dl',
+        }), { status: 200 });
+      }
+      return new Response('nope', { status: 403 });
+    }) as unknown as typeof fetch;
+    const r = await downloadSharePointFile(env(), fetchFn);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('download_http_403');
+  });
+
+  it('download: file_too_large po pobraniu (byteLength)', async () => {
+    const big = new Uint8Array(GRAPH_MAX_BYTES + 1);
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem')) {
+        return new Response(JSON.stringify({
+          size: 10, // meta.size OK — za duży dopiero body
+          name: 'a.xlsx',
+          '@microsoft.graph.downloadUrl': 'https://example.com/dl',
+        }), { status: 200 });
+      }
+      return new Response(big, { status: 200 });
+    }) as unknown as typeof fetch;
+    const r = await downloadSharePointFile(env(), fetchFn);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('file_too_large');
+  });
+
   it('download: OK — bajty bez URL w wyniku', async () => {
     const body = new Uint8Array([1, 2, 3, 4]);
     const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
