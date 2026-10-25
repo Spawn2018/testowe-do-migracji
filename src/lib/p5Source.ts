@@ -38,8 +38,8 @@ export function financeOf(loads: Load[], side: FinSide, live: FinNbp | null = nu
   return financeSummary(loads, side, live ?? latestNbp(loads));
 }
 
-export function belowOf(loads: Load[], thresholdPct: number | null): FinBelowRow[] {
-  return belowThreshold(loads, thresholdPct);
+export function belowOf(loads: Load[], thresholdPct: number | null, live: FinNbp | null = null): FinBelowRow[] {
+  return belowThreshold(loads, thresholdPct, live ?? latestNbp(loads));
 }
 
 /** E39 — tabela tygodni. Produkcja: średnie i liczby publikacji z `fuel_basis` (#409 / 0268, widok ceny strony),

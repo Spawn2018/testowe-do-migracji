@@ -22,6 +22,9 @@ describe('Kurs NBP — aktualny', () => {
     const v = read('src/views/FinanceView.tsx');
     expect(v).toMatch(/const nbpLive = useLatestNbp\(\);/);
     expect(v).toMatch(/financeOf\(loads, side, nbpLive\)/);
+    /* F7 #564: lista „poniżej progu” liczy PLN tym samym kursem co karta i sumy */
+    expect(v).toMatch(/belowOf\(loads, threshold, nbpLive\)/);
+    expect(read('src/lib/p5Source.ts')).toMatch(/return belowThreshold\(loads, thresholdPct, live \?\? latestNbp\(loads\)\);/);
     expect(read('src/lib/nbpLive.ts')).toMatch(/from\('fx_rates'\)[\s\S]*eq\('currency', 'EUR'\)[\s\S]*order\('rate_date', \{ ascending: false \}\)/);
   });
 });

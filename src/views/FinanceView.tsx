@@ -76,7 +76,7 @@ export function FinanceView() {
   const nbpLive = useLatestNbp();
   const fin = useMemo(() => financeOf(loads, side, nbpLive), [loads, side, nbpLive]);
   const threshold = side === 'both' ? marginThresholdOf() : null;
-  const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
+  const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold, nbpLive) : []), [loads, side, threshold, nbpLive]);
   const publV = useFuelPublications();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- publV: publikacje z bazy wczytane później
   const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today, publV]);
