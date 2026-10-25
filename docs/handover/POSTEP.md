@@ -5035,3 +5035,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#549/B7** `6b0b19b3` (F7 „gotowe do scalenia” po `bd8faba`, CI unit/visual zielone). Bez push na main — `deploy-main` (CSP `frame-src` + `lint:css` w unit.yml).
 - Bieżąca: **B8** (`pakiet/b8-stare-nieprzeczytane`) — migracja **0301**: `b8_mark_stale_in_app_read()` (IN_APP nieprzeczytane >7 dni → `read_at` + `AUDYT17_MARK_READ` / `b8-0301`); revoke authenticated; security **449** (+6). Liczby przed/po na produkcji → POSTEP po wdrożeniu.
 
+## 2026-10-25 11:40 — #550 pilne w planie; B8 #551 fix security (bramka #402)
+
+- Skrzynka: **#550** (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §4 / §8 / dopisek `D-20261025-1022-01.md`. Po końcu kroku B8 (#551 CI/F7) → start #550. #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane).
+- Scalanie: brak F7 „gotowe” na otwartych PR (#551 bez komentarza; #383 „Nie scalać jeszcze”). Bez push na main.
+- Bieżąca: **B8** PR #551 — `db` FAIL security 446/3 (IN_APP fixtures kasowane przez `trg_notifications_a_gate`); fix: `session_replication_role=replica` przy wstawkach testowych. Po zielonym CI czekam F7; potem **#550**.
+

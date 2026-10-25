@@ -1454,20 +1454,28 @@ val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
 
 echo; echo "[B8] Stare nieprzeczytane IN_APP >7 dni (7A / 0301)"
 # authenticated bez EXECUTE; sprzątanie tylko sys (migracja / b8_mark_stale_in_app_read).
+# Fixtures: session_replication_role=replica — bramka #402 (trg_notifications_a_gate) kasuje
+# IN_APP bez dozwolonego bell (RISK_OPEN + {} → return null); created_at musi zostać z INSERT.
 val "B8: authenticated bez EXECUTE b8_mark_stale_in_app_read" $HHL \
   "select has_function_privilege('authenticated', 'public.b8_mark_stale_in_app_read()', 'EXECUTE')::text" false
-B8_OLD=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+B8_OLD=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('IN_APP', 'b8-old@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
           'b8:old:' || gen_random_uuid()::text, now() - interval '8 days')
-  returning id" | tail -1)
-B8_NEW=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
+B8_NEW=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('IN_APP', 'b8-new@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
           'b8:new:' || gen_random_uuid()::text, now() - interval '6 days')
-  returning id" | tail -1)
-B8_EM=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
+B8_EM=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('EMAIL', 'b8-em@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
           'b8:em:' || gen_random_uuid()::text, now() - interval '8 days')
-  returning id" | tail -1)
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
 B8_RES=$(sys "select b8_mark_stale_in_app_read()::text" | tail -1)
 echo "$B8_RES" | grep -q '"count":' && { ok=$((ok+1)); echo "  OK    B8: b8_mark_stale_in_app_read zwraca jsonb"; } \
   || { fail=$((fail+1)); echo "  FAIL  B8 wynik: $B8_RES"; }
