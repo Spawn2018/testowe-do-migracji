@@ -1318,14 +1318,22 @@ pos $L557c 54.4030 18.6800 "2026-10-10 09:00+00"
 chk "#557 PR2: stary punkt PL → status FERRY" "$(st $L557c)" FERRY
 chk "#557 PR2: stary punkt ma stale_point" \
   "select (raw->>'stale_point') from positions where load_id='$L557c' order by ts desc limit 1" true
-# postój Gdańsk przed odejściem — nie stale
+# postój Gdańsk przed odejściem — nie stale (osobny rejs: odejście tuż po punktach)
+S557e=77777777-0000-0000-0000-000000005577
 L557f=55555555-0000-0000-0000-00000000557f
-mk $L557f F557 "'HHL/F557'" "'SCX/F557'" AT_PORT_GDANSK "'$S557b'"
-q "
-insert into load_events (load_id, event_type, occurred_at) values ('$L557f','MILESTONE_LOADED','2026-10-09 08:00+00');
-insert into positions (load_id, ts, geom_raw, source) values
- ('$L557f', '2026-10-10 10:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
-" >/dev/null
+chk "#557 PR2: fikstura S557e (Gdańsk przed odejściem)" \
+  "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+   ('$S557e', '$P', '$V557b', 'GDN-NYN',
+    '2026-10-10 11:00+00', '2026-10-11 05:00+00',
+    '2026-10-10 11:00+00', '2026-10-11 05:00+00', 'DOPLYNAL', 'POLFERRIES')
+   returning (id is not null)" t
+mk $L557f F557 "'HHL/F557'" "'SCX/F557'" AT_PORT_GDANSK "'$S557e'"
+chk "#557 PR2: fikstura L557f MILESTONE + prev" \
+  "insert into load_events (load_id, event_type, occurred_at) values ('$L557f','MILESTONE_LOADED','2026-10-09 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L557f', '2026-10-10 10:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+   select count(*) from positions where load_id='$L557f'" 1
 pos $L557f 54.4030 18.6800 "2026-10-10 10:30+00"
 chk "#557 PR2: postój Gdańsk przed odejściem bez stale" \
   "select coalesce(raw->>'stale_point','false') from positions where load_id='$L557f' order by ts desc limit 1" false
@@ -1355,6 +1363,16 @@ q "insert into app_users (auth_id, org_id, email, role, active) values
 chk "#557 PR2: suggest proponuje S557a" \
   "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select (sailing_mismatch_suggest('$L557b')->>'proposed_sailing_id') = '$S557a'; commit" t
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+ select sailing_mismatch_suggest('$L557b'); rollback;" 2>&1)
+echo "$out" | grep -qiE '42501|Brak|odmow|HHL|uprawn' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: suggest KSH odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: suggest KSH odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
+ select sailing_mismatch_suggest('$L557b'); rollback;" 2>&1)
+echo "$out" | grep -qiE '42501|Brak|odmow|HHL|uprawn' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: suggest SCX odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: suggest SCX odmowa: $out"; }
 out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$OPS557';
  select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
 echo "$out" | grep -qiE 'Administrator HHL|42501' \
@@ -1376,16 +1394,22 @@ out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$
 echo "$out" | grep -qiE 'Podgląd|42501' \
   && { ok=$((ok+1)); echo "  OK    #557 PR2: assign Podgląd odmowa"; } \
   || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign Podgląd odmowa: $out"; }
-# Assign OK: IN_TRANSIT_PL + przyszły rejs → pin S557a → FERRY/SE
-# SE poza PORT_IN (Ösmo) — ENTER nie maskuje mismatch przed wykryciem.
+# Assign OK: IN_TRANSIT_PL + przyszły rejs → pin S557a → FERRY → Port SE
+# PORT_IN OFF + pozycja w porcie (jak L557b) — fikstury głośne (F7 r3).
 L557h=55555555-0000-0000-0000-000000005571
-mk $L557h H557 "'HHL/H557'" "'SCX/H557'" IN_TRANSIT_PL "'$S557b'"
-q "
-insert into load_events (load_id, event_type, occurred_at) values ('$L557h','MILESTONE_LOADED','2026-10-09 08:00+00');
-insert into positions (load_id, ts, geom_raw, source) values
- ('$L557h', '2026-10-10 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
-" >/dev/null
-pos $L557h 59.00 17.90 "2026-10-11 09:00+00"
+q "update geofences set active = false
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
+chk "#557 PR2: fikstura L557h load" \
+  "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,telematics_vehicle_id)
+   values ('$L557h','$P','$SCXO','KSH/H557','HHL/H557','SCX/H557','IN_TRANSIT_PL','$S557b','2026-09-30','TEL-H557')
+   returning (id is not null)" t
+chk "#557 PR2: fikstura L557h MILESTONE + prev PL" \
+  "insert into load_events (load_id, event_type, occurred_at) values ('$L557h','MILESTONE_LOADED','2026-10-09 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L557h', '2026-10-10 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+   select count(*) from load_events where load_id='$L557h' and event_type='MILESTONE_LOADED'" 1
+pos $L557h 58.9350 17.9500 "2026-10-11 09:00+00"
 chk "#557 PR2: mismatch przed assign" "$(rk $L557h SAILING_MISMATCH)" 1
 q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select sailing_mismatch_assign('$L557h','$S557a'); commit" >/dev/null
@@ -1398,8 +1422,12 @@ chk "#557 PR2: assign → audit" \
 chk "#557 PR2: assign → ryzyko zamknięte z resolved_by" \
   "select (resolved_at is not null and resolved_by is not null) from risk_signals
     where load_id='$L557h' and dedup_key like 'SAILING_MISMATCH:%' order by detected_at desc limit 1" t
-chk "#557 PR2: assign IN_TRANSIT_PL → status ≥ FERRY/SE" \
-  "select (load_status_rank(status) >= load_status_rank('FERRY'::load_status)) from loads where id='$L557h'" t
+chk "#557 PR2: assign → source AIS (actual_dep)" \
+  "select payload->>'source' from load_events
+    where load_id='$L557h' and event_type='STATUS_AUTO' and payload->>'to'='FERRY'
+    order by occurred_at desc limit 1" AIS
+chk "#557 PR2: assign IN_TRANSIT_PL → FERRY → Port SE" \
+  "$(st $L557h)" AT_PORT_NYNASHAMN
 # Pozycja SE po dopłynięciu (S557c) — ts po starym PL (09:00), po arrival (06:00)
 pos $L557c 58.9350 17.9500 "2026-10-10 10:00+00"
 chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \

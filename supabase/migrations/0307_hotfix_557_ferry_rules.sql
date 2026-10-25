@@ -42,7 +42,7 @@ begin
     left join public.sailings s on s.id = l.sailing_id
    where l.id = p_load_id;
 
-  if v_status not in ('FERRY', 'AT_PORT_NYNASHAMN') then
+  if v_status is null or v_status not in ('FERRY', 'AT_PORT_NYNASHAMN') then
     return false;
   end if;
   if v_status = 'FERRY'
@@ -592,6 +592,9 @@ declare
   v_route text;
   v_sail_status text;
   v_dep_eff timestamptz;
+  v_actual_dep timestamptz;
+  v_plan_dep timestamptz;
+  v_ferry_src text;
   v_lat double precision;
   v_lon double precision;
   v_pts timestamptz;
@@ -615,8 +618,10 @@ begin
   end if;
 
   select s.route, s.status::text,
+         s.actual_departure_at,
+         coalesce(s.delayed_departure_at, s.departure_at),
          coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at)
-    into v_route, v_sail_status, v_dep_eff
+    into v_route, v_sail_status, v_actual_dep, v_plan_dep, v_dep_eff
     from public.sailings s
    where s.id = p_sailing_id
      and s.project_id = (select project_id from public.loads where id = p_load_id);
@@ -660,25 +665,39 @@ begin
     jsonb_build_object('sailing_id', p_sailing_id)
   );
 
-  -- F7 r3: IN_TRANSIT_PL/AT_PORT_GDANSK + odejście ≤ now → FERRY quiet (a10 nie zawsze wystarczy).
+  -- F7 r3: IN_TRANSIT_PL/AT_PORT_GDANSK + odejście ≤ now → FERRY quiet.
+  -- actual_departure → AIS; tylko plan/opóźnienie → SCHEDULE (0276 cofa oba).
   select status into v_status from public.loads where id = p_load_id;
   if v_status in ('IN_TRANSIT_PL', 'AT_PORT_GDANSK')
      and v_dep_eff is not null
      and v_dep_eff <= now() then
-    begin
-      v_prev := current_setting('tower.bulk_quiet', true);
-      perform set_config('tower.bulk_quiet', 'on', true);
-      perform public.auto_set_status(
-        p_load_id, v_status, 'FERRY',
-        'przypięcie rejsu — AIS/SCHEDULE',
-        v_dep_eff,
-        jsonb_build_object('source', 'AIS', 'sailing_id', p_sailing_id, 'powod', 'SAILING_MISMATCH_ASSIGN')
-      );
-      perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-    exception when others then
-      perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
-      raise warning '#557 assign auto FERRY: %', sqlerrm;
-    end;
+    if v_actual_dep is not null and v_actual_dep <= now() then
+      v_ferry_src := 'AIS';
+    elsif v_plan_dep is not null and v_plan_dep <= now() then
+      v_ferry_src := 'SCHEDULE';
+    else
+      v_ferry_src := null;
+    end if;
+    if v_ferry_src is not null then
+      begin
+        v_prev := current_setting('tower.bulk_quiet', true);
+        perform set_config('tower.bulk_quiet', 'on', true);
+        perform public.auto_set_status(
+          p_load_id, v_status, 'FERRY',
+          'przypięcie rejsu — ' || v_ferry_src,
+          v_dep_eff,
+          jsonb_build_object(
+            'source', v_ferry_src,
+            'sailing_id', p_sailing_id,
+            'powod', 'SAILING_MISMATCH_ASSIGN'
+          )
+        );
+        perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+      exception when others then
+        perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+        raise warning '#557 assign auto FERRY: %', sqlerrm;
+      end;
+    end if;
   else
     begin
       perform public.a10_try_ferry_backup(p_load_id, now());
