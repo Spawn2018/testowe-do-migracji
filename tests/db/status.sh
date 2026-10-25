@@ -1276,10 +1276,10 @@ pos $L557a 58.9350 17.9500 "2026-10-11 07:00+00"
 chk "#557 PR2: w porcie SE, strefa OFF → AT_PORT_NYNASHAMN" "$(st $L557a)" AT_PORT_NYNASHAMN
 chk "#557 PR2: source AIS_ARRIVAL_BACKUP (Port SE)" \
   "select payload->>'source' from load_events where load_id='$L557a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" AIS_ARRIVAL_BACKUP
-# ≥2 km od portu, strefa OFF → Droga SE
+# ≥2 km od krawędzi PORT_IN (Ösmo jak #496; 58.96 od środka − 800 m ≈ 1,98 km < 2 km)
 mk $L557d D557 "'HHL/D557'" "'SCX/D557'" FERRY "'$S557a'"
 q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
-pos $L557d 58.9600 17.9500 "2026-10-11 07:30+00"
+pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
 chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
 # strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
 q "update geofences set active = true
@@ -1304,12 +1304,12 @@ chk "#557 PR2: propose = rejs z actual_dep w oknie" \
 pos $L557b 58.9360 17.9510 "2026-10-11 08:05+00"
 chk "#557 PR2: druga pozycja SE — jedno ryzyko mismatch" "$(rk $L557b SAILING_MISMATCH)" 1
 
-# stary punkt PL nie cofa FERRY (S557c: inny dzień niż S557a)
+# stary punkt PL nie cofa FERRY (prev ts ≤ odejście; S557c: inny dzień niż S557a)
 mk $L557c C557 "'HHL/C557'" "'SCX/C557'" FERRY "'$S557c'"
 q "
 insert into load_events (load_id, event_type, occurred_at) values ('$L557c','MILESTONE_LOADED','2026-10-08 08:00+00');
 insert into positions (load_id, ts, geom_raw, source) values
- ('$L557c', '2026-10-09 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+ ('$L557c', '2026-10-09 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
 " >/dev/null
 pos $L557c 54.4030 18.6800 "2026-10-10 09:00+00"
 chk "#557 PR2: stary punkt PL → status FERRY" "$(st $L557c)" FERRY
@@ -1333,8 +1333,8 @@ chk "#557 PR2: +2h bez SE → FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
 q "select public.detect_ferry_overdue('2026-10-10 09:15+00')" >/dev/null
 chk "#557 PR2: drugi cron — jedno FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
 
-# Stena GDY-KAA: backup Port SE (strefa STENA OFF)
-L557g=55555555-0000-0000-0000-00000000557g
+# Stena GDY-KAA: backup Port SE (strefa STENA OFF); UUID hex (bez „g”)
+L557g=55555555-0000-0000-0000-000000005570
 mk $L557g G557 "'HHL/G557'" "'SCX/G557'" FERRY "'$S557d'"
 q "insert into load_events (load_id, event_type, occurred_at) values ('$L557g','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
 pos $L557g 56.1600 15.5900 "2026-10-11 05:00+00"

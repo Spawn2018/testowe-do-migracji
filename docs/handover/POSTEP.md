@@ -5192,3 +5192,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne`. Brak F7 „gotowe” do scalenia. Bez push na main.
 - CI docs `8b4b8a3f`: unit/visual ✔; db security 458/1 (ten sam B5) — oczekiwane przed kodem.
 - Bieżąca: **#557 PR2** — F7 r2 w `0307`: assign HHL_ADMIN+2FA (assert pierwsze); backup Port SE/Droga SE; `detect_ferry_overdue` + drop `ferry_check_arrival_overdue`; stale/mismatch/propose; trigger resolve; status **271**; risks **6** kluczy. Push → CI → prośba F7.
+
+## 2026-10-25 21:25 — #557 PR2: fix fikstur status (db 268/3)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” na #562 po `e34f88bd`. #560 WSTRZYMANY/CONFLICTING; #383 CONFLICTING. Bez push na main.
+- CI #562 `e34f88bd`: unit ✔ visual ✔; **db FAIL** status 268/3 — (1) 58.96 od krawędzi PORT_IN &lt; 2 km → FERRY zamiast IN_TRANSIT_SE; (2) prev pozycji po odejściu → brak `stale_point`; (3) UUID `…557g` niehex.
+- Fix fikstur: Ösmo 59.00/17.90; prev `ts ≤ departure`; L557g `…5570`. EXPECTED status **271** bez zmian. Push → CI → prośba F7.

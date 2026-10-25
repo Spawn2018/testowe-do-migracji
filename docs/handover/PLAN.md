@@ -1679,3 +1679,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 20:05 | #557 PR2 db FAIL: assert B5, POPRAWKA 24.09, unique rejsów S557c, risks +2 klucze | pętla |
 | 25.10.2026 20:40 | #557 PR2 F7 r2 (#562): docs §4 pkt 5 (B5–12); CI ba8a6377 unit/visual ✔ db security 458/1 (komentarz przed assert); kod w następnym | pętla |
 | 25.10.2026 21:10 | #557 PR2 F7 r2 kod 0307: admin assign, Port SE, merge overdue, stale/mismatch; status 271; risks 6 | pętla |
+| 25.10.2026 21:25 | #557 PR2 CI db FAIL status 268/3: Ösmo ≥2 km, stale prev≤dep, UUID L557g hex; fix fikstur status.sh | pętla |
