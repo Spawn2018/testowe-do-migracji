@@ -160,6 +160,7 @@ declare
                                'driver_delivery_name','driver_delivery_phone',
                                'tractor_plate','tractor_delivery_plate','trailer_plate'];
 begin
+  perform public.assert_not_preview();
   -- is_hhl() zwraca NULL dla konta nieaktywnego / bez wiersza app_users — NULL nie może przepuścić
   if is_hhl() is not true then raise exception 'Import harmonogramu wyłącznie HHL'; end if;
   if p_quiet is true and (current_app_role() = 'HHL_ADMIN') is not true then
@@ -311,6 +312,10 @@ begin
     v_historic := false;
     if r.item_id is null or r.load_id is null then
       v_added := v_added || jsonb_build_object('code', r.code);
+      -- F7: dry_run też liczy dates_check (bez otwierania sprawy)
+      if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
+        v_dates_check_n := v_dates_check_n + 1;
+      end if;
       if p_dry_run is false then
         if v_import is null then
           insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
@@ -350,7 +355,6 @@ begin
               'rule', 'A6_L31', 'code', r.code, 'by', 'IMPORT',
               'load_date', r.inc->>'load_date', 'delivery_date', r.inc->>'delivery_date'),
             v_load, null);
-          v_dates_check_n := v_dates_check_n + 1;
         end if;
         if r.item_id is null then
           insert into shipment_items (project_id, load_id, shipment_code, item_type, cargo_class, length_m, width_m, height_m,
@@ -478,6 +482,11 @@ begin
                    'quiet_hours', v_quiet_fill,
                    'quiet_hist', v_historic);
     if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
+
+    -- F7: dry_run też liczy dates_check (zmiana istniejącego)
+    if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
+      v_dates_check_n := v_dates_check_n + 1;
+    end if;
 
     if p_dry_run is false then
       if v_import is null then
@@ -614,7 +623,6 @@ begin
             'rule', 'A6_L31', 'code', r.code, 'by', 'IMPORT',
             'load_date', r.inc->>'load_date', 'delivery_date', r.inc->>'delivery_date'),
           r.load_id, null);
-        v_dates_check_n := v_dates_check_n + 1;
       end if;
       insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
       values (r.load_id, 'SCHEDULE_IMPORTED', now(), v_user,
@@ -707,6 +715,8 @@ begin
         'confirmed_kept', (select count(*) from jsonb_array_elements(v_confirmed) x where not (x->>'overwrite')::boolean),
         'rows', jsonb_array_length(p_rows), 'rejected', coalesce((p_file->>'rejected')::int, 0),
         'skipped_standard', v_skipped + coalesce((p_file->>'skipped_standard')::int, 0),
+        'skipped_carrier', coalesce((p_file->>'skipped_carrier')::int, 0),
+        'skipped_empty', coalesce((p_file->>'skipped_empty')::int, 0),
         'dates_check', v_dates_check_n,
         'quiet', v_run_quiet)
      where id = v_import;
@@ -747,6 +757,8 @@ begin
     'cancel_candidates', v_cands, 'blocked', v_blocked, 'cancelled', v_cancelled, 'critical', v_critical, 'confirmed', v_confirmed,
     'carrier', v_carrier_n,
     'skipped_standard', v_skipped + coalesce((p_file->>'skipped_standard')::int, 0),
+    'skipped_carrier', coalesce((p_file->>'skipped_carrier')::int, 0),
+    'skipped_empty', coalesce((p_file->>'skipped_empty')::int, 0),
     'dates_check', v_dates_check_n,
     'ms', round(extract(epoch from clock_timestamp() - t0) * 1000));
 end $function$;
@@ -755,4 +767,5 @@ REVOKE ALL ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolea
 GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) TO authenticated;
 
 COMMENT ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) IS
-  'I-1 import KSH. #426+#384: p_quiet HHL_ADMIN;
+  'I-1 import KSH. A6/0303: L31 bez raise -> KSH_DATES_CHECK; zasoby/numery; renumber; #426+#384 p_quiet HHL_ADMIN; B5 assert_not_preview; skipped_carrier/empty w stats.';
+

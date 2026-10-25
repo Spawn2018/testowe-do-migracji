@@ -294,10 +294,24 @@ export function parseSchedule(
       return;
     }
 
-    /* E38: filtr Przewoźnik = HH (gdy kolumna jest w mapie). */
-    if (hasCarrierCol && !isHhCarrier(r[map.carrier])) {
-      skippedCarrier += 1;
-      return;
+    /* E38: filtr Przewoźnik = HH (gdy kolumna jest w mapie). Pusty = HH z WARN (F7 A6). */
+    if (hasCarrierCol) {
+      const carrierRaw = r[map.carrier];
+      if (emptyCell(carrierRaw)) {
+        issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
+          code: 'CARRIER_EMPTY',
+          message: 'Pusty „Przewoźnik” — traktowany jako HH (wiersz wchodzi)' });
+      } else if (!isHhCarrier(carrierRaw)) {
+        skippedCarrier += 1;
+        /* E38 pkt 2: NTG (i inni) z wymiarami — WARN w podglądzie, nie cicho. */
+        if (!isStandardDims(r[map.dimensions])) {
+          issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
+            code: 'CARRIER_SKIP',
+            message: `Przewoźnik spoza HH (${cellText(carrierRaw) ?? '—'}) — wiersz pominięty; sprawdź plik KSH`,
+            values: { carrier: cellText(carrierRaw) } });
+        }
+        return;
+      }
     }
 
     // B-8-IMP / D-8: TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) to ładunek NTG.
@@ -405,9 +419,9 @@ export function parseSchedule(
       scxOrderNo: cellText(r[map.scxOrderNo]),
       hhlOrderNo: cellText(r[map.hhlOrderNo]),
       driverName: driver.pl,
-      driverPhone: normalizePhone(phonePl.pl ?? undefined),
+      driverPhone: normalizePhone(phonePl.pl ?? undefined, 'PL'),
       driverNameSe: driver.se,
-      driverPhoneSe: normalizePhone(phonePl.se ?? undefined),
+      driverPhoneSe: normalizePhone(phonePl.se ?? undefined, 'SE'),
       tractorPlate: tractor.pl,
       tractorPlateSe: tractor.se,
       trailerPlate: cellText(r[map.trailerPlate]),

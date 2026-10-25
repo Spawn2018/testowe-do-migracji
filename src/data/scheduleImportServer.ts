@@ -76,6 +76,8 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], 
     name: d.meta.filename, hash: d.hash, path: `harmonogramy/${path}`,
     column_map: d.map ?? COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
     skipped_standard: d.meta.skippedStandard,
+    skipped_carrier: d.meta.skippedCarrier ?? 0,
+    skipped_empty: d.meta.skippedEmpty ?? 0,
     ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
   }, false, quiet);
 }

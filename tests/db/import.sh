@@ -103,10 +103,16 @@ chk "load_events tylko dopisywane (UPDATE odrzucony)" "$($PSQL -c "update load_e
 echo; echo "[I-1] walidacja wejścia (cała transakcja wycofana)"
 err "duplikat kodu"          $HHL "$(IMP '[{"code":"X","length_m":1,"width_m":1,"height_m":1,"load_date":"2026-10-01"},{"code":"X","length_m":1,"width_m":1,"height_m":1}]' false)" "więcej niż raz"
 err "wymiary niedodatnie"    $HHL "$(IMP '[{"code":"X","length_m":0,"width_m":1,"height_m":1}]' false)" "dodatnie"
-# A6 L31 (etap A6): dostawa przed załadunkiem nie odrzuca — sprawa KSH_DATES_CHECK
-val "A6 L31: dostawa przed załadunkiem wchodzi" $HHL "select jsonb_array_length(r->'added') from ($(IMP '[{"code":"KR-03","length_m":1,"width_m":1,"height_m":1,"qty":1,"load_date":"2026-10-05","delivery_date":"2026-10-01","dates_to_check":true}]' false)) s(r)" 1 commit
+# A6 L31 (etap A6): dostawa przed / w dniu / >14 dni nie odrzuca — sprawa KSH_DATES_CHECK
+chk "A6 helper: dostawa przed" "$(Q "select public.a6_import_dates_odd('2026-10-05'::date,'2026-10-01'::date)")" t
+chk "A6 helper: w dniu" "$(Q "select public.a6_import_dates_odd('2026-10-05'::date,'2026-10-05'::date)")" t
+chk "A6 helper: >14 dni" "$(Q "select public.a6_import_dates_odd('2026-10-05'::date,'2026-10-25'::date)")" t
+chk "A6 helper: OK 5 dni" "$(Q "select public.a6_import_dates_odd('2026-10-05'::date,'2026-10-10'::date)")" f
+val "A6 L31: dostawa przed załadunkiem wchodzi" $HHL "select jsonb_array_length(r->'added') from ($(IMP '[{"code":"KR-03","length_m":1,"width_m":1,"height_m":1,"qty":1,"load_date":"2026-10-05","delivery_date":"2026-10-01"}]' false)) s(r)" 1 commit
 chk "A6 L31: KR-03 w bazie" "$(Q "select count(*) from shipment_items where shipment_code='KR-03'")" 1
 chk "A6 L31: sprawa KSH_DATES_CHECK" "$(Q "select count(*) from decisions where type_code='KSH_DATES_CHECK' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'code'='KR-03'")" 1
+val "A6 L31: w dniu załadunku — dry_run dates_check bez wyjątku" $HHL "select r->>'dates_check' from ($(IMP '[{"code":"KR-DAY","length_m":1,"width_m":1,"height_m":1,"qty":1,"load_date":"2026-10-05","delivery_date":"2026-10-05"}]' true)) s(r)" 1
+val "A6 L31: >14 dni — dry_run dates_check" $HHL "select r->>'dates_check' from ($(IMP '[{"code":"KR-FAR","length_m":1,"width_m":1,"height_m":1,"qty":1,"load_date":"2026-10-05","delivery_date":"2026-10-25"}]' true)) s(r)" 1
 err "wymiar nieliczbowy"     $HHL "$(IMP '[{"code":"X","length_m":"Standard","width_m":1,"height_m":1}]' false)" "nieprawidłowa"
 chk "po błędach: bez nowych transportów X" "$(Q "select count(*) from shipment_items where shipment_code='X'")" 0
 val "pusty plik: 0 kandydatów do anulowania" $HHL "select jsonb_array_length(r->'cancel_candidates') from ($(IMP '[]' true)) s(r)" 0
@@ -415,5 +421,11 @@ RREN="[{\"code\":\"SG-A6NEW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\
 val "A6: renumeracja kodu" $HHL "select import_schedule('$P', '$RREN'::jsonb, '{}'::text[], '{\"name\":\"a6r.xlsx\",\"hash\":\"a6r\"}'::jsonb, false); select shipment_code||'|'||coalesce(renumbered_from,'') from shipment_items where load_id='$L_REN'" "SG-A6NEW|SG-A6OLD" commit
 chk "A6: stary kod zniknął" "$(Q "select count(*) from shipment_items where project_id='$P' and shipment_code='SG-A6OLD'")" 0
 chk "A6: helper komentarza" "$(Q "select public.a6_renumber_from_comment('Wcześniej to był SG-11')")" "SG-11"
+# B5: Podgląd blokuje import (assert_not_preview jako pierwsza instrukcja)
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+err "A6 B5: Podgląd — import_schedule odmowa" $HHL "$(IMP '[]' true)" "Podgląd"
+run $HHL "select admin_preview_stop()" commit >/dev/null
+# skipped_carrier / skipped_empty w stats (p_file)
+val "A6: skipped_carrier/empty w stats" $HHL "select (r->>'skipped_carrier')||'/'||(r->>'skipped_empty') from (select import_schedule('$P', '[]'::jsonb, '{}'::text[], '{\"name\":\"sk.xlsx\",\"skipped_carrier\":3,\"skipped_empty\":2,\"skipped_standard\":0}'::jsonb, true) as r) s" "3/2"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

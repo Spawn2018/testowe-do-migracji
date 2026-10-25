@@ -3,7 +3,7 @@ import { LiveMark } from '../components/shell/LiveMark';
 import { delayPillMinutes } from '../lib/prodDash';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { invoicedLoadIds } from '../lib/importRemoval';
-import { MAP_FIELDS as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
+import { MAP_FIELDS_CREATOR as MAP_FIELDS_UI, REQUIRED_FIELDS as REQUIRED_FIELDS_UI, type PartialColumnMap } from '../lib/importMapping';
 import { useTowerStore } from '../store/useTowerStore';
 import { filterLoads } from '../lib/selectors';
 import { canImportSchedule, filterLoadsForRole } from '../lib/permissions';
