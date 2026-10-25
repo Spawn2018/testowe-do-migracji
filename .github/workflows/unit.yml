@@ -18,4 +18,6 @@ jobs:
       # Kontrola typów jak w `npm run build` (deploy-main): błąd TS wychodzi w PR, nie dopiero przy wdrożeniu (F7 #348 B1)
       - name: npx tsc -b
         run: npx tsc -b
+      # B7 / PLAN §4 (po C4–C13 / B-pozycje): stylelint w CI (D-20261017-0730-01)
+      - run: npm run lint:css
       - run: npm run test:unit
