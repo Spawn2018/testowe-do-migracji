@@ -4875,3 +4875,33 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#540** (Spawn2018, `dla-cursora`) — Deadlock `a10_try_prep_status` FOR UPDATE vs INSERT zdarzeń/pozycji; wpisane PLAN §4 Zgubione pkt 9, dopisek `D-20261025-0207-01.md`. Nie przerywa #528. #537/#538/#530/#528/#525/#519/#516/#496 w planie. #413 `pilne` (wygląd SCALONE wcześniej) — nie przerywa.
 - Scalanie: brak F7 `gotowe` po head `7a7af567`; F7 r4 „jedna poprawka”. #532–#536 czekają 0292→0298. Bez push na main.
 - Bieżąca: **#528** PR #531 F7 r4: (1) `forbid_mutation` — `old.load_id is not null` + `=` na GUC/`detached_load_id`; (2) test owner bez flagi → append-only; (3) geofence `exists(...)`. security **400**. Push → CI; ponowne F7.
+
+## 2026-10-25 02:35 — #539+#528 SCALONE; F7 #532 (#530)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #528 zamknięte. Bez `pilne` przerywających.
+- Scalanie: **#539** `b548ed31` (F7 gotowe, bez migracji); **#531/#528** `bf93f0be` (0292, F7 r5 gotowe, CI unit/db/visual). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — F7: `tower.bump_ctx` (strażnik tylko `updated_at`); sailings bez bumpa `CANCELLED`; test SCX notice na wspólnym rejsie + CAR2. security **406**. Rebase na main po #531. Push → CI; ponowne F7.
+
+## 2026-10-25 02:55 — #530 testy security (db 403/3 FAIL)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po head `f98d8568`. #532 MERGEABLE; #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — db FAIL security 403/3: (1) L2→IN_TRANSIT_PL bez `carrier_order_no` (enforce) → brak `sailing_id` → bump 0; (2) asercja `driver_name` przez authenticated (0076); (3) cudzy ładunek = RLS 0 wierszy, nie wyjątek. Poprawka testów; security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:15 — #541 SCALONE; #537 uzup. 2; #532 val commit
+
+- Skrzynka: **#537 uzup. 2** → PLAN §4 Zgubione pkt 10–15, W43 zamknięte, A8 bez „czeka W37”, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: **#541** `81c580cc` (F7 gotowe, wygląd U-129/U-128/U-105, bez migracji). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — db FAIL 405/1: `val` notice bez `commit` wycofywał bump. Poprawka: `commit` + dwa kroki carrier/order_no (F7). security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:45 — #537 uzup. 3; #532 CI zielone, czekam F7
+
+- Skrzynka: **#537 uzup. 3** (Spawn2018) → PLAN §4 Zgubione pkt 16–18 + P11 pkt 3, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe do scalenia` po head `4f56ad2a`. #532 MERGEABLE; unit/db/visual zielone (security **406**). #533–#536 CONFLICTING; #382/#383 bez F7. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone na `4f56ad2a`; docs tylko (nie unieważnia bramy). Czekam F7: gotowe do scalenia.
+
+## 2026-10-25 04:10 — #538 15B+W5; #532 CI zielone, czekam F7
+
+- Skrzynka: **#538** komentarz właściciela 02:30 → PLAN §1 pkt 14.4 (15B: jedna pętla do prognozy 26.10 12:00), §5 W5 zamknięte (R-1 ręczne, `schedule_imports` v4), §4/#538 pkt 6, dopisek `D-20261025-0230-01.md`. #540/#537/#530/#525/#519/#516/#496/#413 w planie. #413 `pilne` (wygląd — baza SCALONE) — nie przerywa.
+- Scalanie: F7 `gotowe` było na `4f56ad2a` **przed** docs `ce875347` → wg D-1050 czekam ponowne „gotowe” po head. #532 MERGEABLE; unit/db/visual zielone na `ce875347` (security **406**). #533–#536 CONFLICTING. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone; docs (W5/15B). Czekam F7: gotowe do scalenia.

@@ -1217,6 +1217,75 @@ val "#528: INSERT nie jest swap — bez _carrier_changed" $SCX \
 # szybki filtr documents: KSH nadal nie widzi doc tylko HHL+SCX (regresja)
 val "#528: KSH nadal bez doc HHL+SCX (filtr)" $KSH \
   "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC',null,20,0)" 0
+echo; echo "[#530] loadsVersion — bump z load_escorts / sailings"
+# piloci: INSERT podbija loads.updated_at (nawet gdy escort_vehicles bez zmiany)
+sys "delete from load_escorts where load_id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', escort_vehicles=0 where id='$L2'" >/dev/null
+sys "insert into load_escorts (load_id, seq, company, plate, scope)
+     values ('$L2', 1, 'Pilot 530', 'ABC530', 'PL_SE')" >/dev/null
+val "#530: INSERT load_escorts podbija loads.updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# rejs: opóźnienie podbija transporty z sailing_id
+SAIL530=a5300000-0000-4000-8000-000000000530
+VES530=a5300000-0000-4000-8000-000000000531
+L530B=a5300000-0000-4000-8000-000000000532
+sys "insert into vessels (id, name, operator) values ('$VES530', 'V530', 'T')
+     on conflict (id) do nothing" >/dev/null
+sys "delete from operator_notices where sailing_id='$SAIL530'" >/dev/null
+sys "delete from loads where id='$L530B'" >/dev/null
+sys "delete from sailings where id='$SAIL530'" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+     select '$SAIL530', project_id, '$VES530', 'GDN-NYN',
+            timestamptz '2030-06-01 18:00+00', timestamptz '2030-06-02 10:00+00',
+            'ZAPLANOWANY', 'RECZNIE'
+       from loads where id='$L2'" >/dev/null
+# enforce_order_numbers (#528): zmiana przewoźnika czyści order_no — dwa kroki (F7)
+sys "update loads set carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set sailing_id='$SAIL530', carrier_order_no='SCX-530',
+     hhl_order_no=coalesce(nullif(btrim(hhl_order_no),''),'HHL/530'), status='IN_TRANSIT_PL'
+     where id='$L2'" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+     status, sailing_id, driver_name)
+     select '$L530B', project_id, '$ORG_B', 'KSH/530B', 'HHL/530B', 'B/530',
+            'IN_TRANSIT_PL', '$SAIL530', 'Keep CAR2'
+       from loads where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id in ('$L2','$L530B')" >/dev/null
+sys "update sailings set delayed_departure_at = departure_at + interval '2 hours',
+        status = 'OPOZNIONY' where id='$SAIL530'" >/dev/null
+val "#530: opóźnienie rejsu podbija loads.updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# F7: SCX notice na rejsie z ładunkiem CAR2 (ORG_B) — bump_ctx, nie błąd strażnika
+sys "update sailings set status='ZAPLANOWANY', delayed_departure_at=null, delayed_arrival_at=null
+     where id='$SAIL530'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name='Keep CAR2'
+     where id='$L530B'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+# val bez „commit” wycofuje notice — asercja po bumpie wtedy pada
+val "#530: SCX notice na wspólnym rejsie (CAR2 też)" $SCX \
+  "select (operator_notice_apply('$SAIL530','OPOZNIONY',
+            timestamptz '2030-06-01 20:00+00','test530') is not null)::text" true commit
+# driver_name: authenticated bez SELECT (0076) — asercja przez sys
+out=$(sys "select (updated_at > timestamptz '2020-01-01 12:00:00+00' and driver_name='Keep CAR2')::text
+     from loads where id='$L530B'" | tr -d '\r')
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #530: po notice CAR2 tylko updated_at (driver bez zmian)"; } || { fail=$((fail+1)); echo "  FAIL  #530: po notice CAR2 tylko updated_at (driver bez zmian)  (otrzymano: $out, oczekiwano: true)"; }
+# cudzy ładunek: RLS → 0 wierszy (bez wyjątku strażnika)
+val "#530: SCX nadal nie zmienia ładunku CAR2 (RLS: 0 wierszy)" $SCX \
+  "with u as (update loads set driver_name='HACK' where id='$L530B' returning 1) select count(*) from u" 0
+# F7 LOW: CANCELLED bez bumpa z rejsu (zegar RODO)
+sys "begin; select set_config('tower.cancel_ctx','MANUAL',true);
+     update loads set status='CANCELLED' where id='$L530B'; commit;" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', sailing_id='$SAIL530'
+     where id='$L530B'" >/dev/null
+sys "update sailings set delayed_departure_at = departure_at + interval '5 hours',
+        status = 'OPOZNIONY' where id='$SAIL530'" >/dev/null
+val "#530: CANCELLED bez bumpa z rejsu" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L530B'" true
+sys "delete from operator_notices where sailing_id='$SAIL530'" >/dev/null
+sys "update loads set sailing_id=null where id in ('$L2','$L530B')" >/dev/null
+sys "delete from loads where id='$L530B'" >/dev/null
+sys "delete from sailings where id='$SAIL530'" >/dev/null
+sys "delete from vessels where id='$VES530'" >/dev/null
+sys "delete from load_escorts where load_id='$L2'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
