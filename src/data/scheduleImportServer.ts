@@ -52,6 +52,9 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
     skippedStandard: parsed.stats.skippedStandard,
+    skippedCarrier: parsed.stats.skippedCarrier,
+    skippedEmpty: parsed.stats.skippedEmpty,
+    datesToCheck: parsed.stats.datesToCheck,
     issues: parsed.issues.filter((i) => i.severity === 'ERROR').slice(0, 12)
       .map((i) => ({ code: i.code, message: i.message, shipmentCode: i.shipmentCode })),
   };
@@ -73,6 +76,8 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], 
     name: d.meta.filename, hash: d.hash, path: `harmonogramy/${path}`,
     column_map: d.map ?? COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
     skipped_standard: d.meta.skippedStandard,
+    skipped_carrier: d.meta.skippedCarrier ?? 0,
+    skipped_empty: d.meta.skippedEmpty ?? 0,
     ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
   }, false, quiet);
 }

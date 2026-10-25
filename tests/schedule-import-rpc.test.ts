@@ -23,17 +23,20 @@ describe('I-1 import harmonogramu — tryb produkcyjny', () => {
     expect(p.rows.map((r) => r.shipmentCode)).toEqual(['QA-01', 'QA-02', 'QA-03', 'QA-04', 'QA-05']);
     expect(p.issues.filter((i) => i.code === 'BAD_DIMENSIONS')).toEqual([]);
     expect(p.issues.filter((i) => STD.includes(i.shipmentCode ?? ''))).toEqual([]);
-    expect(p.issues.filter((i) => i.code === 'NO_SHIPMENT_CODE').length).toBeGreaterThanOrEqual(5);
+    /* A6: puste wiersze (tylko Lp.) → skippedEmpty, nie ERROR NO_SHIPMENT_CODE (E38). */
+    expect(p.stats.skippedEmpty + p.issues.filter((i) => i.code === 'NO_SHIPMENT_CODE').length).toBeGreaterThanOrEqual(5);
   });
-  it('wiersze RPC: klucz = Wysyłka, liczby i daty ISO, bez danych kierowcy', async () => {
+  it('wiersze RPC: klucz = Wysyłka, liczby i daty ISO; A6 wysyła zasoby/numery', async () => {
     const rows = toRpcRows((await fullSchedule()).rows);
     expect(rows).toHaveLength(5);
     expect(new Set(rows.map((r) => r.code)).size).toBe(5);
     expect(rows.find((r) => r.code === 'STD-01')).toBeUndefined();
     expect(Object.keys(rows[0])).not.toContain('cargo_class');   // wymiarowe bez klucza — schedule_row bez zmian po 0050
     expect(rows.find((r) => r.code === 'QA-01')).toMatchObject({ code: 'QA-01', length_m: 18.21, width_m: 2.45, height_m: 2.45, qty: 7, total_weight_t: 20.74, load_date: '2026-09-30', delivery_date: '2026-10-05' });
-    expect(Object.keys(rows[0])).not.toContain('driver_name');
-    expect(Object.keys(rows[0])).not.toContain('driver_phone');
+    expect(Object.keys(rows[0])).toContain('driver_name');
+    expect(Object.keys(rows[0])).toContain('hhl_order_no');
+    expect(Object.keys(rows[0])).toContain('carrier_order_no');
+    expect(Object.keys(rows[0])).not.toContain('order_no');
   });
   it('odpowiedź bazy → ten sam podgląd co demo (nowe / zmienione / anulowane / zablokowane)', () => {
     const res: ImportRpcResult = {
@@ -65,7 +68,7 @@ describe('I-2C klasa STANDARD — parser, walidator zezwoleń, UI', () => {
     expect(ok.issues.filter((i) => i.severity === 'ERROR')).toEqual([]);
     const bad = parseSchedule([{ ...base, 'Rozmiar L x W x H': 'duży' }]);
     expect(bad.rows).toHaveLength(0);
-    expect(bad.issues[0].code).toBe('BAD_DIMENSIONS');
+    expect(bad.issues.some((i) => i.code === 'BAD_DIMENSIONS')).toBe(true);
     const dim = parseSchedule([{ ...base, 'Rozmiar L x W x H': '18,21 x 2,45 x 2,45' }]);
     expect(dim.rows[0].cargoClass).toBe('DIMENSIONED');
   });

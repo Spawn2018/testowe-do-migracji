@@ -94,6 +94,43 @@ export function normalizePhone(v: unknown, defaultCountry: 'PL' | 'SE' = 'PL'): 
   return national || null;
 }
 
+/** A6/E38: „...” / „-” / puste = brak wartości (nie tekst do zapisu). */
+export function emptyCell(v: unknown): boolean {
+  if (v == null) return true;
+  if (typeof v === 'number' && !Number.isFinite(v)) return true;
+  const s = String(v).replace(/\u00A0/g, ' ').trim();
+  return s === '' || s === '-' || s === '...' || s === '…';
+}
+
+/** Tekst komórki po trim; puste / „...” / „-” → null. */
+export function cellText(v: unknown): string | null {
+  if (emptyCell(v)) return null;
+  return String(v).replace(/\u00A0/g, ' ').trim();
+}
+
+/**
+ * E6 / E38: w SharePoint separator „ / ” (PL / SE). Pierwsza część = odcinek PL, druga = SE.
+ * Brak drugiej części → se = null (awizacja SE niekompletna — liczy baza E32).
+ */
+export function splitAb(v: unknown): { pl: string | null; se: string | null } {
+  const t = cellText(v);
+  if (!t) return { pl: null, se: null };
+  const parts = t.split(/\s*\/\s*/).map((p) => {
+    const x = p.trim();
+    return x === '' || x === '-' || x === '...' || x === '…' ? null : x;
+  });
+  if (parts.length === 1) return { pl: parts[0], se: null };
+  return { pl: parts[0] ?? null, se: parts[1] ?? null };
+}
+
+/** Filtr „Przewoźnik = HH” (E38): HH / HHL / H&H. Inni (NTG…) → pominięcie. */
+export function isHhCarrier(v: unknown): boolean {
+  const t = cellText(v);
+  if (!t) return true; /* brak kolumny / pusto — nie filtruj (stare pliki) */
+  const n = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, '');
+  return n === 'HH' || n === 'HHL' || n === 'H&H' || n === 'HANDH' || n.startsWith('HHLOG');
+}
+
 /* --------------------------------------------------------------- */
 /* Mapowanie kolumn — szablon zapisywany po pierwszym imporcie      */
 /* --------------------------------------------------------------- */
@@ -129,10 +166,20 @@ export const ParsedRow = z.object({
   loadTime: z.string().nullable(),
   deliveryDate: z.string().nullable(),
   deliveryTime: z.string().nullable(),
-  orderNo: z.string().nullable(),
+  /** A6: numer SCX z „Nr zlecenia HHL-Scan” (nie stary orderNo). */
+  scxOrderNo: z.string().nullable(),
+  hhlOrderNo: z.string().nullable(),
   driverName: z.string().nullable(),
   driverPhone: z.string().nullable(),
+  driverNameSe: z.string().nullable(),
+  driverPhoneSe: z.string().nullable(),
+  tractorPlate: z.string().nullable(),
+  tractorPlateSe: z.string().nullable(),
+  trailerPlate: z.string().nullable(),
+  comment: z.string().nullable(),
   assemblySeq: z.number().int().nullable(),
+  /** A6 L31: dostawa < załadunek / ten sam dzień / > 14 dni — sprawa KSH_DATES_CHECK, nie odrzucenie. */
+  datesToCheck: z.boolean().optional(),
 }).superRefine((r, ctx) => {
   const dims = [r.lengthM, r.widthM, r.heightM];
   if (r.cargoClass === 'STANDARD' && dims.some((d) => d != null)) {
@@ -197,7 +244,21 @@ export function classifyOversize(
 export interface ParseResult {
   rows: ParsedRow[];
   issues: RowIssue[];
-  stats: { total: number; accepted: number; rejected: number; warnings: number; skippedStandard: number };
+  stats: {
+    total: number;
+    accepted: number;
+    rejected: number;
+    warnings: number;
+    skippedStandard: number;
+    skippedCarrier: number;
+    skippedEmpty: number;
+    datesToCheck: number;
+  };
+}
+
+function daysBetween(a: string, b: string): number {
+  const ms = Date.parse(b) - Date.parse(a);
+  return Math.round(ms / 86_400_000);
 }
 
 export function parseSchedule(
@@ -208,9 +269,47 @@ export function parseSchedule(
   const issues: RowIssue[] = [];
   const seen = new Set<string>();
   let skippedStandard = 0;
+  let skippedCarrier = 0;
+  let skippedEmpty = 0;
+  let datesToCheck = 0;
+  const hasCarrierCol = Boolean(map.carrier && map.carrier !== `\u0000brak:carrier`);
 
   raw.forEach((r, i) => {
     const rowIndex = i + 2; // +1 nagłówek, +1 indeks od 1 (jak w Excelu)
+    const codeRaw = cellText(r[map.shipmentCode]);
+
+    /* A6: wiersz tylko z Lp. / pusty — pomiń bez błędu NO_SHIPMENT_CODE. */
+    if (!codeRaw) {
+      const anyData = Object.entries(r).some(([k, v]) => {
+        if (/^lp\.?$/i.test(k.trim())) return false;
+        return !emptyCell(v);
+      });
+      if (!anyData) {
+        skippedEmpty += 1;
+        return;
+      }
+      issues.push({ rowIndex, shipmentCode: null, severity: 'ERROR',
+        code: 'NO_SHIPMENT_CODE',
+        message: 'Brak kodu w kolumnie "Wysyłka" — to jest klucz naturalny, wiersz odrzucony' });
+      return;
+    }
+
+    /* E38: filtr Przewoźnik = HH (gdy kolumna jest w mapie). Pusty = HH (WARN po STANDARD). */
+    if (hasCarrierCol) {
+      const carrierRaw = r[map.carrier];
+      if (!emptyCell(carrierRaw) && !isHhCarrier(carrierRaw)) {
+        skippedCarrier += 1;
+        /* E38 pkt 2: NTG (i inni) z wymiarami — WARN w podglądzie, nie cicho. */
+        if (!isStandardDims(r[map.dimensions])) {
+          issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
+            code: 'CARRIER_SKIP',
+            message: `Przewoźnik spoza HH (${cellText(carrierRaw) ?? '—'}) — wiersz pominięty; sprawdź plik KSH`,
+            values: { carrier: cellText(carrierRaw) } });
+        }
+        return;
+      }
+    }
+
     // B-8-IMP / D-8: TYP = STANDARD (kolumna Typ albo „Standard” w wymiarach) to ładunek NTG.
     // Pomijamy wiersz. To nie jest błąd i nie trafia do odrzuconych.
     const typCell = r[map.itemType];
@@ -219,14 +318,14 @@ export function parseSchedule(
       skippedStandard += 1;
       return;
     }
-    const code = String(r[map.shipmentCode] ?? '').trim();
-
-    if (!code) {
-      issues.push({ rowIndex, shipmentCode: null, severity: 'ERROR',
-        code: 'NO_SHIPMENT_CODE',
-        message: 'Brak kodu w kolumnie "Wysyłka" — to jest klucz naturalny, wiersz odrzucony' });
-      return;
+    /* F7 A6: pusty Przewoźnik przy obecnej kolumnie = HH z WARN (tylko dla wierszy, które wchodzą). */
+    if (hasCarrierCol && emptyCell(r[map.carrier])) {
+      issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
+        code: 'CARRIER_EMPTY',
+        message: 'Pusty „Przewoźnik” — traktowany jako HH (wiersz wchodzi)' });
     }
+    const code = codeRaw;
+
     if (seen.has(code)) {
       issues.push({ rowIndex, shipmentCode: code, severity: 'ERROR',
         code: 'DUPLICATE_CODE',
@@ -243,9 +342,9 @@ export function parseSchedule(
       return;
     }
 
-    const unitWeightT  = parsePlNumber(r[map.unitWeight]);
-    const qtyRaw       = parsePlNumber(r[map.qty]);
-    const totalWeightT = parsePlNumber(r[map.totalWeight]);
+    const unitWeightT  = emptyCell(r[map.unitWeight]) ? null : parsePlNumber(r[map.unitWeight]);
+    const qtyRaw       = emptyCell(r[map.qty]) ? null : parsePlNumber(r[map.qty]);
+    const totalWeightT = emptyCell(r[map.totalWeight]) ? null : parsePlNumber(r[map.totalWeight]);
     const qty = qtyRaw == null ? 1 : Math.round(qtyRaw);
 
     // ---- WALIDATOR PRZESUNIĘTYCH KOLUMN ----
@@ -280,11 +379,22 @@ export function parseSchedule(
 
     const loadDate = parseDate(r[map.loadDate]);
     const deliveryDate = parseDate(r[map.deliveryDate]);
-    if (loadDate && deliveryDate && deliveryDate < loadDate) {
-      issues.push({ rowIndex, shipmentCode: code, severity: 'ERROR',
-        code: 'DATE_ORDER',
-        message: `Data dostawy (${deliveryDate}) jest wcześniejsza niż data załadunku (${loadDate})` });
-      return;
+    /* A6 L31 / E38 12:50: zła kolejność dat nie odrzuca — sprawa KSH_DATES_CHECK. */
+    let rowDatesCheck = false;
+    if (loadDate && deliveryDate) {
+      const span = daysBetween(loadDate, deliveryDate);
+      if (span < 0 || span === 0 || span > 14) {
+        rowDatesCheck = true;
+        datesToCheck += 1;
+        issues.push({ rowIndex, shipmentCode: code, severity: 'WARN',
+          code: 'KSH_DATES_CHECK',
+          message: span < 0
+            ? `Data dostawy (${deliveryDate}) jest wcześniejsza niż data załadunku (${loadDate}) — transport wchodzi ze sprawą „Daty KSH do sprawdzenia”`
+            : span === 0
+              ? `Dostawa w dniu załadunku (${loadDate}) — sprawa „Daty KSH do sprawdzenia”`
+              : `Dostawa ${span} dni po załadunku (> 14) — sprawa „Daty KSH do sprawdzenia”`,
+          values: { loadDate, deliveryDate, span } });
+      }
     }
 
     // I-2C: STANDARD = ładunek normatywny — walidator wymiarów / zezwoleń go pomija
@@ -296,18 +406,34 @@ export function parseSchedule(
         values: { flags } });
     }
 
+    const driver = splitAb(r[map.driverName]);
+    const phonePl = splitAb(r[map.driverPhone]);
+    const tractor = splitAb(r[map.tractorPlate]);
+
     const parsed = ParsedRow.safeParse({
       shipmentCode: code,
-      itemType: (r[map.itemType] as string) ?? null,
+      itemType: cellText(r[map.itemType]),
       cargoClass: 'DIMENSIONED',
       lengthM: dims?.lengthM ?? null, widthM: dims?.widthM ?? null, heightM: dims?.heightM ?? null,
       unitWeightT, qty, totalWeightT,
-      loadDate, loadTime: parseTime(r[map.loadTime]),
-      deliveryDate, deliveryTime: parseTime(r[map.deliveryTime]),
-      orderNo: (r[map.orderNo] as string)?.toString().trim() || null,
-      driverName: (r[map.driverName] as string)?.toString().trim() || null,
-      driverPhone: normalizePhone(r[map.driverPhone]),
-      assemblySeq: (() => { const n = parsePlNumber(r[map.assemblySeq]); return n == null ? null : Math.round(n); })(),
+      loadDate, loadTime: emptyCell(r[map.loadTime]) ? null : parseTime(r[map.loadTime]),
+      deliveryDate, deliveryTime: emptyCell(r[map.deliveryTime]) ? null : parseTime(r[map.deliveryTime]),
+      scxOrderNo: cellText(r[map.scxOrderNo]),
+      hhlOrderNo: cellText(r[map.hhlOrderNo]),
+      driverName: driver.pl,
+      driverPhone: normalizePhone(phonePl.pl ?? undefined, 'PL'),
+      driverNameSe: driver.se,
+      driverPhoneSe: normalizePhone(phonePl.se ?? undefined, 'SE'),
+      tractorPlate: tractor.pl,
+      tractorPlateSe: tractor.se,
+      trailerPlate: cellText(r[map.trailerPlate]),
+      comment: cellText(r[map.comment]),
+      assemblySeq: (() => {
+        if (!map.assemblySeq || emptyCell(r[map.assemblySeq])) return null;
+        const n = parsePlNumber(r[map.assemblySeq]);
+        return n == null ? null : Math.round(n);
+      })(),
+      datesToCheck: rowDatesCheck || undefined,
     });
 
     if (!parsed.success) {
@@ -329,6 +455,9 @@ export function parseSchedule(
       rejected: issues.filter((i) => i.severity === 'ERROR').length,
       warnings: issues.filter((i) => i.severity === 'WARN').length,
       skippedStandard,
+      skippedCarrier,
+      skippedEmpty,
+      datesToCheck,
     },
   };
 }
@@ -347,9 +476,10 @@ export interface DiffResult {
   criticalDateChanges: Array<{ code: string; field: string; before: unknown; after: unknown }>;
 }
 
+/* Demo dry-run: tylko plan (wymiary/daty). Zasoby i numery A6 porównuje `import_schedule` w bazie. */
 const COMPARED: (keyof ParsedRow)[] = [
   'itemType', 'cargoClass', 'lengthM', 'widthM', 'heightM', 'unitWeightT', 'qty', 'totalWeightT',
-  'loadDate', 'loadTime', 'deliveryDate', 'deliveryTime', 'orderNo', 'assemblySeq',
+  'loadDate', 'loadTime', 'deliveryDate', 'deliveryTime', 'assemblySeq',
 ];
 
 export function diffSchedule(

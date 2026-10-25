@@ -202,22 +202,8 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
 
   it('3. reordered columns still parse by header name and preserve existing loads', async () => {
     const before = useTowerStore.getState().loads;
-    const fieldOrder: ScheduleField[] = [
-      'deliveryDate',
-      'totalWeight',
-      'qty',
-      'dimensions',
-      'itemType',
-      'loadDate',
-      'driverName',
-      'orderNo',
-      'assemblySeq',
-      'deliveryTime',
-      'loadTime',
-      'driverPhone',
-      'unitWeight',
-      'shipmentCode',
-    ];
+    /* A6: pełny zestaw kluczy COLUMN_MAP_DEFAULT w innej kolejności (bez starego orderNo). */
+    const fieldOrder = [...FIELD_ORDER].reverse();
     expect(fieldOrder[0]).not.toBe('shipmentCode');
     expect(new Set(fieldOrder)).toEqual(new Set(FIELD_ORDER));
 
@@ -328,29 +314,32 @@ describe('schedule XLSX import regression (P9 / D23)', () => {
 
     const diff = await dryRunFromXlsx(buf, 'invalid-rows.xlsx', before);
     expect(diff.removedIds).toEqual([]);
-    expect(diff.accepted).toBe(2);
-    expect(diff.rejected).toBe(4);
+    /* A6 L31: QA-D23-DATE (dostawa < załadunek) wchodzi ze sprawą — nie ERROR DATE_ORDER. */
+    expect(diff.accepted).toBe(3);
+    expect(diff.rejected).toBe(3);
+    expect(diff.datesToCheck).toBe(1);
+    expect(diff.warnings).toBeGreaterThanOrEqual(1);
     expect(diff.issues.map((issue) => issue.code)).toEqual([
       'BAD_DIMENSIONS',
       'WEIGHT_INCONSISTENT',
       'NO_SHIPMENT_CODE',
-      'DATE_ORDER',
     ]);
+    expect(diff.added.map((row) => row.code).sort()).toEqual(['QA-D23-DATE', 'QA-D23-OK']);
     /* audyt 25.10 (U-129): liczby w komunikacie z przecinkiem dziesiętnym (E21), bez kropki */
     const w = diff.issues.find((issue) => issue.code === 'WEIGHT_INCONSISTENT')!;
     expect(w.message).toMatch(/\(\d[\d\s]*(,\d{2})? t\).*\(\d[\d\s]*,\d{2} t\)/);
     expect(w.message).not.toMatch(/\d\.\d/);
-    expect(diff.added.map((row) => row.code)).toEqual(['QA-D23-OK']);
     expect(diff.changed.map((row) => row.id)).toEqual(['load-001']);
 
     commitDryRun(diff);
     const after = useTowerStore.getState().loads;
     assertExistingSurvive(before, after);
-    expect(after).toHaveLength(before.length + 1);
+    expect(after).toHaveLength(before.length + 2);
     expect(after.find((load) => load.id === 'load-001')?.plannedDeliverDate).toBe('2026-10-08');
     expect(after.find((load) => load.id === 'load-001')?.resources.driverName).toBe('Marek Kowalski');
     expect(after.some((load) => load.code === 'QA-D23-OK')).toBe(true);
-    for (const code of ['QA-D23-DIM', 'QA-D23-WGT', 'QA-D23-DATE']) {
+    expect(after.some((load) => load.code === 'QA-D23-DATE')).toBe(true);
+    for (const code of ['QA-D23-DIM', 'QA-D23-WGT']) {
       expect(after.some((load) => load.code === code)).toBe(false);
     }
   });
