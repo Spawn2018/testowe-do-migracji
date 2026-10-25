@@ -12,19 +12,28 @@ describe('strefy — potwierdzenie wyłączenia', () => {
   const v = read('src/views/OptionsView.tsx');
 
   it('przełącznik przy aktywnej strefie tylko otwiera pytanie, nie zapisuje', () => {
-    expect(v).toMatch(/if \(g\.active\) \{ setZoneOffAsk\(g\.id\); return; \}/);
+    expect(v).toMatch(/if \(g\.active\) \{ setZoneOffAsk\(\(cur\) => \(cur === g\.id \? null : g\.id\)\); return; \}/);
     expect(v).toMatch(/saveGeofence\(\{ \.\.\.g, active: true \}\)/);
     expect(v).not.toMatch(/saveGeofence\(\{ \.\.\.g, active: !g\.active \}\)/);
   });
 
   it('dopiero „Wyłącz strefę” zapisuje active: false', () => {
-    expect(v).toMatch(/setZoneOffAsk\(null\); saveGeofence\(\{ \.\.\.g, active: false \}\)/);
+    expect(v).toMatch(/closeZoneAsk\(g\.id\);\s*saveGeofence\(\{ \.\.\.g, active: false \}, t\(locale, 'gf_off_reason'\)\)/);
     expect(v).toMatch(/data-zone-off-ask/);
   });
 
+  it('F7 #558: pytanie tylko dla aktywnej strefy i konta z zapisem, dostępność i fokus', () => {
+    expect(v).toMatch(/const asking = zoneOffAsk === g\.id && g\.active && !ro;/);
+    expect(v).toMatch(/role="group" aria-labelledby=\{askId\}/);
+    expect(v).toMatch(/aria-expanded=\{g\.active \? asking : undefined\}/);
+    expect(v).toMatch(/if \(zoneOffAsk\) zoneCancelRef\.current\?\.focus\(\)/);
+    expect(v).toMatch(/!geofences\.some\(\(x\) => x\.id === zoneOffAsk && x\.active\)\) setZoneOffAsk\(null\)/);
+    expect(v).toMatch(/e\.key === 'Escape'/);
+  });
+
   it('strefy portowe i bufory mają ostrzeżenie o statusach', () => {
-    expect(v).toMatch(/new Set<string>\(\['PORT_OUT', 'PORT_IN', 'PRE_PORT'\]\)/);
-    for (const k of ['gf_off_ask', 'gf_off_ask_port', 'gf_off_ask_other', 'gf_off_yes', 'gf_off_no']) expect(hasKey('pl', k)).toBe(true);
+    expect(v).toMatch(/new Set<GeofenceType>\(\['PORT_OUT', 'PORT_IN', 'PRE_PORT'\]\)/);
+    for (const k of ['gf_off_ask', 'gf_off_ask_port', 'gf_off_ask_other', 'gf_off_yes', 'gf_off_no', 'gf_off_reason']) expect(hasKey('pl', k)).toBe(true);
     expect(tp('pl', 'gf_off_ask', { name: 'Terminal Nynäshamn' })).toBe('Wyłączyć strefę „Terminal Nynäshamn”?');
     expect(t('pl', 'gf_off_ask_port')).toMatch(/nie zmienią się same/);
   });

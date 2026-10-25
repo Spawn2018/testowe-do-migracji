@@ -156,7 +156,8 @@ export const d19Pl: Dict = {
   /* wyglad/strefy-potwierdzenie (#557): wyłączenie strefy wymaga potwierdzenia */
   gf_off_ask: 'Wyłączyć strefę „{name}”?',
   gf_off_ask_port: 'Bez tej strefy statusy w porcie nie zmienią się same (Port PL, Na promie → Droga SE) i nie przyjdą ostrzeżenia przed portem.',
-  gf_off_ask_other: 'Bez tej strefy nie będzie zdarzeń wjazdu i wyjazdu ani powiadomień z tej strefy.',
+  gf_off_ask_other: 'Bez niej nie będzie zdarzeń wjazdu i wyjazdu ani powiadomień.',
+  gf_off_reason: 'wyłączona w Opcjach (potwierdzone)',
   gf_off_yes: 'Wyłącz strefę',
   gf_off_no: 'Anuluj',
   opt_active: 'Aktywna',
