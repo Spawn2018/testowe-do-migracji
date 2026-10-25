@@ -958,14 +958,13 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 - CSP Report-Only: `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` i `public/_headers` (podgląd PDF z Storage). Włączenie wymuszenia — W8 (uzupełnienia F7 #549 w §5).
 - `npm run lint:css` w CI (`unit.yml`) — PLAN §4 po C4–C13 / B-pozycje.
 
-### B8 · Stare nieprzeczytane (7A) — W TOKU (`pakiet/b8-stare-nieprzeczytane` / PR #551; migracja **0301**)
+### B8 · Stare nieprzeczytane (7A) — SCALONE (#551 `75ee446c`, 25.10.2026 10:06 UTC; F7 gotowe `54a7777`; migracja **0301**; `deploy-main` w toku)
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane (`b8_mark_stale_in_app_read`).
 - Kopia identyfikatorów w `audit_log` (`action = 'AUDYT17_MARK_READ'`, `entity_id = b8-0301`); liczby przed i po w `POSTEP.md` po wdrożeniu.
-- Po domknięciu CI/F7 #551 → od razu **#550** (`pilne`), potem B9.
 
-### #550 · PILNE: konektor Google „Udostępnianie lokalizacji” dla SG-18 (D-20261025-1022-01) — DO ZROBIENIA (po końcu kroku B8)
-Źródło: skrzynka `dla-cursora` #550 (Spawn2018, etykiety `dla-cursora`+`pilne`). Decyzja właściciela 25.10.2026: wariant **„Nieoficjalny odczyt Google”** (bez gwarancji, może paść, niezgodny z regulaminem Google — świadomie). Link już w `loads.telematics_vehicle_id` SG-18 (dziś `trackerKind` = `other`).
-1. **Rozpoznanie formatu (najpierw, TEST):** jak strona udostępniania bierze pozycję **bez logowania** (np. `maps/rpc/locationsharing/…` + token z linku); opis formatu w POSTEP **bez** prawdziwych współrzędnych i identyfikatorów. Jeśli bez konta Google / ciasteczek **nie da się** → zgłoszenie `pytanie-do-koordynatora` w #550 i STOP tej pozycji (reszta kolejki dalej).
+### #550 · PILNE: lokalizacja kierowcy SG-18 (D-20261025-1022-01) — WSTRZYMANE (właściciel 25.10 11:34: kierowca nie instaluje aplikacji; nic nie budować do nowego wpisu)
+Źródło: skrzynka `dla-cursora` #550 (Spawn2018, etykiety `dla-cursora`+`pilne`). Link Google w SG-18 zostaje jako „inny link” (ręczne kliknięcie). **Nie buduj** konektora Google (STOP pkt 1) ani wariantu z kontem/ciasteczkami; wariant Traccar/OwnTracks/JSON — wstrzymany. Kolejka: B9 → A6 → C4–C13.
+1. **Rozpoznanie formatu (25.10):** `maps/rpc/locationsharing/read` bez sesji Google → HTTP 200, prefix `)]}'`, indeks 0 = null, indeks 6 = `GgA=` (brak pozycji). Token w `pb` nie odblokowuje; biblioteki wymagają ciasteczek sesji. Koordynator potwierdził STOP Google; potem decyzja JSON — **wstrzymana**.
 2. **Edge `google-share-poll`** (cron 5 min): tylko transporty z linkiem Google w oknie śledzenia (D-1710); rozwinięcie krótkiego linku (302→`Location`), token, jedno zapytanie / transport; `positions` źródło `GOOGLE_SHARE`, czas pomiaru z odpowiedzi, dokładność, dedup; dalej jak RIO/emtrack (ETA, strefy, statusy GPS).
 3. **Stan linku** jak RIO (`trackingLinkFromRow` / te same kolumny lub RPC — nazwy w PR dla frontu).
 4. **Awaria formatu:** stan „nie odpowiada”, **jedno** ryzyko HHL („Link Google nie daje pozycji”), bez SMS; przełącznik w `ops_thresholds` (lub podobnie); logi bez tokenu.
@@ -974,10 +973,10 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 7. **Front (koordynator, po PR bazy):** `trackerKind` → „Google”; teksty Link śledzenia / Mapa (stan, ostatnia pozycja, ostrzeżenie 12 h jak RIO #543).
 8. **Odbiór:** SELECT `positions` SG-18 źródło Google, czas pomiaru < 10 min, stan „ok”; brak tokenu w logach Edge.
 
-### B9 · Panel tylko PL (8A) — DeepL zostaje (D-20261019-1515-01, #322)
+### B9 · Panel tylko PL (8A) — DeepL zostaje (D-20261019-1515-01, #322) — W TOKU (`pakiet/b9-panel-pl-deepl`; migracja **0302**)
 Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN → PL zostaje (właściciel 19.10.2026, 15:10). Opis „`drop` tabel tłumaczeń” jest w tej części nieważny.
 1. **Zostają:** `translation_memory`, `translation_queue`, `deepl_usage`; `deepl_usage_view` i kafelek DeepL w Stanie systemu; `src/lib/pl/deepl.ts`, `polishRoadFreeText`, metody tłumaczeń w `store.ts`; klucze `b6_sys_deepl`, `b6_sys_deepl_d`, `pl_deepl_warn`, `pl_deepl_full`, `pl_show_original`, `rk_deepl_usage`; sekret `DEEPL_API_KEY`. Sygnału „B9 — klucz DeepL do usunięcia” nie wysyłasz.
-2. **Usuwasz tylko** wybór języka ekranów EN/SV (kolumna języka w `user_preferences` / `app_users` — z kopią, wszyscy `pl`). Ekran (`AccountMenu`, Ustawienia, `loadPreferences`, `prefs.save`, „Tłumaczenie w toku”, „Pokaż oryginał”) robi koordynator na `wyglad/W-b9-pl` (D-20261020-0010-01). Ty: kolumna, `translate-retry`, alarm, testy bazy. Plików `src/` nie zmieniasz. Aplikacja kierowcy zostaje w 3 językach.
+2. **Usuwasz tylko** wybór języka ekranów EN/SV: kolumna `user_preferences.locale` (z kopią par `user_id→locale` w `audit_log`, wszyscy `pl`). **`app_users.locale` zostaje = `pl`** (czyta go `matrix_notify`, `send-notifications`, wyzwalacz zaproszeń 0197) — bez dropu; nie twardego CHECK (testy money ustawiają `sv` chwilowo). Ekran (`AccountMenu`, Ustawienia, `loadPreferences`, `prefs.save`, „Tłumaczenie w toku”, „Pokaż oryginał”, klucz `rk_translate_wait`) robi koordynator na `wyglad/*` (D-20261020-0010-01). Ty: kolumna prefs, `translate-retry`, alarm `rk_translate_wait`, testy bazy. Plików `src/` nie zmieniasz. Aplikacja kierowcy zostaje w 3 językach.
 3. **Ponawianie.** Zadanie `translate-retry` co 5 min (cron, Edge, ten sam rdzeń `translateFreeText`): kolejka z powodem `blad` albo `brak`; po sukcesie zapis do `translation_memory`, uzupełnienie opisu, usunięcie z kolejki. Powód `limit`: od 1. dnia następnego miesiąca albo po podniesieniu limitu. Powód `odrzucone`: opis z kodów po polsku. `polishRoadFreeText` po sukcesie też usuwa wpis z kolejki.
 4. **Zanim tłumaczenie dotrze:** opis główny po polsku z kodów. Zamiast nieprzetłumaczonego tekstu wolnego: „Tłumaczenie w toku”. Szwedzki tylko pod „Pokaż oryginał”. Szwedzki tekst nie wchodzi do treści głównej, tytułu, dzwonka, e-maila ani SMS.
 5. **Alarm.** Kafelek DeepL: liczba wpisów w kolejce i najstarszy. Wpis starszy niż 15 min (poza `odrzucone`) → stan ostrzegawczy i ryzyko `ROAD_SE` dla HHL „Komunikat drogowy czeka na tłumaczenie” (dedup na hash). Limit ≥ 80 % i wyczerpany — jak dziś (`rk_deepl_usage`).
@@ -1638,3 +1637,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 11:05 | B7 #549: CI unit/visual zielone na `c5d71270`; F7 gotowe na `5febf9f` unieważnione merge+docs → czekam ponowne F7; W8 uzupełnione (F7 #549 pkt 1–3) | pętla |
 | 25.10.2026 11:25 | #549/B7 SCALONE (`6b0b19b3`); F7 gotowe `bd8faba`; start **B8** → migracja **0301** (`b8_mark_stale_in_app_read`); security **449** | pętla |
 | 25.10.2026 11:40 | #550 `pilne` wpisane §4 (Google share SG-18); B8 #551 db FAIL → fix testów (replica przy fixtures IN_APP / bramka #402) | pętla |
+| 25.10.2026 12:10 | #551/B8 SCALONE (`75ee446c`, 0301); #550 pkt 1 STOP — bez logowania Google brak pozycji (`GgA=`); `pytanie-do-koordynatora`; start **B9** | pętla |
+| 25.10.2026 12:20 | B9 start: **0302** drop `user_preferences.locale`, `translate-retry` + cron 5 min, `deepl_usage_view` kolejka; security **455**; #552 docs | pętla |
+| 25.10.2026 13:00 | #550 WSTRZYMANE (kierowca bez aplikacji); B9 F7: `rk_translate_wait`, resolve TRANSLATE_WAIT, alarm bez klucza, stale per hash, audit pairs; security **459** | pętla |
+| 25.10.2026 13:20 | B9 #553 CI unit/visual/db zielone na `f4805369` — czekam „F7: gotowe do scalenia” | pętla |

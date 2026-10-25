@@ -1486,5 +1486,38 @@ chk6 "B8: AUDYT17_MARK_READ z id starego" "$(sys "select (new_value->'notificati
   from audit_log where action='AUDYT17_MARK_READ' and entity_id='b8-0301'
   order by id desc limit 1" | tail -1)" "true"
 
+# --- B9 (0302): panel PL, DeepL zostaje, translate-retry ---
+chk6 "B9: user_preferences bez kolumny locale" "$(sys "select (not exists (
+  select 1 from information_schema.columns
+   where table_schema='public' and table_name='user_preferences' and column_name='locale'
+))::text" | tail -1)" "true"
+chk6 "B9: app_users wszyscy locale=pl" "$(sys "select (count(*) filter (where locale is distinct from 'pl') = 0)::text from app_users" | tail -1)" "true"
+chk6 "B9: translation_memory istnieje" "$(sys "select to_regclass('public.translation_memory') is not null" | tail -1)" "t"
+chk6 "B9: translation_queue istnieje" "$(sys "select to_regclass('public.translation_queue') is not null" | tail -1)" "t"
+B9_VIEW=$(run $HHL "select deepl_usage_view()::text" | tail -1)
+echo "$B9_VIEW" | grep -q 'queued_active' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma queued_active"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view: $B9_VIEW"; }
+echo "$B9_VIEW" | grep -q 'oldest_age_min' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma oldest_age_min"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view oldest: $B9_VIEW"; }
+
+# F7: warn przy wpisie >15 min (nie dla odrzucone); zrzut par w audit_log
+sys "insert into translation_queue (source_hash, source_text, source_lang, reason, created_at)
+  values ('b9teststale00000000000000000001', 'Stale SE text', 'SV', 'blad', now() - interval '20 minutes')
+  on conflict (source_hash) do update set reason='blad', created_at=excluded.created_at"
+B9_WARN=$(run $HHL "select deepl_usage_view()->>'level'" | tail -1)
+chk6 "B9: deepl_usage_view level=warn przy kolejce >15 min" "$B9_WARN" "warn"
+sys "update translation_queue set reason='odrzucone' where source_hash='b9teststale00000000000000000001'"
+# gdy jedyny wpis = odrzucone, oldest_at null (nie liczy się do alarmu kolejki)
+B9_OLD=$(run $HHL "select coalesce(deepl_usage_view()->>'oldest_at','')" | tail -1)
+chk6 "B9: oldest_at puste gdy tylko odrzucone" "${B9_OLD}" ""
+sys "delete from translation_queue where source_hash='b9teststale00000000000000000001'"
+
+chk6 "B9: audit_log AUDYT17_B9_LOCALE ma prefs_pairs" "$(sys "select (new_value ? 'prefs_pairs')::text
+  from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
+  order by id desc limit 1" | tail -1)" "true"
+chk6 "B9: audit_log AUDYT17_B9_LOCALE ma users_pairs" "$(sys "select (new_value ? 'users_pairs')::text
+  from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
+  order by id desc limit 1" | tail -1)" "true"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

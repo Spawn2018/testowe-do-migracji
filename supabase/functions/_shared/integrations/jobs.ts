@@ -46,7 +46,7 @@ import {
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
-import { deeplTranslate, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
+import { deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
 import {
   emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
   unquoteSecret,
@@ -233,6 +233,11 @@ export interface SyncStore {
   translationGet?(hash: string): Promise<string | null>;
   translationPut?(hash: string, source: string, pl: string, lang: 'SV' | 'EN'): Promise<void>;
   translationEnqueue?(hash: string, source: string, lang: 'SV' | 'EN', reason: string): Promise<void>;
+  /** B9: lista kolejki do ponowienia; delete po sukcesie. */
+  translationListQueue?(reasons: string[]): Promise<{ hash: string; source: string; lang: 'SV' | 'EN'; reason: string; createdAt: string }[]>;
+  translationDequeue?(hash: string): Promise<void>;
+  /** B9: uzupełnij opis PL w otwartych ryzykach drogi po udanym ponowieniu. */
+  patchRoadRiskOpis?(original: string, pl: string): Promise<number>;
   deeplUsage?(): Promise<{ characters: number; limit: number }>;
   deeplAddUsage?(n: number): Promise<number>;
 }
@@ -868,6 +873,11 @@ async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail
     if (result.pl) {
       e.note = result.pl;
       e.detail = result.pl;
+      /* B9: po udanym tłumaczeniu usuń wpis z kolejki (także przy trafieniu z pamięci po wcześniejszym błędzie). */
+      if (store.translationDequeue) {
+        try { await store.translationDequeue(textHash(e.freeText)); }
+        catch { /* błąd DELETE nie przerywa tłumaczenia dalszych zdarzeń (F7 B9) */ }
+      }
     }
     const level = result.level === 'ok' ? usageLevel(result.used, result.limit) : result.level;
     if (!warned && (level === 'warn' || level === 'full')) {
@@ -1860,6 +1870,86 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
   }
 }
 
+/**
+ * B9 — ponowienie translation_queue (blad/brak; limit: nowy miesiąc = nowy wiersz deepl_usage).
+ * Po sukcesie: pamięć + opis ryzyka + usunięcie z kolejki + zamknięcie TRANSLATE_WAIT.
+ * Wpisy >15 min (poza odrzucone) → ryzyko ROAD_SE / rk_translate_wait (per hash).
+ * Alarm kolejki także bez DEEPL_API_KEY (wpisy „brak”).
+ */
+export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
+  const key = deps.env.DEEPL_API_KEY;
+  const store = deps.store;
+  const now = deps.now();
+  const nowIso = now.toISOString();
+  let risks = 0;
+  let usageChars = 0;
+  let usageLimit = DEEPL_MONTHLY_LIMIT;
+  if (store.deeplUsage) {
+    const u = await store.deeplUsage();
+    usageChars = u.characters;
+    usageLimit = u.limit || DEEPL_MONTHLY_LIMIT;
+  }
+  const raiseStale = async (rows: { hash: string; reason: string; createdAt: string }[]) => {
+    for (const row of rows) {
+      const ageMin = (now.getTime() - Date.parse(row.createdAt)) / 60000;
+      if (!(ageMin > 15) || row.reason === 'odrzucone') continue;
+      if (await store.raiseRisk({
+        kind: 'ROAD_SE', severity: 'LOW',
+        title: 'Komunikat drogowy czeka na tłumaczenie',
+        titleKey: 'rk_translate_wait',
+        params: { used: usageChars, limit: usageLimit },
+        detail: { zrodlo: 'DeepL', powód: 'kolejka>15min', hash: row.hash, czas: nowIso },
+        dedup: `ROAD_SE:TRANSLATE_WAIT:${row.hash}`,
+      })) risks++;
+    }
+  };
+
+  if (!store.translationListQueue) {
+    return { job: 'translate-retry', mode: 'LIVE', ok: true, reason: 'Brak magazynu kolejki tłumaczeń — pominięto' };
+  }
+  const rows = await store.translationListQueue(['blad', 'brak', 'limit']);
+  await raiseStale(rows);
+
+  if (!key || !store.translationGet || !store.translationPut
+    || !store.translationEnqueue || !store.translationDequeue || !store.deeplUsage || !store.deeplAddUsage) {
+    return {
+      job: 'translate-retry', mode: 'LIVE', ok: true, risks,
+      reason: 'Brak DeepL / magazynu tłumaczeń — pominięto (alarm kolejki OK)',
+    };
+  }
+
+  let usage = await store.deeplUsage();
+  usageChars = usage.characters;
+  usageLimit = usage.limit || DEEPL_MONTHLY_LIMIT;
+  let done = 0;
+  for (const row of rows) {
+    /* Nowy miesiąc = nowy wiersz deepl_usage (F7: bez !isFirstDay). */
+    if (row.reason === 'limit' && usage.characters >= usage.limit) continue;
+    const result = await translateFreeText({
+      text: row.source,
+      source: row.lang,
+      used: usage.characters,
+      limit: usage.limit || DEEPL_MONTHLY_LIMIT,
+      memoryGet: (hash) => store.translationGet!(hash),
+      memoryPut: (hash, source, pl) => store.translationPut!(hash, source, pl, row.lang),
+      enqueue: (hash, reason) => store.translationEnqueue!(hash, row.source, row.lang, reason),
+      addUsage: async (n) => { usage = { ...usage, characters: await store.deeplAddUsage!(n) }; return usage.characters; },
+      deepl: (text, source) => deeplTranslate(deps.fetch, key, text, source),
+    });
+    if (!result.pl) continue;
+    try { await store.translationDequeue(row.hash); }
+    catch { /* nie przerywaj dalszych wpisów */ }
+    if (store.patchRoadRiskOpis) await store.patchRoadRiskOpis(row.source, result.pl);
+    await store.resolveRisks(`ROAD_SE:TRANSLATE_WAIT:${row.hash}`);
+    done++;
+  }
+  return {
+    job: 'translate-retry', mode: 'LIVE', ok: true,
+    updated: done, risks,
+    reason: done ? `Ponowiono ${done} tłumaczeń` : 'Kolejka bez udanych ponowień',
+  };
+}
+
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
   'ferry-ais-listen': runFerryAisListen,
@@ -1868,6 +1958,7 @@ export const JOBS = {
   'emtrack-web': runEmtrackWeb,
   'rio-links': runRioLinks,
   'route-hazards': runRouteHazards,
+  'translate-retry': runTranslateRetry,
 } as const;
 export type JobName = keyof typeof JOBS;
 
@@ -1875,6 +1966,7 @@ export type JobName = keyof typeof JOBS;
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
   'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2, 'route-hazards': 60,
+  'translate-retry': 5,
 };
 
 /** Przebieg zadania z kontrolą częstotliwości i zapisem do dziennika (integration_runs). */
