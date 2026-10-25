@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 416, // #525: +4 DEL/U+2028/U+2029 + button w temacie; było 412 (#519)
-  status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
+  status: 246, // #496 F7 r3: +1 Jämjö IN_TRANSIT; było 245 (+3 morze/Ösmo/Vagnhärad; +3 PORT_IN)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
@@ -54,7 +54,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 38, // #467 F7: +3 Admin sms_gw / src_down odmowa / SCX my_notify; było 35
+  c3: 40, // #496 F7 r3: +2 fuel_miss/ext_mail 42501; było 38 (#467)
 };
 
 /**

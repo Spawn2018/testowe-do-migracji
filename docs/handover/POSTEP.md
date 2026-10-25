@@ -4838,6 +4838,26 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe do scalenia” na #531 (po ostatnim commicie); #382 CONFLICT; #383 bez F7. Bez push na `main`.
 - Bieżąca: **#528** PR #531 — CI unit/db/visual zielone na head `d299a30c` (docs; kod `fc08a460`, migracja **0292**, security **391**). Czekam F7.
 
+## 2026-10-24 23:05 — #525 CI zielone; start #496 (0298)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
+- Scalanie: brak F7 `gotowe do scalenia` po headach #531/#532/#533/#534/#535 (CI zielone). Bez push na main.
+- **#525** PR #535: unit/db/visual zielone na `dbaddafa` (0297). Czekam F7.
+- Bieżąca (równolegle, D-20261019-1050-01 §2 — nie stoję przy F7): **#496** gałąź `pakiet/hotfix-496-f7-drobne-2310` — migracja **0298**: SYSTEM→42501; `sweden_land_geom` bez Bałtyku; znane trasy korytarza; SE_E22 Söderåkra/Södertälje; testy SQLSTATE + status **242**.
+
+## 2026-10-24 23:35 — #496 db FAIL: kolizja ID z #502
+
+- Skrzynka: bez nowych; #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne`.
+- Scalanie: brak F7 `gotowe` (#531–#535 CI zielone; #536 db FAIL). Bez push na main.
+- Bieżąca: **#496** PR #536 — status 240/242 + risks (rk_off_corridor): testy #496 brały L 95/96/97 (= #502 F7 B4); `mk` cicho → stary AT_PORT_GDANSK / rejs GDN-NYN. Poprawka: L 79/7a/7b + `sailing_id` + sprzątanie L496u. Push → CI.
+
+## 2026-10-24 23:55 — #496 F7 #536: do poprawy (geometria / SE_E22 / PORT_IN)
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania; #530/#528/#525/#519/#516/#500/#499/#496 w planie. F7 na #531–#535 = „do poprawy” / zgoda wstrzymana (kolejność 0292→0298) — nie przerywa #496.
+- Scalanie: brak F7 `gotowe do scalenia`. Bez push na main.
+- CI na `3bee738b`: unit/visual zielone; db FAIL (1) — PORT_IN przed planem → AT_PORT (oczekiwano FERRY); F7: oczekiwać AT_PORT.
+- Bieżąca: **#496** PR #536 — F7: (1) PORT_IN→AT_PORT_NYNASHAMN; (2) Södertörn w `sweden_land_geom` + test Ösmo; (3) Vagnhärad/Hölö/Järna + Småland na SE_E22; (4) zawężenie Karlskrona-morze + test; `fuel_miss`/`ext_mail` w liście SYSTEM. status **245**. Push → CI; ponowne F7.
+
 ## 2026-10-25 00:20 — #496 CI zielone; F7 #531 (#528) poprawki
 
 - Skrzynka: bez nowych `dla-cursora` do wpisania (Spawn2018); #530/#528/#525/#519/#516/#500/#499/#496 w planie. Bez `pilne` przerywających.
@@ -4941,3 +4961,23 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#525/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
 - Scalanie: brak F7 `gotowe` po `b9048ba3` (CI unit/db/visual zielone na merge main). #536 czeka na F7 r3. Bez push na main.
 - Bieżąca: **#525** PR #535 — F7 uzupełnienie: `renderSegsHtml` escapuje cały wynik (statyczny tekst szablonu też), `\n`→`<br>`; JSDoc: jedno miejsce escapowania (bez `esc(n.body)` przy P8); test `<b>`→`&lt;b&gt;`. Push → CI; ponowne F7.
+
+## 2026-10-25 06:39 — #535/#525 SCALONE (0297); #496 F7 r3
+
+- Skrzynka: #540/#538/#537/#496/#413 w planie (wpisane). #525 zamknięte. Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#535/#525** `1bc24128` (F7 „gotowe do scalenia” po `7c39865e`, CI unit/db/visual, migracja **0297**). Bez push na main — `deploy-main`.
+- Bieżąca: **#496** PR #536 — merge main; F7 r2: Karlskrona-port w `sweden_land_geom`; Lyckeby/Jämjö/Brömsebro na SE_E22; Ösmo na GDN-NYN DOPŁYNĄŁ; test Jämjö→IN_TRANSIT_SE; c3 fuel_miss/ext_mail 42501. status **246**, c3 **40**. Push → CI; ponowne F7.
+
+## 2026-10-25 07:05 — #496 F7 r3 CI: kolizja ID sailing …496
+
+- Skrzynka: #540/#538/#537/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po `bb2acf09`. CI: unit/visual OK; **db FAIL** status 245/246 — `#496: nieznana trasa → brak OFF_CORRIDOR` (otrzymano 1).
+- Bieżąca: **#496** PR #536 — Ösmo F7 r3 zajęło sailing `…496` (GDN-NYN); test „nieznana trasa” używał tego samego ID → INSERT OTHER cicho padał → SE_E4. Wolne ID `…49a`. status nadal **246**. Push → CI; ponowne F7. Bez push na main.
+
+## 2026-10-25 07:20 — #543 SCALONE; #496 CI zielone; #537 I/J w planie
+
+- Skrzynka: #537 sekcje I/J (Spawn2018) → PLAN §4 pkt 19–32 + W51 (D-J1); dopisek D-20261025-0015-01. #540/#538/#496/#413 już w planie. Bez `pilne`.
+- Scalanie: **#543** `fe0e31c0` (F7 „gotowe do scalenia” po `c969cb1`, CI unit/visual; wyglad J-10 RIO stara pozycja). **#536/#496** — CI unit/db/visual zielone na `4fcf82d3` (status **246**); brak F7 „gotowe” po tym SHA → czekam. Bez push na main — `deploy-main` po #543.
+- Bieżąca: **#496** — czekam F7. F7 r3 INFO w §8: Bergkvara na SE_E22; insert rejsów testowych bez cichego `>/dev/null`. Realizacja #537 I/J po scaleniu 0298.
+
+

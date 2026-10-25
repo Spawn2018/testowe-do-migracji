@@ -905,6 +905,14 @@ mk $L485k K485 "'HHL/K485'" "'SCX/K485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485k','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485k 56.138 15.635 "2026-10-07 14:00+00"
 chk "#485: W_REJSIE przed planem + morze Karlskrona → FERRY" "$(st $L485k)" FERRY
+# #496 F7: w PORT_IN przed planem → AT_PORT_* (wjazd = dowód wcześniejszego przypłynięcia;
+# silnik stref bez warunku godziny — decyzja koordynatora F7 #536).
+# L 79 — nie 95: #502 F7 B4 = L 95 (kolizja → mk cicho, stary AT_PORT_GDANSK).
+L485p=$(L 79)
+mk $L485p P485 "'HHL/P485'" "'SCX/P485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485p','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485p 56.16460 15.63080 "2026-10-07 14:00+00"
+chk "#496: PORT_IN przed planem → AT_PORT_NYNASHAMN" "$(st $L485p)" AT_PORT_NYNASHAMN
 # PL (Gdańsk) przy FERRY
 L485d=$(L 88)
 mk $L485d D485 "'HHL/D485'" "'SCX/D485'" FERRY "'$S486'"
@@ -917,11 +925,48 @@ mk $L485e E485 "'HHL/E485'" "'SCX/E485'" FERRY "'$S486'"
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L485e','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
 pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
 chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
+chk "#496: Port SE synthetic arr_source=plan" \
+  "select payload->>'arr_source' from load_events where load_id='$L485e' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true' order by occurred_at limit 1" plan
+# #496: po planie + morze Nynäshamn (nie ląd) → FERRY (wielokąt bez Bałtyku)
+# L 7a — nie 96: #502 F7 B4 = L 96.
+L485s=$(L 7a)
+mk $L485s S496 "'HHL/S496'" "'SCX/S496'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485s','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485s 58.60 18.00 "2026-10-07 22:30+00"
+chk "#496: po planie + morze Nynäshamn → FERRY" "$(st $L485s)" FERRY
+# #496 F7: po planie + morze Karlskrona (15.635/56.138) → FERRY (zawężony wielokąt)
+L485m=$(L 7c)
+mk $L485m M496 "'HHL/M496'" "'SCX/M496'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485m','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485m 56.138 15.635 "2026-10-07 22:30+00"
+chk "#496: po planie + morze Karlskrona → FERRY" "$(st $L485m)" FERRY
+# #496 F7 r3: Ösmo na rejsie GDN-NYN DOPŁYNĄŁ (nie GDY-KAA — scenariusz rundy 1)
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000496','M/F Wawel 496','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000496','$P','66666666-0000-0000-0000-000000000496','GDN-NYN',
+  '2026-10-05 16:00+00','2026-10-06 10:00+00','2026-10-05 16:00+00','2026-10-06 10:00+00','DOPLYNAL','POLFERRIES');
+" >/dev/null
+S496n=77777777-0000-0000-0000-000000000496
+L485o=$(L 7d)
+mk $L485o O496 "'HHL/O496'" "'SCX/O496'" FERRY "'$S496n'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485o','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485o 59.00 17.90 "2026-10-06 10:30+00"
+chk "#496: DOPLYNAL GDN-NYN + Ösmo → IN_TRANSIT_SE" "$(st $L485o)" IN_TRANSIT_SE
+# #496 F7 r3 BLOKER: GDY-KAA DOPŁYNĄŁ + Jämjö (ląd po poprawce Karlskrona) → IN_TRANSIT_SE
+L485j=$(L 7e)
+mk $L485j J496 "'HHL/J496'" "'SCX/J496'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485j','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485j 56.19 15.84 "2026-10-06 22:30+00"
+chk "#496: DOPLYNAL + Jämjö → IN_TRANSIT_SE" "$(st $L485j)" IN_TRANSIT_SE
 
 # #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
 # F7 r3/r4: Jämjö; Söderköping 16.3186/58.4792; OFFROUTE_KM przywrócone (nie sztywne 2).
 echo; echo "[#487] korytarz E22 po Karlskronie (OFF_CORRIDOR)"
-PREV_OFFROUTE=$(q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")
+# #496: bez ::int — ułamki OFFROUTE_KM
+PREV_OFFROUTE=$(q "select value_num::text from ops_thresholds where key='OFFROUTE_KM'")
 L487a=$(L 8d)
 mk $L487a A487 "'HHL/A487'" "'SCX/A487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
@@ -929,12 +974,12 @@ q "set session_replication_role=replica;
    delete from positions where load_id='$L487a';
    update ops_thresholds set value_num = 20 where key = 'OFFROUTE_KM';
    set session_replication_role=origin;" >/dev/null
-# SG-23 07:20 UTC — na E22 przy Jämjö (wcześniej 24 km od polilinii z Karlshamn)
+# F7 r3: prawdziwy Jämjö 15.84/56.19 (stary 15.95/56.25 leżał w Kalmarsundzie)
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API'),
-  ('$L487a', now(), st_setsrid(st_makepoint(15.9423, 56.2523),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
-chk "#487: Jämjö 15.9423/56.2523 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+chk "#487: Jämjö 15.84/56.19 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
 # SG-23 12:02 UTC — Söderköping (wcześniej 33,5 km bez wierzchołków 0160)
 q "delete from positions where load_id='$L487a'" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values
@@ -942,7 +987,14 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
 q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
+q "delete from positions where load_id='$L487a'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#496: Vagnhärad 17.50/58.95 → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
 L487b=$(L 8e)
 mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
 q "set session_replication_role=replica;
@@ -957,22 +1009,46 @@ q "select refresh_load_eta('$L487b')" >/dev/null
 chk "#487: ~50 km od E22 (Småland) → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
 chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
   "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
-# F7: sprzątanie tylko L487a/L487b (nie globalne DELETE) — risks.sh baseline title_key.
-chk "#487 po teście brak rk_off_corridor L487a/b" \
+# #496: nieznana trasa promu → bez OFF_CORRIDOR (nie SE_E4). CHECK zdejmujemy tylko na czas wstawki.
+# L 7b — nie 97: #502 F7 B4 = L 97 (kolizja → stary rejs GDN-NYN → SE_E4 + OFF_CORRIDOR).
+# Sailing …49a — nie …496: Ösmo F7 r3 już zajmuje …496 (GDN-NYN); INSERT OTHER cicho padał → fałszywy FAIL.
+S496u=77777777-0000-0000-0000-00000000049a
+L496u=$(L 7b)
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S496u','$P','66666666-0000-0000-0000-000000000485','OTHER',
+     '2026-10-06 12:00+00','2026-10-06 22:00+00','2026-10-06 12:00+00','2026-10-06 22:00+00','DOPLYNAL','STENA');" >/dev/null
+mk $L496u U496 "'HHL/U496'" "'SCX/U496'" IN_TRANSIT_SE "'$S496u'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE', sailing_id='$S496u' where id='$L496u';
+   delete from positions where load_id='$L496u';
+   set session_replication_role=origin;" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L496u', now() - interval '15 minutes', st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API'),
+  ('$L496u', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L496u')" >/dev/null
+chk "#496: nieznana trasa → brak OFF_CORRIDOR" "$(rk $L496u OFF_CORRIDOR)" 0
+q "update loads set sailing_id=null where id='$L496u';
+   delete from sailings where id='$S496u';
+   alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route in ('GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY'));" >/dev/null
+# F7: sprzątanie L487a/b + L496u (nie globalne DELETE) — risks.sh baseline title_key.
+chk "#487/#496 po teście brak rk_off_corridor L487a/b/L496u" \
   "delete from decision_events where decision_id in (
       select d.id from decisions d
        where d.risk_id in (select id from risk_signals
-         where load_id in ('$L487a','$L487b')
+         where load_id in ('$L487a','$L487b','$L496u')
            and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%')));
    delete from decisions where risk_id in (
       select id from risk_signals
-       where load_id in ('$L487a','$L487b')
+       where load_id in ('$L487a','$L487b','$L496u')
          and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%'));
    delete from risk_signals
-    where load_id in ('$L487a','$L487b')
+    where load_id in ('$L487a','$L487b','$L496u')
       and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%');
    select count(*) from risk_signals
-    where load_id in ('$L487a','$L487b') and title_key='rk_off_corridor'" 0
+    where load_id in ('$L487a','$L487b','$L496u') and title_key='rk_off_corridor'" 0
 
 echo; echo "[#489] Odpięcie rejsu → powrót statusu (SAILING_REMOVED)"
 L489a=$(L 8f)
