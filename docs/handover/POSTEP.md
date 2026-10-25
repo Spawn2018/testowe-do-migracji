@@ -4905,3 +4905,21 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#538** komentarz właściciela 02:30 → PLAN §1 pkt 14.4 (15B: jedna pętla do prognozy 26.10 12:00), §5 W5 zamknięte (R-1 ręczne, `schedule_imports` v4), §4/#538 pkt 6, dopisek `D-20261025-0230-01.md`. #540/#537/#530/#525/#519/#516/#496/#413 w planie. #413 `pilne` (wygląd — baza SCALONE) — nie przerywa.
 - Scalanie: F7 `gotowe` było na `4f56ad2a` **przed** docs `ce875347` → wg D-1050 czekam ponowne „gotowe” po head. #532 MERGEABLE; unit/db/visual zielone na `ce875347` (security **406**). #533–#536 CONFLICTING. Bez push na main.
 - Bieżąca: **#530** PR #532 — CI zielone; docs (W5/15B). Czekam F7: gotowe do scalenia.
+
+## 2026-10-25 04:27 — #532/#530 SCALONE; start #516 F7 (#533)
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #530 zamknięte (pilot+rejs; pozostałe tabele → #537 pkt 5). Bez pilne przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: **#532** 5f244528 (F7 gotowe po head a1b465c, CI unit/db/visual, migracja **0293**). Bez push na main — deploy-main.
+- Bieżąca: **#516** PR #533 — rebase na main; F7: warunek backup_run_id < OK id, RISK_AUTO_CLOSED, testy, B5≥0299. Push → CI; ponowne F7.
+
+## 2026-10-25 04:55 — #516 db FAIL: backup 42≠41
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: brak F7 `gotowe do scalenia` po head `2d1a7323`. #533 MERGEABLE; unit/visual zielone; **db FAIL** — `backup: oczekiwano 41/41, jest 42 OK` (F7: +6 asercji, nie +5). Bez push na main.
+- Bieżąca: **#516** PR #533 — `gate-suites` backup **42** / hosted **34**. Push → CI; ponowne F7.
+
+## 2026-10-25 05:10 — #516 F7 r2: stale run_id + testy
+
+- Skrzynka: #540/#538/#537/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: CI unit/db/visual zielone na `04f49598` (backup **42**); brak F7 `gotowe` — F7 r2 pkt 3–4. Bez push na main.
+- Bieżąca: **#516** PR #533 — F7 r2: `backup-stale` tylko gdy `split_part(dedup_key,':',2)::bigint < OK`; testy DO ponownie + stale≥OK; `gate-suites` backup **44** / hosted **36**. Kolejka: `dec-auto.sh` PGURL (§8). Push → CI; ponowne F7.
