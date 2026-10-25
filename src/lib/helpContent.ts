@@ -116,7 +116,7 @@ const SCX_USER: HelpVersion = {
 /** „Na telefonie” — na końcu każdej wersji, tylko przy szerokości telefonu (E8). */
 export const HELP_PHONE_STEPS: HelpStep[] = [
   { place: 'Dolny pasek i konto', target: null, text: 'Na dole: Kokpit, Harmonogram, Ryzyka, Dokumenty i Więcej (reszta menu). Ikona konta u góry otwiera Moje konto, Dla mnie, Pomoc i motyw.' },
-  { place: 'Instalacja i powiadomienia', target: 'konto', text: 'iPhone: „Dodaj do ekranu głównego”. Android: „Zainstaluj”. Powiadomienia na telefon włączasz w „Dla mnie”. Jeśli nie chcesz, żeby treść powiadomienia była widoczna na zablokowanym ekranie, wyłącz to w ustawieniach telefonu (Android: Powiadomienia › Na ekranie blokady › „Ukryj treść”; iPhone: Powiadomienia › Pokaż podglądy › „Gdy odblokowany”).' },
+  { place: 'Instalacja i powiadomienia', target: 'konto', text: 'iPhone: „Dodaj do ekranu głównego”. Android: „Zainstaluj”. Powiadomienia na telefon włączasz w „Dla mnie”. Jeśli nie chcesz, żeby treść powiadomienia była widoczna na zablokowanym ekranie, wyłącz to w ustawieniach telefonu (iPhone: Powiadomienia › Pokazuj podglądy › „Gdy odblokowany”; Android: Powiadomienia › ekran blokady › ukryj treść — nazwa zależy od producenta telefonu).' },
 ];
 
 export const HELP_VERSIONS: Record<AccountKind, HelpVersion> = {
