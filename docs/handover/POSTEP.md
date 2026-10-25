@@ -5108,3 +5108,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #556: unit/visual OK; **db FAIL** nullguard — `ksh_sync_write_set` wołał `mfa_satisfied(text)` (brak przeciążenia). Fix w 0304: `user_role` + nullguard **837**.
 - Bieżąca: **A6** migracja **0305** (`import_schedule` dla `service_role`); Edge parse (exceljs + rdzeń A6) → `import_schedule` + snapshot kodów; `SOURCE_DOWN:KSH_SHAREPOINT` sticky po 30 min przez `store.raiseRisk`. Unit: source-down + risk-keys. Dalej: zapis pliku testowego, sprawa znikniętych / konflikt.
 
+## 2026-10-25 16:15 — A6 #556 F7 (import_enabled + Graph)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (A6/#320 otwarte). Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” po `705e8f8` — komentarz „do poprawy” (BLOKER import_enabled + hash + Graph). #383 CONFLICTING. Bez push na main.
+- CI #556 na `705e8f8`: unit ✔, visual ✔, db ✔ (nullguard **837**) — G-15: poprawki dopiero po zielonym CI.
+- Bieżąca: **A6 F7 #556** — `import_enabled` (domyślnie false); dedup hash; Graph try/catch/timeout/10MB; DEMO bez sekretów; `source` SHAREPOINT; projekt `STEGRA_BODEN`; kontrakt parserów; unit graph z fake fetch. Potem ponowne F7.
+
