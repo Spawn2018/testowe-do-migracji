@@ -132,6 +132,8 @@ const pl: Dict = {
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
   rk_deepl_usage: 'Tłumaczenia komunikatów drogowych: {used} / {limit} znaków',
+  /** B9 / F7 #553 — Edge translate-retry; tekst jak wyglad/W-b9-tlumaczenia */
+  rk_translate_wait: 'Komunikat drogowy czeka na tłumaczenie',
   rk_road_pl: 'Trasa PL: {event}',
   rk_road_pl_road: 'Trasa PL {road}: {event}',
   rk_flow_closed: '{code}: droga zamknięta przy pozycji auta',
