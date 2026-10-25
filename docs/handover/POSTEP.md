@@ -5243,3 +5243,15 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#562** F7 „gotowe do scalenia” (Spawn2018, po `4b2d94c8` / kod `bf0aa1a3`) → merge `7159ab4c` (0307). #383 CONFLICTING. Bez push na main.
 - Bieżąca: **A6 #560** — rebase na main, migracja outbound **0306→0308**; F7 5 blokerów + poprawki wpisane w PLAN §4. Następny commit: kod 0308 (If-Match, import_ctx, plan_delivery_to, schedule_row, patch||).
 - Testy db: `import.sh` outbound (+15) — EXPECTED import **161**; CI wcześniej 160/1 FAIL na `outbound_ack` (naprawa w następnym kodzie F7).
+
+## 2026-10-26 00:15 — A6 #560 F7: kod 0308 (5 blokerów)
+
+- Skrzynka: #550 WSTRZYMANE; pozostałe w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI poprzednie SHA: unit/visual ✔; **db FAIL** import 160/1 — `auth.jwt()` w ack (brama bez JWT).
+- Bieżąca: **#560** kod F7 w **0308** + Edge:
+  1. PUT `If-Match` / 412=`etag_mismatch` (pending, bez sprawy);
+  2. `import_schedule` — `import_ctx` wokół UPDATE zasobów/numerów;
+  3. `plan_delivery_to` (Stockholm); tylko zmienione pola; NULL nie czyści;
+  4. ack `done` → `shipment_items.schedule_row` + `KSH_FILE_OUTBOUND`;
+  5. `patch = patch || p_patch` + unique pending; JSZip zamiast exceljs; attempts/failed; write_set skip backlog.
+- EXPECTED import **169**; unit: 412 + JSZip round-trip. Push → CI → prośba F7 po zielonym.

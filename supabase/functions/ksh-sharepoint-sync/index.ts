@@ -120,11 +120,24 @@ async function handle(req: Request): Promise<Response> {
 
   const maybeWrite = async (
     fileBytes: Uint8Array,
-    fileSnapshot: Record<string, { ld: string | null; lt: string | null; dd: string | null; dt: string | null }>,
+    fileSnapshot: Record<string, {
+      ld: string | null;
+      lt: string | null;
+      dd: string | null;
+      dt: string | null;
+      co?: string | null;
+      ho?: string | null;
+    }>,
+    eTag?: string | null,
   ) => {
     if (!writeEnabled) return null;
     return processOutboundWrites({
-      sb, env, projectId, fileBytes, fileSnapshot,
+      sb,
+      env,
+      projectId,
+      fileBytes,
+      fileSnapshot,
+      eTag,
     });
   };
 
@@ -227,7 +240,7 @@ async function handle(req: Request): Promise<Response> {
     lastError: prev?.last_error,
   });
   if (skipImport) {
-    const writeRes = await maybeWrite(dl.bytes, parsed.snapshot);
+    const writeRes = await maybeWrite(dl.bytes, parsed.snapshot, dl.meta.eTag);
     const lastRun = {
       ...(prev?.last_run && typeof prev.last_run === 'object' ? prev.last_run : {}),
       hash,
@@ -241,6 +254,8 @@ async function handle(req: Request): Promise<Response> {
         write_attempted: true,
         write_n: writeRes.written,
         write_conflicts: writeRes.conflicts,
+        write_reason: writeRes.write_reason ?? writeRes.reason ?? null,
+        upload_ok: writeRes.upload_ok,
       } : {}),
     };
     const up = await upsertOk({
@@ -248,6 +263,7 @@ async function handle(req: Request): Promise<Response> {
       last_read_at: started,
       last_run: lastRun,
       last_error: null,
+      snapshot: writeRes?.snapshotPatch ?? undefined,
     });
     await store.resolveRisks(`${DEDUP_PREFIX}`);
     const result = {
@@ -261,6 +277,8 @@ async function handle(req: Request): Promise<Response> {
         write_enabled: writeEnabled ? 'true' : 'false',
         write_n: writeRes ? String(writeRes.written) : '0',
         write_conflicts: writeRes ? String(writeRes.conflicts) : '0',
+        write_reason: writeRes?.write_reason ?? writeRes?.reason ?? '',
+        upload_ok: writeRes?.upload_ok == null ? '' : String(writeRes.upload_ok),
       },
     };
     const runOk = await insertRun(sb, true, result);
@@ -338,7 +356,7 @@ async function handle(req: Request): Promise<Response> {
 
   await store.resolveRisks(`${DEDUP_PREFIX}`);
 
-  const writeRes = await maybeWrite(dl.bytes, parsed.snapshot);
+  const writeRes = await maybeWrite(dl.bytes, parsed.snapshot, dl.meta.eTag);
 
   const lastRun = {
     created: added,
@@ -359,6 +377,8 @@ async function handle(req: Request): Promise<Response> {
       write_attempted: true,
       write_n: writeRes.written,
       write_conflicts: writeRes.conflicts,
+      write_reason: writeRes.write_reason ?? writeRes.reason ?? null,
+      upload_ok: writeRes.upload_ok,
     } : {}),
     // Udany przebieg czyści zegar awarii.
   };
@@ -368,7 +388,7 @@ async function handle(req: Request): Promise<Response> {
     last_read_at: started,
     last_run: lastRun,
     last_error: null,
-    snapshot: parsed.snapshot,
+    snapshot: writeRes?.snapshotPatch ?? parsed.snapshot,
   });
 
   const result = {
@@ -390,6 +410,8 @@ async function handle(req: Request): Promise<Response> {
       write_enabled: writeEnabled ? 'true' : 'false',
       write_n: writeRes ? String(writeRes.written) : '0',
       write_conflicts: writeRes ? String(writeRes.conflicts) : '0',
+      write_reason: writeRes?.write_reason ?? writeRes?.reason ?? '',
+      upload_ok: writeRes?.upload_ok == null ? '' : String(writeRes.upload_ok),
     },
   };
   const runOk = await insertRun(sb, true, result);

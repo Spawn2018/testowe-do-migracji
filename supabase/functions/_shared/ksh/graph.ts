@@ -100,6 +100,8 @@ export type DriveItemMeta = {
   downloadHttp?: number;
   bytes?: number;
   errorCode?: string;
+  /** eTag z driveItem — do PUT If-Match (F7 #560). Nie logować treści URL. */
+  eTag?: string | null;
 };
 
 /**
@@ -141,11 +143,13 @@ export async function downloadSharePointFile(
   }
   const item = await itemRes.json().catch(() => ({} as Record<string, unknown>));
   const err = item.error as { code?: string } | undefined;
+  const eTagRaw = item.eTag ?? item['@odata.etag'];
   const meta: DriveItemMeta = {
     http: itemRes.status,
     size: typeof item.size === 'number' ? item.size : null,
     namePresent: typeof item.name === 'string',
     errorCode: err?.code,
+    eTag: typeof eTagRaw === 'string' && eTagRaw.trim() ? eTagRaw.trim() : null,
   };
   if (!itemRes.ok) {
     return {
@@ -194,12 +198,14 @@ export async function downloadSharePointFile(
 
 /**
  * Zapis bajtów xlsx przez Graph (PUT content). Adres tylko z env — nie w wyniku.
+ * F7 #560: If-Match z eTag odczytu; 412 → etag_mismatch (pending bez sprawy).
  * A6: tylko gdy write_enabled (Edge); CI bez SharePoint — mock fetch.
  */
 export async function uploadSharePointFile(
   env: GraphEnv,
   bytes: Uint8Array,
   fetchFn: typeof fetch = fetch,
+  opts?: { ifMatch?: string | null },
 ): Promise<
   | { ok: true; mode: 'test' | 'prod'; meta: { http: number; bytes: number } }
   | { ok: false; reason: string; meta: { http: number; bytes: number } }
@@ -221,14 +227,17 @@ export async function uploadSharePointFile(
     };
   }
   const shareId = shareUrlToShareId(fileUrl);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${tok.token}`,
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+  const ifMatch = opts?.ifMatch?.trim();
+  if (ifMatch) headers['If-Match'] = ifMatch;
   let putRes: Response;
   try {
     putRes = await fetchFn(`https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/content`, {
       method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${tok.token}`,
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      },
+      headers,
       body: bytes,
       signal: AbortSignal.timeout(GRAPH_DOWNLOAD_TIMEOUT_MS),
     });
@@ -237,6 +246,13 @@ export async function uploadSharePointFile(
       ok: false,
       reason: 'network_upload',
       meta: { http: 0, bytes: bytes.byteLength },
+    };
+  }
+  if (putRes.status === 412) {
+    return {
+      ok: false,
+      reason: 'etag_mismatch',
+      meta: { http: 412, bytes: bytes.byteLength },
     };
   }
   if (!putRes.ok) {

@@ -28,13 +28,42 @@ export function shouldRaiseKshSourceDown(
   return (now - fe) >= downMin * 60_000;
 }
 
-/** Migawka HH do konfliktu (kolejny krok): kod → daty/godziny (bez PII). */
+/** Migawka HH do konfliktu: kod → daty/godziny + numery (bez PII/nazwisk). */
 export function buildCodeSnapshot(
-  rows: readonly { code: string; load_date: string | null; load_time: string | null; delivery_date: string | null; delivery_time: string | null }[],
-): Record<string, { ld: string | null; lt: string | null; dd: string | null; dt: string | null }> {
-  const out: Record<string, { ld: string | null; lt: string | null; dd: string | null; dt: string | null }> = {};
+  rows: readonly {
+    code: string;
+    load_date: string | null;
+    load_time: string | null;
+    delivery_date: string | null;
+    delivery_time: string | null;
+    carrier_order_no?: string | null;
+    hhl_order_no?: string | null;
+  }[],
+): Record<string, {
+  ld: string | null;
+  lt: string | null;
+  dd: string | null;
+  dt: string | null;
+  co: string | null;
+  ho: string | null;
+}> {
+  const out: Record<string, {
+    ld: string | null;
+    lt: string | null;
+    dd: string | null;
+    dt: string | null;
+    co: string | null;
+    ho: string | null;
+  }> = {};
   for (const r of rows) {
-    out[r.code] = { ld: r.load_date, lt: r.load_time, dd: r.delivery_date, dt: r.delivery_time };
+    out[r.code] = {
+      ld: r.load_date,
+      lt: r.load_time,
+      dd: r.delivery_date,
+      dt: r.delivery_time,
+      co: r.carrier_order_no ?? null,
+      ho: r.hhl_order_no ?? null,
+    };
   }
   return out;
 }

@@ -1,10 +1,21 @@
 /**
- * A6 — łatka XLSX: daty/godziny i numery zleceń po kodzie Wysyłka (bez PII w logach).
- * Formuł poza zmienianymi komórkami nie tykamy (exceljs zachowuje pozostałe).
+ * A6 — łatka XLSX przez JSZip (XML arkusza), bez przepisywania całego skoroszytu (F7 #560).
+ * Typ komórki zostaje: tekst→tekst, liczba/data→liczba. NULL / niesparsowane → pomiń (nie czyść).
+ * Duplikat kodu: pierwszy wiersz (jak parser).
+ * JSZip wstrzykiwany (Deno: npm:jszip; Vitest: jszip) — jak fuel/wob.
  */
-import ExcelJS from 'npm:exceljs@4.4.0';
 import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
-import { excelDateFromIso, excelTimeFromHm } from './xlsxPatchTime.ts';
+import {
+  excelSerialFromIso,
+  excelTimeFractionFromHm,
+  normalizeHm,
+} from './xlsxPatchTime.ts';
+
+export type ZipLike = {
+  files: Record<string, { async(type: 'string'): Promise<string> }>;
+  file(name: string, data: string): void;
+  generateAsync(options: { type: 'uint8array' }): Promise<Uint8Array>;
+};
 
 export type OutboundPatch = {
   code: string;
@@ -16,109 +27,306 @@ export type OutboundPatch = {
   hhl_order_no?: string | null;
 };
 
-export { excelDateFromIso, excelTimeFromHm };
+export {
+  excelDateFromIso,
+  excelTimeFromHm,
+  excelSerialFromIso,
+  excelTimeFractionFromHm,
+  normalizeHm,
+} from './xlsxPatchTime.ts';
 
-function unwrapCell(v: unknown): unknown {
-  if (v == null) return null;
-  if (v instanceof Date) return v;
-  if (typeof v === 'object') {
-    const o = v as Record<string, unknown>;
-    if ('result' in o) return unwrapCell(o.result);
-    if ('text' in o && typeof o.text === 'string') return o.text;
-    if (Array.isArray(o.richText)) {
-      return (o.richText as { text?: string }[]).map((t) => t.text ?? '').join('');
-    }
-  }
-  return v;
+function decodeXml(s: string): string {
+  return s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&amp;/g, '&');
 }
 
-function cellStr(v: unknown): string {
-  const u = unwrapCell(v);
-  if (u == null) return '';
-  return String(u).replace(/\u00A0/g, ' ').trim();
+function encodeXml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function parseSharedStrings(xml: string): string[] {
+  const out: string[] = [];
+  for (const si of xml.match(/<si>[\s\S]*?<\/si>/g) ?? []) {
+    const parts = [...si.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((m) => decodeXml(m[1]));
+    out.push(parts.join(''));
+  }
+  return out;
+}
+
+function colLettersToIndex(col: string): number {
+  let n = 0;
+  for (const ch of col) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n;
+}
+
+function indexToColLetters(idx: number): string {
+  let n = idx;
+  let s = '';
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
+
+type CellKind = 'shared' | 'inline' | 'str' | 'number' | 'empty';
+
+type CellInfo = {
+  ref: string;
+  kind: CellKind;
+  text: string;
+  num: number | null;
+  raw: string;
+};
+
+function readCell(attrs: string, body: string, shared: string[]): CellInfo {
+  const ref = /r="([A-Z]+\d+)"/.exec(attrs)?.[1] ?? '';
+  const t = /\st="([^"]+)"/.exec(attrs)?.[1];
+  if (t === 'inlineStr') {
+    const text = decodeXml([...body.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((x) => x[1]).join(''));
+    return { ref, kind: 'inline', text, num: null, raw: '' };
+  }
+  const v = /<v>([\s\S]*?)<\/v>/.exec(body)?.[1];
+  if (v === undefined) {
+    return { ref, kind: 'empty', text: '', num: null, raw: '' };
+  }
+  if (t === 's') {
+    return { ref, kind: 'shared', text: shared[Number(v)] ?? '', num: null, raw: v };
+  }
+  if (t === 'str') {
+    return { ref, kind: 'str', text: decodeXml(v), num: null, raw: v };
+  }
+  const num = Number(v);
+  return {
+    ref,
+    kind: 'number',
+    text: Number.isFinite(num) ? String(num) : decodeXml(v),
+    num: Number.isFinite(num) ? num : null,
+    raw: v,
+  };
+}
+
+function cellDisplay(c: CellInfo): string {
+  return (c.text ?? '').replace(/\u00A0/g, ' ').trim();
+}
+
+function buildCellXml(ref: string, kind: CellKind, value: string | number): string {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return `<c r="${ref}"><v>${value}</v></c>`;
+  }
+  const t = encodeXml(String(value));
+  if (kind === 'str') {
+    return `<c r="${ref}" t="str"><v>${t}</v></c>`;
+  }
+  // shared / inline / empty → inlineStr (nie psujemy sharedStrings innych komórek)
+  return `<c r="${ref}" t="inlineStr"><is><t>${t}</t></is></c>`;
+}
+
+type SheetModel = {
+  path: string;
+  xml: string;
+  shared: string[];
+  /** ref → CellInfo z pierwszego przebiegu */
+  cells: Map<string, CellInfo>;
+  /** kod → numer wiersza (pierwszy) */
+  codeRow: Map<string, number>;
+  headerCol: Map<string, number>;
+  codeColLetters: string;
+};
+
+async function loadFirstSheet(
+  bytes: Uint8Array,
+  loadAsync: (b: Uint8Array) => Promise<ZipLike>,
+): Promise<
+  | { ok: true; zip: ZipLike; sheet: SheetModel }
+  | { ok: false; reason: string }
+> {
+  let zip: ZipLike;
+  try {
+    zip = await loadAsync(bytes);
+  } catch {
+    return { ok: false, reason: 'xlsx_load' };
+  }
+  const sheetPaths = Object.keys(zip.files)
+    .filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+    .sort();
+  if (!sheetPaths.length) return { ok: false, reason: 'no_sheet' };
+  const path = sheetPaths[0]!;
+  const xml = await zip.files[path]!.async('string');
+  const sharedXml = zip.files['xl/sharedStrings.xml']
+    ? await zip.files['xl/sharedStrings.xml']!.async('string')
+    : '';
+  const shared = parseSharedStrings(sharedXml);
+
+  const cells = new Map<string, CellInfo>();
+  for (const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+    const [, col, rowS, attrsRest, body = ''] = m;
+    const attrs = ` r="${col}${rowS}"${attrsRest}`;
+    const info = readCell(attrs, body ?? '', shared);
+    info.ref = `${col}${rowS}`;
+    cells.set(info.ref, info);
+  }
+
+  const headerCol = new Map<string, number>();
+  for (const [ref, cell] of cells) {
+    const row = Number(/(\d+)$/.exec(ref)?.[1] ?? 0);
+    if (row !== 1) continue;
+    const col = /^([A-Z]+)/.exec(ref)?.[1] ?? '';
+    const key = cellDisplay(cell);
+    if (key) headerCol.set(key, colLettersToIndex(col));
+  }
+
+  const codeHeader = COLUMN_MAP_DEFAULT.shipmentCode;
+  const codeColIdx = headerCol.get(codeHeader);
+  if (!codeColIdx) return { ok: false, reason: 'no_code_col' };
+  const codeColLetters = indexToColLetters(codeColIdx);
+
+  const codeRow = new Map<string, number>();
+  for (const [ref, cell] of cells) {
+    const m = /^([A-Z]+)(\d+)$/.exec(ref);
+    if (!m || m[1] !== codeColLetters) continue;
+    const row = Number(m[2]);
+    if (row <= 1) continue;
+    const code = cellDisplay(cell);
+    if (code && !codeRow.has(code)) codeRow.set(code, row);
+  }
+
+  return {
+    ok: true,
+    zip,
+    sheet: { path, xml, shared, cells, codeRow, headerCol, codeColLetters },
+  };
+}
+
+function setCellValue(
+  sheet: SheetModel,
+  row: number,
+  header: string,
+  value: string | number,
+): boolean {
+  const colIdx = sheet.headerCol.get(header);
+  if (!colIdx) return false;
+  const ref = `${indexToColLetters(colIdx)}${row}`;
+  const prev = sheet.cells.get(ref);
+  const kind: CellKind = prev?.kind === 'number' && typeof value === 'number'
+    ? 'number'
+    : prev?.kind === 'str'
+    ? 'str'
+    : prev?.kind === 'number' && typeof value === 'string'
+    ? 'inline'
+    : (prev?.kind ?? 'inline');
+  const xml = buildCellXml(ref, kind === 'shared' ? 'inline' : kind, value);
+  const re = new RegExp(`<c r="${ref}"[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)`);
+  if (re.test(sheet.xml)) {
+    sheet.xml = sheet.xml.replace(re, xml);
+  } else {
+    // Brak komórki — wstaw do wiersza <row r="N">…</row>
+    const rowRe = new RegExp(`(<row[^>]*\\sr="${row}"[^>]*>)([\\s\\S]*?)(<\\/row>)`);
+    if (!rowRe.test(sheet.xml)) return false;
+    sheet.xml = sheet.xml.replace(rowRe, (_all, open, body, close) => `${open}${body}${xml}${close}`);
+  }
+  sheet.cells.set(ref, {
+    ref,
+    kind: typeof value === 'number' ? 'number' : 'inline',
+    text: String(value),
+    num: typeof value === 'number' ? value : null,
+    raw: '',
+  });
+  return true;
 }
 
 /**
- * Nakłada łatki na bajty xlsx. Zwraca nowe bajty + liczby (bez kodów / treści).
- * Nieznany kod → skipped; brak arkusza → błąd.
+ * Nakłada łatki na bajty xlsx (JSZip). Zwraca bajty + listę zapisanych kodów.
+ * `loadAsync` — JSZip.loadAsync (Edge przekazuje npm:jszip; testy — jszip).
  */
 export async function patchWorkbookBytes(
   bytes: Uint8Array,
   patches: readonly OutboundPatch[],
+  loadAsync: (b: Uint8Array) => Promise<ZipLike>,
 ): Promise<
-  | { ok: true; bytes: Uint8Array; written: number; skipped: number }
+  | { ok: true; bytes: Uint8Array; written: number; skipped: number; writtenCodes: string[] }
   | { ok: false; reason: string }
 > {
   if (patches.length === 0) {
-    return { ok: true, bytes, written: 0, skipped: 0 };
+    return { ok: true, bytes, written: 0, skipped: 0, writtenCodes: [] };
   }
-  const wb = new ExcelJS.Workbook();
-  try {
-    await wb.xlsx.load(bytes as unknown as ExcelJS.Buffer);
-  } catch {
-    return { ok: false, reason: 'xlsx_load' };
-  }
-  const ws = wb.worksheets[0];
-  if (!ws) return { ok: false, reason: 'no_sheet' };
-
-  const headerRow = ws.getRow(1);
-  const colByHeader = new Map<string, number>();
-  headerRow.eachCell({ includeEmpty: true }, (cell, col) => {
-    const key = cellStr(cell.value);
-    if (key) colByHeader.set(key, col);
-  });
-
-  const codeCol = colByHeader.get(COLUMN_MAP_DEFAULT.shipmentCode);
-  if (!codeCol) return { ok: false, reason: 'no_code_col' };
-
-  const col = (header: string) => colByHeader.get(header);
-
-  const byCode = new Map<string, number>();
-  ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber === 1) return;
-    const code = cellStr(row.getCell(codeCol).value);
-    if (code) byCode.set(code, rowNumber);
-  });
+  const loaded = await loadFirstSheet(bytes, loadAsync);
+  if (!loaded.ok) return loaded;
+  const { zip, sheet } = loaded;
 
   let written = 0;
   let skipped = 0;
+  const writtenCodes: string[] = [];
+
   for (const p of patches) {
-    const rowNum = byCode.get(p.code);
+    const rowNum = sheet.codeRow.get(p.code);
     if (!rowNum) {
       skipped += 1;
       continue;
     }
-    const row = ws.getRow(rowNum);
     let changed = false;
-    const set = (header: string, value: unknown) => {
-      const c = col(header);
-      if (!c) return;
-      row.getCell(c).value = value as ExcelJS.CellValue;
-      changed = true;
+    const applyDate = (header: string, iso: string | null | undefined, present: boolean) => {
+      if (!present) return;
+      const serial = excelSerialFromIso(iso ?? undefined);
+      if (serial == null) return; // F7: NULL/niesparsowane nie czyści
+      const refCol = sheet.headerCol.get(header);
+      if (!refCol) return;
+      const ref = `${indexToColLetters(refCol)}${rowNum}`;
+      const prev = sheet.cells.get(ref);
+      if (prev?.kind === 'inline' || prev?.kind === 'str' || prev?.kind === 'shared') {
+        if (setCellValue(sheet, rowNum, header, String(iso).trim())) changed = true;
+      } else if (setCellValue(sheet, rowNum, header, serial)) {
+        changed = true;
+      }
     };
-    if ('load_date' in p) set(COLUMN_MAP_DEFAULT.loadDate, excelDateFromIso(p.load_date));
-    if ('load_time' in p) set(COLUMN_MAP_DEFAULT.loadTime, excelTimeFromHm(p.load_time));
-    if ('delivery_date' in p) set(COLUMN_MAP_DEFAULT.deliveryDate, excelDateFromIso(p.delivery_date));
-    if ('delivery_time' in p) set(COLUMN_MAP_DEFAULT.deliveryTime, excelTimeFromHm(p.delivery_time));
-    if ('carrier_order_no' in p) {
-      set(COLUMN_MAP_DEFAULT.scxOrderNo, p.carrier_order_no ?? null);
-    }
-    if ('hhl_order_no' in p) {
-      set(COLUMN_MAP_DEFAULT.hhlOrderNo, p.hhl_order_no ?? null);
-    }
+    const applyTime = (header: string, hm: string | null | undefined, present: boolean) => {
+      if (!present) return;
+      const norm = normalizeHm(hm ?? undefined);
+      if (!norm) return;
+      const refCol = sheet.headerCol.get(header);
+      if (!refCol) return;
+      const ref = `${indexToColLetters(refCol)}${rowNum}`;
+      const prev = sheet.cells.get(ref);
+      if (prev?.kind === 'number') {
+        const frac = excelTimeFractionFromHm(norm);
+        if (frac == null) return;
+        if (setCellValue(sheet, rowNum, header, frac)) changed = true;
+      } else if (setCellValue(sheet, rowNum, header, norm)) {
+        changed = true;
+      }
+    };
+    const applyText = (header: string, val: string | null | undefined, present: boolean) => {
+      if (!present) return;
+      if (val == null || !String(val).trim()) return; // nie czyść
+      if (setCellValue(sheet, rowNum, header, String(val).trim())) changed = true;
+    };
+
+    applyDate(COLUMN_MAP_DEFAULT.loadDate, p.load_date, 'load_date' in p);
+    applyTime(COLUMN_MAP_DEFAULT.loadTime, p.load_time, 'load_time' in p);
+    applyDate(COLUMN_MAP_DEFAULT.deliveryDate, p.delivery_date, 'delivery_date' in p);
+    applyTime(COLUMN_MAP_DEFAULT.deliveryTime, p.delivery_time, 'delivery_time' in p);
+    applyText(COLUMN_MAP_DEFAULT.scxOrderNo, p.carrier_order_no, 'carrier_order_no' in p);
+    applyText(COLUMN_MAP_DEFAULT.hhlOrderNo, p.hhl_order_no, 'hhl_order_no' in p);
+
     if (changed) {
-      row.commit();
       written += 1;
+      writtenCodes.push(p.code);
     } else {
       skipped += 1;
     }
   }
 
-  const out = await wb.xlsx.writeBuffer();
-  return {
-    ok: true,
-    bytes: new Uint8Array(out as ArrayBuffer),
-    written,
-    skipped,
-  };
+  zip.file(sheet.path, sheet.xml);
+  const out = await zip.generateAsync({ type: 'uint8array' });
+  return { ok: true, bytes: out, written, skipped, writtenCodes };
 }
