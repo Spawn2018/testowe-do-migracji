@@ -5064,3 +5064,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #553: unit/visual OK; `db` FAIL — migracja 0302: złe kolumny `audit_log` (`actor_id`/`entity_type` → `user_id`/`entity`, jak 0301).
 - Bieżąca: push poprawki 0302 na `pakiet/b9-panel-pl-deepl`; czekam zielonego `db` + F7.
 
+## 2026-10-25 13:00 — B9 F7 runda 2 (po zielonym CI na 791465c4)
+
+- Skrzynka: #550 (Spawn2018) — komentarz 11:34 **WSTRZYMANE** (kierowca nie instaluje aplikacji); PLAN §4 zaktualizowany. Reszta (#538/#537/#500/#499/#412/#323/#322/#320) w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#553 = „do poprawy”; #554 wygląd w toku; #383 CONFLICTING). Bez push na main.
+- Bieżąca: **B9** F7 #553 — `rk_translate_wait`; `resolveRisks(TRANSLATE_WAIT)` po sukcesie; alarm kolejki przed early return bez klucza; stale per hash; dequeue bez `must` (łap błąd); `audit_log` prefs_pairs/users_pairs; security **459** (+4); PLAN B9 pkt 2: `app_users.locale` zostaje. Unit `pl-data` 11/11.
+

@@ -13,10 +13,18 @@ do $b9$
 declare
   v_prefs int;
   v_users int;
+  v_prefs_pairs jsonb;
+  v_users_pairs jsonb;
 begin
   select count(*)::int into v_prefs
     from user_preferences where locale is distinct from 'pl';
   select count(*)::int into v_users
+    from app_users where locale is distinct from 'pl';
+  select coalesce(jsonb_agg(jsonb_build_object('user_id', user_id, 'locale', locale) order by user_id), '[]'::jsonb)
+    into v_prefs_pairs
+    from user_preferences where locale is distinct from 'pl';
+  select coalesce(jsonb_agg(jsonb_build_object('user_id', id, 'locale', locale) order by id), '[]'::jsonb)
+    into v_users_pairs
     from app_users where locale is distinct from 'pl';
 
   insert into public.audit_log (user_id, action, entity, entity_id, new_value)
@@ -28,6 +36,8 @@ begin
     jsonb_build_object(
       'prefs_non_pl', v_prefs,
       'users_non_pl', v_users,
+      'prefs_pairs', v_prefs_pairs,
+      'users_pairs', v_users_pairs,
       'at', now(),
       'migration', '0302',
       'reason', 'B9 panel PL — locale → pl przed drop'

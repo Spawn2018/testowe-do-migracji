@@ -187,14 +187,24 @@ describe('PL-DATA', () => {
     const queue = new Map<string, { source: string; lang: 'SV' | 'EN'; reason: string; createdAt: string }>();
     const memory = new Map<string, string>();
     const h = textHash('Tillfällig avstängning vid E4 retry');
+    const h2 = textHash('Andra meddelandet stale');
     queue.set(h, {
       source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'blad',
       createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
     });
-    const risks: string[] = [];
+    queue.set(h2, {
+      source: 'Andra meddelandet stale', lang: 'SV', reason: 'brak',
+      createdAt: new Date(Date.now() - 25 * 60_000).toISOString(),
+    });
+    const risks: { dedup: string; titleKey?: string }[] = [];
+    const resolved: string[] = [];
     let deeplN = 0;
     const store = {
-      raiseRisk: async (r: { dedup?: string }) => { if (r.dedup) risks.push(r.dedup); return true; },
+      raiseRisk: async (r: { dedup?: string; titleKey?: string }) => {
+        if (r.dedup) risks.push({ dedup: r.dedup, titleKey: r.titleKey });
+        return true;
+      },
+      resolveRisks: async (prefix: string) => { resolved.push(prefix); return 1; },
       translationGet: async (hash: string) => memory.get(hash) ?? null,
       translationPut: async (hash: string, _s: string, pl: string) => { memory.set(hash, pl); },
       translationEnqueue: async (hash: string, source: string, lang: 'SV' | 'EN', reason: string) => {
@@ -218,10 +228,29 @@ describe('PL-DATA', () => {
       env: { DEEPL_API_KEY: 'test' },
       now: () => new Date(),
     });
-    expect(ok.updated).toBe(1);
+    expect(ok.updated).toBeGreaterThanOrEqual(1);
     expect(queue.has(h)).toBe(false);
     expect(memory.get(h)).toContain('Tymczasowe');
-    expect(risks.some((d) => d.startsWith('ROAD_SE:TRANSLATE_WAIT:'))).toBe(true);
+    expect(risks.filter((r) => r.dedup.startsWith('ROAD_SE:TRANSLATE_WAIT:')).length).toBe(2);
+    expect(risks.every((r) => r.dedup.startsWith('ROAD_SE:TRANSLATE_WAIT:') ? r.titleKey === 'rk_translate_wait' : true)).toBe(true);
+    expect(resolved.some((p) => p === `ROAD_SE:TRANSLATE_WAIT:${h}`)).toBe(true);
+
+    /* Alarm 15 min także bez klucza DeepL (wpisy „brak”). */
+    risks.length = 0;
+    queue.clear();
+    queue.set(h, {
+      source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'brak',
+      createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    });
+    const noKey = await runTranslateRetry({
+      store: store as never,
+      fetch: async () => new Response('{}'),
+      env: {},
+      now: () => new Date(),
+    });
+    expect(noKey.risks).toBe(1);
+    expect(risks[0]?.titleKey).toBe('rk_translate_wait');
+    expect(queue.has(h)).toBe(true);
 
     queue.set(h, {
       source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'blad',

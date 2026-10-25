@@ -874,7 +874,10 @@ async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail
       e.note = result.pl;
       e.detail = result.pl;
       /* B9: po udanym tłumaczeniu usuń wpis z kolejki (także przy trafieniu z pamięci po wcześniejszym błędzie). */
-      if (store.translationDequeue) await store.translationDequeue(textHash(e.freeText));
+      if (store.translationDequeue) {
+        try { await store.translationDequeue(textHash(e.freeText)); }
+        catch { /* błąd DELETE nie przerywa tłumaczenia dalszych zdarzeń (F7 B9) */ }
+      }
     }
     const level = result.level === 'ok' ? usageLevel(result.used, result.limit) : result.level;
     if (!warned && (level === 'warn' || level === 'full')) {
@@ -1868,41 +1871,60 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
- * B9 — ponowienie translation_queue (blad/brak; limit od 1. dnia miesiąca).
- * Po sukcesie: pamięć + opis ryzyka + usunięcie z kolejki. Wpisy >15 min → ryzyko ROAD_SE.
+ * B9 — ponowienie translation_queue (blad/brak; limit: nowy miesiąc = nowy wiersz deepl_usage).
+ * Po sukcesie: pamięć + opis ryzyka + usunięcie z kolejki + zamknięcie TRANSLATE_WAIT.
+ * Wpisy >15 min (poza odrzucone) → ryzyko ROAD_SE / rk_translate_wait (per hash).
+ * Alarm kolejki także bez DEEPL_API_KEY (wpisy „brak”).
  */
 export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
   const key = deps.env.DEEPL_API_KEY;
   const store = deps.store;
   const now = deps.now();
   const nowIso = now.toISOString();
-  if (!key || !store.translationListQueue || !store.translationGet || !store.translationPut
-    || !store.translationEnqueue || !store.translationDequeue || !store.deeplUsage || !store.deeplAddUsage) {
-    return { job: 'translate-retry', mode: 'LIVE', ok: true, reason: 'Brak DeepL / magazynu tłumaczeń — pominięto' };
-  }
-  const rows = await store.translationListQueue(['blad', 'brak', 'limit']);
-  let usage = await store.deeplUsage();
-  const monthStartWarsaw = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(now);
-  const isFirstDay = monthStartWarsaw.endsWith('-01');
-  let done = 0;
   let risks = 0;
-  let staleRaised = false;
-  for (const row of rows) {
-    const ageMin = (now.getTime() - Date.parse(row.createdAt)) / 60000;
-    if (!staleRaised && ageMin > 15 && row.reason !== 'odrzucone') {
-      staleRaised = true;
+  let usageChars = 0;
+  let usageLimit = DEEPL_MONTHLY_LIMIT;
+  if (store.deeplUsage) {
+    const u = await store.deeplUsage();
+    usageChars = u.characters;
+    usageLimit = u.limit || DEEPL_MONTHLY_LIMIT;
+  }
+  const raiseStale = async (rows: { hash: string; reason: string; createdAt: string }[]) => {
+    for (const row of rows) {
+      const ageMin = (now.getTime() - Date.parse(row.createdAt)) / 60000;
+      if (!(ageMin > 15) || row.reason === 'odrzucone') continue;
       if (await store.raiseRisk({
         kind: 'ROAD_SE', severity: 'LOW',
         title: 'Komunikat drogowy czeka na tłumaczenie',
-        titleKey: 'rk_deepl_usage',
-        params: { used: usage.characters, limit: usage.limit },
+        titleKey: 'rk_translate_wait',
+        params: { used: usageChars, limit: usageLimit },
         detail: { zrodlo: 'DeepL', powód: 'kolejka>15min', hash: row.hash, czas: nowIso },
         dedup: `ROAD_SE:TRANSLATE_WAIT:${row.hash}`,
       })) risks++;
     }
-    if (row.reason === 'limit' && !isFirstDay && usage.characters >= usage.limit) continue;
+  };
+
+  if (!store.translationListQueue) {
+    return { job: 'translate-retry', mode: 'LIVE', ok: true, reason: 'Brak magazynu kolejki tłumaczeń — pominięto' };
+  }
+  const rows = await store.translationListQueue(['blad', 'brak', 'limit']);
+  await raiseStale(rows);
+
+  if (!key || !store.translationGet || !store.translationPut
+    || !store.translationEnqueue || !store.translationDequeue || !store.deeplUsage || !store.deeplAddUsage) {
+    return {
+      job: 'translate-retry', mode: 'LIVE', ok: true, risks,
+      reason: 'Brak DeepL / magazynu tłumaczeń — pominięto (alarm kolejki OK)',
+    };
+  }
+
+  let usage = await store.deeplUsage();
+  usageChars = usage.characters;
+  usageLimit = usage.limit || DEEPL_MONTHLY_LIMIT;
+  let done = 0;
+  for (const row of rows) {
+    /* Nowy miesiąc = nowy wiersz deepl_usage (F7: bez !isFirstDay). */
+    if (row.reason === 'limit' && usage.characters >= usage.limit) continue;
     const result = await translateFreeText({
       text: row.source,
       source: row.lang,
@@ -1915,8 +1937,10 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
       deepl: (text, source) => deeplTranslate(deps.fetch, key, text, source),
     });
     if (!result.pl) continue;
-    await store.translationDequeue(row.hash);
+    try { await store.translationDequeue(row.hash); }
+    catch { /* nie przerywaj dalszych wpisów */ }
     if (store.patchRoadRiskOpis) await store.patchRoadRiskOpis(row.source, result.pl);
+    await store.resolveRisks(`ROAD_SE:TRANSLATE_WAIT:${row.hash}`);
     done++;
   }
   return {
