@@ -973,7 +973,7 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 7. **Front (koordynator, po PR bazy):** `trackerKind` → „Google”; teksty Link śledzenia / Mapa (stan, ostatnia pozycja, ostrzeżenie 12 h jak RIO #543).
 8. **Odbiór:** SELECT `positions` SG-18 źródło Google, czas pomiaru < 10 min, stan „ok”; brak tokenu w logach Edge.
 
-### B9 · Panel tylko PL (8A) — DeepL zostaje (D-20261019-1515-01, #322)
+### B9 · Panel tylko PL (8A) — DeepL zostaje (D-20261019-1515-01, #322) — W TOKU (`pakiet/b9-panel-pl-deepl`; migracja **0302**)
 Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN → PL zostaje (właściciel 19.10.2026, 15:10). Opis „`drop` tabel tłumaczeń” jest w tej części nieważny.
 1. **Zostają:** `translation_memory`, `translation_queue`, `deepl_usage`; `deepl_usage_view` i kafelek DeepL w Stanie systemu; `src/lib/pl/deepl.ts`, `polishRoadFreeText`, metody tłumaczeń w `store.ts`; klucze `b6_sys_deepl`, `b6_sys_deepl_d`, `pl_deepl_warn`, `pl_deepl_full`, `pl_show_original`, `rk_deepl_usage`; sekret `DEEPL_API_KEY`. Sygnału „B9 — klucz DeepL do usunięcia” nie wysyłasz.
 2. **Usuwasz tylko** wybór języka ekranów EN/SV (kolumna języka w `user_preferences` / `app_users` — z kopią, wszyscy `pl`). Ekran (`AccountMenu`, Ustawienia, `loadPreferences`, `prefs.save`, „Tłumaczenie w toku”, „Pokaż oryginał”) robi koordynator na `wyglad/W-b9-pl` (D-20261020-0010-01). Ty: kolumna, `translate-retry`, alarm, testy bazy. Plików `src/` nie zmieniasz. Aplikacja kierowcy zostaje w 3 językach.
@@ -1638,3 +1638,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 11:25 | #549/B7 SCALONE (`6b0b19b3`); F7 gotowe `bd8faba`; start **B8** → migracja **0301** (`b8_mark_stale_in_app_read`); security **449** | pętla |
 | 25.10.2026 11:40 | #550 `pilne` wpisane §4 (Google share SG-18); B8 #551 db FAIL → fix testów (replica przy fixtures IN_APP / bramka #402) | pętla |
 | 25.10.2026 12:10 | #551/B8 SCALONE (`75ee446c`, 0301); #550 pkt 1 STOP — bez logowania Google brak pozycji (`GgA=`); `pytanie-do-koordynatora`; start **B9** | pętla |
+| 25.10.2026 12:20 | B9 start: **0302** drop `user_preferences.locale`, `translate-retry` + cron 5 min, `deepl_usage_view` kolejka; security **455**; #552 docs | pętla |

@@ -5052,3 +5052,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
   - **STOP** konektora do decyzji A/B/C (rekomendacja A: RIO/emtrack). Opis bez współrzędnych i identyfikatorów.
 - Bieżąca: **B9** (DeepL zostaje; tylko panel PL / `translate-retry` / alarm — wg PLAN §4).
 
+## 2026-10-25 12:20 — start B9 (0302): locale panelu + translate-retry
+
+- Skrzynka: #550 STOP/`pytanie-do-koordynatora` (rek. A). #552 docs otwarte. #538/#537/#500/#499/#412/#323/#322/#320 w planie.
+- Scalanie: #551/B8 już na main (`75ee446c`). #383 CONFLICTING. Bez push na main.
+- Bieżąca: **B9** `pakiet/b9-panel-pl-deepl` — migracja **0302**: drop `user_preferences.locale` (kopia + wszyscy `pl`), `app_users.locale=pl`, `deepl_usage_view` (+kolejka/oldest), cron `tower-translate-retry` 5 min, Edge `translate-retry`, security **455**. Front (AccountMenu / „Tłumaczenie w toku”) — koordynator.
+

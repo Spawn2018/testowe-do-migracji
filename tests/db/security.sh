@@ -1486,5 +1486,19 @@ chk6 "B8: AUDYT17_MARK_READ z id starego" "$(sys "select (new_value->'notificati
   from audit_log where action='AUDYT17_MARK_READ' and entity_id='b8-0301'
   order by id desc limit 1" | tail -1)" "true"
 
+# --- B9 (0302): panel PL, DeepL zostaje, translate-retry ---
+chk6 "B9: user_preferences bez kolumny locale" "$(sys "select (not exists (
+  select 1 from information_schema.columns
+   where table_schema='public' and table_name='user_preferences' and column_name='locale'
+))::text" | tail -1)" "true"
+chk6 "B9: app_users wszyscy locale=pl" "$(sys "select (count(*) filter (where locale is distinct from 'pl') = 0)::text from app_users" | tail -1)" "true"
+chk6 "B9: translation_memory istnieje" "$(sys "select to_regclass('public.translation_memory') is not null" | tail -1)" "t"
+chk6 "B9: translation_queue istnieje" "$(sys "select to_regclass('public.translation_queue') is not null" | tail -1)" "t"
+B9_VIEW=$(run $HHL "select deepl_usage_view()::text" | tail -1)
+echo "$B9_VIEW" | grep -q 'queued_active' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma queued_active"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view: $B9_VIEW"; }
+echo "$B9_VIEW" | grep -q 'oldest_age_min' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma oldest_age_min"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view oldest: $B9_VIEW"; }
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

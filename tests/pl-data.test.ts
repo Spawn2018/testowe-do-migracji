@@ -182,6 +182,88 @@ describe('PL-DATA', () => {
     expect(formatMarinePl({ waveM: 3.8, gustKn: 40, tempC: 4, windDeg: 180 })).toMatch(/południowy/);
   });
 
+  it('B9 translate-retry: kolejka → pamięć → usunięcie; błąd zostaje; limit bez wywołania', async () => {
+    const { runTranslateRetry } = await import('../supabase/functions/_shared/integrations/jobs.ts');
+    const queue = new Map<string, { source: string; lang: 'SV' | 'EN'; reason: string; createdAt: string }>();
+    const memory = new Map<string, string>();
+    const h = textHash('Tillfällig avstängning vid E4 retry');
+    queue.set(h, {
+      source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'blad',
+      createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
+    });
+    const risks: string[] = [];
+    let deeplN = 0;
+    const store = {
+      raiseRisk: async (r: { dedup?: string }) => { if (r.dedup) risks.push(r.dedup); return true; },
+      translationGet: async (hash: string) => memory.get(hash) ?? null,
+      translationPut: async (hash: string, _s: string, pl: string) => { memory.set(hash, pl); },
+      translationEnqueue: async (hash: string, source: string, lang: 'SV' | 'EN', reason: string) => {
+        queue.set(hash, { source, lang, reason, createdAt: new Date().toISOString() });
+      },
+      translationListQueue: async (reasons: string[]) => [...queue.entries()]
+        .filter(([, v]) => reasons.includes(v.reason))
+        .map(([hash, v]) => ({ hash, ...v })),
+      translationDequeue: async (hash: string) => { queue.delete(hash); },
+      patchRoadRiskOpis: async () => 1,
+      deeplUsage: async () => ({ characters: 10, limit: 1_000_000 }),
+      deeplAddUsage: async (n: number) => 10 + n,
+      lastRun: async () => null,
+      recordRun: async () => {},
+    };
+    const ok = await runTranslateRetry({
+      store: store as never,
+      fetch: (async () => new Response(JSON.stringify({
+        translations: [{ text: 'Tymczasowe zamkniecie przy E4 retry' }],
+      }), { status: 200 })) as typeof fetch,
+      env: { DEEPL_API_KEY: 'test' },
+      now: () => new Date(),
+    });
+    expect(ok.updated).toBe(1);
+    expect(queue.has(h)).toBe(false);
+    expect(memory.get(h)).toContain('Tymczasowe');
+    expect(risks.some((d) => d.startsWith('ROAD_SE:TRANSLATE_WAIT:'))).toBe(true);
+
+    queue.set(h, {
+      source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'blad',
+      createdAt: new Date().toISOString(),
+    });
+    const failStore = {
+      ...store,
+      translationListQueue: store.translationListQueue,
+      translationDequeue: store.translationDequeue,
+      translationGet: async () => null,
+      translationPut: async () => {},
+      deeplUsage: async () => ({ characters: 10, limit: 1_000_000 }),
+      deeplAddUsage: async (n: number) => 10 + n,
+      raiseRisk: async () => false,
+    };
+    const broken = await runTranslateRetry({
+      store: failStore as never,
+      fetch: async () => { deeplN += 1; throw new Error('deepl down'); },
+      env: { DEEPL_API_KEY: 'test' },
+      now: () => new Date(),
+    });
+    expect(broken.updated ?? 0).toBe(0);
+    expect(queue.has(h)).toBe(true);
+
+    queue.set(h, {
+      source: 'Tillfällig avstängning vid E4 retry', lang: 'SV', reason: 'limit',
+      createdAt: new Date().toISOString(),
+    });
+    deeplN = 0;
+    const limited = await runTranslateRetry({
+      store: {
+        ...failStore,
+        deeplUsage: async () => ({ characters: 1_000_000, limit: 1_000_000 }),
+      } as never,
+      fetch: async () => { deeplN += 1; return new Response('{}'); },
+      env: { DEEPL_API_KEY: 'test' },
+      now: () => new Date('2026-10-25T12:00:00Z'),
+    });
+    expect(limited.updated ?? 0).toBe(0);
+    expect(deeplN).toBe(0);
+  });
+
   it('DeepL dostaje tylko treść komunikatu, bez klucza w adresie', async () => {
     const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
       const body = String(init?.body ?? '');
