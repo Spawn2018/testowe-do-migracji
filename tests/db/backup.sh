@@ -152,6 +152,36 @@ psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now(), files=
 chk "#516: OK → decyzja BACKUP_FAILED RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and resolution_code='AUTO_CLOSED'")" 1
 chk "#516: OK → ryzyko backup-stale resolved" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where dedup_key like 'backup-stale:%' and resolved_at is null")" 0
 chk "#516: note z id przebiegu OK" "$(psql "$SRC" -Atq -c "select (resolution_note like '%id='||$OK516||'%')::text from decisions where type_code='BACKUP_FAILED' order by resolved_at desc limit 1")" true
+chk "#516: RISK_AUTO_CLOSED w audycie" "$(psql "$SRC" -Atq -c "select count(*) from audit_log where action='RISK_AUTO_CLOSED' and new_value->>'hotfix'='0295'")" 1
+
+echo; echo "[#516 F7] inne typy / RUNNING / run_id / bez powiadomień"
+PROJ516b=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code in ('BACKUP_FAILED','NO_TRACKING') and title like 'F7 #516%');
+  delete from decisions where type_code in ('BACKUP_FAILED','NO_TRACKING') and title like 'F7 #516%';
+  delete from decisions where type_code='BACKUP_FAILED' and status in ('NEW','RESOLVED');
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+# inny typ decyzji — ma zostać NEW po OK kopii
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516b', 'NO_TRACKING', 'NEW', 'F7 #516 inny typ', '{}'::jsonb)" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516b=$(psql "$SRC" -Atq -c "select id from backup_runs order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='test #516b' where id=$ERR516b" >/dev/null
+# decyzja z przyszłym run_id (≥ kolejnego OK) — nie zamykać
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516b', 'BACKUP_FAILED', 'NEW', 'F7 #516 future run', jsonb_build_object('backup_run_id', $ERR516b + 1000))" >/dev/null
+NOTIF_BEFORE=$(psql "$SRC" -Atq -c "select count(*) from notifications")
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+RUN516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+# aktualizacja RUNNING (bez zmiany statusu) nie zamyka
+psql "$SRC" -q -c "update backup_runs set progress_at=now() where id=$RUN516" >/dev/null
+chk "#516 F7: RUNNING nie zamyka BACKUP_FAILED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW'")" 2
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now() where id=$RUN516" >/dev/null
+chk "#516 F7: inne typy decyzji zostają NEW" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='NO_TRACKING' and status='NEW' and title='F7 #516 inny typ'")" 1
+chk "#516 F7: run_id >= OK nie zamykane" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW' and (detail->>'backup_run_id')::bigint > $RUN516")" 1
+chk "#516 F7: ERROR run_id < OK → RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and detail->>'backup_run_id'='$ERR516b'")" 1
+NOTIF_AFTER=$(psql "$SRC" -Atq -c "select count(*) from notifications")
+chk "#516 F7: zamknięcie bez nowych powiadomień" "$NOTIF_AFTER" "$NOTIF_BEFORE"
 
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
