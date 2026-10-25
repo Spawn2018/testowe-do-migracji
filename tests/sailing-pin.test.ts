@@ -1,7 +1,7 @@
 /** #557 cz. 2 — „Przypnij rejs” w karcie transportu (tylko Administrator HHL, przy ostrzeżeniu o złym rejsie). */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { canPinSailing, hasOpenMismatch, proposedText, suggestFromRpc } from '../src/lib/sailingPin';
+import { canPinSailing, hasOpenMismatch, pinErrorKey, proposedText, suggestFromRpc } from '../src/lib/sailingPin';
 import type { Risk, Sailing } from '../src/types';
 
 const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
@@ -43,7 +43,7 @@ describe('Przypnij rejs', () => {
   it('nazwa rejsu: z rozkładu w czasie polskim; poza rozkładem — etykieta bazy z dopiskiem UTC', () => {
     const s = { mismatch: true, assignedSailingId: null, proposedSailingId: 's-wawel', proposedLabel: 'Wawel 24.10 16:00' };
     expect(proposedText(s, [sail])).toMatch(/^Wawel · .*24\.10.*18:00/);
-    expect(proposedText(s, [])).toBe('Wawel 24.10 16:00 UTC');
+    expect(proposedText(s, [])).toBe('Wawel 24.10 16:00 (godz. UTC)');
     expect(proposedText({ ...s, proposedSailingId: null }, [sail])).toBeNull();
   });
 
@@ -56,5 +56,23 @@ describe('Przypnij rejs', () => {
     expect(c).toMatch(/refreshFromServer\(\{ keepSelection: true \}\)/);
     const po = read('src/components/drawer/PanelOverview.tsx');
     expect(po).toMatch(/canPinSailing\(\{ admin: hhlAdminDates\(role\), readOnly: isPreviewReadOnly\(\{ viewRole: role \}\), mismatch: hasOpenMismatch\(risks, load\.id\) \}\)/);
+  });
+
+  it('błędy bazy (0307) → zrozumiały tekst; nieznany → ogólny, bez surowego komunikatu', () => {
+    expect(pinErrorKey('Tylko Administrator HHL z 2FA')).toBe('p7_pin_err_admin');
+    expect(pinErrorKey('Rejs odwołany')).toBe('p7_pin_err_cancelled');
+    expect(pinErrorKey('Tylko trasa GDN-NYN lub GDY-KAA')).toBe('p7_pin_err_route');
+    expect(pinErrorKey('JWT expired')).toBe('p7_pin_err');
+    expect(pinErrorKey(null)).toBe('p7_pin_err');
+  });
+
+  it('F7 #565: blokada drugiego zapisu, zawsze koniec „Zapisuję…”, osobna instancja na transport', () => {
+    const c = read('src/components/drawer/SailingPin.tsx');
+    expect(c).toMatch(/if \(sent\.current\) return;\s*sent\.current = true;/);
+    expect(c).toMatch(/finally \{\s*setBusy\(false\);/);
+    expect(c).toMatch(/\.catch\(\(\) => \{ if \(live\) setErr/);
+    expect(c).toMatch(/\.finally\(\(\) => \{ if \(live\) setLoaded\(true\); \}\)/);
+    expect(c).not.toMatch(/\$\{r\.error\}/);
+    expect(read('src/components/drawer/PanelOverview.tsx')).toMatch(/<SailingPin key=\{load\.id\} loadId=\{load\.id\}/);
   });
 });

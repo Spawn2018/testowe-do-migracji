@@ -568,7 +568,7 @@ export function PanelOverview(p: Props) {
           ) : bookedVessel ? <span data-content>{bookedVessel}</span>
             : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}
             {canPinSailing({ admin: hhlAdminDates(role), readOnly: isPreviewReadOnly({ viewRole: role }), mismatch: hasOpenMismatch(risks, load.id) })
-              ? <SailingPin loadId={load.id} locale={locale} sailings={sailings} />
+              ? <SailingPin key={load.id} loadId={load.id} locale={locale} sailings={sailings} />
               : null}</dd>
           {pilotsReq ? (
             <>

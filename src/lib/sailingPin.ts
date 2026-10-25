@@ -48,7 +48,19 @@ export function proposedText(s: PinSuggest, sailings: readonly Sailing[]): strin
   if (!s.proposedSailingId) return null;
   const hit = sailings.find((x) => x.id === s.proposedSailingId);
   if (hit) return `${hit.vessel} · ${fmtLocal(effDeparture(hit))}`;
-  return s.proposedLabel ? `${s.proposedLabel.trim()} UTC` : null;
+  return s.proposedLabel ? `${s.proposedLabel.trim()} (godz. UTC)` : null;
+}
+
+/**
+ * Komunikat błędu przypięcia po polsku. Znane odmowy bazy (0307) → zrozumiały tekst; reszta → ogólny
+ * (bez surowego komunikatu bazy w karcie).
+ */
+export function pinErrorKey(raw: string | null): string {
+  const m = (raw ?? '').toLowerCase();
+  if (m.includes('2fa') || m.includes('administrator')) return 'p7_pin_err_admin';
+  if (m.includes('odwołany')) return 'p7_pin_err_cancelled';
+  if (m.includes('trasa')) return 'p7_pin_err_route';
+  return 'p7_pin_err';
 }
 
 export async function sailingMismatchSuggest(loadId: string): Promise<{ data: PinSuggest | null; error: string | null }> {
