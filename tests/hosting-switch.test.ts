@@ -28,6 +28,22 @@ describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
     expect(vercel).not.toHaveProperty('crons')
   })
 
+  // B7 (D-20261017-1220-01 / D-0730): CSP RO frame-src pod PDF Storage; geolocation zostaje () — bez prac kierowcy.
+  it('B7: CSP Report-Only ma frame-src self/blob/supabase; Permissions-Policy geolocation=()', () => {
+    const csp = vercel.headers
+      .flatMap((h) => h.headers)
+      .find((x) => x.key === 'Content-Security-Policy-Report-Only')?.value
+    expect(csp).toMatch(/frame-src 'self' blob: https:\/\/\*\.supabase\.co/)
+    const perm = vercel.headers
+      .flatMap((h) => h.headers)
+      .find((x) => x.key === 'Permissions-Policy')?.value
+    expect(perm).toMatch(/geolocation=\(\)/)
+    const headersFile = readFileSync('public/_headers', 'utf8')
+    expect(headersFile).toMatch(/frame-src 'self' blob: https:\/\/\*\.supabase\.co/)
+    expect(headersFile).toMatch(/geolocation=\(\)/)
+    expect(readFileSync('src/views/DriverPwa.tsx', 'utf8')).toMatch(/Link nieaktywny/)
+  })
+
   it('public/_headers (Cloudflare Pages): /download/* + SEC; w buildzie produkcyjnym /download usuwany', () => {
     // Windows: CRLF w working tree mimo eol=lf — porównujemy po normalizacji LF
     const lines = readFileSync('public/_headers', 'utf8').replace(/\r\n/g, '\n').trim().split('\n')

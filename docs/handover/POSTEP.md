@@ -5010,3 +5010,22 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” po `90b91bf7` — F7 na `e98e956`: P2 `sms_send_test` omija Podgląd. Bez push na main.
 - Bieżąca: **B5** F7 P2 — `sms_send_test` + `admin_sms_zone_test` w `force_helpers` (0300) i strażniku; test „Podgląd — sms_send_test odmowa”; P3: `audit_log_impersonation_bi` + `mfa_satisfied`/`t.active`; asercja 0 SQL-lang z zapisem; komentarz E12/E14. security **443** (+2). Telemetria: `report_client_error` / `report_csp_violation` w Podglądzie zostają bez assert (wyjątek F7) — zapisują `app_role`/`user_id` konta oglądanego. Push → CI; ponowne F7.
 
+## 2026-10-25 10:15 — #382/B5 SCALONE (0300); start B7
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie. Bez `pilne`. #446/#425 już CLOSED (#537 pkt 3). Wtyczka Supabase Cursor = TEST `emkbykwenwrjmbprydml` (wcześniejszy wpis POSTEP).
+- Scalanie: **#382** `29755d09` (F7 „gotowe do scalenia” po `51f5bd2`, CI unit/db/visual zielone, security **443**). Bez push na main — `deploy-main` robi 0300. #383 (front) po wdrożeniu bazy. #548 wygląd — bez F7 gotowe / CI osobno.
+- B5 odłożone P3 (F7): Storage upload w Podglądzie; czyszczenie `impersonation_state` przy role/active; treść PREVIEW_* w audit_log; telemetria report_* zapisuje konto oglądane; opisy 0249→0300 (#382 body poprawione przed merge).
+- Bieżąca: **B7** (`pakiet/b7-naglowki`) — CSP RO `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` + `public/_headers`; `geolocation=()` bez zmian; DRV-CLOSE już w `DriverPwa`; `lint:css` w `unit.yml`; test hosting-switch.
+
+## 2026-10-25 09:41 — #548 SCALONE; #537 uzup. 33–35; B7 CI zielone
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie. **#537 uzup.** (Spawn2018, bez `pilne`): map-static / U-123 / AIS „w porcie” → PLAN §4 pkt 33–35 + P6 U-123 + §8. Bez przerwania B7.
+- Scalanie: **#548** `af310f8b` (F7 „gotowe do scalenia” po `f11074c`, CI unit/visual). Bez push na main — `deploy-main`. #383 — nadal po wdrożeniu 0300 / F7 po SELECT.
+- Bieżąca: **B7** PR #549 — merge main (#548); CI unit/visual zielone na `5febf9fc` (CSP `frame-src`, `lint:css`, test hosting-switch); czekam F7. Bez push na main.
+
+## 2026-10-25 11:05 — B7: CI zielone na head po F7; W8 z F7; czekam ponowne F7
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). Bez `pilne` przerywających. #383 CONFLICTING, „Nie scalać jeszcze” (po SELECT 0300 / F7).
+- Scalanie: F7 „gotowe do scalenia” na `5febf9f` (08:38Z) **przed** merge main `13352892` + docs `c5d71270` → wg D-1050 bez merge. CI unit/visual **zielone** na `c5d71270`. Bez push na main.
+- Bieżąca: **B7** PR #549 — zakres kodu domknięty (CSP RO `frame-src`, `lint:css`, test); PLAN §5 W8 uzupełnione o 3 punkty F7 #549 (zawężenie hostów Supabase, zod jitless, COOP/CORP/`report-to`). Czekam ponowne F7: gotowe do scalenia.
+
