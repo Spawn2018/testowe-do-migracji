@@ -5242,3 +5242,4 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: **#562** F7 „gotowe do scalenia” (Spawn2018, po `4b2d94c8` / kod `bf0aa1a3`) → merge `7159ab4c` (0307). #383 CONFLICTING. Bez push na main.
 - Bieżąca: **A6 #560** — rebase na main, migracja outbound **0306→0308**; F7 5 blokerów + poprawki wpisane w PLAN §4. Następny commit: kod 0308 (If-Match, import_ctx, plan_delivery_to, schedule_row, patch||).
+- Testy db: `import.sh` outbound (+15) — EXPECTED import **161**; CI wcześniej 160/1 FAIL na `outbound_ack` (naprawa w następnym kodzie F7).

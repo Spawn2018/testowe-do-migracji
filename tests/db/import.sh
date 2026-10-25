@@ -467,4 +467,39 @@ chk "A6: dedup — bez nowego schedule_imports" "$(Q "select count(*) from sched
 # sanity: przed pierwszym zapisem SharePoint było mniej wierszy
 chk "A6: pierwszy SHAREPOINT dodał wersję" "$(Q "select ($SI_MID > $SI_BEFORE)")" t
 
+# A6/0308: kolejka WT→plik (dates_ctx / numery; nie przy import_ctx)
+echo; echo "[A6 0308] ksh_sync_outbound"
+chk "A6: authenticated bez EXECUTE outbound_enqueue" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_enqueue(uuid,jsonb,jsonb)','execute')")" f
+chk "A6: authenticated bez EXECUTE outbound_list" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_list(uuid,int)','execute')")" f
+chk "A6: authenticated bez EXECUTE outbound_ack" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_ack(bigint[],text,text)','execute')")" f
+chk "A6: authenticated bez EXECUTE l1b_note_file_changed" "$(Q "select has_function_privilege('authenticated','l1b_note_file_changed(uuid,uuid,text)','execute')")" f
+val "A6: SCX widzi 0 outbound" $SCX "select count(*) from ksh_sync_outbound" 0
+val "A6: KSH widzi 0 outbound" $KSH "select count(*) from ksh_sync_outbound" 0
+$PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
+val "A6: HHL_ADMIN write_set true" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+chk "A6: audit KSH_SYNC_WRITE_SET" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_WRITE_SET' and entity_id='$P'")" t
+val "A6: HHL_ADMIN write_set false" $HHL "select ksh_sync_write_set(false); select write_enabled from ksh_sync_state where project_id='$P'" f commit
+# snapshot pod konflikt (kod SG-01)
+SG_OUT=$(Q "select load_id from shipment_items where shipment_code='SG-01' and project_id='$P' limit 1")
+CODE_OUT=$(Q "select public.load_sms_code('$SG_OUT')")
+$PSQL -c "update ksh_sync_state set snapshot=jsonb_build_object('$CODE_OUT', jsonb_build_object('ld','$D1b','lt',null,'dd','$D2b','dt',null)) where project_id='$P'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+# dates_ctx → pending + historia (+1 zdarzenie w tej samej transakcji)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select set_config('tower.dates_ctx','on',true); update loads set plan_load_date=(plan_load_date + 1) where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: dates_ctx → outbound pending"; else fail=$((fail+1)); echo "  FAIL  A6: dates_ctx → outbound → $out"; fi
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; create temp table _ev0 as select count(*)::int as n from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'; select set_config('tower.dates_ctx','on',true); update loads set plan_load_date=(plan_load_date + 1) where id='$SG_OUT'; select (select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND') - (select n from _ev0); rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: dates_ctx → KSH_FILE_OUTBOUND"; else fail=$((fail+1)); echo "  FAIL  A6: KSH_FILE_OUTBOUND → $out"; fi
+# import_ctx → bez kolejki
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select set_config('tower.import_ctx','on',true); update loads set plan_load_date=(plan_load_date + 1), carrier_order_no='IMP-SKIP' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    A6: import_ctx → bez outbound"; else fail=$((fail+1)); echo "  FAIL  A6: import_ctx outbound → $out"; fi
+# numery bez dates_ctx → pending
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='HHL-SCAN-1' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and patch ? 'carrier_order_no'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: numer → outbound patch"; else fail=$((fail+1)); echo "  FAIL  A6: numer outbound → $out"; fi
+# service_role: sprawa konfliktu + ack
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (l1b_note_file_changed('$P','$SG_OUT','$CODE_OUT') is not null)::text; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: l1b_note_file_changed"; else fail=$((fail+1)); echo "  FAIL  A6: l1b_note_file_changed → $out"; fi
+OID=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set hhl_order_no='KSH-9' where id='$SG_OUT'; select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select ksh_sync_outbound_ack(array[$OID]::bigint[],'conflict','file_changed'); select status from ksh_sync_outbound where id=$OID; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "conflict" ]; then ok=$((ok+1)); echo "  OK    A6: outbound_ack conflict"; else fail=$((fail+1)); echo "  FAIL  A6: outbound_ack → $out"; fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
