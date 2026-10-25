@@ -5161,3 +5161,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - **0306:** logika w `public.hotfix_557_apply()` (revoke public/anon/authenticated; grant service_role); migracja woła `perform`.
 - **status.sh:** +7 asercji (SG-21→Wawel, status ≥ Port SE, audit HOTFIX_557_*, idempotencja SAILING_ASSIGNED); EXPECTED_LOCAL.status 251→258.
 - Bieżąca: push #561, CI, prośba F7. Potem PR2 reguły / powrót #560.
+
+## 2026-10-25 19:25 — #557 db FAIL: boolean true≠t w status.sh
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez F7 „gotowe” (#561; #560 niegotowe; #383 CONFLICTING).
+- CI #561 `5bb244a1`: unit ✔ visual ✔; **db FAIL** status 253/5 (oczekiwano 258) — `::text` → `true`, chk oczekuje `t` (jak #556 import).
+- Fix: usunięte `::text` z 5 asercji #557 w `status.sh`. Ponowny push #561.

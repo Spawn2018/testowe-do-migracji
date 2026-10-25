@@ -1215,15 +1215,15 @@ insert into positions (load_id, ts, geom_raw, source) values
 delete from audit_log where action like 'HOTFIX_557%';
 " >/dev/null
 N557=$(q "select public.hotfix_557_apply()")
-chk "#557: hotfix_557_apply → n_fix > 0" "select ($N557 > 0)::text" t
+chk "#557: hotfix_557_apply → n_fix > 0" "select ($N557 > 0)" t
 chk "#557: SG-21 na rejsie Wawel (jak T-12)" \
-  "select (l.sailing_id = '$SW')::text from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-21'" t
+  "select (l.sailing_id = '$SW') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-21'" t
 chk "#557: T-12 status ≥ AT_PORT_NYNASHAMN" \
-  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN'))::text from loads where id='$LT12'" t
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LT12'" t
 chk "#557: SG-21 status ≥ AT_PORT_NYNASHAMN" \
-  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN'))::text from loads where id='$LSG'" t
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LSG'" t
 chk "#557: audit HOTFIX_557_*" \
-  "select (count(*) filter (where action like 'HOTFIX_557%') >= 3)::text from audit_log" t
+  "select (count(*) filter (where action like 'HOTFIX_557%') >= 3) from audit_log" t
 N_SAIL=$(q "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'")
 chk "#557: jedno SAILING_ASSIGNED po pierwszym przebiegu" "select $N_SAIL" 1
 q "select public.hotfix_557_apply()" >/dev/null

@@ -1661,3 +1661,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 18:35 | #557 PILNE (T-12/SG-21) pierwszeństwo przed #560; D-20261025-1630-01; PR1 korekta danych **0306**; strefy 10/10 OK; #560 F7 po #557 (+ rebase 0307) | pętla |
 | 25.10.2026 19:00 | #557 F7 (2917154): docs — `hotfix_557_apply` + test db przed znakiem; kod w następnym commitcie | pętla |
 | 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |
+| 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |
