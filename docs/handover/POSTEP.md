@@ -5211,3 +5211,15 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 - Skrzynka: bez zmian (#550 WSTRZYMANE). Brak F7 „gotowe”. Bez push na main.
 - Bieżąca: **#557 PR2** — F7 r3 w `0307`: Port SE→Droga SE; resolved_by w triggerze; assign FERRY quiet + trasa; overdue/mismatch dedup; Stena OFF; testy assign/suggest; i18n `rk_ferry_check_after_arrival`. status **284**; risks **7**. Push → CI → prośba F7.
+
+## 2026-10-25 22:30 — #557 PR2 F7 r3: docs (do poprawy CI 282/2)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `6eda05b1`: unit ✔ visual ✔; **db FAIL** status 282/2 — `mismatch przed assign` = 0 (L557h) + `resolved_by` puste.
+- F7 r3 (Spawn2018, 20:04Z na `d6486d8`): PLAN §4 #557 pkt 7. **Następny commit:** kod 0307 (AIS/SCHEDULE source, null status) + fikstury L557h głośne / Gdańsk osobny rejs / suggest KSH·SCX / FERRY→SE.
+
+## 2026-10-25 22:45 — #557 PR2 F7 r3: kod (L557h + AIS/SCHEDULE)
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Brak F7 „gotowe”. Bez push na main.
+- Bieżąca: **#557 PR2** — `0307`: assign `source` AIS vs SCHEDULE; backup `v_status is null or …`; `status.sh`: L557h głośne + PORT_IN OFF + port; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; status **291**. Push → CI → prośba F7.
