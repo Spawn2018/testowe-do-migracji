@@ -4968,4 +4968,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#535/#525** `1bc24128` (F7 „gotowe do scalenia” po `7c39865e`, CI unit/db/visual, migracja **0297**). Bez push na main — `deploy-main`.
 - Bieżąca: **#496** PR #536 — merge main; F7 r2: Karlskrona-port w `sweden_land_geom`; Lyckeby/Jämjö/Brömsebro na SE_E22; Ösmo na GDN-NYN DOPŁYNĄŁ; test Jämjö→IN_TRANSIT_SE; c3 fuel_miss/ext_mail 42501. status **246**, c3 **40**. Push → CI; ponowne F7.
 
+## 2026-10-25 07:05 — #496 F7 r3 CI: kolizja ID sailing …496
+
+- Skrzynka: #540/#538/#537/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe` po `bb2acf09`. CI: unit/visual OK; **db FAIL** status 245/246 — `#496: nieznana trasa → brak OFF_CORRIDOR` (otrzymano 1).
+- Bieżąca: **#496** PR #536 — Ösmo F7 r3 zajęło sailing `…496` (GDN-NYN); test „nieznana trasa” używał tego samego ID → INSERT OTHER cicho padał → SE_E4. Wolne ID `…49a`. status nadal **246**. Push → CI; ponowne F7. Bez push na main.
+
 

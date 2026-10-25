@@ -860,8 +860,8 @@ Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko;
 ### #492 · `loads.updated_at` przy zmianie zasobów/danych z ekranu (po #491) — SCALONE (#529 `8c7fcf37`, 24.10.2026 13:52 UTC, migracja **0291**; `deploy-main` w toku)
 Po #484, przed #528 / B5. Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind/`combo_weight_t`, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. security **385** (+8). Szczegóły: zgłoszenie #492.
 
-### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — W TOKU F7 #536 r3 (migracja **0298**; po #525 SCALONE; przed B5; przed 28.10)
-Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. F7 r3: Karlskrona-port w lądzie; Lyckeby/Jämjö/Brömsebro na E22; Ösmo na GDN-NYN; fuel_miss/ext_mail 42501. Front — koordynator. Szczegóły: #496.
+### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — W TOKU F7 #536 r3+ (migracja **0298**; po #525 SCALONE; przed B5; przed 28.10)
+Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. F7 r3: Karlskrona-port w lądzie; Lyckeby/Jämjö/Brömsebro na E22; Ösmo na GDN-NYN; fuel_miss/ext_mail 42501. CI: sailing „nieznana trasa” → `…49a` (nie `…496` = Ösmo). Front — koordynator. Szczegóły: #496.
 
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.

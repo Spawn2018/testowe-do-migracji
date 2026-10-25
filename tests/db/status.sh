@@ -1011,7 +1011,8 @@ chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
   "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
 # #496: nieznana trasa promu → bez OFF_CORRIDOR (nie SE_E4). CHECK zdejmujemy tylko na czas wstawki.
 # L 7b — nie 97: #502 F7 B4 = L 97 (kolizja → stary rejs GDN-NYN → SE_E4 + OFF_CORRIDOR).
-S496u=77777777-0000-0000-0000-000000000496
+# Sailing …49a — nie …496: Ösmo F7 r3 już zajmuje …496 (GDN-NYN); INSERT OTHER cicho padał → fałszywy FAIL.
+S496u=77777777-0000-0000-0000-00000000049a
 L496u=$(L 7b)
 q "alter table public.sailings drop constraint if exists sailings_route_check;
    insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
