@@ -119,27 +119,6 @@ const PL: Record<string, string> = {
   p7_num_add: 'Dodaj',
   p7_num_edit: 'Edytuj',
 
-  /* Dokumenty */
-  p7_docs_h: 'Dokumenty',
-  p7_docs_go: 'Dokumenty',
-  p7_doc_permit: 'Zezwolenie PL, SE',
-  p7_doc_cmr_signed: 'CMR z podpisem odbiorcy',
-  p7_doc_cmr_after_unload: 'po rozładunku',
-  p7_doc_permit_firm: 'Zezwolenie firmowe',
-  p7_doc_policy_INSURANCE: 'Polisa SCX',
-  p7_doc_ok: 'jest',
-  p7_doc_mismatch: 'niezgodne z zestawem',
-  p7_doc_missing: 'brak pliku',
-  p7_doc_over: 'brak · po terminie',
-  p7_doc_due: 'brak · termin {date}',
-  p7_doc_policy: '{number} · do {date}',
-  p7_doc_policy_none: 'brak',
-  p7_doc_policy_unknown: '—',
-  p7_docs_n_1: '{n} brak',
-  p7_docs_n_2: '{n} braki',
-  p7_docs_n_5: '{n} braków',
-  p7_docs_ok: 'komplet',
-
   /* telefon — linie stanu sekcji */
   p7_ph_plan: 'Plan',
   p7_ph_eta: 'ETA {v}',
