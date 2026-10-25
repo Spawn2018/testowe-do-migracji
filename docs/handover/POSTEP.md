@@ -5017,3 +5017,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - B5 odłożone P3 (F7): Storage upload w Podglądzie; czyszczenie `impersonation_state` przy role/active; treść PREVIEW_* w audit_log; telemetria report_* zapisuje konto oglądane; opisy 0249→0300 (#382 body poprawione przed merge).
 - Bieżąca: **B7** (`pakiet/b7-naglowki`) — CSP RO `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` + `public/_headers`; `geolocation=()` bez zmian; DRV-CLOSE już w `DriverPwa`; `lint:css` w `unit.yml`; test hosting-switch.
 
+## 2026-10-25 09:41 — #548 SCALONE; #537 uzup. 33–35; B7 CI zielone
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie. **#537 uzup.** (Spawn2018, bez `pilne`): map-static / U-123 / AIS „w porcie” → PLAN §4 pkt 33–35 + P6 U-123 + §8. Bez przerwania B7.
+- Scalanie: **#548** `af310f8b` (F7 „gotowe do scalenia” po `f11074c`, CI unit/visual). Bez push na main — `deploy-main`. #383 — nadal po wdrożeniu 0300 / F7 po SELECT.
+- Bieżąca: **B7** PR #549 — merge main (#548); CI unit/visual zielone na `5febf9fc` (CSP `frame-src`, `lint:css`, test hosting-switch); czekam F7. Bez push na main.
+

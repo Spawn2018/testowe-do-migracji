@@ -921,6 +921,9 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 30. **J-04** — usuń nieśledzony folder `origin/` (~217 MB) jeśli jest; wynik w POSTEP.
 31. **J-24** — W43: już zamknięte w §5 (25.10) — nic do zrobienia.
 32. **J-19** — PII w `0176_*` w publicznym repo: **czeka decyzja właściciela D-J1** (W51); bez zmiany historii gita bez decyzji. Front J-10 (#543) SCALONE — poza tą listą.
+33. **`map-static` bez klienta** (#537 uzup. 25.10 ~09:00, po #547): usuń `supabase/functions/map-static/`, undeploy z Supabase, popraw `docs/SEC_OWASP_ASVS_L2.md`; sekrety tylko tej funkcji — wypisz właścicielowi (nie usuwaj sam). Front `appendMapPage` / test — koordynator. Po I/J; niski priorytet.
+34. **U-123 „☎ Dyspozytor SCX”** (#537 uzup. 25.10 ~09:15) → **P6** (punkt odbioru; po I-1 i J-26, przed wydaniem): RPC kontaktów firmy decydującej + `decides_org` / `assignee_id` w payloadzie dzwonka; front `casePeopleOf` / przycisk — koordynator (`wyglad/*`). Szczegóły przy P6.
+35. **U-100 AIS „w porcie” otwarte w bazie** (#537 uzup. 25.10 ~09:50, po #548): 104× FERRY INFO `rk_ais_arrived*` wiszą otwarte (front ich nie pokazuje). Zapisuj od razu zamknięte (historia rejsu) albo auto-zamknięcie po przypłynięciu / 24 h, bez powiadomień; istniejące → `bulk_quiet`. Test. Po I/J; niski priorytet.
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
@@ -950,7 +953,7 @@ Po jednym koncie na rolę: KSH, SCX Dyspozytor, SCX Użytkownik, HHL Operacje. B
   3. Testy: `e9-role` — `HHL_OPS` nie widzi „Podgląd”, Shift+R nic nie zmienia; `HHL_ADMIN` widzi i przełącza; KSH i SCX nie widzą. Jednostkowe `canSwitchView` / `isPreviewReadOnly` dla `HHL_ADMIN`, `HHL_OPS`, `CLIENT_USER`, `CARRIER_DISPATCH`, demo. Brama: `admin_impersonate_start` i start Podglądu jako `HHL_OPS` → `42501`; `HHL_ADMIN` bez 2FA (gdy wymagane) → `42501`.
   4. Odbiór na produkcji (SELECT): `IMPERSONATE_START` i start Podglądu w `audit_log` tylko od `HHL_ADMIN`.
 
-### B7 · Nagłówki — W TOKU (`pakiet/b7-naglowki`; brama bezpieczeństwa po B5; D-20261017-1220-01 §2)
+### B7 · Nagłówki — W TOKU (`pakiet/b7-naglowki` PR #549; brama bezpieczeństwa po B5; D-20261017-1220-01 §2) — CI unit/visual zielone na `5febf9fc`; czekam F7
 Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny” (DRV-CLOSE). **Bez prac:** `Permissions-Policy: geolocation=(self)`, komunikat `POSITION_SHARE_DENIED`, test Playwright „kierowca udostępnia pozycję” — `geolocation=()` zostaje.
 - CSP Report-Only: `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` i `public/_headers` (podgląd PDF z Storage). Włączenie wymuszenia — W8.
 - `npm run lint:css` w CI (`unit.yml`) — PLAN §4 po C4–C13 / B-pozycje.
@@ -1062,6 +1065,7 @@ P4 jest na produkcji **częściowo**. Robisz brakujące punkty, każdy z testem 
   - **podpowiedzi dopłat** (G-22, D-20261009-1309-01 R8): pozycja „Do zrobienia” dla HHL (część przychodowa) i dla SCX (część kosztowa) otwiera okno „Dopłata” z P5; „Nie dodaję” zamyka pozycję tej firmy z wpisem w Historii; dopłata dodana przez SCX → pozycja HHL „Akceptuję / Odrzucam”.
 - **8.4 alternatywne przeprawy** w „Sytuacji na trasie” według `ROZSTRZYGNIECIA` E7-5 (D-45, L-9, FERRY-STATUS). Najpierw sprawdzasz, co z L-9 już działa (`RisksView`, `sailings`); brakującą część budujesz.
 - **E6 (karta decyzji):** „Biorę tę sprawę”, „Oddaj”, „Przejmij” (E6-5), „Zadzwoń”.
+- **U-123 „☎ Dyspozytor SCX” w dzwonku i na kartach Ryzyk** (#537 uzup. 25.10; makieta E5 `dzwonek.html` / E6 `osoby.html`; po I-1 i J-26, przed wydaniem): produkcja — `casePeopleOf` / `caseMeOf` / `caseAssignmentsOf` w `p6Source.ts` zwracają `null` poza demo. **Baza (Ty):** (1) RPC SECURITY DEFINER (tylko zalogowani) — osoby kontaktowe firmy decydującej: `id`, imię i nazwisko, rola, telefon — tylko firmy stron transportów widocznych (RLS HHL↔SCX↔KSH), bez e-maili; KSH bez telefonów kierowców poza D-1243; (2) w powiadomieniach o decyzjach (`notifications.payload` / widok dzwonka): `decides_org` i gdy jest `assignee_id` — dzwonek „☎ \<rola\> \<firma\>”; (3) w PR nazwy i sygnatury — koordynator podepnie `casePeopleOf`/`caseMeOf`/`caseAssignmentsOf` i przycisk (`wyglad/*`). Testy: odczyt cudzej firmy = 0; telefon tylko według RLS.
 - **E2 drogi PL z HERE** (decyzja 07.10, 12:23; D-20261015-0400-01):
   - zadanie `tower-road-pl` co 15 minut, jak `tower-road-se` — **dopiero po wdrożeniu C1** („Poprawki P2–P3 (audyt 15.10)”, zalew dzwonka); ok. 3 000 zapytań HERE Traffic w miesiącu, w darmowej puli;
   - `road-pl` tylko z HERE, bez KPD (E2-1); **D-214 (D-20261017-0730-01, KPD zamknięte 16.10):** usuwasz wywołania KPD z `road-pl` i `_shared/integrations`; stan źródła i próg w Stanie systemu jak dla dróg SE (E2-2, E23-2);
@@ -1618,3 +1622,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 09:20 | #547 SCALONE (`77eac6c9`); B5 #382 CI zielone `e98e956f` (0300, security **441**, nullguard **828**) — czekam F7 | pętla |
 | 25.10.2026 09:50 | B5 F7 P2: sms_send_test/admin_sms_zone_test → force_helpers; security **443**; P3 defer: storage upload test, PREVIEW_* treść, opisy PR 0249→0300 | pętla |
 | 25.10.2026 10:15 | #382/B5 SCALONE (`29755d09`, 0300); F7 gotowe `51f5bd2`; P3 odłożone → §4 B5 + §8; start **B7** (frame-src CSP RO + lint:css w unit.yml) — brama bezpieczeństwa po B5 | pętla |
+| 25.10.2026 09:41 | #548 SCALONE (`af310f8b`, wyglad U-100 Promy dziś); #537 uzup. → §4 pkt 33–35 + P6 U-123; B7 #549 CI zielone `5febf9fc` — czekam F7 | pętla |
