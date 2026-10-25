@@ -878,7 +878,7 @@ DEL/U+2028/U+2029 w regex; `{{button}}` tylko w treści LOGIN; test `tokens` w `
 ### #528 · Historia — drobne F7 r5 (N8 i inne) (D-20261024-1335-01) — SCALONE (#531 `bf93f0be`, migracja **0292**)
 Po #492, przed B5. N8: clear kierowca/dostawa/tablice/order_no/telematyka/rio_* przy zmianie `carrier_org_id` (`escort_vehicles`→0); clear tracking/eta; **AFTER** detach `positions`/TELM (zza_*, flaga `tower.n8_detach_load` w `forbid_mutation` — bez DDL); `telm_attach_phase`→RESET, `geofence_states`→OUTSIDE; trigger `zz_*` po guard; redakcja swap tylko gdy old+new; skalarne filtry docs/fees + COST 10000; `invoice_documents.role` dla KSH. F7 r5 gotowe. security **400**. Front `_carrier_changed` — #527. Szczegóły: #528.
 
-### #530 · loadsVersion z tabel powiązanych (F7 #529) (D-20261024-2035-01) — W TOKU F7 #532 (migracja **0293**)
+### #530 · loadsVersion z tabel powiązanych (F7 #529) (D-20261024-2035-01) — W TOKU F7 #532 (migracja **0293**; CI zielone `4f56ad2a`, czekam F7)
 Po #528 SCALONE. Podbicie `loads.updated_at` z `load_escorts` / `sailings`; `tower.bump_ctx` w strażniku (tylko `updated_at` — SCX notice na wspólnym rejsie); sailings bez bumpa `CANCELLED`. ETA/RIO-stan poza bumpem; RODO bez bumpa. Potem (#537 pkt 5): shipment_items, documents, load_permits, koszt/przychód, load_driver_contacts. security **406** (+6). Szczegóły: #530.
 
 ### #499 · Punkty kontrolne B7/B8/C4–C13 + prognoza 28.10 — wpisane; terminy w POSTEP
@@ -901,6 +901,9 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 13. **Doradca / facade:** usuń wyjątek doradcy dla `load_status_rank` → **P4-u** (1420 R6); przebieg I-5 i I-17 (1420 R5) → brama TEST w **P11**.
 14. **Porządki planu:** W43 zamknięte (2× `web.push.apple.com` + `last_ack_at`); nagłówek A8 bez „czeka W37”; §8: D-20261016-1620-01, -1750-01, -2045-01 — punkty niezrobione przez A3/A4/A7/A10/D-1118 → paczki.
 15. **Przypomnienie (termin bez zmian):** E49 wiatr 20 m/s / +15 % bok / +5 % przód / postój 25 m/s + klucze w `ops_thresholds` → **P6**; cron `tower-road-pl` (HERE) → **P6**; usunięcie `h1_*`/`h3_*` → **P9**.
+16. **`a3_ensure_cmr_upload`: ostrzeżenie zamiast błędu** (#537 uzup. 3): na produkcji nadal `raise exception` (P0001) — przy zbiegu dwóch zapisów przerywa zmianę statusu. Zamień na `raise warning` + wpis w `app_errors`; test dwóch zapisów równolegle, status przechodzi.
+17. **Testy bazy także bez superusera** (#537 uzup. 3) → **P11** pkt 3: `tests/db/gate.sh` (co najmniej security) jako rola bez superusera, jak na produkcji (F7: testy jako `sys` przepuszczały błędy uprawnień). Wcześniej, jeśli prosto.
+18. **Uwagi D1, D2, D4 i D5 z przeglądu #321** (#537 uzup. 3) → **P11** pkt 3 albo 6 (były odłożone, brak w planie). Porządki `h7_pdf_*` / `p7_doc*` / `exportLoadPdfWithMap` (#325) — koordynator.
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
@@ -1199,7 +1202,9 @@ Bez ekranów Opcji (te w P10b, po P3).
    - strażnik tekstów E21 blokujący na wszystkich ekranach (0 trafień, E21 pkt 8);
    - axe kontrast E10;
    - szerokości 1280 / 1366 / 1440 / 1920 bez nakładania kolumn (E20, brama wizualna robi zrzuty 4 szerokości);
-   - elementy poza ekranem E8.
+   - elementy poza ekranem E8;
+   - **testy bazy bez superusera** (#537 uzup. 3 / pkt 17): co najmniej suite security w `gate.sh` jako rola bez superusera (jak produkcja);
+   - **uwagi D1, D2, D4, D5 z przeglądu #321** (#537 uzup. 3 / pkt 18) — wpisać i domknąć tu albo w pkt 6.
 4. **Pozycje produkcyjne spoza audytu:**
    - PR2 kopie do R2 (sprawdzić, czy cron działa; włączyć);
    - PR1 podtrzymanie;
@@ -1574,3 +1579,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 02:32 | #539 SCALONE (`b548ed31`); #531/#528 SCALONE (`bf93f0be`, 0292); F7 #532: bump_ctx + CANCELLED; security **406** | pętla |
 | 25.10.2026 02:55 | #530/#532: poprawka testów security (order_no, driver_name sys, RLS 0) po db 403/3; security **406** | pętla |
 | 25.10.2026 03:15 | #541 SCALONE (`81c580cc`); #537 uzup. 2 → §4 pkt 10–15, W43 zamknięte, A8 bez W37; #532: `val … commit` (notice); security **406** | pętla |
+| 25.10.2026 03:45 | #537 uzup. 3 → §4 pkt 16–18 + P11 pkt 3; #532 CI unit/db/visual zielone na `4f56ad2a` (security **406**); czekam F7 | pętla |

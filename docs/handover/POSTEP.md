@@ -4893,3 +4893,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: **#537 uzup. 2** → PLAN §4 Zgubione pkt 10–15, W43 zamknięte, A8 bez „czeka W37”, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
 - Scalanie: **#541** `81c580cc` (F7 gotowe, wygląd U-129/U-128/U-105, bez migracji). Bez push na main — `deploy-main`.
 - Bieżąca: **#530** PR #532 — db FAIL 405/1: `val` notice bez `commit` wycofywał bump. Poprawka: `commit` + dwa kroki carrier/order_no (F7). security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:45 — #537 uzup. 3; #532 CI zielone, czekam F7
+
+- Skrzynka: **#537 uzup. 3** (Spawn2018) → PLAN §4 Zgubione pkt 16–18 + P11 pkt 3, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: brak F7 `gotowe do scalenia` po head `4f56ad2a`. #532 MERGEABLE; unit/db/visual zielone (security **406**). #533–#536 CONFLICTING; #382/#383 bez F7. Bez push na main.
+- Bieżąca: **#530** PR #532 — CI zielone na `4f56ad2a`; docs tylko (nie unieważnia bramy). Czekam F7: gotowe do scalenia.
