@@ -8,6 +8,7 @@
  * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
  */
 import { useFuelPublications } from '../lib/fuelPublSource';
+import { useLatestNbp } from '../lib/nbpLive';
 import { lazy, Suspense, useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
@@ -71,7 +72,9 @@ export function FinanceView() {
     </Suspense>
   ) : null;
 
-  const fin = useMemo(() => financeOf(loads, side), [loads, side]);
+  /* 25.10: karta „Kurs NBP” — aktualny kurs z fx_rates, nie najnowszy zapisany przy transporcie */
+  const nbpLive = useLatestNbp();
+  const fin = useMemo(() => financeOf(loads, side, nbpLive), [loads, side, nbpLive]);
   const threshold = side === 'both' ? marginThresholdOf() : null;
   const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
   const publV = useFuelPublications();
