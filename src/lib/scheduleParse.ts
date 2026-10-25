@@ -294,14 +294,10 @@ export function parseSchedule(
       return;
     }
 
-    /* E38: filtr Przewoźnik = HH (gdy kolumna jest w mapie). Pusty = HH z WARN (F7 A6). */
+    /* E38: filtr Przewoźnik = HH (gdy kolumna jest w mapie). Pusty = HH (WARN po STANDARD). */
     if (hasCarrierCol) {
       const carrierRaw = r[map.carrier];
-      if (emptyCell(carrierRaw)) {
-        issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
-          code: 'CARRIER_EMPTY',
-          message: 'Pusty „Przewoźnik” — traktowany jako HH (wiersz wchodzi)' });
-      } else if (!isHhCarrier(carrierRaw)) {
+      if (!emptyCell(carrierRaw) && !isHhCarrier(carrierRaw)) {
         skippedCarrier += 1;
         /* E38 pkt 2: NTG (i inni) z wymiarami — WARN w podglądzie, nie cicho. */
         if (!isStandardDims(r[map.dimensions])) {
@@ -321,6 +317,12 @@ export function parseSchedule(
     if (typStandard || isStandardDims(r[map.dimensions])) {
       skippedStandard += 1;
       return;
+    }
+    /* F7 A6: pusty Przewoźnik przy obecnej kolumnie = HH z WARN (tylko dla wierszy, które wchodzą). */
+    if (hasCarrierCol && emptyCell(r[map.carrier])) {
+      issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
+        code: 'CARRIER_EMPTY',
+        message: 'Pusty „Przewoźnik” — traktowany jako HH (wiersz wchodzi)' });
     }
     const code = codeRaw;
 

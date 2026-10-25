@@ -68,7 +68,7 @@ describe('I-2C klasa STANDARD — parser, walidator zezwoleń, UI', () => {
     expect(ok.issues.filter((i) => i.severity === 'ERROR')).toEqual([]);
     const bad = parseSchedule([{ ...base, 'Rozmiar L x W x H': 'duży' }]);
     expect(bad.rows).toHaveLength(0);
-    expect(bad.issues[0].code).toBe('BAD_DIMENSIONS');
+    expect(bad.issues.some((i) => i.code === 'BAD_DIMENSIONS')).toBe(true);
     const dim = parseSchedule([{ ...base, 'Rozmiar L x W x H': '18,21 x 2,45 x 2,45' }]);
     expect(dim.rows[0].cargoClass).toBe('DIMENSIONED');
   });
