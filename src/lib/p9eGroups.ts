@@ -262,3 +262,12 @@ export function demoStageAnchor(tile: StageTile | null, zones: readonly GroupZon
   const z = zones.find((x) => x.active && x.type === type);
   return z ? { lat: z.lat, lng: z.lng } : null;
 }
+
+/** J-17: dopisek pozycji szacowanej statku (#429 C) w dymku pojedynczego auta na promie — te same klucze co dymek grupy. */
+export function estNote(
+  lastAisAt: string | null | undefined,
+  tx: (key: string, params?: Record<string, string | number>) => string,
+  dt: (iso: string) => string,
+): string {
+  return lastAisAt ? tx('p9e_ais_est', { t: dt(lastAisAt) }) : tx('p9e_ais_est_none');
+}

@@ -151,3 +151,19 @@ describe('22.10.2026: auto „Na promie” na pozycji statku z AIS (SG-17)', () 
     expect(a).toContain('fails >= 3) onUpdate([])');
   });
 });
+
+describe('J-17 — dopisek „szacowana” w dymku pojedynczego auta na promie', () => {
+  it('estNote: z godziną ostatniego AIS i bez AIS', async () => {
+    const { estNote } = await import('../src/lib/p9eGroups');
+    const tx = (k: string, p?: Record<string, string | number>) => (p ? `${k}:${p.t}` : k);
+    expect(estNote('2026-10-24T18:20:00Z', tx, () => '24.10, 20:20')).toBe('p9e_ais_est:24.10, 20:20');
+    expect(estNote(null, tx, () => 'x')).toBe('p9e_ais_est_none');
+  });
+  it('CorridorMap: auto na szacowanej pozycji statku dostaje dopisek w dymku (bez grup: Przegląd, tryb skupienia)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(m).toContain('if (ship.estimated) estById.set(f.id');
+    expect(m).toContain('vehicleTip(row, loc, est)');
+  });
+});
+
