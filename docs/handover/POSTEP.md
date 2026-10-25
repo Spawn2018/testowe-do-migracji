@@ -4909,5 +4909,11 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 ## 2026-10-25 04:27 — #532/#530 SCALONE; start #516 F7 (#533)
 
 - Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). #530 zamknięte (pilot+rejs; pozostałe tabele → #537 pkt 5). Bez pilne przerywających (#413 wygląd — baza SCALONE).
-- Scalanie: **#532** 5f244528 (F7 gotowe po head 1b465c, CI unit/db/visual, migracja **0293**). Bez push na main — deploy-main.
-- Bieżąca: **#516** PR #533 — rebase na main; F7: warunek ackup_run_id < OK id, RISK_AUTO_CLOSED, testy, B5≥0299. Push → CI; ponowne F7.
+- Scalanie: **#532** 5f244528 (F7 gotowe po head a1b465c, CI unit/db/visual, migracja **0293**). Bez push na main — deploy-main.
+- Bieżąca: **#516** PR #533 — rebase na main; F7: warunek backup_run_id < OK id, RISK_AUTO_CLOSED, testy, B5≥0299. Push → CI; ponowne F7.
+
+## 2026-10-25 04:55 — #516 db FAIL: backup 42≠41
+
+- Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: brak F7 `gotowe do scalenia` po head `2d1a7323`. #533 MERGEABLE; unit/visual zielone; **db FAIL** — `backup: oczekiwano 41/41, jest 42 OK` (F7: +6 asercji, nie +5). Bez push na main.
+- Bieżąca: **#516** PR #533 — `gate-suites` backup **42** / hosted **34**. Push → CI; ponowne F7.

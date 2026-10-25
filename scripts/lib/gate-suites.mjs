@@ -17,7 +17,7 @@ export const EXPECTED_LOCAL = {
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
-  backup: 41, // #516 F7: +5 RISK_AUTO / inne typy / RUNNING / run_id / bez notify; było 36
+  backup: 42, // #516 F7: +6 RISK_AUTO / RUNNING / inne typy / run_id≥ / run_id< / bez notify; było 36
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
@@ -60,7 +60,7 @@ export const EXPECTED_LOCAL = {
 /**
  * Oczekiwane OK na hosted TEST.
  * security/risks/backup: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE /
- *   backup: CREATE DATABASE + eksport harness — pełne 41 w CI db.yml, D-86).
+ *   backup: CREATE DATABASE + eksport harness — pełne 42 w CI db.yml, D-86).
  * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
  */
 export const EXPECTED_TEST = {
@@ -69,7 +69,7 @@ export const EXPECTED_TEST = {
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
-  backup: 33, // 41 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 +5
+  backup: 34, // 42 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 +6
 };
 
 /** Alias historyczny — brama TEST / summary. */
