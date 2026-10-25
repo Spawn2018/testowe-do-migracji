@@ -60,6 +60,7 @@ const pl: Dict = {
   b6_sys_here_d: 'kafelki {tiles} · trasy {routes} · dopasowanie {match} · ponad pulę {over} USD · podkład {basemap}',
   b6_sys_deepl: 'DeepL (miesiąc)',
   b6_sys_deepl_d: 'z {limit} znaków · kolejka {q}',
+  b6_sys_deepl_wait: 'komunikat drogowy czeka na tłumaczenie od {m} min',
   b6_sys_csp: 'CSP (Report-Only)',
   b6_sys_csp_d: 'do {until} · {hits} wystąpień / 7 dni · {top}',
   b6_sys_last: 'Ostatnio: {d}',
