@@ -149,9 +149,12 @@ begin
     into v_admin, v_target
     from impersonation_state i
     join app_users a on a.id = i.admin_user_id
+    join app_users t on t.id = i.target_user_id
    where a.auth_id = auth.uid()
      and a.active is true
      and a.role = 'HHL_ADMIN'
+     and mfa_satisfied(a.role)
+     and t.active is true
      and i.started_at > now() - interval '8 hours'
    limit 1;
   if v_admin is not null and v_target is not null then
@@ -437,6 +440,7 @@ begin
   if role_matches_org(p_role, v_kind) is not true then
     raise exception 'Rola % nie pasuje do organizacji użytkownika', p_role;
   end if;
+  -- E12 / E14: bez wpisu, gdy nic się nie zmieniło
   if v_old is not distinct from p_role then
     return;
   end if;
@@ -567,7 +571,11 @@ declare
     -- odczytowe / bez zapisu własnego (F7 lista wyjątków strażnika)
     'map_display_state', 'rio_tracking_open', 'email_budget_status', 'my_notify_get'
   ];
-  force_helpers text[] := array['report_position', 'delivered_check_resolve'];
+  -- F7: sms_* woła sms_enqueue (bez EXECUTE dla authenticated) — pętla nie widzi INSERT.
+  force_helpers text[] := array[
+    'report_position', 'delivered_check_resolve',
+    'sms_send_test', 'admin_sms_zone_test'
+  ];
   -- Pierwszy BEGIN po AS $tag$ [DECLARE …] — leniwy tag, DECLARE bez BEGIN w środku.
   re_first_begin text :=
     E'(\\$[A-Za-z0-9_]*?\\$(?:\\s*declare(?:(?!\\ybegin\\y)[\\s\\S])*?)?)(\\s*)begin(\\s+)';

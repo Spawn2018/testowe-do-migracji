@@ -1398,6 +1398,10 @@ err "B5: Podgląd SCX — zapis loads odmowa" $HHL \
   "update loads set driver_name='B5-PREVIEW' where id='$L2'" "Podgląd"
 err "B5: Podgląd SCX — report_position odmowa" $HHL \
   "select report_position('$L2'::uuid, 52.0, 17.0, now(), 10, null, null)" "Podgląd"
+# F7: sms_send_test sprawdza is_hhl_admin() (prawdziwa rola) i woła sms_enqueue — assert obowiązkowy.
+sys "insert into sms_test_numbers (to_e164, label) values ('+48600000999','b5-preview') on conflict do nothing" >/dev/null
+err "B5: Podgląd — sms_send_test odmowa" $HHL \
+  "select sms_send_test('+48600000999')" "Podgląd"
 run $HHL "select admin_preview_stop()" commit >/dev/null
 # Działaj jako (read_only=false) — zapis nadal dozwolony.
 run $HHL "select admin_impersonate_start('$KSHID_B5'::uuid)" commit >/dev/null
@@ -1418,12 +1422,22 @@ val "B5: strażnik RPC — 0 zapisujących bez assert na początku" $HHL \
        'b5_preview_cleanup_expired','admin_preview_start','admin_impersonate_start',
        'map_display_state','rio_tracking_open','email_budget_status','my_notify_get')
      and p.proname !~ '^driver_'
-     and (p.proname in ('report_position','delivered_check_resolve')
+     and (p.proname in ('report_position','delivered_check_resolve','sms_send_test','admin_sms_zone_test')
           or p.prosrc ~* 'insert[[:space:]]+into'
           or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
           or p.prosrc ~* 'delete[[:space:]]+from')
      and not (regexp_replace(p.prosrc, E'^[\\\\s\\\\S]*?\\\\ybegin\\\\y', '', 'i')
               ~* '^[[:space:]]*perform[[:space:]]+public\\.assert_not_preview')" 0
+# F7 P3: 0 SQL-language SECURITY DEFINER z zapisem dla authenticated (dziś 0).
+val "B5: strażnik RPC — 0 SQL-language z zapisem" $HHL \
+  "select count(*)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and p.prosecdef
+     and p.prolang=(select oid from pg_language where lanname='sql')
+     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+     and p.proname !~ '^driver_'
+     and (p.prosrc ~* 'insert[[:space:]]+into'
+          or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
+          or p.prosrc ~* 'delete[[:space:]]+from')" 0
 val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
   "select count(*)::text from (
      select distinct n.nspname, c.relname
