@@ -411,14 +411,16 @@ $PSQL -c "delete from shipment_items where load_id='$L_EXTRA'; delete from loads
 
 echo; echo "[A6] zasoby/numery + renumeracja (0303)"
 RA6="[{\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"hhl_order_no\":\"0002/10/S/2026\",\"carrier_order_no\":\"15002/2026/OSL/GDA/P\",\"driver_name\":\"Jan Test\",\"tractor_plate\":\"WGM1A6\",\"trailer_plate\":\"WWW1A6\"}]"
-val "A6: zasoby i numery z pliku" $HHL "select import_schedule('$P', '$RA6'::jsonb, '{}'::text[], '{\"name\":\"a6.xlsx\",\"hash\":\"a6\",\"path\":\"harmonogramy/x/a6.xlsx\"}'::jsonb, false); select coalesce(hhl_order_no,'')||'|'||coalesce(carrier_order_no,'')||'|'||coalesce(driver_name,'')||'|'||coalesce(tractor_plate,'')||'|'||coalesce(trailer_plate,'') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'" "0002/10/S/2026|15002/2026/OSL/GDA/P|Jan Test|WGM1A6|WWW1A6" commit
+val "A6: import zasobów (RPC)" $HHL "select (import_schedule('$P', '$RA6'::jsonb, '{}'::text[], '{\"name\":\"a6.xlsx\",\"hash\":\"a6\",\"path\":\"harmonogramy/x/a6.xlsx\"}'::jsonb, false)->>'changed') is not null" t commit
+chk "A6: zasoby i numery z pliku" "$(Q "select coalesce(hhl_order_no,'')||'|'||coalesce(carrier_order_no,'')||'|'||coalesce(driver_name,'')||'|'||coalesce(tractor_plate,'')||'|'||coalesce(trailer_plate,'') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "0002/10/S/2026|15002/2026/OSL/GDA/P|Jan Test|WGM1A6|WWW1A6"
 # Renumeracja: SG-A6OLD → SG-A6NEW przez komentarz
 L_REN=$(Q "insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date)
   values ('$P', '00000000-0000-0000-0000-00000000a003', 'PLANNED', '$D1'::date, '$D2'::date) returning id")
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty)
   values ('$P', '$L_REN', 'SG-A6OLD', 18, 2.4, 2.4, 1)" >/dev/null
 RREN="[{\"code\":\"SG-A6NEW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"comment\":\"Wcześniej to był SG-A6OLD\"}]"
-val "A6: renumeracja kodu" $HHL "select import_schedule('$P', '$RREN'::jsonb, '{}'::text[], '{\"name\":\"a6r.xlsx\",\"hash\":\"a6r\"}'::jsonb, false); select shipment_code||'|'||coalesce(renumbered_from,'') from shipment_items where load_id='$L_REN'" "SG-A6NEW|SG-A6OLD" commit
+val "A6: renumeracja kodu (RPC)" $HHL "select import_schedule('$P', '$RREN'::jsonb, '{}'::text[], '{\"name\":\"a6r.xlsx\",\"hash\":\"a6r\"}'::jsonb, false) is not null" t commit
+chk "A6: renumeracja kodu" "$(Q "select shipment_code||'|'||coalesce(renumbered_from,'') from shipment_items where load_id='$L_REN'")" "SG-A6NEW|SG-A6OLD"
 chk "A6: stary kod zniknął" "$(Q "select count(*) from shipment_items where project_id='$P' and shipment_code='SG-A6OLD'")" 0
 chk "A6: helper komentarza" "$(Q "select public.a6_renumber_from_comment('Wcześniej to był SG-11')")" "SG-11"
 # B5: Podgląd blokuje import (assert_not_preview jako pierwsza instrukcja)

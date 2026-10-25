@@ -324,13 +324,14 @@ begin
           returning id into v_import;
         end if;
         insert into loads (
-            project_id, hhl_order_no, carrier_order_no, carrier_org_id, status,
+            project_id, order_no, hhl_order_no, carrier_order_no, carrier_org_id, status,
             plan_load_date, plan_delivery_date, plan_load_from, plan_delivery_to,
             plan_dates_status, plan_dates_confirmed_at,
             driver_name, driver_phone, driver_delivery_name, driver_delivery_phone,
             tractor_plate, tractor_delivery_plate, trailer_plate)
         values (
             p_project,
+            nullif(btrim(coalesce(r.inc->>'order_no', '')), ''),
             nullif(btrim(coalesce(r.inc->>'hhl_order_no', '')), ''),
             nullif(btrim(coalesce(r.inc->>'carrier_order_no', '')), ''),
             v_carrier, 'PLANNED',
@@ -577,6 +578,7 @@ begin
           v_new_del_to := r.plan_delivery_to;
           v_new_del_from := r.plan_delivery_from;
         end if;
+        -- Jak 0267: daty + order_no; zasoby A6 poniżej (osobny UPDATE gdy są w v_fields).
         update loads set
           plan_load_date = coalesce(v_new_load_date, plan_load_date),
           plan_delivery_date = coalesce(v_new_del_date, plan_delivery_date),
@@ -584,23 +586,16 @@ begin
           plan_load_to = v_new_load_to,
           plan_delivery_from = v_new_del_from,
           plan_delivery_to = v_new_del_to,
-          hhl_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'hhl_order_no', '')), ''), hhl_order_no),
-          carrier_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'carrier_order_no', '')), ''), carrier_order_no),
-          driver_name = coalesce(nullif(btrim(coalesce(r.inc->>'driver_name', '')), ''), driver_name),
-          driver_phone = coalesce(nullif(btrim(coalesce(r.inc->>'driver_phone', '')), ''), driver_phone),
-          driver_delivery_name = coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_name', '')), ''), driver_delivery_name),
-          driver_delivery_phone = coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_phone', '')), ''), driver_delivery_phone),
-          tractor_plate = coalesce(nullif(btrim(coalesce(r.inc->>'tractor_plate', '')), ''), tractor_plate),
-          tractor_delivery_plate = coalesce(nullif(btrim(coalesce(r.inc->>'tractor_delivery_plate', '')), ''), tractor_delivery_plate),
-          trailer_plate = coalesce(nullif(btrim(coalesce(r.inc->>'trailer_plate', '')), ''), trailer_plate),
+          order_no = coalesce(nullif(btrim(coalesce(r.inc->>'order_no', '')), ''), order_no),
           updated_at = now()
          where id = r.load_id;
         if v_quiet_fill or v_historic then
           perform set_config('tower.bulk_quiet', coalesce(v_prev_quiet, ''), true);
         end if;
         perform set_config('tower.import_ctx', '', true);
-      elsif v_fields && v_res_fields then
-        -- A6: same zasoby/numery (bez zmiany dat)
+      end if;
+      -- A6: zasoby/numery (samodzielnie albo razem ze zmianą dat)
+      if (v_fields && v_res_fields) then
         update loads set
           hhl_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'hhl_order_no', '')), ''), hhl_order_no),
           carrier_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'carrier_order_no', '')), ''), carrier_order_no),
