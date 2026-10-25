@@ -6,7 +6,7 @@ import { etaConfidenceFromMinutes } from '../src/data/mappers';
 import { OPS_THRESHOLD_DEFAULTS, opsThreshold, setOpsThresholdCache } from '../src/lib/opsThresholdDefaults';
 import { etaDetailFromBasis } from '../src/lib/etaDetail';
 import { computeReadyGaps } from '../src/lib/readyGaps';
-import { trackingStateOneLine } from '../src/lib/trackingStateText';
+import { trackingStateLines } from '../src/lib/trackingStateText';
 import type { Document, Load, LoadEvent } from '../src/types';
 
 function baseLoad(over: Partial<Load> = {}): Load {
@@ -116,11 +116,11 @@ describe('B5 readyGaps piloci z symbolu', () => {
   });
 });
 
-describe('B9 tracking state PDF', () => {
-  it('anulowany — jedna linia', () => {
+describe('B9 tracking state (panel; eksport PDF jednego transportu usunięty)', () => {
+  it('anulowany — nagłówek stanu', () => {
     const load = baseLoad({ status: 'CANCELLED' });
     const events: LoadEvent[] = [];
-    const line = trackingStateOneLine(load, events, 'pl', '2026-10-15T12:00:00Z');
-    expect(line).toMatch(/Anulowany/);
+    const { head } = trackingStateLines(load, events, 'pl', '2026-10-15T12:00:00Z');
+    expect(head).toMatch(/Anulowany/);
   });
 });

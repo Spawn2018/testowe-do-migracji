@@ -107,14 +107,3 @@ export function trackingStateLines(
     sub,
   };
 }
-
-export function trackingStateOneLine(
-  load: Load,
-  events: readonly LoadEvent[],
-  locale: Locale,
-  nowIso: string,
-  orgKind: OrgKind = 'HHL',
-): string {
-  const { head, sub } = trackingStateLines(load, events, locale, nowIso, orgKind);
-  return sub ? `${head} · ${sub}` : head;
-}

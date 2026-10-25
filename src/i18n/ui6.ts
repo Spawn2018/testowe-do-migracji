@@ -214,12 +214,6 @@ const pl: Dict = {
   opl8_empty: 'Brak dopłat uzgodnionych',
   opl8_propose: 'Zaproponuj dopłatę (HHL)',
   opl8_scx_only_cost: 'SCX proponuje tylko koszt — HHL musi zaakceptować. KSH nie widzi.',
-  h7_pdf_btn: 'PDF transportu (+ mapa)',
-  h7_pdf_title: 'Watch Tower — {code}',
-  h7_pdf_map_caption: 'Mapa pozycji — {code}',
-  h7_pdf_ok_map: 'PDF {code} z mapą pozycji',
-  h7_pdf_ok_no_map: 'PDF {code} bez mapy ({reason})',
-  h7_pdf_fail: 'Eksport PDF nieudany: {msg}',
 
   a6_dr_ferry: 'Prom',
   a6_dr_ferry_status: 'Status promu',
