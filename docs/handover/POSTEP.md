@@ -5230,3 +5230,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
 - CI #562 `51fa415a`: unit ✔ visual ✔; **db FAIL** status 286/5 — L557h=`…5571` koliduje z LT12 (PR1) → loads_pkey; cascade mismatch/assign/AIS.
 - Fix: L557h → `…5581`. EXPECTED status **291** bez zmian. Push → CI → prośba F7.
+
+## 2026-10-25 23:30 — #564 SCALONE; #557 PR2 CI zielone — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#564** `wyglad/kurs-nbp-aktualny` — `F7: gotowe` (Spawn2018, po `b02990a`); unit/visual ✔ → merge `fc95a81e`. #560 WSTRZYMANY (F7 po #557); #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
+- Bieżąca: **#557 PR2** #562 `bf0aa1a3` — unit ✔ visual ✔ db ✔ (status 291). PLAN §4 pkt 7–8. Prośba o `F7: gotowe do scalenia`.

@@ -1004,12 +1004,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - **pkt 5:** testy assign/suggest (ADMIN OK; OPS/KSH/SCX/Podgląd odmowa; event+audit; resolved_by; status; suggest; SE po dopłynięciu bez stale).
    - status **284** (+13); risks **7** kluczy (+`rk_ferry_check_after_arrival`).
    - **Uwagi:** propose bez PRE_PORT, bbox PL ≤ 54.45°N; `p_grace` zamiast 2 h; ETA/SMS/cisza + `stale_point` → **W52**.
-7. **F7 #562 r3 (d6486d8) — do poprawy (CI status 282/2 na `6eda05b1`; docs→kod):**
-   - **BLOKER CI:** L557h mismatch=0 — fikstury głośne (bez `>/dev/null` na insertach L557h); PORT_IN OFF + pozycja w porcie (jak L557b); Gdańsk przed odejściem — osobny rejs z odejściem tuż po punktach. UUID L557h ≠ LT12 (`…5581`, nie `…5571`).
-   - **Assign source:** `actual_departure_at <= now()` → `source:'AIS'`; tylko plan (`coalesce(delayed, departure) <= now()`) → `source:'SCHEDULE'`.
-   - **Testy:** suggest odmowa KSH/SCX; po assign pełna ścieżka FERRY → Port/Droga SE (nie tylko ≥ FERRY).
-   - **Uwaga:** `apply_ferry_ais_arrival_backup`: `if v_status is null or v_status not in (…)`.
-   - status **291** (+7 vs 284).
+7. **F7 #562 r3 — kod + BLOKER UUID zrobione** (`51fa415a` + `bf0aa1a3`): AIS/SCHEDULE source; L557h głośne + PORT_IN OFF; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; L557h UUID `…5581` (≠ LT12 `…5571`). status **291**.
+8. **CI #562 `bf0aa1a3` zielone** (unit/visual/db) — czekam `F7: gotowe do scalenia`.
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
@@ -1692,3 +1688,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 22:00 | #557 PR2 F7 r3 kod 0307: Port→Droga, assign FERRY, dedup, Stena OFF; status 284; risks 7 | pętla |
 | 25.10.2026 22:30 | #557 PR2 F7 r3 do poprawy (d6486d8): CI 282/2 L557h; PLAN §4 pkt 7 — docs→kod | pętla |
 | 25.10.2026 23:05 | #557 PR2 CI db FAIL status 286/5: L557h=`…5571` = LT12; fix UUID `…5581` | pętla |
+| 25.10.2026 23:30 | #564 SCALONE (`fc95a81e`, kurs NBP); #557 PR2 CI `bf0aa1a3` unit/visual/db ✔ — czekam F7 | pętla |
