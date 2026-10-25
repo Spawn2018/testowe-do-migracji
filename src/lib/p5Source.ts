@@ -5,7 +5,7 @@
  */
 import type { Bill, Document, Load } from '../types';
 import type { AccountingPack, PackConfig, PackKey, PackSent } from './p5Pack';
-import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
+import { belowThreshold, financeSummary, fuelWeeks, latestNbp, type FinBelowRow, type FinNbp, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
 import { demoAccountingPack, demoDocRequirements, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
 import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 import type { FeeRules, FeeSuggestion } from './p5Fees';
@@ -33,12 +33,13 @@ export function marginFromDb(raw: unknown): number | null | undefined {
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : undefined;
 }
 
-export function financeOf(loads: Load[], side: FinSide): FinSummary {
-  return financeSummary(loads, side);
+/** `live` — aktualny kurs z `fx_rates` (karta „Kurs NBP”, przeliczenie transportów bez kursu przy transporcie). */
+export function financeOf(loads: Load[], side: FinSide, live: FinNbp | null = null): FinSummary {
+  return financeSummary(loads, side, live ?? latestNbp(loads));
 }
 
-export function belowOf(loads: Load[], thresholdPct: number | null): FinBelowRow[] {
-  return belowThreshold(loads, thresholdPct);
+export function belowOf(loads: Load[], thresholdPct: number | null, live: FinNbp | null = null): FinBelowRow[] {
+  return belowThreshold(loads, thresholdPct, live ?? latestNbp(loads));
 }
 
 /** E39 — tabela tygodni. Produkcja: średnie i liczby publikacji z `fuel_basis` (#409 / 0268, widok ceny strony),
