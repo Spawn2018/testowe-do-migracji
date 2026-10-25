@@ -78,11 +78,11 @@ if [ -n "${TOWER_HOSTED_READY:-}" ]; then
 elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
   # A2 (E26): brak LEFT_LOADING_UNCONFIRMED — wyjazd ze Śremu bez loaded_confirmed
   # #461 F7: bez rk_no_departure / rk_missed_sailing; RIO/SILENT/overdue sprzątane w status.sh
-  # #557 PR2 F7: overdue w detect_ferry_overdue (rk_ferry_overdue); + rk_sailing_mismatch
-  chk "automat statusów/promów (tower_test_status): 6 kluczy, 0 generycznych" \
-    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "6/0"
+  # #557 PR2 F7 r3: overdue + rk_ferry_check_after_arrival; + rk_sailing_mismatch
+  chk "automat statusów/promów (tower_test_status): 7 kluczy, 0 generycznych" \
+    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "7/0"
   chk "automat: klucze funkcji" "$(psql "$ST" -Atqc "select string_agg(distinct title_key, ',' order by title_key) from risk_signals")" \
-    "rk_auto_status_blocked,rk_ferry_overdue,rk_loading_not_ready,rk_port_no_loaded,rk_sailing_cancelled,rk_sailing_mismatch"
+    "rk_auto_status_blocked,rk_ferry_check_after_arrival,rk_ferry_overdue,rk_loading_not_ready,rk_port_no_loaded,rk_sailing_cancelled,rk_sailing_mismatch"
 else
   fail=$((fail+2)); echo "  FAIL  brak bazy tower_test_status — uruchom najpierw tests/db/run.sh"
 fi

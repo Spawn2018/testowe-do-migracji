@@ -1683,3 +1683,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 21:10 | #557 PR2 F7 r2 kod 0307: admin assign, Port SE, merge overdue, stale/mismatch; status 271; risks 6 | pętla |
 | 25.10.2026 21:25 | #557 PR2 CI db FAIL status 268/3: Ösmo ≥2 km, stale prev≤dep, UUID L557g hex; fix fikstur status.sh | pętla |
 | 25.10.2026 21:45 | #557 PR2 F7 r3 (#562 e34f88b/3f6bc8f): docs §4 pkt 6 + W52; CI status 270/1 Stena PORT_IN ON | pętla |
+| 25.10.2026 22:00 | #557 PR2 F7 r3 kod 0307: Port→Droga, assign FERRY, dedup, Stena OFF; status 284; risks 7 | pętla |

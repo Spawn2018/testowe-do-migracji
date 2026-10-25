@@ -1281,6 +1281,9 @@ mk $L557d D557 "'HHL/D557'" "'SCX/D557'" FERRY "'$S557a'"
 q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
 pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
 chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
+# F7 r3 pkt 1: Port SE + ≥2 km (strefa OFF) → Droga SE
+pos $L557a 59.00 17.90 "2026-10-11 07:45+00"
+chk "#557 PR2: Port SE + ≥2 km OFF → IN_TRANSIT_SE" "$(st $L557a)" IN_TRANSIT_SE
 # strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
 q "update geofences set active = true
  where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
@@ -1333,12 +1336,73 @@ chk "#557 PR2: +2h bez SE → FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
 q "select public.detect_ferry_overdue('2026-10-10 09:15+00')" >/dev/null
 chk "#557 PR2: drugi cron — jedno FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
 
-# Stena GDY-KAA: backup Port SE (strefa STENA OFF); UUID hex (bez „g”)
+# Stena GDY-KAA: wyłącz STENA PORT_IN (A5/485), inaczej backup return; UUID hex
 L557g=55555555-0000-0000-0000-000000005570
+q "update geofences set active = false
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'STENA'" >/dev/null
 mk $L557g G557 "'HHL/G557'" "'SCX/G557'" FERRY "'$S557d'"
 q "insert into load_events (load_id, event_type, occurred_at) values ('$L557g','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
 pos $L557g 56.1600 15.5900 "2026-10-11 05:00+00"
 chk "#557 PR2: Stena GDY-KAA w porcie → AT_PORT_NYNASHAMN" "$(st $L557g)" AT_PORT_NYNASHAMN
+
+# F7 r3 pkt 5: suggest / assign (HHL_ADMIN OK; OPS/KSH/SCX/Podgląd odmowa)
+HHL=11111111-0000-0000-0000-000000000001
+OPS557=11111111-0000-0000-0000-0000000000ab
+q "insert into app_users (auth_id, org_id, email, role, active) values
+ ('$OPS557','00000000-0000-0000-0000-00000000a001','ops-557@test','HHL_OPS',true)
+ on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+chk "#557 PR2: suggest proponuje S557a" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (sailing_mismatch_suggest('$L557b')->>'proposed_sailing_id') = '$S557a'; commit" t
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$OPS557';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign HHL_OPS odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign HHL_OPS odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign KSH odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign KSH odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign SCX odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign SCX odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+ select admin_preview_start('KSH');
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Podgląd|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign Podgląd odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign Podgląd odmowa: $out"; }
+# Assign OK: IN_TRANSIT_PL + przyszły rejs → pin S557a → FERRY/SE
+L557h=55555555-0000-0000-0000-000000005571
+mk $L557h H557 "'HHL/H557'" "'SCX/H557'" IN_TRANSIT_PL "'$S557b'"
+q "
+insert into load_events (load_id, event_type, occurred_at) values ('$L557h','MILESTONE_LOADED','2026-10-09 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$L557h', '2026-10-10 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+" >/dev/null
+pos $L557h 58.9350 17.9500 "2026-10-11 09:00+00"
+chk "#557 PR2: mismatch przed assign" "$(rk $L557h SAILING_MISMATCH)" 1
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L557h','$S557a'); commit" >/dev/null
+chk "#557 PR2: assign → sailing S557a" \
+  "select (sailing_id = '$S557a') from loads where id='$L557h'" t
+chk "#557 PR2: assign → SAILING_ASSIGNED" \
+  "select count(*) from load_events where load_id='$L557h' and event_type='SAILING_ASSIGNED'" 1
+chk "#557 PR2: assign → audit" \
+  "select count(*) from audit_log where action='SAILING_MISMATCH_ASSIGN' and entity_id='$L557h'" 1
+chk "#557 PR2: assign → ryzyko zamknięte z resolved_by" \
+  "select (resolved_at is not null and resolved_by is not null) from risk_signals
+    where load_id='$L557h' and dedup_key like 'SAILING_MISMATCH:%' order by detected_at desc limit 1" t
+chk "#557 PR2: assign IN_TRANSIT_PL → status ≥ FERRY/SE" \
+  "select (load_status_rank(status) >= load_status_rank('FERRY'::load_status)) from loads where id='$L557h'" t
+# Pozycja SE po dopłynięciu (S557c) — nie stale
+pos $L557c 58.9350 17.9500 "2026-10-10 07:00+00"
+chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \
+  "select coalesce(raw->>'stale_point','false') from positions where load_id='$L557c' order by ts desc limit 1" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
