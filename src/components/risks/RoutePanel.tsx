@@ -5,6 +5,7 @@
  * System — tylko HHL, sprawy techniczne w Opcje › System › Stan systemu.
  * Dane jak dotąd: `sailings`, `marine_conditions`, `corridor_conditions` (produkcja), seed Trafikverket (demo).
  */
+import { stageTileOf } from '../../lib/stageTiles';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Load, Locale, Risk, Sailing } from '../../types';
@@ -123,7 +124,10 @@ export function RoutePanel({
   const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
   const today = dayOf(nowIso);
   const allToday = rows.length > 0 && rows.every((r) => dayOf(r.depIso) === today);
-  const onBoard = rows.reduce((s, r) => s + r.onBoard, 0);
+  /* U-100 F7: suma „na pokładzie” z etapu Prom wszystkich transportów (także na rejsie spoza listy, np. wypłynął > 3 h temu) — jak Mapa */
+  const onBoard = PROD
+    ? loads.filter((l) => !!l.sailingId && stageTileOf(l) === 'FERRY').length
+    : rows.reduce((s, r) => s + r.onBoard, 0);
   const alt = altProposal(rows, altSailingsOf(sailings, nowIso), nowMs);
 
   /* drogi SE */
@@ -150,7 +154,7 @@ export function RoutePanel({
             {box ? <span className="rk-box">{box}</span> : <span className="rk-info-ic" aria-hidden="true">ⓘ</span>}
             <span className="rk-road-tx">
               <span className={info ? 'rk-road-t rk-info' : 'rk-road-t'}>{riskText(locale, r.title, r.titleKey, r.titleParams)}</span>
-              {!info && (meta || r.detail) ? (
+              {!info && (meta || r.severity !== 'LOW') && (meta || r.detail) ? (
                 <span className="rk-road-s">
                   {/* U-100: etykieta wpływu tylko od średniego wzwyż — informacja (LOW) bez „Średni wpływ” */}
                   {r.severity === 'LOW' ? null : (

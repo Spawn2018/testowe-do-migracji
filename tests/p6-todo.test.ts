@@ -201,6 +201,7 @@ describe('U-100 — Sytuacja na trasie zgodnie z makietą E7', () => {
     const src = readFileSync('src/components/risks/RoutePanel.tsx', 'utf8');
     expect(src).toContain("r.severity === 'LOW' ? null");
     expect(src).toContain('r.onBoard > 0 && !phone');
+    expect(src).toContain("loads.filter((l) => !!l.sailingId && stageTileOf(l) === 'FERRY').length");
     expect(src).toContain("{!phone ? <p className=\"rk-muted\">{rt(locale, 'p6_alt_note')}</p> : null}");
   });
 });
