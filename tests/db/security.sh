@@ -1452,5 +1452,31 @@ val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
              and t.tgname='aaa_b5_preview')
    ) x" 0
 
+echo; echo "[B8] Stare nieprzeczytane IN_APP >7 dni (7A / 0301)"
+# authenticated bez EXECUTE; sprzątanie tylko sys (migracja / b8_mark_stale_in_app_read).
+val "B8: authenticated bez EXECUTE b8_mark_stale_in_app_read" $HHL \
+  "select has_function_privilege('authenticated', 'public.b8_mark_stale_in_app_read()', 'EXECUTE')::text" false
+B8_OLD=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('IN_APP', 'b8-old@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:old:' || gen_random_uuid()::text, now() - interval '8 days')
+  returning id" | tail -1)
+B8_NEW=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('IN_APP', 'b8-new@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:new:' || gen_random_uuid()::text, now() - interval '6 days')
+  returning id" | tail -1)
+B8_EM=$(sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('EMAIL', 'b8-em@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:em:' || gen_random_uuid()::text, now() - interval '8 days')
+  returning id" | tail -1)
+B8_RES=$(sys "select b8_mark_stale_in_app_read()::text" | tail -1)
+echo "$B8_RES" | grep -q '"count":' && { ok=$((ok+1)); echo "  OK    B8: b8_mark_stale_in_app_read zwraca jsonb"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B8 wynik: $B8_RES"; }
+chk6 "B8: stare IN_APP przeczytane" "$(sys "select (read_at is not null)::text from notifications where id=$B8_OLD" | tail -1)" "true"
+chk6 "B8: świeże IN_APP bez zmian" "$(sys "select (read_at is null)::text from notifications where id=$B8_NEW" | tail -1)" "true"
+chk6 "B8: EMAIL >7d bez zmian" "$(sys "select (read_at is null)::text from notifications where id=$B8_EM" | tail -1)" "true"
+chk6 "B8: AUDYT17_MARK_READ z id starego" "$(sys "select (new_value->'notification_ids' @> to_jsonb($B8_OLD::bigint))::text
+  from audit_log where action='AUDYT17_MARK_READ' and entity_id='b8-0301'
+  order by id desc limit 1" | tail -1)" "true"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
