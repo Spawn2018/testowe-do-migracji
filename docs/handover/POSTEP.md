@@ -4974,4 +4974,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 `gotowe` po `bb2acf09`. CI: unit/visual OK; **db FAIL** status 245/246 — `#496: nieznana trasa → brak OFF_CORRIDOR` (otrzymano 1).
 - Bieżąca: **#496** PR #536 — Ösmo F7 r3 zajęło sailing `…496` (GDN-NYN); test „nieznana trasa” używał tego samego ID → INSERT OTHER cicho padał → SE_E4. Wolne ID `…49a`. status nadal **246**. Push → CI; ponowne F7. Bez push na main.
 
+## 2026-10-25 07:20 — #543 SCALONE; #496 CI zielone; #537 I/J w planie
+
+- Skrzynka: #537 sekcje I/J (Spawn2018) → PLAN §4 pkt 19–32 + W51 (D-J1); dopisek D-20261025-0015-01. #540/#538/#496/#413 już w planie. Bez `pilne`.
+- Scalanie: **#543** `fe0e31c0` (F7 „gotowe do scalenia” po `c969cb1`, CI unit/visual; wyglad J-10 RIO stara pozycja). **#536/#496** — CI unit/db/visual zielone na `4fcf82d3` (status **246**); brak F7 „gotowe” po tym SHA → czekam. Bez push na main — `deploy-main` po #543.
+- Bieżąca: **#496** — czekam F7. F7 r3 INFO w §8: Bergkvara na SE_E22; insert rejsów testowych bez cichego `>/dev/null`. Realizacja #537 I/J po scaleniu 0298.
+
 

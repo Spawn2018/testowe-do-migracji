@@ -861,7 +861,7 @@ Po #412, przed #492 / B5. `admin_audit_history`: HHL_ADMIN/HHL_OPS — wszystko;
 Po #484, przed #528 / B5. Trigger `BEFORE UPDATE ON loads`: `updated_at = now()` **tylko** przy kolumnach widocznych na ekranie (status, zasoby, daty, numer, rejs, awizacja, symbol/permit_kind/`combo_weight_t`, konfiguracja RIO) — **nie** przy `refresh_load_eta` / `process_position` (`tracking_opened_at`) / stanie RIO / `tower.audit_source='rodo'`. security **385** (+8). Szczegóły: zgłoszenie #492.
 
 ### #496 · Drobne z przeglądów F7 23.10 (#478, #486, #488) — W TOKU F7 #536 r3+ (migracja **0298**; po #525 SCALONE; przed B5; przed 28.10)
-Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. F7 r3: Karlskrona-port w lądzie; Lyckeby/Jämjö/Brömsebro na E22; Ösmo na GDN-NYN; fuel_miss/ext_mail 42501. CI: sailing „nieznana trasa” → `…49a` (nie `…496` = Ösmo). Front — koordynator. Szczegóły: #496.
+Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. F7 r3: Karlskrona-port w lądzie; Lyckeby/Jämjö/Brömsebro na E22; Ösmo na GDN-NYN; fuel_miss/ext_mail 42501. CI zielone na `4fcf82d3` (status **246**; sailing „nieznana trasa” → `…49a`). Czeka F7: gotowe do scalenia. Front — koordynator. Szczegóły: #496.
 
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
@@ -904,6 +904,20 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 16. **`a3_ensure_cmr_upload`: ostrzeżenie zamiast błędu** (#537 uzup. 3): na produkcji nadal `raise exception` (P0001) — przy zbiegu dwóch zapisów przerywa zmianę statusu. Zamień na `raise warning` + wpis w `app_errors`; test dwóch zapisów równolegle, status przechodzi.
 17. **Testy bazy także bez superusera** (#537 uzup. 3) → **P11** pkt 3: `tests/db/gate.sh` (co najmniej security) jako rola bez superusera, jak na produkcji (F7: testy jako `sys` przepuszczały błędy uprawnień). Wcześniej, jeśli prosto.
 18. **Uwagi D1, D2, D4 i D5 z przeglądu #321** (#537 uzup. 3) → **P11** pkt 3 albo 6 (były odłożone, brak w planie). Porządki `h7_pdf_*` / `p7_doc*` / `exportLoadPdfWithMap` (#325) — koordynator.
+19. **I-1 decyzje przewoźnika** (#537 sekcja I, priorytet po #536): `l2_may_resolve` wymaga `loads.carrier_org_id = current_org_id()`; to samo `decision_assign` / `decision_snooze`; `decisions_read` dla `load_id IS NULL` zawęzić do właściwego przewoźnika. Testy dwóch przewoźników: odczyt cudzej = 0, resolve/assign/snooze = 42501. Migracja ≥0299.
+20. **I-2** → **P6**: 3 warunki z #381 + testy: DOC_UPLOADED po zapisie (UUID); `wf_enqueue_event` przenosi `visible_to`; `doc_requirements_status` bez cudzych danych.
+21. **I-3** → **A6**: decyzja L-1b (brak kolumny numeru HHL w pliku KSH); gdy szablon ma `hhlOrderNo` — test „inny numer HHL = 1 konflikt”.
+22. **I-4** — SG-01/SG-02/T-01: `plan_delivery_from = NULL` mimo „przywrócone” w Etapach. Sprawdź `audit_log`; przywróć bez powiadomień (jak 0267) albo wpisz w POSTEP.
+23. **I-5** — `dec-fx`: `resolve-all` jako `authenticated`, nie `postgres` (z U-222).
+24. **I-6** — Stena GDY-KAA: ETA/km do portu odcinkiem `PL_ROAD_GDY` (nie tylko okno śledzenia). Test: ETA/km do Gdyni, nie Gdańska.
+25. **I-7 (niski)** — emtrack: `EMTRACK_WS_TIMEOUT_MS` tylko > 0; `onclose`; LOGOUT także po wyjątku.
+26. **I-8 (niski)** — `v_dd` z dnia `plan_delivery_from`, gdy brak obu dat dostawy.
+27. **J-26 zdublowane rejsy** (#537 sekcja J, priorytet): dedup statek+trasa+dzień lokalny (Europe/Warsaw); porządek 24.10 w `bulk_quiet` (Wawel 16:00); test zmiany czasu 24→25.10 i marzec; Polferries `updated_at` → POSTEP. Migracja ≥0299.
+28. **J-05** — flagi kanałów mail/push z historią; RPC tylko HHL_ADMIN (inni 42501); `notify_channel_allowed` przed firmą/macierzą. Front kart — koordynator (nazwa/sygnatura w PR).
+29. **J-23** — `pilot_notify_redirect` martwy (transport 03.10): `active = false`; wynik w POSTEP.
+30. **J-04** — usuń nieśledzony folder `origin/` (~217 MB) jeśli jest; wynik w POSTEP.
+31. **J-24** — W43: już zamknięte w §5 (25.10) — nic do zrobienia.
+32. **J-19** — PII w `0176_*` w publicznym repo: **czeka decyzja właściciela D-J1** (W51); bez zmiany historii gita bez decyzji. Front J-10 (#543) SCALONE — poza tą listą.
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
@@ -1279,6 +1293,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W48 | Historia zmian dla Operacji HHL, KSH i SCX — zostaje (właściciel 25.10, #538 9A) | — | **potwierdzone 25.10.2026** |
 | W49 | Próg ciszy emtrack 12 h i daty tygodni z rokiem — zostają (#538 10A) | — | **potwierdzone 25.10.2026** |
 | W50 | Lista 23.10 (#482) pkt 1–6 potwierdzone; P1 TAK — SMS ze stref przy wyłączonej wysyłce zewnętrznej idą na numery z Opcji › Strefy (#538 14A) | — | **potwierdzone 25.10.2026** |
+| W51 | D-J1 (#537 J-19): decyzja właściciela — czy usuwać / przepisywać PII z migracji `0176_*` w publicznym repo (bez zmiany historii gita bez zgody) | po #536 | czeka (#537 sekcja J) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1589,3 +1604,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 05:32 | #533/#516 SCALONE (`8f0a6f48`, 0295); #542 SCALONE; start #519 rebase → **0296**; B5/**≥0299** | pętla |
 | 25.10.2026 05:57 | #534/#519 SCALONE (`62879a45`, 0296); F7 gotowe e76c56a; start #525 merge main → **0297**; security **416**; B5/**≥0299** | pętla |
 | 25.10.2026 06:39 | #535/#525 SCALONE (`1bc24128`, 0297); F7 gotowe 7c39865; start #496 F7 r3 → **0298** (Karlskrona/SE_E22) | pętla |
+| 25.10.2026 07:05 | #496 F7 r3: sailing Ösmo `…496` vs nieznana trasa → `…49a`; status **246** | pętla |
+| 25.10.2026 07:20 | #543 SCALONE (`fe0e31c0`, wyglad J-10 RIO stara pozycja); #496 CI zielone `4fcf82d3` — czekam F7; #537 I/J → §4 pkt 19–32 + W51 | pętla |
+| 25.10.2026 07:20 | F7 #536 r3 INFO → §8: Bergkvara na SE_E22; insert rejsów testowych bez cichego `>/dev/null` (ON_ERROR_STOP) | pętla |
