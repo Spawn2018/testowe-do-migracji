@@ -4998,3 +4998,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#545** `d98d8e7f` (wyglad J-17 pozycja szacowana; F7 gotowe `54ff35f`, CI unit/visual). **#544/#540** `5dcb716a` (F7 gotowe `9401f8de`, CI unit/db/visual, migracja **0299**). Bez push na main — `deploy-main`.
 - Bieżąca: **B5** (#323 / PR #382) — rebase na main; migracja **0254→0300**; F7: assert regex `[[:space:]]*` / `^\s*perform` (bez `ltrim`); security **441** (+25), nullguard **828** (+18). Push → CI; czekam F7.
 
+## 2026-10-25 09:20 — #547 SCALONE; B5 CI zielone (0300), czekam F7
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: **#547** `77eac6c9` (wyglad: martwy PDF transportu + mapa + 25 kluczy; F7 gotowe `cb58dfe`, CI unit/visual). **#382/B5** — CI unit/db/visual zielone na `e98e956f` (security **441**, nullguard **828**, migracja **0300**); MERGEABLE; brak F7 „gotowe do scalenia” po head → czekam. Bez push na main — `deploy-main` po #547.
+- Bieżąca: **B5** (#323 / PR #382) — docs (POSTEP); czekam F7: gotowe do scalenia.
+

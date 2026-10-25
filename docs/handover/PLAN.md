@@ -1612,4 +1612,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 07:20 | F7 #536 r3 INFO → §8: Bergkvara na SE_E22; insert rejsów testowych bez cichego `>/dev/null` (ON_ERROR_STOP) | pętla |
 | 25.10.2026 07:46 | #536/#496 SCALONE (`739a53a8`, 0298); #413 zamknięte (baza); start #540 → **0299** (FOR NO KEY UPDATE); B5/**≥0300**; status **250** | pętla |
 | 25.10.2026 08:15 | #540 F7: wait PID w status.sh + chk c17_try_invoiced; status **251**; prod FOR UPDATE RPC (cancel/decision/… ) → ocena przy B5/P6 | pętla |
-| 25.10.2026 08:33 | #545 SCALONE (`d98d8e7f`); #544/#540 SCALONE (`5dcb716a`, 0299); start B5 rebase → **0300** (F7 assert); security **441** |
+| 25.10.2026 08:33 | #545 SCALONE (`d98d8e7f`); #544/#540 SCALONE (`5dcb716a`, 0299); start B5 rebase → **0300** (F7 assert); security **441** | pętla |
+| 25.10.2026 09:20 | #547 SCALONE (`77eac6c9`); B5 #382 CI zielone `e98e956f` (0300, security **441**, nullguard **828**) — czekam F7 | pętla |
