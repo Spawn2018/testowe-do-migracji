@@ -1422,7 +1422,7 @@ val "B5: strażnik RPC — 0 zapisujących bez assert na początku" $HHL \
           or p.prosrc ~* 'insert[[:space:]]+into'
           or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
           or p.prosrc ~* 'delete[[:space:]]+from')
-     and not (regexp_replace(p.prosrc, E'^.*?\\\\ybegin\\\\y', '', 'in')
+     and not (regexp_replace(p.prosrc, E'^[\\\\s\\\\S]*?\\\\ybegin\\\\y', '', 'i')
               ~* '^[[:space:]]*perform[[:space:]]+public\\.assert_not_preview')" 0
 val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
   "select count(*)::text from (

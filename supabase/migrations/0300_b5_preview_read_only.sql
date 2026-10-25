@@ -411,6 +411,8 @@ comment on function public.admin_preview_start(text) is
   'B5: Podgląd KSH/SCX — pierwsze aktywne CLIENT_USER / CARRIER_DISPATCH; tylko HHL_ADMIN.';
 comment on function public.admin_preview_stop() is
   'B5: koniec Podglądu; własne wiersze; bez wiersza = no-op; PREVIEW_STOP w audit_log.';
+comment on function public.admin_impersonate_stop() is
+  'B5: koniec Działaj jako; własne wiersze (bez wymogu HHL_ADMIN); bez wiersza = no-op.';
 
 -- 7) Czyszczenie stanu przy zmianie roli / aktywności
 create or replace function public.admin_set_user_role(p_user uuid, p_role user_role)
