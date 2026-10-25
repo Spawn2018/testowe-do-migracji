@@ -994,16 +994,15 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
 4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign` tylko HHL_ADMIN (przycisk); HHL_OPS widzi ryzyko bez „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
-5. **F7 #562 (071b68f / ba8a6377) — do kodu w następnym commitcie:**
-   - ~~B1 fikstury S557c unique~~ · ~~B2 POPRAWKA 24.09~~ · ~~B3 assert pierwsze (bez komentarza przed `perform`)~~ · ~~B4 risks 7 kluczy~~ — częściowo w `ba8a6377`; B3 nadal FAIL (komentarz przed assert → security 458/1).
-   - **B5 / pkt 5:** assign tylko `is_hhl_admin()` + MFA; OPS/KSH/SCX/Podgląd → 42501.
-   - **pkt 6:** backup: geometria PORT_IN bez `g.active` → Port SE; gdy aktywna PORT_IN → `return` (0298 + histereza); inaczej syntetyczny Port SE (quiet) + Droga SE bez quiet.
-   - **pkt 7–8:** mismatch: wypłynięcie = `coalesce(actual_departure_at, delayed_departure_at, departure_at)`; status ∈ (IN_TRANSIT_PL, AT_PORT_GDANSK, FERRY) + `loaded_confirmed()`; najpierw otwarte ryzyko; propose: ostatni punkt **w PL**, trasy GDN-NYN/GDY-KAA, `actual_arrival_at <= v_first_se`, bez ODWOLANY.
-   - **pkt 9:** stale tylko ≥ FERRY albo (AT_PORT_GDANSK i odejście ≤ ts); jeden ostatni nie-stary `ts <= v_act_dep`.
-   - **pkt 10:** zamykaj SAILING_MISMATCH przy każdej zmianie `sailing_id`; FERRY_ARRIVAL w `detect_ferry_overdue` + dedup `sailing_id`; zamykaj po SE.
-   - **pkt 11:** assign: `audit_log` + `resolved_by`; po pin AIS→FERRY + reguła SE dla ostatniej pozycji SE.
-   - **pkt 12:** testy assign/suggest/idempotencja/Stena/pas 0,8–2 km/postoje nie-stare.
-   - **Uwagi:** exception wrapping w `process_position`; pomijaj `stale_point` w ETA/SMS/ciszy; `params.code` jak w tytule; suggest bez `assert_not_preview`.
+5. **F7 #562 r2 — kod w tym commitcie (0307):**
+   - ~~B1–B4~~ · **B5/pkt 5:** assign `assert_not_preview` pierwsze + HHL_ADMIN+2FA; suggest bez assert (odczyt).
+   - **pkt 6:** backup Port SE / Droga SE; aktywna PORT_IN → return.
+   - **pkt 7–8:** mismatch coalesce dep + loaded + status; propose PL bbox / GDN-NYN|GDY-KAA.
+   - **pkt 9:** stale ≥ FERRY / AT_PORT_GDANSK po odejściu; jeden prev `ts <= dep`.
+   - **pkt 10:** SAILING_MISMATCH trigger na `sailing_id`; overdue w `detect_ferry_overdue` (bez osobnego crona); dedup sailing_id; zamyka po SE.
+   - **pkt 11:** assign audit + `resolved_by` + `a10_try_ferry_backup` + SE.
+   - **pkt 12:** status **271** (+13); risks **6** kluczy (bez `rk_ferry_arrival_check`).
+   - **Uwagi:** exception wrap w `process_position`; `params.code` bez „—”; ETA/SMS stale — dopisek na później (mapa: front).
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
@@ -1679,3 +1678,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 19:47 | #557 PR1 SCALONE (`121a9021`, 0306); F7 gotowe `83dec117`; start PR2 reguły **0307** | pętla |
 | 25.10.2026 20:05 | #557 PR2 db FAIL: assert B5, POPRAWKA 24.09, unique rejsów S557c, risks +2 klucze | pętla |
 | 25.10.2026 20:40 | #557 PR2 F7 r2 (#562): docs §4 pkt 5 (B5–12); CI ba8a6377 unit/visual ✔ db security 458/1 (komentarz przed assert); kod w następnym | pętla |
+| 25.10.2026 21:10 | #557 PR2 F7 r2 kod 0307: admin assign, Port SE, merge overdue, stale/mismatch; status 271; risks 6 | pętla |

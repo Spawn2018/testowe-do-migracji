@@ -1230,19 +1230,25 @@ q "select public.hotfix_557_apply()" >/dev/null
 chk "#557: ponowne wywołanie idempotentne (bez nowego SAILING_ASSIGNED)" \
   "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'" 1
 
-# #557 PR2: AIS backup bez g.active; stary punkt; mismatch + overdue
-# S557c ≠ S557a (inny departure) — unique (vessel, departure) wycofywał cały INSERT.
+# #557 PR2 F7 r2: AIS backup Port SE; stale; mismatch; overdue w detect_ferry_overdue
+# S557c ≠ S557a (inny departure) — unique (vessel, departure).
 echo; echo "[#557 PR2] reguły AIS / stale / mismatch"
 L557a=55555555-0000-0000-0000-00000000557a
 L557b=55555555-0000-0000-0000-00000000557b
 L557c=55555555-0000-0000-0000-00000000557c
+L557d=55555555-0000-0000-0000-00000000557d
+L557e=55555555-0000-0000-0000-00000000557e
 S557a=77777777-0000-0000-0000-000000005573
 S557b=77777777-0000-0000-0000-000000005574
 S557c=77777777-0000-0000-0000-000000005575
+S557d=77777777-0000-0000-0000-000000005576
 V557b=66666666-0000-0000-0000-000000000558
+V557s=66666666-0000-0000-0000-000000000559
 q "
 insert into vessels (id, name, operator) values
- ('$V557b', 'M/F Wawel 557b', 'Polferries') on conflict (id) do nothing;
+ ('$V557b', 'M/F Wawel 557b', 'Polferries'),
+ ('$V557s', 'Stena Vision 557', 'Stena')
+ on conflict (id) do nothing;
 insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
   actual_departure_at, actual_arrival_at, status, source) values
  ('$S557a', '$P', '$V557b', 'GDN-NYN',
@@ -1253,20 +1259,36 @@ insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at
   null, null, 'ZAPLANOWANY', 'POLFERRIES'),
  ('$S557c', '$P', '$V557b', 'GDN-NYN',
   '2026-10-09 12:00+00', '2026-10-10 06:00+00',
-  '2026-10-09 12:00+00', '2026-10-10 06:00+00', 'DOPLYNAL', 'POLFERRIES');
+  '2026-10-09 12:00+00', '2026-10-10 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+ ('$S557d', '$P', '$V557s', 'GDY-KAA',
+  '2026-10-10 14:00+00', '2026-10-11 04:00+00',
+  '2026-10-10 14:00+00', '2026-10-11 04:00+00', 'DOPLYNAL', 'STENA');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route, active) values
+ ('$P','Port Karlskrona 557','PORT_IN', make_circle_fence(56.1600,15.5900, 800), 200, 600, 2,'SE','STENA', false);
 update geofences set active = false
  where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
    and coalesce(route, 'POLFERRIES') = 'POLFERRIES';
 " >/dev/null
+# F7 pkt 6: w porcie (strefa OFF) → AT_PORT_NYNASHAMN
 mk $L557a A557 "'HHL/A557'" "'SCX/A557'" FERRY "'$S557a'"
 q "insert into load_events (load_id, event_type, occurred_at) values ('$L557a','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
 pos $L557a 58.9350 17.9500 "2026-10-11 07:00+00"
-chk "#557 PR2: DOPLYNAL + SE, strefa OFF → IN_TRANSIT_SE (AIS backup)" "$(st $L557a)" IN_TRANSIT_SE
-chk "#557 PR2: source AIS_ARRIVAL_BACKUP" \
-  "select payload->>'source' from load_events where load_id='$L557a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE' order by occurred_at desc limit 1" AIS_ARRIVAL_BACKUP
+chk "#557 PR2: w porcie SE, strefa OFF → AT_PORT_NYNASHAMN" "$(st $L557a)" AT_PORT_NYNASHAMN
+chk "#557 PR2: source AIS_ARRIVAL_BACKUP (Port SE)" \
+  "select payload->>'source' from load_events where load_id='$L557a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" AIS_ARRIVAL_BACKUP
+# ≥2 km od portu, strefa OFF → Droga SE
+mk $L557d D557 "'HHL/D557'" "'SCX/D557'" FERRY "'$S557a'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557d 58.9600 17.9500 "2026-10-11 07:30+00"
+chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
+# strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
 q "update geofences set active = true
  where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
    and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
+mk $L557e E557 "'HHL/E557'" "'SCX/E557'" FERRY "'$S557a'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557e','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557e 58.9480 17.9500 "2026-10-11 08:00+00"
+chk "#557 PR2: strefa ON pas 0,8–2 km → nadal FERRY" "$(st $L557e)" FERRY
 
 # mismatch: przyszły rejs + pozycja SE
 mk $L557b B557 "'HHL/B557'" "'SCX/B557'" AT_PORT_GDANSK "'$S557b'"
@@ -1279,6 +1301,8 @@ pos $L557b 58.9350 17.9500 "2026-10-11 08:00+00"
 chk "#557 PR2: przyszły rejs + SE → ryzyko mismatch" "$(rk $L557b SAILING_MISMATCH)" 1
 chk "#557 PR2: propose = rejs z actual_dep w oknie" \
   "select (public.sailing_mismatch_propose_id('$L557b') = '$S557a')" t
+pos $L557b 58.9360 17.9510 "2026-10-11 08:05+00"
+chk "#557 PR2: druga pozycja SE — jedno ryzyko mismatch" "$(rk $L557b SAILING_MISMATCH)" 1
 
 # stary punkt PL nie cofa FERRY (S557c: inny dzień niż S557a)
 mk $L557c C557 "'HHL/C557'" "'SCX/C557'" FERRY "'$S557c'"
@@ -1291,10 +1315,30 @@ pos $L557c 54.4030 18.6800 "2026-10-10 09:00+00"
 chk "#557 PR2: stary punkt PL → status FERRY" "$(st $L557c)" FERRY
 chk "#557 PR2: stary punkt ma stale_point" \
   "select (raw->>'stale_point') from positions where load_id='$L557c' order by ts desc limit 1" true
+# postój Gdańsk przed odejściem — nie stale
+L557f=55555555-0000-0000-0000-00000000557f
+mk $L557f F557 "'HHL/F557'" "'SCX/F557'" AT_PORT_GDANSK "'$S557b'"
+q "
+insert into load_events (load_id, event_type, occurred_at) values ('$L557f','MILESTONE_LOADED','2026-10-09 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$L557f', '2026-10-10 10:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+" >/dev/null
+pos $L557f 54.4030 18.6800 "2026-10-10 10:30+00"
+chk "#557 PR2: postój Gdańsk przed odejściem bez stale" \
+  "select coalesce(raw->>'stale_point','false') from positions where load_id='$L557f' order by ts desc limit 1" false
 
-# overdue +2h bez pozycji SE (actual_arrival 06:00, check 09:00)
-q "select public.ferry_check_arrival_overdue('2026-10-10 09:00+00')" >/dev/null
-chk "#557 PR2: +2h bez SE → ryzyko arrival_check" "$(rk $L557c FERRY_ARRIVAL_CHECK)" 1
+# overdue +2h bez pozycji SE → detect_ferry_overdue (FERRY_OVERDUE + sailing_id)
+q "select public.detect_ferry_overdue('2026-10-10 09:00+00')" >/dev/null
+chk "#557 PR2: +2h bez SE → FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
+q "select public.detect_ferry_overdue('2026-10-10 09:15+00')" >/dev/null
+chk "#557 PR2: drugi cron — jedno FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
+
+# Stena GDY-KAA: backup Port SE (strefa STENA OFF)
+L557g=55555555-0000-0000-0000-00000000557g
+mk $L557g G557 "'HHL/G557'" "'SCX/G557'" FERRY "'$S557d'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557g','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557g 56.1600 15.5900 "2026-10-11 05:00+00"
+chk "#557 PR2: Stena GDY-KAA w porcie → AT_PORT_NYNASHAMN" "$(st $L557g)" AT_PORT_NYNASHAMN
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

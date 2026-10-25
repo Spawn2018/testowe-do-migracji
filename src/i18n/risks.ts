@@ -30,8 +30,7 @@ const pl: Dict = {
   rk_port_no_loaded: 'Pojazd w porcie PL bez potwierdzenia załadunku',
   rk_left_loading_unconfirmed: 'Pojazd opuścił strefę załadunku bez potwierdzenia załadunku — status bez zmian',
   rk_ferry_overdue: 'Transport nadal w statusie „Prom”, choć {vessel} miał przypłynąć {arr}',
-  /* #557 PR2 */
-  rk_ferry_arrival_check: 'Sprawdź {code} po dopłynięciu',
+  /* #557 PR2 F7: arrival-check scalony w rk_ferry_overdue */
   rk_sailing_mismatch: 'Auto w SE, a przypisany rejs jeszcze nie wypłynął',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',

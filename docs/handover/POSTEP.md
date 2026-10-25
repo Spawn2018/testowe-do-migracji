@@ -5186,3 +5186,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak „F7: gotowe do scalenia” po `ba8a6377`. #560 niegotowe / CONFLICTING po rebase; #383 CONFLICTING. Bez push na main.
 - CI #562 `ba8a6377`: unit ✔ visual ✔; **db FAIL** security 458/1 — B5: komentarz `-- B5:…` między `begin` a `perform assert_not_preview` w `sailing_mismatch_assign` (strażnik wymaga assert jako pierwszej instrukcji). status 265/265, risks 46/46.
 - F7 r2 (Spawn2018, 18:14Z na `071b68f`): bloker 1–4 częściowo w `ba8a6377`; pkt 5–12 + uwagi → PLAN §4 #557 pkt 5, §8 20:40. **Następny commit:** kod 0307 (admin-only assign, backup Port SE, merge overdue, propose/mismatch/stale, testy).
+
+## 2026-10-25 21:10 — #557 PR2 F7 r2: kod 0307
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne`. Brak F7 „gotowe” do scalenia. Bez push na main.
+- CI docs `8b4b8a3f`: unit/visual ✔; db security 458/1 (ten sam B5) — oczekiwane przed kodem.
+- Bieżąca: **#557 PR2** — F7 r2 w `0307`: assign HHL_ADMIN+2FA (assert pierwsze); backup Port SE/Droga SE; `detect_ferry_overdue` + drop `ferry_check_arrival_overdue`; stale/mismatch/propose; trigger resolve; status **271**; risks **6** kluczy. Push → CI → prośba F7.
