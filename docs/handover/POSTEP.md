@@ -5148,3 +5148,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. #557 (produkcja T-12/SG-21) — polecenie Spawn2018 na #560: pierwszeństwo przed zapisem SharePoint.
 - Scalanie: brak F7 „gotowe do scalenia” (#560 = niegotowe + czekaj #557; #383 CONFLICTING). Bez push na main.
 - Bieżąca: **#557 PR1** pakiet/557-ferry-t12-sg21 — migracja **0306** (SG-21 → Wawel T-12; FERRY; SE z pozycji przez `apply_ferry_se_from_position`); PLAN §4/§8 + dopisek D-20261025-1630-01. Strefy 10/10 już OK. Po CI/F7/scaleniu: PR2 reguły #557, potem powrót do #560 (rebase → 0307, 5 blokerów F7).
+
+## 2026-10-25 19:00 — #557 F7: dokumentacja (test db przed znakiem)
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie). Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe do scalenia”. #561 CI na `29171540` zielone (unit/visual/db) — potem F7 „do poprawy” (brak wykonania gałęzi hotfixu na świeżej bazie).
+- Bieżąca: **#557 PR1** — wpis F7 w PLAN §4; następny commit: `hotfix_557_apply()` + test w `tests/db/status.sh` (fikstury T-12/SG-21, PORT_IN SE, idempotencja).
