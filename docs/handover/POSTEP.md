@@ -5199,3 +5199,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak „F7: gotowe” na #562 po `e34f88bd`. #560 WSTRZYMANY/CONFLICTING; #383 CONFLICTING. Bez push na main.
 - CI #562 `e34f88bd`: unit ✔ visual ✔; **db FAIL** status 268/3 — (1) 58.96 od krawędzi PORT_IN &lt; 2 km → FERRY zamiast IN_TRANSIT_SE; (2) prev pozycji po odejściu → brak `stale_point`; (3) UUID `…557g` niehex.
 - Fix fikstur: Ösmo 59.00/17.90; prev `ts ≤ departure`; L557g `…5570`. EXPECTED status **271** bez zmian. Push → CI → prośba F7.
+
+## 2026-10-25 21:45 — #557 PR2 F7 r3: dokumentacja (przed kodem)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `3f6bc8f0`: unit ✔ visual ✔; **db FAIL** status 270/1 — Stena GDY-KAA w porcie zostaje FERRY (aktywne STENA PORT_IN z A5/485 → backup `return`).
+- F7 r3 (Spawn2018, 19:20Z): PLAN §4 #557 pkt 6 + **W52** (stale w ETA/SMS/ciszy). **Następny commit:** kod 0307 + fikstura Stena OFF + testy assign/suggest.

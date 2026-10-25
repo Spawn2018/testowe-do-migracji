@@ -994,15 +994,16 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
 4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign` tylko HHL_ADMIN (przycisk); HHL_OPS widzi ryzyko bez „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
-5. **F7 #562 r2 — kod w tym commitcie (0307):**
-   - ~~B1–B4~~ · **B5/pkt 5:** assign `assert_not_preview` pierwsze + HHL_ADMIN+2FA; suggest bez assert (odczyt).
-   - **pkt 6:** backup Port SE / Droga SE; aktywna PORT_IN → return.
-   - **pkt 7–8:** mismatch coalesce dep + loaded + status; propose PL bbox / GDN-NYN|GDY-KAA.
-   - **pkt 9:** stale ≥ FERRY / AT_PORT_GDANSK po odejściu; jeden prev `ts <= dep`.
-   - **pkt 10:** SAILING_MISMATCH trigger na `sailing_id`; overdue w `detect_ferry_overdue` (bez osobnego crona); dedup sailing_id; zamyka po SE.
-   - **pkt 11:** assign audit + `resolved_by` + `a10_try_ferry_backup` + SE.
-   - **pkt 12:** status **271** (+13); risks **6** kluczy (bez `rk_ferry_arrival_check`).
-   - **Uwagi:** exception wrap w `process_position`; `params.code` bez „—”; ETA/SMS stale — dopisek na później (mapa: front).
+5. **F7 #562 r2 — zrobione w 0307** (admin assign, Port SE, merge overdue, stale/mismatch).
+6. **F7 #562 r3 — kod w tym PR (0307):**
+   - **BLOKER CI:** Stena — wyłączyć STENA PORT_IN (A5/485) przed testem; Ösmo/prev/UUID już w fiksturach.
+   - **pkt 1:** backup też `AT_PORT_NYNASHAMN` → `IN_TRANSIT_SE` przy ≥2 km (strefa OFF); „w porcie” przed „lądem SE”.
+   - **pkt 2:** `trg_loads_sailing_mismatch_resolve`: `resolved_by = current_app_user_id()` (NULL dla systemu).
+   - **pkt 3:** assign: odrzut ODWOLANY / trasa ≠ GDN-NYN|GDY-KAA; przy IN_TRANSIT_PL|AT_PORT_GDANSK + odejście ≤ now → `auto_set_status` FERRY (quiet, AIS) + reguła SE.
+   - **pkt 4:** `detect_ferry_overdue` — skip gdy dedup już resolved; `SAILING_MISMATCH` dedup z `sailing_id`.
+   - **pkt 5:** testy assign/suggest (ADMIN OK; OPS/KSH/SCX/Podgląd odmowa; event+audit; resolved_by; status; suggest; SE po dopłynięciu bez stale).
+   - status **284** (+13); risks **7** kluczy (+`rk_ferry_check_after_arrival`).
+   - **Uwagi:** propose bez PRE_PORT, bbox PL ≤ 54.45°N; `p_grace` zamiast 2 h; ETA/SMS/cisza + `stale_point` → **W52**.
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
@@ -1337,6 +1338,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W49 | Próg ciszy emtrack 12 h i daty tygodni z rokiem — zostają (#538 10A) | — | **potwierdzone 25.10.2026** |
 | W50 | Lista 23.10 (#482) pkt 1–6 potwierdzone; P1 TAK — SMS ze stref przy wyłączonej wysyłce zewnętrznej idą na numery z Opcji › Strefy (#538 14A) | — | **potwierdzone 25.10.2026** |
 | W51 | D-J1 (#537 J-19): decyzja właściciela — czy usuwać / przepisywać PII z migracji `0176_*` w publicznym repo (bez zmiany historii gita bez zgody) | po #536 | czeka (#537 sekcja J) |
+| W52 | #557 F7 r3: pomijać `raw.stale_point` w `trg_positions_eta`, `trg_sms_ksh_1h_position` i ciszy GPS (mapa: front już pomija) | po scaleniu #562 | kolejka wykonawcy (nie właściciel) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1680,3 +1682,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 20:40 | #557 PR2 F7 r2 (#562): docs §4 pkt 5 (B5–12); CI ba8a6377 unit/visual ✔ db security 458/1 (komentarz przed assert); kod w następnym | pętla |
 | 25.10.2026 21:10 | #557 PR2 F7 r2 kod 0307: admin assign, Port SE, merge overdue, stale/mismatch; status 271; risks 6 | pętla |
 | 25.10.2026 21:25 | #557 PR2 CI db FAIL status 268/3: Ösmo ≥2 km, stale prev≤dep, UUID L557g hex; fix fikstur status.sh | pętla |
+| 25.10.2026 21:45 | #557 PR2 F7 r3 (#562 e34f88b/3f6bc8f): docs §4 pkt 6 + W52; CI status 270/1 Stena PORT_IN ON | pętla |
