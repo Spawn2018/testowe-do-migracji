@@ -87,11 +87,11 @@ set search_path = public
 as $$
 declare
   v_me uuid;
-  v_role text;
+  v_role public.user_role;
   v_pid uuid;
 begin
   perform public.assert_not_preview();
-  select id, role::text into v_me, v_role
+  select id, role into v_me, v_role
     from public.app_users
    where auth_id = auth.uid() and active;
   if (v_me is not null and v_role = 'HHL_ADMIN' and public.mfa_satisfied(v_role) is true) is not true then

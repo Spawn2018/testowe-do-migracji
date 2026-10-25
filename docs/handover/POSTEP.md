@@ -5101,3 +5101,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - **Graph (plik testowy, tylko statusy):** token 200; driveItem 200; download 200; bajty 39315. Aplikacja ma dostęp — bez `pytanie-do-koordynatora`.
 - Bieżąca: **A6 pkt 4** `pakiet/a6-sharepoint-sync` — migracja **0304** (`ksh_sync_state`, RPC get/write/upsert, cron `tower-ksh-sharepoint`); Edge `ksh-sharepoint-sync` (odczyt Graph → stan + SOURCE_DOWN:KSH_SHAREPOINT); front `kshSharePointSync` z `ksh_sync_state_get`; nullguard **830**. Dalej: parse→import, zapis testowy, konflikt.
 
+## 2026-10-25 15:10 — A6 #556: parse→import + SOURCE_DOWN 30 min (0305)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#556 w toku; #383 bez F7 / CONFLICTING). Bez push na main.
+- CI #556: unit/visual OK; **db FAIL** nullguard — `ksh_sync_write_set` wołał `mfa_satisfied(text)` (brak przeciążenia). Fix w 0304: `user_role` + nullguard **837**.
+- Bieżąca: **A6** migracja **0305** (`import_schedule` dla `service_role`); Edge parse (exceljs + rdzeń A6) → `import_schedule` + snapshot kodów; `SOURCE_DOWN:KSH_SHAREPOINT` sticky po 30 min przez `store.raiseRisk`. Unit: source-down + risk-keys. Dalej: zapis pliku testowego, sprawa znikniętych / konflikt.
+

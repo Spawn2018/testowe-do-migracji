@@ -135,7 +135,7 @@ export type SourceId =
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
   | 'DIGITRAFFIC' | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
-  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB' | 'RIO';
+  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
@@ -146,6 +146,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
   EMTRACK_WEB: 'telematyka naczep (emtrack web)',
   RIO: 'RIO',
+  KSH_SHAREPOINT: 'Plik KSH (SharePoint)',
 };
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
@@ -153,6 +154,7 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   DIGITRAFFIC: 'FERRY', STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
   HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',
+  KSH_SHAREPOINT: 'JOB_FAILURE',
 };
 
 const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
@@ -163,7 +165,7 @@ const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce, nigdy cicha pustka.
  *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień. */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
-  const sticky = src === 'EMTRACK_WEB' || src === 'RIO';
+  const sticky = src === 'EMTRACK_WEB' || src === 'RIO' || src === 'KSH_SHAREPOINT';
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],

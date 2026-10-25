@@ -430,4 +430,10 @@ run $HHL "select admin_preview_stop()" commit >/dev/null
 # skipped_carrier / skipped_empty w stats (p_file)
 val "A6: skipped_carrier/empty w stats" $HHL "select (r->>'skipped_carrier')||'/'||(r->>'skipped_empty') from (select import_schedule('$P', '[]'::jsonb, '{}'::text[], '{\"name\":\"sk.xlsx\",\"skipped_carrier\":3,\"skipped_empty\":2,\"skipped_standard\":0}'::jsonb, true) as r) s" "3/2"
 
+# A6/0305: service_role (SharePoint Edge) woła ten sam import_schedule
+RSRV="[{\"code\":\"SG-SRV\",\"length_m\":12,\"width_m\":2.5,\"height_m\":2.5,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\"}]"
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select (import_schedule('$P', '$RSRV'::jsonb, '{}'::text[], '{\"name\":\"sp.xlsx\",\"hash\":\"sp\",\"source\":\"SHAREPOINT\"}'::jsonb, true)->>'rows'); rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: service_role dry_run import_schedule"; else fail=$((fail+1)); echo "  FAIL  A6: service_role dry_run → $out"; fi
+chk "A6: service_role ma EXECUTE import_schedule" "$(Q "select has_function_privilege('service_role','import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
