@@ -80,6 +80,8 @@ begin
      where resolved_at is null
        and kind = 'JOB_FAILURE'
        and dedup_key like 'backup-stale:%'
+       and split_part(dedup_key, ':', 2) ~ '^[0-9]+$'
+       and split_part(dedup_key, ':', 2)::bigint < new.id
   loop
     update risk_signals
        set resolved_at = v_now
@@ -107,7 +109,7 @@ end;
 $$;
 
 comment on function public.backup_ok_close_failures() is
-  '#516: status→OK → RESOLVED decyzji BACKUP_FAILED (run_id < OK) + resolve ryzyka backup-stale (cicho).';
+  '#516: status→OK → RESOLVED decyzji BACKUP_FAILED (run_id < OK) + resolve backup-stale (run_id < OK, cicho).';
 
 revoke all on function public.backup_ok_close_failures()
   from public, anon, authenticated;
@@ -196,6 +198,8 @@ begin
      where resolved_at is null
        and kind = 'JOB_FAILURE'
        and dedup_key like 'backup-stale:%'
+       and split_part(dedup_key, ':', 2) ~ '^[0-9]+$'
+       and split_part(dedup_key, ':', 2)::bigint < v_max_ok
   loop
     update risk_signals
        set resolved_at = v_now

@@ -1583,3 +1583,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 03:45 | #537 uzup. 3 → §4 pkt 16–18 + P11 pkt 3; #532 CI unit/db/visual zielone na `4f56ad2a` (security **406**); czekam F7 | pętla |
 | 25.10.2026 04:10 | #538 uzup. 15B+W5 (D-0230): jedna pętla; W5 zamknięte (R-1 ręczne); #532 CI zielone `ce875347` — czekam F7 (commit docs po gotowe) | pętla |
 | 25.10.2026 04:27 | #532/#530 SCALONE (`5f244528`, 0293); F7 gotowe a1b465c; start #516 F7 → **0295**; B5/**≥0299** | pętla |
+| 25.10.2026 05:10 | #516 F7 r2: backup-stale run_id < OK (trigger+DO); testy DO/stale≥; backup **44**; kolejka: `dec-auto.sh` → PGURL/PGADMIN (nie port 5433) | pętla |

@@ -4917,3 +4917,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
 - Scalanie: brak F7 `gotowe do scalenia` po head `2d1a7323`. #533 MERGEABLE; unit/visual zielone; **db FAIL** — `backup: oczekiwano 41/41, jest 42 OK` (F7: +6 asercji, nie +5). Bez push na main.
 - Bieżąca: **#516** PR #533 — `gate-suites` backup **42** / hosted **34**. Push → CI; ponowne F7.
+
+## 2026-10-25 05:10 — #516 F7 r2: stale run_id + testy
+
+- Skrzynka: #540/#538/#537/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających (#413 wygląd — baza SCALONE).
+- Scalanie: CI unit/db/visual zielone na `04f49598` (backup **42**); brak F7 `gotowe` — F7 r2 pkt 3–4. Bez push na main.
+- Bieżąca: **#516** PR #533 — F7 r2: `backup-stale` tylko gdy `split_part(dedup_key,':',2)::bigint < OK`; testy DO ponownie + stale≥OK; `gate-suites` backup **44** / hosted **36**. Kolejka: `dec-auto.sh` PGURL (§8). Push → CI; ponowne F7.

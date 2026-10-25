@@ -183,6 +183,62 @@ chk "#516 F7: ERROR run_id < OK → RESOLVED" "$(psql "$SRC" -Atq -c "select cou
 NOTIF_AFTER=$(psql "$SRC" -Atq -c "select count(*) from notifications")
 chk "#516 F7: zamknięcie bez nowych powiadomień" "$NOTIF_AFTER" "$NOTIF_BEFORE"
 
+echo; echo "[#516 F7 r2] DO ponownie + backup-stale run_id ≥ OK"
+PROJ516c=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%');
+  delete from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%';
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, finished_at) values ('OK', now() - interval '2 minutes', now() - interval '1 minute')" >/dev/null
+MAXOK516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='OK' order by id desc limit 1")
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516c', 'BACKUP_FAILED', 'NEW', 'F7r2 #516 old', jsonb_build_object('backup_run_id', $MAXOK516 - 1)),
+         ('$PROJ516c', 'BACKUP_FAILED', 'NEW', 'F7r2 #516 ge', jsonb_build_object('backup_run_id', $MAXOK516))" >/dev/null
+# ten sam warunek co blok DO migracji 0295 (ponowne uruchomienie)
+psql "$SRC" -q -c "
+do \$\$
+declare
+  r record; v_prev text; v_now timestamptz := now(); v_max_ok bigint; v_note text := 'F7r2 DO #516';
+begin
+  select max(id) into v_max_ok from backup_runs where status = 'OK';
+  v_prev := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+  for r in
+    select id from decisions
+     where type_code = 'BACKUP_FAILED' and status in ('NEW', 'ASSIGNED', 'SNOOZED')
+       and (detail->>'backup_run_id') ~ '^[0-9]+$'
+       and (detail->>'backup_run_id')::bigint < v_max_ok
+  loop
+    update decisions set status='RESOLVED', resolution_code='AUTO_CLOSED',
+      resolution_note=v_note, resolved_at=v_now, updated_at=v_now
+     where id=r.id and status in ('NEW','ASSIGNED','SNOOZED');
+  end loop;
+  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+end;
+\$\$;" >/dev/null
+chk "#516 F7r2: DO old→RESOLVED / ge→NEW" "$(psql "$SRC" -Atq -c "select
+  (select count(*) from decisions where title='F7r2 #516 old' and status='RESOLVED')||'/'||
+  (select count(*) from decisions where title='F7r2 #516 ge' and status='NEW')")" "1/1"
+# ryzyko ze stale id ≥ OK — trigger nie zamyka
+psql "$SRC" -q -c "delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516c=$(psql "$SRC" -Atq -c "select id from backup_runs order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='f7r2' where id=$ERR516c" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+OK516c=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+# stale z run_id = przyszły OK (≥) — zostaje otwarte; stare < OK — zamykane
+psql "$SRC" -q -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values ('$PROJ516c', 'JOB_FAILURE', 'HIGH', 'stale old', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$ERR516c), 'backup-stale:'||$ERR516c||':$PROJ516c', now()),
+         ('$PROJ516c', 'JOB_FAILURE', 'HIGH', 'stale ge', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$OK516c), 'backup-stale:'||$OK516c||':$PROJ516c', now())" >/dev/null
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now() where id=$OK516c" >/dev/null
+chk "#516 F7r2: backup-stale run_id≥OK zostaje otwarte" "$(psql "$SRC" -Atq -c "select
+  (select count(*) from risk_signals where dedup_key='backup-stale:'||$ERR516c||':$PROJ516c' and resolved_at is not null)||'/'||
+  (select count(*) from risk_signals where dedup_key='backup-stale:'||$OK516c||':$PROJ516c' and resolved_at is null)")" "1/1"
+
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"
 head -c 200000 /dev/urandom > "$TMP/pliki/a.pdf"; printf 'Zażółć gęślą jaźń\n' > "$TMP/pliki/b.txt"
