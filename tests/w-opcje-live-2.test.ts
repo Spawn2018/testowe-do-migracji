@@ -257,7 +257,8 @@ describe('F7 #415 — odczyt i zapis', () => {
     expect(f).toContain('if (!error) { await refresh(); onSaved?.(); }');
   });
   it('strefy pod SMS — Operacje HHL tylko podgląd', () => {
-    expect(read('src/views/OptionsView.tsx')).toContain("disabled={ro} onClick={() => { if (ro) return; saveGeofence(");
+    /* #557: przełącznik wyłączania otwiera najpierw potwierdzenie — strażnik `ro` nadal pierwszy w onClick */
+    expect(read('src/views/OptionsView.tsx')).toMatch(/disabled=\{ro\} onClick=\{\(\) => \{\s*if \(ro\) return;/);
   });
 });
 
