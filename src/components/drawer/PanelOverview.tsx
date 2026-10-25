@@ -39,6 +39,8 @@ import { formatCalendarDay } from '../../lib/time';
 import { stageTileOf } from '../../lib/stageTiles';
 import { itemKindName } from '../../lib/p5Finance';
 import { hhlAdminDates } from '../../lib/adminDates';
+import { canPinSailing, hasOpenMismatch } from '../../lib/sailingPin';
+import { SailingPin } from './SailingPin';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -561,10 +563,13 @@ export function PanelOverview(p: Props) {
           <dt>{pt(locale, 'p7_row_link')}</dt>
           <dd>{linkSet ? <span className="po-ok">{pt(locale, 'p7_link_set')}</span> : <span className="po-miss">{awiz === 'none' ? '—' : pt(locale, 'p7_link_none')}</span>}</dd>
           <dt>{pt(locale, 'p7_row_sailing')}</dt>
-          <dd data-ferry-row>{sailingText ? <span data-content>{sailingText}</span> : bookedVessel && sailMissing ? (
+          <dd data-ferry-row tabIndex={-1}>{sailingText ? <span data-content>{sailingText}</span> : bookedVessel && sailMissing ? (
             <><span data-content>{bookedVessel}</span>{' · '}<span className="po-miss" data-sail-unpicked>{pt(locale, 'p7_sail_unpicked')}</span></>
           ) : bookedVessel ? <span data-content>{bookedVessel}</span>
-            : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}</dd>
+            : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}
+            {canPinSailing({ admin: hhlAdminDates(role), readOnly: isPreviewReadOnly({ viewRole: role }), mismatch: hasOpenMismatch(risks, load.id) })
+              ? <SailingPin key={load.id} loadId={load.id} locale={locale} sailings={sailings} />
+              : null}</dd>
           {pilotsReq ? (
             <>
               <dt>{pt(locale, 'p7_pilot_pl')}</dt>
