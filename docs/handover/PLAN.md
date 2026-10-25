@@ -864,7 +864,7 @@ Po #484, przed #528 / B5. Trigger `BEFORE UPDATE ON loads`: `updated_at = now()`
 Testy SQLSTATE (`i2`/`c3`); kod odmowy SYSTEM 42501; `sweden_land_geom` / PORT_IN; wierzchołki SE_E22; nieznana trasa promu → bez korytarza; `PREV_OFFROUTE` bez `::int`. F7 r3: Karlskrona-port w lądzie; Lyckeby/Jämjö/Brömsebro na E22; Ösmo na GDN-NYN; fuel_miss/ext_mail 42501. status **246**. Front — koordynator. Szczegóły: #496.
 
 ### #540 · Deadlock a10 FOR NO KEY UPDATE (D-20261025-0207-01, #537 pkt 9) — W TOKU (migracja **0299**; po #496 SCALONE; przed B5; przed 28.10)
-`a10_try_prep_status` + `c17_try_ready_to_invoice` / `c17_try_invoiced`: `FOR NO KEY UPDATE` zamiast `FOR UPDATE`. Test status: definicja bez `for update`; INSERT zdarzenia przy UPDATE (`lock_timeout` 1 s); 40× równolegle 0 deadlocków. status **250**. Szczegóły: #540.
+`a10_try_prep_status` + `c17_try_ready_to_invoice` / `c17_try_invoiced`: `FOR NO KEY UPDATE` zamiast `FOR UPDATE`. Test status: definicja bez `for update` (a10 + oba c17); INSERT zdarzenia przy UPDATE (`lock_timeout` 1 s); 40× równolegle 0 deadlocków (`wait` na PID). status **251**. Szczegóły: #540.
 
 ### #500 · Odbiór A7 — PDF / combo_* / sprawy zasobów przy CANCELLED — po #498 (nie przerywa)
 `a7-seed-docs.mjs` na prod (pliki poza repo); `combo_*` SG-02/03; zamknięcie `RESOURCE_MISSING` przy anulowanych. Szczegóły: #500.
@@ -1611,3 +1611,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 07:20 | #543 SCALONE (`fe0e31c0`, wyglad J-10 RIO stara pozycja); #496 CI zielone `4fcf82d3` — czekam F7; #537 I/J → §4 pkt 19–32 + W51 | pętla |
 | 25.10.2026 07:20 | F7 #536 r3 INFO → §8: Bergkvara na SE_E22; insert rejsów testowych bez cichego `>/dev/null` (ON_ERROR_STOP) | pętla |
 | 25.10.2026 07:46 | #536/#496 SCALONE (`739a53a8`, 0298); #413 zamknięte (baza); start #540 → **0299** (FOR NO KEY UPDATE); B5/**≥0300**; status **250** | pętla |
+| 25.10.2026 08:15 | #540 F7: wait PID w status.sh + chk c17_try_invoiced; status **251**; prod FOR UPDATE RPC (cancel/decision/… ) → ocena przy B5/P6 | pętla |

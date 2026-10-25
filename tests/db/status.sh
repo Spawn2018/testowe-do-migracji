@@ -1140,21 +1140,27 @@ chk "#540: a10_try_prep_status bez FOR UPDATE" \
   "select (pg_get_functiondef('public.a10_try_prep_status(uuid)'::regprocedure) !~* 'for update')::text" true
 chk "#540: c17_try_ready_to_invoice bez FOR UPDATE" \
   "select (pg_get_functiondef('public.c17_try_ready_to_invoice(uuid,jsonb)'::regprocedure) !~* 'for update')::text" true
+chk "#540: c17_try_invoiced bez FOR UPDATE" \
+  "select (pg_get_functiondef('public.c17_try_invoiced(uuid,jsonb)'::regprocedure) !~* 'for update')::text" true
 # Sesja A trzyma wiersz przez UPDATE+a9 (NO KEY UPDATE) + sleep; sesja B INSERT z lock_timeout 1 s.
+# F7: bez podpowłoki `( … & )` — inaczej `wait` nie czeka na psql (sieroty, wyścig w grep).
 TMP540=$(mktemp -d)
-( $PSQL -c "begin; update loads set driver_name = 'Kierowca540A' where id='$L540'; select pg_sleep(2); commit;" >"$TMP540/A" 2>&1 & )
+$PSQL -c "begin; update loads set driver_name = 'Kierowca540A' where id='$L540'; select pg_sleep(2); commit;" >"$TMP540/A" 2>&1 &
+PID540A=$!
 sleep 0.4
 GOT540=fail
 if $PSQL -c "set lock_timeout = '1s'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$L540','NOTE',now(),'{\"src\":\"#540\"}'::jsonb); select 'ok';" >"$TMP540/B" 2>&1; then
   grep -q '^ok$' "$TMP540/B" && GOT540=ok
 fi
-wait || true
+wait "$PID540A" || true
 chk "#540: INSERT zdarzenia w trakcie UPDATE (lock_timeout 1s) → ok" "select '$GOT540'" ok
 # Równoległy UPDATE + INSERT tego samego ładunku — 0 deadlocków (40 rund).
 for i in $(seq 1 40); do
-  ( $PSQL -c "begin; update loads set driver_name = 'A$i' where id='$L540'; select pg_sleep(0.05); commit;" >/dev/null 2>"$TMP540/da$i" & )
-  ( $PSQL -c "begin; insert into load_events (load_id, event_type, occurred_at) values ('$L540','NOTE',now()); update loads set driver_phone = '+48000000$i' where id='$L540'; commit;" >/dev/null 2>"$TMP540/db$i" & )
-  wait || true
+  $PSQL -c "begin; update loads set driver_name = 'A$i' where id='$L540'; select pg_sleep(0.05); commit;" >/dev/null 2>"$TMP540/da$i" &
+  PID540DA=$!
+  $PSQL -c "begin; insert into load_events (load_id, event_type, occurred_at) values ('$L540','NOTE',now()); update loads set driver_phone = '+48000000$i' where id='$L540'; commit;" >/dev/null 2>"$TMP540/db$i" &
+  PID540DB=$!
+  wait "$PID540DA" "$PID540DB" || true
 done
 DL540=$(grep -ci 'deadlock' "$TMP540"/d* 2>/dev/null | awk -F: '{s+=$NF} END {print s+0}')
 chk "#540: 40× równoległy UPDATE+INSERT → 0 deadlocków" "select $DL540" 0

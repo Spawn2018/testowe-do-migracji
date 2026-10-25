@@ -4986,4 +4986,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#536/#496** `739a53a8` (F7 „gotowe do scalenia” po docs `fdb129c`, CI unit/db/visual, migracja **0298**). Bez push na main — `deploy-main`.
 - Bieżąca: **#540** (Zgubione pkt 9) — `a10_try_prep_status` + c17 billing: `FOR NO KEY UPDATE`; testy status **250** (def, INSERT `lock_timeout` 1 s, 40× 0 deadlocków). Migracja **0299**. B5→**≥0300**. Push → CI; czekam F7.
 
+## 2026-10-25 08:15 — #540 F7: testy wait PID + c17_try_invoiced (status 251)
+
+- Skrzynka: #540/#538/#537 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: **#544/#540** — CI unit/db/visual zielone na `4ded3dc5` (status **250**); F7: jeszcze nie — poprawka testów (podpowłoka/`wait`, chk `c17_try_invoiced`). Migracja 0299 bez uwag. Bez push na main.
+- Bieżąca: **#540** — F7 r2: `$PSQL … &` + `wait` PID; +chk `c17_try_invoiced`; status **251**. Push → CI; ponowne F7. Prod `FOR UPDATE` na loads w RPC (cancel/decision/…) → §8, ocena przy B5/P6.
+
 
