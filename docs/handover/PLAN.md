@@ -1654,3 +1654,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 14:45 | A6 #555 F7: 0303 COMMENT + assert_not_preview; skipped_carrier/empty; kreator bez loadDay/delivDay; WARN NTG/pusty HH; telefon SE; dry_run dates_check | pętla |
 | 25.10.2026 15:35 | #555/A6 kroki 1–2 SCALONE (`e9f9c919`, 0303); F7 gotowe `42bfea9`; start SharePoint **0304** (stan + Edge odczyt Graph) | pętla |
 | 25.10.2026 16:15 | A6 #556 F7 (705e8f8): import_enabled + dedup hash + Graph try/catch/timeout/10MB + DEMO bez sekretów + source SHAREPOINT; projekt STEGRA_BODEN; job_watchdog bez ksh-sharepoint | pętla |
+| 25.10.2026 16:55 | A6 #556 db FAIL import (true≠t) — fix asercji boolean w `import.sh`; ponowne CI | pętla |

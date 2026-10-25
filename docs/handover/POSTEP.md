@@ -5115,3 +5115,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #556 na `705e8f8`: unit ✔, visual ✔, db ✔ (nullguard **837**) — G-15: poprawki dopiero po zielonym CI.
 - Bieżąca: **A6 F7 #556** — `import_enabled` (domyślnie false); dedup hash; Graph try/catch/timeout/10MB; DEMO bez sekretów; `source` SHAREPOINT; projekt `STEGRA_BODEN`; kontrakt parserów; unit graph z fake fetch. Potem ponowne F7.
 
+## 2026-10-25 16:55 — A6 #556 db: boolean t/f w import.sh
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#556; #383 CONFLICTING; #558 wygląd bez F7). Bez push na main.
+- CI #556 na `4e1f4301`: unit ✔, visual ✔, **db FAIL** import 143/146 — `import_enabled::text` i `(a>b)::text` dają `true`/`false`, a `val`/`chk` oczekują `t`/`f` (psql boolean). Fix: bez `::text`.
+- Bieżąca: **A6** push fix testów → ponowne CI → F7. Potem zapis pliku testowego / sprawa znikniętych.
+

@@ -445,9 +445,9 @@ $PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
 err "A6: HHL_OPS ksh_sync_import_set odmowa" $HHL "select ksh_sync_import_set(true)" "Administrator HHL"
 err "A6: HHL_OPS ksh_sync_write_set odmowa" $HHL "select ksh_sync_write_set(true)" "Administrator HHL"
 $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
-val "A6: HHL_ADMIN ksh_sync_import_set" $HHL "select ksh_sync_import_set(true); select import_enabled::text from ksh_sync_state where project_id='$P'" t commit
+val "A6: HHL_ADMIN ksh_sync_import_set" $HHL "select ksh_sync_import_set(true); select import_enabled from ksh_sync_state where project_id='$P'" t commit
 chk "A6: audit KSH_SYNC_IMPORT_SET" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_IMPORT_SET' and entity_id='$P'")" t
-val "A6: HHL_ADMIN wyłącza import_enabled" $HHL "select ksh_sync_import_set(false); select import_enabled::text from ksh_sync_state where project_id='$P'" f commit
+val "A6: HHL_ADMIN wyłącza import_enabled" $HHL "select ksh_sync_import_set(false); select import_enabled from ksh_sync_state where project_id='$P'" f commit
 run $HHL "select admin_preview_start('KSH')" commit >/dev/null
 err "A6: Podgląd — ksh_sync_import_set odmowa" $HHL "select ksh_sync_import_set(true)" "Podgląd"
 run $HHL "select admin_preview_stop()" commit >/dev/null
@@ -465,6 +465,6 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: dedup hash → unchanged_file"; else fail=$((fail+1)); echo "  FAIL  A6: dedup hash → $out"; fi
 chk "A6: dedup — bez nowego schedule_imports" "$(Q "select count(*) from schedule_imports where project_id='$P'")" "$SI_MID"
 # sanity: przed pierwszym zapisem SharePoint było mniej wierszy
-chk "A6: pierwszy SHAREPOINT dodał wersję" "$(Q "select ($SI_MID > $SI_BEFORE)::text")" t
+chk "A6: pierwszy SHAREPOINT dodał wersję" "$(Q "select ($SI_MID > $SI_BEFORE)")" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
