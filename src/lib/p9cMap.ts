@@ -13,6 +13,7 @@ import { etaDuration } from './etaDuration';
 import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
 import { transportLabel, transportSearchBlob } from './transportName';
+import { trackingNoLink } from './trackerLink';
 
 const TZ = 'Europe/Warsaw';
 const PORT_PL: Record<string, string> = { GDN: 'Gdańsk', NYN: 'Nynäshamn', GDY: 'Gdynia', KAA: 'Karlskrona' };
@@ -117,8 +118,9 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
   } else {
     /* powód tylko z danych: `trackingLink === undefined` = serwer jeszcze nie podaje stanu linku (bez zgadywania) */
     const st = l.trackingLink?.check?.state;
-    const why = l.trackingLink === undefined ? null
-      : l.trackingLink === null ? 'p9c_pos_none_link'
+    /* U-231: na produkcji pusty link przychodzi jako `undefined` (mapper) — brak linku poznajemy po `trackingRef` */
+    const why = l.trackingLink === null || trackingNoLink(l, l.trackingLink, ctx.prod) ? 'p9c_pos_none_link'
+      : l.trackingLink === undefined ? null
         : st === 'invalid' ? 'p9c_pos_none_bad'
           : st === 'down' ? 'p9c_pos_none_down' : 'p9c_pos_none_wait';
     pos = { kind: 'none', text: tx('p9c_pos_none'), sub: inWindow && why ? tx(why) : null, alarm: inWindow };
