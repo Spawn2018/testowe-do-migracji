@@ -898,9 +898,10 @@ progress{vertical-align:baseline}
 [type=search]{-webkit-appearance:textfield;outline-offset:-2px}
 ::-webkit-search-decoration{-webkit-appearance:none}
 ::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}
-/* P11 pkt 7 (e29 warstwy Mapy, e42 SMS przy miejscach, e4 faktury): pole wyboru w tokenach — kwadrat bez zaokrągleń,
+/* P11 pkt 7 (e29 warstwy Mapy, e42 SMS przy miejscach, e4 faktury): pole wyboru w tokenach — rogi 2 px jak przyciski
+   (decyzja właściciela 18.10 „rogi zaokrąglone”, potwierdzona 25.10 6A),
    zaznaczone wypełnione kolorem tekstu (nie niebieskie z przeglądarki); radio w kolorze tekstu */
-input[type=checkbox]{-webkit-appearance:none;appearance:none;display:inline-grid;grid-template:100%/100%;place-items:center;box-sizing:border-box;width:16px;height:16px;margin:0;flex:0 0 auto;border:1.5px solid var(--ink-2);border-radius:0;background:var(--surface);cursor:pointer;vertical-align:middle}
+input[type=checkbox]{-webkit-appearance:none;appearance:none;display:inline-grid;grid-template:100%/100%;place-items:center;box-sizing:border-box;width:16px;height:16px;margin:0;flex:0 0 auto;border:1.5px solid var(--ink-2);border-radius:2px;background:var(--surface);cursor:pointer;vertical-align:middle}
 input[type=checkbox]::before{content:"";width:62%;height:34%;box-sizing:border-box;border-left:2px solid var(--surface);border-bottom:2px solid var(--surface);transform:translateY(-1px) rotate(-45deg);visibility:hidden}
 input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}
 input[type=checkbox]:checked::before{visibility:visible}
