@@ -983,17 +983,27 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
 7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
-### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (PR1 SCALONE `121a9021` / **0306**; PR2 `pakiet/557-ferry-rules-pr2` / **0307**; pierwszeństwo przed A6 #560)
+### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (PR1 SCALONE `121a9021` / **0306**; PR2 `pakiet/557-ferry-rules-pr2` / **0307** PR #562; pierwszeństwo przed A6 #560)
 Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
 1. **PR1 — SCALONE** (`121a9021`, 25.10 ~17:47Z, **0306**): SG-21 → Wawel; FERRY; SE z pozycji; `hotfix_557_apply()` + test status +7.
-2. **PR2 (0307, ta gałąź):** 
-   - `apply_ferry_ais_arrival_backup` — FERRY→`IN_TRANSIT_SE` po `actual_arrival_at` + ląd SE, **bez** `geofences.active`;
-   - `ferry_check_arrival_overdue` (+2 h bez pozycji SE → `rk_ferry_arrival_check`, cron `*/15`);
-   - stary punkt emtrack: `raw.stale_point`, bez faz;
-   - `detect_sailing_mismatch` → `rk_sailing_mismatch`; RPC `sailing_mismatch_suggest` / `sailing_mismatch_assign` (HHL, front „Przypnij rejs”);
+2. **PR2 (0307, ta gałąź / #562):** 
+   - `apply_ferry_ais_arrival_backup` — FERRY→Port SE / Droga SE po `actual_arrival_at` + ląd SE, **bez** `geofences.active` (F7 r2 pkt 6);
+   - overdue dopłynięcia: **połącz z** `detect_ferry_overdue` / `rk_ferry_overdue` (cron `tower-prom-opoznienie`) — **bez** osobnego crona `ferry_check_arrival_overdue` (F7 r2 pkt 10);
+   - stary punkt emtrack: `raw.stale_point`, bez faz (F7 r2 pkt 9);
+   - `detect_sailing_mismatch` → `rk_sailing_mismatch`; RPC `sailing_mismatch_suggest` (odczyt) / `sailing_mismatch_assign` (**tylko `is_hhl_admin()` + 2FA**, nie HHL_OPS — F7 r2 pkt 5);
    - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
-4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign(load_id, sailing_id)`; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
+4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign` tylko HHL_ADMIN (przycisk); HHL_OPS widzi ryzyko bez „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
+5. **F7 #562 (071b68f / ba8a6377) — do kodu w następnym commitcie:**
+   - ~~B1 fikstury S557c unique~~ · ~~B2 POPRAWKA 24.09~~ · ~~B3 assert pierwsze (bez komentarza przed `perform`)~~ · ~~B4 risks 7 kluczy~~ — częściowo w `ba8a6377`; B3 nadal FAIL (komentarz przed assert → security 458/1).
+   - **B5 / pkt 5:** assign tylko `is_hhl_admin()` + MFA; OPS/KSH/SCX/Podgląd → 42501.
+   - **pkt 6:** backup: geometria PORT_IN bez `g.active` → Port SE; gdy aktywna PORT_IN → `return` (0298 + histereza); inaczej syntetyczny Port SE (quiet) + Droga SE bez quiet.
+   - **pkt 7–8:** mismatch: wypłynięcie = `coalesce(actual_departure_at, delayed_departure_at, departure_at)`; status ∈ (IN_TRANSIT_PL, AT_PORT_GDANSK, FERRY) + `loaded_confirmed()`; najpierw otwarte ryzyko; propose: ostatni punkt **w PL**, trasy GDN-NYN/GDY-KAA, `actual_arrival_at <= v_first_se`, bez ODWOLANY.
+   - **pkt 9:** stale tylko ≥ FERRY albo (AT_PORT_GDANSK i odejście ≤ ts); jeden ostatni nie-stary `ts <= v_act_dep`.
+   - **pkt 10:** zamykaj SAILING_MISMATCH przy każdej zmianie `sailing_id`; FERRY_ARRIVAL w `detect_ferry_overdue` + dedup `sailing_id`; zamykaj po SE.
+   - **pkt 11:** assign: `audit_log` + `resolved_by`; po pin AIS→FERRY + reguła SE dla ostatniej pozycji SE.
+   - **pkt 12:** testy assign/suggest/idempotencja/Stena/pas 0,8–2 km/postoje nie-stare.
+   - **Uwagi:** exception wrapping w `process_position`; pomijaj `stale_point` w ETA/SMS/ciszy; `params.code` jak w tytule; suggest bez `assert_not_preview`.
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
@@ -1668,3 +1678,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |
 | 25.10.2026 19:47 | #557 PR1 SCALONE (`121a9021`, 0306); F7 gotowe `83dec117`; start PR2 reguły **0307** | pętla |
 | 25.10.2026 20:05 | #557 PR2 db FAIL: assert B5, POPRAWKA 24.09, unique rejsów S557c, risks +2 klucze | pętla |
+| 25.10.2026 20:40 | #557 PR2 F7 r2 (#562): docs §4 pkt 5 (B5–12); CI ba8a6377 unit/visual ✔ db security 458/1 (komentarz przed assert); kod w następnym | pętla |
