@@ -367,7 +367,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         .map((r) => ({
           id: r.id,
           at: r.imported_at,
-          // F7 #556: service_role / SharePoint → stały autor zamiast pustego imported_by
+          // F7 #556: synchronizacja SharePoint → stały autor zamiast pustego imported_by
           by: r.source === 'SHAREPOINT' ? 'Synchronizacja SharePoint' : `v${r.version}`,
           filename: r.file_name ?? '',
           added: Number(r.stats?.added ?? 0), changed: Number(r.stats?.changed ?? 0),
