@@ -1640,3 +1640,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 12:10 | #551/B8 SCALONE (`75ee446c`, 0301); #550 pkt 1 STOP — bez logowania Google brak pozycji (`GgA=`); `pytanie-do-koordynatora`; start **B9** | pętla |
 | 25.10.2026 12:20 | B9 start: **0302** drop `user_preferences.locale`, `translate-retry` + cron 5 min, `deepl_usage_view` kolejka; security **455**; #552 docs | pętla |
 | 25.10.2026 13:00 | #550 WSTRZYMANE (kierowca bez aplikacji); B9 F7: `rk_translate_wait`, resolve TRANSLATE_WAIT, alarm bez klucza, stale per hash, audit pairs; security **459** | pętla |
+| 25.10.2026 13:20 | B9 #553 CI unit/visual/db zielone na `f4805369` — czekam „F7: gotowe do scalenia” | pętla |

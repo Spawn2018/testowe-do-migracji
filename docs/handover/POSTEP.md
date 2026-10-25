@@ -5070,3 +5070,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” (#553 = „do poprawy”; #554 wygląd w toku; #383 CONFLICTING). Bez push na main.
 - Bieżąca: **B9** F7 #553 — `rk_translate_wait`; `resolveRisks(TRANSLATE_WAIT)` po sukcesie; alarm kolejki przed early return bez klucza; stale per hash; dequeue bez `must` (łap błąd); `audit_log` prefs_pairs/users_pairs; security **459** (+4); PLAN B9 pkt 2: `app_users.locale` zostaje. Unit `pl-data` 11/11.
 
+## 2026-10-25 13:20 — B9 #553: CI zielone na f4805369 — czekam F7
+
+- Skrzynka: bez nowych `dla-cursora` do wpisania. #550 WSTRZYMANE. #538/#537/#500/#499/#412/#323/#322/#320 w planie. Bez `pilne` przerywających.
+- Scalanie: **brak** F7 „gotowe do scalenia” po `f4805369` (#553 komentarz „czekam CI + ponowne gotowe”). #554 wygląd bez F7. #383 CONFLICTING. Bez push na main.
+- CI #553 na head `f4805369`: unit ×2 ✔, visual ✔ (`40187335839`), db ✔ (`40187335763`, security 459). Zakres B9 (0302 + translate-retry + alarm) zamknięty w PR — czekam „F7: gotowe do scalenia”.
+
