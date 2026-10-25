@@ -44,6 +44,8 @@ Deno.serve(async (req: Request) => {
 
   const dl = await downloadSharePointFile(env);
   if (!dl.ok) {
+    // SOURCE_DOWN przez store.raiseRisk (title_key) — w kolejnym kroku po serveJob;
+    // tu tylko stan: widok liczy „Nie działa” z wieku lastReadAt (kshSyncView).
     await sb.rpc('ksh_sync_state_upsert', {
       p_project: projectId,
       p_source_ok: false,
@@ -52,22 +54,6 @@ Deno.serve(async (req: Request) => {
       p_last_run: null,
       p_last_error: dl.reason.slice(0, 500),
       p_snapshot: null,
-    });
-    await sb.rpc('raise_integration_risk', {
-      p_project: projectId,
-      p_load: null,
-      p_kind: 'SOURCE_DOWN',
-      p_sev: 'HIGH',
-      p_title: 'Plik KSH (SharePoint) nie odpowiada',
-      p_detail: {
-        title_key: 'rk_source_down',
-        params: { feed: 'KSH_SHAREPOINT' },
-        http: dl.meta.http,
-        code: dl.meta.errorCode ?? dl.reason.slice(0, 80),
-      },
-      p_dedup: 'SOURCE_DOWN:KSH_SHAREPOINT',
-      p_source_url: null,
-      p_valid_until: null,
     });
     const result = {
       job: JOB, mode: 'LIVE', ok: false, reason: dl.reason.slice(0, 120),
@@ -98,12 +84,6 @@ Deno.serve(async (req: Request) => {
     p_last_error: null,
     p_snapshot: null,
   });
-
-  // Zamknij SOURCE_DOWN po udanym odczycie (jak inne źródła).
-  await sb.from('risk_signals')
-    .update({ resolved_at: new Date().toISOString() })
-    .eq('dedup_key', 'SOURCE_DOWN:KSH_SHAREPOINT')
-    .is('resolved_at', null);
 
   const result = {
     job: JOB, mode: 'LIVE', ok: true,

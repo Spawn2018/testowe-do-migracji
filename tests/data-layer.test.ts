@@ -32,7 +32,11 @@ describe('BK3 DemoProvider', () => {
   });
   it('empty snapshot has every key and no data', () => {
     const e = emptySnapshot();
-    for (const k of DATA_SNAPSHOT_KEYS) expect(e[k]).toEqual([]);
+    for (const k of DATA_SNAPSHOT_KEYS) {
+      // A6: stan SharePoint to obiekt albo null (nie tablica)
+      if (k === 'kshSharePointSync') expect(e[k]).toBeNull();
+      else expect(e[k]).toEqual([]);
+    }
   });
 });
 
