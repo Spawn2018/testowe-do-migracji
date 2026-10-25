@@ -454,7 +454,7 @@ Przed C4: przejazd testowy SG-03 na TEST (zmyślony ślad) od importu do faktury
 4. **Funkcje bez logowania** (`keep_alive`, `report_client_error`, `report_csp_violation`): limit 60 / 15 min. IP: `cf-connecting-ip`, potem pierwszy adres `x-forwarded-for`, na końcu `inet_client_addr()`. Przeglądarka: nagłówek `user-agent`, nie parametr wywołującego (D-20261017-1530-01 pkt 2).
 5. **Polityka `loads_read`:** usuwasz martwą ścieżkę `OR current_org_kind() = 'SITE'`. Test w `security.sh`.
 
-### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj) — NA PRODUKCJI (`c938b3bb`, 0226, `dpl_9GMBgxzJ6MN1rc2d3Ao91r1X3frW`, 17.10.2026 20:58) — bez wywołania, czeka W37
+### A8 · emtrack: koniec 717 błędów na dobę (C15 — przeniesione tutaj) — NA PRODUKCJI (`c938b3bb`, 0226, `dpl_9GMBgxzJ6MN1rc2d3Ao91r1X3frW`, 17.10.2026 20:58) — działa od 21.10 (W37 zamknięte; 24.10: 718/718)
 - Po 3× `login_failed` (`loginOk === false`) → 1 próba / 6 h (`skipped_until`), aż do zmiany sekretu. Wyjątek sieci, czas i 5xx: sprawa `SOURCE_DOWN` jak dziś, bez zwiększania serii i bez pauzy 6 h — ponowienie co 2 min (D-20261017-1920-01 pkt 1).
 - Przebieg w pauzie: `ok: false`, `observations.skipped = 'true'`, `next_try_at` = `skipped_until`. Próby logowania to przebiegi bez `skipped` (D-20261017-1920-01 pkt 2).
 - Jedna sprawa `SOURCE_DOWN:EMTRACK_WEB` z „od kiedy”, klucz bez daty; 10 starych duplikatów zamykasz z kopią. `detail.od_kiedy` zostaje (pierwsza awaria w migracji, chwila pierwszego zgłoszenia w kodzie). Tekst „od …” na ekranie — #291 (D-20261017-1920-01 pkt 3).
@@ -895,6 +895,12 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 7. **Kopia zapasowa** (dopisane do #496, nie w #536): `lease_owner` + zwolnienie przy błędzie; testy 5000 i 70 tys. wierszy; budżet czasu wywołania. Osobny PR albo z #533.
 8. **Logowanie na telefonie:** po #515 jeden pomiar 2,6 s (>2,5 s). Zrób 5 pomiarów (jak #509); mediana >2,5 s → przyczyna + poprawka.
 9. **#540 Deadlock a10** (D-20261025-0207-01): `a10_try_prep_status` / inne z wyzwalaczy `loads` — `FOR NO KEY UPDATE` zamiast `FOR UPDATE` (albo bez blokady); test dwóch sesji 0 deadlocków + INSERT bez czekania (`lock_timeout` 1 s). Nie przerywa #531–#536.
+10. **Ocena przewoźnika — statusy** (#537 uzup. 2, D-20261016-2045-01): `carrier_rate_load` / `carrier_scorecard` liczą `DELIVERED`, `READY_TO_INVOICE`, `INVOICED` (nie tylko UNLOADED/DELIVERED). Test: po zafakturowaniu nadal w ocenie. Odbiór: SELECT na produkcji.
+11. **Źródło przy każdej zmianie statusu** → **P6 E17**: `load_events.payload.source` zawsze (dziś brak w `STATUS_READY` i części `STATUS_AUTO`). Test w P6.
+12. **„Zafakturowane” w Finansach** → **P5**: licznik z tabeli faktur (E4); jedna definicja „transport zafakturowany” w Finansach, statusie i ocenie.
+13. **Doradca / facade:** usuń wyjątek doradcy dla `load_status_rank` → **P4-u** (1420 R6); przebieg I-5 i I-17 (1420 R5) → brama TEST w **P11**.
+14. **Porządki planu:** W43 zamknięte (2× `web.push.apple.com` + `last_ack_at`); nagłówek A8 bez „czeka W37”; §8: D-20261016-1620-01, -1750-01, -2045-01 — punkty niezrobione przez A3/A4/A7/A10/D-1118 → paczki.
+15. **Przypomnienie (termin bez zmian):** E49 wiatr 20 m/s / +15 % bok / +5 % przód / postój 25 m/s + klucze w `ops_thresholds` → **P6**; cron `tower-road-pl` (HERE) → **P6**; usunięcie `h1_*`/`h3_*` → **P9**.
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
@@ -1259,7 +1265,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W39 | `LOAD_STATUS × HHL_ADMIN` e-mail w „Kto co dostaje” | teraz | **rozstrzygnięte 15.10.2026, 03:12: cofnąć**; stan 15.10 ~06:11: `email=false` (już wyłączone) |
 | W40 | Uzgodnienie pkt 2–3 i E46–E48 | — | **zaakceptowane 15.10.2026, 03:12** (D-20261015-0330-01) |
 | W42 | Kanał zapasowy, gdy telefon nie potwierdzi pilnego WEB_PUSH w 5 min albo konto bez urządzenia | C16 N4 | **rozstrzygnięte 15.10.2026, 19:57: e-mail** na adres konta (bez SMS; D-20261015-1955-01) |
-| W43 | iPhone do odbioru C16 (właściciel nie ma) + Cz24 pkt 12 (dzwonek i otwarcie aplikacji na iPhonie, D-20261016-0310-01) | C16 odbiór krok 3; P6 Cz24 | czeka na pierwsze konto z iPhone’em — dowód: `push_subscriptions` z `web.push.apple.com` + `last_ack_at`; nie blokuje zamknięcia C16 (D-20261015-1955-01) |
+| W43 | iPhone do odbioru C16 (właściciel nie ma) + Cz24 pkt 12 (dzwonek i otwarcie aplikacji na iPhonie, D-20261016-0310-01) | C16 odbiór krok 3; P6 Cz24 | **zamknięte 25.10.2026** (#537 uzup. 2) — w bazie 2 urządzenia `web.push.apple.com` z `last_ack_at`; nie blokowało C16 (D-20261015-1955-01) |
 | W44 | Pliki polisy HHL i zezwolenia 13/GD/2026 w `D:\Watch Tower\dane\` | A7 / P5 D2 | **pliki potwierdzone 17.10.2026, 07:20** (D-20261017-0730-01) |
 | W45 | SCX: czy zezwolenia SE i PL mają warunek pogodowy (wiatr)? Jeśli tak — próg z dokumentu zastępuje 25 m/s | przed pierwszym transportem KR | **zamknięte 18.10.2026, 21:57** — decyzja właściciela: próg wiatru 25 m/s; próg z dokumentu SCX go zastąpi, jeśli SCX go poda (D-20261018-2200-01) |
 | W46 | Dostęp do modelu Grok (koordynator) | — | **zamknięte 25.10.2026** (#538 4C — właściciel: zrobione wcześniej) |
@@ -1567,3 +1573,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 02:07 | #540 wpisane §4 Zgubione pkt 9; #528 F7 r4: forbid_mutation ścisłe `=` + test append-only; security **400** | pętla |
 | 25.10.2026 02:32 | #539 SCALONE (`b548ed31`); #531/#528 SCALONE (`bf93f0be`, 0292); F7 #532: bump_ctx + CANCELLED; security **406** | pętla |
 | 25.10.2026 02:55 | #530/#532: poprawka testów security (order_no, driver_name sys, RLS 0) po db 403/3; security **406** | pętla |
+| 25.10.2026 03:15 | #541 SCALONE (`81c580cc`); #537 uzup. 2 → §4 pkt 10–15, W43 zamknięte, A8 bez W37; #532: `val … commit` (notice); security **406** | pętla |

@@ -4887,3 +4887,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #540/#538/#537/#530/#525/#519/#516/#496/#413 w planie (wpisane). Bez `pilne` przerywających.
 - Scalanie: brak F7 `gotowe` po head `f98d8568`. #532 MERGEABLE; #533–#536 CONFLICTING. Bez push na main.
 - Bieżąca: **#530** PR #532 — db FAIL security 403/3: (1) L2→IN_TRANSIT_PL bez `carrier_order_no` (enforce) → brak `sailing_id` → bump 0; (2) asercja `driver_name` przez authenticated (0076); (3) cudzy ładunek = RLS 0 wierszy, nie wyjątek. Poprawka testów; security **406**. Push → CI; ponowne F7.
+
+## 2026-10-25 03:15 — #541 SCALONE; #537 uzup. 2; #532 val commit
+
+- Skrzynka: **#537 uzup. 2** → PLAN §4 Zgubione pkt 10–15, W43 zamknięte, A8 bez „czeka W37”, dopisek D-0015. #540/#538/#530/#525/#519/#516/#496 w planie. Bez `pilne` przerywających.
+- Scalanie: **#541** `81c580cc` (F7 gotowe, wygląd U-129/U-128/U-105, bez migracji). Bez push na main — `deploy-main`.
+- Bieżąca: **#530** PR #532 — db FAIL 405/1: `val` notice bez `commit` wycofywał bump. Poprawka: `commit` + dwa kroki carrier/order_no (F7). security **406**. Push → CI; ponowne F7.

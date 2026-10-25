@@ -1239,10 +1239,10 @@ sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arriv
             timestamptz '2030-06-01 18:00+00', timestamptz '2030-06-02 10:00+00',
             'ZAPLANOWANY', 'RECZNIE'
        from loads where id='$L2'" >/dev/null
-# enforce_order_numbers: IN_TRANSIT_PL wymaga hhl_order_no + carrier_order_no
-sys "update loads set sailing_id='$SAIL530', carrier_org_id='$ORG_SCX', status='IN_TRANSIT_PL',
-     carrier_order_no=coalesce(nullif(btrim(carrier_order_no),''),'SCX-530'),
-     hhl_order_no=coalesce(nullif(btrim(hhl_order_no),''),'HHL/530')
+# enforce_order_numbers (#528): zmiana przewoźnika czyści order_no — dwa kroki (F7)
+sys "update loads set carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set sailing_id='$SAIL530', carrier_order_no='SCX-530',
+     hhl_order_no=coalesce(nullif(btrim(hhl_order_no),''),'HHL/530'), status='IN_TRANSIT_PL'
      where id='$L2'" >/dev/null
 sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
      status, sailing_id, driver_name)
@@ -1260,15 +1260,16 @@ sys "update sailings set status='ZAPLANOWANY', delayed_departure_at=null, delaye
 sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name='Keep CAR2'
      where id='$L530B'" >/dev/null
 sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+# val bez „commit” wycofuje notice — asercja po bumpie wtedy pada
 val "#530: SCX notice na wspólnym rejsie (CAR2 też)" $SCX \
   "select (operator_notice_apply('$SAIL530','OPOZNIONY',
-            timestamptz '2030-06-01 20:00+00','test530') is not null)::text" true
+            timestamptz '2030-06-01 20:00+00','test530') is not null)::text" true commit
 # driver_name: authenticated bez SELECT (0076) — asercja przez sys
 out=$(sys "select (updated_at > timestamptz '2020-01-01 12:00:00+00' and driver_name='Keep CAR2')::text
-     from loads where id='$L530B'")
+     from loads where id='$L530B'" | tr -d '\r')
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #530: po notice CAR2 tylko updated_at (driver bez zmian)"; } || { fail=$((fail+1)); echo "  FAIL  #530: po notice CAR2 tylko updated_at (driver bez zmian)  (otrzymano: $out, oczekiwano: true)"; }
 # cudzy ładunek: RLS → 0 wierszy (bez wyjątku strażnika)
-val "#530: SCX nadal nie zmienia ładunku CAR2" $SCX \
+val "#530: SCX nadal nie zmienia ładunku CAR2 (RLS: 0 wierszy)" $SCX \
   "with u as (update loads set driver_name='HACK' where id='$L530B' returning 1) select count(*) from u" 0
 # F7 LOW: CANCELLED bez bumpa z rejsu (zegar RODO)
 sys "begin; select set_config('tower.cancel_ctx','MANUAL',true);
