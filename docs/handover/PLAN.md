@@ -983,18 +983,18 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
 7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (`pakiet/a6-sharepoint-sync`, PR #556)
+### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (`pakiet/557-ferry-t12-sg21`, migracja **0306**; pierwszeństwo przed A6 zapisem #560)
+Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
+1. **PR1 (ta pozycja, 0306):** SG-21 `sailing_id` → Wawel jak T-12 + `SAILING_ASSIGNED`; SG-21 `AT_PORT_GDANSK` → `FERRY` gdy Wawel wypłynął; T-12 i SG-21 → Port SE / Droga SE przez `apply_ferry_se_from_position` (pozycja SE). `tower.bulk_quiet`. TEST bez kodów → no-op.
+   - **F7 (2917154):** `hotfix_557_apply()` + test `status.sh` (+7 OK, EXPECTED 258); revoke public/anon/authenticated. W PR2 reguła awaryjna **bez** zależności od `g.active`.
+2. **PR2 (po PR1):** reguła awaryjna AIS-dopłynięcie → SE (strefa nie blokuje); stary punkt emtrack (identyczne współrzędne PL po dopłynięciu); wykrywanie złego rejsu + propozycja (RPC dla frontu). Testy DB wg #557.
+3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
+4. **Front (koordynator):** po PR2 — ryzyko złego rejsu + „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta.
+
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557; po #557 rebase → migracja **0307+**)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
-   - **SharePoint (pkt 4, w toku — F7 #556):** 0304 stan + Graph; 0305 `service_role`; **F7 (do poprawy → w tym PR, po `4e1f430` + fix boolean `d91c29b0`):**
-     - `import_enabled` domyślnie **false** (HHL_ADMIN+2FA jak `write_enabled`); wyłączony = tylko `p_dry_run` + liczby w `last_run` (bez zapisu);
-     - ten sam hash co ostatni **udany** przebieg (`source_ok` + brak `last_error`) → bez `import_schedule`, tylko `last_read_at` + `unchanged: true`; przy błędzie importu/`parse` zapisuj `failed_hash` (nie `hash`) — ten sam plik woła import ponownie;
-     - `schedule_imports.source` z `p_file->>'source'` (`UPLOAD`/`SHAREPOINT`); autor pusty przy service → „Synchronizacja SharePoint”;
-     - Graph: try/catch na każdym `fetch` **i** `arrayBuffer` (stały powód `network_*`, bez `e.message`/URL), timeout 15/30 s, limit 10 MB; brak sekretów → `DEMO` ok bez `SOURCE_DOWN`; błąd odczytu stanu → `state_read_error` (nie milczeć);
-     - RPC upsert/`integration_runs`: błąd → 502; `left(p_last_error,500)`; `secret_expires_on` domyślnie NULL; projekt po kodzie `STEGRA_BODEN`; `ksh_sync_state_get` **bez** fallbacku „ostatni wiersz bez filtra projektu”;
-     - kontrakt parserów + `importColumnMap` / `phoneNational` / `formatPlNumber`; unit `graph.ts` (timeout, `network_download`, `download_http_*`, za duży po pobraniu); usunięty duplikat `kshSharePointGraph.ts`;
-     - `job_watchdog`: **bez** `ksh-sharepoint-sync` — awarię pokrywa `SOURCE_DOWN:KSH_SHAREPOINT`; **30 min od `first_error_at`** (nie od razu przy `last_read_at` NULL); DEMO bez sekretów nie podnosi SOURCE_DOWN;
-     - `integration_runs` przy pliku bez zmian co 5 min — **zostaje** (jak inne joby; retencja § SECURITY).
-     **Dalej po F7:** zapis na pliku testowym, sprawa „zniknął z pliku” / konflikt WT↔plik.
+   - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
+   - **SharePoint zapis (pkt 4, #560 — po #557):** kolejka outbound + Graph PUT; **F7 niegotowe** (5 blokerów: If-Match/etag, echo numerów `import_ctx`, `plan_delivery_to`, echo dat/`schedule_row`, merge patch `||` + unique pending). Do poprawy: snapshot po PUT, numery w konflikcie, attempts/failed, JSZip zamiast exceljs, testy db 0306→0307.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1657,3 +1657,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 16:15 | A6 #556 F7 (705e8f8): import_enabled + dedup hash + Graph try/catch/timeout/10MB + DEMO bez sekretów + source SHAREPOINT; projekt STEGRA_BODEN; job_watchdog bez ksh-sharepoint | pętla |
 | 25.10.2026 16:55 | A6 #556 db FAIL import (true≠t) — fix asercji boolean w `import.sh`; ponowne CI | pętla |
 | 25.10.2026 17:05 | #558 SCALONE (`d30e7258`, wyglad strefy potwierdzenie); A6 #556 F7 (4e1f430): BLOKER failed_hash + SOURCE_DOWN od first_error_at + Graph arrayBuffer — docs → kod | pętla |
+| 25.10.2026 18:05 | #556 SCALONE (`3d348690`); A6 zapis #560 start (outbound) — potem WSTRZYMANY na rzecz #557 | pętla |
+| 25.10.2026 18:35 | #557 PILNE (T-12/SG-21) pierwszeństwo przed #560; D-20261025-1630-01; PR1 korekta danych **0306**; strefy 10/10 OK; #560 F7 po #557 (+ rebase 0307) | pętla |
+| 25.10.2026 19:00 | #557 F7 (2917154): docs — `hotfix_557_apply` + test db przed znakiem; kod w następnym commitcie | pętla |
+| 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |
+| 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |

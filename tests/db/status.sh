@@ -1166,5 +1166,69 @@ DL540=$(grep -ci 'deadlock' "$TMP540"/d* 2>/dev/null | awk -F: '{s+=$NF} END {pr
 chk "#540: 40× równoległy UPDATE+INSERT → 0 deadlocków" "select $DL540" 0
 rm -rf "$TMP540"
 
+# #557 F7: hotfix_557_apply — CI bez T-12 = no-op; tu fikstury wykonują wszystkie gałęzie.
+echo; echo "[#557] hotfix_557_apply T-12 / SG-21"
+LT12=55555555-0000-0000-0000-000000005571
+LSG=55555555-0000-0000-0000-000000005572
+SW=77777777-0000-0000-0000-000000005571
+SF=77777777-0000-0000-0000-000000005572
+V557=66666666-0000-0000-0000-000000000557
+q "
+update geofences set active = true
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES';
+delete from decision_events where decision_id in (
+  select id from decisions where load_id in ('$LT12','$LSG'));
+delete from decisions where load_id in ('$LT12','$LSG');
+delete from risk_signals where load_id in ('$LT12','$LSG');
+delete from positions where load_id in ('$LT12','$LSG');
+delete from load_events where load_id in ('$LT12','$LSG');
+delete from shipment_items where shipment_code in ('T-12','SG-21') and project_id = '$P';
+delete from loads where id in ('$LT12','$LSG');
+delete from sailings where id in ('$SW','$SF');
+insert into vessels (id, name, operator) values
+ ('$V557', 'M/F Wawel 557', 'Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+  actual_departure_at, actual_arrival_at, status, source) values
+ ('$SW', '$P', '$V557', 'GDN-NYN',
+  '2026-10-24 12:00+00', '2026-10-25 06:00+00',
+  '2026-10-24 12:00+00', '2026-10-25 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+ ('$SF', '$P', '$V557', 'GDN-NYN',
+  now() + interval '2 days', now() + interval '2 days 18 hours',
+  null, null, 'ZAPLANOWANY', 'POLFERRIES');
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, sailing_id, plan_load_date, telematics_vehicle_id) values
+ ('$LT12', '$P', '$SCXO', 'KSH/T12', 'HHL/T12', 'SCX/T12', 'FERRY', '$SW', '2026-10-23', 'TEL-T12'),
+ ('$LSG', '$P', '$SCXO', 'KSH/SG21', 'HHL/SG21', 'SCX/SG21', 'AT_PORT_GDANSK', '$SF', '2026-10-23', 'TEL-SG21');
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values
+ ('$P', '$LT12', 'T-12', 'STANDARD'),
+ ('$P', '$LSG', 'SG-21', 'STANDARD');
+insert into load_events (load_id, event_type, occurred_at) values
+ ('$LT12', 'MILESTONE_LOADED', '2026-10-23 08:00+00'),
+ ('$LSG', 'MILESTONE_LOADED', '2026-10-23 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$LT12', '2026-10-24 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$LT12', '2026-10-25 07:00+00', st_setsrid(st_makepoint(17.9500, 58.9350), 4326), 'TELEMATICS_API'),
+ ('$LSG', '2026-10-24 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$LSG', '2026-10-25 07:00+00', st_setsrid(st_makepoint(17.9500, 58.9350), 4326), 'TELEMATICS_API');
+delete from audit_log where action like 'HOTFIX_557%';
+" >/dev/null
+N557=$(q "select public.hotfix_557_apply()")
+chk "#557: hotfix_557_apply → n_fix > 0" "select ($N557 > 0)" t
+chk "#557: SG-21 na rejsie Wawel (jak T-12)" \
+  "select (l.sailing_id = '$SW') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-21'" t
+chk "#557: T-12 status ≥ AT_PORT_NYNASHAMN" \
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LT12'" t
+chk "#557: SG-21 status ≥ AT_PORT_NYNASHAMN" \
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LSG'" t
+chk "#557: audit HOTFIX_557_*" \
+  "select (count(*) filter (where action like 'HOTFIX_557%') >= 3) from audit_log" t
+N_SAIL=$(q "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'")
+chk "#557: jedno SAILING_ASSIGNED po pierwszym przebiegu" "select $N_SAIL" 1
+q "select public.hotfix_557_apply()" >/dev/null
+chk "#557: ponowne wywołanie idempotentne (bez nowego SAILING_ASSIGNED)" \
+  "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
