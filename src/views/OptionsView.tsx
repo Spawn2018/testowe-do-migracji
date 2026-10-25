@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
-import type { BafParams, FactoringOffer, Locale } from '../types';
+import type { BafParams, FactoringOffer, GeofenceType, Locale } from '../types';
 import { formatPlNumber } from '../lib/format';
 import { geofenceDisplayName, geofenceTypeLabel } from '../lib/enumLabels';
 import { hasKey, t, tp } from '../i18n/messages';
@@ -109,6 +109,9 @@ function Soon({ locale, tipKey }: { locale: Locale; tipKey: string }) {
   return <div className="note option-note" data-dec6-soon={tipKey}>{t(locale, tipKey)}</div>;
 }
 
+/** #557: strefy, których wyłączenie zatrzymuje statusy portowe / ostrzeżenia przed portem */
+const ZONE_PORT_TYPES = new Set<GeofenceType>(['PORT_OUT', 'PORT_IN', 'PRE_PORT']);
+
 export function OptionsView() {
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
@@ -160,6 +163,16 @@ export function OptionsView() {
     if (screen) setRequest((prev) => ({ screen, seq: (prev?.seq ?? 0) + 1 }));
   }, [location.pathname, smsEntry]);
 
+  const [zoneOffAsk, setZoneOffAsk] = useState<string | null>(null);
+  const zoneCancelRef = useRef<HTMLButtonElement | null>(null);
+  /* F7 #558: fokus do „Anuluj” po otwarciu pytania; po zamknięciu wraca na przełącznik strefy */
+  useEffect(() => { if (zoneOffAsk) zoneCancelRef.current?.focus(); }, [zoneOffAsk]);
+  /* F7 #558: strefa wyłączona / usunięta gdzie indziej — pytanie nie może wrócić samo */
+  useEffect(() => { if (zoneOffAsk && !geofences.some((x) => x.id === zoneOffAsk && x.active)) setZoneOffAsk(null); }, [geofences, zoneOffAsk]);
+  const closeZoneAsk = (id: string) => {
+    setZoneOffAsk(null);
+    window.setTimeout(() => document.querySelector<HTMLButtonElement>(`[data-zone-toggle="${CSS.escape(id)}"]`)?.focus(), 0);
+  };
   const saveMark = (label: string) => {
     setSaved(label);
     window.setTimeout(() => setSaved(''), 1600);
@@ -211,18 +224,42 @@ export function OptionsView() {
   /* strefy (włącz / wyłącz) — pod ekranem SMS przy miejscach */
   const zoneList = (
     <div className="settings-list" style={{ marginTop: 10 }} data-live-sms-zones>
-      {geofences.map((g) => (
-        <div className="settings-row" key={g.id}>
+      {geofences.map((g) => {
+        /* #557 (F7 #558): pytanie tylko dla aktywnej strefy i konta z prawem zapisu */
+        const asking = zoneOffAsk === g.id && g.active && !ro;
+        const askId = `zoff-${g.id}`;
+        return (
+        <div className="settings-row" key={g.id} style={asking ? { flexWrap: 'wrap' } : undefined}>
           <div>
             <b data-content>{geofenceDisplayName(g.name, locale)}</b>
             <span>{geofenceTypeLabel(g.type, locale)} · {g.radiusM >= 1000 ? `${Math.round(g.radiusM / 1000)} km` : `${g.radiusM} m`}</span>
           </div>
           {/* F7 #415: Operacje HHL — tylko podgląd (E12-1A), przełącznik nieaktywny */}
-          <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} disabled={ro} onClick={() => { if (ro) return; saveGeofence({ ...g, active: !g.active }); saveMark('strefa'); }}>
+          <button type="button" className={`mini-toggle${g.active ? ' is-on' : ''}`} aria-pressed={g.active} aria-expanded={g.active ? asking : undefined} data-zone-toggle={g.id} disabled={ro} onClick={() => {
+            if (ro) return;
+            /* #557: wyłączenie strefy tylko po potwierdzeniu (23.10 przypadkowo wyłączono 6 stref portowych) */
+            if (g.active) { setZoneOffAsk((cur) => (cur === g.id ? null : g.id)); return; }
+            saveGeofence({ ...g, active: true }); saveMark('strefa');
+          }}>
             <i />{g.active ? t(locale, 'on') : t(locale, 'off')}
           </button>
+          {asking ? (
+            <div className="zone-off-ask" role="group" aria-labelledby={askId} data-zone-off-ask style={{ flexBasis: '100%', marginTop: 8 }}
+              onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); closeZoneAsk(g.id); } }}>
+              <p style={{ margin: '0 0 6px' }}><b id={askId}>{tp(locale, 'gf_off_ask', { name: geofenceDisplayName(g.name, locale) })}</b> {t(locale, ZONE_PORT_TYPES.has(g.type) ? 'gf_off_ask_port' : 'gf_off_ask_other')}</p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" className="btn ox-btn" onClick={() => {
+                  if (ro) return;
+                  closeZoneAsk(g.id);
+                  saveGeofence({ ...g, active: false }, t(locale, 'gf_off_reason')); saveMark('strefa');
+                }}>{t(locale, 'gf_off_yes')}</button>
+                <button type="button" ref={zoneCancelRef} className="btn ghost ox-btn" onClick={() => closeZoneAsk(g.id)}>{t(locale, 'gf_off_no')}</button>
+              </div>
+            </div>
+          ) : null}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 
