@@ -4992,4 +4992,21 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#544/#540** — CI unit/db/visual zielone na `4ded3dc5` (status **250**); F7: jeszcze nie — poprawka testów (podpowłoka/`wait`, chk `c17_try_invoiced`). Migracja 0299 bez uwag. Bez push na main.
 - Bieżąca: **#540** — F7 r2: `$PSQL … &` + `wait` PID; +chk `c17_try_invoiced`; status **251**. Push → CI; ponowne F7. Prod `FOR UPDATE` na loads w RPC (cancel/decision/…) → §8, ocena przy B5/P6.
 
+## 2026-10-25 08:33 — #545+#540 SCALONE; start B5 (0300)
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). **#540** zamknięte. Bez `pilne` przerywających.
+- Scalanie: **#545** `d98d8e7f` (wyglad J-17 pozycja szacowana; F7 gotowe `54ff35f`, CI unit/visual). **#544/#540** `5dcb716a` (F7 gotowe `9401f8de`, CI unit/db/visual, migracja **0299**). Bez push na main — `deploy-main`.
+- Bieżąca: **B5** (#323 / PR #382) — rebase na main; migracja **0254→0300**; F7: assert regex `[[:space:]]*` / `^\s*perform` (bez `ltrim`); security **441** (+25), nullguard **828** (+18). Push → CI; czekam F7.
+
+## 2026-10-25 09:20 — #547 SCALONE; B5 CI zielone (0300), czekam F7
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). Bez `pilne` przerywających.
+- Scalanie: **#547** `77eac6c9` (wyglad: martwy PDF transportu + mapa + 25 kluczy; F7 gotowe `cb58dfe`, CI unit/visual). **#382/B5** — CI unit/db/visual zielone na `e98e956f` (security **441**, nullguard **828**, migracja **0300**); MERGEABLE; brak F7 „gotowe do scalenia” po head → czekam. Bez push na main — `deploy-main` po #547.
+- Bieżąca: **B5** (#323 / PR #382) — docs (POSTEP); czekam F7: gotowe do scalenia.
+
+## 2026-10-25 09:50 — B5 F7: sms_send_test w force_helpers (P2)
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie. Bez `pilne`.
+- Scalanie: brak F7 „gotowe” po `90b91bf7` — F7 na `e98e956`: P2 `sms_send_test` omija Podgląd. Bez push na main.
+- Bieżąca: **B5** F7 P2 — `sms_send_test` + `admin_sms_zone_test` w `force_helpers` (0300) i strażniku; test „Podgląd — sms_send_test odmowa”; P3: `audit_log_impersonation_bi` + `mfa_satisfied`/`t.active`; asercja 0 SQL-lang z zapisem; komentarz E12/E14. security **443** (+2). Telemetria: `report_client_error` / `report_csp_violation` w Podglądzie zostają bez assert (wyjątek F7) — zapisują `app_role`/`user_id` konta oglądanego. Push → CI; ponowne F7.
 

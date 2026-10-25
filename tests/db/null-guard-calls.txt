@@ -152,7 +152,7 @@ load_agreed_fee_add | GUARD | select load_agreed_fee_add('$L1', 'INNE', 10, 'COS
 fee_catalog_hints | EMPTY | select count(*) from fee_catalog_hints() | 0
 load_dwell_info | GUARD | select count(*) from load_dwell_info('$L1') | Brak aktywnego konta|Brak dostępu
 admin_impersonate_start | GUARD | select admin_impersonate_start('$KSHID') | Tylko administrator HHL|wyłącznie administrator
-admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Tylko administrator HHL
+admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Brak aktywnego konta
 real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, '∅') | ∅
 real_app_role | EMPTY | select coalesce(real_app_role()::text, '∅') | ∅
 admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Brak sesji|Brak dostępu
@@ -197,3 +197,7 @@ a7_policies_list | GUARD | select a7_policies_list() | Brak aktywnego konta
 a7_apply_symbol | GUARD | select a7_apply_symbol('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta
 symbol_resolve_code | PURE | select symbol_resolve_code('SG-03') | SG
 symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | true
+admin_preview_start | GUARD | select admin_preview_start('KSH') | Tylko administrator HHL|wyłącznie administrator
+admin_preview_stop | GUARD | select admin_preview_stop() | Brak aktywnego konta
+assert_not_preview | EMPTY | select assert_not_preview() |
+is_preview_read_only | EMPTY | select is_preview_read_only()::text | false
