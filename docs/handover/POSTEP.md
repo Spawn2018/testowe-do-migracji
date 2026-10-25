@@ -5142,3 +5142,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #556 na `e346596b`: unit ×2 ✔, visual ✔, db ✔ (`40206372497`). Prośba o ponowne F7 w PR.
 - Bieżąca: **A6** — czekam F7 #556. Po „gotowe”/scaleniu: zapis na pliku testowym, sprawa „zniknął z pliku” / konflikt WT↔plik.
 
+
+## 2026-10-25 18:35 — #557 PILNE przed A6 zapisem (#560)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. #557 (produkcja T-12/SG-21) — polecenie Spawn2018 na #560: pierwszeństwo przed zapisem SharePoint.
+- Scalanie: brak F7 „gotowe do scalenia” (#560 = niegotowe + czekaj #557; #383 CONFLICTING). Bez push na main.
+- Bieżąca: **#557 PR1** pakiet/557-ferry-t12-sg21 — migracja **0306** (SG-21 → Wawel T-12; FERRY; SE z pozycji przez `apply_ferry_se_from_position`); PLAN §4/§8 + dopisek D-20261025-1630-01. Strefy 10/10 już OK. Po CI/F7/scaleniu: PR2 reguły #557, potem powrót do #560 (rebase → 0307, 5 blokerów F7).
