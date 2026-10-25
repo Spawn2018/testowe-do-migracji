@@ -1202,7 +1202,6 @@ img,video{max-width:100%;height:auto}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense}
   .kpi{min-width:0}
   .kpi .v{white-space:nowrap;font-size:30px;line-height:1.05}
-  .kpi.kpi-wide{grid-column:1/-1;order:2}
   .kpi:not(.kpi-wide):nth-last-child(1 of :not(.kpi-wide)):nth-child(odd of :not(.kpi-wide)){grid-column:1/-1}
   .stage .l{white-space:normal;overflow:visible;text-overflow:unset}
   nav.tower-nav button.nav-pin[data-view="sched"] .count{display:none}

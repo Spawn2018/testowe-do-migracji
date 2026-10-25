@@ -22,6 +22,7 @@
 
 import { z } from 'zod';
 import { toNationalPhone } from './phoneNational';
+import { formatPlNumber } from './format';
 export { standardSkipMessage } from './standardSkipMessage';
 
 /* --------------------------------------------------------------- */
@@ -255,7 +256,7 @@ export function parseSchedule(
       if (Math.abs(totalWeightT - expected) > tol) {
         issues.push({ rowIndex, shipmentCode: code, severity: 'ERROR',
           code: 'WEIGHT_INCONSISTENT',
-          message: `Waga transportu (${totalWeightT} t) nie zgadza się z ilość × waga elementu (${expected.toFixed(2)} t). Najczęstsza przyczyna: przesunięte kolumny w arkuszu.`,
+          message: `Waga transportu (${formatPlNumber(totalWeightT, 2)} t) nie zgadza się z ilość × waga elementu (${formatPlNumber(expected, 2)} t). Najczęstsza przyczyna: przesunięte kolumny w arkuszu.`,
           values: { unitWeightT, qty, totalWeightT } });
         return;
       }
