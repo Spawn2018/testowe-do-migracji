@@ -5,6 +5,7 @@
  * System — tylko HHL, sprawy techniczne w Opcje › System › Stan systemu.
  * Dane jak dotąd: `sailings`, `marine_conditions`, `corridor_conditions` (produkcja), seed Trafikverket (demo).
  */
+import { stageTileOf } from '../../lib/stageTiles';
 import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Load, Locale, Risk, Sailing } from '../../types';
@@ -91,7 +92,7 @@ function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Local
         <span className="rk-ferry-s" data-content>
           <span className={`rk-alert ${tone}`}>{alertText}</span>
           {' · '}{seaText}
-          {r.onBoard > 0 ? ` · ${rtn(locale, 'p6_onboard', r.onBoard)}` : ''}
+          {r.onBoard > 0 && !phone ? ` · ${rtn(locale, 'p6_onboard', r.onBoard)}` : ''}
         </span>
       </span>
     </li>
@@ -123,7 +124,10 @@ export function RoutePanel({
   const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
   const today = dayOf(nowIso);
   const allToday = rows.length > 0 && rows.every((r) => dayOf(r.depIso) === today);
-  const onBoard = rows.reduce((s, r) => s + r.onBoard, 0);
+  /* U-100 F7: suma „na pokładzie” z etapu Prom wszystkich transportów (także na rejsie spoza listy, np. wypłynął > 3 h temu) — jak Mapa */
+  const onBoard = PROD
+    ? loads.filter((l) => !!l.sailingId && stageTileOf(l) === 'FERRY').length
+    : rows.reduce((s, r) => s + r.onBoard, 0);
   const alt = altProposal(rows, altSailingsOf(sailings, nowIso), nowMs);
 
   /* drogi SE */
@@ -150,10 +154,13 @@ export function RoutePanel({
             {box ? <span className="rk-box">{box}</span> : <span className="rk-info-ic" aria-hidden="true">ⓘ</span>}
             <span className="rk-road-tx">
               <span className={info ? 'rk-road-t rk-info' : 'rk-road-t'}>{riskText(locale, r.title, r.titleKey, r.titleParams)}</span>
-              {!info && (meta || r.detail) ? (
+              {!info && (meta || r.severity !== 'LOW') && (meta || r.detail) ? (
                 <span className="rk-road-s">
-                  <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM'))}</span>
-                  {meta ? ` · ${meta}` : ''}
+                  {/* U-100: etykieta wpływu tylko od średniego wzwyż — informacja (LOW) bez „Średni wpływ” */}
+                  {r.severity === 'LOW' ? null : (
+                    <span className={`rk-alert ${tone}`}>{(r.severity === 'CRITICAL' || r.severity === 'HIGH' ? rt(locale, 'p6_imp_HIGH') : rt(locale, 'p6_imp_MEDIUM'))}</span>
+                  )}
+                  {meta ? `${r.severity === 'LOW' ? '' : ' · '}${meta}` : ''}
                 </span>
               ) : null}
               {!info && r.detail && !phone ? <span className="rk-road-n">{r.detail}</span> : null}
@@ -222,7 +229,7 @@ export function RoutePanel({
                 <p className="rk-alt-why"><b>{rtp(locale, 'p6_alt_list', { line: rt(locale, `p6_line_${alt.to}`) })}</b></p>
                 {alt.kind === 'NODATA' ? <p className="rk-muted">{rt(locale, 'p6_alt_nodata')}</p> : (
                   <ul className="rk-alt-list" data-ferry-line={alt.to.toLowerCase()}>
-                    {alt.sailings.map((s) => (
+                    {(phone ? alt.sailings.slice(0, 1) : alt.sailings).map((s) => (
                       <li key={s.id}>
                         <b>{formatListDateTime(effDeparture(s))}</b> · {s.vessel || '—'}
                         {s.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(s.status, locale)}` : ''}
@@ -230,7 +237,7 @@ export function RoutePanel({
                     ))}
                   </ul>
                 )}
-                <p className="rk-muted">{rt(locale, 'p6_alt_note')}</p>
+                {!phone ? <p className="rk-muted">{rt(locale, 'p6_alt_note')}</p> : null}
               </>
             )}
           </div>

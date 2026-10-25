@@ -8,6 +8,7 @@
 import type { Load, Sailing, SailingStatus } from '../types';
 import type { MarineConditionRow } from './marineWeatherDb';
 import { crossingLine, effDeparture, nearestCrossingSailings } from './sailings';
+import { stageTileOf } from './stageTiles';
 
 export type CrossingLine = 'POLFERRIES' | 'STENA';
 export type FerryAlert = 'CANCELLED' | 'STORM' | 'ELEVATED' | 'DELAYED' | 'OK';
@@ -55,7 +56,7 @@ export function seaFromMarine(m: MarineConditionRow | null | undefined): FerrySe
 export function ferryRowsFromDb(
   sailings: readonly Sailing[],
   marine: readonly MarineConditionRow[],
-  loads: readonly Pick<Load, 'sailingId'>[],
+  loads: readonly Pick<Load, 'sailingId' | 'status' | 'stage'>[],
   nowMs: number,
 ): FerryRowView[] {
   const today = warsawDay(nowMs);
@@ -71,7 +72,9 @@ export function ferryRowsFromDb(
       out.push({
         id: s.id, line, vessel: s.vessel, depIso: s.departureAt,
         delayedIso: s.delayedDepartureAt && s.delayedDepartureAt !== s.departureAt ? s.delayedDepartureAt : null,
-        status: s.status, sea, onBoard: loads.filter((l) => l.sailingId === s.id).length,
+        status: s.status, sea,
+        /* U-100: „na pokładzie” = transporty tego rejsu w etapie Prom (nie same rezerwacje) — jak demo i Mapa */
+        onBoard: loads.filter((l) => l.sailingId === s.id && stageTileOf(l) === 'FERRY').length,
       });
     }
   }

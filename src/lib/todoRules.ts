@@ -99,6 +99,8 @@ export function routeRisks(risks: readonly Risk[]): RouteRisks {
     if (isTimeBan(r)) { if (!r.loadId) out.bans.push(r); continue; }
     if (isSystemRisk(r)) { out.system.push(r); continue; }
     if (r.loadId) continue;
+    /* U-100 (makieta E7): „statek w porcie” (AIS, informacja) trafia do historii rejsu, nie na listę ostrzeżeń */
+    if (r.type === 'FERRY' && /^rk_ais_arrived/.test(r.titleKey ?? '')) continue;
     if (r.type === 'FERRY') out.ferry.push(r);
     else if (r.type === 'FORCE_MAJEURE') out.weather.push(r);
     else if (r.kind === 'ROAD_PL') out.roadPl.push(r);
