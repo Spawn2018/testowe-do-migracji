@@ -5082,3 +5082,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#554** F7 gotowe `1699927` → merge `6810812f` (wygląd DeepL). **#553** F7 gotowe `d726467` + CI unit/visual/db → merge `c7cd96d5` (0302). Bez push na main z agenta.
 - Bieżąca: **A6** `pakiet/a6-ksh-sharepoint` — krok 1: `COLUMN_MAP_DEFAULT` 21 kolumn E38 (bez `orderNo`); filtr HH; puste/`...`/`-`; A/B → PL/SE; L31 bez odrzucenia (`datesToCheck` / WARN `KSH_DATES_CHECK`); RPC `carrier_order_no`/`hhl_order_no`/zasoby. Unit: `a6-import-map` + import 38/38. Dalej: migracja `import_schedule` (pkt 2–3) + SharePoint Edge (pkt 4).
 
+## 2026-10-25 14:00 — A6 krok 2: import_schedule 0303
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#555 A6 krok 1 w toku; #383 bez F7 / czek na 0249). Bez push na main.
+- Bieżąca: **A6** migracja **0303** — `import_schedule`: bez `raise` na złych datach → sprawa `KSH_DATES_CHECK`; zapis `hhl_order_no`/`carrier_order_no`/kierowca/ciągnik/naczepa; `renumbered_from` + komentarz „Wcześniej to był …”; `schedule_row_canon` z polami zasobów. Testy `import.sh` (L31, zasoby, renumber). Dalej: SharePoint Edge (pkt 4).
+
