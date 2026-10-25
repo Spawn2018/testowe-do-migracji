@@ -69,7 +69,9 @@ describe('Przypnij rejs', () => {
   it('F7 #565: blokada drugiego zapisu, zawsze koniec „Zapisuję…”, osobna instancja na transport', () => {
     const c = read('src/components/drawer/SailingPin.tsx');
     expect(c).toMatch(/if \(sent\.current\) return;\s*sent\.current = true;/);
-    expect(c).toMatch(/finally \{\s*setBusy\(false\);/);
+    expect(c).toMatch(/setUnknown\(true\);\s*await refreshAndFocusRow\(\);/);
+    expect(c).toMatch(/querySelector<HTMLElement>\('\.drawer \[data-overview\] \[data-ferry-row\]'\)\?\.focus\(\)/);
+    expect(read('src/components/drawer/PanelOverview.tsx')).toMatch(/<dd data-ferry-row tabIndex=\{-1\}>/);
     expect(c).toMatch(/\.catch\(\(\) => \{ if \(live\) setErr/);
     expect(c).toMatch(/\.finally\(\(\) => \{ if \(live\) setLoaded\(true\); \}\)/);
     expect(c).not.toMatch(/\$\{r\.error\}/);

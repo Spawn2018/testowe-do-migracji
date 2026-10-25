@@ -2,6 +2,7 @@
  * #557 cz. 2 — „Przypnij rejs” w wierszu „Rejs” karty transportu.
  * Widoczne tylko dla Administratora HHL we własnym widoku i tylko przy otwartym ostrzeżeniu o złym rejsie.
  * Przed zapisem — potwierdzenie w karcie (bez okien przeglądarki). Po zapisie dane karty pobierają się z bazy.
+ * Po zapisie fokus przechodzi na wiersz „Rejs” (`[data-ferry-row]`, `tabIndex=-1`), bo ostrzeżenie się zamyka.
  * Rodzic montuje komponent z `key={load.id}` — wynik dla jednego transportu nie trafia do karty innego.
  */
 import { useEffect, useRef, useState } from 'react';
@@ -18,6 +19,7 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [unknown, setUnknown] = useState(false);
   /* blokada synchroniczna: drugie kliknięcie przed odświeżeniem stanu nie wyśle drugiego zapisu */
   const sent = useRef(false);
   const pinBtn = useRef<HTMLButtonElement>(null);
@@ -43,6 +45,9 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
   if (!loaded) return null;
   const label = sug ? proposedText(sug, sailings) : null;
 
+  if (unknown) {
+    return <p className="po-set-err" role="alert" data-sail-pin-unknown>{pt(locale, 'p7_pin_err_unknown')}</p>;
+  }
   if (done) {
     return <p ref={doneRef} tabIndex={-1} className="po-ok" role="status" data-sail-pin-done>{ptp(locale, 'p7_pin_done', { sailing: done })}</p>;
   }
@@ -58,32 +63,45 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
     setAsk(false);
     window.requestAnimationFrame(() => pinBtn.current?.focus());
   };
-  const confirm = async () => {
-    if (sent.current) return;
-    sent.current = true;
-    setBusy(true);
-    setErr(null);
+  /* Po zapisie baza zamyka ostrzeżenie, więc ten dopisek znika po odświeżeniu — fokus idzie na stały wiersz „Rejs”. */
+  const refreshAndFocusRow = async () => {
     try {
-      const r = await sailingMismatchAssign(loadId, target);
-      if (!r.ok) {
-        sent.current = false;
-        setErr(pt(locale, pinErrorKey(r.error)));
-        return;
-      }
-      setAsk(false);
-      setDone(label);
-      pushToast(ptp(locale, 'p7_pin_done', { sailing: label }), 'LOW', loadId);
       /* warunek wprost (strażnik I-0/I-2): paczka demo nie zawiera mostu do bazy */
       if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
         const { refreshFromServer } = await import('../../data/supabaseBridge');
         await refreshFromServer({ keepSelection: true });
       }
     } catch {
-      /* zapis mógł dojść do bazy — bez ponowienia; odświeżenie pokaże stan rzeczywisty */
-      setErr(pt(locale, 'p7_pin_err'));
-    } finally {
-      setBusy(false);
+      /* odświeżenie nieudane — dane wrócą przy następnym pobraniu; nie jest to błąd przypięcia */
     }
+    window.requestAnimationFrame(() => document.querySelector<HTMLElement>('.drawer [data-overview] [data-ferry-row]')?.focus());
+  };
+  const confirm = async () => {
+    if (sent.current) return;
+    sent.current = true;
+    setBusy(true);
+    setErr(null);
+    let r: { ok: boolean; error: string | null };
+    try {
+      r = await sailingMismatchAssign(loadId, target);
+    } catch {
+      /* zapis mógł dojść do bazy: bez ponowienia, przyciski chowamy, karta pobiera stan rzeczywisty */
+      setBusy(false);
+      setAsk(false);
+      setUnknown(true);
+      await refreshAndFocusRow();
+      return;
+    }
+    setBusy(false);
+    if (!r.ok) {
+      sent.current = false;
+      setErr(pt(locale, pinErrorKey(r.error)));
+      return;
+    }
+    setAsk(false);
+    setDone(label);
+    pushToast(ptp(locale, 'p7_pin_done', { sailing: label }), 'LOW', loadId);
+    await refreshAndFocusRow();
   };
 
   return (

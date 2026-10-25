@@ -82,6 +82,7 @@ const PL: Record<string, string> = {
   p7_pin_busy: 'Zapisuję…',
   p7_pin_done: 'Rejs przypięty: {sailing}',
   p7_pin_err: 'Nie udało się przypiąć rejsu.',
+  p7_pin_err_unknown: 'Brak odpowiedzi z bazy — nie wiadomo, czy rejs przypięto. Sprawdź wiersz „Rejs” po odświeżeniu karty, zanim spróbujesz ponownie.',
   p7_pin_err_read: 'Nie udało się pobrać propozycji rejsu.',
   p7_pin_err_admin: 'Przypiąć rejs może tylko Administrator HHL zalogowany z kodem weryfikacji dwuetapowej.',
   p7_pin_err_cancelled: 'Ten rejs jest odwołany — wybierz inny rejs w awizacji.',
