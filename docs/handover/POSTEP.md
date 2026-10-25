@@ -5122,3 +5122,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #556 na `4e1f4301`: unit ✔, visual ✔, **db FAIL** import 143/146 — `import_enabled::text` i `(a>b)::text` dają `true`/`false`, a `val`/`chk` oczekują `t`/`f` (psql boolean). Fix: bez `::text`.
 - Bieżąca: **A6** push fix testów → ponowne CI → F7. Potem zapis pliku testowego / sprawa znikniętych.
 
+## 2026-10-25 17:05 — #558 SCALONE; A6 #556 F7 docs (4e1f430)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#558** F7 „gotowe” (Spawn2018, po `8712b63`, CI zielone) → merge `d30e7258`. #556 bez „gotowe”; #383 CONFLICTING. Bez push na main.
+- CI #556 na `d91c29b0` (boolean t/f): unit ✔, db ✔, visual ✔.
+- Bieżąca: **A6 F7 #556** — docs w PLAN/POSTEP/SECURITY (BLOKER `failed_hash` + skip tylko po udanym; Graph `arrayBuffer`; `state_read_error`; get bez fallbacku; SOURCE_DOWN od `first_error_at`; retencja `integration_runs` przy unchanged). Następny commit = kod + testy, potem F7.
+

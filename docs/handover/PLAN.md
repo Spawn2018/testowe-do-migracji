@@ -985,14 +985,15 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 
 ### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (`pakiet/a6-sharepoint-sync`, PR #556)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
-   - **SharePoint (pkt 4, w toku — F7 #556):** 0304 stan + Graph; 0305 `service_role`; **F7 (do poprawy → w tym PR):**
+   - **SharePoint (pkt 4, w toku — F7 #556):** 0304 stan + Graph; 0305 `service_role`; **F7 (do poprawy → w tym PR, po `4e1f430` + fix boolean `d91c29b0`):**
      - `import_enabled` domyślnie **false** (HHL_ADMIN+2FA jak `write_enabled`); wyłączony = tylko `p_dry_run` + liczby w `last_run` (bez zapisu);
-     - ten sam hash co ostatni udany przebieg → bez `import_schedule`, tylko `last_read_at` + `unchanged: true`;
+     - ten sam hash co ostatni **udany** przebieg (`source_ok` + brak `last_error`) → bez `import_schedule`, tylko `last_read_at` + `unchanged: true`; przy błędzie importu/`parse` zapisuj `failed_hash` (nie `hash`) — ten sam plik woła import ponownie;
      - `schedule_imports.source` z `p_file->>'source'` (`UPLOAD`/`SHAREPOINT`); autor pusty przy service → „Synchronizacja SharePoint”;
-     - Graph: try/catch na każdym `fetch` (stały powód, bez `e.message`/URL), timeout 15/30 s, limit 10 MB; brak sekretów → `DEMO` ok bez `SOURCE_DOWN`;
-     - RPC upsert/`integration_runs`: błąd → 502; `left(p_last_error,500)`; `secret_expires_on` domyślnie NULL; projekt po kodzie `STEGRA_BODEN`;
-     - kontrakt dwóch parserów (src + `_shared`); unit `graph.ts` z fałszywym `fetch`; usunięty duplikat `kshSharePointGraph.ts`;
-     - `job_watchdog`: **bez** `ksh-sharepoint-sync` — awarię pokrywa `SOURCE_DOWN:KSH_SHAREPOINT` (30 min); DEMO bez sekretów nie podnosi SOURCE_DOWN.
+     - Graph: try/catch na każdym `fetch` **i** `arrayBuffer` (stały powód `network_*`, bez `e.message`/URL), timeout 15/30 s, limit 10 MB; brak sekretów → `DEMO` ok bez `SOURCE_DOWN`; błąd odczytu stanu → `state_read_error` (nie milczeć);
+     - RPC upsert/`integration_runs`: błąd → 502; `left(p_last_error,500)`; `secret_expires_on` domyślnie NULL; projekt po kodzie `STEGRA_BODEN`; `ksh_sync_state_get` **bez** fallbacku „ostatni wiersz bez filtra projektu”;
+     - kontrakt parserów + `importColumnMap` / `phoneNational` / `formatPlNumber`; unit `graph.ts` (timeout, `network_download`, `download_http_*`, za duży po pobraniu); usunięty duplikat `kshSharePointGraph.ts`;
+     - `job_watchdog`: **bez** `ksh-sharepoint-sync` — awarię pokrywa `SOURCE_DOWN:KSH_SHAREPOINT`; **30 min od `first_error_at`** (nie od razu przy `last_read_at` NULL); DEMO bez sekretów nie podnosi SOURCE_DOWN;
+     - `integration_runs` przy pliku bez zmian co 5 min — **zostaje** (jak inne joby; retencja § SECURITY).
      **Dalej po F7:** zapis na pliku testowym, sprawa „zniknął z pliku” / konflikt WT↔plik.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
@@ -1655,3 +1656,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 15:35 | #555/A6 kroki 1–2 SCALONE (`e9f9c919`, 0303); F7 gotowe `42bfea9`; start SharePoint **0304** (stan + Edge odczyt Graph) | pętla |
 | 25.10.2026 16:15 | A6 #556 F7 (705e8f8): import_enabled + dedup hash + Graph try/catch/timeout/10MB + DEMO bez sekretów + source SHAREPOINT; projekt STEGRA_BODEN; job_watchdog bez ksh-sharepoint | pętla |
 | 25.10.2026 16:55 | A6 #556 db FAIL import (true≠t) — fix asercji boolean w `import.sh`; ponowne CI | pętla |
+| 25.10.2026 17:05 | #558 SCALONE (`d30e7258`, wyglad strefy potwierdzenie); A6 #556 F7 (4e1f430): BLOKER failed_hash + SOURCE_DOWN od first_error_at + Graph arrayBuffer — docs → kod | pętla |
