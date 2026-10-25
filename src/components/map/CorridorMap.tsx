@@ -30,6 +30,7 @@ import { p9m, p9mp } from '../../i18n/p9c';
 import {
   demoStageAnchor, groupView, placeMarkers, splitLabel, vesselKey,
   type FerryInfo, type GroupItem, type GroupView, type GroupZone, type Placed, type ShipFix,
+  estNote,
 } from '../../lib/p9eGroups';
 import { p9e, p9ep } from '../../i18n/p9e';
 import { formatListDateTime } from '../../lib/format';
@@ -99,14 +100,16 @@ function vehicleIcon(row: MapRow, label: string | null): L.DivIcon {
 }
 
 /** Dymek znacznika (E29 pkt 7): nazwa · etap / opóźnienie · ETA / ostatnia pozycja · odcinek / kliknij. */
-function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0]): string {
+function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0], est: string | null = null): string {
   const l1 = `<b>${esc(row.label)}</b> · ${esc(t(locale, row.stageKey))}`;
   const eta = row.eta.main && row.eta.main !== p9m(locale, 'p9c_eta_none') ? p9mp(locale, 'p9c_tip_eta', { eta: row.eta.main }) : '';
   const late = row.late && row.delayMin ? `<span class="r">${esc(p9mp(locale, 'p9c_tip_late', { d: etaDuration(row.delayMin) }))}</span>` : '';
   const l2 = [late, esc(eta)].filter(Boolean).join(' · ');
   const last = row.pos.kind === 'nogps' ? row.pos.text : row.lastFixAt ? p9mp(locale, 'p9c_tip_last', { t: row.pos.text }) : '';
   const l3 = [last, p9m(locale, `p9c_tip_seg_${row.seg}`)].filter(Boolean).map(esc).join(' · ');
-  return [l1, l2, `<span class="g">${l3}</span>`, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
+  /* J-17: pozycja szacowana statku (auto na promie bez grupy) — osobna linia przed „kliknij” */
+  const l4 = est ? `<span class="g">${esc(est)}</span>` : '';
+  return [l1, l2, `<span class="g">${l3}</span>`, l4, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
 }
 /**
  * wyglad/P9-e (E45 pkt 5, R5): znacznik grupy — auta jednego rejsu na statku (strzałka statku) albo kilka aut w jednej
@@ -577,6 +580,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       const fleet0 = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
       /* 22.10.2026 (SG-17 „stoi w porcie”): tracker milknie na promie — auto „Na promie” stoi na pozycji statku z AIS
          (Mapa, Kokpit, Przegląd i tryb skupienia; centrowanie Przeglądu za statkiem). Statek nie jest rysowany drugi raz. */
+      /* J-17 (audyt 25.10): auto na pozycji szacowanej statku (Przegląd, tryb skupienia — bez grup) — dopisek w dymku */
+      const estById = new Map<string, string | null>();
       const fleet = PROD_BUILD
         ? fleet0.map((f) => {
           const l = loadOf.get(f.id);
@@ -584,6 +589,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           const ship = fk ? shipOf(fk) : null;
           if (!ship) return f;
           takenShips.add(vesselKey(ship.vessel));
+          if (ship.estimated) estById.set(f.id, ship.estimated.lastAisTs ?? null);
           return { ...f, lat: ship.lat, lng: ship.lng };
         })
         : fleet0;
@@ -677,8 +683,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         });
         /* telefon (E29 pkt 9): zamiast dymka arkusz po dotknięciu */
         if (!onMarkerRef.current) {
+          const estAt = estById.get(f.id);
+          const est = estAt === undefined ? null
+            : estNote(estAt, (k, p) => (p ? p9ep(loc, k, p) : p9e(loc, k)), (iso) => formatListDateTime(iso, TZ_OPS));
           m.bindTooltip(
-            row ? vehicleTip(row, loc) : [f.code, f.driver, f.plate].filter(Boolean).join(' · '),
+            row ? vehicleTip(row, loc, est) : [f.code, f.driver, f.plate, est].filter(Boolean).join(' · '),
             { direction: 'top', offset: [0, -14], className: 'wt-mk-tip' },
           );
         }
