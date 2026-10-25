@@ -43,6 +43,9 @@ function trackerLine(info: TrackingLinkInfo, locale: Locale): string | null {
  * Wynik zapytania testowego i ostrzeżenia pod polem „Link śledzenia” (E44 pkt 1, 5, 6).
  * `check` — jedna linia stanu linku; `notes` — ostrzeżenia i informacje; `tracker` — gdzie jest lokalizator.
  */
+/** J-10: link „działa”, ale bez pozycji dłużej niż 12 h (postój nocny mieści się w progu). */
+const STALE_FIX_MS = 12 * 3_600_000;
+
 export function trackingLinkNotes(
   info: TrackingLinkInfo,
   load: Pick<Load, 'plannedLoadDate' | 'plannedDeliverDate' | 'planDates'>,
@@ -64,8 +67,16 @@ export function trackingLinkNotes(
       : asset
         ? tp(locale, 'p4c_tl_ok_nodate', { asset })
         : t(locale, 'p4c_tl_ok_bare');
-    const fix = info.check.lastFixAt ? tp(locale, 'p4c_tl_ok_fix', { at: timeOnly(info.check.lastFixAt) }) : null;
-    check = { key: 'ok', tone: 'ok', text: fix ? `${base} · ${fix}` : base };
+    /* J-10 (audyt 25.10): stara pozycja przy „działa” — data zamiast samej godziny, po 12 h ton ostrzegawczy */
+    const fixAt = info.check.lastFixAt ?? null;
+    const fixMs = fixAt ? isoMs(fixAt) : NaN;
+    const started = !info.validFrom || isoMs(info.validFrom) <= now;
+    const stale = Number.isFinite(fixMs) && started && now - fixMs > STALE_FIX_MS;
+    const sameDay = !!fixAt && dayOnly(fixAt) === dayOnly(nowIso);
+    const fix = !fixAt ? null
+      : stale ? tp(locale, 'p4c_tl_ok_fix_old', { at: dayTime(fixAt) })
+        : tp(locale, 'p4c_tl_ok_fix', { at: sameDay ? timeOnly(fixAt) : dayTime(fixAt) });
+    check = { key: 'ok', tone: stale ? 'warn' : 'ok', text: fix ? `${base} · ${fix}` : base };
   } else if (info.check?.state === 'pending') {
     check = { key: 'pending', tone: 'info', text: t(locale, 'p4c_tl_pending') };
   } else if (info.check?.state === 'invalid') {

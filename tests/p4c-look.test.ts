@@ -22,6 +22,18 @@ describe('E44 — pod polem „Link śledzenia”', () => {
     expect(v.tracker).toBe('Lokalizator: naczepa TST 0001 (RIO)');
     expect(v.notes).toEqual([]);
   });
+  it('J-10: stara pozycja przy „działa” — data i ton ostrzegawczy po 12 h; wczoraj bez ostrzeżenia z datą', () => {
+    const old: TrackingLinkInfo = { provider: 'RIO', asset: 'TST 0001', validFrom: '2026-10-01T01:00:00Z', validTo: '2026-10-08T04:00:00Z', trackerOn: 'NACZEPA', check: { state: 'ok', lastFixAt: '2026-10-02T12:05:00Z' } };
+    const v = trackingLinkNotes(old, load, NOW, 'pl');
+    expect(v.check?.tone).toBe('warn');
+    expect(v.check?.text).toBe('Link RIO działa · TST 0001 · ważny do 08.10.2026, 06:00 · ostatnia pozycja 02.10.2026, 14:05 — ponad 12\u00a0h temu. Sprawdź link u przewoźnika.');
+    const night: TrackingLinkInfo = { ...old, check: { state: 'ok', lastFixAt: '2026-10-03T20:00:00Z' } };
+    const n = trackingLinkNotes(night, load, '2026-10-04T05:00:00Z', 'pl');
+    expect(n.check?.tone).toBe('ok');
+    expect(n.check?.text).toContain('ostatnia pozycja 03.10.2026, 22:00');
+    const future: TrackingLinkInfo = { ...old, validFrom: '2026-10-05T01:00:00Z' };
+    expect(trackingLinkNotes(future, load, NOW, 'pl').check?.tone).toBe('ok');
+  });
   it('ostrzeżenia: wygasa przed dostawą, zacznie nadawać po 03:00, użyty przy innym transporcie, pojazd spoza awizacji', () => {
     const info: TrackingLinkInfo = { provider: 'RIO', asset: 'TST 0002', validFrom: '2026-10-05T08:00:00Z', validTo: '2026-10-07T04:00:00Z', trackerOn: 'NIEZNANY', usedBy: ['K-01 · SCX-26-0001'], check: { state: 'ok' } };
     const v = trackingLinkNotes(info, load, NOW, 'pl');

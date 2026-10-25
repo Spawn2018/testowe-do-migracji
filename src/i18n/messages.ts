@@ -427,6 +427,7 @@ const pl: Dict = {
   p4c_tl_ok_nodate: 'Link RIO działa · {asset}',
   p4c_tl_ok_bare: 'Link RIO działa',
   p4c_tl_ok_fix: 'ostatnia pozycja {at}',
+  p4c_tl_ok_fix_old: 'ostatnia pozycja {at} — ponad 12\u00a0h temu. Sprawdź link u przewoźnika.',
   p4c_tl_pending: 'Sprawdzam link RIO…',
   p4c_tl_invalid: 'Link RIO nieprawidłowy — RIO nie zna tego linku. Wklej pełny link od przewoźnika.',
   p4c_tl_down: 'RIO nie odpowiada. Sprawdzimy ponownie za 2\u00a0min.',
