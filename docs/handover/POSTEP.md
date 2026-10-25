@@ -5088,3 +5088,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: brak F7 „gotowe” (#555 A6 krok 1 w toku; #383 bez F7 / czek na 0249). Bez push na main.
 - Bieżąca: **A6** migracja **0303** — `import_schedule`: bez `raise` na złych datach → sprawa `KSH_DATES_CHECK`; zapis `hhl_order_no`/`carrier_order_no`/kierowca/ciągnik/naczepa; `renumbered_from` + komentarz „Wcześniej to był …”; `schedule_row_canon` z polami zasobów. Testy `import.sh` (L31, zasoby, renumber). Dalej: SharePoint Edge (pkt 4).
 
+## 2026-10-25 14:45 — A6 #555 F7 (0303 + front)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” (#555 „do poprawy”; #383 CONFLICTING, bez „gotowe”). Bez push na main.
+- Bieżąca: **A6** F7 #555 — domknięty COMMENT 0303; `perform assert_not_preview()` pierwsza instrukcja + test Podgląd; `skipped_carrier`/`skipped_empty` w stats/`p_file`; kreator `MAP_FIELDS_CREATOR` bez `loadDay`/`delivDay` (wzorzec `stan-walidacja__dark`); WARN `CARRIER_SKIP` (NTG z wymiarami) / `CARRIER_EMPTY`; telefon SE `normalizePhone(..., 'SE')`; dry_run liczy `dates_check` (helper + w dniu / >14). Unit `a6-import-map` 6/6. Dalej: zielone CI + wzorzec visual, potem SharePoint Edge (pkt 4).
+
