@@ -1231,10 +1231,11 @@ chk "#557: ponowne wywołanie idempotentne (bez nowego SAILING_ASSIGNED)" \
   "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'" 1
 
 # #557 PR2: AIS backup bez g.active; stary punkt; mismatch + overdue
+# S557c ≠ S557a (inny departure) — unique (vessel, departure) wycofywał cały INSERT.
 echo; echo "[#557 PR2] reguły AIS / stale / mismatch"
-L557a=$(L a1)
-L557b=$(L a2)
-L557c=$(L a3)
+L557a=55555555-0000-0000-0000-00000000557a
+L557b=55555555-0000-0000-0000-00000000557b
+L557c=55555555-0000-0000-0000-00000000557c
 S557a=77777777-0000-0000-0000-000000005573
 S557b=77777777-0000-0000-0000-000000005574
 S557c=77777777-0000-0000-0000-000000005575
@@ -1251,8 +1252,8 @@ insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at
   '2026-10-20 17:00+00', '2026-10-21 11:00+00',
   null, null, 'ZAPLANOWANY', 'POLFERRIES'),
  ('$S557c', '$P', '$V557b', 'GDN-NYN',
-  '2026-10-10 12:00+00', '2026-10-11 06:00+00',
-  '2026-10-10 12:00+00', '2026-10-11 06:00+00', 'DOPLYNAL', 'POLFERRIES');
+  '2026-10-09 12:00+00', '2026-10-10 06:00+00',
+  '2026-10-09 12:00+00', '2026-10-10 06:00+00', 'DOPLYNAL', 'POLFERRIES');
 update geofences set active = false
  where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
    and coalesce(route, 'POLFERRIES') = 'POLFERRIES';
@@ -1279,20 +1280,20 @@ chk "#557 PR2: przyszły rejs + SE → ryzyko mismatch" "$(rk $L557b SAILING_MIS
 chk "#557 PR2: propose = rejs z actual_dep w oknie" \
   "select (public.sailing_mismatch_propose_id('$L557b') = '$S557a')" t
 
-# stary punkt PL nie cofa FERRY
+# stary punkt PL nie cofa FERRY (S557c: inny dzień niż S557a)
 mk $L557c C557 "'HHL/C557'" "'SCX/C557'" FERRY "'$S557c'"
 q "
-insert into load_events (load_id, event_type, occurred_at) values ('$L557c','MILESTONE_LOADED','2026-10-09 08:00+00');
+insert into load_events (load_id, event_type, occurred_at) values ('$L557c','MILESTONE_LOADED','2026-10-08 08:00+00');
 insert into positions (load_id, ts, geom_raw, source) values
- ('$L557c', '2026-10-10 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+ ('$L557c', '2026-10-09 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
 " >/dev/null
-pos $L557c 54.4030 18.6800 "2026-10-11 09:00+00"
+pos $L557c 54.4030 18.6800 "2026-10-10 09:00+00"
 chk "#557 PR2: stary punkt PL → status FERRY" "$(st $L557c)" FERRY
 chk "#557 PR2: stary punkt ma stale_point" \
   "select (raw->>'stale_point') from positions where load_id='$L557c' order by ts desc limit 1" true
 
-# overdue +2h bez pozycji SE
-q "select public.ferry_check_arrival_overdue('2026-10-11 09:00+00')" >/dev/null
+# overdue +2h bez pozycji SE (actual_arrival 06:00, check 09:00)
+q "select public.ferry_check_arrival_overdue('2026-10-10 09:00+00')" >/dev/null
 chk "#557 PR2: +2h bez SE → ryzyko arrival_check" "$(rk $L557c FERRY_ARRIVAL_CHECK)" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

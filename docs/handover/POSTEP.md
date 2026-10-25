@@ -5173,3 +5173,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: **#561** F7 „gotowe do scalenia” (Spawn2018, po `83dec117`, CI unit/visual/db zielone) → merge `121a9021`. #560 wstrzymany (rebase → 0308+); #383 CONFLICTING. Bez push na main.
 - Bieżąca: **#557 PR2** `pakiet/557-ferry-rules-pr2` — migracja **0307**: AIS backup bez `g.active`, overdue +2 h, `stale_point`, mismatch + RPC suggest/assign. status EXPECTED 265; nullguard 852. Po F7: powrót #560.
+
+## 2026-10-25 20:05 — #557 PR2 db FAIL → fix (0307 + status/risks)
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Bez nowych `pilne` do budowy. Brak F7 „gotowe” (#562; #560 niegotowe; #383 CONFLICTING).
+- CI #562 `071b68f1`: unit ✔; **db FAIL** — security 458/1 (assert nie pierwsze w `sailing_mismatch_assign`); status 257/8 (S557a=S557c → unique vessel+departure wycofał INSERT rejsów, mk FK puste; brak POPRAWKA 24.09 w `process_position`); risks 44/2 (nowy `rk_ferry_arrival_check`).
+- Fix: assert pierwsze; POPRAWKA 24.09; S557c inny dzień; risks 7 kluczy (+arrival +mismatch). Push → CI → prośba F7.

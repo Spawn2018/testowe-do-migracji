@@ -1667,3 +1667,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |
 | 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |
 | 25.10.2026 19:47 | #557 PR1 SCALONE (`121a9021`, 0306); F7 gotowe `83dec117`; start PR2 reguły **0307** | pętla |
+| 25.10.2026 20:05 | #557 PR2 db FAIL: assert B5, POPRAWKA 24.09, unique rejsów S557c, risks +2 klucze | pętla |

@@ -300,13 +300,14 @@ declare
   v_label text;
   v_open boolean;
 begin
+  -- B5: assert jako pierwsza instrukcja po begin (strażnik RPC).
+  perform public.assert_not_preview();
   if auth.uid() is null or public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
   if (public.is_hhl()) is not true then
     raise exception 'wyłącznie HHL' using errcode = '42501';
   end if;
-  perform public.assert_not_preview();
 
   select l.sailing_id into v_sail from public.loads l where l.id = p_load_id;
   if v_sail is null and not exists (select 1 from public.loads where id = p_load_id) then
@@ -352,13 +353,14 @@ declare
   v_old uuid;
   v_actor uuid;
 begin
+  -- B5: assert jako pierwsza instrukcja po begin (strażnik RPC).
+  perform public.assert_not_preview();
   if auth.uid() is null or public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
   if (public.is_hhl()) is not true then
     raise exception 'wyłącznie HHL' using errcode = '42501';
   end if;
-  perform public.assert_not_preview();
   if p_load_id is null or p_sailing_id is null then
     raise exception 'load i sailing wymagane';
   end if;
@@ -424,6 +426,11 @@ create or replace function public.process_position(
   p_raw      jsonb default '{}'::jsonb
 ) returns table (event_type text, geofence_id uuid, geofence_name text)
 language plpgsql security definer set search_path = public as $$
+-- POPRAWKA 24.09.2026: kolumny wyniku (event_type, geofence_id) mają te same
+-- nazwy co kolumny tabel geofence_states i load_events. Bez tej dyrektywy
+-- każde wywołanie ze strefą w zasięgu kończyło się błędem „column reference
+-- is ambiguous", a cała transakcja — razem z pozycją — była wycofywana.
+-- Funkcja w tej postaci nigdy nie przetworzyła punktu w strefie.
 #variable_conflict use_column
 declare
   v_pt        geometry(Point, 4326);
@@ -613,6 +620,9 @@ begin
         v_payload,
         v_dedup
       )
+      -- POPRAWKA 24.09.2026: indeks unikalny na dedup_key jest częściowy
+      -- (where dedup_key is not null) — bez tego warunku Postgres odrzucał
+      -- zapis i żadne zdarzenie wjazdu ani wyjazdu nie mogło powstać.
       on conflict (dedup_key) where dedup_key is not null do nothing;
 
       event_type    := v_emit;
