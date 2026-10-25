@@ -40,17 +40,18 @@ export function sailingAssignDenied(
 
 /**
  * D-20261020-1501-01: rejsy historyczne do wyboru dla Administratora HHL — trasa armatora, nieodwołane, już
- * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze, z ostatnich `days` dni.
+ * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze.
+ * Decyzja właściciela 25.10.2026 (5A): bez limitu dni — `days` tylko opcjonalnie (domyślnie wszystkie).
  */
 export function historicalSailings(
   all: Sailing[],
   nowIso: string,
   operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
-  days = 60,
+  days = Number.POSITIVE_INFINITY,
 ): Sailing[] {
   const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
   const now = Date.parse(nowIso);
-  const from = now - days * 86_400_000;
+  const from = Number.isFinite(days) ? now - days * 86_400_000 : Number.NEGATIVE_INFINITY;
   return all
     .filter((s) => {
       if (s.route !== outbound || s.status === 'ODWOLANY') return false;

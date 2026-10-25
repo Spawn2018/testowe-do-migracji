@@ -12,12 +12,12 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 389, // #525: +4 DEL/U+2028/U+2029 + button w temacie; było 385 (#492)
+  security: 416, // #525: +4 DEL/U+2028/U+2029 + button w temacie; było 412 (#519)
   status: 238, // #502 F7: +5 B4 (stary GPS / wpływający / SCHEDULE×3); było 233; A1 W3 = current_date+14 (#508)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
-  backup: 32, // #498 F7 B1: +3 lease_until / continue_pending (2 min); było 29
+  backup: 44, // #516 F7 r2: +2 DO ponownie / stale≥OK; było 42 (+6 F7 r1 od 36)
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
@@ -60,16 +60,16 @@ export const EXPECTED_LOCAL = {
 /**
  * Oczekiwane OK na hosted TEST.
  * security/risks/backup: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE /
- *   backup: CREATE DATABASE + eksport harness — pełne 32 w CI db.yml, D-86).
+ *   backup: CREATE DATABASE + eksport harness — pełne 44 w CI db.yml, D-86).
  * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 385, // 389 − 4 SKIP (B6); #525
+  security: 412, // 416 − 4 SKIP (B6); #525
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
-  backup: 24, // 32 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #498 +3 lease
+  backup: 36, // 44 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 r2 +2
 };
 
 /** Alias historyczny — brama TEST / summary. */
