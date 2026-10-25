@@ -5076,3 +5076,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **brak** F7 „gotowe do scalenia” po `f4805369` (#553 komentarz „czekam CI + ponowne gotowe”). #554 wygląd bez F7. #383 CONFLICTING. Bez push na main.
 - CI #553 na head `f4805369`: unit ×2 ✔, visual ✔ (`40187335839`), db ✔ (`40187335763`, security 459). Zakres B9 (0302 + translate-retry + alarm) zamknięty w PR — czekam „F7: gotowe do scalenia”.
 
+## 2026-10-25 13:45 — #554+#553 SCALONE; start A6 (mapowanie)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. #322 zamykam (B9 na main). Bez nowych `pilne` do budowy.
+- Scalanie: **#554** F7 gotowe `1699927` → merge `6810812f` (wygląd DeepL). **#553** F7 gotowe `d726467` + CI unit/visual/db → merge `c7cd96d5` (0302). Bez push na main z agenta.
+- Bieżąca: **A6** `pakiet/a6-ksh-sharepoint` — krok 1: `COLUMN_MAP_DEFAULT` 21 kolumn E38 (bez `orderNo`); filtr HH; puste/`...`/`-`; A/B → PL/SE; L31 bez odrzucenia (`datesToCheck` / WARN `KSH_DATES_CHECK`); RPC `carrier_order_no`/`hhl_order_no`/zasoby. Unit: `a6-import-map` + import 38/38. Dalej: migracja `import_schedule` (pkt 2–3) + SharePoint Edge (pkt 4).
+

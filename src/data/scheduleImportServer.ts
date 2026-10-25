@@ -52,6 +52,9 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
     rejected: parsed.stats.rejected,
     warnings: parsed.stats.warnings,
     skippedStandard: parsed.stats.skippedStandard,
+    skippedCarrier: parsed.stats.skippedCarrier,
+    skippedEmpty: parsed.stats.skippedEmpty,
+    datesToCheck: parsed.stats.datesToCheck,
     issues: parsed.issues.filter((i) => i.severity === 'ERROR').slice(0, 12)
       .map((i) => ({ code: i.code, message: i.message, shipmentCode: i.shipmentCode })),
   };
