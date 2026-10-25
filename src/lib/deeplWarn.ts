@@ -11,7 +11,7 @@ export function deeplWarnText(d: DeeplView, locale: Parameters<typeof t>[0]): st
   if (!d || d.level !== 'warn') return '';
   const parts: string[] = [];
   if (d.monthly_limit > 0 && d.characters / d.monthly_limit >= 0.8) parts.push(t(locale, 'pl_deepl_warn'));
-  if (d.oldest_age_min != null && d.oldest_age_min > 15) parts.push(tp(locale, 'b6_sys_deepl_wait', { m: String(Math.round(d.oldest_age_min)) }));
+  if (d.oldest_age_min != null && d.oldest_age_min >= 15) parts.push(tp(locale, 'b6_sys_deepl_wait', { m: String(Math.round(d.oldest_age_min)) }));
   if (!parts.length) parts.push(t(locale, 'pl_deepl_warn'));
   return parts.map((x) => ` · ${x}`).join('');
 }

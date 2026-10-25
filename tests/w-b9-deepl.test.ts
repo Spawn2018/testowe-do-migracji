@@ -7,6 +7,8 @@ describe('B9 — kafelek DeepL: powód ostrzeżenia', () => {
     expect(deeplWarnText({ characters: 850_000, monthly_limit: 1_000_000, level: 'warn' }, 'pl')).toContain('80%');
     const wait = deeplWarnText({ characters: 25_921, monthly_limit: 1_000_000, level: 'warn', oldest_age_min: 22.4 }, 'pl');
     expect(wait).toBe(' · komunikat drogowy czeka na tłumaczenie od 22 min');
+    /* 0302: oldest_age_min = round(...)::int — 15,0–15,49 min daje 15 przy level='warn' */
+    expect(deeplWarnText({ characters: 25_921, monthly_limit: 1_000_000, level: 'warn', oldest_age_min: 15 }, 'pl')).toBe(' · komunikat drogowy czeka na tłumaczenie od 15 min');
     const both = deeplWarnText({ characters: 900_000, monthly_limit: 1_000_000, level: 'warn', oldest_age_min: 40 }, 'pl');
     expect(both.split(' · ').length).toBe(3);
   });
