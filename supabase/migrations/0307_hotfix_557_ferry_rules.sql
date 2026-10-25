@@ -421,7 +421,12 @@ begin
   if v_project is null or v_sail is null then
     return false;
   end if;
-  if v_status not in ('IN_TRANSIT_PL', 'AT_PORT_GDANSK', 'FERRY') then
+  -- Także Port SE / Droga SE: ENTER (debounce=1 w prod) zdąży zmienić status
+  -- zanim wykrycie po pętli stref — nadal mismatch, gdy rejs nie wypłynął.
+  if v_status not in (
+    'IN_TRANSIT_PL', 'AT_PORT_GDANSK', 'FERRY',
+    'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE'
+  ) then
     return false;
   end if;
   if public.loaded_confirmed(p_load_id) is not true then
@@ -480,7 +485,7 @@ revoke all on function public.detect_sailing_mismatch(uuid, timestamptz)
   from public, anon, authenticated;
 grant execute on function public.detect_sailing_mismatch(uuid, timestamptz) to service_role;
 comment on function public.detect_sailing_mismatch(uuid, timestamptz) is
-  '#557 F7: SE + rejs niewypłynięty (coalesce dep); status PL/port/FERRY + loaded.';
+  '#557 F7: SE + rejs niewypłynięty; status PL/port/FERRY/Port SE/Droga SE + loaded.';
 
 -- Zamykanie SAILING_MISMATCH przy każdej zmianie sailing_id.
 create or replace function public.trg_loads_sailing_mismatch_resolve()
@@ -822,6 +827,16 @@ begin
     return;
   end if;
 
+  -- #557: mismatch PRZED ENTER (debounce=1 PORT_IN SE w prod / 0274) —
+  -- inaczej status skacze do Port SE i wykrycie na końcu nic nie robi.
+  if v_on_se then
+    begin
+      perform public.detect_sailing_mismatch(p_load_id, coalesce(p_ts, now()));
+    exception when others then
+      raise warning '#557 detect_sailing_mismatch: %', sqlerrm;
+    end;
+  end if;
+
   for v_fence in
     select g.* from geofences g
     where g.project_id = v_project and g.active
@@ -951,14 +966,6 @@ begin
   exception when others then
     raise warning '#557 apply_ferry_ais_arrival_backup: %', sqlerrm;
   end;
-
-  if v_on_se then
-    begin
-      perform public.detect_sailing_mismatch(p_load_id, coalesce(p_ts, now()));
-    exception when others then
-      raise warning '#557 detect_sailing_mismatch: %', sqlerrm;
-    end;
-  end if;
 
   return;
 end $$;
