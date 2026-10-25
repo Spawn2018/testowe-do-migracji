@@ -19,7 +19,7 @@ begin
   select count(*)::int into v_users
     from app_users where locale is distinct from 'pl';
 
-  insert into audit_log (actor_id, action, entity_type, entity_id, new_value)
+  insert into public.audit_log (user_id, action, entity, entity_id, new_value)
   values (
     null,
     'AUDYT17_B9_LOCALE',
@@ -28,7 +28,9 @@ begin
     jsonb_build_object(
       'prefs_non_pl', v_prefs,
       'users_non_pl', v_users,
-      'at', now()
+      'at', now(),
+      'migration', '0302',
+      'reason', 'B9 panel PL — locale → pl przed drop'
     )
   );
 

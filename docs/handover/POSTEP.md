@@ -5058,3 +5058,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: #551/B8 już na main (`75ee446c`). #383 CONFLICTING. Bez push na main.
 - Bieżąca: **B9** `pakiet/b9-panel-pl-deepl` — migracja **0302**: drop `user_preferences.locale` (kopia + wszyscy `pl`), `app_users.locale=pl`, `deepl_usage_view` (+kolejka/oldest), cron `tower-translate-retry` 5 min, Edge `translate-retry`, security **455**. Front (AccountMenu / „Tłumaczenie w toku”) — koordynator.
 
+## 2026-10-25 12:45 — B9 fix 0302 audit_log (db FAIL)
+
+- Skrzynka: bez nowych `pilne`. #550 STOP. #383 bez F7 „gotowe”.
+- CI #553: unit/visual OK; `db` FAIL — migracja 0302: złe kolumny `audit_log` (`actor_id`/`entity_type` → `user_id`/`entity`, jak 0301).
+- Bieżąca: push poprawki 0302 na `pakiet/b9-panel-pl-deepl`; czekam zielonego `db` + F7.
+
