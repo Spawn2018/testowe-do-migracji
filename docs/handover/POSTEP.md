@@ -5023,3 +5023,9 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Scalanie: **#548** `af310f8b` (F7 „gotowe do scalenia” po `f11074c`, CI unit/visual). Bez push na main — `deploy-main`. #383 — nadal po wdrożeniu 0300 / F7 po SELECT.
 - Bieżąca: **B7** PR #549 — merge main (#548); CI unit/visual zielone na `5febf9fc` (CSP `frame-src`, `lint:css`, test hosting-switch); czekam F7. Bez push na main.
 
+## 2026-10-25 11:05 — B7: CI zielone na head po F7; W8 z F7; czekam ponowne F7
+
+- Skrzynka: #538/#537/#500/#499/#412/#323/#322/#320 w planie (wpisane). Bez `pilne` przerywających. #383 CONFLICTING, „Nie scalać jeszcze” (po SELECT 0300 / F7).
+- Scalanie: F7 „gotowe do scalenia” na `5febf9f` (08:38Z) **przed** merge main `13352892` + docs `c5d71270` → wg D-1050 bez merge. CI unit/visual **zielone** na `c5d71270`. Bez push na main.
+- Bieżąca: **B7** PR #549 — zakres kodu domknięty (CSP RO `frame-src`, `lint:css`, test); PLAN §5 W8 uzupełnione o 3 punkty F7 #549 (zawężenie hostów Supabase, zod jitless, COOP/CORP/`report-to`). Czekam ponowne F7: gotowe do scalenia.
+

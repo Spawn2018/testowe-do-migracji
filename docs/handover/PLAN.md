@@ -953,10 +953,11 @@ Po jednym koncie na rolę: KSH, SCX Dyspozytor, SCX Użytkownik, HHL Operacje. B
   3. Testy: `e9-role` — `HHL_OPS` nie widzi „Podgląd”, Shift+R nic nie zmienia; `HHL_ADMIN` widzi i przełącza; KSH i SCX nie widzą. Jednostkowe `canSwitchView` / `isPreviewReadOnly` dla `HHL_ADMIN`, `HHL_OPS`, `CLIENT_USER`, `CARRIER_DISPATCH`, demo. Brama: `admin_impersonate_start` i start Podglądu jako `HHL_OPS` → `42501`; `HHL_ADMIN` bez 2FA (gdy wymagane) → `42501`.
   4. Odbiór na produkcji (SELECT): `IMPERSONATE_START` i start Podglądu w `audit_log` tylko od `HHL_ADMIN`.
 
-### B7 · Nagłówki — W TOKU (`pakiet/b7-naglowki` PR #549; brama bezpieczeństwa po B5; D-20261017-1220-01 §2) — CI unit/visual zielone na `5febf9fc`; czekam F7
+### B7 · Nagłówki — W TOKU (`pakiet/b7-naglowki` PR #549; brama bezpieczeństwa po B5; D-20261017-1220-01 §2) — CI unit/visual zielone na `c5d71270`; czekam ponowne F7
 Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny” (DRV-CLOSE). **Bez prac:** `Permissions-Policy: geolocation=(self)`, komunikat `POSITION_SHARE_DENIED`, test Playwright „kierowca udostępnia pozycję” — `geolocation=()` zostaje.
 - CSP Report-Only: `frame-src 'self' blob: https://*.supabase.co` w `vercel.json` i `public/_headers` (podgląd PDF z Storage). Włączenie wymuszenia — W8.
 - `npm run lint:css` w CI (`unit.yml`) — PLAN §4 po C4–C13 / B-pozycje.
+- F7 „gotowe” było na `5febf9f` (08:38Z); potem merge main (#548) + docs → wg D-1050 czekam ponowne „gotowe” po head. Przed wymuszeniem CSP: uzupełnienia W8 (F7 #549).
 
 ### B8 · Stare nieprzeczytane (7A)
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane.
@@ -1260,7 +1261,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W5 | Plik KSH z 08.10 (`SCRAP_transporty_2026.09.23_REV.01_3.xlsx`, wiadomość właściciela 08.10 12:14) do wgrania (R-1) — przekazanie wykonawcy poza repozytorium, w `D:\Watch Tower\dane\`. Inny (nowszy) plik tylko dopiskiem koordynatora | przed P7 | **zamknięte 25.10.2026** (#538, D-20261025-0230-01) — właściciel wgrał ręcznie najnowszy plik; na produkcji `schedule_imports` v4 (22.10 11:25 PL, 95 wierszy); R-1 zrobione; plik z 08.10 nieaktualny |
 | W6 | Włączenie wysyłki: SMS do odbiorców (po 3 transportach w trybie testowym), e-maile w „Kto co dostaje”, pierwsza paczka tygodnia na adresy księgowości (alarmy E23 i E47 do Administratorów HHL działają od razu — decyzja 27 A) | po P8 / P5 | czeka |
 | W7 | E-maile logowania (L54): (1) treści wklejone w Authentication › Emails; (2) hak „Send Email” — **bez** Management API (sekret haka z panelu → Edge Secrets). Po P8: funkcja `send-email-hook` + „W7 TERAZ” w POSTEP | po P8 | **treści wklejone (krok 1); włączenie haka po P8 (krok 2)** (#538, 25.10) |
-| W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48) | P11 | czeka |
+| W8 | Akceptacja listy źródeł CSP i 12 wyników ASVS „częściowo” (E48). **Przed wymuszeniem CSP (F7 #549, nie w B7):** (1) `*.supabase.co` w `frame-src`/`img-src`/`connect-src`/`wss` → zawęzić do hostów projektów (prod+TEST); najważniejsze `connect-src`; (2) „eval” z zod v4 → `z.config({ jitless: true })` albo wpis na liście akceptacji; (3) rozważyć COOP/CORP oraz `report-to` dla naruszeń przed startem JS | P11 | czeka |
 | W9 | Klucz przeglądarkowy HERE ograniczony do domeny (AUD-01d) | P11 | **zamknięte 06.10** (D-20261012-0105-01 R9); P11 sprawdza (Referer `tower.log-mar.pl` → 200; obcy → odmowa) |
 | W10 | Konto testowe Claude (interia.pl) — usunięcie po wszystkich pracach (E18 P1) | po R-4 | czeka |
 | W11 | Regeneracja 280 ujęć i tag `baseline-audyt-<data P11>` na maszynie z nocną bramą wizualną (cron właściciela, `scripts/visual/gate.sh`) — wykonawca przygotowuje polecenie w P11 | P11 | czeka |
@@ -1623,3 +1624,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 09:50 | B5 F7 P2: sms_send_test/admin_sms_zone_test → force_helpers; security **443**; P3 defer: storage upload test, PREVIEW_* treść, opisy PR 0249→0300 | pętla |
 | 25.10.2026 10:15 | #382/B5 SCALONE (`29755d09`, 0300); F7 gotowe `51f5bd2`; P3 odłożone → §4 B5 + §8; start **B7** (frame-src CSP RO + lint:css w unit.yml) — brama bezpieczeństwa po B5 | pętla |
 | 25.10.2026 09:41 | #548 SCALONE (`af310f8b`, wyglad U-100 Promy dziś); #537 uzup. → §4 pkt 33–35 + P6 U-123; B7 #549 CI zielone `5febf9fc` — czekam F7 | pętla |
+| 25.10.2026 11:05 | B7 #549: CI unit/visual zielone na `c5d71270`; F7 gotowe na `5febf9f` unieważnione merge+docs → czekam ponowne F7; W8 uzupełnione (F7 #549 pkt 1–3) | pętla |
