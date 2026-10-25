@@ -1005,7 +1005,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - status **284** (+13); risks **7** kluczy (+`rk_ferry_check_after_arrival`).
    - **Uwagi:** propose bez PRE_PORT, bbox PL ≤ 54.45°N; `p_grace` zamiast 2 h; ETA/SMS/cisza + `stale_point` → **W52**.
 7. **F7 #562 r3 (d6486d8) — do poprawy (CI status 282/2 na `6eda05b1`; docs→kod):**
-   - **BLOKER CI:** L557h mismatch=0 — fikstury głośne (bez `>/dev/null` na insertach L557h); PORT_IN OFF + pozycja w porcie (jak L557b); Gdańsk przed odejściem — osobny rejs z odejściem tuż po punktach.
+   - **BLOKER CI:** L557h mismatch=0 — fikstury głośne (bez `>/dev/null` na insertach L557h); PORT_IN OFF + pozycja w porcie (jak L557b); Gdańsk przed odejściem — osobny rejs z odejściem tuż po punktach. UUID L557h ≠ LT12 (`…5581`, nie `…5571`).
    - **Assign source:** `actual_departure_at <= now()` → `source:'AIS'`; tylko plan (`coalesce(delayed, departure) <= now()`) → `source:'SCHEDULE'`.
    - **Testy:** suggest odmowa KSH/SCX; po assign pełna ścieżka FERRY → Port/Droga SE (nie tylko ≥ FERRY).
    - **Uwaga:** `apply_ferry_ais_arrival_backup`: `if v_status is null or v_status not in (…)`.
@@ -1691,3 +1691,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 21:45 | #557 PR2 F7 r3 (#562 e34f88b/3f6bc8f): docs §4 pkt 6 + W52; CI status 270/1 Stena PORT_IN ON | pętla |
 | 25.10.2026 22:00 | #557 PR2 F7 r3 kod 0307: Port→Droga, assign FERRY, dedup, Stena OFF; status 284; risks 7 | pętla |
 | 25.10.2026 22:30 | #557 PR2 F7 r3 do poprawy (d6486d8): CI 282/2 L557h; PLAN §4 pkt 7 — docs→kod | pętla |
+| 25.10.2026 23:05 | #557 PR2 CI db FAIL status 286/5: L557h=`…5571` = LT12; fix UUID `…5581` | pętla |

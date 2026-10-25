@@ -5223,3 +5223,10 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 
 - Skrzynka: bez zmian (#550 WSTRZYMANE). Brak F7 „gotowe”. Bez push na main.
 - Bieżąca: **#557 PR2** — `0307`: assign `source` AIS vs SCHEDULE; backup `v_status is null or …`; `status.sh`: L557h głośne + PORT_IN OFF + port; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; status **291**. Push → CI → prośba F7.
+
+## 2026-10-25 23:05 — #557 PR2: fix UUID L557h (db 286/5)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #560 WSTRZYMANY; #383 CONFLICTING. Bez push na main.
+- CI #562 `51fa415a`: unit ✔ visual ✔; **db FAIL** status 286/5 — L557h=`…5571` koliduje z LT12 (PR1) → loads_pkey; cascade mismatch/assign/AIS.
+- Fix: L557h → `…5581`. EXPECTED status **291** bez zmian. Push → CI → prośba F7.

@@ -1396,7 +1396,7 @@ echo "$out" | grep -qiE 'Podgląd|42501' \
   || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign Podgląd odmowa: $out"; }
 # Assign OK: IN_TRANSIT_PL + przyszły rejs → pin S557a → FERRY → Port SE
 # PORT_IN OFF + pozycja w porcie (jak L557b) — fikstury głośne (F7 r3).
-L557h=55555555-0000-0000-0000-000000005571
+L557h=55555555-0000-0000-0000-000000005581
 q "update geofences set active = false
  where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
    and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
