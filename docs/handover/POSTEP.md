@@ -5450,3 +5450,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - CI `1c6fda99`: unit ✔ visual ✔ **db FAIL** import 192/1 — `A6: r6 B1 sprawa file-changed` 0 zamiast 1 (test wołał `p_quiet=true`, a F7 #2 przy quiet nie otwiera sprawy).
 - Fix: test B1 `import_schedule(…, false, false)` — ścieżka UPLOAD z sprawą; quiet zostaje bez spraw. EXPECTED **193**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 07:05 — A6 #560 F7: file-changed także przy quiet
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `06c6a108` unit/visual/db ✔ — F7: quiet nie może wyłączać sprawy file-changed (także SharePoint). #383 CONFLICTING. Bez push na main.
+- Kod: `l1b_note_file_changed` zawsze przy plik≠expected (bez `v_run_quiet`); B1 z `p_quiet=true` + wariant SharePoint `service_role`+quiet → 1 sprawa. EXPECTED import **195**. Push → CI → prośba F7 po zielonym.
