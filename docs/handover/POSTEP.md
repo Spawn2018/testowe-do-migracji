@@ -5571,3 +5571,39 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 #570 na `f7eafacd` — **nie gotowe** (1 poprawka). Bez push na main.
 - **#569 krok:** `pickOutboundConflictNote` — pomijaj `current==null` gdy inny wiersz obecny; `trim`/`''→null` jak import; unit (brak wiersza→SG-02, puste/null, łatka null/`{}`, jeden kod). Znane ograniczenie migawki per kod główny → §4/#569 i §8. Po scaleniu #569: **#571** → `write_test_ok_at` → #567 23B.
 - vitest `ksh-sharepoint-write` **23/23**. CI → prośba F7.
+
+## 2026-10-26 13:25 — #570 SCALONE; start #571 dwell (0309)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. #571 bez `dla-cursora` — z F7 #570.
+- Scalanie: **#570** — „F7: gotowe do scalenia” (Spawn2018, 12:19Z, po `99817a8f`), CI unit/visual/db ✔ → merge `b3fedf2e`. Bez push na main. F7 follow-upy #569 (normCell / ostrzeżenie pominiętego kodu / migawka §8) → przed `write_enabled`.
+- Bieżąca: **#571** `pakiet/571-geofence-dwell` — migracja **0309**: `geofence_confirm_pending_dwell` + cron `*/2`; `process_position` entered_at/dwell; hotfix SG-23; testy status +11 → EXPECTED **302**. CI → prośba F7.
+
+## 2026-10-26 14:55 — #571 F7 #574: SITE od 1. pozycji
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (wpisane). PR #574: brak „gotowe” po `edc789fd` — F7 korekta (Spawn2018).
+- Scalanie: brak (CI db FAIL 296/6 na starym dwell SITE; visual ✔). Bez push na main.
+- **#571 krok (F7):** SITE → ENTER/`AT_SITE` od 1. pozycji w promieniu; dwell cron pomija SITE; `stale_point` w `p_raw`; SG-23 backdate 10:22 UTC bez powiadomień; testy +14 → EXPECTED status **305**. CI → prośba F7.
+
+## 2026-10-26 15:15 — #571 F7 r2 #574: poprawki (nie gotowe)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `c3258a58`: **nie daję znaku** (Spawn2018).
+- Scalanie: brak. Bez push na main. CI na odrzuconym SHA anulowane.
+- **#571 krok (F7 r2):** `hotfix_571_site_enter_backdate` — kod SG-23 z `shipment_items`/`load_sms_code`; disable `trg_load_events_immutable`; czas = pierwsza pozycja w SITE; `entered_at` zerowany przy EXIT; dwell: pierwsza po EXIT + `bulk_quiet` &gt;2 h; cron bez połykania błędów; testy 779 m / parking×3 / re-entry / backdate → EXPECTED status **314**. CI → prośba F7.
+
+## 2026-10-26 15:45 — #571 F7 r3 #574: OUTSIDE + drop fn + testy
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `f8c69c18`: **nie daję znaku** (1 punkt konieczny + uwagi). CI db FAIL status 305/9 (kolizja UUID L 71–76 z #445/#502).
+- Scalanie: brak. Bez push na main.
+- **#571 krok (F7 r3 pkt 1–4):** `geofence_states` — `state` tylko z `PENDING_IN`; `entered_at` tylko INSIDE/PENDING_OUT; OUTSIDE bez powrotu na plac; `raise notice` gdy brak SG-23; `drop function` po wywołaniu; test helper `tests/db/sql/hotfix_571_site_enter_backdate.sql`; UUID a1–a7; wyłączenie Plac Stegra w teście; OUTSIDE/idempotencja/trg O → EXPECTED status **319**. CI → prośba F7.
+
+## 2026-10-26 16:20 — #571 CI db FAIL → fix testów status **320**
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Brak „F7: gotowe do scalenia” po `5d5d18b2`.
+- Scalanie: brak (#575 niegotowe; #576 bez F7). Bez push na main.
+- **#571 krok:** CI `db` na `5d5d18b2` — status 312 OK / 7 FAIL (#571d/e/f). Fix: włącz PORT_IN przed dwell portu (#557 zostawiło OFF); EXIT SITE &lt; 10 min (bez DELIVERED / zamknięcia okna); fixture ENTER+STATUS_AUTO przez `session_replication_role=replica`. EXPECTED status **320**. CI → prośba F7.
+
+## 2026-10-26 16:50 — #571 CI #571f: source SYSTEM → null
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe w planie. Brak „F7: gotowe” po `dee4226e`.
+- Scalanie: brak (#575 F7 niegotowe + LFS — rerun visual failed; #576 bez F7). Bez push na main.
+- **#571 krok:** CI `db` na `dee4226e` — status 318 OK / 2 FAIL (#571f ENTER+STATUS_AUTO pusto). Przyczyna: fixture `source='SYSTEM'` spoza enum `position_source` → cały INSERT padał (entered_at i tak z hotfix). Fix: `source=null` jak w i2. EXPECTED status **320**. CI → prośba F7.

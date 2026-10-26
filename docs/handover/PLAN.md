@@ -1014,7 +1014,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **CI `cdc31b6c` db FAIL (224/1) — ZROBIONE w teście:** asercja CANCELLED liczyła `blocked` całego pliku (inne kody STATUS) → `1/1`; liczyć tylko `blocked` dla SG-01 / reason CANCELLED.
      - **F7 runda 9 — ZROBIONE w kodzie (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne. Asercja CANCELLED tylko SG-01. EXPECTED import **225**.
      - **CI `833d9415` unit/visual/db ✔** → **F7: gotowe** (Spawn2018, 09:31Z na `a8bbda41`) → **SCALONE** `0feb8a94` (26.10.2026 09:41Z). EXPECTED import **225**.
-     - **Warunki włączenia zapisu (F7 po scaleniu):** ~~#560~~ → **#569** → **#571** (pilne strefy) → `write_test_ok_at` → **#567 23B** (`import_enabled` zostaje false).
+     - **Warunki włączenia zapisu (F7 po scaleniu):** ~~#560~~ → ~~**#569**~~ → **#571** (pilne strefy) → `write_test_ok_at` → **#567 23B** (`import_enabled` zostaje false); follow-upy F7 #569 (normCell / ostrzeżenie pominiętego kodu / migawka per kod).
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1034,14 +1034,17 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - próba z ROLLBACK na produkcji w oknie wdrożenia (jak R-1 w P7);
    - linia „zsynchronizowano …” w Harmonogramie; zmiana w pliku → „było → jest” w dzwonku.
 
-### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — W TOKU (`pakiet/569-a6-conflict-code`, PR #570)
-Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza, w którym wykryto rozjazd (nie z pierwszego kodu). Unit: 2 kody, konflikt na drugim → kod drugiego + pole z łatki. **Test db:** import (konflikt na SG-M2) + Edge `l1b_note_file_changed(SG-M2)` → 1 sprawa; primary dałby 2. (EXPECTED import **234**).
-- **F7 #570 (`ed1e3ba1`) — ZROBIONE w kodzie:** najpierw wiersz różniący się polem **z łatki**, dopiero potem pierwszy rozjechany + dowolne pole (Edge = import; uniknięcie 2 spraw). Unit: SG-A spoza łatki + SG-B z łatki → SG-B/`carrier_order_no`. Komentarz w `import.sh`: wybór kodu = unit.
-- **F7 #570 na `f7eafacd` — ZROBIONE w kodzie (1 poprawka + testy):** w obu pętlach pomijaj `current == null`, gdy w pliku jest inny obecny wiersz (SG-01 zniknął + SG-02 rozjazd → SG-02, nie 2 sprawy). Normalizacja komórek jak import (`trim` + `''→null`). Unit: brak wiersza + drugi z rozjazdem; puste/null/spacje; łatka null/`{}`; jeden kod. **CI → prośba F7.**
-- **Znane ograniczenie (nie blokuje F7; przed `write_enabled`):** `expected_file` = migawka tylko kodu głównego (0308), import patrzy na `prev` wiersza — przy kodzie pobocznym Edge może wskazać inny wiersz/pole niż import. Rozwiązanie: migawka per kod albo `prev` per kod — punkt w #569/#567 przed włączeniem zapisu.
+### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — SCALONE (#570 `b3fedf2e`, 26.10.2026 12:24Z; F7 12:19Z na `99817a8f`)
+Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza konfliktu; preferuj pole z łatki; pomijaj kod bez wiersza w pliku gdy jest inny; norm `trim`/`''→null`. EXPECTED import **234**.
+- **Po F7 (przed `write_enabled`, z #567 lub małym PR):** (1) test: kod nieobecny w pliku + obecny wiersz **bez** rozjazdu → brak sprawy; ostrzeżenie gdy `xlsxPatch` cicho pomija wiersz; (2) `normCell` w Edge = tylko spacje jak `btrim` (nie wszystkie białe); (3) znane ograniczenie migawki kodu głównego — też §8.
 
-### #571 · PILNE: wjazd do strefy potwierdzany czasem (dwell), nie tylko 2. pozycją — DO ZROBIENIA (po #569; przed `write_test_ok_at` / #567 23B; P8 / strefy)
-Źródło: #571 (Spawn2018; F7 #570: pierwszeństwo przed #567). SG-23 na placu Boden (`PENDING_IN`, 1 fix) — emtrack przy postoju ~4 h. **Baza:** przy `PENDING_IN` + ostatnia pozycja w strefie + ≥ `dwell_seconds` bez pozycji poza → wjazd z czasem pierwszej pozycji (cykl 1–5 min, service_role); `debounce_fixes=2` zostaje jako szybsza ścieżka; wszystkie strefy. Korekta SG-23: `AT_SITE` 26.10 10:22 UTC + Historia; powiadomienia jeśli < 2 h. Testy db: 1 pozycja + 10 min → wjazd; w strefie→poza w 10 min → brak; `stale_point` nie potwierdza. Promienia nie zmieniać. `assert_not_preview` w RPC zapisu.
+### #571 · PILNE: SITE od 1. pozycji; dwell dla pozostałych stref — W TOKU (`pakiet/571-geofence-dwell` PR #574, migracja **0309**; po #569; przed `write_test_ok_at` / #567 23B)
+Źródło: #571 (Spawn2018; F7 #570 + F7 #574 decyzja właściciela 26.10 11:48; F7 r2 26.10 ~15:08; F7 r3 26.10 ~15:26). SG-23 na placu Boden — emtrack przy postoju ~4 h.
+- **SITE (F7):** `GEOFENCE_ENTER` / `AT_SITE` przy **pierwszej** świeżej pozycji w `radius_m` (nie histereza); bez `PENDING_IN`/dwell. Parking 1019 m przy r=1010 — bez wjazdu. `entered_at` = czas tej wizyty; zerowany przy EXIT.
+- **Pozostałe strefy:** `geofence_confirm_pending_dwell` (cron `*/2`, bez SITE) — czas z pierwszej pozycji po ostatnim EXIT; `bulk_quiet` gdy &gt; 2 h; debounce; `stale_point` pomija strefy.
+- **SG-23:** szukaj `shipment_items.shipment_code` / `load_sms_code` (nie `order_no`); backdate ENTER/`STATUS_AUTO`/`entered_at` na **pierwszą** świeżą pozycję w SITE (disable `trg_load_events_immutable`; błąd przerywa migrację); bez ponownych powiadomień. Inne `PENDING_IN` SITE → ENTER z pierwszą pozycją (geom pierwszej; `notify_orgs`/`message_tpl`). **F7 r3:** `state` tylko z `PENDING_IN` (OUTSIDE bez powrotu na plac); `entered_at` tylko INSIDE/PENDING_OUT; brak SG-23 → `raise notice`; `drop function` po wywołaniu.
+- **Testy status:** +29 (UUID a1–a7; OUTSIDE; idempotencja; EXIT&lt;10 min bez DELIVERED; PORT_IN ON; replica fixture; `source` STATUS_AUTO = null nie `SYSTEM` — enum `position_source`; trg O). EXPECTED status **320**.
+- **Uwagi F7 (nie blokują, §8):** drganie GPS na krawędzi SITE bez debounce; GEOFENCE_DWELL po porcie z dwell. Następczy PR po #574: cron `greatest(EXIT, entered_at)`; dwell_min w payload.
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at` / #571)
 Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
@@ -1748,3 +1751,10 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 12:00 | #569 F7 #570 poprawka: preferuj wiersz z polem z łatki; unit + komentarz db; CI→F7 | pętla |
 | 26.10.2026 12:25 | #569 CI `ed1e3ba1` unit/visual/db ✔; prośba F7; EXPECTED import 234; dalej write_test_ok_at → #567 23B | pętla |
 | 26.10.2026 12:45 | #569 F7 #570: pomijaj kod bez wiersza w pliku gdy jest inny; norm trim/''→null; #571 wpisane (pilne, po #569); CI→F7 | pętla |
+| 26.10.2026 13:25 | #570 SCALONE `b3fedf2e` (F7 12:19Z); #569 F7 follow-upy przed write_enabled; start #571 dwell **0309** | pętla |
+| 26.10.2026 13:25 | Znane ograniczenie #569: `expected_file` = migawka tylko kodu głównego (0308); przed `write_enabled` — migawka/`prev` per kod (#567) | pętla |
+| 26.10.2026 14:55 | #571 F7 #574: SITE od 1. pozycji (decyzja 11:48); dwell bez SITE; SG-23 backdate 10:22; status **305** | pętla |
+| 26.10.2026 15:15 | #571 F7 r2 #574: nie gotowe — order_no/immutable/entered_at/cron; poprawki → status **314** | pętla |
+| 26.10.2026 15:45 | #571 F7 r3 #574: OUTSIDE bez powrotu; drop fn; notice; testy UUID a1–a7 + idempotencja → status **319** | pętla |
+| 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
+| 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
