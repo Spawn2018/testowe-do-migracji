@@ -5601,3 +5601,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Brak „F7: gotowe do scalenia” po `5d5d18b2`.
 - Scalanie: brak (#575 niegotowe; #576 bez F7). Bez push na main.
 - **#571 krok:** CI `db` na `5d5d18b2` — status 312 OK / 7 FAIL (#571d/e/f). Fix: włącz PORT_IN przed dwell portu (#557 zostawiło OFF); EXIT SITE &lt; 10 min (bez DELIVERED / zamknięcia okna); fixture ENTER+STATUS_AUTO przez `session_replication_role=replica`. EXPECTED status **320**. CI → prośba F7.
+
+## 2026-10-26 16:50 — #571 CI #571f: source SYSTEM → null
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe w planie. Brak „F7: gotowe” po `dee4226e`.
+- Scalanie: brak (#575 F7 niegotowe + LFS — rerun visual failed; #576 bez F7). Bez push na main.
+- **#571 krok:** CI `db` na `dee4226e` — status 318 OK / 2 FAIL (#571f ENTER+STATUS_AUTO pusto). Przyczyna: fixture `source='SYSTEM'` spoza enum `position_source` → cały INSERT padał (entered_at i tak z hotfix). Fix: `source=null` jak w i2. EXPECTED status **320**. CI → prośba F7.

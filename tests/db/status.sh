@@ -1541,14 +1541,14 @@ q "insert into positions (load_id, ts, geom_raw, source, raw) values
   ('$L571f','2026-10-26 11:21:00+00', st_setsrid(st_makepoint($LON779,$LAT779),4326),'TELEMATICS_API','{}')" >/dev/null
 q "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
    values ('$L571f','$G571r','INSIDE',0,'2026-10-26 11:21:00+00','2026-10-26 11:21:00+00')" >/dev/null
-# replica: STATUS_AUTO / ENTER bez triggerów (inaczej insert pada, chk dostaje pustkę)
+# replica: bez AFTER INSERT (notify/status); source = position_source (bez SYSTEM — enum)
 q "set session_replication_role=replica;
    insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key) values
   ('$L571f','GEOFENCE_ENTER','2026-10-26 11:21:00+00','TELEMATICS_API',
    st_setsrid(st_makepoint($LON779,$LAT779),4326),
    jsonb_build_object('geofence_id','$G571r','geofence_kind','SITE','geofence_name','Plac 571 r1010'),
    'GEOFENCE_ENTER:$L571f:$G571r:202610261121'),
-  ('$L571f','STATUS_AUTO','2026-10-26 11:21:00+00','SYSTEM',null,
+  ('$L571f','STATUS_AUTO','2026-10-26 11:21:00+00',null,null,
    jsonb_build_object('to','AT_SITE','from','IN_TRANSIT_SE'),
    'STATUS_AUTO:AT_SITE:$L571f:202610261121');
    set session_replication_role=origin" >/dev/null

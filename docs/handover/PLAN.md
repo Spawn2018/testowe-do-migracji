@@ -1043,7 +1043,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 - **SITE (F7):** `GEOFENCE_ENTER` / `AT_SITE` przy **pierwszej** świeżej pozycji w `radius_m` (nie histereza); bez `PENDING_IN`/dwell. Parking 1019 m przy r=1010 — bez wjazdu. `entered_at` = czas tej wizyty; zerowany przy EXIT.
 - **Pozostałe strefy:** `geofence_confirm_pending_dwell` (cron `*/2`, bez SITE) — czas z pierwszej pozycji po ostatnim EXIT; `bulk_quiet` gdy &gt; 2 h; debounce; `stale_point` pomija strefy.
 - **SG-23:** szukaj `shipment_items.shipment_code` / `load_sms_code` (nie `order_no`); backdate ENTER/`STATUS_AUTO`/`entered_at` na **pierwszą** świeżą pozycję w SITE (disable `trg_load_events_immutable`; błąd przerywa migrację); bez ponownych powiadomień. Inne `PENDING_IN` SITE → ENTER z pierwszą pozycją (geom pierwszej; `notify_orgs`/`message_tpl`). **F7 r3:** `state` tylko z `PENDING_IN` (OUTSIDE bez powrotu na plac); `entered_at` tylko INSIDE/PENDING_OUT; brak SG-23 → `raise notice`; `drop function` po wywołaniu.
-- **Testy status:** +29 (UUID a1–a7; OUTSIDE; idempotencja; EXIT&lt;10 min bez DELIVERED; PORT_IN ON; replica fixture; trg O). EXPECTED status **320**.
+- **Testy status:** +29 (UUID a1–a7; OUTSIDE; idempotencja; EXIT&lt;10 min bez DELIVERED; PORT_IN ON; replica fixture; `source` STATUS_AUTO = null nie `SYSTEM` — enum `position_source`; trg O). EXPECTED status **320**.
 - **Uwagi F7 (nie blokują, §8):** drganie GPS na krawędzi SITE bez debounce; GEOFENCE_DWELL po porcie z dwell. Następczy PR po #574: cron `greatest(EXIT, entered_at)`; dwell_min w payload.
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at` / #571)
@@ -1757,3 +1757,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 15:15 | #571 F7 r2 #574: nie gotowe — order_no/immutable/entered_at/cron; poprawki → status **314** | pętla |
 | 26.10.2026 15:45 | #571 F7 r3 #574: OUTSIDE bez powrotu; drop fn; notice; testy UUID a1–a7 + idempotencja → status **319** | pętla |
 | 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
+| 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
