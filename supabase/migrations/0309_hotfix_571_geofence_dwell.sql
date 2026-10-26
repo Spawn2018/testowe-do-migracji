@@ -1,6 +1,6 @@
--- #571: SITE — wjazd od 1. pozycji w promieniu (F7 #574, decyzja 26.10 11:48).
+-- #571: SITE — wjazd od 1. pozycji w promieniu (F7 #574, decyzja 26.10 11:48; F7 r2).
 -- Pozostale strefy: dwell (cron + process_position) albo debounce_fixes.
--- SG-23: przestaw czas ENTER/AT_SITE na 10:22 UTC (pierwsza pozycja); bez ponownych powiadomien.
+-- SG-23: backdate ENTER/AT_SITE na pierwsza swieza pozycje w SITE (shipment_code); bez ponownych powiadomien.
 
 
 -- ---------------------------------------------------------------------------
@@ -15,12 +15,16 @@ set search_path = public
 as $$
 declare
   v_row        record;
-  v_pos        record;
+  v_first_ts   timestamptz;
+  v_first_geom geometry;
+  v_first_src  position_source;
+  v_last_geom  geometry;
   v_pending_at timestamptz;
   v_emit_at    timestamptz;
   v_dedup      text;
   v_payload    jsonb;
   v_n          int := 0;
+  v_quiet      boolean;
 begin
   for v_row in
     select gs.load_id, gs.geofence_id, gs.entered_at, gs.last_eval_at, gs.consec_fixes,
@@ -33,7 +37,28 @@ begin
        and g.kind is distinct from 'SITE'
        and g.dwell_seconds > 0
   loop
-    v_pending_at := coalesce(v_row.entered_at, v_row.last_eval_at);
+    v_first_ts := null;
+    v_first_geom := null;
+    v_first_src := null;
+    v_last_geom := null;
+
+    /* Pierwsza swieza pozycja w strefie po ostatnim EXIT (nie stary entered_at). */
+    select p.ts, p.geom_raw, p.source
+      into v_first_ts, v_first_geom, v_first_src
+      from positions p
+     where p.load_id = v_row.load_id
+       and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+       and st_contains(v_row.geom, p.geom_raw::geometry)
+       and p.ts > coalesce((
+             select max(e.occurred_at) from load_events e
+              where e.load_id = v_row.load_id
+                and e.event_type = 'GEOFENCE_EXIT'
+                and (e.payload->>'geofence_id')::uuid = v_row.geofence_id
+           ), '-infinity'::timestamptz)
+     order by p.ts
+     limit 1;
+
+    v_pending_at := coalesce(v_first_ts, v_row.entered_at, v_row.last_eval_at);
     if v_pending_at is null then
       continue;
     end if;
@@ -41,21 +66,21 @@ begin
       continue;
     end if;
 
-    select p.ts, p.geom_raw, p.source, p.raw
-      into v_pos
+    /* Ostatnia niesprzeczna pozycja musi nadal byc w strefie. */
+    select p.geom_raw into v_last_geom
       from positions p
      where p.load_id = v_row.load_id
        and coalesce((p.raw->>'stale_point')::boolean, false) is not true
      order by p.ts desc
      limit 1;
 
-    if v_pos.ts is null then
+    if v_last_geom is null
+       or st_contains(v_row.geom, v_last_geom::geometry) is not true then
       continue;
     end if;
 
-    /* Ostatnia niesprzeczna pozycja musi nadal byc w strefie. */
-    if st_contains(v_row.geom, v_pos.geom_raw::geometry) is not true then
-      continue;
+    if v_first_geom is null then
+      v_first_geom := v_last_geom;
     end if;
 
     v_emit_at := v_pending_at;
@@ -74,7 +99,7 @@ begin
     update geofence_states set
       state        = 'INSIDE',
       consec_fixes = 0,
-      entered_at   = coalesce(entered_at, v_emit_at),
+      entered_at   = v_emit_at,
       last_eval_at = p_now
     where load_id = v_row.load_id
       and geofence_id = v_row.geofence_id
@@ -84,12 +109,21 @@ begin
       continue;
     end if;
 
+    v_quiet := (p_now - v_emit_at >= interval '2 hours');
+    if v_quiet then
+      perform set_config('tower.bulk_quiet', 'on', true);
+    end if;
+
     insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key)
     values (
-      v_row.load_id, 'GEOFENCE_ENTER', v_emit_at, coalesce(v_pos.source, 'TELEMATICS_API'),
-      v_pos.geom_raw, v_payload, v_dedup
+      v_row.load_id, 'GEOFENCE_ENTER', v_emit_at, coalesce(v_first_src, 'TELEMATICS_API'),
+      v_first_geom, v_payload, v_dedup
     )
     on conflict (dedup_key) where dedup_key is not null do nothing;
+
+    if v_quiet then
+      perform set_config('tower.bulk_quiet', '', true);
+    end if;
 
     v_n := v_n + 1;
   end loop;
@@ -113,9 +147,9 @@ begin
       '*/2 * * * *',
       $job$select public.geofence_confirm_pending_dwell()$job$
     );
+  else
+    raise notice '#571: pg_cron niedostępny — tower-geofence-dwell nie zaplanowany';
   end if;
-exception when others then
-  null;
 end $cron$;
 
 -- ---------------------------------------------------------------------------
@@ -338,9 +372,14 @@ begin
                        else v_state.consec_fixes
                      end,
       entered_at   = case
+                       /* OUTSIDE→PENDING_IN / OUTSIDE→INSIDE: czas tej wizyty. */
                        when v_new_state = 'PENDING_IN' and v_state.state = 'OUTSIDE' then p_ts
+                       when v_emit = 'GEOFENCE_ENTER' and v_state.state = 'OUTSIDE' then p_ts
+                       /* PENDING_IN→INSIDE: czas pierwszej pozycji (entered_at). */
                        when v_emit = 'GEOFENCE_ENTER' then coalesce(v_state.entered_at, p_ts)
-                       when v_new_state = 'OUTSIDE' and v_state.state = 'PENDING_IN' then null
+                       /* Wyjazd / powrót do OUTSIDE — zeruj (F7 #574: dwell_min, GEOFENCE_DWELL). */
+                       when v_emit = 'GEOFENCE_EXIT' then null
+                       when v_new_state = 'OUTSIDE' then null
                        else v_state.entered_at
                      end,
       exited_at    = case when v_emit = 'GEOFENCE_EXIT'  then p_ts else v_state.exited_at end,
@@ -410,52 +449,111 @@ comment on function public.process_position(uuid, double precision, double preci
 
 
 -- ---------------------------------------------------------------------------
--- 3. Korekta produkcji: SG-23 czas 10:22 UTC + inne PENDING_IN SITE
+-- 3. Korekta: SG-23 (kod z shipment_items / load_sms_code) + PENDING_IN SITE
+--    load_events append-only → disable trigger; błąd korekty przerywa migrację.
 -- ---------------------------------------------------------------------------
-do $sg23$
+create or replace function public.hotfix_571_site_enter_backdate()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
-  v_load   uuid;
-  v_enter  timestamptz := timestamptz '2026-10-26 10:22:00+00';
-  v_fresh  boolean;
-  v_pt     geometry;
-  v_row    record;
-  v_first  timestamptz;
-  v_prev   text;
+  v_load     uuid;
+  v_enter    timestamptz;
+  v_pt       geometry;
+  v_gid      uuid;
+  v_gname    text;
+  v_notify   text[];
+  v_tpl      text;
+  v_row      record;
+  v_first    timestamptz;
+  v_first_pt geometry;
+  v_fresh    boolean;
+  v_prev     text;
 begin
-  /* SG-23: juz AT_SITE / ENTER z 2. pozycji (~11:21) → przestaw na 10:22, bez powiadomien. */
+  /* SG-23: kod w shipment_items / load_sms_code — order_no bywa NULL. */
   select l.id into v_load
     from loads l
-   where l.order_no = 'SG-23'
-   order by l.created_at desc nulls last
+    join shipment_items si on si.load_id = l.id
+   where si.shipment_code = 'SG-23'
+   order by si.shipment_code
    limit 1;
 
+  if v_load is null then
+    select l.id into v_load
+      from loads l
+     where public.load_sms_code(l.id) = 'SG-23'
+     order by l.created_at desc nulls last
+     limit 1;
+  end if;
+
   if v_load is not null then
+    select p.ts, p.geom_raw, g.id, g.name, g.notify_orgs, g.message_tpl
+      into v_enter, v_pt, v_gid, v_gname, v_notify, v_tpl
+      from positions p
+      join geofence_states gs on gs.load_id = p.load_id
+      join geofences g on g.id = gs.geofence_id and g.kind = 'SITE' and g.active is true
+     where p.load_id = v_load
+       and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+       and st_contains(g.geom, p.geom_raw::geometry)
+     order by p.ts
+     limit 1;
+
+    if v_enter is null then
+      raise exception '#571: SG-23 bez swiezej pozycji w SITE — nie moge backdate';
+    end if;
+
     v_prev := current_setting('tower.bulk_quiet', true);
     perform set_config('tower.bulk_quiet', 'on', true);
 
-    update load_events e set
-      occurred_at = v_enter,
-      payload = coalesce(e.payload, '{}'::jsonb)
-                || jsonb_build_object('confirm', 'hotfix_571_backdate', 'first_fix_at', v_enter::text)
-    where e.load_id = v_load
-      and e.event_type = 'GEOFENCE_ENTER'
-      and coalesce(e.payload->>'geofence_kind', '') = 'SITE'
-      and e.occurred_at is distinct from v_enter;
+    alter table load_events disable trigger trg_load_events_immutable;
+    begin
+      update load_events e set
+        occurred_at = v_enter,
+        geom = coalesce(v_pt, e.geom),
+        payload = coalesce(e.payload, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'confirm', 'hotfix_571_backdate',
+                       'first_fix_at', v_enter::text,
+                       'geofence_id', coalesce(e.payload->>'geofence_id', v_gid::text),
+                       'geofence_kind', 'SITE',
+                       'geofence_name', coalesce(e.payload->>'geofence_name', v_gname),
+                       'notify_orgs', coalesce(e.payload->'notify_orgs', to_jsonb(v_notify)),
+                       'message_tpl', coalesce(e.payload->>'message_tpl', v_tpl)
+                     )
+      where e.load_id = v_load
+        and e.event_type = 'GEOFENCE_ENTER'
+        and coalesce(e.payload->>'geofence_kind', '') = 'SITE'
+        and e.occurred_at is distinct from v_enter;
 
-    update load_events e set
-      occurred_at = v_enter,
-      payload = coalesce(e.payload, '{}'::jsonb)
-                || jsonb_build_object('confirm', 'hotfix_571_backdate')
-    where e.load_id = v_load
-      and e.event_type = 'STATUS_AUTO'
-      and e.payload->>'to' = 'AT_SITE'
-      and e.occurred_at is distinct from v_enter
-      and not exists (
-        select 1 from load_events z
-         where z.load_id = e.load_id
-           and z.event_type like 'STATUS_%'
-           and z.payload->>'zastepuje' = e.id::text
-      );
+      update load_events e set
+        occurred_at = v_enter,
+        payload = coalesce(e.payload, '{}'::jsonb)
+                  || jsonb_build_object('confirm', 'hotfix_571_backdate')
+      where e.load_id = v_load
+        and e.event_type = 'STATUS_AUTO'
+        and e.payload->>'to' = 'AT_SITE'
+        and e.occurred_at is distinct from v_enter
+        and not exists (
+          select 1 from load_events z
+           where z.load_id = e.load_id
+             and z.event_type like 'STATUS_%'
+             and z.payload->>'zastepuje' = e.id::text
+        );
+
+      update load_events e set
+        payload = coalesce(e.payload, '{}'::jsonb)
+                  || jsonb_build_object('entered_at', v_enter)
+      where e.load_id = v_load
+        and e.event_type = 'GEOFENCE_DWELL'
+        and coalesce(e.payload->>'geofence_kind', '') = 'SITE';
+
+      alter table load_events enable trigger trg_load_events_immutable;
+    exception when others then
+      alter table load_events enable trigger trg_load_events_immutable;
+      raise;
+    end;
 
     update geofence_states gs set
       entered_at = v_enter,
@@ -466,22 +564,15 @@ begin
     where gs.load_id = v_load
       and g.id = gs.geofence_id
       and g.kind = 'SITE'
-      and (gs.entered_at is distinct from v_enter or gs.state = 'PENDING_IN');
-
-    update load_events e set
-      payload = coalesce(e.payload, '{}'::jsonb)
-                || jsonb_build_object('entered_at', v_enter)
-    where e.load_id = v_load
-      and e.event_type = 'GEOFENCE_DWELL'
-      and coalesce(e.payload->>'geofence_kind', '') = 'SITE';
+      and (gs.entered_at is distinct from v_enter or gs.state <> 'INSIDE');
 
     perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
   end if;
 
-  /* Inne transporty: PENDING_IN na SITE → ENTER z czasem pierwszej pozycji. */
+  /* Inne: PENDING_IN na SITE → ENTER z czasem pierwszej pozycji po ostatnim EXIT. */
   for v_row in
-    select gs.load_id, gs.geofence_id, gs.entered_at, gs.last_eval_at,
-           g.name as geofence_name, l.status::text as status
+    select gs.load_id, gs.geofence_id, g.name as geofence_name, g.geom,
+           g.notify_orgs, g.message_tpl
       from geofence_states gs
       join geofences g on g.id = gs.geofence_id
       join loads l on l.id = gs.load_id
@@ -490,29 +581,23 @@ begin
        and g.active is true
        and l.status::text not in ('UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED')
   loop
-    v_first := coalesce(v_row.entered_at, v_row.last_eval_at);
-    if v_first is null then
-      select p.ts into v_first
-        from positions p
-       where p.load_id = v_row.load_id
-         and coalesce((p.raw->>'stale_point')::boolean, false) is not true
-         and st_contains(
-               (select geom from geofences where id = v_row.geofence_id),
-               p.geom_raw::geometry
-             )
-       order by p.ts
-       limit 1;
-    end if;
-    if v_first is null then
-      continue;
-    end if;
-
-    select p.geom_raw into v_pt
+    select p.ts, p.geom_raw into v_first, v_first_pt
       from positions p
      where p.load_id = v_row.load_id
        and coalesce((p.raw->>'stale_point')::boolean, false) is not true
-     order by p.ts desc
+       and st_contains(v_row.geom, p.geom_raw::geometry)
+       and p.ts > coalesce((
+             select max(e.occurred_at) from load_events e
+              where e.load_id = v_row.load_id
+                and e.event_type = 'GEOFENCE_EXIT'
+                and (e.payload->>'geofence_id')::uuid = v_row.geofence_id
+           ), '-infinity'::timestamptz)
+     order by p.ts
      limit 1;
+
+    if v_first is null then
+      continue;
+    end if;
 
     v_fresh := (now() - v_first) < interval '2 hours';
     v_prev := current_setting('tower.bulk_quiet', true);
@@ -523,7 +608,7 @@ begin
     update geofence_states set
       state = 'INSIDE',
       consec_fixes = 0,
-      entered_at = coalesce(entered_at, v_first),
+      entered_at = v_first,
       last_eval_at = now()
     where load_id = v_row.load_id
       and geofence_id = v_row.geofence_id
@@ -532,13 +617,14 @@ begin
     if found then
       insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key)
       values (
-        v_row.load_id, 'GEOFENCE_ENTER', v_first, 'TELEMATICS_API', v_pt,
+        v_row.load_id, 'GEOFENCE_ENTER', v_first, 'TELEMATICS_API', v_first_pt,
         jsonb_build_object(
           'geofence_id', v_row.geofence_id,
           'geofence_kind', 'SITE',
           'geofence_name', v_row.geofence_name,
-          'confirm', 'hotfix_571_site_pending',
-          'notify', v_fresh
+          'notify_orgs', to_jsonb(v_row.notify_orgs),
+          'message_tpl', v_row.message_tpl,
+          'confirm', 'hotfix_571_site_pending'
         ),
         'GEOFENCE_ENTER:' || v_row.load_id::text || ':' || v_row.geofence_id::text || ':'
           || to_char(v_first at time zone 'UTC', 'YYYYMMDDHH24MI')
@@ -548,7 +634,12 @@ begin
 
     perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
   end loop;
-exception when others then
-  raise warning '#571 SITE hotfix: %', sqlerrm;
 end;
-$sg23$;
+$$;
+
+revoke all on function public.hotfix_571_site_enter_backdate() from public, anon, authenticated;
+grant execute on function public.hotfix_571_site_enter_backdate() to service_role;
+comment on function public.hotfix_571_site_enter_backdate() is
+  '#571 F7: backdate SITE ENTER/AT_SITE do pierwszej pozycji; PENDING_IN SITE → ENTER; bez ponownych powiadomien.';
+
+select public.hotfix_571_site_enter_backdate();

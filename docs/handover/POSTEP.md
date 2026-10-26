@@ -5583,3 +5583,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (wpisane). PR #574: brak „gotowe” po `edc789fd` — F7 korekta (Spawn2018).
 - Scalanie: brak (CI db FAIL 296/6 na starym dwell SITE; visual ✔). Bez push na main.
 - **#571 krok (F7):** SITE → ENTER/`AT_SITE` od 1. pozycji w promieniu; dwell cron pomija SITE; `stale_point` w `p_raw`; SG-23 backdate 10:22 UTC bez powiadomień; testy +14 → EXPECTED status **305**. CI → prośba F7.
+
+## 2026-10-26 15:15 — #571 F7 r2 #574: poprawki (nie gotowe)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `c3258a58`: **nie daję znaku** (Spawn2018).
+- Scalanie: brak. Bez push na main. CI na odrzuconym SHA anulowane.
+- **#571 krok (F7 r2):** `hotfix_571_site_enter_backdate` — kod SG-23 z `shipment_items`/`load_sms_code`; disable `trg_load_events_immutable`; czas = pierwsza pozycja w SITE; `entered_at` zerowany przy EXIT; dwell: pierwsza po EXIT + `bulk_quiet` &gt;2 h; cron bez połykania błędów; testy 779 m / parking×3 / re-entry / backdate → EXPECTED status **314**. CI → prośba F7.
