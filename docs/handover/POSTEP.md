@@ -5538,3 +5538,36 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
 - CI `833d9415`: unit ✔ (`40293902818`), visual ✔ (`40293902904`), db ✔ (`40293903234`, 14m3s). F7 r9 (pole z łatki + CANCELLED SG-01) bez zmian kodu od tego SHA. EXPECTED import **225**.
 - Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs).
+
+## 2026-10-26 11:41 — #560 SCALONE; start #569 + wpis #567
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. #567/#569 bez etykiety `dla-cursora` — wpisane z F7 #560 (Spawn2018) + treść zgłoszeń.
+- Scalanie: **#560** — „F7: gotowe do scalenia” (Spawn2018, 09:31Z, po `a8bbda41`), CI unit/db/visual ✔, bez forka → `gh pr merge --merge` `0feb8a94` (09:41Z). Bez push na main.
+- Po F7 przed `write_enabled`: **#569** (kod+pole z wiersza konfliktu), `write_test_ok_at`, **#567 23B** (lista zmian; import wyłączony).
+- Ten commit (`pakiet/569-a6-conflict-code`): `pickOutboundConflictNote` + unit (#569); PLAN §4/§5 W53–W60 / §6 Po 1.0 / §8; POSTEP. Test db 1 sprawa — w tym PR albo następnym kroku.
+
+## 2026-10-26 11:22 — #569 test db multi-kod (PR #570)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” na #570 (CI `4cb34e4b` unit/visual/db ✔ — czekam F7 po tym commicie). Bez push na main.
+- **#569 krok:** `tests/db/import.sh` — transport SG-01+SG-M2, konflikt pliku na SG-M2 → sprawa z kodem SG-M2; Edge `l1b_note_file_changed(SG-M2)` → nadal 1; primary dałby 2. EXPECTED import **234**. PLAN §4/§8.
+
+## 2026-10-26 12:00 — #569 F7 #570: preferuj pole z łatki
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania; bez `pilne` do budowy.
+- Scalanie: F7 #570 na `0e16897` — jedna poprawka (nie „gotowe”). Bez push na main.
+- **#569 krok:** `pickOutboundConflictNote` — najpierw wiersz z polem z łatki, potem dowolny; unit SG-A spoza + SG-B z łatki; komentarz db (wybór kodu = unit). CI → prośba F7.
+
+## 2026-10-26 12:25 — #569 CI zielone na ed1e3ba1 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” na #570. Jedyny otwarty PR. Bez push na main.
+- CI `ed1e3ba1`: unit ✔, visual ✔, db ✔ (`40310257966` 13m55s / `40310257927`). F7 poprawka (pole z łatki) bez zmian kodu od tego SHA. EXPECTED import **234**.
+- Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs). Po scaleniu: `write_test_ok_at` → #567 23B.
+
+## 2026-10-26 12:45 — #569 F7 #570: brak wiersza + #571 wpisane
+
+- Skrzynka: #550 WSTRZYMANE; #571 (Spawn2018, PILNE strefy — bez etykiety `dla-cursora`, polecenie z F7 #570) → PLAN §4/§8. #538/#537/#500/#499/#412/#323/#320 w planie.
+- Scalanie: F7 #570 na `f7eafacd` — **nie gotowe** (1 poprawka). Bez push na main.
+- **#569 krok:** `pickOutboundConflictNote` — pomijaj `current==null` gdy inny wiersz obecny; `trim`/`''→null` jak import; unit (brak wiersza→SG-02, puste/null, łatka null/`{}`, jeden kod). Znane ograniczenie migawki per kod główny → §4/#569 i §8. Po scaleniu #569: **#571** → `write_test_ok_at` → #567 23B.
+- vitest `ksh-sharepoint-write` **23/23**. CI → prośba F7.

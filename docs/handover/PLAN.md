@@ -991,7 +991,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
 5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r9 ZROBIONE; EXPECTED import **225**; CI `833d9415` ✔ — czekam F7)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — SCALONE zapis (#560 `0feb8a94` / **0308**, F7 26.10 09:31Z); **przed włączeniem `write_enabled`:** #569 + `write_test_ok_at` + lista 23B (#567); import SharePoint wyłączony (23B)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
    - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; Rebase po #557: **0306→0308**.
@@ -1013,7 +1013,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **CI `c34c3e34` db FAIL (212/9) — ZROBIONE w teście:** write on przed PRE-SKIP; schedule_row przy write-off; nowy rev bez wymogu `import_id`; CANCELLED z wyrównanym schedule_row; B1 z SNAP-A→C + write on. EXPECTED import **225**.
      - **CI `cdc31b6c` db FAIL (224/1) — ZROBIONE w teście:** asercja CANCELLED liczyła `blocked` całego pliku (inne kody STATUS) → `1/1`; liczyć tylko `blocked` dla SG-01 / reason CANCELLED.
      - **F7 runda 9 — ZROBIONE w kodzie (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne. Asercja CANCELLED tylko SG-01. EXPECTED import **225**.
-     - **CI `833d9415` unit/visual/db ✔** — czekam „F7: gotowe do scalenia”. EXPECTED import **225**.
+     - **CI `833d9415` unit/visual/db ✔** → **F7: gotowe** (Spawn2018, 09:31Z na `a8bbda41`) → **SCALONE** `0feb8a94` (26.10.2026 09:41Z). EXPECTED import **225**.
+     - **Warunki włączenia zapisu (F7 po scaleniu):** ~~#560~~ → **#569** → **#571** (pilne strefy) → `write_test_ok_at` → **#567 23B** (`import_enabled` zostaje false).
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1033,8 +1034,20 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - próba z ROLLBACK na produkcji w oknie wdrożenia (jak R-1 w P7);
    - linia „zsynchronizowano …” w Harmonogramie; zmiana w pliku → „było → jest” w dzwonku.
 
+### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — W TOKU (`pakiet/569-a6-conflict-code`, PR #570)
+Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza, w którym wykryto rozjazd (nie z pierwszego kodu). Unit: 2 kody, konflikt na drugim → kod drugiego + pole z łatki. **Test db:** import (konflikt na SG-M2) + Edge `l1b_note_file_changed(SG-M2)` → 1 sprawa; primary dałby 2. (EXPECTED import **234**).
+- **F7 #570 (`ed1e3ba1`) — ZROBIONE w kodzie:** najpierw wiersz różniący się polem **z łatki**, dopiero potem pierwszy rozjechany + dowolne pole (Edge = import; uniknięcie 2 spraw). Unit: SG-A spoza łatki + SG-B z łatki → SG-B/`carrier_order_no`. Komentarz w `import.sh`: wybór kodu = unit.
+- **F7 #570 na `f7eafacd` — ZROBIONE w kodzie (1 poprawka + testy):** w obu pętlach pomijaj `current == null`, gdy w pliku jest inny obecny wiersz (SG-01 zniknął + SG-02 rozjazd → SG-02, nie 2 sprawy). Normalizacja komórek jak import (`trim` + `''→null`). Unit: brak wiersza + drugi z rozjazdem; puste/null/spacje; łatka null/`{}`; jeden kod. **CI → prośba F7.**
+- **Znane ograniczenie (nie blokuje F7; przed `write_enabled`):** `expected_file` = migawka tylko kodu głównego (0308), import patrzy na `prev` wiersza — przy kodzie pobocznym Edge może wskazać inny wiersz/pole niż import. Rozwiązanie: migawka per kod albo `prev` per kod — punkt w #569/#567 przed włączeniem zapisu.
+
+### #571 · PILNE: wjazd do strefy potwierdzany czasem (dwell), nie tylko 2. pozycją — DO ZROBIENIA (po #569; przed `write_test_ok_at` / #567 23B; P8 / strefy)
+Źródło: #571 (Spawn2018; F7 #570: pierwszeństwo przed #567). SG-23 na placu Boden (`PENDING_IN`, 1 fix) — emtrack przy postoju ~4 h. **Baza:** przy `PENDING_IN` + ostatnia pozycja w strefie + ≥ `dwell_seconds` bez pozycji poza → wjazd z czasem pierwszej pozycji (cykl 1–5 min, service_role); `debounce_fixes=2` zostaje jako szybsza ścieżka; wszystkie strefy. Korekta SG-23: `AT_SITE` 26.10 10:22 UTC + Historia; powiadomienia jeśli < 2 h. Testy db: 1 pozycja + 10 min → wjazd; w strefie→poza w 10 min → brak; `stale_point` nie potwierdza. Promienia nie zmieniać. `assert_not_preview` w RPC zapisu.
+
+### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at` / #571)
+Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
+
 ### C4–C13 bez zmian zakresu
-Zostają jak w planie, po A6.
+Zostają jak w planie, po A6 / #569 / #567 23B.
 - C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
@@ -1344,6 +1357,14 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W50 | Lista 23.10 (#482) pkt 1–6 potwierdzone; P1 TAK — SMS ze stref przy wyłączonej wysyłce zewnętrznej idą na numery z Opcji › Strefy (#538 14A) | — | **potwierdzone 25.10.2026** |
 | W51 | D-J1 (#537 J-19): decyzja właściciela — czy usuwać / przepisywać PII z migracji `0176_*` w publicznym repo (bez zmiany historii gita bez zgody) | po #536 | czeka (#537 sekcja J) |
 | W52 | #557 F7 r3: pomijać `raw.stale_point` w `trg_positions_eta`, `trg_sms_ksh_1h_position` i ciszy GPS (mapa: front już pomija) | po scaleniu #562 | kolejka wykonawcy (nie właściciel) |
+| W53 | #567 17B: 2FA Administratorów HHL wyłączona do po 1.0; brama 28.10 bez wymogu 2FA | po 1.0 | **zamknięte 26.10.2026 — po 1.0** (#567) |
+| W54 | #567 18B: Polferries — w 1.0 pozycja szacowana z rozkładu; nowe AIS po 1.0 | po 1.0 | **zamknięte 26.10.2026 — po 1.0** (#567) |
+| W55 | #567 19A: pusta komórka godziny w pliku KSH nie zmienia okna; rozstrzygnięcia decyzji w Historii widzi też KSH — sprawdź import 0303 + Historia | A6 / po #567 | kolejka wykonawcy |
+| W56 | #567 20A: SG-18/SG-20/T-11 — położenie i linki RIO podaje SCX (wiadomość wysyła właściciel) | — | **zamknięte 26.10.2026** (#567) — nic nie budować |
+| W57 | #567 21A: puste godziny początku rozładunku SG-01/SG-02/T-01 zostają | — | **zamknięte 26.10.2026** (#567) |
+| W58 | #567 22A: dzwonek na iPhonie po powrocie z tła działa | — | **zamknięte 26.10.2026** (#567) |
+| W59 | #567 23B: lista zmian dry_run z pliku KSH przed włączeniem importu (`import_enabled` false) | po #569 / `write_test_ok_at` | kolejka (#567) |
+| W60 | #567 24A: 17 decyzji koordynatora 25.10 zaakceptowanych — zamknąć powiązane W; #546 zrobione | — | **potwierdzone 26.10.2026** (#567) — #546 zamknąć gdy otwarte |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1364,7 +1385,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 - PR7, P2-TILES, B-VERIFY-17.3, KOPIA-D → P11 pkt 4;
 - E-MAIL-TYG, P3-BRACES i zależności deweloperskie z lukami (nie blokują scalenia) → brama niedzielna (§3).
 
-**Część 3 — PO 1.0** (#538 8A / W18, 25.10.2026): e-CMR (6.9); kanał zespołowy Slack/Teams (9.9); kalendarz do subskrypcji (9.10); raport śladu węglowego (10.9); retencja `files/` w R2. Nie budować przed `release-1.0`.
+**Część 3 — PO 1.0** (#538 8A / W18, 25.10.2026; #567 17B/18B, 26.10): e-CMR (6.9); kanał zespołowy Slack/Teams (9.9); kalendarz do subskrypcji (9.10); raport śladu węglowego (10.9); retencja `files/` w R2; **weryfikacja dwuetapowa Administratorów HHL** (17B — brama 28.10 bez wymogu 2FA; nic w `security_flags` do 1.0); **AIS Polferries** (18B — w 1.0 zostaje pozycja szacowana z rozkładu z dopiskiem „szacowana”). Nie budować przed `release-1.0`.
 
 **Część 4 — Rezerwa:** **usunięta** (D-20261017-0730-01, 3A i 2C). Kalibracja ETA po 5 dostawach (E15), akcja SMS w kreatorze (E35), test wydajności w skali 3× (E46), E37 „Co nowego” i E24 komunikat — robisz normalnie w swoich paczkach (P4-u / P8 / P11 / P10b / P9).
 
@@ -1722,3 +1743,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 10:40 | #560 F7 r9 NIEGOTOWE (pole konfliktu z łatki) + fix asercji CANCELLED — docs→kod | pętla |
 | 26.10.2026 10:50 | #560 F7 r9 kod (patchKeys + asercja CANCELLED SG-01); EXPECTED 225; CI→F7 | pętla |
 | 26.10.2026 11:00 | #560 CI `833d9415` unit/visual/db ✔; prośba F7; EXPECTED import 225 | pętla |
+| 26.10.2026 11:41 | #560 SCALONE `0feb8a94` (F7 09:31Z); #569+#567 wpisane §4/§5/§8; start #569 conflict code | pętla |
+| 26.10.2026 11:22 | #569 test db multi-kod (import+Edge → 1 sprawa); EXPECTED import 234; PR #570 | pętla |
+| 26.10.2026 12:00 | #569 F7 #570 poprawka: preferuj wiersz z polem z łatki; unit + komentarz db; CI→F7 | pętla |
+| 26.10.2026 12:25 | #569 CI `ed1e3ba1` unit/visual/db ✔; prośba F7; EXPECTED import 234; dalej write_test_ok_at → #567 23B | pętla |
+| 26.10.2026 12:45 | #569 F7 #570: pomijaj kod bez wiersza w pliku gdy jest inny; norm trim/''→null; #571 wpisane (pilne, po #569); CI→F7 | pętla |
