@@ -89,9 +89,11 @@ describe('A8 — Stan systemu: „następna próba o …”', () => {
     // 12:00 czasu polskiego → dziś 13:15
     expect(at(demoSources('2026-09-23T10:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('23.09, 13:15');
     expect(demoFuelScreen('2026-09-23', '12:00').alarm?.nextTry).toBe('13:15');
-    // 16:32 → dziś już nie ma prób; Stan systemu: jutro 07:15
-    expect(at(demoSources('2026-09-23T14:32:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('24.09, 07:15');
-    expect(demoFuelScreen('2026-09-23', '16:32').alarm?.nextTry).toBeNull();
+    // #563: 16:32 → dziś 17:15 (nie jutro); po 23:15 → jutro 07:15
+    expect(at(demoSources('2026-09-23T14:32:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('23.09, 17:15');
+    expect(demoFuelScreen('2026-09-23', '16:32').alarm?.nextTry).toBe('17:15');
+    expect(at(demoSources('2026-09-23T21:40:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('24.09, 07:15');
+    expect(demoFuelScreen('2026-09-23', '23:40').alarm?.nextTry).toBeNull();
   });
   it('źródła bez uwagi nie mają czasu próby', () => {
     expect(demoSources(NOW).filter((r) => r.state === 'ok').every((r) => !r.nextTryAt)).toBe(true);
@@ -129,8 +131,9 @@ describe('F7 runda 2 — czas polski po zmianie czasu (25.10) w danych demo', ()
     expect(at(fuel.nextTryAt!)).toBe('23.09, 07:15');
     expect(at(fuel.since!)).toBe('22.09, 07:15');
     expect(Date.parse(fuel.since!)).toBeLessThan(Date.parse('2026-09-23T04:00:00.000Z'));
-    // po 25.10 (czas zimowy) nadal 07:15 czasu polskiego
-    expect(at(demoSources('2026-10-27T15:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('28.10, 07:15');
+    // po 25.10 (czas zimowy): 16:00 → dziś 17:15; po 23:15 → jutro 07:15 (#563)
+    expect(at(demoSources('2026-10-27T15:00:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('27.10, 17:15');
+    expect(at(demoSources('2026-10-27T22:40:00.000Z').find((r) => r.id === 'fuel')!.nextTryAt!)).toBe('28.10, 07:15');
     /* F7 runda 3: w poniedziałek ekran paliwa nie ma alarmu — Stan systemu też „Działa” */
     const mon = demoSources('2026-10-26T15:00:00.000Z').find((r) => r.id === 'fuel')!;
     expect([mon.state, mon.nextTryAt ?? null]).toEqual(['ok', null]);
