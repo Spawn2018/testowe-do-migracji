@@ -5531,3 +5531,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
 - Scalanie: brak „F7: gotowe”. Bez push na main.
 - Kod: `conflictFieldFromSnaps(…, patchKeys)`; outbound przekazuje `Object.keys(patch)`; test CANCELLED liczy tylko SG-01/`CANCELLED`. EXPECTED import **225**; unit 20/20. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 11:00 — A6 #560 CI zielone na 833d9415 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
+- CI `833d9415`: unit ✔ (`40293902818`), visual ✔ (`40293902904`), db ✔ (`40293903234`, 14m3s). F7 r9 (pole z łatki + CANCELLED SG-01) bez zmian kodu od tego SHA. EXPECTED import **225**.
+- Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs).
