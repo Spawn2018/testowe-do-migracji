@@ -58,18 +58,22 @@ export default function LiveFuel({ readOnly = false, party }: { readOnly?: boole
         /* F7 #415: ceny tygodnia bieżącego — wskaźniki dla załadunku w przyszłym tygodniu liczone „na poniedziałek”
            (prognoza z dzisiejszym „dziś” bierze tydzień kotwicy, nie bieżący); z wyniku tylko lista dni do dziś */
         sb.rpc('sefs_week_for_load', { p_project: pid, p_load_date: nextMon, p_today: nextMon }),
-        sb.from('fuel_index_readings').select('value,published_on,corrects_id').eq('project_id', pid).eq('index_code', 'PLN')
+        sb.from('fuel_index_readings').select('id,value,published_on,corrects_id').eq('project_id', pid).eq('index_code', 'PLN')
           .gte('published_on', addDays(mon, -21)).order('published_on'),
         sb.from('integration_runs').select('ran_at,ok,result').eq('job', 'fuel-prices').order('ran_at', { ascending: false }).limit(30),
       ]);
       const err = c.error ?? n.error ?? d.error ?? pl.error ?? r.error;
       setMsg(err ? err.message : null);
+      /* #563: korekta wygrywa — bez oryginałów wskazanych przez corrects_id (jak currentReadings / baza) */
+      const plRows = (pl.data ?? []) as { id: number; value: number; published_on: string | null; corrects_id: number | null }[];
+      const plCorrected = new Set(plRows.map((x) => x.corrects_id).filter((x): x is number => x !== null));
       setCalc({
         cur: (c.data ?? null) as WeekCalc | null,
         next: (n.data ?? null) as WeekCalc | null,
         curDays: (d.data ?? null) as WeekCalc | null,
-        plnPubs: ((pl.data ?? []) as { value: number; published_on: string | null; corrects_id: number | null }[])
-          .filter((x) => x.published_on && x.corrects_id == null).map((x) => ({ value: x.value, published_on: x.published_on! })),
+        plnPubs: plRows
+          .filter((x) => x.published_on && !plCorrected.has(x.id))
+          .map((x) => ({ value: x.value, published_on: x.published_on! })),
         runs: (r.data ?? []) as FuelRun[],
       });
     } catch (e) {

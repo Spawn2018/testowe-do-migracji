@@ -1046,20 +1046,14 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 - **Testy status:** EXPECTED **320**. Uwagi F7 (§8): drganie GPS; dwell_min w payload — następczy PR.
 - Po #574 scalone też wygląd: **#576** (`21c24df8`, paliwo „do X”) i **#575** (`5d9f22fe`, BN9-a katalog promów).
 
-### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (`pakiet/567-23b-lista-zmian`, migracja **0310**; po #571; `write_test_ok_at` przed `write_enabled` prod)
-Źródło: #567 (Spawn2018). **23B (krok):** `ksh_sync_state.preview` + `ksh_sync_preview_store`/`_get`/`_build`; lista z `import_schedule.changed` (N9); bez PII; `field_label` PL; znacznik `manual_after_import` z `audit_log` po ostatnim `schedule_imports`; Edge zapis po każdym przebiegu; dry_run **nie** skipuje po hash (#567). EXPECTED import **240**; nullguard **856**. `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. CI db FAIL na `b07da9d2` (search_path ×3 helperów; store jak upsert 0304; test bez EXECUTE) — poprawka w tym PR.
+### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — SCALONE (#579 `ee0a6dee`, 26.10.2026 22:22 UTC, migracja **0310**; `deploy-main` w toku)
+Źródło: #563. **#563 PRZED #577**. t44: SEK 23,00 / PLN 7,15 / ×1,14; `tier_bound=MAX`, `avg_days_pln=7`; korekty w średniej; SEFS_WEEK_CORR; baf **105**; nullguard **852**. Front `lookupMult`/`sefsWeek`.
 
-### #563 · Opłata paliwowa od t44 + korekty cen (D-20261026-1506-01; po #567; rozliczenia) — DO ZROBIENIA
-Źródło: #563 (Spawn2018) + komentarz PR #577 15:37Z + komentarze #563 (właściciel 15:06). Kolejność po #577: **#563** → następczy mały PR po #574 (`dwell_min` w payload) → **BN0 (#572)**.
-1. **Korekty wygrywają** w `sefs_sek_daily_avg` / `sefs_pub_avg` / froncie (`LiveFuel`, `sefsWeek`, `fuelPublSource`); tydzień zamknięty → sprawa HHL bez cichego przeliczenia; przebiegi 17:15 i 23:15; najpóźniejszy przebieg wygrywa (#563 pkt 1–6).
-2. **Od t44 (załadunki ≥ 26.10):** `sefs_parameters` nowa wersja `tier_bound='MAX'` („do X”), `avg_days_pln=7`; ≤43 bez zmian (`MIN`, 5 publ. PLN). Średnia zaokrąglana do 0,01 przed lookup. Wynik kontrolny t44: SEK **23,00** / PLN **7,15** / ×**1,14** (dziś błędnie 23,03/7,14/×1,13).
-3. Migawki transportów z załadunkiem ≥ 26.10 — przeliczyć; faktury/wcześniejsze — bez zmian. Teksty UI „do X” — koordynator (`wyglad/*`, F1).
+### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311** po #563; F7 pkt 1–8)
+Źródło: #567. Po scaleniu #563: migracja 0310→**0311**. **F7 nie dam** do pkt 1–8 (podgląd niefatalny/dry_run, `ksh_sync_require_service`, wt z WT, manual tylko user, kind added/missing, pending_write, testy z `import_schedule` dry_run). EXPECTED import **240**; nullguard **856**.
 
-### #574-nast · dwell_min w payload (uwaga F7 #574) — DO ZROBIENIA (mały PR po #563)
-Uwaga F7 przy #574 (§8 / #571): `dwell_min` w payload — osobny mały PR po #563, przed BN0.
-
-### BN0 · #572 Karlskrona→Boden pomarańczowa linia HERE (po #563 i #574-nast; przed P9 Mapy) — DO ZROBIENIA
-Źródło: #572 (Spawn2018). `here-roads` leg `SE-KAA` z via z `SE_E22`; odchyłka ≤ 2 km; rysunek `#E5A544` na Mapie/Przegląd/Kokpit.
+### #574-nast · dwell_min w payload — DO ZROBIENIA (po #577)
+### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1770,7 +1764,16 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 15:45 | #571 F7 r3 #574: OUTSIDE bez powrotu; drop fn; notice; testy UUID a1–a7 + idempotencja → status **319** | pętla |
 | 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
 | 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
-| 26.10.2026 16:55 | #571 SCALONE #574 `25546fcc` (F7 15:21Z); #576 `21c24df8`; #575 `5d9f22fe`; start #567 23B **0310** | pętla |
-| 26.10.2026 17:45 | #567 db FAIL (search_path×3, store service_role, EXPECTED nullguard 856); kolejka po #577: #563 → #574-nast → BN0 #572 | pętla |
-| 26.10.2026 18:20 | #567 db FAIL r2: `schedule_imports.imported_at` (nie created_at) w preview_build | pętla |
-| 26.10.2026 18:45 | #567 db FAIL r3: cofnięcie PUBLIC na helperach (security/nullguard); import 240 ✔ | pętla |
+| 26.10.2026 16:55 | #571/#576/#575 SCALONE; start #567 23B (#577); CI FAIL→fix `imported_at`/search_path | pętla |
+| 26.10.2026 17:45 | #567 db FAIL (search_path×3, store); kolejka #563 PRZED #577 | pętla |
+| 26.10.2026 18:20 | #567 db FAIL r2: `schedule_imports.imported_at` w preview_build | pętla |
+| 26.10.2026 18:45 | #567 db FAIL r3: cofnięcie PUBLIC na helperach; import 240 ✔ | pętla |
+| 26.10.2026 19:05 | Kolejka: **#563 PRZED #577**; start `pakiet/563-paliwo-t44` migracja **0310** | pętla |
+| 26.10.2026 21:55 | #563 0310 §11: migawki załadunek ≥26.10 | pętla |
+| 26.10.2026 22:30 | #563 0310 §12: SEFS_WEEK_CORR; baf **81** | pętla |
+| 26.10.2026 22:55 | #563 F7 #579 blokady 1–2 + pkt 3–6; baf **90** | pętla |
+| 26.10.2026 23:15 | #563 F7 #579 r2: SEFS_WEEK_CORR tylko HHL; baf **99** | pętla |
+| 26.10.2026 23:45 | #563 F7 #579 r3: testy na różnych odczytach; baf **101** | pętla |
+| 26.10.2026 23:55 | #563 F7 #579 r4: new_mult z sefs_week_calc; baf **105** | pętla |
+| 27.10.2026 00:10 | #563 F7 #579 r4: CI ✔ `c70f4787` — prośba o F7 | pętla |
+| 27.10.2026 00:25 | #563 SCALONE #579 `ee0a6dee`; start #577 F7 1–8 (0310→**0311**) | pętla |

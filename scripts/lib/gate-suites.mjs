@@ -23,12 +23,12 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 240, // #567 23B: +6 preview_store/get×2/PII/label/bez EXECUTE; było 234 (#569)
-  nullguard: 856, // #567 23B: +4 preview_get EMPTY ×4 konta; było 852 (#557)
+  import: 249, // #567 F7: +9 (dry_run/added/missing/wt/pending/err); było 240
+  nullguard: 856, // #567 23B: +4 preview_get; baza #563 PURE lookup → 852
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
+  dec2: 73, // #455: +2 Działaj jako; katalog 25 typów (#563 SEFS_WEEK_CORR)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
@@ -49,7 +49,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 67, // D-1535: t40 ×1,14 override (+3); D-1300 F7-2 SOURCE
+  baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)

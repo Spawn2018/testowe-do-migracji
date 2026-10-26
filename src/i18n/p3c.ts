@@ -505,7 +505,7 @@ const pl: Dict = {
   ol2_src_weather_cad: 'co godzinę',
   ol2_src_weather_feeds: 'fala i wiatr na rejsach, sprawy promowe',
   ol2_src_fuel: 'Ceny paliwa',
-  ol2_src_fuel_cad: 'codziennie 07:15, ponowienia 09:15 i 13:15',
+  ol2_src_fuel_cad: 'codziennie 07:15, ponowienia 09:15, 13:15, 17:15 i 23:15',
   ol2_src_fuel_feeds: 'opłata paliwowa',
   ol2_src_mail: 'Limit poczty',
   ol2_src_mail_cad: 'przy wysyłce',

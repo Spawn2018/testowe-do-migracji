@@ -22,6 +22,8 @@ interface Params {
   agreed_with_carrier: boolean; agreement_ref: string | null; note: string | null; created_at: string;
   /** I-13 (0063): COST — koszt (przewoźnik), REVENUE — przychód (KSH), BOTH */
   applies_to?: 'COST' | 'REVENUE' | 'BOTH';
+  /** #563: MIN ≤ t43 („od”), MAX od t44 („do X”) */
+  tier_bound?: 'MIN' | 'MAX' | null;
 }
 interface Reading {
   id: number; index_code: 'SEK' | 'PLN'; period: string; reading_date: string; value: number; source_url: string;
@@ -95,12 +97,18 @@ export default function BafForm() {
     if (!sek) return null;
     const pln = live.find((r) => r.index_code === 'PLN' && r.period === sek.period);
     if (!pln) return null;
-    const ms = lookupMult(Number(sek.value), params.tiers_sek); const mp = lookupMult(Number(pln.value), params.tiers_pln);
+    const bound = params.tier_bound === 'MAX' ? 'MAX' : 'MIN';
+    const ms = lookupMult(Number(sek.value), params.tiers_sek, bound);
+    const mp = lookupMult(Number(pln.value), params.tiers_pln, bound);
     return { period: sek.period, ms, mp, applied: Math.min(ms, mp) };
   }, [params, live]);
 
   // B-6h — czy poprzedni tydzień ma odczyty do opłaty paliwowej (to samo okno co sefs_week_calc)
-  const week = useMemo(() => prevWeekStatus(readings, warsawDay(new Date()), params ? { sek: params.tiers_sek, pln: params.tiers_pln } : null), [readings, params]);
+  const week = useMemo(() => prevWeekStatus(
+    readings, warsawDay(new Date()),
+    params ? { sek: params.tiers_sek, pln: params.tiers_pln } : null,
+    params?.tier_bound === 'MAX' ? 'MAX' : 'MIN',
+  ), [readings, params]);
 
   const run = async (fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) => {
     setBusy(true); setMsg(null);

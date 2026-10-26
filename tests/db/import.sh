@@ -1156,22 +1156,71 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: #569 primary ≠ konflikt (osobny klucz)"; else fail=$((fail+1)); echo "  FAIL  A6: #569 primary note → $out"; fi
 chk "A6: #569 primary dałby 2. sprawę" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "2"
 
-# --- #567 23B: lista zmian dry_run (preview) — ta sama logika pól co import (N9) ---
+# --- #567 23B F7: lista zmian dry_run (preview) ---
 echo; echo "[#567 23B] preview lista zmian"
-# Zmyślony changed jak z import_schedule (before=WT, after=plik); PII w fields — ma być odfiltrowane.
-CHG23='[{"code":"SG-00","load_id":"'"$L1"'","fields":["load_date","delivery_date","driver_name","driver_phone"],"before":{"load_date":"2026-10-01","delivery_date":"2026-10-05","driver_name":"X","driver_phone":"Y"},"after":{"load_date":"2026-11-01","delivery_date":"2026-11-05","driver_name":"A","driver_phone":"B"}}]'
-# session_user=postgres (brama) — jak upsert 0304; SET ROLE service_role jak Edge.
+# F7 pkt 8: prawdziwy import_schedule dry_run → store (changed + added + cancel_candidates).
+# Najpierw dry_run z nowym kodem + zmiana daty istniejącego SG-01 (już w bazie po wcześniejszych importach).
+SG1=$(Q "select load_id from shipment_items where shipment_code='SG-01' limit 1")
+D_NEW=$(Q "select (current_date + 40)::text")
+D_DEL=$(Q "select (current_date + 45)::text")
+# Wiersz SG-01 ze zmienioną datą + nowy kod PRE-23B + bez SG-02/T-01 → missing; SG-00 zablokowany.
+RPRE="[{\"code\":\"SG-01\",\"length_m\":18.21,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D_NEW\",\"delivery_date\":\"$D_DEL\"},
+       {\"code\":\"PRE-23B\",\"length_m\":10,\"width_m\":2.5,\"height_m\":2.5,\"qty\":1,\"total_weight_t\":5,\"load_date\":\"$D_NEW\",\"delivery_date\":\"$D_DEL\"}]"
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
-  select (ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 40519, 'h23b')->>'n');
+  with r as (
+    select import_schedule('$P', '$RPRE'::jsonb, '{}'::text[],
+      '{\"name\":\"pre23.xlsx\",\"hash\":\"pre23\",\"source\":\"SHAREPOINT\"}'::jsonb, true) as j
+  )
+  select ksh_sync_preview_store(
+    '$P',
+    coalesce((select j->'changed' from r), '[]'::jsonb),
+    now(), 111, 'pre23',
+    coalesce((select j->'added' from r), '[]'::jsonb),
+    coalesce((select j->'cancel_candidates' from r), '[]'::jsonb)
+  )->>'n';
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | grep -E 'ERROR:|^[0-9]+$' | head -1 | sed 's/^ERROR:  //')
-chk "#567 23B: preview_store n=2 (bez PII)" "$out" "2"
-val "#567 23B: HHL czyta preview" $HHL "select (ksh_sync_preview_get()->>'n')" "2" commit
-val "#567 23B: KSH nie czyta preview" $KSH "select ksh_sync_preview_get() is null" "t" commit
+# n >= 1 (changed i/lub added/missing).
+if echo "$out" | grep -Eq '^[1-9][0-9]*$'; then ok=$((ok+1)); echo "  OK    #567 23B: preview z import_schedule dry_run n=$out"; else fail=$((fail+1)); echo "  FAIL  #567 23B: preview dry_run → $out"; fi
+chk "#567 23B: preview istnieje (bez PII wymaga listy)" \
+  "$(Q "select (preview is not null and jsonb_typeof(preview->'changes')='array')::text from ksh_sync_state where project_id='$P'")" "true"
 chk "#567 23B: bez PII driver w changes" \
   "$(Q "select (not exists (select 1 from jsonb_array_elements(coalesce(preview->'changes','[]'::jsonb)) e where e->>'field' ~* 'driver|phone|pilot'))::text from ksh_sync_state where project_id='$P'")" "true"
-chk "#567 23B: field_label PL (Data załadunku)" \
+chk "#567 23B: kind added obecny" \
+  "$(Q "select bool_or(e->>'kind'='added')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+chk "#567 23B: kind missing obecny" \
+  "$(Q "select bool_or(e->>'kind'='missing')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+# Pole bez zmian: store z fields=[] → brak wiersza changed dla tego kodu.
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (ksh_sync_preview_store('$P', '[{\"code\":\"SG-01\",\"load_id\":\"$SG1\",\"fields\":[],\"before\":{},\"after\":{}}]'::jsonb, now(), 1, 'emptyf', '[]'::jsonb, '[]'::jsonb)->'changes')::text;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: pole bez zmian → brak wiersza" "$out" "[]"
+# Ręczny changed: wt z loads (nie before), PII odfiltrowane, pending_write.
+WT_LD=$(Q "select coalesce(plan_load_date::text,'') from loads where id='$SG1'")
+CHG23='[{"code":"SG-01","load_id":"'"$SG1"'","fields":["load_date","driver_name"],"before":{"load_date":"2099-01-01","driver_name":"X"},"after":{"load_date":"2099-02-02","driver_name":"Y"}}]'
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 2, 'wtchk')->>'n';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | grep -E 'ERROR:|^[0-9]+$' | head -1 | sed 's/^ERROR:  //')
+chk "#567 23B: preview_store n=1 (bez PII)" "$out" "1"
+chk "#567 23B: wt = bieżące WT (nie before 2099)" \
+  "$(Q "select (e->>'wt' is not distinct from nullif('$WT_LD',''))::text from jsonb_array_elements((select preview->'changes' from ksh_sync_state where project_id='$P')) e where e->>'field'='load_date'")" "true"
+chk "#567 23B: field_label PL" \
   "$(Q "select bool_or(e->>'field_label'='Data załadunku')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+chk "#567 23B: pending_write false bez kolejki" \
+  "$(Q "select bool_and(coalesce(e->>'pending_write','false')='false')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+# Kolejka → pending_write true
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG1' and status='pending';
+  insert into ksh_sync_outbound (project_id, load_id, shipment_code, patch, expected_file, status)
+  values ('$P', '$SG1', 'SG-01', '{\"load_date\":\"$D_NEW\"}'::jsonb, '{}'::jsonb, 'pending')" >/dev/null
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (e->>'pending_write') from jsonb_array_elements(
+    ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 3, 'pend')->'changes'
+  ) e where e->>'field'='load_date';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: pending_write true przy kolejce" "$out" "true"
+val "#567 23B: HHL czyta preview" $HHL "select (ksh_sync_preview_get() is not null)" t commit
+val "#567 23B: KSH nie czyta preview" $KSH "select ksh_sync_preview_get() is null" "t" commit
 chk "#567 23B: authenticated bez EXECUTE preview_store" \
-  "$(Q "select has_function_privilege('authenticated','ksh_sync_preview_store(uuid,jsonb,timestamptz,int,text)','execute')")" f
+  "$(Q "select has_function_privilege('authenticated','ksh_sync_preview_store(uuid,jsonb,timestamptz,int,text,jsonb,jsonb)','execute')")" f
+err "#567 23B: authenticated store → 42501" $HHL "select ksh_sync_preview_store('$P','[]'::jsonb)" "42501|Tylko synchronizacja|permission denied"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

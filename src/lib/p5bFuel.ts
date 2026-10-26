@@ -99,8 +99,11 @@ export function feeOf(base: number, mult: number | null): number | null {
   return mult == null ? null : Math.round(base * (mult - 1) * 100) / 100;
 }
 
-/** Wiersz tabeli, w który wpada średnia — jak `lookupMult` (`sefs.ts`): średnia zaokrąglona do grosza, pierwszy wiersz
- *  z „do” ≥ średniej; poniżej tabeli — pierwszy wiersz, powyżej — ostatni. */
+/**
+ * Wiersz tabeli dla średniej — na zakresach z `tiersFromDb(…, bound)`.
+ * #563/F7: przy poprawnych from/to (MIN albo MAX) trafienie = pierwszy wiersz z `to` ≥ średnia;
+ * poniżej tabeli — pierwszy, powyżej — ostatni. Nie wołaj na surowych `{lte,mult}` bez `tiersFromDb`.
+ */
 export function tierOf(tiers: readonly FuelTier[], avg: number | null): number {
   if (avg == null || tiers.length === 0) return -1;
   const v = Math.round(avg * 100) / 100;

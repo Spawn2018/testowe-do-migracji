@@ -18,7 +18,7 @@ const dayAt = (nowIso: string, daysBack: number, hh: number, mm: number) => {
 };
 const hmNow = (nowIso: string) => new Intl.DateTimeFormat('pl-PL', { timeZone: TZ_OPS, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(nowIso));
 
-/** A8 w demo: ta sama następna próba co ekran Opłata paliwowa (09:15, 13:15; potem jutro 07:15). */
+/** A8 w demo: ta sama następna próba co ekran Opłata paliwowa (#563: do 23:15; potem jutro 07:15). */
 function fuelNextTryAt(nowIso: string): string {
   const t = fuelNextTryToday(hmNow(nowIso));
   if (!t) return dayAt(nowIso, -1, Number(FUEL_FETCH_AT.slice(0, 2)), Number(FUEL_FETCH_AT.slice(3)));

@@ -35,10 +35,10 @@ const CUR_ORLEN = [-0.277, -0.3, -0.356, -0.349, -0.318, -0.318, -0.318];
 const PREV_OKQ8 = [0.11, -0.09, -0.54, 0.51, 0.51, 0.51, 0.51];
 const PREV_ORLEN = [0.222, 0.143, 0.035, 0.052, 0.06, -0.277, -0.277];
 
-/** E3: pobieranie cen o 07:15, ponowienia o 09:15 i 13:15 (czas polski). */
+/** E3 / #563: pobieranie 07:15, ponowienia 09:15, 13:15, 17:15, 23:15 (czas polski). */
 export const FUEL_FETCH_AT = '07:15';
-export const FUEL_RETRIES = ['09:15', '13:15'] as const;
-/** Następna automatyczna próba dziś po `nowHm` („HH:MM”, czas polski): 07:15, 09:15, 13:15; null — dziś już nie będzie. */
+export const FUEL_RETRIES = ['09:15', '13:15', '17:15', '23:15'] as const;
+/** Następna automatyczna próba dziś po `nowHm` („HH:MM”, czas polski); null — dziś już nie będzie. */
 export const fuelNextTryToday = (nowHm: string): string | null => [FUEL_FETCH_AT, ...FUEL_RETRIES].find((t) => t > nowHm) ?? null;
 
 /** `nowHm` — godzina zegara demo (czas polski); bez niej przykład z makiety („13:15”). */

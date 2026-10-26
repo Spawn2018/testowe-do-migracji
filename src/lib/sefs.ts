@@ -38,13 +38,28 @@ export const SEFS_SOURCES = {
 export const SEFS_SEK: SefsTier[] = tables.sek as SefsTier[];
 export const SEFS_PLN: SefsTier[] = tables.pln as SefsTier[];
 
-export function lookupMult(price: number, tiers: SefsTier[]): number {
+/**
+ * Odczyt mnożnika z tabeli załącznika (#563 / D-1506):
+ * - `MAX` (domyślnie — tabele JSON/`do_*`, od t44 w bazie „do X”): pierwszy próg `lte ≥ cena`; powyżej → ostatni;
+ * - `MIN` (≤ t43 w bazie, D-1322 „od”): najwyższy próg `lte ≤ cena`; poniżej pierwszego → pierwszy.
+ * Produkcja: przekaż `tier_bound` z wersji `sefs_parameters`.
+ */
+export type SefsTierBound = 'MIN' | 'MAX';
+export function lookupMult(price: number, tiers: SefsTier[], bound: SefsTierBound = 'MAX'): number {
   if (tiers.length === 0) return 1;
-  if (price <= tiers[0].lte) return tiers[0].mult;
-  for (const t of tiers) {
-    if (price <= t.lte) return t.mult;
+  const sorted = [...tiers].sort((a, b) => a.lte - b.lte);
+  if (bound === 'MAX') {
+    for (const t of sorted) {
+      if (price <= t.lte) return t.mult;
+    }
+    return sorted[sorted.length - 1].mult;
   }
-  return tiers[tiers.length - 1].mult;
+  let hit: SefsTier | null = null;
+  for (const t of sorted) {
+    if (t.lte <= price) hit = t;
+    else break;
+  }
+  return (hit ?? sorted[0]).mult;
 }
 
 export function round2(n: number): number {

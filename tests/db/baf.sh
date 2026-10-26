@@ -183,11 +183,67 @@ chk "załadunek 12.10, dziś 08.10 → PROGNOZA" "$(Q "select fuel_status||'/'||
 sys "select load_price_compute('$LNX', '2026-10-12')"
 M1=$(Q "select fuel_applied_mult from load_cost where load_id='$LNX'")
 chk "po niedzieli → OSTATECZNY (migawka)" "$(Q "select fuel_status from load_cost where load_id='$LNX'")" "OSTATECZNY"
+# Korekta SEK w dół (21,50 → ×1,09): applied = least(SEK,PLN) musi się zmienić (w górę do 30
+# nie zmienia applied, bo wygrywa PLN ×1,12).
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
-  select project_id, index_code, period, reading_date, 30.00, source_url, 'korekta po zamknięciu', id, 'test 0166'
+  select project_id, index_code, period, reading_date, 21.50, source_url, 'korekta po zamknięciu', id, 'test 0166'
     from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
 sys "select load_price_compute('$LNX', '2026-10-13')"
 chk "korekta po zamknięciu nie zmienia migawki" "$(Q "select fuel_applied_mult||'/'||fuel_status from load_cost where load_id='$LNX'")" "$M1/OSTATECZNY"
+# #563 pkt 3: zamknięty tydzień → sprawa HHL, bez cichego przeliczenia (trigger po INSERT korekty)
+chk "#563 zamknięty: 1 sprawa SEFS_WEEK_CORR" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 zamknięty: tytuł z ×stary / ×nowy / N" "$(Q "select (title ~ 'było ×')::text||'/'||(title ~ 'jest ×')::text||'/'||(title ~ 'transport')::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/true/true"
+chk "#563 zamknięty: idempotencja event_key" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")" "1"
+# F7 #579 r2 pkt 1: tylko HHL widzi SEFS_WEEK_CORR (SCX/KSH — 0)
+HHL_AUTH=11111111-0000-0000-0000-000000000001
+KSH_AUTH=11111111-0000-0000-0000-000000000002
+SCX_AUTH=11111111-0000-0000-0000-000000000003
+as_auth() { $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r'; }
+chk "#563 F7r2: HHL widzi SEFS_WEEK_CORR" "$(as_auth "$HHL_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 F7r2: SCX nie widzi SEFS_WEEK_CORR" "$(as_auth "$SCX_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
+chk "#563 F7r2: KSH nie widzi SEFS_WEEK_CORR" "$(as_auth "$KSH_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
+# F7 #579 r3+r4: jedna korekta na odczyt — druga/trzecia = inne dni tego samego
+# zamkniętego tygodnia (≤t43: cena = ostatnia publikacja ≤ dzień).
+# „od progu”: avg (21,50+6×22,20)/7=22,10 zostaje ×1,09 — 2. korekta musi dać
+# applied ≠ ×1,09 i ≠ migawki (tu 22,40 → avg 22,36 → ×1,11). Wartość celu z sefs_week_calc.
+# 3) SEK 07.10→22,80 pub 07.10 → avg 22,56 → ×1,12 = migawka → EXPIRED.
+CORR1_NEW=$(Q "select (detail->>'new_mult')::numeric(4,2)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")
+SNAP_MULT=$(Q "select (detail->>'old_mult')::numeric(4,2)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")
+N_CORR1=$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, 22.40, source_url, 'korekta 2 inny dzień', '2026-10-06'::date, id, 'test F7r4 update'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-06' and corrects_id is null"
+CORR2_CALC=$(Q "select (sefs_week_calc('$P','2026-10-12','2026-10-13')->>'applied_mult')::numeric(4,2)::text")
+chk "#563 F7r4: 2. korekta — sefs_week_calc ≠ corr1 i ≠ migawka" "$(Q "select ('$CORR2_CALC' is distinct from '$CORR1_NEW' and '$CORR2_CALC' is distinct from '$SNAP_MULT')::text")" "true"
+chk "#563 F7r3: 2. korekta (inny odczyt) zapisana" "$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")" "$((N_CORR1 + 1))"
+chk "#563 F7r2: nadal 1 sprawa po 2. korekcie" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 F7r2: 2. korekta zaktualizowała new_mult" "$(Q "select ((detail->>'new_mult')::numeric(4,2)::text is distinct from '$CORR1_NEW')::text||'/'||status::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/NEW"
+chk "#563 F7r4: new_mult = sefs_week_calc po 2. korekcie" "$(Q "select (detail->>'new_mult')::numeric(4,2)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "$CORR2_CALC"
+chk "#563 F7r2: event UPDATE po 2. korekcie" "$(Q "select count(*) from decision_events e join decisions d on d.id=e.decision_id where d.detail->>'event_key'='563:fuel-corr:$P:2026-10-05' and e.action='UPDATE'")" "1"
+chk "#563 F7r4: event UPDATE z new_mult z calc" "$(Q "select (e.payload->>'new_mult')::numeric(4,2)::text from decision_events e join decisions d on d.id=e.decision_id where d.detail->>'event_key'='563:fuel-corr:$P:2026-10-05' and e.action='UPDATE' order by e.at desc limit 1")" "$CORR2_CALC"
+N_CORR2=$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, 22.80, source_url, 'korekta 3 powrót inny dzień', '2026-10-07'::date, id, 'test F7r4 agree'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-07' and corrects_id is null"
+chk "#563 F7r3: 3. korekta (inny odczyt) zapisana" "$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")" "$((N_CORR2 + 1))"
+chk "#563 F7r4: po 3. korekcie sefs_week_calc = migawka" "$(Q "select ((sefs_week_calc('$P','2026-10-12','2026-10-13')->>'applied_mult')::numeric(4,2)::text = '$SNAP_MULT')::text")" "true"
+chk "#563 F7r2: powrót do zgodności → EXPIRED" "$(Q "select status::text||'/'||(expired_reason is not null)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "EXPIRED/true"
+# F7 #579 r2 pkt 3: korekta bez zmiany mnożnika → brak nowej sprawy; tydzień otwarty → brak
+N_BEFORE=$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")
+# Korekta SEK w t42 (zamknięty) o wartość w tym samym progu co już applied na LNX — najpierw upewnij się że LNX ma OSTATECZNY
+# tu: korekta PLN 05.10 bez wpływu na applied (wygrywa SEK) gdy SEK już przywrócony
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, value, source_url, 'korekta PLN bez zmiany applied', published_on, id, 'test F7r2 no-mult'
+    from fuel_index_readings where project_id='$P' and index_code='PLN' and period='2026-10-05' and corrects_id is null limit 1"
+chk "#563 F7r2: korekta bez zmiany mnożnika → bez nowej sprawy" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")" "$N_BEFORE"
+# Tydzień otwarty = bieżący ISO (Europe/Warsaw): korekta nie otwiera sprawy
+OPEN_D=$(Q "select (timezone('Europe/Warsaw', now()))::date::text")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  values ('$P','SEK','$OPEN_D','$OPEN_D'::date,22.00,'https://www.okq8.se/foretag/priser/','open-week base','$OPEN_D'::date)"
+OPEN_OID=$(Q "select id from fuel_index_readings where project_id='$P' and index_code='SEK' and period='$OPEN_D' and corrects_id is null order by id desc limit 1")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  values ('$P','SEK','$OPEN_D','$OPEN_D'::date,18.00,'https://www.okq8.se/foretag/priser/','open-week corr','$OPEN_D'::date,'$OPEN_OID','test F7r2 open week')"
+chk "#563 F7r2: korekta w tygodniu otwartym → brak sprawy" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key' like '563:fuel-corr:$P:%' and detail->>'period'='$OPEN_D'")" "0"
 
 # Nowa wersja tabeli od 12.10 → stare transporty bez zmian
 sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to)
@@ -267,6 +323,78 @@ chk "SEFS_INVOICE_DIFF: setup (zafakturowane ×1,14)" "$(Q "select coalesce(fuel
 chk "SEFS_INVOICE_DIFF: skan znajduje 1" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
 chk "SEFS_INVOICE_DIFF: drugi skan nadal 1 (mismatch)" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
 chk "SEFS_INVOICE_DIFF: jedna sprawa (idempotent)" "$(Q "select count(*) from decisions where detail->>'event_key'='d1300:invoice:$LINV'")" "1"
+
+# --- #563: korekta wygrywa przy współdzielonym published_on; MAX „do X” od t44 ---
+chk "#563 MAX: 23,00 → 1,14 (do X)" "$(Q "select sefs_lookup_mult(23.00, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 MAX: 23,03 → 1,14 (nie 1,13 jak MIN)" "$(Q "select sefs_lookup_mult(23.03, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 MIN: 23,03 → 1,13 (≤t43 bez zmian)" "$(Q "select sefs_lookup_mult(23.03, '$TS'::jsonb, 'MIN')")" "1.13"
+chk "#563 MAX PLN: 7,15 → 1,14" "$(Q "select sefs_lookup_mult(7.15, '$TP'::jsonb, 'MAX')")" "1.14"
+chk "#563 over_table MAX: = ostatni → nie" "$(Q "select (sefs_compute_hybrid_sys('$P',23.70,7.50,'2026-10-26')->>'over_table_sek')")" "false"
+# params v1 (MIN) obowiązuje do 25.10; wstawiamy MAX od 26.10 dla t44
+sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to, tier_bound, avg_days_pln)
+  values ('$P', 90, '2026-10-26', 'hybrid_min', 19.47, 5.698, 'OKQ8 GoEasy Diesel firmowa', 'ORLEN_EKODIESEL',
+          'https://www.okq8.se/foretag/priser/', 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'WEEKLY',
+          '$TS', '$TP', true, '#563 t44 MAX test', 'BOTH', 'MAX', 7)"
+chk "#563 over_table MAX: > ostatni → tak" "$(Q "select (sefs_compute_hybrid_sys('$P',23.71,7.50,'2026-10-26')->>'over_table_sek')")" "true"
+# Współdzielony published_on 20.10: odczyt 21.10 (23,09) + odczyt 22.10 (23,09) + korekta 22.10 → 22,89
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and index_code='SEK' and period in ('2026-10-20','2026-10-21','2026-10-22')"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  values
+  ('$P','SEK','2026-10-21','2026-10-21',23.09,'https://www.okq8.se/foretag/priser/','#563 pub', '2026-10-20'),
+  ('$P','SEK','2026-10-22','2026-10-22',23.09,'https://www.okq8.se/foretag/priser/','#563 pub', '2026-10-20')"
+OID22=$(Q "select id from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-22' and corrects_id is null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  values ('$P','SEK','2026-10-22','2026-10-22',22.89,'https://www.okq8.se/foretag/priser/','#563 corr','2026-10-20',$OID22,'Błędna kwota, poprawiono')"
+# Wskaźniki t44 = 19–25.10: uzupełnij SEK 23,00 i PLN 7,15 (poza 21–22 już wstawionymi)
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and period::date between '2026-10-19' and '2026-10-25' and corrects_id is null and period not in ('2026-10-21','2026-10-22')"
+sys "delete from fuel_index_readings where project_id='$P' and corrects_id is not null and period::date between '2026-10-19' and '2026-10-25' and period <> '2026-10-22'"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.00, 'https://www.okq8.se/foretag/priser/', 't44', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d
+   where d not in ('2026-10-21'::date,'2026-10-22'::date)"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 7.15, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 't44', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+DA=$(Q "select sefs_sek_daily_avg('$P','2026-10-19','2026-10-25')")
+chk "#563 korekta: dzień 22.10 = 22,89 (nie 23,09 z pub 20.10)" "$(Q "select to_char((x->>'value')::numeric, 'FM999999990.00') from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-22'")" "22.89"
+chk "#563 korekta: dzień 21.10 = 23,09" "$(Q "select to_char((x->>'value')::numeric, 'FM999999990.00') from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-21'")" "23.09"
+W44F="sefs_week_calc('$P','2026-10-26','2026-10-26')"
+chk "#563 t44: params MAX + PLN 7 dni" "$(Q "select ($W44F->>'tier_bound')||'/'||($W44F->>'avg_days_pln')||'/'||($W44F->>'n_pln')")" "MAX/7/7"
+chk "#563 t44: wynik kontrolny ×1,14" "$(Q "select ($W44F->>'avg_sek')||'/'||($W44F->>'avg_pln')||'/'||($W44F->>'applied_mult')")" "23.00/7.15/1.14"
+chk "#563 t43 nadal MIN (załadunek 19.10)" "$(Q "select coalesce(sefs_week_calc('$P','2026-10-19','2026-10-19')->>'tier_bound','∅')")" "MIN"
+# F7 #579 blokada 1: prognoza t45+ bierze PLN 7 dni (nie pub_avg) — weekend z przeniesieniem
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and period::date between '2026-10-19' and '2026-10-25'"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.30, 'https://www.okq8.se/foretag/priser/', 'f7-prog', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, case when extract(isodow from d) <= 5 then 7.25 else 7.05 end,
+         'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'f7-prog',
+         case when extract(isodow from d) <= 5 then d else date '2026-10-24' end
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+W44O="sefs_week_calc('$P','2026-10-26','2026-10-26')"
+chk "#563 F7: t44 ostateczny 7,19 / ×1,14 (PLN 7 dni)" "$(Q "select ($W44O->>'avg_pln')||'/'||($W44O->>'applied_mult')")" "7.19/1.14"
+W45P="sefs_week_calc('$P','2026-11-02','2026-10-26')"
+chk "#563 F7: prognoza t45 = t44 (nie pub_avg 7,22)" "$(Q "select ($W45P->>'avg_pln')||'/'||($W45P->>'applied_mult')||'/'||($W45P->>'status')")" "7.19/1.14/PROGNOZA"
+# F7 #579 blokada 2: ≤t43 — zmiana ceny w środę w ciągu dnia nie zmienia reguły (publikacja ≤ dzień)
+SEK36=$(Q "select sefs_sek_daily_avg('$P','2026-09-21','2026-09-27')->>'avg'")
+chk "#563 F7: t36–t43 średnia SEK bez period=D (jak D-1300)" "$(Q "select round(($SEK36)::numeric, 2)::text")" "23.05"
+# F7 #579 pkt 3: published_on > reading_date → period = data obowiązywania (nie obcięcie)
+sys "update security_flags set enabled=true where key='FUEL_SE_PL_INGEST'"
+ING=$($PSQL -v ON_ERROR_STOP=1 -c "begin; set local role service_role; select fuel_se_pl_ingest('$P', '[{\"index_code\":\"SEK\",\"period\":\"2026-10-26\",\"reading_date\":\"2026-10-26\",\"value\":23.55,\"source_url\":\"https://www.okq8.se/foretag/priser/\",\"published_on\":\"2026-10-27\",\"source_note\":\"f7 jutro\"}]'::jsonb); commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+chk "#563 F7: ingest cena od jutra → inserted" "$(Q "select ('$ING'::jsonb->>'inserted')")" "1"
+chk "#563 F7: period = published_on (nie dzień odczytu)" "$(Q "select period from fuel_index_readings where project_id='$P' and value=23.55 and source_note like 'f7 jutro%' order by id desc limit 1")" "2026-10-27"
+# F7: progi brzegowe MAX
+chk "#563 F7: MAX 23,10 → 1,14" "$(Q "select sefs_lookup_mult(23.10, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 F7: MAX 23,11 → 1,15" "$(Q "select sefs_lookup_mult(23.11, '$TS'::jsonb, 'MAX')")" "1.15"
+chk "#563 F7: MAX PLN 7,20 → 1,14" "$(Q "select sefs_lookup_mult(7.20, '$TP'::jsonb, 'MAX')")" "1.14"
+chk "#563 F7: MAX PLN 7,21 → 1,15" "$(Q "select sefs_lookup_mult(7.21, '$TP'::jsonb, 'MAX')")" "1.15"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

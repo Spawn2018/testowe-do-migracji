@@ -22,6 +22,8 @@ const pl: Dict = {
   dec_type_ROUTE_DEVIATION: 'Zjazd z trasy z zezwolenia',
   dec_type_SEFS_OUT_OF_TABLE: 'Opłata paliwowa: cena poza tabelą albo awaria źródła',
   dec_type_SEFS_INVOICE_DIFF: 'Opłata paliwowa na fakturze ≠ wyliczona',
+  /* #563: korekta ceny w zamkniętym tygodniu — bez cichego przeliczenia migawek */
+  dec_type_SEFS_WEEK_CORR: 'Korekta ceny paliwa zmienia mnożnik zamkniętego tygodnia',
   dec_type_KR_OVER_3: 'Ponad 3 kratownice jednego dnia',
   dec_type_INSURANCE_EXPIRING: 'Polisa przewoźnika wygasa',
   dec_type_DWELL_OVER_FREE: 'Zmierzony postój ponad czas wolny',

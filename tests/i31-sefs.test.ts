@@ -26,7 +26,7 @@ function tiersFromJson(json: {
 }
 
 describe('I-31 — SEFS hybrid_min', () => {
-  it('lookup: poniżej pierwszego / na progu / nad ostatnim', () => {
+  it('lookup MAX (domyślnie / t44+) i MIN (≤t43, #563): poniżej pierwszego / na progu / nad ostatnim', () => {
     const tiers: SefsTier[] = [
       { lte: 10, mult: 1.0 },
       { lte: 20, mult: 1.1 },
@@ -37,6 +37,9 @@ describe('I-31 — SEFS hybrid_min', () => {
     expect(lookupMult(10.01, tiers)).toBe(1.1);
     expect(lookupMult(30, tiers)).toBe(1.2);
     expect(lookupMult(99, tiers)).toBe(1.2);
+    expect(lookupMult(10.01, tiers, 'MIN')).toBe(1.0);
+    expect(lookupMult(20, tiers, 'MIN')).toBe(1.1);
+    expect(lookupMult(99, tiers, 'MIN')).toBe(1.2);
   });
 
   it('hybrid_min wybiera niższy mnożnik', () => {
@@ -54,6 +57,7 @@ describe('I-31 — SEFS hybrid_min', () => {
     expect(pln.length).toBe(51);
     const avgSek = 23.05;
     const avgPln = 7.41;
+    /* CENNIK_STEGRA: pola do_sek_l / do_pln = „do X” (domyślne MAX) */
     const multSek = lookupMult(round2(avgSek), sek);
     const multPln = lookupMult(round2(avgPln), pln);
     const applied = Math.min(multSek, multPln);

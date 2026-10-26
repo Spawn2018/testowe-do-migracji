@@ -109,6 +109,7 @@ insurance_policy_approve | GUARD | select insurance_policy_approve(gen_random_uu
 shipment_family | PURE | select shipment_family('KR-08') | KR
 kr_convoy_count | GUARD | select kr_convoy_count('$L1') | wyłącznie HHL
 sefs_lookup_mult | PURE | select sefs_lookup_mult(1, '[{"lte":10,"mult":1.1}]'::jsonb) | 1.1
+sefs_lookup_mult | PURE | select sefs_lookup_mult(23.03, '[{"lte":22.8,"mult":1.13},{"lte":23.1,"mult":1.14}]'::jsonb, 'MAX') | 1.14
 sefs_compute_hybrid | GUARD | select sefs_compute_hybrid('$P', 20, 6) | wyłącznie HHL
 sefs_week_for_load | GUARD | select sefs_week_for_load('$P', current_date) | wyłącznie HHL
 decision_open | GUARD | select decision_open('$P','BACKUP_FAILED','x','{}'::jsonb) | Brak aktywnego konta

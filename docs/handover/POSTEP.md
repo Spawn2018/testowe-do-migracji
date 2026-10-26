@@ -5631,3 +5631,85 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 ## 2026-10-26 18:45 — #567 db FAIL r3: cofnięcie PUBLIC na helperach
 
 - import **240** ✔ po `imported_at`. security 457/2 + nullguard 855/1 — GRANT PUBLIC na 3 helperach. Cofnięte (zostaje service_role; owner DEFINER wywołuje). CI → F7.
+## 2026-10-26 19:05 — #563 PRZED #577; start paliwo t44
+
+- Skrzynka: #550 WSTRZYMANE; komentarz #577: kolejka **#563 → #577 (F7 1–8) → #574-nast → BN0**. #577 CI ✔ `bf6dd230` — bez F7 do poprawek po #563.
+- Scalanie: brak (bez push na main).
+- **#563 krok:** `pakiet/563-paliwo-t44` migracja **0310** — `tier_bound`/`avg_days_pln`; lookup MAX; korekty w daily/pub avg; PLN 7 dni; nowa wersja params od 26.10; D-1535 override bez zmian. Następny: testy baf + przeliczenie migawek ≥26.10.
+
+## 2026-10-26 19:25 — #563 testy baf + last_published / save_parameters
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe, ale **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
+- **#563 krok:** `sefs_last_published` + `sefs_save_parameters` (tier_bound/avg_days_pln); baf +11 (korekta shared pub, MAX/MIN, t44 ×1,14) → EXPECTED **78**; nullguard +1 → **853**. Push → CI `baf,nullguard`. Następny: Edge 17:15/23:15 albo przeliczenie migawek ≥26.10.
+
+## 2026-10-26 20:40 — #563 CI fix + Edge 17:15/23:15
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #578 po #577; #577 bez F7. Bez push na main.
+- CI `83024814`: db FAIL — (1) `sefs_lookup_mult` 2-arg+3-arg niejednoznaczne; (2) `sefs_save_parameters` bez `assert_not_preview` (security B5); (3) days value `22.8900` vs `22.89`; nullguard 852/i31 przez (1).
+- **#563 krok:** drop 2-arg lookup; assert B5; `round(...,2)` w days; `fuel_se_pl_ingest` — późniejszy przebieg / ochrona korekty; Edge godziny 7/9/13/17/23 + zawsze fetch; demo/i18n godzin. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10 / front `corrects_id`.
+
+## 2026-10-26 19:15 — #563 CI r2: lookup grant + ingest powtórka
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe **po #577**; #577/#579 bez F7. Bez push na main.
+- CI `0a77bbde` db FAIL: i31 permission denied `sefs_lookup_mult` (revoke authenticated); i2 `fuel_se_pl_ingest` powtórka skipped=0; nullguard 852≠853 (PURE nie liczy OK).
+- **#563 krok:** 2-arg lookup bez default na 3-arg + GRANT authenticated; ingest — ta sama cena→skip (published_on tylko gdy w payload); nullguard EXPECTED **852**; baf `to_char` dni. Push PR #579. Następny: migawki ≥26.10 / sprawa zamkniętego tygodnia / front.
+
+## 2026-10-26 20:35 — #563 front lookupMult + corrects_id
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #579 CI ✔ `c2c5e9c5` (unit/db/visual) — bez F7 (zostają migawki + sprawa zamkniętego tygodnia). #577/#578 czekają. Bez push na main.
+- **#563 krok:** `lookupMult(price, tiers, bound)` MAX/MIN; `effectiveReadings` w `sefsWeek`; `LiveFuel` plnPubs bez oryginałów skorygowanych; `BafForm` bound z `tier_bound`. Push PR #579. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10.
+
+## 2026-10-26 21:55 — #563 migawki załadunek ≥ 26.10
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #579 CI ✔ `68b343fd` (unit/db/visual) — bez F7 do sprawy zamkniętego tygodnia. #578 F7 gotowe **po #577**; #577 bez F7. Bez push na main.
+- **#563 krok:** 0310 §11 — niezafakturowane z `fuel_load_date`/`plan_load_date` ≥ 26.10: OSTATECZNY→PROGNOZA + `load_price_compute`; faktury ≥26.10 z innym mnożnikiem → `SEFS_INVOICE_DIFF` (kwoty bez zmian); audit `FUEL_RECALC_T44_563`. Push PR #579. Następny: sprawa zamkniętego tygodnia (korekta nie zmienia migawek; decyzja HHL).
+
+## 2026-10-26 22:30 — #563 sprawa zamkniętego tygodnia
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe **po #577**; #577 bez F7 (pkt 1–8 po #563); #579 bez F7 do zielonego CI po tym pushu. Bez push na main.
+- CI `fb254888`: unit/db/visual ✔ (G-15 — czekano).
+- **#563 krok:** 0310 §12 — typ `SEFS_WEEK_CORR` + trigger po INSERT korekty: gdy tydzień wskaźników zamknięty i są OSTATECZNY z innym mnożnikiem → sprawa HHL (tytuł było/jest/N), bez zmiany migawek. baf EXPECTED **81**. i18n + workflowCreator. Push PR #579. Po zielonym CI — prośba o F7 (zakres #563 domknięty).
+
+## 2026-10-26 22:55 — #563 F7 #579: blokady 1–2 + poprawki 3–6
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe” po HEAD; #577 bez F7. Bez push na main.
+- CI `9e82d6e4`: unit/visual ✔, db FAIL (baf SEFS_WEEK_CORR 0/1 — korekta SEK w górę nie zmienia applied; dec2 katalog 24→25).
+- **#563 krok (F7 19:34):** `sefs_last_ostateczny` → PLN 7 dni przy `avg_days_pln=7`; `sefs_sek_daily_avg` / `sefs_pub_avg` — nowa reguła tylko MAX; ingest/Edge: published_on > dzień → period = data obowiązywania; wersja t44 z `sefs_params_for(…,26.10)`; dziennik z kwotami; `sefsWeek` fill 7 dni; test SEFS_WEEK_CORR korektą w dół; baf **90**; dec2 25 typów. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-26 23:15 — #563 F7 #579 r2: SEFS_WEEK_CORR HHL + update/close
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe `dla-cursora` w planie. Bez nowych do wpisania.
+- Scalanie: CI `fa5bc5d4` unit/db/visual ✔; F7 r2 (20:09) — obliczenia OK, 3 poprawki SEFS_WEEK_CORR przed znakiem. #577/#578 czekają. Bez push na main.
+- **#563 krok (F7 r2 pkt 1–3):** `decisions_read` — `SEFS_WEEK_CORR` tylko HHL; trigger — kolejna korekta UPDATE / powrót do zgodności → EXPIRED; testy negatywne (bez zmiany mnożnika, tydzień otwarty). baf EXPECTED **99**. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-26 23:45 — #563 F7 #579 r3: korektury różnych odczytów
+
+- Skrzynka: #550 WSTRZYMANE; #538/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: #578 F7 gotowe **po #577**; #577 bez F7; #579 F7 r3 (20:32) — polityka OK, baf 96/3 (2./3. korekta tego samego odczytu = duplicate key; `sys` połyka). CI `c35de979`: unit/visual ✔, db FAIL. Bez push na main.
+- **#563 krok (F7 r3):** testy SEFS_WEEK_CORR — 2. korekta SEK 06.10 (pub 06.10 → ×1,11 UPDATE), 3. SEK 07.10 (pub 07.10 → ×1,12 EXPIRED); chk liczby korekt; baf EXPECTED **101**. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-26 23:55 — #563 F7 #579 r4: new_mult z sefs_week_calc
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: CI `84510888` db FAIL baf 100/1 (F7 r4 21:00 — avg 22,10 zostaje ×1,09 przy „od progu”). #577 bez F7; #578 F7 po #577. Bez push na main.
+- **#563 krok (F7 r4):** 2. korekta SEK 06.10→**22,40** (pub 06.10) — `sefs_week_calc` ≠ corr1/migawka; asercje `new_mult` + payload UPDATE; trigger — UPDATE tylko gdy `new_mult` się zmienia; 3. korekta 07.10→22,80 → EXPIRED. baf EXPECTED **105**. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-27 00:10 — #563 F7 #579 r4: CI zielone, prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
+- CI `c70f4787`: unit ✔, db ✔ (13m38s), visual ✔ (części bramy/telefon/zrzuty).
+- **#563 krok:** prośba o F7 na HEAD `c70f4787` (komentarz PR #579). Czekam na „F7: gotowe do scalenia”. Po scaleniu → #577 F7 pkt 1–8 (0310→0311).
+## 2026-10-27 00:25 — #563 SCALONE; start #577 F7 1–8 (0311)
+
+- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: **#579** merge ee0a6dee (F7 gotowe na c70f4787; docs c3677db6; CI unit/db/visual ✔). #578 F7 gotowe **po #577**. Bez push na main.
+- **#577 krok:** merge main; migracja **0311**; F7 1–8: require_service, Edge preview tylko dry_run niefatalny, wt z WT, pending_write, manual=user, kind added/missing, testy z import_schedule dry_run. EXPECTED import **249**.
+

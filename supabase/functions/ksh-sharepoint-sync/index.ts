@@ -378,42 +378,20 @@ async function handle(req: Request): Promise<Response> {
   const changed = Array.isArray(data.changed) ? data.changed.length : 0;
   const cands = Array.isArray(data.cancel_candidates) ? data.cancel_candidates.length : 0;
 
-  // #567 23B: lista zmian z tego samego `changed` co import (N9); nadpisanie przy każdym przebiegu.
-  {
+  // #567 23B F7: podgląd tylko w dry_run; błąd niefatalny (nie source_ok/failed_hash/502).
+  let previewError: string | null = null;
+  if (dryRun) {
     const prevStore = await sb.rpc('ksh_sync_preview_store', {
       p_project: projectId,
       p_changed: Array.isArray(data.changed) ? data.changed : [],
       p_read_at: started,
       p_bytes: dl.bytes.byteLength,
       p_file_hash: hash,
+      p_added: Array.isArray(data.added) ? data.added : [],
+      p_cancel_candidates: Array.isArray(data.cancel_candidates) ? data.cancel_candidates : [],
     });
     if (prevStore.error) {
-      const errTag = `preview:${prevStore.error.code || 'err'}`;
-      const up = await upsertOk({
-        source_ok: false,
-        last_read_at: null,
-        last_run: errorRunBase({
-          bytes: dl.bytes.byteLength,
-          mode: dl.mode,
-          parse_ok: true,
-          accepted: parsed.meta.accepted,
-          failed_hash: hash,
-        }),
-        last_error: errTag.slice(0, 500),
-      });
-      await raiseDownIfDue([errTag.slice(0, 120)]);
-      const result = {
-        job: JOB, mode: 'LIVE' as const, ok: false, reason: errTag.slice(0, 120),
-        observations: {
-          bytes: String(dl.bytes.byteLength),
-          accepted: String(parsed.meta.accepted),
-        },
-      };
-      const runOk = await insertRun(sb, false, result);
-      if (!up || !runOk) {
-        return Response.json({ ...result, ok: false, reason: 'state_or_run' }, { status: 502 });
-      }
-      return Response.json(result, { status: 502 });
+      previewError = `preview:${prevStore.error.code || 'err'}`;
     }
   }
 
@@ -436,6 +414,7 @@ async function handle(req: Request): Promise<Response> {
     dry_run: dryRun,
     import_enabled: importEnabled,
     write_enabled: writeEnabled,
+    ...(previewError ? { preview_error: previewError.slice(0, 120) } : {}),
     ...(writeRes ? {
       write_attempted: true,
       write_n: writeRes.written,
