@@ -1012,7 +1012,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **F7 runda 8 — ZROBIONE w kodzie (2 BLOKERY + 2 poprawki):** **1** `not coalesce(v_pend ? 'hhl_order_no', false)` — sprawa #384 bez kolejki; **2** trigger + pending-skip tylko przy `write_enabled`; `write_set(false)` → `skipped`/`write_disabled`; **3** CANCELLED → blocked tylko przy niepustych polach; **4** Edge `conflictFieldFromSnaps`. EXPECTED import **221**; unit 20/20.
      - **CI `c34c3e34` db FAIL (212/9) — ZROBIONE w teście:** write on przed PRE-SKIP; schedule_row przy write-off; nowy rev bez wymogu `import_id`; CANCELLED z wyrównanym schedule_row; B1 z SNAP-A→C + write on. EXPECTED import **225**.
      - **CI `cdc31b6c` db FAIL (224/1) — ZROBIONE w teście:** asercja CANCELLED liczyła `blocked` całego pliku (inne kody STATUS) → `1/1`; liczyć tylko `blocked` dla SG-01 / reason CANCELLED.
-     - **F7 runda 9 — do kodu (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne.
+     - **F7 runda 9 — ZROBIONE w kodzie (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne. Asercja CANCELLED tylko SG-01. EXPECTED import **225**.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1719,3 +1719,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 09:55 | #560 F7 r8 kod (0308 + Edge + import 221); CI→F7 | pętla |
 | 26.10.2026 10:15 | #560 F7 r8 fix testów import 225 (`cdc31b6c`); CI db FAIL CANCELLED 224/1 (blocked innych kodów) | pętla |
 | 26.10.2026 10:40 | #560 F7 r9 NIEGOTOWE (pole konfliktu z łatki) + fix asercji CANCELLED — docs→kod | pętla |
+| 26.10.2026 10:50 | #560 F7 r9 kod (patchKeys + asercja CANCELLED SG-01); EXPECTED 225; CI→F7 | pętla |

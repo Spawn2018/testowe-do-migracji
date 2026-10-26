@@ -1037,8 +1037,11 @@ IMP_CAN=$(Q "select jsonb_agg(jsonb_build_object(
   'carrier_order_no',coalesce(l.carrier_order_no,''),'hhl_order_no',coalesce(l.hhl_order_no,''),
   'dates_to_check',false
 )) from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01' where l.id='$SG_OUT'")
+# F7 r9 / CI cdc31b6c: inne kody nieobecne w pliku mogą być blocked STATUS — licz tylko SG-01.
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  select (r->>'unchanged')||'/'||jsonb_array_length(r->'blocked')
+  select (r->>'unchanged')||'/'||(
+    select count(*)::text from jsonb_array_elements(r->'blocked') b
+     where b->>'code'='SG-01' and b->>'reason'='CANCELLED')
     from import_schedule('$P','$IMP_CAN'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true) r;
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1/0" ]; then ok=$((ok+1)); echo "  OK    A6: r8 CANCELLED bez zmian → unchanged"; else fail=$((fail+1)); echo "  FAIL  A6: r8 CANCELLED → $out (oczekiwano 1/0)"; fi

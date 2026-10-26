@@ -66,14 +66,21 @@ export function fileRowChangedSinceRead(
 }
 
 /**
- * F7 r8 POPRAWKA 4: pole sprawy = pierwsze różniące się expected↔plik
- * (ta sama reguła co import), nie pierwsze z łatki.
+ * F7 r8/r9: pole sprawy jak import — najpierw różniące się pole **z łatki**
+ * (ta sama kolejność co import), potem dowolne różniące się.
  */
 export function conflictFieldFromSnaps(
   expected: FileDateSnap | null | undefined,
   current: FileDateSnap | null | undefined,
+  patchKeys?: readonly string[] | null,
   fallback: ConflictField = 'carrier_order_no',
 ): ConflictField {
+  const fromPatch = patchKeys?.length
+    ? CONFLICT_FIELD_ORDER.filter((f) => patchKeys.includes(f))
+    : [];
+  for (const field of fromPatch) {
+    if (snapVal(expected, field) !== snapVal(current, field)) return field;
+  }
   for (const field of CONFLICT_FIELD_ORDER) {
     if (snapVal(expected, field) !== snapVal(current, field)) return field;
   }

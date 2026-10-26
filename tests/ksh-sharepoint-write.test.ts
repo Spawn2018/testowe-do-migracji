@@ -64,7 +64,7 @@ describe('A6 writeConflict', () => {
     expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(true);
   });
 
-  it('F7 r8: conflictFieldFromSnaps — pierwsze różniące się pole (kolejność jak import)', () => {
+  it('F7 r8/r9: conflictFieldFromSnaps — najpierw łatka, potem dowolne (kolejność jak import)', () => {
     const a = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
@@ -72,6 +72,14 @@ describe('A6 writeConflict', () => {
     expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('carrier_order_no');
     expect(conflictFieldFromSnaps(a, { ...a, ld: '2026-11-02', co: 'S2' })).toBe('load_date');
     expect(conflictFieldFromSnaps(a, { ...a })).toBe('carrier_order_no');
+    // F7 r9: łatka {co} + w pliku też load_date → pole z łatki
+    expect(conflictFieldFromSnaps(
+      a, { ...a, ld: '2026-11-02', co: 'S2' }, ['carrier_order_no'],
+    )).toBe('carrier_order_no');
+    // łatka bez różnicy, inne pole różne → fallback na dowolne
+    expect(conflictFieldFromSnaps(
+      a, { ...a, ld: '2026-11-02', co: 'S1' }, ['carrier_order_no'],
+    )).toBe('load_date');
   });
 });
 

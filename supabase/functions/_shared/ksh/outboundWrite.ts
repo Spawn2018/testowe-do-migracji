@@ -196,9 +196,12 @@ export async function processOutboundWrites(args: {
     }
     if (conflict) {
       conflictItems.push(it);
-      // F7 r8: pole = pierwsze różniące się expected↔plik (jak import), nie pierwsze z patch.
+      // F7 r9: najpierw pole z łatki (jak import), potem dowolne różniące się.
       const cur = args.fileSnapshot[primary] ?? null;
-      const field = conflictFieldFromSnaps(expected, cur);
+      const patchKeys = it.patch && typeof it.patch === 'object'
+        ? Object.keys(it.patch as Record<string, unknown>)
+        : [];
+      const field = conflictFieldFromSnaps(expected, cur, patchKeys);
       const rev = typeof it.rev === 'number' && it.rev >= 1 ? it.rev : 1;
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,

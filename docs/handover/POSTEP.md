@@ -5525,3 +5525,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: brak „F7: gotowe”. CI `cdc31b6c` unit/visual ✔ **db FAIL** import 224/1 — `A6: r8 CANCELLED → 1/1`: SG-01 unchanged OK, ale `blocked` liczył inne kody (STATUS, nieobecne w pliku). Bez push na main.
 - F7 r9 (Spawn2018 na `c34c3e34`): `conflictFieldFromSnaps` — najpierw pole z łatki. Następny commit: kod + asercja CANCELLED tylko SG-01.
+
+## 2026-10-26 10:50 — A6 #560 F7 r9: kod
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. Bez push na main.
+- Kod: `conflictFieldFromSnaps(…, patchKeys)`; outbound przekazuje `Object.keys(patch)`; test CANCELLED liczy tylko SG-01/`CANCELLED`. EXPECTED import **225**; unit 20/20. Push → CI → prośba F7 po zielonym.
