@@ -66,8 +66,10 @@ export function fileRowChangedSinceRead(
 }
 
 /**
- * #569: kod i pole sprawy z wiersza, w którym wykryto rozjazd
- * (nie z pierwszego kodu transportu przy wielu kodach).
+ * #569 / F7 #570: kod i pole sprawy z wiersza konfliktu (nie z pierwszego kodu).
+ * Najpierw wiersz różniący się polem **z łatki** (kolejność jak import);
+ * dopiero gdy żaden — pierwszy rozjechany wiersz i dowolne pole.
+ * Inaczej Edge (sprawa spoza łatki) ≠ import (tylko pola łatki) → 2 sprawy.
  */
 export function pickOutboundConflictNote(
   remaining: string[],
@@ -76,6 +78,18 @@ export function pickOutboundConflictNote(
   patch: Record<string, unknown> | null | undefined,
 ): { code: string; field: ConflictField } | null {
   const patchKeys = patch && typeof patch === 'object' ? Object.keys(patch) : [];
+  const fromPatch = patchKeys.length
+    ? CONFLICT_FIELD_ORDER.filter((f) => patchKeys.includes(f))
+    : [];
+  for (const code of remaining) {
+    const current = fileSnapshot[code] ?? null;
+    if (!fileRowChangedSinceRead(expected, current)) continue;
+    for (const field of fromPatch) {
+      if (snapVal(expected, field) !== snapVal(current, field)) {
+        return { code, field };
+      }
+    }
+  }
   for (const code of remaining) {
     const current = fileSnapshot[code] ?? null;
     if (fileRowChangedSinceRead(expected, current)) {

@@ -108,6 +108,18 @@ describe('A6 writeConflict', () => {
     );
     expect(notePatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
     expect(pickOutboundConflictNote(['SG-A'], expected, snap, { carrier_order_no: 'S9' })).toBeNull();
+    // F7 #570: pierwszy kod różni się tylko polem spoza łatki, drugi — polem z łatki
+    // → wybierz drugi (jak import), nie pierwszy ze sprawą spoza łatki
+    const notePreferPatch = pickOutboundConflictNote(
+      ['SG-A', 'SG-B'],
+      expected,
+      {
+        'SG-A': { ...expected, ld: '2026-11-02' },
+        'SG-B': { ...expected, co: 'S2' },
+      },
+      { carrier_order_no: 'S9' },
+    );
+    expect(notePreferPatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
   });
 });
 

@@ -1142,7 +1142,8 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
 if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: #569 import → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: #569 import → $out"; fi
 chk "A6: #569 import sprawa kod SG-M2" "$(Q "select count(*)||':'||coalesce(max(detail->>'code'),'') from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:SG-M2:carrier_order_no:pending:%'")" "1:SG-M2"
 chk "A6: #569 import 1 sprawa (nie primary)" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "1"
-# Edge: ten sam konflikt (pickOutboundConflictNote → SG-M2) → dedup, nadal 1
+# Edge: ten sam konflikt → dedup, nadal 1.
+# Kod SG-M2 na sztywno: wybór kodu/pola pokrywa test unit pickOutboundConflictNote (#569 / F7 #570).
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select (l1b_note_file_changed('$P','$SG_OUT','SG-M2','carrier_order_no',$REV569) is not null)::text;
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)

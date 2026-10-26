@@ -5551,3 +5551,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: brak „F7: gotowe do scalenia” na #570 (CI `4cb34e4b` unit/visual/db ✔ — czekam F7 po tym commicie). Bez push na main.
 - **#569 krok:** `tests/db/import.sh` — transport SG-01+SG-M2, konflikt pliku na SG-M2 → sprawa z kodem SG-M2; Edge `l1b_note_file_changed(SG-M2)` → nadal 1; primary dałby 2. EXPECTED import **234**. PLAN §4/§8.
+
+## 2026-10-26 12:00 — #569 F7 #570: preferuj pole z łatki
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania; bez `pilne` do budowy.
+- Scalanie: F7 #570 na `0e16897` — jedna poprawka (nie „gotowe”). Bez push na main.
+- **#569 krok:** `pickOutboundConflictNote` — najpierw wiersz z polem z łatki, potem dowolny; unit SG-A spoza + SG-B z łatki; komentarz db (wybór kodu = unit). CI → prośba F7.
