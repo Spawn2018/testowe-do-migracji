@@ -65,6 +65,21 @@ describe('W-567 lista zmian z pliku KSH', () => {
     expect(previewNotes(p.changes[0])).toEqual([]);
   });
 
+  it('format wartości: daty, godziny, znaczniki czasu; inne bez zmian', () => {
+    expect(previewValue('2026-10-27', 'load_date')).toBe('27.10.2026');
+    expect(previewValue('2026-10-27')).toBe('27.10.2026');
+    expect(previewValue('08:05:00', 'load_time')).toBe('08:05');
+    expect(previewValue('8:05')).toBe('08:05');
+    expect(previewValue('2026-10-26T07:05:00Z', 'updated_at')).toBe('26.10.2026, 08:05');
+    expect(previewValue('2026-10-26T23:30:00+00:00', 'load_date')).toBe('27.10.2026');
+    expect(previewValue('2026-10-26T07:05:00Z', 'unload_time')).toBe('08:05');
+    expect(previewValue('2026-10-26 14:10:00', 'sync_at')).toBe('26.10.2026, 14:10');
+    expect(previewValue('2026-10-27T00:00:00', 'deliv_date')).toBe('27.10.2026');
+    expect(previewValue('AB 12345', 'tractor')).toBe('AB 12345');
+    expect(previewValue('2', 'qty')).toBe('2');
+    expect(previewValue('12.5 x 3.1', 'dims')).toBe('12.5 x 3.1');
+  });
+
   it('puste wartości jako „—”, czas odczytu w Europe/Warsaw', () => {
     expect(previewValue(null)).toBe('—');
     expect(previewValue('  ')).toBe('—');
@@ -74,8 +89,11 @@ describe('W-567 lista zmian z pliku KSH', () => {
   });
 
   it('brak funkcji w bazie rozpoznany', () => {
-    expect(isMissingRpc('Could not find the function public.ksh_sync_preview_get without parameters')).toBe(true);
-    expect(isMissingRpc('PGRST202')).toBe(true);
-    expect(isMissingRpc('permission denied')).toBe(false);
+    expect(isMissingRpc({ code: 'PGRST202', message: 'x' })).toBe(true);
+    expect(isMissingRpc({ code: null, message: 'Could not find the function public.ksh_sync_preview_get without parameters in the schema cache' })).toBe(true);
+    /* fałszywie pozytywny przypadek: nazwa funkcji w komunikacie innego błędu nie chowa panelu */
+    expect(isMissingRpc({ code: '42501', message: 'permission denied for function ksh_sync_preview_get' })).toBe(false);
+    expect(isMissingRpc({ code: 'PGRST301', message: 'schema cache reload' })).toBe(false);
+    expect(isMissingRpc(null)).toBe(false);
   });
 });

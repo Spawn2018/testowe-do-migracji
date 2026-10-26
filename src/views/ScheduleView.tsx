@@ -36,6 +36,7 @@ import { effDeparture } from '../lib/sailings';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import type { ServerImportDraft } from '../data/scheduleImportServer';
 import { accountRole } from '../lib/accountRole';
+import { viewedKind } from '../lib/cockpitE9';
 import { importSkipText, standardSkipMessage } from '../lib/standardSkipMessage';
 import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
@@ -222,9 +223,9 @@ export function ScheduleView() {
   const verTitle = syncLine ? syncLine.title : verTitle0;
   /* W-567 (decyzja 23B): lista zmian z pliku KSH — tylko produkcja (demo nie ma stanu synchronizacji), Administrator/Operacje HHL,
      dopóki import z pliku jest wyłączony; panel sam znika, gdy baza nie ma `ksh_sync_preview_get` albo zwraca null */
-  const viewerKind = accountRole(role);
+  const viewerKind = viewedKind(role, accountRole(role));
   const showKshPreview = SERVER_IMPORT && !!kshSync && kshSync.importEnabled !== true
-    && role === 'HHL' && (viewerKind === 'HHL_ADMIN' || viewerKind === 'HHL_OPS');
+    && (viewerKind === 'HHL_ADMIN' || viewerKind === 'HHL_OPS');
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 

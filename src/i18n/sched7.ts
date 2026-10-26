@@ -133,7 +133,8 @@ const PL: Record<string, string> = {
   s7_kp_manual: 'poprawione ręcznie po imporcie',
   s7_kp_pending: 'czeka na zapis do pliku — nie zostanie nadpisane',
   s7_kp_open: 'Otwórz transport {code}',
-  s7_kp_note: 'Import z pliku jest wyłączony. Po włączeniu wartości z kolumny „W pliku” zastąpią wartości w Watch Tower.',
+  s7_kp_note: 'Import z pliku jest wyłączony. Po włączeniu wartości z kolumny „W pliku” zastąpią wartości w Watch Tower — poza polami oznaczonymi „czeka na zapis do pliku”, których import nie nadpisze.',
+  s7_kp_not_ready: 'Lista jeszcze nie przygotowana — pojawi się po najbliższym odczycie pliku (co 5 min).',
 };
 
 export function s7(locale: Locale, key: string): string {

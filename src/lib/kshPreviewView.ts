@@ -4,7 +4,7 @@
  * znacznik `manual_after_import` (pole poprawione ręcznie po ostatnim imporcie) i opcjonalnie `pending_write`
  * (pole czeka na zapis do pliku — nie zostanie nadpisane). Czyste funkcje widoku: odczyt, grupowanie, liczniki, format.
  */
-import { fmtDateTime } from './time';
+import { fmtDate, fmtDateTime, fmtTime, formatCalendarDay } from './time';
 
 /** `changed` — różnica pola; `added` — kod w pliku, brak w Watch Tower; `missing` — kod w Watch Tower, brak w pliku. */
 export type KshPreviewKind = 'changed' | 'added' | 'missing';
@@ -72,15 +72,49 @@ export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
   };
 }
 
-/** Błąd „funkcji nie ma w bazie” (baza bez PR #577) — panel się nie pokazuje, bez komunikatu. */
-export function isMissingRpc(message: string | null | undefined): boolean {
-  return /ksh_sync_preview_get|PGRST202|schema cache|Could not find the function/i.test(message ?? '');
+/**
+ * Błąd „funkcji nie ma w bazie” (baza bez PR #577) — panel się chowa, bez komunikatu.
+ * Rozpoznanie po kodzie PostgREST `PGRST202`; zapasowo po komunikacie „Could not find the function”.
+ * Inne błędy (np. „permission denied for function ksh_sync_preview_get”) dają komunikat w panelu.
+ */
+export function isMissingRpc(err: { code?: string | null; message?: string | null } | null | undefined): boolean {
+  if (!err) return false;
+  if (err.code === 'PGRST202') return true;
+  return /Could not find the function/i.test(err.message ?? '');
 }
 
-/** Pusta wartość jako „—”. */
-export function previewValue(v: string | null | undefined): string {
+const RE_DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
+const RE_TIME = /^(\d{1,2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+const RE_STAMP = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}(?::?\d{2})?)?$/i;
+
+/**
+ * Wartość komórki: pusta → „—”; dzień `RRRR-MM-DD` → `DD.MM.RRRR`; godzina `GG:MM[:SS]` → `GG:MM`;
+ * znacznik czasu ISO ze strefą → `DD.MM.RRRR, GG:MM` (Europe/Warsaw), bez strefy — godzina ścienna bez przesunięcia.
+ * Nazwa pola zawęża wynik: `*_date` → sama data, `*_time` → sama godzina. Inne wartości bez zmian.
+ */
+export function previewValue(v: string | null | undefined, field?: string | null): string {
   const s = v == null ? '' : String(v).trim();
-  return s === '' ? '—' : s;
+  if (s === '') return '—';
+  const f = (field ?? '').toLowerCase();
+  const isDateField = /(^|_)date$/.test(f);
+  const isTimeField = /(^|_)time$/.test(f);
+  if (RE_DAY.test(s)) return formatCalendarDay(s);
+  const tm = s.match(RE_TIME);
+  if (tm) return `${tm[1].padStart(2, '0')}:${tm[2]}`;
+  const st = s.match(RE_STAMP);
+  if (st) {
+    if (st[6]) {
+      if (isDateField) return fmtDate(s);
+      if (isTimeField) return fmtTime(s);
+      return fmtDateTime(s);
+    }
+    const day = `${st[3]}.${st[2]}.${st[1]}`;
+    const hm = `${st[4]}:${st[5]}`;
+    if (isDateField) return day;
+    if (isTimeField) return hm;
+    return `${day}, ${hm}`;
+  }
+  return s;
 }
 
 /** Porównanie kodów „naturalnie” (SG-7 przed SG-10). */

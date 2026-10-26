@@ -2,9 +2,10 @@
  * W-567 (decyzja 23B) — Harmonogram: „Zmiany z pliku KSH do przejrzenia (N)”.
  * Tylko produkcja, tylko Administrator / Operacje HHL i tylko gdy import z pliku jest wyłączony (warunki w ScheduleView).
  * Domyślnie zwinięty; RPC `ksh_sync_preview_get()` wołane przy pierwszym rozwinięciu i po „Odśwież”.
- * Brak funkcji w bazie (PGRST202) albo null → panel znika bez komunikatu; inny błąd → krótki komunikat w panelu.
+ * Brak funkcji w bazie (PGRST202) → panel znika bez komunikatu; null → „Lista jeszcze nie przygotowana…”;
+ * inny błąd → krótki komunikat w panelu (nad poprzednio wczytaną tabelą, jeśli była).
  */
-import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
 import { getSupabase } from '../../auth/client';
 import { useTowerStore } from '../../store/useTowerStore';
 import { s7, s7p } from '../../i18n/sched7';
@@ -13,48 +14,58 @@ import {
   type KshPreview,
 } from '../../lib/kshPreviewView';
 
-type State =
-  | { kind: 'idle' }
-  | { kind: 'loading'; prev: KshPreview | null }
-  | { kind: 'ok'; data: KshPreview }
-  | { kind: 'error'; msg: string }
-  | { kind: 'gone' };
-
 export function KshPreviewPanel() {
   const locale = useTowerStore((s) => s.locale);
   const selectLoad = useTowerStore((s) => s.selectLoad);
   const [open, setOpen] = useState(false);
-  const [st, setSt] = useState<State>({ kind: 'idle' });
+  const [started, setStarted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  /** Ostatnio wczytana lista — zostaje na ekranie po błędzie „Odśwież” (komunikat nad nią). */
+  const [data, setData] = useState<KshPreview | null>(null);
+  /** RPC zwróciło null — lista jeszcze nie przygotowana (panel zostaje, z „Odśwież”). */
+  const [notReady, setNotReady] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  /** Tylko PGRST202 (funkcji nie ma w bazie) chowa panel. */
+  const [gone, setGone] = useState(false);
   const [onlyManual, setOnlyManual] = useState(false);
+  const busy = useRef(false);
 
-  const load = useCallback(async (prev: KshPreview | null) => {
-    setSt({ kind: 'loading', prev });
+  const load = useCallback(async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setStarted(true);
+    setLoading(true);
     try {
       const sb = await getSupabase();
-      const { data, error } = await sb.rpc('ksh_sync_preview_get');
+      const { data: raw, error } = await sb.rpc('ksh_sync_preview_get');
       if (error) {
-        setSt(isMissingRpc(error.message) ? { kind: 'gone' } : { kind: 'error', msg: error.message });
+        if (isMissingRpc(error)) setGone(true);
+        else setErr(error.message);
         return;
       }
-      const v = kshPreviewFromRpc(data);
-      setSt(v ? { kind: 'ok', data: v } : { kind: 'gone' });
+      const v = kshPreviewFromRpc(raw);
+      setErr(null);
+      setNotReady(!v);
+      setData(v);
     } catch (e) {
-      setSt({ kind: 'error', msg: e instanceof Error ? e.message : String(e) });
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      busy.current = false;
+      setLoading(false);
     }
   }, []);
 
-  const data = st.kind === 'ok' ? st.data : st.kind === 'loading' ? st.prev : null;
   const groups = useMemo(() => (data ? groupPreview(data.changes, onlyManual) : []), [data, onlyManual]);
   const counts = useMemo(() => (data ? previewCounts(data.changes) : null), [data]);
   const added = useMemo(() => (data ? previewKindCodes(data.changes, 'added') : []), [data]);
   const missing = useMemo(() => (data ? previewKindCodes(data.changes, 'missing') : []), [data]);
 
-  if (st.kind === 'gone') return null;
+  if (gone) return null;
 
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next && st.kind === 'idle') void load(null);
+    if (next && !started) void load();
   };
   const title = counts ? s7p(locale, 's7_kp_title_n', { n: previewTotal(counts) }) : s7(locale, 's7_kp_title');
   const lbl = {
@@ -63,7 +74,7 @@ export function KshPreviewPanel() {
   };
 
   return (
-    <section className="s7-kp" data-ksh-preview aria-label={s7(locale, 's7_kp_title')}>
+    <section className="s7-kp" data-ksh-preview aria-label={s7(locale, 's7_kp_title')} aria-busy={loading}>
       <div className="s7-kp-hd">
         <button type="button" className="s7-kp-toggle" aria-expanded={open} data-ksh-preview-toggle onClick={toggle}>
           <span aria-hidden="true">{open ? '▾' : '▸'}</span> {title}
@@ -74,7 +85,7 @@ export function KshPreviewPanel() {
               <input type="checkbox" checked={onlyManual} onChange={(e) => setOnlyManual(e.target.checked)} data-ksh-preview-manual />
               {s7(locale, 's7_kp_only_manual')}
             </label>
-            <button type="button" className="chipbtn" disabled={st.kind === 'loading'} data-ksh-preview-refresh onClick={() => void load(data)}>
+            <button type="button" className="chipbtn" aria-disabled={loading} data-ksh-preview-refresh onClick={() => { if (!loading) void load(); }}>
               {s7(locale, 's7_kp_refresh')}
             </button>
           </>
@@ -82,8 +93,11 @@ export function KshPreviewPanel() {
       </div>
       {open ? (
         <div className="s7-kp-bd">
-          {st.kind === 'error' ? <p className="s7-kp-err" role="alert">{s7p(locale, 's7_kp_error', { msg: st.msg })}</p> : null}
-          {st.kind === 'loading' && !data ? <p className="s7-kp-meta">{s7(locale, 's7_kp_loading')}</p> : null}
+          <div aria-live="polite" data-ksh-preview-msg>
+            {err ? <p className="s7-kp-err" data-ksh-preview-error>{s7p(locale, 's7_kp_error', { msg: err })}</p> : null}
+            {loading && !data ? <p className="s7-kp-meta">{s7(locale, 's7_kp_loading')}</p> : null}
+            {notReady && !loading ? <p className="s7-kp-meta" data-ksh-preview-not-ready>{s7(locale, 's7_kp_not_ready')}</p> : null}
+          </div>
           {data && counts ? (
             <>
               <p className="s7-kp-meta" data-ksh-preview-head>
@@ -132,8 +146,8 @@ export function KshPreviewPanel() {
                                 ) : <span className="s7-kp-rep">{g.code}</span>}
                               </th>
                               <td data-label={lbl.field}>{r.fieldLabel}</td>
-                              <td data-label={lbl.wt}>{previewValue(r.wt)}</td>
-                              <td data-label={lbl.file}>{previewValue(r.file)}</td>
+                              <td data-label={lbl.wt}>{previewValue(r.wt, r.field)}</td>
+                              <td data-label={lbl.file}>{previewValue(r.file, r.field)}</td>
                               <td data-label={lbl.notes} className="s7-kp-notes">
                                 {notes.length === 0 ? '—' : notes.map((n) => (
                                   <span key={n} className={`pill ${n === 'manual' ? 'p-amber' : 'p-sea'}`} data-ksh-preview-note={n}>
