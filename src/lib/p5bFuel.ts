@@ -99,7 +99,7 @@ export function feeOf(base: number, mult: number | null): number | null {
   return mult == null ? null : Math.round(base * (mult - 1) * 100) / 100;
 }
 
-/** Wiersz tabeli, w który wpada średnia — jak `lookupMult` (`sefs.ts`): średnia zaokrąglona do grosza, pierwszy wiersz
+/** Wiersz tabeli, w który wpada średnia — jak `lookupMult` MAX (`sefs.ts`): średnia zaokrąglona do grosza, pierwszy wiersz
  *  z „do” ≥ średniej; poniżej tabeli — pierwszy wiersz, powyżej — ostatni. */
 export function tierOf(tiers: readonly FuelTier[], avg: number | null): number {
   if (avg == null || tiers.length === 0) return -1;

@@ -46,9 +46,9 @@ describe('tabela mnożników „do X” (tier_bound = MAX)', () => {
     expect(pln).toHaveLength(51);
   });
 
-  it('ekran i wspólny odczyt frontu (`lookupMult`) dają ten sam mnożnik dla każdej średniej co 0,01', () => {
-    for (let c = 1600; c <= 3300; c += 1) expect(at(sek, c / 100)).toBe(lookupMult(c / 100, SEK));
-    for (let c = 450; c <= 1050; c += 1) expect(at(pln, c / 100)).toBe(lookupMult(c / 100, PLN));
+  it('ekran i wspólny odczyt frontu (`lookupMult` MAX) dają ten sam mnożnik dla każdej średniej co 0,01', () => {
+    for (let c = 1600; c <= 3300; c += 1) expect(at(sek, c / 100)).toBe(lookupMult(c / 100, SEK, 'MAX'));
+    for (let c = 450; c <= 1050; c += 1) expect(at(pln, c / 100)).toBe(lookupMult(c / 100, PLN, 'MAX'));
   });
 });
 
@@ -61,6 +61,8 @@ describe('wersje do tygodnia 43 bez zmian (tier_bound = MIN albo brak pola)', ()
 
   it('MIN: 23,03 → 1,13 (odczyt „od”, jak policzone t43 i wcześniej)', () => {
     expect(at(tiersFromDb(SEK, 'MIN'), 23.03)).toBe(1.13);
+    expect(lookupMult(23.03, SEK, 'MIN')).toBe(1.13);
+    expect(lookupMult(23.03, SEK, 'MAX')).toBe(1.14);
   });
 });
 

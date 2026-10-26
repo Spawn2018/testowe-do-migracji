@@ -124,7 +124,9 @@ describe('B-6g / B-6i: bez rozjazdu w prawo', () => {
 });
 
 describe('B-6h: SEFS — średnia poprzedniego tygodnia', () => {
-  const r = (index_code: string, period: string, value: number, corrects_id: number | null = null) => ({ index_code, period, value, corrects_id });
+  const r = (id: number, index_code: string, period: string, value: number, corrects_id: number | null = null) => (
+    { id, index_code, period, value, corrects_id }
+  );
   const tiers = { sek: [{ lte: 19.47, mult: 1 }, { lte: 20.5, mult: 1.05 }], pln: [{ lte: 5.7, mult: 1 }, { lte: 6.2, mult: 1.04 }] };
   it('okno pon–niedz poprzedniego tygodnia (05.10.2026 → 28.09–04.10)', () => {
     const w = prevWeekStatus([], '2026-10-05', tiers);
@@ -132,13 +134,16 @@ describe('B-6h: SEFS — średnia poprzedniego tygodnia', () => {
     expect(prevWeekStatus([], '2026-10-11', tiers).from).toBe('2026-09-28');
     expect(w.mult).toBeNull();
   });
-  it('liczą się tylko odczyty dzienne z okna, jak w sefs_week_calc; stosowany niższy mnożnik', () => {
+  it('liczą się odczyty efektywne z okna (#563 korekta > oryginał); stosowany niższy mnożnik', () => {
     const w = prevWeekStatus([
-      r('SEK', '2026-09-28', 20.0), r('SEK', '2026-10-02', 20.4), r('SEK', '2026-10-05', 30), r('SEK', '2026-W40', 25), r('SEK', '2026-09', 25),
-      r('PLN', '2026-09-30', 5.6), r('PLN', '2026-10-01', 5.7, 7),
+      r(1, 'SEK', '2026-09-28', 20.0), r(2, 'SEK', '2026-10-02', 20.4), r(3, 'SEK', '2026-10-05', 30),
+      r(4, 'SEK', '2026-W40', 25), r(5, 'SEK', '2026-09', 25),
+      r(6, 'PLN', '2026-09-30', 5.6),
+      r(7, 'PLN', '2026-10-01', 5.9), r(8, 'PLN', '2026-10-01', 5.7, 7), // korekta 7 → 5,7
     ], '2026-10-05', tiers);
-    expect([w.nSek, w.nPln]).toEqual([2, 1]);
+    expect([w.nSek, w.nPln]).toEqual([2, 2]);
     expect(w.avgSek).toBeCloseTo(20.2, 6);
+    expect(w.avgPln).toBeCloseTo((5.6 + 5.7) / 2, 6);
     expect(w.mult).toBe(1);
   });
   it('formularz zapisuje odczyt dzienny (okres = data odczytu) i pokazuje stan tygodnia', () => {

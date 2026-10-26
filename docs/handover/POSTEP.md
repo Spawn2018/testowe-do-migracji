@@ -5633,3 +5633,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #578 F7 gotowe **po #577**; #577/#579 bez F7. Bez push na main.
 - CI `0a77bbde` db FAIL: i31 permission denied `sefs_lookup_mult` (revoke authenticated); i2 `fuel_se_pl_ingest` powtórka skipped=0; nullguard 852≠853 (PURE nie liczy OK).
 - **#563 krok:** 2-arg lookup bez default na 3-arg + GRANT authenticated; ingest — ta sama cena→skip (published_on tylko gdy w payload); nullguard EXPECTED **852**; baf `to_char` dni. Push PR #579. Następny: migawki ≥26.10 / sprawa zamkniętego tygodnia / front.
+
+## 2026-10-26 20:35 — #563 front lookupMult + corrects_id
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #579 CI ✔ `c2c5e9c5` (unit/db/visual) — bez F7 (zostają migawki + sprawa zamkniętego tygodnia). #577/#578 czekają. Bez push na main.
+- **#563 krok:** `lookupMult(price, tiers, bound)` MAX/MIN; `effectiveReadings` w `sefsWeek`; `LiveFuel` plnPubs bez oryginałów skorygowanych; `BafForm` bound z `tier_bound`. Push PR #579. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10.

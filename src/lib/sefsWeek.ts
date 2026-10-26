@@ -3,10 +3,17 @@
  * odczyty dzienne (okres = data RRRR-MM-DD) z poprzedniego tygodnia pon–niedz względem dnia odniesienia,
  * średnia SEK i osobno PLN, mnożniki z tabel, stosowany niższy. Czas Europe/Warsaw.
  * Tylko podgląd w Opcjach — wartość przy transporcie liczy i zapisuje baza.
+ * #563: cena dnia = odczyt efektywny (korekta wygrywa z oryginałem); `tier_bound` jak w wersji załącznika.
  */
-import { lookupMult, round2, type SefsTier } from './sefs';
+import { lookupMult, round2, type SefsTier, type SefsTierBound } from './sefs';
 
-export interface WeekReading { index_code: string; period: string; value: number; corrects_id: number | null }
+export interface WeekReading {
+  id?: number;
+  index_code: string;
+  period: string;
+  value: number;
+  corrects_id: number | null;
+}
 
 export interface PrevWeekStatus {
   from: string; to: string; nSek: number; nPln: number;
@@ -26,23 +33,30 @@ function addDays(day: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Odczyty aktualne: bez oryginałów, które mają korektę (#563 — jak `currentReadings` / baza). */
+export function effectiveReadings(readings: readonly WeekReading[]): WeekReading[] {
+  const corrected = new Set(readings.map((r) => r.corrects_id).filter((x): x is number => x !== null));
+  return readings.filter((r) => r.id == null || !corrected.has(r.id));
+}
+
 export function prevWeekStatus(
   readings: readonly WeekReading[],
   refDay: string,
   tiers?: { sek: SefsTier[]; pln: SefsTier[] } | null,
+  bound: SefsTierBound = 'MAX',
 ): PrevWeekStatus {
   const dow = (new Date(`${refDay}T12:00:00Z`).getUTCDay() + 6) % 7; // pon = 0
   const weekStart = addDays(refDay, -dow);
   const from = addDays(weekStart, -7);
   const to = addDays(weekStart, -1);
-  // jak w bazie: wiersze bez wskazania korekty (corrects_id is null), okres dzienny w oknie
-  const inWeek = (code: string) => readings.filter((r) => r.index_code === code && r.corrects_id === null
+  const live = effectiveReadings(readings);
+  const inWeek = (code: string) => live.filter((r) => r.index_code === code
     && DAY.test(r.period) && r.period >= from && r.period <= to);
   const sek = inWeek('SEK'); const pln = inWeek('PLN');
   const avg = (xs: WeekReading[]) => (xs.length ? xs.reduce((a, r) => a + Number(r.value), 0) / xs.length : null);
   const avgSek = avg(sek); const avgPln = avg(pln);
   const mult = avgSek !== null && avgPln !== null && tiers
-    ? Math.min(lookupMult(round2(avgSek), tiers.sek), lookupMult(round2(avgPln), tiers.pln))
+    ? Math.min(lookupMult(round2(avgSek), tiers.sek, bound), lookupMult(round2(avgPln), tiers.pln, bound))
     : null;
   return { from, to, nSek: sek.length, nPln: pln.length, avgSek, avgPln, mult };
 }

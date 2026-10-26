@@ -1050,7 +1050,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #563 + komentarz PR #577 15:59Z: **#563 PRZED #577** (tydzień 44 liczy się źle: 23,03/7,14/×1,13 zamiast 23,00/7,15/×1,14).
 1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg` / `sefs_last_published`; avg do 0,01 przed lookup.
 2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian). `sefs_save_parameters` przyjmuje oba pola.
-3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **78** (+11). Edge 17:15/23:15 zrobione. CI fix: lookup 2-arg+grant, ingest powtórka (ta sama cena→skip), nullguard **852**. Zostaje: migawki załadunek ≥ 26.10 + sprawa zamkniętego tygodnia + front `corrects_id`/`lookupMult` MAX. Teksty UI — koordynator.
+3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **78** (+11). Edge 17:15/23:15 zrobione. CI fix: lookup 2-arg+grant, ingest powtórka (ta sama cena→skip), nullguard **852**. Front: `lookupMult(…, tier_bound)`, `sefsWeek`/`LiveFuel`/`BafForm` — korekta wygrywa. Zostaje: migawki załadunek ≥ 26.10 + sprawa zamkniętego tygodnia. Teksty UI — koordynator.
 4. Kolejka: **#563** → **#577** (F7 pkt 1–8; migracja 0310→**0311** po rebase) → #574-nast → BN0 (#572).
 
 ### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; F7 po #563)
