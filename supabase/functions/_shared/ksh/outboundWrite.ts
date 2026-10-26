@@ -1,17 +1,20 @@
 /**
  * A6 — przetworzenie kolejki WT→plik: konflikt / łatka JSZip / upload Graph + If-Match.
- * F7 #560: etag_mismatch→pending; brak expected→skip; numery w konflikcie; attempts;
- * done tylko dla zapisanych kodów; snapshot po PUT.
+ * F7 #560 / r2: no_etag; konflikt per kod; PUT zgubiony→ack; sprawdzaj ack/l1b;
+ * import_enabled + write_test_ok_at (prod).
  */
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import JSZip from 'npm:jszip@3';
 import { uploadSharePointFile, type GraphEnv } from './graph.ts';
 import { patchWorkbookBytes, type OutboundPatch } from './xlsxPatch.ts';
 import {
+  fileAlreadyHasPatch,
   fileRowChangedSinceRead,
   missingExpectedFile,
   type FileDateSnap,
 } from './writeConflict.ts';
+
+export { fileAlreadyHasPatch } from './writeConflict.ts';
 
 export type OutboundItem = {
   id: number;
@@ -87,10 +90,14 @@ export async function processOutboundWrites(args: {
   env: GraphEnv;
   projectId: string;
   fileBytes: Uint8Array;
-  /** Bieżąca migawka z właśnie sparsowanego pliku. */
   fileSnapshot: SnapshotMap;
-  /** eTag z odczytu driveItem (If-Match). */
   eTag?: string | null;
+  /** F7 r2: zapis tylko przy włączonym imporcie. */
+  importEnabled?: boolean;
+  /** Tryb pliku Graph. */
+  fileMode?: 'test' | 'prod';
+  /** F7 r2: prod dopiero po udanym teście. */
+  writeTestOkAt?: string | null;
 }): Promise<{
   attempted: boolean;
   written: number;
@@ -99,9 +106,23 @@ export async function processOutboundWrites(args: {
   upload_ok: boolean | null;
   write_reason?: string;
   reason?: string;
-  /** Zaktualizowana migawka po udanym PUT (do upsert stanu). */
   snapshotPatch?: SnapshotMap;
+  /** Ustaw po udanym PUT w trybie test. */
+  mark_write_test_ok?: boolean;
 }> {
+  if (args.importEnabled !== true) {
+    return {
+      attempted: false, written: 0, conflicts: 0, skipped: 0,
+      upload_ok: null, write_reason: 'import_disabled',
+    };
+  }
+  if (args.fileMode === 'prod' && !args.writeTestOkAt) {
+    return {
+      attempted: false, written: 0, conflicts: 0, skipped: 0,
+      upload_ok: null, write_reason: 'write_test_required',
+    };
+  }
+
   const list = await args.sb.rpc('ksh_sync_outbound_list', {
     p_project: args.projectId,
     p_limit: 50,
@@ -117,14 +138,22 @@ export async function processOutboundWrites(args: {
     return { attempted: false, written: 0, conflicts: 0, skipped: 0, upload_ok: null };
   }
 
+  // F7 r2 BLOKER 3: brak eTag → bez PUT.
+  if (!args.eTag?.trim()) {
+    return {
+      attempted: true, written: 0, conflicts: 0, skipped: 0,
+      upload_ok: false, reason: 'no_etag', write_reason: 'no_etag',
+    };
+  }
+
   const toWrite: OutboundItem[] = [];
+  const alreadyDone: OutboundItem[] = [];
   const conflictIds: number[] = [];
   const skipIds: number[] = [];
   const skipReasons = new Map<number, string>();
 
   for (const it of items) {
     const expected = asSnap(it.expected_file);
-    // F7: brak expected → nie zapisuj
     if (missingExpectedFile(expected)) {
       skipIds.push(Number(it.id));
       skipReasons.set(Number(it.id), 'no_expected');
@@ -132,17 +161,33 @@ export async function processOutboundWrites(args: {
     }
     const codes = patchCodes(it);
     const primary = codes[0] ?? it.code;
-    const current = args.fileSnapshot[primary] ?? null;
-    // Brak wiersza przy istniejącym expected → KSH_ROW_GONE (nie „Plik zmieniony”)
-    if (!current && !args.fileSnapshot[primary]) {
-      const anyCodeInFile = codes.some((c) => args.fileSnapshot[c]);
-      if (!anyCodeInFile) {
-        skipIds.push(Number(it.id));
-        skipReasons.set(Number(it.id), 'KSH_ROW_GONE');
-        continue;
+
+    // F7 r2: PUT zgubiony — plik już ma łatkę.
+    const allApplied = codes.every((code) =>
+      fileAlreadyHasPatch(expected!, { code, ...it.patch }, args.fileSnapshot[code] ?? null)
+    );
+    if (allApplied && codes.length > 0) {
+      alreadyDone.push(it);
+      continue;
+    }
+
+    const anyCodeInFile = codes.some((c) => args.fileSnapshot[c]);
+    if (!anyCodeInFile) {
+      skipIds.push(Number(it.id));
+      skipReasons.set(Number(it.id), 'KSH_ROW_GONE');
+      continue;
+    }
+
+    // F7 r2 UWAGA: konflikt dla każdego łatanego kodu.
+    let conflict = false;
+    for (const code of codes) {
+      const current = args.fileSnapshot[code] ?? null;
+      if (fileRowChangedSinceRead(expected, current)) {
+        conflict = true;
+        break;
       }
     }
-    if (fileRowChangedSinceRead(expected, current ?? args.fileSnapshot[primary] ?? null)) {
+    if (conflict) {
       conflictIds.push(Number(it.id));
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,
@@ -160,6 +205,21 @@ export async function processOutboundWrites(args: {
     toWrite.push(it);
   }
 
+  if (alreadyDone.length) {
+    const a = await ack(
+      args.sb,
+      alreadyDone.map((it) => Number(it.id)),
+      'done',
+      null,
+    );
+    if (!a.ok) {
+      return {
+        attempted: true, written: 0, conflicts: 0, skipped: 0,
+        upload_ok: false, reason: 'ack_done_recover', write_reason: 'ack_done_recover',
+      };
+    }
+  }
+
   const ackConflict = await ack(args.sb, conflictIds, 'conflict', 'file_changed');
   if (!ackConflict.ok) {
     return {
@@ -168,7 +228,6 @@ export async function processOutboundWrites(args: {
     };
   }
   if (skipIds.length) {
-    // Grupuj po powodzie
     const byReason = new Map<string, number[]>();
     for (const id of skipIds) {
       const r = skipReasons.get(id) ?? 'no_row';
@@ -187,17 +246,28 @@ export async function processOutboundWrites(args: {
   }
 
   if (toWrite.length === 0) {
+    const snapFromRecover: SnapshotMap = { ...args.fileSnapshot };
+    for (const it of alreadyDone) {
+      for (const code of patchCodes(it)) {
+        snapFromRecover[code] = applyPatchToSnap(
+          asSnap(it.expected_file),
+          { code, ...it.patch },
+        );
+      }
+    }
     return {
       attempted: true,
-      written: 0,
+      written: alreadyDone.length,
       conflicts: conflictIds.length,
       skipped: skipIds.length,
-      upload_ok: null,
-      write_reason: conflictIds.length ? 'conflict' : 'nothing_to_write',
+      upload_ok: alreadyDone.length ? true : null,
+      write_reason: alreadyDone.length
+        ? 'recovered_ack'
+        : (conflictIds.length ? 'conflict' : 'nothing_to_write'),
+      snapshotPatch: alreadyDone.length ? snapFromRecover : undefined,
     };
   }
 
-  // Wszystkie kody transportu (F7).
   const patches: OutboundPatch[] = [];
   for (const it of toWrite) {
     for (const code of patchCodes(it)) {
@@ -226,15 +296,22 @@ export async function processOutboundWrites(args: {
   const skippedNoWrite = toWrite.filter((it) => !patchCodes(it).some((c) => writtenSet.has(c)));
 
   if (doneItems.length === 0) {
-    await ack(
+    const a = await ack(
       args.sb,
       skippedNoWrite.map((it) => Number(it.id)),
       'skipped',
       'patch_no_cell',
     );
+    if (!a.ok) {
+      return {
+        attempted: true, written: 0, conflicts: conflictIds.length,
+        skipped: skipIds.length, upload_ok: false,
+        reason: 'ack_skipped', write_reason: 'ack_skipped',
+      };
+    }
     return {
       attempted: true,
-      written: 0,
+      written: alreadyDone.length,
       conflicts: conflictIds.length,
       skipped: skipIds.length + skippedNoWrite.length,
       upload_ok: null,
@@ -246,30 +323,41 @@ export async function processOutboundWrites(args: {
     ifMatch: args.eTag,
   });
   if (!up.ok) {
-    if (up.reason === 'etag_mismatch') {
-      // F7 BLOKER 1: zostaje pending, bez sprawy; następny przebieg pobierze plik.
+    if (up.reason === 'etag_mismatch' || up.reason === 'no_etag') {
       return {
         attempted: true,
         written: 0,
         conflicts: conflictIds.length,
         skipped: skipIds.length,
         upload_ok: false,
-        reason: 'etag_mismatch',
-        write_reason: 'etag_mismatch',
+        reason: up.reason,
+        write_reason: up.reason,
       };
     }
-    // Próby → failed po 5.
+    // 423 = plik otwarty: normalne ponowienie; failed dopiero po 5 (ack failed liczy attempts).
     const failIds = doneItems.map((it) => Number(it.id));
-    await ack(args.sb, failIds, 'failed', up.reason);
+    const ackFail = await ack(args.sb, failIds, 'failed', up.reason);
+    if (!ackFail.ok) {
+      return {
+        attempted: true, written: 0, conflicts: conflictIds.length, skipped: skipIds.length,
+        upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
+      };
+    }
     for (const it of doneItems) {
       const attempts = Number(it.attempts ?? 0) + 1;
       if (attempts >= 5) {
-        await args.sb.rpc('l1b_note_outbound_failed', {
+        const note = await args.sb.rpc('l1b_note_outbound_failed', {
           p_project: args.projectId,
           p_load: it.load_id,
           p_code: it.code,
           p_reason: up.reason,
         });
+        if (note.error) {
+          return {
+            attempted: true, written: 0, conflicts: conflictIds.length, skipped: skipIds.length,
+            upload_ok: false, reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
+          };
+        }
       }
     }
     return {
@@ -284,12 +372,19 @@ export async function processOutboundWrites(args: {
   }
 
   if (skippedNoWrite.length) {
-    await ack(
+    const a = await ack(
       args.sb,
       skippedNoWrite.map((it) => Number(it.id)),
       'skipped',
       'patch_no_cell',
     );
+    if (!a.ok) {
+      return {
+        attempted: true, written: patched.written, conflicts: conflictIds.length,
+        skipped: skipIds.length, upload_ok: true,
+        reason: 'ack_skipped', write_reason: 'ack_skipped',
+      };
+    }
   }
 
   const doneIds = doneItems.map((it) => Number(it.id));
@@ -306,8 +401,15 @@ export async function processOutboundWrites(args: {
     };
   }
 
-  // Fałszywy konflikt przy 2. edycji: nadpisz snapshot wartościami z łatki.
   const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
+  for (const it of alreadyDone) {
+    for (const code of patchCodes(it)) {
+      snapshotPatch[code] = applyPatchToSnap(
+        asSnap(it.expected_file) ?? snapshotPatch[code] ?? null,
+        { code, ...it.patch },
+      );
+    }
+  }
   for (const it of doneItems) {
     for (const code of patchCodes(it)) {
       if (!writtenSet.has(code)) continue;
@@ -342,11 +444,12 @@ export async function processOutboundWrites(args: {
 
   return {
     attempted: true,
-    written: patched.written,
+    written: patched.written + alreadyDone.length,
     conflicts: conflictIds.length,
     skipped: skipIds.length + skippedNoWrite.length + patched.skipped,
     upload_ok: true,
     write_reason: 'ok',
     snapshotPatch,
+    mark_write_test_ok: args.fileMode === 'test',
   };
 }

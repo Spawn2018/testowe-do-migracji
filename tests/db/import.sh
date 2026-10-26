@@ -482,6 +482,9 @@ CODE_OUT=$(Q "select public.load_sms_code('$SG_OUT')")
 $PSQL -c "update ksh_sync_state set snapshot=jsonb_build_object('$CODE_OUT', jsonb_build_object('ld','$D1b','lt',null,'dd','$D2b','dt',null,'co',null,'ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='PRE-SKIP' where id='$SG_OUT'; commit;" >/dev/null
+# F7 r2: write_set wymaga import_enabled (tu import wyłączony od testów wyżej)
+err "A6: write_set bez importu odmowa" $HHL "select ksh_sync_write_set(true)" "import z pliku"
+val "A6: HHL_ADMIN import_set przed write" $HHL "select ksh_sync_import_set(true); select import_enabled from ksh_sync_state where project_id='$P'" t commit
 val "A6: HHL_ADMIN write_set true (skip pending)" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
 chk "A6: write_set true → pending skipped" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='skipped' and last_error='write_enabled_on'")" 1
 chk "A6: audit KSH_SYNC_WRITE_SET" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_WRITE_SET' and entity_id='$P'")" t
@@ -534,5 +537,19 @@ chk "A6: done → KSH_FILE_OUTBOUND" "$(Q "select count(*) - $EV0 from load_even
 # 42501 / permission denied dla authenticated na ack (brak EXECUTE albo require_service)
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack(array[1]::bigint[],'done',null); rollback;" 2>&1 || true)
 if echo "$out" | grep -qiE '42501|permission denied|Tylko synchronizacja'; then ok=$((ok+1)); echo "  OK    A6: ack authenticated → 42501"; else fail=$((fail+1)); echo "  FAIL  A6: ack 42501 → $(echo "$out" | tail -1)"; fi
+# F7 r2 BLOKER 4: wartość = migawka pliku → 0 outbound (echo TAKE_FILE)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+CODE_SNAP=$(Q "select public.load_sms_code('$SG_OUT'::uuid)")
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','FROM-FILE','ho','KSH-FILE')) where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='FROM-FILE', hhl_order_no='KSH-FILE' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    A6: echo migawki → 0 outbound"; else fail=$((fail+1)); echo "  FAIL  A6: echo migawki → $out"; fi
+# F7 r2: scalanie zachowuje najstarszą expected_file
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_enqueue('$SG_OUT'::uuid, '{\"carrier_order_no\":\"X1\"}'::jsonb, '{\"co\":\"OLD\"}'::jsonb);
+  select ksh_sync_outbound_enqueue('$SG_OUT'::uuid, '{\"hhl_order_no\":\"Y2\"}'::jsonb, '{\"co\":\"NEW\"}'::jsonb);
+  select expected_file->>'co' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "OLD" ]; then ok=$((ok+1)); echo "  OK    A6: expected_file najstarsza"; else fail=$((fail+1)); echo "  FAIL  A6: expected_file → $out"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

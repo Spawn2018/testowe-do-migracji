@@ -37,3 +37,40 @@ export function fileRowChangedSinceRead(
     || (expected.ho ?? null) !== (current.ho ?? null)
   );
 }
+
+type PatchLike = {
+  load_date?: string | null;
+  load_time?: string | null;
+  delivery_date?: string | null;
+  delivery_time?: string | null;
+  carrier_order_no?: string | null;
+  hhl_order_no?: string | null;
+};
+
+/** Plik już = expected+łatka (PUT udany, ack zgubiony) — F7 r2. */
+export function fileAlreadyHasPatch(
+  expected: FileDateSnap,
+  patch: PatchLike,
+  current: FileDateSnap | null | undefined,
+): boolean {
+  if (!current) return false;
+  const want: FileDateSnap = {
+    ld: expected.ld ?? null,
+    lt: expected.lt ?? null,
+    dd: expected.dd ?? null,
+    dt: expected.dt ?? null,
+    co: expected.co ?? null,
+    ho: expected.ho ?? null,
+  };
+  if ('load_date' in patch && patch.load_date != null) want.ld = String(patch.load_date);
+  if ('load_time' in patch && patch.load_time != null) want.lt = String(patch.load_time);
+  if ('delivery_date' in patch && patch.delivery_date != null) want.dd = String(patch.delivery_date);
+  if ('delivery_time' in patch && patch.delivery_time != null) want.dt = String(patch.delivery_time);
+  if ('carrier_order_no' in patch && patch.carrier_order_no != null) {
+    want.co = String(patch.carrier_order_no);
+  }
+  if ('hhl_order_no' in patch && patch.hhl_order_no != null) {
+    want.ho = String(patch.hhl_order_no);
+  }
+  return !fileRowChangedSinceRead(want, current);
+}

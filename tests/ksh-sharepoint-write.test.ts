@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
 import {
+  fileAlreadyHasPatch,
   fileRowChangedSinceRead,
   missingExpectedFile,
 } from '../supabase/functions/_shared/ksh/writeConflict';
@@ -12,6 +13,7 @@ import {
   excelDateFromIso,
   excelTimeFromHm,
   excelSerialFromIso,
+  formatDateTextFromIso,
   normalizeHm,
 } from '../supabase/functions/_shared/ksh/xlsxPatchTime';
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
@@ -48,13 +50,19 @@ describe('A6 writeConflict', () => {
 });
 
 describe('A6 xlsxPatchTime', () => {
-  it('ISO → UTC noon / serial', () => {
+  it('ISO → UTC północ / serial całkowity (F7 r2)', () => {
     const d = excelDateFromIso('2026-11-15');
     expect(d?.getUTCFullYear()).toBe(2026);
     expect(d?.getUTCMonth()).toBe(10);
     expect(d?.getUTCDate()).toBe(15);
-    expect(d?.getUTCHours()).toBe(12);
-    expect(excelSerialFromIso('2026-11-15')).toBeGreaterThan(40_000);
+    expect(d?.getUTCHours()).toBe(0);
+    expect(excelSerialFromIso('2026-10-26')).toBe(46321);
+    expect(Number.isInteger(excelSerialFromIso('2026-10-26'))).toBe(true);
+  });
+
+  it('formatDateTextFromIso dd.mm.yyyy', () => {
+    expect(formatDateTextFromIso('2026-10-26')).toBe('26.10.2026');
+    expect(formatDateTextFromIso('2026-10-26', '2026-01-01')).toBe('2026-10-26');
   });
 
   it('HH:MM → 1899-12-30; normalizeHm', () => {
@@ -112,12 +120,20 @@ describe('A6 Graph upload If-Match', () => {
       }
       return new Response('no', { status: 404 });
     }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), body, fetchFn);
+    const r = await uploadSharePointFile(env(), body, fetchFn, { ifMatch: '"e"' });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.meta.bytes).toBe(3);
       expect(JSON.stringify(r)).not.toMatch(/tempauth|tok|contoso/);
     }
+  });
+
+  it('upload bez If-Match → no_etag (F7 r2)', async () => {
+    const fetchFn = vi.fn(async () => new Response('no', { status: 404 })) as unknown as typeof fetch;
+    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('no_etag');
+    expect(fetchFn).not.toHaveBeenCalled();
   });
 
   it('upload network → network_upload', async () => {
@@ -128,7 +144,7 @@ describe('A6 Graph upload If-Match', () => {
       }
       throw new TypeError('reset');
     }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn);
+    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn, { ifMatch: '"e"' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('network_upload');
   });
@@ -141,9 +157,19 @@ describe('A6 Graph upload If-Match', () => {
       }
       return new Response('denied', { status: 403 });
     }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn);
+    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn, { ifMatch: '"e"' });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('upload_http_403');
+  });
+});
+
+describe('A6 fileAlreadyHasPatch', () => {
+  it('plik = expected+łatka → true', () => {
+    const exp = { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'A', ho: null };
+    expect(fileAlreadyHasPatch(exp, { code: 'X', load_date: '2026-11-02' }, {
+      ...exp, ld: '2026-11-02',
+    })).toBe(true);
+    expect(fileAlreadyHasPatch(exp, { code: 'X', load_date: '2026-11-02' }, exp)).toBe(false);
   });
 });
 
@@ -200,7 +226,7 @@ async function fixtureXlsx(): Promise<Uint8Array> {
     </row>
     <row r="2">
       <c r="A2" t="s"><v>7</v></c>
-      <c r="B2"><v>46000</v></c>
+      <c r="B2" s="3"><v>46000</v></c>
       <c r="C2" t="inlineStr"><is><t>08:00</t></is></c>
       <c r="D2"><v>46005</v></c>
       <c r="E2" t="inlineStr"><is><t>14:00</t></is></c>
@@ -247,6 +273,8 @@ describe('A6 xlsxPatch JSZip', () => {
     expect(sheet2).toContain('SUM(1,2)');
     expect(sheet1).toContain('NEW-SCAN');
     expect(sheet1).toContain('09:15');
+    // F7 r2: styl s="3" zachowany na B2
+    expect(sheet1).toMatch(/<c r="B2"[^>]*\ss="3"/);
     // drugi wiersz SG-99 (A3) nietknięty jako „pierwszy wygrywa”
     expect(sheet1).toMatch(/<c r="A3"[^>]*>[\s\S]*?SG-99/);
     // godzina rozładunku nie wyczyszczona

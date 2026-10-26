@@ -5283,6 +5283,17 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI HEAD `3542f586`: unit ✔ visual ✔ db ✔ (`40246684823` / `40246684890`).
 - Bieżąca: **#560** — wpis F7 r2 w PLAN §4/§8 (styl `s=`, serial daty całkowity, `no_etag`, echo migawki, DEFLATE, kolejność komórek, workbook.xml, `dd.mm.yyyy`, zapis tylko przy `import_enabled`, PUT zgubiony→ack, oldest expected, ack/l1b check, konflikt per kod, `write_test_ok_at`, 423=ponowienie). Następny commit: kod.
 
+## 2026-10-26 02:25 — A6 #560 F7 runda 2: kod
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Brak „F7: gotowe”. Bez push na main.
+- Kod F7 r2 w **0308** + Edge/unit:
+  1. styl komórki `s=…`; 2. serial daty całkowity (2026-10-26→46321); 3. `no_etag` bez PUT; 4. echo=migawka → 0 kolejki;
+  5–8. DEFLATE, kolejność komórek, workbook.xml+rels, `dd.mm.yyyy`;
+  9. zapis tylko przy `import_enabled` (`write_set` odrzuca);
+  10. PUT zgubiony→`fileAlreadyHasPatch`→ack done; 11. oldest `expected_file`; 12. sprawdzaj ack/l1b;
+  + konflikt per kod; `write_test_ok_at`; 423=ponowienie (failed po 5).
+- EXPECTED import **173**; unit `ksh-sharepoint-write` 15/15. Push → CI → prośba F7 po zielonym.
+
 ### Prognoza wydania 1.0 (#538 1B — do 26.10 12:00; tempo 23–25.10 + rundy F7)
 
 Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynatora równolegle. Bramę bezpieczeństwa 28.10 (B5, B7, C11, C9, OWASP z P11) da się domknąć: **B5/B7/B8/B9 już SCALONE**; C11 = test Auth; C9 = testy E19; OWASP = wycinek P11.

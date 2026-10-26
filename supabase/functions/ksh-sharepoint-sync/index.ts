@@ -28,6 +28,7 @@ type SyncStateRow = {
   last_read_at?: string | null;
   import_enabled?: boolean | null;
   write_enabled?: boolean | null;
+  write_test_ok_at?: string | null;
   source_ok?: boolean | null;
   last_error?: string | null;
   last_run?: {
@@ -99,7 +100,7 @@ async function handle(req: Request): Promise<Response> {
   {
     const st = await sb
       .from('ksh_sync_state')
-      .select('last_read_at, import_enabled, write_enabled, last_run, source_ok, last_error')
+      .select('last_read_at, import_enabled, write_enabled, write_test_ok_at, last_run, source_ok, last_error')
       .eq('project_id', projectId)
       .maybeSingle();
     if (st.error) {
@@ -114,6 +115,8 @@ async function handle(req: Request): Promise<Response> {
   const prevReadAt = prev?.last_read_at ?? null;
   const importEnabled = prev?.import_enabled === true;
   const writeEnabled = prev?.write_enabled === true;
+  const writeTestOkAt = prev?.write_test_ok_at ?? null;
+  const fileMode = env.SHAREPOINT_FILE_MODE === 'test' ? 'test' as const : 'prod' as const;
   const prevHash = typeof prev?.last_run?.hash === 'string' ? prev.last_run.hash : null;
   const prevFirstErrorAt =
     typeof prev?.last_run?.first_error_at === 'string' ? prev.last_run.first_error_at : null;
@@ -130,15 +133,27 @@ async function handle(req: Request): Promise<Response> {
     }>,
     eTag?: string | null,
   ) => {
+    // F7 r2: zapis tylko przy write_enabled + import_enabled.
     if (!writeEnabled) return null;
-    return processOutboundWrites({
+    const res = await processOutboundWrites({
       sb,
       env,
       projectId,
       fileBytes,
       fileSnapshot,
       eTag,
+      importEnabled,
+      fileMode,
+      writeTestOkAt,
     });
+    if (res.mark_write_test_ok) {
+      await sb
+        .from('ksh_sync_state')
+        .update({ write_test_ok_at: new Date().toISOString() })
+        .eq('project_id', projectId)
+        .is('write_test_ok_at', null);
+    }
+    return res;
   };
 
   const raiseDownIfDue = async (warnings: string[]) => {

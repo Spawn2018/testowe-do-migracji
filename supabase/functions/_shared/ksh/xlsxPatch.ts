@@ -1,20 +1,24 @@
 /**
  * A6 — łatka XLSX przez JSZip (XML arkusza), bez przepisywania całego skoroszytu (F7 #560).
- * Typ komórki zostaje: tekst→tekst, liczba/data→liczba. NULL / niesparsowane → pomiń (nie czyść).
- * Duplikat kodu: pierwszy wiersz (jak parser).
- * JSZip wstrzykiwany (Deno: npm:jszip; Vitest: jszip) — jak fuel/wob.
+ * F7 r2: atrybuty stylu `s=…`, serial daty całkowity, DEFLATE, kolejność komórek,
+ * pierwszy arkusz z workbook.xml+rels, tekst daty dd.mm.yyyy.
  */
 import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
 import {
   excelSerialFromIso,
   excelTimeFractionFromHm,
+  formatDateTextFromIso,
   normalizeHm,
 } from './xlsxPatchTime.ts';
 
 export type ZipLike = {
   files: Record<string, { async(type: 'string'): Promise<string> }>;
   file(name: string, data: string): void;
-  generateAsync(options: { type: 'uint8array' }): Promise<Uint8Array>;
+  generateAsync(options: {
+    type: 'uint8array';
+    compression?: 'DEFLATE' | 'STORE';
+    compressionOptions?: { level?: number };
+  }): Promise<Uint8Array>;
 };
 
 export type OutboundPatch = {
@@ -32,6 +36,7 @@ export {
   excelTimeFromHm,
   excelSerialFromIso,
   excelTimeFractionFromHm,
+  formatDateTextFromIso,
   normalizeHm,
 } from './xlsxPatchTime.ts';
 
@@ -79,6 +84,15 @@ function indexToColLetters(idx: number): string {
   return s;
 }
 
+/** Atrybuty komórki poza r i t (F7 r2: zachowaj s=…). */
+function attrsExtra(attrs: string): string {
+  return attrs
+    .replace(/\sr="[^"]*"/g, '')
+    .replace(/\st="[^"]*"/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 type CellKind = 'shared' | 'inline' | 'str' | 'number' | 'empty';
 
 type CellInfo = {
@@ -87,24 +101,27 @@ type CellInfo = {
   text: string;
   num: number | null;
   raw: string;
+  /** Atrybuty poza r/t (np. s="3"). */
+  extra: string;
 };
 
 function readCell(attrs: string, body: string, shared: string[]): CellInfo {
   const ref = /r="([A-Z]+\d+)"/.exec(attrs)?.[1] ?? '';
+  const extra = attrsExtra(attrs);
   const t = /\st="([^"]+)"/.exec(attrs)?.[1];
   if (t === 'inlineStr') {
     const text = decodeXml([...body.matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map((x) => x[1]).join(''));
-    return { ref, kind: 'inline', text, num: null, raw: '' };
+    return { ref, kind: 'inline', text, num: null, raw: '', extra };
   }
   const v = /<v>([\s\S]*?)<\/v>/.exec(body)?.[1];
   if (v === undefined) {
-    return { ref, kind: 'empty', text: '', num: null, raw: '' };
+    return { ref, kind: 'empty', text: '', num: null, raw: '', extra };
   }
   if (t === 's') {
-    return { ref, kind: 'shared', text: shared[Number(v)] ?? '', num: null, raw: v };
+    return { ref, kind: 'shared', text: shared[Number(v)] ?? '', num: null, raw: v, extra };
   }
   if (t === 'str') {
-    return { ref, kind: 'str', text: decodeXml(v), num: null, raw: v };
+    return { ref, kind: 'str', text: decodeXml(v), num: null, raw: v, extra };
   }
   const num = Number(v);
   return {
@@ -113,6 +130,7 @@ function readCell(attrs: string, body: string, shared: string[]): CellInfo {
     text: Number.isFinite(num) ? String(num) : decodeXml(v),
     num: Number.isFinite(num) ? num : null,
     raw: v,
+    extra,
   };
 }
 
@@ -120,29 +138,52 @@ function cellDisplay(c: CellInfo): string {
   return (c.text ?? '').replace(/\u00A0/g, ' ').trim();
 }
 
-function buildCellXml(ref: string, kind: CellKind, value: string | number): string {
+function buildCellXml(
+  ref: string,
+  kind: CellKind,
+  value: string | number,
+  extra = '',
+): string {
+  const ex = extra ? ` ${extra}` : '';
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return `<c r="${ref}"><v>${value}</v></c>`;
+    return `<c r="${ref}"${ex}><v>${value}</v></c>`;
   }
   const t = encodeXml(String(value));
   if (kind === 'str') {
-    return `<c r="${ref}" t="str"><v>${t}</v></c>`;
+    return `<c r="${ref}"${ex} t="str"><v>${t}</v></c>`;
   }
-  // shared / inline / empty → inlineStr (nie psujemy sharedStrings innych komórek)
-  return `<c r="${ref}" t="inlineStr"><is><t>${t}</t></is></c>`;
+  return `<c r="${ref}"${ex} t="inlineStr"><is><t>${t}</t></is></c>`;
 }
 
 type SheetModel = {
   path: string;
   xml: string;
   shared: string[];
-  /** ref → CellInfo z pierwszego przebiegu */
   cells: Map<string, CellInfo>;
-  /** kod → numer wiersza (pierwszy) */
   codeRow: Map<string, number>;
   headerCol: Map<string, number>;
   codeColLetters: string;
 };
+
+async function resolveFirstSheetPath(zip: ZipLike): Promise<string | null> {
+  const wbFile = zip.files['xl/workbook.xml'];
+  const relsFile = zip.files['xl/_rels/workbook.xml.rels'];
+  if (!wbFile || !relsFile) return null;
+  const wbXml = await wbFile.async('string');
+  const first = /<sheet\b([^>]*?)\s*\/?>/.exec(wbXml);
+  if (!first) return null;
+  const rid = /\br:id="([^"]+)"/.exec(first[1])?.[1];
+  if (!rid) return null;
+  const relsXml = await relsFile.async('string');
+  const reA = new RegExp(`<Relationship[^>]*\\bId="${rid}"[^>]*\\bTarget="([^"]+)"`);
+  const reB = new RegExp(`<Relationship[^>]*\\bTarget="([^"]+)"[^>]*\\bId="${rid}"`);
+  const m = reA.exec(relsXml) ?? reB.exec(relsXml);
+  if (!m?.[1]) return null;
+  let target = m[1].replace(/^\//, '');
+  if (target.startsWith('worksheets/')) target = `xl/${target}`;
+  if (!target.startsWith('xl/')) target = `xl/${target}`;
+  return target;
+}
 
 async function loadFirstSheet(
   bytes: Uint8Array,
@@ -157,11 +198,12 @@ async function loadFirstSheet(
   } catch {
     return { ok: false, reason: 'xlsx_load' };
   }
-  const sheetPaths = Object.keys(zip.files)
-    .filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
-    .sort();
-  if (!sheetPaths.length) return { ok: false, reason: 'no_sheet' };
-  const path = sheetPaths[0]!;
+  const path = (await resolveFirstSheetPath(zip))
+    ?? Object.keys(zip.files)
+      .filter((n) => /^xl\/worksheets\/sheet\d+\.xml$/.test(n))
+      .sort()[0]
+    ?? null;
+  if (!path || !zip.files[path]) return { ok: false, reason: 'no_sheet' };
   const xml = await zip.files[path]!.async('string');
   const sharedXml = zip.files['xl/sharedStrings.xml']
     ? await zip.files['xl/sharedStrings.xml']!.async('string')
@@ -208,6 +250,39 @@ async function loadFirstSheet(
   };
 }
 
+/** Wstaw komórkę we właściwej kolejności kolumn; obsłuż `<row r="N"/>`. */
+function insertOrReplaceCell(sheet: SheetModel, ref: string, cellXml: string): boolean {
+  const row = Number(/(\d+)$/.exec(ref)?.[1] ?? 0);
+  if (!row) return false;
+  const re = new RegExp(`<c r="${ref}"[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)`);
+  if (re.test(sheet.xml)) {
+    sheet.xml = sheet.xml.replace(re, cellXml);
+    return true;
+  }
+  const colIdx = colLettersToIndex(/^([A-Z]+)/.exec(ref)?.[1] ?? 'A');
+  // Self-closing row
+  const selfRe = new RegExp(`<row([^>]*\\sr="${row}"[^>]*)/>`);
+  if (selfRe.test(sheet.xml)) {
+    sheet.xml = sheet.xml.replace(selfRe, `<row$1>${cellXml}</row>`);
+    return true;
+  }
+  const rowRe = new RegExp(`(<row[^>]*\\sr="${row}"[^>]*>)([\\s\\S]*?)(<\\/row>)`);
+  if (!rowRe.test(sheet.xml)) return false;
+  sheet.xml = sheet.xml.replace(rowRe, (_all, open: string, body: string, close: string) => {
+    const cellRe = /<c r="([A-Z]+)(\d+)"[^>]*?(?:\/>|>[\s\S]*?<\/c>)/g;
+    let insertAt = body.length;
+    let m: RegExpExecArray | null;
+    while ((m = cellRe.exec(body))) {
+      if (colLettersToIndex(m[1]) > colIdx) {
+        insertAt = m.index;
+        break;
+      }
+    }
+    return `${open}${body.slice(0, insertAt)}${cellXml}${body.slice(insertAt)}${close}`;
+  });
+  return true;
+}
+
 function setCellValue(
   sheet: SheetModel,
   row: number,
@@ -224,30 +299,23 @@ function setCellValue(
     ? 'str'
     : prev?.kind === 'number' && typeof value === 'string'
     ? 'inline'
-    : (prev?.kind ?? 'inline');
-  const xml = buildCellXml(ref, kind === 'shared' ? 'inline' : kind, value);
-  const re = new RegExp(`<c r="${ref}"[^>]*?(?:\\/>|>[\\s\\S]*?<\\/c>)`);
-  if (re.test(sheet.xml)) {
-    sheet.xml = sheet.xml.replace(re, xml);
-  } else {
-    // Brak komórki — wstaw do wiersza <row r="N">…</row>
-    const rowRe = new RegExp(`(<row[^>]*\\sr="${row}"[^>]*>)([\\s\\S]*?)(<\\/row>)`);
-    if (!rowRe.test(sheet.xml)) return false;
-    sheet.xml = sheet.xml.replace(rowRe, (_all, open, body, close) => `${open}${body}${xml}${close}`);
-  }
+    : (prev?.kind === 'shared' ? 'inline' : (prev?.kind ?? 'inline'));
+  const extra = prev?.extra ?? '';
+  const xml = buildCellXml(ref, kind === 'shared' ? 'inline' : kind, value, extra);
+  if (!insertOrReplaceCell(sheet, ref, xml)) return false;
   sheet.cells.set(ref, {
     ref,
     kind: typeof value === 'number' ? 'number' : 'inline',
     text: String(value),
     num: typeof value === 'number' ? value : null,
     raw: '',
+    extra,
   });
   return true;
 }
 
 /**
  * Nakłada łatki na bajty xlsx (JSZip). Zwraca bajty + listę zapisanych kodów.
- * `loadAsync` — JSZip.loadAsync (Edge przekazuje npm:jszip; testy — jszip).
  */
 export async function patchWorkbookBytes(
   bytes: Uint8Array,
@@ -278,13 +346,14 @@ export async function patchWorkbookBytes(
     const applyDate = (header: string, iso: string | null | undefined, present: boolean) => {
       if (!present) return;
       const serial = excelSerialFromIso(iso ?? undefined);
-      if (serial == null) return; // F7: NULL/niesparsowane nie czyści
+      if (serial == null) return;
       const refCol = sheet.headerCol.get(header);
       if (!refCol) return;
       const ref = `${indexToColLetters(refCol)}${rowNum}`;
       const prev = sheet.cells.get(ref);
       if (prev?.kind === 'inline' || prev?.kind === 'str' || prev?.kind === 'shared') {
-        if (setCellValue(sheet, rowNum, header, String(iso).trim())) changed = true;
+        const text = formatDateTextFromIso(iso, prev.text);
+        if (text && setCellValue(sheet, rowNum, header, text)) changed = true;
       } else if (setCellValue(sheet, rowNum, header, serial)) {
         changed = true;
       }
@@ -307,7 +376,7 @@ export async function patchWorkbookBytes(
     };
     const applyText = (header: string, val: string | null | undefined, present: boolean) => {
       if (!present) return;
-      if (val == null || !String(val).trim()) return; // nie czyść
+      if (val == null || !String(val).trim()) return;
       if (setCellValue(sheet, rowNum, header, String(val).trim())) changed = true;
     };
 
@@ -327,6 +396,10 @@ export async function patchWorkbookBytes(
   }
 
   zip.file(sheet.path, sheet.xml);
-  const out = await zip.generateAsync({ type: 'uint8array' });
+  const out = await zip.generateAsync({
+    type: 'uint8array',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
   return { ok: true, bytes: out, written, skipped, writtenCodes };
 }

@@ -142,7 +142,8 @@ begin
   on conflict (load_id) where (status = 'pending')
   do update set
     patch = public.ksh_sync_outbound.patch || excluded.patch,
-    expected_file = coalesce(excluded.expected_file, public.ksh_sync_outbound.expected_file),
+    -- F7 r2: zachowaj najstarszą migawkę (existing, nie excluded).
+    expected_file = coalesce(public.ksh_sync_outbound.expected_file, excluded.expected_file),
     shipment_code = excluded.shipment_code,
     created_at = now(),
     created_by = excluded.created_by,
@@ -347,6 +348,8 @@ declare
   v_snap jsonb;
   v_code text;
   v_proj_code text;
+  v_load_time text;
+  v_deliv_time text;
 begin
   if current_setting('tower.import_ctx', true) = 'on' then
     return new;
@@ -358,49 +361,56 @@ begin
     return new;
   end if;
 
-  if current_setting('tower.dates_ctx', true) = 'on' then
-    -- Tylko zmienione pola; NULL nie czyści komórki (pomijamy klucz).
-    if new.plan_load_date is distinct from old.plan_load_date
-       and new.plan_load_date is not null then
-      v_patch := v_patch || jsonb_build_object('load_date', new.plan_load_date);
-    end if;
-    if new.plan_load_from is distinct from old.plan_load_from
-       and new.plan_load_from is not null then
-      v_patch := v_patch || jsonb_build_object(
-        'load_time', to_char(new.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI')
-      );
-    end if;
-    if new.plan_delivery_date is distinct from old.plan_delivery_date
-       and new.plan_delivery_date is not null then
-      v_patch := v_patch || jsonb_build_object('delivery_date', new.plan_delivery_date);
-    end if;
-    -- F7 BLOKER 3: rozładunek = plan_delivery_to (Europe/Stockholm), nie from.
-    if new.plan_delivery_to is distinct from old.plan_delivery_to
-       and new.plan_delivery_to is not null then
-      v_patch := v_patch || jsonb_build_object(
-        'delivery_time', to_char(new.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI')
-      );
-    end if;
-  end if;
-
-  if new.carrier_order_no is distinct from old.carrier_order_no
-     and nullif(btrim(new.carrier_order_no), '') is not null then
-    v_patch := v_patch || jsonb_build_object('carrier_order_no', new.carrier_order_no);
-  end if;
-  if new.hhl_order_no is distinct from old.hhl_order_no
-     and nullif(btrim(new.hhl_order_no), '') is not null then
-    v_patch := v_patch || jsonb_build_object('hhl_order_no', new.hhl_order_no);
-  end if;
-
-  if v_patch = '{}'::jsonb then
-    return new;
-  end if;
-
+  -- F7 r2 BLOKER 4: migawka pliku — pomiń pole gdy nowa wartość = plik (echo TAKE_FILE itd.).
   v_code := public.load_sms_code(new.id);
   select s.snapshot -> v_code into v_snap
     from public.ksh_sync_state s where s.project_id = new.project_id;
   if v_snap is not null then
     v_exp := v_snap;
+  end if;
+
+  if current_setting('tower.dates_ctx', true) = 'on' then
+    -- Tylko zmienione pola; NULL nie czyści komórki (pomijamy klucz).
+    if new.plan_load_date is distinct from old.plan_load_date
+       and new.plan_load_date is not null
+       and (v_snap is null or (v_snap->>'ld') is distinct from new.plan_load_date::text) then
+      v_patch := v_patch || jsonb_build_object('load_date', new.plan_load_date);
+    end if;
+    if new.plan_load_from is distinct from old.plan_load_from
+       and new.plan_load_from is not null then
+      v_load_time := to_char(new.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI');
+      if (v_snap is null or (v_snap->>'lt') is distinct from v_load_time) then
+        v_patch := v_patch || jsonb_build_object('load_time', v_load_time);
+      end if;
+    end if;
+    if new.plan_delivery_date is distinct from old.plan_delivery_date
+       and new.plan_delivery_date is not null
+       and (v_snap is null or (v_snap->>'dd') is distinct from new.plan_delivery_date::text) then
+      v_patch := v_patch || jsonb_build_object('delivery_date', new.plan_delivery_date);
+    end if;
+    -- F7 BLOKER 3: rozładunek = plan_delivery_to (Europe/Stockholm), nie from.
+    if new.plan_delivery_to is distinct from old.plan_delivery_to
+       and new.plan_delivery_to is not null then
+      v_deliv_time := to_char(new.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
+      if (v_snap is null or (v_snap->>'dt') is distinct from v_deliv_time) then
+        v_patch := v_patch || jsonb_build_object('delivery_time', v_deliv_time);
+      end if;
+    end if;
+  end if;
+
+  if new.carrier_order_no is distinct from old.carrier_order_no
+     and nullif(btrim(new.carrier_order_no), '') is not null
+     and (v_snap is null or (v_snap->>'co') is distinct from new.carrier_order_no) then
+    v_patch := v_patch || jsonb_build_object('carrier_order_no', new.carrier_order_no);
+  end if;
+  if new.hhl_order_no is distinct from old.hhl_order_no
+     and nullif(btrim(new.hhl_order_no), '') is not null
+     and (v_snap is null or (v_snap->>'ho') is distinct from new.hhl_order_no) then
+    v_patch := v_patch || jsonb_build_object('hhl_order_no', new.hhl_order_no);
+  end if;
+
+  if v_patch = '{}'::jsonb then
+    return new;
   end if;
 
   perform public.ksh_sync_outbound_enqueue(new.id, v_patch, v_exp);
@@ -422,7 +432,14 @@ create trigger trg_ksh_sync_outbound
 comment on function public.trg_ksh_sync_outbound() is
   'A6 G-20: kolejka zapisu do pliku KSH po zmianie dat (dates_ctx) lub numerów; nie przy import_ctx; STEGRA_*.';
 
+-- F7 r2: write_test_ok_at — prod dopiero po udanym zapisie testowym.
+alter table public.ksh_sync_state
+  add column if not exists write_test_ok_at timestamptz;
+comment on column public.ksh_sync_state.write_test_ok_at is
+  'A6 F7: czas udanego PUT w trybie test; bez niego tryb prod nie pisze.';
+
 -- F7: przy włączeniu zapisu — zaległe pending → skipped (bez backlogu).
+-- F7 r2: zapis tylko gdy import_enabled = true.
 create or replace function public.ksh_sync_write_set(p_enabled boolean)
 returns void
 language plpgsql
@@ -433,6 +450,7 @@ declare
   v_me uuid;
   v_role public.user_role;
   v_pid uuid;
+  v_import boolean;
 begin
   perform public.assert_not_preview();
   select id, role into v_me, v_role
@@ -447,6 +465,12 @@ begin
    limit 1;
   if v_pid is null then
     raise exception 'Brak projektu KSH (STEGRA_BODEN)' using errcode = 'P0002';
+  end if;
+  if p_enabled is true then
+    select import_enabled into v_import from public.ksh_sync_state where project_id = v_pid;
+    if v_import is not true then
+      raise exception 'Włącz najpierw import z pliku' using errcode = '22023';
+    end if;
   end if;
   insert into public.ksh_sync_state (project_id, write_enabled)
   values (v_pid, coalesce(p_enabled, false))
@@ -471,7 +495,7 @@ revoke all on function public.ksh_sync_write_set(boolean) from public, anon;
 grant execute on function public.ksh_sync_write_set(boolean) to authenticated;
 
 comment on function public.ksh_sync_write_set(boolean) is
-  'A6: przełącznik zapisu WT→plik; przy true zaległe pending→skipped; tylko HHL_ADMIN + 2FA.';
+  'A6: przełącznik zapisu WT→plik; wymaga import_enabled; przy true zaległe pending→skipped; HHL_ADMIN+2FA.';
 
 commit;
 

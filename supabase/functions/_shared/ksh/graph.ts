@@ -217,6 +217,15 @@ export async function uploadSharePointFile(
   if (bytes.byteLength > GRAPH_MAX_BYTES) {
     return { ok: false, reason: 'file_too_large', meta: { http: 0, bytes: bytes.byteLength } };
   }
+  // F7 r2 BLOKER 3: brak eTag → bez PUT i bez tokenu (nie nadpisuj bez warunku).
+  const ifMatch = opts?.ifMatch?.trim();
+  if (!ifMatch) {
+    return {
+      ok: false,
+      reason: 'no_etag',
+      meta: { http: 0, bytes: bytes.byteLength },
+    };
+  }
   const fileUrl = resolved.mode === 'test' ? env.SHAREPOINT_TEST_FILE_URL! : env.SHAREPOINT_FILE_URL!;
   const tok = await graphClientCredentialsToken(env, fetchFn);
   if (!tok.ok) {
@@ -230,9 +239,8 @@ export async function uploadSharePointFile(
   const headers: Record<string, string> = {
     Authorization: `Bearer ${tok.token}`,
     'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'If-Match': ifMatch,
   };
-  const ifMatch = opts?.ifMatch?.trim();
-  if (ifMatch) headers['If-Match'] = ifMatch;
   let putRes: Response;
   try {
     putRes = await fetchFn(`https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/content`, {
