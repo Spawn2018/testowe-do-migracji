@@ -50,7 +50,7 @@ export function requestAuthReload(): Promise<AuthReloadResult> {
   return requestAuthReloadTracked().first;
 }
 
-/** F7 #383 r3: `first` — koniec albo limit czasu; `finished` — faktyczny koniec przeładowania (bez limitu,
+/** F7 #383 r3: `first` — koniec albo limit czasu; `finished` — faktyczny koniec przeładowania (najpóźniej po `AUTH_RELOAD_HARD_MS`,
  * spełnia się od razu, gdy nikt nie słucha zdarzenia — demo, testy). */
 export function requestAuthReloadTracked(): { first: Promise<AuthReloadResult>; finished: Promise<void> } {
   if (typeof window === 'undefined') return { first: Promise.resolve('done'), finished: Promise.resolve() };
