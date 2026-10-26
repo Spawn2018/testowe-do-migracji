@@ -5456,3 +5456,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: brak „F7: gotowe”. CI `06c6a108` unit/visual/db ✔ — F7: quiet nie może wyłączać sprawy file-changed (także SharePoint). #383 CONFLICTING. Bez push na main.
 - Kod: `l1b_note_file_changed` zawsze przy plik≠expected (bez `v_run_quiet`); B1 z `p_quiet=true` + wariant SharePoint `service_role`+quiet → 1 sprawa. EXPECTED import **195**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 07:20 — A6 #560 F7 runda 7: B1 quiet + N13 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 r7 na `06c6a108` — **wymaga poprawek** (B1 sprawa przy `p_quiet=true`; N13 pending przed crit). Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `fe1e4bd6` (B1 quiet w kodzie): unit ✔ visual ✔ **db FAIL** import 193/2 — (1) quiet+hhlOrderNo: trigger zostawia pending → file-changed (ten sam klucz) mimo wyciszenia sprawy numeru; (2) SharePoint sprawa 0 (czyszczenie decyzji / dedup). Fix w następnym commitcie z N13.
+- Bieżąca: **#560** — wpis F7 r7 w PLAN §4/§8. Następny commit: kod N13 + testy.
