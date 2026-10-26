@@ -10,14 +10,13 @@ import { uploadSharePointFile, type GraphEnv } from './graph.ts';
 import { patchWorkbookBytes, type OutboundPatch } from './xlsxPatch.ts';
 import {
   fileAlreadyHasPatch,
-  conflictFieldFromSnaps,
-  fileRowChangedSinceRead,
   missingExpectedFile,
+  pickOutboundConflictNote,
   type FileDateSnap,
 } from './writeConflict.ts';
 import { ackPayload } from './ackPayload.ts';
 
-export { fileAlreadyHasPatch } from './writeConflict.ts';
+export { fileAlreadyHasPatch, pickOutboundConflictNote } from './writeConflict.ts';
 export { ackPayload } from './ackPayload.ts';
 
 export type OutboundItem = {
@@ -167,7 +166,6 @@ export async function processOutboundWrites(args: {
       continue;
     }
     const codes = patchCodes(it);
-    const primary = codes[0] ?? it.code;
 
     // F7 r2 / r2b: PUT zgubiony lub częściowa łatka — pomiń kody już w pliku.
     const remaining = codes.filter((code) =>
@@ -186,28 +184,21 @@ export async function processOutboundWrites(args: {
     }
 
     // F7 r2 UWAGA: konflikt tylko dla kodów jeszcze nie zastosowanych.
-    let conflict = false;
-    for (const code of remaining) {
-      const current = args.fileSnapshot[code] ?? null;
-      if (fileRowChangedSinceRead(expected, current)) {
-        conflict = true;
-        break;
-      }
-    }
-    if (conflict) {
+    // #569: p_code / pole sprawy = wiersz, w którym wykryto rozjazd (nie primary).
+    const conflictNote = pickOutboundConflictNote(
+      remaining,
+      expected!,
+      args.fileSnapshot,
+      it.patch as Record<string, unknown>,
+    );
+    if (conflictNote) {
       conflictItems.push(it);
-      // F7 r9: najpierw pole z łatki (jak import), potem dowolne różniące się.
-      const cur = args.fileSnapshot[primary] ?? null;
-      const patchKeys = it.patch && typeof it.patch === 'object'
-        ? Object.keys(it.patch as Record<string, unknown>)
-        : [];
-      const field = conflictFieldFromSnaps(expected, cur, patchKeys);
       const rev = typeof it.rev === 'number' && it.rev >= 1 ? it.rev : 1;
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,
         p_load: it.load_id,
-        p_code: primary,
-        p_field: field,
+        p_code: conflictNote.code,
+        p_field: conflictNote.field,
         p_rev: rev,
       });
       if (note.error) {

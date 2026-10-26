@@ -66,6 +66,29 @@ export function fileRowChangedSinceRead(
 }
 
 /**
+ * #569: kod i pole sprawy z wiersza, w którym wykryto rozjazd
+ * (nie z pierwszego kodu transportu przy wielu kodach).
+ */
+export function pickOutboundConflictNote(
+  remaining: string[],
+  expected: FileDateSnap,
+  fileSnapshot: Record<string, FileDateSnap | null | undefined>,
+  patch: Record<string, unknown> | null | undefined,
+): { code: string; field: ConflictField } | null {
+  const patchKeys = patch && typeof patch === 'object' ? Object.keys(patch) : [];
+  for (const code of remaining) {
+    const current = fileSnapshot[code] ?? null;
+    if (fileRowChangedSinceRead(expected, current)) {
+      return {
+        code,
+        field: conflictFieldFromSnaps(expected, current, patchKeys),
+      };
+    }
+  }
+  return null;
+}
+
+/**
  * F7 r8/r9: pole sprawy jak import — najpierw różniące się pole **z łatki**
  * (ta sama kolejność co import), potem dowolne różniące się.
  */

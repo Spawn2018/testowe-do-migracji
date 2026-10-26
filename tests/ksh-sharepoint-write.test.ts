@@ -9,6 +9,7 @@ import {
   fileAlreadyHasPatch,
   fileRowChangedSinceRead,
   missingExpectedFile,
+  pickOutboundConflictNote,
 } from '../supabase/functions/_shared/ksh/writeConflict';
 import { ackPayload } from '../supabase/functions/_shared/ksh/ackPayload';
 import {
@@ -80,6 +81,33 @@ describe('A6 writeConflict', () => {
     expect(conflictFieldFromSnaps(
       a, { ...a, ld: '2026-11-02', co: 'S1' }, ['carrier_order_no'],
     )).toBe('load_date');
+  });
+
+  it('#569: pickOutboundConflictNote — kod i pole z wiersza konfliktu (2 kody)', () => {
+    const expected = {
+      ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
+    };
+    // Pierwszy kod zgodny z expected; drugi zmieniony w pliku (ho).
+    const snap = {
+      'SG-A': { ...expected },
+      'SG-B': { ...expected, ho: 'K2' },
+    };
+    const note = pickOutboundConflictNote(
+      ['SG-A', 'SG-B'],
+      expected,
+      snap,
+      { carrier_order_no: 'S9' },
+    );
+    expect(note).toEqual({ code: 'SG-B', field: 'hhl_order_no' });
+    // łatka {co} + konflikt na co w drugim → pole z łatki
+    const notePatch = pickOutboundConflictNote(
+      ['SG-A', 'SG-B'],
+      expected,
+      { 'SG-A': { ...expected }, 'SG-B': { ...expected, co: 'S2', ld: '2026-11-02' } },
+      { carrier_order_no: 'S9' },
+    );
+    expect(notePatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
+    expect(pickOutboundConflictNote(['SG-A'], expected, snap, { carrier_order_no: 'S9' })).toBeNull();
   });
 });
 

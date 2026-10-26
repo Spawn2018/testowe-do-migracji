@@ -5538,3 +5538,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
 - CI `833d9415`: unit ✔ (`40293902818`), visual ✔ (`40293902904`), db ✔ (`40293903234`, 14m3s). F7 r9 (pole z łatki + CANCELLED SG-01) bez zmian kodu od tego SHA. EXPECTED import **225**.
 - Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs).
+
+## 2026-10-26 11:41 — #560 SCALONE; start #569 + wpis #567
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. #567/#569 bez etykiety `dla-cursora` — wpisane z F7 #560 (Spawn2018) + treść zgłoszeń.
+- Scalanie: **#560** — „F7: gotowe do scalenia” (Spawn2018, 09:31Z, po `a8bbda41`), CI unit/db/visual ✔, bez forka → `gh pr merge --merge` `0feb8a94` (09:41Z). Bez push na main.
+- Po F7 przed `write_enabled`: **#569** (kod+pole z wiersza konfliktu), `write_test_ok_at`, **#567 23B** (lista zmian; import wyłączony).
+- Ten commit (`pakiet/569-a6-conflict-code`): `pickOutboundConflictNote` + unit (#569); PLAN §4/§5 W53–W60 / §6 Po 1.0 / §8; POSTEP. Test db 1 sprawa — w tym PR albo następnym kroku.
