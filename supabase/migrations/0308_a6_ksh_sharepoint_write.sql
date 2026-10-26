@@ -535,9 +535,9 @@ $$;
 revoke all on function public.ksh_sync_outbound_ack(jsonb, text, text) from public, anon, authenticated;
 grant execute on function public.ksh_sync_outbound_ack(jsonb, text, text) to service_role;
 
--- Sprawa: plik zmienił się od odczytu (nie nadpisuj).
+-- Sprawa: plik zmienił się od odczytu przy pending WT→plik (nie nadpisuj).
 -- F7 r6 BLOKER 1: bez ksh_sync_require_service — woła też import_schedule (HHL UPLOAD).
--- Klucz dedup jak l1b_note_conflict (UWAGA: jedna sprawa na kod, nie dwie).
+-- F7 r7/05:37: klucz z :pending — osobno od konfliktu numeru bez kolejki (#426 quiet bez sprawy).
 create or replace function public.l1b_note_file_changed(
   p_project uuid, p_load uuid, p_code text
 ) returns uuid
@@ -551,9 +551,12 @@ begin
   end if;
   return decision_open_from_event(
     p_project, 'TOWER_KSH_CONFLICT',
-    'l1b:conflict:' || p_project::text || ':' || btrim(p_code) || ':hhl_order_no',
+    'l1b:conflict:' || p_project::text || ':' || btrim(p_code) || ':hhl_order_no:pending',
     'Plik KSH zmieniony — sprawdź',
-    jsonb_build_object('code', btrim(p_code), 'reason', 'file_changed_since_read'),
+    jsonb_build_object(
+      'code', btrim(p_code),
+      'reason', 'file_changed_since_read',
+      'pending', true),
     p_load, null
   );
 end;
@@ -1266,20 +1269,6 @@ begin
     if r.renum_from is not null and not ('shipment_code' = any (v_fields)) then
       v_fields := array['shipment_code'] || coalesce(v_fields, '{}'::text[]);
     end if;
-    -- L-1b / HOTFIX #384 pkt 3: konflikt tylko gdy mapa ma kolumne HHL i plik ma niepusta wartosc.
-    -- F7 #2: przy p_quiet nie otwieraj spraw TOWER_KSH_CONFLICT.
-    if p_dry_run is false
-       and v_run_quiet is not true
-       and v_has_hhl_col
-       and nullif(btrim(r.hhl_order_no), '') is not null
-       and nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') is not null
-       and nullif(btrim(r.hhl_order_no), '') is distinct from
-           nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') then
-      perform l1b_note_conflict(
-        p_project, r.load_id, r.code, r.hhl_order_no,
-        coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo'));
-    end if;
-    if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
 
     if r.status = 'CANCELLED' then
       v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
@@ -1287,8 +1276,8 @@ begin
       continue;
     end if;
 
-    -- F7 r7 N13: pending skip PRZED confirmed/crit — inaczej CRITICAL i IN_APP lecą na datę,
-    -- której import nie zastosuje (pending WT). Po skipu puste v_fields → unchanged, bez CHANGED.
+    -- F7 r7 N13 + 05:37: pending skip PRZED konfliktem numeru i confirmed/crit.
+    -- Inaczej CRITICAL/IN_APP na datę z pending; albo dubel l1b_note_conflict + file-changed.
     v_pend := null;
     v_exp_out := null;
     v_pending_wt := '{}';
@@ -1320,6 +1309,20 @@ begin
           end if;
         end loop;
       end if;
+    end if;
+    -- L-1b / HOTFIX #384 pkt 3: konflikt numeru tylko bez pending na hhl (sprawa :pending już wyżej).
+    -- F7 #2 / #426: przy p_quiet nie otwieraj spraw TOWER_KSH_CONFLICT (bez :pending).
+    if p_dry_run is false
+       and v_run_quiet is not true
+       and v_has_hhl_col
+       and not (v_pend ? 'hhl_order_no')
+       and nullif(btrim(r.hhl_order_no), '') is not null
+       and nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') is not null
+       and nullif(btrim(r.hhl_order_no), '') is distinct from
+           nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') then
+      perform l1b_note_conflict(
+        p_project, r.load_id, r.code, r.hhl_order_no,
+        coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo'));
     end if;
     if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
 
