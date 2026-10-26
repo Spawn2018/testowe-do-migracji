@@ -48,9 +48,10 @@ export function tierBoundFor(
   calcVersion: number | null | undefined,
   latestVersion: number | null | undefined,
 ): TierBound {
-  const of = (v: number | null | undefined) => (v == null ? undefined : (bounds ?? []).find((b) => b.version === v)?.tier_bound);
-  const b = of(calcVersion) ?? of(latestVersion);
-  return b === 'MAX' ? 'MAX' : 'MIN';
+  const row = (v: number | null | undefined) => (v == null ? undefined : (bounds ?? []).find((b) => b.version === v));
+  /* F7 #576 r2: wiersz wersji tygodnia istnieje → jego wartość (puste pole = MIN), bez przechodzenia do najnowszej */
+  const r = row(calcVersion) ?? row(latestVersion);
+  return r?.tier_bound === 'MAX' ? 'MAX' : 'MIN';
 }
 
 /** Wynik `sefs_week_calc` (pola, których używa ekran). */

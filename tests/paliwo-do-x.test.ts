@@ -72,7 +72,8 @@ describe('sposób odczytu progu idzie za wersją tygodnia (F7 #576)', () => {
   });
   it('bez wersji tygodnia — najnowsza; brak kolumny / wiersza — MIN', () => {
     expect(tierBoundFor(bounds, null, 5)).toBe('MAX');
-    expect(tierBoundFor(bounds, 3, 5)).toBe('MAX');
+    expect(tierBoundFor(bounds, 3, 5)).toBe('MIN'); // wersja tygodnia bez pola = MIN, nie najnowsza
+    expect(tierBoundFor(bounds, 9, 5)).toBe('MAX'); // brak wiersza wersji tygodnia → najnowsza
     expect(tierBoundFor([], 5, 5)).toBe('MIN');
     expect(tierBoundFor(null, null, null)).toBe('MIN');
   });
