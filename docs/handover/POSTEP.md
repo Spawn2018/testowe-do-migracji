@@ -5276,6 +5276,13 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - CI #560 `ed98f039`: unit ✔ visual ✔ db ✔ (`40244927734` / `40244927753`). Prośba o `F7: gotowe do scalenia`.
 - Bieżąca: **A6 #560** — czekam F7. Po scaleniu: odbiór zapisu na pliku testowym (liczby w POSTEP), potem C4–C13.
 
+## 2026-10-26 02:15 — A6 #560 F7 runda 2: docs (blokerów lista)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `ed98f039` — **wymaga poprawek** (4 BLOKERY + 8 POPRAWEK); brak „F7: gotowe”. Docs na `3542f586` nie zmieniają kodu. #383 CONFLICTING. Bez push na main.
+- CI HEAD `3542f586`: unit ✔ visual ✔ db ✔ (`40246684823` / `40246684890`).
+- Bieżąca: **#560** — wpis F7 r2 w PLAN §4/§8 (styl `s=`, serial daty całkowity, `no_etag`, echo migawki, DEFLATE, kolejność komórek, workbook.xml, `dd.mm.yyyy`, zapis tylko przy `import_enabled`, PUT zgubiony→ack, oldest expected, ack/l1b check, konflikt per kod, `write_test_ok_at`, 423=ponowienie). Następny commit: kod.
+
 ### Prognoza wydania 1.0 (#538 1B — do 26.10 12:00; tempo 23–25.10 + rundy F7)
 
 Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynatora równolegle. Bramę bezpieczeństwa 28.10 (B5, B7, C11, C9, OWASP z P11) da się domknąć: **B5/B7/B8/B9 już SCALONE**; C11 = test Auth; C9 = testy E19; OWASP = wycinek P11.
