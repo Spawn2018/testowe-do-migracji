@@ -1208,8 +1208,18 @@ begin
     return new;
   end if;
 
-  -- Inny mnożnik: otwórz / zaktualizuj / wznów zamkniętą (F7 #579 r2 pkt 2).
+  -- Inny mnożnik niż migawka: otwórz / zaktualizuj / wznów (F7 #579 r2 pkt 2).
+  -- F7 #579 r4: UPDATE + zdarzenie tylko gdy new_mult ≠ poprzedni w sprawie
+  -- (kolejna korekta bez zmiany applied nie spamuje UPDATE).
   if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
+    if exists (
+      select 1 from public.decisions d
+       where d.id = v_id
+         and round((d.detail->>'new_mult')::numeric, 4)
+             is not distinct from round(v_new, 4)
+    ) then
+      return new;
+    end if;
     update decisions
        set title = v_title,
            detail = coalesce(detail, '{}'::jsonb) || v_detail,
@@ -1269,7 +1279,7 @@ create trigger trg_fuel_correction_closed_week
   execute function public.sefs_note_closed_week_on_correction();
 
 comment on function public.sefs_note_closed_week_on_correction() is
-  '#563/F7 r2: zamknięty tydzień → SEFS_WEEK_CORR (tylko HHL); kolejna korekta aktualizuje/zamyka; bez zmiany mnożnika i w tygodniu otwartym — nic.';
+  '#563/F7 r2+r4: zamknięty tydzień → SEFS_WEEK_CORR (tylko HHL); kolejna korekta UPDATE tylko gdy new_mult się zmienia / zgodność → EXPIRED; bez zmiany mnożnika względem migawki i w tygodniu otwartym — nic.';
 
 -- F7 #579 r2 pkt 1: SEFS_WEEK_CORR (load_id null, decider HHL) — tylko HHL; SCX/KSH nie widzą.
 drop policy if exists decisions_read on public.decisions;

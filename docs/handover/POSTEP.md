@@ -5671,3 +5671,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; #538/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: #578 F7 gotowe **po #577**; #577 bez F7; #579 F7 r3 (20:32) — polityka OK, baf 96/3 (2./3. korekta tego samego odczytu = duplicate key; `sys` połyka). CI `c35de979`: unit/visual ✔, db FAIL. Bez push na main.
 - **#563 krok (F7 r3):** testy SEFS_WEEK_CORR — 2. korekta SEK 06.10 (pub 06.10 → ×1,11 UPDATE), 3. SEK 07.10 (pub 07.10 → ×1,12 EXPIRED); chk liczby korekt; baf EXPECTED **101**. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-26 23:55 — #563 F7 #579 r4: new_mult z sefs_week_calc
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: CI `84510888` db FAIL baf 100/1 (F7 r4 21:00 — avg 22,10 zostaje ×1,09 przy „od progu”). #577 bez F7; #578 F7 po #577. Bez push na main.
+- **#563 krok (F7 r4):** 2. korekta SEK 06.10→**22,40** (pub 06.10) — `sefs_week_calc` ≠ corr1/migawka; asercje `new_mult` + payload UPDATE; trigger — UPDATE tylko gdy `new_mult` się zmienia; 3. korekta 07.10→22,80 → EXPIRED. baf EXPECTED **105**. Push PR #579 — po zielonym CI prośba o F7.
