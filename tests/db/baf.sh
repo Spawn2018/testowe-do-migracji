@@ -188,6 +188,10 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
     from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
 sys "select load_price_compute('$LNX', '2026-10-13')"
 chk "korekta po zamknięciu nie zmienia migawki" "$(Q "select fuel_applied_mult||'/'||fuel_status from load_cost where load_id='$LNX'")" "$M1/OSTATECZNY"
+# #563 pkt 3: zamknięty tydzień → sprawa HHL, bez cichego przeliczenia (trigger po INSERT korekty)
+chk "#563 zamknięty: 1 sprawa SEFS_WEEK_CORR" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 zamknięty: tytuł z ×stary / ×nowy / N" "$(Q "select (title ~ 'było ×')::text||'/'||(title ~ 'jest ×')::text||'/'||(title ~ 'transport')::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/true/true"
+chk "#563 zamknięty: idempotencja event_key" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")" "1"
 
 # Nowa wersja tabeli od 12.10 → stare transporty bez zmian
 sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to)

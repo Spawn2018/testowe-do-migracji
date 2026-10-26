@@ -955,4 +955,144 @@ begin
   perform set_config('tower.bulk_quiet', coalesce(nullif(v_prev_quiet, ''), 'off'), true);
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 12. #563 pkt 3: korekta w zamkniętym tygodniu → sprawa HHL, bez cichego
+--     przeliczenia migawek (OSTATECZNY zostaje; decyzja przed APPLY).
+-- ---------------------------------------------------------------------
+insert into public.decision_types (
+  code, title_key, decider_role, options, due_hours, due_note, severity_default, sort_order
+) values (
+  'SEFS_WEEK_CORR',
+  'dec_type_SEFS_WEEK_CORR',
+  'HHL',
+  '[{"code":"ACCEPT","label_key":"dec_opt_ACCEPT","requires_comment":true,"effect":"ACCEPT"},{"code":"DISPUTE","label_key":"dec_opt_DISPUTE","requires_comment":true,"effect":"DISPUTE"}]'::jsonb,
+  168,
+  null,
+  'WARNING',
+  17
+)
+on conflict (code) do update set
+  title_key = excluded.title_key,
+  decider_role = excluded.decider_role,
+  options = excluded.options,
+  due_hours = excluded.due_hours,
+  severity_default = excluded.severity_default,
+  sort_order = excluded.sort_order,
+  active = true;
+
+create or replace function public.sefs_note_closed_week_on_correction()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_period date;
+  v_ind_start date;
+  v_ind_end date;
+  v_load_start date;
+  v_load_end date;
+  v_today date := (timezone('Europe/Warsaw', now()))::date;
+  v_old numeric;
+  v_new numeric;
+  v_w jsonb;
+  v_n int;
+  v_week text;
+  v_title text;
+begin
+  if (new.corrects_id is not null) is not true then
+    return new;
+  end if;
+  if (new.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') is not true then
+    return new;
+  end if;
+  v_period := new.period::date;
+  v_ind_start := v_period - ((extract(isodow from v_period)::int) - 1);
+  v_ind_end := v_ind_start + 6;
+  -- Tydzień wskaźników musi być już zamknięty (po niedzieli wskaźników).
+  if (v_today > v_ind_end) is not true then
+    return new;
+  end if;
+  -- Transporty biorą ten tydzień jako „poprzedni” (załadunek pn–nd tydzień później).
+  v_load_start := v_ind_start + 7;
+  v_load_end := v_load_start + 6;
+
+  select count(distinct l.id)::int,
+         min(coalesce(c.fuel_applied_mult, rv.fuel_applied_mult))
+    into v_n, v_old
+    from loads l
+    left join load_cost c
+      on c.load_id = l.id
+     and c.fuel_status = 'OSTATECZNY'
+     and c.fuel_applied_mult is not null
+     and c.invoiced_total_eur is null
+    left join load_revenue rv
+      on rv.load_id = l.id
+     and rv.fuel_status = 'OSTATECZNY'
+     and rv.fuel_applied_mult is not null
+     and rv.invoiced_total_eur is null
+   where l.project_id = new.project_id
+     and l.status is distinct from 'CANCELLED'
+     and public.fuel_load_date(l.id) between v_load_start and v_load_end
+     and (c.load_id is not null or rv.load_id is not null);
+
+  if (coalesce(v_n, 0) > 0 and v_old is not null) is not true then
+    return new;
+  end if;
+
+  v_w := public.sefs_week_calc(new.project_id, v_load_start, v_today);
+  if coalesce(v_w->>'ok', '') <> 'true' then
+    return new;
+  end if;
+  v_new := (v_w->>'applied_mult')::numeric;
+  if (v_new is not null and round(v_old, 4) is distinct from round(v_new, 4)) is not true then
+    return new;
+  end if;
+
+  v_week := ltrim(to_char(v_load_start, 'IW'), '0');
+  v_title := format(
+    'Korekta ceny paliwa zmienia mnożnik tygodnia %s: było ×%s, jest ×%s — %s transportów',
+    v_week,
+    trim(to_char(v_old, '990.99')),
+    trim(to_char(v_new, '990.99')),
+    v_n::text
+  );
+
+  perform public.decision_open_from_event(
+    new.project_id,
+    'SEFS_WEEK_CORR',
+    '563:fuel-corr:' || new.project_id::text || ':' || v_ind_start::text,
+    v_title,
+    jsonb_build_object(
+      'ind_week_start', v_ind_start,
+      'ind_week_end', v_ind_end,
+      'load_week_start', v_load_start,
+      'load_week_end', v_load_end,
+      'old_mult', v_old,
+      'new_mult', v_new,
+      'n_loads', v_n,
+      'index_code', new.index_code,
+      'period', new.period,
+      'reading_id', new.id,
+      'corrects_id', new.corrects_id,
+      'source', '0310_563'
+    ),
+    null,
+    null
+  );
+  return new;
+end $$;
+
+revoke all on function public.sefs_note_closed_week_on_correction() from public, anon, authenticated;
+
+drop trigger if exists trg_fuel_correction_closed_week on public.fuel_index_readings;
+create trigger trg_fuel_correction_closed_week
+  after insert on public.fuel_index_readings
+  for each row
+  when (new.corrects_id is not null)
+  execute function public.sefs_note_closed_week_on_correction();
+
+comment on function public.sefs_note_closed_week_on_correction() is
+  '#563: po korekcie ceny w zamkniętym tygodniu wskaźników — sprawa HHL SEFS_WEEK_CORR; migawki OSTATECZNY bez cichej zmiany.';
+
 commit;
