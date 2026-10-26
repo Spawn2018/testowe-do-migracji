@@ -41,8 +41,8 @@ as $$
   end;
 $$;
 
-revoke all on function public.ksh_sync_preview_field_label(text) from anon, authenticated;
-grant execute on function public.ksh_sync_preview_field_label(text) to public, service_role;
+revoke all on function public.ksh_sync_preview_field_label(text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_preview_field_label(text) to service_role;
 
 -- Kolumny audit_log (ROW_UPDATE na loads) odpowiadające polom importu.
 create or replace function public.ksh_sync_preview_audit_keys(p_field text)
@@ -66,8 +66,8 @@ as $$
   end;
 $$;
 
-revoke all on function public.ksh_sync_preview_audit_keys(text) from anon, authenticated;
-grant execute on function public.ksh_sync_preview_audit_keys(text) to public, service_role;
+revoke all on function public.ksh_sync_preview_audit_keys(text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_preview_audit_keys(text) to service_role;
 
 -- Pola bez PII (kierowca / telefon / piloci — nigdy na liście).
 create or replace function public.ksh_sync_preview_field_allowed(p_field text)
@@ -82,8 +82,8 @@ as $$
                          'driver_delivery_phone', 'pilot_name', 'pilot_phone');
 $$;
 
-revoke all on function public.ksh_sync_preview_field_allowed(text) from anon, authenticated;
-grant execute on function public.ksh_sync_preview_field_allowed(text) to public, service_role;
+revoke all on function public.ksh_sync_preview_field_allowed(text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_preview_field_allowed(text) to service_role;
 
 -- Buduje płaską listę z import_schedule.changed (+ znacznik ręcznej zmiany).
 create or replace function public.ksh_sync_preview_build(

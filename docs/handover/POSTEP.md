@@ -5627,3 +5627,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - Skrzynka: bez zmian (#550 WSTRZYMANE). Scalanie: brak F7. unit/visual ✔; db FAIL import 237/3 (security/nullguard ✔).
 - **Przyczyna:** `ksh_sync_preview_build` brał `schedule_imports.created_at` — kolumna to `imported_at`. Helpery: EXECUTE dla PUBLIC (czyste etykiety). CI → F7.
+
+## 2026-10-26 18:45 — #567 db FAIL r3: cofnięcie PUBLIC na helperach
+
+- import **240** ✔ po `imported_at`. security 457/2 + nullguard 855/1 — GRANT PUBLIC na 3 helperach. Cofnięte (zostaje service_role; owner DEFINER wywołuje). CI → F7.

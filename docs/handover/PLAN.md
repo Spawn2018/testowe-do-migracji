@@ -1772,3 +1772,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
 | 26.10.2026 16:55 | #571 SCALONE #574 `25546fcc` (F7 15:21Z); #576 `21c24df8`; #575 `5d9f22fe`; start #567 23B **0310** | pętla |
 | 26.10.2026 17:45 | #567 db FAIL (search_path×3, store service_role, EXPECTED nullguard 856); kolejka po #577: #563 → #574-nast → BN0 #572 | pętla |
+| 26.10.2026 18:20 | #567 db FAIL r2: `schedule_imports.imported_at` (nie created_at) w preview_build | pętla |
+| 26.10.2026 18:45 | #567 db FAIL r3: cofnięcie PUBLIC na helperach (security/nullguard); import 240 ✔ | pętla |
