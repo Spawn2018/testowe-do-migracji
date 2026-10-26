@@ -856,10 +856,13 @@ chk "A6: r7 B1 SharePoint sprawa file-changed" "$(Q "select count(*) from decisi
 chk "A6: r7 B1 sprawa ma klucz :pending:" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "1"
 
 # F7 06:08: rozwiąż → nowy rev + konflikt → 2. sprawa; ponowny import → nadal 2.
+# decision_resolve zwraca wynik efektu (v_fx), nie status — status czytamy z decisions.
 DEC_B1R=$(Q "select id from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%' limit 1")
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  select (decision_resolve('$DEC_B1R','KEEP_TOWER',null)->>'status');
-commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+  select decision_resolve('$DEC_B1R','KEEP_TOWER',null);
+  reset role;
+  select status::text from decisions where id='$DEC_B1R';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
 if [ "$out" = "RESOLVED" ]; then ok=$((ok+1)); echo "  OK    A6: r7 B1 resolve KEEP_TOWER"; else fail=$((fail+1)); echo "  FAIL  A6: r7 B1 resolve → $out"; fi
 chk "A6: r7 B1 po resolve 0 otwartych :pending:" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "0"
 # nowa zmiana WT (rev++) + plik nadal ≠ expected → 2. sprawa

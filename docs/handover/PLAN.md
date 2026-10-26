@@ -1007,6 +1007,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **F7 runda 7 — ZROBIONE w kodzie:** **B1** file-changed przy `p_quiet=true` (UPLOAD) i `false` (SharePoint cron); czyszczenie `decision_events` przed asercją. **N13** pending przed `v_confirmed`/`v_crit`; puste `v_fields` → unchanged bez CHANGED/CRITICAL. Testy: quiet hhlOrderNo czyści outbound; N13 awizowany. EXPECTED import **198**.
      - **F7 r7 CI `45eeed2c` db FAIL (197/1) + komentarz 05:37 — ZROBIONE w kodzie:** **(1)** dwie sytuacje: bez pending → quiet bez sprawy (#426); z pending → sprawa zawsze. **(2)** SharePoint 0 spraw: reset `schedule_row` + pending. CI `514967e6` unit/visual/db ✔.
      - **F7 06:08 (po zielonym CI `514967e6`) — ZROBIONE w kodzie:** klucz `l1b:conflict:<proj>:<kod>:<pole>:pending:<rev>` (nowy rev = nowa sprawa po resolve); `detail` = `code`/`field`/`reason` (bez wartości PII); czyszczenie testów bez `|| true` + count dokładny; test resolve→rev→2→reimport. Edge przekazuje `p_field`+`p_rev`. EXPECTED import **205**. #426 liczy tylko klucze bez `:pending:`.
+     - **CI `6b1fae35` db FAIL (204/1) — ZROBIONE w teście:** asercja resolve czyta `decisions.status` (nie `decision_resolve()->>'status'` — funkcja zwraca `v_fx`).
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1707,3 +1708,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 07:35 | #560 F7 r7 kod N13+B1; EXPECTED import 198; CI→F7 | pętla |
 | 26.10.2026 08:00 | #560 CI `45eeed2c` db FAIL SharePoint B1 0 spraw (schedule_row po B1); F7 05:37 `:pending` + reset schedule_row — docs→kod | pętla |
 | 26.10.2026 08:20 | #560 CI `514967e6` unit/visual/db ✔; F7 06:08 klucz `:pending:<rev>` + resolve→2 sprawy — docs→kod | pętla |
+| 26.10.2026 08:55 | #560 CI `6b1fae35` db FAIL resolve (v_fx≠status) — fix testu decisions.status; EXPECTED 205 | pętla |

@@ -5488,3 +5488,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe”. CI `514967e6` unit/visual/db ✔. #383 CONFLICTING. Bez push na main.
 - F7 06:08: (1) klucz `l1b:conflict:<proj>:<kod>:<pole>:pending:<rev>` — po resolve nowy rev = nowa sprawa; (2) `detail` = code/field/reason; (3) czyszczenie bez `|| true` + count dokładny; (4) test resolve→rev→2→reimport; Edge `p_field`+`p_rev`.
 - Kod w 0308 + import.sh + outboundWrite + EXPECTED import **205**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 08:55 — A6 #560 db FAIL resolve: status z decisions
+
+- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `6b1fae35` unit/visual ✔ **db FAIL** import 204/1 — `A6: r7 B1 resolve →` (puste). #383 CONFLICTING. Bez push na main.
+- Przyczyna: `decision_resolve` zwraca `v_fx` (efekt), nie `status`; asercja `->>'status'` była pusta mimo RESOLVED w `decisions`. Fix testu: po resolve `select status from decisions`. EXPECTED import **205** bez zmian.
