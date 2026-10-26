@@ -5494,3 +5494,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: brak „F7: gotowe”. CI `6b1fae35` unit/visual ✔ **db FAIL** import 204/1 — `A6: r7 B1 resolve →` (puste). #383 CONFLICTING. Bez push na main.
 - Przyczyna: `decision_resolve` zwraca `v_fx` (efekt), nie `status`; asercja `->>'status'` była pusta mimo RESOLVED w `decisions`. Fix testu: po resolve `select status from decisions`. EXPECTED import **205** bez zmian.
+
+## 2026-10-26 08:25 — A6 #560 CI zielone na 10480535 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia”. #383 otwarty, bez F7 (nie scalać). Bez push na main.
+- CI `10480535`: unit ✔, visual ✔, db ✔ (`40283229765` / `40283229788` / `40283229808`). Fix resolve: asercja `decisions.status`. EXPECTED import **205**.
+- Prośba o F7: gotowe do scalenia na HEAD (kod bez zmian od `10480535`; ten commit — docs).
