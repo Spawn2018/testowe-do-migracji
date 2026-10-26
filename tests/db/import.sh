@@ -471,7 +471,7 @@ chk "A6: pierwszy SHAREPOINT dodał wersję" "$(Q "select ($SI_MID > $SI_BEFORE)
 echo; echo "[A6 0308] ksh_sync_outbound"
 chk "A6: authenticated bez EXECUTE outbound_enqueue" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_enqueue(uuid,jsonb,jsonb)','execute')")" f
 chk "A6: authenticated bez EXECUTE outbound_list" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_list(uuid,int)','execute')")" f
-chk "A6: authenticated bez EXECUTE outbound_ack" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_ack(bigint[],text,text)','execute')")" f
+chk "A6: authenticated bez EXECUTE outbound_ack" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_ack(jsonb,text,text)','execute')")" f
 chk "A6: authenticated bez EXECUTE l1b_note_file_changed" "$(Q "select has_function_privilege('authenticated','l1b_note_file_changed(uuid,uuid,text)','execute')")" f
 val "A6: SCX widzi 0 outbound" $SCX "select count(*) from ksh_sync_outbound" 0
 val "A6: KSH widzi 0 outbound" $KSH "select count(*) from ksh_sync_outbound" 0
@@ -523,19 +523,21 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: l1b_note_file_changed"; else fail=$((fail+1)); echo "  FAIL  A6: l1b_note_file_changed → $out"; fi
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 OID=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set hhl_order_no='KSH-9' where id='$SG_OUT'; select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
-out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select ksh_sync_outbound_ack(array[$OID]::bigint[],'conflict','file_changed'); select status from ksh_sync_outbound where id=$OID; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+OREV=$(Q "select rev from ksh_sync_outbound where id=$OID")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object('id',$OID,'rev',$OREV)),'conflict','file_changed'); select status from ksh_sync_outbound where id=$OID; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "conflict" ]; then ok=$((ok+1)); echo "  OK    A6: outbound_ack conflict"; else fail=$((fail+1)); echo "  FAIL  A6: outbound_ack → $out"; fi
-# F7 BLOKER 4: ack done → schedule_row + historia
+# F7 BLOKER 4 / N4: ack done → schedule_row z sent + historia
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 OID2=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select set_config('tower.dates_ctx','on',true); update loads set plan_load_date=(plan_load_date + 1) where id='$SG_OUT'; select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
-NEW_LD=$(Q "select plan_load_date::text from loads where id='$SG_OUT'")
+OREV2=$(Q "select rev from ksh_sync_outbound where id=$OID2")
+SENT_LD=$(Q "select patch->>'load_date' from ksh_sync_outbound where id=$OID2")
 EV0=$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")
-out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select ksh_sync_outbound_ack(array[$OID2]::bigint[],'done',null); select status from ksh_sync_outbound where id=$OID2; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role'; select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object('id',$OID2,'rev',$OREV2,'sent',jsonb_build_object('load_date','$SENT_LD'))),'done',null); select status from ksh_sync_outbound where id=$OID2; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "done" ]; then ok=$((ok+1)); echo "  OK    A6: outbound_ack done"; else fail=$((fail+1)); echo "  FAIL  A6: outbound_ack done → $out"; fi
-chk "A6: done → schedule_row load_date" "$(Q "select schedule_row->>'load_date' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1")" "$NEW_LD"
+chk "A6: done → schedule_row load_date" "$(Q "select schedule_row->>'load_date' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1")" "$SENT_LD"
 chk "A6: done → KSH_FILE_OUTBOUND" "$(Q "select count(*) - $EV0 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
 # 42501 / permission denied dla authenticated na ack (brak EXECUTE albo require_service)
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack(array[1]::bigint[],'done',null); rollback;" 2>&1 || true)
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack('[{\"id\":1,\"rev\":1}]'::jsonb,'done',null); rollback;" 2>&1 || true)
 if echo "$out" | grep -qiE '42501|permission denied|Tylko synchronizacja'; then ok=$((ok+1)); echo "  OK    A6: ack authenticated → 42501"; else fail=$((fail+1)); echo "  FAIL  A6: ack 42501 → $(echo "$out" | tail -1)"; fi
 # F7 r2 BLOKER 4: wartość = migawka pliku → 0 outbound (echo TAKE_FILE)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
@@ -576,5 +578,61 @@ $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='
 commit;" >/dev/null 2>&1
 val "A6: import_set false wyłącza write" $HHL "select ksh_sync_import_set(false); select write_enabled from ksh_sync_state where project_id='$P'" f commit
 chk "A6: import_set false → pending skipped" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='skipped' and last_error='import_disabled'")" 1
+
+# F7 r3 N4: list→B→C→ack(stary rev) ⇒ pending C, expected_file.co=B
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N4_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N4_REV=$(Q "select rev from ksh_sync_outbound where id=$N4_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N4_ID,'rev',$N4_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+  select status||':'||coalesce(patch->>'carrier_order_no','')||':'||coalesce(expected_file->>'co','')
+    from ksh_sync_outbound where id=$N4_ID;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "pending:SNAP-C:SNAP-B" ]; then ok=$((ok+1)); echo "  OK    A6: N4 B→C ack stary rev → pending C / file B"; else fail=$((fail+1)); echo "  FAIL  A6: N4 B→C → $out"; fi
+
+# F7 r3 N4: list→powrót A (skipped)→ack(stary) ⇒ pending A, expected_file.co=B
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N4B_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N4B_REV=$(Q "select rev from ksh_sync_outbound where id=$N4B_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N4B_ID,'rev',$N4B_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+  select status||':'||coalesce(patch->>'carrier_order_no','')||':'||coalesce(expected_file->>'co','')
+    from ksh_sync_outbound where id=$N4B_ID;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "pending:SNAP-A:SNAP-B" ]; then ok=$((ok+1)); echo "  OK    A6: N4 powrót A ack → pending A / file B"; else fail=$((fail+1)); echo "  FAIL  A6: N4 powrót A → $out"; fi
+
+# F7 r3 N4: list→bez zmian→ack(zgodny rev) ⇒ done
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-OK' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N4C_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N4C_REV=$(Q "select rev from ksh_sync_outbound where id=$N4C_ID")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N4C_ID,'rev',$N4C_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-OK')
+  )),'done',null);
+  select status from ksh_sync_outbound where id=$N4C_ID;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "done" ]; then ok=$((ok+1)); echo "  OK    A6: N4 zgodny rev → done"; else fail=$((fail+1)); echo "  FAIL  A6: N4 zgodny rev → $out"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

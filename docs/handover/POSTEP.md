@@ -5352,3 +5352,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 na `c204854a` — **wymaga poprawek** (BLOKER N4 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - CI HEAD `3b98f70b` (docs po `c204854a`): unit ✔ visual ✔ db ✔ (`40253711028`, 19m49s).
 - Bieżąca: **#560** — wpis F7 r3 w PLAN §4/§8: `rev` na outbound; list zwraca `rev`; ack `(id,rev,sent)`; przy rozjeździe → pending z różnicą WT≠sent + `expected_file=sent`; `schedule_row` z `sent`; testy B→C / A→A / done; uwagi NULL nie czyści + float 1e-9. Następny commit: kod.
+
+## 2026-10-26 04:00 — A6 #560 F7 r3: kod N4
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (N4 dopiero w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r3 N4 w **0308** + Edge/unit:
+  1. Kolumna `rev` (enqueue/clear/skip/ack podbijają);
+  2. `list` → `rev`; `ack(jsonb[{id,rev,sent}], status, error)`;
+  3. rozjazd rev przy done → pending + `wt_diff` + `expected_file` z `apply_sent` (plik = sent);
+  4. `schedule_row` z `sent`;
+  5. testy db: B→C stary rev / powrót A / zgodny → done; `xlsxPatch` 1e-9.
+- EXPECTED import **180**; unit `ksh-sharepoint-write` **18/18**. Push → CI → prośba F7 po zielonym.

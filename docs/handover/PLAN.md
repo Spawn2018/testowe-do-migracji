@@ -991,7 +991,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
 5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r3 na `c204854a`: NIEGOTOWE — BLOKER N4 `rev`+`sent`; docs→kod)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r3 N4 ZROBIONE w kodzie; czekam CI/F7)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
    - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; Rebase po #557: **0306→0308**.
@@ -1000,13 +1000,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **POPRAWKI runda 2 — ZROBIONE:** DEFLATE; kolejność komórek w wierszu (+ self-closing `<row/>`); pierwszy arkusz z `workbook.xml`+rels; tekst daty `dd.mm.yyyy`; zapis tylko przy `import_enabled=true` (`ksh_sync_write_set` odrzuca bez importu); PUT udany/ack zgubiony → jeśli plik=oczekiwany+łatka → `ack done`; scalanie: najstarsza `expected_file`; sprawdzaj błędy `ack`/`l1b_note_*`.
      - **UWAGI runda 2 — ZROBIONE w kodzie:** konflikt dla każdego łatanego kodu; prod dopiero po `write_test_ok_at` (udany przebieg trybu test; `SHAREPOINT_TEST_FILE_URL` w sekretach 26.10); **423** (plik otwarty) = normalne ponowienie, `failed` dopiero po 5 próbach.
      - **F7 runda 2b (`c204854a`) — ZROBIONE:** **N1** A→B→A usuwa klucz z pending (`patch - pole`); pusty → `skipped`/`reverted_to_file`; **N2** data+godzina w komórce (ułamek / część całkowita); **N3** `import_set(false)` → `write_enabled=false` + pending `import_disabled`; uwagi: `write_test_ok_at`, `pickSharePointMode`, częściowa łatka multi-kod, styl sąsiada. EXPECTED import **177**; unit 17/17. CI unit/visual/db ✔.
-     - **F7 runda 3 (`c204854a`) — DO ZROBIENIA (BLOKER N4 + uwagi):** wyścig list→PUT→ack: brak stanu „w trakcie”; `ack` bierze bieżący `patch`, nie to, co Edge zapisał.
-       1. Kolumna `rev int` (podbijana przy każdej zmianie wiersza outbound: enqueue, clear klucza, skipped).
-       2. `ksh_sync_outbound_list` zwraca `rev`; `ack` przyjmuje pary `(id, rev, sent jsonb)`.
-       3. `ack done` tylko gdy `rev` się zgadza; przy rozjeździe → z powrotem **pending**: `patch` = różnica (WT ≠ `sent`), `expected_file` = `sent` (to jest w pliku → bez fałszywego konfliktu). Przypadek A→B→A (skipped) + zapisane B → pending `{co:A}`.
-       4. `schedule_row` z `sent`, nie z bieżącego `patch`.
-       5. Testy db: list→B→C→ack(stary rev) ⇒ pending `{co:C}`, `expected_file.co=B`; list→powrót A→ack ⇒ pending `{co:A}`; list→bez zmian→ack ⇒ `done`.
-       - **UWAGI r3:** NULL przy niepustej migawce nie czyści komórki w pliku (opis + wpis w Historii); `xlsxPatch` zaokrąglaj `serial+frac` do 1e-9 (bez ogona float).
+     - **F7 runda 3 — ZROBIONE (BLOKER N4 + uwagi):** `rev` na outbound (enqueue/clear/skip/ack); `list` zwraca `rev`; `ack(jsonb[{id,rev,sent}], status, error)` — `done` tylko przy zgodnym `rev`; rozjazd → pending z `wt_diff` (WT ≠ plik po `sent`) + `expected_file` z `apply_sent`; `schedule_row` z `sent`; testy B→C / powrót A / done; `xlsxPatch` 1e-9. **UWAGA:** NULL przy niepustej migawce nie czyści komórki w pliku (zostaje w Historii transportu przy kolejnym done). EXPECTED import **180**.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1693,3 +1687,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 02:50 | #560 F7 r2b na `d60f171a` — NIEGOTOWE (N1 A→B→A pending, N2 data+godzina, N3 import_set wyłącza write); docs→kod | pętla |
 | 26.10.2026 03:15 | #560 F7 r2b kod `c204854a` — CI unit/visual/db ✔; N1–N3 ZROBIONE; czekam F7 | pętla |
 | 26.10.2026 03:45 | #560 F7 r3 na `c204854a` — NIEGOTOWE (N4 `rev`+`sent` + uwagi NULL/1e-9); docs→kod | pętla |
+| 26.10.2026 04:00 | #560 F7 r3 kod N4 (`rev`+`sent`, wt_diff, 1e-9); EXPECTED import 180; unit 18/18; CI→F7 | pętla |

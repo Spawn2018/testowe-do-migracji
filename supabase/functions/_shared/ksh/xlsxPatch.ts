@@ -372,7 +372,9 @@ export async function patchWorkbookBytes(
         const frac = prevNum != null && !Number.isInteger(prevNum)
           ? prevNum - Math.floor(prevNum)
           : 0;
-        if (setCellValue(sheet, rowNum, header, serial + frac)) changed = true;
+        // F7 r3: bez ogona float (1e-9).
+        const merged = Math.round((serial + frac) * 1e9) / 1e9;
+        if (setCellValue(sheet, rowNum, header, merged)) changed = true;
       }
     };
     const applyTime = (header: string, hm: string | null | undefined, present: boolean) => {
@@ -388,7 +390,8 @@ export async function patchWorkbookBytes(
         if (frac == null) return;
         // F7 r2b N2: zachowaj część daty (całkowitą) z poprzedniej wartości.
         const day = Math.floor(prev.num ?? 0);
-        if (setCellValue(sheet, rowNum, header, day + frac)) changed = true;
+        const merged = Math.round((day + frac) * 1e9) / 1e9;
+        if (setCellValue(sheet, rowNum, header, merged)) changed = true;
       } else if (setCellValue(sheet, rowNum, header, norm)) {
         changed = true;
       }

@@ -2,6 +2,7 @@
  * A6 — przetworzenie kolejki WT→plik: konflikt / łatka JSZip / upload Graph + If-Match.
  * F7 #560 / r2: no_etag; konflikt per kod; PUT zgubiony→ack; sprawdzaj ack/l1b;
  * import_enabled + write_test_ok_at (prod).
+ * F7 r3 N4: ack(id, rev, sent) — schedule_row z sent; rozjazd rev → pending.
  */
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import JSZip from 'npm:jszip@3';
@@ -24,9 +25,12 @@ export type OutboundItem = {
   patch: OutboundPatch & Record<string, unknown>;
   expected_file?: FileDateSnap | null;
   attempts?: number;
+  rev?: number;
 };
 
 export type SnapshotMap = Record<string, FileDateSnap>;
+
+type AckItem = { id: number; rev: number; sent?: Record<string, unknown> | null };
 
 function asSnap(v: unknown): FileDateSnap | null {
   if (!v || typeof v !== 'object') return null;
@@ -70,15 +74,26 @@ function applyPatchToSnap(base: FileDateSnap | null, patch: OutboundPatch): File
   return next;
 }
 
+function ackPayload(
+  items: OutboundItem[],
+  withSent: boolean,
+): AckItem[] {
+  return items.map((it) => ({
+    id: Number(it.id),
+    rev: Number(it.rev ?? 1),
+    ...(withSent ? { sent: { ...it.patch } } : {}),
+  }));
+}
+
 async function ack(
   sb: SupabaseClient,
-  ids: number[],
+  items: AckItem[],
   status: 'done' | 'conflict' | 'skipped' | 'failed',
   error: string | null,
 ): Promise<{ ok: boolean }> {
-  if (!ids.length) return { ok: true };
+  if (!items.length) return { ok: true };
   const { error: err } = await sb.rpc('ksh_sync_outbound_ack', {
-    p_ids: ids,
+    p_acks: items,
     p_status: status,
     p_error: error,
   });
@@ -148,14 +163,14 @@ export async function processOutboundWrites(args: {
 
   const toWrite: OutboundItem[] = [];
   const alreadyDone: OutboundItem[] = [];
-  const conflictIds: number[] = [];
-  const skipIds: number[] = [];
+  const conflictItems: OutboundItem[] = [];
+  const skipItems: OutboundItem[] = [];
   const skipReasons = new Map<number, string>();
 
   for (const it of items) {
     const expected = asSnap(it.expected_file);
     if (missingExpectedFile(expected)) {
-      skipIds.push(Number(it.id));
+      skipItems.push(it);
       skipReasons.set(Number(it.id), 'no_expected');
       continue;
     }
@@ -173,7 +188,7 @@ export async function processOutboundWrites(args: {
 
     const anyCodeInFile = (remaining.length ? remaining : codes).some((c) => args.fileSnapshot[c]);
     if (!anyCodeInFile) {
-      skipIds.push(Number(it.id));
+      skipItems.push(it);
       skipReasons.set(Number(it.id), 'KSH_ROW_GONE');
       continue;
     }
@@ -188,7 +203,7 @@ export async function processOutboundWrites(args: {
       }
     }
     if (conflict) {
-      conflictIds.push(Number(it.id));
+      conflictItems.push(it);
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,
         p_load: it.load_id,
@@ -206,12 +221,7 @@ export async function processOutboundWrites(args: {
   }
 
   if (alreadyDone.length) {
-    const a = await ack(
-      args.sb,
-      alreadyDone.map((it) => Number(it.id)),
-      'done',
-      null,
-    );
+    const a = await ack(args.sb, ackPayload(alreadyDone, true), 'done', null);
     if (!a.ok) {
       return {
         attempted: true, written: 0, conflicts: 0, skipped: 0,
@@ -220,25 +230,30 @@ export async function processOutboundWrites(args: {
     }
   }
 
-  const ackConflict = await ack(args.sb, conflictIds, 'conflict', 'file_changed');
+  const ackConflict = await ack(
+    args.sb,
+    ackPayload(conflictItems, false),
+    'conflict',
+    'file_changed',
+  );
   if (!ackConflict.ok) {
     return {
       attempted: true, written: 0, conflicts: 0, skipped: 0,
       upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
     };
   }
-  if (skipIds.length) {
-    const byReason = new Map<string, number[]>();
-    for (const id of skipIds) {
-      const r = skipReasons.get(id) ?? 'no_row';
+  if (skipItems.length) {
+    const byReason = new Map<string, OutboundItem[]>();
+    for (const it of skipItems) {
+      const r = skipReasons.get(Number(it.id)) ?? 'no_row';
       if (!byReason.has(r)) byReason.set(r, []);
-      byReason.get(r)!.push(id);
+      byReason.get(r)!.push(it);
     }
-    for (const [reason, ids] of byReason) {
-      const a = await ack(args.sb, ids, 'skipped', reason);
+    for (const [reason, group] of byReason) {
+      const a = await ack(args.sb, ackPayload(group, false), 'skipped', reason);
       if (!a.ok) {
         return {
-          attempted: true, written: 0, conflicts: conflictIds.length, skipped: 0,
+          attempted: true, written: 0, conflicts: conflictItems.length, skipped: 0,
           upload_ok: false, reason: 'ack_skipped', write_reason: 'ack_skipped',
         };
       }
@@ -258,12 +273,12 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: alreadyDone.length,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length,
       upload_ok: alreadyDone.length ? true : null,
       write_reason: alreadyDone.length
         ? 'recovered_ack'
-        : (conflictIds.length ? 'conflict' : 'nothing_to_write'),
+        : (conflictItems.length ? 'conflict' : 'nothing_to_write'),
       snapshotPatch: alreadyDone.length ? snapFromRecover : undefined,
     };
   }
@@ -283,8 +298,8 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: 0,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length + toWrite.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length + toWrite.length,
       upload_ok: false,
       reason: patched.reason,
       write_reason: patched.reason,
@@ -298,22 +313,22 @@ export async function processOutboundWrites(args: {
   if (doneItems.length === 0) {
     const a = await ack(
       args.sb,
-      skippedNoWrite.map((it) => Number(it.id)),
+      ackPayload(skippedNoWrite, false),
       'skipped',
       'patch_no_cell',
     );
     if (!a.ok) {
       return {
-        attempted: true, written: 0, conflicts: conflictIds.length,
-        skipped: skipIds.length, upload_ok: false,
+        attempted: true, written: 0, conflicts: conflictItems.length,
+        skipped: skipItems.length, upload_ok: false,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
     }
     return {
       attempted: true,
       written: alreadyDone.length,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length + skippedNoWrite.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length + skippedNoWrite.length,
       upload_ok: null,
       write_reason: 'patch_no_cell',
     };
@@ -327,19 +342,23 @@ export async function processOutboundWrites(args: {
       return {
         attempted: true,
         written: 0,
-        conflicts: conflictIds.length,
-        skipped: skipIds.length,
+        conflicts: conflictItems.length,
+        skipped: skipItems.length,
         upload_ok: false,
         reason: up.reason,
         write_reason: up.reason,
       };
     }
     // 423 = plik otwarty: normalne ponowienie; failed dopiero po 5 (ack failed liczy attempts).
-    const failIds = doneItems.map((it) => Number(it.id));
-    const ackFail = await ack(args.sb, failIds, 'failed', up.reason);
+    const ackFail = await ack(
+      args.sb,
+      ackPayload(doneItems, false),
+      'failed',
+      up.reason,
+    );
     if (!ackFail.ok) {
       return {
-        attempted: true, written: 0, conflicts: conflictIds.length, skipped: skipIds.length,
+        attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
         upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
       };
     }
@@ -354,7 +373,7 @@ export async function processOutboundWrites(args: {
         });
         if (note.error) {
           return {
-            attempted: true, written: 0, conflicts: conflictIds.length, skipped: skipIds.length,
+            attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
             upload_ok: false, reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
         }
@@ -363,8 +382,8 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: 0,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length,
       upload_ok: false,
       reason: up.reason,
       write_reason: up.reason,
@@ -374,27 +393,26 @@ export async function processOutboundWrites(args: {
   if (skippedNoWrite.length) {
     const a = await ack(
       args.sb,
-      skippedNoWrite.map((it) => Number(it.id)),
+      ackPayload(skippedNoWrite, false),
       'skipped',
       'patch_no_cell',
     );
     if (!a.ok) {
       return {
-        attempted: true, written: patched.written, conflicts: conflictIds.length,
-        skipped: skipIds.length, upload_ok: true,
+        attempted: true, written: patched.written, conflicts: conflictItems.length,
+        skipped: skipItems.length, upload_ok: true,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
     }
   }
 
-  const doneIds = doneItems.map((it) => Number(it.id));
-  const ackDone = await ack(args.sb, doneIds, 'done', null);
+  const ackDone = await ack(args.sb, ackPayload(doneItems, true), 'done', null);
   if (!ackDone.ok) {
     return {
       attempted: true,
       written: patched.written,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length + skippedNoWrite.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length + skippedNoWrite.length,
       upload_ok: true,
       reason: 'ack_done',
       write_reason: 'ack_done',
@@ -433,8 +451,8 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: patched.written,
-      conflicts: conflictIds.length,
-      skipped: skipIds.length + skippedNoWrite.length,
+      conflicts: conflictItems.length,
+      skipped: skipItems.length + skippedNoWrite.length,
       upload_ok: true,
       reason: 'state_upsert',
       write_reason: 'state_upsert',
@@ -445,8 +463,8 @@ export async function processOutboundWrites(args: {
   return {
     attempted: true,
     written: patched.written + alreadyDone.length,
-    conflicts: conflictIds.length,
-    skipped: skipIds.length + skippedNoWrite.length + patched.skipped,
+    conflicts: conflictItems.length,
+    skipped: skipItems.length + skippedNoWrite.length + patched.skipped,
     upload_ok: true,
     write_reason: 'ok',
     snapshotPatch,

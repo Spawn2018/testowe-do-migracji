@@ -48,6 +48,11 @@ alter table public.ksh_sync_outbound
   check (status in ('pending', 'done', 'conflict', 'skipped', 'failed'));
 alter table public.ksh_sync_outbound
   add column if not exists attempts int not null default 0;
+-- F7 r3 N4: wersja wiersza (list→PUT→ack); podbijana przy każdej zmianie pending.
+alter table public.ksh_sync_outbound
+  add column if not exists rev int not null default 1;
+comment on column public.ksh_sync_outbound.rev is
+  'A6 F7 N4: wersja kolejki; ack(id,rev,sent); przy rozjeździe → pending z różnicą WT≠sent.';
 
 create index if not exists ksh_sync_outbound_pending_idx
   on public.ksh_sync_outbound (project_id, id)
@@ -147,7 +152,8 @@ begin
     shipment_code = excluded.shipment_code,
     created_at = now(),
     created_by = excluded.created_by,
-    last_error = null
+    last_error = null,
+    rev = public.ksh_sync_outbound.rev + 1
   returning id into v_id;
   return v_id;
 end;
@@ -181,7 +187,8 @@ begin
       ), jsonb_build_array(o.shipment_code)),
       'patch', o.patch,
       'expected_file', o.expected_file,
-      'attempts', o.attempts
+      'attempts', o.attempts,
+      'rev', o.rev
     ) order by o.id)
     from (
       select * from public.ksh_sync_outbound
@@ -196,8 +203,104 @@ $$;
 revoke all on function public.ksh_sync_outbound_list(uuid, int) from public, anon, authenticated;
 grant execute on function public.ksh_sync_outbound_list(uuid, int) to service_role;
 
+-- F7 r3 N4: ack przyjmuje pary (id, rev, sent); done tylko przy zgodnym rev.
+drop function if exists public.ksh_sync_outbound_ack(bigint[], text, text);
+
+create or replace function public.ksh_sync_outbound_apply_sent(p_exp jsonb, p_sent jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = public
+as $$
+declare
+  v jsonb := coalesce(p_exp, '{}'::jsonb);
+begin
+  if p_sent is null or jsonb_typeof(p_sent) is distinct from 'object' then
+    return v;
+  end if;
+  if p_sent ? 'load_date' then
+    v := jsonb_set(v, '{ld}', coalesce(to_jsonb(p_sent->>'load_date'), 'null'::jsonb));
+  end if;
+  if p_sent ? 'load_time' then
+    v := jsonb_set(v, '{lt}', coalesce(to_jsonb(p_sent->>'load_time'), 'null'::jsonb));
+  end if;
+  if p_sent ? 'delivery_date' then
+    v := jsonb_set(v, '{dd}', coalesce(to_jsonb(p_sent->>'delivery_date'), 'null'::jsonb));
+  end if;
+  if p_sent ? 'delivery_time' then
+    v := jsonb_set(v, '{dt}', coalesce(to_jsonb(p_sent->>'delivery_time'), 'null'::jsonb));
+  end if;
+  if p_sent ? 'carrier_order_no' then
+    v := jsonb_set(v, '{co}', coalesce(to_jsonb(p_sent->>'carrier_order_no'), 'null'::jsonb));
+  end if;
+  if p_sent ? 'hhl_order_no' then
+    v := jsonb_set(v, '{ho}', coalesce(to_jsonb(p_sent->>'hhl_order_no'), 'null'::jsonb));
+  end if;
+  return v;
+end;
+$$;
+
+revoke all on function public.ksh_sync_outbound_apply_sent(jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.ksh_sync_outbound_apply_sent(jsonb, jsonb) to service_role;
+
+-- Różnica WT ↔ stan pliku po sent (klucze outbound); NULL nie czyści komórki.
+create or replace function public.ksh_sync_outbound_wt_diff(p_load uuid, p_file jsonb)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  l record;
+  v_patch jsonb := '{}'::jsonb;
+  v_lt text;
+  v_dt text;
+  v_co text;
+  v_ho text;
+begin
+  select * into l from public.loads where id = p_load;
+  if l.id is null then
+    return '{}'::jsonb;
+  end if;
+  v_co := nullif(btrim(l.carrier_order_no), '');
+  v_ho := nullif(btrim(l.hhl_order_no), '');
+  if l.plan_load_from is not null then
+    v_lt := to_char(l.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI');
+  end if;
+  if l.plan_delivery_to is not null then
+    v_dt := to_char(l.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
+  end if;
+
+  if l.plan_load_date is not null
+     and (p_file->>'ld') is distinct from l.plan_load_date::text then
+    v_patch := v_patch || jsonb_build_object('load_date', l.plan_load_date);
+  end if;
+  if v_lt is not null and (p_file->>'lt') is distinct from v_lt then
+    v_patch := v_patch || jsonb_build_object('load_time', v_lt);
+  end if;
+  if l.plan_delivery_date is not null
+     and (p_file->>'dd') is distinct from l.plan_delivery_date::text then
+    v_patch := v_patch || jsonb_build_object('delivery_date', l.plan_delivery_date);
+  end if;
+  if v_dt is not null and (p_file->>'dt') is distinct from v_dt then
+    v_patch := v_patch || jsonb_build_object('delivery_time', v_dt);
+  end if;
+  if v_co is not null and (p_file->>'co') is distinct from v_co then
+    v_patch := v_patch || jsonb_build_object('carrier_order_no', v_co);
+  end if;
+  if v_ho is not null and (p_file->>'ho') is distinct from v_ho then
+    v_patch := v_patch || jsonb_build_object('hhl_order_no', v_ho);
+  end if;
+  return v_patch;
+end;
+$$;
+
+revoke all on function public.ksh_sync_outbound_wt_diff(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.ksh_sync_outbound_wt_diff(uuid, jsonb) to service_role;
+
 create or replace function public.ksh_sync_outbound_ack(
-  p_ids bigint[],
+  p_acks jsonb,
   p_status text,
   p_error text default null
 ) returns int
@@ -207,47 +310,102 @@ set search_path = public
 as $$
 declare
   n int := 0;
+  a jsonb;
+  v_id bigint;
+  v_rev int;
+  v_sent jsonb;
   r record;
   v_patch jsonb;
   v_code text;
+  v_file jsonb;
+  v_diff jsonb;
 begin
   perform public.ksh_sync_require_service();
   if (p_status in ('done', 'conflict', 'skipped', 'failed')) is not true then
     raise exception 'Zły status' using errcode = '22023';
   end if;
-  if p_ids is null or cardinality(p_ids) = 0 then
+  if p_acks is null or jsonb_typeof(p_acks) is distinct from 'array'
+     or jsonb_array_length(p_acks) = 0 then
     return 0;
   end if;
 
-  if p_status = 'failed' then
-    update public.ksh_sync_outbound
-       set attempts = attempts + 1,
-           last_error = left(p_error, 500),
-           status = case when attempts + 1 >= 5 then 'failed' else status end,
-           done_at = case when attempts + 1 >= 5 then now() else done_at end
-     where id = any (p_ids) and status = 'pending';
-    get diagnostics n = row_count;
-    return n;
-  end if;
-
-  for r in
-    select o.*
-      from public.ksh_sync_outbound o
-     where o.id = any (p_ids) and o.status = 'pending'
+  for a in select value from jsonb_array_elements(p_acks)
   loop
+    v_id := nullif(a->>'id', '')::bigint;
+    v_rev := nullif(a->>'rev', '')::int;
+    v_sent := case
+      when a ? 'sent' and jsonb_typeof(a->'sent') = 'object' then a->'sent'
+      else null
+    end;
+    if v_id is null or v_rev is null then
+      continue;
+    end if;
+
+    select o.* into r from public.ksh_sync_outbound o where o.id = v_id;
+    if r.id is null then
+      continue;
+    end if;
+
+    -- F7 r3 N4: rozjazd rev przy done → pending z różnicą WT≠sent, expected_file z sent.
+    if p_status = 'done' and r.rev is distinct from v_rev then
+      v_file := public.ksh_sync_outbound_apply_sent(r.expected_file, coalesce(v_sent, '{}'::jsonb));
+      v_diff := public.ksh_sync_outbound_wt_diff(r.load_id, v_file);
+      if v_diff = '{}'::jsonb then
+        update public.ksh_sync_outbound
+           set status = 'skipped',
+               done_at = now(),
+               last_error = 'rev_mismatch_empty',
+               expected_file = v_file,
+               patch = '{}'::jsonb,
+               rev = rev + 1
+         where id = r.id;
+      else
+        update public.ksh_sync_outbound
+           set status = 'pending',
+               done_at = null,
+               last_error = 'rev_mismatch',
+               expected_file = v_file,
+               patch = v_diff,
+               rev = rev + 1
+         where id = r.id;
+      end if;
+      n := n + 1;
+      continue;
+    end if;
+
+    -- conflict / skipped / failed / done przy zgodnym rev — tylko pending.
+    if (r.status = 'pending' and r.rev is not distinct from v_rev) is not true then
+      continue;
+    end if;
+
+    if p_status = 'failed' then
+      update public.ksh_sync_outbound
+         set attempts = attempts + 1,
+             last_error = left(p_error, 500),
+             status = case when attempts + 1 >= 5 then 'failed' else status end,
+             done_at = case when attempts + 1 >= 5 then now() else done_at end,
+             rev = rev + 1
+       where id = r.id and status = 'pending' and rev = v_rev;
+      if found then
+        n := n + 1;
+      end if;
+      continue;
+    end if;
+
     update public.ksh_sync_outbound
        set status = p_status,
            done_at = now(),
-           last_error = left(p_error, 500)
-     where id = r.id and status = 'pending';
+           last_error = left(p_error, 500),
+           rev = rev + 1
+     where id = r.id and status = 'pending' and rev = v_rev;
     if not found then
       continue;
     end if;
     n := n + 1;
 
-    -- F7 BLOKER 4: po udanym PUT zaktualizuj schedule_row (bez echo dat przy następnym imporcie).
+    -- F7 N4: schedule_row z sent (to, co Edge zapisał), nie z bieżącego patch.
     if p_status = 'done' then
-      v_patch := coalesce(r.patch, '{}'::jsonb);
+      v_patch := coalesce(v_sent, r.patch, '{}'::jsonb);
       update public.shipment_items si
          set schedule_row = coalesce(si.schedule_row, '{}'::jsonb)
            || jsonb_strip_nulls(jsonb_build_object(
@@ -263,7 +421,6 @@ begin
              updated_at = now()
        where si.load_id = r.load_id;
 
-      -- Historia dopiero przy done (F7).
       v_code := r.shipment_code;
       insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
       values (
@@ -276,8 +433,8 @@ begin
 end;
 $$;
 
-revoke all on function public.ksh_sync_outbound_ack(bigint[], text, text) from public, anon, authenticated;
-grant execute on function public.ksh_sync_outbound_ack(bigint[], text, text) to service_role;
+revoke all on function public.ksh_sync_outbound_ack(jsonb, text, text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_outbound_ack(jsonb, text, text) to service_role;
 
 -- Sprawa: plik zmienił się od odczytu (nie nadpisuj).
 create or replace function public.l1b_note_file_changed(
@@ -435,16 +592,19 @@ begin
   end if;
 
   -- F7 r2b N1: usuń z pending klucze przywrócone do migawki; pusty patch → skipped.
+  -- F7 r3 N4: każda zmiana pending podbija rev (wyścig list→PUT→ack).
   if cardinality(v_clear) > 0 then
     foreach v_k in array v_clear loop
       update public.ksh_sync_outbound
-         set patch = patch - v_k
+         set patch = patch - v_k,
+             rev = rev + 1
        where load_id = new.id and status = 'pending' and patch ? v_k;
     end loop;
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
-           last_error = 'reverted_to_file'
+           last_error = 'reverted_to_file',
+           rev = rev + 1
      where load_id = new.id and status = 'pending' and patch = '{}'::jsonb;
   end if;
 
@@ -519,7 +679,8 @@ begin
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
-           last_error = 'write_enabled_on'
+           last_error = 'write_enabled_on',
+           rev = rev + 1
      where project_id = v_pid and status = 'pending';
   end if;
   insert into public.audit_log (user_id, action, entity, entity_id, new_value)
@@ -572,7 +733,8 @@ begin
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
-           last_error = 'import_disabled'
+           last_error = 'import_disabled',
+           rev = rev + 1
      where project_id = v_pid and status = 'pending';
   else
     insert into public.ksh_sync_state (project_id, import_enabled)
