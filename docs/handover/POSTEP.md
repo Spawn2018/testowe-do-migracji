@@ -5323,18 +5323,25 @@ Tempo 3 dni: ~1â€“2 paczki bazy/dzieÅ„ przy 1â€“3 rundach F7; wyglÄ…d koordynato
 - CI HEAD `d60f171a`: unit âœ” (`40248906751`) visual âœ” (`40248906744`) db âœ” (`40248906795`, 13m49s).
 - BieÅ¼Ä…ca: **#560** â€” F7 r2 kod (4 BLOKERY + POPRAWKI + uwagi) na `d60f171a`; proÅ›ba o F7: gotowe do scalenia. Po F7: odbiÃ³r pliku testowego (liczby przed â†’ po â†’ przywrÃ³cone); `SHAREPOINT_TEST_FILE_URL` juÅ¼ w `.env.local` / sekretach.
 
-## 2026-10-26 02:50 — A6 #560 F7 runda 2b: N1–N3 (docs)
+## 2026-10-26 02:50 â€” A6 #560 F7 runda 2b: N1â€“N3 (docs)
 
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
-- Scalanie: F7 na `d60f171a` — **wymaga poprawek** (N1 bloker + N2/N3 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
-- Bie¿¹ca: **#560** — wpis F7 r2b w PLAN §4/§8 (N1: A›B›A usuwa klucz z pending; N2: data+godzina w komórce; N3: `import_set(false)` › `write_enabled=false` + pending skipped; uwagi: `write_test_ok_at` check, `pickSharePointMode`, czêœciowa ³atka multi-kod, styl z s¹siada). Nastêpny commit: kod.
+- Scalanie: F7 na `d60f171a` â€” **wymaga poprawek** (N1 bloker + N2/N3 + uwagi); brak â€F7: gotoweâ€. #383 CONFLICTING. Bez push na main.
+- BieÅ¼Ä…ca: **#560** â€” wpis F7 r2b w PLAN Â§4/Â§8 (N1: Aâ†’Bâ†’A usuwa klucz z pending; N2: data+godzina w komÃ³rce; N3: `import_set(false)` â†’ `write_enabled=false` + pending skipped; uwagi: `write_test_ok_at` check, `pickSharePointMode`, czÄ™Å›ciowa Å‚atka multi-kod, styl z sÄ…siada). NastÄ™pny commit: kod.
 
-## 2026-10-26 02:55 — A6 #560 F7 runda 2b: kod N1–N3
+## 2026-10-26 02:55 â€” A6 #560 F7 runda 2b: kod N1â€“N3
 
-- Skrzynka: #550 WSTRZYMANE. Brak „F7: gotowe”. Bez push na main.
+- Skrzynka: #550 WSTRZYMANE. Brak â€F7: gotoweâ€. Bez push na main.
 - Kod F7 r2b w **0308** + Edge/unit:
-  1. **N1:** powrót do migawki usuwa klucz z pending; pusty › `skipped/reverted_to_file`; test A›B›A / A›B;
-  2. **N2:** data+godzina w komórce — zachowaj u³amek / czêœæ ca³kowit¹;
-  3. **N3:** `ksh_sync_import_set(false)` › `write_enabled=false` + pending `import_disabled`;
-  + `pickSharePointMode`, check `write_test_ok_at`, czêœciowa ³atka multi-kod, styl z s¹siada.
-- EXPECTED import **177**; unit `ksh-sharepoint-write` 17/17. Push po koñcu CI na poprzednim SHA › proœba F7 po zielonym.
+  1. **N1:** powrÃ³t do migawki usuwa klucz z pending; pusty â†’ `skipped/reverted_to_file`; test Aâ†’Bâ†’A / Aâ†’B;
+  2. **N2:** data+godzina w komÃ³rce â€” zachowaj uÅ‚amek / czÄ™Å›Ä‡ caÅ‚kowitÄ…;
+  3. **N3:** `ksh_sync_import_set(false)` â†’ `write_enabled=false` + pending `import_disabled`;
+  + `pickSharePointMode`, check `write_test_ok_at`, czÄ™Å›ciowa Å‚atka multi-kod, styl z sÄ…siada.
+- EXPECTED import **177**; unit `ksh-sharepoint-write` 17/17. Push â†’ CI â†’ proÅ›ba F7 po zielonym.
+
+## 2026-10-26 03:15 â€” A6 #560 F7 r2b: CI zielone na `c204854a`
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budowaÄ‡); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak â€F7: gotowe do scaleniaâ€ po `c204854a` (ostatni F7 = wymaga poprawek na `d60f171a`). #383 CONFLICTING. Bez push na main.
+- CI HEAD `c204854a`: unit âœ” (`40251900611` / `40251895707`) visual âœ” (`40251900582`) db âœ” (`40251900609`, 10m20s).
+- BieÅ¼Ä…ca: **#560** â€” F7 r2b (N1â€“N3 + uwagi) na `c204854a`; proÅ›ba o F7: gotowe do scalenia. Po F7: odbiÃ³r pliku testowego (liczby przed â†’ po â†’ przywrÃ³cone).

@@ -991,7 +991,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
 5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r2 na `d60f171a` **niegotowe**; runda 2b: N1–N3 + uwagi)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r2b na `c204854a` CI ✔; czekam F7)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
    - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; Rebase po #557: **0306→0308**.
@@ -999,11 +999,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **F7 runda 2 (`ed98f039` → kod `d60f171a`) — ZROBIONE:** (1) łatka zachowuje atrybuty komórki (`s=…`); (2) data = serial całkowity (nie UTC noon → x.5); (3) brak eTag → **bez PUT**, powód `no_etag`, pending; (4) echo po TAKE_FILE / dowolnej ścieżce: pomiń pole gdy wartość = migawka pliku.
      - **POPRAWKI runda 2 — ZROBIONE:** DEFLATE; kolejność komórek w wierszu (+ self-closing `<row/>`); pierwszy arkusz z `workbook.xml`+rels; tekst daty `dd.mm.yyyy`; zapis tylko przy `import_enabled=true` (`ksh_sync_write_set` odrzuca bez importu); PUT udany/ack zgubiony → jeśli plik=oczekiwany+łatka → `ack done`; scalanie: najstarsza `expected_file`; sprawdzaj błędy `ack`/`l1b_note_*`.
      - **UWAGI runda 2 — ZROBIONE w kodzie:** konflikt dla każdego łatanego kodu; prod dopiero po `write_test_ok_at` (udany przebieg trybu test; `SHAREPOINT_TEST_FILE_URL` w sekretach 26.10); **423** (plik otwarty) = normalne ponowienie, `failed` dopiero po 5 próbach.
-     - **F7 runda 2b (`d60f171a` — niegotowe) — DO ZROBIENIA w tym PR:**
-       - **N1 BLOKER:** powrót WT do wartości z pliku (A→B→A) usuwa klucz z pending (`patch - pole`); pusty patch → `skipped` (`reverted_to_file`). Test: A→B→A → 0 kluczy; A→B → 1 klucz.
-       - **N2:** data+godzina w jednej komórce — zachowaj ułamek przy łatce daty i część całkowitą przy łatce godziny.
-       - **N3:** `ksh_sync_import_set(false)` → też `write_enabled=false` + pending → `skipped` (`import_disabled`).
-       - **Uwagi:** wynik update `write_test_ok_at`; `pickSharePointMode` w `index.ts`; przy częściowej łatce multi-kod pomiń kody już zastosowane / nieaktualizuj ich migawki; styl nowej komórki z sąsiada kolumny.
+     - **F7 runda 2b (`c204854a`) — ZROBIONE:** **N1** A→B→A usuwa klucz z pending (`patch - pole`); pusty → `skipped`/`reverted_to_file`; **N2** data+godzina w komórce (ułamek / część całkowita); **N3** `import_set(false)` → `write_enabled=false` + pending `import_disabled`; uwagi: `write_test_ok_at`, `pickSharePointMode`, częściowa łatka multi-kod, styl sąsiada. EXPECTED import **177**; unit 17/17. CI unit/visual/db ✔.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1688,3 +1684,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 02:15 | #560 F7 runda 2 (`ed98f039`): 4 BLOKERY + 8 POPRAWEK + uwagi (styl komórki, serial daty, no_etag, echo migawki, DEFLATE, import_enabled, write_test_ok_at, 423); CI HEAD `3542f586` ✔ — docs → kod | pętla |
 | 26.10.2026 01:41 | #560 F7 r2 kod `d60f171a` — CI unit/visual/db ✔ (`40248906751` / `40248906744` / `40248906795`); czekam F7; odbiór pliku testowego po F7 | pętla |
 | 26.10.2026 02:50 | #560 F7 r2b na `d60f171a` — NIEGOTOWE (N1 A→B→A pending, N2 data+godzina, N3 import_set wyłącza write); docs→kod | pętla |
+| 26.10.2026 03:15 | #560 F7 r2b kod `c204854a` — CI unit/visual/db ✔; N1–N3 ZROBIONE; czekam F7 | pętla |
