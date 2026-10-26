@@ -5322,3 +5322,9 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - Scalanie: brak ‚ÄûF7: gotowe do scalenia‚Äù po `d60f171a` (ostatni F7 = wymaga poprawek na `ed98f039`). #383 CONFLICTING. Bez push na main.
 - CI HEAD `d60f171a`: unit ‚úî (`40248906751`) visual ‚úî (`40248906744`) db ‚úî (`40248906795`, 13m49s).
 - Bie≈ºƒÖca: **#560** ‚Äî F7 r2 kod (4 BLOKERY + POPRAWKI + uwagi) na `d60f171a`; pro≈õba o F7: gotowe do scalenia. Po F7: odbi√≥r pliku testowego (liczby przed ‚Üí po ‚Üí przywr√≥cone); `SHAREPOINT_TEST_FILE_URL` ju≈º w `.env.local` / sekretach.
+
+## 2026-10-26 02:50 ó A6 #560 F7 runda 2b: N1ñN3 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `d60f171a` ó **wymaga poprawek** (N1 bloker + N2/N3 + uwagi); brak ÑF7: gotoweî. #383 CONFLICTING. Bez push na main.
+- Bieøπca: **#560** ó wpis F7 r2b w PLAN ß4/ß8 (N1: AõBõA usuwa klucz z pending; N2: data+godzina w komÛrce; N3: `import_set(false)` õ `write_enabled=false` + pending skipped; uwagi: `write_test_ok_at` check, `pickSharePointMode`, czÍúciowa ≥atka multi-kod, styl z sπsiada). NastÍpny commit: kod.
