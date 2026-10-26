@@ -5677,3 +5677,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#412/#323/#320 w planie. Bez nowych do wpisania.
 - Scalanie: CI `84510888` db FAIL baf 100/1 (F7 r4 21:00 — avg 22,10 zostaje ×1,09 przy „od progu”). #577 bez F7; #578 F7 po #577. Bez push na main.
 - **#563 krok (F7 r4):** 2. korekta SEK 06.10→**22,40** (pub 06.10) — `sefs_week_calc` ≠ corr1/migawka; asercje `new_mult` + payload UPDATE; trigger — UPDATE tylko gdy `new_mult` się zmienia; 3. korekta 07.10→22,80 → EXPIRED. baf EXPECTED **105**. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-27 00:10 — #563 F7 #579 r4: CI zielone, prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
+- CI `c70f4787`: unit ✔, db ✔ (13m38s), visual ✔ (części bramy/telefon/zrzuty).
+- **#563 krok:** prośba o F7 na HEAD `c70f4787` (komentarz PR #579). Czekam na „F7: gotowe do scalenia”. Po scaleniu → #577 F7 pkt 1–8 (0310→0311).
