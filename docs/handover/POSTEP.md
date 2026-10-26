@@ -5236,3 +5236,305 @@ Suma od razu: 175 / 7 dÃ³b = 25,0 na dobÄ. Szacunek szczytu po skrÃ³cie: 
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: **#564** `wyglad/kurs-nbp-aktualny` — `F7: gotowe` (Spawn2018, po `b02990a`); unit/visual ✔ → merge `fc95a81e`. #560 WSTRZYMANY (F7 po #557); #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
 - Bieżąca: **#557 PR2** #562 `bf0aa1a3` — unit ✔ visual ✔ db ✔ (status 291). PLAN §4 pkt 7–8. Prośba o `F7: gotowe do scalenia`.
+
+## 2026-10-25 23:50 — #557 PR2 SCALONE; powrót A6 #560 (0308 + F7)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#562** F7 „gotowe do scalenia” (Spawn2018, po `4b2d94c8` / kod `bf0aa1a3`) → merge `7159ab4c` (0307). #383 CONFLICTING. Bez push na main.
+- Bieżąca: **A6 #560** — rebase na main, migracja outbound **0306→0308**; F7 5 blokerów + poprawki wpisane w PLAN §4. Następny commit: kod 0308 (If-Match, import_ctx, plan_delivery_to, schedule_row, patch||).
+- Testy db: `import.sh` outbound (+15) — EXPECTED import **161**; CI wcześniej 160/1 FAIL na `outbound_ack` (naprawa w następnym kodzie F7).
+
+## 2026-10-26 00:15 — A6 #560 F7: kod 0308 (5 blokerów)
+
+- Skrzynka: #550 WSTRZYMANE; pozostałe w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI poprzednie SHA: unit/visual ✔; **db FAIL** import 160/1 — `auth.jwt()` w ack (brama bez JWT).
+- Bieżąca: **#560** kod F7 w **0308** + Edge:
+  1. PUT `If-Match` / 412=`etag_mismatch` (pending, bez sprawy);
+  2. `import_schedule` — `import_ctx` wokół UPDATE zasobów/numerów;
+  3. `plan_delivery_to` (Stockholm); tylko zmienione pola; NULL nie czyści;
+  4. ack `done` → `shipment_items.schedule_row` + `KSH_FILE_OUTBOUND`;
+  5. `patch = patch || p_patch` + unique pending; JSZip zamiast exceljs; attempts/failed; write_set skip backlog.
+- EXPECTED import **169**; unit: 412 + JSZip round-trip. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 00:55 — #565 SCALONE; A6 #560 db FAIL → fix kodowania 0308
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#565** `wyglad/W-przypnij-rejs` — `F7: gotowe do scalenia` (Spawn2018, po `1d438410`, CI unit/visual ✔) → merge `c1e3fca9`. #383 CONFLICTING. Bez push na main.
+- CI #560 `6b182812`: unit ✔ visual ✔; **db FAIL** import 158/11 + nullguard 848/4 — migracja **0308** miała zepsute UTF-8 w komunikatach `import_schedule` (`wyĹ‚Ä…cznie` zamiast `wyłącznie`); testy `err`/`nullguard` nie łapały odmowy; kaskada na A6 outbound.
+- Fix: naprawa kodowania PL w `0308_a6_ksh_sharepoint_write.sql`; `import.sh` — `jsonb_exists` zamiast `?`, ack authenticated → `permission denied|42501`. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 01:25 — A6 #560 db FAIL patch|| (GROUP BY) → fix testu
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `ee4f620f`: unit/visual ✔; **db FAIL** import 168/1 — asercja `A6: patch||` mieszała `count(*)` z kolumną `patch` (Postgres: musi GROUP BY / agregat). Caret w logu na `jsonb_exists(patch,…)`.
+- Fix: `bool_and(jsonb_exists…)` w `import.sh`. EXPECTED import nadal **169**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 01:45 — A6 #560 CI zielone; F7; prognoza #538 1B / #499
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `ed98f039`. #383 CONFLICTING / „Nie scalać jeszcze”. Bez push na main.
+- CI #560 `ed98f039`: unit ✔ visual ✔ db ✔ (`40244927734` / `40244927753`). Prośba o `F7: gotowe do scalenia`.
+- Bieżąca: **A6 #560** — czekam F7. Po scaleniu: odbiór zapisu na pliku testowym (liczby w POSTEP), potem C4–C13.
+
+## 2026-10-26 02:15 — A6 #560 F7 runda 2: docs (blokerów lista)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `ed98f039` — **wymaga poprawek** (4 BLOKERY + 8 POPRAWEK); brak „F7: gotowe”. Docs na `3542f586` nie zmieniają kodu. #383 CONFLICTING. Bez push na main.
+- CI HEAD `3542f586`: unit ✔ visual ✔ db ✔ (`40246684823` / `40246684890`).
+- Bieżąca: **#560** — wpis F7 r2 w PLAN §4/§8 (styl `s=`, serial daty całkowity, `no_etag`, echo migawki, DEFLATE, kolejność komórek, workbook.xml, `dd.mm.yyyy`, zapis tylko przy `import_enabled`, PUT zgubiony→ack, oldest expected, ack/l1b check, konflikt per kod, `write_test_ok_at`, 423=ponowienie). Następny commit: kod.
+
+## 2026-10-26 02:25 — A6 #560 F7 runda 2: kod
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Brak „F7: gotowe”. Bez push na main.
+- Kod F7 r2 w **0308** + Edge/unit:
+  1. styl komórki `s=…`; 2. serial daty całkowity (2026-10-26→46321); 3. `no_etag` bez PUT; 4. echo=migawka → 0 kolejki;
+  5–8. DEFLATE, kolejność komórek, workbook.xml+rels, `dd.mm.yyyy`;
+  9. zapis tylko przy `import_enabled` (`write_set` odrzuca);
+  10. PUT zgubiony→`fileAlreadyHasPatch`→ack done; 11. oldest `expected_file`; 12. sprawdzaj ack/l1b;
+  + konflikt per kod; `write_test_ok_at`; 423=ponowienie (failed po 5).
+- EXPECTED import **173**; unit `ksh-sharepoint-write` 15/15. Push → CI → prośba F7 po zielonym.
+
+### Prognoza wydania 1.0 (#538 1B — do 26.10 12:00; tempo 23–25.10 + rundy F7)
+
+Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynatora równolegle. Bramę bezpieczeństwa 28.10 (B5, B7, C11, C9, OWASP z P11) da się domknąć: **B5/B7/B8/B9 już SCALONE**; C11 = test Auth; C9 = testy E19; OWASP = wycinek P11.
+
+| Pozycja | Stan / prognoza na produkcji |
+|---|---|
+| B5, B7, B8, B9 | **SCALONE** (25.10) |
+| A6 zapis (#560 / 0308) | **26.10** (CI ✔; +0–1 runda F7; odbiór pliku testowego tego samego dnia) |
+| C4–C13 | **26.10 wieczór – 27.10** (9 pozycji, głównie testy/RPC; ~1 runda F7/pakiet) |
+| #500 | **27.10** |
+| #537 (Cursor: I/J priorytet + drobne; reszta → P4-u/P5/P6/P11) | **27–29.10** |
+| P4-u | **29–30.10** |
+| P3-d | **30.10** |
+| P5 (reszta) | **30.10 – 01.11** |
+| P6 | **01–02.11** |
+| P7 | **02–03.11** |
+| P8 | **03–04.11** |
+| P9 | **04.11** |
+| P10a / P10b | **05.11** |
+| Konta RO (#538 3A) + P11 (jakość/OWASP/wydanie) | **05–06.11** |
+| **Realna data wydania 1.0** | **śr 5.11.2026 – czw 6.11.2026** (jedna pętla; bez cięcia zakresu). Na 28.10 zostaje tylko brama bezpieczeństwa. |
+
+## 2026-10-26 01:41 — A6 #560 F7 r2: CI zielone na `d60f171a`
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `d60f171a` (ostatni F7 = wymaga poprawek na `ed98f039`). #383 CONFLICTING. Bez push na main.
+- CI HEAD `d60f171a`: unit ✔ (`40248906751`) visual ✔ (`40248906744`) db ✔ (`40248906795`, 13m49s).
+- Bieżąca: **#560** — F7 r2 kod (4 BLOKERY + POPRAWKI + uwagi) na `d60f171a`; prośba o F7: gotowe do scalenia. Po F7: odbiór pliku testowego (liczby przed → po → przywrócone); `SHAREPOINT_TEST_FILE_URL` już w `.env.local` / sekretach.
+
+## 2026-10-26 02:50 — A6 #560 F7 runda 2b: N1–N3 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `d60f171a` — **wymaga poprawek** (N1 bloker + N2/N3 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- Bieżąca: **#560** — wpis F7 r2b w PLAN §4/§8 (N1: A→B→A usuwa klucz z pending; N2: data+godzina w komórce; N3: `import_set(false)` → `write_enabled=false` + pending skipped; uwagi: `write_test_ok_at` check, `pickSharePointMode`, częściowa łatka multi-kod, styl z sąsiada). Następny commit: kod.
+
+## 2026-10-26 02:55 — A6 #560 F7 runda 2b: kod N1–N3
+
+- Skrzynka: #550 WSTRZYMANE. Brak „F7: gotowe”. Bez push na main.
+- Kod F7 r2b w **0308** + Edge/unit:
+  1. **N1:** powrót do migawki usuwa klucz z pending; pusty → `skipped/reverted_to_file`; test A→B→A / A→B;
+  2. **N2:** data+godzina w komórce — zachowaj ułamek / część całkowitą;
+  3. **N3:** `ksh_sync_import_set(false)` → `write_enabled=false` + pending `import_disabled`;
+  + `pickSharePointMode`, check `write_test_ok_at`, częściowa łatka multi-kod, styl z sąsiada.
+- EXPECTED import **177**; unit `ksh-sharepoint-write` 17/17. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 03:15 — A6 #560 F7 r2b: CI zielone na `c204854a`
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `c204854a` (ostatni F7 = wymaga poprawek na `d60f171a`). #383 CONFLICTING. Bez push na main.
+- CI HEAD `c204854a`: unit ✔ (`40251900611` / `40251895707`) visual ✔ (`40251900582`) db ✔ (`40251900609`, 10m20s).
+- Bieżąca: **#560** — F7 r2b (N1–N3 + uwagi) na `c204854a`; prośba o F7: gotowe do scalenia. Po F7: odbiór pliku testowego (liczby przed → po → przywrócone).
+
+## 2026-10-26 03:45 — A6 #560 F7 runda 3: N4 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `c204854a` — **wymaga poprawek** (BLOKER N4 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI HEAD `3b98f70b` (docs po `c204854a`): unit ✔ visual ✔ db ✔ (`40253711028`, 19m49s).
+- Bieżąca: **#560** — wpis F7 r3 w PLAN §4/§8: `rev` na outbound; list zwraca `rev`; ack `(id,rev,sent)`; przy rozjeździe → pending z różnicą WT≠sent + `expected_file=sent`; `schedule_row` z `sent`; testy B→C / A→A / done; uwagi NULL nie czyści + float 1e-9. Następny commit: kod.
+
+## 2026-10-26 04:00 — A6 #560 F7 r3: kod N4
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (N4 dopiero w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r3 N4 w **0308** + Edge/unit:
+  1. Kolumna `rev` (enqueue/clear/skip/ack podbijają);
+  2. `list` → `rev`; `ack(jsonb[{id,rev,sent}], status, error)`;
+  3. rozjazd rev przy done → pending + `wt_diff` + `expected_file` z `apply_sent` (plik = sent);
+  4. `schedule_row` z `sent`;
+  5. testy db: B→C stary rev / powrót A / zgodny → done; `xlsxPatch` 1e-9.
+- EXPECTED import **180**; unit `ksh-sharepoint-write` **18/18**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 04:20 — A6 #560 F7 runda 4: N5–N8 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `f4fde778` — **wymaga poprawek** (BLOKER N5 + N6–N8); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI HEAD `f4fde778`: unit ✔ visual ✔ db ✔ (`40256802926` / `40256802933` / `40256802932`).
+- Bieżąca: **#560** — wpis F7 r4 w PLAN §4/§8: N5 `schedule_row`+historia przy rozjeździe; N6 `FOR UPDATE`; N7 scal do istniejącego pending; N8 tylko pending/`reverted_to_file`; uwagi wt_diff∩klucze, trigger vs `expected_file`, unit `ackPayload`. Następny commit: kod.
+
+## 2026-10-26 04:25 — A6 #560 F7 r4: kod N5–N8
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (N5–N8 w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r4 w **0308** + Edge/unit:
+  1. N5: przy rozjeździe `schedule_row`+`KSH_FILE_OUTBOUND` z `sent`;
+  2. N6: `FOR UPDATE` outbound + loads;
+  3. N7: scal do istniejącego pending, stary `done`/`rev_mismatch_merged`;
+  4. N8: rozjazd tylko pending/`reverted_to_file`; podwójny ack no-op;
+  5. `wt_diff(…, keys)`; trigger vs `expected_file`; `ackPayload.ts`.
+- EXPECTED import **186**; unit `ksh-sharepoint-write` **19/19**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 04:45 — A6 #560 db FAIL N5: fix test GRANT
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `f6b83fab`: unit ✔ visual ✔ **db FAIL** import 183/3 — N5: `permission denied` na `shipment_items`/`loads` (SELECT w tej samej transakcji co ack jako `service_role` / import jako `authenticated` → rollback ack).
+- Fix: ack osobno + asercje przez `Q` (postgres); import + `reset role` przed odczytem `loads`. EXPECTED nadal **186**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 05:00 — A6 #560 F7 runda 5: N9–N12 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `f6b83fab` — **wymaga poprawek** (N9–N12); brak „F7: gotowe”. CI `a1b98daa`: unit ✔ visual ✔ **db FAIL** `A6: N5 import → SNAP-B` (185/1) — import nadpisuje całą grupę zasobów (objaw N9). #383 CONFLICTING. Bez push na main.
+- Bieżąca: **#560** — wpis F7 r5 w PLAN §4/§8: **N9** tylko pola z `v_fields` + skip pending / konflikt gdy plik≠expected; **N10** blokady loads→outbound + sort `load_id`; **N11** historia/schedule_row tylko przy `v_file ≠ expected_file`; **N12** expected_file tylko klucze pending, reszta vs snapshot. Następny commit: kod.
+
+## 2026-10-26 05:20 — A6 #560 F7 r5: kod N9–N12
+
+- Skrzynka: #550 WSTRZYMANE. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- Kod F7 r5 w **0308** + testy:
+  1. **N9:** import `case when … = any(v_fields)`; skip pól z pending; konflikt gdy plik≠expected;
+  2. **N10:** ack sort po `load_id`; blokady loads → outbound;
+  3. **N11:** schedule_row/historia przy rozjeździe tylko gdy `v_file ≠ expected_file`;
+  4. **N12:** porównanie per klucz + `state_upsert` odświeża `expected_file` ze snapshot.
+- EXPECTED import **189**; testy N9/N11/N12. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 05:45 — A6 #560 db FAIL na `bbcc567e` → fix testów N7/N11/g20
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `bbcc567e`: unit ✔ visual ✔ **db FAIL** import 186/3 + g20 14/1:
+  1. **N11:** `delete load_events` niemożliwe (immutable) → count 7 zamiast 1 — asercja na deltę jak N5;
+  2. **N7:** po N12 snapshot `SNAP-X` → B→A nie robi `reverted_to_file` — reset snapshot do A przed N7;
+  3. **g20:** N9 + zaległy pending po `ksh_confirm_dates` blokuje datę z pliku — `delete outbound` przed importem w teście.
+- EXPECTED bez zmian (import 189, g20 15). Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 06:20 — A6 #560 F7 runda 6: docs (CI ✔ + bloker)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. F7 r6 na `bbcc567e` — **wymaga poprawek** (CI czerwone + BLOKER + 3 poprawki); fix testów `4e7915bb` **nie zamyka** rundy 6. #383 CONFLICTING. Bez push na main.
+- CI HEAD `4e7915bb`: unit ✔ (`40265279875`) visual ✔ (`40265279937`) db ✔ (`40265279880`).
+- Bieżąca: **#560** — wpis F7 r6 w PLAN §4/§8: (1) `l1b_note_file_changed` bez bramki service przy imporcie HHL; (2) godziny tylko z `v_fields`; (3) `expected_file`∉`patch`; (4) `write_set`/`import_set` locks loads→outbound; uwagi dedup HHL + `pending_wt` w `changed`. Następny commit: kod.
+
+## 2026-10-26 06:35 — A6 #560 F7 r6: kod B1 + P2–P4
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (r6 dopiero w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r6 w **0308** + testy:
+  1. **B1:** `l1b_note_file_changed` bez `ksh_sync_require_service`; dedup jak conflict HHL;
+  2. **P2:** data/godzina tylko gdy ∈ `v_fields` (pending time → godzina WT, data z pliku);
+  3. **P3:** `state_upsert` expected tylko klucze spoza `patch` (N12 asercja);
+  4. **P4:** `write_set`/`import_set` — `loads FOR UPDATE` sort id → outbound;
+  + `pending_wt` w `changed`.
+- EXPECTED import **193**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 06:50 — A6 #560 db FAIL na `f076c7f9` → quiet + P2 dates_ctx
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `f076c7f9`: unit ✔ visual ✔ **db FAIL** import 191/2:
+  1. **quiet + hhlOrderNo:** `l1b_note_file_changed` (ten sam klucz co conflict) otwierał sprawę mimo `p_quiet` — fix: `v_run_quiet is not true`;
+  2. **P2:** test enqueue godziny bez `dates_ctx` → brak pending → brało 14:00 z pliku — fix test: `set_config('tower.dates_ctx','on')`.
+- EXPECTED nadal **193**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 06:55 — A6 #560 db FAIL na `1c6fda99` → B1 bez quiet
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `1c6fda99`: unit ✔ visual ✔ **db FAIL** import 192/1 — `A6: r6 B1 sprawa file-changed` 0 zamiast 1 (test wołał `p_quiet=true`, a F7 #2 przy quiet nie otwiera sprawy).
+- Fix: test B1 `import_schedule(…, false, false)` — ścieżka UPLOAD z sprawą; quiet zostaje bez spraw. EXPECTED **193**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 07:05 — A6 #560 F7: file-changed także przy quiet
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `06c6a108` unit/visual/db ✔ — F7: quiet nie może wyłączać sprawy file-changed (także SharePoint). #383 CONFLICTING. Bez push na main.
+- Kod: `l1b_note_file_changed` zawsze przy plik≠expected (bez `v_run_quiet`); B1 z `p_quiet=true` + wariant SharePoint `service_role`+quiet → 1 sprawa. EXPECTED import **195**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 07:20 — A6 #560 F7 runda 7: B1 quiet + N13 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 r7 na `06c6a108` — **wymaga poprawek** (B1 sprawa przy `p_quiet=true`; N13 pending przed crit). Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `fe1e4bd6` (B1 quiet w kodzie): unit ✔ visual ✔ **db FAIL** import 193/2 — (1) quiet+hhlOrderNo: trigger zostawia pending → file-changed (ten sam klucz) mimo wyciszenia sprawy numeru; (2) SharePoint sprawa 0 (czyszczenie decyzji / dedup). Fix w następnym commitcie z N13.
+- Bieżąca: **#560** — wpis F7 r7 w PLAN §4/§8. Następny commit: kod N13 + testy.
+
+## 2026-10-26 07:35 — A6 #560 F7 runda 7: kod B1+N13
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- Kod F7 r7 w **0308** + testy:
+  1. **N13:** pending skip przed confirmed/crit; puste v_fields → unchanged (bez CRITICAL/CHANGED);
+  2. **B1:** UPLOAD quiet + SharePoint `p_quiet=false` (cron); `decision_events` przed delete decisions;
+  3. quiet+hhlOrderNo: czyść outbound przed asercją sprawy numeru.
+- EXPECTED import **198**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 08:00 — A6 #560 F7 r7 CI FAIL → `:pending` + schedule_row
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `45eeed2c` unit/visual ✔ **db FAIL** import 197/1 — `A6: r7 B1 SharePoint sprawa file-changed` 0 zamiast 1. #383 CONFLICTING. Bez push na main.
+- Przyczyna SharePoint: po B1 UPLOAD `schedule_row` dostaje `carrier_order_no` z pliku (SNAP-B); kolejny import nie ma pola w `v_fields` → brak ścieżki pending/file-changed (WT zostaje C „przypadkiem”). Nie jest to brak grantu `service_role`.
+- F7 05:37: klucz file-changed z `:pending`; #426 liczy tylko bez znacznika; test SharePoint resetuje `schedule_row`; pending skip przed `l1b_note_conflict`.
+- Kod `514967e6`: 0308 + import.sh + EXPECTED **199**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 08:20 — A6 #560 F7 06:08 klucz `:pending:<rev>`
+
+- Skrzynka: #550 WSTRZYMANE; pozostałe w planie. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe”. CI `514967e6` unit/visual/db ✔. #383 CONFLICTING. Bez push na main.
+- F7 06:08: (1) klucz `l1b:conflict:<proj>:<kod>:<pole>:pending:<rev>` — po resolve nowy rev = nowa sprawa; (2) `detail` = code/field/reason; (3) czyszczenie bez `|| true` + count dokładny; (4) test resolve→rev→2→reimport; Edge `p_field`+`p_rev`.
+- Kod w 0308 + import.sh + outboundWrite + EXPECTED import **205**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 08:55 — A6 #560 db FAIL resolve: status z decisions
+
+- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `6b1fae35` unit/visual ✔ **db FAIL** import 204/1 — `A6: r7 B1 resolve →` (puste). #383 CONFLICTING. Bez push na main.
+- Przyczyna: `decision_resolve` zwraca `v_fx` (efekt), nie `status`; asercja `->>'status'` była pusta mimo RESOLVED w `decisions`. Fix testu: po resolve `select status from decisions`. EXPECTED import **205** bez zmian.
+
+## 2026-10-26 08:25 — A6 #560 CI zielone na 10480535 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia”. #383 otwarty, bez F7 (nie scalać). Bez push na main.
+- CI `10480535`: unit ✔, visual ✔, db ✔ (`40283229765` / `40283229788` / `40283229808`). Fix resolve: asercja `decisions.status`. EXPECTED import **205**.
+- Prośba o F7: gotowe do scalenia na HEAD (kod bez zmian od `10480535`; ten commit — docs).
+
+## 2026-10-26 09:25 — #383 SCALONE; A6 #560 F7 runda 8 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#383** `wyglad/W-b5-podglad-baza` — „F7: gotowe do scalenia” (Spawn2018, 07:22Z po `9bd36e60`), CI ✔, bez forka → `gh pr merge --merge` `e192d881` (07:25Z). **#560** F7 r8 na `59ae1348`/`10480535` — **NIEGOTOWE** (2 BLOKERY). Bez push na main.
+- F7 r8 (PLAN §4): (1) `coalesce` przy `v_pend ? hhl_order_no`; (2) kolejka/pending-skip tylko przy `write_enabled`; (3) CANCELLED tylko przy niepustych polach; (4) Edge pole = różnica expected↔plik. Następny commit: kod.
+
+## 2026-10-26 09:55 — A6 #560 F7 r8: kod
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (r8 dopiero w tym commicie). #383 SCALONE wcześniej. Bez push na main.
+- Kod F7 r8 w **0308** + Edge + testy: coalesce HHL; write_enabled bramka; write_disabled; CANCELLED; `conflictFieldFromSnaps`. EXPECTED import **221**; unit 20/20. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 10:15 — A6 #560 F7 r8: fix db FAIL import 212/9
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `c34c3e34` unit/visual ✔ **db FAIL** import 212/9 (write_set skip, write-off import daty, nowy rev/reimport `import_id`, CANCELLED 1/1, B1 SNAP-B). Bez push na main.
+- Fix testów: kolejka dopiero po `write_enabled`; `schedule_row` przy write-off; asercja jsonb zamiast `import_id` (konflikt bez `schedule_imports`); CANCELLED z wyrównanym `schedule_row`; B1 jak r6 (SNAP-A→C). EXPECTED import **225**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 10:40 — A6 #560 F7 r9 docs + CI FAIL CANCELLED
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. CI `cdc31b6c` unit/visual ✔ **db FAIL** import 224/1 — `A6: r8 CANCELLED → 1/1`: SG-01 unchanged OK, ale `blocked` liczył inne kody (STATUS, nieobecne w pliku). Bez push na main.
+- F7 r9 (Spawn2018 na `c34c3e34`): `conflictFieldFromSnaps` — najpierw pole z łatki. Następny commit: kod + asercja CANCELLED tylko SG-01.
+
+## 2026-10-26 10:50 — A6 #560 F7 r9: kod
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. Bez push na main.
+- Kod: `conflictFieldFromSnaps(…, patchKeys)`; outbound przekazuje `Object.keys(patch)`; test CANCELLED liczy tylko SG-01/`CANCELLED`. EXPECTED import **225**; unit 20/20. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 11:00 — A6 #560 CI zielone na 833d9415 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
+- CI `833d9415`: unit ✔ (`40293902818`), visual ✔ (`40293902904`), db ✔ (`40293903234`, 14m3s). F7 r9 (pole z łatki + CANCELLED SG-01) bez zmian kodu od tego SHA. EXPECTED import **225**.
+- Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs).

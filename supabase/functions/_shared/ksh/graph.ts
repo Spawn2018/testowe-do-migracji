@@ -100,6 +100,8 @@ export type DriveItemMeta = {
   downloadHttp?: number;
   bytes?: number;
   errorCode?: string;
+  /** eTag z driveItem — do PUT If-Match (F7 #560). Nie logować treści URL. */
+  eTag?: string | null;
 };
 
 /**
@@ -141,11 +143,13 @@ export async function downloadSharePointFile(
   }
   const item = await itemRes.json().catch(() => ({} as Record<string, unknown>));
   const err = item.error as { code?: string } | undefined;
+  const eTagRaw = item.eTag ?? item['@odata.etag'];
   const meta: DriveItemMeta = {
     http: itemRes.status,
     size: typeof item.size === 'number' ? item.size : null,
     namePresent: typeof item.name === 'string',
     errorCode: err?.code,
+    eTag: typeof eTagRaw === 'string' && eTagRaw.trim() ? eTagRaw.trim() : null,
   };
   if (!itemRes.ok) {
     return {
@@ -190,4 +194,85 @@ export async function downloadSharePointFile(
     return { ok: false, reason: 'file_too_large', meta };
   }
   return { ok: true, mode: resolved.mode, bytes: buf, meta };
+}
+
+/**
+ * Zapis bajtów xlsx przez Graph (PUT content). Adres tylko z env — nie w wyniku.
+ * F7 #560: If-Match z eTag odczytu; 412 → etag_mismatch (pending bez sprawy).
+ * A6: tylko gdy write_enabled (Edge); CI bez SharePoint — mock fetch.
+ */
+export async function uploadSharePointFile(
+  env: GraphEnv,
+  bytes: Uint8Array,
+  fetchFn: typeof fetch = fetch,
+  opts?: { ifMatch?: string | null },
+): Promise<
+  | { ok: true; mode: 'test' | 'prod'; meta: { http: number; bytes: number } }
+  | { ok: false; reason: string; meta: { http: number; bytes: number } }
+> {
+  const resolved = resolveFileUrl(env);
+  if (!resolved.ok) {
+    return { ok: false, reason: resolved.reason, meta: { http: 0, bytes: bytes.byteLength } };
+  }
+  if (bytes.byteLength > GRAPH_MAX_BYTES) {
+    return { ok: false, reason: 'file_too_large', meta: { http: 0, bytes: bytes.byteLength } };
+  }
+  // F7 r2 BLOKER 3: brak eTag → bez PUT i bez tokenu (nie nadpisuj bez warunku).
+  const ifMatch = opts?.ifMatch?.trim();
+  if (!ifMatch) {
+    return {
+      ok: false,
+      reason: 'no_etag',
+      meta: { http: 0, bytes: bytes.byteLength },
+    };
+  }
+  const fileUrl = resolved.mode === 'test' ? env.SHAREPOINT_TEST_FILE_URL! : env.SHAREPOINT_FILE_URL!;
+  const tok = await graphClientCredentialsToken(env, fetchFn);
+  if (!tok.ok) {
+    return {
+      ok: false,
+      reason: tok.error,
+      meta: { http: tok.http, bytes: bytes.byteLength },
+    };
+  }
+  const shareId = shareUrlToShareId(fileUrl);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${tok.token}`,
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'If-Match': ifMatch,
+  };
+  let putRes: Response;
+  try {
+    putRes = await fetchFn(`https://graph.microsoft.com/v1.0/shares/${shareId}/driveItem/content`, {
+      method: 'PUT',
+      headers,
+      body: bytes,
+      signal: AbortSignal.timeout(GRAPH_DOWNLOAD_TIMEOUT_MS),
+    });
+  } catch {
+    return {
+      ok: false,
+      reason: 'network_upload',
+      meta: { http: 0, bytes: bytes.byteLength },
+    };
+  }
+  if (putRes.status === 412) {
+    return {
+      ok: false,
+      reason: 'etag_mismatch',
+      meta: { http: 412, bytes: bytes.byteLength },
+    };
+  }
+  if (!putRes.ok) {
+    return {
+      ok: false,
+      reason: `upload_http_${putRes.status}`,
+      meta: { http: putRes.status, bytes: bytes.byteLength },
+    };
+  }
+  return {
+    ok: true,
+    mode: resolved.mode,
+    meta: { http: putRes.status, bytes: bytes.byteLength },
+  };
 }

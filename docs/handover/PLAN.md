@@ -927,7 +927,7 @@ Kolejność: #498 → #502 → #413 → #505 → #422 → #412 → #484 → #492
 
 ### Decyzje właściciela 25.10 00:55 (#538, D-20261025-0055-01) — wpisane; nie przerywa #528/#531–#536
 Źródło: skrzynka `dla-cursora` #538 (Spawn2018). Odpowiedź właściciela `1B 2A 3A 4C 5A 6A 7B 8A 9A 10A 11A 12C 13A 14A`. Kolejność bez zmian: najpierw #531–#536 (0292→0298), potem #537, B5, B9, A6, B7, B8, C4–C13, #500.
-1. **1B — pełny zakres, data wydania = realna z prognozy.** Na 28.10 tylko brama bezpieczeństwa: B5, B7, hasła (C11), C9 E19, OWASP z P11. **Do pon. 26.10, 12:00:** prognoza w POSTEP i w #499 dla każdej pozycji spoza produkcji (P4-u, P3-d, reszta P5, P6–P11, B5, B7–B9, A6, C4–C13, #500, #537) z tempa 3 dni + rundy F7 → realna data wydania. Najpierw brama bezpieczeństwa, potem reszta z planu.
+1. **1B — pełny zakres, data wydania = realna z prognozy.** Na 28.10 tylko brama bezpieczeństwa: B5, B7, hasła (C11), C9 E19, OWASP z P11. **Prognoza 26.10 ~01:45 (POSTEP + #499):** B5–B9 SCALONE; A6 26.10; C4–C13 26–27.10; #500 27.10; #537 27–29.10; P4-u 29–30.10; P3-d 30.10; P5–P11 30.10–06.11 → **realna data 1.0 ≈ 5–6.11.2026**. Najpierw brama bezpieczeństwa, potem reszta z planu.
 2. **2A** — decyzje koordynatora 1–8 z #517 zaakceptowane → zamknij W-wpisy / #517.
 3. **3A — konta tylko do odczytu na produkcji** (pomiary #422 + odbiór ról): pozycja przed P11 poniżej; W47 (hasła).
 4. **4C** — W46 zamknięte (Grok wcześniej). **5A** — rejsy historyczne HHL_ADMIN bez limitu dni (front koordynator; baza: sprawdź `guard_load_update` / 0243). **6A/7B** — pola 2 px / bez wersalików — front koordynator (7B zamknięte). **8A–10A, 12C–14A** — W18/W23/W25/W48–W50 powyżej.
@@ -983,34 +983,37 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 6. **Testy:** kolejka → ponowienie → pamięć → usunięcie; błąd DeepL → wpis zostaje; limit → bez wywołania. Reguła „szwedzki” (`tests/e21Rules.ts`) bez zmian — 0 trafień. Brama: tabele tłumaczeń są, `deepl_usage_view` działa, kolumny języka ekranów nie ma.
 7. **Odbiór (SELECT):** `translation_memory` ≥ 278, kolejka bez wpisów starszych niż 15 min (poza `odrzucone`), zużycie DeepL rośnie przy nowych komunikatach.
 
-### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — W TOKU (PR1 SCALONE `121a9021` / **0306**; PR2 `pakiet/557-ferry-rules-pr2` / **0307** PR #562; pierwszeństwo przed A6 #560)
+### #557 · PILNE: T-12 / SG-21 po dopłynięciu (D-20261025-1630-01) — SCALONE (PR1 `121a9021` / **0306**; PR2 #562 `7159ab4c` / **0307**)
 Źródło: #557 (Spawn2018) + komentarz na #560 (25.10 ~16:30Z). Strefy **10/10 aktywne** (właściciel) — pkt „2 bufory” zamknięty.
 1. **PR1 — SCALONE** (`121a9021`, 25.10 ~17:47Z, **0306**): SG-21 → Wawel; FERRY; SE z pozycji; `hotfix_557_apply()` + test status +7.
-2. **PR2 (0307, ta gałąź / #562):** 
-   - `apply_ferry_ais_arrival_backup` — FERRY→Port SE / Droga SE po `actual_arrival_at` + ląd SE, **bez** `geofences.active` (F7 r2 pkt 6);
-   - overdue dopłynięcia: **połącz z** `detect_ferry_overdue` / `rk_ferry_overdue` (cron `tower-prom-opoznienie`) — **bez** osobnego crona `ferry_check_arrival_overdue` (F7 r2 pkt 10);
-   - stary punkt emtrack: `raw.stale_point`, bez faz (F7 r2 pkt 9);
-   - `detect_sailing_mismatch` → `rk_sailing_mismatch`; RPC `sailing_mismatch_suggest` (odczyt) / `sailing_mismatch_assign` (**tylko `is_hhl_admin()` + 2FA**, nie HHL_OPS — F7 r2 pkt 5);
-   - **Strefa wyłączona → włączona:** `process_position` przy `OUTSIDE`+wewnątrz i `debounce_fixes=1` (PORT_IN SE) emituje `GEOFENCE_ENTER` na pierwszej pozycji po włączeniu — bez osobnej migracji.
+2. **PR2 — SCALONE** (#562 `7159ab4c`, **0307**): backup AIS bez `g.active`; overdue w `detect_ferry_overdue`; `stale_point`; mismatch + suggest/assign (HHL_ADMIN+2FA); F7 r2–r3 (Port SE→Droga SE, dedup, Stena OFF, UUID L557h `…5581`). status **291**; risks **7**.
 3. **Odbiór PR1 (SELECT):** SG-21 na Wawelu 24.10; T-12 i SG-21 ≠ `FERRY` / `AT_PORT_GDANSK`; T-11 bez zmian.
-4. **Front (koordynator):** `sailing_mismatch_suggest(load_id)` → `{mismatch, proposed_sailing_id, proposed_label}`; `sailing_mismatch_assign` tylko HHL_ADMIN (przycisk); HHL_OPS widzi ryzyko bez „Przypnij rejs”; po dopłynięciu nie rysować pozycji promu jako auta; pomijać `raw.stale_point`.
-5. **F7 #562 r2 — zrobione w 0307** (admin assign, Port SE, merge overdue, stale/mismatch).
-6. **F7 #562 r3 — kod w tym PR (0307):**
-   - **BLOKER CI:** Stena — wyłączyć STENA PORT_IN (A5/485) przed testem; Ösmo/prev/UUID już w fiksturach.
-   - **pkt 1:** backup też `AT_PORT_NYNASHAMN` → `IN_TRANSIT_SE` przy ≥2 km (strefa OFF); „w porcie” przed „lądem SE”.
-   - **pkt 2:** `trg_loads_sailing_mismatch_resolve`: `resolved_by = current_app_user_id()` (NULL dla systemu).
-   - **pkt 3:** assign: odrzut ODWOLANY / trasa ≠ GDN-NYN|GDY-KAA; przy IN_TRANSIT_PL|AT_PORT_GDANSK + odejście ≤ now → `auto_set_status` FERRY (quiet, AIS) + reguła SE.
-   - **pkt 4:** `detect_ferry_overdue` — skip gdy dedup już resolved; `SAILING_MISMATCH` dedup z `sailing_id`.
-   - **pkt 5:** testy assign/suggest (ADMIN OK; OPS/KSH/SCX/Podgląd odmowa; event+audit; resolved_by; status; suggest; SE po dopłynięciu bez stale).
-   - status **284** (+13); risks **7** kluczy (+`rk_ferry_check_after_arrival`).
-   - **Uwagi:** propose bez PRE_PORT, bbox PL ≤ 54.45°N; `p_grace` zamiast 2 h; ETA/SMS/cisza + `stale_point` → **W52**.
-7. **F7 #562 r3 — kod + BLOKER UUID zrobione** (`51fa415a` + `bf0aa1a3`): AIS/SCHEDULE source; L557h głośne + PORT_IN OFF; S557e Gdańsk; suggest KSH/SCX; FERRY→Port SE; L557h UUID `…5581` (≠ LT12 `…5571`). status **291**.
-8. **CI #562 `bf0aa1a3` zielone** (unit/visual/db) — czekam `F7: gotowe do scalenia`.
+4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
+5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 **WSTRZYMANY** do scalenia #557 PR2; po #557 rebase → migracja **0308+**)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r9 ZROBIONE; EXPECTED import **225**; CI `833d9415` ✔ — czekam F7)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
-   - **SharePoint zapis (pkt 4, #560 — po #557 PR2):** kolejka outbound + Graph PUT; **F7 niegotowe** (5 blokerów). Do poprawy: snapshot po PUT, numery w konflikcie, attempts/failed, JSZip zamiast exceljs, testy db **0306→0308**.
+   - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; Rebase po #557: **0306→0308**.
+     - **F7 runda 1 (68c45a9) — ZROBIONE w 0308:** (1) PUT `If-Match` / 412=`etag_mismatch`; (2) `import_ctx` przy UPDATE zasobów; (3) `plan_delivery_to`; NULL nie czyści; (4) `schedule_row` przy `done`; (5) `patch ||` + indeks pending; JSZip; attempts/failed; STEGRA_*; testy import **169**.
+     - **F7 runda 2 (`ed98f039` → kod `d60f171a`) — ZROBIONE:** (1) łatka zachowuje atrybuty komórki (`s=…`); (2) data = serial całkowity (nie UTC noon → x.5); (3) brak eTag → **bez PUT**, powód `no_etag`, pending; (4) echo po TAKE_FILE / dowolnej ścieżce: pomiń pole gdy wartość = migawka pliku.
+     - **POPRAWKI runda 2 — ZROBIONE:** DEFLATE; kolejność komórek w wierszu (+ self-closing `<row/>`); pierwszy arkusz z `workbook.xml`+rels; tekst daty `dd.mm.yyyy`; zapis tylko przy `import_enabled=true` (`ksh_sync_write_set` odrzuca bez importu); PUT udany/ack zgubiony → jeśli plik=oczekiwany+łatka → `ack done`; scalanie: najstarsza `expected_file`; sprawdzaj błędy `ack`/`l1b_note_*`.
+     - **UWAGI runda 2 — ZROBIONE w kodzie:** konflikt dla każdego łatanego kodu; prod dopiero po `write_test_ok_at` (udany przebieg trybu test; `SHAREPOINT_TEST_FILE_URL` w sekretach 26.10); **423** (plik otwarty) = normalne ponowienie, `failed` dopiero po 5 próbach.
+     - **F7 runda 2b (`c204854a`) — ZROBIONE:** **N1** A→B→A usuwa klucz z pending (`patch - pole`); pusty → `skipped`/`reverted_to_file`; **N2** data+godzina w komórce (ułamek / część całkowita); **N3** `import_set(false)` → `write_enabled=false` + pending `import_disabled`; uwagi: `write_test_ok_at`, `pickSharePointMode`, częściowa łatka multi-kod, styl sąsiada. EXPECTED import **177**; unit 17/17. CI unit/visual/db ✔.
+     - **F7 runda 3 — ZROBIONE (BLOKER N4 + uwagi):** `rev` na outbound (enqueue/clear/skip/ack); `list` zwraca `rev`; `ack(jsonb[{id,rev,sent}], status, error)` — `done` tylko przy zgodnym `rev`; rozjazd → pending z `wt_diff` (WT ≠ plik po `sent`) + `expected_file` z `apply_sent`; `schedule_row` z `sent`; testy B→C / powrót A / done; `xlsxPatch` 1e-9. **UWAGA:** NULL przy niepustej migawce nie czyści komórki w pliku (zostaje w Historii transportu przy kolejnym done). EXPECTED import **180**. CI unit/visual/db ✔ na `f4fde778`.
+     - **F7 runda 4 — ZROBIONE w kodzie (BLOKER N5 + N6–N8):** **N5** `schedule_row`+historia przy rozjeździe (import pliku B nie nadpisuje WT C); **N6** `FOR UPDATE` kolejki+loads; **N7** scal do istniejącego pending, stary `done`/`rev_mismatch_merged`; **N8** rozjazd tylko pending/`reverted_to_file`, podwójny ack no-op; `wt_diff(…, keys)`; trigger vs `expected_file`; unit `ackPayload`. EXPECTED import **186**; unit 19/19. **Fix CI `a1b98daa`:** test N5 asercje przez `Q`/`reset role` — db nadal FAIL: import B nadpisuje WT C (objaw **N9**).
+     - **F7 runda 5 — ZROBIONE w kodzie (N9–N12):** **N9** import tylko `v_fields` + skip pending / konflikt gdy plik≠expected; **N10** blokady loads→outbound + sort `load_id`; **N11** historia/schedule_row tylko przy `v_file ≠ expected_file`; **N12** expected per klucz pending + odświeżenie w `state_upsert`. EXPECTED import **189**; testy N9/N11/N12. **Fix CI po `bbcc567e`:** N11 delta (bez DELETE events); N7 reset snapshot po N12; g20 czyści outbound przed importem (N9). CI unit/visual/db ✔ na `4e7915bb`.
+     - **F7 runda 6 — ZROBIONE w kodzie (BLOKER + 3 poprawki + uwagi):** **1** `l1b_note_file_changed` bez `ksh_sync_require_service` (dedup = `l1b:conflict:…:hhl_order_no`); import UPLOAD HHL przy konflikcie → OK + 1 sprawa; **file-changed także przy `p_quiet`** (quiet = tylko powiadomienia; test SharePoint `service_role`+quiet). **2** data/godzina tylko z `v_fields` (test P2: `dates_ctx` przy enqueue godziny). **3** `state_upsert` — `expected_file` tylko klucze spoza `patch`. **4** `write_set`/`import_set`: `loads FOR UPDATE` → kolejka. **UWAGI:** `pending_wt` w `changed`. EXPECTED import **195**. CI `06c6a108` ✔ — F7: quiet nie wyłącza sprawy → poprawka w tym SHA.
+     - **F7 runda 7 — ZROBIONE w kodzie:** **B1** file-changed przy `p_quiet=true` (UPLOAD) i `false` (SharePoint cron); czyszczenie `decision_events` przed asercją. **N13** pending przed `v_confirmed`/`v_crit`; puste `v_fields` → unchanged bez CHANGED/CRITICAL. Testy: quiet hhlOrderNo czyści outbound; N13 awizowany. EXPECTED import **198**.
+     - **F7 r7 CI `45eeed2c` db FAIL (197/1) + komentarz 05:37 — ZROBIONE w kodzie:** **(1)** dwie sytuacje: bez pending → quiet bez sprawy (#426); z pending → sprawa zawsze. **(2)** SharePoint 0 spraw: reset `schedule_row` + pending. CI `514967e6` unit/visual/db ✔.
+     - **F7 06:08 (po zielonym CI `514967e6`) — ZROBIONE w kodzie:** klucz `l1b:conflict:<proj>:<kod>:<pole>:pending:<rev>` (nowy rev = nowa sprawa po resolve); `detail` = `code`/`field`/`reason` (bez wartości PII); czyszczenie testów bez `|| true` + count dokładny; test resolve→rev→2→reimport. Edge przekazuje `p_field`+`p_rev`. EXPECTED import **205**. #426 liczy tylko klucze bez `:pending:`.
+     - **CI `6b1fae35` db FAIL (204/1) — ZROBIONE w teście:** asercja resolve czyta `decisions.status` (nie `decision_resolve()->>'status'` — funkcja zwraca `v_fx`).
+     - **CI `10480535` unit/visual/db ✔** — czekam „F7: gotowe do scalenia”. EXPECTED import **205**.
+     - **F7 runda 8 — ZROBIONE w kodzie (2 BLOKERY + 2 poprawki):** **1** `not coalesce(v_pend ? 'hhl_order_no', false)` — sprawa #384 bez kolejki; **2** trigger + pending-skip tylko przy `write_enabled`; `write_set(false)` → `skipped`/`write_disabled`; **3** CANCELLED → blocked tylko przy niepustych polach; **4** Edge `conflictFieldFromSnaps`. EXPECTED import **221**; unit 20/20.
+     - **CI `c34c3e34` db FAIL (212/9) — ZROBIONE w teście:** write on przed PRE-SKIP; schedule_row przy write-off; nowy rev bez wymogu `import_id`; CANCELLED z wyrównanym schedule_row; B1 z SNAP-A→C + write on. EXPECTED import **225**.
+     - **CI `cdc31b6c` db FAIL (224/1) — ZROBIONE w teście:** asercja CANCELLED liczyła `blocked` całego pliku (inne kody STATUS) → `1/1`; liczyć tylko `blocked` dla SG-01 / reason CANCELLED.
+     - **F7 runda 9 — ZROBIONE w kodzie (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne. Asercja CANCELLED tylko SG-01. EXPECTED import **225**.
+     - **CI `833d9415` unit/visual/db ✔** — czekam „F7: gotowe do scalenia”. EXPECTED import **225**.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1675,7 +1678,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 16:55 | A6 #556 db FAIL import (true≠t) — fix asercji boolean w `import.sh`; ponowne CI | pętla |
 | 25.10.2026 17:05 | #558 SCALONE (`d30e7258`, wyglad strefy potwierdzenie); A6 #556 F7 (4e1f430): BLOKER failed_hash + SOURCE_DOWN od first_error_at + Graph arrayBuffer — docs → kod | pętla |
 | 25.10.2026 18:05 | #556 SCALONE (`3d348690`); A6 zapis #560 start (outbound) — potem WSTRZYMANY na rzecz #557 | pętla |
-| 25.10.2026 18:35 | #557 PILNE (T-12/SG-21) pierwszeństwo przed #560; D-20261025-1630-01; PR1 korekta danych **0306**; strefy 10/10 OK; #560 F7 po #557 (+ rebase 0307) | pętla |
+| 25.10.2026 18:35 | #557 PILNE (T-12/SG-21) pierwszeństwo przed #560; D-20261025-1630-01; PR1 korekta danych **0306**; strefy 10/10 OK; #560 F7 po #557 (+ rebase 0308) | pętla |
 | 25.10.2026 19:00 | #557 F7 (2917154): docs — `hotfix_557_apply` + test db przed znakiem; kod w następnym commitcie | pętla |
 | 25.10.2026 19:10 | #557 F7 kod: `hotfix_557_apply` + status.sh +7; EXPECTED status 258; czekam F7 | pętla |
 | 25.10.2026 19:25 | #557 db FAIL status true≠t (`::text`); fix asercji #557 w status.sh; ponowne CI | pętla |
@@ -1689,3 +1692,33 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 25.10.2026 22:30 | #557 PR2 F7 r3 do poprawy (d6486d8): CI 282/2 L557h; PLAN §4 pkt 7 — docs→kod | pętla |
 | 25.10.2026 23:05 | #557 PR2 CI db FAIL status 286/5: L557h=`…5571` = LT12; fix UUID `…5581` | pętla |
 | 25.10.2026 23:30 | #564 SCALONE (`fc95a81e`, kurs NBP); #557 PR2 CI `bf0aa1a3` unit/visual/db ✔ — czekam F7 | pętla |
+| 25.10.2026 23:50 | #562/#557 PR2 SCALONE (`7159ab4c`, 0307); powrót A6 #560 — rebase → **0308**, F7 5 blokerów w PLAN §4 | pętla |
+| 26.10.2026 00:55 | #565 SCALONE (`c1e3fca9`); #560 db FAIL import/nullguard — UTF-8 w 0308 (`wyłącznie`); fix + push | pętla |
+| 26.10.2026 01:45 | #560 CI `ed98f039` unit/visual/db ✔; prośba F7; prognoza #538 1B / #499 (realna data 1.0 ≈ 5–6.11) | pętla |
+| 26.10.2026 02:15 | #560 F7 runda 2 (`ed98f039`): 4 BLOKERY + 8 POPRAWEK + uwagi (styl komórki, serial daty, no_etag, echo migawki, DEFLATE, import_enabled, write_test_ok_at, 423); CI HEAD `3542f586` ✔ — docs → kod | pętla |
+| 26.10.2026 01:41 | #560 F7 r2 kod `d60f171a` — CI unit/visual/db ✔ (`40248906751` / `40248906744` / `40248906795`); czekam F7; odbiór pliku testowego po F7 | pętla |
+| 26.10.2026 02:50 | #560 F7 r2b na `d60f171a` — NIEGOTOWE (N1 A→B→A pending, N2 data+godzina, N3 import_set wyłącza write); docs→kod | pętla |
+| 26.10.2026 03:15 | #560 F7 r2b kod `c204854a` — CI unit/visual/db ✔; N1–N3 ZROBIONE; czekam F7 | pętla |
+| 26.10.2026 03:45 | #560 F7 r3 na `c204854a` — NIEGOTOWE (N4 `rev`+`sent` + uwagi NULL/1e-9); docs→kod | pętla |
+| 26.10.2026 04:00 | #560 F7 r3 kod N4 (`rev`+`sent`, wt_diff, 1e-9); EXPECTED import 180; unit 18/18; CI→F7 | pętla |
+| 26.10.2026 04:20 | #560 F7 r3 CI ✔ `f4fde778`; F7 r4 NIEGOTOWE (N5 schedule_row przy rozjeździe, N6 FOR UPDATE, N7 scal pending, N8 only pending/reverted); docs→kod | pętla |
+| 26.10.2026 04:25 | #560 F7 r4 kod N5–N8; EXPECTED import 186; unit 19/19; CI→F7 | pętla |
+| 26.10.2026 04:45 | #560 db FAIL `f6b83fab` import 183/3 — N5 SELECT jako service_role; fix test GRANT → Q/reset role | pętla |
+| 26.10.2026 05:00 | #560 CI `a1b98daa` unit/visual ✔ db FAIL N5 import→SNAP-B (objaw N9); F7 r5 NIEGOTOWE N9–N12 — docs→kod | pętla |
+| 26.10.2026 05:20 | #560 F7 r5 kod N9–N12 (0308 + import 189); CI→F7 | pętla |
+| 26.10.2026 05:45 | #560 db FAIL `bbcc567e` → fix testów N7/N11/g20 (`4e7915bb`) | pętla |
+| 26.10.2026 06:20 | #560 CI `4e7915bb` unit/visual/db ✔; F7 r6 NIEGOTOWE (bloker import+konflikt, godziny, expected∉patch, deadlock write_set) — docs→kod | pętla |
+| 26.10.2026 06:35 | #560 F7 r6 kod B1+P2–P4 (0308, import 193); CI→F7 | pętla |
+| 26.10.2026 07:05 | #560 CI `06c6a108` ✔; F7: file-changed także przy quiet (+ SharePoint); EXPECTED import 195 | pętla |
+| 26.10.2026 07:20 | #560 F7 r7 na `06c6a108` — B1 quiet + N13 (pending przed crit); CI `fe1e4bd6` db FAIL 193/2 — docs→kod | pętla |
+| 26.10.2026 07:35 | #560 F7 r7 kod N13+B1; EXPECTED import 198; CI→F7 | pętla |
+| 26.10.2026 08:00 | #560 CI `45eeed2c` db FAIL SharePoint B1 0 spraw (schedule_row po B1); F7 05:37 `:pending` + reset schedule_row — docs→kod | pętla |
+| 26.10.2026 08:20 | #560 CI `514967e6` unit/visual/db ✔; F7 06:08 klucz `:pending:<rev>` + resolve→2 sprawy — docs→kod | pętla |
+| 26.10.2026 08:55 | #560 CI `6b1fae35` db FAIL resolve (v_fx≠status) — fix testu decisions.status; EXPECTED 205 | pętla |
+| 26.10.2026 08:25 | #560 CI `10480535` unit/visual/db ✔; prośba F7; #383 bez „F7: gotowe” | pętla |
+| 26.10.2026 09:25 | #383 SCALONE (`e192d881`, F7 po `9bd36e60`); #560 F7 r8 NIEGOTOWE (hhl NULL, write_enabled) — docs→kod | pętla |
+| 26.10.2026 09:55 | #560 F7 r8 kod (0308 + Edge + import 221); CI→F7 | pętla |
+| 26.10.2026 10:15 | #560 F7 r8 fix testów import 225 (`cdc31b6c`); CI db FAIL CANCELLED 224/1 (blocked innych kodów) | pętla |
+| 26.10.2026 10:40 | #560 F7 r9 NIEGOTOWE (pole konfliktu z łatki) + fix asercji CANCELLED — docs→kod | pętla |
+| 26.10.2026 10:50 | #560 F7 r9 kod (patchKeys + asercja CANCELLED SG-01); EXPECTED 225; CI→F7 | pętla |
+| 26.10.2026 11:00 | #560 CI `833d9415` unit/visual/db ✔; prośba F7; EXPECTED import 225 | pętla |

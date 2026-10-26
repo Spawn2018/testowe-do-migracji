@@ -58,6 +58,9 @@ sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local ro
 
 echo; echo "[g20] import_schedule — kontekst i zmiana daty"
 sval "import_schedule ustawia tower.import_ctx" "select (prosrc like '%tower.import_ctx%')::text from pg_proc where proname='import_schedule' and pronargs=6" "true"
+# A6 N9: zaległy pending (np. po ksh_confirm_dates przy write_enabled) blokuje daty z pliku —
+# ten test sprawdza sam import, nie konflikt z kolejką zapisu.
+sys "delete from ksh_sync_outbound where load_id='$L2'" >/dev/null
 sys "delete from shipment_items where shipment_code='SG-G20'" >/dev/null
 sys "insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, qty, total_weight_t, schedule_row)
      values ('$P','$L2','SG-G20','DIMENSIONED',10,2.5,2.5,1,10,
