@@ -41,6 +41,7 @@ import { plPlural } from '../lib/plPlural';
 import { StageBar, StageChip } from '../components/shell/StageBar';
 import { useIsPhone } from '../lib/useIsPhone';
 import { kshSyncLine, kshSyncOf } from '../lib/kshSyncView';
+import { KshPreviewPanel } from '../components/schedule/KshPreviewPanel';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -219,6 +220,11 @@ export function ScheduleView() {
   const syncLine = kshSync ? kshSyncLine(kshSync, getNowIso()) : null;
   const fileLine = syncLine ? syncLine.text : verLine;
   const verTitle = syncLine ? syncLine.title : verTitle0;
+  /* W-567 (decyzja 23B): lista zmian z pliku KSH — tylko produkcja (demo nie ma stanu synchronizacji), Administrator/Operacje HHL,
+     dopóki import z pliku jest wyłączony; panel sam znika, gdy baza nie ma `ksh_sync_preview_get` albo zwraca null */
+  const viewerKind = accountRole(role);
+  const showKshPreview = SERVER_IMPORT && !!kshSync && kshSync.importEnabled !== true
+    && role === 'HHL' && (viewerKind === 'HHL_ADMIN' || viewerKind === 'HHL_OPS');
 
   const mapKeys = activeMap ? Object.entries(activeMap) : Object.entries(COLUMN_MAP_DEFAULT);
 
@@ -480,6 +486,7 @@ export function ScheduleView() {
           </div>
         )}
       </div>
+      {showKshPreview && schedTab === 'loads' ? <KshPreviewPanel /> : null}
 
       {canImportSchedule(role) && step === 'upload' && (
         <div
