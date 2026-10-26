@@ -1050,9 +1050,9 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #563 + komentarz PR #577 15:59Z: **#563 PRZED #577** (tydzień 44 liczy się źle: 23,03/7,14/×1,13 zamiast 23,00/7,15/×1,14).
 1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg` / `sefs_last_published`; avg do 0,01 przed lookup.
 2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian). `sefs_save_parameters` przyjmuje oba pola.
-3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **99** (F7 #579 r2: +9 SEFS_WEEK_CORR — tylko HHL, update/zamknięcie, negatywne; wcześniej 90). Edge 17:15/23:15; published_on > dzień → `period` = data obowiązywania. nullguard **852**. Front: `lookupMult(…, tier_bound)`, `sefsWeek` średnia 7 dni z fill, `tierOf` na zakresach z `tiersFromDb`. Migawki ≥26.10: PROGNOZA+compute / `SEFS_INVOICE_DIFF`; dziennik z `base_amount`/`total_amount`. Nowa wersja kopiuje tabele z `sefs_params_for(…, 2026-10-26)`. **Sprawa zamkniętego:** `SEFS_WEEK_CORR` (tylko HHL w `decisions_read`); kolejna korekta aktualizuje otwartą / zamyka przy zgodności z migawką.
+3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **101** (F7 #579 r3: +2 chk liczby korekt na **różnych** odczytach — `fuel_index_readings_one_correction`; było 99). Edge 17:15/23:15; published_on > dzień → `period` = data obowiązywania. nullguard **852**. Front: `lookupMult(…, tier_bound)`, `sefsWeek` średnia 7 dni z fill, `tierOf` na zakresach z `tiersFromDb`. Migawki ≥26.10: PROGNOZA+compute / `SEFS_INVOICE_DIFF`; dziennik z `base_amount`/`total_amount`. Nowa wersja kopiuje tabele z `sefs_params_for(…, 2026-10-26)`. **Sprawa zamkniętego:** `SEFS_WEEK_CORR` (tylko HHL w `decisions_read`); kolejna korekta **innego** odczytu w tym samym tygodniu aktualizuje otwartą / zamyka przy zgodności z migawką.
 4. Kolejka: **#563** → **#577** (F7 pkt 1–8; migracja 0310→**0311** po rebase) → #574-nast → BN0 (#572).
-5. F7 #579 r2 (20:09): obliczenia OK; pkt 1–3 SEFS_WEEK_CORR w toku — po zielonym CI prośba o F7.
+5. F7 #579 r3 (20:32): polityka OK; baf 96/3 — testy 2./3. korekty tego samego odczytu (duplicate key, `sys` połyka). Poprawka: różne odczyty + chk liczby korekt.
 
 ### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; F7 po #563)
 Źródło: #567. CI unit/visual/db ✔ na `bf6dd230` (fix: `imported_at`, search_path, store jak upsert). **F7 nie dam** do pkt 1–8 z komentarza F7 na #577 (podgląd niefatalny/dry_run, `ksh_sync_require_service`, wt z WT, manual tylko user, kind added/missing, pending_write, testy z `import_schedule` dry_run). Po #563 — wróć i domknij w tym PR.
@@ -1775,3 +1775,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 22:30 | #563 0310 §12: SEFS_WEEK_CORR po korekcie w zamkniętym tygodniu (bez cichego przeliczenia); baf **81** | pętla |
 | 26.10.2026 22:55 | #563 F7 #579: blokady 1–2 + pkt 3–6 (prognoza PLN 7d, ≤43 stara SEK, ingest jutro, params_for 26.10); baf **90** | pętla |
 | 26.10.2026 23:15 | #563 F7 #579 r2: SEFS_WEEK_CORR tylko HHL + update/zamknięcie + testy negatywne; baf **99** | pętla |
+| 26.10.2026 23:45 | #563 F7 #579 r3: testy SEFS_WEEK_CORR na różnych odczytach (one_correction); `sys` połyka duplicate key — chk liczby korekt; baf **101** | pętla |

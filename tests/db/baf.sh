@@ -202,20 +202,24 @@ as_auth() { $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; se
 chk "#563 F7r2: HHL widzi SEFS_WEEK_CORR" "$(as_auth "$HHL_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
 chk "#563 F7r2: SCX nie widzi SEFS_WEEK_CORR" "$(as_auth "$SCX_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
 chk "#563 F7r2: KSH nie widzi SEFS_WEEK_CORR" "$(as_auth "$KSH_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
-# F7 #579 r2 pkt 2: druga korekta aktualizuje otwartą; powrót do zgodności → EXPIRED
-# (21,50 vs 30,00 — wyraźnie inny mnożnik / over_table)
+# F7 #579 r3: jedna korekta na odczyt (fuel_index_readings_one_correction) —
+# druga/trzecia = inne dni tego samego zamkniętego tygodnia (≤t43: nowa published_on).
+# 1) SEK 05.10→21,50 (wyżej) → ×1,09; 2) SEK 06.10→22,20 pub 06.10 → ×1,11 UPDATE;
+# 3) SEK 07.10→22,80 pub 07.10 → ×1,12 = migawka → EXPIRED.
 CORR1_NEW=$(Q "select (detail->>'new_mult')::numeric(4,2)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")
-sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
-  select project_id, index_code, period, reading_date, 30.00, source_url, 'korekta 2 inny próg', id, 'test F7r2 update'
-    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
+N_CORR1=$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, 22.20, source_url, 'korekta 2 inny dzień', '2026-10-06'::date, id, 'test F7r3 update'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-06' and corrects_id is null"
+chk "#563 F7r3: 2. korekta (inny odczyt) zapisana" "$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")" "$((N_CORR1 + 1))"
 chk "#563 F7r2: nadal 1 sprawa po 2. korekcie" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
 chk "#563 F7r2: 2. korekta zaktualizowała new_mult" "$(Q "select ((detail->>'new_mult')::numeric(4,2)::text is distinct from '$CORR1_NEW')::text||'/'||status::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/NEW"
 chk "#563 F7r2: event UPDATE po 2. korekcie" "$(Q "select count(*) from decision_events e join decisions d on d.id=e.decision_id where d.detail->>'event_key'='563:fuel-corr:$P:2026-10-05' and e.action='UPDATE'")" "1"
-# Przywróć cenę źródłową → mnożnik = migawka → zamknięcie
-ORIG_SEK=$(Q "select value::text from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null")
-sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
-  select project_id, index_code, period, reading_date, $ORIG_SEK::numeric, source_url, 'korekta 3 powrót', id, 'test F7r2 agree'
-    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
+N_CORR2=$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, 22.80, source_url, 'korekta 3 powrót inny dzień', '2026-10-07'::date, id, 'test F7r3 agree'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-07' and corrects_id is null"
+chk "#563 F7r3: 3. korekta (inny odczyt) zapisana" "$(Q "select count(*) from fuel_index_readings where project_id='$P' and index_code='SEK' and period between '2026-10-05' and '2026-10-11' and corrects_id is not null")" "$((N_CORR2 + 1))"
 chk "#563 F7r2: powrót do zgodności → EXPIRED" "$(Q "select status::text||'/'||(expired_reason is not null)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "EXPIRED/true"
 # F7 #579 r2 pkt 3: korekta bez zmiany mnożnika → brak nowej sprawy; tydzień otwarty → brak
 N_BEFORE=$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")
