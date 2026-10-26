@@ -5480,4 +5480,4 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe”. CI `45eeed2c` unit/visual ✔ **db FAIL** import 197/1 — `A6: r7 B1 SharePoint sprawa file-changed` 0 zamiast 1. #383 CONFLICTING. Bez push na main.
 - Przyczyna SharePoint: po B1 UPLOAD `schedule_row` dostaje `carrier_order_no` z pliku (SNAP-B); kolejny import nie ma pola w `v_fields` → brak ścieżki pending/file-changed (WT zostaje C „przypadkiem”). Nie jest to brak grantu `service_role`.
 - F7 05:37: klucz file-changed z `:pending`; #426 liczy tylko bez znacznika; test SharePoint resetuje `schedule_row`; pending skip przed `l1b_note_conflict`.
-- Bieżąca: docs → kod 0308 + import.sh.
+- Kod `514967e6`: 0308 + import.sh + EXPECTED **199**. Push → CI → prośba F7 po zielonym.
