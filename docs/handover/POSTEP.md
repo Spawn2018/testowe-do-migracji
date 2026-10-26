@@ -5613,3 +5613,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; komentarz #577: kolejka **#563 → #577 (F7 1–8) → #574-nast → BN0**. #577 CI ✔ `bf6dd230` — bez F7 do poprawek po #563.
 - Scalanie: brak (bez push na main).
 - **#563 krok:** `pakiet/563-paliwo-t44` migracja **0310** — `tier_bound`/`avg_days_pln`; lookup MAX; korekty w daily/pub avg; PLN 7 dni; nowa wersja params od 26.10; D-1535 override bez zmian. Następny: testy baf + przeliczenie migawek ≥26.10.
+
+## 2026-10-26 19:25 — #563 testy baf + last_published / save_parameters
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe, ale **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
+- **#563 krok:** `sefs_last_published` + `sefs_save_parameters` (tier_bound/avg_days_pln); baf +11 (korekta shared pub, MAX/MIN, t44 ×1,14) → EXPECTED **78**; nullguard +1 → **853**. Push → CI `baf,nullguard`. Następny: Edge 17:15/23:15 albo przeliczenie migawek ≥26.10.

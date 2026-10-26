@@ -26,9 +26,7 @@ comment on column public.sefs_parameters.tier_bound is
 comment on column public.sefs_parameters.avg_days_pln is
   '#563: 5 = średnia z publikacji Orlen (≤t43); 7 = średnia 7 cen dziennych jak OKQ8 (od t44).';
 
-update public.sefs_parameters
-   set tier_bound = 'MIN', avg_days_pln = 5
- where tier_bound is distinct from 'MIN' or avg_days_pln is distinct from 5;
+-- Domyślne MIN/5 z ADD COLUMN wystarczą (trg_sefs_parameters_immutable blokuje UPDATE).
 
 -- ---------------------------------------------------------------------
 -- 2. Lookup: MIN (stare) / MAX (od t44)
@@ -545,7 +543,96 @@ comment on function public.sefs_week_calc(uuid, date, date) is
   '#563: SEK 7 dni; PLN 5 publ. (≤t43) lub 7 dni (t44+); lookup MIN/MAX z wersji params.';
 
 -- ---------------------------------------------------------------------
--- 7. Nowa wersja parametrów od 26.10.2026 (t44+)
+-- 7. sefs_last_published — najnowsza efektywna (korekta wygrywa)
+-- ---------------------------------------------------------------------
+create or replace function public.sefs_last_published(p_project uuid, p_code text, p_to date)
+returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select jsonb_build_object(
+             'avg', public.sefs_reading_effective_value(r.id),
+             'n', 0,
+             'pubs', jsonb_build_array(jsonb_build_object(
+               'published_on', coalesce(
+                 (select c.published_on from fuel_index_readings c
+                   where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+                 r.published_on),
+               'value', public.sefs_reading_effective_value(r.id))),
+             'fallback_last', true)
+      from fuel_index_readings r
+     where r.project_id = p_project and r.index_code = p_code and r.corrects_id is null
+       and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+       and coalesce(
+             (select c.published_on from fuel_index_readings c
+               where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+             r.published_on) <= p_to
+     order by coalesce(
+                (select c.published_on from fuel_index_readings c
+                  where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+                r.published_on) desc,
+              r.entered_at desc, r.id desc
+     limit 1),
+    jsonb_build_object('avg', null, 'n', 0, 'pubs', '[]'::jsonb, 'fallback_last', false))
+$$;
+revoke all on function public.sefs_last_published(uuid, text, date)
+  from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 8. sefs_save_parameters — tier_bound / avg_days_pln
+-- ---------------------------------------------------------------------
+create or replace function public.sefs_save_parameters(p_project uuid, p jsonb)
+returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  v_ver int;
+  v_me uuid;
+  v_applies text := coalesce(nullif(trim(p->>'applies_to'), ''), 'BOTH');
+  v_bound text := coalesce(nullif(btrim(p->>'tier_bound'), ''), 'MIN');
+  v_days int := coalesce((p->>'avg_days_pln')::int, 5);
+begin
+  if (is_hhl()) is not true then
+    raise exception 'Parametry SEFS zapisuje wyłącznie HHL';
+  end if;
+  if (sefs_tiers_valid(p->'tiers_sek') and sefs_tiers_valid(p->'tiers_pln')) is not true then
+    raise exception 'Tablice mnożników: 1–200 progów {lte, mult}, lte rosnąco, mnożnik 0,5–2';
+  end if;
+  if (v_applies in ('COST', 'REVENUE', 'BOTH')) is not true then
+    raise exception 'Zakres wersji: COST (koszt), REVENUE (przychód) albo BOTH';
+  end if;
+  if (v_bound in ('MIN', 'MAX')) is not true then
+    raise exception 'tier_bound: MIN („od”) albo MAX („do X”)';
+  end if;
+  if (v_days in (5, 7)) is not true then
+    raise exception 'avg_days_pln: 5 (publikacje) albo 7 (ceny dzienne)';
+  end if;
+  select id into v_me from app_users where auth_id = auth.uid() and active;
+  perform pg_advisory_xact_lock(hashtext('sefs_parameters:' || p_project::text));
+  select coalesce(max(version), 0) + 1 into v_ver from sefs_parameters where project_id = p_project;
+  insert into sefs_parameters (
+    project_id, version, valid_from, base_sek, base_pln, index_sek, index_pln,
+    source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln,
+    agreed_with_carrier, agreement_ref, note, created_by, applies_to,
+    tier_bound, avg_days_pln
+  ) values (
+    p_project, v_ver, (p->>'valid_from')::date, (p->>'base_sek')::numeric, (p->>'base_pln')::numeric,
+    p->>'index_sek', p->>'index_pln', p->>'source_url_sek', p->>'source_url_pln',
+    coalesce(p->>'cycle', 'MONTHLY'), p->'tiers_sek', p->'tiers_pln',
+    coalesce((p->>'agreed_with_carrier')::boolean, false), nullif(trim(p->>'agreement_ref'), ''),
+    nullif(trim(p->>'note'), ''), v_me, v_applies, v_bound, v_days
+  );
+  insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+  values (v_me, 'SEFS_PARAMS_VERSION', 'sefs_parameters', p_project::text || ':v' || v_ver,
+          (select to_jsonb(x) - 'id' - 'created_at' - 'created_by' from sefs_parameters x
+            where project_id = p_project and version = v_ver - 1),
+          (select to_jsonb(x) - 'id' - 'created_at' - 'created_by' from sefs_parameters x
+            where project_id = p_project and version = v_ver));
+  return v_ver;
+end $$;
+revoke execute on function public.sefs_save_parameters(uuid, jsonb) from public, anon;
+grant execute on function public.sefs_save_parameters(uuid, jsonb) to authenticated;
+
+-- ---------------------------------------------------------------------
+-- 9. Nowa wersja parametrów od 26.10.2026 (t44+)
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -557,6 +644,14 @@ begin
       from sefs_parameters
      order by project_id, version desc
   loop
+    if exists (
+      select 1 from sefs_parameters x
+       where x.project_id = r.project_id
+         and x.tier_bound = 'MAX'
+         and x.valid_from >= date '2026-10-26'
+    ) then
+      continue;
+    end if;
     v_next := r.version + 1;
     insert into sefs_parameters (
       project_id, version, valid_from, rule, base_sek, base_pln,

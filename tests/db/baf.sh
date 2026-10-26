@@ -268,5 +268,48 @@ chk "SEFS_INVOICE_DIFF: skan znajduje 1" "$(Q "select sefs_scan_invoice_mult_dif
 chk "SEFS_INVOICE_DIFF: drugi skan nadal 1 (mismatch)" "$(Q "select sefs_scan_invoice_mult_diff()->>'invoice_cases'")" "1"
 chk "SEFS_INVOICE_DIFF: jedna sprawa (idempotent)" "$(Q "select count(*) from decisions where detail->>'event_key'='d1300:invoice:$LINV'")" "1"
 
+# --- #563: korekta wygrywa przy współdzielonym published_on; MAX „do X” od t44 ---
+chk "#563 MAX: 23,00 → 1,14 (do X)" "$(Q "select sefs_lookup_mult(23.00, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 MAX: 23,03 → 1,14 (nie 1,13 jak MIN)" "$(Q "select sefs_lookup_mult(23.03, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 MIN: 23,03 → 1,13 (≤t43 bez zmian)" "$(Q "select sefs_lookup_mult(23.03, '$TS'::jsonb, 'MIN')")" "1.13"
+chk "#563 MAX PLN: 7,15 → 1,14" "$(Q "select sefs_lookup_mult(7.15, '$TP'::jsonb, 'MAX')")" "1.14"
+chk "#563 over_table MAX: = ostatni → nie" "$(Q "select (sefs_compute_hybrid_sys('$P',23.70,7.50,'2026-10-26')->>'over_table_sek')")" "false"
+# params v1 (MIN) obowiązuje do 25.10; wstawiamy MAX od 26.10 dla t44
+sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to, tier_bound, avg_days_pln)
+  values ('$P', 90, '2026-10-26', 'hybrid_min', 19.47, 5.698, 'OKQ8 GoEasy Diesel firmowa', 'ORLEN_EKODIESEL',
+          'https://www.okq8.se/foretag/priser/', 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'WEEKLY',
+          '$TS', '$TP', true, '#563 t44 MAX test', 'BOTH', 'MAX', 7)"
+chk "#563 over_table MAX: > ostatni → tak" "$(Q "select (sefs_compute_hybrid_sys('$P',23.71,7.50,'2026-10-26')->>'over_table_sek')")" "true"
+# Współdzielony published_on 20.10: odczyt 21.10 (23,09) + odczyt 22.10 (23,09) + korekta 22.10 → 22,89
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and index_code='SEK' and period in ('2026-10-20','2026-10-21','2026-10-22')"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  values
+  ('$P','SEK','2026-10-21','2026-10-21',23.09,'https://www.okq8.se/foretag/priser/','#563 pub', '2026-10-20'),
+  ('$P','SEK','2026-10-22','2026-10-22',23.09,'https://www.okq8.se/foretag/priser/','#563 pub', '2026-10-20')"
+OID22=$(Q "select id from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-22' and corrects_id is null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  values ('$P','SEK','2026-10-22','2026-10-22',22.89,'https://www.okq8.se/foretag/priser/','#563 corr','2026-10-20',$OID22,'Błędna kwota, poprawiono')"
+# Wskaźniki t44 = 19–25.10: uzupełnij SEK 23,00 i PLN 7,15 (poza 21–22 już wstawionymi)
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and period::date between '2026-10-19' and '2026-10-25' and corrects_id is null and period not in ('2026-10-21','2026-10-22')"
+sys "delete from fuel_index_readings where project_id='$P' and corrects_id is not null and period::date between '2026-10-19' and '2026-10-25' and period <> '2026-10-22'"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.00, 'https://www.okq8.se/foretag/priser/', 't44', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d
+   where d not in ('2026-10-21'::date,'2026-10-22'::date)"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 7.15, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 't44', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+DA=$(Q "select sefs_sek_daily_avg('$P','2026-10-19','2026-10-25')")
+chk "#563 korekta: dzień 22.10 = 22,89 (nie 23,09 z pub 20.10)" "$(Q "select x->>'value' from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-22'")" "22.89"
+chk "#563 korekta: dzień 21.10 = 23,09" "$(Q "select x->>'value' from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-21'")" "23.09"
+W44F="sefs_week_calc('$P','2026-10-26','2026-10-26')"
+chk "#563 t44: params MAX + PLN 7 dni" "$(Q "select ($W44F->>'tier_bound')||'/'||($W44F->>'avg_days_pln')||'/'||($W44F->>'n_pln')")" "MAX/7/7"
+chk "#563 t44: wynik kontrolny ×1,14" "$(Q "select ($W44F->>'avg_sek')||'/'||($W44F->>'avg_pln')||'/'||($W44F->>'applied_mult')")" "23.00/7.15/1.14"
+chk "#563 t43 nadal MIN (załadunek 19.10)" "$(Q "select coalesce(sefs_week_calc('$P','2026-10-19','2026-10-19')->>'tier_bound','∅')")" "MIN"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

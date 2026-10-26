@@ -1048,10 +1048,10 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 
 ### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — W TOKU (`pakiet/563-paliwo-t44`, migracja **0310**)
 Źródło: #563 + komentarz PR #577 15:59Z: **#563 PRZED #577** (tydzień 44 liczy się źle: 23,03/7,14/×1,13 zamiast 23,00/7,15/×1,14).
-1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg`; avg do 0,01 przed lookup.
-2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian).
-3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Migawki załadunek ≥ 26.10 — przeliczyć (następny commit). Teksty UI — koordynator.
-4. Kolejka: **#563** → **#577** (F7 pkt 1–8 w całości) → #574-nast (`dwell_min`) → BN0 (#572).
+1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg` / `sefs_last_published`; avg do 0,01 przed lookup.
+2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian). `sefs_save_parameters` przyjmuje oba pola.
+3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **78** (+11). Migawki załadunek ≥ 26.10 + Edge 17:15/23:15 + sprawa zamkniętego tygodnia + front `corrects_id` — kolejne commity. Teksty UI — koordynator.
+4. Kolejka: **#563** → **#577** (F7 pkt 1–8; migracja 0310→**0311** po rebase) → #574-nast → BN0 (#572).
 
 ### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; F7 po #563)
 Źródło: #567. CI unit/visual/db ✔ na `bf6dd230` (fix: `imported_at`, search_path, store jak upsert). **F7 nie dam** do pkt 1–8 z komentarza F7 na #577 (podgląd niefatalny/dry_run, `ksh_sync_require_service`, wt z WT, manual tylko user, kind added/missing, pending_write, testy z `import_schedule` dry_run). Po #563 — wróć i domknij w tym PR.

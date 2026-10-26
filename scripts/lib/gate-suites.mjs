@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 234, // A6 #569: +9 multi-kod konflikt (write on, setup, import WT, kod SG-M2, 1 sprawa, Edge, dedup, primary≠, 2. sprawa); było 225
-  nullguard: 852, // #557 PR2: +10 (2× GUARD ×5); A6 write_set już w 842 przed #557
+  nullguard: 853, // #563: +1 PURE sefs_lookup_mult MAX; #557 PR2: +10
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -49,7 +49,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 67, // D-1535: t40 ×1,14 override (+3); D-1300 F7-2 SOURCE
+  baf: 78, // #563: MAX t44 + korekta shared pub (+11); D-1535; D-1300 F7-2
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
