@@ -5622,3 +5622,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Komentarz PR #577 (Spawn2018): po #577 → **#563** (t44 paliwo) → następczy #574 → BN0 **#572** — wpisane PLAN §4/§8.
 - Scalanie: brak „F7: gotowe do scalenia” po `b07da9d2`. unit/visual ✔; **db FAIL** (import 236/4, security 458/1, nullguard 856≠853).
 - **#567 krok:** 0310 — `set search_path` na 3 helperach SQL; `ksh_sync_preview_store` jak `ksh_sync_state_upsert` (postgres/admin albo service_role); test import: `has_function_privilege` zamiast `err` (revoke EXECUTE); EXPECTED nullguard **856**. Po CI — ponowna prośba F7.
+
+## 2026-10-26 18:20 — #567 db FAIL r2: schedule_imports.imported_at
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Scalanie: brak F7. unit/visual ✔; db FAIL import 237/3 (security/nullguard ✔).
+- **Przyczyna:** `ksh_sync_preview_build` brał `schedule_imports.created_at` — kolumna to `imported_at`. Helpery: EXECUTE dla PUBLIC (czyste etykiety). CI → F7.

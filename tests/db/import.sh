@@ -1160,9 +1160,10 @@ chk "A6: #569 primary dałby 2. sprawę" "$(Q "select count(*) from decisions wh
 echo; echo "[#567 23B] preview lista zmian"
 # Zmyślony changed jak z import_schedule (before=WT, after=plik); PII w fields — ma być odfiltrowane.
 CHG23='[{"code":"SG-00","load_id":"'"$L1"'","fields":["load_date","delivery_date","driver_name","driver_phone"],"before":{"load_date":"2026-10-01","delivery_date":"2026-10-05","driver_name":"X","driver_phone":"Y"},"after":{"load_date":"2026-11-01","delivery_date":"2026-11-05","driver_name":"A","driver_phone":"B"}}]'
+# session_user=postgres (brama) — jak upsert 0304; SET ROLE service_role jak Edge.
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select (ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 40519, 'h23b')->>'n');
-commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | grep -E 'ERROR:|^[0-9]+$' | head -1 | sed 's/^ERROR:  //')
 chk "#567 23B: preview_store n=2 (bez PII)" "$out" "2"
 val "#567 23B: HHL czyta preview" $HHL "select (ksh_sync_preview_get()->>'n')" "2" commit
 val "#567 23B: KSH nie czyta preview" $KSH "select ksh_sync_preview_get() is null" "t" commit
