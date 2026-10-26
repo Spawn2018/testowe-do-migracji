@@ -649,14 +649,16 @@ $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='
   update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
 EV5=$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")
+# ack jako service_role; odczyt tabel (shipment_items/loads) tylko przez Q (postgres) —
+# service_role/authenticated nie mają GRANT SELECT na te tabele.
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
     'id',$N5_ID,'rev',$N5_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
   )),'done',null);
-  select coalesce((select schedule_row->>'carrier_order_no' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1),'')
-    ||':'||(select carrier_order_no from loads where id='$SG_OUT')
-    ||':'||coalesce((select patch->>'carrier_order_no' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1),'');
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+out=$(Q "select coalesce((select schedule_row->>'carrier_order_no' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1),'')
+  ||':'||(select carrier_order_no from loads where id='$SG_OUT')
+  ||':'||coalesce((select patch->>'carrier_order_no' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1),'')")
 if [ "$out" = "SNAP-B:SNAP-C:SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: N5 schedule_row B / WT C / pending C"; else fail=$((fail+1)); echo "  FAIL  A6: N5 schedule/WT/pending → $out"; fi
 chk "A6: N5 KSH_FILE_OUTBOUND przy rozjeździe" "$(Q "select count(*) - $EV5 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
 IMP_N5=$(Q "select jsonb_agg(jsonb_build_object(
@@ -667,9 +669,10 @@ IMP_N5=$(Q "select jsonb_agg(jsonb_build_object(
   'dates_to_check',false
 )) from loads l where l.id='$SG_OUT'")
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  select (import_schedule('$P','$IMP_N5'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true)->>'changed') is not null;
+  select import_schedule('$P','$IMP_N5'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true);
+  reset role;
   select carrier_order_no from loads where id='$SG_OUT';
-rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
 if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: N5 import pliku B nie zmienia WT C"; else fail=$((fail+1)); echo "  FAIL  A6: N5 import → $out"; fi
 
 # F7 r4 N7: skipped + nowy pending → scal, stary done

@@ -5383,3 +5383,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. N8: rozjazd tylko pending/`reverted_to_file`; podwójny ack no-op;
   5. `wt_diff(…, keys)`; trigger vs `expected_file`; `ackPayload.ts`.
 - EXPECTED import **186**; unit `ksh-sharepoint-write` **19/19**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 04:45 — A6 #560 db FAIL N5: fix test GRANT
+
+- Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `f6b83fab`: unit ✔ visual ✔ **db FAIL** import 183/3 — N5: `permission denied` na `shipment_items`/`loads` (SELECT w tej samej transakcji co ack jako `service_role` / import jako `authenticated` → rollback ack).
+- Fix: ack osobno + asercje przez `Q` (postgres); import + `reset role` przed odczytem `loads`. EXPECTED nadal **186**. Push → CI → prośba F7 po zielonym.
