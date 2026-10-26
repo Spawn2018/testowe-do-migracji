@@ -33,18 +33,25 @@ const CONFLICT_FIELD_ORDER = [
 
 type ConflictField = (typeof CONFLICT_FIELD_ORDER)[number];
 
+/** Jak import (btrim + ''→null) — F7 #570. */
+function normCell(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const t = String(v).trim();
+  return t === '' ? null : t;
+}
+
 function snapVal(
   snap: FileDateSnap | null | undefined,
   field: ConflictField,
 ): string | null {
   if (!snap) return null;
   switch (field) {
-    case 'load_date': return snap.ld ?? null;
-    case 'load_time': return snap.lt ?? null;
-    case 'delivery_date': return snap.dd ?? null;
-    case 'delivery_time': return snap.dt ?? null;
-    case 'carrier_order_no': return snap.co ?? null;
-    case 'hhl_order_no': return snap.ho ?? null;
+    case 'load_date': return normCell(snap.ld);
+    case 'load_time': return normCell(snap.lt);
+    case 'delivery_date': return normCell(snap.dd);
+    case 'delivery_time': return normCell(snap.dt);
+    case 'carrier_order_no': return normCell(snap.co);
+    case 'hhl_order_no': return normCell(snap.ho);
   }
 }
 
@@ -56,19 +63,31 @@ export function fileRowChangedSinceRead(
   if (!expected) return false;
   if (!current) return true;
   return (
-    (expected.ld ?? null) !== (current.ld ?? null)
-    || (expected.lt ?? null) !== (current.lt ?? null)
-    || (expected.dd ?? null) !== (current.dd ?? null)
-    || (expected.dt ?? null) !== (current.dt ?? null)
-    || (expected.co ?? null) !== (current.co ?? null)
-    || (expected.ho ?? null) !== (current.ho ?? null)
+    snapVal(expected, 'load_date') !== snapVal(current, 'load_date')
+    || snapVal(expected, 'load_time') !== snapVal(current, 'load_time')
+    || snapVal(expected, 'delivery_date') !== snapVal(current, 'delivery_date')
+    || snapVal(expected, 'delivery_time') !== snapVal(current, 'delivery_time')
+    || snapVal(expected, 'carrier_order_no') !== snapVal(current, 'carrier_order_no')
+    || snapVal(expected, 'hhl_order_no') !== snapVal(current, 'hhl_order_no')
   );
+}
+
+/** F7 #570: nie wybieraj kodu bez wiersza w pliku, gdy jest inny obecny. */
+function skipMissingWhenOtherPresent(
+  remaining: string[],
+  code: string,
+  current: FileDateSnap | null | undefined,
+  fileSnapshot: Record<string, FileDateSnap | null | undefined>,
+): boolean {
+  if (current != null) return false;
+  return remaining.some((c) => c !== code && (fileSnapshot[c] ?? null) != null);
 }
 
 /**
  * #569 / F7 #570: kod i pole sprawy z wiersza konfliktu (nie z pierwszego kodu).
  * Najpierw wiersz różniący się polem **z łatki** (kolejność jak import);
  * dopiero gdy żaden — pierwszy rozjechany wiersz i dowolne pole.
+ * Pomija kody bez wiersza w pliku, gdy jest inny obecny (uniknięcie 2 spraw).
  * Inaczej Edge (sprawa spoza łatki) ≠ import (tylko pola łatki) → 2 sprawy.
  */
 export function pickOutboundConflictNote(
@@ -83,6 +102,7 @@ export function pickOutboundConflictNote(
     : [];
   for (const code of remaining) {
     const current = fileSnapshot[code] ?? null;
+    if (skipMissingWhenOtherPresent(remaining, code, current, fileSnapshot)) continue;
     if (!fileRowChangedSinceRead(expected, current)) continue;
     for (const field of fromPatch) {
       if (snapVal(expected, field) !== snapVal(current, field)) {
@@ -92,6 +112,7 @@ export function pickOutboundConflictNote(
   }
   for (const code of remaining) {
     const current = fileSnapshot[code] ?? null;
+    if (skipMissingWhenOtherPresent(remaining, code, current, fileSnapshot)) continue;
     if (fileRowChangedSinceRead(expected, current)) {
       return {
         code,

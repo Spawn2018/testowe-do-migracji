@@ -5564,3 +5564,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” na #570. Jedyny otwarty PR. Bez push na main.
 - CI `ed1e3ba1`: unit ✔, visual ✔, db ✔ (`40310257966` 13m55s / `40310257927`). F7 poprawka (pole z łatki) bez zmian kodu od tego SHA. EXPECTED import **234**.
 - Prośba o F7: gotowe do scalenia na HEAD (ten commit — docs). Po scaleniu: `write_test_ok_at` → #567 23B.
+
+## 2026-10-26 12:45 — #569 F7 #570: brak wiersza + #571 wpisane
+
+- Skrzynka: #550 WSTRZYMANE; #571 (Spawn2018, PILNE strefy — bez etykiety `dla-cursora`, polecenie z F7 #570) → PLAN §4/§8. #538/#537/#500/#499/#412/#323/#320 w planie.
+- Scalanie: F7 #570 na `f7eafacd` — **nie gotowe** (1 poprawka). Bez push na main.
+- **#569 krok:** `pickOutboundConflictNote` — pomijaj `current==null` gdy inny wiersz obecny; `trim`/`''→null` jak import; unit (brak wiersza→SG-02, puste/null, łatka null/`{}`, jeden kod). Znane ograniczenie migawki per kod główny → §4/#569 i §8. Po scaleniu #569: **#571** → `write_test_ok_at` → #567 23B.
+- vitest `ksh-sharepoint-write` **23/23**. CI → prośba F7.

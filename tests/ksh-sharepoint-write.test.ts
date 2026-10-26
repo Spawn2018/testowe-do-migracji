@@ -121,6 +121,71 @@ describe('A6 writeConflict', () => {
     );
     expect(notePreferPatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
   });
+
+  it('F7 #570: brak wiersza w pliku + drugi z rozjazdem → kod obecnego (jak import)', () => {
+    const expected = {
+      ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
+    };
+    const note = pickOutboundConflictNote(
+      ['SG-01', 'SG-02'],
+      expected,
+      {
+        // SG-01 zniknął z pliku (brak klucza / null)
+        'SG-02': { ...expected, co: 'S2' },
+      },
+      { carrier_order_no: 'S9' },
+    );
+    expect(note).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
+    const noteNull = pickOutboundConflictNote(
+      ['SG-01', 'SG-02'],
+      expected,
+      { 'SG-01': null, 'SG-02': { ...expected, co: 'S2' } },
+      { carrier_order_no: 'S9' },
+    );
+    expect(noteNull).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
+  });
+
+  it('F7 #570: puste vs null / spacje; łatka null/{}; jeden kod', () => {
+    const expected = {
+      ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
+    };
+    // '' i spacje = null jak import (btrim) → bez konfliktu
+    expect(fileRowChangedSinceRead(expected, {
+      ...expected, co: 'S1', ho: '  K1  ',
+    })).toBe(false);
+    expect(fileRowChangedSinceRead(
+      { ...expected, co: null, ho: '' },
+      { ...expected, co: '', ho: null },
+    )).toBe(false);
+    expect(fileRowChangedSinceRead(expected, { ...expected, co: ' S2 ' })).toBe(true);
+    // jeden kod + rozjazd
+    expect(pickOutboundConflictNote(
+      ['SG-A'],
+      expected,
+      { 'SG-A': { ...expected, co: 'S2' } },
+      { carrier_order_no: 'S9' },
+    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
+    // łatka null / {} — 2. pętla, dowolne pole
+    expect(pickOutboundConflictNote(
+      ['SG-A'],
+      expected,
+      { 'SG-A': { ...expected, ho: 'K2' } },
+      null,
+    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
+    expect(pickOutboundConflictNote(
+      ['SG-A'],
+      expected,
+      { 'SG-A': { ...expected, ho: 'K2' } },
+      {},
+    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
+    // kod ze spacją w kluczu snapu — bez dopasowania = brak wiersza; sam jeden kod → konflikt „zniknął”
+    expect(pickOutboundConflictNote(
+      ['SG-A'],
+      expected,
+      { ' SG-A ': { ...expected, co: 'S2' } },
+      { carrier_order_no: 'S9' },
+    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
+  });
 });
 
 describe('A6 xlsxPatchTime', () => {
