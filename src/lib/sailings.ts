@@ -7,6 +7,10 @@
 import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, SailingStatus } from '../types';
 import { dictEntry } from '../i18n/messages';
 import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
+import {
+  LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, outboundRoutesOf,
+  routeByCode, sailingOfOperator, type FerryOperator,
+} from './ferryCatalog';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
@@ -46,20 +50,19 @@ export function sailingAssignDenied(
 export function historicalSailings(
   all: Sailing[],
   nowIso: string,
-  operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
+  operator: FerryOperator = 'POLFERRIES',
   days = Number.POSITIVE_INFINITY,
 ): Sailing[] {
-  const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
+  /* BN9-a: trasy wyjazdowe armatora z katalogu (Polferries: GDN-NYN, Stena: GDY-KAA — jak dotąd) */
+  const outbound = new Set<string>(outboundRoutesOf(operator));
   const now = Date.parse(nowIso);
   const from = Number.isFinite(days) ? now - days * 86_400_000 : Number.NEGATIVE_INFINITY;
   return all
     .filter((s) => {
-      if (s.route !== outbound || s.status === 'ODWOLANY') return false;
+      if (!outbound.has(s.route) || s.status === 'ODWOLANY') return false;
       const arr = Date.parse(effArrival(s));
       if (!(arr <= now) || arr < from) return false;
-      const op = (s.operator ?? '').toLowerCase();
-      if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA';
-      return !op.includes('stena');
+      return sailingOfOperator(s, operator);
     })
     .sort((a, b) => Date.parse(effDeparture(b)) - Date.parse(effDeparture(a)));
 }
@@ -69,18 +72,16 @@ export function selectableSailings(
   all: Sailing[],
   nowIso: string,
   currentId: string | null | undefined,
-  operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
+  operator: FerryOperator = 'POLFERRIES',
 ): Sailing[] {
-  const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
+  const outbound = new Set<string>(outboundRoutesOf(operator));
   return all
     .filter((s) => {
       if (s.id === currentId) return true;
-      if (s.route !== outbound) return false;
+      if (!outbound.has(s.route)) return false;
       if (s.status === 'ODWOLANY') return false;
       if (hasDeparted(s, nowIso)) return false;
-      const op = (s.operator ?? '').toLowerCase();
-      if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA';
-      return !op.includes('stena');
+      return sailingOfOperator(s, operator);
     })
     .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)));
 }
@@ -237,19 +238,58 @@ export const NEAREST_CROSSING_LIMIT = 3;
 
 /**
  * L-9 — linia z rozkładu w bazie. Dane startowe (demo) nie są rozkładem.
- * Stena: źródło STENA albo armator ze słowem „stena”. Polferries analogicznie.
- * Ręczny wpis bez armatora: trasa GDY–KAA to Stena, GDN–NYN to Polferries.
+ * Stena: źródło STENA albo armator ze słowem „stena”. Polferries analogicznie. BN9-a: tak samo armatorzy z katalogu.
+ * Ręczny wpis bez armatora: armator trasy z katalogu (GDY–KAA to Stena, GDN–NYN to Polferries; przy kilku armatorach — pierwszy).
  */
-export function crossingLine(s: Sailing): 'POLFERRIES' | 'STENA' | null {
+export function crossingLine(s: Sailing): FerryOperator | null {
   if (s.source === 'DANE_STARTOWE') return null;
-  const op = (s.operator ?? '').toLowerCase();
-  if (s.source === 'STENA' || op.includes('stena')) return 'STENA';
-  if (s.source === 'POLFERRIES' || op.includes('polferries')) return 'POLFERRIES';
-  // Inny armator (np. TT-Line) nie jest ani Polferries, ani Steną — nie dopisujemy go do listy.
-  if (op.trim()) return null;
-  if (s.route === 'GDY-KAA' || s.route === 'KAA-GDY') return 'STENA';
-  if (s.route === 'GDN-NYN' || s.route === 'NYN-GDN') return 'POLFERRIES';
-  return null;
+  const named = operatorFromText(s.operator);
+  /* kolejność jak dotąd: Stena (źródło albo nazwa), potem Polferries, potem nowi */
+  for (const line of OPERATOR_MATCH_ORDER) {
+    if (s.source === line || named === line) return line;
+  }
+  // Inny armator (np. TT-Line) spoza katalogu — nie dopisujemy go do listy.
+  if ((s.operator ?? '').trim()) return null;
+  return operatorsForRoute(s.route)[0] ?? null;
+}
+
+/** Odejścia armatora na jego trasach wyjazdowych od `fromMs`, rosnąco. */
+function lineDepartures(
+  all: readonly Sailing[],
+  line: FerryOperator,
+  fromMs: number,
+  skipCancelled: boolean,
+  limit: number,
+): Sailing[] {
+  return all
+    .filter((s) => {
+      if (crossingLine(s) !== line || !routeByCode(s.route)?.outbound || !operatorsForRoute(s.route).includes(line)) return false;
+      if (skipCancelled && s.status === 'ODWOLANY') return false;
+      const dep = Date.parse(effDeparture(s));
+      return Number.isFinite(dep) && dep >= fromMs;
+    })
+    .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
+    .slice(0, limit);
+}
+
+/** Mapa armator → rejsy; Polferries i Stena zawsze (pusta lista = „Brak danych”), nowi tylko z rejsami. */
+export type CrossingMap = Partial<Record<FerryOperator, Sailing[]>> & Record<'POLFERRIES' | 'STENA', Sailing[]>;
+
+function byOperator(pick: (line: FerryOperator) => Sailing[]): CrossingMap {
+  const out = {} as CrossingMap;
+  for (const line of OPERATOR_MATCH_ORDER) {
+    const list = pick(line);
+    if (list.length || LEGACY_OPERATORS.includes(line)) out[line] = list;
+  }
+  return out;
+}
+
+/**
+ * BN9-a — najbliższe rejsy wyjazdowe każdego armatora z katalogu. Polferries i Stena są zawsze (pusta lista =
+ * „Brak danych”); nowi armatorzy — tylko gdy mają rejs, więc bez ich rejsów widoki wyglądają jak dotąd.
+ */
+export function nearestCrossingByOperator(all: readonly Sailing[], nowMs: number, limit = NEAREST_CROSSING_LIMIT): CrossingMap {
+  return byOperator((line) => lineDepartures(all, line, nowMs, true, limit));
 }
 
 /**
@@ -262,16 +302,8 @@ export function nearestCrossingSailings(
   nowMs: number,
   limit = NEAREST_CROSSING_LIMIT,
 ): { polferries: Sailing[]; stena: Sailing[] } {
-  const pick = (line: 'POLFERRIES' | 'STENA', route: Sailing['route']) =>
-    all
-      .filter((s) => {
-        if (crossingLine(s) !== line || s.route !== route || s.status === 'ODWOLANY') return false;
-        const dep = Date.parse(effDeparture(s));
-        return Number.isFinite(dep) && dep >= nowMs;
-      })
-      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
-      .slice(0, limit);
-  return { polferries: pick('POLFERRIES', 'GDN-NYN'), stena: pick('STENA', 'GDY-KAA') };
+  const m = nearestCrossingByOperator(all, nowMs, limit);
+  return { polferries: m.POLFERRIES, stena: m.STENA };
 }
 
 /**
@@ -284,27 +316,25 @@ export function upcomingOutboundSailings(
   lookbackMs = 3 * 3600_000,
   limit = 6,
 ): { polferries: Sailing[]; stena: Sailing[] } {
-  const from = nowMs - lookbackMs;
-  const pick = (line: 'POLFERRIES' | 'STENA', route: Sailing['route']) =>
-    all
-      .filter((s) => {
-        if (crossingLine(s) !== line || s.route !== route) return false;
-        const dep = Date.parse(effDeparture(s));
-        return Number.isFinite(dep) && dep >= from;
-      })
-      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
-      .slice(0, limit);
-  return { polferries: pick('POLFERRIES', 'GDN-NYN'), stena: pick('STENA', 'GDY-KAA') };
+  const m = upcomingOutboundByOperator(all, nowMs, lookbackMs, limit);
+  return { polferries: m.POLFERRIES, stena: m.STENA };
+}
+
+/** BN9-a — jak `upcomingOutboundSailings`, mapa po armatorze (nowi tylko z rejsami). */
+export function upcomingOutboundByOperator(
+  all: readonly Sailing[],
+  nowMs: number,
+  lookbackMs = 3 * 3600_000,
+  limit = 6,
+): CrossingMap {
+  return byOperator((line) => lineDepartures(all, line, nowMs - lookbackMs, false, limit));
 }
 
 export function dbFerryWidget(s: Sailing | null, nowMs: number): { cd: string; line: string } | null {
   if (!s) return null;
   const depMs = Date.parse(effDeparture(s));
   const mins = Math.max(0, Math.round((depMs - nowMs) / 60_000));
-  const dir =
-    s.route === 'GDN-NYN' ? 'GDN→NYN'
-      : s.route === 'NYN-GDN' ? 'NYN→GDN'
-        : s.route === 'GDY-KAA' ? 'GDY→KAA'
-          : 'KAA→GDY';
+  const r = routeByCode(s.route);
+  const dir = r ? `${r.from}→${r.to}` : 'KAA→GDY';
   return { cd: `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`, line: `${s.vessel} · ${fmtLocal(effDeparture(s))} · ${dir}` };
 }

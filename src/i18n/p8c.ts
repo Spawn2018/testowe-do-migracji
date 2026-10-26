@@ -27,6 +27,11 @@ const pl = {
   p8c_do_other: 'rodzaj nie działa — do wyłączenia',
   p8c_route_POLFERRIES: 'Polferries',
   p8c_route_STENA: 'Stena',
+  /* BN9-a: armatorzy z katalogu promów */
+  p8c_route_TALLINK: 'Tallink',
+  p8c_route_VIKING: 'Viking Line',
+  p8c_route_ECKERO: 'Eckerö',
+  p8c_route_DFDS: 'DFDS',
   p8c_card_meta: '{country} · koło {r} · teraz w strefie: {n}',
   p8c_country_PL: 'Polska',
   p8c_country_SE: 'Szwecja',

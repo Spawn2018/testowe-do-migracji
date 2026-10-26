@@ -6,10 +6,12 @@
  * Czyste funkcje widoku — bez zapytań i zapisów.
  */
 import type { Geofence, GeofenceType, Load } from '../types';
+import type { FerryOperator } from './ferryCatalog';
 
 export type ZoneGroup = 'srem' | 'gdansk' | 'gdynia' | 'se_ports' | 'boden' | 'other';
 export const ZONE_GROUPS: readonly ZoneGroup[] = ['srem', 'gdansk', 'gdynia', 'se_ports', 'boden', 'other'];
-export type ZoneRoute = 'POLFERRIES' | 'STENA';
+/** Trasa promowa strefy = armator z katalogu promów (BN9-a). */
+export type ZoneRoute = FerryOperator;
 
 /** 6 rodzajów, które działają (E34 „Porządek”). */
 export const ZONE_KINDS: readonly GeofenceType[] = ['LOADING', 'PRE_ARRIVAL', 'PRE_PORT', 'PORT_OUT', 'PORT_IN', 'SITE'];

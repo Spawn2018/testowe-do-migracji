@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../auth/client';
 import { canFileOperatorNotice, ferryPortPl, noticeKindPl } from '../lib/ferryStatusPl';
 import { effDeparture, fmtLocal } from '../lib/sailings';
+import { isFerryOperator, operatorName } from '../lib/ferryCatalog';
 import { fmtDateTime } from '../lib/time';
 import { useTowerStore } from '../store/useTowerStore';
 
@@ -131,7 +132,7 @@ export function OperatorNoticeForm() {
             {history.map((h) => (
               <tr key={h.id}>
                 <td>{noticeKindPl(h.kind)}</td>
-                <td>{h.operator === 'STENA' ? 'Stena Line' : 'Polferries'}</td>
+                <td>{isFerryOperator(h.operator) ? operatorName(h.operator) : 'Polferries'}</td>
                 <td>{h.note ?? '—'}</td>
                 <td className="num">{fmtDateTime(h.created_at)}</td>
               </tr>

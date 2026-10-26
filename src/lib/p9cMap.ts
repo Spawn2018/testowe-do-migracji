@@ -14,9 +14,12 @@ import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
 import { transportLabel, transportSearchBlob } from './transportName';
 import { trackingNoLink } from './trackerLink';
+import { FERRY_PORTS } from './ferryCatalog';
+import { portName } from './portName';
 
 const TZ = 'Europe/Warsaw';
-const PORT_PL: Record<string, string> = { GDN: 'Gdańsk', NYN: 'Nynäshamn', GDY: 'Gdynia', KAA: 'Karlskrona' };
+/** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
+const PORT_PL: Record<string, string> = Object.fromEntries(FERRY_PORTS.map((p) => [p.code, portName('pl', p.code)]));
 
 /** „00:19” (czas polski). */
 export function hm(iso: string | null | undefined): string {

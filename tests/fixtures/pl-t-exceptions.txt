@@ -83,3 +83,9 @@ Karlskrona
 elem
 # audyt-C (C-02): most na E4 w ryzyku demo zamknięcia (E49)
 Högakustenbron
+# BN9-a: porty promów Estonia ⇄ Finlandia / Szwecja (nazwy własne)
+Tallinn
+Muuga
+Paldiski
+Vuosaari
+Kapellskär

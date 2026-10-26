@@ -3,16 +3,14 @@
  * „Zdąży na rejs” = odjazd po planowanym dojeździe do portu + odprawa.
  */
 import type { Load, LoadResources, Sailing } from '../types';
+import { FERRY_OPERATORS as CATALOG_OPERATORS, sailingOfOperator, type FerryOperator } from './ferryCatalog';
 import { effDeparture, hasDeparted, selectableSailings } from './sailings';
 import { isAfterDelivery } from './status';
 
-/** Armatorzy w UI (STENA-3). */
-export const FERRY_OPERATORS = [
-  { id: 'POLFERRIES', label: 'Polferries' },
-  { id: 'STENA', label: 'Stena Line' },
-] as const;
+/** Armatorzy w UI (STENA-3); BN9-a — z katalogu promów (Polferries, Stena, potem nowi). */
+export const FERRY_OPERATORS: readonly { id: FerryOperator; label: string }[] = CATALOG_OPERATORS.map((o) => ({ id: o.code, label: o.name }));
 
-export type FerryOperatorId = (typeof FERRY_OPERATORS)[number]['id'];
+export type FerryOperatorId = FerryOperator;
 
 /** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7). */
 export const PORT_CLEARANCE_H = 14;
@@ -30,10 +28,9 @@ export function hasAwizacja(
   return false;
 }
 
-function operatorMatches(s: Sailing, operator: FerryOperatorId): boolean {
-  const op = (s.operator ?? '').toLowerCase();
-  if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA' || s.route === 'KAA-GDY';
-  return !op.includes('stena') && (s.route === 'GDN-NYN' || s.route === 'NYN-GDN' || !s.route);
+/** Rejs armatora — reguła z katalogu promów (Polferries i Stena bez zmian, nowi po nazwie albo trasie). */
+export function operatorMatches(s: Sailing, operator: FerryOperatorId): boolean {
+  return sailingOfOperator(s, operator);
 }
 
 /** Najwcześniejszy sensowny odjazd promu względem planu załadunku. */

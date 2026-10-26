@@ -13,7 +13,8 @@ import { computeCorridorKpis } from '../lib/corridorKpis';
 import { nextGdnSailing, seaForSailing } from '../lib/voyage';
 import { ferryRouteName } from '../lib/portName';
 import { vesselById } from '../lib/ferry';
-import { effDeparture, nearestCrossingSailings } from '../lib/sailings';
+import { effDeparture, nearestCrossingByOperator } from '../lib/sailings';
+import { OPERATOR_MATCH_ORDER } from '../lib/ferryCatalog';
 import { buildCockpit, todoQueue, todoRisks, viewedKind, type CockpitTile } from '../lib/cockpitE9';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
@@ -103,8 +104,9 @@ export function DashboardView() {
   const nowMinute = Math.floor(getNow().getTime() / 60_000);
   const ferry = useMemo(() => {
     if (PROD_BUILD) {
-      const near = nearestCrossingSailings(sailings, nowMinute * 60_000, 1);
-      const s = [near.stena[0], near.polferries[0]].filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
+      /* BN9-a: Stena, Polferries, a nowi armatorzy z katalogu tylko wtedy, gdy mają rejs */
+      const near = nearestCrossingByOperator(sailings, nowMinute * 60_000, 1);
+      const s = OPERATOR_MATCH_ORDER.map((op) => near[op]?.[0]).filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
       if (!s) return null;
       const [from, to] = s.route.split('-');
       /* E37, E21 (audyt-A A-03): pełne nazwy portów „Gdańsk → Nynäshamn”, jak w pasku górnym */

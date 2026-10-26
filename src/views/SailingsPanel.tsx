@@ -17,6 +17,8 @@ import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
+import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, isKnownRoute } from '../lib/ferryCatalog';
+import { ferryRouteName } from '../lib/portName';
 
 const VESSELS = ['Wawel', 'Nova Star', 'Stena Spirit', 'Stena Estelle', 'Stena Ebba'] as const;
 
@@ -128,11 +130,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
             const routeRaw = String(fd.get('route') || 'GDN-NYN');
-            const route =
-              routeRaw === 'NYN-GDN' ? 'NYN-GDN'
-                : routeRaw === 'GDY-KAA' ? 'GDY-KAA'
-                  : routeRaw === 'KAA-GDY' ? 'KAA-GDY'
-                    : 'GDN-NYN';
+            /* BN9-a: każda trasa z katalogu promów; nieznana wartość — jak dotąd GDN-NYN */
+            const route = isKnownRoute(routeRaw) ? routeRaw : 'GDN-NYN';
             const r = addSailing({
               vessel: String(fd.get('vessel') || ''),
               route,
@@ -152,10 +151,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             <dt>{t(locale, 'sail_col_route')}</dt>
             <dd>
               <select name="route" className="input" defaultValue="GDN-NYN">
-                <option value="GDN-NYN">Gdańsk → Nynäshamn</option>
-                <option value="GDY-KAA">Gdynia → Karlskrona</option>
-                <option value="NYN-GDN">Nynäshamn → Gdańsk</option>
-                <option value="KAA-GDY">Karlskrona → Gdynia</option>
+                {/* BN9-a: trasy z katalogu promów — dzisiejsze cztery w tej samej kolejności, potem nowe wyjazdowe i powroty */}
+                {FERRY_ROUTE_OPTIONS.map((r) => <option key={r.code} value={r.code}>{ferryRouteName('pl', r.from, r.to)}</option>)}
               </select>
             </dd>
             <dt>{t(locale, 'sail_col_dep')} / {t(locale, 'sail_col_arr')}</dt>
