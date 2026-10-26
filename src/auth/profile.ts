@@ -39,15 +39,17 @@ export const setAuthProfile = (p: AuthProfile | null): void => { current = p; };
 /** ADM-10: po start/stop impersonacji — AuthGate przeładowuje profil + dane. */
 export const AUTH_RELOAD_EVENT = 'wt-auth-reload';
 /** Zwraca obietnicę spełnioną po zakończeniu przeładowania (F7 #383: Podgląd czeka na koniec, bez wyścigu dwóch
- * przeładowań). Bez słuchacza (demo, testy) — spełnia się po `AUTH_RELOAD_MAX_MS`. */
+ * przeładowań): `'done'` — przeładowanie skończone, `'timeout'` — brak końca w `AUTH_RELOAD_MAX_MS`
+ * (bez słuchacza: demo, testy — albo bardzo wolna sieć). Nigdy nie odrzuca. */
 export const AUTH_RELOAD_MAX_MS = 20_000;
+export type AuthReloadResult = 'done' | 'timeout';
 export type AuthReloadDetail = { done: () => void };
-export function requestAuthReload(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve();
-  return new Promise<void>((resolve) => {
+export function requestAuthReload(): Promise<AuthReloadResult> {
+  if (typeof window === 'undefined') return Promise.resolve('done');
+  return new Promise<AuthReloadResult>((resolve) => {
     let fin = false;
-    const done = () => { if (!fin) { fin = true; resolve(); } };
+    const timer = setTimeout(() => { if (!fin) { fin = true; resolve('timeout'); } }, AUTH_RELOAD_MAX_MS);
+    const done = () => { if (!fin) { fin = true; clearTimeout(timer); resolve('done'); } };
     window.dispatchEvent(new CustomEvent<AuthReloadDetail>(AUTH_RELOAD_EVENT, { detail: { done } }));
-    setTimeout(done, AUTH_RELOAD_MAX_MS);
   });
 }

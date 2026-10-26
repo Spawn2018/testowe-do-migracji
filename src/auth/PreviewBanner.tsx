@@ -5,7 +5,7 @@
 import { useTowerStore } from '../store/useTowerStore';
 import { dbPreviewOn, isPreviewReadOnly } from '../lib/prodFacade';
 import { getAuthProfile } from './profile';
-import { switchViewRole } from './previewSwitch';
+import { switchViewRole, usePreviewSwitchBusy } from './previewSwitch';
 import { t } from '../i18n/messages';
 import './auth.css';
 
@@ -17,6 +17,7 @@ const VIEW_LABEL: Record<string, string> = {
 export function PreviewBanner() {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
+  const switching = usePreviewSwitchBusy();
 
   if (!isPreviewReadOnly({ viewRole: role })) return null;
 
@@ -30,7 +31,7 @@ export function PreviewBanner() {
       <p className="subbar-tx">
         <b>{t(locale, 'p3a_preview_bold').replace('{who}', who)}</b> {t(locale, 'p3a_preview_rest')}
       </p>
-      <button className="subbar-btn" type="button" onClick={() => void switchViewRole('HHL')}>
+      <button className="subbar-btn" type="button" onClick={() => void switchViewRole('HHL')} aria-busy={switching || undefined} aria-disabled={switching || undefined}>
         {t(locale, 'p3a_preview_back')}
       </button>
     </div>

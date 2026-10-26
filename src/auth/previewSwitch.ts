@@ -7,7 +7,8 @@
  * `admin_preview_stop()` wraca do własnego konta. Start i koniec zapisuje `audit_log`.
  * Demo (bez logowania): przełącznik zmienia tylko widok, jak dotąd.
  */
-import { getAuthProfile, requestAuthReload } from './profile';
+import { useSyncExternalStore } from 'react';
+import { getAuthProfile, requestAuthReload, type AuthReloadResult } from './profile';
 import { dbPreviewOn, PROD_BUILD } from '../lib/prodFacade';
 import { useTowerStore } from '../store/useTowerStore';
 
@@ -68,11 +69,25 @@ export async function clearStalePreview(call?: Rpc): Promise<void> {
 }
 
 let busy = false;
+const busySubs = new Set<() => void>();
+function setBusy(v: boolean): void {
+  busy = v;
+  for (const f of busySubs) f();
+}
 /** Do testów: stan „przełączanie w toku” (trwa do końca przeładowania profilu i danych). */
 export const previewSwitchBusy = (): boolean => busy;
+/** F7 #383 r2: przyciski przełączania — `disabled` + `aria-busy` w trakcie. */
+export function usePreviewSwitchBusy(): boolean {
+  return useSyncExternalStore(
+    (f) => { busySubs.add(f); return () => { busySubs.delete(f); }; },
+    previewSwitchBusy,
+    () => false,
+  );
+}
 
 export const PREVIEW_RELOAD_FAIL = 'Nie udało się wczytać Podglądu — zostajesz we własnym widoku. Spróbuj ponownie.';
 export const PREVIEW_BACK_FAIL = 'Nie udało się wrócić do widoku HHL — odśwież stronę.';
+export const PREVIEW_SLOW = 'Wczytywanie trwa dłużej niż zwykle — ekran przełączy się, gdy dane dojdą.';
 
 /** F7 #383 r2: po przeładowaniu fokus na pasek Podglądu („Wróć do HHL”) albo na główną treść. */
 function focusAfterSwitch(): void {
@@ -97,7 +112,7 @@ export async function switchViewRole(
   deps?: {
     prod?: boolean;
     call?: Rpc;
-    reload?: () => void | Promise<void>;
+    reload?: () => void | Promise<AuthReloadResult | void>;
     dbPreview?: boolean;
     /** stan Podglądu po przeładowaniu (domyślnie z profilu) */
     previewAfter?: () => boolean;
@@ -112,7 +127,7 @@ export async function switchViewRole(
   if (busy) return null;
   const inPreview = deps?.dbPreview ?? dbPreviewOn(getAuthProfile());
   if (next !== 'HHL' && inPreview && store.role === next) return null;
-  busy = true;
+  setBusy(true);
   try {
     const call = deps?.call ?? (await rpc());
     if (next === 'HHL' && !inPreview) {
@@ -129,16 +144,27 @@ export async function switchViewRole(
       store.pushToast(msg, 'HIGH');
       return msg;
     }
-    await (deps?.reload ?? requestAuthReload)();
+    const reload = deps?.reload ?? requestAuthReload;
+    const res = await reload();
+    if (res === 'timeout') {
+      /* przeładowanie wciąż trwa — nie cofamy startu w bazie (ekran przełączy się po dojściu danych) */
+      store.pushToast(PREVIEW_SLOW, 'MEDIUM');
+      return PREVIEW_SLOW;
+    }
     const after = (deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))();
     const want = next !== 'HHL';
     if (after !== want) {
       if (want) {
-        /* baza w Podglądzie, ekran nie — kończymy Podgląd w bazie (zapisy nie dostaną 42501 bez paska „Wróć”) */
+        /* baza w Podglądzie, ekran nie — kończymy Podgląd w bazie (zapisy nie dostaną 42501 bez paska „Wróć”)
+           i jeszcze raz wczytujemy profil, żeby ekran zgadzał się z bazą */
         try { await call('admin_preview_stop'); } catch { /* kolejne logowanie wyczyści (clearStalePreview) */ }
+        await reload();
         store.pushToast(PREVIEW_RELOAD_FAIL, 'HIGH');
         return PREVIEW_RELOAD_FAIL;
       }
+      /* baza wróciła do HHL, ekran nie — jedna ponowna próba wczytania profilu */
+      await reload();
+      if ((deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))() === false) { focusAfterSwitch(); return null; }
       store.pushToast(PREVIEW_BACK_FAIL, 'HIGH');
       return PREVIEW_BACK_FAIL;
     }
@@ -153,7 +179,7 @@ export async function switchViewRole(
     store.pushToast(msg, 'HIGH');
     return msg;
   } finally {
-    busy = false;
+    setBusy(false);
   }
 }
 

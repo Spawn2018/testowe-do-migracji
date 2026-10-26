@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { setAuthProfile, type AuthProfile } from '../src/auth/profile';
 import { canSwitchView, dbPreviewOn, isPreviewReadOnly, switchRoleOf } from '../src/lib/prodFacade';
-import { clearStalePreview, endPreviewBeforeLogout, previewErrorPl, previewRoOf, previewSwitchBusy, PREVIEW_BACK_FAIL, PREVIEW_RELOAD_FAIL, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
+import { clearStalePreview, endPreviewBeforeLogout, previewErrorPl, previewRoOf, previewSwitchBusy, PREVIEW_BACK_FAIL, PREVIEW_RELOAD_FAIL, PREVIEW_SLOW, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
 import { registerRemoteSink, writeThrough } from '../src/data/registry';
 import { useTowerStore } from '../src/store/useTowerStore';
 
@@ -120,8 +120,25 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     expect(msg).toBe(PREVIEW_RELOAD_FAIL);
     expect(call).toHaveBeenNthCalledWith(1, 'admin_preview_start', { p_side: 'SCX' });
     expect(call).toHaveBeenLastCalledWith('admin_preview_stop');
+    expect(reload).toHaveBeenCalledTimes(2); // po cofnięciu startu — ponowne wczytanie, ekran zgodny z bazą
     const back = await switchViewRole('HHL', { prod: true, call: mk(), reload: vi.fn(), dbPreview: true, previewAfter: () => true });
     expect(back).toBe(PREVIEW_BACK_FAIL);
+    let n = 0; const reload2 = vi.fn();
+    const back2 = await switchViewRole('HHL', { prod: true, call: mk(), reload: reload2, dbPreview: true, previewAfter: () => (n++ === 0) });
+    expect(back2).toBeNull(); // druga próba wczytania udana
+    expect(reload2).toHaveBeenCalledTimes(2);
+  });
+
+  it('F7 #383 r2: przeładowanie po limicie czasu — bez cofania startu w bazie, tylko komunikat', async () => {
+    const call = mk();
+    const msg = await switchViewRole('KSH', { prod: true, call, reload: vi.fn(async () => 'timeout' as const), dbPreview: false, previewAfter: () => false });
+    expect(msg).toBe(PREVIEW_SLOW);
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(call).toHaveBeenCalledWith('admin_preview_start', { p_side: 'KSH' });
+    expect(readSrc('src/components/shell/AccountMenu.tsx')).toMatch(/Promise\.race\(\[endPreviewBeforeLogout\(\), new Promise<void>\(\(r\) => setTimeout\(r, 3000\)\)\]\)/);
+    for (const f of ['src/components/shell/Topbar.tsx', 'src/components/shell/AccountMenu.tsx', 'src/auth/PreviewBanner.tsx']) {
+      expect(readSrc(f)).toMatch(/aria-busy=\{switching \|\| undefined\}/);
+    }
   });
 
   it('F7 #383 r2: wylogowanie kończy Podgląd w bazie; błąd nie blokuje wylogowania', async () => {
@@ -133,7 +150,7 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     expect(off).not.toHaveBeenCalled();
     const boom = vi.fn(async () => { throw new Error('Failed to fetch'); });
     await expect(endPreviewBeforeLogout({ call: boom, dbPreview: true })).resolves.toBeUndefined();
-    expect(readSrc('src/components/shell/AccountMenu.tsx')).toMatch(/endPreviewBeforeLogout\(\)\s*\.then\(\(\) => import\('\.\.\/\.\.\/auth\/client'\)\)/);
+    expect(readSrc('src/components/shell/AccountMenu.tsx')).toMatch(/endPreviewBeforeLogout\(\)[^\n]*\]\)\s*\.then\(\(\) => import\('\.\.\/\.\.\/auth\/client'\)\)/);
   });
 
   it('demo bez logowania: przełącznik zmienia tylko widok', async () => {

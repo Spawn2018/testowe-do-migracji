@@ -14,7 +14,7 @@ import { nextGdnSailing } from '../../lib/voyage';
 import { portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
-import { switchViewRole } from '../../auth/previewSwitch';
+import { switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
 import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
 import { formatListDateTime } from '../../lib/format';
 import { lazyRetry } from '../../lib/lazyRetry';
@@ -191,6 +191,7 @@ export function Topbar() {
   }, [locale, sailings]);
 
   const switchView = canSwitchView();
+  const switching = usePreviewSwitchBusy();
 
   return (
     <header className="topbar">
@@ -211,6 +212,8 @@ export function Topbar() {
               data-role={r}
               aria-pressed={role === r}
               onClick={() => void switchViewRole(r)}
+              aria-busy={switching || undefined}
+              aria-disabled={switching || undefined}
               title={ROLE_META[r].name}
             >
               {ROLE_META[r].short}
