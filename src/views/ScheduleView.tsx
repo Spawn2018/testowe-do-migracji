@@ -222,7 +222,7 @@ export function ScheduleView() {
   const fileLine = syncLine ? syncLine.text : verLine;
   const verTitle = syncLine ? syncLine.title : verTitle0;
   /* W-567 (decyzja 23B): lista zmian z pliku KSH — tylko produkcja (demo nie ma stanu synchronizacji), Administrator/Operacje HHL,
-     dopóki import z pliku jest wyłączony; panel sam znika, gdy baza nie ma `ksh_sync_preview_get` albo zwraca null */
+     dopóki import z pliku jest wyłączony; panel znika tylko, gdy baza nie ma `ksh_sync_preview_get` (PGRST202); null = „lista jeszcze nie przygotowana” */
   const viewerKind = viewedKind(role, accountRole(role));
   const showKshPreview = SERVER_IMPORT && !!kshSync && kshSync.importEnabled !== true
     && (viewerKind === 'HHL_ADMIN' || viewerKind === 'HHL_OPS');
