@@ -5389,3 +5389,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; reszta w planie. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - CI `f6b83fab`: unit ✔ visual ✔ **db FAIL** import 183/3 — N5: `permission denied` na `shipment_items`/`loads` (SELECT w tej samej transakcji co ack jako `service_role` / import jako `authenticated` → rollback ack).
 - Fix: ack osobno + asercje przez `Q` (postgres); import + `reset role` przed odczytem `loads`. EXPECTED nadal **186**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 05:00 — A6 #560 F7 runda 5: N9–N12 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `f6b83fab` — **wymaga poprawek** (N9–N12); brak „F7: gotowe”. CI `a1b98daa`: unit ✔ visual ✔ **db FAIL** `A6: N5 import → SNAP-B` (185/1) — import nadpisuje całą grupę zasobów (objaw N9). #383 CONFLICTING. Bez push na main.
+- Bieżąca: **#560** — wpis F7 r5 w PLAN §4/§8: **N9** tylko pola z `v_fields` + skip pending / konflikt gdy plik≠expected; **N10** blokady loads→outbound + sort `load_id`; **N11** historia/schedule_row tylko przy `v_file ≠ expected_file`; **N12** expected_file tylko klucze pending, reszta vs snapshot. Następny commit: kod.
