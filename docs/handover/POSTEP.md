@@ -5415,3 +5415,22 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   2. **N7:** po N12 snapshot `SNAP-X` → B→A nie robi `reverted_to_file` — reset snapshot do A przed N7;
   3. **g20:** N9 + zaległy pending po `ksh_confirm_dates` blokuje datę z pliku — `delete outbound` przed importem w teście.
 - EXPECTED bez zmian (import 189, g20 15). Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 06:20 — A6 #560 F7 runda 6: docs (CI ✔ + bloker)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. F7 r6 na `bbcc567e` — **wymaga poprawek** (CI czerwone + BLOKER + 3 poprawki); fix testów `4e7915bb` **nie zamyka** rundy 6. #383 CONFLICTING. Bez push na main.
+- CI HEAD `4e7915bb`: unit ✔ (`40265279875`) visual ✔ (`40265279937`) db ✔ (`40265279880`).
+- Bieżąca: **#560** — wpis F7 r6 w PLAN §4/§8: (1) `l1b_note_file_changed` bez bramki service przy imporcie HHL; (2) godziny tylko z `v_fields`; (3) `expected_file`∉`patch`; (4) `write_set`/`import_set` locks loads→outbound; uwagi dedup HHL + `pending_wt` w `changed`. Następny commit: kod.
+
+## 2026-10-26 06:35 — A6 #560 F7 r6: kod B1 + P2–P4
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (r6 dopiero w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r6 w **0308** + testy:
+  1. **B1:** `l1b_note_file_changed` bez `ksh_sync_require_service`; dedup jak conflict HHL;
+  2. **P2:** data/godzina tylko gdy ∈ `v_fields` (pending time → godzina WT, data z pliku);
+  3. **P3:** `state_upsert` expected tylko klucze spoza `patch` (N12 asercja);
+  4. **P4:** `write_set`/`import_set` — `loads FOR UPDATE` sort id → outbound;
+  + `pending_wt` w `changed`.
+- EXPECTED import **193**. Push → CI → prośba F7 po zielonym.
