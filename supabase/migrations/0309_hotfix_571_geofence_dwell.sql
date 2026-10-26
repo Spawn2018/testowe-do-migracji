@@ -488,7 +488,9 @@ begin
      limit 1;
   end if;
 
-  if v_load is not null then
+  if v_load is null then
+    raise notice '#571: SG-23 nie znaleziony (shipment_code / load_sms_code) — pomijam backdate';
+  else
     select p.ts, p.geom_raw, g.id, g.name, g.notify_orgs, g.message_tpl
       into v_enter, v_pt, v_gid, v_gname, v_notify, v_tpl
       from positions p
@@ -555,16 +557,24 @@ begin
       raise;
     end;
 
+    /* F7 r3: OUTSIDE nie wraca na plac; state tylko z PENDING_IN;
+       entered_at tylko INSIDE / PENDING_OUT (czas zdarzeń bez zmiany stanu). */
     update geofence_states gs set
-      entered_at = v_enter,
-      state = case when gs.state in ('PENDING_IN', 'OUTSIDE') then 'INSIDE' else gs.state end,
-      consec_fixes = 0,
+      entered_at = case
+        when gs.state in ('INSIDE', 'PENDING_OUT') then v_enter
+        else gs.entered_at
+      end,
+      state = case when gs.state = 'PENDING_IN' then 'INSIDE' else gs.state end,
+      consec_fixes = case when gs.state = 'PENDING_IN' then 0 else gs.consec_fixes end,
       last_eval_at = greatest(gs.last_eval_at, v_enter)
     from geofences g
     where gs.load_id = v_load
       and g.id = gs.geofence_id
       and g.kind = 'SITE'
-      and (gs.entered_at is distinct from v_enter or gs.state <> 'INSIDE');
+      and (
+        (gs.state in ('INSIDE', 'PENDING_OUT') and gs.entered_at is distinct from v_enter)
+        or gs.state = 'PENDING_IN'
+      );
 
     perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
   end if;
@@ -643,3 +653,5 @@ comment on function public.hotfix_571_site_enter_backdate() is
   '#571 F7: backdate SITE ENTER/AT_SITE do pierwszej pozycji; PENDING_IN SITE → ENTER; bez ponownych powiadomien.';
 
 select public.hotfix_571_site_enter_backdate();
+/* F7 r3: nie zostawiaj funkcji z ALTER TABLE / grant service_role po migracji. */
+drop function public.hotfix_571_site_enter_backdate();

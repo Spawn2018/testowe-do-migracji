@@ -1435,10 +1435,13 @@ chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \
     where load_id='$L557c' and ts = '2026-10-10 10:00+00'" false
 
 # --- #571 F7: SITE od 1. pozycji; dwell dla portu; parking poza promieniem; backdate ---
+# L a1–a7 — nie 71–76 (#445/#502/#461: kolizja UUID → mk cicho, stary FERRY).
 echo; echo "[#571] SITE 1 fix + dwell port + backdate"
-L571a=$(L 71); L571b=$(L 72); L571c=$(L 73); L571d=$(L 74); L571e=$(L 75); L571f=$(L 76)
+L571a=$(L a1); L571b=$(L a2); L571c=$(L a3); L571d=$(L a4); L571e=$(L a5); L571f=$(L a6); L571g=$(L a7)
 G571p=$(q "select id from geofences where project_id='$P' and name='Port Nynäshamn' order by id limit 1")
 # Plac testowy r=1010 m (jak Boden) — parking 1019 m poza; 779 m w środku
+# Wyłącz Plac Stegra (r=1500, ten sam środek) — inaczej 2× SITE ENTER.
+q "update geofences set active = false where project_id='$P' and name='Plac Stegra' and kind='SITE'" >/dev/null
 q "insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route)
    values ('$P','Plac 571 r1010','SITE', make_circle_fence(65.8054,21.7591,1010), 300, 600, 2,'SE', null)" >/dev/null
 G571r=$(q "select id from geofences where project_id='$P' and name='Plac 571 r1010' order by id limit 1")
@@ -1501,6 +1504,7 @@ pos $L571e $LAT779 $LON779 "2026-10-26 14:00:00+00"
 chk "#571e: pierwszy wjazd AT_SITE" "$(st $L571e)" AT_SITE
 N571=$(q "select count(*) from load_events where load_id='$L571e' and event_type='STATUS_AUTO' and payload->>'to'='AT_SITE'")
 N571n=$(q "select count(*) from notifications where load_id='$L571e' and template like '%AT_SITE%'")
+# poza SITE+histereza (nie tylko poza Bufor Boden)
 pos $L571e 65.90 22.10 "2026-10-26 14:20:00+00"
 pos $L571e 65.91 22.12 "2026-10-26 14:25:00+00"
 chk "#571e: po EXIT entered_at null" \
@@ -1516,13 +1520,16 @@ chk "#571e: ponowny wjazd bez 2. STATUS_AUTO AT_SITE" \
   "select count(*) from load_events where load_id='$L571e' and event_type='STATUS_AUTO' and payload->>'to'='AT_SITE'" "$N571"
 chk "#571e: bez nowych powiadomień AT_SITE" \
   "select count(*) from notifications where load_id='$L571e' and template like '%AT_SITE%'" "$N571n"
+# Funkcja usuwana na końcu 0309 — odtwórz na czas testu korekty (F7 r3).
+$PSQL -f "$(git rev-parse --show-toplevel)/tests/db/sql/hotfix_571_site_enter_backdate.sql" >/dev/null
+q "revoke all on function public.hotfix_571_site_enter_backdate() from public, anon, authenticated;
+   grant execute on function public.hotfix_571_site_enter_backdate() to service_role" >/dev/null
 # (f) backdate jak SG-23: order_no NULL, kod w shipment_items, ENTER z 2. pozycji → pierwsza
 q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id)
    values ('$L571f','$P','$SCXO',null,'HHL/571f','SCX/571f','AT_SITE','2026-09-30','TEL-571f')" >/dev/null
 q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
    values ('$P','$L571f','SG-23',10,3,3)" >/dev/null
 q "insert into load_events (load_id,event_type,occurred_at) values ('$L571f','MILESTONE_LOADED','2026-10-20 08:00+00')" >/dev/null
-# pozycje: 10:22 w strefie, 11:21 w strefie; ENTER/STATUS z 11:21 (jak produkcja przed korektą)
 q "insert into positions (load_id, ts, geom_raw, source, raw) values
   ('$L571f','2026-10-26 10:22:00+00', st_setsrid(st_makepoint($LON779,$LAT779),4326),'TELEMATICS_API','{}'),
   ('$L571f','2026-10-26 11:21:00+00', st_setsrid(st_makepoint($LON779,$LAT779),4326),'TELEMATICS_API','{}')" >/dev/null
@@ -1549,6 +1556,44 @@ chk "#571f: entered_at 10:22" \
     where load_id='$L571f' and geofence_id='$G571r'" "2026-10-26 10:22"
 chk "#571f: 0 nowych powiadomień" \
   "select count(*) from notifications where load_id='$L571f'" "$N571f"
+chk "#571f: trg_load_events_immutable włączony (O)" \
+  "select tgenabled::text from pg_trigger where tgname='trg_load_events_immutable' limit 1" O
+# idempotencja: drugie wywołanie nic nie zmienia
+ENT571=$(q "select occurred_at::text from load_events where load_id='$L571f' and event_type='GEOFENCE_ENTER' order by id limit 1")
+q "select public.hotfix_571_site_enter_backdate()" >/dev/null
+chk "#571f: 2. wywołanie — ten sam ENTER" \
+  "select occurred_at::text from load_events where load_id='$L571f' and event_type='GEOFENCE_ENTER' order by id limit 1" "$ENT571"
+# (g) F7 r3: OUTSIDE po EXIT — korekta nie wraca na plac; EXIT bez zmian
+q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id)
+   values ('$L571g','$P','$SCXO',null,'HHL/571g','SCX/571g','IN_TRANSIT_SE','2026-09-30','TEL-571g')" >/dev/null
+q "delete from shipment_items where shipment_code='SG-23' and load_id='$L571f'" >/dev/null
+q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+   values ('$P','$L571g','SG-23',10,3,3)" >/dev/null
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L571g','MILESTONE_LOADED','2026-10-20 08:00+00')" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source, raw) values
+  ('$L571g','2026-10-26 10:22:00+00', st_setsrid(st_makepoint($LON779,$LAT779),4326),'TELEMATICS_API','{}')" >/dev/null
+q "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
+   values ('$L571g','$G571r','OUTSIDE',0,null,'2026-10-26 15:00:00+00')" >/dev/null
+q "insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key) values
+  ('$L571g','GEOFENCE_ENTER','2026-10-26 11:21:00+00','TELEMATICS_API',
+   st_setsrid(st_makepoint($LON779,$LAT779),4326),
+   jsonb_build_object('geofence_id','$G571r','geofence_kind','SITE','geofence_name','Plac 571 r1010'),
+   'GEOFENCE_ENTER:$L571g:$G571r:202610261121'),
+  ('$L571g','GEOFENCE_EXIT','2026-10-26 15:00:00+00','TELEMATICS_API',
+   st_setsrid(st_makepoint(22.10,65.90),4326),
+   jsonb_build_object('geofence_id','$G571r','geofence_kind','SITE'),
+   'GEOFENCE_EXIT:$L571g:$G571r:202610261500')" >/dev/null
+N571x=$(q "select count(*) from load_events where load_id='$L571g' and event_type='GEOFENCE_EXIT'")
+q "select public.hotfix_571_site_enter_backdate()" >/dev/null
+chk "#571g: OUTSIDE bez zmiany stanu" \
+  "select state from geofence_states where load_id='$L571g' and geofence_id='$G571r'" OUTSIDE
+chk "#571g: liczba EXIT bez zmian" \
+  "select count(*) from load_events where load_id='$L571g' and event_type='GEOFENCE_EXIT'" "$N571x"
+chk "#571g: ENTER backdate (czas zdarzeń) na 10:22" \
+  "select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
+    where load_id='$L571g' and event_type='GEOFENCE_ENTER' order by id limit 1" "2026-10-26 10:22"
+q "drop function if exists public.hotfix_571_site_enter_backdate()" >/dev/null
+q "update geofences set active = true where project_id='$P' and name='Plac Stegra' and kind='SITE'" >/dev/null
 chk "#571: dwell tylko service_role" \
   "select has_function_privilege('authenticated', 'geofence_confirm_pending_dwell(timestamptz)', 'execute')" f
 

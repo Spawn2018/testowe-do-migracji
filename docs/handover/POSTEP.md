@@ -5589,3 +5589,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `c3258a58`: **nie daję znaku** (Spawn2018).
 - Scalanie: brak. Bez push na main. CI na odrzuconym SHA anulowane.
 - **#571 krok (F7 r2):** `hotfix_571_site_enter_backdate` — kod SG-23 z `shipment_items`/`load_sms_code`; disable `trg_load_events_immutable`; czas = pierwsza pozycja w SITE; `entered_at` zerowany przy EXIT; dwell: pierwsza po EXIT + `bulk_quiet` &gt;2 h; cron bez połykania błędów; testy 779 m / parking×3 / re-entry / backdate → EXPECTED status **314**. CI → prośba F7.
+
+## 2026-10-26 15:45 — #571 F7 r3 #574: OUTSIDE + drop fn + testy
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `f8c69c18`: **nie daję znaku** (1 punkt konieczny + uwagi). CI db FAIL status 305/9 (kolizja UUID L 71–76 z #445/#502).
+- Scalanie: brak. Bez push na main.
+- **#571 krok (F7 r3 pkt 1–4):** `geofence_states` — `state` tylko z `PENDING_IN`; `entered_at` tylko INSIDE/PENDING_OUT; OUTSIDE bez powrotu na plac; `raise notice` gdy brak SG-23; `drop function` po wywołaniu; test helper `tests/db/sql/hotfix_571_site_enter_backdate.sql`; UUID a1–a7; wyłączenie Plac Stegra w teście; OUTSIDE/idempotencja/trg O → EXPECTED status **319**. CI → prośba F7.
