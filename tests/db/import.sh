@@ -731,22 +731,24 @@ $PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='
 commit;" >/dev/null 2>&1
 chk "A6: N11 podwójny ack rozjazd → 1 historia" "$(Q "select count(*) - $EV11 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
 
-# F7 r5 N12: plik X / expected odświeżone / powrót WT do A → nie usuwa klucza pending
+# F7 r5 N12 + r6 #3: state_upsert nie nadpisuje kluczy z pending patch
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
-# plik poszedł na X → state_upsert odświeża expected_file
+# plik=X + ld w snap — co w patch → expected.co zostaje A; ld spoza patch → odświeżone
 $PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select ksh_sync_state_upsert('$P', true, now(), null, '{}'::jsonb, null,
-    jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-X','ho',null)));
+    jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld','2026-11-01','lt',null,'dd',null,'dt',null,'co','SNAP-X','ho',null)));
 commit;" >/dev/null 2>&1
+chk "A6: N12/r6 expected.co z patch nie nadpisane" "$(Q "select coalesce(expected_file->>'co','')||'|'||coalesce(expected_file->>'ld','') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")" "SNAP-A|2026-11-01"
+# powrót WT do A przy expected.co=A → reverted (klucz usunięty)
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
-chk "A6: N12 powrót A przy pliku X → pending zostaje" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 1
+chk "A6: N12 powrót A przy expected A → bez pending co" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 0
 
 # F7 r4 N7: skipped + nowy pending → scal, stary done
 # (po N12 snapshot bywa SNAP-X — przywróć A, inaczej B→A nie robi reverted_to_file)
@@ -795,5 +797,57 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
   select status||':'||rev::text from ksh_sync_outbound where id=$N8_ID;
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "done:$N8_REV2" ]; then ok=$((ok+1)); echo "  OK    A6: N8 podwójny ack → done no-op"; else fail=$((fail+1)); echo "  FAIL  A6: N8 → $out (oczekiwano done:$N8_REV2)"; fi
+
+# F7 r6 BLOKER 1: import UPLOAD (authenticated HHL) przy konflikcie pending → OK + 1 sprawa (nie 42501)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "delete from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT'" >/dev/null 2>&1 || true
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+DEC_B1=$(Q "select count(*) from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT' and status in ('NEW','ASSIGNED','SNOOZED')")
+IMP_B1=$(Q "select jsonb_agg(jsonb_build_object(
+  'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+  'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date',l.plan_load_date::text,'delivery_date',l.plan_delivery_date::text,
+  'carrier_order_no','SNAP-B','hhl_order_no',coalesce(l.hhl_order_no,''),
+  'dates_to_check',false
+)) from loads l where l.id='$SG_OUT'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select import_schedule('$P','$IMP_B1'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true);
+  reset role;
+  select carrier_order_no from loads where id='$SG_OUT';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
+if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: r6 B1 import+konflikt → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: r6 B1 → $out"; fi
+chk "A6: r6 B1 sprawa file-changed" "$(Q "select (count(*) - $DEC_B1)::text from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT' and status in ('NEW','ASSIGNED','SNOOZED')")" "1"
+
+# F7 r6 POPRAWKA 2: pending load_time + data/godzina w pliku → godzina z WT (nie z pliku)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+LD_WT=$(Q "select plan_load_date::text from loads where id='$SG_OUT'")
+# ustaw znaną godzinę WT 08:00 Warsaw
+$PSQL -c "update loads set plan_load_from = ('$LD_WT 08:00:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = ('$LD_WT 10:00:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG_OUT'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld','$LD_WT','lt','08:00','dd',null,'dt',null,'co',null,'ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set plan_load_from = ('$LD_WT 09:00:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+# plik: nowa data + godzina 14:00 — load_time w pending → nie bierz 14:00; data bez pending → z pliku
+LD_NEW=$(Q "select (plan_load_date + 1)::text from loads where id='$SG_OUT'")
+IMP_P2=$(Q "select jsonb_agg(jsonb_build_object(
+  'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+  'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date','$LD_NEW','load_time','14:00',
+  'delivery_date',l.plan_delivery_date::text,
+  'carrier_order_no',coalesce(l.carrier_order_no,''),'hhl_order_no',coalesce(l.hhl_order_no,''),
+  'dates_to_check',false
+)) from loads l where l.id='$SG_OUT'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select import_schedule('$P','$IMP_P2'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true);
+  reset role;
+  select plan_load_date::text||'|'||to_char(plan_load_from at time zone 'Europe/Warsaw','HH24:MI')
+    from loads where id='$SG_OUT';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
+if [ "$out" = "$LD_NEW|09:00" ]; then ok=$((ok+1)); echo "  OK    A6: r6 P2 data z pliku / godzina WT"; else fail=$((fail+1)); echo "  FAIL  A6: r6 P2 → $out (oczekiwano $LD_NEW|09:00)"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

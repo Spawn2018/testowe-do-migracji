@@ -536,6 +536,8 @@ revoke all on function public.ksh_sync_outbound_ack(jsonb, text, text) from publ
 grant execute on function public.ksh_sync_outbound_ack(jsonb, text, text) to service_role;
 
 -- Sprawa: plik zmienił się od odczytu (nie nadpisuj).
+-- F7 r6 BLOKER 1: bez ksh_sync_require_service — woła też import_schedule (HHL UPLOAD).
+-- Klucz dedup jak l1b_note_conflict (UWAGA: jedna sprawa na kod, nie dwie).
 create or replace function public.l1b_note_file_changed(
   p_project uuid, p_load uuid, p_code text
 ) returns uuid
@@ -544,13 +546,12 @@ security definer
 set search_path = public
 as $$
 begin
-  perform public.ksh_sync_require_service();
   if p_project is null or p_load is null or nullif(btrim(p_code), '') is null then
     return null;
   end if;
   return decision_open_from_event(
     p_project, 'TOWER_KSH_CONFLICT',
-    'l1b:file-changed:' || p_project::text || ':' || btrim(p_code),
+    'l1b:conflict:' || p_project::text || ':' || btrim(p_code) || ':hhl_order_no',
     'Plik KSH zmieniony — sprawdź',
     jsonb_build_object('code', btrim(p_code), 'reason', 'file_changed_since_read'),
     p_load, null
@@ -799,6 +800,15 @@ begin
   on conflict (project_id) do update
     set write_enabled = excluded.write_enabled, updated_at = now();
   if p_enabled is true then
+    -- F7 r6 POPRAWKA 4 / N10: loads FOR UPDATE (sort id) → potem kolejka (bez 40P01 z ack).
+    perform 1
+      from public.loads l
+     where l.id in (
+       select o.load_id from public.ksh_sync_outbound o
+        where o.project_id = v_pid and o.status = 'pending'
+     )
+     order by l.id
+       for update;
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
@@ -853,6 +863,15 @@ begin
       set import_enabled = false,
           write_enabled = false,
           updated_at = now();
+    -- F7 r6 POPRAWKA 4 / N10: loads FOR UPDATE (sort id) → potem kolejka.
+    perform 1
+      from public.loads l
+     where l.id in (
+       select o.load_id from public.ksh_sync_outbound o
+        where o.project_id = v_pid and o.status = 'pending'
+     )
+     order by l.id
+       for update;
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
@@ -949,12 +968,13 @@ declare
   v_service boolean := false;
   v_source text;
   v_hash text;
-  -- F7 r5 N9
+  -- F7 r5 N9 / r6
   v_pend jsonb;
   v_exp_out jsonb;
   v_f text;
   v_exp_val text;
   v_file_val text;
+  v_pending_wt text[] := '{}';
 begin
   perform public.assert_not_preview();
   -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
@@ -1317,29 +1337,11 @@ begin
     if v_run_quiet and p_dry_run is false and cardinality(v_crit) > 0 then
       v_crit_suppressed := v_crit_suppressed + 1;
     end if;
-    v_changed := v_changed || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'fields', to_jsonb(v_fields),
-                   'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
-                   'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
-                   'critical', cardinality(v_crit) > 0,
-                   'quiet_hours', v_quiet_fill,
-                   'quiet_hist', v_historic);
-    if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
-
-    -- F7: dry_run też liczy dates_check (zmiana istniejącego)
-    if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
-      v_dates_check_n := v_dates_check_n + 1;
-    end if;
-
+    -- F7 r5 N9 / r6: pending skip + pending_wt w changed (przed zapisem v_changed).
+    v_pend := null;
+    v_exp_out := null;
+    v_pending_wt := '{}';
     if p_dry_run is false then
-      if v_import is null then
-        insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
-        values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
-                coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
-        returning id into v_import;
-      end if;
-      -- F7 r5 N9: pole w pending patch — nie nadpisuj; plik ≠ expected_file → konflikt HHL.
-      v_pend := null;
-      v_exp_out := null;
       select o.patch, o.expected_file into v_pend, v_exp_out
         from public.ksh_sync_outbound o
        where o.load_id = r.load_id and o.status = 'pending'
@@ -1361,9 +1363,33 @@ begin
             if v_file_val is distinct from v_exp_val then
               perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
             end if;
+            v_pending_wt := array_append(v_pending_wt, v_f);
             v_fields := array_remove(v_fields, v_f);
           end if;
         end loop;
+      end if;
+    end if;
+
+    v_changed := v_changed || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'fields', to_jsonb(v_fields),
+                   'before', (select jsonb_object_agg(f, r.prev -> f) from unnest(v_fields) f),
+                   'after',  (select jsonb_object_agg(f, r.inc -> f) from unnest(v_fields) f),
+                   'critical', cardinality(v_crit) > 0,
+                   'quiet_hours', v_quiet_fill,
+                   'quiet_hist', v_historic,
+                   'pending_wt', to_jsonb(v_pending_wt));
+    if cardinality(v_crit) > 0 then v_critical := v_critical || jsonb_build_object('code', r.code, 'fields', to_jsonb(v_crit)); end if;
+
+    -- F7: dry_run też liczy dates_check (zmiana istniejącego)
+    if coalesce((r.inc->>'dates_to_check')::boolean, false) is true then
+      v_dates_check_n := v_dates_check_n + 1;
+    end if;
+
+    if p_dry_run is false then
+      if v_import is null then
+        insert into schedule_imports (project_id, version, source, file_path, file_hash, file_name, column_map, stats, imported_by)
+        values (p_project, v_version, v_source, p_file->>'path', p_file->>'hash', p_file->>'name',
+                coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
+        returning id into v_import;
       end if;
       update shipment_items set
         item_type = r.inc->>'item_type', cargo_class = coalesce(r.inc->>'cargo_class', 'DIMENSIONED'), length_m = (r.inc->>'length_m')::numeric, width_m = (r.inc->>'width_m')::numeric,
@@ -1382,12 +1408,21 @@ begin
           v_prev_quiet := current_setting('tower.bulk_quiet', true);
           perform set_config('tower.bulk_quiet', 'on', true);
         end if;
-        -- status dat ustawia trg_plan_dates_before (POTWIERDZONA = z pliku); nie w UPDATE (guard)
-        v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
-        v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
+        -- F7 r6 POPRAWKA 2: data/godzina tylko z v_fields (pending usunięte wyżej).
+        -- load_date ∉ v_fields → data WT; load_time ∉ v_fields → komórka jak pusta (19A).
+        if 'load_date' = any (v_fields) then
+          v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
+        else
+          v_new_load_date := r.plan_load_date;
+        end if;
+        if 'delivery_date' = any (v_fields) then
+          v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
+        else
+          v_new_del_date := r.plan_delivery_date;
+        end if;
         -- #384 F7 r2/r3: pusta komórka godziny = bez zmiany (nie null).
         -- Zmiana daty bez godziny → wspólna delta (v_new_date - plan_*_date) dla od i do; strażnik do > od.
-        if nullif(btrim(r.inc->>'load_time'), '') is not null then
+        if 'load_time' = any (v_fields) and nullif(btrim(r.inc->>'load_time'), '') is not null then
           v_new_load_from := public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw');
           v_new_load_to := case
             when v_new_load_from is null then null
@@ -1402,7 +1437,8 @@ begin
           if v_new_load_to is not null and v_new_load_from is not null and v_new_load_to <= v_new_load_from then
             v_new_load_to := null;
           end if;
-        elsif v_new_load_date is distinct from r.plan_load_date
+        elsif 'load_date' = any (v_fields)
+              and v_new_load_date is distinct from r.plan_load_date
               and r.plan_load_date is not null and v_new_load_date is not null then
           v_new_load_from := case when r.plan_load_from is not null then
             r.plan_load_from + make_interval(days => (v_new_load_date - r.plan_load_date))
@@ -1417,7 +1453,7 @@ begin
           v_new_load_from := r.plan_load_from;
           v_new_load_to := r.plan_load_to;
         end if;
-        if nullif(btrim(r.inc->>'delivery_time'), '') is not null then
+        if 'delivery_time' = any (v_fields) and nullif(btrim(r.inc->>'delivery_time'), '') is not null then
           v_new_del_to := public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm');
           v_new_del_from := case
             when v_new_del_to is null then null
@@ -1432,7 +1468,8 @@ begin
           if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
             v_new_del_from := null;
           end if;
-        elsif v_new_del_date is distinct from r.plan_delivery_date
+        elsif 'delivery_date' = any (v_fields)
+              and v_new_del_date is distinct from r.plan_delivery_date
               and r.plan_delivery_date is not null and v_new_del_date is not null then
           v_new_del_to := case when r.plan_delivery_to is not null then
             r.plan_delivery_to + make_interval(days => (v_new_del_date - r.plan_delivery_date))
@@ -1714,11 +1751,23 @@ begin
     end,
     updated_at = now();
 
-  -- N12: pending expected_file ← aktualny snapshot kodu (nie gub zmiany gdy plik=X, expected=A).
+  -- N12 + F7 r6 POPRAWKA 3: odśwież expected_file tylko kluczami spoza pending patch
+  -- (no_etag: nie nadpisuj expected klucza z patch wartością klienta z migawki).
   if p_snapshot is not null then
     update public.ksh_sync_outbound o
        set expected_file = coalesce(o.expected_file, '{}'::jsonb)
-         || coalesce(p_snapshot -> o.shipment_code, '{}'::jsonb)
+         || coalesce((
+              select jsonb_object_agg(x.key, x.value)
+                from jsonb_each(coalesce(p_snapshot -> o.shipment_code, '{}'::jsonb)) as x(key, value)
+               where not (
+                 (x.key = 'ld' and coalesce(o.patch, '{}'::jsonb) ? 'load_date')
+                 or (x.key = 'lt' and coalesce(o.patch, '{}'::jsonb) ? 'load_time')
+                 or (x.key = 'dd' and coalesce(o.patch, '{}'::jsonb) ? 'delivery_date')
+                 or (x.key = 'dt' and coalesce(o.patch, '{}'::jsonb) ? 'delivery_time')
+                 or (x.key = 'co' and coalesce(o.patch, '{}'::jsonb) ? 'carrier_order_no')
+                 or (x.key = 'ho' and coalesce(o.patch, '{}'::jsonb) ? 'hhl_order_no')
+               )
+            ), '{}'::jsonb)
      where o.project_id = p_project
        and o.status = 'pending'
        and o.expected_file is not null
@@ -1733,6 +1782,6 @@ grant execute on function public.ksh_sync_state_upsert(uuid, boolean, timestampt
   to service_role;
 
 comment on function public.ksh_sync_state_upsert(uuid, boolean, timestamptz, timestamptz, jsonb, text, jsonb) is
-  'A6: Edge wynik sync; F7 r5 N12 — odświeża expected_file pending ze snapshot.';
+  'A6: Edge wynik sync; F7 r5 N12 + r6 — expected_file tylko klucze spoza patch.';
 commit;
 
