@@ -1034,8 +1034,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
    - próba z ROLLBACK na produkcji w oknie wdrożenia (jak R-1 w P7);
    - linia „zsynchronizowano …” w Harmonogramie; zmiana w pliku → „było → jest” w dzwonku.
 
-### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — W TOKU (`pakiet/569-a6-conflict-code`)
-Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza, w którym wykryto rozjazd (nie z pierwszego kodu). Unit: 2 kody, konflikt na drugim → kod drugiego + pole z łatki. Test db (import+Edge → 1 sprawa) — w tym PR albo zaraz po.
+### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — W TOKU (`pakiet/569-a6-conflict-code`, PR #570)
+Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza, w którym wykryto rozjazd (nie z pierwszego kodu). Unit: 2 kody, konflikt na drugim → kod drugiego + pole z łatki. **Test db:** import (konflikt na SG-M2) + Edge `l1b_note_file_changed(SG-M2)` → 1 sprawa; primary dałby 2. (EXPECTED import **234**).
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at`)
 Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
@@ -1738,3 +1738,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 10:50 | #560 F7 r9 kod (patchKeys + asercja CANCELLED SG-01); EXPECTED 225; CI→F7 | pętla |
 | 26.10.2026 11:00 | #560 CI `833d9415` unit/visual/db ✔; prośba F7; EXPECTED import 225 | pętla |
 | 26.10.2026 11:41 | #560 SCALONE `0feb8a94` (F7 09:31Z); #569+#567 wpisane §4/§5/§8; start #569 conflict code | pętla |
+| 26.10.2026 11:22 | #569 test db multi-kod (import+Edge → 1 sprawa); EXPECTED import 234; PR #570 | pętla |

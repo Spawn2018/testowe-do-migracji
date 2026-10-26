@@ -1090,4 +1090,69 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
 if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: r8 B1 service+quiet → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: r8 B1 service+quiet → $out"; fi
 chk "A6: r8 B1 service+quiet sprawa :pending:" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "1"
 
+# #569: 2 kody na jednym loadzie — konflikt w pliku na drugim → 1 sprawa (import + Edge)
+echo; echo "[A6 #569] konflikt multi-kod — 1 sprawa"
+val "A6: #569 write on" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "delete from decision_events where decision_id in (select id from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT')" >/dev/null
+$PSQL -c "delete from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT'" >/dev/null
+# drugi kod na tym samym transporcie (SG-01 zostaje primary / load_sms_code)
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty, total_weight_t, item_type, cargo_class, schedule_row)
+  select project_id, load_id, 'SG-M2', length_m, width_m, height_m, qty, coalesce(total_weight_t,1), coalesce(item_type,'Belka'), cargo_class,
+    coalesce(schedule_row,'{}'::jsonb) || jsonb_build_object('carrier_order_no','SNAP-A')
+  from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01'
+  on conflict (project_id, shipment_code) do update set
+    load_id = excluded.load_id,
+    schedule_row = coalesce(shipment_items.schedule_row,'{}'::jsonb) || jsonb_build_object('carrier_order_no','SNAP-A')" >/dev/null
+$PSQL -c "update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb) || jsonb_build_object('carrier_order_no','SNAP-A') where load_id='$SG_OUT' and shipment_code in ('SG-01','SG-M2')" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A', status='READY' where id='$SG_OUT'" >/dev/null
+CODE_PRIM=$(Q "select public.load_sms_code('$SG_OUT'::uuid)")
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object(
+  '$CODE_PRIM', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null),
+  'SG-M2', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)
+) where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+chk "A6: #569 setup pending + 2 kody" "$(Q "select count(*)||':'||(select count(*) from shipment_items where load_id='$SG_OUT' and shipment_code in ('SG-01','SG-M2')) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and patch ? 'carrier_order_no'")" "1:2"
+REV569=$(Q "select rev from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+# plik: primary bez zmian (SNAP-A); drugi kod zmieniony (SNAP-B) → sprawa z kodem SG-M2
+IMP569=$(Q "select jsonb_agg(x.row order by x.ord) from (
+  select 1 as ord, jsonb_build_object(
+    'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+    'unit_weight_t',1,'qty',1,'total_weight_t',1,
+    'load_date',l.plan_load_date::text,'delivery_date',l.plan_delivery_date::text,
+    'carrier_order_no','SNAP-A','hhl_order_no',coalesce(l.hhl_order_no,''),
+    'dates_to_check',false
+  ) as row from loads l where l.id='$SG_OUT'
+  union all
+  select 2, jsonb_build_object(
+    'code','SG-M2','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+    'unit_weight_t',1,'qty',1,'total_weight_t',1,
+    'load_date',l.plan_load_date::text,'delivery_date',l.plan_delivery_date::text,
+    'carrier_order_no','SNAP-B','hhl_order_no',coalesce(l.hhl_order_no,''),
+    'dates_to_check',false
+  ) from loads l where l.id='$SG_OUT'
+) x")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select import_schedule('$P','$IMP569'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,false);
+  reset role;
+  select carrier_order_no from loads where id='$SG_OUT';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
+if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: #569 import → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: #569 import → $out"; fi
+chk "A6: #569 import sprawa kod SG-M2" "$(Q "select count(*)||':'||coalesce(max(detail->>'code'),'') from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:SG-M2:carrier_order_no:pending:%'")" "1:SG-M2"
+chk "A6: #569 import 1 sprawa (nie primary)" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "1"
+# Edge: ten sam konflikt (pickOutboundConflictNote → SG-M2) → dedup, nadal 1
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (l1b_note_file_changed('$P','$SG_OUT','SG-M2','carrier_order_no',$REV569) is not null)::text;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: #569 Edge note SG-M2"; else fail=$((fail+1)); echo "  FAIL  A6: #569 Edge note → $out"; fi
+chk "A6: #569 import+Edge → 1 sprawa" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "1"
+# stary błąd (primary): osobny klucz — dowód, że Edge musi brać kod z wiersza konfliktu
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (l1b_note_file_changed('$P','$SG_OUT','$CODE_PRIM','carrier_order_no',$REV569) is not null)::text;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: #569 primary ≠ konflikt (osobny klucz)"; else fail=$((fail+1)); echo "  FAIL  A6: #569 primary note → $out"; fi
+chk "A6: #569 primary dałby 2. sprawę" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "2"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

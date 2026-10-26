@@ -5545,3 +5545,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#560** — „F7: gotowe do scalenia” (Spawn2018, 09:31Z, po `a8bbda41`), CI unit/db/visual ✔, bez forka → `gh pr merge --merge` `0feb8a94` (09:41Z). Bez push na main.
 - Po F7 przed `write_enabled`: **#569** (kod+pole z wiersza konfliktu), `write_test_ok_at`, **#567 23B** (lista zmian; import wyłączony).
 - Ten commit (`pakiet/569-a6-conflict-code`): `pickOutboundConflictNote` + unit (#569); PLAN §4/§5 W53–W60 / §6 Po 1.0 / §8; POSTEP. Test db 1 sprawa — w tym PR albo następnym kroku.
+
+## 2026-10-26 11:22 — #569 test db multi-kod (PR #570)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” na #570 (CI `4cb34e4b` unit/visual/db ✔ — czekam F7 po tym commicie). Bez push na main.
+- **#569 krok:** `tests/db/import.sh` — transport SG-01+SG-M2, konflikt pliku na SG-M2 → sprawa z kodem SG-M2; Edge `l1b_note_file_changed(SG-M2)` → nadal 1; primary dałby 2. EXPECTED import **234**. PLAN §4/§8.
