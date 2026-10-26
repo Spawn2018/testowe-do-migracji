@@ -5577,3 +5577,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. #571 bez `dla-cursora` — z F7 #570.
 - Scalanie: **#570** — „F7: gotowe do scalenia” (Spawn2018, 12:19Z, po `99817a8f`), CI unit/visual/db ✔ → merge `b3fedf2e`. Bez push na main. F7 follow-upy #569 (normCell / ostrzeżenie pominiętego kodu / migawka §8) → przed `write_enabled`.
 - Bieżąca: **#571** `pakiet/571-geofence-dwell` — migracja **0309**: `geofence_confirm_pending_dwell` + cron `*/2`; `process_position` entered_at/dwell; hotfix SG-23; testy status +11 → EXPECTED **302**. CI → prośba F7.
+
+## 2026-10-26 14:55 — #571 F7 #574: SITE od 1. pozycji
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie (wpisane). PR #574: brak „gotowe” po `edc789fd` — F7 korekta (Spawn2018).
+- Scalanie: brak (CI db FAIL 296/6 na starym dwell SITE; visual ✔). Bez push na main.
+- **#571 krok (F7):** SITE → ENTER/`AT_SITE` od 1. pozycji w promieniu; dwell cron pomija SITE; `stale_point` w `p_raw`; SG-23 backdate 10:22 UTC bez powiadomień; testy +14 → EXPECTED status **305**. CI → prośba F7.

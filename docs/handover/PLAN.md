@@ -1038,10 +1038,12 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza konfliktu; preferuj pole z łatki; pomijaj kod bez wiersza w pliku gdy jest inny; norm `trim`/`''→null`. EXPECTED import **234**.
 - **Po F7 (przed `write_enabled`, z #567 lub małym PR):** (1) test: kod nieobecny w pliku + obecny wiersz **bez** rozjazdu → brak sprawy; ostrzeżenie gdy `xlsxPatch` cicho pomija wiersz; (2) `normCell` w Edge = tylko spacje jak `btrim` (nie wszystkie białe); (3) znane ograniczenie migawki kodu głównego — też §8.
 
-### #571 · PILNE: wjazd do strefy potwierdzany czasem (dwell), nie tylko 2. pozycją — W TOKU (`pakiet/571-geofence-dwell`, migracja **0309**; po #569; przed `write_test_ok_at` / #567 23B)
-Źródło: #571 (Spawn2018; F7 #570). SG-23 na placu Boden (`PENDING_IN`, 1 fix) — emtrack przy postoju ~4 h.
-- **Baza (0309):** `geofence_confirm_pending_dwell` (cron `*/2`, service_role): `PENDING_IN` + ostatnia pozycja w strefie (bez `stale_point`) + ≥ `dwell_seconds` → `GEOFENCE_ENTER` z czasem pierwszej (`entered_at`); `process_position`: `entered_at` przy starcie PENDING_IN + dwell przy nowej pozycji; `debounce_fixes=2` bez zmian (szybsza ścieżka). Korekta SG-23: ENTER/`AT_SITE` 26.10 10:22 UTC gdy nadal bez wjazdu; powiadomienia gdy &lt; 2 h (`bulk_quiet` inaczej). Promienia nie zmieniać.
-- **Testy status:** +11 (1 fix→ENTER po 10 min; poza przed dwell; stale; grant). EXPECTED status **302**.
+### #571 · PILNE: SITE od 1. pozycji; dwell dla pozostałych stref — W TOKU (`pakiet/571-geofence-dwell` PR #574, migracja **0309**; po #569; przed `write_test_ok_at` / #567 23B)
+Źródło: #571 (Spawn2018; F7 #570 + F7 #574 decyzja właściciela 26.10 11:48). SG-23 na placu Boden — emtrack przy postoju ~4 h.
+- **SITE (F7):** `GEOFENCE_ENTER` / `AT_SITE` przy **pierwszej** świeżej pozycji w `radius_m` (nie histereza); bez `PENDING_IN`/dwell. Parking 1019 m przy r=1010 — bez wjazdu.
+- **Pozostałe strefy:** `geofence_confirm_pending_dwell` (cron `*/2`, bez SITE) + debounce; `stale_point` w `p_raw` pomija strefy.
+- **SG-23:** już `AT_SITE` z ~11:21 → **backdate** ENTER/`STATUS_AUTO`/`entered_at` na **10:22 UTC**; bez ponownych powiadomień. Inne `PENDING_IN` SITE → ENTER z czasem pierwszej (&lt; 2 h → notify).
+- **Testy status:** +14. EXPECTED status **305**.
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at` / #571)
 Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
@@ -1750,3 +1752,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 12:45 | #569 F7 #570: pomijaj kod bez wiersza w pliku gdy jest inny; norm trim/''→null; #571 wpisane (pilne, po #569); CI→F7 | pętla |
 | 26.10.2026 13:25 | #570 SCALONE `b3fedf2e` (F7 12:19Z); #569 F7 follow-upy przed write_enabled; start #571 dwell **0309** | pętla |
 | 26.10.2026 13:25 | Znane ograniczenie #569: `expected_file` = migawka tylko kodu głównego (0308); przed `write_enabled` — migawka/`prev` per kod (#567) | pętla |
+| 26.10.2026 14:55 | #571 F7 #574: SITE od 1. pozycji (decyzja 11:48); dwell bez SITE; SG-23 backdate 10:22; status **305** | pętla |
