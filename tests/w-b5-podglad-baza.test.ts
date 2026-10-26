@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { setAuthProfile, type AuthProfile } from '../src/auth/profile';
+import { AUTH_RELOAD_MAX_MS, requestAuthReloadTracked, setAuthProfile, type AuthProfile } from '../src/auth/profile';
 import { canSwitchView, dbPreviewOn, isPreviewReadOnly, switchRoleOf } from '../src/lib/prodFacade';
 import { clearStalePreview, endPreviewBeforeLogout, previewErrorPl, previewRoOf, previewSwitchBusy, PREVIEW_BACK_FAIL, PREVIEW_RELOAD_FAIL, PREVIEW_SLOW, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
 import { registerRemoteSink, writeThrough } from '../src/data/registry';
@@ -129,12 +129,24 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     expect(reload2).toHaveBeenCalledTimes(2);
   });
 
-  it('F7 #383 r2: przeładowanie po limicie czasu — bez cofania startu w bazie, tylko komunikat', async () => {
+  it('F7 #383 r2/r3: przeładowanie po limicie czasu — komunikat, „w toku” do faktycznego końca, potem zwykłe sprawdzenie', async () => {
     const call = mk();
-    const msg = await switchViewRole('KSH', { prod: true, call, reload: vi.fn(async () => 'timeout' as const), dbPreview: false, previewAfter: () => false });
-    expect(msg).toBe(PREVIEW_SLOW);
+    let finish: () => void = () => {};
+    const waitReload = () => new Promise<void>((r) => { finish = r; });
+    const p = switchViewRole('KSH', { prod: true, call, reload: vi.fn(async () => 'timeout' as const), waitReload, dbPreview: false, previewAfter: () => true });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(useTowerStore.getState().toasts.some((t) => t.message === PREVIEW_SLOW)).toBe(true);
+    expect(previewSwitchBusy()).toBe(true);
+    finish();
+    expect(await p).toBeNull();
+    expect(previewSwitchBusy()).toBe(false);
     expect(call).toHaveBeenCalledTimes(1);
     expect(call).toHaveBeenCalledWith('admin_preview_start', { p_side: 'KSH' });
+    // spóźnione przeładowanie skończyło się bez Podglądu w profilu → koniec Podglądu w bazie
+    const call2 = mk();
+    const msg2 = await switchViewRole('SCX', { prod: true, call: call2, reload: vi.fn(async () => 'timeout' as const), waitReload: async () => {}, dbPreview: false, previewAfter: () => false });
+    expect(msg2).toBe(PREVIEW_RELOAD_FAIL);
+    expect(call2).toHaveBeenLastCalledWith('admin_preview_stop');
     expect(readSrc('src/components/shell/AccountMenu.tsx')).toMatch(/Promise\.race\(\[endPreviewBeforeLogout\(\), new Promise<void>\(\(r\) => setTimeout\(r, 3000\)\)\]\)/);
     for (const f of ['src/components/shell/Topbar.tsx', 'src/components/shell/AccountMenu.tsx', 'src/auth/PreviewBanner.tsx']) {
       expect(readSrc(f)).toMatch(/aria-busy=\{switching \|\| undefined\}/);
@@ -151,6 +163,41 @@ describe('B5 — przełączanie funkcjami bazy', () => {
     const boom = vi.fn(async () => { throw new Error('Failed to fetch'); });
     await expect(endPreviewBeforeLogout({ call: boom, dbPreview: true })).resolves.toBeUndefined();
     expect(readSrc('src/components/shell/AccountMenu.tsx')).toMatch(/endPreviewBeforeLogout\(\)[^\n]*\]\)\s*\.then\(\(\) => import\('\.\.\/\.\.\/auth\/client'\)\)/);
+  });
+
+  it('F7 #383 r3: requestAuthReloadTracked — done kasuje limit; bez słuchacza „finished” od razu', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('window', new EventTarget());
+    try {
+      const lst = (e: Event) => { const d = (e as CustomEvent<{ done: () => void; heard?: boolean }>).detail; d.heard = true; setTimeout(() => d.done(), 1000); };
+      window.addEventListener('wt-auth-reload', lst);
+      const a = requestAuthReloadTracked();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(await a.first).toBe('done');
+      await a.finished;
+      expect(vi.getTimerCount()).toBe(0);
+      window.removeEventListener('wt-auth-reload', lst);
+      const late = (e: Event) => { const d = (e as CustomEvent<{ done: () => void; heard?: boolean }>).detail; d.heard = true; setTimeout(() => d.done(), AUTH_RELOAD_MAX_MS + 5000); };
+      window.addEventListener('wt-auth-reload', late);
+      const b = requestAuthReloadTracked();
+      await vi.advanceTimersByTimeAsync(AUTH_RELOAD_MAX_MS);
+      expect(await b.first).toBe('timeout');
+      let fin = false; void b.finished.then(() => { fin = true; });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(fin).toBe(false);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(fin).toBe(true);
+      window.removeEventListener('wt-auth-reload', late);
+      const c = requestAuthReloadTracked();
+      let cf = false; void c.finished.then(() => { cf = true; });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(cf).toBe(true); // nikt nie słucha (demo/testy) — bez czekania
+      await vi.advanceTimersByTimeAsync(AUTH_RELOAD_MAX_MS);
+      expect(await c.first).toBe('timeout');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
   });
 
   it('demo bez logowania: przełącznik zmienia tylko widok', async () => {

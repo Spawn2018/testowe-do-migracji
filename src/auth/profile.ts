@@ -43,13 +43,28 @@ export const AUTH_RELOAD_EVENT = 'wt-auth-reload';
  * (bez słuchacza: demo, testy — albo bardzo wolna sieć). Nigdy nie odrzuca. */
 export const AUTH_RELOAD_MAX_MS = 20_000;
 export type AuthReloadResult = 'done' | 'timeout';
-export type AuthReloadDetail = { done: () => void };
+export type AuthReloadDetail = { done: () => void; heard?: boolean };
 export function requestAuthReload(): Promise<AuthReloadResult> {
-  if (typeof window === 'undefined') return Promise.resolve('done');
-  return new Promise<AuthReloadResult>((resolve) => {
+  return requestAuthReloadTracked().first;
+}
+
+/** F7 #383 r3: `first` — koniec albo limit czasu; `finished` — faktyczny koniec przeładowania (bez limitu,
+ * spełnia się od razu, gdy nikt nie słucha zdarzenia — demo, testy). */
+export function requestAuthReloadTracked(): { first: Promise<AuthReloadResult>; finished: Promise<void> } {
+  if (typeof window === 'undefined') return { first: Promise.resolve('done'), finished: Promise.resolve() };
+  let markFinished: () => void = () => {};
+  const finished = new Promise<void>((r) => { markFinished = r; });
+  const first = new Promise<AuthReloadResult>((resolve) => {
     let fin = false;
     const timer = setTimeout(() => { if (!fin) { fin = true; resolve('timeout'); } }, AUTH_RELOAD_MAX_MS);
-    const done = () => { if (!fin) { fin = true; clearTimeout(timer); resolve('done'); } };
-    window.dispatchEvent(new CustomEvent<AuthReloadDetail>(AUTH_RELOAD_EVENT, { detail: { done } }));
+    const done = () => {
+      markFinished();
+      if (!fin) { fin = true; clearTimeout(timer); resolve('done'); }
+    };
+    const detail: AuthReloadDetail = { done };
+    window.dispatchEvent(new CustomEvent<AuthReloadDetail>(AUTH_RELOAD_EVENT, { detail }));
+    /* słuchacz (AuthGate) oznacza `heard` synchronicznie; bez słuchacza nie ma na co czekać */
+    if (!detail.heard) markFinished();
   });
+  return { first, finished };
 }

@@ -532,7 +532,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onReload = (e: Event) => {
-      const done = (e as CustomEvent<AuthReloadDetail | undefined>).detail?.done;
+      const detail = (e as CustomEvent<AuthReloadDetail | undefined>).detail;
+      if (detail) detail.heard = true;
+      const done = detail?.done;
       void getSupabase().then(async (sb) => {
         const { data } = await sb.auth.getSession();
         await loadRef.current(data.session);

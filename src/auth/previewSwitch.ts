@@ -8,7 +8,7 @@
  * Demo (bez logowania): przełącznik zmienia tylko widok, jak dotąd.
  */
 import { useSyncExternalStore } from 'react';
-import { getAuthProfile, requestAuthReload, type AuthReloadResult } from './profile';
+import { getAuthProfile, requestAuthReloadTracked, type AuthReloadResult } from './profile';
 import { dbPreviewOn, PROD_BUILD } from '../lib/prodFacade';
 import { useTowerStore } from '../store/useTowerStore';
 
@@ -113,6 +113,8 @@ export async function switchViewRole(
     prod?: boolean;
     call?: Rpc;
     reload?: () => void | Promise<AuthReloadResult | void>;
+    /** po limicie czasu — czekanie na faktyczny koniec przeładowania (testy) */
+    waitReload?: () => Promise<void>;
     dbPreview?: boolean;
     /** stan Podglądu po przeładowaniu (domyślnie z profilu) */
     previewAfter?: () => boolean;
@@ -144,12 +146,14 @@ export async function switchViewRole(
       store.pushToast(msg, 'HIGH');
       return msg;
     }
-    const reload = deps?.reload ?? requestAuthReload;
+    let finished: Promise<void> = Promise.resolve();
+    const reload = deps?.reload ?? (() => { const r = requestAuthReloadTracked(); finished = r.finished; return r.first; });
     const res = await reload();
     if (res === 'timeout') {
-      /* przeładowanie wciąż trwa — nie cofamy startu w bazie (ekran przełączy się po dojściu danych) */
+      /* F7 #383 r3: przeładowanie wciąż trwa — nie cofamy startu w bazie; komunikat, „w toku” zostaje do faktycznego
+         końca, potem to samo sprawdzenie zgodności ekranu z bazą co zwykle */
       store.pushToast(PREVIEW_SLOW, 'MEDIUM');
-      return PREVIEW_SLOW;
+      await (deps?.waitReload ?? (() => finished))();
     }
     const after = (deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))();
     const want = next !== 'HHL';
