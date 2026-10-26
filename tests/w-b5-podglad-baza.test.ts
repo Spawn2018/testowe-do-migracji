@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { AUTH_RELOAD_MAX_MS, requestAuthReloadTracked, setAuthProfile, type AuthProfile } from '../src/auth/profile';
+import { AUTH_RELOAD_HARD_MS, AUTH_RELOAD_MAX_MS, requestAuthReloadTracked, setAuthProfile, type AuthProfile } from '../src/auth/profile';
 import { canSwitchView, dbPreviewOn, isPreviewReadOnly, switchRoleOf } from '../src/lib/prodFacade';
 import { clearStalePreview, endPreviewBeforeLogout, previewErrorPl, previewRoOf, previewSwitchBusy, PREVIEW_BACK_FAIL, PREVIEW_RELOAD_FAIL, PREVIEW_SLOW, readPreviewRo, switchViewRole } from '../src/auth/previewSwitch';
 import { registerRemoteSink, writeThrough } from '../src/data/registry';
@@ -194,6 +194,16 @@ describe('B5 — przełączanie funkcjami bazy', () => {
       expect(cf).toBe(true); // nikt nie słucha (demo/testy) — bez czekania
       await vi.advanceTimersByTimeAsync(AUTH_RELOAD_MAX_MS);
       expect(await c.first).toBe('timeout');
+      // słuchacz, który nigdy nie woła done — „finished” najpóźniej po twardym limicie
+      const never = (e: Event) => { (e as CustomEvent<{ heard?: boolean }>).detail.heard = true; };
+      window.addEventListener('wt-auth-reload', never);
+      const d = requestAuthReloadTracked();
+      let df = false; void d.finished.then(() => { df = true; });
+      await vi.advanceTimersByTimeAsync(AUTH_RELOAD_HARD_MS - 1);
+      expect(df).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(df).toBe(true);
+      window.removeEventListener('wt-auth-reload', never);
     } finally {
       vi.unstubAllGlobals();
       vi.useRealTimers();

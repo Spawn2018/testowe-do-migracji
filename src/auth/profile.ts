@@ -42,6 +42,8 @@ export const AUTH_RELOAD_EVENT = 'wt-auth-reload';
  * przeładowań): `'done'` — przeładowanie skończone, `'timeout'` — brak końca w `AUTH_RELOAD_MAX_MS`
  * (bez słuchacza: demo, testy — albo bardzo wolna sieć). Nigdy nie odrzuca. */
 export const AUTH_RELOAD_MAX_MS = 20_000;
+/** F7 #383 r4: górny limit czekania na faktyczny koniec (zawieszone zapytanie nie blokuje przełącznika na zawsze). */
+export const AUTH_RELOAD_HARD_MS = 90_000;
 export type AuthReloadResult = 'done' | 'timeout';
 export type AuthReloadDetail = { done: () => void; heard?: boolean };
 export function requestAuthReload(): Promise<AuthReloadResult> {
@@ -53,7 +55,10 @@ export function requestAuthReload(): Promise<AuthReloadResult> {
 export function requestAuthReloadTracked(): { first: Promise<AuthReloadResult>; finished: Promise<void> } {
   if (typeof window === 'undefined') return { first: Promise.resolve('done'), finished: Promise.resolve() };
   let markFinished: () => void = () => {};
-  const finished = new Promise<void>((r) => { markFinished = r; });
+  const finished = new Promise<void>((r) => {
+    const hard = setTimeout(r, AUTH_RELOAD_HARD_MS);
+    markFinished = () => { clearTimeout(hard); r(); };
+  });
   const first = new Promise<AuthReloadResult>((resolve) => {
     let fin = false;
     const timer = setTimeout(() => { if (!fin) { fin = true; resolve('timeout'); } }, AUTH_RELOAD_MAX_MS);

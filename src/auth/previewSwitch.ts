@@ -149,12 +149,15 @@ export async function switchViewRole(
     let finished: Promise<void> = Promise.resolve();
     const reload = deps?.reload ?? (() => { const r = requestAuthReloadTracked(); finished = r.finished; return r.first; });
     const res = await reload();
+    const waitEnd = deps?.waitReload ?? (() => finished);
     if (res === 'timeout') {
       /* F7 #383 r3: przeładowanie wciąż trwa — nie cofamy startu w bazie; komunikat, „w toku” zostaje do faktycznego
          końca, potem to samo sprawdzenie zgodności ekranu z bazą co zwykle */
       store.pushToast(PREVIEW_SLOW, 'MEDIUM');
-      await (deps?.waitReload ?? (() => finished))();
+      await waitEnd();
     }
+    /* F7 #383 r4: ponowne wczytanie też czeka na faktyczny koniec po limicie czasu */
+    const reloadFull = async () => { if ((await reload()) === 'timeout') await waitEnd(); };
     const after = (deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))();
     const want = next !== 'HHL';
     if (after !== want) {
@@ -162,12 +165,12 @@ export async function switchViewRole(
         /* baza w Podglądzie, ekran nie — kończymy Podgląd w bazie (zapisy nie dostaną 42501 bez paska „Wróć”)
            i jeszcze raz wczytujemy profil, żeby ekran zgadzał się z bazą */
         try { await call('admin_preview_stop'); } catch { /* kolejne logowanie wyczyści (clearStalePreview) */ }
-        await reload();
+        await reloadFull();
         store.pushToast(PREVIEW_RELOAD_FAIL, 'HIGH');
         return PREVIEW_RELOAD_FAIL;
       }
       /* baza wróciła do HHL, ekran nie — jedna ponowna próba wczytania profilu */
-      await reload();
+      await reloadFull();
       if ((deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))() === false) { focusAfterSwitch(); return null; }
       store.pushToast(PREVIEW_BACK_FAIL, 'HIGH');
       return PREVIEW_BACK_FAIL;
