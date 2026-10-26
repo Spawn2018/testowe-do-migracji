@@ -5607,3 +5607,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe w planie. Brak „F7: gotowe” po `dee4226e`.
 - Scalanie: brak (#575 F7 niegotowe + LFS — rerun visual failed; #576 bez F7). Bez push na main.
 - **#571 krok:** CI `db` na `dee4226e` — status 318 OK / 2 FAIL (#571f ENTER+STATUS_AUTO pusto). Przyczyna: fixture `source='SYSTEM'` spoza enum `position_source` → cały INSERT padał (entered_at i tak z hotfix). Fix: `source=null` jak w i2. EXPECTED status **320**. CI → prośba F7.
+
+## 2026-10-26 19:05 — #563 PRZED #577; start paliwo t44
+
+- Skrzynka: #550 WSTRZYMANE; komentarz #577: kolejka **#563 → #577 (F7 1–8) → #574-nast → BN0**. #577 CI ✔ `bf6dd230` — bez F7 do poprawek po #563.
+- Scalanie: brak (bez push na main).
+- **#563 krok:** `pakiet/563-paliwo-t44` migracja **0310** — `tier_bound`/`avg_days_pln`; lookup MAX; korekty w daily/pub avg; PLN 7 dni; nowa wersja params od 26.10; D-1535 override bez zmian. Następny: testy baf + przeliczenie migawek ≥26.10.

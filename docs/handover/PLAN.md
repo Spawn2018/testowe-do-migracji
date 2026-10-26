@@ -1046,11 +1046,21 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 - **Testy status:** +29 (UUID a1–a7; OUTSIDE; idempotencja; EXIT&lt;10 min bez DELIVERED; PORT_IN ON; replica fixture; `source` STATUS_AUTO = null nie `SYSTEM` — enum `position_source`; trg O). EXPECTED status **320**.
 - **Uwagi F7 (nie blokują, §8):** drganie GPS na krawędzi SITE bez debounce; GEOFENCE_DWELL po porcie z dwell. Następczy PR po #574: cron `greatest(EXIT, entered_at)`; dwell_min w payload.
 
-### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at` / #571)
-Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
+### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — W TOKU (`pakiet/563-paliwo-t44`, migracja **0310**)
+Źródło: #563 + komentarz PR #577 15:59Z: **#563 PRZED #577** (tydzień 44 liczy się źle: 23,03/7,14/×1,13 zamiast 23,00/7,15/×1,14).
+1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg`; avg do 0,01 przed lookup.
+2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian).
+3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Migawki załadunek ≥ 26.10 — przeliczyć (następny commit). Teksty UI — koordynator.
+4. Kolejka: **#563** → **#577** (F7 pkt 1–8 w całości) → #574-nast (`dwell_min`) → BN0 (#572).
+
+### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; F7 po #563)
+Źródło: #567. CI unit/visual/db ✔ na `bf6dd230` (fix: `imported_at`, search_path, store jak upsert). **F7 nie dam** do pkt 1–8 z komentarza F7 na #577 (podgląd niefatalny/dry_run, `ksh_sync_require_service`, wt z WT, manual tylko user, kind added/missing, pending_write, testy z `import_schedule` dry_run). Po #563 — wróć i domknij w tym PR.
+
+### #574-nast · dwell_min w payload — DO ZROBIENIA (po #577)
+### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
 
 ### C4–C13 bez zmian zakresu
-Zostają jak w planie, po A6 / #569 / #567 23B.
+Zostają jak w planie, po A6 / #569 / #567 23B / #563.
 - C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
@@ -1758,3 +1768,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 15:45 | #571 F7 r3 #574: OUTSIDE bez powrotu; drop fn; notice; testy UUID a1–a7 + idempotencja → status **319** | pętla |
 | 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
 | 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
+| 26.10.2026 16:55 | #571/#576/#575 SCALONE; start #567 23B (#577); CI FAIL→fix `imported_at`/search_path | pętla |
+| 26.10.2026 19:05 | Kolejka: **#563 PRZED #577**; start `pakiet/563-paliwo-t44` migracja **0310** (MAX, 7 dni PLN, korekty) | pętla |
