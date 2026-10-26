@@ -5463,3 +5463,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 r7 na `06c6a108` — **wymaga poprawek** (B1 sprawa przy `p_quiet=true`; N13 pending przed crit). Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - CI `fe1e4bd6` (B1 quiet w kodzie): unit ✔ visual ✔ **db FAIL** import 193/2 — (1) quiet+hhlOrderNo: trigger zostawia pending → file-changed (ten sam klucz) mimo wyciszenia sprawy numeru; (2) SharePoint sprawa 0 (czyszczenie decyzji / dedup). Fix w następnym commitcie z N13.
 - Bieżąca: **#560** — wpis F7 r7 w PLAN §4/§8. Następny commit: kod N13 + testy.
+
+## 2026-10-26 07:35 — A6 #560 F7 runda 7: kod B1+N13
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- Kod F7 r7 w **0308** + testy:
+  1. **N13:** pending skip przed confirmed/crit; puste v_fields → unchanged (bez CRITICAL/CHANGED);
+  2. **B1:** UPLOAD quiet + SharePoint `p_quiet=false` (cron); `decision_events` przed delete decisions;
+  3. quiet+hhlOrderNo: czyść outbound przed asercją sprawy numeru.
+- EXPECTED import **198**. Push → CI → prośba F7 po zielonym.

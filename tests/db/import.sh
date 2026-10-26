@@ -228,8 +228,11 @@ chk "F7#3: 0 nowych LATE_DATE_CHANGE" "$(Q "select (count(*) - $R1)::text from r
 chk "F7#3: 0 nowych notifications po add" "$(Q "select (count(*) - $N1)::text from notifications")" "0"
 chk "F7#3: 0 nowych decisions po add" "$(Q "select (count(*) - $DecB3)::text from decisions")" "0"
 
-# F7 drobne: cichy import z innym numerem HHL → 0 TOWER_KSH_CONFLICT (wymaga column_map hhlOrderNo)
+# F7 drobne: cichy import z innym numerem HHL → 0 sprawy NUMERU (l1b_note_conflict).
+# Trigger outbound kolejkuje hhl_order_no nawet przy write_enabled=false — wyczyść, żeby
+# file-changed (ten sam klucz dedup) nie mylił asercji sprawy numeru.
 $PSQL -c "update loads set hhl_order_no='HHL/426-OLD' where id='$LIQ'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where load_id='$LIQ'" >/dev/null
 RQCONF="[{\"code\":\"IQ-426A\",\"length_m\":18.01,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$DQ1b\",\"delivery_date\":\"$DQ2b\",\"hhlOrderNo\":\"HHL/426-NEW\"}]"
 IMPQMAP() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"name\":\"q426c.xlsx\",\"hash\":\"q426c\",\"path\":\"harmonogramy/x/q426c.xlsx\",\"column_map\":{\"hhlOrderNo\":\"Nr HHL\"}}'::jsonb, $2, true)"; }
 DecConf=$(Q "select count(*) from decisions where detail->>'event_key' like 'l1b:conflict:%:hhl_order_no'")
@@ -798,9 +801,9 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "done:$N8_REV2" ]; then ok=$((ok+1)); echo "  OK    A6: N8 podwójny ack → done no-op"; else fail=$((fail+1)); echo "  FAIL  A6: N8 → $out (oczekiwano done:$N8_REV2)"; fi
 
-# F7 r6 BLOKER 1: import UPLOAD (authenticated HHL) przy konflikcie pending → OK + 1 sprawa (nie 42501).
-# p_quiet=true: sprawa i tak (powiadomienia wyciszone); F7: quiet ≠ bez sprawy file-changed.
+# F7 r6/r7 B1: import UPLOAD (authenticated HHL, p_quiet=true) przy konflikcie pending → OK + 1 sprawa.
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "delete from decision_events where decision_id in (select id from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT')" >/dev/null 2>&1 || true
 $PSQL -c "delete from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT'" >/dev/null 2>&1 || true
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
@@ -823,10 +826,12 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
 if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: r6 B1 import+konflikt → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: r6 B1 → $out"; fi
 chk "A6: r6 B1 sprawa file-changed" "$(Q "select (count(*) - $DEC_B1)::text from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT' and status in ('NEW','ASSIGNED','SNOOZED')")" "1"
 
-# F7 r6: SharePoint (service_role, p_quiet=true) przy konflikcie pending → też 1 sprawa.
+# F7 r7: cron SharePoint = p_quiet=false; też 1 sprawa przy konflikcie pending.
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "delete from decision_events where decision_id in (select id from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT')" >/dev/null 2>&1 || true
 $PSQL -c "delete from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT'" >/dev/null 2>&1 || true
-$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set source_ok=false, last_run='{}'::jsonb,
+  snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
@@ -840,12 +845,12 @@ IMP_B1S=$(Q "select jsonb_agg(jsonb_build_object(
   'dates_to_check',false
 )) from loads l where l.id='$SG_OUT'")
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
-  select import_schedule('$P','$IMP_B1S'::jsonb,'{}'::text[],'{\"source\":\"SHAREPOINT\",\"name\":\"sp-b1.xlsx\",\"hash\":\"sp-b1-r6\"}'::jsonb,false,true);
+  select import_schedule('$P','$IMP_B1S'::jsonb,'{}'::text[],'{\"source\":\"SHAREPOINT\",\"name\":\"sp-b1.xlsx\",\"hash\":\"sp-b1-r7\"}'::jsonb,false,false);
   reset role;
   select carrier_order_no from loads where id='$SG_OUT';
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
-if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: r6 B1 SharePoint quiet → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: r6 B1 SharePoint → $out"; fi
-chk "A6: r6 B1 SharePoint sprawa file-changed" "$(Q "select (count(*) - $DEC_B1S)::text from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT' and status in ('NEW','ASSIGNED','SNOOZED')")" "1"
+if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: r7 B1 SharePoint → WT C"; else fail=$((fail+1)); echo "  FAIL  A6: r7 B1 SharePoint → $out"; fi
+chk "A6: r7 B1 SharePoint sprawa file-changed" "$(Q "select (count(*) - $DEC_B1S)::text from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT' and status in ('NEW','ASSIGNED','SNOOZED')")" "1"
 
 # F7 r6 POPRAWKA 2: pending load_time + data/godzina w pliku → godzina z WT (nie z pliku)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
@@ -876,5 +881,46 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
     from loads where id='$SG_OUT';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
 if [ "$out" = "$LD_NEW|09:00" ]; then ok=$((ok+1)); echo "  OK    A6: r6 P2 data z pliku / godzina WT"; else fail=$((fail+1)); echo "  FAIL  A6: r6 P2 → $out (oczekiwano $LD_NEW|09:00)"; fi
+
+# F7 r7 N13: pending load_date + inna data w pliku → bez CRITICAL / IN_APP / CHANGED (awizowany).
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+LD_N13=$(Q "select plan_load_date::text from loads where id='$SG_OUT'")
+LD_N13B=$(Q "select (plan_load_date + 2)::text from loads where id='$SG_OUT'")
+# Wyrównaj schedule_row do WT (poza datą), żeby v_fields = tylko load_date.
+$PSQL -c "update loads set status='READY',
+  plan_load_from = ('$LD_N13 08:00:00'::timestamp at time zone 'Europe/Warsaw'),
+  plan_load_to = ('$LD_N13 10:00:00'::timestamp at time zone 'Europe/Warsaw'),
+  carrier_org_id=coalesce(carrier_org_id,'00000000-0000-0000-0000-00000000a003'),
+  carrier_order_no='N13-CO', hhl_order_no='N13-HO'
+  where id='$SG_OUT'" >/dev/null
+$PSQL -c "update shipment_items set schedule_row = jsonb_build_object(
+  'item_type','Belka','length_m',12,'width_m',2,'height_m',2,'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date','$LD_N13','delivery_date',(select plan_delivery_date::text from loads where id='$SG_OUT'),
+  'carrier_order_no','N13-CO','hhl_order_no','N13-HO'
+) where load_id='$SG_OUT' and shipment_code='SG-01'" >/dev/null
+# snapshot = schedule (żeby update load_date nie mylił echo); potem dopiero dates_ctx → pending
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld','$LD_N13','lt','08:00','dd',null,'dt',null,'co',null,'ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select set_config('tower.dates_ctx','on',true);
+  update loads set plan_load_date = '$LD_N13B'::date where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N13_CRIT=$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='SCHEDULE_DATE_CRITICAL'")
+N13_NOTIF=$(Q "select count(*) from notifications where load_id='$SG_OUT' and template='SCHEDULE_DATE_CRITICAL'")
+LD_FILE=$(Q "select (plan_load_date + 1)::text from loads where id='$SG_OUT'")
+IMP_N13=$(Q "select jsonb_agg(jsonb_build_object(
+  'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+  'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date','$LD_FILE','delivery_date',l.plan_delivery_date::text,
+  'carrier_order_no',coalesce(l.carrier_order_no,''),'hhl_order_no',coalesce(l.hhl_order_no,''),
+  'dates_to_check',false
+)) from loads l where l.id='$SG_OUT'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select (r->>'quiet')||'/'||jsonb_array_length(r->'critical')||'/'||jsonb_array_length(r->'changed')
+    from import_schedule('$P','$IMP_N13'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,false) r;
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "false/0/0" ]; then ok=$((ok+1)); echo "  OK    A6: r7 N13 brak critical/changed"; else fail=$((fail+1)); echo "  FAIL  A6: r7 N13 → $out (oczekiwano false/0/0)"; fi
+chk "A6: r7 N13 0 SCHEDULE_DATE_CRITICAL" "$(Q "select (count(*) - $N13_CRIT)::text from load_events where load_id='$SG_OUT' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+chk "A6: r7 N13 0 IN_APP CRITICAL" "$(Q "select (count(*) - $N13_NOTIF)::text from notifications where load_id='$SG_OUT' and template='SCHEDULE_DATE_CRITICAL'")" "0"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

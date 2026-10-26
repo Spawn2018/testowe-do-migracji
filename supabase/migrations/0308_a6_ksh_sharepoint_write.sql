@@ -1287,6 +1287,42 @@ begin
       continue;
     end if;
 
+    -- F7 r7 N13: pending skip PRZED confirmed/crit — inaczej CRITICAL i IN_APP lecą na datę,
+    -- której import nie zastosuje (pending WT). Po skipu puste v_fields → unchanged, bez CHANGED.
+    v_pend := null;
+    v_exp_out := null;
+    v_pending_wt := '{}';
+    if p_dry_run is false then
+      select o.patch, o.expected_file into v_pend, v_exp_out
+        from public.ksh_sync_outbound o
+       where o.load_id = r.load_id and o.status = 'pending'
+       order by o.id
+       limit 1;
+      if v_pend is not null and v_pend <> '{}'::jsonb then
+        foreach v_f in array array['load_date','load_time','delivery_date','delivery_time','carrier_order_no','hhl_order_no']
+        loop
+          if v_f = any (v_fields) and (v_pend ? v_f) then
+            v_file_val := nullif(btrim(coalesce(r.inc->>v_f, '')), '');
+            v_exp_val := case v_f
+              when 'load_date' then nullif(btrim(coalesce(v_exp_out->>'ld', '')), '')
+              when 'load_time' then nullif(btrim(coalesce(v_exp_out->>'lt', '')), '')
+              when 'delivery_date' then nullif(btrim(coalesce(v_exp_out->>'dd', '')), '')
+              when 'delivery_time' then nullif(btrim(coalesce(v_exp_out->>'dt', '')), '')
+              when 'carrier_order_no' then nullif(btrim(coalesce(v_exp_out->>'co', '')), '')
+              when 'hhl_order_no' then nullif(btrim(coalesce(v_exp_out->>'ho', '')), '')
+            end;
+            -- F7 r6/r7 B1: file-changed zawsze; p_quiet tylko powiadomienia (bulk_quiet w decision_open).
+            if v_file_val is distinct from v_exp_val then
+              perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
+            end if;
+            v_pending_wt := array_append(v_pending_wt, v_f);
+            v_fields := array_remove(v_fields, v_f);
+          end if;
+        end loop;
+      end if;
+    end if;
+    if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
+
     -- DATY-67: daty z pliku zawsze stosowane; informacyjnie lista zmian dat (bez blokady)
     v_keep := false;
     if ('load_date' = any (v_fields) or 'delivery_date' = any (v_fields)
@@ -1336,39 +1372,6 @@ begin
     end;
     if v_run_quiet and p_dry_run is false and cardinality(v_crit) > 0 then
       v_crit_suppressed := v_crit_suppressed + 1;
-    end if;
-    -- F7 r5 N9 / r6: pending skip + pending_wt w changed (przed zapisem v_changed).
-    v_pend := null;
-    v_exp_out := null;
-    v_pending_wt := '{}';
-    if p_dry_run is false then
-      select o.patch, o.expected_file into v_pend, v_exp_out
-        from public.ksh_sync_outbound o
-       where o.load_id = r.load_id and o.status = 'pending'
-       order by o.id
-       limit 1;
-      if v_pend is not null and v_pend <> '{}'::jsonb then
-        foreach v_f in array array['load_date','load_time','delivery_date','delivery_time','carrier_order_no','hhl_order_no']
-        loop
-          if v_f = any (v_fields) and (v_pend ? v_f) then
-            v_file_val := nullif(btrim(coalesce(r.inc->>v_f, '')), '');
-            v_exp_val := case v_f
-              when 'load_date' then nullif(btrim(coalesce(v_exp_out->>'ld', '')), '')
-              when 'load_time' then nullif(btrim(coalesce(v_exp_out->>'lt', '')), '')
-              when 'delivery_date' then nullif(btrim(coalesce(v_exp_out->>'dd', '')), '')
-              when 'delivery_time' then nullif(btrim(coalesce(v_exp_out->>'dt', '')), '')
-              when 'carrier_order_no' then nullif(btrim(coalesce(v_exp_out->>'co', '')), '')
-              when 'hhl_order_no' then nullif(btrim(coalesce(v_exp_out->>'ho', '')), '')
-            end;
-            -- F7 r6: file-changed zawsze otwiera sprawę; p_quiet tylko powiadomienia (bulk_quiet w decision_open).
-            if v_file_val is distinct from v_exp_val then
-              perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
-            end if;
-            v_pending_wt := array_append(v_pending_wt, v_f);
-            v_fields := array_remove(v_fields, v_f);
-          end if;
-        end loop;
-      end if;
     end if;
 
     v_changed := v_changed || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'fields', to_jsonb(v_fields),
