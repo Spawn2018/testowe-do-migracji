@@ -10,6 +10,7 @@ import { uploadSharePointFile, type GraphEnv } from './graph.ts';
 import { patchWorkbookBytes, type OutboundPatch } from './xlsxPatch.ts';
 import {
   fileAlreadyHasPatch,
+  conflictFieldFromSnaps,
   fileRowChangedSinceRead,
   missingExpectedFile,
   type FileDateSnap,
@@ -195,12 +196,9 @@ export async function processOutboundWrites(args: {
     }
     if (conflict) {
       conflictItems.push(it);
-      // F7 06:08: klucz z polem i rev — pierwsze pole z patch (bez wartości PII w detail).
-      const patchKeys = [
-        'load_date', 'load_time', 'delivery_date', 'delivery_time',
-        'carrier_order_no', 'hhl_order_no',
-      ];
-      const field = patchKeys.find((k) => k in (it.patch ?? {})) ?? 'carrier_order_no';
+      // F7 r8: pole = pierwsze różniące się expected↔plik (jak import), nie pierwsze z patch.
+      const cur = args.fileSnapshot[primary] ?? null;
+      const field = conflictFieldFromSnaps(expected, cur);
       const rev = typeof it.rev === 'number' && it.rev >= 1 ? it.rev : 1;
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
 import {
+  conflictFieldFromSnaps,
   fileAlreadyHasPatch,
   fileRowChangedSinceRead,
   missingExpectedFile,
@@ -61,6 +62,16 @@ describe('A6 writeConflict', () => {
     expect(fileRowChangedSinceRead(a, { ...a })).toBe(false);
     expect(fileRowChangedSinceRead(a, { ...a, ld: '2026-11-02' })).toBe(true);
     expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(true);
+  });
+
+  it('F7 r8: conflictFieldFromSnaps — pierwsze różniące się pole (kolejność jak import)', () => {
+    const a = {
+      ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
+    };
+    expect(conflictFieldFromSnaps(a, { ...a, ho: 'K2' })).toBe('hhl_order_no');
+    expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('carrier_order_no');
+    expect(conflictFieldFromSnaps(a, { ...a, ld: '2026-11-02', co: 'S2' })).toBe('load_date');
+    expect(conflictFieldFromSnaps(a, { ...a })).toBe('carrier_order_no');
   });
 });
 

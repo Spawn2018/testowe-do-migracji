@@ -634,6 +634,14 @@ begin
     return new;
   end if;
 
+  -- F7 r8 BLOKER 2: kolejka tylko gdy write_enabled (wymaga import_enabled).
+  if not exists (
+    select 1 from public.ksh_sync_state s
+     where s.project_id = new.project_id and s.write_enabled is true
+  ) then
+    return new;
+  end if;
+
   -- F7 r2 BLOKER 4 + r5 N12: expected_file tylko dla kluczy z pending patch;
   -- pozostałe pola porównuj z ksh_sync_state.snapshot (nie gub zmiany gdy plik poszedł dalej).
   v_code := public.load_sms_code(new.id);
@@ -810,20 +818,27 @@ begin
   values (v_pid, coalesce(p_enabled, false))
   on conflict (project_id) do update
     set write_enabled = excluded.write_enabled, updated_at = now();
+  -- F7 r6 N10 + r8: loads FOR UPDATE (sort id) → kolejka; true→skip write_enabled_on; false→write_disabled.
+  perform 1
+    from public.loads l
+   where l.id in (
+     select o.load_id from public.ksh_sync_outbound o
+      where o.project_id = v_pid and o.status = 'pending'
+   )
+   order by l.id
+     for update;
   if p_enabled is true then
-    -- F7 r6 POPRAWKA 4 / N10: loads FOR UPDATE (sort id) → potem kolejka (bez 40P01 z ack).
-    perform 1
-      from public.loads l
-     where l.id in (
-       select o.load_id from public.ksh_sync_outbound o
-        where o.project_id = v_pid and o.status = 'pending'
-     )
-     order by l.id
-       for update;
     update public.ksh_sync_outbound
        set status = 'skipped',
            done_at = now(),
            last_error = 'write_enabled_on',
+           rev = rev + 1
+     where project_id = v_pid and status = 'pending';
+  else
+    update public.ksh_sync_outbound
+       set status = 'skipped',
+           done_at = now(),
+           last_error = 'write_disabled',
            rev = rev + 1
      where project_id = v_pid and status = 'pending';
   end if;
@@ -839,7 +854,7 @@ revoke all on function public.ksh_sync_write_set(boolean) from public, anon;
 grant execute on function public.ksh_sync_write_set(boolean) to authenticated;
 
 comment on function public.ksh_sync_write_set(boolean) is
-  'A6: przełącznik zapisu WT→plik; wymaga import_enabled; przy true zaległe pending→skipped; HHL_ADMIN+2FA.';
+  'A6: przełącznik zapisu WT→plik; wymaga import_enabled; przy true/false zaległe pending→skipped; HHL_ADMIN+2FA.';
 
 -- F7 r2b N3: wyłączenie importu wyłącza też zapis + czyści pending (bez zaległości).
 create or replace function public.ksh_sync_import_set(p_enabled boolean)
@@ -979,7 +994,7 @@ declare
   v_service boolean := false;
   v_source text;
   v_hash text;
-  -- F7 r5 N9 / r6 / r7 06:08
+  -- F7 r5 N9 / r6 / r7 06:08 / r8
   v_pend jsonb;
   v_exp_out jsonb;
   v_out_rev int;
@@ -987,6 +1002,7 @@ declare
   v_exp_val text;
   v_file_val text;
   v_pending_wt text[] := '{}';
+  v_write_on boolean := false;
 begin
   perform public.assert_not_preview();
   -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
@@ -1015,6 +1031,10 @@ begin
     v_source := 'UPLOAD';
   end if;
   v_hash := nullif(btrim(coalesce(p_file->>'hash', '')), '');
+  -- F7 r8 BLOKER 2: pending-skip tylko gdy write_enabled (inaczej DATY-67 jak przed A6 zapisem).
+  select coalesce(s.write_enabled, false) into v_write_on
+    from public.ksh_sync_state s where s.project_id = p_project;
+  v_write_on := coalesce(v_write_on, false);
   -- F7 BLOKER 2: ten sam hash po realnym imporcie → bez nowego schedule_imports.
   -- dry_run w last_run nie blokuje (po włączeniu import_enabled trzeba zapisać ten sam plik).
   if v_source = 'SHAREPOINT'
@@ -1279,19 +1299,13 @@ begin
       v_fields := array['shipment_code'] || coalesce(v_fields, '{}'::text[]);
     end if;
 
-    if r.status = 'CANCELLED' then
-      v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
-                     'message', 'Transport anulowany — przywrócenie wyłącznie ręcznie przez HHL');
-      continue;
-    end if;
-
     -- F7 r7 N13 + 05:37: pending skip PRZED konfliktem numeru i confirmed/crit.
-    -- Inaczej CRITICAL/IN_APP na datę z pending; albo dubel l1b_note_conflict + file-changed.
+    -- F7 r8 BLOKER 2: tylko gdy write_enabled — inaczej import bierze pola jak przed zapisem A6.
     v_pend := null;
     v_exp_out := null;
     v_out_rev := null;
     v_pending_wt := '{}';
-    if p_dry_run is false then
+    if p_dry_run is false and v_write_on is true then
       select o.patch, o.expected_file, o.rev into v_pend, v_exp_out, v_out_rev
         from public.ksh_sync_outbound o
        where o.load_id = r.load_id and o.status = 'pending'
@@ -1323,11 +1337,12 @@ begin
       end if;
     end if;
     -- L-1b / HOTFIX #384 pkt 3: konflikt numeru tylko bez pending na hhl (sprawa :pending już wyżej).
+    -- F7 r8 BLOKER 1: coalesce — przy v_pend=NULL `?` daje NULL i wyłączało sprawę.
     -- F7 #2 / #426: przy p_quiet nie otwieraj spraw TOWER_KSH_CONFLICT (bez :pending).
     if p_dry_run is false
        and v_run_quiet is not true
        and v_has_hhl_col
-       and not (v_pend ? 'hhl_order_no')
+       and not coalesce(v_pend ? 'hhl_order_no', false)
        and nullif(btrim(r.hhl_order_no), '') is not null
        and nullif(btrim(coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo', '')), '') is not null
        and nullif(btrim(r.hhl_order_no), '') is distinct from
@@ -1337,6 +1352,13 @@ begin
         coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo'));
     end if;
     if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
+
+    -- F7 r8 POPRAWKA 3: CANCELLED → blocked tylko gdy są zmiany pól (puste = unchanged wyżej).
+    if r.status = 'CANCELLED' then
+      v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'CANCELLED',
+                     'message', 'Transport anulowany — przywrócenie wyłącznie ręcznie przez HHL');
+      continue;
+    end if;
 
     -- DATY-67: daty z pliku zawsze stosowane; informacyjnie lista zmian dat (bez blokady)
     v_keep := false;

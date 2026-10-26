@@ -21,6 +21,33 @@ export function missingExpectedFile(
   return expected == null;
 }
 
+/** Kolejność jak w import_schedule (pending skip / file-changed). */
+const CONFLICT_FIELD_ORDER = [
+  'load_date',
+  'load_time',
+  'delivery_date',
+  'delivery_time',
+  'carrier_order_no',
+  'hhl_order_no',
+] as const;
+
+type ConflictField = (typeof CONFLICT_FIELD_ORDER)[number];
+
+function snapVal(
+  snap: FileDateSnap | null | undefined,
+  field: ConflictField,
+): string | null {
+  if (!snap) return null;
+  switch (field) {
+    case 'load_date': return snap.ld ?? null;
+    case 'load_time': return snap.lt ?? null;
+    case 'delivery_date': return snap.dd ?? null;
+    case 'delivery_time': return snap.dt ?? null;
+    case 'carrier_order_no': return snap.co ?? null;
+    case 'hhl_order_no': return snap.ho ?? null;
+  }
+}
+
 /** true = plik ≠ oczekiwany → nie nadpisuj, sprawa HHL. */
 export function fileRowChangedSinceRead(
   expected: FileDateSnap | null | undefined,
@@ -36,6 +63,21 @@ export function fileRowChangedSinceRead(
     || (expected.co ?? null) !== (current.co ?? null)
     || (expected.ho ?? null) !== (current.ho ?? null)
   );
+}
+
+/**
+ * F7 r8 POPRAWKA 4: pole sprawy = pierwsze różniące się expected↔plik
+ * (ta sama reguła co import), nie pierwsze z łatki.
+ */
+export function conflictFieldFromSnaps(
+  expected: FileDateSnap | null | undefined,
+  current: FileDateSnap | null | undefined,
+  fallback: ConflictField = 'carrier_order_no',
+): ConflictField {
+  for (const field of CONFLICT_FIELD_ORDER) {
+    if (snapVal(expected, field) !== snapVal(current, field)) return field;
+  }
+  return fallback;
 }
 
 type PatchLike = {

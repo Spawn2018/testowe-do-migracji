@@ -5507,3 +5507,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: **#383** `wyglad/W-b5-podglad-baza` — „F7: gotowe do scalenia” (Spawn2018, 07:22Z po `9bd36e60`), CI ✔, bez forka → `gh pr merge --merge` `e192d881` (07:25Z). **#560** F7 r8 na `59ae1348`/`10480535` — **NIEGOTOWE** (2 BLOKERY). Bez push na main.
 - F7 r8 (PLAN §4): (1) `coalesce` przy `v_pend ? hhl_order_no`; (2) kolejka/pending-skip tylko przy `write_enabled`; (3) CANCELLED tylko przy niepustych polach; (4) Edge pole = różnica expected↔plik. Następny commit: kod.
+
+## 2026-10-26 09:55 — A6 #560 F7 r8: kod
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); reszta w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (r8 dopiero w tym commicie). #383 SCALONE wcześniej. Bez push na main.
+- Kod F7 r8 w **0308** + Edge + testy: coalesce HHL; write_enabled bramka; write_disabled; CANCELLED; `conflictFieldFromSnaps`. EXPECTED import **221**; unit 20/20. Push → CI → prośba F7 po zielonym.

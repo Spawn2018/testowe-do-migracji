@@ -991,7 +991,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **Front (koordynator):** `sailing_mismatch_suggest` / `sailing_mismatch_assign` (tylko HHL_ADMIN); pomijać `raw.stale_point`; W52 po scaleniu.
 5. **W52:** pomijać `raw.stale_point` w ETA/SMS/ciszy GPS (kolejka wykonawcy).
 
-### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r8 NIEGOTOWE na `10480535`; docs→kod)
+### A6 · Plik KSH = Harmonogram — odczyt SharePoint + zapis na pliku testowym (D-20261019-1420-01, #320; E38, L31, C23 — po B9, przed C4; termin wt 20.10; W13: sekrety są; plik testowy dostępny 19.10) — W TOKU (odczyt #556 SCALONE `3d348690`; zapis #560 `pakiet/a6-sharepoint-write` / **0308** — F7 r8 kod; EXPECTED import **221**; CI→F7)
 1. **Import (ręczny i automatyczny na tym samym rdzeniu):** ~~mapowanie + parser~~ (krok 1) — ~~`import_schedule` zasoby/numery/`KSH_DATES_CHECK`/renumber~~ (krok 2, migracja **0303**, PR #555 SCALONE `e9f9c919` 25.10) — **F7 #555:** COMMENT, `assert_not_preview`, skipped_carrier/empty, kreator bez loadDay/delivDay, WARN NTG/pusty HH, telefon SE, dry_run dates_check.
    - **SharePoint odczyt (pkt 4):** ~~0304+0305; F7 #556~~ — **SCALONE** (`3d348690`): `import_enabled`, dedup hash/`failed_hash`, Graph, SOURCE_DOWN od `first_error_at`, projekt `STEGRA_BODEN`.
    - **SharePoint zapis (pkt 4, #560 / 0308):** kolejka `ksh_sync_outbound` + Graph PUT; Rebase po #557: **0306→0308**.
@@ -1009,7 +1009,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **F7 06:08 (po zielonym CI `514967e6`) — ZROBIONE w kodzie:** klucz `l1b:conflict:<proj>:<kod>:<pole>:pending:<rev>` (nowy rev = nowa sprawa po resolve); `detail` = `code`/`field`/`reason` (bez wartości PII); czyszczenie testów bez `|| true` + count dokładny; test resolve→rev→2→reimport. Edge przekazuje `p_field`+`p_rev`. EXPECTED import **205**. #426 liczy tylko klucze bez `:pending:`.
      - **CI `6b1fae35` db FAIL (204/1) — ZROBIONE w teście:** asercja resolve czyta `decisions.status` (nie `decision_resolve()->>'status'` — funkcja zwraca `v_fx`).
      - **CI `10480535` unit/visual/db ✔** — czekam „F7: gotowe do scalenia”. EXPECTED import **205**.
-     - **F7 runda 8 na `59ae1348` (kod `10480535`) — NIEGOTOWE (2 BLOKERY + 2 poprawki):** **1** `not (v_pend ? 'hhl_order_no')` przy `v_pend=NULL` → NULL → sprawa #384 bez kolejki nigdy; `not coalesce(v_pend ? 'hhl_order_no', false)`; test: nie-cichy + inny HHL + 0 kolejki → 1 sprawa bez `:pending:`. **2** przy `write_enabled=false` trigger i pending-skip w imporcie jak dziś (bez kolejki / bez blokady DATY-67); kolejka i skip tylko gdy `write_enabled=true`; `write_set(false)` → pending `skipped`/`write_disabled`. **3** CANCELLED → `blocked` tylko gdy `v_fields` niepuste. **4** Edge: pole sprawy = pierwsze różniące się expected↔plik (jak import). Uwagi: wynik importu w teście reimport; pary B1 auth+`p_quiet=false` i service+`p_quiet=true`.
+     - **F7 runda 8 — ZROBIONE w kodzie (2 BLOKERY + 2 poprawki):** **1** `not coalesce(v_pend ? 'hhl_order_no', false)` — sprawa #384 bez kolejki; **2** trigger + pending-skip tylko przy `write_enabled`; `write_set(false)` → `skipped`/`write_disabled`; **3** CANCELLED → blocked tylko przy niepustych polach; **4** Edge `conflictFieldFromSnaps`. EXPECTED import **221**; unit 20/20.
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1713,3 +1713,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 08:55 | #560 CI `6b1fae35` db FAIL resolve (v_fx≠status) — fix testu decisions.status; EXPECTED 205 | pętla |
 | 26.10.2026 08:25 | #560 CI `10480535` unit/visual/db ✔; prośba F7; #383 bez „F7: gotowe” | pętla |
 | 26.10.2026 09:25 | #383 SCALONE (`e192d881`, F7 po `9bd36e60`); #560 F7 r8 NIEGOTOWE (hhl NULL, write_enabled) — docs→kod | pętla |
+| 26.10.2026 09:55 | #560 F7 r8 kod (0308 + Edge + import 221); CI→F7 | pętla |
