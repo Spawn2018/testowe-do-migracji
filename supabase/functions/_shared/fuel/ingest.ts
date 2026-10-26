@@ -1,5 +1,5 @@
 /**
- * D-1300 / F7-2 — wspólne helpery fuel-prices (bez Deno.serve; testowane w vitest).
+ * D-1300 / F7-2 / #563 — wspólne helpery fuel-prices (bez Deno.serve; testowane w vitest).
  */
 import { ORLEN_SOURCE_PAGE, orlenM3ToLitre } from './orlen.ts';
 
@@ -24,10 +24,21 @@ export function warsawHour(d = new Date()): number {
   );
 }
 
-export const FUEL_PRICE_HOURS_PL = [7, 9, 13] as const;
+/** #563: 07:15, 09:15, 13:15, 17:15, 23:15 Europe/Warsaw (cron :15). */
+export const FUEL_PRICE_HOURS_PL = [7, 9, 13, 17, 23] as const;
 
 export function isFuelPriceHour(hour: number): boolean {
   return (FUEL_PRICE_HOURS_PL as readonly number[]).includes(hour);
+}
+
+/**
+ * F7 #579 pkt 3: gdy data obowiązywania > dzień odczytu — period = data obowiązywania
+ * (nie zapisuj jako cena dnia D). reading_date zostaje dniem pobrania.
+ */
+export function periodForPublishedOn(fetchDay: string, publishedOn: string | null | undefined): string {
+  const pub = publishedOn && /^\d{4}-\d{2}-\d{2}/.test(publishedOn) ? publishedOn.slice(0, 10) : null;
+  if (pub && pub > fetchDay) return pub;
+  return fetchDay;
 }
 
 /**
@@ -39,13 +50,15 @@ export function orlenIngestPayload(
   period: string,
   orlen: { value: number; effectiveDate?: string | null },
 ): { row: FuelSourceRow; value: number } {
+  const published_on = String(orlen.effectiveDate ?? '').slice(0, 10) || null;
+  const effPeriod = periodForPublishedOn(period, published_on);
   const r: FuelSourceRow = {
     index_code: 'PLN',
-    period,
+    period: effPeriod,
     reading_date: period,
     value: orlenM3ToLitre(orlen.value),
     source_url: ORLEN_SOURCE_PAGE,
-    published_on: String(orlen.effectiveDate ?? '').slice(0, 10) || null,
+    published_on,
     source_note: `ORLEN ONEkodiesel ${orlen.value} PLN/m³ netto (effective ${orlen.effectiveDate}); zapis ${orlenM3ToLitre(orlen.value)} PLN/l`,
   };
   return { row: r, value: orlen.value };

@@ -4,6 +4,7 @@ import { parseOkq8GoEasyDiesel } from '../supabase/functions/_shared/fuel/okq8.t
 import {
   isFuelPriceHour,
   orlenIngestPayload,
+  periodForPublishedOn,
 } from '../supabase/functions/_shared/fuel/ingest.ts';
 
 describe('PALIWO-AUTO-B parsers', () => {
@@ -32,12 +33,29 @@ describe('PALIWO-AUTO-B parsers', () => {
     expect(row.period).toBe('2026-10-18');
   });
 
-  it('okno godzin PL: 7/9/13', () => {
+  // #563/F7 pkt 3: effective > dzień odczytu → period = data obowiązywania
+  it('orlenIngestPayload: cena od jutra → period = published_on', () => {
+    expect(periodForPublishedOn('2026-10-26', '2026-10-27')).toBe('2026-10-27');
+    expect(periodForPublishedOn('2026-10-26', '2026-10-26')).toBe('2026-10-26');
+    const { row } = orlenIngestPayload('2026-10-26', {
+      value: 7200,
+      effectiveDate: '2026-10-27T00:00:00',
+    });
+    expect(row.period).toBe('2026-10-27');
+    expect(row.reading_date).toBe('2026-10-26');
+    expect(row.published_on).toBe('2026-10-27');
+  });
+
+  // #563: +17:15 i 23:15 Europe/Warsaw
+  it('okno godzin PL: 7/9/13/17/23', () => {
     expect(isFuelPriceHour(7)).toBe(true);
     expect(isFuelPriceHour(9)).toBe(true);
     expect(isFuelPriceHour(13)).toBe(true);
+    expect(isFuelPriceHour(17)).toBe(true);
+    expect(isFuelPriceHour(23)).toBe(true);
     expect(isFuelPriceHour(8)).toBe(false);
     expect(isFuelPriceHour(5)).toBe(false);
+    expect(isFuelPriceHour(15)).toBe(false);
   });
 
   it('OKQ8 GoEasy Diesel firmowa 22,29 wprost + data publikacji (nie Q8 Trucks)', () => {
