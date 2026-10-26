@@ -28,7 +28,7 @@ const PL: Record<string, string> = {
   p5b_f_fetch_h: 'Sprawdzanie cen · codziennie {at}',
   p5b_f_today: 'Dziś {date}:',
   p5b_f_yesterday: 'Wczoraj {date}:',
-  p5b_f_retries: 'Kolejne sprawdzenia: {list}. Nowa cena dnia zapisuje się sama; brak ceny dnia — powiadomienie do HHL.',
+  p5b_f_retries: 'Kolejne sprawdzenia: {list}. Nowa cena dnia zapisuje się sama. Brak ceny dnia — powiadomienie do HHL (raz dziennie), znika po zapisaniu ceny.',
   p5b_f_how_h: 'Jak liczymy',
   p5b_f_s1: '1 · Średnia',
   p5b_f_s1_x: 'Ceny z poprzedniego tygodnia pn–nd, osobno Szwecja i Polska',

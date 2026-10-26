@@ -376,7 +376,7 @@ const pl: Dict = {
   p3c_flag_DRIVER_LINK_ACCEPT: 'Stary link kierowcy',
   p3c_flag_DRIVER_LINK_ACCEPT_fx: 'Wejście kierowcy z linku. Aplikacji kierowcy nie zmieniamy.',
   p3c_flag_FUEL_SE_PL_INGEST: 'Codzienne ceny paliwa',
-  p3c_flag_FUEL_SE_PL_INGEST_fx: 'Odczyt OKQ8 i Orlen raz dziennie do opłaty paliwowej.',
+  p3c_flag_FUEL_SE_PL_INGEST_fx: 'Odczyt OKQ8 i Orlen 5× dziennie (07:15–23:15) do opłaty paliwowej.',
   p3c_flag_FUEL_WOB_INGEST: 'Tygodniowy biuletyn paliw UE',
   p3c_flag_FUEL_WOB_INGEST_fx: 'Cotygodniowy biuletyn UE (olej napędowy PL i SE).',
   p3c_thr_WAVE_M: 'Fala',

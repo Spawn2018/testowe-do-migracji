@@ -297,7 +297,7 @@ export function FuelScreen({ locale, view, actions, readOnly, party }: {
             <span className="ox-eyebrow">{fbp(locale, 'p5b_f_fetch_h', { at: fetch.at })}</span>
             {fetchLine('p5b_f_today', fetch.today)}
             {fetchLine('p5b_f_yesterday', fetch.yesterday)}
-            <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: plList(fetch.retries) })}</span>
+            {fetch.retries.length ? <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: plList(fetch.retries) })}</span> : null}
           </section>
         )}
       </div>
