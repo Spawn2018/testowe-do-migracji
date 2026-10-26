@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { notificationFromRow } from '../src/data/mappers';
-import { bellAge, bellGroups, bellTitle, looksLikeTemplateCode, withLoadCode } from '../src/lib/bellList';
+import { BELL_HIDDEN_KINDS, bellAge, bellGroups, bellTitle, looksLikeTemplateCode, withLoadCode } from '../src/lib/bellList';
 
 const L1 = '963e19dd-fe83-4690-9306-5c7fc4b95468';
 const L2 = '2fc65160-0000-4000-8000-000000000002';
@@ -29,7 +29,8 @@ const rows = PROD.map(([template, payload, load_id], i) =>
 describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szablonów', () => {
   it('każdy szablon z produkcji: tytuł „SG-xx · …” bez kodu szablonu i bez technicznego przedrostka', () => {
     const groups = bellGroups(rows, 'HHL', (id) => codes.get(id), 'pl');
-    expect(groups).toHaveLength(rows.length);
+    /* właściciel 21.10.2026 20:14 pkt 6: „Decyzja zamknięta” / „Ryzyko zamknięte” nie wracają do dzwonka */
+    expect(groups).toHaveLength(rows.filter((r) => !BELL_HIDDEN_KINDS.has(r.kind ?? '')).length);
     for (const g of groups) {
       expect(looksLikeTemplateCode(g.title), g.title).toBe(false);
       expect(looksLikeTemplateCode(g.body), g.body).toBe(false);
@@ -55,7 +56,7 @@ describe('AUD-02 dzwonek: tytuł PL, czas względny, grupowanie, bez kodów szab
   it('grupowanie: ten sam transport + ten sam rodzaj = jedna pozycja z licznikiem i najwyższą wagą; najnowsza treść', () => {
     const base = { template: 'RISK_OPEN', load_id: L1, read_at: null };
     const many = [5, 3, 1].map((m, i) => notificationFromRow({ ...base, id: 100 + i, created_at: `2026-10-06T12:0${m}:00Z`, payload: { title: `Zdarzenie ${m}`, severity: i === 1 ? 'CRITICAL' : 'MEDIUM', locale: 'pl' } } as never));
-    const other = notificationFromRow({ ...base, id: 200, template: 'RISK_RESOLVED', created_at: '2026-10-06T12:02:00Z', payload: { title: 'X', locale: 'pl' } } as never);
+    const other = notificationFromRow({ ...base, id: 200, template: 'RISK_SEVERITY', created_at: '2026-10-06T12:02:00Z', payload: { title: 'X', locale: 'pl' } } as never);
     const otherLoad = notificationFromRow({ ...base, id: 201, load_id: L2, created_at: '2026-10-06T12:04:00Z', payload: { title: 'Y', locale: 'pl' } } as never);
     const g = bellGroups([...many, other, otherLoad], 'HHL', (id) => codes.get(id), 'pl');
     expect(g).toHaveLength(3);

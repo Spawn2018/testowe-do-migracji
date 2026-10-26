@@ -77,15 +77,21 @@ if [ -n "${TOWER_HOSTED_READY:-}" ]; then
   echo "  SKIP  automat: klucze funkcji — j.w."
 elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
   # A2 (E26): brak LEFT_LOADING_UNCONFIRMED — wyjazd ze Śremu bez loaded_confirmed
-  chk "automat statusów/promów (tower_test_status): 6 kluczy, 0 generycznych" \
-    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "6/0"
+  # #461 F7: bez rk_no_departure / rk_missed_sailing; RIO/SILENT/overdue sprzątane w status.sh
+  # #557 PR2 F7 r3: overdue + rk_ferry_check_after_arrival; + rk_sailing_mismatch
+  chk "automat statusów/promów (tower_test_status): 7 kluczy, 0 generycznych" \
+    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "7/0"
   chk "automat: klucze funkcji" "$(psql "$ST" -Atqc "select string_agg(distinct title_key, ',' order by title_key) from risk_signals")" \
-    "rk_auto_status_blocked,rk_ferry_overdue,rk_loading_not_ready,rk_missed_sailing,rk_port_no_loaded,rk_sailing_cancelled"
+    "rk_auto_status_blocked,rk_ferry_check_after_arrival,rk_ferry_overdue,rk_loading_not_ready,rk_port_no_loaded,rk_sailing_cancelled,rk_sailing_mismatch"
 else
   fail=$((fail+2)); echo "  FAIL  brak bazy tower_test_status — uruchom najpierw tests/db/run.sh"
 fi
 
 echo; echo "[C1] zalew dzwonka — E5 (D-20261015-0300-01)"
+# #402: bramka czyta risk_route/risk_crit; org + macierz + bez pref wyłączających dzwonek.
+$PSQL -c "update notification_matrix_org_kind set in_app = true where event_group = 'RISK_FERRY_WEATHER'" >/dev/null
+$PSQL -c "update notification_matrix set in_app = true where event_key in ('risk_route','risk_crit')" >/dev/null
+$PSQL -c "delete from user_notify_pref where event_key in ('risk_route','risk_crit') and channel = 'bell'" >/dev/null
 # (1) FERRY bez load_id → 0 nowych IN_APP RISK_OPEN
 N0=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN'")
 $PSQL -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail)
@@ -93,12 +99,11 @@ $PSQL -c "insert into risk_signals (project_id, kind, severity, title, title_key
 chk "C1: FERRY bez load_id → 0 nowych RISK_OPEN IN_APP" \
   "$(Q "select count(*) - $N0 from notifications where channel='IN_APP' and template='RISK_OPEN'")" 0
 # (1b) FERRY z transportem → RISK_OPEN IN_APP (macierz RISK_FERRY_WEATHER; para do C1 bez load_id)
-N1=$(Q "select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1'")
 RID=$(Q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail)
   values ('$P','$L1','FERRY','HIGH','C1 ferry load','rk_c1_ferry_load','{\"title_key\":\"rk_c1_ferry_load\",\"kind\":\"FERRY\"}'::jsonb)
-  returning id")
+  returning id" | tr -d '\r')
 chk "C1: ryzyko z load_id → RISK_OPEN IN_APP" \
-  "$(Q "select case when count(*) > $N1 then 1 else 0 end from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1' and (payload->>'risk_id')='$RID'")" 1
+  "$(Q "select case when count(*) >= 1 then 1 else 0 end from notifications where channel='IN_APP' and template='RISK_OPEN' and load_id='$L1' and (payload->>'risk_id')='$RID'")" 1
 # (2) resolve → 0 RISK_RESOLVED; istniejący RISK_OPEN przeczytany
 $PSQL -c "update risk_signals set resolved_at = now() where id = '$RID'" >/dev/null
 chk "C1: resolve → 0 RISK_RESOLVED" \
@@ -106,6 +111,13 @@ chk "C1: resolve → 0 RISK_RESOLVED" \
 chk "C1: resolve → RISK_OPEN oznaczony przeczytany" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and read_at is not null and payload->>'c1_resolved' = 'true'")" \
   "$(Q "select count(*) from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID'")"
+# #411: matrix_notify('RISK_RESOLVED') → 0; OPEN z url
+chk "#411: matrix RISK_RESOLVED → 0" \
+  "$(Q "select matrix_notify('RISK_FERRY_WEATHER','RISK_RESOLVED','$L1','$P',jsonb_build_object('risk_id','$RID'),'411-rr')")" 0
+chk "#411: matrix DECISION_RESOLVED → 0" \
+  "$(Q "select matrix_notify('DECISION','DECISION_RESOLVED','$L1','$P',jsonb_build_object('decision_id',gen_random_uuid()),'411-dr')")" 0
+chk "#411: RISK_OPEN ma url" \
+  "$(Q "select case when coalesce(payload->>'url','') like '%/#/%' then 1 else 0 end from notifications where template='RISK_OPEN' and (payload->>'risk_id')='$RID' and channel='IN_APP' limit 1")" 1
 
 echo; echo "[1215] zamknięcie alarmów panelu (D-20261018-1215-01)"
 DID=$(Q "insert into decisions (project_id, type_code, status, title) values ('$P','FERRY_CANCELLED','NEW','1215-overdue') returning id")
@@ -144,5 +156,62 @@ $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, 
 $PSQL -c "update loads set status='INVOICED' where id='$L2'" >/dev/null
 chk "1215: faktura po terminie zostaje przy INVOICED" \
   "$(Q "select count(*) from risk_signals where dedup_key='invoice-overdue:$L2' and resolved_at is null")" 1
+
+echo; echo "[398] szum ryzyk — loaded_confirmed / emtrack / ETA / ORDERNO (D-20261021-1820-01)"
+chk "398: SILENT_MIN_EMTRACK = 720" \
+  "$(Q "select value_num::int from ops_thresholds where key='SILENT_MIN_EMTRACK'")" 720
+fx "update loads set actual_load_at = now() - interval '2 hours' where id='$L1'"
+chk "398: loaded_confirmed true (GPS actual_load_at)" "$(Q "select loaded_confirmed('$L1')::text")" true
+fx "update loads set actual_load_at = null where id='$L1'"
+# emtrack < 12 h: cisza 3 h, źródło EMTRACK_WEB → 0 SILENT / 0 NO_POSITION
+$PSQL -c "update risk_signals set resolved_at=now() where dedup_key='SILENT:$L1' and resolved_at is null" >/dev/null
+$PSQL -c "update decisions set status='EXPIRED', expired_reason='398 test cleanup', updated_at=now()
+  where status in ('NEW','ASSIGNED','SNOOZED')
+    and (detail->>'event_key'='SILENT:$L1'
+         or risk_id in (select id from risk_signals where dedup_key='SILENT:$L1'))" >/dev/null 2>&1
+fx "update loads set status='IN_TRANSIT_PL', tractor_plate='EMT 1', telematics_vehicle_id='TEL-EMT-1', plan_load_date=current_date - 1, actual_load_at=now()-interval '1 day' where id='$L1'"
+$PSQL -c "delete from positions where load_id='$L1'" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '3 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
+NDEC0=$(Q "select count(*) from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and load_id='$L1'")
+Q "select detect_silent_vehicles(90)" >/dev/null
+chk "398: emtrack <12h → 0 otwartych SILENT" \
+  "$(Q "select count(*) from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" 0
+chk "398: emtrack <12h → 0 nowych NO_POSITION" \
+  "$(Q "select count(*) - $NDEC0 from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and load_id='$L1'")" 0
+# emtrack ≥ 12 h → 1× LOW, bez decyzji, bez SMS (nawet przy telefonie + linku kierowcy)
+fx "update loads set driver_phone='600111222', driver_phone_country='PL', driver_locale='pl' where id='$L1'"
+$PSQL -c "insert into driver_tokens (load_id, token_hash, expires_at)
+  values ('$L1', driver_token_hash('wt_398emtrack'), now() + interval '1 day')
+  on conflict do nothing" >/dev/null
+$PSQL -c "delete from sms_outbox where kind='GPS_SILENT' and load_id='$L1'" >/dev/null
+$PSQL -c "delete from positions where load_id='$L1'" >/dev/null
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L1', now() - interval '13 hours', st_setsrid(st_makepoint(18.0,53.0),4326), 'EMTRACK_WEB')" >/dev/null
+Q "select detect_silent_vehicles(90)" >/dev/null
+chk "398: emtrack ≥12h → 1 SILENT LOW" \
+  "$(Q "select count(*)||'/'||max(severity::text)||'/'||max(audience::text)||'/'||max(detail->>'emtrack_trailer') from risk_signals where dedup_key='SILENT:$L1' and resolved_at is null")" "1/LOW/HHL/1"
+chk "398: emtrack ≥12h → 0 decyzji NO_POSITION" \
+  "$(Q "select count(*) from decisions where type_code='NO_POSITION' and status in ('NEW','ASSIGNED','SNOOZED') and (detail->>'event_key')='SILENT:$L1'")" 0
+chk "398: emtrack ≥12h → 0 SMS GPS_SILENT" \
+  "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$L1'")" 0
+$PSQL -c "delete from driver_tokens where load_id='$L1' and token_hash = driver_token_hash('wt_398emtrack')" >/dev/null
+fx "update loads set driver_phone=null, driver_phone_country='PL', driver_locale=null where id='$L1'"
+# ETA po dostawie
+fx "update loads set status='READY_TO_INVOICE', actual_delivery_at=now()-interval '1 day', plan_delivery_date=current_date-2 where id='$L1'"
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L1','ETA_BREACH','CRITICAL','Opóźnienie test','rk_eta_breach','{\"l3\":\"1\"}','ETA_BREACH:$L1')
+  on conflict do nothing" >/dev/null 2>&1
+$PSQL -c "update risk_signals set resolved_at=null, detected_at=now() where dedup_key='ETA_BREACH:$L1'" >/dev/null 2>&1
+Q "select refresh_load_eta('$L1')" >/dev/null
+chk "398: ETA_BREACH zamknięte po READY_TO_INVOICE" \
+  "$(Q "select count(*) from risk_signals where dedup_key='ETA_BREACH:$L1' and resolved_at is null")" 0
+# ORDERNO poza oknem
+fx "update loads set status='PLANNED', plan_load_date=current_date + 30, plan_load_from=null, hhl_order_no=null, carrier_order_no=null, actual_delivery_at=null where id='$L2'"
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L2','RESOURCE_MISSING','HIGH','brak HHL','rk_order_no_hhl',
+    '{\"rule\":\"ORDER_NO\",\"side\":\"HHL\"}','ORDERNO:HHL:$L2')
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do nothing" >/dev/null
+Q "select detect_missing_order_numbers(now(), 48)" >/dev/null
+chk "398: ORDERNO zamknięte gdy załadunek za >48 h" \
+  "$(Q "select count(*) from risk_signals where dedup_key='ORDERNO:HHL:$L2' and resolved_at is null")" 0
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

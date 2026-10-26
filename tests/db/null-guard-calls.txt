@@ -43,6 +43,7 @@ current_app_user_id | EMPTY | select coalesce(current_app_user_id()::text, '∅'
 current_org_id | EMPTY | select coalesce(current_org_id()::text, '∅') | ∅
 current_org_kind | EMPTY | select coalesce(current_org_kind()::text, '∅') | ∅
 discard_document | EMPTY | select discard_document('$DOC') | f
+mark_notification_read_any | EMPTY | select mark_notification_read_any($NOTIF) | 0
 mark_notifications_read | EMPTY | select mark_notifications_read(array[$NOTIF]::bigint[]) | 0
 my_profile | EMPTY | select count(*) filter (where active) from my_profile() | 0
 my_sessions | EMPTY | select count(*) from my_sessions() | 0
@@ -57,8 +58,12 @@ invoice_week_local | PURE | select invoice_week_local(now()) | -
 make_circle_fence | PURE | select st_npoints(make_circle_fence(59.3, 18.0, 100)) | -
 money_effective_eur | PURE | select money_effective_eur(1, 2, 3) | -
 money_least_tier | PURE | select money_least_tier('A', 'B') | -
+fuel_basis_public | PURE | select fuel_basis_public('{"n_sek":7,"owner_note":"x"}'::jsonb)->>'n_sek' | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
+ksh_sync_state_get | EMPTY | select coalesce(ksh_sync_state_get()::text, '∅') | ∅
+ksh_sync_write_set | GUARD | select ksh_sync_write_set(false) | Administrator HHL|42501
+ksh_sync_import_set | GUARD | select ksh_sync_import_set(false) | Administrator HHL|42501
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL
 rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyłącznie HHL
 rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyłącznie HHL
@@ -67,10 +72,12 @@ sms_issue_device | GUARD | select sms_issue_device(null) | wyłącznie HHL
 sms_revoke_device | GUARD | select sms_revoke_device(null) | wyłącznie HHL
 sms_set_paused | GUARD | select sms_set_paused(null, null) | wyłącznie HHL
 sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłącznie HHL
-sms_send_test | GUARD | select sms_send_test(null) | wyłącznie HHL
+sms_send_test | GUARD | select sms_send_test(null) | Administrator HHL|wyłącznie HHL
 admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
 admin_security_flag_set | GUARD | select admin_security_flag_set(null, null) | wyłącznie administrator HHL
 security_flags_list | GUARD | select security_flags_list() | tylko HHL
+perf_results_latest | GUARD | select perf_results_latest() | tylko HHL
+app_errors_recent | GUARD | select app_errors_recent(7) | Administrator HHL|tylko HHL
 sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
 admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyłącznie administrator HHL
 permit_requirement_state | GUARD | select permit_requirement_state() | wyłącznie HHL
@@ -121,6 +128,24 @@ admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD
 admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyłącznie HHL
 admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyłącznie HHL
 admin_ops_threshold_set | GUARD | select admin_ops_threshold_set('WAVE_M',3.8) | wyłącznie administrator HHL
+payment_terms_options | GUARD | select payment_terms_options() | tylko HHL
+payment_terms_options_set | GUARD | select payment_terms_options_set('KSH',30) | Administrator HHL
+accounting_addresses_get | GUARD | select accounting_addresses_get() | tylko HHL
+accounting_addresses_set | GUARD | select accounting_addresses_set('HHL',array['a@test.pl']) | Administrator HHL
+accounting_pack_config | GUARD | select accounting_pack_config() | tylko HHL
+accounting_pack_send | GUARD | select accounting_pack_send('KSH','2026-W41') | tylko HHL
+# accounting_pack_send_set_status — tylko service_role (bez GUARD authenticated)
+factoring_offer_get | GUARD | select factoring_offer_get() | tylko HHL|SCX
+factoring_offer_set | GUARD | select factoring_offer_set(true,1,48) | Administrator HHL
+invoice_factoring_set | GUARD | select invoice_factoring_set('00000000-0000-0000-0000-000000000001',true) | przewoźnik|Brak konta
+factoring_tasks | GUARD | select factoring_tasks() | tylko HHL
+factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-0000-000000000001') | wyłącznie HHL|Brak konta
+margin_threshold_get | GUARD | select margin_threshold_get() | tylko HHL
+margin_threshold_set | GUARD | select margin_threshold_set(4) | Administrator HHL
+push_devices_count | GUARD | select push_devices_count() | tylko HHL
+message_texts_list | GUARD | select message_texts_list() | tylko HHL
+message_texts_set | GUARD | select message_texts_set('SMS_A',null,'{{code}}: x.') | Administrator HHL
+message_texts_reset | GUARD | select message_texts_reset('SMS_A') | Administrator HHL
 admin_auth_login_log | GUARD | select * from admin_auth_login_log(5) | Tylko administrator HHL
 admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '1 day', true, false, false) | Tylko administrator HHL
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
@@ -130,10 +155,10 @@ load_agreed_fee_add | GUARD | select load_agreed_fee_add('$L1', 'INNE', 10, 'COS
 fee_catalog_hints | EMPTY | select count(*) from fee_catalog_hints() | 0
 load_dwell_info | GUARD | select count(*) from load_dwell_info('$L1') | Brak aktywnego konta|Brak dostępu
 admin_impersonate_start | GUARD | select admin_impersonate_start('$KSHID') | Tylko administrator HHL|wyłącznie administrator
-admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Tylko administrator HHL
+admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Brak aktywnego konta
 real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, '∅') | ∅
 real_app_role | EMPTY | select coalesce(real_app_role()::text, '∅') | ∅
-admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Tylko administrator HHL
+admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Brak sesji|Brak dostępu
 admin_set_eta_calibration_frozen | GUARD | select admin_set_eta_calibration_frozen(true) | wyłącznie HHL_ADMIN
 apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) | wyłącznie HHL_ADMIN
 email_budget_status | EMPTY | select coalesce(email_budget_status()::text, '∅') | ∅
@@ -146,8 +171,12 @@ deepl_usage_view | GUARD | select deepl_usage_view() | wyłącznie HHL
 map_display_state | GUARD | select map_display_state() | Brak aktywnego konta
 here_tiles_report | GUARD | select here_tiles_report(1) | Brak aktywnego konta
 ferry_track_sample | GUARD | select count(*) from ferry_track_sample() | Brak aktywnego konta
+ferry_sailings_map | GUARD | select count(*) from ferry_sailings_map() | Brak aktywnego konta
 wf_duplicate_check | GUARD | select wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[]'::jsonb, null)::text | tylko HHL_ADMIN
-workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN
+workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN|HHL_OPS
+workflow_rule_write | GUARD | select workflow_rule_write(null, '$P', 'x', '', 'DELAY_DETECTED', 'true'::jsonb, '[{"type":"notify","audience":"HHL"}]'::jsonb, true, null) | Zapis reguł|42501
+workflow_rule_set_enabled | GUARD | select workflow_rule_set_enabled((select id from workflows limit 1), false, null) | Zapis reguł|42501
+workflow_rule_soft_delete | GUARD | select workflow_rule_soft_delete((select id from workflows where code is null limit 1), null) | Zapis reguł|42501
 csp_status_view | PURE | select 1 | 1
 list_load_messages_ui | PURE | select 1 | 1
 load_agreed_fee_accept | PURE | select 1 | 1
@@ -171,3 +200,9 @@ a7_policies_list | GUARD | select a7_policies_list() | Brak aktywnego konta
 a7_apply_symbol | GUARD | select a7_apply_symbol('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta
 symbol_resolve_code | PURE | select symbol_resolve_code('SG-03') | SG
 symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | true
+admin_preview_start | GUARD | select admin_preview_start('KSH') | Tylko administrator HHL|wyłącznie administrator
+admin_preview_stop | GUARD | select admin_preview_stop() | Brak aktywnego konta
+assert_not_preview | EMPTY | select assert_not_preview() |
+is_preview_read_only | EMPTY | select is_preview_read_only()::text | false
+sailing_mismatch_suggest | GUARD | select sailing_mismatch_suggest('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta|wyłącznie HHL
+sailing_mismatch_assign | GUARD | select sailing_mismatch_assign('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002') | Brak aktywnego konta|Administrator HHL|2FA|42501

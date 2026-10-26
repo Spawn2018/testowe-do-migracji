@@ -92,7 +92,8 @@ val "94 z krytycznym przekracza 90 i jest cięte do limitu operacyjnego" "select
 
 # Macierz: niekrytyczny e-mail = DIGEST, nie PENDING. Nic nie wychodzi do Resend.
 # E5: payload z decision_id (albo load_id — tu oba); reguły C1 bez zmian pod stary test.
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+# #411: DECISION_RESOLVED zablokowane — skrót z niekrytycznego DECISION_OPEN
+sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P',
   jsonb_build_object('title','l13','decision_id','$DEC_L13'),'l13-nc','FORWARDER')" >/dev/null
 val "niekrytyczny e-mail macierzy to jeden skrót" "select count(*)||status from notifications where channel='EMAIL' and dedup_key like 'digest:%' group by status" "1DIGEST"
 
@@ -130,6 +131,8 @@ done
 val "5 transportów → 1 e-mail na odbiorcę" "select count(*) from notifications where channel='EMAIL' and dedup_key like 'bundle:sail-9:EM:%'" 1
 val "lista ma 5 transportów" "select jsonb_array_length(payload->'transports') from notifications where dedup_key like 'bundle:sail-9:EM:%'" 5
 KSHU=$(sys "select id from app_users where email='ksh@test'" | tail -1)
+# #402: l13_queue_email przez bramkę — włącz mail dec_new dla KSH na czas testu bundla.
+sys "update notification_matrix set email=true where event_key='dec_new' and role='CLIENT_USER'" >/dev/null
 for i in 1 2 3 4 5; do
   sys "select l13_queue_email('critical','DECISION_OPEN','$KSHU','ksh@test','33333333-0000-0000-0000-00000000b10$i','L13-B$i','{}'::jsonb,'l13-ksh-$i','sail-9')" >/dev/null
 done
@@ -146,7 +149,7 @@ val "stan systemu: ile i do kogo" "begin; select set_config('request.jwt.claim.s
 sys "delete from notifications where channel='EMAIL' and (template in ('L13_FILL','AUTH_INVITE') or status in ('PENDING','DIGEST','SUPPRESSED'));" >/dev/null
 sys "insert into notifications (channel, recipient, template, status, dedup_key)
  select 'EMAIL','hhl@test','L13_FILL','SENT','l13-ord-'||g from generate_series(1,84) g" >/dev/null
-sys "select matrix_notify('DECISION','DECISION_RESOLVED','$L','$P',
+sys "select matrix_notify('DECISION','DECISION_OPEN','$L','$P',
   jsonb_build_object('title','skrot','decision_id','$DEC_L13'),'l13-ord-d','FORWARDER')" >/dev/null
 sys "select matrix_notify('DECISION','DECISION_ESCALATED','$L','$P',
   jsonb_build_object('level','critical','decision_id','$DEC_L13'),'l13-ord-c','FORWARDER')" >/dev/null

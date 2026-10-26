@@ -14,7 +14,7 @@ Polecenie: włączenie + test na żywo (pkt 0–6).
 | Test na sucho | Wynik |
 |---|---|
 | `pilot_redirect_dry_run` | **ok: true** |
-| SMS na fikcyjny KSH `+48111222333` | zapisany jako **`+48695637907`** (właściciel) |
+| SMS na fikcyjny KSH `+48111222333` | zapisany jako **[numer właściciela]** (redirect; wartość z bazy / migracja 0176) |
 | E-mail na `ksh-fake@example.com` | recipient → **`sebastian@log-mar.pl`** |
 | Oba wpisy | oznaczone EXPIRED / BLOCKED_R2 („pilot dry-run — nie wysyłać”) |
 

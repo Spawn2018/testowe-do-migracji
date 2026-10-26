@@ -195,3 +195,17 @@
   .dtr-opt .btn{align-self:stretch;min-height:48px;font-size:16px}
   .dtr-note textarea{font-size:16px}
 }
+/* #384 pkt 5 — formularz „Proponuję inny termin” i propozycje dla KSH */
+.rk-propose{margin:8px 0;padding:10px 12px;border:1px solid var(--rule-2);display:grid;gap:8px;min-width:0}
+.rk-propose legend{padding:0 4px;font-weight:600}
+.rk-propose-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.rk-propose-grid label{display:grid;gap:4px;min-width:0}
+.rk-propose-grid .input{width:100%;min-width:0}
+.rk-ksh-props{margin:12px 0}
+.rk-ksh-props ul{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.rk-ksh-prop{display:grid;gap:8px;padding-bottom:12px;border-bottom:1px solid var(--rule-2)}
+.rk-ksh-prop-hd{margin:0}
+/* wyglad/W-cele-przejsc (d): wiersz promu prowadzi do rejsu w Harmonogramie › Rejsy */
+.rk-ferry.is-link{cursor:pointer;border-radius:2px}
+.rk-ferry.is-link:hover{background:var(--hover, rgba(127,127,127,.08))}
+.rk-ferry.is-link:focus-visible{outline:2px solid var(--focus);outline-offset:2px}

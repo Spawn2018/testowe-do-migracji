@@ -7,4 +7,4 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://maps.hereapi.com https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.hereapi.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://maps.hereapi.com https://server.arcgisonline.com https://*.basemaps.cartocdn.com; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.hereapi.com; worker-src 'self' blob:; frame-src 'self' blob: https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'

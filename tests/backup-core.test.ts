@@ -4,7 +4,15 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Encrypter } from 'age-encryption';
-import { BACKUP_BUCKETS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, backupTables, csvRowCount, gzip, retentionDeletes, sealTable, sha256Hex } from '../supabase/functions/_shared/backup/core';
+import {
+  BACKUP_BUCKETS, CHUNK_EST_ROWS, EXCLUDED_TABLES, EXCLUSION_REASONS, REQUIRED_TABLES, REST_CSV_MAX_ROWS,
+  LEASE_SECONDS, PART_MAX_ROWS, SELECT_BATCH_ROWS, TABLE_COPY_TIMEOUT_MS, TABLE_SELECT_TIMEOUT_MS,
+  WALL_BUDGET_MS, assertCsvInCountWindow, assertCsvMatchesDbCount, assertSafeCtid, backupTables,
+  copyCtidRangeSql, csvEscapeField, csvRowCount, ctidPageRanges, gzip, heapPagesFromBytes,
+  parseBackupProgress, parseSelectColumns, partObjectKey, pastWallBudget, postgrestSelectParam,
+  recordTableParts, remainingTables, retentionDeletes, rowsToCsv, sealTable, selectTextCastSql,
+  sha256Hex, shouldChunkByEstimate,
+} from '../supabase/functions/_shared/backup/core';
 
 const hasAge = (() => { try { execFileSync('age', ['--version']); return true; } catch { return false; } })();
 
@@ -36,6 +44,121 @@ describe('ANEKS 4 PR2 — logika kopii', () => {
     expect(csvRowCount('a,b\n1,2\n3,"x\ny"\n')).toBe(2);
     expect(csvRowCount('a,b\n')).toBe(0);
     expect(csvRowCount('')).toBe(0);
+  });
+
+  // #463 / D-20261022-2110-01 + F7 #472 — stronicowanie; ostatni zakres otwarty; kompletność
+  it('#463: shouldChunkByEstimate od progu; zakresy ctid — ostatni bez górnej granicy', () => {
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS - 1)).toBe(false);
+    expect(shouldChunkByEstimate(CHUNK_EST_ROWS)).toBe(true);
+    expect(heapPagesFromBytes(0)).toBe(1);
+    expect(heapPagesFromBytes(8192)).toBe(1);
+    expect(heapPagesFromBytes(8193)).toBe(2);
+    expect(heapPagesFromBytes(2049 * 8192)).toBe(2049);
+    expect(heapPagesFromBytes(2310 * 8192)).toBe(2310);
+    expect(ctidPageRanges(0)).toEqual([{ from: 0, to: null }]);
+    expect(ctidPageRanges(32)).toEqual([{ from: 0, to: null }]);
+    expect(ctidPageRanges(33)).toEqual([{ from: 0, to: 32 }, { from: 32, to: null }]);
+    expect(copyCtidRangeSql('notifications', 0, 32, null, true)).toContain('header true');
+    expect(copyCtidRangeSql('notifications', 0, 32, null, true)).toContain("ctid < '(32,0)'");
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).toContain('header false');
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).toMatch(/ctid >= '\(32,0\)'::tid\)/);
+    expect(copyCtidRangeSql('notifications', 32, null, null, false)).not.toContain('ctid <');
+    expect(copyCtidRangeSql('loads', 0, 8, '"id", "code"', true)).toContain('"id", "code"');
+    expect(() => copyCtidRangeSql('x;drop', 0, 1, null, true)).toThrow(/niedozwolona/);
+    expect(() => copyCtidRangeSql('loads', 5, 5, null, true)).toThrow(/zakres/);
+    expect(() => assertCsvMatchesDbCount(10, 10, 'loads')).not.toThrow();
+    expect(() => assertCsvMatchesDbCount(9, 10, 'notifications')).toThrow(/niekompletna.*notifications.*csv=9.*db=10/);
+  });
+
+  // #479 F7: poza RR — przedział n0/n1 (wstawki / retencja w trakcie); brak wierszy → ERROR
+  it('#479: assertCsvInCountWindow — wstawki, usunięcia, ubytek w CSV', () => {
+    expect(() => assertCsvInCountWindow(100, 100, 100, 'loads')).not.toThrow();
+    expect(() => assertCsvInCountWindow(105, 100, 110, 'integration_runs')).not.toThrow(); // wstawki
+    expect(() => assertCsvInCountWindow(95, 100, 90, 'sms_heartbeats')).not.toThrow(); // retencja
+    expect(() => assertCsvInCountWindow(100, 110, 90, 'notifications')).not.toThrow(); // n0>n1, csv w środku
+    expect(() => assertCsvInCountWindow(89, 100, 90, 'audit_log')).toThrow(
+      /niekompletna.*audit_log.*csv=89.*n0=100.*n1=90/,
+    ); // csv < lo
+    expect(() => assertCsvInCountWindow(111, 100, 110, 'vessel_positions')).toThrow(
+      /niekompletna.*vessel_positions.*csv=111.*n0=100.*n1=110/,
+    ); // csv > hi
+    expect(() => assertCsvInCountWindow(0, 5, 5, 'app_users')).toThrow(/csv=0.*n0=5.*n1=5/);
+  });
+
+  // #479 cz.5 (historyczne): próg PostgREST; F7 A — select w Edge, helpery CSV zostają
+  it('#479: postgrestSelectParam / REST_CSV_MAX_ROWS', () => {
+    expect(REST_CSV_MAX_ROWS).toBe(1000);
+    expect(REST_CSV_MAX_ROWS).toBeLessThan(CHUNK_EST_ROWS);
+    expect(postgrestSelectParam(null)).toBe('*');
+    expect(postgrestSelectParam('')).toBe('*');
+    expect(postgrestSelectParam('"id", "email"')).toBe('id,email');
+    expect(postgrestSelectParam('id, code')).toBe('id,code');
+    expect(() => postgrestSelectParam('"id";drop')).toThrow(/zła kolumna/);
+  });
+
+  // #479 F7 A: bez COPY — select porcjami + CSV w kodzie
+  it('#479 F7 A: select batch / CSV escape / ctid', () => {
+    expect(SELECT_BATCH_ROWS).toBe(2_000);
+    expect(TABLE_SELECT_TIMEOUT_MS).toBe(TABLE_COPY_TIMEOUT_MS);
+    // #498: wall krótszy — tabela w częściach, timeout całej tabeli historyczny
+    expect(TABLE_SELECT_TIMEOUT_MS).toBeGreaterThanOrEqual(WALL_BUDGET_MS);
+    expect(parseSelectColumns(null)).toBeNull();
+    expect(parseSelectColumns('"id", "code"')).toEqual(['id', 'code']);
+    expect(selectTextCastSql(['id', 'code'])).toBe('"id"::text as "id", "code"::text as "code"');
+    expect(assertSafeCtid('(0,1)')).toBe('(0,1)');
+    expect(() => assertSafeCtid('0,1')).toThrow(/zły ctid/);
+    expect(csvEscapeField(null)).toBe('');
+    expect(csvEscapeField('')).toBe('""');
+    expect(csvEscapeField('a,b')).toBe('"a,b"');
+    expect(csvEscapeField('x"y')).toBe('"x""y"');
+    expect(csvEscapeField('plain')).toBe('plain');
+    expect(rowsToCsv(['a', 'b'], [[null, '1'], ['', 'x,y']])).toBe('a,b\n,1\n"","x,y"\n');
+    expect(csvRowCount(rowsToCsv(['a'], []))).toBe(0);
+    expect(csvRowCount(rowsToCsv(['a'], [['1'], ['2']]))).toBe(2);
+  });
+
+  // #463 F7: kontynuacja w limicie Edge (~150 s) — budżet wywołania + lista pozostałych tabel
+  it('#463: remainingTables / pastWallBudget / timeout tabeli < wall', () => {
+    expect(TABLE_COPY_TIMEOUT_MS).toBeGreaterThan(WALL_BUDGET_MS); // #498: wall krótszy; tabela w częściach
+    expect(WALL_BUDGET_MS).toBeLessThan(150_000);
+    expect(remainingTables(['a', 'b', 'c'], { a: 1 })).toEqual(['b', 'c']);
+    expect(remainingTables(['a', 'b'], null)).toEqual(['a', 'b']);
+    expect(remainingTables(['a'], { a: 0 })).toEqual([]);
+    expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS - 1)).toBe(false);
+    expect(pastWallBudget(1_000, 1_000 + WALL_BUDGET_MS)).toBe(true);
+  });
+
+  // #498: części ≤ 5000 wierszy; klucz partNNNN; progress w backup_runs
+  it('#498: PART_MAX_ROWS / partObjectKey / parseBackupProgress', () => {
+    expect(PART_MAX_ROWS).toBe(5_000);
+    expect(PART_MAX_ROWS).toBeGreaterThan(SELECT_BATCH_ROWS);
+    expect(LEASE_SECONDS).toBe(90);
+    expect(partObjectKey('integration_runs', 1)).toBe('integration_runs.part0001.csv.gz.age');
+    expect(partObjectKey('notifications', 12)).toBe('notifications.part0012.csv.gz.age');
+    expect(() => partObjectKey('x;drop', 1)).toThrow(/niedozwolona/);
+    expect(() => partObjectKey('loads', 0)).toThrow(/części/);
+    const p = parseBackupProgress({
+      table: 'integration_runs', after_ctid: '(10,2)', next_part: 3, n0: 70_000, rows_so_far: 10_000,
+      parts: [{ part: 1, rows: 5000, key: 'integration_runs.part0001.csv.gz.age' }],
+    });
+    expect(p?.table).toBe('integration_runs');
+    expect(p?.after_ctid).toBe('(10,2)');
+    expect(p?.next_part).toBe(3);
+    expect(p?.rows_so_far).toBe(10_000);
+    expect(parseBackupProgress(null)).toBeNull();
+    expect(parseBackupProgress({ table: 'bad;x', next_part: 1, n0: 1, rows_so_far: 0 })).toBeNull();
+  });
+
+  // #498 F7 B2: dokładnie 5000 wierszy = 1 część → nadal table_parts (nie gubić pliku)
+  it('#498 F7 B2: recordTableParts — 1×PART_MAX_ROWS też do table_parts', () => {
+    expect(recordTableParts([])).toBeNull();
+    const one = [{ part: 1, rows: PART_MAX_ROWS, key: 't.part0001.csv.gz.age' }];
+    expect(recordTableParts(one)).toEqual(one);
+    const two = [
+      { part: 1, rows: PART_MAX_ROWS, key: 't.part0001.csv.gz.age' },
+      { part: 2, rows: 12, key: 't.part0002.csv.gz.age' },
+    ];
+    expect(recordTableParts(two)).toEqual(two);
   });
 
   it('retencja: dzienne > 30 dni i miesięczne ≥ 12 miesięcy do usunięcia; pliki zostają', () => {

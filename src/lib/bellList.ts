@@ -8,12 +8,16 @@ export interface BellItem {
   id: string;
   read: boolean;
   roleScope?: readonly string[];
+  kind?: string;
 }
+
+/** Właściciel 21.10.2026 20:14 (pkt 6): zamknięta sprawa nie wraca do dzwonka jako „zamknięta” — znika. */
+export const BELL_HIDDEN_KINDS = new Set(['DECISION_RESOLVED', 'RISK_RESOLVED']);
 
 export function bellVisible<T extends BellItem>(items: readonly T[], role: string): T[] {
   return items.filter((n) => {
     const scoped = !n.roleScope || n.roleScope.length === 0 || n.roleScope.includes(role);
-    return scoped && !n.read;
+    return scoped && !n.read && !(n.kind && BELL_HIDDEN_KINDS.has(n.kind));
   });
 }
 
@@ -65,6 +69,8 @@ const INFO_KINDS = new Set([
   'ZONE_EXIT', 'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'AWIZACJA', 'PLAN_DATES_CHANGED', 'FEE_DECIDED',
   'DECISION_RESOLVED', 'INVOICE_DISPUTE_RESOLVED', 'RISK_OPEN', 'RISK_RESOLVED', 'ROAD_PL', 'ROAD_SE', 'WEATHER',
   'FERRY', 'ROUTE_OBSTACLE', 'WORKFLOW_ALERT',
+  /* #384 pkt 5: wynik propozycji terminu (KSH przyjął / odrzucił) — informacja dla SCX */
+  'KSH_DATE_COUNTER_RESULT',
 ]);
 
 /** P11 (e5, E5): informacje bez działania i bez transportu („Faktura zaakceptowana”, „Import harmonogramu zatwierdzony”) —
@@ -275,4 +281,17 @@ export function withLoadCode(path: string, code: string | undefined): string {
   if (!code || !path.startsWith('/transport/')) return path;
   const q = path.indexOf('?');
   return `/transport/${encodeURIComponent(code)}${q >= 0 ? path.slice(q) : ''}`;
+}
+
+/**
+ * Właściciel 21.10.2026 20:14 (pkt 5): „Na komórce nie wyświetlają się powiadomienia z dzwoneczka”.
+ * Aplikacja na telefonie (iOS, ekran początkowy) nie jest przeładowywana — dzwonek miał tylko wpisy z chwili logowania.
+ * Odświeżenie samego dzwonka: wpisy z serwera (kolejność serwera), przeczytane lokalnie zostają przeczytane
+ * (zapis na serwer mógł jeszcze nie dojść), wpisy spoza odpowiedzi serwera (np. dodane z push) zostają na końcu.
+ */
+export function mergeBellRefresh<T extends BellItem>(local: readonly T[], server: readonly T[]): T[] {
+  const readLocal = new Set(local.filter((n) => n.read).map((n) => n.id));
+  const fromServer = new Set(server.map((n) => n.id));
+  const merged = server.map((n) => (!n.read && readLocal.has(n.id) ? { ...n, read: true } : n));
+  return [...merged, ...local.filter((n) => !fromServer.has(n.id))];
 }

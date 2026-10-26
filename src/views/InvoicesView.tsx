@@ -7,7 +7,7 @@
  * formularz oferty faktoringu) usunięty (E4 „Jedna strona”, E4b „Usunąć”). Telefon: kafelki 2 × 2 i karty, bez obiegu
  * i bez tabeli „Kto co widzi” (img/e4-faktury-phone, E8). Terminy: SCX → HHL 35 dni, HHL → KSH 30 dni (03_REJESTR).
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { attachDocumentFile } from '../lib/docFiles';
 import { canSeeCost } from '../lib/permissions';
@@ -27,6 +27,11 @@ import { factoringTasksOf } from '../lib/p5Source';
 import { FactoringTaskCard } from '../components/invoices/Factoring';
 import '../components/finance/finance.css';
 import '../components/invoices/invoices.css';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { lazyRetry } from '../lib/lazyRetry';
+
+/* #412 E4b (0287): zadania „Wypłata faktoringu” z bazy (HHL); demo bez zmian */
+const LiveFactoringTasks = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LiveFactoring').then((m) => ({ default: m.LiveFactoringTasks })))) : null;
 
 export function InvoicesView() {
   const role = useTowerStore((s) => s.role);
@@ -120,6 +125,9 @@ export function InvoicesView() {
           className="inv-panel"
         >
           <BillsSection direction={d} phone={phone} />
+          {d === 'KOSZT' && role === 'HHL' && LiveFactoringTasks ? (
+            <Suspense fallback={null}><LiveFactoringTasks nowIso={nowIso} locale={locale} /></Suspense>
+          ) : null}
           {d === 'KOSZT' && tasks.length ? (
             <div className="inv-tasks">
               {tasks.map((x) => <FactoringTaskCard key={x.billId} task={x} nowIso={nowIso} locale={locale} />)}

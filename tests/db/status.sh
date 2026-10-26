@@ -8,7 +8,13 @@ SCX=11111111-0000-0000-0000-000000000003; KSH=11111111-0000-0000-0000-0000000000
 ok=0; fail=0
 q()   { $PSQL -c "$1" 2>&1; }
 pos() { q "select count(*) from process_position('$1', $2, $3, '$4')" >/dev/null; }   # ładunek, szer., dł., czas
-chk() { got=$(q "$2" | tail -1); if [ "$got" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $3)"; fi; }
+chk() {
+  out=$(q "$2")
+  got=$(printf '%s\n' "$out" | grep -E '^ERROR:' | head -1)
+  if [ -z "$got" ]; then got=$(printf '%s\n' "$out" | tail -1); fi
+  if [ "$got" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"
+  else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $got, oczekiwano: $3)"; fi
+}
 st()  { echo "select status from loads where id='$1'"; }
 rk()  { echo "select count(*) from risk_signals where load_id='$1' and dedup_key like '$2%'"; }
 
@@ -85,31 +91,63 @@ echo; echo "[2] Port Gdańsk — wjazd w strefę"
 for x in $A $I $J; do pos $x 54.4030 18.6800 "2026-10-01 10:00+00"; pos $x 54.4031 18.6801 "2026-10-01 10:05+00"; done
 chk "wjazd w strefę portu → AT_PORT_GDANSK"                   "$(st $A)" AT_PORT_GDANSK
 chk "port bez potwierdzenia załadunku: ryzyko, status się zmienia" "$(rk $J PORT_NO_LOADED)" 1
+# #398: actual_load_at (GPS) = potwierdzony załadunek → brak PORT_NO_LOADED
+# bez sailing_id — inaczej Lgps wchodzi w promote_ferry_departures (S1) i psuje licznik 3→4
+# L 98 — nie 2a: C17A=L 2a (kolizja ID → C17A zostawał AT_PORT_GDANSK)
+Lgps=$(L 98)
+mk $Lgps GPS "'HHL/GPS'" "'SCX/GPS'" IN_TRANSIT_PL null
+q "set session_replication_role=replica; update loads set actual_load_at='2026-09-30 11:10+00' where id='$Lgps'; set session_replication_role=origin" >/dev/null
+pos $Lgps 54.4030 18.6800 "2026-10-01 10:00+00"; pos $Lgps 54.4031 18.6801 "2026-10-01 10:05+00"
+chk "398: port z actual_load_at → AT_PORT_GDANSK"           "$(st $Lgps)" AT_PORT_GDANSK
+chk "398: port z actual_load_at → 0 PORT_NO_LOADED"         "$(rk $Lgps PORT_NO_LOADED)" 0
 chk "strefa bufora 20 km nie zmienia statusu"                 "select count(*) from load_events where load_id='$A' and event_type='STATUS_AUTO'" 1
 
-echo; echo "[3] PROM — czas odejścia przypisanego rejsu"
+echo; echo "[3] PROM — #461: AIS albo plan+1h (SCHEDULE_ASSUMED); bez MISSED/NO_DEPARTURE"
 chk "minuta przed odejściem: nic"                             "select promote_ferry_departures('2026-10-01 11:59+00')" 0
-chk "odejście rejsu: trzy auta w strefie → PROM"              "select promote_ferry_departures('2026-10-01 12:01+00')" 3
-chk "status A = FERRY"                                        "$(st $A)" FERRY
-chk "auto poza strefą w chwili odejścia: status bez zmian"    "$(st $B)" IN_TRANSIT_PL
-chk "auto poza strefą: ryzyko wysokie"                        "$(rk $B MISSED_SAILING)" 1
+chk "#461: plan minął, brak actual, przed +1h → bez FERRY"   "select promote_ferry_departures('2026-10-01 12:01+00')" 0
+chk "#461: status A nadal AT_PORT_GDANSK"                     "$(st $A)" AT_PORT_GDANSK
+# SCHEDULE_ASSUMED: plan 12:00 + 1 h → FERRY o 13:00, bez spraw i bez powiadomień
+Nbell=$(q "select count(*) from notifications")
+chk "#461: plan+1h bez AIS → FERRY (SCHEDULE_ASSUMED)"       "select promote_ferry_departures('2026-10-01 13:01+00')" 4
+chk "#461: status A = FERRY (rozkład)"                        "$(st $A)" FERRY
+chk "#461: source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+chk "#461: auto poza strefą też FERRY (bez MISSED)"           "$(st $B)" FERRY
+chk "#461: 0 MISSED_SAILING przy nieodwołanym"                "$(rk $B MISSED_SAILING)" 0
+chk "#461: 0 NO_DEPARTURE"                                    "$(rk $A NO_DEPARTURE)" 0
+chk "#461: SCHEDULE_ASSUMED bez nowych powiadomień" \
+  "select (count(*) = $Nbell)::text from notifications" true
+# AIS później → korekta godziny na actual (bez nowych powiadomień)
+Nbell2=$(q "select count(*) from notifications")
+q "update sailings set actual_departure_at = '2026-10-01 12:15+00' where id='$S1'" >/dev/null
+chk "#461: AIS po SCHEDULE_ASSUMED → 0 nowych FERRY (korekta)" "select promote_ferry_departures('2026-10-01 13:05+00')" 0
+chk "#461: po AIS source=AIS i godzina 12:15" \
+  "select (payload->>'source')||'/'||to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$A' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" "AIS/12:15"
+chk "#461: korekta AIS bez nowych powiadomień" \
+  "select (count(*) = $Nbell2)::text from notifications" true
 pos $A 55.50 18.90 "2026-10-01 12:30+00"; pos $A 55.51 18.91 "2026-10-01 12:35+00"
 chk "statek odpływa, auto opuszcza strefę: status nadal PROM" "$(st $A)" FERRY
 
 echo; echo "[4] PROM — zadanie uruchomione z opóźnieniem, statek już na morzu"
 pos $Hh 54.4030 18.6800 "2026-10-01 13:00+00"; pos $Hh 54.4031 18.6801 "2026-10-01 13:05+00"
 pos $Hh 55.50 18.90 "2026-10-01 14:30+00";    pos $Hh 55.51 18.91 "2026-10-01 14:35+00"
+q "update sailings set actual_departure_at = '2026-10-01 14:00+00' where id='$S4'" >/dev/null
 chk "auto było w strefie w chwili odejścia — przełączone mimo opóźnienia zadania" "select promote_ferry_departures('2026-10-01 16:30+00')" 1
 chk "status H = FERRY"                                        "$(st $Hh)" FERRY
 chk "brak fałszywego ryzyka przegapionego rejsu"             "$(rk $Hh MISSED_SAILING)" 0
 
-echo; echo "[5] PROM — rejs opóźniony i odwołany"
+echo; echo "[5] PROM — rejs opóźniony (SCHEDULE_ASSUMED od delayed+1h) i odwołany"
 pos $K 54.4030 18.6800 "2026-10-01 15:00+00"; pos $K 54.4031 18.6801 "2026-10-01 15:05+00"
 q "select promote_ferry_departures('2026-10-01 16:30+00')" >/dev/null
 chk "rozkładowa godzina minęła, rejs opóźniony: auto czeka w porcie" "$(st $K)" AT_PORT_GDANSK
 chk "brak fałszywego ryzyka przy opóźnieniu"                  "$(rk $K MISSED_SAILING)" 0
 q "select promote_ferry_departures('2026-10-01 19:01+00')" >/dev/null
-chk "opóźnione odejście: → PROM"                             "$(st $K)" FERRY
+chk "#461: delayed minął, przed +1h → bez FERRY"              "$(st $K)" AT_PORT_GDANSK
+chk "#461: delayed+1h → FERRY SCHEDULE_ASSUMED"               "select promote_ferry_departures('2026-10-01 20:01+00')" 1
+chk "status K = FERRY"                                        "$(st $K)" FERRY
+chk "#461: K source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$K' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+chk "#461: 0 NO_DEPARTURE przy delayed"                       "$(rk $K NO_DEPARTURE)" 0
 q "select promote_ferry_departures('2026-10-01 20:01+00')" >/dev/null
 chk "rejs odwołany: status bez zmian"                        "$(st $C)" IN_TRANSIT_PL
 chk "rejs odwołany: ryzyko"                                  "$(rk $C SAILING_CANCELLED)" 1
@@ -121,7 +159,8 @@ pos $A 59.3300 18.0600 "2026-10-02 06:40+00"; pos $A 59.3301 18.0601 "2026-10-02
 chk "wyjazd ze strefy portu SE → IN_TRANSIT_SE"              "$(st $A)" IN_TRANSIT_SE
 pos $I 65.5000 21.7000 "2026-10-02 07:00+00"; pos $I 65.5001 21.7001 "2026-10-02 07:05+00"
 chk "GPS zgubił port SE, auto już na trasie → IN_TRANSIT_SE" "$(st $I)" IN_TRANSIT_SE
-chk "przeterminowany PROM: tylko auto bez sygnału po przypłynięciu" "select detect_ferry_overdue('2026-10-02 09:00+00')" 1
+# #461: SCHEDULE_ASSUMED stawia FERRY także poza strefą (B i J na S1) — 2× FERRY_OVERDUE zamiast 1.
+chk "przeterminowany PROM: B+J bez sygnału po przypłynięciu" "select detect_ferry_overdue('2026-10-02 09:00+00')" 2
 chk "ryzyko przeterminowanego PROMU dla właściwego auta"     "$(rk $J FERRY_OVERDUE)" 1
 
 echo; echo "[7] Plac budowy — A2: wyjazd ≥ 10 min → Dostarczone (nigdy UNLOADED)"
@@ -134,8 +173,9 @@ chk "postój na placu: nadal AT_SITE, NIGDY UNLOADED"         "$(st $A)" AT_SITE
 pos $A 58.9350 17.9500 "2026-10-04 06:00+00"; pos $A 58.9351 17.9501 "2026-10-04 06:05+00"
 chk "A2 wyjazd z placu ≥ 10 min → DELIVERED"                 "$(st $A)" DELIVERED
 chk "A2 actual_delivery_at = czas wyjazdu"                   "select to_char(actual_delivery_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from loads where id='$A'" "2026-10-04 06:05"
+# #461: korekta AIS zostawia stare FERRY z zastepuje — oś bez zastąpionych
 chk "pełna ścieżka A w dzienniku zdarzeń" \
-  "select string_agg(payload->>'to', ' → ' order by occurred_at) from load_events where load_id='$A' and event_type='STATUS_AUTO'" \
+  "select string_agg(payload->>'to', ' → ' order by occurred_at) from load_events e where e.load_id='$A' and e.event_type='STATUS_AUTO' and not exists (select 1 from load_events z where z.load_id=e.load_id and z.payload->>'zastepuje'=e.id::text)" \
   "AT_PORT_GDANSK → FERRY → AT_PORT_NYNASHAMN → IN_TRANSIT_SE → AT_SITE → DELIVERED"
 
 echo; echo "[8] Uprawnienia"
@@ -250,19 +290,23 @@ chk "C17 0 transportów UNLOADED w zestawie" "select count(*) from loads where s
 # D-1710 (#368): okno i pozycje tylko przy telematics_vehicle_id.
 echo; echo "[11] A1 — okno śledzenia i bezpiecznik L17"
 W1=$(L 3a); W2=$(L 3b); W3=$(L 3c); W4=$(L 3d); W5=$(L 3e); W6=$(L 3f); W7=$(L 4a)
+# W3/W4 = poza oknem: plan w przyszłości (nie sztywne daty — w dniu planu „cisza poza oknem” / T05 padają).
+W3_PLAN=$(q "select (current_date + 14)::text")
+W4_PLAN=$(q "select (current_date + 21)::text")
+W4_PLAN2=$(q "select (current_date + 23)::text")
 # Data od razu docelowa: mk() wstawia 30.09, a zmiana daty po starcie okna zamraża śledzenie.
 q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id) values
  ('$W1','$P','$SCXO','KSH/A1W1','HHL/A1W1','SCX/A1W1','IN_TRANSIT_PL','2026-10-05','TEL-A1W1'),
  ('$W2','$P','$SCXO','KSH/A1W2','HHL/A1W2','SCX/A1W2','DELIVERED','2026-10-05','TEL-A1W2'),
- ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','2026-10-24','TEL-A1W3'),
- ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','2026-11-05','TEL-A1W4'),
+ ('$W3','$P','$SCXO','KSH/A1W3','HHL/A1W3','SCX/A1W3','IN_TRANSIT_PL','$W3_PLAN','TEL-A1W3'),
+ ('$W4','$P','$SCXO','KSH/A1W4','HHL/A1W4','SCX/A1W4','IN_TRANSIT_PL','$W4_PLAN','TEL-A1W4'),
  ('$W5','$P','$SCXO','KSH/A1W5','HHL/A1W5','SCX/A1W5','IN_TRANSIT_PL','2026-10-05','TEL-A1W5'),
  ('$W6','$P','$SCXO','KSH/A1W6','HHL/A1W6','SCX/A1W6','IN_TRANSIT_SE','2026-10-01','TEL-A1W6')" >/dev/null
 T59=$(q "select public.tracking_window_start('2026-10-05'::date) - interval '1 minute'")
 T00=$(q "select public.tracking_window_start('2026-10-05'::date)")
 # W4: daty w przyszłości (nie „dziś”) — po 03:00 w dniu planu okno już startuje i zamraża tracking_opened_at.
-T05=$(q "select public.tracking_window_start('2026-11-05'::date)")
-T07=$(q "select public.tracking_window_start('2026-11-07'::date)")
+T05=$(q "select public.tracking_window_start('$W4_PLAN'::date)")
+T07=$(q "select public.tracking_window_start('$W4_PLAN2'::date)")
 pos $W1 52.09 17.02 "$T59"
 chk "A1 02:59 bez pozycji" "select count(*) from positions where load_id='$W1'" 0
 pos $W1 52.09 17.02 "$T00"
@@ -271,7 +315,7 @@ pos $W2 52.09 17.02 "$T00"
 chk "A1 Dostarczone bez pozycji" "select count(*) from positions where load_id='$W2'" 0
 pos $W3 52.09 17.02 "2026-10-17 12:00:00+00"
 chk "A1 przyszły tydzień bez pozycji" "select count(*) from positions where load_id='$W3'" 0
-q "update loads set plan_load_date='2026-11-07' where id='$W4'" >/dev/null
+q "update loads set plan_load_date='$W4_PLAN2' where id='$W4'" >/dev/null
 pos $W4 52.09 17.02 "$T05"
 chk "A1 zmiana daty przed startem nie otwiera starego dnia" "select count(*) from positions where load_id='$W4'" 0
 pos $W4 52.09 17.02 "$T07"
@@ -503,7 +547,8 @@ chk "A5 Stena: wjazd Gdańsk (POLFERRIES) bez zmiany statusu" "$(st $L_A5)" IN_T
 # Własny port Gdynia → AT_PORT_GDANSK
 pos $L_A5 54.53321 18.54425 "2026-10-05 11:00+00"; pos $L_A5 54.5333 18.5443 "2026-10-05 11:05+00"
 chk "A5 Stena: wjazd Gdynia → AT_PORT_GDANSK" "$(st $L_A5)" AT_PORT_GDANSK
-chk "A5 Stena: odejście rejsu → FERRY" "select promote_ferry_departures('2026-10-05 12:01+00')" 1
+q "update sailings set actual_departure_at = '2026-10-05 12:00+00' where id='$S_A5'" >/dev/null
+chk "A5 Stena: odejście rejsu (AIS) → FERRY" "select promote_ferry_departures('2026-10-05 12:01+00')" 1
 chk "A5 Stena: status FERRY" "$(st $L_A5)" FERRY
 pos $L_A5 56.16460 15.63080 "2026-10-05 22:10+00"; pos $L_A5 56.1647 15.6309 "2026-10-05 22:15+00"
 chk "A5 Stena: wjazd Karlskrona → AT_PORT_NYNASHAMN" "$(st $L_A5)" AT_PORT_NYNASHAMN
@@ -525,8 +570,8 @@ chk "A5 Polferries: eta_basis port_route=POLFERRIES" "select eta_basis->>'port_r
 chk "A5 READY_TO_INVOICE: ETA jak DELIVERED (segment DONE)" \
   "select basis->>'segment' from compute_load_eta('$C17A')" DONE
 # F7: source w STATUS_AUTO (kontrakt A10); ETA plac Stena > Polferries
-chk "A5 Stena STATUS_AUTO FERRY source=SCHEDULE" \
-  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" SCHEDULE
+chk "A5 Stena STATUS_AUTO FERRY source=AIS" \
+  "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' order by occurred_at desc limit 1" AIS
 chk "A5 Stena STATUS_AUTO AT_PORT_NYNASHAMN source=GPS" \
   "select payload->>'source' from load_events where load_id='$L_A5' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" GPS
 q "select set_config('tower.status_ctx','on',true); update loads set status='AT_PORT_NYNASHAMN' where id in ('$L_A5','$L_PF')" >/dev/null
@@ -540,6 +585,854 @@ chk "A5 Stena: eta_site nie null w porcie SE" "select (eta_site is not null)::te
 chk "A5 Polferries: eta_site nie null w porcie SE" "select (eta_site is not null)::text from loads where id='$L_PF'" true
 chk "A5 ETA plac Stena > Polferries (SE_ROAD_KAA 21,5 > SE_ROAD 17)" \
   "select (s.eta_site > p.eta_site)::text from loads s join loads p on true where s.id='$L_A5' and p.id='$L_PF'" true
+
+# #445 / D-20261022-1235-01: A10_b FERRY tylko po odejściu rejsu (nie przy zbieżności AIS w porcie)
+echo; echo "[#445] A10_b — FERRY tylko po odejściu rejsu"
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000445','M/F Wawel 445','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000445','$P','66666666-0000-0000-0000-000000000445','GDN-NYN',
+  now() + interval '6 hours', now() + interval '24 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445=77777777-0000-0000-0000-000000000445
+V445=66666666-0000-0000-0000-000000000445
+L445=$(L 72)
+mk $L445 A445 "'HHL/A445'" "'SCX/A445'" AT_PORT_GDANSK "'$S445'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445','MILESTONE_LOADED', now() - interval '1 day')" >/dev/null
+# auto i statek w PORT_OUT (≤ 2 km), rejs za 6 h
+q "select process_position('$L445', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L445', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4032, 18.6802, 0, now() - interval '2 minutes', 'DIGITRAFFIC')" >/dev/null
+chk "#445: PORT_OUT + AIS ≤2 km, rejs za 6 h → bez FERRY" \
+  "select a10_try_ferry_backup('$L445', now()); select status from loads where id='$L445'" AT_PORT_GDANSK
+# po actual_departure_at + GPS na morzu (wyjazd PORT_OUT) → FERRY
+q "update sailings set actual_departure_at = now() - interval '5 minutes' where id='$S445';
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 12, now() - interval '1 minute', 'DIGITRAFFIC');
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L445','GEOFENCE_EXIT', now() - interval '20 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'));
+    select process_position('$L445', 55.00, 18.90, now() - interval '3 minutes');
+    select process_position('$L445', 55.01, 18.91, now() - interval '1 minute')" >/dev/null
+chk "#445: po actual_departure_at + GPS morze → FERRY" \
+  "select a10_try_ferry_backup('$L445', now()); select status from loads where id='$L445'" FERRY
+
+# departure_at minął, AIS w porcie (opóźnienie) → bez FERRY
+L445b=$(L 73)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000446','$P','$V445','GDN-NYN',
+  now() - interval '2 hours', now() + interval '16 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445b=77777777-0000-0000-0000-000000000446
+mk $L445b A445b "'HHL/A445b'" "'SCX/A445b'" AT_PORT_GDANSK "'$S445b'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445b','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L445b', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L445b', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4030, 18.6800, 0, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#445: departure minął, AIS w porcie → bez FERRY" \
+  "select a10_try_ferry_backup('$L445b', now()); select status from loads where id='$L445b'" AT_PORT_GDANSK
+
+# departure_at minął, AIS 10 km, auto ≤ 2 km od AIS → FERRY
+L445c=$(L 74)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000447','$P','$V445','GDN-NYN',
+  now() - interval '3 hours', now() + interval '15 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S445c=77777777-0000-0000-0000-000000000447
+mk $L445c A445c "'HHL/A445c'" "'SCX/A445c'" AT_PORT_GDANSK "'$S445c'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L445c','MILESTONE_LOADED', now() - interval '1 day');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 10, now() - interval '1 minute', 'DIGITRAFFIC');
+    select process_position('$L445c', 54.4925, 18.6805, now() - interval '3 minutes');
+    select process_position('$L445c', 54.4928, 18.6802, now() - interval '1 minute')" >/dev/null
+chk "#445: departure minął, AIS 10 km sog>3, auto ≤2 km → FERRY" \
+  "select a10_try_ferry_backup('$L445c', now()); select status from loads where id='$L445c'" FERRY
+
+# #502: A10_b tylko gdy statek płynie; FERRY bez powiadomień status
+echo; echo "[#502] A10_b — W_PORCIE/ZAPLANOWANY v=0 bez FERRY; po actual_dep FERRY 0 notif"
+L502=$(L 76)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000502','$P','$V445','GDN-NYN',
+  now() - interval '30 minutes', now() + interval '18 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502=77777777-0000-0000-0000-000000000502
+mk $L502 A502 "'HHL/A502'" "'SCX/A502'" AT_PORT_GDANSK "'$S502'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L502', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4032, 18.6802, 0, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502: PORT_OUT + ZAPLANOWANY sog=0 (plan minął) → bez FERRY" \
+  "select a10_try_ferry_backup('$L502', now()); select status from loads where id='$L502'" AT_PORT_GDANSK
+N502=$(q "select count(*) from notifications where load_id='$L502' and template='LOAD_STATUS_CHANGED'")
+q "update sailings set actual_departure_at = now() - interval '5 minutes' where id='$S502';
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4930, 18.6800, 12, now() - interval '1 minute', 'DIGITRAFFIC');
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L502','GEOFENCE_EXIT', now() - interval '20 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'));
+    select process_position('$L502', 55.00, 18.90, now() - interval '3 minutes');
+    select process_position('$L502', 55.01, 18.91, now() - interval '1 minute')" >/dev/null
+chk "#502: po actual_departure_at + GPS morze → FERRY" \
+  "select a10_try_ferry_backup('$L502', now()); select status from loads where id='$L502'" FERRY
+chk "#502: FERRY A10_b bez nowych LOAD_STATUS_CHANGED" \
+  "select (count(*)=$N502)::text from notifications where load_id='$L502' and template='LOAD_STATUS_CHANGED'" true
+
+# #502 F7 B4: T-11 — stary GPS naczepy + statek płynący → bez FERRY (czas GPS↔AIS)
+echo; echo "[#502 F7] B4 — stary GPS / wpływający / SCHEDULE cicho"
+L502a=$(L 95)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000503','$P','$V445','GDN-NYN',
+  now() - interval '1 hour', now() + interval '17 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502a=77777777-0000-0000-0000-000000000503
+mk $L502a A502a "'HHL/A502a'" "'SCX/A502a'" AT_PORT_GDANSK "'$S502a'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502a','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502a', 54.4030, 18.6800, now() - interval '2 hours 5 minutes');
+    select process_position('$L502a', 54.4031, 18.6801, now() - interval '2 hours');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4140, 18.6800, 6.9, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502 F7: GPS sprzed 2 h + AIS 6,9 kn 1,2 km → bez FERRY" \
+  "select a10_try_ferry_backup('$L502a', now()); select status from loads where id='$L502a'" AT_PORT_GDANSK
+
+# B4(2): statek wpływający — plan w przyszłości, sog>3, 1–2 km → bez FERRY
+L502b=$(L 96)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000504','$P','$V445','GDN-NYN',
+  now() + interval '6 hours', now() + interval '24 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S502b=77777777-0000-0000-0000-000000000504
+mk $L502b A502b "'HHL/A502b'" "'SCX/A502b'" AT_PORT_GDANSK "'$S502b'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502b','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L502b', 54.4030, 18.6800, now() - interval '10 minutes');
+    select process_position('$L502b', 54.4031, 18.6801, now() - interval '5 minutes');
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+     ('$V445', 54.4140, 18.6900, 6.8, now() - interval '1 minute', 'DIGITRAFFIC')" >/dev/null
+chk "#502 F7: wpływający (plan +6 h, sog>3, 1–2 km) → bez FERRY" \
+  "select a10_try_ferry_backup('$L502b', now()); select status from loads where id='$L502b'" AT_PORT_GDANSK
+
+# B4(3): syntetyczny SCHEDULE przy PORT_IN → 0 LOAD_STATUS_CHANGED dla FERRY
+L502c=$(L 97)
+G502c=$(q "select id from geofences where project_id='$P' and kind='PORT_IN' and name='Port Nynäshamn' order by id limit 1")
+mk $L502c A502c "'HHL/A502c'" "'SCX/A502c'" IN_TRANSIT_PL "'$S1'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L502c','MILESTONE_LOADED', now() - interval '1 day')" >/dev/null
+N502c=$(q "select count(*) from notifications where load_id='$L502c' and template='LOAD_STATUS_CHANGED' and coalesce(payload->>'to','')='FERRY'")
+q "insert into load_events (load_id, event_type, occurred_at, payload) values
+ ('$L502c','GEOFENCE_ENTER', now(),
+  jsonb_build_object('geofence_id','$G502c','geofence_kind','PORT_IN','geofence_name','Port Nynäshamn'))" >/dev/null
+chk "#502 F7: SCHEDULE synthetic_ferry → AT_PORT_NYNASHAMN" "$(st $L502c)" AT_PORT_NYNASHAMN
+chk "#502 F7: SCHEDULE FERRY bez LOAD_STATUS_CHANGED" \
+  "select (count(*)=$N502c)::text from notifications where load_id='$L502c' and template='LOAD_STATUS_CHANGED' and coalesce(payload->>'to','')='FERRY'" true
+chk "#502 F7: synthetic_ferry w osi" \
+  "select (count(*)>0)::text from load_events where load_id='$L502c' and event_type='STATUS_AUTO' and coalesce((payload->>'synthetic_ferry')::boolean,false)" true
+
+# #461: ścieżka (c) bez actual_departure_at → bez FERRY (plan minął, brak pozycji w porcie)
+echo; echo "[#461] A10_c — tylko po actual_departure_at"
+L461c=$(L 75)
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000461','$P','$V445','GDN-NYN',
+  now() - interval '4 hours', now() + interval '14 hours','ZAPLANOWANY','RECZNIE');
+" >/dev/null
+S461c=77777777-0000-0000-0000-000000000461
+mk $L461c A461c "'HHL/A461c'" "'SCX/A461c'" AT_PORT_GDANSK "'$S461c'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L461c','MILESTONE_LOADED', now() - interval '1 day');
+    select process_position('$L461c', 54.4030, 18.6800, now() - interval '2 hours');
+    select process_position('$L461c', 54.4031, 18.6801, now() - interval '90 minutes')" >/dev/null
+chk "#461: A10_c bez actual_departure → bez FERRY" \
+  "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" AT_PORT_GDANSK
+# F7: wyjazd ze strefy PORT_OUT (v_in_port jak na produkcji) — pozycje w porcie zostawiają INSIDE.
+q "update sailings set actual_departure_at = now() - interval '45 minutes' where id='$S461c';
+    update geofence_states gs set state = 'OUTSIDE', exited_at = now() - interval '40 minutes'
+      from geofences g
+     where g.id = gs.geofence_id and gs.load_id = '$L461c' and g.kind = 'PORT_OUT';
+    insert into load_events (load_id, event_type, occurred_at, payload) values
+     ('$L461c','GEOFENCE_EXIT', now() - interval '40 minutes',
+      jsonb_build_object('geofence_kind','PORT_OUT'))" >/dev/null
+chk "#461: A10_c po actual_departure + 30 min bez portu → FERRY" \
+  "select a10_try_ferry_backup('$L461c', now()); select status from loads where id='$L461c'" FERRY
+
+# #446 pkt 1: actual_departure_at → W_REJSIE; actual_arrival_at → DOPLYNAL; ODWOLANY bez zmian
+# ID 448/449 — nie 446/447 (#445 S445b/S445c już je zajmuje; INSERT cichy → fałszywy W_REJSIE)
+echo; echo "[#446] sailings.status po actual_departure/arrival"
+S446=77777777-0000-0000-0000-000000000448
+S446b=77777777-0000-0000-0000-000000000449
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('$S446','$P','66666666-0000-0000-0000-000000000001','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ZAPLANOWANY','POLFERRIES'),
+ ('$S446b','$P','66666666-0000-0000-0000-000000000002','GDN-NYN', now() - interval '2 hours', now() + interval '16 hours','ODWOLANY','POLFERRIES')" >/dev/null
+q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S446'" >/dev/null
+chk "#446: actual_departure_at → W_REJSIE" \
+  "select status from sailings where id='$S446'" W_REJSIE
+q "update sailings set actual_arrival_at = now() - interval '5 minutes' where id='$S446'" >/dev/null
+chk "#446: actual_arrival_at → DOPLYNAL" \
+  "select status from sailings where id='$S446'" DOPLYNAL
+q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S446b'" >/dev/null
+chk "#446: ODWOLANY + actual_departure → bez zmiany statusu" \
+  "select status from sailings where id='$S446b'" ODWOLANY
+# F7: actual_* chroni W_REJSIE przed OPOZNIONY (operator_notice_apply / sync)
+q "update sailings set status = 'OPOZNIONY' where id='$S446'" >/dev/null
+chk "#446 F7: OPOZNIONY przy actual_* → zostaje DOPLYNAL" \
+  "select status from sailings where id='$S446'" DOPLYNAL
+
+# #461 F7: Prom tylko z READY…AT_PORT_GDANSK — PLANNED nie „wypływa”
+echo; echo "[#461] zakres statusów + RIO_NO_POSITION"
+L461p=$(L 77)
+S461p=77777777-0000-0000-0000-000000000477
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,status,source) values
+ ('$S461p','$P','$V445','GDN-NYN',
+  now() - interval '3 hours', now() + interval '15 hours', now() - interval '2 hours','W_REJSIE','RECZNIE')" >/dev/null
+mk $L461p P461 "'HHL/P461'" "'SCX/P461'" PLANNED "'$S461p'"
+chk "#461: PLANNED + rejs odpłynął → bez FERRY" \
+  "select promote_ferry_departures(now()); select status from loads where id='$L461p'" PLANNED
+
+# RIO_NO_POSITION: blokuje SILENT; escalate tylko NO_POSITION/SILENT (nie SEFS)
+L461r=$(L 78)
+mk $L461r R461 "'HHL/R461'" "'SCX/R461'" IN_TRANSIT_PL null
+q "update loads set plan_load_date = current_date, plan_delivery_date = current_date + 5,
+       tracking_opened_at = public.tracking_window_start(current_date)
+     where id='$L461r'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+     ('$L461r', now() - interval '3 hours', ST_SetSRID(ST_MakePoint(17.02, 52.09), 4326), 'TELEMATICS_API')" >/dev/null
+q "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key) values
+     ('$P','$L461r','RESOURCE_MISSING','HIGH','RIO brak pozycji','rk_rio_no_position','{}'::jsonb,'RIO_NO_POSITION:$L461r'),
+     ('$P','$L461r','SILENT_VEHICLE','HIGH','cisza','rk_silent_vehicle','{\"l3\":\"1\"}'::jsonb,'SILENT:$L461r')" >/dev/null
+chk "#461: RIO_NO_POSITION zamyka istniejące SILENT" \
+  "select detect_silent_vehicles(90); select (resolved_at is not null)::text from risk_signals where dedup_key='SILENT:$L461r'" true
+chk "#461: RIO_NO_POSITION blokuje nowe SILENT" \
+  "select count(*) from risk_signals where dedup_key='SILENT:$L461r' and resolved_at is null" 0
+# Bez event_key SILENT:… — trigger przy SILENT już zajął decisions_event_key_uidx.
+D461np=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
+  values ('$P','NO_POSITION','NEW','461 RIO block escalate','$L461r', now() - interval '1 hour',
+          '{}'::jsonb) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
+D461sf=$(q "insert into decisions (project_id, type_code, status, title, load_id, due_at, detail)
+  values ('$P','SEFS_OUT_OF_TABLE','NEW','461 SEFS escalate','$L461r', now() - interval '1 hour', '{}'::jsonb) returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1)
+q "select decision_escalate_overdue()" >/dev/null
+chk "#461: RIO blokuje escalate tylko NO_POSITION" \
+  "select (escalated_at is null)::text from decisions where id='$D461np'" true
+chk "#461: RIO nie blokuje escalate SEFS" \
+  "select (escalated_at is not null)::text from decisions where id='$D461sf'" true
+# F7: sprzątanie globalne jak A1 — detect_silent_vehicles(90) i escalate zostawiają
+# klucze poza L461r; risks.sh liczy title_key w całej tower_test_status (baseline 5).
+chk "#461 po teście brak kluczy RIO/SILENT/overdue" \
+  "delete from decision_events where decision_id in (
+      select d.id from decisions d
+       where d.load_id='$L461r'
+          or d.risk_id in (select id from risk_signals
+            where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+               or kind in ('SILENT_VEHICLE','RESOURCE_MISSING')
+               or dedup_key like 'SILENT:%' or dedup_key like 'RIO_NO_POSITION:%'
+               or dedup_key like 'decision-overdue:%'));
+   delete from decisions where load_id='$L461r'
+      or risk_id in (select id from risk_signals
+        where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+           or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'
+           or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'decision-overdue:%');
+   delete from risk_signals
+    where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')
+       or kind='SILENT_VEHICLE' or dedup_key like 'SILENT:%'
+       or dedup_key like 'RIO_NO_POSITION:%' or dedup_key like 'decision-overdue:%';
+   select count(*) from risk_signals
+    where title_key in ('rk_rio_no_position','rk_silent_vehicle','rk_decision_overdue')" 0
+
+# #485 / F7 #486: po promie — status z pozycji (ład SE, nie GEOFENCE_ENTER)
+echo; echo "[#485] Port SE / Droga SE z pozycji po promie"
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000485','Stena Ebba 485','Stena Line')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000485','$P','66666666-0000-0000-0000-000000000485','GDY-KAA',
+  '2026-10-06 12:00+00','2026-10-06 22:00+00','2026-10-06 12:00+00','2026-10-06 22:00+00','DOPLYNAL','STENA');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route) values
+ ('$P','Port Karlskrona 485','PORT_IN', make_circle_fence(56.16460,15.63080, 800), 200, 600, 1,'SE','STENA');
+" >/dev/null
+S485=77777777-0000-0000-0000-000000000485
+# (3) DOPLYNAL + E22 (~25 km ląd SE) → IN_TRANSIT_SE z godziną pozycji
+L485a=$(L 85)
+mk $L485a A485 "'HHL/A485'" "'SCX/A485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485a','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485a 56.3949 16.0673 "2026-10-06 22:30+00"
+chk "#485: DOPLYNAL + pozycja poza portem SE → IN_TRANSIT_SE" "$(st $L485a)" IN_TRANSIT_SE
+chk "#485: uzupełniony AT_PORT_NYNASHAMN (synthetic)" \
+  "select count(*) from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true'" 1
+chk "#485: source=GPS na Drodze SE" \
+  "select payload->>'source' from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE' order by occurred_at desc limit 1" GPS
+chk "#485: Droga SE z godziną pozycji" \
+  "select to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE' order by occurred_at desc limit 1" "22:30"
+chk "#485: Port SE synthetic = dopłynięcie (actual)" \
+  "select to_char(occurred_at at time zone 'UTC','HH24:MI') from load_events where load_id='$L485a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true' order by occurred_at limit 1" "22:00"
+# (5) W strefie portu SE
+L485b=$(L 86)
+mk $L485b B485 "'HHL/B485'" "'SCX/B485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485b','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485b 56.16460 15.63080 "2026-10-06 22:10+00"
+chk "#485: pozycja w porcie SE → AT_PORT_NYNASHAMN" "$(st $L485b)" AT_PORT_NYNASHAMN
+# (1) DOPLYNAL + Warszawa → FERRY (B1: nie zgadywać odległością)
+L485w=$(L 89)
+mk $L485w W485 "'HHL/W485'" "'SCX/W485'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485w','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485w 52.4535 20.9018 "2026-10-06 22:40+00"
+chk "#485: DOPLYNAL + pozycja w PL (Warszawa) → FERRY" "$(st $L485w)" FERRY
+# W_REJSIE
+q "
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,status,source) values
+ ('77777777-0000-0000-0000-000000000486','$P','66666666-0000-0000-0000-000000000485','GDY-KAA',
+  '2026-10-07 12:00+00','2026-10-07 22:00+00','2026-10-07 12:00+00','W_REJSIE','STENA');
+" >/dev/null
+S486=77777777-0000-0000-0000-000000000486
+# (2) W_REJSIE przed planowym przypłynięciem + morze → FERRY (F7 r2)
+L485c=$(L 87)
+mk $L485c C485 "'HHL/C485'" "'SCX/C485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485c','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485c 55.90 15.90 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE + morze 40 km od PORT_IN → FERRY" "$(st $L485c)" FERRY
+L485n=$(L 8b)
+mk $L485n N485 "'HHL/N485'" "'SCX/N485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485n','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485n 58.60 18.00 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Nynäshamn → FERRY" "$(st $L485n)" FERRY
+L485k=$(L 8c)
+mk $L485k K485 "'HHL/K485'" "'SCX/K485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485k','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485k 56.138 15.635 "2026-10-07 14:00+00"
+chk "#485: W_REJSIE przed planem + morze Karlskrona → FERRY" "$(st $L485k)" FERRY
+# #496 F7: w PORT_IN przed planem → AT_PORT_* (wjazd = dowód wcześniejszego przypłynięcia;
+# silnik stref bez warunku godziny — decyzja koordynatora F7 #536).
+# L 79 — nie 95: #502 F7 B4 = L 95 (kolizja → mk cicho, stary AT_PORT_GDANSK).
+L485p=$(L 79)
+mk $L485p P485 "'HHL/P485'" "'SCX/P485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485p','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485p 56.16460 15.63080 "2026-10-07 14:00+00"
+chk "#496: PORT_IN przed planem → AT_PORT_NYNASHAMN" "$(st $L485p)" AT_PORT_NYNASHAMN
+# PL (Gdańsk) przy FERRY
+L485d=$(L 88)
+mk $L485d D485 "'HHL/D485'" "'SCX/D485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485d','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485d 54.4030 18.6800 "2026-10-07 13:00+00"
+chk "#485: pozycja w PL przy FERRY → bez zmiany" "$(st $L485d)" FERRY
+# (4) po planowym przypłynięciu bez actual + ląd SE (E4) → IN_TRANSIT_SE (F7 r2)
+L485e=$(L 8a)
+mk $L485e E485 "'HHL/E485'" "'SCX/E485'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485e','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485e 57.7826 14.1618 "2026-10-07 22:30+00"
+chk "#485: po planie bez actual + E4 → IN_TRANSIT_SE" "$(st $L485e)" IN_TRANSIT_SE
+chk "#496: Port SE synthetic arr_source=plan" \
+  "select payload->>'arr_source' from load_events where load_id='$L485e' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' and payload->>'synthetic'='true' order by occurred_at limit 1" plan
+# #496: po planie + morze Nynäshamn (nie ląd) → FERRY (wielokąt bez Bałtyku)
+# L 7a — nie 96: #502 F7 B4 = L 96.
+L485s=$(L 7a)
+mk $L485s S496 "'HHL/S496'" "'SCX/S496'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485s','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485s 58.60 18.00 "2026-10-07 22:30+00"
+chk "#496: po planie + morze Nynäshamn → FERRY" "$(st $L485s)" FERRY
+# #496 F7: po planie + morze Karlskrona (15.635/56.138) → FERRY (zawężony wielokąt)
+L485m=$(L 7c)
+mk $L485m M496 "'HHL/M496'" "'SCX/M496'" FERRY "'$S486'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485m','MILESTONE_LOADED','2026-10-06 08:00+00')" >/dev/null
+pos $L485m 56.138 15.635 "2026-10-07 22:30+00"
+chk "#496: po planie + morze Karlskrona → FERRY" "$(st $L485m)" FERRY
+# #496 F7 r3: Ösmo na rejsie GDN-NYN DOPŁYNĄŁ (nie GDY-KAA — scenariusz rundy 1)
+q "
+insert into vessels (id,name,operator) values
+ ('66666666-0000-0000-0000-000000000496','M/F Wawel 496','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+ ('77777777-0000-0000-0000-000000000496','$P','66666666-0000-0000-0000-000000000496','GDN-NYN',
+  '2026-10-05 16:00+00','2026-10-06 10:00+00','2026-10-05 16:00+00','2026-10-06 10:00+00','DOPLYNAL','POLFERRIES');
+" >/dev/null
+S496n=77777777-0000-0000-0000-000000000496
+L485o=$(L 7d)
+mk $L485o O496 "'HHL/O496'" "'SCX/O496'" FERRY "'$S496n'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485o','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485o 59.00 17.90 "2026-10-06 10:30+00"
+chk "#496: DOPLYNAL GDN-NYN + Ösmo → IN_TRANSIT_SE" "$(st $L485o)" IN_TRANSIT_SE
+# #496 F7 r3 BLOKER: GDY-KAA DOPŁYNĄŁ + Jämjö (ląd po poprawce Karlskrona) → IN_TRANSIT_SE
+L485j=$(L 7e)
+mk $L485j J496 "'HHL/J496'" "'SCX/J496'" FERRY "'$S485'"
+q "insert into load_events (load_id,event_type,occurred_at) values ('$L485j','MILESTONE_LOADED','2026-10-05 08:00+00')" >/dev/null
+pos $L485j 56.19 15.84 "2026-10-06 22:30+00"
+chk "#496: DOPLYNAL + Jämjö → IN_TRANSIT_SE" "$(st $L485j)" IN_TRANSIT_SE
+
+# #487: OFF_CORRIDOR po Karlskronie = SE_E22 (nie SE_E4)
+# F7 r3/r4: Jämjö; Söderköping 16.3186/58.4792; OFFROUTE_KM przywrócone (nie sztywne 2).
+echo; echo "[#487] korytarz E22 po Karlskronie (OFF_CORRIDOR)"
+# #496: bez ::int — ułamki OFFROUTE_KM
+PREV_OFFROUTE=$(q "select value_num::text from ops_thresholds where key='OFFROUTE_KM'")
+L487a=$(L 8d)
+mk $L487a A487 "'HHL/A487'" "'SCX/A487'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L487a';
+   delete from positions where load_id='$L487a';
+   update ops_thresholds set value_num = 20 where key = 'OFFROUTE_KM';
+   set session_replication_role=origin;" >/dev/null
+# F7 r3: prawdziwy Jämjö 15.84/56.19 (stary 15.95/56.25 leżał w Kalmarsundzie)
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(15.84, 56.19),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#487: Jämjö 15.84/56.19 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+# SG-23 12:02 UTC — Söderköping (wcześniej 33,5 km bez wierzchołków 0160)
+q "delete from positions where load_id='$L487a'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
+q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
+q "delete from positions where load_id='$L487a'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487a')" >/dev/null
+chk "#496: Vagnhärad 17.50/58.95 → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+L487b=$(L 8e)
+mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L487b';
+   delete from positions where load_id='$L487b';
+   set session_replication_role=origin;" >/dev/null
+# ~50 km od E22 w Smålandzie (zachód od Västervik 16.637/57.758; nie Kattegat)
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L487b', now() - interval '15 minutes', st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API'),
+  ('$L487b', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L487b')" >/dev/null
+chk "#487: ~50 km od E22 (Småland) → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
+chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
+  "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
+# #496: nieznana trasa promu → bez OFF_CORRIDOR (nie SE_E4). CHECK zdejmujemy tylko na czas wstawki.
+# L 7b — nie 97: #502 F7 B4 = L 97 (kolizja → stary rejs GDN-NYN → SE_E4 + OFF_CORRIDOR).
+# Sailing …49a — nie …496: Ösmo F7 r3 już zajmuje …496 (GDN-NYN); INSERT OTHER cicho padał → fałszywy FAIL.
+S496u=77777777-0000-0000-0000-00000000049a
+L496u=$(L 7b)
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S496u','$P','66666666-0000-0000-0000-000000000485','OTHER',
+     '2026-10-06 12:00+00','2026-10-06 22:00+00','2026-10-06 12:00+00','2026-10-06 22:00+00','DOPLYNAL','STENA');" >/dev/null
+mk $L496u U496 "'HHL/U496'" "'SCX/U496'" IN_TRANSIT_SE "'$S496u'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE', sailing_id='$S496u' where id='$L496u';
+   delete from positions where load_id='$L496u';
+   set session_replication_role=origin;" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L496u', now() - interval '15 minutes', st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API'),
+  ('$L496u', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L496u')" >/dev/null
+chk "#496: nieznana trasa → brak OFF_CORRIDOR" "$(rk $L496u OFF_CORRIDOR)" 0
+q "update loads set sailing_id=null where id='$L496u';
+   delete from sailings where id='$S496u';
+   alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route in ('GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY'));" >/dev/null
+# F7: sprzątanie L487a/b + L496u (nie globalne DELETE) — risks.sh baseline title_key.
+chk "#487/#496 po teście brak rk_off_corridor L487a/b/L496u" \
+  "delete from decision_events where decision_id in (
+      select d.id from decisions d
+       where d.risk_id in (select id from risk_signals
+         where load_id in ('$L487a','$L487b','$L496u')
+           and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%')));
+   delete from decisions where risk_id in (
+      select id from risk_signals
+       where load_id in ('$L487a','$L487b','$L496u')
+         and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%'));
+   delete from risk_signals
+    where load_id in ('$L487a','$L487b','$L496u')
+      and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%');
+   select count(*) from risk_signals
+    where load_id in ('$L487a','$L487b','$L496u') and title_key='rk_off_corridor'" 0
+
+echo; echo "[#489] Odpięcie rejsu → powrót statusu (SAILING_REMOVED)"
+L489a=$(L 8f)
+L489b=$(L 90)
+L489c=$(L 91)
+L489d=$(L 92)
+L489e=$(L 93)
+L489f=$(L 94)
+S489b=77777777-0000-0000-0000-000000000489
+S489e=77777777-0000-0000-0000-00000000049e
+q "insert into sailings (id,project_id,vessel_id,departure_at,arrival_at,actual_departure_at,status,route) values
+ ('$S489b','$P','66666666-0000-0000-0000-000000000001','2026-10-01 18:00+00','2026-10-02 12:00+00','2026-10-01 18:05+00','ZAPLANOWANY','GDN-NYN'),
+ ('$S489e','$P','66666666-0000-0000-0000-000000000001','2026-10-01 10:00+00','2026-10-02 04:00+00',null,'ZAPLANOWANY','GDN-NYN')" >/dev/null
+# a) FERRY z AIS → odpięcie → IN_TRANSIT_PL; 0 powiadomień; FERRY z zastepuje
+mk $L489a A489 "'HHL/A489'" "'SCX/A489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+Nbell489=$(q "select count(*) from notifications")
+chk "#489: promote → FERRY (AIS)" "select promote_ferry_departures('2026-10-01 12:30+00'); select status from loads where id='$L489a'" FERRY
+chk "#489: odpięcie rejsu przy FERRY AIS → IN_TRANSIT_PL" \
+  "update loads set sailing_id = null where id='$L489a'; select status from loads where id='$L489a'" IN_TRANSIT_PL
+chk "#489: source=SAILING_REMOVED" \
+  "select payload->>'source' from load_events where load_id='$L489a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_PL' order by id desc limit 1" SAILING_REMOVED
+chk "#489: FERRY z osi zastąpione (zastepuje)" \
+  "select count(*) from load_events e where e.load_id='$L489a' and e.event_type='STATUS_AUTO' and e.payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=e.load_id and z.payload->>'zastepuje'=e.id::text)" 0
+chk "#489: odpięcie bez nowych powiadomień" \
+  "select (count(*) = $Nbell489)::text from notifications" true
+# b) FERRY ręczny → odpięcie bez zmian
+mk $L489b B489 "'HHL/B489'" "'SCX/B489'" IN_TRANSIT_PL "'$S1'"
+HHL=11111111-0000-0000-0000-000000000001
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select load_status_set('$L489b','AT_PORT_GDANSK','2026-10-01 11:00+00',null);
+   select load_status_set('$L489b','FERRY','2026-10-01 12:00+00',null);
+   commit" >/dev/null
+chk "#489: ręczny FERRY przed odpięciem" "$(st $L489b)" FERRY
+chk "#489: odpięcie przy FERRY ręcznym → bez zmian" \
+  "update loads set sailing_id = null where id='$L489b'; select status from loads where id='$L489b'" FERRY
+# b') FERRY z AIS, potem ręczna godzina FERRY → odpięcie bez zmian (F7)
+mk $L489f F489 "'HHL/F489'" "'SCX/F489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+chk "#489: b' promote → FERRY (AIS)" \
+  "select promote_ferry_departures('2026-10-01 12:30+00'); select status from loads where id='$L489f'" FERRY
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select load_status_set('$L489f','FERRY','2026-10-01 13:00+00',null);
+   commit" >/dev/null
+chk "#489: b' po load_status_set nadal FERRY" "$(st $L489f)" FERRY
+chk "#489: b' odpięcie po ręcznej godzinie → bez zmian" \
+  "update loads set sailing_id = null where id='$L489f'; select status from loads where id='$L489f'" FERRY
+# c) zmiana rejsu → cofnięcie, potem nowy rejs ustawia FERRY
+mk $L489c C489 "'HHL/C489'" "'SCX/C489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+q "select promote_ferry_departures('2026-10-01 12:30+00')" >/dev/null
+chk "#489: C przed zmianą rejsu = FERRY" "$(st $L489c)" FERRY
+chk "#489: zmiana rejsu → cofnięcie do IN_TRANSIT_PL" \
+  "update loads set sailing_id = '$S489b' where id='$L489c'; select status from loads where id='$L489c'" IN_TRANSIT_PL
+chk "#489: po promote nowego rejsu → FERRY" \
+  "select promote_ferry_departures('2026-10-01 18:30+00'); select status from loads where id='$L489c'" FERRY
+chk "#489: nowy FERRY ma sailing_id S489b" \
+  "select payload->>'sailing_id' from load_events where load_id='$L489c' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" "$S489b"
+# d) FERRY z AIS, potem AT_PORT_NYNASHAMN z GPS → odpięcie bez zmian (F7)
+mk $L489d D489 "'HHL/D489'" "'SCX/D489'" IN_TRANSIT_PL "'$S1'"
+q "update sailings set actual_departure_at = '2026-10-01 12:00+00' where id='$S1'" >/dev/null
+chk "#489: d promote → FERRY (AIS)" \
+  "select promote_ferry_departures('2026-10-01 12:30+00'); select status from loads where id='$L489d'" FERRY
+pos $L489d 58.9350 17.9500 "2026-10-02 06:10+00"; pos $L489d 58.9351 17.9501 "2026-10-02 06:15+00"
+chk "#489: d GPS → AT_PORT_NYNASHAMN" "$(st $L489d)" AT_PORT_NYNASHAMN
+chk "#489: d odpięcie przy porcie SE GPS → bez zmian" \
+  "update loads set sailing_id = null where id='$L489d'; select status from loads where id='$L489d'" AT_PORT_NYNASHAMN
+# e) SCHEDULE_ASSUMED → korekta AIS → odpięcie → AT_PORT_GDANSK (F7 B1)
+mk $L489e E489 "'HHL/E489'" "'SCX/E489'" AT_PORT_GDANSK "'$S489e'"
+chk "#489: e SCHEDULE_ASSUMED → FERRY" \
+  "select promote_ferry_departures('2026-10-01 11:00+00'); select status from loads where id='$L489e'" FERRY
+chk "#489: e source=SCHEDULE_ASSUMED" \
+  "select payload->>'source' from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" SCHEDULE_ASSUMED
+q "update sailings set actual_departure_at = '2026-10-01 10:15+00' where id='$S489e'" >/dev/null
+chk "#489: e AIS korekta (korekta=true)" \
+  "select promote_ferry_departures('2026-10-01 11:30+00'); select (payload->>'korekta') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'to'='FERRY' and not exists (select 1 from load_events z where z.load_id=load_events.load_id and z.payload->>'zastepuje'=load_events.id::text) order by id desc limit 1" true
+chk "#489: e odpięcie po korekcie → AT_PORT_GDANSK" \
+  "update loads set sailing_id = null where id='$L489e'; select status from loads where id='$L489e'" AT_PORT_GDANSK
+chk "#489: e cofniete_ids ma 2 (korzeń + korekta)" \
+  "select jsonb_array_length(payload->'cofniete_ids') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'source'='SAILING_REMOVED' order by id desc limit 1" 2
+chk "#489: e cofnięcie bez korekta:true" \
+  "select coalesce(payload->>'korekta','') from load_events where load_id='$L489e' and event_type='STATUS_AUTO' and payload->>'source'='SAILING_REMOVED' order by id desc limit 1" ""
+
+echo; echo "[#540] a10 FOR NO KEY UPDATE — bez deadlocka z INSERT load_events"
+L540=$(L a0)
+mk $L540 A540 "'HHL/A540'" "'SCX/A540'" RESOURCES_PENDING null
+# Odbiór: definicja bez „for update” („for no key update” nie zawiera tej frazy).
+chk "#540: a10_try_prep_status bez FOR UPDATE" \
+  "select (pg_get_functiondef('public.a10_try_prep_status(uuid)'::regprocedure) !~* 'for update')::text" true
+chk "#540: c17_try_ready_to_invoice bez FOR UPDATE" \
+  "select (pg_get_functiondef('public.c17_try_ready_to_invoice(uuid,jsonb)'::regprocedure) !~* 'for update')::text" true
+chk "#540: c17_try_invoiced bez FOR UPDATE" \
+  "select (pg_get_functiondef('public.c17_try_invoiced(uuid,jsonb)'::regprocedure) !~* 'for update')::text" true
+# Sesja A trzyma wiersz przez UPDATE+a9 (NO KEY UPDATE) + sleep; sesja B INSERT z lock_timeout 1 s.
+# F7: bez podpowłoki `( … & )` — inaczej `wait` nie czeka na psql (sieroty, wyścig w grep).
+TMP540=$(mktemp -d)
+$PSQL -c "begin; update loads set driver_name = 'Kierowca540A' where id='$L540'; select pg_sleep(2); commit;" >"$TMP540/A" 2>&1 &
+PID540A=$!
+sleep 0.4
+GOT540=fail
+if $PSQL -c "set lock_timeout = '1s'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$L540','NOTE',now(),'{\"src\":\"#540\"}'::jsonb); select 'ok';" >"$TMP540/B" 2>&1; then
+  grep -q '^ok$' "$TMP540/B" && GOT540=ok
+fi
+wait "$PID540A" || true
+chk "#540: INSERT zdarzenia w trakcie UPDATE (lock_timeout 1s) → ok" "select '$GOT540'" ok
+# Równoległy UPDATE + INSERT tego samego ładunku — 0 deadlocków (40 rund).
+for i in $(seq 1 40); do
+  $PSQL -c "begin; update loads set driver_name = 'A$i' where id='$L540'; select pg_sleep(0.05); commit;" >/dev/null 2>"$TMP540/da$i" &
+  PID540DA=$!
+  $PSQL -c "begin; insert into load_events (load_id, event_type, occurred_at) values ('$L540','NOTE',now()); update loads set driver_phone = '+48000000$i' where id='$L540'; commit;" >/dev/null 2>"$TMP540/db$i" &
+  PID540DB=$!
+  wait "$PID540DA" "$PID540DB" || true
+done
+DL540=$(grep -ci 'deadlock' "$TMP540"/d* 2>/dev/null | awk -F: '{s+=$NF} END {print s+0}')
+chk "#540: 40× równoległy UPDATE+INSERT → 0 deadlocków" "select $DL540" 0
+rm -rf "$TMP540"
+
+# #557 F7: hotfix_557_apply — CI bez T-12 = no-op; tu fikstury wykonują wszystkie gałęzie.
+echo; echo "[#557] hotfix_557_apply T-12 / SG-21"
+LT12=55555555-0000-0000-0000-000000005571
+LSG=55555555-0000-0000-0000-000000005572
+SW=77777777-0000-0000-0000-000000005571
+SF=77777777-0000-0000-0000-000000005572
+V557=66666666-0000-0000-0000-000000000557
+q "
+update geofences set active = true
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES';
+delete from decision_events where decision_id in (
+  select id from decisions where load_id in ('$LT12','$LSG'));
+delete from decisions where load_id in ('$LT12','$LSG');
+delete from risk_signals where load_id in ('$LT12','$LSG');
+delete from positions where load_id in ('$LT12','$LSG');
+delete from load_events where load_id in ('$LT12','$LSG');
+delete from shipment_items where shipment_code in ('T-12','SG-21') and project_id = '$P';
+delete from loads where id in ('$LT12','$LSG');
+delete from sailings where id in ('$SW','$SF');
+insert into vessels (id, name, operator) values
+ ('$V557', 'M/F Wawel 557', 'Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+  actual_departure_at, actual_arrival_at, status, source) values
+ ('$SW', '$P', '$V557', 'GDN-NYN',
+  '2026-10-24 12:00+00', '2026-10-25 06:00+00',
+  '2026-10-24 12:00+00', '2026-10-25 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+ ('$SF', '$P', '$V557', 'GDN-NYN',
+  now() + interval '2 days', now() + interval '2 days 18 hours',
+  null, null, 'ZAPLANOWANY', 'POLFERRIES');
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, sailing_id, plan_load_date, telematics_vehicle_id) values
+ ('$LT12', '$P', '$SCXO', 'KSH/T12', 'HHL/T12', 'SCX/T12', 'FERRY', '$SW', '2026-10-23', 'TEL-T12'),
+ ('$LSG', '$P', '$SCXO', 'KSH/SG21', 'HHL/SG21', 'SCX/SG21', 'AT_PORT_GDANSK', '$SF', '2026-10-23', 'TEL-SG21');
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values
+ ('$P', '$LT12', 'T-12', 'STANDARD'),
+ ('$P', '$LSG', 'SG-21', 'STANDARD');
+insert into load_events (load_id, event_type, occurred_at) values
+ ('$LT12', 'MILESTONE_LOADED', '2026-10-23 08:00+00'),
+ ('$LSG', 'MILESTONE_LOADED', '2026-10-23 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$LT12', '2026-10-24 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$LT12', '2026-10-25 07:00+00', st_setsrid(st_makepoint(17.9500, 58.9350), 4326), 'TELEMATICS_API'),
+ ('$LSG', '2026-10-24 14:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$LSG', '2026-10-25 07:00+00', st_setsrid(st_makepoint(17.9500, 58.9350), 4326), 'TELEMATICS_API');
+delete from audit_log where action like 'HOTFIX_557%';
+" >/dev/null
+N557=$(q "select public.hotfix_557_apply()")
+chk "#557: hotfix_557_apply → n_fix > 0" "select ($N557 > 0)" t
+chk "#557: SG-21 na rejsie Wawel (jak T-12)" \
+  "select (l.sailing_id = '$SW') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-21'" t
+chk "#557: T-12 status ≥ AT_PORT_NYNASHAMN" \
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LT12'" t
+chk "#557: SG-21 status ≥ AT_PORT_NYNASHAMN" \
+  "select (public.load_status_rank(status) >= public.load_status_rank('AT_PORT_NYNASHAMN')) from loads where id='$LSG'" t
+chk "#557: audit HOTFIX_557_*" \
+  "select (count(*) filter (where action like 'HOTFIX_557%') >= 3) from audit_log" t
+N_SAIL=$(q "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'")
+chk "#557: jedno SAILING_ASSIGNED po pierwszym przebiegu" "select $N_SAIL" 1
+q "select public.hotfix_557_apply()" >/dev/null
+chk "#557: ponowne wywołanie idempotentne (bez nowego SAILING_ASSIGNED)" \
+  "select count(*) from load_events where load_id='$LSG' and event_type='SAILING_ASSIGNED'" 1
+
+# #557 PR2 F7 r2: AIS backup Port SE; stale; mismatch; overdue w detect_ferry_overdue
+# S557c ≠ S557a (inny departure) — unique (vessel, departure).
+echo; echo "[#557 PR2] reguły AIS / stale / mismatch"
+L557a=55555555-0000-0000-0000-00000000557a
+L557b=55555555-0000-0000-0000-00000000557b
+L557c=55555555-0000-0000-0000-00000000557c
+L557d=55555555-0000-0000-0000-00000000557d
+L557e=55555555-0000-0000-0000-00000000557e
+S557a=77777777-0000-0000-0000-000000005573
+S557b=77777777-0000-0000-0000-000000005574
+S557c=77777777-0000-0000-0000-000000005575
+S557d=77777777-0000-0000-0000-000000005576
+V557b=66666666-0000-0000-0000-000000000558
+V557s=66666666-0000-0000-0000-000000000559
+q "
+insert into vessels (id, name, operator) values
+ ('$V557b', 'M/F Wawel 557b', 'Polferries'),
+ ('$V557s', 'Stena Vision 557', 'Stena')
+ on conflict (id) do nothing;
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+  actual_departure_at, actual_arrival_at, status, source) values
+ ('$S557a', '$P', '$V557b', 'GDN-NYN',
+  '2026-10-10 12:00+00', '2026-10-11 06:00+00',
+  '2026-10-10 12:00+00', '2026-10-11 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+ ('$S557b', '$P', '$V557b', 'GDN-NYN',
+  '2026-10-20 17:00+00', '2026-10-21 11:00+00',
+  null, null, 'ZAPLANOWANY', 'POLFERRIES'),
+ ('$S557c', '$P', '$V557b', 'GDN-NYN',
+  '2026-10-09 12:00+00', '2026-10-10 06:00+00',
+  '2026-10-09 12:00+00', '2026-10-10 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+ ('$S557d', '$P', '$V557s', 'GDY-KAA',
+  '2026-10-10 14:00+00', '2026-10-11 04:00+00',
+  '2026-10-10 14:00+00', '2026-10-11 04:00+00', 'DOPLYNAL', 'STENA');
+insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route, active) values
+ ('$P','Port Karlskrona 557','PORT_IN', make_circle_fence(56.1600,15.5900, 800), 200, 600, 2,'SE','STENA', false);
+update geofences set active = false
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES';
+" >/dev/null
+# F7 pkt 6: w porcie (strefa OFF) → AT_PORT_NYNASHAMN
+mk $L557a A557 "'HHL/A557'" "'SCX/A557'" FERRY "'$S557a'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557a','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557a 58.9350 17.9500 "2026-10-11 07:00+00"
+chk "#557 PR2: w porcie SE, strefa OFF → AT_PORT_NYNASHAMN" "$(st $L557a)" AT_PORT_NYNASHAMN
+chk "#557 PR2: source AIS_ARRIVAL_BACKUP (Port SE)" \
+  "select payload->>'source' from load_events where load_id='$L557a' and event_type='STATUS_AUTO' and payload->>'to'='AT_PORT_NYNASHAMN' order by occurred_at desc limit 1" AIS_ARRIVAL_BACKUP
+# ≥2 km od krawędzi PORT_IN (Ösmo jak #496; 58.96 od środka − 800 m ≈ 1,98 km < 2 km)
+mk $L557d D557 "'HHL/D557'" "'SCX/D557'" FERRY "'$S557a'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
+chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
+# F7 r3 pkt 1: Port SE + ≥2 km (strefa OFF) → Droga SE
+pos $L557a 59.00 17.90 "2026-10-11 07:45+00"
+chk "#557 PR2: Port SE + ≥2 km OFF → IN_TRANSIT_SE" "$(st $L557a)" IN_TRANSIT_SE
+# strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
+q "update geofences set active = true
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
+mk $L557e E557 "'HHL/E557'" "'SCX/E557'" FERRY "'$S557a'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557e','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557e 58.9480 17.9500 "2026-10-11 08:00+00"
+chk "#557 PR2: strefa ON pas 0,8–2 km → nadal FERRY" "$(st $L557e)" FERRY
+
+# mismatch: przyszły rejs + pozycja SE
+mk $L557b B557 "'HHL/B557'" "'SCX/B557'" AT_PORT_GDANSK "'$S557b'"
+q "
+insert into load_events (load_id, event_type, occurred_at) values ('$L557b','MILESTONE_LOADED','2026-10-09 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$L557b', '2026-10-10 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+" >/dev/null
+pos $L557b 58.9350 17.9500 "2026-10-11 08:00+00"
+chk "#557 PR2: przyszły rejs + SE → ryzyko mismatch" "$(rk $L557b SAILING_MISMATCH)" 1
+chk "#557 PR2: propose = rejs z actual_dep w oknie" \
+  "select (public.sailing_mismatch_propose_id('$L557b') = '$S557a')" t
+pos $L557b 58.9360 17.9510 "2026-10-11 08:05+00"
+chk "#557 PR2: druga pozycja SE — jedno ryzyko mismatch" "$(rk $L557b SAILING_MISMATCH)" 1
+
+# stary punkt PL nie cofa FERRY (prev ts ≤ odejście; S557c: inny dzień niż S557a)
+mk $L557c C557 "'HHL/C557'" "'SCX/C557'" FERRY "'$S557c'"
+q "
+insert into load_events (load_id, event_type, occurred_at) values ('$L557c','MILESTONE_LOADED','2026-10-08 08:00+00');
+insert into positions (load_id, ts, geom_raw, source) values
+ ('$L557c', '2026-10-09 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+" >/dev/null
+pos $L557c 54.4030 18.6800 "2026-10-10 09:00+00"
+chk "#557 PR2: stary punkt PL → status FERRY" "$(st $L557c)" FERRY
+chk "#557 PR2: stary punkt ma stale_point" \
+  "select (raw->>'stale_point') from positions where load_id='$L557c' order by ts desc limit 1" true
+# postój Gdańsk przed odejściem — nie stale (osobny rejs: odejście tuż po punktach)
+S557e=77777777-0000-0000-0000-000000005577
+L557f=55555555-0000-0000-0000-00000000557f
+chk "#557 PR2: fikstura S557e (Gdańsk przed odejściem)" \
+  "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+   ('$S557e', '$P', '$V557b', 'GDN-NYN',
+    '2026-10-10 11:00+00', '2026-10-11 05:00+00',
+    '2026-10-10 11:00+00', '2026-10-11 05:00+00', 'DOPLYNAL', 'POLFERRIES')
+   returning (id is not null)" t
+mk $L557f F557 "'HHL/F557'" "'SCX/F557'" AT_PORT_GDANSK "'$S557e'"
+chk "#557 PR2: fikstura L557f MILESTONE + prev" \
+  "insert into load_events (load_id, event_type, occurred_at) values ('$L557f','MILESTONE_LOADED','2026-10-09 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L557f', '2026-10-10 10:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+   select count(*) from positions where load_id='$L557f'" 1
+pos $L557f 54.4030 18.6800 "2026-10-10 10:30+00"
+chk "#557 PR2: postój Gdańsk przed odejściem bez stale" \
+  "select coalesce(raw->>'stale_point','false') from positions where load_id='$L557f' order by ts desc limit 1" false
+
+# overdue +2h bez pozycji SE → detect_ferry_overdue (FERRY_OVERDUE + sailing_id)
+q "select public.detect_ferry_overdue('2026-10-10 09:00+00')" >/dev/null
+chk "#557 PR2: +2h bez SE → FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
+q "select public.detect_ferry_overdue('2026-10-10 09:15+00')" >/dev/null
+chk "#557 PR2: drugi cron — jedno FERRY_OVERDUE" "$(rk $L557c FERRY_OVERDUE)" 1
+
+# Stena GDY-KAA: wyłącz STENA PORT_IN (A5/485), inaczej backup return; UUID hex
+L557g=55555555-0000-0000-0000-000000005570
+q "update geofences set active = false
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'STENA'" >/dev/null
+mk $L557g G557 "'HHL/G557'" "'SCX/G557'" FERRY "'$S557d'"
+q "insert into load_events (load_id, event_type, occurred_at) values ('$L557g','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+pos $L557g 56.1600 15.5900 "2026-10-11 05:00+00"
+chk "#557 PR2: Stena GDY-KAA w porcie → AT_PORT_NYNASHAMN" "$(st $L557g)" AT_PORT_NYNASHAMN
+
+# F7 r3 pkt 5: suggest / assign (HHL_ADMIN OK; OPS/KSH/SCX/Podgląd odmowa)
+HHL=11111111-0000-0000-0000-000000000001
+OPS557=11111111-0000-0000-0000-0000000000ab
+q "insert into app_users (auth_id, org_id, email, role, active) values
+ ('$OPS557','00000000-0000-0000-0000-00000000a001','ops-557@test','HHL_OPS',true)
+ on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+chk "#557 PR2: suggest proponuje S557a" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (sailing_mismatch_suggest('$L557b')->>'proposed_sailing_id') = '$S557a'; commit" t
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+ select sailing_mismatch_suggest('$L557b'); rollback;" 2>&1)
+echo "$out" | grep -qiE '42501|Brak|odmow|HHL|uprawn' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: suggest KSH odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: suggest KSH odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
+ select sailing_mismatch_suggest('$L557b'); rollback;" 2>&1)
+echo "$out" | grep -qiE '42501|Brak|odmow|HHL|uprawn' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: suggest SCX odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: suggest SCX odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$OPS557';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign HHL_OPS odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign HHL_OPS odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign KSH odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign KSH odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign SCX odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign SCX odmowa: $out"; }
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+ select admin_preview_start('KSH');
+ select sailing_mismatch_assign('$L557b','$S557a'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Podgląd|42501' \
+  && { ok=$((ok+1)); echo "  OK    #557 PR2: assign Podgląd odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #557 PR2: assign Podgląd odmowa: $out"; }
+# Assign OK: IN_TRANSIT_PL + przyszły rejs → pin S557a → FERRY → Port SE
+# PORT_IN OFF + pozycja w porcie (jak L557b) — fikstury głośne (F7 r3).
+L557h=55555555-0000-0000-0000-000000005581
+q "update geofences set active = false
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
+chk "#557 PR2: fikstura L557h load" \
+  "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,telematics_vehicle_id)
+   values ('$L557h','$P','$SCXO','KSH/H557','HHL/H557','SCX/H557','IN_TRANSIT_PL','$S557b','2026-09-30','TEL-H557')
+   returning (id is not null)" t
+chk "#557 PR2: fikstura L557h MILESTONE + prev PL" \
+  "insert into load_events (load_id, event_type, occurred_at) values ('$L557h','MILESTONE_LOADED','2026-10-09 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L557h', '2026-10-10 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API');
+   select count(*) from load_events where load_id='$L557h' and event_type='MILESTONE_LOADED'" 1
+pos $L557h 58.9350 17.9500 "2026-10-11 09:00+00"
+chk "#557 PR2: mismatch przed assign" "$(rk $L557h SAILING_MISMATCH)" 1
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L557h','$S557a'); commit" >/dev/null
+chk "#557 PR2: assign → sailing S557a" \
+  "select (sailing_id = '$S557a') from loads where id='$L557h'" t
+chk "#557 PR2: assign → SAILING_ASSIGNED" \
+  "select count(*) from load_events where load_id='$L557h' and event_type='SAILING_ASSIGNED'" 1
+chk "#557 PR2: assign → audit" \
+  "select count(*) from audit_log where action='SAILING_MISMATCH_ASSIGN' and entity_id='$L557h'" 1
+chk "#557 PR2: assign → ryzyko zamknięte z resolved_by" \
+  "select (resolved_at is not null and resolved_by is not null) from risk_signals
+    where load_id='$L557h' and dedup_key like 'SAILING_MISMATCH:%' order by detected_at desc limit 1" t
+chk "#557 PR2: assign → source AIS (actual_dep)" \
+  "select payload->>'source' from load_events
+    where load_id='$L557h' and event_type='STATUS_AUTO' and payload->>'to'='FERRY'
+    order by occurred_at desc limit 1" AIS
+chk "#557 PR2: assign IN_TRANSIT_PL → FERRY → Port SE" \
+  "$(st $L557h)" AT_PORT_NYNASHAMN
+# Pozycja SE po dopłynięciu (S557c) — ts po starym PL (09:00), po arrival (06:00)
+pos $L557c 58.9350 17.9500 "2026-10-10 10:00+00"
+chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \
+  "select coalesce(raw->>'stale_point','false') from positions
+    where load_id='$L557c' and ts = '2026-10-10 10:00+00'" false
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

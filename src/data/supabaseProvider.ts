@@ -7,13 +7,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { DataMutation, DataProvider, DataSnapshot, UserPrefsPatch } from './provider';
 import { emptySnapshot } from './provider';
-import type { FerryBooking } from '../types';
+import type { FerryBooking, Notification } from '../types';
 import { isServerId } from './registry';
 import { safeStorageTarget } from './storagePath';
 import { workflowFromRow, workflowRunFromRow, workflowToDb, type WorkflowDbRow, type WorkflowRunDbRow } from './workflowMap';
 import {
   awizacjaPatchToDb, documentFromRow, eventFromRow, eventToRow, ferryPatchToDb, geofenceFromRow, geofenceToRpc,
-  PRICE_VIEW_COLUMNS, PRICE_VIEW_COLUMNS_LEGACY, applyPriceViews, type PriceViewRow,
+  PRICE_VIEW_COLUMNS, PRICE_VIEW_COLUMNS_LEGACY, PRICE_VIEW_COLUMNS_NO_BASIS, applyPriceViews, type PriceViewRow,
   BILL_COLUMNS, billFromRow, billToRpc, type BillRow, notificationFromRow, type NotificationRow,
   loadFromRow, messageFromRow, resourcesPatchToDb, riskFromRow, statusToDb, vesselToDb,
   type DocumentRow, type EventRow, type GeofenceRow, type LoadRow, type MessageRow, type OrgRow, type RiskRow,
@@ -21,7 +21,7 @@ import {
 } from './mappers';
 import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
-import { setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
+import { marginFromDb, setMarginFromServer, setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
 import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
@@ -41,6 +41,66 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
   return (res.data ?? ([] as unknown as T));
 }
 
+/**
+ * Audyt 25.10 (F7 #539 pkt A): rozkład rejsów stronami po 1000 (`max_rows`). Jedno zapytanie zwracało 1000 NAJSTARSZYCH
+ * rejsów, więc po przekroczeniu 1000 wierszy (oba armatory, oba kierunki, rozkład na miesiące naprzód) znikałyby
+ * najnowsze i przyszłe — także te do wyboru w awizacji. Kolejność rosnąco po `departure_at`, powtórzony wiersz po `id`.
+ */
+export async function fetchAllSailings<T = Record<string, unknown>>(
+  sb: SupabaseClient,
+  columns: string,
+  cap: number = Infinity,
+): Promise<{ data: T[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('sailings').select(columns)
+      .order('departure_at', { ascending: true }).order('id', { ascending: true }).range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    const rows = (r.data ?? []) as unknown as T[];
+    for (const row of rows) {
+      const k = String((row as { id?: unknown }).id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
+/**
+ * 22.10.2026 (właściciel 21:38): statusy SG-03 i innych zafakturowanych zniknęły z osi Status — zrzut brał tylko
+ * 500 najnowszych zdarzeń całego projektu, a od 20.10 starsze (październikowe statusy z GPS) wypadały.
+ * Teraz wszystkie zdarzenia, stronami po 1000 (limit odpowiedzi API, `max_rows`); `cap` tylko dla testów.
+ * Nowe zdarzenie między stronami przesuwa wiersze — powtórzony wiersz odrzucany po `id`.
+ */
+export async function fetchAllLoadEvents(
+  sb: SupabaseClient,
+  cap: number = Infinity,
+): Promise<{ data: EventRow[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: EventRow[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('load_events').select('id,load_id,event_type,occurred_at,payload')
+      .order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    const rows = (r.data ?? []) as EventRow[];
+    for (const row of rows) {
+      const k = String((row as { id: unknown }).id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
 export interface SupabaseProviderOptions {
   now?: () => string;
   eventLimit?: number;
@@ -48,6 +108,8 @@ export interface SupabaseProviderOptions {
 
 export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProviderOptions = {}): DataProvider & {
   context(): { orgs: OrgRow[]; projectId: string | null };
+  loadNotifications(): Promise<Notification[]>;
+  loadsVersion(): Promise<string | null>;
 } {
   const now = opts.now ?? (() => new Date().toISOString());
   let orgs: OrgRow[] = [];
@@ -63,12 +125,41 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     projectId = (must(p, 'projects') as { id: string } | null)?.id ?? null;
   }
 
+  /* M7 — centrum powiadomień: własne wiersze IN_APP (RLS notifications_read_own), najnowsze 200 */
+  const notificationsQuery = () => sb.from('notifications').select('id,template,payload,load_id,created_at,read_at')
+    .eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200);
+
+  /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek, bez całego zrzutu — odświeżanie po powrocie do aplikacji na telefonie. */
+  async function loadNotifications(): Promise<Notification[]> {
+    return (must(await notificationsQuery(), 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r));
+  }
+
+  /**
+   * Właściciel 23.10.2026 13:43: statusy z automatu (GPS, AIS) zmieniają się na serwerze, a ekran pokazywał stary stan
+   * do przeładowania. Jedno lekkie zapytanie: najnowsza zmiana wiersza transportu widocznego dla konta (RLS).
+   */
+  async function loadsVersion(): Promise<string | null> {
+    const r = await sb.from('loads').select('updated_at').order('updated_at', { ascending: false, nullsFirst: false }).limit(1);
+    if (r.error) return null;
+    const row = (r.data ?? [])[0] as { updated_at?: string | null } | undefined;
+    return row?.updated_at ?? null;
+  }
+
+  /* 22.10.2026 (właściciel 21:38): wszystkie zdarzenia zamiast 500 najnowszych — patrz fetchAllLoadEvents. */
+  const fetchAllEvents = () => fetchAllLoadEvents(sb, opts.eventLimit);
+
   async function loadSnapshot(): Promise<DataSnapshot> {
     await ensureContext();
     const at = now();
     // 0187: fuel_status (wstępny/ostateczny); przed nałożeniem migracji widok nie ma kolumny → zapas bez niej
+    // #409 / 0268: fuel_basis; przed migracją widok nie ma kolumny → zapas bez niej
     const selectPriceView = async (view: string) => {
       const r = await sb.from(view).select(PRICE_VIEW_COLUMNS);
+      if (r.error && /fuel_basis/.test(r.error.message ?? '')) {
+        const r2 = await sb.from(view).select(PRICE_VIEW_COLUMNS_NO_BASIS);
+        if (r2.error && /fuel_status/.test(r2.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
+        return r2;
+      }
       if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
       return r;
     };
@@ -80,10 +171,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
     if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
+    /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501), równolegle z resztą */
+    const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, kshSyncQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
       loadsQuery,
-      sb.from('load_events').select('id,load_id,event_type,occurred_at,payload').order('occurred_at', { ascending: false }).limit(opts.eventLimit ?? 500),
-      sb.from('load_messages').select('id,load_id,body,created_at,author_org').order('created_at', { ascending: true }),
+      fetchAllEvents(),
+      sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
       sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
@@ -94,17 +187,19 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
       sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
-      sb.from('notifications').select('id,template,payload,load_id,created_at,read_at').eq('channel', 'IN_APP').order('created_at', { ascending: false }).limit(200),
+      notificationsQuery(),
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
-      sb.from('sailings').select(SAILING_COLUMNS).order('departure_at', { ascending: true }),
+      fetchAllSailings(sb, SAILING_COLUMNS),
       // I-1: wersje importu harmonogramu (RLS schedule_imports_hhl — tylko HHL; pozostali: 0 wierszy)
-      sb.from('schedule_imports').select('id,version,file_name,stats,imported_at').order('version', { ascending: false }).limit(20),
+      sb.from('schedule_imports').select('id,version,file_name,stats,imported_at,source').order('version', { ascending: false }).limit(20),
+      /* A6: stan SharePoint — HHL; brak RPC / odmowa → null (linia B-09) */
+      sb.rpc('ksh_sync_state_get'),
       // 0076 (PLAN §1.5): dane kierowcy nie są kolumnami loads dla API — tylko HHL i przewoźnik transportu (RPC); inni: 0 wierszy
       sb.rpc('load_driver_contacts'),
       // 0081 (SCOPE 6.5): zgodność powiązanych zezwoleń z wymiarami zestawu — tylko transporty z zezwoleniem
       sb.rpc('load_permit_status'),
-      // 9.4 (0094): reguły automatyzacji — RLS wf_all: tylko HHL_ADMIN (pozostali: 0 wierszy); przebiegi — odczyt HHL
-      sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
+      // 9.4 (0094) / #413 E35 Z1: bez soft-delete (removed_at); RLS: HHL_ADMIN + HHL_OPS odczyt
+      sb.from('workflows').select('id,code,name,description,trigger_type,condition,actions,enabled').is('removed_at', null).order('code', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false }),
       sb.from('workflow_runs').select('id,workflow_id,load_id,status,result,ran_at').order('id', { ascending: false }).limit(1000),
       /* E41: KSH dostaje null. Brak funkcji (okno przed migracją) nie gasi całego zrzutu. */
       sb.rpc('load_order_numbers'),
@@ -130,6 +225,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
     if (!thrQ.error && thrQ.data) {
       setOpsThresholdCache(thrQ.data as { key: string; value_num: number }[]);
+    }
+    {
+      const mq = await marginP;
+      if (!mq) setMarginFromServer(undefined);
+      /* chwilowy błąd odczytu przy odświeżeniu — zostaje ostatnia wartość (sekcja w Opcjach nie znika) */
+      else if (!mq.error) setMarginFromServer(marginFromDb(mq.data));
     }
     const wfRuns = (wfRunQ.error ? [] : wfRunQ.data ?? []) as WorkflowRunDbRow[];
     const okBy = new Map<string, number>();
@@ -166,6 +267,9 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       .map((r) => [r.load_id, Array.isArray(r.gaps) ? r.gaps : []]));
     const permitOk = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean }[])
       .filter((p) => p.permits_linked > 0).map((p) => [p.load_id, p.ok]));
+    /* Kokpit „Zezwolenia 7 dni”: komplet = podpięte, pasują do zestawu i nie brakuje kraju (FIRMA — jedno zezwolenie) */
+    const permitDone = new Map(((permitQ.error ? [] : permitQ.data ?? []) as { load_id: string; permits_linked: number; ok: boolean; missing_countries: string[] | null }[])
+      .map((p) => [p.load_id, p.permits_linked > 0 && p.ok === true && (p.missing_countries ?? []).length === 0]));
     const drivers = new Map(((driversQ.error ? [] : driversQ.data ?? []) as {
       load_id: string; driver_name: string | null; driver_phone: string | null; driver_phone_country?: string | null;
       driver_delivery_name?: string | null; driver_delivery_phone?: string | null; driver_delivery_phone_country?: string | null;
@@ -205,7 +309,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         trailer_swap: drivers.get(r.id)?.trailer_swap ?? false,
       }))
       .map((r, i) => applyPriceViews(loadFromRow(r, orgs, i, at), costBy.get(r.id), revBy.get(r.id)))
-      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l));
+      .map((l) => (permitOk.has(l.id) ? { ...l, permitFits: permitOk.get(l.id) ?? null } : l))
+      .map((l) => (permitDone.has(l.id) ? { ...l, permitComplete: permitDone.get(l.id) ?? null } : l));
     /* B5 K2.1: usedBy — inne transporty z tym samym rio_tracking_id */
     const rioGroups = new Map<string, Load[]>();
     for (const l of mappedLoads) {
@@ -255,13 +360,44 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
       sailings: (must(sailQ, 'sailings') as unknown as SailingDbRow[]).map(sailingFromRow),
-      scheduleVersions: ((schedQ.error ? [] : schedQ.data ?? []) as { id: string; version: number; file_name: string | null; stats: Record<string, number> | null; imported_at: string }[])
+      scheduleVersions: ((schedQ.error ? [] : schedQ.data ?? []) as {
+        id: string; version: number; file_name: string | null; stats: Record<string, number> | null;
+        imported_at: string; source?: string | null;
+      }[])
         .map((r) => ({
-          id: r.id, at: r.imported_at, by: `v${r.version}`, filename: r.file_name ?? '',
+          id: r.id,
+          at: r.imported_at,
+          // F7 #556: synchronizacja SharePoint → stały autor zamiast pustego imported_by
+          by: r.source === 'SHAREPOINT' ? 'Synchronizacja SharePoint' : `v${r.version}`,
+          filename: r.file_name ?? '',
           added: Number(r.stats?.added ?? 0), changed: Number(r.stats?.changed ?? 0),
           removed: Number(r.stats?.cancelled ?? 0), rejected: Number(r.stats?.rejected ?? 0),
           skippedStandard: Number(r.stats?.skipped_standard ?? 0),
         })),
+      kshSharePointSync: (() => {
+        if (kshSyncQ.error && !/ksh_sync_state_get|PGRST202|schema cache|Could not find/i.test(kshSyncQ.error.message ?? '')) {
+          throw new Error(`ksh_sync_state_get: ${kshSyncQ.error.message}`);
+        }
+        const raw = kshSyncQ.error ? null : kshSyncQ.data;
+        if (!raw || typeof raw !== 'object') return null;
+        const o = raw as Record<string, unknown>;
+        const run = o.lastRun;
+        return {
+          lastReadAt: typeof o.lastReadAt === 'string' ? o.lastReadAt : null,
+          lastWriteAt: typeof o.lastWriteAt === 'string' ? o.lastWriteAt : null,
+          writeEnabled: o.writeEnabled === true,
+          importEnabled: o.importEnabled === true,
+          sourceOk: o.sourceOk === true,
+          secretExpiresOn: typeof o.secretExpiresOn === 'string' ? o.secretExpiresOn : null,
+          lastRun: run && typeof run === 'object' ? {
+            created: Number((run as { created?: number }).created ?? 0),
+            changed: Number((run as { changed?: number }).changed ?? 0),
+            skipped: Number((run as { skipped?: number }).skipped ?? 0),
+            ntg: Number((run as { ntg?: number }).ntg ?? 0),
+            cases: Number((run as { cases?: number }).cases ?? 0),
+          } : null,
+        };
+      })(),
     };
   }
 
@@ -312,7 +448,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
   }
 
-  async function apply(m: DataMutation): Promise<{ id?: string } | void> {
+  async function apply(m: DataMutation): Promise<{ id?: string; warning?: string } | void> {
     switch (m.type) {
       case 'load.status': {
         const db = statusToDb(m.status);
@@ -363,7 +499,10 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         return { id: String((must(res, 'zdarzenie') as { id: number }).id) };
       }
       case 'message.send': {
-        const res = await sb.from('load_messages').insert({ load_id: m.loadId, body: m.text }).select('id').single();
+        /* B4: „tylko HHL i SCX” → {FORWARDER,CARRIER}; bez wyboru — domyślnie wszyscy (baza normalizuje, KSH zawsze wszyscy) */
+        const row: { load_id: string; body: string; visible_to?: string[] } = { load_id: m.loadId, body: m.text };
+        if (m.visibleTo === 'HHL_SCX') row.visible_to = ['FORWARDER', 'CARRIER'];
+        const res = await sb.from('load_messages').insert(row).select('id').single();
         return { id: String((must(res, 'wiadomość') as { id: number }).id) };
       }
       case 'load.orderNo':
@@ -395,6 +534,12 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
           await sb.storage.from(stored.bucket).remove([objectPath]);
           await sb.rpc('discard_document', { p_id: row.id });
           throw new Error(res.error.message);
+        }
+        /* E4b (0287): wybór „Faktoring HHL” — po zapisie faktury; odmowa nie cofa faktury (wybór można zmienić w szczegółach do akceptacji) */
+        if (m.bill.factoring?.selected && m.bill.direction === 'KOSZT') {
+          const f = await sb.rpc('invoice_factoring_set', { p_invoice: String(res.data), p_selected: true });
+          /* F7 #521: faktura JEST zapisana — bez „Nie zapisano” (groziłoby ponownym wysłaniem) */
+          if (f.error) return { id: String(res.data), warning: `Faktura zapisana, ale wybór faktoringu nie: ${f.error.message}. Wybór możesz zmienić w szczegółach faktury.` };
         }
         return { id: String(res.data) };
       }
@@ -473,25 +618,52 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       case 'workflow.create': {
         await ensureContext();
         if (!projectId) throw new Error('reguła: brak projektu');
-        const res = await sb.from('workflows').insert({ ...workflowToDb(m.rule), project_id: projectId }).select('id').single();
-        return { id: (must(res, 'reguła') as { id: string }).id };
+        const row = workflowToDb(m.rule);
+        const res = await sb.rpc('workflow_rule_write', {
+          p_id: null,
+          p_project: projectId,
+          p_name: row.name,
+          p_description: row.description ?? '',
+          p_trigger_type: row.trigger_type,
+          p_condition: row.condition ?? true,
+          p_actions: row.actions ?? [],
+          p_enabled: row.enabled ?? true,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
+        return { id: String(res.data) };
       }
       case 'workflow.update': {
-        const res = await sb.from('workflows').update(workflowToDb(m.patch)).eq('id', m.id).select('id');
-        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: zmienia wyłącznie administrator HHL');
+        const row = workflowToDb(m.patch);
+        const res = await sb.rpc('workflow_rule_write', {
+          p_id: m.id,
+          p_project: null,
+          p_name: row.name ?? null,
+          p_description: row.description ?? null,
+          p_trigger_type: row.trigger_type ?? null,
+          p_condition: row.condition ?? null,
+          p_actions: row.actions ?? null,
+          p_enabled: row.enabled ?? null,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
+        if (!res.data) throw new Error('reguła: zmienia wyłącznie administrator HHL');
         return;
       }
       case 'workflow.delete': {
-        // B-5 — usuwa wyłącznie HHL_ADMIN (RLS wf_all); reguł START-* baza nie usuwa (0165); wpis zostaje w audit_log
-        const res = await sb.from('workflows').delete().eq('id', m.id).select('id');
-        if (!(must(res, 'reguła') as { id: string }[]).length) throw new Error('reguła: usuwa wyłącznie administrator HHL');
+        /* #505 F7 #506 pkt 9: zawsze soft-delete (hard DELETE kasował workflow_runs). */
+        const res = await sb.rpc('workflow_rule_soft_delete', {
+          p_id: m.id,
+          p_reason: m.reason?.trim() || null,
+        });
+        if (res.error) throw new Error(res.error.message);
         return;
       }
       case 'geofence.save': {
         await ensureContext();
         if (!projectId) throw new Error('strefa: brak projektu');
         const serverId = isServerId(m.geofence.id) ? m.geofence.id : null;
-        const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(m.geofence, projectId, orgs, serverId));
+        const res = await sb.rpc('upsert_geofence_circle', geofenceToRpc(m.geofence, projectId, orgs, serverId, m.reason));
         return { id: String(must(res, 'strefa')) };
       }
       case 'geofence.delete': {
@@ -503,5 +675,5 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     }
   }
 
-  return { kind: 'supabase', loadSnapshot, apply, loadPreferences, context: () => ({ orgs, projectId }) };
+  return { kind: 'supabase', loadSnapshot, loadNotifications, loadsVersion, apply, loadPreferences, context: () => ({ orgs, projectId }) };
 }

@@ -106,6 +106,9 @@ val "KSH mniej niż 5 dni" "select l3_lead_alarm(now() + interval '4 days', now(
 $PSQL -c "update ops_thresholds set value_num = 3 where key = 'LEAD_DAYS'" >/dev/null
 val "krótsze wyprzedzenie KSH gasi alarm" "select l3_lead_alarm(now() + interval '4 days', now())" f
 $PSQL -c "update ops_thresholds set value_num = 5 where key = 'LEAD_DAYS'" >/dev/null
+# #384 pkt 2: miniona / ≥5 dni — bez alarmu
+val "KSH miniona data → bez alarmu" "select l3_lead_alarm(now() - interval '1 day', now())" f
+val "KSH za 10 dni → bez alarmu" "select l3_lead_alarm(now() + interval '10 days', now())" f
 val "cisza GPS tylko przy źródle i ruchu" "select l3_silent_alarm(now() - interval '30 minutes', now(), false, true)" f
 # B7 / E15: SILENT_MIN = 30; alarm gdy cisza > progu
 val "cisza 45 min przy progu 30" "select l3_silent_alarm(now() - interval '45 minutes', now(), true, true)" t
@@ -134,14 +137,18 @@ val "zniknięcie bez kodu → bez decyzji" "select (l1b_note_row_gone('$P','$L',
 val "zniknięcie wiersza → decyzja" "select (l1b_note_row_gone('$P','$L','SG-GONE') is not null)" t
 $PSQL -c "select l1b_note_row_gone('$P','$L','SG-GONE')" >/dev/null
 val "zniknięcie drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:row-gone:$P:SG-GONE'" 1
-val "import woła zniknięcie wiersza" "select (position('l1b_note_row_gone' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
+val "import woła zniknięcie wiersza" "select (position('l1b_note_row_gone' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
 
 val "konflikt bez numeru HHL → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C','','KSH/2') is null)" t
 val "konflikt numeru HHL → decyzja" "select (l1b_note_conflict('$P','$L','SG-C','HHL/1','KSH/2') is not null)" t
 $PSQL -c "select l1b_note_conflict('$P','$L','SG-C','HHL/1','KSH/2')" >/dev/null
 val "konflikt drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:conflict:$P:SG-C:hhl_order_no'" 1
 val "ten sam numer → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C2','HHL/1','HHL/1') is null)" t
-val "import woła konflikt" "select (position('l1b_note_conflict' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
+# #384 pkt 3: pusta wartość w pliku ≠ konflikt
+val "konflikt puste file → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C3','HHL/9','') is null)" t
+val "konflikt file null → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C4','HHL/9',null) is null)" t
+val "import woła konflikt" "select (position('l1b_note_conflict' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
+val "import sprawdza column_map hhlOrderNo" "select (position('hhlOrderNo' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
 
 val "plik nieczytelny → decyzja" "select (l1b_ksh_file_unreadable('$P','zly.xlsx') is not null)" t
 $PSQL -c "select l1b_ksh_file_unreadable('$P','zly.xlsx')" >/dev/null
@@ -219,7 +226,7 @@ $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length
 val "4 ładunki KR → decyzja" "select l1b_kr_check('$P','2026-12-01')" 4
 $PSQL -c "select l1b_kr_check('$P','2026-12-01')" >/dev/null
 val "KR drugie → jedna" "select count(*) from decisions where detail->>'event_key'='l1b:kr:$P:2026-12-01'" 1
-val "import woła próg KR" "select (position('l1b_kr_check' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean)'::regprocedure)) > 0)" t
+val "import woła próg KR" "select (position('l1b_kr_check' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
 val "postój nie ma funkcji z sztywnym progiem" "select count(*) from pg_proc where proname='l1b_dwell_check'" 0
 
 echo; echo "[dec-auto] D-0930 kod transportu w powiadomieniu SCX"

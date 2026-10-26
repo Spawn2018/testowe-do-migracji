@@ -50,7 +50,25 @@ fi
 n=0; rows=0; bad=""
 for t in $TABLES; do
   [[ "$t" =~ ^[a-z_]+$ ]] || { echo "RESTORE FAIL: nazwa tabeli $t" >&2; exit 2; }
-  age -d -i "$AGE_IDENTITY" "$DIR/$t.csv.gz.age" | gunzip > "$TMP/$t.csv"
+  # #498: duże tabele w częściach (manifest.table_parts) albo pojedynczy plik t.csv.gz.age
+  PARTS=$(python3 -c "
+import json,sys
+m=json.load(open(sys.argv[1]))
+p=(m.get('table_parts') or {}).get(sys.argv[2]) or []
+print(' '.join(x['key'] for x in sorted(p, key=lambda z: z.get('part',0))))
+" "$TMP/manifest.json" "$t")
+  if [ -n "$PARTS" ]; then
+    : > "$TMP/$t.csv"
+    first=1
+    for pk in $PARTS; do
+      age -d -i "$AGE_IDENTITY" "$DIR/$pk" | gunzip > "$TMP/_part.csv"
+      # part0001 ma nagłówek CSV; kolejne części — tylko wiersze (#498)
+      if [ "$first" = 1 ]; then cat "$TMP/_part.csv" > "$TMP/$t.csv"; first=0
+      else cat "$TMP/_part.csv" >> "$TMP/$t.csv"; fi
+    done
+  else
+    age -d -i "$AGE_IDENTITY" "$DIR/$t.csv.gz.age" | gunzip > "$TMP/$t.csv"
+  fi
   cols=$(head -1 "$TMP/$t.csv")
   # Ścieżka CSV: na Windows natywny psql wymaga ścieżki Win; cygpath gdy dostępny.
   CSV_PATH=$TMP/$t.csv

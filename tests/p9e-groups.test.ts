@@ -126,6 +126,11 @@ describe('P9-e dymek i lista', () => {
   it('odmiana, nazwa statku, nazwa transportu, demo', () => {
     expect([1, 2, 4, 5, 12, 14, 22, 25].map(carsWord)).toEqual(['one', 'few', 'few', 'many', 'many', 'many', 'few', 'many']);
     expect(vesselKey('Nova Star')).toBe(vesselKey('NOVA  STAR'));
+    /* 22.10.2026: AIS „M/F Wawel” = rejs „Wawel” (SG-17 na promie, nie w porcie) */
+    expect(vesselKey('M/F Wawel')).toBe(vesselKey('Wawel'));
+    expect(vesselKey('M/F Stena Ebba')).toBe('stena ebba');
+    expect(vesselKey('MS Nova Star')).toBe('nova star');
+    expect(vesselKey('Msta')).toBe('msta');
     expect(splitLabel('SG-03')).toEqual({ code: 'SG-03', num: null });
     expect(demoStageAnchor('SITE', ZONES)).toEqual({ lat: 65.81273, lng: 21.78898 });
     expect(demoStageAnchor('PORT_PL', ZONES)).toEqual({ lat: 54.40372, lng: 18.6813 });
@@ -133,3 +138,32 @@ describe('P9-e dymek i lista', () => {
     expect(demoStageAnchor('FERRY', ZONES)).not.toBeNull();
   });
 });
+
+describe('22.10.2026: auto „Na promie” na pozycji statku z AIS (SG-17)', () => {
+  it('CorridorMap: pozycja floty z shipOf dla etapu FERRY, statek bez drugiego znacznika; błędy odczytu promów', async () => {
+    const { readFileSync } = await import('node:fs');
+    const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(m).toContain("stageTileOf(l) === 'FERRY' ? ferryKeyOf(l) : null");
+    expect(m).toContain('takenShips.add(vesselKey(ship.vessel));');
+    expect(m.indexOf('const shipOf = ')).toBeLessThan(m.indexOf('const fleet = PROD_BUILD'));
+    expect(m.indexOf('const fleet = PROD_BUILD')).toBeLessThan(m.indexOf("if (slot === 'drawer')"));
+    const a = readFileSync('src/lib/aisDb.ts', 'utf8');
+    expect(a).toContain('fails >= 3) onUpdate([])');
+  });
+});
+
+describe('J-17 — dopisek „szacowana” w dymku pojedynczego auta na promie', () => {
+  it('estNote: z godziną ostatniego AIS i bez AIS', async () => {
+    const { estNote } = await import('../src/lib/p9eGroups');
+    const tx = (k: string, p?: Record<string, string | number>) => (p ? `${k}:${p.t}` : k);
+    expect(estNote('2026-10-24T18:20:00Z', tx, () => '24.10, 20:20')).toBe('p9e_ais_est:24.10, 20:20');
+    expect(estNote(null, tx, () => 'x')).toBe('p9e_ais_est_none');
+  });
+  it('CorridorMap: auto na szacowanej pozycji statku dostaje dopisek w dymku (bez grup: Przegląd, tryb skupienia)', async () => {
+    const { readFileSync } = await import('node:fs');
+    const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(m).toContain('if (ship.estimated) estById.set(f.id');
+    expect(m).toContain('vehicleTip(row, loc, est)');
+  });
+});
+

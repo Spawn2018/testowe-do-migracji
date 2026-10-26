@@ -86,14 +86,16 @@ const edgeText = (m: number) => (m > 0 ? p8ct('p8c_impact_out', { m: radiusText(
 const countryOf = (z: Pick<ZoneRow, 'country' | 'lat'>): 'PL' | 'SE' => (z.country ? (z.country === 'SE' ? 'SE' : 'PL') : z.lat > 56 ? 'SE' : 'PL');
 
 export function ZonesView() {
-  const src = useMemo(() => zonesOf(), []);
   const phone = useIsPhone();
   const role = useTowerStore((s) => s.role);
   const loads = useTowerStore((s) => s.loads);
   const nowMin = Math.floor(getNow().getTime() / 60_000);
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
+  const acct = accountRole(role);
+  /* #413: źródło zależne od konta (saveZone tylko Administrator HHL) */
+  const src = useMemo(() => zonesOf(), [acct]);
   /* E9: zmienia tylko Administrator HHL; Operacje HHL — podgląd */
-  const canEdit = role === 'HHL' && accountRole(role) !== 'HHL_OPS' && !!src?.saveZone;
+  const canEdit = role === 'HHL' && acct !== 'HHL_OPS' && !!src?.saveZone;
   const [zones, setZones] = useState<ZoneRow[] | null>(src?.initial ?? null);
   const [loadErr, setLoadErr] = useState(false);
   const [rev, setRev] = useState(0);
@@ -142,7 +144,9 @@ export function ZonesView() {
   }
 
   const zone = zones.find((z) => z.id === sel) ?? null;
-  const groups = groupZones(zones);
+  /* audyt-teksty (d), makieta E34 telefon: na telefonie Boden pierwszy, dalej według trasy */
+  const byRoute = groupZones(zones);
+  const groups = phone ? [...byRoute.filter((g) => g.group === 'boden'), ...byRoute.filter((g) => g.group !== 'boden')] : byRoute;
   const open = (id: string) => { setSel(id); setAdding(false); setNote(''); setFocusId(null); setReveal((n) => n + 1); };
   const back = () => {
     const id = sel;
@@ -184,8 +188,9 @@ export function ZonesView() {
   const header = (
     <header className="zv-hd">
       <h2>{p8ct('p8c_title')}</h2>
-      <span className="zv-sub">{p8ct('p8c_sub', { n: zones.length })}</span>
-      {canEdit && !adding ? (
+      {/* makieta E34 telefon: w nagłówku sama liczba stref; „+ Strefa” pod listą */}
+      <span className="zv-sub" data-zone-count>{phone ? zones.length : p8ct('p8c_sub', { n: zones.length })}</span>
+      {canEdit && !adding && !phone ? (
         <button ref={addRef} type="button" className="btn zv-add" onClick={() => { setAdding(true); setNote(''); setReveal((n) => n + 1); }} data-zone-add>{p8ct('p8c_add')}</button>
       ) : null}
     </header>
@@ -246,6 +251,11 @@ export function ZonesView() {
           <ZonesMap mode="all" zones={zones} label={p8ct('p8c_map_label')} />
         </Suspense>
         {list}
+        {canEdit && !adding ? (
+          <div className="zv-add-row">
+            <button ref={addRef} type="button" className="btn zv-add" onClick={() => { setAdding(true); setNote(''); setReveal((n) => n + 1); }} data-zone-add>{p8ct('p8c_add')}</button>
+          </div>
+        ) : null}
         <p className="zv-foot">{p8ct('p8c_phone_note')}</p>
       </div>
     );
@@ -623,7 +633,13 @@ function ZoneForm({ zone, tracked, near, phone, reveal, onCancel, onSave }: {
         {ports ? (
           <div className="zv-field">
             <label htmlFor={`${id}-route`}>{p8ct('p8c_f_route')}</label>
-            <select id={`${id}-route`} className="input" value={route} onChange={(e) => setRoute(e.target.value === 'STENA' ? 'STENA' : 'POLFERRIES')}>
+            {/* #505: route w v_geofences_circle / upsert p_route — wybór aktywny także w produkcji */}
+            <select
+              id={`${id}-route`}
+              className="input"
+              value={route}
+              onChange={(e) => setRoute(e.target.value === 'STENA' ? 'STENA' : 'POLFERRIES')}
+            >
               <option value="POLFERRIES">{p8ct('p8c_route_POLFERRIES')}</option>
               <option value="STENA">{p8ct('p8c_route_STENA')}</option>
             </select>

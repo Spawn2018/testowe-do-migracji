@@ -5,28 +5,84 @@
  */
 import type { Bill, Document, Load } from '../types';
 import type { AccountingPack, PackConfig, PackKey, PackSent } from './p5Pack';
-import { belowThreshold, financeSummary, fuelWeeks, type FinBelowRow, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
+import { belowThreshold, financeSummary, fuelWeeks, latestNbp, type FinBelowRow, type FinNbp, type FinSide, type FinSummary, type FuelWeekRow } from './p5Finance';
 import { demoAccountingPack, demoDocRequirements, demoFactoringOffer, demoFactoringTasks, demoFeeRules, demoFeeSuggestions, demoFuelEnrich, demoMarginThreshold, demoPackActions, demoPermits, demoPolicies } from './p5Demo';
 import { DEFAULT_DOC_REQUIREMENTS, type DocRequirement } from './docRequirements';
 import type { FeeRules, FeeSuggestion } from './p5Fees';
+import { fuelPublicationsIn } from './fuelPublSource';
 
-/** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona. */
+/** Próg marży w % (Opcje › Cennik i opłaty, E16); null = nie ustawiony, flaga wyłączona.
+ *  Produkcja (#412, 0288): `margin_threshold_get` przy wczytaniu danych — tylko HHL; KSH i SCX zawsze null. */
+let prodMargin: number | null | undefined;
+export function setMarginFromServer(pct: number | null | undefined): void {
+  prodMargin = pct;
+}
+/** undefined = nie wczytano (np. inna rola) — Opcje bez pola; null = flaga wyłączona. */
+export function prodMarginState(): number | null | undefined {
+  return prodMargin;
+}
 export function marginThresholdOf(): number | null {
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoMarginThreshold() : null;
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoMarginThreshold() : prodMargin ?? null;
+}
+/** Wynik `margin_threshold_get()` / `_set` → % albo null (wyłączony); zły kształt → undefined (bez zmyślonej wartości). */
+export function marginFromDb(raw: unknown): number | null | undefined {
+  if (!raw || typeof raw !== 'object' || !('pct' in raw)) return undefined;
+  const v = (raw as { pct: unknown }).pct;
+  if (v == null) return null;
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : undefined;
 }
 
-export function financeOf(loads: Load[], side: FinSide): FinSummary {
-  return financeSummary(loads, side);
+/** `live` — aktualny kurs z `fx_rates` (karta „Kurs NBP”, przeliczenie transportów bez kursu przy transporcie). */
+export function financeOf(loads: Load[], side: FinSide, live: FinNbp | null = null): FinSummary {
+  return financeSummary(loads, side, live ?? latestNbp(loads));
 }
 
-export function belowOf(loads: Load[], thresholdPct: number | null): FinBelowRow[] {
-  return belowThreshold(loads, thresholdPct);
+export function belowOf(loads: Load[], thresholdPct: number | null, live: FinNbp | null = null): FinBelowRow[] {
+  return belowThreshold(loads, thresholdPct, live ?? latestNbp(loads));
 }
 
-/** E39 — tabela tygodni. Średnie cen i publikacje: w produkcji z bazy (`fuel_basis`), dziś „—”. */
+/** E39 — tabela tygodni. Produkcja: średnie i liczby publikacji z `fuel_basis` (#409 / 0268, widok ceny strony),
+ *  lista publikacji z `fuel_index_readings` (HHL), a gdy jej nie ma (KSH, SCX) — z `fuel_basis.pubs_*` transportów tygodnia. */
 export function fuelWeeksOf(loads: Load[], side: FinSide, today: string): FuelWeekRow[] {
   const rows = fuelWeeks(loads, side, today);
-  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelEnrich(rows, today) : rows;
+  const demo = import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelEnrich(rows, today) : null;
+  if (demo) return demo;
+  return rows.map((r) => enrichFromBasis(r, loads, side, today));
+}
+
+/** Wiersz tygodnia + dane z bazy (czysta funkcja, test). Prognoza i scalony zakres — bez średnich i bez listy, jak w demo. */
+export function enrichFromBasis(r: FuelWeekRow, loads: readonly Load[], side: FinSide, today: string): FuelWeekRow {
+  if (!r.idx || r.weekLast) return r;
+  const ids = new Set(r.loads.map((x) => x.id));
+  const basis = loads
+    .filter((l) => ids.has(l.id))
+    .map((l) => {
+      const m = l.pricing?.money && l.pricing.money.v === 2 ? l.pricing.money : null;
+      return m ? (side === 'rev' ? m.rev : m.cost).fuel.basis ?? null : null;
+    })
+    .find((b) => b != null) ?? null;
+  const out: FuelWeekRow = { ...r };
+  if (basis) {
+    if (out.okq8) out.okq8 = { ...out.okq8, avg: basis.avgSek, n: basis.nSek };
+    if (out.orlen) out.orlen = { ...out.orlen, avg: basis.avgPln, n: basis.nPln };
+  }
+  const to = r.idx.to < today ? r.idx.to : today;
+  const fromReadings = fuelPublicationsIn(r.idx.from, to);
+  /* F7 #408 P2: źródło bez publikacji w tygodniu (n = 0) — baza bierze jego ostatnią cenę sprzed tygodnia; pokazujemy ją
+     (każde źródło osobno), tylko w tygodniu ostatecznym — prognoza KSH/SCX bez listy (decyzja koordynatora) */
+  const fromBasis = basis
+    ? basis.pubs.filter((p) => {
+      const n = p.source === 'OKQ8' ? basis.nSek : basis.nPln;
+      if (n === 0 && r.state === 'OSTATECZNA') return true;
+      return p.date >= r.idx!.from && p.date <= to;
+    })
+    : null;
+  /* F7 #408 B1: najpierw publikacje, z których baza policzyła średnią (`fuel_basis`), dla każdej roli; notowania HHL
+     (`fuel_index_readings`; KSH i SCX dostają pustą listę przez RLS) tylko gdy bazy brak — np. prognoza bieżącego tygodnia */
+  const pub = fromBasis && fromBasis.length ? fromBasis : fromReadings && fromReadings.length ? fromReadings : fromBasis ?? fromReadings;
+  if (pub) out.publications = pub;
+  return out;
 }
 
 /** E4b — oferta faktoringu HHL (Opcje › Pieniądze › Faktoring, wersja z datą). W produkcji z bazy — wykonawca. */
@@ -88,6 +144,16 @@ export function setPermitsFromServer(rows: PermitView[] | null): void {
 }
 export function permitsOf(loads: Load[]): PermitView[] | null {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoPermits(loads) : (prodPermits === undefined ? [] : prodPermits);
+}
+/**
+ * E31 pkt 9 (decyzja koordynatora 22.10.2026): KSH widzi zezwolenia swoich transportów — tylko do odczytu,
+ * wyłącznie zezwolenia przypięte do co najmniej jednego transportu z jego listy. HHL i SCX — bez zmian.
+ * Produkcja (#464 / 0272): `a7_permits_list` zwraca KSH tylko Firma i Trasa z `load_permits`
+ * własnych transportów (loads już zawężone). Filtr `loads > 0` zostaje jako zabezpieczenie UI.
+ */
+export function permitsForRole(permits: readonly PermitView[] | null, role: Document['visibleTo'][number]): PermitView[] | null {
+  if (!permits) return null;
+  return role === 'KSH' ? permits.filter((p) => p.loads > 0) : [...permits];
 }
 /**
  * „+ Dodaj” przy „Inne pliki” i rodzaj „Inne” w oknie „Wgraj dokument” (E31 pkt 5; D-20261014-2005-01 S4 pkt 7).

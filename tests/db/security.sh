@@ -234,24 +234,30 @@ err "SCX security_flags_list odmowa" $SCX "select security_flags_list()" "tylko 
 
 echo; echo "[B6] e-mail na osobę, płatność, rio_secret, limit anon, loads_read (0225)"
 HHLID=$(sys "select id from app_users where email='hhl@test'")
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push/money/import.
+# Bramka (a_gate przed budżetem) wymaga event_key — B6T* przez matrix_event=dates.
+sys "update notification_matrix set email=true where event_key='dates' and role='HHL_ADMIN'" >/dev/null
+sys "update notification_matrix set email=true where event_key='email_budget' and role='HHL_ADMIN'" >/dev/null
 sys "
 do \$\$
 declare i int; u uuid := '$HHLID';
 begin
   for i in 1..25 loop
     insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
-    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text, '{}'::jsonb, 'b6mail:' || i, 'PENDING');
+    values ('EMAIL', 'hhl@test', u, 'B6T' || ((i - 1) / 5)::text,
+            jsonb_build_object('matrix_event', 'dates'), 'b6mail:' || i, 'PENDING');
   end loop;
 end \$\$;
 " >/dev/null
-val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%'" 20
+val "B6: 20 e-maili na osobę na dobę" $HHL "select count(*) from notifications where user_id='$HHLID' and channel='EMAIL' and template like 'B6T%' and status is distinct from 'SUPPRESSED'" 20
 val "B6: 1 wiadomość zbiorcza" $HHL "select count(*) from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" 1
 val "B6: tytuł limitu" $HHL "select payload->>'title' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Limit e-maili na dziś"
 val "B6: treść limitu" $HHL "select payload->>'body' from notifications where user_id='$HHLID' and template='EMAIL_BUDGET'" "Dziś dostałeś już 20 e-maili z Watch Tower. Kolejne powiadomienia z dzisiaj są w dzwonku i w aplikacji na telefonie. E-maile wrócą jutro."
 val "B6: EMAIL_BUDGET w treściach" $HHL "select subject_pl from notification_copy where id='EMAIL_BUDGET'" "Limit e-maili na dziś"
 sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
-     values ('EMAIL', 'hhl@test', '$HHLID', 'B6PILNY', '{\"push_fallback\":true}'::jsonb, 'b6mail:pilny', 'PENDING')" >/dev/null
-val "B6: e-mail zapasowy poza limitem" $HHL "select count(*) from notifications where user_id='$HHLID' and template='B6PILNY'" 1
+     values ('EMAIL', 'hhl@test', '$HHLID', 'B6PILNY',
+             '{\"push_fallback\":true,\"matrix_event\":\"dates\"}'::jsonb, 'b6mail:pilny', 'PENDING')" >/dev/null
+val "B6: e-mail zapasowy poza limitem" $HHL "select count(*) from notifications where user_id='$HHLID' and template='B6PILNY' and status is distinct from 'SUPPRESSED'" 1
 
 out=$(sys "begin; grant update (paid_at) on invoices to authenticated; set local role authenticated; set local request.jwt.claim.sub='$KSH'; update invoices set paid_at=current_date where id='$INVP'; rollback;")
 echo "$out" | grep -q "tylko HHL" && { ok=$((ok+1)); echo "  OK    B6: KSH nie zmieni paid_at"; } || { fail=$((fail+1)); echo "  FAIL  B6 paid_at: $out"; }
@@ -265,6 +271,35 @@ err "B6: SCX nie zapisze rio_secret wprost" $SCX "update loads set rio_secret='t
 sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
 out=$(sys "select rio_secret from loads where id='$L1'")
 echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
+
+echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
+# Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
+# Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani
+# tracking_opened_at (brak grant select) w information_schema.columns — Edge i tak idzie service_role.
+RIO_POLL_COLS='id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id'
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name = any(string_to_array('$RIO_POLL_COLS',','))")
+[ "$out" = "18" ] && { ok=$((ok+1)); echo "  OK    #442: 18 kolumn poll RIO w loads"; } || { fail=$((fail+1)); echo "  FAIL  #442: 18 kolumn poll RIO w loads  (otrzymano: $out, oczekiwano: 18)"; }
+out=$(sys "select count(*) from information_schema.columns where table_schema='public' and table_name='loads' and column_name='shipment_code'")
+[ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    #442: loads bez shipment_code"; } || { fail=$((fail+1)); echo "  FAIL  #442: loads bez shipment_code  (otrzymano: $out, oczekiwano: 0)"; }
+
+echo; echo "[#392] RIO sanitize — zmiana linku czyści / resetuje pola RIO (0252)"
+sys "update loads set telematics_vehicle_id='https://emtrack.eu/app/' where id='$L1'" >/dev/null
+out=$(sys "select (rio_tracking_id is null and rio_check_state is null)::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    392: RIO→emtrack — rio_tracking_id i check_state puste"; } || { fail=$((fail+1)); echo "  FAIL  392 RIO→emtrack pola: $out"; }
+out=$(sys "select rio_secret from loads where id='$L1'")
+[ -z "$out" ] && { ok=$((ok+1)); echo "  OK    392: RIO→emtrack — rio_secret puste"; } || { fail=$((fail+1)); echo "  FAIL  392 rio_secret po emtrack: $out"; }
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-a' where id='$L1'" >/dev/null
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee' where id='$L1'" >/dev/null
+out=$(sys "select coalesce(rio_secret,'') || '|' || coalesce(rio_check_state,'') || '|' || coalesce(rio_tracking_id,'') from loads where id='$L1'")
+[ "$out" = "|pending|bbbbbbbb-bbbb-cccc-dddd-eeeeeeeeeeee" ] && { ok=$((ok+1)); echo "  OK    392: RIO A→B bez klucza — secret null, pending, id B"; } || { fail=$((fail+1)); echo "  FAIL  392 A→B: $out"; }
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-same' where id='$L1'" >/dev/null
+sys "update loads set telematics_vehicle_id='rio:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' where id='$L1'" >/dev/null
+out=$(sys "select rio_secret from loads where id='$L1'")
+echo "$out" | grep -qx "klucz-same" && { ok=$((ok+1)); echo "  OK    392: rio: ten sam id — secret bez zmian"; } || { fail=$((fail+1)); echo "  FAIL  392 ten sam rio:: $out"; }
+sys "update loads set telematics_vehicle_id=null where id='$L1'" >/dev/null
+out=$(sys "select (rio_tracking_id is null and rio_secret is null and rio_check_state is null)::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    392: RIO→pusty — pola RIO puste"; } || { fail=$((fail+1)); echo "  FAIL  392 RIO→pusty: $out"; }
+
 out=$(sys "select position('SITE' in pg_get_expr(polqual, polrelid)) from pg_policy where polname='loads_read'")
 [ "$out" = "0" ] && { ok=$((ok+1)); echo "  OK    B6: loads_read bez SITE"; } || { fail=$((fail+1)); echo "  FAIL  B6 loads_read: $out"; }
 
@@ -384,6 +419,1105 @@ val "B4: SCX widzi DOC_UPLOADED dokumentu HHL+SCX" $SCX \
   "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 1
 val "B4: HHL widzi DOC_UPLOADED dokumentu HHL+SCX" $HHL \
   "select count(*) from load_events where event_type='DOC_UPLOADED' and payload->>'filename'='b4-doc-hhl-scx.pdf'" 1
+
+echo; echo "[#422] Wydajność (perf_results) i Błędy aplikacji (app_errors_recent)"
+OPS422=11111111-0000-0000-0000-0000000000a1
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS422','00000000-0000-0000-0000-00000000a001','ops-422@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "#422: HHL_ADMIN czyta perf_results_latest (p5)" $HHL \
+  "select (perf_results_latest()->'rows' @> '[{\"id\":\"p5\"}]')::text" true
+val "#422: HHL_OPS czyta perf_results_latest" $OPS422 \
+  "select (jsonb_typeof(perf_results_latest()->'rows') = 'array')::text" true
+err "#422: KSH nie czyta perf_results_latest" $KSH "select perf_results_latest()" "tylko HHL|42501"
+err "#422: SCX nie czyta perf_results_latest" $SCX "select perf_results_latest()" "tylko HHL|42501"
+chk6 "#422: anon bez SELECT/INSERT na perf_results" "$(sys "select has_table_privilege('anon','perf_results','select')::text||has_table_privilege('anon','perf_results','insert')::text||has_table_privilege('authenticated','perf_results','insert')::text" | tail -1)" "falsefalsefalse"
+chk6 "#422: anon bez EXECUTE perf_results_latest / app_errors_recent" "$(sys "select has_function_privilege('anon','perf_results_latest()','execute')::text||has_function_privilege('anon','app_errors_recent(int)','execute')::text" | tail -1)" "falsefalse"
+chk6 "#422: authenticated bez EXECUTE record / ingest" "$(sys "select has_function_privilege('authenticated','perf_result_record(text,text,text,text,text,boolean,text,timestamptz)','execute')::text||has_function_privilege('authenticated','perf_p95_lists_ingest(timestamptz)','execute')::text" | tail -1)" "falsefalse"
+err "#422: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into perf_results (metric_id, what, how, result_text, limit_text, ok, source) values ('p1','x','y','z','l',true,'t')" \
+  "permission denied|42501"
+err "#422: HHL nie wywoła perf_result_record" $HHL \
+  "select perf_result_record('p1','x','y','z','l',true,'t')" \
+  "permission denied|42501"
+err "#422: HHL nie wywoła perf_p95_lists_ingest" $HHL \
+  "select perf_p95_lists_ingest()" \
+  "permission denied|42501"
+val "#422: HHL_ADMIN app_errors_recent ma groups" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'groups') = 'array')::text" true
+val "#422: app_errors_recent newCount null (brak danych)" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'newCount') = 'null')::text" true
+err "#422: HHL_OPS nie czyta app_errors_recent" $OPS422 "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: KSH nie czyta app_errors_recent" $KSH "select app_errors_recent(7)" "Administrator HHL|42501"
+err "#422: SCX nie czyta app_errors_recent" $SCX "select app_errors_recent(7)" "Administrator HHL|42501"
+out=$(sys "select perf_p95_lists_ingest()->>'p4_result'"); echo "$out" | grep -qiE 'brak pomiaru|[0-9]+ ms' \
+  && { ok=$((ok+1)); echo "  OK    #422: ingest zapisuje p4 (max_exec_time)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #422: ingest: $out"; }
+val "#422: po ingest HHL widzi p4 w latest" $HHL \
+  "select (perf_results_latest()->'rows' @> '[{\"id\":\"p4\"}]')::text" true
+
+echo; echo "[#508] Lighthouse p1–p3 + newSince od deploy-main"
+chk6 "#508: authenticated bez EXECUTE deploy_success_record" "$(sys "select has_function_privilege('authenticated','deploy_success_record(timestamptz,jsonb)','execute')::text" | tail -1)" "false"
+err "#508: HHL nie wywoła deploy_success_record" $HHL \
+  "select deploy_success_record()" \
+  "permission denied|42501|tylko usługa"
+sys "select deploy_success_record(now() - interval '1 hour', '{\"test\":true}'::jsonb)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-new','error','#508 nowy blad po deploy','/login', now() - interval '30 minutes', now(), 1)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-old','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '90 minutes', 1)" >/dev/null
+val "#508: newSince ustawione po deploy-main" $HHL \
+  "select (jsonb_typeof(app_errors_recent(7)->'newSince') = 'string')::text" true
+val "#508: newCount = 1 (tylko grupy po wdrożeniu)" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+sys "select perf_result_record('p1','Logowanie · telefon','LCP · CLS · TBT','2,0 s · 0,01 · 100 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/:mobile');
+     select perf_result_record('p2','Offline · telefon','LCP · CLS · TBT','2,1 s · 0,02 · 120 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',true,'lighthouse:/offline.html:mobile');
+     select perf_result_record('p3','Logowanie · komputer','LCP · CLS · TBT','2,2 s · 0,02 · 150 ms','LCP ≤ 2,5 s · CLS ≤ 0,1 · TBT ≤ 300 ms',false,'lighthouse:/:desktop')" >/dev/null
+val "#508: perf_results_latest ma p1–p3" $HHL \
+  "select ((perf_results_latest()->'rows' @> '[{\"id\":\"p1\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p2\"}]') and (perf_results_latest()->'rows' @> '[{\"id\":\"p3\"}]'))::text" true
+val "#508: at z pomiaru ok is not null (p1)" $HHL \
+  "select ((perf_results_latest()->'rows' @> '[{\"id\":\"p1\",\"ok\":true}]') and (perf_results_latest()->'at' is not null))::text" true
+# Ten sam message sprzed wdrożenia nie wchodzi do newCount; ok=false w integration_runs ignorowany.
+sys "insert into integration_runs (job, ran_at, ok, result)
+     values ('deploy-main', now() - interval '10 minutes', false, '{\"fail\":true}'::jsonb)" >/dev/null
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('508-same','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '5 minutes', 2)" >/dev/null
+val "#508: newCount bez grupy istniejącej przed wdrożeniem" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+
+echo; echo "[#412] E40 terminy płatności i adresy księgowości"
+OPS412=11111111-0000-0000-0000-0000000000a2
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS412','00000000-0000-0000-0000-00000000a001','ops-412@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+val "#412: HHL_ADMIN czyta terminy 30/35" $HHL \
+  "select (payment_terms_options()->>'kshDays')||'/'||(payment_terms_options()->>'scxDays')" "30/35"
+val "#412: HHL_OPS czyta terminy" $OPS412 \
+  "select (payment_terms_options()->>'kshDays')::text" 30
+err "#412: KSH nie czyta terminów" $KSH "select payment_terms_options()" "tylko HHL|42501"
+err "#412: SCX nie czyta terminów" $SCX "select payment_terms_options()" "tylko HHL|42501"
+# Wersjonowanie: seed ma valid_from=dziś — cofnij, żeby insert dziś zostawił starą wersję (issue_date sprzed zmiany).
+sys "update payment_terms set valid_from = current_date - 7
+       where project_id = '22222222-0000-0000-0000-000000000001'
+         and payer_org_id = '00000000-0000-0000-0000-00000000a002'
+         and payee_org_id = '00000000-0000-0000-0000-00000000a001'" >/dev/null
+val "#412: HHL_ADMIN ustawia termin KSH=45" $HHL \
+  "select payment_terms_options_set('KSH', 45); select (payment_terms_options()->>'kshDays')" 45 commit
+val "#412: issue_date sprzed zmiany ma stary termin" $HHL \
+  "select t.term_days::text from payment_terms t
+     where t.project_id = '22222222-0000-0000-0000-000000000001'
+       and t.payer_org_id = '00000000-0000-0000-0000-00000000a002'
+       and t.payee_org_id = '00000000-0000-0000-0000-00000000a001'
+       and t.valid_from <= (current_date - 1)
+     order by t.valid_from desc limit 1" 30
+val "#412: audit PAYMENT_TERMS_SET" $HHL \
+  "select count(*) from audit_log where action='PAYMENT_TERMS_SET' and new_value->>'days'='45'" 1
+err "#412: HHL_OPS nie ustawi terminu" $OPS412 "select payment_terms_options_set('SCX', 40)" "Administrator HHL|42501"
+err "#412: KSH nie ustawi terminu" $KSH "select payment_terms_options_set('KSH', 40)" "Administrator HHL|42501"
+err "#412: dni poza 1–120" $HHL "select payment_terms_options_set('KSH', 0)" "1–120|22023"
+val "#412: przywróć termin KSH=30" $HHL \
+  "select payment_terms_options_set('KSH', 30); select (payment_terms_options()->>'kshDays')" 30 commit
+sys "delete from payment_terms
+       where project_id = '22222222-0000-0000-0000-000000000001'
+         and payer_org_id = '00000000-0000-0000-0000-00000000a002'
+         and payee_org_id = '00000000-0000-0000-0000-00000000a001'
+         and valid_from < current_date" >/dev/null
+val "#412: HHL czyta adresy startowe" $HHL \
+  "select (accounting_addresses_get()->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
+val "#412: HHL_OPS czyta adresy" $OPS412 \
+  "select (accounting_addresses_get()->'KSH'->>0)" "faktury@ksh.pl"
+err "#412: KSH nie czyta adresów" $KSH "select accounting_addresses_get()" "tylko HHL|42501"
+err "#412: SCX nie czyta adresów" $SCX "select accounting_addresses_get()" "tylko HHL|42501"
+val "#412: KSH SELECT accounting_addresses = 0" $KSH "select count(*) from accounting_addresses" 0
+val "#412: SCX SELECT accounting_addresses = 0" $SCX "select count(*) from accounting_addresses" 0
+# Adresy @test.pl — fikcyjne (F7: nie firmowe); regex wymaga TLD (≥2 litery).
+val "#412: HHL_ADMIN zapisuje 2 adresy HHL (@test.pl)" $HHL \
+  "select accounting_addresses_set('HHL', array['ksiegowosc@test.pl','biuro@test.pl']); select jsonb_array_length(accounting_addresses_get()->'HHL')" 2 commit
+val "#412: audit ACCOUNTING_ADDRESSES_SET" $HHL \
+  "select count(*) from audit_log where action='ACCOUNTING_ADDRESSES_SET' and entity_id='HHL'" 1
+err "#412: HHL_OPS nie zapisze adresów" $OPS412 \
+  "select accounting_addresses_set('KSH', array['a@test.pl'])" "Administrator HHL|42501"
+err "#412: KSH nie ustawi adresów" $KSH \
+  "select accounting_addresses_set('KSH', array['a@test.pl'])" "Administrator HHL|42501"
+err "#412: zły e-mail odrzucony" $HHL \
+  "select accounting_addresses_set('HHL', array['nie-email'])" "Nieprawidłowy|22023"
+err "#412: e-mail z średnikiem odrzucony" $HHL \
+  "select accounting_addresses_set('HHL', array['a@b.pl;x'])" "Nieprawidłowy|22023"
+chk6 "#412: anon bez SELECT/INSERT accounting_addresses" "$(sys "select has_table_privilege('anon','accounting_addresses','select')::text||has_table_privilege('anon','accounting_addresses','insert')::text||has_table_privilege('authenticated','accounting_addresses','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into accounting_addresses (pack_key, emails) values ('X', '{x@test.pl}')" \
+  "permission denied|42501"
+# Przywróć seed migracji (adresy działowe) po testach @test.
+run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
+
+echo; echo "[#412] E40 paczka tygodnia — dziennik (0286)"
+# Faktury seed (W41) + PDF + CMR + akceptacja KOSZT — wymóg serwera (F7 #512).
+# UUID tylko hex (…pk01/…cm01 padały na invalid uuid → Brak faktury w CI).
+PACK_P=22222222-0000-0000-0000-000000000001
+PACK_L=33333333-0000-0000-0000-000000000001
+PACK_DOC=aaaaaaaa-0412-4000-8000-00000000a401
+PACK_CMR=aaaaaaaa-0412-4000-8000-00000000a402
+sys "insert into documents (id, project_id, load_id, category, storage_path, file_name, mime_type, size_bytes)
+       values ('$PACK_DOC','$PACK_P',null,'INVOICE','test/pack-412-fv.pdf','fv.pdf','application/pdf',100),
+              ('$PACK_CMR','$PACK_P','$PACK_L','CMR','test/pack-412-cmr.pdf','cmr.pdf','application/pdf',100)
+     on conflict (id) do nothing"
+sys "update invoices set week_key='2026-W41', document_id='$PACK_DOC',
+            verification_status=case when direction='KOSZT' then 'ZAAKCEPTOWANA'
+              when direction='PRZYCHOD' then 'DO_WERYFIKACJI' else verification_status end
+      where id in ('44444444-0000-0000-0000-00000000000c','44444444-0000-0000-0000-0000000000ee')"
+val "#412p: HHL czyta config (adresy)" $HHL \
+  "select (accounting_pack_config()->'addresses'->'HHL'->>0)" "ksiegowosc@hhlogistics.pl"
+val "#412p: HHL_OPS czyta config" $OPS412 \
+  "select (accounting_pack_config()->'addresses'->'KSH'->>0)" "faktury@ksh.pl"
+err "#412p: KSH nie czyta config" $KSH "select accounting_pack_config()" "tylko HHL|42501"
+err "#412p: SCX nie czyta config" $SCX "select accounting_pack_config()" "tylko HHL|42501"
+val "#412p: HHL_ADMIN zleca paczkę KSH (ZLECONO)" $HHL \
+  "select (accounting_pack_send('KSH','2026-W41')->>'status')" "ZLECONO" commit
+val "#412p: config.sent po zleceniu" $HHL \
+  "select (accounting_pack_config()->'sent'->'2026-W41:KSH'->>'status')" "ZLECONO"
+val "#412p: audit ACCOUNTING_PACK_SEND" $HHL \
+  "select count(*) from audit_log where action='ACCOUNTING_PACK_SEND' and new_value->>'week'='2026-W41'" 1
+err "#412p: ponowienie bez p_resend odmowa" $HHL \
+  "select accounting_pack_send('KSH','2026-W41')" "już zlecona|P0001"
+val "#412p: HHL_OPS zleca paczkę HHL" $OPS412 \
+  "select (accounting_pack_send('HHL','2026-W41')->>'to')::text" 1 commit
+err "#412p: KSH nie wyśle" $KSH "select accounting_pack_send('KSH','2026-W41')" "tylko HHL|42501"
+err "#412p: SCX nie wyśle" $SCX "select accounting_pack_send('HHL','2026-W41')" "tylko HHL|42501"
+err "#412p: zły tydzień" $HHL "select accounting_pack_send('KSH','2026W41')" "Tydzień ISO|22023"
+err "#412p: W00 poza 01–53" $HHL "select accounting_pack_send('KSH','2026-W00')" "Tydzień ISO|22023"
+err "#412p: W99 poza 01–53" $HHL "select accounting_pack_send('KSH','2026-W99')" "Tydzień ISO|22023"
+err "#412p: brak faktury w tygodniu" $HHL "select accounting_pack_send('KSH','2026-W42')" "Brak faktury|P0002"
+run $HHL "select accounting_addresses_set('HHL', '{}'::text[])" commit >/dev/null
+err "#412p: brak adresu blokuje" $HHL "select accounting_pack_send('HHL','2026-W41', '{}'::text[], true)" "Brak adresu|P0002"
+run $HHL "select accounting_addresses_set('HHL', array['ksiegowosc@hhlogistics.pl'])" commit >/dev/null
+val "#412p: ponowienie z p_resend" $HHL \
+  "select (accounting_pack_send('KSH','2026-W41', '{}'::text[], true)->>'status')" "ZLECONO" commit
+val "#412p: dwa wpisy KSH po resend" $HHL \
+  "select count(*) from accounting_pack_sends where week_key='2026-W41' and pack_key='KSH'" 2
+# Edge: ZLECONO → WYSLANO (session_user postgres w bramie = jak service_role).
+PACK_ID=$(sys "select id::text from accounting_pack_sends where week_key='2026-W41' and pack_key='KSH' order by sent_at desc limit 1" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+out=$(sys "select accounting_pack_send_set_status('$PACK_ID'::uuid, 'WYSLANO'); select status from accounting_pack_sends where id='$PACK_ID'")
+[ "$(echo "$out" | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)" = "WYSLANO" ] \
+  && { ok=$((ok+1)); echo "  OK    #412p: set_status → WYSLANO"; } \
+  || { fail=$((fail+1)); echo "  FAIL  #412p: set_status → WYSLANO  (otrzymano: $out)"; }
+err "#412p: authenticated bez set_status" $HHL \
+  "select accounting_pack_send_set_status('$PACK_ID'::uuid, 'DORECZONO')" "permission denied|42501|service_role"
+val "#412p: KSH SELECT pack_sends = 0" $KSH "select count(*) from accounting_pack_sends" 0
+val "#412p: SCX SELECT pack_sends = 0" $SCX "select count(*) from accounting_pack_sends" 0
+chk6 "#412p: anon bez SELECT/INSERT pack_sends" "$(sys "select has_table_privilege('anon','accounting_pack_sends','select')::text||has_table_privilege('anon','accounting_pack_sends','insert')::text||has_table_privilege('authenticated','accounting_pack_sends','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412p: HHL nie wstawi wiersza bezpośrednio" $HHL \
+  "insert into accounting_pack_sends (week_key, pack_key, to_count, emails, status, by_user_id, by_name)
+     values ('2026-W41','KSH',1,'{a@test.pl}','ZLECONO','$HHL','x')" \
+  "permission denied|42501"
+
+echo; echo "[#412] E4b faktoring — oferta + wybór + wypłata (0287)"
+val "#412f: HHL_ADMIN czyta ofertę 1%/48h" $HHL \
+  "select (factoring_offer_get()->>'feePct')||'/'||(factoring_offer_get()->>'hours')" "1.00/48"
+val "#412f: HHL_OPS czyta ofertę" $OPS412 \
+  "select (factoring_offer_get()->>'version')::text" 1
+val "#412f: SCX czyta ofertę (wybór przy fakturze)" $SCX \
+  "select (factoring_offer_get()->>'from')" "2026-10-07"
+err "#412f: KSH nie czyta oferty" $KSH "select factoring_offer_get()" "tylko HHL|SCX|42501"
+val "#412f: HHL_ADMIN ustawia prowizję 1,5%" $HHL \
+  "select (factoring_offer_set(true, 1.5, 48)->>'feePct')" "1.50" commit
+val "#412f: audit FACTORING_OFFER_SET" $HHL \
+  "select count(*) from audit_log where action='FACTORING_OFFER_SET' and new_value->>'feePct'='1.50'" 1
+err "#412f: HHL_OPS nie zmieni oferty" $OPS412 \
+  "select factoring_offer_set(true, 2, 48)" "Administrator HHL|42501"
+err "#412f: KSH nie zmieni oferty" $KSH \
+  "select factoring_offer_set(true, 2, 48)" "Administrator HHL|42501"
+err "#412f: prowizja poza zakresem" $HHL \
+  "select factoring_offer_set(true, 0, 48)" "0,01–20|22023"
+run $HHL "select factoring_offer_set(true, 1, 48)" commit >/dev/null
+sys "update invoices set factoring_selected=false, factoring_fee_pct=null, factoring_fee_amount=null,
+       factoring_net_payout=null, factoring_hours=null, factoring_offer_version=null,
+       factoring_accepted_at=null, factoring_due_at=null, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null,
+       verification_status='DO_WERYFIKACJI'
+     where id='$INVK'" >/dev/null
+val "#412f: SCX wybiera faktoring na KOSZT" $SCX \
+  "select invoice_factoring_set('$INVK', true); select factoring_fee_amount::text from invoices where id='$INVK'" "100.95" commit
+val "#412f: snapshot wypłaty (brutto−prowizja)" $SCX \
+  "select factoring_net_payout::text from invoices where id='$INVK'" "9994.08"
+err "#412f: KSH nie wybierze faktoringu" $KSH \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+err "#412f: HHL nie wybierze faktoringu na KOSZT SCX" $HHL \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+# F7: drugi przewoźnik nie wybiera cudzej faktury SCX.
+CAR2F=11111111-0000-0000-0000-0000000000c2
+sys "insert into organizations (id, code, name, kind)
+       values ('00000000-0000-0000-0000-00000000a004','CAR2','Drugi przewoźnik','CARRIER')
+       on conflict (id) do nothing;
+     insert into app_users (auth_id, org_id, email, role, active)
+       values ('$CAR2F','00000000-0000-0000-0000-00000000a004','car2-412f@test','CARRIER_DISPATCH',true)
+       on conflict (auth_id) do update set role='CARRIER_DISPATCH', active=true,
+         org_id='00000000-0000-0000-0000-00000000a004'" >/dev/null
+err "#412f: drugi przewoźnik nie wybierze faktoringu SCX" $CAR2F \
+  "select invoice_factoring_set('$INVK', true)" "przewoźnik|42501"
+# F7: wypłata przed akceptacją.
+err "#412f: wypłata przed akceptacją odmowa" $HHL \
+  "select factoring_mark_paid('$INVK')" "Najpierw akceptacja|22023"
+# F7: rezygnacja przed akceptacją.
+val "#412f: SCX rezygnuje z faktoringu" $SCX \
+  "select invoice_factoring_set('$INVK', false); select factoring_selected::text from invoices where id='$INVK'" "false" commit
+run $SCX "select invoice_factoring_set('$INVK', true)" commit >/dev/null
+sys "delete from notifications where template like 'FACTOR%' and payload->>'invoice_id'='$INVK'" >/dev/null
+val "#412f: akceptacja HHL startuje 48 h" $HHL \
+  "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INVK'; select (factoring_due_at is not null)::text from invoices where id='$INVK'" true commit
+err "#412f: zmiana wyboru po akceptacji odmowa" $SCX \
+  "select invoice_factoring_set('$INVK', false)" "Po akceptacji|22023"
+chk6 "#412f: dzwonek FACTORING_ACCEPTED IN_APP HHL" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='IN_APP' and n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.role='HHL_ADMIN'" | tail -1)" 1
+chk6 "#412f: dzwonek FACTORING_ACCEPTED IN_APP SCX" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.channel='IN_APP' and n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.auth_id='$SCX'" | tail -1)" 1
+chk6 "#412f: drugi przewoźnik bez dzwonka akceptacji" "$(sys "select count(*) from notifications n join app_users u on u.id=n.user_id where n.template='FACTORING_ACCEPTED' and n.payload->>'invoice_id'='$INVK' and u.auth_id='$CAR2F'" | tail -1)" 0
+val "#412f: HHL widzi zadanie wypłaty" $HHL \
+  "select jsonb_array_length(factoring_tasks())" 1
+val "#412f: HHL_OPS widzi zadania" $OPS412 \
+  "select (factoring_tasks()->0->>'number')" "SCX/9/2026"
+err "#412f: KSH nie czyta zadań" $KSH "select factoring_tasks()" "tylko HHL|42501"
+err "#412f: SCX nie czyta zadań" $SCX "select factoring_tasks()" "tylko HHL|42501"
+val "#412f: HHL oznacza wypłatę" $HHL \
+  "select factoring_mark_paid('$INVK'); select payment_status||'|'||(factoring_paid_at is not null)::text from invoices where id='$INVK'" "OPLACONA|true" commit
+chk6 "#412f: dzwonek FACTORING_PAID IN_APP HHL+SCX" "$(sys "select count(*) from notifications where channel='IN_APP' and template='FACTORING_PAID' and payload->>'invoice_id'='$INVK'" | tail -1)" 2
+val "#412f: po wypłacie lista pusta" $HHL "select jsonb_array_length(factoring_tasks())" 0
+val "#412f: audit FACTORING_MARK_PAID" $HHL \
+  "select count(*) from audit_log where action='FACTORING_MARK_PAID' and entity_id='$INVK'" 1
+err "#412f: ponowna wypłata odmowa" $HHL "select factoring_mark_paid('$INVK')" "opłacona|P0001"
+err "#412f: SCX nie oznaczy wypłaty" $SCX "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
+err "#412f: KSH nie oznaczy wypłaty" $KSH "select factoring_mark_paid('$INVK')" "wyłącznie HHL|42501"
+val "#412f: unmark czyści factoring_paid_at" $HHL \
+  "select unmark_invoice_paid('$INVK', 'test cofnięcia faktoringu'); select (factoring_paid_at is null and payment_status='NIEOPLACONA')::text from invoices where id='$INVK'" "true" commit
+# Kolejność odwrotna: najpierw mark_invoice_paid, potem factoring.
+sys "update invoices set factoring_selected=true, factoring_fee_pct=1, factoring_fee_amount=100.95,
+       factoring_net_payout=9994.08, factoring_hours=48, factoring_offer_version=1,
+       factoring_accepted_at=now(), factoring_due_at=now()+interval '48 hours', factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, verification_status='ZAAKCEPTOWANA'
+     where id='$INVK'" >/dev/null
+run $HHL "select mark_invoice_paid('$INVK', current_date)" commit >/dev/null
+val "#412f: po mark_invoice_paid brak zadań" $HHL \
+  "select jsonb_array_length(factoring_tasks())" 0
+err "#412f: factoring_mark_paid po OPLACONA odmowa" $HHL \
+  "select factoring_mark_paid('$INVK')" "opłacona|P0001"
+err "#412f: invoice_factoring_set na opłaconej odmowa" $SCX \
+  "select invoice_factoring_set('$INVK', false)" "opłacona|P0001"
+# Przeliczenie przy edycji kwot (zachowany %).
+sys "update invoices set factoring_selected=true, factoring_fee_pct=1, factoring_fee_amount=100.95,
+       factoring_net_payout=9994.08, factoring_hours=48, factoring_offer_version=1,
+       factoring_accepted_at=null, factoring_due_at=null, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, verification_status='DO_WERYFIKACJI',
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+run $SCX "select invoice_factoring_set('$INVK', true)" commit >/dev/null
+sys "update invoices set net_total=24600, gross_total=24600, currency='EUR' where id='$INVK'" >/dev/null
+val "#412f: po edycji kwot przeliczona prowizja" $SCX \
+  "select factoring_fee_amount::text||'/'||factoring_net_payout::text from invoices where id='$INVK'" "246.00/24354.00"
+run $HHL "select factoring_offer_set(false, 1, 48)" commit >/dev/null
+err "#412f: set przy ofercie wyłączonej" $SCX \
+  "select invoice_factoring_set('$INVK', true)" "wyłączony|wyłączona|oferta|P0001"
+val "#412f: HHL widzi ofertę enabled=false" $HHL \
+  "select (factoring_offer_get()->>'enabled')" "false"
+run $HHL "select factoring_offer_set(true, 1, 48)" commit >/dev/null
+sys "update invoices set verification_status='SPORNA', dispute_note='test sporu faktoringu',
+       factoring_selected=false where id='$INVK'" >/dev/null
+err "#412f: SPORNA bez faktoringu" $SCX \
+  "select invoice_factoring_set('$INVK', true)" "sporze|SPORNA|22023"
+# F7: po terminie 48 h — dzwonek OVERDUE (due_at osobno: trigger akceptacji nadpisuje now()+48h).
+sys "update invoices set verification_status='ZAAKCEPTOWANA', factoring_selected=true,
+       factoring_fee_pct=1, factoring_fee_amount=100.95, factoring_net_payout=9994.08,
+       factoring_hours=48, factoring_offer_version=1, factoring_paid_at=null,
+       payment_status='NIEOPLACONA', paid_at=null, dispute_note=null,
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+sys "update invoices set factoring_accepted_at=now()-interval '3 days',
+       factoring_due_at=now()-interval '1 day' where id='$INVK'" >/dev/null
+sys "delete from notifications where template='FACTORING_OVERDUE' and payload->>'invoice_id'='$INVK'" >/dev/null
+sys "select factoring_overdue_notify()" >/dev/null
+chk6 "#412f: dzwonek FACTORING_OVERDUE po terminie" "$(sys "select (count(*) >= 1)::text from notifications where channel='IN_APP' and template='FACTORING_OVERDUE' and payload->>'invoice_id'='$INVK'" | tail -1)" true
+sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_selected=false,
+       factoring_fee_pct=null, factoring_fee_amount=null, factoring_net_payout=null,
+       factoring_hours=null, factoring_offer_version=null, factoring_accepted_at=null,
+       factoring_due_at=null, factoring_paid_at=null, payment_status='NIEOPLACONA', paid_at=null,
+       net_total=10095.03, gross_total=10095.03, currency='PLN'
+     where id='$INVK'" >/dev/null
+chk6 "#412f: anon bez SELECT/INSERT factoring_offers" "$(sys "select has_table_privilege('anon','factoring_offers','select')::text||has_table_privilege('anon','factoring_offers','insert')::text||has_table_privilege('authenticated','factoring_offers','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412f: HHL nie wstawi oferty bezpośrednio" $HHL \
+  "insert into factoring_offers (version, enabled, fee_pct, hours, valid_from) values (99, true, 1, 48, '2099-01-01')" \
+  "permission denied|42501"
+
+echo; echo "[#519] Faktoring N2–N4 (0296) — bez linii, dedup, url faktury"
+INV519=44444444-0000-0000-0000-000000000519
+# Linia na L2 (nie L1 z INVK) — unique invoice_lines(load_id, direction).
+sys "delete from notifications where payload->>'invoice_id'='$INV519' and template like 'FACTOR%';
+     delete from invoice_lines where invoice_id='$INV519';
+     delete from invoices where id='$INV519';
+     insert into invoices (id, project_id, carrier_org_id, period_start, period_end, direction,
+       issuer_org_id, recipient_org_id, invoice_number, currency, net_total, gross_total, due_date,
+       issue_date, verification_status, payment_status,
+       factoring_selected, factoring_fee_pct, factoring_fee_amount, factoring_net_payout,
+       factoring_hours, factoring_offer_version)
+     select '$INV519', project_id, carrier_org_id, period_start, period_end, direction,
+       issuer_org_id, recipient_org_id, 'SCX/519/2026', currency, net_total, gross_total, due_date,
+       coalesce(issue_date, period_start), 'DO_WERYFIKACJI', 'NIEOPLACONA',
+       true, 1, 100.95, 9994.08, 48, 1
+       from invoices where id='$INVK'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
+chk6 "#519 N2: bez invoice_lines → 0 FACTORING_ACCEPTED" "$(sys "select count(*) from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519'" | tail -1)" 0
+sys "insert into invoice_lines (invoice_id, load_id, direction)
+     values ('$INV519', '$L2', 'KOSZT')" >/dev/null
+sys "update invoices set verification_status='DO_WERYFIKACJI', factoring_accepted_at=null, factoring_due_at=null where id='$INV519'" >/dev/null
+sys "delete from notifications where template like 'FACTOR%' and payload->>'invoice_id'='$INV519'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA' where id='$INV519'" >/dev/null
+chk6 "#519 N2: z linią → dzwonek akceptacji" "$(sys "select (count(*) >= 1)::text from notifications where channel='IN_APP' and template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519'" | tail -1)" true
+chk6 "#519 N4: url payload → finanse/faktury" "$(sys "select (payload->>'url' like '%/finanse/faktury/$INV519%')::text from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP' limit 1" | tail -1)" true
+chk6 "#519 N4: notify_click_url FACTORING" "$(sys "select notify_click_url('FACTORING_PAID', jsonb_build_object('invoice_id','$INV519'), null)" | tail -1)" "/#/finanse/faktury/$INV519"
+# N3: ponowna akceptacja (SPORNA → ZAAKCEPTOWANA) → nowy dedup (accepted_at).
+ACC1=$(sys "select count(*) from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)
+sys "update invoices set verification_status='SPORNA', dispute_note='test #519 N3' where id='$INV519'" >/dev/null
+sys "update invoices set verification_status='ZAAKCEPTOWANA', dispute_note=null where id='$INV519'" >/dev/null
+chk6 "#519 N3: ponowna akceptacja → nowy dzwonek" "$(sys "select (count(*) > $ACC1)::text from notifications where template='FACTORING_ACCEPTED' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)" true
+# N3: cofnięcie + ponowna wypłata → nowy FACTORING_PAID.
+sys "delete from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519'" >/dev/null
+run $HHL "select factoring_mark_paid('$INV519')" commit >/dev/null
+PAID1=$(sys "select count(*) from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)
+run $HHL "select unmark_invoice_paid('$INV519', 'test #519 N3')" commit >/dev/null
+run $HHL "select factoring_mark_paid('$INV519')" commit >/dev/null
+chk6 "#519 N3: ponowna wypłata → nowy dzwonek" "$(sys "select (count(*) > $PAID1)::text from notifications where template='FACTORING_PAID' and payload->>'invoice_id'='$INV519' and channel='IN_APP'" | tail -1)" true
+sys "delete from notifications where payload->>'invoice_id'='$INV519' and template like 'FACTOR%';
+     delete from invoice_lines where invoice_id='$INV519';
+     delete from invoices where id='$INV519'" >/dev/null
+
+echo; echo "[#412] E16 próg marży + E11 urządzenia push (0288)"
+val "#412m: HHL_ADMIN czyta próg 4%" $HHL \
+  "select (margin_threshold_get()->>'pct')" "4.0"
+val "#412m: HHL_OPS czyta próg" $OPS412 \
+  "select (margin_threshold_get()->>'pct')" "4.0"
+err "#412m: KSH nie czyta progu" $KSH "select margin_threshold_get()" "tylko HHL|42501"
+err "#412m: SCX nie czyta progu" $SCX "select margin_threshold_get()" "tylko HHL|42501"
+val "#412m: HHL_ADMIN ustawia 5,5%" $HHL \
+  "select (margin_threshold_set(5.55)->>'pct')" "5.6" commit
+val "#412m: audit MARGIN_THRESHOLD_SET" $HHL \
+  "select count(*) from audit_log where action='MARGIN_THRESHOLD_SET' and new_value->>'pct'='5.6'" 1
+err "#412m: HHL_OPS nie ustawi progu" $OPS412 \
+  "select margin_threshold_set(6)" "Administrator HHL|42501"
+err "#412m: KSH nie ustawi progu" $KSH \
+  "select margin_threshold_set(6)" "Administrator HHL|42501"
+err "#412m: próg poza 0–100" $HHL \
+  "select margin_threshold_set(101)" "0–100|22023"
+val "#412m: HHL_ADMIN wyłącza próg (null)" $HHL \
+  "select (margin_threshold_set(null)->'pct')::text" "null" commit
+val "#412m: po wyłączeniu pct null" $HHL \
+  "select (margin_threshold_get()->'pct')::text" "null"
+val "#412m: przywróć 4%" $HHL \
+  "select (margin_threshold_set(4)->>'pct')" "4.0" commit
+chk6 "#412m: anon bez SELECT/INSERT margin_threshold" "$(sys "select has_table_privilege('anon','margin_threshold','select')::text||has_table_privilege('anon','margin_threshold','insert')::text||has_table_privilege('authenticated','margin_threshold','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412m: HHL nie wstawi progu bezpośrednio" $HHL \
+  "insert into margin_threshold (id, pct) values (true, 9) on conflict (id) do update set pct=9" \
+  "permission denied|42501"
+val "#412psh: HHL_ADMIN czyta liczbę urządzeń" $HHL \
+  "select (push_devices_count()->>'own')||'/'||(push_devices_count()->>'all')" "0/0"
+val "#412psh: HHL_OPS czyta liczbę urządzeń" $OPS412 \
+  "select (push_devices_count()->>'all')::text" 0
+err "#412psh: KSH nie czyta liczby urządzeń" $KSH "select push_devices_count()" "tylko HHL|42501"
+err "#412psh: SCX nie czyta liczby urządzeń" $SCX "select push_devices_count()" "tylko HHL|42501"
+
+echo; echo "[#412] E43 treści wiadomości (0289)"
+val "#412e43: lista pusta na starcie" $HHL \
+  "select jsonb_array_length(message_texts_list())" 0
+val "#412e43: HHL_OPS czyta listę" $OPS412 \
+  "select jsonb_array_length(message_texts_list())" 0
+err "#412e43: KSH nie czyta treści" $KSH "select message_texts_list()" "tylko HHL|42501"
+err "#412e43: SCX nie czyta treści" $SCX "select message_texts_list()" "tylko HHL|42501"
+val "#412e43: HHL_ADMIN zapisuje SMS_C" $HHL \
+  "select message_texts_set('SMS_C', null, '{{code}}: auto {{trailer}} stoi przy {{place}} od {{dwell}}.'); select jsonb_array_length(message_texts_list())" 1 commit
+val "#412e43: audit MESSAGE_TEXT_SET" $HHL \
+  "select count(*) from audit_log where action='MESSAGE_TEXT_SET' and entity_id='SMS_C'" 1
+err "#412e43: HHL_OPS nie zapisze" $OPS412 \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
+err "#412e43: KSH nie zapisze" $KSH \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
+err "#412e43: SMS za długi" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('x', 161))" "160 znakow|160 znaków|22023"
+err "#412e43: SMS place×6 >160 (SMS_WORST)" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('{{place}}', 6))" "160 znakow|160 znaków|22023"
+err "#412e43: SMS spoza GSM" $HHL \
+  "select message_texts_set('SMS_A', null, 'test ' || chr(1103))" "alfabet GSM|niedozwolony|22023"
+err "#412e43: SMS [×81 (GSM_EXT ×2)" $HHL \
+  "select message_texts_set('SMS_A', null, repeat('[', 81))" "160 znakow|160 znaków|22023"
+err "#412e43: niedozwolony znacznik" $HHL \
+  "select message_texts_set('SMS_A', null, '{{secret}} x')" "Niedozwolony|znacznik|22023"
+err "#412e43: {{button}} tylko LOGIN" $HHL \
+  "select message_texts_set('SMS_A', null, '{{code}} {{button}}')" "Niedozwolony|znacznik|22023"
+err "#412e43: nieznany kind" $HHL \
+  "select message_texts_set('NO_SUCH', 't', 'b')" "Nieznany|22023"
+err "#412e43: LOGIN bez przycisku" $HHL \
+  "select message_texts_set('INVITE', 'Temat', 'Tresc bez przycisku')" "Przycisk|22023"
+err "#412e43: e-mail bez tematu" $HHL \
+  "select message_texts_set('RISK_OPEN', null, 'Tresc')" "Temat|22023"
+err "#412e43: temat za długi" $HHL \
+  "select message_texts_set('RISK_OPEN', repeat('t', 201), 'Tresc')" "200 znakow|200 znaków|22023"
+err "#412e43: temat ze znakami sterującymi" $HHL \
+  "select message_texts_set('RISK_OPEN', E'temat\r\nBcc: x', 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z DEL (0x7F)" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(127), 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z U+2028" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(8232), 'Tresc')" "sterujac|sterując|22023"
+err "#525: temat z U+2029" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat' || chr(8233), 'Tresc')" "sterujac|sterując|22023"
+err "#525: {{button}} w temacie LOGIN" $HHL \
+  "select message_texts_set('INVITE', 'Temat {{button}}', 'Witaj {{name}}. {{button}}')" "treści|temacie|Przycisk|Niedozwolony|22023"
+err "#412e43: treść za długa" $HHL \
+  "select message_texts_set('RISK_OPEN', 'Temat', repeat('b', 5001))" "5000 znakow|5000 znaków|22023"
+val "#412e43: HHL_ADMIN zapisuje INVITE z przyciskiem" $HHL \
+  "select (message_texts_set('INVITE', 'Watch Tower — zaproszenie', 'Witaj {{name}}. {{button}} Link {{validity}}.')->>'id')" "INVITE" commit
+val "#412e43: lista ma 2 nadpisania" $HHL \
+  "select jsonb_array_length(message_texts_list())" 2
+val "#412e43: zapis bez zmiany bez audytu" $HHL \
+  "select message_texts_set('INVITE', 'Watch Tower — zaproszenie', 'Witaj {{name}}. {{button}} Link {{validity}}.'); select count(*) from audit_log where action='MESSAGE_TEXT_SET' and entity_id='INVITE'" 1
+val "#412e43: drugi zapis — old_value" $HHL \
+  "select message_texts_set('INVITE', 'Watch Tower — zaproszenie 2', 'Witaj {{name}}. {{button}} Link {{validity}}.'); select (old_value->>'subject') from audit_log where action='MESSAGE_TEXT_SET' and entity_id='INVITE' order by created_at desc, id desc limit 1" "Watch Tower — zaproszenie" commit
+err "#412e43: HHL_OPS reset → 42501" $OPS412 \
+  "select message_texts_reset('INVITE')" "Administrator HHL|42501"
+err "#412e43: SCX zapis → 42501" $SCX \
+  "select message_texts_set('SMS_A', null, '{{code}}: test.')" "Administrator HHL|42501"
+val "#412e43: przywróć SMS_C" $HHL \
+  "select (message_texts_reset('SMS_C')->>'ok')::text" "true" commit
+val "#412e43: audit MESSAGE_TEXT_RESET" $HHL \
+  "select count(*) from audit_log where action='MESSAGE_TEXT_RESET' and entity_id='SMS_C'" 1
+val "#412e43: po resecie 1 nadpisanie" $HHL \
+  "select jsonb_array_length(message_texts_list())" 1
+val "#412e43: sprzątanie INVITE" $HHL \
+  "select (message_texts_reset('INVITE')->>'ok')::text" "true" commit
+chk6 "#412e43: anon bez SELECT/INSERT message_texts" "$(sys "select has_table_privilege('anon','message_texts','select')::text||has_table_privilege('anon','message_texts','insert')::text||has_table_privilege('authenticated','message_texts','insert')::text" | tail -1)" "falsefalsefalse"
+err "#412e43: HHL nie wstawi bezpośrednio" $HHL \
+  "insert into message_texts (kind, channel, body) values ('SMS_A', 'SMS', 'x')" \
+  "permission denied|42501"
+val "#412e43: KSH SELECT message_texts = 0" $KSH "select count(*) from message_texts" 0
+
+echo; echo "[#484] Historia zmian — zakres HHL_OPS / KSH / SCX (F7 #526)"
+OPS484=11111111-0000-0000-0000-0000000000c4
+ORG_HHL=00000000-0000-0000-0000-00000000a001
+ORG_KSH=00000000-0000-0000-0000-00000000a002
+ORG_SCX=00000000-0000-0000-0000-00000000a003
+ORG_B=00000000-0000-0000-0000-00000000a004
+SCXB=11111111-0000-0000-0000-0000000000c5
+sys "insert into organizations (id, code, name, kind) values
+     ('$ORG_B','CXB','Przewoznik B','CARRIER')
+     on conflict (id) do update set code=excluded.code, name=excluded.name, kind=excluded.kind" >/dev/null
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS484','$ORG_HHL','ops-484@test','HHL_OPS',true),
+            ('$SCXB','$ORG_B','scxb-484@test','CARRIER_DISPATCH',true)
+     on conflict (auth_id) do update set role=excluded.role, active=true, org_id=excluded.org_id" >/dev/null
+sys "delete from audit_log where action like 'HIST484_%'" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_OWN','loads','$L1','{}',
+      jsonb_build_object('status','READY','hhl_order_no','HHL-HIDE','carrier_order_no','SCX-HIDE','order_no','KSH/1','margin',12.5,'pricing',jsonb_build_object('margin_eur',9)),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_OWN','load_cost','$L1','{}', jsonb_build_object('amount',999),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_OWN','load_revenue','$L1','{}', jsonb_build_object('amount',888,'margin',10),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_FEE_REV','load_agreed_fees','$L1','{}',
+      jsonb_build_object('side','REVENUE','amount_eur',777),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_FEE_COST','load_agreed_fees','$L1','{}',
+      jsonb_build_object('side','COST','amount_eur',666),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_DOC','documents','$L1','{}',
+      jsonb_build_object('file_name','Zlecenie_SCX.pdf','visible_to',jsonb_build_array('FORWARDER','CARRIER')),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_RATE','carrier_ratings','$L1','{}',
+      jsonb_build_object('score',5,'comment','wewnętrzny'),
+      '$L1','$ORG_SCX','$ORG_KSH'),
+     ('HIST484_B','loads','$L1','{}',
+      jsonb_build_object('status','READY','carrier_order_no','B-ORD-999','driver_name','Jan B'),
+      '$L1','$ORG_B','$ORG_KSH'),
+     ('HIST484_FOREIGN','loads','33333333-0000-0000-0000-000000000009','{}',
+      jsonb_build_object('status','READY'),
+      '33333333-0000-0000-0000-000000000009','$ORG_SCX',null)" >/dev/null
+val "#484: HHL_OPS widzi wpis" $OPS484 \
+  "select count(*) > 0 from admin_audit_history(null,null,null,null,'HIST484_OWN',null,20,0)" t
+val "#484: KSH widzi swój loads" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,20,0)" 1
+val "#484: KSH nie widzi obcego transportu" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FOREIGN',null,20,0)" 0
+val "#484: KSH bez hhl/carrier order_no" $KSH \
+  "select ((new_value ? 'hhl_order_no') is false and (new_value ? 'carrier_order_no') is false)::text from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" true
+val "#484: KSH widzi własny order_no" $KSH \
+  "select new_value->>'order_no' from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" "KSH/1"
+val "#484: KSH nie widzi load_cost" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,'load_cost','HIST484_OWN',null,20,0)" 0
+val "#484: KSH nie widzi oceny przewoźnika" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_RATE',null,20,0)" 0
+val "#484: KSH nie widzi doc HHL+SCX" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC',null,20,0)" 0
+val "#484: KSH szukaj nie czyta ukrytego numeru" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,null,'HHL-HIDE',20,0)" 0
+val "#484: SCX widzi swój loads" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,20,0)" 1
+val "#484: SCX nie widzi load_revenue" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,'load_revenue','HIST484_OWN',null,20,0)" 0
+val "#484: SCX marża usunięta z loads" $SCX \
+  "select ((new_value ? 'margin') is false and (new_value->'pricing' ? 'margin_eur') is not true)::text from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,5,0) limit 1" true
+val "#484: SCX nie widzi dopłaty REVENUE" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_REV',null,20,0)" 0
+val "#484: SCX widzi dopłatę COST" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_COST',null,20,0)" 1
+val "#484: SCX nie widzi historii B po przepięciu" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_B',null,20,0)" 0
+val "#484: B widzi swoją historię" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_B',null,20,0)" 1
+# F7 r2 pkt 2: UPDATE dopłaty bez side w JSON — strona z wiersza / deny gdy brak
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_FEE_UPD','load_agreed_fees','$L1',
+      jsonb_build_object('amount_eur',777),
+      jsonb_build_object('amount_eur',800),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX bez dopłaty gdy brak side (diff)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_UPD',null,20,0)" 0
+val "#484: KSH bez dopłaty gdy brak side (diff)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_UPD',null,20,0)" 0
+# F7 r2 pkt 2: propozycja SCX (BOTH/PENDING/CARRIER) — KSH nie widzi (RLS)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_FEE_PROP','load_agreed_fees','$L1','{}',
+      jsonb_build_object('side','BOTH','status','PENDING','proposed_by_kind','CARRIER','amount_eur',444),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez propozycji SCX" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FEE_PROP',null,20,0)" 0
+# F7 r2 pkt 3: wpis zmiany B→SCX w zakresie OLD (B)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_B','carrier_order_no','B-ORD-999','driver_name','Jan B','driver_phone','+461'),
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-NEW'),
+      '$L1','$ORG_B','$ORG_KSH')" >/dev/null
+val "#484: SCX nie widzi swap B→SCX (zakres OLD)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 0
+val "#484: B widzi swap B→SCX" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,20,0)" 1
+# F7 r3 N1: B widzi fakt zmiany, bez danych nowego przewoźnika/kierowcy
+val "#484: B swap bez PII nowego" $SCXB \
+  "select ((new_value ? 'driver_name') is false and (new_value ? 'carrier_order_no') is false and (new_value ? 'driver_phone') is false and (new_value->>'_carrier_changed')='true' and (old_value ? 'driver_name') is false)::text from admin_audit_history(null,null,null,null,'HIST484_SWAP',null,5,0) limit 1" true
+# F7 r4: SCX→NULL — zakres OLD=SCX; fakt bez PII; B nie widzi
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-P2','driver_name','Sven Post','driver_phone','+462'),
+      jsonb_build_object('carrier_org_id', null),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX widzi swap SCX→NULL" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,20,0)" 1
+val "#484: SCX→NULL bez PII (fakt)" $SCX \
+  "select ((old_value ? 'driver_name') is false and (old_value ? 'carrier_order_no') is false and (old_value->>'_carrier_changed')='true' and (new_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,5,0) limit 1" true
+val "#484: B nie widzi SCX→NULL" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_NULL',null,20,0)" 0
+# F7 r4: NULL→B — zakres NEW=B; B bez PII starego SCX; SCX nie widzi
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_SWAP_FROM_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id', null, 'driver_name','Sven Post','driver_phone','+462','carrier_order_no','SCX-P2'),
+      jsonb_build_object('carrier_org_id','$ORG_B','carrier_order_no','B-NEW','driver_name','Kuba B7'),
+      '$L1','$ORG_B','$ORG_KSH')" >/dev/null
+val "#484: B widzi swap NULL→B" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,20,0)" 1
+val "#484: NULL→B bez PII SCX (fakt)" $SCXB \
+  "select ((old_value ? 'driver_name') is false and (old_value ? 'carrier_order_no') is false and (old_value ? 'driver_phone') is false and (new_value ? 'driver_name') is false and (old_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,5,0) limit 1" true
+val "#484: SCX nie widzi NULL→B" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_SWAP_FROM_NULL',null,20,0)" 0
+# F7 r4: live INSERT SCX→NULL — trigger scope=SCX (coalesce OLD)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_LIVE_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id','$ORG_SCX','driver_name','Sven Live','carrier_order_no','SCX-L'),
+      jsonb_build_object('carrier_org_id', null))" >/dev/null
+val "#484: live SCX→NULL — SCX widzi" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_NULL',null,20,0)" 1
+val "#484: live SCX→NULL — B nie widzi" $SCXB \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_NULL',null,20,0)" 0
+# F7 r4: live INSERT NULL→B — trigger scope=B
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_LIVE_FROM_NULL','loads','$L1',
+      jsonb_build_object('carrier_org_id', null, 'driver_name','Sven Left','carrier_order_no','SCX-LEFT'),
+      jsonb_build_object('carrier_org_id','$ORG_B','driver_name','Kuba New'))" >/dev/null
+val "#484: live NULL→B — B widzi fakt" $SCXB \
+  "select ((old_value ? 'driver_name') is false and (new_value->>'_carrier_changed')='true')::text from admin_audit_history(null,null,null,null,'HIST484_LIVE_FROM_NULL',null,5,0) limit 1" true
+val "#484: live NULL→B — SCX nie widzi" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_LIVE_FROM_NULL',null,20,0)" 0
+# F7 r2 pkt 4: doc UPDATE bez visible_to w JSON — brak CLIENT w tabeli/diff → ukryj
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_DOC_UPD','documents','$L1',
+      jsonb_build_object('file_name','Zlecenie_SCX.pdf'),
+      jsonb_build_object('file_name','Zlecenie_SCX_v2.pdf'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez doc UPDATE bez visible_to" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC_UPD',null,20,0)" 0
+# F7 r3 N5: faktura INVOICE bez issuer/recipient = KSH → ukryj
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_INV','documents','$L1','{}',
+      jsonb_build_object('file_name','Faktura_SCX_9_2026_netto_10095.pdf','category','INVOICE','visible_to',jsonb_build_array('FORWARDER','CLIENT','CARRIER')),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez faktury SCX (N5)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_INV',null,20,0)" 0
+# F7 r2 pkt 5: INSERT bez scope_* — trigger BEFORE uzupełnia
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_FN','loads','$L1','{}', jsonb_build_object('status','AT_SITE'))" >/dev/null
+val "#484: KSH widzi wpis z funkcji (scope z triggera)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_FN',null,20,0)" 1
+# F7 r2 pkt 6: allowlista — Price / margin_eur / stawka wypadają
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_NEST','loads','$L1','{}',
+      jsonb_build_object('status','READY','Price',10,'stawka',20,'margin_eur',5,'pricing',jsonb_build_object('margin_eur',9,'client_total_eur',100)),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH allowlista bez Price/margin" $KSH \
+  "select ((new_value ? 'Price') is false and (new_value ? 'margin_eur') is false and (new_value ? 'stawka') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
+val "#484: SCX allowlista bez margin/pricing" $SCX \
+  "select ((new_value ? 'margin_eur') is false and (new_value ? 'pricing') is false and new_value->>'status'='READY')::text from admin_audit_history(null,null,null,null,'HIST484_NEST',null,5,0) limit 1" true
+# F7 r3 N3: ocena — SCX bez comment
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_RATE2','carrier_ratings','$L1','{}',
+      jsonb_build_object('score',4,'comment','HHL-POST290: SCX nie wolno tego widziec'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: SCX ocena bez comment (N3)" $SCX \
+  "select ((new_value ? 'comment') is false and (new_value->>'score')='4')::text from admin_audit_history(null,null,null,null,'HIST484_RATE2',null,5,0) limit 1" true
+# F7 r3 N4: AGREED_FEE_ADD entity load — KSH nie widzi COST
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('AGREED_FEE_ADD','load','$L1','{}',
+      jsonb_build_object('fee_id','aaaaaaaa-0000-0000-0000-0000000000fe','kind','EXTRA','amount_eur',50,'side','COST','status','ACCEPTED','by','FORWARDER'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez AGREED_FEE COST na load (N4)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'AGREED_FEE_ADD',null,20,0)" 0
+val "#484: SCX widzi AGREED_FEE COST na load (N4)" $SCX \
+  "select count(*) from admin_audit_history(null,null,null,null,'AGREED_FEE_ADD',null,20,0)" 1
+# F7 r3 N6: KSH bez kierowcy
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST484_DRV','loads','$L1','{}',
+      jsonb_build_object('status','READY','driver_name','Jan Test','driver_phone','+48111','order_no','KSH/1'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#484: KSH bez driver_name (N6)" $KSH \
+  "select ((new_value ? 'driver_name') is false and (new_value ? 'driver_phone') is false and new_value->>'order_no'='KSH/1')::text from admin_audit_history(null,null,null,null,'HIST484_DRV',null,5,0) limit 1" true
+# F7 r3 N7: zły „UUID” nie przerywa INSERT
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+     ('HIST484_BADUUID','loads','------------------------------------:a','{}', jsonb_build_object('status','X','load_id','not-a-uuid-!!!!!!!!!!!!!!!'))" >/dev/null
+val "#484: zły UUID nie blokuje INSERT (N7)" $HHL \
+  "select count(*) from audit_log where action='HIST484_BADUUID'" 1
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id, user_id)
+     select 'HIST484_MAIL','loads','$L1','{}'::jsonb, jsonb_build_object('status','X'), '$L1','$ORG_SCX','$ORG_KSH', id
+       from app_users where auth_id='$SCX' limit 1" >/dev/null
+val "#484: KSH actor_label = nazwa firmy" $KSH \
+  "select actor_label from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "Scandinavian Express"
+val "#484: KSH actor_party CARRIER (F7 r4)" $KSH \
+  "select actor_party from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" "CARRIER"
+val "#484: KSH user_email null (cudzy)" $KSH \
+  "select (user_email is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
+val "#484: KSH bez cudzego user_id" $KSH \
+  "select (user_id is null)::text from admin_audit_history(null,null,null,null,'HIST484_MAIL',null,5,0) limit 1" true
+# wydajność: dużo wpisów obcych — filtr po scope_client, limit 8 s (Supabase)
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id)
+     select 'HIST484_NOISE','loads','33333333-0000-0000-0000-000000000009','{}'::jsonb,'{}'::jsonb,
+            '33333333-0000-0000-0000-000000000009','$ORG_SCX','$ORG_KSH'
+       from generate_series(1, 4000)" >/dev/null
+val "#484: KSH strona < 8 s przy szumie" $KSH \
+  "select (extract(epoch from (clock_timestamp() - statement_timestamp())) < 8)::text
+     from admin_audit_history(null,null,null,'loads','HIST484_OWN',null,50,0) limit 1" true
+err "#484: anon admin_audit_history → 42501" "00000000-0000-0000-0000-000000000000" \
+  "select * from admin_audit_history(null,null,null,null,null,null,5,0)" "Brak|42501|administrator|dostępu"
+
+echo; echo "[#492] loads.updated_at — ekran vs ETA/RIO"
+# Zamroź updated_at: zasoby/kierowca/symbol → bump; ETA / stan RIO / tracking / RODO → bez.
+# F7 #529: UPDATE osobno (sys), potem SELECT; bez CTE with u as (update…) — SCX bez SELECT carrier_order_no.
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set carrier_order_no = coalesce(carrier_order_no,'') || '-492' where id='$L2'" >/dev/null
+val "#492: zasoby (carrier_order_no) podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set eta_site = now() + interval '3 hours', eta_confidence_min = 15,
+        eta_basis = coalesce(eta_basis,'{}'::jsonb) || jsonb_build_object('t','492'),
+        eta_computed_at = now(), delay_minutes = 9 where id='$L2'" >/dev/null
+val "#492: ETA (jak refresh_load_eta) bez bumpa updated_at" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set rio_check_at = now(), rio_last_fix_at = now(),
+        rio_error_streak = coalesce(rio_error_streak,0) + 1,
+        rio_check_state = coalesce(rio_check_state,'ok') where id='$L2'" >/dev/null
+val "#492: stan RIO bez bumpa updated_at" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set tracking_opened_at = coalesce(tracking_opened_at, now()) where id='$L2'" >/dev/null
+val "#492: tracking_opened_at (process_position) bez bumpa" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set driver_name = trim(both from coalesce(driver_name,'') || ' 492') where id='$L2'" >/dev/null
+val "#492: driver_name podnosi updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set symbol = case when coalesce(symbol,'') = 'SG' then 'KR' else 'SG' end,
+        permit_kind = case when coalesce(permit_kind,'') = 'FIRMA' then 'TRASA' else 'FIRMA' end
+     where id='$L2'" >/dev/null
+val "#492: symbol/permit_kind podnoszą updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "update loads set combo_weight_t = coalesce(combo_weight_t, 40) + 0.1 where id='$L2'" >/dev/null
+val "#492: combo_weight_t podnosi updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# F7 #529 r2/r3: najpierw kierowca, potem osobno zamroź updated_at (driver_name = kolumna ekranu → bump).
+sys "update loads set driver_name = 'Rodo492' where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+sys "begin; select set_config('tower.audit_source','rodo',true);
+        update loads set driver_name = null where id='$L2'; commit;" >/dev/null
+# driver_name: authenticated bez SELECT (0076 → load_driver_contacts) — asercja przez sys
+out=$(sys "select (updated_at = timestamptz '2020-01-01 12:00:00+00' and driver_name is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #492: RODO (audit_source) bez bumpa updated_at"; } || { fail=$((fail+1)); echo "  FAIL  #492: RODO (audit_source) bez bumpa updated_at  (otrzymano: $out, oczekiwano: true)"; }
+
+echo; echo "[#528] N8 zerowanie pól + INSERT ≠ swap (0292)"
+# L2: SCX → B; pola przewoźnika znikają (asercja sys — authenticated bez SELECT driver_*)
+sys "update loads set driver_name='Sven N8', driver_phone='+4800111222', driver_phone_country='PL',
+     tractor_plate='WWW1N8', trailer_plate='WWW2N8', carrier_order_no='SCX-N8',
+     driver_delivery_name='Sven SE', driver_delivery_phone='+4670111222',
+     driver_delivery_phone_country='SE', tractor_delivery_plate='SE1N8',
+     trailer_swap=true, escort_vehicles=2,
+     telematics_vehicle_id='rio:OLD528', telematics_provider='RIO',
+     rio_tracking_id='OLD528', rio_secret='sekret528', rio_asset_name='asset528',
+     rio_tracker_on=true, carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (driver_name is null and driver_phone is null and tractor_plate is null
+              and trailer_plate is null and carrier_order_no is null
+              and driver_delivery_name is null and driver_delivery_phone is null
+              and tractor_delivery_plate is null and coalesce(trailer_swap,false) is false
+              and escort_vehicles = 0
+              and telematics_vehicle_id is null and rio_tracking_id is null
+              and rio_secret is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 zmiana przewoźnika czyści pola"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 zmiana przewoźnika czyści pola  (otrzymano: $out)"; }
+val "#528: N8 load_driver_contacts po swap — B bez starego kierowcy" $SCXB \
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'') from load_driver_contacts() where load_id='$L2'" "/"
+# F7 #531: HHL_OPS swap przy wpisanym carrier_order_no (trigger zz_* po guard)
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Ops Sven', driver_phone='+4800333444',
+     driver_delivery_name='Ops SE', driver_delivery_phone='+4670333444',
+     tractor_plate='OPS1', trailer_plate='OPS2', carrier_order_no='SCX-OPS-N8',
+     telematics_vehicle_id='rio:OPS528', rio_tracking_id='OPS528', rio_secret='ops528'
+     where id='$L2'" >/dev/null
+val "#528: HHL_OPS swap przy carrier_order_no" $OPS_D1525 \
+  "with u as (update loads set carrier_org_id='$ORG_B' where id='$L2' returning 1) select count(*) from u" 1 commit
+val "#528: po OPS swap B bez PII dostawy" $SCXB \
+  "select coalesce(max(driver_name),'')||'/'||coalesce(max(driver_delivery_name),'')||'/'||coalesce(max(driver_phone),'')
+     from load_driver_contacts() where load_id='$L2'" "//"
+out=$(sys "select (telematics_vehicle_id is null and rio_tracking_id is null and rio_secret is null
+              and carrier_order_no is null)::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: po OPS swap rio/telematics wyczyszczone"; } || { fail=$((fail+1)); echo "  FAIL  #528: po OPS swap rio/telematics wyczyszczone  (otrzymano: $out)"; }
+# F7 r2/r3: pozycje SCX odłączone — B i KSH nie widzą tracku starego pojazdu
+# eta_basis = jsonb (nie tekst 'TEST' — invalid json → cichy FAIL 3/3/1)
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "delete from telm_attach_phase where load_id='$L2'" >/dev/null
+sys "delete from geofence_states where load_id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_SCX', telematics_vehicle_id='rio:GPS528',
+     tracking_opened_at=now(), eta_site=now()+interval '2 hours', eta_confidence_min=15,
+     eta_basis=jsonb_build_object('t',1), eta_computed_at=now(), delay_minutes=12
+     where id='$L2'" >/dev/null
+out=$(sys "select (carrier_org_id='$ORG_SCX')::text from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: L2 na SCX przed detach"; } || { fail=$((fail+1)); echo "  FAIL  #528: L2 na SCX przed detach  (otrzymano: $out)"; }
+sys "insert into positions (load_id, ts, geom_raw, source) values
+     ('$L2', now()-interval '10 minutes', st_setsrid(st_makepoint(17.0, 52.4), 4326), 'TELEMATICS_API'),
+     ('$L2', now()-interval '5 minutes', st_setsrid(st_makepoint(17.1, 52.5), 4326), 'TELEMATICS_API'),
+     ('$L2', now(), st_setsrid(st_makepoint(17.2, 52.6), 4326), 'TELEMATICS_API')" >/dev/null
+sys "insert into telm_attach_phase (load_id, phase, observed_at, lat, lon, source)
+     values ('$L2', 'IN_TRANSIT_PL', now(), 52.4, 17.0, 'TELM_PHASE_INFER')" >/dev/null
+sys "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
+     select '$L2', g.id, 'INSIDE', 3, now(), now() from geofences g limit 1" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload, dedup_key)
+     values ('$L2', 'GEOFENCE_ENTER', now(), jsonb_build_object('zrodlo','TELM'), 'TELM_PHASE_N8_528')" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B' where id='$L2'" >/dev/null
+out=$(sys "select (tracking_opened_at is null and eta_site is null and eta_confidence_min is null
+              and eta_basis is null and eta_computed_at is null and delay_minutes is null
+              and (select count(*) from positions where load_id='$L2')=0
+              and (select count(*) from positions where detached_load_id='$L2')=3)::text
+         from loads where id='$L2'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 detach GPS + clear tracking/eta"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 detach GPS + clear tracking/eta  (otrzymano: $out)"; }
+# F7 r4: właściciel tabeli bez flagi n8_detach_load → append-only na odpiętych
+out=$(sys "update load_events set payload='{\"hack\":1}'::jsonb, detached_load_id=null, dedup_key='HACKED' where detached_load_id='$L2'")
+echo "$out" | grep -qi "append-only" && { ok=$((ok+1)); echo "  OK    #528: N8 owner bez flagi — append-only na odpiętych"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 owner bez flagi — append-only na odpiętych  →  $(echo "$out" | tail -1)"; }
+val "#528: B po swap — 0 track/positions/fixes" $SCXB \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+val "#528: KSH po swap — 0 track/positions/fixes" $KSH \
+  "select (select count(*) from load_track('$L2'))::text||'/'||
+          (select count(*) from positions where load_id='$L2')::text||'/'||
+          (select count(*) from latest_vehicle_fixes(array['$L2'::uuid]))::text" "0/0/0"
+out=$(sys "select (coalesce((select phase||'/'||source from telm_attach_phase where load_id='$L2'),'')
+              = 'RESET/D1710_RESET'
+              and exists(select 1 from geofence_states where load_id='$L2')
+              and coalesce((select bool_and(state='OUTSIDE' and consec_fixes=0 and entered_at is null)
+                              from geofence_states where load_id='$L2'), true))::text")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 telm RESET + geofence OUTSIDE"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 telm RESET + geofence OUTSIDE  (otrzymano: $out)"; }
+# ta sama UPDATE: nowe wartości zostają; tablice niepodane → null
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name='Keep Old', tractor_plate='OLD1', trailer_plate='OLD2', carrier_order_no='SCX-KEEP' where id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_B', driver_name='Nowy B', carrier_order_no='B-ORD' where id='$L2'" >/dev/null
+out=$(sys "select driver_name||'/'||carrier_order_no||'/'||(tractor_plate is null and trailer_plate is null)::text from loads where id='$L2'")
+[ "$out" = "Nowy B/B-ORD/true" ] && { ok=$((ok+1)); echo "  OK    #528: N8 pola z tej samej UPDATE zostają"; } || { fail=$((fail+1)); echo "  FAIL  #528: N8 pola z tej samej UPDATE zostają  (otrzymano: $out)"; }
+sys "delete from positions where load_id='$L2' or detached_load_id='$L2'" >/dev/null
+sys "update loads set carrier_org_id='$ORG_SCX', driver_name=null, driver_phone=null, driver_phone_country='PL',
+     driver_delivery_name=null, driver_delivery_phone=null, driver_delivery_phone_country='PL',
+     tractor_delivery_plate=null, trailer_swap=false, escort_vehicles=0,
+     telematics_vehicle_id=null, telematics_provider=null,
+     rio_tracking_id=null, rio_secret=null, rio_asset_name=null, rio_tracker_on=null,
+     tracking_opened_at=null, eta_site=null, eta_confidence_min=null, eta_basis=null,
+     eta_computed_at=null, delay_minutes=null,
+     tractor_plate=null, trailer_plate=null, carrier_order_no=null where id='$L2'" >/dev/null
+# INSERT (old_value NULL) — nie redaguj jak zmiana przewoźnika
+sys "delete from audit_log where action='HIST528_INS'" >/dev/null
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id) values
+     ('HIST528_INS','loads','$L1', null,
+      jsonb_build_object('carrier_org_id','$ORG_SCX','carrier_order_no','SCX-INS','driver_name','Sven Ins'),
+      '$L1','$ORG_SCX','$ORG_KSH')" >/dev/null
+val "#528: INSERT nie jest swap — SCX widzi numer" $SCX \
+  "select new_value->>'carrier_order_no' from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" "SCX-INS"
+val "#528: INSERT nie jest swap — bez _carrier_changed" $SCX \
+  "select ((new_value ? '_carrier_changed') is false and (new_value ? 'driver_name'))::text from admin_audit_history(null,null,null,null,'HIST528_INS',null,5,0) limit 1" true
+# szybki filtr documents: KSH nadal nie widzi doc tylko HHL+SCX (regresja)
+val "#528: KSH nadal bez doc HHL+SCX (filtr)" $KSH \
+  "select count(*) from admin_audit_history(null,null,null,null,'HIST484_DOC',null,20,0)" 0
+echo; echo "[#530] loadsVersion — bump z load_escorts / sailings"
+# piloci: INSERT podbija loads.updated_at (nawet gdy escort_vehicles bez zmiany)
+sys "delete from load_escorts where load_id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', escort_vehicles=0 where id='$L2'" >/dev/null
+sys "insert into load_escorts (load_id, seq, company, plate, scope)
+     values ('$L2', 1, 'Pilot 530', 'ABC530', 'PL_SE')" >/dev/null
+val "#530: INSERT load_escorts podbija loads.updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# rejs: opóźnienie podbija transporty z sailing_id
+SAIL530=a5300000-0000-4000-8000-000000000530
+VES530=a5300000-0000-4000-8000-000000000531
+L530B=a5300000-0000-4000-8000-000000000532
+sys "insert into vessels (id, name, operator) values ('$VES530', 'V530', 'T')
+     on conflict (id) do nothing" >/dev/null
+sys "delete from operator_notices where sailing_id='$SAIL530'" >/dev/null
+sys "delete from loads where id='$L530B'" >/dev/null
+sys "delete from sailings where id='$SAIL530'" >/dev/null
+sys "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+     select '$SAIL530', project_id, '$VES530', 'GDN-NYN',
+            timestamptz '2030-06-01 18:00+00', timestamptz '2030-06-02 10:00+00',
+            'ZAPLANOWANY', 'RECZNIE'
+       from loads where id='$L2'" >/dev/null
+# enforce_order_numbers (#528): zmiana przewoźnika czyści order_no — dwa kroki (F7)
+sys "update loads set carrier_org_id='$ORG_SCX' where id='$L2'" >/dev/null
+sys "update loads set sailing_id='$SAIL530', carrier_order_no='SCX-530',
+     hhl_order_no=coalesce(nullif(btrim(hhl_order_no),''),'HHL/530'), status='IN_TRANSIT_PL'
+     where id='$L2'" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+     status, sailing_id, driver_name)
+     select '$L530B', project_id, '$ORG_B', 'KSH/530B', 'HHL/530B', 'B/530',
+            'IN_TRANSIT_PL', '$SAIL530', 'Keep CAR2'
+       from loads where id='$L2'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id in ('$L2','$L530B')" >/dev/null
+sys "update sailings set delayed_departure_at = departure_at + interval '2 hours',
+        status = 'OPOZNIONY' where id='$SAIL530'" >/dev/null
+val "#530: opóźnienie rejsu podbija loads.updated_at" $HHL \
+  "select (updated_at > timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L2'" true
+# F7: SCX notice na rejsie z ładunkiem CAR2 (ORG_B) — bump_ctx, nie błąd strażnika
+sys "update sailings set status='ZAPLANOWANY', delayed_departure_at=null, delayed_arrival_at=null
+     where id='$SAIL530'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', driver_name='Keep CAR2'
+     where id='$L530B'" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00' where id='$L2'" >/dev/null
+# val bez „commit” wycofuje notice — asercja po bumpie wtedy pada
+val "#530: SCX notice na wspólnym rejsie (CAR2 też)" $SCX \
+  "select (operator_notice_apply('$SAIL530','OPOZNIONY',
+            timestamptz '2030-06-01 20:00+00','test530') is not null)::text" true commit
+# driver_name: authenticated bez SELECT (0076) — asercja przez sys
+out=$(sys "select (updated_at > timestamptz '2020-01-01 12:00:00+00' and driver_name='Keep CAR2')::text
+     from loads where id='$L530B'" | tr -d '\r')
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #530: po notice CAR2 tylko updated_at (driver bez zmian)"; } || { fail=$((fail+1)); echo "  FAIL  #530: po notice CAR2 tylko updated_at (driver bez zmian)  (otrzymano: $out, oczekiwano: true)"; }
+# cudzy ładunek: RLS → 0 wierszy (bez wyjątku strażnika)
+val "#530: SCX nadal nie zmienia ładunku CAR2 (RLS: 0 wierszy)" $SCX \
+  "with u as (update loads set driver_name='HACK' where id='$L530B' returning 1) select count(*) from u" 0
+# F7 LOW: CANCELLED bez bumpa z rejsu (zegar RODO)
+sys "begin; select set_config('tower.cancel_ctx','MANUAL',true);
+     update loads set status='CANCELLED' where id='$L530B'; commit;" >/dev/null
+sys "update loads set updated_at = timestamptz '2020-01-01 12:00:00+00', sailing_id='$SAIL530'
+     where id='$L530B'" >/dev/null
+sys "update sailings set delayed_departure_at = departure_at + interval '5 hours',
+        status = 'OPOZNIONY' where id='$SAIL530'" >/dev/null
+val "#530: CANCELLED bez bumpa z rejsu" $HHL \
+  "select (updated_at = timestamptz '2020-01-01 12:00:00+00')::text from loads where id='$L530B'" true
+sys "delete from operator_notices where sailing_id='$SAIL530'" >/dev/null
+sys "update loads set sailing_id=null where id in ('$L2','$L530B')" >/dev/null
+sys "delete from loads where id='$L530B'" >/dev/null
+sys "delete from sailings where id='$SAIL530'" >/dev/null
+sys "delete from vessels where id='$VES530'" >/dev/null
+sys "delete from load_escorts where load_id='$L2'" >/dev/null
+
+echo; echo "[B5] Podgląd read_only — tylko HHL_ADMIN (0300)"
+OPS_B5=11111111-0000-0000-0000-0000000000b5
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS_B5','00000000-0000-0000-0000-00000000a001','ops-b5@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+KSHID_B5=$(sys "select id from app_users where auth_id='$KSH'" | tr -d '\r')
+HHLID_B5=$(sys "select id from app_users where auth_id='$HHL'" | tr -d '\r')
+err "B5: HHL_OPS nie zaczyna Działaj jako" $OPS_B5 \
+  "select admin_impersonate_start('$KSHID_B5'::uuid)" "Tylko administrator HHL|42501"
+err "B5: HHL_OPS nie zaczyna Podglądu" $OPS_B5 \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+err "B5: KSH nie zaczyna Podglądu" $KSH \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+# MFA: przy włączonej fladze aal1 → 42501 (jak current_* / mfa_satisfied).
+sys "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
+err "B5: Podgląd aal1 przy MFA_HHL_ADMIN" $HHL \
+  "select admin_preview_start('KSH')" "Tylko administrator HHL|42501"
+sys "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
+err "B5: bezpośredni INSERT impersonation_state" $HHL \
+  "insert into impersonation_state (admin_user_id, target_user_id, read_only)
+   values ('$HHLID_B5'::uuid,'$KSHID_B5'::uuid,true)" "permission denied|42501"
+err "B5: bezpośredni UPDATE impersonation_state" $HHL \
+  "update impersonation_state set read_only=true where admin_user_id='$HHLID_B5'::uuid" "permission denied|42501"
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+val "B5: Podgląd KSH → current_role CLIENT_USER" $HHL "select current_app_role()::text" CLIENT_USER
+val "B5: Podgląd → is_preview_read_only" $HHL "select is_preview_read_only()::text" true
+val "B5: my_profile.preview_read_only" $HHL "select preview_read_only::text from my_profile()" true
+# KSH nie dosięga UPDATE loads (0 wierszy, bez wyjątku) — assert + zapis invoices (KSH może spór).
+err "B5: Podgląd KSH — assert_not_preview" $HHL \
+  "select assert_not_preview()" "Podgląd"
+err "B5: Podgląd KSH — zapis invoices odmowa" $HHL \
+  "update invoices set verification_status='SPORNA', dispute_note='b5-preview' where id='$INVP'" "Podgląd"
+err "B5: Podgląd — mark_notifications_read odmowa" $HHL \
+  "select mark_notifications_read(array[]::bigint[])" "Podgląd"
+# Cron / sys bez auth.uid() — wyzwalacz nie blokuje (aktywny Podgląd w tle).
+out=$(sys "with u as (update loads set driver_name=driver_name where id='$L1' returning 1) select count(*) from u")
+[ "$(echo "$out" | tail -1)" = "1" ] && { ok=$((ok+1)); echo "  OK    B5: cron bez auth.uid() przy aktywnym Podglądzie"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B5: cron bez auth.uid() przy aktywnym Podglądzie → $out"; }
+run $HHL "select admin_preview_stop()" commit >/dev/null
+val "B5: po stop role HHL_ADMIN" $HHL "select current_app_role()::text" HHL_ADMIN
+# void w PG17 nie jest NULL; no-op = bez wyjątku; count przez sys (authenticated bez SELECT na state).
+run $HHL "select admin_preview_stop()" commit >/dev/null
+out=$(sys "select count(*)::text from impersonation_state i
+  join app_users a on a.id = i.admin_user_id where a.auth_id = '$HHL'")
+[ "$(echo "$out" | tail -1)" = "0" ] && { ok=$((ok+1)); echo "  OK    B5: stop bez wiersza (idempotentny)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B5: stop bez wiersza (idempotentny) (otrzymano: $out, oczekiwano: 0)"; }
+# TTL 8 h: po 9 h current_* = admin, bez blokady Podglądu (wiersz sprząta start/stop).
+run $HHL "select admin_preview_start('KSH')" commit >/dev/null
+sys "update impersonation_state set started_at = now() - interval '9 hours'
+     where admin_user_id = '$HHLID_B5'" >/dev/null
+val "B5: TTL 9h → current_role HHL_ADMIN" $HHL "select current_app_role()::text" HHL_ADMIN
+val "B5: TTL 9h → acting_as false" $HHL "select acting_as::text from my_profile()" false
+val "B5: TTL 9h → assert_not_preview OK" $HHL "select assert_not_preview(); select 'ok'" ok
+run $HHL "select admin_preview_stop()" commit >/dev/null
+run $HHL "select admin_preview_start('SCX')" commit >/dev/null
+val "B5: Podgląd SCX → CARRIER_DISPATCH" $HHL "select current_app_role()::text" CARRIER_DISPATCH
+# SCX może zmienić driver_name na L2 — wyzwalacz aaa_b5_preview musi odrzucić.
+err "B5: Podgląd SCX — zapis loads odmowa" $HHL \
+  "update loads set driver_name='B5-PREVIEW' where id='$L2'" "Podgląd"
+err "B5: Podgląd SCX — report_position odmowa" $HHL \
+  "select report_position('$L2'::uuid, 52.0, 17.0, now(), 10, null, null)" "Podgląd"
+# F7: sms_send_test sprawdza is_hhl_admin() (prawdziwa rola) i woła sms_enqueue — assert obowiązkowy.
+sys "insert into sms_test_numbers (to_e164, label) values ('+48600000999','b5-preview') on conflict do nothing" >/dev/null
+err "B5: Podgląd — sms_send_test odmowa" $HHL \
+  "select sms_send_test('+48600000999')" "Podgląd"
+run $HHL "select admin_preview_stop()" commit >/dev/null
+# Działaj jako (read_only=false) — zapis nadal dozwolony.
+run $HHL "select admin_impersonate_start('$KSHID_B5'::uuid)" commit >/dev/null
+val "B5: Działaj jako → nie Podgląd" $HHL "select is_preview_read_only()::text" false
+val "B5: Działaj jako — KSH spór faktury OK" $HHL \
+  "with u as (update invoices set verification_status='SPORNA', dispute_note='b5-act-as' where id='$INVP' returning 1) select count(*) from u" 1 commit
+run $HHL "select admin_impersonate_stop()" commit >/dev/null
+# Strażnicy: assert jako PIERWSZA instrukcja po pierwszym BEGIN; wyjątki odczytowe F7.
+val "B5: strażnik RPC — 0 zapisujących bez assert na początku" $HHL \
+  "select count(*)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and p.prosecdef
+     and p.prolang=(select oid from pg_language where lanname='plpgsql')
+     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+     and p.proname not in (
+       'admin_preview_stop','admin_impersonate_stop','keep_alive',
+       'report_client_error','report_csp_violation',
+       'assert_not_preview','is_preview_read_only','guard_preview_write',
+       'b5_preview_cleanup_expired','admin_preview_start','admin_impersonate_start',
+       'map_display_state','rio_tracking_open','email_budget_status','my_notify_get')
+     and p.proname !~ '^driver_'
+     and (p.proname in ('report_position','delivered_check_resolve','sms_send_test','admin_sms_zone_test')
+          or p.prosrc ~* 'insert[[:space:]]+into'
+          or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
+          or p.prosrc ~* 'delete[[:space:]]+from')
+     and not (regexp_replace(p.prosrc, E'^[\\\\s\\\\S]*?\\\\ybegin\\\\y', '', 'i')
+              ~* '^[[:space:]]*perform[[:space:]]+public\\.assert_not_preview')" 0
+# F7 P3: 0 SQL-language SECURITY DEFINER z zapisem dla authenticated (dziś 0).
+val "B5: strażnik RPC — 0 SQL-language z zapisem" $HHL \
+  "select count(*)::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and p.prosecdef
+     and p.prolang=(select oid from pg_language where lanname='sql')
+     and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+     and p.proname !~ '^driver_'
+     and (p.prosrc ~* 'insert[[:space:]]+into'
+          or p.prosrc ~* 'update[[:space:]]+[a-z_][a-z0-9_.]*[[:space:]]+set'
+          or p.prosrc ~* 'delete[[:space:]]+from')" 0
+val "B5: strażnik trigger — 0 tabel zapisu bez aaa_b5_preview" $HHL \
+  "select count(*)::text from (
+     select distinct n.nspname, c.relname
+       from pg_policy p
+       join pg_class c on c.oid=p.polrelid
+       join pg_namespace n on n.oid=c.relnamespace
+      where n.nspname in ('public','storage') and p.polcmd in ('a','w','d','*')
+        and c.relkind='r' and c.relname not in ('audit_log','impersonation_state')
+        and not exists (
+          select 1 from pg_trigger t
+           where t.tgrelid=c.oid and not t.tgisinternal
+             and t.tgname='aaa_b5_preview')
+   ) x" 0
+
+echo; echo "[B8] Stare nieprzeczytane IN_APP >7 dni (7A / 0301)"
+# authenticated bez EXECUTE; sprzątanie tylko sys (migracja / b8_mark_stale_in_app_read).
+# Fixtures: session_replication_role=replica — bramka #402 (trg_notifications_a_gate) kasuje
+# IN_APP bez dozwolonego bell (RISK_OPEN + {} → return null); created_at musi zostać z INSERT.
+val "B8: authenticated bez EXECUTE b8_mark_stale_in_app_read" $HHL \
+  "select has_function_privilege('authenticated', 'public.b8_mark_stale_in_app_read()', 'EXECUTE')::text" false
+B8_OLD=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('IN_APP', 'b8-old@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:old:' || gen_random_uuid()::text, now() - interval '8 days')
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
+B8_NEW=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('IN_APP', 'b8-new@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:new:' || gen_random_uuid()::text, now() - interval '6 days')
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
+B8_EM=$(sys "set session_replication_role=replica;
+  insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
+  values ('EMAIL', 'b8-em@test', '$HHLID_B5', 'RISK_OPEN', '{}'::jsonb,
+          'b8:em:' || gen_random_uuid()::text, now() - interval '8 days')
+  returning id;
+  set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
+B8_RES=$(sys "select b8_mark_stale_in_app_read()::text" | tail -1)
+echo "$B8_RES" | grep -q '"count":' && { ok=$((ok+1)); echo "  OK    B8: b8_mark_stale_in_app_read zwraca jsonb"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B8 wynik: $B8_RES"; }
+chk6 "B8: stare IN_APP przeczytane" "$(sys "select (read_at is not null)::text from notifications where id=$B8_OLD" | tail -1)" "true"
+chk6 "B8: świeże IN_APP bez zmian" "$(sys "select (read_at is null)::text from notifications where id=$B8_NEW" | tail -1)" "true"
+chk6 "B8: EMAIL >7d bez zmian" "$(sys "select (read_at is null)::text from notifications where id=$B8_EM" | tail -1)" "true"
+chk6 "B8: AUDYT17_MARK_READ z id starego" "$(sys "select (new_value->'notification_ids' @> to_jsonb($B8_OLD::bigint))::text
+  from audit_log where action='AUDYT17_MARK_READ' and entity_id='b8-0301'
+  order by id desc limit 1" | tail -1)" "true"
+
+# --- B9 (0302): panel PL, DeepL zostaje, translate-retry ---
+chk6 "B9: user_preferences bez kolumny locale" "$(sys "select (not exists (
+  select 1 from information_schema.columns
+   where table_schema='public' and table_name='user_preferences' and column_name='locale'
+))::text" | tail -1)" "true"
+chk6 "B9: app_users wszyscy locale=pl" "$(sys "select (count(*) filter (where locale is distinct from 'pl') = 0)::text from app_users" | tail -1)" "true"
+chk6 "B9: translation_memory istnieje" "$(sys "select to_regclass('public.translation_memory') is not null" | tail -1)" "t"
+chk6 "B9: translation_queue istnieje" "$(sys "select to_regclass('public.translation_queue') is not null" | tail -1)" "t"
+B9_VIEW=$(run $HHL "select deepl_usage_view()::text" | tail -1)
+echo "$B9_VIEW" | grep -q 'queued_active' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma queued_active"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view: $B9_VIEW"; }
+echo "$B9_VIEW" | grep -q 'oldest_age_min' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma oldest_age_min"; } \
+  || { fail=$((fail+1)); echo "  FAIL  B9 view oldest: $B9_VIEW"; }
+
+# F7: warn przy wpisie >15 min (nie dla odrzucone); zrzut par w audit_log
+sys "insert into translation_queue (source_hash, source_text, source_lang, reason, created_at)
+  values ('b9teststale00000000000000000001', 'Stale SE text', 'SV', 'blad', now() - interval '20 minutes')
+  on conflict (source_hash) do update set reason='blad', created_at=excluded.created_at"
+B9_WARN=$(run $HHL "select deepl_usage_view()->>'level'" | tail -1)
+chk6 "B9: deepl_usage_view level=warn przy kolejce >15 min" "$B9_WARN" "warn"
+sys "update translation_queue set reason='odrzucone' where source_hash='b9teststale00000000000000000001'"
+# gdy jedyny wpis = odrzucone, oldest_at null (nie liczy się do alarmu kolejki)
+B9_OLD=$(run $HHL "select coalesce(deepl_usage_view()->>'oldest_at','')" | tail -1)
+chk6 "B9: oldest_at puste gdy tylko odrzucone" "${B9_OLD}" ""
+sys "delete from translation_queue where source_hash='b9teststale00000000000000000001'"
+
+chk6 "B9: audit_log AUDYT17_B9_LOCALE ma prefs_pairs" "$(sys "select (new_value ? 'prefs_pairs')::text
+  from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
+  order by id desc limit 1" | tail -1)" "true"
+chk6 "B9: audit_log AUDYT17_B9_LOCALE ma users_pairs" "$(sys "select (new_value ? 'users_pairs')::text
+  from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
+  order by id desc limit 1" | tail -1)" "true"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

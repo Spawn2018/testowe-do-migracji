@@ -78,8 +78,8 @@ describe('E16 — Kokpit „Marża”: liczba transportów z ceną i bez ceny', 
   it('Kokpit liczy marżę i liczby z tego samego źródła co Finanse (`financeOf`, suma marż ÷ suma przychodów)', () => {
     const d = src('views/DashboardView.tsx');
     /* financeSummary = to, co zwraca financeOf w Finansach (p5Source) — bez wczytywania przykładów demo w Kokpicie */
-    expect(d).toMatch(/financeSummary\(loads, 'both'\)/);
-    expect(src('lib/p5Source.ts')).toMatch(/return financeSummary\(loads, side\);/);
+    expect(d).toMatch(/financeSummary\(loads, 'both', nbpLive \?\? latestNbp\(loads\)\)/);
+    expect(src('lib/p5Source.ts')).toMatch(/return financeSummary\(loads, side, live \?\? latestNbp\(loads\)\);/);
     expect(fcp('pl', 'p5c_priced_line', { priced: 1, unpriced: 2 })).toBe('1 z ceną · 2 bez ceny');
     expect(d).toContain('pct: r > 0 ? (r - c) / r : null');
   });

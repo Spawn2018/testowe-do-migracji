@@ -107,17 +107,137 @@ sleep 2
 chk "…z wpisem „blokada zajęta”; pierwszy przebieg RUNNING" "$(psql "$SRC" -Atq -c "select count(*) from backup_runs where error like 'równoległy start%'"):$(grep -c RUNNING "$TMP/lockA")" "1:1"
 chk "anon/authenticated bez EXECUTE backup_run_begin"  "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_run_begin(interval)','execute') or has_function_privilege('authenticated','backup_run_begin(interval)','execute')")" f
 
-echo; echo "[I-33] Strażnik zawieszonej kopii — RUNNING > 30 min → ERROR + ryzyko (+ e-mail gdy Vault)"
+echo; echo "[I-33] Strażnik zawieszonej kopii — brak postępu > 10 min → ERROR + ryzyko (#498)"
 psql "$SRC" -q -c "delete from risk_signals where dedup_key like 'backup-stale:%'; delete from backup_runs" >/dev/null
-psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '31 minutes')" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '11 minutes')" >/dev/null
 STALE_ID=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
-chk "strażnik: RUNNING > 30 min → przerwane=1" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 1
+chk "strażnik: brak postępu > 10 min → przerwane=1" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 1
 chk "strażnik: status ERROR + finished_at + komunikat I-33" "$(psql "$SRC" -Atq -c "select status||'/'||(finished_at is not null)||'/'||(error like '%strażnik I-33%') from backup_runs where id=$STALE_ID")" "ERROR/true/true"
 chk "strażnik: ryzyko JOB_FAILURE HHL (dedup backup-stale)" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where kind='JOB_FAILURE' and dedup_key like 'backup-stale:'||$STALE_ID||':%' and resolved_at is null")" 1
 chk "strażnik: ponowne wywołanie bez duplikatu (przerwane=0)" "$(psql "$SRC" -Atq -c "select (backup_stale_watchdog()->>'przerwane')||'/'||(select count(*) from risk_signals where dedup_key like 'backup-stale:'||$STALE_ID||':%' and resolved_at is null)")" "0/1"
-psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '10 minutes')" >/dev/null
-chk "strażnik: RUNNING < 30 min — bez przerwania" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 0
+# #498: długi przebieg z świeżym progress_at nie jest przerywany; stary started_at bez progress_at — tak
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at) values ('RUNNING', now() - interval '2 hours', now() - interval '2 minutes')" >/dev/null
+chk "strażnik: świeży progress_at — bez przerwania" "$(psql "$SRC" -Atq -c "select backup_stale_watchdog()->>'przerwane'")" 0
 chk "anon/authenticated bez EXECUTE backup_stale_watchdog" "$(psql "$SRC" -Atq -c "select has_function_privilege('anon','backup_stale_watchdog(timestamptz,interval)','execute') or has_function_privilege('authenticated','backup_stale_watchdog(timestamptz,interval)','execute')")" f
+
+echo; echo "[#498 F7 B1] lease_until + backup_continue_pending tylko po 2 min bez postępu"
+psql "$SRC" -q -c "delete from backup_runs" >/dev/null
+chk "kolumna lease_until istnieje" "$(psql "$SRC" -Atq -c "select count(*) from information_schema.columns where table_schema='public' and table_name='backup_runs' and column_name='lease_until'")" 1
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, progress_at, prefix, lease_until)
+  values ('RUNNING', now() - interval '1 hour', now() - interval '30 seconds', 'daily/test/', now() + interval '1 minute')" >/dev/null
+chk "continue_pending: świeży progress + lease → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
+# świeży progress mimo wolnego lease → nadal 0 (filtr 2 min)
+psql "$SRC" -q -c "update backup_runs set lease_until = null" >/dev/null
+chk "continue_pending: progress < 2 min → continued=0" "$(psql "$SRC" -Atq -c "select backup_continue_pending()->>'continued'")" 0
+
+echo; echo "[#516] OK kopii zamyka decyzje BACKUP_FAILED + ryzyko backup-stale"
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code='BACKUP_FAILED');
+  delete from decisions where type_code='BACKUP_FAILED';
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='test #516' where id=$ERR516" >/dev/null
+chk "#516: ERROR → decyzja BACKUP_FAILED NEW" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW' and detail->>'backup_run_id'='$ERR516'")" 1
+# ryzyko stale jak po strażniku I-33
+PROJ516=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values ('$PROJ516', 'JOB_FAILURE', 'HIGH', 'Kopia zapasowa bez postępu (> 10 min)', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$ERR516), 'backup-stale:'||$ERR516||':$PROJ516', now())" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+OK516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now(), files=3,
+  parts=jsonb_build_object('t', jsonb_build_array(jsonb_build_object('part',1), jsonb_build_object('part',2)))
+  where id=$OK516" >/dev/null
+chk "#516: OK → decyzja BACKUP_FAILED RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and resolution_code='AUTO_CLOSED'")" 1
+chk "#516: OK → ryzyko backup-stale resolved" "$(psql "$SRC" -Atq -c "select count(*) from risk_signals where dedup_key like 'backup-stale:%' and resolved_at is null")" 0
+chk "#516: note z id przebiegu OK" "$(psql "$SRC" -Atq -c "select (resolution_note like '%id='||$OK516||'%')::text from decisions where type_code='BACKUP_FAILED' order by resolved_at desc limit 1")" true
+chk "#516: RISK_AUTO_CLOSED w audycie" "$(psql "$SRC" -Atq -c "select count(*) from audit_log where action='RISK_AUTO_CLOSED' and new_value->>'hotfix'='0295'")" 1
+
+echo; echo "[#516 F7] inne typy / RUNNING / run_id / bez powiadomień"
+PROJ516b=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code in ('BACKUP_FAILED','NO_TRACKING') and title like 'F7 #516%');
+  delete from decisions where type_code in ('BACKUP_FAILED','NO_TRACKING') and title like 'F7 #516%';
+  delete from decisions where type_code='BACKUP_FAILED' and status in ('NEW','RESOLVED');
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+# inny typ decyzji — ma zostać NEW po OK kopii
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516b', 'NO_TRACKING', 'NEW', 'F7 #516 inny typ', '{}'::jsonb)" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516b=$(psql "$SRC" -Atq -c "select id from backup_runs order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='test #516b' where id=$ERR516b" >/dev/null
+# decyzja z przyszłym run_id (≥ kolejnego OK) — nie zamykać
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516b', 'BACKUP_FAILED', 'NEW', 'F7 #516 future run', jsonb_build_object('backup_run_id', $ERR516b + 1000))" >/dev/null
+NOTIF_BEFORE=$(psql "$SRC" -Atq -c "select count(*) from notifications")
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+RUN516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+# aktualizacja RUNNING (bez zmiany statusu) nie zamyka
+psql "$SRC" -q -c "update backup_runs set progress_at=now() where id=$RUN516" >/dev/null
+chk "#516 F7: RUNNING nie zamyka BACKUP_FAILED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW'")" 2
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now() where id=$RUN516" >/dev/null
+chk "#516 F7: inne typy decyzji zostają NEW" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='NO_TRACKING' and status='NEW' and title='F7 #516 inny typ'")" 1
+chk "#516 F7: run_id >= OK nie zamykane" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='NEW' and (detail->>'backup_run_id')::bigint > $RUN516")" 1
+chk "#516 F7: ERROR run_id < OK → RESOLVED" "$(psql "$SRC" -Atq -c "select count(*) from decisions where type_code='BACKUP_FAILED' and status='RESOLVED' and detail->>'backup_run_id'='$ERR516b'")" 1
+NOTIF_AFTER=$(psql "$SRC" -Atq -c "select count(*) from notifications")
+chk "#516 F7: zamknięcie bez nowych powiadomień" "$NOTIF_AFTER" "$NOTIF_BEFORE"
+
+echo; echo "[#516 F7 r2] DO ponownie + backup-stale run_id ≥ OK"
+PROJ516c=$(psql "$SRC" -Atq -c "select id from projects order by created_at limit 1")
+psql "$SRC" -q -c "delete from decision_events where decision_id in (select id from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%');
+  delete from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%';
+  delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at, finished_at) values ('OK', now() - interval '2 minutes', now() - interval '1 minute')" >/dev/null
+MAXOK516=$(psql "$SRC" -Atq -c "select id from backup_runs where status='OK' order by id desc limit 1")
+psql "$SRC" -q -c "insert into decisions (project_id, type_code, status, title, detail)
+  values ('$PROJ516c', 'BACKUP_FAILED', 'NEW', 'F7r2 #516 old', jsonb_build_object('backup_run_id', $MAXOK516 - 1)),
+         ('$PROJ516c', 'BACKUP_FAILED', 'NEW', 'F7r2 #516 ge', jsonb_build_object('backup_run_id', $MAXOK516))" >/dev/null
+# ten sam warunek co blok DO migracji 0295 (ponowne uruchomienie)
+psql "$SRC" -q -c "
+do \$\$
+declare
+  r record; v_prev text; v_now timestamptz := now(); v_max_ok bigint; v_note text := 'F7r2 DO #516';
+begin
+  select max(id) into v_max_ok from backup_runs where status = 'OK';
+  v_prev := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+  for r in
+    select id from decisions
+     where type_code = 'BACKUP_FAILED' and status in ('NEW', 'ASSIGNED', 'SNOOZED')
+       and (detail->>'backup_run_id') ~ '^[0-9]+$'
+       and (detail->>'backup_run_id')::bigint < v_max_ok
+  loop
+    update decisions set status='RESOLVED', resolution_code='AUTO_CLOSED',
+      resolution_note=v_note, resolved_at=v_now, updated_at=v_now
+     where id=r.id and status in ('NEW','ASSIGNED','SNOOZED');
+  end loop;
+  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+end;
+\$\$;" >/dev/null
+chk "#516 F7r2: DO old→RESOLVED / ge→NEW" "$(psql "$SRC" -Atq -c "select
+  (select count(*) from decisions where title='F7r2 #516 old' and status='RESOLVED')||'/'||
+  (select count(*) from decisions where title='F7r2 #516 ge' and status='NEW')")" "1/1"
+# ryzyko ze stale id ≥ OK — trigger nie zamyka
+psql "$SRC" -q -c "delete from risk_signals where dedup_key like 'backup-stale:%';
+  delete from decisions where type_code='BACKUP_FAILED' and title like 'F7r2 #516%';
+  delete from backup_runs" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now() - interval '1 minute')" >/dev/null
+ERR516c=$(psql "$SRC" -Atq -c "select id from backup_runs order by id desc limit 1")
+psql "$SRC" -q -c "update backup_runs set status='ERROR', finished_at=now(), error='f7r2' where id=$ERR516c" >/dev/null
+psql "$SRC" -q -c "insert into backup_runs (status, started_at) values ('RUNNING', now())" >/dev/null
+OK516c=$(psql "$SRC" -Atq -c "select id from backup_runs where status='RUNNING' order by id desc limit 1")
+# stale z run_id = przyszły OK (≥) — zostaje otwarte; stare < OK — zamykane
+psql "$SRC" -q -c "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values ('$PROJ516c', 'JOB_FAILURE', 'HIGH', 'stale old', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$ERR516c), 'backup-stale:'||$ERR516c||':$PROJ516c', now()),
+         ('$PROJ516c', 'JOB_FAILURE', 'HIGH', 'stale ge', 'rk_job_failure',
+          jsonb_build_object('job','backup','run_id',$OK516c), 'backup-stale:'||$OK516c||':$PROJ516c', now())" >/dev/null
+psql "$SRC" -q -c "update backup_runs set status='OK', finished_at=now() where id=$OK516c" >/dev/null
+chk "#516 F7r2: backup-stale run_id≥OK zostaje otwarte" "$(psql "$SRC" -Atq -c "select
+  (select count(*) from risk_signals where dedup_key='backup-stale:'||$ERR516c||':$PROJ516c' and resolved_at is not null)||'/'||
+  (select count(*) from risk_signals where dedup_key='backup-stale:'||$OK516c||':$PROJ516c' and resolved_at is null)")" "1/1"
 
 echo; echo "[PR2-B] Odtworzenie plików (restore-files.sh): SHA-256 przed i po"
 mkdir -p "$TMP/files/dokumenty/p1" "$TMP/files/harmonogramy/p1" "$TMP/pliki"

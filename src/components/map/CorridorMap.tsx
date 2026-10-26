@@ -30,6 +30,7 @@ import { p9m, p9mp } from '../../i18n/p9c';
 import {
   demoStageAnchor, groupView, placeMarkers, splitLabel, vesselKey,
   type FerryInfo, type GroupItem, type GroupView, type GroupZone, type Placed, type ShipFix,
+  estNote,
 } from '../../lib/p9eGroups';
 import { p9e, p9ep } from '../../i18n/p9e';
 import { formatListDateTime } from '../../lib/format';
@@ -99,14 +100,16 @@ function vehicleIcon(row: MapRow, label: string | null): L.DivIcon {
 }
 
 /** Dymek znacznika (E29 pkt 7): nazwa · etap / opóźnienie · ETA / ostatnia pozycja · odcinek / kliknij. */
-function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0]): string {
+function vehicleTip(row: MapRow, locale: Parameters<typeof t>[0], est: string | null = null): string {
   const l1 = `<b>${esc(row.label)}</b> · ${esc(t(locale, row.stageKey))}`;
   const eta = row.eta.main && row.eta.main !== p9m(locale, 'p9c_eta_none') ? p9mp(locale, 'p9c_tip_eta', { eta: row.eta.main }) : '';
   const late = row.late && row.delayMin ? `<span class="r">${esc(p9mp(locale, 'p9c_tip_late', { d: etaDuration(row.delayMin) }))}</span>` : '';
   const l2 = [late, esc(eta)].filter(Boolean).join(' · ');
   const last = row.pos.kind === 'nogps' ? row.pos.text : row.lastFixAt ? p9mp(locale, 'p9c_tip_last', { t: row.pos.text }) : '';
   const l3 = [last, p9m(locale, `p9c_tip_seg_${row.seg}`)].filter(Boolean).map(esc).join(' · ');
-  return [l1, l2, `<span class="g">${l3}</span>`, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
+  /* J-17: pozycja szacowana statku (auto na promie bez grupy) — osobna linia przed „kliknij” */
+  const l4 = est ? `<span class="g">${esc(est)}</span>` : '';
+  return [l1, l2, `<span class="g">${l3}</span>`, l4, `<span class="g">${esc(p9m(locale, 'p9c_tip_click'))}</span>`].filter((x) => x && x !== '<span class="g"></span>').join('<br>');
 }
 /**
  * wyglad/P9-e (E45 pkt 5, R5): znacznik grupy — auta jednego rejsu na statku (strzałka statku) albo kilka aut w jednej
@@ -120,6 +123,7 @@ function groupIcon(g: Extract<Placed, { kind: 'ferry' | 'zone' }>): L.DivIcon {
     'wt-mk', 'is-grp', `is-${tone}`,
     g.kind === 'ferry' ? 'is-ship' : '',
     g.kind === 'ferry' && g.ais === 'none' ? 'is-noais' : '',
+    g.kind === 'ferry' && g.ais === 'est' ? 'is-est' : '',
     g.late ? 'is-late' : '',
   ].filter(Boolean).join(' ');
   return L.divIcon({
@@ -551,7 +555,44 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         const a = l ? demoStageAnchor(stageTileOf(l), zones) : null;
         return a ? { ...f, lat: a.lat, lng: a.lng } : f;
       });
-      const fleet = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
+      const ferryKeyOf = (l: Load | undefined): string | null => {
+        if (!l) return null;
+        if (l.sailingId) return l.sailingId;
+        /* bez przypisanego rejsu: statek (jeden statek płynie w danej chwili jednym rejsem) */
+        return l.ferry.vessel ? `v:${vesselKey(l.ferry.vessel)}` : null;
+      };
+      const ferryInfo = (fk: string): FerryInfo | null => {
+        const s = sailings.find((x) => x.id === fk);
+        if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
+        const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
+        if (!l) return null;
+        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
+        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
+      };
+      const shipOf = (fk: string): ShipFix | null => {
+        const v = vesselKey(ferryInfo(fk)?.vessel);
+        if (!v) return null;
+        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
+        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
+        if (!p) return null;
+        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, getNowIso()) === 'stale', vessel: p.name, estimated: p.estimated };
+      };
+      const fleet0 = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
+      /* 22.10.2026 (SG-17 „stoi w porcie”): tracker milknie na promie — auto „Na promie” stoi na pozycji statku z AIS
+         (Mapa, Kokpit, Przegląd i tryb skupienia; centrowanie Przeglądu za statkiem). Statek nie jest rysowany drugi raz. */
+      /* J-17 (audyt 25.10): auto na pozycji szacowanej statku (Przegląd, tryb skupienia — bez grup) — dopisek w dymku */
+      const estById = new Map<string, string | null>();
+      const fleet = PROD_BUILD
+        ? fleet0.map((f) => {
+          const l = loadOf.get(f.id);
+          const fk = l && stageTileOf(l) === 'FERRY' ? ferryKeyOf(l) : null;
+          const ship = fk ? shipOf(fk) : null;
+          if (!ship) return f;
+          takenShips.add(vesselKey(ship.vessel));
+          if (ship.estimated) estById.set(f.id, ship.estimated.lastAisTs ?? null);
+          return { ...f, lat: ship.lat, lng: ship.lng };
+        })
+        : fleet0;
       /* E29 pkt 4 i 7: etap, opóźnienie, brak GPS i dymek z tych samych danych co tabela Mapy */
       const loc = useTowerStore.getState().locale;
       const nowIso = getNowIso();
@@ -584,28 +625,6 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       /* wyglad/P9-e (E45 pkt 5, R5): auta jednego rejsu na promie — jeden znacznik na statku z AIS; więcej niż 1 auto
          w strefie załadunku, portu PL, portu SE albo placu — jeden znacznik z liczbą. Przegląd i tryb skupienia bez grup. */
       const fleetById = new Map(fleet.map((f) => [f.id, f]));
-      const ferryKeyOf = (l: Load | undefined): string | null => {
-        if (!l) return null;
-        if (l.sailingId) return l.sailingId;
-        /* bez przypisanego rejsu: statek (jeden statek płynie w danej chwili jednym rejsem) */
-        return l.ferry.vessel ? `v:${vesselKey(l.ferry.vessel)}` : null;
-      };
-      const ferryInfo = (fk: string): FerryInfo | null => {
-        const s = sailings.find((x) => x.id === fk);
-        if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
-        const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
-        if (!l) return null;
-        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
-        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
-      };
-      const shipOf = (fk: string): ShipFix | null => {
-        const v = vesselKey(ferryInfo(fk)?.vessel);
-        if (!v) return null;
-        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
-        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
-        if (!p) return null;
-        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: ferryMarkerTone(p.ts, nowIso) === 'stale', vessel: p.name };
-      };
       const groupItems: GroupItem[] = fleet.map((f) => {
         const row = rowOf(f.id);
         return {
@@ -664,8 +683,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         });
         /* telefon (E29 pkt 9): zamiast dymka arkusz po dotknięciu */
         if (!onMarkerRef.current) {
+          const estAt = estById.get(f.id);
+          const est = estAt === undefined ? null
+            : estNote(estAt, (k, p) => (p ? p9ep(loc, k, p) : p9e(loc, k)), (iso) => formatListDateTime(iso, TZ_OPS));
           m.bindTooltip(
-            row ? vehicleTip(row, loc) : [f.code, f.driver, f.plate].filter(Boolean).join(' · '),
+            row ? vehicleTip(row, loc, est) : [f.code, f.driver, f.plate, est].filter(Boolean).join(' · '),
             { direction: 'top', offset: [0, -14], className: 'wt-mk-tip' },
           );
         }
@@ -731,6 +753,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         if (p.source === 'seed') continue;
         if (takenShips.has(vesselKey(p.name))) continue;
         const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
+        const loc = useTowerStore.getState().locale;
+        if (p.estimated) {
+          /* #429 C: pozycja szacowana z rozkładu — znacznik przerywany, opis z godziną ostatniego AIS */
+          const last = p.estimated.lastAisTs;
+          const est = last
+            ? t(loc, 'i429_est_tip').replace('{d}', formatOpsDateTime(last))
+            : t(loc, 'i429_est_tip_none');
+          L.marker([p.lat, p.lng], {
+            icon: ferryDivIcon('#6BA8D6', heading, false, true),
+            keyboard: false,
+          })
+            .bindTooltip(`${p.name || p.mmsi} · ${est}`, { direction: 'top', offset: [0, -10] })
+            .addTo(layers.ais);
+          continue;
+        }
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
         const tip = stale

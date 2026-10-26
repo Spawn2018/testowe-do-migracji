@@ -28,15 +28,17 @@ interface Props {
   statusRows: DocStatusRow[];
   allowed: DocCategory[];
   loadId?: string | null;
+  /** wyglad/W-cele-przejsc: rodzaj wybrany na starcie (np. „Wgraj” ze sprawy w „Do zrobienia”), gdy jest na liście rodzajów */
+  category?: DocCategory | null;
   onClose: () => void;
 }
 
 const dm = (d: string | null | undefined) => (d ? formatCalendarDay(d.slice(0, 10)) : '—');
 
-export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed, loadId, onClose }: Props) {
+export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed, loadId, category, onClose }: Props) {
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<string>(loadId ?? '');
-  const [cat, setCat] = useState<DocCategory | ''>('');
+  const [cat, setCat] = useState<DocCategory | ''>(category && allowed.includes(category) ? category : '');
   const [scope, setScope] = useState<'FIRMA' | 'TRASA'>('FIRMA');
   const [file, setFile] = useState<File | null>(null);
   const [drag, setDrag] = useState(false);

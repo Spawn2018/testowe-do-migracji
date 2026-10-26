@@ -45,7 +45,9 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
   const [ver, setVer] = useState<Record<string, number>>({});
   const [flash, setFlash] = useState<{ id: string; text: string } | null>(null);
   const [drafts, setDrafts] = useState<ReadonlyMap<string, Draft>>(new Map());
-  const ro = readOnly || !src?.save;
+  /* F7 #524: odczyt zapisanych treści nieudany — tylko podgląd (inaczej „Zapisz” nadpisałby zapisaną treść domyślną) */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const ro = readOnly || !src?.save || loadFailed;
   const items = useRef(new Map<string, HTMLButtonElement>());
   const edBox = useRef<HTMLDivElement>(null);
   /* null = pierwsze wejście (bez przewijania i bez przenoszenia kursora) */
@@ -76,7 +78,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
     let alive = true;
     void src.saved().then(
       (rows) => { if (alive) { setSaved(new Map(rows.map((r) => [r.id, r]))); setLoaded(true); } },
-      () => { if (alive) setLoaded(true); },
+      () => { if (alive) { setLoadFailed(true); setLoaded(true); } },
     );
     return () => { alive = false; };
   }, [src]);
@@ -160,7 +162,7 @@ export function MessageTexts({ readOnly }: { readOnly: boolean }) {
           status={status(item, false)}
           loads={loads}
           readOnly={ro}
-          prodPending={!src}
+          prodPending={!src || loadFailed}
           phone={phone}
           onBack={phone ? () => setOpen(false) : null}
           flash={flash?.id === item.id ? flash.text : null}
@@ -297,7 +299,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     const bod = toMarkers(body);
     void src.save(item.id, subj, bod).then((r) => {
       setBusy(false);
-      if (!r.ok || !r.row) { setMsg({ bad: true, text: p8t('p8_fail') }); return; }
+      if (!r.ok || !r.row) { setMsg({ bad: true, text: r.error ?? p8t('p8_fail') }); return; }
       setMsg({ bad: false, text: p8t('p8_saved') });
       onSaved(r.row);
     }, fail);
@@ -310,7 +312,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     setBusy(true);
     void src.reset(item.id).then((r) => {
       setBusy(false);
-      if (!r.ok) { setMsg({ bad: true, text: p8t('p8_fail') }); return; }
+      if (!r.ok) { setMsg({ bad: true, text: r.error ?? p8t('p8_fail') }); return; }
       onReset();
     }, fail);
   };
@@ -338,6 +340,8 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
       </header>
       <p className="mt-note">{sms ? p8t('p8_pl_only') : item.noBell ? p8t('p8_pack_note') : p8t('p8_email_note')}</p>
       {readOnly ? <p className="mt-ro" data-mt-ro>{prodPending ? p8t('p8_ro_prod') : p8t('p8_ro')}</p> : null}
+      {/* #412 E43 (0289): uczciwie — zapis w bazie jest, wysyłka korzysta z niego dopiero po P8 */}
+      {src?.prod ? <p className="mt-note" data-mt-prod-note>{p8t(item.channel === 'LOGIN' ? 'p8_prod_login' : 'p8_prod_store')}</p> : null}
 
       {email ? (
         <div className="mt-field">

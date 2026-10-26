@@ -28,11 +28,12 @@ export function truckDivIcon(status: string, color: string): L.DivIcon {
   });
 }
 
-export function ferryDivIcon(color: string, headingOrSailing: number | FerrySailing, stale = false): L.DivIcon {
+export function ferryDivIcon(color: string, headingOrSailing: number | FerrySailing, stale = false, estimated = false): L.DivIcon {
   const heading =
     typeof headingOrSailing === 'number' ? headingOrSailing : ferryHeadingDeg(headingOrSailing);
+  const cls = ['wt-marker', 'wt-marker-ferry', stale ? 'wt-marker-ferry-stale' : '', estimated ? 'wt-marker-ferry-est' : ''].filter(Boolean).join(' ');
   return L.divIcon({
-    className: stale ? 'wt-marker wt-marker-ferry wt-marker-ferry-stale' : 'wt-marker wt-marker-ferry',
+    className: cls,
     html: arrowDotHtml({ color, dir: heading, size: 22, ring: '#DCE7EE' }),
     iconSize: [22, 22],
     iconAnchor: [11, 11],

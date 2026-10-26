@@ -114,7 +114,7 @@ export interface Awizacja {
 
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
 export type FerryRoute = 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY';
-export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY';
+export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export interface Sailing {
   id: string;
   vessel: string;
@@ -387,6 +387,8 @@ export interface Load {
   delayed: boolean;
   docMissing: boolean;
   permitFits: boolean | null;
+  /** Kokpit „Zezwolenia 7 dni” (właściciel 21.10.2026 20:14): zezwolenia podpięte i komplet (FIRMA albo PL+SE, bez naruszeń) — z `load_permit_status`; brak = nieznane (demo: dokumenty). */
+  permitComplete?: boolean | null;
   permit?: LoadPermit;
   /** KSH order no from schedule import ("Nr zlecenia") */
   orderNo?: string | null;
@@ -415,6 +417,8 @@ export interface Geofence {
   lng: number;
   /** Kraj strefy. SMS załadunku i placu czyta tę wartość, nie sam środek koła. */
   country?: GeofenceCountry;
+  /** #505 / E34: trasa portu (POLFERRIES / STENA); null = nieportowa albo jak POLFERRIES w silniku. */
+  route?: 'POLFERRIES' | 'STENA' | null;
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;
@@ -508,6 +512,12 @@ export interface Risk {
   kind?: string;
   /** wyglad/W-faktura-termin (A4): faktura sprawy „po terminie płatności” (`detail.invoice_id`) — przycisk „Otwórz fakturę”. */
   invoiceId?: string;
+  /** wyglad/W-todo-jedna-sprawa (#384): ryzyko o decyzji (`detail.decision_id`, np. „Decyzja po terminie”). */
+  decisionId?: string;
+  /** wyglad/W-cele-przejsc: braki z `detail` sprawy DOC_MISSING (0243: `rule`, `permit` — brak zezwolenia, `policy` — brak polisy SCX) */
+  docRule?: string;
+  docPermit?: boolean;
+  docPolicy?: boolean;
 }
 
 export interface RateRule {
@@ -619,6 +629,16 @@ export interface BillLine {
   expectedNet?: number | null;
   flags: BillFlag[];
 }
+export interface BillFactoring {
+  selected: boolean;
+  feePct: number | null;
+  fee: number | null;
+  payout: number | null;
+  hours: number | null;
+  acceptedAt: string | null;
+  dueAt: string | null;
+  paidAt: string | null;
+}
 export interface Bill {
   id: string;
   direction: BillDirection;
@@ -644,6 +664,8 @@ export interface Bill {
   /** Tryb Supabase: ścieżka pliku PDF w Storage (link podpisany 15 min). */
   pdfStoragePath?: string | null;
   lines: BillLine[];
+  /** E4b (0287): wybór przewoźnika „Faktoring HHL” i wyliczenie z bazy (prowizja, wypłata, termin 48 h od akceptacji). */
+  factoring?: BillFactoring | null;
   /** Kontrole nagłówka: BRAK_NA_FAKTURZE + pominięte transporty tygodnia. */
   headerFlags: string[];
   missingLoadIds: string[];

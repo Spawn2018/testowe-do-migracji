@@ -22,6 +22,8 @@ import { DeliveredCheckCard } from '../drawer/DeliveredCheckCard';
 import { DetourCard } from './DetourCard';
 import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
+import { EMPTY_PROPOSAL, proposalOfDetail, proposalPayload, proposalSummary, type ProposalForm } from '../../lib/proposeDate';
+import { getNow } from '../../lib/frozenNow';
 
 export interface CardCtx {
   role: 'HHL' | 'SCX';
@@ -48,7 +50,8 @@ export interface CardCtx {
   /** wyglad/E49: „Objazd czy postój?” — kto decyduje i zapis (null = nie podłączone) */
   detourHandlers: (i: TodoIssue) => { canDecide: boolean; busy: boolean; onDecide: ((pick: 'HOLD' | 'DETOUR', note: string | null) => void) | null };
   decisions: DecisionsApi | null;
-  mayResolve: (deciderRole: string | null) => boolean;
+  /** `overdue` — decyzja po terminie albo eskalowana (#384 pkt 6: wtedy także Operacje HHL) */
+  mayResolve: (deciderRole: string | null, overdue?: boolean) => boolean;
   onResolved: (i: TodoIssue, hint: string | null) => void;
 }
 
@@ -192,11 +195,32 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
   const d = i.decision;
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  /* #384 pkt 5: formularz terminu dla opcji z efektem PROPOSE („Proponuję inny termin”) */
+  const [proposeCode, setProposeCode] = useState<string | null>(null);
+  const [prop, setProp] = useState<ProposalForm>(EMPTY_PROPOSAL);
   const [msg, setMsg] = useState<string | null>(null);
   const roleKey = i.owner === 'SCX' ? 'CARRIER_DISPATCH' : i.owner === 'KSH' ? 'CLIENT_USER' : 'HHL_OPS';
   const adminOnly = d?.deciderRole === 'ADMIN';
-  const resolve = async (code: string, needsNote: boolean) => {
+  const sendProposal = async () => {
+    if (!ctx.decisions || !d || !proposeCode) return;
+    const r = proposalPayload(prop, getNow());
+    if ('error' in r) {
+      setMsg(decText(locale, `dec_prop_err_${r.error}`));
+      return;
+    }
+    setBusy(true);
+    const res = await ctx.decisions.resolve(d.id, proposeCode, note.trim() || proposalSummary(prop), r.payload);
+    setBusy(false);
+    if (res.error) setMsg(res.error);
+    else ctx.onResolved(i, res.hint);
+  };
+  const resolve = async (code: string, needsNote: boolean, effect?: string) => {
     if (!ctx.decisions || !d) return;
+    if (effect === 'PROPOSE') {
+      setMsg(null);
+      setProposeCode((c) => (c === code ? null : code));
+      return;
+    }
     if (needsNote && note.trim().length < 3) {
       setMsg(t(locale, 'dec_need_comment'));
       return;
@@ -227,6 +251,9 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
             ? rtp(locale, 'p6_case_dec_admin', { org: rt(locale, `p6_org_${i.owner}`) })
             : rtp(locale, 'p6_case_dec_line', { org: rt(locale, `p6_org_${i.owner}`), role: rt(locale, `p6_role_${roleKey}`) })}</dd>
         </div>
+        {d && proposalOfDetail(d.detail) ? (
+          <div><dt>{decText(locale, 'dec_prop_title')}</dt><dd data-rk-proposal>{proposalOfDetail(d.detail)}</dd></div>
+        ) : null}
         {ctx.assignOn ? (
           <div><dt>{rt(locale, 'p6_case_assigned')}</dt><dd><b>{a ? (a.id === ctx.me?.id ? `${rt(locale, 'p6_me')} (${a.name})` : a.name) : rt(locale, 'p6_case_assigned_none')}</b></dd></div>
         ) : null}
@@ -257,16 +284,41 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
         </div>
       ) : null}
       {d && ctx.decisions ? (
-        ctx.mayResolve(d.deciderRole) ? (
+        ctx.mayResolve(d.deciderRole, i.overdue || !!d.escalatedAt) ? (
           <div className="rk-resolve">
             <div className="rk-acts">
               {d.options.map((o) => (
-                <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code} onClick={() => void resolve(o.code, o.requires_comment)}>
-                  {decText(locale, o.label_key, o.code)}{o.requires_comment ? ' *' : ''}
+                <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code}
+                  aria-expanded={o.effect === 'PROPOSE' ? proposeCode === o.code : undefined}
+                  onClick={() => void resolve(o.code, o.requires_comment, o.effect)}>
+                  {decText(locale, o.label_key, o.code)}{o.requires_comment && o.effect !== 'PROPOSE' ? ' *' : ''}
                 </button>
               ))}
               <button type="button" className="btn ghost" disabled={busy} onClick={() => void snooze()}>{t(locale, 'dec_snooze_2h')}</button>
             </div>
+            {proposeCode ? (
+              <fieldset className="rk-propose" data-rk-propose>
+                <legend>{decText(locale, 'dec_prop_title')}</legend>
+                <div className="rk-propose-grid">
+                  <label><span>{decText(locale, 'dec_prop_load_date')} *</span>
+                    <input className="input" type="date" required value={prop.loadDate} data-rk-prop="load_date"
+                      onChange={(e) => setProp((p) => ({ ...p, loadDate: e.target.value }))} /></label>
+                  <label><span>{decText(locale, 'dec_prop_load_time')}</span>
+                    <input className="input" type="time" value={prop.loadTime} data-rk-prop="load_time"
+                      onChange={(e) => setProp((p) => ({ ...p, loadTime: e.target.value }))} /></label>
+                  <label><span>{decText(locale, 'dec_prop_del_date')}</span>
+                    <input className="input" type="date" value={prop.deliveryDate} data-rk-prop="delivery_date"
+                      onChange={(e) => setProp((p) => ({ ...p, deliveryDate: e.target.value }))} /></label>
+                  <label><span>{decText(locale, 'dec_prop_del_time')}</span>
+                    <input className="input" type="time" value={prop.deliveryTime} data-rk-prop="delivery_time"
+                      onChange={(e) => setProp((p) => ({ ...p, deliveryTime: e.target.value }))} /></label>
+                </div>
+                <p className="rk-muted">{decText(locale, 'dec_prop_hint')}</p>
+                <button type="button" className="btn is-solid" disabled={busy} data-rk-prop-send onClick={() => void sendProposal()}>
+                  {decText(locale, 'dec_prop_send')}
+                </button>
+              </fieldset>
+            ) : null}
             <label className="rk-note">
               <span>{t(locale, 'dec_comment')}</span>
               <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />

@@ -16,6 +16,20 @@ import { navForRole } from '../lib/permissions';
 import { buildRoute, parseRoute } from '../lib/routes';
 import { composeFromSearch, setChatCompose } from '../lib/chatCompose';
 
+/**
+ * Parametry jednorazowe linku do transportu (zakładka, odpowiedź na czacie) — po przejściu do innego widoku albo transportu
+ * nie przechodzą dalej (właściciel 21.10.2026, 16:27: link z dzwonka „?zakladka=status” otwierał każdy kolejny transport na Statusie).
+ */
+const ONE_SHOT = ['zakladka', 'odpowiedz', 'tekst'];
+export function carrySearch(search: string): string {
+  const q = new URLSearchParams(search);
+  let changed = false;
+  for (const k of ONE_SHOT) if (q.has(k)) { q.delete(k); changed = true; }
+  if (!changed) return search;
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
 function readWindowHash(): Pick<Location, 'pathname' | 'search'> {
   const raw = window.location.hash.replace(/^#/, '') || '/';
   const q = raw.indexOf('?');
@@ -145,7 +159,7 @@ export function useRouteSync() {
       if (st.openInvoiceId) st.setOpenInvoiceId(null);
       const open = st.selectedLoadId ? st.loads.find((x) => x.id === st.selectedLoadId) : null;
       const target = buildRoute(st.view, open?.code ?? null);
-      if (target !== cur.pathname) navigate({ pathname: target, search: cur.search }, { replace: true });
+      if (target !== cur.pathname) navigate({ pathname: target, search: carrySearch(cur.search) }, { replace: true });
       return;
     }
     if (r.kind === 'unknown' || r.kind === 'decision' || r.kind === 'system' || r.kind === 'options' || r.kind === 'denied' || r.kind === 'entry' || r.kind === 'sms' || r.kind === 'workflow') return;
@@ -155,6 +169,8 @@ export function useRouteSync() {
       if (l) {
         pendingCode.current = null;
         st.selectLoad(l.id);
+        /* F7 #394: zimny start z linku (dane jeszcze się wczytywały) — zakładka z linku jak przy zwykłym wejściu */
+        applyUrlToStore(cur.pathname, cur.search, pendingCode);
         return;
       }
       if (!st.loads.length) return; // dane jeszcze się wczytują
@@ -165,6 +181,6 @@ export function useRouteSync() {
     const sel = st.selectedLoadId ? st.loads.find((x) => x.id === st.selectedLoadId) : null;
     const target = buildRoute(st.view, sel?.code ?? null);
     if (target === cur.pathname) return;
-    navigate({ pathname: target, search: cur.search }, { replace });
+    navigate({ pathname: target, search: carrySearch(cur.search) }, { replace });
   }, [view, selectedLoadId, loads, openInvoiceId, navigate]);
 }

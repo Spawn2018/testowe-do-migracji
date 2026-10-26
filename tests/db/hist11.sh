@@ -66,10 +66,36 @@ val "filtr entity=ops_thresholds" \
    select (count(*) > 0)::text from admin_audit_history(null,null,null,'ops_thresholds',null,null,50,0); rollback;" \
   t
 
-err "KSH: admin_audit_history odmowa" \
+# #484: KSH/SCX/OPS mają dostęp (zakres); anon nadal bez EXECUTE.
+L1=$(sys "select id from loads order by created_at nulls last limit 1" | tr -d '\r')
+sys "insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, load_id, scope_carrier_org_id, scope_client_org_id)
+     select '$HHLID', 'HIST11_LOAD', 'loads', '$L1', '{}'::jsonb,
+            jsonb_build_object('status','READY','hhl_order_no','H-SECRET','carrier_order_no','C-SECRET'),
+            '$L1'::uuid, l.carrier_org_id, p.client_org_id
+       from loads l join projects p on p.id = l.project_id
+      where l.id = '$L1'
+        and not exists (select 1 from audit_log where action='HIST11_LOAD' and entity_id='$L1')" >/dev/null
+
+OPS_AUTH=11111111-0000-0000-0000-0000000000b1
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('$OPS_AUTH','00000000-0000-0000-0000-00000000a001','ops-hist11@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id" >/dev/null
+
+val "HHL_OPS: admin_audit_history zwraca wiersze (#484)" \
+  "begin; select set_config('request.jwt.claim.sub','$OPS_AUTH',true); set local role authenticated;
+   select (count(*) > 0)::text from admin_audit_history(null,null,null,null,null,null,20,0); rollback;" \
+  t
+
+val "KSH: widzi wpis swojego transportu (#484)" \
   "begin; select set_config('request.jwt.claim.sub','$KSH',true); set local role authenticated;
-   select * from admin_audit_history(null,null,null,null,null,null,5,0); rollback;" \
-  "Tylko administrator HHL|administrator"
+   select (count(*) > 0)::text from admin_audit_history(null,null,null,'loads',null,null,50,0); rollback;" \
+  t
+
+val "KSH: bez numerów zleceń w new_value (#484)" \
+  "begin; select set_config('request.jwt.claim.sub','$KSH',true); set local role authenticated;
+   select ((new_value ? 'hhl_order_no') is false and (new_value ? 'carrier_order_no') is false)::text
+     from admin_audit_history(null,null,null,'loads','HIST11_LOAD',null,5,0) limit 1; rollback;" \
+  t
 
 err "anon bez EXECUTE" \
   "select has_function_privilege('anon','admin_audit_history(timestamptz,timestamptz,uuid,text,text,text,int,int)','execute')::text" \

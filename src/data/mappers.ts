@@ -2,7 +2,7 @@
  * BK3 — mapowanie wierszy Supabase (schemat 0001/0006) ↔ typy aplikacji.
  * Czyste funkcje (bez klienta Supabase) — testowane jednostkowo.
  */
-import { mechanismIssue, type MoneySideV2 } from '../lib/money/loadMoney';
+import { mechanismIssue, type MoneyFuelBasis, type MoneySideV2 } from '../lib/money/loadMoney';
 import { plSeLocation } from '../lib/pl/seLocation';
 import { formatListDateTime } from '../lib/format';
 import type {
@@ -174,7 +174,9 @@ export const vesselToDb = (v: string | null | undefined): string | null => {
 export function trackingLinkFromRow(row: LoadRow): TrackingLinkInfo | null | undefined {
   const ref = row.telematics_vehicle_id ?? null;
   const kind = trackerKind(ref);
-  const hasRio = Boolean(row.rio_tracking_id) || kind === 'rio';
+  /* #392 (SG-18, właściciel 21.10.2026 16:06): o rodzaju decyduje zapisany link. Po zmianie RIO → emtrack / inny
+     baza mogła zostawić stare `rio_tracking_id` — to nie czyni transportu „RIO” (pusty link też nie). */
+  const hasRio = kind === 'rio';
   if (!hasRio && kind === 'none') return undefined;
   if (!hasRio && kind === 'emtrack') {
     return { provider: 'EMTRACK', check: { state: 'ok' } };
@@ -378,6 +380,8 @@ export function eventToRow(e: Omit<LoadEvent, 'id'>): Record<string, unknown> {
 export interface MessageRow {
   id: number | string; load_id: string; body: string; created_at: string; author_org: string | null;
   author_display?: string | null;
+  /** B4: odbiorcy wiadomości (`org_kind[]`); bez CLIENT = „tylko HHL i SCX” */
+  visible_to?: string[] | null;
   reads?: { userId?: string; user_id?: string; name?: string; org?: string; at?: string }[] | null;
 }
 export function messageFromRow(r: MessageRow): LoadMessage {
@@ -397,6 +401,7 @@ export function messageFromRow(r: MessageRow): LoadMessage {
     author: (r.author_display && String(r.author_display).trim()) || org,
     org,
     text: r.body,
+    ...(Array.isArray(r.visible_to) && r.visible_to.length > 0 && !r.visible_to.includes('CLIENT') ? { visibleTo: 'HHL_SCX' as const } : {}),
     ...(reads?.length ? { reads } : {}),
   };
 }
@@ -406,12 +411,15 @@ export interface GeofenceRow {
   id: string; name: string; kind: string; hysteresis_m: number; dwell_seconds: number; debounce_fixes: number;
   notify_enter: boolean; notify_exit: boolean; notify_dwell: boolean; notify_orgs: string[] | null;
   active: boolean; lat: number; lng: number; radius_m: number; country?: string | null;
+  route?: string | null;
 }
 const GEO_KINDS: GeofenceType[] = ['LOADING', 'PORT_OUT', 'PRE_PORT', 'PORT_IN', 'CHECKPOINT', 'PRE_ARRIVAL', 'SITE', 'REST'];
 const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE'] as const;
+const GEO_ROUTES = ['POLFERRIES', 'STENA'] as const;
 export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
   const kinds = new Set((r.notify_orgs ?? []).map((id) => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '')));
   const country = (r.country ?? '').trim();
+  const route = (r.route ?? '').trim();
   return {
     id: r.id, name: r.name,
     type: (GEO_KINDS as string[]).includes(r.kind) ? (r.kind as GeofenceType) : 'CHECKPOINT',
@@ -421,10 +429,14 @@ export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
     active: r.active,
     trigger: r.notify_dwell ? 'DWELL_EXCEEDED' : r.notify_exit ? 'EXIT' : 'ENTER',
     ...(GEO_COUNTRIES.includes(country as typeof GEO_COUNTRIES[number]) ? { country: country as typeof GEO_COUNTRIES[number] } : {}),
+    ...(GEO_ROUTES.includes(route as typeof GEO_ROUTES[number]) ? { route: route as typeof GEO_ROUTES[number] } : { route: null }),
   };
 }
-export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], serverId: string | null) {
+export function geofenceToRpc(
+  g: Geofence, projectId: string, orgs: OrgRow[], serverId: string | null, reason?: string | null,
+) {
   const orgIds = (kind: OrgKind) => orgs.filter((o) => orgKindToApp(o.kind) === kind).map((o) => o.id);
+  const port = g.type === 'PORT_OUT' || g.type === 'PRE_PORT' || g.type === 'PORT_IN';
   return {
     p_id: serverId, p_project: projectId, p_name: g.name, p_kind: g.type,
     p_lat: g.lat, p_lng: g.lng, p_radius_m: Math.round(g.radiusM),
@@ -434,6 +446,8 @@ export function geofenceToRpc(g: Geofence, projectId: string, orgs: OrgRow[], se
     p_notify_orgs: [...(g.notifyHhl ? orgIds('HHL') : []), ...(g.notifyKsh ? orgIds('KSH') : []), ...(g.notifyScx ? orgIds('SCX') : [])],
     p_active: g.active,
     p_country: g.country ?? null,
+    p_route: port ? (g.route === 'STENA' || g.route === 'POLFERRIES' ? g.route : null) : null,
+    p_reason: reason?.trim() || null,
   };
 }
 
@@ -474,6 +488,12 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     metaParams: params,
     /* wyglad/W-faktura-termin (A4): sprawa „Faktura po terminie płatności” prowadzi do tej faktury */
     invoiceId: str(d.invoice_id) || undefined,
+    /* wyglad/W-todo-jedna-sprawa (#384): „Decyzja po terminie” wskazuje decyzję (`detail.decision_id`) */
+    decisionId: str(d.decision_id) || undefined,
+    /* wyglad/W-cele-przejsc (F7 B1): czego brakuje w sprawie dokumentowej — cel „Wgraj” (0243: permit / policy) */
+    docRule: str(d.rule) || undefined,
+    docPermit: typeof d.permit === 'boolean' ? d.permit : undefined,
+    docPolicy: typeof d.policy === 'boolean' ? d.policy : undefined,
   };
 }
 
@@ -505,7 +525,11 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
     route: ferryRouteFromDb(r.route),
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
-    status: r.status === 'ODWOLANY' ? 'ODWOLANY' : r.status === 'OPOZNIONY' ? 'OPOZNIONY' : 'ZAPLANOWANY',
+    status: r.status === 'ODWOLANY' ? 'ODWOLANY'
+      : r.status === 'OPOZNIONY' ? 'OPOZNIONY'
+        : r.status === 'W_REJSIE' ? 'W_REJSIE'
+          : r.status === 'DOPLYNAL' ? 'DOPLYNAL'
+            : 'ZAPLANOWANY',
     source: src,
   };
 }
@@ -555,6 +579,8 @@ export interface PriceViewRow {
   computed_total_eur: number | string | null; invoiced_total_eur: number | string | null; effective_total_eur: number | string | null;
   fuel_ref_date: string | null; fuel_mult_sek: number | string | null; fuel_mult_pln: number | string | null; fuel_applied_mult: number | string | null;
   fuel_status?: string | null;
+  /** #409 / 0268 — `fuel_basis` (jsonb): avg_*, n_*, pubs_* (`[{published_on, value}]`). */
+  fuel_basis?: unknown;
   fx_table_no: string | null; fx_effective_date: string | null; fx_rate_pln: number | string | null; fx_provisional: boolean | null;
 }
 
@@ -562,7 +588,32 @@ export interface PriceViewRow {
 export const PRICE_VIEW_COLUMNS_LEGACY =
   'load_id,pricing_tier,base_amount,baf_amount,extras_amount,computed_total_eur,invoiced_total_eur,effective_total_eur,' +
   'fuel_ref_date,fuel_mult_sek,fuel_mult_pln,fuel_applied_mult,fx_table_no,fx_effective_date,fx_rate_pln,fx_provisional';
-export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
+export const PRICE_VIEW_COLUMNS_NO_BASIS = PRICE_VIEW_COLUMNS_LEGACY + ',fuel_status';
+/** #409 / 0268: `fuel_basis` w widokach cen; przed migracją — zapas `PRICE_VIEW_COLUMNS_NO_BASIS`. */
+export const PRICE_VIEW_COLUMNS = PRICE_VIEW_COLUMNS_NO_BASIS + ',fuel_basis';
+
+const basisNum = (v: unknown): number | null => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+};
+/** `fuel_basis` → średnie, liczby i publikacje (SEK = OKQ8, PLN = Orlen); zły kształt → null. */
+export function fuelBasisFromDb(raw: unknown): MoneyFuelBasis | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const pubs: MoneyFuelBasis['pubs'] = [];
+  for (const [key, source] of [['pubs_sek', 'OKQ8'], ['pubs_pln', 'ORLEN']] as const) {
+    const arr = Array.isArray(o[key]) ? (o[key] as unknown[]) : [];
+    for (const p of arr) {
+      if (!p || typeof p !== 'object') continue;
+      const q = p as Record<string, unknown>;
+      const date = typeof q.published_on === 'string' ? q.published_on.slice(0, 10) : null;
+      const price = basisNum(q.value);
+      if (date && price != null) pubs.push({ date, source, price });
+    }
+  }
+  pubs.sort((a, b) => a.date.localeCompare(b.date) || a.source.localeCompare(b.source));
+  return { avgSek: basisNum(o.avg_sek), avgPln: basisNum(o.avg_pln), nSek: basisNum(o.n_sek), nPln: basisNum(o.n_pln), pubs };
+}
 
 const TIERS = ['PROGNOZA', 'REALIZACJA', 'FAKTURA'] as const;
 type Tier = (typeof TIERS)[number];
@@ -578,6 +629,7 @@ function sideFromView(r: PriceViewRow): MoneySideV2 {
       refDate: r.fuel_ref_date ?? '',
       multSek: num(r.fuel_mult_sek) ?? 1, multPln: num(r.fuel_mult_pln) ?? 1, applied: num(r.fuel_applied_mult) ?? 1,
       ...(r.fuel_status === 'PROGNOZA' || r.fuel_status === 'WSTEPNY' || r.fuel_status === 'OSTATECZNY' || r.fuel_status === 'BRAK' ? { status: r.fuel_status as 'PROGNOZA' | 'WSTEPNY' | 'OSTATECZNY' | 'BRAK' } : {}),
+      ...(() => { const b = fuelBasisFromDb(r.fuel_basis); return b ? { basis: b } : {}; })(),
     },
     fx: { tableNo: r.fx_table_no ?? '', mid: num(r.fx_rate_pln) ?? 0, date: r.fx_effective_date ?? '', provisional: Boolean(r.fx_provisional) },
   };
@@ -630,11 +682,16 @@ export interface BillRow {
   due_date: string | null; due_date_from_document: boolean | null; verification_status: string; dispute_note: string | null;
   payment_status: string; paid_at: string | null; document_id: string | null; check_flags: string[] | null;
   missing_load_ids: string[] | null; submitted_at: string | null; invoice_lines: BillLineRow[] | null;
+  /* E4b (0287) */
+  factoring_selected?: boolean | null; factoring_fee_pct?: number | string | null; factoring_fee_amount?: number | string | null;
+  factoring_net_payout?: number | string | null; factoring_hours?: number | null; factoring_accepted_at?: string | null;
+  factoring_due_at?: string | null; factoring_paid_at?: string | null;
 }
 export const BILL_COLUMNS =
   'id,direction,issuer_org_id,recipient_org_id,invoice_number,issue_date,receipt_date,week_key,currency,net_total,vat_total,' +
   'gross_total,due_date,due_date_from_document,verification_status,dispute_note,payment_status,paid_at,document_id,check_flags,' +
-  'missing_load_ids,submitted_at,invoice_lines(load_id,invoiced_net,invoiced_fuel,fx_table_no,fx_mid,fx_effective_date,expected_amount,flags)';
+  'missing_load_ids,submitted_at,factoring_selected,factoring_fee_pct,factoring_fee_amount,factoring_net_payout,factoring_hours,' +
+  'factoring_accepted_at,factoring_due_at,factoring_paid_at,invoice_lines(load_id,invoiced_net,invoiced_fuel,fx_table_no,fx_mid,fx_effective_date,expected_amount,flags)';
 
 const numOrNull = (v: number | string | null | undefined): number | null => (v == null || v === '' ? null : Number(v));
 const orgKindById = (orgs: OrgRow[], id: string | null): OrgKind => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '') ?? 'HHL';
@@ -658,6 +715,13 @@ export function billFromRow(r: BillRow, orgs: OrgRow[], docs: { id: string; file
       expectedNet: numOrNull(l.expected_amount), flags: (l.flags ?? []) as BillFlag[],
     })),
     headerFlags: r.check_flags ?? [], missingLoadIds: r.missing_load_ids ?? [], createdAt: r.submitted_at ?? '',
+    factoring: r.factoring_selected
+      ? {
+          selected: true, feePct: numOrNull(r.factoring_fee_pct), fee: numOrNull(r.factoring_fee_amount),
+          payout: numOrNull(r.factoring_net_payout), hours: r.factoring_hours ?? null, acceptedAt: r.factoring_accepted_at ?? null,
+          dueAt: r.factoring_due_at ?? null, paidAt: r.factoring_paid_at ?? null,
+        }
+      : null,
   };
 }
 

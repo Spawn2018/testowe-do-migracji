@@ -46,6 +46,19 @@ sys "update app_users set role='CARRIER_USER' where auth_id='$SCX'"
 val "SCX Użytkownik (CARRIER_USER) widzi koszt swojego transportu" $SCX "select count(*) from v_load_price_carrier where load_id='$L1'" 1
 sys "update app_users set role='CARRIER_DISPATCH' where auth_id='$SCX'"
 
+# #409 / 0271: fuel_basis w widokach cen (średnie, n, pubs) — E39; bez fuel_publications
+# F7: SCX/KSH — allowlista (bez owner_note / params_*); HHL widzi pełny JSON
+sys "update load_cost set fuel_basis='{\"avg_sek\":19.5,\"avg_pln\":7.1,\"n_sek\":7,\"n_pln\":5,\"pubs_sek\":[{\"published_on\":\"2026-09-22\",\"value\":19.5}],\"pubs_pln\":[{\"published_on\":\"2026-09-23\",\"value\":7.1}],\"owner_note\":\"Decyzja wlasciciela test\",\"owner_override\":true,\"params_version\":9}'::jsonb where load_id='$L1'"
+sys "update load_revenue set fuel_basis='{\"avg_sek\":19.5,\"avg_pln\":7.1,\"n_sek\":7,\"n_pln\":5,\"pubs_sek\":[{\"published_on\":\"2026-09-22\",\"value\":19.5}],\"pubs_pln\":[{\"published_on\":\"2026-09-23\",\"value\":7.1}],\"owner_note\":\"Decyzja wlasciciela test\",\"owner_override\":true,\"params_version\":9}'::jsonb where load_id='$L1'"
+val "SCX widzi fuel_basis.n_sek z widoku kosztu (#409)" $SCX "select (fuel_basis->>'n_sek') from v_load_price_carrier where load_id='$L1'" 7
+val "KSH widzi fuel_basis.n_pln z widoku przychodu (#409)" $KSH "select (fuel_basis->>'n_pln') from v_load_price_client where load_id='$L1'" 5
+val "SCX nie widzi fuel_basis przychodu (#409)" $SCX "select count(*) from v_load_price_client where fuel_basis is not null" 0
+val "KSH nie widzi fuel_basis kosztu (#409)" $KSH "select count(*) from v_load_price_carrier where fuel_basis is not null" 0
+val "HHL widzi pubs_sek[0].value z widoku kosztu (#409)" $HHL "select (fuel_basis->'pubs_sek'->0->>'value') from v_load_price_carrier where load_id='$L1'" 19.5
+val "SCX nie widzi owner_note w fuel_basis (#409 F7)" $SCX "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" false
+val "KSH nie widzi owner_note w fuel_basis (#409 F7)" $KSH "select (fuel_basis ? 'owner_note')::text from v_load_price_client where load_id='$L1'" false
+val "HHL widzi owner_note w fuel_basis (#409 F7)" $HHL "select (fuel_basis ? 'owner_note')::text from v_load_price_carrier where load_id='$L1'" true
+
 echo; echo "[M2] Z1 — faktura nie nadpisuje wyliczonej wartości"
 sys "update load_cost set invoiced_total_eur=2100 where load_id='$L1'"
 val "po fakturze: obie wartości zachowane"         $HHL "select cost_computed_eur||'/'||cost_invoiced_eur||'/'||cost_effective_eur from v_load_financials_hhl where load_id='$L1'" "2000.00/2100.00/2100.00"
@@ -259,6 +272,9 @@ val "A4: cofnięcie Opłacona 39/8 przed M7" $HHL "select unmark_invoice_paid($I
 echo; echo "[M7] Terminy i przypomnienia: kadencja −3/0/+1/+7/+14, tylko płatnik i wierzyciel, opłacona → cisza"
 Q() { $PSQL -c "$1" 2>&1 | tail -1; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
+# #402 F7: migracja nie włącza inv_overdue — test włącza kanały jak c16-push/l13.
+sys "update notification_matrix set in_app=true, email=true
+ where event_key='inv_overdue' and role in ('HHL_ADMIN','CLIENT_USER','CARRIER_DISPATCH')" >/dev/null
 sys "update app_users set locale='sv' where email='scx@test'"
 val "HHL: SCX/FV/39/1 „Opłacona” (utrwalone dla M7)"                 $HHL "select mark_invoice_paid((select id from invoices where invoice_number='SCX/FV/39/1'), '2026-10-01'); select payment_status from invoices where invoice_number='SCX/FV/39/1'" OPLACONA commit
 NPR="from notifications n join app_users u on u.id=n.user_id where n.template='PAYMENT_REMINDER'"
@@ -276,8 +292,28 @@ chk "opłacona → w dniu terminu (30.10) przypomnienie nie wychodzi"   "$(Q "se
 chk "przychodowa +1 dzień (26.10 dla terminu 25.10): KSH płatnik, HHL wierzyciel, SCX nic" "$(Q "select count(*) from (select send_payment_reminders('2026-10-26')) x; select string_agg(distinct u.email||':'||(n.payload->>'party'), ',' order by u.email||':'||(n.payload->>'party')) $NPR and n.payload->>'invoice_id'=(select id::text from invoices where invoice_number='HHL/FV/39/1')")" "hhl@test:PAYEE,ksh@test:PAYER"
 chk "refresh w obie strony: po terminie → PO_TERMINIE"                "$(Q "select payment_status from invoices where invoice_number='HHL/FV/39/1'")" PO_TERMINIE
 err "użytkownik nie uruchomi przypomnień (zadanie systemowe)"         $HHL "select send_payment_reminders('2027-01-01')" "permission denied"
-val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER')) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP')::int" t
+val "KSH oznacza przeczytane własne powiadomienia (IN_APP)"           $KSH "select mark_notifications_read(array(select id from notifications where template='PAYMENT_REMINDER' and channel='IN_APP' and user_id=current_app_user_id())) = (select count(*) from notifications where template='PAYMENT_REMINDER' and channel='IN_APP' and user_id=current_app_user_id())::int" t
 val "KSH nie oznaczy cudzych (HHL) powiadomień"                        $KSH "select mark_notifications_read(array(select id from notifications where user_id=(select id from app_users where email='hhl@test')))" 0
+# #411 F7 B3: mark_notifications_read (front) — para :WP:↔:IN: w obie strony.
+# Szablon PAYMENT_REMINDER (nie RISK_OPEN): bramka #402 kasuje IN_APP, gdy bell off dla roli.
+sys "delete from notifications where dedup_key like '411-twin:%' or dedup_key like '411-twin2:%'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'IN_APP', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin:IN:'||u.id::text
+   from app_users u where u.email='ksh@test'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+ select 'WEB_PUSH', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin:WP:'||u.id::text, 'PENDING'
+   from app_users u where u.email='ksh@test'"
+val "#411: para 411-twin istnieje (IN+WP)" $KSH "select count(*) from notifications where dedup_key like '411-twin:%'" 2
+val "#411: mark_notifications_read(WP) czyści bliźniaka IN" $KSH "select mark_notifications_read(array(select id from notifications where dedup_key like '411-twin:WP:%' and user_id=current_app_user_id())); select count(*) from notifications where dedup_key like '411-twin:%' and read_at is not null" 2 commit
+sys "delete from notifications where dedup_key like '411-twin2:%'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
+ select 'IN_APP', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin2:IN:'||u.id::text
+   from app_users u where u.email='ksh@test'"
+sys "insert into notifications (channel, recipient, user_id, template, payload, dedup_key, status)
+ select 'WEB_PUSH', u.email, u.id, 'PAYMENT_REMINDER', '{}'::jsonb, '411-twin2:WP:'||u.id::text, 'PENDING'
+   from app_users u where u.email='ksh@test'"
+val "#411: mark_notifications_read(IN) czyści bliźniaka WP" $KSH "select mark_notifications_read(array(select id from notifications where dedup_key like '411-twin2:IN:%' and user_id=current_app_user_id())); select count(*) from notifications where dedup_key like '411-twin2:%' and read_at is not null" 2 commit
+val "#411: mark_notifications_read nie rusza cudzych" $KSH "select mark_notifications_read(array(select n.id from notifications n join app_users u on u.id=n.user_id where u.email='hhl@test' order by n.id desc limit 5))" 0
 
 echo; echo "[M9] Aplikacja kierowcy: report_position (przewoźnik/HHL), process_position zamknięty, MILESTONE_LOADED, strefy"
 L9=33333333-0000-0000-0000-000000000009

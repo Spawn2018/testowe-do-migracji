@@ -7,7 +7,9 @@
  * HHL: na końcu „Paczka tygodnia dla księgowości” (E40, img/e40-after) — gdy baza poda adresy i dziennik wysyłek.
  * Dane: `src/lib/p5Source.ts` (próg marży, średnie cen paliwa, adresy księgowości i wysyłkę paczek podłącza wykonawca).
  */
-import { useMemo } from 'react';
+import { useFuelPublications } from '../lib/fuelPublSource';
+import { useLatestNbp } from '../lib/nbpLive';
+import { lazy, Suspense, useMemo } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t } from '../i18n/messages';
 import { ft, ftn, ftp } from '../i18n/p5';
@@ -21,8 +23,13 @@ import { accountingPackActionsOf, accountingPackConfigOf, belowOf, financeOf, fu
 import { FuelWeekTable } from '../components/finance/FuelWeekTable';
 import { transportLabel } from '../lib/transportName';
 import { AccountingPackSection } from '../components/finance/AccountingPack';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { lazyRetry } from '../lib/lazyRetry';
 import type { Locale } from '../types';
 import '../components/finance/finance.css';
+
+/* #412 E40 (0286): paczka tygodnia z bazy — „Zleć wysyłkę”, dziennik zleceń; demo bez zmian */
+const LivePack = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/LivePack'))) : null;
 
 const STAGE_TAG: Record<FinStage, string> = { FAKTURA: 'fin-tag go', REALIZACJA: 'fin-tag sea', PROGNOZA: 'fin-tag plain' };
 const PHONE_ORDER: FinStage[] = ['REALIZACJA', 'PROGNOZA', 'FAKTURA'];
@@ -59,12 +66,20 @@ export function FinanceView() {
       locale={locale} phone={phone} loads={loads} bills={bills} documents={documents}
       cfg={packCfg} actions={accountingPackActionsOf()} nowIso={nowIso}
     />
+  ) : role === 'HHL' && LivePack ? (
+    <Suspense fallback={null}>
+      <LivePack locale={locale} phone={phone} loads={loads} bills={bills} documents={documents} nowIso={nowIso} />
+    </Suspense>
   ) : null;
 
-  const fin = useMemo(() => financeOf(loads, side), [loads, side]);
+  /* 25.10: karta „Kurs NBP” — aktualny kurs z fx_rates, nie najnowszy zapisany przy transporcie */
+  const nbpLive = useLatestNbp();
+  const fin = useMemo(() => financeOf(loads, side, nbpLive), [loads, side, nbpLive]);
   const threshold = side === 'both' ? marginThresholdOf() : null;
-  const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold) : []), [loads, side, threshold]);
-  const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today]);
+  const below = useMemo(() => (side === 'both' ? belowOf(loads, threshold, nbpLive) : []), [loads, side, threshold, nbpLive]);
+  const publV = useFuelPublications();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- publV: publikacje z bazy wczytane później
+  const fuel = useMemo(() => fuelWeeksOf(loads, side === 'rev' ? 'rev' : 'cost', today), [loads, side, today, publV]);
   /** E41: nazwa transportu według firmy, która patrzy. */
   const nameOf = (id: string, code: string) => { const l = loads.find((x) => x.id === id); return l ? transportLabel(l, role) : code; };
 

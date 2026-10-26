@@ -4,7 +4,7 @@
  * po prawej „Podgląd wiersza” i „Zasady”. Telefon: zdarzenia jako karty; wybrane rozwinięte z 5 rodzajami kont.
  * Dane i zapis podłącza wykonawca (`notification_matrix`, `admin_notification_matrix_set`) — tu tylko wygląd.
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
@@ -14,7 +14,8 @@ import { CH_KEY, CHANNELS, ChannelChip, Icon, type Channel, type MatrixCell, typ
 
 export type WhoGetsCards = {
   mail: { on: boolean; used: number; max: number; reserve: number };
-  push: { on: boolean; devices: number };
+  /** own — liczba tylko z własnych wierszy (RLS `push_subscriptions`), bez liczby wszystkich osób */
+  push: { on: boolean; devices: number; own?: boolean; /** #412 E11 (0288): urządzenia wszystkich osób (HHL); null = brak liczby */ all?: number | null };
   last: { when: string; text: string };
 };
 
@@ -79,6 +80,9 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
   const [groups, setGroups] = useState(initial);
   const [mailOn, setMailOn] = useState(cards?.mail.on ?? false);
   const [pushOn, setPushOn] = useState(cards?.push.on ?? false);
+  /* F7 #404: dane z bazy po zapisie — ekran bierze nowy stan bez ponownego montowania (wybrany wiersz zostaje) */
+  useEffect(() => { setGroups(initial); }, [initial]);
+  useEffect(() => { setMailOn(cards?.mail.on ?? false); setPushOn(cards?.push.on ?? false); }, [cards?.mail.on, cards?.push.on]);
   const card = (which: 'mail' | 'push', next: boolean) => {
     (which === 'mail' ? setMailOn : setPushOn)(next);
     onCard?.(which, next);
@@ -126,7 +130,14 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
               <b className="ox-card-v">{t(locale, pushOn ? 'p3c_on' : 'p3c_off')}</b>
               <CardSwitch label={t(locale, 'p3c_push_title')} on={pushOn} readOnly={readOnly} onChange={(next) => card('push', next)} />
             </span>
-            <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>
+            {cards.push.own ? (
+              <>
+                <span className="ox-card-sub" data-push-devices="own">{tp(locale, 'p3c_push_devices_own', { n: cards.push.devices })}</span>
+                {cards.push.all != null
+                  ? <span className="ox-card-sub" data-push-devices="all">{tp(locale, 'p3c_push_devices_all_n', { n: cards.push.all })}</span>
+                  : <span className="ox-card-sub">{t(locale, 'p3c_push_devices_all')}</span>}
+              </>
+            ) : <span className="ox-card-sub">{tp(locale, 'p3c_push_devices', { n: cards.push.devices })}</span>}
           </div>
           <div className="ox-card">
             <span className="ox-eyebrow">{t(locale, 'p3c_last_title')}</span>

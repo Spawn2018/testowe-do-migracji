@@ -68,6 +68,13 @@ describe('P9-c · wiersz Mapy', () => {
     expect(r.stageSub).toBe('dzień załadunku 10.10.2026');
   });
 
+  it('U-231: pusty link z produkcji (trackingLink undefined, brak trackingRef) podaje powód', () => {
+    const none = mapRow(load({ status: 'PLANNED', stage: 'PLAN', plannedLoadDate: '2026-10-10' }), ctx({ nowIso: DAY }));
+    expect(none.pos.sub).toBe('brak linku śledzenia · Do zrobienia SCX');
+    const demo = mapRow(load({ status: 'PLANNED', stage: 'PLAN', plannedLoadDate: '2026-10-10' }), ctx({ nowIso: DAY, prod: false }));
+    expect(demo.pos.sub).toBeNull();
+  });
+
   it('link czeka na pierwszą pozycję; przed 03:00 poza oknem', () => {
     const wait = mapRow(load({ status: 'READY', stage: 'PLAN', plannedLoadDate: '2026-10-10', trackingLink: { provider: 'RIO', check: { state: 'pending' } } }), ctx({ nowIso: DAY }));
     expect(wait.pos.sub).toBe('link śledzenia czeka na pierwszą pozycję');
@@ -139,13 +146,13 @@ describe('P9-c · teksty i podpięcie', () => {
     expect(map).toMatch(/setVis\(layers\.poi, false\)/);
   });
   it('strona Mapa poza pierwszym wczytaniem (budżet 400 kB)', () => {
-    expect(readFileSync('src/App.tsx', 'utf8')).toMatch(/import \{ MapViewLazy as MapView \} from '\.\/views\/mapLazy'/);
+    expect(readFileSync('src/TowerShell.tsx', 'utf8')).toMatch(/import \{ MapViewLazy as MapView \} from '\.\/views\/mapLazy'/);
   });
 });
 
 describe('P9-c · powód braku pozycji tylko z danych', () => {
-  it('stan linku nieznany (pole niepodane) — bez powodu', () => {
-    const r = mapRow(load({ status: 'PLANNED', stage: 'PLAN', plannedLoadDate: '2026-10-10' }), ctx({ nowIso: '2026-10-10T04:30:00Z' }));
+  it('stan linku nieznany (link wpisany, stan niepodany) — bez powodu', () => {
+    const r = mapRow(load({ status: 'PLANNED', stage: 'PLAN', plannedLoadDate: '2026-10-10', resources: { driverName: 'A', trackingRef: 'rio:dc8b4cca-3a9c-45c0-8724-97db97d0ceae' } as Load['resources'] }), ctx({ nowIso: '2026-10-10T04:30:00Z' }));
     expect(r.pos).toMatchObject({ kind: 'none', sub: null, alarm: true });
   });
 });

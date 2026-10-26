@@ -10,7 +10,7 @@ import './auth.css';
 /**
  * I-3 — bramka SMS dla HHL (0067/0068): urządzenia (wydanie tokenu raz, pauza, odwołanie), numery testowe,
  * SMS testowy, ostatnie SMS z kolejki (bez treści z linkiem — tylko rodzaj, status i 3 ostatnie cyfry).
- * Przed R-2 (flaga EXTERNAL_MESSAGING) telefon dostaje wyłącznie SMS testowe na numery z listy.
+ * #467: przy EXTERNAL off — SMS testowe tylko na numery z listy; przy EXTERNAL on — numery testowe milczą (SMS na listę stref).
  */
 interface Device { id: string; label: string; created_at: string; revoked_at: string | null; paused: boolean; last_seen_at: string | null; day_sent: number; day_limit: number }
 interface Sms { id: string; kind: string; status: string; to_e164: string; created_at: string; sent_at: string | null; delivered_at: string | null; fallback_at: string | null; error: string | null; attempts: number }
@@ -86,6 +86,7 @@ export default function SmsGateway() {
         </div>
 
         <h4 className="sec">{t(locale, 'i3_test_h')}</h4>
+        {ext ? <div className="note option-note" data-sms-test-ext-on>{t(locale, 'i3_test_ext_on')}</div> : null}
         <form className="baf-form" onSubmit={async (e) => { e.preventDefault(); if (await call('sms_add_test_number', { p_to: num.trim(), p_label: numLabel }, t(locale, 'i3_test_added')) !== null) { setNum(''); setNumLabel(''); } }}>
           <label>{t(locale, 'i3_test_number')}<input className="input" required value={num} onChange={(e) => setNum(e.target.value)} /></label>
           <label>{t(locale, 'i3_test_label')}<input className="input" value={numLabel} onChange={(e) => setNumLabel(e.target.value)} /></label>
@@ -94,7 +95,7 @@ export default function SmsGateway() {
         <div className="panel-bd flush" data-sms="test-numbers">
           {nums.map((n) => (
             <div className="auth-admin-row" key={n.to_e164}><span className="grow"><b>{n.label}</b> · {groupPhone(n.to_e164)}</span>
-              <button className="chipbtn" type="button" disabled={busy} onClick={() => call('sms_send_test', { p_to: n.to_e164 }, t(locale, 'i3_test_sent'))}>{t(locale, 'i3_test_send')}</button></div>
+              <button className="chipbtn" type="button" disabled={busy || ext === true} title={ext ? t(locale, 'i3_test_ext_on') : undefined} onClick={() => call('sms_send_test', { p_to: n.to_e164 }, t(locale, 'i3_test_sent'))}>{t(locale, 'i3_test_send')}</button></div>
           ))}
         </div>
 

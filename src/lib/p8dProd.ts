@@ -1,0 +1,213 @@
+/**
+ * #413 / E35 Z2–Z3 — źródło Automatyzacji na produkcji (store + RPC historii / soft-delete).
+ * #505: powód UI → tower.audit_reason (RPC workflow_rule_*); historia także dla HHL_OPS.
+ */
+import { getSupabase } from '../auth/client';
+import { statusToDb } from '../data/mappers';
+import { isServerId } from '../data/registry';
+import { workflowToDb } from '../data/workflowMap';
+import { loadRuleHistory } from '../data/workflowServer';
+import { useTowerStore } from '../store/useTowerStore';
+import { getNowIso } from './frozenNow';
+import { draftToWorkflow, histFromServer, runsToRuleRuns, workflowToOwn } from './p8dMap';
+import {
+  builtinOverlap, dwellHits, sameRules, type CheckHit, type CheckResult, type OwnRule, type RuleDraft,
+  type RuleHist, type RuleRun, type Visit, type ZoneOption,
+} from './p8dRules';
+import { canManageWorkflows } from './prodFacade';
+
+const PROJECT_CODE = 'STEGRA_BODEN';
+const since30 = (now: string) => Date.parse(now) - 30 * 86_400_000;
+
+function storeRules(): OwnRule[] {
+  const s = useTowerStore.getState();
+  const now = getNowIso();
+  const since = since30(now);
+  return s.workflows
+    .map((w) => workflowToOwn(w, s.workflowRuns, since))
+    .filter((r): r is OwnRule => r != null);
+}
+
+async function prodRules(): Promise<OwnRule[]> {
+  return storeRules();
+}
+
+async function prodRuns(): Promise<RuleRun[]> {
+  const s = useTowerStore.getState();
+  const names = new Map(s.workflows.map((w) => [w.id, w.name]));
+  /* soft-deleted START mogą mieć przebiegi — nazwa z runów bez wiersza w workflows: zostaw id */
+  const codes = new Map(s.loads.map((l) => [l.id, l.code]));
+  return runsToRuleRuns(s.workflowRuns, names, codes, since30(getNowIso()));
+}
+
+async function prodHistory(): Promise<RuleHist[]> {
+  try {
+    const rows = await loadRuleHistory(null, 200);
+    return histFromServer(rows);
+  } catch {
+    return [];
+  }
+}
+
+async function prodZones(): Promise<ZoneOption[]> {
+  return useTowerStore.getState().geofences
+    .filter((g) => g.active)
+    .map((g) => ({ id: g.id, name: g.name, type: g.type, dwellMin: g.dwellMin }));
+}
+
+function visitsFromEvents(): Visit[] {
+  const s = useTowerStore.getState();
+  const codeOf = new Map(s.loads.map((l) => [l.id, l.code]));
+  const enters = new Map<string, { code: string; loadId: string; zoneId: string; enter: string }>();
+  const out: Visit[] = [];
+  const geo = s.events
+    .filter((e) => e.type === 'GEOFENCE_ENTER' || e.type === 'GEOFENCE_EXIT')
+    .slice()
+    .sort((a, b) => a.at.localeCompare(b.at));
+  for (const e of geo) {
+    const zoneId = String(e.payload?.geofence_id ?? '');
+    if (!zoneId) continue;
+    const key = `${e.loadId}:${zoneId}`;
+    if (e.type === 'GEOFENCE_ENTER') {
+      enters.set(key, { code: codeOf.get(e.loadId) ?? e.loadId, loadId: e.loadId, zoneId, enter: e.at });
+    } else {
+      const ent = enters.get(key);
+      if (ent) {
+        out.push({ ...ent, exit: e.at });
+        enters.delete(key);
+      }
+    }
+  }
+  for (const ent of enters.values()) out.push({ ...ent, exit: null });
+  return out;
+}
+
+async function prodCheck(d: RuleDraft, selfId: string | null): Promise<CheckResult> {
+  const now = getNowIso();
+  const since = since30(now);
+  const zones = await prodZones();
+  const rules = storeRules();
+  let hits: CheckHit[] = [];
+  const w = d.when;
+  if (w.kind === 'zone') hits = dwellHits(visitsFromEvents(), w.zoneId, w.minutes, now);
+  else if (w.kind === 'status') {
+    const codeOf = new Map(useTowerStore.getState().loads.map((l) => [l.id, l.code]));
+    const want = w.status === 'ANY' ? null : statusToDb(w.status);
+    hits = useTowerStore.getState().events
+      .filter((e) => (e.type === 'STATUS_CHANGED' || e.type === 'STATUS_AUTO') && Date.parse(e.at) >= since)
+      .filter((e) => {
+        if (w.status === 'ANY') return true;
+        if (!want) return false; /* DELAYED/SILENT — brak w bazie */
+        /* STATUS_CHANGED: payload.status; STATUS_AUTO: payload.to (0212) */
+        const got = String(e.payload?.to ?? e.payload?.status ?? '');
+        return got === want;
+      })
+      .map((e) => ({ code: codeOf.get(e.loadId) ?? e.loadId, loadId: e.loadId, at: e.at }));
+  } else {
+    /* issue / daily: bez pewnego źródła w store → puste hits (lepiej pusto niż zmyślone; E35 check). */
+    hits = [];
+  }
+  return {
+    hits: hits.sort((a, b) => b.at.localeCompare(a.at)),
+    builtins: builtinOverlap(w, zones),
+    same: sameRules(d, rules, selfId),
+  };
+}
+
+/** F7 #506 pkt 4: await RPC — ok dopiero po odpowiedzi bazy (nie writeThrough). */
+async function prodSave(id: string | null, d: RuleDraft, reason: string | null): Promise<{ ok: boolean; rule?: OwnRule; error?: string }> {
+  const patch = draftToWorkflow(d);
+  const row = workflowToDb(patch);
+  try {
+    const sb = await getSupabase();
+    let projectId: string | null = null;
+    const serverId = id && isServerId(id) ? id : null;
+    if (!serverId) {
+      const p = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
+      if (p.error) return { ok: false, error: p.error.message };
+      if (!p.data) return { ok: false, error: 'reguła: brak projektu' };
+      projectId = (p.data as { id: string }).id;
+    }
+    const res = await sb.rpc('workflow_rule_write', {
+      p_id: serverId,
+      p_project: projectId,
+      p_name: row.name ?? null,
+      p_description: row.description ?? null,
+      p_trigger_type: row.trigger_type ?? null,
+      p_condition: row.condition ?? null,
+      p_actions: row.actions ?? null,
+      p_enabled: row.enabled ?? null,
+      p_reason: reason?.trim() || null,
+    });
+    if (res.error) return { ok: false, error: res.error.message };
+    const newId = String(res.data);
+    const store = useTowerStore.getState();
+    if (serverId) {
+      useTowerStore.setState((s) => ({
+        workflows: s.workflows.map((w) => (w.id === serverId ? { ...w, ...patch } : w)),
+      }));
+      const rule = workflowToOwn(
+        { ...patch, id: serverId, runCount: store.workflows.find((w) => w.id === serverId)?.runCount ?? 0 },
+        store.workflowRuns,
+        since30(getNowIso()),
+      );
+      return rule ? { ok: true, rule } : { ok: true };
+    }
+    useTowerStore.setState((s) => ({
+      workflows: [{ ...patch, id: newId, runCount: 0 }, ...s.workflows],
+    }));
+    const rule: OwnRule = {
+      id: newId, name: d.name.trim(), when: d.when, then: { ...d.then, notify: [...d.then.notify] },
+      enabled: d.enabled, runs30: 0, lastRunAt: null,
+    };
+    return { ok: true, rule };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'zapis nieudany' };
+  }
+}
+
+async function prodSetEnabled(id: string, on: boolean, reason: string): Promise<{ ok: boolean }> {
+  try {
+    const sb = await getSupabase();
+    const res = await sb.rpc('workflow_rule_set_enabled', { p_id: id, p_enabled: on, p_reason: reason.trim() || null });
+    if (res.error) return { ok: false };
+    useTowerStore.setState((s) => ({
+      workflows: s.workflows.map((w) => (w.id === id ? { ...w, enabled: on } : w)),
+    }));
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** #413 F7: 0 wierszy po UPDATE (RLS) bez error → nie ok. */
+export function softDeleteTouched(data: { id: string }[] | null | undefined, error: unknown): boolean {
+  return !error && Boolean(data?.length);
+}
+
+async function prodRemove(id: string, reason: string): Promise<{ ok: boolean }> {
+  /* #505: soft-delete przez RPC z powodem (audit_reason w tej samej sesji). */
+  try {
+    const sb = await getSupabase();
+    const res = await sb.rpc('workflow_rule_soft_delete', { p_id: id, p_reason: reason.trim() || null });
+    if (res.error) return { ok: false };
+    useTowerStore.setState((s) => ({ workflows: s.workflows.filter((w) => w.id !== id) }));
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export function prodRulesSource() {
+  const admin = canManageWorkflows();
+  return {
+    rules: prodRules,
+    runs: prodRuns,
+    history: prodHistory,
+    zones: prodZones,
+    check: prodCheck,
+    save: admin ? prodSave : null,
+    setEnabled: admin ? prodSetEnabled : null,
+    remove: admin ? prodRemove : null,
+  };
+}

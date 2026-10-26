@@ -52,6 +52,260 @@ export const BUCKET_OBJECTS_SQL = `select o.id::text as id, o.bucket_id || '/' |
 
 export type Encrypt = (plain: Uint8Array) => Promise<Uint8Array>;
 
+/**
+ * #463 / D-20261022-2110-01 — duże tabele (notifications, integration_runs, sms_heartbeats…)
+ * zawieszały COPY w Edge (I-33 po 30 min). Stronicowanie + limit czasu.
+ * #479 F7 A: bez COPY — `select` porcjami (keyset ctid) + CSV w kodzie; `TABLE_*_TIMEOUT`
+ * na całą tabelę (ERROR z nazwą, nie wiszenie do I-33).
+ * #498: jedna część ≤ PART_MAX_ROWS / wywołanie; pliki `tabela.part0001.csv.gz.age`;
+ * I-33 = 10 min bez postępu (nie 30 min całości).
+ */
+export const CHUNK_EST_ROWS = 2_500;
+export const CTID_PAGES_PER_CHUNK = 32;
+/** Limit czasu na całą tabelę (select+CSV) — << wall-clock Edge (~150 s). */
+export const TABLE_COPY_TIMEOUT_MS = 60_000;
+/** Alias semantyczny (#479 F7 A) — ten sam limit co `TABLE_COPY_TIMEOUT_MS`. */
+export const TABLE_SELECT_TIMEOUT_MS = TABLE_COPY_TIMEOUT_MS;
+/** Porcje keyset po ctid (#479 F7 A) wewnątrz jednej części. */
+export const SELECT_BATCH_ROWS = 2_000;
+/**
+ * #498: max wierszy jednej części R2 (jedno wywołanie ≈ jedna część przy dużych tabelach).
+ * integration_runs ~70k → ~14 continue_run zamiast jednego timeoutu CPU.
+ */
+export const PART_MAX_ROWS = 5_000;
+/** Budżet wall-clock jednego wywołania Edge (#498 — krócej, częstsze continue). */
+export const WALL_BUDGET_MS = 45_000;
+/**
+ * #498 F7 B1: lease continue_run (sekundy) — cron dopiero po wygaśnięciu + 2 min bez postępu.
+ * Przed scheduleContinue lease_until = null (F7 B1'), żeby dziecko nie dostało 409.
+ */
+export const LEASE_SECONDS = 90;
+
+/**
+ * #498 F7 B2: każda tabela z zapisanymi częściami (także dokładnie 1× PART_MAX_ROWS)
+ * musi trafić do `table_parts` — inaczej restore szuka `t.csv.gz.age` i pada.
+ */
+export function recordTableParts(
+  parts: { part: number; rows: number; key: string }[],
+): { part: number; rows: number; key: string }[] | null {
+  return parts.length >= 1 ? parts : null;
+}
+
+/** Stan niedokończonej tabeli w `backup_runs.progress` (#498). */
+export type BackupTableProgress = {
+  table: string;
+  after_ctid: string | null;
+  next_part: number;
+  n0: number;
+  rows_so_far: number;
+  parts: { part: number; rows: number; key: string }[];
+};
+
+/** Tabele jeszcze nie zapisane w `backup_runs.tables` (klucze = ukończone). */
+export function remainingTables(all: readonly string[], done: Record<string, number> | null | undefined): string[] {
+  const have = done && typeof done === 'object' ? done : {};
+  return all.filter((t) => !Object.prototype.hasOwnProperty.call(have, t));
+}
+
+/** Czy czas na kontynuację w kolejnym wywołaniu (po ukończonej tabeli / przed kolejną). */
+export function pastWallBudget(startedAtMs: number, nowMs = Date.now(), budgetMs = WALL_BUDGET_MS): boolean {
+  return Number.isFinite(startedAtMs) && nowMs - startedAtMs >= budgetMs;
+}
+
+/** Zakres ctid: `to === null` = od `from` wzwyż (ostatni kawałek, bez górnej granicy). */
+export type CtidRange = { from: number; to: number | null };
+
+export function assertSafeIdent(name: string): string {
+  if (!/^[a-z_][a-z0-9_]*$/.test(name)) throw new Error(`kopia: niedozwolona nazwa: ${name}`);
+  return name;
+}
+
+export function shouldChunkByEstimate(estRows: number): boolean {
+  return Number.isFinite(estRows) && estRows >= CHUNK_EST_ROWS;
+}
+
+/** Liczba stron heap z bajtów relacji (jak `pg_relation_size / block_size`), min. 1. */
+export function heapPagesFromBytes(bytes: number, blockSize = 8192): number {
+  if (!Number.isFinite(bytes) || bytes < 0 || !Number.isFinite(blockSize) || blockSize <= 0) {
+    throw new Error('kopia: zły rozmiar relacji');
+  }
+  return Math.max(1, Math.ceil(bytes / blockSize));
+}
+
+/**
+ * Zakresy stron heap. Ostatni zawsze bez górnej granicy (`to: null`), żeby wiersze
+ * na stronach po ostatnim ANALYZE / dopisane w trakcie też weszły.
+ */
+export function ctidPageRanges(pages: number, pagesPerChunk = CTID_PAGES_PER_CHUNK): CtidRange[] {
+  const n = Math.max(1, Math.floor(Math.max(0, pages)));
+  const out: CtidRange[] = [];
+  for (let from = 0; from < n; from += pagesPerChunk) {
+    const end = Math.min(n, from + pagesPerChunk);
+    out.push({ from, to: end >= n ? null : end });
+  }
+  return out;
+}
+
+/**
+ * COPY jednego zakresu ctid. `selectList` = lista kolumn (np. loads bez rio_secret) albo null (= *).
+ * Nagłówek CSV tylko przy `header === true` (pierwszy kawałek).
+ * `pageTo === null` → tylko `ctid >= '(from,0)'` (ostatni kawałek).
+ */
+export function copyCtidRangeSql(
+  table: string,
+  pageFrom: number,
+  pageTo: number | null,
+  selectList: string | null,
+  header: boolean,
+): string {
+  const t = assertSafeIdent(table);
+  if (!Number.isInteger(pageFrom) || pageFrom < 0) {
+    throw new Error(`kopia: zły zakres ctid ${pageFrom}..${pageTo}`);
+  }
+  if (pageTo !== null && (!Number.isInteger(pageTo) || pageTo <= pageFrom)) {
+    throw new Error(`kopia: zły zakres ctid ${pageFrom}..${pageTo}`);
+  }
+  const cols = selectList && selectList.trim() ? selectList : '*';
+  const fmt = header ? 'format csv, header true' : 'format csv, header false';
+  const where = pageTo === null
+    ? `ctid >= '(${pageFrom},0)'::tid`
+    : `ctid >= '(${pageFrom},0)'::tid and ctid < '(${pageTo},0)'::tid`;
+  return `copy (select ${cols} from public.${t} where ${where}) to stdout with (${fmt})`;
+}
+
+/**
+ * Po COPY w jednej transakcji RR: csv = count(*) z tej samej migawki (F7 #472).
+ * Przy kopiowaniu poza transakcją (#479) użyj `assertCsvInCountWindow`.
+ */
+export function assertCsvMatchesDbCount(csvRows: number, dbCount: number, table: string): void {
+  const t = assertSafeIdent(table);
+  if (!Number.isFinite(csvRows) || !Number.isFinite(dbCount) || csvRows !== dbCount) {
+    throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} db=${dbCount}`);
+  }
+}
+
+/**
+ * #479 F7: count(*) przed COPY (`n0`) i po (`n1`); csv ∈ [min(n0,n1), max(n0,n1)].
+ * Wstawki / retencja w trakcie nie dają fałszywego ERROR; brak wierszy w CSV (csv < lo) — tak.
+ * Kopia nie jest migawką spójną między tabelami (dopisek D-20261023-0615-01).
+ */
+export function assertCsvInCountWindow(csvRows: number, n0: number, n1: number, table: string): void {
+  const t = assertSafeIdent(table);
+  const lo = Math.min(n0, n1);
+  const hi = Math.max(n0, n1);
+  if (
+    !Number.isFinite(csvRows) || !Number.isFinite(n0) || !Number.isFinite(n1)
+    || csvRows < lo || csvRows > hi
+  ) {
+    throw new Error(`kopia: niekompletna tabela ${t}: csv=${csvRows} n0=${n0} n1=${n1}`);
+  }
+}
+
+/**
+ * #479: lista kolumn COPY (`"id", "code"`) → parametr `select` PostgREST (`id,code`).
+ * `null` / pusty = `*` (cała tabela). Zachowane pod testy / ewentualny REST.
+ */
+export function postgrestSelectParam(selectList: string | null | undefined): string {
+  if (!selectList || !selectList.trim()) return '*';
+  const cols = selectList.split(',').map((c) => {
+    const s = c.trim().replace(/^"|"$/g, '');
+    if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`kopia: zła kolumna select: ${c.trim()}`);
+    return s;
+  });
+  if (!cols.length) return '*';
+  return cols.join(',');
+}
+
+/**
+ * #479 F7 A: `"id", "code"` / `null` → nazwy kolumn (kolejność zachowana).
+ */
+export function parseSelectColumns(selectList: string | null | undefined): string[] | null {
+  if (!selectList || !selectList.trim()) return null;
+  const cols = selectList.split(',').map((c) => {
+    const s = c.trim().replace(/^"|"$/g, '');
+    if (!/^[a-z_][a-z0-9_]*$/.test(s)) throw new Error(`kopia: zła kolumna select: ${c.trim()}`);
+    return s;
+  });
+  if (!cols.length) throw new Error('kopia: pusta lista kolumn');
+  return cols;
+}
+
+/** ctid tekstowy z PG: `(strona,indeks)`. */
+export function assertSafeCtid(s: string): string {
+  if (!/^\(\d+,\d+\)$/.test(s)) throw new Error(`kopia: zły ctid: ${s}`);
+  return s;
+}
+
+/** #498: klucz R2 jednej części tabeli. */
+export function partObjectKey(table: string, part: number): string {
+  const t = assertSafeIdent(table);
+  if (!Number.isInteger(part) || part < 1 || part > 9999) {
+    throw new Error(`kopia: zły numer części ${part}`);
+  }
+  return `${t}.part${String(part).padStart(4, '0')}.csv.gz.age`;
+}
+
+export function parseBackupProgress(raw: unknown): BackupTableProgress | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.table !== 'string' || !/^[a-z_][a-z0-9_]*$/.test(o.table)) return null;
+  const next = Number(o.next_part);
+  const n0 = Number(o.n0);
+  const rows = Number(o.rows_so_far);
+  if (!Number.isInteger(next) || next < 1 || !Number.isFinite(n0) || !Number.isFinite(rows)) return null;
+  const after = o.after_ctid == null || o.after_ctid === ''
+    ? null
+    : assertSafeCtid(String(o.after_ctid));
+  const partsRaw = Array.isArray(o.parts) ? o.parts : [];
+  const parts: BackupTableProgress['parts'] = [];
+  for (const p of partsRaw) {
+    if (!p || typeof p !== 'object') continue;
+    const pr = p as Record<string, unknown>;
+    const part = Number(pr.part);
+    const prow = Number(pr.rows);
+    const key = typeof pr.key === 'string' ? pr.key : '';
+    if (!Number.isInteger(part) || part < 1 || !Number.isFinite(prow) || !key) continue;
+    parts.push({ part, rows: prow, key });
+  }
+  return { table: o.table, after_ctid: after, next_part: next, n0, rows_so_far: rows, parts };
+}
+
+/**
+ * #479 F7 A: lista kolumn → ` "id"::text as "id", … ` (reprezentacja jak COPY text/CSV).
+ */
+export function selectTextCastSql(columns: readonly string[]): string {
+  if (!columns.length) throw new Error('kopia: brak kolumn do select');
+  return columns.map((c) => {
+    const n = assertSafeIdent(c);
+    return `"${n}"::text as "${n}"`;
+  }).join(', ');
+}
+
+/**
+ * CSV jak `COPY … (format csv)`: NULL = puste pole; pusty string = `""`;
+ * cudzysłów / przecinek / NL → pole w cudzysłowach.
+ */
+export function csvEscapeField(value: string | null): string {
+  if (value === null) return '';
+  if (value.length === 0 || /[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/** Nagłówek + wiersze → CSV z końcowym `\n` (jak COPY TO STDOUT). */
+export function rowsToCsv(headers: readonly string[], rows: readonly (readonly (string | null)[])[]): string {
+  const head = headers.map((h) => csvEscapeField(h)).join(',');
+  if (!rows.length) return `${head}\n`;
+  const body = rows.map((r) => r.map((c) => csvEscapeField(c)).join(',')).join('\n');
+  return `${head}\n${body}\n`;
+}
+
+/**
+ * Dawny próg PostgREST (cz.5) — zostawiony dla testów; ścieżka Edge = tylko select (#479 F7 A).
+ */
+export const REST_CSV_MAX_ROWS = 1_000;
+
 export async function gzip(data: Uint8Array): Promise<Uint8Array> {
   const stream = new Blob([data as BlobPart]).stream().pipeThrough(new CompressionStream('gzip'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
@@ -100,6 +354,8 @@ export interface Manifest {
   prefix: string;
   recipient: string;
   tables: Record<string, number>;
+  /** #498: części dużych tabel (suma rows = tables[t]). Brak wpisu = pojedynczy plik `t.csv.gz.age`. */
+  table_parts?: Record<string, { part: number; rows: number; key: string }[]>;
   /** bytes = rozmiar zaszyfrowanego obiektu; size i sha256 = plik PRZED szyfrowaniem (kontrola po odtworzeniu). */
   files: { key: string; document_id?: string; object_id?: string; bytes: number; size?: number; sha256?: string }[];
   excluded: readonly string[];
@@ -107,10 +363,21 @@ export interface Manifest {
   note: string;
 }
 
-export function manifest(prefix: string, recipient: string, tables: Record<string, number>, files: Manifest['files'], at = new Date()): Manifest {
+export function manifest(
+  prefix: string,
+  recipient: string,
+  tables: Record<string, number>,
+  files: Manifest['files'],
+  at = new Date(),
+  tableParts?: Manifest['table_parts'],
+): Manifest {
+  const note = tableParts && Object.keys(tableParts).length
+    ? 'CSV (nagłówek w part0001) → gzip → age. Duże tabele w częściach (#498). Odtworzenie: scripts/restore.sh.'
+    : 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.';
   return {
     created_at: at.toISOString(), prefix, recipient, tables, files, excluded: EXCLUDED_TABLES, buckets: BACKUP_BUCKETS,
-    note: 'CSV (nagłówek) → gzip → age X25519. Odtworzenie: scripts/restore.sh. Utrata danych w najgorszym razie: do 24 h.',
+    ...(tableParts && Object.keys(tableParts).length ? { table_parts: tableParts } : {}),
+    note,
   };
 }
 

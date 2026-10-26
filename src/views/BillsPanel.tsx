@@ -6,7 +6,7 @@
  *         ZGODNA / SPORNA (z uzasadnieniem) / ZAAKCEPTOWANA, termin i status płatności.
  * Kwoty w walucie faktury → `data-deur-exempt="invoice-currency"`.
  */
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTowerStore } from '../store/useTowerStore';
 import { t, tp } from '../i18n/messages';
 import type { Bill, BillDirection, BillLineFx, BillVerification, Document, Load, Locale } from '../types';
@@ -37,6 +37,13 @@ import { PaymentChoice } from '../components/invoices/Factoring';
 import { billEditState, invoiceEditOn } from '../lib/invoiceEdit';
 import { isPreviewReadOnly } from '../lib/prodFacade';
 import { accountRole } from '../lib/accountRole';
+import { SUPABASE_AUTH_ENABLED } from '../auth/config';
+import { lazyRetry } from '../lib/lazyRetry';
+
+/* #412 E4b (0287): faktoring z bazy — wybór SCX przy fakturze i w szczegółach do akceptacji, odczyt dla HHL; demo bez zmian */
+const LIVE_FACT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
+const LiveFactoringChoice = LIVE_FACT ? lazy(lazyRetry(() => import('../auth/LiveFactoring').then((m) => ({ default: m.LiveFactoringChoice })))) : null;
+const LiveFactoringDetail = LIVE_FACT ? lazy(lazyRetry(() => import('../auth/LiveFactoring').then((m) => ({ default: m.LiveFactoringDetail })))) : null;
 
 /** III-7 — historia sporu (zgłoszenie → odpowiedź / korekta wystawcy → rozstrzygnięcie) i odpowiedź wystawcy. */
 function DisputeThread({ bill }: { bill: Bill }) {
@@ -289,6 +296,9 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
   const loads = useTowerStore((s) => s.loads);
   const verifyBill = useTowerStore((s) => s.verifyBill);
   const [wizard, setWizard] = useState(false);
+  /* formularz pod listą — po otwarciu przewinięcie do niego, żeby było widać, co się otworzyło */
+  const wizardRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (wizard) wizardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); }, [wizard]);
   const [openId, setOpenId] = useState<string | null>(null);
   const openInvoiceId = useTowerStore((s) => s.openInvoiceId);
   const setOpenInvoiceId = useTowerStore((s) => s.setOpenInvoiceId);
@@ -358,7 +368,6 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
           ) : null}
         </header>
         )}
-        {wizard ? <BillWizard direction={direction} onDone={(id) => { setWizard(false); if (id) setOpenId(id); }} /> : null}
         {list.length === 0 && pending.length === 0 ? (
           <p className="fin-muted fin-pad">{ft(locale, 'p5_inv_empty')}</p>
         ) : phone ? (
@@ -407,9 +416,10 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
                     <td>{weekKeyLabel(w.weekKey)}</td>
                     <td className="fin-muted">{ft(locale, 'p5_inv_not_issued')}</td>
                     <td className="num">{w.loads.length}</td>
-                    <td className="num"><b>{formatPlNumber(w.netEur, 2)}</b></td>
-                    <td className="num">{formatPlNumber(vatGrossOf(w.netEur).vat, 2)}</td>
-                    <td className="num"><b>{formatPlNumber(vatGrossOf(w.netEur).gross, 2)}</b></td>
+                    {/* W-audyt-ekrany (E4 img/e4-after: kwoty wiersza „jeszcze nie wystawiona” tym samym krojem co wiersze faktur) */}
+                    <td className="num"><span className="mono">{formatPlNumber(w.netEur, 2)}</span></td>
+                    <td className="num"><span className="mono">{formatPlNumber(vatGrossOf(w.netEur).vat, 2)}</span></td>
+                    <td className="num"><span className="mono">{formatPlNumber(vatGrossOf(w.netEur).gross, 2)}</span></td>
                     <td>—</td>
                     <td><StatusTag status="DO_WYSTAWIENIA" /></td>
                     <td className="fin-muted">{ftp(locale, 'p5_inv_waits', { who: ISSUER[direction] })}</td>
@@ -449,6 +459,12 @@ export function BillsSection({ direction, phone }: { direction: BillDirection; p
           </div>
         )}
       </section>
+      {/* W-opcje-live-2 (img/e4-faktury-desk): „Nowa faktura · tydzień …” jako osobny panel pod listą faktur */}
+      {wizard ? (
+        <section className="panel fin-panel inv-new-panel" ref={wizardRef} data-bill-new-panel={direction}>
+          <BillWizard direction={direction} onDone={(id) => { setWizard(false); if (id) setOpenId(id); }} />
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -588,6 +604,11 @@ function BillDetail({ bill }: { bill: Bill }) {
         {bill.disputeNote ? (<><dt>{t(locale, 'bill_dispute_note')}</dt><dd data-content>{bill.disputeNote}</dd></>) : null}
         {bill.paidAt ? (<><dt>{t(locale, 'bill_paid_at')}</dt><dd>{fmtDay(bill.paidAt)}</dd></>) : null}
       </dl>
+      {bill.direction === 'KOSZT' && role !== 'KSH' && LiveFactoringDetail ? (
+        <Suspense fallback={null}>
+          <LiveFactoringDetail bill={bill} locale={locale} canChange={role === 'SCX' && bill.issuer === 'SCX' && !isPreviewReadOnly({ viewRole: role })} />
+        </Suspense>
+      ) : null}
       {docs.length ? docs.map((d) => (
         <DocFileRow key={d.id} doc={d} label={`${byId.get(d.loadId!)?.code ?? ''} · ${d.category}`} onPreview={setPreview} />
       )) : null}
@@ -638,6 +659,9 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
   const documents = useTowerStore((s) => s.documents);
   const registerBill = useTowerStore((s) => s.registerBill);
   const updateBill = useTowerStore((s) => s.updateBill);
+  /* E4b: sposób zapłaty (SCX, nowa faktura kosztowa) — zapis wyboru w bazie po rejestracji faktury */
+  const [fact, setFact] = useState<'STANDARD' | 'FACTORING'>('STANDARD');
+  const setFactCb = useCallback((v: 'STANDARD' | 'FACTORING') => setFact(v), []);
   const allBills = useTowerStore((s) => s.bills);
   /* edycja: pozycje tej faktury nie są „już zafakturowane” — można je zostawić, zmienić albo zdjąć */
   const bills = useMemo(() => (edit ? allBills.filter((b) => b.id !== edit.id) : allBills), [allBills, edit]);
@@ -695,6 +719,7 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
   const draft: BillDraft = {
     direction, number, issueDate, weekKey: week, currency, net: netN, vat: sums?.vat ?? null, gross: sums?.gross ?? null,
     dueDateFromDocument: dueDoc || null, pdfName: file?.name ?? edit?.pdfName ?? (edit ? 'faktura.pdf' : null), pdfSize: file?.size ?? null,
+    factoring: fact === 'FACTORING',
     lines: [...hiddenOwn.map((ln) => ({ loadId: ln.loadId, invoicedNet: ln.invoicedNet, invoicedFuel: ln.invoicedFuel ?? null, fx: ln.fx ?? null })), ...candidates.filter((l) => lineOf(l.id).on).map((l) => {
       const st = lineOf(l.id);
       return { loadId: l.id, invoicedNet: num(st.net) ?? 0, invoicedFuel: num(st.fuel), fx: currency === 'PLN' && st.fxConfirmed ? st.fx : null };
@@ -706,6 +731,7 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
   const sumOk = billSumOk(chk);
   const due = addDaysIso(issueDate || today, BILL_TERM_DAYS[direction]); /* 03_REJESTR: SCX → HHL 35 dni, HHL → KSH 30 dni */
   const offer = !edit && direction === 'KOSZT' && role === 'SCX' ? factoringOfferOf() : null;
+  const liveChoice = !edit && direction === 'KOSZT' && role === 'SCX' && !offer ? LiveFactoringChoice : null;
 
   return (
     <div className="inv-form" data-bill-wizard={direction} data-bill-edit-form={edit ? edit.id : undefined}>
@@ -811,7 +837,11 @@ function BillWizard({ direction, onDone, edit }: { direction: BillDirection; onD
             ) : null}
           </div>
           <p className="fin-muted">{t(locale, 'bill_due_hint')} · {t(locale, 'bill_vat_hint')}</p>
-          {offer ? <PaymentChoice offer={offer} net={netN} gross={sums?.gross ?? null} due={due} currency={currency} /> : null}
+          {offer ? <PaymentChoice offer={offer} net={netN} gross={sums?.gross ?? null} due={due} currency={currency} value={fact} onChange={setFact} /> : null}
+          {liveChoice ? (() => {
+            const Live = liveChoice;
+            return <Suspense fallback={null}><Live net={netN} gross={sums?.gross ?? null} due={due} currency={currency} value={fact} onChange={setFactCb} /></Suspense>;
+          })() : null}
           <dl className="inv-sum" data-deur-exempt="invoice-currency">
             <div><dt>{ft(locale, 'p5_inv_form_sum_exp')}</dt><dd><Amount n={chk.expectedTotal} cur={currency} /></dd></div>
             <div><dt>{ft(locale, 'p5_inv_form_sum_inv')}</dt><dd><Amount n={chk.invoicedTotal} cur={currency} /></dd></div>

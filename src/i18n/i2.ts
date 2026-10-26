@@ -21,6 +21,12 @@ const pl: Dict = {
   i18_imp_consent: "Daty z pliku KSH nadpisują plan (DATY-67)",
   i18_imp_dates: "Import zmienia daty z pliku KSH ({n}):",
   i18_imp_dates_note: "Plik jest źródłem — daty zostaną zapisane. Zmiana < 5 dni przed załadunkiem → ryzyko „późna zmiana”.",
+  // #426 — import bez powiadomień (tylko Administrator HHL, decyzja 22.10 01:38)
+  i426_quiet: "Import bez powiadomień",
+  i426_quiet_on: "Nikt nie dostanie maila, dzwonka ani SMS, a zmiany z pliku nie otworzą spraw w Ryzykach. W historii zostanie wpis „import bez powiadomień”.",
+  i426_quiet_off: "Zmiany z pliku wyślą powiadomienia według Opcji › Kto co dostaje.",
+  i426_saved_quiet: "bez powiadomień",
+  i426_crit_quiet: "zmiana daty na awizowanym: {codes} — bez powiadomień (wyciszone)",
   // I-17 — drugie urządzenie 2FA
   i17_second_intro: "Zapisz konto Watch Tower w drugiej aplikacji uwierzytelniającej (np. na zapasowym telefonie). Każde urządzenie ma własny kod i działa niezależnie.",
   i17_add: "Dodaj drugie urządzenie",
@@ -64,6 +70,9 @@ const pl: Dict = {
   i5_enforce_needs_aal2: 'zmiana po zalogowaniu kodem z aplikacji',
   i2_ais_read_at: 'odczyt AIS {d}',
   i2_ais_stale: 'ostatnia pozycja {d}',
+  // #429 C — pozycja szacowana z rozkładu
+  i429_est_tip: 'szacowana z rozkładu · ostatni AIS {d}',
+  i429_est_tip_none: 'szacowana z rozkładu · brak AIS',
   i2_detect_samples: 'mediana · n = {n} (30 dni)',
   i2_detect_none: 'brak zdarzeń z czasem (30 dni)',
   i2_ais_db: 'z bazy, ostatni odczyt {d}',
@@ -342,6 +351,7 @@ const pl: Dict = {
   i3_test_added: "Dodano numer testowy.",
   i3_test_send: "Wyślij SMS testowy",
   i3_test_sent: "SMS testowy w kolejce.",
+  i3_test_ext_on: "Przy włączonej wysyłce zewnętrznej numery testowe nic nie dostają — SMS idą na listę stref.",
   i3_queue_h: "Ostatnie SMS",
   i3_queue_none: "Kolejka pusta.",
   i3_fallback: "wysłano e-mail zastępczy",

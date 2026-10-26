@@ -176,7 +176,7 @@ export interface PaymentTermsView { kshDays: number; scxDays: number; changed: {
 /** Klucze listy „procenty za anulowanie” w kolejności tabeli: ≥ 5 dni … dzień załadunku. */
 export const CANCEL_DAYS = [5, 4, 3, 2, 1, 0] as const;
 
-/** Prosty adres e-mail do sprawdzenia przed dodaniem (to samo sprawdza baza). */
+/** Prosty adres e-mail do sprawdzenia przed dodaniem (to samo sprawdza baza, 0285). */
 export function looksLikeEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
+  return /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(s.trim());
 }

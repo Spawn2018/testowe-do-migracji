@@ -40,17 +40,18 @@ export function sailingAssignDenied(
 
 /**
  * D-20261020-1501-01: rejsy historyczne do wyboru dla Administratora HHL — trasa armatora, nieodwołane, już
- * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze, z ostatnich `days` dni.
+ * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze.
+ * Decyzja właściciela 25.10.2026 (5A): bez limitu dni — `days` tylko opcjonalnie (domyślnie wszystkie).
  */
 export function historicalSailings(
   all: Sailing[],
   nowIso: string,
   operator: 'POLFERRIES' | 'STENA' = 'POLFERRIES',
-  days = 60,
+  days = Number.POSITIVE_INFINITY,
 ): Sailing[] {
   const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
   const now = Date.parse(nowIso);
-  const from = now - days * 86_400_000;
+  const from = Number.isFinite(days) ? now - days * 86_400_000 : Number.NEGATIVE_INFINITY;
   return all
     .filter((s) => {
       if (s.route !== outbound || s.status === 'ODWOLANY') return false;
@@ -198,9 +199,13 @@ const SAILING_STATUS_LABEL: Record<SailingStatus, Record<Locale, string>> = {
   ZAPLANOWANY: dictEntry('a6_sailing_status_label_zaplanowany'),
   OPOZNIONY: dictEntry('a6_sailing_status_label_opozniony'),
   ODWOLANY: dictEntry('a6_sailing_status_label_odwolany'),
+  W_REJSIE: dictEntry('a6_sailing_status_label_w_rejsie'),
+  DOPLYNAL: dictEntry('a6_sailing_status_label_doplynal'),
 };
 export const sailingStatusLabel = (s: SailingStatus, locale: Locale): string => SAILING_STATUS_LABEL[s][locale];
-export const sailingStatusPill = (s: SailingStatus): string => (s === 'ODWOLANY' ? 'p-red' : s === 'OPOZNIONY' ? 'p-amber' : 'p-sea');
+export const sailingStatusPill = (s: SailingStatus): string => (
+  s === 'ODWOLANY' ? 'p-red' : s === 'OPOZNIONY' ? 'p-amber' : 'p-sea'
+);
 
 /** „DD.MM.RRRR, GG:MM” w czasie PL (B-REJSY: rok w datach; właściciel 16.10.2026). */
 export function fmtLocal(iso: string, tz = 'Europe/Warsaw'): string {

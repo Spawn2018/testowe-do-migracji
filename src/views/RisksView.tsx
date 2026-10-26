@@ -20,6 +20,7 @@ import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
 import { TodoPanel } from '../components/risks/TodoPanel';
 import { RoutePanel } from '../components/risks/RoutePanel';
+import { KshProposals } from '../components/risks/KshProposals';
 import { useOpenDecisions } from '../components/risks/useDecisions';
 import { rt } from '../i18n/p6';
 import '../components/risks/risks.css';
@@ -50,7 +51,8 @@ export function RisksView() {
   const nowIso = useMemo(() => new Date(nowMin * 60_000).toISOString(), [nowMin]);
   const kind = viewedKind(role, accountRole(role));
   const count = useMemo(() => todoQueue(role, risks, kind)?.total ?? 0, [role, risks, kind]);
-  const decisions = useOpenDecisions(PROD && role !== 'KSH');
+  /* #384 pkt 5: KSH pobiera tylko swoje decyzje (propozycje terminu) — RLS decisions_read daje KSH wyłącznie decider CLIENT */
+  const decisions = useOpenDecisions(PROD);
 
   /* E7-6 i dzwonek: link do sprawy otwiera zakładkę „Do zrobienia”, link do sytuacji na trasie — „Na trasie” */
   useEffect(() => {
@@ -121,6 +123,7 @@ export function RisksView() {
       <div className="dash risk-page rk-page" data-page="risks">
         <h1 className="rk-title">{rt(locale, 'p6_title')}<LiveMark /></h1>
         <p className="rk-muted rk-ksh-note">{rt(locale, 'p6_ksh_note')}</p>
+        <KshProposals api={PROD ? decisions : null} locale={locale} loads={loads} userRole={accountRole(role)} />
         <div className={phone ? 'rk-one' : 'rk-ksh'}>{route(['ferry', 'roads'], !phone)}</div>
       </div>
     );

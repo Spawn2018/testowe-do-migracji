@@ -12,31 +12,32 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 155, // B4 cz.2 F7 #381: +8 (CHECK×2/KSH→ALL×2/SCX HHL+SCX/DOC_UPLOADED×3); było 147
-  status: 160, // +2 A10 F7 W12: auto READY bez HHL + rk_auto_status_blocked
+  security: 459, // B9 F7: +4 (warn>15min, oldest null przy odrzucone, prefs_pairs, users_pairs); bylo 455
+  status: 291, // #557 PR2 F7 r3 fix: +7 głośne fikstury / suggest KSH·SCX / AIS source; było 284
   storage: 37,
-  money: 179, // #374: +5 antiflicker SOURCE_DOWN bez daty (wznów ≤60 min, bez RISK_OPEN)
+  money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
-  backup: 29,
+  backup: 44, // #516 F7 r2: +2 DO ponownie / stale≥OK; było 42 (+6 F7 r1 od 36)
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active
   archive: 18,
   watchdog: 27,
   invite: 48,
-  risks: 34, // D-1501: +1 predelivery NO_SAILING/TRACKING/AWIZ_SE
-  import: 66,
-  nullguard: 690, // D-1118: +awiz_pilots_set GUARD (+4; CI 690)
-  i2: 620, // D-1501 F7 #370: miniona dostawa; NO_TRACKING=brak linku (bez chk MANUAL)
+  risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
+  import: 146, // A6 F7 #556: +15 import_enabled/hash/source/claim/upsert/RLS; było 131 (0305)
+  nullguard: 852, // #557 PR2: +10 (2× GUARD ×5: 4 odmowy + pozytywny HHL); było 842
+  i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 42, // A3: katalog typów 19→20 (CMR_UPLOAD); liczba asercji bez zmian
-  dec3: 13,
+  dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
+  'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
+  dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
   dec6: 25, // +2 B7 ETA_CONF_* (D-0300); wcześniej 23
   adm10: 8,
-  hist11: 11,
-  workflows: 67,
+  hist11: 13, // #484: +2 (OPS + KSH zakres/redakcja zamiast odmowy); było 11
+  workflows: 90, // #505 F7: +route null/OPS set_enabled|soft_delete/po/_reason/re-apply (było 86)
   insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
-  'dec-auto': 78, // D-0040: FERRY_CANCELLED i workflow e-mail SCX bez numeru KSH
+  'dec-auto': 83, // #384 pkt 2–3: +5 lead past/far + empty file + column_map
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
@@ -44,31 +45,31 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 33,
+  bmapa: 141, // #465 F7: +105 RPC mapy/Stan (pełna lista + rpc_denied); było 62 / 36 (#460)
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 64, // D-1300 F7-2: SOURCE = brak odczytów; kontrprzykład odczyty bez publikacji
+  baf: 67, // D-1535: t40 ×1,14 override (+3); D-1300 F7-2 SOURCE
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 26, // C3-p + A4 inv_overdue/updated/corrected (asercja 28 event_key w c3.sh)
+  c3: 40, // #496 F7 r3: +2 fuel_miss/ext_mail 42501; było 38 (#467)
 };
 
 /**
  * Oczekiwane OK na hosted TEST.
  * security/risks/backup: SKIP (spatial_ref_sys free / tower_test_status CREATE DATABASE /
- *   backup: CREATE DATABASE + eksport harness — pełne 29 w CI db.yml, D-86).
+ *   backup: CREATE DATABASE + eksport harness — pełne 44 w CI db.yml, D-86).
  * Pozostałe = LOCAL (P0b: wyrównanie do gate.sh).
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 151, // 155 − 4 SKIP (B6)
-  risks: 32, // 34 − 2 SKIP (C1)
+  security: 455, // 459 - 4 SKIP (B6); B9 F7
+  risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 25 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 21,
-  backup: 21, // 29 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE)
+  backup: 36, // 44 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 r2 +2
 };
 
 /** Alias historyczny — brama TEST / summary. */
@@ -95,6 +96,7 @@ export const SUITE_FILE = {
   i30: 'i30.sh',
   i31: 'i31.sh',
   dec2: 'dec2.sh',
+  'dec-fx': 'dec-fx.sh',
   dec3: 'dec3.sh',
   dec5: 'dec5.sh',
   dec6: 'dec6.sh',
@@ -141,6 +143,7 @@ export const LOCAL_RUN = {
   i30: 'boot',
   i31: 'boot',
   dec2: 'boot',
+  'dec-fx': 'boot',
   dec3: 'boot',
   dec5: 'tower',
   dec6: 'tower',
@@ -171,7 +174,7 @@ export const LOCAL_RUN = {
 /** Kolejność lokalnej bramy (jak dawny gate.sh). */
 export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
-  'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec3',
+  'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec-fx', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
   'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3',
 ];
@@ -267,7 +270,7 @@ export function gateSteps() {
     order.push(name);
   }
   const rest = [
-    'i30', 'i31', 'dec2', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
+    'i30', 'i31', 'dec2', 'dec-fx', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
     'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3', 'backup',
   ];
   for (const name of rest) {

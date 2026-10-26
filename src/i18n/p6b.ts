@@ -25,6 +25,7 @@ const PL: Record<string, string> = {
   p6b_tag_IMPORT: 'Import',
   p6b_tag_PROBA: 'Próba',
   p6b_tag_NOTATKA: 'Notatka',
+  p6b_tag_DECYZJA: 'Decyzja',
   p6b_tag_INNE: 'Zmiana',
   p6b_hist_empty: 'Brak wpisów w tym zakresie.',
   p6b_hidden_1: '{n} dawny zapis bez zmiany ukryty (np. ten sam numer, zasoby bez zmian, „Gotowy → Gotowy”).',
@@ -48,6 +49,7 @@ const PL: Record<string, string> = {
   p6b_korekta_axis: 'poprawił Administrator HHL (było {was})',
   p6b_korekta_axis_who: 'poprawka godziny: {who} (było {was})',
   p6b_korekta_hist: 'korekta godziny (było {was})',
+  p6b_korekta_ais: 'wypłynięcie według AIS (było {was})',
 
   /* nazwy zdarzeń (E17-2) — bez kodów */
   p6b_ev_STATUS: 'Status: {to}',
@@ -88,6 +90,11 @@ const PL: Record<string, string> = {
   p6b_ev_RISK_RAISED: 'Nowe ryzyko',
   p6b_ev_SILENT_VEHICLE: 'Brak sygnału z pojazdu',
   p6b_ev_PLAN_DATES_CONFIRMED: 'Daty planu potwierdzone',
+  /* #384: skutki rozstrzygnięć decyzji (decision_apply_effect) */
+  p6b_ev_DECISION_EFFECT: 'Decyzja rozstrzygnięta',
+  p6b_ev_DECISION_HOLD: 'Decyzja wstrzymana',
+  p6b_ev_DECISION_SAILING: 'Decyzja: zmiana rejsu',
+  p6b_ev_DECISION_KEEP_TOWER: 'Decyzja: zostaje wartość z Watch Tower',
   p6b_ev_DOC_UPLOADED: 'Wgrano dokument',
   p6b_ev_NOTE: 'Notatka',
   p6b_st_CANCELLED: 'Anulowany',

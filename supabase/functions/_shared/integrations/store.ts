@@ -8,7 +8,7 @@ import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } fro
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
-const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source';
+const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source';
 
 export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncStore {
   let pid: string | null = null;
@@ -31,8 +31,29 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       must(await sb.from('sailings').upsert(rows, { onConflict: 'vessel_id,departure_at', ignoreDuplicates: true }), 'sailings insert');
     },
     async updateSailing(id: string, patch: SailingPatch) {
-      const r = must(await sb.from('sailings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', id).neq('source', 'RECZNIE').select('id'), 'sailings update') as unknown[];
-      return r.length > 0;
+      // F7 #421 r2: RECZNIE chroni delayed_*/status/plan; actual_* z AIS wolno dopisać także po ręcznej edycji.
+      const { actual_departure_at, actual_arrival_at, ...rest } = patch;
+      const at = new Date().toISOString();
+      const restKeys = Object.keys(rest) as (keyof typeof rest)[];
+      let wrote = false;
+      if (restKeys.length) {
+        const r = must(
+          await sb.from('sailings').update({ ...rest, updated_at: at }).eq('id', id).neq('source', 'RECZNIE').select('id'),
+          'sailings update',
+        ) as unknown[];
+        wrote = r.length > 0;
+      }
+      const actual: Record<string, string | null> = {};
+      if (actual_departure_at !== undefined) actual.actual_departure_at = actual_departure_at;
+      if (actual_arrival_at !== undefined) actual.actual_arrival_at = actual_arrival_at;
+      if (Object.keys(actual).length) {
+        const r = must(
+          await sb.from('sailings').update({ ...actual, updated_at: at }).eq('id', id).select('id'),
+          'sailings update actual',
+        ) as unknown[];
+        wrote = wrote || r.length > 0;
+      }
+      return wrote;
     },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
@@ -73,6 +94,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const best = new Map<string, string>();
       for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
+    },
+    async lastPortPosition(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number) {
+      // Przybliżenie haversine w SQL: 1° szer. ≈ 111 km; długość × cos(lat).
+      const dLat = radiusKm / 111;
+      const dLon = radiusKm / (111 * Math.max(0.2, Math.cos((hub.lat * Math.PI) / 180)));
+      const rows = must(await sb.from('vessel_positions')
+        .select('observed_at,lat,lon')
+        .eq('vessel_id', vesselId)
+        .gte('lat', hub.lat - dLat).lte('lat', hub.lat + dLat)
+        .gte('lon', hub.lon - dLon).lte('lon', hub.lon + dLon)
+        .order('observed_at', { ascending: false }).limit(20), 'vessel_positions port') as { observed_at: string; lat: number; lon: number }[];
+      const R = 6371, rad = Math.PI / 180;
+      for (const r of rows) {
+        const dLatR = (r.lat - hub.lat) * rad, dLonR = (r.lon - hub.lon) * rad;
+        const h = Math.sin(dLatR / 2) ** 2 + Math.cos(hub.lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLonR / 2) ** 2;
+        if (2 * R * Math.asin(Math.sqrt(h)) <= radiusKm) return new Date(r.observed_at).toISOString();
+      }
+      return null;
     },
     async latestAisstreamFixes(sinceIso: string) {
       const rows = must(await sb.from('vessel_positions')
@@ -170,6 +209,42 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         source_hash: hash, source_lang: lang, source_text: source, reason,
       }, { onConflict: 'source_hash' }), 'translation_queue');
     },
+    async translationListQueue(reasons: string[]) {
+      const r = await sb.from('translation_queue')
+        .select('source_hash,source_lang,source_text,reason,created_at')
+        .in('reason', reasons)
+        .order('created_at', { ascending: true })
+        .limit(40);
+      if (r.error) throw new Error(`translation_queue list: ${r.error.message}`);
+      return ((r.data ?? []) as {
+        source_hash: string; source_lang: string; source_text: string; reason: string; created_at: string;
+      }[]).map((row) => ({
+        hash: row.source_hash,
+        source: row.source_text,
+        lang: (row.source_lang === 'EN' ? 'EN' : 'SV') as 'SV' | 'EN',
+        reason: row.reason,
+        createdAt: row.created_at,
+      }));
+    },
+    async translationDequeue(hash: string) {
+      must(await sb.from('translation_queue').delete().eq('source_hash', hash), 'translation_queue delete');
+    },
+    async patchRoadRiskOpis(original: string, pl: string) {
+      const r = await sb.from('risk_signals')
+        .select('id,detail')
+        .in('kind', ['ROAD_SE', 'ROAD_PL'])
+        .is('resolved_at', null)
+        .filter('detail->>oryginal', 'eq', original)
+        .limit(20);
+      if (r.error) throw new Error(`risk_signals road opis: ${r.error.message}`);
+      let n = 0;
+      for (const row of (r.data ?? []) as { id: string; detail: Record<string, unknown> | null }[]) {
+        const detail = { ...(row.detail ?? {}), opis: pl };
+        must(await sb.from('risk_signals').update({ detail }).eq('id', row.id), 'risk_signals opis');
+        n++;
+      }
+      return n;
+    },
     async deeplUsage() {
       const month = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit' }).format(new Date()) + '-01';
       const r = await sb.from('deepl_usage').select('characters,monthly_limit').eq('month', month).maybeSingle();
@@ -256,6 +331,23 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_emtrack_web_enabled: ${r.error.message}`);
       return r.data === true;
     },
+    async telmRioLinksEnabled() {
+      const r = await sb.rpc('telm_rio_links_enabled');
+      if (r.error) throw new Error(`telm_rio_links_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockTry(ttlSec = 90, token?: string) {
+      const r = await sb.rpc('rio_links_lock_try', {
+        p_ttl_sec: ttlSec,
+        p_token: token ?? null,
+      });
+      if (r.error) throw new Error(`rio_links_lock_try: ${r.error.message}`);
+      return r.data === true;
+    },
+    async rioLinksLockRelease(token?: string) {
+      const r = await sb.rpc('rio_links_lock_release', { p_token: token ?? null });
+      if (r.error) throw new Error(`rio_links_lock_release: ${r.error.message}`);
+    },
     async saveOrphanPosition(row: {
       plate: string; trackingObjectId?: string | null;
       lat: number; lon: number; ts: string;
@@ -281,6 +373,56 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       });
       if (r.error) throw new Error(`telm_infer_phase_from_position: ${r.error.message}`);
       return r.data == null ? null : String(r.data);
+    },
+    async listRioLoadsForPoll() {
+      // #442: bez shipment_code — kolumna jest w shipment_items, nie w loads (RioLoadRow.code nieużywane).
+      const r = await sb.from('loads').select(
+        'id,rio_tracking_id,rio_secret,rio_check_state,rio_check_at,rio_valid_from,rio_valid_to,rio_asset_name,rio_tracker_on,rio_last_fix_at,rio_error_streak,trailer_plate,tractor_plate,tractor_delivery_plate,status,plan_load_date,tracking_opened_at,telematics_vehicle_id',
+      )
+        .not('rio_tracking_id', 'is', null)
+        .not('rio_secret', 'is', null)
+        .not('status', 'in', '("CANCELLED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+      if (r.error) throw new Error(`loads rio: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        id: row.id as string,
+        code: null as string | null,
+        rio_tracking_id: String(row.rio_tracking_id),
+        rio_secret: String(row.rio_secret),
+        rio_check_state: (row.rio_check_state as string | null) ?? null,
+        rio_check_at: (row.rio_check_at as string | null) ?? null,
+        rio_valid_from: (row.rio_valid_from as string | null) ?? null,
+        rio_valid_to: (row.rio_valid_to as string | null) ?? null,
+        rio_asset_name: (row.rio_asset_name as string | null) ?? null,
+        rio_tracker_on: (row.rio_tracker_on as string | null) ?? null,
+        rio_last_fix_at: (row.rio_last_fix_at as string | null) ?? null,
+        rio_error_streak: Number(row.rio_error_streak ?? 0),
+        trailer_plate: (row.trailer_plate as string | null) ?? null,
+        tractor_plate: (row.tractor_plate as string | null) ?? null,
+        tractor_delivery_plate: (row.tractor_delivery_plate as string | null) ?? null,
+        status: (row.status as string | null) ?? null,
+        plannedLoadDate: (row.plan_load_date as string | null) ?? null,
+        trackingOpenedAt: (row.tracking_opened_at as string | null) ?? null,
+        telematics_vehicle_id: (row.telematics_vehicle_id as string | null) ?? null,
+      }));
+    },
+    async updateRioLoadState(loadId: string, patch: {
+      rio_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+      rio_check_at?: string;
+      rio_asset_name?: string | null;
+      rio_tracker_on?: string | null;
+      rio_valid_from?: string | null;
+      rio_valid_to?: string | null;
+      rio_last_fix_at?: string;
+      rio_error_streak?: number;
+    }) {
+      must(await sb.from('loads').update(patch).eq('id', loadId), 'loads rio state');
+    },
+    async lastPositionFix(loadId: string, source: string) {
+      const r = await sb.from('positions').select('lat,lon,ts').eq('load_id', loadId).eq('source', source)
+        .order('ts', { ascending: false }).limit(1).maybeSingle();
+      if (r.error || !r.data) return null;
+      const d = r.data as { lat: number; lon: number; ts: string };
+      return { lat: Number(d.lat), lon: Number(d.lon), ts: String(d.ts) };
     },
   };
 }

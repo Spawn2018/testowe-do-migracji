@@ -153,7 +153,7 @@ describe('B5 — przełączanie funkcjami bazy', () => {
   });
 
   it('ekrany przełączają przez switchViewRole; pasek „Działasz jako” nie dubluje paska Podglądu', () => {
-    for (const f of ['src/components/shell/Topbar.tsx', 'src/components/shell/AccountMenu.tsx', 'src/App.tsx', 'src/auth/PreviewBanner.tsx']) {
+    for (const f of ['src/components/shell/Topbar.tsx', 'src/components/shell/AccountMenu.tsx', 'src/TowerShell.tsx', 'src/auth/PreviewBanner.tsx']) {
       expect(readFileSync(f, 'utf8')).toContain('switchViewRole(');
     }
     expect(readFileSync('src/auth/ImpersonationBanner.tsx', 'utf8')).toContain('me.preview_ro');

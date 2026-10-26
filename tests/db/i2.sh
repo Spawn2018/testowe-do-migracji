@@ -21,6 +21,17 @@ run() { local end="rollback"; [ "$3" = "commit" ] && end="commit"
 val() { out=$(run "$2" "$3" "$5" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
   if [ "$out" = "$4" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $out, oczekiwano: $4)"; fi; }
 err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
+# #496: odmowa z SQLSTATE (nie tylko treść).
+errc() {
+  local name="$1" auth="$2" sql="$3" state="$4" msg="${5:-.}"
+  out=$(run "$auth" "do \$\$ begin $sql; raise exception 'NO_RAISE'; exception when others then
+    if sqlstate = '$state' and sqlerrm ~* E'$msg' then raise notice 'ERRC_OK';
+    else raise exception 'ERRC_BAD state=% msg=%', sqlstate, sqlerrm;
+    end if;
+  end \$\$")
+  if echo "$out" | grep -q ERRC_OK; then ok=$((ok+1)); echo "  OK    $name"
+  else fail=$((fail+1)); echo "  FAIL  $name → $(echo "$out" | tail -1)"; fi
+}
 Q() { $PSQL -c "$1" 2>&1 | tail -1; }
 chk() { if [ "$2" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano: $3)"; fi; }
 H() { Q "select round(extract(epoch from (eta_site - $2))/3600, 1) from loads where id='$1'"; }   # ETA − punkt odniesienia [h]
@@ -280,6 +291,8 @@ $PSQL -c "update risk_signals set detected_at = now()-interval '40 days' where d
 val "okno 30 dni: próbka sprzed 40 dni pominięta → 2 próbki" $HHL "select samples from kpi_detection_lag('$P', 30)" 2
 
 echo; echo "[I-10] e-mail o zmianie daty awizowanego (0056)"
+# #402 F7: migracja nie włącza dates.email — test włącza jak c16-push.
+$PSQL -c "update notification_matrix set email=true where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH','CLIENT_USER')" >/dev/null
 $PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{\"code\":\"T-X\"}', 'T-I10-1' from app_users where auth_id='$SCX'" >/dev/null
 chk "IN_APP SCHEDULE_DATE_CRITICAL → 1 e-mail na adres konta" "$(Q "select count(*)||'/'||min(recipient) from notifications where dedup_key='EMAIL:T-I10-1'")" "1/$(Q "select email from app_users where auth_id='$SCX'")"
 $PSQL -c "insert into notifications (channel, recipient, user_id, template, payload, dedup_key) select 'IN_APP', email, id, 'SCHEDULE_DATE_CRITICAL', '{}', 'T-I10-1' from app_users where auth_id='$SCX' on conflict do nothing" >/dev/null
@@ -355,6 +368,9 @@ for x in c1 d1 e1; do SYS "insert into positions (load_id, ts, geom_raw, source)
 SYS "insert into driver_tokens (load_id, token_hash, expires_at) values ('$(R e1)', 'stary1', now() - interval '91 days'), ('$(R e1)', 'swiezy', now() - interval '89 days')"
 SYS "insert into driver_tokens (load_id, token_hash, expires_at, revoked_at) values ('$(R e1)', 'odwolany', now() + interval '1 day', now() - interval '100 days')"
 chk "przebieg: anonimizacja 2 (rozładowany 91 d + anulowany 91 d)" "$(Q "select purge_personal_data()")" "2"
+# #400 F7 r3: UPDATE-y RODO maskują kierowcę w dzienniku (source=rodo); retencja od created_at wpisu.
+chk "D-1243/#400: UPDATE RODO — source=rodo i maska kierowcy (R a1)" "$(Q "select (count(*) > 0 and bool_and(source = 'rodo' and old_value->>'driver_name' = '[dane osobowe]'))::text from audit_log where entity='loads' and entity_id='$(R a1)' and old_value ? 'driver_name'")" "true"
+chk "D-1243/#400: dziennik R a1/c1 bez Jan Kowalski / 600100200" "$(Q "select count(*) from audit_log where entity='loads' and entity_id in ('$(R a1)','$(R c1)') and (coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%Jan Kowalski%' or coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%600100200%')")" "0"
 chk "rozładowany 91 d: imię i telefon usunięte" "$(Q "select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id='$(R a1)'")" "∅/∅"
 chk "rozładowany 89 d: dane zostają" "$(Q "select driver_name from loads where id='$(R b1)'")" "Jan Kowalski"
 chk "anulowany 91 d: dane i pozycje usunięte (NOWE)" "$(Q "select coalesce(driver_phone,'∅') from loads where id='$(R c1)'")/$(Q "select count(*) from positions where load_id='$(R c1)'")" "∅/0"
@@ -498,12 +514,69 @@ val "IQH-2: uzupełnienie godzin przy quiet=0 → nie cicho" $HHL "select coales
 chk "IQH-2: PLAN_DATES_CHANGED przy quiet=0" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LQ2' and event_type='PLAN_DATES_CHANGED'")" "true"
 val "HHL_ADMIN włącza z powrotem import_quiet_hours" $HHL "select admin_ops_threshold_set('import_quiet_hours', 1); select value_num::int from ops_thresholds where key='import_quiet_hours'" 1 commit
 
+echo; echo "[#384 pkt 4] okno „do” + historyczne cicho"
+# 4a: plik z jedną godziną nie kasuje plan_load_to / plan_delivery_from
+DIW1=$(_dcal 40); DIW2=$(_dcal 45)
+ROWIW() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"08:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"12:00\"}]"; }
+ROWIW2() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"09:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"13:00\"}]"; }
+IMPIW() { echo "select import_schedule('$P', '$(ROWIW $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+IMPIW2() { echo "select import_schedule('$P', '$(ROWIW2 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+val "IW-1: import z godzinami" $HHL "select jsonb_array_length(r->'added') from ($(IMPIW $DIW1 $DIW2 false)) s(r)" 1 commit
+LW=$(Q "select load_id from shipment_items where shipment_code='IW-1'")
+$PSQL -c "update loads set plan_load_to=plan_load_from + interval '2 hours', plan_delivery_from=plan_delivery_to - interval '2 hours', carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$LW'" >/dev/null
+TO_BEFORE=$(Q "select plan_load_to::text from loads where id='$LW'")
+FROM_BEFORE=$(Q "select plan_delivery_from::text from loads where id='$LW'")
+val "IW-1: zmiana godziny nie kasuje okna „do”" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW2 $DIW1 $DIW2 false)) s(r)" "IW-1" commit
+chk "IW-1: plan_load_to zachowane" "$(Q "select (plan_load_to::text = '$TO_BEFORE')::text from loads where id='$LW'")" "true"
+chk "IW-1: plan_delivery_from zachowane" "$(Q "select (plan_delivery_from::text = '$FROM_BEFORE')::text from loads where id='$LW'")" "true"
+
+# #384 zaległe: sama zmiana daty (bez load_time) → przesuń okno o różnicę dni
+DIW1c=$(_dcal 42); DIW2c=$(_dcal 47)
+ROWIW3() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+IMPIW3() { echo "select import_schedule('$P', '$(ROWIW3 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+val "IW-1: zmiana samej daty (bez godziny)" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW3 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
+chk "IW-1: okno załadunku na nowej dacie" "$(Q "select ((plan_load_from at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and (plan_load_to at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and extract(hour from plan_load_from at time zone 'Europe/Warsaw') = 9)::text from loads where id='$LW'")" "true"
+chk "IW-1: okno dostawy na nowej dacie" "$(Q "select ((plan_delivery_from at time zone 'Europe/Stockholm')::date = '$DIW2c'::date and (plan_delivery_to at time zone 'Europe/Stockholm')::date = '$DIW2c'::date)::text from loads where id='$LW'")" "true"
+
+# F7 B2: ta sama data + pusta komórka godziny (wcześniej wypełniona) → okno nietknięte
+ROWIW4() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"09:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"13:00\"}]"; }
+IMPIW4() { echo "select import_schedule('$P', '$(ROWIW4 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
+val "IW-1: przywróć godziny na tej samej dacie" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW4 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
+WIN_SAME=$(Q "select plan_load_from::text||'|'||plan_load_to::text||'|'||plan_delivery_from::text||'|'||plan_delivery_to::text from loads where id='$LW'")
+val "IW-1: ta sama data + pusta godzina → changed" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW3 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
+chk "IW-1: okno nietknięte przy pustej godzinie (#384 F7 B2)" "$(Q "select (plan_load_from::text||'|'||plan_load_to::text||'|'||plan_delivery_from::text||'|'||plan_delivery_to::text = '$WIN_SAME')::text from loads where id='$LW'")" "true"
+
+# 4b: minięta dostawa → bulk_quiet (bez PLAN_DATES_CHANGED / SCHEDULE_DATE_CRITICAL)
+DIH1=$(Q "select (current_date - 20)::text"); DIH2=$(Q "select (current_date - 15)::text")
+DIH1b=$(Q "select (current_date - 19)::text"); DIH2b=$(Q "select (current_date - 14)::text")
+ROWHIST() { echo "[{\"code\":\"IH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+ROWHIST2() { echo "[{\"code\":\"IH-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"delivery_date\":\"$2\"}]"; }
+IMPHIST() { echo "select import_schedule('$P', '$(ROWHIST $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"ih.xlsx\"}'::jsonb, $3)"; }
+IMPHIST2() { echo "select import_schedule('$P', '$(ROWHIST2 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"ih.xlsx\"}'::jsonb, $3)"; }
+val "IH-1: transport historyczny" $HHL "select jsonb_array_length(r->'added') from ($(IMPHIST $DIH1 $DIH2 false)) s(r)" 1 commit
+LH=$(Q "select load_id from shipment_items where shipment_code='IH-1'")
+# status przez replica — bez load_status_set; inaczej PLANNED z minioną datą → 2 ryzyka w l3_scan (jak L7/A1)
+$PSQL -c "set session_replication_role=replica; update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003', status='DELIVERED' where id='$LH'; set session_replication_role=origin" >/dev/null
+$PSQL -c "delete from notifications where load_id='$LH'; delete from load_events where load_id='$LH' and event_type in ('PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL'); delete from decision_events where decision_id in (select id from decisions where load_id='$LH'); delete from decisions where load_id='$LH'; delete from risk_signals where load_id='$LH'" >/dev/null
+val "IH-1: zmiana daty na historycznym → quiet_hist" $HHL "select coalesce(r->'changed'->0->>'quiet_hist','false')||'/'||coalesce(r->'changed'->0->>'critical','true') from ($(IMPHIST2 $DIH1b $DIH2b false)) s(r)" "true/false" commit
+chk "IH-1: bez PLAN_DATES_CHANGED" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='PLAN_DATES_CHANGED'")" "0"
+chk "IH-1: bez SCHEDULE_DATE_CRITICAL" "$(Q "select count(*)::text from load_events where load_id='$LH' and event_type='SCHEDULE_DATE_CRITICAL'")" "0"
+# sprzątanie — IW-1/IH-1 nie mogą psuć l3_scan w części 3 (załadunek za 54 h); decision_events przed decisions
+$PSQL -v ON_ERROR_STOP=1 -c "
+  delete from notifications where load_id in ('$LW','$LH');
+  delete from load_events where load_id in ('$LW','$LH');
+  delete from risk_signals where load_id in ('$LW','$LH');
+  delete from decision_events where decision_id in (select id from decisions where load_id in ('$LW','$LH'));
+  delete from decisions where load_id in ('$LW','$LH');
+  delete from shipment_items where shipment_code in ('IW-1','IH-1');
+  delete from loads where id in ('$LW','$LH')" >/dev/null
+
 fi # tower-i2-part 2
 
 if _i2_part_ok 3; then
 echo; echo "[I-3] bramka SMS — część bazowa (0067; bez telefonu, D-4)"
 chk "EXTERNAL_MESSAGING domyślnie wyłączone (R-2, 0068)" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
-$PSQL -c "update security_flags set enabled=true where key='EXTERNAL_MESSAGING'" >/dev/null   # testy funkcjonalne I-3 jak po R-2
+# #467: numery testowe tylko przy EXTERNAL off — zostawiamy wyłączone do pull TEST; EXTERNAL on w sekcji R-2.
 SL=33333333-0000-0000-0000-000000000001
 AN() { local o; o=$($PSQL -v ON_ERROR_STOP=1 -c "begin; set local role anon; $1; commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$'); if echo "$o" | grep -q ERROR; then echo "$o" | grep ERROR; else echo "$o" | tail -1; fi; }
 chk "sms_*: RLS na 3 tabelach, anon bez SELECT" "$(Q "select (select count(*) from pg_class where relname in ('sms_devices','sms_heartbeats','sms_outbox') and relrowsecurity)::text || bool_or(has_table_privilege('anon', 'public.'||t, 'select'))::text from unnest(array['sms_devices','sms_heartbeats','sms_outbox']) t")" "3false"
@@ -519,73 +592,81 @@ chk "anon: zły token urządzenia odrzucony" "$(AN "select count(*) from sms_pul
 chk "anon: brak tokenu odrzucony" "$(AN "select count(*) from sms_pull()" | grep -c 'Brak tokenu')" 1
 chk "authenticated: brak EXECUTE sms_pull (tylko anon)" "$(Q "select has_function_privilege('authenticated','sms_pull(text,int)','execute')::text || has_function_privilege('anon','sms_pull(text,int)','execute')::text")" "falsetrue"
 $PSQL -c "set session_replication_role=replica; update loads set driver_phone='0701234567', driver_phone_country='SE', driver_locale=null, status='PLANNED', actual_delivery_at=null, sailing_id=null where id='$SL'" >/dev/null
+# #405 (D-20261021-2014-01): SMS tylko ZONE_*/TEST — bez SMS do kierowcy; testy idą za decyzją.
 err "link SMS bez numeru kierowcy odrzucony" $HHL "select issue_driver_token_sms('$L2')" "Brak numeru telefonu"
 $PSQL -c "update security_flags set enabled = true where key = 'DRIVER_LINK_ACCEPT'" >/dev/null
-val "HHL: link kierowcy + SMS w jednej transakcji" $HHL "select (r->>'token' like 'wt_%')::text || (r->>'sms_id' is not null)::text from (select issue_driver_token_sms('$SL') r) x" "truetrue" commit
-chk "DRIVER_LINK: sv z prefiksu +46, sekret, priorytet 100; w sms_outbox.body „[link usunięty]”, bez tokenu" "$(Q "select locale||'/'||contains_secret||'/'||priority||'/'||(body like '%forarlank [link usuniety]%')::text||'/'||(body !~ 'wt_|https?://')::text from sms_outbox where kind='DRIVER_LINK' and load_id='$SL'")" "sv/true/100/true/true"
-chk "DRIVER_LINK: pełna treść z linkiem tylko w sms_outbox_secret (brak uprawnień ról API)" "$(Q "select count(*)||'/'||bool_and(s.body like '%forarlank https://tower.log-mar.pl/#/driver/wt_%')::text||'/'||has_table_privilege('authenticated','public.sms_outbox_secret','select')::text||has_table_privilege('anon','public.sms_outbox_secret','select')::text from sms_outbox_secret s join sms_outbox o on o.id=s.sms_id where o.kind='DRIVER_LINK'")" "1/true/falsefalse"
+val "HHL: link kierowcy bez SMS (#405)" $HHL "select (r->>'token' like 'wt_%')::text || (r->>'sms_id' is null)::text from (select issue_driver_token_sms('$SL') r) x" "truetrue" commit
+chk "#405: 0× DRIVER_LINK po issue_driver_token_sms" "$(Q "select count(*) from sms_outbox where kind='DRIVER_LINK' and load_id='$SL'")" 0
+chk "#405: sms_outbox_secret puste po linku bez SMS" "$(Q "select count(*) from sms_outbox_secret")" 0
 val "HHL: select body z kolejki bez tokenu" $HHL "select count(*) from sms_outbox where body ~ 'wt_|https?://'" 0
 err "HHL: brak dostępu do sms_outbox_secret" $HHL "select count(*) from sms_outbox_secret" "permission denied"
 err "KSH: link SMS odrzucony" $KSH "select issue_driver_token_sms('$SL')" "wyłącznie przewoźnik transportu albo HHL"
-chk "telefon pobiera 1 SMS (CLAIMED) z pełnym linkiem" "$(AN "select count(*)||'/'||bool_and(body like '%forarlank https://tower.log-mar.pl/#/driver/wt_%') from sms_pull('$DEVTOK', 5)")/$(Q "select status from sms_outbox where kind='DRIVER_LINK'")" "1/true/CLAIMED"
+# Przepływ telefonu na TEST (dozwolony rodzaj) — bez osobnych val (liczba asercji = EXPECTED)
+$PSQL -c "insert into sms_test_numbers (to_e164, label) values ('+46701234567','i3 pull') on conflict do nothing; select sms_enqueue('TEST', null, '+46701234567', 'pl', '{}'::jsonb, 100, 'i3-pull-test', false)" >/dev/null
+chk "telefon pobiera 1 SMS TEST (CLAIMED)" "$(AN "select count(*)||'/'||bool_and(body like '%SMS testowy%' or body like '%test-SMS%') from sms_pull('$DEVTOK', 5)")/$(Q "select status from sms_outbox where kind='TEST' and to_e164='+46701234567'")" "1/true/CLAIMED"
 chk "drugie pobranie: 0 (bez podwójnego wydania)" "$(AN "select count(*) from sms_pull('$DEVTOK', 5)")" 0
-SID=$(Q "select id from sms_outbox where kind='DRIVER_LINK'")
+SID=$(Q "select id from sms_outbox where kind='TEST' and to_e164='+46701234567'")
 chk "raport SENT: status i licznik dzienny" "$(AN "select sms_report('$DEVTOK', '$SID', 'SENT', null, 1)" >/dev/null; Q "select o.status||'/'||d.day_sent from sms_outbox o join sms_devices d on d.id=o.device_id where o.id='$SID'")" "SENT/1"
-chk "po SENT: sekret usunięty natychmiast (0 wierszy), body bez tokenu" "$(Q "select (select count(*) from sms_outbox_secret)||'/'||(select count(*) from sms_outbox where body ~ 'wt_')")" "0/0"
+chk "po SENT: brak sekretów / tokenów w body" "$(Q "select (select count(*) from sms_outbox_secret)||'/'||(select count(*) from sms_outbox where body ~ 'wt_')")" "0/0"
 chk "powtórzony raport SENT bez błędu i bez podwójnego licznika" "$(AN "select sms_report('$DEVTOK', '$SID', 'SENT')" >/dev/null; Q "select day_sent from sms_devices where revoked_at is null")" 1
 chk "przejście wstecz SENT → CLAIMED odrzucone" "$(AN "select sms_report('$DEVTOK', '$SID', 'CLAIMED')" | grep -c 'Niedozwolone przejście')" 1
 chk "heartbeat: konfiguracja z bazy (poll 15 s, limit 150)" "$(AN "select (r->>'poll_s')||'/'||(r->>'day_limit')||'/'||(r->>'paused') from (select sms_heartbeat('$DEVTOK', '{\"battery\":80}') r) x")" "15/150/false"
 $PSQL -c "update loads set plan_load_from = coalesce(plan_load_from, now() + interval '2 days') + interval '10 minutes', plan_load_to = coalesce(plan_load_to, now() + interval '2 days 8 hours') + interval '10 minutes' where id='$SL'" >/dev/null
 chk "zmiana okna < 30 min: bez SMS" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update loads set plan_load_from = plan_load_from + interval '2 hours', plan_load_to = plan_load_to + interval '2 hours' where id='$SL'" >/dev/null
-chk "zmiana okna załadunku ≥ 30 min: WINDOW_CHANGE (sv, lastningsfonster)" "$(Q "select count(*)||'/'||bool_and(body like '%ANDRAT lastningsfonster:%') from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" "1/true"
+chk "#405: zmiana okna ≥ 30 min → 0 WINDOW_CHANGE (trigger off)" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update loads set plan_load_from = plan_load_from - interval '1 second' + interval '1 second' where id='$SL'" >/dev/null
-chk "to samo okno ponownie: bez duplikatu" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 1
+chk "#405: ponowna zmiana okna → nadal 0 WINDOW_CHANGE" "$(Q "select count(*) from sms_outbox where kind='WINDOW_CHANGE' and load_id='$SL'")" 0
 SA=66666666-0000-0000-0000-0000000000e3
-# Część 3 osobno: vessels wstawia tylko część 1. sailings.vessel_id NOT NULL — bez statku rejs (i SMS rejsu) nie powstaje.
+# Część 3 osobno: vessels wstawia tylko część 1. sailings.vessel_id NOT NULL — bez statku rejs nie powstaje.
 $PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0000-000000000001','Nova Star','Polferries') on conflict (id) do nothing" >/dev/null
 $PSQL -c "insert into sailings (id, project_id, vessel_id, departure_at, arrival_at) values ('$SA','$P','55555555-0000-0000-0000-000000000001', now() + interval '3 days', now() + interval '3 days 18 hours')" >/dev/null
 $PSQL -c "update loads set sailing_id='$SA' where id='$SL'" >/dev/null
-chk "przypisanie rejsu: SAILING_CHANGE" "$(Q "select count(*) from sms_outbox where kind='SAILING_CHANGE' and load_id='$SL'")" 1
+chk "#405: przypisanie rejsu → 0 SAILING_CHANGE" "$(Q "select count(*) from sms_outbox where kind='SAILING_CHANGE' and load_id='$SL'")" 0
 $PSQL -c "update sailings set status='ODWOLANY' where id='$SA'" >/dev/null
-chk "rejs odwołany: SAILING_CANCELLED dla transportu z linkiem" "$(Q "select count(*) from sms_outbox where kind='SAILING_CANCELLED' and load_id='$SL'")" 1
+chk "#405: rejs odwołany → 0 SAILING_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='SAILING_CANCELLED' and load_id='$SL'")" 0
+# Seed 3× TEST do strażnika (dawniej WINDOW/SAILING z triggerów)
+$PSQL -c "insert into sms_outbox (kind, to_e164, locale, body, priority, created_at) values
+ ('TEST','+46701234567','sv','Watch Tower: straznik A', 100, now() - interval '11 minutes'),
+ ('TEST','+46701234567','sv','Watch Tower: straznik B', 100, now() - interval '11 minutes'),
+ ('TEST','+46701234567','sv','Watch Tower: straznik C', 100, now() - interval '11 minutes')" >/dev/null
 $PSQL -c "update sms_devices set paused=true" >/dev/null
 chk "pauza urządzenia: pobranie zwraca 0" "$(AN "select count(*) from sms_pull('$DEVTOK', 5)")" 0
-$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'; update sms_outbox set created_at = now() - interval '11 minutes' where status='QUEUED'" >/dev/null
+$PSQL -c "update sms_devices set paused=false, last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'" >/dev/null
 chk "strażnik: cisza > 30 min → ryzyko JOB_FAILURE HIGH (sms-gateway)" "$(Q "select (sms_watchdog()->>'cisza')") $(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null and severity='HIGH'")" "true 1"
 chk "strażnik: SMS > 10 min → e-mail zastępczy SMS_FALLBACK (bez duplikatu przy drugim przebiegu)" "$(Q "select count(*) filter (where fallback_at is not null) from sms_outbox where status='QUEUED'")/$(Q "select sms_watchdog()->>'fallback'")" "3/0"
 chk "e-mail zastępczy: do HHL (zdarzenia automatyczne), bez cen, ostatnie 3 cyfry numeru" "$(Q "select count(*) > 0 and bool_and(payload->>'to_tail' = '567') from notifications where template='SMS_FALLBACK'")" t
 chk "sygnał wraca: ryzyko zamknięte" "$($PSQL -c "update sms_devices set last_seen_at = now()" >/dev/null; Q "select sms_watchdog()->>'cisza'")/$(Q "select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null")" "false/0"
 $PSQL -c "update sms_devices set last_seen_at = now() - interval '35 minutes'; update sms_heartbeats set at = now() - interval '35 minutes'" >/dev/null
 chk "cooldown 60 min: ponowna cisza zaraz po zamknięciu → bez nowego ryzyka" "$(Q "select (sms_watchdog()->>'cisza')||'/'||(sms_watchdog()->>'nowe_ryzyka')||'/'||(select count(*) from risk_signals where dedup_key like 'sms-gateway:%' and resolved_at is null)")" "true/0/0"
-$PSQL -c "update sms_outbox set expires_at = now() - interval '1 minute' where kind='SAILING_CHANGE'; update sms_outbox set sent_at = now() - interval '25 hours' where kind='DRIVER_LINK'" >/dev/null
-chk "strażnik: przeterminowany → EXPIRED; body wysłanego SMS bez linku" "$(Q "select (r->>'przeterminowane')||'/'||(r->>'wyczyszczone_linki') from (select sms_watchdog() r) x")/$(Q "select body from sms_outbox where kind='DRIVER_LINK'")" "1/1/[link usunięty]"
+$PSQL -c "update sms_outbox set expires_at = now() - interval '1 minute' where body like 'Watch Tower: straznik A%'" >/dev/null
+chk "strażnik: przeterminowany → EXPIRED" "$(Q "select (r->>'przeterminowane') from (select sms_watchdog() r) x")" 1
 val "HHL: kolejka widoczna" $HHL "select count(*) > 0 from sms_outbox" t
 val "KSH: kolejka niewidoczna (RLS)" $KSH "select count(*) from sms_outbox" 0
 err "przewoźnik: bez dostępu do tabeli urządzeń" $SCX "select count(*) from sms_devices where label is not null" "0|permission denied"
-echo "  [I-3 P0] SMS 8 GPS_SILENT i 9 UNLOAD_CONFIRM (0069)"
-chk "CHECK kind: GPS_SILENT i UNLOAD_CONFIRM dozwolone, inne odrzucone" "$(Q "select pg_get_constraintdef(oid) ~ 'GPS_SILENT' and pg_get_constraintdef(oid) ~ 'UNLOAD_CONFIRM' from pg_constraint where conname='sms_outbox_kind_check'")/$($PSQL -c "insert into sms_outbox (kind, to_e164, locale, body) values ('ROAD_SE','+46700000001','sv','x')" 2>&1 | grep -c sms_outbox_kind_check)" "t/1"
+echo "  [I-3 P0 / #405] GPS_SILENT i UNLOAD_CONFIRM wyłączone"
+chk "CHECK kind: GPS_SILENT i UNLOAD_CONFIRM dozwolone w CHECK, inne odrzucone" "$(Q "select pg_get_constraintdef(oid) ~ 'GPS_SILENT' and pg_get_constraintdef(oid) ~ 'UNLOAD_CONFIRM' from pg_constraint where conname='sms_outbox_kind_check'")/$($PSQL -c "insert into sms_outbox (kind, to_e164, locale, body) values ('ROAD_SE','+46700000001','sv','x')" 2>&1 | grep -c sms_outbox_kind_check)" "t/1"
 chk "szablony 8 i 9: PL bez polskich znaków, ≤ 160 znaków (nr 9 znaków, 9999 min)" "$(Q "with r as (select lc, sms_render(k, lc, jsonb_build_object('nr','SG-01-001','min','9999')) b from unnest(array['GPS_SILENT','UNLOAD_CONFIRM']) k cross join unnest(array['pl','en','sv']) lc) select count(*)||'/'||bool_and(lc <> 'pl' or b !~ '[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]')::text || (max(char_length(b)) <= 160)::text from r")" "6/truetrue"
 $PSQL -c "set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$SL'; insert into positions (load_id, ts, geom_raw, source, raw) values ('$SL', now() - interval '47 minutes', st_setsrid(st_makepoint(18.65,54.35),4326), 'DRIVER_PWA', '{\"test\":\"i3p0\"}')" >/dev/null
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-1' from loads where id='$SL'" >/dev/null
-chk "ryzyko SILENT_VEHICLE w ruchu: GPS_SILENT (sv, 47 min od ostatniej pozycji)" "$(Q "select count(*)||'/'||bool_and(body ~ '^Watch Tower .*: ingen GPS-position pa 4[78] min')::text from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" "1/true"
+chk "#405: SILENT_VEHICLE → 0 GPS_SILENT (trigger off)" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 0
 $PSQL -c "update risk_signals set resolved_at=now() where dedup_key='test-gps-1'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-2' from loads where id='$SL'" >/dev/null
-chk "drugie ryzyko w ciągu 3 h: bez drugiego SMS" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 1
-$PSQL -c "set session_replication_role=replica; update loads set status='FERRY' where id='$SL'; set session_replication_role=origin; delete from sms_outbox where kind='GPS_SILENT'; update risk_signals set resolved_at=now() where dedup_key='test-gps-2'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-3' from loads where id='$SL'" >/dev/null
+chk "#405: drugie SILENT → nadal 0 GPS_SILENT" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT' and load_id='$SL'")" 0
+$PSQL -c "set session_replication_role=replica; update loads set status='FERRY' where id='$SL'; set session_replication_role=origin; update risk_signals set resolved_at=now() where dedup_key='test-gps-2'; insert into risk_signals (project_id, load_id, kind, severity, title, dedup_key) select project_id, id, 'SILENT_VEHICLE', 'MEDIUM', 'test', 'test-gps-3' from loads where id='$SL'" >/dev/null
 chk "na promie (FERRY): bez GPS_SILENT" "$(Q "select count(*) from sms_outbox where kind='GPS_SILENT'")" 0
 $PSQL -c "set session_replication_role=replica; update loads set status='AT_SITE', updated_at=now() - interval '3 hours' where id='$SL'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'STATUS_AUTO', now() - interval '30 minutes', '{\"to\":\"AT_SITE\"}')" >/dev/null
 chk "AT_SITE od 30 min: skan bez UNLOAD_CONFIRM" "$(Q "select sms_unload_confirm_scan()")" 0
-chk "AT_SITE od ≥ 2 h bez MILESTONE_UNLOADED: UNLOAD_CONFIRM (sv); ponowny skan bez duplikatu" "$(Q "select sms_unload_confirm_scan(now() + interval '2 hours')")/$(Q "select sms_unload_confirm_scan(now() + interval '3 hours')")/$(Q "select count(*)||'/'||bool_and(body like '%du ar pa Stegra Boden. Bekrafta LOSSAD%')::text from sms_outbox where kind='UNLOAD_CONFIRM' and load_id='$SL'")" "1/0/1/true"
-$PSQL -c "delete from sms_outbox where kind='UNLOAD_CONFIRM'; insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'MILESTONE_UNLOADED', now(), '{}')" >/dev/null
-chk "po MILESTONE_UNLOADED (data usługi, kurs faktury): bez prośby" "$(Q "select sms_unload_confirm_scan(now() + interval '5 hours')")" 0
+chk "#405: AT_SITE ≥ 2 h → skan 0 / 0 UNLOAD_CONFIRM" "$(Q "select sms_unload_confirm_scan(now() + interval '2 hours')")/$(Q "select sms_unload_confirm_scan(now() + interval '3 hours')")/$(Q "select count(*) from sms_outbox where kind='UNLOAD_CONFIRM' and load_id='$SL'")" "0/0/0"
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload) values ('$SL', 'MILESTONE_UNLOADED', now(), '{}')" >/dev/null
+chk "po MILESTONE_UNLOADED: bez prośby" "$(Q "select sms_unload_confirm_scan(now() + interval '5 hours')")" 0
 chk "pg_cron: tower-sms-rozladunek co 10 min (w migracji; atrapa bez pg_cron)" "$(grep -c "cron.schedule('tower-sms-rozladunek', '\*/10 \* \* \* \*'" supabase/migrations/0069_sms_8_9_secret.sql)" 1
 $PSQL -c "delete from risk_signals where dedup_key like 'test-gps-%'; set session_replication_role=replica; delete from load_events where load_id='$SL' and (event_type='MILESTONE_UNLOADED' or (event_type='STATUS_AUTO' and payload->>'to'='AT_SITE')); delete from positions where load_id='$SL' and raw->>'test'='i3p0'; set session_replication_role=replica; update loads set status='IN_TRANSIT_PL' where id='$SL'" >/dev/null
 val "HHL: anulowanie transportu z linkiem" $HHL "select cancel_load('$SL', 'TEST I-3')::text" CANCELLED commit
-chk "anulowanie: LOAD_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='LOAD_CANCELLED' and load_id='$SL'")" 1
+chk "#405: anulowanie → 0 LOAD_CANCELLED" "$(Q "select count(*) from sms_outbox where kind='LOAD_CANCELLED' and load_id='$SL'")" 0
 DID=$(Q "select id from sms_devices where revoked_at is null")
 val "HHL: odwołanie urządzenia" $HHL "select sms_revoke_device('$DID')::text" true commit
 chk "odwołane urządzenie: pobranie odrzucone" "$(AN "select count(*) from sms_pull('$DEVTOK')" | grep -c 'odwołane urządzenie')" 1
-$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, driver_phone_country='PL', sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
+$PSQL -c "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SILENT'); delete from risk_signals where dedup_key like 'sms-gateway:%'; delete from sms_outbox; delete from sms_heartbeats; delete from sms_devices; delete from sms_test_numbers; set session_replication_role=replica; update loads set status='PLANNED', driver_phone=null, driver_phone_country='PL', sailing_id=null where id='$SL'; delete from driver_tokens where load_id='$SL'; delete from sailings where id='$SA'" >/dev/null
 
 echo; echo "[R-2] blokada wiadomości do osób zewnętrznych przed umowami RODO (0068)"
 $PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'" >/dev/null
@@ -593,20 +674,56 @@ DEV2=$(run $HHL "select sms_issue_device('Pixel R2 test')" commit | grep '^sd_')
 $PSQL -c "insert into sms_outbox (kind, to_e164, locale, body, priority) values ('WINDOW_CHANGE','+46701234567','sv','TOWER X: test R2', 100)" >/dev/null
 err "SMS testowy na numer spoza listy odrzucony" $HHL "select sms_send_test('+48600000001')" "listy numerów testowych"
 err "KSH: numer testowy odrzucony" $KSH "select sms_add_test_number('+48600000001','x')" "wyłącznie HHL"
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+errc "#496: sms_send_test HHL_OPS → 42501" $OPS "perform sms_send_test('+48600000001')" 42501 "Administrator HHL|wyłącznie HHL"
 val "HHL: numer testowy dodany" $HHL "select sms_add_test_number('+48600000001','telefon HHL')::text" true commit
 val "HHL: SMS testowy zakolejkowany" $HHL "select (sms_send_test('+48600000001') is not null)::text" true commit
-chk "przed R-2 telefon dostaje tylko SMS testowy (SMS do kierowcy zostaje w kolejce)" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./QUEUED"
-chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo@scx.example','SMS_FALLBACK') returning status")" BLOCKED_R2
+chk "#405 R-2: pull tylko TEST; WINDOW_CHANGE → EXPIRED" "$(AN "select string_agg(body, ',') from sms_pull('$DEV2', 5)")/$(Q "select status from sms_outbox where body='TOWER X: test R2'")" "Watch Tower: SMS testowy bramki./EXPIRED"
+# F7 #424: TEST stref tylko przy EXTERNAL on (R-2); pilot tylko ZONE_*; numer fikcyjny.
+# ::text boolean → true/false; sms_enqueue poza WHERE (dedup 2×).
+$PSQL -c "insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
+  values ('LOAD_SREM', 1, 'F7 strefa', '600111222', 'PL', true)
+  on conflict (list_key, slot) do update
+    set display_name=excluded.display_name, phone_national=excluded.phone_national,
+        country=excluded.country, active=true" >/dev/null
+chk "F7 B1: TEST na sms_zone_recipients przy EXTERNAL off → null" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test-off', false) is null)::text")" true
+err "F7 B1: admin_sms_zone_test przy EXTERNAL off → R-2" $HHL "select admin_sms_zone_test('LOAD_SREM')" "wysyłka zewnętrzna wyłączona|R-2"
+$PSQL -c "insert into pilot_notify_redirect (load_id, owner_email, owner_phone_e164, active, note)
+  values ('$SL', 'pilot-f7@test', '+48600999888', true, 'i3 f7 #405')
+  on conflict (load_id) do update
+    set owner_email=excluded.owner_email, owner_phone_e164=excluded.owner_phone_e164,
+        active=true, note=excluded.note, updated_at=now()" >/dev/null
+F7Z=$(Q "select sms_enqueue('ZONE_ENTER', '$SL', '+48600111222', 'pl', '{\"rej\":\"X\",\"wysylka\":\"SG\",\"miejsce\":\"Srem\"}'::jsonb, 100, 'i3-f7-zone-pilot', false)")
+chk "F7 B2: ZONE_ENTER → numer pilota (EXTERNAL_MESSAGING off)" "$(Q "select to_e164 from sms_outbox where id='$F7Z'")" "+48600999888"
+chk "#467 E42: pilot_redirect_dry_run ok (SMS→pilot, mail bez insertu)" "$(Q "select (pilot_redirect_dry_run('$SL')->>'ok')")" "true"
+
+chk "F7 B2: DRIVER_LINK nadal null" "$(Q "select (sms_enqueue('DRIVER_LINK', '$SL', '+46701234567', 'pl', '{\"nr\":\"SG-01\",\"url\":\"https://x.example/wt\"}'::jsonb, 100, 'i3-f7-drv', false) is null)::text")" true
+chk "F7 B2: WINDOW_CHANGE nadal null" "$(Q "select (sms_enqueue('WINDOW_CHANGE', '$SL', '+46701234567', 'sv', '{\"nr\":\"SG-01\",\"okno\":\"LOAD\",\"dt\":\"1\",\"t2\":\"2\"}'::jsonb, 100, 'i3-f7-win', false) is null)::text")" true
+# 1× ZONE (F7Z) + 1× TEST (lista testowa) — po EXTERNAL on: ZONE pull; TEST testowy → EXPIRED (#467)
+$PSQL -c "insert into sms_test_numbers (to_e164, label) values ('+48600000002','i3 f7 pull') on conflict do nothing; select sms_enqueue('TEST', null, '+48600000002', 'pl', '{}'::jsonb, 100, 'i3-f7-test-pull', false)" >/dev/null
+# #467: macierz CARRIER domyślnie email=false → SUPPRESSED przed R2; na test R-2 włączamy rodzaj.
+$PSQL -c "update notification_matrix set email=true where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+chk "e-mail na adres zewnętrzny (bez konta): BLOCKED_R2 (nie wychodzi)" "$(Q "insert into notifications (channel, recipient, template, payload) values ('EMAIL','dispo@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status")" BLOCKED_R2
 chk "e-mail na log-mar.pl: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','ops@log-mar.pl','SMS_FALLBACK') returning status")" PENDING
 chk "próba odblokowania (UPDATE na PENDING) nadal BLOCKED_R2" "$(Q "update notifications set status='PENDING' where recipient='dispo@scx.example' returning status")" BLOCKED_R2
 chk "0133: e-mail do konta w app_users (nie log-mar): PENDING" "$(Q "insert into notifications (channel, recipient, template) select 'EMAIL', email::text, 'SMS_FALLBACK' from app_users where email='hhl@test' returning status")" PENDING
 $PSQL -c "insert into user_invites (email, org_id, role) values ('invitee@example.com','00000000-0000-0000-0000-00000000a001','HHL_OPS') on conflict do nothing" >/dev/null
-chk "0133: e-mail do aktywnego zaproszenia: PENDING" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','invitee@example.com','SMS_FALLBACK') returning status")" PENDING
+chk "0133: e-mail do aktywnego zaproszenia: PENDING" "$(Q "insert into notifications (channel, recipient, template, payload) values ('EMAIL','invitee@example.com','SMS_FALLBACK','{\"matrix_role\":\"HHL_OPS\"}'::jsonb) returning status")" PENDING
 chk "centrum powiadomień (IN_APP) bez zmian" "$(Q "insert into notifications (channel, recipient, template) values ('IN_APP','dispo@scx.example','TEST') returning status")" PENDING
+# #467 D3: bez konta + rodzaj wyłączony → SUPPRESSED; bez roli → SUPPRESSED (nie ext_mail).
+$PSQL -c "update notification_matrix set email=false where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+chk "#467: bez konta, sms_gw off → SUPPRESSED" "$(Q "insert into notifications (channel, recipient, template, payload) values ('EMAIL','orphan-off@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status")" SUPPRESSED
+$PSQL -c "update notification_matrix set email=true where event_key='sms_gw' and role='CARRIER_DISPATCH'" >/dev/null
+chk "#467: bez konta bez roli → SUPPRESSED (nie domyślnie on)" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','orphan-norole@scx.example','SMS_FALLBACK') returning status")" SUPPRESSED
 err "KSH: włączenie wiadomości zewnętrznych odrzucone" $KSH "select admin_set_external_messaging(true)" "wyłącznie administrator HHL"
 val "HHL_ADMIN: włączenie (po R-2) z wpisem w dzienniku" $HHL "select admin_set_external_messaging(true)::text" true commit
-chk "po włączeniu: e-mail zewnętrzny PENDING, SMS do kierowcy wydawany" "$(Q "insert into notifications (channel, recipient, template) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK') returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/1/1"
-$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl','invitee@example.com') or recipient in (select email::text from app_users where email='hhl@test'); delete from user_invites where email='invitee@example.com'; delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
+err "#467: sms_send_test przy EXTERNAL on → odmowa" $HHL "select sms_send_test('+48600000001')" "Numery testowe wyłączone|wysyłce zewnętrznej"
+chk "#467: TEST na sms_test_numbers przy EXTERNAL on → null" "$(Q "select (sms_enqueue('TEST', null, '+48600000002', 'pl', '{}'::jsonb, 100, 'i3-f7-test-on-block', false) is null)::text")" true
+chk "F7 B1: TEST na sms_zone_recipients przy EXTERNAL on" "$(Q "select (sms_enqueue('TEST', null, '+48600111222', 'pl', '{}'::jsonb, 100, 'i3-f7-zone-test-on', false) is not null)::text")" true
+$PSQL -c "delete from sms_outbox where dedup_key='i3-f7-zone-test-on'" >/dev/null
+chk "po włączeniu: e-mail PENDING; pull 1 ZONE; TEST testowy EXPIRED" "$(Q "insert into notifications (channel, recipient, template, payload) values ('EMAIL','dispo2@scx.example','SMS_FALLBACK','{\"matrix_role\":\"CARRIER_DISPATCH\"}'::jsonb) returning status")/$(AN "select count(*) from sms_pull('$DEV2', 5)")/$(Q "select count(*) filter (where kind='ZONE_ENTER' and status='CLAIMED') from sms_outbox where dedup_key='i3-f7-zone-pilot'")/$(Q "select status from sms_outbox where dedup_key='i3-f7-test-pull'")/$(Q "select count(*) from audit_log where action='EXTERNAL_MESSAGING_SET'")" "PENDING/1/1/EXPIRED/1"
+$PSQL -c "update security_flags set enabled=false where key='EXTERNAL_MESSAGING'; delete from notifications where recipient in ('dispo@scx.example','dispo2@scx.example','ops@log-mar.pl','invitee@example.com','orphan-off@scx.example','orphan-norole@scx.example') or recipient in (select email::text from app_users where email='hhl@test'); delete from user_invites where email='invitee@example.com'; delete from sms_outbox; delete from sms_test_numbers; delete from sms_devices; delete from pilot_notify_redirect where load_id='$SL'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=1; delete from audit_log where action='EXTERNAL_MESSAGING_SET'" >/dev/null
 chk "stan końcowy: wiadomości zewnętrzne wyłączone" "$(Q "select enabled from security_flags where key='EXTERNAL_MESSAGING'")" f
 
 echo; echo "[I-20] ogólny dziennik audytu tabel biznesowych (0072 + HIST-11/0118)"
@@ -619,8 +736,46 @@ val "HHL: zmiana transportu (numer rezerwacji promu)" $HHL "update loads set fer
 chk "ROW_UPDATE loads: kto (HHL), tylko zmieniona kolumna, stara i nowa wartość" "$(Q "select count(*)||'/'||bool_and(u.auth_id='$HHL')::text||'/'||bool_and(a.new_value->>'ferry_booking_ref'='AUD-20' and a.old_value ? 'ferry_booking_ref' and not a.new_value ? 'status')::text from audit_log a join app_users u on u.id=a.user_id where a.action='ROW_UPDATE' and a.entity='loads' and a.entity_id='$L1'")" "1/true/true"
 $PSQL -c "select set_config('tower.eta_ctx','on',false); update loads set eta_site=now(), delay_minutes=5, eta_computed_at=now() where id='$L1'" >/dev/null
 chk "przeliczenie ETA (tylko eta_*/delay_minutes): bez wiersza w dzienniku" "$(Q "select count(*) from audit_log where action='ROW_UPDATE' and entity='loads' and entity_id='$L1'")" 1
-$PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48600111222', driver_name='Jan Test' where id='$L1'" >/dev/null
-chk "dane osobowe kierowcy: w dzienniku „[dane osobowe]”, nie numer" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text||'/'||(select count(*) from audit_log where new_value::text like '%600111222%' or old_value::text like '%Jan Test%') from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+$PSQL -c "set session_replication_role=replica; update loads set driver_phone=null where id='$L1'; set session_replication_role=origin; update loads set driver_phone='+48000000111', driver_name='Jan Test' where id='$L1'" >/dev/null
+# #466 / D1: wszystkie PII jawne w historii (D-1243 dokończenie); sekrety nadal ••••.
+chk "D-1243/#466: kierowca w dzienniku z imieniem i telefonem" "$(Q "select count(*)||'/'||bool_and(new_value->>'driver_phone'='+48000000111' and new_value->>'driver_name'='Jan Test')::text||'/'||(select count(*) from audit_log where entity='loads' and new_value ? 'driver_phone' and (new_value::text like '%[dane osobowe]%' or old_value::text like '%[dane osobowe]%')) from audit_log where entity='loads' and new_value ? 'driver_phone'")" "1/true/0"
+# F7 r3: driver_phone krajowy (0111 ^[0-9]{7,12}$), nie E.164 — jak i2 ok. 1181.
+$PSQL -c "delete from load_escorts where load_id='$L1'; insert into load_escorts (load_id, seq, company, plate, scope, driver_name, driver_phone, driver_phone_country, updated_by)
+ values ('$L1', 1, 'Pilot 400', 'XX400', 'PL', 'Adam Pilot', '000000222', 'PL',
+         (select id from app_users where auth_id='$HHL'))" >/dev/null
+# Nawiasy: || ma wyższy priorytet niż ->> (bez nich: (text||jsonb)->>'…' → brak operatora).
+chk "D-1243/#466: load_escorts — imię i telefon jawne" "$(Q "select (new_value->>'driver_name')||'/'||(new_value->>'driver_phone') from audit_log where entity='load_escorts' and new_value->>'load_id'='$L1' and new_value ? 'driver_name' order by created_at desc limit 1")" "Adam Pilot/000000222"
+HHL_UID=$(Q "select id from app_users where auth_id='$HHL'")
+$PSQL -c "update app_users set phone='+48000000333' where auth_id='$HHL'" >/dev/null
+chk "D-1243/#466: app_users.phone jawny" "$(Q "select new_value->>'phone' from audit_log where entity='app_users' and entity_id='$HHL_UID' and new_value ? 'phone' order by created_at desc limit 1")" "+48000000333"
+# slot 1–2 (0106); tabela ma uuid id → entity_id = id::text (nie list_key:slot).
+# Najpierw delete, żeby INSERT zawsze zapisał phone_national w dzienniku (nie no-op UPDATE).
+$PSQL -c "delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2;
+ insert into sms_zone_recipients (list_key, slot, display_name, phone_national, country, active)
+ values ('LOAD_SREM', 2, 'Test 400', '000000001', 'PL', true)" >/dev/null
+SZR_ID=$(Q "select id::text from sms_zone_recipients where list_key='LOAD_SREM' and slot=2")
+chk "D-1243/#466: sms_zone_recipients.phone_national jawny" "$(Q "select new_value->>'phone_national' from audit_log where entity='sms_zone_recipients' and entity_id='$SZR_ID' and new_value ? 'phone_national' order by created_at desc limit 1")" "000000001"
+$PSQL -c "update loads set rio_secret='sekret-400' where id='$L1'" >/dev/null
+chk "D-1243/#466: rio_secret w dzienniku jako ••••" "$(Q "select new_value->>'rio_secret' from audit_log where entity='loads' and entity_id='$L1' and new_value ? 'rio_secret' order by created_at desc limit 1")" "••••"
+chk "D-1243/#466: sekret-400 nigdzie w audit_log" "$(Q "select count(*) from audit_log where coalesce(old_value::text,'')||coalesce(new_value::text,'') like '%sekret-400%'")" "0"
+# Role: KSH / HHL_ADMIN / HHL_OPS / SCX widzą PII przez load_driver_contacts (0076: bez SELECT kolumn);
+# anon — nic. Historia (audit) już sprawdzona wyżej — jawne wpisy (#466 pkt 2/5).
+# Część 3 osobno: OPS z części 2 może nie istnieć.
+OPS=11111111-0000-0000-0000-0000000000b5
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('$OPS','00000000-0000-0000-0000-00000000a001','ops@test','HHL_OPS',true) on conflict (auth_id) do update set role='HHL_OPS', active=true" >/dev/null
+$PSQL -c "update loads set driver_name='Jan Test', driver_phone='+48000000111' where id='$L1'" >/dev/null
+val "D-1243/#466: KSH widzi kierowcę (RPC)" $KSH "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_ADMIN widzi kierowcę (RPC)" $HHL "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: HHL_OPS widzi kierowcę (RPC)" $OPS "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+val "D-1243/#466: SCX widzi kierowcę (RPC)" $SCX "select driver_name||'/'||driver_phone from load_driver_contacts() where load_id='$L1'" "Jan Test/+48000000111"
+err "D-1243/#466: anon bez SELECT driver_name" $HHL "set local role anon; select driver_name from loads where id='$L1'" "permission denied"
+# RODO: historyczny jawny wpis → purge maskuje; własne UPDATE z source=rodo też maskują
+$PSQL -c "insert into audit_log (action, entity, entity_id, old_value, new_value, created_at)
+ values ('ROW_UPDATE','loads','$L1','{\"driver_name\":\"Stary Kierowca\",\"driver_phone\":\"+48000000999\"}'::jsonb,
+         '{\"driver_name\":\"Nowy Kierowca\"}'::jsonb, now() - interval '100 days')" >/dev/null
+chk "D-1243/#400: purge maskuje driver_* w starym audit_log" "$(Q "select purge_personal_data(); select (old_value->>'driver_name'='[dane osobowe]' and old_value->>'driver_phone'='[dane osobowe]' and new_value->>'driver_name'='[dane osobowe]')::text from audit_log where entity='loads' and entity_id='$L1' and created_at < now() - interval '90 days' order by created_at limit 1")" "true"
+$PSQL -c "delete from load_escorts where load_id='$L1'; delete from sms_zone_recipients where list_key='LOAD_SREM' and slot=2; update app_users set phone=null where auth_id='$HHL'" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set rio_secret=null where id='$L1'" >/dev/null
 # Część 3 osobno: shipment_items nie ma w seed.sql. Wstawia je część 1 (i kasuje) oraz część 5.
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, cargo_class) values ('$P','$L2','I2P3-S1','STANDARD')" >/dev/null
 $PSQL -c "update shipment_items set qty = qty + 1 where id=(select id from shipment_items order by id limit 1); update shipment_items set qty = qty - 1 where id=(select id from shipment_items order by id limit 1)" >/dev/null
@@ -643,6 +798,8 @@ $PSQL -c "insert into sailings (id, project_id, vessel_id, route, departure_at, 
  on conflict (id) do update set departure_at=excluded.departure_at, arrival_at=excluded.arrival_at, status='ZAPLANOWANY'" >/dev/null
 # L1 bez okna awizacji — inaczej NO_SAILING/NO_TRACKING L1 psuje oczekiwane „1” z l3_scan.
 $PSQL -c "set session_replication_role=replica; update loads set plan_load_from=null, plan_load_date=null where id='$L1'; update loads set carrier_org_id='$SCXORG', status='PLANNED', plan_load_from=now() + interval '30 hours', plan_load_date=(now() + interval '30 hours')::date, driver_name=null, driver_phone=null, tractor_plate=null, trailer_plate=null, sailing_id='66666666-0000-0000-0000-00000000a21a', telematics_vehicle_id='rio:i21-test' where id='$L2'" >/dev/null
+# Izolacja jak L7/A1: importy części 2 (D18/IQH/IW/IH) poza L1/L2 nie mogą dawać awizacji+dokumentów w l3_scan.
+$PSQL -c "set session_replication_role=replica; update loads set status='CANCELLED' where project_id='$P' and id not in ('$L1','$L2') and status not in ('CANCELLED','DELIVERED','UNLOADED','READY_TO_INVOICE','INVOICED'); set session_replication_role=origin" >/dev/null
 chk "progi awizacji i dokumentów tylko w Opcjach; duplikaty DRIVER/VEHICLE/DOCS usunięte" "$(Q "select (select value_num::int from ops_thresholds where key='AWIZ_EARLY_H')||'/'||(select value_num::int from ops_thresholds where key='AWIZ_LATE_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_WARN_H')||'/'||(select value_num::int from ops_thresholds where key='DOC_CRIT_H')||'/'||(select count(*) from resource_deadlines where kind in ('DRIVER','VEHICLE','DOCS'))")" "48/12/24/6/0"
 chk "załadunek za 54 h (poza oknem 48 h): bez ryzyka" "$(Q "select l3_scan(now() - interval '24 hours')")" 0
 chk "załadunek za 30 h: jeden alarm awizacji (ostrzeżenie)" "$(Q "select l3_scan()")/$(Q "select detail->>'rule'||':'||severity||':'||audience from risk_signals where dedup_key='l3:NO_AWIZACJA:$L2' and resolved_at is null")" "1/L3_AWIZ:HIGH:HHL_PRZEWOZNIK"
@@ -1086,6 +1243,40 @@ val "D-1118 permit_fits jako KSH" $KSH "select ok::text from permit_fits('$L_D1'
 val "D-1118 permit_fits jako SCX" $SCX "select ok::text from permit_fits('$L_D1','$PM_F')" true
 chk "D-1118 FIRMA: missing_countries puste (nie SE)" \
   "$(Q "select coalesce(array_to_string(missing_countries,','),'') from load_permit_status() where load_id='$L_D1'")" ""
+# #400 / D-1118 8b: fallback wymiarów z symbol_specs (produkcja: 0002/0003/0005 DIMS_UNKNOWN)
+L_400a=33333333-0000-0000-0000-00000000400a
+L_400b=33333333-0000-0000-0000-00000000400b
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400a','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG0','DOCS_PENDING','SG','FIRMA',
+  null, null, null, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400a','$PM_F')" >/dev/null
+chk "#400 SG bez combo_* → ok z symbol_specs (21,69×2,45×3,75)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400a','$PM_F')")" "true/"
+chk "#400 load_permit_status SG bez combo_* → ok" \
+  "$(Q "select ok::text from load_permit_status() where load_id='$L_400a'")" "true"
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400b','$P','00000000-0000-0000-0000-00000000a003','KSH/400-SG-partial','DOCS_PENDING','SG','FIRMA',
+  21.00, null, 4.00, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400b','$PM_F')" >/dev/null
+chk "#400 L/H z transportu, W z symbolu → ok (jak 0002)" \
+  "$(Q "select ok::text||'/'||coalesce(array_to_string(breaches,','),'') from permit_fits('$L_400b','$PM_F')")" "true/"
+$PSQL -c "update loads set combo_length_m=25.00 where id='$L_400b'" >/dev/null
+chk "#400 L z transportu ponad limit → LENGTH (nie wymiary z symbolu)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400b','$PM_F')")" "false/LENGTH"
+$PSQL -c "update loads set combo_length_m=21.00, combo_height_m=4.50 where id='$L_400b'" >/dev/null
+chk "#400 H z transportu ponad 4,30 → HEIGHT" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400b','$PM_F')")" "false/HEIGHT"
+L_400c=33333333-0000-0000-0000-00000000400c
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
+  combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
+ values ('$L_400c','$P','00000000-0000-0000-0000-00000000a003','KSH/400-KR-FIRMA','DOCS_PENDING','KR','FIRMA',
+  null, null, null, null, current_date+3, 0)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_400c','$PM_F')" >/dev/null
+chk "#400 KR FIRMA bez combo_* → LENGTH,WIDTH z symbol_specs (23,69×3,52)" \
+  "$(Q "select ok::text||'/'||array_to_string(breaches,',') from permit_fits('$L_400c','$PM_F')")" "false/LENGTH,WIDTH"
+$PSQL -c "update loads set status='CANCELLED' where id in ('$L_400a','$L_400b','$L_400c')" >/dev/null
 $PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, symbol, permit_kind,
   combo_length_m, combo_width_m, combo_height_m, combo_weight_t, plan_load_date, escort_vehicles)
  values ('$L_D2','$P','00000000-0000-0000-0000-00000000a003','KSH/D1118-KR','DOCS_PENDING','KR','TRASA',
@@ -1321,6 +1512,38 @@ chk "D-1501: DELIVERED bez spraw NO_*" \
   "$(Q "select l3_scan()")/$(Q "select count(*) from risk_signals where load_id='$L_D15b' and dedup_key like 'l3:NO_%' and resolved_at is null")" \
   "0/0"
 $PSQL -c "update loads set status='CANCELLED' where id in ('$L_D15','$L_D15b')" >/dev/null
+
+echo; echo "[#464] a7_permits_list — KSH tylko Firma/Trasa przypięte do jego transportów"
+L_464=33333333-0000-0000-0000-00000000464a
+PM_ORPH=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-ORPH/2026','GDDKiA','IV','FIRMA',
+  23,3.4,4.3,60,0,current_date,current_date+365,'Firma — bez load_permits') returning id")
+PM_F464=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-FIRMA/2026','GDDKiA','IV','FIRMA',
+  23,3.4,4.3,60,0,current_date,current_date+365,'Firma — przypięta') returning id")
+PM_T464=$(Q "insert into permits (project_id, country, permit_no, authority, category, scope,
+  max_length_m, max_width_m, max_height_m, max_weight_t, escort_required, valid_from, valid_until, route_desc)
+ values ('$P','PL','PL/464-TRASA/2026','GDDKiA','IV','TRASA',
+  30,4,4.5,60,1,current_date,current_date+365,'Trasa — przypięta') returning id")
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, order_no, status, plan_load_date)
+ values ('$L_464','$P','00000000-0000-0000-0000-00000000a003','KSH/464','PLANNED', current_date+3)" >/dev/null
+$PSQL -c "insert into load_permits (load_id, permit_id) values ('$L_464','$PM_F464'), ('$L_464','$PM_T464')" >/dev/null
+val "#464 KSH nie widzi FIRMA bez load_permits" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_ORPH'" 0
+val "#464 HHL widzi FIRMA bez load_permits" $HHL \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_ORPH'" 1
+val "#464 KSH widzi przypiętą FIRMA" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+val "#464 KSH widzi przypiętą TRASA (wcześniej 0)" $KSH \
+  "select count(*) from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_T464'" 1
+val "#464 KSH: loads = tylko własne (1)" $KSH \
+  "select (e->>'loads') from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+val "#464 HHL: loads globalnie (1)" $HHL \
+  "select (e->>'loads') from jsonb_array_elements(a7_permits_list()) e where e->>'id'='$PM_F464'" 1
+$PSQL -c "delete from load_permits where load_id='$L_464'; update loads set status='CANCELLED' where id='$L_464';
+ delete from permits where id in ('$PM_ORPH','$PM_F464','$PM_T464')" >/dev/null
 
 fi # tower-i2-part 5
 

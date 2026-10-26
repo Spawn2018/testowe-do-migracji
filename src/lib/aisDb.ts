@@ -7,6 +7,7 @@ import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { FERRY_VESSELS } from './ferry';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
+import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -60,18 +61,52 @@ export async function fetchVesselPositions(): Promise<AisPosition[]> {
 /** Odświeżanie co 2 min. Q-18 (05.10 07:16): widoczny w porcie PL, w rejsie PL→SE i w porcie SE; znika w rejsie SE→PL. */
 export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   const sb = await getSupabase();
-  const res = await sb.rpc('ferry_track_sample');
-  if (res.error || !Array.isArray(res.data)) return [];
-  const rows = res.data as Array<{
-    vessel_id: string;
-    name: string | null;
-    mmsi: number | null;
-    lat: number;
-    lon: number;
-    observed_at: string;
-    cog: number | null;
-    sog_kn: number | null;
-  }>;
+  const [res, sail] = await Promise.all([
+    sb.rpc('ferry_track_sample'),
+    sb.rpc('ferry_sailings_map').then((r) => r, () => ({ data: null, error: true })),
+  ]);
+  /* 22.10.2026: błąd odczytu = wyjątek — mapa zostawia ostatnie pozycje promów zamiast pustej listy */
+  if (res.error || !Array.isArray(res.data)) throw new Error(res.error?.message ?? 'ferry_track_sample: brak danych');
+  const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
+  return withEstimates(markersFromTrack(res.data), sailRows, Date.now());
+}
+
+type TrackRow = {
+  vessel_id: string;
+  name: string | null;
+  mmsi: number | null;
+  lat: number;
+  lon: number;
+  observed_at: string;
+  cog: number | null;
+  sog_kn: number | null;
+};
+
+/** #429 C: prom w rejsie PL→SE bez świeżego AIS — punkt z rozkładu zamiast (albo zamiast braku) ostatniej pozycji. */
+export function withEstimates(markers: AisPosition[], sailRows: readonly SailingMapRow[], nowMs: number): AisPosition[] {
+  const est = estimateFerryPositions(sailRows, nowMs);
+  if (!est.length) return markers;
+  const out = markers.slice();
+  for (const e of est) {
+    const known = FERRY_VESSELS.find((v) => v.mmsi === e.mmsi);
+    const i = out.findIndex((m) => (e.mmsi && m.mmsi === e.mmsi) || (!!e.name && m.name === e.name));
+    const base: AisPosition = i >= 0 ? out[i] : {
+      mmsi: e.mmsi,
+      vesselId: known?.id ?? FERRY_VESSELS[0].id,
+      name: e.name || known?.name || e.mmsi,
+      lat: e.lat,
+      lng: e.lng,
+      ts: e.lastAisTs ?? new Date(nowMs).toISOString(),
+      source: 'db',
+    };
+    const next: AisPosition = { ...base, lat: e.lat, lng: e.lng, cog: e.heading, sog: undefined, estimated: { lastAisTs: e.lastAisTs } };
+    if (i >= 0) out[i] = next; else out.push(next);
+  }
+  return out;
+}
+
+function markersFromTrack(data: unknown[]): AisPosition[] {
+  const rows = data as TrackRow[];
   const fixes: TrackFix[] = rows.map((r) => ({
     id: r.vessel_id,
     lat: r.lat,
@@ -99,10 +134,12 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
 
 export function subscribeAisDb(onUpdate: (pos: AisPosition[]) => void, everyMs = 120_000): () => void {
   let stopped = false;
+  let fails = 0;
   const tick = () => {
     fetchMapFerryMarkers().then(
-      (p) => { if (!stopped) onUpdate(p); },
-      () => { if (!stopped) onUpdate([]); },
+      (p) => { fails = 0; if (!stopped) onUpdate(p); },
+      /* 22.10.2026: chwilowy błąd — zostają ostatnie pozycje; po 3 błędach z rzędu (~6 min) mapa bez promów */
+      () => { fails += 1; if (!stopped && fails >= 3) onUpdate([]); },
     );
   };
   tick();

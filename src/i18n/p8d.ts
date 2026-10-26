@@ -71,6 +71,7 @@ const pl = {
   p8d_c_zone: 'Strefa',
   p8d_c_zone_pick: 'Wybierz strefę',
   p8d_c_longer: 'Dłużej niż',
+  p8d_c_no_dwell: 'bez progu (od razu po wjeździe)',
   p8d_c_status: 'Nowy status',
   p8d_c_status_any: 'każda zmiana',
   p8d_c_issue: 'Rodzaj sprawy',

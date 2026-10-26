@@ -26,6 +26,8 @@ import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 import { CarrierRatingDemo } from '../components/dash/CarrierRatingDemo';
 import { lazyRetry } from '../lib/lazyRetry';
 import { accountRole } from '../lib/accountRole';
+import { latestNbp } from '../lib/p5Finance';
+import { useLatestNbp } from '../lib/nbpLive';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
 const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
@@ -118,13 +120,15 @@ export function DashboardView() {
       sea: sea ? { waveM: sea.waveM, risk: formatSeaRiskLabel(sea.risk, locale) } : null,
     };
   }, [sailings, locale, nowMinute, marineSea]);
+  /* 25.10: ten sam kurs bieżący co Finanse (fx_rates) — Kokpit i Finanse liczą PLN identycznie */
+  const nbpLive = useLatestNbp();
   const marginInfo = useMemo(() => {
     const rev = loads.reduce((a, l) => a + (l.pricing?.revTotal || 0), 0);
     const mar = loads.reduce((a, l) => a + (l.pricing?.margin || 0), 0);
     const agg = aggregateTier(loads, role);
     /* wyglad/P5-c (E16): Kokpit HHL liczy marżę tym samym kodem co Finanse — suma marż ÷ suma przychodów transportów
        z ceną, waluta jak w Finansach — oraz pokazuje liczbę transportów z ceną i bez ceny */
-    const fin = role === 'HHL' ? financeSummary(loads, 'both') : null;
+    const fin = role === 'HHL' ? financeSummary(loads, 'both', nbpLive ?? latestNbp(loads)) : null;
     if (fin) {
       const pln = currency === 'PLN' && fin.plnComplete && fin.nbpLatest != null;
       const r = pln ? fin.total.rev.pln ?? 0 : fin.total.rev.eur;
@@ -142,7 +146,7 @@ export function DashboardView() {
       moneyText: formatAppMoney(mar, locale, currency),
       tierText: agg.tier ? t(locale, `tier_${agg.tier}`).toLowerCase() : t(locale, 'tier_PROGNOZA').toLowerCase(),
     };
-  }, [loads, role, locale, currency]);
+  }, [loads, role, locale, currency, nbpLive]);
   /* B3 / H3.5: „na placu od …” — GEOFENCE_ENTER SITE */
   const siteSince = useMemo(() => {
     const m = new Map<string, string>();

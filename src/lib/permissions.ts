@@ -2,7 +2,7 @@ import type { Load, RoleId } from '../types';
 import { getNowMs } from './frozenNow';
 import { TZ_UNLOAD_SE, calendarDayNoonMs, parseInstant } from './time';
 import { PROD_BUILD, canSeeWorkflows, isPreviewReadOnly } from './prodFacade';
-import { demoAccountKind } from './demoAccount';
+import { accountRole } from './accountRole';
 
 /** E9-7: w Podglądzie KSH/SCX (supabase) brak zapisu w UI. */
 function allowWrite(role: RoleId): boolean {
@@ -30,13 +30,11 @@ const NAV_BY_ROLE: Record<RoleId, NavKey[]> = {
   SCX: ['dash', 'map', 'sched', 'risk', 'docs', 'fin', 'inv', 'settings'],
 }
 
-/** 9.4: moduł Automatyzacje (wf) w produkcji tylko dla HHL_ADMIN (lib/prodFacade canSeeWorkflows); demo bez zmian. */
+/** 9.4 / #413 (E35 pkt 5): Automatyzacje dla HHL_ADMIN i HHL_OPS (canSeeWorkflows); KSH/SCX bez. Demo OPS też widzi. */
 export function navForRole(role: RoleId, prod?: boolean, userRole?: string | null): NavKey[] {
   const nav = NAV_BY_ROLE[role];
   const wf = userRole === undefined ? canSeeWorkflows(prod) : canSeeWorkflows(prod, userRole);
-  /* P11 (e9, tabela E9 „Operacje —”): w demo konto Operacje HHL (`konto=operacje`) też bez Automatyzacji — jak HHL_OPS na produkcji */
-  const demoOps = role === 'HHL' && !(prod ?? PROD_BUILD) && userRole === undefined && demoAccountKind() === 'HHL_OPS';
-  return wf && !demoOps ? nav : nav.filter((k) => k !== 'wf');
+  return wf ? nav : nav.filter((k) => k !== 'wf');
 }
 
 export function canSeeCost(role: RoleId): boolean {
@@ -51,12 +49,14 @@ export function canSeeMargin(role: RoleId): boolean {
   return role === 'HHL';
 }
 
+/** E34 pkt 6 / #413: Strefy edytuje tylko Administrator HHL; Operacje HHL — podgląd. */
 export function canEditGeofence(role: RoleId): boolean {
-  return allowWrite(role) && role === 'HHL';
+  return allowWrite(role) && role === 'HHL' && accountRole(role) !== 'HHL_OPS';
 }
 
+/** E35 pkt 5 / #413: zapis Automatyzacji tylko Administrator; OPS — podgląd (canSeeWorkflows). */
 export function canEditWorkflow(role: RoleId): boolean {
-  return allowWrite(role) && role === 'HHL';
+  return allowWrite(role) && role === 'HHL' && accountRole(role) !== 'HHL_OPS';
 }
 
 /**

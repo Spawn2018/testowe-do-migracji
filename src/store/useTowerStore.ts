@@ -13,6 +13,7 @@ import type {
   Bill,
   BillVerification,
   BafParams,
+  DocCategory,
   Document,
   FactoringOffer,
   FerryBooking,
@@ -72,6 +73,8 @@ import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, s
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
 import { isPreviewReadOnly } from '../lib/prodFacade';
+import type { KshSharePointSync } from '../lib/kshSyncView';
+import { trackerKind } from '../lib/trackerLink';
 import { accountRole } from '../lib/accountRole';
 import { INVOICE_OVERDUE_KIND, refreshInvoiceOverdue, syncInvoiceOverdue } from '../lib/invoiceOverdue';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
@@ -230,6 +233,8 @@ interface TowerState {
   sailings: Sailing[];
   factoringOffer: FactoringOffer;
   scheduleVersions: ScheduleVersion[];
+  /** A6 — stan synchronizacji pliku KSH (SharePoint); null poza HHL / przed podłączeniem. */
+  kshSharePointSync: KshSharePointSync | null;
   rateCost: RateRule[];
   rateRev: RateRule[];
   baf: BafParams;
@@ -237,6 +242,10 @@ interface TowerState {
 
   navCollapsed: boolean;
   drawerTab: string | null;
+  /** wyglad/W-cele-przejsc: „Wgraj” ze sprawy — okno „Wgraj dokument” w panelu z tym transportem i rodzajem (jednorazowe) */
+  uploadReq: { loadId: string; category: DocCategory | null } | null;
+  /** wyglad/W-cele-przejsc: wiersz promu z „Sytuacji na trasie” — Harmonogram › Rejsy z tym rejsem (jednorazowe) */
+  sailingFocus: string | null;
   openDecisionId: string | null;
   openInvoiceId: string | null;
   accessMessage: string | null;
@@ -251,6 +260,8 @@ interface TowerState {
   setRole: (role: RoleId) => void;
   setNavCollapsed: (v: boolean, opts?: { persist?: boolean }) => void;
   setDrawerTab: (tab: string | null) => void;
+  setUploadReq: (r: { loadId: string; category: DocCategory | null } | null) => void;
+  setSailingFocus: (id: string | null) => void;
   setOpenDecisionId: (id: string | null) => void;
   setOpenInvoiceId: (id: string | null) => void;
   setAccessMessage: (msg: string | null) => void;
@@ -325,14 +336,14 @@ interface TowerState {
   /** BK4: dokument już zapisany w Supabase Storage (bajty nie trafiają do przeglądarki). */
   addStoredDocument: (doc: Document, actor?: string) => void;
 
-  saveGeofence: (g: Geofence) => void;
+  saveGeofence: (g: Geofence, reason?: string | null) => void;
   deleteGeofence: (id: string) => void;
   assignScx: (loadId: string, rateNote?: string) => void;
   triggerGeofence: (loadId: string, geofenceId: string) => void;
   toggleWorkflow: (id: string) => void;
-  createWorkflow: (rule: Omit<WorkflowRule, 'id' | 'runCount'>) => string;
-  updateWorkflow: (id: string, patch: Partial<WorkflowRule>) => void;
-  deleteWorkflow: (id: string) => void;
+  createWorkflow: (rule: Omit<WorkflowRule, 'id' | 'runCount'>, reason?: string | null) => string;
+  updateWorkflow: (id: string, patch: Partial<WorkflowRule>, reason?: string | null) => void;
+  deleteWorkflow: (id: string, reason?: string | null) => void;
   runWorkflowNow: (id: string) => void;
 
   updateRate: (side: 'COST' | 'REVENUE', id: string, baseRate: number) => void;
@@ -399,6 +410,8 @@ export const useTowerStore = create<TowerState>()(
       navCollapsed:
         typeof sessionStorage !== 'undefined' && sessionStorage.getItem('wtNavCollapsed') === '1',
       drawerTab: null,
+      uploadReq: null,
+      sailingFocus: null,
       openDecisionId: null,
       openInvoiceId: null,
       accessMessage: null,
@@ -440,6 +453,7 @@ export const useTowerStore = create<TowerState>()(
       sailings: initialData.sailings,
       factoringOffer: { ...DEFAULT_FACTORING_OFFER },
       scheduleVersions: initialData.scheduleVersions,
+      kshSharePointSync: initialData.kshSharePointSync ?? null,
       rateCost: RATE_COST,
       rateRev: RATE_REV,
       baf: BAF_PARAMS,
@@ -523,6 +537,8 @@ export const useTowerStore = create<TowerState>()(
       },
 
       setDrawerTab: (drawerTab) => set({ drawerTab }),
+      setUploadReq: (uploadReq) => set({ uploadReq }),
+      setSailingFocus: (sailingFocus) => set({ sailingFocus }),
       setOpenDecisionId: (openDecisionId) => set({ openDecisionId }),
       setOpenInvoiceId: (openInvoiceId) => set({ openInvoiceId }),
       setAccessMessage: (accessMessage) => set({ accessMessage }),
@@ -533,6 +549,7 @@ export const useTowerStore = create<TowerState>()(
       navigateTo: (opts) => {
         set((s) => ({
           view: (opts.view as ViewKey) ?? s.view,
+          sailingFocus: ((opts.view as ViewKey) ?? s.view) === 'sched' ? s.sailingFocus : null,
           drawerTab: opts.tab !== undefined ? opts.tab : s.drawerTab,
           selectedLoadId: opts.loadId !== undefined ? opts.loadId : s.selectedLoadId,
           stageFilter: opts.stage !== undefined ? opts.stage : s.stageFilter,
@@ -603,7 +620,8 @@ export const useTowerStore = create<TowerState>()(
         get().markNotificationRead(id);
       },
 
-      setView: (view) => set({ view }),
+      /* W-cele-przejsc: cel „rejs w Harmonogramie › Rejsy” nie czeka na inny widok */
+      setView: (view) => set(view === 'sched' ? { view } : { view, sailingFocus: null }),
       setStageFilter: (stage) =>
         set((s) => ({
           stageFilter: stage === null ? null : s.stageFilter === stage ? null : stage,
@@ -908,6 +926,20 @@ export const useTowerStore = create<TowerState>()(
             const resources = { ...l.resources, ...safePatch };
             /* po zapisie RIO w stanie lokalnym zostaje rio:<uuid>, nie URL z kluczem */
             if ('trackingRef' in patch) resources.trackingRef = redactTrackingRef(patch.trackingRef);
+            /* #392 (F7 #393 2b): rodzaj linku od razu po zapisie, bez czekania na dane z serwera (np. przy zablokowanym rejsie,
+               gdy nie ma ponownego pobrania) — RIO → emtrack / inny / pusty przestaje być „RIO” w oknie i na pasku. */
+            /* demo liczy opis linku sam z `trackingRef` (p4cSource), gdy `trackingLink` nie jest ustawiony — tam bez zmian */
+            if ('trackingRef' in patch && (l.trackingLink !== undefined || import.meta.env.VITE_AUTH_MODE === 'supabase')) {
+              const kind = trackerKind(resources.trackingRef);
+              const trackingLink = kind === 'none' ? undefined
+                : kind === 'emtrack' ? { provider: 'EMTRACK' as const, check: { state: 'ok' as const } }
+                  : kind === 'other' ? { provider: 'OTHER' as const, check: { state: 'ok' as const } }
+                    /* RIO: zostaje dotychczasowy opis lokalizatora (rejestracja, sprawdzenie) do odświeżenia z serwera;
+                       bez wcześniejszego RIO — „do sprawdzenia” */
+                    : l.trackingLink?.provider === 'RIO' ? l.trackingLink
+                      : { provider: 'RIO' as const, check: { state: 'pending' as const } };
+              return { ...l, resources, trackingLink };
+            }
             return { ...l, resources };
           });
           const updated = loads.find((l) => l.id === loadId);
@@ -1025,7 +1057,7 @@ export const useTowerStore = create<TowerState>()(
           ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}),
         };
         set((s) => ({ messages: [...s.messages, msg] }));
-        writeThrough({ type: 'message.send', loadId, text });
+        writeThrough({ type: 'message.send', loadId, text, ...(visibleTo === 'HHL_SCX' ? { visibleTo } : {}) });
       },
 
       uploadDocument: (loadId, category, name, opts) => {
@@ -1092,14 +1124,14 @@ export const useTowerStore = create<TowerState>()(
         get().pushToast(t(get().locale, 'bk4_file_saved').replace('{name}', doc.name), 'MEDIUM', loadId);
       },
 
-      saveGeofence: (g) => {
+      saveGeofence: (g, reason) => {
         set((s) => {
           const exists = s.geofences.some((x) => x.id === g.id);
           return {
             geofences: exists ? s.geofences.map((x) => (x.id === g.id ? g : x)) : [...s.geofences, g],
           };
         });
-        writeThrough({ type: 'geofence.save', geofence: g });
+        writeThrough({ type: 'geofence.save', geofence: g, reason: reason ?? null });
         get().pushToast(tp(get().locale, 'a6_ts_zone_saved', { name: g.name }), 'MEDIUM');
         const roles: RoleId[] = [];
         if (g.notifyHhl) roles.push('HHL');
@@ -1222,29 +1254,29 @@ export const useTowerStore = create<TowerState>()(
         if (cur) writeThrough({ type: 'workflow.update', id, patch: { enabled: !cur.enabled } });
       },
 
-      createWorkflow: (rule) => {
+      createWorkflow: (rule, reason) => {
         const id = uid('wf');
         const workflow: WorkflowRule = { ...rule, id, runCount: 0 };
         set((s) => ({ workflows: [workflow, ...s.workflows] }));
-        writeThrough({ type: 'workflow.create', rule }); // 9.4 — baza waliduje (wf_validate) i nadaje id
+        writeThrough({ type: 'workflow.create', rule, reason: reason ?? null }); // 9.4 + #505 powód
         get().pushToast(tp(get().locale, 'a6_ts_rule_added', { name: workflow.name }), 'MEDIUM');
         return id;
       },
 
-      updateWorkflow: (id, patch) => {
+      updateWorkflow: (id, patch, reason) => {
         set((s) => ({
           workflows: s.workflows.map((w) => (w.id === id ? { ...w, ...patch } : w)),
         }));
         const { runCount: _rc, id: _id, ...dbPatch } = patch as Partial<WorkflowRule>;
-        writeThrough({ type: 'workflow.update', id, patch: dbPatch });
+        writeThrough({ type: 'workflow.update', id, patch: dbPatch, reason: reason ?? null });
         get().pushToast(t(get().locale, 'a6_ts_wf_updated'), 'MEDIUM');
       },
 
-      deleteWorkflow: (id) => {
+      deleteWorkflow: (id, reason) => {
         const cur = get().workflows.find((w) => w.id === id);
         if (!cur) return;
         set((s) => ({ workflows: s.workflows.filter((w) => w.id !== id) }));
-        writeThrough({ type: 'workflow.delete', id }); // B-5 — baza: RLS HHL_ADMIN, START-* nieusuwalne, audit_log
+        writeThrough({ type: 'workflow.delete', id, reason: reason ?? null }); // B-5 / #505 soft-delete z powodem
         get().pushToast(tp(get().locale, 'b5_ts_deleted', { name: cur.name }), 'MEDIUM');
       },
 
@@ -1614,6 +1646,10 @@ export const useTowerStore = create<TowerState>()(
           verification: 'DO_WERYFIKACJI', disputeNote: null, payment: 'NIEOPLACONA', paidAt: null,
           pdfDocId: null, pdfName: draft.pdfName ?? null, lines: chk.lines,
           headerFlags: chk.headerFlags, missingLoadIds: chk.missingLoadIds, createdAt: nowIso(),
+          /* E4b: wybór przewoźnika; prowizję, wypłatę i termin liczy baza (po odświeżeniu) */
+          factoring: draft.factoring && draft.direction === 'KOSZT'
+            ? { selected: true, feePct: null, fee: null, payout: null, hours: null, acceptedAt: null, dueAt: null, paidAt: null }
+            : null,
         };
         bill.payment = billPaymentToday(bill, today);
         set((st) => ({ bills: [bill, ...st.bills] }));

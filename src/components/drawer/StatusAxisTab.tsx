@@ -83,9 +83,25 @@ function rowSub(
   }
   const h = r.hit;
   if (!h) return null;
+  /* #489: „rejs odpięty 23.10.2026, 13:05 — powrót do tego statusu” */
+  if (h.cofniecieAt) {
+    /* pierwotny wpis (autor, strefa, powód) jak zwykle; sam wpis cofnięcia — tylko dopisek */
+    const base = h.cofniecieAt === h.at ? null : rowSub({ ...r, hit: { ...h, cofniecieAt: null } }, load, geofences, hits, phone, locale, readyGaps, settle);
+    const line = tp(locale, 'p4b_sub_cofniete', { at: dayTime(h.cofniecieAt) });
+    return [base, line].filter(Boolean).join(' · ');
+  }
   if (h.source === 'import') return t(locale, 'p4b_sub_import');
   /* B5: zapis w Podglądzie — ten sam autor co w Historii („… jako … // KSH”) */
   const actor = h.previewAs && h.actor ? `${whoOf(h.actor, locale)} ${ht(locale, 'p6b_as')} ${whoOf(h.previewAs, locale)}` : axisActor(h.actor);
+  /* #461 (0270): godzina „Prom” poprawiona automatycznie z AIS — „według AIS (z rozkładu było …)” */
+  if (h.korekta?.auto) {
+    const was = h.korekta.poprzednio ? dayTime(h.korekta.poprzednio) : null;
+    const src = h.channel === 'AIS' ? 'ais' : 'auto';
+    const key = was ? `p4b_sub_fix_${src}_${h.korekta.zRozkladu ? 'sched' : 'was'}` : `p4b_sub_fix_${src}`;
+    return was ? tp(locale, key, { was }) : t(locale, key);
+  }
+  /* bez własnego powodu (np. A10_b „pozycja zbieżna z AIS statku”) — ogólny dopisek */
+  if (s === 'ON_FERRY' && h.channel === 'AIS' && !h.why && !h.note) return t(locale, 'p4b_sub_ferry_ais');
   /* D-0005 (0234): godzina poprawiona przez Administratora HHL — „poprawił Administrator HHL (było 07.10.2026, 14:00)” */
   if (h.korekta) {
     const who = h.previewAs ? actor : axisActor(h.actor);

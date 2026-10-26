@@ -12,10 +12,11 @@ import { statusFromDb } from '../data/mappers';
 import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
+import { decText } from '../i18n/decisions';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 import { dayTime, hitChannel } from './statusAxis';
 
-export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'INNE';
+export type HistCat = 'STATUS' | 'TRASA' | 'ZASOBY' | 'NUMER' | 'DOKUMENT' | 'CENA' | 'PLAN' | 'IMPORT' | 'PROBA' | 'NOTATKA' | 'DECYZJA' | 'INNE';
 export type HistFilter = 'ALL' | 'ROUTE' | 'RES' | 'NUM' | 'DOC' | 'PRICE';
 export const HIST_FILTERS: HistFilter[] = ['ALL', 'ROUTE', 'RES', 'NUM', 'DOC', 'PRICE'];
 type Role = 'HHL' | 'KSH' | 'SCX';
@@ -48,6 +49,8 @@ export function histCat(type: string): HistCat {
   if (type.startsWith('PLAN_DATES') || type.startsWith('SCHEDULE_')) return 'PLAN';
   if (type === 'READY_BLOCKED') return 'PROBA';
   if (type === 'NOTE') return 'NOTATKA';
+  /* #384: rozstrzygnięcia decyzji (decision_apply_effect) */
+  if (type.startsWith('DECISION_')) return 'DECYZJA';
   return 'INNE';
 }
 
@@ -115,6 +118,8 @@ function oldNew(p: Record<string, unknown>, locale: Locale): { from: string | nu
 export function isNoChange(e: LoadEvent): boolean {
   const p = e.payload ?? {};
   const on = oldNew(p, 'pl');
+  /* #461 (0270): korekta godziny „Prom” z AIS (Prom → Prom) to nie wpis bez zmiany */
+  if (p.korekta === true) return false;
   if (on.has && on.from != null && on.from === on.to) return true;
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_AUTO' && str(p.from) && statusName(str(p.from), 'pl') === statusName(e.type.slice(7), 'pl')) return true;
   return false;
@@ -131,6 +136,9 @@ export function visibleFor(e: LoadEvent, role: Role): boolean {
   if (role === 'HHL') return true;
   const cat = histCat(e.type);
   if (cat === 'NUMER') return role !== 'KSH';
+  /* F7 #387: decyzje widzą HHL i decydujący. KSH nie dostaje decyzji (decisions_read), SCX — tylko rozstrzygnięcia SCX
+     (nie widzi decyzji tylko-HHL ani ich komentarzy). */
+  if (cat === 'DECYZJA') return role === 'SCX' && /\/\/\s*SCX\b/.test(String(e.actor ?? ''));
   if (cat !== 'CENA') return true;
   const side = String(e.payload?.side ?? '').toUpperCase();
   return role === 'KSH' ? SIDE_KSH.has(side) : SIDE_SCX.has(side);
@@ -242,6 +250,13 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
     const ch = hitChannel(e.type, p, null);
     const src = ch === 'GPS' ? posSource(p, locale) : ch === 'AIS' ? ht(locale, 'p6b_src_AIS') : ch ? ht(locale, `p6b_src_${ch}`) : base.src;
     if (!from && !to) return { ...base, src, head: ht(locale, 'p6b_ev_STATUS_AUTO'), from: null, to: null, tail: why };
+    /* #461 (0270): korekta godziny z AIS — „wypłynięcie według AIS (było …)” */
+    if (p.korekta === true && SYSTEM_ACTOR(e.actor)) {
+      const was = str(p.poprzednio);
+      /* tylko korekta z AIS pisze „według AIS”; inny automat — ogólne „korekta godziny (było …)” */
+      const key = ch === 'AIS' ? 'p6b_korekta_ais' : 'p6b_korekta_hist';
+      return { ...base, src, head: '', from: null, to: to ?? '—', tail: was ? htp(locale, key, { was: dayTime(was) }) : why };
+    }
     return { ...base, src, head: '', from, to: to ?? '—', tail: why };
   }
   if (e.type.startsWith('STATUS_') && e.type !== 'STATUS_CHANGED') {
@@ -298,6 +313,14 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
       ? [ver ? htp(locale, 'p6b_import_ver', { v: ver }) : null, file ? htp(locale, 'p6b_import_file', { f: file }) : null].filter(Boolean).join(', ')
       : note && !/^KSH import\b/i.test(note) ? note : null;
     return { ...base, head: ht(locale, 'p6b_ev_SCHEDULE_IMPORTED'), from: null, to: null, tail };
+  }
+  if (e.type.startsWith('DECISION_') && htHas(`p6b_ev_${e.type}`)) {
+    /* #384: wybrana opcja i komentarz z rozstrzygnięcia („Przyjmuję · komentarz”) */
+    const opt = str(p.option);
+    const optLabel = opt ? decText(locale, `dec_opt_${opt}`, '') : '';
+    const dnote = str(p.note);
+    const tail = [optLabel, dnote].filter(Boolean).join(' · ') || null;
+    return { ...base, head: ht(locale, `p6b_ev_${e.type}`), from: null, to: null, tail };
   }
   const head = htHas(`p6b_ev_${e.type}`) ? ht(locale, `p6b_ev_${e.type}`)
     : cat === 'CENA' ? ht(locale, e.type.includes('FEE') ? 'p6b_ev_FEE' : 'p6b_ev_PRICE')

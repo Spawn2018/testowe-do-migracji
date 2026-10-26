@@ -63,6 +63,7 @@ const pl = {
   p8b_gw_off: 'nieaktywna',
   p8b_gw_none: 'Bramka SMS — brak danych.',
   p8b_fallback: 'Gdy SMS nie wyjdzie w 10\u00a0min, e-mail do Operacji HHL: „SMS do Boden (2 osoby) niewysłany: …”.',
+  p8b_kinds_fixed: 'Każda osoba dostaje wszystkie rodzaje SMS swojego miejsca: A, C i D w Śremie, A–D w Boden.',
   p8b_kinds_note: 'A — przyjazd za ok. {lead} min · B — wcześniejszy przyjazd (dzień przed planem, tylko Boden) · C — auto czeka · D — wjazd. Treści zmienia się w „Treściach wiadomości”.',
   p8b_ro: 'Tylko podgląd · zmienia Administrator HHL',
   p8b_more: 'Rozwiń: {place}',

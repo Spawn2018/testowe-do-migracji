@@ -10,6 +10,8 @@ export type PartialColumnMap = Partial<Record<MapField, string>>;
 export interface ImportTemplate { id?: string; name: string; column_map: PartialColumnMap; header_signature: string }
 
 export const MAP_FIELDS = Object.keys(COLUMN_MAP_DEFAULT) as MapField[];
+/** Kreator mapowania (A6 F7): bez loadDay/delivDay — import ich nie czyta; zostają w COLUMN_MAP_DEFAULT. */
+export const MAP_FIELDS_CREATOR: MapField[] = MAP_FIELDS.filter((f) => f !== 'loadDay' && f !== 'delivDay');
 export const REQUIRED_FIELDS: MapField[] = ['shipmentCode', 'qty'];
 
 export const normHeader = (h: string): string =>

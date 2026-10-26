@@ -53,6 +53,7 @@ const PL: Record<string, string> = {
   p5b_f_how_auto: '{at} auto',
   p5b_f_how_filled: 'uzupełnione',
   p5b_f_how_missing: '{src}: {why}',
+  p5b_f_days_none: 'Ceny z kolejnych dni widzi H&H Logistics. Tutaj mnożnik, który obowiązuje w Twoich transportach.',
   p5b_f_days_note: 'Do średniej wchodzi każda nowa cena opublikowana w tygodniu, raz. Dzień bez nowej publikacji powtarza poprzednią cenę.',
   p5b_f_tiers_h: 'Tabela mnożników — wokół obecnych cen',
   p5b_f_tiers_all_h: 'Tabela mnożników — cała',

@@ -31,7 +31,11 @@ export type GroupZone = {
   active: boolean;
 };
 
-export type ShipFix = { lat: number; lng: number; ts: string; stale: boolean; vessel: string };
+export type ShipFix = {
+  lat: number; lng: number; ts: string; stale: boolean; vessel: string;
+  /** #429 C: pozycja szacowana z rozkładu; `lastAisTs` = ostatni AIS albo null. */
+  estimated?: { lastAisTs: string | null };
+};
 
 /** R5 pkt 3: rodzaje stref, w których auta są grupowane (bez buforów PRE_PORT / PRE_ARRIVAL, punktów i parkingów). */
 export const GROUP_ZONE_TYPES: ReadonlySet<string> = new Set(['LOADING', 'PORT_OUT', 'PORT_IN', 'SITE']);
@@ -45,8 +49,8 @@ export type Placed =
     ids: string[];
     lat: number;
     lng: number;
-    /** ok = świeży odczyt AIS, stale = stary odczyt, none = brak AIS (ostatnia pozycja auta). */
-    ais: 'ok' | 'stale' | 'none';
+    /** ok = świeży odczyt AIS, stale = stary odczyt, est = szacowana z rozkładu (#429 C), none = brak AIS (ostatnia pozycja auta). */
+    ais: 'ok' | 'stale' | 'est' | 'none';
     /** Czas pozycji: odczyt AIS albo ostatnia pozycja auta. */
     at: string | null;
     vessel: string | null;
@@ -132,8 +136,8 @@ export function placeMarkers(
         ids: list.map((it) => it.id),
         lat: ship ? ship.lat : last.lat,
         lng: ship ? ship.lng : last.lng,
-        ais: ship ? (ship.stale ? 'stale' : 'ok') : 'none',
-        at: ship ? ship.ts : last.lastFixAt,
+        ais: ship ? (ship.estimated ? 'est' : ship.stale ? 'stale' : 'ok') : 'none',
+        at: ship ? (ship.estimated ? ship.estimated.lastAisTs : ship.ts) : last.lastFixAt,
         vessel: ship ? ship.vessel : null,
         late: list.some((it) => it.late),
       });
@@ -170,7 +174,10 @@ export function carsWord(n: number): 'one' | 'few' | 'many' {
 
 /** Nazwa statku do porównania z AIS (bez wielkości liter i znaków diakrytycznych). */
 export function vesselKey(name: string | null | undefined): string {
-  return String(name ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  /* 22.10.2026 (SG-17 „stoi w porcie”): AIS i rejsy z bazy mają „M/F Wawel”, a rejs w aplikacji „Wawel” —
+     przedrostek statku (M/F, MF, M/S, MS) pomijany, żeby auto na promie stało na pozycji statku z AIS. */
+  return String(name ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    .replace(/^(m f|mf|m s|ms) /, '');
 }
 
 /* ── widok grupy: dymek i lista (E45 pkt 5 „najechanie — rejs i kody; kliknięcie — lista transportów”) ── */
@@ -234,7 +241,8 @@ export function groupView(
       sub = ctx.tx('p9e_ferry_route', { a: pa, b: pb });
     }
   }
-  const note = g.ais === 'ok' ? ctx.tx('p9e_ais_ok', { t: ctx.hm(g.at) })
+  const note = g.ais === 'est' ? (g.at ? ctx.tx('p9e_ais_est', { t: ctx.dt(g.at) }) : ctx.tx('p9e_ais_est_none'))
+    : g.ais === 'ok' ? ctx.tx('p9e_ais_ok', { t: ctx.hm(g.at) })
     : g.ais === 'stale' ? ctx.tx('p9e_ais_stale', { t: g.at ? ctx.dt(g.at) : '' })
       : g.at ? ctx.tx('p9e_ais_none', { t: ctx.hm(g.at) }) : ctx.tx('p9e_ais_none_bare');
   return { key: g.key, kind: 'ferry', title, sub, note, rows };
@@ -253,4 +261,13 @@ export function demoStageAnchor(tile: StageTile | null, zones: readonly GroupZon
   if (!type) return null;
   const z = zones.find((x) => x.active && x.type === type);
   return z ? { lat: z.lat, lng: z.lng } : null;
+}
+
+/** J-17: dopisek pozycji szacowanej statku (#429 C) w dymku pojedynczego auta na promie — te same klucze co dymek grupy. */
+export function estNote(
+  lastAisAt: string | null | undefined,
+  tx: (key: string, params?: Record<string, string | number>) => string,
+  dt: (iso: string) => string,
+): string {
+  return lastAisAt ? tx('p9e_ais_est', { t: dt(lastAisAt) }) : tx('p9e_ais_est_none');
 }

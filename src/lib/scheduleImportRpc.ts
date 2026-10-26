@@ -22,7 +22,18 @@ export interface RpcRow {
   load_time: string | null;
   delivery_date: string | null;
   delivery_time: string | null;
-  order_no: string | null;
+  /** A6: SCX = HHL-Scan; HHL = HHL-KSH. Stary order_no nie wysyłamy z pliku. */
+  carrier_order_no: string | null;
+  hhl_order_no: string | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  driver_delivery_name: string | null;
+  driver_delivery_phone: string | null;
+  tractor_plate: string | null;
+  tractor_delivery_plate: string | null;
+  trailer_plate: string | null;
+  comment: string | null;
+  dates_to_check: boolean;
   assembly_seq: number | null;
 }
 
@@ -41,7 +52,17 @@ export function toRpcRows(rows: readonly ParsedRow[]): RpcRow[] {
     load_time: r.loadTime,
     delivery_date: r.deliveryDate,
     delivery_time: r.deliveryTime,
-    order_no: r.orderNo,
+    carrier_order_no: r.scxOrderNo,
+    hhl_order_no: r.hhlOrderNo,
+    driver_name: r.driverName,
+    driver_phone: r.driverPhone,
+    driver_delivery_name: r.driverNameSe,
+    driver_delivery_phone: r.driverPhoneSe,
+    tractor_plate: r.tractorPlate,
+    tractor_delivery_plate: r.tractorPlateSe,
+    trailer_plate: r.trailerPlate,
+    comment: r.comment,
+    dates_to_check: Boolean(r.datesToCheck),
     assembly_seq: r.assemblySeq,
   }));
 }
@@ -74,6 +95,9 @@ export interface ParseMeta {
   rejected: number;
   warnings: number;
   skippedStandard: number;
+  skippedCarrier?: number;
+  skippedEmpty?: number;
+  datesToCheck?: number;
   issues: ImportDiff['issues'];
 }
 
@@ -87,6 +111,9 @@ export function rpcToDiff(res: ImportRpcResult, meta: ParseMeta): ImportDiff {
     rejected: meta.rejected,
     warnings: meta.warnings,
     skippedStandard: meta.skippedStandard,
+    skippedCarrier: meta.skippedCarrier ?? 0,
+    skippedEmpty: meta.skippedEmpty ?? 0,
+    datesToCheck: meta.datesToCheck ?? 0,
     filename: meta.filename,
     accepted: meta.accepted,
     total: meta.total,

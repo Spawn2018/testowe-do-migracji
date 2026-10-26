@@ -7,6 +7,7 @@
  * Zasady cennika z liczbami. Telefon: karty, szczegóły zwinięte, „+ Dopłata” 44 px (E8).
  * Bez podpowiedzi z bazy (`feeSuggestionsOf` = null) zostaje dzisiejszy formularz dopłat (`legacyFees`).
  */
+import { useFuelPublications } from '../../lib/fuelPublSource';
 import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react';
 import type { Load, Locale } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -65,7 +66,9 @@ export function PanelPrices({ load, role, locale, phone, nowIso, legacyFees }: P
   /* wyglad/P5-c (E33): odrzucenie dopłaty z powodem — HHL odrzuca dopłatę SCX (powód wymagany), KSH dopłatę HHL */
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [rejecting, setRejecting] = useState<{ id: string; side: FeeSide; draft: string } | null>(null);
-  const fuelRow = useMemo(() => fuelWeeksOf([load], role === 'KSH' ? 'rev' : 'cost', today)[0] ?? null, [load, role, today]);
+  const publV = useFuelPublications();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- publV: publikacje z bazy wczytane później
+  const fuelRow = useMemo(() => fuelWeeksOf([load], role === 'KSH' ? 'rev' : 'cost', today)[0] ?? null, [load, role, today, publV]);
 
   /* E16 (audyt-F F-04): kurs transportu z jednej funkcji — ta sama w Harmonogramie (`loadPln.ts`) */
   const midCost = loadFxMid(load, 'cost');
