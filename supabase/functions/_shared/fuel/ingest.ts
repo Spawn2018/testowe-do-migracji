@@ -1,5 +1,5 @@
 /**
- * D-1300 / F7-2 — wspólne helpery fuel-prices (bez Deno.serve; testowane w vitest).
+ * D-1300 / F7-2 / #563 — wspólne helpery fuel-prices (bez Deno.serve; testowane w vitest).
  */
 import { ORLEN_SOURCE_PAGE, orlenM3ToLitre } from './orlen.ts';
 
@@ -24,7 +24,8 @@ export function warsawHour(d = new Date()): number {
   );
 }
 
-export const FUEL_PRICE_HOURS_PL = [7, 9, 13] as const;
+/** #563: 07:15, 09:15, 13:15, 17:15, 23:15 Europe/Warsaw (cron :15). */
+export const FUEL_PRICE_HOURS_PL = [7, 9, 13, 17, 23] as const;
 
 export function isFuelPriceHour(hour: number): boolean {
   return (FUEL_PRICE_HOURS_PL as readonly number[]).includes(hour);

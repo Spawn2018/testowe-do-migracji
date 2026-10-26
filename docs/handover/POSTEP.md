@@ -5619,3 +5619,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
 - Scalanie: #578 F7 gotowe, ale **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
 - **#563 krok:** `sefs_last_published` + `sefs_save_parameters` (tier_bound/avg_days_pln); baf +11 (korekta shared pub, MAX/MIN, t44 ×1,14) → EXPECTED **78**; nullguard +1 → **853**. Push → CI `baf,nullguard`. Następny: Edge 17:15/23:15 albo przeliczenie migawek ≥26.10.
+
+## 2026-10-26 20:40 — #563 CI fix + Edge 17:15/23:15
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #578 po #577; #577 bez F7. Bez push na main.
+- CI `83024814`: db FAIL — (1) `sefs_lookup_mult` 2-arg+3-arg niejednoznaczne; (2) `sefs_save_parameters` bez `assert_not_preview` (security B5); (3) days value `22.8900` vs `22.89`; nullguard 852/i31 przez (1).
+- **#563 krok:** drop 2-arg lookup; assert B5; `round(...,2)` w days; `fuel_se_pl_ingest` — późniejszy przebieg / ochrona korekty; Edge godziny 7/9/13/17/23 + zawsze fetch; demo/i18n godzin. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10 / front `corrects_id`.

@@ -88,12 +88,8 @@ revoke all on function public.sefs_lookup_mult(numeric, jsonb, text)
 grant execute on function public.sefs_lookup_mult(numeric, jsonb, text)
   to service_role;
 
--- 2-arg: zostaje jako MIN (wywołania bez bound).
-create or replace function public.sefs_lookup_mult(p_price numeric, p_tiers jsonb)
-returns numeric
-language sql immutable set search_path = public as $$
-  select public.sefs_lookup_mult(p_price, p_tiers, 'MIN');
-$$;
+-- Jedna sygnatura z domyślnym MIN — bez osobnego 2-arg (Postgres: niejednoznaczność przeciążeń).
+drop function if exists public.sefs_lookup_mult(numeric, jsonb);
 
 -- ---------------------------------------------------------------------
 -- 3. Hybrid: bound + over_table zależne od metody
@@ -249,11 +245,11 @@ begin
     v_sum := v_sum + v_val;
     v_n := v_n + 1;
     v_days := v_days || jsonb_build_array(jsonb_build_object(
-      'day', v_day, 'value', v_val, 'published_on', v_pub));
+      'day', v_day, 'value', round(v_val, 2), 'published_on', v_pub));
     if v_pub is not null and not (v_pub::text = any (v_pub_keys)) then
       v_pub_keys := array_append(v_pub_keys, v_pub::text);
       v_pubs := v_pubs || jsonb_build_array(jsonb_build_object(
-        'published_on', v_pub, 'value', v_val));
+        'published_on', v_pub, 'value', round(v_val, 2)));
     end if;
   end loop;
 
@@ -338,11 +334,11 @@ begin
     v_sum := v_sum + v_val;
     v_n := v_n + 1;
     v_days := v_days || jsonb_build_array(jsonb_build_object(
-      'day', v_day, 'value', v_val, 'published_on', v_pub));
+      'day', v_day, 'value', round(v_val, 2), 'published_on', v_pub));
     if v_pub is not null and not (v_pub::text = any (v_pub_keys)) then
       v_pub_keys := array_append(v_pub_keys, v_pub::text);
       v_pubs := v_pubs || jsonb_build_array(jsonb_build_object(
-        'published_on', v_pub, 'value', v_val));
+        'published_on', v_pub, 'value', round(v_val, 2)));
     end if;
   end loop;
 
@@ -576,6 +572,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.sefs_last_published(uuid, text, date)
   from public, anon, authenticated;
+grant execute on function public.sefs_last_published(uuid, text, date) to service_role;
 
 -- ---------------------------------------------------------------------
 -- 8. sefs_save_parameters — tier_bound / avg_days_pln
@@ -590,6 +587,7 @@ declare
   v_bound text := coalesce(nullif(btrim(p->>'tier_bound'), ''), 'MIN');
   v_days int := coalesce((p->>'avg_days_pln')::int, 5);
 begin
+  perform public.assert_not_preview();
   if (is_hhl()) is not true then
     raise exception 'Parametry SEFS zapisuje wyłącznie HHL';
   end if;
@@ -632,7 +630,131 @@ revoke execute on function public.sefs_save_parameters(uuid, jsonb) from public,
 grant execute on function public.sefs_save_parameters(uuid, jsonb) to authenticated;
 
 -- ---------------------------------------------------------------------
--- 9. Nowa wersja parametrów od 26.10.2026 (t44+)
+-- 9. fuel_se_pl_ingest — późniejszy przebieg z inną ceną; korekta chroniona
+-- ---------------------------------------------------------------------
+create or replace function public.fuel_se_pl_ingest(p_project uuid, p_rows jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v jsonb;
+  v_id bigint;
+  v_ins int := 0;
+  v_skip int := 0;
+  v_url text;
+  v_note text;
+  v_code text;
+  v_period text;
+  v_date date;
+  v_val numeric;
+  v_pub date;
+  v_pri bigint;
+  v_pri_val numeric;
+  v_pri_pub date;
+  v_eff numeric;
+  v_eff_pub date;
+  v_has_corr boolean;
+begin
+  if (fuel_se_pl_enabled()) is not true then
+    raise exception 'Pobieranie SE/PL wyłączone (security_flags.FUEL_SE_PL_INGEST)';
+  end if;
+  if (exists (select 1 from projects where id = p_project)) is not true then
+    raise exception 'Nieznany projekt';
+  end if;
+  if (jsonb_typeof(p_rows) = 'array' and jsonb_array_length(p_rows) between 1 and 20) is not true then
+    raise exception 'Odczyty SE/PL: tablica 1–20 pozycji';
+  end if;
+
+  for v in select * from jsonb_array_elements(p_rows) loop
+    v_code := v->>'index_code';
+    if (v_code in ('SEK', 'PLN')) is not true then
+      raise exception 'Kod spoza SEK/PLN: %', v_code;
+    end if;
+    v_period := v->>'period';
+    if (v_period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') is not true then
+      raise exception 'Okres musi być YYYY-MM-DD: %', v_period;
+    end if;
+    v_date := (v->>'reading_date')::date;
+    if (v_date <= (timezone('Europe/Warsaw', now()))::date) is not true then
+      raise exception 'Data odczytu nie może być z przyszłości';
+    end if;
+    v_val := (v->>'value')::numeric;
+    if (v_val > 0 and v_val < 100) is not true then
+      raise exception 'Wartość poza zakresem (0–100): %', v_val;
+    end if;
+    v_url := nullif(trim(v->>'source_url'), '');
+    if (v_url is not null and v_url ~ '^https://') is not true then
+      raise exception 'source_url musi być https://';
+    end if;
+    if v_code = 'SEK' and (v_url ~ '^https://www\.okq8\.se/') is not true then
+      raise exception 'SEK: źródło musi być https://www.okq8.se/';
+    end if;
+    if v_code = 'PLN' and (v_url ~ '^https://(www\.)?orlen\.pl/') is not true then
+      raise exception 'PLN: źródło musi być https://www.orlen.pl/';
+    end if;
+    v_pub := case when coalesce(v->>'published_on', '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+      then left(v->>'published_on', 10)::date end;
+    if v_pub is not null and v_pub > v_date then v_pub := v_date; end if;
+    v_note := left(coalesce(nullif(trim(v->>'source_note'), ''), 'automat Watch Tower'), 500);
+
+    -- Najnowszy odczyt bazowy dnia (bez korekt).
+    select r.id, r.value, r.published_on
+      into v_pri, v_pri_val, v_pri_pub
+      from fuel_index_readings r
+     where r.project_id = p_project and r.index_code = v_code and r.period = v_period
+       and r.corrects_id is null
+     order by r.entered_at desc, r.id desc
+     limit 1;
+
+    if v_pri is not null then
+      v_eff := public.sefs_reading_effective_value(v_pri);
+      select coalesce(
+               (select c.published_on from fuel_index_readings c
+                 where c.corrects_id = v_pri order by c.entered_at desc, c.id desc limit 1),
+               v_pri_pub)
+        into v_eff_pub;
+      v_has_corr := exists (
+        select 1 from fuel_index_readings c where c.corrects_id = v_pri);
+
+      -- Ta sama efektywna cena i published_on → bez zapisu (tylko integration_runs po stronie Edge).
+      if round(v_eff, 4) = round(v_val, 4)
+         and v_eff_pub is not distinct from v_pub then
+        v_skip := v_skip + 1;
+        continue;
+      end if;
+
+      -- Ręczna korekta: automat z tą samą wartością co przed korektą nie cofa korekty.
+      if v_has_corr and round(v_pri_val, 4) = round(v_val, 4)
+         and v_pri_pub is not distinct from v_pub then
+        v_skip := v_skip + 1;
+        continue;
+      end if;
+    end if;
+
+    insert into fuel_index_readings (
+      project_id, index_code, period, reading_date, value, source_url, source_note, published_on
+    ) values (p_project, v_code, v_period, v_date, v_val, v_url, v_note, v_pub)
+    returning id into v_id;
+
+    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values (null, 'FUEL_READING_ADD', 'fuel_index_readings', v_id::text, null,
+            (select to_jsonb(r) - 'entered_by' from fuel_index_readings r where r.id = v_id));
+    v_ins := v_ins + 1;
+  end loop;
+
+  return jsonb_build_object('inserted', v_ins, 'skipped', v_skip);
+end $$;
+
+revoke all on function public.fuel_se_pl_ingest(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.fuel_se_pl_ingest(uuid, jsonb) to service_role;
+
+comment on function public.fuel_se_pl_ingest(uuid, jsonb) is
+  '#563: późniejszy przebieg z inną ceną/published_on zapisuje nowy odczyt; korekta chroniona przed tym samym odczytem źródła.';
+
+-- ---------------------------------------------------------------------
+-- 10. Nowa wersja parametrów od 26.10.2026 (t44+)
 -- ---------------------------------------------------------------------
 do $$
 declare

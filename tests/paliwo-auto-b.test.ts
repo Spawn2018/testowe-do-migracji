@@ -32,12 +32,16 @@ describe('PALIWO-AUTO-B parsers', () => {
     expect(row.period).toBe('2026-10-18');
   });
 
-  it('okno godzin PL: 7/9/13', () => {
+  // #563: +17:15 i 23:15 Europe/Warsaw
+  it('okno godzin PL: 7/9/13/17/23', () => {
     expect(isFuelPriceHour(7)).toBe(true);
     expect(isFuelPriceHour(9)).toBe(true);
     expect(isFuelPriceHour(13)).toBe(true);
+    expect(isFuelPriceHour(17)).toBe(true);
+    expect(isFuelPriceHour(23)).toBe(true);
     expect(isFuelPriceHour(8)).toBe(false);
     expect(isFuelPriceHour(5)).toBe(false);
+    expect(isFuelPriceHour(15)).toBe(false);
   });
 
   it('OKQ8 GoEasy Diesel firmowa 22,29 wprost + data publikacji (nie Q8 Trucks)', () => {
