@@ -15,7 +15,7 @@ import { lazyRetry } from '../lib/lazyRetry';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { FuelScreen } from '../components/options/MoneyScreens';
-import { addDays, exampleBaseOf, hhlFuelView, mondayOf, partyFuelView, type FuelRun, type Tier, type TierBound, type WeekCalc } from './liveFuel';
+import { addDays, exampleBaseOf, hhlFuelView, mondayOf, partyFuelView, type FuelRun, tierBoundFor, type Tier, type TierBound, type WeekCalc } from './liveFuel';
 
 const BafForm = lazy(lazyRetry(() => import('./BafForm')));
 const SefsReadOnly = lazy(lazyRetry(() => import('./SefsReadOnly')));
@@ -30,16 +30,22 @@ export default function LiveFuel({ readOnly = false, party }: { readOnly?: boole
   const [params, setParams] = useState<Params | null | undefined>(undefined);
   const [calc, setCalc] = useState<{ cur: WeekCalc | null; next: WeekCalc | null; curDays: WeekCalc | null; plnPubs: { value: number; published_on: string }[]; runs: FuelRun[] } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [bounds, setBounds] = useState<{ version: number; tier_bound: string | null }[]>([]);
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLDetailsElement>(null);
 
   const refresh = useCallback(async () => {
     try {
       const sb = await getSupabase();
-      const p = await /* `*` — kolumna `tier_bound` (#563, od t44) pojawi się w bazie później; jawna lista kolumn dałaby błąd przed migracją */
-        sb.from('sefs_parameters').select('*').order('version', { ascending: false }).limit(1);
+      /* F7 #576: jawna lista kolumn (KSH/SCX nie dostają `note`, `created_by` itd.); `tier_bound` (#563) osobno —
+         przed migracją kolumny nie ma, wtedy odczyt „od X” (MIN) bez komunikatu */
+      const [p, b] = await Promise.all([
+        sb.from('sefs_parameters').select('version,valid_from,agreed_with_carrier,tiers_sek,tiers_pln').order('version', { ascending: false }).limit(1),
+        sb.from('sefs_parameters').select('version,tier_bound').order('version', { ascending: false }).limit(20),
+      ]);
       if (p.error) setMsg(p.error.message);
       setParams(((p.data ?? []) as Params[])[0] ?? null);
+      setBounds(b.error ? [] : ((b.data ?? []) as { version: number; tier_bound: string | null }[]));
       if (party) return;
       const pr = await sb.from('projects').select('id').eq('code', PROJECT_CODE).maybeSingle();
       const pid = (pr.data as { id: string } | null)?.id ?? null;
@@ -77,10 +83,14 @@ export default function LiveFuel({ readOnly = false, party }: { readOnly?: boole
 
   const view = useMemo(() => {
     if (params === undefined) return null;
-    if (party) return partyFuelView({ today, side: party === 'KSH' ? 'rev' : 'cost', loads, params });
+    if (party) {
+      const pb = params ? { ...params, tier_bound: tierBoundFor(bounds, null, params.version) } : null;
+      return partyFuelView({ today, side: party === 'KSH' ? 'rev' : 'cost', loads, params: pb });
+    }
     if (!calc) return null;
-    return hhlFuelView({ today, params, cur: calc.cur, next: calc.next, curDays: calc.curDays, plnPubs: calc.plnPubs, runs: calc.runs, exampleBaseEur: exampleBaseOf(loads, 'cost'), missWhy: t(locale, 'ol2_fuel_no_price') });
-  }, [params, calc, party, today, loads, locale]);
+    const hp = params ? { ...params, tier_bound: tierBoundFor(bounds, calc.cur?.params_version, params.version) } : null;
+    return hhlFuelView({ today, params: hp, cur: calc.cur, next: calc.next, curDays: calc.curDays, plnPubs: calc.plnPubs, runs: calc.runs, exampleBaseEur: exampleBaseOf(loads, 'cost'), missWhy: t(locale, 'ol2_fuel_no_price') });
+  }, [params, bounds, calc, party, today, loads, locale]);
 
   /* „Nowa wersja umowy”: rozwija dzisiejszy formularz załącznika pod ekranem */
   const actions = party || readOnly ? null : {

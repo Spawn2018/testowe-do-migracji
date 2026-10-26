@@ -39,10 +39,26 @@ export function tiersFromDb(t: readonly Tier[] | null | undefined, bound: TierBo
   return list.map((x, i) => ({ from: x.lte, to: r2((i + 1 < list.length ? list[i + 1].lte : x.lte + step) - 0.01), mult: x.mult }));
 }
 
+/**
+ * Sposób odczytu progu dla ekranu: wersja, z której baza policzyła tydzień (`params_version` z `sefs_week_calc`),
+ * potem najnowsza wersja; brak kolumny / wiersza = `MIN` (F7 #576: podświetlenie zgodne z mnożnikiem z bazy).
+ */
+export function tierBoundFor(
+  bounds: readonly { version: number; tier_bound?: string | null }[] | null | undefined,
+  calcVersion: number | null | undefined,
+  latestVersion: number | null | undefined,
+): TierBound {
+  const of = (v: number | null | undefined) => (v == null ? undefined : (bounds ?? []).find((b) => b.version === v)?.tier_bound);
+  const b = of(calcVersion) ?? of(latestVersion);
+  return b === 'MAX' ? 'MAX' : 'MIN';
+}
+
 /** Wynik `sefs_week_calc` (pola, których używa ekran). */
 export interface WeekCalc {
   ok?: boolean;
   status?: string;
+  /** wersja `sefs_parameters`, z której policzono tydzień */
+  params_version?: number | null;
   final?: boolean;
   avg_sek?: number | string | null;
   avg_pln?: number | string | null;

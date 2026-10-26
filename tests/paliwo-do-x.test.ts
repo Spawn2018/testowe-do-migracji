@@ -4,7 +4,7 @@
  * Wynik kontrolny właściciela t44: SE 23,00 SEK/l → 1,14; PL 7,15 zł/l → 1,14.
  */
 import { describe, expect, it } from 'vitest';
-import { tiersFromDb } from '../src/auth/liveFuel';
+import { partyFuelView, tierBoundFor, tiersFromDb } from '../src/auth/liveFuel';
 import { tierOf } from '../src/lib/p5bFuel';
 import { lookupMult } from '../src/lib/sefs';
 
@@ -61,5 +61,26 @@ describe('wersje do tygodnia 43 bez zmian (tier_bound = MIN albo brak pola)', ()
 
   it('MIN: 23,03 → 1,13 (odczyt „od”, jak policzone t43 i wcześniej)', () => {
     expect(at(tiersFromDb(SEK, 'MIN'), 23.03)).toBe(1.13);
+  });
+});
+
+describe('sposób odczytu progu idzie za wersją tygodnia (F7 #576)', () => {
+  const bounds = [{ version: 5, tier_bound: 'MAX' }, { version: 4, tier_bound: 'MIN' }, { version: 3, tier_bound: null }];
+  it('wersja, z której baza policzyła tydzień, wygrywa z najnowszą', () => {
+    expect(tierBoundFor(bounds, 4, 5)).toBe('MIN');
+    expect(tierBoundFor(bounds, 5, 5)).toBe('MAX');
+  });
+  it('bez wersji tygodnia — najnowsza; brak kolumny / wiersza — MIN', () => {
+    expect(tierBoundFor(bounds, null, 5)).toBe('MAX');
+    expect(tierBoundFor(bounds, 3, 5)).toBe('MAX');
+    expect(tierBoundFor([], 5, 5)).toBe('MIN');
+    expect(tierBoundFor(null, null, null)).toBe('MIN');
+  });
+  it('widok KSH/SCX przekazuje sposób odczytu do tabeli', () => {
+    const params = { version: 5, valid_from: '2026-10-26', agreed_with_carrier: true, tiers_sek: SEK, tiers_pln: PLN, tier_bound: 'MAX' as const };
+    const v = partyFuelView({ today: '2026-10-26', side: 'rev', loads: [], params });
+    expect(v.tiers.sek[0]).toEqual({ from: 0, to: 17.4, mult: 0.92 });
+    const m = partyFuelView({ today: '2026-10-26', side: 'rev', loads: [], params: { ...params, tier_bound: 'MIN' } });
+    expect(m.tiers.sek[0].from).toBe(17.4);
   });
 });
