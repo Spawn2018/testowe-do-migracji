@@ -15,13 +15,13 @@ import { lazyRetry } from '../lib/lazyRetry';
 import { getNowIso } from '../lib/frozenNow';
 import { localDateOf } from '../lib/money/engine';
 import { FuelScreen } from '../components/options/MoneyScreens';
-import { addDays, exampleBaseOf, hhlFuelView, mondayOf, partyFuelView, type FuelRun, type Tier, type WeekCalc } from './liveFuel';
+import { addDays, exampleBaseOf, hhlFuelView, mondayOf, partyFuelView, type FuelRun, type Tier, type TierBound, type WeekCalc } from './liveFuel';
 
 const BafForm = lazy(lazyRetry(() => import('./BafForm')));
 const SefsReadOnly = lazy(lazyRetry(() => import('./SefsReadOnly')));
 const PROJECT_CODE = 'STEGRA_BODEN';
 
-type Params = { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek: Tier[]; tiers_pln: Tier[] };
+type Params = { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek: Tier[]; tiers_pln: Tier[]; tier_bound?: TierBound | null };
 
 export default function LiveFuel({ readOnly = false, party }: { readOnly?: boolean; party?: 'KSH' | 'SCX' }) {
   const locale = useTowerStore((s) => s.locale);
@@ -36,7 +36,8 @@ export default function LiveFuel({ readOnly = false, party }: { readOnly?: boole
   const refresh = useCallback(async () => {
     try {
       const sb = await getSupabase();
-      const p = await sb.from('sefs_parameters').select('version,valid_from,agreed_with_carrier,tiers_sek,tiers_pln').order('version', { ascending: false }).limit(1);
+      const p = await /* `*` — kolumna `tier_bound` (#563, od t44) pojawi się w bazie później; jawna lista kolumn dałaby błąd przed migracją */
+        sb.from('sefs_parameters').select('*').order('version', { ascending: false }).limit(1);
       if (p.error) setMsg(p.error.message);
       setParams(((p.data ?? []) as Params[])[0] ?? null);
       if (party) return;
