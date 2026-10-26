@@ -10,6 +10,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { hasKey, t } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
 import { canSwitchView } from '../../lib/prodFacade';
+import { endPreviewBeforeLogout, switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
 import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile';
 import { markManualLogout } from '../../auth/sessionYear';
 import { openOptionsScreen } from '../../lib/openOptions';
@@ -119,6 +120,7 @@ export function AccountMenu() {
     profile?.last_sign_in_at ? t(locale, 'p3a_acc_last').replace('{when}', lastLogin(locale, profile.last_sign_in_at)) : '',
   ].filter(Boolean).join(' · ');
   const switchView = canSwitchView();
+  const switching = usePreviewSwitchBusy();
 
   const close = () => {
     setOpen(false);
@@ -128,7 +130,12 @@ export function AccountMenu() {
     close();
     markManualLogout();
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-      void import('../../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => sb.auth.signOut());
+      /* F7 #383 r2: najpierw koniec Podglądu w bazie, potem wylogowanie */
+      /* zawieszona sieć nie może zablokować wylogowania — najwyżej 3 s na koniec Podglądu */
+      void Promise.race([endPreviewBeforeLogout(), new Promise<void>((r) => setTimeout(r, 3000))])
+        .then(() => import('../../auth/client'))
+        .then(({ getSupabase }) => getSupabase())
+        .then((sb) => sb.auth.signOut());
     }
   };
 
@@ -187,7 +194,7 @@ export function AccountMenu() {
               <div className="seg acc-seg" role="group" aria-label={t(locale, 'p3a_preview_lbl')} data-preview-seg>
                 {PREVIEW_ROLES.map((r) => (
                   <button key={r} type="button" data-role={r} aria-pressed={role === r} title={ROLE_META[r].name}
-                    onClick={() => { setRole(r); close(); }}>
+                    onClick={() => { void switchViewRole(r); close(); }} aria-busy={switching || undefined} aria-disabled={switching || undefined}>
                     {ROLE_META[r].short}
                   </button>
                 ))}

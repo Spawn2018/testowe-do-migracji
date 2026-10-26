@@ -5,7 +5,7 @@
  */
 import type { DataMutation } from './provider';
 import type { DocCategory, Document } from '../types';
-import { isPreviewReadOnly } from '../lib/prodFacade';
+import { dbPreviewOn, isPreviewReadOnly } from '../lib/prodFacade';
 
 type Sink = (m: DataMutation) => void;
 let sink: Sink | null = null;
@@ -48,6 +48,9 @@ export function writeThrough(m: DataMutation): void {
   if (!sink) return;
   // E9-7 / G-07: Podgląd KSH/SCX — bez zapisu domeny (UI + ten strażnik).
   if (!isPersonalMutation(m) && isPreviewReadOnly()) return;
+  /* B5 (0300): w Podglądzie z bazy „własne” to konto oglądane (current_app_user_id) — nic nie zapisujemy,
+     także przeczytania powiadomień i ustawień (F7 #383 B1). */
+  if (dbPreviewOn()) return;
   const id = targetId(m);
   if (id !== null && !isServerId(id)) return;
   sink(m);

@@ -6,7 +6,7 @@
  * pilnuje, że każdy klucz jest użyty w kodzie, a `tests/i2-facade.local.spec.ts` sprawdza build produkcyjny.
  * Tryb demo (lokalnie, podglądy Vercel) bez zmian.
  */
-import { getAuthProfile } from '../auth/profile';
+import { getAuthProfile, type AuthProfile } from '../auth/profile';
 import { getPreviewViewRole } from './previewGate';
 
 export const PROD_BUILD: boolean = import.meta.env.VITE_AUTH_MODE === 'supabase';
@@ -51,8 +51,26 @@ export function canManageWorkflows(prod: boolean = PROD_BUILD, role: string | nu
  * widoków) w produkcji wyłącznie dla roli HHL_ADMIN. HHL_OPS, KSH i przewoźnik nie widzą przełącznika — rola
  * widoku wynika z konta. Demo (bez logowania) — przełącznik jest sposobem prezentacji.
  */
-export function canSwitchView(prod: boolean = PROD_BUILD, role: string | null | undefined = getAuthProfile()?.role): boolean {
+export function canSwitchView(
+  prod: boolean = PROD_BUILD,
+  role: string | null | undefined = switchRoleOf(),
+  p: AuthProfile | null = getAuthProfile(),
+): boolean {
+  /* F7 #383 Ś2: w trakcie „Działaj jako” przełącznik nie nadpisuje impersonacji Podglądem */
+  if (prod && p?.acting_as === true && !dbPreviewOn(p)) return false;
   return !prod || role === 'HHL_ADMIN';
+}
+
+/**
+ * B5 (0300) — Podgląd w bazie: profil to konto oglądane (KSH Użytkownik / SCX Dyspozytor), a prawo przełączania
+ * ma prawdziwy administrator (`real_role`). „Działaj jako” (zapis) przełącznika nie pokazuje.
+ */
+export function dbPreviewOn(p: AuthProfile | null = getAuthProfile()): boolean {
+  return p?.acting_as === true && p.preview_ro === true;
+}
+
+export function switchRoleOf(p: AuthProfile | null = getAuthProfile()): string | null | undefined {
+  return dbPreviewOn(p) ? p?.real_role : p?.role;
 }
 
 const OWN_VIEW: Record<string, string> = { HHL: 'HHL', KSH: 'KSH', SCX: 'SCX' };
@@ -66,8 +84,11 @@ export function isPreviewReadOnly(opts?: {
   prod?: boolean;
   viewRole?: string | null;
   orgCode?: string | null;
+  /** B5 (0300): Podgląd zapisany w bazie (`impersonation_state.read_only`). */
+  dbPreview?: boolean;
 }): boolean {
   const prod = opts?.prod ?? PROD_BUILD;
+  if (prod && (opts?.dbPreview ?? dbPreviewOn())) return true;
   const viewRole = opts?.viewRole !== undefined ? opts.viewRole : getPreviewViewRole();
   const orgCode = opts?.orgCode !== undefined ? opts.orgCode : getAuthProfile()?.org_code;
   const own = orgCode ? OWN_VIEW[orgCode] : undefined;
