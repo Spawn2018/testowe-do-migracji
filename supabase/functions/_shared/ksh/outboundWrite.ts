@@ -195,10 +195,19 @@ export async function processOutboundWrites(args: {
     }
     if (conflict) {
       conflictItems.push(it);
+      // F7 06:08: klucz z polem i rev — pierwsze pole z patch (bez wartości PII w detail).
+      const patchKeys = [
+        'load_date', 'load_time', 'delivery_date', 'delivery_time',
+        'carrier_order_no', 'hhl_order_no',
+      ];
+      const field = patchKeys.find((k) => k in (it.patch ?? {})) ?? 'carrier_order_no';
+      const rev = typeof it.rev === 'number' && it.rev >= 1 ? it.rev : 1;
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,
         p_load: it.load_id,
         p_code: primary,
+        p_field: field,
+        p_rev: rev,
       });
       if (note.error) {
         return {

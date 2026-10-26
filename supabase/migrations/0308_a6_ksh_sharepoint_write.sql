@@ -537,33 +537,41 @@ grant execute on function public.ksh_sync_outbound_ack(jsonb, text, text) to ser
 
 -- Sprawa: plik zmienił się od odczytu przy pending WT→plik (nie nadpisuj).
 -- F7 r6 BLOKER 1: bez ksh_sync_require_service — woła też import_schedule (HHL UPLOAD).
--- F7 r7/05:37: klucz z :pending — osobno od konfliktu numeru bez kolejki (#426 quiet bez sprawy).
+-- F7 r7/06:08: klucz l1b:conflict:<proj>:<kod>:<pole>:pending:<rev> — nowy rev = nowa sprawa
+-- po rozwiązaniu; ten sam rev = ta sama (dedup). detail bez wartości pól (PII).
+drop function if exists public.l1b_note_file_changed(uuid, uuid, text);
 create or replace function public.l1b_note_file_changed(
-  p_project uuid, p_load uuid, p_code text
+  p_project uuid, p_load uuid, p_code text, p_field text, p_rev int
 ) returns uuid
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_field text := nullif(btrim(coalesce(p_field, '')), '');
 begin
   if p_project is null or p_load is null or nullif(btrim(p_code), '') is null then
     return null;
   end if;
+  if v_field is null or p_rev is null or p_rev < 1 then
+    return null;
+  end if;
   return decision_open_from_event(
     p_project, 'TOWER_KSH_CONFLICT',
-    'l1b:conflict:' || p_project::text || ':' || btrim(p_code) || ':hhl_order_no:pending',
+    'l1b:conflict:' || p_project::text || ':' || btrim(p_code) || ':' || v_field
+      || ':pending:' || p_rev::text,
     'Plik KSH zmieniony — sprawdź',
     jsonb_build_object(
       'code', btrim(p_code),
-      'reason', 'file_changed_since_read',
-      'pending', true),
+      'field', v_field,
+      'reason', 'file_changed_since_read'),
     p_load, null
   );
 end;
 $$;
 
-revoke all on function public.l1b_note_file_changed(uuid, uuid, text) from public, anon, authenticated;
-grant execute on function public.l1b_note_file_changed(uuid, uuid, text) to service_role;
+revoke all on function public.l1b_note_file_changed(uuid, uuid, text, text, int) from public, anon, authenticated;
+grant execute on function public.l1b_note_file_changed(uuid, uuid, text, text, int) to service_role;
 
 -- Ryzyko po 5 nieudanych próbach zapisu.
 create or replace function public.l1b_note_outbound_failed(
@@ -971,9 +979,10 @@ declare
   v_service boolean := false;
   v_source text;
   v_hash text;
-  -- F7 r5 N9 / r6
+  -- F7 r5 N9 / r6 / r7 06:08
   v_pend jsonb;
   v_exp_out jsonb;
+  v_out_rev int;
   v_f text;
   v_exp_val text;
   v_file_val text;
@@ -1280,9 +1289,10 @@ begin
     -- Inaczej CRITICAL/IN_APP na datę z pending; albo dubel l1b_note_conflict + file-changed.
     v_pend := null;
     v_exp_out := null;
+    v_out_rev := null;
     v_pending_wt := '{}';
     if p_dry_run is false then
-      select o.patch, o.expected_file into v_pend, v_exp_out
+      select o.patch, o.expected_file, o.rev into v_pend, v_exp_out, v_out_rev
         from public.ksh_sync_outbound o
        where o.load_id = r.load_id and o.status = 'pending'
        order by o.id
@@ -1301,8 +1311,10 @@ begin
               when 'hhl_order_no' then nullif(btrim(coalesce(v_exp_out->>'ho', '')), '')
             end;
             -- F7 r6/r7 B1: file-changed zawsze; p_quiet tylko powiadomienia (bulk_quiet w decision_open).
+            -- F7 06:08: klucz z polem i rev pozycji w kolejce.
             if v_file_val is distinct from v_exp_val then
-              perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
+              perform public.l1b_note_file_changed(
+                p_project, r.load_id, r.code, v_f, coalesce(v_out_rev, 1));
             end if;
             v_pending_wt := array_append(v_pending_wt, v_f);
             v_fields := array_remove(v_fields, v_f);
