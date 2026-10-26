@@ -642,7 +642,8 @@ function ZoneForm({ zone, tracked, near, phone, reveal, onCancel, onSave }: {
               onChange={(e) => setRoute(isFerryOperator(e.target.value) ? e.target.value : 'POLFERRIES')}
             >
               {/* BN9-a: Polferries i Stena zawsze; armator z katalogu promów (np. TALLINK) — tylko gdy strefa go ma */}
-              {zoneRouteOptions(route).map((op) => <option key={op} value={op}>{p8ct(`p8c_route_${op}`)}</option>)}
+              {/* F7 #575 r2: opcje z wartości zapisanej w strefie (nie z bieżącego wyboru) — przełączenie nie gubi armatora */}
+              {zoneRouteOptions((zone ? routeOf(zone) : null) ?? route).map((op) => <option key={op} value={op}>{p8ct(`p8c_route_${op}`)}</option>)}
             </select>
           </div>
         ) : null}
