@@ -5405,3 +5405,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. **N11:** schedule_row/historia przy rozjeździe tylko gdy `v_file ≠ expected_file`;
   4. **N12:** porównanie per klucz + `state_upsert` odświeża `expected_file` ze snapshot.
 - EXPECTED import **189**; testy N9/N11/N12. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 05:45 — A6 #560 db FAIL na `bbcc567e` → fix testów N7/N11/g20
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `bbcc567e`: unit ✔ visual ✔ **db FAIL** import 186/3 + g20 14/1:
+  1. **N11:** `delete load_events` niemożliwe (immutable) → count 7 zamiast 1 — asercja na deltę jak N5;
+  2. **N7:** po N12 snapshot `SNAP-X` → B→A nie robi `reverted_to_file` — reset snapshot do A przed N7;
+  3. **g20:** N9 + zaległy pending po `ksh_confirm_dates` blokuje datę z pliku — `delete outbound` przed importem w teście.
+- EXPECTED bez zmian (import 189, g20 15). Push → CI → prośba F7 po zielonym.

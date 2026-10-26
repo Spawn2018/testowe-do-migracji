@@ -707,9 +707,9 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
 if [ "$out" = "SNAP-C|Nowy Kierowca" ]; then ok=$((ok+1)); echo "  OK    A6: N9 driver z pliku / co zostaje C"; else fail=$((fail+1)); echo "  FAIL  A6: N9 → $out"; fi
 
-# F7 r5 N11: podwójny ack na ścieżce rozjazdu → 1 wpis KSH_FILE_OUTBOUND
+# F7 r5 N11: podwójny ack na ścieżce rozjazdu → +1 wpis KSH_FILE_OUTBOUND
+# (load_events niemutowalne — bez DELETE; delta jak N5)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-$PSQL -c "delete from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'" >/dev/null
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
@@ -720,6 +720,7 @@ N11_REV=$(Q "select rev from ksh_sync_outbound where id=$N11_ID")
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
+EV11=$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")
 $PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
     'id',$N11_ID,'rev',$N11_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
@@ -728,7 +729,7 @@ $PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='
     'id',$N11_ID,'rev',$N11_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
   )),'done',null);
 commit;" >/dev/null 2>&1
-chk "A6: N11 podwójny ack rozjazd → 1 historia" "$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
+chk "A6: N11 podwójny ack rozjazd → 1 historia" "$(Q "select count(*) - $EV11 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
 
 # F7 r5 N12: plik X / expected odświeżone / powrót WT do A → nie usuwa klucza pending
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
@@ -748,7 +749,9 @@ commit;" >/dev/null 2>&1
 chk "A6: N12 powrót A przy pliku X → pending zostaje" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 1
 
 # F7 r4 N7: skipped + nowy pending → scal, stary done
+# (po N12 snapshot bywa SNAP-X — przywróć A, inaczej B→A nie robi reverted_to_file)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
