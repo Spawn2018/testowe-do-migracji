@@ -635,4 +635,87 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "done" ]; then ok=$((ok+1)); echo "  OK    A6: N4 zgodny rev → done"; else fail=$((fail+1)); echo "  FAIL  A6: N4 zgodny rev → $out"; fi
 
+# F7 r4 N5: B→C stary rev → schedule_row=B + historia; import pliku B nie zmienia WT (C)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb) - 'carrier_order_no' - 'scxOrderNo' where load_id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N5_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N5_REV=$(Q "select rev from ksh_sync_outbound where id=$N5_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+EV5=$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N5_ID,'rev',$N5_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+  select coalesce((select schedule_row->>'carrier_order_no' from shipment_items where load_id='$SG_OUT' and shipment_code='SG-01' limit 1),'')
+    ||':'||(select carrier_order_no from loads where id='$SG_OUT')
+    ||':'||coalesce((select patch->>'carrier_order_no' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1),'');
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "SNAP-B:SNAP-C:SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: N5 schedule_row B / WT C / pending C"; else fail=$((fail+1)); echo "  FAIL  A6: N5 schedule/WT/pending → $out"; fi
+chk "A6: N5 KSH_FILE_OUTBOUND przy rozjeździe" "$(Q "select count(*) - $EV5 from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
+IMP_N5=$(Q "select jsonb_agg(jsonb_build_object(
+  'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+  'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date',l.plan_load_date::text,'delivery_date',l.plan_delivery_date::text,
+  'carrier_order_no','SNAP-B','hhl_order_no',coalesce(l.hhl_order_no,''),
+  'dates_to_check',false
+)) from loads l where l.id='$SG_OUT'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select (import_schedule('$P','$IMP_N5'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true)->>'changed') is not null;
+  select carrier_order_no from loads where id='$SG_OUT';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: N5 import pliku B nie zmienia WT C"; else fail=$((fail+1)); echo "  FAIL  A6: N5 import → $out"; fi
+
+# F7 r4 N7: skipped + nowy pending → scal, stary done
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N7_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N7_REV=$(Q "select rev from ksh_sync_outbound where id=$N7_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+chk "A6: N7 setup skipped reverted" "$(Q "select status||':'||coalesce(last_error,'') from ksh_sync_outbound where id=$N7_ID")" "skipped:reverted_to_file"
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-D' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N7_NEW=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N7_ID,'rev',$N7_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+  select (select status||':'||coalesce(last_error,'') from ksh_sync_outbound where id=$N7_ID)
+    ||'|'||(select status||':'||coalesce(patch->>'carrier_order_no','')||':'||coalesce(expected_file->>'co','') from ksh_sync_outbound where id=$N7_NEW);
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "done:rev_mismatch_merged|pending:SNAP-D:SNAP-B" ]; then ok=$((ok+1)); echo "  OK    A6: N7 scal pending / stary done"; else fail=$((fail+1)); echo "  FAIL  A6: N7 → $out"; fi
+
+# F7 r4 N8: podwójny ack done = no-op (status zostaje done)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-E' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N8_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N8_REV=$(Q "select rev from ksh_sync_outbound where id=$N8_ID")
+$PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N8_ID,'rev',$N8_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-E')
+  )),'done',null);
+commit;" >/dev/null 2>&1
+N8_REV2=$(Q "select rev from ksh_sync_outbound where id=$N8_ID")
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N8_ID,'rev',$N8_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-E')
+  )),'done',null);
+  select status||':'||rev::text from ksh_sync_outbound where id=$N8_ID;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "done:$N8_REV2" ]; then ok=$((ok+1)); echo "  OK    A6: N8 podwójny ack → done no-op"; else fail=$((fail+1)); echo "  FAIL  A6: N8 → $out (oczekiwano done:$N8_REV2)"; fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

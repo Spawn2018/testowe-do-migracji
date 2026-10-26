@@ -9,6 +9,7 @@ import {
   fileRowChangedSinceRead,
   missingExpectedFile,
 } from '../supabase/functions/_shared/ksh/writeConflict';
+import { ackPayload } from '../supabase/functions/_shared/ksh/ackPayload';
 import {
   excelDateFromIso,
   excelTimeFromHm,
@@ -24,6 +25,20 @@ const env = (): GraphEnv => ({
   SHAREPOINT_CLIENT_ID: 'c',
   SHAREPOINT_CLIENT_SECRET: 's',
   SHAREPOINT_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/a.xlsx',
+});
+
+describe('A6 ackPayload (F7 r4)', () => {
+  it('z sent: id/rev/patch; bez sent: tylko id/rev', () => {
+    const items = [{
+      id: 42, load_id: 'x', code: 'SG-01', rev: 3,
+      patch: { carrier_order_no: 'H1' },
+    }];
+    expect(ackPayload(items, true)).toEqual([{
+      id: 42, rev: 3, sent: { carrier_order_no: 'H1' },
+    }]);
+    expect(ackPayload(items, false)).toEqual([{ id: 42, rev: 3 }]);
+    expect(ackPayload([{ ...items[0], rev: undefined }], true)[0].rev).toBe(1);
+  });
 });
 
 describe('A6 writeConflict', () => {

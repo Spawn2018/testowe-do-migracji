@@ -14,8 +14,10 @@ import {
   missingExpectedFile,
   type FileDateSnap,
 } from './writeConflict.ts';
+import { ackPayload } from './ackPayload.ts';
 
 export { fileAlreadyHasPatch } from './writeConflict.ts';
+export { ackPayload } from './ackPayload.ts';
 
 export type OutboundItem = {
   id: number;
@@ -72,17 +74,6 @@ function applyPatchToSnap(base: FileDateSnap | null, patch: OutboundPatch): File
     next.ho = String(patch.hhl_order_no);
   }
   return next;
-}
-
-function ackPayload(
-  items: OutboundItem[],
-  withSent: boolean,
-): AckItem[] {
-  return items.map((it) => ({
-    id: Number(it.id),
-    rev: Number(it.rev ?? 1),
-    ...(withSent ? { sent: { ...it.patch } } : {}),
-  }));
 }
 
 async function ack(

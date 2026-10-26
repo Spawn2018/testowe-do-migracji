@@ -244,7 +244,10 @@ revoke all on function public.ksh_sync_outbound_apply_sent(jsonb, jsonb) from pu
 grant execute on function public.ksh_sync_outbound_apply_sent(jsonb, jsonb) to service_role;
 
 -- Różnica WT ↔ stan pliku po sent (klucze outbound); NULL nie czyści komórki.
-create or replace function public.ksh_sync_outbound_wt_diff(p_load uuid, p_file jsonb)
+-- F7 r4: p_keys — tylko klucze z sent ∪ patch (null = wszystkie 6 pól).
+create or replace function public.ksh_sync_outbound_wt_diff(
+  p_load uuid, p_file jsonb, p_keys jsonb default null
+)
 returns jsonb
 language plpgsql
 stable
@@ -258,11 +261,13 @@ declare
   v_dt text;
   v_co text;
   v_ho text;
+  v_allow boolean;
 begin
   select * into l from public.loads where id = p_load;
   if l.id is null then
     return '{}'::jsonb;
   end if;
+  v_allow := (p_keys is null or jsonb_typeof(p_keys) is distinct from 'object');
   v_co := nullif(btrim(l.carrier_order_no), '');
   v_ho := nullif(btrim(l.hhl_order_no), '');
   if l.plan_load_from is not null then
@@ -272,32 +277,39 @@ begin
     v_dt := to_char(l.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
   end if;
 
-  if l.plan_load_date is not null
+  if (v_allow or p_keys ? 'load_date')
+     and l.plan_load_date is not null
      and (p_file->>'ld') is distinct from l.plan_load_date::text then
     v_patch := v_patch || jsonb_build_object('load_date', l.plan_load_date);
   end if;
-  if v_lt is not null and (p_file->>'lt') is distinct from v_lt then
+  if (v_allow or p_keys ? 'load_time')
+     and v_lt is not null and (p_file->>'lt') is distinct from v_lt then
     v_patch := v_patch || jsonb_build_object('load_time', v_lt);
   end if;
-  if l.plan_delivery_date is not null
+  if (v_allow or p_keys ? 'delivery_date')
+     and l.plan_delivery_date is not null
      and (p_file->>'dd') is distinct from l.plan_delivery_date::text then
     v_patch := v_patch || jsonb_build_object('delivery_date', l.plan_delivery_date);
   end if;
-  if v_dt is not null and (p_file->>'dt') is distinct from v_dt then
+  if (v_allow or p_keys ? 'delivery_time')
+     and v_dt is not null and (p_file->>'dt') is distinct from v_dt then
     v_patch := v_patch || jsonb_build_object('delivery_time', v_dt);
   end if;
-  if v_co is not null and (p_file->>'co') is distinct from v_co then
+  if (v_allow or p_keys ? 'carrier_order_no')
+     and v_co is not null and (p_file->>'co') is distinct from v_co then
     v_patch := v_patch || jsonb_build_object('carrier_order_no', v_co);
   end if;
-  if v_ho is not null and (p_file->>'ho') is distinct from v_ho then
+  if (v_allow or p_keys ? 'hhl_order_no')
+     and v_ho is not null and (p_file->>'ho') is distinct from v_ho then
     v_patch := v_patch || jsonb_build_object('hhl_order_no', v_ho);
   end if;
   return v_patch;
 end;
 $$;
 
-revoke all on function public.ksh_sync_outbound_wt_diff(uuid, jsonb) from public, anon, authenticated;
-grant execute on function public.ksh_sync_outbound_wt_diff(uuid, jsonb) to service_role;
+drop function if exists public.ksh_sync_outbound_wt_diff(uuid, jsonb);
+revoke all on function public.ksh_sync_outbound_wt_diff(uuid, jsonb, jsonb) from public, anon, authenticated;
+grant execute on function public.ksh_sync_outbound_wt_diff(uuid, jsonb, jsonb) to service_role;
 
 create or replace function public.ksh_sync_outbound_ack(
   p_acks jsonb,
@@ -319,6 +331,9 @@ declare
   v_code text;
   v_file jsonb;
   v_diff jsonb;
+  v_keys jsonb;
+  v_other bigint;
+  v_elig boolean;
 begin
   perform public.ksh_sync_require_service();
   if (p_status in ('done', 'conflict', 'skipped', 'failed')) is not true then
@@ -341,16 +356,86 @@ begin
       continue;
     end if;
 
-    select o.* into r from public.ksh_sync_outbound o where o.id = v_id;
+    -- F7 r4 N6: blokada wiersza kolejki i loads przed wt_diff.
+    select o.* into r from public.ksh_sync_outbound o where o.id = v_id for update;
     if r.id is null then
       continue;
     end if;
+    perform 1 from public.loads where id = r.load_id for update;
 
-    -- F7 r3 N4: rozjazd rev przy done → pending z różnicą WT≠sent, expected_file z sent.
+    -- F7 r3 N4 + r4 N5/N7/N8: rozjazd rev przy done.
     if p_status = 'done' and r.rev is distinct from v_rev then
+      -- N8: tylko pending albo skipped/reverted_to_file; done = no-op.
+      v_elig := (r.status = 'pending')
+        or (r.status = 'skipped' and r.last_error = 'reverted_to_file');
+      if v_elig is not true then
+        continue;
+      end if;
+
       v_file := public.ksh_sync_outbound_apply_sent(r.expected_file, coalesce(v_sent, '{}'::jsonb));
-      v_diff := public.ksh_sync_outbound_wt_diff(r.load_id, v_file);
-      if v_diff = '{}'::jsonb then
+      v_keys := coalesce(v_sent, '{}'::jsonb) || coalesce(r.patch, '{}'::jsonb);
+      v_diff := public.ksh_sync_outbound_wt_diff(r.load_id, v_file, v_keys);
+
+      -- N5: schedule_row + historia z sent (plik już ma te wartości).
+      v_patch := coalesce(v_sent, '{}'::jsonb);
+      if v_patch <> '{}'::jsonb then
+        update public.shipment_items si
+           set schedule_row = coalesce(si.schedule_row, '{}'::jsonb)
+             || jsonb_strip_nulls(jsonb_build_object(
+                  'load_date', v_patch->'load_date',
+                  'load_time', v_patch->'load_time',
+                  'delivery_date', v_patch->'delivery_date',
+                  'delivery_time', v_patch->'delivery_time',
+                  'carrier_order_no', v_patch->'carrier_order_no',
+                  'hhl_order_no', v_patch->'hhl_order_no',
+                  'scxOrderNo', v_patch->'carrier_order_no',
+                  'hhlOrderNo', v_patch->'hhl_order_no'
+                )),
+               updated_at = now()
+         where si.load_id = r.load_id;
+        insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
+        values (
+          r.load_id, 'KSH_FILE_OUTBOUND', now(), r.created_by,
+          jsonb_build_object(
+            'code', r.shipment_code, 'after', v_patch,
+            'outbound_id', r.id, 'rev_mismatch', true
+          )
+        );
+      end if;
+
+      -- N7: inny pending tego load_id → scal, stary → done.
+      select o.id into v_other
+        from public.ksh_sync_outbound o
+       where o.load_id = r.load_id and o.status = 'pending' and o.id is distinct from r.id
+       order by o.id
+       limit 1
+         for update;
+      if v_other is not null then
+        if v_diff <> '{}'::jsonb then
+          update public.ksh_sync_outbound
+             set patch = patch || v_diff,
+                 expected_file = public.ksh_sync_outbound_apply_sent(
+                   coalesce(expected_file, v_file), coalesce(v_sent, '{}'::jsonb)
+                 ),
+                 last_error = null,
+                 rev = rev + 1
+           where id = v_other;
+        else
+          update public.ksh_sync_outbound
+             set expected_file = public.ksh_sync_outbound_apply_sent(
+                   coalesce(expected_file, v_file), coalesce(v_sent, '{}'::jsonb)
+                 ),
+                 rev = rev + 1
+           where id = v_other;
+        end if;
+        update public.ksh_sync_outbound
+           set status = 'done',
+               done_at = now(),
+               last_error = 'rev_mismatch_merged',
+               expected_file = v_file,
+               rev = rev + 1
+         where id = r.id;
+      elsif v_diff = '{}'::jsonb then
         update public.ksh_sync_outbound
            set status = 'skipped',
                done_at = now(),
@@ -521,9 +606,18 @@ begin
   end if;
 
   -- F7 r2 BLOKER 4: migawka pliku — pomiń pole gdy nowa wartość = plik (echo TAKE_FILE itd.).
+  -- F7 r4: gdy pending ma expected_file — porównuj z nim (okno między ack a state_upsert).
   v_code := public.load_sms_code(new.id);
-  select s.snapshot -> v_code into v_snap
-    from public.ksh_sync_state s where s.project_id = new.project_id;
+  select o.expected_file into v_snap
+    from public.ksh_sync_outbound o
+   where o.load_id = new.id and o.status = 'pending'
+     and o.expected_file is not null
+   order by o.id
+   limit 1;
+  if v_snap is null then
+    select s.snapshot -> v_code into v_snap
+      from public.ksh_sync_state s where s.project_id = new.project_id;
+  end if;
   if v_snap is not null then
     v_exp := v_snap;
   end if;
