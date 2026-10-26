@@ -21,21 +21,45 @@ export function mondayOf(d: string): string {
 
 export type Tier = { lte: number; mult: number };
 /**
- * Tabela załącznika jako przedziały „od–do”. Pole `lte` w bazie to próg „od” (D-20261020-1322-01:
- * mnożnik = wiersz o najwyższym progu ≤ średnia; poniżej pierwszego progu → pierwszy wiersz),
- * więc wiersz trwa od swojego progu do progu następnego minus 0,01. Ostatni — o jeden krok tabeli.
+ * Sposób odczytu progu `lte` w wersji załącznika (`sefs_parameters.tier_bound`):
+ * - `MAX` — „do X” (polecenie właściciela 26.10.2026 15:06, od tygodnia 44): mnożnik = pierwszy wiersz, dla którego
+ *   średnia ≤ próg; wiersz trwa od progu poprzedniego + 0,01 do swojego progu (pierwszy — od 0);
+ * - `MIN` — „od X” (D-20261020-1322-01, wersje do tygodnia 43): mnożnik = wiersz o najwyższym progu ≤ średnia,
+ *   wiersz trwa od swojego progu do progu następnego minus 0,01; ostatni — o jeden krok tabeli.
+ * Brak pola w bazie = `MIN` (zachowanie sprzed zmiany).
  */
-export function tiersFromDb(t: readonly Tier[] | null | undefined): FuelTier[] {
+export type TierBound = 'MIN' | 'MAX';
+export function tiersFromDb(t: readonly Tier[] | null | undefined, bound: TierBound | null | undefined = 'MIN'): FuelTier[] {
   const list = [...(t ?? [])].map((x) => ({ lte: Number(x.lte), mult: Number(x.mult) })).sort((a, b) => a.lte - b.lte);
   const r2 = (v: number) => Math.round(v * 100) / 100;
+  if (bound === 'MAX') {
+    return list.map((x, i) => ({ from: i === 0 ? 0 : r2(list[i - 1].lte + 0.01), to: x.lte, mult: x.mult }));
+  }
   const step = list.length > 1 ? list[list.length - 1].lte - list[list.length - 2].lte : 0.1;
   return list.map((x, i) => ({ from: x.lte, to: r2((i + 1 < list.length ? list[i + 1].lte : x.lte + step) - 0.01), mult: x.mult }));
+}
+
+/**
+ * Sposób odczytu progu dla ekranu: wersja, z której baza policzyła tydzień (`params_version` z `sefs_week_calc`),
+ * potem najnowsza wersja; brak kolumny / wiersza = `MIN` (F7 #576: podświetlenie zgodne z mnożnikiem z bazy).
+ */
+export function tierBoundFor(
+  bounds: readonly { version: number; tier_bound?: string | null }[] | null | undefined,
+  calcVersion: number | null | undefined,
+  latestVersion: number | null | undefined,
+): TierBound {
+  const row = (v: number | null | undefined) => (v == null ? undefined : (bounds ?? []).find((b) => b.version === v));
+  /* F7 #576 r2: wiersz wersji tygodnia istnieje → jego wartość (puste pole = MIN), bez przechodzenia do najnowszej */
+  const r = row(calcVersion) ?? row(latestVersion);
+  return r?.tier_bound === 'MAX' ? 'MAX' : 'MIN';
 }
 
 /** Wynik `sefs_week_calc` (pola, których używa ekran). */
 export interface WeekCalc {
   ok?: boolean;
   status?: string;
+  /** wersja `sefs_parameters`, z której policzono tydzień */
+  params_version?: number | null;
   final?: boolean;
   avg_sek?: number | string | null;
   avg_pln?: number | string | null;
@@ -140,7 +164,7 @@ export function daysFromCalc(
 /** Widok HHL: tydzień bieżący i przyszły z `sefs_week_for_load`, dni z publikacji, pobieranie z `fuel-prices`. */
 export function hhlFuelView(args: {
   today: string;
-  params: { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek: Tier[]; tiers_pln: Tier[] } | null;
+  params: { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek: Tier[]; tiers_pln: Tier[]; tier_bound?: TierBound | null } | null;
   cur: WeekCalc | null;
   next: WeekCalc | null;
   /**
@@ -180,7 +204,7 @@ export function hhlFuelView(args: {
       daysFromCalc(args.curDays, mon, today, runs, null, args.missWhy, [...(cur?.pubs_pln ?? []), ...(args.plnPubs ?? [])]),
       daysFromCalc(cur, current.idxFrom, today, runs, { okq8: current.okq8.avg, orlen: current.orlen.avg, mult: current.applied }, args.missWhy, args.plnPubs ?? []),
     ],
-    tiers: { sek: tiersFromDb(params?.tiers_sek), pln: tiersFromDb(params?.tiers_pln) },
+    tiers: { sek: tiersFromDb(params?.tiers_sek, params?.tier_bound), pln: tiersFromDb(params?.tiers_pln, params?.tier_bound) },
   };
 }
 
@@ -202,7 +226,7 @@ export function partyFuelView(args: {
   today: string;
   side: Side;
   loads: readonly Load[];
-  params: { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek?: Tier[] | null; tiers_pln?: Tier[] | null } | null;
+  params: { version: number; valid_from: string; agreed_with_carrier: boolean; tiers_sek?: Tier[] | null; tiers_pln?: Tier[] | null; tier_bound?: TierBound | null } | null;
 }): FuelScreenView {
   const { today, side, loads, params } = args;
   const mon = mondayOf(today);
@@ -229,6 +253,6 @@ export function partyFuelView(args: {
     fetch: { at: '—', retries: [], today: { date: today, okq8: null, orlen: null }, yesterday: { date: addDays(today, -1), okq8: null, orlen: null } },
     exampleBaseEur: exampleBaseOf(loads, side),
     days: [],
-    tiers: { sek: tiersFromDb(params?.tiers_sek), pln: tiersFromDb(params?.tiers_pln) },
+    tiers: { sek: tiersFromDb(params?.tiers_sek, params?.tier_bound), pln: tiersFromDb(params?.tiers_pln, params?.tier_bound) },
   };
 }
