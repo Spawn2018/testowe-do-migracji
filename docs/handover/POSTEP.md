@@ -5315,3 +5315,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 | P10a / P10b | **05.11** |
 | Konta RO (#538 3A) + P11 (jakość/OWASP/wydanie) | **05–06.11** |
 | **Realna data wydania 1.0** | **śr 5.11.2026 – czw 6.11.2026** (jedna pętla; bez cięcia zakresu). Na 28.10 zostaje tylko brama bezpieczeństwa. |
+
+## 2026-10-26 01:41 — A6 #560 F7 r2: CI zielone na `d60f171a`
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” po `d60f171a` (ostatni F7 = wymaga poprawek na `ed98f039`). #383 CONFLICTING. Bez push na main.
+- CI HEAD `d60f171a`: unit ✔ (`40248906751`) visual ✔ (`40248906744`) db ✔ (`40248906795`, 13m49s).
+- Bieżąca: **#560** — F7 r2 kod (4 BLOKERY + POPRAWKI + uwagi) na `d60f171a`; prośba o F7: gotowe do scalenia. Po F7: odbiór pliku testowego (liczby przed → po → przywrócone); `SHAREPOINT_TEST_FILE_URL` już w `.env.local` / sekretach.
