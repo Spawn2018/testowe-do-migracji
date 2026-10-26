@@ -7,6 +7,7 @@
  * Bez zapytań i zapisów — tylko kształt danych (test `tests/w-opcje-live-2.test.ts`).
  */
 import type { FuelDayGroup, FuelDayRow, FuelFetchDay, FuelScreenView, FuelSource, FuelTier, FuelWeekView } from '../lib/p5bFuel';
+import { FUEL_FETCH_AT, FUEL_RETRIES } from '../lib/p5bFuel';
 import type { Load } from '../types';
 
 const DAY = 86_400_000;
@@ -186,7 +187,6 @@ export function hhlFuelView(args: {
   const yesterday = addDays(today, -1);
   const tDay = fetchDay(runs, today);
   const yDay = fetchDay(runs, yesterday);
-  const times = runTimes(runs, today).length ? runTimes(runs, today) : runTimes(runs, yesterday);
   /* alarm: źródło bez ceny po wszystkich próbach dnia (dziś albo wczoraj) — wpływa na załadunki tygodnia po tygodniu ceny */
   const failed = (['okq8', 'orlen'] as const).flatMap((k) => [tDay, yDay].filter((d) => d[k] === false).map((d) => ({ k, d })))[0] ?? null;
   const failMon = failed ? addDays(mondayOf(failed.d.date), 7) : null;
@@ -198,7 +198,8 @@ export function hhlFuelView(args: {
     } : null,
     current,
     next: { from: nx.from, to: nx.to, idxFrom: nx.idxFrom, idxTo: nx.idxTo, forecast: nx.applied, finalOn: nx.from },
-    fetch: { at: times[0] ?? '—', retries: times.slice(1), today: tDay, yesterday: yDay },
+    /* #563: plan sprawdzeń z funkcji `fuel-prices` (5× dziennie), nie godziny dzisiejszych przebiegów */
+    fetch: { at: FUEL_FETCH_AT, retries: [...FUEL_RETRIES], today: tDay, yesterday: yDay },
     exampleBaseEur: args.exampleBaseEur,
     days: [
       daysFromCalc(args.curDays, mon, today, runs, null, args.missWhy, [...(cur?.pubs_pln ?? []), ...(args.plnPubs ?? [])]),
