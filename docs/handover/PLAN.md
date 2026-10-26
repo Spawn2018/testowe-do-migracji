@@ -1785,3 +1785,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 00:25 | #563 SCALONE #579 `ee0a6dee`; start #577 F7 1–8 (0310→**0311**) | pętla |
 | 27.10.2026 00:45 | #577 F7 1–8 na `056dca75`; CI unit/db/visual ✔; #578 w §4 (po #577); czekam F7 | pętla |
 | 27.10.2026 01:00 | #577 F7 r2: wt po kodzie, blocked→missing, norm liczb, import **254**; zamknięte #320/#323/#412 | pętla |
+| 27.10.2026 01:40 | #580 SCALONE `f2652ef9`; #577 F7 r3: audit_log user_id=app_users.id, import **255** | pętla |
