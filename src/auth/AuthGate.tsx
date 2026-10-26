@@ -6,7 +6,7 @@ import { authErrorPl, passwordOk, PASSWORD_MIN, viewRoleForOrg } from './config'
 import { clearStalePreview, previewRoOf } from './previewSwitch';
 import { sendRecoveryLink } from './sendAuthEmail';
 import { t, tp } from '../i18n/messages';
-import { getAuthProfile, setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile } from './profile';
+import { getAuthProfile, setAuthProfile, AUTH_RELOAD_EVENT, type AuthProfile, type AuthReloadDetail } from './profile';
 import { useTowerStore } from '../store/useTowerStore';
 import { markManualLogout, rememberLogin, sessionEndReason, SESSION_END_MSG, type SessionEnd } from './sessionYear';
 import { MfaSetup, MfaVerify, mfaStep, readMfaStatus } from './Mfa';
@@ -454,7 +454,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (error && prevKey) { readyKeyRef.current = prevKey; useTowerStore.getState().pushToast(t(useTowerStore.getState().locale, 'a6_auth_bg_fail'), 'LOW'); return; }
       if (error || !p) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_no_org') }); return; }
       if (!p.active) { setAuthProfile(null); setState({ kind: 'noaccess', reason: t(useTowerStore.getState().locale, 'a6_auth_deactivated') }); return; }
-      /* B5 (0249): „acting_as” to albo Podgląd (tylko odczyt), albo „Działaj jako” — rozróżnia baza */
+      /* B5 (0300): „acting_as” to albo Podgląd (tylko odczyt), albo „Działaj jako” — rozróżnia baza */
       if (p.acting_as) p.preview_ro = await previewRoOf(p);
       else if (p.role === 'HHL_ADMIN') await clearStalePreview();
       if (!alive) return;
@@ -531,11 +531,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }, [state.kind === 'link-pending' ? 'pending' : state.kind === 'expired' ? 'expired' : 'go', recoveryOnce]);
 
   useEffect(() => {
-    const onReload = () => {
+    const onReload = (e: Event) => {
+      const done = (e as CustomEvent<AuthReloadDetail | undefined>).detail?.done;
       void getSupabase().then(async (sb) => {
         const { data } = await sb.auth.getSession();
         await loadRef.current(data.session);
-      });
+      }).catch(() => {}).finally(() => done?.());
     };
     window.addEventListener(AUTH_RELOAD_EVENT, onReload);
     return () => window.removeEventListener(AUTH_RELOAD_EVENT, onReload);

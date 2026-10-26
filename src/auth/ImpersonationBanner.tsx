@@ -16,7 +16,7 @@ export function ImpersonationBanner() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  /* B5 (0249): Podgląd (tylko odczyt) ma własny pasek — PreviewBanner */
+  /* B5 (0300): Podgląd (tylko odczyt) ma własny pasek — PreviewBanner */
   if (!me?.acting_as || me.preview_ro) return null;
 
   const name = me.full_name?.trim() || me.email;

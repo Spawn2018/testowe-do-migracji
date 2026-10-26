@@ -10,7 +10,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { hasKey, t } from '../../i18n/messages';
 import { ROLE_META } from '../../lib/permissions';
 import { canSwitchView } from '../../lib/prodFacade';
-import { switchViewRole } from '../../auth/previewSwitch';
+import { endPreviewBeforeLogout, switchViewRole } from '../../auth/previewSwitch';
 import { AUTH_RELOAD_EVENT, getAuthProfile, type AuthProfile } from '../../auth/profile';
 import { markManualLogout } from '../../auth/sessionYear';
 import { openOptionsScreen } from '../../lib/openOptions';
@@ -129,7 +129,11 @@ export function AccountMenu() {
     close();
     markManualLogout();
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-      void import('../../auth/client').then(({ getSupabase }) => getSupabase()).then((sb) => sb.auth.signOut());
+      /* F7 #383 r2: najpierw koniec Podglądu w bazie, potem wylogowanie */
+      void endPreviewBeforeLogout()
+        .then(() => import('../../auth/client'))
+        .then(({ getSupabase }) => getSupabase())
+        .then((sb) => sb.auth.signOut());
     }
   };
 

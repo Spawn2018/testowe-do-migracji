@@ -1,5 +1,5 @@
 /**
- * B5 (0249, D-20261019-1525-01) — Podgląd KSH / SCX w bazie.
+ * B5 (0300, D-20261019-1525-01) — Podgląd KSH / SCX w bazie.
  *
  * Produkcja: Administrator HHL przełącza widok funkcjami bazy. `admin_preview_start('KSH'|'SCX')` ustawia
  * Podgląd na pierwszym aktywnym koncie KSH Użytkownik / SCX Dyspozytor (`read_only = true`), więc dane czyta
@@ -33,7 +33,7 @@ export function previewErrorPl(message: string | undefined): string {
   return m || 'Nie udało się przełączyć Podglądu.';
 }
 
-/** Stan Podglądu z profilu (`my_profile.preview_read_only`, 0249); bez pola w bazie — dopytanie `is_preview_read_only`. */
+/** Stan Podglądu z profilu (`my_profile.preview_read_only`, 0300); bez pola w bazie — dopytanie `is_preview_read_only`. */
 export async function previewRoOf(p: { preview_read_only?: boolean | null }, call?: Rpc): Promise<boolean> {
   if (typeof p.preview_read_only === 'boolean') return p.preview_read_only;
   return readPreviewRo(call);
@@ -41,7 +41,7 @@ export async function previewRoOf(p: { preview_read_only?: boolean | null }, cal
 
 /**
  * Po wczytaniu profilu z „acting_as”: czy to Podgląd (tylko odczyt), a nie „Działaj jako”.
- * F7 #383 Ś1: błąd odczytu = Podgląd (bezpieczniej: brak zapisu); brak funkcji w bazie (przed 0249) = nie.
+ * F7 #383 Ś1: błąd odczytu = Podgląd (bezpieczniej: brak zapisu); brak funkcji w bazie (przed 0300) = nie.
  */
 export async function readPreviewRo(call?: Rpc): Promise<boolean> {
   try {
@@ -68,17 +68,40 @@ export async function clearStalePreview(call?: Rpc): Promise<void> {
 }
 
 let busy = false;
-/** Do testów: stan „przełączanie w toku”. */
+/** Do testów: stan „przełączanie w toku” (trwa do końca przeładowania profilu i danych). */
 export const previewSwitchBusy = (): boolean => busy;
+
+export const PREVIEW_RELOAD_FAIL = 'Nie udało się wczytać Podglądu — zostajesz we własnym widoku. Spróbuj ponownie.';
+export const PREVIEW_BACK_FAIL = 'Nie udało się wrócić do widoku HHL — odśwież stronę.';
+
+/** F7 #383 r2: po przeładowaniu fokus na pasek Podglądu („Wróć do HHL”) albo na główną treść. */
+function focusAfterSwitch(): void {
+  if (typeof window === 'undefined' || typeof document === 'undefined' || typeof document.querySelector !== 'function') return;
+  const raf = typeof window.requestAnimationFrame === 'function' ? window.requestAnimationFrame.bind(window) : (f: () => void) => setTimeout(f, 0);
+  raf(() => {
+    const el = document.querySelector<HTMLElement>('[data-banner="preview"] button') ?? document.querySelector<HTMLElement>('main');
+    if (el && el.tagName === 'MAIN' && !el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
+    el?.focus();
+  });
+}
 
 /**
  * Przełącz widok. Zwraca `null` po sukcesie albo tekst błędu (pokazany też w powiadomieniu).
  * F7 #383 B3: jedno przełączenie naraz — kolejne kliknięcia i Shift+R w trakcie są pomijane.
+ * F7 #383 r2: „w toku” trwa do końca przeładowania; po przeładowaniu stan Podglądu w profilu musi zgadzać się
+ * z celem — inaczej (np. błąd sieci przy `my_profile`) kończymy Podgląd w bazie, żeby UI i baza się nie rozjechały.
  * `deps` — do testów.
  */
 export async function switchViewRole(
   next: ViewRoleId,
-  deps?: { prod?: boolean; call?: Rpc; reload?: () => void; dbPreview?: boolean },
+  deps?: {
+    prod?: boolean;
+    call?: Rpc;
+    reload?: () => void | Promise<void>;
+    dbPreview?: boolean;
+    /** stan Podglądu po przeładowaniu (domyślnie z profilu) */
+    previewAfter?: () => boolean;
+  },
 ): Promise<string | null> {
   const store = useTowerStore.getState();
   const prod = deps?.prod ?? PROD_BUILD;
@@ -106,7 +129,20 @@ export async function switchViewRole(
       store.pushToast(msg, 'HIGH');
       return msg;
     }
-    (deps?.reload ?? requestAuthReload)();
+    await (deps?.reload ?? requestAuthReload)();
+    const after = (deps?.previewAfter ?? (() => dbPreviewOn(getAuthProfile())))();
+    const want = next !== 'HHL';
+    if (after !== want) {
+      if (want) {
+        /* baza w Podglądzie, ekran nie — kończymy Podgląd w bazie (zapisy nie dostaną 42501 bez paska „Wróć”) */
+        try { await call('admin_preview_stop'); } catch { /* kolejne logowanie wyczyści (clearStalePreview) */ }
+        store.pushToast(PREVIEW_RELOAD_FAIL, 'HIGH');
+        return PREVIEW_RELOAD_FAIL;
+      }
+      store.pushToast(PREVIEW_BACK_FAIL, 'HIGH');
+      return PREVIEW_BACK_FAIL;
+    }
+    focusAfterSwitch();
     return null;
   } catch (e) {
     if (next === 'HHL' && !inPreview) {
@@ -118,5 +154,20 @@ export async function switchViewRole(
     return msg;
   } finally {
     busy = false;
+  }
+}
+
+/**
+ * F7 #383 r2: wylogowanie w trakcie Podglądu kończy Podgląd w bazie — po ponownym logowaniu Administrator
+ * wraca do własnego widoku, nie do KSH/SCX. Błąd nie blokuje wylogowania.
+ */
+export async function endPreviewBeforeLogout(deps?: { call?: Rpc; dbPreview?: boolean }): Promise<void> {
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase' && !deps?.call) return;
+  const on = deps?.dbPreview ?? dbPreviewOn(getAuthProfile());
+  if (!on) return;
+  try {
+    await (deps?.call ?? (await rpc()))('admin_preview_stop');
+  } catch {
+    /* wylogowanie idzie dalej; przy kolejnym logowaniu clearStalePreview */
   }
 }

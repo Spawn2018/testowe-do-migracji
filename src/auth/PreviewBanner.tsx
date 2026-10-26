@@ -20,7 +20,7 @@ export function PreviewBanner() {
 
   if (!isPreviewReadOnly({ viewRole: role })) return null;
 
-  /* B5 (0249): Podgląd w bazie — konto, którego oczami patrzysz (pierwsze aktywne KSH Użytkownik / SCX Dyspozytor) */
+  /* B5 (0300): Podgląd w bazie — konto, którego oczami patrzysz (pierwsze aktywne KSH Użytkownik / SCX Dyspozytor) */
   const me = getAuthProfile();
   const person = dbPreviewOn(me) ? (me?.full_name?.trim() || me?.email || '') : '';
   const who = `${VIEW_LABEL[role] ?? role}${person ? ` (${person})` : ''}`;

@@ -62,7 +62,7 @@ export function canSwitchView(
 }
 
 /**
- * B5 (0249) — Podgląd w bazie: profil to konto oglądane (KSH Użytkownik / SCX Dyspozytor), a prawo przełączania
+ * B5 (0300) — Podgląd w bazie: profil to konto oglądane (KSH Użytkownik / SCX Dyspozytor), a prawo przełączania
  * ma prawdziwy administrator (`real_role`). „Działaj jako” (zapis) przełącznika nie pokazuje.
  */
 export function dbPreviewOn(p: AuthProfile | null = getAuthProfile()): boolean {
@@ -84,7 +84,7 @@ export function isPreviewReadOnly(opts?: {
   prod?: boolean;
   viewRole?: string | null;
   orgCode?: string | null;
-  /** B5 (0249): Podgląd zapisany w bazie (`impersonation_state.read_only`). */
+  /** B5 (0300): Podgląd zapisany w bazie (`impersonation_state.read_only`). */
   dbPreview?: boolean;
 }): boolean {
   const prod = opts?.prod ?? PROD_BUILD;
