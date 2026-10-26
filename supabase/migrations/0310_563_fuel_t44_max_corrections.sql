@@ -31,8 +31,12 @@ comment on column public.sefs_parameters.avg_days_pln is
 -- ---------------------------------------------------------------------
 -- 2. Lookup: MIN (stare) / MAX (od t44)
 -- ---------------------------------------------------------------------
+-- 3-arg BEZ default (inaczej 2-arg jest niejednoznaczny w Postgres).
+drop function if exists public.sefs_lookup_mult(numeric, jsonb);
+drop function if exists public.sefs_lookup_mult(numeric, jsonb, text);
+
 create or replace function public.sefs_lookup_mult(
-  p_price numeric, p_tiers jsonb, p_bound text default 'MIN'
+  p_price numeric, p_tiers jsonb, p_bound text
 )
 returns numeric
 language plpgsql immutable set search_path = public as $$
@@ -83,13 +87,21 @@ end $$;
 comment on function public.sefs_lookup_mult(numeric, jsonb, text) is
   '#563: MIN = od progu (≤t43); MAX = do X (pierwszy lte ≥ cena, od t44).';
 
-revoke all on function public.sefs_lookup_mult(numeric, jsonb, text)
-  from public, anon, authenticated;
-grant execute on function public.sefs_lookup_mult(numeric, jsonb, text)
-  to service_role;
+-- 2-arg: MIN (i31 / stare wywołania).
+create or replace function public.sefs_lookup_mult(p_price numeric, p_tiers jsonb)
+returns numeric
+language sql immutable set search_path = public as $$
+  select public.sefs_lookup_mult(p_price, p_tiers, 'MIN');
+$$;
 
--- Jedna sygnatura z domyślnym MIN — bez osobnego 2-arg (Postgres: niejednoznaczność przeciążeń).
-drop function if exists public.sefs_lookup_mult(numeric, jsonb);
+revoke all on function public.sefs_lookup_mult(numeric, jsonb, text)
+  from public, anon;
+revoke all on function public.sefs_lookup_mult(numeric, jsonb)
+  from public, anon;
+grant execute on function public.sefs_lookup_mult(numeric, jsonb, text)
+  to authenticated, service_role;
+grant execute on function public.sefs_lookup_mult(numeric, jsonb)
+  to authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 3. Hybrid: bound + over_table zależne od metody
@@ -583,11 +595,14 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_ver int;
   v_me uuid;
-  v_applies text := coalesce(nullif(trim(p->>'applies_to'), ''), 'BOTH');
-  v_bound text := coalesce(nullif(btrim(p->>'tier_bound'), ''), 'MIN');
-  v_days int := coalesce((p->>'avg_days_pln')::int, 5);
+  v_applies text;
+  v_bound text;
+  v_days int;
 begin
   perform public.assert_not_preview();
+  v_applies := coalesce(nullif(trim(p->>'applies_to'), ''), 'BOTH');
+  v_bound := coalesce(nullif(btrim(p->>'tier_bound'), ''), 'MIN');
+  v_days := coalesce((p->>'avg_days_pln')::int, 5);
   if (is_hhl()) is not true then
     raise exception 'Parametry SEFS zapisuje wyłącznie HHL';
   end if;
@@ -657,6 +672,7 @@ declare
   v_eff_pub date;
   v_has_corr boolean;
 begin
+  perform public.assert_not_preview();
   if (fuel_se_pl_enabled()) is not true then
     raise exception 'Pobieranie SE/PL wyłączone (security_flags.FUEL_SE_PL_INGEST)';
   end if;
@@ -709,7 +725,12 @@ begin
      limit 1;
 
     if v_pri is not null then
-      v_eff := public.sefs_reading_effective_value(v_pri);
+      -- Efektywna cena inline (bez osobnego RPC — ten sam TX / ta sama widoczność).
+      v_eff := coalesce(
+        (select c.value from fuel_index_readings c
+          where c.corrects_id = v_pri
+          order by c.entered_at desc, c.id desc limit 1),
+        v_pri_val);
       select coalesce(
                (select c.published_on from fuel_index_readings c
                  where c.corrects_id = v_pri order by c.entered_at desc, c.id desc limit 1),
@@ -718,16 +739,15 @@ begin
       v_has_corr := exists (
         select 1 from fuel_index_readings c where c.corrects_id = v_pri);
 
-      -- Ta sama efektywna cena i published_on → bez zapisu (tylko integration_runs po stronie Edge).
+      -- Ta sama efektywna cena → pomiń (powtórka). published_on tylko gdy podany w payload.
       if round(v_eff, 4) = round(v_val, 4)
-         and v_eff_pub is not distinct from v_pub then
+         and (v_pub is null or v_eff_pub is not distinct from v_pub) then
         v_skip := v_skip + 1;
         continue;
       end if;
 
-      -- Ręczna korekta: automat z tą samą wartością co przed korektą nie cofa korekty.
-      if v_has_corr and round(v_pri_val, 4) = round(v_val, 4)
-         and v_pri_pub is not distinct from v_pub then
+      -- Ręczna korekta: automat z wartością sprzed korekty nie cofa korekty.
+      if v_has_corr and round(v_pri_val, 4) = round(v_val, 4) then
         v_skip := v_skip + 1;
         continue;
       end if;

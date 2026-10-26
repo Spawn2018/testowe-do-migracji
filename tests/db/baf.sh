@@ -304,8 +304,8 @@ sys "insert into fuel_index_readings (project_id, index_code, period, reading_da
   select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, 7.15, 'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 't44', d
     from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
 DA=$(Q "select sefs_sek_daily_avg('$P','2026-10-19','2026-10-25')")
-chk "#563 korekta: dzień 22.10 = 22,89 (nie 23,09 z pub 20.10)" "$(Q "select x->>'value' from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-22'")" "22.89"
-chk "#563 korekta: dzień 21.10 = 23,09" "$(Q "select x->>'value' from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-21'")" "23.09"
+chk "#563 korekta: dzień 22.10 = 22,89 (nie 23,09 z pub 20.10)" "$(Q "select to_char((x->>'value')::numeric, 'FM999999990.00') from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-22'")" "22.89"
+chk "#563 korekta: dzień 21.10 = 23,09" "$(Q "select to_char((x->>'value')::numeric, 'FM999999990.00') from jsonb_array_elements(('$DA'::jsonb)->'days') x where x->>'day'='2026-10-21'")" "23.09"
 W44F="sefs_week_calc('$P','2026-10-26','2026-10-26')"
 chk "#563 t44: params MAX + PLN 7 dni" "$(Q "select ($W44F->>'tier_bound')||'/'||($W44F->>'avg_days_pln')||'/'||($W44F->>'n_pln')")" "MAX/7/7"
 chk "#563 t44: wynik kontrolny ×1,14" "$(Q "select ($W44F->>'avg_sek')||'/'||($W44F->>'avg_pln')||'/'||($W44F->>'applied_mult')")" "23.00/7.15/1.14"

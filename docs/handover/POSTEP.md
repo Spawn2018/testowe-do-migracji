@@ -5626,3 +5626,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #578 po #577; #577 bez F7. Bez push na main.
 - CI `83024814`: db FAIL — (1) `sefs_lookup_mult` 2-arg+3-arg niejednoznaczne; (2) `sefs_save_parameters` bez `assert_not_preview` (security B5); (3) days value `22.8900` vs `22.89`; nullguard 852/i31 przez (1).
 - **#563 krok:** drop 2-arg lookup; assert B5; `round(...,2)` w days; `fuel_se_pl_ingest` — późniejszy przebieg / ochrona korekty; Edge godziny 7/9/13/17/23 + zawsze fetch; demo/i18n godzin. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10 / front `corrects_id`.
+
+## 2026-10-26 19:15 — #563 CI r2: lookup grant + ingest powtórka
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: #578 F7 gotowe **po #577**; #577/#579 bez F7. Bez push na main.
+- CI `0a77bbde` db FAIL: i31 permission denied `sefs_lookup_mult` (revoke authenticated); i2 `fuel_se_pl_ingest` powtórka skipped=0; nullguard 852≠853 (PURE nie liczy OK).
+- **#563 krok:** 2-arg lookup bez default na 3-arg + GRANT authenticated; ingest — ta sama cena→skip (published_on tylko gdy w payload); nullguard EXPECTED **852**; baf `to_char` dni. Push PR #579. Następny: migawki ≥26.10 / sprawa zamkniętego tygodnia / front.
