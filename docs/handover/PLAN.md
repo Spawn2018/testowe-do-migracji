@@ -1036,7 +1036,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 
 ### #569 · A6 sprawa konfliktu przy wielu kodach (po #560, przed `write_enabled`) — W TOKU (`pakiet/569-a6-conflict-code`, PR #570)
 Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza, w którym wykryto rozjazd (nie z pierwszego kodu). Unit: 2 kody, konflikt na drugim → kod drugiego + pole z łatki. **Test db:** import (konflikt na SG-M2) + Edge `l1b_note_file_changed(SG-M2)` → 1 sprawa; primary dałby 2. (EXPECTED import **234**).
-- **F7 #570 (`0e16897`) — ZROBIONE w kodzie:** najpierw wiersz różniący się polem **z łatki**, dopiero potem pierwszy rozjechany + dowolne pole (Edge = import; uniknięcie 2 spraw). Unit: SG-A spoza łatki + SG-B z łatki → SG-B/`carrier_order_no`. Komentarz w `import.sh`: wybór kodu = unit.
+- **F7 #570 (`ed1e3ba1`) — ZROBIONE w kodzie:** najpierw wiersz różniący się polem **z łatki**, dopiero potem pierwszy rozjechany + dowolne pole (Edge = import; uniknięcie 2 spraw). Unit: SG-A spoza łatki + SG-B z łatki → SG-B/`carrier_order_no`. Komentarz w `import.sh`: wybór kodu = unit. **CI unit/visual/db ✔** — czekam „F7: gotowe do scalenia”.
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (wpisane; 23B po #569 / `write_test_ok_at`)
 Źródło: #567 (Spawn2018). **23B:** dry_run zapisuje listę zmian (kod, pole, WT vs plik; bez PII kierowców); RPC odczytu HHL; oznacz ręczne zmiany po ostatnim imporcie; `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. Sprawa 16 — bez odpowiedzi, nic nie robić.
@@ -1741,3 +1741,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 11:41 | #560 SCALONE `0feb8a94` (F7 09:31Z); #569+#567 wpisane §4/§5/§8; start #569 conflict code | pętla |
 | 26.10.2026 11:22 | #569 test db multi-kod (import+Edge → 1 sprawa); EXPECTED import 234; PR #570 | pętla |
 | 26.10.2026 12:00 | #569 F7 #570 poprawka: preferuj wiersz z polem z łatki; unit + komentarz db; CI→F7 | pętla |
+| 26.10.2026 12:25 | #569 CI `ed1e3ba1` unit/visual/db ✔; prośba F7; EXPECTED import 234; dalej write_test_ok_at → #567 23B | pętla |
