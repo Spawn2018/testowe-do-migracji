@@ -5364,3 +5364,22 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. `schedule_row` z `sent`;
   5. testy db: B→C stary rev / powrót A / zgodny → done; `xlsxPatch` 1e-9.
 - EXPECTED import **180**; unit `ksh-sharepoint-write` **18/18**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 04:20 — A6 #560 F7 runda 4: N5–N8 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `f4fde778` — **wymaga poprawek** (BLOKER N5 + N6–N8); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI HEAD `f4fde778`: unit ✔ visual ✔ db ✔ (`40256802926` / `40256802933` / `40256802932`).
+- Bieżąca: **#560** — wpis F7 r4 w PLAN §4/§8: N5 `schedule_row`+historia przy rozjeździe; N6 `FOR UPDATE`; N7 scal do istniejącego pending; N8 tylko pending/`reverted_to_file`; uwagi wt_diff∩klucze, trigger vs `expected_file`, unit `ackPayload`. Następny commit: kod.
+
+## 2026-10-26 04:25 — A6 #560 F7 r4: kod N5–N8
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (N5–N8 w tym commicie). #383 CONFLICTING. Bez push na main.
+- Kod F7 r4 w **0308** + Edge/unit:
+  1. N5: przy rozjeździe `schedule_row`+`KSH_FILE_OUTBOUND` z `sent`;
+  2. N6: `FOR UPDATE` outbound + loads;
+  3. N7: scal do istniejącego pending, stary `done`/`rev_mismatch_merged`;
+  4. N8: rozjazd tylko pending/`reverted_to_file`; podwójny ack no-op;
+  5. `wt_diff(…, keys)`; trigger vs `expected_file`; `ackPayload.ts`.
+- EXPECTED import **186**; unit `ksh-sharepoint-write` **19/19**. Push → CI → prośba F7 po zielonym.
