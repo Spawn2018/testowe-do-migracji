@@ -5726,3 +5726,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #577 F7 r2 (22:52) — niegotowe, 5 pkt. #578 F7 gotowe **po #577**. Bez push na main.
 - **#577 krok (F7 r2):** `ksh_sync_preview_wt_text(…, p_code)`; manual po `shipment_code`; `p_blocked` INVOICED/STATUS → missing; `ksh_sync_preview_norm_file`; Edge przekazuje `blocked`; testy +5 → import **254**. Po zielonym CI — prośba o F7.
 
+## 2026-10-27 01:40 — #580 SCALONE; #577 F7 r3 audit_log FK
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. Bez nowych do wpisania.
+- Scalanie: **#580** merge `f2652ef9` (F7 gotowe na b60511d, CI unit/visual ✔). #578 F7 gotowe **po #577**. Bez push na main.
+- CI #577 `2aa6cab4`: unit/visual ✔, db FAIL import 253/1 (F7 r3: `user_id='$HHL'` = auth_id → FK).
+- **#577 krok (F7 r3):** insert `audit_log` z `app_users.id`; chk że wpis powstał; EXPECTED import **255**. Po zielonym CI — prośba o F7.
+

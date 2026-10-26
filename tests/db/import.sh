@@ -1238,18 +1238,21 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#567 23B: multi-kod wt z SG-M2 + norm file" "$out" "20.00|21.00"
 
-# F7 r2 pkt 2: manual_after_import — użytkownik vs automat (bez user_id).
+# F7 r2/r3 pkt 2: manual_after_import — użytkownik vs automat (bez user_id).
+# audit_log.user_id = app_users.id (FK), nie auth_id.
 SI_M2=$(Q "select id::text from shipment_items where load_id='$SG1' and shipment_code='SG-M2' limit 1")
+HHL_UID=$(Q "select id::text from app_users where auth_id='$HHL'")
 $PSQL -c "insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, created_at)
-  values ('$HHL', 'ROW_UPDATE', 'shipment_items', '$SI_M2',
+  values ('$HHL_UID', 'ROW_UPDATE', 'shipment_items', '$SI_M2',
     '{\"length_m\":20}'::jsonb, '{\"length_m\":20.5}'::jsonb, now())" >/dev/null
+chk "#567 23B: audit_log user manual powstał" "$(Q "select count(*) from audit_log where entity='shipment_items' and entity_id='$SI_M2' and action='ROW_UPDATE' and user_id='$HHL_UID'")" 1
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select (e->>'manual_after_import') from jsonb_array_elements(
     ksh_sync_preview_store('$P', '$CHG_MC'::jsonb, now(), 5, 'manu')->'changes'
   ) e where e->>'field'='length_m';
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#567 23B: manual_after_import true (user)" "$out" "true"
-$PSQL -c "delete from audit_log where entity='shipment_items' and entity_id='$SI_M2' and action='ROW_UPDATE' and user_id='$HHL';
+$PSQL -c "delete from audit_log where entity='shipment_items' and entity_id='$SI_M2' and action='ROW_UPDATE' and user_id='$HHL_UID';
   insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, created_at)
   values (null, 'ROW_UPDATE', 'shipment_items', '$SI_M2',
     '{\"length_m\":20}'::jsonb, '{\"length_m\":20.5}'::jsonb, now())" >/dev/null
