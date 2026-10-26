@@ -5713,3 +5713,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#579** merge ee0a6dee (F7 gotowe na c70f4787; docs c3677db6; CI unit/db/visual ✔). #578 F7 gotowe **po #577**. Bez push na main.
 - **#577 krok:** merge main; migracja **0311**; F7 1–8: require_service, Edge preview tylko dry_run niefatalny, wt z WT, pending_write, manual=user, kind added/missing, testy z import_schedule dry_run. EXPECTED import **249**.
 
+## 2026-10-27 00:45 — #577 CI zielone; czekam F7; #578 w kolejce
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie — bez nowych do wpisania.
+- Scalanie: #577 bez „F7: gotowe” (prośba na `056dca75`). #578 F7 gotowe **po #577**. Bez push na main.
+- CI `056dca75`: unit ✔, db ✔ (10m34s), visual ✔ (telefon/bramy/zrzuty).
+- PLAN §4: #578 wygląd po #577; EXPECTED import **249**. Po F7 #577 → scalać #577 potem #578 → #574-nast → BN0 #572.
+
