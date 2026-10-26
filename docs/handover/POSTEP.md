@@ -5595,3 +5595,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. F7 #574 na `f8c69c18`: **nie daję znaku** (1 punkt konieczny + uwagi). CI db FAIL status 305/9 (kolizja UUID L 71–76 z #445/#502).
 - Scalanie: brak. Bez push na main.
 - **#571 krok (F7 r3 pkt 1–4):** `geofence_states` — `state` tylko z `PENDING_IN`; `entered_at` tylko INSIDE/PENDING_OUT; OUTSIDE bez powrotu na plac; `raise notice` gdy brak SG-23; `drop function` po wywołaniu; test helper `tests/db/sql/hotfix_571_site_enter_backdate.sql`; UUID a1–a7; wyłączenie Plac Stegra w teście; OUTSIDE/idempotencja/trg O → EXPECTED status **319**. CI → prośba F7.
+
+## 2026-10-26 16:20 — #571 CI db FAIL → fix testów status **320**
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Brak „F7: gotowe do scalenia” po `5d5d18b2`.
+- Scalanie: brak (#575 niegotowe; #576 bez F7). Bez push na main.
+- **#571 krok:** CI `db` na `5d5d18b2` — status 312 OK / 7 FAIL (#571d/e/f). Fix: włącz PORT_IN przed dwell portu (#557 zostawiło OFF); EXIT SITE &lt; 10 min (bez DELIVERED / zamknięcia okna); fixture ENTER+STATUS_AUTO przez `session_replication_role=replica`. EXPECTED status **320**. CI → prośba F7.

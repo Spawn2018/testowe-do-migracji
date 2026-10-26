@@ -1438,6 +1438,10 @@ chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \
 # L a1–a7 — nie 71–76 (#445/#502/#461: kolizja UUID → mk cicho, stary FERRY).
 echo; echo "[#571] SITE 1 fix + dwell port + backdate"
 L571a=$(L a1); L571b=$(L a2); L571c=$(L a3); L571d=$(L a4); L571e=$(L a5); L571f=$(L a6); L571g=$(L a7)
+# #557 zostawiło POLFERRIES PORT_IN active=false — włącz przed dwell portu.
+q "update geofences set active = true
+ where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'
+   and coalesce(route, 'POLFERRIES') = 'POLFERRIES'" >/dev/null
 G571p=$(q "select id from geofences where project_id='$P' and name='Port Nynäshamn' order by id limit 1")
 # Plac testowy r=1010 m (jak Boden) — parking 1019 m poza; 779 m w środku
 # Wyłącz Plac Stegra (r=1500, ten sam środek) — inaczej 2× SITE ENTER.
@@ -1500,22 +1504,24 @@ chk "#571d: ENTER z czasem pierwszej" \
   "select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
     where load_id='$L571d' and event_type='GEOFENCE_ENTER' order by occurred_at limit 1" "2026-10-26 13:00"
 # (e) wyjście i ponowny wjazd SITE — ENTER×2, entered_at=nowy wjazd, bez 2. AT_SITE
+# F7: EXIT < 10 min (bez auto DELIVERED) — inaczej okno śledzenia gaśnie i brak 2. ENTER.
 pos $L571e $LAT779 $LON779 "2026-10-26 14:00:00+00"
 chk "#571e: pierwszy wjazd AT_SITE" "$(st $L571e)" AT_SITE
 N571=$(q "select count(*) from load_events where load_id='$L571e' and event_type='STATUS_AUTO' and payload->>'to'='AT_SITE'")
 N571n=$(q "select count(*) from notifications where load_id='$L571e' and template like '%AT_SITE%'")
-# poza SITE+histereza (nie tylko poza Bufor Boden)
-pos $L571e 65.90 22.10 "2026-10-26 14:20:00+00"
-pos $L571e 65.91 22.12 "2026-10-26 14:25:00+00"
+# poza SITE+histereza (nie tylko poza Bufor Boden); dwell ~5 min < 10
+pos $L571e 65.90 22.10 "2026-10-26 14:03:00+00"
+pos $L571e 65.91 22.12 "2026-10-26 14:05:00+00"
 chk "#571e: po EXIT entered_at null" \
   "select (entered_at is null)::text from geofence_states where load_id='$L571e' and geofence_id='$G571r'" true
-pos $L571e $LAT779 $LON779 "2026-10-26 14:40:00+00"
+chk "#571e: EXIT < 10 min → bez DELIVERED" "$(st $L571e)" AT_SITE
+pos $L571e $LAT779 $LON779 "2026-10-26 14:20:00+00"
 chk "#571e: 2× GEOFENCE_ENTER" \
   "select count(*) from load_events where load_id='$L571e' and event_type='GEOFENCE_ENTER'
      and (payload->>'geofence_id')='$G571r'" 2
 chk "#571e: entered_at = nowy wjazd" \
   "select to_char(entered_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from geofence_states
-    where load_id='$L571e' and geofence_id='$G571r'" "2026-10-26 14:40"
+    where load_id='$L571e' and geofence_id='$G571r'" "2026-10-26 14:20"
 chk "#571e: ponowny wjazd bez 2. STATUS_AUTO AT_SITE" \
   "select count(*) from load_events where load_id='$L571e' and event_type='STATUS_AUTO' and payload->>'to'='AT_SITE'" "$N571"
 chk "#571e: bez nowych powiadomień AT_SITE" \
@@ -1535,14 +1541,17 @@ q "insert into positions (load_id, ts, geom_raw, source, raw) values
   ('$L571f','2026-10-26 11:21:00+00', st_setsrid(st_makepoint($LON779,$LAT779),4326),'TELEMATICS_API','{}')" >/dev/null
 q "insert into geofence_states (load_id, geofence_id, state, consec_fixes, entered_at, last_eval_at)
    values ('$L571f','$G571r','INSIDE',0,'2026-10-26 11:21:00+00','2026-10-26 11:21:00+00')" >/dev/null
-q "insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key) values
+# replica: STATUS_AUTO / ENTER bez triggerów (inaczej insert pada, chk dostaje pustkę)
+q "set session_replication_role=replica;
+   insert into load_events (load_id, event_type, occurred_at, source, geom, payload, dedup_key) values
   ('$L571f','GEOFENCE_ENTER','2026-10-26 11:21:00+00','TELEMATICS_API',
    st_setsrid(st_makepoint($LON779,$LAT779),4326),
    jsonb_build_object('geofence_id','$G571r','geofence_kind','SITE','geofence_name','Plac 571 r1010'),
    'GEOFENCE_ENTER:$L571f:$G571r:202610261121'),
   ('$L571f','STATUS_AUTO','2026-10-26 11:21:00+00','SYSTEM',null,
    jsonb_build_object('to','AT_SITE','from','IN_TRANSIT_SE'),
-   'STATUS_AUTO:AT_SITE:$L571f:202610261121')" >/dev/null
+   'STATUS_AUTO:AT_SITE:$L571f:202610261121');
+   set session_replication_role=origin" >/dev/null
 N571f=$(q "select count(*) from notifications where load_id='$L571f'")
 q "select public.hotfix_571_site_enter_backdate()" >/dev/null
 chk "#571f: ENTER backdate na 10:22" \
