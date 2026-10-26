@@ -1434,5 +1434,49 @@ chk "#557 PR2: pozycja SE po dopłynięciu bez stale" \
   "select coalesce(raw->>'stale_point','false') from positions
     where load_id='$L557c' and ts = '2026-10-10 10:00+00'" false
 
+# --- #571: PENDING_IN + dwell_seconds (bez 2. pozycji) ---
+echo; echo "[#571] dwell potwierdza wjazd"
+L571a=$(L 71); L571b=$(L 72); L571c=$(L 73)
+G571=$(q "select id from geofences where project_id='$P' and name='Plac Stegra' order by id limit 1")
+mk $L571a 571a "'HHL/571a'" "'SCX/571a'" IN_TRANSIT_SE null
+mk $L571b 571b "'HHL/571b'" "'SCX/571b'" IN_TRANSIT_SE null
+mk $L571c 571c "'HHL/571c'" "'SCX/571c'" IN_TRANSIT_SE null
+q "insert into load_events (load_id,event_type,occurred_at) values
+ ('$L571a','MILESTONE_LOADED','2026-10-20 08:00+00'),
+ ('$L571b','MILESTONE_LOADED','2026-10-20 08:00+00'),
+ ('$L571c','MILESTONE_LOADED','2026-10-20 08:00+00')" >/dev/null
+# 1 pozycja w strefie → PENDING_IN (debounce=2)
+pos $L571a 65.8054 21.7591 "2026-10-26 10:22:00+00"
+chk "#571: 1 fix → PENDING_IN" \
+  "select state from geofence_states where load_id='$L571a' and geofence_id='$G571'" PENDING_IN
+chk "#571: 1 fix → brak ENTER" \
+  "select count(*) from load_events where load_id='$L571a' and event_type='GEOFENCE_ENTER'" 0
+chk "#571: za wcześnie (5 min) → 0" \
+  "select geofence_confirm_pending_dwell('2026-10-26 10:27:00+00')" 0
+chk "#571: po 10 min → 1 wjazd" \
+  "select geofence_confirm_pending_dwell('2026-10-26 10:32:00+00')" 1
+chk "#571: ENTER z czasem pierwszej pozycji" \
+  "select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
+    where load_id='$L571a' and event_type='GEOFENCE_ENTER' order by occurred_at limit 1" "2026-10-26 10:22"
+chk "#571: status AT_SITE" "$(st $L571a)" AT_SITE
+# w strefie → poza w ciągu 10 min → brak wjazdu
+pos $L571b 65.8054 21.7591 "2026-10-26 11:00:00+00"
+pos $L571b 65.90 22.10 "2026-10-26 11:05:00+00"
+chk "#571: wyszedł przed dwell → OUTSIDE" \
+  "select state from geofence_states where load_id='$L571b' and geofence_id='$G571'" OUTSIDE
+chk "#571: po wyjściu dwell nie potwierdza" \
+  "select geofence_confirm_pending_dwell('2026-10-26 11:20:00+00');
+   select count(*) from load_events where load_id='$L571b' and event_type='GEOFENCE_ENTER'" 0
+# stale_point nie potwierdza
+pos $L571c 65.8054 21.7591 "2026-10-26 12:00:00+00"
+q "update positions set raw = coalesce(raw,'{}'::jsonb) || jsonb_build_object('stale_point', true)
+    where load_id='$L571c' and ts='2026-10-26 12:00:00+00'" >/dev/null
+chk "#571: stale_point → dwell 0" \
+  "select geofence_confirm_pending_dwell('2026-10-26 12:15:00+00')" 0
+chk "#571: stale → brak ENTER" \
+  "select count(*) from load_events where load_id='$L571c' and event_type='GEOFENCE_ENTER'" 0
+chk "#571: funkcja tylko service_role (authenticated 42501)" \
+  "select has_function_privilege('authenticated', 'geofence_confirm_pending_dwell(timestamptz)', 'execute')" f
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

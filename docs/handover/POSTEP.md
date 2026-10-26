@@ -5571,3 +5571,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 #570 na `f7eafacd` — **nie gotowe** (1 poprawka). Bez push na main.
 - **#569 krok:** `pickOutboundConflictNote` — pomijaj `current==null` gdy inny wiersz obecny; `trim`/`''→null` jak import; unit (brak wiersza→SG-02, puste/null, łatka null/`{}`, jeden kod). Znane ograniczenie migawki per kod główny → §4/#569 i §8. Po scaleniu #569: **#571** → `write_test_ok_at` → #567 23B.
 - vitest `ksh-sharepoint-write` **23/23**. CI → prośba F7.
+
+## 2026-10-26 13:25 — #570 SCALONE; start #571 dwell (0309)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. #571 bez `dla-cursora` — z F7 #570.
+- Scalanie: **#570** — „F7: gotowe do scalenia” (Spawn2018, 12:19Z, po `99817a8f`), CI unit/visual/db ✔ → merge `b3fedf2e`. Bez push na main. F7 follow-upy #569 (normCell / ostrzeżenie pominiętego kodu / migawka §8) → przed `write_enabled`.
+- Bieżąca: **#571** `pakiet/571-geofence-dwell` — migracja **0309**: `geofence_confirm_pending_dwell` + cron `*/2`; `process_position` entered_at/dwell; hotfix SG-23; testy status +11 → EXPECTED **302**. CI → prośba F7.
