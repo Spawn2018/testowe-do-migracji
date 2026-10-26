@@ -810,4 +810,149 @@ begin
   end loop;
 end $$;
 
+-- ---------------------------------------------------------------------
+-- 11. Przeliczenie migawek załadunek ≥ 2026-10-26 (t44+)
+--     Niezafakturowane: zdejmij OSTATECZNY → load_price_compute (MAX ×1,14).
+--     Faktury i t ≤ 43 — bez zmian (D-1506; SEFS_INVOICE_DIFF gdy faktura ≥26.10
+--     ma inny mnożnik niż wyliczenie).
+-- ---------------------------------------------------------------------
+do $$
+declare
+  r record;
+  inv record;
+  v_n int := 0;
+  v_inv int := 0;
+  v_fuel date;
+  v_before jsonb := '[]'::jsonb;
+  v_after jsonb := '[]'::jsonb;
+  v_c_sek numeric; v_c_pln numeric; v_c_app numeric; v_c_baf numeric;
+  v_r_sek numeric; v_r_pln numeric; v_r_app numeric; v_r_baf numeric;
+  v_w jsonb;
+  v_new numeric;
+  v_old numeric;
+  v_week text;
+  v_prev_quiet text;
+begin
+  perform set_config('tower.audit_source', 'migracja 0310 (#563 t44 migawki)', true);
+  v_prev_quiet := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+
+  for r in
+    select l.id, l.project_id, l.hhl_order_no, l.order_no, l.plan_load_date,
+           c.fuel_mult_sek as c_sek, c.fuel_mult_pln as c_pln, c.fuel_applied_mult as c_app,
+           c.baf_amount as c_baf, c.invoiced_total_eur as c_inv, c.fuel_status as c_st,
+           rv.fuel_mult_sek as r_sek, rv.fuel_mult_pln as r_pln, rv.fuel_applied_mult as r_app,
+           rv.baf_amount as r_baf, rv.invoiced_total_eur as r_inv, rv.fuel_status as r_st
+      from loads l
+      left join load_cost c on c.load_id = l.id
+      left join load_revenue rv on rv.load_id = l.id
+     where coalesce(public.fuel_load_date(l.id), l.plan_load_date) >= date '2026-10-26'
+       and (
+         (c.load_id is not null and c.invoiced_total_eur is null and c.fuel_applied_mult is not null)
+         or (rv.load_id is not null and rv.invoiced_total_eur is null and rv.fuel_applied_mult is not null)
+       )
+  loop
+    v_fuel := coalesce(public.fuel_load_date(r.id), r.plan_load_date);
+    v_before := v_before || jsonb_build_array(jsonb_build_object(
+      'load_id', r.id,
+      'hhl_order_no', r.hhl_order_no,
+      'order_no', r.order_no,
+      'fuel_date', v_fuel,
+      'cost', jsonb_build_object(
+        'mult_sek', r.c_sek, 'mult_pln', r.c_pln, 'applied', r.c_app,
+        'baf', r.c_baf, 'status', r.c_st),
+      'revenue', jsonb_build_object(
+        'mult_sek', r.r_sek, 'mult_pln', r.r_pln, 'applied', r.r_app,
+        'baf', r.r_baf, 'status', r.r_st)
+    ));
+
+    if r.c_inv is null and r.c_app is not null then
+      update load_cost set fuel_status = 'PROGNOZA'
+       where load_id = r.id and invoiced_total_eur is null and fuel_status = 'OSTATECZNY';
+    end if;
+    if r.r_inv is null and r.r_app is not null then
+      update load_revenue set fuel_status = 'PROGNOZA'
+       where load_id = r.id and invoiced_total_eur is null and fuel_status = 'OSTATECZNY';
+    end if;
+
+    perform public.load_price_compute(r.id);
+
+    select c.fuel_mult_sek, c.fuel_mult_pln, c.fuel_applied_mult, c.baf_amount,
+           rv.fuel_mult_sek, rv.fuel_mult_pln, rv.fuel_applied_mult, rv.baf_amount
+      into v_c_sek, v_c_pln, v_c_app, v_c_baf, v_r_sek, v_r_pln, v_r_app, v_r_baf
+      from loads l
+      left join load_cost c on c.load_id = l.id
+      left join load_revenue rv on rv.load_id = l.id
+     where l.id = r.id;
+
+    v_after := v_after || jsonb_build_array(jsonb_build_object(
+      'load_id', r.id,
+      'hhl_order_no', r.hhl_order_no,
+      'order_no', r.order_no,
+      'cost', jsonb_build_object(
+        'mult_sek', v_c_sek, 'mult_pln', v_c_pln, 'applied', v_c_app, 'baf', v_c_baf),
+      'revenue', jsonb_build_object(
+        'mult_sek', v_r_sek, 'mult_pln', v_r_pln, 'applied', v_r_app, 'baf', v_r_baf)
+    ));
+    v_n := v_n + 1;
+  end loop;
+
+  -- Faktury z załadunkiem ≥ 26.10 i innym mnożnikiem → sprawa (kwoty faktury nietknięte).
+  -- Tylko ≥26.10 — t≤43 bez skanu (D-1506).
+  for inv in
+    select l.id, l.project_id, l.hhl_order_no, l.order_no,
+           coalesce(c.fuel_applied_mult, rv.fuel_applied_mult) as old_mult
+      from loads l
+      left join load_cost c on c.load_id = l.id and c.invoiced_total_eur is not null
+      left join load_revenue rv on rv.load_id = l.id and rv.invoiced_total_eur is not null
+     where coalesce(public.fuel_load_date(l.id), l.plan_load_date) >= date '2026-10-26'
+       and (c.load_id is not null or rv.load_id is not null)
+  loop
+    v_fuel := public.fuel_load_date(inv.id);
+    if v_fuel is null then continue; end if;
+    v_w := public.sefs_week_calc(inv.project_id, v_fuel);
+    if coalesce(v_w->>'ok', '') <> 'true' then continue; end if;
+    v_new := (v_w->>'applied_mult')::numeric;
+    v_old := inv.old_mult;
+    if v_old is null or v_new is null or v_old = v_new then continue; end if;
+    v_week := ltrim(to_char(v_fuel - ((extract(isodow from v_fuel)::int) - 1), 'IW'), '0');
+    perform public.decision_open_from_event(
+      inv.project_id, 'SEFS_INVOICE_DIFF',
+      '563:invoice:' || inv.id::text,
+      format(
+        'Opłata paliwowa na fakturze różni się od wyliczenia (t%s: ×%s → ×%s)',
+        v_week,
+        trim(to_char(v_old, '990.99')),
+        trim(to_char(v_new, '990.99'))
+      ),
+      jsonb_build_object(
+        'load_id', inv.id,
+        'hhl_order_no', inv.hhl_order_no,
+        'order_no', inv.order_no,
+        'old_mult', v_old,
+        'new_mult', v_new,
+        'load_date', v_fuel,
+        'source', '0310_563'
+      ),
+      inv.id, null
+    );
+    v_inv := v_inv + 1;
+  end loop;
+
+  insert into audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    null, 'FUEL_RECALC_T44_563', 'loads', '0310-563-t44',
+    jsonb_build_object(
+      'recomputed', v_n,
+      'from_date', '2026-10-26',
+      'invoice_cases', v_inv,
+      'before', v_before,
+      'after', v_after,
+      'note', '#563 D-1506: migawki ≥26.10; t≤43 i faktury bez zmian kwot'
+    )
+  );
+
+  perform set_config('tower.bulk_quiet', coalesce(nullif(v_prev_quiet, ''), 'off'), true);
+end $$;
+
 commit;

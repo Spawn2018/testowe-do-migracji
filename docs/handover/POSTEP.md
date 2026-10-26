@@ -5639,3 +5639,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
 - Scalanie: #579 CI ✔ `c2c5e9c5` (unit/db/visual) — bez F7 (zostają migawki + sprawa zamkniętego tygodnia). #577/#578 czekają. Bez push na main.
 - **#563 krok:** `lookupMult(price, tiers, bound)` MAX/MIN; `effectiveReadings` w `sefsWeek`; `LiveFuel` plnPubs bez oryginałów skorygowanych; `BafForm` bound z `tier_bound`. Push PR #579. Następny: sprawa zamkniętego tygodnia albo migawki ≥26.10.
+
+## 2026-10-26 21:55 — #563 migawki załadunek ≥ 26.10
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: #579 CI ✔ `68b343fd` (unit/db/visual) — bez F7 do sprawy zamkniętego tygodnia. #578 F7 gotowe **po #577**; #577 bez F7. Bez push na main.
+- **#563 krok:** 0310 §11 — niezafakturowane z `fuel_load_date`/`plan_load_date` ≥ 26.10: OSTATECZNY→PROGNOZA + `load_price_compute`; faktury ≥26.10 z innym mnożnikiem → `SEFS_INVOICE_DIFF` (kwoty bez zmian); audit `FUEL_RECALC_T44_563`. Push PR #579. Następny: sprawa zamkniętego tygodnia (korekta nie zmienia migawek; decyzja HHL).
