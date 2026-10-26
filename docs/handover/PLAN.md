@@ -1047,10 +1047,22 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 - Po #574 scalone też wygląd: **#576** (`21c24df8`, paliwo „do X”) i **#575** (`5d9f22fe`, BN9-a katalog promów).
 
 ### #567 · Decyzje właściciela 26.10 00:01 (17B–24A) + lista zmian KSH 23B — W TOKU (`pakiet/567-23b-lista-zmian`, migracja **0310**; po #571; `write_test_ok_at` przed `write_enabled` prod)
-Źródło: #567 (Spawn2018). **23B (krok):** `ksh_sync_state.preview` + `ksh_sync_preview_store`/`_get`/`_build`; lista z `import_schedule.changed` (N9); bez PII; `field_label` PL; znacznik `manual_after_import` z `audit_log` po ostatnim `schedule_imports`; Edge zapis po każdym przebiegu; dry_run **nie** skipuje po hash (#567). EXPECTED import **240**; nullguard **853**. `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5.
+Źródło: #567 (Spawn2018). **23B (krok):** `ksh_sync_state.preview` + `ksh_sync_preview_store`/`_get`/`_build`; lista z `import_schedule.changed` (N9); bez PII; `field_label` PL; znacznik `manual_after_import` z `audit_log` po ostatnim `schedule_imports`; Edge zapis po każdym przebiegu; dry_run **nie** skipuje po hash (#567). EXPECTED import **240**; nullguard **856**. `import_enabled=false`. **17B/18B** → „Po 1.0” + §5. **19A–22A, 24A** → §5. CI db FAIL na `b07da9d2` (search_path ×3 helperów; store jak upsert 0304; test bez EXECUTE) — poprawka w tym PR.
+
+### #563 · Opłata paliwowa od t44 + korekty cen (D-20261026-1506-01; po #567; rozliczenia) — DO ZROBIENIA
+Źródło: #563 (Spawn2018) + komentarz PR #577 15:37Z + komentarze #563 (właściciel 15:06). Kolejność po #577: **#563** → następczy mały PR po #574 (`dwell_min` w payload) → **BN0 (#572)**.
+1. **Korekty wygrywają** w `sefs_sek_daily_avg` / `sefs_pub_avg` / froncie (`LiveFuel`, `sefsWeek`, `fuelPublSource`); tydzień zamknięty → sprawa HHL bez cichego przeliczenia; przebiegi 17:15 i 23:15; najpóźniejszy przebieg wygrywa (#563 pkt 1–6).
+2. **Od t44 (załadunki ≥ 26.10):** `sefs_parameters` nowa wersja `tier_bound='MAX'` („do X”), `avg_days_pln=7`; ≤43 bez zmian (`MIN`, 5 publ. PLN). Średnia zaokrąglana do 0,01 przed lookup. Wynik kontrolny t44: SEK **23,00** / PLN **7,15** / ×**1,14** (dziś błędnie 23,03/7,14/×1,13).
+3. Migawki transportów z załadunkiem ≥ 26.10 — przeliczyć; faktury/wcześniejsze — bez zmian. Teksty UI „do X” — koordynator (`wyglad/*`, F1).
+
+### #574-nast · dwell_min w payload (uwaga F7 #574) — DO ZROBIENIA (mały PR po #563)
+Uwaga F7 przy #574 (§8 / #571): `dwell_min` w payload — osobny mały PR po #563, przed BN0.
+
+### BN0 · #572 Karlskrona→Boden pomarańczowa linia HERE (po #563 i #574-nast; przed P9 Mapy) — DO ZROBIENIA
+Źródło: #572 (Spawn2018). `here-roads` leg `SE-KAA` z via z `SE_E22`; odchyłka ≤ 2 km; rysunek `#E5A544` na Mapie/Przegląd/Kokpit.
 
 ### C4–C13 bez zmian zakresu
-Zostają jak w planie, po A6 / #569 / #567 23B.
+Zostają jak w planie, po A6 / #569 / #567 23B / #563.
 - C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
@@ -1759,3 +1771,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
 | 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
 | 26.10.2026 16:55 | #571 SCALONE #574 `25546fcc` (F7 15:21Z); #576 `21c24df8`; #575 `5d9f22fe`; start #567 23B **0310** | pętla |
+| 26.10.2026 17:45 | #567 db FAIL (search_path×3, store service_role, EXPECTED nullguard 856); kolejka po #577: #563 → #574-nast → BN0 #572 | pętla |

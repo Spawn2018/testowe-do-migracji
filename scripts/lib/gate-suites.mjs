@@ -23,8 +23,8 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 240, // #567 23B: +6 preview_store/get×2/PII/label/42501; było 234 (#569)
-  nullguard: 853, // #567 23B: +1 preview_get EMPTY; było 852 (#557)
+  import: 240, // #567 23B: +6 preview_store/get×2/PII/label/bez EXECUTE; było 234 (#569)
+  nullguard: 856, // #567 23B: +4 preview_get EMPTY ×4 konta; było 852 (#557)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

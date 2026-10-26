@@ -14,6 +14,7 @@ create or replace function public.ksh_sync_preview_field_label(p_field text)
 returns text
 language sql
 immutable
+set search_path = public
 as $$
   select case p_field
     when 'load_date' then 'Data załadunku'
@@ -48,6 +49,7 @@ create or replace function public.ksh_sync_preview_audit_keys(p_field text)
 returns text[]
 language sql
 immutable
+set search_path = public
 as $$
   select case p_field
     when 'load_date' then array['plan_load_date']
@@ -72,6 +74,7 @@ create or replace function public.ksh_sync_preview_field_allowed(p_field text)
 returns boolean
 language sql
 immutable
+set search_path = public
 as $$
   select p_field is not null
      and p_field !~* '^(driver_|pilot_|.*phone|.*_name)$'
@@ -186,6 +189,7 @@ grant execute on function public.ksh_sync_preview_build(uuid, jsonb, timestamptz
   to service_role;
 
 -- Zapis listy (Edge po dry_run / każdy przebieg podglądu).
+-- Jak ksh_sync_state_upsert (0304): brama lokalna = session_user postgres; Edge = service_role.
 create or replace function public.ksh_sync_preview_store(
   p_project uuid,
   p_changed jsonb,
@@ -200,9 +204,15 @@ set search_path = public
 as $$
 declare
   v_preview jsonb;
+  v_jwt_role text;
 begin
-  if auth.role() is distinct from 'service_role' then
-    raise exception 'ksh_sync_preview_store — tylko Edge (service_role)' using errcode = '42501';
+  if session_user not in ('postgres', 'supabase_admin') then
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    end if;
+    if (coalesce(v_jwt_role, '') = 'service_role') is not true then
+      raise exception 'ksh_sync_preview_store — tylko Edge (service_role)' using errcode = '42501';
+    end if;
   end if;
   if p_project is null then
     raise exception 'ksh_sync_preview_store — brak projektu' using errcode = '22023';

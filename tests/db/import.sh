@@ -1170,7 +1170,7 @@ chk "#567 23B: bez PII driver w changes" \
   "$(Q "select (not exists (select 1 from jsonb_array_elements(coalesce(preview->'changes','[]'::jsonb)) e where e->>'field' ~* 'driver|phone|pilot'))::text from ksh_sync_state where project_id='$P'")" "true"
 chk "#567 23B: field_label PL (Data załadunku)" \
   "$(Q "select bool_or(e->>'field_label'='Data załadunku')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
-err "#567 23B: authenticated bez store" $HHL \
-  "select ksh_sync_preview_store('$P','[]'::jsonb)" "42501|service_role|tylko Edge"
+chk "#567 23B: authenticated bez EXECUTE preview_store" \
+  "$(Q "select has_function_privilege('authenticated','ksh_sync_preview_store(uuid,jsonb,timestamptz,int,text)','execute')")" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

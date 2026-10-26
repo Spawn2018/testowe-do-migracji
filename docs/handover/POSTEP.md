@@ -5616,3 +5616,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - **#576** `21c24df8` (po #574; paliwo „do X”);
   - **#575** `5d9f22fe` (po #574+#576; BN9-a katalog promów).
 - Bieżąca: **#567 23B** `pakiet/567-23b-lista-zmian` — migracja **0310** (`preview`, store/get/build, bez PII, label PL, manual z audit); Edge `ksh_sync_preview_store` po dry_run; skipUnchanged: dry_run nigdy nie skipuje. EXPECTED import **240**, nullguard **853**. `write_test_ok_at` — przed włączeniem zapisu prod (osobno). CI → prośba F7.
+
+## 2026-10-26 17:45 — #567 db FAIL → poprawka; kolejka #563
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Komentarz PR #577 (Spawn2018): po #577 → **#563** (t44 paliwo) → następczy #574 → BN0 **#572** — wpisane PLAN §4/§8.
+- Scalanie: brak „F7: gotowe do scalenia” po `b07da9d2`. unit/visual ✔; **db FAIL** (import 236/4, security 458/1, nullguard 856≠853).
+- **#567 krok:** 0310 — `set search_path` na 3 helperach SQL; `ksh_sync_preview_store` jak `ksh_sync_state_upsert` (postgres/admin albo service_role); test import: `has_function_privilege` zamiast `err` (revoke EXECUTE); EXPECTED nullguard **856**. Po CI — ponowna prośba F7.
