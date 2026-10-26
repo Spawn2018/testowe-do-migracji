@@ -5501,3 +5501,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”. #383 otwarty, bez F7 (nie scalać). Bez push na main.
 - CI `10480535`: unit ✔, visual ✔, db ✔ (`40283229765` / `40283229788` / `40283229808`). Fix resolve: asercja `decisions.status`. EXPECTED import **205**.
 - Prośba o F7: gotowe do scalenia na HEAD (kod bez zmian od `10480535`; ten commit — docs).
+
+## 2026-10-26 09:25 — #383 SCALONE; A6 #560 F7 runda 8 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: **#383** `wyglad/W-b5-podglad-baza` — „F7: gotowe do scalenia” (Spawn2018, 07:22Z po `9bd36e60`), CI ✔, bez forka → `gh pr merge --merge` `e192d881` (07:25Z). **#560** F7 r8 na `59ae1348`/`10480535` — **NIEGOTOWE** (2 BLOKERY). Bez push na main.
+- F7 r8 (PLAN §4): (1) `coalesce` przy `v_pend ? hhl_order_no`; (2) kolejka/pending-skip tylko przy `write_enabled`; (3) CANCELLED tylko przy niepustych polach; (4) Edge pole = różnica expected↔plik. Następny commit: kod.
