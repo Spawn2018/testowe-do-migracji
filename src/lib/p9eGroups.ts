@@ -9,6 +9,8 @@
  * 3. Po zejściu z promu albo wyjeździe ze strefy — znów osobne znaczniki (wynika z pozycji, bez pamięci).
  */
 import type { StageTile } from './stageTiles';
+import { FERRY_PORTS } from './ferryCatalog';
+import { portName } from './portName';
 
 export type GroupItem = {
   id: string;
@@ -199,7 +201,8 @@ export type GroupView = {
 
 export type FerryInfo = { vessel: string | null; route: string | null; departureAt: string | null };
 
-const PORT_PL: Record<string, string> = { GDN: 'Gdańsk', NYN: 'Nynäshamn', GDY: 'Gdynia', KAA: 'Karlskrona' };
+/** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
+const PORT_PL: Record<string, string> = Object.fromEntries(FERRY_PORTS.map((p) => [p.code, portName('pl', p.code)]));
 
 export function groupView(
   g: Extract<Placed, { kind: 'ferry' | 'zone' }>,

@@ -14,6 +14,7 @@ import { renderNotice, asLocale, DECISION_LEAD } from '../../supabase/functions/
 import { clickFromPayload, clickTarget } from '../../supabase/functions/_shared/clickTargets';
 import { shows } from '../lib/prodFacade';
 import { autoRiskCode } from '../lib/sailings';
+import { isFerryOperator, isKnownRoute } from '../lib/ferryCatalog';
 import { etaDetailFromBasis } from '../lib/etaDetail';
 import { opsThreshold } from '../lib/opsThresholdDefaults';
 import { trackerKind } from '../lib/trackerLink';
@@ -415,7 +416,6 @@ export interface GeofenceRow {
 }
 const GEO_KINDS: GeofenceType[] = ['LOADING', 'PORT_OUT', 'PRE_PORT', 'PORT_IN', 'CHECKPOINT', 'PRE_ARRIVAL', 'SITE', 'REST'];
 const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE'] as const;
-const GEO_ROUTES = ['POLFERRIES', 'STENA'] as const;
 export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
   const kinds = new Set((r.notify_orgs ?? []).map((id) => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '')));
   const country = (r.country ?? '').trim();
@@ -429,7 +429,8 @@ export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
     active: r.active,
     trigger: r.notify_dwell ? 'DWELL_EXCEEDED' : r.notify_exit ? 'EXIT' : 'ENTER',
     ...(GEO_COUNTRIES.includes(country as typeof GEO_COUNTRIES[number]) ? { country: country as typeof GEO_COUNTRIES[number] } : {}),
-    ...(GEO_ROUTES.includes(route as typeof GEO_ROUTES[number]) ? { route: route as typeof GEO_ROUTES[number] } : { route: null }),
+    /* BN9-a: trasa portu = armator z katalogu promów */
+    ...(isFerryOperator(route) ? { route } : { route: null }),
   };
 }
 export function geofenceToRpc(
@@ -446,7 +447,7 @@ export function geofenceToRpc(
     p_notify_orgs: [...(g.notifyHhl ? orgIds('HHL') : []), ...(g.notifyKsh ? orgIds('KSH') : []), ...(g.notifyScx ? orgIds('SCX') : [])],
     p_active: g.active,
     p_country: g.country ?? null,
-    p_route: port ? (g.route === 'STENA' || g.route === 'POLFERRIES' ? g.route : null) : null,
+    p_route: port ? (isFerryOperator(g.route) ? g.route : null) : null,
     p_reason: reason?.trim() || null,
   };
 }
@@ -504,20 +505,17 @@ export interface SailingDbRow {
   vessels?: { name: string; operator?: string } | null;
 }
 export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name,operator)';
-function ferryRouteFromDb(route: string): Sailing['route'] {
-  if (route === 'NYN-GDN') return 'NYN-GDN';
-  if (route === 'GDY-KAA') return 'GDY-KAA';
-  if (route === 'KAA-GDY') return 'KAA-GDY';
-  return 'GDN-NYN';
+/** BN9-a: znana trasa z katalogu promów zostaje (np. TLL-HEL); tylko nieznany kod — jak dotąd GDN-NYN. */
+export function ferryRouteFromDb(route: string): Sailing['route'] {
+  return isKnownRoute(route) ? route : 'GDN-NYN';
 }
 export function sailingFromRow(r: SailingDbRow): Sailing {
   const name = r.vessels?.name ?? '';
   const op = r.vessels?.operator ?? '';
   const src =
-    r.source === 'POLFERRIES' ? 'POLFERRIES'
-      : r.source === 'STENA' ? 'STENA'
-        : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE'
-          : 'RECZNIE';
+    isFerryOperator(r.source) ? r.source
+      : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE'
+        : 'RECZNIE';
   return {
     id: r.id,
     vessel: vesselFromDb(name) ?? name.replace(/^M\/F\s+/i, ''),

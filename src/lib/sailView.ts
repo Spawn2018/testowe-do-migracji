@@ -4,28 +4,24 @@
  * z kodami (kliknięcie filtruje Harmonogram), pod tabelą zasięg rozkładów. Same obliczenia widoku (F8).
  */
 import type { FerryRoute, Load, Sailing } from '../types';
+import { FERRY_ROUTES, isOutbound as isOutboundRoute, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, type FerryOperator } from './ferryCatalog';
 import { effArrival, effDeparture } from './sailings';
 import { fmtDate, fmtDateTime } from './time';
 
-export type SailLine = 'POLFERRIES' | 'STENA';
+export type SailLine = FerryOperator;
 
-/** Kierunek do Szwecji (E30 pkt 7: domyślnie tylko te). */
-export const isOutbound = (route: FerryRoute): boolean => route === 'GDN-NYN' || route === 'GDY-KAA';
+/** Kierunek do Szwecji (E30 pkt 7: domyślnie tylko te); BN9-a — z katalogu promów (też wyjazdowe z Estonii). */
+export const isOutbound = (route: FerryRoute): boolean => isOutboundRoute(route);
 
-/** Armator: z `vessels.operator`, a bez niego z trasy (Gdynia ⇄ Karlskrona = Stena Line). */
+/** Armator: z `vessels.operator`, a bez niego z trasy (Gdynia ⇄ Karlskrona = Stena Line; pierwszy armator z katalogu). */
 export function lineOf(s: Pick<Sailing, 'route' | 'operator'>): SailLine {
-  const op = (s.operator ?? '').toLowerCase();
-  if (op.includes('stena')) return 'STENA';
-  if (op.includes('polferries')) return 'POLFERRIES';
-  return s.route === 'GDY-KAA' || s.route === 'KAA-GDY' ? 'STENA' : 'POLFERRIES';
+  return operatorFromText(s.operator) ?? operatorsForRoute(s.route)[0] ?? 'POLFERRIES';
 }
 
-export const ROUTE_SHORT: Record<FerryRoute, string> = {
-  'GDN-NYN': 'GDN → NYN',
-  'NYN-GDN': 'NYN → GDN',
-  'GDY-KAA': 'GDY → KAA',
-  'KAA-GDY': 'KAA → GDY',
-};
+/** „GDN → NYN” — z kodów tras w katalogu. */
+export const ROUTE_SHORT: Record<FerryRoute, string> = Object.fromEntries(
+  FERRY_ROUTES.map((r) => [r.code, `${r.from} → ${r.to}`]),
+) as Record<FerryRoute, string>;
 
 const TZ = 'Europe/Warsaw';
 
@@ -83,7 +79,7 @@ export function sailRows(sailings: Sailing[], loads: Pick<Load, 'code' | 'sailin
 
 export interface Reach { line: SailLine; untilIso: string }
 
-/** Zasięg rozkładów w bazie: ostatnie odejście (bez odwołanych) na armatora — Stena, potem Polferries (makieta E30). */
+/** Zasięg rozkładów w bazie: ostatnie odejście (bez odwołanych) na armatora — Stena, potem Polferries (makieta E30), potem nowi (BN9-a, tylko z rejsami). */
 export function reachOf(sailings: Sailing[]): Reach[] {
   const last = new Map<SailLine, string>();
   for (const s of sailings) {
@@ -93,7 +89,7 @@ export function reachOf(sailings: Sailing[]): Reach[] {
     const cur = last.get(line);
     if (!cur || Date.parse(dep) > Date.parse(cur)) last.set(line, dep);
   }
-  return (['STENA', 'POLFERRIES'] as const).flatMap((line) => (last.has(line) ? [{ line, untilIso: last.get(line)! }] : []));
+  return OPERATOR_MATCH_ORDER.flatMap((line) => (last.has(line) ? [{ line, untilIso: last.get(line)! }] : []));
 }
 
 /** Klucz tekstu źródła (E30: „Stena Line” zamiast „sail_src_STENA”). */

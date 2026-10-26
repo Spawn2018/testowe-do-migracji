@@ -2,6 +2,8 @@
  * PL-DATA — statusy Steny i AIS oraz kody portów po polsku.
  * Formularz komunikatu armatora korzysta z tych samych etykiet.
  */
+import { FERRY_ROUTES } from './ferryCatalog';
+import { portName } from './portName';
 
 const STATUS: Record<string, string> = {
   Arrived: 'Przypłynął',
@@ -39,6 +41,8 @@ const PORT: Record<string, string> = {
   'KAA-GDY': 'Karlskrona–Gdynia',
   'GDN-NYN': 'Gdańsk–Nynäshamn',
   'NYN-GDN': 'Nynäshamn–Gdańsk',
+  /* BN9-a: pozostałe trasy z katalogu promów („Tallinn–Helsinki”) */
+  ...Object.fromEntries(FERRY_ROUTES.map((r) => [r.code, `${portName('pl', r.from)}–${portName('pl', r.to)}`])),
 };
 
 /** AIS Navigational Status (ITU-R M.1371). */

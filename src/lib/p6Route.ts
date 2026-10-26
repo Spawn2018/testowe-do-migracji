@@ -7,10 +7,12 @@
  */
 import type { Load, Sailing, SailingStatus } from '../types';
 import type { MarineConditionRow } from './marineWeatherDb';
+import { FERRY_OPERATORS, outboundRoutesOf, primaryRouteOf, routeByCode, type FerryOperator, type FerryPortCode } from './ferryCatalog';
 import { crossingLine, effDeparture, nearestCrossingSailings } from './sailings';
 import { stageTileOf } from './stageTiles';
 
-export type CrossingLine = 'POLFERRIES' | 'STENA';
+/** Armator przeprawy — z katalogu promów (BN9-a). */
+export type CrossingLine = FerryOperator;
 export type FerryAlert = 'CANCELLED' | 'STORM' | 'ELEVATED' | 'DELAYED' | 'OK';
 
 export interface FerrySea {
@@ -32,14 +34,19 @@ export interface FerryRowView {
   status: SailingStatus | null;
   sea: FerrySea | null;
   onBoard: number;
+  /** BN9-a: trasa rejsu (porty wiersza); bez niej — pierwsza trasa wyjazdowa armatora (`LINE_PORTS`) */
+  route?: Sailing['route'];
 }
 
-export const LINE_PORTS: Record<CrossingLine, { from: 'GDN' | 'GDY'; to: 'NYN' | 'KAA' }> = {
-  POLFERRIES: { from: 'GDN', to: 'NYN' },
-  STENA: { from: 'GDY', to: 'KAA' },
-};
-const LINE_ROUTE: Record<CrossingLine, Sailing['route']> = { POLFERRIES: 'GDN-NYN', STENA: 'GDY-KAA' };
-const LINE_CORRIDOR: Record<CrossingLine, MarineConditionRow['corridor']> = { POLFERRIES: 'BALTIC_GDN_NYN', STENA: 'BALTIC_GDY_KAA' };
+/** Porty pierwszej trasy wyjazdowej armatora (Polferries: GDN → NYN, Stena: GDY → KAA) — z katalogu promów. */
+export const LINE_PORTS: Record<CrossingLine, { from: FerryPortCode; to: FerryPortCode }> = Object.fromEntries(
+  FERRY_OPERATORS.map((o) => {
+    const r = primaryRouteOf(o.code);
+    return [o.code, { from: r.from, to: r.to }];
+  }),
+) as Record<CrossingLine, { from: FerryPortCode; to: FerryPortCode }>;
+/** Pomiar morza tylko dla przepraw, które go mają (nowe trasy — bez pomiaru, „brak danych morskich”). */
+const LINE_CORRIDOR: Partial<Record<CrossingLine, MarineConditionRow['corridor']>> = { POLFERRIES: 'BALTIC_GDN_NYN', STENA: 'BALTIC_GDY_KAA' };
 
 const warsawDay = (ms: number) =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
@@ -61,16 +68,18 @@ export function ferryRowsFromDb(
 ): FerryRowView[] {
   const today = warsawDay(nowMs);
   const out: FerryRowView[] = [];
-  for (const line of ['POLFERRIES', 'STENA'] as const) {
+  /* Polferries, Stena, potem nowi armatorzy z katalogu — każdy na swoich trasach wyjazdowych; bez rejsów nic nie dochodzi */
+  for (const line of FERRY_OPERATORS.map((o) => o.code)) {
     const all = sailings
-      .filter((s) => crossingLine(s) === line && s.route === LINE_ROUTE[line] && Date.parse(effDeparture(s)) >= nowMs - 3 * 3600_000)
+      .filter((s) => crossingLine(s) === line && isLineOutbound(line, s.route) && Date.parse(effDeparture(s)) >= nowMs - 3 * 3600_000)
       .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)));
     const todayRows = all.filter((s) => warsawDay(Date.parse(effDeparture(s))) === today);
     const pick = todayRows.length ? todayRows : all.slice(0, 1);
-    const sea = seaFromMarine(marine.find((m) => m.corridor === LINE_CORRIDOR[line]));
+    const corridor = LINE_CORRIDOR[line];
+    const sea = corridor ? seaFromMarine(marine.find((m) => m.corridor === corridor)) : null;
     for (const s of pick) {
       out.push({
-        id: s.id, line, vessel: s.vessel, depIso: s.departureAt,
+        id: s.id, line, route: s.route, vessel: s.vessel, depIso: s.departureAt,
         delayedIso: s.delayedDepartureAt && s.delayedDepartureAt !== s.departureAt ? s.delayedDepartureAt : null,
         status: s.status, sea,
         /* U-100: „na pokładzie” = transporty tego rejsu w etapie Prom (nie same rezerwacje) — jak demo i Mapa */
@@ -79,6 +88,17 @@ export function ferryRowsFromDb(
     }
   }
   return out.sort((a, b) => Date.parse(a.depIso) - Date.parse(b.depIso));
+}
+
+/** Porty wiersza promu: z trasy rejsu, a bez niej z `LINE_PORTS`. */
+export function rowPorts(r: Pick<FerryRowView, 'line' | 'route'>): { from: FerryPortCode; to: FerryPortCode } {
+  const route = routeByCode(r.route);
+  return route ? { from: route.from, to: route.to } : LINE_PORTS[r.line];
+}
+
+/** Trasa wyjazdowa tego armatora (z katalogu). */
+function isLineOutbound(line: CrossingLine, route: Sailing['route']): boolean {
+  return outboundRoutesOf(line).includes(route);
 }
 
 export function ferryAlert(r: Pick<FerryRowView, 'status' | 'sea' | 'delayedIso'>): FerryAlert {

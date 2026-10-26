@@ -12,7 +12,7 @@ import type { Load, Locale, Risk, Sailing } from '../../types';
 import type { MarineConditionRow } from '../../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../../lib/corridorConditionsDb';
 import type { RoadSituation } from '../../lib/trafikverket';
-import { altProposal, ferryAlert, ferryRowsFromDb, impactOf, LINE_PORTS, roadCounts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
+import { altProposal, ferryAlert, ferryRowsFromDb, impactOf, roadCounts, rowPorts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
 import { altSailingsOf, sampleFerryRowsOf, roadPlOf } from '../../lib/p6Source';
 import { routeRisks } from '../../lib/todoRules';
 import { effDeparture, sailingStatusLabel } from '../../lib/sailings';
@@ -57,7 +57,7 @@ interface Props {
 
 function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Locale; phone: boolean; onOpen?: () => void }) {
   const a = ferryAlert(r);
-  const ports = LINE_PORTS[r.line];
+  const ports = rowPorts(r);
   const time = hm(r.depIso);
   const alertText = a === 'CANCELLED' ? rt(locale, 'p6_ferry_CANCELLED')
     : a === 'STORM' ? rt(locale, 'p6_ferry_STORM')

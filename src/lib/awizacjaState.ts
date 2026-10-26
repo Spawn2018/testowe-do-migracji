@@ -3,20 +3,35 @@
  * „Zdąży na rejs” = odjazd po planowanym dojeździe do portu + odprawa.
  */
 import type { Load, LoadResources, Sailing } from '../types';
-import { effDeparture, hasDeparted, selectableSailings } from './sailings';
+import {
+  clearanceHoursFor, FERRY_OPERATORS as CATALOG_OPERATORS, LEGACY_OPERATORS, outboundRoutesOf, sailingOfOperator,
+  type FerryOperator,
+} from './ferryCatalog';
+import { crossingLine, effDeparture, hasDeparted, selectableSailings } from './sailings';
 import { isAfterDelivery } from './status';
 
-/** Armatorzy w UI (STENA-3). */
-export const FERRY_OPERATORS = [
-  { id: 'POLFERRIES', label: 'Polferries' },
-  { id: 'STENA', label: 'Stena Line' },
-] as const;
+/** Wszyscy armatorzy z katalogu promów (Polferries, Stena, potem nowi). */
+export const FERRY_OPERATORS: readonly { id: FerryOperator; label: string }[] = CATALOG_OPERATORS.map((o) => ({ id: o.code, label: o.name }));
 
-export type FerryOperatorId = (typeof FERRY_OPERATORS)[number]['id'];
+export type FerryOperatorId = FerryOperator;
 
-/** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7). */
-export const PORT_CLEARANCE_H = 14;
-export const STENA_PORT_CLEARANCE_H = 16;
+/**
+ * Armatorzy w UI awizacji (STENA-3): Polferries i Stena zawsze, w tej kolejności; BN9-a — armator z katalogu spoza tej
+ * pary tylko wtedy, gdy ma rejs w danych (jak Kokpit: `crossingLine` na jego trasie wyjazdowej) albo jest już wybrany.
+ */
+export function awizacjaOperators(
+  sailings: readonly Sailing[],
+  current?: FerryOperatorId | null,
+): { id: FerryOperatorId; label: string }[] {
+  return FERRY_OPERATORS.filter((o) =>
+    LEGACY_OPERATORS.includes(o.id)
+    || o.id === current
+    || sailings.some((s) => crossingLine(s) === o.id && outboundRoutesOf(o.id).includes(s.route)));
+}
+
+/** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7) — z katalogu promów (Gdańsk 14 h, Gdynia 16 h). */
+export const PORT_CLEARANCE_H = clearanceHoursFor('POLFERRIES');
+export const STENA_PORT_CLEARANCE_H = clearanceHoursFor('STENA');
 
 /** Awizacja istnieje, gdy są kierowca + ciągnik (kryterium „Edytuj" zamiast „Dodaj"). */
 export function hasAwizacja(
@@ -30,10 +45,9 @@ export function hasAwizacja(
   return false;
 }
 
-function operatorMatches(s: Sailing, operator: FerryOperatorId): boolean {
-  const op = (s.operator ?? '').toLowerCase();
-  if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA' || s.route === 'KAA-GDY';
-  return !op.includes('stena') && (s.route === 'GDN-NYN' || s.route === 'NYN-GDN' || !s.route);
+/** Rejs armatora — reguła z katalogu promów (Polferries i Stena bez zmian, nowi po nazwie albo trasie). */
+export function operatorMatches(s: Sailing, operator: FerryOperatorId): boolean {
+  return sailingOfOperator(s, operator);
 }
 
 /** Najwcześniejszy sensowny odjazd promu względem planu załadunku. */
@@ -48,7 +62,8 @@ export function earliestFerryDepartureMs(
   const cands = [fromWindow, fromPlan].map((x) => (x ? Date.parse(x) : NaN)).filter(Number.isFinite);
   const t = cands.length ? Math.max(...cands) : NaN;
   if (!Number.isFinite(t)) return Date.now();
-  const h = operator === 'STENA' ? STENA_PORT_CLEARANCE_H : PORT_CLEARANCE_H;
+  /* BN9-a: odprawa portu wyjazdowego armatora z katalogu (Polferries i Stena — te same wartości co dotąd) */
+  const h = clearanceHoursFor(operator);
   return t + h * 36e5;
 }
 

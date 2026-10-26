@@ -19,6 +19,7 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { WATER_GDN_NYN, WATER_GDY_KAA, h6Requests } from '../../lib/map/draw';
+import { extraWaterTracksFor, WATER_TRACKS_EXTRA, type ExtraWaterTrack } from '../../lib/map/ferryLines';
 import {
   acquireMap, attributionOf, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
@@ -465,6 +466,24 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     });
     return () => { cancelled = true; };
   }, [mapReady, basemapReady]);
+
+  /* BN9-a: tory wodne nowych przepraw (Estonia ⇄ Finlandia / Szwecja) — tylko dla tras rejsów widocznych transportów,
+     ten sam styl co stałe tory; bez takich transportów (dziś) nic nie dochodzi do mapy */
+  const extraTrackKey = extraWaterTracksFor(
+    loads.map((l) => (l.sailingId ? sailings.find((x) => x.id === l.sailingId)?.route : null)),
+  ).map((x) => x.id).join(',');
+  const routeLayerOn = !!mapLayers.route;
+  useEffect(() => {
+    if (!mapReady || !extraTrackKey || !routeLayerOn) return undefined;
+    const group = L.layerGroup();
+    for (const id of extraTrackKey.split(',') as ExtraWaterTrack[]) {
+      const line = WATER_TRACKS_EXTRA[id];
+      if (!line) continue;
+      L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(group);
+    }
+    group.addTo(mapReady);
+    return () => { group.remove(); };
+  }, [mapReady, extraTrackKey, routeLayerOn]);
 
   useEffect(() => {
     const map = mapRef.current;

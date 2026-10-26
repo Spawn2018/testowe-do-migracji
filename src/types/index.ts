@@ -1,3 +1,5 @@
+import type { FerryOperator, FerryRouteCode } from '../lib/ferryCatalog';
+
 export type Locale = 'pl' | 'en' | 'sv';
 export type OrgKind = 'HHL' | 'KSH' | 'SCX';
 export type RoleId = 'HHL' | 'KSH' | 'SCX';
@@ -113,12 +115,13 @@ export interface Awizacja {
 }
 
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
-export type FerryRoute = 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY';
+/** BN9-a: kody tras z katalogu promów (`src/lib/ferryCatalog.ts`) — te same co w bazie (BN1). */
+export type FerryRoute = FerryRouteCode;
 export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export interface Sailing {
   id: string;
   vessel: string;
-  /** Armator z vessels.operator (Polferries / Stena Line). */
+  /** Armator z vessels.operator (Polferries / Stena Line / armatorzy z katalogu promów). */
   operator?: string;
   route: FerryRoute;
   departureAt: string;
@@ -126,7 +129,7 @@ export interface Sailing {
   delayedDepartureAt: string | null;
   delayedArrivalAt: string | null;
   status: SailingStatus;
-  source: 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES' | 'STENA';
+  source: 'DANE_STARTOWE' | 'RECZNIE' | FerryOperator;
 }
 
 export interface FerryBooking {
@@ -418,7 +421,7 @@ export interface Geofence {
   /** Kraj strefy. SMS załadunku i placu czyta tę wartość, nie sam środek koła. */
   country?: GeofenceCountry;
   /** #505 / E34: trasa portu (POLFERRIES / STENA); null = nieportowa albo jak POLFERRIES w silniku. */
-  route?: 'POLFERRIES' | 'STENA' | null;
+  route?: FerryOperator | null;
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;

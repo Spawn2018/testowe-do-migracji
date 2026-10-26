@@ -4,7 +4,7 @@ import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
 import { fmtDate, fmtTime } from '../../lib/time';
 import { ROLE_META } from '../../lib/permissions';
-import type { Locale, RoleId } from '../../types';
+import type { Locale, RoleId, Sailing } from '../../types';
 import { NotificationBell } from './NotificationBell';
 import { ClaudeIcon } from './ClaudeIcon';
 import { hp } from '../../i18n/help';
@@ -15,7 +15,8 @@ import { portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
-import { effDeparture, nearestCrossingSailings } from '../../lib/sailings';
+import { effDeparture, nearestCrossingByOperator } from '../../lib/sailings';
+import { LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorName } from '../../lib/ferryCatalog';
 import { formatListDateTime } from '../../lib/format';
 import { lazyRetry } from '../../lib/lazyRetry';
 
@@ -48,14 +49,21 @@ function depLabel(depIso: string, nowIso: string): string {
   return day === today && time ? time : dep;
 }
 
-function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof nearestCrossingSailings>[0]): FerryRow[] {
+function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof nearestCrossingByOperator>[0]): FerryRow[] {
   const nowMs = now.getTime();
   const nowIso = now.toISOString();
   const rows: FerryRow[] = [];
   if (PROD_BUILD) {
     /* P7 — produkcja: najbliższa Stena (GDY→KAA) i najbliższy Polferries (GDN→NYN) z bazy. */
-    const near = nearestCrossingSailings(sailings, nowMs, 1);
-    for (const [s, op] of [[near.stena[0], 'Stena'], [near.polferries[0], 'Polferries']] as const) {
+    const near = nearestCrossingByOperator(sailings, nowMs, 1);
+    /* BN9-a: Stena i Polferries zawsze (bez rejsu — „brak rejsu”); nowi armatorzy z katalogu tylko z rejsem */
+    const lines: (readonly [Sailing | undefined, string])[] = [[near.STENA[0], 'Stena'], [near.POLFERRIES[0], 'Polferries']];
+    for (const op of OPERATOR_MATCH_ORDER) {
+      if (LEGACY_OPERATORS.includes(op)) continue;
+      const first = near[op]?.[0];
+      if (first) lines.push([first, operatorName(op)]);
+    }
+    for (const [s, op] of lines) {
       if (!s) {
         const none = `${op} · ${t(locale, 'i2_no_sailing')}`;
         rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: none, short: op, head: none, to: '' });
