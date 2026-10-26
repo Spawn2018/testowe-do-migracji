@@ -62,6 +62,7 @@ fuel_basis_public | PURE | select fuel_basis_public('{"n_sek":7,"owner_note":"x"
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
 ksh_sync_state_get | EMPTY | select coalesce(ksh_sync_state_get()::text, '∅') | ∅
+ksh_sync_preview_get | EMPTY | select coalesce(ksh_sync_preview_get()::text, '∅') | ∅
 ksh_sync_write_set | GUARD | select ksh_sync_write_set(false) | Administrator HHL|42501
 ksh_sync_import_set | GUARD | select ksh_sync_import_set(false) | Administrator HHL|42501
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL

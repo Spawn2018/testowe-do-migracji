@@ -23,8 +23,8 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 234, // A6 #569: +9 multi-kod konflikt (write on, setup, import WT, kod SG-M2, 1 sprawa, Edge, dedup, primary≠, 2. sprawa); było 225
-  nullguard: 852, // #557 PR2: +10 (2× GUARD ×5); A6 write_set już w 842 przed #557
+  import: 240, // #567 23B: +6 preview_store/get×2/PII/label/42501; było 234 (#569)
+  nullguard: 853, // #567 23B: +1 preview_get EMPTY; było 852 (#557)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

@@ -1156,4 +1156,21 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "true" ]; then ok=$((ok+1)); echo "  OK    A6: #569 primary ≠ konflikt (osobny klucz)"; else fail=$((fail+1)); echo "  FAIL  A6: #569 primary note → $out"; fi
 chk "A6: #569 primary dałby 2. sprawę" "$(Q "select count(*) from decisions where load_id='$SG_OUT' and type_code='TOWER_KSH_CONFLICT' and status in ('NEW','ASSIGNED','SNOOZED') and detail->>'event_key' like '%:pending:%'")" "2"
 
+# --- #567 23B: lista zmian dry_run (preview) — ta sama logika pól co import (N9) ---
+echo; echo "[#567 23B] preview lista zmian"
+# Zmyślony changed jak z import_schedule (before=WT, after=plik); PII w fields — ma być odfiltrowane.
+CHG23='[{"code":"SG-00","load_id":"'"$L1"'","fields":["load_date","delivery_date","driver_name","driver_phone"],"before":{"load_date":"2026-10-01","delivery_date":"2026-10-05","driver_name":"X","driver_phone":"Y"},"after":{"load_date":"2026-11-01","delivery_date":"2026-11-05","driver_name":"A","driver_phone":"B"}}]'
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 40519, 'h23b')->>'n');
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: preview_store n=2 (bez PII)" "$out" "2"
+val "#567 23B: HHL czyta preview" $HHL "select (ksh_sync_preview_get()->>'n')" "2" commit
+val "#567 23B: KSH nie czyta preview" $KSH "select ksh_sync_preview_get() is null" "t" commit
+chk "#567 23B: bez PII driver w changes" \
+  "$(Q "select (not exists (select 1 from jsonb_array_elements(coalesce(preview->'changes','[]'::jsonb)) e where e->>'field' ~* 'driver|phone|pilot'))::text from ksh_sync_state where project_id='$P'")" "true"
+chk "#567 23B: field_label PL (Data załadunku)" \
+  "$(Q "select bool_or(e->>'field_label'='Data załadunku')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+err "#567 23B: authenticated bez store" $HHL \
+  "select ksh_sync_preview_store('$P','[]'::jsonb)" "42501|service_role|tylko Edge"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

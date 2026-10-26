@@ -5607,3 +5607,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe w planie. Brak „F7: gotowe” po `dee4226e`.
 - Scalanie: brak (#575 F7 niegotowe + LFS — rerun visual failed; #576 bez F7). Bez push na main.
 - **#571 krok:** CI `db` na `dee4226e` — status 318 OK / 2 FAIL (#571f ENTER+STATUS_AUTO pusto). Przyczyna: fixture `source='SYSTEM'` spoza enum `position_source` → cały INSERT padał (entered_at i tak z hotfix). Fix: `source=null` jak w i2. EXPECTED status **320**. CI → prośba F7.
+
+## 2026-10-26 16:55 — #571/#576/#575 SCALONE; start #567 23B
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie.
+- Scalanie (F7 Spawn2018, bez push na main):
+  - **#574** `25546fcc` (F7 15:21Z, CI unit/visual/db ✔ na `a6c81371`);
+  - **#576** `21c24df8` (po #574; paliwo „do X”);
+  - **#575** `5d9f22fe` (po #574+#576; BN9-a katalog promów).
+- Bieżąca: **#567 23B** `pakiet/567-23b-lista-zmian` — migracja **0310** (`preview`, store/get/build, bez PII, label PL, manual z audit); Edge `ksh_sync_preview_store` po dry_run; skipUnchanged: dry_run nigdy nie skipuje. EXPECTED import **240**, nullguard **853**. `write_test_ok_at` — przed włączeniem zapisu prod (osobno). CI → prośba F7.

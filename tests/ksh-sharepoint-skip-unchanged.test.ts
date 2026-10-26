@@ -4,12 +4,24 @@ import { shouldSkipUnchangedImport } from '../src/lib/kshSharePointSkipUnchanged
 describe('A6 F7 — skip unchanged tylko po udanym przebiegu', () => {
   const hash = 'abc';
 
-  it('po udanym dry_run + ten sam hash + import wyłączony → skip', () => {
+  // #567 23B / etap A6: przy wyłączonym imporcie zawsze przeliczaj listę zmian.
+  it('po udanym dry_run + ten sam hash + import wyłączony → NIE skip (lista 23B)', () => {
     expect(shouldSkipUnchangedImport({
       prevHash: hash,
       hash,
       importEnabled: false,
       prevDryOnly: true,
+      sourceOk: true,
+      lastError: null,
+    })).toBe(false);
+  });
+
+  it('po udanym imporcie + ten sam hash + import włączony → skip', () => {
+    expect(shouldSkipUnchangedImport({
+      prevHash: hash,
+      hash,
+      importEnabled: true,
+      prevDryOnly: false,
       sourceOk: true,
       lastError: null,
     })).toBe(true);
