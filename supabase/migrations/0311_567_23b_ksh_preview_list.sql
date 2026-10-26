@@ -1,6 +1,7 @@
 -- #567 23B: lista zmian dry_run z pliku KSH (podgląd przed importem).
 -- F7 #577: imported_at; require_service; wt z WT; pending_write; manual=user;
 -- kind added/missing; Edge tylko dry_run niefatalny.
+-- F7 r2: wt/manual po shipment_code; blocked→missing; normalizacja liczb; testy.
 begin;
 
 alter table public.ksh_sync_state
@@ -82,8 +83,11 @@ $$;
 revoke all on function public.ksh_sync_preview_field_allowed(text) from public, anon, authenticated;
 grant execute on function public.ksh_sync_preview_field_allowed(text) to service_role;
 
--- F7 pkt 5: bieżąca wartość w Watch Tower (loads / shipment_items), nie before z pliku.
-create or replace function public.ksh_sync_preview_wt_text(p_load uuid, p_field text)
+-- F7 pkt 5 / r2 pkt 1: bieżąca wartość WT; pozycja po shipment_code (nie limit 1).
+drop function if exists public.ksh_sync_preview_wt_text(uuid, text);
+create or replace function public.ksh_sync_preview_wt_text(
+  p_load uuid, p_field text, p_code text default null
+)
 returns text
 language plpgsql
 stable
@@ -104,7 +108,7 @@ begin
       when 'height_m' then to_char(round(si.height_m, 2), 'FM999999990.00')
       when 'unit_weight_t' then to_char(round(si.unit_weight_t, 3), 'FM999999990.000')
       when 'total_weight_t' then to_char(round(si.total_weight_t, 3), 'FM999999990.000')
-      when 'qty' then si.qty::text
+      when 'qty' then to_char(round(si.qty::numeric, 0), 'FM999999990')
       when 'item_type' then si.item_type
       when 'cargo_class' then case when si.cargo_class = 'STANDARD' then 'STANDARD' else si.cargo_class end
       when 'assembly_seq' then si.assembly_seq::text
@@ -112,7 +116,8 @@ begin
     end into v
       from public.shipment_items si
      where si.load_id = p_load
-     order by si.shipment_code
+       and (p_code is null or p_code = '' or si.shipment_code = p_code)
+     order by case when si.shipment_code = p_code then 0 else 1 end, si.shipment_code
      limit 1;
   else
     select case p_field
@@ -139,9 +144,46 @@ begin
 end;
 $$;
 
-revoke all on function public.ksh_sync_preview_wt_text(uuid, text) from public, anon, authenticated;
-grant execute on function public.ksh_sync_preview_wt_text(uuid, text) to service_role;
+revoke all on function public.ksh_sync_preview_wt_text(uuid, text, text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_preview_wt_text(uuid, text, text) to service_role;
 
+-- F7 r2 pkt 5: ten sam format liczb po stronie pliku co wt.
+create or replace function public.ksh_sync_preview_norm_file(p_field text, p_raw text)
+returns text
+language plpgsql
+immutable
+set search_path = public
+as $$
+declare
+  n numeric;
+begin
+  if p_raw is null or btrim(p_raw) = '' then
+    return null;
+  end if;
+  if p_field not in ('length_m','width_m','height_m','qty','unit_weight_t','total_weight_t') then
+    return nullif(btrim(p_raw), '');
+  end if;
+  begin
+    n := btrim(p_raw)::numeric;
+  exception when others then
+    return nullif(btrim(p_raw), '');
+  end;
+  return case p_field
+    when 'length_m' then to_char(round(n, 2), 'FM999999990.00')
+    when 'width_m' then to_char(round(n, 2), 'FM999999990.00')
+    when 'height_m' then to_char(round(n, 2), 'FM999999990.00')
+    when 'unit_weight_t' then to_char(round(n, 3), 'FM999999990.000')
+    when 'total_weight_t' then to_char(round(n, 3), 'FM999999990.000')
+    when 'qty' then to_char(round(n, 0), 'FM999999990')
+    else nullif(btrim(p_raw), '')
+  end;
+end;
+$$;
+
+revoke all on function public.ksh_sync_preview_norm_file(text, text) from public, anon, authenticated;
+grant execute on function public.ksh_sync_preview_norm_file(text, text) to service_role;
+
+drop function if exists public.ksh_sync_preview_build(uuid, jsonb, timestamptz, int, text, jsonb, jsonb);
 create or replace function public.ksh_sync_preview_build(
   p_project uuid,
   p_changed jsonb,
@@ -149,7 +191,8 @@ create or replace function public.ksh_sync_preview_build(
   p_bytes int default null,
   p_file_hash text default null,
   p_added jsonb default '[]'::jsonb,
-  p_cancel_candidates jsonb default '[]'::jsonb
+  p_cancel_candidates jsonb default '[]'::jsonb,
+  p_blocked jsonb default '[]'::jsonb
 )
 returns jsonb
 language plpgsql
@@ -173,6 +216,8 @@ declare
   v_item_id uuid;
   v_entity text;
   v_entity_id text;
+  v_reason text;
+  v_reason_pl text;
 begin
   select max(imported_at) into v_last_imp
     from public.schedule_imports
@@ -197,8 +242,8 @@ begin
         if public.ksh_sync_preview_field_allowed(v_f) is not true then
           continue;
         end if;
-        v_file := v_item #>> array['after', v_f];
-        v_wt := public.ksh_sync_preview_wt_text(v_lid, v_f);
+        v_file := public.ksh_sync_preview_norm_file(v_f, v_item #>> array['after', v_f]);
+        v_wt := public.ksh_sync_preview_wt_text(v_lid, v_f, v_code);
         v_manual := false;
         v_pending := false;
         if v_lid is not null then
@@ -212,10 +257,12 @@ begin
           v_keys := public.ksh_sync_preview_audit_keys(v_f);
           if v_f in ('length_m','width_m','height_m','qty','unit_weight_t','total_weight_t',
                      'item_type','cargo_class','assembly_seq','shipment_code') then
+            -- F7 r2 pkt 1: pozycja z kodem wiersza (#569).
             select si.id into v_item_id
               from public.shipment_items si
              where si.load_id = v_lid
-             order by si.shipment_code
+               and (v_code = '' or si.shipment_code = v_code)
+             order by case when si.shipment_code = v_code then 0 else 1 end, si.shipment_code
              limit 1;
             v_entity := 'shipment_items';
             v_entity_id := v_item_id::text;
@@ -297,6 +344,45 @@ begin
     end loop;
   end if;
 
+  -- F7 r2 pkt 4: znikające zablokowane (INVOICED / STATUS) też jako missing.
+  if p_blocked is not null and jsonb_typeof(p_blocked) = 'array' then
+    for v_item in select value from jsonb_array_elements(p_blocked) loop
+      v_reason := coalesce(v_item->>'reason', '');
+      if v_reason not in ('INVOICED', 'STATUS') then
+        continue;
+      end if;
+      v_code := coalesce(v_item->>'code', '');
+      begin
+        v_lid := nullif(v_item->>'load_id', '')::uuid;
+      exception when others then
+        v_lid := null;
+      end;
+      if v_code = '' then continue; end if;
+      if exists (
+        select 1 from jsonb_array_elements(v_rows) e
+         where e->>'kind' = 'missing' and e->>'code' = v_code
+      ) then
+        continue;
+      end if;
+      v_reason_pl := case v_reason
+        when 'INVOICED' then 'zafakturowany'
+        when 'STATUS' then 'w trasie'
+        else v_reason
+      end;
+      v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+        'code', v_code,
+        'load_id', v_lid,
+        'field', null,
+        'field_label', 'Brak w pliku (zablokowany: ' || v_reason_pl || ')',
+        'wt', null,
+        'file', null,
+        'manual_after_import', false,
+        'pending_write', false,
+        'kind', 'missing'
+      ));
+    end loop;
+  end if;
+
   return jsonb_build_object(
     'read_at', p_read_at,
     'bytes', p_bytes,
@@ -307,12 +393,13 @@ begin
 end;
 $$;
 
-revoke all on function public.ksh_sync_preview_build(uuid, jsonb, timestamptz, int, text, jsonb, jsonb)
+revoke all on function public.ksh_sync_preview_build(uuid, jsonb, timestamptz, int, text, jsonb, jsonb, jsonb)
   from public, anon, authenticated;
-grant execute on function public.ksh_sync_preview_build(uuid, jsonb, timestamptz, int, text, jsonb, jsonb)
+grant execute on function public.ksh_sync_preview_build(uuid, jsonb, timestamptz, int, text, jsonb, jsonb, jsonb)
   to service_role;
 
 -- F7 pkt 3: bramka jak 0308 (ksh_sync_require_service).
+drop function if exists public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb);
 create or replace function public.ksh_sync_preview_store(
   p_project uuid,
   p_changed jsonb,
@@ -320,7 +407,8 @@ create or replace function public.ksh_sync_preview_store(
   p_bytes int default null,
   p_file_hash text default null,
   p_added jsonb default '[]'::jsonb,
-  p_cancel_candidates jsonb default '[]'::jsonb
+  p_cancel_candidates jsonb default '[]'::jsonb,
+  p_blocked jsonb default '[]'::jsonb
 )
 returns jsonb
 language plpgsql
@@ -337,7 +425,8 @@ begin
 
   v_preview := public.ksh_sync_preview_build(
     p_project, p_changed, coalesce(p_read_at, now()), p_bytes, p_file_hash,
-    coalesce(p_added, '[]'::jsonb), coalesce(p_cancel_candidates, '[]'::jsonb)
+    coalesce(p_added, '[]'::jsonb), coalesce(p_cancel_candidates, '[]'::jsonb),
+    coalesce(p_blocked, '[]'::jsonb)
   );
 
   insert into public.ksh_sync_state (project_id, preview, updated_at)
@@ -350,13 +439,13 @@ begin
 end;
 $$;
 
-revoke all on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb)
+revoke all on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb, jsonb)
   from public, anon, authenticated;
-grant execute on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb)
+grant execute on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb, jsonb)
   to service_role;
 
-comment on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb) is
-  '#567 23B F7: zapis preview (Edge/service); added/missing; wt z WT.';
+comment on function public.ksh_sync_preview_store(uuid, jsonb, timestamptz, int, text, jsonb, jsonb, jsonb) is
+  '#567 23B F7 r2: preview + blocked missing; wt po kodzie; norm liczb.';
 
 create or replace function public.ksh_sync_preview_get()
 returns jsonb

@@ -5720,3 +5720,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `056dca75`: unit ✔, db ✔ (10m34s), visual ✔ (telefon/bramy/zrzuty).
 - PLAN §4: #578 wygląd po #577; EXPECTED import **249**. Po F7 #577 → scalać #577 potem #578 → #574-nast → BN0 #572.
 
+## 2026-10-27 01:00 — #577 F7 r2: multi-kod / blocked / norm
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); zamknięte #320/#323/#412 (pozycje SCALONE). #538/#537/#500/#499 otwarte w planie.
+- Scalanie: #577 F7 r2 (22:52) — niegotowe, 5 pkt. #578 F7 gotowe **po #577**. Bez push na main.
+- **#577 krok (F7 r2):** `ksh_sync_preview_wt_text(…, p_code)`; manual po `shipment_code`; `p_blocked` INVOICED/STATUS → missing; `ksh_sync_preview_norm_file`; Edge przekazuje `blocked`; testy +5 → import **254**. Po zielonym CI — prośba o F7.
+

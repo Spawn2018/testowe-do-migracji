@@ -372,6 +372,7 @@ async function handle(req: Request): Promise<Response> {
     changed?: unknown[];
     unchanged?: number;
     cancel_candidates?: unknown[];
+    blocked?: unknown[];
     dates_check?: number;
   };
   const added = Array.isArray(data.added) ? data.added.length : 0;
@@ -389,6 +390,7 @@ async function handle(req: Request): Promise<Response> {
       p_file_hash: hash,
       p_added: Array.isArray(data.added) ? data.added : [],
       p_cancel_candidates: Array.isArray(data.cancel_candidates) ? data.cancel_candidates : [],
+      p_blocked: Array.isArray(data.blocked) ? data.blocked : [],
     });
     if (prevStore.error) {
       previewError = `preview:${prevStore.error.code || 'err'}`;

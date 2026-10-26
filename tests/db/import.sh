@@ -1189,6 +1189,10 @@ chk "#567 23B: kind added obecny" \
   "$(Q "select bool_or(e->>'kind'='added')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
 chk "#567 23B: kind missing obecny" \
   "$(Q "select bool_or(e->>'kind'='missing')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+# F7 r2 pkt 3: konkretny wiersz z prawdziwego dry_run (SG-01 / load_date).
+WT_DR=$(Q "select coalesce(plan_load_date::text,'') from loads where id='$SG1'")
+chk "#567 23B: dry_run SG-01 load_date wt+file" \
+  "$(Q "select (e->>'wt' is not distinct from nullif('$WT_DR','') and e->>'file' = '$D_NEW')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e where e->>'code'='SG-01' and e->>'field'='load_date' limit 1")" "true"
 # Pole bez zmian: store z fields=[] → brak wiersza changed dla tego kodu.
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
   select (ksh_sync_preview_store('$P', '[{\"code\":\"SG-01\",\"load_id\":\"$SG1\",\"fields\":[],\"before\":{},\"after\":{}}]'::jsonb, now(), 1, 'emptyf', '[]'::jsonb, '[]'::jsonb)->'changes')::text;
@@ -1220,7 +1224,49 @@ chk "#567 23B: pending_write true przy kolejce" "$out" "true"
 val "#567 23B: HHL czyta preview" $HHL "select (ksh_sync_preview_get() is not null)" t commit
 val "#567 23B: KSH nie czyta preview" $KSH "select ksh_sync_preview_get() is null" "t" commit
 chk "#567 23B: authenticated bez EXECUTE preview_store" \
-  "$(Q "select has_function_privilege('authenticated','ksh_sync_preview_store(uuid,jsonb,timestamptz,int,text,jsonb,jsonb)','execute')")" f
+  "$(Q "select has_function_privilege('authenticated','ksh_sync_preview_store(uuid,jsonb,timestamptz,int,text,jsonb,jsonb,jsonb)','execute')")" f
 err "#567 23B: authenticated store → 42501" $HHL "select ksh_sync_preview_store('$P','[]'::jsonb)" "42501|Tylko synchronizacja|permission denied"
+
+# F7 r2 pkt 1+5: kilka kodów (#569) — wt z pozycji o tym kodzie; file znormalizowany.
+$PSQL -c "update shipment_items set length_m=10 where load_id='$SG1' and shipment_code='SG-01';
+  update shipment_items set length_m=20 where load_id='$SG1' and shipment_code='SG-M2'" >/dev/null
+CHG_MC='[{"code":"SG-M2","load_id":"'"$SG1"'","fields":["length_m"],"before":{"length_m":"10"},"after":{"length_m":"21"}}]'
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (e->>'wt')||'|'||(e->>'file') from jsonb_array_elements(
+    ksh_sync_preview_store('$P', '$CHG_MC'::jsonb, now(), 4, 'mc')->'changes'
+  ) e where e->>'code'='SG-M2' and e->>'field'='length_m';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: multi-kod wt z SG-M2 + norm file" "$out" "20.00|21.00"
+
+# F7 r2 pkt 2: manual_after_import — użytkownik vs automat (bez user_id).
+SI_M2=$(Q "select id::text from shipment_items where load_id='$SG1' and shipment_code='SG-M2' limit 1")
+$PSQL -c "insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, created_at)
+  values ('$HHL', 'ROW_UPDATE', 'shipment_items', '$SI_M2',
+    '{\"length_m\":20}'::jsonb, '{\"length_m\":20.5}'::jsonb, now())" >/dev/null
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (e->>'manual_after_import') from jsonb_array_elements(
+    ksh_sync_preview_store('$P', '$CHG_MC'::jsonb, now(), 5, 'manu')->'changes'
+  ) e where e->>'field'='length_m';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: manual_after_import true (user)" "$out" "true"
+$PSQL -c "delete from audit_log where entity='shipment_items' and entity_id='$SI_M2' and action='ROW_UPDATE' and user_id='$HHL';
+  insert into audit_log (user_id, action, entity, entity_id, old_value, new_value, created_at)
+  values (null, 'ROW_UPDATE', 'shipment_items', '$SI_M2',
+    '{\"length_m\":20}'::jsonb, '{\"length_m\":20.5}'::jsonb, now())" >/dev/null
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (e->>'manual_after_import') from jsonb_array_elements(
+    ksh_sync_preview_store('$P', '$CHG_MC'::jsonb, now(), 6, 'auto')->'changes'
+  ) e where e->>'field'='length_m';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: manual_after_import false (automat)" "$out" "false"
+
+# F7 r2 pkt 4: blocked INVOICED → kind missing z etykietą.
+BLK='[{"code":"SG-BLK","load_id":"'"$SG1"'","reason":"INVOICED","message":"na fakturze"}]'
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select (e->>'kind')||'|'||(e->>'field_label') from jsonb_array_elements(
+    ksh_sync_preview_store('$P', '[]'::jsonb, now(), 7, 'blk', '[]'::jsonb, '[]'::jsonb, '$BLK'::jsonb)->'changes'
+  ) e where e->>'code'='SG-BLK';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+chk "#567 23B: blocked INVOICED → missing" "$out" "missing|Brak w pliku (zablokowany: zafakturowany)"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

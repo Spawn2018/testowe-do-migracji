@@ -1049,8 +1049,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — SCALONE (#579 `ee0a6dee`, 26.10.2026 22:22 UTC, migracja **0310**; `deploy-main` w toku)
 Źródło: #563. **#563 PRZED #577**. t44: SEK 23,00 / PLN 7,15 / ×1,14; `tier_bound=MAX`, `avg_days_pln=7`; korekty w średniej; SEFS_WEEK_CORR; baf **105**; nullguard **852**. Front `lookupMult`/`sefsWeek`.
 
-### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; F7 pkt 1–8 na `056dca75`)
-Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 zrobione: podgląd niefatalny tylko dry_run; `ksh_sync_require_service`; `wt` z WT; `manual_after_import` tylko `user_id`; `kind` added/missing/changed; `pending_write`; testy z `import_schedule` dry_run. CI unit/db/visual ✔ na `056dca75` — **czekam „F7: gotowe do scalenia”**. EXPECTED import **249**; nullguard **856**.
+### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; F7 r2 pkt 1–5)
+Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + **r2**: `wt`/manual po `shipment_code` (#569); `blocked` INVOICED/STATUS → `kind: missing`; normalizacja liczb wt/file; testy dry_run wiersz + multi-kod + manual×2 + blocked. EXPECTED import **254**; nullguard **856**. Po zielonym CI — prośba o F7.
 
 ### #578 · wygląd lista zmian KSH (23B) — F7 gotowe, scalać PO #577
 Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7: gotowe (26.10 ~16:30Z) z warunkiem: **dopiero po #577**. Potem #574-nast → BN0 #572.
@@ -1781,3 +1781,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 00:10 | #563 F7 #579 r4: CI ✔ `c70f4787` — prośba o F7 | pętla |
 | 27.10.2026 00:25 | #563 SCALONE #579 `ee0a6dee`; start #577 F7 1–8 (0310→**0311**) | pętla |
 | 27.10.2026 00:45 | #577 F7 1–8 na `056dca75`; CI unit/db/visual ✔; #578 w §4 (po #577); czekam F7 | pętla |
+| 27.10.2026 01:00 | #577 F7 r2: wt po kodzie, blocked→missing, norm liczb, import **254**; zamknięte #320/#323/#412 | pętla |
