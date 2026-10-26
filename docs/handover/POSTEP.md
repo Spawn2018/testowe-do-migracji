@@ -5434,3 +5434,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. **P4:** `write_set`/`import_set` — `loads FOR UPDATE` sort id → outbound;
   + `pending_wt` w `changed`.
 - EXPECTED import **193**. Push → CI → prośba F7 po zielonym.
+
+## 2026-10-26 06:50 — A6 #560 db FAIL na `f076c7f9` → quiet + P2 dates_ctx
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI `f076c7f9`: unit ✔ visual ✔ **db FAIL** import 191/2:
+  1. **quiet + hhlOrderNo:** `l1b_note_file_changed` (ten sam klucz co conflict) otwierał sprawę mimo `p_quiet` — fix: `v_run_quiet is not true`;
+  2. **P2:** test enqueue godziny bez `dates_ctx` → brak pending → brało 14:00 z pliku — fix test: `set_config('tower.dates_ctx','on')`.
+- EXPECTED nadal **193**. Push → CI → prośba F7 po zielonym.

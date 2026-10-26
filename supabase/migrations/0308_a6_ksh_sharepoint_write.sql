@@ -1360,7 +1360,8 @@ begin
               when 'carrier_order_no' then nullif(btrim(coalesce(v_exp_out->>'co', '')), '')
               when 'hhl_order_no' then nullif(btrim(coalesce(v_exp_out->>'ho', '')), '')
             end;
-            if v_file_val is distinct from v_exp_val then
+            -- F7 #2 / r6: przy p_quiet nie otwieraj TOWER_KSH_CONFLICT (także file-changed).
+            if v_file_val is distinct from v_exp_val and v_run_quiet is not true then
               perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
             end if;
             v_pending_wt := array_append(v_pending_wt, v_f);

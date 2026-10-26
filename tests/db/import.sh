@@ -829,7 +829,9 @@ LD_WT=$(Q "select plan_load_date::text from loads where id='$SG_OUT'")
 $PSQL -c "update loads set plan_load_from = ('$LD_WT 08:00:00'::timestamp at time zone 'Europe/Warsaw'),
   plan_load_to = ('$LD_WT 10:00:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG_OUT'" >/dev/null
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld','$LD_WT','lt','08:00','dd',null,'dt',null,'co',null,'ho',null)) where project_id='$P'" >/dev/null
+# load_time w kolejce tylko przy dates_ctx (jak ksh_confirm_dates / edycja dat HHL)
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select set_config('tower.dates_ctx','on',true);
   update loads set plan_load_from = ('$LD_WT 09:00:00'::timestamp at time zone 'Europe/Warsaw') where id='$SG_OUT';
 commit;" >/dev/null 2>&1
 # plik: nowa data + godzina 14:00 — load_time w pending → nie bierz 14:00; data bez pending → z pliku
