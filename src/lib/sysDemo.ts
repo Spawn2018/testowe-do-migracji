@@ -37,8 +37,8 @@ export function demoSources(nowIso: string): SourceRow[] {
   return [
     /* F7 runda 3: „Nie działa” tylko wtedy, gdy ekran Opłata paliwowa ma alarm (brak ceny z wczoraj w tym samym tygodniu — nie w poniedziałek) */
     fuelAlarmDay(nowIso)
-      ? { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso) + 1, 7, 15), state: 'down', since: dayAt(nowIso, fuelBack(nowIso), 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', nextTryAt: fuelNextTryAt(nowIso), canCheck: true }
-      : { id: 'fuel', name: 'Ceny paliwa', cadence: 'raz dziennie', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso), 7, 15), state: 'ok', since: null, why: null, canCheck: true },
+      ? { id: 'fuel', name: 'Ceny paliwa', cadence: '5× dziennie (07:15–23:15)', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso) + 1, 7, 15), state: 'down', since: dayAt(nowIso, fuelBack(nowIso), 7, 15), why: 'Strona Orlen nie odpowiada (5 prób z rzędu). Opłata paliwowa liczona z cen z poprzedniego odczytu.', nextTryAt: fuelNextTryAt(nowIso), canCheck: true }
+      : { id: 'fuel', name: 'Ceny paliwa', cadence: '5× dziennie (07:15–23:15)', feeds: 'opłata paliwowa', lastAt: dayAt(nowIso, fuelBack(nowIso), 7, 15), state: 'ok', since: null, why: null, canCheck: true },
     { id: 'mail', name: 'Limit poczty', cadence: 'przy wysyłce i co godzinę', feeds: 'e-maile do użytkowników', lastAt: ago(nowIso, 4 * 24 * 60 + 150), state: 'nomeasure', since: ago(nowIso, 4 * 24 * 60 + 150), why: 'Zadanie nie ma harmonogramu, więc stary wynik nie jest błędem. Pomiar co godzinę.', canCheck: true },
     { id: 'weather', name: 'Pogoda morska', cadence: 'co godzinę', feeds: 'fala i wiatr na rejsach, sprawy promowe', lastAt: ago(nowIso, 17), state: 'partial', since: ago(nowIso, 2 * 24 * 60 + 136), why: 'DMI odmawia (za dużo zapytań) w każdym przebiegu, dane tylko z FMI. 8 z 24 godzin bez wyniku.', canCheck: true },
     /* wyglad/audyt-E (E-09; E49 16.10, 02:08 — D-20261016-0230-01 Z5): wiatr na drodze z SMHI, próg świeżości 2 h */

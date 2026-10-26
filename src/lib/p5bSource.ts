@@ -16,7 +16,7 @@ const ok = async (): Promise<boolean> => true;
 
 /** E3 — ekran Opłaty paliwowej (tydzień bieżący i przyszły, pobieranie cen, ceny z 2 tygodni, tabela mnożników). */
 export function fuelScreenOf(today: string, nowIso?: string): FuelScreenView | null {
-  /* „Następna automatyczna próba” z zegara demo — po 13:15 „dziś nie ma już prób” (zgodnie ze Stanem systemu) */
+  /* „Następna automatyczna próba” z zegara demo — po 23:15 „dziś nie ma już prób” (zgodnie ze Stanem systemu) */
   const hm = nowIso ? new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(nowIso)) : undefined;
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFuelScreen(today, hm) : null;
 }

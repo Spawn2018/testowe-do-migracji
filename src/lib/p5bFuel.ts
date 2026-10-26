@@ -7,6 +7,15 @@
 
 export type FuelSource = 'OKQ8' | 'ORLEN';
 
+/**
+ * E3 / #563 (wdrożone 26.10.2026, #579): ceny paliwa sprawdzane 5× dziennie (czas polski) — cron co godzinę, funkcja
+ * `fuel-prices` działa o 7, 9, 13, 17 i 23; każde sprawdzenie pobiera cenę i zapisuje ją, gdy się zmieniła.
+ */
+export const FUEL_FETCH_AT = '07:15';
+export const FUEL_RETRIES = ['09:15', '13:15', '17:15', '23:15'] as const;
+/** „09:15, 13:15, 17:15 i 23:15”. */
+export const plList = (xs: readonly string[]): string => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} i ${xs[xs.length - 1]}`);
+
 /** Wiersz tabeli mnożników z załącznika do umowy: średnia cena od–do (włącznie) → mnożnik. */
 export interface FuelTier { from: number; to: number; mult: number }
 

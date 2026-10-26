@@ -14,7 +14,7 @@ import { formatPlNumber } from '../../lib/format';
 import { fmtDateRange, fmtDateTime, formatCalendarDay } from '../../lib/time';
 import { TZ_OPERACYJNA } from '../../lib/money/engine';
 import {
-  CANCEL_DAYS, feeOf, looksLikeEmail, pctOf, tierOf, tiersAround,
+  CANCEL_DAYS, feeOf, looksLikeEmail, pctOf, plList, tierOf, tiersAround,
   type CancelRulesView, type DwellRulesView, type FuelActions, type FuelDayRow, type FuelScreenView, type FuelSource, type FuelTier, type PaymentTermsView,
   type RateCardRow, type RateCardSave, type RateCardView,
 } from '../../lib/p5bFuel';
@@ -297,7 +297,7 @@ export function FuelScreen({ locale, view, actions, readOnly, party }: {
             <span className="ox-eyebrow">{fbp(locale, 'p5b_f_fetch_h', { at: fetch.at })}</span>
             {fetchLine('p5b_f_today', fetch.today)}
             {fetchLine('p5b_f_yesterday', fetch.yesterday)}
-            <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: fetch.retries.join(' i ') })}</span>
+            {fetch.retries.length ? <span className="pm-card-l">{fbp(locale, 'p5b_f_retries', { list: plList(fetch.retries) })}</span> : null}
           </section>
         )}
       </div>
