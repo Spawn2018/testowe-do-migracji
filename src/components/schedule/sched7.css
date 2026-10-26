@@ -155,7 +155,7 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-kp .ox-table tbody th{font-weight:400}
 .s7-kp-code{font-family:var(--font-cond);font-weight:700;white-space:nowrap}
 @media (min-width:769px){.s7-kp .ox-table tr.s7-kp-first th,.s7-kp .ox-table tr.s7-kp-first td{border-top:1px solid var(--rule)}}
-.s7-kp-rep{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.s7-kp-rep{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .s7-kp-link{background:none;border:0;padding:0;font:inherit;color:var(--sea);text-decoration:underline;cursor:pointer}
 .s7-kp-notes .pill{margin:0 4px 2px 0}
 @media (max-width:768px){
@@ -168,7 +168,7 @@ tbody tr.is-cancel td{color:var(--ink-3)}
   .s7-kp .ox-cards-phone tbody tr{background:var(--surface);border:1px solid var(--rule);margin:0 0 10px;padding:6px 0}
   .s7-kp .ox-cards-phone th,.s7-kp .ox-cards-phone td{border:0;padding:6px 16px}
   .s7-kp .ox-cards-phone [data-label]::before{content:attr(data-label);display:block;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
-  .s7-kp-rep{position:static;width:auto;height:auto;overflow:visible;clip:auto}
+  .s7-kp-rep{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
   .s7-kp-link{min-height:44px}
 }
 .s7-kp-codes{margin:0 0 10px}
