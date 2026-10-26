@@ -334,6 +334,7 @@ declare
   v_keys jsonb;
   v_other bigint;
   v_elig boolean;
+  v_load_id uuid;
 begin
   perform public.ksh_sync_require_service();
   if (p_status in ('done', 'conflict', 'skipped', 'failed')) is not true then
@@ -344,7 +345,14 @@ begin
     return 0;
   end if;
 
-  for a in select value from jsonb_array_elements(p_acks)
+  -- F7 r5 N10: sort po load_id; blokady zawsze loads → ksh_sync_outbound
+  -- (trigger blokuje loads, potem outbound — odwrotna kolejność w ack = 40P01).
+  for a in
+    select el.value
+      from jsonb_array_elements(p_acks) el(value)
+      left join public.ksh_sync_outbound o
+        on o.id = nullif(el.value->>'id', '')::bigint
+     order by o.load_id nulls last, o.id nulls last
   loop
     v_id := nullif(a->>'id', '')::bigint;
     v_rev := nullif(a->>'rev', '')::int;
@@ -356,12 +364,16 @@ begin
       continue;
     end if;
 
-    -- F7 r4 N6: blokada wiersza kolejki i loads przed wt_diff.
+    -- N10: load_id bez blokady → loads FOR UPDATE → outbound FOR UPDATE → ponowne sprawdzenie.
+    select o.load_id into v_load_id from public.ksh_sync_outbound o where o.id = v_id;
+    if v_load_id is null then
+      continue;
+    end if;
+    perform 1 from public.loads where id = v_load_id for update;
     select o.* into r from public.ksh_sync_outbound o where o.id = v_id for update;
     if r.id is null then
       continue;
     end if;
-    perform 1 from public.loads where id = r.load_id for update;
 
     -- F7 r3 N4 + r4 N5/N7/N8: rozjazd rev przy done.
     if p_status = 'done' and r.rev is distinct from v_rev then
@@ -376,9 +388,11 @@ begin
       v_keys := coalesce(v_sent, '{}'::jsonb) || coalesce(r.patch, '{}'::jsonb);
       v_diff := public.ksh_sync_outbound_wt_diff(r.load_id, v_file, v_keys);
 
-      -- N5: schedule_row + historia z sent (plik już ma te wartości).
+      -- N5 + N11: schedule_row + historia z sent tylko gdy plik naprawdę się zmienił
+      -- względem expected_file (ponowny ack ze starym rev nie duplikuje wpisu).
       v_patch := coalesce(v_sent, '{}'::jsonb);
-      if v_patch <> '{}'::jsonb then
+      if v_patch <> '{}'::jsonb
+         and v_file is distinct from coalesce(r.expected_file, '{}'::jsonb) then
         update public.shipment_items si
            set schedule_row = coalesce(si.schedule_row, '{}'::jsonb)
              || jsonb_strip_nulls(jsonb_build_object(
@@ -589,6 +603,9 @@ declare
   v_clear text[] := '{}'::text[];
   v_exp jsonb;
   v_snap jsonb;
+  v_state_snap jsonb;
+  v_exp_file jsonb;
+  v_pend_patch jsonb;
   v_code text;
   v_proj_code text;
   v_load_time text;
@@ -605,26 +622,28 @@ begin
     return new;
   end if;
 
-  -- F7 r2 BLOKER 4: migawka pliku — pomiń pole gdy nowa wartość = plik (echo TAKE_FILE itd.).
-  -- F7 r4: gdy pending ma expected_file — porównuj z nim (okno między ack a state_upsert).
+  -- F7 r2 BLOKER 4 + r5 N12: expected_file tylko dla kluczy z pending patch;
+  -- pozostałe pola porównuj z ksh_sync_state.snapshot (nie gub zmiany gdy plik poszedł dalej).
   v_code := public.load_sms_code(new.id);
-  select o.expected_file into v_snap
+  select o.expected_file, o.patch into v_exp_file, v_pend_patch
     from public.ksh_sync_outbound o
    where o.load_id = new.id and o.status = 'pending'
-     and o.expected_file is not null
    order by o.id
    limit 1;
-  if v_snap is null then
-    select s.snapshot -> v_code into v_snap
-      from public.ksh_sync_state s where s.project_id = new.project_id;
-  end if;
-  if v_snap is not null then
-    v_exp := v_snap;
+  select s.snapshot -> v_code into v_state_snap
+    from public.ksh_sync_state s where s.project_id = new.project_id;
+  -- enqueue: zachowaj najstarszą expected_file (albo snapshot gdy brak pending).
+  if v_exp_file is not null then
+    v_exp := v_exp_file;
+  elsif v_state_snap is not null then
+    v_exp := v_state_snap;
   end if;
 
   if current_setting('tower.dates_ctx', true) = 'on' then
     -- Tylko zmienione pola; NULL nie czyści komórki (pomijamy klucz).
     if new.plan_load_date is distinct from old.plan_load_date then
+      v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'load_date'
+                     then v_exp_file else v_state_snap end;
       if new.plan_load_date is not null
          and (v_snap is null or (v_snap->>'ld') is distinct from new.plan_load_date::text) then
         v_patch := v_patch || jsonb_build_object('load_date', new.plan_load_date);
@@ -637,6 +656,8 @@ begin
     if new.plan_load_from is distinct from old.plan_load_from then
       if new.plan_load_from is not null then
         v_load_time := to_char(new.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI');
+        v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'load_time'
+                       then v_exp_file else v_state_snap end;
         if (v_snap is null or (v_snap->>'lt') is distinct from v_load_time) then
           v_patch := v_patch || jsonb_build_object('load_time', v_load_time);
         elsif v_snap is not null and (v_snap->>'lt') is not distinct from v_load_time then
@@ -645,6 +666,8 @@ begin
       end if;
     end if;
     if new.plan_delivery_date is distinct from old.plan_delivery_date then
+      v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'delivery_date'
+                     then v_exp_file else v_state_snap end;
       if new.plan_delivery_date is not null
          and (v_snap is null or (v_snap->>'dd') is distinct from new.plan_delivery_date::text) then
         v_patch := v_patch || jsonb_build_object('delivery_date', new.plan_delivery_date);
@@ -657,6 +680,8 @@ begin
     if new.plan_delivery_to is distinct from old.plan_delivery_to then
       if new.plan_delivery_to is not null then
         v_deliv_time := to_char(new.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
+        v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'delivery_time'
+                       then v_exp_file else v_state_snap end;
         if (v_snap is null or (v_snap->>'dt') is distinct from v_deliv_time) then
           v_patch := v_patch || jsonb_build_object('delivery_time', v_deliv_time);
         elsif v_snap is not null and (v_snap->>'dt') is not distinct from v_deliv_time then
@@ -667,6 +692,8 @@ begin
   end if;
 
   if new.carrier_order_no is distinct from old.carrier_order_no then
+    v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'carrier_order_no'
+                   then v_exp_file else v_state_snap end;
     if nullif(btrim(new.carrier_order_no), '') is not null
        and (v_snap is null or (v_snap->>'co') is distinct from new.carrier_order_no) then
       v_patch := v_patch || jsonb_build_object('carrier_order_no', new.carrier_order_no);
@@ -676,6 +703,8 @@ begin
     end if;
   end if;
   if new.hhl_order_no is distinct from old.hhl_order_no then
+    v_snap := case when coalesce(v_pend_patch, '{}'::jsonb) ? 'hhl_order_no'
+                   then v_exp_file else v_state_snap end;
     if nullif(btrim(new.hhl_order_no), '') is not null
        and (v_snap is null or (v_snap->>'ho') is distinct from new.hhl_order_no) then
       v_patch := v_patch || jsonb_build_object('hhl_order_no', new.hhl_order_no);
@@ -920,6 +949,12 @@ declare
   v_service boolean := false;
   v_source text;
   v_hash text;
+  -- F7 r5 N9
+  v_pend jsonb;
+  v_exp_out jsonb;
+  v_f text;
+  v_exp_val text;
+  v_file_val text;
 begin
   perform public.assert_not_preview();
   -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
@@ -1302,6 +1337,34 @@ begin
                 coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
         returning id into v_import;
       end if;
+      -- F7 r5 N9: pole w pending patch — nie nadpisuj; plik ≠ expected_file → konflikt HHL.
+      v_pend := null;
+      v_exp_out := null;
+      select o.patch, o.expected_file into v_pend, v_exp_out
+        from public.ksh_sync_outbound o
+       where o.load_id = r.load_id and o.status = 'pending'
+       order by o.id
+       limit 1;
+      if v_pend is not null and v_pend <> '{}'::jsonb then
+        foreach v_f in array array['load_date','load_time','delivery_date','delivery_time','carrier_order_no','hhl_order_no']
+        loop
+          if v_f = any (v_fields) and (v_pend ? v_f) then
+            v_file_val := nullif(btrim(coalesce(r.inc->>v_f, '')), '');
+            v_exp_val := case v_f
+              when 'load_date' then nullif(btrim(coalesce(v_exp_out->>'ld', '')), '')
+              when 'load_time' then nullif(btrim(coalesce(v_exp_out->>'lt', '')), '')
+              when 'delivery_date' then nullif(btrim(coalesce(v_exp_out->>'dd', '')), '')
+              when 'delivery_time' then nullif(btrim(coalesce(v_exp_out->>'dt', '')), '')
+              when 'carrier_order_no' then nullif(btrim(coalesce(v_exp_out->>'co', '')), '')
+              when 'hhl_order_no' then nullif(btrim(coalesce(v_exp_out->>'ho', '')), '')
+            end;
+            if v_file_val is distinct from v_exp_val then
+              perform public.l1b_note_file_changed(p_project, r.load_id, r.code);
+            end if;
+            v_fields := array_remove(v_fields, v_f);
+          end if;
+        end loop;
+      end if;
       update shipment_items set
         item_type = r.inc->>'item_type', cargo_class = coalesce(r.inc->>'cargo_class', 'DIMENSIONED'), length_m = (r.inc->>'length_m')::numeric, width_m = (r.inc->>'width_m')::numeric,
         height_m = (r.inc->>'height_m')::numeric, unit_weight_t = (r.inc->>'unit_weight_t')::numeric,
@@ -1384,15 +1447,22 @@ begin
           v_new_del_to := r.plan_delivery_to;
           v_new_del_from := r.plan_delivery_from;
         end if;
-        -- Jak 0267: daty + order_no; zasoby A6 poniżej (osobny UPDATE gdy są w v_fields).
+        -- F7 r5 N9: tylko pola z v_fields (daty analogicznie do zasobów).
         update loads set
-          plan_load_date = coalesce(v_new_load_date, plan_load_date),
-          plan_delivery_date = coalesce(v_new_del_date, plan_delivery_date),
-          plan_load_from = v_new_load_from,
-          plan_load_to = v_new_load_to,
-          plan_delivery_from = v_new_del_from,
-          plan_delivery_to = v_new_del_to,
-          order_no = coalesce(nullif(btrim(coalesce(r.inc->>'order_no', '')), ''), order_no),
+          plan_load_date = case when 'load_date' = any (v_fields)
+            then coalesce(v_new_load_date, plan_load_date) else plan_load_date end,
+          plan_delivery_date = case when 'delivery_date' = any (v_fields)
+            then coalesce(v_new_del_date, plan_delivery_date) else plan_delivery_date end,
+          plan_load_from = case when 'load_date' = any (v_fields) or 'load_time' = any (v_fields)
+            then v_new_load_from else plan_load_from end,
+          plan_load_to = case when 'load_date' = any (v_fields) or 'load_time' = any (v_fields)
+            then v_new_load_to else plan_load_to end,
+          plan_delivery_from = case when 'delivery_date' = any (v_fields) or 'delivery_time' = any (v_fields)
+            then v_new_del_from else plan_delivery_from end,
+          plan_delivery_to = case when 'delivery_date' = any (v_fields) or 'delivery_time' = any (v_fields)
+            then v_new_del_to else plan_delivery_to end,
+          order_no = case when 'order_no' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'order_no', '')), ''), order_no) else order_no end,
           updated_at = now()
          where id = r.load_id;
         if v_quiet_fill or v_historic then
@@ -1400,20 +1470,29 @@ begin
         end if;
         perform set_config('tower.import_ctx', '', true);
       end if;
-      -- A6: zasoby/numery (samodzielnie albo razem ze zmianą dat)
+      -- A6: zasoby/numery — F7 r5 N9: tylko pola z v_fields.
       if (v_fields && v_res_fields) then
         -- F7 BLOKER 2 (#560): import_ctx także wokół UPDATE zasobów/numerów (bez echa do pliku).
         perform set_config('tower.import_ctx', 'on', true);
         update loads set
-          hhl_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'hhl_order_no', '')), ''), hhl_order_no),
-          carrier_order_no = coalesce(nullif(btrim(coalesce(r.inc->>'carrier_order_no', '')), ''), carrier_order_no),
-          driver_name = coalesce(nullif(btrim(coalesce(r.inc->>'driver_name', '')), ''), driver_name),
-          driver_phone = coalesce(nullif(btrim(coalesce(r.inc->>'driver_phone', '')), ''), driver_phone),
-          driver_delivery_name = coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_name', '')), ''), driver_delivery_name),
-          driver_delivery_phone = coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_phone', '')), ''), driver_delivery_phone),
-          tractor_plate = coalesce(nullif(btrim(coalesce(r.inc->>'tractor_plate', '')), ''), tractor_plate),
-          tractor_delivery_plate = coalesce(nullif(btrim(coalesce(r.inc->>'tractor_delivery_plate', '')), ''), tractor_delivery_plate),
-          trailer_plate = coalesce(nullif(btrim(coalesce(r.inc->>'trailer_plate', '')), ''), trailer_plate),
+          hhl_order_no = case when 'hhl_order_no' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'hhl_order_no', '')), ''), hhl_order_no) else hhl_order_no end,
+          carrier_order_no = case when 'carrier_order_no' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'carrier_order_no', '')), ''), carrier_order_no) else carrier_order_no end,
+          driver_name = case when 'driver_name' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'driver_name', '')), ''), driver_name) else driver_name end,
+          driver_phone = case when 'driver_phone' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'driver_phone', '')), ''), driver_phone) else driver_phone end,
+          driver_delivery_name = case when 'driver_delivery_name' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_name', '')), ''), driver_delivery_name) else driver_delivery_name end,
+          driver_delivery_phone = case when 'driver_delivery_phone' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'driver_delivery_phone', '')), ''), driver_delivery_phone) else driver_delivery_phone end,
+          tractor_plate = case when 'tractor_plate' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'tractor_plate', '')), ''), tractor_plate) else tractor_plate end,
+          tractor_delivery_plate = case when 'tractor_delivery_plate' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'tractor_delivery_plate', '')), ''), tractor_delivery_plate) else tractor_delivery_plate end,
+          trailer_plate = case when 'trailer_plate' = any (v_fields)
+            then coalesce(nullif(btrim(coalesce(r.inc->>'trailer_plate', '')), ''), trailer_plate) else trailer_plate end,
           updated_at = now()
          where id = r.load_id;
         perform set_config('tower.import_ctx', '', true);
@@ -1576,6 +1655,84 @@ DO $g$ BEGIN
 END $g$;
 
 COMMENT ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) IS
-  'I-1 import KSH. A6/0308 F7: import_ctx wokół UPDATE zasobów; service_role/HHL; SHAREPOINT; L31/zasoby/renumber/p_quiet/B5.';
+  'I-1 import KSH. A6/0308 F7: import_ctx wokół UPDATE zasobów; service_role/HHL; SHAREPOINT; L31/zasoby/renumber/p_quiet/B5; N9 tylko v_fields.';
+commit;
+
+-- ---------------------------------------------------------------------
+-- F7 r5 N12: przy nowym snapshot odśwież expected_file pending (plik poszedł dalej).
+-- ---------------------------------------------------------------------
+begin;
+create or replace function public.ksh_sync_state_upsert(
+  p_project uuid,
+  p_source_ok boolean,
+  p_last_read_at timestamptz default null,
+  p_last_write_at timestamptz default null,
+  p_last_run jsonb default null,
+  p_last_error text default null,
+  p_snapshot jsonb default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_jwt_role text;
+begin
+  if session_user not in ('postgres', 'supabase_admin') then
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    end if;
+    if (coalesce(v_jwt_role, '') = 'service_role') is not true then
+      raise exception 'ksh_sync_state_upsert — tylko Edge (service_role)' using errcode = '42501';
+    end if;
+  end if;
+  if p_project is null then
+    raise exception 'project wymagany' using errcode = '22023';
+  end if;
+  insert into public.ksh_sync_state as s (
+    project_id, source_ok, last_read_at, last_write_at, last_run, last_error, snapshot, updated_at
+  ) values (
+    p_project,
+    coalesce(p_source_ok, false),
+    p_last_read_at,
+    p_last_write_at,
+    p_last_run,
+    left(p_last_error, 500),
+    coalesce(p_snapshot, '{}'::jsonb),
+    now()
+  )
+  on conflict (project_id) do update set
+    source_ok = excluded.source_ok,
+    last_read_at = coalesce(excluded.last_read_at, s.last_read_at),
+    last_write_at = coalesce(excluded.last_write_at, s.last_write_at),
+    last_run = coalesce(excluded.last_run, s.last_run),
+    last_error = excluded.last_error,
+    snapshot = case
+      when p_snapshot is null then s.snapshot
+      else excluded.snapshot
+    end,
+    updated_at = now();
+
+  -- N12: pending expected_file ← aktualny snapshot kodu (nie gub zmiany gdy plik=X, expected=A).
+  if p_snapshot is not null then
+    update public.ksh_sync_outbound o
+       set expected_file = coalesce(o.expected_file, '{}'::jsonb)
+         || coalesce(p_snapshot -> o.shipment_code, '{}'::jsonb)
+     where o.project_id = p_project
+       and o.status = 'pending'
+       and o.expected_file is not null
+       and p_snapshot ? o.shipment_code;
+  end if;
+end;
+$$;
+
+revoke all on function public.ksh_sync_state_upsert(uuid, boolean, timestamptz, timestamptz, jsonb, text, jsonb)
+  from public, anon, authenticated;
+grant execute on function public.ksh_sync_state_upsert(uuid, boolean, timestamptz, timestamptz, jsonb, text, jsonb)
+  to service_role;
+
+comment on function public.ksh_sync_state_upsert(uuid, boolean, timestamptz, timestamptz, jsonb, text, jsonb) is
+  'A6: Edge wynik sync; F7 r5 N12 — odświeża expected_file pending ze snapshot.';
 commit;
 

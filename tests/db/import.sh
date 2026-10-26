@@ -675,6 +675,78 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
 if [ "$out" = "SNAP-C" ]; then ok=$((ok+1)); echo "  OK    A6: N5 import pliku B nie zmienia WT C"; else fail=$((fail+1)); echo "  FAIL  A6: N5 import → $out"; fi
 
+# F7 r5 N9: N5 stan + driver_name z pliku → driver OK, co zostaje C
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A', driver_name='Stary Kierowca' where id='$SG_OUT'" >/dev/null
+$PSQL -c "update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb) || jsonb_build_object('carrier_order_no','SNAP-A','driver_name','Stary Kierowca') where load_id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N9_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N9_REV=$(Q "select rev from ksh_sync_outbound where id=$N9_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+$PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N9_ID,'rev',$N9_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+commit;" >/dev/null 2>&1
+IMP_N9=$(Q "select jsonb_agg(jsonb_build_object(
+  'code','SG-01','item_type','Belka','length_m',12,'width_m',2,'height_m',2,
+  'unit_weight_t',1,'qty',1,'total_weight_t',1,
+  'load_date',l.plan_load_date::text,'delivery_date',l.plan_delivery_date::text,
+  'carrier_order_no','SNAP-B','hhl_order_no',coalesce(l.hhl_order_no,''),
+  'driver_name','Nowy Kierowca','dates_to_check',false
+)) from loads l where l.id='$SG_OUT'")
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select import_schedule('$P','$IMP_N9'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true);
+  reset role;
+  select coalesce(carrier_order_no,'')||'|'||coalesce(driver_name,'') from loads where id='$SG_OUT';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1)
+if [ "$out" = "SNAP-C|Nowy Kierowca" ]; then ok=$((ok+1)); echo "  OK    A6: N9 driver z pliku / co zostaje C"; else fail=$((fail+1)); echo "  FAIL  A6: N9 → $out"; fi
+
+# F7 r5 N11: podwójny ack na ścieżce rozjazdu → 1 wpis KSH_FILE_OUTBOUND
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "delete from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+N11_ID=$(Q "select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")
+N11_REV=$(Q "select rev from ksh_sync_outbound where id=$N11_ID")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+$PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N11_ID,'rev',$N11_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+  select ksh_sync_outbound_ack(jsonb_build_array(jsonb_build_object(
+    'id',$N11_ID,'rev',$N11_REV,'sent',jsonb_build_object('carrier_order_no','SNAP-B')
+  )),'done',null);
+commit;" >/dev/null 2>&1
+chk "A6: N11 podwójny ack rozjazd → 1 historia" "$(Q "select count(*) from load_events where load_id='$SG_OUT' and event_type='KSH_FILE_OUTBOUND'")" 1
+
+# F7 r5 N12: plik X / expected odświeżone / powrót WT do A → nie usuwa klucza pending
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-C' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+# plik poszedł na X → state_upsert odświeża expected_file
+$PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_state_upsert('$P', true, now(), null, '{}'::jsonb, null,
+    jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-X','ho',null)));
+commit;" >/dev/null 2>&1
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+chk "A6: N12 powrót A przy pliku X → pending zostaje" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 1
+
 # F7 r4 N7: skipped + nowy pending → scal, stary done
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null

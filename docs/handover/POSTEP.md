@@ -5395,3 +5395,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: F7 na `f6b83fab` — **wymaga poprawek** (N9–N12); brak „F7: gotowe”. CI `a1b98daa`: unit ✔ visual ✔ **db FAIL** `A6: N5 import → SNAP-B` (185/1) — import nadpisuje całą grupę zasobów (objaw N9). #383 CONFLICTING. Bez push na main.
 - Bieżąca: **#560** — wpis F7 r5 w PLAN §4/§8: **N9** tylko pola z `v_fields` + skip pending / konflikt gdy plik≠expected; **N10** blokady loads→outbound + sort `load_id`; **N11** historia/schedule_row tylko przy `v_file ≠ expected_file`; **N12** expected_file tylko klucze pending, reszta vs snapshot. Następny commit: kod.
+
+## 2026-10-26 05:20 — A6 #560 F7 r5: kod N9–N12
+
+- Skrzynka: #550 WSTRZYMANE. Brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- Kod F7 r5 w **0308** + testy:
+  1. **N9:** import `case when … = any(v_fields)`; skip pól z pending; konflikt gdy plik≠expected;
+  2. **N10:** ack sort po `load_id`; blokady loads → outbound;
+  3. **N11:** schedule_row/historia przy rozjeździe tylko gdy `v_file ≠ expected_file`;
+  4. **N12:** porównanie per klucz + `state_upsert` odświeża `expected_file` ze snapshot.
+- EXPECTED import **189**; testy N9/N11/N12. Push → CI → prośba F7 po zielonym.
