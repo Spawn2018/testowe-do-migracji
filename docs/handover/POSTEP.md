@@ -5659,3 +5659,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” po HEAD; #577 bez F7. Bez push na main.
 - CI `9e82d6e4`: unit/visual ✔, db FAIL (baf SEFS_WEEK_CORR 0/1 — korekta SEK w górę nie zmienia applied; dec2 katalog 24→25).
 - **#563 krok (F7 19:34):** `sefs_last_ostateczny` → PLN 7 dni przy `avg_days_pln=7`; `sefs_sek_daily_avg` / `sefs_pub_avg` — nowa reguła tylko MAX; ingest/Edge: published_on > dzień → period = data obowiązywania; wersja t44 z `sefs_params_for(…,26.10)`; dziennik z kwotami; `sefsWeek` fill 7 dni; test SEFS_WEEK_CORR korektą w dół; baf **90**; dec2 25 typów. Push PR #579 — po zielonym CI prośba o F7.
+
+## 2026-10-26 23:15 — #563 F7 #579 r2: SEFS_WEEK_CORR HHL + update/close
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); pozostałe `dla-cursora` w planie. Bez nowych do wpisania.
+- Scalanie: CI `fa5bc5d4` unit/db/visual ✔; F7 r2 (20:09) — obliczenia OK, 3 poprawki SEFS_WEEK_CORR przed znakiem. #577/#578 czekają. Bez push na main.
+- **#563 krok (F7 r2 pkt 1–3):** `decisions_read` — `SEFS_WEEK_CORR` tylko HHL; trigger — kolejna korekta UPDATE / powrót do zgodności → EXPIRED; testy negatywne (bez zmiany mnożnika, tydzień otwarty). baf EXPECTED **99**. Push PR #579 — po zielonym CI prośba o F7.

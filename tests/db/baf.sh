@@ -194,6 +194,45 @@ chk "korekta po zamknięciu nie zmienia migawki" "$(Q "select fuel_applied_mult|
 chk "#563 zamknięty: 1 sprawa SEFS_WEEK_CORR" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
 chk "#563 zamknięty: tytuł z ×stary / ×nowy / N" "$(Q "select (title ~ 'było ×')::text||'/'||(title ~ 'jest ×')::text||'/'||(title ~ 'transport')::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/true/true"
 chk "#563 zamknięty: idempotencja event_key" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")" "1"
+# F7 #579 r2 pkt 1: tylko HHL widzi SEFS_WEEK_CORR (SCX/KSH — 0)
+HHL_AUTH=11111111-0000-0000-0000-000000000001
+KSH_AUTH=11111111-0000-0000-0000-000000000002
+SCX_AUTH=11111111-0000-0000-0000-000000000003
+as_auth() { $PSQL -v ON_ERROR_STOP=1 -c "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r'; }
+chk "#563 F7r2: HHL widzi SEFS_WEEK_CORR" "$(as_auth "$HHL_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 F7r2: SCX nie widzi SEFS_WEEK_CORR" "$(as_auth "$SCX_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
+chk "#563 F7r2: KSH nie widzi SEFS_WEEK_CORR" "$(as_auth "$KSH_AUTH" "select count(*) from decisions where type_code='SEFS_WEEK_CORR'")" "0"
+# F7 #579 r2 pkt 2: druga korekta aktualizuje otwartą; powrót do zgodności → EXPIRED
+# (21,50 vs 30,00 — wyraźnie inny mnożnik / over_table)
+CORR1_NEW=$(Q "select (detail->>'new_mult')::numeric(4,2)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, 30.00, source_url, 'korekta 2 inny próg', id, 'test F7r2 update'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
+chk "#563 F7r2: nadal 1 sprawa po 2. korekcie" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "1"
+chk "#563 F7r2: 2. korekta zaktualizowała new_mult" "$(Q "select ((detail->>'new_mult')::numeric(4,2)::text is distinct from '$CORR1_NEW')::text||'/'||status::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "true/NEW"
+chk "#563 F7r2: event UPDATE po 2. korekcie" "$(Q "select count(*) from decision_events e join decisions d on d.id=e.decision_id where d.detail->>'event_key'='563:fuel-corr:$P:2026-10-05' and e.action='UPDATE'")" "1"
+# Przywróć cenę źródłową → mnożnik = migawka → zamknięcie
+ORIG_SEK=$(Q "select value::text from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, $ORIG_SEK::numeric, source_url, 'korekta 3 powrót', id, 'test F7r2 agree'
+    from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
+chk "#563 F7r2: powrót do zgodności → EXPIRED" "$(Q "select status::text||'/'||(expired_reason is not null)::text from decisions where detail->>'event_key'='563:fuel-corr:$P:2026-10-05'")" "EXPIRED/true"
+# F7 #579 r2 pkt 3: korekta bez zmiany mnożnika → brak nowej sprawy; tydzień otwarty → brak
+N_BEFORE=$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")
+# Korekta SEK w t42 (zamknięty) o wartość w tym samym progu co już applied na LNX — najpierw upewnij się że LNX ma OSTATECZNY
+# tu: korekta PLN 05.10 bez wpływu na applied (wygrywa SEK) gdy SEK już przywrócony
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  select project_id, index_code, period, reading_date, value, source_url, 'korekta PLN bez zmiany applied', published_on, id, 'test F7r2 no-mult'
+    from fuel_index_readings where project_id='$P' and index_code='PLN' and period='2026-10-05' and corrects_id is null limit 1"
+chk "#563 F7r2: korekta bez zmiany mnożnika → bez nowej sprawy" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and project_id='$P'")" "$N_BEFORE"
+# Tydzień otwarty = bieżący ISO (Europe/Warsaw): korekta nie otwiera sprawy
+OPEN_D=$(Q "select (timezone('Europe/Warsaw', now()))::date::text")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  values ('$P','SEK','$OPEN_D','$OPEN_D'::date,22.00,'https://www.okq8.se/foretag/priser/','open-week base','$OPEN_D'::date)"
+OPEN_OID=$(Q "select id from fuel_index_readings where project_id='$P' and index_code='SEK' and period='$OPEN_D' and corrects_id is null order by id desc limit 1")
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on, corrects_id, correction_reason)
+  values ('$P','SEK','$OPEN_D','$OPEN_D'::date,18.00,'https://www.okq8.se/foretag/priser/','open-week corr','$OPEN_D'::date,'$OPEN_OID','test F7r2 open week')"
+chk "#563 F7r2: korekta w tygodniu otwartym → brak sprawy" "$(Q "select count(*) from decisions where type_code='SEFS_WEEK_CORR' and detail->>'event_key' like '563:fuel-corr:$P:%' and detail->>'period'='$OPEN_D'")" "0"
 
 # Nowa wersja tabeli od 12.10 → stare transporty bez zmian
 sys "insert into sefs_parameters (project_id, version, valid_from, rule, base_sek, base_pln, index_sek, index_pln, source_url_sek, source_url_pln, cycle, tiers_sek, tiers_pln, agreed_with_carrier, note, applies_to)

@@ -1095,6 +1095,11 @@ declare
   v_n int;
   v_week text;
   v_title text;
+  v_key text;
+  v_id uuid;
+  v_st decision_status;
+  v_detail jsonb;
+  v_agree boolean;
 begin
   if (new.corrects_id is not null) is not true then
     return new;
@@ -1141,10 +1146,12 @@ begin
     return new;
   end if;
   v_new := (v_w->>'applied_mult')::numeric;
-  if (v_new is not null and round(v_old, 4) is distinct from round(v_new, 4)) is not true then
+  if v_new is null then
     return new;
   end if;
 
+  v_key := '563:fuel-corr:' || new.project_id::text || ':' || v_ind_start::text;
+  v_agree := round(v_old, 4) = round(v_new, 4);
   v_week := ltrim(to_char(v_load_start, 'IW'), '0');
   v_title := format(
     'Korekta ceny paliwa zmienia mnożnik tygodnia %s: było ×%s, jest ×%s — %s transportów',
@@ -1153,29 +1160,102 @@ begin
     trim(to_char(v_new, '990.99')),
     v_n::text
   );
-
-  perform public.decision_open_from_event(
-    new.project_id,
-    'SEFS_WEEK_CORR',
-    '563:fuel-corr:' || new.project_id::text || ':' || v_ind_start::text,
-    v_title,
-    jsonb_build_object(
-      'ind_week_start', v_ind_start,
-      'ind_week_end', v_ind_end,
-      'load_week_start', v_load_start,
-      'load_week_end', v_load_end,
-      'old_mult', v_old,
-      'new_mult', v_new,
-      'n_loads', v_n,
-      'index_code', new.index_code,
-      'period', new.period,
-      'reading_id', new.id,
-      'corrects_id', new.corrects_id,
-      'source', '0310_563'
-    ),
-    null,
-    null
+  v_detail := jsonb_build_object(
+    'ind_week_start', v_ind_start,
+    'ind_week_end', v_ind_end,
+    'load_week_start', v_load_start,
+    'load_week_end', v_load_end,
+    'old_mult', v_old,
+    'new_mult', v_new,
+    'n_loads', v_n,
+    'index_code', new.index_code,
+    'period', new.period,
+    'reading_id', new.id,
+    'corrects_id', new.corrects_id,
+    'source', '0310_563',
+    'event_key', v_key
   );
+
+  select d.id, d.status into v_id, v_st
+    from decisions d
+   where d.detail->>'event_key' = v_key
+   order by d.created_at desc, d.id desc
+   limit 1;
+
+  -- Powrót do zgodności z migawką → zamknij otwartą sprawę (F7 #579 r2 pkt 2).
+  if v_agree then
+    if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
+      update decisions
+         set status = 'EXPIRED',
+             expired_reason = format(
+               'Korekta przywróciła mnożnik ×%s (zgodny z migawką) — sprawa zamknięta automatycznie',
+               trim(to_char(v_old, '990.99'))),
+             title = v_title,
+             detail = coalesce(detail, '{}'::jsonb) || v_detail
+               || jsonb_build_object('closed_by', 'auto_agree', 'closed_at', now()),
+             updated_at = now()
+       where id = v_id;
+      insert into decision_events (decision_id, actor_id, action, payload)
+      values (
+        v_id, null, 'EXPIRE',
+        jsonb_build_object(
+          'reason', 'auto_agree',
+          'old_mult', v_old, 'new_mult', v_new,
+          'reading_id', new.id, 'event_key', v_key
+        )
+      );
+    end if;
+    return new;
+  end if;
+
+  -- Inny mnożnik: otwórz / zaktualizuj / wznów zamkniętą (F7 #579 r2 pkt 2).
+  if v_id is not null and v_st in ('NEW', 'ASSIGNED', 'SNOOZED') then
+    update decisions
+       set title = v_title,
+           detail = coalesce(detail, '{}'::jsonb) || v_detail,
+           updated_at = now()
+     where id = v_id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (
+      v_id, null, 'UPDATE',
+      jsonb_build_object(
+        'old_mult', v_old, 'new_mult', v_new, 'n_loads', v_n,
+        'reading_id', new.id, 'event_key', v_key
+      )
+    );
+  elsif v_id is not null and v_st in ('RESOLVED', 'EXPIRED') then
+    update decisions
+       set status = 'NEW',
+           resolved_at = null,
+           resolved_by = null,
+           resolution_code = null,
+           resolution_note = null,
+           expired_reason = null,
+           title = v_title,
+           detail = coalesce(detail, '{}'::jsonb) || v_detail
+             || jsonb_build_object('reopened_by', 'correction', 'reopened_at', now()),
+           updated_at = now()
+     where id = v_id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (
+      v_id, null, 'OPEN',
+      jsonb_build_object(
+        'reopen', true,
+        'old_mult', v_old, 'new_mult', v_new,
+        'reading_id', new.id, 'event_key', v_key
+      )
+    );
+  else
+    perform public.decision_open_from_event(
+      new.project_id,
+      'SEFS_WEEK_CORR',
+      v_key,
+      v_title,
+      v_detail - 'event_key',
+      null,
+      null
+    );
+  end if;
   return new;
 end $$;
 
@@ -1189,6 +1269,42 @@ create trigger trg_fuel_correction_closed_week
   execute function public.sefs_note_closed_week_on_correction();
 
 comment on function public.sefs_note_closed_week_on_correction() is
-  '#563: po korekcie ceny w zamkniętym tygodniu wskaźników — sprawa HHL SEFS_WEEK_CORR; migawki OSTATECZNY bez cichej zmiany.';
+  '#563/F7 r2: zamknięty tydzień → SEFS_WEEK_CORR (tylko HHL); kolejna korekta aktualizuje/zamyka; bez zmiany mnożnika i w tygodniu otwartym — nic.';
+
+-- F7 #579 r2 pkt 1: SEFS_WEEK_CORR (load_id null, decider HHL) — tylko HHL; SCX/KSH nie widzą.
+drop policy if exists decisions_read on public.decisions;
+create policy decisions_read on public.decisions for select to authenticated using (
+  current_app_user_id() is not null
+  and (
+    is_hhl()
+    or (
+      current_org_kind() = 'CARRIER'
+      and decisions.type_code is distinct from 'SEFS_WEEK_CORR'
+      and exists (
+        select 1 from decision_types t
+         where t.code = decisions.type_code
+           and t.decider_role in ('CARRIER', 'HHL')
+           and (
+             (decisions.load_id is null
+              and exists (
+                select 1 from loads l
+                 where l.project_id = decisions.project_id
+                   and l.carrier_org_id = current_org_id()))
+             or exists (
+               select 1 from loads l
+                where l.id = decisions.load_id
+                  and l.carrier_org_id = current_org_id()))))
+    or (
+      current_org_kind() = 'CLIENT'
+      and exists (
+        select 1 from decision_types t
+         where t.code = decisions.type_code
+           and t.decider_role = 'CLIENT'
+           and exists (
+             select 1 from projects p
+              where p.id = decisions.project_id
+                and p.client_org_id = current_org_id())))
+  )
+);
 
 commit;
