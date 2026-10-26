@@ -551,5 +551,30 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
   select expected_file->>'co' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "OLD" ]; then ok=$((ok+1)); echo "  OK    A6: expected_file najstarsza"; else fail=$((fail+1)); echo "  FAIL  A6: expected_file → $out"; fi
+# F7 r2b N1: A→B→A (powrót do migawki) usuwa klucz z pending
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+  update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
+  select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no');
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    A6: A→B→A → 0 kluczy pending"; else fail=$((fail+1)); echo "  FAIL  A6: A→B→A → $out"; fi
+# kontrola pozytywna A→B → 1 klucz
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set carrier_order_no='SNAP-B' where id='$SG_OUT';
+  select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no');
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: A→B → 1 klucz pending"; else fail=$((fail+1)); echo "  FAIL  A6: A→B → $out"; fi
+# F7 r2b N3: import_set(false) → write_enabled=false + pending skipped
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  select ksh_sync_import_set(true); select ksh_sync_write_set(true);
+  update loads set carrier_order_no='PEND-1' where id='$SG_OUT';
+commit;" >/dev/null 2>&1
+val "A6: import_set false wyłącza write" $HHL "select ksh_sync_import_set(false); select write_enabled from ksh_sync_state where project_id='$P'" f commit
+chk "A6: import_set false → pending skipped" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='skipped' and last_error='import_disabled'")" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

@@ -5328,3 +5328,13 @@ Tempo 3 dni: ~1â€“2 paczki bazy/dzieÅ„ przy 1â€“3 rundach F7; wyglÄ…d koordynato
 - Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
 - Scalanie: F7 na `d60f171a` — **wymaga poprawek** (N1 bloker + N2/N3 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
 - Bie¿¹ca: **#560** — wpis F7 r2b w PLAN §4/§8 (N1: A›B›A usuwa klucz z pending; N2: data+godzina w komórce; N3: `import_set(false)` › `write_enabled=false` + pending skipped; uwagi: `write_test_ok_at` check, `pickSharePointMode`, czêœciowa ³atka multi-kod, styl z s¹siada). Nastêpny commit: kod.
+
+## 2026-10-26 02:55 — A6 #560 F7 runda 2b: kod N1–N3
+
+- Skrzynka: #550 WSTRZYMANE. Brak „F7: gotowe”. Bez push na main.
+- Kod F7 r2b w **0308** + Edge/unit:
+  1. **N1:** powrót do migawki usuwa klucz z pending; pusty › `skipped/reverted_to_file`; test A›B›A / A›B;
+  2. **N2:** data+godzina w komórce — zachowaj u³amek / czêœæ ca³kowit¹;
+  3. **N3:** `ksh_sync_import_set(false)` › `write_enabled=false` + pending `import_disabled`;
+  + `pickSharePointMode`, check `write_test_ok_at`, czêœciowa ³atka multi-kod, styl z s¹siada.
+- EXPECTED import **177**; unit `ksh-sharepoint-write` 17/17. Push po koñcu CI na poprzednim SHA › proœba F7 po zielonym.

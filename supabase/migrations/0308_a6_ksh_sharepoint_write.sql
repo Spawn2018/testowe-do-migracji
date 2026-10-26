@@ -344,12 +344,14 @@ set search_path = public
 as $$
 declare
   v_patch jsonb := '{}'::jsonb;
+  v_clear text[] := '{}'::text[];
   v_exp jsonb;
   v_snap jsonb;
   v_code text;
   v_proj_code text;
   v_load_time text;
   v_deliv_time text;
+  v_k text;
 begin
   if current_setting('tower.import_ctx', true) = 'on' then
     return new;
@@ -371,42 +373,79 @@ begin
 
   if current_setting('tower.dates_ctx', true) = 'on' then
     -- Tylko zmienione pola; NULL nie czyści komórki (pomijamy klucz).
-    if new.plan_load_date is distinct from old.plan_load_date
-       and new.plan_load_date is not null
-       and (v_snap is null or (v_snap->>'ld') is distinct from new.plan_load_date::text) then
-      v_patch := v_patch || jsonb_build_object('load_date', new.plan_load_date);
-    end if;
-    if new.plan_load_from is distinct from old.plan_load_from
-       and new.plan_load_from is not null then
-      v_load_time := to_char(new.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI');
-      if (v_snap is null or (v_snap->>'lt') is distinct from v_load_time) then
-        v_patch := v_patch || jsonb_build_object('load_time', v_load_time);
+    if new.plan_load_date is distinct from old.plan_load_date then
+      if new.plan_load_date is not null
+         and (v_snap is null or (v_snap->>'ld') is distinct from new.plan_load_date::text) then
+        v_patch := v_patch || jsonb_build_object('load_date', new.plan_load_date);
+      elsif v_snap is not null
+         and (v_snap->>'ld') is not distinct from new.plan_load_date::text then
+        -- F7 r2b N1: powrót do wartości z pliku → usuń klucz z pending.
+        v_clear := array_append(v_clear, 'load_date');
       end if;
     end if;
-    if new.plan_delivery_date is distinct from old.plan_delivery_date
-       and new.plan_delivery_date is not null
-       and (v_snap is null or (v_snap->>'dd') is distinct from new.plan_delivery_date::text) then
-      v_patch := v_patch || jsonb_build_object('delivery_date', new.plan_delivery_date);
+    if new.plan_load_from is distinct from old.plan_load_from then
+      if new.plan_load_from is not null then
+        v_load_time := to_char(new.plan_load_from at time zone 'Europe/Warsaw', 'HH24:MI');
+        if (v_snap is null or (v_snap->>'lt') is distinct from v_load_time) then
+          v_patch := v_patch || jsonb_build_object('load_time', v_load_time);
+        elsif v_snap is not null and (v_snap->>'lt') is not distinct from v_load_time then
+          v_clear := array_append(v_clear, 'load_time');
+        end if;
+      end if;
+    end if;
+    if new.plan_delivery_date is distinct from old.plan_delivery_date then
+      if new.plan_delivery_date is not null
+         and (v_snap is null or (v_snap->>'dd') is distinct from new.plan_delivery_date::text) then
+        v_patch := v_patch || jsonb_build_object('delivery_date', new.plan_delivery_date);
+      elsif v_snap is not null
+         and (v_snap->>'dd') is not distinct from new.plan_delivery_date::text then
+        v_clear := array_append(v_clear, 'delivery_date');
+      end if;
     end if;
     -- F7 BLOKER 3: rozładunek = plan_delivery_to (Europe/Stockholm), nie from.
-    if new.plan_delivery_to is distinct from old.plan_delivery_to
-       and new.plan_delivery_to is not null then
-      v_deliv_time := to_char(new.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
-      if (v_snap is null or (v_snap->>'dt') is distinct from v_deliv_time) then
-        v_patch := v_patch || jsonb_build_object('delivery_time', v_deliv_time);
+    if new.plan_delivery_to is distinct from old.plan_delivery_to then
+      if new.plan_delivery_to is not null then
+        v_deliv_time := to_char(new.plan_delivery_to at time zone 'Europe/Stockholm', 'HH24:MI');
+        if (v_snap is null or (v_snap->>'dt') is distinct from v_deliv_time) then
+          v_patch := v_patch || jsonb_build_object('delivery_time', v_deliv_time);
+        elsif v_snap is not null and (v_snap->>'dt') is not distinct from v_deliv_time then
+          v_clear := array_append(v_clear, 'delivery_time');
+        end if;
       end if;
     end if;
   end if;
 
-  if new.carrier_order_no is distinct from old.carrier_order_no
-     and nullif(btrim(new.carrier_order_no), '') is not null
-     and (v_snap is null or (v_snap->>'co') is distinct from new.carrier_order_no) then
-    v_patch := v_patch || jsonb_build_object('carrier_order_no', new.carrier_order_no);
+  if new.carrier_order_no is distinct from old.carrier_order_no then
+    if nullif(btrim(new.carrier_order_no), '') is not null
+       and (v_snap is null or (v_snap->>'co') is distinct from new.carrier_order_no) then
+      v_patch := v_patch || jsonb_build_object('carrier_order_no', new.carrier_order_no);
+    elsif v_snap is not null
+       and (v_snap->>'co') is not distinct from new.carrier_order_no then
+      v_clear := array_append(v_clear, 'carrier_order_no');
+    end if;
   end if;
-  if new.hhl_order_no is distinct from old.hhl_order_no
-     and nullif(btrim(new.hhl_order_no), '') is not null
-     and (v_snap is null or (v_snap->>'ho') is distinct from new.hhl_order_no) then
-    v_patch := v_patch || jsonb_build_object('hhl_order_no', new.hhl_order_no);
+  if new.hhl_order_no is distinct from old.hhl_order_no then
+    if nullif(btrim(new.hhl_order_no), '') is not null
+       and (v_snap is null or (v_snap->>'ho') is distinct from new.hhl_order_no) then
+      v_patch := v_patch || jsonb_build_object('hhl_order_no', new.hhl_order_no);
+    elsif v_snap is not null
+       and (v_snap->>'ho') is not distinct from new.hhl_order_no then
+      v_clear := array_append(v_clear, 'hhl_order_no');
+    end if;
+  end if;
+
+  -- F7 r2b N1: usuń z pending klucze przywrócone do migawki; pusty patch → skipped.
+  if cardinality(v_clear) > 0 then
+    foreach v_k in array v_clear loop
+      update public.ksh_sync_outbound
+         set patch = patch - v_k
+       where load_id = new.id and status = 'pending' and patch ? v_k;
+    end loop;
+    update public.ksh_sync_outbound
+       set status = 'skipped',
+           done_at = now(),
+           last_error = 'reverted_to_file'
+     where load_id = new.id and status = 'pending' and patch = '{}'::jsonb;
   end if;
 
   if v_patch = '{}'::jsonb then
@@ -496,6 +535,67 @@ grant execute on function public.ksh_sync_write_set(boolean) to authenticated;
 
 comment on function public.ksh_sync_write_set(boolean) is
   'A6: przełącznik zapisu WT→plik; wymaga import_enabled; przy true zaległe pending→skipped; HHL_ADMIN+2FA.';
+
+-- F7 r2b N3: wyłączenie importu wyłącza też zapis + czyści pending (bez zaległości).
+create or replace function public.ksh_sync_import_set(p_enabled boolean)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_me uuid;
+  v_role public.user_role;
+  v_pid uuid;
+begin
+  perform public.assert_not_preview();
+  select id, role into v_me, v_role
+    from public.app_users
+   where auth_id = auth.uid() and active;
+  if (v_me is not null and v_role = 'HHL_ADMIN' and public.mfa_satisfied(v_role) is true) is not true then
+    raise exception 'Tylko Administrator HHL z 2FA' using errcode = '42501';
+  end if;
+  select id into v_pid from public.projects
+   where code in ('STEGRA_BODEN', 'STEGRA')
+   order by case code when 'STEGRA_BODEN' then 0 else 1 end
+   limit 1;
+  if v_pid is null then
+    raise exception 'Brak projektu KSH (STEGRA_BODEN)' using errcode = 'P0002';
+  end if;
+  if coalesce(p_enabled, false) is not true then
+    insert into public.ksh_sync_state (project_id, import_enabled, write_enabled)
+    values (v_pid, false, false)
+    on conflict (project_id) do update
+      set import_enabled = false,
+          write_enabled = false,
+          updated_at = now();
+    update public.ksh_sync_outbound
+       set status = 'skipped',
+           done_at = now(),
+           last_error = 'import_disabled'
+     where project_id = v_pid and status = 'pending';
+  else
+    insert into public.ksh_sync_state (project_id, import_enabled)
+    values (v_pid, true)
+    on conflict (project_id) do update
+      set import_enabled = true, updated_at = now();
+  end if;
+  insert into public.audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    v_me, 'KSH_SYNC_IMPORT_SET', 'ksh_sync_state', v_pid::text,
+    jsonb_build_object(
+      'import_enabled', coalesce(p_enabled, false),
+      'write_enabled_cleared', (coalesce(p_enabled, false) is not true)
+    )
+  );
+end;
+$$;
+
+revoke all on function public.ksh_sync_import_set(boolean) from public, anon;
+grant execute on function public.ksh_sync_import_set(boolean) to authenticated;
+
+comment on function public.ksh_sync_import_set(boolean) is
+  'A6 F7: przełącznik importu SharePoint→WT; przy false także write_enabled=false i pending→skipped; HHL_ADMIN+2FA.';
 
 commit;
 

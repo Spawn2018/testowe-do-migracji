@@ -294,4 +294,84 @@ describe('A6 xlsxPatch JSZip', () => {
       expect(r.skipped).toBe(1);
     }
   });
+
+  it('F7 r2b N2: data na komórce z ułamkiem zachowuje godzinę', async () => {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
+    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`);
+    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`);
+    const h = COLUMN_MAP_DEFAULT;
+    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
+      <c r="B1" t="inlineStr"><is><t>${h.loadDate}</t></is></c>
+    </row>
+    <row r="2">
+      <c r="A2" t="inlineStr"><is><t>SG-DT</t></is></c>
+      <c r="B2"><v>46000.333</v></c>
+    </row>
+  </sheetData>
+</worksheet>`);
+    const bytes = await zip.generateAsync({ type: 'uint8array' });
+    const r = await patchWorkbookBytes(
+      bytes,
+      [{ code: 'SG-DT', load_date: '2026-12-01' }],
+      (b) => JSZip.loadAsync(b),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const out = await JSZip.loadAsync(r.bytes);
+    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
+    // 2026-12-01 serial = 46357; +0.333 z poprzedniej godziny
+    expect(sheet1).toMatch(/<c r="B2"[^>]*><v>46357\.333<\/v>/);
+  });
+
+  it('F7 r2b N2: godzina na komórce całkowitej dokłada ułamek', async () => {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
+    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`);
+    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`);
+    const h = COLUMN_MAP_DEFAULT;
+    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
+      <c r="B1" t="inlineStr"><is><t>${h.loadTime}</t></is></c>
+    </row>
+    <row r="2">
+      <c r="A2" t="inlineStr"><is><t>SG-TM</t></is></c>
+      <c r="B2"><v>46357</v></c>
+    </row>
+  </sheetData>
+</worksheet>`);
+    const bytes = await zip.generateAsync({ type: 'uint8array' });
+    const r = await patchWorkbookBytes(
+      bytes,
+      [{ code: 'SG-TM', load_time: '08:00' }],
+      (b) => JSZip.loadAsync(b),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const out = await JSZip.loadAsync(r.bytes);
+    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
+    // 8/24 = 0.333...
+    expect(sheet1).toMatch(/<c r="B2"[^>]*><v>46357\.3/);
+  });
 });

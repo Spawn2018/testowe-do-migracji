@@ -283,6 +283,18 @@ function insertOrReplaceCell(sheet: SheetModel, ref: string, cellXml: string): b
   return true;
 }
 
+/** F7 r2b: nowa komórka daty bez stylu → weź s= z sąsiada tej kolumny. */
+function neighborExtra(sheet: SheetModel, colIdx: number, row: number): string {
+  for (const dr of [-1, 1, -2, 2]) {
+    const r = row + dr;
+    if (r < 2) continue;
+    const ref = `${indexToColLetters(colIdx)}${r}`;
+    const c = sheet.cells.get(ref);
+    if (c?.extra) return c.extra;
+  }
+  return '';
+}
+
 function setCellValue(
   sheet: SheetModel,
   row: number,
@@ -300,7 +312,7 @@ function setCellValue(
     : prev?.kind === 'number' && typeof value === 'string'
     ? 'inline'
     : (prev?.kind === 'shared' ? 'inline' : (prev?.kind ?? 'inline'));
-  const extra = prev?.extra ?? '';
+  const extra = prev?.extra || neighborExtra(sheet, colIdx, row);
   const xml = buildCellXml(ref, kind === 'shared' ? 'inline' : kind, value, extra);
   if (!insertOrReplaceCell(sheet, ref, xml)) return false;
   sheet.cells.set(ref, {
@@ -354,8 +366,13 @@ export async function patchWorkbookBytes(
       if (prev?.kind === 'inline' || prev?.kind === 'str' || prev?.kind === 'shared') {
         const text = formatDateTextFromIso(iso, prev.text);
         if (text && setCellValue(sheet, rowNum, header, text)) changed = true;
-      } else if (setCellValue(sheet, rowNum, header, serial)) {
-        changed = true;
+      } else {
+        // F7 r2b N2: komórka data+godzina (ułamek) — zachowaj część czasu.
+        const prevNum = prev?.kind === 'number' ? prev.num : null;
+        const frac = prevNum != null && !Number.isInteger(prevNum)
+          ? prevNum - Math.floor(prevNum)
+          : 0;
+        if (setCellValue(sheet, rowNum, header, serial + frac)) changed = true;
       }
     };
     const applyTime = (header: string, hm: string | null | undefined, present: boolean) => {
@@ -369,7 +386,9 @@ export async function patchWorkbookBytes(
       if (prev?.kind === 'number') {
         const frac = excelTimeFractionFromHm(norm);
         if (frac == null) return;
-        if (setCellValue(sheet, rowNum, header, frac)) changed = true;
+        // F7 r2b N2: zachowaj część daty (całkowitą) z poprzedniej wartości.
+        const day = Math.floor(prev.num ?? 0);
+        if (setCellValue(sheet, rowNum, header, day + frac)) changed = true;
       } else if (setCellValue(sheet, rowNum, header, norm)) {
         changed = true;
       }

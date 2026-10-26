@@ -10,6 +10,7 @@ import { isServiceRequest } from '../_shared/serviceAuth.ts';
 import {
   downloadSharePointFile,
   hasSharePointSecrets,
+  pickSharePointMode,
   type GraphEnv,
 } from '../_shared/ksh/graph.ts';
 import { parseWorkbookBytes, sha256Hex } from '../_shared/ksh/applyImport.ts';
@@ -116,7 +117,7 @@ async function handle(req: Request): Promise<Response> {
   const importEnabled = prev?.import_enabled === true;
   const writeEnabled = prev?.write_enabled === true;
   const writeTestOkAt = prev?.write_test_ok_at ?? null;
-  const fileMode = env.SHAREPOINT_FILE_MODE === 'test' ? 'test' as const : 'prod' as const;
+  const fileMode = pickSharePointMode(env.SHAREPOINT_FILE_MODE);
   const prevHash = typeof prev?.last_run?.hash === 'string' ? prev.last_run.hash : null;
   const prevFirstErrorAt =
     typeof prev?.last_run?.first_error_at === 'string' ? prev.last_run.first_error_at : null;
@@ -147,11 +148,19 @@ async function handle(req: Request): Promise<Response> {
       writeTestOkAt,
     });
     if (res.mark_write_test_ok) {
-      await sb
+      const okAt = await sb
         .from('ksh_sync_state')
         .update({ write_test_ok_at: new Date().toISOString() })
         .eq('project_id', projectId)
         .is('write_test_ok_at', null);
+      if (okAt.error) {
+        return {
+          ...res,
+          upload_ok: false,
+          reason: 'write_test_ok_at',
+          write_reason: 'write_test_ok_at',
+        };
+      }
     }
     return res;
   };

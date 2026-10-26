@@ -162,25 +162,25 @@ export async function processOutboundWrites(args: {
     const codes = patchCodes(it);
     const primary = codes[0] ?? it.code;
 
-    // F7 r2: PUT zgubiony — plik już ma łatkę.
-    const allApplied = codes.every((code) =>
-      fileAlreadyHasPatch(expected!, { code, ...it.patch }, args.fileSnapshot[code] ?? null)
+    // F7 r2 / r2b: PUT zgubiony lub częściowa łatka — pomiń kody już w pliku.
+    const remaining = codes.filter((code) =>
+      !fileAlreadyHasPatch(expected!, { code, ...it.patch }, args.fileSnapshot[code] ?? null)
     );
-    if (allApplied && codes.length > 0) {
+    if (codes.length > 0 && remaining.length === 0) {
       alreadyDone.push(it);
       continue;
     }
 
-    const anyCodeInFile = codes.some((c) => args.fileSnapshot[c]);
+    const anyCodeInFile = (remaining.length ? remaining : codes).some((c) => args.fileSnapshot[c]);
     if (!anyCodeInFile) {
       skipIds.push(Number(it.id));
       skipReasons.set(Number(it.id), 'KSH_ROW_GONE');
       continue;
     }
 
-    // F7 r2 UWAGA: konflikt dla każdego łatanego kodu.
+    // F7 r2 UWAGA: konflikt tylko dla kodów jeszcze nie zastosowanych.
     let conflict = false;
-    for (const code of codes) {
+    for (const code of remaining) {
       const current = args.fileSnapshot[code] ?? null;
       if (fileRowChangedSinceRead(expected, current)) {
         conflict = true;
@@ -202,7 +202,7 @@ export async function processOutboundWrites(args: {
       }
       continue;
     }
-    toWrite.push(it);
+    toWrite.push({ ...it, codes: remaining.length ? remaining : codes });
   }
 
   if (alreadyDone.length) {
