@@ -5345,3 +5345,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” po `c204854a` (ostatni F7 = wymaga poprawek na `d60f171a`). #383 CONFLICTING. Bez push na main.
 - CI HEAD `c204854a`: unit ✔ (`40251900611` / `40251895707`) visual ✔ (`40251900582`) db ✔ (`40251900609`, 10m20s).
 - Bieżąca: **#560** — F7 r2b (N1–N3 + uwagi) na `c204854a`; prośba o F7: gotowe do scalenia. Po F7: odbiór pliku testowego (liczby przed → po → przywrócone).
+
+## 2026-10-26 03:45 — A6 #560 F7 runda 3: N4 (docs)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: F7 na `c204854a` — **wymaga poprawek** (BLOKER N4 + uwagi); brak „F7: gotowe”. #383 CONFLICTING. Bez push na main.
+- CI HEAD `3b98f70b` (docs po `c204854a`): unit ✔ visual ✔ db ✔ (`40253711028`, 19m49s).
+- Bieżąca: **#560** — wpis F7 r3 w PLAN §4/§8: `rev` na outbound; list zwraca `rev`; ack `(id,rev,sent)`; przy rozjeździe → pending z różnicą WT≠sent + `expected_file=sent`; `schedule_row` z `sent`; testy B→C / A→A / done; uwagi NULL nie czyści + float 1e-9. Następny commit: kod.
