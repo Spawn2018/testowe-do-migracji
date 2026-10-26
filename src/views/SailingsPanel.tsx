@@ -151,7 +151,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             <dt>{t(locale, 'sail_col_route')}</dt>
             <dd>
               <select name="route" className="input" defaultValue="GDN-NYN">
-                {/* BN9-a: trasy z katalogu promów — dzisiejsze cztery w tej samej kolejności, potem nowe wyjazdowe i powroty */}
+                {/* BN9-a: trasy z katalogu promów — dzisiejsze cztery w tej samej kolejności, potem nowe wyjazdowe i powroty.
+                    Świadomy wyjątek od zasady „nowe tylko gdy są dane”: ręczny rejs nowej trasy musi dać się dodać. */}
                 {FERRY_ROUTE_OPTIONS.map((r) => <option key={r.code} value={r.code}>{ferryRouteName('pl', r.from, r.to)}</option>)}
               </select>
             </dd>

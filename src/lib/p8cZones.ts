@@ -6,12 +6,20 @@
  * Czyste funkcje widoku — bez zapytań i zapisów.
  */
 import type { Geofence, GeofenceType, Load } from '../types';
-import type { FerryOperator } from './ferryCatalog';
+import { LEGACY_OPERATORS, type FerryOperator } from './ferryCatalog';
 
 export type ZoneGroup = 'srem' | 'gdansk' | 'gdynia' | 'se_ports' | 'boden' | 'other';
 export const ZONE_GROUPS: readonly ZoneGroup[] = ['srem', 'gdansk', 'gdynia', 'se_ports', 'boden', 'other'];
 /** Trasa promowa strefy = armator z katalogu promów (BN9-a). */
 export type ZoneRoute = FerryOperator;
+
+/**
+ * BN9-a: armatorzy do wyboru w formularzu strefy — Polferries i Stena zawsze (kolejność jak dotąd); armator z katalogu
+ * promów spoza tej pary tylko wtedy, gdy strefa już go ma (żeby nie pokazał się jako Polferries i nie nadpisał przy zapisie).
+ */
+export function zoneRouteOptions(current: ZoneRoute | null | undefined): ZoneRoute[] {
+  return current && !LEGACY_OPERATORS.includes(current) ? [...LEGACY_OPERATORS, current] : [...LEGACY_OPERATORS];
+}
 
 /** 6 rodzajów, które działają (E34 „Porządek”). */
 export const ZONE_KINDS: readonly GeofenceType[] = ['LOADING', 'PRE_ARRIVAL', 'PRE_PORT', 'PORT_OUT', 'PORT_IN', 'SITE'];

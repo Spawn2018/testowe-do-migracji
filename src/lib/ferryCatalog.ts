@@ -36,6 +36,8 @@ export interface FerryPortDef {
   lng: number;
   /** klucz nazwy w słowniku (`portName`) */
   nameKey: `p3a_port_${FerryPortCode}`;
+  /** porty wyjazdowe: godziny „Śrem → port + odprawa” (awizacja, „zdąży na rejs”) */
+  clearanceH?: number;
 }
 
 export interface FerryOperatorDef {
@@ -60,16 +62,17 @@ export interface FerryRouteDef {
 }
 
 export const FERRY_PORTS: readonly FerryPortDef[] = [
-  { code: 'GDN', country: 'PL', lat: 54.4, lng: 18.67, nameKey: 'p3a_port_GDN' },
-  { code: 'GDY', country: 'PL', lat: 54.533, lng: 18.54, nameKey: 'p3a_port_GDY' },
+  { code: 'GDN', country: 'PL', lat: 54.4, lng: 18.67, nameKey: 'p3a_port_GDN', clearanceH: 14 },
+  { code: 'GDY', country: 'PL', lat: 54.533, lng: 18.54, nameKey: 'p3a_port_GDY', clearanceH: 16 },
   { code: 'NYN', country: 'SE', lat: 58.903, lng: 17.948, nameKey: 'p3a_port_NYN' },
   { code: 'KAA', country: 'SE', lat: 56.155, lng: 15.62, nameKey: 'p3a_port_KAA' },
+  /* Porty estońskie: odprawa 14 h jak Polferries — DO POTWIERDZENIA W BN8 */
   /* Tallinn, Old City Harbour (Vanasadam) — terminale A i D */
-  { code: 'TLL', country: 'EE', lat: 59.443, lng: 24.77, nameKey: 'p3a_port_TLL' },
+  { code: 'TLL', country: 'EE', lat: 59.443, lng: 24.77, nameKey: 'p3a_port_TLL', clearanceH: 14 },
   /* Muuga, terminal HHLA TK */
-  { code: 'MUU', country: 'EE', lat: 59.497, lng: 24.96, nameKey: 'p3a_port_MUU' },
+  { code: 'MUU', country: 'EE', lat: 59.497, lng: 24.96, nameKey: 'p3a_port_MUU', clearanceH: 14 },
   /* Paldiski, port południowy */
-  { code: 'PLD', country: 'EE', lat: 59.335, lng: 24.083, nameKey: 'p3a_port_PLD' },
+  { code: 'PLD', country: 'EE', lat: 59.335, lng: 24.083, nameKey: 'p3a_port_PLD', clearanceH: 14 },
   /* Helsinki, West Harbour (Länsisatama) T2; Katajanokka ok. 4 km dalej */
   { code: 'HEL', country: 'FI', lat: 60.153, lng: 24.915, nameKey: 'p3a_port_HEL' },
   { code: 'VUO', country: 'FI', lat: 60.206, lng: 25.19, nameKey: 'p3a_port_VUO' },
@@ -169,6 +172,17 @@ export function outboundRoutesOf(operator: FerryOperator): FerryRouteCode[] {
 /** Pierwsza trasa wyjazdowa armatora (porty w wierszu „Sytuacja na trasie”). */
 export function primaryRouteOf(operator: FerryOperator): FerryRouteDef {
   return FERRY_ROUTES.find((r) => r.outbound && r.operators.includes(operator)) ?? FERRY_ROUTES[0];
+}
+
+/** Domyślna odprawa portu wyjazdowego bez wpisu (jak Gdańsk). */
+const DEFAULT_CLEARANCE_H = 14;
+
+/**
+ * Godziny „Śrem → port + odprawa” dla armatora: z portu wyjazdowego jego pierwszej trasy wyjazdowej
+ * (Polferries: Gdańsk 14 h, Stena: Gdynia 16 h; porty estońskie 14 h — do potwierdzenia w BN8).
+ */
+export function clearanceHoursFor(operator: FerryOperator): number {
+  return PORT_BY_CODE.get(primaryRouteOf(operator).from)?.clearanceH ?? DEFAULT_CLEARANCE_H;
 }
 
 /**

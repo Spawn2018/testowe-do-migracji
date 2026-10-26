@@ -99,35 +99,46 @@ export function ferrySummary(r: ReturnType<typeof checkFerries>): string {
 export type ExtraWaterTrack = Exclude<WaterTrackId, 'GDN-NYN' | 'GDY-KAA'>;
 
 /**
- * Tory wodne [szer., dł.] — od terminalu wyjazdowego do docelowego, po wodzie (nie są geometrią HERE). Ten sam styl
- * linii co `WATER_GDN_NYN` / `WATER_GDY_KAA`. Rysowane tylko, gdy trasę ma widoczny transport (dziś żaden — mapa bez zmian).
+ * Tory wodne [szer., dł.] — od wody przy terminalu wyjazdowym do wody przy docelowym (nie są geometrią HERE). Wyznaczone
+ * po wodzie na wielokątach lądu OpenStreetMap (land-polygons, 26.10.2026; najkrótsza droga z zapasem od brzegu przez
+ * punkty kursu armatora) i sprawdzone: żaden odcinek nie przecina lądu. Ten sam styl linii co `WATER_GDN_NYN` /
+ * `WATER_GDY_KAA`. Rysowane tylko, gdy trasę ma widoczny transport (dziś żaden — mapa bez zmian).
  */
 export const WATER_TRACKS_EXTRA: Record<ExtraWaterTrack, readonly LatLng[]> = {
-  /* Tallinn (Vanasadam) → zatoka tallińska między Naissaar i Aegna → Zatoka Fińska → tor Länsisatama → West Harbour T2 */
+  /* Tallinn (Vanasadam) → Tallinna laht między Paljassaare a Viimsi, na zachód od Aegna → Zatoka Fińska → podejście do
+     West Harbour (Länsisatama) od południa */
   'TLL-HEL': [
-    [59.443, 24.77], [59.475, 24.75], [59.52, 24.7], [59.62, 24.72], [59.75, 24.8], [59.88, 24.87],
-    [60.0, 24.9], [60.08, 24.93], [60.105, 24.93], [60.125, 24.905], [60.14, 24.9], [60.153, 24.915],
+    [59.4468, 24.7727], [59.4488, 24.772], [59.4498, 24.77], [59.62, 24.72], [60.0, 24.9], [60.14, 24.908],
+    [60.1477, 24.9169],
   ],
-  /* Muuga (HHLA TK) → zatoka Muuga → na zachód od Prangli i Keri → Zatoka Fińska → tor Vuosaari od południowego wschodu */
+  /* Muuga (HHLA TK) → zatoka Muuga → na zachód od Prangli → Zatoka Fińska → Vuosaaren selkä → Vuosaari */
   'MUU-VUO': [
-    [59.497, 24.96], [59.53, 24.94], [59.6, 24.9], [59.7, 24.95], [59.85, 25.05], [59.97, 25.15],
-    [60.08, 25.24], [60.14, 25.245], [60.175, 25.22], [60.195, 25.2], [60.206, 25.19],
+    [59.497, 24.9582], [59.6, 24.9], [59.97, 25.15], [60.182, 25.19], [60.186, 25.188], [60.206, 25.19],
   ],
-  /* Tallinn → między Naissaar i Aegna, na północ od Naissaar → Zatoka Fińska na zachód (między Hanko a Osmussaar, na
-     południe od Bengtskär, Utö i Kökar) → Mariehamn (Västerhamn) → Morze Alandzkie → Söderarm → Furusund → Vaxholm →
-     Lidingö → Värtahamnen */
+  /* Tallinn → na północ od Naissaar → Zatoka Fińska na zachód (między Hanko a Osmussaar, na południe od Utö i Kökar) →
+     Mariehamn (Västerhamn) → Morze Alandzkie → Söderarm → Furusundsleden → Vaxholm → na południe od Lidingö
+     (Halvkakssundet, Saltsjön) → Blockhusudden → Värtahamnen. Od północy (Lilla Värtan) się nie da — Lidingöbron. */
   'TLL-STO': [
-    [59.443, 24.77], [59.475, 24.75], [59.52, 24.7], [59.63, 24.62], [59.64, 24.3], [59.63, 24.0], [59.62, 23.4],
-    [59.65, 22.7], [59.66, 22.0], [59.7, 21.4], [59.78, 20.8], [59.92, 20.3], [59.96, 20.02], [60.0, 19.9],
-    [60.05, 19.905], [60.093, 19.925], [60.04, 19.86], [59.86, 19.56], [59.775, 19.45], [59.72, 19.2],
-    [59.665, 18.93], [59.6, 18.84], [59.53, 18.7], [59.46, 18.52], [59.415, 18.4], [59.385, 18.3], [59.36, 18.2],
-    [59.35, 18.105],
+    [59.4468, 24.7727], [59.4488, 24.772], [59.4498, 24.77], [59.63, 24.62], [59.64, 24.3], [59.63, 24.0],
+    [59.62, 23.4], [59.65, 22.7], [59.66, 22.0], [59.7, 21.4], [59.777, 20.812], [59.78, 20.8],
+    [59.827, 20.526], [59.827, 20.492], [59.846, 20.45], [59.88, 20.3], [59.901, 20.189], [59.921, 20.127],
+    [59.981, 19.985], [59.995, 19.959], [60.015, 19.941], [60.046, 19.943], [60.057, 19.929], [60.093, 19.925],
+    [60.082, 19.926], [60.069, 19.92], [60.037, 19.884], [59.86, 19.56], [59.745, 19.47], [59.7455, 19.4084],
+    [59.739, 19.3904], [59.738, 19.3824], [59.734, 19.3764], [59.7125, 19.3304], [59.7125, 19.3264], [59.7105, 19.3164],
+    [59.7065, 19.3064], [59.6775, 19.2444], [59.6775, 19.2194], [59.6655, 18.9434], [59.6645, 18.9374], [59.574, 18.7034],
+    [59.5675, 18.6794], [59.5675, 18.6704], [59.566, 18.6614], [59.5605, 18.6344], [59.5575, 18.6224], [59.548, 18.6034],
+    [59.547, 18.5994], [59.5415, 18.5864], [59.5335, 18.5734], [59.4875, 18.4844], [59.487, 18.4754], [59.477, 18.4594],
+    [59.4725, 18.4454], [59.472, 18.4444], [59.4585, 18.4264], [59.4545, 18.4254], [59.4215, 18.3504], [59.4185, 18.3464],
+    [59.413, 18.3534], [59.4035, 18.3624], [59.402, 18.3624], [59.392, 18.3404], [59.386, 18.3374], [59.381, 18.3324],
+    [59.378, 18.2894], [59.3445, 18.2224], [59.338, 18.2054], [59.3375, 18.1714], [59.339, 18.1644], [59.343, 18.1484],
+    [59.354, 18.1154], [59.3545, 18.1124],
   ],
-  /* Paldiski (port południowy) → zatoka Paldiski → na północ od półwyspu Pakri → zachód Zatoki Fińskiej (na południe od
-     Bengtskär) → Bałtyk na południe od Wysp Alandzkich → Söderarm → Kapellskär */
+  /* Paldiski (port południowy) → zatoka Paldiski (na zachód od miasta, między półwyspem Pakri a Väike-Pakri) → otwarte
+     morze na północny zachód → Bałtyk na południe od Wysp Alandzkich → Söderarm → Kapellskärsfjärden → Kapellskär */
   'PLD-KPS': [
-    [59.335, 24.083], [59.37, 24.1], [59.43, 24.06], [59.5, 23.6], [59.55, 22.9], [59.6, 22.1], [59.62, 21.3],
-    [59.65, 20.5], [59.68, 19.95], [59.715, 19.55], [59.735, 19.35], [59.73, 19.2], [59.721, 19.065],
+    [59.3327, 24.0804], [59.3327, 24.078], [59.3327, 24.076], [59.3547, 24.034], [59.45, 24.0], [59.5, 23.6],
+    [59.55, 22.9], [59.6, 22.1], [59.62, 21.3], [59.65, 20.5], [59.68, 19.95], [59.74, 19.5],
+    [59.759, 19.3817], [59.746, 19.2297], [59.737, 19.2097], [59.731, 19.1797], [59.721, 19.0677],
   ],
 };
 

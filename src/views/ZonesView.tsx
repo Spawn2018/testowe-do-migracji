@@ -16,10 +16,11 @@ import { formatListDateTime } from '../lib/format';
 import { plPlural } from '../lib/plPlural';
 import { trackingPhase } from '../lib/stageTiles';
 import {
-  ZONE_KINDS, changeParts, groupOf, groupZones, impactOf, insideNow, parseCenter, parseNum, radiusText, routeOf,
+  ZONE_KINDS, changeParts, groupOf, groupZones, impactOf, insideNow, parseCenter, parseNum, radiusText, routeOf, zoneRouteOptions,
   type ZoneChange, type ZoneRoute, type ZoneRow,
 } from '../lib/p8cZones';
 import { zonesOf, type NearPos, type ZoneDraft, type ZonesSource } from '../lib/p8cSource';
+import { isFerryOperator } from '../lib/ferryCatalog';
 import { geofenceTypeLabel } from '../lib/enumLabels';
 import type { GeofenceType } from '../types';
 import { p8ct, type P8cKey } from '../i18n/p8c';
@@ -638,10 +639,10 @@ function ZoneForm({ zone, tracked, near, phone, reveal, onCancel, onSave }: {
               id={`${id}-route`}
               className="input"
               value={route}
-              onChange={(e) => setRoute(e.target.value === 'STENA' ? 'STENA' : 'POLFERRIES')}
+              onChange={(e) => setRoute(isFerryOperator(e.target.value) ? e.target.value : 'POLFERRIES')}
             >
-              <option value="POLFERRIES">{p8ct('p8c_route_POLFERRIES')}</option>
-              <option value="STENA">{p8ct('p8c_route_STENA')}</option>
+              {/* BN9-a: Polferries i Stena zawsze; armator z katalogu promów (np. TALLINK) — tylko gdy strefa go ma */}
+              {zoneRouteOptions(route).map((op) => <option key={op} value={op}>{p8ct(`p8c_route_${op}`)}</option>)}
             </select>
           </div>
         ) : null}

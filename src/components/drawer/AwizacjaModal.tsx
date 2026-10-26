@@ -13,7 +13,7 @@ import { t } from '../../i18n/messages';
 import { editableOrderSide } from '../../lib/orderNumbers';
 import {
   awizacjaDuplicateWarning,
-  FERRY_OPERATORS,
+  awizacjaOperators,
   reachableSailings,
   resourceSuggestions,
   type FerryOperatorId,
@@ -341,7 +341,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <label className="form-field am-f">
               <span>{pt(locale, 'p7_m_operator')}</span>
               <select className="input" value={operator} onChange={(e) => { setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
-                {FERRY_OPERATORS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                {awizacjaOperators(sailings, operator).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
             {sailingLock ? (

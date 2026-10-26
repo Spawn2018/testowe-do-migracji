@@ -178,7 +178,7 @@ describe('BN9-a — tory wodne nowych przepraw', () => {
     for (const [id, line] of Object.entries(WATER_TRACKS_EXTRA)) {
       const r = routeByCode(id)!;
       expect(r.waterTrack).toBe(id);
-      expect(line.length).toBeGreaterThanOrEqual(8);
+      expect(line.length).toBeGreaterThanOrEqual(5);
       for (const p of line) expect(inBaltic(p), `${id} ${p}`).toBe(true);
       const [a, b] = routePorts(id)!;
       const first = line[0];
