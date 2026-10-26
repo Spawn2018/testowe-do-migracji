@@ -5652,3 +5652,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #578 F7 gotowe **po #577**; #577 bez F7 (pkt 1–8 po #563); #579 bez F7 do zielonego CI po tym pushu. Bez push na main.
 - CI `fb254888`: unit/db/visual ✔ (G-15 — czekano).
 - **#563 krok:** 0310 §12 — typ `SEFS_WEEK_CORR` + trigger po INSERT korekty: gdy tydzień wskaźników zamknięty i są OSTATECZNY z innym mnożnikiem → sprawa HHL (tytuł było/jest/N), bez zmiany migawek. baf EXPECTED **81**. i18n + workflowCreator. Push PR #579. Po zielonym CI — prośba o F7 (zakres #563 domknięty).
+
+## 2026-10-26 22:55 — #563 F7 #579: blokady 1–2 + poprawki 3–6
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe” po HEAD; #577 bez F7. Bez push na main.
+- CI `9e82d6e4`: unit/visual ✔, db FAIL (baf SEFS_WEEK_CORR 0/1 — korekta SEK w górę nie zmienia applied; dec2 katalog 24→25).
+- **#563 krok (F7 19:34):** `sefs_last_ostateczny` → PLN 7 dni przy `avg_days_pln=7`; `sefs_sek_daily_avg` / `sefs_pub_avg` — nowa reguła tylko MAX; ingest/Edge: published_on > dzień → period = data obowiązywania; wersja t44 z `sefs_params_for(…,26.10)`; dziennik z kwotami; `sefsWeek` fill 7 dni; test SEFS_WEEK_CORR korektą w dół; baf **90**; dec2 25 typów. Push PR #579 — po zielonym CI prośba o F7.

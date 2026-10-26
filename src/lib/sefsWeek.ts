@@ -3,7 +3,8 @@
  * odczyty dzienne (okres = data RRRR-MM-DD) z poprzedniego tygodnia pon–niedz względem dnia odniesienia,
  * średnia SEK i osobno PLN, mnożniki z tabel, stosowany niższy. Czas Europe/Warsaw.
  * Tylko podgląd w Opcjach — wartość przy transporcie liczy i zapisuje baza.
- * #563: cena dnia = odczyt efektywny (korekta wygrywa z oryginałem); `tier_bound` jak w wersji załącznika.
+ * #563/F7: cena dnia = odczyt efektywny (korekta wygrywa); dni bez odczytu = ostatnia znana (jak baza);
+ * jeden odczyt na dzień (nie 2× przy dwóch wpisach); `tier_bound` jak w wersji załącznika.
  */
 import { lookupMult, round2, type SefsTier, type SefsTierBound } from './sefs';
 
@@ -39,6 +40,36 @@ export function effectiveReadings(readings: readonly WeekReading[]): WeekReading
   return readings.filter((r) => r.id == null || !corrected.has(r.id));
 }
 
+/** Średnia 7 cen dziennych z przeniesieniem ostatniej znanej (jak sefs_*_daily_avg). */
+function dailyAvg(
+  live: readonly WeekReading[],
+  code: string,
+  from: string,
+  to: string,
+): { avg: number | null; n: number } {
+  const rows = live
+    .filter((r) => r.index_code === code && DAY.test(r.period))
+    .slice()
+    .sort((a, b) => a.period.localeCompare(b.period) || (a.id ?? 0) - (b.id ?? 0));
+  const byDay = new Map<string, number>();
+  for (const r of rows) byDay.set(r.period, Number(r.value));
+
+  let last: number | null = null;
+  for (const r of rows) {
+    if (r.period < from) last = Number(r.value);
+  }
+
+  let sum = 0;
+  let n = 0;
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (byDay.has(d)) last = byDay.get(d)!;
+    if (last == null) return { avg: null, n };
+    sum += last;
+    n += 1;
+  }
+  return n ? { avg: sum / n, n } : { avg: null, n: 0 };
+}
+
 export function prevWeekStatus(
   readings: readonly WeekReading[],
   refDay: string,
@@ -50,13 +81,12 @@ export function prevWeekStatus(
   const from = addDays(weekStart, -7);
   const to = addDays(weekStart, -1);
   const live = effectiveReadings(readings);
-  const inWeek = (code: string) => live.filter((r) => r.index_code === code
-    && DAY.test(r.period) && r.period >= from && r.period <= to);
-  const sek = inWeek('SEK'); const pln = inWeek('PLN');
-  const avg = (xs: WeekReading[]) => (xs.length ? xs.reduce((a, r) => a + Number(r.value), 0) / xs.length : null);
-  const avgSek = avg(sek); const avgPln = avg(pln);
+  const sek = dailyAvg(live, 'SEK', from, to);
+  const pln = dailyAvg(live, 'PLN', from, to);
+  const avgSek = sek.avg;
+  const avgPln = pln.avg;
   const mult = avgSek !== null && avgPln !== null && tiers
     ? Math.min(lookupMult(round2(avgSek), tiers.sek, bound), lookupMult(round2(avgPln), tiers.pln, bound))
     : null;
-  return { from, to, nSek: sek.length, nPln: pln.length, avgSek, avgPln, mult };
+  return { from, to, nSek: sek.n, nPln: pln.n, avgSek, avgPln, mult };
 }

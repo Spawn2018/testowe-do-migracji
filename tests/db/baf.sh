@@ -183,8 +183,10 @@ chk "załadunek 12.10, dziś 08.10 → PROGNOZA" "$(Q "select fuel_status||'/'||
 sys "select load_price_compute('$LNX', '2026-10-12')"
 M1=$(Q "select fuel_applied_mult from load_cost where load_id='$LNX'")
 chk "po niedzieli → OSTATECZNY (migawka)" "$(Q "select fuel_status from load_cost where load_id='$LNX'")" "OSTATECZNY"
+# Korekta SEK w dół (21,50 → ×1,09): applied = least(SEK,PLN) musi się zmienić (w górę do 30
+# nie zmienia applied, bo wygrywa PLN ×1,12).
 sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, corrects_id, correction_reason)
-  select project_id, index_code, period, reading_date, 30.00, source_url, 'korekta po zamknięciu', id, 'test 0166'
+  select project_id, index_code, period, reading_date, 21.50, source_url, 'korekta po zamknięciu', id, 'test 0166'
     from fuel_index_readings where project_id='$P' and index_code='SEK' and period='2026-10-05' and corrects_id is null"
 sys "select load_price_compute('$LNX', '2026-10-13')"
 chk "korekta po zamknięciu nie zmienia migawki" "$(Q "select fuel_applied_mult||'/'||fuel_status from load_cost where load_id='$LNX'")" "$M1/OSTATECZNY"
@@ -314,6 +316,35 @@ W44F="sefs_week_calc('$P','2026-10-26','2026-10-26')"
 chk "#563 t44: params MAX + PLN 7 dni" "$(Q "select ($W44F->>'tier_bound')||'/'||($W44F->>'avg_days_pln')||'/'||($W44F->>'n_pln')")" "MAX/7/7"
 chk "#563 t44: wynik kontrolny ×1,14" "$(Q "select ($W44F->>'avg_sek')||'/'||($W44F->>'avg_pln')||'/'||($W44F->>'applied_mult')")" "23.00/7.15/1.14"
 chk "#563 t43 nadal MIN (załadunek 19.10)" "$(Q "select coalesce(sefs_week_calc('$P','2026-10-19','2026-10-19')->>'tier_bound','∅')")" "MIN"
+# F7 #579 blokada 1: prognoza t45+ bierze PLN 7 dni (nie pub_avg) — weekend z przeniesieniem
+sys "alter table fuel_index_readings disable trigger trg_fuel_readings_immutable"
+sys "delete from fuel_index_readings where project_id='$P' and period::date between '2026-10-19' and '2026-10-25'"
+sys "alter table fuel_index_readings enable trigger trg_fuel_readings_immutable"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'SEK', to_char(d,'YYYY-MM-DD'), d, 23.30, 'https://www.okq8.se/foretag/priser/', 'f7-prog', d
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+sys "insert into fuel_index_readings (project_id, index_code, period, reading_date, value, source_url, source_note, published_on)
+  select '$P', 'PLN', to_char(d,'YYYY-MM-DD'), d, case when extract(isodow from d) <= 5 then 7.25 else 7.05 end,
+         'https://www.orlen.pl/pl/dla-biznesu/hurtowe-ceny-paliw', 'f7-prog',
+         case when extract(isodow from d) <= 5 then d else date '2026-10-24' end
+    from generate_series('2026-10-19'::date,'2026-10-25'::date,'1 day') d"
+W44O="sefs_week_calc('$P','2026-10-26','2026-10-26')"
+chk "#563 F7: t44 ostateczny 7,19 / ×1,14 (PLN 7 dni)" "$(Q "select ($W44O->>'avg_pln')||'/'||($W44O->>'applied_mult')")" "7.19/1.14"
+W45P="sefs_week_calc('$P','2026-11-02','2026-10-26')"
+chk "#563 F7: prognoza t45 = t44 (nie pub_avg 7,22)" "$(Q "select ($W45P->>'avg_pln')||'/'||($W45P->>'applied_mult')||'/'||($W45P->>'status')")" "7.19/1.14/PROGNOZA"
+# F7 #579 blokada 2: ≤t43 — zmiana ceny w środę w ciągu dnia nie zmienia reguły (publikacja ≤ dzień)
+SEK36=$(Q "select sefs_sek_daily_avg('$P','2026-09-21','2026-09-27')->>'avg'")
+chk "#563 F7: t36–t43 średnia SEK bez period=D (jak D-1300)" "$(Q "select round(($SEK36)::numeric, 2)::text")" "23.05"
+# F7 #579 pkt 3: published_on > reading_date → period = data obowiązywania (nie obcięcie)
+sys "update security_flags set enabled=true where key='FUEL_SE_PL_INGEST'"
+ING=$($PSQL -v ON_ERROR_STOP=1 -c "begin; set local role service_role; select fuel_se_pl_ingest('$P', '[{\"index_code\":\"SEK\",\"period\":\"2026-10-26\",\"reading_date\":\"2026-10-26\",\"value\":23.55,\"source_url\":\"https://www.okq8.se/foretag/priser/\",\"published_on\":\"2026-10-27\",\"source_note\":\"f7 jutro\"}]'::jsonb); commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1 | tr -d '\r')
+chk "#563 F7: ingest cena od jutra → inserted" "$(Q "select ('$ING'::jsonb->>'inserted')")" "1"
+chk "#563 F7: period = published_on (nie dzień odczytu)" "$(Q "select period from fuel_index_readings where project_id='$P' and value=23.55 and source_note like 'f7 jutro%' order by id desc limit 1")" "2026-10-27"
+# F7: progi brzegowe MAX
+chk "#563 F7: MAX 23,10 → 1,14" "$(Q "select sefs_lookup_mult(23.10, '$TS'::jsonb, 'MAX')")" "1.14"
+chk "#563 F7: MAX 23,11 → 1,15" "$(Q "select sefs_lookup_mult(23.11, '$TS'::jsonb, 'MAX')")" "1.15"
+chk "#563 F7: MAX PLN 7,20 → 1,14" "$(Q "select sefs_lookup_mult(7.20, '$TP'::jsonb, 'MAX')")" "1.14"
+chk "#563 F7: MAX PLN 7,21 → 1,15" "$(Q "select sefs_lookup_mult(7.21, '$TP'::jsonb, 'MAX')")" "1.15"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

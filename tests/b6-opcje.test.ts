@@ -134,16 +134,31 @@ describe('B-6h: SEFS — średnia poprzedniego tygodnia', () => {
     expect(prevWeekStatus([], '2026-10-11', tiers).from).toBe('2026-09-28');
     expect(w.mult).toBeNull();
   });
-  it('liczą się odczyty efektywne z okna (#563 korekta > oryginał); stosowany niższy mnożnik', () => {
+  it('średnia 7 dni z przeniesieniem; korekta wygrywa (#563/F7 jak baza)', () => {
     const w = prevWeekStatus([
       r(1, 'SEK', '2026-09-28', 20.0), r(2, 'SEK', '2026-10-02', 20.4), r(3, 'SEK', '2026-10-05', 30),
       r(4, 'SEK', '2026-W40', 25), r(5, 'SEK', '2026-09', 25),
       r(6, 'PLN', '2026-09-30', 5.6),
       r(7, 'PLN', '2026-10-01', 5.9), r(8, 'PLN', '2026-10-01', 5.7, 7), // korekta 7 → 5,7
     ], '2026-10-05', tiers);
-    expect([w.nSek, w.nPln]).toEqual([2, 2]);
-    expect(w.avgSek).toBeCloseTo(20.2, 6);
-    expect(w.avgPln).toBeCloseTo((5.6 + 5.7) / 2, 6);
+    // pn–nd 28.09–04.10: SEK 20×4 + 20,4×3 (fill); PLN bez ceny przed 30.09 → urwane
+    expect(w.nSek).toBe(7);
+    expect(w.avgSek).toBeCloseTo((20 * 4 + 20.4 * 3) / 7, 6);
+    expect(w.avgPln).toBeNull();
+    expect(w.nPln).toBe(0);
+    expect(w.mult).toBeNull();
+  });
+  it('PLN z ceną przed oknem — fill weekendu jak baza', () => {
+    const w = prevWeekStatus([
+      r(1, 'SEK', '2026-09-27', 20.0),
+      r(2, 'SEK', '2026-09-28', 20.0), r(3, 'SEK', '2026-10-02', 20.4),
+      r(4, 'PLN', '2026-09-27', 5.5),
+      r(5, 'PLN', '2026-09-30', 5.6),
+      r(6, 'PLN', '2026-10-01', 5.9), r(7, 'PLN', '2026-10-01', 5.7, 6),
+    ], '2026-10-05', tiers);
+    expect([w.nSek, w.nPln]).toEqual([7, 7]);
+    // PLN: 28–29=5,5; 30=5,6; 1–4=5,7
+    expect(w.avgPln).toBeCloseTo((5.5 * 2 + 5.6 + 5.7 * 4) / 7, 6);
     expect(w.mult).toBe(1);
   });
   it('formularz zapisuje odczyt dzienny (okres = data odczytu) i pokazuje stan tygodnia', () => {

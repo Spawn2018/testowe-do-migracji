@@ -32,6 +32,16 @@ export function isFuelPriceHour(hour: number): boolean {
 }
 
 /**
+ * F7 #579 pkt 3: gdy data obowiązywania > dzień odczytu — period = data obowiązywania
+ * (nie zapisuj jako cena dnia D). reading_date zostaje dniem pobrania.
+ */
+export function periodForPublishedOn(fetchDay: string, publishedOn: string | null | undefined): string {
+  const pub = publishedOn && /^\d{4}-\d{2}-\d{2}/.test(publishedOn) ? publishedOn.slice(0, 10) : null;
+  if (pub && pub > fetchDay) return pub;
+  return fetchDay;
+}
+
+/**
  * Wiersz Orlen do fuel_se_pl_ingest.
  * Zwraca `{ row: r, value }` — nigdy `{ row, value }` przy zewnętrznym `const row = …`
  * (TDZ / ReferenceError w Edge — F7-2).
@@ -40,13 +50,15 @@ export function orlenIngestPayload(
   period: string,
   orlen: { value: number; effectiveDate?: string | null },
 ): { row: FuelSourceRow; value: number } {
+  const published_on = String(orlen.effectiveDate ?? '').slice(0, 10) || null;
+  const effPeriod = periodForPublishedOn(period, published_on);
   const r: FuelSourceRow = {
     index_code: 'PLN',
-    period,
+    period: effPeriod,
     reading_date: period,
     value: orlenM3ToLitre(orlen.value),
     source_url: ORLEN_SOURCE_PAGE,
-    published_on: String(orlen.effectiveDate ?? '').slice(0, 10) || null,
+    published_on,
     source_note: `ORLEN ONEkodiesel ${orlen.value} PLN/m³ netto (effective ${orlen.effectiveDate}); zapis ${orlenM3ToLitre(orlen.value)} PLN/l`,
   };
   return { row: r, value: orlen.value };

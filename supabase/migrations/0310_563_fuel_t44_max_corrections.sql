@@ -186,7 +186,9 @@ revoke all on function public.sefs_reading_effective_value(bigint)
 grant execute on function public.sefs_reading_effective_value(bigint) to service_role;
 
 -- ---------------------------------------------------------------------
--- 5. OKQ8: średnia 7 dni — korekta wygrywa; cena dnia z period=D albo last≤D
+-- 5. OKQ8: średnia 7 dni
+--    ≤t43 (MIN): reguła D-1300 — ostatnia publikacja ≤ dzień (bez period=D).
+--    t44+ (MAX / avg_days_pln=7): period=D + efektywna korekta (F7 #579).
 -- ---------------------------------------------------------------------
 create or replace function public.sefs_sek_daily_avg(p_project uuid, p_from date, p_to date)
 returns jsonb
@@ -200,7 +202,14 @@ declare
   v_days jsonb := '[]'::jsonb;
   v_pubs jsonb := '[]'::jsonb;
   v_pub_keys text[] := array[]::text[];
+  v_params sefs_parameters%rowtype;
+  v_max boolean := false;
 begin
+  -- Metoda z wersji obowiązującej w poniedziałek tygodnia załadunku (= p_to+1).
+  select * into v_params from sefs_params_for(p_project, p_to + 1);
+  v_max := coalesce(v_params.tier_bound, 'MIN') = 'MAX'
+        or coalesce(v_params.avg_days_pln, 5) = 7;
+
   if (exists (
         select 1 from fuel_index_readings r
          where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
@@ -213,21 +222,8 @@ begin
   end if;
 
   for v_day in select d::date from generate_series(p_from, p_to, '1 day') d loop
-    -- Najpierw odczyt z period = dzień (efektywna wartość: korekta > odczyt).
-    select public.sefs_reading_effective_value(r.id),
-           coalesce(
-             (select c.published_on from fuel_index_readings c
-               where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-             r.published_on)
-      into v_val, v_pub
-      from fuel_index_readings r
-     where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
-       and r.period = to_char(v_day, 'YYYY-MM-DD')
-     order by r.entered_at desc, r.id desc
-     limit 1;
-
-    if v_val is null then
-      -- Brak odczytu z D → ostatnia efektywna publikacja ≤ D
+    if v_max then
+      -- t44+: najpierw odczyt z period = dzień (efektywna = korekta).
       select public.sefs_reading_effective_value(r.id),
              coalesce(
                (select c.published_on from fuel_index_readings c
@@ -236,16 +232,48 @@ begin
         into v_val, v_pub
         from fuel_index_readings r
        where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
-         and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-         and coalesce(
-               (select c.published_on from fuel_index_readings c
-                 where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-               r.published_on) <= v_day
-       order by coalesce(
-                  (select c.published_on from fuel_index_readings c
-                    where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-                  r.published_on) desc,
-                r.entered_at desc, r.id desc
+         and r.period = to_char(v_day, 'YYYY-MM-DD')
+       order by r.entered_at desc, r.id desc
+       limit 1;
+
+      if v_val is null then
+        select public.sefs_reading_effective_value(r.id),
+               coalesce(
+                 (select c.published_on from fuel_index_readings c
+                   where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+                 r.published_on)
+          into v_val, v_pub
+          from fuel_index_readings r
+         where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
+           and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+           and coalesce(
+                 (select c.published_on from fuel_index_readings c
+                   where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+                 r.published_on) <= v_day
+         order by coalesce(
+                    (select c.published_on from fuel_index_readings c
+                      where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
+                    r.published_on) desc,
+                  r.entered_at desc, r.id desc
+         limit 1;
+      end if;
+    else
+      -- ≤t43: D-1300 — ostatnia publikacja ≤ dzień (period nie wyznacza ceny dnia).
+      with pubs as (
+        select distinct on (coalesce(c.published_on, r.published_on))
+               coalesce(c.published_on, r.published_on) as pub,
+               coalesce(c.value, r.value) as value
+          from fuel_index_readings r
+          left join fuel_index_readings c on c.corrects_id = r.id
+         where r.project_id = p_project and r.index_code = 'SEK' and r.corrects_id is null
+           and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+           and coalesce(c.published_on, r.published_on) is not null
+         order by coalesce(c.published_on, r.published_on), r.period
+      )
+      select value, pub into v_val, v_pub
+        from pubs
+       where pub <= v_day
+       order by pub desc
        limit 1;
     end if;
 
@@ -271,12 +299,13 @@ begin
       'fallback_last', false, 'no_readings', true);
   end if;
   return jsonb_build_object(
-    'avg', round(v_sum / v_n, 2), 'n', v_n, 'days', v_days, 'pubs', v_pubs,
+    'avg', case when v_max then round(v_sum / v_n, 2) else v_sum / v_n end,
+    'n', v_n, 'days', v_days, 'pubs', v_pubs,
     'fallback_last', false);
 end $$;
 
 comment on function public.sefs_sek_daily_avg(uuid, date, date) is
-  '#563: OKQ8 — 7 cen dziennych; efektywna = najnowsza korekta; avg zaokrąglona do 0,01.';
+  '#563/F7: ≤t43 = D-1300 (publikacja ≤ dzień); t44+ MAX = period=D + korekta.';
 
 -- PLN daily avg (ta sama reguła) — używane gdy avg_days_pln = 7
 create or replace function public.sefs_pln_daily_avg(p_project uuid, p_from date, p_to date)
@@ -371,28 +400,25 @@ grant execute on function public.sefs_pln_daily_avg(uuid, date, date) to service
 comment on function public.sefs_pln_daily_avg(uuid, date, date) is
   '#563: Orlen — 7 cen dziennych (gdy avg_days_pln=7); ta sama reguła korekt co SEK.';
 
--- sefs_pub_avg: przy distinct on wybierz najnowszą korektę (entered_at), nie najwcześniejszy period
+-- sefs_pub_avg: ≤t43 bez zmian kolejności (pub, period) — F7 #579 blokada 2.
+-- Efektywna wartość korekty przez left join (jak 0187); nie entered_at desc.
 create or replace function public.sefs_pub_avg(p_project uuid, p_code text, p_from date, p_to date)
 returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare v_avg numeric; v_n int; v_pubs jsonb; v_last record;
 begin
-  with base as (
-    select r.id,
-           public.sefs_reading_effective_value(r.id) as value,
-           coalesce(
-             (select c.published_on from fuel_index_readings c
-               where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-             r.published_on) as pub,
-           r.entered_at
+  with eff as (
+    select coalesce(c.value, r.value) as value,
+           coalesce(c.published_on, r.published_on) as pub,
+           r.period
       from fuel_index_readings r
+      left join fuel_index_readings c on c.corrects_id = r.id
      where r.project_id = p_project and r.index_code = p_code and r.corrects_id is null
        and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
   ), pubs as (
-    select distinct on (pub) pub, value
-      from base
+    select distinct on (pub) pub, value from eff
      where pub between p_from and p_to
-     order by pub, entered_at desc, id desc
+     order by pub, period
   )
   select avg(value), count(*),
          coalesce(jsonb_agg(jsonb_build_object('published_on', pub, 'value', value) order by pub), '[]'::jsonb)
@@ -407,24 +433,14 @@ begin
                  and r.period::date between p_from and p_to)) is not true then
     return jsonb_build_object('avg', null, 'n', 0, 'pubs', '[]'::jsonb, 'fallback_last', false, 'no_readings', true);
   end if;
-  select public.sefs_reading_effective_value(r.id) as value,
-         coalesce(
-           (select c.published_on from fuel_index_readings c
-             where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-           r.published_on) as pub
+  select coalesce(c.value, r.value) as value, coalesce(c.published_on, r.published_on) as pub
     into v_last
     from fuel_index_readings r
+    left join fuel_index_readings c on c.corrects_id = r.id
    where r.project_id = p_project and r.index_code = p_code and r.corrects_id is null
      and r.period ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-     and coalesce(
-           (select c.published_on from fuel_index_readings c
-             where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-           r.published_on) <= p_to
-   order by coalesce(
-              (select c.published_on from fuel_index_readings c
-                where c.corrects_id = r.id order by c.entered_at desc, c.id desc limit 1),
-              r.published_on) desc,
-            r.entered_at desc, r.id desc
+     and coalesce(c.published_on, r.published_on) <= p_to
+   order by coalesce(c.published_on, r.published_on) desc, r.period desc
    limit 1;
   if found then
     return jsonb_build_object('avg', v_last.value, 'n', 0,
@@ -549,6 +565,68 @@ end $$;
 
 comment on function public.sefs_week_calc(uuid, date, date) is
   '#563: SEK 7 dni; PLN 5 publ. (≤t43) lub 7 dni (t44+); lookup MIN/MAX z wersji params.';
+
+-- ---------------------------------------------------------------------
+-- 6b. sefs_last_ostateczny — prognoza t45+: PLN 7 dni gdy avg_days_pln=7 (F7 blokada 1)
+-- ---------------------------------------------------------------------
+create or replace function public.sefs_last_ostateczny(p_project uuid, p_today date)
+returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  v_today date := coalesce(p_today, (timezone('Europe/Warsaw', now()))::date);
+  v_anchor date; v_prev_start date; v_prev_end date;
+  s jsonb; p jsonb; v_res jsonb;
+  v_i int;
+  v_params sefs_parameters%rowtype;
+  v_pln_days int;
+begin
+  v_anchor := v_today - ((extract(isodow from v_today)::int) - 1);
+  s := jsonb_build_object('avg', null, 'n', 0);
+  p := jsonb_build_object('avg', null, 'n', 0);
+  v_prev_start := v_anchor - 7;
+  v_prev_end := v_anchor - 1;
+  for v_i in 0..51 loop
+    v_prev_start := v_anchor - 7 - (v_i * 7);
+    v_prev_end := v_anchor - 1 - (v_i * 7);
+    select * into v_params from sefs_params_for(p_project, v_prev_end + 1);
+    v_pln_days := coalesce(v_params.avg_days_pln, 5);
+    s := sefs_sek_daily_avg(p_project, v_prev_start, v_prev_end);
+    if v_pln_days = 7 then
+      p := sefs_pln_daily_avg(p_project, v_prev_start, v_prev_end);
+    else
+      p := sefs_pub_avg(p_project, 'PLN', v_prev_start, v_prev_end);
+      if (p->>'avg') is null then
+        p := sefs_last_published(p_project, 'PLN', v_prev_end);
+      end if;
+    end if;
+    exit when (s->>'avg') is not null and (p->>'avg') is not null;
+  end loop;
+  if ((s->>'avg') is not null and (p->>'avg') is not null) is not true then
+    return jsonb_build_object(
+      'ok', false, 'reason', 'SOURCE_FAILURE',
+      'message', 'Brak ostatniego OSTATECZNEGO mnożnika (brak publikacji SEK/PLN)',
+      'anchor_week_start', v_anchor, 'prev_week_start', v_prev_start, 'prev_week_end', v_prev_end,
+      'n_sek', coalesce((s->>'n')::int, 0), 'n_pln', coalesce((p->>'n')::int, 0),
+      'status', 'PROGNOZA');
+  end if;
+  v_res := sefs_compute_hybrid_sys(
+    p_project, (s->>'avg')::numeric, (p->>'avg')::numeric, v_prev_end + 1);
+  return v_res || jsonb_build_object(
+    'anchor_week_start', v_anchor,
+    'prev_week_start', v_prev_start, 'prev_week_end', v_prev_end,
+    'n_sek', (s->>'n')::int, 'n_pln', (p->>'n')::int,
+    'pubs_sek', s->'pubs', 'pubs_pln', p->'pubs',
+    'days_sek', s->'days', 'days_pln', p->'days',
+    'fallback_last_sek', coalesce((s->>'fallback_last')::boolean, false),
+    'fallback_last_pln', coalesce((p->>'fallback_last')::boolean, false),
+    'status', 'OSTATECZNY', 'final', true,
+    'computed_on', v_today
+  );
+end $$;
+revoke all on function public.sefs_last_ostateczny(uuid, date) from public, anon, authenticated;
+grant execute on function public.sefs_last_ostateczny(uuid, date) to service_role;
+comment on function public.sefs_last_ostateczny(uuid, date) is
+  '#563/F7: kotwica ostatniego zamkniętego; PLN 7 dni gdy params.avg_days_pln=7 (prognoza t45+).';
 
 -- ---------------------------------------------------------------------
 -- 7. sefs_last_published — najnowsza efektywna (korekta wygrywa)
@@ -712,7 +790,11 @@ begin
     end if;
     v_pub := case when coalesce(v->>'published_on', '') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
       then left(v->>'published_on', 10)::date end;
-    if v_pub is not null and v_pub > v_date then v_pub := v_date; end if;
+    -- F7 #579 pkt 3: cena „od jutra” — nie obcinaj published_on do dnia odczytu;
+    -- period = data obowiązywania (inaczej cena dnia D przesuwa tydzień).
+    if v_pub is not null and v_pub > v_date then
+      v_period := to_char(v_pub, 'YYYY-MM-DD');
+    end if;
     v_note := left(coalesce(nullif(trim(v->>'source_note'), ''), 'automat Watch Tower'), 500);
 
     -- Najnowszy odczyt bazowy dnia (bez korekt).
@@ -775,26 +857,29 @@ comment on function public.fuel_se_pl_ingest(uuid, jsonb) is
 
 -- ---------------------------------------------------------------------
 -- 10. Nowa wersja parametrów od 26.10.2026 (t44+)
+--     Tabele z wersji obowiązującej 26.10 (sefs_params_for), nie z max(version).
 -- ---------------------------------------------------------------------
 do $$
 declare
-  r record;
+  r sefs_parameters%rowtype;
+  v_proj uuid;
   v_next int;
 begin
-  for r in
-    select distinct on (project_id) *
-      from sefs_parameters
-     order by project_id, version desc
-  loop
+  for v_proj in select distinct project_id from sefs_parameters loop
     if exists (
       select 1 from sefs_parameters x
-       where x.project_id = r.project_id
+       where x.project_id = v_proj
          and x.tier_bound = 'MAX'
          and x.valid_from >= date '2026-10-26'
     ) then
       continue;
     end if;
-    v_next := r.version + 1;
+    select * into r from sefs_params_for(v_proj, date '2026-10-26');
+    if (r.id is not null) is not true then
+      continue;
+    end if;
+    select coalesce(max(version), 0) + 1 into v_next
+      from sefs_parameters where project_id = v_proj;
     insert into sefs_parameters (
       project_id, version, valid_from, rule, base_sek, base_pln,
       index_sek, index_pln, source_url_sek, source_url_pln, cycle,
@@ -804,7 +889,7 @@ begin
       r.project_id, v_next, date '2026-10-26', r.rule, r.base_sek, r.base_pln,
       r.index_sek, r.index_pln, r.source_url_sek, r.source_url_pln, r.cycle,
       r.tiers_sek, r.tiers_pln, r.agreed_with_carrier, r.agreement_ref,
-      '#563 D-1506: od t44 próg „do X” (MAX) + Orlen średnia 7 dni; tabele bez zmian.',
+      '#563 D-1506: od t44 próg „do X” (MAX) + Orlen średnia 7 dni; tabele z wersji na 26.10.',
       r.created_by, r.applies_to, 'MAX', 7
     );
   end loop;
@@ -826,7 +911,9 @@ declare
   v_before jsonb := '[]'::jsonb;
   v_after jsonb := '[]'::jsonb;
   v_c_sek numeric; v_c_pln numeric; v_c_app numeric; v_c_baf numeric;
+  v_c_base numeric; v_c_total numeric;
   v_r_sek numeric; v_r_pln numeric; v_r_app numeric; v_r_baf numeric;
+  v_r_base numeric; v_r_total numeric;
   v_w jsonb;
   v_new numeric;
   v_old numeric;
@@ -840,9 +927,11 @@ begin
   for r in
     select l.id, l.project_id, l.hhl_order_no, l.order_no, l.plan_load_date,
            c.fuel_mult_sek as c_sek, c.fuel_mult_pln as c_pln, c.fuel_applied_mult as c_app,
-           c.baf_amount as c_baf, c.invoiced_total_eur as c_inv, c.fuel_status as c_st,
+           c.baf_amount as c_baf, c.base_amount as c_base, c.total_amount as c_total,
+           c.invoiced_total_eur as c_inv, c.fuel_status as c_st,
            rv.fuel_mult_sek as r_sek, rv.fuel_mult_pln as r_pln, rv.fuel_applied_mult as r_app,
-           rv.baf_amount as r_baf, rv.invoiced_total_eur as r_inv, rv.fuel_status as r_st
+           rv.baf_amount as r_baf, rv.base_amount as r_base, rv.total_amount as r_total,
+           rv.invoiced_total_eur as r_inv, rv.fuel_status as r_st
       from loads l
       left join load_cost c on c.load_id = l.id
       left join load_revenue rv on rv.load_id = l.id
@@ -860,10 +949,12 @@ begin
       'fuel_date', v_fuel,
       'cost', jsonb_build_object(
         'mult_sek', r.c_sek, 'mult_pln', r.c_pln, 'applied', r.c_app,
-        'baf', r.c_baf, 'status', r.c_st),
+        'baf', r.c_baf, 'base_amount', r.c_base, 'total_amount', r.c_total,
+        'status', r.c_st),
       'revenue', jsonb_build_object(
         'mult_sek', r.r_sek, 'mult_pln', r.r_pln, 'applied', r.r_app,
-        'baf', r.r_baf, 'status', r.r_st)
+        'baf', r.r_baf, 'base_amount', r.r_base, 'total_amount', r.r_total,
+        'status', r.r_st)
     ));
 
     if r.c_inv is null and r.c_app is not null then
@@ -878,8 +969,11 @@ begin
     perform public.load_price_compute(r.id);
 
     select c.fuel_mult_sek, c.fuel_mult_pln, c.fuel_applied_mult, c.baf_amount,
-           rv.fuel_mult_sek, rv.fuel_mult_pln, rv.fuel_applied_mult, rv.baf_amount
-      into v_c_sek, v_c_pln, v_c_app, v_c_baf, v_r_sek, v_r_pln, v_r_app, v_r_baf
+           c.base_amount, c.total_amount,
+           rv.fuel_mult_sek, rv.fuel_mult_pln, rv.fuel_applied_mult, rv.baf_amount,
+           rv.base_amount, rv.total_amount
+      into v_c_sek, v_c_pln, v_c_app, v_c_baf, v_c_base, v_c_total,
+           v_r_sek, v_r_pln, v_r_app, v_r_baf, v_r_base, v_r_total
       from loads l
       left join load_cost c on c.load_id = l.id
       left join load_revenue rv on rv.load_id = l.id
@@ -890,9 +984,11 @@ begin
       'hhl_order_no', r.hhl_order_no,
       'order_no', r.order_no,
       'cost', jsonb_build_object(
-        'mult_sek', v_c_sek, 'mult_pln', v_c_pln, 'applied', v_c_app, 'baf', v_c_baf),
+        'mult_sek', v_c_sek, 'mult_pln', v_c_pln, 'applied', v_c_app, 'baf', v_c_baf,
+        'base_amount', v_c_base, 'total_amount', v_c_total),
       'revenue', jsonb_build_object(
-        'mult_sek', v_r_sek, 'mult_pln', v_r_pln, 'applied', v_r_app, 'baf', v_r_baf)
+        'mult_sek', v_r_sek, 'mult_pln', v_r_pln, 'applied', v_r_app, 'baf', v_r_baf,
+        'base_amount', v_r_base, 'total_amount', v_r_total)
     ));
     v_n := v_n + 1;
   end loop;

@@ -17,6 +17,7 @@ import { OKQ8_PRICES_URL, OKQ8_UA, parseOkq8GoEasyDiesel } from '../_shared/fuel
 import {
   isFuelPriceHour,
   orlenIngestPayload,
+  periodForPublishedOn,
   warsawHour,
   type FuelSourceRow,
 } from '../_shared/fuel/ingest.ts';
@@ -119,9 +120,10 @@ Deno.serve(async (req) => {
       const okq8Res = await fetch(OKQ8_PRICES_URL, { headers: { 'User-Agent': OKQ8_UA } });
       if (!okq8Res.ok) throw new Error(`OKQ8: HTTP ${okq8Res.status}`);
       const okq8 = parseOkq8GoEasyDiesel(await okq8Res.text());
+      const effPeriod = periodForPublishedOn(period, okq8.publishedOn);
       const r: FuelSourceRow = {
         index_code: 'SEK',
-        period,
+        period: effPeriod,
         reading_date: period,
         value: okq8.valueSek,
         source_url: OKQ8_PRICES_URL,

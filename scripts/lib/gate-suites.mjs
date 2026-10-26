@@ -28,7 +28,7 @@ export const EXPECTED_LOCAL = {
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako real_app_user_id; KSH=HHL (zamiast ≥1); było 71 (#384)
+  dec2: 73, // #455: +2 Działaj jako; katalog 25 typów (#563 SEFS_WEEK_CORR)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
@@ -49,7 +49,7 @@ export const EXPECTED_LOCAL = {
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
-  baf: 81, // #563: +3 zamknięty tydzień (sprawa); MAX t44 + korekta; D-1535; D-1300 F7-2
+  baf: 90, // #563/F7: +9 prognoza t45, ≤43 SEK, ingest jutro, brzegi MAX; +3 sprawa; MAX t44
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
