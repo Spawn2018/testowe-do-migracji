@@ -798,7 +798,8 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "done:$N8_REV2" ]; then ok=$((ok+1)); echo "  OK    A6: N8 podwójny ack → done no-op"; else fail=$((fail+1)); echo "  FAIL  A6: N8 → $out (oczekiwano done:$N8_REV2)"; fi
 
-# F7 r6 BLOKER 1: import UPLOAD (authenticated HHL) przy konflikcie pending → OK + 1 sprawa (nie 42501)
+# F7 r6 BLOKER 1: import UPLOAD (authenticated HHL) przy konflikcie pending → OK + 1 sprawa (nie 42501).
+# p_quiet=false: F7 #2 przy quiet nie otwiera TOWER_KSH_CONFLICT — tu sprawdzamy ścieżkę z sprawą.
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "delete from decisions where type_code='TOWER_KSH_CONFLICT' and load_id='$SG_OUT'" >/dev/null 2>&1 || true
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
@@ -815,7 +816,7 @@ IMP_B1=$(Q "select jsonb_agg(jsonb_build_object(
   'dates_to_check',false
 )) from loads l where l.id='$SG_OUT'")
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  select import_schedule('$P','$IMP_B1'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,true);
+  select import_schedule('$P','$IMP_B1'::jsonb,'{}'::text[],'{\"source\":\"UPLOAD\"}'::jsonb,false,false);
   reset role;
   select carrier_order_no from loads where id='$SG_OUT';
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|COMMIT)$' | tail -1)
