@@ -5769,13 +5769,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
 
 
-## 2026-10-27 07:00 � #583 PILNE start (BN0 #585 czekam F7)
+## 2026-10-27 07:00 — #583 PILNE start (BN0 #585 czekam F7)
 
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora`.
-- Scalanie: **brak** �F7: gotowe do scalenia� na #585 (HEAD `0b8d4dd1`, CI unit/visual/db ?). Bez push na main.
-- Bie��ca: **#583** (pilne, import KSH) � ga��� `pakiet/583-import-ksh-prev-plates` z main; migracja **0314**:
-  - `import_live_prev` � prev z live WT (wszystkie `v_fnames`, `load_time`/`delivery_time` z `plan_*`);
-  - tablice: walidacja + `skip_reason`, subset ? WT bez zapisu/wiersza;
-  - `ksh_sync_preview_build` � os�ona wt=file + `skip_reason`;
-  - testy import +13 � EXPECTED **268**.
-- Po zielonym CI � pro�ba o F7. BN0 #585 scala� gdy F7 gotowe (osobny PR).
+- Scalanie: **brak** „F7: gotowe do scalenia” na #585 (HEAD `0b8d4dd1`, CI unit/visual/db ✔). Bez push na main.
+- Bieżąca: **#583** (pilne, import KSH) — gałąź `pakiet/583-import-ksh-prev-plates` z main; migracja **0314**:
+  - `import_live_prev` — prev z live WT (wszystkie `v_fnames`, `load_time`/`delivery_time` z `plan_*`);
+  - tablice: walidacja + `skip_reason`, subset ⊂ WT bez zapisu/wiersza;
+  - `ksh_sync_preview_build` — osłona wt=file + `skip_reason`;
+  - testy import +13 — EXPECTED **268**.
+- Po zielonym CI — prośba o F7. BN0 #585 scalać gdy F7 gotowe (osobny PR).
+
+## 2026-10-27 07:20 — #583 CI FAIL → poprawka prev/pending/testy
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie). #585 bez „F7: gotowe do scalenia” po `0b8d4dd1`.
+- CI #586 `47e43278`: unit ✔, visual ✔, db FAIL import 247/21 (A6 SNAP-B, N13, CANCELLED, #583 puste out).
+- Przyczyny: (1) pending czyścił tylko `v_fields`, zapis szedł `v_apply_fields` → plik SNAP-B nadpisywał WT SNAP-C; (2) czysty live prev psuł A6 (wymiary ze sparse pliku); (3) testy `#583` z `PERFORM` i bez `2>&1`.
+- Poprawka w **0314**: prev = `schedule_row || (live − wymiary)`; pusta komórka pliku = bez zmiany; pending → też `v_apply_fields`; testy bez PERFORM.

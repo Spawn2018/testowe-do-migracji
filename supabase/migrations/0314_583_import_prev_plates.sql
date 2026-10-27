@@ -641,7 +641,16 @@ begin
            (l.plan_load_from is not null or l.plan_load_to is not null
             or l.plan_delivery_from is not null or l.plan_delivery_to is not null
             or l.status in ('READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE')) as awizowany,
-           case when si.id is not null then public.import_live_prev(si.id, l.id) else null end as prev
+           -- #583: wymiary/qty z schedule_row (A6); numery/tablice/kierowcy/daty/godziny z live WT.
+           -- schedule_row bez hhl/carrier/tablic → wcześniej fałszywe changed. Brak row → pełny live.
+           case when si.id is null then null
+             when si.schedule_row is null then public.import_live_prev(si.id, l.id)
+             else si.schedule_row || (
+               public.import_live_prev(si.id, l.id)
+               - array['item_type','cargo_class','length_m','width_m','height_m',
+                       'unit_weight_t','qty','total_weight_t','assembly_seq']
+             )
+           end as prev
       from _imp i
       left join _renum rn on rn.new_code = i.code
       left join shipment_items si on si.project_id = p_project
@@ -740,8 +749,11 @@ begin
               jsonb_build_object('shipment_code', r.code, 'renumbered_from', r.renum_from));
     end if;
 
+    -- #583: prev = live WT. Pusta komórka w pliku = bez zmiany (#384 godziny; rzadki wiersz A6).
     select coalesce(array_agg(f order by f), '{}') into v_fields
-      from unnest(v_fnames) f where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb);
+      from unnest(v_fnames) f
+     where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb)
+       and nullif(btrim(coalesce(r.inc ->> f, '')), '') is not null;
     if r.renum_from is not null and not ('shipment_code' = any (v_fields)) then
       v_fields := array['shipment_code'] || coalesce(v_fields, '{}'::text[]);
     end if;
@@ -795,6 +807,8 @@ begin
             end if;
             v_pending_wt := array_append(v_pending_wt, v_f);
             v_fields := array_remove(v_fields, v_f);
+            -- #583: zapis idzie po v_apply_fields — pending musi też je czyścić (inaczej SNAP-B nadpisuje SNAP-C).
+            v_apply_fields := array_remove(v_apply_fields, v_f);
           end if;
         end loop;
       end if;
