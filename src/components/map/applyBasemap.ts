@@ -3,6 +3,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_AUTH_ENABLED, SUPABASE_URL } from '../../au
 import {
   ROAD_PL,
   ROAD_SE,
+  ROAD_KAA,
   basemapFor,
   looseRoadOk,
   roadGeometryOk,
@@ -218,11 +219,11 @@ export async function applyBasemap(
   return layer;
 }
 
-const SPEC: Record<string, typeof ROAD_PL | 'loose'> = {
+const SPEC: Record<string, typeof ROAD_PL | typeof ROAD_SE | typeof ROAD_KAA | 'loose'> = {
   'PL-GDN': ROAD_PL,
   'SE-NYN': ROAD_SE,
   'PL-GDY': 'loose',
-  'SE-KAA': 'loose',
+  'SE-KAA': ROAD_KAA,
 };
 
 export function acceptedRoads(rows: unknown): LatLng[][] {
@@ -247,6 +248,8 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
   return out;
 }
 
+const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
+
 export async function loadRoadLines(): Promise<LatLng[][]> {
   if (!SUPABASE_AUTH_ENABLED) return [];
   try {
@@ -254,7 +257,8 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     const sb = await getSupabase();
     const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
     let lines = await read();
-    if (lines.length >= 2) return lines;
+    // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_E22).
+    if (lines.length >= ROAD_LEGS) return lines;
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return lines;

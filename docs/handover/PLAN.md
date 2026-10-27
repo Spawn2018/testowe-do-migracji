@@ -1058,10 +1058,11 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #578 · wygląd lista zmian KSH (23B) — SCALONE (`4d348405`, 27.10.2026 00:36Z)
 Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7 gotowe (26.10 ~16:30Z) po #577.
 
-### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**; F7 #582 r3)
-Źródło: F7 #574 r2 + F7 #582 r1–r3. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
+### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
+Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
+### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (po #574-nast; migracja **0313**)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). `here-roads` SE-KAA z `via` z `SE_E22` (`passThrough`); odświeżenie przy `corridor_polylines.updated_at`; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` dociąga 4 legi; pomarańcz `#E5A544` bez zmiany (jak SE-NYN). bmapa EXPECTED **149**.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po BN0 #572, przed BN1; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Nie przerywa #574-nast / BN0.
@@ -1797,3 +1798,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 02:36 | #574 F7 §8: **drganie GPS na krawędzi SITE** — cykl EXIT/ENTER z powiadomieniem przy skokach na histerezie (dziś bez ekstra debounce SITE; decyzja: zostaje, monitorować na produkcji). **Podwójny DWELL w porcie** — drugi DWELL po re-ENTER w tej samej wizycie możliwy gdy `entered_at` się resetuje; cron/process emisja DWELL tylko gdy brak DWELL od `entered_at` (0309) — zostaje | pętla |
 | 27.10.2026 02:40 | #584 SCALONE `f5b0451b` (wygląd lista zmian KSH — ukryj bez zmian). #574-nast F7 #582 r3: N1+N2 testy | pętla |
 | 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
+| 27.10.2026 03:00 | #574-nast / #582 SCALONE `de50a8bb` (F7 gotowe na `36c1a0a`, unit/db/visual ✔); start BN0 #572 (**0313**) | pętla |

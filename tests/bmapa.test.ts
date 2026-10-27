@@ -5,6 +5,7 @@ import {
   H6_LAYER_ENABLED,
   ROAD_PL,
   ROAD_SE,
+  ROAD_KAA,
   STRAIGHT_GDN_NYN,
   STRAIGHT_GDY_KAA,
   WATER_GDN_NYN,
@@ -15,6 +16,7 @@ import {
   visibleFerryMarkers,
   ferryPhase,
   metersPerPixel,
+  maxDeviationToCorridorKm,
   rawGps,
   roadGeometryOk,
   ferryVisible,
@@ -111,6 +113,28 @@ describe('B-MAPA geometria', () => {
     const dense = denseVia(ROAD_PL.via.map((v) => [v.lat, v.lng] as [number, number]), 0.4);
     expect(roadGeometryOk(dense, ROAD_PL)).toBe(true);
     expect(roadGeometryOk(dense, ROAD_SE)).toBe(false);
+  });
+
+  // #572 BN0 / E — Karlskrona–Boden jak SE_E22 (≤ 2 km od korytarza)
+  it('#572 SE-KAA: ROAD_KAA + odchyłka od korytarza ≤ 2 km', () => {
+    const corridor = ROAD_KAA.via.map((v) => [v.lat, v.lng] as [number, number]);
+    // krok 0,25 km — haversine bywa dłuższy niż przybliżenie w denseVia (maxSeg ≤ 3)
+    const dense = denseVia(corridor, 0.25);
+    expect(roadGeometryOk(dense, ROAD_KAA)).toBe(true);
+    expect(maxDeviationToCorridorKm(dense, corridor)).toBeLessThanOrEqual(2);
+    const chord: Array<[number, number]> = [
+      [56.1646, 15.6308],
+      [65.80539, 21.75914],
+    ];
+    expect(roadGeometryOk(chord, ROAD_KAA)).toBe(false);
+    expect(maxDeviationToCorridorKm(chord, corridor)).toBeGreaterThan(2);
+    const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
+    expect(apply).toMatch(/ROAD_KAA/);
+    expect(apply).toMatch(/ROAD_LEGS = 4/);
+    const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
+    expect(edge).toMatch(/passThrough=true/);
+    expect(edge).toMatch(/here_corridor_points/);
+    expect(edge).toMatch(/SE_E22/);
   });
 
   it('ślad przez rondo to surowe punkty, bez dopasowania', () => {

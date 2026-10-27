@@ -168,6 +168,40 @@ export const ROAD_SE: RoadSpec = {
   ],
 };
 
+/**
+ * #572 BN0: Karlskrona–Boden po E22/E4 (jak SE_E22 z przejazdu).
+ * Punkty kontrolne = Lyckeby / Jämjö / Brömsebro / Söderåkra + kręgosłup E22→E4.
+ */
+export const ROAD_KAA: RoadSpec = {
+  minPoints: 2000,
+  maxSegKm: 3,
+  // cięciwy via ≈ 1160 km; prawdziwa droga HERE ≈ 1380 km (H-0)
+  minKm: 1000,
+  maxKm: 1600,
+  via: [
+    { lat: 56.1646, lng: 15.6308, km: 3 },
+    { lat: 56.198, lng: 15.656, km: 5 },
+    { lat: 56.19, lng: 15.84, km: 8 },
+    { lat: 56.3, lng: 15.99, km: 8 },
+    { lat: 56.47, lng: 16.06, km: 8 },
+    { lat: 57.758, lng: 16.637, km: 12 },
+    { lat: 58.594, lng: 16.183, km: 12 },
+    { lat: 59.195, lng: 17.628, km: 12 },
+    { lat: 65.80539, lng: 21.75914, km: 3 },
+  ],
+};
+
+/** #572: max km od punktów korytarza do linii HERE (odbiór ≤ 2). */
+export function maxDeviationToCorridorKm(
+  line: readonly LatLng[],
+  corridor: readonly LatLng[],
+): number {
+  if (line.length < 2 || corridor.length === 0) return Infinity;
+  let m = 0;
+  for (const p of corridor) m = Math.max(m, nearestKm(line, p[0], p[1]));
+  return m;
+}
+
 export function looseRoadOk(line: readonly LatLng[]): boolean {
   return line.length >= 200 && maxSegmentKm(line) <= 3 && lineLengthKm(line) >= 80;
 }

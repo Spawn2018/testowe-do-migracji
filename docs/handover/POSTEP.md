@@ -5768,3 +5768,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #584 F7 gotowe po `09482223`, unit/visual ✔ → merge `f5b0451b`. #582 bez „F7: gotowe” (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g → insert pinned UUID bez kodu) → anulowane wiszące visual/db (G-15).
 - **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
 
+## 2026-10-27 04:00 — #582 SCALONE; start BN0 #572 (0313)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **#582** merge `de50a8bb` (F7 „gotowe do scalenia” 01:56Z na `36c1a0a`; unit/db/visual ✔). Bez push na main.
+- **BN0 #572 krok:** gałąź `pakiet/572-bn0-se-kaa-here`; migracja **0313** (`here_corridor_points`, `here_road_corridor_dev_m`); Edge `here-roads` — SE-KAA z `via` SE_E22 (`passThrough`), refetch gdy korytarz nowszy; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` → 4 legi; bmapa **149**. Zrzut visual mapy — po zielonym CI / F7.
+
