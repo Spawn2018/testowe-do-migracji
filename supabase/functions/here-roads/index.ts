@@ -1,12 +1,13 @@
 /**
  * B-MAPA — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
- * #572 BN0 / F7 #585 r3: SE-KAA z via z SE_KAA_TRACK; retry_after (bez cofania fetched_at);
+ * #572 BN0 / F7 #585 r4: SE-KAA z via z SE_KAA_TRACK; shouldFetch (retry_after przed świeżością);
  * odchyłka NOWE-3; odrzucenie nie kasuje punktów.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
 import { HERE_BILLING_DEFAULTS } from '../_shared/here/billing.ts';
+import { shouldFetch } from '../_shared/here/roadFetch.ts';
 import {
   ROAD_PL,
   ROAD_SE,
@@ -25,7 +26,6 @@ const LEGS = [
   { leg: 'SE-KAA', origin: '56.1646,15.6308', destination: '65.80539,21.75914', spec: 'kaa' as const, summary: 'Trasa drogowa Karlskrona–Boden' },
 ] as const;
 
-const DAY_MS = 30 * 864e5;
 const RETRY_REJECT_MS = 24 * 3600e3;
 const CORRIDOR_KAA = 'SE_KAA_TRACK';
 
@@ -85,17 +85,17 @@ Deno.serve(async (req) => {
   }
 
   let stored = 0;
+  const nowMs = Date.now();
   for (const leg of LEGS) {
     const prev = have.get(leg.leg);
-    const age = prev ? Date.now() - Date.parse(prev.fetched_at) : Infinity;
     const corridorNewer =
-      leg.leg === 'SE-KAA' && corridorUpdatedAt > 0 && prev != null && corridorUpdatedAt > Date.parse(prev.fetched_at);
-    const retryAt = prev?.retry_after ? Date.parse(prev.retry_after) : 0;
-    const waitingRetry = retryAt > 0 && Date.now() < retryAt;
-    // NOWE-1/2: świeży sukces trzyma 30 dni; po odrzuceniu czekaj retry_after (fetched_at bez cofania).
-    if (prev && age < DAY_MS && !corridorNewer) {
-      if (!retryAt || waitingRetry) continue;
-    }
+      leg.leg === 'SE-KAA' &&
+      corridorUpdatedAt > 0 &&
+      prev != null &&
+      Number.isFinite(Date.parse(prev.fetched_at)) &&
+      corridorUpdatedAt > Date.parse(prev.fetched_at);
+    // F7 r4 P1: najpierw retry_after, potem świeżość 30 dni (także przy fetched_at=-infinity).
+    if (!shouldFetch(prev, nowMs, corridorNewer)) continue;
 
     // F7 #585: SE-KAA bez korytarza — pomiń (bez zapytania „na ślepo”).
     if (leg.leg === 'SE-KAA' && corridorPts.length < 2) continue;

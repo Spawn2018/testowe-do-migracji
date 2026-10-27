@@ -6002,3 +6002,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - NOWE-3: `kaaDeviationOk` / SQL `here_road_corridor_dev_m` (korytarz→≤2 km; trasa→max(2;0,15×L));
   - bmapa EXPECTED **163**.
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 18:55 — BN0 #585 F7 r4 (P1/P2/P3)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r4 POPRAWKI na `106d84c`; db FAIL N3 rebuild→0). Bez push na main.
+- **Krok (BN0 #585):** F7 r4:
+  - P1: `shouldFetch` — `retry_after` przed świeżością (także `fetched_at=-infinity`); unit;
+  - P2: `rebuild_se_kaa_track` — brak Verkö → 0 (bez `coalesce(...,1)`);
+  - P3: N3 odstępy SE 12 min; test braku portu → 0; bmapa EXPECTED **164**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.

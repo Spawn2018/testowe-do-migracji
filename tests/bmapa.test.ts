@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { shouldFetch, ROAD_FETCH_DAY_MS } from '../supabase/functions/_shared/here/roadFetch';
 import {
   HERE_MAX_ZOOM,
   H6_LAYER_ENABLED,
@@ -183,7 +184,7 @@ describe('B-MAPA geometria', () => {
     expect(edge).toMatch(/passThrough=true/);
     expect(edge).toMatch(/here_corridor_via_points/);
     expect(edge).toMatch(/kaaDeviationOk/);
-    expect(edge).toMatch(/retry_after/);
+    expect(edge).toMatch(/shouldFetch/);
     expect(edge).toMatch(/roadKaaSpecFromVia/);
     expect(edge).toMatch(/SE_KAA_TRACK/);
     expect(edge).not.toMatch(/SE_E22/);
@@ -192,7 +193,51 @@ describe('B-MAPA geometria', () => {
     expect(mig).toMatch(/retry_after/);
     expect(mig).toMatch(/rebuild_se_kaa_track/);
     expect(mig).toMatch(/95ab7218-69cc-490d-8b68-b379c3ed9aae/);
+    expect(mig).toMatch(/b\.rn_start is not null/);
     expect(mig).not.toMatch(/st_makepoint\(15\.63048/);
+  });
+
+  it('#572 F7 r4: shouldFetch — retry_after przed świeżością', () => {
+    const now = Date.parse('2026-10-27T12:00:00Z');
+    const day = ROAD_FETCH_DAY_MS;
+    // -infinity + retry_after w przyszłości → brak zapytania
+    expect(
+      shouldFetch(
+        { fetched_at: '-infinity', retry_after: '2026-10-28T12:00:00Z' },
+        now,
+        false,
+      ),
+    ).toBe(false);
+    // minione retry_after przy świeżym sukcesie → też brak
+    expect(
+      shouldFetch(
+        {
+          fetched_at: new Date(now - day / 2).toISOString(),
+          retry_after: new Date(now - 3600e3).toISOString(),
+        },
+        now,
+        false,
+      ),
+    ).toBe(false);
+    // -infinity + minione retry → wolno (wymusić przeliczenie)
+    expect(
+      shouldFetch(
+        { fetched_at: '-infinity', retry_after: new Date(now - 3600e3).toISOString() },
+        now,
+        false,
+      ),
+    ).toBe(true);
+    // corridorNewer + aktywny retry → nadal brak (nie płacić)
+    expect(
+      shouldFetch(
+        {
+          fetched_at: new Date(now - day * 2).toISOString(),
+          retry_after: '2026-10-28T12:00:00Z',
+        },
+        now,
+        true,
+      ),
+    ).toBe(false);
   });
 
   it('ślad przez rondo to surowe punkty, bez dopasowania', () => {

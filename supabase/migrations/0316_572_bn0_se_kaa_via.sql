@@ -318,26 +318,23 @@ begin
   ),
   bounds as (
     select
-      -- N3: pierwszy punkt PO ostatnim pobycie ≤2 km od Verkö (przed placem); bez PL/promu.
-      coalesce(
-        (
-          select min(n.rn)
-            from numbered n
-           where n.rn > coalesce(
-                   (select max(n2.rn) from numbered n2
-                     where n2.d_origin <= 2000
-                       and n2.rn < coalesce(
-                             (select min(n3.rn) from numbered n3 where n3.d_dest <= 2000),
-                             (select max(n4.rn) + 1 from numbered n4)
-                           )),
-                   0
-                 )
-             and n.rn <= coalesce(
-                   (select min(n5.rn) from numbered n5 where n5.d_dest <= 2000),
-                   (select max(n6.rn) from numbered n6)
-                 )
-        ),
-        1
+      -- N3/F7 r4 P2: start PO Verkö; brak Verkö / brak punktów po nim → NULL (nie 1 = PL).
+      (
+        select min(n.rn)
+          from numbered n
+         where n.rn > coalesce(
+                 (select max(n2.rn) from numbered n2
+                   where n2.d_origin <= 2000
+                     and n2.rn < coalesce(
+                           (select min(n3.rn) from numbered n3 where n3.d_dest <= 2000),
+                           (select max(n4.rn) + 1 from numbered n4)
+                         )),
+                 0
+               )
+           and n.rn <= coalesce(
+                 (select min(n5.rn) from numbered n5 where n5.d_dest <= 2000),
+                 (select max(n6.rn) from numbered n6)
+               )
       ) as rn_start,
       coalesce(
         (select min(rn) from numbered where d_dest <= 2000),
@@ -347,7 +344,8 @@ begin
   trimmed as (
     select n.g, n.ts, n.speed_kmh, n.rn
       from numbered n, bounds b
-     where n.rn >= b.rn_start and n.rn <= b.rn_end
+     where b.rn_start is not null
+       and n.rn >= b.rn_start and n.rn <= b.rn_end
        and b.rn_start <= b.rn_end
   ),
   moving as (
@@ -391,7 +389,7 @@ end;
 $$;
 
 comment on function public.rebuild_se_kaa_track(uuid) is
-  '#572 F7 r3: SE_KAA_TRACK ze śladu load_id; start po ostatnim Verkö ≤2 km. 0 = brak/za mało punktów.';
+  '#572 F7 r4: SE_KAA_TRACK ze śladu load_id; start po ostatnim Verkö ≤2 km. 0 = brak Verkö / za mało punktów.';
 
 revoke all on function public.rebuild_se_kaa_track(uuid) from public, anon, authenticated;
 

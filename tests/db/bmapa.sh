@@ -234,23 +234,24 @@ e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E
 [ "$e22_before" = "$e22_after" ] && { ok=$((ok+1)); echo "  OK    SE_E22 bez zmian (N8)"; } || { fail=$((fail+1)); echo "  FAIL  SE_E22 nadpisane"; }
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
+# F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).
 L572=a572a572-0000-4000-8000-000000000572
 sys "delete from positions where load_id='$L572'" >/dev/null
 sys "delete from loads where id='$L572'" >/dev/null
 sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
      values ('$L572', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-N3', 'IN_TRANSIT_SE')" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
-     select '$L572', timestamptz '2026-10-20 06:00:00+00' + (g.i || ' minutes')::interval,
+     select '$L572', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
             60, 'TEST', '{}'::jsonb
        from generate_series(0, 9) as g(i)" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
-     select '$L572', timestamptz '2026-10-20 08:00:00+00' + (g.i || ' minutes')::interval,
+     select '$L572', timestamptz '2026-10-20 08:00:00+00' + (g.i * 5 || ' minutes')::interval,
             st_setsrid(st_makepoint(15.6308 + (g.i % 3) * 0.001, 56.1646 + (g.i % 3) * 0.001), 4326),
             5, 'TEST', '{}'::jsonb
        from generate_series(0, 4) as g(i)" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
-     select '$L572', timestamptz '2026-10-20 09:00:00+00' + (g.i || ' minutes')::interval,
+     select '$L572', timestamptz '2026-10-20 09:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(
               15.63 + (21.76 - 15.63) * g.i / 80.0,
               56.17 + (65.81 - 56.17) * g.i / 80.0
@@ -266,6 +267,22 @@ awk "BEGIN{exit !($start_lat+0 >= 55.5 && $start_lat+0 <= 57.5)}" 2>/dev/null \
   || { fail=$((fail+1)); echo "  FAIL  N3 start lat → $start_lat"; }
 sys "delete from positions where load_id='$L572'" >/dev/null
 sys "delete from loads where id='$L572'" >/dev/null
+
+# F7 r4 P2/P3: brak punktu przy porcie Verkö → rebuild 0 (nie start od PL)
+L572b=a572a572-0000-4000-8000-000000000573
+sys "delete from positions where load_id='$L572b'" >/dev/null
+sys "delete from loads where id='$L572b'" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
+     values ('$L572b', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-P2', 'IN_TRANSIT_SE')" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
+     select '$L572b', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
+            st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
+            60, 'TEST', '{}'::jsonb
+       from generate_series(0, 60) as g(i)" >/dev/null
+n3b=$(sys "select rebuild_se_kaa_track('$L572b')")
+if [ "$n3b" = "0" ]; then ok=$((ok+1)); echo "  OK    P2 brak Verkö → rebuild 0"; else fail=$((fail+1)); echo "  FAIL  P2 brak Verkö → $n3b"; fi
+sys "delete from positions where load_id='$L572b'" >/dev/null
+sys "delete from loads where id='$L572b'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
