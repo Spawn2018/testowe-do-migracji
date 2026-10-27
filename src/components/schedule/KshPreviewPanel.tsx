@@ -136,14 +136,13 @@ export function KshPreviewPanel() {
                           const notes = previewNotes(r);
                           return (
                             <tr key={`${r.field}-${i}`} data-ksh-preview-row={g.code} className={i === 0 ? 's7-kp-first' : 's7-kp-cont'}>
-                              <th scope="row" data-label={lbl.code} className="s7-kp-code">
-                                {i === 0 ? (
-                                  g.loadId ? (
-                                    <button type="button" className="s7-kp-link" aria-label={s7p(locale, 's7_kp_open', { code: g.code })} onClick={() => selectLoad(g.loadId)}>
-                                      {g.code}
-                                    </button>
-                                  ) : g.code
-                                ) : <span className="s7-kp-rep">{g.code}</span>}
+                              <th scope="row" data-label={lbl.code} className={i === 0 ? 's7-kp-code' : 's7-kp-code s7-kp-code-cont'}>
+                                {/* Kod transportu w każdym wierszu (zgłoszenie właściciela 27.10, 14:24 — drugi wiersz BS-06 wyglądał na „bez numeru”). */}
+                                {g.loadId ? (
+                                  <button type="button" className="s7-kp-link" aria-label={s7p(locale, 's7_kp_open', { code: g.code })} onClick={() => selectLoad(g.loadId)}>
+                                    {g.code}
+                                  </button>
+                                ) : g.code}
                               </th>
                               <td data-label={lbl.field}>{r.fieldLabel}</td>
                               <td data-label={lbl.wt}>{previewValue(r.wt, r.field)}</td>
