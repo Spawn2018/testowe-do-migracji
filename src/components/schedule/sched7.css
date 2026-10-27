@@ -156,7 +156,7 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-kp-code{font-family:var(--font-cond);font-weight:700;white-space:nowrap}
 @media (min-width:769px){.s7-kp .ox-table tr.s7-kp-first th,.s7-kp .ox-table tr.s7-kp-first td{border-top:1px solid var(--rule)}}
 /* Kolejny wiersz tego samego transportu: kod widoczny, przygaszony (grupa czytelna, żaden wiersz bez numeru). */
-.s7-kp-code-cont .s7-kp-link,.s7-kp-code-cont{color:var(--ink-3);font-weight:600}
+.s7-kp-code-cont .s7-kp-link,.s7-kp-code-cont{color:var(--ink-3)}
 .s7-kp-link{background:none;border:0;padding:0;font:inherit;color:var(--sea);text-decoration:underline;cursor:pointer}
 .s7-kp-notes .pill{margin:0 4px 2px 0}
 @media (max-width:768px){
