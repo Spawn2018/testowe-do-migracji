@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 312, // #596: +3 (decision_resolve CANCEL/REMOVE ze skutkiem; apply_effect CARRIER_* wyjątek); było 309
+  import: 315, // #596 F7 r1: +3 (idempotent zamknięta, Podgląd, WILL_RESTORE); było 312 (+3 strażnik po 309)
   nullguard: 866, // #590: +2 RPC (decision_resolve_carrier_change, load_restore_removed) × 5 rodzajów kont = +10; było 856
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,

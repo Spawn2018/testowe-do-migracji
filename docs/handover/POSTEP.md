@@ -6062,3 +6062,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka `dla-cursora`: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Komentarz Spawn2018 na #598 (20:34Z): kolejność po #585 → **#596** → **#594** → #581.
 - Scalanie: **#585** F7 gotowe na `0007d0fc` (20:21Z, po `a02cbf9`) + CI unit/visual/db ✔ → `gh pr merge --merge` → `29b0496e` (20:36Z). Bez push na main.
 - Bieżąca: **#596** gałąź `pakiet/596-decision-resolve-carrier-guard`, migracja **0317** — `decision_resolve` → `decision_resolve_carrier_change`; `decision_apply_effect` CARRIER_* → wyjątek; import EXPECTED **312**. PR #598 (P4-k) po #596 przenumeruje 0317→0318.
+
+## 2026-10-27 22:15 — #596/#599 F7 r1 poprawki (assert_not_preview + WILL_RESTORE)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (nic nie budować); #538/#537/#500/#499 w planie — bez nowych. Brak PR z „F7: gotowe do scalenia”.
+- CI na `f915a0e3`: unit ✔, visual ✔, **db FAIL** security 458/1 — B5 strażnik: `decision_resolve` bez `assert_not_preview` na początku (regresja względem produkcji).
+- F7 r1 #599 (Spawn2018, 20:43Z): blokujące = brak `assert_not_preview`; średnie = `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; test zamknięta→idempotent.
+- Krok: poprawka w 0317 + testy import (+3 → EXPECTED **315**); push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia. #598 nadal CONFLICTING / F7 poprawki; numeracja 0317 zostaje przy #599.

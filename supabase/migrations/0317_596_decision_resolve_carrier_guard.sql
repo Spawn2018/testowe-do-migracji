@@ -8,6 +8,8 @@
 --
 -- Rozwiązanie: przekazanie do decision_resolve_carrier_change + wyjątek
 -- w decision_apply_effect dla CARRIER_* (bezpiecznik).
+-- F7 r1: assert_not_preview na początku (jak produkcja po B5);
+-- KSH_REMOVED_BACK / WILL_RESTORE → load_restore_removed.
 -- =====================================================================
 
 create or replace function public.decision_apply_effect(
@@ -394,6 +396,8 @@ declare
   v_fx jsonb;
   v_effect text;
 begin
+  -- B5 / F7 #599: pierwsza instrukcja — Podgląd nie zapisuje
+  perform public.assert_not_preview();
   if (current_app_user_id() is not null) is not true then
     raise exception 'Rozstrzygnięcie — tylko wskazana firma albo administrator' using errcode = '42501';
   end if;
@@ -403,6 +407,10 @@ begin
   -- #596: jedna ścieżka — ogólne resolve nie zamyka bez skutku CARRIER_*
   if d.type_code = 'KSH_CARRIER_CHANGED' then
     return public.decision_resolve_carrier_change(p_decision, upper(btrim(p_option)));
+  end if;
+  -- #596 F7: Przywróć usunięty — ta sama ścieżka co ekran (#595)
+  if d.type_code = 'KSH_REMOVED_BACK' and upper(btrim(p_option)) = 'WILL_RESTORE' then
+    return public.load_restore_removed(d.load_id);
   end if;
   if (d.status in ('NEW','ASSIGNED','SNOOZED')) is not true then
     raise exception 'Decyzja już zamknięta' using errcode = '22023';
@@ -511,4 +519,4 @@ revoke all on function public.decision_resolve(uuid, text, text, jsonb) from pub
 grant execute on function public.decision_resolve(uuid, text, text, jsonb) to authenticated;
 
 comment on function public.decision_resolve(uuid, text, text, jsonb) is
-  '#384 + #596: KSH_CARRIER_CHANGED → decision_resolve_carrier_change (jedna ścieżka ze skutkiem).';
+  '#384 + #596: assert_not_preview; KSH_CARRIER_CHANGED → carrier_change; KSH_REMOVED_BACK/WILL_RESTORE → load_restore_removed.';
