@@ -116,6 +116,8 @@ decision_open | GUARD | select decision_open('$P','BACKUP_FAILED','x','{}'::json
 decision_assign | GUARD | select decision_assign(gen_random_uuid(), gen_random_uuid()) | HHL lub
 decision_snooze | GUARD | select decision_snooze(gen_random_uuid(), now() + interval '1 hour') | HHL lub
 decision_resolve | GUARD | select decision_resolve(gen_random_uuid(), 'ACCEPT') | wskazana firma|Rozstrzygnięcie
+decision_resolve_carrier_change | GUARD | select decision_resolve_carrier_change(gen_random_uuid(), 'CANCEL') | Rozstrzygnięcie|forbidden|HHL
+load_restore_removed | GUARD | select load_restore_removed(gen_random_uuid()) | forbidden|HHL_ADMIN
 delivered_check_resolve | GUARD | select delivered_check_resolve('$L1', true, null) | wskazana firma|Rozstrzyg|Brak aktywnego konta
 decision_expire | GUARD | select decision_expire(gen_random_uuid(), 'test wygaszenia') | HHL lub system|Wygaszenie
 auth_email_allowed | EMPTY | select auth_email_allowed('hhl@test') | f

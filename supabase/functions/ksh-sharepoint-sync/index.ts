@@ -320,6 +320,7 @@ async function handle(req: Request): Promise<Response> {
     rejected: parsed.meta.rejected,
     skipped_standard: parsed.meta.skippedStandard,
     skipped_carrier: parsed.meta.skippedCarrier,
+    skipped_carrier_rows: parsed.meta.skippedCarrierRows ?? [],
     skipped_empty: parsed.meta.skippedEmpty,
   };
 

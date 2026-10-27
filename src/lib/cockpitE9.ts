@@ -172,7 +172,7 @@ export function invoiceTodoCount(
 /** Wspólne liczby z danych (bez zapisu, bez zapytań). */
 export function cockpitFacts(input: Pick<CockpitInput, 'loads' | 'documents' | 'nowIso' | 'bills'>) {
   /* B10: anulowane poza liczbami Kokpitu i mapy */
-  const loads = input.loads.filter((l) => l.status !== 'CANCELLED');
+  const loads = input.loads.filter((l) => l.status !== 'CANCELLED' && l.status !== 'REMOVED');
   const { documents, nowIso, bills } = input;
   const scxBilled = loadsBilledBy(bills, 'SCX');
   const today = dayKey(nowIso) ?? nowIso.slice(0, 10);

@@ -181,7 +181,7 @@ describe('B-MAPA geometria', () => {
     expect(edge).toMatch(/maxDeviationSymmetricKm/);
     expect(edge).toMatch(/SE_KAA_TRACK/);
     expect(edge).not.toMatch(/SE_E22/);
-    const mig = readFileSync('supabase/migrations/0313_572_bn0_se_kaa_via.sql', 'utf8');
+    const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');
     expect(mig).toMatch(/SE_KAA_TRACK/);
     expect(mig).toMatch(/95ab7218-69cc-490d-8b68-b379c3ed9aae/);
     expect(mig).not.toMatch(/st_makepoint\(15\.63048/);

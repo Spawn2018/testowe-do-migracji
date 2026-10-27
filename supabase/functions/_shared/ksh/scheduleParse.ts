@@ -241,6 +241,9 @@ export function classifyOversize(
 /* Główny parser                                                    */
 /* --------------------------------------------------------------- */
 
+/** #590: wiersze pominięte z powodu innego przewoźnika (bez pełnych danych wiersza). */
+export type SkippedCarrierRow = { code: string; carrier_text: string };
+
 export interface ParseResult {
   rows: ParsedRow[];
   issues: RowIssue[];
@@ -251,6 +254,7 @@ export interface ParseResult {
     warnings: number;
     skippedStandard: number;
     skippedCarrier: number;
+    skippedCarrierRows: SkippedCarrierRow[];
     skippedEmpty: number;
     datesToCheck: number;
   };
@@ -270,6 +274,7 @@ export function parseSchedule(
   const seen = new Set<string>();
   let skippedStandard = 0;
   let skippedCarrier = 0;
+  const skippedCarrierRows: SkippedCarrierRow[] = [];
   let skippedEmpty = 0;
   let datesToCheck = 0;
   const hasCarrierCol = Boolean(map.carrier && map.carrier !== `\u0000brak:carrier`);
@@ -299,6 +304,13 @@ export function parseSchedule(
       const carrierRaw = r[map.carrier];
       if (!emptyCell(carrierRaw) && !isHhCarrier(carrierRaw)) {
         skippedCarrier += 1;
+        /* #590: lista kodów+przewoźnik do decyzji KSH_CARRIER_CHANGED (nie pełny wiersz). */
+        if (!isStandardDims(r[map.dimensions])) {
+          skippedCarrierRows.push({
+            code: codeRaw,
+            carrier_text: cellText(carrierRaw) ?? '—',
+          });
+        }
         /* E38 pkt 2: NTG (i inni) z wymiarami — WARN w podglądzie, nie cicho. */
         if (!isStandardDims(r[map.dimensions])) {
           issues.push({ rowIndex, shipmentCode: codeRaw, severity: 'WARN',
@@ -456,6 +468,7 @@ export function parseSchedule(
       warnings: issues.filter((i) => i.severity === 'WARN').length,
       skippedStandard,
       skippedCarrier,
+      skippedCarrierRows,
       skippedEmpty,
       datesToCheck,
     },

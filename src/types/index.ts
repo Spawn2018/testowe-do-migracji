@@ -20,6 +20,8 @@ export type LoadStatus =
   | 'READY_TO_INVOICE'
   | 'INVOICED'
   | 'CANCELLED'
+  /** #590: usunięty z harmonogramu (tylko HHL; RLS ukrywa przed KSH i SCX) */
+  | 'REMOVED'
   | 'DELAYED'
   | 'SILENT'
   | 'DOC_MISSING';

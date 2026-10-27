@@ -37,7 +37,7 @@ export function isTodoRisk(r: R): boolean {
 }
 
 /** Transport po dostawie albo anulowany — alarmy „przed załadunkiem” przy nim są już nieaktualne. */
-const LOAD_CLOSED: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED']);
+const LOAD_CLOSED: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED', 'REMOVED']);
 const filled = (v: string | null | undefined): boolean => !!(v ?? '').trim();
 
 /** Alarmy przed załadunkiem i w drodze — po dostawie albo anulowaniu transportu nieaktualne (zamknięcie w bazie — D-20261018-1215-01 §2). */

@@ -24,7 +24,7 @@ import type { Sailing, TrackingLinkInfo } from '../types';
 export type DbLoadStatus =
   | 'PLANNED' | 'RESOURCES_PENDING' | 'DOCS_PENDING' | 'READY' | 'AT_LOADING' | 'IN_TRANSIT_PL'
   | 'AT_PORT_GDANSK' | 'FERRY' | 'AT_PORT_NYNASHAMN' | 'IN_TRANSIT_SE' | 'AT_SITE' | 'UNLOADED'
-  | 'DELIVERED' | 'READY_TO_INVOICE' | 'INVOICED' | 'CANCELLED';
+  | 'DELIVERED' | 'READY_TO_INVOICE' | 'INVOICED' | 'CANCELLED' | 'REMOVED';
 
 const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   PLANNED: 'PLANNED',
@@ -44,6 +44,7 @@ const DB_TO_APP_STATUS: Record<DbLoadStatus, LoadStatus> = {
   READY_TO_INVOICE: 'READY_TO_INVOICE',
   INVOICED: 'INVOICED',
   CANCELLED: 'CANCELLED',
+  REMOVED: 'REMOVED',
 };
 
 /** App → DB. DELAYED / SILENT to flagi, nie statusy w bazie → null (tylko zdarzenie). */
@@ -65,6 +66,8 @@ const APP_TO_DB_STATUS: Record<LoadStatus, DbLoadStatus | null> = {
   READY_TO_INVOICE: 'READY_TO_INVOICE',
   INVOICED: 'INVOICED',
   CANCELLED: 'CANCELLED',
+  /** #590: do REMOVED tylko przez decyzję (decision_resolve_carrier_change) — nie ustawiamy z UI */
+  REMOVED: null,
   DELAYED: null,
   SILENT: null,
 };
