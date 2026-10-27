@@ -18,28 +18,32 @@ describe('W-583 lista zmian KSH bez fałszywych zmian', () => {
     ],
   };
 
-  it('klucz porównania: trim, pojedyncze spacje, wielkość liter; pusty = brak', () => {
-    expect(sameValueKey(' gd  9792x ')).toBe('GD 9792X');
+  it('klucz porównania ściśle jak import; brak = pusty tekst', () => {
+    expect(sameValueKey(' gd  9792x ')).toBe(' gd  9792x ');
     expect(sameValueKey(null)).toBe('');
     expect(sameValueKey('')).toBe(sameValueKey(undefined));
   });
 
   it('noop tylko dla changed z tą samą wartością', () => {
-    expect(isNoopChange({ kind: 'changed', wt: 'A', file: 'a' })).toBe(true);
+    expect(isNoopChange({ kind: 'changed', wt: 'A', file: 'A' })).toBe(true);
+    expect(isNoopChange({ kind: 'changed', wt: 'A', file: 'a' })).toBe(false);
+    expect(isNoopChange({ kind: 'changed', wt: 'GD 9792X', file: 'GD  9792X' })).toBe(false);
     expect(isNoopChange({ kind: 'changed', wt: null, file: '' })).toBe(true);
     expect(isNoopChange({ kind: 'changed', wt: null, file: 'PLAT' })).toBe(false);
     expect(isNoopChange({ kind: 'missing', wt: null, file: null })).toBe(false);
     expect(isNoopChange({ kind: 'added', wt: null, file: null })).toBe(false);
   });
 
-  it('odczyt RPC pomija 3 fałszywe zmiany, zostawia prawdziwe i missing; licznik bez nich', () => {
+  it('odczyt RPC pomija tylko identyczne wartości; inna wielkość liter i spacje zostają (import je zapisze)', () => {
     const p = kshPreviewFromRpc(raw)!;
     expect(p.changes.map((c) => `${c.code}:${c.field || c.kind}`)).toEqual([
+      'SG-01:tractor_plate',
+      'SG-02:trailer_plate',
       'BS-01:trailer_plate',
       'SG-03:load_date',
       'SG-04:missing',
     ]);
-    expect(p.n).toBe(3);
+    expect(p.n).toBe(5);
   });
 
   it('tylko fałszywe zmiany → pusta lista i licznik 0', () => {

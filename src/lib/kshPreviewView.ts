@@ -37,9 +37,13 @@ export interface KshPreviewGroup {
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : v == null ? null : String(v));
 
-/** Wartość do porównania WT ↔ plik: bez spacji na brzegach i podwójnych, wielkość liter bez znaczenia; pusta → ''. */
+/**
+ * Wartość do porównania WT ↔ plik — ściśle, jak import (`is distinct from`, bez zmiany wielkości liter i spacji);
+ * jedyna normalizacja: brak = pusty tekst (serwer i tak zwraca `nullif(…, '')`). Inaczej panel ukryłby zmianę,
+ * którą import zapisze (np. `0035/10/s/2026` w pliku).
+ */
 export function sameValueKey(v: string | null | undefined): string {
-  return (v ?? '').trim().replace(/\s+/g, ' ').toLocaleUpperCase('pl-PL');
+  return v ?? '';
 }
 
 /**
@@ -85,7 +89,7 @@ export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
     readAt: typeof o.read_at === 'string' ? o.read_at : null,
     bytes: Number.isFinite(Number(o.bytes)) ? Number(o.bytes) : 0,
     hash: typeof o.hash === 'string' ? o.hash : '',
-    n: Number.isFinite(n) ? Math.max(changes.length, n - dropped) : changes.length,
+    n: dropped > 0 || !Number.isFinite(n) ? changes.length : n,
     changes,
   };
 }
