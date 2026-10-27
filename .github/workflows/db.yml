@@ -34,4 +34,4 @@ jobs:
           for f in supabase/migrations/*.sql; do
             psql $url -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null 2>/tmp/err || { echo "FAIL $f"; tail -5 /tmp/err; exit 1; }
           done
-          psql $url -f tmp-introspect.sql
+          psql $url -f tests/db/zz_introspect.sql
