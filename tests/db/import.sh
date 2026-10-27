@@ -1280,7 +1280,9 @@ r583_file_sql() {
   printf "%s" "(select jsonb_build_array(jsonb_build_object('code','SG-01','item_type',si.item_type,'cargo_class',case when si.cargo_class='STANDARD' then 'STANDARD' end,'length_m',round(si.length_m,2),'width_m',round(si.width_m,2),'height_m',round(si.height_m,2),'unit_weight_t',round(si.unit_weight_t,3),'qty',si.qty,'total_weight_t',round(si.total_weight_t,3),'load_date',l.plan_load_date,'load_time',case when l.plan_load_from is null then null else to_char(l.plan_load_from at time zone 'Europe/Warsaw','HH24:MI') end,'delivery_date',l.plan_delivery_date,'delivery_time',case when l.plan_delivery_to is null then null else to_char(l.plan_delivery_to at time zone 'Europe/Stockholm','HH24:MI') end,'order_no',l.order_no,'assembly_seq',si.assembly_seq,'hhl_order_no',l.hhl_order_no,'carrier_order_no',l.carrier_order_no,'driver_name',l.driver_name,'driver_phone',l.driver_phone,'driver_delivery_name',l.driver_delivery_name,'driver_delivery_phone',l.driver_delivery_phone,'tractor_plate',l.tractor_plate,'tractor_delivery_plate',l.tractor_delivery_plate,'trailer_plate',l.trailer_plate) || ($patch_expr)) from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01' where l.id='$SG1' limit 1)"
 }
 r583_prep_sql() {
-  printf "%s" "update loads set hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P', tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999', status='READY' where id='$SG1'; update shipment_items set schedule_row=null where load_id='$SG1' and shipment_code='SG-01';"
+  # Po UPDATE loads przy write_enabled powstaje pending — czyść przed importem
+  # (pending-skip wykreśla carrier/hhl/daty z v_apply_fields; F7 pusta waga + numer).
+  printf "%s" "update loads set hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P', tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999', status='READY' where id='$SG1'; update shipment_items set schedule_row=null where load_id='$SG1' and shipment_code='SG-01'; delete from ksh_sync_outbound where load_id='$SG1' and status='pending';"
 }
 # SQL: utwórz _f583 + GRANT (wywołać przed set role).
 r583_mat_sql() {
@@ -1375,6 +1377,7 @@ update shipment_items set total_weight_t=20.74, unit_weight_t=20.74, length_m=12
   schedule_row = jsonb_build_object('total_weight_t',20.74,'length_m',12.50,'carrier_order_no','15035/2026/OSL/GDA/P')
  where load_id='$SG1' and shipment_code='SG-01';
 update loads set carrier_order_no='15035/2026/OSL/GDA/P' where id='$SG1';
+delete from ksh_sync_outbound where load_id='$SG1' and status='pending';
 $(r583_mat_sql "$F583")
 update _f583 set j = jsonb_build_array((j->0) - 'total_weight_t');
 set local role authenticated; set local request.jwt.claim.sub='$HHL';

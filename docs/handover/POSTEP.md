@@ -5885,3 +5885,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
 - Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 CI `c3e42f49` import 277/281 (F7 11:08Z) — bez „gotowe”. Bez push na main.
 - **Krok (PR #586):** `r583_grep` / `client_min_messages=warning` (NOTICE: …); test pusta waga = `(j->0)-'total_weight_t'` + asercja skip+carrier; delete pending SG1 przed #583. EXPECTED **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 17:00 — #583 CI FAIL r12: pending po prep blokuje numer
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać**; #586 bez „F7: gotowe”. Bez push na main.
+- CI #586 `54dadc16`: unit/visual ✔; db FAIL import **280/281** (`#583 F7: pusta waga + numer` — skip_reason OK, `carrier_order_no`∅, numer zostaje stary).
+- Przyczyna: `write_enabled` + `r583_prep_sql` UPDATE loads → pending; import `false` wykreśla `carrier_order_no` (pending-skip). Jednorazowy delete przed blokiem #583 nie wystarcza (prep w każdej transakcji).
+- **Krok:** `delete pending` na końcu `r583_prep_sql` + po UPDATE numeru w teście wagi. EXPECTED **281**. Po zielonym CI — prośba o F7.
