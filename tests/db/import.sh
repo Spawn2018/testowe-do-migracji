@@ -1272,4 +1272,236 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#567 23B: blocked INVOICED → missing" "$out" "missing|Brak w pliku (zablokowany: zafakturowany)"
 
+# --- #583: prev z live WT + tablice PLAT / subset ---
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set
+  hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
+  tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
+where id='$SG1';
+update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
+  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+where load_id='$SG1' and shipment_code='SG-01';
+create temporary table _r583 as
+  select jsonb_build_array(import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01')) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')||'/'||(r->>'unchanged')
+  from (select import_schedule('$P', (select rows from _r583), '{}'::text[],
+        '{\"name\":\"583a.xlsx\",\"hash\":\"583a\"}'::jsonb, true) r) s;
+rollback;
+")
+chk "#583: identyczne numery/tablice → changed=0" "$out" "0/1"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set
+  hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
+  tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
+where id='$SG1';
+update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
+  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+where load_id='$SG1' and shipment_code='SG-01';
+create temporary table _r583 as
+  select jsonb_build_array(import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01')) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583b.xlsx\",\"hash\":\"583b\"}'::jsonb, true)->'changed' into temporary _chg583;
+reset role;
+set local role service_role;
+set local request.jwt.claim.role='service_role';
+select jsonb_array_length(ksh_sync_preview_store('$P', (select * from _chg583), now(), 8, '583eq')->'changes');
+rollback;
+")
+chk "#583: preview bez wierszy gdy WT=plik" "$out" "0"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set
+  hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
+  tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
+where id='$SG1';
+update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
+  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+where load_id='$SG1' and shipment_code='SG-01';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','ZZZ1111')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')||'/'||coalesce(r->'changed'->0->'fields'->>0,'')
+  from (select import_schedule('$P', (select rows from _r583), '{}'::text[],
+        '{\"name\":\"583c.xlsx\",\"hash\":\"583c\"}'::jsonb, true) r) s;
+rollback;
+")
+chk "#583: jedna różna tablica → changed=1" "$out" "1/trailer_plate"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set
+  hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
+  tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
+where id='$SG1';
+update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
+  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+where load_id='$SG1' and shipment_code='SG-01';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','ZZZ1111')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583d.xlsx\",\"hash\":\"583d\"}'::jsonb, true)->'changed' into temporary _chg583;
+reset role;
+set local role service_role;
+set local request.jwt.claim.role='service_role';
+select jsonb_array_length(ksh_sync_preview_store('$P', (select * from _chg583), now(), 9, '583one')->'changes');
+rollback;
+")
+chk "#583: preview 1 wiersz dla różnej tablicy" "$out" "1"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate=null where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','PLAT')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select coalesce(r->'changed'->0->'skip_reason'->>'trailer_plate','')
+  from (select import_schedule('$P', (select rows from _r583), '{}'::text[],
+        '{\"name\":\"583p.xlsx\",\"hash\":\"583p\"}'::jsonb, true) r) s;
+rollback;
+")
+chk "#583: PLAT → skip_reason" "$out" "wartość w pliku nie jest tablicą — pominięta"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate=null where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','PLAT')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+perform import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583p2.xlsx\",\"hash\":\"583p2\"}'::jsonb, false);
+reset role;
+select coalesce(trailer_plate,'∅') from loads where id='$SG1';
+rollback;
+")
+chk "#583: po PLAT trailer_plate nadal null" "$out" "∅"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate=null where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','PLAT')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583p3.xlsx\",\"hash\":\"583p3\"}'::jsonb, true)->'changed' into temporary _chg583;
+reset role;
+set local role service_role;
+set local request.jwt.claim.role='service_role';
+select e->>'skip_reason' from jsonb_array_elements(
+  ksh_sync_preview_store('$P', (select * from _chg583), now(), 10, '583plat')->'changes'
+) e where e->>'field'='trailer_plate';
+rollback;
+")
+chk "#583: preview PLAT ma skip_reason" "$out" "wartość w pliku nie jest tablicą — pominięta"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','WGM03896')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')
+  from (select import_schedule('$P', (select rows from _r583), '{}'::text[],
+        '{\"name\":\"583s.xlsx\",\"hash\":\"583s\"}'::jsonb, true) r) s;
+rollback;
+")
+chk "#583: subset tablicy → changed=0" "$out" "0"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','WGM03896')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+perform import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583s2.xlsx\",\"hash\":\"583s2\"}'::jsonb, false);
+reset role;
+select trailer_plate from loads where id='$SG1';
+rollback;
+")
+chk "#583: po subset SEX56N nie skasowane" "$out" "WGM 03896 - SEX56N"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+create temporary table _r583 as
+  select jsonb_build_array(
+    import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01','trailer_plate','KR12345')
+  ) as rows
+    from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
+   where l.id='$SG1';
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+perform import_schedule('$P', (select rows from _r583), '{}'::text[],
+  '{\"name\":\"583n.xlsx\",\"hash\":\"583n\"}'::jsonb, false);
+reset role;
+select trailer_plate from loads where id='$SG1';
+rollback;
+")
+chk "#583: nowa tablica zapisana" "$out" "KR12345"
+
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+update loads set hhl_order_no='0035/10/S/2026' where id='$SG1';
+set local role service_role;
+set local request.jwt.claim.role='service_role';
+select jsonb_array_length(ksh_sync_preview_store('$P',
+  '[{\"code\":\"SG-01\",\"load_id\":\"$SG1\",\"fields\":[\"hhl_order_no\"],\"before\":{\"hhl_order_no\":\"X\"},\"after\":{\"hhl_order_no\":\"0035/10/S/2026\"}}]'::jsonb,
+  now(), 11, '583shield')->'changes');
+rollback;
+")
+chk "#583: preview_store osłona gdy wt=file" "$out" "0"
+
+chk "#583: anon bez EXECUTE import_live_prev" \
+  "$(Q "select has_function_privilege('anon','import_live_prev(uuid,uuid)','execute')")" f
+chk "#583: authenticated bez EXECUTE import_live_prev" \
+  "$(Q "select has_function_privilege('authenticated','import_live_prev(uuid,uuid)','execute')")" f
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

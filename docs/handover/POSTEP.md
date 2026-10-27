@@ -5768,3 +5768,14 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - Scalanie: #584 F7 gotowe po `09482223`, unit/visual ‚úî ‚Üí merge `f5b0451b`. #582 bez ‚ÄûF7: gotowe‚Äù (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g ‚Üí insert pinned UUID bez kodu) ‚Üí anulowane wiszƒÖce visual/db (G-15).
 - **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ‚Üî `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN ¬ß8.
 
+
+## 2026-10-27 07:00 ó #583 PILNE start (BN0 #585 czekam F7)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora`.
+- Scalanie: **brak** ÑF7: gotowe do scaleniaî na #585 (HEAD `0b8d4dd1`, CI unit/visual/db ?). Bez push na main.
+- Bieøπca: **#583** (pilne, import KSH) ó ga≥πü `pakiet/583-import-ksh-prev-plates` z main; migracja **0314**:
+  - `import_live_prev` ó prev z live WT (wszystkie `v_fnames`, `load_time`/`delivery_time` z `plan_*`);
+  - tablice: walidacja + `skip_reason`, subset ? WT bez zapisu/wiersza;
+  - `ksh_sync_preview_build` ó os≥ona wt=file + `skip_reason`;
+  - testy import +13 õ EXPECTED **268**.
+- Po zielonym CI õ proúba o F7. BN0 #585 scalaÊ gdy F7 gotowe (osobny PR).
