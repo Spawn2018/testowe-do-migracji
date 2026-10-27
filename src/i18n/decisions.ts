@@ -86,6 +86,22 @@ const pl: Dict = {
   dec_opt_DELIVERED_YES: 'Tak, dostarczono',
   dec_opt_DELIVERED_NO: 'Nie',
   dec_opt_UPLOAD_CMR: 'Wgraj CMR',
+  /* #590/#592 — import KSH: zmiana przewoźnika w pliku, usunięty transport wrócił w pliku */
+  dec_type_KSH_CARRIER_CHANGED: 'Zmiana przewoźnika w pliku KSH',
+  dec_opt_CARRIER_CANCEL: 'Anuluj transport',
+  dec_opt_CARRIER_REMOVE: 'Usuń z harmonogramu',
+  dec_opt_CARRIER_SNOOZE: 'Odłóż o 2\u00a0h',
+  dec_type_KSH_REMOVED_BACK: 'Usunięty transport wrócił w pliku KSH',
+  dec_opt_REMOVED_KEEP: 'Zostaw usunięty',
+  dec_opt_REMOVED_RESTORE: 'Przywróć do harmonogramu',
+  dec_confirm_CARRIER_CANCEL: 'Transport zostanie anulowany — przewoźnik i KSH zobaczą go jako anulowany. Na pewno?',
+  dec_confirm_CARRIER_REMOVE: 'Transport zniknie z harmonogramu wszystkich firm (HHL, SCX, KSH). Działa tylko przed załadunkiem. Przywrócić go może wyłącznie administrator HHL. Na pewno?',
+  dec_confirm_REMOVED_RESTORE: 'Transport wróci do harmonogramu z poprzednim statusem. Na pewno?',
+  dec_confirm_yes: 'Tak, potwierdzam',
+  dec_confirm_back: 'Wróć',
+  dec_err_unknown_option: 'Ta opcja nie jest obsługiwana na tym ekranie — nic nie zmieniono.',
+  dec_err_no_load: 'Decyzja nie wskazuje transportu — nic nie zmieniono.',
+  dec_err_restore_admin: 'Przywrócić transport może tylko administrator HHL — decyzja zostaje otwarta.',
 };
 
 export const DEC_I18N: Record<Locale, Dict> = { pl, en: {}, sv: {} };

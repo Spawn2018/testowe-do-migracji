@@ -24,6 +24,7 @@ import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
 import { EMPTY_PROPOSAL, proposalOfDetail, proposalPayload, proposalSummary, type ProposalForm } from '../../lib/proposeDate';
 import { getNow } from '../../lib/frozenNow';
+import { confirmKeyOf, hasOwnSnooze } from '../../lib/carrierDecision';
 
 export interface CardCtx {
   role: 'HHL' | 'SCX';
@@ -199,6 +200,8 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
   const [proposeCode, setProposeCode] = useState<string | null>(null);
   const [prop, setProp] = useState<ProposalForm>(EMPTY_PROPOSAL);
   const [msg, setMsg] = useState<string | null>(null);
+  /* #590/#592: Anuluj / Usuń / Przywróć — potwierdzenie na stronie (bez okien przeglądarki) */
+  const [confirmOpt, setConfirmOpt] = useState<string | null>(null);
   const roleKey = i.owner === 'SCX' ? 'CARRIER_DISPATCH' : i.owner === 'KSH' ? 'CLIENT_USER' : 'HHL_OPS';
   const adminOnly = d?.deciderRole === 'ADMIN';
   const sendProposal = async () => {
@@ -214,8 +217,15 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
     if (res.error) setMsg(res.error);
     else ctx.onResolved(i, res.hint);
   };
-  const resolve = async (code: string, needsNote: boolean, effect?: string) => {
+  const resolve = async (code: string, needsNote: boolean, effect?: string, confirmed = false) => {
     if (!ctx.decisions || !d) return;
+    if (!confirmed && confirmKeyOf(d.typeCode, code)) {
+      setMsg(null);
+      setProposeCode(null);
+      setConfirmOpt((c) => (c === code ? null : code));
+      return;
+    }
+    setConfirmOpt(null);
     if (effect === 'PROPOSE') {
       setMsg(null);
       setProposeCode((c) => (c === code ? null : code));
@@ -289,13 +299,34 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
             <div className="rk-acts">
               {d.options.map((o) => (
                 <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code}
-                  aria-expanded={o.effect === 'PROPOSE' ? proposeCode === o.code : undefined}
+                  aria-expanded={o.effect === 'PROPOSE' ? proposeCode === o.code : confirmKeyOf(d.typeCode, o.code) ? confirmOpt === o.code : undefined}
                   onClick={() => void resolve(o.code, o.requires_comment, o.effect)}>
                   {decText(locale, o.label_key, o.code)}{o.requires_comment && o.effect !== 'PROPOSE' ? ' *' : ''}
                 </button>
               ))}
-              <button type="button" className="btn ghost" disabled={busy} onClick={() => void snooze()}>{t(locale, 'dec_snooze_2h')}</button>
+              {hasOwnSnooze(d.typeCode) ? null : (
+                <button type="button" className="btn ghost" disabled={busy} onClick={() => void snooze()}>{t(locale, 'dec_snooze_2h')}</button>
+              )}
             </div>
+            {confirmOpt ? (() => {
+              const o = d.options.find((x) => x.code === confirmOpt);
+              const key = confirmKeyOf(d.typeCode, confirmOpt);
+              if (!o || !key) return null;
+              return (
+                <div className="rk-dec-confirm" role="alert" data-rk-dec-confirm={o.code}>
+                  <p>{decText(locale, key)}</p>
+                  <div className="rk-acts">
+                    <button type="button" className={o.code === 'REMOVE' || o.code === 'CANCEL' ? 'btn is-solid is-danger' : 'btn is-solid'} disabled={busy}
+                      data-rk-dec-yes={o.code} onClick={() => void resolve(o.code, o.requires_comment, o.effect, true)}>
+                      {decText(locale, 'dec_confirm_yes')}: {decText(locale, o.label_key, o.code)}
+                    </button>
+                    <button type="button" className="btn ghost" disabled={busy} data-rk-dec-back onClick={() => setConfirmOpt(null)}>
+                      {decText(locale, 'dec_confirm_back')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })() : null}
             {proposeCode ? (
               <fieldset className="rk-propose" data-rk-propose>
                 <legend>{decText(locale, 'dec_prop_title')}</legend>
