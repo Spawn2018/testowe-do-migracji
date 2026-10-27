@@ -485,6 +485,8 @@ export interface Notification {
   code?: string;
   /** wyglad/P6-e: wiadomość Czatu „tylko HHL i SCX” — z `payload.visible_to` bez KSH (mapowanie: D-20261016-0310-01 Cz14). */
   chatOnly?: boolean;
+  /** #594 B1: migawka zmian importu pliku KSH (`KSH_IMPORT_SUMMARY.payload.summary_id`) — kliknięcie otwiera okno. */
+  summaryId?: string;
 }
 
 export interface Risk {

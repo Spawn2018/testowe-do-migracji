@@ -2,7 +2,7 @@
  * #274 (pomiar Lighthouse 24.10: logowanie na telefonie 5,8 s, próg 2,5 s) — powłoka aplikacji (pasek, menu, widoki,
  * panel transportu) w osobnym kawałku. Ekran logowania (`AuthGate`) nie czeka już na kod powłoki: `App.tsx` ładuje ją leniwie.
  */
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { usePushOpen } from './lib/pushOpen';
 import { NewVersionBar } from './components/shell/NewVersionBar';
 import { PartBoundary } from './components/shell/PartBoundary';
@@ -45,6 +45,8 @@ import { usePhoneTableLabels } from './lib/phoneTableLabels';
 
 const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
 const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
+/* #594 B1: okno „Zmiany z pliku KSH” — osobny fragment, pobierany dopiero po kliknięciu powiadomienia (budżet D15) */
+const KshImportSummaryModal = lazy(lazyRetry(() => import('./components/shell/KshImportSummaryModal').then((m) => ({ default: m.KshImportSummaryModal }))));
 /* pobranie panelu transportu w tle, gdy przeglądarka jest wolna (pierwsze kliknięcie bez czekania) */
 if (typeof window !== 'undefined') {
   const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
@@ -56,6 +58,13 @@ export default function TowerShell() {
   const view = useTowerStore((s) => s.view);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const importSummaryId = useTowerStore((s) => s.importSummaryId);
+  /* #594: okno, które się nie wczytało (offline) albo przerwało błędem — zamknięte, z komunikatem; aplikacja działa dalej */
+  const onKisError = useCallback(() => {
+    const st = useTowerStore.getState();
+    st.closeImportSummary();
+    st.pushToast('Nie udało się otworzyć zmian z pliku KSH — spróbuj ponownie za chwilę.', 'MEDIUM');
+  }, []);
   const setView = useTowerStore((s) => s.setView);
   const initTheme = useTowerStore((s) => s.initTheme);
   const navCollapsed = useTowerStore((s) => s.navCollapsed);
@@ -89,6 +98,9 @@ export default function TowerShell() {
         return;
       }
       const store = useTowerStore.getState();
+      /* #594: przy otwartym oknie importu skróty (widoki, motyw, pomoc) nie działają — Esc obsługuje okno.
+         Sprawdzenie w DOM, nie w stanie: okno, które się nie wczytało, nie blokuje skrótów. */
+      if (document.querySelector('[data-kis-modal]')) return;
       if (e.key === 'Escape') {
         store.selectLoad(null);
         store.setStageFilter(null);
@@ -246,6 +258,9 @@ export default function TowerShell() {
       </div>
       {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
       <Suspense fallback={null}><LoadDrawer /></Suspense>
+      {importSummaryId ? (
+        <PartBoundary name="kis" onError={onKisError}><Suspense fallback={null}><KshImportSummaryModal /></Suspense></PartBoundary>
+      ) : null}
       <Toasts />
     </div>
   );
