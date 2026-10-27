@@ -5825,3 +5825,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - CI #586 `51b3cd1d`: unit/visual ✔; db FAIL 258/10 (out=`^` — SQL z `"` w argumencie `r583_run` znów w `-c "..."`).
 - Krok: każdy test = heredoc + `-v rows="$R…"`. Po zielonym — F7.
+
+## 2026-10-27 10:05 — #583 CI FAIL r8: fixture = SQL w heredoc (bez -v)
+
+- CI #586 `8fb25489`: db FAIL 258/10 (CONTEXT JSON — `-v rows=` nadal zepsute).
+- Krok: prep+import w jednym heredoc; `$(r583_file_sql patch)` = jednoliniowe podzapytanie. Po zielonym — F7.
