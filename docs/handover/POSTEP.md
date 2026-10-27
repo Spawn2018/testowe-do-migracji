@@ -6056,3 +6056,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” po `a02cbf9c` (jedyny otwarty PR #585). Bez push na main.
 - CI HEAD `a02cbf9c`: unit ✔, visual ✔ (zmiany + części bramy/telefon/zrzuty), db ✔ (bmapa EXPECTED **168**, 15m1s). MERGEABLE.
 - **Krok:** wpis PLAN/POSTEP + prośba o F7: gotowe do scalenia. Po znaku → `gh pr merge --merge`; dalej P4-k #581.
+
+## 2026-10-27 21:40 — #585 SCALONE; start #596 (strażnik decision_resolve)
+
+- Skrzynka `dla-cursora`: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Komentarz Spawn2018 na #598 (20:34Z): kolejność po #585 → **#596** → **#594** → #581.
+- Scalanie: **#585** F7 gotowe na `0007d0fc` (20:21Z, po `a02cbf9`) + CI unit/visual/db ✔ → `gh pr merge --merge` → `29b0496e` (20:36Z). Bez push na main.
+- Bieżąca: **#596** gałąź `pakiet/596-decision-resolve-carrier-guard`, migracja **0317** — `decision_resolve` → `decision_resolve_carrier_change`; `decision_apply_effect` CARRIER_* → wyjątek; import EXPECTED **312**. PR #598 (P4-k) po #596 przenumeruje 0317→0318.

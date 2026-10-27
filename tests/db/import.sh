@@ -1890,4 +1890,30 @@ chk "#590: anon bez EXECUTE decision_resolve_carrier_change / load_restore_remov
 chk "#590: authenticated bez EXECUTE na pomocnicze (note_carrier_changed, apply/close skips, wake)" \
   "$(Q "select has_function_privilege('authenticated','l1b_note_carrier_changed(uuid,uuid,text,text,text,timestamptz)','execute')::text||has_function_privilege('authenticated','import_apply_carrier_skips(uuid,jsonb)','execute')::text||has_function_privilege('authenticated','import_close_carrier_skips_resolved(uuid)','execute')::text||has_function_privilege('authenticated','decisions_wake_carrier_snoozed()','execute')::text")" "falsefalsefalsefalse"
 
+echo; echo "[#596] decision_resolve → decision_resolve_carrier_change (strażnik)"
+# Ogólne decision_resolve nie może zamknąć KSH_CARRIER_CHANGED bez skutku na transporcie.
+out=$(t590 "$(fx C596-1 PLANNED "$FXD1")" "
+$(IMPSK C596-1 596a)
+select decision_resolve($(DECID C596-1),'CANCEL',null)->>'effect';
+select (select status from loads where id=$(LOADID C596-1))
+  ||'|'||(select status from decisions where id=$(DECID C596-1));")
+chk "#596: decision_resolve CANCEL → skutek CANCEL + CANCELLED|RESOLVED" "$out" "CANCEL|CANCELLED|RESOLVED"
+
+out=$(t590 "$(fx C596-2 PLANNED "$FXD1")" "
+$(IMPSK C596-2 596b)
+select decision_resolve($(DECID C596-2),'REMOVE',null)->>'effect';
+select (select status from loads where id=$(LOADID C596-2))
+  ||'|'||(select status from decisions where id=$(DECID C596-2));")
+chk "#596: decision_resolve REMOVE → skutek REMOVE + REMOVED|RESOLVED" "$out" "REMOVE|REMOVED|RESOLVED"
+
+# Bezpiecznik: apply_effect jest revoke od authenticated — wołamy jako sys po resecie roli.
+out=$($PSQL -v ON_ERROR_STOP=1 -c "begin;
+$(fx C596-3 PLANNED "$FXD1")
+$ROLEHHL
+$(IMPSK C596-3 596c)
+reset role;
+select decision_apply_effect($(DECID C596-3),'CARRIER_CANCEL','CANCEL',null,null);
+rollback;" 2>&1 | tr -d '\r')
+chkre "#596: decision_apply_effect CARRIER_CANCEL → wyjątek (własne rozstrzygnięcie)" "$out" "w.asne rozstrzygni.cie|Ta decyzja"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

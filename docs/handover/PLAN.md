@@ -1061,17 +1061,23 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r6b — CI ✔ `a02cbf9c`; czekam F7; 27B osobny PR)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r6b: po `TELEMATICS_API` nadal positions=0 — `enforce_order_numbers` odrzuca `IN_TRANSIT_SE` bez `hhl_order_no`/`carrier_order_no` (cichy FAIL insert ładunku). Fix + asercje load. bmapa EXPECTED **168**. CI unit/visual/db ✔ na `a02cbf9c` — prośba o F7: gotowe do scalenia. Po BN0 → P4-k #581 → BN1. 27B osobno.
+### BN0 · #572 Karlskrona→Boden linia HERE — SCALONE (`29b0496e`, PR #585, 27.10.2026 20:36Z; migracja **0316**)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). F7 gotowe na `0007d0fc` (po `a02cbf9`). bmapa EXPECTED **168**. 27B (obie trasy OFF_CORRIDOR) — osobny PR. Po BN0 → #596 → #594 → P4-k #581 → BN1.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
 
 ### #590 · Import KSH: zmiana przewoźnika → decyzja HHL — SCALONE (`f44c1cb9`, PR #592, 27.10.2026 17:04Z; migracja **0315**)
-Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; status `REMOVED`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309**.
+Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; status `REMOVED`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309** (przed #596).
 
-### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #590 / BN0; przed BN1; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: #583 → #590 → BN0 → ten → BN1.
+### #596 · PILNE: strażnik decision_resolve dla KSH_CARRIER_CHANGED — W TOKU (gałąź `pakiet/596-decision-resolve-carrier-guard`; migracja **0317**)
+Źródło: #596 (Spawn2018; komentarz #598 20:34Z — kolejność po #585, przed #594). `decision_resolve` → `decision_resolve_carrier_change`; `decision_apply_effect` CARRIER_* → wyjątek. import EXPECTED **312**.
+
+### #594 · Import KSH: zbiorcze powiadomienie + migawka — DO ZROBIENIA (po #596; baza Cursor, ekran koordynator)
+Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH; migawka `ksh_import_summaries` + RPC z filtrem pól; testy import. Ekran — `wyglad/` (okno, gest, rozmycie).
+
+### P4-k · #581 Kalibracja ETA ciągła — W TOKU równolegle (PR #598 `pakiet/581-p4k-eta-calibration`; cz.1 była **0317** → po #596 przenumeruj na **0318**; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność scalania: #596 → #594 → ten (F7). Pomiar odcinków z GPS; dalej `eta_predictions`, cron, auto-apply 27A. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1836,3 +1842,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 20:15 | BN0 #585 F7 r6: `TEST`→`TELEMATICS_API` + asercje count + delete SE_KAA_TRACK; bmapa **166** | pętla |
 | 27.10.2026 20:45 | BN0 #585 F7 r6b: db FAIL positions=0 — brak hhl/carrier_order_no przy IN_TRANSIT_SE; bmapa **168** | pętla |
 | 27.10.2026 21:05 | BN0 #585 F7 r6b CI ✔ `a02cbf9c` (unit/visual/db, bmapa **168**); prośba o F7: gotowe do scalenia → potem P4-k #581 | pętla |
+| 27.10.2026 21:40 | #585 SCALONE (`29b0496e`); kolejność #596→#594→#581; start #596 migracja **0317** (strażnik decision_resolve) | pętla |
