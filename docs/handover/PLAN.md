@@ -1074,7 +1074,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #596 (Spawn2018). F7 gotowe na `3429fce8`. `decision_resolve` → `decision_resolve_carrier_change`; `assert_not_preview`; `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; `decision_apply_effect` CARRIER_* → wyjątek. import EXPECTED **315**.
 
 ### #594 · Import KSH: zbiorcze powiadomienie + migawka — W TOKU (PR baza #601 `pakiet/594-ksh-import-summary`, migracja **0318**; ekran gest/rozmycie **SCALONE** #600 `7d8ebb4b` 27.10 22:08Z)
-Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH; migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól; testy import (**343**), nullguard (**870**). Ekran — koordynator `wyglad/` (okno, gest, rozmycie) — #600.
+Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3); testy import (**352**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (okno, gest, rozmycie) — #600.
 
 ### P4-k · #581 Kalibracja ETA ciągła — W TOKU równolegle (PR #598 `pakiet/581-p4k-eta-calibration`; cz.1 była **0317** → po #596/#594 przenumeruj na **0319**; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność scalania: #596 → #594 → ten (F7). Pomiar odcinków z GPS; dalej `eta_predictions`, cron, auto-apply 27A. Ekran — koordynator `wyglad/`.

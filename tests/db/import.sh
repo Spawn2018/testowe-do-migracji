@@ -1976,13 +1976,17 @@ val "#594: HHL czyta migawkę" $HHL "select (ksh_import_summary_get('$SID594'::u
 val "#594: KSH czyta migawkę" $KSH "select (ksh_import_summary_get('$SID594'::uuid) is not null)" t
 val "#594: SCX czyta migawkę" $SCX "select (ksh_import_summary_get('$SID594'::uuid) is not null)" t
 
-# Drugi import (zmiana dat + numerów) — nadal 1 powiadomienie/konto, nieprzeczytane
+# Drugi import (zmiana dat + numerów) — nadal 1 powiadomienie/konto, nieprzeczytane; nowe id (B4)
 $PSQL -c "update notifications set read_at=now() where template='KSH_IMPORT_SUMMARY'" >/dev/null
 N594=$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")
+ID594a=$(Q "select id::text from notifications where template='KSH_IMPORT_SUMMARY' and user_id=(select id from app_users where auth_id='$HHL') order by id desc limit 1")
 val "#594: drugi import ze zmianami" $HHL "select jsonb_array_length(r->'changed') from ($(IMP594b "$R594c" false)) s(r)" 1 commit
-chk "#594: nadal 1 SUMMARY na konto (upsert)" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")" "$N594"
+chk "#594: nadal 1 SUMMARY na konto (delete+insert)" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")" "$N594"
 chk "#594: SUMMARY znowu nieprzeczytane" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and read_at is null")" "$N594"
+ID594b=$(Q "select id::text from notifications where template='KSH_IMPORT_SUMMARY' and user_id=(select id from app_users where auth_id='$HHL') order by id desc limit 1")
+chk "#594: B4 nowe id po drugim imporcie" "$(Q "select ('$ID594a' is distinct from '$ID594b')::text")" "true"
 chk "#594: 2 migawki (historia)" "$(Q "select count(*) from ksh_import_summaries where project_id='$P'")" 2
+chk "#594: P5 project_id w payload" "$(Q "select (payload->>'project_id') from notifications where template='KSH_IMPORT_SUMMARY' and user_id=(select id from app_users where auth_id='$HHL') limit 1")" "$P"
 
 SID594b=$(Q "select id from ksh_import_summaries where project_id='$P' order by imported_at desc limit 1")
 # Filtr pól: KSH bez hhl_order_no / carrier_order_no; SCX bez hhl_order_no; HHL widzi oba
@@ -2011,6 +2015,54 @@ OTH_UID=$(Q "select id from app_users where auth_id='11111111-0000-0000-0000-000
 R594n="[{\"code\":\"S594-B\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D594A\",\"delivery_date\":\"$D594B\"}]"
 val "#594: nowy transport (powiadomienie)" $HHL "select jsonb_array_length(r->'added') from (select import_schedule('$P', '$R594n'::jsonb, '{}'::text[], '{\"name\":\"594n.xlsx\",\"hash\":\"594n\"}'::jsonb, false) as r) s" 1 commit
 chk "#594: obcy przewoźnik bez SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and user_id='$OTH_UID'")" 0
+
+# B3: drugi przewoźnik w projekcie — publish tylko ze zmianą CAR2 → SCX bez dzwonka i bez wiersza
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a098','CAR2','Carrier Two','CARRIER') on conflict do nothing" >/dev/null
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('11111111-0000-0000-0000-000000000098','00000000-0000-0000-0000-00000000a098','car2@test','CARRIER_DISPATCH',true) on conflict (auth_id) do update set active=true, org_id=excluded.org_id" >/dev/null
+CAR2=11111111-0000-0000-0000-000000000098
+CAR2_UID=$(Q "select id from app_users where auth_id='$CAR2'")
+SCX_UID=$(Q "select id from app_users where auth_id='$SCX'")
+L594C2=33333333-0000-0000-0000-000000005941
+$PSQL -c "insert into loads (id, project_id, carrier_org_id, status, plan_load_date, plan_delivery_date, hhl_order_no, carrier_order_no)
+  values ('$L594C2','$P','00000000-0000-0000-0000-00000000a098','PLANNED','$D594A','$D594B','HHL/C2','C2/1')
+  on conflict (id) do update set carrier_org_id=excluded.carrier_org_id, status='PLANNED', removed_at=null" >/dev/null
+$PSQL -c "delete from shipment_items where load_id='$L594C2'" >/dev/null
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty, total_weight_t)
+  values ('$P','$L594C2','S594-C2',18,2.4,2.4,1,20)" >/dev/null
+IMP594B3=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, stats)
+  values ('$P', (select coalesce(max(version),0)+1 from schedule_imports where project_id='$P'),
+          'UPLOAD','594c2.xlsx','594c2','{}'::jsonb) returning id")
+VER594B3=$(Q "select version from schedule_imports where id='$IMP594B3'")
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload)
+  values ('$L594C2','SCHEDULE_IMPORTED',now(),
+    jsonb_build_object('action','CHANGED','code','S594-C2','version',$VER594B3,
+      'fields', jsonb_build_array('carrier_order_no','load_date'),
+      'before', jsonb_build_object('carrier_order_no','C2/1','load_date','$D594A'),
+      'after', jsonb_build_object('carrier_order_no','C2/2','load_date','$D594A2')))" >/dev/null
+$PSQL -c "delete from notifications where template='KSH_IMPORT_SUMMARY' and user_id in ('$SCX_UID','$CAR2_UID')" >/dev/null
+chk "#594: B3 publish tylko CAR2" "$(Q "select (ksh_import_summary_publish('$P','$IMP594B3',$VER594B3,'594c2.xlsx','594c2') is not null)::text")" "true"
+chk "#594: B3 SCX bez SUMMARY przy zmianie CAR2" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and user_id='$SCX_UID'")" 0
+chk "#594: B3 CAR2 dostaje SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and user_id='$CAR2_UID'")" 1
+SID594c2=$(Q "select id from ksh_import_summaries where import_id='$IMP594B3'")
+val "#594: B3 SCX nie widzi wiersza CAR2" $SCX "select coalesce((select count(*) from jsonb_array_elements(coalesce(ksh_import_summary_get('$SID594c2'::uuid)->'changes','[]'::jsonb)) c where c->>'code'='S594-C2'),0)::text" "0"
+val "#594: B3 CAR2 widzi swój wiersz" $CAR2 "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594c2'::uuid)->'changes') c where c->>'code'='S594-C2'),0) > 0" t
+
+# D6: retencja 30 — publish kasuje nadmiar
+$PSQL -c "insert into ksh_import_summaries (project_id, imported_at, changes, stats)
+  select '$P', now() - (g || ' minutes')::interval, '[]'::jsonb, '{}'::jsonb from generate_series(1, 35) g" >/dev/null
+IMP594D6=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, stats)
+  values ('$P', (select coalesce(max(version),0)+1 from schedule_imports where project_id='$P'),
+          'UPLOAD','594ret.xlsx','594ret','{}'::jsonb) returning id")
+VER594D6=$(Q "select version from schedule_imports where id='$IMP594D6'")
+L594A=$(Q "select load_id from shipment_items where shipment_code='S594-A' limit 1")
+$PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload)
+  values ('$L594A','SCHEDULE_IMPORTED',now(),
+    jsonb_build_object('action','CHANGED','code','S594-A','version',$VER594D6,
+      'fields', jsonb_build_array('hhl_order_no'),
+      'before', jsonb_build_object('hhl_order_no','HHL/old'),
+      'after', jsonb_build_object('hhl_order_no','HHL/ret')))" >/dev/null
+chk "#594: D6 publish (retencja)" "$(Q "select (ksh_import_summary_publish('$P','$IMP594D6',$VER594D6,'594ret.xlsx','594ret') is not null)::text")" "true"
+chk "#594: D6 retencja ≤30 migawek" "$(Q "select (count(*) <= 30)::text from ksh_import_summaries where project_id='$P'")" "true"
 
 # Podgląd: odczyt OK
 val "#594: Podgląd — get OK" $HHL "select admin_preview_start('KSH'); select (ksh_import_summary_get('$SID594b'::uuid) is not null)" t

@@ -6109,3 +6109,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. SCX `::text` → `true` zamiast `t` → porównanie boolean bez cast;
   5. nullguard EXPECTED **870** (EMPTY pozytywne = n/d, tylko +4 odmowy).
 - import EXPECTED **343**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-28 00:25 — #601 F7 r1: B3/B4 + c3 fixed_* + medium
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe” (#598 niegotowe; #601 poprawki).
+- CI #601 `3f214f11`: import/nullguard ✔, **c3 FAIL** (katalog 32→33 `ksh_import`; `fixed_*=5` przez macierz).
+- F7 r1 (Spawn2018 na #601):
+  - B3: publish/get — SCX tylko własne `load_id`; dzwonek tylko gdy zmiana go dotyczy;
+  - B4: delete+insert (nowe `id` powiadomienia);
+  - D2/c3: `fixed_*=false`; katalog **33**;
+  - P1: odtworzenie `skip_reason` z WT gdy event bez pola; P3 stats z odfiltrowanej listy; P4 `old.stats='{}'` + unique `import_id` + wyjątek→`integration_runs`; P5 `project_id`; D1 `order by au.id`; D4/D5 kształt wierszy; D6 retencja 30.
+- import EXPECTED **352**; backup: `ksh_import_summaries`. Bez push na main.

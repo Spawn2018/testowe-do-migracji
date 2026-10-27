@@ -26,7 +26,7 @@ export const EXCLUDED_TABLES = Object.keys(EXCLUSION_REASONS) as readonly (keyof
 /** Tabele, bez których kopia jest bezwartościowa — brak w katalogu = błąd przebiegu (np. zła baza). */
 export const REQUIRED_TABLES = [
   'organizations', 'app_users', 'projects', 'loads', 'shipment_items', 'load_events', 'documents',
-  'invoices', 'invoice_lines', 'schedule_imports', 'audit_log',
+  'invoices', 'invoice_lines', 'schedule_imports', 'ksh_import_summaries', 'audit_log',
 ] as const;
 
 /** Lista tabel do kopii: katalog − wyłączenia (posortowana, bez duplikatów, tylko bezpieczne nazwy). */

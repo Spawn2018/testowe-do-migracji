@@ -1,6 +1,6 @@
 -- #594: zbiorcze powiadomienie IN_APP po imporcie KSH + migawka ksh_import_summaries.
--- Jedno KSH_IMPORT_SUMMARY na konto (zastępuje poprzednie); filtr pól w RPC wg roli.
--- Hook: trigger po update stats w schedule_imports (bez odtwarzania import_schedule).
+-- Jedno KSH_IMPORT_SUMMARY na konto (delete+insert → nowe id); filtr pól i transportów w RPC wg roli.
+-- Hook: trigger po pierwszej aktualizacji stats w schedule_imports (old.stats = '{}').
 
 begin;
 
@@ -22,6 +22,11 @@ create table if not exists public.ksh_import_summaries (
 create index if not exists ksh_import_summaries_project_at_idx
   on public.ksh_import_summaries (project_id, imported_at desc);
 
+-- P4: jedna migawka na import (ponowna aktualizacja stats nie mnoży)
+create unique index if not exists ksh_import_summaries_import_uidx
+  on public.ksh_import_summaries (import_id)
+  where import_id is not null;
+
 comment on table public.ksh_import_summaries is
   '#594: migawka zmian z importu KSH (kształt jak ksh_sync_preview); retencja 30/projekt.';
 
@@ -31,20 +36,21 @@ revoke all on table public.ksh_import_summaries from public, anon, authenticated
 
 -- ---------------------------------------------------------------------------
 -- 2. Macierz: dzwonek dla HHL / KSH / SCX; bez e-mail/SMS/push
+-- D2 / #402: fixed_* = false (Admin może wyłączyć dzwonek)
 -- ---------------------------------------------------------------------------
 insert into public.notification_matrix (
   event_key, event_group, role, in_app, email, push,
   fixed_in_app, fixed_email, fixed_push, risks_only, label_pl
 ) values
-  ('ksh_import', 'LOAD_STATUS', 'HHL_ADMIN', true, false, false, true, true, true, false,
+  ('ksh_import', 'LOAD_STATUS', 'HHL_ADMIN', true, false, false, false, false, false, false,
    'Zmiany z pliku KSH (zbiorcze)'),
-  ('ksh_import', 'LOAD_STATUS', 'HHL_OPS', true, false, false, true, true, true, false,
+  ('ksh_import', 'LOAD_STATUS', 'HHL_OPS', true, false, false, false, false, false, false,
    'Zmiany z pliku KSH (zbiorcze)'),
-  ('ksh_import', 'LOAD_STATUS', 'CLIENT_USER', true, false, false, true, true, true, false,
+  ('ksh_import', 'LOAD_STATUS', 'CLIENT_USER', true, false, false, false, false, false, false,
    'Zmiany z pliku KSH (zbiorcze)'),
-  ('ksh_import', 'LOAD_STATUS', 'CARRIER_DISPATCH', true, false, false, true, true, true, false,
+  ('ksh_import', 'LOAD_STATUS', 'CARRIER_DISPATCH', true, false, false, false, false, false, false,
    'Zmiany z pliku KSH (zbiorcze)'),
-  ('ksh_import', 'LOAD_STATUS', 'CARRIER_USER', true, false, false, true, true, true, false,
+  ('ksh_import', 'LOAD_STATUS', 'CARRIER_USER', true, false, false, false, false, false, false,
    'Zmiany z pliku KSH (zbiorcze)')
 on conflict (event_key, role) do update set
   in_app = excluded.in_app,
@@ -143,8 +149,44 @@ $$;
 revoke all on function public.notify_event_key(text, jsonb) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 4. Widoczność pól wg roli (karta transportu)
+-- 4. Widoczność pól wg rodzaju firmy (D4: kind raz, nie per wiersz)
 -- ---------------------------------------------------------------------------
+create or replace function public.ksh_import_summary_field_visible(p_field text, p_kind text)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+begin
+  if p_field is null or btrim(p_field) = '' then
+    return true; -- wiersze added/missing bez pola
+  end if;
+  if public.ksh_sync_preview_field_allowed(p_field) is not true then
+    return false;
+  end if;
+  if p_kind is null then
+    return false;
+  end if;
+  -- KSH: bez numerów HHL–SCX / HHL–KSH i bez kosztów przewoźnika
+  if p_kind = 'CLIENT' then
+    return p_field not in (
+      'hhl_order_no', 'carrier_order_no',
+      'agreed_fee', 'carrier_rate', 'carrier_price', 'cost', 'margin', 'sefs'
+    );
+  end if;
+  -- SCX: bez numeru HHL–KSH i bez przychodu klienta
+  if p_kind = 'CARRIER' then
+    return p_field not in (
+      'hhl_order_no',
+      'client_price', 'revenue', 'agreed_fee_client', 'margin', 'sefs'
+    );
+  end if;
+  return true; -- FORWARDER (HHL)
+end;
+$$;
+
+-- Kompatybilność: jednoargumentowa czyta kind z current_app_user
 create or replace function public.ksh_import_summary_field_visible(p_field text)
 returns boolean
 language plpgsql
@@ -155,38 +197,16 @@ as $$
 declare
   v_kind text;
 begin
-  if p_field is null or btrim(p_field) = '' then
-    return true; -- wiersze added/missing bez pola
-  end if;
-  if public.ksh_sync_preview_field_allowed(p_field) is not true then
-    return false;
-  end if;
   select o.kind::text into v_kind
     from public.app_users u
     join public.organizations o on o.id = u.org_id
    where u.id = public.current_app_user_id() and u.active;
-  if v_kind is null then
-    return false;
-  end if;
-  -- KSH: bez numerów HHL–SCX / HHL–KSH i bez kosztów przewoźnika
-  if v_kind = 'CLIENT' then
-    return p_field not in (
-      'hhl_order_no', 'carrier_order_no',
-      'agreed_fee', 'carrier_rate', 'carrier_price', 'cost', 'margin', 'sefs'
-    );
-  end if;
-  -- SCX: bez numeru HHL–KSH i bez przychodu klienta
-  if v_kind = 'CARRIER' then
-    return p_field not in (
-      'hhl_order_no',
-      'client_price', 'revenue', 'agreed_fee_client', 'margin', 'sefs'
-    );
-  end if;
-  return true; -- FORWARDER (HHL)
+  return public.ksh_import_summary_field_visible(p_field, v_kind);
 end;
 $$;
 
 revoke all on function public.ksh_import_summary_field_visible(text) from public, anon, authenticated;
+revoke all on function public.ksh_import_summary_field_visible(text, text) from public, anon, authenticated;
 comment on function public.ksh_import_summary_field_visible(text) is
   '#594: filtr pól migawki — KSH bez numerów zleceń i kosztów SCX; SCX bez HHL–KSH i przychodu.';
 
@@ -194,7 +214,7 @@ comment on function public.ksh_import_summary_field_visible(text) is
 -- 5. Budowa listy zmian z load_events danej wersji importu
 -- ---------------------------------------------------------------------------
 create or replace function public.ksh_import_summary_build_changes(
-  p_project uuid, p_version int
+  p_project uuid, p_version int, p_imported_at timestamptz default null
 ) returns jsonb
 language plpgsql
 stable
@@ -207,10 +227,16 @@ declare
   f text;
   v_skip jsonb;
   v_sr text;
+  v_wt_now text;
+  v_before text;
+  v_after text;
+  v_since timestamptz;
 begin
   if p_project is null or p_version is null then
     return '[]'::jsonb;
   end if;
+  -- D4: zawężenie do okna importu (zapas 1 h wstecz / 5 min naprzód)
+  v_since := coalesce(p_imported_at, now()) - interval '1 hour';
 
   -- Nowe w pliku
   for r in
@@ -221,10 +247,18 @@ begin
        and e.event_type = 'SCHEDULE_IMPORTED'
        and e.payload->>'action' = 'ADDED'
        and (e.payload->>'version')::int = p_version
+       and e.occurred_at >= v_since
      order by e.payload->>'code'
   loop
     v_rows := v_rows || jsonb_build_object(
-      'code', r.code, 'load_id', r.load_id, 'kind', 'added'
+      'code', r.code,
+      'load_id', r.load_id,
+      'field', null,
+      'field_label', 'Nowy transport',
+      'wt', null,
+      'file', null,
+      'kind', 'added',
+      'skip_reason', null
     );
   end loop;
 
@@ -237,6 +271,7 @@ begin
        and e.event_type = 'SCHEDULE_IMPORTED'
        and e.payload->>'action' = 'CHANGED'
        and (e.payload->>'version')::int = p_version
+       and e.occurred_at >= v_since
      order by e.payload->>'code'
   loop
     v_skip := coalesce(r.payload->'skip_reason', '{}'::jsonb);
@@ -247,16 +282,31 @@ begin
         continue;
       end if;
       v_sr := nullif(v_skip->>f, '');
-      v_rows := v_rows || jsonb_strip_nulls(jsonb_build_object(
+      v_before := r.payload->'before'->>f;
+      v_after := r.payload->'after'->>f;
+      -- P1: event CHANGED (0315) nie niesie skip_reason — odtwórz z bieżącego WT
+      if v_sr is null and v_after is distinct from v_before then
+        begin
+          v_wt_now := public.ksh_sync_preview_wt_text(r.load_id, f, r.code);
+          if v_wt_now is not distinct from coalesce(v_before, '')
+             and v_wt_now is distinct from coalesce(
+                   public.ksh_sync_preview_norm_file(f, v_after), v_after, '') then
+            v_sr := 'nie zapisane przy imporcie';
+          end if;
+        exception when others then
+          v_sr := null;
+        end;
+      end if;
+      v_rows := v_rows || jsonb_build_object(
         'code', r.code,
         'load_id', r.load_id,
         'field', f,
         'field_label', public.ksh_sync_preview_field_label(f),
-        'wt', r.payload->'before'->>f,
-        'file', r.payload->'after'->>f,
+        'wt', v_before,
+        'file', v_after,
         'kind', 'changed',
         'skip_reason', v_sr
-      ));
+      );
     end loop;
   end loop;
 
@@ -273,10 +323,18 @@ begin
        and e.event_type = 'STATUS_CANCELLED'
        and (e.payload->>'version')::int = p_version
        and coalesce(e.payload->>'reason', '') ilike '%harmonogram%'
+       and e.occurred_at >= v_since
      order by 2
   loop
     v_rows := v_rows || jsonb_build_object(
-      'code', r.code, 'load_id', r.load_id, 'kind', 'missing'
+      'code', r.code,
+      'load_id', r.load_id,
+      'field', null,
+      'field_label', 'Anulowany / usunięty',
+      'wt', null,
+      'file', null,
+      'kind', 'missing',
+      'skip_reason', null
     );
   end loop;
 
@@ -284,10 +342,30 @@ begin
 end;
 $$;
 
-revoke all on function public.ksh_import_summary_build_changes(uuid, int) from public, anon, authenticated;
+drop function if exists public.ksh_import_summary_build_changes(uuid, int);
+revoke all on function public.ksh_import_summary_build_changes(uuid, int, timestamptz)
+  from public, anon, authenticated;
+
+-- Stats z odfiltrowanej listy (P3)
+create or replace function public.ksh_import_summary_stats_of(p_changes jsonb)
+returns jsonb
+language sql
+immutable
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'transports', (select count(distinct c->>'code') from jsonb_array_elements(coalesce(p_changes, '[]'::jsonb)) c),
+    'fields', (select count(*) from jsonb_array_elements(coalesce(p_changes, '[]'::jsonb)) c
+                where c->>'kind' = 'changed' and nullif(c->>'skip_reason', '') is null),
+    'added', (select count(*) from jsonb_array_elements(coalesce(p_changes, '[]'::jsonb)) c where c->>'kind' = 'added'),
+    'cancelled', (select count(*) from jsonb_array_elements(coalesce(p_changes, '[]'::jsonb)) c where c->>'kind' = 'missing')
+  )
+$$;
+
+revoke all on function public.ksh_import_summary_stats_of(jsonb) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 6. Publikacja migawki + jedno IN_APP na konto
+-- 6. Publikacja migawki + jedno IN_APP na konto (delete+insert → nowe id)
 -- ---------------------------------------------------------------------------
 create or replace function public.ksh_import_summary_publish(
   p_project uuid,
@@ -304,14 +382,15 @@ declare
   v_changes jsonb;
   v_id uuid;
   v_at timestamptz := now();
-  v_n_codes int;
-  v_n_fields int;
-  v_n_added int;
-  v_n_missing int;
+  v_stats jsonb;
   v_title text;
   v_short text;
   v_payload jsonb;
+  v_filtered jsonb;
+  v_fstats jsonb;
   u record;
+  c jsonb;
+  v_ok boolean;
 begin
   perform public.assert_not_preview();
   if p_project is null or p_import_id is null or p_version is null then
@@ -321,28 +400,24 @@ begin
   -- Blokada projektu — bez duplikatów przy równoległych przebiegach
   perform pg_advisory_xact_lock(hashtextextended(p_project::text, 594));
 
-  v_changes := public.ksh_import_summary_build_changes(p_project, p_version);
+  v_changes := public.ksh_import_summary_build_changes(p_project, p_version, v_at);
   if jsonb_array_length(v_changes) = 0 then
     return null;
   end if;
 
-  select count(distinct c->>'code'),
-         count(*) filter (where c->>'kind' = 'changed'),
-         count(*) filter (where c->>'kind' = 'added'),
-         count(*) filter (where c->>'kind' = 'missing')
-    into v_n_codes, v_n_fields, v_n_added, v_n_missing
-    from jsonb_array_elements(v_changes) c;
+  v_stats := public.ksh_import_summary_stats_of(v_changes);
+
+  -- P4: unique (import_id) — ponowna aktualizacja stats bez drugiej migawki
+  if exists (
+    select 1 from public.ksh_import_summaries where import_id = p_import_id
+  ) then
+    return null;
+  end if;
 
   insert into public.ksh_import_summaries (
     project_id, import_id, imported_at, file_name, file_hash, changes, stats
   ) values (
-    p_project, p_import_id, v_at, p_file_name, p_file_hash, v_changes,
-    jsonb_build_object(
-      'transports', v_n_codes,
-      'fields', v_n_fields,
-      'added', v_n_added,
-      'cancelled', v_n_missing
-    )
+    p_project, p_import_id, v_at, p_file_name, p_file_hash, v_changes, v_stats
   ) returning id into v_id;
 
   -- Retencja: ostatnie 30 migawek na projekt
@@ -357,25 +432,10 @@ begin
 
   v_title := 'Zmiany z pliku KSH — '
     || to_char(v_at at time zone 'Europe/Warsaw', 'DD.MM.YYYY HH24:MI');
-  v_short := format(
-    'Transporty: %s · pola: %s · nowe: %s · anulowane/usunięte: %s',
-    v_n_codes, v_n_fields, v_n_added, v_n_missing
-  );
-  v_payload := jsonb_build_object(
-    'title', v_title,
-    'summary', v_short,
-    'summary_id', v_id,
-    'imported_at', v_at,
-    'file_name', p_file_name,
-    'transports', v_n_codes,
-    'fields', v_n_fields,
-    'added', v_n_added,
-    'cancelled', v_n_missing,
-    'matrix_event', 'ksh_import'
-  );
 
   for u in
-    select au.id, coalesce(au.email::text, au.id::text) as recipient
+    select au.id, coalesce(au.email::text, au.id::text) as recipient,
+           o.kind::text as org_kind, o.id as org_id
       from public.app_users au
       join public.organizations o on o.id = au.org_id
      where au.active
@@ -384,29 +444,67 @@ begin
          or (o.kind = 'CLIENT' and exists (
                select 1 from public.projects pr
                 where pr.id = p_project and pr.client_org_id = o.id))
+         -- B3: przewoźnik tylko gdy w zmianach jest jego transport
          or (o.kind = 'CARRIER' and exists (
-               select 1 from public.loads l
-                where l.project_id = p_project and l.carrier_org_id = o.id
+               select 1
+                 from jsonb_array_elements(v_changes) ch
+                 join public.loads l on l.id = (ch->>'load_id')::uuid
+                where l.carrier_org_id = o.id
                   and l.status is distinct from 'CANCELLED'
                   and l.status is distinct from 'REMOVED'
                   and l.removed_at is null))
        )
+     order by au.id  -- D1: bez zakleszczeń przy równoległych importach
   loop
+    -- P3: liczby per odbiorca (filtr ról + B3 filtr transportów SCX)
+    v_filtered := '[]'::jsonb;
+    for c in select * from jsonb_array_elements(v_changes)
+    loop
+      if u.org_kind = 'CARRIER' then
+        if not exists (
+          select 1 from public.loads l
+           where l.id = (c->>'load_id')::uuid and l.carrier_org_id = u.org_id
+        ) then
+          continue;
+        end if;
+      end if;
+      v_ok := public.ksh_import_summary_field_visible(c->>'field', u.org_kind);
+      if v_ok is true then
+        v_filtered := v_filtered || c;
+      end if;
+    end loop;
+    if jsonb_array_length(v_filtered) = 0 and u.org_kind = 'CARRIER' then
+      continue; -- B3: nic widocznego dla tego przewoźnika
+    end if;
+    v_fstats := public.ksh_import_summary_stats_of(v_filtered);
+    v_short := format(
+      'Transporty: %s · pola: %s · nowe: %s · anulowane/usunięte: %s',
+      v_fstats->>'transports', v_fstats->>'fields',
+      v_fstats->>'added', v_fstats->>'cancelled'
+    );
+    v_payload := jsonb_build_object(
+      'title', v_title,
+      'summary', v_short,
+      'summary_id', v_id,
+      'project_id', p_project,
+      'imported_at', v_at,
+      'file_name', p_file_name,
+      'transports', (v_fstats->>'transports')::int,
+      'fields', (v_fstats->>'fields')::int,
+      'added', (v_fstats->>'added')::int,
+      'cancelled', (v_fstats->>'cancelled')::int,
+      'matrix_event', 'ksh_import'
+    );
+
+    -- B4: delete+insert → nowe id (mergeBellRefresh nie zachowa read:true)
+    delete from public.notifications
+     where dedup_key = 'KSH_IMPORT_SUMMARY:' || u.id::text;
     insert into public.notifications (
       channel, recipient, user_id, load_id, template, payload, dedup_key, read_at, status
     ) values (
       'IN_APP', u.recipient, u.id, null, 'KSH_IMPORT_SUMMARY', v_payload,
       'KSH_IMPORT_SUMMARY:' || u.id::text, null, 'PENDING'
-    )
-    on conflict (dedup_key) where dedup_key is not null
-    do update set
-      payload = excluded.payload,
-      recipient = excluded.recipient,
-      read_at = null,
-      status = 'PENDING',
-      error = null,
-      sent_at = null,
-      created_at = now();
+    );
   end loop;
 
   return v_id;
@@ -420,7 +518,7 @@ comment on function public.ksh_import_summary_publish(uuid, uuid, int, text, tex
   '#594: migawka + jedno IN_APP KSH_IMPORT_SUMMARY na konto HHL/SCX/KSH projektu.';
 
 -- ---------------------------------------------------------------------------
--- 7. Trigger po zapisie stats (import_schedule kończy update)
+-- 7. Trigger po pierwszej aktualizacji stats (P4: old.stats = '{}')
 -- ---------------------------------------------------------------------------
 create or replace function public.trg_ksh_import_summary_on_stats()
 returns trigger
@@ -437,6 +535,10 @@ begin
   if new.stats is not distinct from old.stats then
     return new;
   end if;
+  -- P4: tylko pierwsze wypełnienie stats (nie backfill / ręczna poprawka)
+  if old.stats is distinct from '{}'::jsonb then
+    return new;
+  end if;
   -- p_quiet: import bez powiadomień (IQ-426 / SCHEDULE_IMPORT_QUIET)
   if coalesce((new.stats->>'quiet')::boolean, false) is true then
     return new;
@@ -445,9 +547,24 @@ begin
        + coalesce((new.stats->>'changed')::int, 0)
        + coalesce((new.stats->>'cancelled')::int, 0);
   if v_n > 0 then
-    perform public.ksh_import_summary_publish(
-      new.project_id, new.id, new.version, new.file_name, new.file_hash
-    );
+    begin
+      perform public.ksh_import_summary_publish(
+        new.project_id, new.id, new.version, new.file_name, new.file_hash
+      );
+    exception when others then
+      -- P4: awaria powiadomienia nie wycofuje importu
+      insert into public.integration_runs (job, ran_at, ok, result)
+      values (
+        'ksh_import_summary',
+        now(),
+        false,
+        jsonb_build_object(
+          'import_id', new.id,
+          'project_id', new.project_id,
+          'err', left(sqlerrm, 500)
+        )
+      );
+    end;
   end if;
   return new;
 end;
@@ -461,7 +578,7 @@ create trigger trg_ksh_import_summary_on_stats
   for each row execute function public.trg_ksh_import_summary_on_stats();
 
 -- ---------------------------------------------------------------------------
--- 8. RPC odczytu z filtrem pól
+-- 8. RPC odczytu z filtrem pól i transportów (B3/P3)
 -- ---------------------------------------------------------------------------
 create or replace function public.ksh_import_summary_get(p_id uuid)
 returns jsonb
@@ -479,6 +596,7 @@ declare
   c jsonb;
   v_field text;
   v_ok boolean;
+  v_stats jsonb;
 begin
   if p_id is null or v_me is null then
     return null;
@@ -519,25 +637,34 @@ begin
 
   for c in select * from jsonb_array_elements(coalesce(s.changes, '[]'::jsonb))
   loop
+    -- B3: SCX widzi tylko własne transporty
+    if v_kind = 'CARRIER' then
+      if not exists (
+        select 1 from public.loads l
+         where l.id = (c->>'load_id')::uuid and l.carrier_org_id = v_org
+      ) then
+        continue;
+      end if;
+    end if;
     v_field := c->>'field';
     if v_field is null or btrim(v_field) = '' then
       v_ok := true; -- added / missing
     else
-      v_ok := public.ksh_import_summary_field_visible(v_field);
+      v_ok := public.ksh_import_summary_field_visible(v_field, v_kind);
     end if;
     if v_ok is true then
       v_out := v_out || c;
     end if;
   end loop;
 
-  -- Wiersz transportu, w którym zostały same niewidoczne pola — już pominięty (per pole).
-  -- Gdy po filtrze brak wierszy: i tak zwróć nagłówek (puste changes).
+  v_stats := public.ksh_import_summary_stats_of(v_out);
+
   return jsonb_build_object(
     'id', s.id,
     'project_id', s.project_id,
     'imported_at', s.imported_at,
     'file_name', s.file_name,
-    'stats', s.stats,
+    'stats', v_stats,
     'changes', v_out,
     'n', jsonb_array_length(v_out)
   );
@@ -547,6 +674,6 @@ $$;
 revoke all on function public.ksh_import_summary_get(uuid) from public, anon;
 grant execute on function public.ksh_import_summary_get(uuid) to authenticated;
 comment on function public.ksh_import_summary_get(uuid) is
-  '#594: odczyt migawki importu KSH z filtrem pól wg roli; Podgląd OK (tylko odczyt).';
+  '#594: odczyt migawki importu KSH z filtrem pól i transportów wg roli; Podgląd OK (tylko odczyt).';
 
 commit;
