@@ -5810,3 +5810,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #586 `dd7afd1f`: unit ✔; db FAIL import 258/10 (`#583` out=`CONTEXT: JSON data…`); visual części w toku → SHA znany zły.
 - Przyczyna: `r583_rows` wołał `import_live_prev` przez `Q` (REVOKE dla authenticated/public) → błąd SQL wklejany jako JSON do `import_schedule`.
 - Krok: `r583_file` = podzapytanie z kolumn live (+ patch) wewnątrz `-c`; bez JSON w shellu. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 09:05 — #583 CI FAIL r5: Q(jsonb_build_object) + dollar-quote
+
+- CI #586 `7ba45c20`: unit/visual ✔; db FAIL import 258/10 (`#583` out=`^` — heredoc `r583_file` w `-c`).
+- Krok: `r583_rows` jak A6 IMP_N5 (`jsonb_build_object` z live, bez `import_live_prev`); w `-c` `$json$…$json$::jsonb`. Po zielonym — F7.
