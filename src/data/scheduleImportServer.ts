@@ -53,6 +53,7 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
     warnings: parsed.stats.warnings,
     skippedStandard: parsed.stats.skippedStandard,
     skippedCarrier: parsed.stats.skippedCarrier,
+    skippedCarrierRows: parsed.stats.skippedCarrierRows,
     skippedEmpty: parsed.stats.skippedEmpty,
     datesToCheck: parsed.stats.datesToCheck,
     issues: parsed.issues.filter((i) => i.severity === 'ERROR').slice(0, 12)
@@ -60,7 +61,14 @@ export async function serverDryRun(buf: ArrayBuffer, filename: string, map?: Par
   };
   const rows = toRpcRows(parsed.rows);
   const [pid, hash] = await Promise.all([projectId(), sha256Hex(buf)]);
-  const preview = await call(pid, rows, [], { name: filename }, true);
+  const preview = await call(pid, rows, [], {
+    name: filename,
+    skipped_carrier: meta.skippedCarrier ?? 0,
+    skipped_carrier_rows: meta.skippedCarrierRows ?? [],
+    skipped_empty: meta.skippedEmpty ?? 0,
+    skipped_standard: meta.skippedStandard,
+    rejected: meta.rejected,
+  }, true);
   return { diff: rpcToDiff(preview, meta), preview, rows, meta, hash, buf, projectId: pid, map };
 }
 
@@ -77,6 +85,7 @@ export async function serverCommit(d: ServerImportDraft, cancelCodes: string[], 
     column_map: d.map ?? COLUMN_MAP_DEFAULT, rejected: d.meta.rejected,
     skipped_standard: d.meta.skippedStandard,
     skipped_carrier: d.meta.skippedCarrier ?? 0,
+    skipped_carrier_rows: d.meta.skippedCarrierRows ?? [],
     skipped_empty: d.meta.skippedEmpty ?? 0,
     ...(overwriteCodes.length ? { overwrite_confirmed: overwriteCodes } : {}),
   }, false, quiet);

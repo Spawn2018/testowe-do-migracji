@@ -106,8 +106,10 @@ authenticated decision_assign
 authenticated decision_expire
 authenticated decision_open
 authenticated decision_resolve
+authenticated decision_resolve_carrier_change
 authenticated delivered_check_resolve
 authenticated decision_snooze
+authenticated load_restore_removed
 authenticated deepl_usage_view
 authenticated delete_geofence
 authenticated discard_document

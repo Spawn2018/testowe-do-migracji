@@ -96,6 +96,8 @@ export interface ParseMeta {
   warnings: number;
   skippedStandard: number;
   skippedCarrier?: number;
+  /** #590: kody z innym przewoźnikiem w pliku (do p_file.skipped_carrier_rows). */
+  skippedCarrierRows?: Array<{ code: string; carrier_text: string }>;
   skippedEmpty?: number;
   datesToCheck?: number;
   issues: ImportDiff['issues'];

@@ -1633,4 +1633,129 @@ chk "#583: anon bez EXECUTE import_live_prev" \
 chk "#583: authenticated bez EXECUTE import_live_prev" \
   "$(Q "select has_function_privilege('authenticated','import_live_prev(uuid,uuid)','execute')")" f
 
+echo; echo "[#590] KSH_CARRIER_CHANGED"
+# Wykrycie: inny przewoźnik ≠ „Brak w pliku”; dry_run też otwiera decyzję; dedup 3×.
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+delete from decisions where type_code='KSH_CARRIER_CHANGED';
+update loads set status='PLANNED', removed_at=null, removed_reason=null, removed_prev_status=null
+ where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+set local role authenticated; set local request.jwt.claim.sub='$HHL';
+with imp as (
+  select import_schedule(
+    '$P',
+    jsonb_build_array(
+      jsonb_build_object('code','SG-02','length_m',12,'width_m',2,'height_m',2,'qty',1,
+        'load_date','$D1','delivery_date','$D2')
+    ),
+    '{}'::text[],
+    jsonb_build_object(
+      'name','590.xlsx','hash','590a',
+      'skipped_carrier', 1,
+      'skipped_carrier_rows', jsonb_build_array(
+        jsonb_build_object('code','SG-01','carrier_text','Inny Przewoznik Sp. z o.o.')
+      )
+    ),
+    true
+  ) r
+)
+select
+  (select count(*)::text from decisions where type_code='KSH_CARRIER_CHANGED' and status='NEW' and detail->>'code'='SG-01')
+  ||'|'||
+  coalesce((select jsonb_path_query_first(r->'cancel_candidates', '\$[*] ? (@.code == \"SG-01\")')::text from imp), '∅');
+select import_schedule(
+  '$P',
+  jsonb_build_array(
+    jsonb_build_object('code','SG-02','length_m',12,'width_m',2,'height_m',2,'qty',1,
+      'load_date','$D1','delivery_date','$D2')
+  ),
+  '{}'::text[],
+  jsonb_build_object(
+    'name','590.xlsx','hash','590b',
+    'skipped_carrier_rows', jsonb_build_array(
+      jsonb_build_object('code','SG-01','carrier_text','Inny Przewoznik Sp. z o.o.')
+    )
+  ),
+  true
+);
+select import_schedule(
+  '$P',
+  jsonb_build_array(
+    jsonb_build_object('code','SG-02','length_m',12,'width_m',2,'height_m',2,'qty',1,
+      'load_date','$D1','delivery_date','$D2')
+  ),
+  '{}'::text[],
+  jsonb_build_object(
+    'name','590.xlsx','hash','590c',
+    'skipped_carrier_rows', jsonb_build_array(
+      jsonb_build_object('code','SG-01','carrier_text','Inny Przewoznik Sp. z o.o.')
+    )
+  ),
+  true
+);
+select count(*)::text from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' and status in ('NEW','ASSIGNED','SNOOZED');
+rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT|DELETE|UPDATE)' | tr -d '\r')
+chk "#590: dry_run → decyzja + nie cancel_candidate" "$(echo "$out" | head -1)" "1|∅"
+chk "#590: 3 przebiegi = 1 otwarta decyzja" "$(echo "$out" | tail -1)" "1"
+
+# CANCEL
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+delete from decisions where type_code='KSH_CARRIER_CHANGED';
+update loads set status='PLANNED', removed_at=null where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+set local role authenticated; set local request.jwt.claim.sub='$HHL';
+select import_schedule(
+  '$P', '[]'::jsonb, '{}'::text[],
+  jsonb_build_object('name','590c.xlsx','skipped_carrier_rows',
+    jsonb_build_array(jsonb_build_object('code','SG-01','carrier_text','NTG'))),
+  true);
+select decision_resolve_carrier_change(
+  (select id from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' order by created_at desc limit 1),
+  'CANCEL')->>'effect';
+select status from loads where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+select status from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' order by created_at desc limit 1;
+rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT|DELETE|UPDATE)' | tr -d '\r' | paste -sd'|' -)
+chk "#590: CANCEL → CANCELLED + RESOLVED" "$out" "CANCEL|CANCELLED|RESOLVED"
+
+# REMOVE + odmowa po LOADED + SCX 42501
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+delete from decisions where type_code='KSH_CARRIER_CHANGED';
+update loads set status='PLANNED', removed_at=null, removed_reason=null, removed_prev_status=null
+ where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+set local role authenticated; set local request.jwt.claim.sub='$HHL';
+select import_schedule(
+  '$P', '[]'::jsonb, '{}'::text[],
+  jsonb_build_object('name','590r.xlsx','skipped_carrier_rows',
+    jsonb_build_array(jsonb_build_object('code','SG-01','carrier_text','NTG'))),
+  true);
+select decision_resolve_carrier_change(
+  (select id from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' order by created_at desc limit 1),
+  'REMOVE')->>'effect';
+select (removed_at is not null)::text from loads where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT|DELETE|UPDATE)' | tr -d '\r' | paste -sd'|' -)
+chk "#590: REMOVE → removed_at" "$out" "REMOVE|t"
+
+err "#590: SCX nie rozstrzyga" $SCX \
+  "select decision_resolve_carrier_change(gen_random_uuid(), 'CANCEL')" \
+  "HHL|Rozstrzygnięcie|forbidden"
+
+# SNOOZE_2H
+out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
+begin;
+delete from decisions where type_code='KSH_CARRIER_CHANGED';
+update loads set status='PLANNED', removed_at=null where id=(select load_id from shipment_items where shipment_code='SG-01' limit 1);
+set local role authenticated; set local request.jwt.claim.sub='$HHL';
+select import_schedule(
+  '$P', '[]'::jsonb, '{}'::text[],
+  jsonb_build_object('name','590s.xlsx','skipped_carrier_rows',
+    jsonb_build_array(jsonb_build_object('code','SG-01','carrier_text','NTG'))),
+  true);
+select decision_resolve_carrier_change(
+  (select id from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' order by created_at desc limit 1),
+  'SNOOZE_2H')->>'status';
+select status from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='SG-01' order by created_at desc limit 1;
+rollback;" 2>&1 | grep -vE '^(BEGIN|SET|ROLLBACK|COMMIT|DELETE|UPDATE)' | tr -d '\r' | paste -sd'|' -)
+chk "#590: SNOOZE_2H" "$out" "SNOOZED|SNOOZED"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

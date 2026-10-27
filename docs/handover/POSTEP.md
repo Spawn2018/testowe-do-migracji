@@ -5900,3 +5900,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #586 po r12 bez „gotowe”). Bez push na main.
 - CI #586 HEAD `af084955`: unit ✔, visual ✔, db ✔ (import EXPECTED **281**).
 - **Krok:** wpis PLAN/POSTEP + prośba o F7 na #586. Scalaj **#585 (0313) przed #586 (0314)**.
+
+## 2026-10-27 14:00 — #586 SCALONE; start #590
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie; #590 (bez etykiety `dla-cursora`) — wpisane §4 po F7 #586.
+- Scalanie: **#586** F7 gotowe na `37ad492b` (12:51Z) + CI unit/visual/db ✔ → `gh pr merge --merge` → `ac5f8f0f` (12:57Z). #585 F7 r3 NIE; kolejność: 0314 przed BN0 → w #585 przenieś 0313→**0315**.
+- **Krok (#590):** migracja **0316** `KSH_CARRIER_CHANGED` + parser `skipped_carrier_rows` + RPC CANCEL/REMOVE/SNOOZE_2H + `loads.removed_at`; import EXPECTED **287**; nullguard **858**. Front — koordynator. Importu nie włączać.

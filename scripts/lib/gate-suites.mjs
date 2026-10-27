@@ -23,8 +23,8 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 281, // #583 F7 r4: +2 (audit waga, rano); było 279
-  nullguard: 856, // #567 23B: +4 preview_get; baza #563 PURE lookup → 852
+  import: 287, // #590: +6 (carrier_changed detect/dedup/dry/cancel/remove/snooze); było 281 #583
+  nullguard: 858, // #590: +2 decision_resolve_carrier_change + load_restore_removed; było 856
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

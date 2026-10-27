@@ -15,6 +15,7 @@ export type ApplyParseResult = {
     warnings: number;
     skippedStandard: number;
     skippedCarrier: number;
+    skippedCarrierRows: Array<{ code: string; carrier_text: string }>;
     skippedEmpty: number;
     datesToCheck: number;
   };
@@ -35,6 +36,7 @@ export async function parseWorkbookBytes(bytes: Uint8Array): Promise<ApplyParseR
       warnings: parsed.stats.warnings,
       skippedStandard: parsed.stats.skippedStandard,
       skippedCarrier: parsed.stats.skippedCarrier,
+      skippedCarrierRows: parsed.stats.skippedCarrierRows,
       skippedEmpty: parsed.stats.skippedEmpty,
       datesToCheck: parsed.stats.datesToCheck,
     },
