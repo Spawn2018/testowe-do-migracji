@@ -1890,4 +1890,58 @@ chk "#590: anon bez EXECUTE decision_resolve_carrier_change / load_restore_remov
 chk "#590: authenticated bez EXECUTE na pomocnicze (note_carrier_changed, apply/close skips, wake)" \
   "$(Q "select has_function_privilege('authenticated','l1b_note_carrier_changed(uuid,uuid,text,text,text,timestamptz)','execute')::text||has_function_privilege('authenticated','import_apply_carrier_skips(uuid,jsonb)','execute')::text||has_function_privilege('authenticated','import_close_carrier_skips_resolved(uuid)','execute')::text||has_function_privilege('authenticated','decisions_wake_carrier_snoozed()','execute')::text")" "falsefalsefalsefalse"
 
+echo; echo "[#596] decision_resolve → decision_resolve_carrier_change (strażnik)"
+# Ogólne decision_resolve nie może zamknąć KSH_CARRIER_CHANGED bez skutku na transporcie.
+out=$(t590 "$(fx C596-1 PLANNED "$FXD1")" "
+$(IMPSK C596-1 596a)
+select decision_resolve($(DECID C596-1),'CANCEL',null)->>'effect';
+select (select status from loads where id=$(LOADID C596-1))
+  ||'|'||(select status from decisions where id=$(DECID C596-1));")
+chk "#596: decision_resolve CANCEL → skutek CANCEL + CANCELLED|RESOLVED" "$out" "CANCEL|CANCELLED|RESOLVED"
+
+out=$(t590 "$(fx C596-2 PLANNED "$FXD1")" "
+$(IMPSK C596-2 596b)
+select decision_resolve($(DECID C596-2),'REMOVE',null)->>'effect';
+select (select status from loads where id=$(LOADID C596-2))
+  ||'|'||(select status from decisions where id=$(DECID C596-2));")
+chk "#596: decision_resolve REMOVE → skutek REMOVE + REMOVED|RESOLVED" "$out" "REMOVE|REMOVED|RESOLVED"
+
+# Bezpiecznik: apply_effect jest revoke od authenticated — wołamy jako sys po resecie roli.
+out=$($PSQL -v ON_ERROR_STOP=1 -c "begin;
+$(fx C596-3 PLANNED "$FXD1")
+$ROLEHHL
+$(IMPSK C596-3 596c)
+reset role;
+select decision_apply_effect($(DECID C596-3),'CARRIER_CANCEL','CANCEL',null,null);
+rollback;" 2>&1 | tr -d '\r')
+chkre "#596: decision_apply_effect CARRIER_CANCEL → wyjątek (własne rozstrzygnięcie)" "$out" "w.asne rozstrzygni.cie|Ta decyzja"
+
+# F7 r1: zamknięta decyzja → idempotent, bez drugiej zmiany transportu
+out=$(t590 "$(fx C596-4 PLANNED "$FXD1")" "
+$(IMPSK C596-4 596d)
+select decision_resolve($(DECID C596-4),'CANCEL',null)->>'effect';
+select decision_resolve($(DECID C596-4),'REMOVE',null)->>'idempotent';
+select (select status from loads where id=$(LOADID C596-4))
+  ||'|'||(select status||'/'||resolution_code from decisions where id=$(DECID C596-4));")
+chk "#596: zamknięta → idempotent, transport bez zmian" "$out" "CANCEL|true|CANCELLED|RESOLVED/CANCEL"
+
+# F7 r1: Podgląd blokuje decision_resolve (assert_not_preview)
+out=$(t590 "$(fx C596-5 PLANNED "$FXD1")" "
+$(IMPSK C596-5 596e)
+select admin_preview_start('KSH');
+select decision_resolve($(DECID C596-5),'CANCEL',null);")
+chkre "#596: Podgląd — decision_resolve odmowa" "$out" "Podgląd"
+
+# F7 r1: KSH_REMOVED_BACK / WILL_RESTORE przez decision_resolve → load_restore_removed
+out=$(t590 "$(fx C596-6 PLANNED "$FXD1")" "
+$(IMPSK C596-6 596f)
+select decision_resolve_carrier_change($(DECID C596-6),'REMOVE')->>'effect';
+$(IMPBACK C596-6 596rb)
+select decision_resolve(
+  (select id from decisions where type_code='KSH_REMOVED_BACK' and load_id=$(LOADID C596-6) and status='NEW' order by created_at desc limit 1),
+  'WILL_RESTORE', null)->>'ok';
+select (select (status::text <> 'REMOVED')::text from loads where id=$(LOADID C596-6))
+  ||'|'||(select status||'/'||resolution_code from decisions where type_code='KSH_REMOVED_BACK' and load_id=$(LOADID C596-6));")
+chk "#596: decision_resolve WILL_RESTORE → przywrócenie + RESOLVED/RESTORED" "$out" "REMOVE|true|true|RESOLVED/RESTORED"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
