@@ -140,3 +140,37 @@ tbody tr.is-cancel td{color:var(--ink-3)}
 .s7-hd .sub[data-ksh-sync]{max-width:none}
 .sub.s7-sync-down{color:var(--red);font-weight:600}
 .s7-card-docs{font-size:13.5px;line-height:1.4}
+/* W-567 (decyzja 23B): „Zmiany z pliku KSH do przejrzenia” — wygląd tabel Opcji (.ox-table, karty na telefonie);
+   reguły powtórzone w zasięgu .s7-kp, bo arkusz Opcji ładuje się dopiero z ekranem Opcji */
+.s7-kp{margin:0 12px 8px;border:1px solid var(--rule);background:var(--surface)}
+.s7-kp-hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:6px 12px}
+.s7-kp-toggle{background:none;border:0;padding:6px 0;font:700 15px var(--font-cond);color:var(--ink);cursor:pointer;text-align:left}
+.s7-kp-filter{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.s7-kp-bd{padding:0 12px 12px;max-height:50vh;overflow:auto}
+.s7-kp-meta{margin:4px 0 8px;font-size:13px;color:var(--ink-2)}
+.s7-kp-err{margin:4px 0 8px;font-size:13px;color:var(--red);font-weight:600}
+.s7-kp .ox-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--rule)}
+.s7-kp .ox-table th,.s7-kp .ox-table td{white-space:normal;padding:8px 12px;border-bottom:1px solid var(--rule-2);text-align:left;vertical-align:top;font-size:14px}
+.s7-kp .ox-table thead th{background:var(--surface-2);font-family:var(--font-cond);font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--ink-3);position:sticky;top:0}
+.s7-kp .ox-table tbody th{font-weight:400}
+.s7-kp-code{font-family:var(--font-cond);font-weight:700;white-space:nowrap}
+@media (min-width:769px){.s7-kp .ox-table tr.s7-kp-first th,.s7-kp .ox-table tr.s7-kp-first td{border-top:1px solid var(--rule)}}
+.s7-kp-rep{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.s7-kp-link{background:none;border:0;padding:0;font:inherit;color:var(--sea);text-decoration:underline;cursor:pointer}
+.s7-kp-notes .pill{margin:0 4px 2px 0}
+@media (max-width:768px){
+  .s7-kp{margin:0 8px 8px}
+  .s7-kp-toggle,.s7-kp-filter{min-height:44px}
+  .s7-kp-bd{max-height:none}
+  .s7-kp .ox-cards-phone,.s7-kp .ox-cards-phone tbody,.s7-kp .ox-cards-phone tr,.s7-kp .ox-cards-phone th,.s7-kp .ox-cards-phone td{display:block;width:100%}
+  .s7-kp .ox-cards-phone{border:0;background:transparent}
+  .s7-kp .ox-cards-phone thead{display:none}
+  .s7-kp .ox-cards-phone tbody tr{background:var(--surface);border:1px solid var(--rule);margin:0 0 10px;padding:6px 0}
+  .s7-kp .ox-cards-phone th,.s7-kp .ox-cards-phone td{border:0;padding:6px 16px}
+  .s7-kp .ox-cards-phone [data-label]::before{content:attr(data-label);display:block;font-family:var(--font-cond);font-size:12.5px;font-weight:700;letter-spacing:.02em;color:var(--ink-3)}
+  .s7-kp-rep{position:static;width:auto;height:auto;overflow:visible;clip-path:none}
+  .s7-kp-link{min-height:44px}
+}
+.s7-kp-codes{margin:0 0 10px}
+.s7-kp-codes b,.s7-kp-sub{display:block;font:700 13.5px var(--font-cond);color:var(--ink-2);margin:0 0 4px}
+.s7-kp-codes ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--font-cond);font-weight:700}
