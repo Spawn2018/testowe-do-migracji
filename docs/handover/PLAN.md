@@ -1049,8 +1049,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — SCALONE (#579 `ee0a6dee`, 26.10.2026 22:22 UTC, migracja **0310**; `deploy-main` w toku)
 Źródło: #563. **#563 PRZED #577**. t44: SEK 23,00 / PLN 7,15 / ×1,14; `tier_bound=MAX`, `avg_days_pln=7`; korekty w średniej; SEFS_WEEK_CORR; baf **105**; nullguard **852**. Front `lookupMult`/`sefsWeek`.
 
-### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; F7 r3 — audit_log user_id)
-Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + r2 + **r3**: test manual — `audit_log.user_id` = `app_users.id` (nie auth_id) + chk wpisu. EXPECTED import **255**; nullguard **856**. Po zielonym CI — prośba o F7.
+### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; CI ✔ `a2dbd890` — czekam F7)
+Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + r2 + **r3**: test manual — `audit_log.user_id` = `app_users.id` (nie auth_id) + chk wpisu. EXPECTED import **255**; nullguard **856**. CI unit/db/visual ✔ na `a2dbd890` — prośba o F7.
 
 ### #580 · wygląd Opłata paliwowa 5× dziennie (#563) — SCALONE (`f2652ef9`, 26.10.2026 23:27Z)
 Źródło: `wyglad/paliwo-5-sprawdzen` (#580). F7 gotowe na `b60511d`.
@@ -1786,3 +1786,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 00:45 | #577 F7 1–8 na `056dca75`; CI unit/db/visual ✔; #578 w §4 (po #577); czekam F7 | pętla |
 | 27.10.2026 01:00 | #577 F7 r2: wt po kodzie, blocked→missing, norm liczb, import **254**; zamknięte #320/#323/#412 | pętla |
 | 27.10.2026 01:40 | #580 SCALONE `f2652ef9`; #577 F7 r3: audit_log user_id=app_users.id, import **255** | pętla |
+| 27.10.2026 01:55 | #577 CI ✔ `a2dbd890` (unit/db/visual) — prośba o F7; #578 po #577 | pętla |

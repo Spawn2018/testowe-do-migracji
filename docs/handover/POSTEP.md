@@ -5733,3 +5733,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #577 `2aa6cab4`: unit/visual ✔, db FAIL import 253/1 (F7 r3: `user_id='$HHL'` = auth_id → FK).
 - **#577 krok (F7 r3):** insert `audit_log` z `app_users.id`; chk że wpis powstał; EXPECTED import **255**. Po zielonym CI — prośba o F7.
 
+## 2026-10-27 01:55 — #577 CI zielone; prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po HEAD. #578 F7 gotowe **po #577**. Bez push na main.
+- CI `a2dbd890`: unit ✔, db ✔ (14m33s), visual ✔ (telefon/bramy/zrzuty).
+- **#577 krok:** prośba o F7 na HEAD `a2dbd890` (F7 r3: audit_log = app_users.id). Po znaku → scalać #577 potem #578 → #574-nast → BN0 #572.
+
