@@ -6069,3 +6069,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI na `f915a0e3`: unit ✔, visual ✔, **db FAIL** security 458/1 — B5 strażnik: `decision_resolve` bez `assert_not_preview` na początku (regresja względem produkcji).
 - F7 r1 #599 (Spawn2018, 20:43Z): blokujące = brak `assert_not_preview`; średnie = `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; test zamknięta→idempotent.
 - Krok: poprawka w 0317 + testy import (+3 → EXPECTED **315**); push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia. #598 nadal CONFLICTING / F7 poprawki; numeracja 0317 zostaje przy #599.
+
+## 2026-10-27 22:35 — #596/#599 F7 r2: B5 komentarz przed begin
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak PR z „F7: gotowe do scalenia”.
+- CI `3dacdb5e`: unit ✔, visual ✔; **db FAIL** security 458/459 — B5: po `begin` stał komentarz przed `perform assert_not_preview` (regex wymaga assert jako pierwszej instrukcji).
+- F7 r2 (Spawn2018, 21:22Z): przenieść komentarz nad `begin`.
+- Krok: komentarz nad `begin` w 0317; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.

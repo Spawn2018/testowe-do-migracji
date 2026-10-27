@@ -1070,7 +1070,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #590 · Import KSH: zmiana przewoźnika → decyzja HHL — SCALONE (`f44c1cb9`, PR #592, 27.10.2026 17:04Z; migracja **0315**)
 Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; status `REMOVED`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309** (przed #596).
 
-### #596 · PILNE: strażnik decision_resolve dla KSH_CARRIER_CHANGED — W TOKU (PR #599 `pakiet/596-decision-resolve-carrier-guard`; migracja **0317**; F7 r1 poprawki)
+### #596 · PILNE: strażnik decision_resolve dla KSH_CARRIER_CHANGED — W TOKU (PR #599 `pakiet/596-decision-resolve-carrier-guard`; migracja **0317**; F7 r2: komentarz przed begin)
 Źródło: #596 (Spawn2018; komentarz #598 20:34Z — kolejność po #585, przed #594). `decision_resolve` → `decision_resolve_carrier_change`; `assert_not_preview`; `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; `decision_apply_effect` CARRIER_* → wyjątek. import EXPECTED **315**.
 
 ### #594 · Import KSH: zbiorcze powiadomienie + migawka — DO ZROBIENIA (po #596; baza Cursor, ekran koordynator)
@@ -1844,3 +1844,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 21:05 | BN0 #585 F7 r6b CI ✔ `a02cbf9c` (unit/visual/db, bmapa **168**); prośba o F7: gotowe do scalenia → potem P4-k #581 | pętla |
 | 27.10.2026 21:40 | #585 SCALONE (`29b0496e`); kolejność #596→#594→#581; start #596 migracja **0317** (strażnik decision_resolve) | pętla |
 | 27.10.2026 22:15 | #596/#599 F7 r1: assert_not_preview, WILL_RESTORE→restore, testy Podgląd/idempotent; import **315**; db FAIL security (brak assert) → poprawka | pętla |
+| 27.10.2026 22:35 | #596/#599 F7 r2: B5 security — komentarz między begin a perform; przeniesiony nad begin | pętla |

@@ -395,8 +395,8 @@ declare
   v_role text;
   v_fx jsonb;
   v_effect text;
+-- B5 / F7 #599: po begin od razu assert (komentarz nie może stać między begin a perform)
 begin
-  -- B5 / F7 #599: pierwsza instrukcja — Podgląd nie zapisuje
   perform public.assert_not_preview();
   if (current_app_user_id() is not null) is not true then
     raise exception 'Rozstrzygnięcie — tylko wskazana firma albo administrator' using errcode = '42501';
