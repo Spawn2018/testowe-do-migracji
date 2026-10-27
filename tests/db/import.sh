@@ -1285,10 +1285,14 @@ r583_prep_sql() {
 # SQL: utwórz _f583 + GRANT (wywołać przed set role).
 r583_mat_sql() {
   # GRANT: po set role authenticated/service_role mogą czytać temp (inaczej permission denied).
-  printf "%s" "drop table if exists _f583; create temporary table _f583(j jsonb); insert into _f583 select $1; grant select on _f583 to authenticated, service_role;"
+  # client_min_messages: bez NOTICE „table/relation … skipping” w wyniku paste/tail (F7 CI 277/281).
+  printf "%s" "set local client_min_messages = warning; drop table if exists _f583; create temporary table _f583(j jsonb); insert into _f583 select $1; grant select on _f583 to authenticated, service_role;"
 }
-# F7 r5: NOTICE/DDL nie psuje paste/tail; ERROR/CONTEXT/DETAIL zostaw — widać przyczynę w CI.
-r583_grep() { grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|UPDATE|DROP|CREATE|INSERT|GRANT|NOTICE)$'; }
+# F7 r5/CI: NOTICE: … (nie sama linia NOTICE) psuje paste; ERROR/CONTEXT/DETAIL zostaw.
+r583_grep() { grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|UPDATE|DROP|CREATE|INSERT|GRANT|NOTICE:?)'; }
+
+# Pending z #567 (load_date) + write_enabled — czyść przed #583 (pending-skip nie blokuje numeru, ale izoluje).
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG1' and status='pending'" >/dev/null
 
 F583=$(r583_file_sql "'{}'::jsonb")
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "begin; $(r583_prep_sql) $(r583_mat_sql "$F583") set local role authenticated; set local request.jwt.claim.sub='$HHL'; select jsonb_array_length(r->'changed')||'/'||(r->>'unchanged') from (select import_schedule('$P', (select j from _f583), '{}'::text[], '{\"name\":\"583a.xlsx\",\"hash\":\"583a\"}'::jsonb, true) r) s; rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
@@ -1360,9 +1364,10 @@ select trailer_plate from loads where id='$SG1';
 rollback;" 2>&1 | r583_grep | tr -d '\r' | paste -sd'|' -)
 chk "#583 F7: plik=file_base ≠ WT → bez cofnięcia" "$out" "0|NOWA111"
 
-# F7 r2 C: pusta total_weight_t + zmiana numeru → waga bez zmiany + skip_reason
-# jsonb_build_object pomija null — jawny JSON null; unit_weight zgodny z chk_weight_consistency.
-F583=$(r583_file_sql "jsonb_build_object('carrier_order_no','NOWY/583') || '{\"total_weight_t\":null}'::jsonb")
+# F7 r2 C / CI: pusta total_weight_t + zmiana numeru → waga bez zmiany, numer zapisany.
+# Pusta waga = brak klucza (jak po schedule_row_canon); bez '{"…":null}' w shellu (cudzysłowy).
+# unit_weight zgodny z chk_weight_consistency; file_base ma stary numer (trójstronne).
+F583=$(r583_file_sql "jsonb_build_object('carrier_order_no','NOWY/583')")
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 $(r583_prep_sql)
@@ -1371,14 +1376,18 @@ update shipment_items set total_weight_t=20.74, unit_weight_t=20.74, length_m=12
  where load_id='$SG1' and shipment_code='SG-01';
 update loads set carrier_order_no='15035/2026/OSL/GDA/P' where id='$SG1';
 $(r583_mat_sql "$F583")
+update _f583 set j = jsonb_build_array((j->0) - 'total_weight_t');
 set local role authenticated; set local request.jwt.claim.sub='$HHL';
 create temporary table _r583 as select import_schedule('$P', (select j from _f583), '{}'::text[], '{\"name\":\"583wt.xlsx\",\"hash\":\"583wt\"}'::jsonb, false) r;
+select coalesce(r->'changed'->0->'skip_reason'->>'total_weight_t','∅')||'|'||
+       coalesce((select f from jsonb_array_elements_text(r->'changed'->0->'fields') f where f='carrier_order_no'),'∅')
+  from _r583;
 reset role;
 select coalesce(round(si.total_weight_t,2)::text,'∅')||'|'||coalesce(l.carrier_order_no,'∅')
   from shipment_items si join loads l on l.id=si.load_id
  where si.shipment_code='SG-01' and l.id='$SG1';
-rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
-chk "#583 F7: pusta waga + numer → waga zostaje" "$out" "20.74|NOWY/583"
+rollback;" 2>&1 | r583_grep | tr -d '\r' | paste -sd'|' -)
+chk "#583 F7: pusta waga + numer → waga zostaje" "$out" "pusta komórka w pliku — pominięta|carrier_order_no|20.74|NOWY/583"
 
 # F7 pkt 4: WPR6303 ≠ WPR6303P (nie podciąg)
 F583=$(r583_file_sql "jsonb_build_object('tractor_plate','WPR6303')")

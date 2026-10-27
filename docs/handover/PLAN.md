@@ -1064,8 +1064,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0313**; CI zielone; czekam F7)
 Źródło: #572. F7 r2: `SE_KAA_TRACK` (nie nadpisuj `SE_E22`); bez literałów GPS; via co ~100 km; nearestKm odcinek. Po BN0 → **#583** → P4-k #581 → BN1.
 
-### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; F7 r5)
-Źródło: #583 (Spawn2018, `pilne`). F7 #586 r5: nieczytelna godzina (`schedule_cell_ts`→null) = bez zmiany + `skip_reason` gdy WT ma okno; test „rano” sprawdza okno 09:00; wagi w testach zgodne z `chk_weight_consistency`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
+### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; CI fix po F7 r5)
+Źródło: #583 (Spawn2018, `pilne`). F7 #586 r5 OK; CI 277/281: NOTICE w `r583_grep` + test pusta waga (brak klucza, nie JSON null w shellu). import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #583; przed BN1; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: BN0 → #583 → ten → BN1.

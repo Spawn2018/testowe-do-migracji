@@ -5879,3 +5879,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 `pilne` WSTRZYMANE (Google STOP); #538/#537/#500/#499 w planie — bez nowych.
 - Scalanie: brak „F7: gotowe do scalenia” (#585 r3 NIE; #586 r5 niegotowe 10:27Z na `45d6762`). CI `45d6762`: unit/visual ✔; db FAIL import 279/2 (pusta waga / audit wagi — `chk_weight_consistency`; ERROR wycięty przez `r583_grep`). Bez push na main.
 - **Krok (PR #586):** (5) nieczytelna `load_time`/`delivery_time` → bez zapisu + `skip_reason` gdy WT ma okno; pas w UPDATE okna; test „rano” = skip + 09:00; testy wagi: `unit_weight_t` zgodny + jawny JSON null; `r583_grep` zostawia ERROR/CONTEXT. EXPECTED **281**. Po zielonym CI — prośba o F7. Scalaj #585 przed #586.
+
+## 2026-10-27 16:20 — #583 CI fix po F7: NOTICE + pusta waga/numer
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 CI `c3e42f49` import 277/281 (F7 11:08Z) — bez „gotowe”. Bez push na main.
+- **Krok (PR #586):** `r583_grep` / `client_min_messages=warning` (NOTICE: …); test pusta waga = `(j->0)-'total_weight_t'` + asercja skip+carrier; delete pending SG1 przed #583. EXPECTED **281**. Po zielonym CI — prośba o F7.
