@@ -858,10 +858,10 @@ begin
         end if;
       end if;
     end loop;
-    -- F7 r2 C: puste wagi/item/seq (+ qty surowa) → skip_reason, bez zapisu, bez klucza w schedule_row
+    -- F7 r2 C / r3 pkt 3: skip_reason „pusta komórka…” tylko gdy WT ma wartość (co chronić).
     foreach v_f in array v_leave_empty_note loop
       if nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is null
-         and coalesce(r.prev -> v_f, 'null'::jsonb) is distinct from 'null'::jsonb
+         and nullif(btrim(coalesce(r.prev ->> v_f, '')), '') is not null
          and (
            r.file_base is null
            or not (r.file_base ? v_f)
@@ -877,7 +877,7 @@ begin
       end if;
     end loop;
     if coalesce((r.inc ->> '_qty_empty')::boolean, false)
-       and coalesce(r.prev -> 'qty', 'null'::jsonb) is distinct from 'null'::jsonb then
+       and nullif(btrim(coalesce(r.prev ->> 'qty', '')), '') is not null then
       if ('qty' = any (coalesce(v_fields, '{}'::text[]))) is not true then
         v_fields := array_append(coalesce(v_fields, '{}'::text[]), 'qty');
       end if;
@@ -908,6 +908,12 @@ begin
                   and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
                   and nullif(btrim(i2.row ->> v_f), '')
                       is distinct from nullif(btrim(r.inc ->> v_f), '')
+                when v_f in ('load_time', 'delivery_time') then
+                  -- F7 r3 drobne: „9:00” = „09:00”
+                  nullif(btrim(coalesce(i2.row ->> v_f, '')), '') is not null
+                  and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
+                  and (nullif(btrim(i2.row ->> v_f), '')::time)
+                      is distinct from (nullif(btrim(r.inc ->> v_f), '')::time)
                 else
                   coalesce(i2.row ->> v_f, '') is distinct from coalesce(r.inc ->> v_f, '')
               end
@@ -973,15 +979,24 @@ begin
         p_project, r.load_id, r.code, r.hhl_order_no,
         coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo'));
     end if;
-    -- F7 r2 A: przy zapisie odśwież schedule_row zawsze (także unchanged/blocked/same skips).
+    -- F7 r3 drobne: pending A6 nie trafia do schedule_row (po anulowaniu kolejki wraca plik).
+    if coalesce(cardinality(v_pending_wt), 0) > 0 then
+      foreach v_f in array v_pending_wt loop
+        if (v_f = any (coalesce(v_omit_sched, '{}'::text[]))) is not true then
+          v_omit_sched := array_append(v_omit_sched, v_f);
+        end if;
+      end loop;
+    end if;
+    -- F7 r2 A / r3 pkt 2: odśwież schedule_row tylko gdy się zmienia; bez updated_at (audyt).
     v_sched_row := (coalesce(r.inc, '{}'::jsonb) - '_qty_empty');
     if coalesce(cardinality(v_omit_sched), 0) > 0 then
       v_sched_row := v_sched_row - v_omit_sched;
     end if;
     if p_dry_run is false and r.item_id is not null then
       update shipment_items
-         set schedule_row = v_sched_row, updated_at = now()
-       where id = r.item_id;
+         set schedule_row = v_sched_row
+       where id = r.item_id
+         and schedule_row is distinct from v_sched_row;
     end if;
 
     if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
@@ -1008,17 +1023,18 @@ begin
 
     -- D-20261020-1157-01: ciche pierwsze uzupelnienie pustych godzin (import_quiet_hours).
     -- B1 F7: puste takze w loads (nie tylko w schedule_row) — godziny wpisane przez KSH/HHL nie nadpisywac cicho.
+    -- F7 r3 drobne: licz z v_apply_fields (pominięte wagi nie blokują quiet).
     v_quiet_fill := v_quiet_on
-      and cardinality(v_fields) > 0
-      and v_fields <@ array['load_time','delivery_time']::text[]
+      and cardinality(v_apply_fields) > 0
+      and v_apply_fields <@ array['load_time','delivery_time']::text[]
       and (
-        not ('load_time' = any (v_fields))
+        not ('load_time' = any (v_apply_fields))
         or (nullif(btrim(r.prev->>'load_time'), '') is null
             and nullif(btrim(r.inc->>'load_time'), '') is not null
             and r.plan_load_from is null and r.plan_load_to is null)
       )
       and (
-        not ('delivery_time' = any (v_fields))
+        not ('delivery_time' = any (v_apply_fields))
         or (nullif(btrim(r.prev->>'delivery_time'), '') is null
             and nullif(btrim(r.inc->>'delivery_time'), '') is not null
             and r.plan_delivery_from is null and r.plan_delivery_to is null)
@@ -1376,5 +1392,160 @@ DO $g$ BEGIN
     GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) TO service_role;
   END IF;
 END $g$;
+
+commit;
+
+-- F7 #586 r3 pkt 2: UPDATE samego schedule_row na shipment_items → bez audytu
+-- (import odświeża snapshot co 15 min; price/a7_symbol i tak tylko na kolumnach wymiarów).
+begin;
+
+create or replace function public.audit_row_change() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_old jsonb; v_new jsonb; o jsonb; n jsonb; k text;
+  v_skip constant text[] := array[
+    'updated_at', 'eta_site', 'eta_confidence_min', 'eta_basis', 'eta_computed_at',
+    'delay_minutes', 'fetched_at', 'beat_at', 'beats', 'last_seen_at',
+    'rio_check_at', 'rio_last_fix_at'
+  ];
+  v_secret constant text[] := array['rio_secret'];
+  v_pii constant text[] := array[
+    'driver_name', 'driver_phone', 'phone_national', 'phone', 'contact_phone',
+    'contact_name', 'email_personal'
+  ];
+  v_keep_fee constant text[] := array['side', 'status', 'proposed_by_kind', 'load_id', 'amount_eur', 'kind'];
+  v_keep_doc constant text[] := array['visible_to', 'category', 'load_id', 'file_name', 'uploaded_by'];
+  v_id text; v_user uuid; v_source text; v_full jsonb;
+  v_mask text;
+  v_rodo boolean;
+  v_reason text;
+  v_load uuid;
+  v_carrier uuid;
+  v_client uuid;
+begin
+  o := case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end;
+  n := case when tg_op in ('UPDATE', 'INSERT') then to_jsonb(new) end;
+  if tg_op = 'UPDATE' then
+    v_old := '{}'; v_new := '{}';
+    for k in select key from jsonb_each(n) loop
+      if (n -> k) is distinct from (o -> k) and (k = any(v_skip)) is not true then
+        v_old := v_old || jsonb_build_object(k, o -> k);
+        v_new := v_new || jsonb_build_object(k, n -> k);
+      end if;
+    end loop;
+    if v_new = '{}'::jsonb then return null; end if;
+    -- #583 F7 r3: sam schedule_row (odświeżenie snapshotu importu) — bez wpisu audytu
+    if tg_table_name = 'shipment_items'
+       and (select count(*) from jsonb_object_keys(v_new)) = 1
+       and (v_new ? 'schedule_row') then
+      return null;
+    end if;
+    if tg_table_name = 'load_agreed_fees' then
+      foreach k in array v_keep_fee loop
+        if o ? k and (v_old ? k) is not true then
+          v_old := v_old || jsonb_build_object(k, o -> k);
+        end if;
+        if n ? k and (v_new ? k) is not true then
+          v_new := v_new || jsonb_build_object(k, n -> k);
+        end if;
+      end loop;
+    end if;
+    if tg_table_name = 'documents' then
+      foreach k in array v_keep_doc loop
+        if o ? k and (v_old ? k) is not true then
+          v_old := v_old || jsonb_build_object(k, o -> k);
+        end if;
+        if n ? k and (v_new ? k) is not true then
+          v_new := v_new || jsonb_build_object(k, n -> k);
+        end if;
+      end loop;
+    end if;
+    if tg_table_name in ('loads', 'load')
+       and (o ->> 'carrier_org_id') is distinct from (n ->> 'carrier_org_id') then
+      v_old := v_old || jsonb_build_object('carrier_org_id', o -> 'carrier_org_id');
+      v_new := v_new || jsonb_build_object('carrier_org_id', n -> 'carrier_org_id');
+    end if;
+  else
+    v_old := o; v_new := n;
+  end if;
+
+  v_reason := nullif(btrim(current_setting('tower.audit_reason', true)), '');
+  if v_reason is not null then
+    v_new := coalesce(v_new, '{}'::jsonb) || jsonb_build_object('_reason', v_reason);
+  end if;
+
+  v_source := nullif(btrim(current_setting('tower.audit_source', true)), '');
+  v_rodo := (v_source = 'rodo') is true;
+
+  foreach k in array (v_secret || v_pii) loop
+    if k = any (v_secret) then
+      v_mask := '"••••"';
+    elsif v_rodo and k = any (v_pii) then
+      v_mask := '"[dane osobowe]"';
+    else
+      v_mask := null;
+    end if;
+    if v_mask is not null then
+      if v_old ? k and jsonb_typeof(v_old -> k) <> 'null' then
+        v_old := jsonb_set(v_old, array[k], v_mask::jsonb);
+      end if;
+      if v_new ? k and jsonb_typeof(v_new -> k) <> 'null' then
+        v_new := jsonb_set(v_new, array[k], v_mask::jsonb);
+      end if;
+    end if;
+  end loop;
+
+  v_full := coalesce(n, o);
+  v_id := coalesce(
+    v_full ->> 'id',
+    v_full ->> 'key',
+    v_full ->> 'kind',
+    nullif((v_full ->> 'invoice_id') || ':' || (v_full ->> 'load_id'), ':'),
+    nullif((v_full ->> 'load_id') || ':' || (v_full ->> 'permit_id'), ':'),
+    nullif((v_full ->> 'event_group') || ':' || (v_full ->> 'org_kind'), ':'),
+    nullif((v_full ->> 'currency') || ':' || (v_full ->> 'rate_date'), ':'),
+    nullif((v_full ->> 'project_id') || ':' || (v_full ->> 'category'), ':'),
+    nullif((v_full ->> 'list_key') || ':' || (v_full ->> 'slot'), ':'),
+    case when public.audit_history_try_uuid(v_full ->> 'load_id') is not null
+      then v_full ->> 'load_id' end,
+    tg_table_name
+  );
+
+  select s.out_load, s.out_carrier, s.out_client
+    into v_load, v_carrier, v_client
+    from public.audit_history_compute_scope(
+      tg_table_name, v_id, v_old, v_new, null, null, null
+    ) s;
+  if v_load is null then
+    v_load := public.audit_history_try_uuid(v_full ->> 'load_id');
+  end if;
+  if v_load is null and tg_table_name in ('loads', 'load') then
+    v_load := public.audit_history_try_uuid(v_full ->> 'id');
+  end if;
+
+  begin
+    v_user := public.current_app_user_id();
+  exception when others then
+    v_user := null;
+  end;
+
+  if v_user is null then
+    v_source := coalesce(v_source, 'system');
+  end if;
+
+  insert into audit_log (
+    user_id, action, entity, entity_id, old_value, new_value, source,
+    load_id, scope_carrier_org_id, scope_client_org_id
+  ) values (
+    v_user, 'ROW_' || tg_op, tg_table_name, v_id, v_old, v_new, v_source,
+    v_load, v_carrier, v_client
+  );
+  return null;
+end $$;
+
+revoke all on function public.audit_row_change() from public, anon, authenticated;
+
+comment on function public.audit_row_change() is
+  'HIST-11 + #466 + #505 + #484 + #583: PII; scope; sam schedule_row na shipment_items bez audytu.';
 
 commit;
