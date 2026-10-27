@@ -226,8 +226,10 @@ comment on function public.trg_geofence_matrix_notify() is
   '#574-nast: ZONE_* z macierzy; tower.bulk_quiet=on → cisza (cron dwell ≥2 h).';
 
 -- ---------------------------------------------------------------------------
--- 2. N2: PENDING_IN + entered_at NULL na zakończonych → OUTSIDE
+-- 2–3. N2 PENDING_IN NULL→OUTSIDE + SG-23 DWELL per geofence_id
+--    Źródło: tests/db/sql/hotfix_574_dwell_recalc.sql (N1: diff bloku)
 -- ---------------------------------------------------------------------------
+-- BEGIN SG23
 update public.geofence_states gs
    set state = 'OUTSIDE',
        consec_fixes = 0,
@@ -243,11 +245,6 @@ update public.geofence_states gs
         )
    );
 
--- ---------------------------------------------------------------------------
--- 3. SG-23 DWELL payload per geofence_id (F7 #582 pkt 1–3)
---    Źródło: tests/db/sql/hotfix_574_dwell_recalc.sql
--- ---------------------------------------------------------------------------
--- BEGIN SG23
 create or replace function public.hotfix_574_dwell_recalc()
 returns void
 language plpgsql
@@ -367,10 +364,11 @@ exception
     raise;
 end;
 $$;
+-- END SG23
 
 revoke all on function public.hotfix_574_dwell_recalc() from public, anon, authenticated;
 grant execute on function public.hotfix_574_dwell_recalc() to service_role;
 
 select public.hotfix_574_dwell_recalc();
 drop function public.hotfix_574_dwell_recalc();
--- END SG23
+

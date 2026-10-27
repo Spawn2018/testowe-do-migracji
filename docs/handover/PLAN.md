@@ -1058,8 +1058,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #578 · wygląd lista zmian KSH (23B) — SCALONE (`4d348405`, 27.10.2026 00:36Z)
 Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7 gotowe (26.10 ~16:30Z) po #577.
 
-### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**; F7 #582 r2)
-Źródło: F7 #574 r2 + F7 #582 r1–r2. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE. status EXPECTED **336**.
+### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**; F7 #582 r3)
+Źródło: F7 #574 r2 + F7 #582 r1–r3. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
 ### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
 
@@ -1795,3 +1795,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 01:55 | #577 CI ✔ `a2dbd890` (unit/db/visual) — prośba o F7; #578 po #577 | pętla |
 | 27.10.2026 02:36 | #577 SCALONE `eeed3a8e` + #578 `4d348405`; #581 wpisane §4/§5 (27A); start #574-nast **0312** | pętla |
 | 27.10.2026 02:36 | #574 F7 §8: **drganie GPS na krawędzi SITE** — cykl EXIT/ENTER z powiadomieniem przy skokach na histerezie (dziś bez ekstra debounce SITE; decyzja: zostaje, monitorować na produkcji). **Podwójny DWELL w porcie** — drugi DWELL po re-ENTER w tej samej wizycie możliwy gdy `entered_at` się resetuje; cron/process emisja DWELL tylko gdy brak DWELL od `entered_at` (0309) — zostaje | pętla |
+| 27.10.2026 02:40 | #584 SCALONE `f5b0451b` (wygląd lista zmian KSH — ukryj bez zmian). #574-nast F7 #582 r3: N1+N2 testy | pętla |
+| 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |

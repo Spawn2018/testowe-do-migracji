@@ -1,5 +1,18 @@
--- #574-nast: przelicz GEOFENCE_DWELL.payload (dwell_min/minutes/entered_at) per strefa.
--- Wołane z migracji 0312 i z tests/db/status.sh ($PSQL -f).
+update public.geofence_states gs
+   set state = 'OUTSIDE',
+       consec_fixes = 0,
+       last_eval_at = coalesce(gs.last_eval_at, now())
+  from public.loads l
+ where gs.load_id = l.id
+   and gs.state = 'PENDING_IN'
+   and gs.entered_at is null
+   and (
+     l.actual_delivery_at is not null
+     or l.status::text in (
+          'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'
+        )
+   );
+
 create or replace function public.hotfix_574_dwell_recalc()
 returns void
 language plpgsql

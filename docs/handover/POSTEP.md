@@ -5762,3 +5762,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe”. Visual bramy zawieszone ~1 h → anulowane (G-15). Bez push na main.
 - **Krok F7 r2:** `hotfix_574_dwell_recalc` (per `geofence_id`, UUID pinned); test #574h bez ręcznego UPDATE + EXIT>entered; #574i2 ZONE bez quiet; N2 skip finished + OUTSIDE; cron `v_prev`; status EXPECTED **336**.
 
+## 2026-10-27 03:40 — #584 SCALONE; #574-nast F7 #582 r3 N1+N2
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie (bez nowych).
+- Scalanie: #584 F7 gotowe po `09482223`, unit/visual ✔ → merge `f5b0451b`. #582 bez „F7: gotowe” (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g → insert pinned UUID bez kodu) → anulowane wiszące visual/db (G-15).
+- **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
+

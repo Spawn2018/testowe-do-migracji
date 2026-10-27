@@ -1609,9 +1609,21 @@ q "update geofences set active = true where project_id='$P' and name='Plac Stegr
 chk "#571: dwell tylko service_role" \
   "select has_function_privilege('authenticated', 'geofence_confirm_pending_dwell(timestamptz)', 'execute')" f
 
-# --- #574-nast (F7 #582 r1–r2): cron lower bound + DWELL per strefa + N2 ---
+# --- #574-nast (F7 #582 r3): cron lower bound + DWELL per strefa + N1/N2 ---
 # UUID b1–b6 — unikaj kolizji z a1–a7 (#571).
-echo; echo "[#574-nast] cron lower bound + DWELL payload + N2"
+echo; echo "[#574-nast] cron lower bound + DWELL payload + N1/N2"
+ROOT574=$(git rev-parse --show-toplevel)
+MIG574="$ROOT574/supabase/migrations/0312_574_dwell_min_followup.sql"
+REF574="$ROOT574/tests/db/sql/hotfix_574_dwell_recalc.sql"
+EXT574=$(mktemp)
+sed -n '/^-- BEGIN SG23$/,/^-- END SG23$/p' "$MIG574" | sed '1d;$d' > "$EXT574"
+if diff -q "$REF574" "$EXT574" >/dev/null; then
+  ok=$((ok+1)); echo "  OK    #574N1: blok BEGIN/END SG23 = hotfix_574_dwell_recalc.sql"
+else
+  fail=$((fail+1)); echo "  FAIL  #574N1: blok BEGIN/END SG23 ≠ hotfix_574_dwell_recalc.sql"
+  diff -u "$REF574" "$EXT574" | head -40 || true
+fi
+rm -f "$EXT574"
 L574h=$(L b1); L574i=$(L b2); L574k=$(L b4); L574m=$(L b5); L574n=$(L b6)
 L574j='95ab7218-69cc-490d-8b68-b379c3ed9aae'
 mk $L574h 574h "'HHL/574h'" "'SCX/574h'" IN_TRANSIT_SE null
@@ -1640,22 +1652,27 @@ chk "#574h: cron po dwell → ENTER z 16:00 (nie 09:00)" \
    select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
     where load_id='$L574h' and event_type='GEOFENCE_ENTER' and (payload->>'geofence_id')='$G571p'
     order by occurred_at desc limit 1" "2026-10-26 16:00"
-# (h2) EXIT późniejszy niż entered_at → lower = EXIT
+# (h2) F7 r3 N2: consec_fixes=0, bez UPDATE; surowa poz. 11:30 (przed EXIT) + 13:00
 q "insert into load_events (load_id,event_type,occurred_at,source,geom,payload,dedup_key) values
   ('$L574k','GEOFENCE_EXIT','2026-10-26 12:00:00+00','TELEMATICS_API',
    st_setsrid(st_makepoint(17.90,58.90),4326),
    jsonb_build_object('geofence_id','$G571p','geofence_kind','PORT_IN'),
    'GEOFENCE_EXIT:$L574k:$G571p:202610261200')" >/dev/null
 q "insert into geofence_states (load_id,geofence_id,state,consec_fixes,entered_at,last_eval_at)
-   values ('$L574k','$G571p','PENDING_IN',1,'2026-10-26 11:00:00+00','2026-10-26 13:00:00+00')
+   values ('$L574k','$G571p','PENDING_IN',0,'2026-10-26 11:00:00+00','2026-10-26 13:00:00+00')
    on conflict (load_id, geofence_id) do update
-     set state='PENDING_IN', entered_at='2026-10-26 11:00:00+00', last_eval_at='2026-10-26 13:00:00+00'" >/dev/null
-pos $L574k 58.9350 17.9500 "2026-10-26 13:00:00+00"
-q "update geofence_states set state='PENDING_IN', entered_at='2026-10-26 11:00:00+00'
-    where load_id='$L574k' and geofence_id='$G571p'" >/dev/null
-chk "#574h2: EXIT>entered_at → ENTER z 13:00 (nie 11:00)" \
-  "select geofence_confirm_pending_dwell('2026-10-26 13:15:00+00');
-   select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
+     set state='PENDING_IN', consec_fixes=0, entered_at='2026-10-26 11:00:00+00',
+         last_eval_at='2026-10-26 13:00:00+00'" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source, raw) values
+  ('$L574k','2026-10-26 11:30:00+00', st_setsrid(st_makepoint(17.9500,58.9350),4326),'TELEMATICS_API','{}'),
+  ('$L574k','2026-10-26 13:00:00+00', st_setsrid(st_makepoint(17.9500,58.9350),4326),'TELEMATICS_API','{}')" >/dev/null
+chk "#574h2: cron EXIT>entered_at → 1" \
+  "select geofence_confirm_pending_dwell('2026-10-26 13:15:00+00')" 1
+chk "#574h2: dokładnie 1 ENTER" \
+  "select count(*) from load_events where load_id='$L574k' and event_type='GEOFENCE_ENTER'
+     and (payload->>'geofence_id')='$G571p'" 1
+chk "#574h2: ENTER z 13:00 (nie 11:30)" \
+  "select to_char(occurred_at at time zone 'UTC','YYYY-MM-DD HH24:MI') from load_events
     where load_id='$L574k' and event_type='GEOFENCE_ENTER' and (payload->>'geofence_id')='$G571p'
     order by occurred_at desc limit 1" "2026-10-26 13:00"
 # (i) bulk_quiet ≥ 2 h: ENTER bez nowych powiadomień strefy
@@ -1676,7 +1693,7 @@ chk "#574i2: cron fresh <2h → ENTER" \
      and (payload->>'geofence_id')='$G571p'" 1
 chk "#574i2: bez bulk_quiet — ZONE_ENTER > 0" \
   "select (count(*) > $N574m)::text from notifications where load_id='$L574m' and template='ZONE_ENTER'" true
-# (N2) zakończony transport: PENDING_IN + entered_at NULL — cron pomija; update → OUTSIDE
+# (N2) zakończony: PENDING_IN + entered_at NULL — cron pomija; wspólny SQL → OUTSIDE
 q "insert into geofence_states (load_id,geofence_id,state,consec_fixes,entered_at,last_eval_at)
    values ('$L574n','$G571p','PENDING_IN',0,null,'2026-10-01 08:00:00+00')
    on conflict (load_id, geofence_id) do update
@@ -1686,17 +1703,16 @@ q "insert into positions (load_id, ts, geom_raw, source, raw) values
 chk "#574N2: cron pomija DELIVERED → 0 ENTER" \
   "select geofence_confirm_pending_dwell('2026-10-26 12:00:00+00');
    select count(*) from load_events where load_id='$L574n' and event_type='GEOFENCE_ENTER'" 0
-q "update geofence_states gs set state='OUTSIDE', consec_fixes=0
-    from loads l
-   where gs.load_id=l.id and gs.load_id='$L574n' and gs.state='PENDING_IN' and gs.entered_at is null
-     and (l.actual_delivery_at is not null
-          or l.status::text in ('UNLOADED','DELIVERED','READY_TO_INVOICE','INVOICED','CANCELLED'))" >/dev/null
-chk "#574N2: migracja zamyka PENDING_IN NULL → OUTSIDE" \
+$PSQL -f "$REF574" >/dev/null
+q "revoke all on function public.hotfix_574_dwell_recalc() from public, anon, authenticated;
+   grant execute on function public.hotfix_574_dwell_recalc() to service_role" >/dev/null
+chk "#574N2: wspólny SQL zamyka PENDING_IN NULL → OUTSIDE" \
   "select state from geofence_states where load_id='$L574n' and geofence_id='$G571p'" OUTSIDE
-# (j) DWELL per geofence_id — pinned SG-23 UUID; dwie strefy SITE / dwie wizyty
+# (j) DWELL per geofence_id — pinned SG-23 UUID; dwie strefy SITE
 q "insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route)
    values ('$P','Plac 574 LOADING','SITE', make_circle_fence(52.0833,17.0167,500), 100, 600, 2,'PL', null)" >/dev/null
 G574s=$(q "select id from geofences where project_id='$P' and name='Plac 574 LOADING' order by id limit 1")
+q "delete from shipment_items where shipment_code='SG-23'" >/dev/null
 q "delete from shipment_items where load_id='$L574j'" >/dev/null
 q "delete from loads where id='$L574j'" >/dev/null
 q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,plan_load_date,telematics_vehicle_id)
@@ -1725,9 +1741,6 @@ q "set session_replication_role=replica;
      'entered_at','2026-10-26 11:21:00+00','dwell_min',29,'minutes',29),
    'GEOFENCE_DWELL:$L574j:$G571r:202610261150');
    set session_replication_role=origin" >/dev/null
-$PSQL -f "$(git rev-parse --show-toplevel)/tests/db/sql/hotfix_574_dwell_recalc.sql" >/dev/null
-q "revoke all on function public.hotfix_574_dwell_recalc() from public, anon, authenticated;
-   grant execute on function public.hotfix_574_dwell_recalc() to service_role" >/dev/null
 q "select public.hotfix_574_dwell_recalc()" >/dev/null
 chk "#574j: DWELL SITE Boden dwell_min ≈ 88" \
   "select (payload->>'dwell_min')::int from load_events
