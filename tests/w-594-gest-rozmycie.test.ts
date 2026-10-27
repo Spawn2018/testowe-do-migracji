@@ -31,10 +31,15 @@ describe('W-594 gest w dzwonku', () => {
     expect(bell).toMatch(/e\.pointerType !== 'touch'/);
     expect(bell).toMatch(/onDismiss=\{\(\) => \{ for \(const id of g\.ids\) markNotificationRead\(id\); \}\}/);
     expect(bell).toMatch(/onClickCapture/);
+    /* F7: próg z ref (nie ze starego stanu), klucz z id grupy (nowe powiadomienie = nowy wiersz), flaga kliknięcia czyszczona też dla myszy */
+    expect(bell).toMatch(/swipeRelease\(dxRef\.current, w\)/);
+    expect(bell).toMatch(/key=\{`\$\{g\.key\}:\$\{g\.ids\.join\(','\)\}`\}/);
+    expect(bell).toMatch(/moved\.current = false;\s*if \(e\.pointerType !== 'touch'\) return;/);
   });
 
   it('tło pod dzwonkiem: element rozmycia, dotknięcie zamyka', () => {
-    expect(bell).toMatch(/className="bell-scrim"[^>]*onPointerDown=\{\(\) => setOpen\(false\)\}/);
+    expect(bell).toMatch(/className="bell-scrim"[^>]*onClick=\{\(\) => setOpen\(false\)\}/);
+    expect(bell).not.toMatch(/bell-scrim"[^>]*onPointerDown/);
   });
 });
 
@@ -44,7 +49,7 @@ describe('W-594 rozmycie tła', () => {
 
   it('pasek transportu: tło z rozmyciem na każdej szerokości', () => {
     expect(drawer).toMatch(/className="scrim drawer-scrim"/);
-    expect(css).toMatch(/\.drawer-scrim\{[^}]*backdrop-filter:blur\(/);
+    expect(css).toMatch(/@media \(min-width:769px\)\{\.drawer-scrim\{[^}]*backdrop-filter:blur\(/);
   });
 
   it('dzwonek: rozmycie tylko na telefonie (ukryte na komputerze)', () => {
@@ -52,7 +57,13 @@ describe('W-594 rozmycie tła', () => {
     expect(css).toMatch(/@media \(max-width:768px\)\{\s*\.bell-scrim\{display:block;[^}]*backdrop-filter:blur\(/);
   });
 
-  it('pion przewija listę (touch-action pan-y)', () => {
+  it('przycisk dzwonka nad rozmytym tłem (drugie dotknięcie zamyka listę)', () => {
+    expect(css).toMatch(/\.bell-wrap \.bell-trigger\{position:relative;z-index:56\}/);
+  });
+
+  it('pion przewija listę (touch-action pan-y); przesunięty wiersz nie przewija w poziomie i nie przyjmuje dotyku', () => {
     expect(css).toMatch(/\.bell-item\{touch-action:pan-y\}/);
+    expect(css).toMatch(/\.bell-pop \.bell-scroll\{overflow-x:hidden\}/);
+    expect(css).toMatch(/\.bell-item\.is-gone\{[^}]*pointer-events:none/);
   });
 });

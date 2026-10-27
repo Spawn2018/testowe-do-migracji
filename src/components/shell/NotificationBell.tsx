@@ -19,6 +19,7 @@ function SwipeRow({ onDismiss, className, children, ...rest }: {
   children: React.ReactNode;
 } & Record<`data-${string}`, string | number | undefined>) {
   const [dx, setDx] = useState(0);
+  const dxRef = useRef(0);
   const [gone, setGone] = useState(false);
   const st = useRef<{ x: number; y: number; axis: SwipeAxis; id: number } | null>(null);
   const moved = useRef(false);
@@ -26,13 +27,14 @@ function SwipeRow({ onDismiss, className, children, ...rest }: {
   const end = () => {
     const s = st.current;
     st.current = null;
-    if (!s || s.axis !== 'x') { setDx(0); return; }
+    if (!s || s.axis !== 'x') { dxRef.current = 0; setDx(0); return; }
     const w = rowRef.current?.getBoundingClientRect().width ?? 0;
-    if (swipeRelease(dx, w) === 'dismiss') {
+    /* ostatnie przesunięcie z ref, nie ze stanu ostatniego renderu */
+    if (swipeRelease(dxRef.current, w) === 'dismiss') {
       setGone(true);
       setDx(w);
       window.setTimeout(onDismiss, 160);
-    } else setDx(0);
+    } else { dxRef.current = 0; setDx(0); }
   };
   return (
     <div
@@ -41,8 +43,8 @@ function SwipeRow({ onDismiss, className, children, ...rest }: {
       className={`${className}${dx > 0 ? ' is-swiping' : ''}${gone ? ' is-gone' : ''}`}
       style={dx > 0 ? { transform: `translateX(${dx}px)` } : undefined}
       onPointerDown={(e) => {
-        if (e.pointerType !== 'touch') return;
         moved.current = false;
+        if (e.pointerType !== 'touch') return;
         st.current = { x: e.clientX, y: e.clientY, axis: 'none', id: e.pointerId };
       }}
       onPointerMove={(e) => {
@@ -53,11 +55,12 @@ function SwipeRow({ onDismiss, className, children, ...rest }: {
         if (s.axis === 'none') s.axis = swipeAxis(mx, my);
         if (s.axis === 'x') {
           moved.current = true;
-          setDx(swipeOffset(mx));
+          dxRef.current = swipeOffset(mx);
+          setDx(dxRef.current);
         }
       }}
       onPointerUp={end}
-      onPointerCancel={() => { st.current = null; setDx(0); }}
+      onPointerCancel={() => { st.current = null; dxRef.current = 0; setDx(0); }}
       onClickCapture={(e) => {
         /* przesunięcie to nie kliknięcie — nie otwieraj powiadomienia */
         if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false; }
@@ -139,7 +142,7 @@ export function NotificationBell() {
         ? [g.name, g.body].filter(Boolean).join(' · ')
         : [when, g.body].filter(Boolean).join(' · ');
     return (
-      <SwipeRow key={g.key} className={`bell-item${chat ? ' is-chat' : ''}`} data-bell-count={g.count} data-bell-section={g.section} data-bell-chat={chat ? (chat.only ? 'HHL_SCX' : 'ALL') : undefined}
+      <SwipeRow key={`${g.key}:${g.ids.join(',')}`} className={`bell-item${chat ? ' is-chat' : ''}`} data-bell-count={g.count} data-bell-section={g.section} data-bell-chat={chat ? (chat.only ? 'HHL_SCX' : 'ALL') : undefined}
         onDismiss={() => { for (const id of g.ids) markNotificationRead(id); }}>
         <span className={`bell-gut ${gut(g.section, g.severity as Severity)}`} aria-hidden />
         <button
@@ -198,8 +201,9 @@ export function NotificationBell() {
           <span className="bell-badge cond tabular">{unread > 99 ? '99+' : unread}</span>
         ) : null}
       </button>
-      {/* #594 B3: telefon — tło rozmyte, gdy lista jest otwarta (na komputerze ukryte w CSS); dotknięcie zamyka */}
-      {open ? <div className="bell-scrim" aria-hidden="true" data-bell-scrim onPointerDown={() => setOpen(false)} /> : null}
+      {/* #594 B3: telefon — tło rozmyte, gdy lista jest otwarta (na komputerze ukryte w CSS); dotknięcie zamyka.
+          onClick (nie pointerdown): tło znika dopiero po puszczeniu palca, więc kliknięcie nie trafia w element pod spodem (iOS) */}
+      {open ? <div className="bell-scrim" aria-hidden="true" data-bell-scrim onClick={() => setOpen(false)} /> : null}
       {open && (
         <div
           className="bell-pop"
