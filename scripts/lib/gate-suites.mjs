@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 352, // #594 F7 r1: +9 (B4 id, P5 project_id, B3×5, D6 retencja); było 343
+  import: 359, // #594 F7 r2: +7 (B3 cancel×3, P1 skip×4); było 352
   nullguard: 870, // #594: +1 RPC ksh_import_summary_get × 4 konta odmowy (+4; EMPTY pozytywne = n/d); było 866
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,

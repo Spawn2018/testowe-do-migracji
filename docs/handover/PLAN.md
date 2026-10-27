@@ -1073,8 +1073,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #596 · PILNE: strażnik decision_resolve dla KSH_CARRIER_CHANGED — SCALONE (`620f7294`, PR #599, 27.10.2026 21:54Z; migracja **0317**)
 Źródło: #596 (Spawn2018). F7 gotowe na `3429fce8`. `decision_resolve` → `decision_resolve_carrier_change`; `assert_not_preview`; `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; `decision_apply_effect` CARRIER_* → wyjątek. import EXPECTED **315**.
 
-### #594 · Import KSH: zbiorcze powiadomienie + migawka — W TOKU (PR baza #601 `pakiet/594-ksh-import-summary`, migracja **0318**; ekran gest/rozmycie **SCALONE** #600 `7d8ebb4b` 27.10 22:08Z)
-Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3); testy import (**352**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (okno, gest, rozmycie) — #600.
+### #594 · Import KSH: zbiorcze powiadomienie + migawka — W TOKU (PR baza #601 `pakiet/594-ksh-import-summary`, migracja **0318**; ekran gest/rozmycie **SCALONE** #600 `7d8ebb4b`; okno **SCALONE** #602 `df3f5caa` 27.10 23:17Z)
+Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
 ### P4-k · #581 Kalibracja ETA ciągła — W TOKU równolegle (PR #598 `pakiet/581-p4k-eta-calibration`; cz.1 była **0317** → po #596/#594 przenumeruj na **0319**; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność scalania: #596 → #594 → ten (F7). Pomiar odcinków z GPS; dalej `eta_predictions`, cron, auto-apply 27A. Ekran — koordynator `wyglad/`.
@@ -1849,3 +1849,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 23:00 | #596/#599 SCALONE (`620f7294`, F7 gotowe `3429fce`); start #594 migracja **0318** (SUMMARY + migawka); #581 → **0319** | pętla |
 | 27.10.2026 23:15 | #600 SCALONE (`7d8ebb4b`, F7 gotowe `85a6d11a`); #601 db FAIL import 338/4 (REMOVED, dry_run RLS, OPS×4, true/t) + nullguard 870 — poprawka | pętla |
 | 28.10.2026 00:15 | #601 F7 r1 CI db FAIL B3/D6 (INSERT schedule_imports bez column_map → „^”); poprawka testów + retencja OFFSET 30 | pętla |
+| 28.10.2026 00:35 | #602 SCALONE (`df3f5caa`, F7 gotowe); #601 F7 r2: B3 cancel, P1 pusty WT, OTH w P2, status LATE_DATE po A1; import **359** | pętla |

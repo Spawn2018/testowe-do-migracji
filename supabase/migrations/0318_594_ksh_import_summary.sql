@@ -285,11 +285,12 @@ begin
       v_before := r.payload->'before'->>f;
       v_after := r.payload->'after'->>f;
       -- P1: event CHANGED (0315) nie niesie skip_reason — odtwórz z bieżącego WT
+      -- coalesce: pusty WT (null) vs przed (null/'') nie może fałszywie oznaczyć zapisu
       if v_sr is null and v_after is distinct from v_before then
         begin
           v_wt_now := public.ksh_sync_preview_wt_text(r.load_id, f, r.code);
-          if v_wt_now is not distinct from coalesce(v_before, '')
-             and v_wt_now is distinct from coalesce(
+          if coalesce(v_wt_now, '') = coalesce(v_before, '')
+             and coalesce(v_wt_now, '') <> coalesce(
                    public.ksh_sync_preview_norm_file(f, v_after), v_after, '') then
             v_sr := 'nie zapisane przy imporcie';
           end if;
@@ -447,15 +448,13 @@ begin
          or (o.kind = 'CLIENT' and exists (
                select 1 from public.projects pr
                 where pr.id = p_project and pr.client_org_id = o.id))
-         -- B3: przewoźnik tylko gdy w zmianach jest jego transport
+         -- B3: przewoźnik gdy w zmianach jest jego transport (także anulowanie/missing —
+         -- bez filtra statusu: po CANCELLED w tej samej transakcji exists inaczej by padło)
          or (o.kind = 'CARRIER' and exists (
                select 1
                  from jsonb_array_elements(v_changes) ch
                  join public.loads l on l.id = (ch->>'load_id')::uuid
-                where l.carrier_org_id = o.id
-                  and l.status is distinct from 'CANCELLED'
-                  and l.status is distinct from 'REMOVED'
-                  and l.removed_at is null))
+                where l.carrier_org_id = o.id))
        )
      order by au.id  -- D1: bez zakleszczeń przy równoległych importach
   loop

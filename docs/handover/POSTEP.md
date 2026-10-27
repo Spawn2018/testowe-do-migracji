@@ -6132,3 +6132,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - 0318: retencja przez `OFFSET 30` (bariera podzapytania zamiast `NOT IN … LIMIT`);
   - import EXPECTED **352** (bez zmiany liczby asercji).
 - Push → CI `db.yml` suites=import,nullguard,c3; po zielonym — prośba o F7 r2: gotowe do scalenia.
+
+## 2026-10-28 00:35 — #602 SCALONE; #601 F7 r2 (B3 cancel / P1 / OTH / LATE_DATE)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#602** F7 „gotowe do scalenia” na `1fd3955c` (23:14Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `df3f5caa`. Bez push na main.
+- CI #601 `94b005c1`: dispatch import/nullguard/c3 ✔ (352/870/40); pełny PR db FAIL risks (8 kluczy — `rk_late_date_change` po A1 imporcie w LEAD_DAYS).
+- **Krok (#594 / #601) F7 r2:**
+  - B3: publish CARRIER bez filtra statusu/removed (anulowanie → dzwonek); test cancel×3;
+  - P1: `coalesce` przy odtwarzaniu skip_reason (pusty WT); testy WT z wartością + pusty (+4);
+  - OTH z transportem tylko w P2 → 0 SUMMARY przy imporcie do P;
+  - `status.sh`: ponowne sprzątanie LATE_DATE po A1 imporcie;
+  - import EXPECTED **359**.
+- Push → CI; po zielonym — prośba o F7 r2: gotowe do scalenia.
