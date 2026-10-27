@@ -12,7 +12,7 @@ import { previewReadAt } from '../../lib/kshPreviewView';
 import { kshImportSummaryFromRpc, type KshImportSummary } from '../../lib/kshImportSummary';
 import { KshChangeList } from '../schedule/KshChangeList';
 
-type State = { kind: 'loading' } | { kind: 'error'; msg: string } | { kind: 'none' } | { kind: 'ok'; data: KshImportSummary };
+type State = { kind: 'loading' } | { kind: 'error'; msg: string } | { kind: 'none' } | { kind: 'demo' } | { kind: 'ok'; data: KshImportSummary };
 
 const FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
 
@@ -33,7 +33,7 @@ function SummaryDialog({ id }: { id: string }) {
   const load = useCallback(async () => {
     setState({ kind: 'loading' });
     /* warunek wpisany wprost — paczka demo bez klienta Supabase (I-2) */
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') { setState({ kind: 'none' }); return; }
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') { setState({ kind: 'demo' }); return; }
     try {
       const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
@@ -47,11 +47,15 @@ function SummaryDialog({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => { void load(); }, [load]);
+  /* po wczytaniu (także po „Odśwież”) fokus na ✕, jeśli wypadł z okna */
+  useEffect(() => {
+    if (state.kind !== 'loading' && boxRef.current && !boxRef.current.contains(document.activeElement)) xRef.current?.focus();
+  }, [state.kind]);
 
-  const done = useCallback(() => {
+  const done = useCallback((restore = true) => {
     close();
-    /* fokus wraca na dzwonek (okno otwiera się z jego listy) */
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('.bell-trigger')?.focus());
+    /* fokus wraca na dzwonek (okno otwiera się z jego listy); po przejściu do transportu fokus zostaje dla panelu */
+    if (restore) requestAnimationFrame(() => document.querySelector<HTMLElement>('.bell-trigger')?.focus());
   }, [close]);
 
   useEffect(() => {
@@ -68,6 +72,8 @@ function SummaryDialog({ id }: { id: string }) {
       if (!els.length) return;
       const first = els[0];
       const last = els[els.length - 1];
+      /* fokus poza oknem (np. przycisk „Odśwież” zniknął w czasie wczytywania) — wraca do okna */
+      if (!boxRef.current.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
@@ -80,12 +86,12 @@ function SummaryDialog({ id }: { id: string }) {
 
   return (
     <>
-      <div className="kis-scrim" aria-hidden="true" data-kis-scrim onClick={done} />
+      <div className="kis-scrim" aria-hidden="true" data-kis-scrim onClick={() => done()} />
       <section ref={boxRef} className="panel kis-modal" role="dialog" aria-modal="true" aria-labelledby="kis-title" data-kis-modal aria-busy={state.kind === 'loading'}>
         <header className="panel-hd kis-hd">
           <h2 id="kis-title">{title}</h2>
           <div className="spacer" />
-          <button ref={xRef} type="button" className="iconbtn kis-x" aria-label={s7(locale, 's7_kis_close')} data-kis-close onClick={done}>✕</button>
+          <button ref={xRef} type="button" className="iconbtn kis-x" aria-label={s7(locale, 's7_kis_close')} data-kis-close onClick={() => done()}>✕</button>
         </header>
         <div className="kis-bd s7-kp">
           <div aria-live="polite">
@@ -97,6 +103,7 @@ function SummaryDialog({ id }: { id: string }) {
               </p>
             ) : null}
             {state.kind === 'none' ? <p className="s7-kp-meta" data-kis-none>{s7(locale, 's7_kis_none')}</p> : null}
+            {state.kind === 'demo' ? <p className="s7-kp-meta" data-kis-demo>{s7(locale, 's7_kis_demo')}</p> : null}
           </div>
           {d ? (
             <>
@@ -111,7 +118,7 @@ function SummaryDialog({ id }: { id: string }) {
                 changes={d.changes}
                 counts={d.counts}
                 emptyKey="s7_kis_empty"
-                onOpenLoad={(loadId) => { done(); selectLoad(loadId); }}
+                onOpenLoad={(loadId) => { done(false); selectLoad(loadId); }}
               />
             </>
           ) : null}

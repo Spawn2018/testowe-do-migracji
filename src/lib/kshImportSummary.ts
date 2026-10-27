@@ -5,6 +5,7 @@
  * wg roli w bazie. Kształt wierszy jak w `ksh_sync_preview_get` (W-567), więc model i lista są wspólne.
  */
 import { kshPreviewFromRpc, previewCounts, type KshPreviewChange, type KshPreviewCounts } from './kshPreviewView';
+import { fmtDateTime } from './time';
 
 export const KSH_IMPORT_SUMMARY = 'KSH_IMPORT_SUMMARY';
 
@@ -47,13 +48,11 @@ export function summaryIdOf(template: string | null | undefined, payload: Record
  * Czas importu w Europe/Warsaw; liczby z payloadu (#601).
  */
 export function importSummaryNotice(p: Record<string, unknown>): { subject: string; body: string } {
-  const at = Date.parse(String(p.imported_at ?? ''));
-  const when = Number.isFinite(at)
-    ? new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-      .format(new Date(at)).replace(/,?\s+/, ', ')
-    : '';
+  const raw = typeof p.imported_at === 'string' && Number.isFinite(Date.parse(p.imported_at)) ? p.imported_at : null;
+  /* ten sam format co tytuł okna i czas w dzwonku (Europe/Warsaw, „DD.MM.RRRR, GG:MM”) */
+  const when = raw ? fmtDateTime(raw) : '';
   const keys = ['transports', 'fields', 'added', 'cancelled'] as const;
-  const has = keys.some((k) => p[k] != null && Number.isFinite(Number(p[k])));
+  const has = keys.some((k) => typeof p[k] === 'number');
   const n = (k: string) => (Number.isFinite(Number(p[k])) ? Number(p[k]) : 0);
   return {
     subject: `Zmiany z pliku KSH${when ? ` — ${when}` : ''}`,

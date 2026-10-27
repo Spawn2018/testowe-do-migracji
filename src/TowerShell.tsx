@@ -92,6 +92,8 @@ export default function TowerShell() {
         return;
       }
       const store = useTowerStore.getState();
+      /* #594: przy otwartym oknie importu skróty (widoki, motyw, pomoc) nie działają — Esc obsługuje okno */
+      if (store.importSummaryId) return;
       if (e.key === 'Escape') {
         store.selectLoad(null);
         store.setStageFilter(null);
@@ -249,7 +251,7 @@ export default function TowerShell() {
       </div>
       {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
       <Suspense fallback={null}><LoadDrawer /></Suspense>
-      {importSummaryId ? <Suspense fallback={null}><KshImportSummaryModal /></Suspense> : null}
+      {importSummaryId ? <PartBoundary name="kis"><Suspense fallback={null}><KshImportSummaryModal /></Suspense></PartBoundary> : null}
       <Toasts />
     </div>
   );

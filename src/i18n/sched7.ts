@@ -143,6 +143,7 @@ const PL: Record<string, string> = {
   s7_kis_file: 'Plik: {name}',
   s7_kis_none: 'Szczegóły tego importu nie są już dostępne (zastąpił je nowszy import albo nie dotyczą Twoich transportów).',
   s7_kis_error: 'Nie udało się wczytać zmian: {msg}',
+  s7_kis_demo: 'W wersji pokazowej szczegóły importu nie są dostępne — pojawią się w działającym programie.',
   s7_kis_empty: 'Ten import nie zmienił danych widocznych dla Twojego konta.',
   s7_kp_not_ready: 'Lista jeszcze nie przygotowana — pojawi się po najbliższym odczycie pliku (co 5 min).',
 };

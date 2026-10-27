@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { KSH_IMPORT_SUMMARY, importSummaryNotice, kshImportSummaryFromRpc, summaryIdOf } from '../src/lib/kshImportSummary';
 import { notificationFromRow } from '../src/data/mappers';
-import { bellSection } from '../src/lib/bellList';
+import { bellSection, mergeBellRefresh } from '../src/lib/bellList';
 import { KshChangeList } from '../src/components/schedule/KshChangeList';
 
 /**
@@ -73,6 +73,14 @@ describe('W-594 powiadomienie w dzwonku', () => {
     expect(importSummaryNotice({ imported_at: '2026-10-27T17:05:00Z' }).body).toBe('Otwórz, aby zobaczyć zmiany z ostatniego importu.');
   });
 
+  it('nowy import (ten sam wiersz, nowszy czas) wraca jako nieprzeczytany mimo lokalnego odczytu', () => {
+    const local = [{ id: 'srv-77', read: true, at: '2026-10-27T17:05:00Z', summaryId: 'a' }];
+    const fresh = [{ id: 'srv-77', read: false, at: '2026-10-27T19:40:00Z', summaryId: 'b' }];
+    expect(mergeBellRefresh(local, fresh)[0]).toMatchObject({ read: false, summaryId: 'b' });
+    /* ten sam wpis (ten sam czas) — lokalny odczyt zostaje, jak dotąd */
+    expect(mergeBellRefresh(local, [{ ...local[0], read: false }])[0].read).toBe(true);
+  });
+
   it('summary_id tylko dla tego szablonu', () => {
     expect(summaryIdOf('SCHEDULE_IMPORTED', { summary_id: 'x' })).toBeUndefined();
     expect(summaryIdOf(KSH_IMPORT_SUMMARY, {})).toBeUndefined();
@@ -91,8 +99,12 @@ describe('W-594 okno — wygląd i zachowanie', () => {
 
   it('rozmyte tło, zamknięcie ✕, Esc i dotknięcie tła; fokus w oknie; fokus wraca na dzwonek', () => {
     expect(css).toMatch(/\.kis-scrim\{[^}]*backdrop-filter:blur\(/);
-    expect(modal).toMatch(/className="kis-scrim"[^>]*onClick=\{done\}/);
-    expect(modal).toMatch(/data-kis-close onClick=\{done\}>✕</);
+    expect(modal).toMatch(/className="kis-scrim"[^>]*onClick=\{\(\) => done\(\)\}/);
+    expect(modal).toMatch(/data-kis-close onClick=\{\(\) => done\(\)\}>✕</);
+    /* przejście do transportu: okno zamknięte bez oddawania fokusu dzwonkowi (pasek transportu ma swój fokus) */
+    expect(modal).toMatch(/onOpenLoad=\{\(loadId\) => \{ done\(false\); selectLoad\(loadId\); \}\}/);
+    /* pułapka fokusu łapie też fokus spoza okna */
+    expect(modal).toMatch(/!boxRef\.current\.contains\(document\.activeElement\)/);
     expect(modal).toMatch(/e\.key === 'Escape'/);
     expect(modal).toMatch(/e\.key !== 'Tab'/);
     expect(modal).toMatch(/role="dialog" aria-modal="true"/);
@@ -112,7 +124,9 @@ describe('W-594 okno — wygląd i zachowanie', () => {
 
   it('okno ładowane osobno (budżet paczki) i tylko gdy otwarte', () => {
     expect(shell).toMatch(/lazy\(lazyRetry\(\(\) => import\('\.\/components\/shell\/KshImportSummaryModal'\)/);
-    expect(shell).toMatch(/\{importSummaryId \? <Suspense fallback=\{null\}><KshImportSummaryModal \/><\/Suspense> : null\}/);
+    expect(shell).toMatch(/\{importSummaryId \? <PartBoundary name="kis"><Suspense fallback=\{null\}><KshImportSummaryModal \/><\/Suspense><\/PartBoundary> : null\}/);
+    /* skróty klawiszowe wyłączone przy otwartym oknie */
+    expect(shell).toMatch(/if \(store\.importSummaryId\) return;/);
   });
 
   it('lista zmian: kod w każdym wierszu, powód pominięcia, nowe i brakujące kody', () => {

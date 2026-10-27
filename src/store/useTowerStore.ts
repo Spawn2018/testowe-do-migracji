@@ -478,6 +478,7 @@ export const useTowerStore = create<TowerState>()(
         applyThemeToDom(nextTheme);
         const defaultView = 'dash';
         setPreviewViewRole(role); // E9-7 — strażnik Podglądu (writeThrough / isPreviewReadOnly)
+        set({ importSummaryId: null }); // #594: okno importu z danymi poprzedniej roli zamknięte
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
 

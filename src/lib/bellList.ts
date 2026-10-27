@@ -7,6 +7,8 @@ import { plPlural } from './plPlural';
 export interface BellItem {
   id: string;
   read: boolean;
+  /** czas wpisu — #594: ten sam wiersz serwera może wrócić z nowszym czasem (zbiorcze powiadomienie importu) */
+  at?: string;
   roleScope?: readonly string[];
   kind?: string;
 }
@@ -291,8 +293,10 @@ export function withLoadCode(path: string, code: string | undefined): string {
  * (zapis na serwer mógł jeszcze nie dojść), wpisy spoza odpowiedzi serwera (np. dodane z push) zostają na końcu.
  */
 export function mergeBellRefresh<T extends BellItem>(local: readonly T[], server: readonly T[]): T[] {
-  const readLocal = new Set(local.filter((n) => n.read).map((n) => n.id));
+  /* #594: lokalne „przeczytane” tylko dla tego samego wpisu — ten sam id z nowszym czasem (nowy import KSH
+     nadpisuje jedno powiadomienie na konto) to nowa, nieprzeczytana wiadomość */
+  const readLocal = new Map(local.filter((n) => n.read).map((n) => [n.id, n.at]));
   const fromServer = new Set(server.map((n) => n.id));
-  const merged = server.map((n) => (!n.read && readLocal.has(n.id) ? { ...n, read: true } : n));
+  const merged = server.map((n) => (!n.read && readLocal.has(n.id) && readLocal.get(n.id) === n.at ? { ...n, read: true } : n));
   return [...merged, ...local.filter((n) => !fromServer.has(n.id))];
 }
