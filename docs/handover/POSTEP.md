@@ -5740,3 +5740,31 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `a2dbd890`: unit ✔, db ✔ (14m33s), visual ✔ (telefon/bramy/zrzuty).
 - **#577 krok:** prośba o F7 na HEAD `a2dbd890` (F7 r3: audit_log = app_users.id). Po znaku → scalać #577 potem #578 → #574-nast → BN0 #572.
 
+## 2026-10-27 02:40 — #577+#578 SCALONE; #581 w planie; start #574-nast
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. #581 (Spawn2018, bez etykiety `dla-cursora`) — wpisane z F7 #577 / treści zgłoszenia.
+- Scalanie: **#577** merge `eeed3a8e` (F7 gotowe na `6422b34`, CI unit/db/visual ✔); zaraz **#578** merge `4d348405` (F7 po #577). Bez push na main.
+- **#581:** PLAN §4 (po BN0, przed BN1), §5 W61 (27A: auto ≤15 %), §8. Komentarz w zgłoszeniu.
+- **#574-nast krok:** migracja **0312** — cron `greatest(EXIT, entered_at)`; SG-23 DWELL payload; testy status +7 → EXPECTED **327**; §8 drganie GPS / podwójny DWELL. Gałąź `pakiet/574-nast-dwell-min`.
+
+## 2026-10-27 03:00 — #574-nast db FAIL #574i → bulk_quiet w trg_geofence_matrix_notify
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe” na #582 (HEAD przed poprawką). Bez push na main.
+- CI `5bd6bf9b`: unit ✔, visual ✔, db FAIL status 326/1 — `#574i: bulk_quiet — bez nowych powiadomień` (otrzymano 4, oczekiwano 0).
+- **Przyczyna:** cron ustawia `tower.bulk_quiet`, ale `trg_geofence_matrix_notify` (0281) i tak woła `matrix_notify` → ZONE_ENTER.
+- **Krok:** w **0312** (jeszcze nie na main) — early return przy `bulk_quiet=on` w `trg_geofence_matrix_notify`. Po zielonym CI — prośba o F7.
+- **Uwaga prod:** 0309 na produkcji wysyła ZONE_ENTER przy potwierdzeniach dwell cofniętych ≥ 2 h (naprawia 0312).
+
+## 2026-10-27 03:25 — #574-nast F7 #582 r2: pkt 1–4 + N2
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. F7 #582 r2 (01:10Z) — NIE scalać.
+- Scalanie: brak „F7: gotowe”. Visual bramy zawieszone ~1 h → anulowane (G-15). Bez push na main.
+- **Krok F7 r2:** `hotfix_574_dwell_recalc` (per `geofence_id`, UUID pinned); test #574h bez ręcznego UPDATE + EXIT>entered; #574i2 ZONE bez quiet; N2 skip finished + OUTSIDE; cron `v_prev`; status EXPECTED **336**.
+
+## 2026-10-27 03:40 — #584 SCALONE; #574-nast F7 #582 r3 N1+N2
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie (bez nowych).
+- Scalanie: #584 F7 gotowe po `09482223`, unit/visual ✔ → merge `f5b0451b`. #582 bez „F7: gotowe” (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g → insert pinned UUID bez kodu) → anulowane wiszące visual/db (G-15).
+- **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
+

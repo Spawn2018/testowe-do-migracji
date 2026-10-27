@@ -1049,17 +1049,22 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — SCALONE (#579 `ee0a6dee`, 26.10.2026 22:22 UTC, migracja **0310**; `deploy-main` w toku)
 Źródło: #563. **#563 PRZED #577**. t44: SEK 23,00 / PLN 7,15 / ×1,14; `tier_bound=MAX`, `avg_days_pln=7`; korekty w średniej; SEFS_WEEK_CORR; baf **105**; nullguard **852**. Front `lookupMult`/`sefsWeek`.
 
-### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; CI ✔ `a2dbd890` — czekam F7)
-Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + r2 + **r3**: test manual — `audit_log.user_id` = `app_users.id` (nie auth_id) + chk wpisu. EXPECTED import **255**; nullguard **856**. CI unit/db/visual ✔ na `a2dbd890` — prośba o F7.
+### #567 / #577 · Lista zmian KSH 23B — SCALONE (#577 `eeed3a8e`, 27.10.2026 00:36Z; migracja **0311**)
+Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + r2 + **r3**: test manual — `audit_log.user_id` = `app_users.id` (nie auth_id) + chk wpisu. EXPECTED import **255**; nullguard **856**. F7 gotowe na `6422b34`.
 
 ### #580 · wygląd Opłata paliwowa 5× dziennie (#563) — SCALONE (`f2652ef9`, 26.10.2026 23:27Z)
 Źródło: `wyglad/paliwo-5-sprawdzen` (#580). F7 gotowe na `b60511d`.
 
-### #578 · wygląd lista zmian KSH (23B) — F7 gotowe, scalać PO #577
-Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7: gotowe (26.10 ~16:30Z) z warunkiem: **dopiero po #577**. Potem #574-nast → BN0 #572.
+### #578 · wygląd lista zmian KSH (23B) — SCALONE (`4d348405`, 27.10.2026 00:36Z)
+Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7 gotowe (26.10 ~16:30Z) po #577.
 
-### #574-nast · dwell_min w payload — DO ZROBIENIA (po #577 / #578)
+### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**; F7 #582 r3)
+Źródło: F7 #574 r2 + F7 #582 r1–r3. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
+
 ### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
+
+### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po BN0 #572, przed BN1; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Nie przerywa #574-nast / BN0.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1380,6 +1385,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W58 | #567 22A: dzwonek na iPhonie po powrocie z tła działa | — | **zamknięte 26.10.2026** (#567) |
 | W59 | #567 23B: lista zmian dry_run z pliku KSH przed włączeniem importu (`import_enabled` false) | po #569 / `write_test_ok_at` | kolejka (#567) |
 | W60 | #567 24A: 17 decyzji koordynatora 25.10 zaakceptowanych — zamknąć powiązane W; #546 zrobione | — | **potwierdzone 26.10.2026** (#567) — #546 zamknąć gdy otwarte |
+| W61 | #581 / 27A: kalibracja ETA — auto-apply ≤ 15 % + test wsteczny; > 15 % czeka na HHL_ADMIN; zamrożenie wstrzymuje oba tryby; autor audytu „automat kalibracji” | P4-k #581 | **potwierdzone 27.10.2026 01:05** (#581) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1787,3 +1793,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 01:00 | #577 F7 r2: wt po kodzie, blocked→missing, norm liczb, import **254**; zamknięte #320/#323/#412 | pętla |
 | 27.10.2026 01:40 | #580 SCALONE `f2652ef9`; #577 F7 r3: audit_log user_id=app_users.id, import **255** | pętla |
 | 27.10.2026 01:55 | #577 CI ✔ `a2dbd890` (unit/db/visual) — prośba o F7; #578 po #577 | pętla |
+| 27.10.2026 02:36 | #577 SCALONE `eeed3a8e` + #578 `4d348405`; #581 wpisane §4/§5 (27A); start #574-nast **0312** | pętla |
+| 27.10.2026 02:36 | #574 F7 §8: **drganie GPS na krawędzi SITE** — cykl EXIT/ENTER z powiadomieniem przy skokach na histerezie (dziś bez ekstra debounce SITE; decyzja: zostaje, monitorować na produkcji). **Podwójny DWELL w porcie** — drugi DWELL po re-ENTER w tej samej wizycie możliwy gdy `entered_at` się resetuje; cron/process emisja DWELL tylko gdy brak DWELL od `entered_at` (0309) — zostaje | pętla |
+| 27.10.2026 02:40 | #584 SCALONE `f5b0451b` (wygląd lista zmian KSH — ukryj bez zmian). #574-nast F7 #582 r3: N1+N2 testy | pętla |
+| 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
