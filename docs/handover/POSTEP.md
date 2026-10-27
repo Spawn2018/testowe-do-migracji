@@ -5860,3 +5860,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” (#585 NIE scalać; #586 r3 przed scaleniem 3 poprawki). Bez push na main.
 - CI na `d845962` anulowane (SHA znany zły — F7: test A padnie).
 - **Krok F7 r3:** (1) test A: 1. import bez stdout JSON + count tylko `driver_name`; (2) `schedule_row` UPDATE tylko `is distinct from`, bez `updated_at`; `audit_row_change` pomija sam `schedule_row` na `shipment_items`; (3) `skip_reason` pusta tylko gdy WT ma wartość + testy; drobne: pending→`v_omit_sched`, quiet z `v_apply_fields`, konflikt godzin `::time`. EXPECTED import **279**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 13:50 — #583 CI FAIL r11: GRANT na temp fixtures
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…; 27B osobny PR po #585); #586 bez F7 gotowe. Bez push na main.
+- CI #586 `f91abb77`: unit ✔; db FAIL import 260/19 (`permission denied for table _f583` / `_old583` po `set role`); visual części anulowane/ukończone (SHA znany zły).
+- **Krok:** `GRANT SELECT` na `_f583` (w `r583_mat_sql` + test A), `_chg583`→`service_role`, `_old583`→`authenticated`. EXPECTED import **279** bez zmiany. Po zielonym CI — prośba o F7.
