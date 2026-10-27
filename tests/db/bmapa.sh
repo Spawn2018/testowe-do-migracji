@@ -235,12 +235,14 @@ e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).
-# F7 r6: source = TELEMATICS_API (enum; 'TEST' → cichy FAIL insert → positions puste).
+# F7 r6: source = TELEMATICS_API (enum); F7 r6b: hhl/carrier_order_no (enforce_order_numbers
+# przy IN_TRANSIT_SE) — bez numerów insert ładunku padał cicho → positions 0.
 L572=a572a572-0000-4000-8000-000000000572
 sys "delete from positions where load_id='$L572'" >/dev/null
 sys "delete from loads where id='$L572'" >/dev/null
-sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
-     values ('$L572', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-N3', 'IN_TRANSIT_SE')" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status)
+     values ('$L572', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-N3', 'HHL/572-N3', 'SCX/572-N3', 'IN_TRANSIT_SE')" >/dev/null
+val "N3 load istnieje" "select count(*)::text from loads where id='$L572'" "1"
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
@@ -295,8 +297,9 @@ sys "delete from loads where id='$L572'" >/dev/null
 L572b=a572a572-0000-4000-8000-000000000573
 sys "delete from positions where load_id='$L572b'" >/dev/null
 sys "delete from loads where id='$L572b'" >/dev/null
-sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
-     values ('$L572b', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-P2', 'IN_TRANSIT_SE')" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status)
+     values ('$L572b', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-P2', 'HHL/572-P2', 'SCX/572-P2', 'IN_TRANSIT_SE')" >/dev/null
+val "P2 load istnieje" "select count(*)::text from loads where id='$L572b'" "1"
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572b', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(

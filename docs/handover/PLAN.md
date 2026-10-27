@@ -1061,8 +1061,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r6 — `TELEMATICS_API` + asercje; 27B osobny PR)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r6: przyczyna N3 = `source='TEST'` (brak w enumie) → ciche inserty → rebuild 0; poprawka `'TELEMATICS_API'` + count 95/61 + `delete SE_KAA_TRACK` przed rebuild. bmapa EXPECTED **166**. Po zielonym — prośba o F7. Po BN0 → P4-k #581 → BN1. 27B osobno.
+### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r6b — numery zleceń; 27B osobny PR)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r6b: po `TELEMATICS_API` nadal positions=0 — `enforce_order_numbers` odrzuca `IN_TRANSIT_SE` bez `hhl_order_no`/`carrier_order_no` (cichy FAIL insert ładunku). Fix + asercje load. bmapa EXPECTED **168**. Po zielonym — prośba o F7. Po BN0 → P4-k #581 → BN1. 27B osobno.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
@@ -1834,3 +1834,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 19:15 | BN0 #585 F7 r5: P2 bez coalesce(…,0); P3 SE sin; fixture P2 zygzak; store_road INSERT -infinity; bmapa **164** | pętla |
 | 27.10.2026 19:45 | #595 SCALONE (`4f9d2c18`); BN0 #585 db FAIL N3 (163/164) po r5; F7 r6 fixture łamana + offset | pętla |
 | 27.10.2026 20:15 | BN0 #585 F7 r6: `TEST`→`TELEMATICS_API` + asercje count + delete SE_KAA_TRACK; bmapa **166** | pętla |
+| 27.10.2026 20:45 | BN0 #585 F7 r6b: db FAIL positions=0 — brak hhl/carrier_order_no przy IN_TRANSIT_SE; bmapa **168** | pętla |

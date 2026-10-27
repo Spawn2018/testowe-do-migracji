@@ -6040,3 +6040,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyna (F7):** `position_source` nie ma `'TEST'` → inserty do `/dev/null` cicho padają → `positions` puste → rebuild 0; `start_lat` czytał stary `SE_KAA_TRACK`.
 - **Krok (BN0 #585):** `bmapa.sh` — 4× `'TELEMATICS_API'`; asercje count N3=95 (10+5+80) i P2=61; `delete SE_KAA_TRACK` przed `rebuild`; bmapa EXPECTED **166**.
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 20:45 — BN0 #585 F7 r6b: numery zleceń w fixture
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (CI db FAIL na `7ce5a57e`). Bez push na main.
+- CI `7ce5a57e`: unit ✔, visual ✔; db FAIL bmapa 162/166 — N3/P2 positions=0 mimo `TELEMATICS_API`.
+- **Przyczyna:** `trg_loads_order_numbers` / `enforce_order_numbers` — `IN_TRANSIT_SE` wymaga `hhl_order_no` i `carrier_order_no`; insert ładunku padał cicho (`>/dev/null`) → FK positions → 0.
+- **Krok (BN0 #585):** N3/P2 — numery HHL/SCX jak w `status.sh` `mk`; asercje „load istnieje”; bmapa EXPECTED **168**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
