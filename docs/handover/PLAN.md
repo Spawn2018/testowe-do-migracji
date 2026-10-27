@@ -1807,3 +1807,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 08:45 | #583 CI fix r4: fixture `r583_file` w SQL (bez Q→import_live_prev / JSON w shellu) | pętla |
 | 27.10.2026 09:05 | #583 CI fix r5: Q(jsonb_build_object)+`$json$` (heredoc w -c → `^`) | pętla |
 | 27.10.2026 09:25 | #583 CI fix r6: psql `-v` + `:'rows'` (JSON nie w `-c "…"`) | pętla |
+| 27.10.2026 09:45 | #583 CI fix r7: heredoc + `-v rows=` (bez -c z JSON/SQL) | pętla |

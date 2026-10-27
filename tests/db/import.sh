@@ -1273,23 +1273,10 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#567 23B: blocked INVOICED → missing" "$out" "missing|Brak w pliku (zablokowany: zafakturowany)"
 
 # --- #583: prev z live WT + tablice PLAT / subset ---
-# Fixture jak A6 IMP_N5: Q → jsonb (bez import_live_prev / REVOKE). Do -c: psql -v + :'rows'
-# (JSON z " nie wolno wklejać w -c "...": rozrywa cudzysłów bash → pusty/zepsuty literal).
+# Q → jsonb (bez import_live_prev). Heredoc + psql -v rows= + :'rows' — zero JSON/SQL w -c "...".
 r583_rows() {
   local patch="${1:-{}}"
-  # jedna linia — bez CR z Windows w SQL na CI
   Q "select jsonb_build_array(jsonb_build_object('code','SG-01','item_type',si.item_type,'cargo_class',case when si.cargo_class='STANDARD' then 'STANDARD' end,'length_m',round(si.length_m,2),'width_m',round(si.width_m,2),'height_m',round(si.height_m,2),'unit_weight_t',round(si.unit_weight_t,3),'qty',si.qty,'total_weight_t',round(si.total_weight_t,3),'load_date',l.plan_load_date,'load_time',case when l.plan_load_from is null then null else to_char(l.plan_load_from at time zone 'Europe/Warsaw','HH24:MI') end,'delivery_date',l.plan_delivery_date,'delivery_time',case when l.plan_delivery_to is null then null else to_char(l.plan_delivery_to at time zone 'Europe/Stockholm','HH24:MI') end,'order_no',l.order_no,'assembly_seq',si.assembly_seq,'hhl_order_no',l.hhl_order_no,'carrier_order_no',l.carrier_order_no,'driver_name',l.driver_name,'driver_phone',l.driver_phone,'driver_delivery_name',l.driver_delivery_name,'driver_delivery_phone',l.driver_delivery_phone,'tractor_plate',l.tractor_plate,'tractor_delivery_plate',l.tractor_delivery_plate,'trailer_plate',l.trailer_plate) || ('${patch}')::jsonb from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01' where l.id='$SG1' limit 1" | tr -d '\r'
-}
-r583_run() {
-  # $1=nazwa pliku testu; $2=dry_run true/false; $3=SQL select (używa :'rows')
-  local name="$1" dry="$2" sql="$3" rows="$4"
-  $PSQL -v ON_ERROR_STOP=1 -Atq -v "rows=${rows}" -c "
-begin;
-set local role authenticated;
-set local request.jwt.claim.sub='$HHL';
-${sql}
-rollback;
-" 2>&1 | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|CREATE)$' | tail -1 | tr -d '\r'
 }
 r583_prep() {
   $PSQL -c "update loads set
@@ -1303,95 +1290,175 @@ r583_prep() {
 
 r583_prep
 R583EQ=$(r583_rows '{}')
-out=$(r583_run 583a true "select jsonb_array_length(r->'changed')||'/'||(r->>'unchanged')
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583EQ" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')||'/'||(r->>'unchanged')
   from (select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-        '{\"name\":\"583a.xlsx\",\"hash\":\"583a\"}'::jsonb, true) r) s;" "$R583EQ")
+        '{"name":"583a.xlsx","hash":"583a"}'::jsonb, true) r) s;
+rollback;
+EOF
+)
 chk "#583: identyczne numery/tablice → changed=0" "$out" "0/1"
 
 r583_prep
 R583EQ=$(r583_rows '{}')
-out=$(r583_run 583b true "create temporary table _chg583 as
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583EQ" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|CREATE)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+create temporary table _chg583 as
   select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-    '{\"name\":\"583b.xlsx\",\"hash\":\"583b\"}'::jsonb, true)->'changed' as changed;
+    '{"name":"583b.xlsx","hash":"583b"}'::jsonb, true)->'changed' as changed;
 reset role;
 set local role service_role;
 set local request.jwt.claim.role='service_role';
-select jsonb_array_length(ksh_sync_preview_store('$P', (select changed from _chg583), now(), 8, '583eq')->'changes');" "$R583EQ")
+select jsonb_array_length(ksh_sync_preview_store('$P', (select changed from _chg583), now(), 8, '583eq')->'changes');
+rollback;
+EOF
+)
 chk "#583: preview bez wierszy gdy WT=plik" "$out" "0"
 
 r583_prep
 R583ONE=$(r583_rows '{"trailer_plate":"ZZZ1111"}')
-out=$(r583_run 583c true "select jsonb_array_length(r->'changed')||'/'||coalesce(r->'changed'->0->'fields'->>0,'')
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583ONE" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')||'/'||coalesce(r->'changed'->0->'fields'->>0,'')
   from (select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-        '{\"name\":\"583c.xlsx\",\"hash\":\"583c\"}'::jsonb, true) r) s;" "$R583ONE")
+        '{"name":"583c.xlsx","hash":"583c"}'::jsonb, true) r) s;
+rollback;
+EOF
+)
 chk "#583: jedna różna tablica → changed=1" "$out" "1/trailer_plate"
 
 r583_prep
 R583ONE=$(r583_rows '{"trailer_plate":"ZZZ1111"}')
-out=$(r583_run 583d true "create temporary table _chg583 as
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583ONE" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|CREATE)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+create temporary table _chg583 as
   select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-    '{\"name\":\"583d.xlsx\",\"hash\":\"583d\"}'::jsonb, true)->'changed' as changed;
+    '{"name":"583d.xlsx","hash":"583d"}'::jsonb, true)->'changed' as changed;
 reset role;
 set local role service_role;
 set local request.jwt.claim.role='service_role';
-select jsonb_array_length(ksh_sync_preview_store('$P', (select changed from _chg583), now(), 9, '583one')->'changes');" "$R583ONE")
+select jsonb_array_length(ksh_sync_preview_store('$P', (select changed from _chg583), now(), 9, '583one')->'changes');
+rollback;
+EOF
+)
 chk "#583: preview 1 wiersz dla różnej tablicy" "$out" "1"
 
 $PSQL -c "update loads set trailer_plate=null, status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583PLAT=$(r583_rows '{"trailer_plate":"PLAT"}')
-out=$(r583_run 583p true "select coalesce(r->'changed'->0->'skip_reason'->>'trailer_plate','')
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583PLAT" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select coalesce(r->'changed'->0->'skip_reason'->>'trailer_plate','')
   from (select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-        '{\"name\":\"583p.xlsx\",\"hash\":\"583p\"}'::jsonb, true) r) s;" "$R583PLAT")
+        '{"name":"583p.xlsx","hash":"583p"}'::jsonb, true) r) s;
+rollback;
+EOF
+)
 chk "#583: PLAT → skip_reason" "$out" "wartość w pliku nie jest tablicą — pominięta"
 
 $PSQL -c "update loads set trailer_plate=null, status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583PLAT=$(r583_rows '{"trailer_plate":"PLAT"}')
-out=$(r583_run 583p2 false "select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-  '{\"name\":\"583p2.xlsx\",\"hash\":\"583p2\"}'::jsonb, false);
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583PLAT" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
+  '{"name":"583p2.xlsx","hash":"583p2"}'::jsonb, false);
 reset role;
-select coalesce(trailer_plate,'∅') from loads where id='$SG1';" "$R583PLAT")
+select coalesce(trailer_plate,'∅') from loads where id='$SG1';
+rollback;
+EOF
+)
 chk "#583: po PLAT trailer_plate nadal null" "$out" "∅"
 
 $PSQL -c "update loads set trailer_plate=null, status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583PLAT=$(r583_rows '{"trailer_plate":"PLAT"}')
-out=$(r583_run 583p3 true "create temporary table _chg583 as
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583PLAT" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|CREATE)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+create temporary table _chg583 as
   select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-    '{\"name\":\"583p3.xlsx\",\"hash\":\"583p3\"}'::jsonb, true)->'changed' as changed;
+    '{"name":"583p3.xlsx","hash":"583p3"}'::jsonb, true)->'changed' as changed;
 reset role;
 set local role service_role;
 set local request.jwt.claim.role='service_role';
 select e->>'skip_reason' from jsonb_array_elements(
   ksh_sync_preview_store('$P', (select changed from _chg583), now(), 10, '583plat')->'changes'
-) e where e->>'field'='trailer_plate';" "$R583PLAT")
+) e where e->>'field'='trailer_plate';
+rollback;
+EOF
+)
 chk "#583: preview PLAT ma skip_reason" "$out" "wartość w pliku nie jest tablicą — pominięta"
 
 $PSQL -c "update loads set trailer_plate='WGM 03896 - SEX56N', status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583SUB=$(r583_rows '{"trailer_plate":"WGM03896"}')
-out=$(r583_run 583s true "select jsonb_array_length(r->'changed')
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583SUB" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select jsonb_array_length(r->'changed')
   from (select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-        '{\"name\":\"583s.xlsx\",\"hash\":\"583s\"}'::jsonb, true) r) s;" "$R583SUB")
+        '{"name":"583s.xlsx","hash":"583s"}'::jsonb, true) r) s;
+rollback;
+EOF
+)
 chk "#583: subset tablicy → changed=0" "$out" "0"
 
 $PSQL -c "update loads set trailer_plate='WGM 03896 - SEX56N', status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583SUB=$(r583_rows '{"trailer_plate":"WGM03896"}')
-out=$(r583_run 583s2 false "select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-  '{\"name\":\"583s2.xlsx\",\"hash\":\"583s2\"}'::jsonb, false);
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583SUB" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
+  '{"name":"583s2.xlsx","hash":"583s2"}'::jsonb, false);
 reset role;
-select trailer_plate from loads where id='$SG1';" "$R583SUB")
+select trailer_plate from loads where id='$SG1';
+rollback;
+EOF
+)
 chk "#583: po subset SEX56N nie skasowane" "$out" "WGM 03896 - SEX56N"
 
 $PSQL -c "update loads set trailer_plate='WGM 03896 - SEX56N', status='READY' where id='$SG1';
 update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01'" >/dev/null
 R583NEW=$(r583_rows '{"trailer_plate":"KR12345"}')
-out=$(r583_run 583n false "select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
-  '{\"name\":\"583n.xlsx\",\"hash\":\"583n\"}'::jsonb, false);
+out=$(
+  $PSQL -v ON_ERROR_STOP=1 -Atq -v rows="$R583NEW" 2>&1 <<EOF | grep -v -E '^(BEGIN|SET|RESET|ROLLBACK)$' | tail -1 | tr -d '\r'
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub='$HHL';
+select import_schedule('$P', :'rows'::jsonb, '{}'::text[],
+  '{"name":"583n.xlsx","hash":"583n"}'::jsonb, false);
 reset role;
-select trailer_plate from loads where id='$SG1';" "$R583NEW")
+select trailer_plate from loads where id='$SG1';
+rollback;
+EOF
+)
 chk "#583: nowa tablica zapisana" "$out" "KR12345"
 
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "

@@ -5820,3 +5820,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - CI #586 `82b5e453`: unit ✔; db FAIL 258/10 (`CONTEXT: JSON data…^` — `${R583EQ}` z `"` rozrywał bash `-c "..."`).
 - Krok: `r583_run` → `psql -v rows=…` + `:'rows'::jsonb`; `r583_rows` jedna linia. Po zielonym — F7.
+
+## 2026-10-27 09:45 — #583 CI FAIL r7: heredoc zamiast r583_run/-c
+
+- CI #586 `51b3cd1d`: unit/visual ✔; db FAIL 258/10 (out=`^` — SQL z `"` w argumencie `r583_run` znów w `-c "..."`).
+- Krok: każdy test = heredoc + `-v rows="$R…"`. Po zielonym — F7.
