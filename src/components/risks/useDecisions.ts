@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgKind } from '../../types';
 import type { DecisionOption, TodoDecision } from '../../lib/p6Todo';
-import { decisionRpc, isForbidden } from '../../lib/carrierDecision';
+import { changesLoads, dbErrorKey, decisionRpc } from '../../lib/carrierDecision';
 import { decText } from '../../i18n/decisions';
 
 type DecRow = {
@@ -88,17 +88,22 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return { hint: null, error: null };
     /* #590/#592: zmiana przewoźnika i przywrócenie mają własne funkcje bazy (`carrierDecision.ts`) */
     const row = rowsRef.current.find((r) => r.id === id);
-    const call = decisionRpc(
-      { id, typeCode: row?.typeCode ?? '', loadId: row?.loadId ?? null },
-      option, note, payload,
-    );
+    /* bez wiersza nie znamy rodzaju decyzji — nigdy nie zgadujemy ogólnego rozstrzygnięcia (zamknęłoby bez skutku) */
+    if (!row) return { hint: null, error: decText('pl', 'dec_err_stale') };
+    const call = decisionRpc({ id, typeCode: row.typeCode, loadId: row.loadId }, option, note, payload);
     if ('error' in call) return { hint: null, error: decText('pl', `dec_err_${call.error}`) };
     const { getSupabase } = await import('../../auth/client');
     const sb = await getSupabase();
     const { data, error: e } = await sb.rpc(call.fn, call.args);
     if (e) {
-      if (call.fn === 'load_restore_removed' && isForbidden(e)) return { hint: null, error: decText('pl', 'dec_err_restore_admin') };
-      return { hint: null, error: e.message };
+      const key = call.fn === 'decision_resolve' ? null : dbErrorKey(e);
+      if (key === 'dec_err_forbidden' && call.fn === 'load_restore_removed') return { hint: null, error: decText('pl', 'dec_err_restore_admin') };
+      return { hint: null, error: key ? decText('pl', key) : e.message };
+    }
+    if (changesLoads(call)) {
+      /* anulowanie / usunięcie / przywrócenie — harmonogram od razu, nie po 2 min cyklu */
+      const { refreshFromServer } = await import('../../data/supabaseBridge');
+      await refreshFromServer({ keepSelection: true, background: true });
     }
     await refresh();
     return { hint: (data as { ui_hint?: string } | null)?.ui_hint ?? null, error: null };

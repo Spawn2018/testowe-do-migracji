@@ -57,3 +57,28 @@ export function isForbidden(e: { code?: string | null; message?: string | null }
   if (!e) return false;
   return e.code === '42501' || /forbidden/i.test(e.message ?? '');
 }
+
+/** Opcja widoczna dla tej osoby: „Przywróć” tylko dla administratora HHL (funkcja bazy przepuszcza tylko tę rolę). */
+export function optionVisible(typeCode: string, option: string, role: string | null | undefined): boolean {
+  if (typeCode === REMOVED_BACK && option === 'WILL_RESTORE') return role === 'HHL_ADMIN';
+  return true;
+}
+
+/** Komentarz z karty nie trafia do funkcji zmiany przewoźnika — pole komentarza ukryte, żeby nie obiecywać zapisu. */
+export function takesNote(typeCode: string): boolean {
+  return typeCode !== CARRIER_CHANGED;
+}
+
+/** Angielskie komunikaty funkcji bazy → klucz słownika decyzji; `null` — pokaż komunikat bazy bez zmian (np. polski 22023). */
+export function dbErrorKey(e: { code?: string | null; message?: string | null }): string | null {
+  if (isForbidden(e)) return 'dec_err_forbidden';
+  const m = (e.message ?? '').trim().toLowerCase();
+  if (m === 'not found' || e.code === 'P0002') return 'dec_err_stale';
+  if (m === 'wrong type') return 'dec_err_stale';
+  return null;
+}
+
+/** Skutek w transporcie (anulowanie / usunięcie / przywrócenie) — po sukcesie trzeba odświeżyć harmonogram, nie tylko listę decyzji. */
+export function changesLoads(call: DecisionRpc): boolean {
+  return call.fn === 'load_restore_removed' || call.fn === 'decision_resolve_carrier_change';
+}

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { confirmKeyOf, decisionRpc, hasOwnSnooze, isForbidden } from '../src/lib/carrierDecision';
+import { changesLoads, confirmKeyOf, dbErrorKey, decisionRpc, hasOwnSnooze, isForbidden, optionVisible, takesNote } from '../src/lib/carrierDecision';
 import { DEC_I18N, decText } from '../src/i18n/decisions';
 
 /**
@@ -16,6 +16,9 @@ const OPTIONS = [
   'dec_opt_CARRIER_CANCEL', 'dec_opt_CARRIER_REMOVE', 'dec_opt_CARRIER_SNOOZE',
   'dec_opt_REMOVED_KEEP', 'dec_opt_REMOVED_RESTORE',
   'dec_type_KSH_CARRIER_CHANGED', 'dec_type_KSH_REMOVED_BACK',
+  'dec_confirm_CARRIER_CANCEL', 'dec_confirm_CARRIER_REMOVE', 'dec_confirm_REMOVED_RESTORE',
+  'dec_confirm_yes', 'dec_confirm_back',
+  'dec_err_unknown_option', 'dec_err_no_load', 'dec_err_restore_admin', 'dec_err_stale', 'dec_err_forbidden',
 ];
 
 describe('W-590 decyzja „zmiana przewoźnika” — właściwa funkcja bazy', () => {
@@ -69,6 +72,35 @@ describe('W-590 decyzja „zmiana przewoźnika” — właściwa funkcja bazy', 
   });
 });
 
+describe('W-590 F7 r1 — uprawnienia, komunikaty bazy, odświeżenie harmonogramu', () => {
+  it('„Przywróć” widzi tylko administrator HHL; reszta opcji dla wszystkich', () => {
+    expect(optionVisible('KSH_REMOVED_BACK', 'WILL_RESTORE', 'HHL_ADMIN')).toBe(true);
+    expect(optionVisible('KSH_REMOVED_BACK', 'WILL_RESTORE', 'HHL_OPS')).toBe(false);
+    expect(optionVisible('KSH_REMOVED_BACK', 'WILL_RESTORE', null)).toBe(false);
+    expect(optionVisible('KSH_REMOVED_BACK', 'KEEP_REMOVED', 'HHL_OPS')).toBe(true);
+    expect(optionVisible('KSH_CARRIER_CHANGED', 'REMOVE', 'HHL_OPS')).toBe(true);
+  });
+
+  it('pole komentarza ukryte tam, gdzie baza go nie zapisuje', () => {
+    expect(takesNote('KSH_CARRIER_CHANGED')).toBe(false);
+    expect(takesNote('KSH_REMOVED_BACK')).toBe(true);
+    expect(takesNote('NO_AWIZACJA')).toBe(true);
+  });
+
+  it('angielskie odmowy bazy dostają polski komunikat; polski 22023 zostaje bez zmian', () => {
+    expect(dbErrorKey({ code: '42501', message: 'forbidden' })).toBe('dec_err_forbidden');
+    expect(dbErrorKey({ code: 'P0002', message: 'not found' })).toBe('dec_err_stale');
+    expect(dbErrorKey({ code: '22023', message: 'wrong type' })).toBe('dec_err_stale');
+    expect(dbErrorKey({ code: '22023', message: 'Usunięcie z harmonogramu tylko przed załadunkiem (status IN_TRANSIT)' })).toBeNull();
+  });
+
+  it('po anulowaniu / usunięciu / przywróceniu odświeżany jest harmonogram', () => {
+    expect(changesLoads({ fn: 'decision_resolve_carrier_change', args: { p_decision: 'd', p_action: 'REMOVE' } })).toBe(true);
+    expect(changesLoads({ fn: 'load_restore_removed', args: { p_load: 'l' } })).toBe(true);
+    expect(changesLoads({ fn: 'decision_resolve', args: {} })).toBe(false);
+  });
+});
+
 describe('W-590 etykiety i ostrzeżenia po polsku', () => {
   it('każda opcja i nazwa decyzji ma polską etykietę (nie surowy kod)', () => {
     for (const k of OPTIONS) {
@@ -88,14 +120,21 @@ describe('W-590 ekran nie woła ogólnego rozstrzygnięcia z pominięciem trasy'
   const hook = readFileSync('src/components/risks/useDecisions.ts', 'utf8');
   const card = readFileSync('src/components/risks/TodoCard.tsx', 'utf8');
 
-  it('hook wybiera funkcję przez decisionRpc, bez wpisanego na sztywno decision_resolve', () => {
+  it('hook wybiera funkcję przez decisionRpc i bez wiersza decyzji odmawia (nie zgaduje ogólnego rozstrzygnięcia)', () => {
     expect(hook).toMatch(/decisionRpc\(/);
-    expect(hook).not.toMatch(/rpc\('decision_resolve'/);
+    expect(hook).not.toMatch(/rpc\(\s*['"`]decision_resolve['"`]/);
+    expect(hook).toMatch(/sb\.rpc\(call\.fn, call\.args\)/);
+    expect(hook).toMatch(/if \(!row\) return \{ hint: null, error: decText\('pl', 'dec_err_stale'\) \}/);
+    expect(hook).toMatch(/changesLoads\(call\)[\s\S]*refreshFromServer/);
   });
 
   it('karta pokazuje potwierdzenie na stronie i ukrywa podwójne „Odłóż”', () => {
     expect(card).toMatch(/data-rk-dec-confirm/);
     expect(card).toMatch(/hasOwnSnooze\(d\.typeCode\)/);
     expect(card).not.toMatch(/window\.confirm|\bconfirm\(/);
+    expect(card).toMatch(/optionVisible\(d\.typeCode, o\.code, ctx\.me\?\.role\)/);
+    expect(card).toMatch(/data-rk-dec-yes=\{o\.code\} autoFocus/);
+    /* komentarz wymagany sprawdzany PRZED otwarciem potwierdzenia */
+    expect(card).toMatch(/confirmKeyOf\(d\.typeCode, code\)\) \{\s*if \(needsNote/);
   });
 });

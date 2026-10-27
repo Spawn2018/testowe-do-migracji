@@ -24,7 +24,7 @@ import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
 import { EMPTY_PROPOSAL, proposalOfDetail, proposalPayload, proposalSummary, type ProposalForm } from '../../lib/proposeDate';
 import { getNow } from '../../lib/frozenNow';
-import { confirmKeyOf, hasOwnSnooze } from '../../lib/carrierDecision';
+import { confirmKeyOf, hasOwnSnooze, optionVisible, takesNote } from '../../lib/carrierDecision';
 
 export interface CardCtx {
   role: 'HHL' | 'SCX';
@@ -220,6 +220,10 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
   const resolve = async (code: string, needsNote: boolean, effect?: string, confirmed = false) => {
     if (!ctx.decisions || !d) return;
     if (!confirmed && confirmKeyOf(d.typeCode, code)) {
+      if (needsNote && note.trim().length < 3) {
+        setMsg(t(locale, 'dec_need_comment'));
+        return;
+      }
       setMsg(null);
       setProposeCode(null);
       setConfirmOpt((c) => (c === code ? null : code));
@@ -297,7 +301,7 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
         ctx.mayResolve(d.deciderRole, i.overdue || !!d.escalatedAt) ? (
           <div className="rk-resolve">
             <div className="rk-acts">
-              {d.options.map((o) => (
+              {d.options.filter((o) => optionVisible(d.typeCode, o.code, ctx.me?.role)).map((o) => (
                 <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code}
                   aria-expanded={o.effect === 'PROPOSE' ? proposeCode === o.code : confirmKeyOf(d.typeCode, o.code) ? confirmOpt === o.code : undefined}
                   onClick={() => void resolve(o.code, o.requires_comment, o.effect)}>
@@ -317,10 +321,14 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
                   <p>{decText(locale, key)}</p>
                   <div className="rk-acts">
                     <button type="button" className={o.code === 'REMOVE' || o.code === 'CANCEL' ? 'btn is-solid is-danger' : 'btn is-solid'} disabled={busy}
-                      data-rk-dec-yes={o.code} onClick={() => void resolve(o.code, o.requires_comment, o.effect, true)}>
+                      data-rk-dec-yes={o.code} autoFocus onClick={() => void resolve(o.code, o.requires_comment, o.effect, true)}>
                       {decText(locale, 'dec_confirm_yes')}: {decText(locale, o.label_key, o.code)}
                     </button>
-                    <button type="button" className="btn ghost" disabled={busy} data-rk-dec-back onClick={() => setConfirmOpt(null)}>
+                    <button type="button" className="btn ghost" disabled={busy} data-rk-dec-back onClick={() => {
+                      const back = o.code;
+                      setConfirmOpt(null);
+                      requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-rk-case="${CSS.escape(i.id)}"] [data-rk-opt="${CSS.escape(back)}"]`)?.focus());
+                    }}>
                       {decText(locale, 'dec_confirm_back')}
                     </button>
                   </div>
@@ -350,10 +358,12 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
                 </button>
               </fieldset>
             ) : null}
-            <label className="rk-note">
-              <span>{t(locale, 'dec_comment')}</span>
-              <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-            </label>
+            {takesNote(d.typeCode) ? (
+              <label className="rk-note">
+                <span>{t(locale, 'dec_comment')}</span>
+                <textarea className="input" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+              </label>
+            ) : null}
           </div>
         ) : <p className="rk-muted" data-rk-other-firm>{rtp(locale, 'p6_case_other_firm', { org: ORG_SHORT[i.owner] })}</p>
       ) : null}
