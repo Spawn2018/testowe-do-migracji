@@ -19,6 +19,28 @@ revoke all on function public.import_plate_norm(text) from public, anon, authent
 comment on function public.import_plate_norm(text) is
   '#583: tablica — wielkie litery, bez spacji i myślników.';
 
+-- Podział na tablice: „ - ” / „/” / „,” / „;” (F7 #586 pkt 4–5).
+create or replace function public.import_plate_parts(p text)
+returns text[]
+language sql
+immutable
+parallel safe
+set search_path = public
+as $$
+  select coalesce(array_agg(n order by ord), '{}'::text[])
+    from (
+      select public.import_plate_norm(x) as n, ord
+        from regexp_split_to_table(coalesce(p, ''), '\s+-\s+|[/;,]') with ordinality as t(x, ord)
+       where nullif(btrim(x), '') is not null
+    ) s
+   where n is not null;
+$$;
+
+revoke all on function public.import_plate_parts(text) from public, anon, authenticated;
+
+comment on function public.import_plate_parts(text) is
+  '#583 F7: tablice z komórki po separatorach - / , ;.';
+
 create or replace function public.import_plate_is_valid(p text)
 returns boolean
 language plpgsql
@@ -27,20 +49,33 @@ parallel safe
 set search_path = public
 as $$
 declare
-  n text := public.import_plate_norm(p);
+  parts text[] := public.import_plate_parts(p);
+  n text;
 begin
-  if n is null then
-    return false;
+  if coalesce(cardinality(parts), 0) = 0 then
+    -- pojedyncza wartość bez separatora
+    n := public.import_plate_norm(p);
+    if n is null then
+      return false;
+    end if;
+    -- [[:alpha:]] — też MÜ; 4–10; ≥ 1 cyfra (odrzuca PLAT, es-ga, brak, ?)
+    return n ~ '^[[:alpha:][:digit:]]{4,10}$' and n ~ '[0-9]';
   end if;
-  -- litery+cyfry, 4–10 znaków, ≥ 1 cyfra (odrzuca PLAT, es-ga, brak, ?)
-  return n ~ '^[A-Z0-9]{4,10}$' and n ~ '[0-9]';
+  foreach n in array parts loop
+    if n is null
+       or n !~ '^[[:alpha:][:digit:]]{4,10}$'
+       or n !~ '[0-9]' then
+      return false;
+    end if;
+  end loop;
+  return true;
 end;
 $$;
 
 revoke all on function public.import_plate_is_valid(text) from public, anon, authenticated;
 
 comment on function public.import_plate_is_valid(text) is
-  '#583: czy wartość z pliku jest numerem rejestracyjnym.';
+  '#583 F7: każda tablica z komórki osobno ([[:alpha:]]); dwie w pliku OK.';
 
 create or replace function public.import_plate_file_in_wt(p_wt text, p_file text)
 returns boolean
@@ -52,19 +87,37 @@ as $$
 declare
   w text := public.import_plate_norm(p_wt);
   f text := public.import_plate_norm(p_file);
+  wt_parts text[];
+  file_parts text[];
 begin
   if f is null or w is null then
     return false;
   end if;
-  -- plik ⊂ WT po normalizacji (np. WGM03896 ⊂ WGM03896SEX56N)
-  return position(f in w) > 0;
+  -- całość po normalizacji
+  if f = w then
+    return true;
+  end if;
+  wt_parts := public.import_plate_parts(p_wt);
+  file_parts := public.import_plate_parts(p_file);
+  -- plik = jedna tablica z WT (nie podciąg: WPR6303 ≠ WPR6303P)
+  if cardinality(file_parts) <= 1 and f = any (wt_parts) then
+    return true;
+  end if;
+  -- plik ma kilka tablic: każda musi być w WT
+  if cardinality(file_parts) > 1
+     and cardinality(file_parts) = (
+       select count(*) from unnest(file_parts) fp where fp = any (wt_parts)
+     ) then
+    return true;
+  end if;
+  return false;
 end;
 $$;
 
 revoke all on function public.import_plate_file_in_wt(text, text) from public, anon, authenticated;
 
 comment on function public.import_plate_file_in_wt(text, text) is
-  '#583: wartość z pliku zawarta w WT (dwie tablice PL+SE) → bez nadpisania.';
+  '#583 F7: plik = całość WT albo jedna/wszystkie tablice po split — bez position().';
 
 create or replace function public.import_preview_values_equal(p_field text, p_wt text, p_file text)
 returns boolean
@@ -461,6 +514,20 @@ declare
   v_skip_reasons jsonb := '{}'::jsonb;
   v_pf text;
   v_plate_fields text[] := array['tractor_plate','tractor_delivery_plate','trailer_plate'];
+  -- F7 #586 BLOKER 1: pusta komórka = bez zmiany tylko dla tych pól (wymiary/cargo_class per pole).
+  v_leave_empty text[] := array[
+    'load_time','delivery_time','order_no',
+    'hhl_order_no','carrier_order_no',
+    'driver_name','driver_phone','driver_delivery_name','driver_delivery_phone',
+    'tractor_plate','tractor_delivery_plate','trailer_plate'
+  ];
+  -- F7 #586 pkt 3: pola wspólne transportu (wiele kodów na load_id).
+  v_load_shared text[] := array[
+    'load_date','load_time','delivery_date','delivery_time','order_no',
+    'hhl_order_no','carrier_order_no',
+    'driver_name','driver_phone','driver_delivery_name','driver_delivery_phone',
+    'tractor_plate','tractor_delivery_plate','trailer_plate'
+  ];
 begin
   perform public.assert_not_preview();
   -- A6/0305: cron Edge (service_role) albo HHL (jak dotąd).
@@ -641,16 +708,11 @@ begin
            (l.plan_load_from is not null or l.plan_load_to is not null
             or l.plan_delivery_from is not null or l.plan_delivery_to is not null
             or l.status in ('READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK','FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE')) as awizowany,
-           -- #583: wymiary/qty z schedule_row (A6); numery/tablice/kierowcy/daty/godziny z live WT.
-           -- schedule_row bez hhl/carrier/tablic → wcześniej fałszywe changed. Brak row → pełny live.
+           -- #583 F7 BLOKER 2: porównanie trójstronne — prev=live WT; file_base=ostatni plik (schedule_row).
            case when si.id is null then null
-             when si.schedule_row is null then public.import_live_prev(si.id, l.id)
-             else si.schedule_row || (
-               public.import_live_prev(si.id, l.id)
-               - array['item_type','cargo_class','length_m','width_m','height_m',
-                       'unit_weight_t','qty','total_weight_t','assembly_seq']
-             )
-           end as prev
+             else public.import_live_prev(si.id, l.id)
+           end as prev,
+           si.schedule_row as file_base
       from _imp i
       left join _renum rn on rn.new_code = i.code
       left join shipment_items si on si.project_id = p_project
@@ -749,15 +811,24 @@ begin
               jsonb_build_object('shipment_code', r.code, 'renumbered_from', r.renum_from));
     end if;
 
-    -- #583: prev = live WT. Pusta komórka w pliku = bez zmiany (#384 godziny; rzadki wiersz A6).
+    -- #583 F7: changed gdy inc≠live ORAZ (brak klucza w file_base LUB inc≠file_base).
+    -- Pusta komórka = bez zmiany tylko dla v_leave_empty (numery/kierowcy/tablice/godziny).
     select coalesce(array_agg(f order by f), '{}') into v_fields
       from unnest(v_fnames) f
      where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb)
-       and nullif(btrim(coalesce(r.inc ->> f, '')), '') is not null;
+       and (
+         r.file_base is null
+         or not (r.file_base ? f)
+         or coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.file_base -> f, 'null'::jsonb)
+       )
+       and (
+         f <> all (v_leave_empty)
+         or nullif(btrim(coalesce(r.inc ->> f, '')), '') is not null
+       );
     if r.renum_from is not null and not ('shipment_code' = any (v_fields)) then
       v_fields := array['shipment_code'] || coalesce(v_fields, '{}'::text[]);
     end if;
-    -- #583: tablice — subset ⊂ WT → bez zmiany; nie-tablica → preview+skip_reason, bez zapisu
+    -- #583: tablice — równość części WT → bez zmiany; nie-tablica → preview+skip_reason, bez zapisu
     v_skip_reasons := '{}'::jsonb;
     v_apply_fields := coalesce(v_fields, '{}'::text[]);
     foreach v_pf in array v_plate_fields loop
@@ -770,6 +841,24 @@ begin
           v_skip_reasons := v_skip_reasons || jsonb_build_object(
             v_pf, 'wartość w pliku nie jest tablicą — pominięta');
         end if;
+      end if;
+    end loop;
+    -- #583 F7 pkt 3: różne wartości w wierszach tego samego load_id → bez zapisu
+    foreach v_f in array coalesce(v_fields, '{}'::text[]) loop
+      if v_f = any (v_apply_fields)
+         and v_f = any (v_load_shared)
+         and exists (
+           select 1
+             from _imp i2
+             join shipment_items si2
+               on si2.project_id = p_project and si2.shipment_code = i2.code
+            where si2.load_id = r.load_id
+              and i2.code is distinct from r.code
+              and coalesce(i2.row ->> v_f, '') is distinct from coalesce(r.inc ->> v_f, '')
+         ) then
+        v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_f);
+        v_skip_reasons := v_skip_reasons || jsonb_build_object(
+          v_f, 'różne wartości w wierszach transportu');
       end if;
     end loop;
 
@@ -911,12 +1000,22 @@ begin
                 coalesce(p_file->'column_map', '{}'::jsonb), '{}'::jsonb, v_user)
         returning id into v_import;
       end if;
+      -- F7 #586 BLOKER 1: wymiary i cargo_class tylko gdy w v_apply_fields (pusta komórka nie kasuje).
       update shipment_items set
-        item_type = r.inc->>'item_type', cargo_class = coalesce(r.inc->>'cargo_class', 'DIMENSIONED'), length_m = (r.inc->>'length_m')::numeric, width_m = (r.inc->>'width_m')::numeric,
-        height_m = (r.inc->>'height_m')::numeric, unit_weight_t = (r.inc->>'unit_weight_t')::numeric,
-        qty = (r.inc->>'qty')::int, total_weight_t = (r.inc->>'total_weight_t')::numeric,
-        assembly_seq = (r.inc->>'assembly_seq')::int,
-        -- zachowana data potwierdzona: w schedule_row zostają poprzednie daty, więc różnica (i ostrzeżenie) wraca przy kolejnym imporcie
+        item_type = case when 'item_type' = any (v_apply_fields) then r.inc->>'item_type' else item_type end,
+        cargo_class = case when 'cargo_class' = any (v_apply_fields)
+          then coalesce(r.inc->>'cargo_class', 'DIMENSIONED') else cargo_class end,
+        length_m = case when 'length_m' = any (v_apply_fields) then (r.inc->>'length_m')::numeric else length_m end,
+        width_m = case when 'width_m' = any (v_apply_fields) then (r.inc->>'width_m')::numeric else width_m end,
+        height_m = case when 'height_m' = any (v_apply_fields) then (r.inc->>'height_m')::numeric else height_m end,
+        unit_weight_t = case when 'unit_weight_t' = any (v_apply_fields)
+          then (r.inc->>'unit_weight_t')::numeric else unit_weight_t end,
+        qty = case when 'qty' = any (v_apply_fields) then (r.inc->>'qty')::int else qty end,
+        total_weight_t = case when 'total_weight_t' = any (v_apply_fields)
+          then (r.inc->>'total_weight_t')::numeric else total_weight_t end,
+        assembly_seq = case when 'assembly_seq' = any (v_apply_fields)
+          then (r.inc->>'assembly_seq')::int else assembly_seq end,
+        -- file_base na następny przebieg = wiersz pliku (bez pominiętych tablic)
         schedule_row = r.inc - array(
           select p from unnest(v_plate_fields) p where not (p = any (v_apply_fields))
         ),

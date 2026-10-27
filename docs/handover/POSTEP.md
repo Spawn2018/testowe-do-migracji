@@ -5835,3 +5835,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - CI #586 `941af010`: db FAIL 258/10 (heredoc+pipe → `^`).
 - Krok: `$F583` + `-c "..."`; patch = `jsonb_build_object(...)` (bez `"` w SQL). Po zielonym — F7.
+
+## 2026-10-27 11:05 — #583 F7 #586 niegotowe: blokery 1–2 + pkt 3–6
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 bez „F7: gotowe do scalenia”. #586 F7 06:41Z **NIE scalać** (po `7ba45c20`; kolejne CI-fixy fixture). Bez push na main.
+- Krok (ten sam PR #586): porównanie trójstronne; UPDATE wymiarów per `v_apply_fields`; `import_plate_parts` + walidacja `[[:alpha:]]`; multi-code `skip_reason`; testy F7 (+5); EXPECTED import **273**. Po zielonym CI — prośba o F7.

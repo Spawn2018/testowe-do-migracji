@@ -1064,8 +1064,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0313**; CI zielone; czekam F7)
 Źródło: #572. F7 r2: `SE_KAA_TRACK` (nie nadpisuj `SE_E22`); bez literałów GPS; via co ~100 km; nearestKm odcinek. Po BN0 → **#583** → P4-k #581 → BN1.
 
-### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR na `pakiet/583-import-ksh-prev-plates`; migracja **0314**)
-Źródło: #583 (Spawn2018, `pilne`). `import_live_prev` (prev = live WT, nie dziurawy `schedule_row`); porównanie ścisłe; `ksh_sync_preview_store` osłona wt=file; walidacja tablic + `skip_reason`; subset (WGM03896 ⊂ WT) bez zapisu. import EXPECTED **268**. Front `skip_reason` — koordynator `wyglad/`.
+### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; F7 niegotowe → poprawki)
+Źródło: #583 (Spawn2018, `pilne`). F7 #586: **trójstronne** (inc≠live ∧ (brak klucza w `schedule_row` ∨ inc≠schedule_row)); wymiary/`cargo_class` **per pole**; pusta komórka = leave tylko numery/kierowcy/tablice/godziny; tablice = split ` - `/`/`/,`; multi-code → `skip_reason`; bez `position()`. import EXPECTED **273**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #583; przed BN1; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: BN0 → #583 → ten → BN1.
@@ -1810,3 +1810,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 09:45 | #583 CI fix r7: heredoc + `-v rows=` (bez -c z JSON/SQL) | pętla |
 | 27.10.2026 10:05 | #583 CI fix r8: fixture SQL w heredoc (`r583_file_sql`, bez -v) | pętla |
 | 27.10.2026 10:25 | #583 CI fix r9: `-c` jak A6 + patch `jsonb_build_object` | pętla |
+| 27.10.2026 11:05 | #583 F7 #586 niegotowe: trójstronne + wymiary per pole + split tablic + multi-code; import EXPECTED **273** | pętla |
