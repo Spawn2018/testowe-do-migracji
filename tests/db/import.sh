@@ -1273,9 +1273,9 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#567 23B: blocked INVOICED → missing" "$out" "missing|Brak w pliku (zablokowany: zafakturowany)"
 
 # --- #583: prev z live WT + tablice PLAT / subset ---
-# Helper: wiersz pliku = live prev (+ nadpisania). Bez PERFORM (tylko PL/pgSQL). stderr → out.
-R583() { # $1 = jsonb_build_object nadpisań (może być pusty '{}')
-  echo "select jsonb_build_array(public.import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01') || ($1)::jsonb)
+# Helper: wiersz pliku = live prev (+ nadpisania JSON). $1 = surowy JSON → ('…')::jsonb.
+R583() {
+  echo "select jsonb_build_array(public.import_live_prev(si.id, l.id) || jsonb_build_object('code','SG-01') || ('$1')::jsonb)
     from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01'
    where l.id='$SG1' limit 1"; }
 
@@ -1285,8 +1285,8 @@ update loads set
   hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
   tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
 where id='$SG1';
-update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
-  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+-- null schedule_row → prev = czysty live (plik z R583 = ten sam snapshot).
+update shipment_items set schedule_row = null
 where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{}');
 set local role authenticated;
@@ -1304,8 +1304,7 @@ update loads set
   hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
   tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
 where id='$SG1';
-update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
-  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+update shipment_items set schedule_row = null
 where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{}');
 set local role authenticated;
@@ -1327,8 +1326,7 @@ update loads set
   hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
   tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
 where id='$SG1';
-update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
-  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+update shipment_items set schedule_row = null
 where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"ZZZ1111"}');
 set local role authenticated;
@@ -1346,8 +1344,7 @@ update loads set
   hhl_order_no='0035/10/S/2026', carrier_order_no='15035/2026/OSL/GDA/P',
   tractor_plate='WPR6303P', tractor_delivery_plate='ABC123', trailer_plate='WWW999'
 where id='$SG1';
-update shipment_items set schedule_row = coalesce(schedule_row,'{}'::jsonb)
-  - 'hhl_order_no' - 'carrier_order_no' - 'tractor_plate' - 'tractor_delivery_plate' - 'trailer_plate'
+update shipment_items set schedule_row = null
 where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"ZZZ1111"}');
 set local role authenticated;
@@ -1366,6 +1363,7 @@ chk "#583: preview 1 wiersz dla różnej tablicy" "$out" "1"
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate=null where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"PLAT"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';
@@ -1379,6 +1377,7 @@ chk "#583: PLAT → skip_reason" "$out" "wartość w pliku nie jest tablicą —
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate=null where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"PLAT"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';
@@ -1393,6 +1392,7 @@ chk "#583: po PLAT trailer_plate nadal null" "$out" "∅"
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate=null where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"PLAT"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';
@@ -1412,6 +1412,7 @@ chk "#583: preview PLAT ma skip_reason" "$out" "wartość w pliku nie jest tabli
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"WGM03896"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';
@@ -1425,6 +1426,7 @@ chk "#583: subset tablicy → changed=0" "$out" "0"
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"WGM03896"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';
@@ -1439,6 +1441,7 @@ chk "#583: po subset SEX56N nie skasowane" "$out" "WGM 03896 - SEX56N"
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 update loads set trailer_plate='WGM 03896 - SEX56N' where id='$SG1';
+update shipment_items set schedule_row = null where load_id='$SG1' and shipment_code='SG-01';
 create temporary table _r583 as $($R583 '{"trailer_plate":"KR12345"}');
 set local role authenticated;
 set local request.jwt.claim.sub='$HHL';

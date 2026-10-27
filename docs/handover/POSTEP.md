@@ -5786,3 +5786,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #586 `47e43278`: unit ✔, visual ✔, db FAIL import 247/21 (A6 SNAP-B, N13, CANCELLED, #583 puste out).
 - Przyczyny: (1) pending czyścił tylko `v_fields`, zapis szedł `v_apply_fields` → plik SNAP-B nadpisywał WT SNAP-C; (2) czysty live prev psuł A6 (wymiary ze sparse pliku); (3) testy `#583` z `PERFORM` i bez `2>&1`.
 - Poprawka w **0314**: prev = `schedule_row || (live − wymiary)`; pusta komórka pliku = bez zmiany; pending → też `v_apply_fields`; testy bez PERFORM.
+
+## 2026-10-27 07:45 — #583 CI FAIL r2: R583 cudzysłów JSON
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych `dla-cursora` do wpisania.
+- Scalanie: #585 bez „F7: gotowe do scalenia” (HEAD `0b8d4dd1`, CI ✔). #586 bez F7. Bez push na main.
+- CI #586 `d2dfe145`: unit ✔; db FAIL import 258/10 (wszystkie `#583` z R583 — out = `^` = błąd SQL); visual/db PR anulowane (G-15, SHA znany zły).
+- Przyczyna: `R583` robiło `({})::jsonb` / `({"trailer_plate":…})::jsonb` bez cudzysłowów literału.
+- Poprawka testów: `('$1')::jsonb`; `schedule_row = null` w fixturech #583 (prev = live = plik). Po push — prośba o F7 gdy CI zielone.
