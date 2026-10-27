@@ -271,7 +271,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async listActiveLoadsForTelematics() {
       const r = await sb.from('loads').select('id,trailer_plate,telematics_vehicle_id,status,plan_load_date,plan_delivery_date,tracking_opened_at')
-        .not('status', 'in', '("CANCELLED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+        .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
       if (r.error) throw new Error(`loads telematics: ${r.error.message}`);
       return (r.data ?? []).map((row) => ({
         id: row.id as string,
@@ -381,7 +381,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       )
         .not('rio_tracking_id', 'is', null)
         .not('rio_secret', 'is', null)
-        .not('status', 'in', '("CANCELLED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+        .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
       if (r.error) throw new Error(`loads rio: ${r.error.message}`);
       return (r.data ?? []).map((row) => ({
         id: row.id as string,

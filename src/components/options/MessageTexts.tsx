@@ -253,7 +253,7 @@ function MessageEditor({ item, saved, draft, status, loads, readOnly, prodPendin
     onDraft(same ? null : { subject: s, body: b });
   };
 
-  const previewLoads = useMemo(() => loads.filter((l) => l.status !== 'CANCELLED').slice(0, 24), [loads]);
+  const previewLoads = useMemo(() => loads.filter((l) => l.status !== 'CANCELLED' && l.status !== 'REMOVED').slice(0, 24), [loads]);
   const [loadId, setLoadId] = useState<string>('');
   /* wybrany transport, a gdy go nie ma (lista doszła później, transport wypadł) — transport startowy */
   const load = previewLoads.find((l) => l.id === loadId)

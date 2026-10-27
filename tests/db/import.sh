@@ -1633,4 +1633,261 @@ chk "#583: anon bez EXECUTE import_live_prev" \
 chk "#583: authenticated bez EXECUTE import_live_prev" \
   "$(Q "select has_function_privilege('authenticated','import_live_prev(uuid,uuid)','execute')")" f
 
+echo; echo "[#590] KSH_CARRIER_CHANGED + status REMOVED (F7)"
+# Fixtures w transakcjach z rollbackiem: własne transporty C590-* (nie ruszamy SG-01/SG-02 z wcześniejszych sekcji).
+SCXORG=00000000-0000-0000-0000-00000000a003
+# fx <kod> <status> <data załadunku>  — transport + pozycja harmonogramu
+fx() { echo "with l as (insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date, hhl_order_no, carrier_order_no)
+  values ('$P','$SCXORG','$2',$3,'$D2'::date,'H-$1','C-$1') returning id)
+  insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+  select '$P', id, '$1', 10, 2.5, 2.5 from l;"; }
+FXD1="'$D1'::date"
+# plik: wiersz pominięty (przewoźnik ≠ HH)
+SKIPF() { echo "jsonb_build_object('name','590.xlsx','hash','$2','skipped_carrier_rows',
+  jsonb_build_array(jsonb_build_object('code','$1','carrier_text','Inny Przewoznik Sp. z o.o.')))"; }
+# wiersz harmonogramu z kodem (kod wrócił w pliku jako HH)
+ROWF() { echo "jsonb_build_array(jsonb_build_object('code','$1','length_m',10,'width_m',2.5,'height_m',2.5,'qty',1,
+  'load_date','$D1','delivery_date','$D2'))"; }
+# import w DO — wynik JSON nie zaśmieca wyjścia. $1 kod pominięty, $2 skrót, $3 dry_run
+IMPSK() { echo "do \$\$ begin perform import_schedule('$P', $(ROWF Z-590), '{}'::text[], $(SKIPF "$1" "$2"), ${3:-true}); end \$\$;"; }
+# import z kodem w pliku jako HH (bez wiersza pominiętego)
+IMPBACK() { echo "do \$\$ begin perform import_schedule('$P', $(ROWF "$1"), '{}'::text[],
+  jsonb_build_object('name','590b.xlsx','hash','$2'), true); end \$\$;"; }
+DECID() { echo "(select id from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='$1' order by created_at desc limit 1)"; }
+LOADID() { echo "(select load_id from shipment_items where project_id='$P' and shipment_code='$1')"; }
+ROLEHHL="set local role authenticated; set local request.jwt.claim.sub='$HHL';"
+# t590 <SQL przed rolą (superuser)> <SQL jako HHL> — wynik w jednej linii (|), bez znaczników poleceń
+t590() { $PSQL -v ON_ERROR_STOP=1 -c "begin; $1 $ROLEHHL $2 rollback;" 2>&1 \
+  | grep -vE '^(BEGIN|SET|RESET|ROLLBACK|COMMIT|DELETE [0-9]+|UPDATE [0-9]+|INSERT [0-9]+|DO|NOTICE: .*|WARNING: .*)$' | tr -d '\r' | paste -sd'|' -; }
+chkre() { if echo "$2" | grep -qiE "$3"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano wzorca: $3)"; fi; }
+
+# --- wykrycie: dry_run otwiera decyzję; wynik niesie carrier_changed; dedup 3× ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+select r->'carrier_changed'->0->>'code'||'|'||(r->'carrier_changed'->0->>'carrier_file')||'|'||((r->'carrier_changed'->0->>'carrier_wt') is not null)::text
+  from (select import_schedule('$P', $(ROWF Z-590), '{}'::text[], $(SKIPF C590-1 590a), true) r) s;
+select count(*) from decisions where type_code='KSH_CARRIER_CHANGED' and status='NEW' and detail->>'code'='C590-1';
+select count(*) from jsonb_array_elements((select import_schedule('$P', $(ROWF Z-590), '{}'::text[], $(SKIPF C590-1 590aa), true))->'cancel_candidates') c where c->>'code'='C590-1';")
+chk "#590: dry_run → carrier_changed w wyniku, decyzja NEW, nie kandydat do anulowania" "$out" "C590-1|Inny Przewoznik Sp. z o.o.|true|1|0"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a) $(IMPSK C590-1 590b) $(IMPSK C590-1 590c)
+select count(*) from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='C590-1' and status in ('NEW','ASSIGNED','SNOOZED');")
+chk "#590: 3 przebiegi = 1 otwarta decyzja" "$out" "1"
+
+# --- BLOKER 3: auto-zamknięcie także w dry_run, ponowne otwarcie po zamknięciu ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+$(IMPBACK C590-1 590x)
+select status||'/'||resolution_code from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='C590-1';")
+chk "#590: kod wrócił w pliku (dry_run) → RESOLVED/CARRIER_BACK" "$out" "RESOLVED/CARRIER_BACK"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+$(IMPBACK C590-1 590x)
+$(IMPSK C590-1 590y)
+select (select count(*) from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='C590-1' and status='NEW')
+  ||'|'||(select count(*) from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='C590-1');")
+chk "#590: po zamknięciu kolejna zmiana otwiera nową decyzję (unikalny klucz)" "$out" "1|2"
+
+# --- ważność: CRITICAL ≤ 48 h, inaczej WARNING (kolumna decisions.severity) ---
+out=$(t590 "$(fx C590-1 PLANNED "(current_date + 1)") $(fx C590-2 PLANNED "(current_date + 3)")" "
+$(IMPSK C590-1 590a)
+$(IMPSK C590-2 590b)
+select (select severity from decisions where detail->>'code'='C590-1' and type_code='KSH_CARRIER_CHANGED')
+  ||'|'||(select severity from decisions where detail->>'code'='C590-2' and type_code='KSH_CARRIER_CHANGED');")
+chk "#590: ważność CRITICAL (załadunek ≤ 48 h) vs WARNING" "$out" "CRITICAL|WARNING"
+
+# --- „Brak w pliku” zamykane, gdy kod wrócił z innym przewoźnikiem ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")
+  do \$\$ begin perform decision_open_from_event('$P','KSH_ROW_GONE','590-rg-1','C590-1: brak w pliku','{\"code\":\"C590-1\"}'::jsonb,$(LOADID C590-1),null); end \$\$;" "
+$(IMPSK C590-1 590a)
+select status||'/'||resolution_code from decisions where type_code='KSH_ROW_GONE' and load_id=$(LOADID C590-1);")
+chkre "#590: otwarte KSH_ROW_GONE zamknięte przy zmianie przewoźnika" "$out" "RESOLVED/SUPERSEDED"
+
+# --- CANCEL przed załadunkiem i po wjeździe (cancel_load) + zdarzenie dla przewoźnika ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'CANCEL')->>'effect';
+select (select status from loads where id=$(LOADID C590-1))
+  ||'|'||(select status from decisions where id=$(DECID C590-1))
+  ||'|'||(select count(*) from load_events where load_id=$(LOADID C590-1) and event_type='STATUS_CANCELLED');")
+chk "#590: CANCEL przed załadunkiem → CANCELLED + RESOLVED + STATUS_CANCELLED" "$out" "CANCEL|CANCELLED|RESOLVED|1"
+
+out=$(t590 "$(fx C590-1 AT_LOADING "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'CANCEL')->>'effect';
+select (select status from loads where id=$(LOADID C590-1))
+  ||'|'||(select count(*) from audit_log where entity_id=$(LOADID C590-1)::text and action='LOAD_CANCEL_MANUAL')
+  ||'|'||(select count(*) from load_events where load_id=$(LOADID C590-1) and event_type='STATUS_CANCELLED');")
+chk "#590: CANCEL po wjeździe → cancel_load (ręczne anulowanie) + STATUS_CANCELLED" "$out" "CANCEL|CANCELLED|1|1"
+
+# --- REMOVE: status REMOVED, sprzątanie ryzyk / decyzji / kolejki pliku ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")
+  insert into risk_signals (project_id, load_id, kind, severity, title)
+   values ('$P', $(LOADID C590-1), (enum_range(null::risk_kind))[1], (enum_range(null::risk_severity))[1], 'C590');
+  do \$\$ begin perform decision_open_from_event('$P','KSH_ROW_GONE','590-rm-1','inna decyzja','{}'::jsonb,$(LOADID C590-1),null); end \$\$;
+  insert into ksh_sync_outbound (project_id, load_id, shipment_code, patch) values ('$P', $(LOADID C590-1), 'C590-1', '{}'::jsonb);" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+reset role;
+select l.status||'|'||l.removed_prev_status||'|'||(l.removed_at is not null)::text
+  ||'|'||(select count(*) from risk_signals where load_id=l.id and resolved_at is null)
+  ||'|'||(select count(*) from decisions where load_id=l.id and status in ('NEW','ASSIGNED','SNOOZED'))
+  ||'|'||(select count(*) from ksh_sync_outbound where load_id=l.id and status='pending')
+  ||'|'||(select status from decisions where id=$(DECID C590-1))
+  from loads l where l.id=$(LOADID C590-1);")
+chk "#590: REMOVE → REMOVED, 0 otwartych ryzyk/decyzji, pusta kolejka pliku" "$out" "REMOVE|REMOVED|PLANNED|true|0|0|0|RESOLVED"
+
+# F7 r2: REMOVED kasuje niezafakturowaną cenę (nie jak CANCELLED z zerami); RODO jak CANCELLED.
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")
+  insert into load_cost (load_id, base_amount, baf_amount, computed_total_eur)
+   values ($(LOADID C590-1), 100, 10, 110);
+  insert into load_revenue (load_id, base_amount, baf_amount, computed_total_eur)
+   values ($(LOADID C590-1), 200, 20, 220);" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+reset role;
+select (select count(*) from load_cost where load_id=$(LOADID C590-1))
+  ||'|'||(select count(*) from load_revenue where load_id=$(LOADID C590-1))
+  ||'|'||(select (prosrc like '%REMOVED%' and prosrc like '%skipped%')::text from pg_proc p
+            join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='load_price_compute'
+             and pg_get_function_identity_arguments(p.oid)='p_load uuid, p_today date')
+  ||'|'||(select (prosrc like '%REMOVED%')::text from pg_proc p
+            join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='purge_personal_data'
+             and pg_get_function_identity_arguments(p.oid)='p_days integer');
+set session_replication_role = replica;
+update loads set driver_name='Jan Removed', driver_phone='+48111000000',
+       updated_at = now() - interval '91 days' where id=$(LOADID C590-1);
+set session_replication_role = origin;
+select purge_personal_data(90);
+select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id=$(LOADID C590-1);")
+chk "#590 F7 r2: REMOVED bez ceny; purge czyści PII; funkcje znają REMOVED" \
+  "$out" "REMOVE|0|0|true|true|1|∅/∅"
+
+out=$(t590 "$(fx C590-1 AT_LOADING "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE');")
+chkre "#590: REMOVE po załadunku odmowa" "$out" "przed załadunkiem"
+
+err "#590: SCX nie rozstrzyga" $SCX \
+  "select decision_resolve_carrier_change(gen_random_uuid(), 'CANCEL')" \
+  "HHL|Rozstrzygnięcie|forbidden"
+err "#590: KSH nie rozstrzyga" $KSH \
+  "select decision_resolve_carrier_change(gen_random_uuid(), 'REMOVE')" \
+  "HHL|Rozstrzygnięcie|forbidden"
+
+# --- strażnik statusu REMOVED ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+select set_config('tower.status_ctx','on',true);
+update loads set status='PLANNED' where id=$(LOADID C590-1);")
+chkre "#590: z REMOVED nie wyjdzie zwykłym UPDATE" "$out" "Administratora HHL"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+select set_config('tower.status_ctx','on',true);
+update loads set status='REMOVED' where id=$(LOADID C590-1);")
+chkre "#590: do REMOVED nie wejdzie poza decyzją" "$out" "wyłącznie przez rozstrzygnięcie"
+
+# --- przywrócenie: tylko HHL_ADMIN ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+select load_restore_removed($(LOADID C590-1))->>'ok';
+select (select (status::text <> 'REMOVED')::text from loads where id=$(LOADID C590-1))
+  ||'|'||(select (removed_at is null)::text from loads where id=$(LOADID C590-1))
+  ||'|'||(select count(*) from load_events where load_id=$(LOADID C590-1) and event_type='LOAD_RESTORED');")
+chk "#590: HHL_ADMIN przywraca transport (REMOVED → poprzedni status)" "$out" "REMOVE|true|true|true|1"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+reset role;
+update app_users set role='HHL_OPS' where auth_id='$HHL';
+$ROLEHHL
+select load_restore_removed($(LOADID C590-1));")
+chkre "#590: HHL_OPS nie przywraca (tylko Administrator)" "$out" "forbidden"
+
+# --- usunięty transport wraca w pliku jako HH → bez zapisu, sprawa KSH_REMOVED_BACK ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+select (select count(*) from jsonb_array_elements(r->'blocked') b where b->>'code'='C590-1' and b->>'reason'='REMOVED')
+  ||'|'||jsonb_array_length(r->'changed')
+  from (select import_schedule('$P', $(ROWF C590-1), '{}'::text[], jsonb_build_object('name','590b.xlsx','hash','590rb'), true) r) s;
+select (select status::text from loads where id=$(LOADID C590-1))
+  ||'|'||(select count(*) from decisions where type_code='KSH_REMOVED_BACK' and load_id=$(LOADID C590-1) and status='NEW');
+select load_restore_removed($(LOADID C590-1))->>'ok';
+select status||'/'||resolution_code from decisions where type_code='KSH_REMOVED_BACK' and load_id=$(LOADID C590-1);")
+chk "#590: REMOVED wrócił w pliku → blocked REMOVED, bez zmian, KSH_REMOVED_BACK; przywrócenie zamyka sprawę" \
+  "$out" "REMOVE|1|0|REMOVED|1|true|RESOLVED/RESTORED"
+
+# --- widoczność: SCX i KSH nie widzą decyzji ani transportów REMOVED; powiadomienia tylko HHL ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+$(IMPSK C590-1 590c)
+select (select count(*) from decisions where type_code in ('KSH_CARRIER_CHANGED','KSH_REMOVED_BACK'))
+  ||'|'||(select count(*) from loads where status::text='REMOVED');
+set local request.jwt.claim.sub='$SCX';
+select (select count(*) from decisions where type_code in ('KSH_CARRIER_CHANGED','KSH_REMOVED_BACK'))
+  ||'|'||(select count(*) from loads where status::text='REMOVED');
+set local request.jwt.claim.sub='$KSH';
+select (select count(*) from decisions where type_code in ('KSH_CARRIER_CHANGED','KSH_REMOVED_BACK'))
+  ||'|'||(select count(*) from loads where status::text='REMOVED');
+reset role;
+select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id
+ where o.kind<>'FORWARDER' and (n.payload->>'type' in ('KSH_CARRIER_CHANGED','KSH_REMOVED_BACK'));")
+chkre "#590: SCX i KSH: 0 decyzji i 0 transportów REMOVED; HHL widzi; 0 powiadomień poza HHL" "$out" "^REMOVE\|[1-9][0-9]*\|1\|0\|0\|0\|0\|0$"
+
+# --- drzemka 2 h: SNOOZE, pobudka z ponownym powiadomieniem HHL, zamknięcie gdy kod wrócił ---
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'SNOOZE_2H')->>'status';
+select (select status from decisions where id=$(DECID C590-1))
+  ||'|'||(select count(*) from load_events where load_id=$(LOADID C590-1) and event_type='DECISION_SNOOZED');")
+chk "#590: SNOOZE_2H → SNOOZED + zdarzenie" "$out" "SNOOZED|SNOOZED|1"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'SNOOZE_2H')->>'status';
+reset role;
+update decisions set snooze_until = now() - interval '1 minute' where id=$(DECID C590-1);
+$ROLEHHL
+$(IMPSK C590-1 590w)
+select (select status from decisions where id=$(DECID C590-1))
+  ||'|'||(select count(*) from decision_events where decision_id=$(DECID C590-1) and action='WAKE')
+  ||'|'||(select count(*) from decisions where type_code='KSH_CARRIER_CHANGED' and detail->>'code'='C590-1' and status in ('NEW','ASSIGNED','SNOOZED'));")
+chk "#590: po 2 h decyzja wraca jako NEW (WAKE), nadal jedna otwarta" "$out" "SNOOZED|NEW|1|1"
+
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'SNOOZE_2H')->>'status';
+reset role;
+update decisions set snooze_until = now() - interval '1 minute' where id=$(DECID C590-1);
+$ROLEHHL
+$(IMPBACK C590-1 590z)
+select status||'/'||resolution_code from decisions where id=$(DECID C590-1);")
+chk "#590: po 2 h, gdy kod wrócił jako HH → zamknięcie zamiast pobudki" "$out" "SNOOZED|RESOLVED/CARRIER_BACK"
+
+# --- strażnik: nikt nie wyklucza CANCELLED bez REMOVED (funkcje, widoki, polityki) ---
+chk "#590 strażnik: funkcje public wykluczające CANCELLED muszą wykluczać też REMOVED" \
+  "$(Q "select coalesce(string_agg(p.proname, ',' order by p.proname), 'brak') from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+        where n.nspname='public' and p.prokind='f' and p.prosrc !~ 'REMOVED'
+          and (p.prosrc ~* 'status[[:space:]]*(<>|!=)[[:space:]]*''CANCELLED''' or p.prosrc ~* 'status[[:space:]]+is[[:space:]]+distinct[[:space:]]+from[[:space:]]+''CANCELLED'''
+               or p.prosrc ~* 'not[[:space:]]+in[[:space:]]*\\([^)]*(CANCELLED[^)]*(PLANNED|DELIVERED|UNLOADED|INVOICED)|(PLANNED|DELIVERED|UNLOADED|INVOICED)[^)]*CANCELLED)[^)]*\\)')
+          and p.proname not in ('guard_load_update','trg_sms_load_changes','load_status_set','cancel_load','import_cancel_loads','import_removal_check')")" "brak"
+chk "#590 strażnik: widoki public z CANCELLED muszą znać REMOVED" \
+  "$(Q "select coalesce(string_agg(viewname, ',' order by viewname), 'brak') from pg_views where schemaname='public' and definition ~ 'CANCELLED' and definition !~ 'REMOVED'")" "brak"
+chk "#590 strażnik: polityki RLS z CANCELLED muszą znać REMOVED" \
+  "$(Q "select coalesce(string_agg(tablename||'.'||policyname, ',' order by tablename, policyname), 'brak') from pg_policies where schemaname='public' and coalesce(qual,'')||coalesce(with_check,'') ~ '(^|[^_A-Za-z])CANCELLED' and coalesce(qual,'')||coalesce(with_check,'') !~ 'REMOVED'")" "brak"
+chk "#590: decisions_read bez KSH_CARRIER_CHANGED dla przewoźnika (jak SEFS_WEEK_CORR)" \
+  "$(Q "select (qual like '%KSH_CARRIER_CHANGED%' and qual like '%KSH_REMOVED_BACK%' and qual like '%SEFS_WEEK_CORR%')::text from pg_policies where tablename='decisions' and policyname='decisions_read'")" "true"
+chk "#590: anon bez EXECUTE decision_resolve_carrier_change / load_restore_removed" \
+  "$(Q "select has_function_privilege('anon','decision_resolve_carrier_change(uuid,text)','execute')::text||has_function_privilege('anon','load_restore_removed(uuid)','execute')::text")" "falsefalse"
+chk "#590: authenticated bez EXECUTE na pomocnicze (note_carrier_changed, apply/close skips, wake)" \
+  "$(Q "select has_function_privilege('authenticated','l1b_note_carrier_changed(uuid,uuid,text,text,text,timestamptz)','execute')::text||has_function_privilege('authenticated','import_apply_carrier_skips(uuid,jsonb)','execute')::text||has_function_privilege('authenticated','import_close_carrier_skips_resolved(uuid)','execute')::text||has_function_privilege('authenticated','decisions_wake_carrier_snoozed()','execute')::text")" "falsefalsefalsefalse"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

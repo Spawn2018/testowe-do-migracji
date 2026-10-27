@@ -5900,3 +5900,42 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #586 po r12 bez „gotowe”). Bez push na main.
 - CI #586 HEAD `af084955`: unit ✔, visual ✔, db ✔ (import EXPECTED **281**).
 - **Krok:** wpis PLAN/POSTEP + prośba o F7 na #586. Scalaj **#585 (0313) przed #586 (0314)**.
+
+## 2026-10-27 14:00 — #586 SCALONE; start #590
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie; #590 (bez etykiety `dla-cursora`) — wpisane §4 po F7 #586.
+- Scalanie: **#586** F7 gotowe na `37ad492b` (12:51Z) + CI unit/visual/db ✔ → `gh pr merge --merge` → `ac5f8f0f` (12:57Z). #585 F7 r3 NIE; kolejność: 0314 przed BN0 → w #585 przenieś 0313→**0315**.
+- **Krok (#590):** migracja **0316** `KSH_CARRIER_CHANGED` + parser `skipped_carrier_rows` + RPC CANCEL/REMOVE/SNOOZE_2H + `loads.removed_at`; import EXPECTED **287**; nullguard **858**. Front — koordynator. Importu nie włączać.
+
+## 2026-10-27 14:25 — #591 SCALONE; #592 db FAIL → domknięcie 0316
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#591** (`wyglad/583-powod-pominiecia`) F7 gotowe na `2b9b21b` (12:45Z) + CI unit/visual ✔ → `gh pr merge --merge` → `85b6a70d` (13:17Z). #585 F7 r3 NIE. #592 bez F7.
+- **Krok (#590 / PR #592):** migracja 0316 ucięta (brak `END IF; END $g$` po GRANT `import_schedule` → FAIL tower_boot). Domknięcie bloku; push na `pakiet/590-ksh-carrier-changed`.
+
+## 2026-10-27 15:20 — #590 / PR #592 F7: migracja 0315 (przenumerowanie z 0316), BLOKERY 1–5 w toku
+
+- Migracja **0315** `KSH_CARRIER_CHANGED` + status `REMOVED` (BEZ nakładania na produkcję): enum `REMOVED` jako pierwszy krok; `REMOVED` wszędzie, gdzie wykluczamy `CANCELLED` (funkcje po `pg_proc`, front `.not(status in (CANCELLED,REMOVED))`, `store.ts`); `decisions_read` bez `KSH_CARRIER_CHANGED` dla SCX; auto-zamknięcie w dry_run; unikalny klucz zdarzenia (ponowne otwarcie); `severity` CRITICAL ≤ 48 h; CANCEL po wjeździe przez `cancel_load`; pobudka drzemki 2 h z ponownym powiadomieniem HHL; `carrier_changed[]` w wyniku importu.
+- Testy: import EXPECTED **308**, dec2 katalog **27** typów, nullguard **866** (+2 RPC × 5 kont; 858 było błędną liczbą); strażnik `tests/removed-status-guard.test.ts`.
+- BN0 #585 → migracja **0316**. Wynik bramy db — wpis po zielonym przebiegu.
+
+## 2026-10-27 16:15 — #593 SCALONE; #590 F7 r2 (cena/RODO/check_function_bodies)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#593** (`wyglad/567-kod-w-kazdym-wierszu`) F7 gotowe na `ea2aaa9` (13:48Z) + CI unit/visual ✔ → `gh pr merge --merge` → `6a6b30d9`. #585 F7 r3 NIE. #592 bez „gotowe”.
+- CI #592 `0b5f26e3`: unit/visual ✔; db FAIL tylko nullguard oczekiwano **858**, jest **866** → lokalnie `356a904f` (EXPECTED 866).
+- **Krok (#590 / PR #592 F7 r2):** `load_price_compute` — REMOVED bez ceny (kasuje niezafakturowane `load_cost`/`load_revenue`); `purge_personal_data` — REMOVED jak CANCELLED; `check_function_bodies=on` zaraz po bloku DO; trigger cleanup woła `load_price_compute`. import EXPECTED **309**. Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-27 16:45 — #590 / PR #592: CI db FAIL → asercja purge
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #592 bez gotowe). Bez push na main.
+- CI #592 `51db7529`: unit ✔, visual ✔; db FAIL import 308/1 — asercja F7 r2 oczekiwała `…|true|true|∅/∅`, a `select purge_personal_data(90)` wkleja `1` (licznik) → `…|true|true|1|∅/∅`. Kod migracji OK (0 kosztów, 0 przychodów, PII wyczyszczone).
+- **Krok:** poprawka oczekiwanego ciągu w `import.sh` (EXPECTED nadal **309**). Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-27 17:30 — #590 / PR #592: CI zielone na `71fd92ec`; czekam F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu koordynatora); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `71fd92ec` (#585 CONFLICTING / F7 r3 NIE; #592 bez gotowe). Bez push na main.
+- CI #592 HEAD `71fd92ec`: unit ✔, db ✔ (import EXPECTED **309**, nullguard **866**), visual ✔ (pierwszy przebieg zrzuty: flaky `kokpit__hhl__pl__1920__light` 274 px — ten commit tylko asercja purge; po `gh run rerun --failed` zielone).
+- **Krok:** wpis PLAN/POSTEP + prośba o F7 na #592. Po „F7: gotowe do scalenia” — `gh pr merge --merge` (#592 = 0315 przed #585→0316).

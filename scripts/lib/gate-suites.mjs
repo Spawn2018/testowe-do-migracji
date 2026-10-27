@@ -23,12 +23,12 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 281, // #583 F7 r4: +2 (audit waga, rano); było 279
-  nullguard: 856, // #567 23B: +4 preview_get; baza #563 PURE lookup → 852
+  import: 309, // #590 F7 r2: +1 (REMOVED bez ceny / purge RODO); było 308
+  nullguard: 866, // #590: +2 RPC (decision_resolve_carrier_change, load_restore_removed) × 5 rodzajów kont = +10; było 856
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako; katalog 25 typów (#563 SEFS_WEEK_CORR)
+  dec2: 73, // #455: +2 Działaj jako; katalog 27 typów (#563 SEFS_WEEK_CORR; #590 +2)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
