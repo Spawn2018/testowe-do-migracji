@@ -5740,3 +5740,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `a2dbd890`: unit ✔, db ✔ (14m33s), visual ✔ (telefon/bramy/zrzuty).
 - **#577 krok:** prośba o F7 na HEAD `a2dbd890` (F7 r3: audit_log = app_users.id). Po znaku → scalać #577 potem #578 → #574-nast → BN0 #572.
 
+## 2026-10-27 02:40 — #577+#578 SCALONE; #581 w planie; start #574-nast
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. #581 (Spawn2018, bez etykiety `dla-cursora`) — wpisane z F7 #577 / treści zgłoszenia.
+- Scalanie: **#577** merge `eeed3a8e` (F7 gotowe na `6422b34`, CI unit/db/visual ✔); zaraz **#578** merge `4d348405` (F7 po #577). Bez push na main.
+- **#581:** PLAN §4 (po BN0, przed BN1), §5 W61 (27A: auto ≤15 %), §8. Komentarz w zgłoszeniu.
+- **#574-nast krok:** migracja **0312** — cron `greatest(EXIT, entered_at)`; SG-23 DWELL payload; testy status +7 → EXPECTED **327**; §8 drganie GPS / podwójny DWELL. Gałąź `pakiet/574-nast-dwell-min`.
+
