@@ -1809,3 +1809,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 09:25 | #583 CI fix r6: psql `-v` + `:'rows'` (JSON nie w `-c "…"`) | pętla |
 | 27.10.2026 09:45 | #583 CI fix r7: heredoc + `-v rows=` (bez -c z JSON/SQL) | pętla |
 | 27.10.2026 10:05 | #583 CI fix r8: fixture SQL w heredoc (`r583_file_sql`, bez -v) | pętla |
+| 27.10.2026 10:25 | #583 CI fix r9: `-c` jak A6 + patch `jsonb_build_object` | pętla |

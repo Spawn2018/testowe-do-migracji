@@ -5830,3 +5830,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - CI #586 `8fb25489`: db FAIL 258/10 (CONTEXT JSON — `-v rows=` nadal zepsute).
 - Krok: prep+import w jednym heredoc; `$(r583_file_sql patch)` = jednoliniowe podzapytanie. Po zielonym — F7.
+
+## 2026-10-27 10:25 — #583 CI FAIL r9: -c jak A6 + patch jsonb_build_object
+
+- CI #586 `941af010`: db FAIL 258/10 (heredoc+pipe → `^`).
+- Krok: `$F583` + `-c "..."`; patch = `jsonb_build_object(...)` (bez `"` w SQL). Po zielonym — F7.
