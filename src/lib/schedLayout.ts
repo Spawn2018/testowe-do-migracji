@@ -197,7 +197,7 @@ export function pair(a: string | null | undefined, b: string | null | undefined,
 export function etaText(l: Pick<Load, 'status' | 'stage' | 'etaBoden' | 'etaPreLoad'>): 'done' | 'site' | 'none' | 'eta' {
   if (['UNLOADING', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'].includes(l.status) || l.stage === 'DELIVERED') return 'done';
   if (l.stage === 'SITE') return 'site';
-  if (l.status === 'CANCELLED' || l.etaPreLoad || !l.etaBoden || l.stage === 'PLAN') return 'none';
+  if (l.status === 'CANCELLED' || l.status === 'REMOVED' || l.etaPreLoad || !l.etaBoden || l.stage === 'PLAN') return 'none';
   return 'eta';
 }
 

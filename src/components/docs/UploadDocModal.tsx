@@ -61,7 +61,7 @@ export function UploadDocModal({ locale, role, phone, loads, statusRows, allowed
 
   const stateText = (s: 'OVERDUE' | 'MISSING' | 'OK' | null) => (s ? ft(locale, `p5_up_state_${s}`) : '');
   const typeName = load?.itemType ?? '';
-  const firmaCount = typeName ? loads.filter((l) => l.itemType === typeName && l.status !== 'CANCELLED').length : 0;
+  const firmaCount = typeName ? loads.filter((l) => l.itemType === typeName && l.status !== 'CANCELLED' && l.status !== 'REMOVED').length : 0;
 
   const submit = async () => {
     if (!sel || !kind || !file) return;

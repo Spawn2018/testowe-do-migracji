@@ -23,12 +23,12 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 287, // #590: +6 (carrier_changed detect/dedup/dry/cancel/remove/snooze); było 281 #583
+  import: 308, // #590 F7: +27 (carrier_changed + status REMOVED + strażnicy); było 281 #583
   nullguard: 858, // #590: +2 decision_resolve_carrier_change + load_restore_removed; było 856
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako; katalog 25 typów (#563 SEFS_WEEK_CORR)
+  dec2: 73, // #455: +2 Działaj jako; katalog 27 typów (#563 SEFS_WEEK_CORR; #590 +2)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,

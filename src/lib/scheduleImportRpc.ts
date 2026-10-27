@@ -77,7 +77,9 @@ export interface ImportRpcResult {
   changed: { code: string; load_id: string; fields: string[]; critical: boolean }[];
   unchanged: number;
   cancel_candidates: { code: string; load_id: string }[];
-  blocked: { code: string; load_id: string; reason: 'INVOICED' | 'STATUS' | 'CANCELLED'; message: string }[];
+  blocked: { code: string; load_id: string; reason: 'INVOICED' | 'STATUS' | 'CANCELLED' | 'REMOVED'; message: string }[];
+  /** #590: wiersze pominięte (przewoźnik ≠ HH) dla transportów z Watch Tower → decyzja KSH_CARRIER_CHANGED (podgląd: koordynator). */
+  carrier_changed?: { code: string; carrier_wt: string | null; carrier_file: string | null }[];
   cancelled: { code: string; load_id: string }[];
   critical: { code: string; fields: string[] }[];
   /** I-18 (0061): zmiany dat POTWIERDZONYCH przez KSH; overwrite=false → data zostaje bez zmian */

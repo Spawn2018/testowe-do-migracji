@@ -1,18 +1,190 @@
 -- =====================================================================
--- TOWER — Migracja 0316: #590 KSH_CARRIER_CHANGED (zmiana przewoźnika w pliku)
--- Po 0314 (#583). 0315 zarezerwowane dla BN0 #585 (przenumerowanie 0313→0315).
+-- TOWER — Migracja 0315: #590 KSH_CARRIER_CHANGED + status REMOVED (F7 r1)
+-- Po 0314 (#583). Przed BN0 #585 (przenumerowanie 0313 → 0316).
+--
+-- Jeden plik, jedna transakcja (supabase db push). Wartość enum REMOVED jest
+-- dodana na początku, a użyta WYŁĄCZNIE w ciałach plpgsql / jako ::text —
+-- Postgres 55P04 nie pozwala użyć nowej wartości w tej samej transakcji
+-- (CHECK, polityka i WHEN triggera idą przez status::text).
+--
+-- Decyzja koordynatora (F7 #592): REMOVED to status „usunięty z harmonogramu”
+--   • wszędzie tam, gdzie wykluczamy CANCELLED, wykluczamy też REMOVED;
+--   • REMOVED → poprzedni status tylko przez load_restore_removed (HHL_ADMIN);
+--   • SCX/KSH nie widzą REMOVED (polityka restrykcyjna na loads) ani decyzji
+--     KSH_CARRIER_CHANGED / KSH_REMOVED_BACK (decisions_read, powiadomienia).
 -- =====================================================================
 
+alter type public.load_status add value if not exists 'REMOVED';
+
+-- ---------------------------------------------------------------------
+-- 1. loads: znaczniki usunięcia + spójność statusu
+-- ---------------------------------------------------------------------
 alter table public.loads
   add column if not exists removed_at timestamptz,
   add column if not exists removed_reason text,
   add column if not exists removed_prev_status public.load_status;
 
 comment on column public.loads.removed_at is
-  '#590: miękkie usunięcie z harmonogramu (HHL); null = widoczny';
+  '#590: usunięcie z harmonogramu (status REMOVED, tylko HHL); null = nie usunięty';
 
 grant select (removed_at, removed_reason, removed_prev_status) on public.loads to authenticated;
 
+alter table public.loads drop constraint if exists loads_removed_consistent;
+alter table public.loads add constraint loads_removed_consistent
+  check ((status::text = 'REMOVED') = (removed_at is not null));
+
+-- Ranga statusu: REMOVED jak CANCELLED (poza torem, „po wszystkim”).
+create or replace function public.load_status_rank(p_status load_status)
+returns int
+language sql immutable parallel safe set search_path = public as $$
+  select case p_status::text
+    when 'PLANNED' then 10
+    when 'RESOURCES_PENDING' then 20
+    when 'DOCS_PENDING' then 30
+    when 'READY' then 40
+    when 'AT_LOADING' then 50
+    when 'IN_TRANSIT_PL' then 60
+    when 'AT_PORT_GDANSK' then 70
+    when 'FERRY' then 80
+    when 'AT_PORT_NYNASHAMN' then 90
+    when 'IN_TRANSIT_SE' then 100
+    when 'AT_SITE' then 110
+    when 'UNLOADED' then 120
+    when 'DELIVERED' then 120
+    when 'READY_TO_INVOICE' then 130
+    when 'INVOICED' then 140
+    when 'CANCELLED' then 999
+    when 'REMOVED' then 999
+    else 0
+  end;
+$$;
+
+-- SCX i KSH nie widzą transportów REMOVED (restrykcyjna polityka SELECT, AND z istniejącymi).
+drop policy if exists loads_removed_hhl_only on public.loads;
+create policy loads_removed_hhl_only on public.loads
+  as restrictive for select to authenticated
+  using (status::text <> 'REMOVED' or is_hhl());
+
+-- Strażnik statusu: z REMOVED wyłącznie load_restore_removed (poprzedni status);
+-- do REMOVED wyłącznie decision_resolve_carrier_change.
+create or replace function public.trg_loads_removed_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+begin
+  if new.status is not distinct from old.status then
+    return new;
+  end if;
+  if old.status::text = 'REMOVED' then
+    if current_setting('tower.restore_ctx', true) is distinct from 'on'
+       or new.status is distinct from old.removed_prev_status then
+      raise exception 'Transport usunięty z harmonogramu — przywrócenie wyłącznie przez Administratora HHL'
+        using errcode = '42501';
+    end if;
+  end if;
+  if new.status::text = 'REMOVED'
+     and current_setting('tower.remove_ctx', true) is distinct from 'on' then
+    raise exception 'Usunięcie z harmonogramu wyłącznie przez rozstrzygnięcie decyzji zmiany przewoźnika'
+      using errcode = '42501';
+  end if;
+  return new;
+end
+$fn$;
+revoke all on function public.trg_loads_removed_guard() from public, anon, authenticated;
+
+drop trigger if exists aab_loads_removed_guard on public.loads;
+create trigger aab_loads_removed_guard
+  before update of status on public.loads
+  for each row
+  execute function public.trg_loads_removed_guard();
+
+-- Po REMOVED: zamknij pozostałe otwarte ryzyka i decyzje transportu, wyczyść kolejkę zapisu do pliku KSH.
+create or replace function public.trg_loads_removed_cleanup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  r record;
+begin
+  if new.status::text is distinct from 'REMOVED' or old.status::text = 'REMOVED' then
+    return null;
+  end if;
+  update risk_signals
+     set resolved_at = now(),
+         detail = coalesce(detail, '{}'::jsonb) || jsonb_build_object('closed_by', '590_REMOVED')
+   where load_id = new.id
+     and resolved_at is null;
+  for r in
+    update decisions
+       set status = 'RESOLVED',
+           resolved_at = now(),
+           resolution_code = 'REMOVED',
+           resolution_note = coalesce(resolution_note, 'transport usunięty z harmonogramu'),
+           snooze_until = null,
+           updated_at = now()
+     where load_id = new.id
+       and status in ('NEW', 'ASSIGNED', 'SNOOZED')
+    returning id
+  loop
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (r.id, current_app_user_id(), 'RESOLVE',
+            jsonb_build_object('option', 'REMOVED', 'via', 'load_removed'));
+  end loop;
+  update ksh_sync_outbound
+     set status = 'skipped'
+   where load_id = new.id
+     and status = 'pending';
+  return null;
+end
+$fn$;
+revoke all on function public.trg_loads_removed_cleanup() from public, anon, authenticated;
+
+drop trigger if exists trg_loads_removed_cleanup on public.loads;
+create trigger trg_loads_removed_cleanup
+  after update of status on public.loads
+  for each row
+  when (new.status::text = 'REMOVED' and old.status::text is distinct from 'REMOVED')
+  execute function public.trg_loads_removed_cleanup();
+
+-- ---------------------------------------------------------------------
+-- 2. load_events: nowe typy zdarzeń (lista z 0308 + 3)
+-- ---------------------------------------------------------------------
+alter table public.load_events drop constraint if exists load_events_event_type_known;
+alter table public.load_events add constraint load_events_event_type_known check (event_type in (
+    'NOTE', 'DOC_UPLOADED', 'PERMIT_MISMATCH', 'AWIZACJA_UPDATED', 'RESOURCES_UPDATED', 'ORDER_NO_UPDATED',
+    'FERRY_UPDATED', 'SAILING_ASSIGNED', 'SCX_ASSIGNED', 'PLAN_B_ACTIVATED', 'READY_BLOCKED',
+    'SCHEDULE_IMPORTED', 'SCHEDULE_DATE_CRITICAL', 'STATUS_APPROACHING_SITE', 'STATUS_AT_LOADING',
+    'STATUS_AT_PORT', 'STATUS_AT_PORT_GDANSK', 'STATUS_AT_PORT_NYNASHAMN', 'STATUS_AT_SITE',
+    'STATUS_CANCELLED', 'STATUS_DELAYED', 'STATUS_DELIVERED', 'STATUS_DOCS_PENDING', 'STATUS_DOC_MISSING',
+    'STATUS_FERRY', 'STATUS_IN_TRANSIT_PL', 'STATUS_IN_TRANSIT_SE', 'STATUS_LOADING', 'STATUS_ON_FERRY',
+    'STATUS_PLANNED', 'STATUS_READY', 'STATUS_RESOURCES_PENDING', 'STATUS_SILENT', 'STATUS_UNLOADED',
+    'STATUS_UNLOADING', 'STATUS_READY_TO_INVOICE', 'STATUS_INVOICED',
+    'MILESTONE_LOADED', 'MILESTONE_UNLOADED', 'DRIVER_ON_FERRY', 'DRIVER_PROBLEM',
+    'GEOFENCE_ENTER', 'GEOFENCE_EXIT', 'GEOFENCE_DWELL', 'STATUS_AUTO', 'POSITION_SHARED',
+    'POSITION_SHARE_DENIED', 'DELAY_DETECTED', 'RISK_RAISED', 'SILENT_VEHICLE',
+    'PLAN_DATES_CONFIRMED', 'PLAN_DATES_CHANGED', 'DECISION_HOLD', 'PILOTS_SET',
+    'DECISION_EFFECT', 'DECISION_SAILING', 'DECISION_KEEP_TOWER',
+    'KSH_FILE_OUTBOUND',
+    'LOAD_REMOVED', 'LOAD_RESTORED', 'DECISION_SNOOZED'
+));
+
+-- ---------------------------------------------------------------------
+-- 3. decisions: ważność (CRITICAL ≤ 48 h), typy decyzji, widoczność tylko dla HHL
+-- ---------------------------------------------------------------------
+alter table public.decisions
+  add column if not exists severity text;
+alter table public.decisions drop constraint if exists decisions_severity_check;
+alter table public.decisions add constraint decisions_severity_check
+  check (severity is null or severity in ('INFO', 'WARNING', 'CRITICAL'));
+comment on column public.decisions.severity is
+  '#590: ważność tej instancji (null = severity_default typu); CRITICAL → e-mail krytyczny.';
+
+-- Bez terminu (due_hours null): decision_escalate_overdue pomija wiersze bez due_at,
+-- więc eskalacja po terminie nie dociera do SCX/KSH.
 insert into public.decision_types (
   code, title_key, decider_role, options, due_hours, due_note, severity_default, sort_order
 ) values (
@@ -24,13 +196,301 @@ insert into public.decision_types (
     {"code":"REMOVE","label_key":"dec_opt_CARRIER_REMOVE","requires_comment":false,"effect":"CARRIER_REMOVE"},
     {"code":"SNOOZE_2H","label_key":"dec_opt_CARRIER_SNOOZE","requires_comment":false,"effect":"SNOOZE"}
   ]'::jsonb,
-  24, null, 'WARNING', 48
+  null, 'przed załadunkiem', 'WARNING', 48
+), (
+  'KSH_REMOVED_BACK',
+  'dec_type_KSH_REMOVED_BACK',
+  'HHL',
+  '[
+    {"code":"KEEP_REMOVED","label_key":"dec_opt_REMOVED_KEEP","requires_comment":false,"effect":"ACCEPT"},
+    {"code":"WILL_RESTORE","label_key":"dec_opt_REMOVED_RESTORE","requires_comment":false,"effect":"ACCEPT"}
+  ]'::jsonb,
+  null, 'przed załadunkiem', 'WARNING', 49
 ) on conflict (code) do update set
   title_key = excluded.title_key,
   options = excluded.options,
+  due_hours = excluded.due_hours,
+  due_note = excluded.due_note,
   severity_default = excluded.severity_default,
-  decider_role = excluded.decider_role;
+  decider_role = excluded.decider_role,
+  sort_order = excluded.sort_order;
 
+-- decisions_read (z 0310) + KSH_CARRIER_CHANGED / KSH_REMOVED_BACK tylko HHL (SCX nie widzi; KSH wymaga decider_role CLIENT).
+drop policy if exists decisions_read on public.decisions;
+create policy decisions_read on public.decisions for select to authenticated using (
+  current_app_user_id() is not null
+  and (
+    is_hhl()
+    or (
+      current_org_kind() = 'CARRIER'
+      and decisions.type_code not in ('SEFS_WEEK_CORR', 'KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK')
+      and exists (
+        select 1 from decision_types t
+         where t.code = decisions.type_code
+           and t.decider_role in ('CARRIER', 'HHL')
+           and (
+             (decisions.load_id is null
+              and exists (
+                select 1 from loads l
+                 where l.project_id = decisions.project_id
+                   and l.carrier_org_id = current_org_id()))
+             or exists (
+               select 1 from loads l
+                where l.id = decisions.load_id
+                  and l.carrier_org_id = current_org_id()))))
+    or (
+      current_org_kind() = 'CLIENT'
+      and decisions.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK')
+      and exists (
+        select 1 from decision_types t
+         where t.code = decisions.type_code
+           and t.decider_role = 'CLIENT'
+           and exists (
+             select 1 from projects p
+              where p.id = decisions.project_id
+                and p.client_org_id = current_org_id())))
+  )
+);
+
+-- decision_open_from_event (z 0243): severity z detail.severity_override; HHL-only bez dzwonka SCX/KSH.
+create or replace function public.decision_open_from_event(
+  p_project uuid,
+  p_type text,
+  p_event_key text,
+  p_title text,
+  p_detail jsonb default '{}'::jsonb,
+  p_load uuid default null,
+  p_risk uuid default null
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_hours numeric;
+  v_role text;
+  v_due timestamptz;
+  v_detail jsonb;
+  v_group text := 'DECISION';
+  v_hhl_only boolean := p_type in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK');
+  v_sev text;
+begin
+  if p_event_key is null or length(btrim(p_event_key)) = 0 then
+    raise exception 'L-1: zdarzenie bez klucza' using errcode = '22023';
+  end if;
+  select id into v_id
+    from decisions
+   where detail->>'event_key' = p_event_key
+   limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+  select due_hours, decider_role into v_hours, v_role
+    from decision_types
+   where code = p_type and active;
+  if v_role is null then
+    raise exception 'Nieznany typ decyzji %', p_type using errcode = '22023';
+  end if;
+  if v_hours is not null then
+    v_due := now() + (v_hours::text || ' hours')::interval;
+  end if;
+  v_sev := case when p_detail->>'severity_override' in ('INFO', 'WARNING', 'CRITICAL')
+                then p_detail->>'severity_override' end;
+  v_detail := coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('event_key', p_event_key, 'opened_by', 'L-1');
+  begin
+    insert into decisions (project_id, type_code, title, detail, load_id, risk_id, due_at, severity)
+    values (p_project, p_type, p_title, v_detail, p_load, p_risk, v_due, v_sev)
+    returning id into v_id;
+  exception when unique_violation then
+    select id into v_id from decisions where detail->>'event_key' = p_event_key limit 1;
+    return v_id;
+  end;
+  insert into decision_events (decision_id, actor_id, action, payload)
+  values (v_id, null, 'OPEN', jsonb_build_object('type', p_type, 'event_key', p_event_key));
+  /* F7 N3: przy bulk_quiet bez dzwonka IN_APP (e-mail wycisza l13_decision_email).
+     Join po roli jak po 0201 (nie org_kind z 0149). #590: HHL-only → tylko FORWARDER. */
+  if current_setting('tower.bulk_quiet', true) is distinct from 'on' then
+    insert into notifications (channel, recipient, user_id, load_id, template, payload, dedup_key)
+    select 'IN_APP', coalesce(u.email::text, u.id::text), u.id, p_load, 'DECISION_OPEN',
+           jsonb_build_object(
+             'decision_id', v_id, 'type', p_type, 'title', p_title,
+             'status', 'NEW', 'event', 'OPEN', 'locale', u.locale
+           ),
+           left('dec:OPEN:' || v_id::text || ':IN:' || u.id::text, 200)
+      from app_users u
+      join organizations o on o.id = u.org_id
+      join notification_matrix m
+        on m.event_group = v_group and m.role = u.role and m.in_app
+     where u.active
+       and (
+         o.kind = 'FORWARDER'
+         or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+              p_load is null
+              or exists (select 1 from loads l where l.id = p_load and l.carrier_org_id = o.id)))
+         or (v_hhl_only is not true and o.kind = 'CLIENT' and (
+              p_project is null
+              or exists (select 1 from projects pr where pr.id = p_project and pr.client_org_id = o.id)
+              or exists (select 1 from loads l join projects pr on pr.id = l.project_id
+                          where l.id = p_load and pr.client_org_id = o.id)))
+       )
+    on conflict (dedup_key) where dedup_key is not null do nothing;
+  end if;
+  perform public.l13_decision_email(v_id);
+  return v_id;
+end $$;
+comment on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) is
+  'L-1: otwiera decyzję. F7 N3/0242: bulk_quiet = bez DECISION_OPEN IN_APP. #590: severity_override; HHL-only bez SCX/KSH.';
+revoke all on function public.decision_open_from_event(uuid, text, text, text, jsonb, uuid, uuid) from public, anon, authenticated;
+
+-- l13_decision_email (z 0236): severity instancji; HHL-only bez e-maila do SCX/KSH.
+create or replace function public.l13_decision_email(p_decision uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  d decisions%rowtype;
+  v_role text;
+  v_sev text;
+  v_kind text;
+  v_bundle text;
+  v_order text;
+  v_payload jsonb;
+  v_hhl_only boolean;
+  r record;
+begin
+  -- C3-p / E5: tylko wiersz macierzy „Nowa decyzja” (dec_new); flaga AUTOMATIC_DECISION_EMAIL usunięta.
+  select * into d from decisions where id = p_decision;
+  if not found then
+    return;
+  end if;
+  select decider_role, severity_default into v_role, v_sev
+    from decision_types where code = d.type_code;
+  v_sev := coalesce(d.severity, v_sev);
+  v_hhl_only := d.type_code in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK');
+  v_kind := case when v_sev = 'CRITICAL' or d.type_code = 'FERRY_CANCELLED' then 'critical' else 'digest' end;
+  v_bundle := coalesce(
+    nullif(d.detail->>'bundle_key', ''),
+    nullif(d.detail->>'sailing_id', ''),
+    d.type_code || ':' || coalesce(d.detail->>'event_key', d.id::text)
+  );
+  select order_no into v_order from loads where id = d.load_id;
+  v_payload := jsonb_build_object(
+    'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+    'status', d.status, 'event', 'OPEN', 'severity', v_sev,
+    'bundle_key', v_bundle, 'level', case when v_kind = 'critical' then 'critical' else 'info' end
+  );
+  -- F7 P5: jednorazowe A3/A9 bez e-maila L-13.
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return;
+  end if;
+  for r in
+    select distinct u.id as user_id, u.email::text as recipient, u.locale, o.kind as org_kind
+      from app_users u
+      join organizations o on o.id = u.org_id
+      join notification_matrix m
+        on m.event_key = 'dec_new' and m.role = u.role and m.email
+     where u.active and u.email is not null
+       and (
+         o.kind = 'FORWARDER'
+         or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+              d.load_id is null
+              or exists (select 1 from loads l where l.id = d.load_id and l.carrier_org_id = o.id)))
+         or (v_hhl_only is not true and o.kind = 'CLIENT' and (
+              d.project_id is null
+              or exists (select 1 from projects pr where pr.id = d.project_id and pr.client_org_id = o.id)))
+       )
+  loop
+    perform public.l13_queue_email(
+      v_kind, 'DECISION_OPEN', r.user_id, r.recipient, d.load_id,
+      case when r.org_kind = 'CARRIER' then nullif(public.load_sms_code(d.load_id), '—') else v_order end,
+      v_payload || jsonb_build_object('locale', r.locale),
+      left('dec:OPEN:' || d.id::text || ':EM:' || r.user_id::text, 200),
+      case when v_kind = 'critical' then v_bundle else null end
+    );
+  end loop;
+  perform public.l13_email_guard_note(now());
+end $$;
+
+revoke all on function public.l13_decision_email(uuid) from public, anon, authenticated;
+comment on function public.l13_decision_email(uuid) is
+  'C3-p: e-mail decyzji tylko z wiersza macierzy dec_new. D-20261020-0040: CARRIER dostaje kod transportu. #590: severity instancji; HHL-only.';
+
+-- decision_notify (z 0256): decyzje HHL-only nie idą do KSH.
+create or replace function public.decision_notify(p_decision uuid, p_event text)
+returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  d decisions%rowtype;
+  v_role text;
+  v_tpl text;
+  n int := 0;
+  v_dedup text;
+begin
+  select * into d from decisions where id = p_decision;
+  if not found then return 0; end if;
+
+  -- #411: zamknięcie → 0× DECISION_RESOLVED; dzwonek/push/mail powiązane przeczytane
+  if p_event = 'RESOLVE' then
+    return public.notify_mark_case_closed('sprawa zamknięta', p_decision, d.risk_id);
+  end if;
+
+  select decider_role into v_role from decision_types where code = d.type_code;
+  v_tpl := case p_event
+    when 'OPEN' then 'DECISION_OPEN'
+    when 'ESCALATE' then 'DECISION_ESCALATED'
+    else 'DECISION_EVENT'
+  end;
+  v_dedup := 'dec:' || p_event || ':' || d.id::text;
+
+  n := n + public.matrix_notify(
+    'DECISION', v_tpl, d.load_id, d.project_id,
+    jsonb_build_object(
+      'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+      'status', d.status, 'event', p_event, 'resolution', d.resolution_code,
+      'url', public.notify_click_url(v_tpl,
+        jsonb_build_object('decision_id', d.id, 'type', d.type_code), d.load_id)
+    ),
+    v_dedup, 'FORWARDER'
+  );
+
+  if v_role = 'CARRIER' then
+    n := n + public.matrix_notify(
+      'DECISION', v_tpl, d.load_id, d.project_id,
+      jsonb_build_object(
+        'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+        'status', d.status, 'event', p_event, 'resolution', d.resolution_code,
+        'url', public.notify_click_url(v_tpl,
+          jsonb_build_object('decision_id', d.id, 'type', d.type_code), d.load_id)
+      ),
+      v_dedup, 'CARRIER'
+    );
+  end if;
+
+  if d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK') then
+    n := n + public.matrix_notify(
+      'DECISION', v_tpl, d.load_id, d.project_id,
+      jsonb_build_object(
+        'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+        'status', d.status, 'event', p_event, 'resolution', d.resolution_code,
+        'url', public.notify_click_url(v_tpl,
+          jsonb_build_object('decision_id', d.id, 'type', d.type_code), d.load_id)
+      ),
+      v_dedup, 'CLIENT'
+    );
+  end if;
+
+  return n;
+end $$;
+revoke all on function public.decision_notify(uuid, text) from public, anon, authenticated;
+comment on function public.decision_notify(uuid, text) is
+  '#411: RESOLVE bez DECISION_RESOLVED; OPEN/ESCALATE z url w payload. #590: HHL-only bez CLIENT.';
+
+-- ---------------------------------------------------------------------
+-- 4. KSH_CARRIER_CHANGED — wykrycie, zamykanie, rozstrzygnięcie
+-- ---------------------------------------------------------------------
 create or replace function public.l1b_note_carrier_changed(
   p_project uuid,
   p_load uuid,
@@ -50,22 +510,29 @@ declare
   v_detail jsonb;
   v_sev text := 'WARNING';
   v_plan date;
+  v_plan_from timestamptz;
+  v_anchor timestamptz;
   v_carrier_wt text;
 begin
   if p_project is null or p_load is null or nullif(btrim(p_code), '') is null then
     return null;
   end if;
-  select l.plan_load_date,
+  select l.plan_load_date, l.plan_load_from,
          coalesce(
            (select o.name from organizations o where o.id = l.carrier_org_id),
            'Scandinavian Express'
          )
-    into v_plan, v_carrier_wt
+    into v_plan, v_plan_from, v_carrier_wt
     from loads l where l.id = p_load;
-  if v_plan is not null and v_plan <= (timezone('Europe/Warsaw', now()))::date + 2 then
+  -- CRITICAL: załadunek w ciągu 48 h. Okno godzinowe — dokładnie; sama data — koniec doby planu
+  -- (dzień +2 to ok. 72 h, F7 #592 pkt 4; wcześniej „dziś+2” liczyło się jako 48 h).
+  v_anchor := coalesce(
+    v_plan_from,
+    case when v_plan is not null then ((v_plan + 1)::timestamp at time zone 'Europe/Warsaw') end
+  );
+  if v_anchor is not null and v_anchor <= now() + interval '48 hours' then
     v_sev := 'CRITICAL';
   end if;
-  v_key := 'ksh-carrier:' || p_load::text;
   v_title := format(
     '%s: zmiana przewoźnika w pliku KSH (%s → %s)',
     btrim(p_code),
@@ -73,31 +540,49 @@ begin
     coalesce(nullif(btrim(p_carrier_file), ''), '—')
   );
   v_detail := jsonb_build_object(
-    'event_key', v_key,
     'code', btrim(p_code),
     'carrier_wt', v_carrier_wt,
     'carrier_file', nullif(btrim(p_carrier_file), ''),
     'file_name', nullif(btrim(p_file_name), ''),
     'file_read_at', p_file_read_at,
     'plan_load_date', v_plan,
-    'severity_hint', v_sev
+    'severity_override', v_sev
   );
+
+  -- Kod wrócił z innym przewoźnikiem — „Brak w pliku” z wcześniejszego importu przestaje być aktualne.
+  update decisions
+     set status = 'RESOLVED',
+         resolved_at = now(),
+         resolution_code = 'SUPERSEDED',
+         resolution_note = 'zmiana przewoźnika w pliku KSH (KSH_CARRIER_CHANGED)',
+         snooze_until = null,
+         updated_at = now()
+   where project_id = p_project
+     and load_id = p_load
+     and type_code = 'KSH_ROW_GONE'
+     and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+
+  -- Dedup tylko wśród otwartych (NEW / ASSIGNED / SNOOZED): po rozstrzygnięciu kolejna zmiana otwiera nową.
   select d.id into v_id
     from decisions d
    where d.project_id = p_project
+     and d.load_id = p_load
      and d.type_code = 'KSH_CARRIER_CHANGED'
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
-     and d.detail->>'event_key' = v_key
    order by d.created_at desc
    limit 1;
   if v_id is not null then
     update decisions
        set detail = coalesce(detail, '{}'::jsonb) || v_detail,
            title = v_title,
+           severity = case when v_sev = 'CRITICAL' then 'CRITICAL' else severity end,
            updated_at = now()
      where id = v_id;
     return v_id;
   end if;
+  -- Unikalny klucz zdarzenia: decision_open_from_event nie otwiera ponownie przy RESOLVED o tym samym kluczu.
+  v_key := 'ksh-carrier:' || p_load::text || ':'
+           || (extract(epoch from clock_timestamp()) * 1000000)::bigint::text;
   v_id := decision_open_from_event(
     p_project, 'KSH_CARRIER_CHANGED', v_key, v_title, v_detail, p_load, null
   );
@@ -107,13 +592,66 @@ $fn$;
 revoke all on function public.l1b_note_carrier_changed(uuid, uuid, text, text, text, timestamptz)
   from public, anon, authenticated;
 
+-- Transport usunięty z harmonogramu, a jego kod wrócił w pliku jako HH — do decyzji Administratora (przywrócenie).
+create or replace function public.l1b_note_removed_back(
+  p_project uuid,
+  p_load uuid,
+  p_code text,
+  p_file_name text
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $fn$
+declare
+  v_id uuid;
+  v_key text;
+  v_title text;
+  v_detail jsonb;
+  v_removed_at timestamptz;
+  v_reason text;
+begin
+  if p_project is null or p_load is null or nullif(btrim(p_code), '') is null then
+    return null;
+  end if;
+  select l.removed_at, l.removed_reason into v_removed_at, v_reason from loads l where l.id = p_load;
+  select d.id into v_id
+    from decisions d
+   where d.project_id = p_project
+     and d.load_id = p_load
+     and d.type_code = 'KSH_REMOVED_BACK'
+     and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+   limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+  v_title := format('%s: transport usunięty z harmonogramu wrócił w pliku KSH', btrim(p_code));
+  v_detail := jsonb_build_object(
+    'code', btrim(p_code),
+    'file_name', nullif(btrim(p_file_name), ''),
+    'removed_at', v_removed_at,
+    'removed_reason', v_reason
+  );
+  v_key := 'ksh-removed-back:' || p_load::text || ':'
+           || (extract(epoch from clock_timestamp()) * 1000000)::bigint::text;
+  return decision_open_from_event(
+    p_project, 'KSH_REMOVED_BACK', v_key, v_title, v_detail, p_load, null
+  );
+end
+$fn$;
+revoke all on function public.l1b_note_removed_back(uuid, uuid, text, text)
+  from public, anon, authenticated;
+
+drop function if exists public.import_apply_carrier_skips(uuid, jsonb, boolean, boolean, uuid);
+drop function if exists public.import_close_carrier_skips_resolved(uuid, boolean);
+
+-- Wiersze pominięte przez parser (przewoźnik ≠ HH): decyzja dla transportu w Watch Tower.
+-- Zwraca listę {code, carrier_wt, carrier_file} do podglądu. Ciszę p_quiet zapewnia import_schedule
+-- (tower.bulk_quiet na cały przebieg) — tu nie ruszamy bulk_quiet.
 create or replace function public.import_apply_carrier_skips(
   p_project uuid,
-  p_file jsonb,
-  p_dry_run boolean,
-  p_quiet boolean,
-  p_user uuid
-) returns void
+  p_file jsonb
+) returns jsonb
 language plpgsql
 security definer
 set search_path = public
@@ -123,40 +661,45 @@ declare
   v_code text;
   v_carrier text;
   v_load uuid;
+  v_wt text;
+  v_out jsonb := '[]'::jsonb;
 begin
-  for s in select value from jsonb_array_elements(coalesce(p_file->'skipped_carrier_rows', '[]'::jsonb))
+  if jsonb_typeof(p_file->'skipped_carrier_rows') is distinct from 'array' then
+    return v_out;
+  end if;
+  for s in select value from jsonb_array_elements(p_file->'skipped_carrier_rows')
   loop
     v_code := nullif(btrim(s->>'code'), '');
     v_carrier := nullif(btrim(s->>'carrier_text'), '');
     if v_code is null then continue; end if;
-    select l.id into v_load
+    v_load := null;
+    select l.id, coalesce(o.name, 'Scandinavian Express')
+      into v_load, v_wt
       from shipment_items si
       join loads l on l.id = si.load_id
+      left join organizations o on o.id = l.carrier_org_id
      where si.project_id = p_project
        and si.shipment_code = v_code
-       and l.status <> 'CANCELLED'
+       and l.status not in ('CANCELLED', 'REMOVED')
        and l.removed_at is null
      limit 1;
     if v_load is null then continue; end if;
-    if p_quiet is true then
-      perform set_config('tower.bulk_quiet', '1', true);
-    end if;
     perform l1b_note_carrier_changed(
       p_project, v_load, v_code, v_carrier,
       p_file->>'name', now()
     );
-    if p_quiet is true then
-      perform set_config('tower.bulk_quiet', '', true);
-    end if;
+    v_out := v_out || jsonb_build_object(
+      'code', v_code, 'carrier_wt', v_wt, 'carrier_file', v_carrier);
   end loop;
+  return v_out;
 end
 $fn$;
-revoke all on function public.import_apply_carrier_skips(uuid, jsonb, boolean, boolean, uuid)
+revoke all on function public.import_apply_carrier_skips(uuid, jsonb)
   from public, anon, authenticated;
 
+-- Kod wrócił w pliku jako HH → zamknij otwarte KSH_CARRIER_CHANGED (także w dry_run — F7 #592 pkt 3).
 create or replace function public.import_close_carrier_skips_resolved(
-  p_project uuid,
-  p_dry_run boolean
+  p_project uuid
 ) returns void
 language plpgsql
 security definer
@@ -165,7 +708,6 @@ as $fn$
 declare
   d record;
 begin
-  if p_dry_run is true then return; end if;
   for d in
     select dec.id
       from decisions dec
@@ -180,16 +722,25 @@ begin
     update decisions
        set status = 'RESOLVED',
            resolved_at = now(),
+           resolution_code = 'CARRIER_BACK',
            resolution_note = 'przewoźnik w pliku wrócił do Scandinavian Express',
+           snooze_until = null,
            updated_at = now()
      where id = d.id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (d.id, null, 'RESOLVE', jsonb_build_object('option', 'CARRIER_BACK', 'via', 'import'));
+    begin
+      perform decision_notify(d.id, 'RESOLVE');
+    exception when others then
+      null;
+    end;
   end loop;
 exception
   when undefined_table then
     null;
 end
 $fn$;
-revoke all on function public.import_close_carrier_skips_resolved(uuid, boolean)
+revoke all on function public.import_close_carrier_skips_resolved(uuid)
   from public, anon, authenticated;
 
 create or replace function public.decision_resolve_carrier_change(
@@ -207,6 +758,10 @@ declare
   v_status text;
   v_code text;
   v_carrier text;
+  v_reason text;
+  v_prev_quiet text;
+  v_n int;
+  v_pre constant text[] := array['PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY'];
 begin
   perform assert_not_preview();
   if (current_app_user_id() is not null) is not true then
@@ -231,7 +786,7 @@ begin
   end if;
   v_code := d.detail->>'code';
   v_carrier := coalesce(d.detail->>'carrier_file', '—');
-  select l.status into v_status from loads l where l.id = d.load_id;
+  select l.status::text into v_status from loads l where l.id = d.load_id;
 
   if v_action = 'SNOOZE_2H' then
     update decisions
@@ -239,6 +794,8 @@ begin
            snooze_until = now() + interval '2 hours',
            updated_at = now()
      where id = d.id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (d.id, v_user, 'SNOOZE', jsonb_build_object('hours', 2, 'via', 'carrier_change'));
     insert into audit_log (user_id, action, entity, entity_id, new_value)
     values (v_user, 'DECISION_CARRIER_SNOOZE', 'decisions', d.id::text,
             jsonb_build_object('action', 'SNOOZE_2H', 'load_id', d.load_id, 'code', v_code));
@@ -249,50 +806,90 @@ begin
   end if;
 
   if v_action = 'REMOVE' then
-    if v_status is null or v_status not in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+    if v_status is null or v_status <> all (v_pre) then
       raise exception 'Usunięcie z harmonogramu tylko przed załadunkiem (status %)', coalesce(v_status, '?')
         using errcode = '22023';
     end if;
-    update loads
-       set removed_at = now(),
-           removed_reason = 'Zmiana przewoźnika w pliku KSH: ' || v_carrier,
-           removed_prev_status = status,
-           updated_at = now()
-     where id = d.load_id and removed_at is null;
+    -- Nazwy obcego przewoźnika nie zapisujemy w loads (SCX nie ma widzieć) — jest w decyzji (tylko HHL).
+    v_reason := 'Zmiana przewoźnika w pliku KSH';
+    v_prev_quiet := current_setting('tower.bulk_quiet', true);
+    perform set_config('tower.bulk_quiet', 'on', true);
+    perform set_config('tower.status_ctx', 'on', true);
+    perform set_config('tower.remove_ctx', 'on', true);
     update decisions
        set status = 'RESOLVED', resolved_at = now(),
-           resolution_note = 'REMOVE', updated_at = now(),
+           resolution_code = 'REMOVE', resolution_note = 'REMOVE',
+           snooze_until = null, updated_at = now(),
            resolved_by = v_user
      where id = d.id;
+    update loads
+       set status = 'REMOVED',
+           removed_at = now(),
+           removed_reason = v_reason,
+           removed_prev_status = status,
+           tracking_opened_at = null,
+           updated_at = now()
+     where id = d.load_id
+       and status::text = any (v_pre);
+    get diagnostics v_n = row_count;
+    perform set_config('tower.remove_ctx', '', true);
+    perform set_config('tower.status_ctx', '', true);
+    perform set_config('tower.bulk_quiet', coalesce(v_prev_quiet, ''), true);
+    if v_n = 0 then
+      raise exception 'Usunięcie z harmonogramu tylko przed załadunkiem' using errcode = '22023';
+    end if;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (d.id, v_user, 'RESOLVE', jsonb_build_object('option', 'REMOVE', 'effect', 'CARRIER_REMOVE'));
     insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
     values (v_user, 'LOAD_REMOVE_CARRIER', 'loads', d.load_id::text,
             jsonb_build_object('status', v_status),
-            jsonb_build_object('removed', true, 'reason', 'Zmiana przewoźnika w pliku KSH: ' || v_carrier));
+            jsonb_build_object('status', 'REMOVED', 'reason', v_reason));
     insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
     values (d.load_id, 'LOAD_REMOVED', now(), v_user,
-            jsonb_build_object('decision_id', d.id, 'reason', 'carrier_changed', 'carrier_file', v_carrier));
+            jsonb_build_object('decision_id', d.id, 'reason', 'carrier_changed', 'prev_status', v_status));
+    begin
+      perform decision_notify(d.id, 'RESOLVE');
+    exception when others then
+      null;
+    end;
     return jsonb_build_object('ok', true, 'status', 'RESOLVED', 'effect', 'REMOVE');
   end if;
 
   if v_action = 'CANCEL' then
-    perform set_config('tower.cancel_ctx', 'IMPORT', true);
-    update loads set status = 'CANCELLED', updated_at = now()
-     where id = d.load_id and status <> 'CANCELLED';
-    perform set_config('tower.cancel_ctx', '', true);
-    insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
-    values (v_user, 'LOAD_CANCEL_IMPORT', 'loads', d.load_id::text,
-            jsonb_build_object('status', v_status),
-            jsonb_build_object('status', 'CANCELLED',
-                               'reason', 'Zmiana przewoźnika w pliku KSH: ' || v_carrier));
+    v_reason := 'Zmiana przewoźnika w pliku KSH';
+    if v_status = 'CANCELLED' then
+      null;
+    elsif v_status = any (v_pre) then
+      -- Przed załadunkiem: anulowanie jak z importu (strażnik: bez faktury).
+      perform set_config('tower.cancel_ctx', 'IMPORT', true);
+      perform set_config('tower.status_ctx', 'on', true);
+      update loads set status = 'CANCELLED', updated_at = now()
+       where id = d.load_id and status::text = any (v_pre);
+      perform set_config('tower.cancel_ctx', '', true);
+      perform set_config('tower.status_ctx', '', true);
+      insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
+      values (v_user, 'LOAD_CANCEL_IMPORT', 'loads', d.load_id::text,
+              jsonb_build_object('status', v_status),
+              jsonb_build_object('status', 'CANCELLED', 'reason', v_reason));
+    elsif v_status = 'REMOVED' then
+      raise exception 'Transport usunięty z harmonogramu' using errcode = '22023';
+    else
+      -- Po wjeździe na załadunek: anulowanie ręczne HHL z powodem (cancel_load pisze LOAD_CANCEL_MANUAL).
+      perform cancel_load(d.load_id, v_reason);
+      perform set_config('tower.status_ctx', '', true);
+    end if;
+    -- STATUS_CANCELLED → workflow powiadamia przewoźnika o anulowaniu (jak import_cancel_loads).
     insert into load_events (load_id, event_type, occurred_at, actor_id, payload)
     values (d.load_id, 'STATUS_CANCELLED', now(), v_user,
-            jsonb_build_object('decision_id', d.id, 'reason',
-                               'Zmiana przewoźnika w pliku KSH: ' || v_carrier));
+            jsonb_build_object('decision_id', d.id, 'reason', v_reason));
     update decisions
        set status = 'RESOLVED', resolved_at = now(),
-           resolution_note = 'CANCEL', updated_at = now(),
+           resolution_code = 'CANCEL', resolution_note = 'CANCEL',
+           snooze_until = null, updated_at = now(),
            resolved_by = v_user
      where id = d.id;
+    insert into decision_events (decision_id, actor_id, action, payload)
+    values (d.id, v_user, 'RESOLVE', jsonb_build_object('option', 'CANCEL', 'effect', 'CARRIER_CANCEL'));
     begin
       perform decision_notify(d.id, 'RESOLVE');
     exception when others then
@@ -316,22 +913,40 @@ as $fn$
 declare
   v_user uuid := current_app_user_id();
   v_prev public.load_status;
+  v_cur text;
+  v_prev_quiet text;
 begin
   perform assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'forbidden' using errcode = '42501';
   end if;
-  select removed_prev_status into v_prev from loads where id = p_load and removed_at is not null;
-  if v_prev is null then
+  select l.status::text, l.removed_prev_status into v_cur, v_prev
+    from loads l where l.id = p_load for update;
+  if not found or v_cur is distinct from 'REMOVED' or v_prev is null then
     return jsonb_build_object('ok', true, 'idempotent', true);
   end if;
+  v_prev_quiet := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+  perform set_config('tower.status_ctx', 'on', true);
+  perform set_config('tower.restore_ctx', 'on', true);
   update loads
      set status = v_prev,
          removed_at = null,
          removed_reason = null,
          removed_prev_status = null,
          updated_at = now()
-   where id = p_load;
+   where id = p_load and status::text = 'REMOVED';
+  perform set_config('tower.restore_ctx', '', true);
+  perform set_config('tower.status_ctx', '', true);
+  perform set_config('tower.bulk_quiet', coalesce(v_prev_quiet, ''), true);
+  -- Sprawa „wrócił w pliku” przestaje być aktualna.
+  update decisions
+     set status = 'RESOLVED', resolved_at = now(), resolved_by = v_user,
+         resolution_code = 'RESTORED', resolution_note = 'transport przywrócony do harmonogramu',
+         snooze_until = null, updated_at = now()
+   where load_id = p_load
+     and type_code = 'KSH_REMOVED_BACK'
+     and status in ('NEW', 'ASSIGNED', 'SNOOZED');
   insert into audit_log (user_id, action, entity, entity_id, new_value)
   values (v_user, 'LOAD_RESTORE_REMOVED', 'loads', p_load::text,
           jsonb_build_object('status', v_prev));
@@ -343,6 +958,7 @@ $fn$;
 revoke all on function public.load_restore_removed(uuid) from public, anon;
 grant execute on function public.load_restore_removed(uuid) to authenticated;
 
+-- Drzemka 2 h: po terminie decyzja wraca jako NEW i powiadamia HHL; gdy kod wrócił w pliku jako HH — zamknięcie.
 create or replace function public.decisions_wake_carrier_snoozed()
 returns int
 language plpgsql
@@ -350,20 +966,60 @@ security definer
 set search_path = public
 as $fn$
 declare
+  d record;
   n int := 0;
+  v_imp boolean := to_regclass('pg_temp._imp') is not null;
+  v_back boolean;
 begin
-  with u as (
-    update decisions
-       set status = 'NEW',
-           snooze_until = null,
-           updated_at = now()
+  for d in
+    select id, project_id, load_id, detail
+      from decisions
      where type_code = 'KSH_CARRIER_CHANGED'
        and status = 'SNOOZED'
        and snooze_until is not null
        and snooze_until <= now()
-    returning id
-  )
-  select count(*)::int into n from u;
+     order by created_at
+       for update
+  loop
+    v_back := false;
+    if v_imp then
+      execute 'select exists (select 1 from pg_temp._imp i where i.code = $1)'
+        into v_back using d.detail->>'code';
+    end if;
+    if v_back then
+      update decisions
+         set status = 'RESOLVED', resolved_at = now(), snooze_until = null,
+             resolution_code = 'CARRIER_BACK',
+             resolution_note = 'przewoźnik w pliku wrócił do Scandinavian Express',
+             updated_at = now()
+       where id = d.id;
+      insert into decision_events (decision_id, actor_id, action, payload)
+      values (d.id, null, 'RESOLVE', jsonb_build_object('option', 'CARRIER_BACK', 'via', 'wake'));
+    else
+      update decisions
+         set status = 'NEW', snooze_until = null, updated_at = now()
+       where id = d.id;
+      insert into decision_events (decision_id, actor_id, action, payload)
+      values (d.id, null, 'WAKE', jsonb_build_object('type', 'KSH_CARRIER_CHANGED'));
+      begin
+        perform public.matrix_notify(
+          'DECISION', 'DECISION_EVENT', d.load_id, d.project_id,
+          jsonb_build_object(
+            'decision_id', d.id, 'type', 'KSH_CARRIER_CHANGED',
+            'title', (select title from decisions where id = d.id),
+            'status', 'NEW', 'event', 'WAKE',
+            'url', public.notify_click_url('DECISION_EVENT',
+              jsonb_build_object('decision_id', d.id, 'type', 'KSH_CARRIER_CHANGED'), d.load_id)
+          ),
+          'dec:WAKE:' || d.id::text || ':' || (extract(epoch from clock_timestamp()) * 1000000)::bigint::text,
+          'FORWARDER'
+        );
+      exception when others then
+        null;
+      end;
+      n := n + 1;
+    end if;
+  end loop;
   return n;
 end
 $fn$;
@@ -372,9 +1028,86 @@ revoke all on function public.decisions_wake_carrier_snoozed() from public, anon
 comment on function public.decision_resolve_carrier_change(uuid, text) is
   '#590: CANCEL / REMOVE / SNOOZE_2H dla KSH_CARRIER_CHANGED; tylko HHL; assert_not_preview';
 comment on function public.load_restore_removed(uuid) is
-  '#590: przywrócenie transportu usuniętego z harmonogramu — tylko HHL_ADMIN';
+  '#590: przywrócenie transportu REMOVED — tylko HHL_ADMIN';
 
--- import_schedule (patched from 0314) below
+-- ---------------------------------------------------------------------
+-- 5. REMOVED wszędzie tam, gdzie wykluczamy CANCELLED (funkcje public)
+--    Wzorce (tylko status ładunku; SMS/powiadomienia mają inne wartości):
+--      A  status <> 'CANCELLED'                      → not in ('CANCELLED','REMOVED')
+--      E  status is distinct from 'CANCELLED'        → (status is null or … not in …)
+--      C  [not] in (… 'CANCELLED' …) z kodami ładunku → dopisz 'REMOVED'
+--      D  v_status = 'CANCELLED' (ETA / token kierowcy) → in ('CANCELLED','REMOVED')
+--    Pomijamy detektory przejścia (…→CANCELLED) i funkcje, które już znają REMOVED.
+-- ---------------------------------------------------------------------
+do $patch$
+declare
+  r record;
+  m text[];
+  v_new text;
+  n_fn int := 0;
+  v_names text := '';
+  v_skip text[] := array[
+    'guard_load_update', 'trg_sms_load_changes', 'load_status_set', 'cancel_load',
+    'import_cancel_loads', 'import_removal_check', 'import_schedule',
+    'import_apply_carrier_skips', 'l1b_note_carrier_changed', 'l1b_note_removed_back',
+    'decision_resolve_carrier_change', 'load_restore_removed', 'decisions_wake_carrier_snoozed',
+    'trg_loads_removed_guard', 'trg_loads_removed_cleanup', 'load_status_rank'
+  ];
+  v_d_fn text[] := array['compute_load_eta', 'driver_token_load', 'issue_driver_token'];
+begin
+  -- Funkcje SQL z 'REMOVED' w ciele: bez analizy przy tworzeniu (nowa wartość enum w tej transakcji).
+  perform set_config('check_function_bodies', 'off', true);
+  for r in
+    select p.oid, p.proname, pg_get_functiondef(p.oid) as def
+      from pg_proc p
+      join pg_namespace ns on ns.oid = p.pronamespace
+     where ns.nspname = 'public'
+       and p.prokind = 'f'
+       and p.prosrc like '%CANCELLED%'
+       and p.prosrc not like '%REMOVED%'
+       and p.proname <> all (v_skip)
+     order by p.proname, p.oid
+  loop
+    v_new := r.def;
+    -- A
+    v_new := regexp_replace(v_new,
+      '(\m(?:[a-z_][a-z0-9_]*\.)?status)\s*(?:<>|!=)\s*''CANCELLED''(?:::(?:public\.)?load_status)?',
+      '\1 not in (''CANCELLED'', ''REMOVED'')', 'gi');
+    -- E
+    v_new := regexp_replace(v_new,
+      '(\m(?:[a-z_][a-z0-9_]*\.)?status)\s+is\s+distinct\s+from\s+''CANCELLED''(?:::(?:public\.)?load_status)?',
+      '(\1 is null or \1 not in (''CANCELLED'', ''REMOVED''))', 'gi');
+    -- C
+    for m in
+      select regexp_matches(v_new,
+        '(\m(?:not\s+)?in\s*\()([^()]*''CANCELLED''[^()]*)(\))', 'gi')
+    loop
+      if m[2] !~ 'REMOVED'
+         and m[2] ~ '''(PLANNED|RESOURCES_PENDING|DOCS_PENDING|READY|UNLOADED|DELIVERED|READY_TO_INVOICE|INVOICED)'''
+         and m[2] !~ '''(FAILED|EXPIRED|SUPPRESSED|SENT|ERROR|QUEUED|CLAIMED|BLOCKED_R2)''' then
+        v_new := replace(v_new, m[1] || m[2] || m[3],
+          m[1] || replace(m[2], '''CANCELLED''', '''CANCELLED'', ''REMOVED''') || m[3]);
+      end if;
+    end loop;
+    -- D
+    if r.proname = any (v_d_fn) then
+      v_new := regexp_replace(v_new,
+        '(\m(?:v_status|v_load\.status))\s*=\s*''CANCELLED''',
+        '\1 in (''CANCELLED'', ''REMOVED'')', 'g');
+    end if;
+    if v_new is distinct from r.def then
+      execute v_new;
+      n_fn := n_fn + 1;
+      v_names := v_names || case when v_names = '' then '' else ', ' end || r.proname;
+    end if;
+  end loop;
+  raise notice '#590: REMOVED dopisane w % funkcjach: %', n_fn, v_names;
+end
+$patch$;
+
+-- ---------------------------------------------------------------------
+-- 6. import_schedule (z 0314) + carrier_changed w wyniku, REMOVED poza dopasowaniem
+-- ---------------------------------------------------------------------
 
 create or replace FUNCTION public.import_schedule(p_project uuid, p_rows jsonb, p_cancel_codes text[] DEFAULT '{}'::text[], p_file jsonb DEFAULT '{}'::jsonb, p_dry_run boolean DEFAULT true, p_quiet boolean DEFAULT false)
  RETURNS jsonb
@@ -421,6 +1154,7 @@ declare
   v_new_del_from timestamptz;
   v_new_del_to timestamptz;
   v_today date := (now() at time zone 'Europe/Warsaw')::date;
+  v_carrier_changed jsonb := '[]'::jsonb;
   v_fnames    text[] := array['item_type','cargo_class','length_m','width_m','height_m','unit_weight_t','qty','total_weight_t',
                               'load_date','load_time','delivery_date','delivery_time','order_no','assembly_seq',
                               'hhl_order_no','carrier_order_no','driver_name','driver_phone',
@@ -526,6 +1260,7 @@ begin
       'skipped_standard', coalesce((p_file->>'skipped_standard')::int, 0),
       'skipped_carrier', coalesce((p_file->>'skipped_carrier')::int, 0),
       'skipped_empty', coalesce((p_file->>'skipped_empty')::int, 0),
+      'carrier_changed', '[]'::jsonb,
       'dates_check', 0);
   end if;
   v_run_quiet := (p_quiet is true);
@@ -536,7 +1271,6 @@ begin
   if not exists (select 1 from projects where id = p_project) then raise exception 'Nieznany projekt'; end if;
   if p_rows is null or jsonb_typeof(p_rows) <> 'array' then raise exception 'Wiersze importu: oczekiwana tablica'; end if;
   perform pg_advisory_xact_lock(hashtext('import_schedule:' || p_project::text));
-  perform decisions_wake_carrier_snoozed();
   select id into v_user from app_users where auth_id = auth.uid();
   select coalesce((select value_num = 1 from ops_thresholds where key = 'import_quiet_hours'), false)
     into v_quiet_on;
@@ -607,6 +1341,9 @@ begin
       raise exception 'Kod % występuje w pliku więcej niż raz', btrim(r.v->>'code');
     end;
   end loop;
+
+  -- #590 F7 pkt 5: po zbudowaniu _imp — drzemka 2 h kończy się; kod wrócił jako HH → zamknij zamiast budzić.
+  perform public.decisions_wake_carrier_snoozed();
 
   -- DATY-67: plik KSH = źródło dat — zawsze nadpisuje (bez overwrite_confirmed)
   v_over := '{}'::text[];
@@ -734,6 +1471,15 @@ begin
                 jsonb_build_object('action', 'ADDED', 'code', r.code, 'version', v_version, 'file', p_file->>'name',
                                    'quiet', v_run_quiet));
       end if;
+      continue;
+    end if;
+
+    -- #590 F7 BLOKER 1: transport usunięty z harmonogramu — plik go nie aktualizuje (ani dat, ani zasobów).
+    -- Kod wrócił w pliku jako HH → sprawa do przywrócenia (Administrator HHL), bez zapisu zmian.
+    if r.status::text = 'REMOVED' then
+      perform public.l1b_note_removed_back(p_project, r.load_id, r.code, p_file->>'name');
+      v_blocked := v_blocked || jsonb_build_object('code', r.code, 'load_id', r.load_id, 'reason', 'REMOVED',
+                     'message', 'Transport usunięty z harmonogramu — przywrócenie wyłącznie ręcznie (Administrator HHL)');
       continue;
     end if;
 
@@ -1242,7 +1988,7 @@ begin
   end loop;
 
   -- #590: decyzje KSH_CARRIER_CHANGED z skipped_carrier_rows (także dry_run)
-  perform import_apply_carrier_skips(p_project, p_file, p_dry_run, v_run_quiet, v_user);
+  v_carrier_changed := public.import_apply_carrier_skips(p_project, p_file);
 
   -- nieobecne w pliku: kandydaci do anulowania (tylko gdy plik ma przyjęte wiersze)
   if jsonb_array_length(p_rows) > 0 then
@@ -1250,7 +1996,7 @@ begin
       select si.shipment_code as code, l.id as load_id, l.status,
              exists (select 1 from invoice_lines il where il.load_id = l.id) as invoiced
         from shipment_items si join loads l on l.id = si.load_id
-       where si.project_id = p_project and l.status <> 'CANCELLED'
+       where si.project_id = p_project and l.status not in ('CANCELLED', 'REMOVED')
          and l.removed_at is null
          and si.cargo_class is distinct from 'STANDARD'
          and not exists (select 1 from _imp i where i.code = si.shipment_code)
@@ -1297,7 +2043,7 @@ begin
   end if;
 
   -- #590: kod wrócił jako HH → zamknij KSH_CARRIER_CHANGED
-  perform import_close_carrier_skips_resolved(p_project, p_dry_run);
+  perform public.import_close_carrier_skips_resolved(p_project);
 
   -- F7 #2: przy p_quiet nie otwieraj spraw KR_OVER_3.
   if p_dry_run is false and v_run_quiet is not true then
@@ -1363,6 +2109,7 @@ begin
     'skipped_carrier', coalesce((p_file->>'skipped_carrier')::int, 0),
     'skipped_empty', coalesce((p_file->>'skipped_empty')::int, 0),
     'dates_check', v_dates_check_n,
+    'carrier_changed', v_carrier_changed,
     'ms', round(extract(epoch from clock_timestamp() - t0) * 1000));
 end $function$;
 

@@ -20,7 +20,7 @@ export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(e
 const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
 
 /** Statusy, w których przewoźnik i Operacje HHL nie zmieniają rejsu — lustro `old.status >= 'FERRY'` w guard_load_update (0242). */
-const SAILING_LOCKED_STATUSES: ReadonlySet<LoadStatus> = new Set<LoadStatus>([...AFTER_FERRY, 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED']);
+const SAILING_LOCKED_STATUSES: ReadonlySet<LoadStatus> = new Set<LoadStatus>([...AFTER_FERRY, 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED', 'REMOVED']);
 
 export type SailingDenied = 'ROLE' | 'DEPARTED' | 'CANCELLED' | 'NOT_FOUND' | null;
 /**

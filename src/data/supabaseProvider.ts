@@ -163,14 +163,14 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       if (r.error && /fuel_status/.test(r.error.message ?? '')) return sb.from(view).select(PRICE_VIEW_COLUMNS_LEGACY);
       return r;
     };
-    /* B10: HHL wczytuje anulowane (filtr w Harmonogramie); KSH/SCX — bez CANCELLED */
+    /* B10: HHL wczytuje anulowane (filtr w Harmonogramie); KSH/SCX — bez CANCELLED. #590: REMOVED jak CANCELLED (RLS ukrywa też przed KSH/SCX). */
     const profileQ = await sb.rpc('my_profile');
     const profileRow = Array.isArray(profileQ.data) ? profileQ.data[0] : profileQ.data;
     const profileRole = String((profileRow as { role?: string } | null)?.role ?? '');
     const isHhl = profileRole === 'HHL_ADMIN' || profileRole === 'HHL_OPS';
     const orgKind: OrgKind = isHhl ? 'HHL' : profileRole.startsWith('CLIENT') || profileRole.startsWith('SITE') ? 'KSH' : 'SCX';
     let loadsQuery = sb.from('loads').select(LOAD_COLUMNS).order('plan_load_date', { ascending: true, nullsFirst: false });
-    if (!isHhl) loadsQuery = loadsQuery.neq('status', 'CANCELLED');
+    loadsQuery = isHhl ? loadsQuery.neq('status', 'REMOVED') : loadsQuery.not('status', 'in', '(CANCELLED,REMOVED)');
     /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501), równolegle z resztą */
     const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);
     const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, kshSyncQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
