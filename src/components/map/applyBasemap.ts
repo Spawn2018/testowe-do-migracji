@@ -250,6 +250,11 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
 
 const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
 
+/** F7 #585: jedno wołanie here-roads na sesję + limit czasu (brakujący leg nie spamuje Edge). */
+let hereRoadsSessionAt = 0;
+const HERE_ROADS_SESSION_MS = 5 * 60_000;
+const HERE_ROADS_TIMEOUT_MS = 15_000;
+
 export async function loadRoadLines(): Promise<LatLng[][]> {
   if (!SUPABASE_AUTH_ENABLED) return [];
   try {
@@ -259,18 +264,27 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     let lines = await read();
     // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_E22).
     if (lines.length >= ROAD_LEGS) return lines;
+    if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return lines;
-    await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: '{}',
-    });
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+        signal: ac.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+      hereRoadsSessionAt = Date.now();
+    }
     lines = await read(true);
     return lines;
   } catch {

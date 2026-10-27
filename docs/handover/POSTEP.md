@@ -5780,3 +5780,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak PR z „F7: gotowe do scalenia” po HEAD.
 - **BN0 #585:** unit/visual ✔ na `56cbb8c2`; db bmapa FAIL `SE-KAA w roads → true` — asercja porównywała do `t`, Postgres `exists::text` = `true`. Fix + PLAN kolejność: BN0 → **#583** → P4-k #581 → BN1.
 
+## 2026-10-27 04:55 — BN0 #585 F7: korytarz GPS SG-23 + via + odchyłka
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: F7 #585 na `56cbb8c` — **NIE scalać** (korytarz miast); CI na `8df1bf31` unit/visual/db ✔ — potem poprawki F7 (ten commit). Bez push na main.
+- **BN0 krok F7:** `SE_E22` = ślad SG-23 23.10 06:59→26.10 12:39 (simplify ~50 m, skoki >5 km); `here_corridor_via_points` co ~100 km; `here_road_corridor_dev_m` dwukierunkowa; `here_store_road(null)` zostawia points; Edge skip bez korytarza + try/catch JSON; front AbortController; bmapa **155**.
+

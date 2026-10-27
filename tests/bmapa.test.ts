@@ -17,6 +17,7 @@ import {
   ferryPhase,
   metersPerPixel,
   maxDeviationToCorridorKm,
+  maxDeviationSymmetricKm,
   rawGps,
   roadGeometryOk,
   ferryVisible,
@@ -115,25 +116,46 @@ describe('B-MAPA geometria', () => {
     expect(roadGeometryOk(dense, ROAD_SE)).toBe(false);
   });
 
-  // #572 BN0 / E — Karlskrona–Boden jak SE_E22 (≤ 2 km od korytarza)
-  it('#572 SE-KAA: ROAD_KAA + odchyłka od korytarza ≤ 2 km', () => {
-    const corridor = ROAD_KAA.via.map((v) => [v.lat, v.lng] as [number, number]);
-    // krok 0,25 km — haversine bywa dłuższy niż przybliżenie w denseVia (maxSeg ≤ 3)
-    const dense = denseVia(corridor, 0.25);
-    expect(roadGeometryOk(dense, ROAD_KAA)).toBe(true);
-    expect(maxDeviationToCorridorKm(dense, corridor)).toBeLessThanOrEqual(2);
+  // #572 BN0 / F7 #585 — ślad SG-23 (fragment), nie tautologia ROAD_KAA.via↔via
+  it('#572 SE-KAA: odchyłka dwukierunkowa ≤ 2 km; równoległa 10 km odrzucona', () => {
+    // Fragment uproszczonego śladu SG-23 23–26.10 (F7: fixture z przejazdu, nie z via).
+    const corridor: Array<[number, number]> = [
+      [56.16578, 15.63048],
+      [56.25228, 15.94227],
+      [56.6735, 16.32488],
+      [57.4557, 16.5132],
+      [58.18638, 16.53605],
+      [58.85299, 16.20737],
+      [59.40451, 16.29687],
+      [59.93662, 16.79901],
+      [61.40568, 16.99454],
+      [62.70836, 17.87574],
+      [63.61627, 19.82807],
+      [64.82652, 21.02098],
+      [65.65591, 21.97832],
+      [65.81801, 21.70654],
+    ];
+    // Zagęszczenie umiarkowane (JS nearestKm = wierzchołki; SQL = geography na linii).
+    const dense = denseVia(corridor, 5);
+    expect(maxDeviationSymmetricKm(dense, dense)).toBeLessThanOrEqual(2);
+    // Równoległa ~10 km na wschód (0,18° ≈ 10 km na 60°N) — F7: musi paść.
+    const parallel = dense.map(([lat, lng]) => [lat, lng + 0.18] as [number, number]);
+    expect(maxDeviationSymmetricKm(parallel, dense)).toBeGreaterThan(2);
+    expect(maxDeviationToCorridorKm(parallel, dense)).toBeGreaterThan(2);
     const chord: Array<[number, number]> = [
       [56.1646, 15.6308],
       [65.80539, 21.75914],
     ];
     expect(roadGeometryOk(chord, ROAD_KAA)).toBe(false);
-    expect(maxDeviationToCorridorKm(chord, corridor)).toBeGreaterThan(2);
+    expect(maxDeviationSymmetricKm(chord, dense)).toBeGreaterThan(2);
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
     expect(apply).toMatch(/ROAD_LEGS = 4/);
+    expect(apply).toMatch(/AbortController/);
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
     expect(edge).toMatch(/passThrough=true/);
-    expect(edge).toMatch(/here_corridor_points/);
+    expect(edge).toMatch(/here_corridor_via_points/);
+    expect(edge).toMatch(/maxDeviationSymmetricKm/);
     expect(edge).toMatch(/SE_E22/);
   });
 

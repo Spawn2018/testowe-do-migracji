@@ -191,7 +191,7 @@ export const ROAD_KAA: RoadSpec = {
   ],
 };
 
-/** #572: max km od punktów korytarza do linii HERE (odbiór ≤ 2). */
+/** #572: max km od punktów korytarza do linii HERE (kierunek korytarz → linia). */
 export function maxDeviationToCorridorKm(
   line: readonly LatLng[],
   corridor: readonly LatLng[],
@@ -200,6 +200,14 @@ export function maxDeviationToCorridorKm(
   let m = 0;
   for (const p of corridor) m = Math.max(m, nearestKm(line, p[0], p[1]));
   return m;
+}
+
+/** #572 F7: odchyłka dwukierunkowa (korytarz↔linia) — odrzuca równoległą drogę 10–20 km obok. */
+export function maxDeviationSymmetricKm(
+  line: readonly LatLng[],
+  corridor: readonly LatLng[],
+): number {
+  return Math.max(maxDeviationToCorridorKm(line, corridor), maxDeviationToCorridorKm(corridor, line));
 }
 
 export function looseRoadOk(line: readonly LatLng[]): boolean {

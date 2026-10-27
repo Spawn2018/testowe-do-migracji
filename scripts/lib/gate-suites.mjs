@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 149, // #572 BN0: +8 (via SE_E22, odchyłka ≤2 km / cięciwa, roads=4); było 141 (#465)
+  bmapa: 155, // #572 F7: +6 (via_points, ≥50 pts, równoległa, null zachowuje); było 149
   h4: 19,
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)

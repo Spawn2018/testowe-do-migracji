@@ -1,7 +1,8 @@
 /**
  * B-MAPA — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
- * #572 BN0: SE-KAA z via z corridor_polylines SE_E22 (passThrough), odświeżenie przy zmianie korytarza.
+ * #572 BN0 / F7 #585: SE-KAA z via co ~100 km na śladzie SE_E22 (passThrough);
+ * odświeżenie przy zmianie korytarza; odrzucenie nie kasuje punktów.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
@@ -12,7 +13,7 @@ import {
   ROAD_KAA,
   looseRoadOk,
   roadGeometryOk,
-  maxDeviationToCorridorKm,
+  maxDeviationSymmetricKm,
   type LatLng,
 } from '../_shared/map/draw.ts';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
@@ -25,7 +26,6 @@ const LEGS = [
 ] as const;
 
 const DAY_MS = 30 * 864e5;
-const MAX_VIA = 14;
 const MAX_DEV_KM = 2;
 
 function parseCorridorPoints(raw: unknown): LatLng[] {
@@ -36,19 +36,6 @@ function parseCorridorPoints(raw: unknown): LatLng[] {
     const lat = Number(p[0]);
     const lng = Number(p[1]);
     if (Number.isFinite(lat) && Number.isFinite(lng)) out.push([lat, lng]);
-  }
-  return out;
-}
-
-/** Pośrednie via z korytarza (bez origin/dest), max MAX_VIA równomiernie. */
-function viaFromCorridor(pts: readonly LatLng[]): LatLng[] {
-  if (pts.length < 3) return [];
-  const mid = pts.slice(1, -1);
-  if (mid.length <= MAX_VIA) return [...mid];
-  const out: LatLng[] = [];
-  for (let i = 0; i < MAX_VIA; i++) {
-    const idx = Math.round((i * (mid.length - 1)) / (MAX_VIA - 1));
-    out.push(mid[idx]);
   }
   return out;
 }
@@ -81,12 +68,15 @@ Deno.serve(async (req) => {
   }
 
   let corridorPts: LatLng[] = [];
+  let viaPts: LatLng[] = [];
   let corridorUpdatedAt = 0;
   {
     const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', 'SE_E22').maybeSingle();
     corridorUpdatedAt = Date.parse(String(corrRow.data?.updated_at ?? '')) || 0;
-    const viaRpc = await sb.rpc('here_corridor_points', { p_code: 'SE_E22' });
-    if (!viaRpc.error) corridorPts = parseCorridorPoints(viaRpc.data);
+    const ptsRpc = await sb.rpc('here_corridor_points', { p_code: 'SE_E22' });
+    if (!ptsRpc.error) corridorPts = parseCorridorPoints(ptsRpc.data);
+    const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: 'SE_E22', p_max: 14 });
+    if (!viaRpc.error) viaPts = parseCorridorPoints(viaRpc.data);
   }
 
   let stored = 0;
@@ -97,6 +87,9 @@ Deno.serve(async (req) => {
       leg.leg === 'SE-KAA' && corridorUpdatedAt > 0 && prev != null && corridorUpdatedAt > Date.parse(prev.fetched_at);
     if (prev && age < DAY_MS && !corridorNewer) continue;
 
+    // F7 #585: SE-KAA bez korytarza — pomiń (bez zapytania „na ślepo”).
+    if (leg.leg === 'SE-KAA' && corridorPts.length < 2) continue;
+
     const routeUrl = new URL('https://router.hereapi.com/v8/routes');
     routeUrl.searchParams.set('transportMode', 'truck');
     routeUrl.searchParams.set('origin', leg.origin);
@@ -104,14 +97,24 @@ Deno.serve(async (req) => {
     routeUrl.searchParams.set('return', 'polyline');
     routeUrl.searchParams.set('apiKey', key);
     if (leg.leg === 'SE-KAA') {
-      for (const v of viaFromCorridor(corridorPts)) {
+      for (const v of viaPts) {
         routeUrl.searchParams.append('via', `${v[0]},${v[1]}!passThrough=true`);
       }
     }
     const res = await fetch(routeUrl, { headers: { 'User-Agent': 'WatchTower/1' } });
     if (!res.ok) continue;
-    await sb.rpc('here_note_service', { p_service: 'routing', p_n: 1, p_usd: 0 });
-    const body = await res.json();
+    // D-78: koszt jednostkowy routing ponad pulę (here_note_service i tak przelicza z stawek).
+    await sb.rpc('here_note_service', {
+      p_service: 'routing',
+      p_n: 1,
+      p_usd: HERE_BILLING_DEFAULTS.routesRateUsd,
+    });
+    let body: { routes?: Array<{ sections?: Array<{ polyline?: string }> }> };
+    try {
+      body = await res.json();
+    } catch {
+      continue;
+    }
     const sections = body?.routes?.[0]?.sections ?? [];
     const line: LatLng[] = [];
     for (const section of sections) {
@@ -126,8 +129,9 @@ Deno.serve(async (req) => {
     const okDev =
       leg.leg !== 'SE-KAA' ||
       corridorPts.length < 2 ||
-      maxDeviationToCorridorKm(line, corridorPts) <= MAX_DEV_KM;
+      maxDeviationSymmetricKm(line, corridorPts) <= MAX_DEV_KM;
     if (!okGeom || !okDev) {
+      // F7: nie kasuj punktów — tylko summary + fetched_at (here_store_road null zachowuje points).
       await sb.rpc('here_store_road', {
         p_leg: leg.leg,
         p_points: null,

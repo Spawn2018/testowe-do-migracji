@@ -163,25 +163,42 @@ rpc_ok "#465 HHL carrier_scorecard" "$HHL_465" "select count(*) from carrier_sco
 rpc_denied "#465 KSH carrier_scorecard" "$KSH_465" "select count(*) from carrier_scorecard()"
 rpc_ok "#465 SCX carrier_scorecard" "$SCX_465" "select count(*) from carrier_scorecard()"
 
-# #572 BN0: SE-KAA zgodna z SE_E22 (≤ 2 km); map_display_state.roads = 4 legi
+# #572 BN0 / F7 #585: SE_E22 ze śladu GPS; via co ~100 km; odchyłka dwukierunkowa; null nie kasuje
 echo; echo "[#572] BN0 SE-KAA / SE_E22"
 val "anon nie czyta here_corridor_points" "select has_function_privilege('anon','here_corridor_points(text)','execute')::text" "false"
 val "authenticated nie czyta here_corridor_points" "select has_function_privilege('authenticated','here_corridor_points(text)','execute')::text" "false"
+val "anon nie czyta here_corridor_via_points" "select has_function_privilege('anon','here_corridor_via_points(text,integer)','execute')::text" "false"
+val "authenticated nie czyta here_corridor_via_points" "select has_function_privilege('authenticated','here_corridor_via_points(text,integer)','execute')::text" "false"
 val "anon nie czyta here_road_corridor_dev_m" "select has_function_privilege('anon','here_road_corridor_dev_m(text,text)','execute')::text" "false"
-n_via=$(sys "select jsonb_array_length(here_corridor_points('SE_E22'))")
-if [ "$n_via" -ge 10 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    here_corridor_points(SE_E22) ≥ 10 ($n_via)"; else fail=$((fail+1)); echo "  FAIL  here_corridor_points → $n_via"; fi
-# Linia = wierzchołki SE_E22 → odchyłka 0; potem 4 legi w map_display_state
+n_pts=$(sys "select jsonb_array_length(here_corridor_points('SE_E22'))")
+if [ "$n_pts" -ge 50 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    here_corridor_points(SE_E22) ≥ 50 ($n_pts)"; else fail=$((fail+1)); echo "  FAIL  here_corridor_points → $n_pts"; fi
+n_via=$(sys "select jsonb_array_length(here_corridor_via_points('SE_E22', 14))")
+if [ "$n_via" -ge 5 ] 2>/dev/null && [ "$n_via" -le 14 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    here_corridor_via_points 5–14 ($n_via)"; else fail=$((fail+1)); echo "  FAIL  via_points → $n_via"; fi
+# Linia = wierzchołki SE_E22 → odchyłka 0 obu kierunków; potem 4 legi
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
 sys "select here_store_road('PL-GDN', '[[52.07,17.02],[52.53,17.6],[53.41,18.45],[54.40,18.68]]'::jsonb, 'PL-GDN test #572', now())" >/dev/null
 sys "select here_store_road('SE-NYN', '[[58.90,17.95],[60.67,17.14],[62.39,17.31],[65.80,21.76]]'::jsonb, 'SE-NYN test #572', now())" >/dev/null
 sys "select here_store_road('PL-GDY', '[[52.07,17.02],[53.5,18.0],[54.53,18.54]]'::jsonb, 'PL-GDY test #572', now())" >/dev/null
 dev_m=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_E22')::text,'null')")
-# 0 metrów przy identycznych wierzchołkach; próg odbioru 2000 m
-awk "BEGIN{exit !($dev_m+0 <= 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    SE-KAA odchyłka od SE_E22 ≤ 2 km ($dev_m m)"; } || { fail=$((fail+1)); echo "  FAIL  odchyłka → $dev_m"; }
-# cięciwa Karlskrona–Boden bez via → daleko od Lyckeby/Jämjö
+awk "BEGIN{exit !($dev_m+0 <= 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    SE-KAA odchyłka ↔ SE_E22 ≤ 2 km ($dev_m m)"; } || { fail=$((fail+1)); echo "  FAIL  odchyłka → $dev_m"; }
+# cięciwa Karlskrona–Boden
 sys "select here_store_road('SE-KAA', '[[56.1646,15.6308],[65.80539,21.75914]]'::jsonb, 'cięciwa #572', now())" >/dev/null
 dev_bad=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_E22')::text,'null')")
 awk "BEGIN{exit !($dev_bad+0 > 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    cięciwa SE-KAA > 2 km od SE_E22 ($dev_bad m)"; } || { fail=$((fail+1)); echo "  FAIL  cięciwa odchyłka → $dev_bad"; }
+# F7: linia równoległa ~10 km na wschód (przesunięcie lng) → odchyłka > 2 km
+sys "select here_store_road('SE-KAA', (
+  select jsonb_agg(jsonb_build_array((p->>0)::float8, (p->>1)::float8 + 0.18) order by ord)
+    from jsonb_array_elements(here_corridor_points('SE_E22')) with ordinality as t(p, ord)
+), 'równoległa #572', now())" >/dev/null
+dev_par=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_E22')::text,'null')")
+awk "BEGIN{exit !($dev_par+0 > 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    równoległa 10 km > 2 km ($dev_par m)"; } || { fail=$((fail+1)); echo "  FAIL  równoległa → $dev_par"; }
+# F7: odrzucenie (null) nie kasuje punktów
+sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
+sys "select here_store_road('SE-KAA', null, 'odrzut #572 — zostaw punkty', now())" >/dev/null
+keep=$(sys "select (points is not null and jsonb_array_length(points) >= 2)::text from here_road_geometry where leg='SE-KAA'")
+[ "$keep" = "true" ] && { ok=$((ok+1)); echo "  OK    here_store_road(null) zostawia points"; } || { fail=$((fail+1)); echo "  FAIL  null kasuje points → $keep"; }
+sum=$(sys "select summary from here_road_geometry where leg='SE-KAA'")
+[ "$sum" = "odrzut #572 — zostaw punkty" ] && { ok=$((ok+1)); echo "  OK    summary po odrzuceniu"; } || { fail=$((fail+1)); echo "  FAIL  summary → $sum"; }
 # przywróć zgodną linię i sprawdź 4 legi w map_display_state
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
