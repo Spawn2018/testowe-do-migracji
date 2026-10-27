@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 273, // #583 F7: +5 (trójstronne, length, WPR≠, dwie tablice, multi-code); było 268
+  import: 276, // #583 F7 r2: +3 (A schedule_row, B konflikt dat, B pusta 2.kod); było 273
   nullguard: 856, // #567 23B: +4 preview_get; baza #563 PURE lookup → 852
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,

@@ -5847,3 +5847,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie).
 - Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 bez F7 po `35c272ab` (db 259/14). Bez push na main.
 - Krok: fixture `jsonb_build_array(...||patch)` bez zamykającego `)` przed FROM → 14× `out=^`. Dopisane `)`. Po zielonym db — prośba o F7.
+
+## 2026-10-27 12:15 — #583 F7 #586 r2 A/B/C + CI permission denied
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (bieżąca #583); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać**; #586 F7 r2 **NIE scalać** (08:23Z) + db FAIL `07e29aad` (259/14, `permission denied for table loads` — subquery fixture po `set role`). Bez push na main.
+- Krok (PR #586): A — `schedule_row` zawsze przy zapisie; B — daty/`v_crit` z `v_apply_fields`, pusta leave ≠ konflikt, omit w `schedule_row`; C — wagi/item/seq + `_qty_empty`; testy `_f583` przed role + A/B/C; EXPECTED **276**. Po zielonym CI — prośba o F7.

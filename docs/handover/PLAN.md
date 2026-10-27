@@ -1065,7 +1065,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #572. F7 r2: `SE_KAA_TRACK` (nie nadpisuj `SE_E22`); bez literałów GPS; via co ~100 km; nearestKm odcinek. Po BN0 → **#583** → P4-k #581 → BN1.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; F7 niegotowe → poprawki)
-Źródło: #583 (Spawn2018, `pilne`). F7 #586: **trójstronne** (inc≠live ∧ (brak klucza w `schedule_row` ∨ inc≠schedule_row)); wymiary/`cargo_class` **per pole**; pusta komórka = leave tylko numery/kierowcy/tablice/godziny; tablice = split ` - `/`/`/,`; multi-code → `skip_reason`; bez `position()`. import EXPECTED **273**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
+Źródło: #583 (Spawn2018, `pilne`). F7 #586 r2: **trójstronne** + odświeżanie `schedule_row` także unchanged (A); multi-code daty/`v_crit` z `v_apply_fields`, pusta leave ≠ konflikt (B); wagi/`item_type`/`assembly_seq`/`qty` surowa pusta = leave + `skip_reason` (C); fixture testów materializowane przed `set role`. import EXPECTED **276**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #583; przed BN1; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: BN0 → #583 → ten → BN1.
@@ -1812,3 +1812,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 10:25 | #583 CI fix r9: `-c` jak A6 + patch `jsonb_build_object` | pętla |
 | 27.10.2026 11:05 | #583 F7 #586 niegotowe: trójstronne + wymiary per pole + split tablic + multi-code; import EXPECTED **273** | pętla |
 | 27.10.2026 11:40 | #583 CI fix r10: `)` zamykające `jsonb_build_array` w `r583_file_sql` (14× out=`^`) | pętla |
+| 27.10.2026 12:15 | #583 F7 r2 A/B/C + fixture `_f583` przed set role; import EXPECTED **276** | pętla |

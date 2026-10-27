@@ -512,14 +512,21 @@ declare
   v_write_on boolean := false;
   v_apply_fields text[];
   v_skip_reasons jsonb := '{}'::jsonb;
+  v_omit_sched text[] := '{}';
+  v_sched_row jsonb;
   v_pf text;
   v_plate_fields text[] := array['tractor_plate','tractor_delivery_plate','trailer_plate'];
-  -- F7 #586 BLOKER 1: pusta komórka = bez zmiany tylko dla tych pól (wymiary/cargo_class per pole).
+  -- F7 #586 BLOKER 1 + r2 C: pusta komórka = bez zmiany (wagi/item/seq z skip_reason).
   v_leave_empty text[] := array[
     'load_time','delivery_time','order_no',
     'hhl_order_no','carrier_order_no',
     'driver_name','driver_phone','driver_delivery_name','driver_delivery_phone',
-    'tractor_plate','tractor_delivery_plate','trailer_plate'
+    'tractor_plate','tractor_delivery_plate','trailer_plate',
+    'unit_weight_t','total_weight_t','item_type','assembly_seq'
+  ];
+  -- F7 r2 C: te leave_empty dają wiersz podglądu ze skip_reason (nie cicho).
+  v_leave_empty_note text[] := array[
+    'unit_weight_t','total_weight_t','item_type','assembly_seq'
   ];
   -- F7 #586 pkt 3: pola wspólne transportu (wiele kodów na load_id).
   v_load_shared text[] := array[
@@ -632,7 +639,12 @@ begin
            and (c.canon->>'height_m')::numeric > 0) is not true then
       raise exception 'Wiersz % (%): wymiary muszą być dodatnie (wymagane dla klasy innej niż STANDARD)', r.i, r.v->>'code';
     end if;
-    if (c.canon->>'qty')::int <= 0 then raise exception 'Wiersz % (%): ilość musi być dodatnia', r.i, r.v->>'code'; end if;
+    -- F7 r2 C: pusta qty w pliku (surowa komórka) ≠ canon→1 — oznacz, waliduj dopiero gdy podana.
+    if nullif(btrim(coalesce(r.v->>'qty', '')), '') is null then
+      c.canon := c.canon || jsonb_build_object('_qty_empty', true);
+    elsif (c.canon->>'qty')::int <= 0 then
+      raise exception 'Wiersz % (%): ilość musi być dodatnia', r.i, r.v->>'code';
+    end if;
     -- A6 L31: nie odrzucaj złych dat — sprawa KSH_DATES_CHECK przy zapisie.
     v_dates_odd := public.a6_import_dates_odd(
       (c.canon->>'load_date')::date, (c.canon->>'delivery_date')::date);
@@ -812,7 +824,7 @@ begin
     end if;
 
     -- #583 F7: changed gdy inc≠live ORAZ (brak klucza w file_base LUB inc≠file_base).
-    -- Pusta komórka = bez zmiany tylko dla v_leave_empty (numery/kierowcy/tablice/godziny).
+    -- Pusta komórka = bez zmiany dla v_leave_empty; qty surowa pusta → _qty_empty (nie canon=1).
     select coalesce(array_agg(f order by f), '{}') into v_fields
       from unnest(v_fnames) f
      where coalesce(r.inc -> f, 'null'::jsonb) is distinct from coalesce(r.prev -> f, 'null'::jsonb)
@@ -824,12 +836,14 @@ begin
        and (
          f <> all (v_leave_empty)
          or nullif(btrim(coalesce(r.inc ->> f, '')), '') is not null
-       );
+       )
+       and not (f = 'qty' and coalesce((r.inc ->> '_qty_empty')::boolean, false));
     if r.renum_from is not null and not ('shipment_code' = any (v_fields)) then
       v_fields := array['shipment_code'] || coalesce(v_fields, '{}'::text[]);
     end if;
     -- #583: tablice — równość części WT → bez zmiany; nie-tablica → preview+skip_reason, bez zapisu
     v_skip_reasons := '{}'::jsonb;
+    v_omit_sched := '{}';
     v_apply_fields := coalesce(v_fields, '{}'::text[]);
     foreach v_pf in array v_plate_fields loop
       if v_pf = any (coalesce(v_fields, '{}'::text[])) then
@@ -838,12 +852,41 @@ begin
           v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_pf);
         elsif public.import_plate_is_valid(r.inc ->> v_pf) is not true then
           v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_pf);
+          v_omit_sched := array_append(v_omit_sched, v_pf);
           v_skip_reasons := v_skip_reasons || jsonb_build_object(
             v_pf, 'wartość w pliku nie jest tablicą — pominięta');
         end if;
       end if;
     end loop;
-    -- #583 F7 pkt 3: różne wartości w wierszach tego samego load_id → bez zapisu
+    -- F7 r2 C: puste wagi/item/seq (+ qty surowa) → skip_reason, bez zapisu, bez klucza w schedule_row
+    foreach v_f in array v_leave_empty_note loop
+      if nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is null
+         and coalesce(r.prev -> v_f, 'null'::jsonb) is distinct from 'null'::jsonb
+         and (
+           r.file_base is null
+           or not (r.file_base ? v_f)
+           or coalesce(r.inc -> v_f, 'null'::jsonb) is distinct from coalesce(r.file_base -> v_f, 'null'::jsonb)
+         ) then
+        if not (v_f = any (coalesce(v_fields, '{}'::text[]))) then
+          v_fields := array_append(coalesce(v_fields, '{}'::text[]), v_f);
+        end if;
+        v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_f);
+        v_omit_sched := array_append(v_omit_sched, v_f);
+        v_skip_reasons := v_skip_reasons || jsonb_build_object(
+          v_f, 'pusta komórka w pliku — pominięta');
+      end if;
+    end loop;
+    if coalesce((r.inc ->> '_qty_empty')::boolean, false)
+       and coalesce(r.prev -> 'qty', 'null'::jsonb) is distinct from 'null'::jsonb then
+      if not ('qty' = any (coalesce(v_fields, '{}'::text[]))) then
+        v_fields := array_append(coalesce(v_fields, '{}'::text[]), 'qty');
+      end if;
+      v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from 'qty');
+      v_omit_sched := array_append(v_omit_sched, 'qty');
+      v_skip_reasons := v_skip_reasons || jsonb_build_object(
+        'qty', 'pusta komórka w pliku — pominięta');
+    end if;
+    -- #583 F7 pkt 3 + r2 B: konflikt multi-code — pusta leave = bez zdania; tablice po norm
     foreach v_f in array coalesce(v_fields, '{}'::text[]) loop
       if v_f = any (v_apply_fields)
          and v_f = any (v_load_shared)
@@ -854,14 +897,27 @@ begin
                on si2.project_id = p_project and si2.shipment_code = i2.code
             where si2.load_id = r.load_id
               and i2.code is distinct from r.code
-              and coalesce(i2.row ->> v_f, '') is distinct from coalesce(r.inc ->> v_f, '')
+              and case
+                when v_f = any (v_plate_fields) then
+                  public.import_plate_norm(i2.row ->> v_f) is not null
+                  and public.import_plate_norm(r.inc ->> v_f) is not null
+                  and public.import_plate_norm(i2.row ->> v_f)
+                      is distinct from public.import_plate_norm(r.inc ->> v_f)
+                when v_f = any (v_leave_empty) then
+                  nullif(btrim(coalesce(i2.row ->> v_f, '')), '') is not null
+                  and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
+                  and nullif(btrim(i2.row ->> v_f), '')
+                      is distinct from nullif(btrim(r.inc ->> v_f), '')
+                else
+                  coalesce(i2.row ->> v_f, '') is distinct from coalesce(r.inc ->> v_f, '')
+              end
          ) then
         v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_f);
+        v_omit_sched := array_append(v_omit_sched, v_f);
         v_skip_reasons := v_skip_reasons || jsonb_build_object(
           v_f, 'różne wartości w wierszach transportu');
       end if;
     end loop;
-
 
     -- F7 r7 N13 + 05:37: pending skip PRZED konfliktem numeru i confirmed/crit.
     -- F7 r8 BLOKER 2: tylko gdy write_enabled — inaczej import bierze pola jak przed zapisem A6.
@@ -917,6 +973,17 @@ begin
         p_project, r.load_id, r.code, r.hhl_order_no,
         coalesce(r.inc->>'hhl_order_no', r.inc->>'hhlOrderNo'));
     end if;
+    -- F7 r2 A: przy zapisie odśwież schedule_row zawsze (także unchanged/blocked/same skips).
+    v_sched_row := (coalesce(r.inc, '{}'::jsonb) - '_qty_empty');
+    if coalesce(cardinality(v_omit_sched), 0) > 0 then
+      v_sched_row := v_sched_row - v_omit_sched;
+    end if;
+    if p_dry_run is false and r.item_id is not null then
+      update shipment_items
+         set schedule_row = v_sched_row, updated_at = now()
+       where id = r.item_id;
+    end if;
+
     if cardinality(v_fields) = 0 then v_unchanged := v_unchanged + 1; continue; end if;
 
     -- F7 r8 POPRAWKA 3: CANCELLED → blocked tylko gdy są zmiany pól (puste = unchanged wyżej).
@@ -927,9 +994,10 @@ begin
     end if;
 
     -- DATY-67: daty z pliku zawsze stosowane; informacyjnie lista zmian dat (bez blokady)
+    -- F7 r2 B: tylko pola z v_apply_fields (konflikt multi-code nie zapisuje dat „z v_fields”).
     v_keep := false;
-    if ('load_date' = any (v_fields) or 'delivery_date' = any (v_fields)
-        or 'load_time' = any (v_fields) or 'delivery_time' = any (v_fields)) then
+    if ('load_date' = any (v_apply_fields) or 'delivery_date' = any (v_apply_fields)
+        or 'load_time' = any (v_apply_fields) or 'delivery_time' = any (v_apply_fields)) then
       v_confirmed := v_confirmed || jsonb_build_object('code', r.code, 'load_id', r.load_id,
                        'before', jsonb_build_object('load_date', r.prev->'load_date', 'delivery_date', r.prev->'delivery_date',
                                                     'load_time', r.prev->'load_time', 'delivery_time', r.prev->'delivery_time'),
@@ -967,10 +1035,11 @@ begin
       )
     );
     -- F7 #7: w dry_run pokazuj critical także przy quiet; wycisz zdarzenia dopiero przy zapisie.
+    -- F7 r2 B: critical tylko z v_apply_fields (pominięty konflikt dat nie jest krytyczny).
     v_crit := case
       when v_quiet_fill or v_historic then '{}'::text[]
       when r.awizowany then
-        array(select f from unnest(v_fields) f where f in ('load_date','load_time','delivery_date','delivery_time'))
+        array(select f from unnest(v_apply_fields) f where f in ('load_date','load_time','delivery_date','delivery_time'))
       else '{}'::text[]
     end;
     if v_run_quiet and p_dry_run is false and cardinality(v_crit) > 0 then
@@ -1015,10 +1084,7 @@ begin
           then (r.inc->>'total_weight_t')::numeric else total_weight_t end,
         assembly_seq = case when 'assembly_seq' = any (v_apply_fields)
           then (r.inc->>'assembly_seq')::int else assembly_seq end,
-        -- file_base na następny przebieg = wiersz pliku (bez pominiętych tablic)
-        schedule_row = r.inc - array(
-          select p from unnest(v_plate_fields) p where not (p = any (v_apply_fields))
-        ),
+        -- schedule_row odświeżone wyżej (F7 r2 A); tu tylko znacznik importu
         last_seen_import = v_import, updated_at = now()
        where id = r.item_id;
       if 'load_date' = any (v_apply_fields) or 'delivery_date' = any (v_apply_fields) or 'order_no' = any (v_apply_fields)
@@ -1029,21 +1095,20 @@ begin
           v_prev_quiet := current_setting('tower.bulk_quiet', true);
           perform set_config('tower.bulk_quiet', 'on', true);
         end if;
-        -- F7 r6 POPRAWKA 2: data/godzina tylko z v_fields (pending usunięte wyżej).
-        -- load_date ∉ v_fields → data WT; load_time ∉ v_fields → komórka jak pusta (19A).
-        if 'load_date' = any (v_fields) then
+        -- F7 r2 B: data/godzina tylko z v_apply_fields (pending + konflikt multi-code).
+        if 'load_date' = any (v_apply_fields) then
           v_new_load_date := coalesce((r.inc->>'load_date')::date, r.plan_load_date);
         else
           v_new_load_date := r.plan_load_date;
         end if;
-        if 'delivery_date' = any (v_fields) then
+        if 'delivery_date' = any (v_apply_fields) then
           v_new_del_date := coalesce((r.inc->>'delivery_date')::date, r.plan_delivery_date);
         else
           v_new_del_date := r.plan_delivery_date;
         end if;
         -- #384 F7 r2/r3: pusta komórka godziny = bez zmiany (nie null).
         -- Zmiana daty bez godziny → wspólna delta (v_new_date - plan_*_date) dla od i do; strażnik do > od.
-        if 'load_time' = any (v_fields) and nullif(btrim(r.inc->>'load_time'), '') is not null then
+        if 'load_time' = any (v_apply_fields) and nullif(btrim(r.inc->>'load_time'), '') is not null then
           v_new_load_from := public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw');
           v_new_load_to := case
             when v_new_load_from is null then null
@@ -1058,7 +1123,7 @@ begin
           if v_new_load_to is not null and v_new_load_from is not null and v_new_load_to <= v_new_load_from then
             v_new_load_to := null;
           end if;
-        elsif 'load_date' = any (v_fields)
+        elsif 'load_date' = any (v_apply_fields)
               and v_new_load_date is distinct from r.plan_load_date
               and r.plan_load_date is not null and v_new_load_date is not null then
           v_new_load_from := case when r.plan_load_from is not null then
@@ -1074,7 +1139,7 @@ begin
           v_new_load_from := r.plan_load_from;
           v_new_load_to := r.plan_load_to;
         end if;
-        if 'delivery_time' = any (v_fields) and nullif(btrim(r.inc->>'delivery_time'), '') is not null then
+        if 'delivery_time' = any (v_apply_fields) and nullif(btrim(r.inc->>'delivery_time'), '') is not null then
           v_new_del_to := public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm');
           v_new_del_from := case
             when v_new_del_to is null then null
@@ -1089,7 +1154,7 @@ begin
           if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
             v_new_del_from := null;
           end if;
-        elsif 'delivery_date' = any (v_fields)
+        elsif 'delivery_date' = any (v_apply_fields)
               and v_new_del_date is distinct from r.plan_delivery_date
               and r.plan_delivery_date is not null and v_new_del_date is not null then
           v_new_del_to := case when r.plan_delivery_to is not null then
@@ -1105,19 +1170,19 @@ begin
           v_new_del_to := r.plan_delivery_to;
           v_new_del_from := r.plan_delivery_from;
         end if;
-        -- F7 r5 N9: tylko pola z v_fields (daty analogicznie do zasobów).
+        -- F7 r2 B: tylko pola z v_apply_fields (daty analogicznie do zasobów).
         update loads set
-          plan_load_date = case when 'load_date' = any (v_fields)
+          plan_load_date = case when 'load_date' = any (v_apply_fields)
             then coalesce(v_new_load_date, plan_load_date) else plan_load_date end,
-          plan_delivery_date = case when 'delivery_date' = any (v_fields)
+          plan_delivery_date = case when 'delivery_date' = any (v_apply_fields)
             then coalesce(v_new_del_date, plan_delivery_date) else plan_delivery_date end,
-          plan_load_from = case when 'load_date' = any (v_fields) or 'load_time' = any (v_fields)
+          plan_load_from = case when 'load_date' = any (v_apply_fields) or 'load_time' = any (v_apply_fields)
             then v_new_load_from else plan_load_from end,
-          plan_load_to = case when 'load_date' = any (v_fields) or 'load_time' = any (v_fields)
+          plan_load_to = case when 'load_date' = any (v_apply_fields) or 'load_time' = any (v_apply_fields)
             then v_new_load_to else plan_load_to end,
-          plan_delivery_from = case when 'delivery_date' = any (v_fields) or 'delivery_time' = any (v_fields)
+          plan_delivery_from = case when 'delivery_date' = any (v_apply_fields) or 'delivery_time' = any (v_apply_fields)
             then v_new_del_from else plan_delivery_from end,
-          plan_delivery_to = case when 'delivery_date' = any (v_fields) or 'delivery_time' = any (v_fields)
+          plan_delivery_to = case when 'delivery_date' = any (v_apply_fields) or 'delivery_time' = any (v_apply_fields)
             then v_new_del_to else plan_delivery_to end,
           order_no = case when 'order_no' = any (v_apply_fields)
             then coalesce(nullif(btrim(coalesce(r.inc->>'order_no', '')), ''), order_no) else order_no end,
