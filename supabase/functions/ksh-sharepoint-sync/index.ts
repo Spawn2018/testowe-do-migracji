@@ -372,11 +372,30 @@ async function handle(req: Request): Promise<Response> {
     changed?: unknown[];
     unchanged?: number;
     cancel_candidates?: unknown[];
+    blocked?: unknown[];
     dates_check?: number;
   };
   const added = Array.isArray(data.added) ? data.added.length : 0;
   const changed = Array.isArray(data.changed) ? data.changed.length : 0;
   const cands = Array.isArray(data.cancel_candidates) ? data.cancel_candidates.length : 0;
+
+  // #567 23B F7: podgląd tylko w dry_run; błąd niefatalny (nie source_ok/failed_hash/502).
+  let previewError: string | null = null;
+  if (dryRun) {
+    const prevStore = await sb.rpc('ksh_sync_preview_store', {
+      p_project: projectId,
+      p_changed: Array.isArray(data.changed) ? data.changed : [],
+      p_read_at: started,
+      p_bytes: dl.bytes.byteLength,
+      p_file_hash: hash,
+      p_added: Array.isArray(data.added) ? data.added : [],
+      p_cancel_candidates: Array.isArray(data.cancel_candidates) ? data.cancel_candidates : [],
+      p_blocked: Array.isArray(data.blocked) ? data.blocked : [],
+    });
+    if (prevStore.error) {
+      previewError = `preview:${prevStore.error.code || 'err'}`;
+    }
+  }
 
   await store.resolveRisks(`${DEDUP_PREFIX}`);
 
@@ -397,6 +416,7 @@ async function handle(req: Request): Promise<Response> {
     dry_run: dryRun,
     import_enabled: importEnabled,
     write_enabled: writeEnabled,
+    ...(previewError ? { preview_error: previewError.slice(0, 120) } : {}),
     ...(writeRes ? {
       write_attempted: true,
       write_n: writeRes.written,

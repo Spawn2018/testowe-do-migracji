@@ -147,6 +147,7 @@ authenticated kpi_detection_lag
 authenticated kr_convoy_count
 authenticated ksh_confirm_dates
 authenticated ksh_sync_state_get
+authenticated ksh_sync_preview_get
 authenticated ksh_sync_write_set
 authenticated ksh_sync_import_set
 authenticated l1b_ksh_file_unreadable

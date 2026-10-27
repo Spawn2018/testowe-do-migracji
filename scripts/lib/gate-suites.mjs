@@ -23,8 +23,8 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 234, // A6 #569: +9 multi-kod konflikt (write on, setup, import WT, kod SG-M2, 1 sprawa, Edge, dedup, primary≠, 2. sprawa); było 225
-  nullguard: 852, // #563: PURE lookup MAX nie liczy OK; #557 PR2: +10
+  import: 255, // #567 F7 r3: +1 chk audit_log user_id=app_users.id; było 254 (r2 +5 od 249)
+  nullguard: 856, // #567 23B: +4 preview_get; baza #563 PURE lookup → 852
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

@@ -1014,7 +1014,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
      - **CI `cdc31b6c` db FAIL (224/1) — ZROBIONE w teście:** asercja CANCELLED liczyła `blocked` całego pliku (inne kody STATUS) → `1/1`; liczyć tylko `blocked` dla SG-01 / reason CANCELLED.
      - **F7 runda 9 — ZROBIONE w kodzie (1 poprawka):** Edge `conflictFieldFromSnaps(expected, cur, Object.keys(patch))` — najpierw pierwsze różniące się pole **z łatki** (kolejność jak import), potem dowolne; unit: `{co}` → `carrier_order_no`; patch bez różnicy + inne pole różne. Asercja CANCELLED tylko SG-01. EXPECTED import **225**.
      - **CI `833d9415` unit/visual/db ✔** → **F7: gotowe** (Spawn2018, 09:31Z na `a8bbda41`) → **SCALONE** `0feb8a94` (26.10.2026 09:41Z). EXPECTED import **225**.
-     - **Warunki włączenia zapisu (F7 po scaleniu):** ~~#560~~ → ~~**#569**~~ → **#571** (pilne strefy) → `write_test_ok_at` → **#567 23B** (`import_enabled` zostaje false); follow-upy F7 #569 (normCell / ostrzeżenie pominiętego kodu / migawka per kod).
+     - **Warunki włączenia zapisu (F7 po scaleniu):** ~~#560~~ → ~~**#569**~~ → ~~**#571**~~ → **#567 23B** (lista; `import_enabled` false) → `write_test_ok_at` → write_enabled; follow-upy F7 #569 (normCell / ostrzeżenie pominiętego kodu / migawka per kod).
    - jedno mapowanie 21 kolumn (`importColumnMap.ts`, `importMapping.ts`, `scheduleParse.ts`, `import_schedule`):
      - dodajesz `carrier`, `tractorPlate`, `trailerPlate`, `scxOrderNo` (HHL-Scan), `hhlOrderNo` (HHL-KSH), `comment`, `loadDay`, `delivDay`;
      - `lp` pomijasz, `orderNo` usuwasz, `assemblySeq` jest opcjonalne; w kreatorze mapowania ukryte `loadDay`/`delivDay` (F7 — import ich nie czyta);
@@ -1038,26 +1038,27 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: F7 #560 + #569 (Spawn2018). Edge `pickOutboundConflictNote`: `p_code`/`p_field` z wiersza konfliktu; preferuj pole z łatki; pomijaj kod bez wiersza w pliku gdy jest inny; norm `trim`/`''→null`. EXPECTED import **234**.
 - **Po F7 (przed `write_enabled`, z #567 lub małym PR):** (1) test: kod nieobecny w pliku + obecny wiersz **bez** rozjazdu → brak sprawy; ostrzeżenie gdy `xlsxPatch` cicho pomija wiersz; (2) `normCell` w Edge = tylko spacje jak `btrim` (nie wszystkie białe); (3) znane ograniczenie migawki kodu głównego — też §8.
 
-### #571 · PILNE: SITE od 1. pozycji; dwell dla pozostałych stref — W TOKU (`pakiet/571-geofence-dwell` PR #574, migracja **0309**; po #569; przed `write_test_ok_at` / #567 23B)
-Źródło: #571 (Spawn2018; F7 #570 + F7 #574 decyzja właściciela 26.10 11:48; F7 r2 26.10 ~15:08; F7 r3 26.10 ~15:26). SG-23 na placu Boden — emtrack przy postoju ~4 h.
-- **SITE (F7):** `GEOFENCE_ENTER` / `AT_SITE` przy **pierwszej** świeżej pozycji w `radius_m` (nie histereza); bez `PENDING_IN`/dwell. Parking 1019 m przy r=1010 — bez wjazdu. `entered_at` = czas tej wizyty; zerowany przy EXIT.
-- **Pozostałe strefy:** `geofence_confirm_pending_dwell` (cron `*/2`, bez SITE) — czas z pierwszej pozycji po ostatnim EXIT; `bulk_quiet` gdy &gt; 2 h; debounce; `stale_point` pomija strefy.
-- **SG-23:** szukaj `shipment_items.shipment_code` / `load_sms_code` (nie `order_no`); backdate ENTER/`STATUS_AUTO`/`entered_at` na **pierwszą** świeżą pozycję w SITE (disable `trg_load_events_immutable`; błąd przerywa migrację); bez ponownych powiadomień. Inne `PENDING_IN` SITE → ENTER z pierwszą pozycją (geom pierwszej; `notify_orgs`/`message_tpl`). **F7 r3:** `state` tylko z `PENDING_IN` (OUTSIDE bez powrotu na plac); `entered_at` tylko INSIDE/PENDING_OUT; brak SG-23 → `raise notice`; `drop function` po wywołaniu.
-- **Testy status:** +29 (UUID a1–a7; OUTSIDE; idempotencja; EXIT&lt;10 min bez DELIVERED; PORT_IN ON; replica fixture; `source` STATUS_AUTO = null nie `SYSTEM` — enum `position_source`; trg O). EXPECTED status **320**.
-- **Uwagi F7 (nie blokują, §8):** drganie GPS na krawędzi SITE bez debounce; GEOFENCE_DWELL po porcie z dwell. Następczy PR po #574: cron `greatest(EXIT, entered_at)`; dwell_min w payload.
+### #571 · PILNE: SITE od 1. pozycji; dwell dla pozostałych stref — SCALONE (#574 `25546fcc`, 26.10.2026 15:28Z; migracja **0309**; F7 15:21Z na `a6c81371`)
+Źródło: #571 (Spawn2018; F7 #570 + F7 #574 decyzja właściciela 26.10 11:48; F7 r2–r3). SG-23 na placu Boden — emtrack przy postoju ~4 h.
+- **SITE (F7):** `GEOFENCE_ENTER` / `AT_SITE` przy **pierwszej** świeżej pozycji w `radius_m`; bez `PENDING_IN`/dwell. Parking 1019 m przy r=1010 — bez wjazdu. `entered_at` = czas wizyty; zerowany przy EXIT.
+- **Pozostałe strefy:** `geofence_confirm_pending_dwell` (cron `*/2`, bez SITE).
+- **SG-23:** backdate po `shipment_items`/`load_sms_code`; F7 r3 OUTSIDE bez powrotu; `drop function` po wywołaniu.
+- **Testy status:** EXPECTED **320**. Uwagi F7 (§8): drganie GPS; dwell_min w payload — następczy PR.
+- Po #574 scalone też wygląd: **#576** (`21c24df8`, paliwo „do X”) i **#575** (`5d9f22fe`, BN9-a katalog promów).
 
-### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — W TOKU (`pakiet/563-paliwo-t44`, migracja **0310**)
-Źródło: #563 + komentarz PR #577 15:59Z: **#563 PRZED #577** (tydzień 44 liczy się źle: 23,03/7,14/×1,13 zamiast 23,00/7,15/×1,14).
-1. Korekty wygrywają w `sefs_sek_daily_avg` / `sefs_pub_avg` / `sefs_pln_daily_avg` / `sefs_last_published`; avg do 0,01 przed lookup.
-2. Od t44 (`valid_from=2026-10-26`): `tier_bound=MAX` („do X”), `avg_days_pln=7`; ≤43 = MIN + 5 publ. PLN (bez zmian). `sefs_save_parameters` przyjmuje oba pola.
-3. Wynik t44: SEK 23,00 / PLN 7,15 / ×1,14. Testy baf EXPECTED **105** (F7 #579 r4: 2. korekta z `sefs_week_calc` ≠ corr1/migawka; UPDATE tylko gdy `new_mult` się zmienia; było 101). Edge 17:15/23:15; published_on > dzień → `period` = data obowiązywania. nullguard **852**. Front: `lookupMult(…, tier_bound)`, `sefsWeek` średnia 7 dni z fill, `tierOf` na zakresach z `tiersFromDb`. Migawki ≥26.10: PROGNOZA+compute / `SEFS_INVOICE_DIFF`; dziennik z `base_amount`/`total_amount`. Nowa wersja kopiuje tabele z `sefs_params_for(…, 2026-10-26)`. **Sprawa zamkniętego:** `SEFS_WEEK_CORR` (tylko HHL w `decisions_read`); kolejna korekta **innego** odczytu aktualizuje otwartą **tylko przy zmianie mnożnika** / zamyka przy zgodności z migawką.
-4. Kolejka: **#563** → **#577** (F7 pkt 1–8; migracja 0310→**0311** po rebase) → #574-nast → BN0 (#572).
-5. F7 #579 r4: CI unit/db/visual ✔ na `c70f4787` — prośba o F7 (komentarz PR #579).
+### #563 · Opłata paliwowa od t44 + korekty (D-20261026-1506-01) — SCALONE (#579 `ee0a6dee`, 26.10.2026 22:22 UTC, migracja **0310**; `deploy-main` w toku)
+Źródło: #563. **#563 PRZED #577**. t44: SEK 23,00 / PLN 7,15 / ×1,14; `tier_bound=MAX`, `avg_days_pln=7`; korekty w średniej; SEFS_WEEK_CORR; baf **105**; nullguard **852**. Front `lookupMult`/`sefsWeek`.
 
-### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; F7 po #563)
-Źródło: #567. CI unit/visual/db ✔ na `bf6dd230` (fix: `imported_at`, search_path, store jak upsert). **F7 nie dam** do pkt 1–8 z komentarza F7 na #577 (podgląd niefatalny/dry_run, `ksh_sync_require_service`, wt z WT, manual tylko user, kind added/missing, pending_write, testy z `import_schedule` dry_run). Po #563 — wróć i domknij w tym PR.
+### #567 / #577 · Lista zmian KSH 23B — W TOKU (PR #577; migracja **0311**; CI ✔ `a2dbd890` — czekam F7)
+Źródło: #567. Po #563: migracja **0311**. F7 pkt 1–8 + r2 + **r3**: test manual — `audit_log.user_id` = `app_users.id` (nie auth_id) + chk wpisu. EXPECTED import **255**; nullguard **856**. CI unit/db/visual ✔ na `a2dbd890` — prośba o F7.
 
-### #574-nast · dwell_min w payload — DO ZROBIENIA (po #577)
+### #580 · wygląd Opłata paliwowa 5× dziennie (#563) — SCALONE (`f2652ef9`, 26.10.2026 23:27Z)
+Źródło: `wyglad/paliwo-5-sprawdzen` (#580). F7 gotowe na `b60511d`.
+
+### #578 · wygląd lista zmian KSH (23B) — F7 gotowe, scalać PO #577
+Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7: gotowe (26.10 ~16:30Z) z warunkiem: **dopiero po #577**. Potem #574-nast → BN0 #572.
+
+### #574-nast · dwell_min w payload — DO ZROBIENIA (po #577 / #578)
 ### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
 
 ### C4–C13 bez zmian zakresu
@@ -1770,11 +1771,19 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 26.10.2026 16:20 | #571 CI db FAIL status 312/7: PORT_IN OFF, EXIT≥10→DELIVERED, fixture STATUS_AUTO; fix testów → status **320** | pętla |
 | 26.10.2026 16:50 | #571 CI db FAIL status 318/2 (#571f): fixture `source=SYSTEM` ≠ enum → null; visual #575 rerun LFS | pętla |
 | 26.10.2026 16:55 | #571/#576/#575 SCALONE; start #567 23B (#577); CI FAIL→fix `imported_at`/search_path | pętla |
-| 26.10.2026 19:05 | Kolejka: **#563 PRZED #577**; start `pakiet/563-paliwo-t44` migracja **0310** (MAX, 7 dni PLN, korekty) | pętla |
-| 26.10.2026 21:55 | #563 0310 §11: migawki załadunek ≥26.10 (PROGNOZA+compute; SEFS_INVOICE_DIFF na fakturach); zostaje sprawa zamkniętego tygodnia | pętla |
-| 26.10.2026 22:30 | #563 0310 §12: SEFS_WEEK_CORR po korekcie w zamkniętym tygodniu (bez cichego przeliczenia); baf **81** | pętla |
-| 26.10.2026 22:55 | #563 F7 #579: blokady 1–2 + pkt 3–6 (prognoza PLN 7d, ≤43 stara SEK, ingest jutro, params_for 26.10); baf **90** | pętla |
-| 26.10.2026 23:15 | #563 F7 #579 r2: SEFS_WEEK_CORR tylko HHL + update/zamknięcie + testy negatywne; baf **99** | pętla |
-| 26.10.2026 23:45 | #563 F7 #579 r3: testy SEFS_WEEK_CORR na różnych odczytach (one_correction); `sys` połyka duplicate key — chk liczby korekt; baf **101** | pętla |
-| 26.10.2026 23:55 | #563 F7 #579 r4: 2. korekta SEK 22,40 (od progu; calc ≠ ×1,09/migawka); UPDATE tylko przy zmianie `new_mult`; baf **105** | pętla |
-| 27.10.2026 00:10 | #563 F7 #579 r4: CI unit/db/visual ✔ `c70f4787` — prośba o F7 | pętla |
+| 26.10.2026 17:45 | #567 db FAIL (search_path×3, store); kolejka #563 PRZED #577 | pętla |
+| 26.10.2026 18:20 | #567 db FAIL r2: `schedule_imports.imported_at` w preview_build | pętla |
+| 26.10.2026 18:45 | #567 db FAIL r3: cofnięcie PUBLIC na helperach; import 240 ✔ | pętla |
+| 26.10.2026 19:05 | Kolejka: **#563 PRZED #577**; start `pakiet/563-paliwo-t44` migracja **0310** | pętla |
+| 26.10.2026 21:55 | #563 0310 §11: migawki załadunek ≥26.10 | pętla |
+| 26.10.2026 22:30 | #563 0310 §12: SEFS_WEEK_CORR; baf **81** | pętla |
+| 26.10.2026 22:55 | #563 F7 #579 blokady 1–2 + pkt 3–6; baf **90** | pętla |
+| 26.10.2026 23:15 | #563 F7 #579 r2: SEFS_WEEK_CORR tylko HHL; baf **99** | pętla |
+| 26.10.2026 23:45 | #563 F7 #579 r3: testy na różnych odczytach; baf **101** | pętla |
+| 26.10.2026 23:55 | #563 F7 #579 r4: new_mult z sefs_week_calc; baf **105** | pętla |
+| 27.10.2026 00:10 | #563 F7 #579 r4: CI ✔ `c70f4787` — prośba o F7 | pętla |
+| 27.10.2026 00:25 | #563 SCALONE #579 `ee0a6dee`; start #577 F7 1–8 (0310→**0311**) | pętla |
+| 27.10.2026 00:45 | #577 F7 1–8 na `056dca75`; CI unit/db/visual ✔; #578 w §4 (po #577); czekam F7 | pętla |
+| 27.10.2026 01:00 | #577 F7 r2: wt po kodzie, blocked→missing, norm liczb, import **254**; zamknięte #320/#323/#412 | pętla |
+| 27.10.2026 01:40 | #580 SCALONE `f2652ef9`; #577 F7 r3: audit_log user_id=app_users.id, import **255** | pętla |
+| 27.10.2026 01:55 | #577 CI ✔ `a2dbd890` (unit/db/visual) — prośba o F7; #578 po #577 | pętla |

@@ -5608,6 +5608,29 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak (#575 F7 niegotowe + LFS — rerun visual failed; #576 bez F7). Bez push na main.
 - **#571 krok:** CI `db` na `dee4226e` — status 318 OK / 2 FAIL (#571f ENTER+STATUS_AUTO pusto). Przyczyna: fixture `source='SYSTEM'` spoza enum `position_source` → cały INSERT padał (entered_at i tak z hotfix). Fix: `source=null` jak w i2. EXPECTED status **320**. CI → prośba F7.
 
+## 2026-10-26 16:55 — #571/#576/#575 SCALONE; start #567 23B
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499/#412/#323/#320 w planie.
+- Scalanie (F7 Spawn2018, bez push na main):
+  - **#574** `25546fcc` (F7 15:21Z, CI unit/visual/db ✔ na `a6c81371`);
+  - **#576** `21c24df8` (po #574; paliwo „do X”);
+  - **#575** `5d9f22fe` (po #574+#576; BN9-a katalog promów).
+- Bieżąca: **#567 23B** `pakiet/567-23b-lista-zmian` — migracja **0310** (`preview`, store/get/build, bez PII, label PL, manual z audit); Edge `ksh_sync_preview_store` po dry_run; skipUnchanged: dry_run nigdy nie skipuje. EXPECTED import **240**, nullguard **853**. `write_test_ok_at` — przed włączeniem zapisu prod (osobno). CI → prośba F7.
+
+## 2026-10-26 17:45 — #567 db FAIL → poprawka; kolejka #563
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie. Komentarz PR #577 (Spawn2018): po #577 → **#563** (t44 paliwo) → następczy #574 → BN0 **#572** — wpisane PLAN §4/§8.
+- Scalanie: brak „F7: gotowe do scalenia” po `b07da9d2`. unit/visual ✔; **db FAIL** (import 236/4, security 458/1, nullguard 856≠853).
+- **#567 krok:** 0310 — `set search_path` na 3 helperach SQL; `ksh_sync_preview_store` jak `ksh_sync_state_upsert` (postgres/admin albo service_role); test import: `has_function_privilege` zamiast `err` (revoke EXECUTE); EXPECTED nullguard **856**. Po CI — ponowna prośba F7.
+
+## 2026-10-26 18:20 — #567 db FAIL r2: schedule_imports.imported_at
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE). Scalanie: brak F7. unit/visual ✔; db FAIL import 237/3 (security/nullguard ✔).
+- **Przyczyna:** `ksh_sync_preview_build` brał `schedule_imports.created_at` — kolumna to `imported_at`. Helpery: EXECUTE dla PUBLIC (czyste etykiety). CI → F7.
+
+## 2026-10-26 18:45 — #567 db FAIL r3: cofnięcie PUBLIC na helperach
+
+- import **240** ✔ po `imported_at`. security 457/2 + nullguard 855/1 — GRANT PUBLIC na 3 helperach. Cofnięte (zostaje service_role; owner DEFINER wywołuje). CI → F7.
 ## 2026-10-26 19:05 — #563 PRZED #577; start paliwo t44
 
 - Skrzynka: #550 WSTRZYMANE; komentarz #577: kolejka **#563 → #577 (F7 1–8) → #574-nast → BN0**. #577 CI ✔ `bf6dd230` — bez F7 do poprawek po #563.
@@ -5684,3 +5707,36 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #578 F7 gotowe **po #577**; #577 bez F7 (pkt 1–8 po #563). Bez push na main.
 - CI `c70f4787`: unit ✔, db ✔ (13m38s), visual ✔ (części bramy/telefon/zrzuty).
 - **#563 krok:** prośba o F7 na HEAD `c70f4787` (komentarz PR #579). Czekam na „F7: gotowe do scalenia”. Po scaleniu → #577 F7 pkt 1–8 (0310→0311).
+## 2026-10-27 00:25 — #563 SCALONE; start #577 F7 1–8 (0311)
+
+- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499/#412/#323/#320 w planie. Bez nowych do wpisania.
+- Scalanie: **#579** merge ee0a6dee (F7 gotowe na c70f4787; docs c3677db6; CI unit/db/visual ✔). #578 F7 gotowe **po #577**. Bez push na main.
+- **#577 krok:** merge main; migracja **0311**; F7 1–8: require_service, Edge preview tylko dry_run niefatalny, wt z WT, pending_write, manual=user, kind added/missing, testy z import_schedule dry_run. EXPECTED import **249**.
+
+## 2026-10-27 00:45 — #577 CI zielone; czekam F7; #578 w kolejce
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499/#412/#323/#320 w planie — bez nowych do wpisania.
+- Scalanie: #577 bez „F7: gotowe” (prośba na `056dca75`). #578 F7 gotowe **po #577**. Bez push na main.
+- CI `056dca75`: unit ✔, db ✔ (10m34s), visual ✔ (telefon/bramy/zrzuty).
+- PLAN §4: #578 wygląd po #577; EXPECTED import **249**. Po F7 #577 → scalać #577 potem #578 → #574-nast → BN0 #572.
+
+## 2026-10-27 01:00 — #577 F7 r2: multi-kod / blocked / norm
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); zamknięte #320/#323/#412 (pozycje SCALONE). #538/#537/#500/#499 otwarte w planie.
+- Scalanie: #577 F7 r2 (22:52) — niegotowe, 5 pkt. #578 F7 gotowe **po #577**. Bez push na main.
+- **#577 krok (F7 r2):** `ksh_sync_preview_wt_text(…, p_code)`; manual po `shipment_code`; `p_blocked` INVOICED/STATUS → missing; `ksh_sync_preview_norm_file`; Edge przekazuje `blocked`; testy +5 → import **254**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 01:40 — #580 SCALONE; #577 F7 r3 audit_log FK
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. Bez nowych do wpisania.
+- Scalanie: **#580** merge `f2652ef9` (F7 gotowe na b60511d, CI unit/visual ✔). #578 F7 gotowe **po #577**. Bez push na main.
+- CI #577 `2aa6cab4`: unit/visual ✔, db FAIL import 253/1 (F7 r3: `user_id='$HHL'` = auth_id → FK).
+- **#577 krok (F7 r3):** insert `audit_log` z `app_users.id`; chk że wpis powstał; EXPECTED import **255**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 01:55 — #577 CI zielone; prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po HEAD. #578 F7 gotowe **po #577**. Bez push na main.
+- CI `a2dbd890`: unit ✔, db ✔ (14m33s), visual ✔ (telefon/bramy/zrzuty).
+- **#577 krok:** prośba o F7 na HEAD `a2dbd890` (F7 r3: audit_log = app_users.id). Po znaku → scalać #577 potem #578 → #574-nast → BN0 #572.
+
