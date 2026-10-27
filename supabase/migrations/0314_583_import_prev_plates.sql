@@ -903,17 +903,18 @@ begin
                   and public.import_plate_norm(r.inc ->> v_f) is not null
                   and public.import_plate_norm(i2.row ->> v_f)
                       is distinct from public.import_plate_norm(r.inc ->> v_f)
+                when v_f in ('load_time', 'delivery_time') then
+                  -- F7 r4: schedule_cell_ts (nie ::time — „rano”/`9-12` nie wycofuje importu);
+                  -- „9:00” = „09:00”; nieczytelny tekst → null → bez konfliktu.
+                  public.schedule_cell_ts(current_date, i2.row ->> v_f, 'UTC') is not null
+                  and public.schedule_cell_ts(current_date, r.inc ->> v_f, 'UTC') is not null
+                  and public.schedule_cell_ts(current_date, i2.row ->> v_f, 'UTC')
+                      is distinct from public.schedule_cell_ts(current_date, r.inc ->> v_f, 'UTC')
                 when v_f = any (v_leave_empty) then
                   nullif(btrim(coalesce(i2.row ->> v_f, '')), '') is not null
                   and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
                   and nullif(btrim(i2.row ->> v_f), '')
                       is distinct from nullif(btrim(r.inc ->> v_f), '')
-                when v_f in ('load_time', 'delivery_time') then
-                  -- F7 r3 drobne: „9:00” = „09:00”
-                  nullif(btrim(coalesce(i2.row ->> v_f, '')), '') is not null
-                  and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
-                  and (nullif(btrim(i2.row ->> v_f), '')::time)
-                      is distinct from (nullif(btrim(r.inc ->> v_f), '')::time)
                 else
                   coalesce(i2.row ->> v_f, '') is distinct from coalesce(r.inc ->> v_f, '')
               end

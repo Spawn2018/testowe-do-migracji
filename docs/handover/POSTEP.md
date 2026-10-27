@@ -5867,3 +5867,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…; 27B osobny PR po #585); #586 bez F7 gotowe. Bez push na main.
 - CI #586 `f91abb77`: unit ✔; db FAIL import 260/19 (`permission denied for table _f583` / `_old583` po `set role`); visual części anulowane/ukończone (SHA znany zły).
 - **Krok:** `GRANT SELECT` na `_f583` (w `r583_mat_sql` + test A), `_chg583`→`service_role`, `_old583`→`authenticated`. EXPECTED import **279** bez zmiany. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 14:55 — #583 F7 #586 r4: schedule_cell_ts + testy
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: #585 bez „F7: gotowe do scalenia”; #586 F7 r4 **niegotowe** (09:31Z na `f91abb7`) + CI `764a5d20` db FAIL import 275/4. Bez push na main.
+- **Krok (PR #586):** (1) konflikt `load_time`/`delivery_time` → `schedule_cell_ts` (przed `v_leave_empty`; nieczytelny tekst = bez konfliktu); (2) test A = `do … perform`; (3) audyt wokół 1. importu + kontrola zmiany wagi; (4) `assembly_seq` odczyt po `reset role`; filtr NOTICE; test „rano”; EXPECTED import **281**. Po zielonym CI — prośba o F7.

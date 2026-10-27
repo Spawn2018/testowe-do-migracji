@@ -1064,8 +1064,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0313**; CI zielone; czekam F7)
 Źródło: #572. F7 r2: `SE_KAA_TRACK` (nie nadpisuj `SE_E22`); bez literałów GPS; via co ~100 km; nearestKm odcinek. Po BN0 → **#583** → P4-k #581 → BN1.
 
-### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; F7 r3 + CI r11 GRANT)
-Źródło: #583 (Spawn2018, `pilne`). F7 #586 r3: test A przez perform + tylko `driver_name`; `schedule_row` UPDATE tylko gdy distinct, bez `updated_at`; audyt pomija sam `schedule_row` na `shipment_items`; `skip_reason` pusta komórka tylko gdy WT ma wartość; pending→`v_omit_sched`; quiet z `v_apply_fields`; konflikt godzin po `::time`. CI r11: `GRANT SELECT` na temp `_f583`/`_chg583`/`_old583` (po `set role` — permission denied). import EXPECTED **279**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
+### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — W TOKU (PR #586 `pakiet/583-import-ksh-prev-plates`; migracja **0314**; F7 r4)
+Źródło: #583 (Spawn2018, `pilne`). F7 #586 r4: konflikt godzin przez `schedule_cell_ts` (nie `::time`; „rano” bez wycofania); test A = `perform`; audyt wokół 1. importu (plik=WT → 0) + kontrola wagi ≥1; `assembly_seq` odczyt po `reset role`; filtr NOTICE w testach. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/`. **Importu nie włączać** przed frontem. Scalaj **#585 (0313) przed #586**.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #583; przed BN1; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: BN0 → #583 → ten → BN1.
@@ -1815,3 +1815,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 12:15 | #583 F7 r2 A/B/C + fixture `_f583` przed set role; import EXPECTED **276** | pętla |
 | 27.10.2026 12:45 | #583 F7 r3: audit/schedule_row + pusta WT + test A; import EXPECTED **279** | pętla |
 | 27.10.2026 13:50 | #583 CI fix r11: GRANT SELECT na `_f583`/`_chg583`/`_old583` po set role (260/19 → permission denied) | pętla |
+| 27.10.2026 14:55 | #583 F7 #586 r4: schedule_cell_ts + perform + audit 1. import/waga + rano; EXPECTED **281** | pętla |
