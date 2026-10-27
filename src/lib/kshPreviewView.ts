@@ -37,12 +37,30 @@ export interface KshPreviewGroup {
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : v == null ? null : String(v));
 
+/**
+ * Wartość do porównania WT ↔ plik — ściśle, jak import (`is distinct from`, bez zmiany wielkości liter i spacji);
+ * jedyna normalizacja: brak = pusty tekst (serwer i tak zwraca `nullif(…, '')`). Inaczej panel ukryłby zmianę,
+ * którą import zapisze (np. `0035/10/s/2026` w pliku).
+ */
+export function sameValueKey(v: string | null | undefined): string {
+  return v ?? '';
+}
+
+/**
+ * #583 — „zmiana” z tą samą wartością w Watch Tower i w pliku nie jest zmianą (np. numer HHL–KSH 0035/10/S/2026
+ * po obu stronach). Osłona ekranu niezależna od poprawki po stronie bazy.
+ */
+export function isNoopChange(c: Pick<KshPreviewChange, 'kind' | 'wt' | 'file'>): boolean {
+  return c.kind === 'changed' && sameValueKey(c.wt) === sameValueKey(c.file);
+}
+
 /** Odpowiedź RPC → model widoku; null — brak danych (konto spoza HHL albo niepoprawny kształt). */
 export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   if (!Array.isArray(o.changes)) return null;
   const changes: KshPreviewChange[] = [];
+  let dropped = 0;
   for (const c of o.changes) {
     if (!c || typeof c !== 'object') continue;
     const r = c as Record<string, unknown>;
@@ -50,6 +68,10 @@ export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
     const kind: KshPreviewKind = r.kind === 'added' || r.kind === 'missing' ? r.kind : 'changed';
     const field = str(r.field) ?? '';
     if (!code || (kind === 'changed' && !field)) continue;
+    if (isNoopChange({ kind, wt: str(r.wt), file: str(r.file) })) {
+      dropped += 1;
+      continue;
+    }
     changes.push({
       kind,
       code,
@@ -67,7 +89,7 @@ export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
     readAt: typeof o.read_at === 'string' ? o.read_at : null,
     bytes: Number.isFinite(Number(o.bytes)) ? Number(o.bytes) : 0,
     hash: typeof o.hash === 'string' ? o.hash : '',
-    n: Number.isFinite(n) ? n : changes.length,
+    n: dropped > 0 || !Number.isFinite(n) ? changes.length : n,
     changes,
   };
 }
