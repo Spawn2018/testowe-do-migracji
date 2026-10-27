@@ -1,8 +1,8 @@
 /**
  * B-MAPA — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
- * #572 BN0 / F7 #585: SE-KAA z via co ~100 km na śladzie SE_E22 (passThrough);
- * odświeżenie przy zmianie korytarza; odrzucenie nie kasuje punktów.
+ * #572 BN0 / F7 #585 r2: SE-KAA z via co ~100 km na SE_KAA_TRACK (osobny od E22);
+ * odświeżenie przy zmianie korytarza; odrzucenie nie kasuje punktów (ponów po 24 h).
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
@@ -26,7 +26,9 @@ const LEGS = [
 ] as const;
 
 const DAY_MS = 30 * 864e5;
+const RETRY_REJECT_MS = 24 * 3600e3;
 const MAX_DEV_KM = 2;
+const CORRIDOR_KAA = 'SE_KAA_TRACK';
 
 function parseCorridorPoints(raw: unknown): LatLng[] {
   if (!Array.isArray(raw)) return [];
@@ -71,11 +73,11 @@ Deno.serve(async (req) => {
   let viaPts: LatLng[] = [];
   let corridorUpdatedAt = 0;
   {
-    const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', 'SE_E22').maybeSingle();
+    const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', CORRIDOR_KAA).maybeSingle();
     corridorUpdatedAt = Date.parse(String(corrRow.data?.updated_at ?? '')) || 0;
-    const ptsRpc = await sb.rpc('here_corridor_points', { p_code: 'SE_E22' });
+    const ptsRpc = await sb.rpc('here_corridor_points', { p_code: CORRIDOR_KAA });
     if (!ptsRpc.error) corridorPts = parseCorridorPoints(ptsRpc.data);
-    const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: 'SE_E22', p_max: 14 });
+    const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: CORRIDOR_KAA, p_max: 14 });
     if (!viaRpc.error) viaPts = parseCorridorPoints(viaRpc.data);
   }
 
@@ -131,11 +133,13 @@ Deno.serve(async (req) => {
       corridorPts.length < 2 ||
       maxDeviationSymmetricKm(line, corridorPts) <= MAX_DEV_KM;
     if (!okGeom || !okDev) {
-      // F7: nie kasuj punktów — tylko summary + fetched_at (here_store_road null zachowuje points).
+      // F7 N9: nie blokuj 30 dni — ponów po 24 h (fetched_at tak, by age ≥ DAY_MS za 24 h).
+      const retryAt = new Date(Date.now() - DAY_MS + RETRY_REJECT_MS).toISOString();
       await sb.rpc('here_store_road', {
         p_leg: leg.leg,
         p_points: null,
-        p_summary: leg.summary + (okGeom ? ' — odchyłka od SE_E22' : ' — geometria odrzucona'),
+        p_summary: leg.summary + (okGeom ? ' — odchyłka od SE_KAA_TRACK' : ' — geometria odrzucona'),
+        p_now: retryAt,
       });
       continue;
     }

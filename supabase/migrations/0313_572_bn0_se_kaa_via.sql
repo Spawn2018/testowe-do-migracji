@@ -1,6 +1,12 @@
--- #572 BN0 / F7 #585: SE-KAA zgodna ze śladem GPS SG-23 (SE_E22).
--- Via co ~100 km na drodze (nie centra miast); odchyłka dwukierunkowa ≤ 2 km;
--- odrzucenie nie kasuje dobrej geometrii; wymuszenie przeliczenia SE-KAA.
+-- #572 BN0 / F7 #585 r2: SE-KAA z korytarza SE_KAA_TRACK (ślad GPS), nie SE_E22.
+-- N4: bez literałów GPS w repo. N8: SE_E22 bez zmian (OFF_CORRIDOR/ETA STENA).
+-- Via = najbliższy wierzchołek śladu co ~100 km; odchyłka dwukierunkowa ≤ 2 km;
+-- odrzucenie nie kasuje points; wymuszenie przeliczenia SE-KAA.
+
+alter table public.corridor_polylines drop constraint if exists corridor_polylines_code_check;
+alter table public.corridor_polylines
+  add constraint corridor_polylines_code_check
+  check (code in ('PL_ROAD', 'SE_E4', 'SE_E22', 'SE_APPROACH_SG03', 'SE_KAA_TRACK'));
 
 create or replace function public.here_corridor_points(p_code text)
 returns jsonb
@@ -41,7 +47,7 @@ comment on function public.here_corridor_points(text) is
 
 revoke all on function public.here_corridor_points(text) from public, anon, authenticated;
 
--- Via dla HERE Routing: punkty na linii korytarza co ~100 km (max 14), bez końców.
+-- Via: najbliższy rzeczywisty wierzchołek śladu przy kolejnych 100 km (metry geography).
 create or replace function public.here_corridor_via_points(p_code text, p_max integer default 14)
 returns jsonb
 language plpgsql
@@ -50,28 +56,23 @@ security definer
 set search_path = public
 as $$
 declare
-  v_geom geometry;
   v_len double precision;
   v_n integer;
   v_max integer;
   v_out jsonb := '[]'::jsonb;
   v_i integer;
-  v_frac double precision;
+  v_target double precision;
   v_pt geometry;
 begin
   if (p_code is not null and length(btrim(p_code)) > 0) is not true then
     raise exception 'Brak kodu korytarza' using errcode = '22023';
   end if;
   v_max := greatest(1, least(coalesce(p_max, 14), 14));
-  select c.geom into v_geom from public.corridor_polylines c where c.code = p_code;
-  if v_geom is null then
-    return '[]'::jsonb;
-  end if;
-  v_len := st_length(v_geom::geography);
+  select st_length(c.geom::geography) into v_len
+    from public.corridor_polylines c where c.code = p_code;
   if (v_len is not null and v_len >= 50000) is not true then
     return '[]'::jsonb;
   end if;
-  -- ~100 km: liczba via = min(p_max, floor(km/100)-1), co najmniej 1 przy ≥200 km
   v_n := least(v_max, greatest(0, floor(v_len / 100000.0)::int - 1));
   if v_n < 1 and v_len >= 200000 then
     v_n := 1;
@@ -79,22 +80,42 @@ begin
   if v_n < 1 then
     return '[]'::jsonb;
   end if;
+
   for v_i in 1..v_n loop
-    v_frac := v_i::double precision / (v_n + 1)::double precision;
-    v_pt := st_lineinterpolatepoint(v_geom, v_frac);
-    v_out := v_out || jsonb_build_array(
-      jsonb_build_array(
-        round(st_y(v_pt)::numeric, 6),
-        round(st_x(v_pt)::numeric, 6)
-      )
-    );
+    v_target := v_len * (v_i::double precision / (v_n + 1)::double precision);
+    with pts as (
+      select (dp).path[1] as i, (dp).geom as g
+        from public.corridor_polylines c
+       cross join lateral st_dumppoints(c.geom) as dp
+       where c.code = p_code
+    ),
+    steps as (
+      select i, g,
+             coalesce(st_distance(lag(g) over (order by i)::geography, g::geography), 0) as step_m
+        from pts
+    ),
+    cum as (
+      select i, g, sum(step_m) over (order by i) as cum_m from steps
+    )
+    select g into v_pt
+      from cum
+     order by abs(cum_m - v_target)
+     limit 1;
+    if v_pt is not null then
+      v_out := v_out || jsonb_build_array(
+        jsonb_build_array(
+          round(st_y(v_pt)::numeric, 6),
+          round(st_x(v_pt)::numeric, 6)
+        )
+      );
+    end if;
   end loop;
   return v_out;
 end;
 $$;
 
 comment on function public.here_corridor_via_points(text, integer) is
-  '#572 F7: via passThrough co ~100 km na SE_E22 (nie wierzchołki miast).';
+  '#572 F7: via passThrough co ~100 km — najbliższy wierzchołek śladu (metry), nie interpolacja cięciwy.';
 
 revoke all on function public.here_corridor_via_points(text, integer) from public, anon, authenticated;
 
@@ -144,12 +165,14 @@ begin
     return null;
   end if;
 
+  -- punkt korytarza → linia HERE (geography)
   select max(st_distance(v_road_g, dp.geom::geography))
     into v_c2r
     from corridor_polylines c
    cross join lateral st_dumppoints(c.geom) as dp
    where c.code = p_corridor;
 
+  -- punkt HERE → linia korytarza (geography)
   select max(st_distance(v_corr_g, st_setsrid(st_makepoint((p->>1)::float8, (p->>0)::float8), 4326)::geography))
     into v_r2c
     from here_road_geometry h
@@ -207,142 +230,75 @@ begin
   if exists (select 1 from pg_roles where rolname = 'service_role') then
     grant execute on function public.here_corridor_points(text) to service_role;
     grant execute on function public.here_corridor_via_points(text, integer) to service_role;
+    grant execute on function public.here_road_corridor_dev_m(text, text) to service_role;
     grant execute on function public.here_store_road(text, jsonb, text, timestamptz) to service_role;
   end if;
 end $$;
 
--- SE_E22 ze śladu SG-23 (23.10 06:59 → 26.10 12:39), ST_Simplify ~50 m, skoki >5 km odrzucone.
--- 87 punktów, zapis poza repo: D:/Watch Tower/dane/tmp/se_e22_sg23_pts.json
-update public.corridor_polylines
-   set geom = st_setsrid(st_makeline(array[
-         st_makepoint(15.63048, 56.16578),
-         st_makepoint(15.67606, 56.20057),
-         st_makepoint(15.94227, 56.25228),
-         st_makepoint(16.06734, 56.39491),
-         st_makepoint(16.09166, 56.56572),
-         st_makepoint(16.32488, 56.6735),
-         st_makepoint(16.37197, 56.8415),
-         st_makepoint(16.42929, 57.01968),
-         st_makepoint(16.48243, 57.12846),
-         st_makepoint(16.46003, 57.29467),
-         st_makepoint(16.5132, 57.4557),
-         st_makepoint(16.47182, 57.61414),
-         st_makepoint(16.44219, 57.66674),
-         st_makepoint(16.38689, 57.89055),
-         st_makepoint(16.51831, 58.01925),
-         st_makepoint(16.53605, 58.18638),
-         st_makepoint(16.44891, 58.34502),
-         st_makepoint(16.31859, 58.47919),
-         st_makepoint(16.17355, 58.57509),
-         st_makepoint(16.15802, 58.69317),
-         st_makepoint(16.20737, 58.85299),
-         st_makepoint(16.2494, 59.00117),
-         st_makepoint(16.1445, 59.13129),
-         st_makepoint(16.10964, 59.29196),
-         st_makepoint(16.19381, 59.41482),
-         st_makepoint(16.29687, 59.40451),
-         st_makepoint(16.30437, 59.49788),
-         st_makepoint(16.48474, 59.61316),
-         st_makepoint(16.58319, 59.70872),
-         st_makepoint(16.54819, 59.88075),
-         st_makepoint(16.79901, 59.93662),
-         st_makepoint(16.91633, 60.08277),
-         st_makepoint(16.95996, 60.2519),
-         st_makepoint(16.97963, 60.41631),
-         st_makepoint(16.96129, 60.57376),
-         st_makepoint(17.08744, 60.68307),
-         st_makepoint(17.06276, 60.86006),
-         st_makepoint(17.0201, 60.90392),
-         st_makepoint(16.96202, 61.0593),
-         st_makepoint(17.03269, 61.23614),
-         st_makepoint(16.99454, 61.40568),
-         st_makepoint(16.97899, 61.58203),
-         st_makepoint(17.07861, 61.74549),
-         st_makepoint(17.18711, 61.89527),
-         st_makepoint(17.26688, 62.04529),
-         st_makepoint(17.37304, 62.20377),
-         st_makepoint(17.36646, 62.36884),
-         st_makepoint(17.34065, 62.46062),
-         st_makepoint(17.56288, 62.53999),
-         st_makepoint(17.88251, 62.61113),
-         st_makepoint(17.87574, 62.70836),
-         st_makepoint(17.99277, 62.84396),
-         st_makepoint(18.16095, 62.98316),
-         st_makepoint(18.36805, 63.08375),
-         st_makepoint(18.50996, 63.23041),
-         st_makepoint(18.72144, 63.29488),
-         st_makepoint(19.00856, 63.31617),
-         st_makepoint(19.01541, 63.31746),
-         st_makepoint(19.21556, 63.44271),
-         st_makepoint(19.46506, 63.57799),
-         st_makepoint(19.82807, 63.61627),
-         st_makepoint(20.11036, 63.73716),
-         st_makepoint(20.5628, 63.89859),
-         st_makepoint(20.83758, 64.0203),
-         st_makepoint(20.97462, 64.18062),
-         st_makepoint(21.09153, 64.29483),
-         st_makepoint(21.30028, 64.39682),
-         st_makepoint(21.23178, 64.5641),
-         st_makepoint(21.00079, 64.70336),
-         st_makepoint(20.97089, 64.72988),
-         st_makepoint(21.02098, 64.82652),
-         st_makepoint(21.22327, 64.96017),
-         st_makepoint(21.48908, 65.09324),
-         st_makepoint(21.50496, 65.14181),
-         st_makepoint(21.504, 65.14221),
-         st_makepoint(21.50536, 65.14199),
-         st_makepoint(21.427, 65.2935),
-         st_makepoint(21.58257, 65.42947),
-         st_makepoint(21.8444, 65.54782),
-         st_makepoint(22.0304, 65.63748),
-         st_makepoint(21.97832, 65.65591),
-         st_makepoint(21.7365, 65.78825),
-         st_makepoint(21.78728, 65.82412),
-         st_makepoint(21.7879, 65.82187),
-         st_makepoint(21.8021, 65.807),
-         st_makepoint(21.80438, 65.80763),
-         st_makepoint(21.70654, 65.81801)
-       ]), 4326),
-       source = 'GPS SG-23 23–26.10.2026 (simplify ~50 m, #572 F7)',
-       updated_at = now()
- where code = 'SE_E22';
-
-update public.corridor_polylines
-   set total_km = round((st_length(geom::geography) / 1000.0)::numeric, 2),
-       updated_at = now()
- where code = 'SE_E22';
-
-
--- Na produkcji: przebuduj ze świeżego GPS SG-23, jeśli ≥ 50 punktów po filtrze skoków.
+-- N4/N8: SE_E22 bez zmian. SE_KAA_TRACK tylko z positions (gdy brak — nic).
+-- UUID SG-23 pinned; skoki po prędkości >150 km/h; przycięcie port→plac; postoje; simplify.
 do $$
 declare
-  v_load uuid;
+  v_load uuid := '95ab7218-69cc-490d-8b68-b379c3ed9aae';
   v_geom geometry;
   v_n int;
+  v_origin geography := st_setsrid(st_makepoint(15.6308, 56.1646), 4326)::geography;
+  v_dest geography := st_setsrid(st_makepoint(21.75914, 65.80539), 4326)::geography;
 begin
-  select l.id into v_load
-    from loads l
-    join shipment_items si on si.load_id = l.id
-   where si.shipment_code = 'SG-23'
-   order by si.shipment_code
-   limit 1;
-  if v_load is null then
+  if not exists (select 1 from loads where id = v_load) then
     return;
   end if;
+
   with raw as (
-    select coalesce(geom_snapped, geom_raw)::geometry as g, ts
+    select coalesce(geom_snapped, geom_raw)::geometry as g,
+           ts,
+           speed_kmh,
+           lag(coalesce(geom_snapped, geom_raw)::geometry) over (order by ts) as prev_g,
+           lag(ts) over (order by ts) as prev_ts
       from positions
      where load_id = v_load
-       and ts >= timestamptz '2026-10-23 06:59:00+00'
-       and ts <= timestamptz '2026-10-26 12:39:00+00'
        and coalesce(geom_snapped, geom_raw) is not null
   ),
-  filtered as (
-    select g, ts, lag(g) over (order by ts) as prev from raw
+  speed_ok as (
+    select g, ts, speed_kmh
+      from raw
+     where prev_g is null
+        or prev_ts is null
+        or (extract(epoch from (ts - prev_ts)) > 0
+            and (st_distance(prev_g::geography, g::geography)
+                 / greatest(extract(epoch from (ts - prev_ts)), 1)) * 3.6 <= 150)
+  ),
+  -- wyjazd z portu (~2 km od Verkö) → wjazd na plac (~2 km od Boden)
+  numbered as (
+    select g, ts, speed_kmh,
+           row_number() over (order by ts) as rn,
+           st_distance(g::geography, v_origin) as d_origin,
+           st_distance(g::geography, v_dest) as d_dest
+      from speed_ok
+  ),
+  bounds as (
+    select
+      coalesce((select min(rn) from numbered where d_origin > 2000), 1) as rn_start,
+      coalesce((select min(rn) from numbered where d_dest <= 2000),
+               (select max(rn) from numbered)) as rn_end
+  ),
+  trimmed as (
+    select n.g, n.ts, n.speed_kmh, n.rn
+      from numbered n, bounds b
+     where n.rn >= b.rn_start and n.rn <= b.rn_end
+  ),
+  -- usuń postoje: speed≈0 albo skupisko <300 m względem poprzedniego zatrzymania
+  moving as (
+    select g, ts, speed_kmh, rn,
+           lag(g) over (order by ts) as prev_g,
+           lag(speed_kmh) over (order by ts) as prev_spd
+      from trimmed
   ),
   kept as (
-    select g, ts from filtered
-     where prev is null or st_distance(g::geography, prev::geography) <= 5000
+    select g, ts from moving
+     where coalesce(speed_kmh, 1) > 1
+        or prev_g is null
+        or st_distance(g::geography, prev_g::geography) >= 300
   ),
   agg as (
     select count(*)::int as n,
@@ -350,15 +306,24 @@ begin
       from kept
   )
   select n, geom into v_n, v_geom from agg;
+
   if (v_n is not null and v_n >= 50 and v_geom is not null and st_npoints(v_geom) >= 10) is not true then
     return;
   end if;
-  update public.corridor_polylines
-     set geom = st_setsrid(v_geom, 4326),
-         source = 'GPS SG-23 23–26.10.2026 (live rebuild #572 F7)',
-         total_km = round((st_length(v_geom::geography) / 1000.0)::numeric, 2),
-         updated_at = now()
-   where code = 'SE_E22';
+
+  insert into public.corridor_polylines (code, geom, total_km, source, updated_at)
+  values (
+    'SE_KAA_TRACK',
+    st_setsrid(v_geom, 4326),
+    round((st_length(v_geom::geography) / 1000.0)::numeric, 2),
+    'GPS track rebuild #572 F7 (SE_KAA_TRACK)',
+    now()
+  )
+  on conflict (code) do update
+    set geom = excluded.geom,
+        total_km = excluded.total_km,
+        source = excluded.source,
+        updated_at = now();
 end $$;
 
 update public.here_road_geometry

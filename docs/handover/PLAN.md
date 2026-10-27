@@ -1062,7 +1062,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
 ### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0313**)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). F7 #585: `SE_E22` ze śladu GPS SG-23 (nie centra miast); via co ~100 km (`here_corridor_via_points`); odchyłka dwukierunkowa ≤ 2 km; odrzucenie nie kasuje `points`; `fetched_at=-infinity` SE-KAA; `loadRoadLines` AbortController + sesja. Test #496: punkt na śladzie `16.23/58.95` (nie Vagnhärad/E4). bmapa EXPECTED **155**; status **339**. Po BN0 → **#583 PILNE** → P4-k #581 → BN1.
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). F7 #585 r2: **`SE_KAA_TRACK`** (nie nadpisuj `SE_E22` — N8); bez literałów GPS w repo (N4, tylko DO z `positions` UUID SG-23); via = najbliższy wierzchołek co ~100 km; `nearestKm` punkt→odcinek; `ROAD_KAA.via` inland (bez Södertälje); odrzucenie: points zostają, ponów po 24 h; front N6 — timeout nie kasuje legów. Test #496: Vagnhärad/E4 na `SE_E22`. bmapa EXPECTED **155**; status **339**. Po BN0 → **#583 PILNE** → P4-k #581 → BN1.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — DO ZROBIENIA (po BN0 #572 / #585; przed P4-k #581)
 Źródło: #583 (Spawn2018, `pilne`; komentarze 27.10 00:55 i 01:37; kolejność z PR #585). Dopóki nie na produkcji — właściciel nie włącza importu.
@@ -1808,3 +1808,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
 | 27.10.2026 03:00 | #574-nast / #582 SCALONE `de50a8bb` (F7 gotowe na `36c1a0a`, unit/db/visual ✔); start BN0 #572 (**0313**) | pętla |
 | 27.10.2026 04:15 | #583 PILNE wpisane §4 (po BN0, przed P4-k): fałszywe zmiany prev + tablice PLAT/es-ga/SG-21; kolejność z komentarza PR #585. BN0 #585: fix bmapa asercja `exists::text` = `true` (nie `t`) | pętla |
+| 27.10.2026 05:45 | BN0 #585 F7 r2: `SE_KAA_TRACK` (N8), bez literałów GPS (N4), via inland/N1, nearestKm odcinek/N2, trim DO/N3, front N6, via metry/N5, reject 24h/N9 | pętla |

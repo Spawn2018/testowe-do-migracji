@@ -262,7 +262,7 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     const sb = await getSupabase();
     const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
     let lines = await read();
-    // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_E22).
+    // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_KAA_TRACK).
     if (lines.length >= ROAD_LEGS) return lines;
     if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
     const { data } = await sb.auth.getSession();
@@ -281,11 +281,17 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
         body: '{}',
         signal: ac.signal,
       });
+    } catch {
+      // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
     } finally {
       clearTimeout(timer);
       hereRoadsSessionAt = Date.now();
     }
-    lines = await read(true);
+    try {
+      lines = await read(true);
+    } catch {
+      /* zostaw lines */
+    }
     return lines;
   } catch {
     return [];

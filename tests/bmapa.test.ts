@@ -18,6 +18,7 @@ import {
   metersPerPixel,
   maxDeviationToCorridorKm,
   maxDeviationSymmetricKm,
+  nearestKm,
   rawGps,
   roadGeometryOk,
   ferryVisible,
@@ -116,47 +117,74 @@ describe('B-MAPA geometria', () => {
     expect(roadGeometryOk(dense, ROAD_SE)).toBe(false);
   });
 
-  // #572 BN0 / F7 #585 — ślad SG-23 (fragment), nie tautologia ROAD_KAA.via↔via
-  it('#572 SE-KAA: odchyłka dwukierunkowa ≤ 2 km; równoległa 10 km odrzucona', () => {
-    // Fragment uproszczonego śladu SG-23 23–26.10 (F7: fixture z przejazdu, nie z via).
+  // #572 BN0 / F7 #585 r2 — fixture inland (nie tautologia via↔via); N1/N2/N7
+  it('#572 SE-KAA: odchyłka ≤ 2 km; równoległa 10 km; roadGeometryOk na śladzie', () => {
+    // Fikcyjny korytarz inland (jak fixture bmapa.sh) — nie GPS kierowcy.
     const corridor: Array<[number, number]> = [
-      [56.16578, 15.63048],
-      [56.25228, 15.94227],
-      [56.6735, 16.32488],
-      [57.4557, 16.5132],
-      [58.18638, 16.53605],
-      [58.85299, 16.20737],
-      [59.40451, 16.29687],
-      [59.93662, 16.79901],
-      [61.40568, 16.99454],
-      [62.70836, 17.87574],
-      [63.61627, 19.82807],
-      [64.82652, 21.02098],
-      [65.65591, 21.97832],
-      [65.81801, 21.70654],
+      [56.17, 15.63],
+      [56.5, 16.05],
+      [57.0, 16.4],
+      [57.5, 16.5],
+      [58.0, 16.45],
+      [58.5, 16.2],
+      [59.0, 16.3],
+      [59.5, 16.5],
+      [60.0, 16.8],
+      [60.7, 17.1],
+      [61.5, 17.2],
+      [62.4, 17.4],
+      [63.2, 18.5],
+      [63.8, 20.2],
+      [64.7, 21.0],
+      [65.3, 21.5],
+      [65.81, 21.76],
     ];
-    // Zagęszczenie umiarkowane (JS nearestKm = wierzchołki; SQL = geography na linii).
+    // N7: gęsta linia przechodzi ROAD_KAA (minPoints 2000); odchyłka na rzadszej (O(n²)).
+    const denseOk = denseVia(corridor, 0.25);
+    expect(roadGeometryOk(denseOk, ROAD_KAA)).toBe(true);
     const dense = denseVia(corridor, 5);
     expect(maxDeviationSymmetricKm(dense, dense)).toBeLessThanOrEqual(2);
-    // Równoległa ~10 km na wschód (0,18° ≈ 10 km na 60°N) — F7: musi paść.
     const parallel = dense.map(([lat, lng]) => [lat, lng + 0.18] as [number, number]);
     expect(maxDeviationSymmetricKm(parallel, dense)).toBeGreaterThan(2);
     expect(maxDeviationToCorridorKm(parallel, dense)).toBeGreaterThan(2);
+    // N2: punkt w połowie długiego odcinka — nearestKm = odcinek, nie wierzchołek.
+    const sparse: Array<[number, number]> = [
+      [56.17, 15.63],
+      [65.81, 21.76],
+    ];
+    const midLat = (56.17 + 65.81) / 2;
+    const midLng = (15.63 + 21.76) / 2;
+    expect(nearestKm(sparse, midLat, midLng)).toBeLessThan(1);
+    // Do samych wierzchołków byłoby ~ połowa cięciwy ≫ 1 km.
+    expect(Math.min(
+      Math.hypot((midLat - 56.17) * 111, (midLng - 15.63) * 55),
+      Math.hypot((midLat - 65.81) * 111, (midLng - 21.76) * 55),
+    )).toBeGreaterThan(100);
     const chord: Array<[number, number]> = [
       [56.1646, 15.6308],
       [65.80539, 21.75914],
     ];
     expect(roadGeometryOk(chord, ROAD_KAA)).toBe(false);
     expect(maxDeviationSymmetricKm(chord, dense)).toBeGreaterThan(2);
+    // N1: Södertälje poza spec — ślad inland nie wymaga E4.
+    expect(ROAD_KAA.via.some((v) => Math.abs(v.lat - 59.195) < 0.01 && Math.abs(v.lng - 17.628) < 0.01)).toBe(
+      false,
+    );
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
     expect(apply).toMatch(/ROAD_LEGS = 4/);
     expect(apply).toMatch(/AbortController/);
+    expect(apply).toMatch(/timeout\/sieć/);
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
     expect(edge).toMatch(/passThrough=true/);
     expect(edge).toMatch(/here_corridor_via_points/);
     expect(edge).toMatch(/maxDeviationSymmetricKm/);
-    expect(edge).toMatch(/SE_E22/);
+    expect(edge).toMatch(/SE_KAA_TRACK/);
+    expect(edge).not.toMatch(/SE_E22/);
+    const mig = readFileSync('supabase/migrations/0313_572_bn0_se_kaa_via.sql', 'utf8');
+    expect(mig).toMatch(/SE_KAA_TRACK/);
+    expect(mig).toMatch(/95ab7218-69cc-490d-8b68-b379c3ed9aae/);
+    expect(mig).not.toMatch(/st_makepoint\(15\.63048/);
   });
 
   it('ślad przez rondo to surowe punkty, bez dopasowania', () => {

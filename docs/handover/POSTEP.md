@@ -5792,3 +5792,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” po HEAD `1d0e28d1`. unit/visual ✔; db FAIL — status 338/339: `#496 Vagnhärad 17.50/58.95` (E4 ~70 km od SE_E22 GPS).
 - **Krok:** `status.sh` — asercja na `16.23/58.95` (wierzchołki śladu ~58.85–59.00); komentarz #572 F7. EXPECTED status **339** bez zmiany. Push → CI; potem prośba o F7.
 
+## 2026-10-27 05:45 — BN0 #585 F7 r2: N4/N8/N1/N2/N3/N6
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: F7 #585 r2 na `1d0e28d` — **NIE scalać**; CI na `88ba5259` unit/visual/db ✔ (status punkt na GPS). Bez „F7: gotowe” po wymaganym minimum. Bez push na main.
+- **Krok F7 r2 (minimum N4,N8,N1,N2,N3,N6 + N5/N9):**
+  - N4: usunięte literały GPS / okno czasu / ścieżka lokalna z 0313; tylko DO z `positions`.
+  - N8: nowy kod `SE_KAA_TRACK` (CHECK); `SE_E22` bez zmian; Edge/bmapa → `SE_KAA_TRACK`.
+  - N1: `ROAD_KAA.via` inland (Norrköping…Luleå), bez Södertälje.
+  - N2: `nearestKm` = punkt→odcinek; test połowy długiego odcinka.
+  - N3: DO — UUID SG-23, trim port→plac, postoje, skoki >150 km/h, simplify.
+  - N5: via = najbliższy wierzchołek po metrach geography.
+  - N6: `loadRoadLines` — timeout/fetch lokalnie, zwraca `lines`.
+  - N9: odrzucenie → `fetched_at` tak, by ponowić po 24 h.
+  - `status.sh` #496 z powrotem Vagnhärad/E4. bmapa fixture CI (nie GPS).
+

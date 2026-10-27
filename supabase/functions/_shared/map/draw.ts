@@ -126,9 +126,35 @@ export function maxSegmentKm(line: readonly LatLng[]): number {
   return m;
 }
 
+/** Odległość punktu do odcinka (projekcja lokalna + haversine) — F7 #585 N2. */
+export function distPointToSegmentKm(
+  lat: number,
+  lng: number,
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number,
+): number {
+  const dx = bLng - aLng;
+  const dy = bLat - aLat;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return haversineKm(lat, lng, aLat, aLng);
+  let t = ((lng - aLng) * dx + (lat - aLat) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return haversineKm(lat, lng, aLat + t * dy, aLng + t * dx);
+}
+
+/** Najbliższa odległość do łamanej (punkt → odcinek), nie tylko do wierzchołków. */
 export function nearestKm(line: readonly LatLng[], lat: number, lng: number): number {
+  if (line.length === 0) return Infinity;
+  if (line.length === 1) return haversineKm(lat, lng, line[0][0], line[0][1]);
   let best = Infinity;
-  for (const p of line) best = Math.min(best, haversineKm(p[0], p[1], lat, lng));
+  for (let i = 0; i < line.length - 1; i++) {
+    best = Math.min(
+      best,
+      distPointToSegmentKm(lat, lng, line[i][0], line[i][1], line[i + 1][0], line[i + 1][1]),
+    );
+  }
   return best;
 }
 
@@ -169,24 +195,22 @@ export const ROAD_SE: RoadSpec = {
 };
 
 /**
- * #572 BN0: Karlskrona–Boden po E22/E4 (jak SE_E22 z przejazdu).
- * Punkty kontrolne = Lyckeby / Jämjö / Brömsebro / Söderåkra + kręgosłup E22→E4.
+ * #572 BN0 / F7 N1: Karlskrona–Boden po śladzie inland (SE_KAA_TRACK).
+ * Bez Södertälje/E4 — punkty kontrolne ze śladu (Norrköping…Luleå), ≤ 5 km.
  */
 export const ROAD_KAA: RoadSpec = {
   minPoints: 2000,
   maxSegKm: 3,
-  // cięciwy via ≈ 1160 km; prawdziwa droga HERE ≈ 1380 km (H-0)
   minKm: 1000,
   maxKm: 1600,
   via: [
     { lat: 56.1646, lng: 15.6308, km: 3 },
-    { lat: 56.198, lng: 15.656, km: 5 },
-    { lat: 56.19, lng: 15.84, km: 8 },
-    { lat: 56.3, lng: 15.99, km: 8 },
-    { lat: 56.47, lng: 16.06, km: 8 },
-    { lat: 57.758, lng: 16.637, km: 12 },
-    { lat: 58.594, lng: 16.183, km: 12 },
-    { lat: 59.195, lng: 17.628, km: 12 },
+    { lat: 58.5, lng: 16.2, km: 5 }, // Norrköping (ślad inland)
+    { lat: 59.5, lng: 16.5, km: 5 }, // Västerås
+    { lat: 60.7, lng: 17.1, km: 5 }, // Gävle
+    { lat: 62.4, lng: 17.4, km: 5 }, // Sundsvall
+    { lat: 63.8, lng: 20.2, km: 5 }, // Umeå
+    { lat: 65.3, lng: 21.5, km: 5 }, // Luleå (na śladzie, nie 22.15)
     { lat: 65.80539, lng: 21.75914, km: 3 },
   ],
 };
