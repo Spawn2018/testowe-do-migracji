@@ -6023,3 +6023,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - drobne: `here_store_road` INSERT odrzucenia `fetched_at=-infinity`;
   - bmapa EXPECTED **164** (bez zmiany).
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 19:45 — #595 SCALONE; BN0 #585 F7 r6 (N3 fixture)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#595** — F7 „gotowe do scalenia” na `28823f7e` (po ostatnim commitcie; unit/visual ✔; MERGEABLE) → `gh pr merge --merge` → `4f9d2c18` (18:28Z). Bez push na main.
+- BN0 #585: unit/visual ✔ na `5f3c7520`; db FAIL N3 rebuild→0 (163/164) — `0.05*sin` niewystarczające vs `st_simplify(0.00045)`.
+- **Krok (BN0 #585):** F7 r6 — N3 SE: łamana po 17 miastach (jak fixture SE_KAA_TRACK) + offset 0,15°/0,12°, 80 próbek / 12 min; EXPECTED **164**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.

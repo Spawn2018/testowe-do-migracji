@@ -250,15 +250,33 @@ sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
             st_setsrid(st_makepoint(15.6308 + (g.i % 3) * 0.001, 56.1646 + (g.i % 3) * 0.001), 4326),
             5, 'TEST', '{}'::jsonb
        from generate_series(0, 4) as g(i)" >/dev/null
-# F7 r5 P3: odchylenie sin — prosta cięciwa → st_simplify zostawia 2 pkt → rebuild 0.
+# F7 r6 P3: łamana po miastach (jak fixture) + offset — 0.05*sin na CI → simplify 2 pkt → 0.
+# 16 odcinków × 5 próbek = 80 pkt; 12 min; offset 0.15° → przeżywa simplify, ≤150 km/h.
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
-     select '$L572', timestamptz '2026-10-20 09:00:00+00' + (g.i * 12 || ' minutes')::interval,
-            st_setsrid(st_makepoint(
-              15.63 + (21.76 - 15.63) * g.i / 80.0 + 0.05 * sin(g.i),
-              56.17 + (65.81 - 56.17) * g.i / 80.0
-            ), 4326),
+     with verts(i, lon, lat) as (
+       values
+         (0, 15.63, 56.17), (1, 16.05, 56.50), (2, 16.40, 57.00),
+         (3, 16.50, 57.50), (4, 16.45, 58.00), (5, 16.18, 58.59),
+         (6, 16.30, 59.00), (7, 16.54, 59.61), (8, 16.80, 60.00),
+         (9, 17.10, 60.70), (10, 17.20, 61.50), (11, 17.40, 62.40),
+         (12, 18.50, 63.20), (13, 20.20, 63.80), (14, 21.00, 64.70),
+         (15, 21.50, 65.30), (16, 21.76, 65.81)
+     ),
+     seg as (
+       select a.i as seg, a.lon as lon0, a.lat as lat0, b.lon as lon1, b.lat as lat1
+         from verts a join verts b on b.i = a.i + 1
+     ),
+     samples as (
+       select s.seg * 5 + g.k as seq,
+              s.lon0 + (s.lon1 - s.lon0) * g.k / 5.0 + 0.15 * sin((s.seg * 5 + g.k) / 2.5),
+              s.lat0 + (s.lat1 - s.lat0) * g.k / 5.0 + 0.12 * cos((s.seg * 5 + g.k) / 2.5)
+         from seg s cross join generate_series(0, 4) as g(k)
+     )
+     select '$L572',
+            timestamptz '2026-10-20 09:00:00+00' + (s.seq * 12 || ' minutes')::interval,
+            st_setsrid(st_makepoint(s.lon, s.lat), 4326),
             70, 'TEST', '{}'::jsonb
-       from generate_series(0, 80) as g(i)" >/dev/null
+       from samples s(seq, lon, lat)" >/dev/null
 n3=$(sys "select rebuild_se_kaa_track('$L572')")
 if [ "$n3" -ge 10 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    N3 rebuild_se_kaa_track ≥ 10 ($n3)"; else fail=$((fail+1)); echo "  FAIL  N3 rebuild → $n3"; fi
 start_lat=$(sys "select round(st_y(st_startpoint(geom))::numeric, 2) from corridor_polylines where code='SE_KAA_TRACK'")
