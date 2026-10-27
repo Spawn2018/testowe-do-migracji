@@ -53,6 +53,8 @@ export interface CardCtx {
   decisions: DecisionsApi | null;
   /** `overdue` — decyzja po terminie albo eskalowana (#384 pkt 6: wtedy także Operacje HHL) */
   mayResolve: (deciderRole: string | null, overdue?: boolean) => boolean;
+  /** rola konta oglądającego (`accountRole`) — na produkcji z profilu; `me` jest tylko w demo */
+  userRole: string | null;
   onResolved: (i: TodoIssue, hint: string | null) => void;
 }
 
@@ -301,7 +303,7 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
         ctx.mayResolve(d.deciderRole, i.overdue || !!d.escalatedAt) ? (
           <div className="rk-resolve">
             <div className="rk-acts">
-              {d.options.filter((o) => optionVisible(d.typeCode, o.code, ctx.me?.role)).map((o) => (
+              {d.options.filter((o) => optionVisible(d.typeCode, o.code, ctx.userRole)).map((o) => (
                 <button key={o.code} type="button" className="btn" disabled={busy} data-rk-opt={o.code}
                   aria-expanded={o.effect === 'PROPOSE' ? proposeCode === o.code : confirmKeyOf(d.typeCode, o.code) ? confirmOpt === o.code : undefined}
                   onClick={() => void resolve(o.code, o.requires_comment, o.effect)}>

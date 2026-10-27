@@ -124,15 +124,19 @@ describe('W-590 ekran nie woła ogólnego rozstrzygnięcia z pominięciem trasy'
     expect(hook).toMatch(/decisionRpc\(/);
     expect(hook).not.toMatch(/rpc\(\s*['"`]decision_resolve['"`]/);
     expect(hook).toMatch(/sb\.rpc\(call\.fn, call\.args\)/);
-    expect(hook).toMatch(/if \(!row\) return \{ hint: null, error: decText\('pl', 'dec_err_stale'\) \}/);
+    expect(hook).toMatch(/if \(!row\) \{\s*void refresh\(\);\s*return \{ hint: null, error: decText\('pl', 'dec_err_stale'\) \};/);
     expect(hook).toMatch(/changesLoads\(call\)[\s\S]*refreshFromServer/);
+    expect(hook).toMatch(/refreshFromServer\(\{ keepSelection: true, background: true \}\)\.catch\(/);
   });
 
   it('karta pokazuje potwierdzenie na stronie i ukrywa podwójne „Odłóż”', () => {
     expect(card).toMatch(/data-rk-dec-confirm/);
     expect(card).toMatch(/hasOwnSnooze\(d\.typeCode\)/);
     expect(card).not.toMatch(/window\.confirm|\bconfirm\(/);
-    expect(card).toMatch(/optionVisible\(d\.typeCode, o\.code, ctx\.me\?\.role\)/);
+    /* F7 r2: na produkcji `ctx.me` = null — rola z `accountRole` (jak `mayResolve`), nie z `me` */
+    expect(card).toMatch(/optionVisible\(d\.typeCode, o\.code, ctx\.userRole\)/);
+    expect(card).not.toMatch(/optionVisible\([^)]*ctx\.me/);
+    expect(readFileSync('src/components/risks/TodoPanel.tsx', 'utf8')).toMatch(/userRole: accountRole\(role\)/);
     expect(card).toMatch(/data-rk-dec-yes=\{o\.code\} autoFocus/);
     /* komentarz wymagany sprawdzany PRZED otwarciem potwierdzenia */
     expect(card).toMatch(/confirmKeyOf\(d\.typeCode, code\)\) \{\s*if \(needsNote/);

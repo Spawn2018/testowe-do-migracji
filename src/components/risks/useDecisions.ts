@@ -89,7 +89,10 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     /* #590/#592: zmiana przewoźnika i przywrócenie mają własne funkcje bazy (`carrierDecision.ts`) */
     const row = rowsRef.current.find((r) => r.id === id);
     /* bez wiersza nie znamy rodzaju decyzji — nigdy nie zgadujemy ogólnego rozstrzygnięcia (zamknęłoby bez skutku) */
-    if (!row) return { hint: null, error: decText('pl', 'dec_err_stale') };
+    if (!row) {
+      void refresh();
+      return { hint: null, error: decText('pl', 'dec_err_stale') };
+    }
     const call = decisionRpc({ id, typeCode: row.typeCode, loadId: row.loadId }, option, note, payload);
     if ('error' in call) return { hint: null, error: decText('pl', `dec_err_${call.error}`) };
     const { getSupabase } = await import('../../auth/client');
@@ -97,13 +100,15 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     const { data, error: e } = await sb.rpc(call.fn, call.args);
     if (e) {
       const key = call.fn === 'decision_resolve' ? null : dbErrorKey(e);
+      if (key === 'dec_err_stale') void refresh();
       if (key === 'dec_err_forbidden' && call.fn === 'load_restore_removed') return { hint: null, error: decText('pl', 'dec_err_restore_admin') };
       return { hint: null, error: key ? decText('pl', key) : e.message };
     }
     if (changesLoads(call)) {
       /* anulowanie / usunięcie / przywrócenie — harmonogram od razu, nie po 2 min cyklu */
       const { refreshFromServer } = await import('../../data/supabaseBridge');
-      await refreshFromServer({ keepSelection: true, background: true });
+      /* zmiana w bazie już zapisana — chwilowy błąd sieci przy odświeżeniu nie może zawiesić karty */
+      await refreshFromServer({ keepSelection: true, background: true }).catch(() => undefined);
     }
     await refresh();
     return { hint: (data as { ui_hint?: string } | null)?.ui_hint ?? null, error: null };
