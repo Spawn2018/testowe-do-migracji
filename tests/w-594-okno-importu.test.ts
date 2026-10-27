@@ -92,6 +92,18 @@ describe('W-594 powiadomienie w dzwonku', () => {
   });
 });
 
+describe('W-594 granica błędu okna', () => {
+  it('PartBoundary z onError: po błędzie woła rodzica i nic nie rysuje (bez bloku „Odśwież”)', async () => {
+    const { PartBoundary } = await import('../src/components/shell/PartBoundary');
+    let called = 0;
+    const b = new PartBoundary({ children: null, name: 'kis', onError: () => { called += 1; } });
+    b.state = { failed: true };
+    expect(b.render()).toBeNull();
+    b.componentDidCatch(new Error('x'), { componentStack: '' } as never);
+    expect(called).toBe(1);
+  });
+});
+
 describe('W-594 okno — wygląd i zachowanie', () => {
   const modal = readFileSync('src/components/shell/KshImportSummaryModal.tsx', 'utf8');
   const css = readFileSync('src/components/schedule/sched7.css', 'utf8');
@@ -124,9 +136,12 @@ describe('W-594 okno — wygląd i zachowanie', () => {
 
   it('okno ładowane osobno (budżet paczki) i tylko gdy otwarte', () => {
     expect(shell).toMatch(/lazy\(lazyRetry\(\(\) => import\('\.\/components\/shell\/KshImportSummaryModal'\)/);
-    expect(shell).toMatch(/\{importSummaryId \? <PartBoundary name="kis"><Suspense fallback=\{null\}><KshImportSummaryModal \/><\/Suspense><\/PartBoundary> : null\}/);
+    expect(shell).toMatch(/\{importSummaryId \? \(/);
     /* skróty klawiszowe wyłączone przy otwartym oknie */
-    expect(shell).toMatch(/if \(store\.importSummaryId\) return;/);
+    expect(shell).toMatch(/if \(document\.querySelector\('\[data-kis-modal\]'\)\) return;/);
+    /* okno, które się nie wczytało: zamknięte z komunikatem, bez bloku „Odśwież” w środku strony */
+    expect(shell).toMatch(/<PartBoundary name="kis" onError=\{onKisError\}>/);
+    expect(shell).toMatch(/st\.closeImportSummary\(\);\s*st\.pushToast\(/);
   });
 
   it('lista zmian: kod w każdym wierszu, powód pominięcia, nowe i brakujące kody', () => {
