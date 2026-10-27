@@ -5747,3 +5747,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **#581:** PLAN §4 (po BN0, przed BN1), §5 W61 (27A: auto ≤15 %), §8. Komentarz w zgłoszeniu.
 - **#574-nast krok:** migracja **0312** — cron `greatest(EXIT, entered_at)`; SG-23 DWELL payload; testy status +7 → EXPECTED **327**; §8 drganie GPS / podwójny DWELL. Gałąź `pakiet/574-nast-dwell-min`.
 
+## 2026-10-27 03:00 — #574-nast db FAIL #574i → bulk_quiet w trg_geofence_matrix_notify
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe” na #582 (HEAD przed poprawką). Bez push na main.
+- CI `5bd6bf9b`: unit ✔, visual ✔, db FAIL status 326/1 — `#574i: bulk_quiet — bez nowych powiadomień` (otrzymano 4, oczekiwano 0).
+- **Przyczyna:** cron ustawia `tower.bulk_quiet`, ale `trg_geofence_matrix_notify` (0281) i tak woła `matrix_notify` → ZONE_ENTER.
+- **Krok:** w **0312** (jeszcze nie na main) — early return przy `bulk_quiet=on` w `trg_geofence_matrix_notify`. Po zielonym CI — prośba o F7.
+

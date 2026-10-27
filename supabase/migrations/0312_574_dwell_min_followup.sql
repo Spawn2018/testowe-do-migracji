@@ -142,6 +142,76 @@ grant execute on function public.geofence_confirm_pending_dwell(timestamptz) to 
 comment on function public.geofence_confirm_pending_dwell(timestamptz) is
   '#574-nast: PENDING_IN (bez SITE); first pos >= greatest(EXIT, entered_at); bulk_quiet ≥2h; service_role.';
 
+-- bulk_quiet wokół INSERT GEOFENCE_ENTER (cron ≥2 h) musi wyciszyć ZONE_* z macierzy
+-- (0281 nie sprawdzał ustawienia — stąd FAIL #574i: 4 powiadomienia).
+create or replace function public.trg_geofence_matrix_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_proj uuid;
+  v_tpl text;
+  v_fence text;
+  v_gid uuid;
+  v_kind text;
+  v_country text;
+  v_name text;
+begin
+  if current_setting('tower.bulk_quiet', true) = 'on' then
+    return null;
+  end if;
+  if new.event_type not in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT') then
+    return null;
+  end if;
+  v_tpl := case new.event_type when 'GEOFENCE_ENTER' then 'ZONE_ENTER' else 'ZONE_EXIT' end;
+
+  begin
+    v_gid := nullif(new.payload->>'geofence_id', '')::uuid;
+  exception when others then
+    v_gid := null;
+  end;
+
+  if v_gid is not null then
+    select g.kind::text, g.country, g.name
+      into v_kind, v_country, v_name
+      from geofences g
+     where g.id = v_gid;
+  end if;
+
+  v_kind := coalesce(nullif(v_kind, ''), nullif(new.payload->>'geofence_kind', ''));
+  v_country := coalesce(
+    nullif(v_country, ''),
+    nullif(new.payload->>'geofence_country', ''),
+    nullif(new.payload->>'country', '')
+  );
+  v_name := coalesce(
+    nullif(v_name, ''),
+    nullif(new.payload->>'geofence_name', ''),
+    nullif(new.payload->>'name', '')
+  );
+
+  v_fence := coalesce(
+    nullif(new.payload->>'geofence_id', ''),
+    coalesce(v_kind, '') || ':' || coalesce(v_name, ''),
+    'x'
+  );
+  select project_id into v_proj from loads where id = new.load_id;
+  perform public.matrix_notify(
+    'LOAD_STATUS', v_tpl, new.load_id, v_proj,
+    jsonb_build_object(
+      'load_id', new.load_id,
+      'event', new.event_type,
+      'geofence_id', new.payload->>'geofence_id',
+      'geofence_name', v_name,
+      'geofence_kind', v_kind,
+      'geofence_country', v_country
+    ),
+    'zone:' || new.event_type || ':' || new.load_id::text || ':' || v_fence
+  );
+  return null;
+end $$;
+revoke all on function public.trg_geofence_matrix_notify() from public, anon, authenticated;
+comment on function public.trg_geofence_matrix_notify() is
+  '#574-nast: ZONE_* z macierzy; tower.bulk_quiet=on → cisza (cron dwell ≥2 h).';
+
 -- ---------------------------------------------------------------------------
 -- 2. SG-23: GEOFENCE_DWELL payload po backdate ENTER (F7 #574 pkt 6 / odbiór)
 -- ---------------------------------------------------------------------------
