@@ -5815,3 +5815,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - CI #586 `7ba45c20`: unit/visual ✔; db FAIL import 258/10 (`#583` out=`^` — heredoc `r583_file` w `-c`).
 - Krok: `r583_rows` jak A6 IMP_N5 (`jsonb_build_object` z live, bez `import_live_prev`); w `-c` `$json$…$json$::jsonb`. Po zielonym — F7.
+
+## 2026-10-27 09:25 — #583 CI FAIL r6: psql -v + :'rows' (JSON nie w -c "…")
+
+- CI #586 `82b5e453`: unit ✔; db FAIL 258/10 (`CONTEXT: JSON data…^` — `${R583EQ}` z `"` rozrywał bash `-c "..."`).
+- Krok: `r583_run` → `psql -v rows=…` + `:'rows'::jsonb`; `r583_rows` jedna linia. Po zielonym — F7.
