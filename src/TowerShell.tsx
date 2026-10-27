@@ -45,6 +45,8 @@ import { usePhoneTableLabels } from './lib/phoneTableLabels';
 
 const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
 const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
+/* #594 B1: okno „Zmiany z pliku KSH” — osobny fragment, pobierany dopiero po kliknięciu powiadomienia (budżet D15) */
+const KshImportSummaryModal = lazy(lazyRetry(() => import('./components/shell/KshImportSummaryModal').then((m) => ({ default: m.KshImportSummaryModal }))));
 /* pobranie panelu transportu w tle, gdy przeglądarka jest wolna (pierwsze kliknięcie bez czekania) */
 if (typeof window !== 'undefined') {
   const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
@@ -56,6 +58,7 @@ export default function TowerShell() {
   const view = useTowerStore((s) => s.view);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
+  const importSummaryId = useTowerStore((s) => s.importSummaryId);
   const setView = useTowerStore((s) => s.setView);
   const initTheme = useTowerStore((s) => s.initTheme);
   const navCollapsed = useTowerStore((s) => s.navCollapsed);
@@ -246,6 +249,7 @@ export default function TowerShell() {
       </div>
       {/* D15 (budżet 400 kB): panel transportu osobno — pobierany w tle po starcie, więc otwiera się od razu */}
       <Suspense fallback={null}><LoadDrawer /></Suspense>
+      {importSummaryId ? <Suspense fallback={null}><KshImportSummaryModal /></Suspense> : null}
       <Toasts />
     </div>
   );

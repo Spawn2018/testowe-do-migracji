@@ -135,6 +135,15 @@ const PL: Record<string, string> = {
   s7_kp_skip: 'nie zostanie zapisane: {reason}',
   s7_kp_open: 'Otwórz transport {code}',
   s7_kp_note: 'Import z pliku jest wyłączony. Po włączeniu wartości z kolumny „W pliku” zastąpią wartości w Watch Tower — poza polami oznaczonymi „czeka na zapis do pliku” i „nie zostanie zapisane”, których import nie nadpisze.',
+  /* #594 B1 — okno „Zmiany z pliku KSH” po imporcie (z dzwonka) */
+  s7_kis_title: 'Zmiany z pliku KSH',
+  s7_kis_title_at: 'Zmiany z pliku KSH — {at}',
+  s7_kis_close: 'Zamknij okno zmian z pliku KSH',
+  s7_kis_sum: 'Transporty: {t} · pola: {f} · nowe: {a} · anulowane/usunięte: {b}',
+  s7_kis_file: 'Plik: {name}',
+  s7_kis_none: 'Szczegóły tego importu nie są już dostępne (zastąpił je nowszy import albo nie dotyczą Twoich transportów).',
+  s7_kis_error: 'Nie udało się wczytać zmian: {msg}',
+  s7_kis_empty: 'Ten import nie zmienił danych widocznych dla Twojego konta.',
   s7_kp_not_ready: 'Lista jeszcze nie przygotowana — pojawi się po najbliższym odczycie pliku (co 5 min).',
 };
 
