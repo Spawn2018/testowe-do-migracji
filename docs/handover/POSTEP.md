@@ -6049,3 +6049,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyna:** `trg_loads_order_numbers` / `enforce_order_numbers` — `IN_TRANSIT_SE` wymaga `hhl_order_no` i `carrier_order_no`; insert ładunku padał cicho (`>/dev/null`) → FK positions → 0.
 - **Krok (BN0 #585):** N3/P2 — numery HHL/SCX jak w `status.sh` `mk`; asercje „load istnieje”; bmapa EXPECTED **168**.
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 21:05 — BN0 #585 F7 r6b: CI zielone; prośba o F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `a02cbf9c` (jedyny otwarty PR #585). Bez push na main.
+- CI HEAD `a02cbf9c`: unit ✔, visual ✔ (zmiany + części bramy/telefon/zrzuty), db ✔ (bmapa EXPECTED **168**, 15m1s). MERGEABLE.
+- **Krok:** wpis PLAN/POSTEP + prośba o F7: gotowe do scalenia. Po znaku → `gh pr merge --merge`; dalej P4-k #581.
