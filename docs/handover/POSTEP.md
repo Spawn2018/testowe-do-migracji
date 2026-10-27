@@ -6084,3 +6084,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `9ab04622`: unit ✔; **db FAIL** security 458/1 — B5: słowo `begin` w komentarzu nad ciałem → regex `security.sh:1429` obcina w złym miejscu.
 - F7 r3 (Spawn2018, 21:30Z): komentarz bez słowa „begin” (albo `comment on function`).
 - Krok: komentarz `assert_not_preview jako pierwsza instrukcja`; lokalna weryfikacja regexu OK; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 23:00 — #596 SCALONE; start #594 (0318 SUMMARY)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#599/#596** — F7 „gotowe do scalenia” na `3429fce` (21:54Z, po ostatnim commitcie) + CI unit/visual/db ✔ → `gh pr merge --merge` → `620f7294`. Bez push na main.
+- Bieżąca: **#594** gałąź `pakiet/594-ksh-import-summary`, migracja **0318**:
+  - tabela `ksh_import_summaries` (retencja 30);
+  - macierz `ksh_import` (dzwonek ON, e-mail/push OFF, fixed);
+  - trigger po `schedule_imports.stats` → `ksh_import_summary_publish` (nie przy dry_run / quiet / 0 zmian);
+  - jedno IN_APP `KSH_IMPORT_SUMMARY` na konto (dedup upsert, read_at=null);
+  - RPC `ksh_import_summary_get` z filtrem pól (KSH bez numerów zleceń; SCX bez HHL–KSH);
+  - import EXPECTED **342**; nullguard **871**.
+- Ekran gest/rozmycie: PR #600 (`wyglad/`) — osobno. Po #594 baza → #581 przenumeruj na **0319**.

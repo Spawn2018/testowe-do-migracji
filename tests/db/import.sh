@@ -1944,4 +1944,75 @@ select (select (status::text <> 'REMOVED')::text from loads where id=$(LOADID C5
   ||'|'||(select status||'/'||resolution_code from decisions where type_code='KSH_REMOVED_BACK' and load_id=$(LOADID C596-6));")
 chk "#596: decision_resolve WILL_RESTORE → przywrócenie + RESOLVED/RESTORED" "$out" "REMOVE|true|true|RESOLVED/RESTORED"
 
+echo; echo "[#594] zbiorcze powiadomienie + migawka ksh_import_summaries"
+# Macierz ksh_import: dzwonek ON dla HHL/KSH/SCX (migracja 0318).
+D594A=$(Q "select (current_date + 30)::text")
+D594B=$(Q "select (current_date + 35)::text")
+D594A2=$(Q "select (current_date + 31)::text")
+D594B2=$(Q "select (current_date + 36)::text")
+R594="[{\"code\":\"S594-A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D594A\",\"delivery_date\":\"$D594B\",\"hhl_order_no\":\"HHL/594\",\"carrier_order_no\":\"SCX/594\"}]"
+R594c="[{\"code\":\"S594-A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D594A2\",\"delivery_date\":\"$D594B2\",\"hhl_order_no\":\"HHL/594b\",\"carrier_order_no\":\"SCX/594b\"}]"
+IMP594() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"name\":\"594.xlsx\",\"hash\":\"594a\",\"path\":\"harmonogramy/x/594.xlsx\"}'::jsonb, $2)"; }
+IMP594b() { echo "select import_schedule('$P', '$1'::jsonb, ${3:-'{}'}::text[], '{\"name\":\"594b.xlsx\",\"hash\":\"594b\",\"path\":\"harmonogramy/x/594b.xlsx\"}'::jsonb, $2)"; }
+IMP594q() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"name\":\"594q.xlsx\",\"hash\":\"594q\"}'::jsonb, $2, true)"; }
+
+$PSQL -c "delete from notifications where template='KSH_IMPORT_SUMMARY'" >/dev/null
+$PSQL -c "delete from ksh_import_summaries where project_id='$P'" >/dev/null
+
+val "#594: dry_run → brak migawki" $HHL "select import_schedule('$P', '$R594'::jsonb, '{}'::text[], '{\"name\":\"594d.xlsx\",\"hash\":\"594d\"}'::jsonb, true) is not null; select count(*)::text from ksh_import_summaries where project_id='$P'" "0" commit
+chk "#594: dry_run → 0 powiadomień SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")" 0
+
+val "#594: import z nowym → 1 migawka" $HHL "select jsonb_array_length(r->'added') from ($(IMP594 "$R594" false)) s(r)" 1 commit
+chk "#594: 1 migawka po zapisie" "$(Q "select count(*) from ksh_import_summaries where project_id='$P'")" 1
+# HHL + KSH + SCX (seed) = 3
+chk "#594: 1 IN_APP na HHL/KSH/SCX" "$(Q "select count(*) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and n.channel='IN_APP' and o.kind in ('FORWARDER','CLIENT','CARRIER')")" 3
+chk "#594: bez e-mail/SMS SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and channel <> 'IN_APP'")" 0
+
+SID594=$(Q "select id from ksh_import_summaries where project_id='$P' order by imported_at desc limit 1")
+val "#594: HHL czyta migawkę" $HHL "select (ksh_import_summary_get('$SID594'::uuid)->>'n')::int > 0" t
+val "#594: KSH czyta migawkę" $KSH "select (ksh_import_summary_get('$SID594'::uuid) is not null)" t
+val "#594: SCX czyta migawkę" $SCX "select (ksh_import_summary_get('$SID594'::uuid) is not null)" t
+
+# Drugi import (zmiana dat + numerów) — nadal 1 powiadomienie/konto, nieprzeczytane
+$PSQL -c "update notifications set read_at=now() where template='KSH_IMPORT_SUMMARY'" >/dev/null
+N594=$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")
+val "#594: drugi import ze zmianami" $HHL "select jsonb_array_length(r->'changed') from ($(IMP594b "$R594c" false)) s(r)" 1 commit
+chk "#594: nadal 1 SUMMARY na konto (upsert)" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")" "$N594"
+chk "#594: SUMMARY znowu nieprzeczytane" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and read_at is null")" "$N594"
+chk "#594: 2 migawki (historia)" "$(Q "select count(*) from ksh_import_summaries where project_id='$P'")" 2
+
+SID594b=$(Q "select id from ksh_import_summaries where project_id='$P' order by imported_at desc limit 1")
+# Filtr pól: KSH bez hhl_order_no / carrier_order_no; SCX bez hhl_order_no; HHL widzi oba
+val "#594: HHL widzi hhl_order_no" $HHL "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field'='hhl_order_no'),0)::text" "1"
+val "#594: KSH bez numerów zleceń" $KSH "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field' in ('hhl_order_no','carrier_order_no')),0)::text" "0"
+val "#594: SCX bez hhl_order_no" $SCX "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field'='hhl_order_no'),0)::text" "0"
+val "#594: SCX widzi carrier_order_no / daty" $SCX "select (coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field' in ('carrier_order_no','load_date','delivery_date')),0) > 0)::text" "t"
+
+# Import bez zmian → brak nowej migawki / bez nowego SUMMARY (upsert nie ruszany — read_at zostaje)
+$PSQL -c "update notifications set read_at=now() where template='KSH_IMPORT_SUMMARY'" >/dev/null
+M594=$(Q "select count(*) from ksh_import_summaries where project_id='$P'")
+val "#594: import bez zmian → unchanged" $HHL "select (r->>'unchanged')::text from ($(IMP594b "$R594c" false)) s(r)" "1" commit
+chk "#594: bez zmian → ta sama liczba migawek" "$(Q "select count(*) from ksh_import_summaries where project_id='$P'")" "$M594"
+chk "#594: bez zmian → SUMMARY nadal przeczytane" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and read_at is null")" 0
+
+# Quiet ze zmianą → 0 SUMMARY (jak IQ-426)
+N594q=$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")
+R594q="[{\"code\":\"S594-A\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D594A\",\"delivery_date\":\"$D594B2\",\"hhl_order_no\":\"HHL/594b\",\"carrier_order_no\":\"SCX/594b\"}]"
+val "#594: quiet ze zmianą daty" $HHL "select jsonb_array_length(r->'changed') from ($(IMP594q "$R594q" false)) s(r)" 1 commit
+chk "#594: quiet → 0 nowych SUMMARY" "$(Q "select (count(*) - $N594q)::text from notifications where template='KSH_IMPORT_SUMMARY'")" "0"
+
+# Przewoźnik innego projektu → brak powiadomienia
+$PSQL -c "insert into organizations (id, code, name, kind) values ('00000000-0000-0000-0000-00000000a099','OTH','Other Carrier','CARRIER') on conflict do nothing" >/dev/null
+$PSQL -c "insert into app_users (auth_id, org_id, email, role, active) values ('11111111-0000-0000-0000-000000000099','00000000-0000-0000-0000-00000000a099','oth@test','CARRIER_DISPATCH',true) on conflict (auth_id) do update set active=true, org_id=excluded.org_id" >/dev/null
+OTH_UID=$(Q "select id from app_users where auth_id='11111111-0000-0000-0000-000000000099'")
+R594n="[{\"code\":\"S594-B\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D594A\",\"delivery_date\":\"$D594B\"}]"
+val "#594: nowy transport (powiadomienie)" $HHL "select jsonb_array_length(r->'added') from (select import_schedule('$P', '$R594n'::jsonb, '{}'::text[], '{\"name\":\"594n.xlsx\",\"hash\":\"594n\"}'::jsonb, false) as r) s" 1 commit
+chk "#594: obcy przewoźnik bez SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and user_id='$OTH_UID'")" 0
+
+# Podgląd: odczyt OK
+val "#594: Podgląd — get OK" $HHL "select admin_preview_start('KSH'); select (ksh_import_summary_get('$SID594b'::uuid) is not null)" t
+
+chk "#594: anon bez EXECUTE get" "$(Q "select has_function_privilege('anon','ksh_import_summary_get(uuid)','execute')")" f
+chk "#594: authenticated ma EXECUTE get" "$(Q "select has_function_privilege('authenticated','ksh_import_summary_get(uuid)','execute')")" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
