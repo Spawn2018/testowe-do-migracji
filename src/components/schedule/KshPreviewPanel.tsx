@@ -150,8 +150,10 @@ export function KshPreviewPanel() {
                               <td data-label={lbl.file}>{previewValue(r.file, r.field)}</td>
                               <td data-label={lbl.notes} className="s7-kp-notes">
                                 {notes.length === 0 ? '—' : notes.map((n) => (
-                                  <span key={n} className={`pill ${n === 'manual' ? 'p-amber' : 'p-sea'}`} data-ksh-preview-note={n}>
-                                    {s7(locale, n === 'manual' ? 's7_kp_manual' : 's7_kp_pending')}
+                                  <span key={n} className={`pill ${n === 'manual' ? 'p-amber' : n === 'skip' ? 'p-plan' : 'p-sea'}`} data-ksh-preview-note={n}>
+                                    {n === 'skip'
+                                      ? s7p(locale, 's7_kp_skip', { reason: r.skipReason ?? '' })
+                                      : s7(locale, n === 'manual' ? 's7_kp_manual' : 's7_kp_pending')}
                                   </span>
                                 ))}
                               </td>
