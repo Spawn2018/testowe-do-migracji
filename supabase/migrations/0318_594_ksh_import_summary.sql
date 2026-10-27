@@ -388,6 +388,7 @@ begin
                select 1 from public.loads l
                 where l.project_id = p_project and l.carrier_org_id = o.id
                   and l.status is distinct from 'CANCELLED'
+                  and l.status is distinct from 'REMOVED'
                   and l.removed_at is null))
        )
   loop

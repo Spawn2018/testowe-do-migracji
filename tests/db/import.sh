@@ -1958,8 +1958,11 @@ IMP594q() { echo "select import_schedule('$P', '$1'::jsonb, '{}'::text[], '{\"na
 
 $PSQL -c "delete from notifications where template='KSH_IMPORT_SUMMARY'" >/dev/null
 $PSQL -c "delete from ksh_import_summaries where project_id='$P'" >/dev/null
+# HHL_OPS z #426 zostaje aktywny poza tą sekcją — tu tylko seed HHL/KSH/SCX (= 3)
+$PSQL -c "update app_users set active=false where auth_id='$OPS_AUTH'" >/dev/null
 
-val "#594: dry_run → brak migawki" $HHL "select import_schedule('$P', '$R594'::jsonb, '{}'::text[], '{\"name\":\"594d.xlsx\",\"hash\":\"594d\"}'::jsonb, true) is not null; select count(*)::text from ksh_import_summaries where project_id='$P'" "0" commit
+val "#594: dry_run → wynik" $HHL "select import_schedule('$P', '$R594'::jsonb, '{}'::text[], '{\"name\":\"594d.xlsx\",\"hash\":\"594d\"}'::jsonb, true) is not null" t
+chk "#594: dry_run → brak migawki" "$(Q "select count(*) from ksh_import_summaries where project_id='$P'")" 0
 chk "#594: dry_run → 0 powiadomień SUMMARY" "$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY'")" 0
 
 val "#594: import z nowym → 1 migawka" $HHL "select jsonb_array_length(r->'added') from ($(IMP594 "$R594" false)) s(r)" 1 commit
@@ -1986,7 +1989,7 @@ SID594b=$(Q "select id from ksh_import_summaries where project_id='$P' order by 
 val "#594: HHL widzi hhl_order_no" $HHL "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field'='hhl_order_no'),0)::text" "1"
 val "#594: KSH bez numerów zleceń" $KSH "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field' in ('hhl_order_no','carrier_order_no')),0)::text" "0"
 val "#594: SCX bez hhl_order_no" $SCX "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field'='hhl_order_no'),0)::text" "0"
-val "#594: SCX widzi carrier_order_no / daty" $SCX "select (coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field' in ('carrier_order_no','load_date','delivery_date')),0) > 0)::text" "t"
+val "#594: SCX widzi carrier_order_no / daty" $SCX "select coalesce((select count(*) from jsonb_array_elements(ksh_import_summary_get('$SID594b'::uuid)->'changes') c where c->>'field' in ('carrier_order_no','load_date','delivery_date')),0) > 0" t
 
 # Import bez zmian → brak nowej migawki / bez nowego SUMMARY (upsert nie ruszany — read_at zostaje)
 $PSQL -c "update notifications set read_at=now() where template='KSH_IMPORT_SUMMARY'" >/dev/null
@@ -2014,5 +2017,6 @@ val "#594: Podgląd — get OK" $HHL "select admin_preview_start('KSH'); select 
 
 chk "#594: anon bez EXECUTE get" "$(Q "select has_function_privilege('anon','ksh_import_summary_get(uuid)','execute')")" f
 chk "#594: authenticated ma EXECUTE get" "$(Q "select has_function_privilege('authenticated','ksh_import_summary_get(uuid)','execute')")" t
+$PSQL -c "update app_users set active=true where auth_id='$OPS_AUTH'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

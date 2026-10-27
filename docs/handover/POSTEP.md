@@ -6097,3 +6097,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - RPC `ksh_import_summary_get` z filtrem pól (KSH bez numerów zleceń; SCX bez HHL–KSH);
   - import EXPECTED **342**; nullguard **871**.
 - Ekran gest/rozmycie: PR #600 (`wyglad/`) — osobno. Po #594 baza → #581 przenumeruj na **0319**.
+
+## 2026-10-27 23:15 — #600 SCALONE; #601 poprawka db (REMOVED / dry_run / OPS / nullguard)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#600** F7 „gotowe do scalenia” na `85a6d11a` (21:58Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `7d8ebb4b`. Bez push na main.
+- CI #601 `5f316d1c` (dispatch import,nullguard): **FAIL** 338/4 + nullguard 870/871:
+  1. `ksh_import_summary_publish` wyklucza CANCELLED bez REMOVED → dodane `status is distinct from 'REMOVED'`;
+  2. dry_run `val` czytał `ksh_import_summaries` jako authenticated (revoke) → split: import `val` + count `chk` przez Q;
+  3. 4 IN_APP (HHL_OPS z #426) → w sekcji #594 OPS nieaktywny, oczekiwane 3;
+  4. SCX `::text` → `true` zamiast `t` → porównanie boolean bez cast;
+  5. nullguard EXPECTED **870** (EMPTY pozytywne = n/d, tylko +4 odmowy).
+- import EXPECTED **343**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
