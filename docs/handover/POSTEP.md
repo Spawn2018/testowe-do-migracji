@@ -5794,3 +5794,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #586 `d2dfe145`: unit ✔; db FAIL import 258/10 (wszystkie `#583` z R583 — out = `^` = błąd SQL); visual/db PR anulowane (G-15, SHA znany zły).
 - Przyczyna: `R583` robiło `({})::jsonb` / `({"trailer_plate":…})::jsonb` bez cudzysłowów literału.
 - Poprawka testów: `('$1')::jsonb`; `schedule_row = null` w fixturech #583 (prev = live = plik). Po push — prośba o F7 gdy CI zielone.
+
+## 2026-10-27 08:15 — #583 CI FAIL r3: R583→Q + IW-1 pod #583
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 bez „F7: gotowe do scalenia” (HEAD `0b8d4dd1`, CI ✔). #586 bez F7. Bez push na main.
+- CI #586 `215e8747`: unit ✔, visual ✔; db FAIL import 258/10 (`#583` out=`^`) + i2 669/2 (IW-1).
+- Przyczyna #583: `$($R583 …)` w `-c` nadal dawało błąd SQL (tail -1 = `^`). Przyczyna IW-1: pusta komórka / godziny zgodne z live = bez `changed` (decyzja #583).
+- Krok: testy #583 jak A6 (`r583_rows`/`Q` + `'…'::jsonb`); IW-1 → unchanged (#583). Po zielonym CI — prośba o F7.

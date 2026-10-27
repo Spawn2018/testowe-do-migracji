@@ -1803,3 +1803,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
 | 27.10.2026 07:00 | #583 PILNE start (BN0 #585 CI zielone, czekam F7): migracja **0314** import_live_prev + tablice/skip_reason; import EXPECTED **268** | pętla |
 | 27.10.2026 07:45 | #583 CI fix r2: R583 `('$1')::jsonb` + schedule_row null w testach (258/10 → push) | pętla |
+| 27.10.2026 08:15 | #583 CI fix r3: testy bez `$($R583)` (jak A6/`Q`); IW-1 unchanged pod pustą komórką (#583) | pętla |
