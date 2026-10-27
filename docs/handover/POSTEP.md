@@ -5774,3 +5774,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#582** merge `de50a8bb` (F7 „gotowe do scalenia” 01:56Z na `36c1a0a`; unit/db/visual ✔). Bez push na main.
 - **BN0 #572 krok:** gałąź `pakiet/572-bn0-se-kaa-here`; migracja **0313** (`here_corridor_points`, `here_road_corridor_dev_m`); Edge `here-roads` — SE-KAA z `via` SE_E22 (`passThrough`), refetch gdy korytarz nowszy; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` → 4 legi; bmapa **149**. Zrzut visual mapy — po zielonym CI / F7.
 
+## 2026-10-27 04:15 — BN0 #585 CI fix; #583 wpisane do planu
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. #583 (`pilne`, bez `dla-cursora`) — polecenie z komentarza PR #585 (Spawn2018): wpisane PLAN §4/§8.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po HEAD.
+- **BN0 #585:** unit/visual ✔ na `56cbb8c2`; db bmapa FAIL `SE-KAA w roads → true` — asercja porównywała do `t`, Postgres `exists::text` = `true`. Fix + PLAN kolejność: BN0 → **#583** → P4-k #581 → BN1.
+

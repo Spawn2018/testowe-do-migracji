@@ -187,7 +187,7 @@ sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Kar
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
 if [ "$legs" = "4" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 4"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
 kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' and jsonb_array_length(e->'points')>=2)::text")
-[ "$kaa" = "t" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
+[ "$kaa" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

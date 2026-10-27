@@ -1061,11 +1061,19 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (po #574-nast; migracja **0313**)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). `here-roads` SE-KAA z `via` z `SE_E22` (`passThrough`); odświeżenie przy `corridor_polylines.updated_at`; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` dociąga 4 legi; pomarańcz `#E5A544` bez zmiany (jak SE-NYN). bmapa EXPECTED **149**.
+### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0313**)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). `here-roads` SE-KAA z `via` z `SE_E22` (`passThrough`); odświeżenie przy `corridor_polylines.updated_at`; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` dociąga 4 legi; pomarańcz `#E5A544` bez zmiany (jak SE-NYN). bmapa EXPECTED **149**. Po BN0 → **#583 PILNE** → P4-k #581 → BN1.
 
-### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po BN0 #572, przed BN1; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Nie przerywa #574-nast / BN0.
+### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — DO ZROBIENIA (po BN0 #572 / #585; przed P4-k #581)
+Źródło: #583 (Spawn2018, `pilne`; komentarze 27.10 00:55 i 01:37; kolejność z PR #585). Dopóki nie na produkcji — właściciel nie włącza importu.
+1. `import_schedule`: `prev` dla wszystkich pól z `v_fnames` (nie tylko 5 z tabeli) z tego samego źródła co WT / karta transportu; snapshot bez stałego `'load_time', null` tam, gdzie baza ma wartość (`0305` ~348). Porównanie **ścisłe** (`is distinct from`) — różna wielkość liter / spacje = prawdziwa zmiana.
+2. `ksh_sync_preview_store`: nie zapisuj `kind='changed'`, gdy znormalizowane `wt` = `file` (osłona niezależna od pkt 1).
+3. Tablice z pliku: walidacja formatu (litery+cyfry, 4–10 po usunięciu spacji/myślników, ≥ 1 cyfra); `PLAT` / `es-ga` / `brak` / `?` → **bez zapisu**, w podglądzie `kind='changed'` + `skip_reason` („wartość w pliku nie jest tablicą — pominięta”).
+4. Zawartość: nie nadpisuj, gdy plik ⊂ WT po normalizacji (`WGM03896` ⊂ `WGM 03896 - SEX56N`) — bez wiersza w podglądzie.
+5. Testy `tests/db/import.sh`: identyczne numery/tablice → `changed`=0; jedna różna → 1 wiersz; `PLAT` → `skip_reason`; subset tablicy → bez zapisu. Odbiór po wdrożeniu: `preview.changes` bez WT=plik. Front `skip_reason` — koordynator `wyglad/`.
+
+### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #583; przed BN1; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Pomiar odcinków z GPS (nie z ETA); `eta_predictions`; cron co godzinę; auto-apply gdy zmiana ≤ 15 % i test wsteczny lepszy (powiadomienie HHL + cofnięcie); > 15 % → zatwierdzenie HHL_ADMIN; zamrożenie `ETA_CALIBRATION_FROZEN`; nowe trasy/przeprawy ze słownika BN1; naprawa 8 starych pomiarów; czujka; ekran — koordynator `wyglad/`. Kolejność: BN0 → #583 → ten → BN1.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1799,3 +1807,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 02:40 | #584 SCALONE `f5b0451b` (wygląd lista zmian KSH — ukryj bez zmian). #574-nast F7 #582 r3: N1+N2 testy | pętla |
 | 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
 | 27.10.2026 03:00 | #574-nast / #582 SCALONE `de50a8bb` (F7 gotowe na `36c1a0a`, unit/db/visual ✔); start BN0 #572 (**0313**) | pętla |
+| 27.10.2026 04:15 | #583 PILNE wpisane §4 (po BN0, przed P4-k): fałszywe zmiany prev + tablice PLAT/es-ga/SG-21; kolejność z komentarza PR #585. BN0 #585: fix bmapa asercja `exists::text` = `true` (nie `t`) | pętla |
