@@ -5916,5 +5916,5 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 ## 2026-10-27 15:20 — #590 / PR #592 F7: migracja 0315 (przenumerowanie z 0316), BLOKERY 1–5 w toku
 
 - Migracja **0315** `KSH_CARRIER_CHANGED` + status `REMOVED` (BEZ nakładania na produkcję): enum `REMOVED` jako pierwszy krok; `REMOVED` wszędzie, gdzie wykluczamy `CANCELLED` (funkcje po `pg_proc`, front `.not(status in (CANCELLED,REMOVED))`, `store.ts`); `decisions_read` bez `KSH_CARRIER_CHANGED` dla SCX; auto-zamknięcie w dry_run; unikalny klucz zdarzenia (ponowne otwarcie); `severity` CRITICAL ≤ 48 h; CANCEL po wjeździe przez `cancel_load`; pobudka drzemki 2 h z ponownym powiadomieniem HHL; `carrier_changed[]` w wyniku importu.
-- Testy: import EXPECTED **308**, dec2 katalog **27** typów, nullguard **858**; strażnik `tests/removed-status-guard.test.ts`.
+- Testy: import EXPECTED **308**, dec2 katalog **27** typów, nullguard **866** (+2 RPC × 5 kont; 858 było błędną liczbą); strażnik `tests/removed-status-guard.test.ts`.
 - BN0 #585 → migracja **0316**. Wynik bramy db — wpis po zielonym przebiegu.
