@@ -5906,3 +5906,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie; #590 (bez etykiety `dla-cursora`) — wpisane §4 po F7 #586.
 - Scalanie: **#586** F7 gotowe na `37ad492b` (12:51Z) + CI unit/visual/db ✔ → `gh pr merge --merge` → `ac5f8f0f` (12:57Z). #585 F7 r3 NIE; kolejność: 0314 przed BN0 → w #585 przenieś 0313→**0315**.
 - **Krok (#590):** migracja **0316** `KSH_CARRIER_CHANGED` + parser `skipped_carrier_rows` + RPC CANCEL/REMOVE/SNOOZE_2H + `loads.removed_at`; import EXPECTED **287**; nullguard **858**. Front — koordynator. Importu nie włączać.
+
+## 2026-10-27 14:25 — #591 SCALONE; #592 db FAIL → domknięcie 0316
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#591** (`wyglad/583-powod-pominiecia`) F7 gotowe na `2b9b21b` (12:45Z) + CI unit/visual ✔ → `gh pr merge --merge` → `85b6a70d` (13:17Z). #585 F7 r3 NIE. #592 bez F7.
+- **Krok (#590 / PR #592):** migracja 0316 ucięta (brak `END IF; END $g$` po GRANT `import_schedule` → FAIL tower_boot). Domknięcie bloku; push na `pakiet/590-ksh-carrier-changed`.
