@@ -47,7 +47,7 @@ describe('W-594 rozmycie tła', () => {
   const css = readFileSync('src/index.css', 'utf8');
   const drawer = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
 
-  it('pasek transportu: tło z rozmyciem na każdej szerokości', () => {
+  it('pasek transportu: tło z rozmyciem od 769 px (na telefonie pasek zajmuje cały ekran)', () => {
     expect(drawer).toMatch(/className="scrim drawer-scrim"/);
     expect(css).toMatch(/@media \(min-width:769px\)\{\.drawer-scrim\{[^}]*backdrop-filter:blur\(/);
   });
@@ -58,7 +58,9 @@ describe('W-594 rozmycie tła', () => {
   });
 
   it('przycisk dzwonka nad rozmytym tłem (drugie dotknięcie zamyka listę)', () => {
-    expect(css).toMatch(/\.bell-wrap \.bell-trigger\{position:relative;z-index:56\}/);
+    expect(css).toMatch(/\.bell-wrap \.bell-trigger\[aria-expanded="true"\]\{position:relative;z-index:56\}/);
+    /* zamknięty dzwonek nie może wyjść ponad pasek transportu (z-index 51) */
+    expect(css).not.toMatch(/\.bell-wrap \.bell-trigger\{[^}]*z-index/);
   });
 
   it('pion przewija listę (touch-action pan-y); przesunięty wiersz nie przewija w poziomie i nie przyjmuje dotyku', () => {
