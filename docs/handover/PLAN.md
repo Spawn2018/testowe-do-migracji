@@ -1848,3 +1848,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 22:40 | #596/#599 F7 r3: B5 — komentarz bez słowa begin (regex security.sh); CI→F7 | pętla |
 | 27.10.2026 23:00 | #596/#599 SCALONE (`620f7294`, F7 gotowe `3429fce`); start #594 migracja **0318** (SUMMARY + migawka); #581 → **0319** | pętla |
 | 27.10.2026 23:15 | #600 SCALONE (`7d8ebb4b`, F7 gotowe `85a6d11a`); #601 db FAIL import 338/4 (REMOVED, dry_run RLS, OPS×4, true/t) + nullguard 870 — poprawka | pętla |
+| 28.10.2026 00:15 | #601 F7 r1 CI db FAIL B3/D6 (INSERT schedule_imports bez column_map → „^”); poprawka testów + retencja OFFSET 30 | pętla |

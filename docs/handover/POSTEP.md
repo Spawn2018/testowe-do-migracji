@@ -6120,3 +6120,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - D2/c3: `fixed_*=false`; katalog **33**;
   - P1: odtworzenie `skip_reason` z WT gdy event bez pola; P3 stats z odfiltrowanej listy; P4 `old.stats='{}'` + unique `import_id` + wyjątek→`integration_runs`; P5 `project_id`; D1 `order by au.id`; D4/D5 kształt wierszy; D6 retencja 30.
 - import EXPECTED **352**; backup: `ksh_import_summaries`. Bez push na main.
+
+## 2026-10-28 00:15 — #601 F7 r1: CI db FAIL B3/D6 (column_map + retencja)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Brak PR z „F7: gotowe do scalenia” (#602 wygląd bez F7; #598 CONFLICTING / poprawki; #601 czeka na zielone db).
+- Scalanie: brak. Bez push na main.
+- CI HEAD `321031cc`: unit ✔, visual ✔; **db FAIL** import 346/6 (B3×4, D6×2) — `Q` zwracało `^` (psql ERROR).
+- **Przyczyna:** INSERT do `schedule_imports` w testach B3/D6 bez `column_map` (NOT NULL w 0001) → pusty/zły id → publish z błędnym uuid. D6: `g || ' minutes'` (brak operatora integer||text).
+- **Krok (#594 / #601):**
+  - testy: `column_map='{}'` w INSERT B3/D6; D6 `make_interval(mins => g)`;
+  - 0318: retencja przez `OFFSET 30` (bariera podzapytania zamiast `NOT IN … LIMIT`);
+  - import EXPECTED **352** (bez zmiany liczby asercji).
+- Push → CI `db.yml` suites=import,nullguard,c3; po zielonym — prośba o F7 r2: gotowe do scalenia.

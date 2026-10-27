@@ -420,14 +420,17 @@ begin
     p_project, p_import_id, v_at, p_file_name, p_file_hash, v_changes, v_stats
   ) returning id into v_id;
 
-  -- Retencja: ostatnie 30 migawek na projekt
+  -- Retencja: ostatnie 30 migawek na projekt (podzapytanie z barierą — ten sam FROM)
   delete from public.ksh_import_summaries s
    where s.project_id = p_project
-     and s.id not in (
-       select x.id from public.ksh_import_summaries x
-        where x.project_id = p_project
-        order by x.imported_at desc, x.id desc
-        limit 30
+     and s.id in (
+       select z.id from (
+         select x.id
+           from public.ksh_import_summaries x
+          where x.project_id = p_project
+          order by x.imported_at desc, x.id desc
+          offset 30
+       ) z
      );
 
   v_title := 'Zmiany z pliku KSH — '

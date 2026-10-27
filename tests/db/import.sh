@@ -2029,9 +2029,10 @@ $PSQL -c "insert into loads (id, project_id, carrier_org_id, status, plan_load_d
 $PSQL -c "delete from shipment_items where load_id='$L594C2'" >/dev/null
 $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty, total_weight_t)
   values ('$P','$L594C2','S594-C2',18,2.4,2.4,1,20)" >/dev/null
-IMP594B3=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, stats)
+# column_map NOT NULL (0001) — bez niego INSERT pada, Q zwraca „^”, publish dostaje pusty uuid
+IMP594B3=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, column_map, stats)
   values ('$P', (select coalesce(max(version),0)+1 from schedule_imports where project_id='$P'),
-          'UPLOAD','594c2.xlsx','594c2','{}'::jsonb) returning id")
+          'UPLOAD','594c2.xlsx','594c2','{}'::jsonb,'{}'::jsonb) returning id")
 VER594B3=$(Q "select version from schedule_imports where id='$IMP594B3'")
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload)
   values ('$L594C2','SCHEDULE_IMPORTED',now(),
@@ -2049,10 +2050,10 @@ val "#594: B3 CAR2 widzi swój wiersz" $CAR2 "select coalesce((select count(*) f
 
 # D6: retencja 30 — publish kasuje nadmiar
 $PSQL -c "insert into ksh_import_summaries (project_id, imported_at, changes, stats)
-  select '$P', now() - (g || ' minutes')::interval, '[]'::jsonb, '{}'::jsonb from generate_series(1, 35) g" >/dev/null
-IMP594D6=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, stats)
+  select '$P', now() - make_interval(mins => g), '[]'::jsonb, '{}'::jsonb from generate_series(1, 35) g" >/dev/null
+IMP594D6=$(Q "insert into schedule_imports (project_id, version, source, file_name, file_hash, column_map, stats)
   values ('$P', (select coalesce(max(version),0)+1 from schedule_imports where project_id='$P'),
-          'UPLOAD','594ret.xlsx','594ret','{}'::jsonb) returning id")
+          'UPLOAD','594ret.xlsx','594ret','{}'::jsonb,'{}'::jsonb) returning id")
 VER594D6=$(Q "select version from schedule_imports where id='$IMP594D6'")
 L594A=$(Q "select load_id from shipment_items where shipment_code='S594-A' limit 1")
 $PSQL -c "insert into load_events (load_id, event_type, occurred_at, payload)
