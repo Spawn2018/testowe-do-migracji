@@ -1,12 +1,20 @@
--- #572 BN0 / F7 #585 r2: SE-KAA z korytarza SE_KAA_TRACK (ślad GPS), nie SE_E22.
+-- #572 BN0 / F7 #585 r3: SE-KAA z korytarza SE_KAA_TRACK (ślad GPS), nie SE_E22.
 -- N4: bez literałów GPS w repo. N8: SE_E22 bez zmian (OFF_CORRIDOR/ETA STENA).
--- Via = najbliższy wierzchołek śladu co ~100 km; odchyłka dwukierunkowa ≤ 2 km;
--- odrzucenie nie kasuje points; wymuszenie przeliczenia SE-KAA.
+-- N1: via = najbliższy wierzchołek śladu co ~100 km.
+-- NOWE-1/2: kolumna retry_after; odrzucenie nie cofa fetched_at (bez pętli HERE / purge).
+-- N3: start śladu = po ostatnim pobycie ≤2 km od Verkö.
+-- NOWE-3: odchyłka korytarz→HERE ≤2 km; HERE→korytarz ≤ max(2 km; 0,15×L odcinka).
 
 alter table public.corridor_polylines drop constraint if exists corridor_polylines_code_check;
 alter table public.corridor_polylines
   add constraint corridor_polylines_code_check
   check (code in ('PL_ROAD', 'SE_E4', 'SE_E22', 'SE_APPROACH_SG03', 'SE_KAA_TRACK'));
+
+alter table public.here_road_geometry
+  add column if not exists retry_after timestamptz;
+
+comment on column public.here_road_geometry.retry_after is
+  '#572 F7 r3: po odrzuceniu geometrii — nie wołaj HERE przed tą chwilą; fetched_at = ostatni sukces.';
 
 create or replace function public.here_corridor_points(p_code text)
 returns jsonb
@@ -27,7 +35,7 @@ begin
         round(st_y(dp.geom)::numeric, 6),
         round(st_x(dp.geom)::numeric, 6)
       )
-      order by dp.path[1]
+    order by dp.path[1]
     ),
     '[]'::jsonb
   )
@@ -119,7 +127,8 @@ comment on function public.here_corridor_via_points(text, integer) is
 
 revoke all on function public.here_corridor_via_points(text, integer) from public, anon, authenticated;
 
--- Odchyłka dwukierunkowa (m): max(korytarz→HERE, HERE→korytarz). NULL gdy brak geometrii.
+-- Odchyłka NOWE-3 (m): korytarz→HERE surowa; HERE→korytarz z tolerancją 0,15×L (nadmiar ponad allowed).
+-- Odbiór OK gdy wynik ≤ 2000.
 create or replace function public.here_road_corridor_dev_m(p_leg text, p_corridor text)
 returns double precision
 language plpgsql
@@ -131,7 +140,7 @@ declare
   v_road_g geography;
   v_corr_g geography;
   v_c2r double precision;
-  v_r2c double precision;
+  v_r2c_excess double precision;
 begin
   if (p_leg in ('PL-GDN', 'PL-GDY', 'SE-NYN', 'SE-KAA')) is not true then
     raise exception 'Zła noga trasy' using errcode = '22023';
@@ -165,32 +174,61 @@ begin
     return null;
   end if;
 
-  -- punkt korytarza → linia HERE (geography)
+  -- punkt korytarza → linia HERE (strict ≤ 2 km)
   select max(st_distance(v_road_g, dp.geom::geography))
     into v_c2r
     from corridor_polylines c
    cross join lateral st_dumppoints(c.geom) as dp
    where c.code = p_corridor;
 
-  -- punkt HERE → linia korytarza (geography)
-  select max(st_distance(v_corr_g, st_setsrid(st_makepoint((p->>1)::float8, (p->>0)::float8), 4326)::geography))
-    into v_r2c
-    from here_road_geometry h
-   cross join lateral jsonb_array_elements(h.points) as t(p)
-   where h.leg = p_leg
-     and h.points is not null
-     and jsonb_typeof(h.points) = 'array';
+  -- punkt HERE → odcinek korytarza; excess ponad max(2000, 0.15×L)
+  with corr_pts as (
+    select (dp).path[1] as i, (dp).geom as g
+      from corridor_polylines c
+     cross join lateral st_dumppoints(c.geom) as dp
+     where c.code = p_corridor
+  ),
+  segs as (
+    select st_makeline(a.g, b.g)::geography as seg_g,
+           st_distance(a.g::geography, b.g::geography) as seg_m
+      from corr_pts a
+      join corr_pts b on b.i = a.i + 1
+  ),
+  road_pts as (
+    select st_setsrid(st_makepoint((p->>1)::float8, (p->>0)::float8), 4326)::geography as g
+      from here_road_geometry h
+     cross join lateral jsonb_array_elements(h.points) as t(p)
+     where h.leg = p_leg
+       and h.points is not null
+       and jsonb_typeof(h.points) = 'array'
+  ),
+  per_pt as (
+    select rp.g,
+           (select s.seg_g from segs s order by st_distance(s.seg_g, rp.g) limit 1) as nearest_seg,
+           (select s.seg_m from segs s order by st_distance(s.seg_g, rp.g) limit 1) as nearest_m
+      from road_pts rp
+  )
+  select coalesce(max(
+           greatest(0,
+             st_distance(nearest_seg, g)
+             - greatest(2000.0, 0.15 * coalesce(nearest_m, 0))
+           )
+         ), 0)
+    into v_r2c_excess
+    from per_pt
+   where nearest_seg is not null;
 
-  return greatest(coalesce(v_c2r, 0), coalesce(v_r2c, 0));
+  return greatest(coalesce(v_c2r, 0), coalesce(v_r2c_excess, 0));
 end;
 $$;
 
 comment on function public.here_road_corridor_dev_m(text, text) is
-  '#572 F7: max metrów odchyłki dwukierunkowej korytarz↔HERE (odbiór ≤ 2000 m).';
+  '#572 F7 r3 NOWE-3: max(m) — korytarz→HERE surowa; HERE→korytarz nadmiar ponad max(2km;0,15×L). OK ≤ 2000.';
 
 revoke all on function public.here_road_corridor_dev_m(text, text) from public, anon, authenticated;
 
--- Odrzucenie: p_points null → zostaw dotychczasowe points (F7 #585).
+-- Sukces: points + fetched_at + retry_after null.
+-- Odrzucenie (p_points null): zostaw points i fetched_at; summary; retry_after = p_now.
 create or replace function public.here_store_road(
   p_leg text,
   p_points jsonb,
@@ -211,42 +249,45 @@ begin
   if (p_summary is not null and length(btrim(p_summary)) > 0) is not true then
     raise exception 'Brak podsumowania' using errcode = '22023';
   end if;
-  insert into here_road_geometry (leg, points, summary, fetched_at)
-  values (p_leg, p_points, left(p_summary, 240), p_now)
+  if p_points is null then
+    insert into here_road_geometry (leg, points, summary, fetched_at, retry_after)
+    values (p_leg, null, left(p_summary, 240), p_now, p_now)
+    on conflict (leg) do update
+      set summary = excluded.summary,
+          retry_after = excluded.retry_after;
+    -- points i fetched_at bez zmian przy konflikcie
+    return;
+  end if;
+  insert into here_road_geometry (leg, points, summary, fetched_at, retry_after)
+  values (p_leg, p_points, left(p_summary, 240), p_now, null)
   on conflict (leg) do update
-    set points = case
-                   when excluded.points is null then here_road_geometry.points
-                   else excluded.points
-                 end,
+    set points = excluded.points,
         summary = excluded.summary,
-        fetched_at = excluded.fetched_at;
+        fetched_at = excluded.fetched_at,
+        retry_after = null;
 end;
 $$;
 
 revoke all on function public.here_store_road(text, jsonb, text, timestamptz) from public, anon, authenticated;
 
-do $$
-begin
-  if exists (select 1 from pg_roles where rolname = 'service_role') then
-    grant execute on function public.here_corridor_points(text) to service_role;
-    grant execute on function public.here_corridor_via_points(text, integer) to service_role;
-    grant execute on function public.here_road_corridor_dev_m(text, text) to service_role;
-    grant execute on function public.here_store_road(text, jsonb, text, timestamptz) to service_role;
-  end if;
-end $$;
-
--- N4/N8: SE_E22 bez zmian. SE_KAA_TRACK tylko z positions (gdy brak — nic).
--- UUID SG-23 pinned; skoki po prędkości >150 km/h; przycięcie port→plac; postoje; simplify.
-do $$
+-- N3: budowa SE_KAA_TRACK ze śladu GPS (start po ostatnim Verkö ≤2 km).
+create or replace function public.rebuild_se_kaa_track(p_load_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
 declare
-  v_load uuid := '95ab7218-69cc-490d-8b68-b379c3ed9aae';
   v_geom geometry;
   v_n int;
   v_origin geography := st_setsrid(st_makepoint(15.6308, 56.1646), 4326)::geography;
   v_dest geography := st_setsrid(st_makepoint(21.75914, 65.80539), 4326)::geography;
 begin
-  if not exists (select 1 from loads where id = v_load) then
-    return;
+  if (p_load_id is not null) is not true then
+    return 0;
+  end if;
+  if not exists (select 1 from loads where id = p_load_id) then
+    return 0;
   end if;
 
   with raw as (
@@ -256,7 +297,7 @@ begin
            lag(coalesce(geom_snapped, geom_raw)::geometry) over (order by ts) as prev_g,
            lag(ts) over (order by ts) as prev_ts
       from positions
-     where load_id = v_load
+     where load_id = p_load_id
        and coalesce(geom_snapped, geom_raw) is not null
   ),
   speed_ok as (
@@ -268,7 +309,6 @@ begin
             and (st_distance(prev_g::geography, g::geography)
                  / greatest(extract(epoch from (ts - prev_ts)), 1)) * 3.6 <= 150)
   ),
-  -- wyjazd z portu (~2 km od Verkö) → wjazd na plac (~2 km od Boden)
   numbered as (
     select g, ts, speed_kmh,
            row_number() over (order by ts) as rn,
@@ -278,20 +318,41 @@ begin
   ),
   bounds as (
     select
-      coalesce((select min(rn) from numbered where d_origin > 2000), 1) as rn_start,
-      coalesce((select min(rn) from numbered where d_dest <= 2000),
-               (select max(rn) from numbered)) as rn_end
+      -- N3: pierwszy punkt PO ostatnim pobycie ≤2 km od Verkö (przed placem); bez PL/promu.
+      coalesce(
+        (
+          select min(n.rn)
+            from numbered n
+           where n.rn > coalesce(
+                   (select max(n2.rn) from numbered n2
+                     where n2.d_origin <= 2000
+                       and n2.rn < coalesce(
+                             (select min(n3.rn) from numbered n3 where n3.d_dest <= 2000),
+                             (select max(n4.rn) + 1 from numbered n4)
+                           )),
+                   0
+                 )
+             and n.rn <= coalesce(
+                   (select min(n5.rn) from numbered n5 where n5.d_dest <= 2000),
+                   (select max(n6.rn) from numbered n6)
+                 )
+        ),
+        1
+      ) as rn_start,
+      coalesce(
+        (select min(rn) from numbered where d_dest <= 2000),
+        (select max(rn) from numbered)
+      ) as rn_end
   ),
   trimmed as (
     select n.g, n.ts, n.speed_kmh, n.rn
       from numbered n, bounds b
      where n.rn >= b.rn_start and n.rn <= b.rn_end
+       and b.rn_start <= b.rn_end
   ),
-  -- usuń postoje: speed≈0 albo skupisko <300 m względem poprzedniego zatrzymania
   moving as (
     select g, ts, speed_kmh, rn,
-           lag(g) over (order by ts) as prev_g,
-           lag(speed_kmh) over (order by ts) as prev_spd
+           lag(g) over (order by ts) as prev_g
       from trimmed
   ),
   kept as (
@@ -308,7 +369,7 @@ begin
   select n, geom into v_n, v_geom from agg;
 
   if (v_n is not null and v_n >= 50 and v_geom is not null and st_npoints(v_geom) >= 10) is not true then
-    return;
+    return 0;
   end if;
 
   insert into public.corridor_polylines (code, geom, total_km, source, updated_at)
@@ -324,8 +385,31 @@ begin
         total_km = excluded.total_km,
         source = excluded.source,
         updated_at = now();
+
+  return st_npoints(v_geom);
+end;
+$$;
+
+comment on function public.rebuild_se_kaa_track(uuid) is
+  '#572 F7 r3: SE_KAA_TRACK ze śladu load_id; start po ostatnim Verkö ≤2 km. 0 = brak/za mało punktów.';
+
+revoke all on function public.rebuild_se_kaa_track(uuid) from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'service_role') then
+    grant execute on function public.here_corridor_points(text) to service_role;
+    grant execute on function public.here_corridor_via_points(text, integer) to service_role;
+    grant execute on function public.here_road_corridor_dev_m(text, text) to service_role;
+    grant execute on function public.here_store_road(text, jsonb, text, timestamptz) to service_role;
+    grant execute on function public.rebuild_se_kaa_track(uuid) to service_role;
+  end if;
 end $$;
 
+-- N4/N8: SE_E22 bez zmian. SE_KAA_TRACK tylko z positions (gdy brak — nic).
+select public.rebuild_se_kaa_track('95ab7218-69cc-490d-8b68-b379c3ed9aae'::uuid);
+
 update public.here_road_geometry
-   set fetched_at = '-infinity'::timestamptz
+   set fetched_at = '-infinity'::timestamptz,
+       retry_after = null
  where leg = 'SE-KAA';

@@ -1,8 +1,8 @@
 /**
  * B-MAPA — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
- * #572 BN0 / F7 #585 r2: SE-KAA z via co ~100 km na SE_KAA_TRACK (osobny od E22);
- * odświeżenie przy zmianie korytarza; odrzucenie nie kasuje punktów (ponów po 24 h).
+ * #572 BN0 / F7 #585 r3: SE-KAA z via z SE_KAA_TRACK; retry_after (bez cofania fetched_at);
+ * odchyłka NOWE-3; odrzucenie nie kasuje punktów.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
@@ -10,10 +10,10 @@ import { HERE_BILLING_DEFAULTS } from '../_shared/here/billing.ts';
 import {
   ROAD_PL,
   ROAD_SE,
-  ROAD_KAA,
+  roadKaaSpecFromVia,
   looseRoadOk,
   roadGeometryOk,
-  maxDeviationSymmetricKm,
+  kaaDeviationOk,
   type LatLng,
 } from '../_shared/map/draw.ts';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
@@ -22,12 +22,11 @@ const LEGS = [
   { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: ROAD_PL, summary: 'Trasa drogowa Śrem–Gdańsk' },
   { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: ROAD_SE, summary: 'Trasa drogowa Nynäshamn–Boden' },
   { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose' as const, summary: 'Trasa drogowa Śrem–Gdynia' },
-  { leg: 'SE-KAA', origin: '56.1646,15.6308', destination: '65.80539,21.75914', spec: ROAD_KAA, summary: 'Trasa drogowa Karlskrona–Boden' },
+  { leg: 'SE-KAA', origin: '56.1646,15.6308', destination: '65.80539,21.75914', spec: 'kaa' as const, summary: 'Trasa drogowa Karlskrona–Boden' },
 ] as const;
 
 const DAY_MS = 30 * 864e5;
 const RETRY_REJECT_MS = 24 * 3600e3;
-const MAX_DEV_KM = 2;
 const CORRIDOR_KAA = 'SE_KAA_TRACK';
 
 function parseCorridorPoints(raw: unknown): LatLng[] {
@@ -63,10 +62,14 @@ Deno.serve(async (req) => {
   }
   const key = Deno.env.get('HERE_API_KEY') ?? '';
   if (!key) return Response.json({ ok: false, reason: 'brak' }, { headers: corsHeaders() });
-  const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points');
-  const have = new Map<string, { fetched_at: string; points: unknown }>();
+  const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points,retry_after');
+  const have = new Map<string, { fetched_at: string; points: unknown; retry_after: string | null }>();
   for (const row of fresh.data ?? []) {
-    have.set(String(row.leg), { fetched_at: String(row.fetched_at), points: row.points });
+    have.set(String(row.leg), {
+      fetched_at: String(row.fetched_at),
+      points: row.points,
+      retry_after: row.retry_after != null ? String(row.retry_after) : null,
+    });
   }
 
   let corridorPts: LatLng[] = [];
@@ -87,7 +90,12 @@ Deno.serve(async (req) => {
     const age = prev ? Date.now() - Date.parse(prev.fetched_at) : Infinity;
     const corridorNewer =
       leg.leg === 'SE-KAA' && corridorUpdatedAt > 0 && prev != null && corridorUpdatedAt > Date.parse(prev.fetched_at);
-    if (prev && age < DAY_MS && !corridorNewer) continue;
+    const retryAt = prev?.retry_after ? Date.parse(prev.retry_after) : 0;
+    const waitingRetry = retryAt > 0 && Date.now() < retryAt;
+    // NOWE-1/2: świeży sukces trzyma 30 dni; po odrzuceniu czekaj retry_after (fetched_at bez cofania).
+    if (prev && age < DAY_MS && !corridorNewer) {
+      if (!retryAt || waitingRetry) continue;
+    }
 
     // F7 #585: SE-KAA bez korytarza — pomiń (bez zapytania „na ślepo”).
     if (leg.leg === 'SE-KAA' && corridorPts.length < 2) continue;
@@ -127,19 +135,18 @@ Deno.serve(async (req) => {
         /* zła polilinia */
       }
     }
-    const okGeom = leg.spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, leg.spec);
+    const spec = leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts) : leg.spec;
+    const okGeom = spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, spec);
     const okDev =
-      leg.leg !== 'SE-KAA' ||
-      corridorPts.length < 2 ||
-      maxDeviationSymmetricKm(line, corridorPts) <= MAX_DEV_KM;
+      leg.leg !== 'SE-KAA' || corridorPts.length < 2 || kaaDeviationOk(line, corridorPts);
     if (!okGeom || !okDev) {
-      // F7 N9: nie blokuj 30 dni — ponów po 24 h (fetched_at tak, by age ≥ DAY_MS za 24 h).
-      const retryAt = new Date(Date.now() - DAY_MS + RETRY_REJECT_MS).toISOString();
+      // NOWE-1/2: p_now = retry_after; fetched_at bez zmian; points zostają.
+      const retryIso = new Date(Date.now() + RETRY_REJECT_MS).toISOString();
       await sb.rpc('here_store_road', {
         p_leg: leg.leg,
         p_points: null,
         p_summary: leg.summary + (okGeom ? ' — odchyłka od SE_KAA_TRACK' : ' — geometria odrzucona'),
-        p_now: retryAt,
+        p_now: retryIso,
       });
       continue;
     }

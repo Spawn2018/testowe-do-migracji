@@ -1061,8 +1061,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r3 NIE — poprawki N1/NOWE-1/2/N2/N3; 27B osobny PR)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r2: **`SE_KAA_TRACK`** (nie nadpisuj `SE_E22`); bez literałów GPS; via co ~100 km. F7 r3: N1 via z `here_corridor_via_points`; `retry_after` (NOWE-1/2); start śladu po Verkö (N3); `cos(lat)` (N2); tolerancja odchyłki NOWE-3. Po BN0 → P4-k #581 → BN1. 27B osobno.
+### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r3 poprawki w toku — CI; 27B osobny PR)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r3: N1 `roadKaaSpecFromVia` + awaryjne 58.59/59.61; `retry_after` (NOWE-1/2); `rebuild_se_kaa_track` start po Verkö (N3); `cos(lat)` (N2); `kaaDeviationOk` NOWE-3. bmapa EXPECTED **163**. Po zielonym — prośba o F7. Po BN0 → P4-k #581 → BN1. 27B osobno.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
@@ -1829,3 +1829,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 14:00 | #586 SCALONE (`ac5f8f0f`); kolejność: 0314 przed BN0 (0313→0315); start #590 migracja **0316** | pętla |
 | 27.10.2026 17:30 | #590 / PR #592 CI ✔ na `71fd92ec` (unit/visual/db); czekam F7; #585 0316 po #590 | pętla |
 | 27.10.2026 18:05 | #592/#590 SCALONE (`f44c1cb9`, 0315); start BN0 #585: merge main + `0313`→**0316**; F7 r3 N1/NOWE dalej | pętla |
+| 27.10.2026 18:30 | BN0 #585 F7 r3: retry_after, N3 rebuild po Verkö, cos(lat), kaaDeviationOk NOWE-3, ROAD_KAA awaryjne; bmapa **163** | pętla |

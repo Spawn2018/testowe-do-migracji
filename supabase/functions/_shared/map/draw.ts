@@ -126,7 +126,10 @@ export function maxSegmentKm(line: readonly LatLng[]): number {
   return m;
 }
 
-/** Odległość punktu do odcinka (projekcja lokalna + haversine) — F7 #585 N2. */
+/**
+ * Odległość punktu do odcinka (projekcja lokalna + haversine).
+ * F7 #585 N2: długość geograficzna × cos(lat) — bez tego zawyża ~1,5 km przy progu 2 km.
+ */
 export function distPointToSegmentKm(
   lat: number,
   lng: number,
@@ -135,13 +138,33 @@ export function distPointToSegmentKm(
   bLat: number,
   bLng: number,
 ): number {
-  const dx = bLng - aLng;
-  const dy = bLat - aLat;
+  const cosLat = Math.cos((((aLat + bLat) / 2) * Math.PI) / 180);
+  const dLng = bLng - aLng;
+  const dLat = bLat - aLat;
+  const dx = dLng * cosLat;
+  const dy = dLat;
   const len2 = dx * dx + dy * dy;
   if (len2 === 0) return haversineKm(lat, lng, aLat, aLng);
-  let t = ((lng - aLng) * dx + (lat - aLat) * dy) / len2;
+  let t = (((lng - aLng) * cosLat) * dx + (lat - aLat) * dy) / len2;
   t = Math.max(0, Math.min(1, t));
-  return haversineKm(lat, lng, aLat + t * dy, aLng + t * dx);
+  return haversineKm(lat, lng, aLat + t * dLat, aLng + t * dLng);
+}
+
+/** Długość najbliższego odcinka łamanej (km) — NOWE-3 tolerancja 0,15 × L. */
+export function nearestSegmentKm(line: readonly LatLng[], lat: number, lng: number): number {
+  if (line.length < 2) return 0;
+  let bestD = Infinity;
+  let bestL = 0;
+  for (let i = 0; i < line.length - 1; i++) {
+    const a = line[i];
+    const b = line[i + 1];
+    const d = distPointToSegmentKm(lat, lng, a[0], a[1], b[0], b[1]);
+    if (d < bestD) {
+      bestD = d;
+      bestL = haversineKm(a[0], a[1], b[0], b[1]);
+    }
+  }
+  return bestL;
 }
 
 /** Najbliższa odległość do łamanej (punkt → odcinek), nie tylko do wierzchołków. */
@@ -195,8 +218,8 @@ export const ROAD_SE: RoadSpec = {
 };
 
 /**
- * #572 BN0 / F7 N1: Karlskrona–Boden po śladzie inland (SE_KAA_TRACK).
- * Bez Södertälje/E4 — punkty kontrolne ze śladu (Norrköping…Luleå), ≤ 5 km.
+ * #572 BN0 / F7 r3 N1: awaryjne punkty kontrolne (gdy brak via z bazy).
+ * Norrköping/Västerås ze śladu (nie jezioro Mälaren); Edge i tak bierze `here_corridor_via_points`.
  */
 export const ROAD_KAA: RoadSpec = {
   minPoints: 2000,
@@ -205,15 +228,28 @@ export const ROAD_KAA: RoadSpec = {
   maxKm: 1600,
   via: [
     { lat: 56.1646, lng: 15.6308, km: 3 },
-    { lat: 58.5, lng: 16.2, km: 5 }, // Norrköping (ślad inland)
-    { lat: 59.5, lng: 16.5, km: 5 }, // Västerås
-    { lat: 60.7, lng: 17.1, km: 5 }, // Gävle
-    { lat: 62.4, lng: 17.4, km: 5 }, // Sundsvall
-    { lat: 63.8, lng: 20.2, km: 5 }, // Umeå
-    { lat: 65.3, lng: 21.5, km: 5 }, // Luleå (na śladzie, nie 22.15)
+    { lat: 58.59, lng: 16.18, km: 5 }, // Norrköping (awaryjnie)
+    { lat: 59.61, lng: 16.54, km: 5 }, // Västerås (awaryjnie)
+    { lat: 60.7, lng: 17.1, km: 5 },
+    { lat: 62.4, lng: 17.4, km: 5 },
+    { lat: 63.8, lng: 20.2, km: 5 },
+    { lat: 65.3, lng: 21.5, km: 5 },
     { lat: 65.80539, lng: 21.75914, km: 3 },
   ],
 };
+
+/** Spec SE-KAA z via z bazy (`here_corridor_via_points`); puste → ROAD_KAA awaryjne. */
+export function roadKaaSpecFromVia(viaPts: readonly LatLng[]): RoadSpec {
+  if (viaPts.length < 2) return ROAD_KAA;
+  return {
+    ...ROAD_KAA,
+    via: [
+      { lat: 56.1646, lng: 15.6308, km: 3 },
+      ...viaPts.map(([lat, lng]) => ({ lat, lng, km: 5 })),
+      { lat: 65.80539, lng: 21.75914, km: 3 },
+    ],
+  };
+}
 
 /** #572: max km od punktów korytarza do linii HERE (kierunek korytarz → linia). */
 export function maxDeviationToCorridorKm(
@@ -226,12 +262,27 @@ export function maxDeviationToCorridorKm(
   return m;
 }
 
-/** #572 F7: odchyłka dwukierunkowa (korytarz↔linia) — odrzuca równoległą drogę 10–20 km obok. */
+/** #572 F7: odchyłka dwukierunkowa surowa (korytarz↔linia). */
 export function maxDeviationSymmetricKm(
   line: readonly LatLng[],
   corridor: readonly LatLng[],
 ): number {
   return Math.max(maxDeviationToCorridorKm(line, corridor), maxDeviationToCorridorKm(corridor, line));
+}
+
+/**
+ * #572 F7 r3 NOWE-3: korytarz→trasa ≤ 2 km; trasa→korytarz ≤ max(2 km; 0,15 × L odcinka śladu).
+ */
+export function kaaDeviationOk(line: readonly LatLng[], corridor: readonly LatLng[]): boolean {
+  if (line.length < 2 || corridor.length < 2) return false;
+  if (maxDeviationToCorridorKm(line, corridor) > 2) return false;
+  for (const p of line) {
+    const d = nearestKm(corridor, p[0], p[1]);
+    const seg = nearestSegmentKm(corridor, p[0], p[1]);
+    const allowed = Math.max(2, 0.15 * seg);
+    if (d > allowed) return false;
+  }
+  return true;
 }
 
 export function looseRoadOk(line: readonly LatLng[]): boolean {

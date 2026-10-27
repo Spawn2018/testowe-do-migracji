@@ -5989,3 +5989,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu); #538/#537/#500/#499 w planie — bez nowych do wpisania.
 - Scalanie: **#592/#590** — F7 „gotowe do scalenia” na `3805d75` (po CI unit/visual/db ✔ na docs HEAD) → `gh pr merge --merge` → `f44c1cb9` (17:04Z). Issue #590 zamknięte. Bez push na main.
 - **Krok (BN0 #585):** merge `origin/main` (konflikty PLAN/POSTEP); migracja `0313_572_…` → **`0316_572_…`**. F7 r3 (N1, NOWE-1/2, N2, N3) — następny krok.
+
+## 2026-10-27 18:30 — BN0 #585 F7 r3 (N1 / NOWE-1–3 / N2 / N3)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (po merge main CI zielone na `10b6a1d3`; F7 r3 NIE). Bez push na main.
+- **Krok (BN0 #585):** F7 r3 na migracji **0316** + Edge/draw:
+  - N1: `roadKaaSpecFromVia` + awaryjne Norrköping/Västerås 58.59/59.61;
+  - NOWE-1/2: kolumna `retry_after`; odrzucenie nie cofa `fetched_at` (bez pętli HERE / purge);
+  - N2: `distPointToSegmentKm` × `cos(lat)`;
+  - N3: `rebuild_se_kaa_track` — start po ostatnim Verkö ≤2 km (test PL+prom+SE);
+  - NOWE-3: `kaaDeviationOk` / SQL `here_road_corridor_dev_m` (korytarz→≤2 km; trasa→max(2;0,15×L));
+  - bmapa EXPECTED **163**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.

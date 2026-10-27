@@ -6,12 +6,15 @@ import {
   ROAD_PL,
   ROAD_SE,
   ROAD_KAA,
+  roadKaaSpecFromVia,
   STRAIGHT_GDN_NYN,
   STRAIGHT_GDY_KAA,
   WATER_GDN_NYN,
   WATER_GDY_KAA,
   basemapFor,
+  distPointToSegmentKm,
   h6Requests,
+  kaaDeviationOk,
   lineHitsLand,
   visibleFerryMarkers,
   ferryPhase,
@@ -117,18 +120,17 @@ describe('B-MAPA geometria', () => {
     expect(roadGeometryOk(dense, ROAD_SE)).toBe(false);
   });
 
-  // #572 BN0 / F7 #585 r2 — fixture inland (nie tautologia via↔via); N1/N2/N7
-  it('#572 SE-KAA: odchyłka ≤ 2 km; równoległa 10 km; roadGeometryOk na śladzie', () => {
-    // Fikcyjny korytarz inland (jak fixture bmapa.sh) — nie GPS kierowcy.
+  // #572 BN0 / F7 #585 r3 — N1/N2/NOWE-3; fixture inland (nie GPS).
+  it('#572 SE-KAA: odchyłka NOWE-3; równoległa 10 km; roadGeometryOk; cos(lat)', () => {
     const corridor: Array<[number, number]> = [
       [56.17, 15.63],
       [56.5, 16.05],
       [57.0, 16.4],
       [57.5, 16.5],
       [58.0, 16.45],
-      [58.5, 16.2],
+      [58.59, 16.18],
       [59.0, 16.3],
-      [59.5, 16.5],
+      [59.61, 16.54],
       [60.0, 16.8],
       [60.7, 17.1],
       [61.5, 17.2],
@@ -139,37 +141,39 @@ describe('B-MAPA geometria', () => {
       [65.3, 21.5],
       [65.81, 21.76],
     ];
-    // N7: gęsta linia przechodzi ROAD_KAA (minPoints 2000); odchyłka na rzadszej (O(n²)).
     const denseOk = denseVia(corridor, 0.25);
     expect(roadGeometryOk(denseOk, ROAD_KAA)).toBe(true);
+    expect(roadGeometryOk(denseOk, roadKaaSpecFromVia(corridor.slice(1, -1)))).toBe(true);
+    // N1 awaryjne: Norrköping/Västerås nie w jeziorze.
+    expect(ROAD_KAA.via.some((v) => Math.abs(v.lat - 58.59) < 0.01 && Math.abs(v.lng - 16.18) < 0.01)).toBe(true);
+    expect(ROAD_KAA.via.some((v) => Math.abs(v.lat - 59.61) < 0.01 && Math.abs(v.lng - 16.54) < 0.01)).toBe(true);
+    expect(ROAD_KAA.via.some((v) => Math.abs(v.lat - 59.195) < 0.01 && Math.abs(v.lng - 17.628) < 0.01)).toBe(
+      false,
+    );
     const dense = denseVia(corridor, 5);
+    expect(kaaDeviationOk(dense, dense)).toBe(true);
     expect(maxDeviationSymmetricKm(dense, dense)).toBeLessThanOrEqual(2);
     const parallel = dense.map(([lat, lng]) => [lat, lng + 0.18] as [number, number]);
-    expect(maxDeviationSymmetricKm(parallel, dense)).toBeGreaterThan(2);
+    expect(kaaDeviationOk(parallel, dense)).toBe(false);
     expect(maxDeviationToCorridorKm(parallel, dense)).toBeGreaterThan(2);
-    // N2: punkt w połowie długiego odcinka — nearestKm = odcinek, nie wierzchołek.
+    // N2: punkt w połowie odcinka (~200 km) — nearestKm = odcinek, nie wierzchołek; cos(lat) w draw.ts.
     const sparse: Array<[number, number]> = [
-      [56.17, 15.63],
-      [65.81, 21.76],
+      [60.0, 17.0],
+      [62.0, 19.0],
     ];
-    const midLat = (56.17 + 65.81) / 2;
-    const midLng = (15.63 + 21.76) / 2;
-    expect(nearestKm(sparse, midLat, midLng)).toBeLessThan(1);
-    // Do samych wierzchołków byłoby ~ połowa cięciwy ≫ 1 km.
+    expect(nearestKm(sparse, 61.0, 18.0)).toBeLessThan(2);
     expect(Math.min(
-      Math.hypot((midLat - 56.17) * 111, (midLng - 15.63) * 55),
-      Math.hypot((midLat - 65.81) * 111, (midLng - 21.76) * 55),
+      Math.hypot((61 - 60) * 111, (18 - 17) * 55),
+      Math.hypot((61 - 62) * 111, (18 - 19) * 55),
     )).toBeGreaterThan(100);
+    expect(distPointToSegmentKm(65.1, 21.05, 65.0, 20.0, 65.2, 22.0)).toBeLessThan(2);
+    expect(readFileSync('supabase/functions/_shared/map/draw.ts', 'utf8')).toMatch(/cosLat/);
     const chord: Array<[number, number]> = [
       [56.1646, 15.6308],
       [65.80539, 21.75914],
     ];
     expect(roadGeometryOk(chord, ROAD_KAA)).toBe(false);
-    expect(maxDeviationSymmetricKm(chord, dense)).toBeGreaterThan(2);
-    // N1: Södertälje poza spec — ślad inland nie wymaga E4.
-    expect(ROAD_KAA.via.some((v) => Math.abs(v.lat - 59.195) < 0.01 && Math.abs(v.lng - 17.628) < 0.01)).toBe(
-      false,
-    );
+    expect(kaaDeviationOk(chord, dense)).toBe(false);
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
     expect(apply).toMatch(/ROAD_LEGS = 4/);
@@ -178,11 +182,15 @@ describe('B-MAPA geometria', () => {
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
     expect(edge).toMatch(/passThrough=true/);
     expect(edge).toMatch(/here_corridor_via_points/);
-    expect(edge).toMatch(/maxDeviationSymmetricKm/);
+    expect(edge).toMatch(/kaaDeviationOk/);
+    expect(edge).toMatch(/retry_after/);
+    expect(edge).toMatch(/roadKaaSpecFromVia/);
     expect(edge).toMatch(/SE_KAA_TRACK/);
     expect(edge).not.toMatch(/SE_E22/);
     const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');
     expect(mig).toMatch(/SE_KAA_TRACK/);
+    expect(mig).toMatch(/retry_after/);
+    expect(mig).toMatch(/rebuild_se_kaa_track/);
     expect(mig).toMatch(/95ab7218-69cc-490d-8b68-b379c3ed9aae/);
     expect(mig).not.toMatch(/st_makepoint\(15\.63048/);
   });

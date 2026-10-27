@@ -163,21 +163,23 @@ rpc_ok "#465 HHL carrier_scorecard" "$HHL_465" "select count(*) from carrier_sco
 rpc_denied "#465 KSH carrier_scorecard" "$KSH_465" "select count(*) from carrier_scorecard()"
 rpc_ok "#465 SCX carrier_scorecard" "$SCX_465" "select count(*) from carrier_scorecard()"
 
-# #572 BN0 / F7 #585 r2: SE_KAA_TRACK (fikcyjny fixture CI); SE_E22 bez nadpisania; via; odchyłka; null
+# #572 BN0 / F7 #585 r3: SE_KAA_TRACK; retry_after; N3 start po Verkö; NOWE-3
 echo; echo "[#572] BN0 SE-KAA / SE_KAA_TRACK"
 val "anon nie czyta here_corridor_points" "select has_function_privilege('anon','here_corridor_points(text)','execute')::text" "false"
 val "authenticated nie czyta here_corridor_points" "select has_function_privilege('authenticated','here_corridor_points(text)','execute')::text" "false"
 val "anon nie czyta here_corridor_via_points" "select has_function_privilege('anon','here_corridor_via_points(text,integer)','execute')::text" "false"
 val "authenticated nie czyta here_corridor_via_points" "select has_function_privilege('authenticated','here_corridor_via_points(text,integer)','execute')::text" "false"
 val "anon nie czyta here_road_corridor_dev_m" "select has_function_privilege('anon','here_road_corridor_dev_m(text,text)','execute')::text" "false"
+val "anon nie woła rebuild_se_kaa_track" "select has_function_privilege('anon','rebuild_se_kaa_track(uuid)','execute')::text" "false"
+val "authenticated nie woła rebuild_se_kaa_track" "select has_function_privilege('authenticated','rebuild_se_kaa_track(uuid)','execute')::text" "false"
 # Fikcyjny korytarz inland (nie GPS kierowcy) — segmentize → ≥50 wierzchołków
 sys "insert into corridor_polylines (code, geom, total_km, source, updated_at)
      values (
        'SE_KAA_TRACK',
        st_segmentize(st_setsrid(st_makeline(array[
          st_makepoint(15.63, 56.17), st_makepoint(16.05, 56.50), st_makepoint(16.40, 57.00),
-         st_makepoint(16.50, 57.50), st_makepoint(16.45, 58.00), st_makepoint(16.20, 58.50),
-         st_makepoint(16.30, 59.00), st_makepoint(16.50, 59.50), st_makepoint(16.80, 60.00),
+         st_makepoint(16.50, 57.50), st_makepoint(16.45, 58.00), st_makepoint(16.18, 58.59),
+         st_makepoint(16.30, 59.00), st_makepoint(16.54, 59.61), st_makepoint(16.80, 60.00),
          st_makepoint(17.10, 60.70), st_makepoint(17.20, 61.50), st_makepoint(17.40, 62.40),
          st_makepoint(18.50, 63.20), st_makepoint(20.20, 63.80), st_makepoint(21.00, 64.70),
          st_makepoint(21.50, 65.30), st_makepoint(21.76, 65.81)
@@ -189,6 +191,7 @@ sys "insert into corridor_polylines (code, geom, total_km, source, updated_at)
      on conflict (code) do update
        set geom = excluded.geom, total_km = excluded.total_km, source = excluded.source, updated_at = now()" >/dev/null
 sys "update corridor_polylines set total_km = round((st_length(geom::geography)/1000.0)::numeric,2) where code='SE_KAA_TRACK'" >/dev/null
+e22_before=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E22'")
 n_pts=$(sys "select jsonb_array_length(here_corridor_points('SE_KAA_TRACK'))")
 if [ "$n_pts" -ge 50 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    here_corridor_points(SE_KAA_TRACK) ≥ 50 ($n_pts)"; else fail=$((fail+1)); echo "  FAIL  here_corridor_points → $n_pts"; fi
 n_via=$(sys "select jsonb_array_length(here_corridor_via_points('SE_KAA_TRACK', 14))")
@@ -210,16 +213,59 @@ sys "select here_store_road('SE-KAA', (
 dev_par=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_KAA_TRACK')::text,'null')")
 awk "BEGIN{exit !($dev_par+0 > 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    równoległa 10 km > 2 km ($dev_par m)"; } || { fail=$((fail+1)); echo "  FAIL  równoległa → $dev_par"; }
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
-sys "select here_store_road('SE-KAA', null, 'odrzut #572 — zostaw punkty', now())" >/dev/null
+fetched_before=$(sys "select fetched_at::text from here_road_geometry where leg='SE-KAA'")
+sys "select here_store_road('SE-KAA', null, 'odrzut #572 — zostaw punkty', now() + interval '24 hours')" >/dev/null
 keep=$(sys "select (points is not null and jsonb_array_length(points) >= 2)::text from here_road_geometry where leg='SE-KAA'")
 [ "$keep" = "true" ] && { ok=$((ok+1)); echo "  OK    here_store_road(null) zostawia points"; } || { fail=$((fail+1)); echo "  FAIL  null kasuje points → $keep"; }
 sum=$(sys "select summary from here_road_geometry where leg='SE-KAA'")
 [ "$sum" = "odrzut #572 — zostaw punkty" ] && { ok=$((ok+1)); echo "  OK    summary po odrzuceniu"; } || { fail=$((fail+1)); echo "  FAIL  summary → $sum"; }
+fetched_after=$(sys "select fetched_at::text from here_road_geometry where leg='SE-KAA'")
+[ "$fetched_before" = "$fetched_after" ] && { ok=$((ok+1)); echo "  OK    odrzut nie cofa fetched_at (NOWE-1/2)"; } || { fail=$((fail+1)); echo "  FAIL  fetched_at zmienione"; }
+retry_set=$(sys "select (retry_after is not null and retry_after > now())::text from here_road_geometry where leg='SE-KAA'")
+[ "$retry_set" = "true" ] && { ok=$((ok+1)); echo "  OK    retry_after ustawione po odrzuceniu"; } || { fail=$((fail+1)); echo "  FAIL  retry_after → $retry_set"; }
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
+retry_clr=$(sys "select (retry_after is null)::text from here_road_geometry where leg='SE-KAA'")
+[ "$retry_clr" = "true" ] && { ok=$((ok+1)); echo "  OK    sukces czyści retry_after"; } || { fail=$((fail+1)); echo "  FAIL  retry_after po sukcesie → $retry_clr"; }
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
 if [ "$legs" = "4" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 4"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
 kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
+e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E22'")
+[ "$e22_before" = "$e22_after" ] && { ok=$((ok+1)); echo "  OK    SE_E22 bez zmian (N8)"; } || { fail=$((fail+1)); echo "  FAIL  SE_E22 nadpisane"; }
+
+# N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
+L572=a572a572-0000-4000-8000-000000000572
+sys "delete from positions where load_id='$L572'" >/dev/null
+sys "delete from loads where id='$L572'" >/dev/null
+sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
+     values ('$L572', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-N3', 'IN_TRANSIT_SE')" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
+     select '$L572', timestamptz '2026-10-20 06:00:00+00' + (g.i || ' minutes')::interval,
+            st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
+            60, 'TEST', '{}'::jsonb
+       from generate_series(0, 9) as g(i)" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
+     select '$L572', timestamptz '2026-10-20 08:00:00+00' + (g.i || ' minutes')::interval,
+            st_setsrid(st_makepoint(15.6308 + (g.i % 3) * 0.001, 56.1646 + (g.i % 3) * 0.001), 4326),
+            5, 'TEST', '{}'::jsonb
+       from generate_series(0, 4) as g(i)" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
+     select '$L572', timestamptz '2026-10-20 09:00:00+00' + (g.i || ' minutes')::interval,
+            st_setsrid(st_makepoint(
+              15.63 + (21.76 - 15.63) * g.i / 80.0,
+              56.17 + (65.81 - 56.17) * g.i / 80.0
+            ), 4326),
+            70, 'TEST', '{}'::jsonb
+       from generate_series(0, 80) as g(i)" >/dev/null
+n3=$(sys "select rebuild_se_kaa_track('$L572')")
+if [ "$n3" -ge 10 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    N3 rebuild_se_kaa_track ≥ 10 ($n3)"; else fail=$((fail+1)); echo "  FAIL  N3 rebuild → $n3"; fi
+start_lat=$(sys "select round(st_y(st_startpoint(geom))::numeric, 2) from corridor_polylines where code='SE_KAA_TRACK'")
+# start po Verkö (~56.16), nie PL (~52)
+awk "BEGIN{exit !($start_lat+0 >= 55.5 && $start_lat+0 <= 57.5)}" 2>/dev/null \
+  && { ok=$((ok+1)); echo "  OK    N3 start lat po Verkö ($start_lat), nie PL"; } \
+  || { fail=$((fail+1)); echo "  FAIL  N3 start lat → $start_lat"; }
+sys "delete from positions where load_id='$L572'" >/dev/null
+sys "delete from loads where id='$L572'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
