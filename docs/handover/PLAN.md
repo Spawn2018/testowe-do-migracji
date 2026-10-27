@@ -1809,3 +1809,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 03:00 | #574-nast / #582 SCALONE `de50a8bb` (F7 gotowe na `36c1a0a`, unit/db/visual ✔); start BN0 #572 (**0313**) | pętla |
 | 27.10.2026 04:15 | #583 PILNE wpisane §4 (po BN0, przed P4-k): fałszywe zmiany prev + tablice PLAT/es-ga/SG-21; kolejność z komentarza PR #585. BN0 #585: fix bmapa asercja `exists::text` = `true` (nie `t`) | pętla |
 | 27.10.2026 05:45 | BN0 #585 F7 r2: `SE_KAA_TRACK` (N8), bez literałów GPS (N4), via inland/N1, nearestKm odcinek/N2, trim DO/N3, front N6, via metry/N5, reject 24h/N9 | pętla |
+| 27.10.2026 06:15 | BN0 #585 CI zielone na `8f84dca8` (unit/visual/db); MERGEABLE; czekam F7: gotowe do scalenia → potem #583 | pętla |

@@ -5807,3 +5807,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - N9: odrzucenie → `fetched_at` tak, by ponowić po 24 h.
   - `status.sh` #496 z powrotem Vagnhärad/E4. bmapa fixture CI (nie GPS).
 
+## 2026-10-27 06:15 — BN0 #585 CI zielone na `8f84dca8`; czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **brak** „F7: gotowe do scalenia” po HEAD `8f84dca8` (prośba 04:06Z). Jedyny otwarty PR #585 — MERGEABLE, unit/visual/db ✔. Bez push na main.
+- Bieżąca: **BN0 #572** — minimum F7 r2 na produkcji w kodzie; czekam F7. Po scaleniu → **#583 PILNE**.
+
