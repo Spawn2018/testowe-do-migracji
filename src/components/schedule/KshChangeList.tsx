@@ -12,7 +12,7 @@ import {
 } from '../../lib/kshPreviewView';
 import './sched7.css';
 
-export function KshChangeList({ locale, changes, counts, onlyManual = false, onOpenLoad, emptyKey = 's7_kp_empty' }: {
+export function KshChangeList({ locale, changes, counts, onlyManual = false, onOpenLoad, emptyKey = 's7_kp_empty', skipKey = 's7_kp_skip' }: {
   locale: Locale;
   changes: readonly KshPreviewChange[];
   counts: KshPreviewCounts;
@@ -20,6 +20,8 @@ export function KshChangeList({ locale, changes, counts, onlyManual = false, onO
   onOpenLoad: (loadId: string) => void;
   /** tekst przy braku zmian (panel: „Plik zgadza się z Watch Tower”) */
   emptyKey?: string;
+  /** znacznik pominiętego pola: panel przed importem „nie zostanie zapisane”, okno po imporcie „nie zapisane” */
+  skipKey?: string;
 }) {
   const groups = useMemo(() => groupPreview(changes, onlyManual), [changes, onlyManual]);
   const added = useMemo(() => previewKindCodes(changes, 'added'), [changes]);
@@ -68,7 +70,7 @@ export function KshChangeList({ locale, changes, counts, onlyManual = false, onO
                         {notes.length === 0 ? '—' : notes.map((n) => (
                           <span key={n} className={`pill ${n === 'manual' ? 'p-amber' : n === 'skip' ? 'p-plan' : 'p-sea'}`} data-ksh-preview-note={n}>
                             {n === 'skip'
-                              ? s7p(locale, 's7_kp_skip', { reason: r.skipReason ?? '' })
+                              ? s7p(locale, skipKey, { reason: r.skipReason ?? '' })
                               : s7(locale, n === 'manual' ? 's7_kp_manual' : 's7_kp_pending')}
                           </span>
                         ))}

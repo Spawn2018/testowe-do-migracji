@@ -144,6 +144,14 @@ describe('W-594 okno — wygląd i zachowanie', () => {
     expect(shell).toMatch(/st\.closeImportSummary\(\);\s*st\.pushToast\(/);
   });
 
+  it('okno po imporcie: pominięte pole jako „nie zapisane”, poza liczbą pól', () => {
+    const v = kshImportSummaryFromRpc(RPC)!;
+    const html = renderToStaticMarkup(createElement(KshChangeList, { locale: 'pl', changes: v.changes, counts: v.counts, onOpenLoad: () => {}, skipKey: 's7_kis_skip' }));
+    expect(html).toContain('nie zapisane: nieczytelna godzina — pominięta');
+    expect(html).not.toContain('nie zostanie zapisane');
+    expect(modal).toMatch(/f: d\.changes\.filter\(\(c\) => c\.kind === 'changed' && !c\.skipReason\)\.length/);
+  });
+
   it('lista zmian: kod w każdym wierszu, powód pominięcia, nowe i brakujące kody', () => {
     const v = kshImportSummaryFromRpc(RPC)!;
     const html = renderToStaticMarkup(createElement(KshChangeList, { locale: 'pl', changes: v.changes, counts: v.counts, onOpenLoad: () => {} }));

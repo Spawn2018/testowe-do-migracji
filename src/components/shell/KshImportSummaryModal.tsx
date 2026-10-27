@@ -109,7 +109,9 @@ function SummaryDialog({ id }: { id: string }) {
             <>
               <p className="s7-kp-meta kis-sum" data-kis-sum>
                 {s7p(locale, 's7_kis_sum', {
-                  t: new Set(d.changes.map((c) => c.code)).size, f: d.counts.fields, a: d.counts.added, b: d.counts.missing,
+                  /* pola pominięte przez import (skip_reason) nie są zmianą — jak `fields` w powiadomieniu (#601) */
+                  t: new Set(d.changes.map((c) => c.code)).size, f: d.changes.filter((c) => c.kind === 'changed' && !c.skipReason).length,
+                  a: d.counts.added, b: d.counts.missing,
                 })}
               </p>
               {d.fileName ? <p className="s7-kp-meta kis-file">{s7p(locale, 's7_kis_file', { name: d.fileName })}</p> : null}
@@ -118,6 +120,7 @@ function SummaryDialog({ id }: { id: string }) {
                 changes={d.changes}
                 counts={d.counts}
                 emptyKey="s7_kis_empty"
+                skipKey="s7_kis_skip"
                 onOpenLoad={(loadId) => { done(false); selectLoad(loadId); }}
               />
             </>
