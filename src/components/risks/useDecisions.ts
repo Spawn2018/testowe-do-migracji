@@ -3,9 +3,11 @@
  * To samo zapytanie i te same funkcje bazy co dotychczasowe Centrum decyzji (DEC-2): `decisions` z katalogiem
  * `decision_types`, rozstrzygnięcie `decision_resolve`, odłożenie `decision_snooze`. Tylko produkcja; demo — `p6Source.ts`.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgKind } from '../../types';
 import type { DecisionOption, TodoDecision } from '../../lib/p6Todo';
+import { changesLoads, dbErrorKey, decisionRpc } from '../../lib/carrierDecision';
+import { decText } from '../../i18n/decisions';
 
 type DecRow = {
   id: string;
@@ -38,7 +40,7 @@ export interface DecisionsApi {
   rows: TodoDecision[];
   error: string | null;
   refresh: () => Promise<void>;
-  /** wynik `decision_resolve` (ui_hint) albo błąd; `payload` = daty przy PROPOSE_DATE (#384) */
+  /** wynik rozstrzygnięcia (ui_hint) albo błąd — funkcja bazy wg rodzaju decyzji (`carrierDecision.ts`); `payload` = daty przy PROPOSE_DATE (#384) */
   resolve: (
     id: string,
     option: string,
@@ -51,6 +53,8 @@ export interface DecisionsApi {
 export function useOpenDecisions(enabled: boolean): DecisionsApi {
   const [rows, setRows] = useState<TodoDecision[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const rowsRef = useRef<TodoDecision[]>([]);
+  rowsRef.current = rows;
 
   const refresh = useCallback(async () => {
     /* warunek wpisany wprost — paczka demo bez klienta Supabase (I-2) */
@@ -82,12 +86,30 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     payload?: Record<string, unknown> | null,
   ) => {
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return { hint: null, error: null };
+    /* #590/#592: zmiana przewoźnika i przywrócenie mają własne funkcje bazy (`carrierDecision.ts`) */
+    const row = rowsRef.current.find((r) => r.id === id);
+    /* bez wiersza nie znamy rodzaju decyzji — nigdy nie zgadujemy ogólnego rozstrzygnięcia (zamknęłoby bez skutku) */
+    if (!row) {
+      void refresh();
+      return { hint: null, error: decText('pl', 'dec_err_stale') };
+    }
+    const call = decisionRpc({ id, typeCode: row.typeCode, loadId: row.loadId }, option, note, payload);
+    if ('error' in call) return { hint: null, error: decText('pl', `dec_err_${call.error}`) };
     const { getSupabase } = await import('../../auth/client');
     const sb = await getSupabase();
-    const args: Record<string, unknown> = { p_decision: id, p_option: option, p_note: note };
-    if (payload != null) args.p_payload = payload;
-    const { data, error: e } = await sb.rpc('decision_resolve', args);
-    if (e) return { hint: null, error: e.message };
+    const { data, error: e } = await sb.rpc(call.fn, call.args);
+    if (e) {
+      const key = call.fn === 'decision_resolve' ? null : dbErrorKey(e);
+      if (key === 'dec_err_stale') void refresh();
+      if (key === 'dec_err_forbidden' && call.fn === 'load_restore_removed') return { hint: null, error: decText('pl', 'dec_err_restore_admin') };
+      return { hint: null, error: key ? decText('pl', key) : e.message };
+    }
+    if (changesLoads(call)) {
+      /* anulowanie / usunięcie / przywrócenie — harmonogram od razu, nie po 2 min cyklu */
+      const { refreshFromServer } = await import('../../data/supabaseBridge');
+      /* zmiana w bazie już zapisana — chwilowy błąd sieci przy odświeżeniu nie może zawiesić karty */
+      await refreshFromServer({ keepSelection: true, background: true }).catch(() => undefined);
+    }
     await refresh();
     return { hint: (data as { ui_hint?: string } | null)?.ui_hint ?? null, error: null };
   }, [refresh]);

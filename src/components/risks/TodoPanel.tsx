@@ -315,6 +315,7 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     },
     decisions,
     mayResolve: (deciderRole, overdue) => mayResolveDecision(deciderRole, accountRole(role), overdue),
+    userRole: accountRole(role),
     onResolved: (i, hint) => {
       setOpenIssue(null);
       if (hint === 'BACKUP_RETRY') navigate({ pathname: '/opcje/stan-systemu', search: 'kopia=1' });

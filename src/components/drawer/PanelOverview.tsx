@@ -299,7 +299,7 @@ export function PanelOverview(p: Props) {
   const ctx: CardCtx | null = role === 'KSH' ? null : {
     role, locale, phone, nowIso, loadOf: (id) => loads.find((x) => x.id === id), assignOn: false, assignee: () => null, me: null,
     peopleOf: () => null, historyOf: () => null, onTake: noop, onGive: noop, onTakeover: noop, confirmId: null, onConfirm: noop,
-    onCancelConfirm: noop, onGo: noop, onFee: noop, checkHandlers: () => ({}), decisions: null, mayResolve: () => false, onResolved: noop,
+    onCancelConfirm: noop, onGo: noop, onFee: noop, checkHandlers: () => ({}), decisions: null, mayResolve: () => false, userRole: null, onResolved: noop,
     /* wyglad/E49: „Objazd czy postój?” rozstrzyga SCX na stronie Ryzyka — w panelu tylko podgląd */
     detourHandlers: () => ({ canDecide: false, busy: false, onDecide: null }),
   };
