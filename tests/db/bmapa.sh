@@ -235,6 +235,7 @@ e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).
+# F7 r6: source = TELEMATICS_API (enum; 'TEST' → cichy FAIL insert → positions puste).
 L572=a572a572-0000-4000-8000-000000000572
 sys "delete from positions where load_id='$L572'" >/dev/null
 sys "delete from loads where id='$L572'" >/dev/null
@@ -243,12 +244,12 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
-            60, 'TEST', '{}'::jsonb
+            60, 'TELEMATICS_API', '{}'::jsonb
        from generate_series(0, 9) as g(i)" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572', timestamptz '2026-10-20 08:00:00+00' + (g.i * 5 || ' minutes')::interval,
             st_setsrid(st_makepoint(15.6308 + (g.i % 3) * 0.001, 56.1646 + (g.i % 3) * 0.001), 4326),
-            5, 'TEST', '{}'::jsonb
+            5, 'TELEMATICS_API', '{}'::jsonb
        from generate_series(0, 4) as g(i)" >/dev/null
 # F7 r6 P3: łamana po miastach (jak fixture) + offset — 0.05*sin na CI → simplify 2 pkt → 0.
 # 16 odcinków × 5 próbek = 80 pkt; 12 min; offset 0.15° → przeżywa simplify, ≤150 km/h.
@@ -275,12 +276,15 @@ sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572',
             timestamptz '2026-10-20 09:00:00+00' + (s.seq * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(s.lon, s.lat), 4326),
-            70, 'TEST', '{}'::jsonb
+            70, 'TELEMATICS_API', '{}'::jsonb
        from samples s(seq, lon, lat)" >/dev/null
+# 10 PL + 5 Verkö + 80 SE = 95
+val "N3 positions = 95 (10+5+80)" "select count(*)::text from positions where load_id='$L572'" "95"
+sys "delete from corridor_polylines where code='SE_KAA_TRACK'" >/dev/null
 n3=$(sys "select rebuild_se_kaa_track('$L572')")
 if [ "$n3" -ge 10 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    N3 rebuild_se_kaa_track ≥ 10 ($n3)"; else fail=$((fail+1)); echo "  FAIL  N3 rebuild → $n3"; fi
-start_lat=$(sys "select round(st_y(st_startpoint(geom))::numeric, 2) from corridor_polylines where code='SE_KAA_TRACK'")
-# start po Verkö (~56.16), nie PL (~52)
+start_lat=$(sys "select coalesce(round(st_y(st_startpoint(geom))::numeric, 2)::text,'') from corridor_polylines where code='SE_KAA_TRACK'")
+# start po Verkö (~56.16), nie PL (~52); start_lat z wyniku rebuild (nie wcześniejszego fixture)
 awk "BEGIN{exit !($start_lat+0 >= 55.5 && $start_lat+0 <= 57.5)}" 2>/dev/null \
   && { ok=$((ok+1)); echo "  OK    N3 start lat po Verkö ($start_lat), nie PL"; } \
   || { fail=$((fail+1)); echo "  FAIL  N3 start lat → $start_lat"; }
@@ -299,8 +303,10 @@ sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
               17.0 + g.i * 0.01 + 0.08 * sin(g.i),
               52.08 + g.i * 0.01 + 0.08 * cos(g.i)
             ), 4326),
-            60, 'TEST', '{}'::jsonb
+            60, 'TELEMATICS_API', '{}'::jsonb
        from generate_series(0, 60) as g(i)" >/dev/null
+val "P2 positions = 61" "select count(*)::text from positions where load_id='$L572b'" "61"
+sys "delete from corridor_polylines where code='SE_KAA_TRACK'" >/dev/null
 n3b=$(sys "select rebuild_se_kaa_track('$L572b')")
 if [ "$n3b" = "0" ]; then ok=$((ok+1)); echo "  OK    P2 brak Verkö → rebuild 0"; else fail=$((fail+1)); echo "  FAIL  P2 brak Verkö → $n3b"; fi
 sys "delete from positions where load_id='$L572b'" >/dev/null

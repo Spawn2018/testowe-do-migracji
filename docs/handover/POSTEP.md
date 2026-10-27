@@ -6031,3 +6031,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - BN0 #585: unit/visual ✔ na `5f3c7520`; db FAIL N3 rebuild→0 (163/164) — `0.05*sin` niewystarczające vs `st_simplify(0.00045)`.
 - **Krok (BN0 #585):** F7 r6 — N3 SE: łamana po 17 miastach (jak fixture SE_KAA_TRACK) + offset 0,15°/0,12°, 80 próbek / 12 min; EXPECTED **164**.
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 20:15 — BN0 #585 F7 r6: enum positions + asercje
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `77d1f4c9` (F7: nadal `source='TEST'`). Bez push na main.
+- CI `77d1f4c9`: unit ✔, visual ✔; db FAIL (21m39s) — N3 rebuild→0 jak F7.
+- **Przyczyna (F7):** `position_source` nie ma `'TEST'` → inserty do `/dev/null` cicho padają → `positions` puste → rebuild 0; `start_lat` czytał stary `SE_KAA_TRACK`.
+- **Krok (BN0 #585):** `bmapa.sh` — 4× `'TELEMATICS_API'`; asercje count N3=95 (10+5+80) i P2=61; `delete SE_KAA_TRACK` przed `rebuild`; bmapa EXPECTED **166**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
