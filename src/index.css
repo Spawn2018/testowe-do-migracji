@@ -1936,3 +1936,18 @@ img,video{max-width:100%;height:auto}
 .map-e29 td[data-map-name] .map-cell-sub{white-space:nowrap}
 /* wyglad/W-cele-przejsc: miejsce, do którego prowadzi sprawa albo wiersz promu (wiersz rejsu w Przeglądzie, rejs w Harmonogramie › Rejsy) */
 .is-go-target{outline:2px solid var(--focus);outline-offset:2px;border-radius:2px}
+
+/* #594 B4 (właściciel 27.10, 14:55): prawy pasek transportu — reszta ekranu rozmyta, po zamknięciu wraca */
+.drawer-scrim{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+/* #594 B3: tło pod listą dzwonka — tylko telefon */
+.bell-scrim{display:none}
+/* #594 B2: gest w dzwonku — pion przewija listę, poziom przesuwa wiersz */
+.bell-item{touch-action:pan-y}
+.bell-item.is-swiping{transition:none;opacity:.85}
+.bell-item.is-gone{transition:transform .16s ease-out,opacity .16s ease-out;opacity:0}
+@media (max-width:768px){
+  .bell-scrim{display:block;position:fixed;inset:0;z-index:55;background:rgba(6,14,20,.25);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .bell-item.is-gone{transition:none}
+}

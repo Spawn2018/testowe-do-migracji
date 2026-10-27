@@ -266,7 +266,7 @@ export function LoadDrawer() {
 
   return (
     <>
-      <button type="button" className="scrim" aria-label={t(locale, 'a6_dr_close')} onClick={() => selectLoad(null)} />
+      <button type="button" className="scrim drawer-scrim" data-drawer-scrim aria-label={t(locale, 'a6_dr_close')} onClick={() => selectLoad(null)} />
       <aside className="drawer" role="dialog" aria-label={transportLabel(load, role, 'panel')}>
         <div className="drawer-hd">
           <div className="r1">
