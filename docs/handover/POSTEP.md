@@ -5768,6 +5768,50 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #584 F7 gotowe po `09482223`, unit/visual ✔ → merge `f5b0451b`. #582 bez „F7: gotowe” (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g → insert pinned UUID bez kodu) → anulowane wiszące visual/db (G-15).
 - **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
 
+## 2026-10-27 04:00 — #582 SCALONE; start BN0 #572 (0313)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **#582** merge `de50a8bb` (F7 „gotowe do scalenia” 01:56Z na `36c1a0a`; unit/db/visual ✔). Bez push na main.
+- **BN0 #572 krok:** gałąź `pakiet/572-bn0-se-kaa-here`; migracja **0313** (`here_corridor_points`, `here_road_corridor_dev_m`); Edge `here-roads` — SE-KAA z `via` SE_E22 (`passThrough`), refetch gdy korytarz nowszy; `ROAD_KAA` + odchyłka ≤ 2 km; `loadRoadLines` → 4 legi; bmapa **149**. Zrzut visual mapy — po zielonym CI / F7.
+
+## 2026-10-27 04:15 — BN0 #585 CI fix; #583 wpisane do planu
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. #583 (`pilne`, bez `dla-cursora`) — polecenie z komentarza PR #585 (Spawn2018): wpisane PLAN §4/§8.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po HEAD.
+- **BN0 #585:** unit/visual ✔ na `56cbb8c2`; db bmapa FAIL `SE-KAA w roads → true` — asercja porównywała do `t`, Postgres `exists::text` = `true`. Fix + PLAN kolejność: BN0 → **#583** → P4-k #581 → BN1.
+
+## 2026-10-27 04:55 — BN0 #585 F7: korytarz GPS SG-23 + via + odchyłka
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: F7 #585 na `56cbb8c` — **NIE scalać** (korytarz miast); CI na `8df1bf31` unit/visual/db ✔ — potem poprawki F7 (ten commit). Bez push na main.
+- **BN0 krok F7:** `SE_E22` = ślad SG-23 23.10 06:59→26.10 12:39 (simplify ~50 m, skoki >5 km); `here_corridor_via_points` co ~100 km; `here_road_corridor_dev_m` dwukierunkowa; `here_store_road(null)` zostawia points; Edge skip bez korytarza + try/catch JSON; front AbortController; bmapa **155**.
+
+## 2026-10-27 05:25 — BN0 #585 CI: status Vagnhärad → punkt na śladzie SG-23
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe” po HEAD `1d0e28d1`. unit/visual ✔; db FAIL — status 338/339: `#496 Vagnhärad 17.50/58.95` (E4 ~70 km od SE_E22 GPS).
+- **Krok:** `status.sh` — asercja na `16.23/58.95` (wierzchołki śladu ~58.85–59.00); komentarz #572 F7. EXPECTED status **339** bez zmiany. Push → CI; potem prośba o F7.
+
+## 2026-10-27 05:45 — BN0 #585 F7 r2: N4/N8/N1/N2/N3/N6
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: F7 #585 r2 na `1d0e28d` — **NIE scalać**; CI na `88ba5259` unit/visual/db ✔ (status punkt na GPS). Bez „F7: gotowe” po wymaganym minimum. Bez push na main.
+- **Krok F7 r2 (minimum N4,N8,N1,N2,N3,N6 + N5/N9):**
+  - N4: usunięte literały GPS / okno czasu / ścieżka lokalna z 0313; tylko DO z `positions`.
+  - N8: nowy kod `SE_KAA_TRACK` (CHECK); `SE_E22` bez zmian; Edge/bmapa → `SE_KAA_TRACK`.
+  - N1: `ROAD_KAA.via` inland (Norrköping…Luleå), bez Södertälje.
+  - N2: `nearestKm` = punkt→odcinek; test połowy długiego odcinka.
+  - N3: DO — UUID SG-23, trim port→plac, postoje, skoki >150 km/h, simplify.
+  - N5: via = najbliższy wierzchołek po metrach geography.
+  - N6: `loadRoadLines` — timeout/fetch lokalnie, zwraca `lines`.
+  - N9: odrzucenie → `fetched_at` tak, by ponowić po 24 h.
+  - `status.sh` #496 z powrotem Vagnhärad/E4. bmapa fixture CI (nie GPS).
+
+## 2026-10-27 06:15 — BN0 #585 CI zielone na `8f84dca8`; czekam F7
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: **brak** „F7: gotowe do scalenia” po HEAD `8f84dca8` (prośba 04:06Z). Jedyny otwarty PR #585 — MERGEABLE, unit/visual/db ✔. Bez push na main.
+- Bieżąca: **BN0 #572** — minimum F7 r2 na produkcji w kodzie; czekam F7. Po scaleniu → **#583 PILNE**.
 
 ## 2026-10-27 07:00 — #583 PILNE start (BN0 #585 czekam F7)
 
@@ -5940,9 +5984,171 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #592 HEAD `71fd92ec`: unit ✔, db ✔ (import EXPECTED **309**, nullguard **866**), visual ✔ (pierwszy przebieg zrzuty: flaky `kokpit__hhl__pl__1920__light` 274 px — ten commit tylko asercja purge; po `gh run rerun --failed` zielone).
 - **Krok:** wpis PLAN/POSTEP + prośba o F7 na #592. Po „F7: gotowe do scalenia” — `gh pr merge --merge` (#592 = 0315 przed #585→0316).
 
-## 2026-10-27 21:20 � BN0 czeka F7 (docs po gotowe); start P4-k #581 cz.1
+## 2026-10-27 18:05 — #590 SCALONE; BN0 #585: merge main + 0313→0316
 
-- Skrzynka `dla-cursora`: #550 WSTRZYMANE; #538/#537/#500/#499 juz w planie; bez nowego `pilne`.
-- Scalanie: PR #585 F7 gotowe na `a02cbf9` (20:02Z); potem commit docs `0007d0fc` � ZASADY: czekam ponowne F7. CI unit/visual/db ? na `0007d0fc`. Bez merge.
-- Biezaca (rownolegle przy F7): **P4-k #581** ga��� `pakiet/581-p4k-eta-calibration`, migracja **0317** � `eta_record_segment_observations` (PL_ROAD/PORT_CHECKIN/CROSSING_DEFAULT/SE_ROAD|_KAA), GPS km+pokrycie, exclude LUKA/POKRYCIE, stare H4�`H4_BLEDNY_POMIAR`, `eta_rebuild_segment_observations`, h4�integration_runs przy bledzie. Suite `p4k` EXPECTED **15**.
-- Bez push na main. Po F7 #585 � merge BN0; dalej P4-k cz.2 (`eta_predictions`, cron, 27A).
+- Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#592/#590** — F7 „gotowe do scalenia” na `3805d75` (po CI unit/visual/db ✔ na docs HEAD) → `gh pr merge --merge` → `f44c1cb9` (17:04Z). Issue #590 zamknięte. Bez push na main.
+- **Krok (BN0 #585):** merge `origin/main` (konflikty PLAN/POSTEP); migracja `0313_572_…` → **`0316_572_…`**. F7 r3 (N1, NOWE-1/2, N2, N3) — następny krok.
+
+## 2026-10-27 18:30 — BN0 #585 F7 r3 (N1 / NOWE-1–3 / N2 / N3)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (po merge main CI zielone na `10b6a1d3`; F7 r3 NIE). Bez push na main.
+- **Krok (BN0 #585):** F7 r3 na migracji **0316** + Edge/draw:
+  - N1: `roadKaaSpecFromVia` + awaryjne Norrköping/Västerås 58.59/59.61;
+  - NOWE-1/2: kolumna `retry_after`; odrzucenie nie cofa `fetched_at` (bez pętli HERE / purge);
+  - N2: `distPointToSegmentKm` × `cos(lat)`;
+  - N3: `rebuild_se_kaa_track` — start po ostatnim Verkö ≤2 km (test PL+prom+SE);
+  - NOWE-3: `kaaDeviationOk` / SQL `here_road_corridor_dev_m` (korytarz→≤2 km; trasa→max(2;0,15×L));
+  - bmapa EXPECTED **163**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 18:55 — BN0 #585 F7 r4 (P1/P2/P3)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r4 POPRAWKI na `106d84c`; db FAIL N3 rebuild→0). Bez push na main.
+- **Krok (BN0 #585):** F7 r4:
+  - P1: `shouldFetch` — `retry_after` przed świeżością (także `fetched_at=-infinity`); unit;
+  - P2: `rebuild_se_kaa_track` — brak Verkö → 0 (bez `coalesce(...,1)`);
+  - P3: N3 odstępy SE 12 min; test braku portu → 0; bmapa EXPECTED **164**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 19:15 — BN0 #585 F7 r5 (P2/P3 + store_road)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r5 POPRAWKI na `995db03`; db FAIL N3 rebuild→0, 163/164). Bez push na main.
+- **Krok (BN0 #585):** F7 r5:
+  - P2: `rebuild_se_kaa_track` — usunięte `coalesce(max Verkö, 0)`; brak portu → `rn_start` NULL → 0; fixture PL zygzak (≥10 pkt po simplify);
+  - P3: N3 SE `+ 0.05*sin(i)` (prosta → simplify 2 pkt);
+  - drobne: `here_store_road` INSERT odrzucenia `fetched_at=-infinity`;
+  - bmapa EXPECTED **164** (bez zmiany).
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 19:45 — #595 SCALONE; BN0 #585 F7 r6 (N3 fixture)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#595** — F7 „gotowe do scalenia” na `28823f7e` (po ostatnim commitcie; unit/visual ✔; MERGEABLE) → `gh pr merge --merge` → `4f9d2c18` (18:28Z). Bez push na main.
+- BN0 #585: unit/visual ✔ na `5f3c7520`; db FAIL N3 rebuild→0 (163/164) — `0.05*sin` niewystarczające vs `st_simplify(0.00045)`.
+- **Krok (BN0 #585):** F7 r6 — N3 SE: łamana po 17 miastach (jak fixture SE_KAA_TRACK) + offset 0,15°/0,12°, 80 próbek / 12 min; EXPECTED **164**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 20:15 — BN0 #585 F7 r6: enum positions + asercje
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `77d1f4c9` (F7: nadal `source='TEST'`). Bez push na main.
+- CI `77d1f4c9`: unit ✔, visual ✔; db FAIL (21m39s) — N3 rebuild→0 jak F7.
+- **Przyczyna (F7):** `position_source` nie ma `'TEST'` → inserty do `/dev/null` cicho padają → `positions` puste → rebuild 0; `start_lat` czytał stary `SE_KAA_TRACK`.
+- **Krok (BN0 #585):** `bmapa.sh` — 4× `'TELEMATICS_API'`; asercje count N3=95 (10+5+80) i P2=61; `delete SE_KAA_TRACK` przed `rebuild`; bmapa EXPECTED **166**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 20:45 — BN0 #585 F7 r6b: numery zleceń w fixture
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (CI db FAIL na `7ce5a57e`). Bez push na main.
+- CI `7ce5a57e`: unit ✔, visual ✔; db FAIL bmapa 162/166 — N3/P2 positions=0 mimo `TELEMATICS_API`.
+- **Przyczyna:** `trg_loads_order_numbers` / `enforce_order_numbers` — `IN_TRANSIT_SE` wymaga `hhl_order_no` i `carrier_order_no`; insert ładunku padał cicho (`>/dev/null`) → FK positions → 0.
+- **Krok (BN0 #585):** N3/P2 — numery HHL/SCX jak w `status.sh` `mk`; asercje „load istnieje”; bmapa EXPECTED **168**.
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 21:05 — BN0 #585 F7 r6b: CI zielone; prośba o F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `a02cbf9c` (jedyny otwarty PR #585). Bez push na main.
+- CI HEAD `a02cbf9c`: unit ✔, visual ✔ (zmiany + części bramy/telefon/zrzuty), db ✔ (bmapa EXPECTED **168**, 15m1s). MERGEABLE.
+- **Krok:** wpis PLAN/POSTEP + prośba o F7: gotowe do scalenia. Po znaku → `gh pr merge --merge`; dalej P4-k #581.
+
+## 2026-10-27 21:40 — #585 SCALONE; start #596 (strażnik decision_resolve)
+
+- Skrzynka `dla-cursora`: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Komentarz Spawn2018 na #598 (20:34Z): kolejność po #585 → **#596** → **#594** → #581.
+- Scalanie: **#585** F7 gotowe na `0007d0fc` (20:21Z, po `a02cbf9`) + CI unit/visual/db ✔ → `gh pr merge --merge` → `29b0496e` (20:36Z). Bez push na main.
+- Bieżąca: **#596** gałąź `pakiet/596-decision-resolve-carrier-guard`, migracja **0317** — `decision_resolve` → `decision_resolve_carrier_change`; `decision_apply_effect` CARRIER_* → wyjątek; import EXPECTED **312**. PR #598 (P4-k) po #596 przenumeruje 0317→0318.
+
+## 2026-10-27 22:15 — #596/#599 F7 r1 poprawki (assert_not_preview + WILL_RESTORE)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (nic nie budować); #538/#537/#500/#499 w planie — bez nowych. Brak PR z „F7: gotowe do scalenia”.
+- CI na `f915a0e3`: unit ✔, visual ✔, **db FAIL** security 458/1 — B5 strażnik: `decision_resolve` bez `assert_not_preview` na początku (regresja względem produkcji).
+- F7 r1 #599 (Spawn2018, 20:43Z): blokujące = brak `assert_not_preview`; średnie = `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; test zamknięta→idempotent.
+- Krok: poprawka w 0317 + testy import (+3 → EXPECTED **315**); push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia. #598 nadal CONFLICTING / F7 poprawki; numeracja 0317 zostaje przy #599.
+
+## 2026-10-27 22:35 — #596/#599 F7 r2: B5 komentarz przed begin
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak PR z „F7: gotowe do scalenia”.
+- CI `3dacdb5e`: unit ✔, visual ✔; **db FAIL** security 458/459 — B5: po `begin` stał komentarz przed `perform assert_not_preview` (regex wymaga assert jako pierwszej instrukcji).
+- F7 r2 (Spawn2018, 21:22Z): przenieść komentarz nad `begin`.
+- Krok: komentarz nad `begin` w 0317; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 22:40 — #596/#599 F7 r3: komentarz bez słowa begin
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r3 POPRAWKI na `9ab04622`). Bez push na main.
+- CI `9ab04622`: unit ✔; **db FAIL** security 458/1 — B5: słowo `begin` w komentarzu nad ciałem → regex `security.sh:1429` obcina w złym miejscu.
+- F7 r3 (Spawn2018, 21:30Z): komentarz bez słowa „begin” (albo `comment on function`).
+- Krok: komentarz `assert_not_preview jako pierwsza instrukcja`; lokalna weryfikacja regexu OK; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 23:00 — #596 SCALONE; start #594 (0318 SUMMARY)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#599/#596** — F7 „gotowe do scalenia” na `3429fce` (21:54Z, po ostatnim commitcie) + CI unit/visual/db ✔ → `gh pr merge --merge` → `620f7294`. Bez push na main.
+- Bieżąca: **#594** gałąź `pakiet/594-ksh-import-summary`, migracja **0318**:
+  - tabela `ksh_import_summaries` (retencja 30);
+  - macierz `ksh_import` (dzwonek ON, e-mail/push OFF, fixed);
+  - trigger po `schedule_imports.stats` → `ksh_import_summary_publish` (nie przy dry_run / quiet / 0 zmian);
+  - jedno IN_APP `KSH_IMPORT_SUMMARY` na konto (dedup upsert, read_at=null);
+  - RPC `ksh_import_summary_get` z filtrem pól (KSH bez numerów zleceń; SCX bez HHL–KSH);
+  - import EXPECTED **342**; nullguard **871**.
+- Ekran gest/rozmycie: PR #600 (`wyglad/`) — osobno. Po #594 baza → #581 przenumeruj na **0319**.
+
+## 2026-10-27 23:15 — #600 SCALONE; #601 poprawka db (REMOVED / dry_run / OPS / nullguard)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#600** F7 „gotowe do scalenia” na `85a6d11a` (21:58Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `7d8ebb4b`. Bez push na main.
+- CI #601 `5f316d1c` (dispatch import,nullguard): **FAIL** 338/4 + nullguard 870/871:
+  1. `ksh_import_summary_publish` wyklucza CANCELLED bez REMOVED → dodane `status is distinct from 'REMOVED'`;
+  2. dry_run `val` czytał `ksh_import_summaries` jako authenticated (revoke) → split: import `val` + count `chk` przez Q;
+  3. 4 IN_APP (HHL_OPS z #426) → w sekcji #594 OPS nieaktywny, oczekiwane 3;
+  4. SCX `::text` → `true` zamiast `t` → porównanie boolean bez cast;
+  5. nullguard EXPECTED **870** (EMPTY pozytywne = n/d, tylko +4 odmowy).
+- import EXPECTED **343**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-28 00:25 — #601 F7 r1: B3/B4 + c3 fixed_* + medium
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe” (#598 niegotowe; #601 poprawki).
+- CI #601 `3f214f11`: import/nullguard ✔, **c3 FAIL** (katalog 32→33 `ksh_import`; `fixed_*=5` przez macierz).
+- F7 r1 (Spawn2018 na #601):
+  - B3: publish/get — SCX tylko własne `load_id`; dzwonek tylko gdy zmiana go dotyczy;
+  - B4: delete+insert (nowe `id` powiadomienia);
+  - D2/c3: `fixed_*=false`; katalog **33**;
+  - P1: odtworzenie `skip_reason` z WT gdy event bez pola; P3 stats z odfiltrowanej listy; P4 `old.stats='{}'` + unique `import_id` + wyjątek→`integration_runs`; P5 `project_id`; D1 `order by au.id`; D4/D5 kształt wierszy; D6 retencja 30.
+- import EXPECTED **352**; backup: `ksh_import_summaries`. Bez push na main.
+
+## 2026-10-28 00:15 — #601 F7 r1: CI db FAIL B3/D6 (column_map + retencja)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Brak PR z „F7: gotowe do scalenia” (#602 wygląd bez F7; #598 CONFLICTING / poprawki; #601 czeka na zielone db).
+- Scalanie: brak. Bez push na main.
+- CI HEAD `321031cc`: unit ✔, visual ✔; **db FAIL** import 346/6 (B3×4, D6×2) — `Q` zwracało `^` (psql ERROR).
+- **Przyczyna:** INSERT do `schedule_imports` w testach B3/D6 bez `column_map` (NOT NULL w 0001) → pusty/zły id → publish z błędnym uuid. D6: `g || ' minutes'` (brak operatora integer||text).
+- **Krok (#594 / #601):**
+  - testy: `column_map='{}'` w INSERT B3/D6; D6 `make_interval(mins => g)`;
+  - 0318: retencja przez `OFFSET 30` (bariera podzapytania zamiast `NOT IN … LIMIT`);
+  - import EXPECTED **352** (bez zmiany liczby asercji).
+- Push → CI `db.yml` suites=import,nullguard,c3; po zielonym — prośba o F7 r2: gotowe do scalenia.
+
+## 2026-10-28 00:35 — #602 SCALONE; #601 F7 r2 (B3 cancel / P1 / OTH / LATE_DATE)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#602** F7 „gotowe do scalenia” na `1fd3955c` (23:14Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `df3f5caa`. Bez push na main.
+- CI #601 `94b005c1`: dispatch import/nullguard/c3 ✔ (352/870/40); pełny PR db FAIL risks (8 kluczy — `rk_late_date_change` po A1 imporcie w LEAD_DAYS).
+- **Krok (#594 / #601) F7 r2:**
+  - B3: publish CARRIER bez filtra statusu/removed (anulowanie → dzwonek); test cancel×3;
+  - P1: `coalesce` przy odtwarzaniu skip_reason (pusty WT); testy WT z wartością + pusty (+4);
+  - OTH z transportem tylko w P2 → 0 SUMMARY przy imporcie do P;
+  - `status.sh`: ponowne sprzątanie LATE_DATE po A1 imporcie;
+  - import EXPECTED **359**.
+- Push → CI; po zielonym — prośba o F7 r2: gotowe do scalenia.
+
+## 2026-10-28 00:55 — #601/#594 SCALONE; #581 merge main → 0319
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#601/#594** — F7 „gotowe do scalenia” na `da399f83` (23:53Z, po ostatnim commitcie) + CI unit/db/visual ✔ → `gh pr merge --merge` → `ecbae548`. Bez push na main.
+- **Krok (#581 / #598):** merge `origin/main` (konflikty PLAN/POSTEP); migracja `0317_581_…` → **`0319_581_…`** (0317 zajęte przez #596). Następny: F7 r1 POPRAWKI (p4k seed STEGRA, duplikaty ts, idempotencja, integration_runs, trasy konfiguracyjne).
+

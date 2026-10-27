@@ -438,6 +438,18 @@ q "insert into loads (id,project_id,carrier_org_id,order_no,status,plan_load_dat
 q "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, cargo_class) values ('$P','$W8','SG-ZOST',10,3,3,'DIMENSIONED')" >/dev/null
 chk "A1 HHL w sesji: cancel_load z powodem → CANCELLED" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select cancel_load('$W3','Test A1 — anulowanie'); commit" CANCELLED
 chk "A1 import w sesji HHL anuluje PLANNED spoza pliku" "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select import_schedule('$P', '[{\"code\":\"SG-KEEP\",\"length_m\":10,\"width_m\":3,\"height_m\":3,\"qty\":1,\"total_weight_t\":10,\"load_date\":\"2026-11-01\",\"delivery_date\":\"2026-11-05\"}]'::jsonb, '{SG-ZOST}'::text[], '{\"name\":\"a1.xlsx\",\"hash\":\"a1\",\"path\":\"x/a1.xlsx\"}'::jsonb, false); select status from loads where id='$W8'; commit" CANCELLED
+# Po A1 imporcie (daty w LEAD_DAYS) może powstać LATE_DATE — risks.sh liczy klucze w tower_test_status.
+q "delete from decision_events where decision_id in (
+      select d.id from decisions d join risk_signals s on s.id=d.risk_id
+       where s.title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or s.dedup_key like 'LATE_DATE%' or s.dedup_key like 'ETA:%');
+    delete from decisions where risk_id in (
+      select id from risk_signals
+       where title_key in ('rk_late_date_change','rk_eta_after_latest')
+          or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%');
+    delete from risk_signals
+     where title_key in ('rk_late_date_change','rk_eta_after_latest')
+        or dedup_key like 'LATE_DATE%' or dedup_key like 'ETA:%'" >/dev/null
 
 # A2 / E26 / L14 — SG-03 (zmyślony ślad G-17) i sprawa DELIVERED_CHECK
 echo; echo "[12] A2 — wyjazd z placu i L14"
@@ -987,7 +999,7 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
-# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
+# #496 / F7 #585 N8: SE_E22 bez nadpisania GPS — Vagnhärad/E4 znowu w korytarzu
 q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
 q "delete from positions where load_id='$L487a'" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #581 P4-k cz.1 — pomiar odcinków ETA z GPS / stref (0317).
+# #581 P4-k cz.1 — pomiar odcinków ETA z GPS / stref (0319).
 . "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 ok=0; fail=0

@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
  * nie pokazywał kodu — kod był ukryty klasą „tylko dla czytnika ekranu”. Każdy wiersz ma mieć widoczny kod.
  */
 describe('W-567 lista zmian KSH — kod transportu w każdym wierszu', () => {
-  const panel = readFileSync('src/components/schedule/KshPreviewPanel.tsx', 'utf8');
+  /* #594 B1: tabela przeniesiona do wspólnej listy (panel Harmonogramu i okno po imporcie) */
+  const panel = readFileSync('src/components/schedule/KshChangeList.tsx', 'utf8');
   const css = readFileSync('src/components/schedule/sched7.css', 'utf8');
 
   it('panel nie warunkuje wyświetlenia kodu numerem wiersza i nie używa ukrytej klasy', () => {

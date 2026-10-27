@@ -9,7 +9,8 @@ import { a10 } from '../../i18n/p10a';
 
 interface State { failed: boolean }
 
-export class PartBoundary extends Component<{ children: ReactNode; name?: string }, State> {
+/** `onError` — część bez własnego miejsca na komunikat (okno): zamiast bloku z „Odśwież” rodzic zamyka ją sam (#594). */
+export class PartBoundary extends Component<{ children: ReactNode; name?: string; onError?: () => void }, State> {
   state: State = { failed: false };
 
   static getDerivedStateFromError(): State {
@@ -19,10 +20,12 @@ export class PartBoundary extends Component<{ children: ReactNode; name?: string
   componentDidCatch(error: Error, info: ErrorInfo): void {
     /* zgłoszenie do `client_errors` robi globalny reporter (I-6) — tu tylko ślad w konsoli */
     console.error('[część aplikacji]', this.props.name ?? '', error, info.componentStack);
+    this.props.onError?.();
   }
 
   render() {
     if (!this.state.failed) return this.props.children;
+    if (this.props.onError) return null;
     return (
       <div className="part-fail" role="alert" data-part-failed={this.props.name ?? ''}>
         <h2>{a10('a10_part_h')}</h2>

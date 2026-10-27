@@ -3,6 +3,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_AUTH_ENABLED, SUPABASE_URL } from '../../au
 import {
   ROAD_PL,
   ROAD_SE,
+  ROAD_KAA,
   basemapFor,
   looseRoadOk,
   roadGeometryOk,
@@ -218,11 +219,11 @@ export async function applyBasemap(
   return layer;
 }
 
-const SPEC: Record<string, typeof ROAD_PL | 'loose'> = {
+const SPEC: Record<string, typeof ROAD_PL | typeof ROAD_SE | typeof ROAD_KAA | 'loose'> = {
   'PL-GDN': ROAD_PL,
   'SE-NYN': ROAD_SE,
   'PL-GDY': 'loose',
-  'SE-KAA': 'loose',
+  'SE-KAA': ROAD_KAA,
 };
 
 export function acceptedRoads(rows: unknown): LatLng[][] {
@@ -247,6 +248,13 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
   return out;
 }
 
+const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
+
+/** F7 #585: jedno wołanie here-roads na sesję + limit czasu (brakujący leg nie spamuje Edge). */
+let hereRoadsSessionAt = 0;
+const HERE_ROADS_SESSION_MS = 5 * 60_000;
+const HERE_ROADS_TIMEOUT_MS = 15_000;
+
 export async function loadRoadLines(): Promise<LatLng[][]> {
   if (!SUPABASE_AUTH_ENABLED) return [];
   try {
@@ -254,20 +262,36 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     const sb = await getSupabase();
     const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
     let lines = await read();
-    if (lines.length >= 2) return lines;
+    // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_KAA_TRACK).
+    if (lines.length >= ROAD_LEGS) return lines;
+    if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return lines;
-    await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        apikey: SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: '{}',
-    });
-    lines = await read(true);
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+        signal: ac.signal,
+      });
+    } catch {
+      // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
+    } finally {
+      clearTimeout(timer);
+      hereRoadsSessionAt = Date.now();
+    }
+    try {
+      lines = await read(true);
+    } catch {
+      /* zostaw lines */
+    }
     return lines;
   } catch {
     return [];

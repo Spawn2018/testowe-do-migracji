@@ -249,6 +249,9 @@ interface TowerState {
   openDecisionId: string | null;
   openInvoiceId: string | null;
   accessMessage: string | null;
+  /** #594 B1: otwarte okno „Zmiany z pliku KSH” (id migawki importu); null — zamknięte */
+  importSummaryId: string | null;
+  closeImportSummary: () => void;
   entryOpen: boolean;
   smsEntry: { id: string; status: string; recipient: string; email: string; transport: string } | null;
   workflowFocus: string | null;
@@ -415,6 +418,7 @@ export const useTowerStore = create<TowerState>()(
       openDecisionId: null,
       openInvoiceId: null,
       accessMessage: null,
+      importSummaryId: null,
       entryOpen: false,
       smsEntry: null,
       workflowFocus: null,
@@ -474,6 +478,7 @@ export const useTowerStore = create<TowerState>()(
         applyThemeToDom(nextTheme);
         const defaultView = 'dash';
         setPreviewViewRole(role); // E9-7 — strażnik Podglądu (writeThrough / isPreviewReadOnly)
+        set({ importSummaryId: null }); // #594: okno importu z danymi poprzedniej roli zamknięte
         set({ role, theme: nextTheme, view: defaultView as ViewKey });
       },
 
@@ -542,6 +547,7 @@ export const useTowerStore = create<TowerState>()(
       setOpenDecisionId: (openDecisionId) => set({ openDecisionId }),
       setOpenInvoiceId: (openInvoiceId) => set({ openInvoiceId }),
       setAccessMessage: (accessMessage) => set({ accessMessage }),
+      closeImportSummary: () => set({ importSummaryId: null }),
       setEntryOpen: (entryOpen) => set({ entryOpen }),
       setSmsEntry: (smsEntry) => set({ smsEntry }),
       setWorkflowFocus: (workflowFocus) => set({ workflowFocus }),
@@ -586,6 +592,12 @@ export const useTowerStore = create<TowerState>()(
       openNotification: (id) => {
         const n = get().notifications.find((x) => x.id === id);
         if (!n) return;
+        /* #594 B1: zbiorcze powiadomienie importu pliku KSH — okno ze zmianami zamiast przejścia do widoku */
+        if (n.summaryId) {
+          set({ importSummaryId: n.summaryId });
+          get().markNotificationRead(id);
+          return;
+        }
         const href = n.href;
         // AUD-02: kod transportu z load_id (ładunki ryzyk/stref nie niosą kodu → było `/transport/brak`)
         const loadCode = n.loadId ? get().loads.find((l) => l.id === n.loadId)?.code : undefined;

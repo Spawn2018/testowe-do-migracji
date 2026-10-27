@@ -7,6 +7,69 @@ import { formatListDateTime } from '../../lib/format';
 import { bellGeneralCount, bellGroups, type BellGroup, type BellLocale, type BellSource } from '../../lib/bellList';
 import { transportLabel } from '../../lib/transportName';
 import { pt } from '../../i18n/p6e';
+import { swipeAxis, swipeOffset, swipeRelease, type SwipeAxis } from '../../lib/bellSwipe';
+
+/**
+ * #594 B2: telefon — przesunięcie w prawo usuwa powiadomienie z listy (oznaczenie jako przeczytane).
+ * Tylko dotyk (`pointerType === 'touch'`); mysz i klawiatura bez zmian. Pionowy ruch przewija listę (`touch-action: pan-y`).
+ */
+function SwipeRow({ onDismiss, className, children, ...rest }: {
+  onDismiss: () => void;
+  className: string;
+  children: React.ReactNode;
+} & Record<`data-${string}`, string | number | undefined>) {
+  const [dx, setDx] = useState(0);
+  const dxRef = useRef(0);
+  const [gone, setGone] = useState(false);
+  const st = useRef<{ x: number; y: number; axis: SwipeAxis; id: number } | null>(null);
+  const moved = useRef(false);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const end = () => {
+    const s = st.current;
+    st.current = null;
+    if (!s || s.axis !== 'x') { dxRef.current = 0; setDx(0); return; }
+    const w = rowRef.current?.getBoundingClientRect().width ?? 0;
+    /* ostatnie przesunięcie z ref, nie ze stanu ostatniego renderu */
+    if (swipeRelease(dxRef.current, w) === 'dismiss') {
+      setGone(true);
+      setDx(w);
+      window.setTimeout(onDismiss, 160);
+    } else { dxRef.current = 0; setDx(0); }
+  };
+  return (
+    <div
+      {...rest}
+      ref={rowRef}
+      className={`${className}${dx > 0 ? ' is-swiping' : ''}${gone ? ' is-gone' : ''}`}
+      style={dx > 0 ? { transform: `translateX(${dx}px)` } : undefined}
+      onPointerDown={(e) => {
+        moved.current = false;
+        if (e.pointerType !== 'touch') return;
+        st.current = { x: e.clientX, y: e.clientY, axis: 'none', id: e.pointerId };
+      }}
+      onPointerMove={(e) => {
+        const s = st.current;
+        if (!s || e.pointerId !== s.id) return;
+        const mx = e.clientX - s.x;
+        const my = e.clientY - s.y;
+        if (s.axis === 'none') s.axis = swipeAxis(mx, my);
+        if (s.axis === 'x') {
+          moved.current = true;
+          dxRef.current = swipeOffset(mx);
+          setDx(dxRef.current);
+        }
+      }}
+      onPointerUp={end}
+      onPointerCancel={() => { st.current = null; dxRef.current = 0; setDx(0); }}
+      onClickCapture={(e) => {
+        /* przesunięcie to nie kliknięcie — nie otwieraj powiadomienia */
+        if (moved.current) { e.preventDefault(); e.stopPropagation(); moved.current = false; }
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 /** Pasek po lewej pozycji: „Do zrobienia” według wagi, „Moje transporty” zawsze niebieski (img/e5-desk). */
 function gut(section: 'todo' | 'mine', s: Severity): string {
@@ -79,7 +142,8 @@ export function NotificationBell() {
         ? [g.name, g.body].filter(Boolean).join(' · ')
         : [when, g.body].filter(Boolean).join(' · ');
     return (
-      <div key={g.key} className={`bell-item${chat ? ' is-chat' : ''}`} data-bell-count={g.count} data-bell-section={g.section} data-bell-chat={chat ? (chat.only ? 'HHL_SCX' : 'ALL') : undefined}>
+      <SwipeRow key={`${g.key}:${g.ids.join(',')}`} className={`bell-item${chat ? ' is-chat' : ''}`} data-bell-count={g.count} data-bell-section={g.section} data-bell-chat={chat ? (chat.only ? 'HHL_SCX' : 'ALL') : undefined}
+        onDismiss={() => { for (const id of g.ids) markNotificationRead(id); }}>
         <span className={`bell-gut ${gut(g.section, g.severity as Severity)}`} aria-hidden />
         <button
           type="button"
@@ -102,7 +166,7 @@ export function NotificationBell() {
           ) : null}
           {meta ? <span className="bell-meta">{meta}</span> : null}
         </button>
-      </div>
+      </SwipeRow>
     );
   };
 
@@ -137,6 +201,9 @@ export function NotificationBell() {
           <span className="bell-badge cond tabular">{unread > 99 ? '99+' : unread}</span>
         ) : null}
       </button>
+      {/* #594 B3: telefon — tło rozmyte, gdy lista jest otwarta (na komputerze ukryte w CSS); dotknięcie zamyka.
+          onClick (nie pointerdown): tło znika dopiero po puszczeniu palca, więc kliknięcie nie trafia w element pod spodem (iOS) */}
+      {open ? <div className="bell-scrim" aria-hidden="true" data-bell-scrim onClick={() => setOpen(false)} /> : null}
       {open && (
         <div
           className="bell-pop"

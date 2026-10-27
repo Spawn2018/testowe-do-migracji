@@ -5,6 +5,7 @@
 import { mechanismIssue, type MoneyFuelBasis, type MoneySideV2 } from '../lib/money/loadMoney';
 import { plSeLocation } from '../lib/pl/seLocation';
 import { formatListDateTime } from '../lib/format';
+import { KSH_IMPORT_SUMMARY, importSummaryNotice, summaryIdOf } from '../lib/kshImportSummary';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
@@ -762,7 +763,10 @@ function payloadCode(p: Record<string, unknown>): string | undefined {
 }
 
 export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
-  const n = renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
+  /* #594 B1: zbiorcze powiadomienie importu pliku KSH — tylko dzwonek, tekst po polsku z liczb (kshImportSummary.ts) */
+  const n = r.template === KSH_IMPORT_SUMMARY
+    ? { ...importSummaryNotice(r.payload ?? {}), severity: 'LOW' as const, view: null }
+    : renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
   const payload = r.payload ?? {};
   const inv = payload.invoice_id;
   const target = clickTarget(clickFromPayload(r.template, payload, 'bell'));
@@ -772,6 +776,7 @@ export function notificationFromRow(r: NotificationRow, locale?: string): Notifi
     roleScope: r.template === 'SMS_FALLBACK' ? ['HHL'] : undefined,
     kind: r.template,
     code: payloadCode(payload),
+    summaryId: summaryIdOf(r.template, payload),
     href: {
       view: n.view ?? undefined,
       entityId: typeof inv === 'string' ? inv : undefined,

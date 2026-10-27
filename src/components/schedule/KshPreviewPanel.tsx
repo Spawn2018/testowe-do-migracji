@@ -5,14 +5,15 @@
  * Brak funkcji w bazie (PGRST202) → panel znika bez komunikatu; null → „Lista jeszcze nie przygotowana…”;
  * inny błąd → krótki komunikat w panelu (nad poprzednio wczytaną tabelą, jeśli była).
  */
-import { Fragment, useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { getSupabase } from '../../auth/client';
 import { useTowerStore } from '../../store/useTowerStore';
 import { s7, s7p } from '../../i18n/sched7';
 import {
-  groupPreview, isMissingRpc, previewKindCodes, previewTotal, kshPreviewFromRpc, previewCounts, previewNotes, previewReadAt, previewValue,
+  isMissingRpc, previewTotal, kshPreviewFromRpc, previewCounts, previewReadAt,
   type KshPreview,
 } from '../../lib/kshPreviewView';
+import { KshChangeList } from './KshChangeList';
 
 export function KshPreviewPanel() {
   const locale = useTowerStore((s) => s.locale);
@@ -55,10 +56,7 @@ export function KshPreviewPanel() {
     }
   }, []);
 
-  const groups = useMemo(() => (data ? groupPreview(data.changes, onlyManual) : []), [data, onlyManual]);
   const counts = useMemo(() => (data ? previewCounts(data.changes) : null), [data]);
-  const added = useMemo(() => (data ? previewKindCodes(data.changes, 'added') : []), [data]);
-  const missing = useMemo(() => (data ? previewKindCodes(data.changes, 'missing') : []), [data]);
 
   if (gone) return null;
 
@@ -68,10 +66,6 @@ export function KshPreviewPanel() {
     if (next && !started) void load();
   };
   const title = counts ? s7p(locale, 's7_kp_title_n', { n: previewTotal(counts) }) : s7(locale, 's7_kp_title');
-  const lbl = {
-    code: s7(locale, 's7_kp_c_code'), field: s7(locale, 's7_kp_c_field'), wt: s7(locale, 's7_kp_c_wt'),
-    file: s7(locale, 's7_kp_c_file'), notes: s7(locale, 's7_kp_c_notes'),
-  };
 
   return (
     <section className="s7-kp" data-ksh-preview aria-label={s7(locale, 's7_kp_title')} aria-busy={loading}>
@@ -107,63 +101,7 @@ export function KshPreviewPanel() {
                 {counts.missing ? s7p(locale, 's7_kp_head_missing', { b: counts.missing }) : ''}
               </p>
               <p className="s7-kp-meta">{s7(locale, 's7_kp_note')}</p>
-              {!onlyManual ? ([['added', added], ['missing', missing]] as const).map(([k, list]) => (list.length ? (
-                <div key={k} className="s7-kp-codes" data-ksh-preview-kind={k}>
-                  <b>{s7p(locale, k === 'added' ? 's7_kp_added' : 's7_kp_missing', { n: list.length })}</b>
-                  <ul>
-                    {list.map((x) => (
-                      <li key={x.code}>
-                        {x.loadId ? (
-                          <button type="button" className="s7-kp-link" aria-label={s7p(locale, 's7_kp_open', { code: x.code })} onClick={() => selectLoad(x.loadId)}>{x.code}</button>
-                        ) : x.code}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null)) : null}
-              {(added.length || missing.length) && groups.length ? <b className="s7-kp-sub">{s7p(locale, 's7_kp_fields', { n: counts.fields })}</b> : null}
-              {groups.length === 0 && (onlyManual || (!added.length && !missing.length)) ? (
-                <p className="s7-kp-meta" data-ksh-preview-empty>{s7(locale, onlyManual ? 's7_kp_empty_manual' : 's7_kp_empty')}</p>
-              ) : groups.length === 0 ? null : (
-                <table className="ox-table ox-cards-phone s7-kp-t" data-ksh-preview-table>
-                  <thead>
-                    <tr><th>{lbl.code}</th><th>{lbl.field}</th><th>{lbl.wt}</th><th>{lbl.file}</th><th>{lbl.notes}</th></tr>
-                  </thead>
-                  <tbody>
-                    {groups.map((g) => (
-                      <Fragment key={g.code}>
-                        {g.rows.map((r, i) => {
-                          const notes = previewNotes(r);
-                          return (
-                            <tr key={`${r.field}-${i}`} data-ksh-preview-row={g.code} className={i === 0 ? 's7-kp-first' : 's7-kp-cont'}>
-                              <th scope="row" data-label={lbl.code} className={i === 0 ? 's7-kp-code' : 's7-kp-code s7-kp-code-cont'}>
-                                {/* Kod transportu w każdym wierszu (zgłoszenie właściciela 27.10, 14:24 — drugi wiersz BS-06 wyglądał na „bez numeru”). */}
-                                {g.loadId ? (
-                                  <button type="button" className="s7-kp-link" aria-label={s7p(locale, 's7_kp_open', { code: g.code })} onClick={() => selectLoad(g.loadId)}>
-                                    {g.code}
-                                  </button>
-                                ) : g.code}
-                              </th>
-                              <td data-label={lbl.field}>{r.fieldLabel}</td>
-                              <td data-label={lbl.wt}>{previewValue(r.wt, r.field)}</td>
-                              <td data-label={lbl.file}>{previewValue(r.file, r.field)}</td>
-                              <td data-label={lbl.notes} className="s7-kp-notes">
-                                {notes.length === 0 ? '—' : notes.map((n) => (
-                                  <span key={n} className={`pill ${n === 'manual' ? 'p-amber' : n === 'skip' ? 'p-plan' : 'p-sea'}`} data-ksh-preview-note={n}>
-                                    {n === 'skip'
-                                      ? s7p(locale, 's7_kp_skip', { reason: r.skipReason ?? '' })
-                                      : s7(locale, n === 'manual' ? 's7_kp_manual' : 's7_kp_pending')}
-                                  </span>
-                                ))}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <KshChangeList locale={locale} changes={data.changes} counts={counts} onlyManual={onlyManual} onOpenLoad={(id) => selectLoad(id)} />
             </>
           ) : null}
         </div>

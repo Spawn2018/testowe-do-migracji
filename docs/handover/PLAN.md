@@ -1061,17 +1061,23 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 gotowe na `a02cbf9` 20:02Z; HEAD docs `0007d0fc` — CI ✔; czekam ponowne F7; 27B osobny PR)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r6b: fixture N3/P2 + `TELEMATICS_API` + `hhl`/`carrier_order_no`; bmapa EXPECTED **168**. F7 gotowe na kodzie `a02cbf9`; commit docs po gotowe → wg ZASADY czekam ponowne. Po BN0 → P4-k #581 (start równoległy przy czekaniu F7) → BN1.
+### BN0 · #572 Karlskrona→Boden linia HERE — SCALONE (`29b0496e`, PR #585, 27.10.2026 20:36Z; migracja **0316**)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). F7 gotowe na `0007d0fc` (po `a02cbf9`). bmapa EXPECTED **168**. 27B (obie trasy OFF_CORRIDOR) — osobny PR. Po BN0 → #596 → #594 → P4-k #581 → BN1.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
 
 ### #590 · Import KSH: zmiana przewoźnika → decyzja HHL — SCALONE (`f44c1cb9`, PR #592, 27.10.2026 17:04Z; migracja **0315**)
-Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; status `REMOVED`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309**.
+Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; status `REMOVED`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309** (przed #596).
 
-### P4-k · #581 Kalibracja ETA ciągła — W TOKU (gałąź `pakiet/581-p4k-eta-calibration`; migracja **0317** cz.1; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Start przy czekaniu F7 na BN0 #585 (dopisek D-1050: przy F7 nie stój). **Cz.1 (0317):** pomiar odcinków z GPS/stref (`eta_record_segment_observations`); stare H4 → `H4_BLEDNY_POMIAR`; `eta_rebuild_segment_observations`; h4 bez połykania (integration_runs); suite `p4k` EXPECTED **15**. Dalej: `eta_predictions`, cron, auto-apply 27A, czujka, BN1 kody. Ekran — koordynator `wyglad/`. Kolejność: #583 → #590 → BN0 → ten → BN1.
+### #596 · PILNE: strażnik decision_resolve dla KSH_CARRIER_CHANGED — SCALONE (`620f7294`, PR #599, 27.10.2026 21:54Z; migracja **0317**)
+Źródło: #596 (Spawn2018). F7 gotowe na `3429fce8`. `decision_resolve` → `decision_resolve_carrier_change`; `assert_not_preview`; `KSH_REMOVED_BACK`/`WILL_RESTORE` → `load_restore_removed`; `decision_apply_effect` CARRIER_* → wyjątek. import EXPECTED **315**.
+
+### #594 · Import KSH: zbiorcze powiadomienie + migawka — SCALONE (baza #601 `ecbae548`, 27.10.2026 23:55Z, migracja **0318**; ekran gest/rozmycie #600 `7d8ebb4b`; okno #602 `df3f5caa`)
+Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
+
+### P4-k · #581 Kalibracja ETA ciągła — W TOKU (PR #598 `pakiet/581-p4k-eta-calibration`; migracja **0319** cz.1; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 SCALONE → ten (F7 r1 POPRAWKI). **Cz.1 (0319):** pomiar odcinków z GPS/stref; suite `p4k`; dalej `eta_predictions`, cron, auto-apply 27A. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1804,6 +1810,10 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 02:36 | #574 F7 §8: **drganie GPS na krawędzi SITE** — cykl EXIT/ENTER z powiadomieniem przy skokach na histerezie (dziś bez ekstra debounce SITE; decyzja: zostaje, monitorować na produkcji). **Podwójny DWELL w porcie** — drugi DWELL po re-ENTER w tej samej wizycie możliwy gdy `entered_at` się resetuje; cron/process emisja DWELL tylko gdy brak DWELL od `entered_at` (0309) — zostaje | pętla |
 | 27.10.2026 02:40 | #584 SCALONE `f5b0451b` (wygląd lista zmian KSH — ukryj bez zmian). #574-nast F7 #582 r3: N1+N2 testy | pętla |
 | 27.10.2026 02:40 | #574-nast N5 (§8): aktywny transport z `entered_at` NULL i EXIT → dolna granica crona = sam EXIT; dziś brak takich wierszy na produkcji (odczyt F7 27.10) | pętla |
+| 27.10.2026 03:00 | #574-nast / #582 SCALONE `de50a8bb` (F7 gotowe na `36c1a0a`, unit/db/visual ✔); start BN0 #572 (**0313**) | pętla |
+| 27.10.2026 04:15 | #583 PILNE wpisane §4 (po BN0, przed P4-k): fałszywe zmiany prev + tablice PLAT/es-ga/SG-21; kolejność z komentarza PR #585. BN0 #585: fix bmapa asercja `exists::text` = `true` (nie `t`) | pętla |
+| 27.10.2026 05:45 | BN0 #585 F7 r2: `SE_KAA_TRACK` (N8), bez literałów GPS (N4), via inland/N1, nearestKm odcinek/N2, trim DO/N3, front N6, via metry/N5, reject 24h/N9 | pętla |
+| 27.10.2026 06:15 | BN0 #585 CI zielone na `8f84dca8` (unit/visual/db); MERGEABLE; czekam F7: gotowe do scalenia → potem #583 | pętla |
 | 27.10.2026 07:00 | #583 PILNE start (BN0 #585 CI zielone, czekam F7): migracja **0314** import_live_prev + tablice/skip_reason; import EXPECTED **268** | pętla |
 | 27.10.2026 07:45 | #583 CI fix r2: R583 `('$1')::jsonb` + schedule_row null w testach (258/10 → push) | pętla |
 | 27.10.2026 08:15 | #583 CI fix r3: testy bez `$($R583)` (jak A6/`Q`); IW-1 unchanged pod pustą komórką (#583) | pętla |
@@ -1823,5 +1833,21 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 17:00 | #583 CI 280/281: pending po prep (`write_enabled`) blokował carrier w teście pustej wagi | pętla |
 | 27.10.2026 17:30 | #583 CI zielone na `af084955` (unit/visual/db); czekam F7; scalaj #585 przed #586 | pętla |
 | 27.10.2026 14:00 | #586 SCALONE (`ac5f8f0f`); kolejność: 0314 przed BN0 (0313→0315); start #590 migracja **0316** | pętla |
-| 27.10.2026 17:30 | #590 / PR #592 CI ✔ na `71fd92ec` (unit/visual/db; visual zrzuty po rerun flaky kokpit); czekam F7; #585 0316 po #590 | pętla |
-| 27.10.2026 21:20 | BN0 #585: F7 gotowe na `a02cbf9` (20:02); HEAD docs `0007d0fc` CI ✔ — czekam ponowne F7. Start **P4-k #581** (0317 cz.1 pomiar GPS) | pętla |
+| 27.10.2026 17:30 | #590 / PR #592 CI ✔ na `71fd92ec` (unit/visual/db); czekam F7; #585 0316 po #590 | pętla |
+| 27.10.2026 18:05 | #592/#590 SCALONE (`f44c1cb9`, 0315); start BN0 #585: merge main + `0313`→**0316**; F7 r3 N1/NOWE dalej | pętla |
+| 27.10.2026 18:30 | BN0 #585 F7 r3: retry_after, N3 rebuild po Verkö, cos(lat), kaaDeviationOk NOWE-3, ROAD_KAA awaryjne; bmapa **163** | pętla |
+| 27.10.2026 18:55 | BN0 #585 F7 r4: shouldFetch P1; rebuild bez rn_start=1 P2; N3 12 min + brak Verkö→0 P3; bmapa **164**; db FAIL N3 na r3 | pętla |
+| 27.10.2026 19:15 | BN0 #585 F7 r5: P2 bez coalesce(…,0); P3 SE sin; fixture P2 zygzak; store_road INSERT -infinity; bmapa **164** | pętla |
+| 27.10.2026 19:45 | #595 SCALONE (`4f9d2c18`); BN0 #585 db FAIL N3 (163/164) po r5; F7 r6 fixture łamana + offset | pętla |
+| 27.10.2026 20:15 | BN0 #585 F7 r6: `TEST`→`TELEMATICS_API` + asercje count + delete SE_KAA_TRACK; bmapa **166** | pętla |
+| 27.10.2026 20:45 | BN0 #585 F7 r6b: db FAIL positions=0 — brak hhl/carrier_order_no przy IN_TRANSIT_SE; bmapa **168** | pętla |
+| 27.10.2026 21:05 | BN0 #585 F7 r6b CI ✔ `a02cbf9c` (unit/visual/db, bmapa **168**); prośba o F7: gotowe do scalenia → potem P4-k #581 | pętla |
+| 27.10.2026 21:40 | #585 SCALONE (`29b0496e`); kolejność #596→#594→#581; start #596 migracja **0317** (strażnik decision_resolve) | pętla |
+| 27.10.2026 22:15 | #596/#599 F7 r1: assert_not_preview, WILL_RESTORE→restore, testy Podgląd/idempotent; import **315**; db FAIL security (brak assert) → poprawka | pętla |
+| 27.10.2026 22:35 | #596/#599 F7 r2: B5 security — komentarz między begin a perform; przeniesiony nad begin | pętla |
+| 27.10.2026 22:40 | #596/#599 F7 r3: B5 — komentarz bez słowa begin (regex security.sh); CI→F7 | pętla |
+| 27.10.2026 23:00 | #596/#599 SCALONE (`620f7294`, F7 gotowe `3429fce`); start #594 migracja **0318** (SUMMARY + migawka); #581 → **0319** | pętla |
+| 27.10.2026 23:15 | #600 SCALONE (`7d8ebb4b`, F7 gotowe `85a6d11a`); #601 db FAIL import 338/4 (REMOVED, dry_run RLS, OPS×4, true/t) + nullguard 870 — poprawka | pętla |
+| 28.10.2026 00:15 | #601 F7 r1 CI db FAIL B3/D6 (INSERT schedule_imports bez column_map → „^”); poprawka testów + retencja OFFSET 30 | pętla |
+| 28.10.2026 00:35 | #602 SCALONE (`df3f5caa`, F7 gotowe); #601 F7 r2: B3 cancel, P1 pusty WT, OTH w P2, status LATE_DATE po A1; import **359** | pętla |
+| 28.10.2026 00:55 | #601/#594 SCALONE (`ecbae548`, F7 gotowe `da399f8`); start #581: merge main + migracja **0317→0319** | pętla |
