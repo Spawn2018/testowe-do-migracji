@@ -250,3 +250,7 @@ Odświeżona 1 migawka Playwright (`tests/__screenshots__/stan-walidacja-dark.pn
 ## wyglad/W-1118 (20.10.2026) — oś Status: „Przygotowanie” i „Rozliczenie” zwinięte
 
 Zamierzona zmiana UI (D-20261020-1118-01, decyzja właściciela 20.10.2026, 11:18). Migawka odświeżona z przebiegu `visual.yml` `update=true` (run 39404184157, gałąź `wyglad/W-1118`). Zmieniona wyłącznie `stan-zablokowany-dark.png`: na osi Status sekcje „Przygotowanie” i „Rozliczenie” są zwinięte i pokazują bieżący status, a legenda zawiera źródła A10. Innych migawek ani matrycy 280 ujęć nie ruszano.
+
+## #594 B4 (27.10.2026) — rozmycie tła za paskiem transportu
+
+Zamierzona zmiana UI (polecenie właściciela 27.10.2026, 14:55, #594 pkt 3: „gdy widoczny jest prawy pasek transportu to tło ulega rozmyciu”). Migawka odświeżona z przebiegu `visual.yml` `update=true` (run 40583817432, gałąź `wyglad/W-594-gesty-rozmycie`, commit `22e4746`). Zmieniona wyłącznie `stan-zablokowany-dark.png`: reszta ekranu za otwartym paskiem jest rozmyta (`backdrop-filter: blur(3px)`, od 769 px). Pozostałe migawki identyczne bajt w bajt. Matrycy 280 ujęć nie ruszano.
