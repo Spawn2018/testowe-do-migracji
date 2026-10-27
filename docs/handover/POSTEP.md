@@ -6076,3 +6076,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `3dacdb5e`: unit ✔, visual ✔; **db FAIL** security 458/459 — B5: po `begin` stał komentarz przed `perform assert_not_preview` (regex wymaga assert jako pierwszej instrukcji).
 - F7 r2 (Spawn2018, 21:22Z): przenieść komentarz nad `begin`.
 - Krok: komentarz nad `begin` w 0317; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 22:40 — #596/#599 F7 r3: komentarz bez słowa begin
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r3 POPRAWKI na `9ab04622`). Bez push na main.
+- CI `9ab04622`: unit ✔; **db FAIL** security 458/1 — B5: słowo `begin` w komentarzu nad ciałem → regex `security.sh:1429` obcina w złym miejscu.
+- F7 r3 (Spawn2018, 21:30Z): komentarz bez słowa „begin” (albo `comment on function`).
+- Krok: komentarz `assert_not_preview jako pierwsza instrukcja`; lokalna weryfikacja regexu OK; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
