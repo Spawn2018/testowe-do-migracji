@@ -5925,3 +5925,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#593** (`wyglad/567-kod-w-kazdym-wierszu`) F7 gotowe na `ea2aaa9` (13:48Z) + CI unit/visual ✔ → `gh pr merge --merge` → `6a6b30d9`. #585 F7 r3 NIE. #592 bez „gotowe”.
 - CI #592 `0b5f26e3`: unit/visual ✔; db FAIL tylko nullguard oczekiwano **858**, jest **866** → lokalnie `356a904f` (EXPECTED 866).
 - **Krok (#590 / PR #592 F7 r2):** `load_price_compute` — REMOVED bez ceny (kasuje niezafakturowane `load_cost`/`load_revenue`); `purge_personal_data` — REMOVED jak CANCELLED; `check_function_bodies=on` zaraz po bloku DO; trigger cleanup woła `load_price_compute`. import EXPECTED **309**. Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-27 16:45 — #590 / PR #592: CI db FAIL → asercja purge
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #592 bez gotowe). Bez push na main.
+- CI #592 `51db7529`: unit ✔, visual ✔; db FAIL import 308/1 — asercja F7 r2 oczekiwała `…|true|true|∅/∅`, a `select purge_personal_data(90)` wkleja `1` (licznik) → `…|true|true|1|∅/∅`. Kod migracji OK (0 kosztów, 0 przychodów, PII wyczyszczone).
+- **Krok:** poprawka oczekiwanego ciągu w `import.sh` (EXPECTED nadal **309**). Push → CI; po zielonym — prośba o F7.

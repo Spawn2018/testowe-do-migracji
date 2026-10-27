@@ -1764,7 +1764,7 @@ set session_replication_role = origin;
 select purge_personal_data(90);
 select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id=$(LOADID C590-1);")
 chk "#590 F7 r2: REMOVED bez ceny; purge czyści PII; funkcje znają REMOVED" \
-  "$out" "REMOVE|0|0|true|true|∅/∅"
+  "$out" "REMOVE|0|0|true|true|1|∅/∅"
 
 out=$(t590 "$(fx C590-1 AT_LOADING "$FXD1")" "
 $(IMPSK C590-1 590a)
