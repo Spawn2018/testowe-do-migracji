@@ -250,8 +250,10 @@ begin
     raise exception 'Brak podsumowania' using errcode = '22023';
   end if;
   if p_points is null then
+    -- F7 r5: przy pierwszym INSERT (brak wiersza) fetched_at = -infinity —
+    -- nie p_now (= retry), bo po upływie retry wiek ~0 blokowałby HERE na 30 dni.
     insert into here_road_geometry (leg, points, summary, fetched_at, retry_after)
-    values (p_leg, null, left(p_summary, 240), p_now, p_now)
+    values (p_leg, null, left(p_summary, 240), '-infinity'::timestamptz, p_now)
     on conflict (leg) do update
       set summary = excluded.summary,
           retry_after = excluded.retry_after;
@@ -318,18 +320,18 @@ begin
   ),
   bounds as (
     select
-      -- N3/F7 r4 P2: start PO Verkö; brak Verkö / brak punktów po nim → NULL (nie 1 = PL).
+      -- N3/F7 r5 P2: start PO Verkö; brak punktu przy porcie → rn_start NULL → 0
+      -- (bez coalesce(...,0): rn > 0 dawałoby start od PL).
       (
         select min(n.rn)
           from numbered n
-         where n.rn > coalesce(
-                 (select max(n2.rn) from numbered n2
-                   where n2.d_origin <= 2000
-                     and n2.rn < coalesce(
-                           (select min(n3.rn) from numbered n3 where n3.d_dest <= 2000),
-                           (select max(n4.rn) + 1 from numbered n4)
-                         )),
-                 0
+         where n.rn > (
+                 select max(n2.rn) from numbered n2
+                  where n2.d_origin <= 2000
+                    and n2.rn < coalesce(
+                          (select min(n3.rn) from numbered n3 where n3.d_dest <= 2000),
+                          (select max(n4.rn) + 1 from numbered n4)
+                        )
                )
            and n.rn <= coalesce(
                  (select min(n5.rn) from numbered n5 where n5.d_dest <= 2000),
@@ -389,7 +391,7 @@ end;
 $$;
 
 comment on function public.rebuild_se_kaa_track(uuid) is
-  '#572 F7 r4: SE_KAA_TRACK ze śladu load_id; start po ostatnim Verkö ≤2 km. 0 = brak Verkö / za mało punktów.';
+  '#572 F7 r5: SE_KAA_TRACK ze śladu load_id; start po ostatnim Verkö ≤2 km. 0 = brak Verkö / za mało punktów.';
 
 revoke all on function public.rebuild_se_kaa_track(uuid) from public, anon, authenticated;
 

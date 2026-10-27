@@ -1061,8 +1061,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #574-nast · dwell_min w payload — SCALONE (#582 `de50a8bb`, 27.10.2026 01:59Z; migracja **0312**; F7 gotowe na `36c1a0a`)
 Źródło: F7 #574 r2 + F7 #582 r1–r4. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE; N1 diff BEGIN/END SG23. status EXPECTED **339**.
 
-### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r4 poprawki — CI; 27B osobny PR)
-Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r4: P1 `shouldFetch` (retry_after przed świeżością, także `-infinity`); P2 `rebuild_se_kaa_track` bez fallbacku `rn_start=1`; P3 N3 odstępy SE 12 min + test braku Verkö→0. bmapa EXPECTED **164**. Po zielonym — prośba o F7. Po BN0 → P4-k #581 → BN1. 27B osobno.
+### BN0 · #572 Karlskrona→Boden linia HERE — W TOKU (PR #585 `pakiet/572-bn0-se-kaa-here`; migracja **0316**; F7 r5 poprawki — CI; 27B osobny PR)
+Źródło: #572 (Spawn2018; właściciel 26.10 12:05). Po #590 (0315). F7 r5: P2 `rn_start` bez `coalesce(…,0)` (brak Verkö → NULL → 0); P3 N3 SE z `0.05*sin(i)`; fixture P2 zygzak; INSERT odrzucenia `fetched_at=-infinity`. P1 zamknięte. bmapa EXPECTED **164**. Po zielonym — prośba o F7. Po BN0 → P4-k #581 → BN1. 27B osobno.
 
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
@@ -1831,3 +1831,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 18:05 | #592/#590 SCALONE (`f44c1cb9`, 0315); start BN0 #585: merge main + `0313`→**0316**; F7 r3 N1/NOWE dalej | pętla |
 | 27.10.2026 18:30 | BN0 #585 F7 r3: retry_after, N3 rebuild po Verkö, cos(lat), kaaDeviationOk NOWE-3, ROAD_KAA awaryjne; bmapa **163** | pętla |
 | 27.10.2026 18:55 | BN0 #585 F7 r4: shouldFetch P1; rebuild bez rn_start=1 P2; N3 12 min + brak Verkö→0 P3; bmapa **164**; db FAIL N3 na r3 | pętla |
+| 27.10.2026 19:15 | BN0 #585 F7 r5: P2 bez coalesce(…,0); P3 SE sin; fixture P2 zygzak; store_road INSERT -infinity; bmapa **164** | pętla |

@@ -250,10 +250,11 @@ sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
             st_setsrid(st_makepoint(15.6308 + (g.i % 3) * 0.001, 56.1646 + (g.i % 3) * 0.001), 4326),
             5, 'TEST', '{}'::jsonb
        from generate_series(0, 4) as g(i)" >/dev/null
+# F7 r5 P3: odchylenie sin — prosta cięciwa → st_simplify zostawia 2 pkt → rebuild 0.
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572', timestamptz '2026-10-20 09:00:00+00' + (g.i * 12 || ' minutes')::interval,
             st_setsrid(st_makepoint(
-              15.63 + (21.76 - 15.63) * g.i / 80.0,
+              15.63 + (21.76 - 15.63) * g.i / 80.0 + 0.05 * sin(g.i),
               56.17 + (65.81 - 56.17) * g.i / 80.0
             ), 4326),
             70, 'TEST', '{}'::jsonb
@@ -268,7 +269,7 @@ awk "BEGIN{exit !($start_lat+0 >= 55.5 && $start_lat+0 <= 57.5)}" 2>/dev/null \
 sys "delete from positions where load_id='$L572'" >/dev/null
 sys "delete from loads where id='$L572'" >/dev/null
 
-# F7 r4 P2/P3: brak punktu przy porcie Verkö → rebuild 0 (nie start od PL)
+# F7 r5 P2: brak Verkö → 0; fixture zygzak (≥10 pkt po simplify) — test startu, nie upraszczania
 L572b=a572a572-0000-4000-8000-000000000573
 sys "delete from positions where load_id='$L572b'" >/dev/null
 sys "delete from loads where id='$L572b'" >/dev/null
@@ -276,7 +277,10 @@ sys "insert into loads (id, project_id, carrier_org_id, order_no, status)
      values ('$L572b', '$P_465', '00000000-0000-0000-0000-00000000a003', 'KSH/572-P2', 'IN_TRANSIT_SE')" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw)
      select '$L572b', timestamptz '2026-10-20 06:00:00+00' + (g.i * 12 || ' minutes')::interval,
-            st_setsrid(st_makepoint(17.0 + g.i * 0.01, 52.08 + g.i * 0.01), 4326),
+            st_setsrid(st_makepoint(
+              17.0 + g.i * 0.01 + 0.08 * sin(g.i),
+              52.08 + g.i * 0.01 + 0.08 * cos(g.i)
+            ), 4326),
             60, 'TEST', '{}'::jsonb
        from generate_series(0, 60) as g(i)" >/dev/null
 n3b=$(sys "select rebuild_se_kaa_track('$L572b')")

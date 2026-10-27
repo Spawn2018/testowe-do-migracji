@@ -6012,3 +6012,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - P2: `rebuild_se_kaa_track` — brak Verkö → 0 (bez `coalesce(...,1)`);
   - P3: N3 odstępy SE 12 min; test braku portu → 0; bmapa EXPECTED **164**.
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 19:15 — BN0 #585 F7 r5 (P2/P3 + store_road)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r5 POPRAWKI na `995db03`; db FAIL N3 rebuild→0, 163/164). Bez push na main.
+- **Krok (BN0 #585):** F7 r5:
+  - P2: `rebuild_se_kaa_track` — usunięte `coalesce(max Verkö, 0)`; brak portu → `rn_start` NULL → 0; fixture PL zygzak (≥10 pkt po simplify);
+  - P3: N3 SE `+ 0.05*sin(i)` (prosta → simplify 2 pkt);
+  - drobne: `here_store_road` INSERT odrzucenia `fetched_at=-infinity`;
+  - bmapa EXPECTED **164** (bez zmiany).
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
