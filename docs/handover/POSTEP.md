@@ -5768,3 +5768,135 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #584 F7 gotowe po `09482223`, unit/visual ✔ → merge `f5b0451b`. #582 bez „F7: gotowe” (r3: N1+N2). CI db na `f034012c` FAIL #574j (SG-23 nadal na L571g → insert pinned UUID bez kodu) → anulowane wiszące visual/db (G-15).
 - **Krok F7 r3:** N1 `diff` BEGIN/END SG23 ↔ `hotfix_574_dwell_recalc.sql` (UPDATE N2 w tym samym bloku); #574h2 `consec_fixes=0`, surowe poz. 11:30+13:00, bez UPDATE; #574j `delete shipment_code=SG-23` przed insert; status EXPECTED **339**. N5 w PLAN §8.
 
+
+## 2026-10-27 07:00 — #583 PILNE start (BN0 #585 czekam F7)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora`.
+- Scalanie: **brak** „F7: gotowe do scalenia” na #585 (HEAD `0b8d4dd1`, CI unit/visual/db ✔). Bez push na main.
+- Bieżąca: **#583** (pilne, import KSH) — gałąź `pakiet/583-import-ksh-prev-plates` z main; migracja **0314**:
+  - `import_live_prev` — prev z live WT (wszystkie `v_fnames`, `load_time`/`delivery_time` z `plan_*`);
+  - tablice: walidacja + `skip_reason`, subset ⊂ WT bez zapisu/wiersza;
+  - `ksh_sync_preview_build` — osłona wt=file + `skip_reason`;
+  - testy import +13 — EXPECTED **268**.
+- Po zielonym CI — prośba o F7. BN0 #585 scalać gdy F7 gotowe (osobny PR).
+
+## 2026-10-27 07:20 — #583 CI FAIL → poprawka prev/pending/testy
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie). #585 bez „F7: gotowe do scalenia” po `0b8d4dd1`.
+- CI #586 `47e43278`: unit ✔, visual ✔, db FAIL import 247/21 (A6 SNAP-B, N13, CANCELLED, #583 puste out).
+- Przyczyny: (1) pending czyścił tylko `v_fields`, zapis szedł `v_apply_fields` → plik SNAP-B nadpisywał WT SNAP-C; (2) czysty live prev psuł A6 (wymiary ze sparse pliku); (3) testy `#583` z `PERFORM` i bez `2>&1`.
+- Poprawka w **0314**: prev = `schedule_row || (live − wymiary)`; pusta komórka pliku = bez zmiany; pending → też `v_apply_fields`; testy bez PERFORM.
+
+## 2026-10-27 07:45 — #583 CI FAIL r2: R583 cudzysłów JSON
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych `dla-cursora` do wpisania.
+- Scalanie: #585 bez „F7: gotowe do scalenia” (HEAD `0b8d4dd1`, CI ✔). #586 bez F7. Bez push na main.
+- CI #586 `d2dfe145`: unit ✔; db FAIL import 258/10 (wszystkie `#583` z R583 — out = `^` = błąd SQL); visual/db PR anulowane (G-15, SHA znany zły).
+- Przyczyna: `R583` robiło `({})::jsonb` / `({"trailer_plate":…})::jsonb` bez cudzysłowów literału.
+- Poprawka testów: `('$1')::jsonb`; `schedule_row = null` w fixturech #583 (prev = live = plik). Po push — prośba o F7 gdy CI zielone.
+
+## 2026-10-27 08:15 — #583 CI FAIL r3: R583→Q + IW-1 pod #583
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`, nic nie budować); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 bez „F7: gotowe do scalenia” (HEAD `0b8d4dd1`, CI ✔). #586 bez F7. Bez push na main.
+- CI #586 `215e8747`: unit ✔, visual ✔; db FAIL import 258/10 (`#583` out=`^`) + i2 669/2 (IW-1).
+- Przyczyna #583: `$($R583 …)` w `-c` nadal dawało błąd SQL (tail -1 = `^`). Przyczyna IW-1: pusta komórka / godziny zgodne z live = bez `changed` (decyzja #583).
+- Krok: testy #583 jak A6 (`r583_rows`/`Q` + `'…'::jsonb`); IW-1 → unchanged (#583). Po zielonym CI — prośba o F7.
+
+## 2026-10-27 08:45 — #583 CI FAIL r4: fixture w SQL, nie przez Q(import_live_prev)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 bez „F7: gotowe” (CI ✔). #586 bez F7. Bez push na main.
+- CI #586 `dd7afd1f`: unit ✔; db FAIL import 258/10 (`#583` out=`CONTEXT: JSON data…`); visual części w toku → SHA znany zły.
+- Przyczyna: `r583_rows` wołał `import_live_prev` przez `Q` (REVOKE dla authenticated/public) → błąd SQL wklejany jako JSON do `import_schedule`.
+- Krok: `r583_file` = podzapytanie z kolumn live (+ patch) wewnątrz `-c`; bez JSON w shellu. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 09:05 — #583 CI FAIL r5: Q(jsonb_build_object) + dollar-quote
+
+- CI #586 `7ba45c20`: unit/visual ✔; db FAIL import 258/10 (`#583` out=`^` — heredoc `r583_file` w `-c`).
+- Krok: `r583_rows` jak A6 IMP_N5 (`jsonb_build_object` z live, bez `import_live_prev`); w `-c` `$json$…$json$::jsonb`. Po zielonym — F7.
+
+## 2026-10-27 09:25 — #583 CI FAIL r6: psql -v + :'rows' (JSON nie w -c "…")
+
+- CI #586 `82b5e453`: unit ✔; db FAIL 258/10 (`CONTEXT: JSON data…^` — `${R583EQ}` z `"` rozrywał bash `-c "..."`).
+- Krok: `r583_run` → `psql -v rows=…` + `:'rows'::jsonb`; `r583_rows` jedna linia. Po zielonym — F7.
+
+## 2026-10-27 09:45 — #583 CI FAIL r7: heredoc zamiast r583_run/-c
+
+- CI #586 `51b3cd1d`: unit/visual ✔; db FAIL 258/10 (out=`^` — SQL z `"` w argumencie `r583_run` znów w `-c "..."`).
+- Krok: każdy test = heredoc + `-v rows="$R…"`. Po zielonym — F7.
+
+## 2026-10-27 10:05 — #583 CI FAIL r8: fixture = SQL w heredoc (bez -v)
+
+- CI #586 `8fb25489`: db FAIL 258/10 (CONTEXT JSON — `-v rows=` nadal zepsute).
+- Krok: prep+import w jednym heredoc; `$(r583_file_sql patch)` = jednoliniowe podzapytanie. Po zielonym — F7.
+
+## 2026-10-27 10:25 — #583 CI FAIL r9: -c jak A6 + patch jsonb_build_object
+
+- CI #586 `941af010`: db FAIL 258/10 (heredoc+pipe → `^`).
+- Krok: `$F583` + `-c "..."`; patch = `jsonb_build_object(...)` (bez `"` w SQL). Po zielonym — F7.
+
+## 2026-10-27 11:05 — #583 F7 #586 niegotowe: blokery 1–2 + pkt 3–6
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 bez „F7: gotowe do scalenia”. #586 F7 06:41Z **NIE scalać** (po `7ba45c20`; kolejne CI-fixy fixture). Bez push na main.
+- Krok (ten sam PR #586): porównanie trójstronne; UPDATE wymiarów per `v_apply_fields`; `import_plate_parts` + walidacja `[[:alpha:]]`; multi-code `skip_reason`; testy F7 (+5); EXPECTED import **273**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 11:40 — #583 CI FAIL r10: brak `)` w r583_file_sql
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie).
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 bez F7 po `35c272ab` (db 259/14). Bez push na main.
+- Krok: fixture `jsonb_build_array(...||patch)` bez zamykającego `)` przed FROM → 14× `out=^`. Dopisane `)`. Po zielonym db — prośba o F7.
+
+## 2026-10-27 12:15 — #583 F7 #586 r2 A/B/C + CI permission denied
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (bieżąca #583); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać**; #586 F7 r2 **NIE scalać** (08:23Z) + db FAIL `07e29aad` (259/14, `permission denied for table loads` — subquery fixture po `set role`). Bez push na main.
+- Krok (PR #586): A — `schedule_row` zawsze przy zapisie; B — daty/`v_crit` z `v_apply_fields`, pusta leave ≠ konflikt, omit w `schedule_row`; C — wagi/item/seq + `_qty_empty`; testy `_f583` przed role + A/B/C; EXPECTED **276**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 12:45 — #583 F7 #586 r3: audit / pusta WT / test A
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe” (#585 NIE scalać; #586 r3 przed scaleniem 3 poprawki). Bez push na main.
+- CI na `d845962` anulowane (SHA znany zły — F7: test A padnie).
+- **Krok F7 r3:** (1) test A: 1. import bez stdout JSON + count tylko `driver_name`; (2) `schedule_row` UPDATE tylko `is distinct from`, bez `updated_at`; `audit_row_change` pomija sam `schedule_row` na `shipment_items`; (3) `skip_reason` pusta tylko gdy WT ma wartość + testy; drobne: pending→`v_omit_sched`, quiet z `v_apply_fields`, konflikt godzin `::time`. EXPECTED import **279**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 13:50 — #583 CI FAIL r11: GRANT na temp fixtures
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…; 27B osobny PR po #585); #586 bez F7 gotowe. Bez push na main.
+- CI #586 `f91abb77`: unit ✔; db FAIL import 260/19 (`permission denied for table _f583` / `_old583` po `set role`); visual części anulowane/ukończone (SHA znany zły).
+- **Krok:** `GRANT SELECT` na `_f583` (w `r583_mat_sql` + test A), `_chg583`→`service_role`, `_old583`→`authenticated`. EXPECTED import **279** bez zmiany. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 14:55 — #583 F7 #586 r4: schedule_cell_ts + testy
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: #585 bez „F7: gotowe do scalenia”; #586 F7 r4 **niegotowe** (09:31Z na `f91abb7`) + CI `764a5d20` db FAIL import 275/4. Bez push na main.
+- **Krok (PR #586):** (1) konflikt `load_time`/`delivery_time` → `schedule_cell_ts` (przed `v_leave_empty`; nieczytelny tekst = bez konfliktu); (2) test A = `do … perform`; (3) audyt wokół 1. importu + kontrola zmiany wagi; (4) `assembly_seq` odczyt po `reset role`; filtr NOTICE; test „rano”; EXPECTED import **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 15:45 — #583 F7 #586 r5: nieczytelna godzina + CI wagi
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (Google STOP); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 r3 NIE; #586 r5 niegotowe 10:27Z na `45d6762`). CI `45d6762`: unit/visual ✔; db FAIL import 279/2 (pusta waga / audit wagi — `chk_weight_consistency`; ERROR wycięty przez `r583_grep`). Bez push na main.
+- **Krok (PR #586):** (5) nieczytelna `load_time`/`delivery_time` → bez zapisu + `skip_reason` gdy WT ma okno; pas w UPDATE okna; test „rano” = skip + 09:00; testy wagi: `unit_weight_t` zgodny + jawny JSON null; `r583_grep` zostawia ERROR/CONTEXT. EXPECTED **281**. Po zielonym CI — prośba o F7. Scalaj #585 przed #586.
+
+## 2026-10-27 16:20 — #583 CI fix po F7: NOTICE + pusta waga/numer
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 CI `c3e42f49` import 277/281 (F7 11:08Z) — bez „gotowe”. Bez push na main.
+- **Krok (PR #586):** `r583_grep` / `client_min_messages=warning` (NOTICE: …); test pusta waga = `(j->0)-'total_weight_t'` + asercja skip+carrier; delete pending SG1 przed #583. EXPECTED **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 17:00 — #583 CI FAIL r12: pending po prep blokuje numer
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: #585 F7 r3 **NIE scalać**; #586 bez „F7: gotowe”. Bez push na main.
+- CI #586 `54dadc16`: unit/visual ✔; db FAIL import **280/281** (`#583 F7: pusta waga + numer` — skip_reason OK, `carrier_order_no`∅, numer zostaje stary).
+- Przyczyna: `write_enabled` + `r583_prep_sql` UPDATE loads → pending; import `false` wykreśla `carrier_order_no` (pending-skip). Jednorazowy delete przed blokiem #583 nie wystarcza (prep w każdej transakcji).
+- **Krok:** `delete pending` na końcu `r583_prep_sql` + po UPDATE numeru w teście wagi. EXPECTED **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 17:30 — #583 CI zielone; czekam F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #586 po r12 bez „gotowe”). Bez push na main.
+- CI #586 HEAD `af084955`: unit ✔, visual ✔, db ✔ (import EXPECTED **281**).
+- **Krok:** wpis PLAN/POSTEP + prośba o F7 na #586. Scalaj **#585 (0313) przed #586 (0314)**.

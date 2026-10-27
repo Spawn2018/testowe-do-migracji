@@ -538,13 +538,14 @@ val "IW-1: zmiana samej daty (bez godziny)" $HHL "select (r->'changed'->0->>'cod
 chk "IW-1: okno załadunku na nowej dacie" "$(Q "select ((plan_load_from at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and (plan_load_to at time zone 'Europe/Warsaw')::date = '$DIW1c'::date and extract(hour from plan_load_from at time zone 'Europe/Warsaw') = 9)::text from loads where id='$LW'")" "true"
 chk "IW-1: okno dostawy na nowej dacie" "$(Q "select ((plan_delivery_from at time zone 'Europe/Stockholm')::date = '$DIW2c'::date and (plan_delivery_to at time zone 'Europe/Stockholm')::date = '$DIW2c'::date)::text from loads where id='$LW'")" "true"
 
-# F7 B2: ta sama data + pusta komórka godziny (wcześniej wypełniona) → okno nietknięte
+# #583: pusta komórka pliku = bez zmiany; prev z live WT — godziny już w plan_* nie dają changed.
+# #384 F7 B2: pusta godzina nie rusza okna (skutek uboczny #583: brak wiersza changed).
 ROWIW4() { echo "[{\"code\":\"IW-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$1\",\"load_time\":\"09:00\",\"delivery_date\":\"$2\",\"delivery_time\":\"13:00\"}]"; }
 IMPIW4() { echo "select import_schedule('$P', '$(ROWIW4 $1 $2)'::jsonb, '{}'::text[], '{\"name\":\"iw.xlsx\",\"column_map\":{\"orderNo\":\"Nr zlecenia\"}}'::jsonb, $3)"; }
-val "IW-1: przywróć godziny na tej samej dacie" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW4 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
+val "IW-1: godziny zgodne z live → unchanged (#583)" $HHL "select jsonb_array_length(r->'changed') from ($(IMPIW4 $DIW1c $DIW2c false)) s(r)" 0 commit
 WIN_SAME=$(Q "select plan_load_from::text||'|'||plan_load_to::text||'|'||plan_delivery_from::text||'|'||plan_delivery_to::text from loads where id='$LW'")
-val "IW-1: ta sama data + pusta godzina → changed" $HHL "select (r->'changed'->0->>'code') from ($(IMPIW3 $DIW1c $DIW2c false)) s(r)" "IW-1" commit
-chk "IW-1: okno nietknięte przy pustej godzinie (#384 F7 B2)" "$(Q "select (plan_load_from::text||'|'||plan_load_to::text||'|'||plan_delivery_from::text||'|'||plan_delivery_to::text = '$WIN_SAME')::text from loads where id='$LW'")" "true"
+val "IW-1: ta sama data + pusta godzina → unchanged (#583)" $HHL "select jsonb_array_length(r->'changed') from ($(IMPIW3 $DIW1c $DIW2c false)) s(r)" 0 commit
+chk "IW-1: okno nietknięte przy pustej godzinie (#384 F7 B2 / #583)" "$(Q "select (plan_load_from::text||'|'||plan_load_to::text||'|'||plan_delivery_from::text||'|'||plan_delivery_to::text = '$WIN_SAME')::text from loads where id='$LW'")" "true"
 
 # 4b: minięta dostawa → bulk_quiet (bez PLAN_DATES_CHANGED / SCHEDULE_DATE_CRITICAL)
 DIH1=$(Q "select (current_date - 20)::text"); DIH2=$(Q "select (current_date - 15)::text")
