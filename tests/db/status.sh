@@ -987,7 +987,7 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
-# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
+# #496 / F7 #585 N8: SE_E22 bez nadpisania GPS — Vagnhärad/E4 znowu w korytarzu
 q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
 q "delete from positions where load_id='$L487a'" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values
