@@ -6084,3 +6084,64 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `9ab04622`: unit ✔; **db FAIL** security 458/1 — B5: słowo `begin` w komentarzu nad ciałem → regex `security.sh:1429` obcina w złym miejscu.
 - F7 r3 (Spawn2018, 21:30Z): komentarz bez słowa „begin” (albo `comment on function`).
 - Krok: komentarz `assert_not_preview jako pierwsza instrukcja`; lokalna weryfikacja regexu OK; push PR #599; po zielonym CI — prośba o F7: gotowe do scalenia.
+
+## 2026-10-27 23:00 — #596 SCALONE; start #594 (0318 SUMMARY)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#599/#596** — F7 „gotowe do scalenia” na `3429fce` (21:54Z, po ostatnim commitcie) + CI unit/visual/db ✔ → `gh pr merge --merge` → `620f7294`. Bez push na main.
+- Bieżąca: **#594** gałąź `pakiet/594-ksh-import-summary`, migracja **0318**:
+  - tabela `ksh_import_summaries` (retencja 30);
+  - macierz `ksh_import` (dzwonek ON, e-mail/push OFF, fixed);
+  - trigger po `schedule_imports.stats` → `ksh_import_summary_publish` (nie przy dry_run / quiet / 0 zmian);
+  - jedno IN_APP `KSH_IMPORT_SUMMARY` na konto (dedup upsert, read_at=null);
+  - RPC `ksh_import_summary_get` z filtrem pól (KSH bez numerów zleceń; SCX bez HHL–KSH);
+  - import EXPECTED **342**; nullguard **871**.
+- Ekran gest/rozmycie: PR #600 (`wyglad/`) — osobno. Po #594 baza → #581 przenumeruj na **0319**.
+
+## 2026-10-27 23:15 — #600 SCALONE; #601 poprawka db (REMOVED / dry_run / OPS / nullguard)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#600** F7 „gotowe do scalenia” na `85a6d11a` (21:58Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `7d8ebb4b`. Bez push na main.
+- CI #601 `5f316d1c` (dispatch import,nullguard): **FAIL** 338/4 + nullguard 870/871:
+  1. `ksh_import_summary_publish` wyklucza CANCELLED bez REMOVED → dodane `status is distinct from 'REMOVED'`;
+  2. dry_run `val` czytał `ksh_import_summaries` jako authenticated (revoke) → split: import `val` + count `chk` przez Q;
+  3. 4 IN_APP (HHL_OPS z #426) → w sekcji #594 OPS nieaktywny, oczekiwane 3;
+  4. SCX `::text` → `true` zamiast `t` → porównanie boolean bez cast;
+  5. nullguard EXPECTED **870** (EMPTY pozytywne = n/d, tylko +4 odmowy).
+- import EXPECTED **343**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
+## 2026-10-28 00:25 — #601 F7 r1: B3/B4 + c3 fixed_* + medium
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe” (#598 niegotowe; #601 poprawki).
+- CI #601 `3f214f11`: import/nullguard ✔, **c3 FAIL** (katalog 32→33 `ksh_import`; `fixed_*=5` przez macierz).
+- F7 r1 (Spawn2018 na #601):
+  - B3: publish/get — SCX tylko własne `load_id`; dzwonek tylko gdy zmiana go dotyczy;
+  - B4: delete+insert (nowe `id` powiadomienia);
+  - D2/c3: `fixed_*=false`; katalog **33**;
+  - P1: odtworzenie `skip_reason` z WT gdy event bez pola; P3 stats z odfiltrowanej listy; P4 `old.stats='{}'` + unique `import_id` + wyjątek→`integration_runs`; P5 `project_id`; D1 `order by au.id`; D4/D5 kształt wierszy; D6 retencja 30.
+- import EXPECTED **352**; backup: `ksh_import_summaries`. Bez push na main.
+
+## 2026-10-28 00:15 — #601 F7 r1: CI db FAIL B3/D6 (column_map + retencja)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania. Brak PR z „F7: gotowe do scalenia” (#602 wygląd bez F7; #598 CONFLICTING / poprawki; #601 czeka na zielone db).
+- Scalanie: brak. Bez push na main.
+- CI HEAD `321031cc`: unit ✔, visual ✔; **db FAIL** import 346/6 (B3×4, D6×2) — `Q` zwracało `^` (psql ERROR).
+- **Przyczyna:** INSERT do `schedule_imports` w testach B3/D6 bez `column_map` (NOT NULL w 0001) → pusty/zły id → publish z błędnym uuid. D6: `g || ' minutes'` (brak operatora integer||text).
+- **Krok (#594 / #601):**
+  - testy: `column_map='{}'` w INSERT B3/D6; D6 `make_interval(mins => g)`;
+  - 0318: retencja przez `OFFSET 30` (bariera podzapytania zamiast `NOT IN … LIMIT`);
+  - import EXPECTED **352** (bez zmiany liczby asercji).
+- Push → CI `db.yml` suites=import,nullguard,c3; po zielonym — prośba o F7 r2: gotowe do scalenia.
+
+## 2026-10-28 00:35 — #602 SCALONE; #601 F7 r2 (B3 cancel / P1 / OTH / LATE_DATE)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#602** F7 „gotowe do scalenia” na `1fd3955c` (23:14Z, po ostatnim commitcie) + CI unit/visual ✔ → `gh pr merge --merge` → `df3f5caa`. Bez push na main.
+- CI #601 `94b005c1`: dispatch import/nullguard/c3 ✔ (352/870/40); pełny PR db FAIL risks (8 kluczy — `rk_late_date_change` po A1 imporcie w LEAD_DAYS).
+- **Krok (#594 / #601) F7 r2:**
+  - B3: publish CARRIER bez filtra statusu/removed (anulowanie → dzwonek); test cancel×3;
+  - P1: `coalesce` przy odtwarzaniu skip_reason (pusty WT); testy WT z wartością + pusty (+4);
+  - OTH z transportem tylko w P2 → 0 SUMMARY przy imporcie do P;
+  - `status.sh`: ponowne sprzątanie LATE_DATE po A1 imporcie;
+  - import EXPECTED **359**.
+- Push → CI; po zielonym — prośba o F7 r2: gotowe do scalenia.
