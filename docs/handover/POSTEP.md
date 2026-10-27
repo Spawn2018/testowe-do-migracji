@@ -5893,3 +5893,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #586 `54dadc16`: unit/visual ✔; db FAIL import **280/281** (`#583 F7: pusta waga + numer` — skip_reason OK, `carrier_order_no`∅, numer zostaje stary).
 - Przyczyna: `write_enabled` + `r583_prep_sql` UPDATE loads → pending; import `false` wykreśla `carrier_order_no` (pending-skip). Jednorazowy delete przed blokiem #583 nie wystarcza (prep w każdej transakcji).
 - **Krok:** `delete pending` na końcu `r583_prep_sql` + po UPDATE numeru w teście wagi. EXPECTED **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 17:30 — #583 CI zielone; czekam F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #586 po r12 bez „gotowe”). Bez push na main.
+- CI #586 HEAD `af084955`: unit ✔, visual ✔, db ✔ (import EXPECTED **281**).
+- **Krok:** wpis PLAN/POSTEP + prośba o F7 na #586. Scalaj **#585 (0313) przed #586 (0314)**.
