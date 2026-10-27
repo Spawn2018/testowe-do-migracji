@@ -47,6 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 141, // #465 F7: +105 RPC mapy/Stan (pełna lista + rpc_denied); było 62 / 36 (#460)
   h4: 19,
+  p4k: 15, // #581 P4-k cz.1: pomiar odcinków GPS / stref (0317)
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
@@ -114,6 +115,7 @@ export const SUITE_FILE = {
   'ferry-status': 'ferry-status.sh',
   bmapa: 'bmapa.sh',
   h4: 'h4.sh',
+  p4k: 'p4k.sh',
   aud03: 'aud03.sh',
   g20: 'g20.sh',
   baf: 'baf.sh',
@@ -161,6 +163,7 @@ export const LOCAL_RUN = {
   'ferry-status': 'tower',
   bmapa: 'tower',
   h4: 'tower',
+  p4k: 'tower',
   aud03: 'tower',
   g20: 'tower',
   baf: 'boot',
@@ -176,7 +179,7 @@ export const LOCAL_ORDER = [
   'security', 'status', 'storage', 'money', 'release', 'backup', 'session', 'archive',
   'watchdog', 'invite', 'risks', 'import', 'nullguard', 'i2', 'i30', 'i31', 'dec2', 'dec-fx', 'dec3',
   'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto', 'dwell', 'l13',
-  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3',
+  'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'p4k', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3',
 ];
 
 const NEED_SEED_BASE = new Set(['session']);
@@ -271,7 +274,7 @@ export function gateSteps() {
   }
   const rest = [
     'i30', 'i31', 'dec2', 'dec-fx', 'dec3', 'dec5', 'dec6', 'adm10', 'hist11', 'workflows', 'insurance', 'dec-auto',
-    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3', 'backup',
+    'dwell', 'l12', 'h1', 'h3', 'smsksh', 'ferry-status', 'bmapa', 'h4', 'p4k', 'aud03', 'g20', 'baf', 'e18', 'e41', 'e25', 'c16-push', 'c3', 'backup',
   ];
   for (const name of rest) {
     if (!SUITE_FILE[name] || EXPECTED_TEST[name] == null) {

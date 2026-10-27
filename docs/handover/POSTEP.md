@@ -5939,3 +5939,10 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - Scalanie: brak ‚ÄûF7: gotowe do scalenia‚Äù po `71fd92ec` (#585 CONFLICTING / F7 r3 NIE; #592 bez gotowe). Bez push na main.
 - CI #592 HEAD `71fd92ec`: unit ‚úî, db ‚úî (import EXPECTED **309**, nullguard **866**), visual ‚úî (pierwszy przebieg zrzuty: flaky `kokpit__hhl__pl__1920__light` 274 px ‚Äî ten commit tylko asercja purge; po `gh run rerun --failed` zielone).
 - **Krok:** wpis PLAN/POSTEP + pro≈õba o F7 na #592. Po ‚ÄûF7: gotowe do scalenia‚Äù ‚Äî `gh pr merge --merge` (#592 = 0315 przed #585‚Üí0316).
+
+## 2026-10-27 21:20 ó BN0 czeka F7 (docs po gotowe); start P4-k #581 cz.1
+
+- Skrzynka `dla-cursora`: #550 WSTRZYMANE; #538/#537/#500/#499 juz w planie; bez nowego `pilne`.
+- Scalanie: PR #585 F7 gotowe na `a02cbf9` (20:02Z); potem commit docs `0007d0fc` õ ZASADY: czekam ponowne F7. CI unit/visual/db ? na `0007d0fc`. Bez merge.
+- Biezaca (rownolegle przy F7): **P4-k #581** ga≥πü `pakiet/581-p4k-eta-calibration`, migracja **0317** ó `eta_record_segment_observations` (PL_ROAD/PORT_CHECKIN/CROSSING_DEFAULT/SE_ROAD|_KAA), GPS km+pokrycie, exclude LUKA/POKRYCIE, stare H4õ`H4_BLEDNY_POMIAR`, `eta_rebuild_segment_observations`, h4õintegration_runs przy bledzie. Suite `p4k` EXPECTED **15**.
+- Bez push na main. Po F7 #585 õ merge BN0; dalej P4-k cz.2 (`eta_predictions`, cron, 27A).
