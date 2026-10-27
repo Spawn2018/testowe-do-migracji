@@ -867,7 +867,7 @@ begin
            or not (r.file_base ? v_f)
            or coalesce(r.inc -> v_f, 'null'::jsonb) is distinct from coalesce(r.file_base -> v_f, 'null'::jsonb)
          ) then
-        if not (v_f = any (coalesce(v_fields, '{}'::text[]))) then
+        if (v_f = any (coalesce(v_fields, '{}'::text[]))) is not true then
           v_fields := array_append(coalesce(v_fields, '{}'::text[]), v_f);
         end if;
         v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_f);
@@ -878,7 +878,7 @@ begin
     end loop;
     if coalesce((r.inc ->> '_qty_empty')::boolean, false)
        and coalesce(r.prev -> 'qty', 'null'::jsonb) is distinct from 'null'::jsonb then
-      if not ('qty' = any (coalesce(v_fields, '{}'::text[]))) then
+      if ('qty' = any (coalesce(v_fields, '{}'::text[]))) is not true then
         v_fields := array_append(coalesce(v_fields, '{}'::text[]), 'qty');
       end if;
       v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from 'qty');
