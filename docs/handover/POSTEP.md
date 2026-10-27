@@ -5932,3 +5932,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” (#585 F7 r3 NIE; #592 bez gotowe). Bez push na main.
 - CI #592 `51db7529`: unit ✔, visual ✔; db FAIL import 308/1 — asercja F7 r2 oczekiwała `…|true|true|∅/∅`, a `select purge_personal_data(90)` wkleja `1` (licznik) → `…|true|true|1|∅/∅`. Kod migracji OK (0 kosztów, 0 przychodów, PII wyczyszczone).
 - **Krok:** poprawka oczekiwanego ciągu w `import.sh` (EXPECTED nadal **309**). Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-27 17:30 — #590 / PR #592: CI zielone na `71fd92ec`; czekam F7
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (brak nowego wpisu koordynatora); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: brak „F7: gotowe do scalenia” po `71fd92ec` (#585 CONFLICTING / F7 r3 NIE; #592 bez gotowe). Bez push na main.
+- CI #592 HEAD `71fd92ec`: unit ✔, db ✔ (import EXPECTED **309**, nullguard **866**), visual ✔ (pierwszy przebieg zrzuty: flaky `kokpit__hhl__pl__1920__light` 274 px — ten commit tylko asercja purge; po `gh run rerun --failed` zielone).
+- **Krok:** wpis PLAN/POSTEP + prośba o F7 na #592. Po „F7: gotowe do scalenia” — `gh pr merge --merge` (#592 = 0315 przed #585→0316).

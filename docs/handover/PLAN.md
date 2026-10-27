@@ -1067,7 +1067,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #583 · PILNE: import KSH — fałszywe zmiany + tablice PLAT/es-ga/SG-21 — SCALONE (`ac5f8f0f`, PR #586, 27.10.2026 12:57Z; migracja **0314**)
 Źródło: #583 (Spawn2018, `pilne`). F7 gotowe na `37ad492b`. import EXPECTED **281**. Front `skip_reason` — koordynator `wyglad/583-powod-pominiecia`. **Importu nie włączać** przed frontem i #590. Odbiór SELECT: dry_run bez fałszywych zmian; PLAT/es-ga `skip_reason`; SG-21 bez wiersza tablicy.
 
-### #590 · Import KSH: zmiana przewoźnika → decyzja HHL — W TOKU (gałąź `pakiet/590-ksh-carrier-changed`; migracja **0315**; F7 r2 #592: cena/RODO REMOVED + `check_function_bodies`; CI: asercja purge z licznikiem)
+### #590 · Import KSH: zmiana przewoźnika → decyzja HHL — W TOKU (gałąź `pakiet/590-ksh-carrier-changed`; migracja **0315**; PR #592 HEAD `71fd92ec`; CI unit/visual/db ✔ — czekam „F7: gotowe do scalenia”)
 Źródło: #590 (Spawn2018; właściciel 27.10 12:47). Po #586, przed 27B/#585 i #581. Parser: `skipped_carrier_rows[{code,carrier_text}]`. `import_schedule`: decyzja `KSH_CARRIER_CHANGED` (także dry_run; nie „Brak w pliku”); RPC `decision_resolve_carrier_change(CANCEL|REMOVE|SNOOZE_2H)`; soft-remove `loads.removed_at`; restore HHL_ADMIN. Front — koordynator `wyglad/`. **Importu nie włączać** przed frontem. import EXPECTED **309**. F7: transport usunięty = status `REMOVED` (wszędzie jak `CANCELLED`; przywrócenie tylko `load_restore_removed`, HHL_ADMIN); SCX i KSH nie widzą decyzji ani transportów REMOVED; `load_price_compute` bez ceny dla REMOVED; `purge_personal_data` jak CANCELLED.
 
 ### P4-k · #581 Kalibracja ETA ciągła — DO ZROBIENIA (po #590 / BN0; przed BN1; decyzja 27A)
@@ -1823,3 +1823,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 17:00 | #583 CI 280/281: pending po prep (`write_enabled`) blokował carrier w teście pustej wagi | pętla |
 | 27.10.2026 17:30 | #583 CI zielone na `af084955` (unit/visual/db); czekam F7; scalaj #585 przed #586 | pętla |
 | 27.10.2026 14:00 | #586 SCALONE (`ac5f8f0f`); kolejność: 0314 przed BN0 (0313→0315); start #590 migracja **0316** | pętla |
+| 27.10.2026 17:30 | #590 / PR #592 CI ✔ na `71fd92ec` (unit/visual/db; visual zrzuty po rerun flaky kokpit); czekam F7; #585 0316 po #590 | pętla |
