@@ -987,14 +987,15 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L487a', now(), st_setsrid(st_makepoint(16.3186, 58.4792),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
 chk "#487: Söderköping 16.3186/58.4792 (OFFROUTE_KM=20) → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
-# #496 F7: Vagnhärad na E4 (OFFROUTE_KM domyślne ≈2) → brak OFF_CORRIDOR
+# #572 F7 / #496: punkt na śladzie SG-23 (~16.23/58.95), nie Vagnhärad/E4 17.50
+# (E4 ~70 km od SE_E22 z GPS — po BN0 poza korytarzem; OFFROUTE_KM domyślne ≈2)
 q "update ops_thresholds set value_num = ${PREV_OFFROUTE:-2} where key = 'OFFROUTE_KM'" >/dev/null
 q "delete from positions where load_id='$L487a'" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API'),
-  ('$L487a', now(), st_setsrid(st_makepoint(17.50, 58.95),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L487a', now() - interval '15 minutes', st_setsrid(st_makepoint(16.23, 58.95),4326), 'TELEMATICS_API'),
+  ('$L487a', now(), st_setsrid(st_makepoint(16.23, 58.95),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L487a')" >/dev/null
-chk "#496: Vagnhärad 17.50/58.95 → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
+chk "#496/#572: ślad SG-23 16.23/58.95 → brak OFF_CORRIDOR" "$(rk $L487a OFF_CORRIDOR)" 0
 L487b=$(L 8e)
 mk $L487b B487 "'HHL/B487'" "'SCX/B487'" FERRY "'$S485'"
 q "set session_replication_role=replica;

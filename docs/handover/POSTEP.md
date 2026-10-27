@@ -5786,3 +5786,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 #585 na `56cbb8c` — **NIE scalać** (korytarz miast); CI na `8df1bf31` unit/visual/db ✔ — potem poprawki F7 (ten commit). Bez push na main.
 - **BN0 krok F7:** `SE_E22` = ślad SG-23 23.10 06:59→26.10 12:39 (simplify ~50 m, skoki >5 km); `here_corridor_via_points` co ~100 km; `here_road_corridor_dev_m` dwukierunkowa; `here_store_road(null)` zostawia points; Edge skip bez korytarza + try/catch JSON; front AbortController; bmapa **155**.
 
+## 2026-10-27 05:25 — BN0 #585 CI: status Vagnhärad → punkt na śladzie SG-23
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe” po HEAD `1d0e28d1`. unit/visual ✔; db FAIL — status 338/339: `#496 Vagnhärad 17.50/58.95` (E4 ~70 km od SE_E22 GPS).
+- **Krok:** `status.sh` — asercja na `16.23/58.95` (wierzchołki śladu ~58.85–59.00); komentarz #572 F7. EXPECTED status **339** bez zmiany. Push → CI; potem prośba o F7.
+
