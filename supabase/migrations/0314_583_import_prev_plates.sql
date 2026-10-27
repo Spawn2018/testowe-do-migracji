@@ -886,6 +886,27 @@ begin
       v_skip_reasons := v_skip_reasons || jsonb_build_object(
         'qty', 'pusta komórka w pliku — pominięta');
     end if;
+    -- F7 #586 r5 pkt 5: nieczytelna godzina (schedule_cell_ts → null) = bez zmiany;
+    -- skip_reason tylko gdy WT ma okno (inaczej nie ma czego chronić).
+    foreach v_f in array array['load_time','delivery_time']::text[] loop
+      if v_f = any (v_apply_fields)
+         and nullif(btrim(coalesce(r.inc ->> v_f, '')), '') is not null
+         and public.schedule_cell_ts(current_date, r.inc ->> v_f, 'UTC') is null then
+        v_apply_fields := array(select x from unnest(v_apply_fields) x where x is distinct from v_f);
+        if (v_f = 'load_time' and (r.plan_load_from is not null or r.plan_load_to is not null))
+           or (v_f = 'delivery_time' and (r.plan_delivery_from is not null or r.plan_delivery_to is not null)) then
+          if (v_f = any (coalesce(v_fields, '{}'::text[]))) is not true then
+            v_fields := array_append(coalesce(v_fields, '{}'::text[]), v_f);
+          end if;
+          v_omit_sched := array_append(v_omit_sched, v_f);
+          v_skip_reasons := v_skip_reasons || jsonb_build_object(
+            v_f, 'nieczytelna godzina w pliku — pominięta');
+        else
+          v_fields := array(select x from unnest(coalesce(v_fields, '{}'::text[])) x
+                             where x is distinct from v_f);
+        end if;
+      end if;
+    end loop;
     -- #583 F7 pkt 3 + r2 B: konflikt multi-code — pusta leave = bez zdania; tablice po norm
     foreach v_f in array coalesce(v_fields, '{}'::text[]) loop
       if v_f = any (v_apply_fields)
@@ -1127,18 +1148,23 @@ begin
         -- Zmiana daty bez godziny → wspólna delta (v_new_date - plan_*_date) dla od i do; strażnik do > od.
         if 'load_time' = any (v_apply_fields) and nullif(btrim(r.inc->>'load_time'), '') is not null then
           v_new_load_from := public.schedule_cell_ts(v_new_load_date, r.inc->>'load_time', 'Europe/Warsaw');
-          v_new_load_to := case
-            when v_new_load_from is null then null
-            when r.plan_load_to is not null
-                 and (r.plan_load_to at time zone 'Europe/Warsaw')::date = v_new_load_date
-                 and r.plan_load_to > v_new_load_from
-              then r.plan_load_to
-            when r.plan_load_to is not null and r.plan_load_date is not null and v_new_load_date is not null then
-              r.plan_load_to + make_interval(days => (v_new_load_date - r.plan_load_date))
-            else null
-          end;
-          if v_new_load_to is not null and v_new_load_from is not null and v_new_load_to <= v_new_load_from then
-            v_new_load_to := null;
+          -- F7 r5: nieczytelna godzina nie kasuje okna (pas bezpieczeństwa przy filtrze wyżej).
+          if v_new_load_from is null then
+            v_new_load_from := r.plan_load_from;
+            v_new_load_to := r.plan_load_to;
+          else
+            v_new_load_to := case
+              when r.plan_load_to is not null
+                   and (r.plan_load_to at time zone 'Europe/Warsaw')::date = v_new_load_date
+                   and r.plan_load_to > v_new_load_from
+                then r.plan_load_to
+              when r.plan_load_to is not null and r.plan_load_date is not null and v_new_load_date is not null then
+                r.plan_load_to + make_interval(days => (v_new_load_date - r.plan_load_date))
+              else null
+            end;
+            if v_new_load_to is not null and v_new_load_from is not null and v_new_load_to <= v_new_load_from then
+              v_new_load_to := null;
+            end if;
           end if;
         elsif 'load_date' = any (v_apply_fields)
               and v_new_load_date is distinct from r.plan_load_date
@@ -1158,18 +1184,23 @@ begin
         end if;
         if 'delivery_time' = any (v_apply_fields) and nullif(btrim(r.inc->>'delivery_time'), '') is not null then
           v_new_del_to := public.schedule_cell_ts(v_new_del_date, r.inc->>'delivery_time', 'Europe/Stockholm');
-          v_new_del_from := case
-            when v_new_del_to is null then null
-            when r.plan_delivery_from is not null
-                 and (r.plan_delivery_from at time zone 'Europe/Stockholm')::date = v_new_del_date
-                 and r.plan_delivery_from < v_new_del_to
-              then r.plan_delivery_from
-            when r.plan_delivery_from is not null and r.plan_delivery_date is not null and v_new_del_date is not null then
-              r.plan_delivery_from + make_interval(days => (v_new_del_date - r.plan_delivery_date))
-            else null
-          end;
-          if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
-            v_new_del_from := null;
+          -- F7 r5: nieczytelna godzina nie kasuje okna dostawy.
+          if v_new_del_to is null then
+            v_new_del_to := r.plan_delivery_to;
+            v_new_del_from := r.plan_delivery_from;
+          else
+            v_new_del_from := case
+              when r.plan_delivery_from is not null
+                   and (r.plan_delivery_from at time zone 'Europe/Stockholm')::date = v_new_del_date
+                   and r.plan_delivery_from < v_new_del_to
+                then r.plan_delivery_from
+              when r.plan_delivery_from is not null and r.plan_delivery_date is not null and v_new_del_date is not null then
+                r.plan_delivery_from + make_interval(days => (v_new_del_date - r.plan_delivery_date))
+              else null
+            end;
+            if v_new_del_from is not null and v_new_del_to is not null and v_new_del_from >= v_new_del_to then
+              v_new_del_from := null;
+            end if;
           end if;
         elsif 'delivery_date' = any (v_apply_fields)
               and v_new_del_date is distinct from r.plan_delivery_date

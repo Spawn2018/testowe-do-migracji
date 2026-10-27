@@ -5873,3 +5873,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
 - Scalanie: #585 bez „F7: gotowe do scalenia”; #586 F7 r4 **niegotowe** (09:31Z na `f91abb7`) + CI `764a5d20` db FAIL import 275/4. Bez push na main.
 - **Krok (PR #586):** (1) konflikt `load_time`/`delivery_time` → `schedule_cell_ts` (przed `v_leave_empty`; nieczytelny tekst = bez konfliktu); (2) test A = `do … perform`; (3) audyt wokół 1. importu + kontrola zmiany wagi; (4) `assembly_seq` odczyt po `reset role`; filtr NOTICE; test „rano”; EXPECTED import **281**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 15:45 — #583 F7 #586 r5: nieczytelna godzina + CI wagi
+
+- Skrzynka: #550 `pilne` WSTRZYMANE (Google STOP); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: brak „F7: gotowe do scalenia” (#585 r3 NIE; #586 r5 niegotowe 10:27Z na `45d6762`). CI `45d6762`: unit/visual ✔; db FAIL import 279/2 (pusta waga / audit wagi — `chk_weight_consistency`; ERROR wycięty przez `r583_grep`). Bez push na main.
+- **Krok (PR #586):** (5) nieczytelna `load_time`/`delivery_time` → bez zapisu + `skip_reason` gdy WT ma okno; pas w UPDATE okna; test „rano” = skip + 09:00; testy wagi: `unit_weight_t` zgodny + jawny JSON null; `r583_grep` zostawia ERROR/CONTEXT. EXPECTED **281**. Po zielonym CI — prośba o F7. Scalaj #585 przed #586.

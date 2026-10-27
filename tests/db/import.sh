@@ -1287,8 +1287,8 @@ r583_mat_sql() {
   # GRANT: po set role authenticated/service_role mogą czytać temp (inaczej permission denied).
   printf "%s" "drop table if exists _f583; create temporary table _f583(j jsonb); insert into _f583 select $1; grant select on _f583 to authenticated, service_role;"
 }
-# F7 r4 / CI: NOTICE z DROP IF EXISTS i DETAIL z błędów nie mogą psuć paste/tail.
-r583_grep() { grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|UPDATE|DROP|CREATE|INSERT|GRANT|NOTICE|DETAIL|CONTEXT|HINT|ERROR)'; }
+# F7 r5: NOTICE/DDL nie psuje paste/tail; ERROR/CONTEXT/DETAIL zostaw — widać przyczynę w CI.
+r583_grep() { grep -v -E '^(BEGIN|SET|RESET|ROLLBACK|UPDATE|DROP|CREATE|INSERT|GRANT|NOTICE)$'; }
 
 F583=$(r583_file_sql "'{}'::jsonb")
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "begin; $(r583_prep_sql) $(r583_mat_sql "$F583") set local role authenticated; set local request.jwt.claim.sub='$HHL'; select jsonb_array_length(r->'changed')||'/'||(r->>'unchanged') from (select import_schedule('$P', (select j from _f583), '{}'::text[], '{\"name\":\"583a.xlsx\",\"hash\":\"583a\"}'::jsonb, true) r) s; rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
@@ -1361,11 +1361,12 @@ rollback;" 2>&1 | r583_grep | tr -d '\r' | paste -sd'|' -)
 chk "#583 F7: plik=file_base ≠ WT → bez cofnięcia" "$out" "0|NOWA111"
 
 # F7 r2 C: pusta total_weight_t + zmiana numeru → waga bez zmiany + skip_reason
-F583=$(r583_file_sql "jsonb_build_object('carrier_order_no','NOWY/583','total_weight_t',null)")
+# jsonb_build_object pomija null — jawny JSON null; unit_weight zgodny z chk_weight_consistency.
+F583=$(r583_file_sql "jsonb_build_object('carrier_order_no','NOWY/583') || '{\"total_weight_t\":null}'::jsonb")
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 $(r583_prep_sql)
-update shipment_items set total_weight_t=20.74, length_m=12.50, width_m=2.45, height_m=2.45,
+update shipment_items set total_weight_t=20.74, unit_weight_t=20.74, length_m=12.50, width_m=2.45, height_m=2.45,
   schedule_row = jsonb_build_object('total_weight_t',20.74,'length_m',12.50,'carrier_order_no','15035/2026/OSL/GDA/P')
  where load_id='$SG1' and shipment_code='SG-01';
 update loads set carrier_order_no='15035/2026/OSL/GDA/P' where id='$SG1';
@@ -1373,8 +1374,9 @@ $(r583_mat_sql "$F583")
 set local role authenticated; set local request.jwt.claim.sub='$HHL';
 create temporary table _r583 as select import_schedule('$P', (select j from _f583), '{}'::text[], '{\"name\":\"583wt.xlsx\",\"hash\":\"583wt\"}'::jsonb, false) r;
 reset role;
-select round(total_weight_t,2)::text||'|'||carrier_order_no from shipment_items si
-  join loads l on l.id=si.load_id where si.shipment_code='SG-01' and l.id='$SG1';
+select coalesce(round(si.total_weight_t,2)::text,'∅')||'|'||coalesce(l.carrier_order_no,'∅')
+  from shipment_items si join loads l on l.id=si.load_id
+ where si.shipment_code='SG-01' and l.id='$SG1';
 rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
 chk "#583 F7: pusta waga + numer → waga zostaje" "$out" "20.74|NOWY/583"
 
@@ -1483,9 +1485,9 @@ chk "#583 F7 r4: 1. import plik=WT → 0 audit shipment_items" "$out" "0"
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 $(r583_prep_sql)
-update shipment_items set total_weight_t=20.74, schedule_row=null
+update shipment_items set total_weight_t=20.74, unit_weight_t=20.74, schedule_row=null
  where load_id='$SG1' and shipment_code='SG-01';
-$(r583_mat_sql "$(r583_file_sql "jsonb_build_object('total_weight_t',21.5)")")
+$(r583_mat_sql "$(r583_file_sql "jsonb_build_object('total_weight_t',21.5,'unit_weight_t',21.5)")")
 create temporary table _a583 as select count(*)::int as n from audit_log where entity='shipment_items';
 set local role authenticated; set local request.jwt.claim.sub='$HHL';
 do \$x\$ begin
@@ -1555,13 +1557,16 @@ select case when l.plan_load_date = o.ld and l.plan_delivery_date = o.dd + 1 the
 rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
 chk "#583 F7 B: konflikt load_date, delivery zapisana" "$out" "t"
 
-# F7 r4 pkt 1: „rano” w 2. kodzie → import przechodzi, bez konfliktu godzin
+# F7 r4/r5: „rano” w 2. kodzie → bez konfliktu; nieczytelna nie kasuje okna 09:00
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 $(r583_prep_sql)
-update loads set trailer_plate='RANO1', status='READY' where id='$SG1';
-insert into shipment_items (project_id, load_id, shipment_code, item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t)
-select project_id, load_id, 'SG-01B', item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t
+update loads set trailer_plate='RANO1', status='READY',
+  plan_load_from = (plan_load_date::text || ' 09:00')::timestamp at time zone 'Europe/Warsaw',
+  plan_load_to = (plan_load_date::text || ' 12:00')::timestamp at time zone 'Europe/Warsaw'
+ where id='$SG1';
+insert into shipment_items (project_id, load_id, shipment_code, item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, unit_weight_t)
+select project_id, load_id, 'SG-01B', item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, unit_weight_t
   from shipment_items where load_id='$SG1' and shipment_code='SG-01'
 on conflict do nothing;
 set local role authenticated; set local request.jwt.claim.sub='$HHL';
@@ -1577,11 +1582,13 @@ create temporary table _r583 as select import_schedule('$P',
       'load_time','rano','trailer_plate','NEWPL1')
   ),
   '{}'::text[], '{\"name\":\"583rano.xlsx\",\"hash\":\"583rano\"}'::jsonb, false) r;
-select coalesce(r->'changed'->0->'skip_reason'->>'load_time','∅') from _r583;
+select coalesce((select e->'skip_reason'->>'load_time' from jsonb_array_elements(r->'changed') e
+  where e->'skip_reason' ? 'load_time' limit 1),'∅') from _r583;
 reset role;
-select trailer_plate from loads where id='$SG1';
+select trailer_plate||'|'||to_char(plan_load_from at time zone 'Europe/Warsaw','HH24:MI')
+  from loads where id='$SG1';
 rollback;" 2>&1 | r583_grep | tr -d '\r' | paste -sd'|' -)
-chk "#583 F7 r4: rano w 2. kodzie → bez konfliktu, zapis" "$out" "∅|NEWPL1"
+chk "#583 F7 r5: rano → skip + okno 09:00 zostaje" "$out" "nieczytelna godzina w pliku — pominięta|NEWPL1|09:00"
 
 # F7 r2 B: pusta komórka w drugim kodzie ≠ konflikt
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
