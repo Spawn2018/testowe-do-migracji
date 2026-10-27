@@ -1738,6 +1738,34 @@ select l.status||'|'||l.removed_prev_status||'|'||(l.removed_at is not null)::te
   from loads l where l.id=$(LOADID C590-1);")
 chk "#590: REMOVE → REMOVED, 0 otwartych ryzyk/decyzji, pusta kolejka pliku" "$out" "REMOVE|REMOVED|PLANNED|true|0|0|0|RESOLVED"
 
+# F7 r2: REMOVED kasuje niezafakturowaną cenę (nie jak CANCELLED z zerami); RODO jak CANCELLED.
+out=$(t590 "$(fx C590-1 PLANNED "$FXD1")
+  insert into load_cost (load_id, base_amount, baf_amount, computed_total_eur)
+   values ($(LOADID C590-1), 100, 10, 110);
+  insert into load_revenue (load_id, base_amount, baf_amount, computed_total_eur)
+   values ($(LOADID C590-1), 200, 20, 220);" "
+$(IMPSK C590-1 590a)
+select decision_resolve_carrier_change($(DECID C590-1),'REMOVE')->>'effect';
+reset role;
+select (select count(*) from load_cost where load_id=$(LOADID C590-1))
+  ||'|'||(select count(*) from load_revenue where load_id=$(LOADID C590-1))
+  ||'|'||(select (prosrc like '%REMOVED%' and prosrc like '%skipped%')::text from pg_proc p
+            join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='load_price_compute'
+             and pg_get_function_identity_arguments(p.oid)='p_load uuid, p_today date')
+  ||'|'||(select (prosrc like '%REMOVED%')::text from pg_proc p
+            join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public' and p.proname='purge_personal_data'
+             and pg_get_function_identity_arguments(p.oid)='p_days integer');
+set session_replication_role = replica;
+update loads set driver_name='Jan Removed', driver_phone='+48111000000',
+       updated_at = now() - interval '91 days' where id=$(LOADID C590-1);
+set session_replication_role = origin;
+select purge_personal_data(90);
+select coalesce(driver_name,'∅')||'/'||coalesce(driver_phone,'∅') from loads where id=$(LOADID C590-1);")
+chk "#590 F7 r2: REMOVED bez ceny; purge czyści PII; funkcje znają REMOVED" \
+  "$out" "REMOVE|0|0|true|true|∅/∅"
+
 out=$(t590 "$(fx C590-1 AT_LOADING "$FXD1")" "
 $(IMPSK C590-1 590a)
 select decision_resolve_carrier_change($(DECID C590-1),'REMOVE');")

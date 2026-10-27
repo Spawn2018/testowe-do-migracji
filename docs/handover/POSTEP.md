@@ -5918,3 +5918,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Migracja **0315** `KSH_CARRIER_CHANGED` + status `REMOVED` (BEZ nakładania na produkcję): enum `REMOVED` jako pierwszy krok; `REMOVED` wszędzie, gdzie wykluczamy `CANCELLED` (funkcje po `pg_proc`, front `.not(status in (CANCELLED,REMOVED))`, `store.ts`); `decisions_read` bez `KSH_CARRIER_CHANGED` dla SCX; auto-zamknięcie w dry_run; unikalny klucz zdarzenia (ponowne otwarcie); `severity` CRITICAL ≤ 48 h; CANCEL po wjeździe przez `cancel_load`; pobudka drzemki 2 h z ponownym powiadomieniem HHL; `carrier_changed[]` w wyniku importu.
 - Testy: import EXPECTED **308**, dec2 katalog **27** typów, nullguard **866** (+2 RPC × 5 kont; 858 było błędną liczbą); strażnik `tests/removed-status-guard.test.ts`.
 - BN0 #585 → migracja **0316**. Wynik bramy db — wpis po zielonym przebiegu.
+
+## 2026-10-27 16:15 — #593 SCALONE; #590 F7 r2 (cena/RODO/check_function_bodies)
+
+- Skrzynka: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#593** (`wyglad/567-kod-w-kazdym-wierszu`) F7 gotowe na `ea2aaa9` (13:48Z) + CI unit/visual ✔ → `gh pr merge --merge` → `6a6b30d9`. #585 F7 r3 NIE. #592 bez „gotowe”.
+- CI #592 `0b5f26e3`: unit/visual ✔; db FAIL tylko nullguard oczekiwano **858**, jest **866** → lokalnie `356a904f` (EXPECTED 866).
+- **Krok (#590 / PR #592 F7 r2):** `load_price_compute` — REMOVED bez ceny (kasuje niezafakturowane `load_cost`/`load_revenue`); `purge_personal_data` — REMOVED jak CANCELLED; `check_function_bodies=on` zaraz po bloku DO; trigger cleanup woła `load_price_compute`. import EXPECTED **309**. Push → CI; po zielonym — prośba o F7.

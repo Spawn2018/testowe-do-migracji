@@ -138,6 +138,8 @@ begin
      set status = 'skipped'
    where load_id = new.id
      and status = 'pending';
+  -- F7 r2: bez ceny / kosztów anulowania (load_price_compute kasuje niezafakturowane wiersze).
+  perform public.load_price_compute(new.id);
   return null;
 end
 $fn$;
@@ -1104,6 +1106,72 @@ begin
   raise notice '#590: REMOVED dopisane w % funkcjach: %', n_fn, v_names;
 end
 $patch$;
+
+-- F7 r2 pkt 3: przywróć sprawdzanie ciał funkcji (off obowiązywało do końca transakcji).
+select set_config('check_function_bodies', 'on', true);
+
+-- F7 r2 pkt 1: REMOVED = brak transportu → bez ceny i bez kosztów anulowania (nie jak CANCELLED).
+do $f7r2_price$
+declare
+  def text;
+  newdef text;
+begin
+  select pg_get_functiondef(p.oid) into def
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname = 'load_price_compute'
+     and pg_get_function_identity_arguments(p.oid) = 'p_load uuid, p_today date';
+  if def is null then
+    raise exception '#590: brak load_price_compute(uuid, date)';
+  end if;
+  if def ~ 'skipped'', ''REMOVED' then
+    raise notice '#590: load_price_compute już obsługuje REMOVED';
+    return;
+  end if;
+  newdef := regexp_replace(
+    def,
+    '(if not found then return jsonb_build_object\(''ok'', false, ''reason'', ''NO_LOAD''\); end if;\s*)',
+    E'\\1  if l.status::text = ''REMOVED'' then\n'
+      || E'    delete from load_cost where load_id = p_load and invoiced_total_eur is null;\n'
+      || E'    delete from load_revenue where load_id = p_load and invoiced_total_eur is null;\n'
+      || E'    return jsonb_build_object(''ok'', true, ''load_id'', p_load, ''skipped'', ''REMOVED'');\n'
+      || E'  end if;\n',
+    'i');
+  if newdef is not distinct from def then
+    raise exception '#590: nie wstawiono gałęzi REMOVED w load_price_compute';
+  end if;
+  execute newdef;
+end
+$f7r2_price$;
+
+-- F7 r2 pkt 2: purge_personal_data — REMOVED na tych samych zasadach co CANCELLED (RODO).
+do $f7r2_purge$
+declare
+  def text;
+  newdef text;
+begin
+  select pg_get_functiondef(p.oid) into def
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.proname = 'purge_personal_data'
+     and pg_get_function_identity_arguments(p.oid) = 'p_days integer';
+  if def is null then
+    raise exception '#590: brak purge_personal_data(integer)';
+  end if;
+  if def ~ 'REMOVED' then
+    raise notice '#590: purge_personal_data już zna REMOVED';
+    return;
+  end if;
+  newdef := replace(def, 'l.status = ''CANCELLED''', 'l.status in (''CANCELLED'', ''REMOVED'')');
+  newdef := replace(newdef, 'status = ''CANCELLED''', 'status in (''CANCELLED'', ''REMOVED'')');
+  if newdef is not distinct from def or newdef !~ 'REMOVED' then
+    raise exception '#590: nie dopisano REMOVED w purge_personal_data';
+  end if;
+  execute newdef;
+end
+$f7r2_purge$;
 
 -- ---------------------------------------------------------------------
 -- 6. import_schedule (z 0314) + carrier_changed w wyniku, REMOVED poza dopasowaniem
