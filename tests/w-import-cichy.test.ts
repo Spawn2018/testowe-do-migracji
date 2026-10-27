@@ -11,8 +11,9 @@ describe('#426 import bez powiadomień', () => {
     expect(s).toContain("...(quiet ? { p_quiet: true } : {})");
     expect(s).toMatch(/serverCommit\(d: ServerImportDraft, cancelCodes: string\[\], overwriteCodes: string\[\] = \[\], quiet = false\)/);
     expect(s).toContain('}, false, quiet);');
-    /* podgląd (dry run) nigdy cichy */
-    expect(s).toContain("const preview = await call(pid, rows, [], { name: filename }, true);");
+    /* podgląd (dry run) nigdy cichy; #590: p_file ze skipped_carrier_rows */
+    expect(s).toMatch(/const preview = await call\(pid, rows, \[\], \{[\s\S]*?name: filename[\s\S]*?\}, true\);/);
+    expect(s).toContain('skipped_carrier_rows: meta.skippedCarrierRows ?? []');
   });
 
   it('okno importu: przełącznik tylko dla HHL_ADMIN w trybie Supabase, reset przy nowym pliku', () => {
