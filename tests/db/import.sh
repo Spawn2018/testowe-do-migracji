@@ -1637,8 +1637,8 @@ echo; echo "[#590] KSH_CARRIER_CHANGED + status REMOVED (F7)"
 # Fixtures w transakcjach z rollbackiem: własne transporty C590-* (nie ruszamy SG-01/SG-02 z wcześniejszych sekcji).
 SCXORG=00000000-0000-0000-0000-00000000a003
 # fx <kod> <status> <data załadunku>  — transport + pozycja harmonogramu
-fx() { echo "with l as (insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date)
-  values ('$P','$SCXORG','$2',$3,'$D2'::date) returning id)
+fx() { echo "with l as (insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date, hhl_order_no, carrier_order_no)
+  values ('$P','$SCXORG','$2',$3,'$D2'::date,'H-$1','C-$1') returning id)
   insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
   select '$P', id, '$1', 10, 2.5, 2.5 from l;"; }
 FXD1="'$D1'::date"
@@ -1658,7 +1658,7 @@ LOADID() { echo "(select load_id from shipment_items where project_id='$P' and s
 ROLEHHL="set local role authenticated; set local request.jwt.claim.sub='$HHL';"
 # t590 <SQL przed rolą (superuser)> <SQL jako HHL> — wynik w jednej linii (|), bez znaczników poleceń
 t590() { $PSQL -v ON_ERROR_STOP=1 -c "begin; $1 $ROLEHHL $2 rollback;" 2>&1 \
-  | grep -vE '^(BEGIN|SET|RESET|ROLLBACK|COMMIT|DELETE [0-9]+|UPDATE [0-9]+|INSERT [0-9]+|DO)$' | tr -d '\r' | paste -sd'|' -; }
+  | grep -vE '^(BEGIN|SET|RESET|ROLLBACK|COMMIT|DELETE [0-9]+|UPDATE [0-9]+|INSERT [0-9]+|DO|NOTICE: .*|WARNING: .*)$' | tr -d '\r' | paste -sd'|' -; }
 chkre() { if echo "$2" | grep -qiE "$3"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1  (otrzymano: $2, oczekiwano wzorca: $3)"; fi; }
 
 # --- wykrycie: dry_run otwiera decyzję; wynik niesie carrier_changed; dedup 3× ---

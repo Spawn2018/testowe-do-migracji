@@ -763,7 +763,7 @@ declare
   v_n int;
   v_pre constant text[] := array['PLANNED', 'RESOURCES_PENDING', 'DOCS_PENDING', 'READY'];
 begin
-  perform assert_not_preview();
+  perform public.assert_not_preview();
   if (current_app_user_id() is not null) is not true then
     raise exception 'Rozstrzygnięcie — tylko HHL' using errcode = '42501';
   end if;
@@ -916,7 +916,7 @@ declare
   v_cur text;
   v_prev_quiet text;
 begin
-  perform assert_not_preview();
+  perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'forbidden' using errcode = '42501';
   end if;
