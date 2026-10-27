@@ -5841,3 +5841,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
 - Scalanie: #585 bez „F7: gotowe do scalenia”. #586 F7 06:41Z **NIE scalać** (po `7ba45c20`; kolejne CI-fixy fixture). Bez push na main.
 - Krok (ten sam PR #586): porównanie trójstronne; UPDATE wymiarów per `v_apply_fields`; `import_plate_parts` + walidacja `[[:alpha:]]`; multi-code `skip_reason`; testy F7 (+5); EXPECTED import **273**. Po zielonym CI — prośba o F7.
+
+## 2026-10-27 11:40 — #583 CI FAIL r10: brak `)` w r583_file_sql
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; reszta w planie).
+- Scalanie: #585 F7 r3 **NIE scalać** (N1/NOWE-1…); #586 bez F7 po `35c272ab` (db 259/14). Bez push na main.
+- Krok: fixture `jsonb_build_array(...||patch)` bez zamykającego `)` przed FROM → 14× `out=^`. Dopisane `)`. Po zielonym db — prośba o F7.

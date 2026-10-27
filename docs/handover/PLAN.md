@@ -1811,3 +1811,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 27.10.2026 10:05 | #583 CI fix r8: fixture SQL w heredoc (`r583_file_sql`, bez -v) | pętla |
 | 27.10.2026 10:25 | #583 CI fix r9: `-c` jak A6 + patch `jsonb_build_object` | pętla |
 | 27.10.2026 11:05 | #583 F7 #586 niegotowe: trójstronne + wymiary per pole + split tablic + multi-code; import EXPECTED **273** | pętla |
+| 27.10.2026 11:40 | #583 CI fix r10: `)` zamykające `jsonb_build_array` w `r583_file_sql` (14× out=`^`) | pętla |
