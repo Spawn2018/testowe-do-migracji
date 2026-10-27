@@ -19,6 +19,8 @@ export interface KshPreviewChange {
   file: string | null;
   manualAfterImport: boolean;
   pendingWrite: boolean;
+  /** #583 — powód, dla którego import NIE zapisze wartości z pliku (np. „pusta komórka w pliku — pominięta”). */
+  skipReason: string | null;
 }
 
 export interface KshPreview {
@@ -82,6 +84,7 @@ export function kshPreviewFromRpc(raw: unknown): KshPreview | null {
       file: str(r.file),
       manualAfterImport: r.manual_after_import === true,
       pendingWrite: r.pending_write === true,
+      skipReason: str(r.skip_reason)?.trim() || null,
     });
   }
   const n = Number(o.n);
@@ -197,10 +200,11 @@ export function previewTotal(c: KshPreviewCounts): number {
 }
 
 /** Znaczniki w kolumnie „Uwagi” (klucze tekstów). */
-export function previewNotes(c: KshPreviewChange): Array<'manual' | 'pending'> {
-  const out: Array<'manual' | 'pending'> = [];
+export function previewNotes(c: Pick<KshPreviewChange, 'manualAfterImport' | 'pendingWrite' | 'skipReason'>): Array<'manual' | 'pending' | 'skip'> {
+  const out: Array<'manual' | 'pending' | 'skip'> = [];
   if (c.manualAfterImport) out.push('manual');
   if (c.pendingWrite) out.push('pending');
+  if (c.skipReason) out.push('skip');
   return out;
 }
 
