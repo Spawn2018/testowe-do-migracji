@@ -5754,4 +5754,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `5bd6bf9b`: unit ✔, visual ✔, db FAIL status 326/1 — `#574i: bulk_quiet — bez nowych powiadomień` (otrzymano 4, oczekiwano 0).
 - **Przyczyna:** cron ustawia `tower.bulk_quiet`, ale `trg_geofence_matrix_notify` (0281) i tak woła `matrix_notify` → ZONE_ENTER.
 - **Krok:** w **0312** (jeszcze nie na main) — early return przy `bulk_quiet=on` w `trg_geofence_matrix_notify`. Po zielonym CI — prośba o F7.
+- **Uwaga prod:** 0309 na produkcji wysyła ZONE_ENTER przy potwierdzeniach dwell cofniętych ≥ 2 h (naprawia 0312).
+
+## 2026-10-27 03:25 — #574-nast F7 #582 r2: pkt 1–4 + N2
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie. F7 #582 r2 (01:10Z) — NIE scalać.
+- Scalanie: brak „F7: gotowe”. Visual bramy zawieszone ~1 h → anulowane (G-15). Bez push na main.
+- **Krok F7 r2:** `hotfix_574_dwell_recalc` (per `geofence_id`, UUID pinned); test #574h bez ręcznego UPDATE + EXIT>entered; #574i2 ZONE bez quiet; N2 skip finished + OUTSIDE; cron `v_prev`; status EXPECTED **336**.
 

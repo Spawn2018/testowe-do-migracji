@@ -1058,8 +1058,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #578 · wygląd lista zmian KSH (23B) — SCALONE (`4d348405`, 27.10.2026 00:36Z)
 Źródło: `wyglad/567-lista-zmian-ksh` (#578). F7 gotowe (26.10 ~16:30Z) po #577.
 
-### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**)
-Źródło: F7 #574 r2 pkt 5–8 / odbiór. Cron: first pos ≥ `greatest(EXIT, entered_at)`; SG-23 DWELL `dwell_min`/`minutes` po backdate; test (e) `LOAD_STATUS_CHANGED`+`to=AT_SITE`; §8: drganie GPS SITE / podwójny DWELL port. status EXPECTED **327**.
+### #574-nast · dwell_min w payload — W TOKU (po #577 / #578; migracja **0312**; F7 #582 r2)
+Źródło: F7 #574 r2 + F7 #582 r1–r2. Cron: `greatest(EXIT, entered_at)`; skip finished; `bulk_quiet`+`v_prev`; ZONE_* cisza. SG-23 DWELL per `geofence_id` (`hotfix_574_dwell_recalc`, UUID pinned); N2 PENDING_IN NULL→OUTSIDE. status EXPECTED **336**.
 
 ### BN0 · #572 Karlskrona→Boden linia HERE — DO ZROBIENIA (po #574-nast)
 

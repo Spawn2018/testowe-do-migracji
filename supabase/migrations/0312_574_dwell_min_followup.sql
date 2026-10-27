@@ -1,8 +1,9 @@
--- #574-nast (F7 #574 r2 pkt 5–6): cron dwell — dolna granica first pos;
--- SG-23 GEOFENCE_DWELL: przelicz dwell_min/minutes po backdate ENTER.
+-- #574-nast (F7 #582 r1–r2): cron dwell lower bound + bulk_quiet;
+-- SG-23 DWELL per strefa; zamknięcie PENDING_IN NULL na zakończonych.
 
 -- ---------------------------------------------------------------------------
--- 1. geofence_confirm_pending_dwell — greatest(ostatni EXIT, entered_at)
+-- 1. geofence_confirm_pending_dwell — greatest(EXIT, entered_at); skip finished;
+--    bulk_quiet z przywróceniem v_prev
 -- ---------------------------------------------------------------------------
 create or replace function public.geofence_confirm_pending_dwell(
   p_now timestamptz default now()
@@ -25,6 +26,7 @@ declare
   v_quiet      boolean;
   v_lower      timestamptz;
   v_last_exit  timestamptz;
+  v_prev       text;
 begin
   for v_row in
     select gs.load_id, gs.geofence_id, gs.entered_at, gs.last_eval_at, gs.consec_fixes,
@@ -32,10 +34,15 @@ begin
            g.notify_orgs, g.message_tpl, g.hysteresis_m
       from geofence_states gs
       join geofences g on g.id = gs.geofence_id
+      join loads l on l.id = gs.load_id
      where gs.state = 'PENDING_IN'
        and g.active is true
        and g.kind is distinct from 'SITE'
        and g.dwell_seconds > 0
+       and l.actual_delivery_at is null
+       and l.status::text not in (
+             'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'
+           )
   loop
     v_first_ts := null;
     v_first_geom := null;
@@ -49,6 +56,11 @@ begin
      where e.load_id = v_row.load_id
        and e.event_type = 'GEOFENCE_EXIT'
        and (e.payload->>'geofence_id')::uuid = v_row.geofence_id;
+
+    /* Bez entered_at i bez EXIT — nie emituj ENTER z -infinity (stare pozycje). */
+    if v_row.entered_at is null and v_last_exit is null then
+      continue;
+    end if;
 
     v_lower := greatest(
       coalesce(v_last_exit, '-infinity'::timestamptz),
@@ -116,6 +128,7 @@ begin
     end if;
 
     v_quiet := (p_now - v_emit_at >= interval '2 hours');
+    v_prev := current_setting('tower.bulk_quiet', true);
     if v_quiet then
       perform set_config('tower.bulk_quiet', 'on', true);
     end if;
@@ -128,7 +141,7 @@ begin
     on conflict (dedup_key) where dedup_key is not null do nothing;
 
     if v_quiet then
-      perform set_config('tower.bulk_quiet', '', true);
+      perform set_config('tower.bulk_quiet', coalesce(nullif(v_prev, ''), 'off'), true);
     end if;
 
     v_n := v_n + 1;
@@ -140,7 +153,7 @@ $$;
 revoke all on function public.geofence_confirm_pending_dwell(timestamptz) from public, anon, authenticated;
 grant execute on function public.geofence_confirm_pending_dwell(timestamptz) to service_role;
 comment on function public.geofence_confirm_pending_dwell(timestamptz) is
-  '#574-nast: PENDING_IN (bez SITE); first pos >= greatest(EXIT, entered_at); bulk_quiet ≥2h; service_role.';
+  '#574-nast: PENDING_IN (bez SITE/finished); first pos >= greatest(EXIT, entered_at); bulk_quiet≥2h + v_prev; service_role.';
 
 -- bulk_quiet wokół INSERT GEOFENCE_ENTER (cron ≥2 h) musi wyciszyć ZONE_* z macierzy
 -- (0281 nie sprawdzał ustawienia — stąd FAIL #574i: 4 powiadomienia).
@@ -213,63 +226,136 @@ comment on function public.trg_geofence_matrix_notify() is
   '#574-nast: ZONE_* z macierzy; tower.bulk_quiet=on → cisza (cron dwell ≥2 h).';
 
 -- ---------------------------------------------------------------------------
--- 2. SG-23: GEOFENCE_DWELL payload po backdate ENTER (F7 #574 pkt 6 / odbiór)
+-- 2. N2: PENDING_IN + entered_at NULL na zakończonych → OUTSIDE
 -- ---------------------------------------------------------------------------
-do $dwell$
-declare
-  v_load   uuid;
-  v_enter  timestamptz;
-  v_n      int := 0;
-begin
-  select l.id into v_load
-    from loads l
-   where public.load_sms_code(l.id) = 'SG-23'
-      or exists (
-           select 1 from shipment_items si
-            where si.load_id = l.id and si.shipment_code = 'SG-23'
-         )
-   order by l.created_at desc nulls last
-   limit 1;
+update public.geofence_states gs
+   set state = 'OUTSIDE',
+       consec_fixes = 0,
+       last_eval_at = coalesce(gs.last_eval_at, now())
+  from public.loads l
+ where gs.load_id = l.id
+   and gs.state = 'PENDING_IN'
+   and gs.entered_at is null
+   and (
+     l.actual_delivery_at is not null
+     or l.status::text in (
+          'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED', 'CANCELLED'
+        )
+   );
 
-  if v_load is null then
-    raise notice '#574-nast: SG-23 nie znaleziony — pomijam przeliczenie DWELL';
+-- ---------------------------------------------------------------------------
+-- 3. SG-23 DWELL payload per geofence_id (F7 #582 pkt 1–3)
+--    Źródło: tests/db/sql/hotfix_574_dwell_recalc.sql
+-- ---------------------------------------------------------------------------
+-- BEGIN SG23
+create or replace function public.hotfix_574_dwell_recalc()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_load   uuid := '95ab7218-69cc-490d-8b68-b379c3ed9aae';
+  v_dwell  record;
+  v_enter  timestamptz;
+  v_min    numeric;
+  v_n      int := 0;
+  v_need   int := 0;
+  v_code   text;
+begin
+  if not exists (select 1 from loads where id = v_load) then
+    raise notice '#574-nast: SG-23 (%) nie znaleziony — pomijam przeliczenie DWELL', v_load;
     return;
   end if;
 
-  select e.occurred_at into v_enter
+  v_code := public.load_sms_code(v_load);
+  if v_code is distinct from 'SG-23' then
+    raise exception '#574-nast: ładunek % ma load_sms_code=% (oczekiwano SG-23)', v_load, v_code;
+  end if;
+
+  select count(*) into v_need
     from load_events e
    where e.load_id = v_load
-     and e.event_type = 'GEOFENCE_ENTER'
+     and e.event_type = 'GEOFENCE_DWELL'
      and e.payload->>'geofence_kind' = 'SITE'
-   order by e.occurred_at
-   limit 1;
+     and exists (
+           select 1 from load_events en
+            where en.load_id = v_load
+              and en.event_type = 'GEOFENCE_ENTER'
+              and en.payload->>'geofence_kind' = 'SITE'
+              and en.payload->>'geofence_id' is not distinct from e.payload->>'geofence_id'
+              and en.occurred_at <= e.occurred_at
+         )
+     and (
+       (e.payload->>'entered_at')::timestamptz is distinct from (
+         select max(en.occurred_at) from load_events en
+          where en.load_id = v_load
+            and en.event_type = 'GEOFENCE_ENTER'
+            and en.payload->>'geofence_kind' = 'SITE'
+            and en.payload->>'geofence_id' is not distinct from e.payload->>'geofence_id'
+            and en.occurred_at <= e.occurred_at
+       )
+       or (e.payload->>'dwell_min')::numeric is distinct from round(
+         extract(epoch from (
+           e.occurred_at - (
+             select max(en.occurred_at) from load_events en
+              where en.load_id = v_load
+                and en.event_type = 'GEOFENCE_ENTER'
+                and en.payload->>'geofence_kind' = 'SITE'
+                and en.payload->>'geofence_id' is not distinct from e.payload->>'geofence_id'
+                and en.occurred_at <= e.occurred_at
+           )
+         )) / 60.0
+       )
+     );
 
-  if v_enter is null then
-    raise notice '#574-nast: SG-23 bez GEOFENCE_ENTER SITE — pomijam DWELL';
+  if v_need = 0 then
+    raise notice '#574-nast: SG-23 DWELL bez zmian (0 wierszy)';
     return;
   end if;
 
   alter table public.load_events disable trigger trg_load_events_immutable;
 
-  update load_events e
-     set payload = e.payload
-       || jsonb_build_object(
-            'entered_at', v_enter,
-            'dwell_min', round(extract(epoch from (e.occurred_at - v_enter)) / 60.0),
-            'minutes', round(extract(epoch from (e.occurred_at - v_enter)) / 60.0)
-          )
-   where e.load_id = v_load
-     and e.event_type = 'GEOFENCE_DWELL'
-     and e.payload->>'geofence_kind' = 'SITE'
-     and (
-       (e.payload->>'entered_at')::timestamptz is distinct from v_enter
-       or (e.payload->>'dwell_min')::numeric
-            is distinct from round(extract(epoch from (e.occurred_at - v_enter)) / 60.0)
-     );
+  for v_dwell in
+    select e.id, e.occurred_at, e.payload
+      from load_events e
+     where e.load_id = v_load
+       and e.event_type = 'GEOFENCE_DWELL'
+       and e.payload->>'geofence_kind' = 'SITE'
+  loop
+    select max(en.occurred_at) into v_enter
+      from load_events en
+     where en.load_id = v_load
+       and en.event_type = 'GEOFENCE_ENTER'
+       and en.payload->>'geofence_kind' = 'SITE'
+       and en.payload->>'geofence_id' is not distinct from v_dwell.payload->>'geofence_id'
+       and en.occurred_at <= v_dwell.occurred_at;
 
-  get diagnostics v_n = row_count;
+    if v_enter is null then
+      continue;
+    end if;
+
+    v_min := round(extract(epoch from (v_dwell.occurred_at - v_enter)) / 60.0);
+
+    update load_events e
+       set payload = e.payload
+         || jsonb_build_object(
+              'entered_at', v_enter,
+              'dwell_min', v_min,
+              'minutes', v_min
+            )
+     where e.id = v_dwell.id
+       and (
+         (e.payload->>'entered_at')::timestamptz is distinct from v_enter
+         or (e.payload->>'dwell_min')::numeric is distinct from v_min
+       );
+
+    if found then
+      v_n := v_n + 1;
+    end if;
+  end loop;
+
   alter table public.load_events enable trigger trg_load_events_immutable;
-
   raise notice '#574-nast: SG-23 DWELL przeliczony, wierszy=%', v_n;
 exception
   when others then
@@ -279,4 +365,12 @@ exception
       null;
     end;
     raise;
-end $dwell$;
+end;
+$$;
+
+revoke all on function public.hotfix_574_dwell_recalc() from public, anon, authenticated;
+grant execute on function public.hotfix_574_dwell_recalc() to service_role;
+
+select public.hotfix_574_dwell_recalc();
+drop function public.hotfix_574_dwell_recalc();
+-- END SG23
