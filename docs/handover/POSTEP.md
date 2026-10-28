@@ -6334,3 +6334,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: bez zmian (#550 WSTRZYMANE; #538/#537/#500/#499 w planie).
 - CI `0a48566e`: unit ✔ / visual ✔ / db ✖ — dec6 **27/27**, security nadal B5 strażnik (1): komentarz między `begin` a `perform assert` łamie regex.
 - **Krok:** assert jako pierwsza instrukcja po `begin` (bez komentarza przed); push.
+
+## 2026-10-28 10:00 — C4 #606 CI zielone `70987410` — prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: brak „F7: gotowe” po `70987410`. Jedyny otwarty PR: #606.
+- CI `70987410`: unit ✔ / visual ✔ / db ✔ (dec6 **27**, security **459**, nullguard **880**); run db `40658778055`, visual `40658778048`.
+- **Krok:** komentarz na #606 — prośba o F7: gotowe do scalenia (C4 / 0321). Bez push na main.
