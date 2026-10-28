@@ -1090,11 +1090,11 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; **nowy termin: 29.10 wieczór** (albo z P11) — 28D:A; status w #588. CSP Report-Only już w B7; enforce = W8.
 security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
 
-### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — W TOKU (`pakiet/613-bs01-wymiary-bsa`, migracja **0324**; przed #612 / #611)
-Źródło: #613 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 14:28; załadunek 30.10). Przerywa #611/#612.
-1. **Dane (0324):** `hotfix_613_apply()` — `shipment_items` BS-01: 11,95×2,45×1,30, qty=2, `total_weight_t=21.37`, `unit_weight_t=10.685`; A7 → **BS-A** (combo H 2,60); `load_price_compute` (kwoty z `rate_rules`, nie w migracji); Historia NOTE + audit HOTFIX_613_*; idempotentna; >1 wiersz BS-01 → wyjątek.
-2. **Odbiór na produkcji** (SELECT w #613): wymiary, symbol BS-A, zestaw 2,60, `load_revenue.base_amount`=5345, koszt BS-A, wpisy Historii. Kopia R2 przed `db push`.
-3. Po scaleniu: powrót do **#611** — przeróbka #612 wg zasad 28.10 14:28 (nie scalać starych 0324/0325 z kierowcą w imporcie).
+### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — W TOKU (`pakiet/613-bs01-wymiary-bsa`, PR #614, migracja **0324**; przed #612 / #611)
+Źródło: #613 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 14:28; załadunek 30.10). Przerywa #611/#612. F7 r1 POPRAWKI (28.10 ~15:56).
+1. **Dane (0324):** `hotfix_613_apply()` — BS-01: 11,95×2,45×1,30, qty=2, 21,37 t / 10,685; tylko stan przed = 14,95×2,45×1,80/2/31,02 (inaczej SKIPPED); skip CANCELLED/REMOVED/INVOICED / `invoice_lines`; A7 → **BS-A** (combo 18,19×2,45×2,60); `load_price_compute`; Historia: NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; przychód w `audit_log`; drop funkcji po SELECT; status **358**.
+2. **Odbiór na produkcji** (SELECT w #613): wymiary, BS-A, combo 2,60, przychód 5345+BAF=6093,30, koszt 5090+BAF=5802,60, Historia bez kwot dla KSH. Kopia R2 przed `db push`.
+3. Po scaleniu: powrót do **#611** — przeróbka #612 (rebase **0325+**) wg zasad 28.10 14:28.
 
 ### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU / PAUZA na #613 (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612; po #613 migracje **0325+**)
 Źródło: #611 + komentarz PR #612 (Spawn2018, 28.10 14:28 — zasady właściciela). **Nie scalać** obecnych 0324/0325 (kierowca na liście + kraj w imporcie = sprzeczne). Po #613 rebase i przeróbka w tym samym PR.
@@ -1910,3 +1910,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 13:30 | #609 F7 r3 + CI db: C11 bez zapisu prefs; config letters_digits; skrypt Auth; C9 CANCELLED = val 0 (RLS) | pętla |
 | 28.10.2026 15:20 | #611 CI zielone `f975c9d3` (A+A5, PR #612); **#613** pilne BS-01 przed #612 — start **0324** `hotfix_613_apply` | pętla |
 | 28.10.2026 15:55 | #613 CI db FAIL status 346/350 (asercje `true`/`21.370`); poprawka testów; PLAN #611 = przeróbka kierunku plik↔WT (14:28) | pętla |
+| 28.10.2026 16:15 | #614 F7 r1 POPRAWKI: Historia bez wycieku cen, strażnik przed, drop fn, wycena W1/W2; status **358**; CI po push → F7 r2 | pętla |
