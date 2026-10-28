@@ -88,8 +88,11 @@ export function parseTime(v: unknown): string | null {
 /** Normalizacja do numeru krajowego (TEL-1). Zastępuje E.164. */
 export function normalizePhone(v: unknown, defaultCountry: 'PL' | 'SE' = 'PL'): string | null {
   if (v == null || v === '') return null;
-  // Excel często daje liczbę — SE 070… traciłoby zero; trzymamy jako tekst gdy string.
-  const raw = typeof v === 'number' ? String(Math.trunc(v)) : String(v);
+  // Excel często daje liczbę — SE 070… traci wiodące 0; #611: przywróć przed TEL-1.
+  let raw = typeof v === 'number' ? String(Math.trunc(v)) : String(v);
+  if (typeof v === 'number' && defaultCountry === 'SE' && raw !== '' && !raw.startsWith('0')) {
+    raw = `0${raw}`;
+  }
   const { national } = toNationalPhone(raw, defaultCountry);
   return national || null;
 }
