@@ -68,7 +68,16 @@ export function etaCalibAutoNotice(
   const ver = num(p.undo_version) ?? num(p.version);
   const pct = num(p.max_change_pct);
   const codes = Array.isArray(p.codes) ? p.codes.filter((c): c is string => typeof c === 'string' && c.trim() !== '') : [];
-  const name = (c: string) => labels?.[c]?.trim() || SEGMENT_SHORT[c] || c;
+  /* #616 D3: bez argumentu — nazwy odcinków z `payload.labels` (0327: kod → `eta_segment_params.label`). */
+  const fromPayload = p.labels && typeof p.labels === 'object' && !Array.isArray(p.labels)
+    ? (p.labels as Record<string, unknown>) : undefined;
+  const lbl = (c: string): string | undefined => {
+    const a = labels?.[c];
+    if (typeof a === 'string' && a.trim()) return a.trim();
+    const b = fromPayload?.[c];
+    return typeof b === 'string' && b.trim() ? b.trim() : undefined;
+  };
+  const name = (c: string) => lbl(c) || SEGMENT_SHORT[c] || c;
   const parts = [
     ver != null ? `Wersja ${ver}` : null,
     pct != null ? `zmiana do ${pctPl(pct)}` : null,

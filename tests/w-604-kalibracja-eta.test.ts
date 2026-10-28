@@ -40,6 +40,13 @@ describe('W-604 dzwonek: ETA_CALIBRATION_AUTO', () => {
     expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD', 'NEW_SEG'] }, { SE_ROAD: 'Droga SE: Nynäshamn → Boden' }).body)
       .toBe('Wersja 17 · zmiana do 12,4% · odcinki: Droga SE: Nynäshamn → Boden, NEW_SEG');
   });
+  it('#616 D3: nazwy odcinków z payload.labels (0327); argument ma pierwszeństwo; zły kształt ignorowany', () => {
+    expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD'], labels: { SE_ROAD: 'Droga SE z bazy' } }).body)
+      .toContain('odcinki: Droga SE z bazy');
+    expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD'], labels: { SE_ROAD: 'z bazy' } }, { SE_ROAD: 'z argumentu' }).body)
+      .toContain('odcinki: z argumentu');
+    expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD'], labels: ['x'] }).body).toContain('odcinki: Droga SE');
+  });
   it('bez liczb — summary z bazy; bez niczego — zdanie zamiast pustki', () => {
     expect(etaCalibAutoNotice({ summary: 'Zastosowano wersję 3.' }).body).toBe('Zastosowano wersję 3.');
     expect(etaCalibAutoNotice({}).body).toMatch(/Otwórz Kalibrację ETA/);
