@@ -28,6 +28,10 @@ const pl: Dict = {
   dec_type_INSURANCE_EXPIRING: 'Polisa przewoźnika wygasa',
   dec_type_DWELL_OVER_FREE: 'Zmierzony postój ponad czas wolny',
   dec_type_BACKUP_FAILED: 'Kopia zapasowa nieudana',
+  /* #581 P4-k / 27A: auto-kalibracja ETA > 15 % — zatwierdzenie HHL */
+  dec_type_ETA_CALIBRATION_APPROVAL: 'Kalibracja ETA wymaga zatwierdzenia',
+  dec_opt_APPLY_ETA_CALIB: 'Zastosuj nowe czasy odcinków',
+  dec_opt_REJECT_ETA_CALIB: 'Odrzuć propozycję',
   dec_type_KSH_DATES_CHECK: 'Daty KSH do sprawdzenia',
   dec_type_DELIVERED_CHECK: 'Wyjazd z placu po krótkim postoju — czy dostarczono?',
   dec_type_DELIVERY_UNCONFIRMED: 'Potwierdź dostawę — doba po planowanej dostawie bez „Dostarczone”',

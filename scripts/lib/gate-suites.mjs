@@ -28,7 +28,7 @@ export const EXPECTED_LOCAL = {
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako; katalog 27 typów (#563 SEFS_WEEK_CORR; #590 +2)
+  dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
@@ -47,7 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 168, // #572 F7 r6b: +2 asercje load istnieje (hhl/carrier_order_no); było 166
   h4: 19,
-  p4k: 45, // #581 P4-k cz.2: N1 wrappery + propose/auto≤15%/18%/freeze/tick (0320); było 31
+  p4k: 53, // #581 F7 r1 #604: +Ś1/B3/B4/B5/Ś8/D8/tick; było 45
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101

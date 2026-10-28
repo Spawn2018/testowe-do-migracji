@@ -6189,3 +6189,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `d24df599` db FAIL: p4k 43/2 (`format('%.1f')` nielegalne w PG → propose); security B5 (undo bez `assert_not_preview`); nullguard 875≠871.
 - **Krok:** 0320 — `format(%s)` + assert w undo/apply; EXPECTED nullguard **875**. Push → CI; po zielonym — F7: gotowe do scalenia.
 
+## 2026-10-28 04:05 — #604 F7 r1 POPRAWKI (B3–B7, Ś1–Ś8, D*)
+
+- Skrzynka: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych. Jedyny otwarty PR: #604 — **bez** „F7: gotowe do scalenia” po `f3c570dd` (F7 r1: nie scalać). CI na `f3c570dd` unit/visual/db ✔ (tylko B1/B2/nullguard).
+- **Krok F7 r1 (0320 + testy):**
+  - **B3** `notify_event_key` → `eta_calib`; macierz HHL_ADMIN/OPS; payload `matrix_event`; c3 katalog **34**
+  - **B4** decyzja `ETA_CALIBRATION_APPROVAL` + trigger APPLY → `eta_apply_calibration_internal`; dec2 **28**
+  - **B5** `undo_version=v_id`; `undone_at` + pomijanie kodów; odmowa przy nowszej wersji z tymi kluczami
+  - **B6** tick: osobne bloki, `ok=false` w `integration_runs`, bez raise
+  - **B7** wsteczny czasowy (fit 70 % starszych / test nowsze); `n_test<2` → bez auto
+  - **Ś1/Ś2** `eta_route_aliases` + otwarty CHECK kodów + FK corridor; drop CHECK geofences.route
+  - **Ś3–Ś8** okno 90d / 7d / clamp spread / update zamiast delete / lock / undo przy FROZEN; CROSSING_* w propose
+  - **D7/D8/D11** cleanup PL_ROAD z seeda; testy undo HHL/KSH; auto `n_obs≥10`
+  - suite `p4k` **53**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+

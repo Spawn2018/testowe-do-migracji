@@ -1076,8 +1076,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #594 · Import KSH: zbiorcze powiadomienie + migawka — SCALONE (baza #601 `ecbae548`, 27.10.2026 23:55Z, migracja **0318**; ekran gest/rozmycie #600 `7d8ebb4b`; okno #602 `df3f5caa`)
 Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
-### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320):** drop wrapperów N1; `eta_propose_calibration` + auto-apply ≤15 % (27A) / >15 % czeka; `eta_calibration_undo`; cron `tower-eta-calibration` co 1 h (rebuild 48 h + propose + auto); suite `p4k` **45**. Ekran — koordynator `wyglad/`.
+### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR #604 na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r1 #604:** drop N1; propose (p4k, CROSSING_*, wsteczny czasowy, histereza 90d/7d); auto ≤15 % + `ETA_CALIBRATION_AUTO`/`eta_calib` (c3 **34**); >15 % → decyzja `ETA_CALIBRATION_APPROVAL` (dec2 **28**); undo + `undone_at` (także przy FROZEN); tick bez raise; słownik `eta_route_aliases` (Ś1); FK corridor (Ś2); suite `p4k` **53**, nullguard **875**. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1853,3 +1853,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 00:55 | #601/#594 SCALONE (`ecbae548`, F7 gotowe `da399f8`); start #581: merge main + migracja **0317→0319** | pętla |
 | 28.10.2026 01:20 | #581/#598 F7 r1: `eta_route_segments`, STEGRA seed, bez duplikatów ts, luka tylko PL/SE, integration_runs w triggerze, REMOVED w rebuild; p4k **31** | pętla |
 | 28.10.2026 02:15 | #598/#581 cz.1 SCALONE (`3f82cb09`, F7 gotowe `02445f52`); start cz.2 **0320** (cron 48 h + auto-apply 27A + N1) | pętla |
+| 28.10.2026 04:05 | #604 F7 r1: B3–B7 + Ś1–Ś8 + D7–D11 w 0320 (aliasy tras, decyzja >15 %, undo/undone_at, tick bez raise); p4k **53**, c3 **34**, dec2 **28** | pętla |
