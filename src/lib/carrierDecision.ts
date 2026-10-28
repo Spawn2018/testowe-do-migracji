@@ -9,6 +9,8 @@
  * (tylko administrator HHL; funkcja sama zamyka decyzję), „Zostaw usunięty” — zwykłe `decision_resolve`.
  */
 
+import { calibErrCode } from './etaCalibAuto';
+
 export type DecisionRpc =
   | { fn: 'decision_resolve_carrier_change'; args: { p_decision: string; p_action: string } }
   | { fn: 'load_restore_removed'; args: { p_load: string } }
@@ -69,8 +71,21 @@ export function takesNote(typeCode: string): boolean {
   return typeCode !== CARRIER_CHANGED;
 }
 
+/**
+ * W-604: błędy kalibracji ETA (0320) przy rozstrzyganiu `ETA_CALIBRATION_APPROVAL` — wyzwalacz woła
+ * `eta_apply_calibration_internal`, więc `decision_resolve` może zwrócić `ETA_APPLY_NEWER`, `ETA_CALIB_BUSY`, `ETA_FROZEN`,
+ * `ETA_NOT_ADMIN`, „wersja cofnięta”… → klucz `dec_err_ETA_*`; `null` — to nie błąd kalibracji.
+ */
+export function etaDbErrorKey(e: { code?: string | null; message?: string | null } | null | undefined): string | null {
+  const c = calibErrCode(e);
+  return c ? `dec_err_ETA_${c}` : null;
+}
+
 /** Angielskie komunikaty funkcji bazy → klucz słownika decyzji; `null` — pokaż komunikat bazy bez zmian (np. polski 22023). */
 export function dbErrorKey(e: { code?: string | null; message?: string | null }): string | null {
+  /* przed 42501: ETA_NOT_ADMIN ma własne zdanie */
+  const eta = etaDbErrorKey(e);
+  if (eta) return eta;
   if (isForbidden(e)) return 'dec_err_forbidden';
   const m = (e.message ?? '').trim().toLowerCase();
   if (m === 'not found' || e.code === 'P0002') return 'dec_err_stale';

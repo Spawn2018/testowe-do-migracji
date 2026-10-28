@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, GeofenceType, Locale } from '../types';
@@ -33,7 +33,7 @@ import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusSc
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG_READY } from '../lib/notifyCatalog';
-import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
+import { etaCalibrationApproveOf, etaCalibrationOf, etaCalibrationUndoOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 import { accountRole } from '../lib/accountRole';
 import { OPTIONS_CHANGED_EVENT } from '../lib/optionsChanged';
 import type { LiveMeta } from '../auth/liveOptionsMeta';
@@ -159,9 +159,16 @@ export function OptionsView() {
     const r = parseRoute(location.pathname);
     const screen: OptScreenId | null = smsEntry != null || r.kind === 'system' ? 'status'
       : r.kind === 'options' && r.section === 'sms' ? 'zones'
-        : r.kind === 'options' && r.section === 'cennik' ? 'rates' : null;
+        : r.kind === 'options' && r.section === 'cennik' ? 'rates'
+          : r.kind === 'options' && r.section === 'kalibracja-eta' ? 'calib' : null;
     if (screen) setRequest((prev) => ({ screen, seq: (prev?.seq ?? 0) + 1 }));
   }, [location.pathname, smsEntry]);
+  /* W-604: z dzwonka „Kalibracja ETA zastosowana automatycznie” — podświetlona wersja (`?wersja=N`) */
+  const calibFocus = useMemo(() => {
+    if (parseRoute(location.pathname).kind !== 'options') return null;
+    const v = new URLSearchParams(location.search).get('wersja');
+    return v && /^\d+$/.test(v) ? v : null;
+  }, [location.pathname, location.search]);
 
   const [zoneOffAsk, setZoneOffAsk] = useState<string | null>(null);
   const zoneCancelRef = useRef<HTMLButtonElement | null>(null);
@@ -409,9 +416,9 @@ export function OptionsView() {
         const calib = etaCalibrationOf(loads);
         return scr('calib', calib ? (
           <Suspense fallback={null}>
-            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} />
+            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} onUndo={ro ? null : etaCalibrationUndoOf(calib)} highlight={calibFocus} />
           </Suspense>
-        ) : LiveCalib ? block(<LiveCalib readOnly={ro} />) : noSource, {
+        ) : LiveCalib ? block(<LiveCalib readOnly={ro} highlight={calibFocus} />) : noSource, {
           right: change,
           mark: calib && !PROD_BUILD ? <DemoMark /> : undefined,
           meta: calib ? calibMeta(calib) : liveMeta?.meta.calib?.meta,

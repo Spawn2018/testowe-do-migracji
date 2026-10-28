@@ -26,7 +26,7 @@ export async function loadOptionsMeta(locale: Locale, admin: boolean): Promise<L
     sb.rpc('security_flags_list'),
     sb.from('ops_thresholds').select('key'),
     sb.from('eta_segment_observations').select('id,exclude_reason'),
-    sb.from('eta_calibration_versions').select('id,applied,frozen'),
+    sb.from('eta_calibration_versions').select('id,applied,frozen,undone_at,rejected_at,note'),
   ]);
 
   const users = (u.error ? null : u.data) as Array<{ active: boolean; phone: string | null }> | null;
@@ -53,11 +53,13 @@ export async function loadOptionsMeta(locale: Locale, admin: boolean): Promise<L
   }
 
   const o = (obs.error ? null : obs.data) as Array<{ exclude_reason: string | null }> | null;
-  const v = (ver.error ? null : ver.data) as Array<{ id: number; applied: boolean; frozen: boolean | null }> | null;
+  const v = (ver.error ? null : ver.data) as Array<{ id: number; applied: boolean; frozen: boolean | null; undone_at?: string | null; rejected_at?: string | null; note?: string | null }> | null;
   if (o && v) {
     const n = o.filter((x) => !x.exclude_reason).length;
-    const applied = v.filter((x) => x.applied).length;
-    const waiting = v.some((x) => !x.applied && !x.frozen);
+    /* W-604: numer wersji = id (jak na ekranie i w dzwonku); cofnięta, odrzucona i zastąpiona nie czekają */
+    const live = v.filter((x) => x.applied && !x.undone_at).map((x) => x.id);
+    const applied = live.length ? Math.max(...live) : 0;
+    const waiting = v.some((x) => !x.applied && !x.frozen && !x.undone_at && !x.rejected_at && !/superseded/i.test(x.note ?? ''));
     out.meta.calib = {
       meta: waiting ? t(locale, 'cal_meta_ready')
         : n < CALIB_NEEDED ? tp(locale, 'cal_meta_wait', { n, need: CALIB_NEEDED })

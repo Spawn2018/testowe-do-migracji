@@ -24,6 +24,7 @@ import { e49t } from '../../i18n/e49';
 import { timeOnly } from '../../lib/statusAxis';
 import { EMPTY_PROPOSAL, proposalOfDetail, proposalPayload, proposalSummary, type ProposalForm } from '../../lib/proposeDate';
 import { getNow } from '../../lib/frozenNow';
+import { etaCalibDecisionLine } from '../../lib/etaCalibAuto';
 import { confirmKeyOf, hasOwnSnooze, optionVisible, takesNote } from '../../lib/carrierDecision';
 
 export interface CardCtx {
@@ -269,6 +270,9 @@ function CaseDetail({ i, ctx }: { i: TodoIssue; ctx: CardCtx }) {
         </div>
         {d && proposalOfDetail(d.detail) ? (
           <div><dt>{decText(locale, 'dec_prop_title')}</dt><dd data-rk-proposal>{proposalOfDetail(d.detail)}</dd></div>
+        ) : null}
+        {d && etaCalibDecisionLine(d.typeCode, d.detail) ? (
+          <div><dt>{decText(locale, 'dec_eta_calib_title')}</dt><dd data-rk-eta-calib>{etaCalibDecisionLine(d.typeCode, d.detail)}</dd></div>
         ) : null}
         {ctx.assignOn ? (
           <div><dt>{rt(locale, 'p6_case_assigned')}</dt><dd><b>{a ? (a.id === ctx.me?.id ? `${rt(locale, 'p6_me')} (${a.name})` : a.name) : rt(locale, 'p6_case_assigned_none')}</b></dd></div>

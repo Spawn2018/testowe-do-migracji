@@ -6,6 +6,7 @@ import { mechanismIssue, type MoneyFuelBasis, type MoneySideV2 } from '../lib/mo
 import { plSeLocation } from '../lib/pl/seLocation';
 import { formatListDateTime } from '../lib/format';
 import { KSH_IMPORT_SUMMARY, importSummaryNotice, summaryIdOf } from '../lib/kshImportSummary';
+import { ETA_CALIBRATION_AUTO, calibPathOf, calibVersionOf, etaCalibAutoNotice } from '../lib/etaCalibAuto';
 import type {
   Awizacja, Bill, BillFlag, BillPayment, BillVerification, CorridorStage, DocCategory, Document, FerryBooking, Geofence, GeofenceType, Load,
   LoadEvent, LoadMessage, LoadResources, LoadStatus, Notification, OrgKind, Risk, RiskType, Severity,
@@ -764,12 +765,18 @@ function payloadCode(p: Record<string, unknown>): string | undefined {
 
 export function notificationFromRow(r: NotificationRow, locale?: string): Notification {
   /* #594 B1: zbiorcze powiadomienie importu pliku KSH — tylko dzwonek, tekst po polsku z liczb (kshImportSummary.ts) */
+  /* W-604: kalibracja ETA zastosowana automatycznie (0320) — tylko dzwonek HHL_ADMIN, tekst po polsku z liczb (etaCalibAuto.ts) */
   const n = r.template === KSH_IMPORT_SUMMARY
     ? { ...importSummaryNotice(r.payload ?? {}), severity: 'LOW' as const, view: null }
-    : renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
+    : r.template === ETA_CALIBRATION_AUTO
+      ? { ...etaCalibAutoNotice(r.payload ?? {}), severity: 'LOW' as const, view: null }
+      : renderNotice({ template: r.template, payload: r.payload ?? {} }, locale ? asLocale(locale) : undefined);
   const payload = r.payload ?? {};
   const inv = payload.invoice_id;
-  const target = clickTarget(clickFromPayload(r.template, payload, 'bell'));
+  /* W-604: kliknięcie → Opcje › Kalibracja ETA z podświetloną wersją (adres po stronie ekranu, bez rejestru clickTargets) */
+  const target = r.template === ETA_CALIBRATION_AUTO
+    ? { kind: 'options' as const, path: calibPathOf(calibVersionOf(r.template, payload)) }
+    : clickTarget(clickFromPayload(r.template, payload, 'bell'));
   return {
     id: `${NOTIFICATION_PREFIX}${r.id}`, at: r.created_at, title: n.subject, body: bellBody(n.body), severity: n.severity,
     loadId: r.load_id ?? undefined, read: Boolean(r.read_at),

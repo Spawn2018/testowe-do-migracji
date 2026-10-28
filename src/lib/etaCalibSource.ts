@@ -10,7 +10,8 @@
  * D-20261017-1100-01 §3). Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0).
  */
 import type { Load } from '../types';
-import { demoCalibration, demoCalibrationApproveFor } from './etaCalibDemo';
+import { demoCalibration, demoCalibrationApproveFor, demoCalibrationUndo } from './etaCalibDemo';
+import type { CalibVersionStatus } from './etaCalibAuto';
 
 /** Minuty: rzeczywisty przyjazd − ETA (dodatnie = przyjechał później niż ETA). `null` — brak ETA w tym punkcie. */
 export type CalibErr = number | null;
@@ -68,6 +69,10 @@ export type CalibVersion = {
   what: string;
   /** Obowiązuje teraz. */
   current?: boolean;
+  /** W-604 (0320): stan wersji — zastosowana, cofnięta, odrzucona, zastąpiona, oczekuje (auto / decyzja HHL). */
+  status?: CalibVersionStatus;
+  /** W-604: tę wersję można cofnąć (`eta_calibration_undo`) — najnowsza zastosowana i niecofnięta. */
+  undoable?: boolean;
 };
 
 export type CalibProposal = {
@@ -90,6 +95,8 @@ export type EtaCalibration = {
 };
 
 export type CalibApprove = (proposalId: string) => Promise<{ ok: boolean; version?: CalibVersion }>;
+/** W-604: „Cofnij” wersję — `error` to gotowe zdanie po polsku (kod błędu bazy → słownik). */
+export type CalibUndo = (versionId: string) => Promise<{ ok: boolean; error?: string | null }>;
 
 export function etaCalibrationOf(loads: readonly Load[]): EtaCalibration | null {
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoCalibration(loads);
@@ -99,5 +106,11 @@ export function etaCalibrationOf(loads: readonly Load[]): EtaCalibration | null 
 /** „Zatwierdź nowe czasy” — tylko Administrator HHL. `null` — zapis nie podłączony (przycisk niedostępny). */
 export function etaCalibrationApproveOf(c: EtaCalibration): CalibApprove | null {
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoCalibrationApproveFor(c);
+  return null;
+}
+
+/** W-604: „Cofnij” — tylko Administrator HHL. Demo: cofnięcie w pamięci strony; produkcja: `LiveCalib` (`eta_calibration_undo`). */
+export function etaCalibrationUndoOf(_c: EtaCalibration): CalibUndo | null {
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') return demoCalibrationUndo;
   return null;
 }

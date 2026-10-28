@@ -31,7 +31,7 @@ export const CALIB_SAME_PCT = 10;
 export const CALIB_AHEAD_AT_24H = ['SE_ROAD', 'SE_BREAKS'] as const;
 
 const V1: CalibVersion = {
-  id: 'cal-v1', no: 1, at: '2026-09-01T09:00:00+02:00', by: 'System // Watch Tower', current: true,
+  id: 'cal-v1', no: 1, at: '2026-09-01T09:00:00+02:00', by: 'System // Watch Tower', current: true, status: 'applied',
   what: 'Czasy startowe: Droga PL 7 h 30 min, odprawa 3 h, Droga SE 17 h, przerwy 2 h',
 };
 
@@ -131,7 +131,16 @@ export function demoCalibrationApproveFor(c: EtaCalibration) {
     if (!c.proposal || proposalId !== c.proposal.id) return { ok: false };
     return {
       ok: true,
-      version: { id: 'cal-v2', no: 2, at: getNowIso(), by: 'Konto pokazowe // H&H Logistics', current: true, what: calibVersionText(c) },
+      version: { id: 'cal-v2', no: 2, at: getNowIso(), by: 'Konto pokazowe // H&H Logistics', current: true, what: calibVersionText(c), status: 'applied', undoable: true },
     };
   };
+}
+
+/**
+ * W-604 — demo: „Cofnij” w pamięci strony (produkcja: `eta_calibration_undo`). Ekran oznacza wersję jako cofniętą
+ * i wraca do poprzedniej; czasy startowe (wersja 1) nie mają czego przywrócić.
+ */
+export async function demoCalibrationUndo(versionId: string): Promise<{ ok: boolean; error?: string | null }> {
+  if (versionId === V1.id) return { ok: false, error: 'Wersji startowej nie da się cofnąć — nie ma wcześniejszych czasów.' };
+  return { ok: true };
 }

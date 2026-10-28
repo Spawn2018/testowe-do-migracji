@@ -78,7 +78,8 @@ const INFO_KINDS = new Set([
 /** P11 (e5, E5): informacje bez działania i bez transportu („Faktura zaakceptowana”, „Import harmonogramu zatwierdzony”) —
  *  „Moje transporty”, nie „Do zrobienia” (tam tylko sprawy z działaniem). */
 /* #594: zbiorcze powiadomienie po imporcie pliku KSH — informacja bez transportu, w „Moje transporty” */
-const INFO_NOLOAD_KINDS = new Set(['SCHEDULE_IMPORTED', 'INVOICE_ACCEPTED', 'KSH_IMPORT_SUMMARY']);
+/* W-604: kalibracja ETA zastosowana automatycznie — informacja bez transportu (cofnięcie na ekranie kalibracji) */
+const INFO_NOLOAD_KINDS = new Set(['SCHEDULE_IMPORTED', 'INVOICE_ACCEPTED', 'KSH_IMPORT_SUMMARY', 'ETA_CALIBRATION_AUTO']);
 
 export function bellSection(n: Pick<BellSource, 'kind' | 'loadId' | 'severity' | 'href'>): BellSection {
   const k = n.kind;

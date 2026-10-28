@@ -12,7 +12,7 @@ import { statusFromDb } from '../data/mappers';
 import { formatHistoryActor } from './historyActor';
 import { docCategoryLabel, eventTypeLabel, readyGateReasonLabel } from './enumLabels';
 import { ht, htHas, htp } from '../i18n/p6b';
-import { decText } from '../i18n/decisions';
+import { decOptText } from '../i18n/decisions';
 import { fmtDateTime as fmtDateTimeZ, fmtTime, formatCalendarDay } from './time';
 import { dayTime, hitChannel } from './statusAxis';
 
@@ -317,7 +317,8 @@ export function histRow(e: LoadEvent, locale: Locale, zones: ReadonlyMap<string,
   if (e.type.startsWith('DECISION_') && htHas(`p6b_ev_${e.type}`)) {
     /* #384: wybrana opcja i komentarz z rozstrzygnięcia („Przyjmuję · komentarz”) */
     const opt = str(p.option);
-    const optLabel = opt ? decText(locale, `dec_opt_${opt}`, '') : '';
+    /* W-604: ten sam kod opcji w kilku typach (APPLY/REJECT) — etykieta z typu decyzji, jeśli zdarzenie go niesie */
+    const optLabel = opt ? decOptText(locale, opt, str(p.type) ?? str(p.type_code) ?? str(p.decision_type)) : '';
     const dnote = str(p.note);
     const tail = [optLabel, dnote].filter(Boolean).join(' · ') || null;
     return { ...base, head: ht(locale, `p6b_ev_${e.type}`), from: null, to: null, tail };

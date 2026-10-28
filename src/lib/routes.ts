@@ -56,6 +56,7 @@ export function parseRoute(pathname: string): ParsedRoute {
   if (p.toLowerCase() === '/opcje/stan-systemu') return { kind: 'system' };
   if (p.toLowerCase() === '/opcje/odbiorcy-sms') return { kind: 'options', section: 'sms' };
   if (p.toLowerCase() === '/opcje/cennik') return { kind: 'options', section: 'cennik' };
+  if (p.toLowerCase() === '/opcje/kalibracja-eta') return { kind: 'options', section: 'kalibracja-eta' };
   if (p.toLowerCase() === '/brak-dostepu') return { kind: 'denied' };
   if (p.toLowerCase() === '/szczegoly-wpisu') return { kind: 'entry' };
   const sms = /^\/opcje\/stan-systemu\/bramka-sms\/([^/]+)$/i.exec(p);
