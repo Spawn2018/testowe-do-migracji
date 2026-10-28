@@ -47,6 +47,10 @@ describe('W-604 dzwonek: ETA_CALIBRATION_AUTO', () => {
       .toContain('odcinki: z argumentu');
     expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD'], labels: ['x'] }).body).toContain('odcinki: Droga SE');
   });
+  it('#619: SE_ROAD_KAA_INLAND ma krótką nazwę (bez etykiet z bazy)', () => {
+    expect(etaCalibAutoNotice({ ...payload, codes: ['SE_ROAD_KAA_INLAND'] }).body)
+      .toBe('Wersja 17 · zmiana do 12,4% · odcinki: Droga SE (Karlskrona, śródlądowa)');
+  });
   it('bez liczb — summary z bazy; bez niczego — zdanie zamiast pustki', () => {
     expect(etaCalibAutoNotice({ summary: 'Zastosowano wersję 3.' }).body).toBe('Zastosowano wersję 3.');
     expect(etaCalibAutoNotice({}).body).toMatch(/Otwórz Kalibrację ETA/);

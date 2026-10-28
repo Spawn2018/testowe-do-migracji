@@ -29,6 +29,8 @@ export const SEGMENT_SHORT: Readonly<Record<string, string>> = {
   CROSSING_DEFAULT: 'rejs',
   SE_ROAD: 'Droga SE',
   SE_ROAD_KAA: 'Droga SE (Karlskrona)',
+  /* #619 / 27B:C: osobny odcinek kalibracji — wariant śródlądowy Karlskrona → Boden */
+  SE_ROAD_KAA_INLAND: 'Droga SE (Karlskrona, śródlądowa)',
   SE_BREAKS: 'przerwy',
   SE_DAILY_REST: 'odpoczynek dobowy',
 };
