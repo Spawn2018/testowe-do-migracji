@@ -22,7 +22,7 @@ T="2026-10-01 12:00+02"
 
 echo; echo "[0035] Strażnik wyniku zadań"
 chk "okres startowy usage-check (przed 27.09 06:00 + 26 h, brak przebiegów)" "$(Q "select e->>'stan' from jsonb_array_elements(job_watchdog('2026-09-27 10:00+02')) e where e->>'job'='usage-check'")" OKRES_STARTOWY
-chk "brak jakichkolwiek przebiegów: ferry-ais, send-notifications i usage-check ALARM, kopia nieuzbrojona (bez R2)" "$(st "$T")" "backup=NIEUZBROJONY (brak pierwszej udanej kopii),ferry-ais=ALARM,send-notifications=ALARM,usage-check=ALARM"
+chk "brak jakichkolwiek przebiegów: ferry-ais, send-notifications i usage-check ALARM, kopia nieuzbrojona (bez R2); doradca OKRES_STARTOWY (#588)" "$(st "$T")" "backup=NIEUZBROJONY (brak pierwszej udanej kopii),ferry-ais=ALARM,security-advisor-snapshot=OKRES_STARTOWY,send-notifications=ALARM,usage-check=ALARM"
 chk "3 ryzyka JOB_FAILURE (1 projekt × 3 zadania)"                  "$(open)" 3
 chk "ponowne wywołanie przy trwającym alarmie: bez drugiego e-maila"  "$(Q "select e->>'email' from jsonb_array_elements(job_watchdog('$T')) e where e->>'job'='ferry-ais'")" BEZ_ZMIAN
 chk "ponowne wywołanie: bez duplikatów"                              "$(open)" 3

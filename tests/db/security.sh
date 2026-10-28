@@ -62,8 +62,8 @@ echo; echo "[7] Podwójne fakturowanie"
 out=$(sys "insert into invoice_lines (invoice_id, load_id, direction) values ('$INVP','$L1','KOSZT')"); echo "$out" | grep -qi "duplicate\|unique" && { ok=$((ok+1)); echo "  OK    ten sam transport dwa razy po stronie kosztu — zablokowane"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
 
 echo; echo "[8] Waluty"
-val "KSH ustawia sobie wyświetlanie w PLN"           $KSH "with i as (insert into user_preferences (user_id, display_currency) select id,'PLN' from app_users where auth_id='$KSH' returning 1) select count(*) from i" 1 commit
-run $HHL "insert into user_preferences (user_id) select id from app_users where auth_id='$HHL'" commit >/dev/null
+# C11/0323: seed ma już user_preferences (EUR) z wyzwalacza — KSH zmienia na PLN
+val "KSH ustawia sobie wyświetlanie w PLN"           $KSH "update user_preferences set display_currency='PLN' where user_id=(select id from app_users where auth_id='$KSH') returning display_currency" PLN commit
 val "KSH widzi wyłącznie własne ustawienia"          $KSH "select count(*) from user_preferences" 1
 err "waluta wyświetlania SEK odrzucona"              $KSH "update user_preferences set display_currency='SEK'" "check constraint"
 out=$(sys "update invoices set currency='SEK' where id='$INVP'"); echo "$out" | grep -qi "check constraint" && { ok=$((ok+1)); echo "  OK    faktura w SEK odrzucona"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
@@ -1518,6 +1518,100 @@ chk6 "B9: audit_log AUDYT17_B9_LOCALE ma prefs_pairs" "$(sys "select (new_value 
 chk6 "B9: audit_log AUDYT17_B9_LOCALE ma users_pairs" "$(sys "select (new_value ? 'users_pairs')::text
   from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
   order by id desc limit 1" | tail -1)" "true"
+
+# --- #588 (0322): cron phase=flags bez fałszywego „Brak pomiaru”; wynik po set_findings ---
+# F7 r1: domknięcie szkieletów, ścieżki błędu, EXECUTE, watchdog 26 h
+SID588=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+chk6 "#588: phase=flags bez integration_runs" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'" | tail -1)" "0"
+sys "select security_advisor_snapshot_set_findings($SID588,
+  jsonb_build_array(jsonb_build_object('lint','test','level','INFO','object','public.x','detail','t')),
+  jsonb_build_object('advisor_ok', true))" >/dev/null
+chk6 "#588: set_findings → ok=true" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'
+  order by id desc limit 1" | tail -1)" "true"
+chk6 "#588: set_findings → detail doradca" "$(sys "select result->>'detail' from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'
+  order by id desc limit 1" | tail -1)" "doradca security"
+chk6 "#588: set_findings → source edge na migawce" "$(sys "select source from security_advisor_snapshots where id=$SID588" | tail -1)" "edge"
+# prawdziwy brak pomiaru (bez phase=flags) nadal zapisuje ok=false
+SID588b=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'manual', jsonb_build_object('advisor_ok', false))" | tail -1 | tr -d '\r')
+chk6 "#588: bez phase + advisor_ok=false → Brak pomiaru" "$(sys "select (ok::text || '/' || (result->>'detail'))
+  from integration_runs where job='security-advisor-snapshot'
+    and (result->>'snapshot_id') = '$SID588b'
+  order by id desc limit 1" | tail -1)" "false/Brak pomiaru"
+# B1: szkielet bez set_findings → kolejny capture(phase=flags) → ok=false dla starego
+SID588c=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+SID588d=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+chk6 "#588: F7 B1 szkielet → kolejny flags zamyka stary ok=false" "$(sys "select (ok::text || '/' || (result->>'detail'))
+  from integration_runs where job='security-advisor-snapshot'
+    and (result->>'snapshot_id') = '$SID588c'
+  order by id desc limit 1" | tail -1)" "false/Brak pomiaru: Edge nie uzupełnił migawki"
+chk6 "#588: F7 B1 bez duplikatu przy drugim flags" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588c'" | tail -1)" "1"
+chk6 "#588: F7 B1 nowy szkielet bez run" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588d'" | tail -1)" "0"
+# M1: ścieżki błędu set_findings + EXECUTE
+SID588e=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+sys "select security_advisor_snapshot_set_findings($SID588e, '[]'::jsonb, '{\"advisor_ok\":false}'::jsonb)" >/dev/null
+chk6 "#588: F7 M1 set_findings advisor_ok=false → ok=false" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588e'
+  order by id desc limit 1" | tail -1)" "false"
+SID588f=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+sys "select security_advisor_snapshot_set_findings($SID588f, '[]'::jsonb, '{}'::jsonb)" >/dev/null
+chk6 "#588: F7 M1 set_findings {} → ok=false" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588f'
+  order by id desc limit 1" | tail -1)" "false"
+chk6 "#588: F7 M1 authenticated bez EXECUTE set_findings" "$(sys "select has_function_privilege(
+  'authenticated', 'public.security_advisor_snapshot_set_findings(bigint,jsonb,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
+chk6 "#588: F7 M1 authenticated bez EXECUTE capture" "$(sys "select has_function_privilege(
+  'authenticated', 'public.security_advisor_snapshot_capture(jsonb,text,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
+# B1c: watchdog 26 h bez sukcesu → ryzyko (armed_from 18.10; risks.sh na 01.10 = OKRES_STARTOWY).
+# Najpierw usuń przebiegi z tego bloku (#588 set_findings ok=true zasłania ciszę przy p_now≈now()).
+sys "delete from integration_runs where job='security-advisor-snapshot'
+  and result->>'snapshot_id' in ('$SID588','$SID588b','$SID588c','$SID588d','$SID588e','$SID588f')" >/dev/null
+sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
+sys "select job_watchdog(timestamptz '2026-10-28 12:00+02')" >/dev/null
+chk6 "#588: F7 B1c watchdog 26h → JOB_FAILURE security-advisor" "$(sys "select count(*)::text from risk_signals
+  where kind='JOB_FAILURE' and resolved_at is null
+    and detail->>'job'='security-advisor-snapshot'" | tail -1)" "$(sys "select count(*)::text from projects" | tail -1)"
+# M2: sprzątanie migawek i ryzyk
+sys "delete from security_advisor_snapshots where id in ($SID588,$SID588b,$SID588c,$SID588d,$SID588e,$SID588f)" >/dev/null
+sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
+
+# --- #588 / C11 (0323): user_preferences EUR przy pierwszym koncie ---
+chk6 "#588 C11: każdy app_users ma preferencje" "$(sys "select (not exists (
+  select 1 from app_users au left join user_preferences up on up.user_id = au.id
+  where up.user_id is null))::text" | tail -1)" "true"
+chk6 "#588 C11: seed HHL/KSH/SCX mają wiersz prefs" "$(sys "select count(*)::text from user_preferences up
+  join app_users au on au.id = up.user_id
+  where au.auth_id in ('$HHL','$KSH','$SCX')" | tail -1)" "3"
+C11_UID=$(sys "insert into app_users (auth_id, org_id, email, role, active)
+  values ('11111111-0000-0000-0000-00000000c011','00000000-0000-0000-0000-00000000a001','c11-prefs@test','HHL_OPS',true)
+  returning id" | tail -1 | tr -d '\r')
+chk6 "#588 C11: insert app_users → prefs EUR" "$(sys "select display_currency from user_preferences where user_id='$C11_UID'" | tail -1)" "EUR"
+chk6 "#588 C11: authenticated bez EXECUTE trg_app_user_prefs_eur" "$(sys "select has_function_privilege(
+  'authenticated', 'public.trg_app_user_prefs_eur()', 'EXECUTE')::text" | tail -1)" "false"
+chk6 "#588 C11: audit AUDYT17_C11_PREFS" "$(sys "select count(*)::text from audit_log
+  where action='AUDYT17_C11_PREFS' and entity_id='c11-0323'" | tail -1)" "1"
+sys "delete from app_users where id='$C11_UID'" >/dev/null
+
+# --- #588 / C9: E19 pkt 6 w security.sh (Przeczytali, anulowanie, anon, v_load_price_client) ---
+echo; echo "[#588 C9] E19 pkt 6 — Przeczytali / anulowanie / anon / ceny klienta"
+# Przeczytali: tylko wiadomość widoczna (decyzja 15.10 03:12) — B4MID = HHL+SCX bez CLIENT
+sys "insert into load_message_reads (message_id, user_id, read_at)
+     select $B4MID, id, now() from app_users where auth_id='$HHL'
+     on conflict (message_id, user_id) do nothing" >/dev/null
+val "#588 C9: KSH bez Przeczytali dla HHL–SCX" $KSH "select count(*) from load_message_read_list($B4MID)" 0
+val "#588 C9: HHL widzi Przeczytali HHL–SCX" $HHL "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
+val "#588 C9: SCX widzi Przeczytali HHL–SCX" $SCX "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
+err "#588 C9: KSH nie anuluje (cancel_load)" $KSH "select cancel_load('$L2','test C9')" "wyłącznie HHL"
+# KSH: RLS często 0 wierszy (bez wyjątku) — jak „KSH nie wpisze numeru przewoźnika”
+val "#588 C9: KSH nie dopisze CANCELLED" $KSH "with u as (update loads set status='CANCELLED' where id='$L2' returning 1) select count(*) from u" 0
+chk6 "#588 C9: anon bez EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('anon','public.auth_email_allowed(text)','execute')::text")" "false"
+chk6 "#588 C9: authenticated ma EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('authenticated','public.auth_email_allowed(text)','execute')::text")" "true"
+val "#588 C9: SCX — v_load_price_client 0 wierszy" $SCX "select count(*) from v_load_price_client" 0
+chk6 "#588 C9: anon bez SELECT v_load_price_client" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.v_load_price_client','select')::text")" "false"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

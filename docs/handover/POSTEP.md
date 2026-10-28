@@ -6341,3 +6341,42 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” po `70987410`. Jedyny otwarty PR: #606.
 - CI `70987410`: unit ✔ / visual ✔ / db ✔ (dec6 **27**, security **459**, nullguard **880**); run db `40658778055`, visual `40658778048`.
 - **Krok:** komentarz na #606 — prośba o F7: gotowe do scalenia (C4 / 0321). Bez push na main.
+
+## 2026-10-28 10:30 — #607+#606 SCALONE; start #588 (0322 advisor phase)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. #588 (Spawn2018, bez etykiety `dla-cursora`, polecenie w komentarzu + F7 #606) — pierwszeństwo po C4.
+- Scalanie: #607 `b8675d2f` (F7 gotowe `f351dc88`, unit/visual ✔); #606 `7995ee95` (F7 gotowe `a07f650a` po docs, CI unit/visual/db ✔). Bez push na main.
+- **#588 diagnoza `security-advisor-snapshot`:** Edge + token OK (ręczne wywołanie: migawka **19**, 220 zgłoszeń, `advisor_ok=true`). Fałszywy „Brak pomiaru”: cron `capture(phase=flags)` bez `advisor_ok` → `v_ok=false` → `integration_runs` ok=false **przed** Edge; Edge potem zapisuje `-edge` ok=true. Od ~18.10 codziennie para: job bazy `Brak pomiaru` + edge OK.
+- **Krok:** migracja **0322** — `phase=flags` bez wpisu przebiegu; `set_findings` dopisuje wynik `security-advisor-snapshot`. security **464** (+5). Dalej w #588: C11 test Auth, C9 E19, OWASP wycinek — status do 18:00 na #588.
+
+## 2026-10-28 11:50 — #608 w planie; #609 F7 r1 poprawki 0322
+
+- Skrzynka \dla-cursora\: **#608** (Spawn2018) wpisane PLAN §4/§8 — 27B:C obie trasy (po #588+#603), 27C:B nic, 28B:B import KSH wyłączony, 28C:A zapis SharePoint po włączeniu, BN6/#589 odblokowane, kolejność #588→#603→27B→#597→BN1. #550 \pilne\ nadal **WSTRZYMANE**. #538/#537/#500/#499 w planie — bez nowych do budowy teraz.
+- Scalanie: #609 F7 r1 **niegotowe** (B1 cisza gdy Edge nie działa) — bez scalenia. CI poprzedniego SHA `ec57026d` unit/visual/db ✔.
+- **Krok #588 / F7 r1:** 0322 — domknięcie szkieletów `phase=flags`; `tick` bez sekretów/pg_net → ok=false; `job_watchdog` + security-advisor-snapshot 26 h (armed 18.10 — risks.sh 01.10 = OKRES_STARTOWY); set_findings idempotencja + source z wiersza + advisor_error; testy security **472** (+8). Dalej po F7: C11 → C9 → OWASP. Bez push na main.
+
+## 2026-10-28 12:25 — #609 CI db czerwone → poprawka B1c + watchdog.sh
+
+- Skrzynka: bez nowych `dla-cursora` (poza już wpisanymi). Scalanie: brak „F7: gotowe” — bez merge. Bez push na main.
+- **CI #609** SHA `80af5858`: unit/visual ✔; db **FAIL** — (1) B1c: `set_findings` ok=true zasłaniał ciszę 26 h → 0 ryzyk; (2) `watchdog.sh` oczekiwanie bez `security-advisor-snapshot=OKRES_STARTOWY` na 01.10.
+- **Krok:** przed B1c kasuj przebiegi bloku #588; `watchdog.sh` + doradca w stringu stanów. security **472**, watchdog **27**. CI security+watchdog. Po zielonym — F7 r2.
+
+## 2026-10-28 12:50 — #610 SCALONE; #588 C11 (0323)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
+- Scalanie: **#610** wygląd (F7 gotowe @ `9c3f5bfd`, po commicie) → merge `e37f8a0f`. #609: CI `1630ceb0` unit/visual/db ✔ — prośba F7; potem C11 na tej samej gałęzi (nowy HEAD → ponowne F7). Bez push na main.
+- **Krok #588 C11:** migracja **0323** — `trg_app_user_prefs_eur` + uzupełnienie braków; `loadPreferences` bez wiersza → EUR; skrypt `scripts/auth/c11-password-policy.mjs` (TEST); security **477** (+5); vitest `c11-prefs-eur`.
+- **C11 — Auth (sygnał):** TEST przyjmuje „111111111111” i „ąęśćżźółń1234” przez sesję użytkownika; Management API config/auth HTTP 401 — bez sync z produkcją. Komentarz w #588. Dalej: C9 → OWASP; status bramy do 18:00 na #588.
+
+## 2026-10-28 13:10 — #588 C9 (E19 pkt 6 w security.sh)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; #538/#537/#500/#499 — bez nowych do budowy. Bez `pilne` przerywających.
+- Scalanie: #609 — F7 „gotowe” było @ `1630ceb0`; po C11 HEAD `6cc20ae2` (CI unit/visual/db ✔) + ten krok C9 → ponowne F7 po zielonym CI. Bez push na main.
+- **Krok #588 C9:** `security.sh` — Przeczytali (`load_message_read_list`: KSH 0 / HHL+SCX ≥1 dla HHL–SCX); KSH bez `cancel_load` i CANCELLED; `anon` bez `auth_email_allowed` i bez SELECT `v_load_price_client`; SCX → 0 wierszy widoku cen klienta. security **486** (+9). Allowlista anon już w [6.1].
+- **OWASP (28D:A):** pełny wycinek ASVS/CSP enforce/ZAP → **termin 29.10 wieczór** (albo z P11); CSP Report-Only już B7. Komentarz statusu w #588.
+
+## 2026-10-28 13:30 — #609 F7 r3 + poprawka C9 (CI db)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
+- Scalanie: #609 — brak F7 po ostatnim HEAD; CI `7c473c5b` unit/visual ✔, **db FAIL** security 485/486 (`KSH nie dopisze CANCELLED` — RLS 0 wierszy, bez wyjątku). Bez push na main.
+- **Krok:** F7 r3 C11 — `loadPreferences` tylko odczyt EUR; `config.toml` `letters_digits`; skrypt Auth (create.id, finally, weak_password/422, EUR tylko z 0323). C9 — CANCELLED przez KSH = `val` count 0. security **486**. Po zielonym CI → F7 r4. Dalej OWASP (29.10).
