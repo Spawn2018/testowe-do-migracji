@@ -53,12 +53,12 @@ $PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0
 
 echo; echo "[I-2d] ETA v1 — uprawnienia i dostęp"
 chk "authenticated/anon: brak EXECUTE compute_load_eta i refresh_load_eta" "$(Q "select has_function_privilege('authenticated','compute_load_eta(uuid,timestamptz)','execute')::text||has_function_privilege('anon','refresh_load_eta(uuid)','execute')::text")" "falsefalse"
-chk "parametry odcinków: 9 (FERRY-STATUS: + PL_ROAD_GDY, SE_ROAD_KAA), każdy ze źródłem" "$(Q "select count(*) filter (where length(source)>10) from eta_segment_params")" 9
+chk "parametry odcinków: 11 (#581: + CROSSING_GDN_NYN/GDY_KAA; FERRY-STATUS: PL_ROAD_GDY, SE_ROAD_KAA), każdy ze źródłem" "$(Q "select count(*) filter (where length(source)>10) from eta_segment_params")" 11
 err "KSH nie zmienia parametrów odcinków" $KSH "update eta_segment_params set hours=1 where code='SE_ROAD'" "permission denied"
-val "KSH czyta parametry odcinków" $KSH "select count(*) from eta_segment_params" 9
+val "KSH czyta parametry odcinków" $KSH "select count(*) from eta_segment_params" 11
 
 echo; echo "[D-9] parametry odcinków (0054)"
-chk "wartości D-9 + I-15 + FERRY-STATUS: PL 7,5, Gdynia 8,2, Karlskrona 21,5" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,PL_ROAD=7.5/25,PL_ROAD_GDY=8.2/25,PORT_CHECKIN=3/0,SE_BREAKS=2/50,SE_DAILY_REST=11/0,SE_ROAD=17/20,SE_ROAD_KAA=21.5/20"
+chk "wartości D-9 + I-15 + FERRY-STATUS + #581 przeprawy: PL 7,5, Gdynia 8,2, Karlskrona 21,5" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,CROSSING_GDN_NYN=18/15,CROSSING_GDY_KAA=18/15,PL_ROAD=7.5/25,PL_ROAD_GDY=8.2/25,PORT_CHECKIN=3/0,SE_BREAKS=2/50,SE_DAILY_REST=11/0,SE_ROAD=17/20,SE_ROAD_KAA=21.5/20"
 chk "źródła: koordynator D-9 ×3, właściciel I-15 ×2" "$(Q "select count(*) filter (where source='szacunek koordynatora 27.09 — do potwierdzenia z SCX (II-3)')||'/'||count(*) filter (where source like 'właściciel 27.09 (I-15)%') from eta_segment_params")" "3/2"
 
 echo; echo "[I-2d] bez pozycji: ETA pusta, nie z planu"
