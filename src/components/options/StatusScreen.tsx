@@ -189,7 +189,7 @@ function Sources({ locale, rows, nowIso, canCheck, admin, jobs: jobsIn }: { loca
           <p className="sys-note">{sy(locale, 'sys_other_note')}</p>
           <ul>
             {jobs.map((j) => (
-              <li key={j.id}><span className={`sys-st is-${j.state}`}><Dot state={j.state} />{j.name}</span><span className="sys-num">{j.lastAt ? (sameDay(j.lastAt, nowIso) ? hm(j.lastAt) : dt(j.lastAt)) : '—'}</span></li>
+              <li key={j.id}><span className={`sys-st is-${j.state}`}><Dot state={j.state} />{j.name}{j.why === 'stale' ? <small className="sys-why"> · {sy(locale, 'sys_other_stale')}</small> : null}</span><span className="sys-num">{j.lastAt ? (sameDay(j.lastAt, nowIso) ? hm(j.lastAt) : dt(j.lastAt)) : '—'}</span></li>
             ))}
           </ul>
         </details>

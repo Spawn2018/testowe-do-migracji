@@ -129,14 +129,27 @@ export function liveSourceRows(locale: Locale, runs: readonly RunRow[], devices:
   return rows;
 }
 
+/**
+ * #588 (F7 r1 #609): zadania dzienne, których brak przebiegu też jest awarią — gdy Edge w ogóle nie odpowie, nie powstaje
+ * żaden wiersz, a ostatni (wczorajszy) „OK” wisiałby bez końca. Po progu (minuty) bez nowego przebiegu stan = „nie działa”.
+ */
+export const LIVE_OTHER_STALE_MIN: Partial<Record<(typeof LIVE_OTHER_JOBS)[number], number>> = {
+  'security-advisor-snapshot': 26 * 60,
+  'security-advisor-snapshot-edge': 26 * 60,
+};
+
 /** „Pozostałe zadania”: ostatni przebieg i stan każdego zadania pomocniczego. */
-export function liveOtherJobs(locale: Locale, runs: readonly RunRow[]): OtherJob[] {
+export function liveOtherJobs(locale: Locale, runs: readonly RunRow[], nowIso?: string): OtherJob[] {
+  const now = nowIso ? Date.parse(nowIso) : Date.now();
   return LIVE_OTHER_JOBS.flatMap((job) => {
     const rs = runsOf(runs, [job]);
     if (!rs.length) return [];
     const key = `b6_job_${job.replace(/-/g, '_')}`;
     const name = t(locale, key) !== key ? t(locale, key) : t(locale, `ol2_job_${job.replace(/-/g, '_')}`);
-    return [{ id: job, name, lastAt: rs.find((r) => r.ok)?.ran_at ?? null, state: rs[0].ok ? 'ok' as const : 'down' as const }];
+    const staleMin = LIVE_OTHER_STALE_MIN[job];
+    const last = Date.parse(rs[0].ran_at);
+    const stale = staleMin != null && Number.isFinite(last) && Number.isFinite(now) && now - last > staleMin * 60_000;
+    return [{ id: job, name, lastAt: rs.find((r) => r.ok)?.ran_at ?? null, state: rs[0].ok && !stale ? 'ok' as const : 'down' as const, ...(rs[0].ok && stale ? { why: 'stale' as const } : {}) }];
   });
 }
 
@@ -193,7 +206,7 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
           locale={locale}
           nowIso={nowIso}
           admin={admin}
-          live={{ rows: liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso), jobs: liveOtherJobs(locale, data.runs), perf, errors }}
+          live={{ rows: liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso), jobs: liveOtherJobs(locale, data.runs, nowIso), perf, errors }}
         />
       ) : <p className="note" role="status">{t(locale, 'ol2_loading')}</p>}
       <details className="ol2-more" data-live-status-more open={watchBackup || undefined}>
