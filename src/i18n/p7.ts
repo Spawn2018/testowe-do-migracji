@@ -160,6 +160,7 @@ const PL: Record<string, string> = {
   p7_m_phone: 'Telefon',
   p7_m_tractor: 'Ciągnik',
   p7_m_trailer: 'Naczepa (jedna na całą trasę)',
+  p7_m_trailer_many: 'Wpisz jeden numer naczepy. Dwa numery w tym polu zrywają łączenie pozycji z emtrack z tym transportem.',
   p7_m_swap: 'Przepięcie naczepy',
   p7_m_swap_hint: 'po zaznaczeniu pojawia się „Odcinek SE · prom → Boden”',
   p7_m_operator: 'Armator',
