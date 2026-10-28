@@ -1775,5 +1775,111 @@ chk "#574j: trg_load_events_immutable włączony (O)" \
   "select tgenabled::text from pg_trigger where tgname='trg_load_events_immutable' limit 1" O
 q "drop function if exists public.hotfix_574_dwell_recalc()" >/dev/null
 
+# #613 F7 r1: hotfix_613_apply — CI bez BS-01 = no-op; fikstura BS-B → BS-A + wycena.
+# Funkcja dropnięta w migracji — odtwarzamy z BEGIN/END HOTFIX613 (jak #574 SG23).
+echo; echo "[#613] hotfix_613_apply BS-01 wymiary → BS-A"
+ROOT613=$(git rev-parse --show-toplevel)
+MIG613="$ROOT613/supabase/migrations/0324_hotfix_613_bs01_dims.sql"
+EXT613=$(mktemp)
+sed -n '/^-- BEGIN HOTFIX613$/,/^-- END HOTFIX613$/p' "$MIG613" | sed '1d;$d' > "$EXT613"
+$PSQL -f "$EXT613" >/dev/null
+q "revoke all on function public.hotfix_613_apply() from public, anon, authenticated;
+   grant execute on function public.hotfix_613_apply() to service_role" >/dev/null
+rm -f "$EXT613"
+L613=55555555-0000-0000-0000-000000006131
+RC613C=44444444-0000-0000-0000-0000000613c1
+RC613R=44444444-0000-0000-0000-0000000613c2
+q "
+delete from audit_log where action like 'HOTFIX_613%';
+delete from load_events where load_id = '$L613';
+delete from load_revenue where load_id = '$L613';
+delete from load_cost where load_id = '$L613';
+delete from shipment_items where shipment_code = 'BS-01' and project_id = '$P';
+delete from loads where id = '$L613';
+delete from rate_rules where rate_card_id in ('$RC613C','$RC613R');
+delete from rate_cards where id in ('$RC613C','$RC613R');
+insert into rate_cards (id, project_id, side, org_id, currency, valid_from, version, note) values
+ ('$RC613C','$P','COST','$SCXO','EUR','2026-10-29',99,'#613 test'),
+ ('$RC613R','$P','REVENUE','$KSHO','EUR','2026-10-29',99,'#613 test');
+insert into rate_rules (rate_card_id, cargo_class, symbol, family, convoy_cars,
+  length_from, length_to, width_from, width_to, height_from, height_to, weight_from, weight_to, base_rate)
+ values
+ ('$RC613C','SYMBOL','BS-A','BS',null,0,12.50,0,2.45,0,1.30,0,23.0,5090.00),
+ ('$RC613C','SYMBOL','BS-B','BS',null,0,14.95,0,2.45,0,1.80,0,31.1,6030.00),
+ ('$RC613R','SYMBOL','BS-A','BS',null,0,12.50,0,2.45,0,1.30,0,23.0,5345.00),
+ ('$RC613R','SYMBOL','BS-B','BS',null,0,14.95,0,2.45,0,1.80,0,31.1,6332.00);
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, plan_load_date, symbol, combo_length_m, combo_width_m, combo_height_m) values
+ ('$L613','$P','$SCXO','KSH/BS01','HHL/BS01','SCX/BS01','RESOURCES_PENDING','2026-10-30',
+  'BS-B',18.19,2.45,3.10);
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class,
+  length_m, width_m, height_m, qty, unit_weight_t, total_weight_t) values
+ ('$P','$L613','BS-01','DIMENSIONED',14.95,2.45,1.80,2,15.510,31.020);
+insert into load_revenue (load_id, base_amount, baf_amount, extras_amount, computed_total_eur,
+  fuel_status, fuel_ref_date, fuel_applied_mult, fuel_mult_sek, fuel_mult_pln) values
+ ('$L613',6332.00,886.48,0,7218.48,'OSTATECZNY','2026-10-30',1.14,1.14,1.14);
+insert into load_cost (load_id, base_amount, baf_amount, extras_amount, computed_total_eur,
+  fuel_status, fuel_ref_date, fuel_applied_mult, fuel_mult_sek, fuel_mult_pln) values
+ ('$L613',6030.00,844.20,0,6874.20,'OSTATECZNY','2026-10-30',1.14,1.14,1.14);
+" >/dev/null
+N613oth=$(q "select coalesce(sum(total_weight_t),0)::text from shipment_items where project_id='$P' and shipment_code is distinct from 'BS-01'")
+N613bell=$(q "select count(*) from notifications")
+N613out=$(q "select count(*) from ksh_sync_outbound where load_id='$L613'")
+chk "#613: przed hotfixem symbol BS-B" \
+  "select symbol from loads where id='$L613'" BS-B
+chk "#613: przed — przychód BS-B 6332" \
+  "select base_amount::text from load_revenue where load_id='$L613'" "6332.00"
+N613=$(q "select public.hotfix_613_apply()")
+chk "#613: hotfix_613_apply → n_fix=1" "select ($N613 = 1)" t
+chk "#613: wymiary 11,95×2,45×1,30 / 21,37 t" \
+  "select format('%s/%s/%s/%s', length_m, width_m, height_m, round(total_weight_t, 2)) from shipment_items where load_id='$L613'" \
+  "11.95/2.45/1.30/21.37"
+chk "#613: qty=2 unit_weight 10.685" \
+  "select format('%s/%s', qty, unit_weight_t) from shipment_items where load_id='$L613'" "2/10.685"
+chk "#613: symbol BS-A" "select symbol from loads where id='$L613'" BS-A
+chk "#613: combo BS-A 18.19/2.45/2.60" \
+  "select format('%s/%s/%s', combo_length_m, combo_width_m, combo_height_m) from loads where id='$L613'" \
+  "18.19/2.45/2.60"
+chk "#613: przychód 5345 / BAF 748.30 / 6093.30" \
+  "select format('%s/%s/%s', base_amount, baf_amount, total_amount) from load_revenue where load_id='$L613'" \
+  "5345.00/748.30/6093.30"
+chk "#613: koszt 5090 / BAF 712.60 / 5802.60" \
+  "select format('%s/%s/%s', base_amount, baf_amount, total_amount) from load_cost where load_id='$L613'" \
+  "5090.00/712.60/5802.60"
+chk "#613: audit HOTFIX_613_* ≥3" \
+  "select (count(*) filter (where action like 'HOTFIX_613%') >= 3) from audit_log" t
+chk "#613: NOTE publiczna bez revenue|cost" \
+  "select count(*) from load_events where load_id='$L613' and event_type='NOTE'
+     and visible_to is null and (payload->>'hotfix')='0324'
+     and payload::text !~ 'revenue|cost'" 1
+chk "#613: NOTE koszt FORWARDER+CARRIER" \
+  "select count(*) from load_events where load_id='$L613' and event_type='NOTE'
+     and visible_to = array['FORWARDER','CARRIER']::org_kind[]
+     and (payload->>'kind')='cost'" 1
+chk "#613: inne transporty bez zmian (suma wag)" \
+  "select coalesce(sum(total_weight_t),0)::text from shipment_items where project_id='$P' and shipment_code is distinct from 'BS-01'" \
+  "$N613oth"
+chk "#613: 0 nowych notifications" \
+  "select (count(*) = $N613bell)::text from notifications" true
+chk "#613: 0 nowych ksh_sync_outbound" \
+  "select (count(*) = $N613out)::text from ksh_sync_outbound where load_id='$L613'" true
+q "select public.hotfix_613_apply()" >/dev/null
+chk "#613: ponowne wywołanie idempotentne (n_fix=0)" \
+  "select public.hotfix_613_apply()" 0
+# Strażnik: inne wymiary → 0, bez zmian, HOTFIX_613_SKIPPED
+q "
+delete from audit_log where action = 'HOTFIX_613_SKIPPED' and entity_id = '$L613';
+update shipment_items set length_m=10.00, width_m=2.00, height_m=1.00, qty=2, unit_weight_t=10, total_weight_t=20.00
+ where load_id='$L613';
+update loads set symbol='BS-B', combo_height_m=3.10 where id='$L613';
+" >/dev/null
+chk "#613: inne wymiary → n_fix=0" "select public.hotfix_613_apply()" 0
+chk "#613: inne wymiary — bez zmiany (10/2/1/20)" \
+  "select format('%s/%s/%s/%s', length_m, width_m, height_m, round(total_weight_t,0)) from shipment_items where load_id='$L613'" \
+  "10.00/2.00/1.00/20"
+chk "#613: inne wymiary → HOTFIX_613_SKIPPED" \
+  "select count(*) from audit_log where action='HOTFIX_613_SKIPPED' and entity_id='$L613'" 1
+q "drop function if exists public.hotfix_613_apply()" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

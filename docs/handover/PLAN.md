@@ -1090,8 +1090,22 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; **nowy termin: 29.10 wieczór** (albo z P11) — 28D:A; status w #588. CSP Report-Only już w B7; enforce = W8.
 security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
 
+### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — W TOKU (`pakiet/613-bs01-wymiary-bsa`, PR #614, migracja **0324**; przed #612 / #611)
+Źródło: #613 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 14:28; załadunek 30.10). Przerywa #611/#612. F7 r1 POPRAWKI (28.10 ~15:56).
+1. **Dane (0324):** `hotfix_613_apply()` — BS-01: 11,95×2,45×1,30, qty=2, 21,37 t / 10,685; tylko stan przed = 14,95×2,45×1,80/2/31,02 (inaczej SKIPPED); skip CANCELLED/REMOVED/INVOICED / `invoice_lines`; A7 → **BS-A** (combo 18,19×2,45×2,60); `load_price_compute`; Historia: NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; przychód w `audit_log`; drop funkcji po SELECT; status **358**.
+2. **Odbiór na produkcji** (SELECT w #613): wymiary, BS-A, combo 2,60, przychód 5345+BAF=6093,30, koszt 5090+BAF=5802,60, Historia bez kwot dla KSH. Kopia R2 przed `db push`.
+3. Po scaleniu: powrót do **#611** — przeróbka #612 (rebase **0325+**) wg zasad 28.10 14:28.
+
+### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU / PAUZA na #613 (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612; po #613 migracje **0325+**)
+Źródło: #611 + komentarz PR #612 (Spawn2018, 28.10 14:28 — zasady właściciela). **Nie scalać** obecnych 0324/0325 (kierowca na liście + kraj w imporcie = sprzeczne). Po #613 rebase i przeróbka w tym samym PR.
+1. **Import (`import_schedule`):** z `v_fnames`/zapisu **usuń** kierowców, telefony, kraje telefonów, ciągniki, naczepę, `carrier_order_no`, `hhl_order_no` — import ich nigdy nie zapisuje. Kraj z 0325 — zbędny w imporcie.
+2. **Lista 23B + podsumowanie 0318:** tylko pola **plik→WT** i **oba kierunki** (Typ, wymiary, waga, qty, daty/godziny, przewoźnik, item_type…). Jawna allowlista w `ksh_sync_preview_field_allowed` (zamiast wycinania wzorcem). Pola „tylko WT→plik” **nigdzie** na liście ani w powiadomieniu.
+3. **Przepięcie naczepy** wyłącznie z Awizacji WT — ustawianie `trailer_swap` z pliku **odpada**.
+4. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa jedna, numery zleceń; telefon jako tekst. Test: ponowny import zapisanego „PL / SE” → 0 zmian.
+5. Import KSH **wyłączony** do wiadomości właściciela (28B).
+
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → **#588** → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → **#613** (pilne BS-01) → **#611** (pilne, przed importem) → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
 1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1894,3 +1908,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 12:50 | #610 SCALONE (`e37f8a0f`); #588 C11 **0323** prefs EUR + skrypt Auth TEST; security **477**; dalej C9→OWASP | pętla |
 | 28.10.2026 13:10 | #588 **C9** E19 pkt 6 w `security.sh` (+9 → **486**); OWASP → termin **29.10** (#588 / 28D:A); CI po push → F7 | pętla |
 | 28.10.2026 13:30 | #609 F7 r3 + CI db: C11 bez zapisu prefs; config letters_digits; skrypt Auth; C9 CANCELLED = val 0 (RLS) | pętla |
+| 28.10.2026 15:20 | #611 CI zielone `f975c9d3` (A+A5, PR #612); **#613** pilne BS-01 przed #612 — start **0324** `hotfix_613_apply` | pętla |
+| 28.10.2026 15:55 | #613 CI db FAIL status 346/350 (asercje `true`/`21.370`); poprawka testów; PLAN #611 = przeróbka kierunku plik↔WT (14:28) | pętla |
+| 28.10.2026 16:15 | #614 F7 r1 POPRAWKI: Historia bez wycieku cen, strażnik przed, drop fn, wycena W1/W2; status **358**; CI po push → F7 r2 | pętla |

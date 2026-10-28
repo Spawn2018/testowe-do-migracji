@@ -6380,3 +6380,21 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
 - Scalanie: #609 — brak F7 po ostatnim HEAD; CI `7c473c5b` unit/visual ✔, **db FAIL** security 485/486 (`KSH nie dopisze CANCELLED` — RLS 0 wierszy, bez wyjątku). Bez push na main.
 - **Krok:** F7 r3 C11 — `loadPreferences` tylko odczyt EUR; `config.toml` `letters_digits`; skrypt Auth (create.id, finally, weak_password/422, EUR tylko z 0323). C9 — CANCELLED przez KSH = `val` count 0. security **486**. Po zielonym CI → F7 r4. Dalej OWASP (29.10).
+
+## 2026-10-28 15:20 — #613 pilne BS-01 (przed #612); #611 CI zielone
+
+- Skrzynka `dla-cursora`: **#613** (`pilne`, Spawn2018) — korekta BS-01 przed #612; wpisane PLAN §4/§8. **#611** (`pilne`) — CI unit/db/visual ✔ na `f975c9d3` (PR #612); pauza do po #613 (rebase 0324→0325). #608 w kolejce. #550 **WSTRZYMANE**.
+- Scalanie: #612 — brak „F7: gotowe” po `f975c9d3`; **nie merge** (przerwane przez #613). Bez push na main.
+- **Krok #613:** migracja **0324** `hotfix_613_apply()` — wymiary/waga BS-01 → A7 BS-A + `load_price_compute`; Historia NOTE; audit; status **350** (+11). Gałąź `pakiet/613-bs01-wymiary-bsa`.
+
+## 2026-10-28 15:55 — #613 F7 CI: status 4 FAIL → poprawka asercji
+
+- Skrzynka: #613/#611 `pilne` open; #612 — **nie scalać** (zasady właściciela 14:28: kierunek plik↔WT). PLAN §4 #611 przepisany.
+- Scalanie: #614 — brak F7; unit/visual ✔, **db FAIL** status 346/350 (`true` vs `t`, `21.370` vs `21.37`). Bez push na main.
+- **Krok:** `status.sh` — `::text` → `…/true`; `round(total_weight_t,2)` w formacie wymiarów. Po zielonym CI → F7: gotowe do scalenia.
+
+## 2026-10-28 16:15 — #614 F7 r1: Historia / strażnik / drop / wycena
+
+- Skrzynka: #613/#611 `pilne` open; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
+- Scalanie: #614 — F7 r1 POPRAWKI (nie „gotowe”); CI na `28888310` unit/db/visual ✔ (tylko asercje CI). #612 nie scalać. Bez push na main.
+- **Krok F7 r1:** `0324` — NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; strażnik przed (docelowe / ≠14.95… / CANCELLED|REMOVED|INVOICED|invoice_lines → SKIPPED); `drop function` po SELECT; status.sh odtwarza z BEGIN/END HOTFIX613; fikstura `load_revenue`/`load_cost` BS-B + asercje 5345/748.30/6093.30 i 5090/712.60/5802.60; status **358**. Po zielonym CI → F7 r2.
