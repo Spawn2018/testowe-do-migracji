@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 366, // #611 F7 r3: +1 HHL widzi load_date; P1=publish null + P1c; było 365
+  import: 370, // #597: +4 outbound awizacja (AB/telefon/write off/CANCELLED); było 366
   nullguard: 880, // #581 F7 r2: +GUARD eta_route_dict_upsert (5 ról); było 875
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,

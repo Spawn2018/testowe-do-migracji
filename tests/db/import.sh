@@ -2186,4 +2186,49 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
 commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 chk "#611: preview tylko load_date" "$out" "load_date"
 
+echo; echo "[#597] outbound awizacja WT→plik"
+# write_enabled już true z sekcji A6 outbound; wyczyść kolejkę
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_name='Jan Testowy', driver_delivery_name='Erik Testowy',
+    driver_phone='600111222', driver_delivery_phone='0700111222',
+    driver_phone_country='PL', driver_delivery_phone_country='SE',
+    tractor_plate='WGM1A6', tractor_delivery_plate='ABC123',
+    trailer_plate='WWW1A6', trailer_swap=true
+  where id='$SG_OUT';
+  select coalesce(patch->>'driver','')||'|'||coalesce(patch->>'driver_phone','')||'|'||coalesce(patch->>'tractor','')||'|'||coalesce(patch->>'trailer','')
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "Jan Testowy / Erik Testowy|600111222 / 0700111222|WGM1A6 / ABC123|WWW1A6" ]; then
+  ok=$((ok+1)); echo "  OK    #597: swap → pending PL / SE"; else fail=$((fail+1)); echo "  FAIL  #597: swap pending → $out"; fi
+# write_enabled=false → 0
+val "#597: write_set false (awiz)" $HHL "select ksh_sync_write_set(false); select write_enabled from ksh_sync_state where project_id='$P'" f commit
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_delivery_name='Erik Off', trailer_swap=true where id='$SG_OUT';
+  select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #597: write off → 0 outbound"; else fail=$((fail+1)); echo "  FAIL  #597: write off → $out"; fi
+val "#597: write_set true (po awiz)" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+# CANCELLED → 0
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set status='CANCELLED', driver_name='X Cancel', trailer_swap=false where id='$SG_OUT';
+  select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #597: CANCELLED → 0 outbound"; else fail=$((fail+1)); echo "  FAIL  #597: CANCELLED → $out"; fi
+# telefon SE z +46 → wiodące 0 w komórce
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_phone='600333444', driver_delivery_phone='+46 70 333 44 55',
+    driver_phone_country='PL', driver_delivery_phone_country='SE',
+    trailer_swap=true
+  where id='$SG_OUT';
+  select patch->>'driver_phone' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "600333444 / 0703334455" ]; then
+  ok=$((ok+1)); echo "  OK    #597: telefon SE +46 → 0…"; else fail=$((fail+1)); echo "  FAIL  #597: telefon SE → $out"; fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

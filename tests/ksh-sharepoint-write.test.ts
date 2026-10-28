@@ -434,6 +434,62 @@ describe('A6 xlsxPatch JSZip', () => {
     }
   });
 
+  it('#597: awizacja PL/SE i telefon jako tekst (nie formuła)', async () => {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
+    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`);
+    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`);
+    const h = COLUMN_MAP_DEFAULT;
+    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
+      <c r="B1" t="inlineStr"><is><t>${h.driverName}</t></is></c>
+      <c r="C1" t="inlineStr"><is><t>${h.driverPhone}</t></is></c>
+      <c r="D1" t="inlineStr"><is><t>${h.tractorPlate}</t></is></c>
+      <c r="E1" t="inlineStr"><is><t>${h.trailerPlate}</t></is></c>
+    </row>
+    <row r="2">
+      <c r="A2" t="inlineStr"><is><t>SG-AW</t></is></c>
+      <c r="B2" t="inlineStr"><is><t>old</t></is></c>
+      <c r="C2"><v>700111222</v></c>
+      <c r="D2" t="inlineStr"><is><t>OLDTR</t></is></c>
+      <c r="E2" t="inlineStr"><is><t>OLDTL</t></is></c>
+    </row>
+  </sheetData>
+</worksheet>`);
+    const bytes = await zip.generateAsync({ type: 'uint8array' });
+    const r = await patchWorkbookBytes(
+      bytes,
+      [{
+        code: 'SG-AW',
+        driver: 'Jan Testowy / Erik Testowy',
+        driver_phone: '600111222 / 0700111222',
+        tractor: 'WGM1A6 / ABC123',
+        trailer: 'WWW1A6',
+      }],
+      (b) => JSZip.loadAsync(b),
+    );
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.written).toBe(1);
+    const out = await JSZip.loadAsync(r.bytes);
+    const sheet = await out.files['xl/worksheets/sheet1.xml']!.async('string');
+    expect(sheet).toContain('Jan Testowy / Erik Testowy');
+    expect(sheet).toContain('600111222 / 0700111222');
+    expect(sheet).toContain('WGM1A6 / ABC123');
+    expect(sheet).toContain('WWW1A6');
+    expect(sheet).not.toMatch(/<f>/);
+  });
+
   it('F7 r2b N2: data na komórce z ułamkiem zachowuje godzinę', async () => {
     const zip = new JSZip();
     zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);

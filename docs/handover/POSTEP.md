@@ -6434,3 +6434,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   1. `#567 23B pending_write false` — przed asercją `delete` pending z A6 + ponowny `preview_store`.
   2. `#583 tablice w kodach` — pełny wiersz jak `r583_file_sql` (bez leave_empty → false changed) + drugi kod z inną tablicą.
   3. import EXPECTED **366**. CI po push → prośba o F7.
+
+## 2026-10-28 18:55 — #612 SCALONE; start #597
+
+- Skrzynka: #611 zamknięte (SCALONE); #597 W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 → `61a1350d` (F7 gotowe @ `705dff05`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #597:** migracja **0326** — outbound awizacja (`driver`/`driver_phone`/`tractor`/`trailer`, „PL / SE”); `xlsxPatch` tekst; import **370**. Gałąź `pakiet/597-awizacja-outbound-ksh`.
