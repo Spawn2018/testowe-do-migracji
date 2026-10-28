@@ -1,18 +1,18 @@
 /**
- * #588 / C11 — EUR przy pierwszym logowaniu (brak wiersza → zapis EUR).
+ * #588 / C11 — EUR przy pierwszym logowaniu (brak wiersza → odczyt EUR; F7 r3 bez zapisu).
  * Etap: Naprawy audytu / brama bezpieczeństwa; decyzja W1 + PLAN §4 C11.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 describe('C11 — user_preferences EUR przy pierwszym logowaniu', () => {
-  it('loadPreferences bez wiersza wywołuje savePreferences(EUR)', () => {
+  it('loadPreferences bez wiersza zwraca EUR bez savePreferences', () => {
     const src = readFileSync('src/data/supabaseProvider.ts', 'utf8');
     const prefs = src.slice(
       src.indexOf('async function loadPreferences'),
       src.indexOf('async function savePreferences'),
     );
-    expect(prefs).toContain("savePreferences({ displayCurrency: 'EUR' })");
+    expect(prefs).not.toContain('savePreferences');
     expect(prefs).toContain("return { displayCurrency: 'EUR', theme: null }");
   });
 

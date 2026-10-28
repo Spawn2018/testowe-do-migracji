@@ -6374,3 +6374,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #609 — F7 „gotowe” było @ `1630ceb0`; po C11 HEAD `6cc20ae2` (CI unit/visual/db ✔) + ten krok C9 → ponowne F7 po zielonym CI. Bez push na main.
 - **Krok #588 C9:** `security.sh` — Przeczytali (`load_message_read_list`: KSH 0 / HHL+SCX ≥1 dla HHL–SCX); KSH bez `cancel_load` i CANCELLED; `anon` bez `auth_email_allowed` i bez SELECT `v_load_price_client`; SCX → 0 wierszy widoku cen klienta. security **486** (+9). Allowlista anon już w [6.1].
 - **OWASP (28D:A):** pełny wycinek ASVS/CSP enforce/ZAP → **termin 29.10 wieczór** (albo z P11); CSP Report-Only już B7. Komentarz statusu w #588.
+
+## 2026-10-28 13:30 — #609 F7 r3 + poprawka C9 (CI db)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
+- Scalanie: #609 — brak F7 po ostatnim HEAD; CI `7c473c5b` unit/visual ✔, **db FAIL** security 485/486 (`KSH nie dopisze CANCELLED` — RLS 0 wierszy, bez wyjątku). Bez push na main.
+- **Krok:** F7 r3 C11 — `loadPreferences` tylko odczyt EUR; `config.toml` `letters_digits`; skrypt Auth (create.id, finally, weak_password/422, EUR tylko z 0323). C9 — CANCELLED przez KSH = `val` count 0. security **486**. Po zielonym CI → F7 r4. Dalej OWASP (29.10).

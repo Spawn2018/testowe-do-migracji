@@ -1606,7 +1606,8 @@ val "#588 C9: KSH bez Przeczytali dla HHL–SCX" $KSH "select count(*) from load
 val "#588 C9: HHL widzi Przeczytali HHL–SCX" $HHL "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
 val "#588 C9: SCX widzi Przeczytali HHL–SCX" $SCX "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
 err "#588 C9: KSH nie anuluje (cancel_load)" $KSH "select cancel_load('$L2','test C9')" "wyłącznie HHL"
-err "#588 C9: KSH nie dopisze CANCELLED" $KSH "update loads set status='CANCELLED' where id='$L2'" "wyłącznie HHL|load_status_set|cancel_load"
+# KSH: RLS często 0 wierszy (bez wyjątku) — jak „KSH nie wpisze numeru przewoźnika”
+val "#588 C9: KSH nie dopisze CANCELLED" $KSH "with u as (update loads set status='CANCELLED' where id='$L2' returning 1) select count(*) from u" 0
 chk6 "#588 C9: anon bez EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('anon','public.auth_email_allowed(text)','execute')::text")" "false"
 chk6 "#588 C9: authenticated ma EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('authenticated','public.auth_email_allowed(text)','execute')::text")" "true"
 val "#588 C9: SCX — v_load_price_client 0 wierszy" $SCX "select count(*) from v_load_price_client" 0

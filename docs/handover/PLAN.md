@@ -1085,10 +1085,10 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #588 · Brama bezpieczeństwa 28.10 20:00 — W TOKU (`pakiet/588-brama-bezpieczenstwa`, migracje **0322–0323**; po C4, przed C5 / BN / #597)
 Źródło: #588 (Spawn2018; komentarz 28.10 08:02 — pierwszeństwo po #606). Zakres do 20:00:
 1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`). **F7 r1/r2:** domknięcie szkieletów bez Edge; `tick` przy braku sekretów/pg_net → `ok=false`; `job_watchdog` + `security-advisor-snapshot` 26 h; idempotencja `set_findings`; source z wiersza; `advisor_error` → `result.error`; B1c + watchdog.sh.
-2. **C11** — **0323** + `scripts/auth/c11-password-policy.mjs`: `user_preferences` EUR przy insert `app_users` + uzupełnienie braków; `loadPreferences` bez wiersza → zapis EUR; test Auth na TEST (hasło ≥ 12, litery a–z + cyfry). Widok #291; Auth W1. **C11 — Auth:** TEST przyjmuje hasła bez litery a–z (sygnał w #588).
-3. **C9** — **w tym PR:** E19 pkt 6 w `security.sh`: Przeczytali (`load_message_read_list` — KSH 0 dla HHL–SCX); KSH bez `cancel_load` / CANCELLED; `anon` bez `auth_email_allowed` i bez SELECT `v_load_price_client`; SCX → 0 wierszy `v_load_price_client`. Allowlista anon już w [6.1].
+2. **C11** — **0323** + `scripts/auth/c11-password-policy.mjs`: `user_preferences` EUR przy insert `app_users` + uzupełnienie braków; **F7 r3:** `loadPreferences` bez wiersza → tylko odczyt EUR (bez `savePreferences` przy Podglądzie); `config.toml` `password_requirements=letters_digits`; skrypt Auth: `userId` z create, `finally` sprzątanie, słabe hasło = `weak_password`/422, EUR tylko z 0323. Widok #291; Auth W1 (panel — właściciel). **C11 — Auth:** TEST przyjmuje hasła bez litery a–z (sygnał w #588) — do ustawienia w panelu.
+3. **C9** — **w tym PR:** E19 pkt 6 w `security.sh`: Przeczytali (`load_message_read_list` — KSH 0 dla HHL–SCX); KSH bez `cancel_load`; KSH UPDATE CANCELLED → 0 wierszy (RLS); `anon` bez `auth_email_allowed` i bez SELECT `v_load_price_client`; SCX → 0 wierszy `v_load_price_client`. Allowlista anon już w [6.1].
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; **nowy termin: 29.10 wieczór** (albo z P11) — 28D:A; status w #588. CSP Report-Only już w B7; enforce = W8.
-security **486** (+9 C9; było 477 C11). Po C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
+security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → **#588** → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
@@ -1893,3 +1893,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 12:25 | #609 db FAIL po F7 r1: B1c (kasuj przebiegi przed watchdog) + watchdog.sh OKRES_STARTOWY doradcy | pętla |
 | 28.10.2026 12:50 | #610 SCALONE (`e37f8a0f`); #588 C11 **0323** prefs EUR + skrypt Auth TEST; security **477**; dalej C9→OWASP | pętla |
 | 28.10.2026 13:10 | #588 **C9** E19 pkt 6 w `security.sh` (+9 → **486**); OWASP → termin **29.10** (#588 / 28D:A); CI po push → F7 | pętla |
+| 28.10.2026 13:30 | #609 F7 r3 + CI db: C11 bez zapisu prefs; config letters_digits; skrypt Auth; C9 CANCELLED = val 0 (RLS) | pętla |
