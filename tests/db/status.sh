@@ -1811,22 +1811,22 @@ insert into shipment_items (project_id, load_id, shipment_code, cargo_class,
 chk "#613: przed hotfixem symbol BS-B" \
   "select symbol from loads where id='$L613'" BS-B
 chk "#613: przed — rate_match przychód BS-B" \
-  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 6332)" \
-  "BS-B/t"
+  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 6332)::text" \
+  "BS-B/true"
 N613=$(q "select public.hotfix_613_apply()")
 chk "#613: hotfix_613_apply → n_fix=1" "select ($N613 = 1)" t
 chk "#613: wymiary 11,95×2,45×1,30 / 21,37 t" \
-  "select length_m||'/'||width_m||'/'||height_m||'/'||total_weight_t from shipment_items where load_id='$L613'" \
+  "select format('%s/%s/%s/%s', length_m, width_m, height_m, round(total_weight_t, 2)) from shipment_items where load_id='$L613'" \
   "11.95/2.45/1.30/21.37"
 chk "#613: symbol BS-A" "select symbol from loads where id='$L613'" BS-A
 chk "#613: combo_height 2,60 (BS-A)" \
   "select combo_height_m::text from loads where id='$L613'" "2.60"
 chk "#613: rate_match przychód BS-A (5345)" \
-  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 5345)" \
-  "BS-A/t"
+  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 5345)::text" \
+  "BS-A/true"
 chk "#613: rate_match koszt BS-A (5090)" \
-  "select (rate_match_sys('$RC613C','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613C','$L613')->>'base_rate')::numeric = 5090)" \
-  "BS-A/t"
+  "select (rate_match_sys('$RC613C','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613C','$L613')->>'base_rate')::numeric = 5090)::text" \
+  "BS-A/true"
 chk "#613: audit HOTFIX_613_*" \
   "select (count(*) filter (where action like 'HOTFIX_613%') >= 3) from audit_log" t
 chk "#613: NOTE w Historii" \

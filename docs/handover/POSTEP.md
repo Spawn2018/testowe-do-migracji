@@ -6386,3 +6386,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka `dla-cursora`: **#613** (`pilne`, Spawn2018) — korekta BS-01 przed #612; wpisane PLAN §4/§8. **#611** (`pilne`) — CI unit/db/visual ✔ na `f975c9d3` (PR #612); pauza do po #613 (rebase 0324→0325). #608 w kolejce. #550 **WSTRZYMANE**.
 - Scalanie: #612 — brak „F7: gotowe” po `f975c9d3`; **nie merge** (przerwane przez #613). Bez push na main.
 - **Krok #613:** migracja **0324** `hotfix_613_apply()` — wymiary/waga BS-01 → A7 BS-A + `load_price_compute`; Historia NOTE; audit; status **350** (+11). Gałąź `pakiet/613-bs01-wymiary-bsa`.
+
+## 2026-10-28 15:55 — #613 F7 CI: status 4 FAIL → poprawka asercji
+
+- Skrzynka: #613/#611 `pilne` open; #612 — **nie scalać** (zasady właściciela 14:28: kierunek plik↔WT). PLAN §4 #611 przepisany.
+- Scalanie: #614 — brak F7; unit/visual ✔, **db FAIL** status 346/350 (`true` vs `t`, `21.370` vs `21.37`). Bez push na main.
+- **Krok:** `status.sh` — `::text` → `…/true`; `round(total_weight_t,2)` w formacie wymiarów. Po zielonym CI → F7: gotowe do scalenia.
