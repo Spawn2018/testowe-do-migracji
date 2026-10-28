@@ -6491,3 +6491,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #616 @ `6bf9b378`: unit ✔; visual ✔ (części); db **FAIL** p4k 83/86 — B2 propose/`rejected_at`/applied (NO_CHANGE).
 - **Przyczyna:** B1+ stosuje `p4k-optout-bell` → note `…; auto-applied`; cleanup nie starzał wersji → Ś3 pomija PL_ROAD → `eta_propose_calibration` = NO_CHANGE.
 - **Krok:** cleanup — `created_at`/`undone_at` −8 d dla optout-bell + reset PL_ROAD; przed B2 propose starzej wszystkie `auto-applied` <7 d. p4k **86**. Push → CI `p4k` → F7 r3.
+
+## 2026-10-28 21:45 — #616 SCALONE; #603 rebuild + 0328
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: #616 → `cf01968e` (F7 gotowe @ `d908f750`, CI unit/db/visual ✔). Bez push na main.
+- **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=29, loads_fail=0`. Wykluczenia: TRASA_NIEZNANA 11 (0 sailing — dane); LUKA_GPS 3 (dane); PORT_CHECKIN/CROSSING BRAK — **błąd pomiaru** (EXIT istniał, `p_before=PIN` + `<` gubiło).
+- **Krok 0328** (`pakiet/603-eta-rebuild-se-road`): okno `≥`/`≤`; EXIT bez limitu PIN; PIN po EXIT; `SE_ROAD_KAA_INLAND`; rebuild() 0-arg; p4k **89**.
