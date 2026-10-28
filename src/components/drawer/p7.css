@@ -171,3 +171,6 @@
   .po-call{min-height:44px}
   .po-inline{margin:8px 0 0;display:flex}
 }
+
+/* #622: ostrzeżenie — dwa numery w polu naczepy */
+.am-warn{display:block;margin-top:4px;font-size:12.5px;line-height:1.4;color:var(--amber-ink)}

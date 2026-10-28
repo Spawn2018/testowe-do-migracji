@@ -25,7 +25,7 @@ import { accountRole } from '../../lib/accountRole';
 import { getNowIso } from '../../lib/frozenNow';
 import { trackingLinkOf } from '../../lib/p4cSource';
 import { TrackingLinkField } from './TrackingLinkField';
-import { awizDeadline, awizMissing, awizMissingSe, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, type Pilots } from '../../lib/p7Awiz';
+import { awizDeadline, awizMissing, awizMissingSe, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, trailerHasManyPlates, type Pilots } from '../../lib/p7Awiz';
 import { canFixAwizOf, pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
 import { transportLabel } from '../../lib/transportName';
 import { pt, ptp } from '../../i18n/p7';
@@ -272,6 +272,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             <span>{pt(locale, 'p7_m_trailer')}</span>
             <input className={`input mono${trailerPlate.trim() ? '' : ' am-need'}`} list="awiz-trailers" value={trailerPlate} onChange={(e) => setTrailerPlate(e.target.value)} autoComplete="off" />
             <datalist id="awiz-trailers">{trailerHints.map((h) => <option key={h} value={h} />)}</datalist>
+            {trailerHasManyPlates(trailerPlate) ? <small className="am-warn" role="status" data-awiz-trailer-many>{pt(locale, 'p7_m_trailer_many')}</small> : null}
           </label>
 
           <label className="am-check" data-c-sep-swap>

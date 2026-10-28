@@ -188,3 +188,14 @@ export function convoyOf<T extends Pick<Load, 'id' | 'code' | 'plannedLoadDate'>
   const group = loads.filter((l) => sameGroup(l) && (l.plannedLoadDate ?? '').slice(0, 10) === day);
   return group.length > 1 ? [...group].sort((a, b) => a.code.localeCompare(b.code, 'pl', { numeric: true })) : [];
 }
+
+/**
+ * #622: pole „Naczepa” ma jeden numer (zasada 28.10 14:28). Dwa numery („ABC 123 - XYZ 45”, „A/B”, „A, B”, „A + B”)
+ * zrywają dopasowanie pozycji emtrack (dokładna równość numeru) — ostrzegamy przy wpisie. Spacja wewnątrz numeru
+ * („WGM 03896”) i myślnik bez spacji (np. niemieckie „B-AB 123”) to jeden numer.
+ */
+export function trailerHasManyPlates(v: string | null | undefined): boolean {
+  const s = String(v ?? '').trim();
+  if (!s) return false;
+  return /[\/,;+]/.test(s) || /\s[-–—]\s?|\s?[-–—]\s/.test(s);
+}
