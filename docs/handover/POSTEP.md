@@ -6547,3 +6547,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #619 — F7 r3 logika OK, czekam zielonego CI (brak „F7: gotowe” po ostatnim). Bez push na main.
 - CI #619 @ `b4a1fe42`: unit/visual ✔; db **FAIL** p4k 87/94. Diagnostyka: `NO_ROW n=3 route=POLFERRIES ev=6 gf=4 load=1 corridors=none` — pomiar wstawia 3 wiersze, ale `EXISTS` w tym samym `SELECT` ich nie widzi (snapshot PG).
 - **Krok:** testy #603 — `eta_record_segment_observations` i asercja w osobnych statementach. p4k **94**. Push → CI → F7.
+
+## 2026-10-29 00:15 — #619 F7 r3 drobne (po zielonym CI)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” po `2c564470`. CI @ `2c564470`: unit/db/visual **zielone**. Bez push na main.
+- **Krok F7 r3 drobne (0328 + p4k):**
+  1. `actual_departure_at` NOT NULL poza oknem → BRAK, **bez** `delayed`.
+  2. CROSSING OK tylko gdy `PIN > EXIT > ENTER` (EXIT=ENTER → BRAK).
+  3. Testy: actual+delayed→BRAK; D1 EXIT=ENTER; D3 bez PIN EXIT po SITE; `port_out_src` na CROSSING.
+  4. PLAN: kalibracja nie czyta `port_out_src` (SAILING_DELAYED = jak EVENT do przeglądu po danych).
+  5. p4k **98**. Rebuild 05.10 wstrzymany. Push → CI → F7.

@@ -66,6 +66,8 @@ declare
   c_se text;
   v_id bigint;
   v_port_out_src text;
+  v_actual timestamptz;
+  v_delayed timestamptz;
 begin
   if not exists (select 1 from loads where id = p_load) then
     return 0;
@@ -113,30 +115,28 @@ begin
   v_port_out_src := case when t_port_out is not null then 'EVENT' else null end;
 
   -- F7 r2/r3: po braku EXIT ≤ PIN — tylko actual, potem delayed (> ENTER, < PIN);
-  -- plan i GPS_LAST → BRAK (bez gałęzi GPS)
+  -- plan i GPS_LAST → BRAK (bez gałęzi GPS).
+  -- F7 r3 drobne: actual NOT NULL poza oknem → BRAK, bez delayed (nieaktualny sailing_id).
   if t_port_out is null and t_port_in is not null then
-    select s.actual_departure_at
-      into t_port_out
+    v_actual := null;
+    v_delayed := null;
+    select s.actual_departure_at, s.delayed_departure_at
+      into v_actual, v_delayed
       from loads l
       join sailings s on s.id = l.sailing_id
-     where l.id = p_load
-       and s.actual_departure_at is not null
-       and s.actual_departure_at > t_port_in
-       and (t_pin_enter is null or s.actual_departure_at < t_pin_enter);
-    if t_port_out is not null then
-      v_port_out_src := 'SAILING_ACTUAL';
-    else
-      select s.delayed_departure_at
-        into t_port_out
-        from loads l
-        join sailings s on s.id = l.sailing_id
-       where l.id = p_load
-         and s.delayed_departure_at is not null
-         and s.delayed_departure_at > t_port_in
-         and (t_pin_enter is null or s.delayed_departure_at < t_pin_enter);
-      if t_port_out is not null then
-        v_port_out_src := 'SAILING_DELAYED';
+     where l.id = p_load;
+    if v_actual is not null then
+      if v_actual > t_port_in
+         and (t_pin_enter is null or v_actual < t_pin_enter) then
+        t_port_out := v_actual;
+        v_port_out_src := 'SAILING_ACTUAL';
       end if;
+      -- actual poza oknem: zostaw null → BRAK; nie bierz delayed
+    elsif v_delayed is not null
+          and v_delayed > t_port_in
+          and (t_pin_enter is null or v_delayed < t_pin_enter) then
+      t_port_out := v_delayed;
+      v_port_out_src := 'SAILING_DELAYED';
     end if;
   end if;
 
@@ -169,8 +169,11 @@ begin
     end if;
   end if;
 
-  -- F7 drobne: CROSSING przy EXIT = PIN → > (równość = BRAK, upsert odrzuca p_to = p_from)
-  if t_port_out is not null and t_pin_enter is not null and t_pin_enter > t_port_out then
+  -- F7 drobne: CROSSING tylko gdy PIN > EXIT i EXIT > ENTER (EXIT=ENTER = BRAK, nie odprawa w rejsie)
+  if t_port_out is not null
+     and t_pin_enter is not null
+     and t_pin_enter > t_port_out
+     and t_port_out > t_port_in then
     if eta_upsert_segment_observation(p_load, c_cross, t_port_out, t_pin_enter, false, null) is not null then
       n := n + 1;
       if v_port_out_src is not null then
@@ -210,7 +213,7 @@ revoke all on function public.eta_record_segment_observations(uuid)
 grant execute on function public.eta_record_segment_observations(uuid) to service_role;
 
 comment on function public.eta_record_segment_observations(uuid) is
-  '#603 F7 r3: EXIT ≤ PIN; fallback actual/delayed (>ENTER,<PIN); bez planu/GPS; port_out_src; CROSSING gdy PIN > EXIT.';
+  '#603 F7 r3: EXIT ≤ PIN; actual poza oknem→BRAK (bez delayed); bez planu/GPS; port_out_src; CROSSING gdy PIN > EXIT > ENTER.';
 
 -- ---------------------------------------------------------------------------
 -- 3) SE_ROAD_KAA_INLAND — osobny odcinek kalibracji (27B:C); E4 zostaje SE_ROAD_KAA
