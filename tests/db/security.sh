@@ -1596,5 +1596,21 @@ chk6 "#588 C11: audit AUDYT17_C11_PREFS" "$(sys "select count(*)::text from audi
   where action='AUDYT17_C11_PREFS' and entity_id='c11-0323'" | tail -1)" "1"
 sys "delete from app_users where id='$C11_UID'" >/dev/null
 
+# --- #588 / C9: E19 pkt 6 w security.sh (Przeczytali, anulowanie, anon, v_load_price_client) ---
+echo; echo "[#588 C9] E19 pkt 6 — Przeczytali / anulowanie / anon / ceny klienta"
+# Przeczytali: tylko wiadomość widoczna (decyzja 15.10 03:12) — B4MID = HHL+SCX bez CLIENT
+sys "insert into load_message_reads (message_id, user_id, read_at)
+     select $B4MID, id, now() from app_users where auth_id='$HHL'
+     on conflict (message_id, user_id) do nothing" >/dev/null
+val "#588 C9: KSH bez Przeczytali dla HHL–SCX" $KSH "select count(*) from load_message_read_list($B4MID)" 0
+val "#588 C9: HHL widzi Przeczytali HHL–SCX" $HHL "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
+val "#588 C9: SCX widzi Przeczytali HHL–SCX" $SCX "select (count(*) >= 1)::text from load_message_read_list($B4MID)" true
+err "#588 C9: KSH nie anuluje (cancel_load)" $KSH "select cancel_load('$L2','test C9')" "wyłącznie HHL"
+err "#588 C9: KSH nie dopisze CANCELLED" $KSH "update loads set status='CANCELLED' where id='$L2'" "wyłącznie HHL|load_status_set|cancel_load"
+chk6 "#588 C9: anon bez EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('anon','public.auth_email_allowed(text)','execute')::text")" "false"
+chk6 "#588 C9: authenticated ma EXECUTE auth_email_allowed" "$(psql "$PGURL" -Atq -c "select has_function_privilege('authenticated','public.auth_email_allowed(text)','execute')::text")" "true"
+val "#588 C9: SCX — v_load_price_client 0 wierszy" $SCX "select count(*) from v_load_price_client" 0
+chk6 "#588 C9: anon bez SELECT v_load_price_client" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.v_load_price_client','select')::text")" "false"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -6367,3 +6367,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#610** wygląd (F7 gotowe @ `9c3f5bfd`, po commicie) → merge `e37f8a0f`. #609: CI `1630ceb0` unit/visual/db ✔ — prośba F7; potem C11 na tej samej gałęzi (nowy HEAD → ponowne F7). Bez push na main.
 - **Krok #588 C11:** migracja **0323** — `trg_app_user_prefs_eur` + uzupełnienie braków; `loadPreferences` bez wiersza → EUR; skrypt `scripts/auth/c11-password-policy.mjs` (TEST); security **477** (+5); vitest `c11-prefs-eur`.
 - **C11 — Auth (sygnał):** TEST przyjmuje „111111111111” i „ąęśćżźółń1234” przez sesję użytkownika; Management API config/auth HTTP 401 — bez sync z produkcją. Komentarz w #588. Dalej: C9 → OWASP; status bramy do 18:00 na #588.
+
+## 2026-10-28 13:10 — #588 C9 (E19 pkt 6 w security.sh)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; #538/#537/#500/#499 — bez nowych do budowy. Bez `pilne` przerywających.
+- Scalanie: #609 — F7 „gotowe” było @ `1630ceb0`; po C11 HEAD `6cc20ae2` (CI unit/visual/db ✔) + ten krok C9 → ponowne F7 po zielonym CI. Bez push na main.
+- **Krok #588 C9:** `security.sh` — Przeczytali (`load_message_read_list`: KSH 0 / HHL+SCX ≥1 dla HHL–SCX); KSH bez `cancel_load` i CANCELLED; `anon` bez `auth_email_allowed` i bez SELECT `v_load_price_client`; SCX → 0 wierszy widoku cen klienta. security **486** (+9). Allowlista anon już w [6.1].
+- **OWASP (28D:A):** pełny wycinek ASVS/CSP enforce/ZAP → **termin 29.10 wieczór** (albo z P11); CSP Report-Only już B7. Komentarz statusu w #588.
