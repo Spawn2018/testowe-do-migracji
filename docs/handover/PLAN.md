@@ -1935,3 +1935,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 20:45 | #616 F7 r1 POPRAWKI: B1 bell/`notify_channel_allowed`, B2 bez HHL_OPS, B3 asercje decyzji, D1/D2/D5/D7; p4k **84** | pętla |
 | 28.10.2026 20:50 | #617 SCALONE (`7027bd1c`, F7 gotowe @ `c8eb7b8e`) — dzwonek ETA labels z payload (D3) | pętla |
 | 28.10.2026 20:55 | #616 F7 r2 POPRAWKI: T1 `app_users.id` w p4k + B1+; D5 coalesce(spread,0) jak 0320; p4k **86** | pętla |
+| 28.10.2026 21:20 | #616 CI db FAIL p4k 83/86 (B2 propose NO_CHANGE) — cleanup optout-bell / Ś3; p4k **86** | pętla |

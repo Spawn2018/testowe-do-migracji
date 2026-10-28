@@ -466,6 +466,14 @@ delete from user_notify_pref where event_key='eta_calib'
 delete from notifications where template = 'ETA_CALIBRATION_AUTO'
    or user_id = '$ADMIN2_UID'::uuid;
 delete from app_users where auth_id = '11111111-0000-0000-0000-0000000000aa';
+-- F7 r2+: p4k-optout-bell dostaje note …; auto-applied → Ś3 blokuje PL_ROAD (<7 d)
+update eta_calibration_versions
+   set created_at = now() - interval '8 days',
+       undone_at = now() - interval '8 days'
+ where note like '%p4k-optout-bell%'
+   and applied is true
+   and undone_at is null;
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
 commit;" >/dev/null
 
 # F7 r8 #605: Δspread w pp/100 — 15→40 = 0,25 → NEEDS_APPROVAL (godziny bez zmian)
@@ -613,11 +621,14 @@ commit;" >/dev/null
 
 # F7 r5/r6 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
 VER18=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-18%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
-# Ś3: auto-12 w <7 d blokuje PL_ROAD (<3 nowych obs) → NO_CHANGE, bez SUPERSEDED
+# Ś3: auto-applied w <7 d blokuje PL_ROAD (<3 nowych obs) → NO_CHANGE; starzej wszystkie (AUTO_VER + ewentualne resztki)
 sys "begin;
 update eta_calibration_versions
    set created_at = now() - interval '8 days'
- where id = $AUTO_VER and applied is true;
+ where applied is true
+   and undone_at is null
+   and coalesce(note, '') like '%auto-applied%'
+   and created_at > now() - interval '7 days';
 commit;"
 sys "begin;
 -- fit≈9.6 przy hours=8.5 → Δh≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18

@@ -6484,3 +6484,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - T1: `user_notify_pref` / `notifications.user_id` / `resolved_by` → `(select id from app_users where auth_id=…)`; B1+ `applied` + drugi HHL_ADMIN bez prefu → 1.
   - D5: `pending` + `internal` — `coalesce(spread,0)` jak 0320 (NULL→N do decyzji).
   - p4k EXPECTED **86**. Push → CI `p4k` → prośba o F7 r3.
+
+## 2026-10-28 21:20 — #616 CI FAIL B2 propose (Ś3 / optout-bell)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`. Brak F7 „gotowe” po ostatnim commicie.
+- CI #616 @ `6bf9b378`: unit ✔; visual ✔ (części); db **FAIL** p4k 83/86 — B2 propose/`rejected_at`/applied (NO_CHANGE).
+- **Przyczyna:** B1+ stosuje `p4k-optout-bell` → note `…; auto-applied`; cleanup nie starzał wersji → Ś3 pomija PL_ROAD → `eta_propose_calibration` = NO_CHANGE.
+- **Krok:** cleanup — `created_at`/`undone_at` −8 d dla optout-bell + reset PL_ROAD; przed B2 propose starzej wszystkie `auto-applied` <7 d. p4k **86**. Push → CI `p4k` → F7 r3.
