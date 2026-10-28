@@ -1943,3 +1943,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 21:20 | #616 CI db FAIL p4k 83/86 (B2 propose NO_CHANGE) — cleanup optout-bell / Ś3; p4k **86** | pętla |
 | 28.10.2026 22:55 | #621 SCALONE (`95113ee9`, F7 gotowe @ `5175c592`) — LiveCalib odcinki Gdynia/Karlskrona | pętla |
 | 28.10.2026 23:10 | #619 F7 r3: actual/delayed tylko; bez planu/GPS; `port_out_src`; D1/D3; testy …00a60x (kolizja BT …000603); p4k **94** | pętla |
+| 28.10.2026 23:25 | #623 SCALONE (`94f7c99a`, F7 gotowe @ `d5a78228`) — W-622 ostrzeżenie dwóch nr naczepy | pętla |
+| 28.10.2026 23:40 | #619 CI db FAIL p4k 87/94 (7× #603 false); diagnostyka + UUID a603a603 + route w payload | pętla |

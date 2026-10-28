@@ -908,16 +908,16 @@ val "B1: powrotny wcześniej + PL→SE później → wybrany PL→SE" \
      from compute_load_eta('a581a581-0000-4000-8000-000000000581', now()) limit 1;
    rollback;" "true"
 
-# #603 F7 r3: load …00a60x — NIE …000603 (kolizja z BT …0006||lpad)
-# B4: 1 PIN, późny EXIT po PIN, sailing_id=null → BRAK (bez planu/GPS)
+# #603 F7 r3: load a603-… (nie …0006xx — kolizja BT). Trasa w payload + sailing null.
+# B4: 1 PIN, późny EXIT po PIN → BRAK (bez planu/GPS)
 val "#603: późny EXIT po PIN → PORT_CHECKIN BRAK" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at, sailing_id)
-   select 'a581a581-0000-4000-8000-00000000a601', project_id, 'P4K-603A', 'HHL-603A', 'SCX-603A',
+   select 'a603a603-0000-4000-8000-000000000001', project_id, 'P4K-603A', 'HHL-603A', 'SCX-603A',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02', null
      from loads where id='a581a581-0000-4000-8000-000000000581';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -927,26 +927,46 @@ val "#603: późny EXIT po PIN → PORT_CHECKIN BRAK" \
      ('GEOFENCE_ENTER','SITE',     timestamptz '2026-10-20 06:00+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a601', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000001', t.ev, t.ts,
+          jsonb_build_object(
+            'geofence_id', f.id, 'geofence_kind', f.k,
+            'route', coalesce(f.route, 'POLFERRIES')
+          )
      from t join f on f.k = t.k;
-   select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a601') >= 1
-     and exists (
-       select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a601'
-          and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
-          and exclude_reason = 'BRAK_ZDARZENIA'
+   with r as (
+     select eta_record_segment_observations('a603a603-0000-4000-8000-000000000001') as n,
+            eta_obs_route_key('a603a603-0000-4000-8000-000000000001') as route,
+            (select count(*) from load_events
+              where load_id='a603a603-0000-4000-8000-000000000001') as ev
+   )
+   select coalesce(
+     (
+       select format('OK excl=%s n=%s route=%s ev=%s',
+         o.exclude_reason, r.n, coalesce(r.route,'null'), r.ev)
+         from eta_segment_observations o, r
+        where o.load_id='a603a603-0000-4000-8000-000000000001'
+          and o.corridor='PORT_CHECKIN' and (o.features->>'p4k')='true'
+        limit 1
+     ),
+     (
+       select format('NO_ROW n=%s route=%s ev=%s gf=%s load=%s corridors=%s',
+         r.n, coalesce(r.route,'null'), r.ev,
+         (select count(*) from geofences where name like 'P4K %'),
+         (select count(*) from loads where id='a603a603-0000-4000-8000-000000000001'),
+         coalesce((select string_agg(corridor || ':' || coalesce(exclude_reason,'OK'), ',')
+                     from eta_segment_observations
+                    where load_id='a603a603-0000-4000-8000-000000000001'), 'none'))
+         from r
      )
-   )::text;
-   rollback;" "true"
+   );
+   rollback;" "OK excl=BRAK_ZDARZENIA n=3 route=POLFERRIES ev=6"
 
 # B2: późny EXIT + sailing.actual_departure_at → PORT_CHECKIN OK 3 h + port_out_src
 val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at)
-   select 'a581a581-0000-4000-8000-00000000a602', project_id, 'P4K-603B', 'HHL-603B', 'SCX-603B',
+   select 'a603a603-0000-4000-8000-000000000002', project_id, 'P4K-603B', 'HHL-603B', 'SCX-603B',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
      from loads where id='a581a581-0000-4000-8000-000000000581';
    insert into vessels (id, name, operator) values
@@ -956,7 +976,7 @@ val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
                          actual_departure_at, delayed_departure_at, status, source)
    values (
      'a581a581-0000-4000-8000-0000000000c2',
-     (select project_id from loads where id='a581a581-0000-4000-8000-00000000a602'),
+     (select project_id from loads where id='a603a603-0000-4000-8000-000000000002'),
      'a581a581-0000-4000-8000-0000000000c1',
      'GDN-NYN',
      timestamptz '2026-10-18 16:00+02',
@@ -969,8 +989,8 @@ val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
          delayed_departure_at = excluded.delayed_departure_at,
          departure_at = excluded.departure_at;
    update loads set sailing_id = 'a581a581-0000-4000-8000-0000000000c2'
-    where id = 'a581a581-0000-4000-8000-00000000a602';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+    where id = 'a603a603-0000-4000-8000-000000000002';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -978,14 +998,15 @@ val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
      ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-19 11:08+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a602', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000002', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a602') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000002') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a602'
+        where load_id='a603a603-0000-4000-8000-000000000002'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason is null
           and round(hours_observed) = 3
@@ -999,7 +1020,7 @@ val "#603: plan bez actual → PORT_CHECKIN BRAK" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at)
-   select 'a581a581-0000-4000-8000-00000000a603', project_id, 'P4K-603P', 'HHL-603P', 'SCX-603P',
+   select 'a603a603-0000-4000-8000-000000000003', project_id, 'P4K-603P', 'HHL-603P', 'SCX-603P',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
      from loads where id='a581a581-0000-4000-8000-000000000581';
    insert into vessels (id, name, operator) values
@@ -1009,7 +1030,7 @@ val "#603: plan bez actual → PORT_CHECKIN BRAK" \
                          actual_departure_at, delayed_departure_at, status, source)
    values (
      'a581a581-0000-4000-8000-0000000000c3',
-     (select project_id from loads where id='a581a581-0000-4000-8000-00000000a603'),
+     (select project_id from loads where id='a603a603-0000-4000-8000-000000000003'),
      'a581a581-0000-4000-8000-0000000000c1',
      'GDN-NYN',
      timestamptz '2026-10-18 17:00+02',
@@ -1019,8 +1040,8 @@ val "#603: plan bez actual → PORT_CHECKIN BRAK" \
      set actual_departure_at = null, delayed_departure_at = null,
          departure_at = excluded.departure_at;
    update loads set sailing_id = 'a581a581-0000-4000-8000-0000000000c3'
-    where id = 'a581a581-0000-4000-8000-00000000a603';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+    where id = 'a603a603-0000-4000-8000-000000000003';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -1028,14 +1049,15 @@ val "#603: plan bez actual → PORT_CHECKIN BRAK" \
      ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-19 11:08+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a603', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000003', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a603') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000003') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a603'
+        where load_id='a603a603-0000-4000-8000-000000000003'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason = 'BRAK_ZDARZENIA'
      )
@@ -1047,7 +1069,7 @@ val "#603: delayed → PORT_CHECKIN OK + SAILING_DELAYED" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at)
-   select 'a581a581-0000-4000-8000-00000000a604', project_id, 'P4K-603Dly', 'HHL-603Dly', 'SCX-603Dly',
+   select 'a603a603-0000-4000-8000-000000000004', project_id, 'P4K-603Dly', 'HHL-603Dly', 'SCX-603Dly',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
      from loads where id='a581a581-0000-4000-8000-000000000581';
    insert into vessels (id, name, operator) values
@@ -1057,7 +1079,7 @@ val "#603: delayed → PORT_CHECKIN OK + SAILING_DELAYED" \
                          actual_departure_at, delayed_departure_at, status, source)
    values (
      'a581a581-0000-4000-8000-0000000000c4',
-     (select project_id from loads where id='a581a581-0000-4000-8000-00000000a604'),
+     (select project_id from loads where id='a603a603-0000-4000-8000-000000000004'),
      'a581a581-0000-4000-8000-0000000000c1',
      'GDN-NYN',
      timestamptz '2026-10-18 17:00+02',
@@ -1071,8 +1093,8 @@ val "#603: delayed → PORT_CHECKIN OK + SAILING_DELAYED" \
          departure_at = excluded.departure_at,
          status = excluded.status;
    update loads set sailing_id = 'a581a581-0000-4000-8000-0000000000c4'
-    where id = 'a581a581-0000-4000-8000-00000000a604';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+    where id = 'a603a603-0000-4000-8000-000000000004';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -1080,14 +1102,15 @@ val "#603: delayed → PORT_CHECKIN OK + SAILING_DELAYED" \
      ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-19 11:08+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a604', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000004', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a604') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000004') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a604'
+        where load_id='a603a603-0000-4000-8000-000000000004'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason is null
           and round(hours_observed) = 7
@@ -1101,7 +1124,7 @@ val "#603: rejs sprzed ENTER → PORT_CHECKIN BRAK" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at)
-   select 'a581a581-0000-4000-8000-00000000a605', project_id, 'P4K-603E', 'HHL-603E', 'SCX-603E',
+   select 'a603a603-0000-4000-8000-000000000005', project_id, 'P4K-603E', 'HHL-603E', 'SCX-603E',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
      from loads where id='a581a581-0000-4000-8000-000000000581';
    insert into vessels (id, name, operator) values
@@ -1111,7 +1134,7 @@ val "#603: rejs sprzed ENTER → PORT_CHECKIN BRAK" \
                          actual_departure_at, status, source)
    values (
      'a581a581-0000-4000-8000-0000000000c5',
-     (select project_id from loads where id='a581a581-0000-4000-8000-00000000a605'),
+     (select project_id from loads where id='a603a603-0000-4000-8000-000000000005'),
      'a581a581-0000-4000-8000-0000000000c1',
      'GDN-NYN',
      timestamptz '2026-10-18 10:00+02',
@@ -1120,8 +1143,8 @@ val "#603: rejs sprzed ENTER → PORT_CHECKIN BRAK" \
      'ZAPLANOWANY', 'RECZNIE'
    ) on conflict (id) do update set actual_departure_at = excluded.actual_departure_at;
    update loads set sailing_id = 'a581a581-0000-4000-8000-0000000000c5'
-    where id = 'a581a581-0000-4000-8000-00000000a605';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+    where id = 'a603a603-0000-4000-8000-000000000005';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -1129,14 +1152,15 @@ val "#603: rejs sprzed ENTER → PORT_CHECKIN BRAK" \
      ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-19 11:08+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a605', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000005', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a605') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000005') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a605'
+        where load_id='a603a603-0000-4000-8000-000000000005'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason = 'BRAK_ZDARZENIA'
      )
@@ -1148,10 +1172,10 @@ val "#603: EXIT powrotu po PIN → PORT_CHECKIN bez zawyżenia" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at, sailing_id)
-   select 'a581a581-0000-4000-8000-00000000a606', project_id, 'P4K-603C', 'HHL-603C', 'SCX-603C',
+   select 'a603a603-0000-4000-8000-000000000006', project_id, 'P4K-603C', 'HHL-603C', 'SCX-603C',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02', null
      from loads where id='a581a581-0000-4000-8000-000000000581';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -1162,14 +1186,15 @@ val "#603: EXIT powrotu po PIN → PORT_CHECKIN bez zawyżenia" \
      ('GEOFENCE_ENTER','SITE',     timestamptz '2026-10-20 06:00+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a606', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000006', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a606') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000006') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a606'
+        where load_id='a603a603-0000-4000-8000-000000000006'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason is null
           and round(hours_observed) = 3
@@ -1183,10 +1208,10 @@ val "#603: CROSSING EXIT=PIN → BRAK" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at, sailing_id)
-   select 'a581a581-0000-4000-8000-00000000a607', project_id, 'P4K-603D', 'HHL-603D', 'SCX-603D',
+   select 'a603a603-0000-4000-8000-000000000007', project_id, 'P4K-603D', 'HHL-603D', 'SCX-603D',
           'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02', null
      from loads where id='a581a581-0000-4000-8000-000000000581';
-   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
    t(ev, k, ts) as (values
      ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
      ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
@@ -1194,14 +1219,15 @@ val "#603: CROSSING EXIT=PIN → BRAK" \
      ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-18 17:00+02')
    )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-00000000a607', t.ev, t.ts,
-          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+   select 'a603a603-0000-4000-8000-000000000007', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-00000000a607') >= 1
+     eta_record_segment_observations('a603a603-0000-4000-8000-000000000007') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id='a581a581-0000-4000-8000-00000000a607'
+        where load_id='a603a603-0000-4000-8000-000000000007'
           and corridor like 'CROSSING%' and (features->>'p4k')='true'
           and exclude_reason = 'BRAK_ZDARZENIA'
      )

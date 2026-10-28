@@ -6533,3 +6533,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. `features.port_out_src` = `EVENT` / `SAILING_ACTUAL` / `SAILING_DELAYED`.
   4. D1: koniec = ENTER → wiersz BRAK; D3: bez PIN — EXIT ≤ SITE/`actual_delivery_at`.
   5. Testy N4 + UUID `…00a60x` (uniknięcie kolizji BT). p4k **94**. Rebuild 05.10 wstrzymany. Push → CI → F7 r3.
+
+## 2026-10-28 23:40 — #623 SCALONE; #619 CI db FAIL p4k 87/94
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: #623 → `94f7c99a` (F7 gotowe @ `d5a78228`, unit/visual ✔) — W-622 ostrzeżenie dwóch nr naczepy. Bez push na main.
+- CI #619 @ `190db80c`: unit/visual ✔; db **FAIL** p4k 87/94 (7× #603 → `false`; SE_ROAD_KAA_INLAND OK).
+- **Krok:** diagnostyka 1. testu (NO_ROW/OK excl+route+ev); UUID `a603a603-…`; `route` w payload zdarzeń. Push → CI `p4k` → odczyt diagnostyki / fix.
