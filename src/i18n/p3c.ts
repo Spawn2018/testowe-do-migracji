@@ -579,7 +579,7 @@ const pl: Dict = {
   p3l_exp_all_loads: 'wszystkie transporty widoczne dla Twojego konta',
   p3l_flag_by_hhl: 'konto HHL',
   p3l_flags_none: 'Brak przełączników do pokazania.',
-  p3l_cal_note: 'Baza mierzy dziś czas jazdy na odcinkach z pomiarów dostaw. Błędu ETA 24 h, 6 h i 1 h przed przyjazdem, odprawy w porcie i przerw jeszcze nie zapisuje — te kolumny pokazują „–”.',
+  p3l_cal_note: 'Baza mierzy dziś czas jazdy na odcinkach z pomiarów dostaw. Błędu ETA 24 h, 6 h i 1 h przed przyjazdem oraz przerw jeszcze nie zapisuje — te kolumny pokazują „–”.',
   p3l_cal_fixed_crossing: 'Czas z rozkładu armatora (gdy rejsu nie ma w rozkładzie — ta wartość) — bez kalibracji.',
   p3l_cal_fixed_rest: '11 h (9 h skrócony) — przepisy UE, bez kalibracji.',
   p3l_cal_ver_what: 'nowe czasy odcinków: {list}',

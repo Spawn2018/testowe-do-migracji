@@ -6,7 +6,7 @@
  * W-604 (0320): wszystkie wersje ze stanem (zastosowana / cofnięta / odrzucona / zastąpiona / oczekuje), numer = id wersji
  * (ten sam co w dzwonku „Kalibracja ETA zastosowana automatycznie”); „Cofnij” → `eta_calibration_undo(p_version)` — tylko
  * Administrator HHL, także przy zamrożeniu. Błędy funkcji po polsku z kodu (`calibErrorKey`).
- * Błędu ETA 24 h / 6 h / 1 h, odprawy i przerw baza jeszcze nie zapisuje — kolumny „–”.
+ * Błędu ETA 24 h / 6 h / 1 h i przerw baza jeszcze nie zapisuje — kolumny „–”; odprawa (PORT_CHECKIN) od #621.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from './client';
@@ -31,8 +31,20 @@ type Ver = {
 /** Dopiski bazy w `note` (0320) — nie pokazujemy ich jako opisu wersji. */
 const MACHINE_NOTE = /propozycja ciągła|auto-applied|\bundone\b|\brejected\b|\bsuperseded\b/i;
 
-/** Odcinek pomiaru → kod czasu (`eta_segment_params`). */
-const CORRIDOR_SEG: Record<string, string> = { SE_E4: 'SE_ROAD', PL_ROAD: 'PL_ROAD' };
+/** Stare nazwy korytarzy pomiaru (sprzed 0320) → kod czasu (`eta_segment_params`). */
+const CORRIDOR_SEG: Readonly<Record<string, string>> = { SE_E4: 'SE_ROAD' };
+/**
+ * Odcinek pomiaru → kod czasu. Od 0320 `corridor` to już kod odcinka (PL_ROAD_GDY, SE_ROAD_KAA, PORT_CHECKIN…);
+ * mapujemy tylko stare nazwy — inaczej pomiary tras Gdynia/Karlskrona nie trafiały do swoich odcinków (#620 uwaga).
+ */
+export const segOfCorridor = (corridor: string): string => CORRIDOR_SEG[corridor] ?? corridor;
+/** Kolumna w tabeli pomiarów: droga PL, odprawa w porcie albo droga SE (rejs i przerwy nie są tu pokazywane). */
+export function obsColumn(seg: string): 'pl' | 'port' | 'se' | null {
+  if (seg === 'PL_ROAD' || seg.startsWith('PL_ROAD_')) return 'pl';
+  if (seg === 'PORT_CHECKIN' || seg.startsWith('PORT_CHECKIN_')) return 'port';
+  if (seg === 'SE_ROAD' || seg.startsWith('SE_ROAD_')) return 'se';
+  return null;
+}
 /** Bez kalibracji (rozkład armatora, przepisy UE) i parametry, które nie są odcinkiem trasy. */
 const FIXED_NOTE: Record<string, string> = { CROSSING_DEFAULT: 'p3l_cal_fixed_crossing', SE_DAILY_REST: 'p3l_cal_fixed_rest' };
 const NOT_SEGMENT = new Set(['GPS_FRESH_MIN']);
@@ -41,19 +53,22 @@ const minOf = (h: number | string | null | undefined) => (h == null || h === '' 
 
 export function calibFromDb(locale: Locale, params: readonly Param[], obs: readonly Obs[], vers: readonly Ver[], loads: readonly Load[], nameOf: (id: string | null) => string, frozen = false): EtaCalibration {
   const code = (id: string) => loads.find((l) => l.id === id)?.code ?? id.slice(0, 8);
-  const observations: CalibObservation[] = obs.map((o) => ({
-    id: `obs-${o.id}`,
-    loadId: o.load_id,
-    code: code(o.load_id),
-    arrivedAt: o.observed_at,
-    err24: null, err6: null, err1: null,
-    plMin: CORRIDOR_SEG[o.corridor] === 'PL_ROAD' ? minOf(o.hours_observed) : null,
-    portMin: null,
-    seMin: CORRIDOR_SEG[o.corridor] === 'SE_ROAD' ? minOf(o.hours_observed) : null,
-    breaksMin: null,
-    rest: null,
-    skipped: o.exclude_reason,
-  }));
+  const observations: CalibObservation[] = obs.map((o) => {
+    const col = obsColumn(segOfCorridor(o.corridor));
+    return {
+      id: `obs-${o.id}`,
+      loadId: o.load_id,
+      code: code(o.load_id),
+      arrivedAt: o.observed_at,
+      err24: null, err6: null, err1: null,
+      plMin: col === 'pl' ? minOf(o.hours_observed) : null,
+      portMin: col === 'port' ? minOf(o.hours_observed) : null,
+      seMin: col === 'se' ? minOf(o.hours_observed) : null,
+      breaksMin: null,
+      rest: null,
+      skipped: o.exclude_reason,
+    };
+  });
   /* propozycja: najnowsza niezastosowana, niezamrożona, nie cofnięta, nie odrzucona i nie zastąpiona (0320) */
   const proposalVer = [...vers]
     .filter((v) => !v.applied && !v.frozen && !v.undone_at && !v.rejected_at && !/superseded/i.test(v.note ?? ''))
@@ -62,7 +77,7 @@ export function calibFromDb(locale: Locale, params: readonly Param[], obs: reado
     const cur = minOf(p.hours) ?? 0;
     if (FIXED_NOTE[p.code]) return fixed(p.code, p.label, cur, t(locale, FIXED_NOTE[p.code]));
     const values = obs
-      .filter((o) => !o.exclude_reason && CORRIDOR_SEG[o.corridor] === p.code && o.hours_observed != null)
+      .filter((o) => !o.exclude_reason && segOfCorridor(o.corridor) === p.code && o.hours_observed != null)
       .map((o) => minOf(o.hours_observed)!);
     const m = measured(p.code, p.label, cur, values);
     /* propozycja z bazy: czas po zmianie = `params_after` (to zapisze „Zatwierdź”) */
