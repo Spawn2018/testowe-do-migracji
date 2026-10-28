@@ -1372,6 +1372,7 @@ revoke all on function public.eta_record_segment_observations(uuid)
   from public, anon, authenticated;
 grant execute on function public.eta_record_segment_observations(uuid) to service_role;
 
+-- Ś1: v_op ze słownika; treść A10/0279 (nie cofać do 0242 — status A10 + SCHEDULE).
 create or replace function public.apply_geofence_status()
 returns trigger
 language plpgsql
@@ -1392,9 +1393,12 @@ declare
   v_code    text;
   v_route   text;
   v_op      text;
+  v_gaps    jsonb;
+  v_gaps_txt text;
+  v_dep     timestamptz;
+  v_prev    text;
 begin
   select status, project_id into v_status, v_project from loads where id = new.load_id;
-  -- A2: po Dostarczone także gotowe do faktury i zafakturowane — bez cofania statusu.
   if v_status in ('CANCELLED','UNLOADED','DELIVERED','READY_TO_INVOICE','INVOICED') then
     return null;
   end if;
@@ -1412,7 +1416,6 @@ begin
    where l.id = new.load_id;
   v_op := coalesce(v_op, 'POLFERRIES');
 
-  -- Syntetyczne wyjścia TELM (faza z pozycji) nie ustawiają actual_* (A2 / 0227).
   if coalesce(new.payload->>'synthetic', '') = 'true'
      or coalesce((new.payload->>'actual_load')::boolean, true) is false then
     return null;
@@ -1428,17 +1431,35 @@ begin
 
   if new.event_type = 'GEOFENCE_ENTER' then
 
-    if v_kind = 'LOADING' then
-      if v_status = 'READY' then
-        perform auto_set_status(new.load_id, v_status, 'AT_LOADING', 'wjazd w strefę załadunku', new.occurred_at, v_detail);
-      elsif v_status in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING') then
+    if v_kind = 'LOADING'
+       and v_status in ('PLANNED','RESOURCES_PENDING','DOCS_PENDING','READY') then
+      v_gaps := public.awiz_missing(new.load_id);
+      if v_status is distinct from 'READY'
+         or exists (
+           select 1
+             from jsonb_array_elements(coalesce(v_gaps, '[]'::jsonb)) g
+            where g->>'kind' in ('ORDER_SCX', 'ORDER_HHL')
+         ) then
+        v_gaps_txt := public.a10_prep_gaps_text(v_gaps);
         perform raise_risk(new.load_id, 'AUTO_STATUS', 'HIGH',
-          format('Pojazd w strefie załadunku, a transport niegotowy (status %s)', v_status),
-          v_detail || jsonb_build_object('title_key', 'rk_loading_not_ready', 'params', jsonb_build_object('status', v_status)),
+          case when coalesce(v_gaps_txt, '') = '' then
+            format('Załadunek bez gotowości (status %s)', v_status)
+          else
+            format('Załadunek bez gotowości: %s', v_gaps_txt)
+          end,
+          v_detail || jsonb_build_object(
+            'title_key', 'rk_loading_not_ready',
+            'params', jsonb_build_object('status', v_status, 'gaps', coalesce(v_gaps_txt, '')),
+            'gaps', v_gaps
+          ),
           'LOADING_NOT_READY:' || new.load_id);
       end if;
+      perform auto_set_status(new.load_id, v_status, 'AT_LOADING',
+        'wjazd w strefę załadunku', new.occurred_at, v_detail);
 
-    elsif v_kind = 'PORT_OUT' and v_status in ('READY','AT_LOADING','IN_TRANSIT_PL')
+    elsif v_kind = 'PORT_OUT'
+          and public.load_status_rank(v_status) >= public.load_status_rank('READY')
+          and public.load_status_rank(v_status) <= public.load_status_rank('IN_TRANSIT_PL')
           and public.eta_obs_operator_key(coalesce(v_route, 'POLFERRIES')) = v_op then
       if auto_set_status(new.load_id, v_status, 'AT_PORT_GDANSK',
            format('wjazd w strefę portu PL (%s)', coalesce(v_name, v_op)),
@@ -1446,20 +1467,44 @@ begin
          and loaded_confirmed(new.load_id) is not true then
         perform raise_risk(new.load_id, 'LOADING_UNCONFIRMED', 'MEDIUM',
           format('Pojazd w porcie PL (%s) bez potwierdzenia załadunku', coalesce(v_name, v_op)),
-          v_detail || jsonb_build_object('title_key', 'rk_port_no_loaded', 'params', '{}'::jsonb), 'PORT_NO_LOADED:' || new.load_id);
+          v_detail || jsonb_build_object('title_key', 'rk_port_no_loaded', 'params', '{}'::jsonb),
+          'PORT_NO_LOADED:' || new.load_id);
       end if;
 
-    elsif v_kind = 'PORT_IN' and v_status = 'FERRY'
+    elsif v_kind = 'PORT_IN'
+          and public.load_status_rank(v_status) < public.load_status_rank('AT_PORT_NYNASHAMN')
+          and public.load_status_rank(v_status) >= public.load_status_rank('AT_LOADING')
           and public.eta_obs_operator_key(coalesce(v_route, 'POLFERRIES')) = v_op then
-      perform auto_set_status(new.load_id, v_status, 'AT_PORT_NYNASHAMN',
-        format('wjazd w strefę portu SE (%s)', coalesce(v_name, v_op)),
-        new.occurred_at, v_detail);
+      if v_status is distinct from 'FERRY' then
+        select coalesce(s.delayed_departure_at, s.departure_at) into v_dep
+          from loads l left join sailings s on s.id = l.sailing_id
+         where l.id = new.load_id;
+        v_prev := current_setting('tower.bulk_quiet', true);
+        perform set_config('tower.bulk_quiet', 'on', true);
+        perform auto_set_status(
+          new.load_id, v_status, 'FERRY',
+          'wjazd do portu SE — uzupełniony status Na promie',
+          least(coalesce(v_dep, new.occurred_at), new.occurred_at),
+          v_detail || jsonb_build_object(
+            'source', 'SCHEDULE',
+            'synthetic_ferry', true
+          )
+        );
+        perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+        select status into v_status from loads where id = new.load_id;
+      end if;
+      if v_status = 'FERRY' then
+        perform auto_set_status(new.load_id, v_status, 'AT_PORT_NYNASHAMN',
+          format('wjazd w strefę portu SE (%s)', coalesce(v_name, v_op)),
+          new.occurred_at, v_detail);
+      end if;
 
-    elsif v_kind = 'SITE' and v_status in ('FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE') then
-      perform auto_set_status(new.load_id, v_status, 'AT_SITE', 'wjazd na plac budowy', new.occurred_at, v_detail);
+    elsif v_kind = 'SITE'
+          and public.load_status_rank(v_status) >= public.load_status_rank('AT_LOADING')
+          and public.load_status_rank(v_status) < public.load_status_rank('AT_SITE') then
+      perform auto_set_status(new.load_id, v_status, 'AT_SITE',
+        'wjazd na plac budowy', new.occurred_at, v_detail);
 
-    -- Awaryjnie: GPS zgubił wyjazd z portu SE albo cały pobyt w porcie
-    -- (sygnał wraca dopiero na lądzie). Auto na drogach SE nie może być na promie.
     elsif v_kind in ('CHECKPOINT','PRE_ARRIVAL') and v_country = 'SE'
           and v_status in ('FERRY','AT_PORT_NYNASHAMN') then
       perform auto_set_status(new.load_id, v_status, 'IN_TRANSIT_SE',
@@ -1490,7 +1535,6 @@ begin
     end if;
 
     if v_kind = 'LOADING' and v_status = 'AT_LOADING' then
-      -- D-1710: EXIT LOADING wymaga wczesniejszego ENTER.
       if v_entered is null then
         null;
       elsif v_dwell_min is not null and v_dwell_min >= 5 then
@@ -1507,7 +1551,6 @@ begin
            where id = new.load_id;
         end if;
       end if;
-      -- krócej niż 5 min: status bez zmian, bez LEFT_LOADING_UNCONFIRMED
 
     elsif v_kind = 'SITE' and v_status = 'AT_SITE' then
       if v_dwell_min is not null and v_dwell_min >= 10 then
@@ -1524,7 +1567,6 @@ begin
            where id = new.load_id;
         end if;
       elsif v_dwell_min is not null and v_dwell_min < 10 then
-        -- L14: sprawa „Czy dostarczono?”
         select public.load_sms_code(new.load_id) into v_code;
         v_title := format(
           '%s: wyjazd z placu po %s min — czy dostarczono?',
@@ -1553,14 +1595,9 @@ begin
         format('wyjazd ze strefy portu SE (%s)', coalesce(v_name, v_op)),
         new.occurred_at, v_detail);
     end if;
-    -- Wyjazd ze strefy portu Gdańsk po przełączeniu na PROM (statek
-    -- odpływa) celowo niczego nie zmienia.
   end if;
   return null;
 end $function$;
-
-
-revoke all on function public.apply_geofence_status() from public, anon, authenticated;
 
 revoke all on function public.apply_geofence_status() from public, anon, authenticated;
 
@@ -2017,7 +2054,9 @@ begin
 end $function$;
 
 
-revoke execute on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
+-- Jak 0242/0279: brak EXECUTE dla anon/authenticated (i2 + security + nullguard).
+revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
+grant execute on function public.compute_load_eta(uuid, timestamptz) to service_role;
 
 -- -------------------------------------------------------------------------
 -- 6) Kolumny odłączenia (RODO / śledzenie zmian)
@@ -2033,11 +2072,4 @@ comment on column public.positions.detached_load_id is
   'D-1710: transport, z którego odłączono pozycję (load_id = null); retencja 30 dni.';
 comment on column public.load_events.detached_load_id is
   'D-1710: transport, z którego odłączono zdarzenie (load_id = null).';
-
--- -------------------------------------------------------------------------
--- 7) telm_infer_phase_from_position — tylko po starcie / poza załadunkiem (F7 #373)
--- -------------------------------------------------------------------------
-
-revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon;
-grant execute on function public.compute_load_eta(uuid, timestamptz) to authenticated;
 

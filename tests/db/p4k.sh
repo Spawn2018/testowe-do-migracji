@@ -402,9 +402,24 @@ val "auto 18%: PL_ROAD bez zmian (8.5)" \
   "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "8.5"
 
 # B7 BACKTEST_WORSE: fit poprawia medianę, test pogarsza
+# Po auto 12% PL_ROAD jest zablokowany ≥7 dni (Ś3) — cofnij auto + izoluj pomiary.
 sys "begin;
+update eta_calibration_versions
+   set undone_at = now()
+ where applied is true
+   and undone_at is null
+   and coalesce(note, '') like '%auto-applied%';
+delete from eta_segment_observations
+ where corridor = 'PL_ROAD'
+   and coalesce(features->>'p4k', '') = 'true';
 delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
 delete from loads where id::text like 'a581a581-0000-4000-8000-00000000060%';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                    plan_load_date, plan_delivery_date, actual_delivery_at)
 select ('a581a581-0000-4000-8000-00000000060' || g)::uuid,
@@ -413,7 +428,7 @@ select ('a581a581-0000-4000-8000-00000000060' || g)::uuid,
        'DELIVERED', current_date - 30, current_date - 25, now() - interval '25 days'
   from generate_series(1, 10) g;
 -- fit (7): blisko 12 h; test (3): blisko seed 7.5 → mediana fit pogarsza test
-update eta_segment_params set hours = 7.5 where code = 'PL_ROAD';
+update eta_segment_params set hours = 7.5, spread_pct = 15 where code = 'PL_ROAD';
 insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
 select ('a581a581-0000-4000-8000-00000000060' || ord)::uuid, 'PL_ROAD', h,
        jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
@@ -433,6 +448,14 @@ sys "begin;
 delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
 delete from loads where id::text like 'a581a581-0000-4000-8000-00000000060%';
 delete from eta_calibration_versions where note like 'propozycja ciągła%' and applied is not true;
+-- przywróć auto-12 do stanu „zastosowana” pod test undo (BACKTEST tymczasowo ją cofnął)
+update eta_calibration_versions
+   set undone_at = null,
+       note = regexp_replace(coalesce(note, ''), ';?\s*undone', '', 'g')
+ where id = $AUTO_VER;
+update eta_segment_params
+   set hours = 10, spread_pct = 15
+ where code = 'PL_ROAD';
 commit;" >/dev/null
 
 # undo po auto 12 % (przywróć params_before); zamrożenie nie blokuje (Ś8)

@@ -6230,3 +6230,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - payload AUTO: `title`/`summary`/`undo_version`; `ETA_CALIB_BUSY`; clamp spread tylko nowe
   - suite `p4k` **60**, nullguard **880**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
 
+## 2026-10-28 05:35 — #604 CI db FAIL po F7 r2 → A10 geofence + grant ETA + B7 fixture
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `199b5032`.
+- Scalanie: nie (CI db run 40625850627 FAIL).
+- **Przyczyny:** (1) `apply_geofence_status` w 0320 cofnięte do 0242 — bez A10/0279 (LOADING z DOCS_PENDING, SCHEDULE synthetic_ferry); (2) `grant execute … compute_load_eta to authenticated` → security/i2/nullguard; (3) B7 BACKTEST: po auto-12 PL_ROAD zablokowany Ś3 ≥7 dni → `NO_CHANGE`.
+- **Krok:** 0320 — geofence = 0279 + słownik `eta_obs_operator_key`; revoke EXECUTE `compute_load_eta` (tylko service_role); p4k.sh — undo auto przed BT + izolacja PL_ROAD, przywrócenie auto pod undo. Push → CI; po zielonym — prośba o F7.
+
