@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #581 P4-k cz.1 — pomiar odcinków ETA z GPS / stref (0319, F7 r1).
+# #581 P4-k — pomiar GPS (0319) + kalibracja ciągła / auto-apply 27A (0320).
 . "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 ok=0; fail=0
@@ -255,18 +255,122 @@ val "integration_runs eta_calib_obs po błędzie" \
 val "authenticated bez EXECUTE eta_record" \
   "select has_function_privilege('authenticated','eta_record_segment_observations(uuid)','execute')::text" "false"
 
-val "authenticated bez EXECUTE eta_rebuild()" \
-  "select has_function_privilege('authenticated','eta_rebuild_segment_observations()','execute')::text" "false"
+val "authenticated bez EXECUTE eta_rebuild(timestamptz)" \
+  "select has_function_privilege('authenticated','eta_rebuild_segment_observations(timestamptz)','execute')::text" "false"
+
+val "brak wrappera eta_rebuild()" \
+  "select count(*)::text from pg_proc where proname='eta_rebuild_segment_observations' and pronargs=0" "0"
+
+val "eta_rebuild bez arg (DEFAULT) jednoznaczny" \
+  "select jsonb_typeof(eta_rebuild_segment_observations())" "object"
 
 val "anon bez EXECUTE eta_obs_position_rows" \
   "select has_function_privilege('anon','eta_obs_position_rows(uuid,timestamptz,timestamptz)','execute')::text" "false"
 
-val "anon bez EXECUTE eta_upsert" \
-  "select has_function_privilege('anon','eta_upsert_segment_observation(uuid,text,timestamptz,timestamptz)','execute')::text" "false"
+val "anon bez EXECUTE eta_upsert 6-arg" \
+  "select has_function_privilege('anon','eta_upsert_segment_observation(uuid,text,timestamptz,timestamptz,boolean,text)','execute')::text" "false"
+
+val "brak wrappera eta_upsert 4-arg" \
+  "select count(*)::text from pg_proc
+    where proname='eta_upsert_segment_observation' and pronargs=4" "0"
 
 val "search_path pg_temp na eta_record" \
   "select (prosecdef and coalesce(array_to_string(proconfig, ','), '') like '%pg_temp%')::text from pg_proc
     where proname='eta_record_segment_observations' and pronargs=1" "true"
+
+# --- cz.2: propozycja / auto-apply 27A / undo / freeze ---
+echo; echo "[p4k] #581 cz.2 kalibracja ciągła (0320)"
+
+sys "begin;
+delete from eta_segment_observations where features->>'p4k_calib' = 'true';
+delete from eta_calibration_versions where note like 'p4k-test%';
+-- 5 pomiarów PL_ROAD: mediana 10 h vs parametr (zwykle 7.5) → >10 %
+insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
+select 'a581a581-0000-4000-8000-000000000581', 'PL_ROAD', h, 300, h/3.0,
+       jsonb_build_object('p4k_calib', true), now() - (g || ' hours')::interval
+  from (values (9.5),(10.0),(10.0),(10.5),(11.0)) as t(h)
+  cross join lateral generate_series(1,1) g;
+-- n=4 SE_ROAD — za mało na propozycję samego SE
+insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
+select 'a581a581-0000-4000-8000-000000000581', 'SE_ROAD', 20, 400, 5.0,
+       jsonb_build_object('p4k_calib', true), now()
+  from generate_series(1,4);
+commit;" >/dev/null
+
+val "propose: powstaje przy n≥5 i >10%" \
+  "select (eta_propose_calibration()->>'proposal' is not null)::text" "true"
+
+val "propose: jedna niezatwierdzona" \
+  "select count(*)::text from eta_calibration_versions where applied is not true and note like 'propozycja ciągła%'" "1"
+
+# auto ≤15 %: ustaw params_before blisko mediany, żeby max_chg=12 %
+sys "begin;
+update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
+delete from eta_calibration_versions where applied is not true;
+-- propozycja z ręcznym 12 %: 8.9 → 10.0 = 12.4 %
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.9, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 12)),
+  5, 90, 60, false, 'p4k-test-auto-12'
+);
+commit;" >/dev/null
+
+val "auto 12%: stosuje" \
+  "select (eta_auto_apply_pending()->>'applied' is not null)::text" "true"
+
+val "auto 12%: PL_ROAD=10" \
+  "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "10"
+
+val "audyt automat kalibracji" \
+  "select (new_value->>'actor' = 'automat kalibracji')::text
+     from audit_log where action='ETA_CALIBRATION_APPLY'
+     order by created_at desc nulls last, id desc limit 1" "true"
+
+# 18 % — czeka
+sys "begin;
+update eta_segment_params set hours = 8.5 where code = 'PL_ROAD';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.5, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 12)),
+  5, 100, 50, false, 'p4k-test-auto-18'
+);
+commit;" >/dev/null
+
+val "auto 18%: NEEDS_APPROVAL" \
+  "select eta_auto_apply_pending()->>'reason'" "NEEDS_APPROVAL"
+
+val "auto 18%: PL_ROAD bez zmian (8.5)" \
+  "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "8.5"
+
+# zamrożenie
+sys "begin;
+update app_parameters set value = 1 where key = 'ETA_CALIBRATION_FROZEN';
+commit;" >/dev/null
+
+val "freeze: propose → FROZEN" \
+  "select eta_propose_calibration()->>'reason'" "FROZEN"
+
+sys "begin;
+update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
+-- przywróć PL_ROAD z seeda 0051 (4.5 h) — nie psuj innych suite
+update eta_segment_params set hours = 4.5, spread_pct = 20, source = 'założenie M12 — do potwierdzenia z przewoźnikiem (17.14)'
+ where code = 'PL_ROAD';
+delete from eta_segment_observations where features->>'p4k_calib' = 'true';
+delete from eta_calibration_versions where note like 'p4k-test%' or note like 'propozycja ciągła%';
+delete from audit_log where action in ('ETA_CALIBRATION_APPLY','ETA_CALIBRATION_UNDO')
+  and entity_id in (select id::text from eta_calibration_versions where note like 'p4k-test%');
+commit;" >/dev/null
+
+val "tick istnieje" \
+  "select count(*)::text from pg_proc where proname='eta_calibration_tick' and pronargs=0" "1"
+
+val "authenticated bez EXECUTE tick" \
+  "select has_function_privilege('authenticated','eta_calibration_tick()','execute')::text" "false"
+
+val "authenticated ma EXECUTE undo" \
+  "select has_function_privilege('authenticated','eta_calibration_undo(bigint)','execute')::text" "true"
 
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -6171,3 +6171,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `279731b6`: unit/visual ✔; **db FAIL** — i2 668/3 (parametry odcinków 9→11 po `CROSSING_GDN_NYN`/`CROSSING_GDY_KAA`); p4k **31**/31, h4 19/19.
 - **Krok:** `tests/db/i2.sh` — count/string_agg = 11 + nowe kody przepraw (EXPECTED i2 **671** bez zmiany). Push → CI; po zielonym — F7: gotowe do scalenia.
 
+## 2026-10-28 03:15 — #598/#581 cz.1 SCALONE; start cz.2 (0320)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#598** — F7 „gotowe do scalenia” (`Spawn2018`, 01:08Z) po `02445f52` (00:49Z) + CI unit/visual/db ✔ → `gh pr merge --merge` → `3f82cb09`. Bez push na main.
+- Bieżąca: **P4-k cz.2** gałąź `pakiet/581-p4k-eta-calib-cz2`, migracja **0320**:
+  - drop wrapperów 0/4-arg (F7 N1: `eta_rebuild` / `eta_seg_event_at` / `eta_upsert`);
+  - `eta_propose_calibration` (n≥5, >10 %, test wsteczny);
+  - auto-apply ≤15 % + powiadomienie IN_APP `ETA_CALIBRATION_AUTO` + audyt „automat kalibracji” (27A); >15 % czeka;
+  - `eta_calibration_undo` (HHL_ADMIN); zamrożenie wstrzymuje;
+  - cron `tower-eta-calibration` co 1 h → `eta_calibration_tick` (rebuild 48 h + propose + auto);
+  - suite `p4k` **45**; nullguard **871**.
+

@@ -89,6 +89,7 @@ authenticated admin_sms_zone_test
 authenticated admin_sms_zone_trigger_set
 authenticated app_user_mark_password_set
 authenticated apply_eta_calibration_version
+authenticated eta_calibration_undo
 authenticated auth_email_allowed
 authenticated baf_change_log
 authenticated can_see_margin
