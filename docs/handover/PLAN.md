@@ -1854,3 +1854,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 01:20 | #581/#598 F7 r1: `eta_route_segments`, STEGRA seed, bez duplikatów ts, luka tylko PL/SE, integration_runs w triggerze, REMOVED w rebuild; p4k **31** | pętla |
 | 28.10.2026 02:15 | #598/#581 cz.1 SCALONE (`3f82cb09`, F7 gotowe `02445f52`); start cz.2 **0320** (cron 48 h + auto-apply 27A + N1) | pętla |
 | 28.10.2026 04:05 | #604 F7 r1: B3–B7 + Ś1–Ś8 + D7–D11 w 0320 (aliasy tras, decyzja >15 %, undo/undone_at, tick bez raise); p4k **53**, c3 **34**, dec2 **28** | pętla |
+| 28.10.2026 04:15 | #604 CI db FAIL p4k 42/11: fixture multi-load (uidx p4k) + spread stały w auto 12%/18% (Ś6); push fix | pętla |

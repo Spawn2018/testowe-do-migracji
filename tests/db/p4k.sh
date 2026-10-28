@@ -294,22 +294,28 @@ PL_SRC=$(sys "select source from eta_segment_params where code='PL_ROAD'" | grep
 
 sys "begin;
 delete from notifications where template = 'ETA_CALIBRATION_AUTO';
-delete from eta_segment_observations where features->>'p4k_calib' = 'true' or features->>'p4k' = 'true' and load_id = 'a581a581-0000-4000-8000-000000000581' and corridor = 'PL_ROAD' and km_observed = 300;
+delete from eta_segment_observations where coalesce(features->>'p4k_calib','') = 'true';
 delete from eta_calibration_versions where note like 'p4k-test%' or note like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
--- 5+5 pomiarów PL_ROAD w dwóch oknach czasu (B7): fit starsze, test nowsze
+-- Unikalność p4k(load_id,corridor): osobny transport na każdy pomiar (Ś5 + indeks 0319)
+delete from loads where id::text like 'a581a581-0000-4000-8000-00000000059%';
+insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                   plan_load_date, plan_delivery_date, actual_delivery_at)
+select ('a581a581-0000-4000-8000-00000000059' || g)::uuid,
+       (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+       'P4K-C' || g, 'HHL-P4K-C' || g, 'SCX-P4K-C' || g,
+       'DELIVERED', current_date - 25, current_date - 20, now() - interval '20 days'
+  from generate_series(1, 8) g;
+-- 5 starszych + 3 nowsze PL_ROAD (B7: fit / test); mediana ~10 h vs seed 7,5 → >10 %
 insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
-select 'a581a581-0000-4000-8000-000000000581', 'PL_ROAD', h, 300, h/3.0,
+select ('a581a581-0000-4000-8000-00000000059' || ord)::uuid, 'PL_ROAD', h, 300, h/3.0,
        jsonb_build_object('p4k', true, 'p4k_calib', true), now() - interval '20 days' + (ord || ' hours')::interval
   from (values (1,9.5),(2,10.0),(3,10.0),(4,10.5),(5,11.0)) as t(ord,h);
 insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
-select 'a581a581-0000-4000-8000-000000000581', 'PL_ROAD', h, 300, h/3.0,
+select ('a581a581-0000-4000-8000-00000000059' || (5+ord))::uuid, 'PL_ROAD', h, 300, h/3.0,
        jsonb_build_object('p4k', true, 'p4k_calib', true), now() - interval '2 days' + (ord || ' hours')::interval
   from (values (1,9.8),(2,10.0),(3,10.2)) as t(ord,h);
-insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
-select 'a581a581-0000-4000-8000-000000000581', 'SE_ROAD', 20, 400, 5.0,
-       jsonb_build_object('p4k', true, 'p4k_calib', true), now() - (g || ' days')::interval
-  from generate_series(1,4) g;
 commit;" >/dev/null
 
 val "propose: powstaje przy n≥5 i >10%" \
@@ -321,14 +327,16 @@ val "propose: jedna niezatwierdzona" \
 val "Ś1: alias STENA → GDY-KAA" \
   "select route_key from eta_route_aliases where alias_key='STENA'" "GDY-KAA"
 
-# auto ≤15 %, n_obs≥10 (D11)
+# auto ≤15 %, n_obs≥10 (D11); spread bez zmian (Ś6 wlicza Δspread do progu — 15→12 = 20 %)
 sys "begin;
 update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
 delete from eta_calibration_versions where applied is not true;
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
 values (
   jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.9, 'spread_pct', 15)),
-  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 12)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
   10, 90, 60, false, 'p4k-test-auto-12'
 );
 commit;" >/dev/null
@@ -354,13 +362,15 @@ val "B5a: undo_version = zastosowana" \
   "select (payload->>'undo_version' = '$AUTO_VER')::text from notifications
     where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
 
-# 18 % — decyzja HHL (B4)
+# 18 % godzin — decyzja HHL (B4); spread stały, żeby próg liczył tylko Δh
 sys "begin;
 update eta_segment_params set hours = 8.5 where code = 'PL_ROAD';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
 values (
   jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.5, 'spread_pct', 15)),
-  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 12)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
   10, 100, 50, false, 'p4k-test-auto-18'
 );
 commit;" >/dev/null
@@ -409,7 +419,8 @@ delete from notifications where template = 'ETA_CALIBRATION_AUTO';
 delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 delete from eta_calibration_versions where note like 'p4k-test%' or note like 'propozycja ciągła%';
-delete from eta_segment_observations where features->>'p4k_calib' = 'true';
+delete from eta_segment_observations where coalesce(features->>'p4k_calib','') = 'true';
+delete from loads where id::text like 'a581a581-0000-4000-8000-00000000059%';
 update eta_segment_params
    set hours = ${PL_H}::numeric, spread_pct = ${PL_SP}::numeric, source = \$s\$${PL_SRC}\$s\$
  where code = 'PL_ROAD';

@@ -6203,3 +6203,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - **D7/D8/D11** cleanup PL_ROAD z seeda; testy undo HHL/KSH; auto `n_obs≥10`
   - suite `p4k` **53**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
 
+## 2026-10-28 04:15 — #604 CI db FAIL p4k 42/11 → fix fixture
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `871c01ae`.
+- Scalanie: nie (CI db czerwone na `871c01ae`, run 40618589437).
+- **Przyczyna p4k:** (1) unikalny indeks `eta_seg_obs_p4k_load_corridor_uidx` — fixture wkładał 8 pomiarów PL_ROAD na ten sam `load_id` → insert padał cicho, propose `NO_CHANGE`; (2) test auto 12 % zmieniał `spread_pct` 15→12 (=20 %) → Ś6 → `NEEDS_APPROVAL` zamiast apply; stąd B4=2 i puste `AUTO_VER` / undo.
+- **Krok:** `tests/db/p4k.sh` — 8 osobnych transportów na pomiary; spread stały w auto 12 %/18 %; czyszczenie decyzji przed B4. Push → CI `p4k` (+ unit/visual); po zielonym — prośba o F7.
+
