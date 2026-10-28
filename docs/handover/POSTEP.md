@@ -6293,3 +6293,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: nie (CI db 40640565398: p4k 70/2; unit/visual ✔).
 - **Przyczyny:** (1) B2 propose z 8 obs → `n_obs<10` → auto `BLOCKED` zamiast applied; (2) undo cleanup: `delete loads` BT bez wcześniejszego `notifications`/`risk_signals`.
 - **Krok:** fixture calib 12 obs (8+4, lpad `…0005||nn`); cleanup BT/final z FK przed loads. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 08:45 — #604 CI po F7 r7: p4k 71/1 → B2 spread_pct=10
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (brak „F7: gotowe” po `fa556604`; CI db 40643770785: p4k **71/1**; unit/visual ✔).
+- **Przyczyna B2:** propose z płaskich godzin (9.6) liczy `spread_pct` = clamp 10; przy params 15 Δspread ≈33 % → `eta_auto_apply_pending` = `NEEDS_APPROVAL` (nie applied). SUPERSEDED/`rejected_at` OK.
+- **Krok:** p4k.sh B2 — `spread_pct=10` przed propose (Ś6: Δspread w progu 15 %). Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.

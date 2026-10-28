@@ -444,8 +444,9 @@ update eta_calibration_versions
  where id = $AUTO_VER and applied is true;
 commit;"
 sys "begin;
--- fit≈9.6 przy hours=8.5 → Δ≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
-update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+-- fit≈9.6 przy hours=8.5 → Δh≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
+-- spread_pct=10: płaskie godziny → mediana p10/p90 daje clamp 10; przy 15 Δspread≈33 % → NEEDS_APPROVAL zamiast apply (Ś6)
+update eta_segment_params set hours = 8.5, spread_pct = 10 where code = 'PL_ROAD';
 update eta_segment_observations set hours_observed = 9.6
  where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
    and observed_at < now() - interval '10 days';
