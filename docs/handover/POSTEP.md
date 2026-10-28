@@ -6565,3 +6565,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: F7 „gotowe” @ `2c564470` unieważnione nowym `5b330fd5` (#624 wchłonięte w #619 zamiast osobnego PR). Brak „F7: gotowe” po HEAD. Bez push na main.
 - CI @ `5b330fd5`: unit ✔; visual ✔; db **FAIL** — `p4k: oczekiwano 94/94, jest: 98 OK, 0 FAIL` (same asercje, brak `EXPECTED`).
 - **Krok:** `gate-suites.mjs` p4k **98**; PLAN: #624 w #619. Push → CI → F7.
+
+## 2026-10-29 01:30 — #619/#603 SCALONE; rebuild po 0328
+
+- Skrzynka: #608 w planie (kolejność → **27B:C**); #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #619 → `07d27ba7` (F7 gotowe @ `61eb3284`, CI unit/db/visual ✔, p4k 98/98). #624 zamknięte. Bez push na main.
+- deploy-main `40787814059` ✔ — migracja **0328** nałożona.
+- **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0** (było 1+5 BRAK); CROSSING_* 2+1 każdy; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4. `port_out_src`: PORT EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2. Wynik w komentarzu #619.
+- **Następna pozycja:** 27B:C (obie trasy Karlskrona→Boden / OFF_CORRIDOR + ETA + mapa + kalibracja).
