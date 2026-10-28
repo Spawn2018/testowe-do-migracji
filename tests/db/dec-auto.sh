@@ -147,7 +147,8 @@ val "ten sam numer → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C2'
 # #384 pkt 3: pusta wartość w pliku ≠ konflikt
 val "konflikt puste file → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C3','HHL/9','') is null)" t
 val "konflikt file null → bez decyzji" "select (l1b_note_conflict('$P','$L','SG-C4','HHL/9',null) is null)" t
-val "import woła konflikt" "select (position('l1b_note_conflict' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
+# #611: hhl_order_no poza importem — konflikt plik↔WT tylko przez l1b_note_file_changed (daty).
+val "import woła konflikt" "select (position('l1b_note_file_changed' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
 val "import sprawdza column_map hhlOrderNo" "select (position('hhlOrderNo' in pg_get_functiondef('import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)'::regprocedure)) > 0)" t
 
 val "plik nieczytelny → decyzja" "select (l1b_ksh_file_unreadable('$P','zly.xlsx') is not null)" t

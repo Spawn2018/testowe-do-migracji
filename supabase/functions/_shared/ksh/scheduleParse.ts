@@ -20,10 +20,10 @@
  *    nie naprawiany zgadywaniem.
  */
 
-import { z } from 'zod';
-import { toNationalPhone } from './phoneNational';
-import { formatPlNumber } from './format';
-export { standardSkipMessage } from './standardSkipMessage';
+import { z } from 'npm:zod@3';
+import { toNationalPhone } from './phoneNational.ts';
+import { formatPlNumber } from './formatPl.ts';
+export { standardSkipMessage } from './standardSkipMessage.ts';
 
 /* --------------------------------------------------------------- */
 /* Parsowanie wartości w formacie polskim                           */

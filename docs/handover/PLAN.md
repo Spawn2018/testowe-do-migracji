@@ -1097,11 +1097,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612, migracja **0325**)
 Źródło: #611 + zasady właściciela 28.10 14:28. Stare 0324/0325 (kierowca na liście) **pominięte** w rebase po #613.
-1. **0325:** `import_schedule` + `schedule_row_canon` — bez zapisu kierowca/telefon/tablice/`hhl_order_no`/`carrier_order_no`; jawna allowlista `ksh_sync_preview_field_allowed` (plik→WT + oba kierunki); bez konfliktu HHL z pliku. `cargo_class`/`order_no`/`assembly_seq` jak dziś. import **365**.
-2. Testy A6/#583/#594 przepisane pod decyzję #611.
-3. **Przepięcie naczepy** wyłącznie z Awizacji WT — z pliku **odpada**.
-4. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa, numery zleceń.
-5. Import KSH **wyłączony** do wiadomości właściciela (28B).
+1. **0325:** `import_schedule` + `schedule_row_canon` — bez zapisu kierowca/telefon/tablice/`hhl_order_no`/`carrier_order_no`; jawna allowlista `ksh_sync_preview_field_allowed` (plik→WT + oba kierunki); konflikt plik↔WT tylko daty/godziny (`l1b_note_file_changed`). `cargo_class`/`order_no`/`assembly_seq` jak dziś. import **366**.
+2. Testy A6 B1/#569/#583/#594 + dec-auto przepisane pod decyzję #611 (konflikt = `load_date`; P1 publish null dla WT→plik).
+3. F7 r3: Edge `scheduleParse` — importy Deno (`npm:zod@3`, `.ts`, `formatPl.ts`); ciała = front (kontrakt A6 bez linii import).
+4. **Przepięcie naczepy** wyłącznie z Awizacji WT — z pliku **odpada**.
+5. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa, numery zleceń.
+6. Import KSH **wyłączony** do wiadomości właściciela (28B).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → **#613** (pilne BS-01) → **#611** (pilne, przed importem) → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
@@ -1912,3 +1913,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 16:15 | #614 F7 r1 POPRAWKI: Historia bez wycieku cen, strażnik przed, drop fn, wycena W1/W2; status **358**; CI po push → F7 r2 | pętla |
 | 28.10.2026 16:48 | #614 SCALONE (`ece3c334`, F7 gotowe @ `8a127f97`); start #611 **0325** kierunek plik↔WT | pętla |
 | 28.10.2026 17:10 | #612 CI db FAIL: 0325 — niedomknięty `DO $g$` (GRANT service_role); poprawka składni | pętla |
+| 28.10.2026 17:55 | #612 F7 r3: Edge Deno importy; testy B1/#569→load_date; P1 publish null; import **366** | pętla |

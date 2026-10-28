@@ -6410,3 +6410,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #613 SCALONE (odbiór SELECT po deploy — koordynator); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
 - Scalanie: #612 — brak „F7: gotowe” po `186bf171`; CI db FAIL (migracja 0325). Bez push na main.
 - **Krok:** `0325` — domknięcie `DO $g$` (`END IF; END $g$;`) przed `commit` (GRANT service_role). Unit/visual ✔ na poprzednim SHA; db po push.
+
+## 2026-10-28 17:55 — #612 F7 r3: Edge Deno + testy kierunku
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 — brak „F7: gotowe”; CI na `b657730c`: unit/visual ✔, **db FAIL** import 345/365 (B1/`carrier_order_no`) + dec-auto 82/83. Bez push na main.
+- **Krok F7 r3:**
+  1. Edge `scheduleParse` — importy Deno (`npm:zod@3`, `.ts`, `formatPl.ts`); ciało = front.
+  2. Testy A6 B1/#569: konflikt = `load_date` (oba kierunki); #583 wymiary z WT; #594 HHL bez numerów / widzi datę; P1 WT→plik → publish null + P1c filtr; D6 na `load_date`; dec-auto → `l1b_note_file_changed`.
+  3. import EXPECTED **366**. CI po push → prośba o F7.
