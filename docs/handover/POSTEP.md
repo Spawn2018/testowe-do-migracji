@@ -6446,3 +6446,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: bez nowych; #550 WSTRZYMANE; #608 w kolejce.
 - Scalanie: #615 — brak „F7: gotowe”; db FAIL (CANCELLED przez JWT → guard_load_update). Bez push na main.
 - **Krok:** test #597 CANCELLED jak A6 r8 (postgres, nie authenticated); EXPECTED import **372**.
+
+## 2026-10-28 19:45 — #597 F7 r1 (B1/B2 + drobne)
+
+- Skrzynka `dla-cursora`: #608 w kolejce; #550 **WSTRZYMANE**; #538/#537/#500/#499 — bez nowych do budowy. Bez `pilne` przerywających.
+- Scalanie: #615 — F7 „nie gotowe” (blockery r1 otwarte). CI @ `1495fefe` unit/db/visual ✔ — potem poprawki r1. Bez push na main.
+- **Krok F7 r1:**
+  1. B1 `fileAlreadyHasPatch` — klucz awizacji → `false` (PUT, nie alreadyDone); unit.
+  2. B2 `ksh_sync_outbound_wt_diff` + `apply_sent` — `dr`/`ph`/`tr`/`tl`; test rev mismatch → pending DriverB.
+  3. Drobne: kolejka po złożonym `ksh_file_ab`; OTHER z „+”; `begin`/`commit`; wczesne wyjście; testy SE-only / no-op / PL+48.
+  4. PLAN §4/#597 + §5 W62 + §8; import EXPECTED **376**.

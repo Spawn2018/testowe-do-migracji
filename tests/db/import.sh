@@ -2230,5 +2230,59 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "600333444 / 0703334455" ]; then
   ok=$((ok+1)); echo "  OK    #597: telefon SE +46 → 0…"; else fail=$((fail+1)); echo "  FAIL  #597: telefon SE → $out"; fi
+# F7 r1: swap z jedną pustą stroną (tylko SE) → sama SE
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_name=null, driver_delivery_name='Erik Only',
+    trailer_swap=true
+  where id='$SG_OUT';
+  select patch->>'driver' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "Erik Only" ]; then
+  ok=$((ok+1)); echo "  OK    #597: swap tylko SE → sama SE"; else fail=$((fail+1)); echo "  FAIL  #597: swap tylko SE → $out"; fi
+# F7 r1: no-op (ta sama złożona wartość) → 0 pending
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='Jan Noop', driver_delivery_name=null, trailer_swap=false
+  where id='$SG_OUT'; commit;" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_delivery_name='Erik Ignored', trailer_swap=false where id='$SG_OUT';
+  select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then
+  ok=$((ok+1)); echo "  OK    #597: no-op SE przy swap=false → 0"; else fail=$((fail+1)); echo "  FAIL  #597: no-op → $out"; fi
+# F7 r1: PL +48 → cyfry bez +
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_phone='+48 600 555 666', driver_phone_country='PL',
+    driver_delivery_phone=null, trailer_swap=false
+  where id='$SG_OUT';
+  select patch->>'driver_phone' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "600555666" ]; then
+  ok=$((ok+1)); echo "  OK    #597: PL +48 → cyfry"; else fail=$((fail+1)); echo "  FAIL  #597: PL +48 → $out"; fi
+# F7 B2: rev mismatch — Edge ack ze starym rev po zmianie A→B → pending z B
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+OID_A=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='DriverA', driver_delivery_name=null, trailer_swap=false where id='$SG_OUT';
+  select id from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+REV_A=$(Q "select rev from ksh_sync_outbound where id=$OID_A")
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='DriverB' where id='$SG_OUT'; commit;" >/dev/null
+out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_outbound_ack(
+    jsonb_build_array(jsonb_build_object(
+      'id',$OID_A,'rev',$REV_A,
+      'sent',jsonb_build_object('driver','DriverA')
+    )),'done',null);
+  select patch->>'driver' from ksh_sync_outbound
+   where load_id='$SG_OUT' and status='pending' order by id desc limit 1;
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "DriverB" ]; then
+  ok=$((ok+1)); echo "  OK    #597: rev mismatch → pending DriverB"; else fail=$((fail+1)); echo "  FAIL  #597: rev mismatch → $out"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

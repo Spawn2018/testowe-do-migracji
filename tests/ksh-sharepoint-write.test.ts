@@ -310,6 +310,22 @@ describe('A6 fileAlreadyHasPatch', () => {
     })).toBe(true);
     expect(fileAlreadyHasPatch(exp, { code: 'X', load_date: '2026-11-02' }, exp)).toBe(false);
   });
+
+  // #597 F7 B1: patch tylko-awizacja → false (toWrite, nie alreadyDone) — etap #597.
+  it('#597: awizacja poza snapshota → false (PUT, nie alreadyDone)', () => {
+    const exp = { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'A', ho: null };
+    expect(fileAlreadyHasPatch(exp, { code: 'X', driver: 'Jan / Erik' }, exp)).toBe(false);
+    expect(fileAlreadyHasPatch(exp, { code: 'X', driver_phone: '600111222' }, exp)).toBe(false);
+    expect(fileAlreadyHasPatch(exp, { code: 'X', tractor: 'WGM1A6' }, exp)).toBe(false);
+    expect(fileAlreadyHasPatch(exp, { code: 'X', trailer: 'WWW1A6' }, exp)).toBe(false);
+    // ścieżka outboundWrite: remaining = codes.filter(!alreadyHas) → toWrite
+    const codes = ['SG-01'];
+    const patch = { code: 'SG-01', driver: 'A / B' };
+    const remaining = codes.filter((code) =>
+      !fileAlreadyHasPatch(exp, { code, ...patch }, exp)
+    );
+    expect(remaining).toEqual(['SG-01']);
+  });
 });
 
 /** Minimalny XLSX (arkusz + sharedStrings + drugi arkusz formuły) — round-trip JSZip. */
