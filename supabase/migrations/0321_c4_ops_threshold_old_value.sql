@@ -1,6 +1,8 @@
 -- C4 (D-20261015-0300-01): admin_ops_threshold_set zapisuje old_value (było → jest).
 -- Dotąd „from/to” było tylko w new_value → Historia pokazywała puste „było”.
 -- Alerty stref/ryzyk w przeglądarce usuwane w store (macierz + my_notify).
+-- B5: pierwsza instrukcja po begin = perform assert_not_preview (CREATE OR REPLACE
+-- zdejmuje wstrzyknięcie z 0300; komentarz przed perform łamie strażnik security).
 
 create or replace function public.admin_ops_threshold_set(p_key text, p_value numeric)
 returns void
@@ -10,7 +12,6 @@ declare
   v_role text;
   v_old numeric;
 begin
-  -- B5 (0300): CREATE OR REPLACE zdejmuje assert wstrzyknięty wcześniej — wstawiamy ręcznie.
   perform public.assert_not_preview();
   select id, role::text into v_me, v_role from app_users where auth_id = auth.uid() and active;
   if (v_me is not null and v_role = 'HHL_ADMIN') is not true then

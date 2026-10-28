@@ -6328,3 +6328,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” (CI db FAIL na `8197251d`). Bez push na main.
 - CI `8197251d`: unit ✔ / visual ✔ / db ✖ — (1) dec6: `::text` → `true` zamiast `t`; (2) security B5: 0321 bez `assert_not_preview` (0300 wstrzykiwał — CREATE OR REPLACE zdejmuje).
 - **Krok:** 0321 + `perform public.assert_not_preview()`; dec6 bez `::text`; push #606.
+
+## 2026-10-28 09:40 — C4 #606 db: assert musi być 1. po begin
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; #538/#537/#500/#499 w planie).
+- CI `0a48566e`: unit ✔ / visual ✔ / db ✖ — dec6 **27/27**, security nadal B5 strażnik (1): komentarz między `begin` a `perform assert` łamie regex.
+- **Krok:** assert jako pierwsza instrukcja po `begin` (bez komentarza przed); push.
