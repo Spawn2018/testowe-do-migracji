@@ -5,12 +5,14 @@
  * (po 5 dostawach; mediana z rozrzutem; ≤ 10 % — bez zmian), wersje czasów. Bez zatwierdzenia nic się nie zmienia.
  * Dane: `etaCalibSource.ts` (kody odcinków jak `eta_segment_params`).
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { formatListDateTime } from '../../lib/format';
 import { etaDuration } from '../../lib/etaDuration';
-import type { CalibApprove, CalibErr, CalibSegment, CalibVersion, EtaCalibration } from '../../lib/etaCalibSource';
+import type { CalibApprove, CalibErr, CalibSegment, CalibUndo, CalibVersion, EtaCalibration } from '../../lib/etaCalibSource';
+import { undoVisible, versionsAfterUndo } from '../../lib/etaCalibAuto';
+import { scrollToScreen } from '../../lib/openOptions';
 import './etaCalib.css';
 
 /** Cel z odbioru E15: błąd godzinę przed przyjazdem ≤ 30 min. */
@@ -34,7 +36,7 @@ const meanAbs = (xs: Array<number | null>) => {
 };
 const dayOf = (iso: string) => formatListDateTime(iso).split(', ')[0];
 
-export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, onApproved, mark, frozen, onFreeze, note }: {
+export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, onApproved, mark, frozen, onFreeze, note, onUndo, highlight }: {
   locale: Locale;
   data: EtaCalibration;
   readOnly?: boolean;
@@ -49,17 +51,53 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
   onFreeze?: (next: boolean) => void;
   /** Zdanie nad pomiarami (produkcja: czego baza jeszcze nie mierzy). */
   note?: string;
+  /** W-604: „Cofnij” przy ostatniej zastosowanej wersji — tylko Administrator HHL; `null` — bez prawa zmiany. Działa też przy zamrożeniu. */
+  onUndo?: CalibUndo | null;
+  /** W-604: wersja wskazana z dzwonka (`?wersja=N`) — podświetlona na liście. */
+  highlight?: string | null;
 }) {
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [own, setOwn] = useState<CalibVersion | null>(null);
+  const [undoAsk, setUndoAsk] = useState<string | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
+  const [undoErr, setUndoErr] = useState<string | null>(null);
+  const [undone, setUndone] = useState<ReadonlySet<string>>(() => new Set());
   const added = approved !== undefined ? approved : own;
   const setAdded = (v: CalibVersion) => { setOwn(v); onApproved?.(v); };
+  /* wersja zatwierdzona w tej sesji i od razu cofnięta — propozycja zużyta, ETA liczy poprzednie czasy */
+  const addedLive = added && !undone.has(added.id) ? added : null;
   const counted = data.observations.filter((o) => !o.skipped);
   const left = Math.max(0, data.needed - counted.length);
-  const versions = added ? [added, ...data.versions.map((v) => ({ ...v, current: false }))] : data.versions;
+  const versions = versionsAfterUndo(added ? [added, ...data.versions.map((v) => ({ ...v, current: false }))] : data.versions, undone);
+  const currentVer = versions.find((v) => v.current) ?? null;
   const proposal = added ? null : data.proposal;
+  useEffect(() => {
+    if (highlight) scrollToScreen(`[data-cal-ver-id="${highlight.replace(/[^\w-]/g, '')}"]`);
+  }, [highlight]);
+  /* F7 r1 Ś2: po cofnięciu fokus na nagłówek listy wersji, po błędzie — na komunikat (panel pytania znika) */
+  const verHeadRef = useRef<HTMLHeadingElement | null>(null);
+  const undoErrRef = useRef<HTMLSpanElement | null>(null);
+  const focusAfterUndo = (failed: boolean) => {
+    window.setTimeout(() => (failed ? undoErrRef.current : verHeadRef.current)?.focus(), 0);
+  };
+  const cancelUndo = () => {
+    setUndoAsk(null);
+    window.setTimeout(() => document.querySelector<HTMLButtonElement>('[data-eta-calib] [data-cal-undo]')?.focus(), 0);
+  };
+  const undo = (id: string) => {
+    if (!onUndo || undoBusy) return;
+    setUndoBusy(true);
+    setUndoErr(null);
+    void onUndo(id).then((r) => {
+      setUndoBusy(false);
+      setUndoAsk(null);
+      if (r.ok) setUndone((cur) => new Set([...cur, id]));
+      else setUndoErr(r.error ?? t(locale, 'cal_undo_failed'));
+      focusAfterUndo(!r.ok);
+    }, () => { setUndoBusy(false); setUndoAsk(null); setUndoErr(t(locale, 'cal_undo_failed')); focusAfterUndo(true); });
+  };
   const avg = { h24: meanAbs(counted.map((o) => o.err24)), h6: meanAbs(counted.map((o) => o.err6)), h1: meanAbs(counted.map((o) => o.err1)) };
   const head = [
     t(locale, 'cal_c_load'), t(locale, 'cal_c_arrived'), t(locale, 'cal_c_24'), t(locale, 'cal_c_6'), t(locale, 'cal_c_1'),
@@ -81,7 +119,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
   const verdict = (s: CalibSegment): ReactNode => {
     if (s.verdict === 'few') return <span className="cal-wait">{t(locale, 'cal_v_few')}</span>;
     if (s.verdict === 'same') return <span className="cal-wait">{tp(locale, 'cal_v_same', { p: pct(s.devPct ?? 0) })}</span>;
-    if (added) return <span className="ox-go">{t(locale, 'cal_v_applied')}</span>;
+    if (addedLive) return <span className="ox-go">{t(locale, 'cal_v_applied')}</span>;
     return <span><b>{dur(s.medianMin)}</b> <span className="cal-dev">({pct(s.devPct ?? 0)})</span></span>;
   };
 
@@ -90,7 +128,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
       <div className="ox-count-line">
         <span data-cal-count={counted.length}>
           {added
-            ? tp(locale, 'cal_count_done', { n: counted.length, no: added.no })
+            ? tp(locale, 'cal_count_done', { n: counted.length, no: (addedLive ?? currentVer ?? added).no })
             : left
               ? tp(locale, 'cal_count_wait', { n: counted.length, need: data.needed, left })
               : data.proposal
@@ -164,7 +202,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
         <div className="ox-panel-hd">
           <h3>{t(locale, 'cal_prop_h')}</h3>
           {proposal ? <span className="ox-tag ox-tag-unfinished">{tp(locale, 'cal_prop_tag', { d: dayOf(proposal.at) })}</span> : null}
-          {added ? <span className="ox-tag ox-tag-active">{tp(locale, 'cal_prop_done', { no: added.no })}</span> : null}
+          {addedLive ? <span className="ox-tag ox-tag-active">{tp(locale, 'cal_prop_done', { no: addedLive.no })}</span> : null}
         </div>
         <div className="ox-panel-note cal-note">{tp(locale, 'cal_prop_note', { need: data.needed })}</div>
         <div className="cal-wrap"><table className="ox-table ox-cards-phone cal-seg-t">
@@ -180,7 +218,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
                   </>
                 ) : (
                   <>
-                    <td className="cal-num">{dur(added && s.verdict === 'propose' && s.medianMin != null ? s.medianMin : s.currentMin)}</td>
+                    <td className="cal-num">{dur(addedLive && s.verdict === 'propose' && s.medianMin != null ? s.medianMin : s.currentMin)}</td>
                     <td className="cal-num">
                       {s.verdict === 'few'
                         ? tp(locale, 'cal_s_few', { n: s.n, need: data.needed })
@@ -204,10 +242,15 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
               {tp(locale, 'cal_gain', { n: counted.length, after: etaDuration(proposal.errorAfterMin), before: etaDuration(proposal.errorBeforeMin) })}
             </p>
           ) : null}
-          {added ? (
+          {added && !addedLive ? (
+            <span className="cal-wait" data-cal-prop-undone>{tp(locale, 'cal_prop_undone', { no: added.no })}</span>
+          ) : added ? (
             <span className="ox-go">{tp(locale, 'cal_prop_applied', { no: added.no })}</span>
           ) : !proposal ? (
             <span className="cal-wait">{left ? tp(locale, 'cal_prop_wait', { left, need: data.needed }) : t(locale, 'cal_prop_none')}</span>
+          ) : proposal.awaitsDecision ? (
+            /* F7 r1 Ś1: > 15 % rozstrzyga decyzja w Ryzykach — bez „Zatwierdź” na ekranie */
+            <span className="cal-wait" data-cal-awaits-decision>{t(locale, 'cal_prop_decision')}</span>
           ) : readOnly ? (
             <span className="cal-wait">{t(locale, 'cal_prop_ro')}</span>
           ) : ask ? (
@@ -229,17 +272,45 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
       </section>
 
       <section className="ox-panel" data-cal-versions>
-        <div className="ox-panel-hd"><h3>{t(locale, 'cal_ver_h')}</h3></div>
+        <div className="ox-panel-hd"><h3 ref={verHeadRef} tabIndex={-1} data-cal-ver-h>{t(locale, 'cal_ver_h')}</h3></div>
         <ul className="cal-ver">
-          {versions.map((v) => (
-            <li key={v.id} data-cal-ver={v.no}>
-              <b>{tp(locale, 'cal_ver_no', { no: v.no })}{v.current ? <span className="ox-tag ox-tag-active cal-cur">{t(locale, 'cal_ver_cur')}</span> : null}</b>
-              <span className="ox-nowrap" data-content>{formatListDateTime(v.at)}</span>
-              <span data-content>{v.by}</span>
-              <span className="cal-ver-what" data-content>{v.what}</span>
-            </li>
-          ))}
+          {versions.map((v) => {
+            const canUndo = v.current === true && undoVisible({ readOnly, canUndo: !!onUndo, undoable: v.undoable, status: v.status });
+            /* „zastosowana” bez znacznika (jak dotąd); inne stany — znacznik przy numerze */
+            const tag = v.status && v.status !== 'applied' ? v.status : null;
+            return (
+              <li key={v.id} data-cal-ver={v.no} data-cal-ver-id={v.id} data-cal-status={v.status ?? 'applied'}
+                className={highlight && highlight === v.id ? 'cal-ver-hl' : undefined} data-cal-hl={highlight && highlight === v.id ? '' : undefined}>
+                <b>
+                  {tp(locale, 'cal_ver_no', { no: v.no })}
+                  {v.current ? <span className="ox-tag ox-tag-active cal-cur">{t(locale, 'cal_ver_cur')}</span> : null}
+                  {tag ? <span className={`ox-tag cal-cur${tag.startsWith('pending') ? ' ox-tag-unfinished' : ''}`} data-cal-tag={tag}>{t(locale, `cal_st_${tag}`)}</span> : null}
+                </b>
+                <span className="ox-nowrap" data-content>{formatListDateTime(v.at)}</span>
+                <span data-content>{v.by}</span>
+                <span className="cal-ver-what" data-content>{v.what}</span>
+                {canUndo ? (
+                  undoAsk === v.id ? (
+                    <span className="cal-ask cal-ver-undo" data-cal-undo-ask>
+                      <span>{tp(locale, 'cal_undo_ask', { no: v.no })}</span>
+                      <span className="cal-btns">
+                        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- F7 r1 Ś2: fokus w panelu pytania */}
+                        <button type="button" className="btn ghost ox-btn" autoFocus onClick={cancelUndo} data-cal-undo-no>{t(locale, 'p3c_cancel')}</button>
+                        <button type="button" className="btn ox-btn" disabled={undoBusy} onClick={() => undo(v.id)} data-cal-undo-yes>{t(locale, 'cal_undo_yes')}</button>
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="cal-ask cal-ver-undo">
+                      <span className="cal-wait">{t(locale, frozen ? 'cal_undo_rule_frozen' : 'cal_undo_rule')}</span>
+                      <button type="button" className="btn ghost ox-btn" onClick={() => { setUndoErr(null); setUndoAsk(v.id); }} data-cal-undo>{t(locale, 'cal_undo')}</button>
+                    </span>
+                  )
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
+        {undoErr ? <div className="ox-panel-bd"><span className="ox-alert" role="alert" tabIndex={-1} ref={undoErrRef} data-cal-undo-err>{undoErr}</span></div> : null}
       </section>
     </div>
   );

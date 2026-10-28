@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTowerStore } from '../store/useTowerStore';
 import type { BafParams, FactoringOffer, GeofenceType, Locale } from '../types';
@@ -33,7 +33,7 @@ import { KshSyncSourceBlock, StatusScreen } from '../components/options/StatusSc
 import { sourceHealth } from '../lib/sysSource';
 import { myNotifyOf, useLiveNotify } from '../lib/forMeSource';
 import { NOTIFY_CATALOG_READY } from '../lib/notifyCatalog';
-import { etaCalibrationApproveOf, etaCalibrationOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
+import { etaCalibrationApproveOf, etaCalibrationOf, etaCalibrationUndoOf, type CalibVersion, type EtaCalibration } from '../lib/etaCalibSource';
 import { accountRole } from '../lib/accountRole';
 import { OPTIONS_CHANGED_EVENT } from '../lib/optionsChanged';
 import type { LiveMeta } from '../auth/liveOptionsMeta';
@@ -130,6 +130,8 @@ export function OptionsView() {
   const [request, setRequest] = useState<{ screen: OptScreenId; seq: number } | null>(null);
   /* wyglad/W-eta: wersja zatwierdzona w Kalibracji ETA — ten sam stan na ekranie i w menu bocznym (F7 P2) */
   const [calibApproved, setCalibApproved] = useState<CalibVersion | null>(null);
+  /* W-604 F7 r1: demo — wersja cofnięta w tej sesji (menu boczne pokazuje wersję obowiązującą) */
+  const [calibUndone, setCalibUndone] = useState<string | null>(null);
   /* wyglad/W-opcje-live-1: stany w menu i na kafelkach z bazy (produkcja); odświeżane po zapisie w ekranie */
   const [liveMeta, setLiveMeta] = useState<LiveMeta | null>(null);
   const metaAdmin = accountRole(role) !== 'HHL_OPS';
@@ -159,9 +161,16 @@ export function OptionsView() {
     const r = parseRoute(location.pathname);
     const screen: OptScreenId | null = smsEntry != null || r.kind === 'system' ? 'status'
       : r.kind === 'options' && r.section === 'sms' ? 'zones'
-        : r.kind === 'options' && r.section === 'cennik' ? 'rates' : null;
+        : r.kind === 'options' && r.section === 'cennik' ? 'rates'
+          : r.kind === 'options' && r.section === 'kalibracja-eta' ? 'calib' : null;
     if (screen) setRequest((prev) => ({ screen, seq: (prev?.seq ?? 0) + 1 }));
   }, [location.pathname, smsEntry]);
+  /* W-604: z dzwonka „Kalibracja ETA zastosowana automatycznie” — podświetlona wersja (`?wersja=N`) */
+  const calibFocus = useMemo(() => {
+    if (parseRoute(location.pathname).kind !== 'options') return null;
+    const v = new URLSearchParams(location.search).get('wersja');
+    return v && /^\d+$/.test(v) ? v : null;
+  }, [location.pathname, location.search]);
 
   const [zoneOffAsk, setZoneOffAsk] = useState<string | null>(null);
   const zoneCancelRef = useRef<HTMLButtonElement | null>(null);
@@ -216,6 +225,10 @@ export function OptionsView() {
   const roBlock = (el: ReactNode) => block(ro ? <fieldset disabled className="opt-ro" data-opt-ro>{el}</fieldset> : el);
   const calibMeta = (c: EtaCalibration): string => {
     const n = c.observations.filter((o) => !o.skipped).length;
+    if (calibApproved && calibUndone === calibApproved.id) {
+      const cur = c.versions.find((v) => v.current);
+      return cur ? tp(locale, 'cal_meta_done', { no: cur.no }) : t(locale, 'cal_meta_same');
+    }
     if (calibApproved) return tp(locale, 'cal_meta_done', { no: calibApproved.no });
     if (c.proposal) return t(locale, 'cal_meta_ready');
     return n >= c.needed ? t(locale, 'cal_meta_same') : tp(locale, 'cal_meta_wait', { n, need: c.needed });
@@ -409,9 +422,12 @@ export function OptionsView() {
         const calib = etaCalibrationOf(loads);
         return scr('calib', calib ? (
           <Suspense fallback={null}>
-            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} />
+            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} onUndo={ro ? null : (() => {
+              const u = etaCalibrationUndoOf(calib);
+              return u ? async (id: string) => { const r = await u(id); if (r.ok) setCalibUndone(id); return r; } : null;
+            })()} highlight={calibFocus} />
           </Suspense>
-        ) : LiveCalib ? block(<LiveCalib readOnly={ro} />) : noSource, {
+        ) : LiveCalib ? block(<LiveCalib readOnly={ro} highlight={calibFocus} />) : noSource, {
           right: change,
           mark: calib && !PROD_BUILD ? <DemoMark /> : undefined,
           meta: calib ? calibMeta(calib) : liveMeta?.meta.calib?.meta,

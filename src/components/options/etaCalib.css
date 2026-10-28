@@ -24,6 +24,9 @@
 .ox-cal .cal-ver li{display:grid;grid-template-columns:180px 150px minmax(0,240px) minmax(0,1fr);gap:12px;align-items:baseline;padding:11px 16px;border-bottom:1px solid var(--rule-2)}
 .ox-cal .cal-ver li:last-child{border-bottom:0}
 .ox-cal .cal-ver-what{color:var(--ink-2);min-width:0}
+/* W-604: „Cofnij” i pytanie pod wierszem wersji; wersja wskazana z dzwonka */
+.ox-cal .cal-ver-undo{grid-column:1 / -1}
+.ox-cal .cal-ver li.cal-ver-hl{background:var(--amber-bg);border-left:3px solid var(--amber);padding-left:13px}
 
 @media (max-width:1500px){
   .ox-cal .cal-obs-t td:last-child .cal-line{white-space:normal}

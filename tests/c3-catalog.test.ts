@@ -7,15 +7,17 @@ import { NOTIFY_CATALOG, NOTIFY_EVENT_IDS } from '../src/lib/notifyCatalog';
 
 describe('C3 katalog powiadomień', () => {
   it('każdy wiersz katalogu jest w migracji macierzy', () => {
-    // C3-p: 25; A4 + inv_overdue/updated/corrected (0237) → 28; 0255 (+4) → 32.
+    // C3-p: 25; A4 + inv_overdue/updated/corrected (0237) → 28; 0255 (+4) → 32; 0320 eta_calib → 33.
     const sql = [
       readFileSync('supabase/migrations/0222_c3_matrix_events.sql', 'utf8'),
       readFileSync('supabase/migrations/0223_c3p_chat_matrix_fixes.sql', 'utf8'),
       readFileSync('supabase/migrations/0237_a7_a4_symbol_faktura.sql', 'utf8'),
       /* workflow, email_budget, fuel_miss, ext_mail (0255, #406) — na produkcji od 22.10.2026 */
       readFileSync('supabase/migrations/0255_hotfix_402_notify_gate.sql', 'utf8'),
+      /* eta_calib (0320, #581 P4-k cz. 2) */
+      readFileSync('supabase/migrations/0320_581_p4k_eta_calib_continuous.sql', 'utf8'),
     ].join('\n');
-    expect(NOTIFY_EVENT_IDS).toHaveLength(32);
+    expect(NOTIFY_EVENT_IDS).toHaveLength(33);
     for (const id of NOTIFY_EVENT_IDS) expect(sql, id).toContain(`'${id}'`);
     expect(sql).toContain('notify_audience_ok');
     expect(sql).toContain("'visible_to'");

@@ -98,6 +98,9 @@ export const NOTIFY_CATALOG: MatrixGroup[] = [
         cells: { HHL_ADMIN: c(true, false, true), HHL_OPS: c(true), CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
       { id: 'ext_mail', title: 'Maile do adresów spoza aplikacji (np. księgowość)', sub: 'tylko e-mail · tylko Administrator HHL',
         cells: { HHL_ADMIN: c(false, false, true), HHL_OPS: null, CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
+      /* W-604: kalibracja ETA zastosowana automatycznie (0320, `ETA_CALIBRATION_AUTO`) — tylko dzwonek HHL_ADMIN */
+      { id: 'eta_calib', title: 'Kalibracja ETA zastosowana automatycznie', sub: 'zmiana ≤ 15% · tylko dzwonek · tylko Administrator HHL', target: 'Opcje › Kalibracja ETA',
+        cells: { HHL_ADMIN: c(true), HHL_OPS: null, CLIENT_USER: null, CARRIER_DISPATCH: null, CARRIER_USER: null } },
     ],
   },
 ];

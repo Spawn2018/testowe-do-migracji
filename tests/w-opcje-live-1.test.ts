@@ -33,7 +33,8 @@ describe('Opcje na produkcji — podłączenie ekranów', () => {
     }
     expect(v).toContain("lazy(lazyRetry(() => import('../auth/LiveThresholds')))");
     expect(v).toContain('block(<SecurityFlags readOnly={ro} />)');
-    expect(v).toContain('block(<LiveCalib readOnly={ro} />)');
+    /* W-604: wersja wskazana z dzwonka (`?wersja=N`) */
+    expect(v).toContain('block(<LiveCalib readOnly={ro} highlight={calibFocus} />)');
     expect(v).toContain('block(<DataExportPanel admin={isHhlAdmin} />)');
     expect(v).not.toContain("scr('flags', pick('flags', null)");
   });
@@ -206,7 +207,8 @@ describe('F7 #414 — jedna operacja naraz i błędy', () => {
       expect(read(`src/auth/${f}.tsx`), f).toMatch(/const refresh = useCallback\(async \(\) => \{\n    try \{/);
     }
     expect(read('src/auth/LiveThresholds.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
-    expect(read('src/auth/LiveCalib.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
+    /* W-604: zatwierdzenie, zamrożenie i cofnięcie wersji */
+    expect(read('src/auth/LiveCalib.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(3);
     expect(read('src/auth/LiveBroadcast.tsx').match(/announceOptionsChanged\(\)/g)?.length).toBe(2);
     expect(read('src/auth/LiveUsers.tsx')).not.toContain('void getSupabase().then(');
   });

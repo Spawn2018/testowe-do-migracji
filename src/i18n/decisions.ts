@@ -108,9 +108,36 @@ const pl: Dict = {
   dec_err_restore_admin: 'Przywrócić transport może tylko administrator HHL — decyzja zostaje otwarta.',
   dec_err_stale: 'Ta decyzja jest już nieaktualna — lista została odświeżona, nic nie zmieniono.',
   dec_err_forbidden: 'Brak uprawnień do tego rozstrzygnięcia — decyzja zostaje otwarta.',
+  /* W-604 (0320): błędy kalibracji ETA przy rozstrzygnięciu ETA_CALIBRATION_APPROVAL */
+  dec_err_ETA_NOT_ADMIN: 'Kalibrację ETA zatwierdza tylko Administrator HHL — decyzja zostaje otwarta.',
+  dec_err_ETA_APPLY_NEWER: 'Jest już nowsza zastosowana wersja kalibracji z tymi odcinkami — tej nie da się zastosować. Odrzuć propozycję.',
+  dec_err_ETA_UNDO_NEWER: 'Najpierw trzeba cofnąć nowszą wersję kalibracji z tymi odcinkami — nic nie zmieniono.',
+  dec_err_ETA_BUSY: 'Kalibracja ETA jest właśnie zapisywana — spróbuj za chwilę. Decyzja zostaje otwarta.',
+  dec_err_ETA_FROZEN: 'Kalibracja ETA jest zamrożona — nowych czasów nie da się zastosować. Odmroź w Opcjach albo odrzuć propozycję.',
+  dec_err_ETA_UNDO_MISSING: 'Ta wersja kalibracji nie jest już zastosowana — nic nie zmieniono.',
+  dec_err_ETA_UNDONE: 'Ta wersja kalibracji została cofnięta — nie da się jej zastosować ponownie. Odrzuć propozycję.',
+  dec_err_ETA_APPLY_MISSING: 'Tej wersji kalibracji nie ma już w bazie — odrzuć propozycję.',
+  /* W-604: wiersz karty decyzji kalibracji (detail: version, max_change_pct) */
+  dec_eta_calib_title: 'Kalibracja ETA',
+  /* W-604: opcje APPLY / REJECT bez typu decyzji (historia) — ogólne słowa */
+  dec_opt_APPLY: 'Zastosuj',
+  dec_opt_REJECT: 'Odrzuć',
 };
 
 export const DEC_I18N: Record<Locale, Dict> = { pl, en: {}, sv: {} };
+
+/** Opcja o tym samym kodzie w kilku typach decyzji — etykieta z katalogu typu (`label_key` w `decision_types.options`). */
+const OPT_BY_TYPE: Record<string, Record<string, string>> = {
+  ETA_CALIBRATION_APPROVAL: { APPLY: 'dec_opt_APPLY_ETA_CALIB', REJECT: 'dec_opt_REJECT_ETA_CALIB' },
+  KSH_DATE_COUNTER: { REJECT: 'dec_opt_REJECT_DATE' },
+};
+
+/** W-604: etykieta wybranej opcji w historii — najpierw z typu decyzji, potem `dec_opt_<kod>`; '' — brak etykiety. */
+export function decOptText(locale: Locale, option: string, typeCode?: string | null): string {
+  const byType = typeCode ? OPT_BY_TYPE[typeCode]?.[option] : undefined;
+  if (byType) return decText(locale, byType, '');
+  return decText(locale, `dec_opt_${option}`, '');
+}
 
 export function decText(locale: Locale, key: string | null | undefined, fallback?: string): string {
   if (!key) return fallback ?? '';

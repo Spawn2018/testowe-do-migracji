@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { OrgKind } from '../../types';
 import type { DecisionOption, TodoDecision } from '../../lib/p6Todo';
-import { changesLoads, dbErrorKey, decisionRpc } from '../../lib/carrierDecision';
+import { changesLoads, dbErrorKey, decisionRpc, etaDbErrorKey } from '../../lib/carrierDecision';
 import { decText } from '../../i18n/decisions';
 
 type DecRow = {
@@ -99,7 +99,8 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
     const sb = await getSupabase();
     const { data, error: e } = await sb.rpc(call.fn, call.args);
     if (e) {
-      const key = call.fn === 'decision_resolve' ? null : dbErrorKey(e);
+      /* W-604: ogólne rozstrzygnięcie — tylko błędy kalibracji ETA po polsku, reszta komunikatu bazy bez zmian */
+      const key = call.fn === 'decision_resolve' ? etaDbErrorKey(e) : dbErrorKey(e);
       if (key === 'dec_err_stale') void refresh();
       if (key === 'dec_err_forbidden' && call.fn === 'load_restore_removed') return { hint: null, error: decText('pl', 'dec_err_restore_admin') };
       return { hint: null, error: key ? decText('pl', key) : e.message };
