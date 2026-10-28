@@ -1111,10 +1111,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
 5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
 
-### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-calib-apply-notify`, migracja **0327**, PR #616)
-Źródło: #603 + F7 #607 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
-1. **0327 (ten PR):** `eta_apply_calibration_internal` zamyka `ETA_CALIBRATION_APPROVAL` + `decision_events` + `audit_log DECISION_RESOLVE`; `eta_auto_apply_pending` — tylko `HHL_ADMIN` + `notify_channel_allowed(…,'bell')` (B1); **bez** wiersza HHL_OPS w macierzy (B2); `labels` = `eta_segment_params.label`; `summary` z przecinkiem E21. **F7 r2:** D5 = reguła 0320 (`coalesce(spread,0)` — NULL→N do decyzji); testy `p4k` z `app_users.id` (nie `auth_id`) + kontrola pozytywna. p4k **86**. ~~D3 front `labels`~~ → **#617 SCALONE**. D6: bez jednorazowego zamykania starych decyzji (na prod brak zastosowanych z otwartą).
-2. **Dalej w #603:** pełne przeliczenie pomiarów (okno / wykluczenia, przed ~04.11); dwa odcinki SE_ROAD w słowniku (pod 27B:C).
+### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-rebuild-se-road`, migracja **0328**, PR #619)
+Źródło: #603 + F7 #607 / F7 #619 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
+1. ~~**0327** APPLY zamyka decyzję + macierz + labels~~ — **SCALONE** (`cf01968e` / PR #616, 28.10.2026 19:43Z). ~~D3 front~~ → **#617 SCALONE**.
+2. **Pełna odbudowa pomiarów (prod, 28.10):** `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=29, loads_fail=0`. Dostarczone z GPS od 05.10: 17/17 z pomiarem; OK 9, wykluczenia 20. Per odcinek po rebuild: PL_ROAD 3 OK + 11 TRASA_NIEZNANA (brak `sailing`/route — dane); PL_ROAD_GDY 0+3 LUKA_GPS (luki 4–8 h — dane); PORT_CHECKIN 1+5 BRAK; CROSSING_GDY_KAA 0+1 BRAK; SE_ROAD 3 OK; SE_ROAD_KAA 2 OK. **Ponowny rebuild od 05.10 wstrzymany do F7 poprawki 0328** (F7 #619).
+3. **0328 (PR #619):** okno zdarzeń `≥`/`≤`. **F7 r3 + drobne (#624 w tym PR):** EXIT PORT_OUT tylko **≤ PIN** (bez PIN: ≤ SITE/`actual_delivery_at`); gdy brak → `actual_departure_at`, potem `delayed_departure_at` (**> ENTER, < PIN**); **actual poza oknem → BRAK bez delayed**; **plan i GPS_LAST → BRAK**. `features.port_out_src` = `EVENT` / `SAILING_ACTUAL` / `SAILING_DELAYED` (PORT_CHECKIN i CROSSING). D1: koniec = ENTER → wiersz BRAK. CROSSING tylko gdy PIN **>** EXIT **>** ENTER. `SE_ROAD_KAA_INLAND` w `eta_segment_params` (**bez** mapowania w `eta_route_segments` do 27B — martwy celowo). **Uwaga:** kalibracja / auto-apply **nie czyta** `port_out_src` — SAILING_DELAYED liczy się jak EVENT/ACTUAL; przegląd po pierwszych danych po rebuildzie. Front nazwa — **#620 SCALONE**; ekran kalibracji odcinków — **#621 SCALONE**. Bez wrappera 0-arg. p4k **98** (`EXPECTED`); i2 parametry **12**. Rebuild od 05.10 **wstrzymany** do F7.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → **#603** (W TOKU) → **27B:C** → BN1…
@@ -1934,5 +1935,16 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 20:15 | #615/#597 SCALONE (`b34d807c`, F7 gotowe @ `3c6e7d52`); start **#603** **0327** (APPLY zamyka decyzję, macierz, labels) | pętla |
 | 28.10.2026 20:45 | #616 F7 r1 POPRAWKI: B1 bell/`notify_channel_allowed`, B2 bez HHL_OPS, B3 asercje decyzji, D1/D2/D5/D7; p4k **84** | pętla |
 | 28.10.2026 20:50 | #617 SCALONE (`7027bd1c`, F7 gotowe @ `c8eb7b8e`) — dzwonek ETA labels z payload (D3) | pętla |
+| 28.10.2026 21:45 | #616/#603 **0327** SCALONE (`cf01968e`); pełny rebuild prod od 05.10 (17/29); start **0328** PORT_CHECKIN + SE_ROAD_KAA_INLAND | pętla |
+| 28.10.2026 22:20 | #619 F7 r2: EXIT ≤ PIN; fallback sailings/GPS; CROSSING `>`; testy prod (późny EXIT); p4k **91**; rebuild 05.10 wstrzymany do F7 | pętla |
+| 28.10.2026 22:28 | #620 SCALONE (`4c81d6af`, F7 gotowe @ `f636a137`) — SEGMENT_SHORT SE_ROAD_KAA_INLAND | pętla |
+| 28.10.2026 22:45 | #619 CI db FAIL p4k 87/91 (DELETE load_events + fixture 581); testy na load …603; GPS tylko z `route` | pętla |
 | 28.10.2026 20:55 | #616 F7 r2 POPRAWKI: T1 `app_users.id` w p4k + B1+; D5 coalesce(spread,0) jak 0320; p4k **86** | pętla |
 | 28.10.2026 21:20 | #616 CI db FAIL p4k 83/86 (B2 propose NO_CHANGE) — cleanup optout-bell / Ś3; p4k **86** | pętla |
+| 28.10.2026 22:55 | #621 SCALONE (`95113ee9`, F7 gotowe @ `5175c592`) — LiveCalib odcinki Gdynia/Karlskrona | pętla |
+| 28.10.2026 23:10 | #619 F7 r3: actual/delayed tylko; bez planu/GPS; `port_out_src`; D1/D3; testy …00a60x (kolizja BT …000603); p4k **94** | pętla |
+| 28.10.2026 23:25 | #623 SCALONE (`94f7c99a`, F7 gotowe @ `d5a78228`) — W-622 ostrzeżenie dwóch nr naczepy | pętla |
+| 28.10.2026 23:40 | #619 CI db FAIL p4k 87/94 (7× #603 false); diagnostyka + UUID a603a603 + route w payload | pętla |
+| 28.10.2026 23:55 | #619: testy #603 — pomiar i asercja w osobnych statementach (snapshot PG: n=3, corridors=none) | pętla |
+| 29.10.2026 00:15 | #619 CI zielone @ `2c564470`; F7 r3 drobne: actual poza oknem→BRAK; CROSSING EXIT>ENTER; testy D1/D3/port_out_src; p4k **98** | pętla |
+| 29.10.2026 00:45 | #619 CI db FAIL EXPECTED p4k 94≠98 (testy 98/0); fix `gate-suites` → **98**; #624 wchłonięte w #619 | pętla |

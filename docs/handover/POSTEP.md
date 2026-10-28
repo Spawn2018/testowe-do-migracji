@@ -6491,3 +6491,77 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #616 @ `6bf9b378`: unit ✔; visual ✔ (części); db **FAIL** p4k 83/86 — B2 propose/`rejected_at`/applied (NO_CHANGE).
 - **Przyczyna:** B1+ stosuje `p4k-optout-bell` → note `…; auto-applied`; cleanup nie starzał wersji → Ś3 pomija PL_ROAD → `eta_propose_calibration` = NO_CHANGE.
 - **Krok:** cleanup — `created_at`/`undone_at` −8 d dla optout-bell + reset PL_ROAD; przed B2 propose starzej wszystkie `auto-applied` <7 d. p4k **86**. Push → CI `p4k` → F7 r3.
+
+## 2026-10-28 21:45 — #616 SCALONE; #603 rebuild + 0328
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: #616 → `cf01968e` (F7 gotowe @ `d908f750`, CI unit/db/visual ✔). Bez push na main.
+- **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=29, loads_fail=0`. Wykluczenia: TRASA_NIEZNANA 11 (0 sailing — dane); LUKA_GPS 3 (dane); PORT_CHECKIN/CROSSING BRAK — **błąd pomiaru** (EXIT istniał, `p_before=PIN` + `<` gubiło).
+- **Krok 0328** (`pakiet/603-eta-rebuild-se-road`): okno `≥`/`≤`; EXIT bez limitu PIN; PIN po EXIT; `SE_ROAD_KAA_INLAND`; rebuild() 0-arg; p4k **89**.
+
+## 2026-10-28 22:20 — #619 F7 r2: PORT_CHECKIN EXIT ≤ PIN
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #619 — F7 **nie** gotowe @ `c371bb0b` (B2/B3/B4 otwarte); brak innych PR z „F7: gotowe”. Bez push na main.
+- CI @ `c371bb0b`: unit ✔; db **FAIL** p4k (test PIN → `forbid_mutation` na DELETE `load_events`).
+- **Krok F7 r2 (0328):**
+  1. B2/B3 — EXIT PORT_OUT tylko **≤ PIN**; fallback `sailings.actual_departure_at`/`departure_at` albo ostatni GPS w PORT_OUT; inaczej BRAK.
+  2. CROSSING — warunek `PIN > EXIT` (równość → BRAK).
+  3. `begin`/`commit`; bez wrappera 0-arg.
+  4. Testy: późny EXIT→BRAK; +sailing→OK 3 h; EXIT powrotu; CROSSING=; SE_ROAD_KAA_INLAND (bez mapowania `eta_route_segments` do 27B).
+  5. p4k **91**. Rebuild prod od 05.10 **wstrzymany** do F7 tej poprawki. Push → CI → F7 r2.
+
+## 2026-10-28 22:45 — #620 SCALONE; #619 CI p4k poprawka
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #620 → `4c81d6af` (F7 gotowe @ `f636a137`, unit/visual ✔). #619 — czekam CI po poprawce. Bez push na main.
+- CI #619 @ `53e3ef2e`: unit/visual ✔; db **FAIL** p4k 87/91 (4× #603 — DELETE `load_events` na fixture 581 / zanieczyszczenie).
+- **Krok:** testy #603 na osobnym loadzie `…603` (tylko INSERT, bez DELETE append-only); GPS fallback tylko geofence z `route` (nie null). p4k **91**. Push → CI → F7.
+
+## 2026-10-28 22:55 — #621 SCALONE; #619 F7 niegotowe
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #621 → `95113ee9` (F7 gotowe @ `5175c592`, unit/visual ✔) — LiveCalib mapuje kody odcinków Gdynia/Karlskrona/odprawa. Bez push na main.
+- #619 @ `d5ee10ab`: F7 **nie** gotowe (r2 N1–N4 otwarte); CI db **FAIL** p4k 87/91 (UUID `…000603` = BT `…0006||03`).
+
+## 2026-10-28 23:10 — #619 F7 r3: actual/delayed, bez GPS/plan
+
+- Skrzynka: bez zmian. Brak innych PR z „F7: gotowe” po ostatnim commicie.
+- **Krok F7 r3 (0328 + p4k):**
+  1. Po późnym EXIT ważne tylko `actual_departure_at`, potem `delayed_departure_at` (> ENTER, < PIN).
+  2. Plan i GPS_LAST → `BRAK_ZDARZENIA`; gałąź GPS usunięta.
+  3. `features.port_out_src` = `EVENT` / `SAILING_ACTUAL` / `SAILING_DELAYED`.
+  4. D1: koniec = ENTER → wiersz BRAK; D3: bez PIN — EXIT ≤ SITE/`actual_delivery_at`.
+  5. Testy N4 + UUID `…00a60x` (uniknięcie kolizji BT). p4k **94**. Rebuild 05.10 wstrzymany. Push → CI → F7 r3.
+
+## 2026-10-28 23:40 — #623 SCALONE; #619 CI db FAIL p4k 87/94
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: #623 → `94f7c99a` (F7 gotowe @ `d5a78228`, unit/visual ✔) — W-622 ostrzeżenie dwóch nr naczepy. Bez push na main.
+- CI #619 @ `190db80c`: unit/visual ✔; db **FAIL** p4k 87/94 (7× #603 → `false`; SE_ROAD_KAA_INLAND OK).
+- **Krok:** diagnostyka 1. testu (NO_ROW/OK excl+route+ev); UUID `a603a603-…`; `route` w payload zdarzeń. Push → CI `p4k` → odczyt diagnostyki / fix.
+
+## 2026-10-28 23:55 — #619 p4k: snapshot PG w testach #603
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #619 — F7 r3 logika OK, czekam zielonego CI (brak „F7: gotowe” po ostatnim). Bez push na main.
+- CI #619 @ `b4a1fe42`: unit/visual ✔; db **FAIL** p4k 87/94. Diagnostyka: `NO_ROW n=3 route=POLFERRIES ev=6 gf=4 load=1 corridors=none` — pomiar wstawia 3 wiersze, ale `EXISTS` w tym samym `SELECT` ich nie widzi (snapshot PG).
+- **Krok:** testy #603 — `eta_record_segment_observations` i asercja w osobnych statementach. p4k **94**. Push → CI → F7.
+
+## 2026-10-29 00:15 — #619 F7 r3 drobne (po zielonym CI)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” po `2c564470`. CI @ `2c564470`: unit/db/visual **zielone**. Bez push na main.
+- **Krok F7 r3 drobne (0328 + p4k):**
+  1. `actual_departure_at` NOT NULL poza oknem → BRAK, **bez** `delayed`.
+  2. CROSSING OK tylko gdy `PIN > EXIT > ENTER` (EXIT=ENTER → BRAK).
+  3. Testy: actual+delayed→BRAK; D1 EXIT=ENTER; D3 bez PIN EXIT po SITE; `port_out_src` na CROSSING.
+  4. PLAN: kalibracja nie czyta `port_out_src` (SAILING_DELAYED = jak EVENT do przeglądu po danych).
+  5. p4k **98**. Rebuild 05.10 wstrzymany. Push → CI → F7.
+
+## 2026-10-29 00:45 — #619 CI db: EXPECTED p4k 94→98
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: F7 „gotowe” @ `2c564470` unieważnione nowym `5b330fd5` (#624 wchłonięte w #619 zamiast osobnego PR). Brak „F7: gotowe” po HEAD. Bez push na main.
+- CI @ `5b330fd5`: unit ✔; visual ✔; db **FAIL** — `p4k: oczekiwano 94/94, jest: 98 OK, 0 FAIL` (same asercje, brak `EXPECTED`).
+- **Krok:** `gate-suites.mjs` p4k **98**; PLAN: #624 w #619. Push → CI → F7.
