@@ -1,6 +1,6 @@
 -- #603: po pełnej odbudowie pomiarów (od 05.10) — poprawka PORT_CHECKIN/CROSSING
--- F7 #619 r1/r2: EXIT tylko ≤ PIN; późny EXIT (≥ PIN, GPS po przypłynięciu) →
---   koniec odprawy z sailings (actual/plan) albo ostatni GPS w PORT_OUT; inaczej BRAK.
+-- F7 #619 r1–r3: EXIT tylko ≤ PIN; po późnym EXIT ważne tylko actual/delayed
+--   (nie plan, nie GPS_LAST); features.port_out_src; D1/D3.
 -- + słownik SE_ROAD_KAA_INLAND (27B:C; bez mapowania eta_route_segments do 27B).
 begin;
 
@@ -42,7 +42,7 @@ comment on function public.eta_seg_event_at(uuid, text, text, timestamptz, times
   '#603: okno domknięte (≥/≤); filtr trasy przez eta_obs_route_family.';
 
 -- ---------------------------------------------------------------------------
--- 2) PORT_CHECKIN: EXIT ≤ PIN; fallback sailings / GPS w PORT_OUT; CROSSING: >
+-- 2) PORT_CHECKIN: EXIT ≤ PIN; fallback tylko actual/delayed; CROSSING: >
 -- ---------------------------------------------------------------------------
 create or replace function public.eta_record_segment_observations(p_load uuid)
 returns int
@@ -54,8 +54,9 @@ declare
   t_pin_enter timestamptz;
   t_pin_exit timestamptz;
   t_site timestamptz;
-  t_sail timestamptz;
-  t_gps_out timestamptz;
+  t_site_bound timestamptz;
+  t_delivery timestamptz;
+  t_exit_before timestamptz;
   n int := 0;
   v_route text;
   v_op text;
@@ -64,6 +65,7 @@ declare
   c_cross text;
   c_se text;
   v_id bigint;
+  v_port_out_src text;
 begin
   if not exists (select 1 from loads where id = p_load) then
     return 0;
@@ -98,41 +100,42 @@ begin
   t_port_in := eta_seg_event_at(p_load, 'GEOFENCE_ENTER', 'PORT_OUT', t_load_exit, null, v_op);
   -- PIN po ENTER PORT_OUT (jak 0320)
   t_pin_enter := eta_seg_event_at(p_load, 'GEOFENCE_ENTER', 'PORT_IN', t_port_in, null, v_op);
-  -- F7 B2/B3: EXIT tylko ≤ PIN (domknięte) — późny EXIT / powrót nie wchodzi
-  t_port_out := eta_seg_event_at(p_load, 'GEOFENCE_EXIT', 'PORT_OUT', t_port_in, t_pin_enter, v_op);
 
-  -- Brak EXIT ≤ PIN (typ: EXIT wykryty po PIN) → sailings albo ostatni GPS w PORT_OUT
+  -- D3: bez PIN — EXIT ograniczony do SITE / actual_delivery_at (nie bez granicy)
+  t_site_bound := eta_seg_event_at(p_load, 'GEOFENCE_ENTER', 'SITE', t_port_in, null, null);
+  select l.actual_delivery_at into t_delivery from loads l where l.id = p_load;
+  t_exit_before := coalesce(t_pin_enter, t_site_bound, t_delivery);
+
+  -- F7 B2/B3: EXIT tylko ≤ PIN (albo SITE/dostawa); późny EXIT / powrót nie wchodzi
+  t_port_out := eta_seg_event_at(
+    p_load, 'GEOFENCE_EXIT', 'PORT_OUT', t_port_in, t_exit_before, v_op
+  );
+  v_port_out_src := case when t_port_out is not null then 'EVENT' else null end;
+
+  -- F7 r2/r3: po braku EXIT ≤ PIN — tylko actual, potem delayed (> ENTER, < PIN);
+  -- plan i GPS_LAST → BRAK (bez gałęzi GPS)
   if t_port_out is null and t_port_in is not null then
-    select coalesce(s.actual_departure_at, s.departure_at)
-      into t_sail
+    select s.actual_departure_at
+      into t_port_out
       from loads l
       join sailings s on s.id = l.sailing_id
-     where l.id = p_load;
-    if t_sail is not null
-       and t_sail >= t_port_in
-       and (t_pin_enter is null or t_sail <= t_pin_enter) then
-      t_port_out := t_sail;
+     where l.id = p_load
+       and s.actual_departure_at is not null
+       and s.actual_departure_at > t_port_in
+       and (t_pin_enter is null or s.actual_departure_at < t_pin_enter);
+    if t_port_out is not null then
+      v_port_out_src := 'SAILING_ACTUAL';
     else
-      -- tylko PORT_OUT z trasą tej samej rodziny (null route = za szeroko, obce porty)
-      select max(p.ts)
-        into t_gps_out
-        from positions p
-        join loads l on l.id = p_load
-        join geofences g on g.project_id = l.project_id
-         and g.kind = 'PORT_OUT'
-         and coalesce(g.active, true)
-         and g.route is not null
-       where p.load_id = p_load
-         and p.ts >= t_port_in
-         and (t_pin_enter is null or p.ts <= t_pin_enter)
-         and p.geom_raw is not null
-         and st_contains(g.geom, p.geom_raw::geometry)
-         and (
-           v_op is null
-           or public.eta_obs_route_family(g.route) = public.eta_obs_route_family(v_op)
-         );
-      if t_gps_out is not null then
-        t_port_out := t_gps_out;
+      select s.delayed_departure_at
+        into t_port_out
+        from loads l
+        join sailings s on s.id = l.sailing_id
+       where l.id = p_load
+         and s.delayed_departure_at is not null
+         and s.delayed_departure_at > t_port_in
+         and (t_pin_enter is null or s.delayed_departure_at < t_pin_enter);
+      if t_port_out is not null then
+        v_port_out_src := 'SAILING_DELAYED';
       end if;
     end if;
   end if;
@@ -146,9 +149,17 @@ begin
     end if;
   end if;
 
-  if t_port_in is not null and t_port_out is not null then
+  -- D1: koniec = ENTER → wiersz BRAK (nie cichy brak); OK tylko gdy t_port_out > t_port_in
+  if t_port_in is not null and t_port_out is not null and t_port_out > t_port_in then
     if eta_upsert_segment_observation(p_load, c_ci, t_port_in, t_port_out, false, null) is not null then
       n := n + 1;
+      if v_port_out_src is not null then
+        update eta_segment_observations
+           set features = features || jsonb_build_object('port_out_src', v_port_out_src)
+         where load_id = p_load
+           and corridor = c_ci
+           and (features->>'p4k') = 'true';
+      end if;
     end if;
   elsif t_port_in is not null then
     if eta_upsert_segment_observation(
@@ -162,6 +173,13 @@ begin
   if t_port_out is not null and t_pin_enter is not null and t_pin_enter > t_port_out then
     if eta_upsert_segment_observation(p_load, c_cross, t_port_out, t_pin_enter, false, null) is not null then
       n := n + 1;
+      if v_port_out_src is not null then
+        update eta_segment_observations
+           set features = features || jsonb_build_object('port_out_src', v_port_out_src)
+         where load_id = p_load
+           and corridor = c_cross
+           and (features->>'p4k') = 'true';
+      end if;
     end if;
   elsif t_port_out is not null then
     if eta_upsert_segment_observation(
@@ -192,7 +210,7 @@ revoke all on function public.eta_record_segment_observations(uuid)
 grant execute on function public.eta_record_segment_observations(uuid) to service_role;
 
 comment on function public.eta_record_segment_observations(uuid) is
-  '#603 F7: EXIT PORT_OUT ≤ PIN; fallback sailings/GPS; CROSSING tylko gdy PIN > EXIT.';
+  '#603 F7 r3: EXIT ≤ PIN; fallback actual/delayed (>ENTER,<PIN); bez planu/GPS; port_out_src; CROSSING gdy PIN > EXIT.';
 
 -- ---------------------------------------------------------------------------
 -- 3) SE_ROAD_KAA_INLAND — osobny odcinek kalibracji (27B:C); E4 zostaje SE_ROAD_KAA

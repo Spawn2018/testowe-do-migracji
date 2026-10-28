@@ -6517,3 +6517,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #620 → `4c81d6af` (F7 gotowe @ `f636a137`, unit/visual ✔). #619 — czekam CI po poprawce. Bez push na main.
 - CI #619 @ `53e3ef2e`: unit/visual ✔; db **FAIL** p4k 87/91 (4× #603 — DELETE `load_events` na fixture 581 / zanieczyszczenie).
 - **Krok:** testy #603 na osobnym loadzie `…603` (tylko INSERT, bez DELETE append-only); GPS fallback tylko geofence z `route` (nie null). p4k **91**. Push → CI → F7.
+
+## 2026-10-28 22:55 — #621 SCALONE; #619 F7 niegotowe
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #621 → `95113ee9` (F7 gotowe @ `5175c592`, unit/visual ✔) — LiveCalib mapuje kody odcinków Gdynia/Karlskrona/odprawa. Bez push na main.
+- #619 @ `d5ee10ab`: F7 **nie** gotowe (r2 N1–N4 otwarte); CI db **FAIL** p4k 87/91 (UUID `…000603` = BT `…0006||03`).
+
+## 2026-10-28 23:10 — #619 F7 r3: actual/delayed, bez GPS/plan
+
+- Skrzynka: bez zmian. Brak innych PR z „F7: gotowe” po ostatnim commicie.
+- **Krok F7 r3 (0328 + p4k):**
+  1. Po późnym EXIT ważne tylko `actual_departure_at`, potem `delayed_departure_at` (> ENTER, < PIN).
+  2. Plan i GPS_LAST → `BRAK_ZDARZENIA`; gałąź GPS usunięta.
+  3. `features.port_out_src` = `EVENT` / `SAILING_ACTUAL` / `SAILING_DELAYED`.
+  4. D1: koniec = ENTER → wiersz BRAK; D3: bez PIN — EXIT ≤ SITE/`actual_delivery_at`.
+  5. Testy N4 + UUID `…00a60x` (uniknięcie kolizji BT). p4k **94**. Rebuild 05.10 wstrzymany. Push → CI → F7 r3.

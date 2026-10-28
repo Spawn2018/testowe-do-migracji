@@ -47,7 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 168, // #572 F7 r6b: +2 asercje load istnieje (hhl/carrier_order_no); było 166
   h4: 19,
-  p4k: 91, // #603 0328 F7: +5 (późny EXIT BRAK; sailing OK; powrót; CROSSING=; SE_INLAND) −1 stary PIN; było 86
+  p4k: 94, // #603 0328 F7 r3: +3 N4 (plan→BRAK; delayed+tag; rejs sprzed ENTER); UUID …00a60x; było 91
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
