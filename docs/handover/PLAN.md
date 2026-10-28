@@ -1077,7 +1077,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
 ### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR #604 na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r3 + CI:** A2 komentarze w `apply_geofence_status` (0279); B7 `undone_at` −8 d (nie `now()`); `due_hours=null` (bez eskalacji KSH); BACKTEST sprząta propozycje; testy KSH/SCX 0 decyzji. suite `p4k` **60**, nullguard **880**. Ekran — koordynator `wyglad/`.
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r3:** BT fixture hours=10 (Δ≤40 %); backtest per kod; Ś3 bez martwego `not exists`; `sailings_route_check` otwarty; silnik bez hardkodu STENA; dict upsert → params + `ETA_DICT_*` / seed protect; decyzje SUPERSEDED; kody błędów `ETA_*`. suite `p4k` **62**, nullguard **880**. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1857,3 +1857,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 04:15 | #604 CI db FAIL p4k 42/11: fixture multi-load (uidx p4k) + spread stały w auto 12%/18% (Ś6); push fix | pętla |
 | 28.10.2026 04:50 | #604 CI db FAIL p4k 51/2: propose line 130 — jsonb_exists zamiast `?` na zmiennej; skip NULL; GPS bez p4k w fixture | pętla |
 | 28.10.2026 05:10 | #604 F7 r2: B7 fit/test, ADMIN, DOC_MISSING, Ś1 silnik+RPC, rejected_at, p4k **60**, nullguard **880** | pętla |
+| 28.10.2026 06:05 | #604 F7 r3 CI a6a3c9f7: A2 komentarze, B7 undone −8 d, due_hours=null, KSH/SCX 0 decyzji; p4k **60** | pętla |
+| 28.10.2026 06:20 | #604 CI db FAIL p4k BACKTEST→NO_CHANGE (Δ60 %>40 %); F7 r3: BT hours=10, backtest per kod, sailings CHECK, dict params, SUPERSEDED; p4k **62** | pętla |

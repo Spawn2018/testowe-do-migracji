@@ -441,8 +441,9 @@ select ('a581a581-0000-4000-8000-00000000060' || g)::uuid,
        'P4K-BT' || g, 'HHL-BT' || g, 'SCX-BT' || g,
        'DELIVERED', current_date - 30, current_date - 25, now() - interval '25 days'
   from generate_series(1, 10) g;
--- fit (7): blisko 12 h; test (3): blisko seed 7.5 → mediana fit pogarsza test
-update eta_segment_params set hours = 7.5, spread_pct = 15 where code = 'PL_ROAD';
+-- fit (7): ~12 h; hours=10 → Δ20 % (>10 %, ≤40 % limitu 30 d); test (3): ~7.5
+-- (hours=7.5 dawało Δ60 % → continue limitu → NO_CHANGE zamiast BACKTEST_WORSE)
+update eta_segment_params set hours = 10, spread_pct = 15 where code = 'PL_ROAD';
 insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
 select ('a581a581-0000-4000-8000-00000000060' || ord)::uuid, 'PL_ROAD', h,
        jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
@@ -483,7 +484,7 @@ val "freeze: propose → FROZEN" \
 # D8: KSH odmowa przed undo HHL
 ksh_out=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
   select eta_calibration_undo($AUTO_VER); commit;" 2>&1 || true)
-if echo "$ksh_out" | grep -qiE 'wyłącznie HHL_ADMIN|42501'; then
+if echo "$ksh_out" | grep -qiE 'ETA_NOT_ADMIN|wyłącznie HHL_ADMIN|42501'; then
   ok=$((ok+1)); echo "  OK    D8: KSH nie cofa"
 else
   fail=$((fail+1)); echo "  FAIL  D8: KSH nie cofa ($ksh_out)"
@@ -523,6 +524,23 @@ val "Ś1: RPC dict upsert HHL" \
    select (eta_route_dict_upsert('P4K-DICT-TEST','GDN-NYN','POLFERRIES', null)->>'ok');
    commit;" "true"
 
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
+             'ops-p4k@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;" >/dev/null
+ops_dict=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000004';
+  select eta_route_dict_upsert('P4K-DICT-OPS','GDN-NYN','POLFERRIES', null); commit;" 2>&1 || true)
+if echo "$ops_dict" | grep -qiE 'ETA_DICT_NOT_ADMIN|42501'; then
+  ok=$((ok+1)); echo "  OK    Ś1: HHL_OPS odmowa dict"
+else
+  fail=$((fail+1)); echo "  FAIL  Ś1: HHL_OPS odmowa dict ($ops_dict)"
+fi
+
+sys "begin;
+delete from eta_route_aliases where alias_key in ('P4K-DICT-TEST','P4K-DICT-OPS');
+delete from audit_log where action='ETA_ROUTE_DICT_UPSERT' and entity_id like 'P4K-DICT%';
+commit;" >/dev/null
+
 val "tick istnieje" \
   "select count(*)::text from pg_proc where proname='eta_calibration_tick' and pronargs=0" "1"
 
@@ -534,6 +552,9 @@ val "authenticated ma EXECUTE undo" \
 
 val "tick: integration_runs bez raise" \
   "select (eta_calibration_tick()->>'ok' is not null)::text" "true"
+
+val "tick: ok=true na czystych danych" \
+  "select (eta_calibration_tick()->>'ok')" "true"
 
 val "tick: wpis integration_runs" \
   "select (count(*) >= 1)::text from integration_runs where job like 'eta_calib%'" "true"

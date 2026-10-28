@@ -6244,3 +6244,14 @@ Tempo 3 dni: ~1â€“2 paczki bazy/dzieÅ„ przy 1â€“3 rundach F7; wyglÄ…d koordynato
 - **Przyczyny:** (1) status â€” brak komentarzy A2 â€Awaryjnie: GPSâ€ / â€celowo niczego nie zmieniaâ€ w `apply_geofence_status` (0279); (2) B7 â€” `undone_at=now()` wÅ‚Ä…cza skip â€po undo <3 nowychâ€ (pomiary BT majÄ… `observed_at` w przeszÅ‚oÅ›ci) â†’ `NO_CHANGE`.
 - **Krok F7 r3 (czÄ™Å›Ä‡ CI):** komentarze A2; B7 `undone_at âˆ’8 d` + `%p4k-auto%`; `due_hours=null`; BACKTEST sprzÄ…ta propozycje; filtr 90 d/sÅ‚ownik w teÅ›cie wstecz; +2 testy KSH/SCX 0 decyzji â†’ p4k **60**. Push â†’ CI; po zielonym â€” proÅ›ba o F7 (bez scalenia bez â€gotoweâ€).
 
+
+## 2026-10-28 06:20 — #604 F7 r3: BACKTEST fixture + Œ1/Œ3/decyzje
+
+- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po 6a3c9f7.
+- Scalanie: nie (CI db 40630478204: p4k 59/1 BACKTEST_WORSE›NO_CHANGE; unit/visual ?).
+- **Przyczyna BT:** hours=7.5 vs mediana fit ~12 › ?60 % > limit 40 %/30 d › continue › NO_CHANGE.
+- **Krok F7 r3 (reszta):**
+  - p4k BT: hours=10 (?20 %); +HHL_OPS dict odmowa; tick ok=true; EXPECTED p4k **62**
+  - 0320: backtest per kod; Œ3 bez martwego 
+ot exists; sailings_route_check regex; silnik bez hardkodu STENA/tras; dict upsert › params + seed protect + ETA_DICT_*; decyzje SUPERSEDED; kody ETA_*; payload AUTO codes
+- Push › CI; po zielonym — proœba o F7 (bez scalenia bez „gotowe”). Bez push na main.

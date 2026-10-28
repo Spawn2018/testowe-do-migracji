@@ -59,6 +59,12 @@ end $route_chk$;
 comment on column public.geofences.route is
   '#581 F7 Ś1: trasa portu — klucz ze słownika eta_route_aliases / eta_route_segments; null = domyślna rodzina.';
 
+-- Ś1 F7 r3: otwórz CHECK tras rejsu (0119 miała zamkniętą listę 4 tras)
+alter table public.sailings drop constraint if exists sailings_route_check;
+alter table public.sailings
+  add constraint sailings_route_check
+  check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');
+
 -- FK corridor → params (Ś2 F7 r2): NOT VALID, bez sztucznych wierszy LiveCalib
 do $fk$
 begin
@@ -411,15 +417,8 @@ begin
            o.corridor not like 'PL_ROAD%' and o.corridor not like 'SE_ROAD%'
            or coalesce(o.features->>'gps_quality', '') = 'true'
          )
+         -- Ś3 F7 r3: tylko v_skip_codes (7 d / ≥3 obs) — bez osobnego not exists (martwa reguła)
          and (v_skip_codes = '{}' or o.corridor <> all (v_skip_codes))
-         and not exists (
-           select 1 from eta_calibration_versions v
-            where v.applied is true
-              and v.undone_at is null
-              and coalesce(v.note, '') like '%auto-applied%'
-              and jsonb_exists(v.params_after, o.corridor)
-              and v.created_at > now() - interval '7 days'
-         )
     ),
     fit as (
       select * from base where rn <= greatest(1, floor(cnt * 0.7))
@@ -501,68 +500,93 @@ begin
     return jsonb_build_object('ok', true, 'proposal', null, 'reason', 'NO_CHANGE');
   end if;
 
-  -- B7: błąd przed/po tylko na zbiorze testowym (30 % najnowszych per kod)
-  select
-    coalesce(avg(abs(o.hours_observed - (v_after -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
-    coalesce(avg(abs(o.hours_observed - (v_before -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
-    count(*)::int
-    into v_err_after, v_err_before, v_err_n
-    from (
-      select o.corridor, o.hours_observed, o.observed_at,
-             row_number() over (partition by o.corridor order by o.observed_at, o.id) as rn,
-             count(*) over (partition by o.corridor) as cnt
-        from eta_segment_observations o
-       where o.exclude_reason is null
-         and o.hours_observed > 0
-         and o.observed_at >= now() - interval '90 days'
-         and coalesce(o.features->>'p4k', '') = 'true'
-         and o.corridor in (select segment_code from eta_route_segments)
-         and jsonb_exists(v_after, o.corridor)
-         and (
-           o.corridor not like 'PL_ROAD%' and o.corridor not like 'SE_ROAD%'
-           or coalesce(o.features->>'gps_quality', '') = 'true'
-         )
-    ) o
-   where o.rn > greatest(1, floor(o.cnt * 0.7));
+  -- B7 F7 r3 pkt 9: backtest per kod — odrzuć tylko kody, które pogarszają / mają za mało testu
+  declare
+    v_keep_before jsonb := '{}'::jsonb;
+    v_keep_after jsonb := '{}'::jsonb;
+    v_code text;
+    v_c_err_a numeric;
+    v_c_err_b numeric;
+    v_c_n int;
+    v_any_few boolean := false;
+    v_any_worse boolean := false;
+  begin
+    for v_code in select jsonb_object_keys(v_after)
+    loop
+      select
+        coalesce(avg(abs(o.hours_observed - (v_after -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
+        coalesce(avg(abs(o.hours_observed - (v_before -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
+        count(*)::int
+        into v_c_err_a, v_c_err_b, v_c_n
+        from (
+          select o.corridor, o.hours_observed,
+                 row_number() over (partition by o.corridor order by o.observed_at, o.id) as rn,
+                 count(*) over (partition by o.corridor) as cnt
+            from eta_segment_observations o
+           where o.exclude_reason is null
+             and o.hours_observed > 0
+             and o.observed_at >= now() - interval '90 days'
+             and coalesce(o.features->>'p4k', '') = 'true'
+             and o.corridor = v_code
+             and o.corridor in (select segment_code from eta_route_segments)
+             and (
+               o.corridor not like 'PL_ROAD%' and o.corridor not like 'SE_ROAD%'
+               or coalesce(o.features->>'gps_quality', '') = 'true'
+             )
+        ) o
+       where o.rn > greatest(1, floor(o.cnt * 0.7));
+      if v_c_n < 2 then
+        v_any_few := true;
+        continue;
+      end if;
+      if v_c_err_a >= v_c_err_b then
+        v_any_worse := true;
+        v_err_after := coalesce(v_err_after, 0) + v_c_err_a * v_c_n;
+        v_err_before := coalesce(v_err_before, 0) + v_c_err_b * v_c_n;
+        v_err_n := coalesce(v_err_n, 0) + v_c_n;
+        continue;
+      end if;
+      v_keep_before := v_keep_before || jsonb_build_object(v_code, v_before -> v_code);
+      v_keep_after := v_keep_after || jsonb_build_object(v_code, v_after -> v_code);
+      v_err_after := coalesce(v_err_after, 0) + v_c_err_a * v_c_n;
+      v_err_before := coalesce(v_err_before, 0) + v_c_err_b * v_c_n;
+      v_err_n := coalesce(v_err_n, 0) + v_c_n;
+    end loop;
 
-  if v_err_n < 2 then
-    delete from eta_calibration_versions
-     where applied is not true
-       and created_by is null
-       and coalesce(note, '') like 'propozycja ciągła%'
-       and undone_at is null
-       and rejected_at is null
-       and not exists (
-         select 1 from decisions d
-          where d.type_code = 'ETA_CALIBRATION_APPROVAL'
-            and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
-            and d.detail->>'version' = eta_calibration_versions.id::text
-       );
-    return jsonb_build_object(
-      'ok', true, 'proposal', null, 'reason', 'BACKTEST_TOO_FEW',
-      'n_test', v_err_n
-    );
-  end if;
+    if v_keep_after = '{}'::jsonb then
+      delete from eta_calibration_versions
+       where applied is not true
+         and created_by is null
+         and coalesce(note, '') like 'propozycja ciągła%'
+         and undone_at is null
+         and rejected_at is null
+         and not exists (
+           select 1 from decisions d
+            where d.type_code = 'ETA_CALIBRATION_APPROVAL'
+              and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+              and d.detail->>'version' = eta_calibration_versions.id::text
+         );
+      if v_any_worse is not true and v_any_few then
+        return jsonb_build_object(
+          'ok', true, 'proposal', null, 'reason', 'BACKTEST_TOO_FEW',
+          'n_test', coalesce(v_err_n, 0)
+        );
+      end if;
+      return jsonb_build_object(
+        'ok', true, 'proposal', null, 'reason', 'BACKTEST_WORSE',
+        'error_before_min', round(case when coalesce(v_err_n,0)>0 then v_err_before/v_err_n else 0 end, 2),
+        'error_after_min', round(case when coalesce(v_err_n,0)>0 then v_err_after/v_err_n else 0 end, 2)
+      );
+    end if;
 
-  if v_err_after >= v_err_before then
-    delete from eta_calibration_versions
-     where applied is not true
-       and created_by is null
-       and coalesce(note, '') like 'propozycja ciągła%'
-       and undone_at is null
-       and rejected_at is null
-       and not exists (
-         select 1 from decisions d
-          where d.type_code = 'ETA_CALIBRATION_APPROVAL'
-            and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
-            and d.detail->>'version' = eta_calibration_versions.id::text
-       );
-    return jsonb_build_object(
-      'ok', true, 'proposal', null, 'reason', 'BACKTEST_WORSE',
-      'error_before_min', round(v_err_before, 2),
-      'error_after_min', round(v_err_after, 2)
-    );
-  end if;
+    v_before := v_keep_before;
+    v_after := v_keep_after;
+    v_n_codes := (select count(*)::int from jsonb_object_keys(v_after));
+    if coalesce(v_err_n, 0) > 0 then
+      v_err_after := v_err_after / v_err_n;
+      v_err_before := v_err_before / v_err_n;
+    end if;
+  end;
 
   select id into v_exist
     from eta_calibration_versions
@@ -584,7 +608,7 @@ begin
     ) into v_open_dec;
   end if;
 
-  -- Ś4 vs B4: przy otwartej decyzji — nowy wiersz (HHL zatwierdza to, co widział)
+  -- Ś4 vs B4: przy otwartej decyzji — nowy wiersz; starą decyzję SUPERSEDED (F7 r3 pkt 8)
   if v_exist is not null and v_open_dec is not true then
     update eta_calibration_versions
        set params_before = v_before,
@@ -601,6 +625,17 @@ begin
      where id = v_exist;
     v_id := v_exist;
   else
+    if v_open_dec is true then
+      update decisions
+         set status = 'RESOLVED',
+             resolved_at = now(),
+             resolution_code = 'SUPERSEDED',
+             resolution_note = 'nowa propozycja kalibracji ETA',
+             snooze_until = null,
+             updated_at = now()
+       where type_code = 'ETA_CALIBRATION_APPROVAL'
+         and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+    end if;
     insert into eta_calibration_versions (
       created_by, params_before, params_after, n_obs,
       error_before_min, error_after_min, applied, frozen, note
@@ -660,18 +695,31 @@ begin
 
   select value into v_frozen from app_parameters where key = 'ETA_CALIBRATION_FROZEN';
   if coalesce(v_frozen, 0) = 1 then
-    raise exception 'kalibracja zamrożona — odmroź przed zastosowaniem wersji';
+    raise exception 'ETA_FROZEN' using errcode = 'P0001';
   end if;
 
   select * into v from eta_calibration_versions where id = p_version;
   if not found then
-    raise exception 'brak wersji %', p_version;
+    raise exception 'ETA_APPLY_MISSING' using errcode = 'P0001';
   end if;
   if v.applied is true and v.undone_at is null then
     return true;
   end if;
   if v.undone_at is not null then
-    raise exception 'wersja cofnięta — nie stosuj ponownie';
+    raise exception 'ETA_APPLY_UNDONE' using errcode = 'P0001';
+  end if;
+  -- F7 r3 pkt 8: odmowa APPLY gdy nowsza zastosowana z tymi kluczami
+  if exists (
+    select 1 from eta_calibration_versions n
+     where n.applied is true
+       and n.undone_at is null
+       and n.id > p_version
+       and exists (
+         select 1 from jsonb_object_keys(n.params_after) k1
+          where jsonb_exists(v.params_after, k1)
+       )
+  ) then
+    raise exception 'ETA_APPLY_NEWER' using errcode = 'P0001';
   end if;
 
   select count(*)::int into v_n_codes
@@ -777,7 +825,7 @@ language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
-    raise exception 'wyłącznie HHL_ADMIN';
+    raise exception 'ETA_NOT_ADMIN' using errcode = '42501';
   end if;
   return public.eta_apply_calibration_internal(p_version, null, false);
 end;
@@ -863,8 +911,10 @@ begin
   begin
     v_ok := public.eta_apply_calibration_internal(v_id, 'automat kalibracji', true);
   exception when others then
-    if SQLERRM like 'AUTO_NEEDS_APPROVAL%' or SQLERRM like 'kalibracja zamrożona%'
-       or SQLERRM like 'ETA_CALIB_BUSY%' or SQLERRM like 'BUSY%' or SQLERRM like 'wersja cofnięta%' then
+    if SQLERRM like 'AUTO_NEEDS_APPROVAL%' or SQLERRM like 'ETA_FROZEN%'
+       or SQLERRM like 'kalibracja zamrożona%'
+       or SQLERRM like 'ETA_CALIB_BUSY%' or SQLERRM like 'BUSY%'
+       or SQLERRM like 'ETA_APPLY_%' or SQLERRM like 'wersja cofnięta%' then
       return jsonb_build_object(
         'ok', true, 'applied', null, 'reason', 'BLOCKED',
         'version', v_id, 'msg', left(SQLERRM, 200)
@@ -888,8 +938,20 @@ begin
       'locale', u.locale,
       'title', 'Kalibracja ETA zastosowana automatycznie',
       'summary', format(
-        'Zastosowano wersję %s (zmiana do %s%%). Możesz cofnąć.',
-        v_id::text, round(v_max * 100.0, 1)::text
+        'Zastosowano wersję %s (zmiana do %s%%, kody: %s). Możesz cofnąć.',
+        v_id::text, round(v_max * 100.0, 1)::text,
+        coalesce((
+          select string_agg(k, ', ' order by k)
+            from eta_calibration_versions v
+            cross join lateral jsonb_object_keys(v.params_after) k
+           where v.id = v_id
+        ), '—')
+      ),
+      'codes', (
+        select coalesce(jsonb_agg(k order by k), '[]'::jsonb)
+          from eta_calibration_versions v
+          cross join lateral jsonb_object_keys(v.params_after) k
+         where v.id = v_id
       )
     ),
     left('ETA_CALIB_AUTO:' || v_id::text || ':' || u.id::text, 200)
@@ -920,14 +982,14 @@ declare
 begin
   perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
-    raise exception 'wyłącznie HHL_ADMIN';
+    raise exception 'ETA_NOT_ADMIN' using errcode = '42501';
   end if;
   -- Ś8: zamrożenie NIE blokuje undo
 
   select * into v from eta_calibration_versions
    where id = p_version and applied is true and undone_at is null;
   if not found then
-    raise exception 'brak zastosowanej wersji %', p_version;
+    raise exception 'ETA_UNDO_MISSING' using errcode = 'P0001';
   end if;
 
   -- B5c: odmowa, gdy nowsza zastosowana z przecięciem kluczy
@@ -942,7 +1004,7 @@ begin
           where jsonb_exists(v.params_after, k1)
        )
   ) then
-    raise exception 'istnieje nowsza zastosowana wersja z tymi kluczami — cofnij ją najpierw';
+    raise exception 'ETA_UNDO_NEWER' using errcode = 'P0001';
   end if;
 
   for k, h, sp in
@@ -1161,40 +1223,86 @@ create or replace function public.eta_route_dict_upsert(
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare
   r record;
+  v_alias text := upper(btrim(p_alias));
+  v_route text := upper(btrim(p_route_key));
+  v_op text := nullif(upper(btrim(p_operator)), '');
+  v_old jsonb;
+  v_roles text[];
+  v_force boolean := coalesce((p_segments ->> '_force')::boolean, false);
+  v_segs jsonb := case
+    when p_segments is null then null
+    else p_segments - '_force'
+  end;
 begin
   perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
-    raise exception 'wyłącznie HHL_ADMIN' using errcode = '42501';
+    raise exception 'ETA_DICT_NOT_ADMIN' using errcode = '42501';
   end if;
-  if p_alias is null or p_route_key is null then
-    raise exception 'alias i route_key wymagane' using errcode = '22023';
+  if p_alias is null or p_route_key is null or btrim(p_alias) = '' or btrim(p_route_key) = '' then
+    raise exception 'ETA_DICT_ARGS' using errcode = '22023';
   end if;
+  -- F7 r3 pkt 11: seed (STENA/POLFERRIES/…) bez _force
+  if v_force is not true
+     and v_alias in ('STENA', 'POLFERRIES', 'GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY')
+     and exists (select 1 from eta_route_aliases where alias_key = v_alias)
+  then
+    raise exception 'ETA_DICT_SEED_PROTECTED' using errcode = 'P0001';
+  end if;
+  select jsonb_build_object('route_key', route_key, 'operator', operator)
+    into v_old from eta_route_aliases where alias_key = v_alias;
   insert into eta_route_aliases (alias_key, route_key, operator)
-  values (upper(btrim(p_alias)), upper(btrim(p_route_key)), nullif(upper(btrim(p_operator)), ''))
+  values (v_alias, v_route, v_op)
   on conflict (alias_key) do update
     set route_key = excluded.route_key, operator = excluded.operator;
-  if p_segments is not null then
-    for r in select * from jsonb_to_recordset(p_segments)
+  if v_segs is not null and jsonb_typeof(v_segs) = 'array' then
+    for r in select * from jsonb_to_recordset(v_segs)
                as x(segment_role text, segment_code text)
     loop
+      -- F7 r3 pkt 6: brakujący kod → params startowe (uniknij 23503)
+      insert into eta_segment_params (code, label, hours, spread_pct, source)
+      values (
+        upper(btrim(r.segment_code)),
+        'Słownik tras ' || upper(btrim(r.segment_role)),
+        case upper(btrim(r.segment_role))
+          when 'PL_ROAD' then 4.5
+          when 'PORT_CHECKIN' then 2
+          when 'CROSSING' then 18
+          when 'SE_ROAD' then 17
+          else 10
+        end,
+        20,
+        'eta_route_dict_upsert start'
+      )
+      on conflict (code) do nothing;
       insert into eta_route_segments (route_key, segment_role, segment_code)
-      values (upper(btrim(p_route_key)), upper(btrim(r.segment_role)), upper(btrim(r.segment_code)))
+      values (v_route, upper(btrim(r.segment_role)), upper(btrim(r.segment_code)))
       on conflict (route_key, segment_role) do update set segment_code = excluded.segment_code;
     end loop;
   end if;
-  insert into audit_log (user_id, action, entity, entity_id, new_value)
+  select array_agg(segment_role order by segment_role) into v_roles
+    from eta_route_segments where route_key = v_route;
+  if v_segs is not null and (
+       v_roles is null
+       or v_roles <@ array['PL_ROAD','PORT_CHECKIN','CROSSING','SE_ROAD'] is not true
+       or array['PL_ROAD','PORT_CHECKIN','CROSSING','SE_ROAD'] <@ v_roles is not true
+     )
+  then
+    raise exception 'ETA_DICT_ROLES' using errcode = 'P0001';
+  end if;
+  insert into audit_log (user_id, action, entity, entity_id, old_value, new_value)
   values (
     current_app_user_id(),
     'ETA_ROUTE_DICT_UPSERT',
     'eta_route_aliases',
-    upper(btrim(p_alias)),
+    v_alias,
+    v_old,
     jsonb_build_object(
-      'route_key', upper(btrim(p_route_key)),
-      'operator', nullif(upper(btrim(p_operator)), ''),
-      'segments', p_segments
+      'route_key', v_route,
+      'operator', v_op,
+      'segments', v_segs
     )
   );
-  return jsonb_build_object('ok', true, 'alias', upper(btrim(p_alias)), 'route_key', upper(btrim(p_route_key)));
+  return jsonb_build_object('ok', true, 'alias', v_alias, 'route_key', v_route);
 end;
 $$;
 revoke all on function public.eta_route_dict_upsert(text, text, text, jsonb) from public, anon;
@@ -1727,17 +1835,16 @@ begin
   h_cross := coalesce(h_cross, 18); sp_cross := coalesce(sp_cross, 0.15);
   fresh_h := coalesce(fresh_h, 1.5);
 
-  -- A5 F7: droga SE według trasy rejsu (geofences.route PORT_IN).
-  -- Źródło SE_ROAD_KAA: 0160 FERRY-STATUS — Karlskrona → E22 → E4 → Boden = 21,5 h
-  -- (dłużej niż SE_ROAD Nynäshamn–Boden = 17 h). PL: PL_ROAD_GDY = 8,2 h.
-  h_road := coalesce(h_road, case when v_op = 'STENA' then 21.5 else 17 end);
-  sp_road := coalesce(sp_road, 0.2);
-  h_pl := coalesce(h_pl, case when v_op = 'STENA' then 8.2 else 4.5 end);
-  sp_pl := coalesce(sp_pl, case when v_op = 'STENA' then 0.25 else 0.2 end);
-
+  -- Ś1 F7 r3: czasy z eta_segment_params (słownik); korytarz OSM z kodu SE_ROAD
   select slowdown_mult, reason into v_slow, v_slow_reason
     from corridor_conditions
-   where corridor = case when v_op = 'STENA' then 'SE_E22' else 'SE_E4' end;
+   where corridor = case
+     when public.eta_obs_segment_code(
+            coalesce((select public.eta_obs_route_family(sa.route)
+                        from sailings sa where sa.id = l.sailing_id), 'GDN-NYN'),
+            'SE_ROAD') like '%KAA%' then 'SE_E22'
+     else 'SE_E4'
+   end;
   v_slow := coalesce(v_slow, 1.00);
   if v_slow > 1.00 then
     v_weather_pct := round((v_slow - 1) * 100);
@@ -1889,7 +1996,13 @@ begin
     if v_status = 'IN_TRANSIT_SE' then
       if p.ts is not null and p.ts >= p_now - make_interval(mins => (fresh_h * 60)::int) then
         select * into cp from corridor_progress(
-          case when v_op = 'STENA' then 'SE_E22' else 'SE_E4' end, p.g);
+          case
+            when public.eta_obs_segment_code(
+                   coalesce((select public.eta_obs_route_family(sa.route)
+                               from sailings sa where sa.id = l.sailing_id), 'GDN-NYN'),
+                   'SE_ROAD') like '%KAA%' then 'SE_E22'
+            else 'SE_E4'
+          end, p.g);
         if found and cp.remaining_frac is not null then
           v_frac := cp.remaining_frac;
           v_off := cp.off_m;
@@ -2003,12 +2116,13 @@ begin
           v_var := v_var + (12 * 60)^2; v_sum := v_sum + (12 * 60); v_comp := v_comp || jsonb_build_object('code','SAILING_AT_RISK','min',round(12 * 60));
         end if;
       else
-        -- II-7 / STENA-3: najbliższy rejs GDN-NYN lub GDY-KAA
+        -- Ś1 F7 r3: najbliższy rejs ze słownika aliasów (nie hardkod GDN-NYN/GDY-KAA)
         select coalesce(x.delayed_departure_at, x.departure_at), coalesce(x.delayed_arrival_at, x.arrival_at)
           into v_dep, v_arr
           from sailings x
          where x.project_id = l.project_id
-           and x.route in ('GDN-NYN', 'GDY-KAA') and x.status <> 'ODWOLANY'
+           and exists (select 1 from eta_route_aliases a where a.alias_key = x.route)
+           and x.status <> 'ODWOLANY'
            and coalesce(x.delayed_departure_at, x.departure_at) >= v_start
          order by coalesce(x.delayed_departure_at, x.departure_at) limit 1;
         if v_dep is not null then
