@@ -20,7 +20,8 @@ import { composeFromSearch, setChatCompose } from '../lib/chatCompose';
  * Parametry jednorazowe linku do transportu (zakładka, odpowiedź na czacie) — po przejściu do innego widoku albo transportu
  * nie przechodzą dalej (właściciel 21.10.2026, 16:27: link z dzwonka „?zakladka=status” otwierał każdy kolejny transport na Statusie).
  */
-const ONE_SHOT = ['zakladka', 'odpowiedz', 'tekst'];
+/* W-604: `wersja` — podświetlenie wersji kalibracji ETA z dzwonka, tylko raz */
+const ONE_SHOT = ['zakladka', 'odpowiedz', 'tekst', 'wersja'];
 export function carrySearch(search: string): string {
   const q = new URLSearchParams(search);
   let changed = false;

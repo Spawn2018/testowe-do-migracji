@@ -59,6 +59,15 @@ describe('W-604 dzwonek: ETA_CALIBRATION_AUTO', () => {
     expect(calibVersionOf(ETA_CALIBRATION_AUTO, { version: '9' })).toBe(9);
     expect(calibPathOf(undefined)).toBe('/opcje/kalibracja-eta');
   });
+  it('„wersja” jednorazowa — nie przechodzi do kolejnych adresów; katalog „Kto co dostaje” zna eta_calib', async () => {
+    const { carrySearch } = await import('../src/hooks/useRouteSync');
+    expect(carrySearch('?wersja=17')).toBe('');
+    const { NOTIFY_CATALOG } = await import('../src/lib/notifyCatalog');
+    const row = NOTIFY_CATALOG.flatMap((g) => g.rows).find((r) => r.id === 'eta_calib');
+    expect(row?.cells.HHL_ADMIN).toBeTruthy();
+    expect(row?.cells.HHL_OPS).toBeNull();
+    expect(row?.cells.CLIENT_USER).toBeNull();
+  });
   it('adres /opcje/kalibracja-eta → Opcje, ekran Kalibracja ETA', () => {
     expect(parseRoute('/opcje/kalibracja-eta')).toEqual({ kind: 'options', section: 'kalibracja-eta' });
     const view = read('src/views/OptionsView.tsx');
@@ -121,9 +130,39 @@ describe('W-604 stan wersji', () => {
     expect(calibVersionStatus({ ...base, id: 2, applied: true, undone_at: '2026-10-28T08:00:00Z', note: 'auto-applied; undone' })).toBe('undone');
     expect(calibVersionStatus({ ...base, id: 3, rejected_at: '2026-10-28T08:00:00Z', note: 'propozycja ciągła; rejected' })).toBe('rejected');
     expect(calibVersionStatus({ ...base, id: 4, rejected_at: '2026-10-28T08:00:00Z', note: 'propozycja ciągła n=7; superseded' })).toBe('superseded');
-    expect(calibVersionStatus({ ...base, id: 5, note: 'propozycja ciągła n=7', params_before: pb, params_after: pa })).toBe('pending_auto');
+    expect(calibVersionStatus({ ...base, id: 5, note: 'propozycja ciągła n=10', params_before: pb, params_after: pa, n_obs: 10, error_before_min: 60, error_after_min: 30 })).toBe('pending_auto');
     expect(calibVersionStatus({ ...base, id: 6, note: 'propozycja ciągła n=7', params_before: pb, params_after: { SE_ROAD: { hours: 13 } } })).toBe('pending_decision');
     expect(calibVersionStatus({ ...base, id: 7, created_by: 'u1', note: 'ręcznie' })).toBe('pending');
+  });
+  it('F7 r1 B2: auto tylko gdy baza zastosuje — n_obs ≥ 10, test wsteczny poprawia błąd, bez zamrożenia; inaczej „oczekuje”', () => {
+    const ok = { ...base, id: 5, note: 'propozycja ciągła', params_before: pb, params_after: pa, n_obs: 10, error_before_min: 60, error_after_min: 30 };
+    expect(calibVersionStatus(ok)).toBe('pending_auto');
+    expect(calibVersionStatus({ ...ok, n_obs: 7 })).toBe('pending');
+    expect(calibVersionStatus({ ...ok, n_obs: null })).toBe('pending');
+    expect(calibVersionStatus(ok, true)).toBe('pending');
+    expect(calibVersionStatus({ ...ok, error_after_min: 60 })).toBe('pending');
+    expect(calibVersionStatus({ ...ok, error_before_min: null })).toBe('pending_auto');
+    /* próg na surowej wartości: 15,04 % > 15 % (po zaokrągleniu byłoby 15,0) — decyzja, także przy n_obs < 10 i zamrożeniu */
+    const p1504 = { ...ok, params_before: { A: { hours: 100 } }, params_after: { A: { hours: 115.04 } } };
+    expect(maxChangePct(p1504)).toBe(15);
+    expect(calibVersionStatus(p1504)).toBe('pending_decision');
+    expect(calibVersionStatus({ ...p1504, n_obs: 7 }, true)).toBe('pending_decision');
+    expect(calibVersionStatus({ ...ok, params_before: { A: { hours: 100 } }, params_after: { A: { hours: 115 } } })).toBe('pending_auto');
+  });
+  it('calibFromDb: zamrożenie z ekranu → propozycja ≤ 15 % „oczekuje”; > 15 % — bez „Zatwierdź”, zdanie o decyzji', () => {
+    const params = [{ code: 'SE_ROAD', label: 'Droga SE', hours: 17 }];
+    const row = (o: Record<string, unknown>) => ({
+      id: 12, created_at: '2026-10-20T00:00:00Z', created_by: null, params_after: pa, params_before: pb, n_obs: 10,
+      error_before_min: 60, error_after_min: 30, applied: false, frozen: false, note: 'propozycja ciągła n=10', undone_at: null, rejected_at: null, ...o,
+    }) as Parameters<typeof calibFromDb>[2][number];
+    expect(calibFromDb('pl', params, [], [row({})], [], () => 'a', true).versions[0].status).toBe('pending');
+    expect(calibFromDb('pl', params, [], [row({})], [], () => 'a').proposal?.awaitsDecision).toBe(false);
+    const big = calibFromDb('pl', params, [], [row({ params_after: { SE_ROAD: { hours: 13 } } })], [], () => 'a');
+    expect(big.proposal?.awaitsDecision).toBe(true);
+    const h = renderToStaticMarkup(createElement(EtaCalibScreen, { locale: 'pl', data: big, onApprove: async () => ({ ok: true }) }));
+    expect(h).not.toMatch(/data-cal-approve/);
+    expect(h).toContain('Czeka na decyzję Administratora HHL w Ryzykach.');
+    expect(read('src/auth/LiveCalib.tsx')).toMatch(/\}, db\.frozen\) : null\)/);
   });
   it('zmiana jak w bazie: godziny względnie, rozrzut w punktach procentowych', () => {
     expect(maxChangePct({ params_before: pb, params_after: pa })).toBe(11.8);
@@ -208,8 +247,12 @@ describe('W-604 „Cofnij” — tylko HHL_ADMIN, potwierdzenie na stronie', () 
     expect(h).toContain('data-cal-tag="undone"');
     expect(h).toMatch(/data-cal-ver-id="7"[^>]*class="cal-ver-hl"/);
   });
-  it('potwierdzenie w panelu na stronie, nie confirm()', () => {
+  it('potwierdzenie w panelu na stronie, nie confirm(); fokus: „Anuluj” w panelu, potem nagłówek listy albo komunikat', () => {
     const src = read('src/components/options/EtaCalibScreen.tsx');
+    expect(src).toMatch(/autoFocus onClick=\{cancelUndo\} data-cal-undo-no/);
+    expect(src).toMatch(/<h3 ref=\{verHeadRef\} tabIndex=\{-1\}/);
+    expect(src).toMatch(/tabIndex=\{-1\} ref=\{undoErrRef\}/);
+    expect(src).toMatch(/failed \? undoErrRef\.current : verHeadRef\.current/);
     expect(src).toMatch(/data-cal-undo-ask/);
     expect(src).not.toMatch(/window\.confirm|\bconfirm\(/);
   });
@@ -236,6 +279,7 @@ describe('W-604 decyzja ETA_CALIBRATION_APPROVAL', () => {
   it('karta: wersja i największa zmiana z detail', () => {
     expect(etaCalibDecisionLine('ETA_CALIBRATION_APPROVAL', { version: 21, max_change_pct: 18.4, action: 'apply_eta_calibration_version' }))
       .toBe('Wersja 21 · zmiana do 18,4%');
+    expect(DEC_I18N.pl.dec_eta_calib_title).toBe('Kalibracja ETA');
     expect(etaCalibDecisionLine('KSH_DATE_COUNTER', { version: 21 })).toBeNull();
     expect(etaCalibDecisionLine('ETA_CALIBRATION_APPROVAL', {})).toBeNull();
     expect(read('src/components/risks/TodoCard.tsx')).toMatch(/data-rk-eta-calib>\{etaCalibDecisionLine\(d\.typeCode, d\.detail\)\}/);

@@ -475,6 +475,7 @@ const pl: Dict = {
   cal_undo_ask: 'Cofnąć wersję {no}? Odcinki z tej wersji wracają do czasów sprzed niej, ETA przelicza się z nich. Wpis w Historii zmian.',
   cal_undo_yes: 'Tak, cofnij',
   cal_undo_failed: 'Nie udało się cofnąć — spróbuj jeszcze raz.',
+  cal_prop_decision: 'Czeka na decyzję Administratora HHL w Ryzykach.',
   cal_prop_undone: 'Wersja {no} cofnięta — ETA liczy poprzednie czasy. Nowa propozycja powstanie z kolejnych dostaw.',
   cal_err_NOT_ADMIN: 'Kalibrację ETA zmienia tylko Administrator HHL — nic nie zmieniono.',
   cal_err_APPLY_NEWER: 'Jest już nowsza zastosowana wersja z tymi odcinkami — tej nie da się zastosować.',

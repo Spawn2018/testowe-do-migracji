@@ -39,7 +39,7 @@ const NOT_SEGMENT = new Set(['GPS_FRESH_MIN']);
 
 const minOf = (h: number | string | null | undefined) => (h == null || h === '' ? null : Math.round(Number(h) * 60));
 
-export function calibFromDb(locale: Locale, params: readonly Param[], obs: readonly Obs[], vers: readonly Ver[], loads: readonly Load[], nameOf: (id: string | null) => string): EtaCalibration {
+export function calibFromDb(locale: Locale, params: readonly Param[], obs: readonly Obs[], vers: readonly Ver[], loads: readonly Load[], nameOf: (id: string | null) => string, frozen = false): EtaCalibration {
   const code = (id: string) => loads.find((l) => l.id === id)?.code ?? id.slice(0, 8);
   const observations: CalibObservation[] = obs.map((o) => ({
     id: `obs-${o.id}`,
@@ -86,7 +86,7 @@ export function calibFromDb(locale: Locale, params: readonly Param[], obs: reado
       by: nameOf(v.created_by),
       what: human || (list ? tp(locale, 'p3l_cal_ver_what', { list }) : v.note?.trim() ?? ''),
       current: v.id === undoId,
-      status: calibVersionStatus(v as CalibVersionDb),
+      status: calibVersionStatus(v as CalibVersionDb, frozen),
       undoable: v.id === undoId,
     };
   });
@@ -97,6 +97,8 @@ export function calibFromDb(locale: Locale, params: readonly Param[], obs: reado
     versions,
     proposal: proposalVer ? {
       id: String(proposalVer.id),
+      /* F7 r1 Ś1: zmiana > 15 % — rozstrzyga decyzja w Ryzykach (zatwierdzenie z ekranu zostawiłoby ją otwartą) */
+      awaitsDecision: calibVersionStatus(proposalVer as CalibVersionDb, frozen) === 'pending_decision',
       at: proposalVer.created_at,
       errorBeforeMin: Math.round(Number(proposalVer.error_before_min ?? 0)),
       errorAfterMin: Math.round(Number(proposalVer.error_after_min ?? 0)),
@@ -148,7 +150,7 @@ export default function LiveCalib({ readOnly = false, highlight = null }: { read
   const data = useMemo(() => (db ? calibFromDb(locale, db.params, db.obs, db.vers, loads, (id) => {
     const x = id ? byId.get(id) : undefined;
     return x ? personName(x) : t(locale, 'p3l_h_auto');
-  }) : null), [db, loads, byId, locale]);
+  }, db.frozen) : null), [db, loads, byId, locale]);
 
   const approve = useCallback(async (id: string) => {
     const sb = await getSupabase();

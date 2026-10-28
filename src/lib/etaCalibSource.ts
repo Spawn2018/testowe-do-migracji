@@ -82,6 +82,8 @@ export type CalibProposal = {
   /** Średni błąd ETA 24 h przed przyjazdem na tych samych dostawach: z obecnymi czasami i z proponowanymi (min). */
   errorBeforeMin: number;
   errorAfterMin: number;
+  /** W-604 F7 r1 Ś1: zmiana > 15 % — czeka na decyzję Administratora HHL w Ryzykach (`ETA_CALIBRATION_APPROVAL`). */
+  awaitsDecision?: boolean;
 };
 
 export type EtaCalibration = {

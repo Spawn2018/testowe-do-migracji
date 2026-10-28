@@ -118,7 +118,7 @@ const pl: Dict = {
   dec_err_ETA_UNDONE: 'Ta wersja kalibracji została cofnięta — nie da się jej zastosować ponownie. Odrzuć propozycję.',
   dec_err_ETA_APPLY_MISSING: 'Tej wersji kalibracji nie ma już w bazie — odrzuć propozycję.',
   /* W-604: wiersz karty decyzji kalibracji (detail: version, max_change_pct) */
-  dec_eta_calib_title: 'Wersja kalibracji',
+  dec_eta_calib_title: 'Kalibracja ETA',
   /* W-604: opcje APPLY / REJECT bez typu decyzji (historia) — ogólne słowa */
   dec_opt_APPLY: 'Zastosuj',
   dec_opt_REJECT: 'Odrzuć',

@@ -118,10 +118,17 @@ export interface CalibVersionDb {
   note: string | null;
   params_before?: Record<string, { hours?: number | string | null; spread_pct?: number | string | null }> | null;
   params_after?: Record<string, { hours?: number | string | null; spread_pct?: number | string | null }> | null;
+  /* F7 r1 B2: warunki auto-zastosowania w bazie (D11: n ≥ 10; test wsteczny musi poprawiać błąd) */
+  n_obs?: number | null;
+  error_before_min?: number | string | null;
+  error_after_min?: number | string | null;
 }
 
-/** Największa zmiana wersji w % — ta sama reguła co `eta_auto_apply_pending` (godziny względnie, rozrzut w pp). */
-export function maxChangePct(v: Pick<CalibVersionDb, 'params_before' | 'params_after'>): number | null {
+/** D11 (0320): auto-zastosowanie tylko przy co najmniej tylu obserwacjach w wersji. */
+export const ETA_AUTO_MIN_OBS = 10;
+
+/** Największa zmiana wersji jako ułamek (0.1504 = 15,04%) — ta sama reguła co `eta_auto_apply_pending` (godziny względnie, rozrzut w pp). */
+export function maxChangeRaw(v: Pick<CalibVersionDb, 'params_before' | 'params_after'>): number | null {
   const a = v.params_after ?? null;
   const b = v.params_before ?? null;
   if (!a || !b) return null;
@@ -138,19 +145,42 @@ export function maxChangePct(v: Pick<CalibVersionDb, 'params_before' | 'params_a
     c = Math.max(c, Math.abs((sn ?? 0) - (so ?? 0)) / 100);
     max = Math.max(max ?? 0, c);
   }
-  return max == null ? null : Math.round(max * 1000) / 10;
+  return max;
 }
 
-/** Status wersji: cofnięta / zastosowana / zastąpiona / odrzucona / oczekuje (auto albo decyzja HHL). */
-export function calibVersionStatus(v: CalibVersionDb): CalibVersionStatus {
+/** Największa zmiana w % z jedną cyfrą po przecinku (do wyświetlenia — progu nie porównujemy na zaokrągleniu). */
+export function maxChangePct(v: Pick<CalibVersionDb, 'params_before' | 'params_after'>): number | null {
+  const raw = maxChangeRaw(v);
+  return raw == null ? null : Math.round(raw * 1000) / 10;
+}
+
+/**
+ * Czy baza zastosuje tę wersję sama (`eta_apply_calibration_internal(p_auto => true)`): bez zamrożenia, n_obs ≥ 10,
+ * test wsteczny poprawia błąd (gdy oba błędy są). Inaczej baza zwraca BLOCKED — wersja zwyczajnie czeka.
+ */
+export function autoApplicable(v: CalibVersionDb, frozen = false): boolean {
+  if (frozen) return false;
+  if ((v.n_obs ?? 0) < ETA_AUTO_MIN_OBS) return false;
+  const before = num(v.error_before_min);
+  const after = num(v.error_after_min);
+  if (before != null && after != null && after >= before) return false;
+  return true;
+}
+
+/**
+ * Status wersji: cofnięta / zastosowana / zastąpiona / odrzucona / oczekuje. Propozycja ciągła ze zmianą > 15 % (surowa
+ * wartość, jak w bazie) — decyzja HHL; ≤ 15 % — auto tylko gdy baza ją zastosuje (`autoApplicable`), inaczej zwykłe „oczekuje”.
+ */
+export function calibVersionStatus(v: CalibVersionDb, frozen = false): CalibVersionStatus {
   const note = (v.note ?? '').toLowerCase();
   if (v.undone_at) return 'undone';
   if (v.applied) return 'applied';
   if (note.includes('superseded')) return 'superseded';
   if (v.rejected_at || note.includes('rejected')) return 'rejected';
   if (!v.created_by && note.startsWith('propozycja ciągła')) {
-    const pct = maxChangePct(v);
-    return pct != null && pct > ETA_AUTO_MAX_PCT ? 'pending_decision' : 'pending_auto';
+    const raw = maxChangeRaw(v);
+    if (raw != null && raw > ETA_AUTO_MAX_PCT / 100) return 'pending_decision';
+    return autoApplicable(v, frozen) ? 'pending_auto' : 'pending';
   }
   return 'pending';
 }

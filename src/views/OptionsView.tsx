@@ -130,6 +130,8 @@ export function OptionsView() {
   const [request, setRequest] = useState<{ screen: OptScreenId; seq: number } | null>(null);
   /* wyglad/W-eta: wersja zatwierdzona w Kalibracji ETA — ten sam stan na ekranie i w menu bocznym (F7 P2) */
   const [calibApproved, setCalibApproved] = useState<CalibVersion | null>(null);
+  /* W-604 F7 r1: demo — wersja cofnięta w tej sesji (menu boczne pokazuje wersję obowiązującą) */
+  const [calibUndone, setCalibUndone] = useState<string | null>(null);
   /* wyglad/W-opcje-live-1: stany w menu i na kafelkach z bazy (produkcja); odświeżane po zapisie w ekranie */
   const [liveMeta, setLiveMeta] = useState<LiveMeta | null>(null);
   const metaAdmin = accountRole(role) !== 'HHL_OPS';
@@ -223,6 +225,10 @@ export function OptionsView() {
   const roBlock = (el: ReactNode) => block(ro ? <fieldset disabled className="opt-ro" data-opt-ro>{el}</fieldset> : el);
   const calibMeta = (c: EtaCalibration): string => {
     const n = c.observations.filter((o) => !o.skipped).length;
+    if (calibApproved && calibUndone === calibApproved.id) {
+      const cur = c.versions.find((v) => v.current);
+      return cur ? tp(locale, 'cal_meta_done', { no: cur.no }) : t(locale, 'cal_meta_same');
+    }
     if (calibApproved) return tp(locale, 'cal_meta_done', { no: calibApproved.no });
     if (c.proposal) return t(locale, 'cal_meta_ready');
     return n >= c.needed ? t(locale, 'cal_meta_same') : tp(locale, 'cal_meta_wait', { n, need: c.needed });
@@ -416,7 +422,10 @@ export function OptionsView() {
         const calib = etaCalibrationOf(loads);
         return scr('calib', calib ? (
           <Suspense fallback={null}>
-            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} onUndo={ro ? null : etaCalibrationUndoOf(calib)} highlight={calibFocus} />
+            <EtaCalibScreen locale={locale} data={calib} readOnly={ro} onApprove={ro ? null : etaCalibrationApproveOf(calib)} approved={calibApproved} onApproved={setCalibApproved} onUndo={ro ? null : (() => {
+              const u = etaCalibrationUndoOf(calib);
+              return u ? async (id: string) => { const r = await u(id); if (r.ok) setCalibUndone(id); return r; } : null;
+            })()} highlight={calibFocus} />
           </Suspense>
         ) : LiveCalib ? block(<LiveCalib readOnly={ro} highlight={calibFocus} />) : noSource, {
           right: change,

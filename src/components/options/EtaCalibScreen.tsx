@@ -5,7 +5,7 @@
  * (po 5 dostawach; mediana z rozrzutem; ≤ 10 % — bez zmian), wersje czasów. Bez zatwierdzenia nic się nie zmienia.
  * Dane: `etaCalibSource.ts` (kody odcinków jak `eta_segment_params`).
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { formatListDateTime } from '../../lib/format';
@@ -76,6 +76,16 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
   useEffect(() => {
     if (highlight) scrollToScreen(`[data-cal-ver-id="${highlight.replace(/[^\w-]/g, '')}"]`);
   }, [highlight]);
+  /* F7 r1 Ś2: po cofnięciu fokus na nagłówek listy wersji, po błędzie — na komunikat (panel pytania znika) */
+  const verHeadRef = useRef<HTMLHeadingElement | null>(null);
+  const undoErrRef = useRef<HTMLSpanElement | null>(null);
+  const focusAfterUndo = (failed: boolean) => {
+    window.setTimeout(() => (failed ? undoErrRef.current : verHeadRef.current)?.focus(), 0);
+  };
+  const cancelUndo = () => {
+    setUndoAsk(null);
+    window.setTimeout(() => document.querySelector<HTMLButtonElement>('[data-eta-calib] [data-cal-undo]')?.focus(), 0);
+  };
   const undo = (id: string) => {
     if (!onUndo || undoBusy) return;
     setUndoBusy(true);
@@ -85,7 +95,8 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
       setUndoAsk(null);
       if (r.ok) setUndone((cur) => new Set([...cur, id]));
       else setUndoErr(r.error ?? t(locale, 'cal_undo_failed'));
-    }, () => { setUndoBusy(false); setUndoErr(t(locale, 'cal_undo_failed')); });
+      focusAfterUndo(!r.ok);
+    }, () => { setUndoBusy(false); setUndoAsk(null); setUndoErr(t(locale, 'cal_undo_failed')); focusAfterUndo(true); });
   };
   const avg = { h24: meanAbs(counted.map((o) => o.err24)), h6: meanAbs(counted.map((o) => o.err6)), h1: meanAbs(counted.map((o) => o.err1)) };
   const head = [
@@ -237,6 +248,9 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
             <span className="ox-go">{tp(locale, 'cal_prop_applied', { no: added.no })}</span>
           ) : !proposal ? (
             <span className="cal-wait">{left ? tp(locale, 'cal_prop_wait', { left, need: data.needed }) : t(locale, 'cal_prop_none')}</span>
+          ) : proposal.awaitsDecision ? (
+            /* F7 r1 Ś1: > 15 % rozstrzyga decyzja w Ryzykach — bez „Zatwierdź” na ekranie */
+            <span className="cal-wait" data-cal-awaits-decision>{t(locale, 'cal_prop_decision')}</span>
           ) : readOnly ? (
             <span className="cal-wait">{t(locale, 'cal_prop_ro')}</span>
           ) : ask ? (
@@ -258,7 +272,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
       </section>
 
       <section className="ox-panel" data-cal-versions>
-        <div className="ox-panel-hd"><h3>{t(locale, 'cal_ver_h')}</h3></div>
+        <div className="ox-panel-hd"><h3 ref={verHeadRef} tabIndex={-1} data-cal-ver-h>{t(locale, 'cal_ver_h')}</h3></div>
         <ul className="cal-ver">
           {versions.map((v) => {
             const canUndo = v.current === true && undoVisible({ readOnly, canUndo: !!onUndo, undoable: v.undoable, status: v.status });
@@ -280,7 +294,8 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
                     <span className="cal-ask cal-ver-undo" data-cal-undo-ask>
                       <span>{tp(locale, 'cal_undo_ask', { no: v.no })}</span>
                       <span className="cal-btns">
-                        <button type="button" className="btn ghost ox-btn" onClick={() => setUndoAsk(null)}>{t(locale, 'p3c_cancel')}</button>
+                        {/* eslint-disable-next-line jsx-a11y/no-autofocus -- F7 r1 Ś2: fokus w panelu pytania */}
+                        <button type="button" className="btn ghost ox-btn" autoFocus onClick={cancelUndo} data-cal-undo-no>{t(locale, 'p3c_cancel')}</button>
                         <button type="button" className="btn ox-btn" disabled={undoBusy} onClick={() => undo(v.id)} data-cal-undo-yes>{t(locale, 'cal_undo_yes')}</button>
                       </span>
                     </span>
@@ -295,7 +310,7 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
             );
           })}
         </ul>
-        {undoErr ? <div className="ox-panel-bd"><span className="ox-alert" role="alert" data-cal-undo-err>{undoErr}</span></div> : null}
+        {undoErr ? <div className="ox-panel-bd"><span className="ox-alert" role="alert" tabIndex={-1} ref={undoErrRef} data-cal-undo-err>{undoErr}</span></div> : null}
       </section>
     </div>
   );
