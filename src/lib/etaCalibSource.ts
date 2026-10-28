@@ -43,7 +43,7 @@ export type CalibObservation = {
 export type CalibVerdict = 'propose' | 'same' | 'few' | 'fixed';
 
 export type CalibSegment = {
-  /** Kod z `eta_segment_params`: PL_ROAD, PL_ROAD_GDY, PORT_CHECKIN, CROSSING_DEFAULT, SE_ROAD, SE_ROAD_KAA, SE_BREAKS, SE_DAILY_REST. */
+  /** Kod z `eta_segment_params`: PL_ROAD, PL_ROAD_GDY, PORT_CHECKIN, CROSSING_DEFAULT, SE_ROAD, SE_ROAD_KAA, SE_ROAD_KAA_INLAND (#619), SE_BREAKS, SE_DAILY_REST. */
   code: string;
   name: string;
   /** Czas w obowiązującej wersji (min). */

@@ -113,7 +113,7 @@ export function demoCalibration(loads: readonly Load[]): EtaCalibration {
 }
 
 const SHORT: Record<string, string> = {
-  PL_ROAD: 'Droga PL', PL_ROAD_GDY: 'Droga PL (Gdynia)', PORT_CHECKIN: 'odprawa', SE_ROAD: 'Droga SE', SE_ROAD_KAA: 'Droga SE (Karlskrona)', SE_BREAKS: 'przerwy',
+  PL_ROAD: 'Droga PL', PL_ROAD_GDY: 'Droga PL (Gdynia)', PORT_CHECKIN: 'odprawa', SE_ROAD: 'Droga SE', SE_ROAD_KAA: 'Droga SE (Karlskrona)', SE_ROAD_KAA_INLAND: 'Droga SE (Karlskrona, śródlądowa)', SE_BREAKS: 'przerwy',
 };
 
 /** Treść wersji po zatwierdzeniu — z tych samych median co tabela (demo i test). */
