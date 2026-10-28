@@ -6210,3 +6210,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyna p4k:** (1) unikalny indeks `eta_seg_obs_p4k_load_corridor_uidx` — fixture wkładał 8 pomiarów PL_ROAD na ten sam `load_id` → insert padał cicho, propose `NO_CHANGE`; (2) test auto 12 % zmieniał `spread_pct` 15→12 (=20 %) → Ś6 → `NEEDS_APPROVAL` zamiast apply; stąd B4=2 i puste `AUTO_VER` / undo.
 - **Krok:** `tests/db/p4k.sh` — 8 osobnych transportów na pomiary; spread stały w auto 12 %/18 %; czyszczenie decyzji przed B4. Push → CI `p4k` (+ unit/visual); po zielonym — prośba o F7.
 
+## 2026-10-28 04:50 — #604 CI db FAIL p4k 51/2 → propose SPI `?` + skip NULL
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `82c1167b`.
+- Scalanie: nie (CI db czerwone na `82c1167b`, run 40620605100: p4k propose wyjątek line 130).
+- **Przyczyna:** (1) `v_after ? o.corridor` w SQL ze zmienną PL/pgSQL → `$1 ?` psuje plan SPI; (2) `INTO v_skip_codes` przy 0 undone → NULL (odfiltrowanie for); (3) GPS cz.1 z `p4k=true` mieszał się z fixture kalibracji.
+- **Krok:** 0320 — `jsonb_exists`, skip przez podzapytanie+coalesce; p4k.sh — zdejmij `p4k` z GPS 581 przed propose. Push → CI; po zielonym — prośba o F7.
+

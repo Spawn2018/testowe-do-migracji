@@ -358,19 +358,21 @@ begin
   end if;
 
   -- B5b: kody cofnięte w ostatnich 7 dniach — pomijaj, dopóki < 3 nowych obserwacji po undone_at
-  select coalesce(array_agg(distinct k), '{}')
-    into v_skip_codes
-    from eta_calibration_versions v
-    cross join lateral jsonb_object_keys(v.params_after) k
-   where v.undone_at is not null
-     and v.undone_at > now() - interval '7 days'
-     and (
-       select count(*) from eta_segment_observations o
-        where o.corridor = k
-          and o.exclude_reason is null
-          and o.observed_at > v.undone_at
-          and coalesce(o.features->>'p4k', '') = 'true'
-     ) < 3;
+  -- Podzapytanie: przy 0 wierszach INTO nie może zostawić NULL (odfiltrowałoby cały for).
+  select coalesce((
+    select array_agg(distinct k)
+      from eta_calibration_versions v
+      cross join lateral jsonb_object_keys(v.params_after) k
+     where v.undone_at is not null
+       and v.undone_at > now() - interval '7 days'
+       and (
+         select count(*) from eta_segment_observations o
+          where o.corridor = k
+            and o.exclude_reason is null
+            and o.observed_at > v.undone_at
+            and coalesce(o.features->>'p4k', '') = 'true'
+       ) < 3
+  ), '{}') into v_skip_codes;
 
   for r in
     select o.corridor as code,
@@ -458,13 +460,14 @@ begin
   end if;
 
   -- B7: dopasowanie na starszych, błąd na najnowszych nieużytych
+  -- jsonb_exists: operator ? przy zmiennej PL/pgSQL ($1 ?) psuje plan SPI.
   select percentile_cont(0.7) within group (order by o.observed_at)
     into v_fit_cut
     from eta_segment_observations o
    where o.exclude_reason is null
      and o.hours_observed > 0
      and coalesce(o.features->>'p4k', '') = 'true'
-     and v_after ? o.corridor;
+     and jsonb_exists(v_after, o.corridor);
 
   select
     coalesce(avg(abs(o.hours_observed - (v_after -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
@@ -474,7 +477,7 @@ begin
    where o.exclude_reason is null
      and o.hours_observed > 0
      and coalesce(o.features->>'p4k', '') = 'true'
-     and v_after ? o.corridor
+     and jsonb_exists(v_after, o.corridor)
      and (v_fit_cut is null or o.observed_at >= v_fit_cut);
 
   select
@@ -484,7 +487,7 @@ begin
    where o.exclude_reason is null
      and o.hours_observed > 0
      and coalesce(o.features->>'p4k', '') = 'true'
-     and v_after ? o.corridor
+     and jsonb_exists(v_after, o.corridor)
      and (v_fit_cut is null or o.observed_at >= v_fit_cut);
 
   if v_err_n < 2 then
@@ -859,7 +862,7 @@ begin
        and n.id > p_version
        and exists (
          select 1 from jsonb_object_keys(n.params_after) k1
-          where v.params_after ? k1
+          where jsonb_exists(v.params_after, k1)
        )
   ) then
     raise exception 'istnieje nowsza zastosowana wersja z tymi kluczami — cofnij ją najpierw';

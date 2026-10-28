@@ -298,6 +298,11 @@ delete from eta_segment_observations where coalesce(features->>'p4k_calib','') =
 delete from eta_calibration_versions where note like 'p4k-test%' or note like 'propozycja ciągła%';
 delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+-- GPS z cz.1 też ma features.p4k — wyłącz z propose (zostaje p4k_calib)
+update eta_segment_observations
+   set features = (features - 'p4k') || jsonb_build_object('p4k_gps', true)
+ where load_id = 'a581a581-0000-4000-8000-000000000581'
+   and coalesce(features->>'p4k','') = 'true';
 -- Unikalność p4k(load_id,corridor): osobny transport na każdy pomiar (Ś5 + indeks 0319)
 delete from loads where id::text like 'a581a581-0000-4000-8000-00000000059%';
 insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
@@ -319,7 +324,7 @@ select ('a581a581-0000-4000-8000-00000000059' || (5+ord))::uuid, 'PL_ROAD', h, 3
 commit;" >/dev/null
 
 val "propose: powstaje przy n≥5 i >10%" \
-  "select (eta_propose_calibration()->>'proposal' is not null)::text" "true"
+  "select coalesce((eta_propose_calibration()->>'proposal') is not null, false)::text" "true"
 
 val "propose: jedna niezatwierdzona" \
   "select count(*)::text from eta_calibration_versions where applied is not true and note like 'propozycja ciągła%'" "1"
