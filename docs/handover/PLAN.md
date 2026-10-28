@@ -1076,8 +1076,8 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #594 · Import KSH: zbiorcze powiadomienie + migawka — SCALONE (baza #601 `ecbae548`, 27.10.2026 23:55Z, migracja **0318**; ekran gest/rozmycie #600 `7d8ebb4b`; okno #602 `df3f5caa`)
 Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
-### P4-k · #581 Kalibracja ETA ciągła — W TOKU (PR #598 `pakiet/581-p4k-eta-calibration`; migracja **0319** cz.1; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 SCALONE → ten (F7 r1 poprawki w toku). **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE), suite `p4k` **31**; ciągły cron 48 h + auto-apply 27A → cz.2. Ekran — koordynator `wyglad/`.
+### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR #604 na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r8:** Δ `spread_pct` w punktach procentowych / 100 (#605; 15→10 = 0,05 auto; 15→40 = 0,25 → HHL); B2 z `spread_pct=15` (płaskie → clamp 10, Δ 5 pp); test `spread 15→40 pp: NEEDS_APPROVAL`. suite `p4k` **73**, nullguard **880**. **Zamierzone (F7 r6):** `BACKUP_FAILED` z `decider_role=ADMIN` — HHL_OPS bez DECISION_OPEN/e-mail. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1852,3 +1852,17 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 00:35 | #602 SCALONE (`df3f5caa`, F7 gotowe); #601 F7 r2: B3 cancel, P1 pusty WT, OTH w P2, status LATE_DATE po A1; import **359** | pętla |
 | 28.10.2026 00:55 | #601/#594 SCALONE (`ecbae548`, F7 gotowe `da399f8`); start #581: merge main + migracja **0317→0319** | pętla |
 | 28.10.2026 01:20 | #581/#598 F7 r1: `eta_route_segments`, STEGRA seed, bez duplikatów ts, luka tylko PL/SE, integration_runs w triggerze, REMOVED w rebuild; p4k **31** | pętla |
+| 28.10.2026 02:15 | #598/#581 cz.1 SCALONE (`3f82cb09`, F7 gotowe `02445f52`); start cz.2 **0320** (cron 48 h + auto-apply 27A + N1) | pętla |
+| 28.10.2026 04:05 | #604 F7 r1: B3–B7 + Ś1–Ś8 + D7–D11 w 0320 (aliasy tras, decyzja >15 %, undo/undone_at, tick bez raise); p4k **53**, c3 **34**, dec2 **28** | pętla |
+| 28.10.2026 04:15 | #604 CI db FAIL p4k 42/11: fixture multi-load (uidx p4k) + spread stały w auto 12%/18% (Ś6); push fix | pętla |
+| 28.10.2026 04:50 | #604 CI db FAIL p4k 51/2: propose line 130 — jsonb_exists zamiast `?` na zmiennej; skip NULL; GPS bez p4k w fixture | pętla |
+| 28.10.2026 05:10 | #604 F7 r2: B7 fit/test, ADMIN, DOC_MISSING, Ś1 silnik+RPC, rejected_at, p4k **60**, nullguard **880** | pętla |
+| 28.10.2026 06:05 | #604 F7 r3 CI a6a3c9f7: A2 komentarze, B7 undone −8 d, due_hours=null, KSH/SCX 0 decyzji; p4k **60** | pętla |
+| 28.10.2026 06:20 | #604 CI db FAIL p4k BACKTEST→NO_CHANGE (Δ60 %>40 %); F7 r3: BT hours=10, backtest per kod, sailings CHECK, dict params, SUPERSEDED; p4k **62** | pętla |
+| 28.10.2026 06:50 | #604 CI db FAIL: nullguard 868/12 (ETA_* vs „wyłącznie HHL_ADMIN”) + p4k BT UUID `…060||10` invalid → rollback → NO_CHANGE; F7 r4 domknięcie (ADMIN recipients, coalesce, Kolumny) | pętla |
+| 28.10.2026 07:05 | #604 CI db FAIL Ś8 undo (ETA_UNDO_MISSING — restore AUTO_VER w `/dev/null`); F7 r5: B1 filtr PL→SE, B2 rejected_at, B3 is distinct from, backtest keep-only, p4k **69** | pętla |
+| 28.10.2026 07:40 | #604 CI db FAIL p4k 64/5 + F7 r6: ETA_APPLY_NEWER, B1 UUID/PL→SE, B2 Ś3+proposal, undo 2×tx; p4k **72**; BACKUP_FAILED ADMIN zamierzone | pętla |
+| 28.10.2026 08:10 | #604 CI db FAIL p4k 70/2 (B2 auto n_obs&lt;10 → BLOCKED; undo FK notifications); fixture 12 obs + delete notifications przed loads | pętla |
+| 28.10.2026 08:45 | #604 CI db FAIL p4k 71/1 (B2 applied=false: propose Δspread 15→10 ≈33 % → NEEDS_APPROVAL); fixture B2 `spread_pct=10` | pętla |
+| 28.10.2026 09:05 | #604 F7 r8: Δspread w pp/100 (#605); p4k **73**; push `41cc7c93` | pętla |
+| 28.10.2026 09:35 | #604 CI unit/visual/db ✔ `41cc7c93` — prośba o F7: gotowe do scalenia (cz.2 / 0320) | pętla |

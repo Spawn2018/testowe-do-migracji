@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
-# #581 P4-k cz.1 — pomiar odcinków ETA z GPS / stref (0319, F7 r1).
+# #581 P4-k — pomiar GPS (0319) + kalibracja ciągła / auto-apply 27A (0320).
 . "$(git rev-parse --show-toplevel)/tests/db/refuse-prod.sh"
 PSQL="psql ${PGURL:-postgres://postgres@localhost:5433/tower} -Atq"
 ok=0; fail=0
+HHL=11111111-0000-0000-0000-000000000001
+KSH=11111111-0000-0000-0000-000000000002
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
+# Wywołanie RPC jako rola (F7 D8: undo HHL / odmowa KSH)
+as_role() {
+  sys "begin; set local role authenticated; set local request.jwt.claim.sub='$1'; $2; commit;"
+}
 val() {
   out=$(sys "$2" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
   if [ "$out" = "$3" ]; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); echo "  FAIL  $1 (otrzymano: $out, oczekiwano: $3)"; fi
@@ -255,18 +261,488 @@ val "integration_runs eta_calib_obs po błędzie" \
 val "authenticated bez EXECUTE eta_record" \
   "select has_function_privilege('authenticated','eta_record_segment_observations(uuid)','execute')::text" "false"
 
-val "authenticated bez EXECUTE eta_rebuild()" \
-  "select has_function_privilege('authenticated','eta_rebuild_segment_observations()','execute')::text" "false"
+val "authenticated bez EXECUTE eta_rebuild(timestamptz)" \
+  "select has_function_privilege('authenticated','eta_rebuild_segment_observations(timestamptz)','execute')::text" "false"
+
+val "brak wrappera eta_rebuild()" \
+  "select count(*)::text from pg_proc where proname='eta_rebuild_segment_observations' and pronargs=0" "0"
+
+val "eta_rebuild bez arg (DEFAULT) jednoznaczny" \
+  "select jsonb_typeof(eta_rebuild_segment_observations())" "object"
 
 val "anon bez EXECUTE eta_obs_position_rows" \
   "select has_function_privilege('anon','eta_obs_position_rows(uuid,timestamptz,timestamptz)','execute')::text" "false"
 
-val "anon bez EXECUTE eta_upsert" \
-  "select has_function_privilege('anon','eta_upsert_segment_observation(uuid,text,timestamptz,timestamptz)','execute')::text" "false"
+val "anon bez EXECUTE eta_upsert 6-arg" \
+  "select has_function_privilege('anon','eta_upsert_segment_observation(uuid,text,timestamptz,timestamptz,boolean,text)','execute')::text" "false"
+
+val "brak wrappera eta_upsert 4-arg" \
+  "select count(*)::text from pg_proc
+    where proname='eta_upsert_segment_observation' and pronargs=4" "0"
 
 val "search_path pg_temp na eta_record" \
   "select (prosecdef and coalesce(array_to_string(proconfig, ','), '') like '%pg_temp%')::text from pg_proc
     where proname='eta_record_segment_observations' and pronargs=1" "true"
+
+# --- cz.2: propozycja / auto-apply 27A / undo / freeze (F7 r1 #604) ---
+echo; echo "[p4k] #581 cz.2 kalibracja ciągła (0320)"
+
+# D7: zapamiętaj PL_ROAD z seeda (i2: 7.5/25)
+PL_H=$(sys "select hours::text from eta_segment_params where code='PL_ROAD'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+PL_SP=$(sys "select spread_pct::text from eta_segment_params where code='PL_ROAD'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+PL_SRC=$(sys "select source from eta_segment_params where code='PL_ROAD'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+
+sys "begin;
+delete from notifications where template = 'ETA_CALIBRATION_AUTO';
+delete from eta_segment_observations where coalesce(features->>'p4k_calib','') = 'true';
+delete from eta_calibration_versions where note like 'p4k-test%' or note like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+-- GPS z cz.1 też ma features.p4k — wyłącz z propose (zostaje p4k_calib)
+update eta_segment_observations
+   set features = (features - 'p4k') || jsonb_build_object('p4k_gps', true)
+ where load_id = 'a581a581-0000-4000-8000-000000000581'
+   and coalesce(features->>'p4k','') = 'true';
+-- Unikalność p4k(load_id,corridor): osobny transport na każdy pomiar (Ś5 + indeks 0319)
+-- D11: auto wymaga n_obs≥10 — 8 fit + 4 test (lpad, nie …059||10)
+delete from notifications
+ where load_id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and load_id <> 'a581a581-0000-4000-8000-000000000581';
+delete from risk_signals
+ where load_id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and load_id <> 'a581a581-0000-4000-8000-000000000581';
+delete from loads
+ where id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and id <> 'a581a581-0000-4000-8000-000000000581';
+insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                   plan_load_date, plan_delivery_date, actual_delivery_at)
+select ('a581a581-0000-4000-8000-0000000005' || lpad(g::text, 2, '0'))::uuid,
+       (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+       'P4K-C' || g, 'HHL-P4K-C' || g, 'SCX-P4K-C' || g,
+       'DELIVERED', current_date - 25, current_date - 20, now() - interval '20 days'
+  from generate_series(1, 12) g;
+-- 8 starszych + 4 nowsze PL_ROAD; mediana ~10 h vs seed 7,5 → >10 %
+-- Ś5: gps_quality=true dla PL_ROAD
+insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
+select ('a581a581-0000-4000-8000-0000000005' || lpad(ord::text, 2, '0'))::uuid, 'PL_ROAD', h, 300, h/3.0,
+       jsonb_build_object('p4k', true, 'p4k_calib', true, 'gps_quality', true),
+       now() - interval '20 days' + (ord || ' hours')::interval
+  from (values (1,9.5),(2,10.0),(3,10.0),(4,10.5),(5,11.0),(6,9.8),(7,10.0),(8,10.2)) as t(ord,h);
+insert into eta_segment_observations (load_id, corridor, hours_observed, km_observed, tempo_h_per_100km, features, observed_at)
+select ('a581a581-0000-4000-8000-0000000005' || lpad((8+ord)::text, 2, '0'))::uuid, 'PL_ROAD', h, 300, h/3.0,
+       jsonb_build_object('p4k', true, 'p4k_calib', true, 'gps_quality', true),
+       now() - interval '2 days' + (ord || ' hours')::interval
+  from (values (1,9.8),(2,10.0),(3,10.2),(4,9.9)) as t(ord,h);
+commit;" >/dev/null
+
+val "propose: powstaje przy n≥5 i >10%" \
+  "select coalesce((eta_propose_calibration()->>'proposal') is not null, false)::text" "true"
+
+val "propose: jedna niezatwierdzona" \
+  "select count(*)::text from eta_calibration_versions where applied is not true and note like 'propozycja ciągła%'" "1"
+
+val "Ś1: alias STENA → GDY-KAA" \
+  "select route_key from eta_route_aliases where alias_key='STENA'" "GDY-KAA"
+
+# auto ≤15 %, n_obs≥10 (D11); spread bez zmian (F7 r8: Δspread w pp/100 — 15→12 = 0,03)
+sys "begin;
+update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.9, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
+  10, 90, 60, false, 'propozycja ciągła #581 p4k-auto-12'
+);
+commit;" >/dev/null
+
+val "auto 12%: stosuje" \
+  "select (eta_auto_apply_pending()->>'applied' is not null)::text" "true"
+
+val "auto 12%: PL_ROAD=10" \
+  "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "10"
+
+val "audyt automat kalibracji" \
+  "select (new_value->>'actor' = 'automat kalibracji')::text
+     from audit_log where action='ETA_CALIBRATION_APPLY'
+     order by created_at desc nulls last, id desc limit 1" "true"
+
+HHL_N=$(sys "select count(*)::text from app_users where active is true and role='HHL_ADMIN'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+val "B3: powiadomienia = liczba HHL_ADMIN ($HHL_N)" \
+  "select count(*)::text from notifications
+    where template='ETA_CALIBRATION_AUTO' and payload->>'matrix_event'='eta_calib'" "$HHL_N"
+
+val "B3: payload title+summary" \
+  "select (payload ? 'title' and payload ? 'summary' and payload ? 'undo_version')::text
+     from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+AUTO_VER=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-12%' and applied is true order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+
+val "B5a: undo_version = zastosowana" \
+  "select (payload->>'undo_version' = '$AUTO_VER')::text from notifications
+    where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+# F7 r8 #605: Δspread w pp/100 — 15→40 = 0,25 → NEEDS_APPROVAL (godziny bez zmian)
+sys "begin;
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 40)),
+  10, 80, 50, false, 'propozycja ciągła #581 p4k-spread-pp'
+);
+commit;" >/dev/null
+
+val "spread 15→40 pp: NEEDS_APPROVAL" \
+  "select eta_auto_apply_pending()->>'reason'" "NEEDS_APPROVAL"
+
+# 18 % godzin — decyzja HHL_ADMIN (B4 ADMIN); spread stały
+sys "begin;
+update eta_segment_params set hours = 8.5 where code = 'PL_ROAD';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.5, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
+  10, 100, 50, false, 'propozycja ciągła #581 p4k-auto-18'
+);
+commit;" >/dev/null
+
+val "auto 18%: NEEDS_APPROVAL" \
+  "select eta_auto_apply_pending()->>'reason'" "NEEDS_APPROVAL"
+
+val "B4: decyzja ETA_CALIBRATION_APPROVAL" \
+  "select count(*)::text from decisions
+    where type_code='ETA_CALIBRATION_APPROVAL' and status in ('NEW','ASSIGNED')" "1"
+
+val "B4: decider_role=ADMIN" \
+  "select decider_role from decision_types where code='ETA_CALIBRATION_APPROVAL'" "ADMIN"
+
+val "auto 18%: PL_ROAD bez zmian (8.5)" \
+  "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "8.5"
+
+val "B4: KSH 0 decyzji APPROVAL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+   select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   commit;" "0"
+
+val "B4: SCX 0 decyzji APPROVAL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000003';
+   select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   commit;" "0"
+
+# F7 r5 B3: DECISION_OPEN / L-13 tylko HHL_ADMIN (nie HHL_OPS)
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
+             'ops-p4k@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;" >/dev/null
+
+val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
+  "select count(*)::text from notifications
+    where template='DECISION_OPEN'
+      and user_id='11111111-0000-0000-0000-000000000004'
+      and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
+
+# F7 r5/r6 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
+VER18=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-18%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+# Ś3: auto-12 w <7 d blokuje PL_ROAD (<3 nowych obs) → NO_CHANGE, bez SUPERSEDED
+sys "begin;
+update eta_calibration_versions
+   set created_at = now() - interval '8 days'
+ where id = $AUTO_VER and applied is true;
+commit;"
+sys "begin;
+-- fit≈9.6 przy hours=8.5 → Δh≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
+-- F7 r8: płaskie godziny → clamp spread 10; przy starym 15 Δ = 5 pp (=0,05) → v_max≈0,129 → auto applied
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+update eta_segment_observations set hours_observed = 9.6
+ where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
+   and observed_at < now() - interval '10 days';
+update eta_segment_observations set hours_observed = 9.5
+ where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
+   and observed_at >= now() - interval '10 days';
+commit;"
+
+val "B2: propose ma proposal (nie NO_CHANGE)" \
+  "select (eta_propose_calibration()->>'proposal' is not null)::text" "true"
+
+sys "begin; select eta_auto_apply_pending(); commit;"
+
+val "B2: auto-18 rejected_at po SUPERSEDED" \
+  "select (rejected_at is not null)::text from eta_calibration_versions where id=$VER18" "true"
+
+val "B2: nowa wersja applied (bez BLOCKED)" \
+  "select (count(*) >= 1)::text from eta_calibration_versions
+    where applied is true and undone_at is null and id > $VER18
+      and note like 'propozycja ciągła%'" "true"
+
+sys "begin;
+-- usuń wersje po VER18 (żeby undo AUTO_VER / BT nie widziały nowszej applied ani skip 7 d)
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+delete from audit_log
+ where action in ('ETA_CALIBRATION_APPLY','ETA_CALIBRATION_UNDO')
+   and entity_id in (select id::text from eta_calibration_versions where id >= $VER18);
+delete from eta_calibration_versions where id >= $VER18;
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+-- przywróć godziny obserwacji calib (mediana ~10 jak na starcie cz.2; 8 fit + 4 test)
+update eta_segment_observations set hours_observed = h
+ from (values
+   (1,9.5),(2,10.0),(3,10.0),(4,10.5),(5,11.0),(6,9.8),(7,10.0),(8,10.2),
+   (9,9.8),(10,10.0),(11,10.2),(12,9.9)
+ ) as t(ord, h)
+ where load_id = ('a581a581-0000-4000-8000-0000000005' || lpad(t.ord::text, 2, '0'))::uuid
+   and corridor = 'PL_ROAD';
+commit;"
+
+# B7 BACKTEST_WORSE: fit poprawia medianę, test pogarsza.
+# Po auto 12% PL_ROAD zablokowany ≥7 dni (Ś3) — cofnij auto (undone_at STARSZE niż 7 dni,
+# inaczej skip „po undo <3 nowych obs” wycina kod, bo pomiary BT mają observed_at w przeszłości).
+sys "begin;
+update eta_calibration_versions
+   set undone_at = now() - interval '8 days'
+ where applied is true
+   and undone_at is null
+   and (
+     coalesce(note, '') like '%auto-applied%'
+     or coalesce(note, '') like '%p4k-auto%'
+   );
+delete from eta_segment_observations
+ where corridor = 'PL_ROAD'
+   and coalesce(features->>'p4k', '') = 'true';
+delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
+delete from notifications where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from risk_signals where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from decision_events where decision_id in (
+  select id from decisions where load_id::text like 'a581a581-0000-4000-8000-0000000006%'
+);
+delete from decisions where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+-- UUID: …0006 || lpad(nn) — nie …060||10 (niepoprawny UUID, transakcja się wycofuje → NO_CHANGE)
+insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                   plan_load_date, plan_delivery_date, actual_delivery_at)
+select ('a581a581-0000-4000-8000-0000000006' || lpad(g::text, 2, '0'))::uuid,
+       (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+       'P4K-BT' || g, 'HHL-BT' || g, 'SCX-BT' || g,
+       'DELIVERED', current_date - 30, current_date - 25, now() - interval '25 days'
+  from generate_series(1, 10) g;
+-- fit (7): ~12 h; hours=10 → Δ20 % (>10 %, ≤40 % limitu 30 d); test (3): ~7.5
+-- (hours=7.5 dawało Δ60 % → continue limitu → NO_CHANGE zamiast BACKTEST_WORSE)
+update eta_segment_params set hours = 10, spread_pct = 15 where code = 'PL_ROAD';
+insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
+select ('a581a581-0000-4000-8000-0000000006' || lpad(ord::text, 2, '0'))::uuid, 'PL_ROAD', h,
+       jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
+       now() - interval '40 days' + (ord || ' days')::interval
+  from (values (1,11.5),(2,12.0),(3,12.0),(4,12.0),(5,12.5),(6,12.0),(7,11.8)) as t(ord,h);
+insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
+select ('a581a581-0000-4000-8000-0000000006' || lpad((7+ord)::text, 2, '0'))::uuid, 'PL_ROAD', h,
+       jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
+       now() - interval '3 days' + (ord || ' hours')::interval
+  from (values (1,7.4),(2,7.5),(3,7.6)) as t(ord,h);
+commit;"
+
+val "B7: BACKTEST_WORSE gdy fit psuje test" \
+  "select eta_propose_calibration()->>'reason'" "BACKTEST_WORSE"
+
+# F7 r6: restore AUTO_VER w osobnej transakcji (BT ustawiał undone_at −8 d); sprzątanie BT później.
+undo_restore=$(sys "begin;
+update eta_calibration_versions
+   set undone_at = null,
+       applied = true,
+       note = regexp_replace(coalesce(note, ''), ';?\s*(undone|superseded)', '', 'g')
+ where id = $AUTO_VER;
+update eta_segment_params
+   set hours = 10, spread_pct = 15
+ where code = 'PL_ROAD';
+commit;" 2>&1) || true
+if echo "$undo_restore" | grep -qiE 'ERROR|FATAL'; then
+  fail=$((fail+1)); echo "  FAIL  undo prep restore ERROR ($undo_restore)"
+else
+  ok=$((ok+1)); echo "  OK    undo prep restore bez ERROR"
+fi
+
+undo_clean=$(sys "begin;
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
+delete from positions where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from load_events where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from notifications where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from risk_signals where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from decision_events where decision_id in (
+  select id from decisions where load_id::text like 'a581a581-0000-4000-8000-0000000006%'
+);
+delete from decisions where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from eta_calibration_versions
+ where id > $AUTO_VER
+   and coalesce(note, '') like 'propozycja ciągła%';
+commit;" 2>&1) || true
+if echo "$undo_clean" | grep -qiE 'ERROR|FATAL'; then
+  fail=$((fail+1)); echo "  FAIL  undo prep cleanup ERROR ($undo_clean)"
+else
+  ok=$((ok+1)); echo "  OK    undo prep cleanup bez ERROR"
+fi
+
+val "undo prep: AUTO_VER applied+not undone" \
+  "select (applied is true and undone_at is null)::text from eta_calibration_versions where id=$AUTO_VER" "true"
+
+# undo po auto 12 % (przywróć params_before); zamrożenie nie blokuje (Ś8)
+sys "begin;
+update app_parameters set value = 1 where key = 'ETA_CALIBRATION_FROZEN';
+commit;"
+
+val "freeze: propose → FROZEN" \
+  "select eta_propose_calibration()->>'reason'" "FROZEN"
+
+# D8: KSH odmowa przed undo HHL
+ksh_out=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+  select eta_calibration_undo($AUTO_VER); commit;" 2>&1 || true)
+if echo "$ksh_out" | grep -qiE 'ETA_NOT_ADMIN|wyłącznie HHL_ADMIN|42501'; then
+  ok=$((ok+1)); echo "  OK    D8: KSH nie cofa"
+else
+  fail=$((fail+1)); echo "  FAIL  D8: KSH nie cofa ($ksh_out)"
+fi
+
+val "Ś8: undo HHL przy zamrożeniu" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select eta_calibration_undo($AUTO_VER)::text; commit;" "true"
+
+val "B5: undone_at ustawione" \
+  "select (undone_at is not null)::text from eta_calibration_versions where id=$AUTO_VER" "true"
+
+sys "begin;
+update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
+-- D7: przywróć oryginał PL_ROAD; audyt przed wersjami
+delete from audit_log
+ where action in ('ETA_CALIBRATION_APPLY','ETA_CALIBRATION_UNDO','ETA_ROUTE_DICT_UPSERT')
+   and (
+     entity_id in (select id::text from eta_calibration_versions where note like 'propozycja ciągła%')
+     or entity_id like 'P4K-DICT%'
+   );
+delete from notifications where template = 'ETA_CALIBRATION_AUTO';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+delete from eta_calibration_versions where note like 'propozycja ciągła%';
+delete from eta_segment_observations where coalesce(features->>'p4k_calib','') = 'true';
+delete from notifications
+ where load_id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and load_id <> 'a581a581-0000-4000-8000-000000000581';
+delete from risk_signals
+ where load_id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and load_id <> 'a581a581-0000-4000-8000-000000000581';
+delete from loads
+ where id::text like 'a581a581-0000-4000-8000-0000000005%'
+   and id <> 'a581a581-0000-4000-8000-000000000581';
+delete from notifications where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from risk_signals where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
+update eta_segment_params
+   set hours = ${PL_H}::numeric, spread_pct = ${PL_SP}::numeric, source = \$s\$${PL_SRC}\$s\$
+ where code = 'PL_ROAD';
+commit;" >/dev/null
+
+val "Ś1: RPC dict upsert HHL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (eta_route_dict_upsert('P4K-DICT-TEST','GDN-NYN','POLFERRIES', null)->>'ok');
+   commit;" "true"
+
+ops_dict=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000004';
+  select eta_route_dict_upsert('P4K-DICT-OPS','GDN-NYN','POLFERRIES', null); commit;" 2>&1 || true)
+if echo "$ops_dict" | grep -qiE 'ETA_DICT_NOT_ADMIN|42501'; then
+  ok=$((ok+1)); echo "  OK    Ś1: HHL_OPS odmowa dict"
+else
+  fail=$((fail+1)); echo "  FAIL  Ś1: HHL_OPS odmowa dict ($ops_dict)"
+fi
+
+# F7 r4: alias + audit sprzątaj PO RPC (nie przed)
+sys "begin;
+delete from eta_route_aliases where alias_key in ('P4K-DICT-TEST','P4K-DICT-OPS');
+delete from audit_log where action='ETA_ROUTE_DICT_UPSERT' and entity_id like 'P4K-DICT%';
+commit;" >/dev/null
+
+val "tick istnieje" \
+  "select count(*)::text from pg_proc where proname='eta_calibration_tick' and pronargs=0" "1"
+
+val "authenticated bez EXECUTE tick" \
+  "select has_function_privilege('authenticated','eta_calibration_tick()','execute')::text" "false"
+
+val "authenticated ma EXECUTE undo" \
+  "select has_function_privilege('authenticated','eta_calibration_undo(bigint)','execute')::text" "true"
+
+val "tick: integration_runs bez raise" \
+  "select (eta_calibration_tick()->>'ok' is not null)::text" "true"
+
+val "tick: ok=true na czystych danych" \
+  "select (eta_calibration_tick()->>'ok')" "true"
+
+val "tick: wpis integration_runs" \
+  "select (count(*) >= 1)::text from integration_runs where job like 'eta_calib%'" "true"
+
+# F7 r5/r6 B1: filtr PL→SE = alias_key=route_key; powrotny wcześniej nie wygrywa z PL→SE
+val "B1: NYN-GDN/KAA-GDY poza filtrem PL→SE" \
+  "select (count(*) = 0)::text from eta_route_aliases
+    where alias_key in ('NYN-GDN','KAA-GDY') and alias_key = route_key" "true"
+
+val "B1: GDN-NYN i GDY-KAA w filtrze PL→SE" \
+  "select (count(*) = 2)::text from eta_route_aliases
+    where alias_key in ('GDN-NYN','GDY-KAA') and alias_key = route_key" "true"
+
+val "B1: powrotny wcześniej + PL→SE później → wybrany PL→SE" \
+  "begin;
+   insert into vessels (id, name, operator) values
+     ('a581a581-0000-4000-8000-0000000000b1', 'P4K B1', 'POLFERRIES')
+   on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+   values
+     ('a581a581-0000-4000-8000-0000000000b2',
+      (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+      'a581a581-0000-4000-8000-0000000000b1',
+      'NYN-GDN', now() + interval '1 day', now() + interval '2 days', 'ZAPLANOWANY', 'RECZNIE'),
+     ('a581a581-0000-4000-8000-0000000000b3',
+      (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+      'a581a581-0000-4000-8000-0000000000b1',
+      'GDN-NYN', now() + interval '3 days', now() + interval '4 days', 'ZAPLANOWANY', 'RECZNIE')
+   on conflict (id) do nothing;
+   update loads set sailing_id = null, status = 'IN_TRANSIT_PL',
+                    telematics_vehicle_id = coalesce(telematics_vehicle_id, 'P4K-B1')
+    where id = 'a581a581-0000-4000-8000-000000000581';
+   insert into positions (load_id, ts, geom_raw, source, raw) values
+     ('a581a581-0000-4000-8000-000000000581', now() - interval '3 minutes',
+      st_setsrid(st_makepoint(17.0, 54.5), 4326), 'TELEMATICS_API', '{}'::jsonb);
+   select (
+     (basis->>'sailing') like '%założony%'
+     and (basis->'flags')::text like '%założony najbliższy%'
+     and exists (
+       select 1 from jsonb_array_elements(basis->'segments') s
+        where s->>'code' = 'CROSSING'
+          and abs(extract(epoch from (s->>'departure')::timestamptz
+              - (select departure_at from sailings where id='a581a581-0000-4000-8000-0000000000b3'))) < 2
+     )
+   )::text
+     from compute_load_eta('a581a581-0000-4000-8000-000000000581', now()) limit 1;
+   rollback;" "true"
 
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

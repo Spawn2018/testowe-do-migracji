@@ -24,11 +24,11 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 359, // #594 F7 r2: +7 (B3 cancel×3, P1 skip×4); było 352
-  nullguard: 870, // #594: +1 RPC ksh_import_summary_get × 4 konta odmowy (+4; EMPTY pozytywne = n/d); było 866
+  nullguard: 880, // #581 F7 r2: +GUARD eta_route_dict_upsert (5 ról); było 875
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
-  dec2: 73, // #455: +2 Działaj jako; katalog 27 typów (#563 SEFS_WEEK_CORR; #590 +2)
+  dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
@@ -47,7 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 168, // #572 F7 r6b: +2 asercje load istnieje (hhl/carrier_order_no); było 166
   h4: 19,
-  p4k: 31, // #581 P4-k cz.1 F7 r1: trasy, STENA, exclude, integration_runs (0319)
+  p4k: 73, // #581 F7 r8 #604: +spread 15→40 pp NEEDS_APPROVAL; było 72
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101

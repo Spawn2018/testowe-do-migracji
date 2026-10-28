@@ -6171,3 +6171,146 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `279731b6`: unit/visual ✔; **db FAIL** — i2 668/3 (parametry odcinków 9→11 po `CROSSING_GDN_NYN`/`CROSSING_GDY_KAA`); p4k **31**/31, h4 19/19.
 - **Krok:** `tests/db/i2.sh` — count/string_agg = 11 + nowe kody przepraw (EXPECTED i2 **671** bez zmiany). Push → CI; po zielonym — F7: gotowe do scalenia.
 
+## 2026-10-28 03:15 — #598/#581 cz.1 SCALONE; start cz.2 (0320)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: **#598** — F7 „gotowe do scalenia” (`Spawn2018`, 01:08Z) po `02445f52` (00:49Z) + CI unit/visual/db ✔ → `gh pr merge --merge` → `3f82cb09`. Bez push na main.
+- Bieżąca: **P4-k cz.2** gałąź `pakiet/581-p4k-eta-calib-cz2`, migracja **0320**:
+  - drop wrapperów 0/4-arg (F7 N1: `eta_rebuild` / `eta_seg_event_at` / `eta_upsert`);
+  - `eta_propose_calibration` (n≥5, >10 %, test wsteczny);
+  - auto-apply ≤15 % + powiadomienie IN_APP `ETA_CALIBRATION_AUTO` + audyt „automat kalibracji” (27A); >15 % czeka;
+  - `eta_calibration_undo` (HHL_ADMIN); zamrożenie wstrzymuje;
+  - cron `tower-eta-calibration` co 1 h → `eta_calibration_tick` (rebuild 48 h + propose + auto);
+  - suite `p4k` **45**; nullguard **875**.
+
+## 2026-10-28 03:45 — #604/#581 cz.2 CI fix (format / B5 / nullguard)
+
+- Skrzynka: #550 WSTRZYMANE; #583 zamknięte (SCALONE #586); #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe”.
+- CI `d24df599` db FAIL: p4k 43/2 (`format('%.1f')` nielegalne w PG → propose); security B5 (undo bez `assert_not_preview`); nullguard 875≠871.
+- **Krok:** 0320 — `format(%s)` + assert w undo/apply; EXPECTED nullguard **875**. Push → CI; po zielonym — F7: gotowe do scalenia.
+
+## 2026-10-28 04:05 — #604 F7 r1 POPRAWKI (B3–B7, Ś1–Ś8, D*)
+
+- Skrzynka: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych. Jedyny otwarty PR: #604 — **bez** „F7: gotowe do scalenia” po `f3c570dd` (F7 r1: nie scalać). CI na `f3c570dd` unit/visual/db ✔ (tylko B1/B2/nullguard).
+- **Krok F7 r1 (0320 + testy):**
+  - **B3** `notify_event_key` → `eta_calib`; macierz HHL_ADMIN/OPS; payload `matrix_event`; c3 katalog **34**
+  - **B4** decyzja `ETA_CALIBRATION_APPROVAL` + trigger APPLY → `eta_apply_calibration_internal`; dec2 **28**
+  - **B5** `undo_version=v_id`; `undone_at` + pomijanie kodów; odmowa przy nowszej wersji z tymi kluczami
+  - **B6** tick: osobne bloki, `ok=false` w `integration_runs`, bez raise
+  - **B7** wsteczny czasowy (fit 70 % starszych / test nowsze); `n_test<2` → bez auto
+  - **Ś1/Ś2** `eta_route_aliases` + otwarty CHECK kodów + FK corridor; drop CHECK geofences.route
+  - **Ś3–Ś8** okno 90d / 7d / clamp spread / update zamiast delete / lock / undo przy FROZEN; CROSSING_* w propose
+  - **D7/D8/D11** cleanup PL_ROAD z seeda; testy undo HHL/KSH; auto `n_obs≥10`
+  - suite `p4k` **53**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+
+## 2026-10-28 04:15 — #604 CI db FAIL p4k 42/11 → fix fixture
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `871c01ae`.
+- Scalanie: nie (CI db czerwone na `871c01ae`, run 40618589437).
+- **Przyczyna p4k:** (1) unikalny indeks `eta_seg_obs_p4k_load_corridor_uidx` — fixture wkładał 8 pomiarów PL_ROAD na ten sam `load_id` → insert padał cicho, propose `NO_CHANGE`; (2) test auto 12 % zmieniał `spread_pct` 15→12 (=20 %) → Ś6 → `NEEDS_APPROVAL` zamiast apply; stąd B4=2 i puste `AUTO_VER` / undo.
+- **Krok:** `tests/db/p4k.sh` — 8 osobnych transportów na pomiary; spread stały w auto 12 %/18 %; czyszczenie decyzji przed B4. Push → CI `p4k` (+ unit/visual); po zielonym — prośba o F7.
+
+## 2026-10-28 04:50 — #604 CI db FAIL p4k 51/2 → propose SPI `?` + skip NULL
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `82c1167b`.
+- Scalanie: nie (CI db czerwone na `82c1167b`, run 40620605100: p4k propose wyjątek line 130).
+- **Przyczyna:** (1) `v_after ? o.corridor` w SQL ze zmienną PL/pgSQL → `$1 ?` psuje plan SPI; (2) `INTO v_skip_codes` przy 0 undone → NULL (odfiltrowanie for); (3) GPS cz.1 z `p4k=true` mieszał się z fixture kalibracji.
+- **Krok:** 0320 — `jsonb_exists`, skip przez podzapytanie+coalesce; p4k.sh — zdejmij `p4k` z GPS 581 przed propose. Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-28 05:10 — #604 F7 r2 POPRAWKI (B7 + ADMIN + Ś1 silnik)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (F7 r2: nie scalać; CI db na `998afc07` FAIL p4k 51/2 — `percentile_cont` na `timestamptz`).
+- **Krok F7 r2 (0320 + p4k + allowlist/nullguard):**
+  - **B7:** fit/test per kod (`row_number` 70/30); mediana z fit; błąd tylko z test; bez `percentile_cont(timestamptz)`
+  - **notify:** przywrócone `DOC_MISSING`/`CMR_MISSING` → `cmr`
+  - **B4:** `decider_role=ADMIN`; `decision_open_from_event`/`l13` HHL-only; `rejected_at` + REJECT
+  - **Ś1:** `eta_record`/`compute_load_eta`/`apply_geofence` ze słownika; RPC `eta_route_dict_upsert`
+  - **Ś2–Ś5/Ś3:** FK NOT VALID; `gps_quality` PL/SE; M obs także po auto; bez haczyka `p4k-test%`
+  - payload AUTO: `title`/`summary`/`undo_version`; `ETA_CALIB_BUSY`; clamp spread tylko nowe
+  - suite `p4k` **60**, nullguard **880**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+
+## 2026-10-28 05:35 — #604 CI db FAIL po F7 r2 → A10 geofence + grant ETA + B7 fixture
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `199b5032`.
+- Scalanie: nie (CI db run 40625850627 FAIL).
+- **Przyczyny:** (1) `apply_geofence_status` w 0320 cofnięte do 0242 — bez A10/0279 (LOADING z DOCS_PENDING, SCHEDULE synthetic_ferry); (2) `grant execute … compute_load_eta to authenticated` → security/i2/nullguard; (3) B7 BACKTEST: po auto-12 PL_ROAD zablokowany Ś3 ≥7 dni → `NO_CHANGE`.
+- **Krok:** 0320 — geofence = 0279 + słownik `eta_obs_operator_key`; revoke EXECUTE `compute_load_eta` (tylko service_role); p4k.sh — undo auto przed BT + izolacja PL_ROAD, przywrócenie auto pod undo. Push → CI; po zielonym — prośba o F7.
+
+## 2026-10-28 06:00 — #604 CI FAIL a5de7b4e → F7 r3 (status A2 + B7 undone)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych do wpisania. Jedyny otwarty PR #604 — bez „F7: gotowe” po `a5de7b4e`.
+- Scalanie: nie (CI db 40627919452: status 337/2, p4k 57/1; unit/visual ✔).
+- **Przyczyny:** (1) status — brak komentarzy A2 „Awaryjnie: GPS” / „celowo niczego nie zmienia” w `apply_geofence_status` (0279); (2) B7 — `undone_at=now()` włącza skip „po undo <3 nowych” (pomiary BT mają `observed_at` w przeszłości) → `NO_CHANGE`.
+- **Krok F7 r3 (część CI):** komentarze A2; B7 `undone_at −8 d` + `%p4k-auto%`; `due_hours=null`; BACKTEST sprząta propozycje; filtr 90 d/słownik w teście wstecz; +2 testy KSH/SCX 0 decyzji → p4k **60**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+
+## 2026-10-28 06:20 — #604 F7 r3: BACKTEST fixture + Ś1/Ś3/decyzje
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `a6a3c9f7`.
+- Scalanie: nie (CI db 40630478204: p4k 59/1 BACKTEST_WORSE→NO_CHANGE; unit/visual ✔).
+- **Przyczyna BT:** hours=7.5 vs mediana fit ~12 → Δ60 % > limit 40 %/30 d → continue → NO_CHANGE.
+- **Krok F7 r3 (reszta):**
+  - p4k BT: hours=10 (Δ20 %); +HHL_OPS dict odmowa; tick ok=true; EXPECTED p4k **62**
+  - 0320: backtest per kod; Ś3 bez martwego `not exists`; sailings_route_check regex; silnik bez hardkodu STENA/tras; dict upsert → params + seed protect + ETA_DICT_*; decyzje SUPERSEDED; kody ETA_*; payload AUTO `codes`
+- Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”). Bez push na main.
+
+## 2026-10-28 06:50 — #604 CI FAIL ce9c31b6: nullguard + BT UUID; F7 r4 domknięcie
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `ce9c31b6`.
+- Scalanie: nie (CI db 40632688755: nullguard 868/12, p4k 61/1; unit/visual ✔).
+- **Przyczyny:** (1) nullguard oczekiwał „wyłącznie HHL_ADMIN”, funkcje rzucają `ETA_NOT_ADMIN` / `ETA_DICT_NOT_ADMIN`; (2) fixture B7: `…060||10` → niepoprawny UUID, transakcja z `>/dev/null` się wycofuje → stan przed BT → NO_CHANGE.
+- **Krok:** null-guard-calls → kody ETA_*; BT UUID `…0006||lpad(nn,2)`; F7 r4: DECISION_OPEN/L-13 tylko HHL_ADMIN przy ADMIN; `ETA_CALIB_NEWER`; bez coalesce h_road/h_pl; bez bloku „Kolumny odłączenia”; delete propose zawężony; dict cleanup po RPC. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 07:05 — #604 F7 r5 (B1–B3 + Ś8 + backtest keep)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (CI db na `8101591e` FAIL p4k 61/1 Ś8 undo; F7 r5: nie scalać bez „gotowe” po nowym SHA).
+- **Przyczyna Ś8:** restore AUTO_VER po BT był w bloku z `>/dev/null` — przy błędzie `undone_at` zostawało −8 d → `ETA_UNDO_MISSING`.
+- **Krok F7 r5 (0320 + p4k + gate-suites):**
+  - **B1:** `compute_load_eta` wybiera rejs tylko gdy `alias_key = route_key` (bez powrotnych NYN-GDN/KAA-GDY) + testy
+  - **B2:** po SUPERSEDED ustaw `rejected_at` na starej wersji; test propose→rejected + auto nowej
+  - **B3:** FORWARDER z `v_role is distinct from 'ADMIN'`; test HHL_OPS 0× DECISION_OPEN
+  - backtest: `n_obs` / `max_chg` / błąd tylko z kodów keep; apply → `ETA_NOT_ADMIN`
+  - Ś8: restore AUTO_VER bez `/dev/null` + val prep; p4k **69**
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 07:50 — #604 F7 r6: ETA_APPLY_NEWER + fixture p4k (72)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. F7 r6 na `bcf82a7b` (nie scalać bez „gotowe” po nowym SHA).
+- Scalanie: nie (CI db 40637399528: p4k 64/5; unit/visual ✔).
+- **F7 r6 / CI fix:**
+  - 0320: `ETA_APPLY_NEWER` (handler `ETA_APPLY_%` → BLOCKED; nie `ETA_CALIB_NEWER`)
+  - B1: UUID `…00b1/b2/b3`; scenariusz powrotny wcześniej + PL→SE później → wybrany PL→SE
+  - B2: `created_at` AUTO −8 d (Ś3) + asercja `proposal is not null` przed SUPERSEDED
+  - undo: restore AUTO_VER i cleanup BT w osobnych tx + grep ERROR; delete positions/events przed loads
+  - PLAN: `BACKUP_FAILED` ADMIN — zamierzone (HHL_OPS bez DECISION_OPEN)
+  - suite `p4k` **72**, nullguard **880**
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 08:10 — #604 CI po F7 r6: p4k 70/2 → fixture n≥10 + FK notifications
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `62b57178`.
+- Scalanie: nie (CI db 40640565398: p4k 70/2; unit/visual ✔).
+- **Przyczyny:** (1) B2 propose z 8 obs → `n_obs<10` → auto `BLOCKED` zamiast applied; (2) undo cleanup: `delete loads` BT bez wcześniejszego `notifications`/`risk_signals`.
+- **Krok:** fixture calib 12 obs (8+4, lpad `…0005||nn`); cleanup BT/final z FK przed loads. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 08:45 — #604 CI po F7 r7: p4k 71/1 → B2 spread_pct=10
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (brak „F7: gotowe” po `fa556604`; CI db 40643770785: p4k **71/1**; unit/visual ✔).
+- **Przyczyna B2:** propose z płaskich godzin (9.6) liczy `spread_pct` = clamp 10; przy params 15 Δspread ≈33 % → `eta_auto_apply_pending` = `NEEDS_APPROVAL` (nie applied). SUPERSEDED/`rejected_at` OK.
+- **Krok:** p4k.sh B2 — `spread_pct=10` przed propose (Ś6: Δspread w progu 15 %). Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 09:05 — #604 F7 r8: Δspread w pp/100 (#605)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (kończyć krok #604, potem wrócić); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: nie (brak „F7: gotowe” po `242c16b8`; CI na tym SHA było zielone unit/visual/db — ale F7 r8 wymaga zmiany reguły, nie samego fixture).
+- **F7 r8 (#605):** względna Δspread prawie zawsze >15 % → auto 10–15 % martwe. Decyzja: `abs(new−old)/100` (punkty procentowe) w propose, auto, apply_internal.
+- **Krok:** 0320 cztery miejsca Δspread → `/100.0`; B2 z powrotem `spread_pct=15`; test `spread 15→40 pp: NEEDS_APPROVAL`; EXPECTED p4k **73**. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 09:35 — #604 CI zielone `41cc7c93` — prośba o F7
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `41cc7c93`.
+- Scalanie: nie (czekam na przegląd F7 r8 i „gotowe” po tym SHA). Jedyny otwarty PR: #604.
+- CI `41cc7c93`: unit ✔ / visual ✔ / db ✔ (p4k **73**, nullguard **880**); run db `40648903813`, visual `40648904042`.
+- **Krok:** komentarz na #604 — prośba o F7: gotowe do scalenia (cz.2 / 0320). Bez push na main.
