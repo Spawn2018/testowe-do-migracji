@@ -1238,6 +1238,11 @@ chk "#567 23B: wt = bieżące WT (nie before 2099)" \
   "$(Q "select (e->>'wt' is not distinct from nullif('$WT_LD',''))::text from jsonb_array_elements((select preview->'changes' from ksh_sync_state where project_id='$P')) e where e->>'field'='load_date'")" "true"
 chk "#567 23B: field_label PL" \
   "$(Q "select bool_or(e->>'field_label'='Data załadunku')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
+# A6 zostawia pending na SG-01 (write_enabled) — wyczyść i przebuduj preview przed asercją.
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG1' and status='pending'" >/dev/null
+$PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
+  select ksh_sync_preview_store('$P', '$CHG23'::jsonb, now(), 2, 'nopend');
+commit;" >/dev/null
 chk "#567 23B: pending_write false bez kolejki" \
   "$(Q "select bool_and(coalesce(e->>'pending_write','false')='false')::text from jsonb_array_elements(coalesce((select preview->'changes' from ksh_sync_state where project_id='$P'),'[]'::jsonb)) e")" "true"
 # Kolejka → pending_write true
@@ -1444,26 +1449,21 @@ rollback;" 2>&1 | r583_grep | tail -1 | tr -d '\r')
 chk "#583 F7/#611: tablice z pliku nie zapisane" "$out" "STARA1"
 
 # F7 pkt 3 / #611: różne tablice w kodach — pole poza importem, WT bez zmian.
-# Wymiary/daty = bieżące WT (inaczej changed>0 przez length_m itd.).
+# Pełny wiersz jak r583_file_sql (bez leave_empty → false changed); tylko trailer_plate różny.
 out=$($PSQL -v ON_ERROR_STOP=1 -Atq -c "
 begin;
 $(r583_prep_sql)
 update loads set trailer_plate='KEEP99', status='READY' where id='$SG1';
-insert into shipment_items (project_id, load_id, shipment_code, item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, schedule_row)
-select project_id, load_id, 'SG-01B', item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, schedule_row
+insert into shipment_items (project_id, load_id, shipment_code, item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, unit_weight_t, assembly_seq, schedule_row)
+select project_id, load_id, 'SG-01B', item_type, cargo_class, length_m, width_m, height_m, qty, total_weight_t, unit_weight_t, assembly_seq, schedule_row
   from shipment_items where load_id='$SG1' and shipment_code='SG-01'
 on conflict do nothing;
+$(r583_mat_sql "$(r583_file_sql "jsonb_build_object('trailer_plate','AAA1111')")")
+update _f583 set j = j || jsonb_build_array(
+  (j->0) || jsonb_build_object('code','SG-01B','trailer_plate','BBB2222'));
 set local role authenticated; set local request.jwt.claim.sub='$HHL';
-create temporary table _r583 as select import_schedule('$P',
-  (select jsonb_build_array(
-    jsonb_build_object('code','SG-01','length_m',round(si.length_m,2),'width_m',round(si.width_m,2),
-      'height_m',round(si.height_m,2),'qty',si.qty,'total_weight_t',round(si.total_weight_t,3),
-      'load_date',l.plan_load_date,'delivery_date',l.plan_delivery_date,'trailer_plate','AAA1111'),
-    jsonb_build_object('code','SG-01B','length_m',round(si.length_m,2),'width_m',round(si.width_m,2),
-      'height_m',round(si.height_m,2),'qty',si.qty,'total_weight_t',round(si.total_weight_t,3),
-      'load_date',l.plan_load_date,'delivery_date',l.plan_delivery_date,'trailer_plate','BBB2222')
-  ) from loads l join shipment_items si on si.load_id=l.id and si.shipment_code='SG-01' where l.id='$SG1' limit 1),
-  '{}'::text[], '{\"name\":\"583mc.xlsx\",\"hash\":\"583mc\"}'::jsonb, false) r;
+create temporary table _r583 as select import_schedule('$P', (select j from _f583), '{}'::text[],
+  '{\"name\":\"583mc.xlsx\",\"hash\":\"583mc\"}'::jsonb, false) r;
 select coalesce(jsonb_array_length(r->'changed'),0)::text from _r583;
 reset role;
 select trailer_plate from loads where id='$SG1';

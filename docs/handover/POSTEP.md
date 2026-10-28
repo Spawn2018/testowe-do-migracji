@@ -6425,3 +6425,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
 - Scalanie: #612 — F7 r4: jedna linia Deno; brak „F7: gotowe” do zielonego CI. Jedyny otwarty PR. Bez push na main.
 - **Krok:** `supabase/functions/_shared/ksh/scheduleParse.ts:139` — `from './importColumnMap.ts'` (jak main). import **366**. CI po push → F7: gotowe.
+
+## 2026-10-28 18:20 — #612 CI db: import 364/366 → poprawka testów
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
+- Scalanie: #612 — brak „F7: gotowe”; CI `f6ae3f07` unit/visual ✔, **db FAIL** import 364/366. Bez push na main.
+- **Krok:**
+  1. `#567 23B pending_write false` — przed asercją `delete` pending z A6 + ponowny `preview_store`.
+  2. `#583 tablice w kodach` — pełny wiersz jak `r583_file_sql` (bez leave_empty → false changed) + drugi kod z inną tablicą.
+  3. import EXPECTED **366**. CI po push → prośba o F7.

@@ -1915,3 +1915,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 17:10 | #612 CI db FAIL: 0325 — niedomknięty `DO $g$` (GRANT service_role); poprawka składni | pętla |
 | 28.10.2026 17:55 | #612 F7 r3: Edge Deno importy; testy B1/#569→load_date; P1 publish null; import **366** | pętla |
 | 28.10.2026 18:00 | #612 F7 r4: `importColumnMap.ts` (Deno); CI po push → F7 gotowe | pętla |
+| 28.10.2026 18:20 | #612 CI db FAIL import 364/366 (#567 pending A6; #583 niepełny JSON) — poprawka testów | pętla |
