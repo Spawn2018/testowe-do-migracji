@@ -6398,3 +6398,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #613/#611 `pilne` open; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
 - Scalanie: #614 — F7 r1 POPRAWKI (nie „gotowe”); CI na `28888310` unit/db/visual ✔ (tylko asercje CI). #612 nie scalać. Bez push na main.
 - **Krok F7 r1:** `0324` — NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; strażnik przed (docelowe / ≠14.95… / CANCELLED|REMOVED|INVOICED|invoice_lines → SKIPPED); `drop function` po SELECT; status.sh odtwarza z BEGIN/END HOTFIX613; fikstura `load_revenue`/`load_cost` BS-B + asercje 5345/748.30/6093.30 i 5090/712.60/5802.60; status **358**. Po zielonym CI → F7 r2.
+
+## 2026-10-28 16:48 — #614 SCALONE; #611 0325 kierunek plik↔WT
+
+- Skrzynka: #613 SCALONE (czekam odbiór SELECT po deploy); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE.
+- Scalanie: #614 → `ece3c334` (F7 gotowe @ `8a127f97`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #611:** rebase po #613 (stare 0324/0325 pominięte); migracja **0325** — allowlista preview + `import_schedule`/`schedule_row_canon` bez WT→plik; testy A6/#583/#594/#611; import **365**. PR #612.

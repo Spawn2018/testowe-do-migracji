@@ -1090,18 +1090,17 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; **nowy termin: 29.10 wieczór** (albo z P11) — 28D:A; status w #588. CSP Report-Only już w B7; enforce = W8.
 security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
 
-### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — W TOKU (`pakiet/613-bs01-wymiary-bsa`, PR #614, migracja **0324**; przed #612 / #611)
-Źródło: #613 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 14:28; załadunek 30.10). Przerywa #611/#612. F7 r1 POPRAWKI (28.10 ~15:56).
-1. **Dane (0324):** `hotfix_613_apply()` — BS-01: 11,95×2,45×1,30, qty=2, 21,37 t / 10,685; tylko stan przed = 14,95×2,45×1,80/2/31,02 (inaczej SKIPPED); skip CANCELLED/REMOVED/INVOICED / `invoice_lines`; A7 → **BS-A** (combo 18,19×2,45×2,60); `load_price_compute`; Historia: NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; przychód w `audit_log`; drop funkcji po SELECT; status **358**.
-2. **Odbiór na produkcji** (SELECT w #613): wymiary, BS-A, combo 2,60, przychód 5345+BAF=6093,30, koszt 5090+BAF=5802,60, Historia bez kwot dla KSH. Kopia R2 przed `db push`.
-3. Po scaleniu: powrót do **#611** — przeróbka #612 (rebase **0325+**) wg zasad 28.10 14:28.
+### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — SCALONE (`ece3c334`, PR #614, migracja **0324**; 28.10 ~15:48)
+Źródło: #613. F7 r2 gotowe @ `8a127f97`. Odbiór SELECT na produkcji — po `deploy-main` (koordynator w #613).
+1. **Dane (0324):** `hotfix_613_apply` → BS-A + wycena; Historia bez wycieku cen; drop fn. status **358**.
+2. **Odbiór** (SELECT w #613): wymiary, BS-A, 6093,30 / 5802,60, Historia bez kwot dla KSH.
 
-### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU / PAUZA na #613 (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612; po #613 migracje **0325+**)
-Źródło: #611 + komentarz PR #612 (Spawn2018, 28.10 14:28 — zasady właściciela). **Nie scalać** obecnych 0324/0325 (kierowca na liście + kraj w imporcie = sprzeczne). Po #613 rebase i przeróbka w tym samym PR.
-1. **Import (`import_schedule`):** z `v_fnames`/zapisu **usuń** kierowców, telefony, kraje telefonów, ciągniki, naczepę, `carrier_order_no`, `hhl_order_no` — import ich nigdy nie zapisuje. Kraj z 0325 — zbędny w imporcie.
-2. **Lista 23B + podsumowanie 0318:** tylko pola **plik→WT** i **oba kierunki** (Typ, wymiary, waga, qty, daty/godziny, przewoźnik, item_type…). Jawna allowlista w `ksh_sync_preview_field_allowed` (zamiast wycinania wzorcem). Pola „tylko WT→plik” **nigdzie** na liście ani w powiadomieniu.
-3. **Przepięcie naczepy** wyłącznie z Awizacji WT — ustawianie `trailer_swap` z pliku **odpada**.
-4. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa jedna, numery zleceń; telefon jako tekst. Test: ponowny import zapisanego „PL / SE” → 0 zmian.
+### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612, migracja **0325**)
+Źródło: #611 + zasady właściciela 28.10 14:28. Stare 0324/0325 (kierowca na liście) **pominięte** w rebase po #613.
+1. **0325:** `import_schedule` + `schedule_row_canon` — bez zapisu kierowca/telefon/tablice/`hhl_order_no`/`carrier_order_no`; jawna allowlista `ksh_sync_preview_field_allowed` (plik→WT + oba kierunki); bez konfliktu HHL z pliku. `cargo_class`/`order_no`/`assembly_seq` jak dziś. import **365**.
+2. Testy A6/#583/#594 przepisane pod decyzję #611.
+3. **Przepięcie naczepy** wyłącznie z Awizacji WT — z pliku **odpada**.
+4. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa, numery zleceń.
 5. Import KSH **wyłączony** do wiadomości właściciela (28B).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
@@ -1911,3 +1910,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 15:20 | #611 CI zielone `f975c9d3` (A+A5, PR #612); **#613** pilne BS-01 przed #612 — start **0324** `hotfix_613_apply` | pętla |
 | 28.10.2026 15:55 | #613 CI db FAIL status 346/350 (asercje `true`/`21.370`); poprawka testów; PLAN #611 = przeróbka kierunku plik↔WT (14:28) | pętla |
 | 28.10.2026 16:15 | #614 F7 r1 POPRAWKI: Historia bez wycieku cen, strażnik przed, drop fn, wycena W1/W2; status **358**; CI po push → F7 r2 | pętla |
+| 28.10.2026 16:48 | #614 SCALONE (`ece3c334`, F7 gotowe @ `8a127f97`); start #611 **0325** kierunek plik↔WT | pętla |
