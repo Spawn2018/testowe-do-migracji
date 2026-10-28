@@ -1111,9 +1111,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
 5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
 
-### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-calib-apply-notify`, migracja **0327**)
+### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-calib-apply-notify`, migracja **0327**, PR #616)
 Źródło: #603 + F7 #607 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
-1. **0327 (ten PR):** `eta_apply_calibration_internal` po sukcesie zamyka `ETA_CALIBRATION_APPROVAL` (`event_key=ETA_CALIB_VER:…`, RESOLVED/APPLY + `decision_events`); `max_change_pct` zawsze w audycie; `eta_auto_apply_pending` — macierz+`notify_person_on` (`eta_calib`), HHL_OPS `in_app=false`, payload `labels` z `eta_segment_params`, `summary` z przecinkiem E21. p4k **78**.
+1. **0327 (ten PR):** `eta_apply_calibration_internal` zamyka `ETA_CALIBRATION_APPROVAL` + `decision_events` + `audit_log DECISION_RESOLVE`; `max_change_pct` ujednolicony (D5); `eta_auto_apply_pending` — tylko `HHL_ADMIN` + `notify_channel_allowed(…,'bell')` (B1); **bez** wiersza HHL_OPS w macierzy (B2); `labels` = `eta_segment_params.label`; `summary` z przecinkiem E21. **F7 r1 POPRAWKI** (B1–B3, D1/D2/D5/D7). p4k **84**. D3 front `labels` → koordynator `wyglad/*`. D6: bez jednorazowego zamykania starych decyzji (na prod brak zastosowanych z otwartą).
 2. **Dalej w #603:** pełne przeliczenie pomiarów (okno / wykluczenia, przed ~04.11); dwa odcinki SE_ROAD w słowniku (pod 27B:C).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
@@ -1932,3 +1932,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 18:55 | #612 SCALONE (`61a1350d`, F7 gotowe @ `705dff05`); #611 zamknięte; start **#597** outbound awizacja **0326** | pętla |
 | 28.10.2026 19:45 | #615 F7 r1: B1 `fileAlreadyHasPatch` awizacja→PUT; B2 `wt_diff`/`apply_sent` dr/ph/tr/tl; OTHER „+”; no-op; import **376**; W62 SE-only | pętla |
 | 28.10.2026 20:15 | #615/#597 SCALONE (`b34d807c`, F7 gotowe @ `3c6e7d52`); start **#603** **0327** (APPLY zamyka decyzję, macierz, labels) | pętla |
+| 28.10.2026 20:45 | #616 F7 r1 POPRAWKI: B1 bell/`notify_channel_allowed`, B2 bez HHL_OPS, B3 asercje decyzji, D1/D2/D5/D7; p4k **84** | pętla |

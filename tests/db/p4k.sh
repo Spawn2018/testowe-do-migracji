@@ -387,24 +387,68 @@ val "B3: payload title+summary" \
   "select (payload ? 'title' and payload ? 'summary' and payload ? 'undo_version')::text
      from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
 
-# #603: labels z eta_segment_params + przecinek w summary (E21)
-val "#603: payload labels PL_ROAD" \
-  "select (payload->'labels' ? 'PL_ROAD')::text
-     from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+# #603 D7: labels[PL_ROAD] = eta_segment_params.label
+val "#603: payload labels PL_ROAD = label" \
+  "select (n.payload->'labels'->>'PL_ROAD' = p.label)::text
+     from notifications n, eta_segment_params p
+    where n.template='ETA_CALIBRATION_AUTO' and p.code='PL_ROAD'
+    order by n.id desc limit 1" "true"
 
 val "#603: summary przecinek dziesiętny" \
   "select (payload->>'summary' ~ '[0-9]+,[0-9]+%')::text
      from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
 
-val "#603: HHL_OPS eta_calib in_app=false" \
-  "select (in_app is false)::text from notification_matrix
-    where event_key='eta_calib' and role='HHL_OPS'" "true"
+# B2: brak wiersza HHL_OPS w macierzy eta_calib
+val "#603: brak HHL_OPS w macierzy eta_calib" \
+  "select count(*)::text from notification_matrix
+    where event_key='eta_calib' and role='HHL_OPS'" "0"
 
 AUTO_VER=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-12%' and applied is true order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 
 val "B5a: undo_version = zastosowana" \
   "select (payload->>'undo_version' = '$AUTO_VER')::text from notifications
     where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+# F7 r1 B1: HHL_ADMIN z bell=false → 0 powiadomień; B2: HHL_OPS z bell=true → 0
+sys "begin;
+insert into app_users (auth_id, org_id, email, role, active)
+values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
+        'ops-p4k@test','HHL_OPS',true)
+on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;
+insert into user_notify_pref (user_id, event_key, channel, on_value)
+values
+  ('$HHL', 'eta_calib', 'bell', false),
+  ('11111111-0000-0000-0000-000000000004', 'eta_calib', 'bell', true)
+on conflict (user_id, event_key, channel) do update set on_value = excluded.on_value;
+delete from notifications where template = 'ETA_CALIBRATION_AUTO';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.9, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
+  10, 90, 60, false, 'propozycja ciągła #603 p4k-optout-bell'
+);
+select eta_auto_apply_pending();
+commit;" >/dev/null
+
+val "#603 B1: HHL_ADMIN bell=false → 0" \
+  "select count(*)::text from notifications
+    where template='ETA_CALIBRATION_AUTO' and user_id='$HHL'" "0"
+
+val "#603 B2: HHL_OPS bell=true → 0" \
+  "select count(*)::text from notifications
+    where template='ETA_CALIBRATION_AUTO'
+      and user_id='11111111-0000-0000-0000-000000000004'" "0"
+
+sys "begin;
+delete from user_notify_pref where event_key='eta_calib'
+  and user_id in ('$HHL'::uuid, '11111111-0000-0000-0000-000000000004'::uuid);
+delete from notifications where template = 'ETA_CALIBRATION_AUTO';
+commit;" >/dev/null
 
 # F7 r8 #605: Δspread w pp/100 — 15→40 = 0,25 → NEEDS_APPROVAL (godziny bez zmian)
 sys "begin;
@@ -477,7 +521,7 @@ val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
       and user_id='11111111-0000-0000-0000-000000000004'
       and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
 
-# #603: APPLY z Opcji (apply_eta_calibration_version) zamyka otwartą decyzję
+# #603 B3: APPLY z Opcji zamyka decyzję (count, nie tail true z apply)
 sys "begin;
 insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
 values (
@@ -502,19 +546,47 @@ commit;" >/dev/null
 
 OPT_VER=$(sys "select id::text from eta_calibration_versions where note like '%p4k-opt-apply%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 
-val "#603: APPLY z Opcji zamyka decyzję" \
-  "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000001';
-   select apply_eta_calibration_version($OPT_VER)::text;
-   select (status = 'RESOLVED' and resolution_code = 'APPLY')::text
-     from decisions
+val "#603 B3: APPLY z Opcji → 1 decyzja RESOLVED" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select apply_eta_calibration_version($OPT_VER);
+   select count(*)::text from decisions
     where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER'
-    order by created_at desc nulls last limit 1;
-   commit;" "true"
+      and status = 'RESOLVED' and resolution_code = 'APPLY'
+      and resolved_by = '$HHL'::uuid;
+   commit;" "1"
+
+val "#603 B3: 1× decision_events RESOLVE (apply_internal)" \
+  "select count(*)::text from decision_events e
+     join decisions d on d.id = e.decision_id
+    where d.detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER'
+      and e.action = 'RESOLVE'
+      and e.payload->>'source' = 'eta_apply_calibration_internal'" "1"
+
+val "#603 B3: decyzja innej wersji zostaje NEW" \
+  "select count(*)::text from decisions
+    where type_code = 'ETA_CALIBRATION_APPROVAL'
+      and status in ('NEW', 'ASSIGNED')
+      and detail->>'event_key' is distinct from 'ETA_CALIB_VER:$OPT_VER'" "1"
+
+# D2: audyt APPLY ręcznego ma max_change_pct > 0
+val "#603 D2: audyt APPLY ręczny max_change > 0" \
+  "select ((new_value->>'max_change_pct')::numeric > 0 and (new_value->>'auto')::boolean is false)::text
+     from audit_log
+    where action='ETA_CALIBRATION_APPLY' and entity_id='$OPT_VER'
+    order by created_at desc nulls last, id desc limit 1" "true"
+
+val "#603 D1: audyt DECISION_RESOLVE po APPLY" \
+  "select count(*)::text from audit_log
+    where action='DECISION_RESOLVE'
+      and (new_value->>'version')::bigint = $OPT_VER
+      and new_value->>'source' = 'eta_apply_calibration_internal'" "1"
 
 sys "begin;
 delete from decision_events where decision_id in (
   select id from decisions where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER');
 delete from decisions where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER';
+delete from audit_log where action in ('ETA_CALIBRATION_APPLY','DECISION_RESOLVE')
+  and (entity_id = '$OPT_VER' or (new_value->>'version')::text = '$OPT_VER');
 delete from eta_calibration_versions where id = $OPT_VER;
 update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
 commit;" >/dev/null

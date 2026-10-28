@@ -1,12 +1,12 @@
--- #603 / F7 #607: apply zamyka decyzję; macierz eta_calib; labels+summary; max_change_pct w audycie.
+-- #603 / F7 #607 + F7 r1 #616: apply zamyka decyzję; macierz eta_calib; labels+summary; max_change_pct.
 -- Po #597 (0326). Nie edytuj nałożonej migracji.
 begin;
 
--- HHL_OPS: martwy wiersz in_app (auto i tak nie czytał macierzy) — wyłącz.
-update public.notification_matrix
-   set in_app = false,
-       email = false,
-       push = false
+-- B2: HHL_OPS nie dostaje „Możesz cofnąć” (cofanie tylko HHL_ADMIN) — usuń wiersz macierzy.
+delete from public.user_notify_pref
+ where event_key = 'eta_calib'
+   and user_id in (select id from public.app_users where role = 'HHL_OPS');
+delete from public.notification_matrix
  where event_key = 'eta_calib'
    and role = 'HHL_OPS';
 
@@ -27,6 +27,7 @@ declare
   v_n_codes int := 0;
   v_dec uuid;
   v_me uuid;
+  v_note text;
 begin
   if pg_try_advisory_xact_lock(hashtext('eta_calib')) is not true then
     raise exception 'ETA_CALIB_BUSY' using errcode = 'P0001';
@@ -36,6 +37,12 @@ begin
   if coalesce(v_frozen, 0) = 1 then
     raise exception 'ETA_FROZEN' using errcode = 'P0001';
   end if;
+
+  -- D1: p_auto=true = cron; false = ekran Opcji.
+  v_note := case
+    when p_auto then 'zastosowano automatycznie'
+    else 'zastosowano z Opcji'
+  end;
 
   select * into v from eta_calibration_versions where id = p_version;
   if not found then
@@ -56,6 +63,7 @@ begin
              resolved_at = now(),
              resolved_by = v_me,
              resolution_code = 'APPLY',
+             resolution_note = v_note,
              snooze_until = null,
              updated_at = now()
        where id = v_dec;
@@ -64,6 +72,17 @@ begin
         v_dec, v_me, 'RESOLVE',
         jsonb_build_object(
           'option', 'APPLY', 'effect', 'ACCEPT',
+          'note', v_note,
+          'source', 'eta_apply_calibration_internal',
+          'version', p_version, 'already_applied', true
+        )
+      );
+      insert into audit_log (user_id, action, entity, entity_id, new_value)
+      values (
+        v_me, 'DECISION_RESOLVE', 'decisions', v_dec::text,
+        jsonb_build_object(
+          'option', 'APPLY', 'effect', 'ACCEPT',
+          'type', 'ETA_CALIBRATION_APPROVAL',
           'source', 'eta_apply_calibration_internal',
           'version', p_version, 'already_applied', true
         )
@@ -90,7 +109,7 @@ begin
   select count(*)::int into v_n_codes
     from jsonb_object_keys(v.params_after);
 
-  -- #603: max_change zawsze (auto i ręczne) — audyt nie zera przy APPLY z ekranu.
+  -- #603 / D5: max_change jak w eta_auto_apply_pending (godziny + rozrzut tylko gdy sp_old≠0).
   for r in
     select e.key as code,
            (e.value->>'hours')::numeric as h_new,
@@ -193,10 +212,7 @@ begin
            resolved_at = now(),
            resolved_by = v_me,
            resolution_code = 'APPLY',
-           resolution_note = case
-             when p_auto then 'zastosowano automatycznie / z ekranu'
-             else coalesce(resolution_note, 'zastosowano z Opcji')
-           end,
+           resolution_note = v_note,
            snooze_until = null,
            updated_at = now()
      where id = v_dec;
@@ -208,7 +224,18 @@ begin
       jsonb_build_object(
         'option', 'APPLY',
         'effect', 'ACCEPT',
-        'note', case when p_auto then 'apply_internal auto/ekran' else 'apply_internal Opcje' end,
+        'note', v_note,
+        'source', 'eta_apply_calibration_internal',
+        'version', p_version
+      )
+    );
+    -- D1: ta sama ścieżka audytu co decision_resolve.
+    insert into audit_log (user_id, action, entity, entity_id, new_value)
+    values (
+      v_me, 'DECISION_RESOLVE', 'decisions', v_dec::text,
+      jsonb_build_object(
+        'option', 'APPLY', 'effect', 'ACCEPT',
+        'type', 'ETA_CALIBRATION_APPROVAL',
         'source', 'eta_apply_calibration_internal',
         'version', p_version
       )
@@ -235,6 +262,7 @@ declare
   v_labels jsonb;
   v_codes text;
   v_pct_txt text;
+  v_payload jsonb;
 begin
   if pg_try_advisory_xact_lock(hashtext('eta_calib')) is not true then
     return jsonb_build_object('ok', false, 'reason', 'BUSY');
@@ -253,13 +281,20 @@ begin
     return jsonb_build_object('ok', true, 'applied', null, 'reason', 'NO_PENDING');
   end if;
 
+  -- D5: ten sam wzór co eta_apply_calibration_internal (bez coalesce(spread,0)).
   select coalesce(max(
            greatest(
-             abs((a.value->>'hours')::numeric - (b.value->>'hours')::numeric)
-               / nullif((b.value->>'hours')::numeric, 0),
-             abs(coalesce((a.value->>'spread_pct')::numeric, 0)
-                 - coalesce((b.value->>'spread_pct')::numeric, 0))
-               / 100.0
+             case
+               when nullif((b.value->>'hours')::numeric, 0) is null then 0::numeric
+               else abs((a.value->>'hours')::numeric - (b.value->>'hours')::numeric)
+                    / (b.value->>'hours')::numeric
+             end,
+             case
+               when nullif((b.value->>'spread_pct')::numeric, 0) is null
+                    or (a.value->>'spread_pct') is null then 0::numeric
+               else abs((a.value->>'spread_pct')::numeric - (b.value->>'spread_pct')::numeric)
+                    / 100.0
+             end
            )
          ), 0)
     into v_max
@@ -332,38 +367,39 @@ begin
   -- E21: przecinek dziesiętny w summary (12,4% nie 12.4%).
   v_pct_txt := replace(round(v_max * 100.0, 1)::text, '.', ',');
 
+  v_payload := jsonb_build_object(
+    'version', v_id,
+    'undo_version', v_id,
+    'max_change_pct', round(v_max * 100.0, 1),
+    'matrix_event', 'eta_calib',
+    'title', 'Kalibracja ETA zastosowana automatycznie',
+    'summary', format(
+      'Zastosowano wersję %s (zmiana do %s%%, kody: %s). Możesz cofnąć.',
+      v_id::text, v_pct_txt, v_codes
+    ),
+    'codes', (
+      select coalesce(jsonb_agg(k order by k), '[]'::jsonb)
+        from eta_calibration_versions v
+        cross join lateral jsonb_object_keys(v.params_after) k
+       where v.id = v_id
+    ),
+    'labels', v_labels
+  );
+
+  -- B1/B2: tylko HHL_ADMIN; kanał 'bell' + notify_channel_allowed (firma→macierz→osoba).
   insert into notifications (channel, recipient, user_id, template, payload, dedup_key)
   select
     'IN_APP',
     coalesce(u.email::text, u.id::text),
     u.id,
     'ETA_CALIBRATION_AUTO',
-    jsonb_build_object(
-      'version', v_id,
-      'undo_version', v_id,
-      'max_change_pct', round(v_max * 100.0, 1),
-      'matrix_event', 'eta_calib',
-      'locale', u.locale,
-      'title', 'Kalibracja ETA zastosowana automatycznie',
-      'summary', format(
-        'Zastosowano wersję %s (zmiana do %s%%, kody: %s). Możesz cofnąć.',
-        v_id::text, v_pct_txt, v_codes
-      ),
-      'codes', (
-        select coalesce(jsonb_agg(k order by k), '[]'::jsonb)
-          from eta_calibration_versions v
-          cross join lateral jsonb_object_keys(v.params_after) k
-         where v.id = v_id
-      ),
-      'labels', v_labels
-    ),
+    v_payload || jsonb_build_object('locale', u.locale),
     left('ETA_CALIB_AUTO:' || v_id::text || ':' || u.id::text, 200)
   from app_users u
-  join notification_matrix m
-    on m.event_key = 'eta_calib' and m.role = u.role
  where u.active is true
-   and public.notify_person_on(
-         u.id, 'eta_calib', 'IN_APP', m.in_app, coalesce(m.fixed_in_app, false)
+   and u.role = 'HHL_ADMIN'
+   and public.notify_channel_allowed(
+         u.id, 'ETA_CALIBRATION_AUTO', v_payload, 'bell'
        ) is true
   on conflict (dedup_key) where dedup_key is not null do nothing;
 
@@ -378,8 +414,8 @@ revoke all on function public.eta_auto_apply_pending() from public, anon, authen
 grant execute on function public.eta_auto_apply_pending() to service_role;
 
 comment on function public.eta_apply_calibration_internal(bigint, text, boolean) is
-  '#603: APPLY zamyka ETA_CALIBRATION_APPROVAL; max_change_pct zawsze w audycie.';
+  '#603 F7 r1: APPLY zamyka decyzję + DECISION_RESOLVE; max_change ujednolicony; note auto≠ekran.';
 comment on function public.eta_auto_apply_pending() is
-  '#603: macierz+my_notify eta_calib; labels; summary z przecinkiem E21.';
+  '#603 F7 r1: HHL_ADMIN + notify_channel_allowed(bell); labels; summary E21; bez HHL_OPS w macierzy.';
 
 commit;

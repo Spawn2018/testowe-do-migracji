@@ -6462,3 +6462,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #597 zamknięte (SCALONE); #608 w kolejce; #550 **WSTRZYMANE**; #603 W TOKU. Bez nowych `dla-cursora` do budowy.
 - Scalanie: #615 → `b34d807c` (F7 gotowe @ `3c6e7d52`, CI unit/db/visual ✔). Bez push na main.
 - **Krok #603:** migracja **0327** — APPLY zamyka `ETA_CALIBRATION_APPROVAL`; `max_change_pct` w audycie; macierz+`notify_person_on` `eta_calib` (HHL_OPS off); `labels` + summary z przecinkiem; p4k **78**. Gałąź `pakiet/603-eta-calib-apply-notify`.
+
+## 2026-10-28 20:45 — #616 F7 r1 POPRAWKI (#603 / 0327)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne` do budowy. Bez F7 „gotowe” do scalenia.
+- CI #616 @ `3c856974`: unit/db/visual ✔; F7 r1 **POPRAWKI** (nie scalać).
+- **Krok:** F7 r1 w **0327** + `p4k.sh`:
+  - B1: `notify_channel_allowed(…,'bell')` zamiast `notify_person_on(…,'IN_APP')`; test admin `bell=false` → 0.
+  - B2: `delete` wiersza HHL_OPS z macierzy `eta_calib`; insert tylko `HHL_ADMIN`; test OPS `bell=true` → 0.
+  - B3: asercja `count=1` RESOLVED + `resolved_by` + 1× `decision_events` + inna wersja zostaje NEW.
+  - D1: `resolution_note` auto≠ekran; `audit_log DECISION_RESOLVE`; D2 audyt APPLY ręczny; D5 max_change ujednolicony; D7 labels=label.
+  - D3 front → koordynator; D6 odnotowane (brak starych na prod).
+  - p4k EXPECTED **84**. Push → CI `p4k` → prośba o F7 r2.
