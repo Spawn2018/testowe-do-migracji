@@ -51,7 +51,6 @@ export const STORE_PERSIST_FIELD_KEYS = [
   'documents',
   'messages',
   'notifications',
-  'notificationPrefs',
   'invoices',
   'bills',
   'sailings',
@@ -138,13 +137,6 @@ export function isCorruptPersistSlice(raw: unknown): boolean {
   if ('locale' in o && o.locale != null && !LOCALES.has(String(o.locale))) return true;
   if ('theme' in o && o.theme != null && !THEMES.has(String(o.theme))) return true;
   if ('themeManual' in o && o.themeManual != null && typeof o.themeManual !== 'boolean') {
-    return true;
-  }
-  if (
-    'notificationPrefs' in o &&
-    o.notificationPrefs != null &&
-    (typeof o.notificationPrefs !== 'object' || Array.isArray(o.notificationPrefs))
-  ) {
     return true;
   }
   if (

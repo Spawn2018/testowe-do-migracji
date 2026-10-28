@@ -388,7 +388,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C17** ✅ (D-20261015-2110-01, BLOKER): PR #235 → `e7595541` / `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs` (0220); 15048 READY_TO_INVOICE, 15060 INVOICED, 0× UNLOADED.
 - **C16-H** ✅ (D-20261016-0100-01, BLOKER): PR #238 → `8bae03be` (0221); `send-notifications` v26; `APP_URL=https://tower.log-mar.pl`; tick starych WEB_PUSH = 0.
 - **C3** ✅ macierz powiadomień po zdarzeniu; **poprawki C3-p** w Naprawach audytu 17.10 (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39); **+ Cz13** (D-20261016-0310-01): wiersz „Wiadomość w czacie” — dzwonek i telefon włączone dla 5 rodzajów kont, e-mail wyłączony, wyjątek od C1 pkt 4; odbiorcy z `visible_to`, bez autora; **+ Cz25** (D-20261016-0315-01): odbiorców zawęża zawsze `visible_to`; ustawienie macierzy nie da KSH rozmów „tylko HHL i SCX”; **+ wartości startowe (D-20261016-0330-01 pkt 5):** wiersz „Nowa wiadomość w czacie” — dzwonek i telefon dla 5 rodzajów kont, bez e-maila; opis „tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień”. **NA PRODUKCJI 17.10.2026 00:34** — scalenie `2938ae96` (PR #273), migracja 0222, `send-notifications`, wdrożenie `dpl_4iugo2qyvCYt9gNgHUpmjjH3hivi` (`index-B_buB0CA.js`). Bieżąca produkcja po #274: `7db7282f` / `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1` (`index-Bv_J4hjW.js`).
-- **C4** ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk → profil lub usunięte.
+- **C4** ⏳ W TOKU (`pakiet/C4-old-value`, migracja **0321**): ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk usunięte z przeglądarki (macierz + `my_notify`).
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
 - **C6** teksty spraw z serwera (E21): daty, pogoda, AUTO_STATUS bez UUID.
 - **C7** role E9 w bazie; zestaw `e9-role`.
@@ -1076,11 +1076,14 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### #594 · Import KSH: zbiorcze powiadomienie + migawka — SCALONE (baza #601 `ecbae548`, 27.10.2026 23:55Z, migracja **0318**; ekran gest/rozmycie #600 `7d8ebb4b`; okno #602 `df3f5caa`)
 Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
-### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR #604 na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r8:** Δ `spread_pct` w punktach procentowych / 100 (#605; 15→10 = 0,05 auto; 15→40 = 0,25 → HHL); B2 z `spread_pct=15` (płaskie → clamp 10, Δ 5 pp); test `spread 15→40 pp: NEEDS_APPROVAL`. suite `p4k` **73**, nullguard **880**. **Zamierzone (F7 r6):** `BACKUP_FAILED` z `decider_role=ADMIN` — HHL_OPS bez DECISION_OPEN/e-mail. Ekran — koordynator `wyglad/`.
+### P4-k · #581 Kalibracja ETA ciągła — SCALONE (cz.1 `3f82cb09` / PR #598 / **0319**; cz.2 `a7ecb48b` / PR #604 / **0320**, 28.10.2026 07:52Z; decyzja 27A)
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r8:** Δ `spread_pct` w punktach procentowych / 100 (#605; 15→10 = 0,05 auto; 15→40 = 0,25 → HHL); B2 z `spread_pct=15` (płaskie → clamp 10, Δ 5 pp); test `spread 15→40 pp: NEEDS_APPROVAL`. suite `p4k` **73**, nullguard **880**. **Zamierzone (F7 r6):** `BACKUP_FAILED` z `decider_role=ADMIN` — HHL_OPS bez DECISION_OPEN/e-mail. Ekran — koordynator `wyglad/`. Po wdrożeniu: rebuild pomiarów (#603), cron + pierwszy tick.
+
+### C4 · Ustawienia „było → jest” + alerty — W TOKU (`pakiet/C4-old-value`, migracja **0321**; D-20261015-0300-01)
+Źródło: PLAN Poprawki P2–P3 C4; po A6 / P4-k. `admin_ops_threshold_set` → `old_value`/`new_value` (`value`); bez audytu przy braku zmiany. Macierz / security_flag / cennik / SEFS / `my_notify` już miały `old_value`. Alerty stref/ryzyk/workflow: usunięte z `notificationPrefs` w store (zostaje macierz + `my_notify` / `bellOffForPerson`); w przeglądarce tylko motyw i waluta. dec6 **27** (+2). Próba R-3 na TEST — wpis przy odbiorze C4 (równolegle).
 
 ### C4–C13 bez zmian zakresu
-Zostają jak w planie, po A6 / #569 / #567 23B / #563.
+Zostają jak w planie, po A6 / #569 / #567 23B / #563. **C4** — W TOKU powyżej.
 - C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
@@ -1866,3 +1869,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 08:45 | #604 CI db FAIL p4k 71/1 (B2 applied=false: propose Δspread 15→10 ≈33 % → NEEDS_APPROVAL); fixture B2 `spread_pct=10` | pętla |
 | 28.10.2026 09:05 | #604 F7 r8: Δspread w pp/100 (#605); p4k **73**; push `41cc7c93` | pętla |
 | 28.10.2026 09:35 | #604 CI unit/visual/db ✔ `41cc7c93` — prośba o F7: gotowe do scalenia (cz.2 / 0320) | pętla |
+| 28.10.2026 08:52 | #604/#581 cz.2 SCALONE (`a7ecb48b`, F7 gotowe `bf76504c`); start C4 **0321** (old_value progów + usunięcie alertów lokalnych) | pętla |

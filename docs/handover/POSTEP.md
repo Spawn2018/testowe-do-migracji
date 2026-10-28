@@ -6314,3 +6314,10 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - Scalanie: nie (czekam na przeglƒÖd F7 r8 i ‚Äûgotowe‚Äù po tym SHA). Jedyny otwarty PR: #604.
 - CI `41cc7c93`: unit ‚úî / visual ‚úî / db ‚úî (p4k **73**, nullguard **880**); run db `40648903813`, visual `40648904042`.
 - **Krok:** komentarz na #604 ‚Äî pro≈õba o F7: gotowe do scalenia (cz.2 / 0320). Bez push na main.
+
+## 2026-10-28 08:59 ó #604 SCALONE; start C4 (0321)
+
+- Skrzynka `dla-cursora`: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie ó bez nowych do wpisania.
+- Scalanie: #604 F7 gotowe `bf76504c` (po docs; akceptacja kodu z `41cc7c93`); CI unit/visual/db ?; merge `a7ecb48b` (`gh pr merge --merge`). Bez push na main.
+- **P4-k #581 cz.2** SCALONE ó migracja **0320**; deploy-main w toku (`40652927113`). Po wdroøeniu: rebuild pomiarÛw (#603), cron + pierwszy tick.
+- **Krok C4:** ga≥πü `pakiet/C4-old-value`, migracja **0321** ó `admin_ops_threshold_set` zapisuje `old_value`/`new_value` (`value`), bez audytu przy braku zmiany; usuniÍte `notificationPrefs` (alerty stref/ryzyk/workflow) ze store ó zostaje macierz + `my_notify` / `bellOffForPerson`. dec6 EXPECTED **27** (+2). PrÛba R-3 na TEST ó przy odbiorze C4.

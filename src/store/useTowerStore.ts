@@ -89,12 +89,6 @@ import { etaDuration } from '../lib/etaDuration';
 
 export type ViewKey = NK;
 
-export interface NotificationPrefs {
-  workflowAlerts: boolean;
-  geofenceAlerts: boolean;
-  riskAlerts: boolean;
-}
-
 /**
  * BK3: w trybie Supabase store startuje PUSTY (dane przychodzą z serwera po
  * zalogowaniu) i nie czyta/zapisuje danych demo z localStorage v2.
@@ -225,7 +219,6 @@ interface TowerState {
   workflows: WorkflowRule[];
   workflowRuns: WorkflowRun[];
   notifications: Notification[];
-  notificationPrefs: NotificationPrefs;
   invoices: Invoice[];
   /** M6 — faktury v2 (koszt SCX→HHL, przychód HHL→KSH). */
   bills: Bill[];
@@ -351,7 +344,6 @@ interface TowerState {
 
   updateRate: (side: 'COST' | 'REVENUE', id: string, baseRate: number) => void;
   updateBaf: (patch: Partial<BafParams>) => void;
-  updateNotificationPrefs: (patch: Partial<NotificationPrefs>) => void;
 
   commitImport: (diff: {
     added: Partial<Load>[];
@@ -451,7 +443,6 @@ export const useTowerStore = create<TowerState>()(
       workflows: initialData.workflows,
       workflowRuns: initialData.workflowRuns,
       notifications: initialData.notifications,
-      notificationPrefs: { workflowAlerts: true, geofenceAlerts: true, riskAlerts: true },
       invoices: initialData.invoices,
       bills: initialData.bills,
       sailings: initialData.sailings,
@@ -658,31 +649,12 @@ export const useTowerStore = create<TowerState>()(
       dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
       pushNotification: (n) => {
-        const prefs = get().notificationPrefs ?? {
-          workflowAlerts: true,
-          geofenceAlerts: true,
-          riskAlerts: true,
-        };
+        // C4: alerty stref/ryzyk/workflow tylko z macierzy + my_notify (bellOffForPerson) — bez lokalnych przełączników.
         const view = n.href?.view ?? '';
-        const blob = `${n.title ?? ''} ${n.body ?? ''}`.toLowerCase();
         const zoneKind = n.kind === 'ZONE_ENTER' || n.kind === 'ZONE_EXIT' || n.kind === 'GEOFENCE_ENTER' || n.kind === 'GEOFENCE_EXIT' || view === 'geo';
         if (get().role === 'KSH' && zoneKind) return;
         if (n.kind === 'DOC_MISSING' && get().role === 'KSH') return;
         if (bellOffForPerson(n.kind)) return;
-        let allowed = true;
-        if (view === 'wf' || /workflow|regu[lł]a|automatyz/.test(blob)) {
-          allowed = prefs.workflowAlerts !== false;
-        } else if (view === 'geo' || /geofence|stref/.test(blob)) {
-          allowed = prefs.geofenceAlerts !== false;
-        } else if (
-          view === 'risk' ||
-          n.severity === 'CRITICAL' ||
-          n.severity === 'HIGH' ||
-          /ryzyk|ferry|plan b|alternatywa se|force.?majeure/.test(blob)
-        ) {
-          allowed = prefs.riskAlerts !== false;
-        }
-        if (!allowed) return;
         const note: Notification = {
           id: n.id ?? uid('n'),
           at: n.at ?? nowIso(),
@@ -1338,9 +1310,6 @@ export const useTowerStore = create<TowerState>()(
       },
 
       updateBaf: (patch) => set((s) => ({ baf: { ...s.baf, ...patch } })),
-
-      updateNotificationPrefs: (patch) =>
-        set((s) => ({ notificationPrefs: { ...s.notificationPrefs, ...patch } })),
 
       commitImport: ({ added, changed, removedIds, rejected, filename, accepted, allowRemovals, skippedStandard = 0 }) => {
         // Normal schedule imports are additive. Ignore any legacy/provided removals unless
@@ -2051,7 +2020,6 @@ export const useTowerStore = create<TowerState>()(
         theme: s.theme,
         themeManual: s.themeManual,
         showDemoMarks: s.showDemoMarks,
-        notificationPrefs: s.notificationPrefs,
       }) : ({
         role: s.role,
         locale: s.locale,
@@ -2066,7 +2034,6 @@ export const useTowerStore = create<TowerState>()(
         documents: s.documents.map((d) => (d.dataUrl ? { ...d, dataUrl: null } : d)),
         messages: s.messages,
         notifications: s.notifications,
-        notificationPrefs: s.notificationPrefs,
         invoices: s.invoices,
         bills: s.bills,
         sailings: s.sailings,
