@@ -6286,3 +6286,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - PLAN: `BACKUP_FAILED` ADMIN — zamierzone (HHL_OPS bez DECISION_OPEN)
   - suite `p4k` **72**, nullguard **880**
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 08:10 — #604 CI po F7 r6: p4k 70/2 → fixture n≥10 + FK notifications
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `62b57178`.
+- Scalanie: nie (CI db 40640565398: p4k 70/2; unit/visual ✔).
+- **Przyczyny:** (1) B2 propose z 8 obs → `n_obs<10` → auto `BLOCKED` zamiast applied; (2) undo cleanup: `delete loads` BT bez wcześniejszego `notifications`/`risk_signals`.
+- **Krok:** fixture calib 12 obs (8+4, lpad `…0005||nn`); cleanup BT/final z FK przed loads. Push → CI; po zielonym — prośba o F7. Bez push na main.
