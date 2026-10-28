@@ -6404,3 +6404,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #613 SCALONE (czekam odbiór SELECT po deploy); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE.
 - Scalanie: #614 → `ece3c334` (F7 gotowe @ `8a127f97`, CI unit/db/visual ✔). Bez push na main.
 - **Krok #611:** rebase po #613 (stare 0324/0325 pominięte); migracja **0325** — allowlista preview + `import_schedule`/`schedule_row_canon` bez WT→plik; testy A6/#583/#594/#611; import **365**. PR #612.
+
+## 2026-10-28 17:10 — #612: poprawka 0325 (DO $g$)
+
+- Skrzynka: #613 SCALONE (odbiór SELECT po deploy — koordynator); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
+- Scalanie: #612 — brak „F7: gotowe” po `186bf171`; CI db FAIL (migracja 0325). Bez push na main.
+- **Krok:** `0325` — domknięcie `DO $g$` (`END IF; END $g$;`) przed `commit` (GRANT service_role). Unit/visual ✔ na poprzednim SHA; db po push.

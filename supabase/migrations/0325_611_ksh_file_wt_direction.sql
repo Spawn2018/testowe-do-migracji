@@ -1011,5 +1011,7 @@ GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boo
 DO $g$ BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
     GRANT EXECUTE ON FUNCTION public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) TO service_role;
+  END IF;
+END $g$;
 
 commit;

@@ -1911,3 +1911,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 15:55 | #613 CI db FAIL status 346/350 (asercje `true`/`21.370`); poprawka testów; PLAN #611 = przeróbka kierunku plik↔WT (14:28) | pętla |
 | 28.10.2026 16:15 | #614 F7 r1 POPRAWKI: Historia bez wycieku cen, strażnik przed, drop fn, wycena W1/W2; status **358**; CI po push → F7 r2 | pętla |
 | 28.10.2026 16:48 | #614 SCALONE (`ece3c334`, F7 gotowe @ `8a127f97`); start #611 **0325** kierunek plik↔WT | pętla |
+| 28.10.2026 17:10 | #612 CI db FAIL: 0325 — niedomknięty `DO $g$` (GRANT service_role); poprawka składni | pętla |
