@@ -6498,3 +6498,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #616 → `cf01968e` (F7 gotowe @ `d908f750`, CI unit/db/visual ✔). Bez push na main.
 - **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=29, loads_fail=0`. Wykluczenia: TRASA_NIEZNANA 11 (0 sailing — dane); LUKA_GPS 3 (dane); PORT_CHECKIN/CROSSING BRAK — **błąd pomiaru** (EXIT istniał, `p_before=PIN` + `<` gubiło).
 - **Krok 0328** (`pakiet/603-eta-rebuild-se-road`): okno `≥`/`≤`; EXIT bez limitu PIN; PIN po EXIT; `SE_ROAD_KAA_INLAND`; rebuild() 0-arg; p4k **89**.
+
+## 2026-10-28 22:20 — #619 F7 r2: PORT_CHECKIN EXIT ≤ PIN
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #619 — F7 **nie** gotowe @ `c371bb0b` (B2/B3/B4 otwarte); brak innych PR z „F7: gotowe”. Bez push na main.
+- CI @ `c371bb0b`: unit ✔; db **FAIL** p4k (test PIN → `forbid_mutation` na DELETE `load_events`).
+- **Krok F7 r2 (0328):**
+  1. B2/B3 — EXIT PORT_OUT tylko **≤ PIN**; fallback `sailings.actual_departure_at`/`departure_at` albo ostatni GPS w PORT_OUT; inaczej BRAK.
+  2. CROSSING — warunek `PIN > EXIT` (równość → BRAK).
+  3. `begin`/`commit`; bez wrappera 0-arg.
+  4. Testy: późny EXIT→BRAK; +sailing→OK 3 h; EXIT powrotu; CROSSING=; SE_ROAD_KAA_INLAND (bez mapowania `eta_route_segments` do 27B).
+  5. p4k **91**. Rebuild prod od 05.10 **wstrzymany** do F7 tej poprawki. Push → CI → F7 r2.
