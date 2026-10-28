@@ -113,6 +113,7 @@ begin
        and (t_pin_enter is null or t_sail <= t_pin_enter) then
       t_port_out := t_sail;
     else
+      -- tylko PORT_OUT z trasą tej samej rodziny (null route = za szeroko, obce porty)
       select max(p.ts)
         into t_gps_out
         from positions p
@@ -120,6 +121,7 @@ begin
         join geofences g on g.project_id = l.project_id
          and g.kind = 'PORT_OUT'
          and coalesce(g.active, true)
+         and g.route is not null
        where p.load_id = p_load
          and p.ts >= t_port_in
          and (t_pin_enter is null or p.ts <= t_pin_enter)
@@ -127,7 +129,6 @@ begin
          and st_contains(g.geom, p.geom_raw::geometry)
          and (
            v_op is null
-           or g.route is null
            or public.eta_obs_route_family(g.route) = public.eta_obs_route_family(v_op)
          );
       if t_gps_out is not null then

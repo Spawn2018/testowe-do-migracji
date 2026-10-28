@@ -6510,3 +6510,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. `begin`/`commit`; bez wrappera 0-arg.
   4. Testy: późny EXIT→BRAK; +sailing→OK 3 h; EXIT powrotu; CROSSING=; SE_ROAD_KAA_INLAND (bez mapowania `eta_route_segments` do 27B).
   5. p4k **91**. Rebuild prod od 05.10 **wstrzymany** do F7 tej poprawki. Push → CI → F7 r2.
+
+## 2026-10-28 22:45 — #620 SCALONE; #619 CI p4k poprawka
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #620 → `4c81d6af` (F7 gotowe @ `f636a137`, unit/visual ✔). #619 — czekam CI po poprawce. Bez push na main.
+- CI #619 @ `53e3ef2e`: unit/visual ✔; db **FAIL** p4k 87/91 (4× #603 — DELETE `load_events` na fixture 581 / zanieczyszczenie).
+- **Krok:** testy #603 na osobnym loadzie `…603` (tylko INSERT, bez DELETE append-only); GPS fallback tylko geofence z `route` (nie null). p4k **91**. Push → CI → F7.
