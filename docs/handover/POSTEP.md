@@ -6419,3 +6419,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   1. Edge `scheduleParse` — importy Deno (`npm:zod@3`, `.ts`, `formatPl.ts`); ciało = front.
   2. Testy A6 B1/#569: konflikt = `load_date` (oba kierunki); #583 wymiary z WT; #594 HHL bez numerów / widzi datę; P1 WT→plik → publish null + P1c filtr; D6 na `load_date`; dec-auto → `l1b_note_file_changed`.
   3. import EXPECTED **366**. CI po push → prośba o F7.
+
+## 2026-10-28 18:00 — #612 F7 r4: importColumnMap.ts
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 — F7 r4: jedna linia Deno; brak „F7: gotowe” do zielonego CI. Jedyny otwarty PR. Bez push na main.
+- **Krok:** `supabase/functions/_shared/ksh/scheduleParse.ts:139` — `from './importColumnMap.ts'` (jak main). import **366**. CI po push → F7: gotowe.

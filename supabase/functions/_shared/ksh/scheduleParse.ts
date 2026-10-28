@@ -136,7 +136,7 @@ export function isHhCarrier(v: unknown): boolean {
 /* --------------------------------------------------------------- */
 
 // D15: stała w lekkim module (widok harmonogramu nie ładuje zod przy starcie).
-import { COLUMN_MAP_DEFAULT } from './importColumnMap';
+import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
 export { COLUMN_MAP_DEFAULT };
 
 export type ColumnMap = Record<keyof typeof COLUMN_MAP_DEFAULT, string>;
