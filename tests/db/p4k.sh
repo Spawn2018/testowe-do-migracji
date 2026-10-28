@@ -372,6 +372,12 @@ val "audyt automat kalibracji" \
      from audit_log where action='ETA_CALIBRATION_APPLY'
      order by created_at desc nulls last, id desc limit 1" "true"
 
+# #603: audyt auto ma policzone max_change_pct (nie 0)
+val "#603: audyt max_change_pct > 0" \
+  "select ((new_value->>'max_change_pct')::numeric > 0)::text
+     from audit_log where action='ETA_CALIBRATION_APPLY'
+     order by created_at desc nulls last, id desc limit 1" "true"
+
 HHL_N=$(sys "select count(*)::text from app_users where active is true and role='HHL_ADMIN'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 val "B3: powiadomienia = liczba HHL_ADMIN ($HHL_N)" \
   "select count(*)::text from notifications
@@ -380,6 +386,19 @@ val "B3: powiadomienia = liczba HHL_ADMIN ($HHL_N)" \
 val "B3: payload title+summary" \
   "select (payload ? 'title' and payload ? 'summary' and payload ? 'undo_version')::text
      from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+# #603: labels z eta_segment_params + przecinek w summary (E21)
+val "#603: payload labels PL_ROAD" \
+  "select (payload->'labels' ? 'PL_ROAD')::text
+     from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+val "#603: summary przecinek dziesiętny" \
+  "select (payload->>'summary' ~ '[0-9]+,[0-9]+%')::text
+     from notifications where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
+
+val "#603: HHL_OPS eta_calib in_app=false" \
+  "select (in_app is false)::text from notification_matrix
+    where event_key='eta_calib' and role='HHL_OPS'" "true"
 
 AUTO_VER=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-12%' and applied is true order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 
@@ -457,6 +476,48 @@ val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
     where template='DECISION_OPEN'
       and user_id='11111111-0000-0000-0000-000000000004'
       and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
+
+# #603: APPLY z Opcji (apply_eta_calibration_version) zamyka otwartą decyzję
+sys "begin;
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 8.5, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 9.0, 'spread_pct', 15)),
+  10, 80, 40, false, 'propozycja ciągła #603 p4k-opt-apply'
+);
+select decision_open_from_event(
+  (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+  'ETA_CALIBRATION_APPROVAL',
+  'ETA_CALIB_VER:' || (select id::text from eta_calibration_versions where note like '%p4k-opt-apply%' order by id desc limit 1),
+  'test #603 apply z Opcji',
+  jsonb_build_object(
+    'version', (select id from eta_calibration_versions where note like '%p4k-opt-apply%' order by id desc limit 1),
+    'action', 'apply_eta_calibration_version',
+    'max_change_pct', 20,
+    'severity_override', 'WARNING'
+  ),
+  null, null
+);
+commit;" >/dev/null
+
+OPT_VER=$(sys "select id::text from eta_calibration_versions where note like '%p4k-opt-apply%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+
+val "#603: APPLY z Opcji zamyka decyzję" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000001';
+   select apply_eta_calibration_version($OPT_VER)::text;
+   select (status = 'RESOLVED' and resolution_code = 'APPLY')::text
+     from decisions
+    where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER'
+    order by created_at desc nulls last limit 1;
+   commit;" "true"
+
+sys "begin;
+delete from decision_events where decision_id in (
+  select id from decisions where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER');
+delete from decisions where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER';
+delete from eta_calibration_versions where id = $OPT_VER;
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+commit;" >/dev/null
 
 # F7 r5/r6 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
 VER18=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-18%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')

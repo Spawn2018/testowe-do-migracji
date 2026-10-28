@@ -6456,3 +6456,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   2. B2 `ksh_sync_outbound_wt_diff` + `apply_sent` — `dr`/`ph`/`tr`/`tl`; test rev mismatch → pending DriverB.
   3. Drobne: kolejka po złożonym `ksh_file_ab`; OTHER z „+”; `begin`/`commit`; wczesne wyjście; testy SE-only / no-op / PL+48.
   4. PLAN §4/#597 + §5 W62 + §8; import EXPECTED **376**.
+
+## 2026-10-28 20:15 — #597 SCALONE; start #603
+
+- Skrzynka: #597 zamknięte (SCALONE); #608 w kolejce; #550 **WSTRZYMANE**; #603 W TOKU. Bez nowych `dla-cursora` do budowy.
+- Scalanie: #615 → `b34d807c` (F7 gotowe @ `3c6e7d52`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #603:** migracja **0327** — APPLY zamyka `ETA_CALIBRATION_APPROVAL`; `max_change_pct` w audycie; macierz+`notify_person_on` `eta_calib` (HHL_OPS off); `labels` + summary z przecinkiem; p4k **78**. Gałąź `pakiet/603-eta-calib-apply-notify`.

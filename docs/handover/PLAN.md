@@ -1103,7 +1103,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. **Przepięcie naczepy** wyłącznie z Awizacji WT — z pliku **odpada**.
 5. Import KSH **wyłączony** do wiadomości właściciela (28B). Zgłoszenie #611 zamknięte.
 
-### #597 · Zapis Awizacji WT→plik KSH — W TOKU (`pakiet/597-awizacja-outbound-ksh`, migracja **0326**, PR #615)
+### #597 · Zapis Awizacji WT→plik KSH — SCALONE (`b34d807c` / PR #615 / **0326**, 28.10.2026 18:10Z)
 Źródło: #597 + F7 #612 (zaraz po #611). Zasady 14:28: kierowca/telefon/ciągnik/naczepa/`carrier_order_no`/`hhl_order_no` = tylko WT→plik.
 1. **0326:** `trg_ksh_sync_outbound` — po zmianie awizacji enqueue `driver` / `driver_phone` / `tractor` / `trailer` („PL / SE” przy `trailer_swap`); `ksh_file_ab` + `ksh_file_phone_text` (SE z 0, OTHER z „+”, tekst); kolejka po **złożonej** wartości komórki (nie po samym SE przy `swap=false`); wczesne wyjście gdy nic nie zmienione; bez kolejki przy `write_enabled=false` / `CANCELLED`/`REMOVED` / `import_ctx`.
 2. Edge: `xlsxPatch` kolumny 12–15 tekst; **F7 B1** `fileAlreadyHasPatch` — klucz awizacji → nie `alreadyDone` (PUT); **F7 B2** `ksh_sync_outbound_wt_diff` + `apply_sent` znają `dr`/`ph`/`tr`/`tl` (rev mismatch zachowuje nowszą awizację).
@@ -1111,8 +1111,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
 5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
 
+### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-calib-apply-notify`, migracja **0327**)
+Źródło: #603 + F7 #607 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
+1. **0327 (ten PR):** `eta_apply_calibration_internal` po sukcesie zamyka `ETA_CALIBRATION_APPROVAL` (`event_key=ETA_CALIB_VER:…`, RESOLVED/APPLY + `decision_events`); `max_change_pct` zawsze w audycie; `eta_auto_apply_pending` — macierz+`notify_person_on` (`eta_calib`), HHL_OPS `in_app=false`, payload `labels` z `eta_segment_params`, `summary` z przecinkiem E21. p4k **78**.
+2. **Dalej w #603:** pełne przeliczenie pomiarów (okno / wykluczenia, przed ~04.11); dwa odcinki SE_ROAD w słowniku (pod 27B:C).
+
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → **#597** (W TOKU) → **#603** → **27B:C** → BN1…
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → **#603** (W TOKU) → **27B:C** → BN1…
 1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1926,3 +1931,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 18:20 | #612 CI db FAIL import 364/366 (#567 pending A6; #583 niepełny JSON) — poprawka testów | pętla |
 | 28.10.2026 18:55 | #612 SCALONE (`61a1350d`, F7 gotowe @ `705dff05`); #611 zamknięte; start **#597** outbound awizacja **0326** | pętla |
 | 28.10.2026 19:45 | #615 F7 r1: B1 `fileAlreadyHasPatch` awizacja→PUT; B2 `wt_diff`/`apply_sent` dr/ph/tr/tl; OTHER „+”; no-op; import **376**; W62 SE-only | pętla |
+| 28.10.2026 20:15 | #615/#597 SCALONE (`b34d807c`, F7 gotowe @ `3c6e7d52`); start **#603** **0327** (APPLY zamyka decyzję, macierz, labels) | pętla |
