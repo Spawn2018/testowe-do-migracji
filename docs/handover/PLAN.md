@@ -1107,7 +1107,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #597 + F7 #612 (zaraz po #611). Zasady 14:28: kierowca/telefon/ciągnik/naczepa/`carrier_order_no`/`hhl_order_no` = tylko WT→plik.
 1. **0326:** `trg_ksh_sync_outbound` — po zmianie awizacji enqueue `driver` / `driver_phone` / `tractor` / `trailer` („PL / SE” przy `trailer_swap`); `ksh_file_ab` + `ksh_file_phone_text` (SE z 0, tekst); bez kolejki przy `write_enabled=false` / `CANCELLED`/`REMOVED` / `import_ctx`.
 2. Edge `xlsxPatch`: te 4 pola → kolumny 12–15, zawsze tekst (nigdy formuła).
-3. Testy import **370** (+4); unit xlsxPatch awizacja.
+3. Testy import **372** (+6); unit xlsxPatch awizacja; CANCELLED przez postgres (nie JWT — guard).
 4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)

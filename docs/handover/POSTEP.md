@@ -6440,3 +6440,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #611 zamknięte (SCALONE); #597 W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
 - Scalanie: #612 → `61a1350d` (F7 gotowe @ `705dff05`, CI unit/db/visual ✔). Bez push na main.
 - **Krok #597:** migracja **0326** — outbound awizacja (`driver`/`driver_phone`/`tractor`/`trailer`, „PL / SE”); `xlsxPatch` tekst; import **370**. Gałąź `pakiet/597-awizacja-outbound-ksh`.
+
+## 2026-10-28 19:20 — #597 CI import FAIL → fix CANCELLED
+
+- Skrzynka: bez nowych; #550 WSTRZYMANE; #608 w kolejce.
+- Scalanie: #615 — brak „F7: gotowe”; db FAIL (CANCELLED przez JWT → guard_load_update). Bez push na main.
+- **Krok:** test #597 CANCELLED jak A6 r8 (postgres, nie authenticated); EXPECTED import **372**.

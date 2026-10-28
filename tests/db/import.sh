@@ -2211,9 +2211,9 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #597: write off → 0 outbound"; else fail=$((fail+1)); echo "  FAIL  #597: write off → $out"; fi
 val "#597: write_set true (po awiz)" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
-# CANCELLED → 0
+# CANCELLED → 0 (status jak A6 r8: przez postgres — JWT HHL → guard_load_update)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+out=$($PSQL -c "begin;
   update loads set status='CANCELLED', driver_name='X Cancel', trailer_swap=false where id='$SG_OUT';
   select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
