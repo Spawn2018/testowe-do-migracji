@@ -71,6 +71,15 @@ describe('Stan systemu — „Źródła danych” z integration_runs', () => {
     expect(liveOtherJobs('pl', [run('web-push-send', 1), run('rodo', 60, false)]).map((j) => [j.name, j.state])).toEqual([['Powiadomienia na telefon', 'ok'], ['Porządki RODO', 'down']]);
     expect([limitText(15), limitText(180), limitText(8 * 24 * 60)]).toEqual(['15 min', '3 h', '8 dni']);
   });
+  it('#588: doradca bezpieczeństwa bez przebiegu > 26 h = „nie działa” (Edge nie odpowiedział)', () => {
+    const fresh = liveOtherJobs('pl', [run('security-advisor-snapshot', 60), run('security-advisor-snapshot-edge', 60)], NOW);
+    expect(fresh.map((j) => j.state)).toEqual(['ok', 'ok']);
+    const stale = liveOtherJobs('pl', [run('security-advisor-snapshot', 27 * 60), run('security-advisor-snapshot-edge', 27 * 60)], NOW);
+    expect(stale.map((j) => j.state)).toEqual(['down', 'down']);
+    expect(stale[0].lastAt).toBe(run('security-advisor-snapshot', 27 * 60).ran_at);
+    /* inne zadania bez progu — stary udany przebieg nadal „działa” */
+    expect(liveOtherJobs('pl', [run('rodo', 5 * 24 * 60)], NOW)[0].state).toBe('ok');
+  });
   it('Opcje ładują LiveStatus; dzisiejszy panel (kopie, limity, „Odśwież”) zostaje pod listą', () => {
     expect(read('src/views/OptionsView.tsx')).toContain("import('../auth/LiveStatus')");
     expect(read('src/auth/LiveStatus.tsx')).toContain('<SystemStatusPanel />');
