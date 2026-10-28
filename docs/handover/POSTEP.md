@@ -6398,3 +6398,39 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #613/#611 `pilne` open; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
 - Scalanie: #614 — F7 r1 POPRAWKI (nie „gotowe”); CI na `28888310` unit/db/visual ✔ (tylko asercje CI). #612 nie scalać. Bez push na main.
 - **Krok F7 r1:** `0324` — NOTE `visible_to NULL` bez kwot + NOTE FORWARDER+CARRIER tylko koszt; strażnik przed (docelowe / ≠14.95… / CANCELLED|REMOVED|INVOICED|invoice_lines → SKIPPED); `drop function` po SELECT; status.sh odtwarza z BEGIN/END HOTFIX613; fikstura `load_revenue`/`load_cost` BS-B + asercje 5345/748.30/6093.30 i 5090/712.60/5802.60; status **358**. Po zielonym CI → F7 r2.
+
+## 2026-10-28 16:48 — #614 SCALONE; #611 0325 kierunek plik↔WT
+
+- Skrzynka: #613 SCALONE (czekam odbiór SELECT po deploy); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE.
+- Scalanie: #614 → `ece3c334` (F7 gotowe @ `8a127f97`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #611:** rebase po #613 (stare 0324/0325 pominięte); migracja **0325** — allowlista preview + `import_schedule`/`schedule_row_canon` bez WT→plik; testy A6/#583/#594/#611; import **365**. PR #612.
+
+## 2026-10-28 17:10 — #612: poprawka 0325 (DO $g$)
+
+- Skrzynka: #613 SCALONE (odbiór SELECT po deploy — koordynator); #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
+- Scalanie: #612 — brak „F7: gotowe” po `186bf171`; CI db FAIL (migracja 0325). Bez push na main.
+- **Krok:** `0325` — domknięcie `DO $g$` (`END IF; END $g$;`) przed `commit` (GRANT service_role). Unit/visual ✔ na poprzednim SHA; db po push.
+
+## 2026-10-28 17:55 — #612 F7 r3: Edge Deno + testy kierunku
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 — brak „F7: gotowe”; CI na `b657730c`: unit/visual ✔, **db FAIL** import 345/365 (B1/`carrier_order_no`) + dec-auto 82/83. Bez push na main.
+- **Krok F7 r3:**
+  1. Edge `scheduleParse` — importy Deno (`npm:zod@3`, `.ts`, `formatPl.ts`); ciało = front.
+  2. Testy A6 B1/#569: konflikt = `load_date` (oba kierunki); #583 wymiary z WT; #594 HHL bez numerów / widzi datę; P1 WT→plik → publish null + P1c filtr; D6 na `load_date`; dec-auto → `l1b_note_file_changed`.
+  3. import EXPECTED **366**. CI po push → prośba o F7.
+
+## 2026-10-28 18:00 — #612 F7 r4: importColumnMap.ts
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 — F7 r4: jedna linia Deno; brak „F7: gotowe” do zielonego CI. Jedyny otwarty PR. Bez push na main.
+- **Krok:** `supabase/functions/_shared/ksh/scheduleParse.ts:139` — `from './importColumnMap.ts'` (jak main). import **366**. CI po push → F7: gotowe.
+
+## 2026-10-28 18:20 — #612 CI db: import 364/366 → poprawka testów
+
+- Skrzynka: #611 `pilne` W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych.
+- Scalanie: #612 — brak „F7: gotowe”; CI `f6ae3f07` unit/visual ✔, **db FAIL** import 364/366. Bez push na main.
+- **Krok:**
+  1. `#567 23B pending_write false` — przed asercją `delete` pending z A6 + ponowny `preview_store`.
+  2. `#583 tablice w kodach` — pełny wiersz jak `r583_file_sql` (bez leave_empty → false changed) + drugi kod z inną tablicą.
+  3. import EXPECTED **366**. CI po push → prośba o F7.
