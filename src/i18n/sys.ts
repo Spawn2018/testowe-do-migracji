@@ -39,6 +39,7 @@ const PL: Record<string, string> = {
   sys_checked: 'Sprawdzone {t}: {state}',
   sys_other: 'Pozostałe zadania · {n}',
   sys_other_note: 'Zadania bez wpływu na dane na ekranach. Stan liczony tak samo.',
+  sys_other_stale: 'brak przebiegu > 26 h',
   sys_thr_h: 'Progi „Nie działa”',
   sys_thr_note: 'Dane starsze niż próg albo 5 nieudanych prób z rzędu — „Nie działa”. Jedna sprawa na źródło, zamknięcie po 15\u00a0min poprawnej pracy. Alarm: Administratorzy HHL, e-mail i push, przypomnienie po 2\u00a0h, „Wróciło” przy zamknięciu.',
   sys_thr_SRC_TELEMATICS_MIN: 'Telematyka naczep',

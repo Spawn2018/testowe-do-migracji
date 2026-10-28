@@ -77,6 +77,8 @@ describe('Stan systemu — „Źródła danych” z integration_runs', () => {
     const stale = liveOtherJobs('pl', [run('security-advisor-snapshot', 27 * 60), run('security-advisor-snapshot-edge', 27 * 60)], NOW);
     expect(stale.map((j) => j.state)).toEqual(['down', 'down']);
     expect(stale[0].lastAt).toBe(run('security-advisor-snapshot', 27 * 60).ran_at);
+    expect(stale[0].why).toBe('stale');
+    expect(fresh[0].why).toBeUndefined();
     /* inne zadania bez progu — stary udany przebieg nadal „działa” */
     expect(liveOtherJobs('pl', [run('rodo', 5 * 24 * 60)], NOW)[0].state).toBe('ok');
   });

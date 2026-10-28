@@ -129,7 +129,6 @@ export function liveSourceRows(locale: Locale, runs: readonly RunRow[], devices:
   return rows;
 }
 
-/** „Pozostałe zadania”: ostatni przebieg i stan każdego zadania pomocniczego. */
 /**
  * #588 (F7 r1 #609): zadania dzienne, których brak przebiegu też jest awarią — gdy Edge w ogóle nie odpowie, nie powstaje
  * żaden wiersz, a ostatni (wczorajszy) „OK” wisiałby bez końca. Po progu (minuty) bez nowego przebiegu stan = „nie działa”.
@@ -139,6 +138,7 @@ export const LIVE_OTHER_STALE_MIN: Partial<Record<(typeof LIVE_OTHER_JOBS)[numbe
   'security-advisor-snapshot-edge': 26 * 60,
 };
 
+/** „Pozostałe zadania”: ostatni przebieg i stan każdego zadania pomocniczego. */
 export function liveOtherJobs(locale: Locale, runs: readonly RunRow[], nowIso?: string): OtherJob[] {
   const now = nowIso ? Date.parse(nowIso) : Date.now();
   return LIVE_OTHER_JOBS.flatMap((job) => {
@@ -149,7 +149,7 @@ export function liveOtherJobs(locale: Locale, runs: readonly RunRow[], nowIso?: 
     const staleMin = LIVE_OTHER_STALE_MIN[job];
     const last = Date.parse(rs[0].ran_at);
     const stale = staleMin != null && Number.isFinite(last) && Number.isFinite(now) && now - last > staleMin * 60_000;
-    return [{ id: job, name, lastAt: rs.find((r) => r.ok)?.ran_at ?? null, state: rs[0].ok && !stale ? 'ok' as const : 'down' as const }];
+    return [{ id: job, name, lastAt: rs.find((r) => r.ok)?.ran_at ?? null, state: rs[0].ok && !stale ? 'ok' as const : 'down' as const, ...(rs[0].ok && stale ? { why: 'stale' as const } : {}) }];
   });
 }
 

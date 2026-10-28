@@ -31,7 +31,8 @@ export type SourceRow = {
   canCheck: boolean;
 };
 
-export type OtherJob = { id: string; name: string; lastAt: string | null; state: SourceState };
+/** `why: 'stale'` — brak nowego przebiegu dłużej niż próg zadania (#588), nie błąd ostatniego przebiegu. */
+export type OtherJob = { id: string; name: string; lastAt: string | null; state: SourceState; why?: 'stale' };
 
 export type CheckResult = { at: string; state: SourceState; text: string | null };
 
