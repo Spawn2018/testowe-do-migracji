@@ -6152,3 +6152,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#601/#594** — F7 „gotowe do scalenia” na `da399f83` (23:53Z, po ostatnim commitcie) + CI unit/db/visual ✔ → `gh pr merge --merge` → `ecbae548`. Bez push na main.
 - **Krok (#581 / #598):** merge `origin/main` (konflikty PLAN/POSTEP); migracja `0317_581_…` → **`0319_581_…`** (0317 zajęte przez #596). Następny: F7 r1 POPRAWKI (p4k seed STEGRA, duplikaty ts, idempotencja, integration_runs, trasy konfiguracyjne).
 
+## 2026-10-28 01:20 — #581/#598 F7 r1 poprawki (0319 + p4k)
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe” (ten PR = poprawki).
+- CI na `e707c789`: unit/visual ✔; db FAIL — p4k 4/15 + import strażnik REMOVED (`eta_rebuild` bez REMOVED).
+- **Krok F7 r1 (Spawn2018 na #598):**
+  1. seed `STEGRA`/`STEGRA_BODEN`, asercje load=1 / geofences=4, bez nakładania `ts` positions;
+  2. `eta_route_segments` + `CROSSING_GDN_NYN`/`CROSSING_GDY_KAA`; luka/pokrycie tylko PL/SE; km/tempo NULL na PORT/CROSSING;
+  3. idempotencja: kasuj auto-p4k; ręczne exclude zostaje; unique `(load_id,corridor)` gdzie p4k;
+  4. `integration_runs` w `trg_h4_eta_observation` po wycofaniu podtransakcji;
+  5. rebuild: `p_since` (30 dni), `CANCELLED`+`REMOVED`; indeksy `detached_load_id`;
+  6. dedup GPS / skoki >150 km/h / luki brzegowe / ostatni EXIT / `search_path=public,pg_temp`.
+- Suite `p4k` EXPECTED **31**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
+
