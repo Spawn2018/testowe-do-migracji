@@ -6456,3 +6456,38 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   2. B2 `ksh_sync_outbound_wt_diff` + `apply_sent` — `dr`/`ph`/`tr`/`tl`; test rev mismatch → pending DriverB.
   3. Drobne: kolejka po złożonym `ksh_file_ab`; OTHER z „+”; `begin`/`commit`; wczesne wyjście; testy SE-only / no-op / PL+48.
   4. PLAN §4/#597 + §5 W62 + §8; import EXPECTED **376**.
+
+## 2026-10-28 20:15 — #597 SCALONE; start #603
+
+- Skrzynka: #597 zamknięte (SCALONE); #608 w kolejce; #550 **WSTRZYMANE**; #603 W TOKU. Bez nowych `dla-cursora` do budowy.
+- Scalanie: #615 → `b34d807c` (F7 gotowe @ `3c6e7d52`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #603:** migracja **0327** — APPLY zamyka `ETA_CALIBRATION_APPROVAL`; `max_change_pct` w audycie; macierz+`notify_person_on` `eta_calib` (HHL_OPS off); `labels` + summary z przecinkiem; p4k **78**. Gałąź `pakiet/603-eta-calib-apply-notify`.
+
+## 2026-10-28 20:45 — #616 F7 r1 POPRAWKI (#603 / 0327)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne` do budowy. Bez F7 „gotowe” do scalenia.
+- CI #616 @ `3c856974`: unit/db/visual ✔; F7 r1 **POPRAWKI** (nie scalać).
+- **Krok:** F7 r1 w **0327** + `p4k.sh`:
+  - B1: `notify_channel_allowed(…,'bell')` zamiast `notify_person_on(…,'IN_APP')`; test admin `bell=false` → 0.
+  - B2: `delete` wiersza HHL_OPS z macierzy `eta_calib`; insert tylko `HHL_ADMIN`; test OPS `bell=true` → 0.
+  - B3: asercja `count=1` RESOLVED + `resolved_by` + 1× `decision_events` + inna wersja zostaje NEW.
+  - D1: `resolution_note` auto≠ekran; `audit_log DECISION_RESOLVE`; D2 audyt APPLY ręczny; D5 max_change ujednolicony; D7 labels=label.
+  - D3 front → koordynator; D6 odnotowane (brak starych na prod).
+  - p4k EXPECTED **84**. Push → CI `p4k` → prośba o F7 r2.
+
+## 2026-10-28 20:55 — #617 SCALONE; #616 F7 r2 POPRAWKI (#603)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #617 → `7027bd1c` (F7 gotowe @ `c8eb7b8e`, CI unit/visual ✔) — D3 front labels. Bez push na main.
+- CI #616 @ `0d653b0c`: unit ✔; db **FAIL** p4k 83/84 (`resolved_by` = auth_id); F7 r2 **POPRAWKI**.
+- **Krok F7 r2:**
+  - T1: `user_notify_pref` / `notifications.user_id` / `resolved_by` → `(select id from app_users where auth_id=…)`; B1+ `applied` + drugi HHL_ADMIN bez prefu → 1.
+  - D5: `pending` + `internal` — `coalesce(spread,0)` jak 0320 (NULL→N do decyzji).
+  - p4k EXPECTED **86**. Push → CI `p4k` → prośba o F7 r3.
+
+## 2026-10-28 21:20 — #616 CI FAIL B2 propose (Ś3 / optout-bell)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`. Brak F7 „gotowe” po ostatnim commicie.
+- CI #616 @ `6bf9b378`: unit ✔; visual ✔ (części); db **FAIL** p4k 83/86 — B2 propose/`rejected_at`/applied (NO_CHANGE).
+- **Przyczyna:** B1+ stosuje `p4k-optout-bell` → note `…; auto-applied`; cleanup nie starzał wersji → Ś3 pomija PL_ROAD → `eta_propose_calibration` = NO_CHANGE.
+- **Krok:** cleanup — `created_at`/`undone_at` −8 d dla optout-bell + reset PL_ROAD; przed B2 propose starzej wszystkie `auto-applied` <7 d. p4k **86**. Push → CI `p4k` → F7 r3.
