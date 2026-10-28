@@ -9,9 +9,12 @@ describe('#622: pole naczepy — jeden numer', () => {
     }
   });
   it('jeden numer (ze spacją w środku albo myślnikiem bez spacji) i puste → bez ostrzeżenia', () => {
-    for (const v of ['ABC 12345', 'ABC12345', 'B-AB 123', 'PO 8T201', '', '  ', null, undefined]) {
+    for (const v of ['ABC 12345', 'ABC12345', 'B-AB 123', 'PO 8T201', '12-ABC-3', 'KL-AB 123', '', '  ', null, undefined]) {
       expect(trailerHasManyPlates(v), String(v)).toBe(false);
     }
+  });
+  it('ograniczenie (świadome): dwa numery oddzielone samą spacją nie są rozpoznawane — spacja bywa wewnątrz numeru', () => {
+    expect(trailerHasManyPlates('ABC12345 XYZ45A')).toBe(false);
   });
   it('tekst ostrzeżenia po polsku', () => {
     expect(pt('pl', 'p7_m_trailer_many')).toMatch(/jeden numer naczepy/);

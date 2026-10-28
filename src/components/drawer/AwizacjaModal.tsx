@@ -270,9 +270,9 @@ export function AwizacjaModal({ load, onClose }: Props) {
 
           <label className="form-field am-f">
             <span>{pt(locale, 'p7_m_trailer')}</span>
-            <input className={`input mono${trailerPlate.trim() ? '' : ' am-need'}`} list="awiz-trailers" value={trailerPlate} onChange={(e) => setTrailerPlate(e.target.value)} autoComplete="off" />
+            <input className={`input mono${trailerPlate.trim() ? '' : ' am-need'}`} list="awiz-trailers" value={trailerPlate} onChange={(e) => setTrailerPlate(e.target.value)} autoComplete="off" aria-describedby={trailerHasManyPlates(trailerPlate) ? 'awiz-trailer-many' : undefined} />
             <datalist id="awiz-trailers">{trailerHints.map((h) => <option key={h} value={h} />)}</datalist>
-            {trailerHasManyPlates(trailerPlate) ? <small className="am-warn" role="status" data-awiz-trailer-many>{pt(locale, 'p7_m_trailer_many')}</small> : null}
+            {trailerHasManyPlates(trailerPlate) ? <small id="awiz-trailer-many" className="am-warn" role="status" data-awiz-trailer-many>{pt(locale, 'p7_m_trailer_many')}</small> : null}
           </label>
 
           <label className="am-check" data-c-sep-swap>
