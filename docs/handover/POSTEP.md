@@ -6217,3 +6217,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyna:** (1) `v_after ? o.corridor` w SQL ze zmienną PL/pgSQL → `$1 ?` psuje plan SPI; (2) `INTO v_skip_codes` przy 0 undone → NULL (odfiltrowanie for); (3) GPS cz.1 z `p4k=true` mieszał się z fixture kalibracji.
 - **Krok:** 0320 — `jsonb_exists`, skip przez podzapytanie+coalesce; p4k.sh — zdejmij `p4k` z GPS 581 przed propose. Push → CI; po zielonym — prośba o F7.
 
+## 2026-10-28 05:10 — #604 F7 r2 POPRAWKI (B7 + ADMIN + Ś1 silnik)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (F7 r2: nie scalać; CI db na `998afc07` FAIL p4k 51/2 — `percentile_cont` na `timestamptz`).
+- **Krok F7 r2 (0320 + p4k + allowlist/nullguard):**
+  - **B7:** fit/test per kod (`row_number` 70/30); mediana z fit; błąd tylko z test; bez `percentile_cont(timestamptz)`
+  - **notify:** przywrócone `DOC_MISSING`/`CMR_MISSING` → `cmr`
+  - **B4:** `decider_role=ADMIN`; `decision_open_from_event`/`l13` HHL-only; `rejected_at` + REJECT
+  - **Ś1:** `eta_record`/`compute_load_eta`/`apply_geofence` ze słownika; RPC `eta_route_dict_upsert`
+  - **Ś2–Ś5/Ś3:** FK NOT VALID; `gps_quality` PL/SE; M obs także po auto; bez haczyka `p4k-test%`
+  - payload AUTO: `title`/`summary`/`undo_version`; `ETA_CALIB_BUSY`; clamp spread tylko nowe
+  - suite `p4k` **60**, nullguard **880**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+

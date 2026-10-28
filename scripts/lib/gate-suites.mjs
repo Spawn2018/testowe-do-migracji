@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 359, // #594 F7 r2: +7 (B3 cancel×3, P1 skip×4); było 352
-  nullguard: 875, // #581 cz.2: +GUARD eta_calibration_undo (5 ról); było 870 (#594)
+  nullguard: 880, // #581 F7 r2: +GUARD eta_route_dict_upsert (5 ról); było 875
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -47,7 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 8,
   bmapa: 168, // #572 F7 r6b: +2 asercje load istnieje (hhl/carrier_order_no); było 166
   h4: 19,
-  p4k: 53, // #581 F7 r1 #604: +Ś1/B3/B4/B5/Ś8/D8/tick; było 45
+  p4k: 60, // #581 F7 r2 #604: +title/ADMIN/BACKTEST/dict/tick-runs; było 53
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
