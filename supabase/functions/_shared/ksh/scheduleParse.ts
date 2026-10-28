@@ -20,10 +20,10 @@
  *    nie naprawiany zgadywaniem.
  */
 
-import { z } from 'npm:zod@3';
-import { toNationalPhone } from './phoneNational.ts';
-import { formatPlNumber } from './formatPl.ts';
-export { standardSkipMessage } from './standardSkipMessage.ts';
+import { z } from 'zod';
+import { toNationalPhone } from './phoneNational';
+import { formatPlNumber } from './format';
+export { standardSkipMessage } from './standardSkipMessage';
 
 /* --------------------------------------------------------------- */
 /* Parsowanie wartości w formacie polskim                           */
@@ -89,7 +89,6 @@ export function parseTime(v: unknown): string | null {
 export function normalizePhone(v: unknown, defaultCountry: 'PL' | 'SE' = 'PL'): string | null {
   if (v == null || v === '') return null;
   // Excel często daje liczbę — SE 070… traciłoby zero; trzymamy jako tekst gdy string.
-  // #611: telefon tylko WT→plik — import nie zapisuje; ostrzeżenie o liczbie jest po stronie parseSchedule (front).
   const raw = typeof v === 'number' ? String(Math.trunc(v)) : String(v);
   const { national } = toNationalPhone(raw, defaultCountry);
   return national || null;
@@ -137,7 +136,7 @@ export function isHhCarrier(v: unknown): boolean {
 /* --------------------------------------------------------------- */
 
 // D15: stała w lekkim module (widok harmonogramu nie ładuje zod przy starcie).
-import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
+import { COLUMN_MAP_DEFAULT } from './importColumnMap';
 export { COLUMN_MAP_DEFAULT };
 
 export type ColumnMap = Record<keyof typeof COLUMN_MAP_DEFAULT, string>;
