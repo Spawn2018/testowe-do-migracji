@@ -6181,5 +6181,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - auto-apply ≤15 % + powiadomienie IN_APP `ETA_CALIBRATION_AUTO` + audyt „automat kalibracji” (27A); >15 % czeka;
   - `eta_calibration_undo` (HHL_ADMIN); zamrożenie wstrzymuje;
   - cron `tower-eta-calibration` co 1 h → `eta_calibration_tick` (rebuild 48 h + propose + auto);
-  - suite `p4k` **45**; nullguard **871**.
+  - suite `p4k` **45**; nullguard **875**.
+
+## 2026-10-28 03:45 — #604/#581 cz.2 CI fix (format / B5 / nullguard)
+
+- Skrzynka: #550 WSTRZYMANE; #583 zamknięte (SCALONE #586); #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe”.
+- CI `d24df599` db FAIL: p4k 43/2 (`format('%.1f')` nielegalne w PG → propose); security B5 (undo bez `assert_not_preview`); nullguard 875≠871.
+- **Krok:** 0320 — `format(%s)` + assert w undo/apply; EXPECTED nullguard **875**. Push → CI; po zielonym — F7: gotowe do scalenia.
 

@@ -128,7 +128,11 @@ begin
     null, v_before, v_after, v_n,
     round(v_err_before, 2), round(v_err_after, 2),
     false, false,
-    format('propozycja ciągła #581; max_chg=%.1f%%; kody=%s', v_max_chg * 100.0, v_n_codes)
+    format(
+      'propozycja ciągła #581; max_chg=%s%%; kody=%s',
+      round(v_max_chg * 100.0, 1)::text,
+      v_n_codes
+    )
   )
   returning id into v_id;
 
@@ -196,7 +200,8 @@ begin
       v_max_chg := greatest(v_max_chg, v_chg);
     end loop;
     if v_max_chg > 0.15 then
-      raise exception 'AUTO_NEEDS_APPROVAL: zmiana %.1f%% > 15%%', v_max_chg * 100.0;
+      raise exception 'AUTO_NEEDS_APPROVAL: zmiana % %% > 15%%',
+        round(v_max_chg * 100.0, 1)::text;
     end if;
     if v.error_after_min is not null
        and v.error_before_min is not null
@@ -258,6 +263,7 @@ create or replace function public.apply_eta_calibration_version(p_version bigint
 returns boolean
 language plpgsql security definer set search_path = public, pg_temp as $$
 begin
+  perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'wyłącznie HHL_ADMIN';
   end if;
@@ -364,6 +370,7 @@ declare
   v_frozen numeric;
   k text; h numeric; sp numeric;
 begin
+  perform public.assert_not_preview();
   if (current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'wyłącznie HHL_ADMIN';
   end if;
