@@ -388,7 +388,7 @@ Po zamknięciu P4, przed P3-d (D-20261015-0300-01 C, D-20261015-0330-01, D-20261
 - **C17** ✅ (D-20261015-2110-01, BLOKER): PR #235 → `e7595541` / `dpl_HRCPmDoD3Ghiumi6tXDkaxcSzRfs` (0220); 15048 READY_TO_INVOICE, 15060 INVOICED, 0× UNLOADED.
 - **C16-H** ✅ (D-20261016-0100-01, BLOKER): PR #238 → `8bae03be` (0221); `send-notifications` v26; `APP_URL=https://tower.log-mar.pl`; tick starych WEB_PUSH = 0.
 - **C3** ✅ macierz powiadomień po zdarzeniu; **poprawki C3-p** w Naprawach audytu 17.10 (nie 5 grup); jeśli `LOAD_STATUS × HHL_ADMIN` `email=true` → `false` (W39); **+ Cz13** (D-20261016-0310-01): wiersz „Wiadomość w czacie” — dzwonek i telefon włączone dla 5 rodzajów kont, e-mail wyłączony, wyjątek od C1 pkt 4; odbiorcy z `visible_to`, bez autora; **+ Cz25** (D-20261016-0315-01): odbiorców zawęża zawsze `visible_to`; ustawienie macierzy nie da KSH rozmów „tylko HHL i SCX”; **+ wartości startowe (D-20261016-0330-01 pkt 5):** wiersz „Nowa wiadomość w czacie” — dzwonek i telefon dla 5 rodzajów kont, bez e-maila; opis „tylko do firm, które widzą wiadomość · „tylko HHL i SCX” nigdy do KSH, niezależnie od ustawień”. **NA PRODUKCJI 17.10.2026 00:34** — scalenie `2938ae96` (PR #273), migracja 0222, `send-notifications`, wdrożenie `dpl_4iugo2qyvCYt9gNgHUpmjjH3hivi` (`index-B_buB0CA.js`). Bieżąca produkcja po #274: `7db7282f` / `dpl_CaHR42SHedxQesLr1Q6W6hXPusA1` (`index-Bv_J4hjW.js`).
-- **C4** ⏳ W TOKU (`pakiet/C4-old-value`, migracja **0321**): ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk usunięte z przeglądarki (macierz + `my_notify`).
+- **C4** ✅ SCALONE (`7995ee95` / PR #606 / **0321**, 28.10.2026 09:24Z): ustawienia z „było → jest” (`old_value`); alerty stref/ryzyk usunięte z przeglądarki (macierz + `my_notify`).
 - **C5** nazwa transportu w funkcjach bazy = `shipment_code` / `transport_label`; KSH bez numeru zlecenia.
 - **C6** teksty spraw z serwera (E21): daty, pogoda, AUTO_STATUS bez UUID.
 - **C7** role E9 w bazie; zestaw `e9-role`.
@@ -1079,11 +1079,19 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### P4-k · #581 Kalibracja ETA ciągła — SCALONE (cz.1 `3f82cb09` / PR #598 / **0319**; cz.2 `a7ecb48b` / PR #604 / **0320**, 28.10.2026 07:52Z; decyzja 27A)
 Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r8:** Δ `spread_pct` w punktach procentowych / 100 (#605; 15→10 = 0,05 auto; 15→40 = 0,25 → HHL); B2 z `spread_pct=15` (płaskie → clamp 10, Δ 5 pp); test `spread 15→40 pp: NEEDS_APPROVAL`. suite `p4k` **73**, nullguard **880**. **Zamierzone (F7 r6):** `BACKUP_FAILED` z `decider_role=ADMIN` — HHL_OPS bez DECISION_OPEN/e-mail. Ekran — koordynator `wyglad/`. Po wdrożeniu: rebuild pomiarów (#603), cron + pierwszy tick.
 
-### C4 · Ustawienia „było → jest” + alerty — W TOKU (`pakiet/C4-old-value`, migracja **0321**; D-20261015-0300-01)
+### C4 · Ustawienia „było → jest” + alerty — SCALONE (`7995ee95` / PR #606 / **0321**, 28.10.2026 09:24Z; D-20261015-0300-01)
 Źródło: PLAN Poprawki P2–P3 C4; po A6 / P4-k. `admin_ops_threshold_set` → `old_value`/`new_value` (`value`); bez audytu przy braku zmiany. Macierz / security_flag / cennik / SEFS / `my_notify` już miały `old_value`. Alerty stref/ryzyk/workflow: usunięte z `notificationPrefs` w store (zostaje macierz + `my_notify` / `bellOffForPerson`); w przeglądarce tylko motyw i waluta. dec6 **27** (+2). Próba R-3 na TEST — wpis przy odbiorze C4 (równolegle).
 
+### #588 · Brama bezpieczeństwa 28.10 20:00 — W TOKU (`pakiet/588-brama-bezpieczenstwa`, migracja **0322**; po C4, przed C5 / BN / #597)
+Źródło: #588 (Spawn2018; komentarz 28.10 08:02 — pierwszeństwo po #606). Zakres do 20:00:
+1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`).
+2. **C11** — test Auth na TEST (hasło ≥ 12, litery+cyfry; Waluta EUR przy pierwszym logowaniu).
+3. **C9** — testy E19 pkt 6 w `security.sh` (Przeczytali, anon, `v_load_price_client`, …).
+4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; co nie wejdzie do 20:00 → nowy termin w komentarzu #588 do 18:00.
+security **464** (+5). Po 0322: C11 → C9 → OWASP.
+
 ### C4–C13 bez zmian zakresu
-Zostają jak w planie, po A6 / #569 / #567 23B / #563. **C4** — W TOKU powyżej.
+Zostają jak w planie, po A6 / #569 / #567 23B / #563. **C4** — SCALONE powyżej. **#588** przerywa kolejkę C5–C13 do 20:00 (brama bezpieczeństwa).
 - C11 = hasło min. 12 znaków **z literami i cyframi**. Widok — #291 (`passwordOk`, `pwCheck`, jeden komunikat). Auth — W1 (właściciel 17.10.2026, 07:28). Ty tylko test na TEST: „111111111111” i „ąęśćżźółń1234” → odmowa z serwera; „Haslo-testowe-12” → przyjęte. Gdy serwer przyjmie hasło bez litery a–z albo bez cyfry — sygnał „C11 — Auth”.
 
 Także (D-20261017-0730-01 §4, nie wygląd):
@@ -1870,3 +1878,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 09:05 | #604 F7 r8: Δspread w pp/100 (#605); p4k **73**; push `41cc7c93` | pętla |
 | 28.10.2026 09:35 | #604 CI unit/visual/db ✔ `41cc7c93` — prośba o F7: gotowe do scalenia (cz.2 / 0320) | pętla |
 | 28.10.2026 08:52 | #604/#581 cz.2 SCALONE (`a7ecb48b`, F7 gotowe `bf76504c`); start C4 **0321** (old_value progów + usunięcie alertów lokalnych) | pętla |
+| 28.10.2026 09:07 | #607 wygląd kalibracji ETA SCALONE (`b8675d2f`, F7 gotowe `f351dc88`) | pętla |
+| 28.10.2026 09:24 | #606/C4 SCALONE (`7995ee95`, F7 gotowe `a07f650a` / 0321); start **#588** brama bezpieczeństwa (**0322** fałszywy „Brak pomiaru”) | pętla |

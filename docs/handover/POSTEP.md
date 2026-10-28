@@ -6341,3 +6341,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” po `70987410`. Jedyny otwarty PR: #606.
 - CI `70987410`: unit ✔ / visual ✔ / db ✔ (dec6 **27**, security **459**, nullguard **880**); run db `40658778055`, visual `40658778048`.
 - **Krok:** komentarz na #606 — prośba o F7: gotowe do scalenia (C4 / 0321). Bez push na main.
+
+## 2026-10-28 10:30 — #607+#606 SCALONE; start #588 (0322 advisor phase)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. #588 (Spawn2018, bez etykiety `dla-cursora`, polecenie w komentarzu + F7 #606) — pierwszeństwo po C4.
+- Scalanie: #607 `b8675d2f` (F7 gotowe `f351dc88`, unit/visual ✔); #606 `7995ee95` (F7 gotowe `a07f650a` po docs, CI unit/visual/db ✔). Bez push na main.
+- **#588 diagnoza `security-advisor-snapshot`:** Edge + token OK (ręczne wywołanie: migawka **19**, 220 zgłoszeń, `advisor_ok=true`). Fałszywy „Brak pomiaru”: cron `capture(phase=flags)` bez `advisor_ok` → `v_ok=false` → `integration_runs` ok=false **przed** Edge; Edge potem zapisuje `-edge` ok=true. Od ~18.10 codziennie para: job bazy `Brak pomiaru` + edge OK.
+- **Krok:** migracja **0322** — `phase=flags` bez wpisu przebiegu; `set_findings` dopisuje wynik `security-advisor-snapshot`. security **464** (+5). Dalej w #588: C11 test Auth, C9 E19, OWASP wycinek — status do 18:00 na #588.

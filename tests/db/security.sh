@@ -1519,5 +1519,27 @@ chk6 "B9: audit_log AUDYT17_B9_LOCALE ma users_pairs" "$(sys "select (new_value 
   from audit_log where action='AUDYT17_B9_LOCALE' and entity_id='b9-0302'
   order by id desc limit 1" | tail -1)" "true"
 
+# --- #588 (0322): cron phase=flags bez fałszywego „Brak pomiaru”; wynik po set_findings ---
+SID588=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+chk6 "#588: phase=flags bez integration_runs" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588" | tail -1)" "0"
+sys "select security_advisor_snapshot_set_findings($SID588,
+  jsonb_build_array(jsonb_build_object('lint','test','level','INFO','object','public.x','detail','t')),
+  jsonb_build_object('advisor_ok', true))" >/dev/null
+chk6 "#588: set_findings → ok=true" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588
+  order by id desc limit 1" | tail -1)" "true"
+chk6 "#588: set_findings → detail doradca" "$(sys "select result->>'detail' from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588
+  order by id desc limit 1" | tail -1)" "doradca security"
+chk6 "#588: set_findings → source edge na migawce" "$(sys "select source from security_advisor_snapshots where id=$SID588" | tail -1)" "edge"
+# prawdziwy brak pomiaru (bez phase=flags) nadal zapisuje ok=false
+SID588b=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'manual', jsonb_build_object('advisor_ok', false))" | tail -1 | tr -d '\r')
+chk6 "#588: bez phase + advisor_ok=false → Brak pomiaru" "$(sys "select (ok::text || '/' || (result->>'detail'))
+  from integration_runs where job='security-advisor-snapshot'
+    and (result->>'snapshot_id')::bigint = $SID588b
+  order by id desc limit 1" | tail -1)" "false/Brak pomiaru"
+sys "delete from security_advisor_snapshots where id in ($SID588, $SID588b)"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
