@@ -6165,3 +6165,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   6. dedup GPS / skoki >150 km/h / luki brzegowe / ostatni EXIT / `search_path=public,pg_temp`.
 - Suite `p4k` EXPECTED **31**. Push → CI; po zielonym — prośba o F7: gotowe do scalenia.
 
+## 2026-10-28 02:50 — #598 db FAIL i2 (parametry odcinków) → fix
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych. Brak F7 „gotowe”.
+- CI `279731b6`: unit/visual ✔; **db FAIL** — i2 668/3 (parametry odcinków 9→11 po `CROSSING_GDN_NYN`/`CROSSING_GDY_KAA`); p4k **31**/31, h4 19/19.
+- **Krok:** `tests/db/i2.sh` — count/string_agg = 11 + nowe kody przepraw (EXPECTED i2 **671** bez zmiany). Push → CI; po zielonym — F7: gotowe do scalenia.
+
