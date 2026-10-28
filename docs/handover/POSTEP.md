@@ -6558,3 +6558,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. Testy: actual+delayed→BRAK; D1 EXIT=ENTER; D3 bez PIN EXIT po SITE; `port_out_src` na CROSSING.
   4. PLAN: kalibracja nie czyta `port_out_src` (SAILING_DELAYED = jak EVENT do przeglądu po danych).
   5. p4k **98**. Rebuild 05.10 wstrzymany. Push → CI → F7.
+
+## 2026-10-29 00:45 — #619 CI db: EXPECTED p4k 94→98
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: F7 „gotowe” @ `2c564470` unieważnione nowym `5b330fd5` (#624 wchłonięte w #619 zamiast osobnego PR). Brak „F7: gotowe” po HEAD. Bez push na main.
+- CI @ `5b330fd5`: unit ✔; visual ✔; db **FAIL** — `p4k: oczekiwano 94/94, jest: 98 OK, 0 FAIL` (same asercje, brak `EXPECTED`).
+- **Krok:** `gate-suites.mjs` p4k **98**; PLAN: #624 w #619. Push → CI → F7.
