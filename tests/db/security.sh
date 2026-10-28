@@ -1566,15 +1566,16 @@ chk6 "#588: F7 M1 authenticated bez EXECUTE set_findings" "$(sys "select has_fun
   'authenticated', 'public.security_advisor_snapshot_set_findings(bigint,jsonb,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
 chk6 "#588: F7 M1 authenticated bez EXECUTE capture" "$(sys "select has_function_privilege(
   'authenticated', 'public.security_advisor_snapshot_capture(jsonb,text,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
-# B1c: watchdog 26 h bez sukcesu → ryzyko (armed_from 18.10; risks.sh na 01.10 = OKRES_STARTOWY)
+# B1c: watchdog 26 h bez sukcesu → ryzyko (armed_from 18.10; risks.sh na 01.10 = OKRES_STARTOWY).
+# Najpierw usuń przebiegi z tego bloku (#588 set_findings ok=true zasłania ciszę przy p_now≈now()).
+sys "delete from integration_runs where job='security-advisor-snapshot'
+  and result->>'snapshot_id' in ('$SID588','$SID588b','$SID588c','$SID588d','$SID588e','$SID588f')" >/dev/null
 sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
 sys "select job_watchdog(timestamptz '2026-10-28 12:00+02')" >/dev/null
 chk6 "#588: F7 B1c watchdog 26h → JOB_FAILURE security-advisor" "$(sys "select count(*)::text from risk_signals
   where kind='JOB_FAILURE' and resolved_at is null
     and detail->>'job'='security-advisor-snapshot'" | tail -1)" "$(sys "select count(*)::text from projects" | tail -1)"
-# M2: sprzątanie testu
-sys "delete from integration_runs where job='security-advisor-snapshot'
-  and result->>'snapshot_id' in ('$SID588','$SID588b','$SID588c','$SID588d','$SID588e','$SID588f')" >/dev/null
+# M2: sprzątanie migawek i ryzyk
 sys "delete from security_advisor_snapshots where id in ($SID588,$SID588b,$SID588c,$SID588d,$SID588e,$SID588f)" >/dev/null
 sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
 

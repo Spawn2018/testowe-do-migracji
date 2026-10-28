@@ -6352,5 +6352,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 ## 2026-10-28 11:50 — #608 w planie; #609 F7 r1 poprawki 0322
 
 - Skrzynka \dla-cursora\: **#608** (Spawn2018) wpisane PLAN §4/§8 — 27B:C obie trasy (po #588+#603), 27C:B nic, 28B:B import KSH wyłączony, 28C:A zapis SharePoint po włączeniu, BN6/#589 odblokowane, kolejność #588→#603→27B→#597→BN1. #550 \pilne\ nadal **WSTRZYMANE**. #538/#537/#500/#499 w planie — bez nowych do budowy teraz.
-- Scalanie: #609 F7 r1 **niegotowe** (B1 cisza gdy Edge nie działa) — bez scalenia. CI poprzedniego SHA c57026d\ unit/visual/db ✔.
-- **Krok #588 / F7 r1:** 0322 — domknięcie szkieletów \phase=flags\; \	ick\ bez sekretów/pg_net → ok=false; \job_watchdog\ + security-advisor-snapshot 26 h (armed 18.10 — risks.sh 01.10 = OKRES_STARTOWY); set_findings idempotencja + source z wiersza + advisor_error; testy security **472** (+8). Dalej po F7: C11 → C9 → OWASP. Bez push na main.
+- Scalanie: #609 F7 r1 **niegotowe** (B1 cisza gdy Edge nie działa) — bez scalenia. CI poprzedniego SHA `ec57026d` unit/visual/db ✔.
+- **Krok #588 / F7 r1:** 0322 — domknięcie szkieletów `phase=flags`; `tick` bez sekretów/pg_net → ok=false; `job_watchdog` + security-advisor-snapshot 26 h (armed 18.10 — risks.sh 01.10 = OKRES_STARTOWY); set_findings idempotencja + source z wiersza + advisor_error; testy security **472** (+8). Dalej po F7: C11 → C9 → OWASP. Bez push na main.
+
+## 2026-10-28 12:25 — #609 CI db czerwone → poprawka B1c + watchdog.sh
+
+- Skrzynka: bez nowych `dla-cursora` (poza już wpisanymi). Scalanie: brak „F7: gotowe” — bez merge. Bez push na main.
+- **CI #609** SHA `80af5858`: unit/visual ✔; db **FAIL** — (1) B1c: `set_findings` ok=true zasłaniał ciszę 26 h → 0 ryzyk; (2) `watchdog.sh` oczekiwanie bez `security-advisor-snapshot=OKRES_STARTOWY` na 01.10.
+- **Krok:** przed B1c kasuj przebiegi bloku #588; `watchdog.sh` + doradca w stringu stanów. security **472**, watchdog **27**. CI security+watchdog. Po zielonym — F7 r2.

@@ -1890,3 +1890,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 09:07 | #607 wygląd kalibracji ETA SCALONE (`b8675d2f`, F7 gotowe `f351dc88`) | pętla |
 | 28.10.2026 09:24 | #606/C4 SCALONE (`7995ee95`, F7 gotowe `a07f650a` / 0321); start **#588** brama bezpieczeństwa (**0322** fałszywy „Brak pomiaru”) | pętla |
 | 28.10.2026 11:50 | #608 decyzje 28.10 wpisane §4 (27B:C, 28B/C, BN6, kolejność po #588); #609 F7 r1 → poprawki B1/M1/M2 w **0322**, security **472** | pętla |
+| 28.10.2026 12:25 | #609 db FAIL po F7 r1: B1c (kasuj przebiegi przed watchdog) + watchdog.sh OKRES_STARTOWY doradcy | pętla |
