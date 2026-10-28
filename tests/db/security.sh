@@ -1520,26 +1520,63 @@ chk6 "B9: audit_log AUDYT17_B9_LOCALE ma users_pairs" "$(sys "select (new_value 
   order by id desc limit 1" | tail -1)" "true"
 
 # --- #588 (0322): cron phase=flags bez fałszywego „Brak pomiaru”; wynik po set_findings ---
+# F7 r1: domknięcie szkieletów, ścieżki błędu, EXECUTE, watchdog 26 h
 SID588=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
 chk6 "#588: phase=flags bez integration_runs" "$(sys "select count(*)::text from integration_runs
-  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588" | tail -1)" "0"
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'" | tail -1)" "0"
 sys "select security_advisor_snapshot_set_findings($SID588,
   jsonb_build_array(jsonb_build_object('lint','test','level','INFO','object','public.x','detail','t')),
   jsonb_build_object('advisor_ok', true))" >/dev/null
 chk6 "#588: set_findings → ok=true" "$(sys "select ok::text from integration_runs
-  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'
   order by id desc limit 1" | tail -1)" "true"
 chk6 "#588: set_findings → detail doradca" "$(sys "select result->>'detail' from integration_runs
-  where job='security-advisor-snapshot' and (result->>'snapshot_id')::bigint = $SID588
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588'
   order by id desc limit 1" | tail -1)" "doradca security"
 chk6 "#588: set_findings → source edge na migawce" "$(sys "select source from security_advisor_snapshots where id=$SID588" | tail -1)" "edge"
 # prawdziwy brak pomiaru (bez phase=flags) nadal zapisuje ok=false
 SID588b=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'manual', jsonb_build_object('advisor_ok', false))" | tail -1 | tr -d '\r')
 chk6 "#588: bez phase + advisor_ok=false → Brak pomiaru" "$(sys "select (ok::text || '/' || (result->>'detail'))
   from integration_runs where job='security-advisor-snapshot'
-    and (result->>'snapshot_id')::bigint = $SID588b
+    and (result->>'snapshot_id') = '$SID588b'
   order by id desc limit 1" | tail -1)" "false/Brak pomiaru"
-sys "delete from security_advisor_snapshots where id in ($SID588, $SID588b)"
+# B1: szkielet bez set_findings → kolejny capture(phase=flags) → ok=false dla starego
+SID588c=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+SID588d=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+chk6 "#588: F7 B1 szkielet → kolejny flags zamyka stary ok=false" "$(sys "select (ok::text || '/' || (result->>'detail'))
+  from integration_runs where job='security-advisor-snapshot'
+    and (result->>'snapshot_id') = '$SID588c'
+  order by id desc limit 1" | tail -1)" "false/Brak pomiaru: Edge nie uzupełnił migawki"
+chk6 "#588: F7 B1 bez duplikatu przy drugim flags" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588c'" | tail -1)" "1"
+chk6 "#588: F7 B1 nowy szkielet bez run" "$(sys "select count(*)::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588d'" | tail -1)" "0"
+# M1: ścieżki błędu set_findings + EXECUTE
+SID588e=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+sys "select security_advisor_snapshot_set_findings($SID588e, '[]'::jsonb, '{\"advisor_ok\":false}'::jsonb)" >/dev/null
+chk6 "#588: F7 M1 set_findings advisor_ok=false → ok=false" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588e'
+  order by id desc limit 1" | tail -1)" "false"
+SID588f=$(sys "select security_advisor_snapshot_capture('[]'::jsonb, 'cron', jsonb_build_object('phase','flags'))" | tail -1 | tr -d '\r')
+sys "select security_advisor_snapshot_set_findings($SID588f, '[]'::jsonb, '{}'::jsonb)" >/dev/null
+chk6 "#588: F7 M1 set_findings {} → ok=false" "$(sys "select ok::text from integration_runs
+  where job='security-advisor-snapshot' and (result->>'snapshot_id') = '$SID588f'
+  order by id desc limit 1" | tail -1)" "false"
+chk6 "#588: F7 M1 authenticated bez EXECUTE set_findings" "$(sys "select has_function_privilege(
+  'authenticated', 'public.security_advisor_snapshot_set_findings(bigint,jsonb,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
+chk6 "#588: F7 M1 authenticated bez EXECUTE capture" "$(sys "select has_function_privilege(
+  'authenticated', 'public.security_advisor_snapshot_capture(jsonb,text,jsonb)', 'EXECUTE')::text" | tail -1)" "false"
+# B1c: watchdog 26 h bez sukcesu → ryzyko (armed_from 18.10; risks.sh na 01.10 = OKRES_STARTOWY)
+sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
+sys "select job_watchdog(timestamptz '2026-10-28 12:00+02')" >/dev/null
+chk6 "#588: F7 B1c watchdog 26h → JOB_FAILURE security-advisor" "$(sys "select count(*)::text from risk_signals
+  where kind='JOB_FAILURE' and resolved_at is null
+    and detail->>'job'='security-advisor-snapshot'" | tail -1)" "$(sys "select count(*)::text from projects" | tail -1)"
+# M2: sprzątanie testu
+sys "delete from integration_runs where job='security-advisor-snapshot'
+  and result->>'snapshot_id' in ('$SID588','$SID588b','$SID588c','$SID588d','$SID588e','$SID588f')" >/dev/null
+sys "delete from security_advisor_snapshots where id in ($SID588,$SID588b,$SID588c,$SID588d,$SID588e,$SID588f)" >/dev/null
+sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -1084,11 +1084,20 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 
 ### #588 · Brama bezpieczeństwa 28.10 20:00 — W TOKU (`pakiet/588-brama-bezpieczenstwa`, migracja **0322**; po C4, przed C5 / BN / #597)
 Źródło: #588 (Spawn2018; komentarz 28.10 08:02 — pierwszeństwo po #606). Zakres do 20:00:
-1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`).
+1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`). **F7 r1:** domknięcie szkieletów bez Edge; `tick` przy braku sekretów/pg_net → `ok=false`; `job_watchdog` + `security-advisor-snapshot` 26 h; idempotencja `set_findings`; source z wiersza; `advisor_error` → `result.error`.
 2. **C11** — test Auth na TEST (hasło ≥ 12, litery+cyfry; Waluta EUR przy pierwszym logowaniu).
 3. **C9** — testy E19 pkt 6 w `security.sh` (Przeczytali, anon, `v_load_price_client`, …).
-4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; co nie wejdzie do 20:00 → nowy termin w komentarzu #588 do 18:00.
-security **464** (+5). Po 0322: C11 → C9 → OWASP.
+4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; co nie wejdzie do 20:00 → nowy termin w komentarzu #588 do 18:00 (28D:A — jeśli nie do 20:00, nowa data w #588).
+security **472** (+8 F7 r1). Po 0322: C11 → C9 → OWASP.
+
+### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → **#588** → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
+2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
+3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
+4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
+5. **BN6 / #589 Łotwa** — odblokowane (klucze API/endpointy w sekretach Supabase); w kolejności planu po BN. Sprawdź nazwy sekretów w kodzie, nie wypisuj wartości.
+6. GitHub: „Automatically delete head branches” włączone przez właściciela.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563. **C4** — SCALONE powyżej. **#588** przerywa kolejkę C5–C13 do 20:00 (brama bezpieczeństwa).
@@ -1880,3 +1889,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 08:52 | #604/#581 cz.2 SCALONE (`a7ecb48b`, F7 gotowe `bf76504c`); start C4 **0321** (old_value progów + usunięcie alertów lokalnych) | pętla |
 | 28.10.2026 09:07 | #607 wygląd kalibracji ETA SCALONE (`b8675d2f`, F7 gotowe `f351dc88`) | pętla |
 | 28.10.2026 09:24 | #606/C4 SCALONE (`7995ee95`, F7 gotowe `a07f650a` / 0321); start **#588** brama bezpieczeństwa (**0322** fałszywy „Brak pomiaru”) | pętla |
+| 28.10.2026 11:50 | #608 decyzje 28.10 wpisane §4 (27B:C, 28B/C, BN6, kolejność po #588); #609 F7 r1 → poprawki B1/M1/M2 w **0322**, security **472** | pętla |
