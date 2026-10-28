@@ -6314,3 +6314,30 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: nie (czekam na przegląd F7 r8 i „gotowe” po tym SHA). Jedyny otwarty PR: #604.
 - CI `41cc7c93`: unit ✔ / visual ✔ / db ✔ (p4k **73**, nullguard **880**); run db `40648903813`, visual `40648904042`.
 - **Krok:** komentarz na #604 — prośba o F7: gotowe do scalenia (cz.2 / 0320). Bez push na main.
+
+## 2026-10-28 08:59 � #604 SCALONE; start C4 (0321)
+
+- Skrzynka `dla-cursora`: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie � bez nowych do wpisania.
+- Scalanie: #604 F7 gotowe `bf76504c` (po docs; akceptacja kodu z `41cc7c93`); CI unit/visual/db ?; merge `a7ecb48b` (`gh pr merge --merge`). Bez push na main.
+- **P4-k #581 cz.2** SCALONE � migracja **0320**; deploy-main w toku (`40652927113`). Po wdro�eniu: rebuild pomiar�w (#603), cron + pierwszy tick.
+- **Krok C4:** ga��� `pakiet/C4-old-value`, migracja **0321** � `admin_ops_threshold_set` zapisuje `old_value`/`new_value` (`value`), bez audytu przy braku zmiany; usuni�te `notificationPrefs` (alerty stref/ryzyk/workflow) ze store � zostaje macierz + `my_notify` / `bellOffForPerson`. dec6 EXPECTED **27** (+2). Pr�ba R-3 na TEST � przy odbiorze C4.
+
+## 2026-10-28 09:20 — C4 #606 CI db FAIL → fix assert + dec6
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. Bez `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” (CI db FAIL na `8197251d`). Bez push na main.
+- CI `8197251d`: unit ✔ / visual ✔ / db ✖ — (1) dec6: `::text` → `true` zamiast `t`; (2) security B5: 0321 bez `assert_not_preview` (0300 wstrzykiwał — CREATE OR REPLACE zdejmuje).
+- **Krok:** 0321 + `perform public.assert_not_preview()`; dec6 bez `::text`; push #606.
+
+## 2026-10-28 09:40 — C4 #606 db: assert musi być 1. po begin
+
+- Skrzynka: bez zmian (#550 WSTRZYMANE; #538/#537/#500/#499 w planie).
+- CI `0a48566e`: unit ✔ / visual ✔ / db ✖ — dec6 **27/27**, security nadal B5 strażnik (1): komentarz między `begin` a `perform assert` łamie regex.
+- **Krok:** assert jako pierwsza instrukcja po `begin` (bez komentarza przed); push.
+
+## 2026-10-28 10:00 — C4 #606 CI zielone `70987410` — prośba o F7
+
+- Skrzynka: #550 WSTRZYMANE; #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: brak „F7: gotowe” po `70987410`. Jedyny otwarty PR: #606.
+- CI `70987410`: unit ✔ / visual ✔ / db ✔ (dec6 **27**, security **459**, nullguard **880**); run db `40658778055`, visual `40658778048`.
+- **Krok:** komentarz na #606 — prośba o F7: gotowe do scalenia (C4 / 0321). Bez push na main.
