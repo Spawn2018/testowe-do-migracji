@@ -433,7 +433,11 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
   async function loadPreferences(): Promise<UserPrefsPatch | null> {
     const r = await sb.from('user_preferences').select('display_currency,theme').maybeSingle();
     if (r.error) throw new Error(`user_preferences: ${r.error.message}`);
-    if (!r.data) return null;
+    // C11 (#588): brak wiersza → EUR przy pierwszym logowaniu (wiersz w bazie)
+    if (!r.data) {
+      await savePreferences({ displayCurrency: 'EUR' });
+      return { displayCurrency: 'EUR', theme: null };
+    }
     const d = r.data as { display_currency: string; theme: string | null };
     return {
       displayCurrency: d.display_currency === 'PLN' ? 'PLN' : 'EUR',

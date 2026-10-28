@@ -62,8 +62,8 @@ echo; echo "[7] Podwójne fakturowanie"
 out=$(sys "insert into invoice_lines (invoice_id, load_id, direction) values ('$INVP','$L1','KOSZT')"); echo "$out" | grep -qi "duplicate\|unique" && { ok=$((ok+1)); echo "  OK    ten sam transport dwa razy po stronie kosztu — zablokowane"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
 
 echo; echo "[8] Waluty"
-val "KSH ustawia sobie wyświetlanie w PLN"           $KSH "with i as (insert into user_preferences (user_id, display_currency) select id,'PLN' from app_users where auth_id='$KSH' returning 1) select count(*) from i" 1 commit
-run $HHL "insert into user_preferences (user_id) select id from app_users where auth_id='$HHL'" commit >/dev/null
+# C11/0323: seed ma już user_preferences (EUR) z wyzwalacza — KSH zmienia na PLN
+val "KSH ustawia sobie wyświetlanie w PLN"           $KSH "update user_preferences set display_currency='PLN' where user_id=(select id from app_users where auth_id='$KSH') returning display_currency" PLN commit
 val "KSH widzi wyłącznie własne ustawienia"          $KSH "select count(*) from user_preferences" 1
 err "waluta wyświetlania SEK odrzucona"              $KSH "update user_preferences set display_currency='SEK'" "check constraint"
 out=$(sys "update invoices set currency='SEK' where id='$INVP'"); echo "$out" | grep -qi "check constraint" && { ok=$((ok+1)); echo "  OK    faktura w SEK odrzucona"; } || { fail=$((fail+1)); echo "  FAIL  $out"; }
@@ -1578,6 +1578,23 @@ chk6 "#588: F7 B1c watchdog 26h → JOB_FAILURE security-advisor" "$(sys "select
 # M2: sprzątanie migawek i ryzyk
 sys "delete from security_advisor_snapshots where id in ($SID588,$SID588b,$SID588c,$SID588d,$SID588e,$SID588f)" >/dev/null
 sys "delete from risk_signals where kind='JOB_FAILURE' and detail->>'job'='security-advisor-snapshot'" >/dev/null
+
+# --- #588 / C11 (0323): user_preferences EUR przy pierwszym koncie ---
+chk6 "#588 C11: każdy app_users ma preferencje" "$(sys "select (not exists (
+  select 1 from app_users au left join user_preferences up on up.user_id = au.id
+  where up.user_id is null))::text" | tail -1)" "true"
+chk6 "#588 C11: seed HHL/KSH/SCX mają wiersz prefs" "$(sys "select count(*)::text from user_preferences up
+  join app_users au on au.id = up.user_id
+  where au.auth_id in ('$HHL','$KSH','$SCX')" | tail -1)" "3"
+C11_UID=$(sys "insert into app_users (auth_id, org_id, email, role, active)
+  values ('11111111-0000-0000-0000-00000000c011','00000000-0000-0000-0000-00000000a001','c11-prefs@test','HHL_OPS',true)
+  returning id" | tail -1 | tr -d '\r')
+chk6 "#588 C11: insert app_users → prefs EUR" "$(sys "select display_currency from user_preferences where user_id='$C11_UID'" | tail -1)" "EUR"
+chk6 "#588 C11: authenticated bez EXECUTE trg_app_user_prefs_eur" "$(sys "select has_function_privilege(
+  'authenticated', 'public.trg_app_user_prefs_eur()', 'EXECUTE')::text" | tail -1)" "false"
+chk6 "#588 C11: audit AUDYT17_C11_PREFS" "$(sys "select count(*)::text from audit_log
+  where action='AUDYT17_C11_PREFS' and entity_id='c11-0323'" | tail -1)" "1"
+sys "delete from app_users where id='$C11_UID'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

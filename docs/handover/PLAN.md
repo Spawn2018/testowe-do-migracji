@@ -1082,13 +1082,13 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 ### C4 · Ustawienia „było → jest” + alerty — SCALONE (`7995ee95` / PR #606 / **0321**, 28.10.2026 09:24Z; D-20261015-0300-01)
 Źródło: PLAN Poprawki P2–P3 C4; po A6 / P4-k. `admin_ops_threshold_set` → `old_value`/`new_value` (`value`); bez audytu przy braku zmiany. Macierz / security_flag / cennik / SEFS / `my_notify` już miały `old_value`. Alerty stref/ryzyk/workflow: usunięte z `notificationPrefs` w store (zostaje macierz + `my_notify` / `bellOffForPerson`); w przeglądarce tylko motyw i waluta. dec6 **27** (+2). Próba R-3 na TEST — wpis przy odbiorze C4 (równolegle).
 
-### #588 · Brama bezpieczeństwa 28.10 20:00 — W TOKU (`pakiet/588-brama-bezpieczenstwa`, migracja **0322**; po C4, przed C5 / BN / #597)
+### #588 · Brama bezpieczeństwa 28.10 20:00 — W TOKU (`pakiet/588-brama-bezpieczenstwa`, migracje **0322–0323**; po C4, przed C5 / BN / #597)
 Źródło: #588 (Spawn2018; komentarz 28.10 08:02 — pierwszeństwo po #606). Zakres do 20:00:
-1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`). **F7 r1:** domknięcie szkieletów bez Edge; `tick` przy braku sekretów/pg_net → `ok=false`; `job_watchdog` + `security-advisor-snapshot` 26 h; idempotencja `set_findings`; source z wiersza; `advisor_error` → `result.error`.
-2. **C11** — test Auth na TEST (hasło ≥ 12, litery+cyfry; Waluta EUR przy pierwszym logowaniu).
+1. **`security-advisor-snapshot` „Brak pomiaru”** — **0322** (ten PR): cron `phase=flags` nie pisze fałszywego `ok=false`; wynik po `set_findings`. Edge i token OK (ręcznie: migawka 19, 220 zgłoszeń, `advisor_ok=true`). **F7 r1/r2:** domknięcie szkieletów bez Edge; `tick` przy braku sekretów/pg_net → `ok=false`; `job_watchdog` + `security-advisor-snapshot` 26 h; idempotencja `set_findings`; source z wiersza; `advisor_error` → `result.error`; B1c + watchdog.sh.
+2. **C11** — **0323** + `scripts/auth/c11-password-policy.mjs`: `user_preferences` EUR przy insert `app_users` + uzupełnienie braków; `loadPreferences` bez wiersza → zapis EUR; test Auth na TEST (hasło ≥ 12, litery a–z + cyfry). Widok #291; Auth W1.
 3. **C9** — testy E19 pkt 6 w `security.sh` (Przeczytali, anon, `v_load_price_client`, …).
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; co nie wejdzie do 20:00 → nowy termin w komentarzu #588 do 18:00 (28D:A — jeśli nie do 20:00, nowa data w #588).
-security **472** (+8 F7 r1). Po 0322: C11 → C9 → OWASP.
+security **477** (+5 C11). Po 0322/C11: C9 → OWASP. Wygląd #610 SCALONE (`e37f8a0f`).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → **#588** → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
@@ -1891,3 +1891,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 09:24 | #606/C4 SCALONE (`7995ee95`, F7 gotowe `a07f650a` / 0321); start **#588** brama bezpieczeństwa (**0322** fałszywy „Brak pomiaru”) | pętla |
 | 28.10.2026 11:50 | #608 decyzje 28.10 wpisane §4 (27B:C, 28B/C, BN6, kolejność po #588); #609 F7 r1 → poprawki B1/M1/M2 w **0322**, security **472** | pętla |
 | 28.10.2026 12:25 | #609 db FAIL po F7 r1: B1c (kasuj przebiegi przed watchdog) + watchdog.sh OKRES_STARTOWY doradcy | pętla |
+| 28.10.2026 12:50 | #610 SCALONE (`e37f8a0f`); #588 C11 **0323** prefs EUR + skrypt Auth TEST; security **477**; dalej C9→OWASP | pętla |

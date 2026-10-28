@@ -6360,3 +6360,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: bez nowych `dla-cursora` (poza już wpisanymi). Scalanie: brak „F7: gotowe” — bez merge. Bez push na main.
 - **CI #609** SHA `80af5858`: unit/visual ✔; db **FAIL** — (1) B1c: `set_findings` ok=true zasłaniał ciszę 26 h → 0 ryzyk; (2) `watchdog.sh` oczekiwanie bez `security-advisor-snapshot=OKRES_STARTOWY` na 01.10.
 - **Krok:** przed B1c kasuj przebiegi bloku #588; `watchdog.sh` + doradca w stringu stanów. security **472**, watchdog **27**. CI security+watchdog. Po zielonym — F7 r2.
+
+## 2026-10-28 12:50 — #610 SCALONE; #588 C11 (0323)
+
+- Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
+- Scalanie: **#610** wygląd (F7 gotowe @ `9c3f5bfd`, po commicie) → merge `e37f8a0f`. #609: CI `1630ceb0` unit/visual/db ✔ — prośba F7; potem C11 na tej samej gałęzi (nowy HEAD → ponowne F7). Bez push na main.
+- **Krok #588 C11:** migracja **0323** — `trg_app_user_prefs_eur` + uzupełnienie braków; `loadPreferences` bez wiersza → EUR; skrypt `scripts/auth/c11-password-policy.mjs` (TEST); security **477** (+5); vitest `c11-prefs-eur`.
+- **C11 — Auth (sygnał):** TEST przyjmuje „111111111111” i „ąęśćżźółń1234” przez sesję użytkownika; Management API config/auth HTTP 401 — bez sync z produkcją. Komentarz w #588. Dalej: C9 → OWASP; status bramy do 18:00 na #588.
