@@ -1775,5 +1775,65 @@ chk "#574j: trg_load_events_immutable włączony (O)" \
   "select tgenabled::text from pg_trigger where tgname='trg_load_events_immutable' limit 1" O
 q "drop function if exists public.hotfix_574_dwell_recalc()" >/dev/null
 
+# #613 F7: hotfix_613_apply — CI bez BS-01 = no-op; tu fikstura BS-B → BS-A.
+# Kwoty: rate_match_sys na kartach testowych (bez SEFS w status.sh); load_price_compute w migracji na prod.
+echo; echo "[#613] hotfix_613_apply BS-01 wymiary → BS-A"
+L613=55555555-0000-0000-0000-000000006131
+RC613C=44444444-0000-0000-0000-0000000613c1
+RC613R=44444444-0000-0000-0000-0000000613c2
+q "
+delete from audit_log where action like 'HOTFIX_613%';
+delete from load_events where load_id = '$L613';
+delete from load_revenue where load_id = '$L613';
+delete from load_cost where load_id = '$L613';
+delete from shipment_items where shipment_code = 'BS-01' and project_id = '$P';
+delete from loads where id = '$L613';
+delete from rate_rules where rate_card_id in ('$RC613C','$RC613R');
+delete from rate_cards where id in ('$RC613C','$RC613R');
+insert into rate_cards (id, project_id, side, org_id, currency, valid_from, version, note) values
+ ('$RC613C','$P','COST','$SCXO','EUR','2026-09-28',1,'#613 test'),
+ ('$RC613R','$P','REVENUE','$KSHO','EUR','2026-09-28',1,'#613 test');
+insert into rate_rules (rate_card_id, cargo_class, symbol, family, convoy_cars,
+  length_from, length_to, width_from, width_to, height_from, height_to, weight_from, weight_to, base_rate)
+ values
+ ('$RC613C','SYMBOL','BS-A','BS',null,0,12.50,0,2.45,0,1.30,0,23.0,5090.00),
+ ('$RC613C','SYMBOL','BS-B','BS',null,0,14.95,0,2.45,0,1.80,0,31.1,6030.00),
+ ('$RC613R','SYMBOL','BS-A','BS',null,0,12.50,0,2.45,0,1.30,0,23.0,5345.00),
+ ('$RC613R','SYMBOL','BS-B','BS',null,0,14.95,0,2.45,0,1.80,0,31.1,6332.00);
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, plan_load_date, symbol, combo_length_m, combo_width_m, combo_height_m) values
+ ('$L613','$P','$SCXO','KSH/BS01','HHL/BS01','SCX/BS01','RESOURCES_PENDING','2026-10-30',
+  'BS-B',18.19,2.45,3.10);
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class,
+  length_m, width_m, height_m, qty, unit_weight_t, total_weight_t) values
+ ('$P','$L613','BS-01','DIMENSIONED',14.95,2.45,1.80,2,15.510,31.020);
+" >/dev/null
+chk "#613: przed hotfixem symbol BS-B" \
+  "select symbol from loads where id='$L613'" BS-B
+chk "#613: przed — rate_match przychód BS-B" \
+  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 6332)" \
+  "BS-B/t"
+N613=$(q "select public.hotfix_613_apply()")
+chk "#613: hotfix_613_apply → n_fix=1" "select ($N613 = 1)" t
+chk "#613: wymiary 11,95×2,45×1,30 / 21,37 t" \
+  "select length_m||'/'||width_m||'/'||height_m||'/'||total_weight_t from shipment_items where load_id='$L613'" \
+  "11.95/2.45/1.30/21.37"
+chk "#613: symbol BS-A" "select symbol from loads where id='$L613'" BS-A
+chk "#613: combo_height 2,60 (BS-A)" \
+  "select combo_height_m::text from loads where id='$L613'" "2.60"
+chk "#613: rate_match przychód BS-A (5345)" \
+  "select (rate_match_sys('$RC613R','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613R','$L613')->>'base_rate')::numeric = 5345)" \
+  "BS-A/t"
+chk "#613: rate_match koszt BS-A (5090)" \
+  "select (rate_match_sys('$RC613C','$L613')->>'symbol')||'/'||((rate_match_sys('$RC613C','$L613')->>'base_rate')::numeric = 5090)" \
+  "BS-A/t"
+chk "#613: audit HOTFIX_613_*" \
+  "select (count(*) filter (where action like 'HOTFIX_613%') >= 3) from audit_log" t
+chk "#613: NOTE w Historii" \
+  "select count(*) from load_events where load_id='$L613' and event_type='NOTE' and (payload->>'hotfix')='0324'" 1
+q "select public.hotfix_613_apply()" >/dev/null
+chk "#613: ponowne wywołanie idempotentne (n_fix=0)" \
+  "select public.hotfix_613_apply()" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

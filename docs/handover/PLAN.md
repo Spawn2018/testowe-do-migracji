@@ -1090,8 +1090,20 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 4. **OWASP wycinek P11** — ASVS/CSP/ZAP według listy; **nowy termin: 29.10 wieczór** (albo z P11) — 28D:A; status w #588. CSP Report-Only już w B7; enforce = W8.
 security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wygląd #610 SCALONE (`e37f8a0f`).
 
+### #613 · PILNE: korekta BS-01 wymiary/waga → BS-A + wycena — W TOKU (`pakiet/613-bs01-wymiary-bsa`, migracja **0324**; przed #612 / #611)
+Źródło: #613 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 14:28; załadunek 30.10). Przerywa #611/#612.
+1. **Dane (0324):** `hotfix_613_apply()` — `shipment_items` BS-01: 11,95×2,45×1,30, qty=2, `total_weight_t=21.37`, `unit_weight_t=10.685`; A7 → **BS-A** (combo H 2,60); `load_price_compute` (kwoty z `rate_rules`, nie w migracji); Historia NOTE + audit HOTFIX_613_*; idempotentna; >1 wiersz BS-01 → wyjątek.
+2. **Odbiór na produkcji** (SELECT w #613): wymiary, symbol BS-A, zestaw 2,60, `load_revenue.base_amount`=5345, koszt BS-A, wpisy Historii. Kopia R2 przed `db push`.
+3. Po scaleniu: powrót do **#611** (rebase 0324/0325 → 0325/0326).
+
+### #611 · Kierowca/telefon PL+SE na liście zmian KSH + przepięcie naczepy — W TOKU / PAUZA na #613 (`pakiet/611-ksh-kierowca-telefon-swap`, migracje **0324–0325** na gałęzi → po #613 **0325–0326**; PR #612)
+Źródło: #611 (Spawn2018, `dla-cursora`+`pilne`; właściciel 28.10 12:19; B2 potwierdzone 28.10 12:34). Blokuje przegląd listy przed 28B „włącz”. Front etykiet — koordynator.
+1. **A preview (0324 na gałęzi):** `ksh_sync_preview_field_allowed` kierowca/telefon; etykiety; `wt_text`; `values_equal`; PHONE_AS_NUMBER. **CI zielone** na `f975c9d3` (unit/db/visual) — czeka F7 po #613.
+2. **A5 kraj (0325 na gałęzi):** `import_schedule` country PL/SE; Edge `toRpcRows`; import **378**.
+3. **Przed włączeniem importu (następny PR po A+A5):** (a) spójność listy z zapisem — pomijaj 4 pola kierowcy gdy `import_preview_values_equal`; (b) **kraj w porównaniu** telefonów; (c) prefiks `00` po stronie WT; (d) B `trailer_swap` z pliku (B2: plik bez SE + WT ze swap → zostaje WT); (e) C #597 zapis awizacji. Import KSH **wyłączony** do wiadomości właściciela.
+
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → **#588** → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → **#613** (pilne BS-01) → **#611** (pilne, przed importem) → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
 1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1894,3 +1906,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 12:50 | #610 SCALONE (`e37f8a0f`); #588 C11 **0323** prefs EUR + skrypt Auth TEST; security **477**; dalej C9→OWASP | pętla |
 | 28.10.2026 13:10 | #588 **C9** E19 pkt 6 w `security.sh` (+9 → **486**); OWASP → termin **29.10** (#588 / 28D:A); CI po push → F7 | pętla |
 | 28.10.2026 13:30 | #609 F7 r3 + CI db: C11 bez zapisu prefs; config letters_digits; skrypt Auth; C9 CANCELLED = val 0 (RLS) | pętla |
+| 28.10.2026 15:20 | #611 CI zielone `f975c9d3` (A+A5, PR #612); **#613** pilne BS-01 przed #612 — start **0324** `hotfix_613_apply` | pętla |

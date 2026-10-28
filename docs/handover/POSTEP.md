@@ -6380,3 +6380,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka `dla-cursora`: #608 w planie; #550 **WSTRZYMANE**; bez nowych. Bez `pilne` przerywających.
 - Scalanie: #609 — brak F7 po ostatnim HEAD; CI `7c473c5b` unit/visual ✔, **db FAIL** security 485/486 (`KSH nie dopisze CANCELLED` — RLS 0 wierszy, bez wyjątku). Bez push na main.
 - **Krok:** F7 r3 C11 — `loadPreferences` tylko odczyt EUR; `config.toml` `letters_digits`; skrypt Auth (create.id, finally, weak_password/422, EUR tylko z 0323). C9 — CANCELLED przez KSH = `val` count 0. security **486**. Po zielonym CI → F7 r4. Dalej OWASP (29.10).
+
+## 2026-10-28 15:20 — #613 pilne BS-01 (przed #612); #611 CI zielone
+
+- Skrzynka `dla-cursora`: **#613** (`pilne`, Spawn2018) — korekta BS-01 przed #612; wpisane PLAN §4/§8. **#611** (`pilne`) — CI unit/db/visual ✔ na `f975c9d3` (PR #612); pauza do po #613 (rebase 0324→0325). #608 w kolejce. #550 **WSTRZYMANE**.
+- Scalanie: #612 — brak „F7: gotowe” po `f975c9d3`; **nie merge** (przerwane przez #613). Bez push na main.
+- **Krok #613:** migracja **0324** `hotfix_613_apply()` — wymiary/waga BS-01 → A7 BS-A + `load_price_compute`; Historia NOTE; audit; status **350** (+11). Gałąź `pakiet/613-bs01-wymiary-bsa`.
