@@ -1864,3 +1864,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 07:40 | #604 CI db FAIL p4k 64/5 + F7 r6: ETA_APPLY_NEWER, B1 UUID/PL→SE, B2 Ś3+proposal, undo 2×tx; p4k **72**; BACKUP_FAILED ADMIN zamierzone | pętla |
 | 28.10.2026 08:10 | #604 CI db FAIL p4k 70/2 (B2 auto n_obs&lt;10 → BLOCKED; undo FK notifications); fixture 12 obs + delete notifications przed loads | pętla |
 | 28.10.2026 08:45 | #604 CI db FAIL p4k 71/1 (B2 applied=false: propose Δspread 15→10 ≈33 % → NEEDS_APPROVAL); fixture B2 `spread_pct=10` | pętla |
+| 28.10.2026 09:05 | #604 F7 r8: Δspread w pp/100 (#605); p4k **73**; push `41cc7c93` | pętla |
+| 28.10.2026 09:35 | #604 CI unit/visual/db ✔ `41cc7c93` — prośba o F7: gotowe do scalenia (cz.2 / 0320) | pętla |

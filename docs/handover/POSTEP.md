@@ -6307,3 +6307,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: nie (brak „F7: gotowe” po `242c16b8`; CI na tym SHA było zielone unit/visual/db — ale F7 r8 wymaga zmiany reguły, nie samego fixture).
 - **F7 r8 (#605):** względna Δspread prawie zawsze >15 % → auto 10–15 % martwe. Decyzja: `abs(new−old)/100` (punkty procentowe) w propose, auto, apply_internal.
 - **Krok:** 0320 cztery miejsca Δspread → `/100.0`; B2 z powrotem `spread_pct=15`; test `spread 15→40 pp: NEEDS_APPROVAL`; EXPECTED p4k **73**. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 09:35 — #604 CI zielone `41cc7c93` — prośba o F7
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe do scalenia” po `41cc7c93`.
+- Scalanie: nie (czekam na przegląd F7 r8 i „gotowe” po tym SHA). Jedyny otwarty PR: #604.
+- CI `41cc7c93`: unit ✔ / visual ✔ / db ✔ (p4k **73**, nullguard **880**); run db `40648903813`, visual `40648904042`.
+- **Krok:** komentarz na #604 — prośba o F7: gotowe do scalenia (cz.2 / 0320). Bez push na main.
