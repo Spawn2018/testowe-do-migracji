@@ -409,16 +409,22 @@ val "B5a: undo_version = zastosowana" \
   "select (payload->>'undo_version' = '$AUTO_VER')::text from notifications
     where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
 
-# F7 r1 B1: HHL_ADMIN z bell=false → 0 powiadomień; B2: HHL_OPS z bell=true → 0
+# F7 r1/r2 B1–B2: user_id = app_users.id (nie auth_id); pozytyw: applied + drugi admin bez prefu
+OPS_AUTH=11111111-0000-0000-0000-000000000004
+HHL_UID=$(sys "select id::text from app_users where auth_id='$HHL'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 sys "begin;
 insert into app_users (auth_id, org_id, email, role, active)
-values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
+values ('$OPS_AUTH','00000000-0000-0000-0000-00000000a001',
         'ops-p4k@test','HHL_OPS',true)
 on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;
+insert into app_users (auth_id, org_id, email, role, active)
+values ('11111111-0000-0000-0000-0000000000aa','00000000-0000-0000-0000-00000000a001',
+        'admin2-p4k@test','HHL_ADMIN',true)
+on conflict (auth_id) do update set role='HHL_ADMIN', active=true, org_id=excluded.org_id;
 insert into user_notify_pref (user_id, event_key, channel, on_value)
 values
-  ('$HHL', 'eta_calib', 'bell', false),
-  ('11111111-0000-0000-0000-000000000004', 'eta_calib', 'bell', true)
+  ('$HHL_UID', 'eta_calib', 'bell', false),
+  ((select id from app_users where auth_id='$OPS_AUTH'), 'eta_calib', 'bell', true)
 on conflict (user_id, event_key, channel) do update set on_value = excluded.on_value;
 delete from notifications where template = 'ETA_CALIBRATION_AUTO';
 delete from eta_calibration_versions
@@ -435,19 +441,31 @@ values (
 select eta_auto_apply_pending();
 commit;" >/dev/null
 
+OPS_UID=$(sys "select id::text from app_users where auth_id='$OPS_AUTH'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+ADMIN2_UID=$(sys "select id::text from app_users where auth_id='11111111-0000-0000-0000-0000000000aa'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+
+val "#603 B1+: p4k-optout-bell applied" \
+  "select applied::text from eta_calibration_versions
+    where note like '%p4k-optout-bell%' order by id desc limit 1" "true"
+
+val "#603 B1+: drugi HHL_ADMIN bez prefu → 1" \
+  "select count(*)::text from notifications
+    where template='ETA_CALIBRATION_AUTO' and user_id='$ADMIN2_UID'" "1"
+
 val "#603 B1: HHL_ADMIN bell=false → 0" \
   "select count(*)::text from notifications
-    where template='ETA_CALIBRATION_AUTO' and user_id='$HHL'" "0"
+    where template='ETA_CALIBRATION_AUTO' and user_id='$HHL_UID'" "0"
 
 val "#603 B2: HHL_OPS bell=true → 0" \
   "select count(*)::text from notifications
-    where template='ETA_CALIBRATION_AUTO'
-      and user_id='11111111-0000-0000-0000-000000000004'" "0"
+    where template='ETA_CALIBRATION_AUTO' and user_id='$OPS_UID'" "0"
 
 sys "begin;
 delete from user_notify_pref where event_key='eta_calib'
-  and user_id in ('$HHL'::uuid, '11111111-0000-0000-0000-000000000004'::uuid);
-delete from notifications where template = 'ETA_CALIBRATION_AUTO';
+  and user_id in ('$HHL_UID'::uuid, '$OPS_UID'::uuid);
+delete from notifications where template = 'ETA_CALIBRATION_AUTO'
+   or user_id = '$ADMIN2_UID'::uuid;
+delete from app_users where auth_id = '11111111-0000-0000-0000-0000000000aa';
 commit;" >/dev/null
 
 # F7 r8 #605: Δspread w pp/100 — 15→40 = 0,25 → NEEDS_APPROVAL (godziny bez zmian)
@@ -509,16 +527,18 @@ val "B4: SCX 0 decyzji APPROVAL" \
    select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
    commit;" "0"
 
-# F7 r5 B3: DECISION_OPEN / L-13 tylko HHL_ADMIN (nie HHL_OPS)
+# F7 r5 B3: DECISION_OPEN / L-13 tylko HHL_ADMIN (nie HHL_OPS); user_id = app_users.id
 sys "insert into app_users (auth_id, org_id, email, role, active)
      values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
              'ops-p4k@test','HHL_OPS',true)
      on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;" >/dev/null
+OPS_UID=$(sys "select id::text from app_users where auth_id='11111111-0000-0000-0000-000000000004'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+HHL_UID=$(sys "select id::text from app_users where auth_id='$HHL'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
 
 val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
   "select count(*)::text from notifications
     where template='DECISION_OPEN'
-      and user_id='11111111-0000-0000-0000-000000000004'
+      and user_id='$OPS_UID'::uuid
       and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
 
 # #603 B3: APPLY z Opcji zamyka decyzję (count, nie tail true z apply)
@@ -552,7 +572,7 @@ val "#603 B3: APPLY z Opcji → 1 decyzja RESOLVED" \
    select count(*)::text from decisions
     where detail->>'event_key' = 'ETA_CALIB_VER:$OPT_VER'
       and status = 'RESOLVED' and resolution_code = 'APPLY'
-      and resolved_by = '$HHL'::uuid;
+      and resolved_by = '$HHL_UID'::uuid;
    commit;" "1"
 
 val "#603 B3: 1× decision_events RESOLVE (apply_internal)" \

@@ -6474,3 +6474,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - D1: `resolution_note` auto≠ekran; `audit_log DECISION_RESOLVE`; D2 audyt APPLY ręczny; D5 max_change ujednolicony; D7 labels=label.
   - D3 front → koordynator; D6 odnotowane (brak starych na prod).
   - p4k EXPECTED **84**. Push → CI `p4k` → prośba o F7 r2.
+
+## 2026-10-28 20:55 — #617 SCALONE; #616 F7 r2 POPRAWKI (#603)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #617 → `7027bd1c` (F7 gotowe @ `c8eb7b8e`, CI unit/visual ✔) — D3 front labels. Bez push na main.
+- CI #616 @ `0d653b0c`: unit ✔; db **FAIL** p4k 83/84 (`resolved_by` = auth_id); F7 r2 **POPRAWKI**.
+- **Krok F7 r2:**
+  - T1: `user_notify_pref` / `notifications.user_id` / `resolved_by` → `(select id from app_users where auth_id=…)`; B1+ `applied` + drugi HHL_ADMIN bez prefu → 1.
+  - D5: `pending` + `internal` — `coalesce(spread,0)` jak 0320 (NULL→N do decyzji).
+  - p4k EXPECTED **86**. Push → CI `p4k` → prośba o F7 r3.

@@ -1113,7 +1113,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — W TOKU (`pakiet/603-eta-calib-apply-notify`, migracja **0327**, PR #616)
 Źródło: #603 + F7 #607 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
-1. **0327 (ten PR):** `eta_apply_calibration_internal` zamyka `ETA_CALIBRATION_APPROVAL` + `decision_events` + `audit_log DECISION_RESOLVE`; `max_change_pct` ujednolicony (D5); `eta_auto_apply_pending` — tylko `HHL_ADMIN` + `notify_channel_allowed(…,'bell')` (B1); **bez** wiersza HHL_OPS w macierzy (B2); `labels` = `eta_segment_params.label`; `summary` z przecinkiem E21. **F7 r1 POPRAWKI** (B1–B3, D1/D2/D5/D7). p4k **84**. D3 front `labels` → koordynator `wyglad/*`. D6: bez jednorazowego zamykania starych decyzji (na prod brak zastosowanych z otwartą).
+1. **0327 (ten PR):** `eta_apply_calibration_internal` zamyka `ETA_CALIBRATION_APPROVAL` + `decision_events` + `audit_log DECISION_RESOLVE`; `eta_auto_apply_pending` — tylko `HHL_ADMIN` + `notify_channel_allowed(…,'bell')` (B1); **bez** wiersza HHL_OPS w macierzy (B2); `labels` = `eta_segment_params.label`; `summary` z przecinkiem E21. **F7 r2:** D5 = reguła 0320 (`coalesce(spread,0)` — NULL→N do decyzji); testy `p4k` z `app_users.id` (nie `auth_id`) + kontrola pozytywna. p4k **86**. ~~D3 front `labels`~~ → **#617 SCALONE**. D6: bez jednorazowego zamykania starych decyzji (na prod brak zastosowanych z otwartą).
 2. **Dalej w #603:** pełne przeliczenie pomiarów (okno / wykluczenia, przed ~04.11); dwa odcinki SE_ROAD w słowniku (pod 27B:C).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
@@ -1933,3 +1933,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 19:45 | #615 F7 r1: B1 `fileAlreadyHasPatch` awizacja→PUT; B2 `wt_diff`/`apply_sent` dr/ph/tr/tl; OTHER „+”; no-op; import **376**; W62 SE-only | pętla |
 | 28.10.2026 20:15 | #615/#597 SCALONE (`b34d807c`, F7 gotowe @ `3c6e7d52`); start **#603** **0327** (APPLY zamyka decyzję, macierz, labels) | pętla |
 | 28.10.2026 20:45 | #616 F7 r1 POPRAWKI: B1 bell/`notify_channel_allowed`, B2 bez HHL_OPS, B3 asercje decyzji, D1/D2/D5/D7; p4k **84** | pętla |
+| 28.10.2026 20:50 | #617 SCALONE (`7027bd1c`, F7 gotowe @ `c8eb7b8e`) — dzwonek ETA labels z payload (D3) | pętla |
+| 28.10.2026 20:55 | #616 F7 r2 POPRAWKI: T1 `app_users.id` w p4k + B1+; D5 coalesce(spread,0) jak 0320; p4k **86** | pętla |

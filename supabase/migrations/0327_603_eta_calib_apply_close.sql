@@ -1,4 +1,4 @@
--- #603 / F7 #607 + F7 r1 #616: apply zamyka decyzję; macierz eta_calib; labels+summary; max_change_pct.
+-- #603 / F7 #607 + F7 r1/r2 #616: apply zamyka decyzję; macierz eta_calib; labels+summary; D5 spread jak 0320.
 -- Po #597 (0326). Nie edytuj nałożonej migracji.
 begin;
 
@@ -109,7 +109,7 @@ begin
   select count(*)::int into v_n_codes
     from jsonb_object_keys(v.params_after);
 
-  -- #603 / D5: max_change jak w eta_auto_apply_pending (godziny + rozrzut tylko gdy sp_old≠0).
+  -- #603 / F7 r2 D5: jak 0320 pending — rozrzut NULL→N liczony od 0 (do decyzji, bezpieczniej).
   for r in
     select e.key as code,
            (e.value->>'hours')::numeric as h_new,
@@ -123,9 +123,10 @@ begin
       continue;
     end if;
     v_chg := abs(r.h_new - r.h_old) / r.h_old;
-    if nullif(r.sp_old, 0) is not null and r.sp_new is not null then
-      v_chg := greatest(v_chg, abs(r.sp_new - r.sp_old) / 100.0);
-    end if;
+    v_chg := greatest(
+      v_chg,
+      abs(coalesce(r.sp_new, 0) - coalesce(r.sp_old, 0)) / 100.0
+    );
     v_max_chg := greatest(v_max_chg, v_chg);
   end loop;
 
@@ -281,20 +282,14 @@ begin
     return jsonb_build_object('ok', true, 'applied', null, 'reason', 'NO_PENDING');
   end if;
 
-  -- D5: ten sam wzór co eta_apply_calibration_internal (bez coalesce(spread,0)).
+  -- F7 r2 D5: reguła 0320 — coalesce(spread,0); NULL→40 → NEEDS_APPROVAL (jak front maxChangeRaw).
   select coalesce(max(
            greatest(
-             case
-               when nullif((b.value->>'hours')::numeric, 0) is null then 0::numeric
-               else abs((a.value->>'hours')::numeric - (b.value->>'hours')::numeric)
-                    / (b.value->>'hours')::numeric
-             end,
-             case
-               when nullif((b.value->>'spread_pct')::numeric, 0) is null
-                    or (a.value->>'spread_pct') is null then 0::numeric
-               else abs((a.value->>'spread_pct')::numeric - (b.value->>'spread_pct')::numeric)
-                    / 100.0
-             end
+             abs((a.value->>'hours')::numeric - (b.value->>'hours')::numeric)
+               / nullif((b.value->>'hours')::numeric, 0),
+             abs(coalesce((a.value->>'spread_pct')::numeric, 0)
+                 - coalesce((b.value->>'spread_pct')::numeric, 0))
+               / 100.0
            )
          ), 0)
     into v_max
@@ -414,8 +409,8 @@ revoke all on function public.eta_auto_apply_pending() from public, anon, authen
 grant execute on function public.eta_auto_apply_pending() to service_role;
 
 comment on function public.eta_apply_calibration_internal(bigint, text, boolean) is
-  '#603 F7 r1: APPLY zamyka decyzję + DECISION_RESOLVE; max_change ujednolicony; note auto≠ekran.';
+  '#603 F7 r2: APPLY zamyka decyzję + DECISION_RESOLVE; max_change jak 0320 (spread NULL→0); note auto≠ekran.';
 comment on function public.eta_auto_apply_pending() is
-  '#603 F7 r1: HHL_ADMIN + notify_channel_allowed(bell); labels; summary E21; bez HHL_OPS w macierzy.';
+  '#603 F7 r2: HHL_ADMIN + notify_channel_allowed(bell); D5 spread coalesce(0); labels; summary E21; bez HHL_OPS.';
 
 commit;
