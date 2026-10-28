@@ -448,7 +448,8 @@ begin
       10), 100);
     v_spread_old := coalesce(nullif(r.spread_now, 0), 20);
     v_chg_h := abs(r.med - r.hours_now) / v_old;
-    v_chg_sp := abs(v_spread - v_spread_old) / v_spread_old;
+    -- F7 r8 #605: rozrzut już jest % godzin → Δ w punktach procentowych / 100 (15→10 = 0,05)
+    v_chg_sp := abs(v_spread - v_spread_old) / 100.0;
     if (
       select coalesce(sum(
         abs((a.value->>'hours')::numeric - (b.value->>'hours')::numeric)
@@ -594,7 +595,7 @@ begin
                / nullif((b.value->>'hours')::numeric, 0),
              abs(coalesce((v_after -> b.key ->> 'spread_pct')::numeric, 0)
                  - coalesce((b.value->>'spread_pct')::numeric, 0))
-               / nullif(coalesce((b.value->>'spread_pct')::numeric, 20), 0)
+               / 100.0
            )), 0)
       into v_max_chg
       from jsonb_each(v_before) b
@@ -802,7 +803,8 @@ begin
       end if;
       v_chg := abs(r.h_new - r.h_old) / r.h_old;
       if nullif(r.sp_old, 0) is not null and r.sp_new is not null then
-        v_chg := greatest(v_chg, abs(r.sp_new - r.sp_old) / r.sp_old);
+        -- F7 r8: Δspread w pp/100, nie względnie
+        v_chg := greatest(v_chg, abs(r.sp_new - r.sp_old) / 100.0);
       end if;
       v_max_chg := greatest(v_max_chg, v_chg);
     end loop;
@@ -928,7 +930,7 @@ begin
                / nullif((b.value->>'hours')::numeric, 0),
              abs(coalesce((a.value->>'spread_pct')::numeric, 0)
                  - coalesce((b.value->>'spread_pct')::numeric, 0))
-               / nullif(coalesce((b.value->>'spread_pct')::numeric, 20), 0)
+               / 100.0
            )
          ), 0)
     into v_max

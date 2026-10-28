@@ -6300,3 +6300,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: nie (brak „F7: gotowe” po `fa556604`; CI db 40643770785: p4k **71/1**; unit/visual ✔).
 - **Przyczyna B2:** propose z płaskich godzin (9.6) liczy `spread_pct` = clamp 10; przy params 15 Δspread ≈33 % → `eta_auto_apply_pending` = `NEEDS_APPROVAL` (nie applied). SUPERSEDED/`rejected_at` OK.
 - **Krok:** p4k.sh B2 — `spread_pct=10` przed propose (Ś6: Δspread w progu 15 %). Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 09:05 — #604 F7 r8: Δspread w pp/100 (#605)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (kończyć krok #604, potem wrócić); #538/#537/#500/#499 w planie — bez nowych do wpisania.
+- Scalanie: nie (brak „F7: gotowe” po `242c16b8`; CI na tym SHA było zielone unit/visual/db — ale F7 r8 wymaga zmiany reguły, nie samego fixture).
+- **F7 r8 (#605):** względna Δspread prawie zawsze >15 % → auto 10–15 % martwe. Decyzja: `abs(new−old)/100` (punkty procentowe) w propose, auto, apply_internal.
+- **Krok:** 0320 cztery miejsca Δspread → `/100.0`; B2 z powrotem `spread_pct=15`; test `spread 15→40 pp: NEEDS_APPROVAL`; EXPECTED p4k **73**. Push → CI; po zielonym — prośba o F7. Bez push na main.

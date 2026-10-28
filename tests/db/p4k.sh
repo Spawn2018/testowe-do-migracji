@@ -344,7 +344,7 @@ val "propose: jedna niezatwierdzona" \
 val "Ś1: alias STENA → GDY-KAA" \
   "select route_key from eta_route_aliases where alias_key='STENA'" "GDY-KAA"
 
-# auto ≤15 %, n_obs≥10 (D11); spread bez zmian (Ś6 wlicza Δspread do progu — 15→12 = 20 %)
+# auto ≤15 %, n_obs≥10 (D11); spread bez zmian (F7 r8: Δspread w pp/100 — 15→12 = 0,03)
 sys "begin;
 update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
 delete from eta_calibration_versions
@@ -387,9 +387,32 @@ val "B5a: undo_version = zastosowana" \
   "select (payload->>'undo_version' = '$AUTO_VER')::text from notifications
     where template='ETA_CALIBRATION_AUTO' order by id desc limit 1" "true"
 
+# F7 r8 #605: Δspread w pp/100 — 15→40 = 0,25 → NEEDS_APPROVAL (godziny bez zmian)
+sys "begin;
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
+values (
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 15)),
+  jsonb_build_object('PL_ROAD', jsonb_build_object('hours', 10.0, 'spread_pct', 40)),
+  10, 80, 50, false, 'propozycja ciągła #581 p4k-spread-pp'
+);
+commit;" >/dev/null
+
+val "spread 15→40 pp: NEEDS_APPROVAL" \
+  "select eta_auto_apply_pending()->>'reason'" "NEEDS_APPROVAL"
+
 # 18 % godzin — decyzja HHL_ADMIN (B4 ADMIN); spread stały
 sys "begin;
 update eta_segment_params set hours = 8.5 where code = 'PL_ROAD';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
 delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
@@ -445,8 +468,8 @@ update eta_calibration_versions
 commit;"
 sys "begin;
 -- fit≈9.6 przy hours=8.5 → Δh≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
--- spread_pct=10: płaskie godziny → mediana p10/p90 daje clamp 10; przy 15 Δspread≈33 % → NEEDS_APPROVAL zamiast apply (Ś6)
-update eta_segment_params set hours = 8.5, spread_pct = 10 where code = 'PL_ROAD';
+-- F7 r8: płaskie godziny → clamp spread 10; przy starym 15 Δ = 5 pp (=0,05) → v_max≈0,129 → auto applied
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
 update eta_segment_observations set hours_observed = 9.6
  where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
    and observed_at < now() - interval '10 days';
