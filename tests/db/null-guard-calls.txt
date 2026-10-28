@@ -165,9 +165,9 @@ real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, '∅') | �
 real_app_role | EMPTY | select coalesce(real_app_role()::text, '∅') | ∅
 admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Brak sesji|Brak dostępu
 admin_set_eta_calibration_frozen | GUARD | select admin_set_eta_calibration_frozen(true) | wyłącznie HHL_ADMIN
-apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) | wyłącznie HHL_ADMIN
-eta_calibration_undo | GUARD | select eta_calibration_undo(1) | wyłącznie HHL_ADMIN
-eta_route_dict_upsert | GUARD | select eta_route_dict_upsert('X','Y','Z', null) | wyłącznie HHL_ADMIN
+apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) | ETA_NOT_ADMIN
+eta_calibration_undo | GUARD | select eta_calibration_undo(1) | ETA_NOT_ADMIN
+eta_route_dict_upsert | GUARD | select eta_route_dict_upsert('X','Y','Z', null) | ETA_DICT_NOT_ADMIN
 email_budget_status | EMPTY | select coalesce(email_budget_status()::text, '∅') | ∅
 h1_route_check_state | GUARD | select h1_route_check_state() | Brak aktywnego konta
 here_budget_view | GUARD | select here_budget_view() | wyłącznie HHL

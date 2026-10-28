@@ -164,13 +164,7 @@ drop function if exists public.eta_upsert_segment_observation(uuid, text, timest
 comment on function public.eta_rebuild_segment_observations(timestamptz) is
   '#581 P4-k: odbudowa pomiarów GPS; p_since null = 30 dni. Cron cz.2: now()-48h.';
 
--- Patch v_op w eta_record_segment_observations — tylko fragment przez pełny replace
--- (treść jak 0319, v_op z eta_obs_operator_key). Odczytamy z 0319 poniżej w osobnym bloku
--- — tu wywołanie pomocnicze używane przy pomiarze; funkcja pomiaru zostaje z 0319,
--- a v_op poprawiamy create or replace pełnej funkcji z 0319 z jedną zmianą.
--- Aby nie dublować 400 linii: wrapper w rebuild/tick wystarczy; v_op w 0319 nadal
--- mapuje STENA/POLFERRIES, ale eta_seg_event_at już używa rodzin — aliasy pokrywają
--- STENA↔GDY-KAA. Dodatkowo: gdy v_route znany, p_route = operator z słownika.
+-- Operator trasy ze słownika (eta_route_aliases); używane przy pomiarze i silniku ETA.
 
 create or replace function public.eta_record_v_op(p_route text)
 returns text
@@ -719,7 +713,7 @@ begin
           where jsonb_exists(v.params_after, k1)
        )
   ) then
-    raise exception 'ETA_APPLY_NEWER' using errcode = 'P0001';
+    raise exception 'ETA_CALIB_NEWER' using errcode = 'P0001';
   end if;
 
   select count(*)::int into v_n_codes
@@ -1121,7 +1115,7 @@ begin
         on m.event_group = v_group and m.role = u.role and m.in_app
      where u.active
        and (
-         o.kind = 'FORWARDER'
+         (o.kind = 'FORWARDER' and (v_role <> 'ADMIN' or u.role = 'HHL_ADMIN'))
          or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
               p_load is null
               or exists (select 1 from loads l where l.id = p_load and l.carrier_org_id = o.id)))
@@ -1190,7 +1184,7 @@ begin
         on m.event_key = 'dec_new' and m.role = u.role and m.email
      where u.active and u.email is not null
        and (
-         o.kind = 'FORWARDER'
+         (o.kind = 'FORWARDER' and (v_role <> 'ADMIN' or u.role = 'HHL_ADMIN'))
          or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
               d.load_id is null
               or exists (select 1 from loads l where l.id = d.load_id and l.carrier_org_id = o.id)))
@@ -1211,7 +1205,7 @@ begin
 end $$;
 revoke all on function public.l13_decision_email(uuid) from public, anon, authenticated;
 comment on function public.l13_decision_email(uuid) is
-  'C3-p + #581: e-mail decyzji; ETA_CALIBRATION / ADMIN tylko FORWARDER.';
+  'C3-p + #581: e-mail decyzji; ADMIN → tylko HHL_ADMIN (bez HHL_OPS).';
 
 -- Ś1: RPC HHL_ADMIN — słownik tras/aliasów (ekran „Dodaj przeprawę”)
 create or replace function public.eta_route_dict_upsert(
@@ -1827,11 +1821,11 @@ begin
            'SE_ROAD');
   select hours, spread_pct / 100 into h_rest, sp_rest from eta_segment_params where code = 'SE_DAILY_REST';
   select hours, spread_pct / 100 into h_brk, sp_brk from eta_segment_params where code = 'SE_BREAKS';
-  h_road := coalesce(h_road, 17); sp_road := coalesce(sp_road, 0.2);
+  -- F7 r4: bez ogólnego coalesce(h_road,17)/(h_pl,4.5) — zasłaniały warianty ze słownika
   h_rest := coalesce(h_rest, 11); sp_rest := coalesce(sp_rest, 0);
   h_brk := coalesce(h_brk, 2); sp_brk := coalesce(sp_brk, 0.5);
   select hours into fresh_h from eta_segment_params where code = 'GPS_FRESH_MIN';
-  h_pl := coalesce(h_pl, 4.5); sp_pl := coalesce(sp_pl, 0.2); h_ci := coalesce(h_ci, 2);
+  h_ci := coalesce(h_ci, 2);
   h_cross := coalesce(h_cross, 18); sp_cross := coalesce(sp_cross, 0.15);
   fresh_h := coalesce(fresh_h, 1.5);
 
@@ -2201,19 +2195,4 @@ end $function$;
 -- Jak 0242/0279: brak EXECUTE dla anon/authenticated (i2 + security + nullguard).
 revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
 grant execute on function public.compute_load_eta(uuid, timestamptz) to service_role;
-
--- -------------------------------------------------------------------------
--- 6) Kolumny odłączenia (RODO / śledzenie zmian)
--- -------------------------------------------------------------------------
-alter table public.positions
-  add column if not exists detached_load_id uuid,
-  add column if not exists detached_at timestamptz;
-alter table public.load_events
-  add column if not exists detached_load_id uuid,
-  add column if not exists detached_at timestamptz;
-
-comment on column public.positions.detached_load_id is
-  'D-1710: transport, z którego odłączono pozycję (load_id = null); retencja 30 dni.';
-comment on column public.load_events.detached_load_id is
-  'D-1710: transport, z którego odłączono zdarzenie (load_id = null).';
 

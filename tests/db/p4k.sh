@@ -338,7 +338,10 @@ val "Ś1: alias STENA → GDY-KAA" \
 # auto ≤15 %, n_obs≥10 (D11); spread bez zmian (Ś6 wlicza Δspread do progu — 15→12 = 20 %)
 sys "begin;
 update eta_segment_params set hours = 8.9 where code = 'PL_ROAD';
-delete from eta_calibration_versions where applied is not true;
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
 delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 insert into eta_calibration_versions (params_before, params_after, n_obs, error_before_min, error_after_min, applied, note)
@@ -427,16 +430,17 @@ delete from eta_segment_observations
  where corridor = 'PL_ROAD'
    and coalesce(features->>'p4k', '') = 'true';
 delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
-delete from loads where id::text like 'a581a581-0000-4000-8000-00000000060%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
 delete from eta_calibration_versions
  where applied is not true
    and created_by is null
    and coalesce(note, '') like 'propozycja ciągła%';
 delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
 delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
+-- UUID: …0006 || lpad(nn) — nie …060||10 (niepoprawny UUID, transakcja się wycofuje → NO_CHANGE)
 insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                    plan_load_date, plan_delivery_date, actual_delivery_at)
-select ('a581a581-0000-4000-8000-00000000060' || g)::uuid,
+select ('a581a581-0000-4000-8000-0000000006' || lpad(g::text, 2, '0'))::uuid,
        (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
        'P4K-BT' || g, 'HHL-BT' || g, 'SCX-BT' || g,
        'DELIVERED', current_date - 30, current_date - 25, now() - interval '25 days'
@@ -445,12 +449,12 @@ select ('a581a581-0000-4000-8000-00000000060' || g)::uuid,
 -- (hours=7.5 dawało Δ60 % → continue limitu → NO_CHANGE zamiast BACKTEST_WORSE)
 update eta_segment_params set hours = 10, spread_pct = 15 where code = 'PL_ROAD';
 insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
-select ('a581a581-0000-4000-8000-00000000060' || ord)::uuid, 'PL_ROAD', h,
+select ('a581a581-0000-4000-8000-0000000006' || lpad(ord::text, 2, '0'))::uuid, 'PL_ROAD', h,
        jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
        now() - interval '40 days' + (ord || ' days')::interval
   from (values (1,11.5),(2,12.0),(3,12.0),(4,12.0),(5,12.5),(6,12.0),(7,11.8)) as t(ord,h);
 insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
-select ('a581a581-0000-4000-8000-00000000060' || (7+ord))::uuid, 'PL_ROAD', h,
+select ('a581a581-0000-4000-8000-0000000006' || lpad((7+ord)::text, 2, '0'))::uuid, 'PL_ROAD', h,
        jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
        now() - interval '3 days' + (ord || ' hours')::interval
   from (values (1,7.4),(2,7.5),(3,7.6)) as t(ord,h);
@@ -461,7 +465,7 @@ val "B7: BACKTEST_WORSE gdy fit psuje test" \
 
 sys "begin;
 delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
-delete from loads where id::text like 'a581a581-0000-4000-8000-00000000060%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
 delete from eta_calibration_versions where note like 'propozycja ciągła%' and applied is not true;
 -- przywróć auto-12 do stanu „zastosowana” pod test undo (BACKTEST tymczasowo ją cofnął)
 update eta_calibration_versions
@@ -512,8 +516,7 @@ delete from decisions where type_code = 'ETA_CALIBRATION_APPROVAL';
 delete from eta_calibration_versions where note like 'propozycja ciągła%';
 delete from eta_segment_observations where coalesce(features->>'p4k_calib','') = 'true';
 delete from loads where id::text like 'a581a581-0000-4000-8000-00000000059%';
-delete from loads where id::text like 'a581a581-0000-4000-8000-00000000060%';
-delete from eta_route_aliases where alias_key = 'P4K-DICT-TEST';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
 update eta_segment_params
    set hours = ${PL_H}::numeric, spread_pct = ${PL_SP}::numeric, source = \$s\$${PL_SRC}\$s\$
  where code = 'PL_ROAD';
@@ -536,6 +539,7 @@ else
   fail=$((fail+1)); echo "  FAIL  Ś1: HHL_OPS odmowa dict ($ops_dict)"
 fi
 
+# F7 r4: alias + audit sprzątaj PO RPC (nie przed)
 sys "begin;
 delete from eta_route_aliases where alias_key in ('P4K-DICT-TEST','P4K-DICT-OPS');
 delete from audit_log where action='ETA_ROUTE_DICT_UPSERT' and entity_id like 'P4K-DICT%';

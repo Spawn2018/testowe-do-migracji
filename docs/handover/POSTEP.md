@@ -6244,14 +6244,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyny:** (1) status — brak komentarzy A2 „Awaryjnie: GPS” / „celowo niczego nie zmienia” w `apply_geofence_status` (0279); (2) B7 — `undone_at=now()` włącza skip „po undo <3 nowych” (pomiary BT mają `observed_at` w przeszłości) → `NO_CHANGE`.
 - **Krok F7 r3 (część CI):** komentarze A2; B7 `undone_at −8 d` + `%p4k-auto%`; `due_hours=null`; BACKTEST sprząta propozycje; filtr 90 d/słownik w teście wstecz; +2 testy KSH/SCX 0 decyzji → p4k **60**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
 
+## 2026-10-28 06:20 — #604 F7 r3: BACKTEST fixture + Ś1/Ś3/decyzje
 
-## 2026-10-28 06:20 � #604 F7 r3: BACKTEST fixture + �1/�3/decyzje
-
-- Skrzynka: #550 WSTRZYMANE (pilne); #538/#537/#500/#499 w planie � bez nowych. Brak �F7: gotowe� po 6a3c9f7.
-- Scalanie: nie (CI db 40630478204: p4k 59/1 BACKTEST_WORSE�NO_CHANGE; unit/visual ?).
-- **Przyczyna BT:** hours=7.5 vs mediana fit ~12 � ?60 % > limit 40 %/30 d � continue � NO_CHANGE.
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `a6a3c9f7`.
+- Scalanie: nie (CI db 40630478204: p4k 59/1 BACKTEST_WORSE→NO_CHANGE; unit/visual ✔).
+- **Przyczyna BT:** hours=7.5 vs mediana fit ~12 → Δ60 % > limit 40 %/30 d → continue → NO_CHANGE.
 - **Krok F7 r3 (reszta):**
-  - p4k BT: hours=10 (?20 %); +HHL_OPS dict odmowa; tick ok=true; EXPECTED p4k **62**
-  - 0320: backtest per kod; �3 bez martwego 
-ot exists; sailings_route_check regex; silnik bez hardkodu STENA/tras; dict upsert � params + seed protect + ETA_DICT_*; decyzje SUPERSEDED; kody ETA_*; payload AUTO codes
-- Push � CI; po zielonym � pro�ba o F7 (bez scalenia bez �gotowe�). Bez push na main.
+  - p4k BT: hours=10 (Δ20 %); +HHL_OPS dict odmowa; tick ok=true; EXPECTED p4k **62**
+  - 0320: backtest per kod; Ś3 bez martwego `not exists`; sailings_route_check regex; silnik bez hardkodu STENA/tras; dict upsert → params + seed protect + ETA_DICT_*; decyzje SUPERSEDED; kody ETA_*; payload AUTO `codes`
+- Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”). Bez push na main.
+
+## 2026-10-28 06:50 — #604 CI FAIL ce9c31b6: nullguard + BT UUID; F7 r4 domknięcie
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych. Brak „F7: gotowe” po `ce9c31b6`.
+- Scalanie: nie (CI db 40632688755: nullguard 868/12, p4k 61/1; unit/visual ✔).
+- **Przyczyny:** (1) nullguard oczekiwał „wyłącznie HHL_ADMIN”, funkcje rzucają `ETA_NOT_ADMIN` / `ETA_DICT_NOT_ADMIN`; (2) fixture B7: `…060||10` → niepoprawny UUID, transakcja z `>/dev/null` się wycofuje → stan przed BT → NO_CHANGE.
+- **Krok:** null-guard-calls → kody ETA_*; BT UUID `…0006||lpad(nn,2)`; F7 r4: DECISION_OPEN/L-13 tylko HHL_ADMIN przy ADMIN; `ETA_CALIB_NEWER`; bez coalesce h_road/h_pl; bez bloku „Kolumny odłączenia”; delete propose zawężony; dict cleanup po RPC. Push → CI; po zielonym — prośba o F7. Bez push na main.
