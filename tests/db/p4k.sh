@@ -426,8 +426,14 @@ val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
       and user_id='11111111-0000-0000-0000-000000000004'
       and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
 
-# F7 r5 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
+# F7 r5/r6 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
 VER18=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-18%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+# Ś3: auto-12 w <7 d blokuje PL_ROAD (<3 nowych obs) → NO_CHANGE, bez SUPERSEDED
+sys "begin;
+update eta_calibration_versions
+   set created_at = now() - interval '8 days'
+ where id = $AUTO_VER and applied is true;
+commit;"
 sys "begin;
 -- fit≈9.6 przy hours=8.5 → Δ≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
 update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
@@ -437,9 +443,12 @@ update eta_segment_observations set hours_observed = 9.6
 update eta_segment_observations set hours_observed = 9.5
  where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
    and observed_at >= now() - interval '10 days';
-select eta_propose_calibration();
-select eta_auto_apply_pending();
 commit;"
+
+val "B2: propose ma proposal (nie NO_CHANGE)" \
+  "select (eta_propose_calibration()->>'proposal' is not null)::text" "true"
+
+sys "begin; select eta_auto_apply_pending(); commit;"
 
 val "B2: auto-18 rejected_at po SUPERSEDED" \
   "select (rejected_at is not null)::text from eta_calibration_versions where id=$VER18" "true"
@@ -516,22 +525,39 @@ commit;"
 val "B7: BACKTEST_WORSE gdy fit psuje test" \
   "select eta_propose_calibration()->>'reason'" "BACKTEST_WORSE"
 
-# F7 r5: bez >/dev/null — najpierw przywróć AUTO_VER (BT ustawiał undone_at −8 d)
-sys "begin;
+# F7 r6: restore AUTO_VER w osobnej transakcji (BT ustawiał undone_at −8 d); sprzątanie BT później.
+undo_restore=$(sys "begin;
 update eta_calibration_versions
    set undone_at = null,
-       note = regexp_replace(coalesce(note, ''), ';?\s*undone', '', 'g')
- where id = $AUTO_VER and applied is true;
-delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
-delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
-delete from eta_calibration_versions
- where applied is not true
-   and created_by is null
-   and coalesce(note, '') like 'propozycja ciągła%';
+       applied = true,
+       note = regexp_replace(coalesce(note, ''), ';?\s*(undone|superseded)', '', 'g')
+ where id = $AUTO_VER;
 update eta_segment_params
    set hours = 10, spread_pct = 15
  where code = 'PL_ROAD';
-commit;"
+commit;" 2>&1) || true
+if echo "$undo_restore" | grep -qiE 'ERROR|FATAL'; then
+  fail=$((fail+1)); echo "  FAIL  undo prep restore ERROR ($undo_restore)"
+else
+  ok=$((ok+1)); echo "  OK    undo prep restore bez ERROR"
+fi
+
+undo_clean=$(sys "begin;
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
+delete from positions where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from load_events where load_id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from eta_calibration_versions
+ where id > $AUTO_VER
+   and coalesce(note, '') like 'propozycja ciągła%';
+commit;" 2>&1) || true
+if echo "$undo_clean" | grep -qiE 'ERROR|FATAL'; then
+  fail=$((fail+1)); echo "  FAIL  undo prep cleanup ERROR ($undo_clean)"
+else
+  ok=$((ok+1)); echo "  OK    undo prep cleanup bez ERROR"
+fi
 
 val "undo prep: AUTO_VER applied+not undone" \
   "select (applied is true and undone_at is null)::text from eta_calibration_versions where id=$AUTO_VER" "true"
@@ -618,7 +644,7 @@ val "tick: ok=true na czystych danych" \
 val "tick: wpis integration_runs" \
   "select (count(*) >= 1)::text from integration_runs where job like 'eta_calib%'" "true"
 
-# F7 r5 B1: filtr PL→SE = alias_key=route_key; sam NYN-GDN nie daje założonego rejsu
+# F7 r5/r6 B1: filtr PL→SE = alias_key=route_key; powrotny wcześniej nie wygrywa z PL→SE
 val "B1: NYN-GDN/KAA-GDY poza filtrem PL→SE" \
   "select (count(*) = 0)::text from eta_route_aliases
     where alias_key in ('NYN-GDN','KAA-GDY') and alias_key = route_key" "true"
@@ -627,26 +653,38 @@ val "B1: GDN-NYN i GDY-KAA w filtrze PL→SE" \
   "select (count(*) = 2)::text from eta_route_aliases
     where alias_key in ('GDN-NYN','GDY-KAA') and alias_key = route_key" "true"
 
-val "B1: sam NYN-GDN → brak założonego rejsu powrotnego" \
+val "B1: powrotny wcześniej + PL→SE później → wybrany PL→SE" \
   "begin;
    insert into vessels (id, name, operator) values
-     ('a581a581-0000-4000-8000-00000000vv01', 'P4K B1', 'POLFERRIES')
+     ('a581a581-0000-4000-8000-0000000000b1', 'P4K B1', 'POLFERRIES')
    on conflict (id) do nothing;
-   update sailings set status = 'ODWOLANY'
-    where project_id = (select project_id from loads where id='a581a581-0000-4000-8000-000000000581');
    insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
-   values (
-     'a581a581-0000-4000-8000-00000000sa01',
-     (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
-     'a581a581-0000-4000-8000-00000000vv01',
-     'NYN-GDN', now() + interval '2 days', now() + interval '3 days', 'ZAPLANOWANY', 'RECZNIE');
+   values
+     ('a581a581-0000-4000-8000-0000000000b2',
+      (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+      'a581a581-0000-4000-8000-0000000000b1',
+      'NYN-GDN', now() + interval '1 day', now() + interval '2 days', 'ZAPLANOWANY', 'RECZNIE'),
+     ('a581a581-0000-4000-8000-0000000000b3',
+      (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+      'a581a581-0000-4000-8000-0000000000b1',
+      'GDN-NYN', now() + interval '3 days', now() + interval '4 days', 'ZAPLANOWANY', 'RECZNIE')
+   on conflict (id) do nothing;
    update loads set sailing_id = null, status = 'IN_TRANSIT_PL',
                     telematics_vehicle_id = coalesce(telematics_vehicle_id, 'P4K-B1')
     where id = 'a581a581-0000-4000-8000-000000000581';
    insert into positions (load_id, ts, geom_raw, source, raw) values
      ('a581a581-0000-4000-8000-000000000581', now() - interval '3 minutes',
       st_setsrid(st_makepoint(17.0, 54.5), 4326), 'TELEMATICS_API', '{}'::jsonb);
-   select ((basis->'flags')::text like '%brak rejsu w rozkładzie%')::text
+   select (
+     (basis->>'sailing') like '%założony%'
+     and (basis->'flags')::text like '%założony najbliższy%'
+     and exists (
+       select 1 from jsonb_array_elements(basis->'segments') s
+        where s->>'code' = 'CROSSING'
+          and abs(extract(epoch from (s->>'departure')::timestamptz
+              - (select departure_at from sailings where id='a581a581-0000-4000-8000-0000000000b3'))) < 2
+     )
+   )::text
      from compute_load_eta('a581a581-0000-4000-8000-000000000581', now()) limit 1;
    rollback;" "true"
 

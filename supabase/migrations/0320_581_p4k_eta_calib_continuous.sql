@@ -777,7 +777,7 @@ begin
           where jsonb_exists(v.params_after, k1)
        )
   ) then
-    raise exception 'ETA_CALIB_NEWER' using errcode = 'P0001';
+    raise exception 'ETA_APPLY_NEWER' using errcode = 'P0001';
   end if;
 
   select count(*)::int into v_n_codes

@@ -6273,3 +6273,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - backtest: `n_obs` / `max_chg` / błąd tylko z kodów keep; apply → `ETA_NOT_ADMIN`
   - Ś8: restore AUTO_VER bez `/dev/null` + val prep; p4k **69**
 - Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
+
+## 2026-10-28 07:50 — #604 F7 r6: ETA_APPLY_NEWER + fixture p4k (72)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie — bez nowych. F7 r6 na `bcf82a7b` (nie scalać bez „gotowe” po nowym SHA).
+- Scalanie: nie (CI db 40637399528: p4k 64/5; unit/visual ✔).
+- **F7 r6 / CI fix:**
+  - 0320: `ETA_APPLY_NEWER` (handler `ETA_APPLY_%` → BLOCKED; nie `ETA_CALIB_NEWER`)
+  - B1: UUID `…00b1/b2/b3`; scenariusz powrotny wcześniej + PL→SE później → wybrany PL→SE
+  - B2: `created_at` AUTO −8 d (Ś3) + asercja `proposal is not null` przed SUPERSEDED
+  - undo: restore AUTO_VER i cleanup BT w osobnych tx + grep ERROR; delete positions/events przed loads
+  - PLAN: `BACKUP_FAILED` ADMIN — zamierzone (HHL_OPS bez DECISION_OPEN)
+  - suite `p4k` **72**, nullguard **880**
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
