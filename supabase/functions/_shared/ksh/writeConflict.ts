@@ -152,15 +152,26 @@ type PatchLike = {
   delivery_time?: string | null;
   carrier_order_no?: string | null;
   hhl_order_no?: string | null;
+  driver?: string | null;
+  driver_phone?: string | null;
+  tractor?: string | null;
+  trailer?: string | null;
 };
 
-/** Plik już = expected+łatka (PUT udany, ack zgubiony) — F7 r2. */
+/** #597: klucze awizacji poza snapshota dat/numerów (bez PII w migawce). */
+const AWIZ_PATCH_KEYS = ['driver', 'driver_phone', 'tractor', 'trailer'] as const;
+
+/** Plik już = expected+łatka (PUT udany, ack zgubiony) — F7 r2 / #597 F7 B1. */
 export function fileAlreadyHasPatch(
   expected: FileDateSnap,
   patch: PatchLike,
   current: FileDateSnap | null | undefined,
 ): boolean {
   if (!current) return false;
+  // B1: łatka z awizacją → nie alreadyDone (snapshot bez dr/ph/tr/tl) — wymagany PUT.
+  for (const k of AWIZ_PATCH_KEYS) {
+    if (k in patch) return false;
+  }
   const want: FileDateSnap = {
     ld: expected.ld ?? null,
     lt: expected.lt ?? null,

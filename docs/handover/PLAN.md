@@ -1095,17 +1095,24 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **Dane (0324):** `hotfix_613_apply` → BS-A + wycena; Historia bez wycieku cen; drop fn. status **358**.
 2. **Odbiór** (SELECT w #613): wymiary, BS-A, 6093,30 / 5802,60, Historia bez kwot dla KSH.
 
-### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — W TOKU (`pakiet/611-ksh-kierowca-telefon-swap`, PR #612, migracja **0325**)
+### #611 · Kierunek plik KSH ↔ WT (przeróbka #612) — SCALONE (`61a1350d`, PR #612, migracja **0325**; 28.10 ~18:55)
 Źródło: #611 + zasady właściciela 28.10 14:28. Stare 0324/0325 (kierowca na liście) **pominięte** w rebase po #613.
 1. **0325:** `import_schedule` + `schedule_row_canon` — bez zapisu kierowca/telefon/tablice/`hhl_order_no`/`carrier_order_no`; jawna allowlista `ksh_sync_preview_field_allowed` (plik→WT + oba kierunki); konflikt plik↔WT tylko daty/godziny (`l1b_note_file_changed`). `cargo_class`/`order_no`/`assembly_seq` jak dziś. import **366**.
 2. Testy A6 B1/#569/#583/#594 + dec-auto przepisane pod decyzję #611 (konflikt = `load_date`; P1 publish null dla WT→plik).
-3. F7 r3–r4: Edge `scheduleParse` — importy Deno (`npm:zod@3`, `.ts`, `formatPl.ts`, `importColumnMap.ts`); ciała = front (kontrakt A6 bez linii import).
+3. F7 r3–r5: Edge `scheduleParse` — importy Deno; ciała = front (kontrakt A6 bez linii import).
 4. **Przepięcie naczepy** wyłącznie z Awizacji WT — z pliku **odpada**.
-5. **#597 (osobny PR zaraz po #612):** zapis WT→plik — kierowca/telefon/ciągnik „PL / SE”, naczepa, numery zleceń.
-6. Import KSH **wyłączony** do wiadomości właściciela (28B).
+5. Import KSH **wyłączony** do wiadomości właściciela (28B). Zgłoszenie #611 zamknięte.
 
-### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (po #588; skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → **#613** (pilne BS-01) → **#611** (pilne, przed importem) → **#603** (pełne przeliczenie pomiarów przed ~04.11, wykluczenia) → **27B:C** (osobny PR) → **#597** → BN1…
+### #597 · Zapis Awizacji WT→plik KSH — W TOKU (`pakiet/597-awizacja-outbound-ksh`, migracja **0326**, PR #615)
+Źródło: #597 + F7 #612 (zaraz po #611). Zasady 14:28: kierowca/telefon/ciągnik/naczepa/`carrier_order_no`/`hhl_order_no` = tylko WT→plik.
+1. **0326:** `trg_ksh_sync_outbound` — po zmianie awizacji enqueue `driver` / `driver_phone` / `tractor` / `trailer` („PL / SE” przy `trailer_swap`); `ksh_file_ab` + `ksh_file_phone_text` (SE z 0, OTHER z „+”, tekst); kolejka po **złożonej** wartości komórki (nie po samym SE przy `swap=false`); wczesne wyjście gdy nic nie zmienione; bez kolejki przy `write_enabled=false` / `CANCELLED`/`REMOVED` / `import_ctx`.
+2. Edge: `xlsxPatch` kolumny 12–15 tekst; **F7 B1** `fileAlreadyHasPatch` — klucz awizacji → nie `alreadyDone` (PUT); **F7 B2** `ksh_sync_outbound_wt_diff` + `apply_sent` znają `dr`/`ph`/`tr`/`tl` (rev mismatch zachowuje nowszą awizację).
+3. Testy import **376** (+4 F7: SE-only, no-op, PL+48, rev mismatch B); unit B1 awizacja→toWrite; CANCELLED przez postgres.
+4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
+5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
+
+### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → **#597** (W TOKU) → **#603** → **27B:C** → BN1…
 1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1433,6 +1440,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W59 | #567 23B: lista zmian dry_run z pliku KSH przed włączeniem importu (`import_enabled` false) | po #569 / `write_test_ok_at` | kolejka (#567) |
 | W60 | #567 24A: 17 decyzji koordynatora 25.10 zaakceptowanych — zamknąć powiązane W; #546 zrobione | — | **potwierdzone 26.10.2026** (#567) — #546 zamknąć gdy otwarte |
 | W61 | #581 / 27A: kalibracja ETA — auto-apply ≤ 15 % + test wsteczny; > 15 % czeka na HHL_ADMIN; zamrożenie wstrzymuje oba tryby; autor audytu „automat kalibracji” | P4-k #581 | **potwierdzone 27.10.2026 01:05** (#581) |
+| W62 | #597 F7: swap z samą stroną SE w pliku = samo SE (wygląda jak PL). Propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie | #597 / po F7 | czeka |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1916,3 +1924,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 17:55 | #612 F7 r3: Edge Deno importy; testy B1/#569→load_date; P1 publish null; import **366** | pętla |
 | 28.10.2026 18:00 | #612 F7 r4: `importColumnMap.ts` (Deno); CI po push → F7 gotowe | pętla |
 | 28.10.2026 18:20 | #612 CI db FAIL import 364/366 (#567 pending A6; #583 niepełny JSON) — poprawka testów | pętla |
+| 28.10.2026 18:55 | #612 SCALONE (`61a1350d`, F7 gotowe @ `705dff05`); #611 zamknięte; start **#597** outbound awizacja **0326** | pętla |
+| 28.10.2026 19:45 | #615 F7 r1: B1 `fileAlreadyHasPatch` awizacja→PUT; B2 `wt_diff`/`apply_sent` dr/ph/tr/tl; OTHER „+”; no-op; import **376**; W62 SE-only | pętla |

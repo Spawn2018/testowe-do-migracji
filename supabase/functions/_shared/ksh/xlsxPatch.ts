@@ -29,6 +29,11 @@ export type OutboundPatch = {
   delivery_time?: string | null;
   carrier_order_no?: string | null;
   hhl_order_no?: string | null;
+  /** #597: złożone „PL / SE” (tekst, nigdy formuła). */
+  driver?: string | null;
+  driver_phone?: string | null;
+  tractor?: string | null;
+  trailer?: string | null;
 };
 
 export {
@@ -408,6 +413,11 @@ export async function patchWorkbookBytes(
     applyTime(COLUMN_MAP_DEFAULT.deliveryTime, p.delivery_time, 'delivery_time' in p);
     applyText(COLUMN_MAP_DEFAULT.scxOrderNo, p.carrier_order_no, 'carrier_order_no' in p);
     applyText(COLUMN_MAP_DEFAULT.hhlOrderNo, p.hhl_order_no, 'hhl_order_no' in p);
+    // #597: awizacja — zawsze tekst (SE z zerem / „+”), nigdy formuła Excela.
+    applyText(COLUMN_MAP_DEFAULT.driverName, p.driver, 'driver' in p);
+    applyText(COLUMN_MAP_DEFAULT.driverPhone, p.driver_phone, 'driver_phone' in p);
+    applyText(COLUMN_MAP_DEFAULT.tractorPlate, p.tractor, 'tractor' in p);
+    applyText(COLUMN_MAP_DEFAULT.trailerPlate, p.trailer, 'trailer' in p);
 
     if (changed) {
       written += 1;

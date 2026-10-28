@@ -6434,3 +6434,25 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   1. `#567 23B pending_write false` — przed asercją `delete` pending z A6 + ponowny `preview_store`.
   2. `#583 tablice w kodach` — pełny wiersz jak `r583_file_sql` (bez leave_empty → false changed) + drugi kod z inną tablicą.
   3. import EXPECTED **366**. CI po push → prośba o F7.
+
+## 2026-10-28 18:55 — #612 SCALONE; start #597
+
+- Skrzynka: #611 zamknięte (SCALONE); #597 W TOKU; #608 w kolejce; #550 WSTRZYMANE. Bez nowych `dla-cursora`.
+- Scalanie: #612 → `61a1350d` (F7 gotowe @ `705dff05`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #597:** migracja **0326** — outbound awizacja (`driver`/`driver_phone`/`tractor`/`trailer`, „PL / SE”); `xlsxPatch` tekst; import **370**. Gałąź `pakiet/597-awizacja-outbound-ksh`.
+
+## 2026-10-28 19:20 — #597 CI import FAIL → fix CANCELLED
+
+- Skrzynka: bez nowych; #550 WSTRZYMANE; #608 w kolejce.
+- Scalanie: #615 — brak „F7: gotowe”; db FAIL (CANCELLED przez JWT → guard_load_update). Bez push na main.
+- **Krok:** test #597 CANCELLED jak A6 r8 (postgres, nie authenticated); EXPECTED import **372**.
+
+## 2026-10-28 19:45 — #597 F7 r1 (B1/B2 + drobne)
+
+- Skrzynka `dla-cursora`: #608 w kolejce; #550 **WSTRZYMANE**; #538/#537/#500/#499 — bez nowych do budowy. Bez `pilne` przerywających.
+- Scalanie: #615 — F7 „nie gotowe” (blockery r1 otwarte). CI @ `1495fefe` unit/db/visual ✔ — potem poprawki r1. Bez push na main.
+- **Krok F7 r1:**
+  1. B1 `fileAlreadyHasPatch` — klucz awizacji → `false` (PUT, nie alreadyDone); unit.
+  2. B2 `ksh_sync_outbound_wt_diff` + `apply_sent` — `dr`/`ph`/`tr`/`tl`; test rev mismatch → pending DriverB.
+  3. Drobne: kolejka po złożonym `ksh_file_ab`; OTHER z „+”; `begin`/`commit`; wczesne wyjście; testy SE-only / no-op / PL+48.
+  4. PLAN §4/#597 + §5 W62 + §8; import EXPECTED **376**.
