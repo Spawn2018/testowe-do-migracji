@@ -10,6 +10,8 @@ declare
   v_role text;
   v_old numeric;
 begin
+  -- B5 (0300): CREATE OR REPLACE zdejmuje assert wstrzyknięty wcześniej — wstawiamy ręcznie.
+  perform public.assert_not_preview();
   select id, role::text into v_me, v_role from app_users where auth_id = auth.uid() and active;
   if (v_me is not null and v_role = 'HHL_ADMIN') is not true then
     raise exception 'Progi — wyłącznie administrator HHL' using errcode = '42501';

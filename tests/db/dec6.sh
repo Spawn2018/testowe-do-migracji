@@ -30,7 +30,8 @@ sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local ro
 val "DELAY_MIN=45 po RPC" "select value_num::text from ops_thresholds where key='DELAY_MIN'" "45"
 val "audit OPS_THRESHOLD_SET" "select count(*)>0 from audit_log where action='OPS_THRESHOLD_SET' and entity_id='DELAY_MIN'" t
 # C4 (D-20261015-0300-01): old_value / new_value osobno (było → jest)
-val "C4 audit old_value/new_value" "select ((old_value->>'value')::numeric = 30 and (new_value->>'value')::numeric = 45)::text from audit_log where action='OPS_THRESHOLD_SET' and entity_id='DELAY_MIN' order by created_at desc limit 1" t
+# bez ::text — psql -Atq zwraca t/f (jak count(*)>0), nie true/false
+val "C4 audit old_value/new_value" "select (old_value->>'value')::numeric = 30 and (new_value->>'value')::numeric = 45 from audit_log where action='OPS_THRESHOLD_SET' and entity_id='DELAY_MIN' order by created_at desc limit 1" t
 C4_AUD_BEFORE=$(sys "select count(*) from audit_log where action='OPS_THRESHOLD_SET' and entity_id='DELAY_MIN'" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1)
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_ops_threshold_set('DELAY_MIN', 45); commit;" >/dev/null

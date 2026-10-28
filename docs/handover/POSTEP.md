@@ -6321,3 +6321,10 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - Scalanie: #604 F7 gotowe `bf76504c` (po docs; akceptacja kodu z `41cc7c93`); CI unit/visual/db ?; merge `a7ecb48b` (`gh pr merge --merge`). Bez push na main.
 - **P4-k #581 cz.2** SCALONE ó migracja **0320**; deploy-main w toku (`40652927113`). Po wdroøeniu: rebuild pomiarÛw (#603), cron + pierwszy tick.
 - **Krok C4:** ga≥πü `pakiet/C4-old-value`, migracja **0321** ó `admin_ops_threshold_set` zapisuje `old_value`/`new_value` (`value`), bez audytu przy braku zmiany; usuniÍte `notificationPrefs` (alerty stref/ryzyk/workflow) ze store ó zostaje macierz + `my_notify` / `bellOffForPerson`. dec6 EXPECTED **27** (+2). PrÛba R-3 na TEST ó przy odbiorze C4.
+
+## 2026-10-28 09:20 ‚Äî C4 #606 CI db FAIL ‚Üí fix assert + dec6
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE**; #538/#537/#500/#499 w planie ‚Äî bez nowych. Bez `pilne` do budowy.
+- Scalanie: brak ‚ÄûF7: gotowe‚Äù (CI db FAIL na `8197251d`). Bez push na main.
+- CI `8197251d`: unit ‚úî / visual ‚úî / db ‚úñ ‚Äî (1) dec6: `::text` ‚Üí `true` zamiast `t`; (2) security B5: 0321 bez `assert_not_preview` (0300 wstrzykiwa≈Ç ‚Äî CREATE OR REPLACE zdejmuje).
+- **Krok:** 0321 + `perform public.assert_not_preview()`; dec6 bez `::text`; push #606.
