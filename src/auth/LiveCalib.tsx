@@ -6,7 +6,7 @@
  * W-604 (0320): wszystkie wersje ze stanem (zastosowana / cofnięta / odrzucona / zastąpiona / oczekuje), numer = id wersji
  * (ten sam co w dzwonku „Kalibracja ETA zastosowana automatycznie”); „Cofnij” → `eta_calibration_undo(p_version)` — tylko
  * Administrator HHL, także przy zamrożeniu. Błędy funkcji po polsku z kodu (`calibErrorKey`).
- * Błędu ETA 24 h / 6 h / 1 h, odprawy i przerw baza jeszcze nie zapisuje — kolumny „–”.
+ * Błędu ETA 24 h / 6 h / 1 h i przerw baza jeszcze nie zapisuje — kolumny „–”; odprawa (PORT_CHECKIN) od #621.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabase } from './client';

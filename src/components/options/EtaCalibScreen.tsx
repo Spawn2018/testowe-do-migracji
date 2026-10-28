@@ -166,7 +166,8 @@ export function EtaCalibScreen({ locale, data, readOnly, onApprove, approved, on
                       <td className="cal-num">{errText(o.err6)}</td>
                       <td className={`cal-num ${errTone(o.err1)}`} data-cal-err1={o.err1 ?? ''}>{errText(o.err1)}</td>
                       <td className="cal-num">
-                        <span className="cal-line">{dur(o.plMin)}</span>
+                        {/* #621: sam pomiar odprawy — bez „–” nad nim */}
+                        {o.plMin != null || o.portMin == null ? <span className="cal-line">{dur(o.plMin)}</span> : null}
                         {o.portMin != null ? <span className="cal-line cal-dim">{tp(locale, 'cal_port', { d: etaDuration(o.portMin) })}</span> : null}
                       </td>
                       <td className="cal-num">{dur(o.seMin)}</td>

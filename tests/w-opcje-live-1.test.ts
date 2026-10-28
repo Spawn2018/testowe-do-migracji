@@ -172,13 +172,16 @@ describe('Przełączniki bezpieczeństwa i Kalibracja ETA', () => {
       { code: 'PORT_CHECKIN', label: 'Odprawa', hours: 2 },
       { code: 'SE_ROAD_KAA', label: 'Droga SE (Karlskrona)', hours: 21 },
       { code: 'SE_ROAD', label: 'Droga SE', hours: 17 },
+      { code: 'CROSSING_GDY_KAA', label: 'Rejs Gdynia–Karlskrona', hours: 11 },
+      { code: 'SE_BREAKS', label: 'Przerwy', hours: 1 },
     ];
     const mk = (id: number, corridor: string, h: number, ex: string | null = null) =>
       ({ id, load_id: `l${id}`, corridor, hours_observed: h, exclude_reason: ex, observed_at: '2026-10-20T10:00:00Z' });
     const obs = [mk(1, 'PL_ROAD_GDY', 7), mk(2, 'PORT_CHECKIN', 3), mk(3, 'SE_ROAD_KAA', 22), mk(4, 'SE_E4', 18), mk(5, 'SE_ROAD_KAA', 30, 'LUKA_GPS'), mk(6, 'CROSSING_GDY_KAA', 10)];
     const c = calibFromDb('pl', params, obs, [], [], () => 'x');
     const n = Object.fromEntries(c.segments.map((s) => [s.code, s.n]));
-    expect(n).toEqual({ PL_ROAD_GDY: 1, PORT_CHECKIN: 1, SE_ROAD_KAA: 1, SE_ROAD: 1 });
+    expect(n).toEqual({ PL_ROAD_GDY: 1, PORT_CHECKIN: 1, SE_ROAD_KAA: 1, SE_ROAD: 1, CROSSING_GDY_KAA: 1, SE_BREAKS: 0 });
+    expect(c.segments.find((s) => s.code === 'CROSSING_GDY_KAA')?.verdict).not.toBe('fixed');
     expect(c.observations[0]).toMatchObject({ plMin: 420, portMin: null, seMin: null });
     expect(c.observations[1]).toMatchObject({ plMin: null, portMin: 180, seMin: null });
     expect(c.observations[2]).toMatchObject({ plMin: null, portMin: null, seMin: 1320 });
