@@ -581,7 +581,7 @@ declare
   r record;
   v_n_codes int := 0;
 begin
-  if not pg_try_advisory_xact_lock(hashtext('eta_calib')) then
+  if pg_try_advisory_xact_lock(hashtext('eta_calib')) is not true then
     raise exception 'BUSY' using errcode = 'P0001';
   end if;
 
@@ -718,7 +718,7 @@ declare
   v_dec uuid;
   v_proj uuid;
 begin
-  if not pg_try_advisory_xact_lock(hashtext('eta_calib')) then
+  if pg_try_advisory_xact_lock(hashtext('eta_calib')) is not true then
     return jsonb_build_object('ok', false, 'reason', 'BUSY');
   end if;
 
@@ -914,7 +914,7 @@ declare
   v_ok boolean := true;
   v_msg text := null;
 begin
-  if not pg_try_advisory_xact_lock(hashtext('eta_calib')) then
+  if pg_try_advisory_xact_lock(hashtext('eta_calib')) is not true then
     insert into integration_runs (job, ok, result)
     values ('eta_calib_tick', false, jsonb_build_object('reason', 'BUSY'));
     return jsonb_build_object('ok', false, 'reason', 'BUSY');
