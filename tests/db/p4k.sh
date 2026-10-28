@@ -401,14 +401,28 @@ val "B4: decider_role=ADMIN" \
 val "auto 18%: PL_ROAD bez zmian (8.5)" \
   "select trim_scale(hours)::text from eta_segment_params where code='PL_ROAD'" "8.5"
 
-# B7 BACKTEST_WORSE: fit poprawia medianę, test pogarsza
-# Po auto 12% PL_ROAD jest zablokowany ≥7 dni (Ś3) — cofnij auto + izoluj pomiary.
+val "B4: KSH 0 decyzji APPROVAL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH';
+   select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   commit;" "0"
+
+val "B4: SCX 0 decyzji APPROVAL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000003';
+   select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   commit;" "0"
+
+# B7 BACKTEST_WORSE: fit poprawia medianę, test pogarsza.
+# Po auto 12% PL_ROAD zablokowany ≥7 dni (Ś3) — cofnij auto (undone_at STARSZE niż 7 dni,
+# inaczej skip „po undo <3 nowych obs” wycina kod, bo pomiary BT mają observed_at w przeszłości).
 sys "begin;
 update eta_calibration_versions
-   set undone_at = now()
+   set undone_at = now() - interval '8 days'
  where applied is true
    and undone_at is null
-   and coalesce(note, '') like '%auto-applied%';
+   and (
+     coalesce(note, '') like '%auto-applied%'
+     or coalesce(note, '') like '%p4k-auto%'
+   );
 delete from eta_segment_observations
  where corridor = 'PL_ROAD'
    and coalesce(features->>'p4k', '') = 'true';

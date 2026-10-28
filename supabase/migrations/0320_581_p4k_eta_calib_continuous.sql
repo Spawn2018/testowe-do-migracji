@@ -284,7 +284,7 @@ insert into public.decision_types (
 ) values (
   'ETA_CALIBRATION_APPROVAL', 'dec_type_ETA_CALIBRATION_APPROVAL', 'ADMIN',
   '[{"code":"APPLY","label_key":"dec_opt_APPLY_ETA_CALIB","requires_comment":false,"effect":"ACCEPT"},{"code":"REJECT","label_key":"dec_opt_REJECT_ETA_CALIB","requires_comment":true,"effect":"SKIP"}]'::jsonb,
-  48, 'zmiana parametrów ETA > 15 %', 'WARNING', 50
+  null, 'zmiana parametrów ETA > 15 % (bez eskalacji do KSH)', 'WARNING', 50
 )
 on conflict (code) do update set
   title_key = excluded.title_key,
@@ -399,7 +399,7 @@ begin
   for r in
     with base as (
       select o.corridor, o.hours_observed, o.observed_at, o.features,
-             row_number() over (partition by o.corridor order by o.observed_at) as rn,
+             row_number() over (partition by o.corridor order by o.observed_at, o.id) as rn,
              count(*) over (partition by o.corridor) as cnt
         from eta_segment_observations o
        where o.exclude_reason is null
@@ -509,12 +509,14 @@ begin
     into v_err_after, v_err_before, v_err_n
     from (
       select o.corridor, o.hours_observed, o.observed_at,
-             row_number() over (partition by o.corridor order by o.observed_at) as rn,
+             row_number() over (partition by o.corridor order by o.observed_at, o.id) as rn,
              count(*) over (partition by o.corridor) as cnt
         from eta_segment_observations o
        where o.exclude_reason is null
          and o.hours_observed > 0
+         and o.observed_at >= now() - interval '90 days'
          and coalesce(o.features->>'p4k', '') = 'true'
+         and o.corridor in (select segment_code from eta_route_segments)
          and jsonb_exists(v_after, o.corridor)
          and (
            o.corridor not like 'PL_ROAD%' and o.corridor not like 'SE_ROAD%'
@@ -524,6 +526,18 @@ begin
    where o.rn > greatest(1, floor(o.cnt * 0.7));
 
   if v_err_n < 2 then
+    delete from eta_calibration_versions
+     where applied is not true
+       and created_by is null
+       and coalesce(note, '') like 'propozycja ciągła%'
+       and undone_at is null
+       and rejected_at is null
+       and not exists (
+         select 1 from decisions d
+          where d.type_code = 'ETA_CALIBRATION_APPROVAL'
+            and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+            and d.detail->>'version' = eta_calibration_versions.id::text
+       );
     return jsonb_build_object(
       'ok', true, 'proposal', null, 'reason', 'BACKTEST_TOO_FEW',
       'n_test', v_err_n
@@ -531,6 +545,18 @@ begin
   end if;
 
   if v_err_after >= v_err_before then
+    delete from eta_calibration_versions
+     where applied is not true
+       and created_by is null
+       and coalesce(note, '') like 'propozycja ciągła%'
+       and undone_at is null
+       and rejected_at is null
+       and not exists (
+         select 1 from decisions d
+          where d.type_code = 'ETA_CALIBRATION_APPROVAL'
+            and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+            and d.detail->>'version' = eta_calibration_versions.id::text
+       );
     return jsonb_build_object(
       'ok', true, 'proposal', null, 'reason', 'BACKTEST_WORSE',
       'error_before_min', round(v_err_before, 2),
@@ -1505,6 +1531,8 @@ begin
       perform auto_set_status(new.load_id, v_status, 'AT_SITE',
         'wjazd na plac budowy', new.occurred_at, v_detail);
 
+    -- Awaryjnie: GPS zgubił wyjazd z portu SE albo cały pobyt w porcie
+    -- (sygnał wraca dopiero na lądzie). Auto na drogach SE nie może być na promie.
     elsif v_kind in ('CHECKPOINT','PRE_ARRIVAL') and v_country = 'SE'
           and v_status in ('FERRY','AT_PORT_NYNASHAMN') then
       perform auto_set_status(new.load_id, v_status, 'IN_TRANSIT_SE',
@@ -1595,6 +1623,8 @@ begin
         format('wyjazd ze strefy portu SE (%s)', coalesce(v_name, v_op)),
         new.occurred_at, v_detail);
     end if;
+    -- Wyjazd ze strefy portu Gdańsk po przełączeniu na PROM (statek
+    -- odpływa) celowo niczego nie zmienia.
   end if;
   return null;
 end $function$;

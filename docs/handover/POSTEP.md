@@ -6237,3 +6237,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Przyczyny:** (1) `apply_geofence_status` w 0320 cofnięte do 0242 — bez A10/0279 (LOADING z DOCS_PENDING, SCHEDULE synthetic_ferry); (2) `grant execute … compute_load_eta to authenticated` → security/i2/nullguard; (3) B7 BACKTEST: po auto-12 PL_ROAD zablokowany Ś3 ≥7 dni → `NO_CHANGE`.
 - **Krok:** 0320 — geofence = 0279 + słownik `eta_obs_operator_key`; revoke EXECUTE `compute_load_eta` (tylko service_role); p4k.sh — undo auto przed BT + izolacja PL_ROAD, przywrócenie auto pod undo. Push → CI; po zielonym — prośba o F7.
 
+## 2026-10-28 06:00 — #604 CI FAIL a5de7b4e → F7 r3 (status A2 + B7 undone)
+
+- Skrzynka: #550 WSTRZYMANE (`pilne`); #538/#537/#500/#499 w planie — bez nowych do wpisania. Jedyny otwarty PR #604 — bez „F7: gotowe” po `a5de7b4e`.
+- Scalanie: nie (CI db 40627919452: status 337/2, p4k 57/1; unit/visual ✔).
+- **Przyczyny:** (1) status — brak komentarzy A2 „Awaryjnie: GPS” / „celowo niczego nie zmienia” w `apply_geofence_status` (0279); (2) B7 — `undone_at=now()` włącza skip „po undo <3 nowych” (pomiary BT mają `observed_at` w przeszłości) → `NO_CHANGE`.
+- **Krok F7 r3 (część CI):** komentarze A2; B7 `undone_at −8 d` + `%p4k-auto%`; `due_hours=null`; BACKTEST sprząta propozycje; filtr 90 d/słownik w teście wstecz; +2 testy KSH/SCX 0 decyzji → p4k **60**. Push → CI; po zielonym — prośba o F7 (bez scalenia bez „gotowe”).
+
