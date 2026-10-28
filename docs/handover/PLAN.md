@@ -1115,7 +1115,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #603 + F7 #607 (po #597). Kolejność: ~~#597~~ → **#603** → **27B:C** → BN1…
 1. ~~**0327** APPLY zamyka decyzję + macierz + labels~~ — **SCALONE** (`cf01968e` / PR #616, 28.10.2026 19:43Z). ~~D3 front~~ → **#617 SCALONE**.
 2. **Pełna odbudowa pomiarów (prod, 28.10):** `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=29, loads_fail=0`. Dostarczone z GPS od 05.10: 17/17 z pomiarem; OK 9, wykluczenia 20. Per odcinek po rebuild: PL_ROAD 3 OK + 11 TRASA_NIEZNANA (brak `sailing`/route — dane); PL_ROAD_GDY 0+3 LUKA_GPS (luki 4–8 h — dane); PORT_CHECKIN 1+5 BRAK; CROSSING_GDY_KAA 0+1 BRAK; SE_ROAD 3 OK; SE_ROAD_KAA 2 OK.
-3. **0328 (ten PR):** błąd pomiaru PORT_CHECKIN — `p_before=PIN` + `<` gubiło EXIT przy PIN ≤ EXIT (5/5 BRAK miało ENTER+EXIT). Fix: okno `≥`/`≤`; EXIT bez limitu PIN; PIN szukany **po** EXIT. `SE_ROAD_KAA_INLAND` w `eta_segment_params` (27B:C — przełączanie korytarza później). Wrapper `eta_rebuild()` 0-arg. p4k **89**. Po scaleniu: ponowny rebuild na prod + odbiór SELECT.
+3. **0328 (ten PR):** błąd pomiaru PORT_CHECKIN — `p_before=PIN` + `<` gubiło EXIT przy PIN ≤ EXIT (5/5 BRAK miało ENTER+EXIT). Fix: okno `≥`/`≤`; EXIT bez limitu PIN; PIN szukany **po** EXIT. `SE_ROAD_KAA_INLAND` w `eta_segment_params` (27B:C — przełączanie korytarza później). Bez wrappera 0-arg (F7 N1). p4k **88**; i2 parametry **12**. Po scaleniu: ponowny rebuild na prod + odbiór SELECT.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → **#603** (W TOKU) → **27B:C** → BN1…

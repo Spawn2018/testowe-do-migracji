@@ -170,15 +170,4 @@ on conflict (code) do update set
   source = excluded.source,
   updated_at = now();
 
--- Wrapper bezargumentowy (wygodne ręczne / odbiór) — 0320 go usunął
-create or replace function public.eta_rebuild_segment_observations()
-returns jsonb
-language sql security definer set search_path = public, pg_temp as $$
-  select public.eta_rebuild_segment_observations(null::timestamptz);
-$$;
-revoke all on function public.eta_rebuild_segment_observations()
-  from public, anon, authenticated;
-grant execute on function public.eta_rebuild_segment_observations() to service_role;
-
-comment on function public.eta_rebuild_segment_observations() is
-  '#603: odbudowa pomiarów; p_since null = 30 dni (retencja GPS).';
+-- bez wrappera 0-arg (F7 N1 / 0320): wywołanie = eta_rebuild_segment_observations(null) albo DEFAULT

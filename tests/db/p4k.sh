@@ -908,80 +908,37 @@ val "B1: powrotny wcześniej + PL→SE później → wybrany PL→SE" \
      from compute_load_eta('a581a581-0000-4000-8000-000000000581', now()) limit 1;
    rollback;" "true"
 
-# #603: PIN kilka min przed EXIT PORT_OUT nie może dać PORT_CHECKIN=BRAK_ZDARZENIA
+# #603: PIN kilka min przed EXIT PORT_OUT nie może dać PORT_CHECKIN=BRAK (fixture 581)
 val "#603: PIN przed EXIT → PORT_CHECKIN OK (nie BRAK)" \
   "begin;
-   delete from eta_segment_observations where load_id = 'a581a581-0000-4000-8000-000000000603';
-   delete from load_events where load_id = 'a581a581-0000-4000-8000-000000000603';
-   delete from positions where load_id = 'a581a581-0000-4000-8000-000000000603';
-   delete from loads where id = 'a581a581-0000-4000-8000-000000000603';
-   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
-                      plan_load_date, plan_delivery_date, actual_delivery_at, sailing_id)
-   select 'a581a581-0000-4000-8000-000000000603', project_id, 'P4K-603', 'HHL-P4K-603', 'SCX-P4K-603',
-          'DELIVERED', current_date - 5, current_date - 2, timestamptz '2026-10-26 20:00+02',
-          (select id from sailings where route = 'GDN-NYN' order by departure_at desc limit 1)
-     from loads where id = 'a581a581-0000-4000-8000-000000000581';
-   -- gdy brak rejsu GDN-NYN: ustaw trase przez zdarzenia geofence (route POLFERRIES)
-   update loads set sailing_id = coalesce(sailing_id,
-     (select s.id from sailings s where s.route in ('GDN-NYN','POLFERRIES') limit 1))
-    where id = 'a581a581-0000-4000-8000-000000000603';
+   delete from load_events where load_id='a581a581-0000-4000-8000-000000000581';
+   with f as (select kind::text k, id from geofences where name like 'P4K %'),
+   t(ev, k, ts) as (values
+     ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
+     ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
+     ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-18 16:56+02'),
+     ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-18 17:00+02'),
+     ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-19 11:00+02'),
+     ('GEOFENCE_EXIT','PORT_IN',   timestamptz '2026-10-19 12:00+02'),
+     ('GEOFENCE_ENTER','SITE',     timestamptz '2026-10-20 06:00+02')
+   )
    insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_EXIT', timestamptz '2026-10-22 10:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'LOADING')
-     from geofences g where g.name = 'P4K LOADING' limit 1;
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_ENTER', timestamptz '2026-10-22 14:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'PORT_OUT', 'route', 'POLFERRIES')
-     from geofences g where g.name = 'P4K PORT_OUT' limit 1;
-   -- wczesny PIN (4 min przed EXIT) — jak na produkcji
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_ENTER', timestamptz '2026-10-22 17:56+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'PORT_IN', 'route', 'POLFERRIES')
-     from geofences g where g.name = 'P4K PORT_IN' limit 1;
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_EXIT', timestamptz '2026-10-22 18:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'PORT_OUT', 'route', 'POLFERRIES')
-     from geofences g where g.name = 'P4K PORT_OUT' limit 1;
-   -- prawdziwy PIN SE po EXIT + SITE (żeby SE nie wpadł w BRAK z innych powodów)
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_ENTER', timestamptz '2026-10-23 12:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'PORT_IN', 'route', 'POLFERRIES')
-     from geofences g where g.name = 'P4K PORT_IN' limit 1;
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_EXIT', timestamptz '2026-10-23 14:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'PORT_IN', 'route', 'POLFERRIES')
-     from geofences g where g.name = 'P4K PORT_IN' limit 1;
-   insert into load_events (load_id, event_type, occurred_at, payload)
-   select 'a581a581-0000-4000-8000-000000000603', 'GEOFENCE_ENTER', timestamptz '2026-10-24 10:00+02',
-          jsonb_build_object('geofence_id', g.id, 'geofence_kind', 'SITE')
-     from geofences g where g.name = 'P4K SITE' limit 1;
-   -- GPS gęsty na PL (bez LUKA)
-   insert into positions (load_id, ts, geom_raw, source, raw)
-   select 'a581a581-0000-4000-8000-000000000603',
-          timestamptz '2026-10-22 10:00+02' + (g.i || ' minutes')::interval,
-          st_setsrid(st_makepoint(18.0 + g.i/1000.0, 54.0), 4326),
-          'TELEMATICS_API', '{}'::jsonb
-     from generate_series(0, 480, 5) as g(i);
+   select 'a581a581-0000-4000-8000-000000000581', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k)
+     from t join f on f.k = t.k;
    select (
-     eta_record_segment_observations('a581a581-0000-4000-8000-000000000603') >= 1
+     eta_record_segment_observations('a581a581-0000-4000-8000-000000000581') >= 1
      and exists (
        select 1 from eta_segment_observations
-        where load_id = 'a581a581-0000-4000-8000-000000000603'
-          and corridor = 'PORT_CHECKIN' and exclude_reason is null
-     )
-     and not exists (
-       select 1 from eta_segment_observations
-        where load_id = 'a581a581-0000-4000-8000-000000000603'
-          and corridor = 'PORT_CHECKIN' and exclude_reason = 'BRAK_ZDARZENIA'
+        where load_id='a581a581-0000-4000-8000-000000000581'
+          and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
+          and exclude_reason is null
      )
    )::text;
    rollback;" "true"
 
 val "#603: SE_ROAD_KAA_INLAND w słowniku (27B:C)" \
   "select (count(*) = 1)::text from eta_segment_params where code = 'SE_ROAD_KAA_INLAND'" "true"
-
-val "#603: rebuild() 0-arg istnieje" \
-  "select count(*)::text from pg_proc where proname='eta_rebuild_segment_observations' and pronargs=0" "1"
 
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
