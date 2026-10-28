@@ -6540,3 +6540,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #623 → `94f7c99a` (F7 gotowe @ `d5a78228`, unit/visual ✔) — W-622 ostrzeżenie dwóch nr naczepy. Bez push na main.
 - CI #619 @ `190db80c`: unit/visual ✔; db **FAIL** p4k 87/94 (7× #603 → `false`; SE_ROAD_KAA_INLAND OK).
 - **Krok:** diagnostyka 1. testu (NO_ROW/OK excl+route+ev); UUID `a603a603-…`; `route` w payload zdarzeń. Push → CI `p4k` → odczyt diagnostyki / fix.
+
+## 2026-10-28 23:55 — #619 p4k: snapshot PG w testach #603
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499 w kolejce. Bez nowych `pilne`.
+- Scalanie: #619 — F7 r3 logika OK, czekam zielonego CI (brak „F7: gotowe” po ostatnim). Bez push na main.
+- CI #619 @ `b4a1fe42`: unit/visual ✔; db **FAIL** p4k 87/94. Diagnostyka: `NO_ROW n=3 route=POLFERRIES ev=6 gf=4 load=1 corridors=none` — pomiar wstawia 3 wiersze, ale `EXISTS` w tym samym `SELECT` ich nie widzi (snapshot PG).
+- **Krok:** testy #603 — `eta_record_segment_observations` i asercja w osobnych statementach. p4k **94**. Push → CI → F7.

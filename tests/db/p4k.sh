@@ -909,6 +909,8 @@ val "B1: powrotny wcześniej + PL→SE później → wybrany PL→SE" \
    rollback;" "true"
 
 # #603 F7 r3: load a603-… (nie …0006xx — kolizja BT). Trasa w payload + sailing null.
+# Pomiar i asercja w OSOBNYCH statementach — w jednym SELECT snapshot PG nie widzi
+# wierszy wstawionych przez eta_record_segment_observations (n=3, corridors=none).
 # B4: 1 PIN, późny EXIT po PIN → BRAK (bez planu/GPS)
 val "#603: późny EXIT po PIN → PORT_CHECKIN BRAK" \
   "begin;
@@ -933,33 +935,16 @@ val "#603: późny EXIT po PIN → PORT_CHECKIN BRAK" \
             'route', coalesce(f.route, 'POLFERRIES')
           )
      from t join f on f.k = t.k;
-   with r as (
-     select eta_record_segment_observations('a603a603-0000-4000-8000-000000000001') as n,
-            eta_obs_route_key('a603a603-0000-4000-8000-000000000001') as route,
-            (select count(*) from load_events
-              where load_id='a603a603-0000-4000-8000-000000000001') as ev
-   )
-   select coalesce(
-     (
-       select format('OK excl=%s n=%s route=%s ev=%s',
-         o.exclude_reason, r.n, coalesce(r.route,'null'), r.ev)
-         from eta_segment_observations o, r
-        where o.load_id='a603a603-0000-4000-8000-000000000001'
-          and o.corridor='PORT_CHECKIN' and (o.features->>'p4k')='true'
-        limit 1
-     ),
-     (
-       select format('NO_ROW n=%s route=%s ev=%s gf=%s load=%s corridors=%s',
-         r.n, coalesce(r.route,'null'), r.ev,
-         (select count(*) from geofences where name like 'P4K %'),
-         (select count(*) from loads where id='a603a603-0000-4000-8000-000000000001'),
-         coalesce((select string_agg(corridor || ':' || coalesce(exclude_reason,'OK'), ',')
-                     from eta_segment_observations
-                    where load_id='a603a603-0000-4000-8000-000000000001'), 'none'))
-         from r
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000001');
+   select (
+     exists (
+       select 1 from eta_segment_observations
+        where load_id='a603a603-0000-4000-8000-000000000001'
+          and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
+          and exclude_reason = 'BRAK_ZDARZENIA'
      )
-   );
-   rollback;" "OK excl=BRAK_ZDARZENIA n=3 route=POLFERRIES ev=6"
+   )::text;
+   rollback;" "true"
 
 # B2: późny EXIT + sailing.actual_departure_at → PORT_CHECKIN OK 3 h + port_out_src
 val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
@@ -1002,9 +987,9 @@ val "#603: późny EXIT + sailing → PORT_CHECKIN OK" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000002');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000002') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000002'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
@@ -1053,9 +1038,9 @@ val "#603: plan bez actual → PORT_CHECKIN BRAK" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000003');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000003') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000003'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
@@ -1106,9 +1091,9 @@ val "#603: delayed → PORT_CHECKIN OK + SAILING_DELAYED" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000004');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000004') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000004'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
@@ -1156,9 +1141,9 @@ val "#603: rejs sprzed ENTER → PORT_CHECKIN BRAK" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000005');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000005') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000005'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
@@ -1190,9 +1175,9 @@ val "#603: EXIT powrotu po PIN → PORT_CHECKIN bez zawyżenia" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000006');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000006') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000006'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
@@ -1223,9 +1208,9 @@ val "#603: CROSSING EXIT=PIN → BRAK" \
           jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
                              'route', coalesce(f.route, 'POLFERRIES'))
      from t join f on f.k = t.k;
+   select eta_record_segment_observations('a603a603-0000-4000-8000-000000000007');
    select (
-     eta_record_segment_observations('a603a603-0000-4000-8000-000000000007') >= 1
-     and exists (
+     exists (
        select 1 from eta_segment_observations
         where load_id='a603a603-0000-4000-8000-000000000007'
           and corridor like 'CROSSING%' and (features->>'p4k')='true'
