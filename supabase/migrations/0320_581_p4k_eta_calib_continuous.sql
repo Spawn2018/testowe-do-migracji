@@ -164,7 +164,7 @@ drop function if exists public.eta_upsert_segment_observation(uuid, text, timest
 comment on function public.eta_rebuild_segment_observations(timestamptz) is
   '#581 P4-k: odbudowa pomiarów GPS; p_since null = 30 dni. Cron cz.2: now()-48h.';
 
--- Operator trasy ze słownika (eta_route_aliases); używane przy pomiarze i silniku ETA.
+-- Operator / rodzina trasy: wyłącznie eta_route_aliases + eta_route_segments (bez hardkodu STENA).
 
 create or replace function public.eta_record_v_op(p_route text)
 returns text
@@ -575,7 +575,59 @@ begin
 
     v_before := v_keep_before;
     v_after := v_keep_after;
+    -- F7 r5 pkt 5: n_obs / max_chg / błąd tylko z kodów zostawionych (bez „worse”)
     v_n_codes := (select count(*)::int from jsonb_object_keys(v_after));
+    select coalesce(sum(cnt), 0)::int into v_n
+      from (
+        select count(*)::int as cnt
+          from eta_segment_observations o
+         where o.exclude_reason is null
+           and o.hours_observed > 0
+           and o.observed_at >= now() - interval '90 days'
+           and coalesce(o.features->>'p4k', '') = 'true'
+           and jsonb_exists(v_after, o.corridor)
+           and o.corridor in (select segment_code from eta_route_segments)
+         group by o.corridor
+      ) s;
+    select coalesce(max(greatest(
+             abs((v_after -> b.key ->> 'hours')::numeric - (b.value->>'hours')::numeric)
+               / nullif((b.value->>'hours')::numeric, 0),
+             abs(coalesce((v_after -> b.key ->> 'spread_pct')::numeric, 0)
+                 - coalesce((b.value->>'spread_pct')::numeric, 0))
+               / nullif(coalesce((b.value->>'spread_pct')::numeric, 20), 0)
+           )), 0)
+      into v_max_chg
+      from jsonb_each(v_before) b
+     where jsonb_exists(v_after, b.key);
+    v_err_after := 0; v_err_before := 0; v_err_n := 0;
+    for v_code in select jsonb_object_keys(v_after)
+    loop
+      select
+        coalesce(avg(abs(o.hours_observed - (v_after -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
+        coalesce(avg(abs(o.hours_observed - (v_before -> o.corridor ->> 'hours')::numeric) * 60.0), 0),
+        count(*)::int
+        into v_c_err_a, v_c_err_b, v_c_n
+        from (
+          select o.corridor, o.hours_observed,
+                 row_number() over (partition by o.corridor order by o.observed_at, o.id) as rn,
+                 count(*) over (partition by o.corridor) as cnt
+            from eta_segment_observations o
+           where o.exclude_reason is null
+             and o.hours_observed > 0
+             and o.observed_at >= now() - interval '90 days'
+             and coalesce(o.features->>'p4k', '') = 'true'
+             and o.corridor = v_code
+             and o.corridor in (select segment_code from eta_route_segments)
+             and (
+               o.corridor not like 'PL_ROAD%' and o.corridor not like 'SE_ROAD%'
+               or coalesce(o.features->>'gps_quality', '') = 'true'
+             )
+        ) o
+       where o.rn > greatest(1, floor(o.cnt * 0.7));
+      v_err_after := v_err_after + v_c_err_a * v_c_n;
+      v_err_before := v_err_before + v_c_err_b * v_c_n;
+      v_err_n := v_err_n + v_c_n;
+    end loop;
     if coalesce(v_err_n, 0) > 0 then
       v_err_after := v_err_after / v_err_n;
       v_err_before := v_err_before / v_err_n;
@@ -602,7 +654,7 @@ begin
     ) into v_open_dec;
   end if;
 
-  -- Ś4 vs B4: przy otwartej decyzji — nowy wiersz; starą decyzję SUPERSEDED (F7 r3 pkt 8)
+  -- Ś4 vs B4: przy otwartej decyzji — nowy wiersz; starą decyzję SUPERSEDED (F7 r3/r5 B2)
   if v_exist is not null and v_open_dec is not true then
     update eta_calibration_versions
        set params_before = v_before,
@@ -629,6 +681,18 @@ begin
              updated_at = now()
        where type_code = 'ETA_CALIBRATION_APPROVAL'
          and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+      -- F7 r5 B2: stara wersja z decyzją → rejected, żeby auto nie wracało do BLOCKED
+      if v_exist is not null then
+        update eta_calibration_versions
+           set rejected_at = coalesce(rejected_at, now()),
+               note = case
+                 when coalesce(note, '') like '%superseded%' then note
+                 else coalesce(note || '; ', '') || 'superseded'
+               end
+         where id = v_exist
+           and applied is not true
+           and undone_at is null;
+      end if;
     end if;
     insert into eta_calibration_versions (
       created_by, params_before, params_after, n_obs,
@@ -753,7 +817,7 @@ begin
     end if;
     v_label := 'automat kalibracji';
   elsif (current_app_role() = 'HHL_ADMIN') is not true then
-    raise exception 'wyłącznie HHL_ADMIN';
+    raise exception 'ETA_NOT_ADMIN' using errcode = '42501';
   end if;
 
   for k, h, sp in
@@ -1115,7 +1179,7 @@ begin
         on m.event_group = v_group and m.role = u.role and m.in_app
      where u.active
        and (
-         (o.kind = 'FORWARDER' and (v_role <> 'ADMIN' or u.role = 'HHL_ADMIN'))
+         (o.kind = 'FORWARDER' and (v_role is distinct from 'ADMIN' or u.role = 'HHL_ADMIN'))
          or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
               p_load is null
               or exists (select 1 from loads l where l.id = p_load and l.carrier_org_id = o.id)))
@@ -1184,7 +1248,7 @@ begin
         on m.event_key = 'dec_new' and m.role = u.role and m.email
      where u.active and u.email is not null
        and (
-         (o.kind = 'FORWARDER' and (v_role <> 'ADMIN' or u.role = 'HHL_ADMIN'))
+         (o.kind = 'FORWARDER' and (v_role is distinct from 'ADMIN' or u.role = 'HHL_ADMIN'))
          or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
               d.load_id is null
               or exists (select 1 from loads l where l.id = d.load_id and l.carrier_org_id = o.id)))
@@ -2110,12 +2174,14 @@ begin
           v_var := v_var + (12 * 60)^2; v_sum := v_sum + (12 * 60); v_comp := v_comp || jsonb_build_object('code','SAILING_AT_RISK','min',round(12 * 60));
         end if;
       else
-        -- Ś1 F7 r3: najbliższy rejs ze słownika aliasów (nie hardkod GDN-NYN/GDY-KAA)
+        -- Ś1 F7 r5 B1: tylko trasy PL→SE (alias_key = route_key); bez powrotnych NYN-GDN/KAA-GDY
         select coalesce(x.delayed_departure_at, x.departure_at), coalesce(x.delayed_arrival_at, x.arrival_at)
           into v_dep, v_arr
           from sailings x
          where x.project_id = l.project_id
-           and exists (select 1 from eta_route_aliases a where a.alias_key = x.route)
+           and x.route in (
+             select a.alias_key from eta_route_aliases a where a.alias_key = a.route_key
+           )
            and x.status <> 'ODWOLANY'
            and coalesce(x.delayed_departure_at, x.departure_at) >= v_start
          order by coalesce(x.delayed_departure_at, x.departure_at) limit 1;

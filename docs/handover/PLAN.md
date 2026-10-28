@@ -1077,7 +1077,7 @@ Decyzja 8A dotyczy języka ekranów. Tłumaczenie komunikatów drogowych SV/EN �
 Źródło: #594 (Spawn2018; właściciel 27.10 14:55). Jedno IN_APP `KSH_IMPORT_SUMMARY` na konto HHL/SCX/KSH (delete+insert → nowe id); migawka `ksh_import_summaries` + RPC `ksh_import_summary_get` z filtrem pól i transportów (B3, także anulowanie); P1 skip przy pustym WT; testy import (**359**), nullguard (**870**); c3 katalog **33**, `fixed_*=false`. Ekran — koordynator `wyglad/` (#600 gest/rozmycie, #602 okno).
 
 ### P4-k · #581 Kalibracja ETA ciągła — W TOKU (cz.1 SCALONE `3f82cb09` / PR #598 / **0319**; cz.2 PR #604 na `pakiet/581-p4k-eta-calib-cz2` / **0320**; decyzja 27A)
-Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r4→r5:** BT UUID `…0006||lpad`; nullguard `ETA_NOT_ADMIN`/`ETA_DICT_NOT_ADMIN`; DECISION_OPEN/L-13 tylko `HHL_ADMIN` przy ADMIN; `ETA_CALIB_NEWER`; bez ogólnego coalesce h_road/h_pl; bez bloku „Kolumny odłączenia”. suite `p4k` **62**, nullguard **880**. Ekran — koordynator `wyglad/`.
+Źródło: #581 (Spawn2018; właściciel 27.10 00:55 + 27A 01:05). Kolejność: #596 → #594 → cz.1 SCALONE. **Cz.1 (0319):** `eta_route_segments`, pomiar GPS/stref (luka tylko PL/SE). **Cz.2 (0320) F7 r5:** B1 rejs tylko `alias_key=route_key` (bez NYN-GDN/KAA-GDY); B2 SUPERSEDED→`rejected_at`; B3 ADMIN `is distinct from` + test HHL_OPS 0; backtest n/max_chg tylko z keep; `ETA_NOT_ADMIN` w apply; Ś8 undo prep bez `>/dev/null`. suite `p4k` **69**, nullguard **880**. Ekran — koordynator `wyglad/`.
 
 ### C4–C13 bez zmian zakresu
 Zostają jak w planie, po A6 / #569 / #567 23B / #563.
@@ -1860,3 +1860,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 28.10.2026 06:05 | #604 F7 r3 CI a6a3c9f7: A2 komentarze, B7 undone −8 d, due_hours=null, KSH/SCX 0 decyzji; p4k **60** | pętla |
 | 28.10.2026 06:20 | #604 CI db FAIL p4k BACKTEST→NO_CHANGE (Δ60 %>40 %); F7 r3: BT hours=10, backtest per kod, sailings CHECK, dict params, SUPERSEDED; p4k **62** | pętla |
 | 28.10.2026 06:50 | #604 CI db FAIL: nullguard 868/12 (ETA_* vs „wyłącznie HHL_ADMIN”) + p4k BT UUID `…060||10` invalid → rollback → NO_CHANGE; F7 r4 domknięcie (ADMIN recipients, coalesce, Kolumny) | pętla |
+| 28.10.2026 07:05 | #604 CI db FAIL Ś8 undo (ETA_UNDO_MISSING — restore AUTO_VER w `/dev/null`); F7 r5: B1 filtr PL→SE, B2 rejected_at, B3 is distinct from, backtest keep-only, p4k **69** | pętla |

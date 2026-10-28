@@ -414,6 +414,59 @@ val "B4: SCX 0 decyzji APPROVAL" \
    select count(*)::text from decisions where type_code='ETA_CALIBRATION_APPROVAL';
    commit;" "0"
 
+# F7 r5 B3: DECISION_OPEN / L-13 tylko HHL_ADMIN (nie HHL_OPS)
+sys "insert into app_users (auth_id, org_id, email, role, active)
+     values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
+             'ops-p4k@test','HHL_OPS',true)
+     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;" >/dev/null
+
+val "B3: HHL_OPS 0 DECISION_OPEN kalibracji" \
+  "select count(*)::text from notifications
+    where template='DECISION_OPEN'
+      and user_id='11111111-0000-0000-0000-000000000004'
+      and payload->>'type'='ETA_CALIBRATION_APPROVAL'" "0"
+
+# F7 r5 B2: przy otwartej decyzji propose → SUPERSEDED + rejected_at (bez wiecznego BLOCKED)
+VER18=$(sys "select id::text from eta_calibration_versions where note like '%p4k-auto-18%' order by id desc limit 1" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tail -1 | tr -d '\r')
+sys "begin;
+-- fit≈9.6 przy hours=8.5 → Δ≈12.9 % (>10, ≤15); test≈9.5 (po lepsze niż przed) — otwarta decyzja na VER18
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+update eta_segment_observations set hours_observed = 9.6
+ where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
+   and observed_at < now() - interval '10 days';
+update eta_segment_observations set hours_observed = 9.5
+ where coalesce(features->>'p4k_calib','') = 'true' and corridor = 'PL_ROAD'
+   and observed_at >= now() - interval '10 days';
+select eta_propose_calibration();
+select eta_auto_apply_pending();
+commit;"
+
+val "B2: auto-18 rejected_at po SUPERSEDED" \
+  "select (rejected_at is not null)::text from eta_calibration_versions where id=$VER18" "true"
+
+val "B2: nowa wersja applied (bez BLOCKED)" \
+  "select (count(*) >= 1)::text from eta_calibration_versions
+    where applied is true and undone_at is null and id > $VER18
+      and note like 'propozycja ciągła%'" "true"
+
+sys "begin;
+-- usuń wersje po VER18 (żeby undo AUTO_VER / BT nie widziały nowszej applied ani skip 7 d)
+delete from decision_events where decision_id in (select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+delete from audit_log
+ where action in ('ETA_CALIBRATION_APPLY','ETA_CALIBRATION_UNDO')
+   and entity_id in (select id::text from eta_calibration_versions where id >= $VER18);
+delete from eta_calibration_versions where id >= $VER18;
+update eta_segment_params set hours = 8.5, spread_pct = 15 where code = 'PL_ROAD';
+-- przywróć godziny obserwacji calib (mediana ~10 jak na starcie cz.2)
+update eta_segment_observations set hours_observed = h
+ from (values
+   (1,9.5),(2,10.0),(3,10.0),(4,10.5),(5,11.0),(6,9.8),(7,10.0),(8,10.2)
+ ) as t(ord, h)
+ where load_id = ('a581a581-0000-4000-8000-00000000059' || t.ord)::uuid
+   and corridor = 'PL_ROAD';
+commit;"
+
 # B7 BACKTEST_WORSE: fit poprawia medianę, test pogarsza.
 # Po auto 12% PL_ROAD zablokowany ≥7 dni (Ś3) — cofnij auto (undone_at STARSZE niż 7 dni,
 # inaczej skip „po undo <3 nowych obs” wycina kod, bo pomiary BT mają observed_at w przeszłości).
@@ -458,29 +511,35 @@ select ('a581a581-0000-4000-8000-0000000006' || lpad((7+ord)::text, 2, '0'))::uu
        jsonb_build_object('p4k', true, 'p4k_calib', true, 'p4k_bt', true, 'gps_quality', true),
        now() - interval '3 days' + (ord || ' hours')::interval
   from (values (1,7.4),(2,7.5),(3,7.6)) as t(ord,h);
-commit;" >/dev/null
+commit;"
 
 val "B7: BACKTEST_WORSE gdy fit psuje test" \
   "select eta_propose_calibration()->>'reason'" "BACKTEST_WORSE"
 
+# F7 r5: bez >/dev/null — najpierw przywróć AUTO_VER (BT ustawiał undone_at −8 d)
 sys "begin;
-delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
-delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
-delete from eta_calibration_versions where note like 'propozycja ciągła%' and applied is not true;
--- przywróć auto-12 do stanu „zastosowana” pod test undo (BACKTEST tymczasowo ją cofnął)
 update eta_calibration_versions
    set undone_at = null,
        note = regexp_replace(coalesce(note, ''), ';?\s*undone', '', 'g')
- where id = $AUTO_VER;
+ where id = $AUTO_VER and applied is true;
+delete from eta_segment_observations where coalesce(features->>'p4k_bt','')='true';
+delete from loads where id::text like 'a581a581-0000-4000-8000-0000000006%';
+delete from eta_calibration_versions
+ where applied is not true
+   and created_by is null
+   and coalesce(note, '') like 'propozycja ciągła%';
 update eta_segment_params
    set hours = 10, spread_pct = 15
  where code = 'PL_ROAD';
-commit;" >/dev/null
+commit;"
+
+val "undo prep: AUTO_VER applied+not undone" \
+  "select (applied is true and undone_at is null)::text from eta_calibration_versions where id=$AUTO_VER" "true"
 
 # undo po auto 12 % (przywróć params_before); zamrożenie nie blokuje (Ś8)
 sys "begin;
 update app_parameters set value = 1 where key = 'ETA_CALIBRATION_FROZEN';
-commit;" >/dev/null
+commit;"
 
 val "freeze: propose → FROZEN" \
   "select eta_propose_calibration()->>'reason'" "FROZEN"
@@ -527,10 +586,6 @@ val "Ś1: RPC dict upsert HHL" \
    select (eta_route_dict_upsert('P4K-DICT-TEST','GDN-NYN','POLFERRIES', null)->>'ok');
    commit;" "true"
 
-sys "insert into app_users (auth_id, org_id, email, role, active)
-     values ('11111111-0000-0000-0000-000000000004','00000000-0000-0000-0000-00000000a001',
-             'ops-p4k@test','HHL_OPS',true)
-     on conflict (auth_id) do update set role='HHL_OPS', active=true, org_id=excluded.org_id;" >/dev/null
 ops_dict=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='11111111-0000-0000-0000-000000000004';
   select eta_route_dict_upsert('P4K-DICT-OPS','GDN-NYN','POLFERRIES', null); commit;" 2>&1 || true)
 if echo "$ops_dict" | grep -qiE 'ETA_DICT_NOT_ADMIN|42501'; then
@@ -562,6 +617,38 @@ val "tick: ok=true na czystych danych" \
 
 val "tick: wpis integration_runs" \
   "select (count(*) >= 1)::text from integration_runs where job like 'eta_calib%'" "true"
+
+# F7 r5 B1: filtr PL→SE = alias_key=route_key; sam NYN-GDN nie daje założonego rejsu
+val "B1: NYN-GDN/KAA-GDY poza filtrem PL→SE" \
+  "select (count(*) = 0)::text from eta_route_aliases
+    where alias_key in ('NYN-GDN','KAA-GDY') and alias_key = route_key" "true"
+
+val "B1: GDN-NYN i GDY-KAA w filtrze PL→SE" \
+  "select (count(*) = 2)::text from eta_route_aliases
+    where alias_key in ('GDN-NYN','GDY-KAA') and alias_key = route_key" "true"
+
+val "B1: sam NYN-GDN → brak założonego rejsu powrotnego" \
+  "begin;
+   insert into vessels (id, name, operator) values
+     ('a581a581-0000-4000-8000-00000000vv01', 'P4K B1', 'POLFERRIES')
+   on conflict (id) do nothing;
+   update sailings set status = 'ODWOLANY'
+    where project_id = (select project_id from loads where id='a581a581-0000-4000-8000-000000000581');
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+   values (
+     'a581a581-0000-4000-8000-00000000sa01',
+     (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+     'a581a581-0000-4000-8000-00000000vv01',
+     'NYN-GDN', now() + interval '2 days', now() + interval '3 days', 'ZAPLANOWANY', 'RECZNIE');
+   update loads set sailing_id = null, status = 'IN_TRANSIT_PL',
+                    telematics_vehicle_id = coalesce(telematics_vehicle_id, 'P4K-B1')
+    where id = 'a581a581-0000-4000-8000-000000000581';
+   insert into positions (load_id, ts, geom_raw, source, raw) values
+     ('a581a581-0000-4000-8000-000000000581', now() - interval '3 minutes',
+      st_setsrid(st_makepoint(17.0, 54.5), 4326), 'TELEMATICS_API', '{}'::jsonb);
+   select ((basis->'flags')::text like '%brak rejsu w rozkładzie%')::text
+     from compute_load_eta('a581a581-0000-4000-8000-000000000581', now()) limit 1;
+   rollback;" "true"
 
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

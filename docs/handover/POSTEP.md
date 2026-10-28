@@ -6260,3 +6260,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: nie (CI db 40632688755: nullguard 868/12, p4k 61/1; unit/visual ✔).
 - **Przyczyny:** (1) nullguard oczekiwał „wyłącznie HHL_ADMIN”, funkcje rzucają `ETA_NOT_ADMIN` / `ETA_DICT_NOT_ADMIN`; (2) fixture B7: `…060||10` → niepoprawny UUID, transakcja z `>/dev/null` się wycofuje → stan przed BT → NO_CHANGE.
 - **Krok:** null-guard-calls → kody ETA_*; BT UUID `…0006||lpad(nn,2)`; F7 r4: DECISION_OPEN/L-13 tylko HHL_ADMIN przy ADMIN; `ETA_CALIB_NEWER`; bez coalesce h_road/h_pl; bez bloku „Kolumny odłączenia”; delete propose zawężony; dict cleanup po RPC. Push → CI; po zielonym — prośba o F7. Bez push na main.
+
+## 2026-10-28 07:05 — #604 F7 r5 (B1–B3 + Ś8 + backtest keep)
+
+- Skrzynka `dla-cursora`: #550 `pilne` **WSTRZYMANE** (nic nie budować); #538/#537/#500/#499 w planie — bez nowych.
+- Scalanie: nie (CI db na `8101591e` FAIL p4k 61/1 Ś8 undo; F7 r5: nie scalać bez „gotowe” po nowym SHA).
+- **Przyczyna Ś8:** restore AUTO_VER po BT był w bloku z `>/dev/null` — przy błędzie `undone_at` zostawało −8 d → `ETA_UNDO_MISSING`.
+- **Krok F7 r5 (0320 + p4k + gate-suites):**
+  - **B1:** `compute_load_eta` wybiera rejs tylko gdy `alias_key = route_key` (bez powrotnych NYN-GDN/KAA-GDY) + testy
+  - **B2:** po SUPERSEDED ustaw `rejected_at` na starej wersji; test propose→rejected + auto nowej
+  - **B3:** FORWARDER z `v_role is distinct from 'ADMIN'`; test HHL_OPS 0× DECISION_OPEN
+  - backtest: `n_obs` / `max_chg` / błąd tylko z kodów keep; apply → `ETA_NOT_ADMIN`
+  - Ś8: restore AUTO_VER bez `/dev/null` + val prep; p4k **69**
+- Push → CI; po zielonym — prośba o F7: gotowe do scalenia. Bez push na main.
