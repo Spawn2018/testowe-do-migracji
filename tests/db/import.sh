@@ -2401,24 +2401,34 @@ chk "#650: audit backfill" "$(Q "select count(*)>0 from audit_log where action='
 $PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
 err "#650: ADMIN aal1 enqueue odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
 $PSQL -c "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
-# N5: backfill pomija CANCELLED/REMOVED; trigger REMOVED bez kolejki
+# N5: własny ładunek — backfill pomija CANCELLED i REMOVED; trigger REMOVED bez kolejki
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-SG_CX=$(Q "select id from loads where project_id='$P' and status='PLANNED' and id is distinct from '$SG_OUT' order by code limit 1")
-if [ -n "$SG_CX" ] && [ "$SG_CX" != "" ]; then
-  $PSQL -c "update loads set status='CANCELLED', carrier_order_no='CX-650', hhl_order_no='HX-650' where id='$SG_CX'" >/dev/null
-  val "#650 N5: backfill bez CANCELLED" $HHL \
-    "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending'" 0 commit
-  $PSQL -c "update loads set status='REMOVED' where id='$SG_CX'" >/dev/null
-  $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX'" >/dev/null
-  out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-    update loads set driver_name='RemovedDrv' where id='$SG_CX';
-    select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending';
-  rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-  if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #650 N5: trigger REMOVED → 0 pending"; else fail=$((fail+1)); echo "  FAIL  #650 N5: REMOVED → $out"; fi
-  $PSQL -c "update loads set status='PLANNED' where id='$SG_CX'" >/dev/null
-else
-  ok=$((ok+2)); echo "  OK    #650 N5: backfill CANCELLED (brak 2. load — skip+count)"; echo "  OK    #650 N5: trigger REMOVED (brak 2. load — skip+count)"
-fi
+SG_CX=$(Q "insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date,
+    driver_name, driver_phone, driver_phone_country, tractor_plate, trailer_plate,
+    carrier_order_no, hhl_order_no, trailer_swap)
+  values ('$P', '00000000-0000-0000-0000-00000000a003', 'PLANNED',
+    (current_date + 10), (current_date + 15),
+    'CxDrv', '600650651', 'PL', 'TRCX650', 'TLCX650',
+    'CX-650', 'HX-650', false)
+  returning id")
+$PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m, qty)
+  values ('$P', '$SG_CX', 'CX-650', 18, 2.4, 2.4, 1)" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX'" >/dev/null
+$PSQL -c "update loads set status='CANCELLED' where id='$SG_CX'" >/dev/null
+val "#650 N5: backfill bez CANCELLED" $HHL \
+  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending'" 0 commit
+$PSQL -c "update loads set status='REMOVED' where id='$SG_CX'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX'" >/dev/null
+val "#650 N5: backfill bez REMOVED" $HHL \
+  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending'" 0 commit
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='RemovedDrv' where id='$SG_CX';
+  select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #650 N5: trigger REMOVED → 0 pending"; else fail=$((fail+1)); echo "  FAIL  #650 N5: REMOVED → $out"; fi
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX';
+  delete from shipment_items where load_id='$SG_CX';
+  delete from loads where id='$SG_CX'" >/dev/null
 # N3: wyczyszczenie numeru usuwa klucz ze starego pending
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
 $PSQL -c "update loads set hhl_order_no='KSH-N3', carrier_order_no='SCAN-N3',

@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 00:20 — #650 F7 r3 POPRAWKI (B1'' ack bez dat)
+
+- Skrzynka: #650 F7 r3 POPRAWKI @ cb97a1ca (1 bloker). #608 w planie; #550 **WSTRZYMANE**. #651 po #650.
+- Scalanie: F7 **niegotowe** (POPRAWKI r3).
+- **Krok:** (1) B1'' — przy `wb.conflicts` ack `done` / `applyPatchToSnap` z `stripDateKeysFromPatch` (obie ścieżki); (2) test: migawka zgodna, komórka z inną datą, łatka `{load_date,driver,hhl}` → 2 PATCH, `sent` bez `load_date`, `snapshotPatch.ld` bez zmian; (3) N5: własny ładunek CANCELLED/REMOVED + osobny backfill REMOVED; (4) PLAN: KEEP_TOWER przy konflikcie daty ponownie kolejkuje datę. import **396**.
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-30 00:10 — #650 F7 r2 POPRAWKI (B1' + bez PUT)
 
 - Skrzynka: #650 F7 r2 POPRAWKI @ ddf8c245. #608 w planie; #550 **WSTRZYMANE**. #651 po #650.

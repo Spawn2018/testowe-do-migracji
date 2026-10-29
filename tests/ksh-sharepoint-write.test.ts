@@ -1266,6 +1266,62 @@ describe('#650 F7 r2 processOutboundWrites B1\'/PUT', () => {
     )).toBe(false);
   });
 
+  it("B1'': konflikt daty w workbooku → ack done bez load_date w sent", async () => {
+    const matchSnap = {
+      ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: 'KSH-OLD',
+    };
+    const item = {
+      id: 43,
+      load_id: 'load-1',
+      code: 'SG-01',
+      codes: ['SG-01'],
+      rev: 1,
+      attempts: 0,
+      patch: {
+        load_date: '2026-11-05',
+        driver: 'JanWt',
+        hhl_order_no: 'KSH-NEW',
+      },
+      expected_file: matchSnap,
+    };
+    const { sb, rpcs } = mockSb([item]);
+    // Migawka zgodna; komórka pliku ma inną datę → konflikt dopiero w workbooku.
+    const { fetchFn, calls } = workbookFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.driverName,
+          COLUMN_MAP_DEFAULT.hhlOrderNo,
+        ],
+        ['SG-01', '03.11.2026', 'JanKsh', 'KSH-OLD'],
+      ],
+    });
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': matchSnap },
+      fileMode: 'prod',
+      writeTestOkAt: '2026-10-29T00:00:00Z',
+      fetchFn,
+    });
+    expect(r.upload_ok).toBe(true);
+    const patches = calls.filter((c) => c.method === 'PATCH' && c.url.includes('range(address='));
+    expect(patches.length).toBe(2);
+    expect(rpcs.some((c) =>
+      c.name === 'l1b_note_file_changed' && c.args.p_field === 'load_date'
+    )).toBe(true);
+    const ackDone = rpcs.find((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done'
+    );
+    expect(ackDone).toBeTruthy();
+    const sent = (ackDone!.args.p_acks as { sent?: Record<string, unknown> }[])[0]?.sent ?? {};
+    expect(sent).not.toHaveProperty('load_date');
+    expect(sent).toMatchObject({ driver: 'JanWt', hhl_order_no: 'KSH-NEW' });
+    expect(r.snapshotPatch?.['SG-01']?.ld).toBe('2026-11-01');
+  });
+
   it('processOutboundWrites: zero PUT i zero /content', async () => {
     const item = {
       id: 7,

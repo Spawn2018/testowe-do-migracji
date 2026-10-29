@@ -134,6 +134,18 @@ function stripDateKeysFromPatch(
   return next;
 }
 
+/** #650 F7 r3 B1'': konflikt dat w workbooku → ack/snap tylko WT6 (bez fałszywego sent daty). */
+function patchAckWithoutConflictDates(
+  it: OutboundItem,
+  conflictCodes: ReadonlySet<string>,
+): OutboundPatch & Record<string, unknown> {
+  const patch = it.patch as OutboundPatch & Record<string, unknown>;
+  if (patchCodes(it).some((c) => conflictCodes.has(c))) {
+    return stripDateKeysFromPatch(patch);
+  }
+  return patch;
+}
+
 function applyPatchToSnap(base: FileDateSnap | null, patch: OutboundPatch): FileDateSnap {
   const next: FileDateSnap = {
     ld: base?.ld ?? null,
@@ -439,10 +451,15 @@ export async function processOutboundWrites(args: {
       itemWorkbookDone(it, writtenSet, incompleteSet, conflictSet)
     );
     if (!fullyDone.length) return { ok: true, doneCount: 0 };
-    const a = await ack(args.sb, ackPayload(fullyDone, true), 'done', null);
+    // B1'' F7 r3: przy konflikcie dat w wb — sent/snap bez dat.
+    const fullyDoneAck = fullyDone.map((it) => ({
+      ...it,
+      patch: patchAckWithoutConflictDates(it, conflictSet),
+    }));
+    const a = await ack(args.sb, ackPayload(fullyDoneAck, true), 'done', null);
     if (!a.ok) return { ok: false, reason: 'ack_done', doneCount: 0 };
     const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
-    for (const it of fullyDone) {
+    for (const it of fullyDoneAck) {
       for (const code of patchCodes(it)) {
         if (!writtenSet.has(code)) continue;
         snapshotPatch[code] = applyPatchToSnap(snapshotPatch[code] ?? null, {
@@ -699,8 +716,14 @@ export async function processOutboundWrites(args: {
     }
   }
 
-  if (doneItems.length) {
-    const ackDone = await ack(args.sb, ackPayload(doneItems, true), 'done', null);
+  // B1'' F7 r3: konflikty dat w workbooku → ack done bez dat w sent.
+  const doneItemsAck = doneItems.map((it) => ({
+    ...it,
+    patch: patchAckWithoutConflictDates(it, conflictCodeSet),
+  }));
+
+  if (doneItemsAck.length) {
+    const ackDone = await ack(args.sb, ackPayload(doneItemsAck, true), 'done', null);
     if (!ackDone.ok) {
       return {
         attempted: true,
@@ -731,7 +754,7 @@ export async function processOutboundWrites(args: {
       );
     }
   }
-  for (const it of doneItems) {
+  for (const it of doneItemsAck) {
     for (const code of patchCodes(it)) {
       if (!writtenSet.has(code)) continue;
       snapshotPatch[code] = applyPatchToSnap(snapshotPatch[code] ?? null, {
