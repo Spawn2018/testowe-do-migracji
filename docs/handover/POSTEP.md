@@ -6636,3 +6636,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. Test `refresh=true` (reclaim po dostawie, insert-only).
   5. Status **398** (+12). Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji — świadome ograniczenie.
 - Unit lokalnie 22/22. Po push — prośba o „F7: gotowe do scalenia”. B3: #627 → 0330 przed scaleniem.
+
+## 2026-10-29 04:45 — #622 SCALONE + reclaim; start #626 (0330)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne` do budowy.
+- Scalanie: #628 → `27abf140` (F7 gotowe @ `6a9dadb0`, CI unit/db/visual ✔). B3 #627 → 0330, potem B3bis → **0331** (`23f90c87`). Bez push na main.
+- deploy-main `40812385338` ✔ — **0329** na produkcji.
+- **Reclaim SG-21** od 2026-10-27 10:21 UTC (partie 6 h): reclaimed **743**, skipped 0; sieroty naczepy od 27.10 **0**; pozycje od 27.10 **769**; last `2026-10-29 03:32:57Z` EMTRACK_WEB; status IN_TRANSIT_SE; EMTRACK_ORPHAN otwarte **0**.
+- **#626:** 4× `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357); migracja **0330** EXIT < PIN / actual+1h / CROSSING min(PIN,arrival+1h); p4k **102** (+4). Push → CI → F7.
