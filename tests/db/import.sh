@@ -2230,7 +2230,7 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "600333444 / 0703334455" ]; then
   ok=$((ok+1)); echo "  OK    #597: telefon SE +46 → 0…"; else fail=$((fail+1)); echo "  FAIL  #597: telefon SE → $out"; fi
-# F7 r1: swap z jedną pustą stroną (tylko SE) → sama SE
+# #618: swap z jedną pustą stroną — „... / SE” / „PL / ...” (nie samo SE)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set
@@ -2239,8 +2239,64 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
   where id='$SG_OUT';
   select patch->>'driver' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-if [ "$out" = "Erik Only" ]; then
-  ok=$((ok+1)); echo "  OK    #597: swap tylko SE → sama SE"; else fail=$((fail+1)); echo "  FAIL  #597: swap tylko SE → $out"; fi
+if [ "$out" = "... / Erik Only" ]; then
+  ok=$((ok+1)); echo "  OK    #618: swap tylko SE → ... / DriverSE"; else fail=$((fail+1)); echo "  FAIL  #618: swap tylko SE → $out"; fi
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_name='DriverPL', driver_delivery_name=null,
+    trailer_swap=true
+  where id='$SG_OUT';
+  select patch->>'driver' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "DriverPL / ..." ]; then
+  ok=$((ok+1)); echo "  OK    #618: swap tylko PL → DriverPL / ..."; else fail=$((fail+1)); echo "  FAIL  #618: swap tylko PL → $out"; fi
+# #618: telefon / ciągnik — te same gałęzie
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_phone='600777888', driver_phone_country='PL',
+    driver_delivery_phone=null, driver_delivery_phone_country=null,
+    tractor_plate='WGMPL1', tractor_delivery_plate=null,
+    trailer_swap=true
+  where id='$SG_OUT';
+  select coalesce(patch->>'driver_phone','')||'|'||coalesce(patch->>'tractor','')
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "600777888 / ...|WGMPL1 / ..." ]; then
+  ok=$((ok+1)); echo "  OK    #618: phone/tractor PL-only → … / ..."; else fail=$((fail+1)); echo "  FAIL  #618: phone/tractor PL → $out"; fi
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_phone=null, driver_phone_country=null,
+    driver_delivery_phone='0700999888', driver_delivery_phone_country='SE',
+    tractor_plate=null, tractor_delivery_plate='SETR01',
+    trailer_swap=true
+  where id='$SG_OUT';
+  select coalesce(patch->>'driver_phone','')||'|'||coalesce(patch->>'tractor','')
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "... / 0700999888|... / SETR01" ]; then
+  ok=$((ok+1)); echo "  OK    #618: phone/tractor SE-only → ... / SE"; else fail=$((fail+1)); echo "  FAIL  #618: phone/tractor SE → $out"; fi
+# #618: obie puste przy swap → null (bez kolejki pustego)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set
+    driver_name=null, driver_delivery_name=null,
+    driver_phone='600000001', driver_delivery_phone=null, trailer_swap=true
+  where id='$SG_OUT';
+  select count(*) filter (where patch ? 'driver') from ksh_sync_outbound
+   where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "0" ]; then
+  ok=$((ok+1)); echo "  OK    #618: swap obie puste driver → bez klucza"; else fail=$((fail+1)); echo "  FAIL  #618: obie puste → $out"; fi
+# #618/#611: „PL / ...” i „... / SE” z pliku nie trafiają do WT
+$PSQL -c "update loads l set driver_name='Kierowca WT618', driver_delivery_name='SE WT618',
+  tractor_plate='WT618PL', tractor_delivery_plate='WT618SE', trailer_swap=true
+  from shipment_items si where si.load_id=l.id and si.shipment_code='SG-02'" >/dev/null
+RDOT="[{\"code\":\"SG-02\",\"length_m\":18.5,\"width_m\":2.45,\"height_m\":2.45,\"qty\":7,\"total_weight_t\":20.74,\"load_date\":\"$D1\",\"delivery_date\":\"$D2\",\"driver_name\":\"PL / ...\",\"driver_delivery_name\":\"... / SE\",\"tractor_plate\":\"AA / ...\",\"tractor_delivery_plate\":\"... / BB\"}]"
+val "#618: import z kropkami (RPC)" $HHL "select (import_schedule('$P', '$RDOT'::jsonb, '{}'::text[], '{\"name\":\"dot.xlsx\",\"hash\":\"dot\",\"path\":\"harmonogramy/x/dot.xlsx\"}'::jsonb, false)->>'changed') is not null" t commit
+chk "#618: plik PL/... i .../SE nie nadpisują WT" "$(Q "select coalesce(driver_name,'')||'|'||coalesce(driver_delivery_name,'')||'|'||coalesce(tractor_plate,'')||'|'||coalesce(tractor_delivery_plate,'') from loads l join shipment_items si on si.load_id=l.id where si.shipment_code='SG-02'")" "Kierowca WT618|SE WT618|WT618PL|WT618SE"
 # F7 r1: no-op (ta sama złożona wartość) → 0 pending
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';

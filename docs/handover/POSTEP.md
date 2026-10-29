@@ -6749,3 +6749,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #633 → `2563d627` (F7: gotowe @ `abf5bca2`, CI unit/db/visual ✔, p4k **111**). Bez push na main. #630 zamknięte.
 - **Krok #634** (F7 #633: dalej emtrack 6.34.0, potem #618): `EMTRACK_EXPECTED_VERSION` 6.33.0→6.34.0; testy meta/mismatch; PLAN §4/§8. Gałąź `pakiet/634-emtrack-6.34.0`.
 - Po zielonym CI — F7. Potem **#618**.
+
+## 2026-10-29 11:20 — #634 SCALONE; start #618 ksh_file_ab kropek
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`. #618 wpisane (§4/§5 W62/§8).
+- Scalanie: #635 → `251febc5` (F7: gotowe @ `a21af060`, CI unit/db/visual ✔). Bez push na main. #634 zamknięte. Uwaga F7: sekret Edge `EMTRACK_EXPECTED_VERSION` wygrywa ze stałą — mismatch po deploy → właściciel.
+- **Krok #618:** migracja **0333** `ksh_file_ab` — swap: `PL / SE` | `PL / ...` | `... / SE`; bez swap: PL; obie puste → null. Testy import +6 → **382**. Gałąź `pakiet/618-ksh-file-ab-dots`.
