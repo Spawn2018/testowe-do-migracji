@@ -6755,3 +6755,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`. #618 wpisane (§4/§5 W62/§8).
 - Scalanie: #635 → `251febc5` (F7: gotowe @ `a21af060`, CI unit/db/visual ✔). Bez push na main. #634 zamknięte. Uwaga F7: sekret Edge `EMTRACK_EXPECTED_VERSION` wygrywa ze stałą — mismatch po deploy → właściciel.
 - **Krok #618:** migracja **0333** `ksh_file_ab` — swap: `PL / SE` | `PL / ...` | `... / SE`; bez swap: PL; obie puste → null. Testy import +6 → **382**. Gałąź `pakiet/618-ksh-file-ab-dots`.
+
+## 2026-10-29 11:55 — #618 CI db: country NOT NULL w testach phone
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`. Bez PR do scalenia (brak „F7: gotowe”).
+- CI #636: unit/visual ✔; `db` import 380/2 — `driver_*_phone_country=null` narusza NOT NULL.
+- **Krok:** testy #618 phone/tractor zostawiają country PL/SE przy pustym telefonie (`ksh_file_phone_text` i tak → null). Push → CI → F7.

@@ -2256,7 +2256,7 @@ $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set
     driver_phone='600777888', driver_phone_country='PL',
-    driver_delivery_phone=null, driver_delivery_phone_country=null,
+    driver_delivery_phone=null, driver_delivery_phone_country='SE',
     tractor_plate='WGMPL1', tractor_delivery_plate=null,
     trailer_swap=true
   where id='$SG_OUT';
@@ -2268,7 +2268,7 @@ if [ "$out" = "600777888 / ...|WGMPL1 / ..." ]; then
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set
-    driver_phone=null, driver_phone_country=null,
+    driver_phone=null, driver_phone_country='PL',
     driver_delivery_phone='0700999888', driver_delivery_phone_country='SE',
     tractor_plate=null, tractor_delivery_plate='SETR01',
     trailer_swap=true
