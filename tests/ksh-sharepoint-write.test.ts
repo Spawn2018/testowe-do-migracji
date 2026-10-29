@@ -1,9 +1,8 @@
 /**
- * A6 — zapis WT→plik: konflikt, format dat/godzin, Graph upload + If-Match, JSZip łatka.
+ * A6 / #650 — zapis WT→plik: konflikt dat, 6 pól WT nadpisuje, workbook PATCH (bez PUT).
  */
 import { describe, expect, it, vi } from 'vitest';
-import JSZip from 'jszip';
-import { shareUrlToShareId, uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
+import { shareUrlToShareId, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
 import {
   conflictFieldFromSnaps,
   fileAlreadyHasPatch,
@@ -20,7 +19,6 @@ import {
   formatDateTextFromIso,
   normalizeHm,
 } from '../supabase/functions/_shared/ksh/xlsxPatchTime';
-import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
 import { processOutboundWrites } from '../supabase/functions/_shared/ksh/outboundWrite';
@@ -128,100 +126,93 @@ describe('A6 writeConflict', () => {
     )).toBe(true);
   });
 
-  it('ten sam snap → bez konfliktu; zmiana daty lub numeru → konflikt', () => {
+  it('ten sam snap → bez konfliktu; zmiana daty → konflikt; numer (#650) → bez konfliktu', () => {
     const a = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
     expect(fileRowChangedSinceRead(a, { ...a })).toBe(false);
     expect(fileRowChangedSinceRead(a, { ...a, ld: '2026-11-02' })).toBe(true);
-    expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(true);
+    // #650: numery WT→plik bez kontroli konfliktu
+    expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(false);
   });
 
-  it('F7 r8/r9: conflictFieldFromSnaps — najpierw łatka, potem dowolne (kolejność jak import)', () => {
+  it('F7 r8/r9 + #650: conflictFieldFromSnaps — tylko daty/godziny', () => {
     const a = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    expect(conflictFieldFromSnaps(a, { ...a, ho: 'K2' })).toBe('hhl_order_no');
-    expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('carrier_order_no');
+    // same daty, różny numer → brak pola daty; fallback load_date
+    expect(conflictFieldFromSnaps(a, { ...a, ho: 'K2' })).toBe('load_date');
+    expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('load_date');
     expect(conflictFieldFromSnaps(a, { ...a, ld: '2026-11-02', co: 'S2' })).toBe('load_date');
-    expect(conflictFieldFromSnaps(a, { ...a })).toBe('carrier_order_no');
-    // F7 r9: łatka {co} + w pliku też load_date → pole z łatki
+    expect(conflictFieldFromSnaps(a, { ...a })).toBe('load_date');
+    // łatka {load_date} + rozjazd daty
     expect(conflictFieldFromSnaps(
-      a, { ...a, ld: '2026-11-02', co: 'S2' }, ['carrier_order_no'],
-    )).toBe('carrier_order_no');
-    // łatka bez różnicy, inne pole różne → fallback na dowolne
+      a, { ...a, ld: '2026-11-02', co: 'S2' }, ['load_date'],
+    )).toBe('load_date');
+    // łatka tylko numery (poza CONFLICT_FIELD_ORDER) → dowolna data różniąca się
     expect(conflictFieldFromSnaps(
       a, { ...a, ld: '2026-11-02', co: 'S1' }, ['carrier_order_no'],
     )).toBe('load_date');
   });
 
-  it('#569: pickOutboundConflictNote — kod i pole z wiersza konfliktu (2 kody)', () => {
+  it('#569/#650: pickOutboundConflictNote — tylko daty; numery bez konfliktu', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    // Pierwszy kod zgodny z expected; drugi zmieniony w pliku (ho).
+    // Różnica tylko w numerze → brak konfliktu (#650)
     const snap = {
       'SG-A': { ...expected },
       'SG-B': { ...expected, ho: 'K2' },
     };
-    const note = pickOutboundConflictNote(
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       snap,
       { carrier_order_no: 'S9' },
-    );
-    expect(note).toEqual({ code: 'SG-B', field: 'hhl_order_no' });
-    // łatka {co} + konflikt na co w drugim → pole z łatki
-    const notePatch = pickOutboundConflictNote(
+    )).toBeNull();
+    // Data różna w SG-B → konflikt load_date (nie numer)
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       { 'SG-A': { ...expected }, 'SG-B': { ...expected, co: 'S2', ld: '2026-11-02' } },
-      { carrier_order_no: 'S9' },
-    );
-    expect(notePatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
+      { carrier_order_no: 'S9', load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-B', field: 'load_date' });
     expect(pickOutboundConflictNote(['SG-A'], expected, snap, { carrier_order_no: 'S9' })).toBeNull();
-    // F7 #570: pierwszy kod różni się tylko polem spoza łatki, drugi — polem z łatki
-    // → wybierz drugi (jak import), nie pierwszy ze sprawą spoza łatki
-    const notePreferPatch = pickOutboundConflictNote(
+    // Pierwszy kod: data; drugi: tylko numer → wybierz pierwszy (data)
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       {
         'SG-A': { ...expected, ld: '2026-11-02' },
         'SG-B': { ...expected, co: 'S2' },
       },
-      { carrier_order_no: 'S9' },
-    );
-    expect(notePreferPatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
+      { carrier_order_no: 'S9', load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-A', field: 'load_date' });
   });
 
-  it('F7 #570: brak wiersza w pliku + drugi z rozjazdem → kod obecnego (jak import)', () => {
+  it('F7 #570/#650: brak wiersza + drugi tylko z numerem → bez konfliktu dat', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    const note = pickOutboundConflictNote(
+    expect(pickOutboundConflictNote(
       ['SG-01', 'SG-02'],
       expected,
-      {
-        // SG-01 zniknął z pliku (brak klucza / null)
-        'SG-02': { ...expected, co: 'S2' },
-      },
+      { 'SG-02': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    );
-    expect(note).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
-    const noteNull = pickOutboundConflictNote(
+    )).toBeNull();
+    // SG-02 z rozjazdem daty → konflikt
+    expect(pickOutboundConflictNote(
       ['SG-01', 'SG-02'],
       expected,
-      { 'SG-01': null, 'SG-02': { ...expected, co: 'S2' } },
-      { carrier_order_no: 'S9' },
-    );
-    expect(noteNull).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
+      { 'SG-01': null, 'SG-02': { ...expected, ld: '2026-11-02' } },
+      { load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-02', field: 'load_date' });
   });
 
-  it('F7 #570: puste vs null / spacje; łatka null/{}; jeden kod', () => {
+  it('F7 #570/#650: puste vs null; numery bez konfliktu; zniknięty wiersz', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    // '' i spacje = null jak import (btrim) → bez konfliktu
     expect(fileRowChangedSinceRead(expected, {
       ...expected, co: 'S1', ho: '  K1  ',
     })).toBe(false);
@@ -229,34 +220,26 @@ describe('A6 writeConflict', () => {
       { ...expected, co: null, ho: '' },
       { ...expected, co: '', ho: null },
     )).toBe(false);
-    expect(fileRowChangedSinceRead(expected, { ...expected, co: ' S2 ' })).toBe(true);
-    // jeden kod + rozjazd
+    expect(fileRowChangedSinceRead(expected, { ...expected, co: ' S2 ' })).toBe(false);
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { 'SG-A': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
-    // łatka null / {} — 2. pętla, dowolne pole
+    )).toBeNull();
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { 'SG-A': { ...expected, ho: 'K2' } },
       null,
-    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
-    expect(pickOutboundConflictNote(
-      ['SG-A'],
-      expected,
-      { 'SG-A': { ...expected, ho: 'K2' } },
-      {},
-    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
-    // kod ze spacją w kluczu snapu — bez dopasowania = brak wiersza; sam jeden kod → konflikt „zniknął”
+    )).toBeNull();
+    // kod ze spacją w kluczu snapu — brak wiersza; sam jeden kod → konflikt „zniknął”
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { ' SG-A ': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
+    )).toEqual({ code: 'SG-A', field: 'load_date' });
   });
 });
 
@@ -479,8 +462,46 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
-  it('konflikt komórki gdy plik ≠ expected', async () => {
-    const { fetchFn } = mockFetch({ conflictCo: true });
+  // #650: komplet 6 pól już w pliku → 0 PATCH (skip_applied), ack written
+  it('#650: komplet WT=plik → 0 PATCH (skip_applied)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      usedAddress: 'Harmonogram!A1:G2',
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.hhlOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+          COLUMN_MAP_DEFAULT.driverPhone,
+          COLUMN_MAP_DEFAULT.tractorPlate,
+          COLUMN_MAP_DEFAULT.trailerPlate,
+        ],
+        ['SG-01', 'SCAN-1', 'KSH-1', 'Jan', '600111222', 'TR1', 'TL1'],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{
+        code: 'SG-01',
+        carrier_order_no: 'SCAN-1',
+        hhl_order_no: 'KSH-1',
+        driver: 'Jan',
+        driver_phone: '600111222',
+        tractor: 'TR1',
+        trailer: 'TL1',
+      }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'SCAN-1', ho: 'KSH-1' },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toContain('SG-01');
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
+  });
+
+  it('#650: numer w pliku ≠ WT → nadpisanie, 0 konfliktów + overwritten_n', async () => {
+    const { fetchFn, calls } = mockFetch({ conflictCo: true });
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
@@ -491,9 +512,84 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.writtenCodes).toEqual([]);
-      expect(r.conflicts.some((c) => c.code === 'SG-01')).toBe(true);
+      expect(r.writtenCodes).toContain('SG-01');
+      expect(r.conflicts).toEqual([]);
+      expect(r.overwritten_n).toBe(1);
     }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(1);
+  });
+
+  it('#650: inny kierowca + numer w pliku → oba nadpisane, 0 konfliktów', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+        ],
+        ['SG-01', 'OTHER', 'JanKsh'],
+      ],
+      usedAddress: 'Harmonogram!A1:C2',
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver: 'JanWt' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.conflicts).toEqual([]);
+      expect(r.overwritten_n).toBe(2);
+      expect(r.writtenCodes).toContain('SG-01');
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+  });
+
+  it('#650: konflikt daty blokuje daty, nie 6 pól WT', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+        ],
+        // data w pliku ≠ expected → konflikt; numer/kierowca ≠ WT → nadpisanie
+        ['SG-01', '03.11.2026', 'OTHER', 'JanKsh'],
+      ],
+      usedAddress: 'Harmonogram!A1:D2',
+      numberFormat: [
+        ['General', 'General', 'General', 'General'],
+        ['General', 'General', 'General', 'General'],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{
+        code: 'SG-01',
+        itemKey: 'pos-1',
+        load_date: '2026-11-05',
+        carrier_order_no: 'NEW',
+        driver: 'JanWt',
+      }],
+      expectedByCode: {
+        'SG-01': {
+          ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null,
+        },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.conflicts.some((c) => c.field === 'load_date')).toBe(true);
+      expect(r.overwritten_n).toBeGreaterThanOrEqual(2);
+      expect(r.writtenCodes).toContain('SG-01');
+    }
+    // 2 PATCH (kierowca + numer); data zablokowana konfliktem
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
   });
 
   it('429 createSession → workbook_http_429 + closeSession nie (brak sesji)', async () => {
@@ -650,34 +746,43 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(patch?.url).toMatch(/range\(address='D2'\)/);
   });
 
-  it('R2: konflikt kodu B blokuje PATCH kodu A tej samej pozycji (itemKey)', async () => {
+  it('R2/#650: konflikt daty kodu B blokuje daty A+B pozycji; numery WT nadal PATCH', async () => {
     const { fetchFn, calls } = mockFetch({
-      secondCodeConflict: true,
       usedAddress: 'Harmonogram!A1:C3',
       values: [
-        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
-        ['SG-01', 'OLD', ''],
-        ['SG-02', 'OTHER', ''],
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+        ],
+        ['SG-01', '01.11.2026', 'OLD'],
+        ['SG-02', '02.11.2026', 'OTHER'],
+      ],
+      numberFormat: [
+        ['General', 'General', 'General'],
+        ['General', 'General', 'General'],
+        ['General', 'General', 'General'],
       ],
     });
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [
-        { code: 'SG-01', itemKey: 'pos-1', carrier_order_no: 'NEW' },
-        { code: 'SG-02', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+        { code: 'SG-01', itemKey: 'pos-1', load_date: '2026-11-05', carrier_order_no: 'NEW' },
+        { code: 'SG-02', itemKey: 'pos-1', load_date: '2026-11-05', carrier_order_no: 'NEW' },
       ],
       expectedByCode: {
-        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
-        'SG-02': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-01': { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-02': { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null },
       },
       fetchFn,
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.writtenCodes).toEqual([]);
-      expect(r.conflicts.some((c) => c.code === 'SG-02')).toBe(true);
+      expect(r.conflicts.some((c) => c.field === 'load_date')).toBe(true);
+      // numery nadpisane mimo konfliktu dat
+      expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+      expect(r.overwritten_n).toBeGreaterThanOrEqual(1);
     }
-    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
   it('R3/R4: pusta komórka + General → tekst daty; format daty → serial; [Red] ≠ data', () => {
@@ -1022,94 +1127,6 @@ describe('#645 processOutboundWrites (R1 ack / note_423 / 403)', () => {
   });
 });
 
-describe('A6 Graph upload If-Match', () => {
-  it('upload OK z If-Match', async () => {
-    const body = new Uint8Array([1, 2, 3]);
-    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const u = String(input);
-      if (u.includes('/token')) {
-        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      }
-      if (u.includes('/content') && init?.method === 'PUT') {
-        const h = init.headers as Record<string, string>;
-        expect(h['If-Match']).toBe('"etag-1"');
-        return new Response('{}', { status: 200 });
-      }
-      return new Response('no', { status: 404 });
-    }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), body, fetchFn, { ifMatch: '"etag-1"' });
-    expect(r.ok).toBe(true);
-  });
-
-  it('upload 412 → etag_mismatch', async () => {
-    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
-      const u = String(input);
-      if (u.includes('/token')) {
-        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      }
-      return new Response('precondition', { status: 412 });
-    }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn, { ifMatch: '"x"' });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toBe('etag_mismatch');
-  });
-
-  it('upload OK — bez URL/tokenu w meta', async () => {
-    const body = new Uint8Array([1, 2, 3]);
-    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const u = String(input);
-      if (u.includes('/token')) {
-        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      }
-      if (u.includes('/content') && init?.method === 'PUT') {
-        expect((init.body as Uint8Array).byteLength).toBe(3);
-        return new Response('{}', { status: 200 });
-      }
-      return new Response('no', { status: 404 });
-    }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), body, fetchFn, { ifMatch: '"e"' });
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.meta.bytes).toBe(3);
-      expect(JSON.stringify(r)).not.toMatch(/tempauth|tok|contoso/);
-    }
-  });
-
-  it('upload bez If-Match → no_etag (F7 r2)', async () => {
-    const fetchFn = vi.fn(async () => new Response('no', { status: 404 })) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn);
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toBe('no_etag');
-    expect(fetchFn).not.toHaveBeenCalled();
-  });
-
-  it('upload network → network_upload', async () => {
-    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
-      const u = String(input);
-      if (u.includes('/token')) {
-        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      }
-      throw new TypeError('reset');
-    }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn, { ifMatch: '"e"' });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toBe('network_upload');
-  });
-
-  it('upload HTTP 403 → upload_http_403', async () => {
-    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
-      const u = String(input);
-      if (u.includes('/token')) {
-        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      }
-      return new Response('denied', { status: 403 });
-    }) as unknown as typeof fetch;
-    const r = await uploadSharePointFile(env(), new Uint8Array([1]), fetchFn, { ifMatch: '"e"' });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toBe('upload_http_403');
-  });
-});
-
 describe('A6 fileAlreadyHasPatch', () => {
   it('plik = expected+łatka → true', () => {
     const exp = { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'A', ho: null };
@@ -1120,7 +1137,7 @@ describe('A6 fileAlreadyHasPatch', () => {
   });
 
   // #597 F7 B1: patch tylko-awizacja → false (toWrite, nie alreadyDone) — etap #597.
-  it('#597: awizacja poza snapshota → false (PUT, nie alreadyDone)', () => {
+  it('#597: awizacja poza snapshota → false (workbook, nie alreadyDone)', () => {
     const exp = { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'A', ho: null };
     expect(fileAlreadyHasPatch(exp, { code: 'X', driver: 'Jan / Erik' }, exp)).toBe(false);
     expect(fileAlreadyHasPatch(exp, { code: 'X', driver_phone: '600111222' }, exp)).toBe(false);
@@ -1136,304 +1153,263 @@ describe('A6 fileAlreadyHasPatch', () => {
   });
 });
 
-/** Minimalny XLSX (arkusz + sharedStrings + drugi arkusz formuły) — round-trip JSZip. */
-async function fixtureXlsx(): Promise<Uint8Array> {
-  const zip = new JSZip();
-  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-  <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-  <Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
-</Types>`);
-  zip.file('xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets>
-    <sheet name="Harmonogram" sheetId="1" r:id="rId1"/>
-    <sheet name="Inny" sheetId="2" r:id="rId2"/>
-  </sheets>
-</workbook>`);
-  zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-</Relationships>`);
-  const h = COLUMN_MAP_DEFAULT;
-  // A1..: nagłówki jako shared strings 0..; wiersz 2: SG-99 + data liczba + godzina tekst + numer tekst
-  zip.file('xl/sharedStrings.xml', `<?xml version="1.0"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="8" uniqueCount="8">
-  <si><t>${h.shipmentCode}</t></si>
-  <si><t>${h.loadDate}</t></si>
-  <si><t>${h.loadTime}</t></si>
-  <si><t>${h.deliveryDate}</t></si>
-  <si><t>${h.deliveryTime}</t></si>
-  <si><t>${h.scxOrderNo}</t></si>
-  <si><t>${h.hhlOrderNo}</t></si>
-  <si><t>SG-99</t></si>
-</sst>`);
-  zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1">
-      <c r="A1" t="s"><v>0</v></c>
-      <c r="B1" t="s"><v>1</v></c>
-      <c r="C1" t="s"><v>2</v></c>
-      <c r="D1" t="s"><v>3</v></c>
-      <c r="E1" t="s"><v>4</v></c>
-      <c r="F1" t="s"><v>5</v></c>
-      <c r="G1" t="s"><v>6</v></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="s"><v>7</v></c>
-      <c r="B2" s="3"><v>46000</v></c>
-      <c r="C2" t="inlineStr"><is><t>08:00</t></is></c>
-      <c r="D2"><v>46005</v></c>
-      <c r="E2" t="inlineStr"><is><t>14:00</t></is></c>
-      <c r="F2" t="inlineStr"><is><t>OLD-SCAN</t></is></c>
-      <c r="G2" t="inlineStr"><is><t>OLD-KSH</t></is></c>
-    </row>
-    <row r="3">
-      <c r="A3" t="inlineStr"><is><t>SG-99</t></is></c>
-      <c r="B3"><v>1</v></c>
-    </row>
-  </sheetData>
-</worksheet>`);
-  zip.file('xl/worksheets/sheet2.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1"><c r="A1"><f>SUM(1,2)</f><v>3</v></c></row>
-  </sheetData>
-</worksheet>`);
-  return zip.generateAsync({ type: 'uint8array' });
-}
+describe('#650 F7 r2 processOutboundWrites B1\'/PUT', () => {
+  const expectedSnap = {
+    ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null,
+  };
+  const fileSnapMismatchDate = {
+    ld: '2026-11-03', lt: null, dd: null, dt: null, co: 'OTHER', ho: 'KSH-OLD',
+  };
 
-describe('A6 xlsxPatch JSZip', () => {
-  it('round-trip: zmienia tylko docelowe komórki; drugi arkusz/formuła zostaje; pierwszy SG-99', async () => {
-    const bytes = await fixtureXlsx();
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{
-        code: 'SG-99',
-        load_date: '2026-12-01',
-        load_time: '09:15',
-        carrier_order_no: 'NEW-SCAN',
-        delivery_time: null, // F7: null nie czyści
-      }],
-      (b) => JSZip.loadAsync(b),
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.written).toBe(1);
-    expect(r.writtenCodes).toEqual(['SG-99']);
+  function mockSb(items: Record<string, unknown>[]) {
+    const rpcs: { name: string; args: Record<string, unknown> }[] = [];
+    const sb = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') {
+          return { data: items, error: null };
+        }
+        return { data: true, error: null };
+      }),
+    };
+    return { sb: sb as never, rpcs };
+  }
 
-    const out = await JSZip.loadAsync(r.bytes);
-    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
-    const sheet2 = await out.files['xl/worksheets/sheet2.xml']!.async('string');
-    expect(sheet2).toContain('SUM(1,2)');
-    expect(sheet1).toContain('NEW-SCAN');
-    expect(sheet1).toContain('09:15');
-    // F7 r2: styl s="3" zachowany na B2
-    expect(sheet1).toMatch(/<c r="B2"[^>]*\ss="3"/);
-    // drugi wiersz SG-99 (A3) nietknięty jako „pierwszy wygrywa”
-    expect(sheet1).toMatch(/<c r="A3"[^>]*>[\s\S]*?SG-99/);
-    // godzina rozładunku nie wyczyszczona
-    expect(sheet1).toContain('14:00');
+  function workbookFetch(opts?: {
+    values?: unknown[][];
+    usedAddress?: string;
+  }) {
+    const calls: { method: string; url: string; body?: string }[] = [];
+    const values = opts?.values ?? [
+      [
+        COLUMN_MAP_DEFAULT.shipmentCode,
+        COLUMN_MAP_DEFAULT.loadDate,
+        COLUMN_MAP_DEFAULT.driverName,
+        COLUMN_MAP_DEFAULT.hhlOrderNo,
+      ],
+      ['SG-01', '03.11.2026', 'JanKsh', 'KSH-OLD'],
+    ];
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      calls.push({
+        method,
+        url: u,
+        body: typeof init?.body === 'string' ? init.body : undefined,
+      });
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        const cols = values[0]?.length ?? 2;
+        const nf = values.map(() => Array.from({ length: cols }, () => 'General'));
+        return new Response(JSON.stringify({
+          address: opts?.usedAddress ?? 'Harmonogram!A1:D2',
+          values,
+          numberFormat: nf,
+        }), { status: 200 });
+      }
+      if (u.includes('range(address=') && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+    return { fetchFn, calls };
+  }
+
+  it("B1': migawka z rozjechaną datą + {driver,hhl} → PATCH + sprawa load_date", async () => {
+    const item = {
+      id: 42,
+      load_id: 'load-1',
+      code: 'SG-01',
+      codes: ['SG-01'],
+      rev: 1,
+      attempts: 0,
+      patch: { driver: 'JanWt', hhl_order_no: 'KSH-NEW' },
+      expected_file: expectedSnap,
+    };
+    const { sb, rpcs } = mockSb([item]);
+    const { fetchFn, calls } = workbookFetch();
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': fileSnapMismatchDate },
+      fileMode: 'prod',
+      writeTestOkAt: '2026-10-29T00:00:00Z',
+      fetchFn,
+    });
+    expect(r.upload_ok).toBe(true);
+    expect(r.conflicts).toBeGreaterThanOrEqual(1);
+    const patches = calls.filter((c) => c.method === 'PATCH' && c.url.includes('range(address='));
+    expect(patches.length).toBe(2);
+    expect(rpcs.some((c) =>
+      c.name === 'l1b_note_file_changed' && c.args.p_field === 'load_date'
+    )).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'conflict'
+    )).toBe(false);
   });
 
-  it('nieznany kod → skipped', async () => {
-    const bytes = await fixtureXlsx();
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{ code: 'NOPE', load_date: '2026-12-01' }],
-      (b) => JSZip.loadAsync(b),
+  it("B1'': konflikt daty w workbooku → ack done bez load_date w sent", async () => {
+    const matchSnap = {
+      ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: 'KSH-OLD',
+    };
+    const item = {
+      id: 43,
+      load_id: 'load-1',
+      code: 'SG-01',
+      codes: ['SG-01'],
+      rev: 1,
+      attempts: 0,
+      patch: {
+        load_date: '2026-11-05',
+        driver: 'JanWt',
+        hhl_order_no: 'KSH-NEW',
+      },
+      expected_file: matchSnap,
+    };
+    const { sb, rpcs } = mockSb([item]);
+    // Migawka zgodna; komórka pliku ma inną datę → konflikt dopiero w workbooku.
+    const { fetchFn, calls } = workbookFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.driverName,
+          COLUMN_MAP_DEFAULT.hhlOrderNo,
+        ],
+        ['SG-01', '03.11.2026', 'JanKsh', 'KSH-OLD'],
+      ],
+    });
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': matchSnap },
+      fileMode: 'prod',
+      writeTestOkAt: '2026-10-29T00:00:00Z',
+      fetchFn,
+    });
+    expect(r.upload_ok).toBe(true);
+    const patches = calls.filter((c) => c.method === 'PATCH' && c.url.includes('range(address='));
+    expect(patches.length).toBe(2);
+    expect(rpcs.some((c) =>
+      c.name === 'l1b_note_file_changed' && c.args.p_field === 'load_date'
+    )).toBe(true);
+    const ackDone = rpcs.find((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done'
     );
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.written).toBe(0);
-      expect(r.skipped).toBe(1);
-    }
+    expect(ackDone).toBeTruthy();
+    const sent = (ackDone!.args.p_acks as { sent?: Record<string, unknown> }[])[0]?.sent ?? {};
+    expect(sent).not.toHaveProperty('load_date');
+    expect(sent).toMatchObject({ driver: 'JanWt', hhl_order_no: 'KSH-NEW' });
+    expect(r.snapshotPatch?.['SG-01']?.ld).toBe('2026-11-01');
   });
 
-  it('#597: awizacja PL/SE i telefon jako tekst (nie formuła)', async () => {
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
-    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`);
-    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>`);
-    const h = COLUMN_MAP_DEFAULT;
-    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1">
-      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
-      <c r="B1" t="inlineStr"><is><t>${h.driverName}</t></is></c>
-      <c r="C1" t="inlineStr"><is><t>${h.driverPhone}</t></is></c>
-      <c r="D1" t="inlineStr"><is><t>${h.tractorPlate}</t></is></c>
-      <c r="E1" t="inlineStr"><is><t>${h.trailerPlate}</t></is></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="inlineStr"><is><t>SG-AW</t></is></c>
-      <c r="B2" t="inlineStr"><is><t>old</t></is></c>
-      <c r="C2"><v>700111222</v></c>
-      <c r="D2" t="inlineStr"><is><t>OLDTR</t></is></c>
-      <c r="E2" t="inlineStr"><is><t>OLDTL</t></is></c>
-    </row>
-  </sheetData>
-</worksheet>`);
-    const bytes = await zip.generateAsync({ type: 'uint8array' });
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{
-        code: 'SG-AW',
-        driver: 'Jan Testowy / Erik Testowy',
-        driver_phone: '600111222 / 0700111222',
-        tractor: 'WGM1A6 / ABC123',
-        trailer: 'WWW1A6',
-      }],
-      (b) => JSZip.loadAsync(b),
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    expect(r.written).toBe(1);
-    const out = await JSZip.loadAsync(r.bytes);
-    const sheet = await out.files['xl/worksheets/sheet1.xml']!.async('string');
-    expect(sheet).toContain('Jan Testowy / Erik Testowy');
-    expect(sheet).toContain('600111222 / 0700111222');
-    expect(sheet).toContain('WGM1A6 / ABC123');
-    expect(sheet).toContain('WWW1A6');
-    expect(sheet).not.toMatch(/<f>/);
+  it('processOutboundWrites: zero PUT i zero /content', async () => {
+    const item = {
+      id: 7,
+      load_id: 'load-1',
+      code: 'SG-01',
+      codes: ['SG-01'],
+      rev: 1,
+      attempts: 0,
+      patch: { carrier_order_no: 'NEW' },
+      expected_file: { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+    };
+    const { sb } = mockSb([item]);
+    const { fetchFn, calls } = workbookFetch({
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+        ['SG-01', 'OLD'],
+      ],
+      usedAddress: 'Harmonogram!A1:B2',
+    });
+    await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': item.expected_file },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+    expect(calls.some((c) => c.url.includes('/content'))).toBe(false);
   });
 
-  it('F7 r2b N2: data na komórce z ułamkiem zachowuje godzinę', async () => {
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
-    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`);
-    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>`);
-    const h = COLUMN_MAP_DEFAULT;
-    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1">
-      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
-      <c r="B1" t="inlineStr"><is><t>${h.loadDate}</t></is></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="inlineStr"><is><t>SG-DT</t></is></c>
-      <c r="B2"><v>46000.333</v></c>
-    </row>
-  </sheetData>
-</worksheet>`);
-    const bytes = await zip.generateAsync({ type: 'uint8array' });
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{ code: 'SG-DT', load_date: '2026-12-01' }],
-      (b) => JSZip.loadAsync(b),
-    );
+  it('N5: pusta wartość WT przy niepustej komórce → 0 PATCH', async () => {
+    const mock = workbookFetch({
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.driverName],
+        ['SG-01', 'JanKsh'],
+      ],
+      usedAddress: 'Harmonogram!A1:B2',
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', driver: '' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null },
+      },
+      fetchFn: mock.fetchFn,
+    });
     expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const out = await JSZip.loadAsync(r.bytes);
-    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
-    // 2026-12-01 serial = 46357; +0.333 z poprzedniej godziny
-    expect(sheet1).toMatch(/<c r="B2"[^>]*><v>46357\.333<\/v>/);
+    expect(mock.calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
-  it('F7 r3: serial+frac zaokrąglony do 1e-9 (bez ogona float)', async () => {
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
-    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`);
-    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>`);
-    const h = COLUMN_MAP_DEFAULT;
-    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1">
-      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
-      <c r="B1" t="inlineStr"><is><t>${h.loadDate}</t></is></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="inlineStr"><is><t>SG-FL</t></is></c>
-      <c r="B2"><v>46000.3333333</v></c>
-    </row>
-  </sheetData>
-</worksheet>`);
-    const bytes = await zip.generateAsync({ type: 'uint8array' });
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{ code: 'SG-FL', load_date: '2026-12-01' }],
-      (b) => JSZip.loadAsync(b),
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const out = await JSZip.loadAsync(r.bytes);
-    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
-    const m = sheet1.match(/<c r="B2"[^>]*><v>([^<]+)<\/v>/);
-    expect(m).toBeTruthy();
-    const n = Number(m![1]);
-    expect(n).toBe(Math.round(n * 1e9) / 1e9);
-    expect(String(n)).not.toMatch(/99999|00001/);
-  });
-
-  it('F7 r2b N2: godzina na komórce całkowitej dokłada ułamek', async () => {
-    const zip = new JSZip();
-    zip.file('[Content_Types].xml', `<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"/>`);
-    zip.file('xl/workbook.xml', `<?xml version="1.0"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
-  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="H" sheetId="1" r:id="rId1"/></sheets>
-</workbook>`);
-    zip.file('xl/_rels/workbook.xml.rels', `<?xml version="1.0"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-</Relationships>`);
-    const h = COLUMN_MAP_DEFAULT;
-    zip.file('xl/worksheets/sheet1.xml', `<?xml version="1.0"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
-    <row r="1">
-      <c r="A1" t="inlineStr"><is><t>${h.shipmentCode}</t></is></c>
-      <c r="B1" t="inlineStr"><is><t>${h.loadTime}</t></is></c>
-    </row>
-    <row r="2">
-      <c r="A2" t="inlineStr"><is><t>SG-TM</t></is></c>
-      <c r="B2"><v>46357</v></c>
-    </row>
-  </sheetData>
-</worksheet>`);
-    const bytes = await zip.generateAsync({ type: 'uint8array' });
-    const r = await patchWorkbookBytes(
-      bytes,
-      [{ code: 'SG-TM', load_time: '08:00' }],
-      (b) => JSZip.loadAsync(b),
-    );
-    expect(r.ok).toBe(true);
-    if (!r.ok) return;
-    const out = await JSZip.loadAsync(r.bytes);
-    const sheet1 = await out.files['xl/worksheets/sheet1.xml']!.async('string');
-    // 8/24 = 0.333...
-    expect(sheet1).toMatch(/<c r="B2"[^>]*><v>46357\.3/);
+  it('#650: WT6 bez expected → przepuszczone (nie no_expected)', async () => {
+    const item = {
+      id: 9,
+      load_id: 'load-1',
+      code: 'SG-01',
+      codes: ['SG-01'],
+      rev: 1,
+      attempts: 0,
+      patch: { driver: 'JanWt', hhl_order_no: 'KSH-1' },
+      expected_file: null,
+    };
+    const { sb, rpcs } = mockSb([item]);
+    const { fetchFn, calls } = workbookFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.driverName,
+          COLUMN_MAP_DEFAULT.hhlOrderNo,
+        ],
+        ['SG-01', 'JanKsh', 'OLD'],
+      ],
+      usedAddress: 'Harmonogram!A1:C2',
+    });
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null } },
+      fileMode: 'prod',
+      writeTestOkAt: '2026-10-29T00:00:00Z',
+      fetchFn,
+    });
+    expect(rpcs.some((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'skipped'
+      && c.args.p_error === 'no_expected'
+    )).toBe(false);
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+    expect(r.upload_ok).toBe(true);
   });
 });

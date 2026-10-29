@@ -6910,6 +6910,34 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 00:20 — #650 F7 r3 POPRAWKI (B1'' ack bez dat)
+
+- Skrzynka: #650 F7 r3 POPRAWKI @ cb97a1ca (1 bloker). #608 w planie; #550 **WSTRZYMANE**. #651 po #650.
+- Scalanie: F7 **niegotowe** (POPRAWKI r3).
+- **Krok:** (1) B1'' — przy `wb.conflicts` ack `done` / `applyPatchToSnap` z `stripDateKeysFromPatch` (obie ścieżki); (2) test: migawka zgodna, komórka z inną datą, łatka `{load_date,driver,hhl}` → 2 PATCH, `sent` bez `load_date`, `snapshotPatch.ld` bez zmian; (3) N5: własny ładunek CANCELLED/REMOVED + osobny backfill REMOVED; (4) PLAN: KEEP_TOWER przy konflikcie daty ponownie kolejkuje datę. import **396**.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-30 00:10 — #650 F7 r2 POPRAWKI (B1' + bez PUT)
+
+- Skrzynka: #650 F7 r2 POPRAWKI @ ddf8c245. #608 w planie; #550 **WSTRZYMANE**. #651 po #650.
+- Scalanie: brak „F7: gotowe”; CI @ ddf8c245: unit/visual ✔, **db import 385/8** (echo/A→B→A/N12/N7 vs komplet WT6 + `t`/`f` vs `true`/`false`).
+- **Krok:** (1) B1' — konflikt dat przed workbookiem nie blokuje WT6 (strip dat → PATCH; sprawa tylko na datę); (2) usunięty `uploadSharePointFile` + `patchWorkbookBytes`; (3) `write_via=workbook`; (4) testy: 0 PUT/`/content`, puste WT→0 PATCH, WT6 bez expected; (5) A6 testy przepisane pod #650; N5 CANCELLED/REMOVED. import **395**. Unit ksh-sharepoint-write **51/51**.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 23:40 — #650 F7 POPRAWKI: WT nadpisuje 6 pól (decyzja 23:24)
+
+- Skrzynka: #650 F7 POPRAWKI + decyzja właściciela 29.10 23:24 (nadpisanie 6 pól WT→plik). #608 w planie; #550 **WSTRZYMANE**. #651 czeka na scalenie po #650.
+- Scalanie: F7 **niegotowe** (POPRAWKI) @ cce273e1 — poprawki w tym PR.
+- **Krok:** B1 Edge — 6 pól bez konfliktu (nadpisanie / `skip_applied`); daty R2 tylko daty; `overwritten_n` w wyniku workbook + `integration_runs`/`last_run`. `writeConflict`: konflikt tylko ld/lt/dd/dt. N3 SQL: clear WT → drop klucza z pending. N5: testy puste WT, 2×backfill, audit, MFA aal1. import **393**. Unit ksh-sharepoint-write **59/59**.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 23:10 — #650 PILNE: komplet 6 pól WT→plik (przed #651)
+
+- Skrzynka: #650 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §4/#637/#650, §8, POSTEP. #608 w planie; #550 **WSTRZYMANE**. Komentarz na #651: #650 ma pierwszeństwo — PR #650 przed scaleniem #651.
+- Scalanie: brak „F7: gotowe” ( #651 CI w toku, bez zmian plików na tej gałęzi ). #649 SCALONE wcześniej.
+- **Krok:** gałąź `pakiet/650-ksh-outbound-full-wt` / migracja **0340** — `ksh_sync_outbound_wt6_patch` + trigger zawsze dokłada 6 pól; `ksh_sync_outbound_enqueue_active_wt` (HHL_ADMIN+2FA). Mapowanie: `carrier_order_no`→HHL-Scan, `hhl_order_no`→HHL-KSH. import **387**; nullguard **895**. Unit: komplet WT=plik → 0 PATCH.
+- Push → CI → prośba o F7. Po scaleniu: ponowna próba na kopii TS-02/SS-02 → #637. Bez push na main.
+
 ## 2026-10-29 22:20 — #649 CI: EXPECTED status 470→476
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.

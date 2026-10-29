@@ -23,8 +23,8 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 383, // #637 F7: +1 asercja import_enabled=f po import_set(false); było 382 (#618)
-  nullguard: 890, // BN1 0338: +2 GUARD ×5 ról (ferry_dict_snapshot, ferry_route_port_countries); było 880
+  import: 396, // #650 F7 r3: +1 N5 backfill REMOVED (własny ładunek); było 395
+  nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
