@@ -8,14 +8,22 @@
 alter type risk_kind add value if not exists 'EMTRACK_ORPHAN';
 
 -- Tokeny tablicy (jak matchTrailer.plateTokens): separatory między nr: - / ,
+-- Kolejność jak w wejściu; DISTINCT bez ORDER BY mieszał AA/BB w CI.
 create or replace function public.telm_plate_tokens(p text)
 returns text[]
 language sql immutable parallel safe set search_path = public as $$
   select coalesce(
     array(
-      select distinct upper(regexp_replace(tok, '[^A-Z0-9]', '', 'g'))
-        from unnest(regexp_split_to_array(coalesce(p, ''), E'\\s*[-/,]\\s*')) as tok
-       where upper(regexp_replace(tok, '[^A-Z0-9]', '', 'g')) <> ''
+      select x.tok
+        from (
+          select upper(regexp_replace(t.tok, '[^A-Z0-9]', '', 'g')) as tok,
+                 min(t.ord) as ord
+            from unnest(regexp_split_to_array(coalesce(p, ''), E'\\s*[-/,]\\s*'))
+                 with ordinality as t(tok, ord)
+           where upper(regexp_replace(t.tok, '[^A-Z0-9]', '', 'g')) <> ''
+           group by 1
+        ) x
+       order by x.ord
     ),
     '{}'::text[]
   );

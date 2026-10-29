@@ -6585,3 +6585,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. emtrack-web po pętli woła scan; testy unit + status **370** (+12).
   4. Po wdrożeniu: reclaim SG-21 od 27.10 10:21 UTC → komentarz #622.
 - 27B: po #622 rebase migracji 0329→0330.
+
+## 2026-10-29 03:05 — #622 CI db: status 361/9 → poprawka testów + kolejność tokenów
+
+- Skrzynka: bez nowych poleceń; #550 WSTRZYMANE; #608 w kolejce. Bez F7 do scalenia.
+- CI PR #628 @ `97f9c63c`: unit/visual ✔; **db FAIL** status 361 OK / 9 FAIL (#622).
+- Przyczyna: UUID testów `L 62`/`L 63` kolidowały z SG8/Lfut (insert cichy → reclaim na CANCELLED bez emtrack → pusty wynik); `telm_plate_tokens` DISTINCT bez kolejności; asercja `f/f` vs `false/false`.
+- Poprawka: UUID `c2`/`c3`; tokeny z `WITH ORDINALITY` + ORDER BY; oczekiwania jsonb `true|2` / `false/false`. Po push — prośba o F7 przy zielonym CI.

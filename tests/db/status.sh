@@ -1882,8 +1882,9 @@ chk "#613: inne wymiary → HOTFIX_613_SKIPPED" \
 q "drop function if exists public.hotfix_613_apply()" >/dev/null
 
 # --- #622: tokeny naczepy + reclaim sierot + alarm EMTRACK_ORPHAN (fikcyjne tablice) ---
+# UUID c2/c3 — nie 62/63 (SG8 L14 / Lfut D-1501).
 echo; echo "[#622] emtrack trailer tokens / orphan reclaim"
-L622=$(L 62)
+L622=$(L c2)
 q "
 insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
   status, plan_load_date, telematics_vehicle_id, trailer_plate, tracking_opened_at)
@@ -1901,7 +1902,7 @@ chk "#622: match textId=primary (SG-21)" \
 chk "#622: match textId z dwoma vs WT z jednym" \
   "select public.telm_trailer_tokens_match('AA11AA','AA11AA - BB22BB')" t
 chk "#622: brak fałszywego dopasowania / fragment" \
-  "select public.telm_trailer_tokens_match('AA11AA','AA11')::text||'/'||public.telm_trailer_tokens_match('AA11AA','ZZ99ZZ')::text" "f/f"
+  "select public.telm_trailer_tokens_match('AA11AA','AA11')::text||'/'||public.telm_trailer_tokens_match('AA11AA','ZZ99ZZ')::text" "false/false"
 chk "#622: spacje w jednym nr nie rozbijają" \
   "select array_to_string(public.telm_plate_tokens('AA 11 AA'), ',')" "AA11AA"
 # Sierota: plate = primary (jak po zmianie nazwy w emtrack); raw.textId też.
@@ -1916,13 +1917,13 @@ select public.telm_save_orphan_position(
   jsonb_build_object('textId','AA11AA','provider','EMTRACK_WEB'));
 " >/dev/null
 chk "#622: reclaim ok + 2" \
-  "select (r->>'ok')||'|'||(r->>'reclaimed') from public.telm_reclaim_orphan_positions('$L622'::uuid, '2026-10-27 00:00:00+00'::timestamptz) r" "t|2"
+  "select (j->>'ok')||'|'||(j->>'reclaimed') from (select public.telm_reclaim_orphan_positions('$L622'::uuid, '2026-10-27 00:00:00+00'::timestamptz) j) s" "true|2"
 chk "#622: positions po reclaim" "select count(*) from positions where load_id='$L622' and source='EMTRACK_WEB'" 2
 chk "#622: sieroty skasowane" "select count(*) from telematics_orphan_positions where plate='AA11AA'" 0
 chk "#622: reclaim idempotentne (0)" \
   "select (public.telm_reclaim_orphan_positions('$L622'::uuid, '2026-10-27 00:00:00+00'::timestamptz)->>'reclaimed')" 0
 # Alarm: inny load bez pozycji, sierota z tokenem
-L622b=$(L 63)
+L622b=$(L c3)
 q "
 insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
   status, plan_load_date, telematics_vehicle_id, trailer_plate, tracking_opened_at)
