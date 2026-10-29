@@ -6706,3 +6706,39 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. `i2.sh`: 5 korytarzy + KSH 5 (SE_KAA_INLAND — geometria publiczna).
   4. Rebase na main (docs #631). status **413** bez zmiany liczby.
 - Po push — CI → F7 (tylko diff). Potem **#630** → ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 07:45 — #627 SCALONE; start #630 (0332)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #627 → `0dc28827` (F7: gotowe @ `70179782`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #630:** migracja **0332** — `eta_propose_calibration` pomija PORT_CHECKIN z `sailing_mismatch` (`n_skipped_sailing_mismatch` + note `skip_mm_PORT_CHECKIN`); CROSSING z mismatch zostaje; p4k **110** (+2). Gałąź `pakiet/630-calib-skip-sailing-mismatch`.
+- Po zielonym CI — F7. Potem ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 08:00 — #630 F7 r1 POPRAWKI (PR #633)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować); #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 = POPRAWKI @ `5140ed6b`). CI db: p4k 108/2 FAIL (hours=3→Δ>40%; UUID `00c`+3). Visual/unit ✔. Bez push na main.
+- **Krok F7 r1 (#633):**
+  1. Ś1: filtr + `v_n_skip_mm` po `segment_role = 'PORT_CHECKIN'` (nie kod na sztywno); zakres jak propozycja (słownik, 90 d).
+  2. P1: CROSSING ≥5 mismatch z godzinami ≠ parametr (18→24); assert propozycja/`n_obs`.
+  3. P2: `n_obs` + `error_*` bez mismatch; hours=8 (Δ25%); undo 7d — same mismatch nie odblokowują.
+  4. Bez zdublowanego REVOKE/GRANT. p4k **111**.
+- Po push — CI → F7 (tylko diff). Potem ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 08:25 — #630 CI db FAIL → fix skip 7 d w p4k
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” @ `113ff22f`. CI: unit ✔ visual ✔; **db FAIL** p4k 109/2 — `#630` PORT_CHECKIN/CROSSING proposal=null (obce undo/auto <7 d → `v_skip_codes`).
+- **Krok:** w testach #630 wyczyść okno skip 7 d (undone_at + auto-applied created_at → 8 d) przed propose; p4k nadal **111**. Push → CI → F7.
+
+## 2026-10-29 09:00 — #630 CI db FAIL @ 695179be → delete versions w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ `695179be`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (te same #630 — starzenie skip 7 d nie wystarczyło).
+- **Krok:** w transakcji testów #630 `delete from eta_calibration_versions` (puste skip + limit 30 d); asercje z powodem FAIL (`null:reason`). p4k **111**. Push → CI → F7.
+
+## 2026-10-29 09:25 — #630 CI db FAIL @ 7938da6c → propose raz w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ `7938da6c`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (`no_PORT_CHECKIN:?` / `no_CROSSING:?` — CTE wołało `eta_propose_calibration` wielokrotnie).
+- **Krok:** testy #630: wynik propose w temp table (jedno wywołanie) + join do wersji; diagnostyka `param_h` / `ngood` / `orphan`. p4k nadal **111**. Push → CI → F7.
