@@ -1130,8 +1130,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #622+#626+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo. **Uwaga:** #627 migracja **0331** (po #626/**0330**).
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → **27B:C** → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **W TOKU** (`pakiet/27B-kaa-dual-corridor`, migracja **0331**, PR #627). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND` z miast ≤~30 km + punkt Norrköping→Katrineholm / Malmköping); `stena_se_eta_corridor` (lat&lt;58.55 = pień). F7 r2: REMOVED w `refresh_load_eta` (#590); testy v_blocked (delete+rollback), Polferries Sztokholm, L cc≠#622 c8; i2 = 5 korytarzy (KSH widzi INLAND); status **413**. **Po OFF:** #630 (kalibracja pomija PORT_CHECKIN `sailing_mismatch`) → ETA SE po faktycznym korytarzu; mapa obie linie (HERE, B12); kalibracja dwa SE_ROAD. Bez śladu GPS w repo.
+
+### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — DO ZROBIENIA (po 27B:C OFF / #627; przed ETA/mapa 27B; backlog F7 #629)
+Źródło: #630 (Spawn2018; odbiór 0330 ✔). `eta_propose_calibration` (0320+) pomija wiersze PORT_CHECKIN z `features->>'sailing_mismatch'='true'` (licz w wykluczonych); CROSSING z mismatch zostaje. Test: mismatch nie w medianie / n_obs. Front oznaczenie — koordynator po scaleniu.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
 4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
@@ -1970,4 +1973,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 05:10 | #626 F7 r1 POPRAWKI (P1 sailing_ok / P2 EXIT przed PIN); p4k **106**; CI db 97/5 → UUID + logika | pętla |
 | 29.10.2026 05:30 | #626 F7 r2 @ 35fca542: eff_dep; ±1h; trim tylko gdy ok; p4k **107**; CI ✔ | pętla |
 | 29.10.2026 05:55 | #626 F7 r3: arrival&lt;EXIT BRAK tylko przy sailing_ok; test przesiadki A&lt;EXIT; p4k **108**; backlog kalibracja mismatch | pętla |
-| 29.10.2026 06:30 | #626 SCALONE (`d5786626`); H4 zdjęte; rebuild 17/34 — PORT 6/0, CROSSING_GDN 3/0; następna **27B:C** | pętla |
+| 29.10.2026 06:30 | #626 SCALONE (`d5786626`); H4 zdjęte; rebuild 17/34 — PORT 6/0, CROSSING_GDN 3/0; start **27B:C** F7 r1 (**0331**, status **413**) | pętla |
+| 29.10.2026 07:05 | #627 F7 r2 POPRAWKI + CI db: REMOVED, v_blocked txn, E4 Sztokholm, i2×5, L cc; #630 w §4 po OFF | pętla |

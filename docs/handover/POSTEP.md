@@ -6690,4 +6690,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89; `pin_src` SAILING_ACTUAL_ARR×2 + EVENT×1)
   - CROSSING_GDY_KAA 2+1 BRAK; PL_ROAD 3+11 TRASA; PL_ROAD_GDY 0+3 LUKA; SE_E4 0+9 H4; SE_ROAD 3; SE_ROAD_KAA 2
   - exclude: OK 19 · TRASA 11 · H4 9 · LUKA 3 · BRAK 1
-- Tabela w komentarzu #626. **Backlog:** kalibracja pomija mismatch PORT_CHECKIN (osobny PR). Następna: **27B:C** (#627 = **0331**).
+- Tabela w komentarzu #626. **Backlog:** kalibracja pomija mismatch PORT_CHECKIN (→ #630). Następna: **27B:C** (#627 = **0331**).
+
+## 2026-10-29 06:40 — 27B:C F7 r1 (0331)
+
+- **27B:C** PR #627 — rebase na main (0331 po 0329/0330); F7 r1: `begin`/`commit`; punkty ≤~30 km; TRACK tylko gdy blisko Västerås; testy pień / TRACK / v_blocked / Polferries SE_E4; status **413**. Push → CI → F7 r2.
+
+## 2026-10-29 07:05 — 27B:C F7 r2 + CI db FAIL (0331)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #630 (Spawn2018, bez `dla-cursora`) wpisane §4 z F7 #627 — po OFF, przed ETA/mapa. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r2 = POPRAWKI @ `a0378470`). CI db ✖: status 410/3, import 375/1 (#590), i2 669/2. Bez push na main.
+- **Krok F7 r2 + CI:**
+  1. `0331`: `CANCELLED`→`not in (CANCELLED,REMOVED)`; punkt Norrköping→Katrineholm; Malmköping zamiast Flen; komentarz Hedesunda/Gysinge.
+  2. `status.sh`: v_blocked = `begin; delete corridors; refresh; count unresolved; rollback`; Polferries punkt Sztokholm; L27Ba=`cc` (wolne `c8` dla #622).
+  3. `i2.sh`: 5 korytarzy + KSH 5 (SE_KAA_INLAND — geometria publiczna).
+  4. Rebase na main (docs #631). status **413** bez zmiany liczby.
+- Po push — CI → F7 (tylko diff). Potem **#630** → ETA/mapa/kalibracja SE_ROAD 27B.
