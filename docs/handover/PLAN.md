@@ -1142,8 +1142,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — SCALONE (`97428948` / PR #636 / **0333**, 29.10.2026 10:31Z)
 Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
 
-### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — W TOKU (`pakiet/637-ksh-write-no-import`, migracja **0334**)
-Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → **próba na kopii** → `ksh_sync_write_set(true)` prod → uzupełnienie aktywnych → pierwszy cykl. Kod: `write_set` bez wymogu importu; `import_set(false)` nie gasi `write_enabled` ani kolejki; Edge zapis bez bramki `import_disabled`; **F7 #639:** zapis tylko przy `write_enabled` (kolejka z triggera). Próba: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → jedna zmiana awizacji → cykl (PUT na kopię, `write_test_ok_at`) → `prod` → jednorazowe zakolejkowanie aktywnych → meldunek w #637. import **383**.
+### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI (`9be41712` / PR #639 / **0334**, deploy-main `40873859365`); **próba na kopii czeka W63**
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334 scalony+wdrożony~~ → **próba na kopii (W63)** → `ksh_sync_write_set(true)` + cykl test → `prod` → uzupełnienie aktywnych → pierwszy cykl → meldunek. Kod: `write_set` bez wymogu importu; `import_set(false)` nie gasi `write_enabled` ani kolejki; Edge zapis tylko przy `write_enabled` (F7 #639). Stan po wdrożeniu (SELECT): `import_enabled=false`, `write_enabled=false`, `write_test_ok_at` null, `last_run.mode=prod`, pending 0. **Blokada:** brak sekretu Edge `SHAREPOINT_FILE_MODE` (domyślnie prod) — bez `=test` nie wolno włączać zapisu (brama `write_test_required`); lokalny `SUPABASE_ACCESS_TOKEN` 401, token doradcy bez `edge_functions_secrets_write`. import **383**.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1472,6 +1472,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W60 | #567 24A: 17 decyzji koordynatora 25.10 zaakceptowanych — zamknąć powiązane W; #546 zrobione | — | **potwierdzone 26.10.2026** (#567) — #546 zamknąć gdy otwarte |
 | W61 | #581 / 27A: kalibracja ETA — auto-apply ≤ 15 % + test wsteczny; > 15 % czeka na HHL_ADMIN; zamrożenie wstrzymuje oba tryby; autor audytu „automat kalibracji” | P4-k #581 | **potwierdzone 27.10.2026 01:05** (#581) |
 | W62 | #597 F7: swap z samą stroną SE w pliku = samo SE (wygląda jak PL). Propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie | #597 / po F7 | **zamknięte 28.10.2026 19:40** — właściciel: `... / SE` i `PL / ...` (#618) |
+| W63 | #637 próba na kopii: ustaw Edge `SHAREPOINT_FILE_MODE=test` (sekret dziś nieobecny → mode=prod) **albo** odśwież `SUPABASE_ACCESS_TOKEN` wykonawcy z uprawnieniem `edge_functions_secrets_write`; potem agent: `ksh_sync_write_set(true)` (HHL_ADMIN+2FA) → awizacja → cykl → `prod` → backlog → meldunek #637. Import zostaje off | #637 | **czeka** 29.10.2026 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1996,3 +1997,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |
 | 29.10.2026 13:40 | #637 PR #639 CI zielone @ `c469db8e` (unit/visual/db import 383); czekam F7; #638 po #637 | pętla |
 | 29.10.2026 14:00 | #637 PR #639 CI zielone @ `f48f91a2` (docs po F7 @ c469db8); czekam ponowne F7; #638 po #637 | pętla |
+| 29.10.2026 14:30 | #639 SCALONE (`9be41712`, F7 gotowe @ b4065e9); deploy-main ✔; #637 próba na kopii → **W63** (brak FILE_MODE=test); start F7 #638 (0335) | pętla |

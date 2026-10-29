@@ -6789,3 +6789,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #639 @ `f48f91a2`: unit ✔, visual ✔, db ✔ (import **383**, run `40867523084`). MERGEABLE.
 - #638 czeka na #637 (0334→0335 + REMOVED/Polferries). Bez push na main.
 
+## 2026-10-29 14:30 — #639 SCALONE; #637 W63 (FILE_MODE); start #638
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (próba na kopii).
+- Scalanie: #639 → `9be41712` (F7: gotowe @ `b4065e9` 12:24Z, po HEAD; CI unit/db/visual ✔). Bez push na main.
+- deploy-main `40873859365` ✔ (Baza+Edge+Vercel). Stan prod: `import_enabled=false`, `write_enabled=false`, `write_test_ok_at` null, `last_run.mode=prod`, pending 0.
+- Próba na kopii **zablokowana**: sekret Edge `SHAREPOINT_FILE_MODE` nie istnieje (mode=prod); ustawienie API → 403 (`edge_functions_secrets_write`); lokalny `SUPABASE_ACCESS_TOKEN` 401. **W63** w §5. Bez włączania `write_enabled` na prod.
+- **Dalej:** F7 #638 (przenumeruj 0334→0335 + REMOVED/Polferries). Po „W63 gotowe” — dokończ #637 (test→prod→backlog→meldunek).
+
