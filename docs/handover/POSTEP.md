@@ -6775,3 +6775,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** przywróć `if (!writeEnabled) return null` (kolejka tylko z triggera przy write on); procedura próby: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → zmiana awizacji → cykl → `prod` → backlog aktywnych. Unit: prod bez `writeTestOkAt` → `write_test_required`; test dochodzi do kolejki. import.sh +1 asercja `import_enabled=f` → **383**. Usunięty zbędny `importEnabled` z `processOutboundWrites`.
 - Push → CI → F7. Po scaleniu/wdrożeniu: próba na kopii wg procedury → meldunek w #637.
 
+## 2026-10-29 13:40 — #637 PR #639 CI zielone @ c469db8e
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (krok 2 próba na kopii po wdrożeniu).
+- Scalanie: brak „F7: gotowe do scalenia” po `c469db8e` — prośba o F7 w PR #639.
+- CI #639 @ `c469db8e`: unit ✔, visual ✔, db ✔ (import **383**, run `40865029504`). MERGEABLE.
+- #638 (27B ETA) CI zielone, F7 = POPRAWKI — czeka na scalenie #637 (potem 0334→0335 + REMOVED/Polferries).
+

@@ -1994,3 +1994,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 12:35 | #618/#636 SCALONE (`97428948`); 27B:C ETA **0334** na PR #638 (czekaj #637) | pętla |
 | 29.10.2026 13:00 | #637 PILNE „włącz zapis”: **0334** write bez importu; próba na kopii przed write_set; przed F7 #638 | pętla |
 | 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |
+| 29.10.2026 13:40 | #637 PR #639 CI zielone @ `c469db8e` (unit/visual/db import 383); czekam F7; #638 po #637 | pętla |
