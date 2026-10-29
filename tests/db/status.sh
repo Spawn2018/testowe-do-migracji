@@ -1163,9 +1163,16 @@ chk "27B: Polferries Karlstad → OFF_CORRIDOR SE_E4" \
     where load_id='$L27Be4' and dedup_key='OFF_CORRIDOR:$L27Be4' and resolved_at is null" SE_E4
 
 # F7 #638: REMOVED → ETA null, segment CANCELLED (jak 0315) — 1 asercja (+2 Polferries = +3)
+# REMOVED tylko przez decision_resolve / remove_ctx; w teście: replica + removed_at (check 0315).
 L27Brm=$(L cd)
-mk $L27Brm R27B "'HHL/R27B'" "'SCX/R27B'" IN_TRANSIT_SE
-q "update loads set status='REMOVED' where id='$L27Brm'" >/dev/null
+mk $L27Brm R27B "'HHL/R27B'" "'SCX/R27B'" IN_TRANSIT_SE null
+q "set session_replication_role=replica;
+   update loads
+      set status='REMOVED',
+          removed_at=now(),
+          removed_prev_status='IN_TRANSIT_SE'
+    where id='$L27Brm';
+   set session_replication_role=origin;" >/dev/null
 chk "27B ETA: REMOVED → eta null + segment CANCELLED" \
   "select case when eta is null and basis->>'segment'='CANCELLED' then 'ok' else 'bad' end from compute_load_eta('$L27Brm', now())" ok
 
