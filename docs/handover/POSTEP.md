@@ -6742,3 +6742,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
 - Scalanie: brak „F7: gotowe”. CI @ `7938da6c`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (`no_PORT_CHECKIN:?` / `no_CROSSING:?` — CTE wołało `eta_propose_calibration` wielokrotnie).
 - **Krok:** testy #630: wynik propose w temp table (jedno wywołanie) + join do wersji; diagnostyka `param_h` / `ngood` / `orphan`. p4k nadal **111**. Push → CI → F7.
+
+## 2026-10-29 10:00 — #630 SCALONE; start #634 emtrack 6.34.0
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #633 → `2563d627` (F7: gotowe @ `abf5bca2`, CI unit/db/visual ✔, p4k **111**). Bez push na main. #630 zamknięte.
+- **Krok #634** (F7 #633: dalej emtrack 6.34.0, potem #618): `EMTRACK_EXPECTED_VERSION` 6.33.0→6.34.0; testy meta/mismatch; PLAN §4/§8. Gałąź `pakiet/634-emtrack-6.34.0`.
+- Po zielonym CI — F7. Potem **#618**.
