@@ -21,6 +21,39 @@ export function missingExpectedFile(
   return expected == null;
 }
 
+function asExpectedSnap(v: unknown): FileDateSnap | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  return {
+    ld: typeof o.ld === 'string' ? o.ld : o.ld == null ? null : String(o.ld),
+    lt: typeof o.lt === 'string' ? o.lt : o.lt == null ? null : String(o.lt),
+    dd: typeof o.dd === 'string' ? o.dd : o.dd == null ? null : String(o.dd),
+    dt: typeof o.dt === 'string' ? o.dt : o.dt == null ? null : String(o.dt),
+    co: typeof o.co === 'string' ? o.co : o.co == null ? null : String(o.co),
+    ho: typeof o.ho === 'string' ? o.ho : o.ho == null ? null : String(o.ho),
+  };
+}
+
+/**
+ * #637 (a) / 28C:A: w trybie `test` baseline konfliktu = migawka z **kopii**
+ * odczytana w tym samym cyklu (nie `expected_file` z odczytów prod).
+ * Na prod bez zmian — „nie nadpisuj edycji klienta”.
+ */
+export function resolveOutboundExpected(args: {
+  fileMode?: 'test' | 'prod';
+  expectedFile: unknown;
+  fileSnapshot: Record<string, FileDateSnap | null | undefined>;
+  codes: string[];
+}): FileDateSnap | null {
+  if (args.fileMode === 'test') {
+    for (const c of args.codes) {
+      const fromCopy = asExpectedSnap(args.fileSnapshot[c] ?? null);
+      if (fromCopy) return fromCopy;
+    }
+  }
+  return asExpectedSnap(args.expectedFile);
+}
+
 /** Kolejność jak w import_schedule (pending skip / file-changed). */
 const CONFLICT_FIELD_ORDER = [
   'load_date',

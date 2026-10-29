@@ -13,12 +13,17 @@ import {
   fileAlreadyHasPatch,
   missingExpectedFile,
   pickOutboundConflictNote,
+  resolveOutboundExpected,
   type FileDateSnap,
 } from './writeConflict.ts';
 import { ackPayload } from './ackPayload.ts';
 import { outboundWriteProdGate } from './outboundWriteGate.ts';
 
-export { fileAlreadyHasPatch, pickOutboundConflictNote } from './writeConflict.ts';
+export {
+  fileAlreadyHasPatch,
+  pickOutboundConflictNote,
+  resolveOutboundExpected,
+} from './writeConflict.ts';
 export { ackPayload } from './ackPayload.ts';
 export { outboundWriteProdGate } from './outboundWriteGate.ts';
 
@@ -159,13 +164,18 @@ export async function processOutboundWrites(args: {
   const skipReasons = new Map<number, string>();
 
   for (const it of items) {
-    const expected = asSnap(it.expected_file);
+    const codes = patchCodes(it);
+    const expected = resolveOutboundExpected({
+      fileMode: args.fileMode,
+      expectedFile: it.expected_file,
+      fileSnapshot: args.fileSnapshot,
+      codes,
+    });
     if (missingExpectedFile(expected)) {
       skipItems.push(it);
       skipReasons.set(Number(it.id), 'no_expected');
       continue;
     }
-    const codes = patchCodes(it);
 
     // F7 r2 / r2b: PUT zgubiony lub częściowa łatka — pomiń kody już w pliku.
     const remaining = codes.filter((code) =>
@@ -185,6 +195,7 @@ export async function processOutboundWrites(args: {
 
     // F7 r2 UWAGA: konflikt tylko dla kodów jeszcze nie zastosowanych.
     // #569: p_code / pole sprawy = wiersz, w którym wykryto rozjazd (nie primary).
+    // #637 (a): w test expected już z kopii — konflikt prod↔kopia nie blokuje próby.
     const conflictNote = pickOutboundConflictNote(
       remaining,
       expected!,
@@ -255,9 +266,16 @@ export async function processOutboundWrites(args: {
   if (toWrite.length === 0) {
     const snapFromRecover: SnapshotMap = { ...args.fileSnapshot };
     for (const it of alreadyDone) {
-      for (const code of patchCodes(it)) {
+      const codesDone = patchCodes(it);
+      const base = resolveOutboundExpected({
+        fileMode: args.fileMode,
+        expectedFile: it.expected_file,
+        fileSnapshot: args.fileSnapshot,
+        codes: codesDone,
+      });
+      for (const code of codesDone) {
         snapFromRecover[code] = applyPatchToSnap(
-          asSnap(it.expected_file),
+          asSnap(args.fileSnapshot[code]) ?? base,
           { code, ...it.patch },
         );
       }
@@ -413,9 +431,16 @@ export async function processOutboundWrites(args: {
 
   const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
   for (const it of alreadyDone) {
-    for (const code of patchCodes(it)) {
+    const codesDone = patchCodes(it);
+    const base = resolveOutboundExpected({
+      fileMode: args.fileMode,
+      expectedFile: it.expected_file,
+      fileSnapshot: args.fileSnapshot,
+      codes: codesDone,
+    });
+    for (const code of codesDone) {
       snapshotPatch[code] = applyPatchToSnap(
-        asSnap(it.expected_file) ?? snapshotPatch[code] ?? null,
+        asSnap(args.fileSnapshot[code]) ?? base ?? snapshotPatch[code] ?? null,
         { code, ...it.patch },
       );
     }

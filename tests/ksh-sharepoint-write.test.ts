@@ -10,6 +10,7 @@ import {
   fileRowChangedSinceRead,
   missingExpectedFile,
   pickOutboundConflictNote,
+  resolveOutboundExpected,
 } from '../supabase/functions/_shared/ksh/writeConflict';
 import { ackPayload } from '../supabase/functions/_shared/ksh/ackPayload';
 import {
@@ -41,6 +42,42 @@ describe('A6 outboundWriteProdGate (#637 F7)', () => {
       .toEqual({ block: false });
     expect(outboundWriteProdGate({ fileMode: 'prod', writeTestOkAt: '2026-10-29T12:00:00Z' }))
       .toEqual({ block: false });
+  });
+});
+
+describe('A6 resolveOutboundExpected (#637 a — próba na kopii)', () => {
+  const prodSnap = {
+    ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: null, co: 'P1', ho: 'H1',
+  };
+  const copySnap = {
+    ld: '2026-10-01', lt: '07:00', dd: '2026-10-05', dt: null, co: 'C1', ho: 'H1',
+  };
+
+  it('prod → expected_file z kolejki (bez podmiany na kopię)', () => {
+    expect(resolveOutboundExpected({
+      fileMode: 'prod',
+      expectedFile: prodSnap,
+      fileSnapshot: { 'SG-01': copySnap },
+      codes: ['SG-01'],
+    })).toEqual(prodSnap);
+  });
+
+  it('test → migawka z kopii w cyklu (nie prod)', () => {
+    expect(resolveOutboundExpected({
+      fileMode: 'test',
+      expectedFile: prodSnap,
+      fileSnapshot: { 'SG-01': copySnap },
+      codes: ['SG-01'],
+    })).toEqual(copySnap);
+  });
+
+  it('test bez wiersza w kopii → spadnij na expected_file', () => {
+    expect(resolveOutboundExpected({
+      fileMode: 'test',
+      expectedFile: prodSnap,
+      fileSnapshot: {},
+      codes: ['SG-01'],
+    })).toEqual(prodSnap);
   });
 });
 
