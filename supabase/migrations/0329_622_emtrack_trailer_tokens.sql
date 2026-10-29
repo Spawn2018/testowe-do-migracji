@@ -9,6 +9,9 @@
 
 alter type risk_kind add value if not exists 'EMTRACK_ORPHAN';
 
+-- Transakcja po ADD VALUE (enum nieużywalny w tej samej transakcji co ALTER TYPE).
+begin;
+
 -- Normalizacja jak normalizePlate (TS): upper + bez spacji/myślników.
 create or replace function public.telm_norm_plate(p text)
 returns text
@@ -767,3 +770,5 @@ grant execute on function public.process_position(uuid, double precision, double
   to service_role;
 comment on function public.process_position(uuid, double precision, double precision, timestamptz, position_source, numeric, numeric, boolean, jsonb) is
   'Zapis pozycji + geofence. #622: tower.pos_budget_bypass=on pomija limit 60 s (reclaim sierot).';
+
+commit;

@@ -1958,3 +1958,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 01:30 | #619/#603 **0328** SCALONE (`07d27ba7`); #624 zamknięte; rebuild prod 17/34 — PORT_CHECKIN 6/0; następna **27B:C** | pętla |
 | 29.10.2026 02:15 | Kolejność: **#622** (SG-21 PILNE) → #626 → 27B:C (#627 F7 r1 otwarte); start **0329** tokeny/reclaim | pętla |
 | 29.10.2026 02:45 | #622 F7 r1 w #628: B1–B2/P1/P3/P4; status **375**; CI 8c38a4ea db 363/7 (reclaim) — poprawka w toku | pętla |
+| 29.10.2026 03:05 | #622 CI @ 1a4350b1 db FAIL (ranking 3/1 vs 3/2; risks +rk_emtrack_orphan) — poprawka asercji + begin/commit 0329 | pętla |

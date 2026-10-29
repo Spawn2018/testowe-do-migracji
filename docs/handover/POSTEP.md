@@ -6605,3 +6605,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   5. P4: zamykanie `EMTRACK_ORPHAN` przy GPS < 2 h i po reclaim; `plate = any(tokeny)` przed raw.
   6. Testy unit + status **375**; `mk` dla L622/L622b.
 - Po zielonym CI — prośba o F7 r2.
+
+## 2026-10-29 03:05 — #622 CI db @ 1a4350b1: status 374/1 + risks 44/2
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; bez „F7: gotowe”. #627 nie scalać (kolejność).
+- CI PR #628 @ `1a4350b1`: unit/visual ✔; **db FAIL** — status 374 OK / 1 FAIL; risks 44 OK / 2 FAIL.
+- Przyczyna: asercja rankingu `BB 22 BB`≡`BB22BB` to pełna równość (1), nie primary (2); `rk_emtrack_orphan` nie w liście kluczy automatu (7→8).
+- Poprawka: status ranking `3/2` na tym samym WT (additional/primary); risks +`rk_emtrack_orphan`; `begin`/`commit` w 0329 po `ALTER TYPE`. Po push — F7 r2 przy zielonym CI.

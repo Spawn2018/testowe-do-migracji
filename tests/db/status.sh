@@ -1912,8 +1912,9 @@ chk "#622: brak fałszywego dopasowania / fragment" \
   "select public.telm_trailer_tokens_match('AA11AA','AA11')::text||'/'||public.telm_trailer_tokens_match('AA11AA','ZZ99ZZ')::text" "false/false"
 chk "#622: spacje w jednym nr nie rozbijają" \
   "select array_to_string(public.telm_plate_tokens('AA 11 AA'), ',')" "AA11AA"
+# additional (3) vs primary (2) na tym samym WT; 'BB 22 BB'≡'BB22BB' to pełna równość (1), nie primary
 chk "#622: ranking primary vs additional" \
-  "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','BB22BB')::text||'/'||public.telm_trailer_match_rank('BB 22 BB','BB22BB')::text" "3/2"
+  "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','BB22BB')::text||'/'||public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','AA11AA')::text" "3/2"
 # Sierota: plate = primary (jak po zmianie nazwy w emtrack); raw.textId też.
 # Pozycje z dala od SITE (żeby reclaim nie zamykał okna).
 q "
