@@ -3,13 +3,18 @@ import {
   extractWaitSeconds, fetchTrackingObjectsReadOnly, isLoginHardFail, isLoginSuccess, isMoving,
   normalizePlate, parseCurrentSnapshot, pollIntervalSec, summarizeLoginFrame,
 } from '../supabase/functions/_shared/telematics/emtrackWeb';
-import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, trackingWindowStartMs } from '../supabase/functions/_shared/telematics/matchTrailer';
+import {
+  ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, plateTokens,
+  plateTokensEm, primaryTrailerToken, trackingWindowStartMs,
+  trailerMatchRank, trailerPlateTokensMatch,
+} from '../supabase/functions/_shared/telematics/matchTrailer';
 import { runEmtrackWeb } from '../supabase/functions/_shared/integrations/jobs';
 import { sourceDownRisk } from '../supabase/functions/_shared/integrations/sync';
 import {
   emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
   unquoteSecret,
 } from '../supabase/functions/_shared/integrations/emtrackLogin';
+import trailerMatchCases from './fixtures/trailerMatchCases.json';
 
 describe('TELM-EMTRACK-WEB parsers', () => {
   it('normalizePlate usuwa spacje i myślniki', () => {
@@ -64,6 +69,77 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(matchFixToLoad(fix, [
       { id: 'url2', trailer_plate: 'OTHER', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
     ])).toBeNull();
+  });
+
+  // #622 F7: tokeny naczepy (fikcyjne tablice ≥5+cyfra — bez numerów produkcyjnych).
+  it('#622: plateTokens / trailerPlateTokensMatch (SG-21 i odwrotnie)', () => {
+    expect(plateTokens('AB 12 CD - XY 99 ZZ')).toEqual(['AB12CD', 'XY99ZZ']);
+    expect(plateTokens('AB12CD/XY99ZZ,ZZ1234')).toEqual(['AB12CD', 'XY99ZZ', 'ZZ1234']);
+    expect(primaryTrailerToken('AB 12 CD - XY 99 ZZ')).toBe('AB12CD');
+    // B1: textId ze spacją (format emtrack) = pełna równość z WT „A - B”
+    expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA 11 AA BB 22 BB')).toBe(true);
+    expect(trailerMatchRank('AA 11 AA - BB 22 BB', 'AA 11 AA BB 22 BB')).toBe(1);
+    expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA11AA')).toBe(true);
+    // textId z dwoma vs WT z jednym
+    expect(trailerPlateTokensMatch('AB12CD', 'AB12CD - XY99ZZ')).toBe(true);
+    // textId z jednym vs WT z dwoma (SG-21)
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99 ZZ', 'AB12CD')).toBe(true);
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99 ZZ', 'XY99ZZ')).toBe(true);
+    // separatory
+    expect(trailerPlateTokensMatch('AB12CD/XY99ZZ', 'AB12CD')).toBe(true);
+    // B2: myślnik bez spacji nie tnie (HH-AB123 ≠ token HH)
+    expect(plateTokens('HH-AB 123')).toEqual(['HHAB123']);
+    expect(trailerPlateTokensMatch('HHXX01', 'HH-AB 123')).toBe(false);
+    // brak fałszywego dopasowania między różnymi naczepami / fragmentami / krótkimi
+    expect(trailerPlateTokensMatch('AB12CD', 'ZZ99ZZ')).toBe(false);
+    expect(trailerPlateTokensMatch('AB12CD', 'AB12')).toBe(false);
+    expect(trailerPlateTokensMatch('TRAILER01', 'TRAILER0')).toBe(false);
+    // F7 r2 B1-bis: WT bez tokenu z samych cyfr; EM bez środkowego fragmentu
+    expect(plateTokens('XX 12345')).toEqual(['XX12345']);
+    expect(plateTokensEm('YY 12345')).toEqual(['YY12345']);
+    expect(trailerPlateTokensMatch('XX 12345', 'YY 12345')).toBe(false);
+    expect(trailerMatchRank('XX 12345 - ZZ1 2345', 'XX 12345')).toBe(2);
+    expect(trailerMatchRank('A - B', 'A B')).toBe(1);
+    // F7 r3: upper przed strip (jak SQL)
+    expect(plateTokens('ab 12345')).toEqual(['AB12345']);
+    expect(trailerPlateTokensMatch('xx 12345', 'yy 12345')).toBe(false);
+  });
+
+  // Sync: tests/fixtures/trailerMatchCases.json ↔ tests/db/status.sh (#622 shared)
+  it('#622: wspólna tabela [wt, textId, rank] TS↔SQL (F7 r3)', () => {
+    for (const c of trailerMatchCases) {
+      expect(trailerMatchRank(c.wt, c.textId)).toBe(c.rank);
+    }
+  });
+
+  it('#622: matchFixToLoad — ranking / remis (F7 P1)', () => {
+    const at = Date.now();
+    const mk = (textId: string) => parseCurrentSnapshot({
+      trackingObjectId: 42, name: 'x', textId, type: 'TRAILER',
+      currentSnapshot: { ts: at, d: { C: { v: { lat: 1, lng: 2 } } } },
+    });
+    const link = 'https://emtrack.eu/app/';
+    const row = {
+      id: 'sg21',
+      trailer_plate: 'AB 12 CD - XY 99 ZZ',
+      telematics_vehicle_id: link,
+      status: 'AT_PORT_NYNASHAMN',
+      plannedLoadDate: '2020-01-01',
+    };
+    expect(matchFixToLoad(mk('AB12CD'), [row])?.id).toBe('sg21');
+    expect(matchFixToLoad(mk('AB12CD - XY99ZZ'), [{ ...row, trailer_plate: 'AB12CD' }])?.id).toBe('sg21');
+    expect(matchFixToLoad(mk('ZZ99ZZ'), [row])).toBeNull();
+    // remis na tokenie dodatkowym → null (sierota)
+    const x = { ...row, id: 'x', trailer_plate: 'AA 11 AA - BB 22 BB', plannedLoadDate: '2020-01-01' };
+    const y = { ...row, id: 'y', trailer_plate: 'BB 22 BB', plannedLoadDate: '2020-01-02' };
+    expect(matchFixToLoad(mk('BB22BB'), [x, y])?.id).toBe('y'); // y = primary (rank 2) > x additional (rank 3)
+    const x2 = { ...row, id: 'x2', trailer_plate: 'AA 11 AA - BB 22 BB', plannedLoadDate: '2020-01-01' };
+    const y2 = { ...row, id: 'y2', trailer_plate: 'CC 33 CC - BB 22 BB', plannedLoadDate: '2020-01-02' };
+    expect(matchFixToLoad(mk('BB22BB'), [x2, y2])).toBeNull(); // remis rank 3
+    expect(ambiguousMatchCount(mk('AB12CD'), [
+      row,
+      { ...row, id: 'other', plannedLoadDate: '2020-01-02' },
+    ])).toBe(2);
   });
 
   it('E27/D-1710: okno od 03:00 + link; ta sama naczepa z linkiem → wcześniejszy', () => {

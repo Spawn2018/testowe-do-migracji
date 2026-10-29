@@ -103,6 +103,7 @@ put(['ROUTE_OBSTACLE'], (i) => transport(i.loadCode, 'status'));
 put(['WEATHER'], (i) => (i.tab === 'storm' ? decision(i.decisionId) : transport(i.loadCode, 'status')));
 
 put(['USAGE_LIMIT'], () => system('zuzycie'));
+put(['EMTRACK_ORPHAN'], (i) => transport(i.loadCode, 'status'));
 put(['JOB_FAILURE', 'SOURCE_DOWN', 'SOURCE_DOWN_AIS'], (i) => (
   (i.resource ?? '').toLowerCase() === 'backup' ? decision(i.decisionId) : system('integracje')
 ));

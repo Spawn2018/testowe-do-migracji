@@ -1,0 +1,11 @@
+[
+  { "wt": "xx 12345", "textId": "yy 12345", "rank": null },
+  { "wt": "ab 12345", "textId": "AB12345", "rank": 1 },
+  { "wt": "XX 12345", "textId": "YY 12345", "rank": null },
+  { "wt": "XX 12345 - ZZ1 2345", "textId": "XX 12345", "rank": 2 },
+  { "wt": "A - B", "textId": "A B", "rank": 1 },
+  { "wt": "AA 11 AA - BB 22 BB", "textId": "BB22BB", "rank": 3 },
+  { "wt": "AA 11 AA - BB 22 BB", "textId": "AA11AA", "rank": 2 },
+  { "wt": "AA 11 AA - BB 22 BB", "textId": "AA 11 AA BB 22 BB", "rank": 1 },
+  { "wt": "HHXX01", "textId": "HH-AB 123", "rank": null }
+]

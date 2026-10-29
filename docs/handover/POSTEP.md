@@ -6573,3 +6573,66 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - deploy-main `40787814059` ✔ — migracja **0328** nałożona.
 - **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0** (było 1+5 BRAK); CROSSING_* 2+1 każdy; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4. `port_out_src`: PORT EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2. Wynik w komentarzu #619.
 - **Następna pozycja:** 27B:C (obie trasy Karlskrona→Boden / OFF_CORRIDOR + ETA + mapa + kalibracja).
+
+## 2026-10-29 02:15 — #622 PILNE przed 27B (kolejność koordynatora)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #622 otwarte (PILNE w tytule; bez etykiety `pilne` — priorytet z komentarza 29.10 w #622/#627). #537/#500/#499/#538 w kolejce.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie. #627 (27B) — F7 **nie** gotowe (B2/testy/pośrednie); CI db FAIL import 375/376 + i2 669/671. Bez push na main.
+- **Kolejność:** **#622 → #626 pkt 5 → 27B:C (#627) → #618**.
+- **Krok #622** (`pakiet/622-emtrack-trailer-tokens`, **0329**):
+  1. `matchTrailer`: tokeny naczepy (spacja/`-`/`/`/`,`); primary WT ∈ textId albo textId = token WT; `ambiguousMatchCount` tą samą regułą.
+  2. Migracja: `telm_reclaim_orphan_positions`, `telm_scan_orphan_trailer_alerts` (`EMTRACK_ORPHAN` → HHL), bypass 60 s w `process_position`.
+  3. emtrack-web po pętli woła scan; testy unit + status **370** (+12).
+  4. Po wdrożeniu: reclaim SG-21 od 27.10 10:21 UTC → komentarz #622.
+- 27B: po #622 rebase migracji 0329→0330.
+
+## 2026-10-29 03:05 — #622 CI db: status 361/9 → poprawka testów + kolejność tokenów
+
+- Skrzynka: bez nowych poleceń; #550 WSTRZYMANE; #608 w kolejce. Bez F7 do scalenia.
+- CI PR #628 @ `97f9c63c`: unit/visual ✔; **db FAIL** status 361 OK / 9 FAIL (#622).
+- Przyczyna: UUID testów `L 62`/`L 63` kolidowały z SG8/Lfut (insert cichy → reclaim na CANCELLED bez emtrack → pusty wynik); `telm_plate_tokens` DISTINCT bez kolejności; asercja `f/f` vs `false/false`.
+- Poprawka: UUID `c2`/`c3`; tokeny z `WITH ORDINALITY` + ORDER BY; oczekiwania jsonb `true|2` / `false/false`. Po push — prośba o F7 przy zielonym CI.
+
+## 2026-10-29 02:45 — #622 F7 r1 (B1–B2, P1, P3, P4) w PR #628
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; bez `pilne` aktywnego. Scalanie: brak „F7: gotowe” (F7 @ 8c38a4e: **nie** gotowe — wdrożyć r1).
+- CI @ `8c38a4ea`: unit/visual ✔; **db FAIL** status 363/7 (reclaim/scan — wczesny return bez `reclaimed` → pusta asercja; insert poza `mk`).
+- **Krok F7 r1:**
+  1. B1: pełna równość `normalizePlate` przed tokenami; sklejenia fragmentów po spacji.
+  2. B2: myślnik tylko ze spacją (≥1 strony); `/`, `,`, `;`, `+`; token ≥5 + cyfra.
+  3. P1: ranking pełna > primary > additional; remis → sierota; to samo w reclaim.
+  4. P3: reclaim — INSERT-only gdy `ts < max(positions)`; refresh stanu na najnowszym; partie 800; tryb po dostawie tylko INSERT.
+  5. P4: zamykanie `EMTRACK_ORPHAN` przy GPS < 2 h i po reclaim; `plate = any(tokeny)` przed raw.
+  6. Testy unit + status **375**; `mk` dla L622/L622b.
+- Po zielonym CI — prośba o F7 r2.
+
+## 2026-10-29 03:05 — #622 CI db @ 1a4350b1: status 374/1 + risks 44/2
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; bez „F7: gotowe”. #627 nie scalać (kolejność).
+- CI PR #628 @ `1a4350b1`: unit/visual ✔; **db FAIL** — status 374 OK / 1 FAIL; risks 44 OK / 2 FAIL.
+- Przyczyna: asercja rankingu `BB 22 BB`≡`BB22BB` to pełna równość (1), nie primary (2); `rk_emtrack_orphan` nie w liście kluczy automatu (7→8).
+- Poprawka: status ranking `3/2` na tym samym WT (additional/primary); risks +`rk_emtrack_orphan`; `begin`/`commit` w 0329 po `ALTER TYPE`. Po push — F7 r2 przy zielonym CI.
+
+## 2026-10-29 03:30 — #622 F7 r2 (B1-bis, P3-bis, P4-bis/perf) w PR #628
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `dla-cursora`. Scalanie: brak „F7: gotowe” (F7 r2 = POPRAWKI @ `1a4350b` / przypomnienie @ `3a7c7b25`).
+- CI @ `3a7c7b25`: unit/visual/db ✔ (G-15 — czekano na koniec przed edycją).
+- **Krok F7 r2:**
+  1. B1-bis: WT = pełny człon; textId = prefiksy od 1. fragmentu (`plateTokensEm` / `telm_plate_tokens_em`); „XX 12345”≠„YY 12345”.
+  2. P3-bis: refresh tylko gdy najnowszy wszedł insert-only; bez `process_position` (tylko faza+ETA); `p_until` (partie po czasie — opis w #622).
+  3. P4-bis: zamknięcie alarmu po reclaim tylko gdy `reclaimed>0` albo GPS<2h.
+  4. P4-perf: `plate=any(tokeny)` przed fallbackiem raw textId.
+  5. TS↔SQL: tokeny `[^A-Z0-9]`. Status **386** (+11). Remis dwóch WT → sierota (zmiana vs „pierwszy wygrywa”).
+- Unit lokalnie 21/21. Po push — F7 r3 przy zielonym CI.
+
+## 2026-10-29 03:55 — #622 F7 r3 (upper przed strip) w PR #628
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” (F7 r3 = POPRAWKI @ `e9de427`). CI @ `e9de427c`: unit/visual/db ✔ (G-15 — edycja po końcu).
+- **Krok F7 r3:**
+  1. Bloker: 5× `regexp_replace(upper(x), '[^A-Z0-9]', …)` w 0329 (małe litery nie giną przed `upper`).
+  2. Usunięte zbędne `v_plate = any(v_wt)` w `telm_orphan_matches_trailer`.
+  3. Wspólna tabela `tests/fixtures/trailerMatchCases.json` (TS + status.sh).
+  4. Test `refresh=true` (reclaim po dostawie, insert-only).
+  5. Status **398** (+12). Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji — świadome ograniczenie.
+- Unit lokalnie 22/22. Po push — prośba o „F7: gotowe do scalenia”. B3: #627 → 0330 przed scaleniem.

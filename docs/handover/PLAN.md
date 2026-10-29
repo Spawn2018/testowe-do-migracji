@@ -1112,15 +1112,21 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
 
 ### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — NA PRODUKCJI (`07d27ba7` / PR #619 / **0328**, 28.10.2026 23:30Z; rebuild po wdrożeniu)
-Źródło: #603 + F7 #607 / F7 #619 (po #597). Kolejność: ~~#597~~ → ~~#603~~ → **27B:C** → BN1…
+Źródło: #603 + F7 #607 / F7 #619 (po #597). Kolejność: ~~#597~~ → ~~#603~~ → **#622** → #626 pkt 5 → **27B:C** → BN1…
 1. ~~**0327** APPLY zamyka decyzję + macierz + labels~~ — **SCALONE** (`cf01968e` / PR #616, 28.10.2026 19:43Z). ~~D3 front~~ → **#617 SCALONE**.
 2. ~~Pierwszy rebuild prod (28.10, przed 0328)~~: 17/29; PORT_CHECKIN 1+5 BRAK (błąd pomiaru EXIT≥PIN).
 3. ~~**0328** (PR #619)~~ — **SCALONE** (`07d27ba7`, F7 gotowe @ `61eb3284`, deploy-main `40787814059`). EXIT PORT_OUT tylko **≤ PIN** (bez PIN: ≤ SITE/`actual_delivery_at`); gdy brak → `actual` potem `delayed` (**> ENTER, < PIN**); actual poza oknem → BRAK bez delayed; plan i GPS_LAST → BRAK; `port_out_src`; D1/D3; CROSSING tylko gdy PIN **>** EXIT **>** ENTER; `SE_ROAD_KAA_INLAND` w słowniku (**bez** mapowania `eta_route_segments` do 27B). #624 wchłonięte. p4k **98**. Front — **#620/#621 SCALONE**.
 4. **Rebuild po 0328** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. OK 18 / wykluczenia 25. Per odcinek: PORT_CHECKIN **6/0**; CROSSING_GDY_KAA 2+1 BRAK; CROSSING_GDN_NYN 2+1 BRAK; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4_BLEDNY_POMIAR. `port_out_src`: PORT_CHECKIN EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2 każdy. Kalibracja nadal **nie czyta** `port_out_src` (przegląd po danych).
+5. **#626 otwarte:** 4 zawyżone pomiary (EXIT=PIN / późny PIN) — po #622: wykluczenia `H4_BLEDNY_POMIAR` + migracja; nie zamykać #603 bez #626.
+
+### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**, PR #628)
+Źródło: #622 (Spawn2018; kolejność koordynatora 29.10: **#622 → #626 → 27B:C**). Front ostrzeżenia dwóch nr — #623 SCALONE.
+1. **0329 (F7 r3):** WT = tylko pełny człon; textId = człony + prefiksy od 1. fragmentu; `regexp_replace(upper(x), …)` (F7 r3 — małe litery); ranking P1; reclaim INSERT-only + `p_until` + refresh bez geofence; P4-bis; wspólna tabela przypadków TS↔SQL; status **398**. Remis dwóch WT → sierota + alarm. Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji („ciągnik naczepa”) — świadome.
+2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC (partie z `p_until` gdy >800) — wynik w #622. Bez tablic produkcyjnych w repo/testach. **B3:** #627 rebase 0329→**0330** przed scaleniem któregokolwiek.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **27B:C** → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #588+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #622+#626+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo. **Uwaga:** gałąź `pakiet/27B-kaa-dual-corridor` (PR #627) ma tymczasowo migrację 0329 — po scaleniu #622 rebase → **0330**.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
 4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
@@ -1950,3 +1956,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 00:15 | #619 CI zielone @ `2c564470`; F7 r3 drobne: actual poza oknem→BRAK; CROSSING EXIT>ENTER; testy D1/D3/port_out_src; p4k **98** | pętla |
 | 29.10.2026 00:45 | #619 CI db FAIL EXPECTED p4k 94≠98 (testy 98/0); fix `gate-suites` → **98**; #624 wchłonięte w #619 | pętla |
 | 29.10.2026 01:30 | #619/#603 **0328** SCALONE (`07d27ba7`); #624 zamknięte; rebuild prod 17/34 — PORT_CHECKIN 6/0; następna **27B:C** | pętla |
+| 29.10.2026 02:15 | Kolejność: **#622** (SG-21 PILNE) → #626 → 27B:C (#627 F7 r1 otwarte); start **0329** tokeny/reclaim | pętla |
+| 29.10.2026 02:45 | #622 F7 r1 w #628: B1–B2/P1/P3/P4; status **375**; CI 8c38a4ea db 363/7 (reclaim) — poprawka w toku | pętla |
+| 29.10.2026 03:05 | #622 CI @ 1a4350b1 db FAIL (ranking 3/1 vs 3/2; risks +rk_emtrack_orphan) — poprawka asercji + begin/commit 0329 | pętla |
+| 29.10.2026 03:30 | #622 F7 r2 w #628: B1-bis/P3-bis/P4-bis/perf; status **386**; CI @ 3a7c7b25 zielone → push r2 | pętla |
+| 29.10.2026 03:55 | #622 F7 r3 w #628: `regexp_replace(upper(…))`; wspólna tabela TS↔SQL; refresh=true; status **398**; CI e9de427 ✔ → push | pętla |

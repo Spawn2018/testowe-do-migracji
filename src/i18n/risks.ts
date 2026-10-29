@@ -36,6 +36,8 @@ const pl: Dict = {
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
   rk_silent_vehicle: 'Brak pozycji pojazdu {plate} od {minutes} min',
+  /** #622: pozycje naczepy w sierotach, transport bez GPS */
+  rk_emtrack_orphan: 'Pozycje naczepy nie trafiają do transportu {code} — sprawdź nr naczepy',
   rk_sequence: 'Rozjazd kolejności montażu: {early} (poz. {early_seq}) przyjedzie po {late} (poz. {late_seq})',
   rk_order_no_hhl: '{code}: brak numeru zlecenia HHL',
   rk_order_no_hhl_text: 'Numer zlecenia HHL jest obowiązkowy przed statusem „Gotowy”.',
