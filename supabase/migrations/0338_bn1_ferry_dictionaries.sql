@@ -85,21 +85,22 @@ grant select, insert, update, delete on public.ferry_ports to service_role;
 grant select, insert, update, delete on public.ferry_routes to service_role;
 grant select, insert, update, delete on public.ferry_route_operators to service_role;
 
+-- Jak 0028: zdezaktywowany JWT nie czyta słowników (session.sh t_visible_rows = 0).
 drop policy if exists ferry_operators_read on public.ferry_operators;
 create policy ferry_operators_read on public.ferry_operators
-  for select to authenticated using (true);
+  for select to authenticated using (current_app_role() is not null);
 
 drop policy if exists ferry_ports_read on public.ferry_ports;
 create policy ferry_ports_read on public.ferry_ports
-  for select to authenticated using (true);
+  for select to authenticated using (current_app_role() is not null);
 
 drop policy if exists ferry_routes_read on public.ferry_routes;
 create policy ferry_routes_read on public.ferry_routes
-  for select to authenticated using (true);
+  for select to authenticated using (current_app_role() is not null);
 
 drop policy if exists ferry_route_operators_read on public.ferry_route_operators;
 create policy ferry_route_operators_read on public.ferry_route_operators
-  for select to authenticated using (true);
+  for select to authenticated using (current_app_role() is not null);
 
 -- ---------------------------------------------------------------------------
 -- 2) Seed: armatorzy
@@ -279,8 +280,20 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_jwt_role text;
 begin
-  if coalesce(auth.role(), '') = 'authenticated'
+  -- Produkcja: auth.role(); brama CI bez auth.role — claim.role (jak 0325).
+  begin
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    else
+      v_jwt_role := nullif(current_setting('request.jwt.claim.role', true), '');
+    end if;
+  exception when others then
+    v_jwt_role := null;
+  end;
+  if coalesce(v_jwt_role, '') = 'authenticated'
      and public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
@@ -311,8 +324,20 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_jwt_role text;
 begin
-  if coalesce(auth.role(), '') = 'authenticated'
+  -- Produkcja: auth.role(); brama CI bez auth.role — claim.role (jak 0325).
+  begin
+    if to_regprocedure('auth.role()') is not null then
+      execute 'select auth.role()' into v_jwt_role;
+    else
+      v_jwt_role := nullif(current_setting('request.jwt.claim.role', true), '');
+    end if;
+  exception when others then
+    v_jwt_role := null;
+  end;
+  if coalesce(v_jwt_role, '') = 'authenticated'
      and public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
@@ -355,6 +380,31 @@ grant execute on function public.ferry_dict_snapshot() to service_role;
 -- ---------------------------------------------------------------------------
 -- 7) Strefy PRE_PORT / PORT_OUT / PORT_IN — porty bałtyckie (jak 0119)
 -- ---------------------------------------------------------------------------
+-- 0004: country tylko PL/SE/LT/DE — BN1 dokłada EE/FI (Estonia/Finlandia).
+do $geo_cty$
+declare
+  c name;
+begin
+  select con.conname into c
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace n on n.oid = rel.relnamespace
+   where n.nspname = 'public' and rel.relname = 'geofences'
+     and con.contype = 'c'
+     and pg_get_constraintdef(con.oid) ilike '%country%'
+     and pg_get_constraintdef(con.oid) ilike '%PL%'
+   limit 1;
+  if c is not null then
+    execute format('alter table public.geofences drop constraint %I', c);
+  end if;
+end $geo_cty$;
+
+alter table public.geofences
+  drop constraint if exists geofences_country_check;
+alter table public.geofences
+  add constraint geofences_country_check
+  check (country is null or country in ('PL', 'SE', 'LT', 'DE', 'EE', 'FI'));
+
 insert into public.geofences (
   project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes,
   notify_enter, country, route
@@ -384,7 +434,8 @@ select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r)
          ('Terminal Stockholm Värtahamnen',    'PORT_IN',  59.35000, 18.11000,   800, 200, 600, 'SE', 'TLL-STO'),
          ('Terminal Kapellskär',               'PORT_IN',  59.72300, 19.06600,   800, 200, 600, 'SE', 'PLD-KPS')
        ) as z(name, kind, lat, lon, r, hyst, dwell, country, route)
- where p.code = 'STEGRA_BODEN'
+ -- CI seed: code=STEGRA; produkcja: STEGRA_BODEN (jak 0304).
+ where p.code in ('STEGRA_BODEN', 'STEGRA')
    and not exists (
      select 1 from geofences g
       where g.project_id = p.id and g.name = z.name

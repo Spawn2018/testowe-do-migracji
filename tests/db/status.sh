@@ -2276,10 +2276,10 @@ chk "BN1: strefa Terminal Kapellskär" \
   "select count(*) from geofences where name='Terminal Kapellskär' and kind='PORT_IN'" 1
 chk "BN1: sailings source TALLINK dozwolone (rollback)" \
   "begin; insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
-     values ('77777777-0000-0000-0000-00000000bn01', '$P',
+     values ('77777777-0000-0000-0000-00000000b001', '$P',
              '66666666-0000-0000-0000-000000000001', 'TLL-HEL',
              now(), now() + interval '2 hours', 'ZAPLANOWANY', 'TALLINK');
-   select source from sailings where id='77777777-0000-0000-0000-00000000bn01';
+   select source from sailings where id='77777777-0000-0000-0000-00000000b001';
    rollback" TALLINK
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
