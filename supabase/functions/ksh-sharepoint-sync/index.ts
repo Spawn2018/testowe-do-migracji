@@ -3,7 +3,8 @@
  * Job: ksh-sharepoint-sync. Sekrety SHAREPOINT_* tylko w env; logi = statusy i liczby.
  * SOURCE_DOWN:KSH_SHAREPOINT po 30 min bez udanego odczytu (sticky, przez store.raiseRisk).
  * F7 #556: import_enabled (domyślnie dry_run), dedup hash, DEMO bez sekretów, try/catch handler.
- * A6 zapis: write_enabled → kolejka outbound → łatka xlsx → Graph PUT (D-1420).
+ * A6/#637 zapis: write_enabled (lub tryb test) → kolejka outbound → łatka xlsx → Graph PUT;
+ * bez wymogu import_enabled (właściciel: import off, zapis on).
  */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -134,8 +135,8 @@ async function handle(req: Request): Promise<Response> {
     }>,
     eTag?: string | null,
   ) => {
-    // F7 r2: zapis tylko przy write_enabled + import_enabled.
-    if (!writeEnabled) return null;
+    // #637: zapis przy write_enabled; tryb test (próba na kopii) także bez write_enabled.
+    if (!writeEnabled && fileMode !== 'test') return null;
     const res = await processOutboundWrites({
       sb,
       env,

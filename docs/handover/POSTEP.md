@@ -6761,3 +6761,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`. Bez PR do scalenia (brak „F7: gotowe”).
 - CI #636: unit/visual ✔; `db` import 380/2 — `driver_*_phone_country=null` narusza NOT NULL.
 - **Krok:** testy #618 phone/tractor zostawiają country PL/SE przy pustym telefonie (`ksh_file_phone_text` i tak → null). Push → CI → F7.
+
+## 2026-10-29 13:00 — #637 start: zapis WT→plik bez importu (0334)
+
+- Skrzynka: #637 (Spawn2018, PILNE właściciel 11:29) — pierwszeństwo przed 27B/#638; #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe” na #638 (F7 = POPRAWKI; kolejność: #637 najpierw).
+- Scalanie: brak.
+- **Krok #637:** migracja **0334** — `ksh_sync_write_set` bez wymogu `import_enabled`; `ksh_sync_import_set(false)` nie gasi `write_enabled` ani kolejki; Edge `processOutboundWrites` bez `import_disabled`; tryb `test` może pisać bez `write_enabled`. Testy import przepisane (liczba OK **382**). Gałąź `pakiet/637-ksh-write-no-import`.
+- Po zielonym CI → F7 → wdrożenie → krok 2 próba na kopii (SHAREPOINT_TEST_FILE_URL) → meldunek w #637. Potem write_set(true) / uzupełnienie aktywnych. Potem F7 #638 (REMOVED + Polferries causes).
+

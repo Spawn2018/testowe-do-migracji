@@ -1,7 +1,7 @@
 /**
  * A6 — przetworzenie kolejki WT→plik: konflikt / łatka JSZip / upload Graph + If-Match.
  * F7 #560 / r2: no_etag; konflikt per kod; PUT zgubiony→ack; sprawdzaj ack/l1b;
- * import_enabled + write_test_ok_at (prod).
+ * #637: zapis bez wymogu import_enabled; write_test_ok_at (prod).
  * F7 r3 N4: ack(id, rev, sent) — schedule_row z sent; rozjazd rev → pending.
  */
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
@@ -98,7 +98,7 @@ export async function processOutboundWrites(args: {
   fileBytes: Uint8Array;
   fileSnapshot: SnapshotMap;
   eTag?: string | null;
-  /** F7 r2: zapis tylko przy włączonym imporcie. */
+  /** Zachowane dla obserwacji / last_run; #637 nie blokuje zapisu. */
   importEnabled?: boolean;
   /** Tryb pliku Graph. */
   fileMode?: 'test' | 'prod';
@@ -116,12 +116,7 @@ export async function processOutboundWrites(args: {
   /** Ustaw po udanym PUT w trybie test. */
   mark_write_test_ok?: boolean;
 }> {
-  if (args.importEnabled !== true) {
-    return {
-      attempted: false, written: 0, conflicts: 0, skipped: 0,
-      upload_ok: null, write_reason: 'import_disabled',
-    };
-  }
+  // #637: import_enabled nie blokuje zapisu (właściciel: import off, zapis on).
   if (args.fileMode === 'prod' && !args.writeTestOkAt) {
     return {
       attempted: false, written: 0, conflicts: 0, skipped: 0,
