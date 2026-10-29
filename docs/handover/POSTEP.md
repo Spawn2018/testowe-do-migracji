@@ -6896,6 +6896,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - status **443** (+10 asercji B5/B6/operator); nullguard **890**. PLAN: dwa modele `geofences.route`.
 - Push → CI → prośba o F7. Bez push na main.
 
+## 2026-10-29 19:50 — BN1 #647 F7 Tallinn A/D (operator×terminal)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Brak F7 „gotowe”; #647 jedyny otwarty PR.
+- CI @ `5a2d8385` (unit/visual/db) **zielone** — nie scalono (brak F7 gotowe; brakowało Tallinn z F7 POPRAWKI r2).
+- F7 wymagane w PR: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; trasy `TLL-HEL`/`TLLA-HEL` (+ powroty) w rodzinie `TLL-HEL`; PORT_OUT r=250 rozłączne; strefy D HEL + D STO. status **449** (+6).
+- Dalej: czekam F7 po CI; potem CASE-y ETA/AIS → słownik; front z RPC.
+
 ## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.

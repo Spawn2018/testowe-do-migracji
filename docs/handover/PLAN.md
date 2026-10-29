@@ -1150,7 +1150,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
 Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11.
-1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** (`pakiet/bn1-ferry-dict` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Strefy bałtyckie filtruj po rodzinie trasy (nie tylko primary operator). Bez self-aliasów bałtyckich w `eta_route_aliases` (F7 B5). Dalej w BN1: CASE-y ETA/AIS → słownik; front `FerryRoute` z RPC.
+1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** (`pakiet/bn1-ferry-dict` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal (`TLL-HEL`/`HEL-TLL` Tallink D↔T2, `TLLA-HEL`/`HELA-TLL` Viking/Eckerö A↔Katajanokka); PORT_OUT A/D r=250 (rozłączne). Strefy bałtyckie filtruj po rodzinie trasy (nie tylko primary operator) — kolejny krok BN1. Bez self-aliasów bałtyckich w `eta_route_aliases` (F7 B5). Dalej w BN1: CASE-y ETA/AIS → słownik; front `FerryRoute` z RPC.
 2. BN2…BN10 — jak #573 (rozkłady, opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2021,3 +2021,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 18:10 | #638 SCALONE (`9a6ec4b4`, F7 gotowe @ 9056140); #640 wpisane — BN1…BN10 przed 27B mapa; start **0338** BN1 słowniki | pętla |
 | 29.10.2026 18:50 | #647 BN1 F7+CI: nullguard strażnik, route_check, B5/B6 coords, status 443 | pętla |
 | 29.10.2026 19:25 | #647 CI status 4 FAIL: #496 przywracał starą listę tras; RPC GUARD bez JWT — fix status.sh | pętla |
+| 29.10.2026 19:50 | #647 CI @ 5a2d8385 zielone; F7 Tallinn A/D operator×terminal (D=Tallink 59.440/24.775); status 449 | pętla |

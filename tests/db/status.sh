@@ -2258,14 +2258,21 @@ chk "BN1: ferry_operators ≥6" \
   "select count(*) from ferry_operators where active" 6
 chk "BN1: ferry_ports Tallinn A+D + Muuga + Paldiski" \
   "select count(*) from ferry_ports where code in ('TLL_A','TLL_D','MUU','PLD')" 4
+# F7: rodzina TLL-HEL = 4 (Tallink D↔T2 + Viking/Eckerö A↔Katajanokka, oba kierunki)
 chk "BN1: ferry_routes TLL-HEL family" \
-  "select count(*) from ferry_routes where family_key='TLL-HEL' and active" 2
+  "select count(*) from ferry_routes where family_key='TLL-HEL' and active" 4
 chk "BN1: operator GDY-KAA = STENA" \
   "select public.ferry_route_primary_operator('GDY-KAA')" STENA
 chk "BN1: operator GDN-NYN = POLFERRIES" \
   "select public.ferry_route_primary_operator('GDN-NYN')" POLFERRIES
 chk "BN1: operator TLL-HEL = TALLINK" \
   "select public.ferry_route_primary_operator('TLL-HEL')" TALLINK
+chk "BN1: operator TLLA-HEL = VIKING" \
+  "select public.ferry_route_primary_operator('TLLA-HEL')" VIKING
+chk "BN1: TLL-HEL port_from = TLL_D" \
+  "select port_from from ferry_routes where code='TLL-HEL'" TLL_D
+chk "BN1: TLLA-HEL port_from = TLL_A" \
+  "select port_from from ferry_routes where code='TLLA-HEL'" TLL_A
 # RPC z GUARD (nullguard) — sesja authenticated jak front
 chk "BN1: kraje TLL-HEL EE→FI" \
   "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
@@ -2281,6 +2288,8 @@ chk "BN1: snapshot ma trasy bałtyckie" \
    rollback" t
 chk "BN1: strefa Terminal Tallinn A" \
   "select count(*) from geofences where name='Terminal Tallinn A' and kind='PORT_OUT'" 1
+chk "BN1: strefa Terminal Tallinn D HEL" \
+  "select count(*) from geofences where name='Terminal Tallinn D HEL' and kind='PORT_OUT'" 1
 chk "BN1: strefa Terminal Kapellskär" \
   "select count(*) from geofences where name='Terminal Kapellskär' and kind='PORT_IN'" 1
 chk "BN1: sailings source TALLINK dozwolone (rollback)" \
@@ -2312,6 +2321,12 @@ chk "BN1: port NYN współrzędne 0017" \
   "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='NYN'" "58.90453/17.95621"
 chk "BN1: port PLD South Harbour" \
   "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='PLD'" "59.33300/24.08300"
+chk "BN1: port TLL_D F7 wschód" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='TLL_D'" "59.44000/24.77500"
+# PORT_OUT A/D rozłączne (środki ~590 m, r=250 → suma 500)
+chk "BN1: Tallinn A/D rozłączne (>500 m)" \
+  "select ((111320*sqrt(power(a.lat-d.lat,2)+power((a.lon-d.lon)*cos(radians((a.lat+d.lat)/2)),2)))::int > 500)
+     from ferry_ports a, ferry_ports d where a.code='TLL_A' and d.code='TLL_D'" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

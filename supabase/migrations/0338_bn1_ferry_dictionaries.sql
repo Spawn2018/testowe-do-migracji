@@ -63,7 +63,7 @@ create table if not exists public.ferry_route_operators (
 );
 
 comment on table public.ferry_route_operators is
-  'BN1: armatorzy na trasie (wiele: Tallink+Viking+Eckerö na TLL-HEL).';
+  'BN1: armatorzy na trasie; TLL-HEL = operator×terminal (Tallink D vs Viking/Eckerö A).';
 
 alter table public.ferry_operators enable row level security;
 alter table public.ferry_ports enable row level security;
@@ -124,8 +124,9 @@ insert into public.ferry_ports (code, name, terminal, country, lat, lon) values
   ('GDY', 'Gdynia',           'Stena Line',              'PL', 54.53321, 18.54425),
   ('NYN', 'Nynäshamn',        null,                      'SE', 58.90453, 17.95621),
   ('KAA', 'Karlskrona',       'Stena Line',              'SE', 56.16460, 15.63080),
+  -- A = Viking/Eckerö (zachód); D = Tallink (wschód Old City Harbour, F7).
   ('TLL_A', 'Tallinn',        'Terminal A',              'EE', 59.44400, 24.76800),
-  ('TLL_D', 'Tallinn',        'Terminal D',              'EE', 59.44480, 24.76850),
+  ('TLL_D', 'Tallinn',        'Terminal D',              'EE', 59.44000, 24.77500),
   ('MUU', 'Muuga',            'HHLA',                    'EE', 59.50500, 24.95800),
   ('PLD', 'Paldiski',         'South Harbour',           'EE', 59.33300, 24.08300),
   ('HEL_T2', 'Helsinki',      'West Harbour T2',         'FI', 60.15400, 24.91400),
@@ -144,8 +145,11 @@ insert into public.ferry_routes (code, port_from, port_to, family_key, notes) va
   ('NYN-GDN', 'NYN', 'GDN', 'GDN-NYN', 'Polferries powrót'),
   ('GDY-KAA', 'GDY', 'KAA', 'GDY-KAA', 'Stena Line'),
   ('KAA-GDY', 'KAA', 'GDY', 'GDY-KAA', 'Stena Line powrót'),
-  ('TLL-HEL', 'TLL_A', 'HEL_T2', 'TLL-HEL', 'Tallinn↔Helsinki (terminale w rejsie)'),
-  ('HEL-TLL', 'HEL_T2', 'TLL_A', 'TLL-HEL', null),
+  -- TLL-HEL = operator×terminal (F7): Tallink D→T2; Viking/Eckerö A→Katajanokka.
+  ('TLL-HEL',  'TLL_D',  'HEL_T2',  'TLL-HEL', 'Tallink Terminal D → West Harbour T2'),
+  ('TLLA-HEL', 'TLL_A',  'HEL_KAT', 'TLL-HEL', 'Viking/Eckerö Terminal A → Katajanokka'),
+  ('HEL-TLL',  'HEL_T2', 'TLL_D',   'TLL-HEL', null),
+  ('HELA-TLL', 'HEL_KAT','TLL_A',   'TLL-HEL', null),
   ('MUU-VUO', 'MUU', 'VUO', 'MUU-VUO', 'Finbo Cargo'),
   ('VUO-MUU', 'VUO', 'MUU', 'MUU-VUO', null),
   ('TLL-STO', 'TLL_D', 'STO', 'TLL-STO', 'przez Mariehamn'),
@@ -164,12 +168,12 @@ insert into public.ferry_route_operators (route_code, operator_code, is_primary)
   ('NYN-GDN', 'POLFERRIES', true),
   ('GDY-KAA', 'STENA', true),
   ('KAA-GDY', 'STENA', true),
-  ('TLL-HEL', 'TALLINK', true),
-  ('TLL-HEL', 'VIKING', false),
-  ('TLL-HEL', 'ECKERO', false),
-  ('HEL-TLL', 'TALLINK', true),
-  ('HEL-TLL', 'VIKING', false),
-  ('HEL-TLL', 'ECKERO', false),
+  ('TLL-HEL',  'TALLINK', true),
+  ('TLLA-HEL', 'VIKING',  true),
+  ('TLLA-HEL', 'ECKERO',  false),
+  ('HEL-TLL',  'TALLINK', true),
+  ('HELA-TLL', 'VIKING',  true),
+  ('HELA-TLL', 'ECKERO',  false),
   ('MUU-VUO', 'ECKERO', true),
   ('VUO-MUU', 'ECKERO', true),
   ('TLL-STO', 'TALLINK', true),
@@ -409,12 +413,15 @@ select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r)
        z.hyst, z.dwell, 2, true, z.country, z.route
   from projects p,
        (values
-         -- Tallinn A (wyjście EE → FI)
+         -- Tallinn A (Viking/Eckerö → FI); r=250 — rozłączne z D (~590 m)
          ('Bufor 20 km przed Tallinn A',       'PRE_PORT', 59.44400, 24.76800, 20000, 500, 0,   'EE', 'TLL-HEL'),
-         ('Terminal Tallinn A',                'PORT_OUT', 59.44400, 24.76800,   800, 200, 900, 'EE', 'TLL-HEL'),
-         -- Tallinn D (wyjście EE → SE; Tallink)
-         ('Bufor 20 km przed Tallinn D',       'PRE_PORT', 59.44480, 24.76850, 20000, 500, 0,   'EE', 'TLL-STO'),
-         ('Terminal Tallinn D',                'PORT_OUT', 59.44480, 24.76850,   800, 200, 900, 'EE', 'TLL-STO'),
+         ('Terminal Tallinn A',                'PORT_OUT', 59.44400, 24.76800,   250, 100, 900, 'EE', 'TLL-HEL'),
+         -- Tallinn D Tallink → HEL (F7: 59.440/24.775)
+         ('Bufor 20 km przed Tallinn D HEL',   'PRE_PORT', 59.44000, 24.77500, 20000, 500, 0,   'EE', 'TLL-HEL'),
+         ('Terminal Tallinn D HEL',            'PORT_OUT', 59.44000, 24.77500,   250, 100, 900, 'EE', 'TLL-HEL'),
+         -- Tallinn D Tallink → STO
+         ('Bufor 20 km przed Tallinn D',       'PRE_PORT', 59.44000, 24.77500, 20000, 500, 0,   'EE', 'TLL-STO'),
+         ('Terminal Tallinn D',                'PORT_OUT', 59.44000, 24.77500,   250, 100, 900, 'EE', 'TLL-STO'),
          -- Muuga
          ('Bufor 20 km przed Muuga',           'PRE_PORT', 59.50500, 24.95800, 20000, 500, 0,   'EE', 'MUU-VUO'),
          ('Terminal Muuga HHLA',               'PORT_OUT', 59.50500, 24.95800,   800, 200, 900, 'EE', 'MUU-VUO'),
