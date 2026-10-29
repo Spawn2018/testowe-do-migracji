@@ -479,7 +479,7 @@ begin
     end if;
     -- P4-perf: najpierw plate = any(tokeny); raw textId tylko gdy pierwszy nic nie znalazł.
     v_tok := public.telm_plate_tokens(r.trailer_plate);
-    if not (
+    if (
       (cardinality(v_tok) > 0 and exists (
         select 1 from telematics_orphan_positions o
          where o.ts > p_now - interval '24 hours' and o.plate = any (v_tok)
@@ -492,7 +492,7 @@ begin
              coalesce(o.raw->>'textId', o.raw->>'text_id', '')
            )
       )
-    ) then
+    ) is not true then
       continue;
     end if;
     v_code := coalesce(nullif(btrim(r.code), ''), 'transport');
