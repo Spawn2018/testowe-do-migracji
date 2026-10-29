@@ -316,40 +316,131 @@ export async function processOutboundWrites(args: {
     fetchFn: args.fetchFn,
   });
 
+  // B1: częściowy zapis przed błędem — ack done + migawka dla zapisanych kodów.
+  async function ackPartialWritten(
+    writtenCodes: string[],
+  ): Promise<{ ok: boolean; snapshotPatch?: SnapshotMap }> {
+    if (!writtenCodes.length) return { ok: true };
+    const writtenSet = new Set(writtenCodes);
+    const partialDone = toWrite.filter((it) =>
+      patchCodes(it).some((c) => writtenSet.has(c))
+    );
+    if (!partialDone.length) return { ok: true };
+    const a = await ack(args.sb, ackPayload(partialDone, true), 'done', null);
+    if (!a.ok) return { ok: false };
+    const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
+    for (const it of partialDone) {
+      for (const code of patchCodes(it)) {
+        if (!writtenSet.has(code)) continue;
+        snapshotPatch[code] = applyPatchToSnap(snapshotPatch[code] ?? null, {
+          code,
+          ...it.patch,
+        });
+      }
+    }
+    await args.sb.rpc('ksh_sync_state_upsert', {
+      p_project: args.projectId,
+      p_source_ok: true,
+      p_last_read_at: null,
+      p_last_write_at: new Date().toISOString(),
+      p_last_run: null,
+      p_last_error: null,
+      p_snapshot: snapshotPatch,
+    });
+    return { ok: true, snapshotPatch };
+  }
+
   if (!wb.ok) {
-    if (isOutboundTransientReason(wb.reason)) {
-      const note = await args.sb.rpc('ksh_sync_outbound_note_423', {
-        p_acks: ackPayload(toWrite, false),
-      });
-      if (note.error) {
+    const partialCodes = wb.writtenCodes ?? [];
+    const remaining = toWrite.filter((it) =>
+      !patchCodes(it).some((c) => partialCodes.includes(c))
+    );
+
+    if (partialCodes.length) {
+      const part = await ackPartialWritten(partialCodes);
+      if (!part.ok) {
         return {
-          attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
-          upload_ok: false, reason: 'note_423', write_reason: 'note_423',
+          attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+          skipped: skipItems.length, upload_ok: true,
+          reason: 'ack_done', write_reason: 'ack_done',
         };
+      }
+    }
+
+    // B7: 401/403 → jedna sprawa HHL, bez 5 prób / bez note_423.
+    if (wb.reason === 'workbook_auth_403') {
+      const failReason = `workbook_auth_403 ${wb.permission ?? 'Files.ReadWrite (delegated)'}`;
+      if (remaining.length) {
+        const ackFail = await ack(args.sb, ackPayload(remaining, false), 'failed', failReason);
+        if (!ackFail.ok) {
+          return {
+            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            reason: 'ack_failed', write_reason: 'ack_failed',
+          };
+        }
+        const first = remaining[0];
+        const note = await args.sb.rpc('l1b_note_outbound_failed', {
+          p_project: args.projectId,
+          p_load: first.load_id,
+          p_code: first.code,
+          p_reason: failReason,
+        });
+        if (note.error) {
+          return {
+            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
+          };
+        }
       }
       return {
         attempted: true,
-        written: 0,
+        written: partialCodes.length,
         conflicts: conflictItems.length,
         skipped: skipItems.length,
-        upload_ok: false,
+        upload_ok: partialCodes.length ? true : false,
+        reason: wb.reason,
+        write_reason: wb.reason,
+      };
+    }
+
+    if (isOutboundTransientReason(wb.reason)) {
+      if (remaining.length) {
+        const note = await args.sb.rpc('ksh_sync_outbound_note_423', {
+          p_acks: ackPayload(remaining, false),
+        });
+        if (note.error) {
+          return {
+            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            reason: 'note_423', write_reason: 'note_423',
+          };
+        }
+      }
+      return {
+        attempted: true,
+        written: partialCodes.length,
+        conflicts: conflictItems.length,
+        skipped: skipItems.length,
+        upload_ok: partialCodes.length ? true : false,
         reason: wb.reason,
         write_reason: wb.reason,
       };
     }
     const ackFail = await ack(
       args.sb,
-      ackPayload(toWrite, false),
+      ackPayload(remaining.length ? remaining : toWrite, false),
       'failed',
       wb.reason,
     );
     if (!ackFail.ok) {
       return {
-        attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
-        upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
+        attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+        skipped: skipItems.length, upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
       };
     }
-    for (const it of toWrite) {
+    for (const it of (remaining.length ? remaining : toWrite)) {
       const attempts = Number(it.attempts ?? 0) + 1;
       if (attempts >= 5) {
         const note = await args.sb.rpc('l1b_note_outbound_failed', {
@@ -360,18 +451,19 @@ export async function processOutboundWrites(args: {
         });
         if (note.error) {
           return {
-            attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
-            upload_ok: false, reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
+            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            skipped: skipItems.length, upload_ok: false,
+            reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
         }
       }
     }
     return {
       attempted: true,
-      written: 0,
+      written: partialCodes.length,
       conflicts: conflictItems.length,
       skipped: skipItems.length,
-      upload_ok: false,
+      upload_ok: partialCodes.length ? true : false,
       reason: wb.reason,
       write_reason: wb.reason,
     };

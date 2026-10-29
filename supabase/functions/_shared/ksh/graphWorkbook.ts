@@ -2,8 +2,11 @@
  * #645 — Microsoft Graph Excel workbook API (sesja + range GET/PATCH).
  * Adres pliku tylko z env; logi = status HTTP, bez URL/tokenu/treści komórek.
  * Uprawnienia: docs MS = tylko delegated Files.ReadWrite (Application: Not supported).
- * Próba tym samym tokenem aplikacji co odczyt; przy 401/403 — meldunek dla właściciela.
+ * Próba tym samym tokenem aplikacji; 401/403 → workbook_auth_403 (nie transient).
  */
+
+export const WORKBOOK_DELEGATED_PERMISSION = 'Files.ReadWrite (delegated)';
+export const WORKBOOK_AUTH_REASON = 'workbook_auth_403';
 
 import {
   GRAPH_ITEM_TIMEOUT_MS,
@@ -39,6 +42,17 @@ function transientReason(http: number): string | null {
   return null;
 }
 
+function authOrTransient(http: number): {
+  reason: string;
+  permission?: string;
+} | null {
+  if (http === 401 || http === 403) {
+    return { reason: WORKBOOK_AUTH_REASON, permission: WORKBOOK_DELEGATED_PERMISSION };
+  }
+  const tr = transientReason(http);
+  return tr ? { reason: tr } : null;
+}
+
 export function isWorkbookTransientReason(reason: string): boolean {
   return (
     reason === 'workbook_http_423'
@@ -47,8 +61,11 @@ export function isWorkbookTransientReason(reason: string): boolean {
     || reason === 'workbook_http_504'
     || reason === 'workbook_http_409'
     || reason === 'upload_http_423'
+    || reason.startsWith('network_workbook_')
   );
 }
+
+type Fail = { ok: false; reason: string; http: number; permission?: string };
 
 /** driveItem → bazowy adres workbook (preferuj drives/items gdy są id). */
 export async function resolveWorkbookRef(
@@ -56,7 +73,7 @@ export async function resolveWorkbookRef(
   fetchFn: typeof fetch = fetch,
 ): Promise<
   | { ok: true; ref: WorkbookDriveRef }
-  | { ok: false; reason: string; http: number }
+  | Fail
 > {
   const resolved = resolveFileUrl(env);
   if (!resolved.ok) {
@@ -79,12 +96,29 @@ export async function resolveWorkbookRef(
   }
   const item = await itemRes.json().catch(() => ({} as Record<string, unknown>));
   if (!itemRes.ok) {
+    const mapped = authOrTransient(itemRes.status);
+    if (mapped?.permission) {
+      return {
+        ok: false,
+        reason: mapped.reason,
+        http: itemRes.status,
+        permission: mapped.permission,
+      };
+    }
     const err = item.error as { code?: string } | undefined;
     return {
       ok: false,
       reason: err?.code ? `graph_${err.code}` : `driveItem_http_${itemRes.status}`,
       http: itemRes.status,
     };
+  }
+  // Strażnik: tryb test nie może pisać na URL produkcji.
+  if (resolved.mode === 'test') {
+    const testUrl = (env.SHAREPOINT_TEST_FILE_URL || '').trim();
+    const prodUrl = (env.SHAREPOINT_FILE_URL || '').trim();
+    if (testUrl && prodUrl && testUrl === prodUrl) {
+      return { ok: false, reason: 'test_url_equals_prod', http: 0 };
+    }
   }
   const id = typeof item.id === 'string' ? item.id : '';
   const parent = item.parentReference as { driveId?: string } | undefined;
@@ -103,7 +137,7 @@ export async function createWorkbookSession(
   fetchFn: typeof fetch = fetch,
 ): Promise<
   | { ok: true; session: WorkbookSession }
-  | { ok: false; reason: string; http: number }
+  | Fail
 > {
   let res: Response;
   try {
@@ -119,11 +153,11 @@ export async function createWorkbookSession(
   } catch {
     return { ok: false, reason: 'network_workbook_session', http: 0 };
   }
-  // Long-running: 202 + Location — uprość: jedno ponowienie GET Location nie w CI mocku.
+  // Long-running: 202 + Location — running/notStarted = przejściowe (F7).
   if (res.status === 202) {
     const loc = res.headers.get('Location');
     if (!loc) {
-      return { ok: false, reason: 'workbook_session_async', http: 202 };
+      return { ok: false, reason: 'workbook_http_409', http: 202 };
     }
     let op: Response;
     try {
@@ -144,20 +178,25 @@ export async function createWorkbookSession(
         session: { id: sid, workbookBase: ref.workbookBase, token: ref.token },
       };
     }
-    const tr = transientReason(op.status);
+    if (status === 'running' || status === 'notStarted') {
+      return { ok: false, reason: 'workbook_http_409', http: 202 };
+    }
+    const mapped = authOrTransient(op.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_session_http_${op.status}`,
+      reason: mapped?.reason ?? `workbook_session_http_${op.status}`,
       http: op.status,
+      permission: mapped?.permission,
     };
   }
   const body = await res.json().catch(() => ({} as Record<string, unknown>));
   if (!res.ok || typeof body.id !== 'string') {
-    const tr = transientReason(res.status);
+    const mapped = authOrTransient(res.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_session_http_${res.status}`,
+      reason: mapped?.reason ?? `workbook_session_http_${res.status}`,
       http: res.status,
+      permission: mapped?.permission,
     };
   }
   return {
@@ -198,7 +237,7 @@ export async function getWorkbookRange(
   fetchFn: typeof fetch = fetch,
 ): Promise<
   | { ok: true; values: unknown[][]; numberFormat: unknown[][] | null }
-  | { ok: false; reason: string; http: number }
+  | Fail
 > {
   const encSheet = encodeURIComponent(sheetNameOrId);
   const encAddr = encodeURIComponent(address);
@@ -219,11 +258,12 @@ export async function getWorkbookRange(
   }
   const body = await res.json().catch(() => ({} as RangePayload & { error?: { code?: string } }));
   if (!res.ok) {
-    const tr = transientReason(res.status);
+    const mapped = authOrTransient(res.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_range_http_${res.status}`,
+      reason: mapped?.reason ?? `workbook_range_http_${res.status}`,
       http: res.status,
+      permission: mapped?.permission,
     };
   }
   return {
@@ -239,7 +279,7 @@ export async function patchWorkbookRange(
   address: string,
   values: unknown[][],
   fetchFn: typeof fetch = fetch,
-): Promise<{ ok: true } | { ok: false; reason: string; http: number }> {
+): Promise<{ ok: true } | Fail> {
   const encSheet = encodeURIComponent(sheetNameOrId);
   const encAddr = encodeURIComponent(address);
   let res: Response;
@@ -261,11 +301,12 @@ export async function patchWorkbookRange(
     return { ok: false, reason: 'network_workbook_patch', http: 0 };
   }
   if (!res.ok) {
-    const tr = transientReason(res.status);
+    const mapped = authOrTransient(res.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_patch_http_${res.status}`,
+      reason: mapped?.reason ?? `workbook_patch_http_${res.status}`,
       http: res.status,
+      permission: mapped?.permission,
     };
   }
   return { ok: true };
@@ -277,7 +318,7 @@ export async function listWorkbookSheets(
   fetchFn: typeof fetch = fetch,
 ): Promise<
   | { ok: true; sheets: { id: string; name: string; position: number }[] }
-  | { ok: false; reason: string; http: number }
+  | Fail
 > {
   let res: Response;
   try {
@@ -293,11 +334,12 @@ export async function listWorkbookSheets(
   }
   const body = await res.json().catch(() => ({} as { value?: unknown[] }));
   if (!res.ok) {
-    const tr = transientReason(res.status);
+    const mapped = authOrTransient(res.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_sheets_http_${res.status}`,
+      reason: mapped?.reason ?? `workbook_sheets_http_${res.status}`,
       http: res.status,
+      permission: mapped?.permission,
     };
   }
   const value = Array.isArray(body.value) ? body.value : [];
@@ -321,7 +363,7 @@ export async function getWorkbookUsedRange(
   fetchFn: typeof fetch = fetch,
 ): Promise<
   | { ok: true; values: unknown[][]; address: string | null }
-  | { ok: false; reason: string; http: number }
+  | Fail
 > {
   const encSheet = encodeURIComponent(sheetNameOrId);
   let res: Response;
@@ -345,11 +387,12 @@ export async function getWorkbookUsedRange(
     error?: { code?: string };
   }));
   if (!res.ok) {
-    const tr = transientReason(res.status);
+    const mapped = authOrTransient(res.status);
     return {
       ok: false,
-      reason: tr ?? `workbook_used_http_${res.status}`,
+      reason: mapped?.reason ?? `workbook_used_http_${res.status}`,
       http: res.status,
+      permission: mapped?.permission,
     };
   }
   return {

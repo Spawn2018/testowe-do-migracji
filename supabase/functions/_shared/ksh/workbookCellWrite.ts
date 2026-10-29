@@ -1,12 +1,12 @@
 /**
  * #645 — zapis WT→plik komórka po komórce (Graph workbook), bez PUT całego .xlsx.
  * Mapowanie wiersza po kodzie; konflikt per komórka vs migawka; daty jak w pliku.
+ * F7 #646: dwie fazy (odczyt→PATCH), tekst z apostrofem, usedRange z przesunięciem.
  */
 import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
 import {
   closeWorkbookSession,
   createWorkbookSession,
-  getWorkbookRange,
   getWorkbookUsedRange,
   listWorkbookSheets,
   patchWorkbookRange,
@@ -36,8 +36,24 @@ export function indexToColLetters(idx: number): string {
 
 export function colLettersToIndex(col: string): number {
   let n = 0;
-  for (const ch of col) n = n * 26 + (ch.charCodeAt(0) - 64);
+  for (const ch of col.toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
   return n;
+}
+
+/** Początek usedRange (np. Sheet1!B3:Z50 → wiersz 3, kolumna 2). */
+export function parseUsedRangeOrigin(address: string | null | undefined): {
+  row0: number;
+  col0: number;
+} {
+  if (!address) return { row0: 0, col0: 0 };
+  const bang = address.includes('!') ? address.split('!').pop()! : address;
+  const start = bang.split(':')[0].replace(/\$/g, '');
+  const m = /^([A-Za-z]+)(\d+)$/.exec(start);
+  if (!m) return { row0: 0, col0: 0 };
+  return {
+    col0: colLettersToIndex(m[1]) - 1,
+    row0: Math.max(0, parseInt(m[2], 10) - 1),
+  };
 }
 
 function cellText(v: unknown): string {
@@ -45,6 +61,16 @@ function cellText(v: unknown): string {
   if (typeof v === 'number' && Number.isFinite(v)) return String(v);
   if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
   return String(v).replace(/\u00A0/g, ' ').trim();
+}
+
+/** B2: porównanie zdejmuje wiodący apostrof (Graph text). */
+export function stripLeadingApostrophe(s: string): string {
+  return s.startsWith("'") ? s.slice(1) : s;
+}
+
+/** B2: tekst do PATCH z prefiksem apostrofu (formuła / wiodące zero / +tel). */
+export function textValueForPatch(val: string): string {
+  return `'${val}`;
 }
 
 function normSnap(v: string | null | undefined): string | null {
@@ -84,33 +110,75 @@ export function cellMatchesExpected(
     }
     return normalizeHm(cellText(current)) === want;
   }
-  return normSnap(cellText(current)) === exp;
+  return normSnap(stripLeadingApostrophe(cellText(current))) === exp;
+}
+
+/** B1: komórka już ma wartość docelową — bez PATCH, bez konfliktu. */
+export function cellAlreadyHasTarget(
+  current: unknown,
+  target: string | number,
+  kind: 'date' | 'time' | 'text',
+): boolean {
+  if (kind === 'text') {
+    return stripLeadingApostrophe(cellText(current)) === String(target).trim();
+  }
+  if (kind === 'date') {
+    if (typeof target === 'number') {
+      if (typeof current === 'number' && Number.isFinite(current)) {
+        return Math.floor(current) === Math.floor(target);
+      }
+      const epoch = Date.UTC(1899, 11, 30) + Math.floor(target) * 86_400_000;
+      const d = new Date(epoch);
+      const iso = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      return cellMatchesExpected(current, iso, 'date');
+    }
+    return cellMatchesExpected(current, String(target), 'date');
+  }
+  const want = normalizeHm(String(target));
+  if (!want) return false;
+  return cellMatchesExpected(current, want, 'time');
 }
 
 type SheetLayout = {
   sheetId: string;
   headerCol: Map<string, number>;
   codeRow: Map<string, number>;
+  /** Siatka usedRange (do fazy odczytu bez GET). */
+  values: unknown[][];
+  origin: { row0: number; col0: number };
 };
 
-function buildLayout(values: unknown[][]): SheetLayout | { error: string } {
+function buildLayout(
+  values: unknown[][],
+  origin: { row0: number; col0: number },
+): SheetLayout | { error: string } {
+  // B8: nagłówek musi być w wierszu 1 arkusza (jak importer).
+  if (origin.row0 !== 0) return { error: 'no_code_col' };
   if (!values.length) return { error: 'empty_sheet' };
   const headerRow = values[0] ?? [];
   const headerCol = new Map<string, number>();
   for (let i = 0; i < headerRow.length; i++) {
     const key = cellText(headerRow[i]);
-    if (key) headerCol.set(key, i + 1);
+    if (key) headerCol.set(key, i + 1 + origin.col0);
   }
   const codeHeader = COLUMN_MAP_DEFAULT.shipmentCode;
   const codeColIdx = headerCol.get(codeHeader);
   if (!codeColIdx) return { error: 'no_code_col' };
   const codeRow = new Map<string, number>();
+  const relCodeCol = codeColIdx - 1 - origin.col0;
   for (let r = 1; r < values.length; r++) {
     const row = values[r] ?? [];
-    const code = cellText(row[codeColIdx - 1]);
-    if (code && !codeRow.has(code)) codeRow.set(code, r + 1);
+    const code = cellText(row[relCodeCol]);
+    if (code && !codeRow.has(code)) codeRow.set(code, r + 1 + origin.row0);
   }
-  return { sheetId: '', headerCol, codeRow };
+  return { sheetId: '', headerCol, codeRow, values, origin };
+}
+
+function cellFromLayout(layout: SheetLayout, absCol: number, absRow: number): unknown {
+  const ri = absRow - 1 - layout.origin.row0;
+  const ci = absCol - 1 - layout.origin.col0;
+  if (ri < 0 || ci < 0) return null;
+  return layout.values[ri]?.[ci] ?? null;
 }
 
 function snapField(
@@ -131,6 +199,8 @@ function snapField(
 type CellJob = {
   code: string;
   address: string;
+  absCol: number;
+  absRow: number;
   value: string | number;
   expected: string | null;
   kind: 'date' | 'time' | 'text';
@@ -172,6 +242,8 @@ function buildJobs(
       jobs.push({
         code: p.code,
         address: `${indexToColLetters(col)}${row}`,
+        absCol: col,
+        absRow: row,
         value: serial,
         expected: snapField(expected, field),
         kind: 'date',
@@ -192,6 +264,8 @@ function buildJobs(
       jobs.push({
         code: p.code,
         address: `${indexToColLetters(col)}${row}`,
+        absCol: col,
+        absRow: row,
         value: norm,
         expected: snapField(expected, field),
         kind: 'time',
@@ -212,6 +286,8 @@ function buildJobs(
       jobs.push({
         code: p.code,
         address: `${indexToColLetters(col)}${row}`,
+        absCol: col,
+        absRow: row,
         value: String(val).trim(),
         expected: expectedOverride !== undefined ? expectedOverride : null,
         kind: 'text',
@@ -231,8 +307,6 @@ function buildJobs(
       COLUMN_MAP_DEFAULT.hhlOrderNo, p.hhl_order_no, 'hhl_order_no' in p,
       'hhl_order_no', snapField(expected, 'hhl_order_no'),
     );
-    // Awizacja: brak w migawce dat — konflikt tylko gdy ktoś zmienił komórkę od odczytu
-    // (expected = null → puste OK; niepuste bez naszej łatki = konflikt w GET).
     addText(COLUMN_MAP_DEFAULT.driverName, p.driver, 'driver' in p, 'driver');
     addText(COLUMN_MAP_DEFAULT.driverPhone, p.driver_phone, 'driver_phone' in p, 'driver_phone');
     addText(COLUMN_MAP_DEFAULT.tractorPlate, p.tractor, 'tractor' in p, 'tractor');
@@ -241,70 +315,87 @@ function buildJobs(
   return jobs;
 }
 
+type Planned =
+  | { job: CellJob; action: 'skip_applied' }
+  | { job: CellJob; action: 'conflict' }
+  | { job: CellJob; action: 'write'; value: string | number };
+
 /**
- * Dla dat/czasu: jeśli komórka jest liczbą — zapisz serial/ułamek; tekst — tekst w formacie pliku.
+ * Faza 1: odczyt z usedRange — konflikt / już zastosowane / do PATCH.
  */
-async function resolveWriteValue(
-  session: WorkbookSession,
-  sheetId: string,
-  job: CellJob,
-  fetchFn: typeof fetch,
-): Promise<
-  | { ok: true; value: string | number; current: unknown }
-  | { ok: false; reason: string; http?: number; conflict?: true }
-> {
-  const got = await getWorkbookRange(session, sheetId, job.address, fetchFn);
-  if (!got.ok) return got;
-  const current = got.values[0]?.[0] ?? null;
+function planJobs(layout: SheetLayout, jobs: CellJob[]): Planned[] {
+  const out: Planned[] = [];
+  for (const job of jobs) {
+    const current = cellFromLayout(layout, job.absCol, job.absRow);
 
-  // Konflikt: komórka ≠ expected (dla dat/numerów/awizacji bez expected — tylko gdy empty→niepuste obce).
-  if (job.kind === 'date' || job.kind === 'time' || job.expected != null) {
-    if (!cellMatchesExpected(current, job.expected, job.kind)) {
-      return { ok: false, reason: 'cell_conflict', conflict: true };
+    if (cellAlreadyHasTarget(current, job.value, job.kind)) {
+      out.push({ job, action: 'skip_applied' });
+      continue;
     }
-  } else if (job.kind === 'text' && job.expected == null) {
-    // awizacja: nie nadpisuj niepustej komórki, która nie jest jeszcze naszą wartością
-    const cur = cellText(current);
-    if (cur && cur !== String(job.value)) {
-      return { ok: false, reason: 'cell_conflict', conflict: true };
+
+    if (job.kind === 'date' || job.kind === 'time' || job.expected != null) {
+      if (!cellMatchesExpected(current, job.expected, job.kind)) {
+        out.push({ job, action: 'conflict' });
+        continue;
+      }
+    } else if (job.kind === 'text' && job.expected == null) {
+      const cur = stripLeadingApostrophe(cellText(current));
+      if (cur && cur !== String(job.value)) {
+        out.push({ job, action: 'conflict' });
+        continue;
+      }
     }
+
+    let writeValue: string | number = job.value;
+    if (job.kind === 'date') {
+      if (typeof current === 'number' && Number.isFinite(current)) {
+        const serial = typeof job.value === 'number' ? job.value : excelSerialFromIso(String(job.value));
+        if (serial == null) {
+          out.push({ job, action: 'conflict' });
+          continue;
+        }
+        const frac = current - Math.floor(current);
+        writeValue = Math.round((Math.floor(serial) + frac) * 1e9) / 1e9;
+      } else {
+        const isoFromSerial = (() => {
+          if (typeof job.value !== 'number') return null;
+          const epoch = Date.UTC(1899, 11, 30) + Math.floor(job.value) * 86_400_000;
+          const d = new Date(epoch);
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+        })();
+        const formatted = formatDateTextFromIso(isoFromSerial, cellText(current));
+        if (!formatted) {
+          out.push({ job, action: 'conflict' });
+          continue;
+        }
+        // Pusta komórka + kolumna daty → serial (F7 mile widziane).
+        writeValue = cellText(current) === '' && typeof job.value === 'number'
+          ? job.value
+          : formatted;
+      }
+    } else if (job.kind === 'time') {
+      const want = normalizeHm(String(job.value));
+      if (!want) {
+        out.push({ job, action: 'conflict' });
+        continue;
+      }
+      if (typeof current === 'number' && Number.isFinite(current)) {
+        const frac = excelTimeFractionFromHm(want);
+        if (frac == null) {
+          out.push({ job, action: 'conflict' });
+          continue;
+        }
+        writeValue = Math.round((Math.floor(current) + frac) * 1e9) / 1e9;
+      } else {
+        writeValue = want;
+      }
+    } else {
+      writeValue = textValueForPatch(String(job.value));
+    }
+
+    out.push({ job, action: 'write', value: writeValue });
   }
-
-  if (job.kind === 'date') {
-    const isoFromSerial = (() => {
-      if (typeof job.value !== 'number') return null;
-      const epoch = Date.UTC(1899, 11, 30) + Math.floor(job.value) * 86_400_000;
-      const d = new Date(epoch);
-      const y = d.getUTCFullYear();
-      const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    })();
-    if (typeof current === 'number' && Number.isFinite(current)) {
-      const serial = typeof job.value === 'number' ? job.value : excelSerialFromIso(String(job.value));
-      if (serial == null) return { ok: false, reason: 'bad_date' };
-      const frac = current - Math.floor(current);
-      const merged = Math.round((Math.floor(serial) + frac) * 1e9) / 1e9;
-      return { ok: true, value: merged, current };
-    }
-    const formatted = formatDateTextFromIso(isoFromSerial, cellText(current));
-    if (!formatted) return { ok: false, reason: 'bad_date' };
-    return { ok: true, value: formatted, current };
-  }
-
-  if (job.kind === 'time') {
-    const want = normalizeHm(String(job.value));
-    if (!want) return { ok: false, reason: 'bad_time' };
-    if (typeof current === 'number' && Number.isFinite(current)) {
-      const frac = excelTimeFractionFromHm(want);
-      if (frac == null) return { ok: false, reason: 'bad_time' };
-      const day = Math.floor(current);
-      return { ok: true, value: Math.round((day + frac) * 1e9) / 1e9, current };
-    }
-    return { ok: true, value: want, current };
-  }
-
-  return { ok: true, value: job.value, current };
+  return out;
 }
 
 export type WorkbookWriteResult =
@@ -315,15 +406,22 @@ export type WorkbookWriteResult =
     skipped: number;
     conflicts: { code: string; field: string }[];
   }
-  | { ok: false; reason: string; http?: number };
+  | {
+    ok: false;
+    reason: string;
+    http?: number;
+    /** B1: kody zapisane przed błędem przejściowym. */
+    writtenCodes?: string[];
+    conflicts?: { code: string; field: string }[];
+    permission?: string;
+  };
 
 /**
- * Sesja → usedRange → GET komórki → konflikt → PATCH → closeSession.
+ * Sesja → usedRange → faza odczytu/konfliktu → PATCH tylko bez konfliktu → closeSession.
  */
 export async function writePatchesViaWorkbook(args: {
   env: GraphEnv;
   patches: readonly OutboundPatch[];
-  /** expected per code (test = kopia; prod = expected_file). */
   expectedByCode: Record<string, FileDateSnap | null | undefined>;
   fetchFn?: typeof fetch;
 }): Promise<WorkbookWriteResult> {
@@ -334,22 +432,51 @@ export async function writePatchesViaWorkbook(args: {
   }
 
   const ref = await resolveWorkbookRef(args.env, fetchFn);
-  if (!ref.ok) return { ok: false, reason: ref.reason, http: ref.http };
+  if (!ref.ok) {
+    return {
+      ok: false,
+      reason: ref.reason,
+      http: ref.http,
+      permission: ref.permission,
+    };
+  }
 
   const sess = await createWorkbookSession(ref.ref, fetchFn);
-  if (!sess.ok) return { ok: false, reason: sess.reason, http: sess.http };
+  if (!sess.ok) {
+    return {
+      ok: false,
+      reason: sess.reason,
+      http: sess.http,
+      permission: sess.permission,
+    };
+  }
   const session = sess.session;
 
   try {
     const sheets = await listWorkbookSheets(session, fetchFn);
-    if (!sheets.ok) return { ok: false, reason: sheets.reason, http: sheets.http };
+    if (!sheets.ok) {
+      return {
+        ok: false,
+        reason: sheets.reason,
+        http: sheets.http,
+        permission: sheets.permission,
+      };
+    }
     const first = sheets.sheets[0];
     if (!first) return { ok: false, reason: 'no_sheet' };
     const sheetKey = first.id || first.name;
 
     const used = await getWorkbookUsedRange(session, sheetKey, fetchFn);
-    if (!used.ok) return { ok: false, reason: used.reason, http: used.http };
-    const layoutBuilt = buildLayout(used.values);
+    if (!used.ok) {
+      return {
+        ok: false,
+        reason: used.reason,
+        http: used.http,
+        permission: used.permission,
+      };
+    }
+    const origin = parseUsedRangeOrigin(used.address);
+    const layoutBuilt = buildLayout(used.values, origin);
     if ('error' in layoutBuilt) return { ok: false, reason: layoutBuilt.error };
     const layout: SheetLayout = { ...layoutBuilt, sheetId: sheetKey };
 
@@ -364,36 +491,52 @@ export async function writePatchesViaWorkbook(args: {
       };
     }
 
+    const planned = planJobs(layout, jobs);
     const conflicts: { code: string; field: string }[] = [];
     const conflictCodes = new Set<string>();
     const writtenCodes = new Set<string>();
     let skipped = 0;
 
-    for (const job of jobs) {
-      if (conflictCodes.has(job.code)) {
-        skipped += 1;
+    // Faza 1: zbierz konflikty per kod (cały kod blokowany).
+    for (const p of planned) {
+      if (p.action === 'conflict') {
+        if (!conflictCodes.has(p.job.code)) {
+          conflicts.push({ code: p.job.code, field: p.job.conflictField });
+          conflictCodes.add(p.job.code);
+        }
+      }
+    }
+
+    // Faza 2: PATCH tylko dla kodów bez konfliktu.
+    for (const p of planned) {
+      if (conflictCodes.has(p.job.code)) {
+        if (p.action !== 'conflict') skipped += 1;
         continue;
       }
-      const resolved = await resolveWriteValue(session, sheetKey, job, fetchFn);
-      if (!resolved.ok) {
-        if (resolved.conflict) {
-          conflicts.push({ code: job.code, field: job.conflictField });
-          conflictCodes.add(job.code);
-          continue;
-        }
-        return { ok: false, reason: resolved.reason, http: resolved.http };
+      if (p.action === 'skip_applied') {
+        writtenCodes.add(p.job.code);
+        continue;
       }
+      if (p.action !== 'write') continue;
+
       const patched = await patchWorkbookRange(
         session,
         sheetKey,
-        job.address,
-        [[resolved.value]],
+        p.job.address,
+        [[p.value]],
         fetchFn,
       );
       if (!patched.ok) {
-        return { ok: false, reason: patched.reason, http: patched.http };
+        return {
+          ok: false,
+          reason: patched.reason,
+          http: patched.http,
+          permission: patched.permission,
+          writtenCodes: [...writtenCodes],
+          conflicts,
+        };
       }
-      writtenCodes.add(job.code);
+      writtenCodes.add(p.job.code);
     }
 
     return {
@@ -409,6 +552,9 @@ export async function writePatchesViaWorkbook(args: {
 }
 
 /** Eksport do testów layoutu. */
-export function layoutFromValuesForTest(values: unknown[][]) {
-  return buildLayout(values);
+export function layoutFromValuesForTest(
+  values: unknown[][],
+  address: string | null = null,
+) {
+  return buildLayout(values, parseUsedRangeOrigin(address));
 }

@@ -24,14 +24,20 @@ import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch'
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
 import {
+  cellAlreadyHasTarget,
   cellMatchesExpected,
+  indexToColLetters,
   layoutFromValuesForTest,
+  parseUsedRangeOrigin,
+  stripLeadingApostrophe,
+  textValueForPatch,
   writePatchesViaWorkbook,
 } from '../supabase/functions/_shared/ksh/workbookCellWrite';
 import {
   isOutboundTransientReason,
   outboundTransientRetryDelayMinutes,
 } from '../supabase/functions/_shared/ksh/outboundTransient';
+import { WORKBOOK_AUTH_REASON } from '../supabase/functions/_shared/ksh/graphWorkbook';
 
 const env = (): GraphEnv => ({
   SHAREPOINT_TENANT_ID: 't',
@@ -284,15 +290,17 @@ describe('#645 workbook transient backoff', () => {
     expect(outboundTransientRetryDelayMinutes(3)).toBe(30);
     expect(outboundTransientRetryDelayMinutes(4)).toBe(60);
   });
-  it('429/503/423 = transient', () => {
+  it('429/503/423 = transient; auth 403 nie', () => {
     expect(isOutboundTransientReason('workbook_http_429')).toBe(true);
     expect(isOutboundTransientReason('workbook_http_503')).toBe(true);
     expect(isOutboundTransientReason('upload_http_423')).toBe(true);
+    expect(isOutboundTransientReason('network_workbook_patch')).toBe(true);
     expect(isOutboundTransientReason('upload_http_403')).toBe(false);
+    expect(isOutboundTransientReason(WORKBOOK_AUTH_REASON)).toBe(false);
   });
 });
 
-describe('#645 cellMatchesExpected / layout', () => {
+describe('#645 cellMatchesExpected / layout / B2 / B8', () => {
   it('layout: kod → wiersz po nagłówku Wysyłka', () => {
     const layout = layoutFromValuesForTest([
       [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverName],
@@ -305,6 +313,35 @@ describe('#645 cellMatchesExpected / layout', () => {
       expect(layout.headerCol.get(COLUMN_MAP_DEFAULT.scxOrderNo)).toBe(2);
     }
   });
+  it('B8: usedRange z przesunięciem kolumn; nagłówek nie w wierszu 1 → no_code_col', () => {
+    expect(parseUsedRangeOrigin("Harmonogram!C1:E3")).toEqual({ row0: 0, col0: 2 });
+    const shifted = layoutFromValuesForTest(
+      [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+        ['SG-01', 'OLD'],
+      ],
+      'Harmonogram!C1:D2',
+    );
+    expect('error' in shifted).toBe(false);
+    if (!('error' in shifted)) {
+      expect(shifted.headerCol.get(COLUMN_MAP_DEFAULT.shipmentCode)).toBe(3);
+      expect(shifted.codeRow.get('SG-01')).toBe(2);
+      expect(indexToColLetters(27)).toBe('AA');
+    }
+    const bad = layoutFromValuesForTest(
+      [[COLUMN_MAP_DEFAULT.shipmentCode], ['SG-01']],
+      'Sheet1!A2:A3',
+    );
+    expect(bad).toEqual({ error: 'no_code_col' });
+  });
+  it('B2: apostrof / formuła / wiodące zero / +tel / PL/SE', () => {
+    expect(textValueForPatch('=1+1')).toBe("'=1+1");
+    expect(stripLeadingApostrophe("'0701234567")).toBe('0701234567');
+    expect(cellMatchesExpected("'0701234567", '0701234567', 'text')).toBe(true);
+    expect(cellMatchesExpected("'+46701234567", '+46701234567', 'text')).toBe(true);
+    expect(cellMatchesExpected("'PL / SE", 'PL / SE', 'text')).toBe(true);
+    expect(cellAlreadyHasTarget("'NEW", 'NEW', 'text')).toBe(true);
+  });
   it('data serial vs ISO', () => {
     expect(cellMatchesExpected(46321, '2026-10-26', 'date')).toBe(true);
     expect(cellMatchesExpected('26.10.2026', '2026-10-26', 'date')).toBe(true);
@@ -313,14 +350,25 @@ describe('#645 cellMatchesExpected / layout', () => {
 });
 
 describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
-  function mockFetch(opts?: { openFile?: boolean; conflictCo?: boolean; http429?: boolean }) {
-    const calls: string[] = [];
+  function mockFetch(opts?: {
+    conflictCo?: boolean;
+    http429?: boolean;
+    http403?: boolean;
+    alreadyNew?: boolean;
+    patch429After?: number;
+    usedAddress?: string;
+  }) {
+    const calls: { method: string; url: string; headers?: HeadersInit; body?: string }[] = [];
+    let patchCount = 0;
     const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const u = String(input);
       const method = (init?.method ?? 'GET').toUpperCase();
-      calls.push(`${method} ${u.replace(/https:\/\/graph\.microsoft\.com\/v1\.0/, '')}`);
+      calls.push({ method, url: u, headers: init?.headers, body: typeof init?.body === 'string' ? init.body : undefined });
       if (u.includes('/token')) {
         return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/content')) {
+        return new Response('PUT forbidden in #645', { status: 500 });
       }
       if (u.includes('/driveItem') && !u.includes('workbook') && method === 'GET') {
         return new Response(JSON.stringify({
@@ -331,6 +379,7 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
         }), { status: 200 });
       }
       if (u.includes('createSession')) {
+        if (opts?.http403) return new Response('{"error":{}}', { status: 403 });
         if (opts?.http429) return new Response('{"error":{}}', { status: 429 });
         return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
       }
@@ -343,37 +392,34 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
         }), { status: 200 });
       }
       if (u.includes('usedRange')) {
+        const co = opts?.alreadyNew ? 'NEW' : (opts?.conflictCo ? 'OTHER' : 'OLD');
         return new Response(JSON.stringify({
+          address: opts?.usedAddress ?? 'Harmonogram!A1:C2',
           values: [
-            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverName],
-            ['SG-01', opts?.conflictCo ? 'OTHER' : 'OLD', ''],
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+            ['SG-01', co, ''],
           ],
         }), { status: 200 });
       }
-      if (u.includes("range(address=") && method === 'GET') {
-        // B2 = scxOrderNo expected OLD; C2 = driver empty
-        if (u.includes("address='B2'")) {
-          return new Response(JSON.stringify({
-            values: [[opts?.conflictCo ? 'OTHER' : 'OLD']],
-          }), { status: 200 });
-        }
-        if (u.includes("address='C2'")) {
-          return new Response(JSON.stringify({ values: [['']] }), { status: 200 });
-        }
-        return new Response(JSON.stringify({ values: [['']] }), { status: 200 });
-      }
       if (u.includes("range(address=") && method === 'PATCH') {
-        // symulacja „otwartego” pliku — workbook PATCH i tak przechodzi
-        expect(opts?.openFile !== false || true).toBe(true);
-        return new Response(JSON.stringify({ values: [['NEW']] }), { status: 200 });
+        patchCount += 1;
+        if (opts?.patch429After != null && patchCount > opts.patch429After) {
+          return new Response('{"error":{}}', { status: 429 });
+        }
+        const body = init?.body ? JSON.parse(String(init.body)) as { values: unknown[][] } : null;
+        // B2: tekst z apostrofem
+        if (body?.values?.[0]?.[0] != null && typeof body.values[0][0] === 'string') {
+          expect(String(body.values[0][0]).startsWith("'")).toBe(true);
+        }
+        return new Response(JSON.stringify({ values: body?.values ?? [['x']] }), { status: 200 });
       }
       return new Response(`unhandled ${method} ${u}`, { status: 404 });
     }) as unknown as typeof fetch;
     return { fetchFn, calls };
   }
 
-  it('sesja → zapis carrier_order_no przy „otwartym” pliku', async () => {
-    const { fetchFn } = mockFetch({ openFile: true });
+  it('sesja → zapis carrier_order_no; closeSession; brak PUT /content; nagłówek sesji', async () => {
+    const { fetchFn, calls } = mockFetch();
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
@@ -387,6 +433,31 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
       expect(r.writtenCodes).toContain('SG-01');
       expect(r.conflicts).toEqual([]);
     }
+    expect(calls.some((c) => c.url.includes('/content'))).toBe(false);
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+    const withSession = calls.filter((c) =>
+      c.url.includes('workbook') && !c.url.includes('createSession')
+    );
+    for (const c of withSession) {
+      const h = c.headers as Record<string, string> | undefined;
+      expect(h?.['workbook-session-id'] ?? (h as Headers | undefined)?.get?.('workbook-session-id'))
+        .toBeTruthy();
+    }
+  });
+
+  it('B1: komórka już = docelowa → bez PATCH, written', async () => {
+    const { fetchFn, calls } = mockFetch({ alreadyNew: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toContain('SG-01');
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
   it('konflikt komórki gdy plik ≠ expected', async () => {
@@ -406,8 +477,8 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     }
   });
 
-  it('429 createSession → workbook_http_429', async () => {
-    const { fetchFn } = mockFetch({ http429: true });
+  it('429 createSession → workbook_http_429 + closeSession nie (brak sesji)', async () => {
+    const { fetchFn, calls } = mockFetch({ http429: true });
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
@@ -418,6 +489,57 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toBe('workbook_http_429');
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(false);
+  });
+
+  it('B7: 403 createSession → workbook_auth_403 + permission', async () => {
+    const { fetchFn } = mockFetch({ http403: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe(WORKBOOK_AUTH_REASON);
+      expect(r.permission).toMatch(/Files\.ReadWrite/);
+    }
+  });
+
+  it('test → URL kopii (SHAREPOINT_FILE_MODE=test)', async () => {
+    const { fetchFn, calls } = mockFetch();
+    const e = env();
+    e.SHAREPOINT_FILE_MODE = 'test';
+    await writePatchesViaWorkbook({
+      env: e,
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    const shareCalls = calls.filter((c) => c.url.includes('/shares/'));
+    expect(shareCalls.length).toBeGreaterThan(0);
+    // shareId budowany z TEST url — nie z prod (różne ścieżki w env()).
+    expect(e.SHAREPOINT_TEST_FILE_URL).not.toBe(e.SHAREPOINT_FILE_URL);
+  });
+
+  it('B2: telefon z wiodącym zerem jako tekst z apostrofem', async () => {
+    const { fetchFn, calls } = mockFetch();
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.body).toContain("'0701234567");
   });
 });
 

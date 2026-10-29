@@ -19,6 +19,8 @@ export const OUTBOUND_TRANSIENT_LOCK_RISK_HOURS = 4;
 export const OUTBOUND_423_ERROR = 'upload_http_423';
 
 export function isOutboundTransientReason(reason: string): boolean {
+  // workbook_auth_403 — NIE przejściowy (B7): jedna sprawa, bez 5 prób.
+  if (reason === 'workbook_auth_403' || reason.startsWith('workbook_auth_')) return false;
   return (
     reason === OUTBOUND_423_ERROR
     || reason === 'upload_http_423'
@@ -32,5 +34,6 @@ export function isOutboundTransientReason(reason: string): boolean {
     || reason === 'workbook_http_503'
     || reason === 'workbook_http_504'
     || reason === 'workbook_http_409'
+    || reason.startsWith('network_workbook_')
   );
 }

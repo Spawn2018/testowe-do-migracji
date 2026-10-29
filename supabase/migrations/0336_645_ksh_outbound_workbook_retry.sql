@@ -1,5 +1,6 @@
 -- #645 / #637: błędy przejściowe Graph (423/429/503/504/409) = pending + backoff.
--- 5→15→30→60 min; sprawa HHL >4 h; po udanym zapisie clear. Numer 0335 (#644 zastąpione).
+-- 5→15→30→60 min; sprawa HHL >4 h; po udanym zapisie clear.
+-- Numer 0336 (F7 #646 B6: 0335 zostaje dla #638 ETA).
 
 begin;
 
@@ -12,8 +13,7 @@ comment on column public.ksh_sync_outbound.retry_after is
 comment on column public.ksh_sync_outbound.locked_since is
   '#645: pierwszy błąd przejściowy w serii; sprawa HHL gdy > 4 h.';
 
--- Przywróć failed/paused z 423 (PUT) / workbook_* do kolejki.
--- Jeden pending na load (uidx) — tylko gdy nie ma już pending dla tego load_id.
+-- B5: przywróć failed/paused z 423 / workbook_* tylko gdy nie ma nowszej łatki.
 update public.ksh_sync_outbound o
    set status = 'pending',
        done_at = null,
@@ -29,6 +29,10 @@ update public.ksh_sync_outbound o
    and not exists (
      select 1 from public.ksh_sync_outbound p
       where p.load_id = o.load_id and p.status = 'pending'
+   )
+   and not exists (
+     select 1 from public.ksh_sync_outbound n
+      where n.load_id = o.load_id and n.id > o.id
    )
    and o.id = (
      select x.id from public.ksh_sync_outbound x
@@ -86,7 +90,7 @@ $$;
 revoke all on function public.ksh_sync_outbound_list(uuid, int) from public, anon, authenticated;
 grant execute on function public.ksh_sync_outbound_list(uuid, int) to service_role;
 
--- 423: zostaje pending; backoff; sprawa dopiero po 4 h (jedna na projekt).
+-- 423: zostaje pending; backoff; sprawa dopiero po 4 h (jedna na serię locked_since — B3).
 create or replace function public.ksh_sync_outbound_note_423(p_acks jsonb)
 returns int
 language plpgsql
@@ -104,6 +108,7 @@ declare
   v_locked timestamptz;
   v_code text;
   v_load_id uuid;
+  v_event_key text;
 begin
   perform public.ksh_sync_require_service();
   if p_acks is null or jsonb_typeof(p_acks) is distinct from 'array' then
@@ -164,9 +169,12 @@ begin
          order by si.shipment_code
          limit 1;
       end if;
+      -- B3: klucz z serią (epoch locked_since) — jedna sprawa na serię, nie na każdą próbę.
+      v_event_key := 'l1b:file-locked:' || r.project_id::text
+        || ':' || floor(extract(epoch from v_locked))::bigint::text;
       perform decision_open_from_event(
         r.project_id, 'TOWER_KSH_CONFLICT',
-        'l1b:file-locked:' || r.project_id::text,
+        v_event_key,
         'Plik KSH otwarty — zapis czeka',
         jsonb_build_object(
           'code', coalesce(v_code, ''),
@@ -184,13 +192,18 @@ $$;
 revoke all on function public.ksh_sync_outbound_note_423(jsonb) from public, anon, authenticated;
 grant execute on function public.ksh_sync_outbound_note_423(jsonb) to service_role;
 
--- Po udanym PUT: wyczyść backoff (inne pending) i zamknij sprawę file-locked.
+-- B4: wyczyść backoff; zamknij sprawy file-locked (prefiks) jak 0295.
 create or replace function public.ksh_sync_outbound_clear_423(p_project uuid)
 returns void
 language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  r record;
+  v_now timestamptz := now();
+  v_note text := 'Zapis do pliku KSH wznowiony — sprawa file-locked zamknięta';
+  v_prefix text;
 begin
   perform public.ksh_sync_require_service();
   if p_project is null then
@@ -202,13 +215,52 @@ begin
    where project_id = p_project
      and status = 'pending'
      and (locked_since is not null or retry_after is not null);
-  update public.decisions
-     set status = 'RESOLVED',
-         resolution_code = 'AUTO_CLOSED',
-         resolved_at = now(),
-         updated_at = now()
-   where status is distinct from 'RESOLVED'
-     and detail->>'event_key' = 'l1b:file-locked:' || p_project::text;
+
+  v_prefix := 'l1b:file-locked:' || p_project::text;
+  for r in
+    select id
+      from public.decisions
+     where status in ('NEW', 'ASSIGNED', 'SNOOZED')
+       and (
+         detail->>'event_key' = v_prefix
+         or detail->>'event_key' like v_prefix || ':%'
+       )
+     for update
+  loop
+    update public.decisions
+       set status = 'RESOLVED',
+           resolution_code = 'AUTO_CLOSED',
+           resolution_note = v_note,
+           resolved_at = v_now,
+           updated_at = v_now
+     where id = r.id
+       and status in ('NEW', 'ASSIGNED', 'SNOOZED');
+    if found then
+      insert into public.decision_events (decision_id, actor_id, action, payload)
+      values (
+        r.id,
+        null,
+        'RESOLVE',
+        jsonb_build_object(
+          'option', 'AUTO_CLOSED',
+          'effect', 'AUTO_CLOSED',
+          'hotfix', '0336',
+          'reason', v_note
+        )
+      );
+      insert into public.audit_log (user_id, action, entity, entity_id, new_value)
+      values (
+        null,
+        'DECISION_AUTO_CLOSED',
+        'decisions',
+        r.id::text,
+        jsonb_build_object(
+          'reason', v_note,
+          'hotfix', '0336'
+        )
+      );
+    end if;
+  end loop;
 end;
 $$;
 

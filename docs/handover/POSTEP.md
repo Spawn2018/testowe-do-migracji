@@ -6831,3 +6831,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok #645:** Graph Excel workbook API zamiast JSZip+PUT — `createSession` → GET komórki → konflikt vs migawka → `PATCH range` → `closeSession`. Migracja **0335** (backoff 429/503/504/423 z #644). Unit: sesja, konflikt komórki, 429, layout (37 w pliku write). Gałąź `pakiet/645-workbook-cell-write`.
 - Uprawnienia: docs MS — Application **Not supported** dla workbook (tylko delegated `Files.ReadWrite`); próba obecnym tokenem aplikacji; 401/403 → prośba do właściciela/IT w #637.
 - Po F7+deploy: próba na kopii **bez zamykania pliku** → `write_test_ok_at` → meldunek #637. #644 zamknięte jako zastąpione. Bez push na main.
+
+## 2026-10-29 16:35 — #645 F7 #646 POPRAWKI (0336)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak F7 „gotowe”; CI @ 693d588 było zielone (unit/visual/db); F7 = POPRAWKI.
+- **F7 B1–B8:** dwie fazy odczyt→PATCH + idempotencja; tekst z `'`; sprawa file-locked z serią; `clear_423` jak 0295; bez wskrzeszania starej łatki; migracja **0336** (#638 zostaje **0335**); `workbook_auth_403` + permission; usedRange z przesunięciem.
+- Unit lokalnie **43/43** (`ksh-sharepoint-write`). Push → CI → ponowne F7. Bez push na main.
+- Kolejność scalania (F7 B6): najpierw #638 (0335, po rebase docs), potem #646 (0336).
