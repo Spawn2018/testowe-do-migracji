@@ -1130,8 +1130,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → ~~#637/#645 workbook 0336~~ → **27B:C ETA (#638 / 0337)** → mapa/kalibracja → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA W TOKU** PR #638 (**0337**, po #646): `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`; F7 POPRAWKI REMOVED+Polferries. **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → ~~#637/#645 workbook 0336~~ → ~~**27B:C ETA (#638 / 0337)**~~ → **BN1…BN10 (#640)** → 27B mapa/kalibracja → reszta planu.
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA SCALONE** (`9a6ec4b4` / PR #638 / **0337**, 29.10.2026 17:07Z): `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`; REMOVED+Polferries. **Mapa HERE + kalibracja dwa SE_ROAD** — po BN10 (#640). Bez śladu GPS w repo.
 
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
@@ -1147,6 +1147,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
+
+### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11.
+1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** (`pakiet/bn1-ferry-dict` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal (`TLL-HEL`/`HEL-TLL` Tallink D↔T2, `TLLA-HEL`/`HELA-TLL` Viking/Eckerö A↔Katajanokka); PORT_OUT A/D r=250 (rozłączne). **Strefy po rodzinie trasy** (`eta_obs_route_family` ← `ferry_routes.family_key`, `ferry_geofence_matches_route` w `apply_geofence_status` / `compute_load_eta`) — Viking/Eckerö↔TLL-HEL; Tallink TLL-STO≠HEL. Bez self-aliasów bałtyckich w `eta_route_aliases` (F7 B5). status **457**. Dalej w BN1: CASE-y ETA/AIS → słownik; front `FerryRoute` z RPC.
+2. BN2…BN10 — jak #573 (rozkłady, opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -2013,3 +2018,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 17:10 | #645 F7 #646 POPRAWKI r3: R4 wielokod bez wiersza → done; formatLooksLikeDate strip; unit 56/56 | pętla |
 | 29.10.2026 17:20 | #638 merge main po #643 (docs); konflikt tylko PLAN/POSTEP — dziennik dopisany; czeka CI+F7 | pętla |
 | 29.10.2026 17:45 | #646 SCALONE (`2c8e3e1c`); próba na kopii OK (`write_reason=ok`); #638 **0335→0337** | pętla |
+| 29.10.2026 18:10 | #638 SCALONE (`9a6ec4b4`, F7 gotowe @ 9056140); #640 wpisane — BN1…BN10 przed 27B mapa; start **0338** BN1 słowniki | pętla |
+| 29.10.2026 18:50 | #647 BN1 F7+CI: nullguard strażnik, route_check, B5/B6 coords, status 443 | pętla |
+| 29.10.2026 19:25 | #647 CI status 4 FAIL: #496 przywracał starą listę tras; RPC GUARD bez JWT — fix status.sh | pętla |
+| 29.10.2026 19:50 | #647 CI @ 5a2d8385 zielone; F7 Tallinn A/D operator×terminal (D=Tallink 59.440/24.775); status 449 | pętla |
+| 29.10.2026 20:05 | #647 BN1: strefy po rodzinie trasy (`ferry_geofence_matches_route`); status **457**; CI @ 1233afd6 zielone → nowy commit | pętla |

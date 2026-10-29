@@ -6879,3 +6879,41 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #646 → `2c8e3e1c` (F7: gotowe @ `ff41ed3`; kolejność zmieniona — #646 przed #638). deploy-main ✔ (0336 + Edge). Bez push na main.
 - **Próba na kopii bez zamykania:** `mode=test`, `write_reason=ok`, `upload_ok=true`, `write_n=1`; outbound #6 `done`; brak `workbook_auth_403`. `write_test_ok_at` ustawione. Meldunek w #637.
 - **#638:** merge `main` po #646; migracja **0335→0337** (0336 zajęte przez workbook). CI → F7.
+
+## 2026-10-29 18:10 — #638 SCALONE; start BN1 (#640 / 0338)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #640 (Spawn2018, bez etykiety dla-cursora) wpisane z F7 #638 — kolejność: BN1–BN10 przed 27B mapa/kalibracja.
+- Scalanie: #638 → `9a6ec4b4` (F7: gotowe @ `9056140`; CI unit/db/visual ✔). Bez push na main.
+- #637: czeka właściciel `FILE_MODE=prod` (próba na kopii OK, `write_test_ok_at` set).
+- **Krok BN1:** gałąź `pakiet/bn1-ferry-dict`; migracja **0338** — `ferry_operators` / `ferry_ports` / `ferry_routes` / `ferry_route_operators`; seed Stena+Polferries+TALLINK/VIKING/ECKERO/DFDS; strefy bałtyckie; `ferry_dict_snapshot` + `ferry_route_port_countries`; `eta_obs_operator_key` ← słownik. status **433** (+12); nullguard **890** (+10).
+- Dalej BN1: CASE-y w funkcjach ETA/AIS → słownik; front z RPC. Potem BN2…
+
+## 2026-10-29 18:50 — BN1 #647 F7 POPRAWKI + CI db (nullguard/status)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #499/#500/#537/#538 w planie. Bez nowego wpisu.
+- Scalanie: brak F7 „gotowe”; #647 jedyny otwarty PR. CI db @ a9009ef9: status 432/433 FAIL (`sailings_route_check` na TLL-HEL), nullguard 882/890 FAIL (`ferry_dict_snapshot` / `ferry_route_port_countries` — strażnik `auth.role` nie odpalał się w bramie).
+- Poprawki w 0338: strażnik jak `ferry_track_sample` (`current_app_user_id`); ponowne otwarcie `sailings_route_check` (regex); bez self-aliasów bałtyckich (F7 B5); GDN/NYN/PLD/TLL_D współrzędne (F7 B6); `geofences.country` = ISO-2; seed ports `on conflict do nothing`.
+- status **443** (+10 asercji B5/B6/operator); nullguard **890**. PLAN: dwa modele `geofences.route`.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 19:50 — BN1 #647 F7 Tallinn A/D (operator×terminal)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Brak F7 „gotowe”; #647 jedyny otwarty PR.
+- CI @ `5a2d8385` (unit/visual/db) **zielone** — nie scalono (brak F7 gotowe; brakowało Tallinn z F7 POPRAWKI r2).
+- F7 wymagane w PR: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; trasy `TLL-HEL`/`TLLA-HEL` (+ powroty) w rodzinie `TLL-HEL`; PORT_OUT r=250 rozłączne; strefy D HEL + D STO. status **449** (+6).
+- Dalej: czekam F7 po CI; potem CASE-y ETA/AIS → słownik; front z RPC.
+
+## 2026-10-29 20:05 — BN1 #647 strefy po rodzinie trasy
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 czeka `FILE_MODE=prod` właściciela. Bez nowego wpisu.
+- Scalanie: F7 „gotowe” @ 5a2d838 — **unieważnione** commitem Tallinn `1233afd6`; CI @ `1233afd6` unit/db/visual **zielone**. Bez scalenia.
+- **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
+- Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
+
+## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.
+- CI @ 60c0a8a8: unit/visual ✔; nullguard 890/890 ✔; **status 439/443** — 4 FAIL BN1.
+- Przyczyny: (1) `#496` w `status.sh` przywracał starą listę `sailings_route_check` (GDN/GDY) po teście OTHER → TLL-HEL padał; (2) RPC z GUARD wołane bez sesji `authenticated` → „Brak aktywnego konta”.
+- Fix: przywrócenie regexu BN1 po `#496`; kraje/snapshot przez `set local role authenticated` + JWT HHL. status nadal **443**.
+- Push → CI → prośba o F7. Bez push na main.

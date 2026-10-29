@@ -1209,11 +1209,12 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L496u', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L496u')" >/dev/null
 chk "#496: nieznana trasa → brak OFF_CORRIDOR" "$(rk $L496u OFF_CORRIDOR)" 0
+# BN1 (0338): przywróć regex tras (nie starą listę GDN/GDY — psuje TLL-HEL / TALLINK).
 q "update loads set sailing_id=null where id='$L496u';
    delete from sailings where id='$S496u';
    alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
-     check (route in ('GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY'));" >/dev/null
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 # F7: sprzątanie L487a/b + L496u (nie globalne DELETE) — risks.sh baseline title_key.
 chk "#487/#496 po teście brak rk_off_corridor L487a/b/L496u" \
   "delete from decision_events where decision_id in (
@@ -2250,6 +2251,99 @@ select public.telm_save_orphan_position(
 " >/dev/null
 chk "#622: F7 r3 refresh=true po dostawie (insert-only)" \
   "select coalesce(j->>'ok','?')||'|'||coalesce(j->>'reclaimed','?')||'|'||coalesce(j->>'refresh','?') from (select public.telm_reclaim_orphan_positions('$L622g'::uuid, '2026-10-20 00:00:00+00'::timestamptz) j) s" "true|1|true"
+
+# BN1 (#573/#640) — słowniki ferry_* + strefy bałtyckie (0338); regresja Stena/Polferries
+HHL=11111111-0000-0000-0000-000000000001
+chk "BN1: ferry_operators ≥6" \
+  "select count(*) from ferry_operators where active" 6
+chk "BN1: ferry_ports Tallinn A+D + Muuga + Paldiski" \
+  "select count(*) from ferry_ports where code in ('TLL_A','TLL_D','MUU','PLD')" 4
+# F7: rodzina TLL-HEL = 4 (Tallink D↔T2 + Viking/Eckerö A↔Katajanokka, oba kierunki)
+chk "BN1: ferry_routes TLL-HEL family" \
+  "select count(*) from ferry_routes where family_key='TLL-HEL' and active" 4
+chk "BN1: operator GDY-KAA = STENA" \
+  "select public.ferry_route_primary_operator('GDY-KAA')" STENA
+chk "BN1: operator GDN-NYN = POLFERRIES" \
+  "select public.ferry_route_primary_operator('GDN-NYN')" POLFERRIES
+chk "BN1: operator TLL-HEL = TALLINK" \
+  "select public.ferry_route_primary_operator('TLL-HEL')" TALLINK
+chk "BN1: operator TLLA-HEL = VIKING" \
+  "select public.ferry_route_primary_operator('TLLA-HEL')" VIKING
+chk "BN1: TLL-HEL port_from = TLL_D" \
+  "select port_from from ferry_routes where code='TLL-HEL'" TLL_D
+chk "BN1: TLLA-HEL port_from = TLL_A" \
+  "select port_from from ferry_routes where code='TLLA-HEL'" TLL_A
+# RPC z GUARD (nullguard) — sesja authenticated jak front
+chk "BN1: kraje TLL-HEL EE→FI" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select country_from||'-'||country_to from public.ferry_route_port_countries('TLL-HEL');
+   rollback" EE-FI
+chk "BN1: kraje GDN-NYN PL→SE" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select country_from||'-'||country_to from public.ferry_route_port_countries('GDN-NYN');
+   rollback" PL-SE
+chk "BN1: snapshot ma trasy bałtyckie" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (ferry_dict_snapshot()->'routes') @> '[{\"code\":\"PLD-KPS\"}]'::jsonb;
+   rollback" t
+chk "BN1: strefa Terminal Tallinn A" \
+  "select count(*) from geofences where name='Terminal Tallinn A' and kind='PORT_OUT'" 1
+chk "BN1: strefa Terminal Tallinn D HEL" \
+  "select count(*) from geofences where name='Terminal Tallinn D HEL' and kind='PORT_OUT'" 1
+chk "BN1: strefa Terminal Kapellskär" \
+  "select count(*) from geofences where name='Terminal Kapellskär' and kind='PORT_IN'" 1
+chk "BN1: sailings source TALLINK dozwolone (rollback)" \
+  "begin; insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+     values ('77777777-0000-0000-0000-00000000b001', '$P',
+             '66666666-0000-0000-0000-000000000001', 'TLL-HEL',
+             now(), now() + interval '2 hours', 'ZAPLANOWANY', 'TALLINK');
+   select source from sailings where id='77777777-0000-0000-0000-00000000b001';
+   rollback" TALLINK
+# F7 B5: bałtyckie self-aliasy nie w eta_route_aliases (założony rejs = tylko PL→SE)
+chk "BN1: brak self-alias TLL-HEL w eta_route_aliases" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key='TLL-HEL'" 0
+chk "BN1: brak self-alias PLD-KPS w eta_route_aliases" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key='PLD-KPS'" 0
+chk "BN1: założony rejs tylko PL (GDN-NYN/GDY-KAA)" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key in ('GDN-NYN','GDY-KAA')" 2
+# F7: eta_obs_operator_key = upper(btrim) przez ferry_route_primary_operator
+chk "BN1: eta_obs_operator_key NYN-GDN" \
+  "select public.eta_obs_operator_key('NYN-GDN')" POLFERRIES
+chk "BN1: eta_obs_operator_key KAA-GDY" \
+  "select public.eta_obs_operator_key('kaa-gdy')" STENA
+chk "BN1: eta_obs_operator_key POLFERRIES" \
+  "select public.eta_obs_operator_key('POLFERRIES')" POLFERRIES
+chk "BN1: eta_obs_operator_key STENA" \
+  "select public.eta_obs_operator_key('STENA')" STENA
+chk "BN1: eta_obs_operator_key NULL" \
+  "select coalesce(public.eta_obs_operator_key(null), '')" ""
+chk "BN1: port NYN współrzędne 0017" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='NYN'" "58.90453/17.95621"
+chk "BN1: port PLD South Harbour" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='PLD'" "59.33300/24.08300"
+chk "BN1: port TLL_D F7 wschód" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='TLL_D'" "59.44000/24.77500"
+# PORT_OUT A/D rozłączne (środki ~590 m, r=250 → suma 500)
+chk "BN1: Tallinn A/D rozłączne (>500 m)" \
+  "select ((111320*sqrt(power(a.lat-d.lat,2)+power((a.lon-d.lon)*cos(radians((a.lat+d.lat)/2)),2)))::int > 500)
+     from ferry_ports a, ferry_ports d where a.code='TLL_A' and d.code='TLL_D'" t
+# Strefy po rodzinie trasy (nie primary operator) — Viking/Eckerö ↔ TLL-HEL; Tallink STO ≠ HEL
+chk "BN1: family TLLA-HEL → TLL-HEL" \
+  "select public.eta_obs_route_family('TLLA-HEL')" TLL-HEL
+chk "BN1: family HELA-TLL → TLL-HEL" \
+  "select public.eta_obs_route_family('HELA-TLL')" TLL-HEL
+chk "BN1: family TLL-STO" \
+  "select public.eta_obs_route_family('TLL-STO')" TLL-STO
+chk "BN1: match strefa TLL-HEL × TLLA-HEL" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','TLLA-HEL')" t
+chk "BN1: brak match TLL-HEL × TLL-STO" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','TLL-STO')" f
+chk "BN1: match POLFERRIES × GDN-NYN" \
+  "select public.ferry_geofence_matches_route('POLFERRIES','GDN-NYN')" t
+chk "BN1: match STENA × GDY-KAA" \
+  "select public.ferry_geofence_matches_route('STENA','GDY-KAA')" t
+chk "BN1: brak match TLL-HEL × GDN-NYN" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','GDN-NYN')" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
