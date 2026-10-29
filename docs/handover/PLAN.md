@@ -1117,16 +1117,21 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Pierwszy rebuild prod (28.10, przed 0328)~~: 17/29; PORT_CHECKIN 1+5 BRAK (błąd pomiaru EXIT≥PIN).
 3. ~~**0328** (PR #619)~~ — **SCALONE** (`07d27ba7`, F7 gotowe @ `61eb3284`, deploy-main `40787814059`). EXIT PORT_OUT tylko **≤ PIN** (bez PIN: ≤ SITE/`actual_delivery_at`); gdy brak → `actual` potem `delayed` (**> ENTER, < PIN**); actual poza oknem → BRAK bez delayed; plan i GPS_LAST → BRAK; `port_out_src`; D1/D3; CROSSING tylko gdy PIN **>** EXIT **>** ENTER; `SE_ROAD_KAA_INLAND` w słowniku (**bez** mapowania `eta_route_segments` do 27B). #624 wchłonięte. p4k **98**. Front — **#620/#621 SCALONE**.
 4. **Rebuild po 0328** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. OK 18 / wykluczenia 25. Per odcinek: PORT_CHECKIN **6/0**; CROSSING_GDY_KAA 2+1 BRAK; CROSSING_GDN_NYN 2+1 BRAK; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4_BLEDNY_POMIAR. `port_out_src`: PORT_CHECKIN EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2 każdy. Kalibracja nadal **nie czyta** `port_out_src` (przegląd po danych).
-5. **#626 otwarte:** 4 zawyżone pomiary (EXIT=PIN / późny PIN) — po #622: wykluczenia `H4_BLEDNY_POMIAR` + migracja; nie zamykać #603 bez #626.
+5. **#626 W TOKU** (poniżej): wykluczenia H4 na prod zrobione; migracja **0330**.
 
-### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**, PR #628)
-Źródło: #622 (Spawn2018; kolejność koordynatora 29.10: **#622 → #626 → 27B:C**). Front ostrzeżenia dwóch nr — #623 SCALONE.
-1. **0329 (F7 r3):** WT = tylko pełny człon; textId = człony + prefiksy od 1. fragmentu; `regexp_replace(upper(x), …)` (F7 r3 — małe litery); ranking P1; reclaim INSERT-only + `p_until` + refresh bez geofence; P4-bis; wspólna tabela przypadków TS↔SQL; status **398**. Remis dwóch WT → sierota + alarm. Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji („ciągnik naczepa”) — świadome.
-2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC (partie z `p_until` gdy >800) — wynik w #622. Bez tablic produkcyjnych w repo/testach. **B3:** #627 rebase 0329→**0330** przed scaleniem któregokolwiek.
+### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — SCALONE (`27abf140` / PR #628 / **0329**, 29.10.2026 03:29Z; reclaim po deploy)
+Źródło: #622 (Spawn2018; kolejność: ~~#622~~ → **#626** → 27B:C). Front ostrzeżenia dwóch nr — #623 SCALONE.
+1. **0329:** WT = pełny człon; textId = człony + prefiksy od 1. fragmentu; `regexp_replace(upper(x), …)`; ranking P1; reclaim INSERT-only + `p_until`; status **398**. F7 gotowe @ `6a9dadb0`.
+2. **Reclaim SG-21** od 27.10 10:21 UTC (7×6 h): **reclaimed=743**; sieroty naczepy od 27.10 **0**; pozycje od 27.10 **769**; ostatnia **2026-10-29 03:32:57Z** `EMTRACK_WEB`; status **IN_TRANSIT_SE**; otwarte `EMTRACK_ORPHAN` **0**. B3: #627 → **0331** (#626 bierze 0330).
+
+### #626 · EXIT=PIN / późny PIN zawyżają odprawę/rejs — W TOKU (`pakiet/626-eta-exit-pin-strict`, migracja **0330**, PR #629)
+Źródło: #626 (Spawn2018; po #622). 4 pomiary wykluczone `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357) przed PR.
+1. **0330 (F7 r3):** EXIT ściśle `< PIN` (okno do `PIN−1µs`); `eff_dep = coalesce(actual, delayed)`; przy EVENT EXIT: pasuje ⇔ `abs(EXIT−eff_dep)≤1h`, inaczej EVENT + `sailing_mismatch` (CROSSING **bez** trim); bez EVENT: `eff_dep` w oknie ENTER…PIN → `SAILING_ACTUAL`/`SAILING_DELAYED`; CROSSING trim `arrival+1h` / `pin_late_h` **tylko gdy pasuje**; `arrival < EXIT → BRAK` **tylko gdy** `sailing_ok` (przesiadka z przybiciem A przed EXIT B zostaje ważna). p4k **108**. **Backlog (osobny mały PR):** kalibracja 0320 — pomijać `features.sailing_mismatch` dla PORT_CHECKIN; CROSSING z mismatch zostaje; reszta flag informacyjnie. **Ograniczenie:** w gałęzi (2) nieaktualnego `sailing_id` nie da się wykryć. **Backlog:** osobny odcinek „postój w porcie SE”.
+2. Po wdrożeniu: (a) usuń ręczne `H4_BLEDNY_POMIAR` obs 265/283/343/357; (b) rebuild od 05.10; (c) tabela w #626. Nie zamykać #603 bez tego.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #622+#626+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo. **Uwaga:** gałąź `pakiet/27B-kaa-dual-corridor` (PR #627) ma tymczasowo migrację 0329 — po scaleniu #622 rebase → **0330**.
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** (E4 przez Sztokholm **i** ślad SG-23 Norrköping→…→Gävle). Po #622+#626+#603: alarm OFF_CORRIDOR do **najbliższego z dwóch** korytarzy; ETA SE po faktycznym korytarzu (przed rozwidleniem = E4); mapa obie linie (druga z HERE po punktach SG-23, warunek jak B12); kalibracja: dwa odcinki SE_ROAD w słowniku (#603). Bez śladu GPS w repo. **Uwaga:** #627 migracja **0331** (po #626/**0330**).
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
 4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
@@ -1961,3 +1966,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 03:05 | #622 CI @ 1a4350b1 db FAIL (ranking 3/1 vs 3/2; risks +rk_emtrack_orphan) — poprawka asercji + begin/commit 0329 | pętla |
 | 29.10.2026 03:30 | #622 F7 r2 w #628: B1-bis/P3-bis/P4-bis/perf; status **386**; CI @ 3a7c7b25 zielone → push r2 | pętla |
 | 29.10.2026 03:55 | #622 F7 r3 w #628: `regexp_replace(upper(…))`; wspólna tabela TS↔SQL; refresh=true; status **398**; CI e9de427 ✔ → push | pętla |
+| 29.10.2026 04:30 | #622 SCALONE (`27abf140`); reclaim SG-21 743; #627 → **0331**; start **#626** **0330** (wykluczenia H4 + EXIT&lt;PIN / CROSSING) | pętla |
+| 29.10.2026 05:10 | #626 F7 r1 POPRAWKI (P1 sailing_ok / P2 EXIT przed PIN); p4k **106**; CI db 97/5 → UUID + logika | pętla |
+| 29.10.2026 05:30 | #626 F7 r2 @ 35fca542: eff_dep; ±1h; trim tylko gdy ok; p4k **107**; CI ✔ | pętla |
+| 29.10.2026 05:55 | #626 F7 r3: arrival&lt;EXIT BRAK tylko przy sailing_ok; test przesiadki A&lt;EXIT; p4k **108**; backlog kalibracja mismatch | pętla |
