@@ -1446,7 +1446,8 @@ val "#626: EXIT=PIN → PORT_CHECKIN z SAILING_ACTUAL" \
    )::text;
    rollback;" "true"
 
-val "#626: EXIT po odejściu promu → SAILING_ACTUAL" \
+# F7 r2: EXIT >1 h po eff_dep → EVENT zostaje + sailing_mismatch (nie ścieżka actual)
+val "#626: EXIT po odejściu promu → EVENT + mismatch" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, actual_delivery_at)
@@ -1489,8 +1490,9 @@ val "#626: EXIT po odejściu promu → SAILING_ACTUAL" \
         where load_id='a626a626-0000-4000-8000-000000000002'
           and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
           and exclude_reason is null
-          and features->>'port_out_src' = 'SAILING_ACTUAL'
-          and round(hours_observed) = 3
+          and features->>'port_out_src' = 'EVENT'
+          and (features->>'sailing_mismatch') = 'true'
+          and round(hours_observed) = 5
      )
    )::text;
    rollback;" "true"
@@ -1598,7 +1600,7 @@ val "#626: brak actual_arrival → CROSSING jak dziś (PIN)" \
    )::text;
    rollback;" "true"
 
-# F7 r1 P1: nieaktualny sailing_id — EXIT EVENT zostaje + sailing_mismatch
+# F7 r2: EXIT 6 h po eff_dep → EVENT + mismatch; CROSSING do PIN (bez trim arrival)
 val "#626 F7: sailing_mismatch — EXIT EVENT zostaje" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
@@ -1649,6 +1651,79 @@ val "#626 F7: sailing_mismatch — EXIT EVENT zostaje" \
           and (features->>'sailing_mismatch') = 'true'
           and round(hours_observed) = 9
      )
+     and exists (
+       select 1 from eta_segment_observations
+        where load_id='a626a626-0000-4000-8000-000000000005'
+          and corridor like 'CROSSING%' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'pin_src' = 'EVENT'
+          and coalesce(features ? 'pin_late_h', false) is not true
+          and round(hours_observed) = 18
+     )
+   )::text;
+   rollback;" "true"
+
+# F7 r2: przesiadka — EXIT 6 h po eff_dep A, PIN w 6 h po przybiciu A → EVENT+mismatch, CROSSING do PIN
+val "#626 F7: przesiadka — mismatch, CROSSING do PIN" \
+  "begin;
+   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, actual_delivery_at)
+   select 'a626a626-0000-4000-8000-000000000009', project_id, 'P4K-626I', 'HHL-626I', 'SCX-626I',
+          'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-21 18:00+02'
+     from loads where id='a581a581-0000-4000-8000-000000000581';
+   insert into vessels (id, name, operator) values
+     ('a626a626-0000-4000-8000-0000000000a9', 'P4K-Ferry-626I', 'POLFERRIES')
+   on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+                         actual_departure_at, actual_arrival_at, status, source)
+   values (
+     'a626a626-0000-4000-8000-0000000000b9',
+     (select project_id from loads where id='a626a626-0000-4000-8000-000000000009'),
+     'a626a626-0000-4000-8000-0000000000a9',
+     'GDN-NYN',
+     timestamptz '2026-10-18 16:00+02',
+     timestamptz '2026-10-19 08:00+02',
+     timestamptz '2026-10-18 17:00+02',
+     timestamptz '2026-10-19 08:00+02',
+     'ZAPLANOWANY', 'RECZNIE'
+   ) on conflict (id) do update
+     set actual_departure_at = excluded.actual_departure_at,
+         actual_arrival_at = excluded.actual_arrival_at;
+   update loads set sailing_id = 'a626a626-0000-4000-8000-0000000000b9'
+    where id = 'a626a626-0000-4000-8000-000000000009';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
+   t(ev, k, ts) as (values
+     ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
+     ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
+     ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-18 23:05+02'),
+     ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-19 12:00+02')
+   )
+   insert into load_events (load_id, event_type, occurred_at, payload)
+   select 'a626a626-0000-4000-8000-000000000009', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', coalesce(f.route, 'POLFERRIES'))
+     from t join f on f.k = t.k;
+   select eta_record_segment_observations('a626a626-0000-4000-8000-000000000009');
+   select (
+     exists (
+       select 1 from eta_segment_observations
+        where load_id='a626a626-0000-4000-8000-000000000009'
+          and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'port_out_src' = 'EVENT'
+          and (features->>'sailing_mismatch') = 'true'
+          and round(hours_observed) = 9
+     )
+     and exists (
+       select 1 from eta_segment_observations
+        where load_id='a626a626-0000-4000-8000-000000000009'
+          and corridor like 'CROSSING%' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'pin_src' = 'EVENT'
+          and (features->>'sailing_mismatch') = 'true'
+          and coalesce(features ? 'pin_late_h', false) is not true
+          and round(hours_observed) = 13
+     )
    )::text;
    rollback;" "true"
 
@@ -1686,6 +1761,7 @@ val "#626 F7: dwa EXIT — wybór przed PIN (nie = PIN)" \
    )::text;
    rollback;" "true"
 
+# F7 r2: EXIT w ±1 h od odejścia → EVENT bez mismatch; PIN 3 h → ARR bez pin_late_h
 val "#626 F7: PIN 3 h po przybiciu → SAILING_ACTUAL_ARR bez pin_late_h" \
   "begin;
    insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
@@ -1728,6 +1804,15 @@ val "#626 F7: PIN 3 h po przybiciu → SAILING_ACTUAL_ARR bez pin_late_h" \
    select eta_record_segment_observations('a626a626-0000-4000-8000-000000000007');
    select (
      exists (
+       select 1 from eta_segment_observations
+        where load_id='a626a626-0000-4000-8000-000000000007'
+          and corridor='PORT_CHECKIN' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'port_out_src' = 'EVENT'
+          and coalesce(features ? 'sailing_mismatch', false) is not true
+          and round(hours_observed) = 3
+     )
+     and exists (
        select 1 from eta_segment_observations
         where load_id='a626a626-0000-4000-8000-000000000007'
           and corridor like 'CROSSING%' and (features->>'p4k')='true'

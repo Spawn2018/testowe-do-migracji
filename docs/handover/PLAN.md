@@ -1126,7 +1126,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #626 · EXIT=PIN / późny PIN zawyżają odprawę/rejs — W TOKU (`pakiet/626-eta-exit-pin-strict`, migracja **0330**, PR #629)
 Źródło: #626 (Spawn2018; po #622). 4 pomiary wykluczone `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357) przed PR.
-1. **0330:** EXIT ściśle `< PIN` (okno do `PIN−1µs`); EXIT/`actual` tylko gdy rejs pasuje (`PIN ≤ arrival+6h` albo actual w oknie); inaczej EVENT + `sailing_mismatch`; CROSSING `min(PIN, arrival+1h)`; `pin_src` / `pin_late_h` (też SE_ROAD). p4k **106**. Kalibracja nadal nie czyta `pin_src`/`port_out_src`/`pin_late_h` (wiersze z `pin_late_h` / `SAILING_DELAYED` = ważne — przegląd po danych). **Backlog:** osobny odcinek „postój w porcie SE”.
+1. **0330 (F7 r2):** EXIT ściśle `< PIN` (okno do `PIN−1µs`, bez `actual+1h`); `eff_dep = coalesce(actual, delayed)`; przy EVENT EXIT: pasuje ⇔ `abs(EXIT−eff_dep)≤1h`, inaczej EVENT + `sailing_mismatch` (CROSSING **bez** trim); bez EVENT: `eff_dep` w oknie ENTER…PIN → `SAILING_ACTUAL`/`SAILING_DELAYED`; CROSSING trim `arrival+1h` / `pin_late_h` **tylko gdy pasuje**. p4k **107**. Kalibracja nadal nie czyta `sailing_mismatch`/`pin_src`/`port_out_src`/`pin_late_h` (wiersze ważne — przegląd po danych). **Backlog:** osobny odcinek „postój w porcie SE”.
 2. Po wdrożeniu: (a) usuń ręczne `H4_BLEDNY_POMIAR` obs 265/283/343/357; (b) rebuild od 05.10; (c) tabela w #626. Nie zamykać #603 bez tego.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)

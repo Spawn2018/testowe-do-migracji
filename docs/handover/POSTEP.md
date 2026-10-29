@@ -6656,3 +6656,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. Testy: UUID hex; +mismatch / dwa EXIT / PIN 3h / arrival&lt;EXIT; #603 EXIT=PIN → PORT_CHECKIN BRAK. p4k **106**.
   5. PLAN: kalibracja nie czyta pin_*/port_out_src; backlog „postój w porcie SE”.
 - Po zielonym CI — F7 r2. Kolejność dalej: #626 → 27B:C (#627 = **0331**).
+
+## 2026-10-29 05:30 — #626 F7 r2 POPRAWKI (PR #629) — reguła eff_dep
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`. Bez „F7: gotowe”.
+- CI @ `f231c5cd`: unit/visual ✔; **db FAIL** p4k 105/1 (`#603: delayed → SAILING_DELAYED` — regresja F7 r1: `v_sailing_ok` wymagało `actual`).
+- F7 r2 @ `f231c5c` = **POPRAWKI** (uproszczenie zgodności rejsu).
+- **Krok F7 r2:**
+  1. `eff_dep = coalesce(actual_departure_at, delayed_departure_at)`.
+  2. EVENT EXIT &lt; PIN: pasuje ⇔ `abs(EXIT−eff_dep)≤1h`; inaczej EVENT + `sailing_mismatch`, CROSSING **bez** trim.
+  3. Brak EVENT: `eff_dep` w oknie → ACTUAL/DELAYED; actual poza oknem → BRAK bez delayed.
+  4. Usunięte: `PIN ≤ arrival+6h` i limit okna EXIT do `actual+1h`.
+  5. CROSSING trim / `pin_late_h` tylko gdy rejs pasuje. Testy: delayed; przesiadka; EXIT±1h bez mismatch; EXIT&gt;1h → EVENT+mismatch. p4k **107**.
+- Po zielonym CI — F7 r3. Kolejność: #626 → 27B:C (#627 = **0331**).
