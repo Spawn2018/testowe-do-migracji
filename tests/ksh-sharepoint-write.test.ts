@@ -3,7 +3,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
-import { uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
+import { shareUrlToShareId, uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
 import {
   conflictFieldFromSnaps,
   fileAlreadyHasPatch,
@@ -23,12 +23,32 @@ import {
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
+import { processOutboundWrites } from '../supabase/functions/_shared/ksh/outboundWrite';
+import {
+  cellAlreadyHasTarget,
+  cellMatchesExpected,
+  columnHasDateFormat,
+  formatLooksLikeDate,
+  indexToColLetters,
+  layoutFromValuesForTest,
+  parseUsedRangeOrigin,
+  stripLeadingApostrophe,
+  textValueForPatch,
+  writePatchesViaWorkbook,
+} from '../supabase/functions/_shared/ksh/workbookCellWrite';
+import {
+  isOutboundTransientReason,
+  outboundTransientRetryDelayMinutes,
+} from '../supabase/functions/_shared/ksh/outboundTransient';
+import { WORKBOOK_AUTH_REASON } from '../supabase/functions/_shared/ksh/graphWorkbook';
 
 const env = (): GraphEnv => ({
   SHAREPOINT_TENANT_ID: 't',
   SHAREPOINT_CLIENT_ID: 'c',
   SHAREPOINT_CLIENT_SECRET: 's',
   SHAREPOINT_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/a.xlsx',
+  SHAREPOINT_TEST_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/test.xlsx',
+  SHAREPOINT_FILE_MODE: 'test',
 });
 
 describe('A6 outboundWriteProdGate (#637 F7)', () => {
@@ -263,6 +283,742 @@ describe('A6 xlsxPatchTime', () => {
     expect(excelTimeFromHm('bad')).toBeNull();
     expect(normalizeHm('8:05')).toBe('08:05');
     expect(normalizeHm(null)).toBeNull();
+  });
+});
+
+describe('#645 workbook transient backoff', () => {
+  it('5 → 15 → 30 → 60 min', () => {
+    expect(outboundTransientRetryDelayMinutes(1)).toBe(5);
+    expect(outboundTransientRetryDelayMinutes(2)).toBe(15);
+    expect(outboundTransientRetryDelayMinutes(3)).toBe(30);
+    expect(outboundTransientRetryDelayMinutes(4)).toBe(60);
+  });
+  it('429/503/423 = transient; auth 403 nie', () => {
+    expect(isOutboundTransientReason('workbook_http_429')).toBe(true);
+    expect(isOutboundTransientReason('workbook_http_503')).toBe(true);
+    expect(isOutboundTransientReason('upload_http_423')).toBe(true);
+    expect(isOutboundTransientReason('network_workbook_patch')).toBe(true);
+    expect(isOutboundTransientReason('upload_http_403')).toBe(false);
+    expect(isOutboundTransientReason(WORKBOOK_AUTH_REASON)).toBe(false);
+  });
+});
+
+describe('#645 cellMatchesExpected / layout / B2 / B8', () => {
+  it('layout: kod → wiersz po nagłówku Wysyłka', () => {
+    const layout = layoutFromValuesForTest([
+      [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverName],
+      ['SG-01', 'OLD', 'Jan'],
+      ['SG-02', 'X', ''],
+    ]);
+    expect('error' in layout).toBe(false);
+    if (!('error' in layout)) {
+      expect(layout.codeRow.get('SG-01')).toBe(2);
+      expect(layout.headerCol.get(COLUMN_MAP_DEFAULT.scxOrderNo)).toBe(2);
+    }
+  });
+  it('B8: usedRange z przesunięciem kolumn; nagłówek nie w wierszu 1 → no_code_col', () => {
+    expect(parseUsedRangeOrigin("Harmonogram!C1:E3")).toEqual({ row0: 0, col0: 2 });
+    const shifted = layoutFromValuesForTest(
+      [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+        ['SG-01', 'OLD'],
+      ],
+      'Harmonogram!C1:D2',
+    );
+    expect('error' in shifted).toBe(false);
+    if (!('error' in shifted)) {
+      expect(shifted.headerCol.get(COLUMN_MAP_DEFAULT.shipmentCode)).toBe(3);
+      expect(shifted.codeRow.get('SG-01')).toBe(2);
+      expect(indexToColLetters(27)).toBe('AA');
+    }
+    const bad = layoutFromValuesForTest(
+      [[COLUMN_MAP_DEFAULT.shipmentCode], ['SG-01']],
+      'Sheet1!A2:A3',
+    );
+    expect(bad).toEqual({ error: 'no_code_col' });
+  });
+  it('B2: apostrof / formuła / wiodące zero / +tel / PL/SE', () => {
+    expect(textValueForPatch('=1+1')).toBe("'=1+1");
+    expect(stripLeadingApostrophe("'0701234567")).toBe('0701234567');
+    expect(cellMatchesExpected("'0701234567", '0701234567', 'text')).toBe(true);
+    expect(cellMatchesExpected("'+46701234567", '+46701234567', 'text')).toBe(true);
+    expect(cellMatchesExpected("'PL / SE", 'PL / SE', 'text')).toBe(true);
+    expect(cellAlreadyHasTarget("'NEW", 'NEW', 'text')).toBe(true);
+  });
+  it('data serial vs ISO', () => {
+    expect(cellMatchesExpected(46321, '2026-10-26', 'date')).toBe(true);
+    expect(cellMatchesExpected('26.10.2026', '2026-10-26', 'date')).toBe(true);
+    expect(cellMatchesExpected(46322, '2026-10-26', 'date')).toBe(false);
+  });
+});
+
+describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
+  function mockFetch(opts?: {
+    conflictCo?: boolean;
+    http429?: boolean;
+    http403?: boolean;
+    alreadyNew?: boolean;
+    patch429After?: number;
+    usedAddress?: string;
+    throwOnUsedRange?: boolean;
+    numberFormat?: unknown[][];
+    values?: unknown[][];
+    secondCodeConflict?: boolean;
+  }) {
+    const calls: { method: string; url: string; headers?: HeadersInit; body?: string }[] = [];
+    let patchCount = 0;
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      calls.push({ method, url: u, headers: init?.headers, body: typeof init?.body === 'string' ? init.body : undefined });
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/content')) {
+        return new Response('PUT forbidden in #645', { status: 500 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook') && method === 'GET') {
+        return new Response(JSON.stringify({
+          id: 'item1',
+          parentReference: { driveId: 'drive1' },
+          name: 'a.xlsx',
+          size: 100,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        if (opts?.http403) return new Response('{"error":{}}', { status: 403 });
+        if (opts?.http429) return new Response('{"error":{}}', { status: 429 });
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) {
+        return new Response('{}', { status: 204 });
+      }
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        if (opts?.throwOnUsedRange) throw new TypeError('boom-used');
+        const co = opts?.alreadyNew ? 'NEW' : (opts?.conflictCo ? 'OTHER' : 'OLD');
+        const values = opts?.values ?? [
+          [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+          ['SG-01', co, ''],
+          ...(opts?.secondCodeConflict
+            ? [['SG-02', 'OTHER', ''] as unknown[]]
+            : []),
+        ];
+        return new Response(JSON.stringify({
+          address: opts?.usedAddress ?? 'Harmonogram!A1:C2',
+          values,
+          numberFormat: opts?.numberFormat ?? [
+            ['General', 'General', 'General'],
+            ['General', 'General', 'General'],
+            ...(opts?.secondCodeConflict ? [['General', 'General', 'General']] : []),
+          ],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        patchCount += 1;
+        if (opts?.patch429After != null && patchCount > opts.patch429After) {
+          return new Response('{"error":{}}', { status: 429 });
+        }
+        const body = init?.body ? JSON.parse(String(init.body)) as { values: unknown[][] } : null;
+        // B2: tekst (apostrof) vs data/godzina tekstowa / serial — bez wymuszania ' na datach.
+        if (body?.values?.[0]?.[0] != null && typeof body.values[0][0] === 'string') {
+          const s = String(body.values[0][0]);
+          const dateOrTime = /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(s) || /^\d{1,2}:\d{2}$/.test(s);
+          if (!dateOrTime) expect(s.startsWith("'")).toBe(true);
+        }
+        return new Response(JSON.stringify({ values: body?.values ?? [['x']] }), { status: 200 });
+      }
+      return new Response(`unhandled ${method} ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+    return { fetchFn, calls };
+  }
+
+  it('sesja → zapis carrier_order_no; closeSession; brak PUT /content; nagłówek sesji', async () => {
+    const { fetchFn, calls } = mockFetch();
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toContain('SG-01');
+      expect(r.conflicts).toEqual([]);
+    }
+    expect(calls.some((c) => c.url.includes('/content'))).toBe(false);
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+    const withSession = calls.filter((c) =>
+      c.url.includes('workbook') && !c.url.includes('createSession')
+    );
+    for (const c of withSession) {
+      const h = c.headers as Record<string, string> | undefined;
+      expect(h?.['workbook-session-id'] ?? (h as Headers | undefined)?.get?.('workbook-session-id'))
+        .toBeTruthy();
+    }
+  });
+
+  it('B1: komórka już = docelowa → bez PATCH, written', async () => {
+    const { fetchFn, calls } = mockFetch({ alreadyNew: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toContain('SG-01');
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
+  });
+
+  it('konflikt komórki gdy plik ≠ expected', async () => {
+    const { fetchFn } = mockFetch({ conflictCo: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toEqual([]);
+      expect(r.conflicts.some((c) => c.code === 'SG-01')).toBe(true);
+    }
+  });
+
+  it('429 createSession → workbook_http_429 + closeSession nie (brak sesji)', async () => {
+    const { fetchFn, calls } = mockFetch({ http429: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('workbook_http_429');
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(false);
+  });
+
+  it('B7: 403 createSession → workbook_auth_403 + permission', async () => {
+    const { fetchFn } = mockFetch({ http403: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe(WORKBOOK_AUTH_REASON);
+      expect(r.permission).toMatch(/Files\.ReadWrite/);
+    }
+  });
+
+  it('test → shareId z SHAREPOINT_TEST_FILE_URL', async () => {
+    const { fetchFn, calls } = mockFetch();
+    const e = env();
+    e.SHAREPOINT_FILE_MODE = 'test';
+    await writePatchesViaWorkbook({
+      env: e,
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    const want = shareUrlToShareId(e.SHAREPOINT_TEST_FILE_URL!);
+    const shareCalls = calls.filter((c) => c.url.includes('/shares/'));
+    expect(shareCalls.some((c) => c.url.includes(want))).toBe(true);
+    expect(shareCalls.every((c) => !c.url.includes(shareUrlToShareId(e.SHAREPOINT_FILE_URL!)))).toBe(true);
+  });
+
+  it('strażnik test_url_equals_prod', async () => {
+    const { fetchFn } = mockFetch();
+    const e = env();
+    e.SHAREPOINT_FILE_MODE = 'test';
+    e.SHAREPOINT_FILE_URL = e.SHAREPOINT_TEST_FILE_URL;
+    const r = await writePatchesViaWorkbook({
+      env: e,
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('test_url_equals_prod');
+  });
+
+  it('B2: telefon z wiodącym zerem jako tekst z apostrofem', async () => {
+    const { fetchFn, calls } = mockFetch();
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.body).toContain("'0701234567");
+  });
+
+  it('R1: 429 w środku pętli → writtenCodes tylko pełne kody; closeSession', async () => {
+    const { fetchFn, calls } = mockFetch({ patch429After: 1 });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe('workbook_http_429');
+      expect(r.writtenCodes).toEqual([]);
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+  });
+
+  it('R1: ponowienie po częściowym — skip_applied + dokończenie drugiego pola', async () => {
+    const { fetchFn, calls } = mockFetch({
+      alreadyNew: true,
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+        ['SG-01', 'NEW', ''],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toEqual(['SG-01']);
+    const patches = calls.filter((c) => c.method === 'PATCH');
+    expect(patches.length).toBe(1);
+    expect(patches[0].body).toContain("'0701234567");
+  });
+
+  it('closeSession po wyjątku w trakcie sesji (usedRange)', async () => {
+    const { fetchFn, calls } = mockFetch({ throwOnUsedRange: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('network_workbook_used');
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+  });
+
+  it('B8 e2e: usedRange C1 → PATCH na D2 (scx)', async () => {
+    const { fetchFn, calls } = mockFetch({ usedAddress: 'Harmonogram!C1:E2' });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.url).toMatch(/range\(address='D2'\)/);
+  });
+
+  it('R2: konflikt kodu B blokuje PATCH kodu A tej samej pozycji (itemKey)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      secondCodeConflict: true,
+      usedAddress: 'Harmonogram!A1:C3',
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+        ['SG-01', 'OLD', ''],
+        ['SG-02', 'OTHER', ''],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [
+        { code: 'SG-01', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+        { code: 'SG-02', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+      ],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-02': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toEqual([]);
+      expect(r.conflicts.some((c) => c.code === 'SG-02')).toBe(true);
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
+  });
+
+  it('R3/R4: pusta komórka + General → tekst daty; format daty → serial; [Red] ≠ data', () => {
+    expect(formatLooksLikeDate('General')).toBe(false);
+    expect(formatLooksLikeDate('dd.mm.yyyy')).toBe(true);
+    expect(formatLooksLikeDate('[Red]0.00')).toBe(false);
+    expect(formatLooksLikeDate('0.00;[Red]-0.00')).toBe(false);
+    expect(formatLooksLikeDate('"yd"0.00')).toBe(false);
+    expect(columnHasDateFormat(
+      [['General', 'dd.mm.yyyy'], ['General', 'dd.mm.yyyy']],
+      2,
+      { row0: 0, col0: 0 },
+    )).toBe(true);
+    expect(columnHasDateFormat(
+      [['General', 'General'], ['General', 'General']],
+      2,
+      { row0: 0, col0: 0 },
+    )).toBe(false);
+  });
+
+  it('R3: pusta data przy General → PATCH tekstem dd.mm.yyyy (nie serial)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.loadDate],
+        ['SG-01', ''],
+      ],
+      numberFormat: [
+        ['General', 'General'],
+        ['General', 'General'],
+      ],
+      usedAddress: 'Harmonogram!A1:B2',
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', load_date: '2026-10-26' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    const body = patch?.body ? JSON.parse(patch.body) as { values: unknown[][] } : null;
+    expect(body?.values?.[0]?.[0]).toBe('26.10.2026');
+  });
+});
+
+describe('#645 processOutboundWrites (R1 ack / note_423 / 403)', () => {
+  const snap = { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null };
+  const item = {
+    id: 7,
+    load_id: 'load-1',
+    code: 'SG-01',
+    codes: ['SG-01'],
+    rev: 1,
+    attempts: 0,
+    patch: { carrier_order_no: 'NEW' },
+    expected_file: snap,
+  };
+
+  function mockSb(opts?: { upsertFail?: boolean }) {
+    const rpcs: { name: string; args: Record<string, unknown> }[] = [];
+    const sb = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') {
+          return { data: [item], error: null };
+        }
+        if (name === 'ksh_sync_state_upsert' && opts?.upsertFail) {
+          return { data: null, error: { message: 'upsert fail' } };
+        }
+        return { data: true, error: null };
+      }),
+    };
+    return { sb: sb as never, rpcs };
+  }
+
+  it('403 → failed + jedna sprawa l1b_note_outbound_failed; bez note_423', async () => {
+    const { sb, rpcs } = mockSb();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) return new Response('{}', { status: 403 });
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      return new Response('no', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('workbook_auth_403');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'failed')).toBe(true);
+    expect(rpcs.filter((c) => c.name === 'l1b_note_outbound_failed').length).toBe(1);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_note_423')).toBe(false);
+  });
+
+  it('429 częściowy → note_423 bez ack done (brak pełnego kodu)', async () => {
+    const { sb, rpcs } = mockSb();
+    let patchCount = 0;
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:C2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+            ['SG-01', 'OLD', ''],
+          ],
+          numberFormat: [['General', 'General', 'General'], ['General', 'General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        patchCount += 1;
+        if (patchCount > 1) return new Response('{}', { status: 429 });
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const item2fields = {
+      ...item,
+      patch: { carrier_order_no: 'NEW', driver_phone: '0701234567' },
+    };
+    const sb2 = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') return { data: [item2fields], error: null };
+        return { data: true, error: null };
+      }),
+    };
+
+    const r = await processOutboundWrites({
+      sb: sb2 as never,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('workbook_http_429');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_note_423')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(false);
+  });
+
+  it('sukces → ack done + clear_423', async () => {
+    const { sb, rpcs } = mockSb();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:C2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+            ['SG-01', 'OLD', ''],
+          ],
+          numberFormat: [['General', 'General', 'General'], ['General', 'General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('ok');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(true);
+  });
+
+  it('R4: wielokod SG-01+SG-99 (SG-99 bez wiersza) → done + clear_423', async () => {
+    const rpcs: { name: string; args: Record<string, unknown> }[] = [];
+    const multi = {
+      ...item,
+      codes: ['SG-01', 'SG-99'],
+      patch: { carrier_order_no: 'NEW' },
+    };
+    const sb = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') return { data: [multi], error: null };
+        return { data: true, error: null };
+      }),
+    };
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        // Tylko SG-01 w pliku — SG-99 bez wiersza (#570 skipMissingWhenOtherPresent).
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:B2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+            ['SG-01', 'OLD'],
+          ],
+          numberFormat: [['General', 'General'], ['General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb: sb as never,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('ok');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'skipped'
+    )).toBe(false);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(true);
+  });
+
+  it('R4: upsertFail → write_reason state_upsert (bez clear_423)', async () => {
+    const { sb, rpcs } = mockSb({ upsertFail: true });
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:B2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+            ['SG-01', 'OLD'],
+          ],
+          numberFormat: [['General', 'General'], ['General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('state_upsert');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(false);
   });
 });
 

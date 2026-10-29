@@ -2,7 +2,7 @@
 -- Przed rozwidleniem (lat<58.55) → SE_E22; potem najbliższy z SE_E22 / śródlądowy.
 -- Godziny inland → SE_ROAD_KAA_INLAND (już w słowniku 0328); mapa HERE + mapowanie
 -- eta_route_segments — kolejne kroki tej pozycji.
--- #637 SCALONE (0334 write); ta migracja = **0335**. F7: REMOVED + Polferries causes.
+-- #646 SCALONE (0336 workbook); ta migracja = **0337** (było 0335). F7: REMOVED + Polferries causes.
 
 begin;
 

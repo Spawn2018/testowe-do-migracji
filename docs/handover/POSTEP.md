@@ -6824,6 +6824,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **W63c:** zamknąć plik testowy → „W63c gotowe” → enqueue + cykl → `write_test_ok_at`. Potem właściciel `FILE_MODE=prod` + jeden cykl odczytu prod przed backlogiem (F7 #642).
 - #638: F7 gotowe @ `fe9e350`, CI ✔, merge CONFLICTING (docs PLAN po #642) — rebase po W63c / równolegle bez przerywania #637.
 
+## 2026-10-29 15:55 — #645 workbook cell write (0335); W63c anulowane
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #645 (Spawn2018) = następny krok #637; #644 wstrzymane (PUT nie zadziała przy współedycji); #638 CONFLICTING — bez F7 „gotowe” do scalenia.
+- Scalanie: brak.
+- **Krok #645:** Graph Excel workbook API zamiast JSZip+PUT — `createSession` → GET komórki → konflikt vs migawka → `PATCH range` → `closeSession`. Migracja **0335** (backoff 429/503/504/423 z #644). Unit: sesja, konflikt komórki, 429, layout (37 w pliku write). Gałąź `pakiet/645-workbook-cell-write`.
+- Uprawnienia: docs MS — Application **Not supported** dla workbook (tylko delegated `Files.ReadWrite`); próba obecnym tokenem aplikacji; 401/403 → prośba do właściciela/IT w #637.
+- Po F7+deploy: próba na kopii **bez zamykania pliku** → `write_test_ok_at` → meldunek #637. #644 zamknięte jako zastąpione. Bez push na main.
+
 ## 2026-10-29 16:15 — #638 rebase na main (0335)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423).
@@ -6831,9 +6839,43 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - POSTEP przywrócony z main (dziennik tylko dopisywany) + ten wpis.
 - Czeka ponowne F7 po CI.
 
+## 2026-10-29 16:35 — #645 F7 #646 POPRAWKI (0336)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak F7 „gotowe”; CI @ 693d588 było zielone (unit/visual/db); F7 = POPRAWKI.
+- **F7 B1–B8:** dwie fazy odczyt→PATCH + idempotencja; tekst z `'`; sprawa file-locked z serią; `clear_423` jak 0295; bez wskrzeszania starej łatki; migracja **0336** (#638 zostaje **0335**); `workbook_auth_403` + permission; usedRange z przesunięciem.
+- Unit lokalnie **43/43** (`ksh-sharepoint-write`). Push → CI → ponowne F7. Bez push na main.
+- Kolejność scalania (F7 B6): najpierw #638 (0335, po rebase docs), potem #646 (0336).
+
+## 2026-10-29 17:00 — #645 F7 #646 POPRAWKI r2 (R1–R3)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (pilne, po bieżącym kroku); #499/#500/#537/#538 w planie.
+- Scalanie: brak — #646 F7 = POPRAWKI r2 (nie „gotowe”); #638 CONFLICTING z main, bez F7 po HEAD.
+- **R1:** postęp per job (kod+pole); `writtenCodes` / ack `done` tylko gdy wszystkie joby wszystkich kodów pozycji OK albo `skip_applied`; częściowy → `note_423`; błąd `ksh_sync_state_upsert` sprawdzany.
+- **R2:** `itemKey` (id outbound) — konflikt w jednym kodzie blokuje PATCH całej pozycji.
+- **R3:** `usedRange` z `numberFormat`; serial daty/godziny tylko gdy kolumna ma format daty/czasu; inaczej tekst `dd.mm.yyyy` / `HH:MM`.
+- Testy: 429 w pętli, ponowienie, closeSession po wyjątku, shareId z TEST URL, `test_url_equals_prod`, offset C1→D2, R2 itemKey, processOutboundWrites (403/`note_423`/`clear_423`). Unit **54/54**.
+- Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.
+
+## 2026-10-29 17:10 — #645 F7 #646 POPRAWKI r3 (R4)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #499/#500/#537/#538 w planie.
+- Scalanie: brak — #646 F7 = POPRAWKI r3 (1 bloker R4); #638 CONFLICTING, bez F7 „gotowe” po HEAD.
+- **R4:** `writePatchesViaWorkbook` → `codesWithJobs` + `incompleteCodes`; pozycja `done` gdy ≥1 kod z ukończonymi jobami, żaden incomplete, brak konfliktu (kody bez wiersza/jobów neutralne); `skipped`/`patch_no_cell` tylko gdy żaden kod nie miał jobów. Regresja #570 wielokod.
+- Nieblokujące: `formatLooksLikeDate` zdejmuje `[…]` i `"…"` przed `/[yd]/` (`[Red]0.00` ≠ data).
+- Testy: `codes:['SG-01','SG-99']` bez wiersza SG-99 → `done`+`clear_423`; `upsertFail` → `state_upsert`. Unit **56/56**.
+- Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.
+
 ## 2026-10-29 17:20 — #638 merge main po #643 (docs)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423) równolegle z #645 workbook na osobnej gałęzi.
 - F7 #638 @ 3e03d88: CONFLICTING z main po #643 (`bb3a742e`). Merge `origin/main` — konflikt tylko PLAN/POSTEP; dziennik z main zachowany, wpisy #638 dopisane na końcu.
 - Migracja **0335** + testy bez zmian kodu. Push → pełne CI → prośba o F7.
 - Kolejność scalania (F7 #646 B6): **#638 (0335) przed #646 (0336)**. Bez push na main.
+
+## 2026-10-29 17:45 — #646 SCALONE; próba na kopii OK; #638 → 0337
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (czeka `FILE_MODE=prod` właściciela).
+- Scalanie: #646 → `2c8e3e1c` (F7: gotowe @ `ff41ed3`; kolejność zmieniona — #646 przed #638). deploy-main ✔ (0336 + Edge). Bez push na main.
+- **Próba na kopii bez zamykania:** `mode=test`, `write_reason=ok`, `upload_ok=true`, `write_n=1`; outbound #6 `done`; brak `workbook_auth_403`. `write_test_ok_at` ustawione. Meldunek w #637.
+- **#638:** merge `main` po #646; migracja **0335→0337** (0336 zajęte przez workbook). CI → F7.
