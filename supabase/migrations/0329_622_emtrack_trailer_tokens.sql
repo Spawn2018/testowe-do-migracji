@@ -233,9 +233,11 @@ begin
       'MEDIUM'::risk_severity,
       format('Pozycje naczepy nie trafiają do transportu %s — sprawdź nr naczepy', v_code),
       jsonb_build_object(
+        'title_key', 'rk_emtrack_orphan',
         'reason', 'EMTRACK_ORPHAN_MISMATCH',
         'last_pos', v_last,
-        'code', v_code
+        'code', v_code,
+        'params', jsonb_build_object('code', v_code)
       ),
       'EMTRACK_ORPHAN:' || r.id::text
     );
