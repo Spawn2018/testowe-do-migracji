@@ -480,15 +480,16 @@ begin
      ) then
     return false;
   end if;
-  -- Przyjazd poza SE (np. TLL-HEL → FI): backup Nynäshamn nie dotyczy.
+  -- Przyjazd: false tylko gdy żadna aktywna trasa rodziny nie przypływa do SE
+  -- (NYN-GDN/KAA-GDY mają port_to PL, ale rodzina GDN-NYN/GDY-KAA ma SE — F7 #649 r2).
   if v_route is not null
-     and exists (
+     and not exists (
        select 1
          from public.ferry_routes fr
          join public.ferry_ports pt on pt.code = fr.port_to
-        where fr.code = upper(btrim(v_route))
+        where fr.family_key = public.eta_obs_route_family(v_route)
           and fr.active
-          and pt.country is distinct from 'SE'
+          and pt.country = 'SE'
      ) then
     return false;
   end if;

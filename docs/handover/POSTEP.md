@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 22:00 — #649 F7 r2: AIS backup po rodzinie + e2e NYN/GDN
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe”; CI @ adf0f372 unit/db/visual **zielone** — bez scalenia (F7 r2 POPRAWKI: rodzina SE + e2e).
+- **Krok:** (1) `apply_ferry_ais_arrival_backup` — `return false` tylko gdy żadna aktywna trasa rodziny nie przypływa do SE (NYN-GDN/KAA-GDY wracają); (2) e2e: UUID fa–fd, asercja FERRY przed backupem, PORT_IN off na czas testu, OTHER/TLL-HEL false, NYN-GDN+GDN-NYN true. status **476** (+6).
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-29 21:55 — #649 CI fix po F7 r1 (tsc + fixture AIS)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
