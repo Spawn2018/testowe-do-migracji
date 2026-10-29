@@ -74,13 +74,14 @@ export function textValueForPatch(val: string): string {
   return `'${val}`;
 }
 
-/** R3: format Excel wygląda na datę (nie General / czysty czas). */
+/** R3/R4: format Excel wygląda na datę (nie General / czysty czas). */
 export function formatLooksLikeDate(fmt: unknown): boolean {
   const s = String(fmt ?? '').trim().toLowerCase();
   if (!s || s === 'general' || s === '@') return false;
-  if (/[yd]/.test(s)) return true;
-  const noBrackets = s.replace(/\[[^\]]*]/g, '');
-  return /m.*d|d.*m/.test(noBrackets) && !/[hs]/.test(noBrackets);
+  // F7 r3: zdejmij [kolor/locale] i "literały" przed testem y/d ([Red]0.00 ≠ data).
+  const stripped = s.replace(/\[[^\]]*\]/g, '').replace(/"[^"]*"/g, '');
+  if (/[yd]/.test(stripped)) return true;
+  return /m.*d|d.*m/.test(stripped) && !/[hs]/.test(stripped);
 }
 
 /** R3: format Excel wygląda na godzinę (bez daty). */
@@ -474,6 +475,10 @@ export type WorkbookWriteResult =
     ok: true;
     mode: 'test' | 'prod';
     writtenCodes: string[];
+    /** R4: kody, dla których powstał ≥1 job (wiersz w pliku). */
+    codesWithJobs: string[];
+    /** R4: joby zaplanowane i nieukończone (poza zablokowanymi konfliktem). */
+    incompleteCodes: string[];
     skipped: number;
     conflicts: { code: string; field: string }[];
   }
@@ -483,16 +488,16 @@ export type WorkbookWriteResult =
     http?: number;
     /** B1: kody zapisane przed błędem przejściowym. */
     writtenCodes?: string[];
+    codesWithJobs?: string[];
+    incompleteCodes?: string[];
     conflicts?: { code: string; field: string }[];
     permission?: string;
   };
 
-/** R1: kody, dla których wszystkie joby (niezablokowane konfliktem pozycji) są ukończone. */
-function codesFullyWritten(
+function jobsByCodeUnblocked(
   planned: Planned[],
   blockedItemKeys: Set<string>,
-  completedJobKeys: Set<string>,
-): string[] {
+): Map<string, Planned[]> {
   const byCode = new Map<string, Planned[]>();
   for (const p of planned) {
     if (blockedItemKeys.has(p.job.itemKey)) continue;
@@ -500,11 +505,46 @@ function codesFullyWritten(
     list.push(p);
     byCode.set(p.job.code, list);
   }
+  return byCode;
+}
+
+/** R1: kody, dla których wszystkie joby (niezablokowane konfliktem pozycji) są ukończone. */
+function codesFullyWritten(
+  planned: Planned[],
+  blockedItemKeys: Set<string>,
+  completedJobKeys: Set<string>,
+): string[] {
   const out: string[] = [];
-  for (const [code, list] of byCode) {
+  for (const [code, list] of jobsByCodeUnblocked(planned, blockedItemKeys)) {
     if (
       list.length > 0
       && list.every((p) => completedJobKeys.has(jobKey(p.job)))
+    ) {
+      out.push(code);
+    }
+  }
+  return out;
+}
+
+/** R4: kody z ≥1 jobem (także zablokowane konfliktem — miały wiersz w pliku). */
+function codesThatHadJobs(planned: Planned[]): string[] {
+  return [...new Set(planned.map((p) => p.job.code))];
+}
+
+/**
+ * R4: kody z jobami zaplanowanymi, nieukończonymi, poza zablokowanymi.
+ * (częściowy zapis / 429 w środku — nie „done”).
+ */
+function codesIncomplete(
+  planned: Planned[],
+  blockedItemKeys: Set<string>,
+  completedJobKeys: Set<string>,
+): string[] {
+  const out: string[] = [];
+  for (const [code, list] of jobsByCodeUnblocked(planned, blockedItemKeys)) {
+    if (
+      list.length > 0
+      && !list.every((p) => completedJobKeys.has(jobKey(p.job)))
     ) {
       out.push(code);
     }
@@ -524,7 +564,15 @@ export async function writePatchesViaWorkbook(args: {
   const fetchFn = args.fetchFn ?? fetch;
   if (args.patches.length === 0) {
     const mode = (args.env.SHAREPOINT_FILE_MODE || '').toLowerCase() === 'test' ? 'test' : 'prod';
-    return { ok: true, mode, writtenCodes: [], skipped: 0, conflicts: [] };
+    return {
+      ok: true,
+      mode,
+      writtenCodes: [],
+      codesWithJobs: [],
+      incompleteCodes: [],
+      skipped: 0,
+      conflicts: [],
+    };
   }
 
   const ref = await resolveWorkbookRef(args.env, fetchFn);
@@ -582,6 +630,8 @@ export async function writePatchesViaWorkbook(args: {
         ok: true,
         mode: ref.ref.mode,
         writtenCodes: [],
+        codesWithJobs: [],
+        incompleteCodes: [],
         skipped: args.patches.length,
         conflicts: [],
       };
@@ -592,6 +642,7 @@ export async function writePatchesViaWorkbook(args: {
     const blockedItemKeys = new Set<string>();
     const completedJobKeys = new Set<string>();
     let skipped = 0;
+    const withJobs = codesThatHadJobs(planned);
 
     // R2: konflikt w dowolnym kodzie pozycji → blokuje PATCH wszystkich kodów tej pozycji.
     for (const p of planned) {
@@ -629,6 +680,8 @@ export async function writePatchesViaWorkbook(args: {
           http: patched.http,
           permission: patched.permission,
           writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
+          codesWithJobs: withJobs,
+          incompleteCodes: codesIncomplete(planned, blockedItemKeys, completedJobKeys),
           conflicts,
         };
       }
@@ -639,6 +692,8 @@ export async function writePatchesViaWorkbook(args: {
       ok: true,
       mode: ref.ref.mode,
       writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
+      codesWithJobs: withJobs,
+      incompleteCodes: codesIncomplete(planned, blockedItemKeys, completedJobKeys),
       skipped,
       conflicts,
     };

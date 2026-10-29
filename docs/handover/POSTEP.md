@@ -6849,3 +6849,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **R3:** `usedRange` z `numberFormat`; serial daty/godziny tylko gdy kolumna ma format daty/czasu; inaczej tekst `dd.mm.yyyy` / `HH:MM`.
 - Testy: 429 w pętli, ponowienie, closeSession po wyjątku, shareId z TEST URL, `test_url_equals_prod`, offset C1→D2, R2 itemKey, processOutboundWrites (403/`note_423`/`clear_423`). Unit **54/54**.
 - Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.
+
+## 2026-10-29 17:10 — #645 F7 #646 POPRAWKI r3 (R4)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #499/#500/#537/#538 w planie.
+- Scalanie: brak — #646 F7 = POPRAWKI r3 (1 bloker R4); #638 CONFLICTING, bez F7 „gotowe” po HEAD.
+- **R4:** `writePatchesViaWorkbook` → `codesWithJobs` + `incompleteCodes`; pozycja `done` gdy ≥1 kod z ukończonymi jobami, żaden incomplete, brak konfliktu (kody bez wiersza/jobów neutralne); `skipped`/`patch_no_cell` tylko gdy żaden kod nie miał jobów. Regresja #570 wielokod.
+- Nieblokujące: `formatLooksLikeDate` zdejmuje `[…]` i `"…"` przed `/[yd]/` (`[Red]0.00` ≠ data).
+- Testy: `codes:['SG-01','SG-99']` bez wiersza SG-99 → `done`+`clear_423`; `upsertFail` → `state_upsert`. Unit **56/56**.
+- Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.

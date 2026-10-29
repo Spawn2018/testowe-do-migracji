@@ -67,6 +67,35 @@ function patchCodes(it: OutboundItem): string[] {
   return it.code ? [it.code] : [];
 }
 
+/**
+ * R4: pozycja done gdy ≥1 kod z ukończonymi jobami, żaden incomplete, brak konfliktu.
+ * Kody bez jobów (brak wiersza w pliku) są neutralne — #570 skipMissingWhenOtherPresent.
+ */
+function itemWorkbookDone(
+  it: OutboundItem,
+  written: ReadonlySet<string>,
+  incomplete: ReadonlySet<string>,
+  conflictCodes: ReadonlySet<string>,
+): boolean {
+  const codes = patchCodes(it);
+  if (!codes.length) return false;
+  if (codes.some((c) => conflictCodes.has(c))) return false;
+  if (codes.some((c) => incomplete.has(c))) return false;
+  return codes.some((c) => written.has(c));
+}
+
+/** R4: skippedNoWrite tylko gdy żaden kod pozycji nie miał jobów. */
+function itemSkippedNoWrite(
+  it: OutboundItem,
+  codesWithJobs: ReadonlySet<string>,
+  conflictCodes: ReadonlySet<string>,
+): boolean {
+  const codes = patchCodes(it);
+  if (!codes.length) return true;
+  if (codes.some((c) => conflictCodes.has(c))) return false;
+  return !codes.some((c) => codesWithJobs.has(c));
+}
+
 function applyPatchToSnap(base: FileDateSnap | null, patch: OutboundPatch): FileDateSnap {
   const next: FileDateSnap = {
     ld: base?.ld ?? null,
@@ -317,22 +346,25 @@ export async function processOutboundWrites(args: {
     fetchFn: args.fetchFn,
   });
 
-  /** R1: done tylko gdy wszystkie kody pozycji są w writtenCodes; upsert sprawdzany. */
+  /** R1/R4: done przy ≥1 kodzie ukończonym, bez incomplete; upsert sprawdzany. */
   async function ackFullyWrittenItems(
     writtenCodes: string[],
-  ): Promise<{ ok: boolean; snapshotPatch?: SnapshotMap; reason?: string }> {
-    if (!writtenCodes.length) return { ok: true };
+    incompleteCodes: string[] = [],
+    conflictCodeList: string[] = [],
+  ): Promise<{ ok: boolean; snapshotPatch?: SnapshotMap; reason?: string; doneCount: number }> {
     const writtenSet = new Set(writtenCodes);
-    const fullyDone = toWrite.filter((it) => {
-      const codes = patchCodes(it);
-      return codes.length > 0 && codes.every((c) => writtenSet.has(c));
-    });
-    if (!fullyDone.length) return { ok: true };
+    const incompleteSet = new Set(incompleteCodes);
+    const conflictSet = new Set(conflictCodeList);
+    const fullyDone = toWrite.filter((it) =>
+      itemWorkbookDone(it, writtenSet, incompleteSet, conflictSet)
+    );
+    if (!fullyDone.length) return { ok: true, doneCount: 0 };
     const a = await ack(args.sb, ackPayload(fullyDone, true), 'done', null);
-    if (!a.ok) return { ok: false, reason: 'ack_done' };
+    if (!a.ok) return { ok: false, reason: 'ack_done', doneCount: 0 };
     const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
     for (const it of fullyDone) {
       for (const code of patchCodes(it)) {
+        if (!writtenSet.has(code)) continue;
         snapshotPatch[code] = applyPatchToSnap(snapshotPatch[code] ?? null, {
           code,
           ...it.patch,
@@ -348,21 +380,27 @@ export async function processOutboundWrites(args: {
       p_last_error: null,
       p_snapshot: snapshotPatch,
     });
-    if (up.error) return { ok: false, reason: 'state_upsert' };
-    return { ok: true, snapshotPatch };
+    if (up.error) return { ok: false, reason: 'state_upsert', doneCount: fullyDone.length };
+    return { ok: true, snapshotPatch, doneCount: fullyDone.length };
   }
 
   if (!wb.ok) {
     const partialCodes = wb.writtenCodes ?? [];
-    // Pozycje z pełnym zapisem → done; reszta (w tym częściowy kod) → note_423 / failed.
-    const fullyDone = toWrite.filter((it) => {
-      const codes = patchCodes(it);
-      return codes.length > 0 && codes.every((c) => partialCodes.includes(c));
-    });
+    const incompleteCodes = wb.incompleteCodes ?? [];
+    const conflictCodeList = (wb.conflicts ?? []).map((c) => c.code);
+    // Pozycje z pełnym zapisem (R4: kody bez jobów neutralne) → done; reszta → note_423 / failed.
+    const fullyDone = toWrite.filter((it) =>
+      itemWorkbookDone(
+        it,
+        new Set(partialCodes),
+        new Set(incompleteCodes),
+        new Set(conflictCodeList),
+      )
+    );
     const remaining = toWrite.filter((it) => !fullyDone.includes(it));
 
     if (fullyDone.length) {
-      const part = await ackFullyWrittenItems(partialCodes);
+      const part = await ackFullyWrittenItems(partialCodes, incompleteCodes, conflictCodeList);
       if (!part.ok) {
         return {
           attempted: true, written: fullyDone.length, conflicts: conflictItems.length,
@@ -513,18 +551,17 @@ export async function processOutboundWrites(args: {
   }
 
   const writtenSet = new Set(wb.writtenCodes);
-  // R1: done tylko gdy wszystkie kody pozycji są w writtenCodes.
-  const doneItems = toWrite.filter((it) => {
-    const codes = patchCodes(it);
-    return codes.length > 0
-      && codes.every((c) => writtenSet.has(c))
-      && !wb.conflicts.some((c) => codes.includes(c.code));
-  });
-  const skippedNoWrite = toWrite.filter((it) => {
-    const codes = patchCodes(it);
-    return !codes.every((c) => writtenSet.has(c))
-      && !wb.conflicts.some((c) => codes.includes(c.code));
-  });
+  const incompleteSet = new Set(wb.incompleteCodes);
+  const withJobsSet = new Set(wb.codesWithJobs);
+  const conflictCodeSet = new Set(wb.conflicts.map((c) => c.code));
+  // R4: done przy ≥1 kodzie ukończonym; kody bez jobów neutralne; skipped tylko bez jobów.
+  const doneItems = toWrite.filter((it) =>
+    itemWorkbookDone(it, writtenSet, incompleteSet, conflictCodeSet)
+  );
+  const skippedNoWrite = toWrite.filter((it) =>
+    itemSkippedNoWrite(it, withJobsSet, conflictCodeSet)
+    && !doneItems.includes(it)
+  );
 
   if (doneItems.length === 0 && skippedNoWrite.length) {
     const a = await ack(

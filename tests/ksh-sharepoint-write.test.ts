@@ -680,9 +680,12 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
-  it('R3: pusta komórka + General → tekst daty; format daty → serial', () => {
+  it('R3/R4: pusta komórka + General → tekst daty; format daty → serial; [Red] ≠ data', () => {
     expect(formatLooksLikeDate('General')).toBe(false);
     expect(formatLooksLikeDate('dd.mm.yyyy')).toBe(true);
+    expect(formatLooksLikeDate('[Red]0.00')).toBe(false);
+    expect(formatLooksLikeDate('0.00;[Red]-0.00')).toBe(false);
+    expect(formatLooksLikeDate('"yd"0.00')).toBe(false);
     expect(columnHasDateFormat(
       [['General', 'dd.mm.yyyy'], ['General', 'dd.mm.yyyy']],
       2,
@@ -898,6 +901,124 @@ describe('#645 processOutboundWrites (R1 ack / note_423 / 403)', () => {
     expect(r.write_reason).toBe('ok');
     expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
     expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(true);
+  });
+
+  it('R4: wielokod SG-01+SG-99 (SG-99 bez wiersza) → done + clear_423', async () => {
+    const rpcs: { name: string; args: Record<string, unknown> }[] = [];
+    const multi = {
+      ...item,
+      codes: ['SG-01', 'SG-99'],
+      patch: { carrier_order_no: 'NEW' },
+    };
+    const sb = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') return { data: [multi], error: null };
+        return { data: true, error: null };
+      }),
+    };
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        // Tylko SG-01 w pliku — SG-99 bez wiersza (#570 skipMissingWhenOtherPresent).
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:B2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+            ['SG-01', 'OLD'],
+          ],
+          numberFormat: [['General', 'General'], ['General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb: sb as never,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('ok');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) =>
+      c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'skipped'
+    )).toBe(false);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(true);
+  });
+
+  it('R4: upsertFail → write_reason state_upsert (bez clear_423)', async () => {
+    const { sb, rpcs } = mockSb({ upsertFail: true });
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:B2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo],
+            ['SG-01', 'OLD'],
+          ],
+          numberFormat: [['General', 'General'], ['General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('state_upsert');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(false);
   });
 });
 
