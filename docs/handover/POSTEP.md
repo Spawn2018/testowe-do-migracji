@@ -6888,10 +6888,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok BN1:** gałąź `pakiet/bn1-ferry-dict`; migracja **0338** — `ferry_operators` / `ferry_ports` / `ferry_routes` / `ferry_route_operators`; seed Stena+Polferries+TALLINK/VIKING/ECKERO/DFDS; strefy bałtyckie; `ferry_dict_snapshot` + `ferry_route_port_countries`; `eta_obs_operator_key` ← słownik. status **433** (+12); nullguard **890** (+10).
 - Dalej BN1: CASE-y w funkcjach ETA/AIS → słownik; front z RPC. Potem BN2…
 
-## 2026-10-29 18:50 � BN1 #647 F7 POPRAWKI + CI db (nullguard/status)
+## 2026-10-29 18:50 — BN1 #647 F7 POPRAWKI + CI db (nullguard/status)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #499/#500/#537/#538 w planie. Bez nowego wpisu.
-- Scalanie: brak F7 �gotowe�; #647 jedyny otwarty PR. CI db @ a9009ef9: status 432/433 FAIL (`sailings_route_check` na TLL-HEL), nullguard 882/890 FAIL (`ferry_dict_snapshot` / `ferry_route_port_countries` � stra�nik `auth.role` nie odpala� si� w bramie).
-- Poprawki w 0338: stra�nik jak `ferry_track_sample` (`current_app_user_id`); ponowne otwarcie `sailings_route_check` (regex); bez self-alias�w ba�tyckich (F7 B5); GDN/NYN/PLD/TLL_D wsp�rz�dne (F7 B6); `geofences.country` = ISO-2; seed ports `on conflict do nothing`.
+- Scalanie: brak F7 „gotowe”; #647 jedyny otwarty PR. CI db @ a9009ef9: status 432/433 FAIL (`sailings_route_check` na TLL-HEL), nullguard 882/890 FAIL (`ferry_dict_snapshot` / `ferry_route_port_countries` — strażnik `auth.role` nie odpalał się w bramie).
+- Poprawki w 0338: strażnik jak `ferry_track_sample` (`current_app_user_id`); ponowne otwarcie `sailings_route_check` (regex); bez self-aliasów bałtyckich (F7 B5); GDN/NYN/PLD/TLL_D współrzędne (F7 B6); `geofences.country` = ISO-2; seed ports `on conflict do nothing`.
 - status **443** (+10 asercji B5/B6/operator); nullguard **890**. PLAN: dwa modele `geofences.route`.
-- Push � CI � pro�ba o F7. Bez push na main.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.
+- CI @ 60c0a8a8: unit/visual ✔; nullguard 890/890 ✔; **status 439/443** — 4 FAIL BN1.
+- Przyczyny: (1) `#496` w `status.sh` przywracał starą listę `sailings_route_check` (GDN/GDY) po teście OTHER → TLL-HEL padał; (2) RPC z GUARD wołane bez sesji `authenticated` → „Brak aktywnego konta”.
+- Fix: przywrócenie regexu BN1 po `#496`; kraje/snapshot przez `set local role authenticated` + JWT HHL. status nadal **443**.
+- Push → CI → prośba o F7. Bez push na main.

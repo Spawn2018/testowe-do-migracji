@@ -1209,11 +1209,12 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L496u', now(), st_setsrid(st_makepoint(15.79, 57.76),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L496u')" >/dev/null
 chk "#496: nieznana trasa → brak OFF_CORRIDOR" "$(rk $L496u OFF_CORRIDOR)" 0
+# BN1 (0338): przywróć regex tras (nie starą listę GDN/GDY — psuje TLL-HEL / TALLINK).
 q "update loads set sailing_id=null where id='$L496u';
    delete from sailings where id='$S496u';
    alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
-     check (route in ('GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY'));" >/dev/null
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 # F7: sprzątanie L487a/b + L496u (nie globalne DELETE) — risks.sh baseline title_key.
 chk "#487/#496 po teście brak rk_off_corridor L487a/b/L496u" \
   "delete from decision_events where decision_id in (
@@ -2252,6 +2253,7 @@ chk "#622: F7 r3 refresh=true po dostawie (insert-only)" \
   "select coalesce(j->>'ok','?')||'|'||coalesce(j->>'reclaimed','?')||'|'||coalesce(j->>'refresh','?') from (select public.telm_reclaim_orphan_positions('$L622g'::uuid, '2026-10-20 00:00:00+00'::timestamptz) j) s" "true|1|true"
 
 # BN1 (#573/#640) — słowniki ferry_* + strefy bałtyckie (0338); regresja Stena/Polferries
+HHL=11111111-0000-0000-0000-000000000001
 chk "BN1: ferry_operators ≥6" \
   "select count(*) from ferry_operators where active" 6
 chk "BN1: ferry_ports Tallinn A+D + Muuga + Paldiski" \
@@ -2264,12 +2266,19 @@ chk "BN1: operator GDN-NYN = POLFERRIES" \
   "select public.ferry_route_primary_operator('GDN-NYN')" POLFERRIES
 chk "BN1: operator TLL-HEL = TALLINK" \
   "select public.ferry_route_primary_operator('TLL-HEL')" TALLINK
+# RPC z GUARD (nullguard) — sesja authenticated jak front
 chk "BN1: kraje TLL-HEL EE→FI" \
-  "select country_from||'-'||country_to from public.ferry_route_port_countries('TLL-HEL')" EE-FI
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select country_from||'-'||country_to from public.ferry_route_port_countries('TLL-HEL');
+   rollback" EE-FI
 chk "BN1: kraje GDN-NYN PL→SE" \
-  "select country_from||'-'||country_to from public.ferry_route_port_countries('GDN-NYN')" PL-SE
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select country_from||'-'||country_to from public.ferry_route_port_countries('GDN-NYN');
+   rollback" PL-SE
 chk "BN1: snapshot ma trasy bałtyckie" \
-  "select (ferry_dict_snapshot()->'routes') @> '[{\"code\":\"PLD-KPS\"}]'::jsonb" t
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (ferry_dict_snapshot()->'routes') @> '[{\"code\":\"PLD-KPS\"}]'::jsonb;
+   rollback" t
 chk "BN1: strefa Terminal Tallinn A" \
   "select count(*) from geofences where name='Terminal Tallinn A' and kind='PORT_OUT'" 1
 chk "BN1: strefa Terminal Kapellskär" \

@@ -2019,4 +2019,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 17:20 | #638 merge main po #643 (docs); konflikt tylko PLAN/POSTEP — dziennik dopisany; czeka CI+F7 | pętla |
 | 29.10.2026 17:45 | #646 SCALONE (`2c8e3e1c`); próba na kopii OK (`write_reason=ok`); #638 **0335→0337** | pętla |
 | 29.10.2026 18:10 | #638 SCALONE (`9a6ec4b4`, F7 gotowe @ 9056140); #640 wpisane — BN1…BN10 przed 27B mapa; start **0338** BN1 słowniki | pętla |
-| 29.10.2026 18:50 | #647 BN1 F7+CI: nullguard stra�nik, route_check, B5/B6 coords, status 443 | p�tla |
+| 29.10.2026 18:50 | #647 BN1 F7+CI: nullguard strażnik, route_check, B5/B6 coords, status 443 | pętla |
+| 29.10.2026 19:25 | #647 CI status 4 FAIL: #496 przywracał starą listę tras; RPC GUARD bez JWT — fix status.sh | pętla |
