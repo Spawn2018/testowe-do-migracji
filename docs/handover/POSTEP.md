@@ -6730,3 +6730,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
 - Scalanie: brak „F7: gotowe” @ `113ff22f`. CI: unit ✔ visual ✔; **db FAIL** p4k 109/2 — `#630` PORT_CHECKIN/CROSSING proposal=null (obce undo/auto <7 d → `v_skip_codes`).
 - **Krok:** w testach #630 wyczyść okno skip 7 d (undone_at + auto-applied created_at → 8 d) przed propose; p4k nadal **111**. Push → CI → F7.
+
+## 2026-10-29 09:00 — #630 CI db FAIL @ 695179be → delete versions w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ `695179be`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (te same #630 — starzenie skip 7 d nie wystarczyło).
+- **Krok:** w transakcji testów #630 `delete from eta_calibration_versions` (puste skip + limit 30 d); asercje z powodem FAIL (`null:reason`). p4k **111**. Push → CI → F7.

@@ -1941,29 +1941,15 @@ val "#626 F7: actual_arrival < EXIT → CROSSING BRAK" \
 # #630: kalibracja pomija rolę PORT_CHECKIN z sailing_mismatch; CROSSING z mismatch zostaje.
 # 5× mismatch 100 h (starsze, pomijane) + 5× dobre 10 h; hours=8 → Δ25 % (≤40 % limitu 30 d);
 # z filtrem mediana fit ≈ 10 (nie 100).
-# F7 CI: wyczyść okno skip 7 d (undo + auto-applied z wcześniejszych testów p4k), inaczej NO_CHANGE.
+# F7 CI: usuń WSZYSTKIE wersje kalibracji w transakcji (skip 7 d + budż 30 d z wcześniejszych
+# testów p4k) — samo starzenie undone/auto nie wystarczało (CI 109/2 po 695179be).
 val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
   "begin;
    update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
    delete from decision_events where decision_id in (
      select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
    delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
-   delete from eta_calibration_versions
-    where applied is not true and created_by is null
-      and coalesce(note,'') like 'propozycja ciągła%';
-   update eta_calibration_versions
-      set undone_at = now() - interval '8 days'
-    where undone_at is not null
-      and undone_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set created_at = now() - interval '8 days'
-    where applied is true
-      and undone_at is null
-      and coalesce(note, '') like '%auto-applied%'
-      and created_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set undone_at = coalesce(undone_at, now() - interval '8 days')
-    where applied is true and undone_at is null;
+   delete from eta_calibration_versions;
    delete from eta_segment_observations
     where coalesce(features->>'p4k','') = 'true';
    delete from loads where id::text like 'a630a630-0000-4000-8000-0000000000%';
@@ -1992,16 +1978,25 @@ val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
           select * from eta_calibration_versions
            where id = ((select j->>'proposal' from p)::bigint)
         )
-   select (
-     (select (j->>'n_skipped_sailing_mismatch')::int from p) = 5
-     and (select j->>'proposal' from p) is not null
-     and (select (params_after->'PORT_CHECKIN'->>'hours')::numeric from v) between 9 and 11
-     and (select n_obs from v) = 5
-     and (select (j->>'n_obs')::int from p) = 5
-     and (select error_before_min from v) is not null
-     and (select error_after_min from v) is not null
-     and (select error_after_min from v) < (select error_before_min from v)
-   )::text;
+   select case
+     when (select j->>'proposal' from p) is null then
+       'null:' || coalesce((select j->>'reason' from p), '?')
+       || ':skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
+     when (select (j->>'n_skipped_sailing_mismatch')::int from p) is distinct from 5 then
+       'skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
+     when (select params_after->'PORT_CHECKIN'->>'hours' from v) is null then
+       'no_PORT_CHECKIN:' || coalesce((select params_after::text from v), '?')
+     when (select (params_after->'PORT_CHECKIN'->>'hours')::numeric from v) not between 9 and 11 then
+       'hours=' || (select params_after->'PORT_CHECKIN'->>'hours' from v)
+     when (select n_obs from v) is distinct from 5
+       or (select (j->>'n_obs')::int from p) is distinct from 5 then
+       'n_obs=' || coalesce((select n_obs::text from v), '?')
+     when (select error_before_min from v) is null
+       or (select error_after_min from v) is null
+       or (select error_after_min from v) >= (select error_before_min from v) then
+       'err'
+     else 'true'
+   end;
    rollback;" "true"
 
 # Po cofnięciu wersji (<7 d): same mismatch nie dają „3 nowych” → kod nadal w skip 7 d.
@@ -2011,23 +2006,7 @@ val "#630: po undo same mismatch nie odblokowują 7 d" \
    delete from decision_events where decision_id in (
      select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
    delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
-   delete from eta_calibration_versions
-    where applied is not true and created_by is null
-      and coalesce(note,'') like 'propozycja ciągła%';
-   -- wyczyść obce okna skip, potem własny undo <7 d (cel testu)
-   update eta_calibration_versions
-      set undone_at = now() - interval '8 days'
-    where undone_at is not null
-      and undone_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set created_at = now() - interval '8 days'
-    where applied is true
-      and undone_at is null
-      and coalesce(note, '') like '%auto-applied%'
-      and created_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set undone_at = coalesce(undone_at, now() - interval '8 days')
-    where applied is true and undone_at is null;
+   delete from eta_calibration_versions;
    delete from eta_segment_observations
     where corridor = 'PORT_CHECKIN'
       and coalesce(features->>'p4k','') = 'true';
@@ -2079,22 +2058,7 @@ val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
    delete from decision_events where decision_id in (
      select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
    delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
-   delete from eta_calibration_versions
-    where applied is not true and created_by is null
-      and coalesce(note,'') like 'propozycja ciągła%';
-   update eta_calibration_versions
-      set undone_at = now() - interval '8 days'
-    where undone_at is not null
-      and undone_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set created_at = now() - interval '8 days'
-    where applied is true
-      and undone_at is null
-      and coalesce(note, '') like '%auto-applied%'
-      and created_at > now() - interval '7 days';
-   update eta_calibration_versions
-      set undone_at = coalesce(undone_at, now() - interval '8 days')
-    where applied is true and undone_at is null;
+   delete from eta_calibration_versions;
    delete from eta_segment_observations
     where coalesce(features->>'p4k','') = 'true';
    delete from loads where id::text like 'a630a630-0000-4000-8000-00000000c%';
@@ -2117,14 +2081,22 @@ val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
           select * from eta_calibration_versions
            where id = ((select j->>'proposal' from p)::bigint)
         )
-   select (
-     (select j->>'proposal' from p) is not null
-     and (select (params_after->'CROSSING_GDN_NYN'->>'hours')::numeric from v)
-         between 23 and 25
-     and (select n_obs from v) = 5
-     and (select (j->>'n_obs')::int from p) = 5
-     and (select (j->>'n_skipped_sailing_mismatch')::int from p) = 0
-   )::text;
+   select case
+     when (select j->>'proposal' from p) is null then
+       'null:' || coalesce((select j->>'reason' from p), '?')
+       || ':skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
+     when (select params_after->'CROSSING_GDN_NYN'->>'hours' from v) is null then
+       'no_CROSSING:' || coalesce((select params_after::text from v), '?')
+     when (select (params_after->'CROSSING_GDN_NYN'->>'hours')::numeric from v)
+          not between 23 and 25 then
+       'hours=' || (select params_after->'CROSSING_GDN_NYN'->>'hours' from v)
+     when (select n_obs from v) is distinct from 5
+       or (select (j->>'n_obs')::int from p) is distinct from 5 then
+       'n_obs=' || coalesce((select n_obs::text from v), '?')
+     when (select (j->>'n_skipped_sailing_mismatch')::int from p) is distinct from 0 then
+       'skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
+     else 'true'
+   end;
    rollback;" "true"
 
 echo "WYNIK: $ok OK, $fail FAIL"
