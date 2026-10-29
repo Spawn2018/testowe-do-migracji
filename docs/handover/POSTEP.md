@@ -6679,3 +6679,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   2. Test: rejs A 08:00→18:30, EXIT 19:55, PIN 06:30 → PORT_CHECKIN ~6 h + CROSSING ~11 h z `sailing_mismatch`.
   3. p4k **108**. PLAN: backlog kalibracja (pomijać mismatch na PORT_CHECKIN); ograniczenie gałęzi (2) nieaktualnego `sailing_id`.
 - Po zielonym CI — prośba o **F7: gotowe do scalenia**. Po wdrożeniu: zdejmij H4 → rebuild 05.10 → tabela #626. Kolejność: #626 → 27B:C (#627 = **0331**).
+
+## 2026-10-29 06:30 — #626 SCALONE + rebuild prod (0330)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #629 → `d5786626` (F7 gotowe @ `488b62bd`, CI unit/db/visual ✔, p4k **108**). Bez push na main.
+- deploy-main `40823616752` — baza **0330** na produkcji (krok Baza ✔).
+- **Po wdrożeniu:** zdjęte ręczne `H4_BLEDNY_POMIAR` obs 265/283/343/357; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`.
+  - PORT_CHECKIN **6/0** (1× `sailing_mismatch` EVENT)
+  - CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89; `pin_src` SAILING_ACTUAL_ARR×2 + EVENT×1)
+  - CROSSING_GDY_KAA 2+1 BRAK; PL_ROAD 3+11 TRASA; PL_ROAD_GDY 0+3 LUKA; SE_E4 0+9 H4; SE_ROAD 3; SE_ROAD_KAA 2
+  - exclude: OK 19 · TRASA 11 · H4 9 · LUKA 3 · BRAK 1
+- Tabela w komentarzu #626. **Backlog:** kalibracja pomija mismatch PORT_CHECKIN (osobny PR). Następna: **27B:C** (#627 = **0331**).
