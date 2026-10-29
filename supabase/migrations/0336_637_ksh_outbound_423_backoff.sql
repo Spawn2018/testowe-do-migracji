@@ -18,7 +18,7 @@ update public.ksh_sync_outbound
    set status = 'pending',
        done_at = null,
        retry_after = null,
-       locked_since = coalesce(locked_since, updated_at, now() - interval '1 hour'),
+       locked_since = coalesce(locked_since, done_at, created_at, now() - interval '1 hour'),
        last_error = 'upload_http_423',
        rev = rev + 1
  where status = 'failed'
@@ -29,7 +29,7 @@ update public.ksh_sync_outbound
    set status = 'pending',
        done_at = null,
        retry_after = null,
-       locked_since = coalesce(locked_since, updated_at, now() - interval '1 hour'),
+       locked_since = coalesce(locked_since, done_at, created_at, now() - interval '1 hour'),
        last_error = 'upload_http_423',
        rev = rev + 1
  where status = 'skipped'
