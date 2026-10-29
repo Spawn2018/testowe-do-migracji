@@ -2251,5 +2251,36 @@ select public.telm_save_orphan_position(
 chk "#622: F7 r3 refresh=true po dostawie (insert-only)" \
   "select coalesce(j->>'ok','?')||'|'||coalesce(j->>'reclaimed','?')||'|'||coalesce(j->>'refresh','?') from (select public.telm_reclaim_orphan_positions('$L622g'::uuid, '2026-10-20 00:00:00+00'::timestamptz) j) s" "true|1|true"
 
+# BN1 (#573/#640) — słowniki ferry_* + strefy bałtyckie (0338); regresja Stena/Polferries
+chk "BN1: ferry_operators ≥6" \
+  "select count(*) from ferry_operators where active" 6
+chk "BN1: ferry_ports Tallinn A+D + Muuga + Paldiski" \
+  "select count(*) from ferry_ports where code in ('TLL_A','TLL_D','MUU','PLD')" 4
+chk "BN1: ferry_routes TLL-HEL family" \
+  "select count(*) from ferry_routes where family_key='TLL-HEL' and active" 2
+chk "BN1: operator GDY-KAA = STENA" \
+  "select public.ferry_route_primary_operator('GDY-KAA')" STENA
+chk "BN1: operator GDN-NYN = POLFERRIES" \
+  "select public.ferry_route_primary_operator('GDN-NYN')" POLFERRIES
+chk "BN1: operator TLL-HEL = TALLINK" \
+  "select public.ferry_route_primary_operator('TLL-HEL')" TALLINK
+chk "BN1: kraje TLL-HEL EE→FI" \
+  "select country_from||'-'||country_to from public.ferry_route_port_countries('TLL-HEL')" EE-FI
+chk "BN1: kraje GDN-NYN PL→SE" \
+  "select country_from||'-'||country_to from public.ferry_route_port_countries('GDN-NYN')" PL-SE
+chk "BN1: snapshot ma trasy bałtyckie" \
+  "select (ferry_dict_snapshot()->'routes') @> '[{\"code\":\"PLD-KPS\"}]'::jsonb" t
+chk "BN1: strefa Terminal Tallinn A" \
+  "select count(*) from geofences where name='Terminal Tallinn A' and kind='PORT_OUT'" 1
+chk "BN1: strefa Terminal Kapellskär" \
+  "select count(*) from geofences where name='Terminal Kapellskär' and kind='PORT_IN'" 1
+chk "BN1: sailings source TALLINK dozwolone (rollback)" \
+  "begin; insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+     values ('77777777-0000-0000-0000-00000000bn01', '$P',
+             '66666666-0000-0000-0000-000000000001', 'TLL-HEL',
+             now(), now() + interval '2 hours', 'ZAPLANOWANY', 'TALLINK');
+   select source from sailings where id='77777777-0000-0000-0000-00000000bn01';
+   rollback" TALLINK
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

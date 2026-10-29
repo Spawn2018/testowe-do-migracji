@@ -128,6 +128,8 @@ authenticated email_budget_status
 authenticated fee_catalog_hints
 authenticated ferry_track_sample
 authenticated ferry_sailings_map
+authenticated ferry_dict_snapshot
+authenticated ferry_route_port_countries
 authenticated fuel_add_reading
 authenticated fx_rate_before
 authenticated h1_route_check_state

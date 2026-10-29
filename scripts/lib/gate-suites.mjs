@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 486, // #588/C9 E19: +9 (Przeczytali×3, cancel×2, anon/auth email, SCX price, anon SELECT); było 477 (+5 C11)
-  status: 421, // 27B:C ETA 0335 F7: +3 (REMOVED + Polferries se_corridor/se_road_code); było 418 (0334 +5)
+  status: 433, // BN1 0338: +12 słowniki/strefy/source; było 421 (27B ETA +3)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 383, // #637 F7: +1 asercja import_enabled=f po import_set(false); było 382 (#618)
-  nullguard: 880, // #581 F7 r2: +GUARD eta_route_dict_upsert (5 ról); było 875
+  nullguard: 890, // BN1 0338: +2 GUARD ×5 ról (ferry_dict_snapshot, ferry_route_port_countries); było 880
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

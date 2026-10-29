@@ -6879,3 +6879,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #646 → `2c8e3e1c` (F7: gotowe @ `ff41ed3`; kolejność zmieniona — #646 przed #638). deploy-main ✔ (0336 + Edge). Bez push na main.
 - **Próba na kopii bez zamykania:** `mode=test`, `write_reason=ok`, `upload_ok=true`, `write_n=1`; outbound #6 `done`; brak `workbook_auth_403`. `write_test_ok_at` ustawione. Meldunek w #637.
 - **#638:** merge `main` po #646; migracja **0335→0337** (0336 zajęte przez workbook). CI → F7.
+
+## 2026-10-29 18:10 — #638 SCALONE; start BN1 (#640 / 0338)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #640 (Spawn2018, bez etykiety dla-cursora) wpisane z F7 #638 — kolejność: BN1–BN10 przed 27B mapa/kalibracja.
+- Scalanie: #638 → `9a6ec4b4` (F7: gotowe @ `9056140`; CI unit/db/visual ✔). Bez push na main.
+- #637: czeka właściciel `FILE_MODE=prod` (próba na kopii OK, `write_test_ok_at` set).
+- **Krok BN1:** gałąź `pakiet/bn1-ferry-dict`; migracja **0338** — `ferry_operators` / `ferry_ports` / `ferry_routes` / `ferry_route_operators`; seed Stena+Polferries+TALLINK/VIKING/ECKERO/DFDS; strefy bałtyckie; `ferry_dict_snapshot` + `ferry_route_port_countries`; `eta_obs_operator_key` ← słownik. status **433** (+12); nullguard **890** (+10).
+- Dalej BN1: CASE-y w funkcjach ETA/AIS → słownik; front z RPC. Potem BN2…
