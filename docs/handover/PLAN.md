@@ -1119,10 +1119,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. **Rebuild po 0328** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. OK 18 / wykluczenia 25. Per odcinek: PORT_CHECKIN **6/0**; CROSSING_GDY_KAA 2+1 BRAK; CROSSING_GDN_NYN 2+1 BRAK; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4_BLEDNY_POMIAR. `port_out_src`: PORT_CHECKIN EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2 każdy. Kalibracja nadal **nie czyta** `port_out_src` (przegląd po danych).
 5. **#626 otwarte:** 4 zawyżone pomiary (EXIT=PIN / późny PIN) — po #622: wykluczenia `H4_BLEDNY_POMIAR` + migracja; nie zamykać #603 bez #626.
 
-### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**)
+### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**, PR #628)
 Źródło: #622 (Spawn2018; kolejność koordynatora 29.10: **#622 → #626 → 27B:C**). Front ostrzeżenia dwóch nr — #623 SCALONE.
-1. **0329 (F7 r1):** `plateTokens` / ranking P1 w `matchTrailer.ts`; SQL `telm_plate_tokens` (B1/B2), `telm_trailer_match_rank`, reclaim INSERT-only dla starych ts + partie 800 (P3), scan zamyka `EMTRACK_ORPHAN` przy GPS < 2 h (P4); bypass 60 s; status **375**.
-2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC — wynik (liczba, status) w #622. Bez tablic produkcyjnych w repo/testach.
+1. **0329 (F7 r2):** WT = tylko pełny człon; textId = człony + prefiksy od 1. fragmentu (B1-bis; bez tokenu z samych cyfr); ranking P1; reclaim INSERT-only + `p_until` + refresh bez geofence (P3-bis); P4-bis zamknięcie alarmu tylko przy reclaim>0 lub GPS<2h; P4-perf `plate=any` przed raw; status **386**. Remis dwóch WT z tą samą naczepą/linkiem → sierota + alarm (wcześniej wygrywał pierwszy).
+2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC (partie z `p_until` gdy >800) — wynik w #622. Bez tablic produkcyjnych w repo/testach.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
@@ -1959,3 +1959,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 02:15 | Kolejność: **#622** (SG-21 PILNE) → #626 → 27B:C (#627 F7 r1 otwarte); start **0329** tokeny/reclaim | pętla |
 | 29.10.2026 02:45 | #622 F7 r1 w #628: B1–B2/P1/P3/P4; status **375**; CI 8c38a4ea db 363/7 (reclaim) — poprawka w toku | pętla |
 | 29.10.2026 03:05 | #622 CI @ 1a4350b1 db FAIL (ranking 3/1 vs 3/2; risks +rk_emtrack_orphan) — poprawka asercji + begin/commit 0329 | pętla |
+| 29.10.2026 03:30 | #622 F7 r2 w #628: B1-bis/P3-bis/P4-bis/perf; status **386**; CI @ 3a7c7b25 zielone → push r2 | pętla |

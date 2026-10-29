@@ -6612,3 +6612,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI PR #628 @ `1a4350b1`: unit/visual ✔; **db FAIL** — status 374 OK / 1 FAIL; risks 44 OK / 2 FAIL.
 - Przyczyna: asercja rankingu `BB 22 BB`≡`BB22BB` to pełna równość (1), nie primary (2); `rk_emtrack_orphan` nie w liście kluczy automatu (7→8).
 - Poprawka: status ranking `3/2` na tym samym WT (additional/primary); risks +`rk_emtrack_orphan`; `begin`/`commit` w 0329 po `ALTER TYPE`. Po push — F7 r2 przy zielonym CI.
+
+## 2026-10-29 03:30 — #622 F7 r2 (B1-bis, P3-bis, P4-bis/perf) w PR #628
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `dla-cursora`. Scalanie: brak „F7: gotowe” (F7 r2 = POPRAWKI @ `1a4350b` / przypomnienie @ `3a7c7b25`).
+- CI @ `3a7c7b25`: unit/visual/db ✔ (G-15 — czekano na koniec przed edycją).
+- **Krok F7 r2:**
+  1. B1-bis: WT = pełny człon; textId = prefiksy od 1. fragmentu (`plateTokensEm` / `telm_plate_tokens_em`); „XX 12345”≠„YY 12345”.
+  2. P3-bis: refresh tylko gdy najnowszy wszedł insert-only; bez `process_position` (tylko faza+ETA); `p_until` (partie po czasie — opis w #622).
+  3. P4-bis: zamknięcie alarmu po reclaim tylko gdy `reclaimed>0` albo GPS<2h.
+  4. P4-perf: `plate=any(tokeny)` przed fallbackiem raw textId.
+  5. TS↔SQL: tokeny `[^A-Z0-9]`. Status **386** (+11). Remis dwóch WT → sierota (zmiana vs „pierwszy wygrywa”).
+- Unit lokalnie 21/21. Po push — F7 r3 przy zielonym CI.

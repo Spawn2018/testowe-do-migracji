@@ -3,6 +3,9 @@
 -- + alarm HHL gdy pozycje w sierotach, a transport bez GPS > 2 h.
 -- F7 r1: B1 spacje w textId, B2 myślnik tylko ze spacją + token ≥5 z cyfrą,
 -- P1 ranking, P3 reclaim INSERT-only dla starych ts, P4 zamykanie alarmu.
+-- F7 r2: B1-bis WT bez sklejeń / EM prefiksy od 1. fragmentu; P3-bis refresh
+-- bez geofence + p_until; P4-bis zamknięcie tylko przy reclaim>0 lub GPS<2h;
+-- P4-perf plate=any przed raw; TS↔SQL [^A-Z0-9].
 -- process_position: bypass budżetu 60 s przy tower.pos_budget_bypass=on (reclaim).
 -- Bez numerów rejestracyjnych produkcyjnych w testach.
 -- =====================================================================
@@ -32,10 +35,48 @@ $$;
 revoke all on function public.telm_token_valid(text) from public, anon, authenticated;
 grant execute on function public.telm_token_valid(text) to service_role;
 
--- Tokeny tablicy = matchTrailer.plateTokens (F7 B1/B2).
+-- Tokeny WT = matchTrailer.plateTokens (F7 r2 B1-bis): tylko pełny człon.
 -- Separatory: myślnik/en-dash ze spacją z ≥1 strony; / , ; +
--- W członie: fragmenty po spacji + sklejenia sąsiednich; kolejność zachowana.
 create or replace function public.telm_plate_tokens(p text)
+returns text[]
+language plpgsql immutable parallel safe set search_path = public as $$
+declare
+  v_raw text := btrim(coalesce(p, ''));
+  v_parts text[];
+  v_part text;
+  v_out text[] := '{}';
+  v_seen text[] := '{}';
+  v_cand text;
+begin
+  if v_raw = '' then
+    return '{}';
+  end if;
+  v_parts := regexp_split_to_array(
+    v_raw,
+    E'(?:\\s[-–—]\\s?|\\s?[-–—]\\s|\\s*[/,;+]\\s*)'
+  );
+  foreach v_part in array v_parts loop
+    if btrim(coalesce(v_part, '')) = '' then
+      continue;
+    end if;
+    v_cand := upper(regexp_replace(v_part, '[^A-Z0-9]', '', 'g'));
+    if public.telm_token_valid(v_cand) and not (v_cand = any (v_seen)) then
+      v_seen := v_seen || v_cand;
+      v_out := v_out || v_cand;
+    end if;
+  end loop;
+  return v_out;
+end;
+$$;
+
+comment on function public.telm_plate_tokens(text) is
+  '#622 F7 r2: tokeny WT — pełny człon (sep. jak #623; ≥5+cyfra); bez sklejeń.';
+
+revoke all on function public.telm_plate_tokens(text) from public, anon, authenticated;
+grant execute on function public.telm_plate_tokens(text) to service_role;
+
+-- Tokeny textId = matchTrailer.plateTokensEm: pełny człon + prefiksy od 1. fragmentu.
+create or replace function public.telm_plate_tokens_em(p text)
 returns text[]
 language plpgsql immutable parallel safe set search_path = public as $$
 declare
@@ -44,18 +85,15 @@ declare
   v_part text;
   v_frags text[];
   v_frag text;
-  v_i int;
   v_j int;
   v_acc text;
   v_out text[] := '{}';
   v_seen text[] := '{}';
   v_cand text;
-  v_whole text;
 begin
   if v_raw = '' then
     return '{}';
   end if;
-  -- Split: spacja?-spacja? wokół myślnika (z ≥1 spacją); albo / , ; +
   v_parts := regexp_split_to_array(
     v_raw,
     E'(?:\\s[-–—]\\s?|\\s?[-–—]\\s|\\s*[/,;+]\\s*)'
@@ -65,46 +103,39 @@ begin
       continue;
     end if;
     v_frags := regexp_split_to_array(btrim(v_part), E'\\s+');
-    for v_i in 1 .. coalesce(cardinality(v_frags), 0) loop
-      v_acc := '';
-      for v_j in v_i .. coalesce(cardinality(v_frags), 0) loop
-        v_frag := upper(regexp_replace(v_frags[v_j], '[^A-Z0-9]', '', 'g'));
-        if v_frag = '' then
-          continue;
-        end if;
-        v_acc := v_acc || v_frag;
-        v_cand := v_acc;
-        if public.telm_token_valid(v_cand) and not (v_cand = any (v_seen)) then
-          v_seen := v_seen || v_cand;
-          v_out := v_out || v_cand;
-        end if;
-      end loop;
+    v_acc := '';
+    for v_j in 1 .. coalesce(cardinality(v_frags), 0) loop
+      v_frag := upper(regexp_replace(v_frags[v_j], '[^A-Z0-9]', '', 'g'));
+      if v_frag = '' then
+        continue;
+      end if;
+      v_acc := v_acc || v_frag;
+      v_cand := v_acc;
+      if public.telm_token_valid(v_cand) and not (v_cand = any (v_seen)) then
+        v_seen := v_seen || v_cand;
+        v_out := v_out || v_cand;
+      end if;
     end loop;
-    v_whole := public.telm_norm_plate(v_part);
-    if public.telm_token_valid(v_whole) and not (v_whole = any (v_seen)) then
-      v_seen := v_seen || v_whole;
-      v_out := v_out || v_whole;
-    end if;
   end loop;
   return v_out;
 end;
 $$;
 
-comment on function public.telm_plate_tokens(text) is
-  '#622 F7: tokeny nr (sep. jak #623; sklejenia spacji; ≥5+cyfra); kolejność zachowana.';
+comment on function public.telm_plate_tokens_em(text) is
+  '#622 F7 r2: tokeny textId — człony + prefiksy od 1. fragmentu (nigdy sam środek).';
 
-revoke all on function public.telm_plate_tokens(text) from public, anon, authenticated;
-grant execute on function public.telm_plate_tokens(text) to service_role;
+revoke all on function public.telm_plate_tokens_em(text) from public, anon, authenticated;
+grant execute on function public.telm_plate_tokens_em(text) to service_role;
 
--- Ranking: 1 pełna równość, 2 token główny WT, 3 dodatkowy; null = brak (F7 P1).
+-- Ranking: 1 pełna równość, 2 token główny WT, 3 dodatkowy; null = brak (F7 P1 / B1-bis).
 create or replace function public.telm_trailer_match_rank(p_trailer text, p_text_id text)
 returns int
 language plpgsql immutable parallel safe set search_path = public as $$
 declare
-  v_full_wt text := public.telm_norm_plate(p_trailer);
-  v_full_em text := public.telm_norm_plate(p_text_id);
+  v_full_wt text := upper(regexp_replace(coalesce(p_trailer, ''), '[^A-Z0-9]', '', 'g'));
+  v_full_em text := upper(regexp_replace(coalesce(p_text_id, ''), '[^A-Z0-9]', '', 'g'));
   v_wt text[] := public.telm_plate_tokens(p_trailer);
-  v_em text[] := public.telm_plate_tokens(p_text_id);
+  v_em text[] := public.telm_plate_tokens_em(p_text_id);
   v_t text;
 begin
   if v_full_wt <> '' and v_full_em <> '' and v_full_wt = v_full_em then
@@ -122,9 +153,6 @@ begin
       return 3;
     end if;
   end loop;
-  if cardinality(v_em) = 1 and v_wt @> array[v_em[1]] then
-    if v_em[1] = v_wt[1] then return 2; else return 3; end if;
-  end if;
   return null;
 end;
 $$;
@@ -217,9 +245,12 @@ revoke all on function public.telm_orphan_unique_best_load(uuid, text, jsonb, ti
 grant execute on function public.telm_orphan_unique_best_load(uuid, text, jsonb, timestamptz)
   to service_role;
 
+drop function if exists public.telm_reclaim_orphan_positions(uuid, timestamptz);
+
 create or replace function public.telm_reclaim_orphan_positions(
   p_load_id uuid,
-  p_since timestamptz default null
+  p_since timestamptz default null,
+  p_until timestamptz default null
 ) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -241,6 +272,7 @@ declare
   v_pt geometry(Point, 4326);
   v_insert_only boolean;
   v_delivered_mode boolean;
+  v_refresh_needed boolean := false;
 begin
   if p_load_id is null then
     return jsonb_build_object('ok', false, 'error', 'load_id', 'reclaimed', 0);
@@ -261,7 +293,7 @@ begin
   end if;
 
   v_delivered_mode := v_delivered is not null;
-  v_win_end := coalesce(v_delivered, now() + interval '1 day');
+  v_win_end := coalesce(p_until, v_delivered, now() + interval '1 day');
   v_since := coalesce(
     p_since,
     v_opened,
@@ -326,37 +358,34 @@ begin
       ) then
         delete from telematics_orphan_positions where id = r.id;
         v_n := v_n + 1;
-        v_last_ts := r.ts;
-        v_last_lat := r.lat;
-        v_last_lon := r.lon;
+        if v_insert_only then
+          -- P3-bis: refresh tylko gdy ten insert-only jest najnowszym punktem transportu
+          if not exists (
+            select 1 from positions p
+             where p.load_id = p_load_id and p.ts > r.ts
+          ) then
+            v_refresh_needed := true;
+            v_last_ts := r.ts;
+            v_last_lat := r.lat;
+            v_last_lon := r.lon;
+          end if;
+        else
+          v_refresh_needed := false;
+          v_last_ts := r.ts;
+          v_last_lat := r.lat;
+          v_last_lon := r.lon;
+        end if;
       else
         v_skip := v_skip + 1;
       end if;
     end loop;
 
     exit when v_batch < 800;
-    -- kolejna partia: ściśle po ostatnim ts (unikaj zapętlenia na tym samym)
     v_cursor := v_cursor + interval '1 microsecond';
   end loop;
 
-  -- Stan / ETA na najnowszej pozycji (F7 P3); bypass zostaje do refresh (limit 60 s).
-  select p.ts, st_y(p.geom_raw::geometry), st_x(p.geom_raw::geometry)
-    into v_last_ts, v_last_lat, v_last_lon
-    from positions p
-   where p.load_id = p_load_id
-   order by p.ts desc
-   limit 1;
-
-  if v_last_lat is not null and v_delivered_mode is not true then
-    begin
-      perform public.process_position(
-        p_load_id, v_last_lat, v_last_lon, v_last_ts,
-        'EMTRACK_WEB'::position_source, null, null, null,
-        jsonb_build_object('reclaim_refresh', true)
-      );
-    exception when others then
-      raise warning '#622 reclaim refresh: %', sqlerrm;
-    end;
+  -- P3-bis: bez process_position (unikaj podwójnego geofence); tylko faza + ETA.
+  if v_refresh_needed and v_last_lat is not null and v_delivered_mode is not true then
     begin
       perform public.telm_infer_phase_from_position(p_load_id, v_last_lat, v_last_lon, v_last_ts);
     exception when others then
@@ -371,17 +400,25 @@ begin
 
   perform set_config('tower.pos_budget_bypass', 'off', true);
 
-  -- P4: zamknij alarm po reclaim
-  update risk_signals
-     set resolved_at = now()
-   where load_id = p_load_id
-     and dedup_key = 'EMTRACK_ORPHAN:' || p_load_id::text
-     and resolved_at is null;
+  -- P4-bis: zamknij alarm tylko gdy reclaim > 0 albo jest GPS < 2 h
+  if v_n > 0 or exists (
+    select 1 from positions p
+     where p.load_id = p_load_id and p.ts > now() - interval '2 hours'
+  ) then
+    update risk_signals
+       set resolved_at = now()
+     where load_id = p_load_id
+       and dedup_key = 'EMTRACK_ORPHAN:' || p_load_id::text
+       and resolved_at is null;
+  end if;
 
   insert into audit_log (user_id, action, entity, entity_id, new_value)
   values (
     null, 'TELM_ORPHAN_RECLAIM', 'loads', p_load_id::text,
-    jsonb_build_object('reclaimed', v_n, 'skipped', v_skip, 'since', v_since, 'last_ts', v_last_ts)
+    jsonb_build_object(
+      'reclaimed', v_n, 'skipped', v_skip, 'since', v_since,
+      'until', p_until, 'last_ts', v_last_ts, 'refresh', v_refresh_needed
+    )
   );
 
   return jsonb_build_object(
@@ -389,17 +426,19 @@ begin
     'reclaimed', v_n,
     'skipped', v_skip,
     'last_ts', v_last_ts,
+    'refresh', v_refresh_needed,
     'status', (select status::text from loads where id = p_load_id)
   );
 end;
 $$;
 
-comment on function public.telm_reclaim_orphan_positions(uuid, timestamptz) is
-  '#622 F7: sieroty→positions (ranking, INSERT-only dla starych ts, partie 800); ETA na najnowszym.';
+comment on function public.telm_reclaim_orphan_positions(uuid, timestamptz, timestamptz) is
+  '#622 F7 r2: sieroty→positions; INSERT-only; p_until; refresh bez geofence; P4-bis.';
 
-revoke all on function public.telm_reclaim_orphan_positions(uuid, timestamptz)
+revoke all on function public.telm_reclaim_orphan_positions(uuid, timestamptz, timestamptz)
   from public, anon, authenticated;
-grant execute on function public.telm_reclaim_orphan_positions(uuid, timestamptz) to service_role;
+grant execute on function public.telm_reclaim_orphan_positions(uuid, timestamptz, timestamptz)
+  to service_role;
 
 -- Alarm HHL + zamykanie przy świeżej pozycji < 2 h (F7 P4).
 create or replace function public.telm_scan_orphan_trailer_alerts(p_now timestamptz default now())
@@ -438,14 +477,21 @@ begin
     if v_last is not null and v_last > p_now - interval '2 hours' then
       continue;
     end if;
+    -- P4-perf: najpierw plate = any(tokeny); raw textId tylko gdy pierwszy nic nie znalazł.
     v_tok := public.telm_plate_tokens(r.trailer_plate);
-    if not exists (
-      select 1 from telematics_orphan_positions o
-       where o.ts > p_now - interval '24 hours'
-         and (
-           (cardinality(v_tok) > 0 and o.plate = any (v_tok))
-           or public.telm_orphan_matches_trailer(o.plate, o.raw, r.trailer_plate)
-         )
+    if not (
+      (cardinality(v_tok) > 0 and exists (
+        select 1 from telematics_orphan_positions o
+         where o.ts > p_now - interval '24 hours' and o.plate = any (v_tok)
+      ))
+      or exists (
+        select 1 from telematics_orphan_positions o
+         where o.ts > p_now - interval '24 hours'
+           and public.telm_trailer_tokens_match(
+             r.trailer_plate,
+             coalesce(o.raw->>'textId', o.raw->>'text_id', '')
+           )
+      )
     ) then
       continue;
     end if;

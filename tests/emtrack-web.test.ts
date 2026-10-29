@@ -5,7 +5,8 @@ import {
 } from '../supabase/functions/_shared/telematics/emtrackWeb';
 import {
   ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, plateTokens,
-  primaryTrailerToken, trackingWindowStartMs, trailerPlateTokensMatch,
+  plateTokensEm, primaryTrailerToken, trackingWindowStartMs,
+  trailerMatchRank, trailerPlateTokensMatch,
 } from '../supabase/functions/_shared/telematics/matchTrailer';
 import { runEmtrackWeb } from '../supabase/functions/_shared/integrations/jobs';
 import { sourceDownRisk } from '../supabase/functions/_shared/integrations/sync';
@@ -76,6 +77,7 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(primaryTrailerToken('AB 12 CD - XY 99 ZZ')).toBe('AB12CD');
     // B1: textId ze spacją (format emtrack) = pełna równość z WT „A - B”
     expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA 11 AA BB 22 BB')).toBe(true);
+    expect(trailerMatchRank('AA 11 AA - BB 22 BB', 'AA 11 AA BB 22 BB')).toBe(1);
     expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA11AA')).toBe(true);
     // textId z dwoma vs WT z jednym
     expect(trailerPlateTokensMatch('AB12CD', 'AB12CD - XY99ZZ')).toBe(true);
@@ -91,6 +93,12 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(trailerPlateTokensMatch('AB12CD', 'ZZ99ZZ')).toBe(false);
     expect(trailerPlateTokensMatch('AB12CD', 'AB12')).toBe(false);
     expect(trailerPlateTokensMatch('TRAILER01', 'TRAILER0')).toBe(false);
+    // F7 r2 B1-bis: WT bez tokenu z samych cyfr; EM bez środkowego fragmentu
+    expect(plateTokens('XX 12345')).toEqual(['XX12345']);
+    expect(plateTokensEm('YY 12345')).toEqual(['YY12345']);
+    expect(trailerPlateTokensMatch('XX 12345', 'YY 12345')).toBe(false);
+    expect(trailerMatchRank('XX 12345 - ZZ1 2345', 'XX 12345')).toBe(2);
+    expect(trailerMatchRank('A - B', 'A B')).toBe(1);
   });
 
   it('#622: matchFixToLoad — ranking / remis (F7 P1)', () => {

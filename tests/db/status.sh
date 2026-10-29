@@ -1915,6 +1915,17 @@ chk "#622: spacje w jednym nr nie rozbijają" \
 # additional (3) vs primary (2) na tym samym WT; 'BB 22 BB'≡'BB22BB' to pełna równość (1), nie primary
 chk "#622: ranking primary vs additional" \
   "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','BB22BB')::text||'/'||public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','AA11AA')::text" "3/2"
+# F7 r2 B1-bis: WT bez tokenu z samych cyfr; EM bez środkowego fragmentu
+chk "#622: B1-bis WT bez cyfr-only" \
+  "select array_to_string(public.telm_plate_tokens('XX 12345'), ',')" "XX12345"
+chk "#622: B1-bis EM prefiks od 1. frag" \
+  "select array_to_string(public.telm_plate_tokens_em('YY 12345'), ',')" "YY12345"
+chk "#622: B1-bis XX≠YY te same cyfry" \
+  "select public.telm_trailer_tokens_match('XX 12345','YY 12345')" f
+chk "#622: B1-bis primary członu przy dwóch" \
+  "select public.telm_trailer_match_rank('XX 12345 - ZZ1 2345','XX 12345')" 2
+chk "#622: B1-bis A-B vs A B = pełna równość" \
+  "select public.telm_trailer_match_rank('A - B','A B')" 1
 # Sierota: plate = primary (jak po zmianie nazwy w emtrack); raw.textId też.
 # Pozycje z dala od SITE (żeby reclaim nie zamykał okna).
 q "
@@ -1963,6 +1974,72 @@ select public.telm_scan_orphan_trailer_alerts(now());
 " >/dev/null
 chk "#622: P4 alarm zamknięty po GPS" \
   "select count(*) from risk_signals where load_id='$L622b' and dedup_key='EMTRACK_ORPHAN:$L622b' and resolved_at is null" 0
+# F7 r2 P4-bis: reclaim=0 nie zamyka alarmu
+L622c=$(L c4)
+mk $L622c 622c "'HHL/622c'" "'SCX/622c'" IN_TRANSIT_SE null
+q "
+update loads set
+  telematics_vehicle_id = 'https://emtrack.eu/app/',
+  trailer_plate = 'DD 44 DD',
+  tracking_opened_at = public.tracking_window_start(plan_load_date)
+ where id = '$L622c';
+insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+values ('$P','$L622c','T-622C',10,3,3);
+select public.telm_save_orphan_position(
+  'DD44DD', '999003', 61.1, 19.1, (now() - interval '40 minutes'),
+  'EMTRACK_WEB', 10, 0, true, jsonb_build_object('textId','DD44DD'));
+select public.telm_scan_orphan_trailer_alerts(now());
+" >/dev/null
+chk "#622: P4-bis alarm otwarty przed reclaim0" \
+  "select count(*) from risk_signals where load_id='$L622c' and dedup_key='EMTRACK_ORPHAN:$L622c' and resolved_at is null" 1
+chk "#622: P4-bis reclaim0 nie zamyka" \
+  "select (public.telm_reclaim_orphan_positions('$L622c'::uuid, '2099-01-01'::timestamptz)->>'reclaimed')||'|'||(select count(*)::text from risk_signals where load_id='$L622c' and dedup_key='EMTRACK_ORPHAN:$L622c' and resolved_at is null)" "0|1"
+# F7 r2 P3-bis: insert-only gdy sierota starsza niż ostatnia pozycja; bez podwójnego geofence
+L622d=$(L c5)
+mk $L622d 622d "'HHL/622d'" "'SCX/622d'" IN_TRANSIT_SE null
+q "
+update loads set
+  telematics_vehicle_id = 'https://emtrack.eu/app/',
+  trailer_plate = 'EE 55 EE',
+  tracking_opened_at = public.tracking_window_start(plan_load_date)
+ where id = '$L622d';
+insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+values ('$P','$L622d','T-622D',10,3,3);
+select public.process_position(
+  '$L622d'::uuid, 59.0, 18.0, '2026-10-27 14:00:00+00'::timestamptz,
+  'EMTRACK_WEB'::position_source, 20, 0, true, '{}'::jsonb);
+select public.telm_save_orphan_position(
+  'EE55EE', '999004', 58.95, 17.95, '2026-10-27 13:00:00+00'::timestamptz,
+  'EMTRACK_WEB', 15, 0, true, jsonb_build_object('textId','EE55EE'));
+" >/dev/null
+chk "#622: P3-bis reclaim insert-only bez refresh (nowszy już jest)" \
+  "select coalesce(j->>'ok','?')||'|'||coalesce(j->>'reclaimed','?')||'|'||coalesce(j->>'refresh','?') from (select public.telm_reclaim_orphan_positions('$L622d'::uuid, '2026-10-27 00:00:00+00'::timestamptz) j) s" "true|1|false"
+chk "#622: P3-bis pozycje 2 (stara+nowa)" \
+  "select count(*) from positions where load_id='$L622d' and source='EMTRACK_WEB'" 2
+# F7 r2: remis w reclaim (dwa WT z tym samym tokenem dodatkowym) → skip
+L622e=$(L c6)
+L622f=$(L c7)
+mk $L622e 622e "'HHL/622e'" "'SCX/622e'" IN_TRANSIT_SE null
+mk $L622f 622f "'HHL/622f'" "'SCX/622f'" IN_TRANSIT_SE null
+q "
+update loads set
+  telematics_vehicle_id = 'https://emtrack.eu/app/',
+  trailer_plate = 'FF 11 FF - GG 22 GG',
+  tracking_opened_at = public.tracking_window_start(plan_load_date)
+ where id = '$L622e';
+update loads set
+  telematics_vehicle_id = 'https://emtrack.eu/app/',
+  trailer_plate = 'HH 33 HH - GG 22 GG',
+  tracking_opened_at = public.tracking_window_start(plan_load_date)
+ where id = '$L622f';
+select public.telm_save_orphan_position(
+  'GG22GG', '999005', 57.5, 16.5, '2026-10-27 15:00:00+00'::timestamptz,
+  'EMTRACK_WEB', 10, 0, true, jsonb_build_object('textId','GG22GG'));
+" >/dev/null
+chk "#622: remis reclaim → 0" \
+  "select public.telm_reclaim_orphan_positions('$L622e'::uuid, '2026-10-27 00:00:00+00'::timestamptz)->>'reclaimed'" 0
+chk "#622: remis sierota zostaje" \
+  "select count(*) from telematics_orphan_positions where plate='GG22GG'" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

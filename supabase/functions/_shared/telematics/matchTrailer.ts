@@ -22,6 +22,11 @@ const CLOSED = new Set([
 /** Separatory między numerami (#622 F7 / #623): myślnik tylko ze spacją z ≥1 strony; / , ; + */
 const PLATE_SEP = /(?:\s[-–—]\s?|\s?[-–—]\s|\s*[/,;+]\s*)/;
 
+/** Token A-Z0-9 (F7 r2: TS ≡ SQL — bez kropek itp.). */
+export function alnumPlateToken(s: string): string {
+  return String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
 /** Token ważny: ≥ 5 znaków alfanum. i ≥ 1 cyfra (F7 B2). */
 export function isValidPlateToken(t: string): boolean {
   return t.length >= 5 && /\d/.test(t);
@@ -69,29 +74,8 @@ export function loadInTrackingWindow(load: LoadMatchRow, atIso: string): boolean
 }
 
 /**
- * Kandydaci z jednego członu (między separatorami): fragmenty po spacji
- * + sklejenia sąsiednich (1…n), oraz całość po normalizePlate.
- */
-function expandPartCandidates(part: string): string[] {
-  const trimmed = part.trim();
-  if (!trimmed) return [];
-  const frags = trimmed.split(/\s+/).map((f) => normalizePlate(f)).filter((t) => t.length > 0);
-  const out: string[] = [];
-  for (let i = 0; i < frags.length; i++) {
-    let acc = '';
-    for (let j = i; j < frags.length; j++) {
-      acc += frags[j]!;
-      out.push(acc);
-    }
-  }
-  const whole = normalizePlate(trimmed);
-  if (whole) out.push(whole);
-  return out;
-}
-
-/**
- * #622 F7: tokeny tablicy — separatory jak #623; myślnik bez spacji nie tnie;
- * spacje wewnątrz nr → kandydaci ze sklejeń; tylko tokeny ≥5 z cyfrą.
+ * F7 r2 B1-bis — strona WT: tylko pełny człon między separatorami (bez sklejeń
+ * fragmentów → bez tokenu z samych cyfr „12345” z „XX 12345”).
  */
 export function plateTokens(s: string | null | undefined): string[] {
   const raw = String(s ?? '').trim();
@@ -100,10 +84,37 @@ export function plateTokens(s: string | null | undefined): string[] {
   const ordered: string[] = [];
   const seen = new Set<string>();
   for (const part of parts) {
-    for (const cand of expandPartCandidates(part)) {
-      if (!isValidPlateToken(cand) || seen.has(cand)) continue;
-      seen.add(cand);
-      ordered.push(cand);
+    const cand = alnumPlateToken(part);
+    if (!isValidPlateToken(cand) || seen.has(cand)) continue;
+    seen.add(cand);
+    ordered.push(cand);
+  }
+  return ordered;
+}
+
+/**
+ * F7 r2 B1-bis — strona textId: pełny człon + prefiksy od pierwszego fragmentu
+ * („YY 12345” → YY, YY12345; nigdy sam „12345”).
+ */
+export function plateTokensEm(s: string | null | undefined): string[] {
+  const raw = String(s ?? '').trim();
+  if (!raw) return [];
+  const parts = raw.split(PLATE_SEP);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const push = (cand: string) => {
+    if (!isValidPlateToken(cand) || seen.has(cand)) return;
+    seen.add(cand);
+    ordered.push(cand);
+  };
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const frags = trimmed.split(/\s+/).map((f) => alnumPlateToken(f)).filter((t) => t.length > 0);
+    let acc = '';
+    for (const frag of frags) {
+      acc += frag;
+      push(acc);
     }
   }
   return ordered;
@@ -116,24 +127,21 @@ export function primaryTrailerToken(trailerPlate: string | null | undefined): st
 
 /**
  * Ranking dopasowania (#622 F7 P1): 1 = pełna równość, 2 = token główny WT, 3 = dodatkowy.
- * null = brak.
+ * null = brak. WT = pełne człony; textId = człony + prefiksy od pierwszego fragmentu (B1-bis).
  */
 export function trailerMatchRank(
   trailerPlate: string | null | undefined,
   textId: string | null | undefined,
 ): 1 | 2 | 3 | null {
-  const fullWt = normalizePlate(trailerPlate);
-  const fullEm = normalizePlate(textId);
+  const fullWt = alnumPlateToken(String(trailerPlate ?? ''));
+  const fullEm = alnumPlateToken(String(textId ?? ''));
   if (fullWt && fullEm && fullWt === fullEm) return 1;
   const wt = plateTokens(trailerPlate);
-  const em = plateTokens(textId);
+  const em = plateTokensEm(textId);
   if (wt.length === 0 || em.length === 0) return null;
   const emSet = new Set(em);
   if (emSet.has(wt[0]!)) return 2;
   if (wt.some((t) => emSet.has(t))) return 3;
-  if (em.length === 1 && wt.includes(em[0]!)) {
-    return em[0] === wt[0] ? 2 : 3;
-  }
   return null;
 }
 
@@ -149,7 +157,7 @@ export function trailerPlateTokensMatch(
 
 /** Ile transportów w oknie ma tę samą naczepę (reguła tokenów #622). 0 albo 1 → 0. */
 export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]): number {
-  if (!normalizePlate(fix.textId) && !plateTokens(fix.textId).length) return 0;
+  if (!normalizePlate(fix.textId) && !plateTokensEm(fix.textId).length) return 0;
   const at = fix.observedAt || new Date().toISOString();
   const n = loads.filter(
     (l) => loadInTrackingWindow(l, at) && trailerPlateTokensMatch(l.trailer_plate, fix.textId),
