@@ -6690,4 +6690,8 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89; `pin_src` SAILING_ACTUAL_ARR×2 + EVENT×1)
   - CROSSING_GDY_KAA 2+1 BRAK; PL_ROAD 3+11 TRASA; PL_ROAD_GDY 0+3 LUKA; SE_E4 0+9 H4; SE_ROAD 3; SE_ROAD_KAA 2
   - exclude: OK 19 · TRASA 11 · H4 9 · LUKA 3 · BRAK 1
-- Tabela w komentarzu #626. **Backlog:** kalibracja pomija mismatch PORT_CHECKIN (osobny PR). Następna: **27B:C** (#627 = **0331**).
+- Tabela w komentarzu #626. **Backlog:** kalibracja pomija mismatch PORT_CHECKIN (→ #630). Następna: **27B:C** (#627 = **0331**).
+
+## 2026-10-29 06:40 — 27B:C F7 r1 (0331)
+
+- **27B:C** PR #627 — rebase na main (0331 po 0329/0330); F7 r1: `begin`/`commit`; punkty ≤~30 km; TRACK tylko gdy blisko Västerås; testy pień / TRACK / v_blocked / Polferries SE_E4; status **413**. Push → CI → F7 r2.

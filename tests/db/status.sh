@@ -1021,6 +1021,143 @@ q "select refresh_load_eta('$L487b')" >/dev/null
 chk "#487: ~50 km od E22 (Småland) → OFF_CORRIDOR" "$(rk $L487b OFF_CORRIDOR)" 1
 chk "#487: OFF_CORRIDOR z korytarzem SE_E22" \
   "select detail->'params'->>'corridor' from risk_signals where load_id='$L487b' and dedup_key='OFF_CORRIDOR:$L487b' and resolved_at is null" SE_E22
+
+# 27B:C — obie trasy Karlskrona→Boden: OFF do najbliższego z SE_E22 / śródlądowy (F7 r1)
+echo; echo "[27B] dual corridor OFF_CORRIDOR (E4 + inland)"
+chk "27B: SE_KAA_INLAND w słowniku korytarzy" \
+  "select count(*) from corridor_polylines where code='SE_KAA_INLAND' and coalesce(total_km,0)>0" 1
+chk "27B: bez TRACK → inland = SE_KAA_INLAND" \
+  "select public.stena_se_inland_corridor_code()" SE_KAA_INLAND
+chk "27B: eta_corridor pień (Kalmar lat<58.55) → SE_E22" \
+  "select public.stena_se_eta_corridor(st_setsrid(st_makepoint(16.356, 56.663),4326))" SE_E22
+chk "27B: eta_corridor Västerås → SE_KAA_INLAND" \
+  "select public.stena_se_eta_corridor(st_setsrid(st_makepoint(16.5448, 59.6099),4326))" SE_KAA_INLAND
+chk "27B: nearest Västerås → SE_KAA_INLAND" \
+  "select corridor_code from public.stena_se_corridor_nearest(st_setsrid(st_makepoint(16.5448, 59.6099),4326))" SE_KAA_INLAND
+
+L27Ba=$(L c8)
+mk $L27Ba A27B "'HHL/A27B'" "'SCX/A27B'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L27Ba';
+   delete from positions where load_id='$L27Ba';
+   set session_replication_role=origin;" >/dev/null
+# Västerås — na wariancie śródlądowym; wcześniej fałszywy OFF względem samego SE_E22
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L27Ba', now() - interval '15 minutes', st_setsrid(st_makepoint(16.5448, 59.6099),4326), 'TELEMATICS_API'),
+  ('$L27Ba', now(), st_setsrid(st_makepoint(16.5448, 59.6099),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L27Ba')" >/dev/null
+chk "27B: Västerås (śródlądowy) → brak OFF_CORRIDOR" "$(rk $L27Ba OFF_CORRIDOR)" 0
+
+# Pień E22 przed Norrköping (Oskarshamn) — bez OFF
+L27Bc=$(L ca)
+mk $L27Bc C27B "'HHL/C27B'" "'SCX/C27B'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L27Bc';
+   delete from positions where load_id='$L27Bc';
+   set session_replication_role=origin;" >/dev/null
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L27Bc', now() - interval '15 minutes', st_setsrid(st_makepoint(16.45, 57.26),4326), 'TELEMATICS_API'),
+  ('$L27Bc', now(), st_setsrid(st_makepoint(16.45, 57.26),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L27Bc')" >/dev/null
+chk "27B: pień E22 przed Norrköping → brak OFF_CORRIDOR" "$(rk $L27Bc OFF_CORRIDOR)" 0
+
+L27Bb=$(L c9)
+mk $L27Bb B27B "'HHL/B27B'" "'SCX/B27B'" FERRY "'$S485'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE' where id='$L27Bb';
+   delete from positions where load_id='$L27Bb';
+   set session_replication_role=origin;" >/dev/null
+# Karlstad — daleko od E4 i od śródlądowego; kod = wynik nearest (nie ∈ zbioru)
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L27Bb', now() - interval '15 minutes', st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API'),
+  ('$L27Bb', now(), st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L27Bb')" >/dev/null
+chk "27B: Karlstad (daleko od obu) → OFF_CORRIDOR" "$(rk $L27Bb OFF_CORRIDOR)" 1
+chk "27B: Karlstad OFF corridor = nearest()" \
+  "select case when detail->'params'->>'corridor' =
+      (select corridor_code from public.stena_se_corridor_nearest(
+         st_setsrid(st_makepoint(13.51, 59.38),4326)))
+     then 1 else 0 end
+     from risk_signals where load_id='$L27Bb' and dedup_key='OFF_CORRIDOR:$L27Bb' and resolved_at is null" 1
+
+# Preferuj SE_KAA_TRACK gdy ślad przechodzi koło Västerås (≠ kopia SE_E22)
+q "insert into corridor_polylines (code, geom, total_km, attribution, source, updated_at)
+   select 'SE_KAA_TRACK',
+          st_setsrid(st_makeline(array[
+            st_makepoint(16.183, 58.594),
+            st_makepoint(16.5448, 59.6099),
+            st_makepoint(16.6066, 59.9079),
+            st_makepoint(17.1413, 60.6749),
+            st_makepoint(21.7591, 65.8054)
+          ]), 4326),
+          1,
+          'test',
+          '27B F7 TRACK fixture',
+          now()
+   on conflict (code) do update
+     set geom = excluded.geom, total_km = excluded.total_km,
+         attribution = excluded.attribution, source = excluded.source, updated_at = now();
+   update corridor_polylines
+      set total_km = round((st_length(geom::geography)/1000.0)::numeric, 2)
+    where code = 'SE_KAA_TRACK';" >/dev/null
+chk "27B: z TRACK koło Västerås → inland = SE_KAA_TRACK" \
+  "select public.stena_se_inland_corridor_code()" SE_KAA_TRACK
+chk "27B: nearest Västerås przy TRACK → SE_KAA_TRACK" \
+  "select corridor_code from public.stena_se_corridor_nearest(st_setsrid(st_makepoint(16.5448, 59.6099),4326))" SE_KAA_TRACK
+q "delete from corridor_polylines where code='SE_KAA_TRACK' and source='27B F7 TRACK fixture';" >/dev/null
+chk "27B: po usunięciu TRACK → z powrotem SE_KAA_INLAND" \
+  "select public.stena_se_inland_corridor_code()" SE_KAA_INLAND
+
+# Brak obu korytarzy Stena → v_blocked (bez OFF mimo pozycji daleko)
+q "update corridor_polylines set total_km = 0
+    where code in ('SE_E22','SE_KAA_INLAND','SE_KAA_TRACK');" >/dev/null
+q "select refresh_load_eta('$L27Bb')" >/dev/null
+chk "27B: brak obu korytarzy → bez OFF_CORRIDOR (v_blocked)" "$(rk $L27Bb OFF_CORRIDOR)" 0
+q "update corridor_polylines
+      set total_km = round((st_length(geom::geography)/1000.0)::numeric, 2)
+    where code in ('SE_E22','SE_KAA_INLAND');" >/dev/null
+
+# Regresja Polferries / SE_E4 (Nynäshamn) — nie dual Stena
+S27Be4=77777777-0000-0000-0000-00000000027e
+L27Be4=$(L cb)
+q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+   values ('$S27Be4', '$P', '66666666-0000-0000-0000-000000000001', 'GDN-NYN',
+           now() - interval '20 hours', now() - interval '2 hours', 'ZAPLANOWANY', 'POLFERRIES')
+   on conflict (id) do nothing;" >/dev/null
+mk $L27Be4 E27B "'HHL/E27B'" "'SCX/E27B'" FERRY "'$S27Be4'"
+q "set session_replication_role=replica;
+   update loads set status='IN_TRANSIT_SE', sailing_id='$S27Be4' where id='$L27Be4';
+   delete from positions where load_id='$L27Be4';
+   set session_replication_role=origin;" >/dev/null
+# punkt na E4 koło Nyköping — bez OFF; Karlstad na Polferries → OFF z SE_E4
+q "insert into positions (load_id, ts, geom_raw, source) values
+  ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(17.0, 58.75),4326), 'TELEMATICS_API'),
+  ('$L27Be4', now(), st_setsrid(st_makepoint(17.0, 58.75),4326), 'TELEMATICS_API')" >/dev/null
+q "select refresh_load_eta('$L27Be4')" >/dev/null
+chk "27B: Polferries na E4 (Nyköping) → brak OFF_CORRIDOR" "$(rk $L27Be4 OFF_CORRIDOR)" 0
+q "delete from positions where load_id='$L27Be4';
+   insert into positions (load_id, ts, geom_raw, source) values
+  ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API'),
+  ('$L27Be4', now(), st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API');
+   select refresh_load_eta('$L27Be4');" >/dev/null
+chk "27B: Polferries Karlstad → OFF_CORRIDOR SE_E4" \
+  "select detail->'params'->>'corridor' from risk_signals
+    where load_id='$L27Be4' and dedup_key='OFF_CORRIDOR:$L27Be4' and resolved_at is null" SE_E4
+
+# sprzątanie ryzyk 27B (jak #487)
+q "delete from decision_events where decision_id in (
+      select d.id from decisions d
+       where d.risk_id in (select id from risk_signals
+         where load_id in ('$L27Ba','$L27Bb','$L27Bc','$L27Be4')
+           and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%')));
+   delete from decisions where risk_id in (
+      select id from risk_signals
+       where load_id in ('$L27Ba','$L27Bb','$L27Bc','$L27Be4')
+         and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%'));
+   delete from risk_signals
+    where load_id in ('$L27Ba','$L27Bb','$L27Bc','$L27Be4')
+      and (title_key='rk_off_corridor' or dedup_key like 'OFF_CORRIDOR:%');" >/dev/null
+
 # #496: nieznana trasa promu → bez OFF_CORRIDOR (nie SE_E4). CHECK zdejmujemy tylko na czas wstawki.
 # L 7b — nie 97: #502 F7 B4 = L 97 (kolizja → stary rejs GDN-NYN → SE_E4 + OFF_CORRIDOR).
 # Sailing …49a — nie …496: Ösmo F7 r3 już zajmuje …496 (GDN-NYN); INSERT OTHER cicho padał → fałszywy FAIL.
