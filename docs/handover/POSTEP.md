@@ -6624,3 +6624,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. P4-perf: `plate=any(tokeny)` przed fallbackiem raw textId.
   5. TS↔SQL: tokeny `[^A-Z0-9]`. Status **386** (+11). Remis dwóch WT → sierota (zmiana vs „pierwszy wygrywa”).
 - Unit lokalnie 21/21. Po push — F7 r3 przy zielonym CI.
+
+## 2026-10-29 03:55 — #622 F7 r3 (upper przed strip) w PR #628
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” (F7 r3 = POPRAWKI @ `e9de427`). CI @ `e9de427c`: unit/visual/db ✔ (G-15 — edycja po końcu).
+- **Krok F7 r3:**
+  1. Bloker: 5× `regexp_replace(upper(x), '[^A-Z0-9]', …)` w 0329 (małe litery nie giną przed `upper`).
+  2. Usunięte zbędne `v_plate = any(v_wt)` w `telm_orphan_matches_trailer`.
+  3. Wspólna tabela `tests/fixtures/trailerMatchCases.json` (TS + status.sh).
+  4. Test `refresh=true` (reclaim po dostawie, insert-only).
+  5. Status **398** (+12). Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji — świadome ograniczenie.
+- Unit lokalnie 22/22. Po push — prośba o „F7: gotowe do scalenia”. B3: #627 → 0330 przed scaleniem.

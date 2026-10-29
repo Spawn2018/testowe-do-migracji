@@ -1926,6 +1926,29 @@ chk "#622: B1-bis primary członu przy dwóch" \
   "select public.telm_trailer_match_rank('XX 12345 - ZZ1 2345','XX 12345')" 2
 chk "#622: B1-bis A-B vs A B = pełna równość" \
   "select public.telm_trailer_match_rank('A - B','A B')" 1
+# F7 r3: upper przed [^A-Z0-9] (sync: tests/fixtures/trailerMatchCases.json)
+chk "#622: F7 r3 lower xx≠yy" \
+  "select public.telm_trailer_tokens_match('xx 12345','yy 12345')" f
+chk "#622: F7 r3 lower ab→AB12345" \
+  "select array_to_string(public.telm_plate_tokens('ab 12345'), ',')" "AB12345"
+chk "#622: shared lower rank null" \
+  "select coalesce(public.telm_trailer_match_rank('xx 12345','yy 12345')::text,'∅')" "∅"
+chk "#622: shared lower full rank1" \
+  "select public.telm_trailer_match_rank('ab 12345','AB12345')" 1
+chk "#622: shared XX≠YY" \
+  "select coalesce(public.telm_trailer_match_rank('XX 12345','YY 12345')::text,'∅')" "∅"
+chk "#622: shared primary 2" \
+  "select public.telm_trailer_match_rank('XX 12345 - ZZ1 2345','XX 12345')" 2
+chk "#622: shared A-B=1" \
+  "select public.telm_trailer_match_rank('A - B','A B')" 1
+chk "#622: shared additional 3" \
+  "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','BB22BB')" 3
+chk "#622: shared primary AA 2" \
+  "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','AA11AA')" 2
+chk "#622: shared full space 1" \
+  "select public.telm_trailer_match_rank('AA 11 AA - BB 22 BB','AA 11 AA BB 22 BB')" 1
+chk "#622: shared HHXX≠HH-AB" \
+  "select coalesce(public.telm_trailer_match_rank('HHXX01','HH-AB 123')::text,'∅')" "∅"
 # Sierota: plate = primary (jak po zmianie nazwy w emtrack); raw.textId też.
 # Pozycje z dala od SITE (żeby reclaim nie zamykał okna).
 q "
@@ -2040,6 +2063,24 @@ chk "#622: remis reclaim → 0" \
   "select public.telm_reclaim_orphan_positions('$L622e'::uuid, '2026-10-27 00:00:00+00'::timestamptz)->>'reclaimed'" 0
 chk "#622: remis sierota zostaje" \
   "select count(*) from telematics_orphan_positions where plate='GG22GG'" 1
+# F7 r3: refresh=true przy reclaim insert-only po dostawie (faza/ETA pomijane; flaga w JSON)
+L622g=$(L c8)
+mk $L622g 622g "'HHL/622g'" "'SCX/622g'" DELIVERED null
+q "
+update loads set
+  telematics_vehicle_id = 'https://emtrack.eu/app/',
+  trailer_plate = 'JJ 66 JJ',
+  tracking_opened_at = '2026-10-20 00:00:00+00'::timestamptz,
+  actual_delivery_at = '2026-10-28 12:00:00+00'::timestamptz
+ where id = '$L622g';
+insert into shipment_items (project_id, load_id, shipment_code, length_m, width_m, height_m)
+values ('$P','$L622g','T-622G',10,3,3);
+select public.telm_save_orphan_position(
+  'JJ66JJ', '999006', 58.9, 17.9, '2026-10-27 16:00:00+00'::timestamptz,
+  'EMTRACK_WEB', 10, 0, true, jsonb_build_object('textId','JJ66JJ'));
+" >/dev/null
+chk "#622: F7 r3 refresh=true po dostawie (insert-only)" \
+  "select coalesce(j->>'ok','?')||'|'||coalesce(j->>'reclaimed','?')||'|'||coalesce(j->>'refresh','?') from (select public.telm_reclaim_orphan_positions('$L622g'::uuid, '2026-10-20 00:00:00+00'::timestamptz) j) s" "true|1|true"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

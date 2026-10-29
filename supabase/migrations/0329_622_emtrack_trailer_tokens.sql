@@ -6,6 +6,7 @@
 -- F7 r2: B1-bis WT bez sklejeń / EM prefiksy od 1. fragmentu; P3-bis refresh
 -- bez geofence + p_until; P4-bis zamknięcie tylko przy reclaim>0 lub GPS<2h;
 -- P4-perf plate=any przed raw; TS↔SQL [^A-Z0-9].
+-- F7 r3: regexp_replace(upper(x), …) — upper przed [^A-Z0-9] (małe litery).
 -- process_position: bypass budżetu 60 s przy tower.pos_budget_bypass=on (reclaim).
 -- Bez numerów rejestracyjnych produkcyjnych w testach.
 -- =====================================================================
@@ -59,7 +60,7 @@ begin
     if btrim(coalesce(v_part, '')) = '' then
       continue;
     end if;
-    v_cand := upper(regexp_replace(v_part, '[^A-Z0-9]', '', 'g'));
+    v_cand := regexp_replace(upper(v_part), '[^A-Z0-9]', '', 'g');
     if public.telm_token_valid(v_cand) and not (v_cand = any (v_seen)) then
       v_seen := v_seen || v_cand;
       v_out := v_out || v_cand;
@@ -70,7 +71,7 @@ end;
 $$;
 
 comment on function public.telm_plate_tokens(text) is
-  '#622 F7 r2: tokeny WT — pełny człon (sep. jak #623; ≥5+cyfra); bez sklejeń.';
+  '#622 F7 r3: tokeny WT — pełny człon; upper przed [^A-Z0-9]; ≥5+cyfra.';
 
 revoke all on function public.telm_plate_tokens(text) from public, anon, authenticated;
 grant execute on function public.telm_plate_tokens(text) to service_role;
@@ -105,7 +106,7 @@ begin
     v_frags := regexp_split_to_array(btrim(v_part), E'\\s+');
     v_acc := '';
     for v_j in 1 .. coalesce(cardinality(v_frags), 0) loop
-      v_frag := upper(regexp_replace(v_frags[v_j], '[^A-Z0-9]', '', 'g'));
+      v_frag := regexp_replace(upper(v_frags[v_j]), '[^A-Z0-9]', '', 'g');
       if v_frag = '' then
         continue;
       end if;
@@ -122,7 +123,7 @@ end;
 $$;
 
 comment on function public.telm_plate_tokens_em(text) is
-  '#622 F7 r2: tokeny textId — człony + prefiksy od 1. fragmentu (nigdy sam środek).';
+  '#622 F7 r3: tokeny textId — człony + prefiksy od 1. fragmentu; upper przed [^A-Z0-9].';
 
 revoke all on function public.telm_plate_tokens_em(text) from public, anon, authenticated;
 grant execute on function public.telm_plate_tokens_em(text) to service_role;
@@ -132,8 +133,8 @@ create or replace function public.telm_trailer_match_rank(p_trailer text, p_text
 returns int
 language plpgsql immutable parallel safe set search_path = public as $$
 declare
-  v_full_wt text := upper(regexp_replace(coalesce(p_trailer, ''), '[^A-Z0-9]', '', 'g'));
-  v_full_em text := upper(regexp_replace(coalesce(p_text_id, ''), '[^A-Z0-9]', '', 'g'));
+  v_full_wt text := regexp_replace(upper(coalesce(p_trailer, '')), '[^A-Z0-9]', '', 'g');
+  v_full_em text := regexp_replace(upper(coalesce(p_text_id, '')), '[^A-Z0-9]', '', 'g');
   v_wt text[] := public.telm_plate_tokens(p_trailer);
   v_em text[] := public.telm_plate_tokens_em(p_text_id);
   v_t text;
@@ -177,14 +178,10 @@ create or replace function public.telm_orphan_matches_trailer(p_orphan_plate tex
 returns boolean
 language plpgsql stable set search_path = public as $$
 declare
-  v_wt text[] := public.telm_plate_tokens(p_trailer);
-  v_plate text := upper(regexp_replace(coalesce(p_orphan_plate, ''), '[^A-Z0-9]', '', 'g'));
+  v_plate text := regexp_replace(upper(coalesce(p_orphan_plate, '')), '[^A-Z0-9]', '', 'g');
   v_raw_id text := coalesce(p_raw->>'textId', p_raw->>'text_id', '');
 begin
   if v_plate <> '' and public.telm_trailer_tokens_match(p_trailer, v_plate) then
-    return true;
-  end if;
-  if v_plate <> '' and cardinality(v_wt) > 0 and v_plate = any (v_wt) then
     return true;
   end if;
   if v_raw_id <> '' and public.telm_trailer_tokens_match(p_trailer, v_raw_id) then

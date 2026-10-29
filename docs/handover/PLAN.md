@@ -1121,8 +1121,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**, PR #628)
 Źródło: #622 (Spawn2018; kolejność koordynatora 29.10: **#622 → #626 → 27B:C**). Front ostrzeżenia dwóch nr — #623 SCALONE.
-1. **0329 (F7 r2):** WT = tylko pełny człon; textId = człony + prefiksy od 1. fragmentu (B1-bis; bez tokenu z samych cyfr); ranking P1; reclaim INSERT-only + `p_until` + refresh bez geofence (P3-bis); P4-bis zamknięcie alarmu tylko przy reclaim>0 lub GPS<2h; P4-perf `plate=any` przed raw; status **386**. Remis dwóch WT z tą samą naczepą/linkiem → sierota + alarm (wcześniej wygrywał pierwszy).
-2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC (partie z `p_until` gdy >800) — wynik w #622. Bez tablic produkcyjnych w repo/testach.
+1. **0329 (F7 r3):** WT = tylko pełny człon; textId = człony + prefiksy od 1. fragmentu; `regexp_replace(upper(x), …)` (F7 r3 — małe litery); ranking P1; reclaim INSERT-only + `p_until` + refresh bez geofence; P4-bis; wspólna tabela przypadków TS↔SQL; status **398**. Remis dwóch WT → sierota + alarm. Prefiksy textId nie znajdą naczepy jako drugiego członu po samej spacji („ciągnik naczepa”) — świadome.
+2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC (partie z `p_until` gdy >800) — wynik w #622. Bez tablic produkcyjnych w repo/testach. **B3:** #627 rebase 0329→**0330** przed scaleniem któregokolwiek.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
@@ -1960,3 +1960,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 02:45 | #622 F7 r1 w #628: B1–B2/P1/P3/P4; status **375**; CI 8c38a4ea db 363/7 (reclaim) — poprawka w toku | pętla |
 | 29.10.2026 03:05 | #622 CI @ 1a4350b1 db FAIL (ranking 3/1 vs 3/2; risks +rk_emtrack_orphan) — poprawka asercji + begin/commit 0329 | pętla |
 | 29.10.2026 03:30 | #622 F7 r2 w #628: B1-bis/P3-bis/P4-bis/perf; status **386**; CI @ 3a7c7b25 zielone → push r2 | pętla |
+| 29.10.2026 03:55 | #622 F7 r3 w #628: `regexp_replace(upper(…))`; wspólna tabela TS↔SQL; refresh=true; status **398**; CI e9de427 ✔ → push | pętla |

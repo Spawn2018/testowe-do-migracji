@@ -14,6 +14,7 @@ import {
   emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
   unquoteSecret,
 } from '../supabase/functions/_shared/integrations/emtrackLogin';
+import trailerMatchCases from './fixtures/trailerMatchCases.json';
 
 describe('TELM-EMTRACK-WEB parsers', () => {
   it('normalizePlate usuwa spacje i myślniki', () => {
@@ -99,6 +100,16 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(trailerPlateTokensMatch('XX 12345', 'YY 12345')).toBe(false);
     expect(trailerMatchRank('XX 12345 - ZZ1 2345', 'XX 12345')).toBe(2);
     expect(trailerMatchRank('A - B', 'A B')).toBe(1);
+    // F7 r3: upper przed strip (jak SQL)
+    expect(plateTokens('ab 12345')).toEqual(['AB12345']);
+    expect(trailerPlateTokensMatch('xx 12345', 'yy 12345')).toBe(false);
+  });
+
+  // Sync: tests/fixtures/trailerMatchCases.json ↔ tests/db/status.sh (#622 shared)
+  it('#622: wspólna tabela [wt, textId, rank] TS↔SQL (F7 r3)', () => {
+    for (const c of trailerMatchCases) {
+      expect(trailerMatchRank(c.wt, c.textId)).toBe(c.rank);
+    }
   });
 
   it('#622: matchFixToLoad — ranking / remis (F7 P1)', () => {
