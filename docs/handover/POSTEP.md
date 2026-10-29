@@ -6713,3 +6713,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #627 → `0dc28827` (F7: gotowe @ `70179782`, CI unit/db/visual ✔). Bez push na main.
 - **Krok #630:** migracja **0332** — `eta_propose_calibration` pomija PORT_CHECKIN z `sailing_mismatch` (`n_skipped_sailing_mismatch` + note `skip_mm_PORT_CHECKIN`); CROSSING z mismatch zostaje; p4k **110** (+2). Gałąź `pakiet/630-calib-skip-sailing-mismatch`.
 - Po zielonym CI — F7. Potem ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 08:00 — #630 F7 r1 POPRAWKI (PR #633)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować); #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 = POPRAWKI @ `5140ed6b`). CI db: p4k 108/2 FAIL (hours=3→Δ>40%; UUID `00c`+3). Visual/unit ✔. Bez push na main.
+- **Krok F7 r1 (#633):**
+  1. Ś1: filtr + `v_n_skip_mm` po `segment_role = 'PORT_CHECKIN'` (nie kod na sztywno); zakres jak propozycja (słownik, 90 d).
+  2. P1: CROSSING ≥5 mismatch z godzinami ≠ parametr (18→24); assert propozycja/`n_obs`.
+  3. P2: `n_obs` + `error_*` bez mismatch; hours=8 (Δ25%); undo 7d — same mismatch nie odblokowują.
+  4. Bez zdublowanego REVOKE/GRANT. p4k **111**.
+- Po push — CI → F7 (tylko diff). Potem ETA/mapa/kalibracja SE_ROAD 27B.

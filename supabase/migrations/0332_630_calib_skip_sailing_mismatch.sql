@@ -35,14 +35,18 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'FROZEN');
   end if;
 
-  -- #630: liczba PORT_CHECKIN z sailing_mismatch (wykluczone z mediany; CROSSING zostaje)
+  -- #630: pominięcia = rola PORT_CHECKIN (nie kod na sztywno); zakres jak propozycja
+  -- (kody ze słownika, 90 d, p4k; bez v_skip_codes — CROSSING z mismatch zostaje)
   select count(*)::int into v_n_skip_mm
     from eta_segment_observations o
    where o.exclude_reason is null
      and o.hours_observed > 0
      and o.observed_at >= now() - interval '90 days'
      and coalesce(o.features->>'p4k', '') = 'true'
-     and o.corridor = 'PORT_CHECKIN'
+     and o.corridor in (select segment_code from eta_route_segments)
+     and o.corridor in (
+       select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+     )
      and coalesce(o.features->>'sailing_mismatch', '') = 'true';
 
   -- B5b + Ś3: pomijaj kody cofnięte LUB auto-zastosowane w 7 dni, dopóki < 3 nowych obs.
@@ -58,9 +62,11 @@ begin
             and o.exclude_reason is null
             and o.observed_at > v.undone_at
             and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
        ) < 3
@@ -79,9 +85,11 @@ begin
             and o.exclude_reason is null
             and o.observed_at > v.created_at
             and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
        ) < 3
@@ -98,9 +106,11 @@ begin
          and o.hours_observed > 0
          and o.observed_at >= now() - interval '90 days'
          and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
          and o.corridor in (select segment_code from eta_route_segments)
@@ -219,9 +229,11 @@ begin
              and o.hours_observed > 0
              and o.observed_at >= now() - interval '90 days'
              and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
              and o.corridor = v_code
@@ -290,9 +302,11 @@ begin
            and o.hours_observed > 0
            and o.observed_at >= now() - interval '90 days'
            and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
            and jsonb_exists(v_after, o.corridor)
@@ -326,9 +340,11 @@ begin
              and o.hours_observed > 0
              and o.observed_at >= now() - interval '90 days'
              and coalesce(o.features->>'p4k', '') = 'true'
-            -- #630: pomijaj PORT_CHECKIN z sailing_mismatch (CROSSING z mismatch zostaje)
+            -- #630: pomijaj rolę PORT_CHECKIN z sailing_mismatch (CROSSING zostaje)
             and not (
-              o.corridor = 'PORT_CHECKIN'
+              o.corridor in (
+                select segment_code from eta_route_segments where segment_role = 'PORT_CHECKIN'
+              )
               and coalesce(o.features->>'sailing_mismatch', '') = 'true'
             )
              and o.corridor = v_code
@@ -444,9 +460,6 @@ revoke all on function public.eta_propose_calibration() from public, anon, authe
 grant execute on function public.eta_propose_calibration() to service_role;
 
 comment on function public.eta_propose_calibration() is
-  '#581/#630: mediana n≥5, >10 %, p4k; PORT_CHECKIN sailing_mismatch pomijany; CROSSING zostaje.';
-
-revoke all on function public.eta_propose_calibration() from public, anon, authenticated;
-grant execute on function public.eta_propose_calibration() to service_role;
+  '#581/#630: mediana n≥5, >10 %, p4k; rola PORT_CHECKIN + sailing_mismatch pomijana; CROSSING zostaje.';
 
 commit;
