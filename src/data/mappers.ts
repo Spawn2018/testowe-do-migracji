@@ -510,9 +510,12 @@ export interface SailingDbRow {
   vessels?: { name: string; operator?: string } | null;
 }
 export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name,operator)';
-/** BN9-a: znana trasa z katalogu promów zostaje (np. TLL-HEL); tylko nieznany kod — jak dotąd GDN-NYN. */
+/**
+ * BN9-a / BN1 F7 #649: znana trasa (seed / RPC) zostaje; nieznany kod — surowy (bez GDN-NYN).
+ * Flaga „nieznana” → `sailingFromRow` / `routeUnknown`.
+ */
 export function ferryRouteFromDb(route: string): Sailing['route'] {
-  return isKnownRoute(route) ? route : 'GDN-NYN';
+  return route;
 }
 export function sailingFromRow(r: SailingDbRow): Sailing {
   const name = r.vessels?.name ?? '';
@@ -521,11 +524,13 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
     isFerryOperator(r.source) ? r.source
       : r.source === 'DANE_STARTOWE' ? 'DANE_STARTOWE'
         : 'RECZNIE';
+  const known = isKnownRoute(r.route);
   return {
     id: r.id,
     vessel: vesselFromDb(name) ?? name.replace(/^M\/F\s+/i, ''),
     operator: op || undefined,
     route: ferryRouteFromDb(r.route),
+    routeUnknown: known ? undefined : true,
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
     status: r.status === 'ODWOLANY' ? 'ODWOLANY'

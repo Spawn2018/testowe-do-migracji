@@ -96,11 +96,14 @@ describe('BN9-a — mapowanie rejsów z bazy', () => {
     id: 'r', route, departure_at: '2026-10-27T08:00:00Z', arrival_at: '2026-10-27T10:00:00Z',
     delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source, vessels: { name: 'Megastar', operator: 'Tallink' },
   });
-  it('TLL-HEL zostaje TLL-HEL (nie GDN-NYN); nieznany kod — jak dotąd GDN-NYN', () => {
+  it('TLL-HEL/TLLA-HEL zostają; nieznany kod — surowy (BN1 F7 #649, nie GDN-NYN)', () => {
     expect(sailingFromRow(row('TLL-HEL')).route).toBe('TLL-HEL');
     expect(sailingFromRow(row('KPS-PLD')).route).toBe('KPS-PLD');
     expect(sailingFromRow(row('KAA-GDY')).route).toBe('KAA-GDY');
-    expect(sailingFromRow(row('ABC-DEF')).route).toBe('GDN-NYN');
+    expect(sailingFromRow(row('TLLA-HEL')).route).toBe('TLLA-HEL');
+    expect(sailingFromRow(row('TLLA-HEL')).routeUnknown).toBeUndefined();
+    expect(sailingFromRow(row('ABC-DEF')).route).toBe('ABC-DEF');
+    expect(sailingFromRow(row('ABC-DEF')).routeUnknown).toBe(true);
   });
   it('źródło: armator z katalogu zostaje, inne — RECZNIE', () => {
     expect(sailingFromRow(row('TLL-HEL', 'TALLINK')).source).toBe('TALLINK');

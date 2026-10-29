@@ -2344,6 +2344,80 @@ chk "BN1: match STENA × GDY-KAA" \
   "select public.ferry_geofence_matches_route('STENA','GDY-KAA')" t
 chk "BN1: brak match TLL-HEL × GDN-NYN" \
   "select public.ferry_geofence_matches_route('TLL-HEL','GDN-NYN')" f
+# BN1 0339: CASE → słownik; outbound; REMOVED; mapa z ferry_ports
+chk "BN1: outbound GDY-KAA" \
+  "select public.ferry_route_is_outbound('GDY-KAA')" t
+chk "BN1: outbound GDN-NYN" \
+  "select public.ferry_route_is_outbound('GDN-NYN')" t
+chk "BN1: brak outbound NYN-GDN" \
+  "select public.ferry_route_is_outbound('NYN-GDN')" f
+chk "BN1: outbound TLL-HEL" \
+  "select public.ferry_route_is_outbound('TLL-HEL')" t
+chk "BN1: outbound TLLA-HEL" \
+  "select public.ferry_route_is_outbound('TLLA-HEL')" t
+chk "BN1: brak outbound HEL-TLL" \
+  "select public.ferry_route_is_outbound('HEL-TLL')" f
+chk "BN1: ferry_sailings_map z ferry_ports" \
+  "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%ferry_ports%'" t
+chk "BN1: promote outbound ze słownika" \
+  "select pg_get_functiondef('public.promote_ferry_departures(timestamptz)'::regprocedure) like '%ferry_route_is_outbound%'" t
+chk "BN1: apply_geofence_status pomija REMOVED" \
+  "select pg_get_functiondef('public.apply_geofence_status()'::regprocedure) ilike '%REMOVED%'" t
+
+# F7 #649 r2: AIS backup — OTHER/TLL-HEL false; NYN-GDN/GDN-NYN true (rodzina z SE).
+# PORT_IN wyłączony tylko na backup (inaczej early-return „strefa aktywna”).
+# Jak #496: CHECK zdjęty na OTHER; osobne INSERT; UUID fa–fd (nie e8/e9).
+S649o=77777777-0000-0000-0000-00000000649a
+S649t=77777777-0000-0000-0000-00000000649b
+S649n=77777777-0000-0000-0000-00000000649c
+S649g=77777777-0000-0000-0000-00000000649d
+L649o=$(L fa)
+L649t=$(L fb)
+L649n=$(L fc)
+L649g=$(L fd)
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S649o','$P','66666666-0000-0000-0000-000000000001','OTHER',
+     '2026-10-12 12:00+00','2026-10-13 06:00+00','2026-10-12 12:00+00','2026-10-13 06:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S649t','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
+     '2026-10-12 14:00+00','2026-10-13 08:00+00','2026-10-12 14:00+00','2026-10-13 08:00+00','DOPLYNAL','TALLINK');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S649n','$P','66666666-0000-0000-0000-000000000001','NYN-GDN',
+     '2026-10-12 16:00+00','2026-10-13 10:00+00','2026-10-12 16:00+00','2026-10-13 10:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S649g','$P','66666666-0000-0000-0000-000000000001','GDN-NYN',
+     '2026-10-12 18:00+00','2026-10-13 12:00+00','2026-10-12 18:00+00','2026-10-13 12:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+mk $L649o O649 "'HHL/O649'" "'SCX/O649'" FERRY "'$S649o'"
+mk $L649t T649 "'HHL/T649'" "'SCX/T649'" FERRY "'$S649t'"
+mk $L649n N649 "'HHL/N649'" "'SCX/N649'" FERRY "'$S649n'"
+mk $L649g G649 "'HHL/G649'" "'SCX/G649'" FERRY "'$S649g'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L649o','MILESTONE_LOADED','2026-10-11 08:00+00'),
+    ('$L649t','MILESTONE_LOADED','2026-10-11 08:00+00'),
+    ('$L649n','MILESTONE_LOADED','2026-10-11 08:00+00'),
+    ('$L649g','MILESTONE_LOADED','2026-10-11 08:00+00')" >/dev/null
+chk "BN1 F7: OTHER założony FERRY" "$(st $L649o)" FERRY
+chk "BN1 F7: TLL-HEL założony FERRY" "$(st $L649t)" FERRY
+chk "BN1 F7: NYN-GDN założony FERRY" "$(st $L649n)" FERRY
+chk "BN1 F7: GDN-NYN założony FERRY" "$(st $L649g)" FERRY
+q "update public.geofences set active = false
+    where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'" >/dev/null
+chk "BN1 F7: OTHER + ląd SE → AIS backup false" \
+  "select public.apply_ferry_ais_arrival_backup('$L649o', 59.00, 17.90, '2026-10-13 07:00+00')" f
+chk "BN1 F7: OTHER status bez zmian (FERRY)" "$(st $L649o)" FERRY
+chk "BN1 F7: TLL-HEL + ląd SE → AIS backup false" \
+  "select public.apply_ferry_ais_arrival_backup('$L649t', 59.00, 17.90, '2026-10-13 09:00+00')" f
+chk "BN1 F7: TLL-HEL status bez zmian (FERRY)" "$(st $L649t)" FERRY
+chk "BN1 F7: NYN-GDN + ląd SE → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L649n', 59.00, 17.90, '2026-10-13 11:00+00')" t
+chk "BN1 F7: GDN-NYN + ląd SE → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L649g', 59.00, 17.90, '2026-10-13 13:00+00')" t
+q "update public.geofences set active = true
+    where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'" >/dev/null
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

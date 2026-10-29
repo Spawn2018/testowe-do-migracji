@@ -6910,6 +6910,41 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 22:20 — #649 CI: EXPECTED status 470→476
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ 8f618d3b: unit/visual ✔; **db ✖** — `status: oczekiwano 470/470, jest: 476 OK, 0 FAIL` (EXPECTED nie dogonił +6 z F7 r2).
+- **Krok:** `EXPECTED_LOCAL.status` 470→**476** w `scripts/lib/gate-suites.mjs`.
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 22:00 — #649 F7 r2: AIS backup po rodzinie + e2e NYN/GDN
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe”; CI @ adf0f372 unit/db/visual **zielone** — bez scalenia (F7 r2 POPRAWKI: rodzina SE + e2e).
+- **Krok:** (1) `apply_ferry_ais_arrival_backup` — `return false` tylko gdy żadna aktywna trasa rodziny nie przypływa do SE (NYN-GDN/KAA-GDY wracają); (2) e2e: UUID fa–fd, asercja FERRY przed backupem, PORT_IN off na czas testu, OTHER/TLL-HEL false, NYN-GDN+GDN-NYN true. status **476** (+6).
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-29 21:55 — #649 CI fix po F7 r1 (tsc + fixture AIS)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — CI @ 24a691f2: unit ✖ (tsc `outboundRoutesOf`/`includes`), db status 468/2 (fixture AIS), visual ✔.
+- **Krok:** (1) `outboundRoutesOf` → `readonly string[]` (trasy z rejsu to `string`); (2) fixture F7 AIS jak #496 — osobne INSERT, bez ADD CHECK w tej samej transakcji co OTHER. status nadal **470**.
+- Push → CI → prośba o F7 r2. Bez push na main.
+
+## 2026-10-29 21:25 — #649 F7 POPRAWKI r1 (0339 AIS / isOutbound / surowy kod)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 czeka `FILE_MODE=prod`. Bez nowego `pilne`.
+- Scalanie: F7 #649 **POPRAWKI** (3 blokujące) @ 9747510a — CI unit/db/visual były zielone; bez scalenia.
+- **Krok:** ten sam PR #649 — (1) `apply_ferry_ais_arrival_backup`: `ferry_routes.active` + port_to=`SE` (OTHER/TLL-HEL bez AT_PORT); (2) `isOutbound` z krajów portów RPC + aliasy seed `TLLA-HEL`/`HELA-TLL`; (3) `ferryRouteFromDb` surowy kod + `routeUnknown`, log awarii RPC. status **470** (+4). unit bn1+bn9a+review 35/35.
+- Nieblokujące F7 zapisane w PLAN (CASE 0298/0279/0307, seed vs baza, active=false). Push → CI → F7 r2. Bez push na main.
+
+## 2026-10-29 20:50 — #647 SCALONE; BN1 CASE→słownik + front RPC (0339)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 czeka `FILE_MODE=prod`. #648 (BN1-b) — pkt 1–3 w #647; zostaje seed jedną funkcją + e2e.
+- Scalanie: F7 „gotowe” @ `0862fe07` (Spawn2018, po CI) → **#647 SCALONE** `e2599170` (merge). Bez push na main.
+- **Krok BN1:** gałąź `pakiet/bn1-ferry-case-rpc` / migracja **0339** — `ferry_route_is_outbound`; CASE usunięte z `promote_ferry_departures` / `apply_ferry_ais_arrival_backup` / `refresh_load_eta`; `ferry_sailings_map` ← `ferry_ports`; REMOVED we wczesnym return `apply_geofence_status`; front `loadFerryDictIntoCatalog` + `applyFerryDictSnapshot`. status **466** (+9). unit bn1+bn9a 20/20.
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.

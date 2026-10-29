@@ -117,8 +117,8 @@ export interface Awizacja {
 }
 
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
-/** BN9-a: kody tras z katalogu promów (`src/lib/ferryCatalog.ts`) — te same co w bazie (BN1). */
-export type FerryRoute = FerryRouteCode;
+/** BN9-a / BN1: kod z katalogu albo surowy kod z bazy (gdy spoza seeda/RPC — `routeUnknown`). */
+export type FerryRoute = FerryRouteCode | string;
 export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export interface Sailing {
   id: string;
@@ -126,6 +126,8 @@ export interface Sailing {
   /** Armator z vessels.operator (Polferries / Stena Line / armatorzy z katalogu promów). */
   operator?: string;
   route: FerryRoute;
+  /** BN1 F7 #649: trasa spoza katalogu/RPC — UI pokazuje surowy kod, bez podmiany na GDN-NYN. */
+  routeUnknown?: boolean;
   departureAt: string;
   arrivalAt: string;
   delayedDepartureAt: string | null;
