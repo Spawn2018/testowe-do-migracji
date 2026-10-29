@@ -6782,3 +6782,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #639 @ `c469db8e`: unit ✔, visual ✔, db ✔ (import **383**, run `40865029504`). MERGEABLE.
 - #638 (27B ETA) CI zielone, F7 = POPRAWKI — czeka na scalenie #637 (potem 0334→0335 + REMOVED/Polferries).
 
+## 2026-10-29 14:00 — #637 PR #639 CI zielone @ f48f91a2; ponowne F7
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (próba na kopii po wdrożeniu).
+- Scalanie: F7 „gotowe” @ `c469db8` (11:41Z) **przed** docs `f48f91a2` (11:41:22Z) — bez scalenia do ponownego „F7: gotowe do scalenia”.
+- CI #639 @ `f48f91a2`: unit ✔, visual ✔, db ✔ (import **383**, run `40867523084`). MERGEABLE.
+- #638 czeka na #637 (0334→0335 + REMOVED/Polferries). Bez push na main.
+

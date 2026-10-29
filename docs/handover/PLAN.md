@@ -1995,3 +1995,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 13:00 | #637 PILNE „włącz zapis”: **0334** write bez importu; próba na kopii przed write_set; przed F7 #638 | pętla |
 | 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |
 | 29.10.2026 13:40 | #637 PR #639 CI zielone @ `c469db8e` (unit/visual/db import 383); czekam F7; #638 po #637 | pętla |
+| 29.10.2026 14:00 | #637 PR #639 CI zielone @ `f48f91a2` (docs po F7 @ c469db8); czekam ponowne F7; #638 po #637 | pętla |
