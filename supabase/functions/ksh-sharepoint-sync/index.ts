@@ -3,9 +3,9 @@
  * Job: ksh-sharepoint-sync. Sekrety SHAREPOINT_* tylko w env; logi = statusy i liczby.
  * SOURCE_DOWN:KSH_SHAREPOINT po 30 min bez udanego odczytu (sticky, przez store.raiseRisk).
  * F7 #556: import_enabled (domyślnie dry_run), dedup hash, DEMO bez sekretów, try/catch handler.
- * A6/#637 zapis: write_enabled → kolejka outbound → łatka xlsx → Graph PUT;
- * bez wymogu import_enabled (właściciel: import off, zapis on).
- * Próba na kopii: SHAREPOINT_FILE_MODE=test + write_enabled → PUT na SHAREPOINT_TEST_FILE_URL.
+ * A6/#637/#650 zapis: write_enabled → kolejka outbound → Graph workbook PATCH (komórka);
+ * bez PUT całego pliku; bez wymogu import_enabled (import off, zapis on).
+ * Próba na kopii: SHAREPOINT_FILE_MODE=test + write_enabled → PATCH na SHAREPOINT_TEST_FILE_URL.
  */
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -282,6 +282,7 @@ async function handle(req: Request): Promise<Response> {
         overwritten_n: writeRes.overwritten_n,
         write_reason: writeRes.write_reason ?? writeRes.reason ?? null,
         upload_ok: writeRes.upload_ok,
+        write_via: 'workbook',
       } : {}),
     };
     const up = await upsertOk({
@@ -306,6 +307,7 @@ async function handle(req: Request): Promise<Response> {
         overwritten_n: writeRes ? String(writeRes.overwritten_n) : '0',
         write_reason: writeRes?.write_reason ?? writeRes?.reason ?? '',
         upload_ok: writeRes?.upload_ok == null ? '' : String(writeRes.upload_ok),
+        write_via: writeRes ? 'workbook' : '',
       },
     };
     const runOk = await insertRun(sb, true, result);
@@ -428,6 +430,7 @@ async function handle(req: Request): Promise<Response> {
       overwritten_n: writeRes.overwritten_n,
       write_reason: writeRes.write_reason ?? writeRes.reason ?? null,
       upload_ok: writeRes.upload_ok,
+      write_via: 'workbook',
     } : {}),
     // Udany przebieg czyści zegar awarii.
   };
@@ -462,6 +465,7 @@ async function handle(req: Request): Promise<Response> {
       overwritten_n: writeRes ? String(writeRes.overwritten_n) : '0',
       write_reason: writeRes?.write_reason ?? writeRes?.reason ?? '',
       upload_ok: writeRes?.upload_ok == null ? '' : String(writeRes.upload_ok),
+      write_via: writeRes ? 'workbook' : '',
     },
   };
   const runOk = await insertRun(sb, true, result);

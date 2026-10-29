@@ -79,7 +79,13 @@ function itemWorkbookDone(
 ): boolean {
   const codes = patchCodes(it);
   if (!codes.length) return false;
-  if (codes.some((c) => conflictCodes.has(c))) return false;
+  // #650 F7 r2 B1': konflikt dat nie blokuje done, gdy WT6 już zapisane.
+  if (
+    codes.some((c) => conflictCodes.has(c))
+    && !codes.some((c) => written.has(c))
+  ) {
+    return false;
+  }
   if (codes.some((c) => incomplete.has(c))) return false;
   return codes.some((c) => written.has(c));
 }
@@ -94,6 +100,38 @@ function itemSkippedNoWrite(
   if (!codes.length) return true;
   if (codes.some((c) => conflictCodes.has(c))) return false;
   return !codes.some((c) => codesWithJobs.has(c));
+}
+
+/** Pola dwukierunkowe — konflikt dat; nie blokują 6 pól WT (#650 F7 r2 B1'). */
+const DATE_PATCH_KEYS = [
+  'load_date', 'load_time', 'delivery_date', 'delivery_time',
+] as const;
+
+/** 6 pól wyłącznie WT→plik. */
+const WT6_PATCH_KEYS = [
+  'driver', 'driver_phone', 'tractor', 'trailer', 'carrier_order_no', 'hhl_order_no',
+] as const;
+
+function patchHasDateKeys(patch: Record<string, unknown>): boolean {
+  return DATE_PATCH_KEYS.some((k) => k in patch);
+}
+
+function patchHasWt6(patch: Record<string, unknown>): boolean {
+  return WT6_PATCH_KEYS.some((k) => {
+    if (!(k in patch)) return false;
+    const v = patch[k];
+    return v != null && String(v).trim() !== '';
+  });
+}
+
+function stripDateKeysFromPatch(
+  patch: OutboundPatch & Record<string, unknown>,
+): OutboundPatch & Record<string, unknown> {
+  const next: OutboundPatch & Record<string, unknown> = { ...patch };
+  for (const k of DATE_PATCH_KEYS) {
+    delete next[k];
+  }
+  return next;
 }
 
 function applyPatchToSnap(base: FileDateSnap | null, patch: OutboundPatch): FileDateSnap {
@@ -193,7 +231,10 @@ export async function processOutboundWrites(args: {
 
   const toWrite: OutboundItem[] = [];
   const alreadyDone: OutboundItem[] = [];
+  /** Pozycje tylko-daty z konfliktem → ack conflict (bez zapisu). */
   const conflictItems: OutboundItem[] = [];
+  /** Konflikty dat przy pozycji z WT6 (sprawa + zapis WT6; bez ack conflict). */
+  let dateConflictsWithWt6 = 0;
   const skipItems: OutboundItem[] = [];
   const skipReasons = new Map<number, string>();
 
@@ -205,13 +246,27 @@ export async function processOutboundWrites(args: {
       fileSnapshot: args.fileSnapshot,
       codes,
     });
+    // #650: same WT6 bez expected — WT zawsze nadpisuje, expected niepotrzebne.
     if (missingExpectedFile(expected)) {
+      if (
+        patchHasWt6(it.patch as Record<string, unknown>)
+        && !patchHasDateKeys(it.patch as Record<string, unknown>)
+      ) {
+        const anyCodeInFile = codes.some((c) => args.fileSnapshot[c]);
+        if (!anyCodeInFile) {
+          skipItems.push(it);
+          skipReasons.set(Number(it.id), 'KSH_ROW_GONE');
+          continue;
+        }
+        toWrite.push({ ...it, codes });
+        continue;
+      }
       skipItems.push(it);
       skipReasons.set(Number(it.id), 'no_expected');
       continue;
     }
 
-    // F7 r2 / r2b: PUT zgubiony lub częściowa łatka — pomiń kody już w pliku.
+    // F7 r2 / r2b: częściowa łatka — pomiń kody już w pliku.
     const remaining = codes.filter((code) =>
       !fileAlreadyHasPatch(expected!, { code, ...it.patch }, args.fileSnapshot[code] ?? null)
     );
@@ -227,9 +282,8 @@ export async function processOutboundWrites(args: {
       continue;
     }
 
-    // F7 r2 UWAGA: konflikt tylko dla kodów jeszcze nie zastosowanych.
-    // #569: p_code / pole sprawy = wiersz, w którym wykryto rozjazd (nie primary).
-    // #637 (a): w test expected już z kopii — konflikt prod↔kopia nie blokuje próby.
+    // F7 r2 UWAGA: konflikt tylko dla dat/godzin (#650 — 6 pól WT bez kontroli).
+    // B1' F7 r2: konflikt dat nie blokuje WT6 — wytnij daty, reszta do workbooka.
     const conflictNote = pickOutboundConflictNote(
       remaining,
       expected!,
@@ -237,7 +291,6 @@ export async function processOutboundWrites(args: {
       it.patch as Record<string, unknown>,
     );
     if (conflictNote) {
-      conflictItems.push(it);
       const rev = typeof it.rev === 'number' && it.rev >= 1 ? it.rev : 1;
       const note = await args.sb.rpc('l1b_note_file_changed', {
         p_project: args.projectId,
@@ -253,10 +306,23 @@ export async function processOutboundWrites(args: {
           upload_ok: false, reason: 'note_file_changed', write_reason: 'note_file_changed',
         };
       }
+      const stripped = stripDateKeysFromPatch(it.patch as OutboundPatch & Record<string, unknown>);
+      if (patchHasWt6(stripped as Record<string, unknown>)) {
+        dateConflictsWithWt6 += 1;
+        toWrite.push({
+          ...it,
+          patch: stripped,
+          codes: remaining.length ? remaining : codes,
+        });
+        continue;
+      }
+      conflictItems.push(it);
       continue;
     }
     toWrite.push({ ...it, codes: remaining.length ? remaining : codes });
   }
+
+  const conflictsCount = () => conflictItems.length + dateConflictsWithWt6;
 
   if (alreadyDone.length) {
     const a = await ack(args.sb, ackPayload(alreadyDone, true), 'done', null);
@@ -269,18 +335,20 @@ export async function processOutboundWrites(args: {
     }
   }
 
-  const ackConflict = await ack(
-    args.sb,
-    ackPayload(conflictItems, false),
-    'conflict',
-    'file_changed',
-  );
-  if (!ackConflict.ok) {
-    return {
-      attempted: true, written: 0, conflicts: 0, skipped: 0,
-      overwritten_n: 0,
-      upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
-    };
+  if (conflictItems.length) {
+    const ackConflict = await ack(
+      args.sb,
+      ackPayload(conflictItems, false),
+      'conflict',
+      'file_changed',
+    );
+    if (!ackConflict.ok) {
+      return {
+        attempted: true, written: 0, conflicts: 0, skipped: 0,
+        overwritten_n: 0,
+        upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
+      };
+    }
   }
   if (skipItems.length) {
     const byReason = new Map<string, OutboundItem[]>();
@@ -293,7 +361,7 @@ export async function processOutboundWrites(args: {
       const a = await ack(args.sb, ackPayload(group, false), 'skipped', reason);
       if (!a.ok) {
         return {
-          attempted: true, written: 0, conflicts: conflictItems.length, skipped: 0,
+          attempted: true, written: 0, conflicts: conflictsCount(), skipped: 0,
           overwritten_n: 0,
           upload_ok: false, reason: 'ack_skipped', write_reason: 'ack_skipped',
         };
@@ -321,13 +389,13 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: alreadyDone.length,
-      conflicts: conflictItems.length,
+      conflicts: conflictsCount(),
       skipped: skipItems.length,
       overwritten_n: 0,
       upload_ok: alreadyDone.length ? true : null,
       write_reason: alreadyDone.length
         ? 'recovered_ack'
-        : (conflictItems.length ? 'conflict' : 'nothing_to_write'),
+        : (conflictsCount() ? 'conflict' : 'nothing_to_write'),
       snapshotPatch: alreadyDone.length ? snapFromRecover : undefined,
     };
   }
@@ -415,7 +483,7 @@ export async function processOutboundWrites(args: {
       const part = await ackFullyWrittenItems(partialCodes, incompleteCodes, conflictCodeList);
       if (!part.ok) {
         return {
-          attempted: true, written: fullyDone.length, conflicts: conflictItems.length,
+          attempted: true, written: fullyDone.length, conflicts: conflictsCount(),
           skipped: skipItems.length, overwritten_n, upload_ok: true,
           reason: part.reason ?? 'ack_done', write_reason: part.reason ?? 'ack_done',
         };
@@ -429,7 +497,7 @@ export async function processOutboundWrites(args: {
         const ackFail = await ack(args.sb, ackPayload(remaining, false), 'failed', failReason);
         if (!ackFail.ok) {
           return {
-            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            attempted: true, written: partialCodes.length, conflicts: conflictsCount(),
             skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'ack_failed', write_reason: 'ack_failed',
           };
@@ -443,7 +511,7 @@ export async function processOutboundWrites(args: {
         });
         if (note.error) {
           return {
-            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            attempted: true, written: partialCodes.length, conflicts: conflictsCount(),
             skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
@@ -452,7 +520,7 @@ export async function processOutboundWrites(args: {
       return {
         attempted: true,
         written: partialCodes.length,
-        conflicts: conflictItems.length,
+        conflicts: conflictsCount(),
         skipped: skipItems.length,
         overwritten_n,
         upload_ok: partialCodes.length ? true : false,
@@ -468,7 +536,7 @@ export async function processOutboundWrites(args: {
         });
         if (note.error) {
           return {
-            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            attempted: true, written: partialCodes.length, conflicts: conflictsCount(),
             skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'note_423', write_reason: 'note_423',
           };
@@ -477,7 +545,7 @@ export async function processOutboundWrites(args: {
       return {
         attempted: true,
         written: partialCodes.length,
-        conflicts: conflictItems.length,
+        conflicts: conflictsCount(),
         skipped: skipItems.length,
         overwritten_n,
         upload_ok: partialCodes.length ? true : false,
@@ -493,7 +561,7 @@ export async function processOutboundWrites(args: {
     );
     if (!ackFail.ok) {
       return {
-        attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+        attempted: true, written: partialCodes.length, conflicts: conflictsCount(),
         skipped: skipItems.length, overwritten_n, upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
       };
     }
@@ -508,7 +576,7 @@ export async function processOutboundWrites(args: {
         });
         if (note.error) {
           return {
-            attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+            attempted: true, written: partialCodes.length, conflicts: conflictsCount(),
             skipped: skipItems.length, overwritten_n, upload_ok: false,
             reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
@@ -518,7 +586,7 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: partialCodes.length,
-      conflicts: conflictItems.length,
+      conflicts: conflictsCount(),
       skipped: skipItems.length,
       overwritten_n,
       upload_ok: partialCodes.length ? true : false,
@@ -527,9 +595,10 @@ export async function processOutboundWrites(args: {
     };
   }
 
-  // Konflikty wykryte przy GET komórki (równoległa edycja od migawki).
+  // Konflikty dat przy GET komórki — sprawa file_changed; WT6 już zapisane nie idą w ack conflict.
   if (wb.conflicts.length) {
     const conflictCodes = new Set(wb.conflicts.map((c) => c.code));
+    const writtenCodesWb = new Set(wb.writtenCodes);
     const cellConflictItems = toWrite.filter((it) =>
       patchCodes(it).some((c) => conflictCodes.has(c))
     );
@@ -540,7 +609,7 @@ export async function processOutboundWrites(args: {
         p_project: args.projectId,
         p_load: it.load_id,
         p_code: hit?.code ?? it.code,
-        p_field: hit?.field ?? 'carrier_order_no',
+        p_field: hit?.field ?? 'load_date',
         p_rev: rev,
       });
       if (note.error) {
@@ -551,20 +620,29 @@ export async function processOutboundWrites(args: {
         };
       }
     }
-    const ackCell = await ack(
-      args.sb,
-      ackPayload(cellConflictItems, false),
-      'conflict',
-      'file_changed',
+    const pureDateConflicts = cellConflictItems.filter((it) =>
+      !patchCodes(it).some((c) => writtenCodesWb.has(c))
     );
-    if (!ackCell.ok) {
-      return {
-        attempted: true, written: 0, conflicts: 0, skipped: 0,
-        overwritten_n,
-        upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
-      };
+    const withWt6Written = cellConflictItems.filter((it) =>
+      patchCodes(it).some((c) => writtenCodesWb.has(c))
+    );
+    dateConflictsWithWt6 += withWt6Written.length;
+    if (pureDateConflicts.length) {
+      const ackCell = await ack(
+        args.sb,
+        ackPayload(pureDateConflicts, false),
+        'conflict',
+        'file_changed',
+      );
+      if (!ackCell.ok) {
+        return {
+          attempted: true, written: 0, conflicts: 0, skipped: 0,
+          overwritten_n,
+          upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
+        };
+      }
+      conflictItems.push(...pureDateConflicts);
     }
-    conflictItems.push(...cellConflictItems);
   }
 
   const writtenSet = new Set(wb.writtenCodes);
@@ -589,7 +667,7 @@ export async function processOutboundWrites(args: {
     );
     if (!a.ok) {
       return {
-        attempted: true, written: 0, conflicts: conflictItems.length,
+        attempted: true, written: 0, conflicts: conflictsCount(),
         skipped: skipItems.length, overwritten_n, upload_ok: false,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
@@ -597,7 +675,7 @@ export async function processOutboundWrites(args: {
     return {
       attempted: true,
       written: alreadyDone.length,
-      conflicts: conflictItems.length,
+      conflicts: conflictsCount(),
       skipped: skipItems.length + skippedNoWrite.length,
       overwritten_n,
       upload_ok: alreadyDone.length ? true : null,
@@ -614,7 +692,7 @@ export async function processOutboundWrites(args: {
     );
     if (!a.ok) {
       return {
-        attempted: true, written: writtenSet.size, conflicts: conflictItems.length,
+        attempted: true, written: writtenSet.size, conflicts: conflictsCount(),
         skipped: skipItems.length, overwritten_n, upload_ok: true,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
@@ -627,7 +705,7 @@ export async function processOutboundWrites(args: {
       return {
         attempted: true,
         written: writtenSet.size,
-        conflicts: conflictItems.length,
+        conflicts: conflictsCount(),
         skipped: skipItems.length + skippedNoWrite.length,
         overwritten_n,
         upload_ok: true,
@@ -677,7 +755,7 @@ export async function processOutboundWrites(args: {
       return {
         attempted: true,
         written: writtenSet.size + alreadyDone.length,
-        conflicts: conflictItems.length,
+        conflicts: conflictsCount(),
         skipped: skipItems.length + skippedNoWrite.length + wb.skipped,
         overwritten_n,
         upload_ok: true,
@@ -692,7 +770,7 @@ export async function processOutboundWrites(args: {
   return {
     attempted: true,
     written: writtenSet.size + alreadyDone.length,
-    conflicts: conflictItems.length,
+    conflicts: conflictsCount(),
     skipped: skipItems.length + skippedNoWrite.length + wb.skipped,
     overwritten_n,
     upload_ok: doneItems.length || alreadyDone.length ? true : (wb.conflicts.length ? null : null),

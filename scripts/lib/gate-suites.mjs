@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 393, // #650 F7: +6 N5/N3 (puste WT, 2×backfill, audit, MFA aal1, N3×2); było 387
+  import: 395, // #650 F7 r2: +2 N5 CANCELLED/REMOVED; było 393
   nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,
