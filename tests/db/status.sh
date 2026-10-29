@@ -1048,6 +1048,13 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L27Ba', now(), st_setsrid(st_makepoint(16.5448, 59.6099),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L27Ba')" >/dev/null
 chk "27B: Västerås (śródlądowy) → brak OFF_CORRIDOR" "$(rk $L27Ba OFF_CORRIDOR)" 0
+# 27B:C ETA — postęp/godziny wg stena_se_eta_corridor (0334)
+chk "27B ETA: Västerås → se_corridor inland" \
+  "select basis->'causes'->>'se_corridor' from compute_load_eta('$L27Ba', now())" SE_KAA_INLAND
+chk "27B ETA: Västerås → se_road_code INLAND" \
+  "select basis->'causes'->>'se_road_code' from compute_load_eta('$L27Ba', now())" SE_ROAD_KAA_INLAND
+chk "27B ETA: Västerås → progress corridor" \
+  "select basis->'causes'->>'progress' from compute_load_eta('$L27Ba', now())" corridor
 
 # Pień E22 przed Norrköping (Oskarshamn) — bez OFF
 L27Bc=$(L ca)
@@ -1061,6 +1068,10 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L27Bc', now(), st_setsrid(st_makepoint(16.45, 57.26),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L27Bc')" >/dev/null
 chk "27B: pień E22 przed Norrköping → brak OFF_CORRIDOR" "$(rk $L27Bc OFF_CORRIDOR)" 0
+chk "27B ETA: pień → se_corridor SE_E22" \
+  "select basis->'causes'->>'se_corridor' from compute_load_eta('$L27Bc', now())" SE_E22
+chk "27B ETA: pień → se_road_code KAA (E4)" \
+  "select basis->'causes'->>'se_road_code' from compute_load_eta('$L27Bc', now())" SE_ROAD_KAA
 
 L27Bb=$(L c9)
 mk $L27Bb B27B "'HHL/B27B'" "'SCX/B27B'" FERRY "'$S485'"
@@ -1137,6 +1148,11 @@ q "insert into positions (load_id, ts, geom_raw, source) values
   ('$L27Be4', now(), st_setsrid(st_makepoint(18.0686, 59.3293),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L27Be4')" >/dev/null
 chk "27B: Polferries na E4 (Sztokholm) → brak OFF_CORRIDOR" "$(rk $L27Be4 OFF_CORRIDOR)" 0
+# F7 #638: Polferries ETA causes (SE_E4 / SE_ROAD)
+chk "27B ETA: Polferries → se_corridor SE_E4" \
+  "select basis->'causes'->>'se_corridor' from compute_load_eta('$L27Be4', now())" SE_E4
+chk "27B ETA: Polferries → se_road_code SE_ROAD" \
+  "select basis->'causes'->>'se_road_code' from compute_load_eta('$L27Be4', now())" SE_ROAD
 q "delete from positions where load_id='$L27Be4';
    insert into positions (load_id, ts, geom_raw, source) values
   ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API'),
@@ -1145,6 +1161,13 @@ q "delete from positions where load_id='$L27Be4';
 chk "27B: Polferries Karlstad → OFF_CORRIDOR SE_E4" \
   "select detail->'params'->>'corridor' from risk_signals
     where load_id='$L27Be4' and dedup_key='OFF_CORRIDOR:$L27Be4' and resolved_at is null" SE_E4
+
+# F7 #638: REMOVED → ETA null, segment CANCELLED (jak 0315) — 1 asercja (+2 Polferries = +3)
+L27Brm=$(L cd)
+mk $L27Brm R27B "'HHL/R27B'" "'SCX/R27B'" IN_TRANSIT_SE
+q "update loads set status='REMOVED' where id='$L27Brm'" >/dev/null
+chk "27B ETA: REMOVED → eta null + segment CANCELLED" \
+  "select case when eta is null and basis->>'segment'='CANCELLED' then 'ok' else 'bad' end from compute_load_eta('$L27Brm', now())" ok
 
 # sprzątanie ryzyk 27B (jak #487)
 q "delete from decision_events where decision_id in (

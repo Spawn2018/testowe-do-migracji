@@ -6762,32 +6762,22 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI #636: unit/visual ✔; `db` import 380/2 — `driver_*_phone_country=null` narusza NOT NULL.
 - **Krok:** testy #618 phone/tractor zostawiają country PL/SE przy pustym telefonie (`ksh_file_phone_text` i tak → null). Push → CI → F7.
 
+## 2026-10-29 12:35 — #618 SCALONE; start 27B:C ETA (0334→0335)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: #636 → `97428948` (F7: gotowe @ `02051359`, CI unit/db/visual ✔; import 382). #618 zamknięte. Bez push na main. Odbiór SELECT 0333 — koordynator.
+- **Krok 27B:C ETA:** migracja (początkowo 0334, po #637 → **0335**) — `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`. Testy status +5 → **418**. Gałąź `pakiet/27B-eta-se-corridor`.
+
 ## 2026-10-29 13:00 — #637 start: zapis WT→plik bez importu (0334)
 
-- Skrzynka: #637 (Spawn2018, PILNE właściciel 11:29) — pierwszeństwo przed 27B/#638; #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe” na #638 (F7 = POPRAWKI; kolejność: #637 najpierw).
-- Scalanie: brak.
-- **Krok #637:** migracja **0334** — `ksh_sync_write_set` bez wymogu `import_enabled`; `ksh_sync_import_set(false)` nie gasi `write_enabled` ani kolejki; Edge `processOutboundWrites` bez `import_disabled`; tryb `test` może pisać bez `write_enabled`. Testy import przepisane (liczba OK **382**). Gałąź `pakiet/637-ksh-write-no-import`.
-- Po zielonym CI → F7 → wdrożenie → krok 2 próba na kopii (SHAREPOINT_TEST_FILE_URL) → meldunek w #637. Potem write_set(true) / uzupełnienie aktywnych. Potem F7 #638 (REMOVED + Polferries causes).
+- Skrzynka: #637 PILNE — pierwszeństwo przed 27B/#638; #608 w planie; #550 **WSTRZYMANE**.
+- **Krok #637:** migracja **0334** write bez importu. Gałąź `pakiet/637-ksh-write-no-import`.
 
-## 2026-10-29 13:20 — #637 F7 #639 POPRAWKI (write_enabled)
+## 2026-10-29 14:30 — #639 SCALONE; #638 F7 POPRAWKI (0335)
 
-- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte. Bez PR do scalenia (F7 #639 = POPRAWKI; #638 czeka na #637).
-- **Krok:** przywróć `if (!writeEnabled) return null` (kolejka tylko z triggera przy write on); procedura próby: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → zmiana awizacji → cykl → `prod` → backlog aktywnych. Unit: prod bez `writeTestOkAt` → `write_test_required`; test dochodzi do kolejki. import.sh +1 asercja `import_enabled=f` → **383**. Usunięty zbędny `importEnabled` z `processOutboundWrites`.
-- Push → CI → F7. Po scaleniu/wdrożeniu: próba na kopii wg procedury → meldunek w #637.
-
-## 2026-10-29 13:40 — #637 PR #639 CI zielone @ c469db8e
-
-- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (krok 2 próba na kopii po wdrożeniu).
-- Scalanie: brak „F7: gotowe do scalenia” po `c469db8e` — prośba o F7 w PR #639.
-- CI #639 @ `c469db8e`: unit ✔, visual ✔, db ✔ (import **383**, run `40865029504`). MERGEABLE.
-- #638 (27B ETA) CI zielone, F7 = POPRAWKI — czeka na scalenie #637 (potem 0334→0335 + REMOVED/Polferries).
-
-## 2026-10-29 14:00 — #637 PR #639 CI zielone @ f48f91a2; ponowne F7
-
-- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (próba na kopii po wdrożeniu).
-- Scalanie: F7 „gotowe” @ `c469db8` (11:41Z) **przed** docs `f48f91a2` (11:41:22Z) — bez scalenia do ponownego „F7: gotowe do scalenia”.
-- CI #639 @ `f48f91a2`: unit ✔, visual ✔, db ✔ (import **383**, run `40867523084`). MERGEABLE.
-- #638 czeka na #637 (0334→0335 + REMOVED/Polferries). Bez push na main.
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 W63 (FILE_MODE=test).
+- Scalanie: #639 → `9be41712` (F7 @ `b4065e9`); deploy-main ✔. Bez push na main.
+- **Krok #638 F7:** przenumeruj ETA **0334→0335**; `CANCELLED`+`REMOVED`; Polferries causes `SE_E4`/`SE_ROAD`; status **421** (+3). h_road inland tylko `if found`.
 
 ## 2026-10-29 14:30 — #639 SCALONE; #637 W63 (FILE_MODE); start #638
 
