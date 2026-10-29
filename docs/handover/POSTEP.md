@@ -6669,3 +6669,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   4. Usunięte: `PIN ≤ arrival+6h` i limit okna EXIT do `actual+1h`.
   5. CROSSING trim / `pin_late_h` tylko gdy rejs pasuje. Testy: delayed; przesiadka; EXIT±1h bez mismatch; EXIT&gt;1h → EVENT+mismatch. p4k **107**.
 - Po zielonym CI — F7 r3. Kolejność: #626 → 27B:C (#627 = **0331**).
+
+## 2026-10-29 05:55 — #626 F7 r3 (PR #629) — arrival&lt;EXIT tylko przy sailing_ok
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne` / `dla-cursora`. Brak „F7: gotowe do scalenia”.
+- CI @ `35fca542` (F7 r2): unit/db/visual ✔. F7 r3 @ `35fca54` = **POPRAWKI** (jedna linia + test).
+- **Krok F7 r3:**
+  1. `0330`: `arrival < EXIT → CROSSING BRAK` tylko gdy `v_sailing_ok is true` (przesiadka z przybiciem A przed EXIT B nie gubi CROSSING).
+  2. Test: rejs A 08:00→18:30, EXIT 19:55, PIN 06:30 → PORT_CHECKIN ~6 h + CROSSING ~11 h z `sailing_mismatch`.
+  3. p4k **108**. PLAN: backlog kalibracja (pomijać mismatch na PORT_CHECKIN); ograniczenie gałęzi (2) nieaktualnego `sailing_id`.
+- Po zielonym CI — prośba o **F7: gotowe do scalenia**. Po wdrożeniu: zdejmij H4 → rebuild 05.10 → tabela #626. Kolejność: #626 → 27B:C (#627 = **0331**).

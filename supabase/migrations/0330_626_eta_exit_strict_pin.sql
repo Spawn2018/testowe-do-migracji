@@ -1,6 +1,6 @@
--- #626: EXIT ściśle < PIN; zgodność rejsu = abs(EXIT−eff_dep)≤1h (F7 r2);
--- CROSSING trim tylko gdy rejs pasuje; pin_src / pin_late_h.
--- search_path / REVOKE / GRANT bez zmian względem 0328.
+-- #626: EXIT ściśle < PIN; zgodność rejsu = abs(EXIT−eff_dep)≤1h (F7 r2/r3);
+-- CROSSING trim tylko gdy rejs pasuje; arrival < EXIT → BRAK tylko przy sailing_ok;
+-- pin_src / pin_late_h. search_path / REVOKE / GRANT bez zmian względem 0328.
 -- Przed rebuildem: zdejmij ręczne H4_BLEDNY_POMIAR z 4 wierszy (#626 obs 265/283/343/357).
 
 begin;
@@ -187,8 +187,9 @@ begin
     end if;
   end if;
 
-  -- actual_arrival < EXIT → CROSSING BRAK
+  -- actual_arrival < EXIT → CROSSING BRAK (tylko gdy rejs pasuje; F7 r3)
   if t_port_out is not null
+     and v_sailing_ok is true
      and v_arrival is not null
      and v_arrival < t_port_out then
     v_id := eta_upsert_segment_observation(

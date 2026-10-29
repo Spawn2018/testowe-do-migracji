@@ -1126,7 +1126,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #626 · EXIT=PIN / późny PIN zawyżają odprawę/rejs — W TOKU (`pakiet/626-eta-exit-pin-strict`, migracja **0330**, PR #629)
 Źródło: #626 (Spawn2018; po #622). 4 pomiary wykluczone `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357) przed PR.
-1. **0330 (F7 r2):** EXIT ściśle `< PIN` (okno do `PIN−1µs`, bez `actual+1h`); `eff_dep = coalesce(actual, delayed)`; przy EVENT EXIT: pasuje ⇔ `abs(EXIT−eff_dep)≤1h`, inaczej EVENT + `sailing_mismatch` (CROSSING **bez** trim); bez EVENT: `eff_dep` w oknie ENTER…PIN → `SAILING_ACTUAL`/`SAILING_DELAYED`; CROSSING trim `arrival+1h` / `pin_late_h` **tylko gdy pasuje**. p4k **107**. Kalibracja nadal nie czyta `sailing_mismatch`/`pin_src`/`port_out_src`/`pin_late_h` (wiersze ważne — przegląd po danych). **Backlog:** osobny odcinek „postój w porcie SE”.
+1. **0330 (F7 r3):** EXIT ściśle `< PIN` (okno do `PIN−1µs`); `eff_dep = coalesce(actual, delayed)`; przy EVENT EXIT: pasuje ⇔ `abs(EXIT−eff_dep)≤1h`, inaczej EVENT + `sailing_mismatch` (CROSSING **bez** trim); bez EVENT: `eff_dep` w oknie ENTER…PIN → `SAILING_ACTUAL`/`SAILING_DELAYED`; CROSSING trim `arrival+1h` / `pin_late_h` **tylko gdy pasuje**; `arrival < EXIT → BRAK` **tylko gdy** `sailing_ok` (przesiadka z przybiciem A przed EXIT B zostaje ważna). p4k **108**. **Backlog (osobny mały PR):** kalibracja 0320 — pomijać `features.sailing_mismatch` dla PORT_CHECKIN; CROSSING z mismatch zostaje; reszta flag informacyjnie. **Ograniczenie:** w gałęzi (2) nieaktualnego `sailing_id` nie da się wykryć. **Backlog:** osobny odcinek „postój w porcie SE”.
 2. Po wdrożeniu: (a) usuń ręczne `H4_BLEDNY_POMIAR` obs 265/283/343/357; (b) rebuild od 05.10; (c) tabela w #626. Nie zamykać #603 bez tego.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
@@ -1968,3 +1968,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 03:55 | #622 F7 r3 w #628: `regexp_replace(upper(…))`; wspólna tabela TS↔SQL; refresh=true; status **398**; CI e9de427 ✔ → push | pętla |
 | 29.10.2026 04:30 | #622 SCALONE (`27abf140`); reclaim SG-21 743; #627 → **0331**; start **#626** **0330** (wykluczenia H4 + EXIT&lt;PIN / CROSSING) | pętla |
 | 29.10.2026 05:10 | #626 F7 r1 POPRAWKI (P1 sailing_ok / P2 EXIT przed PIN); p4k **106**; CI db 97/5 → UUID + logika | pętla |
+| 29.10.2026 05:30 | #626 F7 r2 @ 35fca542: eff_dep; ±1h; trim tylko gdy ok; p4k **107**; CI ✔ | pętla |
+| 29.10.2026 05:55 | #626 F7 r3: arrival&lt;EXIT BRAK tylko przy sailing_ok; test przesiadki A&lt;EXIT; p4k **108**; backlog kalibracja mismatch | pętla |
