@@ -2342,4 +2342,51 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "DriverB" ]; then
   ok=$((ok+1)); echo "  OK    #597: rev mismatch → pending DriverB"; else fail=$((fail+1)); echo "  FAIL  #597: rev mismatch → $out"; fi
 
+echo; echo "[#650] outbound komplet 6 pól WT→plik"
+# Zmiana tylko kierowcy → w patch też numery (HHL-Scan + HHL-KSH) z bieżącego WT
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update loads set carrier_order_no='SCAN-650', hhl_order_no='KSH-650',
+  driver_name='KierowcaStary', driver_delivery_name=null, trailer_swap=false
+  where id='$SG_OUT'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='KierowcaNowy' where id='$SG_OUT';
+  select coalesce(patch->>'driver','')||'|'||coalesce(patch->>'carrier_order_no','')||'|'||coalesce(patch->>'hhl_order_no','')
+    ||'|'||(patch ? 'driver')::text||'|'||(patch ? 'carrier_order_no')::text||'|'||(patch ? 'hhl_order_no')::text
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "KierowcaNowy|SCAN-650|KSH-650|true|true|true" ]; then
+  ok=$((ok+1)); echo "  OK    #650: zmiana kierowcy → też numery w patch"; else fail=$((fail+1)); echo "  FAIL  #650: kierowca+numery → $out"; fi
+# Komplet już w snap (plik=WT) → enqueue i tak ma 6 kluczy; Edge skip_applied → 0 PATCH (tu: pending z kompletem)
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+$PSQL -c "update loads set
+  driver_name='Komplet650', driver_delivery_name=null,
+  driver_phone='600650650', driver_delivery_phone=null, driver_phone_country='PL',
+  tractor_plate='TR650', tractor_delivery_plate=null,
+  trailer_plate='TL650', trailer_swap=false,
+  carrier_order_no='SCAN-IDEM', hhl_order_no='KSH-IDEM'
+  where id='$SG_OUT'" >/dev/null
+CODE650=$(Q "select public.load_sms_code('$SG_OUT')")
+$PSQL -c "update ksh_sync_state set snapshot = coalesce(snapshot,'{}'::jsonb) || jsonb_build_object(
+  '$CODE650', jsonb_build_object(
+    'ld',null,'lt',null,'dd',null,'dt',null,
+    'co','SCAN-IDEM','ho','KSH-IDEM','dr','Komplet650','ph','600650650','tr','TR650','tl','TL650'
+  )) where project_id='$P'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='Komplet650b' where id='$SG_OUT';
+  select (patch ? 'driver' and patch ? 'driver_phone' and patch ? 'tractor' and patch ? 'trailer'
+          and patch ? 'carrier_order_no' and patch ? 'hhl_order_no')::text
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "true" ]; then
+  ok=$((ok+1)); echo "  OK    #650: pending ma komplet 6 kluczy"; else fail=$((fail+1)); echo "  FAIL  #650: komplet 6 → $out"; fi
+# Backfill aktywnych — OPS odmowa; HHL_ADMIN → pending z kompletem numerów
+$PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
+err "#650: OPS enqueue_active_wt odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
+$PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+val "#650: backfill → pending z hhl_order_no" $HHL \
+  "select ksh_sync_outbound_enqueue_active_wt(); select count(*)>0 from ksh_sync_outbound where project_id='$P' and status='pending' and patch ? 'hhl_order_no'" t commit
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

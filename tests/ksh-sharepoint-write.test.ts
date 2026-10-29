@@ -479,6 +479,44 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
+  // #650: komplet 6 pól już w pliku → 0 PATCH (skip_applied), ack written
+  it('#650: komplet WT=plik → 0 PATCH (skip_applied)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      usedAddress: 'Harmonogram!A1:G2',
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.hhlOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+          COLUMN_MAP_DEFAULT.driverPhone,
+          COLUMN_MAP_DEFAULT.tractorPlate,
+          COLUMN_MAP_DEFAULT.trailerPlate,
+        ],
+        ['SG-01', 'SCAN-1', 'KSH-1', 'Jan', '600111222', 'TR1', 'TL1'],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{
+        code: 'SG-01',
+        carrier_order_no: 'SCAN-1',
+        hhl_order_no: 'KSH-1',
+        driver: 'Jan',
+        driver_phone: '600111222',
+        tractor: 'TR1',
+        trailer: 'TL1',
+      }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'SCAN-1', ho: 'KSH-1' },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toContain('SG-01');
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
+  });
+
   it('konflikt komórki gdy plik ≠ expected', async () => {
     const { fetchFn } = mockFetch({ conflictCo: true });
     const r = await writePatchesViaWorkbook({

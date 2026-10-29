@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 23:10 — #650 PILNE: komplet 6 pól WT→plik (przed #651)
+
+- Skrzynka: #650 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §4/#637/#650, §8, POSTEP. #608 w planie; #550 **WSTRZYMANE**. Komentarz na #651: #650 ma pierwszeństwo — PR #650 przed scaleniem #651.
+- Scalanie: brak „F7: gotowe” ( #651 CI w toku, bez zmian plików na tej gałęzi ). #649 SCALONE wcześniej.
+- **Krok:** gałąź `pakiet/650-ksh-outbound-full-wt` / migracja **0340** — `ksh_sync_outbound_wt6_patch` + trigger zawsze dokłada 6 pól; `ksh_sync_outbound_enqueue_active_wt` (HHL_ADMIN+2FA). Mapowanie: `carrier_order_no`→HHL-Scan, `hhl_order_no`→HHL-KSH. import **387**; nullguard **895**. Unit: komplet WT=plik → 0 PATCH.
+- Push → CI → prośba o F7. Po scaleniu: ponowna próba na kopii TS-02/SS-02 → #637. Bez push na main.
+
 ## 2026-10-29 22:20 — #649 CI: EXPECTED status 470→476
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
