@@ -2027,3 +2027,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 21:25 | #649 F7 POPRAWKI: AIS `ferry_routes`+SE; isOutbound kraje; surowy kod; status **470** | pętla |
 | 29.10.2026 21:55 | #649 CI fix: `outboundRoutesOf` string[]; fixture AIS jak #496 | pętla |
 | 29.10.2026 22:00 | #649 F7 r2: AIS backup po rodzinie SE; e2e NYN-GDN/GDN-NYN; status **476** | pętla |
+| 29.10.2026 22:20 | #649 CI: EXPECTED status 470→476 (db gate) | pętla |

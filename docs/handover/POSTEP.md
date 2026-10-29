@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 22:20 — #649 CI: EXPECTED status 470→476
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ 8f618d3b: unit/visual ✔; **db ✖** — `status: oczekiwano 470/470, jest: 476 OK, 0 FAIL` (EXPECTED nie dogonił +6 z F7 r2).
+- **Krok:** `EXPECTED_LOCAL.status` 470→**476** w `scripts/lib/gate-suites.mjs`.
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-29 22:00 — #649 F7 r2: AIS backup po rodzinie + e2e NYN/GDN
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
