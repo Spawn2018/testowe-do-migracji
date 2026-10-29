@@ -1941,6 +1941,7 @@ val "#626 F7: actual_arrival < EXIT → CROSSING BRAK" \
 # #630: kalibracja pomija rolę PORT_CHECKIN z sailing_mismatch; CROSSING z mismatch zostaje.
 # 5× mismatch 100 h (starsze, pomijane) + 5× dobre 10 h; hours=8 → Δ25 % (≤40 % limitu 30 d);
 # z filtrem mediana fit ≈ 10 (nie 100).
+# F7 CI: wyczyść okno skip 7 d (undo + auto-applied z wcześniejszych testów p4k), inaczej NO_CHANGE.
 val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
   "begin;
    update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
@@ -1950,6 +1951,16 @@ val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
    delete from eta_calibration_versions
     where applied is not true and created_by is null
       and coalesce(note,'') like 'propozycja ciągła%';
+   update eta_calibration_versions
+      set undone_at = now() - interval '8 days'
+    where undone_at is not null
+      and undone_at > now() - interval '7 days';
+   update eta_calibration_versions
+      set created_at = now() - interval '8 days'
+    where applied is true
+      and undone_at is null
+      and coalesce(note, '') like '%auto-applied%'
+      and created_at > now() - interval '7 days';
    update eta_calibration_versions
       set undone_at = coalesce(undone_at, now() - interval '8 days')
     where applied is true and undone_at is null;
@@ -2003,6 +2014,20 @@ val "#630: po undo same mismatch nie odblokowują 7 d" \
    delete from eta_calibration_versions
     where applied is not true and created_by is null
       and coalesce(note,'') like 'propozycja ciągła%';
+   -- wyczyść obce okna skip, potem własny undo <7 d (cel testu)
+   update eta_calibration_versions
+      set undone_at = now() - interval '8 days'
+    where undone_at is not null
+      and undone_at > now() - interval '7 days';
+   update eta_calibration_versions
+      set created_at = now() - interval '8 days'
+    where applied is true
+      and undone_at is null
+      and coalesce(note, '') like '%auto-applied%'
+      and created_at > now() - interval '7 days';
+   update eta_calibration_versions
+      set undone_at = coalesce(undone_at, now() - interval '8 days')
+    where applied is true and undone_at is null;
    delete from eta_segment_observations
     where corridor = 'PORT_CHECKIN'
       and coalesce(features->>'p4k','') = 'true';
@@ -2057,6 +2082,16 @@ val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
    delete from eta_calibration_versions
     where applied is not true and created_by is null
       and coalesce(note,'') like 'propozycja ciągła%';
+   update eta_calibration_versions
+      set undone_at = now() - interval '8 days'
+    where undone_at is not null
+      and undone_at > now() - interval '7 days';
+   update eta_calibration_versions
+      set created_at = now() - interval '8 days'
+    where applied is true
+      and undone_at is null
+      and coalesce(note, '') like '%auto-applied%'
+      and created_at > now() - interval '7 days';
    update eta_calibration_versions
       set undone_at = coalesce(undone_at, now() - interval '8 days')
     where applied is true and undone_at is null;

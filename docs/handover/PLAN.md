@@ -1133,8 +1133,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → **27B:C** → BN1…
 1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **Dalej w 27B:C:** ETA SE po faktycznym korytarzu; mapa obie linie (HERE, B12); kalibracja dwa SE_ROAD. Bez śladu GPS w repo. Kolejność: **#630** → ETA/mapa/kalibracja.
 
-### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — W TOKU (PR #633, migracja **0332**, F7 r1)
-Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. Front oznaczenie — koordynator po scaleniu.
+### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — W TOKU (PR #633, migracja **0332**, F7 r1 + fix CI)
+Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111** (CI: wyczyść skip 7 d w fixture). Front oznaczenie — koordynator po scaleniu.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
 4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.

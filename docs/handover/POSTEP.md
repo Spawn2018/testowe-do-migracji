@@ -6724,3 +6724,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. P2: `n_obs` + `error_*` bez mismatch; hours=8 (Δ25%); undo 7d — same mismatch nie odblokowują.
   4. Bez zdublowanego REVOKE/GRANT. p4k **111**.
 - Po push — CI → F7 (tylko diff). Potem ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 08:25 — #630 CI db FAIL → fix skip 7 d w p4k
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” @ `113ff22f`. CI: unit ✔ visual ✔; **db FAIL** p4k 109/2 — `#630` PORT_CHECKIN/CROSSING proposal=null (obce undo/auto <7 d → `v_skip_codes`).
+- **Krok:** w testach #630 wyczyść okno skip 7 d (undone_at + auto-applied created_at → 8 d) przed propose; p4k nadal **111**. Push → CI → F7.
