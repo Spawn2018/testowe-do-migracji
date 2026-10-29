@@ -60,12 +60,47 @@ export function loadInTrackingWindow(load: LoadMatchRow, atIso: string): boolean
   return at >= trackingWindowStartMs(day);
 }
 
-/** Ile transportów w oknie ma tę samą naczepę. 0 albo 1 → 0 (wybór bez sygnału). */
+/**
+ * #622: tokeny tablicy — separatory między numerami: ` - `, `/`, `,`
+ * (spacje wewnątrz jednego nr zostawia normalizePlate). Pełny numer, bez fragmentów.
+ */
+export function plateTokens(s: string | null | undefined): string[] {
+  const raw = String(s ?? '').trim();
+  if (!raw) return [];
+  const parts = raw.split(/\s*[-/,]\s*/)
+    .map((t) => normalizePlate(t))
+    .filter((t) => t.length > 0);
+  return [...new Set(parts)];
+}
+
+/** Numer naczepy WT: pierwszy token (przy jednym — on sam). */
+export function primaryTrailerToken(trailerPlate: string | null | undefined): string {
+  return plateTokens(trailerPlate)[0] ?? '';
+}
+
+/**
+ * #622: primary WT ∈ tokenów textId, albo textId (jeden token) = któryś token WT.
+ * Przypadek SG-21: WT „A - B”, textId „A” → true; textId z dwoma vs WT z jednym → true.
+ */
+export function trailerPlateTokensMatch(
+  trailerPlate: string | null | undefined,
+  textId: string | null | undefined,
+): boolean {
+  const wt = plateTokens(trailerPlate);
+  const em = plateTokens(textId);
+  if (wt.length === 0 || em.length === 0) return false;
+  if (em.includes(wt[0]!)) return true;
+  if (em.length === 1 && wt.includes(em[0]!)) return true;
+  return false;
+}
+
+/** Ile transportów w oknie ma tę samą naczepę (reguła tokenów #622). 0 albo 1 → 0. */
 export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]): number {
-  const plate = normalizePlate(fix.textId);
-  if (!plate) return 0;
+  if (!plateTokens(fix.textId).length) return 0;
   const at = fix.observedAt || new Date().toISOString();
-  const n = loads.filter((l) => loadInTrackingWindow(l, at) && normalizePlate(l.trailer_plate) === plate).length;
+  const n = loads.filter(
+    (l) => loadInTrackingWindow(l, at) && trailerPlateTokensMatch(l.trailer_plate, fix.textId),
+  ).length;
   return n > 1 ? n : 0;
 }
 
@@ -76,7 +111,7 @@ export function isEmtrackTrackingLink(link: string): boolean {
 
 /**
  * D-1710 / #368: dopasowanie tylko przy niepustym linku.
- * Równość z id/naczepą w polu linku; albo link emtrack + naczepa = textId (SG-17).
+ * Równość z id/naczepą w polu linku; albo link emtrack + naczepa ↔ textId (tokeny #622).
  * Bez dopasowania po samej naczepie przy pustym linku (SG-15/16).
  */
 export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): LoadMatchRow | null {
@@ -90,7 +125,7 @@ export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): Lo
     const t = String(l.telematics_vehicle_id ?? '').trim();
     if (!t) return false;
     if (t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate)) return true;
-    if (isEmtrackTrackingLink(t) && plate !== '' && normalizePlate(l.trailer_plate) === plate) return true;
+    if (isEmtrackTrackingLink(t) && trailerPlateTokensMatch(l.trailer_plate, fix.textId)) return true;
     return false;
   };
   return active.find(hit) ?? null;

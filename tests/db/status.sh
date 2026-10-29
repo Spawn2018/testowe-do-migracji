@@ -1881,5 +1881,66 @@ chk "#613: inne wymiary → HOTFIX_613_SKIPPED" \
   "select count(*) from audit_log where action='HOTFIX_613_SKIPPED' and entity_id='$L613'" 1
 q "drop function if exists public.hotfix_613_apply()" >/dev/null
 
+# --- #622: tokeny naczepy + reclaim sierot + alarm EMTRACK_ORPHAN (fikcyjne tablice) ---
+echo; echo "[#622] emtrack trailer tokens / orphan reclaim"
+L622=$(L 62)
+q "
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, plan_load_date, telematics_vehicle_id, trailer_plate, tracking_opened_at)
+values ('$L622','$P','$SCXO','KSH/622','HHL/622','SCX/622','AT_PORT_NYNASHAMN','2026-10-20',
+  'https://emtrack.eu/app/', 'AA 11 AA - BB 22 BB',
+  public.tracking_window_start('2026-10-20'::date));
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, qty, unit_weight_t, total_weight_t)
+values ('$P','$L622','T-622','STANDARD',13.6,2.45,2.70,1,10,10);
+insert into load_events (load_id, event_type, occurred_at) values ('$L622','MILESTONE_LOADED','2026-10-20 08:00+00');
+" >/dev/null
+chk "#622: tokeny WT dwuczłonowe" \
+  "select array_to_string(public.telm_plate_tokens('AA 11 AA - BB 22 BB'), ',')" "AA11AA,BB22BB"
+chk "#622: match textId=primary (SG-21)" \
+  "select public.telm_trailer_tokens_match('AA 11 AA - BB 22 BB','AA11AA')" t
+chk "#622: match textId z dwoma vs WT z jednym" \
+  "select public.telm_trailer_tokens_match('AA11AA','AA11AA - BB22BB')" t
+chk "#622: brak fałszywego dopasowania / fragment" \
+  "select public.telm_trailer_tokens_match('AA11AA','AA11')::text||'/'||public.telm_trailer_tokens_match('AA11AA','ZZ99ZZ')::text" "f/f"
+chk "#622: spacje w jednym nr nie rozbijają" \
+  "select array_to_string(public.telm_plate_tokens('AA 11 AA'), ',')" "AA11AA"
+# Sierota: plate = primary (jak po zmianie nazwy w emtrack); raw.textId też.
+q "
+select public.telm_save_orphan_position(
+  'AA11AA', '999001', 65.80, 21.70, '2026-10-27 12:00:00+00'::timestamptz,
+  'EMTRACK_WEB', 40, 10, true,
+  jsonb_build_object('textId','AA11AA','provider','EMTRACK_WEB'));
+select public.telm_save_orphan_position(
+  'AA11AA', '999001', 65.81, 21.71, '2026-10-27 12:10:00+00'::timestamptz,
+  'EMTRACK_WEB', 35, 12, true,
+  jsonb_build_object('textId','AA11AA','provider','EMTRACK_WEB'));
+" >/dev/null
+chk "#622: reclaim ok + 2" \
+  "select (r->>'ok')||'|'||(r->>'reclaimed') from public.telm_reclaim_orphan_positions('$L622'::uuid, '2026-10-27 00:00:00+00'::timestamptz) r" "t|2"
+chk "#622: positions po reclaim" "select count(*) from positions where load_id='$L622' and source='EMTRACK_WEB'" 2
+chk "#622: sieroty skasowane" "select count(*) from telematics_orphan_positions where plate='AA11AA'" 0
+chk "#622: reclaim idempotentne (0)" \
+  "select (public.telm_reclaim_orphan_positions('$L622'::uuid, '2026-10-27 00:00:00+00'::timestamptz)->>'reclaimed')" 0
+# Alarm: inny load bez pozycji, sierota z tokenem
+L622b=$(L 63)
+q "
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
+  status, plan_load_date, telematics_vehicle_id, trailer_plate, tracking_opened_at)
+values ('$L622b','$P','$SCXO','KSH/622b','HHL/622b','SCX/622b','IN_TRANSIT_SE','2026-10-20',
+  'https://emtrack.eu/app/', 'CC 33 CC',
+  public.tracking_window_start('2026-10-20'::date));
+insert into shipment_items (project_id, load_id, shipment_code, cargo_class, length_m, width_m, height_m, qty, unit_weight_t, total_weight_t)
+values ('$P','$L622b','T-622B','STANDARD',13.6,2.45,2.70,1,10,10);
+select public.telm_save_orphan_position(
+  'CC33CC', '999002', 60.1, 18.1, (now() - interval '30 minutes'),
+  'EMTRACK_WEB', 10, 0, true, jsonb_build_object('textId','CC33CC'));
+" >/dev/null
+chk "#622: scan orphan alert ≥1" "select (public.telm_scan_orphan_trailer_alerts(now()) >= 1)" t
+chk "#622: ryzyko EMTRACK_ORPHAN dedup" \
+  "select count(*) from risk_signals where load_id='$L622b' and dedup_key='EMTRACK_ORPHAN:$L622b' and resolved_at is null" 1
+q "select public.telm_scan_orphan_trailer_alerts(now())" >/dev/null
+chk "#622: ponowny scan nie duplikuje" \
+  "select count(*) from risk_signals where load_id='$L622b' and dedup_key='EMTRACK_ORPHAN:$L622b' and resolved_at is null" 1
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

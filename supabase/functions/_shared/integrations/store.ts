@@ -367,6 +367,12 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         p_raw: row.raw ?? {},
       }), 'telm_save_orphan_position');
     },
+    /** #622: alarm HHL gdy GPS>2h, a sieroty mają token naczepy. */
+    async scanOrphanTrailerAlerts() {
+      const r = await sb.rpc('telm_scan_orphan_trailer_alerts');
+      if (r.error) throw new Error(`telm_scan_orphan_trailer_alerts: ${r.error.message}`);
+      return Number(r.data ?? 0);
+    },
     async inferPhaseFromPosition(loadId: string, lat: number, lon: number, ts: string) {
       const r = await sb.rpc('telm_infer_phase_from_position', {
         p_load: loadId, p_lat: lat, p_lon: lon, p_ts: ts,

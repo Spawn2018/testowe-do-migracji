@@ -6573,3 +6573,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - deploy-main `40787814059` ✔ — migracja **0328** nałożona.
 - **Rebuild prod** `eta_rebuild_segment_observations('2026-10-05')`: `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0** (było 1+5 BRAK); CROSSING_* 2+1 każdy; PL_ROAD 3+11 TRASA_NIEZNANA; PL_ROAD_GDY 0+3 LUKA_GPS; SE_ROAD 3; SE_ROAD_KAA 2; SE_E4 0+9 H4. `port_out_src`: PORT EVENT×2 + SAILING_ACTUAL×4; CROSSING SAILING_ACTUAL×2. Wynik w komentarzu #619.
 - **Następna pozycja:** 27B:C (obie trasy Karlskrona→Boden / OFF_CORRIDOR + ETA + mapa + kalibracja).
+
+## 2026-10-29 02:15 — #622 PILNE przed 27B (kolejność koordynatora)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #622 otwarte (PILNE w tytule; bez etykiety `pilne` — priorytet z komentarza 29.10 w #622/#627). #537/#500/#499/#538 w kolejce.
+- Scalanie: brak „F7: gotowe” po ostatnim commicie. #627 (27B) — F7 **nie** gotowe (B2/testy/pośrednie); CI db FAIL import 375/376 + i2 669/671. Bez push na main.
+- **Kolejność:** **#622 → #626 pkt 5 → 27B:C (#627) → #618**.
+- **Krok #622** (`pakiet/622-emtrack-trailer-tokens`, **0329**):
+  1. `matchTrailer`: tokeny naczepy (spacja/`-`/`/`/`,`); primary WT ∈ textId albo textId = token WT; `ambiguousMatchCount` tą samą regułą.
+  2. Migracja: `telm_reclaim_orphan_positions`, `telm_scan_orphan_trailer_alerts` (`EMTRACK_ORPHAN` → HHL), bypass 60 s w `process_position`.
+  3. emtrack-web po pętli woła scan; testy unit + status **370** (+12).
+  4. Po wdrożeniu: reclaim SG-21 od 27.10 10:21 UTC → komentarz #622.
+- 27B: po #622 rebase migracji 0329→0330.

@@ -3,7 +3,10 @@ import {
   extractWaitSeconds, fetchTrackingObjectsReadOnly, isLoginHardFail, isLoginSuccess, isMoving,
   normalizePlate, parseCurrentSnapshot, pollIntervalSec, summarizeLoginFrame,
 } from '../supabase/functions/_shared/telematics/emtrackWeb';
-import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, trackingWindowStartMs } from '../supabase/functions/_shared/telematics/matchTrailer';
+import {
+  ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad, plateTokens,
+  primaryTrailerToken, trackingWindowStartMs, trailerPlateTokensMatch,
+} from '../supabase/functions/_shared/telematics/matchTrailer';
 import { runEmtrackWeb } from '../supabase/functions/_shared/integrations/jobs';
 import { sourceDownRisk } from '../supabase/functions/_shared/integrations/sync';
 import {
@@ -64,6 +67,47 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     expect(matchFixToLoad(fix, [
       { id: 'url2', trailer_plate: 'OTHER', telematics_vehicle_id: 'https://emtrack.eu/app/', status: 'IN_TRANSIT_PL', plannedLoadDate: '2020-01-01' },
     ])).toBeNull();
+  });
+
+  // #622: tokeny naczepy (fikcyjne tablice — bez numerów produkcyjnych).
+  it('#622: plateTokens / trailerPlateTokensMatch (SG-21 i odwrotnie)', () => {
+    expect(plateTokens('AB 12 CD - XY 99')).toEqual(['AB12CD', 'XY99']);
+    expect(plateTokens('AB12CD/XY99,ZZ1')).toEqual(['AB12CD', 'XY99', 'ZZ1']);
+    expect(primaryTrailerToken('AB 12 CD - XY 99')).toBe('AB12CD');
+    // textId z dwoma vs WT z jednym
+    expect(trailerPlateTokensMatch('AB12CD', 'AB12CD - XY99')).toBe(true);
+    // textId z jednym vs WT z dwoma (SG-21)
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99', 'AB12CD')).toBe(true);
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99', 'XY99')).toBe(true);
+    // separatory
+    expect(trailerPlateTokensMatch('AB12CD/XY99', 'AB12CD')).toBe(true);
+    // brak fałszywego dopasowania między różnymi naczepami / fragmentami
+    expect(trailerPlateTokensMatch('AB12CD', 'ZZ99ZZ')).toBe(false);
+    expect(trailerPlateTokensMatch('AB12CD', 'AB12')).toBe(false);
+    expect(trailerPlateTokensMatch('TRAILER01', 'TRAILER0')).toBe(false);
+  });
+
+  it('#622: matchFixToLoad — emtrack link + tokeny naczepy', () => {
+    const at = Date.now();
+    const mk = (textId: string) => parseCurrentSnapshot({
+      trackingObjectId: 42, name: 'x', textId, type: 'TRAILER',
+      currentSnapshot: { ts: at, d: { C: { v: { lat: 1, lng: 2 } } } },
+    });
+    const link = 'https://emtrack.eu/app/';
+    const row = {
+      id: 'sg21',
+      trailer_plate: 'AB 12 CD - XY 99',
+      telematics_vehicle_id: link,
+      status: 'AT_PORT_NYNASHAMN',
+      plannedLoadDate: '2020-01-01',
+    };
+    expect(matchFixToLoad(mk('AB12CD'), [row])?.id).toBe('sg21');
+    expect(matchFixToLoad(mk('AB12CD - XY99'), [{ ...row, trailer_plate: 'AB12CD' }])?.id).toBe('sg21');
+    expect(matchFixToLoad(mk('ZZ99ZZ'), [row])).toBeNull();
+    expect(ambiguousMatchCount(mk('AB12CD'), [
+      row,
+      { ...row, id: 'other', plannedLoadDate: '2020-01-02' },
+    ])).toBe(2);
   });
 
   it('E27/D-1710: okno od 03:00 + link; ta sama naczepa z linkiem → wcześniejszy', () => {

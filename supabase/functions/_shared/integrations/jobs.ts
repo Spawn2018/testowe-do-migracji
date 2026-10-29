@@ -203,6 +203,8 @@ export interface SyncStore {
     source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
     speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
   }): Promise<void>;
+  /** #622: alarm HHL — GPS>2h, sieroty z tokenem naczepy. */
+  scanOrphanTrailerAlerts?(): Promise<number>;
   /** TELM: faza z pozycji (SE/morze) przy podłączeniu w trasie. */
   inferPhaseFromPosition?(loadId: string, lat: number, lon: number, ts: string): Promise<string | null>;
   /** A8: licznik błędów logowania emtrack i pauza 6 h. */
@@ -1518,6 +1520,15 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
     }
   }
 
+  let orphanAlerts = 0;
+  if (deps.store.scanOrphanTrailerAlerts) {
+    try {
+      orphanAlerts = await deps.store.scanOrphanTrailerAlerts();
+    } catch {
+      orphanAlerts = -1;
+    }
+  }
+
   return {
     job: 'emtrack-web', mode: 'LIVE', ok: true,
     observations: {
@@ -1530,6 +1541,7 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
       phaseInferred: String(phaseInferred),
       skippedInterval: String(skippedInterval),
       ambiguous_trailer: String(ambiguousTrailer),
+      orphan_alerts: String(orphanAlerts),
       ...loginObs(),
       ...(versionMismatch ? { version_mismatch: versionMismatch } : {}),
     },
