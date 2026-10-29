@@ -5,7 +5,7 @@
  */
 export const EMTRACK_WS_URL = 'wss://emtrack.eu:443/ws/';
 export const EMTRACK_APP_URL = 'https://emtrack.eu/app/';
-export const EMTRACK_EXPECTED_VERSION = '6.33.0';
+export const EMTRACK_EXPECTED_VERSION = '6.34.0';
 export const EMTRACK_UA =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 

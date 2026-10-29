@@ -461,15 +461,15 @@ describe('#374 emtrack version ≠ awaria', () => {
     const ctx = emptyStore();
     const r = await runEmtrackWeb({
       store: ctx.store,
-      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
-      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_EXPECTED_VERSION: '6.32.0' },
+      fetch: async () => new Response('<html><meta name="version" content="6.34.0"></html>'),
+      env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_EXPECTED_VERSION: '6.33.0' },
       now: () => new Date('2026-10-20T20:00:00Z'),
       WebSocketImpl: OkWs as unknown as typeof WebSocket,
     });
     expect(r.ok).toBe(true);
     expect(ctx.raised()).toBe(0);
-    expect(r.observations?.version_mismatch).toBe('6.33.0≠6.32.0');
-    expect(r.observations?.version).toBe('6.33.0');
+    expect(r.observations?.version_mismatch).toBe('6.34.0≠6.33.0');
+    expect(r.observations?.version).toBe('6.34.0');
   });
 });
 
@@ -566,7 +566,7 @@ describe('C15/#365 LOGIN: ostrzeżenie ≠ odmowa, wait, unquote', () => {
         async emtrackLoginState() { return state; },
         async saveEmtrackLoginState(s) { state = s; },
       },
-      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      fetch: async () => new Response('<html><meta name="version" content="6.34.0"></html>'),
       env: { EMTRACK_LOGIN: "'u'", EMTRACK_PASSWORD: "'p'" },
       now: () => new Date('2026-10-21T01:00:00Z'),
       WebSocketImpl: WarnThenOk as unknown as typeof WebSocket,
@@ -663,7 +663,7 @@ describe('C15/#365 LOGIN: ostrzeżenie ≠ odmowa, wait, unquote', () => {
     });
     const job = await runEmtrackWeb({
       store: emptyStore(),
-      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      fetch: async () => new Response('<html><meta name="version" content="6.34.0"></html>'),
       env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p' },
       now: () => new Date('2026-10-21T01:00:00Z'),
       WebSocketImpl: WarnJobWs as unknown as typeof WebSocket,
@@ -729,7 +729,7 @@ describe('C15/#365 LOGIN: ostrzeżenie ≠ odmowa, wait, unquote', () => {
         async emtrackLoginState() { return state; },
         async saveEmtrackLoginState(s) { state = s; },
       },
-      fetch: async () => new Response('<html><meta name="version" content="6.33.0"></html>'),
+      fetch: async () => new Response('<html><meta name="version" content="6.34.0"></html>'),
       env: { EMTRACK_LOGIN: 'u', EMTRACK_PASSWORD: 'p', EMTRACK_WS_TIMEOUT_MS: '40' },
       now: () => new Date('2026-10-21T01:00:00Z'),
       WebSocketImpl: TimeoutWs as unknown as typeof WebSocket,
