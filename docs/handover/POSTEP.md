@@ -6592,3 +6592,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI PR #628 @ `97f9c63c`: unit/visual ✔; **db FAIL** status 361 OK / 9 FAIL (#622).
 - Przyczyna: UUID testów `L 62`/`L 63` kolidowały z SG8/Lfut (insert cichy → reclaim na CANCELLED bez emtrack → pusty wynik); `telm_plate_tokens` DISTINCT bez kolejności; asercja `f/f` vs `false/false`.
 - Poprawka: UUID `c2`/`c3`; tokeny z `WITH ORDINALITY` + ORDER BY; oczekiwania jsonb `true|2` / `false/false`. Po push — prośba o F7 przy zielonym CI.
+
+## 2026-10-29 02:45 — #622 F7 r1 (B1–B2, P1, P3, P4) w PR #628
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; bez `pilne` aktywnego. Scalanie: brak „F7: gotowe” (F7 @ 8c38a4e: **nie** gotowe — wdrożyć r1).
+- CI @ `8c38a4ea`: unit/visual ✔; **db FAIL** status 363/7 (reclaim/scan — wczesny return bez `reclaimed` → pusta asercja; insert poza `mk`).
+- **Krok F7 r1:**
+  1. B1: pełna równość `normalizePlate` przed tokenami; sklejenia fragmentów po spacji.
+  2. B2: myślnik tylko ze spacją (≥1 strony); `/`, `,`, `;`, `+`; token ≥5 + cyfra.
+  3. P1: ranking pełna > primary > additional; remis → sierota; to samo w reclaim.
+  4. P3: reclaim — INSERT-only gdy `ts < max(positions)`; refresh stanu na najnowszym; partie 800; tryb po dostawie tylko INSERT.
+  5. P4: zamykanie `EMTRACK_ORPHAN` przy GPS < 2 h i po reclaim; `plate = any(tokeny)` przed raw.
+  6. Testy unit + status **375**; `mk` dla L622/L622b.
+- Po zielonym CI — prośba o F7 r2.

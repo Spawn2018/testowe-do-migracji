@@ -69,25 +69,31 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     ])).toBeNull();
   });
 
-  // #622: tokeny naczepy (fikcyjne tablice — bez numerów produkcyjnych).
+  // #622 F7: tokeny naczepy (fikcyjne tablice ≥5+cyfra — bez numerów produkcyjnych).
   it('#622: plateTokens / trailerPlateTokensMatch (SG-21 i odwrotnie)', () => {
-    expect(plateTokens('AB 12 CD - XY 99')).toEqual(['AB12CD', 'XY99']);
-    expect(plateTokens('AB12CD/XY99,ZZ1')).toEqual(['AB12CD', 'XY99', 'ZZ1']);
-    expect(primaryTrailerToken('AB 12 CD - XY 99')).toBe('AB12CD');
+    expect(plateTokens('AB 12 CD - XY 99 ZZ')).toEqual(['AB12CD', 'XY99ZZ']);
+    expect(plateTokens('AB12CD/XY99ZZ,ZZ1234')).toEqual(['AB12CD', 'XY99ZZ', 'ZZ1234']);
+    expect(primaryTrailerToken('AB 12 CD - XY 99 ZZ')).toBe('AB12CD');
+    // B1: textId ze spacją (format emtrack) = pełna równość z WT „A - B”
+    expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA 11 AA BB 22 BB')).toBe(true);
+    expect(trailerPlateTokensMatch('AA 11 AA - BB 22 BB', 'AA11AA')).toBe(true);
     // textId z dwoma vs WT z jednym
-    expect(trailerPlateTokensMatch('AB12CD', 'AB12CD - XY99')).toBe(true);
+    expect(trailerPlateTokensMatch('AB12CD', 'AB12CD - XY99ZZ')).toBe(true);
     // textId z jednym vs WT z dwoma (SG-21)
-    expect(trailerPlateTokensMatch('AB 12 CD - XY 99', 'AB12CD')).toBe(true);
-    expect(trailerPlateTokensMatch('AB 12 CD - XY 99', 'XY99')).toBe(true);
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99 ZZ', 'AB12CD')).toBe(true);
+    expect(trailerPlateTokensMatch('AB 12 CD - XY 99 ZZ', 'XY99ZZ')).toBe(true);
     // separatory
-    expect(trailerPlateTokensMatch('AB12CD/XY99', 'AB12CD')).toBe(true);
-    // brak fałszywego dopasowania między różnymi naczepami / fragmentami
+    expect(trailerPlateTokensMatch('AB12CD/XY99ZZ', 'AB12CD')).toBe(true);
+    // B2: myślnik bez spacji nie tnie (HH-AB123 ≠ token HH)
+    expect(plateTokens('HH-AB 123')).toEqual(['HHAB123']);
+    expect(trailerPlateTokensMatch('HHXX01', 'HH-AB 123')).toBe(false);
+    // brak fałszywego dopasowania między różnymi naczepami / fragmentami / krótkimi
     expect(trailerPlateTokensMatch('AB12CD', 'ZZ99ZZ')).toBe(false);
     expect(trailerPlateTokensMatch('AB12CD', 'AB12')).toBe(false);
     expect(trailerPlateTokensMatch('TRAILER01', 'TRAILER0')).toBe(false);
   });
 
-  it('#622: matchFixToLoad — emtrack link + tokeny naczepy', () => {
+  it('#622: matchFixToLoad — ranking / remis (F7 P1)', () => {
     const at = Date.now();
     const mk = (textId: string) => parseCurrentSnapshot({
       trackingObjectId: 42, name: 'x', textId, type: 'TRAILER',
@@ -96,14 +102,21 @@ describe('TELM-EMTRACK-WEB parsers', () => {
     const link = 'https://emtrack.eu/app/';
     const row = {
       id: 'sg21',
-      trailer_plate: 'AB 12 CD - XY 99',
+      trailer_plate: 'AB 12 CD - XY 99 ZZ',
       telematics_vehicle_id: link,
       status: 'AT_PORT_NYNASHAMN',
       plannedLoadDate: '2020-01-01',
     };
     expect(matchFixToLoad(mk('AB12CD'), [row])?.id).toBe('sg21');
-    expect(matchFixToLoad(mk('AB12CD - XY99'), [{ ...row, trailer_plate: 'AB12CD' }])?.id).toBe('sg21');
+    expect(matchFixToLoad(mk('AB12CD - XY99ZZ'), [{ ...row, trailer_plate: 'AB12CD' }])?.id).toBe('sg21');
     expect(matchFixToLoad(mk('ZZ99ZZ'), [row])).toBeNull();
+    // remis na tokenie dodatkowym → null (sierota)
+    const x = { ...row, id: 'x', trailer_plate: 'AA 11 AA - BB 22 BB', plannedLoadDate: '2020-01-01' };
+    const y = { ...row, id: 'y', trailer_plate: 'BB 22 BB', plannedLoadDate: '2020-01-02' };
+    expect(matchFixToLoad(mk('BB22BB'), [x, y])?.id).toBe('y'); // y = primary (rank 2) > x additional (rank 3)
+    const x2 = { ...row, id: 'x2', trailer_plate: 'AA 11 AA - BB 22 BB', plannedLoadDate: '2020-01-01' };
+    const y2 = { ...row, id: 'y2', trailer_plate: 'CC 33 CC - BB 22 BB', plannedLoadDate: '2020-01-02' };
+    expect(matchFixToLoad(mk('BB22BB'), [x2, y2])).toBeNull(); // remis rank 3
     expect(ambiguousMatchCount(mk('AB12CD'), [
       row,
       { ...row, id: 'other', plannedLoadDate: '2020-01-02' },

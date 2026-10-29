@@ -1,68 +1,147 @@
 -- =====================================================================
 -- #622 PILNE: dopasowanie naczepy emtrack po tokenach + odzyskanie sierot
 -- + alarm HHL gdy pozycje w sierotach, a transport bez GPS > 2 h.
+-- F7 r1: B1 spacje w textId, B2 myślnik tylko ze spacją + token ≥5 z cyfrą,
+-- P1 ranking, P3 reclaim INSERT-only dla starych ts, P4 zamykanie alarmu.
 -- process_position: bypass budżetu 60 s przy tower.pos_budget_bypass=on (reclaim).
 -- Bez numerów rejestracyjnych produkcyjnych w testach.
 -- =====================================================================
 
 alter type risk_kind add value if not exists 'EMTRACK_ORPHAN';
 
--- Tokeny tablicy (jak matchTrailer.plateTokens): separatory między nr: - / ,
--- Kolejność jak w wejściu; DISTINCT bez ORDER BY mieszał AA/BB w CI.
+-- Normalizacja jak normalizePlate (TS): upper + bez spacji/myślników.
+create or replace function public.telm_norm_plate(p text)
+returns text
+language sql immutable parallel safe set search_path = public as $$
+  select upper(regexp_replace(coalesce(p, ''), '[\s\-]+', '', 'g'));
+$$;
+
+revoke all on function public.telm_norm_plate(text) from public, anon, authenticated;
+grant execute on function public.telm_norm_plate(text) to service_role;
+
+-- Token ważny: ≥5 znaków A-Z0-9 i ≥1 cyfra (F7 B2).
+create or replace function public.telm_token_valid(p text)
+returns boolean
+language sql immutable parallel safe set search_path = public as $$
+  select coalesce(p, '') ~ '^[A-Z0-9]{5,}$' and coalesce(p, '') ~ '[0-9]';
+$$;
+
+revoke all on function public.telm_token_valid(text) from public, anon, authenticated;
+grant execute on function public.telm_token_valid(text) to service_role;
+
+-- Tokeny tablicy = matchTrailer.plateTokens (F7 B1/B2).
+-- Separatory: myślnik/en-dash ze spacją z ≥1 strony; / , ; +
+-- W członie: fragmenty po spacji + sklejenia sąsiednich; kolejność zachowana.
 create or replace function public.telm_plate_tokens(p text)
 returns text[]
-language sql immutable parallel safe set search_path = public as $$
-  select coalesce(
-    array(
-      select x.tok
-        from (
-          select upper(regexp_replace(t.tok, '[^A-Z0-9]', '', 'g')) as tok,
-                 min(t.ord) as ord
-            from unnest(regexp_split_to_array(coalesce(p, ''), E'\\s*[-/,]\\s*'))
-                 with ordinality as t(tok, ord)
-           where upper(regexp_replace(t.tok, '[^A-Z0-9]', '', 'g')) <> ''
-           group by 1
-        ) x
-       order by x.ord
-    ),
-    '{}'::text[]
+language plpgsql immutable parallel safe set search_path = public as $$
+declare
+  v_raw text := btrim(coalesce(p, ''));
+  v_parts text[];
+  v_part text;
+  v_frags text[];
+  v_frag text;
+  v_i int;
+  v_j int;
+  v_acc text;
+  v_out text[] := '{}';
+  v_seen text[] := '{}';
+  v_cand text;
+  v_whole text;
+begin
+  if v_raw = '' then
+    return '{}';
+  end if;
+  -- Split: spacja?-spacja? wokół myślnika (z ≥1 spacją); albo / , ; +
+  v_parts := regexp_split_to_array(
+    v_raw,
+    E'(?:\\s[-–—]\\s?|\\s?[-–—]\\s|\\s*[/,;+]\\s*)'
   );
+  foreach v_part in array v_parts loop
+    if btrim(coalesce(v_part, '')) = '' then
+      continue;
+    end if;
+    v_frags := regexp_split_to_array(btrim(v_part), E'\\s+');
+    for v_i in 1 .. coalesce(cardinality(v_frags), 0) loop
+      v_acc := '';
+      for v_j in v_i .. coalesce(cardinality(v_frags), 0) loop
+        v_frag := upper(regexp_replace(v_frags[v_j], '[^A-Z0-9]', '', 'g'));
+        if v_frag = '' then
+          continue;
+        end if;
+        v_acc := v_acc || v_frag;
+        v_cand := v_acc;
+        if public.telm_token_valid(v_cand) and not (v_cand = any (v_seen)) then
+          v_seen := v_seen || v_cand;
+          v_out := v_out || v_cand;
+        end if;
+      end loop;
+    end loop;
+    v_whole := public.telm_norm_plate(v_part);
+    if public.telm_token_valid(v_whole) and not (v_whole = any (v_seen)) then
+      v_seen := v_seen || v_whole;
+      v_out := v_out || v_whole;
+    end if;
+  end loop;
+  return v_out;
+end;
 $$;
 
 comment on function public.telm_plate_tokens(text) is
-  '#622: tokeny nr rej. (separatory -/,/; spacje w nr → normalize); bez fragmentów.';
+  '#622 F7: tokeny nr (sep. jak #623; sklejenia spacji; ≥5+cyfra); kolejność zachowana.';
 
 revoke all on function public.telm_plate_tokens(text) from public, anon, authenticated;
 grant execute on function public.telm_plate_tokens(text) to service_role;
 
-create or replace function public.telm_trailer_tokens_match(p_trailer text, p_text_id text)
-returns boolean
+-- Ranking: 1 pełna równość, 2 token główny WT, 3 dodatkowy; null = brak (F7 P1).
+create or replace function public.telm_trailer_match_rank(p_trailer text, p_text_id text)
+returns int
 language plpgsql immutable parallel safe set search_path = public as $$
 declare
+  v_full_wt text := public.telm_norm_plate(p_trailer);
+  v_full_em text := public.telm_norm_plate(p_text_id);
   v_wt text[] := public.telm_plate_tokens(p_trailer);
   v_em text[] := public.telm_plate_tokens(p_text_id);
+  v_t text;
 begin
+  if v_full_wt <> '' and v_full_em <> '' and v_full_wt = v_full_em then
+    return 1;
+  end if;
   if cardinality(v_wt) is null or cardinality(v_wt) = 0
      or cardinality(v_em) is null or cardinality(v_em) = 0 then
-    return false;
+    return null;
   end if;
   if v_em @> array[v_wt[1]] then
-    return true;
+    return 2;
   end if;
+  foreach v_t in array v_wt loop
+    if v_em @> array[v_t] then
+      return 3;
+    end if;
+  end loop;
   if cardinality(v_em) = 1 and v_wt @> array[v_em[1]] then
-    return true;
+    if v_em[1] = v_wt[1] then return 2; else return 3; end if;
   end if;
-  return false;
+  return null;
 end;
 $$;
 
+revoke all on function public.telm_trailer_match_rank(text, text) from public, anon, authenticated;
+grant execute on function public.telm_trailer_match_rank(text, text) to service_role;
+
+create or replace function public.telm_trailer_tokens_match(p_trailer text, p_text_id text)
+returns boolean
+language sql immutable parallel safe set search_path = public as $$
+  select public.telm_trailer_match_rank(p_trailer, p_text_id) is not null;
+$$;
+
 comment on function public.telm_trailer_tokens_match(text, text) is
-  '#622: primary WT ∈ tokenów textId albo textId (1 token) = token WT.';
+  '#622 F7: pełna równość albo wspólny token (≥5+cyfra).';
 
 revoke all on function public.telm_trailer_tokens_match(text, text) from public, anon, authenticated;
 grant execute on function public.telm_trailer_tokens_match(text, text) to service_role;
 
--- Orphan.plate jest znormalizowany (bez separatorów). Dodatkowo raw->>'textId'.
+-- Orphan.plate znormalizowany; najpierw plate = any(tokeny), potem raw textId (F7 P4).
 create or replace function public.telm_orphan_matches_trailer(p_orphan_plate text, p_raw jsonb, p_trailer text)
 returns boolean
 language plpgsql stable set search_path = public as $$
@@ -71,10 +150,10 @@ declare
   v_plate text := upper(regexp_replace(coalesce(p_orphan_plate, ''), '[^A-Z0-9]', '', 'g'));
   v_raw_id text := coalesce(p_raw->>'textId', p_raw->>'text_id', '');
 begin
-  if cardinality(v_wt) is null or cardinality(v_wt) = 0 then
-    return false;
+  if v_plate <> '' and public.telm_trailer_tokens_match(p_trailer, v_plate) then
+    return true;
   end if;
-  if v_plate <> '' and v_plate = any (v_wt) then
+  if v_plate <> '' and cardinality(v_wt) > 0 and v_plate = any (v_wt) then
     return true;
   end if;
   if v_raw_id <> '' and public.telm_trailer_tokens_match(p_trailer, v_raw_id) then
@@ -86,6 +165,54 @@ $$;
 
 revoke all on function public.telm_orphan_matches_trailer(text, jsonb, text) from public, anon, authenticated;
 grant execute on function public.telm_orphan_matches_trailer(text, jsonb, text) to service_role;
+
+-- Czy p_load jest jedynym najlepszym kandydatem dla sieroty (F7 P1 reclaim).
+create or replace function public.telm_orphan_unique_best_load(
+  p_load_id uuid, p_plate text, p_raw jsonb, p_ts timestamptz
+) returns boolean
+language plpgsql stable set search_path = public as $$
+declare
+  v_text text := coalesce(nullif(btrim(coalesce(p_raw->>'textId', p_raw->>'text_id', '')), ''), p_plate);
+  v_best int;
+  v_my int;
+  v_r int;
+  v_n int := 0;
+  r record;
+begin
+  v_my := public.telm_trailer_match_rank(
+    (select trailer_plate from loads where id = p_load_id), v_text
+  );
+  if v_my is null then
+    return false;
+  end if;
+  v_best := v_my;
+  for r in
+    select l.id, l.trailer_plate
+      from loads l
+     where l.id <> p_load_id
+       and l.telematics_vehicle_id ~* 'emtrack\.eu'
+       and coalesce(l.trailer_plate, '') <> ''
+       and public.load_in_tracking_window(l.id, p_ts)
+  loop
+    v_r := public.telm_trailer_match_rank(r.trailer_plate, v_text);
+    if v_r is null then
+      continue;
+    end if;
+    if v_r < v_best then
+      return false;
+    end if;
+    if v_r = v_best then
+      v_n := v_n + 1;
+    end if;
+  end loop;
+  return v_n = 0;
+end;
+$$;
+
+revoke all on function public.telm_orphan_unique_best_load(uuid, text, jsonb, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.telm_orphan_unique_best_load(uuid, text, jsonb, timestamptz)
+  to service_role;
 
 create or replace function public.telm_reclaim_orphan_positions(
   p_load_id uuid,
@@ -99,15 +226,21 @@ declare
   v_delivered timestamptz;
   v_win_end timestamptz;
   v_since timestamptz;
+  v_cursor timestamptz;
+  v_batch int;
   r record;
   v_n int := 0;
   v_skip int := 0;
   v_last_ts timestamptz;
   v_last_lat float8;
   v_last_lon float8;
+  v_max_pos timestamptz;
+  v_pt geometry(Point, 4326);
+  v_insert_only boolean;
+  v_delivered_mode boolean;
 begin
   if p_load_id is null then
-    return jsonb_build_object('ok', false, 'error', 'load_id');
+    return jsonb_build_object('ok', false, 'error', 'load_id', 'reclaimed', 0);
   end if;
 
   select l.trailer_plate, l.telematics_vehicle_id, l.tracking_opened_at,
@@ -115,57 +248,112 @@ begin
     into v_trailer, v_link, v_opened, v_delivered
     from loads l where l.id = p_load_id;
   if not found then
-    return jsonb_build_object('ok', false, 'error', 'not_found');
+    return jsonb_build_object('ok', false, 'error', 'not_found', 'reclaimed', 0);
   end if;
   if v_link is null or btrim(v_link) = '' or v_link !~* 'emtrack\.eu' then
-    return jsonb_build_object('ok', false, 'error', 'no_emtrack_link');
+    return jsonb_build_object('ok', false, 'error', 'no_emtrack_link', 'reclaimed', 0);
   end if;
   if v_trailer is null or btrim(v_trailer) = '' then
-    return jsonb_build_object('ok', false, 'error', 'no_trailer');
+    return jsonb_build_object('ok', false, 'error', 'no_trailer', 'reclaimed', 0);
   end if;
 
+  v_delivered_mode := v_delivered is not null;
   v_win_end := coalesce(v_delivered, now() + interval '1 day');
   v_since := coalesce(
     p_since,
     v_opened,
     (select public.tracking_window_start(plan_load_date) from loads where id = p_load_id)
   );
+  v_cursor := coalesce(v_since, '-infinity'::timestamptz);
 
   perform set_config('tower.pos_budget_bypass', 'on', true);
 
-  for r in
-    select o.id, o.plate, o.lat, o.lon, o.ts, o.source, o.speed_kmh, o.heading_deg, o.ignition, o.raw
-      from telematics_orphan_positions o
-     where o.ts >= coalesce(v_since, '-infinity'::timestamptz)
-       and o.ts <= v_win_end
-       and public.telm_orphan_matches_trailer(o.plate, o.raw, v_trailer)
-     order by o.ts asc
   loop
-    if public.load_in_tracking_window(p_load_id, r.ts) is not true then
-      v_skip := v_skip + 1;
-      continue;
-    end if;
-    perform public.process_position(
-      p_load_id, r.lat, r.lon, r.ts, r.source,
-      r.speed_kmh, r.heading_deg, r.ignition, coalesce(r.raw, '{}'::jsonb)
-    );
-    if exists (
-      select 1 from positions p
-       where p.load_id = p_load_id and p.ts = r.ts and p.source = r.source
-    ) then
-      delete from telematics_orphan_positions where id = r.id;
-      v_n := v_n + 1;
-      v_last_ts := r.ts;
-      v_last_lat := r.lat;
-      v_last_lon := r.lon;
-    else
-      v_skip := v_skip + 1;
-    end if;
+    v_batch := 0;
+    for r in
+      select o.id, o.plate, o.lat, o.lon, o.ts, o.source, o.speed_kmh, o.heading_deg, o.ignition, o.raw
+        from telematics_orphan_positions o
+       where o.ts >= v_cursor
+         and o.ts <= v_win_end
+         and public.telm_orphan_matches_trailer(o.plate, o.raw, v_trailer)
+       order by o.ts asc
+       limit 800
+    loop
+      v_batch := v_batch + 1;
+      v_cursor := r.ts;
+
+      if v_delivered_mode then
+        if r.ts < coalesce(v_opened, v_since, '-infinity'::timestamptz)
+           or r.ts > v_delivered then
+          v_skip := v_skip + 1;
+          continue;
+        end if;
+        v_insert_only := true;
+      elsif public.load_in_tracking_window(p_load_id, r.ts) is not true then
+        v_skip := v_skip + 1;
+        continue;
+      else
+        select max(p.ts) into v_max_pos from positions p where p.load_id = p_load_id;
+        v_insert_only := (v_max_pos is not null and r.ts < v_max_pos);
+      end if;
+
+      if public.telm_orphan_unique_best_load(p_load_id, r.plate, r.raw, r.ts) is not true then
+        v_skip := v_skip + 1;
+        continue;
+      end if;
+
+      if v_insert_only then
+        v_pt := st_setsrid(st_makepoint(r.lon, r.lat), 4326);
+        insert into positions (load_id, ts, geom_raw, speed_kmh, heading_deg, ignition, source, raw)
+        values (
+          p_load_id, r.ts, v_pt, r.speed_kmh, r.heading_deg, r.ignition, r.source,
+          coalesce(r.raw, '{}'::jsonb) || jsonb_build_object('reclaim_insert_only', true)
+        )
+        on conflict (load_id, ts, source) do nothing;
+      else
+        perform public.process_position(
+          p_load_id, r.lat, r.lon, r.ts, r.source,
+          r.speed_kmh, r.heading_deg, r.ignition, coalesce(r.raw, '{}'::jsonb)
+        );
+      end if;
+
+      if exists (
+        select 1 from positions p
+         where p.load_id = p_load_id and p.ts = r.ts and p.source = r.source
+      ) then
+        delete from telematics_orphan_positions where id = r.id;
+        v_n := v_n + 1;
+        v_last_ts := r.ts;
+        v_last_lat := r.lat;
+        v_last_lon := r.lon;
+      else
+        v_skip := v_skip + 1;
+      end if;
+    end loop;
+
+    exit when v_batch < 800;
+    -- kolejna partia: ściśle po ostatnim ts (unikaj zapętlenia na tym samym)
+    v_cursor := v_cursor + interval '1 microsecond';
   end loop;
 
-  perform set_config('tower.pos_budget_bypass', 'off', true);
+  -- Stan / ETA na najnowszej pozycji (F7 P3); bypass zostaje do refresh (limit 60 s).
+  select p.ts, st_y(p.geom_raw::geometry), st_x(p.geom_raw::geometry)
+    into v_last_ts, v_last_lat, v_last_lon
+    from positions p
+   where p.load_id = p_load_id
+   order by p.ts desc
+   limit 1;
 
-  if v_last_lat is not null then
+  if v_last_lat is not null and v_delivered_mode is not true then
+    begin
+      perform public.process_position(
+        p_load_id, v_last_lat, v_last_lon, v_last_ts,
+        'EMTRACK_WEB'::position_source, null, null, null,
+        jsonb_build_object('reclaim_refresh', true)
+      );
+    exception when others then
+      raise warning '#622 reclaim refresh: %', sqlerrm;
+    end;
     begin
       perform public.telm_infer_phase_from_position(p_load_id, v_last_lat, v_last_lon, v_last_ts);
     exception when others then
@@ -177,6 +365,15 @@ begin
       raise warning '#622 refresh_load_eta: %', sqlerrm;
     end;
   end if;
+
+  perform set_config('tower.pos_budget_bypass', 'off', true);
+
+  -- P4: zamknij alarm po reclaim
+  update risk_signals
+     set resolved_at = now()
+   where load_id = p_load_id
+     and dedup_key = 'EMTRACK_ORPHAN:' || p_load_id::text
+     and resolved_at is null;
 
   insert into audit_log (user_id, action, entity, entity_id, new_value)
   values (
@@ -195,13 +392,13 @@ end;
 $$;
 
 comment on function public.telm_reclaim_orphan_positions(uuid, timestamptz) is
-  '#622: sieroty → positions (tokeny naczepy), idempotentnie; geofence/ETA po kolei.';
+  '#622 F7: sieroty→positions (ranking, INSERT-only dla starych ts, partie 800); ETA na najnowszym.';
 
 revoke all on function public.telm_reclaim_orphan_positions(uuid, timestamptz)
   from public, anon, authenticated;
 grant execute on function public.telm_reclaim_orphan_positions(uuid, timestamptz) to service_role;
 
--- Alarm HHL: w oknie, link emtrack, brak pozycji > 2 h, a w sierotach jest token naczepy.
+-- Alarm HHL + zamykanie przy świeżej pozycji < 2 h (F7 P4).
 create or replace function public.telm_scan_orphan_trailer_alerts(p_now timestamptz default now())
 returns integer
 language plpgsql security definer set search_path = public as $$
@@ -210,7 +407,18 @@ declare
   v_code text;
   v_n int := 0;
   v_last timestamptz;
+  v_tok text[];
 begin
+  -- Zamknij otwarte, gdy jest świeża pozycja.
+  update risk_signals rs
+     set resolved_at = p_now
+   where rs.kind = 'EMTRACK_ORPHAN'
+     and rs.resolved_at is null
+     and exists (
+       select 1 from positions p
+        where p.load_id = rs.load_id and p.ts > p_now - interval '2 hours'
+     );
+
   for r in
     select l.id, l.trailer_plate, l.telematics_vehicle_id, l.tracking_opened_at, l.plan_load_date,
            coalesce(
@@ -227,10 +435,14 @@ begin
     if v_last is not null and v_last > p_now - interval '2 hours' then
       continue;
     end if;
+    v_tok := public.telm_plate_tokens(r.trailer_plate);
     if not exists (
       select 1 from telematics_orphan_positions o
        where o.ts > p_now - interval '24 hours'
-         and public.telm_orphan_matches_trailer(o.plate, o.raw, r.trailer_plate)
+         and (
+           (cardinality(v_tok) > 0 and o.plate = any (v_tok))
+           or public.telm_orphan_matches_trailer(o.plate, o.raw, r.trailer_plate)
+         )
     ) then
       continue;
     end if;
@@ -256,7 +468,7 @@ end;
 $$;
 
 comment on function public.telm_scan_orphan_trailer_alerts(timestamptz) is
-  '#622: 1 ryzyko HHL (EMTRACK_ORPHAN) gdy GPS>2h brak, a sieroty mają token naczepy.';
+  '#622 F7: EMTRACK_ORPHAN HHL; zamyka przy GPS<2h; plate=any(tokeny) przed raw.';
 
 revoke all on function public.telm_scan_orphan_trailer_alerts(timestamptz)
   from public, anon, authenticated;

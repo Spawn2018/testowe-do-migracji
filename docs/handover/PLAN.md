@@ -1121,7 +1121,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #622 · PILNE: SG-21 emtrack — tokeny naczepy + reclaim sierot — W TOKU (`pakiet/622-emtrack-trailer-tokens`, migracja **0329**)
 Źródło: #622 (Spawn2018; kolejność koordynatora 29.10: **#622 → #626 → 27B:C**). Front ostrzeżenia dwóch nr — #623 SCALONE.
-1. **0329:** `plateTokens` / `trailerPlateTokensMatch` w `matchTrailer.ts`; SQL `telm_plate_tokens` / `telm_trailer_tokens_match` / `telm_reclaim_orphan_positions` / `telm_scan_orphan_trailer_alerts` (ryzyko `EMTRACK_ORPHAN` → HHL); `process_position` bypass 60 s przy reclaim; cron emtrack woła scan. status **370**.
+1. **0329 (F7 r1):** `plateTokens` / ranking P1 w `matchTrailer.ts`; SQL `telm_plate_tokens` (B1/B2), `telm_trailer_match_rank`, reclaim INSERT-only dla starych ts + partie 800 (P3), scan zamyka `EMTRACK_ORPHAN` przy GPS < 2 h (P4); bypass 60 s; status **375**.
 2. Po wdrożeniu: `telm_reclaim_orphan_positions` dla SG-21 od 27.10 10:21 UTC — wynik (liczba, status) w #622. Bez tablic produkcyjnych w repo/testach.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
@@ -1957,3 +1957,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 00:45 | #619 CI db FAIL EXPECTED p4k 94≠98 (testy 98/0); fix `gate-suites` → **98**; #624 wchłonięte w #619 | pętla |
 | 29.10.2026 01:30 | #619/#603 **0328** SCALONE (`07d27ba7`); #624 zamknięte; rebuild prod 17/34 — PORT_CHECKIN 6/0; następna **27B:C** | pętla |
 | 29.10.2026 02:15 | Kolejność: **#622** (SG-21 PILNE) → #626 → 27B:C (#627 F7 r1 otwarte); start **0329** tokeny/reclaim | pętla |
+| 29.10.2026 02:45 | #622 F7 r1 w #628: B1–B2/P1/P3/P4; status **375**; CI 8c38a4ea db 363/7 (reclaim) — poprawka w toku | pętla |

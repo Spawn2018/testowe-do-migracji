@@ -19,6 +19,14 @@ const CLOSED = new Set([
   'DELIVERED', 'UNLOADED', 'READY_TO_INVOICE', 'INVOICED',
 ]);
 
+/** Separatory między numerami (#622 F7 / #623): myślnik tylko ze spacją z ≥1 strony; / , ; + */
+const PLATE_SEP = /(?:\s[-–—]\s?|\s?[-–—]\s|\s*[/,;+]\s*)/;
+
+/** Token ważny: ≥ 5 znaków alfanum. i ≥ 1 cyfra (F7 B2). */
+export function isValidPlateToken(t: string): boolean {
+  return t.length >= 5 && /\d/.test(t);
+}
+
 /** 03:00 czasu polskiego w dniu załadunku (L16). */
 export function trackingWindowStartMs(planLoadDate: string): number {
   const day = planLoadDate.slice(0, 10);
@@ -61,16 +69,44 @@ export function loadInTrackingWindow(load: LoadMatchRow, atIso: string): boolean
 }
 
 /**
- * #622: tokeny tablicy — separatory między numerami: ` - `, `/`, `,`
- * (spacje wewnątrz jednego nr zostawia normalizePlate). Pełny numer, bez fragmentów.
+ * Kandydaci z jednego członu (między separatorami): fragmenty po spacji
+ * + sklejenia sąsiednich (1…n), oraz całość po normalizePlate.
+ */
+function expandPartCandidates(part: string): string[] {
+  const trimmed = part.trim();
+  if (!trimmed) return [];
+  const frags = trimmed.split(/\s+/).map((f) => normalizePlate(f)).filter((t) => t.length > 0);
+  const out: string[] = [];
+  for (let i = 0; i < frags.length; i++) {
+    let acc = '';
+    for (let j = i; j < frags.length; j++) {
+      acc += frags[j]!;
+      out.push(acc);
+    }
+  }
+  const whole = normalizePlate(trimmed);
+  if (whole) out.push(whole);
+  return out;
+}
+
+/**
+ * #622 F7: tokeny tablicy — separatory jak #623; myślnik bez spacji nie tnie;
+ * spacje wewnątrz nr → kandydaci ze sklejeń; tylko tokeny ≥5 z cyfrą.
  */
 export function plateTokens(s: string | null | undefined): string[] {
   const raw = String(s ?? '').trim();
   if (!raw) return [];
-  const parts = raw.split(/\s*[-/,]\s*/)
-    .map((t) => normalizePlate(t))
-    .filter((t) => t.length > 0);
-  return [...new Set(parts)];
+  const parts = raw.split(PLATE_SEP);
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    for (const cand of expandPartCandidates(part)) {
+      if (!isValidPlateToken(cand) || seen.has(cand)) continue;
+      seen.add(cand);
+      ordered.push(cand);
+    }
+  }
+  return ordered;
 }
 
 /** Numer naczepy WT: pierwszy token (przy jednym — on sam). */
@@ -79,24 +115,41 @@ export function primaryTrailerToken(trailerPlate: string | null | undefined): st
 }
 
 /**
- * #622: primary WT ∈ tokenów textId, albo textId (jeden token) = któryś token WT.
- * Przypadek SG-21: WT „A - B”, textId „A” → true; textId z dwoma vs WT z jednym → true.
+ * Ranking dopasowania (#622 F7 P1): 1 = pełna równość, 2 = token główny WT, 3 = dodatkowy.
+ * null = brak.
+ */
+export function trailerMatchRank(
+  trailerPlate: string | null | undefined,
+  textId: string | null | undefined,
+): 1 | 2 | 3 | null {
+  const fullWt = normalizePlate(trailerPlate);
+  const fullEm = normalizePlate(textId);
+  if (fullWt && fullEm && fullWt === fullEm) return 1;
+  const wt = plateTokens(trailerPlate);
+  const em = plateTokens(textId);
+  if (wt.length === 0 || em.length === 0) return null;
+  const emSet = new Set(em);
+  if (emSet.has(wt[0]!)) return 2;
+  if (wt.some((t) => emSet.has(t))) return 3;
+  if (em.length === 1 && wt.includes(em[0]!)) {
+    return em[0] === wt[0] ? 2 : 3;
+  }
+  return null;
+}
+
+/**
+ * #622: pełna równość albo wspólny token (F7 B1).
  */
 export function trailerPlateTokensMatch(
   trailerPlate: string | null | undefined,
   textId: string | null | undefined,
 ): boolean {
-  const wt = plateTokens(trailerPlate);
-  const em = plateTokens(textId);
-  if (wt.length === 0 || em.length === 0) return false;
-  if (em.includes(wt[0]!)) return true;
-  if (em.length === 1 && wt.includes(em[0]!)) return true;
-  return false;
+  return trailerMatchRank(trailerPlate, textId) != null;
 }
 
 /** Ile transportów w oknie ma tę samą naczepę (reguła tokenów #622). 0 albo 1 → 0. */
 export function ambiguousMatchCount(fix: EmtrackObjectFix, loads: LoadMatchRow[]): number {
-  if (!plateTokens(fix.textId).length) return 0;
+  if (!normalizePlate(fix.textId) && !plateTokens(fix.textId).length) return 0;
   const at = fix.observedAt || new Date().toISOString();
   const n = loads.filter(
     (l) => loadInTrackingWindow(l, at) && trailerPlateTokensMatch(l.trailer_plate, fix.textId),
@@ -112,7 +165,7 @@ export function isEmtrackTrackingLink(link: string): boolean {
 /**
  * D-1710 / #368: dopasowanie tylko przy niepustym linku.
  * Równość z id/naczepą w polu linku; albo link emtrack + naczepa ↔ textId (tokeny #622).
- * Bez dopasowania po samej naczepie przy pustym linku (SG-15/16).
+ * #622 F7 P1: pełna równość > token główny > dodatkowy; remis na najlepszym → null (sierota).
  */
 export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): LoadMatchRow | null {
   const plate = normalizePlate(fix.textId);
@@ -121,12 +174,24 @@ export function matchFixToLoad(fix: EmtrackObjectFix, loads: LoadMatchRow[]): Lo
   const active = loads
     .filter((l) => loadInTrackingWindow(l, at))
     .sort((a, b) => (a.plannedLoadDate ?? '').localeCompare(b.plannedLoadDate ?? '') || a.id.localeCompare(b.id));
-  const hit = (l: LoadMatchRow) => {
+
+  for (const l of active) {
     const t = String(l.telematics_vehicle_id ?? '').trim();
-    if (!t) return false;
-    if (t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate)) return true;
-    if (isEmtrackTrackingLink(t) && trailerPlateTokensMatch(l.trailer_plate, fix.textId)) return true;
-    return false;
-  };
-  return active.find(hit) ?? null;
+    if (!t) continue;
+    if (t === plate || t === idStr || (plate !== '' && normalizePlate(t) === plate)) return l;
+  }
+
+  type Cand = { load: LoadMatchRow; rank: 1 | 2 | 3 };
+  const cands: Cand[] = [];
+  for (const l of active) {
+    const t = String(l.telematics_vehicle_id ?? '').trim();
+    if (!isEmtrackTrackingLink(t)) continue;
+    const rank = trailerMatchRank(l.trailer_plate, fix.textId);
+    if (rank != null) cands.push({ load: l, rank });
+  }
+  if (cands.length === 0) return null;
+  const best = Math.min(...cands.map((c) => c.rank)) as 1 | 2 | 3;
+  const top = cands.filter((c) => c.rank === best);
+  if (top.length !== 1) return null;
+  return top[0]!.load;
 }

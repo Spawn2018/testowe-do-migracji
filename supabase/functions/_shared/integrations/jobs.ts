@@ -1524,8 +1524,11 @@ export async function runEmtrackWeb(deps: JobDeps): Promise<JobResult> {
   if (deps.store.scanOrphanTrailerAlerts) {
     try {
       orphanAlerts = await deps.store.scanOrphanTrailerAlerts();
-    } catch {
+    } catch (e) {
       orphanAlerts = -1;
+      // #622 F7: komunikat błędu skanu (nie tylko -1)
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error('telm_scan_orphan_trailer_alerts:', msg);
     }
   }
 
