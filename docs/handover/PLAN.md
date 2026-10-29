@@ -1136,7 +1136,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
 
-### #634 · emtrack `EMTRACK_EXPECTED_VERSION` → 6.34.0 — SCALONE (`251febc5` / PR #635, 29.10.2026 10:xxZ)
+### #634 · emtrack `EMTRACK_EXPECTED_VERSION` → 6.34.0 — SCALONE (`251febc5` / PR #635, 29.10.2026 09:39Z)
 Źródło: F7 #633 (Spawn2018; po #630). Stała 6.33.0→6.34.0 + testy (jak #374). F7 gotowe @ `a21af060`. Sekret Edge `EMTRACK_EXPECTED_VERSION` ma pierwszeństwo — jeśli mismatch zostanie, zmienia właściciel. Potem **#618**.
 
 ### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — W TOKU (`pakiet/618-ksh-file-ab-dots`, migracja **0333**)
