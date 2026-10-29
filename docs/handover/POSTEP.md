@@ -6706,3 +6706,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   3. `i2.sh`: 5 korytarzy + KSH 5 (SE_KAA_INLAND — geometria publiczna).
   4. Rebase na main (docs #631). status **413** bez zmiany liczby.
 - Po push — CI → F7 (tylko diff). Potem **#630** → ETA/mapa/kalibracja SE_ROAD 27B.
+
+## 2026-10-29 07:45 — #627 SCALONE; start #630 (0332)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne` do budowy.
+- Scalanie: #627 → `0dc28827` (F7: gotowe @ `70179782`, CI unit/db/visual ✔). Bez push na main.
+- **Krok #630:** migracja **0332** — `eta_propose_calibration` pomija PORT_CHECKIN z `sailing_mismatch` (`n_skipped_sailing_mismatch` + note `skip_mm_PORT_CHECKIN`); CROSSING z mismatch zostaje; p4k **110** (+2). Gałąź `pakiet/630-calib-skip-sailing-mismatch`.
+- Po zielonym CI — F7. Potem ETA/mapa/kalibracja SE_ROAD 27B.

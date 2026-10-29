@@ -1938,5 +1938,101 @@ val "#626 F7: actual_arrival < EXIT → CROSSING BRAK" \
    )::text;
    rollback;" "true"
 
+# #630: kalibracja pomija PORT_CHECKIN z sailing_mismatch; CROSSING z mismatch zostaje.
+# 5× mismatch 100 h (starsze) + 5× dobre 10 h → bez filtra mediana ~100; z filtrem ~10.
+val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
+  "begin;
+   update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
+   delete from decision_events where decision_id in (
+     select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+   delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   delete from eta_calibration_versions
+    where applied is not true and created_by is null
+      and coalesce(note,'') like 'propozycja ciągła%';
+   update eta_calibration_versions
+      set undone_at = coalesce(undone_at, now() - interval '8 days')
+    where applied is true and undone_at is null
+      and params_after ? 'PORT_CHECKIN';
+   delete from eta_segment_observations
+    where corridor = 'PORT_CHECKIN'
+      and coalesce(features->>'p4k','') = 'true';
+   delete from loads where id::text like 'a630a630-0000-4000-8000-%';
+   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, actual_delivery_at)
+   select ('a630a630-0000-4000-8000-0000000000' || lpad(g::text, 2, '0'))::uuid,
+          (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+          'P4K-630-' || g, 'HHL-630-' || g, 'SCX-630-' || g,
+          'DELIVERED', current_date - 40, current_date - 35, now() - interval '35 days'
+     from generate_series(1, 10) g;
+   update eta_segment_params set hours = 3, spread_pct = 0 where code = 'PORT_CHECKIN';
+   insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
+   select ('a630a630-0000-4000-8000-0000000000' || lpad(ord::text, 2, '0'))::uuid,
+          'PORT_CHECKIN', 100,
+          jsonb_build_object('p4k', true, 'sailing_mismatch', true, 'p4k_630', true),
+          now() - interval '50 days' + (ord || ' days')::interval
+     from generate_series(1, 5) ord;
+   insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
+   select ('a630a630-0000-4000-8000-0000000000' || lpad((5+ord)::text, 2, '0'))::uuid,
+          'PORT_CHECKIN', 10,
+          jsonb_build_object('p4k', true, 'p4k_630', true),
+          now() - interval '20 days' + (ord || ' days')::interval
+     from generate_series(1, 5) ord;
+   with p as (select public.eta_propose_calibration() as j)
+   select (
+     (j->>'n_skipped_sailing_mismatch')::int = 5
+     and j->>'proposal' is not null
+     and (
+       select (params_after->'PORT_CHECKIN'->>'hours')::numeric
+         from eta_calibration_versions
+        where id = (j->>'proposal')::bigint
+     ) between 9 and 11
+   )::text from p;
+   rollback;" "true"
+
+val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
+  "begin;
+   update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
+   delete from decision_events where decision_id in (
+     select id from decisions where type_code='ETA_CALIBRATION_APPROVAL');
+   delete from decisions where type_code='ETA_CALIBRATION_APPROVAL';
+   delete from eta_calibration_versions
+    where applied is not true and created_by is null
+      and coalesce(note,'') like 'propozycja ciągła%';
+   delete from eta_segment_observations
+    where load_id::text like 'a630a630-0000-4000-8000-00c%';
+   delete from loads where id::text like 'a630a630-0000-4000-8000-00c%';
+   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, actual_delivery_at)
+   select ('a630a630-0000-4000-8000-00c' || lpad(g::text, 3, '0'))::uuid,
+          (select project_id from loads where id='a581a581-0000-4000-8000-000000000581'),
+          'P4K-630C-' || g, 'HHL-630C-' || g, 'SCX-630C-' || g,
+          'DELIVERED', current_date - 40, current_date - 35, now() - interval '35 days'
+     from generate_series(1, 5) g;
+   insert into eta_segment_observations (load_id, corridor, hours_observed, features, observed_at)
+   select ('a630a630-0000-4000-8000-00c' || lpad(ord::text, 3, '0'))::uuid,
+          'CROSSING_GDN_NYN', 18,
+          jsonb_build_object('p4k', true, 'sailing_mismatch', true, 'p4k_630c', true),
+          now() - interval '30 days' + (ord || ' days')::interval
+     from generate_series(1, 5) ord;
+   select (
+     (select count(*)::int from eta_segment_observations o
+       where o.exclude_reason is null
+         and o.hours_observed > 0
+         and o.observed_at >= now() - interval '90 days'
+         and coalesce(o.features->>'p4k', '') = 'true'
+         and o.corridor = 'CROSSING_GDN_NYN'
+         and coalesce(o.features->>'sailing_mismatch', '') = 'true'
+         and o.load_id::text like 'a630a630-0000-4000-8000-00c%') = 5
+     and (public.eta_propose_calibration()->>'n_skipped_sailing_mismatch')::int
+         = (select count(*)::int from eta_segment_observations o
+             where o.exclude_reason is null
+               and o.hours_observed > 0
+               and o.observed_at >= now() - interval '90 days'
+               and coalesce(o.features->>'p4k', '') = 'true'
+               and o.corridor = 'PORT_CHECKIN'
+               and coalesce(o.features->>'sailing_mismatch', '') = 'true')
+   )::text;
+   rollback;" "true"
+
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
