@@ -117,28 +117,24 @@ on conflict (code) do update set name = excluded.name, active = true;
 -- ---------------------------------------------------------------------------
 -- 3) Seed: porty (istniejące + bałtyckie)
 -- ---------------------------------------------------------------------------
+-- Współrzędne GDN/NYN jak 0017 (terminal); Paldiski = South Harbour (F7 B6).
+-- on conflict do nothing — nie nadpisuj zmian HHL (F7).
 insert into public.ferry_ports (code, name, terminal, country, lat, lon) values
-  ('GDN', 'Gdańsk',           'Polferries',              'PL', 54.40300, 18.68000),
+  ('GDN', 'Gdańsk',           'Polferries',              'PL', 54.40372, 18.68130),
   ('GDY', 'Gdynia',           'Stena Line',              'PL', 54.53321, 18.54425),
-  ('NYN', 'Nynäshamn',        null,                      'SE', 58.93500, 17.95000),
+  ('NYN', 'Nynäshamn',        null,                      'SE', 58.90453, 17.95621),
   ('KAA', 'Karlskrona',       'Stena Line',              'SE', 56.16460, 15.63080),
   ('TLL_A', 'Tallinn',        'Terminal A',              'EE', 59.44400, 24.76800),
-  ('TLL_D', 'Tallinn',        'Terminal D',              'EE', 59.45000, 24.76700),
+  ('TLL_D', 'Tallinn',        'Terminal D',              'EE', 59.44480, 24.76850),
   ('MUU', 'Muuga',            'HHLA',                    'EE', 59.50500, 24.95800),
-  ('PLD', 'Paldiski',         null,                      'EE', 59.35000, 24.05000),
+  ('PLD', 'Paldiski',         'South Harbour',           'EE', 59.33300, 24.08300),
   ('HEL_T2', 'Helsinki',      'West Harbour T2',         'FI', 60.15400, 24.91400),
   ('HEL_KAT', 'Helsinki',     'Katajanokka',             'FI', 60.16600, 24.96800),
   ('VUO', 'Vuosaari',         null,                      'FI', 60.21200, 25.18800),
   ('STO', 'Stockholm',        'Värtahamnen',             'SE', 59.35000, 18.11000),
   ('KPS', 'Kapellskär',       null,                      'SE', 59.72300, 19.06600),
   ('MHN', 'Mariehamn',        null,                      'AX', 60.09700, 19.92800)
-on conflict (code) do update set
-  name = excluded.name,
-  terminal = excluded.terminal,
-  country = excluded.country,
-  lat = excluded.lat,
-  lon = excluded.lon,
-  active = true;
+on conflict (code) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- 4) Seed: trasy + armatorzy
@@ -182,17 +178,16 @@ insert into public.ferry_route_operators (route_code, operator_code, is_primary)
   ('KPS-PLD', 'DFDS', true)
 on conflict (route_code, operator_code) do update set is_primary = excluded.is_primary;
 
--- Aliasy operator → rodzina (jak 0320) + bałtyckie
+-- F7 B5: BEZ self-aliasów bałtyckich (alias_key = route_key).
+-- compute_load_eta „założony rejs” bierze alias_key = route_key — self-alias
+-- TLL-HEL wpuściłby rejs Tallinka do ładunku Stena/Polferries bez rejsu.
+-- Kierunki i nazwy armatorów (alias ≠ route_key) — OK dla ferry_route_primary_operator.
 insert into public.eta_route_aliases (alias_key, route_key, operator) values
-  ('TLL-HEL', 'TLL-HEL', 'TALLINK'),
   ('HEL-TLL', 'TLL-HEL', 'TALLINK'),
   ('TALLINK', 'TLL-HEL', 'TALLINK'),
-  ('MUU-VUO', 'MUU-VUO', 'ECKERO'),
   ('VUO-MUU', 'MUU-VUO', 'ECKERO'),
   ('ECKERO',  'MUU-VUO', 'ECKERO'),
-  ('TLL-STO', 'TLL-STO', 'TALLINK'),
   ('STO-TLL', 'TLL-STO', 'TALLINK'),
-  ('PLD-KPS', 'PLD-KPS', 'DFDS'),
   ('KPS-PLD', 'PLD-KPS', 'DFDS'),
   ('DFDS',    'PLD-KPS', 'DFDS'),
   ('VIKING',  'TLL-HEL', 'VIKING')
@@ -201,8 +196,32 @@ on conflict (alias_key) do update set
   operator = excluded.operator;
 
 -- ---------------------------------------------------------------------------
--- 5) Źródło rejsu: nowi armatorzy
+-- 5) Trasa + źródło rejsu: otwarte na bałtyckie (regex tras jak 0320; + armatorzy)
 -- ---------------------------------------------------------------------------
+-- Upewnij się, że nie został stary CHECK z zamkniętą listą PL (0004/0119).
+do $rte$
+declare c name;
+begin
+  for c in
+    select con.conname
+      from pg_constraint con
+      join pg_class rel on rel.oid = con.conrelid
+      join pg_namespace n on n.oid = rel.relnamespace
+     where n.nspname = 'public' and rel.relname = 'sailings'
+       and con.contype = 'c'
+       and pg_get_constraintdef(con.oid) ilike '%GDN-NYN%'
+       and pg_get_constraintdef(con.oid) ilike '%route%'
+       and pg_get_constraintdef(con.oid) not ilike '%~%'
+  loop
+    execute format('alter table public.sailings drop constraint %I', c);
+  end loop;
+end $rte$;
+
+alter table public.sailings drop constraint if exists sailings_route_check;
+alter table public.sailings
+  add constraint sailings_route_check
+  check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');
+
 do $src$
 declare c name;
 begin
@@ -280,21 +299,9 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-  v_jwt_role text;
 begin
-  -- Produkcja: auth.role(); brama CI bez auth.role — claim.role (jak 0325).
-  begin
-    if to_regprocedure('auth.role()') is not null then
-      execute 'select auth.role()' into v_jwt_role;
-    else
-      v_jwt_role := nullif(current_setting('request.jwt.claim.role', true), '');
-    end if;
-  exception when others then
-    v_jwt_role := null;
-  end;
-  if coalesce(v_jwt_role, '') = 'authenticated'
-     and public.current_app_user_id() is null then
+  -- Jak ferry_track_sample (0268): bez app_users → 42501 (nullguard GUARD).
+  if public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
   return query
@@ -324,21 +331,9 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-declare
-  v_jwt_role text;
 begin
-  -- Produkcja: auth.role(); brama CI bez auth.role — claim.role (jak 0325).
-  begin
-    if to_regprocedure('auth.role()') is not null then
-      execute 'select auth.role()' into v_jwt_role;
-    else
-      v_jwt_role := nullif(current_setting('request.jwt.claim.role', true), '');
-    end if;
-  exception when others then
-    v_jwt_role := null;
-  end;
-  if coalesce(v_jwt_role, '') = 'authenticated'
-     and public.current_app_user_id() is null then
+  -- Jak ferry_track_sample (0268): bez app_users → 42501 (nullguard GUARD).
+  if public.current_app_user_id() is null then
     raise exception 'Brak aktywnego konta' using errcode = '42501';
   end if;
   return jsonb_build_object(
@@ -399,11 +394,12 @@ begin
   end if;
 end $geo_cty$;
 
+-- F7 B1: ISO-2 (EE/FI/AX…); produkcja miała tylko PL/SE/LT/DE.
 alter table public.geofences
   drop constraint if exists geofences_country_check;
 alter table public.geofences
   add constraint geofences_country_check
-  check (country is null or country in ('PL', 'SE', 'LT', 'DE', 'EE', 'FI'));
+  check (country is null or country ~ '^[A-Z]{2}$');
 
 insert into public.geofences (
   project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes,
@@ -416,15 +412,15 @@ select p.id, z.name, z.kind::geofence_kind, make_circle_fence(z.lat, z.lon, z.r)
          -- Tallinn A (wyjście EE → FI)
          ('Bufor 20 km przed Tallinn A',       'PRE_PORT', 59.44400, 24.76800, 20000, 500, 0,   'EE', 'TLL-HEL'),
          ('Terminal Tallinn A',                'PORT_OUT', 59.44400, 24.76800,   800, 200, 900, 'EE', 'TLL-HEL'),
-         -- Tallinn D (wyjście EE → SE)
-         ('Bufor 20 km przed Tallinn D',       'PRE_PORT', 59.45000, 24.76700, 20000, 500, 0,   'EE', 'TLL-STO'),
-         ('Terminal Tallinn D',                'PORT_OUT', 59.45000, 24.76700,   800, 200, 900, 'EE', 'TLL-STO'),
+         -- Tallinn D (wyjście EE → SE; Tallink)
+         ('Bufor 20 km przed Tallinn D',       'PRE_PORT', 59.44480, 24.76850, 20000, 500, 0,   'EE', 'TLL-STO'),
+         ('Terminal Tallinn D',                'PORT_OUT', 59.44480, 24.76850,   800, 200, 900, 'EE', 'TLL-STO'),
          -- Muuga
          ('Bufor 20 km przed Muuga',           'PRE_PORT', 59.50500, 24.95800, 20000, 500, 0,   'EE', 'MUU-VUO'),
          ('Terminal Muuga HHLA',               'PORT_OUT', 59.50500, 24.95800,   800, 200, 900, 'EE', 'MUU-VUO'),
-         -- Paldiski
-         ('Bufor 20 km przed Paldiski',        'PRE_PORT', 59.35000, 24.05000, 20000, 500, 0,   'EE', 'PLD-KPS'),
-         ('Terminal Paldiski',                 'PORT_OUT', 59.35000, 24.05000,   800, 200, 900, 'EE', 'PLD-KPS'),
+         -- Paldiski South Harbour (F7 B6)
+         ('Bufor 20 km przed Paldiski',        'PRE_PORT', 59.33300, 24.08300, 20000, 500, 0,   'EE', 'PLD-KPS'),
+         ('Terminal Paldiski',                 'PORT_OUT', 59.33300, 24.08300,   800, 200, 900, 'EE', 'PLD-KPS'),
          -- Helsinki T2 / Katajanokka
          ('Terminal Helsinki West Harbour T2', 'PORT_IN',  60.15400, 24.91400,   800, 200, 600, 'FI', 'TLL-HEL'),
          ('Terminal Helsinki Katajanokka',     'PORT_IN',  60.16600, 24.96800,   800, 200, 600, 'FI', 'TLL-HEL'),

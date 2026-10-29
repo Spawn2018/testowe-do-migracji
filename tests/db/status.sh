@@ -2281,6 +2281,28 @@ chk "BN1: sailings source TALLINK dozwolone (rollback)" \
              now(), now() + interval '2 hours', 'ZAPLANOWANY', 'TALLINK');
    select source from sailings where id='77777777-0000-0000-0000-00000000b001';
    rollback" TALLINK
+# F7 B5: bałtyckie self-aliasy nie w eta_route_aliases (założony rejs = tylko PL→SE)
+chk "BN1: brak self-alias TLL-HEL w eta_route_aliases" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key='TLL-HEL'" 0
+chk "BN1: brak self-alias PLD-KPS w eta_route_aliases" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key='PLD-KPS'" 0
+chk "BN1: założony rejs tylko PL (GDN-NYN/GDY-KAA)" \
+  "select count(*) from eta_route_aliases where alias_key=route_key and alias_key in ('GDN-NYN','GDY-KAA')" 2
+# F7: eta_obs_operator_key = upper(btrim) przez ferry_route_primary_operator
+chk "BN1: eta_obs_operator_key NYN-GDN" \
+  "select public.eta_obs_operator_key('NYN-GDN')" POLFERRIES
+chk "BN1: eta_obs_operator_key KAA-GDY" \
+  "select public.eta_obs_operator_key('kaa-gdy')" STENA
+chk "BN1: eta_obs_operator_key POLFERRIES" \
+  "select public.eta_obs_operator_key('POLFERRIES')" POLFERRIES
+chk "BN1: eta_obs_operator_key STENA" \
+  "select public.eta_obs_operator_key('STENA')" STENA
+chk "BN1: eta_obs_operator_key NULL" \
+  "select coalesce(public.eta_obs_operator_key(null), '')" ""
+chk "BN1: port NYN współrzędne 0017" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='NYN'" "58.90453/17.95621"
+chk "BN1: port PLD South Harbour" \
+  "select round(lat::numeric,5)||'/'||round(lon::numeric,5) from ferry_ports where code='PLD'" "59.33300/24.08300"
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

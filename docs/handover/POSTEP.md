@@ -6887,3 +6887,11 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - #637: czeka w≈Ça≈õciciel `FILE_MODE=prod` (pr√≥ba na kopii OK, `write_test_ok_at` set).
 - **Krok BN1:** ga≈ÇƒÖ≈∫ `pakiet/bn1-ferry-dict`; migracja **0338** ‚Äî `ferry_operators` / `ferry_ports` / `ferry_routes` / `ferry_route_operators`; seed Stena+Polferries+TALLINK/VIKING/ECKERO/DFDS; strefy ba≈Çtyckie; `ferry_dict_snapshot` + `ferry_route_port_countries`; `eta_obs_operator_key` ‚Üê s≈Çownik. status **433** (+12); nullguard **890** (+10).
 - Dalej BN1: CASE-y w funkcjach ETA/AIS ‚Üí s≈Çownik; front z RPC. Potem BN2‚Ä¶
+
+## 2026-10-29 18:50 ó BN1 #647 F7 POPRAWKI + CI db (nullguard/status)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #499/#500/#537/#538 w planie. Bez nowego wpisu.
+- Scalanie: brak F7 Ñgotoweî; #647 jedyny otwarty PR. CI db @ a9009ef9: status 432/433 FAIL (`sailings_route_check` na TLL-HEL), nullguard 882/890 FAIL (`ferry_dict_snapshot` / `ferry_route_port_countries` ó straønik `auth.role` nie odpala≥ siÍ w bramie).
+- Poprawki w 0338: straønik jak `ferry_track_sample` (`current_app_user_id`); ponowne otwarcie `sailings_route_check` (regex); bez self-aliasÛw ba≥tyckich (F7 B5); GDN/NYN/PLD/TLL_D wspÛ≥rzÍdne (F7 B6); `geofences.country` = ISO-2; seed ports `on conflict do nothing`.
+- status **443** (+10 asercji B5/B6/operator); nullguard **890**. PLAN: dwa modele `geofences.route`.
+- Push õ CI õ proúba o F7. Bez push na main.
