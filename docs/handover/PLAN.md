@@ -1130,8 +1130,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → **#618** → 27B:C ETA/mapa/kalibracja → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **Dalej w 27B:C:** ETA SE po faktycznym korytarzu; mapa obie linie (HERE, B12); kalibracja dwa SE_ROAD. Bez śladu GPS w repo. Kolejność: ~~#630~~ → ~~#634~~ → **#618** → ETA/mapa/kalibracja.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → **#637** → 27B:C ETA/mapa/kalibracja → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA** PR #638 (`0334` na gałęzi 27B — po #637 przenumerować); **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo. **#637 przed poprawkami F7 #638.**
 
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
@@ -1139,11 +1139,15 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #634 · emtrack `EMTRACK_EXPECTED_VERSION` → 6.34.0 — SCALONE (`251febc5` / PR #635, 29.10.2026 09:39Z)
 Źródło: F7 #633 (Spawn2018; po #630). Stała 6.33.0→6.34.0 + testy (jak #374). F7 gotowe @ `a21af060`. Sekret Edge `EMTRACK_EXPECTED_VERSION` ma pierwszeństwo — jeśli mismatch zostanie, zmienia właściciel. Potem **#618**.
 
-### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — W TOKU (`pakiet/618-ksh-file-ab-dots`, migracja **0333**)
-Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**.
+### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — SCALONE (`97428948` / PR #636 / **0333**, 29.10.2026 10:31Z)
+Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
+
+### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — W TOKU (`pakiet/637-ksh-write-no-import`, migracja **0334**)
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → **próba na kopii** → `ksh_sync_write_set(true)` prod → uzupełnienie aktywnych → pierwszy cykl. Kod: `write_set` bez wymogu importu; `import_set(false)` nie gasi `write_enabled` ani kolejki; Edge zapis bez bramki `import_disabled`; **F7 #639:** zapis tylko przy `write_enabled` (kolejka z triggera). Próba: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → jedna zmiana awizacji → cykl (PUT na kopię, `write_test_ok_at`) → `prod` → jednorazowe zakolejkowanie aktywnych → meldunek w #637. import **383**.
+
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
-4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
+4. **28C:A / #637** — sekret `SHAREPOINT_TEST_FILE_URL` jest; próba zapisu na kopii **przy imporcie wyłączonym** (decyzja 29.10); wynik → #637. Bez wypisywania wartości sekretu.
 5. **BN6 / #589 Łotwa** — odblokowane (klucze API/endpointy w sekretach Supabase); w kolejności planu po BN. Sprawdź nazwy sekretów w kodzie, nie wypisuj wartości.
 6. GitHub: „Automatically delete head branches” włączone przez właściciela.
 
@@ -1987,3 +1991,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 09:25 | #630 CI db FAIL @ 7938da6c (no_PORT_CHECKIN:?) → propose raz (temp table), bez CTE | pętla |
 | 29.10.2026 10:00 | #630/#633 SCALONE (`2563d627`, F7 gotowe @ `abf5bca2`); start **#634** emtrack 6.34.0 (F7: potem #618) | pętla |
 | 29.10.2026 11:20 | #634/#635 SCALONE (`251febc5`); start **#618** `ksh_file_ab` **0333** (`PL / ...` / `... / SE`); W62 zamknięte | pętla |
+| 29.10.2026 12:35 | #618/#636 SCALONE (`97428948`); 27B:C ETA **0334** na PR #638 (czekaj #637) | pętla |
+| 29.10.2026 13:00 | #637 PILNE „włącz zapis”: **0334** write bez importu; próba na kopii przed write_set; przed F7 #638 | pętla |
+| 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |
+| 29.10.2026 13:40 | #637 PR #639 CI zielone @ `c469db8e` (unit/visual/db import 383); czekam F7; #638 po #637 | pętla |
+| 29.10.2026 14:00 | #637 PR #639 CI zielone @ `f48f91a2` (docs po F7 @ c469db8); czekam ponowne F7; #638 po #637 | pętla |

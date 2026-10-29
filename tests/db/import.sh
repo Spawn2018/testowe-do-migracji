@@ -494,9 +494,9 @@ SG_OUT=$(Q "select load_id from shipment_items where shipment_code='SG-01' and p
 CODE_OUT=$(Q "select public.load_sms_code('$SG_OUT')")
 $PSQL -c "update ksh_sync_state set snapshot=jsonb_build_object('$CODE_OUT', jsonb_build_object('ld','$D1b','lt',null,'dd','$D2b','dt',null,'co',null,'ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-# F7 r2: write_set wymaga import_enabled (tu import wyłączony od testów wyżej)
-err "A6: write_set bez importu odmowa" $HHL "select ksh_sync_write_set(true)" "import z pliku"
-val "A6: HHL_ADMIN import_set przed write" $HHL "select ksh_sync_import_set(true); select import_enabled from ksh_sync_state where project_id='$P'" t commit
+# #637: write_set bez wymogu import_enabled (tu import wyłączony od testów wyżej)
+val "A6: HHL_ADMIN write_set true bez importu" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+val "A6: HHL_ADMIN import_set true (osobno)" $HHL "select ksh_sync_import_set(true); select import_enabled from ksh_sync_state where project_id='$P'" t commit
 val "A6: HHL_ADMIN write_set true (włącz)" $HHL "select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='PRE-SKIP' where id='$SG_OUT'; commit;" >/dev/null
 chk "A6: PRE-SKIP → 1 pending" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" 1
@@ -622,14 +622,15 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
   select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no');
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    A6: A→B → 1 klucz pending"; else fail=$((fail+1)); echo "  FAIL  A6: A→B → $out"; fi
-# F7 r2b N3: import_set(false) → write_enabled=false + pending skipped
+# #637: import_set(false) zostawia write + pending (zapis niezależny)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   select ksh_sync_import_set(true); select ksh_sync_write_set(true);
   update loads set carrier_order_no='PEND-1' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
-val "A6: import_set false wyłącza write" $HHL "select ksh_sync_import_set(false); select write_enabled from ksh_sync_state where project_id='$P'" f commit
-chk "A6: import_set false → pending skipped" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='skipped' and last_error='import_disabled'")" 1
+val "A6: import_set false zostawia write" $HHL "select ksh_sync_import_set(false); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+val "A6: import_set false → import_enabled=f" $HHL "select import_enabled from ksh_sync_state where project_id='$P'" f
+chk "A6: import_set false → pending zostaje" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" 1
 # F7 r8: przywróć import+write — N4+ kolejka tylko przy write_enabled
 val "A6: import+write on przed N4" $HHL "select ksh_sync_import_set(true); select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit
 
