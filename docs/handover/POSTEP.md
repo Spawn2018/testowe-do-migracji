@@ -6903,6 +6903,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - F7 wymagane w PR: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; trasy `TLL-HEL`/`TLLA-HEL` (+ powroty) w rodzinie `TLL-HEL`; PORT_OUT r=250 rozłączne; strefy D HEL + D STO. status **449** (+6).
 - Dalej: czekam F7 po CI; potem CASE-y ETA/AIS → słownik; front z RPC.
 
+## 2026-10-29 20:05 — BN1 #647 strefy po rodzinie trasy
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 czeka `FILE_MODE=prod` właściciela. Bez nowego wpisu.
+- Scalanie: F7 „gotowe” @ 5a2d838 — **unieważnione** commitem Tallinn `1233afd6`; CI @ `1233afd6` unit/db/visual **zielone**. Bez scalenia.
+- **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
+- Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
+
 ## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.

@@ -2327,6 +2327,23 @@ chk "BN1: port TLL_D F7 wschód" \
 chk "BN1: Tallinn A/D rozłączne (>500 m)" \
   "select ((111320*sqrt(power(a.lat-d.lat,2)+power((a.lon-d.lon)*cos(radians((a.lat+d.lat)/2)),2)))::int > 500)
      from ferry_ports a, ferry_ports d where a.code='TLL_A' and d.code='TLL_D'" t
+# Strefy po rodzinie trasy (nie primary operator) — Viking/Eckerö ↔ TLL-HEL; Tallink STO ≠ HEL
+chk "BN1: family TLLA-HEL → TLL-HEL" \
+  "select public.eta_obs_route_family('TLLA-HEL')" TLL-HEL
+chk "BN1: family HELA-TLL → TLL-HEL" \
+  "select public.eta_obs_route_family('HELA-TLL')" TLL-HEL
+chk "BN1: family TLL-STO" \
+  "select public.eta_obs_route_family('TLL-STO')" TLL-STO
+chk "BN1: match strefa TLL-HEL × TLLA-HEL" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','TLLA-HEL')" t
+chk "BN1: brak match TLL-HEL × TLL-STO" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','TLL-STO')" f
+chk "BN1: match POLFERRIES × GDN-NYN" \
+  "select public.ferry_geofence_matches_route('POLFERRIES','GDN-NYN')" t
+chk "BN1: match STENA × GDY-KAA" \
+  "select public.ferry_geofence_matches_route('STENA','GDY-KAA')" t
+chk "BN1: brak match TLL-HEL × GDN-NYN" \
+  "select public.ferry_geofence_matches_route('TLL-HEL','GDN-NYN')" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
