@@ -2364,30 +2364,33 @@ chk "BN1: promote outbound ze słownika" \
 chk "BN1: apply_geofence_status pomija REMOVED" \
   "select pg_get_functiondef('public.apply_geofence_status()'::regprocedure) ilike '%REMOVED%'" t
 
-# F7 #649: apply_ferry_ais_arrival_backup — OTHER / TLL-HEL bez syntetycznego AT_PORT na lądzie SE
+# F7 #649: apply_ferry_ais_arrival_backup — OTHER / TLL-HEL bez syntetycznego AT_PORT na lądzie SE.
+# Jak #496: CHECK zdjęty tylko na wstawkę OTHER; osobne INSERT-y (różne departure); restore na końcu.
 S649o=77777777-0000-0000-0000-00000000649a
 S649t=77777777-0000-0000-0000-00000000649b
-L649o=$(L d1)
-L649t=$(L d2)
+L649o=$(L e8)
+L649t=$(L e9)
 q "alter table public.sailings drop constraint if exists sailings_route_check;
    insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
     ('$S649o','$P','66666666-0000-0000-0000-000000000001','OTHER',
-     '2026-10-10 12:00+00','2026-10-11 06:00+00','2026-10-10 12:00+00','2026-10-11 06:00+00','DOPLYNAL','POLFERRIES'),
+     '2026-10-12 12:00+00','2026-10-13 06:00+00','2026-10-12 12:00+00','2026-10-13 06:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
     ('$S649t','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
-     '2026-10-10 12:00+00','2026-10-11 06:00+00','2026-10-10 12:00+00','2026-10-11 06:00+00','DOPLYNAL','TALLINK');
-   alter table public.sailings add constraint sailings_route_check
-     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
+     '2026-10-12 14:00+00','2026-10-13 08:00+00','2026-10-12 14:00+00','2026-10-13 08:00+00','DOPLYNAL','TALLINK');" >/dev/null
 mk $L649o O649 "'HHL/O649'" "'SCX/O649'" FERRY "'$S649o'"
 mk $L649t T649 "'HHL/T649'" "'SCX/T649'" FERRY "'$S649t'"
 q "insert into load_events (load_id, event_type, occurred_at) values
-    ('$L649o','MILESTONE_LOADED','2026-10-09 08:00+00'),
-    ('$L649t','MILESTONE_LOADED','2026-10-09 08:00+00')" >/dev/null
+    ('$L649o','MILESTONE_LOADED','2026-10-11 08:00+00'),
+    ('$L649t','MILESTONE_LOADED','2026-10-11 08:00+00')" >/dev/null
 chk "BN1 F7: OTHER + ląd SE → AIS backup false" \
-  "select public.apply_ferry_ais_arrival_backup('$L649o', 59.00, 17.90, '2026-10-11 07:00+00')" f
+  "select public.apply_ferry_ais_arrival_backup('$L649o', 59.00, 17.90, '2026-10-13 07:00+00')" f
 chk "BN1 F7: OTHER status bez zmian (FERRY)" "$(st $L649o)" FERRY
 chk "BN1 F7: TLL-HEL + ląd SE → AIS backup false" \
-  "select public.apply_ferry_ais_arrival_backup('$L649t', 59.00, 17.90, '2026-10-11 07:00+00')" f
+  "select public.apply_ferry_ais_arrival_backup('$L649t', 59.00, 17.90, '2026-10-13 09:00+00')" f
 chk "BN1 F7: TLL-HEL status bez zmian (FERRY)" "$(st $L649t)" FERRY
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

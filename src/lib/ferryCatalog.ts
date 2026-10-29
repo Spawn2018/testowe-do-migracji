@@ -255,7 +255,7 @@ export function routePorts(code: string | null | undefined): [FerryPortDef, Ferr
 }
 
 /** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO, PLD-KPS). */
-export function outboundRoutesOf(operator: FerryOperator): FerryRouteCode[] {
+export function outboundRoutesOf(operator: FerryOperator): readonly string[] {
   return FERRY_ROUTES.filter((r) => r.outbound && r.operators.includes(operator)).map((r) => r.code);
 }
 

@@ -2025,3 +2025,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 20:05 | #647 BN1: strefy po rodzinie trasy (`ferry_geofence_matches_route`); status **457**; CI @ 1233afd6 zielone → nowy commit | pętla |
 | 29.10.2026 20:50 | #647 SCALONE; start #649 **0339** CASE→słownik; status **466** | pętla |
 | 29.10.2026 21:25 | #649 F7 POPRAWKI: AIS `ferry_routes`+SE; isOutbound kraje; surowy kod; status **470** | pętla |
+| 29.10.2026 21:55 | #649 CI fix: `outboundRoutesOf` string[]; fixture AIS jak #496 | pętla |
