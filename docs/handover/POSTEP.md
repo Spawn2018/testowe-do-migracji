@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 23:40 — #650 F7 POPRAWKI: WT nadpisuje 6 pól (decyzja 23:24)
+
+- Skrzynka: #650 F7 POPRAWKI + decyzja właściciela 29.10 23:24 (nadpisanie 6 pól WT→plik). #608 w planie; #550 **WSTRZYMANE**. #651 czeka na scalenie po #650.
+- Scalanie: F7 **niegotowe** (POPRAWKI) @ cce273e1 — poprawki w tym PR.
+- **Krok:** B1 Edge — 6 pól bez konfliktu (nadpisanie / `skip_applied`); daty R2 tylko daty; `overwritten_n` w wyniku workbook + `integration_runs`/`last_run`. `writeConflict`: konflikt tylko ld/lt/dd/dt. N3 SQL: clear WT → drop klucza z pending. N5: testy puste WT, 2×backfill, audit, MFA aal1. import **393**. Unit ksh-sharepoint-write **59/59**.
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-29 23:10 — #650 PILNE: komplet 6 pól WT→plik (przed #651)
 
 - Skrzynka: #650 (Spawn2018, `dla-cursora`+`pilne`) — wpisane PLAN §4/#637/#650, §8, POSTEP. #608 w planie; #550 **WSTRZYMANE**. Komentarz na #651: #650 ma pierwszeństwo — PR #650 przed scaleniem #651.

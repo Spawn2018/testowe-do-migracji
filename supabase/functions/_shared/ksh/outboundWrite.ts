@@ -152,6 +152,8 @@ export async function processOutboundWrites(args: {
   written: number;
   conflicts: number;
   skipped: number;
+  /** #650: nadpisania komórek WT6 (plik ≠ WT). */
+  overwritten_n: number;
   upload_ok: boolean | null;
   write_reason?: string;
   reason?: string;
@@ -166,7 +168,7 @@ export async function processOutboundWrites(args: {
   });
   if (gate.block) {
     return {
-      attempted: false, written: 0, conflicts: 0, skipped: 0,
+      attempted: false, written: 0, conflicts: 0, skipped: 0, overwritten_n: 0,
       upload_ok: null, write_reason: gate.write_reason,
     };
   }
@@ -177,13 +179,16 @@ export async function processOutboundWrites(args: {
   });
   if (list.error) {
     return {
-      attempted: true, written: 0, conflicts: 0, skipped: 0,
+      attempted: true, written: 0, conflicts: 0, skipped: 0, overwritten_n: 0,
       upload_ok: false, reason: 'outbound_list', write_reason: 'outbound_list',
     };
   }
   const items = (Array.isArray(list.data) ? list.data : []) as OutboundItem[];
   if (items.length === 0) {
-    return { attempted: false, written: 0, conflicts: 0, skipped: 0, upload_ok: null };
+    return {
+      attempted: false, written: 0, conflicts: 0, skipped: 0, overwritten_n: 0,
+      upload_ok: null,
+    };
   }
 
   const toWrite: OutboundItem[] = [];
@@ -244,6 +249,7 @@ export async function processOutboundWrites(args: {
       if (note.error) {
         return {
           attempted: true, written: 0, conflicts: 0, skipped: 0,
+          overwritten_n: 0,
           upload_ok: false, reason: 'note_file_changed', write_reason: 'note_file_changed',
         };
       }
@@ -257,6 +263,7 @@ export async function processOutboundWrites(args: {
     if (!a.ok) {
       return {
         attempted: true, written: 0, conflicts: 0, skipped: 0,
+        overwritten_n: 0,
         upload_ok: false, reason: 'ack_done_recover', write_reason: 'ack_done_recover',
       };
     }
@@ -271,6 +278,7 @@ export async function processOutboundWrites(args: {
   if (!ackConflict.ok) {
     return {
       attempted: true, written: 0, conflicts: 0, skipped: 0,
+      overwritten_n: 0,
       upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
     };
   }
@@ -286,6 +294,7 @@ export async function processOutboundWrites(args: {
       if (!a.ok) {
         return {
           attempted: true, written: 0, conflicts: conflictItems.length, skipped: 0,
+          overwritten_n: 0,
           upload_ok: false, reason: 'ack_skipped', write_reason: 'ack_skipped',
         };
       }
@@ -314,6 +323,7 @@ export async function processOutboundWrites(args: {
       written: alreadyDone.length,
       conflicts: conflictItems.length,
       skipped: skipItems.length,
+      overwritten_n: 0,
       upload_ok: alreadyDone.length ? true : null,
       write_reason: alreadyDone.length
         ? 'recovered_ack'
@@ -345,6 +355,8 @@ export async function processOutboundWrites(args: {
     expectedByCode,
     fetchFn: args.fetchFn,
   });
+  const overwritten_n = wb.overwritten_n ?? 0;
+
 
   /** R1/R4: done przy ≥1 kodzie ukończonym, bez incomplete; upsert sprawdzany. */
   async function ackFullyWrittenItems(
@@ -404,7 +416,7 @@ export async function processOutboundWrites(args: {
       if (!part.ok) {
         return {
           attempted: true, written: fullyDone.length, conflicts: conflictItems.length,
-          skipped: skipItems.length, upload_ok: true,
+          skipped: skipItems.length, overwritten_n, upload_ok: true,
           reason: part.reason ?? 'ack_done', write_reason: part.reason ?? 'ack_done',
         };
       }
@@ -418,7 +430,7 @@ export async function processOutboundWrites(args: {
         if (!ackFail.ok) {
           return {
             attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
-            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'ack_failed', write_reason: 'ack_failed',
           };
         }
@@ -432,7 +444,7 @@ export async function processOutboundWrites(args: {
         if (note.error) {
           return {
             attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
-            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
         }
@@ -442,6 +454,7 @@ export async function processOutboundWrites(args: {
         written: partialCodes.length,
         conflicts: conflictItems.length,
         skipped: skipItems.length,
+        overwritten_n,
         upload_ok: partialCodes.length ? true : false,
         reason: wb.reason,
         write_reason: wb.reason,
@@ -456,7 +469,7 @@ export async function processOutboundWrites(args: {
         if (note.error) {
           return {
             attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
-            skipped: skipItems.length, upload_ok: partialCodes.length ? true : false,
+            skipped: skipItems.length, overwritten_n, upload_ok: partialCodes.length ? true : false,
             reason: 'note_423', write_reason: 'note_423',
           };
         }
@@ -466,6 +479,7 @@ export async function processOutboundWrites(args: {
         written: partialCodes.length,
         conflicts: conflictItems.length,
         skipped: skipItems.length,
+        overwritten_n,
         upload_ok: partialCodes.length ? true : false,
         reason: wb.reason,
         write_reason: wb.reason,
@@ -480,7 +494,7 @@ export async function processOutboundWrites(args: {
     if (!ackFail.ok) {
       return {
         attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
-        skipped: skipItems.length, upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
+        skipped: skipItems.length, overwritten_n, upload_ok: false, reason: 'ack_failed', write_reason: 'ack_failed',
       };
     }
     for (const it of (remaining.length ? remaining : toWrite)) {
@@ -495,7 +509,7 @@ export async function processOutboundWrites(args: {
         if (note.error) {
           return {
             attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
-            skipped: skipItems.length, upload_ok: false,
+            skipped: skipItems.length, overwritten_n, upload_ok: false,
             reason: 'note_outbound_failed', write_reason: 'note_outbound_failed',
           };
         }
@@ -506,6 +520,7 @@ export async function processOutboundWrites(args: {
       written: partialCodes.length,
       conflicts: conflictItems.length,
       skipped: skipItems.length,
+      overwritten_n,
       upload_ok: partialCodes.length ? true : false,
       reason: wb.reason,
       write_reason: wb.reason,
@@ -531,6 +546,7 @@ export async function processOutboundWrites(args: {
       if (note.error) {
         return {
           attempted: true, written: 0, conflicts: 0, skipped: 0,
+          overwritten_n,
           upload_ok: false, reason: 'note_file_changed', write_reason: 'note_file_changed',
         };
       }
@@ -544,6 +560,7 @@ export async function processOutboundWrites(args: {
     if (!ackCell.ok) {
       return {
         attempted: true, written: 0, conflicts: 0, skipped: 0,
+        overwritten_n,
         upload_ok: false, reason: 'ack_conflict', write_reason: 'ack_conflict',
       };
     }
@@ -573,7 +590,7 @@ export async function processOutboundWrites(args: {
     if (!a.ok) {
       return {
         attempted: true, written: 0, conflicts: conflictItems.length,
-        skipped: skipItems.length, upload_ok: false,
+        skipped: skipItems.length, overwritten_n, upload_ok: false,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
     }
@@ -582,6 +599,7 @@ export async function processOutboundWrites(args: {
       written: alreadyDone.length,
       conflicts: conflictItems.length,
       skipped: skipItems.length + skippedNoWrite.length,
+      overwritten_n,
       upload_ok: alreadyDone.length ? true : null,
       write_reason: wb.conflicts.length ? 'conflict' : 'patch_no_cell',
     };
@@ -597,7 +615,7 @@ export async function processOutboundWrites(args: {
     if (!a.ok) {
       return {
         attempted: true, written: writtenSet.size, conflicts: conflictItems.length,
-        skipped: skipItems.length, upload_ok: true,
+        skipped: skipItems.length, overwritten_n, upload_ok: true,
         reason: 'ack_skipped', write_reason: 'ack_skipped',
       };
     }
@@ -611,6 +629,7 @@ export async function processOutboundWrites(args: {
         written: writtenSet.size,
         conflicts: conflictItems.length,
         skipped: skipItems.length + skippedNoWrite.length,
+        overwritten_n,
         upload_ok: true,
         reason: 'ack_done',
         write_reason: 'ack_done',
@@ -660,6 +679,7 @@ export async function processOutboundWrites(args: {
         written: writtenSet.size + alreadyDone.length,
         conflicts: conflictItems.length,
         skipped: skipItems.length + skippedNoWrite.length + wb.skipped,
+        overwritten_n,
         upload_ok: true,
         reason: 'state_upsert',
         write_reason: 'state_upsert',
@@ -674,6 +694,7 @@ export async function processOutboundWrites(args: {
     written: writtenSet.size + alreadyDone.length,
     conflicts: conflictItems.length,
     skipped: skipItems.length + skippedNoWrite.length + wb.skipped,
+    overwritten_n,
     upload_ok: doneItems.length || alreadyDone.length ? true : (wb.conflicts.length ? null : null),
     write_reason: doneItems.length || alreadyDone.length
       ? 'ok'

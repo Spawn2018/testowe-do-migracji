@@ -2388,5 +2388,27 @@ $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 val "#650: backfill → pending z hhl_order_no" $HHL \
   "select ksh_sync_outbound_enqueue_active_wt(); select count(*)>0 from ksh_sync_outbound where project_id='$P' and status='pending' and patch ? 'hhl_order_no'" t commit
+# N5: pusta wartość WT → brak klucza; podwójny backfill bez nowych wierszy; audit; ADMIN bez 2FA
+$PSQL -c "update loads set hhl_order_no=null where id='$SG_OUT'" >/dev/null
+chk "#650: puste WT → brak klucza" "$(Q "select (public.ksh_sync_outbound_wt6_patch('$SG_OUT') ? 'hhl_order_no')::text")" f
+$PSQL -c "update loads set hhl_order_no='KSH-IDEM' where id='$SG_OUT'" >/dev/null
+N650=$(Q "select count(*) from ksh_sync_outbound where project_id='$P' and status='pending'")
+val "#650: drugi backfill bez nowych wierszy" $HHL \
+  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where project_id='$P' and status='pending'" "$N650" commit
+chk "#650: audit backfill" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_OUTBOUND_BACKFILL_WT'")" t
+$PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
+err "#650: ADMIN aal1 enqueue odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
+$PSQL -c "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
+# N3: wyczyszczenie numeru usuwa klucz ze starego pending
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
+$PSQL -c "update loads set hhl_order_no='KSH-N3', carrier_order_no='SCAN-N3',
+  driver_name='N3Drv', driver_delivery_name=null, trailer_swap=false where id='$SG_OUT'" >/dev/null
+$PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set driver_name='N3Drv2' where id='$SG_OUT'; commit;" >/dev/null
+chk "#650 N3: pending ma hhl przed clear" "$(Q "select (patch ? 'hhl_order_no')::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" t
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set hhl_order_no=null, driver_name='N3Drv3' where id='$SG_OUT'; commit;" >/dev/null
+chk "#650 N3: po clear brak hhl w pending" "$(Q "select (patch ? 'hhl_order_no')::text from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

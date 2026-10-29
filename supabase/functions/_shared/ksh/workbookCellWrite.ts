@@ -2,7 +2,8 @@
  * #645 — zapis WT→plik komórka po komórce (Graph workbook), bez PUT całego .xlsx.
  * Mapowanie wiersza po kodzie; konflikt per komórka vs migawka; daty jak w pliku.
  * F7 #646: dwie fazy (odczyt→PATCH), tekst z apostrofem, usedRange z przesunięciem.
- * F7 r2: R1 postęp per job; R2 konflikt per pozycja (itemKey); R3 serial tylko przy formacie daty.
+ * F7 r2: R1 postęp per job; R2 konflikt dat per pozycja (itemKey); R3 serial tylko przy formacie daty.
+ * #650: 6 pól WT→plik bez kontroli konfliktu (nadpisanie); daty R2 bez zmian.
  */
 import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
 import {
@@ -277,6 +278,24 @@ function jobKey(job: CellJob): string {
   return `${job.code}|${job.conflictField}`;
 }
 
+/** #650: 6 pól wyłącznie WT→plik — bez kontroli konfliktu (właściciel 29.10 23:24). */
+const WT6_FIELDS = new Set<CellJob['conflictField']>([
+  'driver',
+  'driver_phone',
+  'tractor',
+  'trailer',
+  'carrier_order_no',
+  'hhl_order_no',
+]);
+
+function isWt6Field(field: CellJob['conflictField']): boolean {
+  return WT6_FIELDS.has(field);
+}
+
+function cellTextNonempty(current: unknown): boolean {
+  return stripLeadingApostrophe(cellText(current)).trim() !== '';
+}
+
 function buildJobs(
   layout: SheetLayout,
   patches: readonly WorkbookPatch[],
@@ -385,7 +404,8 @@ type Planned =
   | { job: CellJob; action: 'write'; value: string | number };
 
 /**
- * Faza 1: odczyt z usedRange — konflikt / już zastosowane / do PATCH.
+ * Faza 1: odczyt z usedRange — konflikt (tylko daty) / już zastosowane / do PATCH.
+ * #650: 6 pól WT → zawsze nadpisanie przy ≠ (bez konfliktu); puste WT nie dochodzi do joba.
  */
 function planJobs(layout: SheetLayout, jobs: CellJob[]): Planned[] {
   const out: Planned[] = [];
@@ -397,16 +417,19 @@ function planJobs(layout: SheetLayout, jobs: CellJob[]): Planned[] {
       continue;
     }
 
-    if (job.kind === 'date' || job.kind === 'time' || job.expected != null) {
-      if (!cellMatchesExpected(current, job.expected, job.kind)) {
-        out.push({ job, action: 'conflict' });
-        continue;
-      }
-    } else if (job.kind === 'text' && job.expected == null) {
-      const cur = stripLeadingApostrophe(cellText(current));
-      if (cur && cur !== String(job.value)) {
-        out.push({ job, action: 'conflict' });
-        continue;
+    // #650: 6 pól WT→plik — bez kontroli konfliktu (nadpisanie).
+    if (!isWt6Field(job.conflictField)) {
+      if (job.kind === 'date' || job.kind === 'time' || job.expected != null) {
+        if (!cellMatchesExpected(current, job.expected, job.kind)) {
+          out.push({ job, action: 'conflict' });
+          continue;
+        }
+      } else if (job.kind === 'text' && job.expected == null) {
+        const cur = stripLeadingApostrophe(cellText(current));
+        if (cur && cur !== String(job.value)) {
+          out.push({ job, action: 'conflict' });
+          continue;
+        }
       }
     }
 
@@ -477,10 +500,12 @@ export type WorkbookWriteResult =
     writtenCodes: string[];
     /** R4: kody, dla których powstał ≥1 job (wiersz w pliku). */
     codesWithJobs: string[];
-    /** R4: joby zaplanowane i nieukończone (poza zablokowanymi konfliktem). */
+    /** R4: joby zaplanowane i nieukończone (poza zablokowanymi konfliktem dat). */
     incompleteCodes: string[];
     skipped: number;
     conflicts: { code: string; field: string }[];
+    /** #650: ile komórek WT6 miało inną niepustą wartość w pliku i zostało nadpisanych. */
+    overwritten_n: number;
   }
   | {
     ok: false;
@@ -491,16 +516,23 @@ export type WorkbookWriteResult =
     codesWithJobs?: string[];
     incompleteCodes?: string[];
     conflicts?: { code: string; field: string }[];
+    overwritten_n?: number;
     permission?: string;
   };
 
+/**
+ * R2/#650: konflikt dat blokuje tylko joby dat/godzin tej pozycji;
+ * 6 pól WT nadal wchodzą do „ukończonych”.
+ */
 function jobsByCodeUnblocked(
   planned: Planned[],
-  blockedItemKeys: Set<string>,
+  dateBlockedItemKeys: Set<string>,
 ): Map<string, Planned[]> {
   const byCode = new Map<string, Planned[]>();
   for (const p of planned) {
-    if (blockedItemKeys.has(p.job.itemKey)) continue;
+    const dateJob = p.job.kind === 'date' || p.job.kind === 'time';
+    if (dateBlockedItemKeys.has(p.job.itemKey) && dateJob) continue;
+    if (p.action === 'conflict') continue;
     const list = byCode.get(p.job.code) ?? [];
     list.push(p);
     byCode.set(p.job.code, list);
@@ -572,6 +604,7 @@ export async function writePatchesViaWorkbook(args: {
       incompleteCodes: [],
       skipped: 0,
       conflicts: [],
+      overwritten_n: 0,
     };
   }
 
@@ -634,37 +667,46 @@ export async function writePatchesViaWorkbook(args: {
         incompleteCodes: [],
         skipped: args.patches.length,
         conflicts: [],
+        overwritten_n: 0,
       };
     }
 
     const planned = planJobs(layout, jobs);
     const conflicts: { code: string; field: string }[] = [];
-    const blockedItemKeys = new Set<string>();
+    const dateBlockedItemKeys = new Set<string>();
     const completedJobKeys = new Set<string>();
     let skipped = 0;
+    let overwritten_n = 0;
     const withJobs = codesThatHadJobs(planned);
 
-    // R2: konflikt w dowolnym kodzie pozycji → blokuje PATCH wszystkich kodów tej pozycji.
+    // R2/#650: konflikt dat → blokuje tylko daty/godziny pozycji; 6 pól WT nadal PATCH.
     for (const p of planned) {
       if (p.action === 'conflict') {
-        blockedItemKeys.add(p.job.itemKey);
+        dateBlockedItemKeys.add(p.job.itemKey);
         if (!conflicts.some((c) => c.code === p.job.code && c.field === p.job.conflictField)) {
           conflicts.push({ code: p.job.code, field: p.job.conflictField });
         }
       }
     }
 
-    // Faza 2: PATCH tylko dla pozycji bez konfliktu; R1 postęp per job.
+    // Faza 2: PATCH; daty z konfliktem pomijane; WT6 zawsze (gdy write/skip).
     for (const p of planned) {
-      if (blockedItemKeys.has(p.job.itemKey)) {
+      const dateJob = p.job.kind === 'date' || p.job.kind === 'time';
+      if (dateBlockedItemKeys.has(p.job.itemKey) && dateJob) {
         if (p.action !== 'conflict') skipped += 1;
         continue;
       }
+      if (p.action === 'conflict') continue;
       if (p.action === 'skip_applied') {
         completedJobKeys.add(jobKey(p.job));
         continue;
       }
       if (p.action !== 'write') continue;
+
+      if (isWt6Field(p.job.conflictField)) {
+        const cur = cellFromLayout(layout, p.job.absCol, p.job.absRow);
+        if (cellTextNonempty(cur)) overwritten_n += 1;
+      }
 
       const patched = await patchWorkbookRange(
         session,
@@ -679,10 +721,11 @@ export async function writePatchesViaWorkbook(args: {
           reason: patched.reason,
           http: patched.http,
           permission: patched.permission,
-          writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
+          writtenCodes: codesFullyWritten(planned, dateBlockedItemKeys, completedJobKeys),
           codesWithJobs: withJobs,
-          incompleteCodes: codesIncomplete(planned, blockedItemKeys, completedJobKeys),
+          incompleteCodes: codesIncomplete(planned, dateBlockedItemKeys, completedJobKeys),
           conflicts,
+          overwritten_n,
         };
       }
       completedJobKeys.add(jobKey(p.job));
@@ -691,11 +734,12 @@ export async function writePatchesViaWorkbook(args: {
     return {
       ok: true,
       mode: ref.ref.mode,
-      writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
+      writtenCodes: codesFullyWritten(planned, dateBlockedItemKeys, completedJobKeys),
       codesWithJobs: withJobs,
-      incompleteCodes: codesIncomplete(planned, blockedItemKeys, completedJobKeys),
+      incompleteCodes: codesIncomplete(planned, dateBlockedItemKeys, completedJobKeys),
       skipped,
       conflicts,
+      overwritten_n,
     };
   } finally {
     await closeWorkbookSession(session, fetchFn);

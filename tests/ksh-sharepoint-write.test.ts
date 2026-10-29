@@ -128,100 +128,93 @@ describe('A6 writeConflict', () => {
     )).toBe(true);
   });
 
-  it('ten sam snap → bez konfliktu; zmiana daty lub numeru → konflikt', () => {
+  it('ten sam snap → bez konfliktu; zmiana daty → konflikt; numer (#650) → bez konfliktu', () => {
     const a = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
     expect(fileRowChangedSinceRead(a, { ...a })).toBe(false);
     expect(fileRowChangedSinceRead(a, { ...a, ld: '2026-11-02' })).toBe(true);
-    expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(true);
+    // #650: numery WT→plik bez kontroli konfliktu
+    expect(fileRowChangedSinceRead(a, { ...a, co: 'S2' })).toBe(false);
   });
 
-  it('F7 r8/r9: conflictFieldFromSnaps — najpierw łatka, potem dowolne (kolejność jak import)', () => {
+  it('F7 r8/r9 + #650: conflictFieldFromSnaps — tylko daty/godziny', () => {
     const a = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    expect(conflictFieldFromSnaps(a, { ...a, ho: 'K2' })).toBe('hhl_order_no');
-    expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('carrier_order_no');
+    // same daty, różny numer → brak pola daty; fallback load_date
+    expect(conflictFieldFromSnaps(a, { ...a, ho: 'K2' })).toBe('load_date');
+    expect(conflictFieldFromSnaps(a, { ...a, co: 'S2', ho: 'K2' })).toBe('load_date');
     expect(conflictFieldFromSnaps(a, { ...a, ld: '2026-11-02', co: 'S2' })).toBe('load_date');
-    expect(conflictFieldFromSnaps(a, { ...a })).toBe('carrier_order_no');
-    // F7 r9: łatka {co} + w pliku też load_date → pole z łatki
+    expect(conflictFieldFromSnaps(a, { ...a })).toBe('load_date');
+    // łatka {load_date} + rozjazd daty
     expect(conflictFieldFromSnaps(
-      a, { ...a, ld: '2026-11-02', co: 'S2' }, ['carrier_order_no'],
-    )).toBe('carrier_order_no');
-    // łatka bez różnicy, inne pole różne → fallback na dowolne
+      a, { ...a, ld: '2026-11-02', co: 'S2' }, ['load_date'],
+    )).toBe('load_date');
+    // łatka tylko numery (poza CONFLICT_FIELD_ORDER) → dowolna data różniąca się
     expect(conflictFieldFromSnaps(
       a, { ...a, ld: '2026-11-02', co: 'S1' }, ['carrier_order_no'],
     )).toBe('load_date');
   });
 
-  it('#569: pickOutboundConflictNote — kod i pole z wiersza konfliktu (2 kody)', () => {
+  it('#569/#650: pickOutboundConflictNote — tylko daty; numery bez konfliktu', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    // Pierwszy kod zgodny z expected; drugi zmieniony w pliku (ho).
+    // Różnica tylko w numerze → brak konfliktu (#650)
     const snap = {
       'SG-A': { ...expected },
       'SG-B': { ...expected, ho: 'K2' },
     };
-    const note = pickOutboundConflictNote(
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       snap,
       { carrier_order_no: 'S9' },
-    );
-    expect(note).toEqual({ code: 'SG-B', field: 'hhl_order_no' });
-    // łatka {co} + konflikt na co w drugim → pole z łatki
-    const notePatch = pickOutboundConflictNote(
+    )).toBeNull();
+    // Data różna w SG-B → konflikt load_date (nie numer)
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       { 'SG-A': { ...expected }, 'SG-B': { ...expected, co: 'S2', ld: '2026-11-02' } },
-      { carrier_order_no: 'S9' },
-    );
-    expect(notePatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
+      { carrier_order_no: 'S9', load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-B', field: 'load_date' });
     expect(pickOutboundConflictNote(['SG-A'], expected, snap, { carrier_order_no: 'S9' })).toBeNull();
-    // F7 #570: pierwszy kod różni się tylko polem spoza łatki, drugi — polem z łatki
-    // → wybierz drugi (jak import), nie pierwszy ze sprawą spoza łatki
-    const notePreferPatch = pickOutboundConflictNote(
+    // Pierwszy kod: data; drugi: tylko numer → wybierz pierwszy (data)
+    expect(pickOutboundConflictNote(
       ['SG-A', 'SG-B'],
       expected,
       {
         'SG-A': { ...expected, ld: '2026-11-02' },
         'SG-B': { ...expected, co: 'S2' },
       },
-      { carrier_order_no: 'S9' },
-    );
-    expect(notePreferPatch).toEqual({ code: 'SG-B', field: 'carrier_order_no' });
+      { carrier_order_no: 'S9', load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-A', field: 'load_date' });
   });
 
-  it('F7 #570: brak wiersza w pliku + drugi z rozjazdem → kod obecnego (jak import)', () => {
+  it('F7 #570/#650: brak wiersza + drugi tylko z numerem → bez konfliktu dat', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    const note = pickOutboundConflictNote(
+    expect(pickOutboundConflictNote(
       ['SG-01', 'SG-02'],
       expected,
-      {
-        // SG-01 zniknął z pliku (brak klucza / null)
-        'SG-02': { ...expected, co: 'S2' },
-      },
+      { 'SG-02': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    );
-    expect(note).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
-    const noteNull = pickOutboundConflictNote(
+    )).toBeNull();
+    // SG-02 z rozjazdem daty → konflikt
+    expect(pickOutboundConflictNote(
       ['SG-01', 'SG-02'],
       expected,
-      { 'SG-01': null, 'SG-02': { ...expected, co: 'S2' } },
-      { carrier_order_no: 'S9' },
-    );
-    expect(noteNull).toEqual({ code: 'SG-02', field: 'carrier_order_no' });
+      { 'SG-01': null, 'SG-02': { ...expected, ld: '2026-11-02' } },
+      { load_date: '2026-11-03' },
+    )).toEqual({ code: 'SG-02', field: 'load_date' });
   });
 
-  it('F7 #570: puste vs null / spacje; łatka null/{}; jeden kod', () => {
+  it('F7 #570/#650: puste vs null; numery bez konfliktu; zniknięty wiersz', () => {
     const expected = {
       ld: '2026-11-01', lt: '08:00', dd: '2026-11-05', dt: '10:00', co: 'S1', ho: 'K1',
     };
-    // '' i spacje = null jak import (btrim) → bez konfliktu
     expect(fileRowChangedSinceRead(expected, {
       ...expected, co: 'S1', ho: '  K1  ',
     })).toBe(false);
@@ -229,34 +222,26 @@ describe('A6 writeConflict', () => {
       { ...expected, co: null, ho: '' },
       { ...expected, co: '', ho: null },
     )).toBe(false);
-    expect(fileRowChangedSinceRead(expected, { ...expected, co: ' S2 ' })).toBe(true);
-    // jeden kod + rozjazd
+    expect(fileRowChangedSinceRead(expected, { ...expected, co: ' S2 ' })).toBe(false);
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { 'SG-A': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
-    // łatka null / {} — 2. pętla, dowolne pole
+    )).toBeNull();
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { 'SG-A': { ...expected, ho: 'K2' } },
       null,
-    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
-    expect(pickOutboundConflictNote(
-      ['SG-A'],
-      expected,
-      { 'SG-A': { ...expected, ho: 'K2' } },
-      {},
-    )).toEqual({ code: 'SG-A', field: 'hhl_order_no' });
-    // kod ze spacją w kluczu snapu — bez dopasowania = brak wiersza; sam jeden kod → konflikt „zniknął”
+    )).toBeNull();
+    // kod ze spacją w kluczu snapu — brak wiersza; sam jeden kod → konflikt „zniknął”
     expect(pickOutboundConflictNote(
       ['SG-A'],
       expected,
       { ' SG-A ': { ...expected, co: 'S2' } },
       { carrier_order_no: 'S9' },
-    )).toEqual({ code: 'SG-A', field: 'carrier_order_no' });
+    )).toEqual({ code: 'SG-A', field: 'load_date' });
   });
 });
 
@@ -517,8 +502,8 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
-  it('konflikt komórki gdy plik ≠ expected', async () => {
-    const { fetchFn } = mockFetch({ conflictCo: true });
+  it('#650: numer w pliku ≠ WT → nadpisanie, 0 konfliktów + overwritten_n', async () => {
+    const { fetchFn, calls } = mockFetch({ conflictCo: true });
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
@@ -529,9 +514,84 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.writtenCodes).toEqual([]);
-      expect(r.conflicts.some((c) => c.code === 'SG-01')).toBe(true);
+      expect(r.writtenCodes).toContain('SG-01');
+      expect(r.conflicts).toEqual([]);
+      expect(r.overwritten_n).toBe(1);
     }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(1);
+  });
+
+  it('#650: inny kierowca + numer w pliku → oba nadpisane, 0 konfliktów', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+        ],
+        ['SG-01', 'OTHER', 'JanKsh'],
+      ],
+      usedAddress: 'Harmonogram!A1:C2',
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver: 'JanWt' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.conflicts).toEqual([]);
+      expect(r.overwritten_n).toBe(2);
+      expect(r.writtenCodes).toContain('SG-01');
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+  });
+
+  it('#650: konflikt daty blokuje daty, nie 6 pól WT', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+          COLUMN_MAP_DEFAULT.driverName,
+        ],
+        // data w pliku ≠ expected → konflikt; numer/kierowca ≠ WT → nadpisanie
+        ['SG-01', '03.11.2026', 'OTHER', 'JanKsh'],
+      ],
+      usedAddress: 'Harmonogram!A1:D2',
+      numberFormat: [
+        ['General', 'General', 'General', 'General'],
+        ['General', 'General', 'General', 'General'],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{
+        code: 'SG-01',
+        itemKey: 'pos-1',
+        load_date: '2026-11-05',
+        carrier_order_no: 'NEW',
+        driver: 'JanWt',
+      }],
+      expectedByCode: {
+        'SG-01': {
+          ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null,
+        },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.conflicts.some((c) => c.field === 'load_date')).toBe(true);
+      expect(r.overwritten_n).toBeGreaterThanOrEqual(2);
+      expect(r.writtenCodes).toContain('SG-01');
+    }
+    // 2 PATCH (kierowca + numer); data zablokowana konfliktem
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
   });
 
   it('429 createSession → workbook_http_429 + closeSession nie (brak sesji)', async () => {
@@ -688,34 +748,43 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(patch?.url).toMatch(/range\(address='D2'\)/);
   });
 
-  it('R2: konflikt kodu B blokuje PATCH kodu A tej samej pozycji (itemKey)', async () => {
+  it('R2/#650: konflikt daty kodu B blokuje daty A+B pozycji; numery WT nadal PATCH', async () => {
     const { fetchFn, calls } = mockFetch({
-      secondCodeConflict: true,
       usedAddress: 'Harmonogram!A1:C3',
       values: [
-        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
-        ['SG-01', 'OLD', ''],
-        ['SG-02', 'OTHER', ''],
+        [
+          COLUMN_MAP_DEFAULT.shipmentCode,
+          COLUMN_MAP_DEFAULT.loadDate,
+          COLUMN_MAP_DEFAULT.scxOrderNo,
+        ],
+        ['SG-01', '01.11.2026', 'OLD'],
+        ['SG-02', '02.11.2026', 'OTHER'],
+      ],
+      numberFormat: [
+        ['General', 'General', 'General'],
+        ['General', 'General', 'General'],
+        ['General', 'General', 'General'],
       ],
     });
     const r = await writePatchesViaWorkbook({
       env: env(),
       patches: [
-        { code: 'SG-01', itemKey: 'pos-1', carrier_order_no: 'NEW' },
-        { code: 'SG-02', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+        { code: 'SG-01', itemKey: 'pos-1', load_date: '2026-11-05', carrier_order_no: 'NEW' },
+        { code: 'SG-02', itemKey: 'pos-1', load_date: '2026-11-05', carrier_order_no: 'NEW' },
       ],
       expectedByCode: {
-        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
-        'SG-02': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-01': { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-02': { ld: '2026-11-01', lt: null, dd: null, dt: null, co: 'OLD', ho: null },
       },
       fetchFn,
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.writtenCodes).toEqual([]);
-      expect(r.conflicts.some((c) => c.code === 'SG-02')).toBe(true);
+      expect(r.conflicts.some((c) => c.field === 'load_date')).toBe(true);
+      // numery nadpisane mimo konfliktu dat
+      expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+      expect(r.overwritten_n).toBeGreaterThanOrEqual(1);
     }
-    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
   });
 
   it('R3/R4: pusta komórka + General → tekst daty; format daty → serial; [Red] ≠ data', () => {

@@ -1,6 +1,7 @@
 /**
  * A6 — konflikt zapisu WT→plik: wiersz w pliku zmienił się od ostatniego odczytu (D-1420).
- * F7 #560: daty/godziny + numery zleceń; brak expected_file → nie zapisuj (pomijaj).
+ * F7 #560: daty/godziny; #650: numery/awizacja (6 pól WT→plik) bez kontroli konfliktu
+ * (właściciel 29.10 23:24 — WT zawsze nadpisuje). Brak expected_file → nie zapisuj (pomijaj).
  */
 
 export type FileDateSnap = {
@@ -54,14 +55,15 @@ export function resolveOutboundExpected(args: {
   return asExpectedSnap(args.expectedFile);
 }
 
-/** Kolejność jak w import_schedule (pending skip / file-changed). */
+/**
+ * #650: konflikt tylko dla pól dwukierunkowych (daty/godziny).
+ * 6 pól WT→plik (kierowca/telefon/ciągnik/naczepa/numery) — bez kontroli konfliktu.
+ */
 const CONFLICT_FIELD_ORDER = [
   'load_date',
   'load_time',
   'delivery_date',
   'delivery_time',
-  'carrier_order_no',
-  'hhl_order_no',
 ] as const;
 
 type ConflictField = (typeof CONFLICT_FIELD_ORDER)[number];
@@ -83,12 +85,10 @@ function snapVal(
     case 'load_time': return normCell(snap.lt);
     case 'delivery_date': return normCell(snap.dd);
     case 'delivery_time': return normCell(snap.dt);
-    case 'carrier_order_no': return normCell(snap.co);
-    case 'hhl_order_no': return normCell(snap.ho);
   }
 }
 
-/** true = plik ≠ oczekiwany → nie nadpisuj, sprawa HHL. */
+/** true = daty/godziny w pliku ≠ expected → nie nadpisuj dat, sprawa HHL. Numery ignorowane (#650). */
 export function fileRowChangedSinceRead(
   expected: FileDateSnap | null | undefined,
   current: FileDateSnap | null | undefined,
@@ -100,8 +100,6 @@ export function fileRowChangedSinceRead(
     || snapVal(expected, 'load_time') !== snapVal(current, 'load_time')
     || snapVal(expected, 'delivery_date') !== snapVal(current, 'delivery_date')
     || snapVal(expected, 'delivery_time') !== snapVal(current, 'delivery_time')
-    || snapVal(expected, 'carrier_order_no') !== snapVal(current, 'carrier_order_no')
-    || snapVal(expected, 'hhl_order_no') !== snapVal(current, 'hhl_order_no')
   );
 }
 
@@ -164,7 +162,7 @@ export function conflictFieldFromSnaps(
   expected: FileDateSnap | null | undefined,
   current: FileDateSnap | null | undefined,
   patchKeys?: readonly string[] | null,
-  fallback: ConflictField = 'carrier_order_no',
+  fallback: ConflictField = 'load_date',
 ): ConflictField {
   const fromPatch = patchKeys?.length
     ? CONFLICT_FIELD_ORDER.filter((f) => patchKeys.includes(f))
@@ -223,5 +221,10 @@ export function fileAlreadyHasPatch(
   if ('hhl_order_no' in patch && patch.hhl_order_no != null) {
     want.ho = String(patch.hhl_order_no);
   }
-  return !fileRowChangedSinceRead(want, current);
+  // Daty (konflikt) + numery (odzysk ack) — #650 numery poza fileRowChangedSinceRead.
+  if (fileRowChangedSinceRead(want, current)) return false;
+  return (
+    normCell(want.co) === normCell(current.co)
+    && normCell(want.ho) === normCell(current.ho)
+  );
 }

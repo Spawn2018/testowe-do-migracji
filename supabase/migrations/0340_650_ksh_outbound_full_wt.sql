@@ -94,6 +94,10 @@ declare
   v_old_ph text;
   v_old_tr text;
   v_maybe boolean := false;
+  v_wt6 jsonb;
+  v_wt6_keys text[] := array[
+    'driver', 'driver_phone', 'tractor', 'trailer', 'carrier_order_no', 'hhl_order_no'
+  ];
 begin
   if current_setting('tower.import_ctx', true) = 'on' then
     return new;
@@ -249,7 +253,24 @@ begin
   end if;
 
   -- #650: każda pozycja kolejki = komplet 6 pól z bieżącego WT (+ daty z v_patch).
-  v_patch := v_patch || public.ksh_sync_outbound_wt6_patch(new.id);
+  -- N3: klucz WT6 wyczyszczony w WT → usuń ze starego pending (merge || nie zostawia starej wartości).
+  v_wt6 := public.ksh_sync_outbound_wt6_patch(new.id);
+  foreach v_k in array v_wt6_keys loop
+    if (v_wt6 ? v_k) is not true then
+      update public.ksh_sync_outbound
+         set patch = patch - v_k,
+             rev = rev + 1
+       where load_id = new.id and status = 'pending' and patch ? v_k;
+    end if;
+  end loop;
+  update public.ksh_sync_outbound
+     set status = 'skipped',
+         done_at = now(),
+         last_error = 'wt6_cleared',
+         rev = rev + 1
+   where load_id = new.id and status = 'pending' and patch = '{}'::jsonb;
+
+  v_patch := v_patch || v_wt6;
 
   if v_patch = '{}'::jsonb then
     return new;
@@ -278,6 +299,7 @@ declare
   v_patch jsonb;
   v_exp jsonb;
   v_code text;
+  v_k text;
   v_n int := 0;
 begin
   perform public.assert_not_preview();
@@ -301,6 +323,7 @@ begin
     return 0;
   end if;
 
+  -- „Aktywne” = wszystko poza CANCELLED/REMOVED (także dostarczone — numery mają być w pliku).
   for r in
     select l.id
       from public.loads l
@@ -309,6 +332,16 @@ begin
      order by l.id
   loop
     v_patch := public.ksh_sync_outbound_wt6_patch(r.id);
+    -- N3: usuń z pending klucze WT6 nieobecne w bieżącym wt6 (wyczyszczone w WT).
+    foreach v_k in array array[
+      'driver', 'driver_phone', 'tractor', 'trailer', 'carrier_order_no', 'hhl_order_no'
+    ] loop
+      if (v_patch ? v_k) is not true then
+        update public.ksh_sync_outbound
+           set patch = patch - v_k, rev = rev + 1
+         where load_id = r.id and status = 'pending' and patch ? v_k;
+      end if;
+    end loop;
     if v_patch = '{}'::jsonb then
       continue;
     end if;
@@ -332,6 +365,6 @@ revoke all on function public.ksh_sync_outbound_enqueue_active_wt() from public,
 grant execute on function public.ksh_sync_outbound_enqueue_active_wt() to authenticated;
 
 comment on function public.ksh_sync_outbound_enqueue_active_wt() is
-  '#650: jednorazowe zakolejkowanie kompletu 6 pól WT→plik dla aktywnych STEGRA_*; HHL_ADMIN+2FA; wymaga write_enabled.';
+  '#650: jednorazowe zakolejkowanie kompletu 6 pól WT→plik dla aktywnych STEGRA_* (wszystko poza CANCELLED/REMOVED, także dostarczone); HHL_ADMIN+2FA; wymaga write_enabled.';
 
 commit;
