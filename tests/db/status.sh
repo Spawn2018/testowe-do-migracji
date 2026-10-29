@@ -1035,7 +1035,8 @@ chk "27B: eta_corridor Västerås → SE_KAA_INLAND" \
 chk "27B: nearest Västerås → SE_KAA_INLAND" \
   "select corridor_code from public.stena_se_corridor_nearest(st_setsrid(st_makepoint(16.5448, 59.6099),4326))" SE_KAA_INLAND
 
-L27Ba=$(L c8)
+# L cc — nie c8: #622 F7 r3 (L622g) zajmuje c8 niżej (kolizja → false refresh)
+L27Ba=$(L cc)
 mk $L27Ba A27B "'HHL/A27B'" "'SCX/A27B'" FERRY "'$S485'"
 q "set session_replication_role=replica;
    update loads set status='IN_TRANSIT_SE' where id='$L27Ba';
@@ -1108,14 +1109,15 @@ q "delete from corridor_polylines where code='SE_KAA_TRACK' and source='27B F7 T
 chk "27B: po usunięciu TRACK → z powrotem SE_KAA_INLAND" \
   "select public.stena_se_inland_corridor_code()" SE_KAA_INLAND
 
-# Brak obu korytarzy Stena → v_blocked (bez OFF mimo pozycji daleko)
-q "update corridor_polylines set total_km = 0
-    where code in ('SE_E22','SE_KAA_INLAND','SE_KAA_TRACK');" >/dev/null
-q "select refresh_load_eta('$L27Bb')" >/dev/null
-chk "27B: brak obu korytarzy → bez OFF_CORRIDOR (v_blocked)" "$(rk $L27Bb OFF_CORRIDOR)" 0
-q "update corridor_polylines
-      set total_km = round((st_length(geom::geography)/1000.0)::numeric, 2)
-    where code in ('SE_E22','SE_KAA_INLAND');" >/dev/null
+# Brak obu korytarzy Stena → v_blocked (F7 r2: nie total_km=0 — CHECK >0; delete w transakcji;
+# rk() bez resolved_at i L27Bb ma już OFF z Karlstad → licz unresolved w tej samej transakcji)
+chk "27B: brak obu korytarzy → bez OFF_CORRIDOR (v_blocked)" \
+  "begin;
+   delete from corridor_polylines where code in ('SE_E22','SE_KAA_INLAND','SE_KAA_TRACK');
+   select refresh_load_eta('$L27Bb');
+   select count(*) from risk_signals
+     where load_id='$L27Bb' and dedup_key like 'OFF_CORRIDOR%' and resolved_at is null;
+   rollback" 0
 
 # Regresja Polferries / SE_E4 (Nynäshamn) — nie dual Stena
 S27Be4=77777777-0000-0000-0000-00000000027e
@@ -1129,12 +1131,12 @@ q "set session_replication_role=replica;
    update loads set status='IN_TRANSIT_SE', sailing_id='$S27Be4' where id='$L27Be4';
    delete from positions where load_id='$L27Be4';
    set session_replication_role=origin;" >/dev/null
-# punkt na E4 koło Nyköping — bez OFF; Karlstad na Polferries → OFF z SE_E4
+# F7 r2: wierzchołek SE_E4 (Sztokholm) — Nyköping (17.0,58.75) jest tylko w SE_E22 (~55 km od E4)
 q "insert into positions (load_id, ts, geom_raw, source) values
-  ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(17.0, 58.75),4326), 'TELEMATICS_API'),
-  ('$L27Be4', now(), st_setsrid(st_makepoint(17.0, 58.75),4326), 'TELEMATICS_API')" >/dev/null
+  ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(18.0686, 59.3293),4326), 'TELEMATICS_API'),
+  ('$L27Be4', now(), st_setsrid(st_makepoint(18.0686, 59.3293),4326), 'TELEMATICS_API')" >/dev/null
 q "select refresh_load_eta('$L27Be4')" >/dev/null
-chk "27B: Polferries na E4 (Nyköping) → brak OFF_CORRIDOR" "$(rk $L27Be4 OFF_CORRIDOR)" 0
+chk "27B: Polferries na E4 (Sztokholm) → brak OFF_CORRIDOR" "$(rk $L27Be4 OFF_CORRIDOR)" 0
 q "delete from positions where load_id='$L27Be4';
    insert into positions (load_id, ts, geom_raw, source) values
   ('$L27Be4', now() - interval '15 minutes', st_setsrid(st_makepoint(13.51, 59.38),4326), 'TELEMATICS_API'),

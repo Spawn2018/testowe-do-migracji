@@ -31,13 +31,14 @@ with g as (
     st_makepoint(16.40,   57.89),
     st_makepoint(16.32,   58.48),
     st_makepoint(16.183,  58.594),  -- Norrköping (rozwidlenie)
+    st_makepoint(16.195,  58.795),  -- Norrköping→Katrineholm (~45 km — punkt pośredni)
     st_makepoint(16.207,  58.996),  -- Katrineholm
-    st_makepoint(16.588,  59.058),  -- Flen
+    st_makepoint(16.337,  59.133),  -- Malmköping (droga 55; Flen leży ~17 km na wschód od prostej)
     st_makepoint(16.507,  59.371),  -- Eskilstuna
     st_makepoint(16.5448, 59.6099), -- Västerås
     st_makepoint(16.6066, 59.9079), -- Sala
     st_makepoint(16.929,  60.151),  -- Tärnsjö
-    st_makepoint(17.00,   60.45),   -- Ockelbo (kierunek Gävle)
+    st_makepoint(17.00,   60.45),   -- Hedesunda/Gysinge (kierunek Gävle; nie Ockelbo)
     st_makepoint(17.1413, 60.6749), -- Gävle (łączenie z E4)
     st_makepoint(17.1056, 61.7274),
     st_makepoint(17.3069, 62.3908),
@@ -221,9 +222,10 @@ begin
       'READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK',
       'FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
     );
+  -- #590: wyklucz CANCELLED i REMOVED (strażnik import.sh; 0315 przepisało 0298 — nie zgub przy replace)
   v_eta_ok := l3_eta_alarm(r.eta, v_end, v_has)
     and l.actual_delivery_at is null
-    and l.status is distinct from 'CANCELLED'
+    and l.status::text not in ('CANCELLED', 'REMOVED')
     and public.load_status_rank(l.status) < public.load_status_rank('AT_SITE'::public.load_status);
 
   if v_eta_ok then

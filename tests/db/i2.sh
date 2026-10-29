@@ -1189,9 +1189,10 @@ $PSQL -c "delete from load_agreed_fees where load_id='$LF'; delete from load_cos
 
 echo; echo "[II-7] korytarz OSM + ETA v2"
 # B8 / L57: + SE_APPROACH_SG03 (krótki odcinek — total_km może być < 100)
-chk "corridor_polylines: PL_ROAD + SE_E4 + SE_E22 + SE_APPROACH_SG03" "$(Q "select string_agg(code||'='||(case when code='SE_APPROACH_SG03' then (total_km>0) else (total_km>100) end)::text, ',' order by code) from corridor_polylines")" "PL_ROAD=true,SE_APPROACH_SG03=true,SE_E22=true,SE_E4=true"
+# 27B:C / 0331: + SE_KAA_INLAND (KSH widzi — geometria trasy publicznej, nie sekret)
+chk "corridor_polylines: PL_ROAD + SE_E4 + SE_E22 + SE_APPROACH_SG03 + SE_KAA_INLAND" "$(Q "select string_agg(code||'='||(case when code='SE_APPROACH_SG03' then (total_km>0) else (total_km>100) end)::text, ',' order by code) from corridor_polylines")" "PL_ROAD=true,SE_APPROACH_SG03=true,SE_E22=true,SE_E4=true,SE_KAA_INLAND=true"
 chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "select has_table_privilege('anon','corridor_polylines','select')::text||has_function_privilege('anon','corridor_progress(text,geometry)','execute')::text")" "falsefalse"
-val "KSH czyta korytarz (4 linie)" $KSH "select count(*) from corridor_polylines" 4
+val "KSH czyta korytarz (5 linii)" $KSH "select count(*) from corridor_polylines" 5
 chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
 chk "zjazd z trasy: próg w Opcjach OFFROUTE_KM = 2" "$(Q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")/$(Q "select count(*) from app_parameters where key='OFF_CORRIDOR_M'")" "2/0"
 # spowolnienie SE 1.15 liczone z pozycji (AT_PORT_NYNASHAMN = cały odcinek SE), nie z planu
