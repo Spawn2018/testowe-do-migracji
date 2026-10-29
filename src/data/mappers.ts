@@ -510,9 +510,9 @@ export interface SailingDbRow {
   vessels?: { name: string; operator?: string } | null;
 }
 export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name,operator)';
-/** BN9-a: znana trasa z katalogu promów zostaje (np. TLL-HEL); tylko nieznany kod — jak dotąd GDN-NYN. */
+/** BN9-a / BN1: znana trasa z katalogu albo `ferry_dict_snapshot` zostaje (TLL-HEL, TLLA-HEL); nieznany kod — GDN-NYN. */
 export function ferryRouteFromDb(route: string): Sailing['route'] {
-  return isKnownRoute(route) ? route : 'GDN-NYN';
+  return isKnownRoute(route) ? (route as Sailing['route']) : 'GDN-NYN';
 }
 export function sailingFromRow(r: SailingDbRow): Sailing {
   const name = r.vessels?.name ?? '';

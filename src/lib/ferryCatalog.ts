@@ -117,11 +117,59 @@ const ROUTE_BY_CODE = new Map<string, FerryRouteDef>(FERRY_ROUTES.map((r) => [r.
 const PORT_BY_CODE = new Map<string, FerryPortDef>(FERRY_PORTS.map((p) => [p.code, p]));
 const OPERATOR_BY_CODE = new Map<string, FerryOperatorDef>(FERRY_OPERATORS.map((o) => [o.code, o]));
 
+/** BN1: kody / armatorzy / rodziny z `ferry_dict_snapshot` (np. TLLA-HEL), poza seedem UI. */
+let rpcRouteCodes = new Set<string>();
+let rpcOperatorsByRoute = new Map<string, readonly FerryOperator[]>();
+let rpcFamilyByRoute = new Map<string, string>();
+let rpcOperatorNames = new Map<string, string>();
+
+export type FerryDictSnapshot = {
+  operators: { code: string; name: string }[];
+  ports: { code: string; name: string; terminal: string | null; country: string; lat: number; lon: number }[];
+  routes: {
+    code: string;
+    port_from: string;
+    port_to: string;
+    family_key: string;
+    operators: string[];
+  }[];
+};
+
+/** Wgraj snapshot RPC — rozszerza isKnownRoute / operatorsForRoute / isOutbound (seed zostaje). */
+export function applyFerryDictSnapshot(snap: FerryDictSnapshot): void {
+  const codes = new Set<string>();
+  const ops = new Map<string, readonly FerryOperator[]>();
+  const fam = new Map<string, string>();
+  for (const r of snap.routes ?? []) {
+    if (!r?.code) continue;
+    codes.add(r.code);
+    fam.set(r.code, r.family_key || r.code);
+    const list = (r.operators ?? []).filter(isFerryOperator);
+    if (list.length) ops.set(r.code, list);
+  }
+  rpcRouteCodes = codes;
+  rpcOperatorsByRoute = ops;
+  rpcFamilyByRoute = fam;
+  const names = new Map<string, string>();
+  for (const o of snap.operators ?? []) {
+    if (o?.code && o.name) names.set(o.code, o.name);
+  }
+  rpcOperatorNames = names;
+}
+
+/** Testy / demo: wróć do samego seeda. */
+export function resetFerryDictRpc(): void {
+  rpcRouteCodes = new Set();
+  rpcOperatorsByRoute = new Map();
+  rpcFamilyByRoute = new Map();
+  rpcOperatorNames = new Map();
+}
+
 export const FERRY_ROUTE_CODES: readonly FerryRouteCode[] = FERRY_ROUTES.map((r) => r.code);
 export const FERRY_OPERATOR_CODES: readonly FerryOperator[] = FERRY_OPERATORS.map((o) => o.code);
 
 export function isKnownRoute(code: unknown): code is FerryRouteCode {
-  return typeof code === 'string' && ROUTE_BY_CODE.has(code);
+  return typeof code === 'string' && (ROUTE_BY_CODE.has(code) || rpcRouteCodes.has(code));
 }
 
 export function isFerryOperator(code: unknown): code is FerryOperator {
@@ -142,17 +190,24 @@ export function operatorByCode(code: string | null | undefined): FerryOperatorDe
 
 /** Nazwa wyświetlana armatora („Stena Line”); nieznany kod zostaje bez zmian. */
 export function operatorName(code: string): string {
-  return OPERATOR_BY_CODE.get(code)?.name ?? code;
+  return OPERATOR_BY_CODE.get(code)?.name ?? rpcOperatorNames.get(code) ?? code;
 }
 
 /** Armatorzy trasy (pusta lista dla nieznanego kodu). */
 export function operatorsForRoute(code: string | null | undefined): readonly FerryOperator[] {
-  return routeByCode(code)?.operators ?? [];
+  if (!code) return [];
+  return routeByCode(code)?.operators ?? rpcOperatorsByRoute.get(code) ?? [];
 }
 
 /** Kierunek wyjazdowy (PL → SE; z Estonii). Nieznana trasa — nie. */
 export function isOutbound(code: string | null | undefined): boolean {
-  return routeByCode(code)?.outbound ?? false;
+  if (!code) return false;
+  const seed = routeByCode(code);
+  if (seed) return seed.outbound;
+  const family = rpcFamilyByRoute.get(code);
+  if (!family) return false;
+  const canon = ROUTE_BY_CODE.get(family) ?? FERRY_ROUTES.find((r) => r.waterTrack === family);
+  return canon?.outbound ?? false;
 }
 
 /** Porty trasy `[z, do]`; nieznana trasa — null. */

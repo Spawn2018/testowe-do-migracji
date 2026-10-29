@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-29 20:50 — #647 SCALONE; BN1 CASE→słownik + front RPC (0339)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 czeka `FILE_MODE=prod`. #648 (BN1-b) — pkt 1–3 w #647; zostaje seed jedną funkcją + e2e.
+- Scalanie: F7 „gotowe” @ `0862fe07` (Spawn2018, po CI) → **#647 SCALONE** `e2599170` (merge). Bez push na main.
+- **Krok BN1:** gałąź `pakiet/bn1-ferry-case-rpc` / migracja **0339** — `ferry_route_is_outbound`; CASE usunięte z `promote_ferry_departures` / `apply_ferry_ais_arrival_backup` / `refresh_load_eta`; `ferry_sailings_map` ← `ferry_ports`; REMOVED we wczesnym return `apply_geofence_status`; front `loadFerryDictIntoCatalog` + `applyFerryDictSnapshot`. status **466** (+9). unit bn1+bn9a 20/20.
+- Push → CI → prośba o F7. Bez push na main.
+
 ## 2026-10-29 19:25 — BN1 #647 CI status 4 FAIL → fix testów
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez F7 „gotowe”.

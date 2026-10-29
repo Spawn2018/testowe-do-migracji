@@ -23,6 +23,7 @@ import { setOpsThresholdCache } from '../lib/opsThresholdDefaults';
 import { deliveredCheckFromDecision } from '../lib/p4cSource';
 import { marginFromDb, setMarginFromServer, setPermitsFromServer, setPoliciesFromServer, type PermitView, type PolicyView } from '../lib/p5Source';
 import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
+import { loadFerryDictIntoCatalog } from '../lib/ferryDictSource';
 import { transportLabel } from '../lib/transportName';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
@@ -173,7 +174,7 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     loadsQuery = isHhl ? loadsQuery.neq('status', 'REMOVED') : loadsQuery.not('status', 'in', '(CANCELLED,REMOVED)');
     /* #412 E16 (0288): próg marży — tylko HHL (KSH i SCX nie wołają; baza i tak odmawia 42501), równolegle z resztą */
     const marginP = isHhl ? sb.rpc('margin_threshold_get') : Promise.resolve(null);
-    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, kshSyncQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ] = await Promise.all([
+    const [loads, events, messagesPlain, messagesUi, geos, risks, docs, costV, revV, billsQ, notesQ, sailQ, schedQ, kshSyncQ, driversQ, permitQ, wfQ, wfRunQ, orderNos, thrQ, gapsQ, a7PermitsQ, a7PoliciesQ, symQ, escQ, escContactQ, ferryDictOk] = await Promise.all([
       loadsQuery,
       fetchAllEvents(),
       sb.from('load_messages').select('id,load_id,body,created_at,author_org,visible_to').order('created_at', { ascending: true }),
@@ -214,7 +215,10 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.from('symbol_specs').select('symbol,position_name,combo_length_m,combo_width_m,combo_height_m,pilot,permit_kind'),
       sb.from('load_escorts').select('load_id,seq,plate,scope').order('load_id').order('seq'), /* stała kolejność wpisów PL_SE między sobą; pierwszeństwo PL/SE ustala setPilotsFromServer (F7 #357 P6, #360) */
       sb.rpc('load_escort_contacts'),
+      /* BN1: słownik ferry_* z RPC — przed mapowaniem rejsów (TLLA-HEL nie → GDN-NYN) */
+      loadFerryDictIntoCatalog(sb).catch(() => false),
     ]);
+    void ferryDictOk;
     /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
     setSymbolSpecsFromServer(symQ.error ? null : ((symQ.data ?? []) as SymbolSpecRow[]));
     {
