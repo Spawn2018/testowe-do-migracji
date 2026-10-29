@@ -1109,7 +1109,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. Edge: `xlsxPatch` kolumny 12–15 tekst; **F7 B1** `fileAlreadyHasPatch` — klucz awizacji → nie `alreadyDone` (PUT); **F7 B2** `ksh_sync_outbound_wt_diff` + `apply_sent` znają `dr`/`ph`/`tr`/`tl` (rev mismatch zachowuje nowszą awizację).
 3. Testy import **376** (+4 F7: SE-only, no-op, PL+48, rev mismatch B); unit B1 awizacja→toWrite; CANCELLED przez postgres.
 4. `write_enabled` nadal wyłączone na produkcji do akceptacji właściciela; import wyłączony (28B).
-5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). **Pytanie do właściciela (W62):** swap z samą stroną SE daje w pliku samo SE (wygląda jak PL) — propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie.
+5. **Opis (bez implementacji teraz):** guard `CANCELLED`/`REMOVED` wyłącza też daty i numery (zmiana vs 0308 — pending sprzed anulowania nie jest skipowany automatycznie). **Backlog:** jednorazowe zakolejkowanie awizacji aktywnych przy `ksh_sync_write_set(true)` (dziś tylko przy zmianie w WT). ~~**Pytanie W62**~~ → **#618** (decyzja 28.10 19:40: `PL / ...` / `... / SE`).
 
 ### #603 · Kalibracja ETA — APPLY zamyka decyzję + macierz + pełne przeliczenie — NA PRODUKCJI (`07d27ba7` / PR #619 / **0328**, 28.10.2026 23:30Z; rebuild po wdrożeniu)
 Źródło: #603 + F7 #607 / F7 #619 (po #597). Kolejność: ~~#597~~ → ~~#603~~ → **#622** → #626 pkt 5 → **27B:C** → BN1…
@@ -1130,14 +1130,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → **#634** → **#618** → 27B:C ETA/mapa/kalibracja → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **Dalej w 27B:C:** ETA SE po faktycznym korytarzu; mapa obie linie (HERE, B12); kalibracja dwa SE_ROAD. Bez śladu GPS w repo. Kolejność: ~~#630~~ → **#634** (emtrack 6.34.0) → **#618** → ETA/mapa/kalibracja.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → **#618** → 27B:C ETA/mapa/kalibracja → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **Dalej w 27B:C:** ETA SE po faktycznym korytarzu; mapa obie linie (HERE, B12); kalibracja dwa SE_ROAD. Bez śladu GPS w repo. Kolejność: ~~#630~~ → ~~#634~~ → **#618** → ETA/mapa/kalibracja.
 
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
 
-### #634 · emtrack `EMTRACK_EXPECTED_VERSION` → 6.34.0 — W TOKU (`pakiet/634-emtrack-6.34.0`)
-Źródło: F7 #633 (Spawn2018; po #630). Stała w `emtrackWeb.ts` + testy (jak #374). Potem **#618**.
+### #634 · emtrack `EMTRACK_EXPECTED_VERSION` → 6.34.0 — SCALONE (`251febc5` / PR #635, 29.10.2026 09:39Z)
+Źródło: F7 #633 (Spawn2018; po #630). Stała 6.33.0→6.34.0 + testy (jak #374). F7 gotowe @ `a21af060`. Sekret Edge `EMTRACK_EXPECTED_VERSION` ma pierwszeństwo — jeśli mismatch zostanie, zmienia właściciel. Potem **#618**.
+
+### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — W TOKU (`pakiet/618-ksh-file-ab-dots`, migracja **0333**)
+Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**.
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
 4. **28C:A** — sekret `SHAREPOINT_TEST_FILE_URL` jest w Supabase; próba zapisu na kopii **dopiero po włączeniu importu** (28B); wynik (komórki, bez nadpisania edycji) → komentarz #608. Bez wypisywania wartości sekretu.
@@ -1464,7 +1467,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W59 | #567 23B: lista zmian dry_run z pliku KSH przed włączeniem importu (`import_enabled` false) | po #569 / `write_test_ok_at` | kolejka (#567) |
 | W60 | #567 24A: 17 decyzji koordynatora 25.10 zaakceptowanych — zamknąć powiązane W; #546 zrobione | — | **potwierdzone 26.10.2026** (#567) — #546 zamknąć gdy otwarte |
 | W61 | #581 / 27A: kalibracja ETA — auto-apply ≤ 15 % + test wsteczny; > 15 % czeka na HHL_ADMIN; zamrożenie wstrzymuje oba tryby; autor audytu „automat kalibracji” | P4-k #581 | **potwierdzone 27.10.2026 01:05** (#581) |
-| W62 | #597 F7: swap z samą stroną SE w pliku = samo SE (wygląda jak PL). Propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie | #597 / po F7 | czeka |
+| W62 | #597 F7: swap z samą stroną SE w pliku = samo SE (wygląda jak PL). Propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie | #597 / po F7 | **zamknięte 28.10.2026 19:40** — właściciel: `... / SE` i `PL / ...` (#618) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1983,3 +1986,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 09:00 | #630 CI db FAIL 2× → testy: `delete` wersji kalibracji w transakcji (+ diagnostyka reason) | pętla |
 | 29.10.2026 09:25 | #630 CI db FAIL @ 7938da6c (no_PORT_CHECKIN:?) → propose raz (temp table), bez CTE | pętla |
 | 29.10.2026 10:00 | #630/#633 SCALONE (`2563d627`, F7 gotowe @ `abf5bca2`); start **#634** emtrack 6.34.0 (F7: potem #618) | pętla |
+| 29.10.2026 11:20 | #634/#635 SCALONE (`251febc5`); start **#618** `ksh_file_ab` **0333** (`PL / ...` / `... / SE`); W62 zamknięte | pętla |
