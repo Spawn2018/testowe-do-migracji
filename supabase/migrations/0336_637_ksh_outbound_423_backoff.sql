@@ -13,27 +13,29 @@ comment on column public.ksh_sync_outbound.retry_after is
 comment on column public.ksh_sync_outbound.locked_since is
   '#637: pierwszy 423 w bieżącej serii; sprawa HHL gdy > 4 h.';
 
--- Przywróć failed z 423 do kolejki (reguła: 423 ≠ failed).
-update public.ksh_sync_outbound
+-- Przywróć failed/paused z 423 do kolejki (reguła: 423 ≠ failed).
+-- Jeden pending na load (uidx) — tylko gdy nie ma już pending dla tego load_id.
+update public.ksh_sync_outbound o
    set status = 'pending',
        done_at = null,
        retry_after = null,
-       locked_since = coalesce(locked_since, done_at, created_at, now() - interval '1 hour'),
+       locked_since = coalesce(o.locked_since, o.done_at, o.created_at, now() - interval '1 hour'),
        last_error = 'upload_http_423',
-       rev = rev + 1
- where status = 'failed'
-   and last_error = 'upload_http_423';
-
--- Także wstrzymane ręcznie przy 423 (paused) → z powrotem pending.
-update public.ksh_sync_outbound
-   set status = 'pending',
-       done_at = null,
-       retry_after = null,
-       locked_since = coalesce(locked_since, done_at, created_at, now() - interval '1 hour'),
-       last_error = 'upload_http_423',
-       rev = rev + 1
- where status = 'skipped'
-   and last_error = 'paused_423_file_locked';
+       rev = o.rev + 1
+ where o.status in ('failed', 'skipped')
+   and o.last_error in ('upload_http_423', 'paused_423_file_locked')
+   and not exists (
+     select 1 from public.ksh_sync_outbound p
+      where p.load_id = o.load_id and p.status = 'pending'
+   )
+   and o.id = (
+     select x.id from public.ksh_sync_outbound x
+      where x.load_id = o.load_id
+        and x.status in ('failed', 'skipped')
+        and x.last_error in ('upload_http_423', 'paused_423_file_locked')
+      order by x.id desc
+      limit 1
+   );
 
 create or replace function public.ksh_sync_outbound_list(p_project uuid, p_limit int default 50)
 returns jsonb
