@@ -15,7 +15,7 @@ import {
 } from './writeConflict.ts';
 import { ackPayload } from './ackPayload.ts';
 import { outboundWriteProdGate } from './outboundWriteGate.ts';
-import { writePatchesViaWorkbook } from './workbookCellWrite.ts';
+import { writePatchesViaWorkbook, type WorkbookPatch } from './workbookCellWrite.ts';
 import { isOutboundTransientReason } from './outboundTransient.ts';
 
 export {
@@ -293,7 +293,7 @@ export async function processOutboundWrites(args: {
     };
   }
 
-  const patches: OutboundPatch[] = [];
+  const patches: WorkbookPatch[] = [];
   const expectedByCode: Record<string, FileDateSnap | null | undefined> = {};
   for (const it of toWrite) {
     const codes = patchCodes(it);
@@ -303,8 +303,9 @@ export async function processOutboundWrites(args: {
       fileSnapshot: args.fileSnapshot,
       codes,
     });
+    const itemKey = String(it.id);
     for (const code of codes) {
-      patches.push({ code, ...it.patch, code } as OutboundPatch);
+      patches.push({ code, ...it.patch, code, itemKey });
       expectedByCode[code] = expected;
     }
   }
@@ -316,29 +317,29 @@ export async function processOutboundWrites(args: {
     fetchFn: args.fetchFn,
   });
 
-  // B1: częściowy zapis przed błędem — ack done + migawka dla zapisanych kodów.
-  async function ackPartialWritten(
+  /** R1: done tylko gdy wszystkie kody pozycji są w writtenCodes; upsert sprawdzany. */
+  async function ackFullyWrittenItems(
     writtenCodes: string[],
-  ): Promise<{ ok: boolean; snapshotPatch?: SnapshotMap }> {
+  ): Promise<{ ok: boolean; snapshotPatch?: SnapshotMap; reason?: string }> {
     if (!writtenCodes.length) return { ok: true };
     const writtenSet = new Set(writtenCodes);
-    const partialDone = toWrite.filter((it) =>
-      patchCodes(it).some((c) => writtenSet.has(c))
-    );
-    if (!partialDone.length) return { ok: true };
-    const a = await ack(args.sb, ackPayload(partialDone, true), 'done', null);
-    if (!a.ok) return { ok: false };
+    const fullyDone = toWrite.filter((it) => {
+      const codes = patchCodes(it);
+      return codes.length > 0 && codes.every((c) => writtenSet.has(c));
+    });
+    if (!fullyDone.length) return { ok: true };
+    const a = await ack(args.sb, ackPayload(fullyDone, true), 'done', null);
+    if (!a.ok) return { ok: false, reason: 'ack_done' };
     const snapshotPatch: SnapshotMap = { ...args.fileSnapshot };
-    for (const it of partialDone) {
+    for (const it of fullyDone) {
       for (const code of patchCodes(it)) {
-        if (!writtenSet.has(code)) continue;
         snapshotPatch[code] = applyPatchToSnap(snapshotPatch[code] ?? null, {
           code,
           ...it.patch,
         });
       }
     }
-    await args.sb.rpc('ksh_sync_state_upsert', {
+    const up = await args.sb.rpc('ksh_sync_state_upsert', {
       p_project: args.projectId,
       p_source_ok: true,
       p_last_read_at: null,
@@ -347,22 +348,26 @@ export async function processOutboundWrites(args: {
       p_last_error: null,
       p_snapshot: snapshotPatch,
     });
+    if (up.error) return { ok: false, reason: 'state_upsert' };
     return { ok: true, snapshotPatch };
   }
 
   if (!wb.ok) {
     const partialCodes = wb.writtenCodes ?? [];
-    const remaining = toWrite.filter((it) =>
-      !patchCodes(it).some((c) => partialCodes.includes(c))
-    );
+    // Pozycje z pełnym zapisem → done; reszta (w tym częściowy kod) → note_423 / failed.
+    const fullyDone = toWrite.filter((it) => {
+      const codes = patchCodes(it);
+      return codes.length > 0 && codes.every((c) => partialCodes.includes(c));
+    });
+    const remaining = toWrite.filter((it) => !fullyDone.includes(it));
 
-    if (partialCodes.length) {
-      const part = await ackPartialWritten(partialCodes);
+    if (fullyDone.length) {
+      const part = await ackFullyWrittenItems(partialCodes);
       if (!part.ok) {
         return {
-          attempted: true, written: partialCodes.length, conflicts: conflictItems.length,
+          attempted: true, written: fullyDone.length, conflicts: conflictItems.length,
           skipped: skipItems.length, upload_ok: true,
-          reason: 'ack_done', write_reason: 'ack_done',
+          reason: part.reason ?? 'ack_done', write_reason: part.reason ?? 'ack_done',
         };
       }
     }
@@ -508,14 +513,18 @@ export async function processOutboundWrites(args: {
   }
 
   const writtenSet = new Set(wb.writtenCodes);
-  const doneItems = toWrite.filter((it) =>
-    patchCodes(it).some((c) => writtenSet.has(c))
-    && !wb.conflicts.some((c) => patchCodes(it).includes(c.code))
-  );
-  const skippedNoWrite = toWrite.filter((it) =>
-    !patchCodes(it).some((c) => writtenSet.has(c))
-    && !wb.conflicts.some((c) => patchCodes(it).includes(c.code))
-  );
+  // R1: done tylko gdy wszystkie kody pozycji są w writtenCodes.
+  const doneItems = toWrite.filter((it) => {
+    const codes = patchCodes(it);
+    return codes.length > 0
+      && codes.every((c) => writtenSet.has(c))
+      && !wb.conflicts.some((c) => codes.includes(c.code));
+  });
+  const skippedNoWrite = toWrite.filter((it) => {
+    const codes = patchCodes(it);
+    return !codes.every((c) => writtenSet.has(c))
+      && !wb.conflicts.some((c) => codes.includes(c.code));
+  });
 
   if (doneItems.length === 0 && skippedNoWrite.length) {
     const a = await ack(

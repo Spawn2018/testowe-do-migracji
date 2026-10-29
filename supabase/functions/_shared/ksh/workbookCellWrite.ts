@@ -2,6 +2,7 @@
  * #645 — zapis WT→plik komórka po komórce (Graph workbook), bez PUT całego .xlsx.
  * Mapowanie wiersza po kodzie; konflikt per komórka vs migawka; daty jak w pliku.
  * F7 #646: dwie fazy (odczyt→PATCH), tekst z apostrofem, usedRange z przesunięciem.
+ * F7 r2: R1 postęp per job; R2 konflikt per pozycja (itemKey); R3 serial tylko przy formacie daty.
  */
 import { COLUMN_MAP_DEFAULT } from './importColumnMap.ts';
 import {
@@ -72,6 +73,28 @@ export function stripLeadingApostrophe(s: string): string {
 export function textValueForPatch(val: string): string {
   return `'${val}`;
 }
+
+/** R3: format Excel wygląda na datę (nie General / czysty czas). */
+export function formatLooksLikeDate(fmt: unknown): boolean {
+  const s = String(fmt ?? '').trim().toLowerCase();
+  if (!s || s === 'general' || s === '@') return false;
+  if (/[yd]/.test(s)) return true;
+  const noBrackets = s.replace(/\[[^\]]*]/g, '');
+  return /m.*d|d.*m/.test(noBrackets) && !/[hs]/.test(noBrackets);
+}
+
+/** R3: format Excel wygląda na godzinę (bez daty). */
+export function formatLooksLikeTime(fmt: unknown): boolean {
+  const s = String(fmt ?? '').trim().toLowerCase();
+  if (!s || s === 'general' || s === '@') return false;
+  if (/[yd]/.test(s)) return false;
+  return /h/.test(s);
+}
+
+export type WorkbookPatch = OutboundPatch & {
+  /** R2: id pozycji outbound — konflikt w jednym kodzie blokuje całą pozycję. */
+  itemKey?: string;
+};
 
 function normSnap(v: string | null | undefined): string | null {
   if (v == null) return null;
@@ -145,12 +168,14 @@ type SheetLayout = {
   codeRow: Map<string, number>;
   /** Siatka usedRange (do fazy odczytu bez GET). */
   values: unknown[][];
+  numberFormats: unknown[][] | null;
   origin: { row0: number; col0: number };
 };
 
 function buildLayout(
   values: unknown[][],
   origin: { row0: number; col0: number },
+  numberFormats: unknown[][] | null = null,
 ): SheetLayout | { error: string } {
   // B8: nagłówek musi być w wierszu 1 arkusza (jak importer).
   if (origin.row0 !== 0) return { error: 'no_code_col' };
@@ -171,7 +196,36 @@ function buildLayout(
     const code = cellText(row[relCodeCol]);
     if (code && !codeRow.has(code)) codeRow.set(code, r + 1 + origin.row0);
   }
-  return { sheetId: '', headerCol, codeRow, values, origin };
+  return { sheetId: '', headerCol, codeRow, values, numberFormats, origin };
+}
+
+/** R3: format kolumny z numberFormat wierszy danych (pomija nagłówek). */
+export function columnHasDateFormat(
+  numberFormats: unknown[][] | null | undefined,
+  absCol: number,
+  origin: { row0: number; col0: number },
+): boolean {
+  if (!numberFormats?.length) return false;
+  const ci = absCol - 1 - origin.col0;
+  if (ci < 0) return false;
+  for (let ri = 1; ri < numberFormats.length; ri++) {
+    if (formatLooksLikeDate(numberFormats[ri]?.[ci])) return true;
+  }
+  return formatLooksLikeDate(numberFormats[0]?.[ci]);
+}
+
+export function columnHasTimeFormat(
+  numberFormats: unknown[][] | null | undefined,
+  absCol: number,
+  origin: { row0: number; col0: number },
+): boolean {
+  if (!numberFormats?.length) return false;
+  const ci = absCol - 1 - origin.col0;
+  if (ci < 0) return false;
+  for (let ri = 1; ri < numberFormats.length; ri++) {
+    if (formatLooksLikeTime(numberFormats[ri]?.[ci])) return true;
+  }
+  return formatLooksLikeTime(numberFormats[0]?.[ci]);
 }
 
 function cellFromLayout(layout: SheetLayout, absCol: number, absRow: number): unknown {
@@ -198,6 +252,7 @@ function snapField(
 
 type CellJob = {
   code: string;
+  itemKey: string;
   address: string;
   absCol: number;
   absRow: number;
@@ -217,9 +272,13 @@ type CellJob = {
     | 'trailer';
 };
 
+function jobKey(job: CellJob): string {
+  return `${job.code}|${job.conflictField}`;
+}
+
 function buildJobs(
   layout: SheetLayout,
-  patches: readonly OutboundPatch[],
+  patches: readonly WorkbookPatch[],
   expectedByCode: Record<string, FileDateSnap | null | undefined>,
 ): CellJob[] {
   const jobs: CellJob[] = [];
@@ -227,6 +286,7 @@ function buildJobs(
     const row = layout.codeRow.get(p.code);
     if (!row) continue;
     const expected = expectedByCode[p.code] ?? null;
+    const itemKey = p.itemKey?.trim() || p.code;
 
     const addDate = (
       header: string,
@@ -241,6 +301,7 @@ function buildJobs(
       if (serial == null) return;
       jobs.push({
         code: p.code,
+        itemKey,
         address: `${indexToColLetters(col)}${row}`,
         absCol: col,
         absRow: row,
@@ -263,6 +324,7 @@ function buildJobs(
       if (!norm) return;
       jobs.push({
         code: p.code,
+        itemKey,
         address: `${indexToColLetters(col)}${row}`,
         absCol: col,
         absRow: row,
@@ -285,6 +347,7 @@ function buildJobs(
       if (!col) return;
       jobs.push({
         code: p.code,
+        itemKey,
         address: `${indexToColLetters(col)}${row}`,
         absCol: col,
         absRow: row,
@@ -368,8 +431,10 @@ function planJobs(layout: SheetLayout, jobs: CellJob[]): Planned[] {
           out.push({ job, action: 'conflict' });
           continue;
         }
-        // Pusta komórka + kolumna daty → serial (F7 mile widziane).
-        writeValue = cellText(current) === '' && typeof job.value === 'number'
+        // R3: pusta komórka → serial tylko gdy kolumna ma format daty; inaczej tekst.
+        const empty = cellText(current) === '';
+        const dateCol = columnHasDateFormat(layout.numberFormats, job.absCol, layout.origin);
+        writeValue = empty && typeof job.value === 'number' && dateCol
           ? job.value
           : formatted;
       }
@@ -386,6 +451,12 @@ function planJobs(layout: SheetLayout, jobs: CellJob[]): Planned[] {
           continue;
         }
         writeValue = Math.round((Math.floor(current) + frac) * 1e9) / 1e9;
+      } else if (
+        cellText(current) === ''
+        && columnHasTimeFormat(layout.numberFormats, job.absCol, layout.origin)
+      ) {
+        const frac = excelTimeFractionFromHm(want);
+        writeValue = frac ?? want;
       } else {
         writeValue = want;
       }
@@ -416,12 +487,37 @@ export type WorkbookWriteResult =
     permission?: string;
   };
 
+/** R1: kody, dla których wszystkie joby (niezablokowane konfliktem pozycji) są ukończone. */
+function codesFullyWritten(
+  planned: Planned[],
+  blockedItemKeys: Set<string>,
+  completedJobKeys: Set<string>,
+): string[] {
+  const byCode = new Map<string, Planned[]>();
+  for (const p of planned) {
+    if (blockedItemKeys.has(p.job.itemKey)) continue;
+    const list = byCode.get(p.job.code) ?? [];
+    list.push(p);
+    byCode.set(p.job.code, list);
+  }
+  const out: string[] = [];
+  for (const [code, list] of byCode) {
+    if (
+      list.length > 0
+      && list.every((p) => completedJobKeys.has(jobKey(p.job)))
+    ) {
+      out.push(code);
+    }
+  }
+  return out;
+}
+
 /**
  * Sesja → usedRange → faza odczytu/konfliktu → PATCH tylko bez konfliktu → closeSession.
  */
 export async function writePatchesViaWorkbook(args: {
   env: GraphEnv;
-  patches: readonly OutboundPatch[];
+  patches: readonly WorkbookPatch[];
   expectedByCode: Record<string, FileDateSnap | null | undefined>;
   fetchFn?: typeof fetch;
 }): Promise<WorkbookWriteResult> {
@@ -476,7 +572,7 @@ export async function writePatchesViaWorkbook(args: {
       };
     }
     const origin = parseUsedRangeOrigin(used.address);
-    const layoutBuilt = buildLayout(used.values, origin);
+    const layoutBuilt = buildLayout(used.values, origin, used.numberFormat);
     if ('error' in layoutBuilt) return { ok: false, reason: layoutBuilt.error };
     const layout: SheetLayout = { ...layoutBuilt, sheetId: sheetKey };
 
@@ -493,28 +589,28 @@ export async function writePatchesViaWorkbook(args: {
 
     const planned = planJobs(layout, jobs);
     const conflicts: { code: string; field: string }[] = [];
-    const conflictCodes = new Set<string>();
-    const writtenCodes = new Set<string>();
+    const blockedItemKeys = new Set<string>();
+    const completedJobKeys = new Set<string>();
     let skipped = 0;
 
-    // Faza 1: zbierz konflikty per kod (cały kod blokowany).
+    // R2: konflikt w dowolnym kodzie pozycji → blokuje PATCH wszystkich kodów tej pozycji.
     for (const p of planned) {
       if (p.action === 'conflict') {
-        if (!conflictCodes.has(p.job.code)) {
+        blockedItemKeys.add(p.job.itemKey);
+        if (!conflicts.some((c) => c.code === p.job.code && c.field === p.job.conflictField)) {
           conflicts.push({ code: p.job.code, field: p.job.conflictField });
-          conflictCodes.add(p.job.code);
         }
       }
     }
 
-    // Faza 2: PATCH tylko dla kodów bez konfliktu.
+    // Faza 2: PATCH tylko dla pozycji bez konfliktu; R1 postęp per job.
     for (const p of planned) {
-      if (conflictCodes.has(p.job.code)) {
+      if (blockedItemKeys.has(p.job.itemKey)) {
         if (p.action !== 'conflict') skipped += 1;
         continue;
       }
       if (p.action === 'skip_applied') {
-        writtenCodes.add(p.job.code);
+        completedJobKeys.add(jobKey(p.job));
         continue;
       }
       if (p.action !== 'write') continue;
@@ -532,17 +628,17 @@ export async function writePatchesViaWorkbook(args: {
           reason: patched.reason,
           http: patched.http,
           permission: patched.permission,
-          writtenCodes: [...writtenCodes],
+          writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
           conflicts,
         };
       }
-      writtenCodes.add(p.job.code);
+      completedJobKeys.add(jobKey(p.job));
     }
 
     return {
       ok: true,
       mode: ref.ref.mode,
-      writtenCodes: [...writtenCodes],
+      writtenCodes: codesFullyWritten(planned, blockedItemKeys, completedJobKeys),
       skipped,
       conflicts,
     };
@@ -555,6 +651,7 @@ export async function writePatchesViaWorkbook(args: {
 export function layoutFromValuesForTest(
   values: unknown[][],
   address: string | null = null,
+  numberFormats: unknown[][] | null = null,
 ) {
-  return buildLayout(values, parseUsedRangeOrigin(address));
+  return buildLayout(values, parseUsedRangeOrigin(address), numberFormats);
 }

@@ -6839,3 +6839,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **F7 B1–B8:** dwie fazy odczyt→PATCH + idempotencja; tekst z `'`; sprawa file-locked z serią; `clear_423` jak 0295; bez wskrzeszania starej łatki; migracja **0336** (#638 zostaje **0335**); `workbook_auth_403` + permission; usedRange z przesunięciem.
 - Unit lokalnie **43/43** (`ksh-sharepoint-write`). Push → CI → ponowne F7. Bez push na main.
 - Kolejność scalania (F7 B6): najpierw #638 (0335, po rebase docs), potem #646 (0336).
+
+## 2026-10-29 17:00 — #645 F7 #646 POPRAWKI r2 (R1–R3)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (pilne, po bieżącym kroku); #499/#500/#537/#538 w planie.
+- Scalanie: brak — #646 F7 = POPRAWKI r2 (nie „gotowe”); #638 CONFLICTING z main, bez F7 po HEAD.
+- **R1:** postęp per job (kod+pole); `writtenCodes` / ack `done` tylko gdy wszystkie joby wszystkich kodów pozycji OK albo `skip_applied`; częściowy → `note_423`; błąd `ksh_sync_state_upsert` sprawdzany.
+- **R2:** `itemKey` (id outbound) — konflikt w jednym kodzie blokuje PATCH całej pozycji.
+- **R3:** `usedRange` z `numberFormat`; serial daty/godziny tylko gdy kolumna ma format daty/czasu; inaczej tekst `dd.mm.yyyy` / `HH:MM`.
+- Testy: 429 w pętli, ponowienie, closeSession po wyjątku, shareId z TEST URL, `test_url_equals_prod`, offset C1→D2, R2 itemKey, processOutboundWrites (403/`note_423`/`clear_423`). Unit **54/54**.
+- Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.

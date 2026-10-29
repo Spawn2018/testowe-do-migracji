@@ -362,14 +362,15 @@ export async function getWorkbookUsedRange(
   sheetNameOrId: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<
-  | { ok: true; values: unknown[][]; address: string | null }
+  | { ok: true; values: unknown[][]; address: string | null; numberFormat: unknown[][] | null }
   | Fail
 > {
   const encSheet = encodeURIComponent(sheetNameOrId);
   let res: Response;
   try {
+    // Bez valuesOnly — potrzebne numberFormat (R3: serial daty tylko przy formacie daty).
     res = await fetchFn(
-      `${session.workbookBase}/workbook/worksheets/${encSheet}/usedRange(valuesOnly=true)`,
+      `${session.workbookBase}/workbook/worksheets/${encSheet}/usedRange`,
       {
         headers: {
           Authorization: `Bearer ${session.token}`,
@@ -384,6 +385,7 @@ export async function getWorkbookUsedRange(
   const body = await res.json().catch(() => ({} as {
     values?: unknown[][];
     address?: string;
+    numberFormat?: unknown[][];
     error?: { code?: string };
   }));
   if (!res.ok) {
@@ -399,6 +401,7 @@ export async function getWorkbookUsedRange(
     ok: true,
     values: Array.isArray(body.values) ? body.values : [],
     address: typeof body.address === 'string' ? body.address : null,
+    numberFormat: Array.isArray(body.numberFormat) ? body.numberFormat : null,
   };
 }
 

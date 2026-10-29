@@ -3,7 +3,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
-import { uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
+import { shareUrlToShareId, uploadSharePointFile, type GraphEnv } from '../supabase/functions/_shared/ksh/graph';
 import {
   conflictFieldFromSnaps,
   fileAlreadyHasPatch,
@@ -23,9 +23,12 @@ import {
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
+import { processOutboundWrites } from '../supabase/functions/_shared/ksh/outboundWrite';
 import {
   cellAlreadyHasTarget,
   cellMatchesExpected,
+  columnHasDateFormat,
+  formatLooksLikeDate,
   indexToColLetters,
   layoutFromValuesForTest,
   parseUsedRangeOrigin,
@@ -357,6 +360,10 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     alreadyNew?: boolean;
     patch429After?: number;
     usedAddress?: string;
+    throwOnUsedRange?: boolean;
+    numberFormat?: unknown[][];
+    values?: unknown[][];
+    secondCodeConflict?: boolean;
   }) {
     const calls: { method: string; url: string; headers?: HeadersInit; body?: string }[] = [];
     let patchCount = 0;
@@ -392,12 +399,22 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
         }), { status: 200 });
       }
       if (u.includes('usedRange')) {
+        if (opts?.throwOnUsedRange) throw new TypeError('boom-used');
         const co = opts?.alreadyNew ? 'NEW' : (opts?.conflictCo ? 'OTHER' : 'OLD');
+        const values = opts?.values ?? [
+          [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+          ['SG-01', co, ''],
+          ...(opts?.secondCodeConflict
+            ? [['SG-02', 'OTHER', ''] as unknown[]]
+            : []),
+        ];
         return new Response(JSON.stringify({
           address: opts?.usedAddress ?? 'Harmonogram!A1:C2',
-          values: [
-            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
-            ['SG-01', co, ''],
+          values,
+          numberFormat: opts?.numberFormat ?? [
+            ['General', 'General', 'General'],
+            ['General', 'General', 'General'],
+            ...(opts?.secondCodeConflict ? [['General', 'General', 'General']] : []),
           ],
         }), { status: 200 });
       }
@@ -407,9 +424,11 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
           return new Response('{"error":{}}', { status: 429 });
         }
         const body = init?.body ? JSON.parse(String(init.body)) as { values: unknown[][] } : null;
-        // B2: tekst z apostrofem
+        // B2: tekst (apostrof) vs data/godzina tekstowa / serial — bez wymuszania ' na datach.
         if (body?.values?.[0]?.[0] != null && typeof body.values[0][0] === 'string') {
-          expect(String(body.values[0][0]).startsWith("'")).toBe(true);
+          const s = String(body.values[0][0]);
+          const dateOrTime = /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(s) || /^\d{1,2}:\d{2}$/.test(s);
+          if (!dateOrTime) expect(s.startsWith("'")).toBe(true);
         }
         return new Response(JSON.stringify({ values: body?.values ?? [['x']] }), { status: 200 });
       }
@@ -509,7 +528,7 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     }
   });
 
-  it('test → URL kopii (SHAREPOINT_FILE_MODE=test)', async () => {
+  it('test → shareId z SHAREPOINT_TEST_FILE_URL', async () => {
     const { fetchFn, calls } = mockFetch();
     const e = env();
     e.SHAREPOINT_FILE_MODE = 'test';
@@ -521,10 +540,27 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
       },
       fetchFn,
     });
+    const want = shareUrlToShareId(e.SHAREPOINT_TEST_FILE_URL!);
     const shareCalls = calls.filter((c) => c.url.includes('/shares/'));
-    expect(shareCalls.length).toBeGreaterThan(0);
-    // shareId budowany z TEST url — nie z prod (różne ścieżki w env()).
-    expect(e.SHAREPOINT_TEST_FILE_URL).not.toBe(e.SHAREPOINT_FILE_URL);
+    expect(shareCalls.some((c) => c.url.includes(want))).toBe(true);
+    expect(shareCalls.every((c) => !c.url.includes(shareUrlToShareId(e.SHAREPOINT_FILE_URL!)))).toBe(true);
+  });
+
+  it('strażnik test_url_equals_prod', async () => {
+    const { fetchFn } = mockFetch();
+    const e = env();
+    e.SHAREPOINT_FILE_MODE = 'test';
+    e.SHAREPOINT_FILE_URL = e.SHAREPOINT_TEST_FILE_URL;
+    const r = await writePatchesViaWorkbook({
+      env: e,
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('test_url_equals_prod');
   });
 
   it('B2: telefon z wiodącym zerem jako tekst z apostrofem', async () => {
@@ -540,6 +576,328 @@ describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
     expect(r.ok).toBe(true);
     const patch = calls.find((c) => c.method === 'PATCH');
     expect(patch?.body).toContain("'0701234567");
+  });
+
+  it('R1: 429 w środku pętli → writtenCodes tylko pełne kody; closeSession', async () => {
+    const { fetchFn, calls } = mockFetch({ patch429After: 1 });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toBe('workbook_http_429');
+      expect(r.writtenCodes).toEqual([]);
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(2);
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+  });
+
+  it('R1: ponowienie po częściowym — skip_applied + dokończenie drugiego pola', async () => {
+    const { fetchFn, calls } = mockFetch({
+      alreadyNew: true,
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+        ['SG-01', 'NEW', ''],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW', driver_phone: '0701234567' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.writtenCodes).toEqual(['SG-01']);
+    const patches = calls.filter((c) => c.method === 'PATCH');
+    expect(patches.length).toBe(1);
+    expect(patches[0].body).toContain("'0701234567");
+  });
+
+  it('closeSession po wyjątku w trakcie sesji (usedRange)', async () => {
+    const { fetchFn, calls } = mockFetch({ throwOnUsedRange: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('network_workbook_used');
+    expect(calls.some((c) => c.url.includes('closeSession'))).toBe(true);
+  });
+
+  it('B8 e2e: usedRange C1 → PATCH na D2 (scx)', async () => {
+    const { fetchFn, calls } = mockFetch({ usedAddress: 'Harmonogram!C1:E2' });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    expect(patch?.url).toMatch(/range\(address='D2'\)/);
+  });
+
+  it('R2: konflikt kodu B blokuje PATCH kodu A tej samej pozycji (itemKey)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      secondCodeConflict: true,
+      usedAddress: 'Harmonogram!A1:C3',
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+        ['SG-01', 'OLD', ''],
+        ['SG-02', 'OTHER', ''],
+      ],
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [
+        { code: 'SG-01', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+        { code: 'SG-02', itemKey: 'pos-1', carrier_order_no: 'NEW' },
+      ],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+        'SG-02': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toEqual([]);
+      expect(r.conflicts.some((c) => c.code === 'SG-02')).toBe(true);
+    }
+    expect(calls.filter((c) => c.method === 'PATCH').length).toBe(0);
+  });
+
+  it('R3: pusta komórka + General → tekst daty; format daty → serial', () => {
+    expect(formatLooksLikeDate('General')).toBe(false);
+    expect(formatLooksLikeDate('dd.mm.yyyy')).toBe(true);
+    expect(columnHasDateFormat(
+      [['General', 'dd.mm.yyyy'], ['General', 'dd.mm.yyyy']],
+      2,
+      { row0: 0, col0: 0 },
+    )).toBe(true);
+    expect(columnHasDateFormat(
+      [['General', 'General'], ['General', 'General']],
+      2,
+      { row0: 0, col0: 0 },
+    )).toBe(false);
+  });
+
+  it('R3: pusta data przy General → PATCH tekstem dd.mm.yyyy (nie serial)', async () => {
+    const { fetchFn, calls } = mockFetch({
+      values: [
+        [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.loadDate],
+        ['SG-01', ''],
+      ],
+      numberFormat: [
+        ['General', 'General'],
+        ['General', 'General'],
+      ],
+      usedAddress: 'Harmonogram!A1:B2',
+    });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', load_date: '2026-10-26' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: null, ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    const patch = calls.find((c) => c.method === 'PATCH');
+    const body = patch?.body ? JSON.parse(patch.body) as { values: unknown[][] } : null;
+    expect(body?.values?.[0]?.[0]).toBe('26.10.2026');
+  });
+});
+
+describe('#645 processOutboundWrites (R1 ack / note_423 / 403)', () => {
+  const snap = { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null };
+  const item = {
+    id: 7,
+    load_id: 'load-1',
+    code: 'SG-01',
+    codes: ['SG-01'],
+    rev: 1,
+    attempts: 0,
+    patch: { carrier_order_no: 'NEW' },
+    expected_file: snap,
+  };
+
+  function mockSb(opts?: { upsertFail?: boolean }) {
+    const rpcs: { name: string; args: Record<string, unknown> }[] = [];
+    const sb = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') {
+          return { data: [item], error: null };
+        }
+        if (name === 'ksh_sync_state_upsert' && opts?.upsertFail) {
+          return { data: null, error: { message: 'upsert fail' } };
+        }
+        return { data: true, error: null };
+      }),
+    };
+    return { sb: sb as never, rpcs };
+  }
+
+  it('403 → failed + jedna sprawa l1b_note_outbound_failed; bez note_423', async () => {
+    const { sb, rpcs } = mockSb();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) return new Response('{}', { status: 403 });
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      return new Response('no', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('workbook_auth_403');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'failed')).toBe(true);
+    expect(rpcs.filter((c) => c.name === 'l1b_note_outbound_failed').length).toBe(1);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_note_423')).toBe(false);
+  });
+
+  it('429 częściowy → note_423 bez ack done (brak pełnego kodu)', async () => {
+    const { sb, rpcs } = mockSb();
+    let patchCount = 0;
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:C2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+            ['SG-01', 'OLD', ''],
+          ],
+          numberFormat: [['General', 'General', 'General'], ['General', 'General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        patchCount += 1;
+        if (patchCount > 1) return new Response('{}', { status: 429 });
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const item2fields = {
+      ...item,
+      patch: { carrier_order_no: 'NEW', driver_phone: '0701234567' },
+    };
+    const sb2 = {
+      rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
+        rpcs.push({ name, args });
+        if (name === 'ksh_sync_outbound_list') return { data: [item2fields], error: null };
+        return { data: true, error: null };
+      }),
+    };
+
+    const r = await processOutboundWrites({
+      sb: sb2 as never,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('workbook_http_429');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_note_423')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(false);
+  });
+
+  it('sukces → ack done + clear_423', async () => {
+    const { sb, rpcs } = mockSb();
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook')) {
+        return new Response(JSON.stringify({
+          id: 'item1', parentReference: { driveId: 'drive1' }, name: 'a.xlsx', size: 1,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) return new Response('{}', { status: 204 });
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          address: 'Harmonogram!A1:C2',
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverPhone],
+            ['SG-01', 'OLD', ''],
+          ],
+          numberFormat: [['General', 'General', 'General'], ['General', 'General', 'General']],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        return new Response('{}', { status: 200 });
+      }
+      return new Response(`unhandled ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const r = await processOutboundWrites({
+      sb,
+      env: env(),
+      projectId: 'p1',
+      fileSnapshot: { 'SG-01': snap },
+      fileMode: 'test',
+      fetchFn,
+    });
+    expect(r.write_reason).toBe('ok');
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_ack' && c.args.p_status === 'done')).toBe(true);
+    expect(rpcs.some((c) => c.name === 'ksh_sync_outbound_clear_423')).toBe(true);
   });
 });
 
