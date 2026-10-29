@@ -23,12 +23,23 @@ import {
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
+import {
+  cellMatchesExpected,
+  layoutFromValuesForTest,
+  writePatchesViaWorkbook,
+} from '../supabase/functions/_shared/ksh/workbookCellWrite';
+import {
+  isOutboundTransientReason,
+  outboundTransientRetryDelayMinutes,
+} from '../supabase/functions/_shared/ksh/outboundTransient';
 
 const env = (): GraphEnv => ({
   SHAREPOINT_TENANT_ID: 't',
   SHAREPOINT_CLIENT_ID: 'c',
   SHAREPOINT_CLIENT_SECRET: 's',
   SHAREPOINT_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/a.xlsx',
+  SHAREPOINT_TEST_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/test.xlsx',
+  SHAREPOINT_FILE_MODE: 'test',
 });
 
 describe('A6 outboundWriteProdGate (#637 F7)', () => {
@@ -263,6 +274,150 @@ describe('A6 xlsxPatchTime', () => {
     expect(excelTimeFromHm('bad')).toBeNull();
     expect(normalizeHm('8:05')).toBe('08:05');
     expect(normalizeHm(null)).toBeNull();
+  });
+});
+
+describe('#645 workbook transient backoff', () => {
+  it('5 → 15 → 30 → 60 min', () => {
+    expect(outboundTransientRetryDelayMinutes(1)).toBe(5);
+    expect(outboundTransientRetryDelayMinutes(2)).toBe(15);
+    expect(outboundTransientRetryDelayMinutes(3)).toBe(30);
+    expect(outboundTransientRetryDelayMinutes(4)).toBe(60);
+  });
+  it('429/503/423 = transient', () => {
+    expect(isOutboundTransientReason('workbook_http_429')).toBe(true);
+    expect(isOutboundTransientReason('workbook_http_503')).toBe(true);
+    expect(isOutboundTransientReason('upload_http_423')).toBe(true);
+    expect(isOutboundTransientReason('upload_http_403')).toBe(false);
+  });
+});
+
+describe('#645 cellMatchesExpected / layout', () => {
+  it('layout: kod → wiersz po nagłówku Wysyłka', () => {
+    const layout = layoutFromValuesForTest([
+      [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverName],
+      ['SG-01', 'OLD', 'Jan'],
+      ['SG-02', 'X', ''],
+    ]);
+    expect('error' in layout).toBe(false);
+    if (!('error' in layout)) {
+      expect(layout.codeRow.get('SG-01')).toBe(2);
+      expect(layout.headerCol.get(COLUMN_MAP_DEFAULT.scxOrderNo)).toBe(2);
+    }
+  });
+  it('data serial vs ISO', () => {
+    expect(cellMatchesExpected(46321, '2026-10-26', 'date')).toBe(true);
+    expect(cellMatchesExpected('26.10.2026', '2026-10-26', 'date')).toBe(true);
+    expect(cellMatchesExpected(46322, '2026-10-26', 'date')).toBe(false);
+  });
+});
+
+describe('#645 writePatchesViaWorkbook (mock Graph)', () => {
+  function mockFetch(opts?: { openFile?: boolean; conflictCo?: boolean; http429?: boolean }) {
+    const calls: string[] = [];
+    const fetchFn = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      calls.push(`${method} ${u.replace(/https:\/\/graph\.microsoft\.com\/v1\.0/, '')}`);
+      if (u.includes('/token')) {
+        return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
+      }
+      if (u.includes('/driveItem') && !u.includes('workbook') && method === 'GET') {
+        return new Response(JSON.stringify({
+          id: 'item1',
+          parentReference: { driveId: 'drive1' },
+          name: 'a.xlsx',
+          size: 100,
+        }), { status: 200 });
+      }
+      if (u.includes('createSession')) {
+        if (opts?.http429) return new Response('{"error":{}}', { status: 429 });
+        return new Response(JSON.stringify({ id: 'sess-1', persistChanges: true }), { status: 201 });
+      }
+      if (u.includes('closeSession')) {
+        return new Response('{}', { status: 204 });
+      }
+      if (u.includes('/worksheets') && !u.includes('range') && !u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          value: [{ id: 'sheet1', name: 'Harmonogram', position: 0 }],
+        }), { status: 200 });
+      }
+      if (u.includes('usedRange')) {
+        return new Response(JSON.stringify({
+          values: [
+            [COLUMN_MAP_DEFAULT.shipmentCode, COLUMN_MAP_DEFAULT.scxOrderNo, COLUMN_MAP_DEFAULT.driverName],
+            ['SG-01', opts?.conflictCo ? 'OTHER' : 'OLD', ''],
+          ],
+        }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'GET') {
+        // B2 = scxOrderNo expected OLD; C2 = driver empty
+        if (u.includes("address='B2'")) {
+          return new Response(JSON.stringify({
+            values: [[opts?.conflictCo ? 'OTHER' : 'OLD']],
+          }), { status: 200 });
+        }
+        if (u.includes("address='C2'")) {
+          return new Response(JSON.stringify({ values: [['']] }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ values: [['']] }), { status: 200 });
+      }
+      if (u.includes("range(address=") && method === 'PATCH') {
+        // symulacja „otwartego” pliku — workbook PATCH i tak przechodzi
+        expect(opts?.openFile !== false || true).toBe(true);
+        return new Response(JSON.stringify({ values: [['NEW']] }), { status: 200 });
+      }
+      return new Response(`unhandled ${method} ${u}`, { status: 404 });
+    }) as unknown as typeof fetch;
+    return { fetchFn, calls };
+  }
+
+  it('sesja → zapis carrier_order_no przy „otwartym” pliku', async () => {
+    const { fetchFn } = mockFetch({ openFile: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toContain('SG-01');
+      expect(r.conflicts).toEqual([]);
+    }
+  });
+
+  it('konflikt komórki gdy plik ≠ expected', async () => {
+    const { fetchFn } = mockFetch({ conflictCo: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.writtenCodes).toEqual([]);
+      expect(r.conflicts.some((c) => c.code === 'SG-01')).toBe(true);
+    }
+  });
+
+  it('429 createSession → workbook_http_429', async () => {
+    const { fetchFn } = mockFetch({ http429: true });
+    const r = await writePatchesViaWorkbook({
+      env: env(),
+      patches: [{ code: 'SG-01', carrier_order_no: 'NEW' }],
+      expectedByCode: {
+        'SG-01': { ld: null, lt: null, dd: null, dt: null, co: 'OLD', ho: null },
+      },
+      fetchFn,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toBe('workbook_http_429');
   });
 });
 

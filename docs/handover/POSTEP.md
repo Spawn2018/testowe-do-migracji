@@ -6823,3 +6823,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Po wdrożeniu: enqueue awizacja (driver/phone/tractor/trailer) + `ksh-sharepoint-sync`; `mode=test`; **PUT `upload_http_423`** (kopia otwarta). Outbound #2 failed@5; #3 paused (`skipped`/`paused_423_file_locked`) żeby cron nie spalał prób.
 - **W63c:** zamknąć plik testowy → „W63c gotowe” → enqueue + cykl → `write_test_ok_at`. Potem właściciel `FILE_MODE=prod` + jeden cykl odczytu prod przed backlogiem (F7 #642).
 - #638: F7 gotowe @ `fe9e350`, CI ✔, merge CONFLICTING (docs PLAN po #642) — rebase po W63c / równolegle bez przerywania #637.
+
+## 2026-10-29 15:55 — #645 workbook cell write (0335); W63c anulowane
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #645 (Spawn2018) = następny krok #637; #644 wstrzymane (PUT nie zadziała przy współedycji); #638 CONFLICTING — bez F7 „gotowe” do scalenia.
+- Scalanie: brak.
+- **Krok #645:** Graph Excel workbook API zamiast JSZip+PUT — `createSession` → GET komórki → konflikt vs migawka → `PATCH range` → `closeSession`. Migracja **0335** (backoff 429/503/504/423 z #644). Unit: sesja, konflikt komórki, 429, layout (37 w pliku write). Gałąź `pakiet/645-workbook-cell-write`.
+- Uprawnienia: docs MS — Application **Not supported** dla workbook (tylko delegated `Files.ReadWrite`); próba obecnym tokenem aplikacji; 401/403 → prośba do właściciela/IT w #637.
+- Po F7+deploy: próba na kopii **bez zamykania pliku** → `write_test_ok_at` → meldunek #637. #644 zamknięte jako zastąpione. Bez push na main.
