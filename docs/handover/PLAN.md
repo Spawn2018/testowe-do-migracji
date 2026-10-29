@@ -1130,8 +1130,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → ~~#637 kod~~ → **27B:C ETA (#638 / 0335)** → mapa/kalibracja → BN1… (#637 próba na kopii = W63 równolegle)
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA W TOKU** PR #638 (`0335` po #637; F7 POPRAWKI: REMOVED + Polferries causes): `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`. **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → ~~#637 kod~~ → **27B:C ETA (#638 / 0335)** → mapa/kalibracja → BN1… (#637 próba = W63c równolegle)
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA W TOKU** PR #638 (`0335`): `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`; F7 POPRAWKI REMOVED+Polferries. **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo.
 
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
@@ -1143,7 +1143,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
 
 ### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI (`fda91ecc` / PR #642 (a) + #639 **0334**); **próba PUT: czeka W63c (423)**
-Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~runtime `mode=test`~~ → ~~cykl conflict prod≠kopia~~ → ~~**(a)** PR #642 `fda91ecc`~~ → outbound awizacja + cykl → **PUT `upload_http_423`** → **W63c** zamknąć plik testowy → enqueue+cykl → `write_test_ok_at` → właściciel `FILE_MODE=prod` → backlog. Stan: `write_enabled=true`, `write_test_ok_at` null, `mode=test`, pending 0. Bez prod przez agenta. import **383**.
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~runtime `mode=test`~~ → ~~cykl conflict prod≠kopia~~ → ~~**(a)** PR #642 `fda91ecc`~~ → outbound awizacja + cykl → **PUT `upload_http_423`** (kopia otwarta) → outbound #2 failed@5, #3 paused (`skipped`/`paused_423_file_locked`) → **W63c** zamknąć plik testowy → enqueue+cykl → `write_test_ok_at` → właściciel `FILE_MODE=prod` → jeden cykl odczytu prod → backlog aktywnych → meldunek. Stan: `write_enabled=true`, `write_test_ok_at` null, `mode=test`, pending 0. Bez prod przez agenta. import **383**.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1475,7 +1475,6 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W63 | #637: właściciel ustawia Edge `SHAREPOINT_FILE_MODE=test` i sprawdza po nazwie, że `SHAREPOINT_TEST_FILE_URL` istnieje; pisze „W63 gotowe”. Sekrety wpisuje **wyłącznie właściciel** (wykonawca nie ustawia przez API). | #637 | **zamknięte 29.10.2026 13:50** — właściciel: „W63 gotowe” |
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
 | W63c | #637: zamknąć plik testowy SharePoint (Excel/OneDrive) — PUT dostaje `upload_http_423`. Po „W63c gotowe” agent: enqueue awizacja + cykl → `write_test_ok_at`. | #637 | **czeka** |
-
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -1995,7 +1994,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 09:25 | #630 CI db FAIL @ 7938da6c (no_PORT_CHECKIN:?) → propose raz (temp table), bez CTE | pętla |
 | 29.10.2026 10:00 | #630/#633 SCALONE (`2563d627`, F7 gotowe @ `abf5bca2`); start **#634** emtrack 6.34.0 (F7: potem #618) | pętla |
 | 29.10.2026 11:20 | #634/#635 SCALONE (`251febc5`); start **#618** `ksh_file_ab` **0333** (`PL / ...` / `... / SE`); W62 zamknięte | pętla |
-| 29.10.2026 12:35 | #618/#636 SCALONE (`97428948`); 27B:C ETA na PR #638 (czekaj #637) | pętla |
+| 29.10.2026 12:35 | #618/#636 SCALONE (`97428948`); 27B:C ETA **0334** na PR #638 (czekaj #637) | pętla |
 | 29.10.2026 13:00 | #637 PILNE „włącz zapis”: **0334** write bez importu; próba na kopii przed write_set; przed F7 #638 | pętla |
 | 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |
 | 29.10.2026 13:40 | #637 PR #639 CI zielone @ `c469db8e` (unit/visual/db import 383); czekam F7; #638 po #637 | pętla |
@@ -2003,5 +2002,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 14:30 | #639 SCALONE (`9be41712`, F7 gotowe @ b4065e9); deploy-main ✔; #637 próba na kopii → **W63** (brak FILE_MODE=test); start F7 #638 (0335) | pętla |
 | 29.10.2026 15:10 | #637: W63 zamknięte; write_enabled=true + pending=1; runtime `mode=prod`/`write_test_required` → **W63b** (wartość `test` + Redeploy); F7 #641 korekta W63 | pętla |
 | 29.10.2026 15:25 | #641 SCALONE (`75ab2af5`); #637 mode=test → conflict prod≠kopia → wybór **(a)** baseline z kopii (`resolveOutboundExpected`) | pętla |
-| 29.10.2026 16:05 | #642 SCALONE (`fda91ecc`); #637 PUT **423** → **W63c**; #638 rebase 0335 na main | pętla |
-
+| 29.10.2026 16:05 | #642 SCALONE (`fda91ecc`, F7 gotowe); deploy-main ✔; cykl test → PUT **423** → **W63c**; #638 F7 gotowe @ fe9e350 (CONFLICTING docs) | pętla |
+| 29.10.2026 16:15 | #638 rebase na main (0335); POSTEP przywrócony z main; czeka F7 | pętla |
