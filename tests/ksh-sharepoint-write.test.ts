@@ -23,6 +23,7 @@ import {
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
 import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
+import { outbound423RetryDelayMinutes } from '../supabase/functions/_shared/ksh/outbound423';
 
 const env = (): GraphEnv => ({
   SHAREPOINT_TENANT_ID: 't',
@@ -42,6 +43,16 @@ describe('A6 outboundWriteProdGate (#637 F7)', () => {
       .toEqual({ block: false });
     expect(outboundWriteProdGate({ fileMode: 'prod', writeTestOkAt: '2026-10-29T12:00:00Z' }))
       .toEqual({ block: false });
+  });
+});
+
+describe('A6 outbound 423 backoff (#637 F7)', () => {
+  it('5 → 15 → 30 → 60 min, potem co 60', () => {
+    expect(outbound423RetryDelayMinutes(1)).toBe(5);
+    expect(outbound423RetryDelayMinutes(2)).toBe(15);
+    expect(outbound423RetryDelayMinutes(3)).toBe(30);
+    expect(outbound423RetryDelayMinutes(4)).toBe(60);
+    expect(outbound423RetryDelayMinutes(9)).toBe(60);
   });
 });
 

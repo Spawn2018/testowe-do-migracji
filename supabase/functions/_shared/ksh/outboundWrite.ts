@@ -18,6 +18,7 @@ import {
 } from './writeConflict.ts';
 import { ackPayload } from './ackPayload.ts';
 import { outboundWriteProdGate } from './outboundWriteGate.ts';
+import { OUTBOUND_423_ERROR } from './outbound423.ts';
 
 export {
   fileAlreadyHasPatch,
@@ -26,6 +27,7 @@ export {
 } from './writeConflict.ts';
 export { ackPayload } from './ackPayload.ts';
 export { outboundWriteProdGate } from './outboundWriteGate.ts';
+export { outbound423RetryDelayMinutes, OUTBOUND_423_ERROR } from './outbound423.ts';
 
 export type OutboundItem = {
   id: number;
@@ -359,7 +361,27 @@ export async function processOutboundWrites(args: {
         write_reason: up.reason,
       };
     }
-    // 423 = plik otwarty: normalne ponowienie; failed dopiero po 5 (ack failed liczy attempts).
+    // #637 F7: 423 = przejściowy (backoff + sprawa HHL dopiero po 4 h); inne błędy → failed po 5.
+    if (up.reason === OUTBOUND_423_ERROR || up.reason === 'upload_http_423') {
+      const note423 = await args.sb.rpc('ksh_sync_outbound_note_423', {
+        p_acks: ackPayload(doneItems, false),
+      });
+      if (note423.error) {
+        return {
+          attempted: true, written: 0, conflicts: conflictItems.length, skipped: skipItems.length,
+          upload_ok: false, reason: 'note_423', write_reason: 'note_423',
+        };
+      }
+      return {
+        attempted: true,
+        written: 0,
+        conflicts: conflictItems.length,
+        skipped: skipItems.length,
+        upload_ok: false,
+        reason: OUTBOUND_423_ERROR,
+        write_reason: OUTBOUND_423_ERROR,
+      };
+    }
     const ackFail = await ack(
       args.sb,
       ackPayload(doneItems, false),
@@ -476,6 +498,9 @@ export async function processOutboundWrites(args: {
       snapshotPatch,
     };
   }
+
+  // #637 F7: udany zapis zamyka sprawę „plik otwarty” i czyści backoff.
+  await args.sb.rpc('ksh_sync_outbound_clear_423', { p_project: args.projectId });
 
   return {
     attempted: true,

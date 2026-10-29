@@ -6823,3 +6823,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Po wdrożeniu: enqueue awizacja (driver/phone/tractor/trailer) + `ksh-sharepoint-sync`; `mode=test`; **PUT `upload_http_423`** (kopia otwarta). Outbound #2 failed@5; #3 paused (`skipped`/`paused_423_file_locked`) żeby cron nie spalał prób.
 - **W63c:** zamknąć plik testowy → „W63c gotowe” → enqueue + cykl → `write_test_ok_at`. Potem właściciel `FILE_MODE=prod` + jeden cykl odczytu prod przed backlogiem (F7 #642).
 - #638: F7 gotowe @ `fe9e350`, CI ✔, merge CONFLICTING (docs PLAN po #642) — rebase po W63c / równolegle bez przerywania #637.
+
+## 2026-10-29 16:20 — #637 423 backoff (0336)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c + F7 wymóg 423.
+- Scalanie: #642 `fda91ecc`; #643 `bb3a742e` (W63c docs). #638 rebase `781a0a01` — czeka ponowne F7.
+- **Krok:** migracja **0336** — `retry_after`/`locked_since`; `note_423` (backoff, sprawa >4 h); `clear_423` po PUT; failed/paused 423 → pending. Edge: 423≠failed. Unit backoff. Gałąź `pakiet/637-423-backoff`.
