@@ -218,7 +218,10 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       /* BN1: słownik ferry_* z RPC — przed mapowaniem rejsów (TLLA-HEL nie → GDN-NYN) */
       loadFerryDictIntoCatalog(sb).catch(() => false),
     ]);
-    void ferryDictOk;
+    /* F7 #649: awaria RPC — seed UI; bez cichego void */
+    if (ferryDictOk !== true) {
+      console.warn('[BN1] ferry_dict_snapshot niedostępny — katalog seed (TLLA-HEL z seeda)');
+    }
     /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
     setSymbolSpecsFromServer(symQ.error ? null : ((symQ.data ?? []) as SymbolSpecRow[]));
     {

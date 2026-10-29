@@ -471,13 +471,29 @@ begin
     return false;
   end if;
 
-  -- BN1: operator ze słownika; nieznana trasa → POLFERRIES (jak wcześniej null).
-  v_op := coalesce(public.eta_obs_operator_key(v_route), 'POLFERRIES');
+  -- BN1 F7 #649: martwy strażnik eta_obs_route_family('OTHER')≠null — sprawdzaj ferry_routes.
+  -- Nieznana / nieaktywna trasa: bez syntetycznego AT_PORT (dawniej return false).
   if v_route is not null
-     and not exists (select 1 from public.ferry_routes fr where fr.code = upper(btrim(v_route)) and fr.active)
-     and public.eta_obs_route_family(v_route) is null then
+     and not exists (
+       select 1 from public.ferry_routes fr
+        where fr.code = upper(btrim(v_route)) and fr.active
+     ) then
     return false;
   end if;
+  -- Przyjazd poza SE (np. TLL-HEL → FI): backup Nynäshamn nie dotyczy.
+  if v_route is not null
+     and exists (
+       select 1
+         from public.ferry_routes fr
+         join public.ferry_ports pt on pt.code = fr.port_to
+        where fr.code = upper(btrim(v_route))
+          and fr.active
+          and pt.country is distinct from 'SE'
+     ) then
+    return false;
+  end if;
+
+  v_op := coalesce(public.eta_obs_operator_key(v_route), 'POLFERRIES');
 
   -- Aktywna PORT_IN → 0298 (histereza); backup tylko gdy strefa wyłączona.
   -- BN1: dopasowanie po rodzinie trasy (nie primary operator).
