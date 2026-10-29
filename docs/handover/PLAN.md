@@ -1143,7 +1143,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
 
 ### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — W TOKU (`pakiet/637-ksh-write-no-import`, migracja **0334**)
-Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → **próba na kopii** (`SHAREPOINT_TEST_FILE_URL`) → `ksh_sync_write_set(true)` → uzupełnienie aktywnych → pierwszy cykl. Kod: `write_set` bez wymogu importu; `import_set(false)` nie gasi `write_enabled` ani kolejki; Edge zapis bez bramki `import_disabled`; tryb `test` może pisać bez `write_enabled` (próba).
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → **próba na kopii** → `ksh_sync_write_set(true)` prod → uzupełnienie aktywnych → pierwszy cykl. Kod: `write_set` bez wymogu importu; `import_set(false)` nie gasi `write_enabled` ani kolejki; Edge zapis bez bramki `import_disabled`; **F7 #639:** zapis tylko przy `write_enabled` (kolejka z triggera). Próba: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → jedna zmiana awizacji → cykl (PUT na kopię, `write_test_ok_at`) → `prod` → jednorazowe zakolejkowanie aktywnych → meldunek w #637. import **383**.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1993,3 +1993,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 11:20 | #634/#635 SCALONE (`251febc5`); start **#618** `ksh_file_ab` **0333** (`PL / ...` / `... / SE`); W62 zamknięte | pętla |
 | 29.10.2026 12:35 | #618/#636 SCALONE (`97428948`); 27B:C ETA **0334** na PR #638 (czekaj #637) | pętla |
 | 29.10.2026 13:00 | #637 PILNE „włącz zapis”: **0334** write bez importu; próba na kopii przed write_set; przed F7 #638 | pętla |
+| 29.10.2026 13:20 | #637 F7 #639 POPRAWKI: zapis tylko przy write_enabled; próba = MODE=test + write_set(true); import **383** | pętla |

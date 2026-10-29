@@ -629,6 +629,7 @@ $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='
   update loads set carrier_order_no='PEND-1' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
 val "A6: import_set false zostawia write" $HHL "select ksh_sync_import_set(false); select write_enabled from ksh_sync_state where project_id='$P'" t commit
+val "A6: import_set false → import_enabled=f" $HHL "select import_enabled from ksh_sync_state where project_id='$P'" f
 chk "A6: import_set false → pending zostaje" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" 1
 # F7 r8: przywróć import+write — N4+ kolejka tylko przy write_enabled
 val "A6: import+write on przed N4" $HHL "select ksh_sync_import_set(true); select ksh_sync_write_set(true); select write_enabled from ksh_sync_state where project_id='$P'" t commit

@@ -2,6 +2,7 @@
  * A6 — przetworzenie kolejki WT→plik: konflikt / łatka JSZip / upload Graph + If-Match.
  * F7 #560 / r2: no_etag; konflikt per kod; PUT zgubiony→ack; sprawdzaj ack/l1b;
  * #637: zapis bez wymogu import_enabled; write_test_ok_at (prod).
+ * F7 #639: importEnabled zbędne (nie bramkuje); write_enabled jest w index.ts.
  * F7 r3 N4: ack(id, rev, sent) — schedule_row z sent; rozjazd rev → pending.
  */
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
@@ -15,9 +16,11 @@ import {
   type FileDateSnap,
 } from './writeConflict.ts';
 import { ackPayload } from './ackPayload.ts';
+import { outboundWriteProdGate } from './outboundWriteGate.ts';
 
 export { fileAlreadyHasPatch, pickOutboundConflictNote } from './writeConflict.ts';
 export { ackPayload } from './ackPayload.ts';
+export { outboundWriteProdGate } from './outboundWriteGate.ts';
 
 export type OutboundItem = {
   id: number;
@@ -98,8 +101,6 @@ export async function processOutboundWrites(args: {
   fileBytes: Uint8Array;
   fileSnapshot: SnapshotMap;
   eTag?: string | null;
-  /** Zachowane dla obserwacji / last_run; #637 nie blokuje zapisu. */
-  importEnabled?: boolean;
   /** Tryb pliku Graph. */
   fileMode?: 'test' | 'prod';
   /** F7 r2: prod dopiero po udanym teście. */
@@ -116,11 +117,15 @@ export async function processOutboundWrites(args: {
   /** Ustaw po udanym PUT w trybie test. */
   mark_write_test_ok?: boolean;
 }> {
-  // #637: import_enabled nie blokuje zapisu (właściciel: import off, zapis on).
-  if (args.fileMode === 'prod' && !args.writeTestOkAt) {
+  // #637: import_enabled nie blokuje (kolejka + write_enabled w index); prod wymaga write_test_ok_at.
+  const gate = outboundWriteProdGate({
+    fileMode: args.fileMode,
+    writeTestOkAt: args.writeTestOkAt,
+  });
+  if (gate.block) {
     return {
       attempted: false, written: 0, conflicts: 0, skipped: 0,
-      upload_ok: null, write_reason: 'write_test_required',
+      upload_ok: null, write_reason: gate.write_reason,
     };
   }
 

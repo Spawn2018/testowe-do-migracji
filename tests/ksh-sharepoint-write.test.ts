@@ -21,12 +21,27 @@ import {
 } from '../supabase/functions/_shared/ksh/xlsxPatchTime';
 import { patchWorkbookBytes } from '../supabase/functions/_shared/ksh/xlsxPatch';
 import { COLUMN_MAP_DEFAULT } from '../supabase/functions/_shared/ksh/importColumnMap';
+import { outboundWriteProdGate } from '../supabase/functions/_shared/ksh/outboundWriteGate';
 
 const env = (): GraphEnv => ({
   SHAREPOINT_TENANT_ID: 't',
   SHAREPOINT_CLIENT_ID: 'c',
   SHAREPOINT_CLIENT_SECRET: 's',
   SHAREPOINT_FILE_URL: 'https://contoso.sharepoint.com/sites/x/Shared%20Documents/a.xlsx',
+});
+
+describe('A6 outboundWriteProdGate (#637 F7)', () => {
+  it('prod bez writeTestOkAt → write_test_required', () => {
+    expect(outboundWriteProdGate({ fileMode: 'prod', writeTestOkAt: null }))
+      .toEqual({ block: true, write_reason: 'write_test_required' });
+  });
+
+  it('test / prod z writeTestOkAt → bez bloku (kolejka; import off nie bramkuje)', () => {
+    expect(outboundWriteProdGate({ fileMode: 'test', writeTestOkAt: null }))
+      .toEqual({ block: false });
+    expect(outboundWriteProdGate({ fileMode: 'prod', writeTestOkAt: '2026-10-29T12:00:00Z' }))
+      .toEqual({ block: false });
+  });
 });
 
 describe('A6 ackPayload (F7 r4)', () => {

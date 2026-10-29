@@ -6769,3 +6769,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok #637:** migracja **0334** — `ksh_sync_write_set` bez wymogu `import_enabled`; `ksh_sync_import_set(false)` nie gasi `write_enabled` ani kolejki; Edge `processOutboundWrites` bez `import_disabled`; tryb `test` może pisać bez `write_enabled`. Testy import przepisane (liczba OK **382**). Gałąź `pakiet/637-ksh-write-no-import`.
 - Po zielonym CI → F7 → wdrożenie → krok 2 próba na kopii (SHAREPOINT_TEST_FILE_URL) → meldunek w #637. Potem write_set(true) / uzupełnienie aktywnych. Potem F7 #638 (REMOVED + Polferries causes).
 
+## 2026-10-29 13:20 — #637 F7 #639 POPRAWKI (write_enabled)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte. Bez PR do scalenia (F7 #639 = POPRAWKI; #638 czeka na #637).
+- **Krok:** przywróć `if (!writeEnabled) return null` (kolejka tylko z triggera przy write on); procedura próby: `SHAREPOINT_FILE_MODE=test` → `write_set(true)` → zmiana awizacji → cykl → `prod` → backlog aktywnych. Unit: prod bez `writeTestOkAt` → `write_test_required`; test dochodzi do kolejki. import.sh +1 asercja `import_enabled=f` → **383**. Usunięty zbędny `importEnabled` z `processOutboundWrites`.
+- Push → CI → F7. Po scaleniu/wdrożeniu: próba na kopii wg procedury → meldunek w #637.
+
