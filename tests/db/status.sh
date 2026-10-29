@@ -2419,6 +2419,96 @@ q "alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
      check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
+# BN1 0344 F7: apply_ferry_se + mismatch — e2e (bez pg_get_functiondef like)
+# e2e SE: OTHER/TLL-HEL bez zmiany; GDN-NYN / NYN-GDN / GDY-KAA → Droga SE
+S640o=77777777-0000-0000-0000-00000000640a
+S640t=77777777-0000-0000-0000-00000000640b
+S640g=77777777-0000-0000-0000-00000000640c
+S640n=77777777-0000-0000-0000-00000000640d
+S640k=77777777-0000-0000-0000-00000000640e
+L640o=$(L fe)
+L640t=$(L ff)
+L640g=$(L f0)
+L640n=$(L e1)
+L640k=$(L e2)
+q "update public.geofences set active = true
+    where project_id = '$P' and kind = 'PORT_IN' and country = 'SE'" >/dev/null
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S640o','$P','66666666-0000-0000-0000-000000000001','OTHER',
+     '2026-10-14 12:00+00','2026-10-15 06:00+00','2026-10-14 12:00+00','2026-10-15 06:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S640t','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
+     '2026-10-14 14:00+00','2026-10-15 08:00+00','2026-10-14 14:00+00','2026-10-15 08:00+00','DOPLYNAL','TALLINK');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S640g','$P','66666666-0000-0000-0000-000000000001','GDN-NYN',
+     '2026-10-14 18:00+00','2026-10-15 12:00+00','2026-10-14 18:00+00','2026-10-15 12:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S640n','$P','66666666-0000-0000-0000-000000000001','NYN-GDN',
+     '2026-10-14 16:00+00','2026-10-15 10:00+00','2026-10-14 16:00+00','2026-10-15 10:00+00','DOPLYNAL','POLFERRIES');" >/dev/null
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S640k','$P','66666666-0000-0000-0000-000000000001','GDY-KAA',
+     '2026-10-14 20:00+00','2026-10-15 14:00+00','2026-10-14 20:00+00','2026-10-15 14:00+00','DOPLYNAL','STENA');" >/dev/null
+mk $L640o O640 "'HHL/O640'" "'SCX/O640'" FERRY "'$S640o'"
+mk $L640t T640 "'HHL/T640'" "'SCX/T640'" FERRY "'$S640t'"
+mk $L640g G640 "'HHL/G640'" "'SCX/G640'" FERRY "'$S640g'"
+mk $L640n N640 "'HHL/N640'" "'SCX/N640'" FERRY "'$S640n'"
+mk $L640k K640 "'HHL/K640'" "'SCX/K640'" FERRY "'$S640k'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L640o','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L640t','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L640g','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L640n','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L640k','MILESTONE_LOADED','2026-10-13 08:00+00')" >/dev/null
+chk "BN1 0344: OTHER założony FERRY" "$(st $L640o)" FERRY
+chk "BN1 0344: TLL-HEL założony FERRY" "$(st $L640t)" FERRY
+chk "BN1 0344: GDN-NYN założony FERRY" "$(st $L640g)" FERRY
+chk "BN1 0344: NYN-GDN założony FERRY" "$(st $L640n)" FERRY
+chk "BN1 0344: GDY-KAA założony FERRY" "$(st $L640k)" FERRY
+q "select public.apply_ferry_se_from_position('$L640o', 59.00, 17.90, '2026-10-15 07:00+00')" >/dev/null
+chk "BN1 0344: OTHER + ląd SE → bez zmiany (FERRY)" "$(st $L640o)" FERRY
+q "select public.apply_ferry_se_from_position('$L640t', 59.00, 17.90, '2026-10-15 09:00+00')" >/dev/null
+chk "BN1 0344: TLL-HEL + ląd SE → bez zmiany (FERRY)" "$(st $L640t)" FERRY
+q "select public.apply_ferry_se_from_position('$L640g', 59.00, 17.90, '2026-10-15 13:00+00')" >/dev/null
+chk "BN1 0344: GDN-NYN + ląd SE ≥2 km → IN_TRANSIT_SE" "$(st $L640g)" IN_TRANSIT_SE
+q "select public.apply_ferry_se_from_position('$L640n', 59.00, 17.90, '2026-10-15 11:00+00')" >/dev/null
+chk "BN1 0344: NYN-GDN + ląd SE ≥2 km → IN_TRANSIT_SE" "$(st $L640n)" IN_TRANSIT_SE
+q "select public.apply_ferry_se_from_position('$L640k', 59.00, 17.90, '2026-10-15 15:00+00')" >/dev/null
+chk "BN1 0344: GDY-KAA + ląd SE ≥2 km → IN_TRANSIT_SE" "$(st $L640k)" IN_TRANSIT_SE
+
+# Behawioralne propose/assign (F7): TLL-HEL odmowa; GDN-NYN OK
+L640p=$(L e3)
+mk $L640p P640 "'HHL/P640'" "'SCX/P640'" AT_PORT_GDANSK "'$S640t'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L640p','MILESTONE_LOADED','2026-10-13 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L640p', '2026-10-14 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+    ('$L640p', '2026-10-15 09:30+00', st_setsrid(st_makepoint(17.90, 59.00), 4326), 'TELEMATICS_API');" >/dev/null
+chk "BN1 0344: propose nie bierze TLL-HEL (port EE)" \
+  "select (public.sailing_mismatch_propose_id('$L640p') is distinct from '$S640t')" t
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+ select sailing_mismatch_assign('$L640p','$S640t'); rollback;" 2>&1)
+echo "$out" | grep -qiE 'portem w PL|Tylko trasa|ferry_routes|22023|P0001' \
+  && { ok=$((ok+1)); echo "  OK    BN1 0344: assign TLL-HEL odmowa"; } \
+  || { fail=$((fail+1)); echo "  FAIL  BN1 0344: assign TLL-HEL odmowa: $out"; }
+L640q=$(L e4)
+# bez rejsu = filtr rodziny wyłączony; w oknie tylko S640g (PL outbound; TLL/EE i KAA poza arrival)
+mk $L640q Q640 "'HHL/Q640'" "'SCX/Q640'" AT_PORT_GDANSK null
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L640q','MILESTONE_LOADED','2026-10-13 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L640q', '2026-10-14 11:30+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+    ('$L640q', '2026-10-15 12:30+00', st_setsrid(st_makepoint(17.90, 59.00), 4326), 'TELEMATICS_API');" >/dev/null
+chk "BN1 0344: propose = GDN-NYN (PL outbound)" \
+  "select (public.sailing_mismatch_propose_id('$L640q') = '$S640g')" t
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L640q','$S640g'); commit" >/dev/null
+chk "BN1 0344: assign GDN-NYN → sailing" \
+  "select (sailing_id = '$S640g') from loads where id='$L640q'" t
+
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 # BN1/#648: seed jedną funkcją; e2e TLLA-HEL → Tallinn A; active=false wyłącza promote (HHL_ADMIN)
 echo; echo "[BN1/#648] seed + TLLA-HEL e2e + ferry_route_set_active"
 HHL=11111111-0000-0000-0000-000000000001

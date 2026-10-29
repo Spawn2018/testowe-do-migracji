@@ -6910,11 +6910,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
-## 2026-10-30 01:45 — #648 BN1 seed + TLLA-HEL e2e (0342); #651 czeka F7
+## 2026-10-30 06:37 — #654 SCALONE; #651 → 0344
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: F7 „gotowe do scalenia” @ `c7a1b9c` (Spawn2018, po tipie docs) → **#654 SCALONE** `80580d54` (**0343**). Bez push na main.
+- **Krok BN1/#651:** rebase na `main`; migracja **0344** (`apply_ferry_se_from_position` + `sailing_mismatch_*` → słownik; assign tylko PL outbound); e2e NYN/KAA + propose/assign; status **498** (+14 vs 484). Uwagi nieblokujące F7 #654 → #648 (promote active=true; mfa_satisfied; POSTEP 0342→0343).
+- Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-30 01:45 — #648 BN1 seed + TLLA-HEL e2e (0343); #651 czeka F7
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
 - Scalanie: #651 CI **zielone** @ `52861cdc` (unit/visual/db) — potem F7 gotowe; nie scalono (po #653). Bez push na main.
-- **Krok BN1/#648:** gałąź `pakiet/bn1-648-seed` / migracja **0342** — `bn1_seed_baltic_geofences(p_project)` (seed.sql + migracja); e2e TLLA-HEL→Tallinn A → `AT_PORT_GDANSK`; `ferry_route_set_active` (HHL_ADMIN; active=false → promote pomija; SCX 42501). FK `sailings.route` odłożone (OTHER). nullguard +1 GUARD.
+- **Krok BN1/#648:** gałąź `pakiet/bn1-648-seed` / migracja **0343** — `bn1_seed_baltic_geofences(p_project)` (seed.sql + migracja); e2e TLLA-HEL→Tallinn A → `AT_PORT_GDANSK`; `ferry_route_set_active` (HHL_ADMIN; active=false → promote pomija; SCX 42501). FK `sailings.route` odłożone (OTHER). nullguard +1 GUARD.
 - Push → CI → prośba o F7. #651 równolegle czeka F7.
 
 ## 2026-10-30 01:56 — #653 import ON + start PR tylko-zmienione pole (0341)
@@ -6953,6 +6960,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** gałąź `pakiet/650-ksh-outbound-full-wt` / migracja **0340** — `ksh_sync_outbound_wt6_patch` + trigger zawsze dokłada 6 pól; `ksh_sync_outbound_enqueue_active_wt` (HHL_ADMIN+2FA). Mapowanie: `carrier_order_no`→HHL-Scan, `hhl_order_no`→HHL-KSH. import **387**; nullguard **895**. Unit: komplet WT=plik → 0 PATCH.
 - Push → CI → prośba o F7. Po scaleniu: ponowna próba na kopii TS-02/SS-02 → #637. Bez push na main.
 
+## 2026-10-29 23:00 — #649 SCALONE; BN1 CASE remain → słownik
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: F7 „gotowe do scalenia” @ `b5b3e18e` (Spawn2018, po CI unit/db/visual) → **#649 SCALONE** `00a24fe0` (0339). Bez push na main.
+- **Krok BN1:** gałąź `pakiet/bn1-ferry-case-remain` — `apply_ferry_se_from_position` (operator+PORT_IN ze słownika, przyjazd SE po rodzinie); `sailing_mismatch_propose_id` / `assign` → `ferry_route_is_outbound` (+ PL dla propose). `a10_try_ferry_backup` bez CASE (F7 0279:290 = apply_geofence, już 0339). Numer migracji po rebase: **0344**.
+- Push → CI → prośba o F7. Bez push na main.
 ## 2026-10-29 22:20 — #649 CI: EXPECTED status 470→476
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
