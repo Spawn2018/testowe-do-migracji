@@ -6807,3 +6807,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - PLAN §4 #637 → W63b; §5 W63 zamknięte, W63b czeka (po teście właściciel → `FILE_MODE=prod` przed backlogiem). PR #641 docs.
 - Równolegle: #638 F7 POPRAWKI wdrożone (0335), CI unit ✔ / db+visual w toku — bez push na tę gałąź (G-15). Bez push na main.
 
+## 2026-10-29 15:25 — #641 SCALONE; #637 (a) baseline test z kopii
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 pierwsze.
+- Scalanie: #641 → `75ab2af5` (F7: gotowe @ `8e672f2` po HEAD; CI unit/visual ✔). Bez push na main.
+- Odbiór #637: od 13:15Z `mode=test`; cykl → `conflict`/`file_changed` (prod snap ≠ kopia). Wybór **(a)**.
+- Sprawa konfliktu: brak otwartego `TOWER_KSH_CONFLICT` / ryzyka file_* (ack już zjadł outbound).
+- **Krok:** `resolveOutboundExpected` — w `test` expected = migawka z `fileSnapshot` (kopia); prod bez zmian. Unit +3. Gałąź `pakiet/637-test-mode-snap-baseline`. Po F7/deploy: nowa awizacja + cykl → `write_test_ok_at`.
+
