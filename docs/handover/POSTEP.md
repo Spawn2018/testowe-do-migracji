@@ -6823,9 +6823,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Po wdrożeniu: enqueue awizacja (driver/phone/tractor/trailer) + `ksh-sharepoint-sync`; `mode=test`; **PUT `upload_http_423`** (kopia otwarta). Outbound #2 failed@5; #3 paused (`skipped`/`paused_423_file_locked`) żeby cron nie spalał prób.
 - **W63c:** zamknąć plik testowy → „W63c gotowe” → enqueue + cykl → `write_test_ok_at`. Potem właściciel `FILE_MODE=prod` + jeden cykl odczytu prod przed backlogiem (F7 #642).
 - #638: F7 gotowe @ `fe9e350`, CI ✔, merge CONFLICTING (docs PLAN po #642) — rebase po W63c / równolegle bez przerywania #637.
+
 ## 2026-10-29 16:15 — #638 rebase na main (0335)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423).
 - Rebase pakiet/27B-eta-se-corridor na main po #642; konflikt docs PLAN rozwiązany (stan #637 z main zachowany). Migracja 0335 + testy REMOVED/Polferries bez zmian kodu.
 - POSTEP przywrócony z main (dziennik tylko dopisywany) + ten wpis.
 - Czeka ponowne F7 po CI.
+
+## 2026-10-29 17:20 — #638 merge main po #643 (docs)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423) równolegle z #645 workbook na osobnej gałęzi.
+- F7 #638 @ 3e03d88: CONFLICTING z main po #643 (`bb3a742e`). Merge `origin/main` — konflikt tylko PLAN/POSTEP; dziennik z main zachowany, wpisy #638 dopisane na końcu.
+- Migracja **0335** + testy bez zmian kodu. Push → pełne CI → prośba o F7.
+- Kolejność scalania (F7 #646 B6): **#638 (0335) przed #646 (0336)**. Bez push na main.

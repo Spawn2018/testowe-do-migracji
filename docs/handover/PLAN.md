@@ -2004,3 +2004,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 15:25 | #641 SCALONE (`75ab2af5`); #637 mode=test → conflict prod≠kopia → wybór **(a)** baseline z kopii (`resolveOutboundExpected`) | pętla |
 | 29.10.2026 16:05 | #642 SCALONE (`fda91ecc`, F7 gotowe); deploy-main ✔; cykl test → PUT **423** → **W63c**; #638 F7 gotowe @ fe9e350 (CONFLICTING docs) | pętla |
 | 29.10.2026 16:15 | #638 rebase na main (0335); POSTEP przywrócony z main; czeka F7 | pętla |
+| 29.10.2026 17:20 | #638 merge main po #643 (docs W63c); konflikt tylko PLAN/POSTEP — dziennik dopisany; czeka CI+F7 | pętla |
