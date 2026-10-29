@@ -6315,12 +6315,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI `41cc7c93`: unit ✔ / visual ✔ / db ✔ (p4k **73**, nullguard **880**); run db `40648903813`, visual `40648904042`.
 - **Krok:** komentarz na #604 — prośba o F7: gotowe do scalenia (cz.2 / 0320). Bez push na main.
 
-## 2026-10-28 08:59 � #604 SCALONE; start C4 (0321)
+## 2026-10-28 08:59 � #604 SCALONE; start C4 (0321)
 
-- Skrzynka `dla-cursora`: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie � bez nowych do wpisania.
+- Skrzynka `dla-cursora`: #550 `pilne` WSTRZYMANE; #538/#537/#500/#499 w planie � bez nowych do wpisania.
 - Scalanie: #604 F7 gotowe `bf76504c` (po docs; akceptacja kodu z `41cc7c93`); CI unit/visual/db ?; merge `a7ecb48b` (`gh pr merge --merge`). Bez push na main.
-- **P4-k #581 cz.2** SCALONE � migracja **0320**; deploy-main w toku (`40652927113`). Po wdro�eniu: rebuild pomiar�w (#603), cron + pierwszy tick.
-- **Krok C4:** ga��� `pakiet/C4-old-value`, migracja **0321** � `admin_ops_threshold_set` zapisuje `old_value`/`new_value` (`value`), bez audytu przy braku zmiany; usuni�te `notificationPrefs` (alerty stref/ryzyk/workflow) ze store � zostaje macierz + `my_notify` / `bellOffForPerson`. dec6 EXPECTED **27** (+2). Pr�ba R-3 na TEST � przy odbiorze C4.
+- **P4-k #581 cz.2** SCALONE � migracja **0320**; deploy-main w toku (`40652927113`). Po wdro�eniu: rebuild pomiar�w (#603), cron + pierwszy tick.
+- **Krok C4:** ga��� `pakiet/C4-old-value`, migracja **0321** � `admin_ops_threshold_set` zapisuje `old_value`/`new_value` (`value`), bez audytu przy braku zmiany; usuni�te `notificationPrefs` (alerty stref/ryzyk/workflow) ze store � zostaje macierz + `my_notify` / `bellOffForPerson`. dec6 EXPECTED **27** (+2). Pr�ba R-3 na TEST � przy odbiorze C4.
 
 ## 2026-10-28 09:20 — C4 #606 CI db FAIL → fix assert + dec6
 
@@ -6832,6 +6832,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Uprawnienia: docs MS — Application **Not supported** dla workbook (tylko delegated `Files.ReadWrite`); próba obecnym tokenem aplikacji; 401/403 → prośba do właściciela/IT w #637.
 - Po F7+deploy: próba na kopii **bez zamykania pliku** → `write_test_ok_at` → meldunek #637. #644 zamknięte jako zastąpione. Bez push na main.
 
+## 2026-10-29 16:15 — #638 rebase na main (0335)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423).
+- Rebase pakiet/27B-eta-se-corridor na main po #642; konflikt docs PLAN rozwiązany (stan #637 z main zachowany). Migracja 0335 + testy REMOVED/Polferries bez zmian kodu.
+- POSTEP przywrócony z main (dziennik tylko dopisywany) + ten wpis.
+- Czeka ponowne F7 po CI.
+
 ## 2026-10-29 16:35 — #645 F7 #646 POPRAWKI (0336)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE.
@@ -6858,3 +6865,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Nieblokujące: `formatLooksLikeDate` zdejmuje `[…]` i `"…"` przed `/[yd]/` (`[Red]0.00` ≠ data).
 - Testy: `codes:['SG-01','SG-99']` bez wiersza SG-99 → `done`+`clear_423`; `upsertFail` → `state_upsert`. Unit **56/56**.
 - Push → CI → ponowne F7. Scalanie: #638 (0335) przed #646 (0336). Bez push na main.
+
+## 2026-10-29 17:20 — #638 merge main po #643 (docs)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #637 W63c (423) równolegle z #645 workbook na osobnej gałęzi.
+- F7 #638 @ 3e03d88: CONFLICTING z main po #643 (`bb3a742e`). Merge `origin/main` — konflikt tylko PLAN/POSTEP; dziennik z main zachowany, wpisy #638 dopisane na końcu.
+- Migracja **0335** + testy bez zmian kodu. Push → pełne CI → prośba o F7.
+- Kolejność scalania (F7 #646 B6): **#638 (0335) przed #646 (0336)**. Bez push na main.
+
+## 2026-10-29 17:45 — #646 SCALONE; próba na kopii OK; #638 → 0337
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 otwarte (czeka `FILE_MODE=prod` właściciela).
+- Scalanie: #646 → `2c8e3e1c` (F7: gotowe @ `ff41ed3`; kolejność zmieniona — #646 przed #638). deploy-main ✔ (0336 + Edge). Bez push na main.
+- **Próba na kopii bez zamykania:** `mode=test`, `write_reason=ok`, `upload_ok=true`, `write_n=1`; outbound #6 `done`; brak `workbook_auth_403`. `write_test_ok_at` ustawione. Meldunek w #637.
+- **#638:** merge `main` po #646; migracja **0335→0337** (0336 zajęte przez workbook). CI → F7.

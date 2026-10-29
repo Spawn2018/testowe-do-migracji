@@ -1130,8 +1130,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~Po wdrożeniu~~: H4 obs 265/283/343/357 zdjęte; `eta_rebuild_segment_observations('2026-10-05')` → `loads_ok=17, segments=34, loads_fail=0`. PORT_CHECKIN **6/0**; CROSSING_GDN_NYN **3/0** (`pin_late_h` 9,66 / 29,89); CROSSING_GDY_KAA 2+1 BRAK; 1× PORT_CHECKIN z `sailing_mismatch`. Tabela w #626. Następna: **27B:C** (#627 = **0331**).
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
-Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → **#637/#645** → 27B:C ETA/mapa/kalibracja → BN1…
-1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA** PR #638 (**0335**); **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo. **F7 #646 B6: scalanie #638 (0335) przed #646 (0336)** — po rozwiązaniu konfliktu docs z main.
+Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → ~~#622~~ → ~~#626~~ → ~~27B:C OFF/#630~~ → ~~#634~~ → ~~#618~~ → ~~#637/#645 workbook 0336~~ → **27B:C ETA (#638 / 0337)** → mapa/kalibracja → BN1…
+1. **27B:C — Karlskrona→Boden: obie trasy dopuszczone** — **OFF SCALONE** (`0dc28827` / PR #627 / **0331**, 29.10.2026 06:40Z). OFF = najbliższy z SE_E22 / śródlądowy (`SE_KAA_TRACK` gdy ślad blisko Västerås, inaczej `SE_KAA_INLAND`); F7 gotowe @ `70179782`. **ETA W TOKU** PR #638 (**0337**, po #646): `compute_load_eta` → `stena_se_eta_corridor`; inland → `SE_ROAD_KAA_INLAND`; F7 POPRAWKI REMOVED+Polferries. **Dalej:** mapa HERE; kalibracja dwa SE_ROAD. Bez śladu GPS w repo.
 
 ### #630 · Kalibracja pomija PORT_CHECKIN z `sailing_mismatch` — SCALONE (`2563d627` / PR #633 / **0332**, 29.10.2026 08:58Z)
 Źródło: #630 (Spawn2018; odbiór 0330 ✔; po #627). `eta_propose_calibration` pomija **rolę** `PORT_CHECKIN` (kody ze słownika) z `features->>'sailing_mismatch'='true'` (`n_skipped_sailing_mismatch`); CROSSING z mismatch zostaje w medianie/`n_obs`. Test p4k **111**. F7 gotowe @ `abf5bca2`. Front oznaczenie — koordynator po wdrożeniu. Odbiór SELECT 0332 — koordynator.
@@ -1142,11 +1142,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — SCALONE (`97428948` / PR #636 / **0333**, 29.10.2026 10:31Z)
 Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
 
-### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI (`fda91ecc` / PR #642 (a) + #639 **0334**); **#645 workbook (0336) W TOKU**
-Źródło: #637 (Spawn2018; właściciel 29.10 11:29) + #645 (15:13). Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~runtime `mode=test`~~ → ~~cykl conflict~~ → ~~**(a)** PR #642~~ → ~~PUT 423~~ → ~~W63c anulowane~~ (współedycja) → ~~#644 wstrzymane~~ → **#645** zapis komórka po komórce (Graph Excel workbook API, **0336** F7 POPRAWKI) → próba na kopii **bez zamykania** → `write_test_ok_at` → właściciel `FILE_MODE=prod` → jeden cykl odczytu prod → backlog. Stan: `write_enabled=true`, `write_test_ok_at` null, `mode=test`. Bez prod przez agenta. import **383**. Scalanie: **#638 (0335) przed #646 (0336)** (F7 #646 B6).
+### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI; **próba na kopii OK** (`2c8e3e1c` / #646 **0336**)
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29) + #645 (15:13). Import **zostaje wyłączony**. Kroki: ~~#636~~ → ~~0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~mode=test~~ → ~~conflict~~ → ~~**(a)** #642~~ → ~~PUT 423~~ → ~~W63c anulowane~~ → ~~#644~~ → ~~**#645** workbook **0336**~~ → ~~próba na kopii bez zamykania (`write_reason=ok`, `upload_ok=true`, brak auth 403)~~ → **`write_test_ok_at` ustawione** → **właściciel `FILE_MODE=prod`** → jeden cykl odczytu prod → backlog aktywnych → meldunek zamknięcia. Stan: `write_enabled=true`, `write_test_ok_at` set, `mode=test`. Bez prod przez agenta. import **383**.
 
-### #645 · PILNE #637: workbook cell write (bez zamykania pliku) — W TOKU (`pakiet/645-workbook-cell-write`, PR #646, **0336**)
-Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Zamiast JSZip+PUT: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. Backoff 429/503/504/423/409; **401/403 = `workbook_auth_403`** (delegated `Files.ReadWrite`, jedna sprawa HHL). F7 POPRAWKI r3 @ HEAD: R1–R3 OK; **R4** `codesWithJobs`/`incompleteCodes` — pozycja wielokodowa z kodem bez wiersza → `done` (nie `skipped`); `[Red]0.00` ≠ data. #644 zamknięte jako zastąpione. Po F7+deploy: próba na kopii bez zamykania → meldunek #637.
+### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
+Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -2007,6 +2007,9 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 15:25 | #641 SCALONE (`75ab2af5`); #637 mode=test → conflict prod≠kopia → wybór **(a)** baseline z kopii (`resolveOutboundExpected`) | pętla |
 | 29.10.2026 16:05 | #642 SCALONE (`fda91ecc`, F7 gotowe); deploy-main ✔; cykl test → PUT **423** → **W63c**; #638 F7 gotowe @ fe9e350 (CONFLICTING docs) | pętla |
 | 29.10.2026 15:55 | #637: W63c **anulowane** (właściciel 15:13); #644 wstrzymane; start **#645** workbook cell write **0335** (zamiast PUT) | pętla |
+| 29.10.2026 16:15 | #638 rebase na main (0335); POSTEP przywrócony z main; czeka F7 | pętla |
 | 29.10.2026 16:35 | #645 F7 #646 POPRAWKI: B1–B8 + auth 403; migracja **0335→0336** (#638 zostaje 0335); unit 43/43 | pętla |
 | 29.10.2026 17:00 | #645 F7 #646 POPRAWKI r2: R1/R2/R3 (job, itemKey, numberFormat); unit 54/54; czekam F7; #638 CONFLICTING | pętla |
 | 29.10.2026 17:10 | #645 F7 #646 POPRAWKI r3: R4 wielokod bez wiersza → done; formatLooksLikeDate strip; unit 56/56 | pętla |
+| 29.10.2026 17:20 | #638 merge main po #643 (docs); konflikt tylko PLAN/POSTEP — dziennik dopisany; czeka CI+F7 | pętla |
+| 29.10.2026 17:45 | #646 SCALONE (`2c8e3e1c`); próba na kopii OK (`write_reason=ok`); #638 **0335→0337** | pętla |
