@@ -6644,3 +6644,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - deploy-main `40812385338` ✔ — **0329** na produkcji.
 - **Reclaim SG-21** od 2026-10-27 10:21 UTC (partie 6 h): reclaimed **743**, skipped 0; sieroty naczepy od 27.10 **0**; pozycje od 27.10 **769**; last `2026-10-29 03:32:57Z` EMTRACK_WEB; status IN_TRANSIT_SE; EMTRACK_ORPHAN otwarte **0**.
 - **#626:** 4× `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357); migracja **0330** EXIT < PIN / actual+1h / CROSSING min(PIN,arrival+1h); p4k **102** (+4). Push → CI → F7.
+
+## 2026-10-29 05:10 — #626 F7 r1 POPRAWKI (PR #629)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #537/#500/#499/#538 w kolejce. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe” — F7 r1 @ `50cd709` = **POPRAWKI** (P1/P2). CI @ `50cd709`: unit/visual ✔; **db FAIL** p4k 97/5 (UUID `…v1` niehex + EXIT=PIN).
+- **Krok F7 r1:**
+  1. P1: `sailing_ok` = `PIN ≤ arrival+6h` (albo actual w oknie); tylko wtedy actual nadpisuje EVENT; inaczej EVENT + `features.sailing_mismatch`.
+  2. P2: EXIT w `[ENTER, least(PIN−1µs, actual+1h gdy ok)]`.
+  3. CROSSING: `actual_arrival < EXIT` → BRAK; `pin_late_h` też na SE_ROAD; update features po `id` upsertu.
+  4. Testy: UUID hex; +mismatch / dwa EXIT / PIN 3h / arrival&lt;EXIT; #603 EXIT=PIN → PORT_CHECKIN BRAK. p4k **106**.
+  5. PLAN: kalibracja nie czyta pin_*/port_out_src; backlog „postój w porcie SE”.
+- Po zielonym CI — F7 r2. Kolejność dalej: #626 → 27B:C (#627 = **0331**).

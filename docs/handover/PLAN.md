@@ -1124,10 +1124,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **0329:** WT = pełny człon; textId = człony + prefiksy od 1. fragmentu; `regexp_replace(upper(x), …)`; ranking P1; reclaim INSERT-only + `p_until`; status **398**. F7 gotowe @ `6a9dadb0`.
 2. **Reclaim SG-21** od 27.10 10:21 UTC (7×6 h): **reclaimed=743**; sieroty naczepy od 27.10 **0**; pozycje od 27.10 **769**; ostatnia **2026-10-29 03:32:57Z** `EMTRACK_WEB`; status **IN_TRANSIT_SE**; otwarte `EMTRACK_ORPHAN` **0**. B3: #627 → **0331** (#626 bierze 0330).
 
-### #626 · EXIT=PIN / późny PIN zawyżają odprawę/rejs — W TOKU (`pakiet/626-eta-exit-pin-strict`, migracja **0330**)
+### #626 · EXIT=PIN / późny PIN zawyżają odprawę/rejs — W TOKU (`pakiet/626-eta-exit-pin-strict`, migracja **0330**, PR #629)
 Źródło: #626 (Spawn2018; po #622). 4 pomiary wykluczone `H4_BLEDNY_POMIAR` na prod (obs 283/265/343/357) przed PR.
-1. **0330:** EXIT ściśle `< PIN`; EXIT `> actual_departure+1h` → actual; CROSSING koniec = `min(PIN, actual_arrival+1h)`; `pin_src` / `pin_late_h`. p4k **102** (+4).
-2. Po wdrożeniu: rebuild od 05.10 → wynik w #626; nie zamykać #603 bez tego.
+1. **0330:** EXIT ściśle `< PIN` (okno do `PIN−1µs`); EXIT/`actual` tylko gdy rejs pasuje (`PIN ≤ arrival+6h` albo actual w oknie); inaczej EVENT + `sailing_mismatch`; CROSSING `min(PIN, arrival+1h)`; `pin_src` / `pin_late_h` (też SE_ROAD). p4k **106**. Kalibracja nadal nie czyta `pin_src`/`port_out_src`/`pin_late_h` (wiersze z `pin_late_h` / `SAILING_DELAYED` = ważne — przegląd po danych). **Backlog:** osobny odcinek „postój w porcie SE”.
+2. Po wdrożeniu: (a) usuń ręczne `H4_BLEDNY_POMIAR` obs 265/283/343/357; (b) rebuild od 05.10; (c) tabela w #626. Nie zamykać #603 bez tego.
 
 ### #608 · Decyzje właściciela 28.10 10:18 — W KOLEJCE (skrzynka `dla-cursora`)
 Źródło: #608 (Spawn2018). Kolejność: ~~#606~~ → ~~#588~~ → ~~#613~~ → ~~#611~~ → ~~#597~~ → ~~#603~~ → **#622** → #626 → **27B:C** → BN1…
@@ -1967,3 +1967,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 03:30 | #622 F7 r2 w #628: B1-bis/P3-bis/P4-bis/perf; status **386**; CI @ 3a7c7b25 zielone → push r2 | pętla |
 | 29.10.2026 03:55 | #622 F7 r3 w #628: `regexp_replace(upper(…))`; wspólna tabela TS↔SQL; refresh=true; status **398**; CI e9de427 ✔ → push | pętla |
 | 29.10.2026 04:30 | #622 SCALONE (`27abf140`); reclaim SG-21 743; #627 → **0331**; start **#626** **0330** (wykluczenia H4 + EXIT&lt;PIN / CROSSING) | pętla |
+| 29.10.2026 05:10 | #626 F7 r1 POPRAWKI (P1 sailing_ok / P2 EXIT przed PIN); p4k **106**; CI db 97/5 → UUID + logika | pętla |
