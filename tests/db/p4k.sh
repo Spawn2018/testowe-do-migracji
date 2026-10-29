@@ -1939,10 +1939,9 @@ val "#626 F7: actual_arrival < EXIT → CROSSING BRAK" \
    rollback;" "true"
 
 # #630: kalibracja pomija rolę PORT_CHECKIN z sailing_mismatch; CROSSING z mismatch zostaje.
-# 5× mismatch 100 h (starsze, pomijane) + 5× dobre 10 h; hours=8 → Δ25 % (≤40 % limitu 30 d);
-# z filtrem mediana fit ≈ 10 (nie 100).
-# F7 CI: usuń WSZYSTKIE wersje kalibracji w transakcji (skip 7 d + budż 30 d z wcześniejszych
-# testów p4k) — samo starzenie undone/auto nie wystarczało (CI 109/2 po 695179be).
+# 5× mismatch 100 h (pomijane) + 5× dobre 10 h; hours=8 → Δ25 % (≤40 % limitu 30 d).
+# F7 CI: delete wszystkich wersji (skip 7 d + Δ 30 d); propose RAZ (temp table) —
+# wielokrotne wywołanie w CTE dawało no_PORT_CHECKIN:? przy proposal≠null (CI 109/2).
 val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
   "begin;
    update app_parameters set value = 0 where key = 'ETA_CALIBRATION_FROZEN';
@@ -1973,30 +1972,36 @@ val "#630: PORT_CHECKIN sailing_mismatch nie w medianie" \
           jsonb_build_object('p4k', true, 'p4k_630', true),
           now() - interval '20 days' + (ord || ' days')::interval
      from generate_series(1, 5) ord;
-   with p as (select public.eta_propose_calibration() as j),
-        v as (
-          select * from eta_calibration_versions
-           where id = ((select j->>'proposal' from p)::bigint)
-        )
+   create temporary table _p630 on commit drop as
+     select public.eta_propose_calibration() as j;
    select case
-     when (select j->>'proposal' from p) is null then
-       'null:' || coalesce((select j->>'reason' from p), '?')
-       || ':skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
-     when (select (j->>'n_skipped_sailing_mismatch')::int from p) is distinct from 5 then
-       'skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
-     when (select params_after->'PORT_CHECKIN'->>'hours' from v) is null then
-       'no_PORT_CHECKIN:' || coalesce((select params_after::text from v), '?')
-     when (select (params_after->'PORT_CHECKIN'->>'hours')::numeric from v) not between 9 and 11 then
-       'hours=' || (select params_after->'PORT_CHECKIN'->>'hours' from v)
-     when (select n_obs from v) is distinct from 5
-       or (select (j->>'n_obs')::int from p) is distinct from 5 then
-       'n_obs=' || coalesce((select n_obs::text from v), '?')
-     when (select error_before_min from v) is null
-       or (select error_after_min from v) is null
-       or (select error_after_min from v) >= (select error_before_min from v) then
+     when (select hours from eta_segment_params where code='PORT_CHECKIN') is distinct from 8 then
+       'param_h=' || (select hours::text from eta_segment_params where code='PORT_CHECKIN')
+     when j->>'proposal' is null then
+       'null:' || coalesce(j->>'reason', '?')
+       || ':skipmm=' || coalesce(j->>'n_skipped_sailing_mismatch', '?')
+       || ':ngood=' || (
+         select count(*)::text from eta_segment_observations
+          where corridor='PORT_CHECKIN' and features->>'p4k'='true'
+            and exclude_reason is null
+            and coalesce(features->>'sailing_mismatch','') is distinct from 'true')
+     when (j->>'n_skipped_sailing_mismatch')::int is distinct from 5 then
+       'skipmm=' || coalesce(j->>'n_skipped_sailing_mismatch', '?')
+     when v.id is null then
+       'orphan:' || (j->>'proposal')
+     when v.params_after->'PORT_CHECKIN'->>'hours' is null then
+       'no_PORT_CHECKIN:' || coalesce(v.params_after::text, '?')
+     when (v.params_after->'PORT_CHECKIN'->>'hours')::numeric not between 9 and 11 then
+       'hours=' || (v.params_after->'PORT_CHECKIN'->>'hours')
+     when v.n_obs is distinct from 5 or (j->>'n_obs')::int is distinct from 5 then
+       'n_obs=' || coalesce(v.n_obs::text, '?') || '/' || coalesce(j->>'n_obs', '?')
+     when v.error_before_min is null or v.error_after_min is null
+       or v.error_after_min >= v.error_before_min then
        'err'
      else 'true'
-   end;
+   end
+   from _p630 p
+   left join eta_calibration_versions v on v.id = (p.j->>'proposal')::bigint;
    rollback;" "true"
 
 # Po cofnięciu wersji (<7 d): same mismatch nie dają „3 nowych” → kod nadal w skip 7 d.
@@ -2037,7 +2042,8 @@ val "#630: po undo same mismatch nie odblokowują 7 d" \
           jsonb_build_object('p4k', true, 'sailing_mismatch', true, 'p4k_630u', true),
           now() - interval '1 day' + (ord || ' hours')::interval
      from generate_series(1, 5) ord;
-   with p as (select public.eta_propose_calibration() as j)
+   create temporary table _p630u on commit drop as
+     select public.eta_propose_calibration() as j;
    select (
      (j->>'n_skipped_sailing_mismatch')::int = 5
      and (
@@ -2048,7 +2054,7 @@ val "#630: po undo same mismatch nie odblokowują 7 d" \
             and params_after ? 'PORT_CHECKIN'
        )
      )
-   )::text from p;
+   )::text from _p630u;
    rollback;" "true"
 
 # ≥5 CROSSING z mismatch, godziny ≠ parametr (18 → 24); propozycja ≈ mediana, n_obs je liczy.
@@ -2076,27 +2082,27 @@ val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
           jsonb_build_object('p4k', true, 'sailing_mismatch', true, 'p4k_630c', true),
           now() - interval '30 days' + (ord || ' days')::interval
      from generate_series(1, 5) ord;
-   with p as (select public.eta_propose_calibration() as j),
-        v as (
-          select * from eta_calibration_versions
-           where id = ((select j->>'proposal' from p)::bigint)
-        )
+   create temporary table _p630c on commit drop as
+     select public.eta_propose_calibration() as j;
    select case
-     when (select j->>'proposal' from p) is null then
-       'null:' || coalesce((select j->>'reason' from p), '?')
-       || ':skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
-     when (select params_after->'CROSSING_GDN_NYN'->>'hours' from v) is null then
-       'no_CROSSING:' || coalesce((select params_after::text from v), '?')
-     when (select (params_after->'CROSSING_GDN_NYN'->>'hours')::numeric from v)
-          not between 23 and 25 then
-       'hours=' || (select params_after->'CROSSING_GDN_NYN'->>'hours' from v)
-     when (select n_obs from v) is distinct from 5
-       or (select (j->>'n_obs')::int from p) is distinct from 5 then
-       'n_obs=' || coalesce((select n_obs::text from v), '?')
-     when (select (j->>'n_skipped_sailing_mismatch')::int from p) is distinct from 0 then
-       'skipmm=' || coalesce((select j->>'n_skipped_sailing_mismatch' from p), '?')
+     when j->>'proposal' is null then
+       'null:' || coalesce(j->>'reason', '?')
+       || ':skipmm=' || coalesce(j->>'n_skipped_sailing_mismatch', '?')
+       || ':param_h=' || (select hours::text from eta_segment_params where code='CROSSING_GDN_NYN')
+     when v.id is null then
+       'orphan:' || (j->>'proposal')
+     when v.params_after->'CROSSING_GDN_NYN'->>'hours' is null then
+       'no_CROSSING:' || coalesce(v.params_after::text, '?')
+     when (v.params_after->'CROSSING_GDN_NYN'->>'hours')::numeric not between 23 and 25 then
+       'hours=' || (v.params_after->'CROSSING_GDN_NYN'->>'hours')
+     when v.n_obs is distinct from 5 or (j->>'n_obs')::int is distinct from 5 then
+       'n_obs=' || coalesce(v.n_obs::text, '?') || '/' || coalesce(j->>'n_obs', '?')
+     when (j->>'n_skipped_sailing_mismatch')::int is distinct from 0 then
+       'skipmm=' || coalesce(j->>'n_skipped_sailing_mismatch', '?')
      else 'true'
-   end;
+   end
+   from _p630c p
+   left join eta_calibration_versions v on v.id = (p.j->>'proposal')::bigint;
    rollback;" "true"
 
 echo "WYNIK: $ok OK, $fail FAIL"

@@ -6736,3 +6736,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
 - Scalanie: brak „F7: gotowe”. CI @ `695179be`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (te same #630 — starzenie skip 7 d nie wystarczyło).
 - **Krok:** w transakcji testów #630 `delete from eta_calibration_versions` (puste skip + limit 30 d); asercje z powodem FAIL (`null:reason`). p4k **111**. Push → CI → F7.
+
+## 2026-10-29 09:25 — #630 CI db FAIL @ 7938da6c → propose raz w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe”. CI @ `7938da6c`: unit ✔ visual ✔; **db FAIL** p4k 109/2 (`no_PORT_CHECKIN:?` / `no_CROSSING:?` — CTE wołało `eta_propose_calibration` wielokrotnie).
+- **Krok:** testy #630: wynik propose w temp table (jedno wywołanie) + join do wersji; diagnostyka `param_h` / `ngood` / `orphan`. p4k nadal **111**. Push → CI → F7.
