@@ -1142,8 +1142,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #618 · Awizacja w pliku KSH: `PL / ...` i `... / SE` — SCALONE (`97428948` / PR #636 / **0333**, 29.10.2026 10:31Z)
 Źródło: #618 (Spawn2018; decyzja 28.10 19:40; po #634). `ksh_file_ab`: przy `trailer_swap` PL-only → `PL / ...`, SE-only → `... / SE`, obie → `PL / SE`; bez swap → sama PL; obie puste → null (bez kolejki). Telefon przez `ksh_file_phone_text` potem składanie. Import awizacji nadal poza WT (0325) — test kropek. W62 zamknięte. import **382**. F7 gotowe @ `02051359`. Odbiór SELECT 0333 — koordynator.
 
-### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI (`9be41712` / PR #639 / **0334**); **próba PUT: fix (a) baseline z kopii**
-Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~runtime `mode=test`~~ → cykl dał `write_reason=conflict` (migawka prod ≠ kopia) → **(a) `resolveOutboundExpected`: w test baseline = migawka z kopii w cyklu** → ponowny cykl (`write_test_ok_at`) → właściciel `FILE_MODE=prod` → backlog aktywnych → meldunek. Stan SELECT: `write_enabled=true`, `write_test_ok_at` null, `mode=test`, outbound 0 (konflikt #1 już `conflict`/ack; sprawa TOWER_KSH_CONFLICT — brak otwartej). Po scaleniu Edge: nowa awizacja + cykl. Bez prod przez agenta. import **383**.
+### #637 · PILNE: „włącz zapis” WT→plik KSH (import off) — KOD NA PRODUKCJI (`fda91ecc` / PR #642 (a) + #639 **0334**); **próba PUT: czeka W63c (423)**
+Źródło: #637 (Spawn2018; właściciel 29.10 11:29). Pierwszeństwo przed 27B/#638. Import **zostaje wyłączony**. Kroki: ~~#636 wdrożone~~ → ~~kod 0334~~ → ~~W63~~ → ~~`write_set(true)`~~ → ~~runtime `mode=test`~~ → ~~cykl conflict prod≠kopia~~ → ~~**(a)** PR #642 `fda91ecc`~~ → outbound awizacja + cykl → **PUT `upload_http_423`** (kopia otwarta) → outbound #2 failed@5, #3 paused (`skipped`/`paused_423_file_locked`) → **W63c** zamknąć plik testowy → enqueue+cykl → `write_test_ok_at` → właściciel `FILE_MODE=prod` → jeden cykl odczytu prod → backlog aktywnych → meldunek. Stan: `write_enabled=true`, `write_test_ok_at` null, `mode=test`, pending 0. Bez prod przez agenta. import **383**.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — import pliku KSH **zostaje wyłączony** (`import_enabled` false); włączenie dopiero po wiadomości właściciela „włącz” (lista zmian Harmonogram → Zmiany z pliku KSH).
@@ -1474,6 +1474,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W62 | #597 F7: swap z samą stroną SE w pliku = samo SE (wygląda jak PL). Propozycja znacznika „— / SE”; do decyzji zostaje obecne zachowanie | #597 / po F7 | **zamknięte 28.10.2026 19:40** — właściciel: `... / SE` i `PL / ...` (#618) |
 | W63 | #637: właściciel ustawia Edge `SHAREPOINT_FILE_MODE=test` i sprawdza po nazwie, że `SHAREPOINT_TEST_FILE_URL` istnieje; pisze „W63 gotowe”. Sekrety wpisuje **wyłącznie właściciel** (wykonawca nie ustawia przez API). | #637 | **zamknięte 29.10.2026 13:50** — właściciel: „W63 gotowe” |
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
+| W63c | #637: zamknąć plik testowy SharePoint (Excel/OneDrive) — PUT dostaje `upload_http_423`. Po „W63c gotowe” agent: enqueue awizacja + cykl → `write_test_ok_at`. | #637 | **czeka** |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -2001,3 +2002,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 14:30 | #639 SCALONE (`9be41712`, F7 gotowe @ b4065e9); deploy-main ✔; #637 próba na kopii → **W63** (brak FILE_MODE=test); start F7 #638 (0335) | pętla |
 | 29.10.2026 15:10 | #637: W63 zamknięte; write_enabled=true + pending=1; runtime `mode=prod`/`write_test_required` → **W63b** (wartość `test` + Redeploy); F7 #641 korekta W63 | pętla |
 | 29.10.2026 15:25 | #641 SCALONE (`75ab2af5`); #637 mode=test → conflict prod≠kopia → wybór **(a)** baseline z kopii (`resolveOutboundExpected`) | pętla |
+| 29.10.2026 16:05 | #642 SCALONE (`fda91ecc`, F7 gotowe); deploy-main ✔; cykl test → PUT **423** → **W63c**; #638 F7 gotowe @ fe9e350 (CONFLICTING docs) | pętla |

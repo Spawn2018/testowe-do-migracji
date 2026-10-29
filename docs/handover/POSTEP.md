@@ -6815,3 +6815,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Sprawa konfliktu: brak otwartego `TOWER_KSH_CONFLICT` / ryzyka file_* (ack już zjadł outbound).
 - **Krok:** `resolveOutboundExpected` — w `test` expected = migawka z `fileSnapshot` (kopia); prod bez zmian. Unit +3. Gałąź `pakiet/637-test-mode-snap-baseline`. Po F7/deploy: nowa awizacja + cykl → `write_test_ok_at`.
 
+
+## 2026-10-29 16:05 — #642 SCALONE; #637 PUT 423 → W63c
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #637 pierwsze (423).
+- Scalanie: #642 → `fda91ecc` (F7: gotowe @ 49778bd po HEAD; CI unit/visual/db ✔). deploy-main ✔ (Edge). Bez push na main.
+- Po wdrożeniu: enqueue awizacja (driver/phone/tractor/trailer) + `ksh-sharepoint-sync`; `mode=test`; **PUT `upload_http_423`** (kopia otwarta). Outbound #2 failed@5; #3 paused (`skipped`/`paused_423_file_locked`) żeby cron nie spalał prób.
+- **W63c:** zamknąć plik testowy → „W63c gotowe” → enqueue + cykl → `write_test_ok_at`. Potem właściciel `FILE_MODE=prod` + jeden cykl odczytu prod przed backlogiem (F7 #642).
+- #638: F7 gotowe @ `fe9e350`, CI ✔, merge CONFLICTING (docs PLAN po #642) — rebase po W63c / równolegle bez przerywania #637.
