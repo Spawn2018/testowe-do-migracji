@@ -10,7 +10,7 @@ import { t } from '../i18n/messages';
 import { sv, svp } from '../i18n/sail7';
 import { getNowIso } from '../lib/frozenNow';
 import { effArrival, effDeparture } from '../lib/sailings';
-import { reachOf, sailDay, sailRows, sailTime, sourceKey, type SailRow } from '../lib/sailView';
+import { lineOf, reachOf, sailDay, sailRows, sailTime, sourceKey, type SailRow } from '../lib/sailView';
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
 import { DIGITRAFFIC_PORTCALL_ATTRIBUTION } from '../lib/ferry/digitrafficPortCalls';
@@ -26,7 +26,7 @@ import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
 import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
 import { ferryRouteLabel, ferryRouteName, ferryRouteShort } from '../lib/portName';
-import { currentVesselGroups, defaultVessel, vesselOperator, type VesselGroup } from '../lib/vesselGroups';
+import { currentVesselGroups, defaultVessel, vesselOperator, VESSELS_FALLBACK, type VesselGroup } from '../lib/vesselGroups';
 import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../lib/sailingsForm';
 import { vesselsLoader } from '../lib/vesselsLoad';
 
@@ -84,6 +84,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         setFuture(false);
         setReturns(true);
       }
+      /* N6 (F7 #674): wejście z wiersza promu pokazuje rejs także przy innym wybranym armatorze */
+      setLineSel('ALL');
       setFocusId(sailingFocus);
     }
   }
@@ -154,8 +156,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         <button type="button" className="chipbtn" aria-pressed={returns} data-sail-returns onClick={() => setReturns((v) => !v)}>
           {sv(locale, 'sv_returns')}
         </button>
-        {lineOptions.length > 1 ? (
-          <select
+        {/* N4 (F7 #674): filtr zawsze widoczny — sześciu armatorów */}
+        <select
             className="input sv-line"
             value={lineSel}
             aria-label={sv(locale, 'sv_line_filter')}
@@ -165,7 +167,6 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             <option value="ALL">{sv(locale, 'sv_line_all')}</option>
             {lineOptions.map((op) => <option key={op} value={op}>{operatorName(op)}</option>)}
           </select>
-        ) : null}
         <div className="spacer" />
         {canEditSailings ? (
           <button type="button" className="btn" data-sail-new onClick={() => { setAdding((v) => !v); setErr(null); }}>
@@ -201,7 +202,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           <dl className="kv">
             <dt>{t(locale, 'sail_col_vessel')}</dt>
             <dd>
-              <select name="vessel" className="input" defaultValue={defaultVessel(vesselGroups)}>
+              <select key={vesselGroups === VESSELS_FALLBACK ? 'zapas' : 'baza'} name="vessel" className="input" defaultValue={defaultVessel(vesselGroups)}>
                 {vesselGroups.map((g) => (
                   <optgroup key={g.op} label={operatorName(g.op)}>
                     {g.names.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -267,7 +268,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
       })() : null}
 
       {rows.length === 0 ? (
-        <div className="empty" data-sail-empty><p>{sv(locale, emptyRowsKey(lineSel, future, returns))}</p></div>
+        <div className="empty" data-sail-empty><p>{sv(locale, emptyRowsKey(lineSel, lineSel === 'ALL' || sailings.some((x) => lineOf(x) === lineSel), future, returns))}</p></div>
       ) : phone ? (
         <ul className="sv-cards" data-sail-cards>
           {rows.map((r) => (

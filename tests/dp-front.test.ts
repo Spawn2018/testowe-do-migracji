@@ -9,7 +9,7 @@ import { p9m, p9mp } from '../src/i18n/p9c';
 import { p9e, p9ep } from '../src/i18n/p9e';
 import { sv } from '../src/i18n/sail7';
 import { ferryRouteEnds } from '../src/lib/portName';
-import { createVesselsLoader, currentVesselGroups, defaultVessel, groupVessels, LEGACY_VESSEL_ROUTE, routeOfVessel, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
+import { createVesselsLoader, currentVesselGroups, defaultVessel, groupVessels, LEGACY_VESSEL_ROUTE, routeOfVessel, subscribeVesselGroups, vesselGroupsVersion, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
 import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../src/lib/sailingsForm';
 import { ferryLaneLines, HERE_FERRY_LEGS } from '../src/lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../src/lib/map/ferryLines';
@@ -189,6 +189,34 @@ describe('DP-16, DP-17 · jedna pamięć listy statków', () => {
     expect(routeOfVessel('Galileusz')).toBe('GDN-NYN');
     l.reset();
   });
+  it('N7: dwa równoczesne wywołania → jedno pobranie', async () => {
+    let calls = 0;
+    const l = createVesselsLoader(async () => { calls++; return groups; });
+    l.reset();
+    await Promise.all([l.load(), l.load()]);
+    expect(calls).toBe(1);
+    l.reset();
+  });
+  it('B1/N1: zmiana listy powiadamia subskrybentów; mapa i tabela mapy zależą od listy', async () => {
+    let n = 0;
+    const off = subscribeVesselGroups(() => { n++; });
+    const l = createVesselsLoader(async () => groups);
+    const v0 = vesselGroupsVersion();
+    await l.load();
+    expect(n).toBeGreaterThanOrEqual(1);
+    expect(vesselGroupsVersion()).toBeGreaterThan(v0);
+    off();
+    l.reset();
+    /* mapRow z listą sesji (z bazy) */
+    expect(mapRow(ferryLoad('Galileusz'), ctx({ vessels: groups })).stageSub).toBe('Galileusz · Gdańsk → Nynäshamn');
+    expect(mapRow(ferryLoad('Galileusz'), ctx()).stageSub).toBe('Galileusz');
+    const cm = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
+    expect(cm).toMatch(/const vessels = useVesselGroups\(\);/);
+    expect(cm).toMatch(/panelAtSite, applyHover, vessels\]\);/);
+    expect(cm).toMatch(/routeOfVessel\(l\.ferry\.vessel, vessels\)/);
+    const mv = readFileSync('src/views/MapView.tsx', 'utf8');
+    expect(mv).toMatch(/fixIds, sailings, locale, vessels\]\);/);
+  });
   it('po błędzie pamięć się czyści i następne wywołanie próbuje ponownie', async () => {
     let calls = 0;
     const l = createVesselsLoader(async () => { calls++; if (calls === 1) throw new Error('x'); return groups; });
@@ -210,13 +238,21 @@ describe('DP-19 · domyślny statek', () => {
 });
 
 describe('DP-20 · filtr armatora w Rejsach (decyzja 55)', () => {
-  it('zawsze 6 armatorów, także bez rejsów', () => {
-    expect([...sailingLineOptions()].sort()).toEqual(['DFDS', 'ECKERO', 'POLFERRIES', 'STENA', 'TALLINK', 'VIKING']);
+  it('zawsze 6 armatorów, także bez rejsów — N2: kolejność katalogu (Polferries pierwsze)', () => {
+    expect(sailingLineOptions()).toEqual(['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS']);
   });
-  it('armator bez rejsów → komunikat decyzji 55', () => {
-    expect(emptyRowsKey('DFDS', true, false)).toBe('sv_line_empty');
+  it('N3: decyzja 55 tylko gdy armator nie ma żadnego rejsu; ukryte filtrem → zwykły komunikat', () => {
+    expect(emptyRowsKey('DFDS', false, true, false)).toBe('sv_line_empty');
     expect(sv('pl', 'sv_line_empty')).toMatch(/Brak rejsów tego armatora/);
-    expect(emptyRowsKey('ALL', true, false)).toBe('sv_none_future');
-    expect(emptyRowsKey('ALL', false, true)).toBe('sv_none');
+    expect(emptyRowsKey('DFDS', true, true, false)).toBe('sv_none_future');
+    expect(emptyRowsKey('DFDS', true, false, true)).toBe('sv_none');
+    expect(emptyRowsKey('ALL', true, true, false)).toBe('sv_none_future');
+    expect(emptyRowsKey('ALL', true, false, true)).toBe('sv_none');
+  });
+  it('N4–N6: filtr zawsze widoczny, wybór statku po pobraniu listy, wejście z promu zeruje filtr', () => {
+    const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
+    expect(panel).not.toMatch(/lineOptions\.length > 1/);
+    expect(panel).toMatch(/<select key=\{vesselGroups === VESSELS_FALLBACK \? 'zapas' : 'baza'\} name="vessel"/);
+    expect(panel).toMatch(/setLineSel\('ALL'\);\n\s*setFocusId\(sailingFocus\)/);
   });
 });

@@ -66,7 +66,29 @@ export function routeOfVessel(vessel: string | null | undefined, groups: readonl
 }
 
 /* DP-16, DP-17: jedna lista statków na sesję — Rejsy i mapy. Loader wstrzykiwany (testy, paczka demo bez Supabase). */
+/**
+ * N8: stan sesji modułu — ostatnia lista statków pobrana z bazy (null = jeszcze nie pobrano albo błąd).
+ * Wspólny dla wszystkich widoków; zmiana podbija `vesselGroupsVersion` i powiadamia subskrybentów (B1).
+ */
 let lastGroups: readonly VesselGroup[] | null = null;
+let version = 0;
+const listeners = new Set<() => void>();
+
+/** B1/N1 (F7 #674): wersja listy statków — zależność efektów i memo map, żeby dymki odświeżyły się po pobraniu. */
+export function vesselGroupsVersion(): number {
+  return version;
+}
+
+export function subscribeVesselGroups(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => { listeners.delete(fn); };
+}
+
+function setLastGroups(g: readonly VesselGroup[] | null): void {
+  lastGroups = g;
+  version += 1;
+  for (const fn of listeners) fn();
+}
 
 /** Ostatnio pobrana lista z bazy albo lista zapasowa (DP-17: mapy widzą statki dopisane w bazie). */
 export function currentVesselGroups(): readonly VesselGroup[] {
@@ -85,7 +107,7 @@ export function createVesselsLoader(fetchGroups: () => Promise<VesselGroup[]>): 
   return {
     load() {
       cache ??= fetchGroups().then((g) => {
-        if (g.length) lastGroups = g;
+        if (g.length) setLastGroups(g);
         return g;
       }).catch((e: unknown) => {
         cache = null;
@@ -95,7 +117,7 @@ export function createVesselsLoader(fetchGroups: () => Promise<VesselGroup[]>): 
     },
     reset() {
       cache = null;
-      lastGroups = null;
+      setLastGroups(null);
     },
   };
 }
