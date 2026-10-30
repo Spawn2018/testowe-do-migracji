@@ -224,14 +224,19 @@ export function mergeDfdsSailings(primary: DfdsSailing[], secondary: DfdsSailing
   return out;
 }
 
-/** F7 #668 N1: zapas PDF/HTML tylko dla (trasa + doba UTC) nieobecnej w API — nie po exact departureUtc. */
+/** Doba lokalna odjazdu (PLD = Tallinn, KPS = Sztokholm) — nie slice UTC (00:30 EET ≠ poprzedni dzień). */
+export function dfdsLocalDayKey(s: DfdsSailing): string {
+  const tz = s.route === 'PLD-KPS' ? 'Europe/Tallinn' : 'Europe/Stockholm';
+  return `${s.route}|${ymdInTz(new Date(s.departureUtc), tz)}`;
+}
+
+/** F7 #668 N1/r3: zapas PDF/HTML tylko dla (trasa + doba lokalna) nieobecnej w API. */
 export function mergeDfdsMissingDays(api: DfdsSailing[], fallback: DfdsSailing[]): DfdsSailing[] {
-  const days = new Set(api.map((s) => `${s.route}|${s.departureUtc.slice(0, 10)}`));
+  const days = new Set(api.map(dfdsLocalDayKey));
   const out = [...api];
   const seen = new Set(api.map((s) => `${s.route}|${s.departureUtc}`));
   for (const s of fallback) {
-    const day = `${s.route}|${s.departureUtc.slice(0, 10)}`;
-    if (days.has(day)) continue;
+    if (days.has(dfdsLocalDayKey(s))) continue;
     const k = `${s.route}|${s.departureUtc}`;
     if (seen.has(k)) continue;
     seen.add(k);

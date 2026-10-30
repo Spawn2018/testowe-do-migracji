@@ -92,9 +92,14 @@ describe('BN1 — ferry_dict_snapshot → katalog', () => {
     expect(isOutbound('KAA-GDY')).toBe(false);
   });
 
-  /* F7 #668 N3: 12 seed + 2 aliasy Terminal A = 14 kodów jak ferry_routes na prod */
-  it('F7 #668 N3: każdy kod FERRY_ROUTES + TLLA/HELA ma routeLabelPl i short ≠ kod', () => {
-    const codes = [...FERRY_ROUTES.map((r) => r.code), 'TLLA-HEL', 'HELA-TLL'];
+  /* F7 #668 r3 N3: jawna lista 14 kodów (nie z FERRY_ROUTES) */
+  it('F7 #668 N3: każdy z 14 kodów ma routeLabelPl i short ≠ kod', () => {
+    const codes = [
+      'GDN-NYN', 'GDY-KAA', 'NYN-GDN', 'KAA-GDY',
+      'TLL-HEL', 'MUU-VUO', 'TLL-STO', 'PLD-KPS',
+      'HEL-TLL', 'VUO-MUU', 'STO-TLL', 'KPS-PLD',
+      'TLLA-HEL', 'HELA-TLL',
+    ] as const;
     expect(codes).toHaveLength(14);
     for (const c of codes) {
       const pl = routeLabelPl(c);

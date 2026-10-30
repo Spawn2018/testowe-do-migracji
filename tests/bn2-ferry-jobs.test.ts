@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  runFerryPortnet, runFerrySchedule,
+  fetchStenaDays, runFerryPortnet, runFerrySchedule,
   type JobDeps, type JobResult, type SyncStore,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
@@ -37,6 +37,8 @@ class MemStore implements SyncStore {
       { id: MYST, name: 'M/F MyStar', mmsi: 276817000 },
       { id: SIRENA, name: 'M/F Sirena Seaways', mmsi: 277569000 },
       { id: 'v-xprs', name: 'M/F Viking XPRS', mmsi: 230629000 },
+      { id: 'v-cind', name: 'M/F Viking Cinderella', mmsi: null },
+      { id: 'v-gab', name: 'M/F Gabriella', mmsi: null },
       { id: 'v-fin', name: 'M/F Finlandia', mmsi: 230987000 },
       { id: 'v-queen', name: 'M/F Baltic Queen', mmsi: 276815000 },
       { id: 'v-waw', name: 'M/F Wawel', mmsi: null },
@@ -426,16 +428,34 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
   it('#666: DFDS Dynamic API → rejsy PLD-KPS/KPS-PLD; HTML/PDF zbędne', async () => {
     const st = new MemStore();
     const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
-    const pages: Record<string, string | number> = {
-      ...tallinkPages,
-      'api/timetable': JSON.stringify([...both.pld_kps_week44, ...both.kps_pld_week44]),
-      'routes-and-schedules': 503,
-      'ctfassets.net': 503,
-    };
-    await runFerrySchedule(deps(st, pages));
+    let pageHits = 0;
+    let pdfHits = 0;
+    const apiBody = JSON.stringify([...both.pld_kps_week44, ...both.kps_pld_week44]);
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) return new Response(apiBody, { status: 200 });
+      if (url.includes('routes-and-schedules')) { pageHits += 1; return new Response('err', { status: 503 }); }
+      if (url.includes('ctfassets.net')) { pdfHits += 1; return new Response('err', { status: 503 }); }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'KPS-PLD')).toBe(true);
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    /* F7 #668 r3 N2: przy pełnym API zero zapytań do strony/PDF */
+    expect(pageHits).toBe(0);
+    expect(pdfHits).toBe(0);
   });
 
   it('B2: odwołanie dziś nie oznacza jutrzejszego rejsu o tej godzinie', async () => {
@@ -716,5 +736,26 @@ describe('#666 F7 Stena 60 d — równoległość i SOURCE_DOWN tylko przy total
     }) as typeof fetch;
     await runFerrySchedule({ store: stOk, fetch: f, env: {}, now: () => NOW });
     expect(stOk.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_SCHEDULE:'))).toBe(false);
+  });
+
+  it('F7 #668 r3 N9: budżet 0 ms → ostrzeżenie; bez SOURCE_DOWN gdy coś pobrano', async () => {
+    const STENA_JSON = fx('stena-timetable-gdka-2026-10-01.json');
+    let n = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('_jcr_content.timetable.')) {
+        n += 1;
+        await new Promise((r) => setTimeout(r, 15));
+        return new Response(STENA_JSON.replaceAll('2026-10-01', '2026-10-30'), { status: 200 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    /* budgetMs=0: pierwsza fala (≤4) startuje przy elapsed=0; kolejne pomijane po upływie czasu */
+    const r = await fetchStenaDays({ store: new MemStore(), fetch: f, env: {}, now: () => NOW }, 8, 0);
+    expect(r.warnings.some((w) => /przerwano/i.test(w))).toBe(true);
+    expect(r.fetchedOk).toBeGreaterThan(0);
+    expect(n).toBeLessThan(16); // 8 d × 2; część pominięta
+    /* fetchedOk>0 → w jobie nie byłoby SOURCE_DOWN (tylko przy totalnej awarii) */
+    expect(r.fetchedOk === 0).toBe(false);
   });
 });

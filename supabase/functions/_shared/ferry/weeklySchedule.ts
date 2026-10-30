@@ -102,29 +102,33 @@ const MONTH: Record<string, string> = {
 
 export type YmdRange = { from: string; to: string };
 
-/** Zakresy dat z nagłówków sezonowych (EN „Jan 6th 2026 - Dec 23rd 2026”, „01.09.2026–21.06.2027”). */
+/** Zakresy dat z nagłówków sezonowych (EN „Jan 6th 2026 - Dec 23rd 2026”, „01.09.2026–21.06.2027”).
+ * F7 #668 r3: sortuj po pozycji w tekście (mieszane formaty EN / dd.mm.yyyy). */
 export function parseSeasonRanges(raw: string): YmdRange[] {
   const text = stripTags(raw).replace(/\u00a0/g, ' ');
-  const out: YmdRange[] = [];
+  const found: { from: string; to: string; pos: number }[] = [];
   const reEn =
     /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\s*[-–—]\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\b/gi;
   let m: RegExpExecArray | null;
   while ((m = reEn.exec(text)) != null) {
     const from = `${m[3]}-${MONTH[m[1]!.toLowerCase()]!}-${m[2]!.padStart(2, '0')}`;
     const to = `${m[6]}-${MONTH[m[4]!.toLowerCase()]!}-${m[5]!.padStart(2, '0')}`;
-    out.push({ from, to });
+    found.push({ from, to, pos: m.index });
   }
   const reDot = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g;
   while ((m = reDot.exec(text)) != null) {
-    out.push({
+    found.push({
       from: `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`,
       to: `${m[6]}-${m[5]!.padStart(2, '0')}-${m[4]!.padStart(2, '0')}`,
+      pos: m.index,
     });
   }
-  return out;
+  found.sort((a, b) => a.pos - b.pos);
+  return found.map(({ from, to }) => ({ from, to }));
 }
 
+/** F7 #668 r3: pusta lista = poza sezonem (false). „Bez sezonu” obsłuż jawnie u wołającego. */
 export function ymdInRanges(ymd: string, ranges: YmdRange[]): boolean {
-  if (ranges.length === 0) return true;
+  if (ranges.length === 0) return false;
   return ranges.some((r) => ymd >= r.from && ymd <= r.to);
 }

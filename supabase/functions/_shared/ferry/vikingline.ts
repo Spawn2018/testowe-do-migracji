@@ -285,14 +285,19 @@ export function parseVikingTimetableHtml(
     const body = tm[2] ?? '';
     if (!/Departure|Odjazd|Lähtö/i.test(body) || !/Day|Päivä|Dzień/i.test(body)) continue;
     const idx = tm.index ?? 0;
-    /* F7 #668 r2: na prawdziwej stronie Cargo nagłówek sezonu jest ~750 znaków przed <table>
-       (c-accordion__title). Bierzemy ostatni zakres dat w całym prefiksie — nie okno 600. */
+    /* F7 #668 r3: sezon = ostatnie otwarcie c-accordion__item przed tabelą (nie pierwszy w prefiksie).
+       Przy strukturze akordeonu bez seasonAll z wcześniejszych elementów. */
     const before = html.slice(0, idx);
-    const seasonAll = parseSeasonRanges(before);
-    const accordionChunk = before.match(/<(?:details|div)[^>]*c-accordion__item[^>]*>[\s\S]*$/i)?.[0]
-      ?? before.match(/<details[\s\S]*$/i)?.[0];
-    const fromAccordion = accordionChunk ? parseSeasonRanges(accordionChunk) : [];
-    const picked = fromAccordion.length ? fromAccordion : seasonAll;
+    const itemOpenRe = /<(?:details|div)\b[^>]*\bc-accordion__item\b[^>]*>/gi;
+    let lastOpenIdx = -1;
+    let openM: RegExpExecArray | null;
+    while ((openM = itemOpenRe.exec(before)) != null) lastOpenIdx = openM.index;
+    const hasAccordion = lastOpenIdx >= 0;
+    const accordionChunk = hasAccordion
+      ? before.slice(lastOpenIdx)
+      : (before.match(/<details[\s\S]*$/i)?.[0] ?? null);
+    const fromChunk = accordionChunk ? parseSeasonRanges(accordionChunk) : [];
+    const picked = hasAccordion ? fromChunk : parseSeasonRanges(before);
     if (picked.length === 0) {
       warnings.push('Struktura rozkładu Viking zmieniona: tabela bez rozpoznanego sezonu — pominięta.');
       continue;
@@ -300,7 +305,7 @@ export function parseVikingTimetableHtml(
     const ranges: YmdRange[] = [picked[picked.length - 1]!];
     let route: FerryRoute | null =
       routeFromLabel(attrs) ??
-      routeFromLabel(before.slice(-900)) ??
+      routeFromLabel(accordionChunk ?? '') ??
       routeFromLabel(body.slice(0, 240));
     if (!route) {
       if (/data-route\s*=\s*["']helsinki-tallinn["']/i.test(attrs)) route = 'HELA-TLL';
@@ -355,9 +360,11 @@ export function parseVikingTimetableHtml(
     for (const ymd of day.ymds) {
       if (!dates.includes(ymd)) continue;
       for (const leg of day.legs) {
-        /* F7 #668 N6: statek z tabeli sezonowej (ta sama trasa+godzina), nie na sztywno XPRS. */
-        const fromTable = legs.find((l) => l.route === leg.route && l.depHm === leg.depHm)?.vessel
-          ?? legs.find((l) => l.route === leg.route)?.vessel
+        /* F7 #668 N6/r3: statek z tabeli sezonowej w zakresie daty (lato = Cinderella, nie XPRS). */
+        const fromTable = legs.find((l) =>
+          l.route === leg.route && l.depHm === leg.depHm && ymdInRanges(ymd, l.ranges)
+        )?.vessel
+          ?? legs.find((l) => l.route === leg.route && ymdInRanges(ymd, l.ranges))?.vessel
           ?? 'M/F Viking XPRS';
         pushUtcSailing(sailings, leg.route, fromTable, ymd, leg.depHm, leg.arrHm, false);
       }

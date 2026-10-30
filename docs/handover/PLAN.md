@@ -1155,13 +1155,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
-Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r2 @ `3cb0674` — **POPRAWKI** (Bloker 1 Cargo sezony + N1–N9); po pushu — **czekam F7 „gotowe do scalenia”**.
-1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r2: sezon z akordeonu / ostrzeżenie bez „wszystkich dat”; fixture accordion; statek z tabeli w Planned changes.
-2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351)~~; N4 `historicalSailingsAllowed`; N5 `actualDepartureAt` w `hasDeparted`.
-3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~; N3 etykiety 14 kodów.
+Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r3 poprawki @ PR #668 — Bloker 1 (ostatni akordeon) + Bloker 2 (DFDS doba lokalna) + uwagi 1–11; po pushu — **czekam F7 „gotowe do scalenia”**.
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3: sezon = ostatnie `c-accordion__item` przed tabelą (bez `seasonAll` przy akordeonie); fixture + nierozpoznany 2. element; Cinderella 22.6–8.8.2027; statek z `ymdInRanges` w Planned changes.
+2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351 + Cinderella/Gabriella)~~; N4 `historicalSailingsAllowed` (+ demo null); N5 `actualDepartureAt` w `hasDeparted`.
+3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~; N3 jawna lista 14 kodów.
 4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
-5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s; N8 Freight okno dziś+3; ~~**DFDS Dynamic**~~; N1/N2 zapas PDF tylko gdy API puste / doby brakujące.
-6. ~~Testy unit F7 r1 + Dynamic~~; F7 r2 testy Cargo/N3–N5/Freight; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: po wdrożeniu Cargo 403 z DC.
+5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s + przeplatanie GDKA/KAGD; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; N1 doba lokalna; N2/r3 zapas PDF przy pustym lub częściowym API.
+6. ~~Testy unit F7 r1–r3~~; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: prawdziwy scrape Cargo z IP domowego (403 z DC).
 
 ### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — PO #666
 Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3.
@@ -2136,3 +2136,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 20:03 | #668 CI unit/db/visual ✔ @ `5aaa0544` — czekam F7; DP-3/4/5/7/8 → PR #672; #667 po #666 | pętla |
 | 30.10.2026 20:30 | #672 SCALONE `8ec16105` (F7 gotowe @ 6e92dde); #668 F7 r2 POPRAWKI: Cargo sezony + N1–N9 + DP-14…21 | pętla |
 | 30.10.2026 20:35 | #668 F7 r2: Viking sezony (accordion) + DFDS N1/N2 + N5/N6/N8/N9; DP-20/21; #667 PR #673 krok A | pętla |
+| 30.10.2026 21:15 | #668 F7 r3: Viking ostatni accordion + DFDS doba lokalna + N2/N3/N4/N9; 0351 Cinderella/Gabriella; czekam F7 | pętla |
+| 30.10.2026 21:15 | #668 F7 r3 poprawki: Viking ostatni akordeon + DFDS doba lokalna + uwagi 1–11; DP-21 scrape z domu | pętla |

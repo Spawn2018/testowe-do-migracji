@@ -383,7 +383,7 @@ async function mapPoolLimit<T, R>(items: readonly T[], limit: number, fn: (item:
 /** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy.
  * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów.
  * F7 #668 N9: łączny budżet czasu (domyślnie 90 s) — po limicie zapisujemy już pobrane. */
-async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_000): Promise<{
+export async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_000): Promise<{
   sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number; structureFail: boolean;
 }> {
   const warnings: string[] = [];
@@ -394,7 +394,8 @@ async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_000): P
   /* N9: ścienny zegar — deps.now() w testach bywa zamrożony. */
   const started = Date.now();
   const dates = dateRangeYmd(deps.now(), days);
-  const jobs = (['GDKA', 'KAGD'] as const).flatMap((routeCode) => dates.map((date) => ({ routeCode, date })));
+  /* F7 #668 r3 N9: przeplatanie po dacie (GDKA/KAGD tego samego dnia), nie cała trasa najpierw. */
+  const jobs = dates.flatMap((date) => (['GDKA', 'KAGD'] as const).map((routeCode) => ({ routeCode, date })));
   const parts = await mapPoolLimit(jobs, 4, async ({ routeCode, date }) => {
     if (Date.now() - started > budgetMs) {
       return {
@@ -609,8 +610,9 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     }
   }
 
-  /* F7 #668 N2: gdy Dynamic dał rejsy — bez pobierania strony/PDF. */
-  if (apiSailings.length > 0) {
+  /* F7 #668 N2: pełne API → bez strony/PDF. r3 pkt 5: częściowa awaria → uzupełnij doby z PDF/HTML. */
+  const apiComplete = apiSailings.length > 0 && apiOk >= jobs.length;
+  if (apiComplete) {
     return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
   }
 
@@ -636,13 +638,21 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     if (fromPdf.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPdf.sailings);
   }
 
-  /* F7 #668 N1: PDF/HTML tylko doby (trasa+dzień) nieobecne w API — tu API puste, więc cały zapas. */
+  /* F7 #668 N1/r3: PDF/HTML tylko doby (trasa+dzień lokalny) nieobecne w API; także przy częściowej awarii. */
   const sailings = mergeDfdsMissingDays(apiSailings, fallback);
   if (sailings.length > 0) {
+    if (apiSailings.length > 0 && apiOk < jobs.length) {
+      const filled = sailings.length > apiSailings.length;
+      warnings.push(
+        filled
+          ? `DFDS: częściowa awaria API (${apiOk}/${jobs.length}) — uzupełniono brakujące doby z PDF/HTML.`
+          : `DFDS: częściowa awaria API (${apiOk}/${jobs.length}) — brak zapasu PDF/HTML dla brakujących tygodni.`,
+      );
+    }
     return {
       sailings,
       warnings,
-      fetchedOk: fallback.length > 0 ? 1 : 0,
+      fetchedOk: apiSailings.length > 0 ? apiOk : (fallback.length > 0 ? 1 : 0),
       structureFail: false,
     };
   }

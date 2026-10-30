@@ -13,9 +13,10 @@ import {
 } from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
 import {
-  extractDfdsSeasonalPdfUrl, mergeDfdsSailings, parseDfdsSchedule,
+  extractDfdsSeasonalPdfUrl, mergeDfdsMissingDays, mergeDfdsSailings, parseDfdsSchedule,
   parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../src/lib/ferry/dfds';
+import { parseSeasonRanges, ymdInRanges } from '../supabase/functions/_shared/ferry/weeklySchedule';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
 import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/lib/ferry/portsStockholm';
 
@@ -177,7 +178,9 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
 
   it('#666 A Cargo: sezony + 60 dni + wyjątek 24.12 tylko 10:30 HEL→TLL', () => {
     const r = parseVikingTimetableHtml(VIKING_CARGO_HTML, { fromYmd: '2026-10-30', days: 60 });
-    expect(r.warnings.filter((w) => /Struktura|pusta|zablokowana/i.test(w))).toEqual([]);
+    /* F7 #668 r3: fixture ma 2. element bez dat → jedno ostrzeżenie; bez pusta/zablokowana */
+    expect(r.warnings.filter((w) => /pusta|zablokowana/i.test(w))).toEqual([]);
+    expect(r.warnings.filter((w) => /bez rozpoznanego sezonu/i.test(w)).length).toBeGreaterThanOrEqual(1);
     expect(r.sailings.length).toBeGreaterThan(50);
     expect(r.sailings.every((s) => s.route === 'TLLA-HEL' || s.route === 'HELA-TLL')).toBe(true);
     // 30.10.2026 = Fri → HELA-TLL 07:45 / 14:15 (sezon 10.08–31.12.2026)
@@ -201,18 +204,29 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.some((s) => s.departureUtc.startsWith('2026-12-'))).toBe(true);
   });
 
-  it('F7 #668 r2: Cargo accordion — 30.10 bez duplikatów sezonów; Cinderella tylko lato 2027', () => {
+  it('F7 #668 r3: Cargo accordion — ostatni element; Cinderella tylko 22.6–8.8.2027', () => {
     const r = parseVikingTimetableHtml(VIKING_CARGO_HTML, { fromYmd: '2026-10-30', days: 60 });
+    /* (a) 2. element fixture bez dat → ostrzeżenie, 0 duplikatów */
+    expect(r.warnings.some((w) => /bez rozpoznanego sezonu|Struktura/i.test(w))).toBe(true);
+    const allKeys = r.sailings.map((s) => `${s.route}|${s.departureUtc}`);
+    expect(allKeys.length).toBe(new Set(allKeys).size);
     const day = r.sailings.filter((s) => s.departureUtc.startsWith('2026-10-30'));
-    const keys = day.map((s) => `${s.route}|${s.departureUtc}`);
-    expect(keys.length).toBe(new Set(keys).size);
     expect(day.filter((s) => s.route === 'HELA-TLL' && s.departureUtc.includes('T05:45')).length).toBe(1);
-    const cinderella = r.sailings.filter((s) => /Cinderella|Gabriella/i.test(s.vessel));
+    /* (b) horyzont lato 2027 — Cinderella jest w 22.6–8.8 i nigdzie poza (nie every([])) */
+    const summer = parseVikingTimetableHtml(VIKING_CARGO_HTML, { fromYmd: '2027-06-15', days: 70 });
+    const cinderella = summer.sailings.filter((s) => /Cinderella|Gabriella/i.test(s.vessel));
+    expect(cinderella.length).toBeGreaterThan(0);
     expect(cinderella.every((s) => {
       const d = s.departureUtc.slice(0, 10);
       return d >= '2027-06-22' && d <= '2027-08-08';
     })).toBe(true);
-    // tabela bez sezonu → ostrzeżenie, nie „wszystkie daty”
+    const outsideSummer = summer.sailings.filter((s) => {
+      if (!/Cinderella|Gabriella/i.test(s.vessel)) return false;
+      const d = s.departureUtc.slice(0, 10);
+      return d < '2027-06-22' || d > '2027-08-08';
+    });
+    expect(outsideSummer).toHaveLength(0);
+    // tabela bez sezonu / bez akordeonu → ostrzeżenie, nie „wszystkie daty”
     const bare = parseVikingTimetableHtml(
       '<table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>'
       + '<tr><td>07.45</td><td>10.00</td><td>Fri</td><td>Viking XPRS</td></tr></table>',
@@ -220,6 +234,36 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     );
     expect(bare.sailings).toHaveLength(0);
     expect(bare.warnings.some((w) => /bez rozpoznanego sezonu|Struktura/i.test(w))).toBe(true);
+  });
+
+  it('F7 #668 r3: parseSeasonRanges po pozycji; ymdInRanges([]) = false', () => {
+    const mixed = parseSeasonRanges('Jan 1st 2027 - Jun 21st 2027 then 22.6.2027–8.8.2027');
+    expect(mixed.map((r) => `${r.from}/${r.to}`)).toEqual([
+      '2027-01-01/2027-06-21',
+      '2027-06-22/2027-08-08',
+    ]);
+    expect(ymdInRanges('2027-07-01', [])).toBe(false);
+  });
+
+  it('F7 #668 r3 N1: mergeDfdsMissingDays — doba lokalna (nie UTC slice)', () => {
+    // 23:59 EET 26.10 = 21:59 UTC; PDF 22:00 EET tej samej doby = 19:00 UTC
+    const api = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-26T21:59:00.000Z', arrivalUtc: '2026-10-27T07:00:00.000Z',
+    }];
+    const pdfSameDay = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-26T19:00:00.000Z', arrivalUtc: '2026-10-27T05:00:00.000Z',
+    }];
+    const pdfMissing = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-28T19:00:00.000Z', arrivalUtc: '2026-10-29T05:00:00.000Z',
+    }];
+    const merged = mergeDfdsMissingDays(api, [...pdfSameDay, ...pdfMissing]);
+    expect(merged).toHaveLength(2);
+    expect(merged.some((s) => s.departureUtc === '2026-10-26T21:59:00.000Z')).toBe(true);
+    expect(merged.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(false);
+    expect(merged.some((s) => s.departureUtc === '2026-10-28T19:00:00.000Z')).toBe(true);
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

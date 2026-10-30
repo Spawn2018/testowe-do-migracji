@@ -1,6 +1,12 @@
 -- #666 F7: guard_load_update — rejs z actual_departure_at uznany za wypłynięty
 -- (nie tylko planowa/opóźniona godzina). SCX / HHL_OPS nie przypiszą takiego rejsu.
 -- Patch jak 0293 (bez pełnego przepisywania funkcji).
+-- F7 #668 r3: M/F Viking Cinderella + Gabriella (lato 2027 Cargo) — bez nich job pomija rejsy.
+
+insert into public.vessels (name, operator, mmsi, imo) values
+  ('M/F Viking Cinderella', 'Viking Line', null, null),
+  ('M/F Gabriella',         'Viking Line', null, null)
+on conflict (name) do nothing;
 
 do $patch$
 declare

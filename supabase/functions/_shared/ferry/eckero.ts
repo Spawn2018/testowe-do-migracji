@@ -136,7 +136,8 @@ export function parseEckeroTimetableHtml(
   const dates = dateRangeFromYmd(fromYmd, days);
   for (const leg of legs) {
     for (const ymd of dates) {
-      if (!ymdInRanges(ymd, leg.ranges)) continue;
+      /* F7 #668 r3: ymdInRanges([]) = false — bez sezonu = wszystkie daty (jawnie). */
+      if (leg.ranges.length > 0 && !ymdInRanges(ymd, leg.ranges)) continue;
       if (!leg.days.has(weekdayInTz(ymd, leg.tzDep))) continue;
       const depUtc = localToUtc(ymd, leg.depHm, 0, leg.tzDep);
       const arrUtc = localToUtc(ymd, leg.arrHm, leg.arrNextDay ? 1 : 0, leg.tzArr);
