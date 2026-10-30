@@ -1155,8 +1155,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
-Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653 dzwonek~~ SCALONE; dalej #654/#651.
-1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** SCALONE (`e2599170` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal; PORT_OUT A/D r=250; strefy po rodzinie trasy. **0339** SCALONE (`00a24fe0` / PR #649). **#648** (PR #654 / **0343**): `bn1_seed_baltic_geofences`; e2e TLLA-HEL→Tallinn A; `ferry_route_set_active` (+`assert_not_preview`); FK odłożone. **CASE remain** (PR #651 / **0344**, F7 gotowe @ `52861cdc` — po #654).
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653 dzwonek~~ SCALONE; ~~#654/#648 **0343**~~ SCALONE (`80580d54`); dalej **#651 / 0344**.
+1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** SCALONE (`e2599170` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal; PORT_OUT A/D r=250; strefy po rodzinie trasy. **0339** SCALONE (`00a24fe0` / PR #649). **#648** SCALONE (`80580d54` / PR #654 / **0343**): `bn1_seed_baltic_geofences`; e2e TLLA-HEL→Tallinn A; `ferry_route_set_active` (+`assert_not_preview`); FK odłożone. **CASE remain** (PR #651 / **0344**): `apply_ferry_se_from_position` + `sailing_mismatch_*` → słownik; assign tylko PL outbound; e2e NYN/KAA; status **498**.
 2. BN2…BN10 — jak #573 (rozkłady, opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2034,6 +2034,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 21:55 | #649 CI fix: `outboundRoutesOf` string[]; fixture AIS jak #496 | pętla |
 | 29.10.2026 22:00 | #649 F7 r2: AIS backup po rodzinie SE; e2e NYN-GDN/GDN-NYN; status **476** | pętla |
 | 29.10.2026 22:20 | #649 CI: EXPECTED status 470→476 (db gate) | pętla |
+| 29.10.2026 23:00 | #649 SCALONE (`00a24fe0`); start CASE remain (SE/mismatch → słownik) | pętla |
 | 29.10.2026 23:10 | #650 PILNE (przed #651): komplet 6 pól WT→plik **0340**; #651 CI bez zmian plików | pętla |
 | 29.10.2026 23:40 | #650 F7 POPRAWKI: WT nadpisuje 6 pól (decyzja 23:24); N3/N5; import **393** | pętla |
 | 30.10.2026 00:10 | #650 F7 r2: B1' daty≠blokada WT6; bez PUT; write_via; import **395** | pętla |
@@ -2046,3 +2047,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 04:05 | #656 F7 r4: testy import — KSH_ROW_GONE z importu, workflow_worker, CARRIER≥1; import **424** | pętla |
 | 30.10.2026 05:55 | #656 SCALONE `36ee0417`; #654 → **0343** (assert_not_preview, boolean t/f, EXPECTED) | pętla |
 | 30.10.2026 06:15 | #654 CI ✔ @ `581162b8` (unit/visual/db); czeka F7; #651 → **0344** po #654 | pętla |
+| 30.10.2026 06:37 | #654 SCALONE `80580d54` (F7 @ c7a1b9c); #651 rebase → **0344**, status **498** | pętla |
