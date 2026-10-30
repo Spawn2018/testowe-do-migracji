@@ -7156,6 +7156,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 ## 2026-10-30 13:25 — #663 SCALONE; start #662-b
 
 - Skrzynka: #662 pilne — connector SCALONE; #608 w planie; #550 WSTRZYMANE.
-- Scalanie: #663 → `189688bc` (F7 @ `2941001`, CI unit/visual/db ✔). deploy-main `41055098148` w toku (Edge `safefleet-poll`).
-- **Krok #662-b** (`pakiet/662-b-safefleet-audit`, **0350**): `audit_row_change` v_skip `safefleet_*`; `safefleet_token` w v_secret; maska URL w `audit_log` (+ jednorazowo); job `ok=false` przy down/invalid; sort trajektorii od najstarszego; security +1 (EXPECTED **495** / TEST **491**).
+- Scalanie: #663 → `189688bc` (F7 @ `2941001`, CI unit/visual/db ✔).
+- **NA PRODUKCJI** `189688bc`, 30.10.2026 14:26 CEST — Edge `safefleet-poll` (12:26:16Z), **0349**, Vercel `tower.log-mar.pl` (12:28:22Z), deploy-main `41055098148` ✔.
+- **Krok #662-b** PR #664 (`pakiet/662-b-safefleet-audit`, **0350** @ `9d623534`): `audit_row_change` v_skip `safefleet_*`; `safefleet_token` w v_secret; maska URL w `audit_log` (+ jednorazowo); job `ok=false` przy down/invalid; sort trajektorii od najstarszego; security +1 (EXPECTED **495** / TEST **491**).
 - Po F7 #662-b → #661 B1/B2. Bez push na main.
