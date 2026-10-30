@@ -2441,4 +2441,35 @@ $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='
   update loads set hhl_order_no=null, driver_name='N3Drv3' where id='$SG_OUT'; commit;" >/dev/null
 chk "#650 N3: po clear brak hhl w pending" "$(Q "select (patch ? 'hhl_order_no') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" f
 
+echo; echo "[#653] import — tylko KSH_IMPORT_SUMMARY (bez zalania dzwonka)"
+chk "#653: authenticated bez EXECUTE impl" "$(Q "select has_function_privilege('authenticated','import_schedule_impl(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" f
+chk "#653: authenticated ma EXECUTE wrapper" "$(Q "select has_function_privilege('authenticated','import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" t
+# 3 transporty ze zmianą dat → 1 SUMMARY/konto, 0 PLAN_DATES_CHANGED
+D653A=$(Q "select (current_date + 40)::text")
+D653B=$(Q "select (current_date + 45)::text")
+D653A2=$(Q "select (current_date + 41)::text")
+D653B2=$(Q "select (current_date + 46)::text")
+R653new="[
+  {\"code\":\"S653-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A\",\"delivery_date\":\"$D653B\"},
+  {\"code\":\"S653-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A\",\"delivery_date\":\"$D653B\"},
+  {\"code\":\"S653-3\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A\",\"delivery_date\":\"$D653B\"}
+]"
+R653chg="[
+  {\"code\":\"S653-1\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"},
+  {\"code\":\"S653-2\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"},
+  {\"code\":\"S653-3\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"}
+]"
+$PSQL -c "update app_users set active=false where auth_id='$OPS_AUTH'" >/dev/null
+$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN')" >/dev/null
+val "#653: seed 3 transporty" $HHL "select jsonb_array_length(r->'added') from (select import_schedule('$P', '$R653new'::jsonb, '{}'::text[], '{\"name\":\"653a.xlsx\",\"hash\":\"653a\"}'::jsonb, false, false) r) s" 3 commit
+$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN')" >/dev/null
+val "#653: zmiana dat 3 transportów" $HHL "select jsonb_array_length(r->'changed') from (select import_schedule('$P', '$R653chg'::jsonb, '{}'::text[], '{\"name\":\"653b.xlsx\",\"hash\":\"653b\"}'::jsonb, false, false) r) s" 3 commit
+N653sum=$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and channel='IN_APP' and read_at is null")
+chk "#653: 1 SUMMARY na HHL/KSH/SCX" "$N653sum" "3"
+chk "#653: 0 PLAN_DATES_CHANGED" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED'")" "0"
+chk "#653: 0 SCHEDULE_DATE_CRITICAL IN_APP" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" "0"
+chk "#653: 0 RISK_OPEN IN_APP z importu" "$(Q "select count(*) from notifications where template='RISK_OPEN' and channel='IN_APP'")" "0"
+chk "#653: 0 DECISION_OPEN IN_APP z importu" "$(Q "select count(*) from notifications where template='DECISION_OPEN' and channel='IN_APP'")" "0"
+$PSQL -c "update app_users set active=true where auth_id='$OPS_AUTH'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

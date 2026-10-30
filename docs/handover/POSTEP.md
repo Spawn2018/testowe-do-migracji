@@ -6980,3 +6980,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Przyczyny: (1) `#496` w `status.sh` przywracał starą listę `sailings_route_check` (GDN/GDY) po teście OTHER → TLL-HEL padał; (2) RPC z GUARD wołane bez sesji `authenticated` → „Brak aktywnego konta”.
 - Fix: przywrócenie regexu BN1 po `#496`; kraje/snapshot przez `set local role authenticated` + JWT HHL. status nadal **443**.
 - Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-30 02:55 — #653: dzwonek tylko KSH_IMPORT_SUMMARY (0342)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).
+- Scalanie: #655 CI zielone @ 83a92e59 — czeka F7; #651 F7 gotowe — **po** #655+#0342; #654 db FAIL (po #651).
+- **Krok #653 (odbiór 01:15):** zalanie dzwonka po imporcie — PR `pakiet/653-import-bell-summary` / **0342**: wrapper `import_schedule` (`import_bell_quiet`+`bulk_quiet`); trigger wycisza PLAN_DATES/SCHEDULE_CRIT/RISK/DECISION; SUMMARY z „w tym: N spraw, M decyzji”; jednorazowo read_at na zalanie 00:56Z; import **405**.
+- TS-01 outbound #9 @ 01:13Z (6 kluczy): przed wdrożeniem #655 — trigger #650 (komplet 6); aktor bez SELECT (Supabase MCP bez auth w tej sesji) — do odbioru koordynatora.
+- Bez push na main.
+

@@ -60,6 +60,11 @@ describe('W-594 powiadomienie w dzwonku', () => {
     expect(r.subject + r.body).not.toMatch(/KSH_IMPORT_SUMMARY/);
   });
 
+  it('#653: w tym N spraw, M decyzji gdy payload ma risks/decisions', () => {
+    const r = importSummaryNotice({ ...row.payload, risks: 2, decisions: 1 });
+    expect(r.body).toBe('Transporty: 3 · pola: 4 · nowe: 1 · anulowane/usunięte: 2 · w tym: 2 spraw, 1 decyzji');
+  });
+
   it('wiersz bazy → powiadomienie z id migawki; sekcja „Moje transporty”, nie „Do zrobienia”', () => {
     const n = notificationFromRow(row);
     expect(n.summaryId).toBe(RPC.id);
