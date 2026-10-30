@@ -525,10 +525,12 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
 // ---- rejsy (M10) --------------------------------------------------------------
 export interface SailingDbRow {
   id: string; route: string; departure_at: string; arrival_at: string;
-  delayed_departure_at: string | null; delayed_arrival_at: string | null; status: string; source: string;
+  delayed_departure_at: string | null; delayed_arrival_at: string | null;
+  actual_departure_at?: string | null;
+  status: string; source: string;
   vessels?: { name: string; operator?: string } | null;
 }
-export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,status,source,vessels(name,operator)';
+export const SAILING_COLUMNS = 'id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,status,source,vessels(name,operator)';
 /**
  * BN9-a / BN1 F7 #649: znana trasa (seed / RPC) zostaje; nieznany kod — surowy (bez GDN-NYN).
  * Flaga „nieznana” → `sailingFromRow` / `routeUnknown`.
@@ -552,6 +554,7 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
     routeUnknown: known ? undefined : true,
     departureAt: r.departure_at, arrivalAt: r.arrival_at,
     delayedDepartureAt: r.delayed_departure_at, delayedArrivalAt: r.delayed_arrival_at,
+    actualDepartureAt: r.actual_departure_at ?? null,
     status: r.status === 'ODWOLANY' ? 'ODWOLANY'
       : r.status === 'OPOZNIONY' ? 'OPOZNIONY'
         : r.status === 'W_REJSIE' ? 'W_REJSIE'

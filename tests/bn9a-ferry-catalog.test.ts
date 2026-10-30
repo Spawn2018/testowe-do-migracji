@@ -89,6 +89,15 @@ describe('BN9-a — katalog promów jest spójny', () => {
     expect(ferryPortPl('GDN-NYN')).toBe('Gdańsk–Nynäshamn');
     expect(ferryPortPl('TLL-HEL')).toBe('Tallinn–Helsinki');
   });
+
+  it('#666 C: Terminal A ma etykietę w Rejsach (TLLA-HEL / HELA-TLL)', () => {
+    expect(isKnownRoute('TLLA-HEL')).toBe(true);
+    expect(isKnownRoute('HELA-TLL')).toBe(true);
+    expect(ROUTE_SHORT['TLLA-HEL']).toBe('TLLA → HEL');
+    expect(ROUTE_SHORT['HELA-TLL']).toBe('HELA → TLL');
+    expect(ferryPortPl('TLLA-HEL')).toBe('Tallinn A–Helsinki');
+    expect(ferryPortPl('HELA-TLL')).toBe('Helsinki–Tallinn A');
+  });
 });
 
 describe('BN9-a — mapowanie rejsów z bazy', () => {

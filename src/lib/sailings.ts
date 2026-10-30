@@ -14,7 +14,12 @@ import {
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
-export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(effDeparture(s)) <= Date.parse(nowIso);
+/** F7 #668 N5: wypłynięty także przy actualDepartureAt (AIS), nie tylko plan/opóźnienie. */
+export const hasDeparted = (s: Sailing, nowIso: string): boolean => {
+  const now = Date.parse(nowIso);
+  if (s.actualDepartureAt && Date.parse(s.actualDepartureAt) <= now) return true;
+  return Date.parse(effDeparture(s)) <= now;
+};
 
 /** Statusy „na promie lub dalej” — rejsu nie zmienia już przewoźnik (lustro wyzwalacza 0008). */
 const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);
@@ -43,9 +48,9 @@ export function sailingAssignDenied(
 }
 
 /**
- * D-20261020-1501-01: rejsy historyczne do wyboru dla Administratora HHL — trasa armatora, nieodwołane, już
- * wypłynęły i dopłynęły do Szwecji (przypłynięcie ≤ teraz); najnowsze pierwsze.
- * Decyzja właściciela 25.10.2026 (5A): bez limitu dni — `days` tylko opcjonalnie (domyślnie wszystkie).
+ * D-20261020-1501-01 + #666 decyzja 52: rejsy historyczne tylko dla Administratora HHL —
+ * trasa wyjazdowa armatora (wszyscy, w tym Polferries), nieodwołane, już wypłynęły (odejście ≤ teraz);
+ * najnowsze pierwsze. `days` opcjonalnie zawęża po czasie odejścia.
  */
 export function historicalSailings(
   all: Sailing[],
@@ -53,15 +58,15 @@ export function historicalSailings(
   operator: FerryOperator = 'POLFERRIES',
   days = Number.POSITIVE_INFINITY,
 ): Sailing[] {
-  /* BN9-a: trasy wyjazdowe armatora z katalogu (Polferries: GDN-NYN, Stena: GDY-KAA — jak dotąd) */
   const outbound = new Set<string>(outboundRoutesOf(operator));
   const now = Date.parse(nowIso);
   const from = Number.isFinite(days) ? now - days * 86_400_000 : Number.NEGATIVE_INFINITY;
   return all
     .filter((s) => {
       if (!outbound.has(s.route) || s.status === 'ODWOLANY') return false;
-      const arr = Date.parse(effArrival(s));
-      if (!(arr <= now) || arr < from) return false;
+      if (!hasDeparted(s, nowIso)) return false;
+      const dep = Date.parse(effDeparture(s));
+      if (dep < from) return false;
       return sailingOfOperator(s, operator);
     })
     .sort((a, b) => Date.parse(effDeparture(b)) - Date.parse(effDeparture(a)));

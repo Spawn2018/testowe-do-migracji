@@ -36,13 +36,16 @@ import {
   parsePortsStockholmPortEntry,
 } from '../ferry/portsStockholm.ts';
 import {
-  VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
+  VIKING_CARGO_HEL_TLL_PAGE, VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
 } from '../ferry/vikingline.ts';
 import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
 } from '../ferry/eckero.ts';
 import {
-  DFDS_SCHEDULE_PAGE, DFDS_UA, DFDS_WEEKLY_PDF_URL, parseDfdsWeeklyHtml,
+  DFDS_SCHEDULE_PAGE, DFDS_TERMINAL_KPS, DFDS_TERMINAL_PLD, DFDS_UA, DFDS_WEEKLY_PDF_URL,
+  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks,
+  mergeDfdsMissingDays, mergeDfdsSailings, type DfdsFailedWindow,
+  parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -363,40 +366,104 @@ async function applySailings(
   return { plan, updated, manualKept: plan.manualKept + raced };
 }
 
-/** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy. */
-async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
-  sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number;
+/** #666 F7: pula równoległych odczytów (limit 4) — 60 d × 2 trasy bez sekwencji 120×20 s. */
+async function mapPoolLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, limit), items.length || 1) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]!);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+/** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy.
+ * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów.
+ * F7 #668 N9: łączny budżet czasu (domyślnie 90 s) — po limicie zapisujemy już pobrane. */
+export async function fetchStenaDays(
+  deps: JobDeps,
+  days: number,
+  budgetMs = 90_000,
+  /** F7 #668 r4: wstrzyknięty zegar ścienny (test budżetu bez zależności od Date.now). */
+  wallNow: () => number = Date.now,
+): Promise<{
+  sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number; structureFail: boolean;
 }> {
   const warnings: string[] = [];
   const sailings: StenaSailing[] = [];
   let http403 = false;
   let fetchedOk = 0;
+  let structureFail = false;
+  /* N9: ścienny zegar — deps.now() w testach bywa zamrożony. */
+  const started = wallNow();
   const dates = dateRangeYmd(deps.now(), days);
-  for (const routeCode of ['GDKA', 'KAGD'] as const) {
-    for (const date of dates) {
-      const url = stenaTimetableUrl(routeCode, date);
-      const page = await readText(deps, url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
-      if (!page.ok) {
-        warnings.push(page.warning);
-        if (/HTTP 403/.test(page.warning)) http403 = true;
-        continue;
-      }
-      fetchedOk += 1;
-      let json: unknown;
-      try { json = JSON.parse(page.text); } catch {
-        warnings.push(`Stena ${routeCode} ${date}: nieczytelny JSON`);
-        continue;
-      }
-      const parsed = parseStenaTimetable(json, { routeCode, dateYmd: date });
-      // pusty dzień (HTTP 200 + []) — OK, bez ostrzeżenia o awarii
-      sailings.push(...parsed.sailings);
-      for (const w of parsed.warnings) {
-        if (/brak rejsów na/i.test(w)) continue;
-        warnings.push(w);
-      }
+  /* F7 #668 r3 N9: przeplatanie po dacie (GDKA/KAGD tego samego dnia), nie cała trasa najpierw. */
+  const jobs = dates.flatMap((date) => (['GDKA', 'KAGD'] as const).map((routeCode) => ({ routeCode, date })));
+  const parts = await mapPoolLimit(jobs, 4, async ({ routeCode, date }) => {
+    if (wallNow() - started > budgetMs) {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [] as string[],
+        http403: false,
+        ok: false,
+        structureFail: false,
+        skippedBudget: true,
+      };
     }
+    const url = stenaTimetableUrl(routeCode, date);
+    const page = await readText(deps, url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
+    if (!page.ok) {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [page.warning],
+        http403: /HTTP 403/.test(page.warning),
+        ok: false,
+        structureFail: false,
+        skippedBudget: false,
+      };
+    }
+    let json: unknown;
+    try { json = JSON.parse(page.text); } catch {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [`Stena ${routeCode} ${date}: nieczytelny JSON`],
+        http403: false,
+        ok: false,
+        structureFail: false,
+        skippedBudget: false,
+      };
+    }
+    const parsed = parseStenaTimetable(json, { routeCode, dateYmd: date });
+    const struct = parsed.warnings.some((w) => /Struktura/i.test(w));
+    return {
+      sailings: parsed.sailings,
+      warnings: parsed.warnings.filter((w) => !/brak rejsów na/i.test(w)),
+      http403: false,
+      ok: true,
+      structureFail: struct,
+      skippedBudget: false,
+    };
+  });
+  let budgetHits = 0;
+  for (const p of parts) {
+    if (p.skippedBudget) { budgetHits += 1; continue; }
+    if (p.ok) fetchedOk += 1;
+    if (p.http403) http403 = true;
+    if (p.structureFail) structureFail = true;
+    sailings.push(...p.sailings);
+    warnings.push(...p.warnings);
   }
-  return { sailings, warnings, http403, fetchedOk };
+  if (budgetHits > 0) {
+    /* F7 #668 r4: fetchedOk = pary trasa×dzień, nie kalendarzowe doby. */
+    warnings.push(
+      `Stena: przerwano po ${Math.round(budgetMs / 1000)} s — zapisano ${fetchedOk} pobrań (trasa×dzień), pominięto ${budgetHits}.`,
+    );
+  }
+  return { sailings, warnings, http403, fetchedOk, structureFail };
 }
 
 /** BN2 — rozkład Tallink TAL↔HEL (Terminal D) + TAL↔STO na 14 dni.
@@ -437,26 +504,44 @@ async function fetchTallinkDays(deps: JobDeps, days: number): Promise<{
   return { sailings, warnings, fetchedOk, structureFail };
 }
 
-/** BN2 — Viking Line HTML (14 dni). 403/Imperva → fetchedOk=0. */
+/**
+ * #666 A — Viking: najpierw Cargo HEL–TLL, potem sales (zapas).
+ * SOURCE_DOWN tylko gdy oba źródła zawiodą (decyzja 50 + #666 A).
+ */
 async function fetchVikingDays(deps: JobDeps, days: number): Promise<{
   sailings: ReturnType<typeof parseVikingTimetableHtml>['sailings'];
   warnings: string[];
   fetchedOk: number;
   structureFail: boolean;
 }> {
+  const warnings: string[] = [];
+  const cargo = await readText(deps, VIKING_CARGO_HEL_TLL_PAGE, {
+    headers: { 'User-Agent': VIKING_UA, Accept: 'text/html' },
+  });
+  if (cargo.ok) {
+    const parsed = parseVikingTimetableHtml(cargo.text, { now: deps.now(), days });
+    warnings.push(...parsed.warnings);
+    if (parsed.sailings.length > 0) {
+      return { sailings: parsed.sailings, warnings, fetchedOk: 1, structureFail: false };
+    }
+  } else {
+    warnings.push(cargo.warning);
+  }
   const page = await readText(deps, VIKING_SCHEDULE_PAGE, {
     headers: { 'User-Agent': VIKING_UA, Accept: 'text/html' },
   });
   if (!page.ok) {
-    return { sailings: [], warnings: [page.warning], fetchedOk: 0, structureFail: false };
+    warnings.push(page.warning);
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
   }
   const parsed = parseVikingTimetableHtml(page.text, { now: deps.now(), days });
+  warnings.push(...parsed.warnings);
   const structureFail = parsed.warnings.some((w) => /Struktura|zablokowana|pusta/i.test(w))
     && parsed.sailings.length === 0;
   return {
     sailings: parsed.sailings,
-    warnings: parsed.warnings,
-    fetchedOk: structureFail ? 0 : 1,
+    warnings,
+    fetchedOk: structureFail || parsed.sailings.length === 0 ? 0 : 1,
     structureFail,
   };
 }
@@ -485,55 +570,177 @@ async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
   };
 }
 
-/** BN2 / F7 #661 B1 — DFDS: tylko faktycznie sparsowana treść (HTML/PDF); bez stałej HTML. */
+/**
+ * #666 E / BN2 — DFDS Dynamic `/api/timetable` (oba kierunki, tygodnie do horyzontu);
+ * zapas: PDF sezonowy ze strony, potem HTML/PDF tygodniówki. Bez stałej HTML w jobie.
+ */
 async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
   warnings: string[];
   fetchedOk: number;
   structureFail: boolean;
+  /** F7 #668 r7: liczba rejsów z API Dynamic (0 = tylko PDF/HTML albo totalna awaria). */
+  apiSailingsCount: number;
 }> {
   const warnings: string[] = [];
+  const dirs = [
+    { portOfLoading: DFDS_TERMINAL_PLD, portOfDischarge: DFDS_TERMINAL_KPS },
+    { portOfLoading: DFDS_TERMINAL_KPS, portOfDischarge: DFDS_TERMINAL_PLD },
+  ] as const;
+  const weeks = dfdsWeekWindows(deps.now(), days);
+  const jobs = weeks.flatMap((w) => dirs.map((d) => ({ ...w, ...d })));
+  let apiOk = 0;
+  let apiStructureFail = false;
+  const failedWindows: DfdsFailedWindow[] = [];
+  const routeOfDir = (portOfLoading: string): DfdsFailedWindow['route'] =>
+    portOfLoading === DFDS_TERMINAL_PLD ? 'PLD-KPS' : 'KPS-PLD';
+  const apiParts = await mapPoolLimit(jobs, 4, async (job) => {
+    const url = dfdsTimetableUrl({
+      portOfLoading: job.portOfLoading,
+      portOfDischarge: job.portOfDischarge,
+      dateFromIso: job.dateFromIso,
+      dateToIso: job.dateToIso,
+    });
+    const page = await readText(deps, url, {
+      headers: { 'User-Agent': DFDS_UA, Accept: 'application/json' },
+    });
+    if (!page.ok) {
+      return {
+        sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'],
+        warn: [page.warning],
+        job,
+        ok: false,
+      };
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(page.text);
+    } catch {
+      return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'], job, ok: false };
+    }
+    const parsed = parseDfdsTimetableApi(json);
+    /* F7 #668 r6 B1: tylko prawdziwa pusta tablica [] = pusty tydzień (dok).
+       JSON nie-tablica albo niepusta tablica z 0 sparsowanymi → struktura / failedWindow + PDF. */
+    const emptyOk = Array.isArray(json) && json.length === 0;
+    if (emptyOk) {
+      return {
+        sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'],
+        warn: [...parsed.warnings, `DFDS Dynamic: API pusty tydzień ${job.dateFromIso.slice(0, 10)}`],
+        job,
+        ok: true,
+        emptyOk: true,
+      };
+    }
+    if (parsed.sailings.length === 0) {
+      /* F7 #668 r7: bez martwego „bez rozpoznanych”; pusty warnings → oczekiwano tablicy. */
+      return {
+        sailings: [],
+        warn: parsed.warnings.length
+          ? parsed.warnings
+          : ['Struktura rozkładu DFDS Dynamic zmieniona: oczekiwano tablicy.'],
+        job,
+        ok: false,
+        emptyOk: false,
+      };
+    }
+    return {
+      sailings: parsed.sailings,
+      warn: parsed.warnings,
+      job,
+      ok: true,
+      emptyOk: false,
+    };
+  });
+  let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
+  for (const part of apiParts) {
+    warnings.push(...part.warn);
+    if (part.ok) {
+      apiOk += 1;
+      apiSailings = mergeDfdsSailings(apiSailings, part.sailings);
+      /* Pusty tydzień OK — nie wrzucaj do failedWindows (PDF nie „przywraca” odwołanych). */
+    } else {
+      failedWindows.push({
+        dateFromIso: part.job.dateFromIso,
+        dateToIso: part.job.dateToIso,
+        route: routeOfDir(part.job.portOfLoading),
+      });
+      /* F7 #668 r7: także junk z samym „nieczytelne godziny”. */
+      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|nieczytelne godziny|oczekiwano tablicy/i.test(w))) {
+        apiStructureFail = true;
+      }
+    }
+  }
+
+  /* F7 #668 r6: apiComplete tylko przy realnych rejsach (nie same puste []).
+     Wszystkie tygodnie puste → zapas PDF; struktura → failedWindows + PDF. */
+  const apiComplete = failedWindows.length === 0 && apiSailings.length > 0;
+  if (apiComplete) {
+    return {
+      sailings: apiSailings,
+      warnings,
+      fetchedOk: apiOk,
+      structureFail: false,
+      apiSailingsCount: apiSailings.length,
+    };
+  }
+
   const page = await readText(deps, DFDS_SCHEDULE_PAGE, {
     headers: { 'User-Agent': DFDS_UA, Accept: 'text/html' },
   });
-  const pdf = await readText(deps, DFDS_WEEKLY_PDF_URL, {
+  if (!page.ok) warnings.push(page.warning);
+  const pdfUrl = (page.ok && extractDfdsSeasonalPdfUrl(page.text)) || DFDS_WEEKLY_PDF_URL;
+  const pdf = await readText(deps, pdfUrl, {
     headers: { 'User-Agent': DFDS_UA, Accept: 'application/pdf' },
   });
-  if (!page.ok) warnings.push(page.warning);
   if (!pdf.ok) warnings.push(pdf.warning);
-  if (!page.ok && !pdf.ok) {
-    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
-  }
+
+  let fallback: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'] = [];
   if (page.ok) {
     const fromPage = parseDfdsWeeklyHtml(page.text, { now: deps.now(), days });
-    if (fromPage.sailings.length > 0) {
-      return {
-        sailings: fromPage.sailings,
-        warnings: [...warnings, ...fromPage.warnings],
-        fetchedOk: 1,
-        structureFail: false,
-      };
-    }
     warnings.push(...fromPage.warnings);
+    if (fromPage.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPage.sailings);
   }
   if (pdf.ok) {
-    // PDF tekstowy: wyciąg z bajtów może zawierać HTML-podobną tabelę albo plain text.
     const fromPdf = parseDfdsWeeklyHtml(pdf.text, { now: deps.now(), days });
-    if (fromPdf.sailings.length > 0) {
-      return {
-        sailings: fromPdf.sailings,
-        warnings: [...warnings, ...fromPdf.warnings],
-        fetchedOk: 1,
-        structureFail: false,
-      };
-    }
     warnings.push(...fromPdf.warnings);
+    if (fromPdf.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPdf.sailings);
   }
-  // HTTP 200 bez czytelnej tabeli → struktura zmieniona (SOURCE_DOWN), nie zmyślone godziny.
-  if (!warnings.some((w) => /Struktura|brak tabeli/i.test(w))) {
+
+  /* F7 #668 r4: przy częściowym API zawęż PDF do padniętych tygodni (odwołany rejs nie wraca z PDF). */
+  if (apiSailings.length > 0 && failedWindows.length > 0) {
+    fallback = filterDfdsFallbackToFailedWeeks(fallback, failedWindows);
+  }
+  const sailings = mergeDfdsMissingDays(apiSailings, fallback);
+  if (sailings.length > 0) {
+    if (apiSailings.length > 0 && failedWindows.length > 0) {
+      const filled = sailings.length > apiSailings.length;
+      warnings.push(
+        filled
+          ? `DFDS: częściowa awaria API (${apiOk}/${jobs.length}) — uzupełniono brakujące doby z PDF/HTML.`
+          : `DFDS: częściowa awaria API (${apiOk}/${jobs.length}) — brak zapasu PDF/HTML dla brakujących tygodni.`,
+      );
+    }
+    return {
+      sailings,
+      warnings,
+      fetchedOk: apiSailings.length > 0 ? apiOk : (fallback.length > 0 ? 1 : 0),
+      structureFail: false,
+      apiSailingsCount: apiSailings.length,
+    };
+  }
+  if (apiOk === 0 && !page.ok && !pdf.ok) {
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false, apiSailingsCount: 0 };
+  }
+  if (!warnings.some((w) => /Struktura|brak tabeli|Dynamic/i.test(w))) {
     warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
   }
-  return { sailings: [], warnings, fetchedOk: 0, structureFail: true };
+  return {
+    sailings: [],
+    warnings,
+    fetchedOk: 0,
+    structureFail: apiStructureFail,
+    apiSailingsCount: apiSailings.length,
+  };
 }
 
 /** BN2 — Portnet Digitraffic: ATA/ATD → actual_* na dopasowanych rejsach (±3 h od planu). */
@@ -786,10 +993,11 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:POLFERRIES_SCHEDULE:');
   }
 
-  const stena = await fetchStenaDays(deps, 14);
+  /* #666 decyzja 54 + F7: horyzont ≥ 60 dni; SOURCE_DOWN tylko przy całkowitej awarii (jak Tallink #660) */
+  const stena = await fetchStenaDays(deps, 60);
   warnings.push(...stena.warnings);
-  const stFail = stena.http403 || stena.fetchedOk === 0
-    || stena.warnings.some((w) => /Struktura|HTTP|nieczytelny JSON/i.test(w));
+  const stFail = stena.fetchedOk === 0
+    || (stena.structureFail && stena.sailings.length === 0);
   if (stFail) {
     await deps.store.raiseRisk(sourceDownRisk('STENA_SCHEDULE', stena.warnings.length ? stena.warnings : ['Brak odpowiedzi Stena'], now, STENA_ROUTE_PAGE));
     risks += 1;
@@ -807,7 +1015,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
 
   // BN2: Tallink + Viking + Eckerö + DFDS LIVE.
   // F7 #660: SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez żadnych rejsów; kierunki OK zapisujemy.
-  const tallink = await fetchTallinkDays(deps, 14);
+  /* #666 decyzja 54: horyzont ≥ 60 dni */
+  const tallink = await fetchTallinkDays(deps, 60);
   warnings.push(...tallink.warnings);
   const tlFail = tallink.fetchedOk === 0
     || (tallink.structureFail && tallink.sailings.length === 0);
@@ -831,7 +1040,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_SCHEDULE:');
   }
 
-  const viking = await fetchVikingDays(deps, 14);
+  /* #666 A + decyzja 54: Viking Cargo, horyzont ≥ 60 dni; sales = zapas */
+  const viking = await fetchVikingDays(deps, 60);
   warnings.push(...viking.warnings);
   const vkFail = viking.fetchedOk === 0
     || (viking.structureFail && viking.sailings.length === 0);
@@ -848,14 +1058,15 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
       'VIKING_SCHEDULE',
       viking.warnings.length ? viking.warnings : ['Brak odpowiedzi Viking'],
       now,
-      VIKING_SCHEDULE_PAGE,
+      VIKING_CARGO_HEL_TLL_PAGE,
     ));
     risks += 1;
   } else {
     await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
   }
 
-  const eckero = await fetchEckeroDays(deps, 14);
+  /* #666 decyzja 54: horyzont ≥ 60 dni (Viking Cargo — osobny krok #666 A) */
+  const eckero = await fetchEckeroDays(deps, 60);
   warnings.push(...eckero.warnings);
   const ekFail = eckero.fetchedOk === 0
     || (eckero.structureFail && eckero.sailings.length === 0);
@@ -879,10 +1090,11 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:ECKERO_SCHEDULE:');
   }
 
-  const dfds = await fetchDfdsDays(deps, 14);
+  /* #666 decyzja 54 + E: DFDS Dynamic schedule — osobny krok; tu rozszerzenie tygodniówki.
+     F7 #668 r7 (decyzja 50): resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM. */
+  const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
-  const dfFail = dfds.fetchedOk === 0
-    || (dfds.structureFail && dfds.sailings.length === 0);
+  const dfFail = dfds.sailings.length === 0;
   if (dfds.sailings.length > 0) {
     const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
@@ -891,16 +1103,20 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
     warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
   }
-  if (dfFail) {
-    await deps.store.raiseRisk(sourceDownRisk(
-      'DFDS_SCHEDULE',
-      dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS'],
-      now,
-      DFDS_SCHEDULE_PAGE,
-    ));
-    risks += 1;
-  } else {
+  if (dfds.apiSailingsCount > 0) {
     await deps.store.resolveRisks('SOURCE_DOWN:DFDS_SCHEDULE:');
+  } else {
+    const fromPdfOnly = dfds.sailings.length > 0;
+    const msgs = fromPdfOnly
+      ? [
+        'główne źródło DFDS niedostępne lub zmienione — rozkład z zapasu PDF',
+        ...dfds.warnings.slice(0, 9),
+      ]
+      : (dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS']);
+    const risk = sourceDownRisk('DFDS_SCHEDULE', msgs, now, DFDS_SCHEDULE_PAGE);
+    if (fromPdfOnly) risk.severity = 'MEDIUM';
+    await deps.store.raiseRisk(risk);
+    risks += 1;
   }
 
   // Portnet ATD/ATA + Port of Tallinn odwołania → ferry-portnet co 15 min (F7 #660).

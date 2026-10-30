@@ -21,22 +21,18 @@ function S(p: Partial<Sailing> & Pick<Sailing, 'id' | 'route' | 'departureAt'>):
   };
 }
 
-describe('awizacja — lista armatorów', () => {
+describe('awizacja — lista armatorów (#666 decyzja 55)', () => {
+  const ALL = ['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS'];
   const pf = S({ id: 'pf', route: 'GDN-NYN', departureAt: '2026-10-27T16:00:00Z', source: 'POLFERRIES' });
   const st = S({ id: 'st', route: 'GDY-KAA', departureAt: '2026-10-27T19:00:00Z', source: 'STENA' });
-  it('dzisiejsze dane: dokładnie Polferries i Stena, w tej kolejności', () => {
-    expect(awizacjaOperators([pf, st]).map((o) => o.id)).toEqual(['POLFERRIES', 'STENA']);
-    expect(awizacjaOperators([]).map((o) => o.label)).toEqual(['Polferries', 'Stena Line']);
+  it('zawsze wszyscy armatorzy ze słownika, także bez rejsów', () => {
+    expect(awizacjaOperators([pf, st]).map((o) => o.id)).toEqual(ALL);
+    expect(awizacjaOperators([]).map((o) => o.id)).toEqual(ALL);
+    expect(awizacjaOperators([]).map((o) => o.label)[0]).toBe('Polferries');
   });
-  it('z rejsem Vikinga — trzy; powrót albo dane startowe nie dodają armatora', () => {
-    const vk = S({ id: 'vk', route: 'TLL-HEL', departureAt: '2026-10-27T10:00:00Z', operator: 'Viking Line' });
-    expect(awizacjaOperators([pf, st, vk]).map((o) => o.id)).toEqual(['POLFERRIES', 'STENA', 'VIKING']);
-    const back = S({ id: 'b', route: 'HEL-TLL', departureAt: '2026-10-27T10:00:00Z', operator: 'Viking Line' });
-    const seed = S({ id: 's', route: 'TLL-HEL', departureAt: '2026-10-27T10:00:00Z', operator: 'Viking Line', source: 'DANE_STARTOWE' });
-    expect(awizacjaOperators([pf, back, seed]).map((o) => o.id)).toEqual(['POLFERRIES', 'STENA']);
-  });
-  it('wybrany armator zostaje na liście', () => {
-    expect(awizacjaOperators([], 'DFDS').map((o) => o.id)).toEqual(['POLFERRIES', 'STENA', 'DFDS']);
+  it('Viking/DFDS na liście także bez rejsów w danych', () => {
+    expect(awizacjaOperators([pf, st]).map((o) => o.id)).toContain('VIKING');
+    expect(awizacjaOperators([pf, st]).map((o) => o.id)).toContain('DFDS');
   });
 });
 
@@ -73,12 +69,12 @@ function legacySelectable(all: Sailing[], nowIso: string, currentId: string | nu
     return !op.includes('stena');
   }).sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b))).map((s) => s.id);
 }
+/** #666 decyzja 52: historyczne = już wypłynęły (odejście ≤ teraz), nie tylko dopłynęły. */
 function legacyHistorical(all: Sailing[], nowIso: string, operator: Legacy): string[] {
   const outbound = operator === 'STENA' ? 'GDY-KAA' : 'GDN-NYN';
-  const now = Date.parse(nowIso);
   return all.filter((s) => {
     if (s.route !== outbound || s.status === 'ODWOLANY') return false;
-    if (!(Date.parse(effArrival(s)) <= now)) return false;
+    if (!hasDeparted(s, nowIso)) return false;
     const op = (s.operator ?? '').toLowerCase();
     if (operator === 'STENA') return op.includes('stena') || s.route === 'GDY-KAA';
     return !op.includes('stena');
@@ -108,18 +104,15 @@ describe('wybór rejsu: Stena i Polferries — identyczny wynik jak przed katalo
       expect(historicalSailings(all, NOW_ISO, op).map((s) => s.id)).toEqual(legacyHistorical(all, NOW_ISO, op));
     }
   });
-  it('reachableSailings', () => {
+  it('reachableSailings (#666 decyzja 51: bez odcięcia po załadunku)', () => {
     const load: Pick<Load, 'plannedLoadDate' | 'awizacja' | 'sailingId'> = {
       plannedLoadDate: '2026-10-26', sailingId: null,
       awizacja: { loadWindowStart: null, loadWindowEnd: null, unloadWindowStart: null, unloadWindowEnd: null, confirmed: false },
     };
     for (const op of ['POLFERRIES', 'STENA'] as const) {
-      const minDep = Date.parse('2026-10-26T06:00:00+02:00') + (op === 'STENA' ? 16 : 14) * 36e5;
-      const legacy = legacySelectable(all, NOW_ISO, null, op)
-        .map((id) => all.find((s) => s.id === id)!)
-        .filter((s) => legacyMatches(s, op) && Date.parse(effDeparture(s)) >= minDep)
-        .map((s) => s.id);
-      expect(reachableSailings(all, load, NOW_ISO, op).map((s) => s.id)).toEqual(legacy);
+      expect(reachableSailings(all, load, NOW_ISO, op).map((s) => s.id)).toEqual(
+        legacySelectable(all, NOW_ISO, null, op),
+      );
     }
   });
 });

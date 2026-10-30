@@ -25,10 +25,13 @@ export interface FreightFetchPlan {
   routeCode: 'GDKA';
 }
 
-/** Dziś i 6 kolejnych dni (kalendarz UTC — wystarcza do okna zapytania). */
-export function freightWindow(now: Date): FreightFetchPlan {
+/**
+ * F7 #668 N8: okno dla zadania statusów Freight (żywy rozkład) — dziś + kilka dni.
+ * Horyzont 60 d jest w `fetchStenaDays` (JSON AEM / decyzja 54), nie tutaj.
+ */
+export function freightWindow(now: Date, daysAhead = 3): FreightFetchPlan {
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const end = new Date(d.getTime() + 6 * 864e5);
+  const end = new Date(d.getTime() + daysAhead * 864e5);
   return { from: d.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10), routeCode: 'GDKA' };
 }
 
