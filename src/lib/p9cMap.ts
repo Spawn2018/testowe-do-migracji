@@ -18,8 +18,6 @@ import { ferryRouteEnds } from './portName';
 import { routeOfVessel } from './vesselGroups';
 
 const TZ = 'Europe/Warsaw';
-/** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
-
 /** „00:19” (czas polski). */
 export function hm(iso: string | null | undefined): string {
   if (!iso) return '';

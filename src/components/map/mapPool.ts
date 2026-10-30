@@ -14,7 +14,7 @@ import { SITES } from '../../lib/status';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
-import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
+import { FERRY_LANE_STYLE, ferryLaneLines } from '../../lib/map/ferryLanes';
 import { useTowerStore } from '../../store/useTowerStore';
 import { reportBasemapFailure } from '../../lib/p9aSource';
 import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
@@ -382,22 +382,8 @@ if (typeof window !== 'undefined') {
   w.__wtMapPool = Object.assign(poolStats, { listeners: poolListeners });
 }
 
-/** Styl torów promowych — jeden dla wszystkich map korytarza. */
-export const FERRY_LANE_STYLE = { color: '#6BA8D6', weight: 3, opacity: 0.9 } as const;
-
-/**
- * DP-7 (F7 #670): stałe tory wodne rysowane w jednym miejscu — przy tworzeniu mapy i po przerysowaniu przepraw z HERE
- * (`CorridorMap`). `skipLegs` — przeprawy, które HERE już narysowało (FERRY-GDN-NYN, FERRY-GDY-KAA).
- * BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja) — zawsze, ten sam styl;
- * kadrowanie mapy (`corridorBoundsOf`) bez zmian, jak dla Stena/Polferries.
- */
+/** DP-7: stałe tory wodne do warstwy promu — linie z `ferryLaneLines` (jedno źródło dla mapPool i CorridorMap). */
 export function drawFerryLanes(layer: L.LayerGroup, skipLegs: ReadonlySet<string> = new Set()): void {
-  const lanes = { 'FERRY-GDN-NYN': WATER_GDN_NYN, 'FERRY-GDY-KAA': WATER_GDY_KAA } as const;
-  for (const [leg, lane] of Object.entries(lanes)) {
-    if (skipLegs.has(leg)) continue;
-    L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
-  }
-  for (const line of Object.values(WATER_TRACKS_EXTRA)) {
-    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
-  }
+  for (const line of ferryLaneLines(skipLegs)) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
 }
+export { FERRY_LANE_STYLE };

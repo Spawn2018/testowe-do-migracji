@@ -24,14 +24,23 @@ import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
-import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, isKnownRoute, operatorName, OPERATOR_MATCH_ORDER, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
+import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, OPERATOR_MATCH_ORDER, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
 import { ferryRouteLabel, ferryRouteName, ferryRouteShort } from '../lib/portName';
 import { VESSELS_FALLBACK, vesselOperator, type VesselGroup } from '../lib/vesselGroups';
+import { manualRouteError, showRouteUnknown } from '../lib/sailingsForm';
 import { SUPABASE_AUTH_ENABLED } from '../auth/config';
 
-/* DP-8: odczyt `vessels` tylko w paczce produkcyjnej (I-2: paczka demo bez klienta Supabase) */
+/* DP-8: odczyt `vessels` tylko w paczce produkcyjnej (I-2: paczka demo bez klienta Supabase).
+   U6: jedno pobranie na sesję — pamięć podręczna modułu (także po zamknięciu i otwarciu formularza). */
+let vesselsCache: Promise<VesselGroup[]> | null = null;
 const loadVessels = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
-  ? () => import('../data/vesselsServer').then((m) => m.loadVesselGroups())
+  ? (): Promise<VesselGroup[]> => {
+    vesselsCache ??= import('../data/vesselsServer').then((m) => m.loadVesselGroups()).catch((e: unknown) => {
+      vesselsCache = null; /* błąd — następne otwarcie spróbuje ponownie */
+      throw e;
+    });
+    return vesselsCache;
+  }
   : null;
 
 export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean; onShowLoads?: (sailingId: string) => void }) {
@@ -63,7 +72,10 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
     let live = true;
     loadVessels()
       .then((g) => { if (live && g.length) setVesselGroups(g); })
-      .catch(() => { /* zostaje lista zapasowa */ });
+      .catch(() => {
+        /* U5: lista zapasowa BN9-b; bez danych w komunikacie */
+        console.warn('[Rejsy] lista statków z bazy niedostępna — lista zapasowa');
+      });
     return () => { live = false; };
   }, [adding]);
 
@@ -117,7 +129,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
     )
     : <span className="sv-dash">—</span>);
   /* DP-3 (F7 #649): trasa spoza słownika — surowy kod i oznaczenie „nieznana trasa” */
-  const routeUnknown = (r: SailRow) => !!r.sailing.routeUnknown && !isKnownRoute(r.sailing.route) && !routeEnds(r.sailing.route);
+  const routeUnknown = (r: SailRow) => showRouteUnknown(r.sailing);
   const routeCell = (r: SailRow) => (
     <>
       {ferryRouteShort(r.sailing.route)}
@@ -177,7 +189,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             const fd = new FormData(e.currentTarget);
             const route = String(fd.get('route') || '');
             /* DP-5 (F7 #649): nieznany kod trasy nie zamienia się po cichu w GDN-NYN — komunikat i bez zapisu */
-            if (!isKnownRoute(route) && !routeEnds(route)) { setErr(sv(locale, 'sv_route_unknown_err')); return; }
+            const routeErr = manualRouteError(route);
+            if (routeErr) { setErr(sv(locale, routeErr)); return; }
             const vessel = String(fd.get('vessel') || '');
             const op = vesselOperator(vesselGroups, vessel);
             const r = addSailing({

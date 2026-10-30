@@ -17,6 +17,9 @@ const PL: Record<string, string> = {
   /* DP-4: trasa spoza słownika — surowy kod (bez podmiany na Gdańsk → Nynäshamn) */
   p9e_ferry_dep_past_bare: '{r} · wypłynął {t}',
   p9e_ferry_dep_next_bare: '{r} · odpływa {t}',
+  /* B2: rejs bez trasy — sam czas */
+  p9e_ferry_dep_past_only: 'wypłynął {t}',
+  p9e_ferry_dep_next_only: 'odpływa {t}',
   p9e_ais_ok: 'pozycja statku z AIS · {t}',
   p9e_ais_stale: 'ostatni odczyt AIS {t}',
   p9e_ais_none: 'brak AIS · ostatnia pozycja auta {t}',

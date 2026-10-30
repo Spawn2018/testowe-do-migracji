@@ -200,8 +200,6 @@ export type GroupView = {
 
 export type FerryInfo = { vessel: string | null; route: string | null; departureAt: string | null };
 
-/** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
-
 export function groupView(
   g: Extract<Placed, { kind: 'ferry' | 'zone' }>,
   ctx: {
@@ -237,9 +235,11 @@ export function groupView(
     const pa = ends?.a ?? info.route ?? '';
     const pb = ends?.b ?? '';
     if (!ends) {
-      sub = info.departureAt
-        ? ctx.tx(Date.parse(info.departureAt) <= Date.parse(ctx.nowIso) ? 'p9e_ferry_dep_past_bare' : 'p9e_ferry_dep_next_bare', { r: pa, t: ctx.dt(info.departureAt) })
-        : (pa || null);
+      /* B2: bez trasy — sam czas („odpływa 08.10, 18:00”); nieznana trasa — surowy kod przed czasem */
+      const past = info.departureAt ? Date.parse(info.departureAt) <= Date.parse(ctx.nowIso) : false;
+      sub = !info.departureAt ? (pa || null)
+        : pa ? ctx.tx(past ? 'p9e_ferry_dep_past_bare' : 'p9e_ferry_dep_next_bare', { r: pa, t: ctx.dt(info.departureAt) })
+          : ctx.tx(past ? 'p9e_ferry_dep_past_only' : 'p9e_ferry_dep_next_only', { t: ctx.dt(info.departureAt) });
     } else if (info.departureAt) {
       const past = Date.parse(info.departureAt) <= Date.parse(ctx.nowIso);
       sub = ctx.tx(past ? 'p9e_ferry_dep_past' : 'p9e_ferry_dep_next', { a: pa, b: pb, t: ctx.dt(info.departureAt) });
