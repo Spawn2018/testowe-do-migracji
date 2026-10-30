@@ -7281,3 +7281,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#674 SCALONE** `8f916302`. #668/#673 bez „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352/0353).
 - **Krok (F7 r5):** B1 — `parseSeasonRanges` `22.12.–6.1.2027` → rok początku = rok końca−1. B2 — test trasy tylko w h4 (obie kolejności) + dwa `<details>` bez `c-accordion`. DFDS: HTTP+JSON pusty tydzień = OK (bez PDF); `filterDfdsFallbackToFailedWeeks` granice w TZ lokalnej; job: API bez pon. + kolejne 503 → odwołany nie wraca, padnięte z PDF. Planned changes: Tallinn-only head + nearestVessel (17:00→Cinderella) + ostrzeżenie Mariehamn. Unit fokus 63/63. **Dalej:** CI → gotowe do F7 → scalenie → #667.
 - Bez push na main.
+
+## 2026-10-30 23:20 — #668 F7 r6 POPRAWKI (DFDS emptyOk + okno UTC)
+
+- Skrzynka: #666 ten PR (F7 r6); #667 @ 72b48247 gotowe do F7; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352–0354).
+- **Krok (F7 r6):** B1 — `emptyOk` tylko `Array.isArray && length===0`; `{}`/nieparsowalne → failedWindow + struktura; `apiComplete` tylko przy rejsach; wszystkie `[]` → PDF. Uwaga 1 — test lastDetailsChunk (3× details). Uwaga 2 — filter PDF okno UTC [from,to]. Unit bn2-ferry-* 65/65. **Dalej:** CI → gotowe do F7 → scalenie → #667.
+- Bez push na main.

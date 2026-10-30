@@ -251,21 +251,22 @@ export type DfdsFailedWindow = {
   route: FerryRoute;
 };
 
-/** F7 #668 r4/r5: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły.
- * Granice okna w tej samej strefie co doba lokalna rejsu (nie slice UTC). */
+/** F7 #668 r6: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły.
+ * Okno = chwile UTC [dateFromIso, dateToIso] (zakres zapytania API) — nie 8 dób lokalnych.
+ * Doba lokalna zostaje w mergeDfdsMissingDays. */
 export function filterDfdsFallbackToFailedWeeks(
   fallback: DfdsSailing[],
   failed: readonly DfdsFailedWindow[],
 ): DfdsSailing[] {
   if (failed.length === 0) return fallback;
   return fallback.filter((s) => {
-    const tz = s.route === 'PLD-KPS' ? 'Europe/Tallinn' : 'Europe/Stockholm';
-    const ymd = ymdInTz(new Date(s.departureUtc), tz);
+    const dep = Date.parse(s.departureUtc);
+    if (!Number.isFinite(dep)) return false;
     return failed.some((w) => {
       if (w.route !== s.route) return false;
-      const from = ymdInTz(new Date(w.dateFromIso), tz);
-      const to = ymdInTz(new Date(w.dateToIso), tz);
-      return ymd >= from && ymd <= to;
+      const from = Date.parse(w.dateFromIso);
+      const to = Date.parse(w.dateToIso);
+      return Number.isFinite(from) && Number.isFinite(to) && dep >= from && dep <= to;
     });
   });
 }

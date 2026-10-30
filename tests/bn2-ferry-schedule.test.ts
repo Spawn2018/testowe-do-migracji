@@ -330,6 +330,27 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.every((s) => !s.departureUtc.startsWith('2027-'))).toBe(true);
   });
 
+  it('F7 #668 r6: lastDetailsChunk — trzeci details bez h4/etykiety → HELA-TLL (nie pierwsze details)', () => {
+    /* Mutacja „pierwsze <details>” brałaby Tallinn–Helsinki → TLLA-HEL. */
+    const html = `
+<details>
+  <h3>1.1.–21.6.2027</h3>
+  <h4>Tallinn–Helsinki</h4>
+</details>
+<details>
+  <h3>22.6.–8.8.2027</h3>
+  <h4>Helsinki–Tallinn</h4>
+</details>
+<details>
+  <h3>10.08.2026–31.12.2026</h3>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>10.30</td><td>13.10</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>`;
+    const r = parseVikingTimetableHtml(html, { fromYmd: '2026-10-30', days: 1 });
+    expect(r.sailings.some((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30'))).toBe(true);
+    expect(r.sailings.every((s) => s.route !== 'TLLA-HEL' || !s.departureUtc.startsWith('2026-10-30'))).toBe(true);
+  });
+
   it('F7 #668 r5: Planned changes — nearestVessel + tylko kierunek wyjątku', () => {
     /* Wyjątek tylko HEL→TLL: tygodniówka HEL wycięta; TLL z tabeli zostaje; 17:00 → Cinderella (bliżej 18:00). */
     const html = `
@@ -396,8 +417,7 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(merged.some((s) => s.departureUtc === '2026-10-28T19:00:00.000Z')).toBe(true);
   });
 
-  it('F7 #668 r5: filterDfdsFallbackToFailedWeeks — granice okna w strefie lokalnej', () => {
-    // Okno: 26.10 22:00Z–02.11 21:59Z (= 27.10 00:00–03.11 00:00 EET) — slice UTC uciąłby 27.10
+  it('F7 #668 r6: filterDfdsFallbackToFailedWeeks — okno UTC [from,to] zapytania API', () => {
     const failed = [{
       dateFromIso: '2026-10-26T22:00:00.000Z',
       dateToIso: '2026-11-02T21:59:59.999Z',
@@ -411,7 +431,12 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
       route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
       departureUtc: '2026-11-03T20:00:00.000Z', arrivalUtc: '2026-11-04T05:30:00.000Z',
     };
-    const filtered = filterDfdsFallbackToFailedWeeks([inWin, outWin], failed);
+    /* Pon. udanego tygodnia (poza oknem UTC) nie wraca z PDF mimo tej samej doby lokalnej. */
+    const mondayOkWeek = {
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-26T20:00:00.000Z', arrivalUtc: '2026-10-27T05:30:00.000Z',
+    };
+    const filtered = filterDfdsFallbackToFailedWeeks([inWin, outWin, mondayOkWeek], failed);
     expect(filtered).toEqual([inWin]);
   });
 
@@ -451,13 +476,13 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(mKps).toHaveLength(2);
     expect(mKps.some((s) => s.departureUtc === '2026-10-26T21:00:00.000Z')).toBe(false);
     expect(mKps.some((s) => s.departureUtc === '2026-10-25T21:00:00.000Z')).toBe(true);
-    /* F7 #668 r5: okno w strefie lokalnej — 25.10 00:00–23:59Z = 25.10 02:00–26.10 01:59 EET */
+    /* F7 #668 r6: okno = UTC [from,to]; 26.10 19:00Z poza 25.10 00:00–23:59Z */
     const filtered = filterDfdsFallbackToFailedWeeks(
       [...pdfSameLocal, ...pdfPrevLocal],
       [{ dateFromIso: '2026-10-25T00:00:00.000Z', dateToIso: '2026-10-25T23:59:59.000Z', route: 'PLD-KPS' }],
     );
     expect(filtered.some((s) => s.departureUtc === '2026-10-25T19:00:00.000Z')).toBe(true);
-    expect(filtered.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(true); // 26.10 21:00 EET w oknie
+    expect(filtered.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(false);
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

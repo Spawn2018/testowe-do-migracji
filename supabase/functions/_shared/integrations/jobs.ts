@@ -617,16 +617,35 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
       return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'], job, ok: false };
     }
     const parsed = parseDfdsTimetableApi(json);
-    /* F7 #668 r5: HTTP+JSON OK z pustą listą = pusty tydzień (dok), nie awaria do uzupełnienia z PDF. */
-    const emptyOk = parsed.sailings.length === 0;
+    /* F7 #668 r6 B1: tylko prawdziwa pusta tablica [] = pusty tydzień (dok).
+       JSON nie-tablica albo niepusta tablica z 0 sparsowanymi → struktura / failedWindow + PDF. */
+    const emptyOk = Array.isArray(json) && json.length === 0;
+    if (emptyOk) {
+      return {
+        sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'],
+        warn: [...parsed.warnings, `DFDS Dynamic: API pusty tydzień ${job.dateFromIso.slice(0, 10)}`],
+        job,
+        ok: true,
+        emptyOk: true,
+      };
+    }
+    if (parsed.sailings.length === 0) {
+      return {
+        sailings: [],
+        warn: parsed.warnings.length
+          ? parsed.warnings
+          : ['DFDS Dynamic: struktura bez rozpoznanych rejsów'],
+        job,
+        ok: false,
+        emptyOk: false,
+      };
+    }
     return {
       sailings: parsed.sailings,
-      warn: emptyOk
-        ? [...parsed.warnings, `DFDS Dynamic: API pusty tydzień ${job.dateFromIso.slice(0, 10)}`]
-        : parsed.warnings,
+      warn: parsed.warnings,
       job,
       ok: true,
-      emptyOk,
+      emptyOk: false,
     };
   });
   let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
@@ -642,13 +661,15 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
         dateToIso: part.job.dateToIso,
         route: routeOfDir(part.job.portOfLoading),
       });
-      if (part.warn.some((w) => /Struktura|nie-JSON/i.test(w))) apiStructureFail = true;
+      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|bez rozpoznanych/i.test(w))) {
+        apiStructureFail = true;
+      }
     }
   }
 
-  /* F7 #668 N2/r5: wszystkie tygodnie HTTP+JSON OK (także puste) → bez strony/PDF.
-     Częściowa awaria (failedWindows) → PDF tylko dla tygodni, które padły. */
-  const apiComplete = apiOk >= jobs.length && failedWindows.length === 0;
+  /* F7 #668 r6: apiComplete tylko przy realnych rejsach (nie same puste []).
+     Wszystkie tygodnie puste → zapas PDF; struktura → failedWindows + PDF. */
+  const apiComplete = failedWindows.length === 0 && apiSailings.length > 0;
   if (apiComplete) {
     return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
   }

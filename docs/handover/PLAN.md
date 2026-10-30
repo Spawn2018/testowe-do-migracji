@@ -1155,13 +1155,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
-Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r5 poprawki @ PR #668 — B1 sezon przez NY; B2 test kierunku (h4 / details); DFDS pusty tydzień ≠ awaria; filter okna lokalnie; Planned changes Tallinn-head + nearestVessel. Po pushu — **czekam F7 „gotowe do scalenia”**. Kolejność: #668 (0351) → #673 → (#674 SCALONE).
-1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3–r5: sezon = ostatnie `c-accordion__item`; trasa attrs→nagłówek→ostatnia etykieta / h4; `22.12.–6.1.yyyy` przez NY; wyjątki per kierunek + Tallinn-only head + nearestVessel.
+Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r6 poprawki @ PR #668 — B1 emptyOk tylko `[]`; struktura/`{}`/nieparsowalne → PDF; apiComplete tylko przy rejsach; filter PDF okno UTC; test lastDetailsChunk. Po pushu — **czekam F7 „gotowe do scalenia”**. Kolejność: #668 (0351) → #673 → (#674 SCALONE).
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3–r6: sezon = ostatnie `c-accordion__item`; trasa attrs→nagłówek→ostatnia etykieta / h4; `22.12.–6.1.yyyy` przez NY; wyjątki per kierunek + Tallinn-only head + nearestVessel; lastDetailsChunk.
 2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351 + Cinderella/Gabriella)~~; N4 `historicalSailingsAllowed` (+ demo null); N5 `actualDepartureAt` w `hasDeparted`.
 3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~; N3 jawna lista 14 kodów.
 4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
-5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s + przeplatanie GDKA/KAGD; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; N1 doba lokalna; N2/r5: HTTP+JSON pusty tydzień OK (bez PDF); częściowa awaria → PDF tylko padnięte tygodnie (granice w TZ lokalnej).
-6. ~~Testy unit F7 r1–r5~~; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: prawdziwy scrape Cargo z IP domowego (403 z DC).
+5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s + przeplatanie GDKA/KAGD; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; N1 doba lokalna; **r6:** tylko `[]` = pusty tydzień; `{}`/nieparsowalne → failedWindow+PDF; apiComplete tylko z rejsami; filter PDF = UTC [from,to].
+6. ~~Testy unit F7 r1–r6~~; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: prawdziwy scrape Cargo z IP domowego (403 z DC).
 
 ### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — PO #666
 Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3.

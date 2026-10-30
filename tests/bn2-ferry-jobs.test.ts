@@ -516,7 +516,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
   });
 
-  it('F7 #668 r5: API pusty tydzień (dok) ≠ awaria — bez PDF dla tego okna', async () => {
+  it('F7 #668 r6: jeden pusty tydzień [] + reszta OK → ostrzeżenie, bez PDF', async () => {
     const st = new MemStore();
     const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
     const week1Start = '2026-10-26';
@@ -528,10 +528,8 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
         const from = u.searchParams.get('dateFrom') ?? '';
         const load = u.searchParams.get('portOfLoading') ?? '';
         if (from.startsWith(week1Start)) {
-          /* HTTP+JSON OK, pusta lista = dok / tydzień bez rejsów — nie failedWindow. */
           return new Response('[]', { status: 200 });
         }
-        /* Drugi tydzień: pełne API (żeby job miał rejsy i nie brał PDF na tydzień 1). */
         if (from.startsWith('2026-11-02')) {
           const body = load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44;
           return new Response(JSON.stringify(body), { status: 200 });
@@ -557,11 +555,68 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
       }
       throw new Error(`nieoczekiwane: ${url}`);
     }) as typeof fetch;
-    await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
-    /* Wszystkie tygodnie HTTP OK (także puste) → bez strony/PDF. */
+    const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
     expect(pageHits).toBe(0);
+    expect(out.warnings.some((w) => /API pusty tydzień/i.test(w))).toBe(true);
     expect(st.sailings.every((s) => !s.departure_at.startsWith('2026-10-26T20:00'))).toBe(true);
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+  });
+
+  it('F7 #668 r6 B1: wszystkie tygodnie [] → PDF; wszystkie {} → PDF + SOURCE_DOWN', async () => {
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const runWith = async (body: string) => {
+      const st = new MemStore();
+      let pdfHits = 0;
+      const f = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('api/timetable')) return new Response(body, { status: 200 });
+        if (url.includes('routes-and-schedules')) {
+          return new Response(
+            `<html><body><a href="https://downloads.ctfassets.net/x/dfds.pdf">pdf</a>${DFDS_HTML}</body></html>`,
+            { status: 200 },
+          );
+        }
+        if (url.includes('ctfassets.net') || url.includes('dfds.pdf')) {
+          pdfHits += 1;
+          return new Response(DFDS_HTML, { status: 200 });
+        }
+        const pages: Record<string, string | number> = { ...tallinkPages };
+        const hit = Object.entries(pages).find(([k]) => url.includes(k));
+        if (hit) {
+          return typeof hit[1] === 'number'
+            ? new Response('err', { status: hit[1] })
+            : new Response(hit[1], { status: 200 });
+        }
+        if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+        if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+          return new Response('err', { status: 503 });
+        }
+        throw new Error(`nieoczekiwane: ${url}`);
+      }) as typeof fetch;
+      const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+      return { st, out, pdfHits };
+    };
+
+    const empty = await runWith('[]');
+    expect(empty.pdfHits).toBeGreaterThan(0);
+    expect(empty.st.sailings.some((s) => s.source === 'DFDS')).toBe(true);
+    expect(empty.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+
+    const bad = await runWith('{}');
+    expect(bad.pdfHits).toBeGreaterThan(0);
+    /* PDF/HTML może dać rejsy — wtedy bez SOURCE_DOWN; gdy struktura bez zapasu → ryzyko. */
+    if (bad.st.sailings.filter((s) => s.source === 'DFDS').length === 0) {
+      expect(bad.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+      expect(bad.out.warnings.some((w) => /Struktura|oczekiwano tablicy/i.test(w))).toBe(true);
+    } else {
+      expect(bad.out.warnings.some((w) => /Struktura|oczekiwano tablicy/i.test(w))).toBe(true);
+    }
+
+    /* Niepusta tablica bez rozpoznanych tras → jak struktura (failedWindow + PDF). */
+    const junk = await runWith(JSON.stringify([{ portOfLoading: 'XX', portOfDischarge: 'YY', vehicleName: 'X' }]));
+    expect(junk.pdfHits).toBeGreaterThan(0);
+    expect(junk.out.warnings.some((w) => /nieznana trasa|Struktura/i.test(w))).toBe(true);
+    void both;
   });
 
   it('F7 #668 r5: DFDS — odwołany rejs z tygodnia API nie wraca z PDF; 503 → uzupełnienie', async () => {
