@@ -1156,7 +1156,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
 Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~. **W TOKU:** uwagi nieblokujące F7 #654 → #648 (**0346**), potem **BN2…BN10**.
-1. **BN1** — ~~słowniki / strefy / CASE~~ **SCALONE** (0338–0344). **#648 F7 nieblokujące** — W TOKU (**0346** / PR #659): promote przy `active=true`; `mfa_satisfied` w `ferry_route_set_active`; test aal1 odmowa / aal2 OK; status **501**. POSTEP 01:45 już **0343**.
+1. **BN1** — ~~słowniki / strefy / CASE~~ **SCALONE** (0338–0344). **#648 F7 nieblokujące** — W TOKU (**0346** / PR #659): promote przy `active=true`; `mfa_satisfied`; aal1 odmowa / aal2 false→f + true→t; status **502**.
 2. BN2…BN10 — jak #573 (rozkłady, opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2051,3 +2051,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 07:07 | #651 SCALONE `17fda50e` (F7 @ 858b8e5); start **0345** revoke enqueue_active_wt (#653) | pętla |
 | 30.10.2026 07:53 | #657 SCALONE `6201272c` (F7 @ d64fed0 / **0345**); start **0346** #648 F7 (mfa + promote+) | pętla |
 | 30.10.2026 08:15 | #659 F7 POPRAWKI: test HHL_ADMIN aal1→2FA / aal2 OK; status **501** | pętla |
+| 30.10.2026 08:35 | #659 F7 r2: aal2 false→f + true→t (nie true→true); status **502** | pętla |
