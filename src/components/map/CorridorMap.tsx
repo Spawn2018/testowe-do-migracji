@@ -20,6 +20,8 @@ import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
+import { vesselsLoader } from '../../lib/vesselsLoad';
+import { useVesselGroups } from '../../lib/useVesselGroups';
 import {
   acquireMap, attributionOf, drawFerryLanes, ensureBasemap, FERRY_LANE_STYLE, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
@@ -169,6 +171,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const mapRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerBag | null>(null);
   const entryRef = useRef<PoolEntry | null>(null);
+  /* DP-17 (F7 r2 #672): statki z bazy także na mapach (jedna pamięć z Rejsami).
+     B1 (F7 #674): wersja listy jest zależnością efektu rysowania — po pobraniu dymki się przerysowują (także w PROD). */
+  const vessels = useVesselGroups();
+  useEffect(() => {
+    vesselsLoader?.load().catch(() => {
+      console.warn('[Mapa] lista statków z bazy niedostępna — lista zapasowa');
+    });
+  }, []);
   const theme = useTowerStore((s) => s.theme);
   /* E41: podpis znacznika i przebieg — nazwa transportu według firmy, która patrzy */
   const role = useTowerStore((s) => s.role);
@@ -566,7 +576,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         if (!l) return null;
         const ls = l.sailingId ? undefined : sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(l.ferry.vessel) && x.departureAt === l.ferry.departureAt);
         /* DP-4: bez rejsu — trasa z armatora statku (jedna trasa wyjazdowa), nie domyślne GDN-NYN */
-        return { vessel: l.ferry.vessel, route: ls?.route ?? routeOfVessel(l.ferry.vessel), departureAt: l.ferry.departureAt };
+        return { vessel: l.ferry.vessel, route: ls?.route ?? routeOfVessel(l.ferry.vessel, vessels), departureAt: l.ferry.departureAt };
       };
       const shipOf = (fk: string): ShipFix | null => {
         const v = vesselKey(ferryInfo(fk)?.vessel);
@@ -603,6 +613,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           role, nowIso, prod: PROD_BUILD, hasFix: (x) => gpsFixes.has(x),
           sailingOf: (sid) => (sid ? sailings.find((x) => x.id === sid) : undefined),
           tx: (k, p) => (p ? p9mp(loc, k, p) : p9m(loc, k)),
+          vessels,
         });
       };
       const labels = !embedded && (fleet.length <= LABELS_MAX || zoom >= 7);
@@ -782,7 +793,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite, applyHover]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite, applyHover, vessels]);
 
   /* wyglad/P9-e: lista grupy z ostatniego rysowania; grupa, która zniknęła (np. auto wyjechało ze strefy), zamyka listę */
   const openView = openGroup ? groupViewsRef.current.get(openGroup) ?? null : null;

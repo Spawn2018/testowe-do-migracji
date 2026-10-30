@@ -15,6 +15,7 @@ import { filterLoadsForRole } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatTableDay } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
+import { useVesselGroups } from '../lib/useVesselGroups';
 import { headCounts, hm, mapRow, rowMatches, searchHintKey, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
 import { etaDuration } from '../lib/etaDuration';
@@ -117,14 +118,17 @@ export function MapView() {
     return () => { cancelled = true; window.clearInterval(id); };
   }, [fixKey]);
 
+  /* N1 (F7 #674): trasa promu z listy statków z bazy (DP-17) — przeliczenie po jej pobraniu */
+  const vessels = useVesselGroups();
   const rows = useMemo(() => {
     const ctx = {
       role, nowIso, prod: PROD_BUILD, hasFix: (id: string) => fixIds.has(id),
       sailingOf: (sid: string | null | undefined) => (sid ? sailings.find((s) => s.id === sid) : undefined),
       tx: (k: string, p?: Record<string, string | number>) => (p ? p9mp(locale, k, p) : p9m(locale, k)),
+      vessels,
     };
     return roleStage.map((l) => ({ load: l, row: mapRow(l, ctx) }));
-  }, [roleStage, role, nowIso, fixIds, sailings, locale]);
+  }, [roleStage, role, nowIso, fixIds, sailings, locale, vessels]);
 
   /* pkt 1 (pyt. 1 A): bez kafelka — tylko okno śledzenia; z kafelkiem — cały etap */
   const scoped = useMemo(

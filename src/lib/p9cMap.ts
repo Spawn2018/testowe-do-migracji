@@ -15,7 +15,7 @@ import { formatListDateTime } from './format';
 import { transportLabel, transportSearchBlob } from './transportName';
 import { trackingNoLink } from './trackerLink';
 import { ferryRouteEnds } from './portName';
-import { routeOfVessel } from './vesselGroups';
+import { routeOfVessel, type VesselGroup } from './vesselGroups';
 
 const TZ = 'Europe/Warsaw';
 /** „00:19” (czas polski). */
@@ -65,6 +65,8 @@ export type RowCtx = {
   sailingOf: (id: string | null | undefined) => Sailing | undefined;
   /** Teksty (p9m / p9mp) — moduł bez zależności od słowników. */
   tx: (key: string, params?: Record<string, string | number>) => string;
+  /** DP-17 / B1 (F7 #674): lista statków sesji (z bazy albo zapasowa) — trasa auta na promie bez rejsu. */
+  vessels?: readonly VesselGroup[];
 };
 
 const SE_TILES: ReadonlySet<StageTile> = new Set(['PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE']);
@@ -100,7 +102,7 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
     if (vessel) {
       /* DP-4: porty ze słownika tras; trasa nieznana — surowy kod; bez rejsu — trasa z armatora statku (jedna trasa
          wyjazdowa), inaczej sam statek (bez zgadywania GDN-NYN) */
-      const route = s?.route ?? routeOfVessel(vessel);
+      const route = s?.route ?? routeOfVessel(vessel, ctx.vessels);
       const ends = ferryRouteEnds('pl', route);
       stageSub = ends ? `${vessel} · ${ends.a} → ${ends.b}` : route ? `${vessel} · ${route}` : vessel;
     }
