@@ -1185,7 +1185,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | w kolejce |
 | DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | w kolejce |
 | DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
-| DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | zrobione @ 74286d82 (job); wskaźnik w `bn2-ferry-schedule.test.ts` |
+| DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | w kolejce |
 | DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | w kolejce |
 

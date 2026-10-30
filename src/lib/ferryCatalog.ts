@@ -324,7 +324,7 @@ function rpcPortLabel(code: string): string {
 
 /**
  * DP-9 / BN9-b pkt 12 + #666 C: etykieta PL trasy w komunikatach armatora.
- * Alias Terminal A → seed → kody z bazy (`ferry_dict_snapshot` + nazwy portów RPC).
+ * Alias Terminal A → seed → nazwy portów z bazy (RPC) → routeEnds.
  */
 export function routeLabelPl(code: string | null | undefined): string | null {
   if (!code) return null;
@@ -332,15 +332,18 @@ export function routeLabelPl(code: string | null | undefined): string | null {
   if (alias) return alias.pl;
   const seed = routeByCode(code);
   if (seed) return `${PORT_PL[seed.from]}–${PORT_PL[seed.to]}`;
+  /* DP-9: kody tylko w snapshotcie — pełne nazwy/terminale z bazy (np. „Helsinki KAT”). */
+  const ports = rpcRoutePorts.get(code);
+  if (ports && rpcPortInfo.has(ports.from) && rpcPortInfo.has(ports.to)) {
+    return `${rpcPortLabel(ports.from)}–${rpcPortLabel(ports.to)}`;
+  }
   const ends = routeEnds(code);
   if (ends) {
     const from = ends.fromTerminal ? `${PORT_PL[ends.from]} ${ends.fromTerminal}` : PORT_PL[ends.from];
     const to = ends.toTerminal ? `${PORT_PL[ends.to]} ${ends.toTerminal}` : PORT_PL[ends.to];
     return `${from}–${to}`;
   }
-  const ports = rpcRoutePorts.get(code);
-  if (!ports) return null;
-  return `${rpcPortLabel(ports.from)}–${rpcPortLabel(ports.to)}`;
+  return null;
 }
 
 /** Pierwsza trasa wyjazdowa armatora (porty w wierszu „Sytuacja na trasie”). */
