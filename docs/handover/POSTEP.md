@@ -7189,3 +7189,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe” po `736448e6`; CI @ `736448e6` unit/visual/db ✔.
 - **Krok:** Decyzja 50 — `sourceDownRisk(VIKING_SCHEDULE)` = **MEDIUM** (Imperva 403, HHL); testy jobów B3 Tallink TLL-HEL+HEL-TLL+QUEEN; Viking 403 MEDIUM; Eckerö awaria; idempotencja Viking; DST marzec/październik w parserze HTML.
 - Push → CI → F7. Bez push na main.
+
+## 2026-10-30 14:54 — #661 SCALONE; BN2 dopisek testów F7
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`). Bez nowych `dla-cursora`.
+- Scalanie: #661 → `392a9bc2` (F7 @ `bf2572b4`, CI unit/visual/db ✔). Deploy-main `41067127032` w toku.
+- **#663 NA PRODUKCJI** `189688bc` @ **13:29 CET** (już w POSTEP 13:25; potwierdzenie F7 #661).
+- **Krok (F7 #661 nieblokujący):** test `parseDigitrafficPortCalls` Terminal A (Viking XPRS/Finlandia → `TLLA-HEL`/`HELA-TLL`, Tallink → `TLL-HEL`); job Viking+PoT bez duplikatów + RECZNIE nietknięte; PLAN §4 BN2 SCALONE + dopisek. Po deploy #661: ręczny `ferry-schedule` → #640. Potem BN3.
+- Bez push na main.

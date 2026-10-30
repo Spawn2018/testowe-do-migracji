@@ -1155,9 +1155,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
-Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **W TOKU: BN2** (rozkłady).
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **BN2** rozkłady LIVE SCALONE (#660+#661); dopiski testów F7 w toku; potem **BN3**.
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
-2. **BN2** — W TOKU (**0347**+**0348**, PR #660 SCALONE `a94645d9`; PR #661 `pakiet/bn2-viking-eckero-dfds` @ `736448e6`+): Tallink LIVE; Portnet; Viking/Eckerö/DFDS LIVE HTML (14 dni) + Terminal A; F7 #661: ~~B1~~ DFDS bez stałej HTML, ~~B2~~ PoT bez fałszywego +1 dzień, ~~B3~~ Tallink HEL-TLL/QUEEN, okresy ważności, Decyzja 50 Viking SOURCE_DOWN MEDIUM, testy jobów — czekam F7.
+2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2` / F7 @ `bf2572b4`): Tallink; Portnet; Viking/Eckerö/DFDS HTML 14 dni + Terminal A; B1–B3; Decyzja 50 MEDIUM. **Dopisek F7 (nieblokujący):** test Portnet Terminal A + RECZNIE/duplikaty PoT (`pakiet/bn2-f7-portnet-terminal-a-tests`); po wdrożeniu #661 — ręczny `ferry-schedule` → #640.
 3. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2072,3 +2072,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 13:25 | #663 SCALONE `189688bc` (F7 @ 2941001 / **0349**); start **#662-b** **0350** | pętla |
 | 30.10.2026 13:54 | #664 SCALONE `1ee855fd` (F7 @ 4ddb090 / **0350**); powrót #661 B1–B3 | pętla |
 | 30.10.2026 14:30 | #661 F7: Decyzja 50 Viking SOURCE_DOWN MEDIUM + testy jobów B3/DST | pętla |
+| 30.10.2026 14:54 | #661 SCALONE `392a9bc2` (F7 gotowe @ bf2572b4); start BN2 dopisek testów Terminal A / RECZNIE | pętla |

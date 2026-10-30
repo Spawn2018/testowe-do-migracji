@@ -546,4 +546,70 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
     expect(st.sailings.filter((s) => s.source === 'VIKING')).toHaveLength(n1);
     expect(r2.inserted).toBe(0);
   });
+
+  it('Viking + PoT: bez duplikatu; RECZNIE Viking/Eckerö nietknięte przy odwołaniu', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'recz-vk', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+        departure_at: '2026-10-30T01:30:00.000Z', arrival_at: '2026-10-30T03:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'RECZNIE',
+      },
+      {
+        id: 'recz-ec', vessel_id: 'v-fin', route: 'TLLA-HEL',
+        departure_at: '2026-10-30T04:00:00.000Z', arrival_at: '2026-10-30T06:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'RECZNIE',
+      },
+    );
+    const cancelHtml = `<!DOCTYPE html><html><body>
+<table class="table" id="passenger-lines-outbound"><tbody>
+<tr data-terminal="a" data-from_to="helsinki" data-company="viking_line_abp">
+<td data-sort_value="03:30">03:30</td>
+<td data-sort_value="VIKING XPRS">VIKING XPRS</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="A">Terminal A</td>
+<td data-sort_value="Viking Line Abp">Viking Line Abp</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr>
+<tr data-terminal="a" data-from_to="helsinki" data-company="eckeroe_line_ab_oy">
+<td data-sort_value="06:00">06:00</td>
+<td data-sort_value="FINLANDIA">FINLANDIA</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="A">Terminal A</td>
+<td data-sort_value="Eckero">Eckero</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr>
+</tbody></table>
+<table class="table" id="passenger-lines-inbound"><tbody></tbody></table>
+</body></html>`;
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'sales.vikingline.com': VIKING_HTML,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+      'ts.ee/en/departures': cancelHtml,
+      'ts.ee/en/arrivals': cancelHtml,
+    };
+    await runFerrySchedule(deps(st, pages));
+    const vikingKeys = st.sailings
+      .filter((s) => s.source === 'VIKING')
+      .map((s) => `${s.vessel_id}|${s.departure_at}`);
+    expect(new Set(vikingKeys).size).toBe(vikingKeys.length);
+    expect(st.sailings.filter((s) => s.source === 'VIKING').length).toBeGreaterThan(0);
+    expect(st.sailings.find((s) => s.id === 'recz-vk')).toMatchObject({
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+      departure_at: '2026-10-30T01:30:00.000Z',
+    });
+    expect(st.sailings.find((s) => s.id === 'recz-ec')).toMatchObject({
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+      departure_at: '2026-10-30T04:00:00.000Z',
+    });
+  });
 });

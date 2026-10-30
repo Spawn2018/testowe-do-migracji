@@ -16,6 +16,7 @@ import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/l
 
 const TALLINK = JSON.parse(readFileSync(new URL('./fixtures/tallink-timetable-tal-hel-2026-10-30.json', import.meta.url), 'utf8'));
 const PORTNET = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-port-calls-megastar-2026-10-29.json', import.meta.url), 'utf8'));
+const PORTNET_TERM_A = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-port-calls-terminal-a-sample.json', import.meta.url), 'utf8'));
 const VIKING = JSON.parse(readFileSync(new URL('./fixtures/viking-schedule-sample.json', import.meta.url), 'utf8'));
 const ECKERO = JSON.parse(readFileSync(new URL('./fixtures/eckero-schedule-sample.json', import.meta.url), 'utf8'));
 const DFDS = JSON.parse(readFileSync(new URL('./fixtures/dfds-schedule-sample.json', import.meta.url), 'utf8'));
@@ -107,6 +108,29 @@ describe('BN2 Digitraffic Portnet', () => {
     const r = parseDigitrafficPortCalls({});
     expect(r.calls).toEqual([]);
     expect(r.warnings.join(' ')).toMatch(/Struktura|portCalls/);
+  });
+
+  // F7 #661 następny PR: Terminal A (Viking/Finlandia) vs D (Tallink).
+  it('FIHEL Terminal A: Viking XPRS / Finlandia → TLLA-HEL/HELA-TLL; Tallink → TLL-HEL', () => {
+    const r = parseDigitrafficPortCalls(PORTNET_TERM_A);
+    expect(r.warnings).toEqual([]);
+    const xprs = r.calls.find((c) => c.vessel === 'M/F Viking XPRS');
+    expect(xprs).toMatchObject({
+      arrivalRoute: 'TLLA-HEL',
+      departureRoute: 'HELA-TLL',
+      actualArrivalUtc: '2026-10-30T08:00:00.000Z',
+      actualDepartureUtc: '2026-10-30T09:00:00.000Z',
+    });
+    const fin = r.calls.find((c) => c.vessel === 'M/F Finlandia');
+    expect(fin).toMatchObject({
+      arrivalRoute: 'TLLA-HEL',
+      departureRoute: 'HELA-TLL',
+    });
+    const mega = r.calls.find((c) => c.vessel === 'M/F Megastar');
+    expect(mega).toMatchObject({
+      arrivalRoute: 'TLL-HEL',
+      departureRoute: 'HEL-TLL',
+    });
   });
 });
 
