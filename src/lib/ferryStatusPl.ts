@@ -2,7 +2,7 @@
  * PL-DATA — statusy Steny i AIS oraz kody portów po polsku.
  * Formularz komunikatu armatora korzysta z tych samych etykiet.
  */
-import { FERRY_ROUTES } from './ferryCatalog';
+import { FERRY_ROUTES, routeLabelPl } from './ferryCatalog';
 import { portName } from './portName';
 
 const STATUS: Record<string, string> = {
@@ -41,8 +41,10 @@ const PORT: Record<string, string> = {
   'KAA-GDY': 'Karlskrona–Gdynia',
   'GDN-NYN': 'Gdańsk–Nynäshamn',
   'NYN-GDN': 'Nynäshamn–Gdańsk',
-  /* BN9-a: pozostałe trasy z katalogu promów („Tallinn–Helsinki”) */
+  /* BN9-a: pozostałe trasy z katalogu promów („Tallinn–Helsinki”); #666 C: Terminal A przez routeLabelPl */
   ...Object.fromEntries(FERRY_ROUTES.map((r) => [r.code, `${portName('pl', r.from)}–${portName('pl', r.to)}`])),
+  'TLLA-HEL': routeLabelPl('TLLA-HEL')!,
+  'HELA-TLL': routeLabelPl('HELA-TLL')!,
 };
 
 /** AIS Navigational Status (ITU-R M.1371). */
@@ -74,7 +76,7 @@ export function ferryStatusPl(raw: string | null | undefined): string {
 
 export function ferryPortPl(code: string | null | undefined): string {
   const t = (code ?? '').trim();
-  return PORT[t] ?? PORT[t.toUpperCase()] ?? t;
+  return PORT[t] ?? PORT[t.toUpperCase()] ?? routeLabelPl(t) ?? t;
 }
 
 export function aisNavStatusPl(code: number | null | undefined): string {

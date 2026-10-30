@@ -7197,3 +7197,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **#663 NA PRODUKCJI** `189688bc` @ **13:29 CET** (już w POSTEP 13:25; potwierdzenie F7 #661).
 - **Krok (F7 #661 nieblokujący):** test `parseDigitrafficPortCalls` Terminal A (Viking XPRS/Finlandia → `TLLA-HEL`/`HELA-TLL`, Tallink → `TLL-HEL`); job Viking+PoT bez duplikatów + RECZNIE nietknięte; PLAN §4 BN2 SCALONE + dopisek. Po deploy #661: ręczny `ferry-schedule` → #640. Potem BN3.
 - Bez push na main.
+
+## 2026-10-30 15:47 — #666 PILNE: awizacja + trasy TLLA + horyzont 60 d (krok 1)
+
+- Skrzynka: **#666** (Spawn2018, `pilne`+`dla-cursora`) — przed DFDS/BN3; uzupełnienia 15:31/15:33/15:35/15:42 (decyzje 48a–56 przyjęte). #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak otwartych PR; #665 SCALONE `799ea18d` (na `main`).
+- **Krok 1 (#666 B/C/D/E częściowo):** decyzje 51–55 w awizacji (`reachableSailings` bez odcięcia załadunkiem; `awizacjaOperators` = wszyscy; historyczne = wypłynięte, też Polferries; „Rejs promem” + oznaczenie przed załadunkiem + komunikat pusty); `TLLA-HEL`/`HELA-TLL` w `FERRY_ROUTES` + `routeShortLabel`; Stena/Tallink/Eckerö/DFDS horyzont 60 d (`freightWindow` +59, `fetchStenaDays` 60). **Dalej w #666:** A Viking Cargo; DFDS Dynamic endpoint; RPC historyczne dla SCX/HHL_OPS; Viking sales zostaje zapasem.
+- Bez push na main.

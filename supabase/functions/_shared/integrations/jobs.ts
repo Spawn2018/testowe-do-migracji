@@ -786,7 +786,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:POLFERRIES_SCHEDULE:');
   }
 
-  const stena = await fetchStenaDays(deps, 14);
+  /* #666 decyzja 54: horyzont ≥ 60 dni (Stena JSON AEM; Freight w ferry-status też 60) */
+  const stena = await fetchStenaDays(deps, 60);
   warnings.push(...stena.warnings);
   const stFail = stena.http403 || stena.fetchedOk === 0
     || stena.warnings.some((w) => /Struktura|HTTP|nieczytelny JSON/i.test(w));
@@ -807,7 +808,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
 
   // BN2: Tallink + Viking + Eckerö + DFDS LIVE.
   // F7 #660: SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez żadnych rejsów; kierunki OK zapisujemy.
-  const tallink = await fetchTallinkDays(deps, 14);
+  /* #666 decyzja 54: horyzont ≥ 60 dni */
+  const tallink = await fetchTallinkDays(deps, 60);
   warnings.push(...tallink.warnings);
   const tlFail = tallink.fetchedOk === 0
     || (tallink.structureFail && tallink.sailings.length === 0);
@@ -855,7 +857,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
   }
 
-  const eckero = await fetchEckeroDays(deps, 14);
+  /* #666 decyzja 54: horyzont ≥ 60 dni (Viking Cargo — osobny krok #666 A) */
+  const eckero = await fetchEckeroDays(deps, 60);
   warnings.push(...eckero.warnings);
   const ekFail = eckero.fetchedOk === 0
     || (eckero.structureFail && eckero.sailings.length === 0);
@@ -879,7 +882,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:ECKERO_SCHEDULE:');
   }
 
-  const dfds = await fetchDfdsDays(deps, 14);
+  /* #666 decyzja 54 + E: DFDS Dynamic schedule — osobny krok; tu rozszerzenie tygodniówki */
+  const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
   const dfFail = dfds.fetchedOk === 0
     || (dfds.structureFail && dfds.sailings.length === 0);

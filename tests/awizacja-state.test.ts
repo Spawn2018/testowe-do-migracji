@@ -66,7 +66,7 @@ describe('reachableSailings', () => {
     status: 'ZAPLANOWANY', source: 'DANE_STARTOWE',
   });
 
-  it('filters sailings before port clearance', () => {
+  it('#666 decyzja 51: pokazuje też rejsy przed odprawą (oznaczenie w UI)', () => {
     const l = load({
       id: 'a',
       plannedLoadDate: '2026-10-02',
@@ -82,7 +82,7 @@ describe('reachableSailings', () => {
     const early = sail('early', new Date(min - 36e5).toISOString());
     const ok = sail('ok', new Date(min + 36e5).toISOString());
     const ids = reachableSailings([early, ok], l, now).map((s) => s.id);
-    expect(ids).toEqual(['ok']);
+    expect(ids).toEqual(['early', 'ok']);
   });
 
   it('keeps current sailing even if early', () => {

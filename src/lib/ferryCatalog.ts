@@ -114,14 +114,25 @@ export const FERRY_ROUTES: readonly FerryRouteDef[] = [
 /**
  * BN1 F7 #649: aliasy operator×terminal (AAA-BBB w FERRY_ROUTES zostaje).
  * Bez RPC: TLLA-HEL/HELA-TLL znane; nie spadają na GDN-NYN.
+ * #666 C: etykiety przez `routeShortLabel` / `ROUTE_SHORT` (nie w FERRY_ROUTES — kod 4+3 liter).
  */
 const SEED_ROUTE_ALIASES: ReadonlyMap<string, {
   operators: readonly FerryOperator[];
   outbound: boolean;
   waterTrack: WaterTrackId;
+  from: FerryPortCode;
+  to: FerryPortCode;
+  short: string;
+  pl: string;
 }> = new Map([
-  ['TLLA-HEL', { operators: ['VIKING', 'ECKERO'], outbound: true, waterTrack: 'TLL-HEL' }],
-  ['HELA-TLL', { operators: ['VIKING', 'ECKERO'], outbound: false, waterTrack: 'TLL-HEL' }],
+  ['TLLA-HEL', {
+    operators: ['VIKING', 'ECKERO'], outbound: true, waterTrack: 'TLL-HEL',
+    from: 'TLL', to: 'HEL', short: 'TLLA → HEL', pl: 'Tallinn A–Helsinki',
+  }],
+  ['HELA-TLL', {
+    operators: ['VIKING', 'ECKERO'], outbound: false, waterTrack: 'TLL-HEL',
+    from: 'HEL', to: 'TLL', short: 'HELA → TLL', pl: 'Helsinki–Tallinn A',
+  }],
 ]);
 
 /** Przeprawy działające przed BN9 (Polferries, Stena) — ich wygląd ma zostać bez zmian. */
@@ -254,9 +265,45 @@ export function routePorts(code: string | null | undefined): [FerryPortDef, Ferr
   return a && b ? [a, b] : null;
 }
 
-/** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO, PLD-KPS). */
+/** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO, PLD-KPS; Viking: +TLLA-HEL). */
 export function outboundRoutesOf(operator: FerryOperator): readonly string[] {
-  return FERRY_ROUTES.filter((r) => r.outbound && r.operators.includes(operator)).map((r) => r.code);
+  const fromSeed = FERRY_ROUTES.filter((r) => r.outbound && r.operators.includes(operator)).map((r) => r.code);
+  const fromAlias: string[] = [];
+  for (const [code, a] of SEED_ROUTE_ALIASES) {
+    if (!a.outbound || !a.operators.includes(operator)) continue;
+    if (!fromSeed.includes(code)) fromAlias.push(code);
+  }
+  const fromRpc: string[] = [];
+  for (const [code, ops] of rpcOperatorsByRoute) {
+    if (!ops.includes(operator)) continue;
+    if (!isOutbound(code)) continue;
+    if (fromSeed.includes(code) || fromAlias.includes(code) || fromRpc.includes(code)) continue;
+    fromRpc.push(code);
+  }
+  return [...fromSeed, ...fromAlias, ...fromRpc];
+}
+
+/**
+ * #666 C: krótka etykieta trasy do Rejsów / awizacji / mapy.
+ * Seed + alias Terminal A + snapshot RPC (`port_from → port_to`); nigdy pusty dla znanego kodu.
+ */
+export function routeShortLabel(code: string | null | undefined): string {
+  if (!code) return '—';
+  const alias = SEED_ROUTE_ALIASES.get(code);
+  if (alias) return alias.short;
+  const seed = routeByCode(code);
+  if (seed) return `${seed.from} → ${seed.to}`;
+  const ports = rpcRoutePorts.get(code);
+  if (ports) return `${ports.from} → ${ports.to}`;
+  return code;
+}
+
+/** #666 C: etykieta PL trasy (Terminal A: „Tallinn A–Helsinki”). */
+export function routeLabelPl(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const alias = SEED_ROUTE_ALIASES.get(code);
+  if (alias) return alias.pl;
+  return null;
 }
 
 /** Pierwsza trasa wyjazdowa armatora (porty w wierszu „Sytuacja na trasie”). */

@@ -14,11 +14,13 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import {
   awizacjaDuplicateWarning,
   awizacjaOperators,
+  isBeforePlannedLoad,
   reachableSailings,
   resourceSuggestions,
   type FerryOperatorId,
 } from '../../lib/awizacjaState';
 import { isPlausibleNational, toNationalPhone } from '../../lib/phoneNational';
+import { routeShortLabel } from '../../lib/ferryCatalog';
 import { effArrival, effDeparture, fmtLocal, historicalSailings, sailingAssignDenied, sailingStatusLabel } from '../../lib/sailings';
 import { isPreviewReadOnly } from '../../lib/prodFacade';
 import { accountRole } from '../../lib/accountRole';
@@ -352,23 +354,31 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 <span>{pt(locale, 'p7_m_sailing')}</span>
                 <select className="input" value={sailingId} onChange={(e) => setSailingId(e.target.value)} data-awiz-sailing>
                   <option value="">{t(locale, 'sail_none')}</option>
-                  {sailingOptions.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
-                      {o.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(o.status, locale)}` : ''}
-                    </option>
-                  ))}
+                  {sailingOptions.map((o) => {
+                    const before = isBeforePlannedLoad(o, load, operator);
+                    return (
+                      <option key={o.id} value={o.id}>
+                        {routeShortLabel(o.route)} · {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
+                        {before ? ` · ${pt(locale, 'p7_m_sailing_before_load')}` : ''}
+                        {o.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(o.status, locale)}` : ''}
+                      </option>
+                    );
+                  })}
                   {historyOptions.length ? (
                     <optgroup label={pt(locale, 'p7_m_sailing_hist')} data-awiz-sailing-hist>
                       {historyOptions.map((o) => (
                         <option key={o.id} value={o.id}>
-                          {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
+                          {routeShortLabel(o.route)} · {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}
                         </option>
                       ))}
                     </optgroup>
                   ) : null}
                 </select>
-                <small className="am-hint" data-awiz-sailing-later>{pt(locale, 'p7_m_sailing_later')}</small>
+                {!sailingOptions.length && !historyOptions.length ? (
+                  <small className="am-hint" data-awiz-sailing-empty>{pt(locale, 'p7_m_sailing_empty')}</small>
+                ) : (
+                  <small className="am-hint" data-awiz-sailing-later>{pt(locale, 'p7_m_sailing_later')}</small>
+                )}
               </label>
             )}
           </div>

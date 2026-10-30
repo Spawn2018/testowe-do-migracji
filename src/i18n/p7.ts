@@ -164,7 +164,8 @@ const PL: Record<string, string> = {
   p7_m_swap: 'Przepięcie naczepy',
   p7_m_swap_hint: 'po zaznaczeniu pojawia się „Odcinek SE · prom → Boden”',
   p7_m_operator: 'Armator',
-  p7_m_sailing: 'Rejs do Szwecji',
+  /* #666 decyzja 53 */
+  p7_m_sailing: 'Rejs promem',
   p7_m_vessel: 'Statek',
   p7_m_scx_no: 'Nr zlecenia SCX',
   p7_m_hhl_no: 'Nr zlecenia HHL',
@@ -176,7 +177,12 @@ const PL: Record<string, string> = {
   p7_m_ro: 'Awizację robi SCX. Ty ją oglądasz.',
   /* D-20261020-1501-01: Podgląd (B5) — tylko do odczytu; rejs i link śledzenia można dodać później */
   p7_m_ro_preview: 'Podgląd — tylko do odczytu. Awizację zapisujesz w swoim widoku HHL.',
-  p7_m_sailing_hist: 'Rejsy, które już dopłynęły do Szwecji',
+  /* #666 decyzja 52–53 */
+  p7_m_sailing_hist: 'Rejsy, które już wypłynęły lub dopłynęły (tylko Administrator HHL)',
+  /* #666 decyzja 51 */
+  p7_m_sailing_before_load: 'przed planowanym załadunkiem',
+  /* #666 decyzja 55 */
+  p7_m_sailing_empty: 'Brak rejsów w rozkładzie — źródło niedostępne lub rozkład jeszcze niepobrany; rejs można dodać później',
   /* D-20261020-1525-01: Odcinek SE — puste pola dozwolone; kierowcę SE awizuje się najpóźniej 48 h przed dostawą */
   p7_m_se_later: 'Można zapisać puste: inny kierowca i ciągnik od promu. Kierowcę SE trzeba awizować najpóźniej 48\u00a0h przed dostawą.',
   p7_m_se_later_miss: 'Do uzupełnienia najpóźniej 48\u00a0h przed dostawą: {what}. Do tego czasu sprawa „Brak awizacji kierowcy SE”.',

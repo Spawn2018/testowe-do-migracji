@@ -4,10 +4,10 @@
  */
 import type { Load, LoadResources, Sailing } from '../types';
 import {
-  clearanceHoursFor, FERRY_OPERATORS as CATALOG_OPERATORS, LEGACY_OPERATORS, outboundRoutesOf, sailingOfOperator,
+  clearanceHoursFor, FERRY_OPERATORS as CATALOG_OPERATORS, sailingOfOperator,
   type FerryOperator,
 } from './ferryCatalog';
-import { crossingLine, effDeparture, hasDeparted, selectableSailings } from './sailings';
+import { effDeparture, hasDeparted, selectableSailings } from './sailings';
 import { isAfterDelivery } from './status';
 
 /** Wszyscy armatorzy z katalogu promów (Polferries, Stena, potem nowi). */
@@ -16,17 +16,15 @@ export const FERRY_OPERATORS: readonly { id: FerryOperator; label: string }[] = 
 export type FerryOperatorId = FerryOperator;
 
 /**
- * Armatorzy w UI awizacji (STENA-3): Polferries i Stena zawsze, w tej kolejności; BN9-a — armator z katalogu spoza tej
- * pary tylko wtedy, gdy ma rejs w danych (jak Kokpit: `crossingLine` na jego trasie wyjazdowej) albo jest już wybrany.
+ * #666 decyzja 55: w awizacji zawsze wszyscy armatorzy ze słownika (Polferries…DFDS),
+ * także gdy nie ma jeszcze rejsów w rozkładzie (komunikat w UI).
+ * `sailings` / `current` zostają w sygnaturze (kompatybilność wywołań).
  */
 export function awizacjaOperators(
-  sailings: readonly Sailing[],
-  current?: FerryOperatorId | null,
+  _sailings?: readonly Sailing[],
+  _current?: FerryOperatorId | null,
 ): { id: FerryOperatorId; label: string }[] {
-  return FERRY_OPERATORS.filter((o) =>
-    LEGACY_OPERATORS.includes(o.id)
-    || o.id === current
-    || sailings.some((s) => crossingLine(s) === o.id && outboundRoutesOf(o.id).includes(s.route)));
+  return [...FERRY_OPERATORS];
 }
 
 /** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7) — z katalogu promów (Gdańsk 14 h, Gdynia 16 h). */
@@ -67,20 +65,31 @@ export function earliestFerryDepartureMs(
   return t + h * 36e5;
 }
 
-/** Rejsy armatora, na które auto zdąży (+ bieżący przypisany). */
+/**
+ * #666 decyzja 51: wszystkie przyszłe (jeszcze niewypłynięte) rejsy armatora ze wszystkich tras wyjazdowych,
+ * bez odcinania po dniu załadunku (+ bieżący przypisany). Kolejność: od najbliższego.
+ * Rejsy wcześniejsze niż załadunek+odprawa — do wyboru; oznaczenie w UI przez `isBeforePlannedLoad`.
+ */
 export function reachableSailings(
   all: Sailing[],
   load: Pick<Load, 'plannedLoadDate' | 'awizacja' | 'sailingId'>,
   nowIso: string,
   operator: FerryOperatorId = 'POLFERRIES',
 ): Sailing[] {
-  const minDep = earliestFerryDepartureMs(load, operator);
   return selectableSailings(all, nowIso, load.sailingId, operator).filter((s) => {
     if (s.id === load.sailingId) return true;
     if (hasDeparted(s, nowIso)) return false;
-    if (!operatorMatches(s, operator)) return false;
-    return Date.parse(effDeparture(s)) >= minDep;
+    return operatorMatches(s, operator);
   });
+}
+
+/** #666 decyzja 51: rejs przed planowanym załadunkiem + odprawą — do wyboru, z oznaczeniem w UI. */
+export function isBeforePlannedLoad(
+  s: Sailing,
+  load: Pick<Load, 'plannedLoadDate' | 'awizacja'>,
+  operator: FerryOperatorId = 'POLFERRIES',
+): boolean {
+  return Date.parse(effDeparture(s)) < earliestFerryDepartureMs(load, operator);
 }
 
 /** Unikalne wcześniej użyte wartości (podpowiedzi). */
