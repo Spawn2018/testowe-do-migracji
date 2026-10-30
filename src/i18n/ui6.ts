@@ -525,7 +525,7 @@ const pl: Dict = {
   a6_three_way_label_nie_zrealizowano: 'nie zrealizowano',
   a6_three_way_label_poza_cennikiem: 'poza cennikiem',
   a6_three_way_label_zgodna: 'zgodna',
-  a6_top_ferry_title: 'Następny odjazd promu (rozkład Polferries GDN↔NYN)',
+  a6_top_ferry_title: 'Najbliższy odjazd promu do Szwecji lub Finlandii — wszyscy armatorzy pod „+”',
   a6_top_lang: 'Język',
   a6_top_shortcuts: 'Skróty klawiszowe',
   a6_top_theme: 'Jasny / ciemny',
