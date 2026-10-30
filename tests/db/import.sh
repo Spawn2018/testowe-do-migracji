@@ -2492,11 +2492,13 @@ IMP653_ID=$(echo "$IMP653" | cut -d'|' -f1)
 IMP653_VER=$(echo "$IMP653" | cut -d'|' -f2)
 IMP653_NAME=$(echo "$IMP653" | cut -d'|' -f3)
 IMP653_HASH=$(echo "$IMP653" | cut -d'|' -f4)
+# Publish liczy decyzje z created_at >= imported_at (= now() w publish).
+# DEC653 powstała przy imporcie wcześniej — podbij created_at, żeby weszła do okna.
 $PSQL -c "delete from ksh_import_summaries where import_id='$IMP653_ID';
   delete from notifications where template='KSH_IMPORT_SUMMARY';
   update decisions set status='RESOLVED', resolved_at=now(), resolution_code='SUPERSEDED'
     where load_id in ('$L653','$L653RG') and status in ('NEW','ASSIGNED','SNOOZED') and id <> '$DEC653';
-  update decisions set status='NEW', resolved_at=null, resolution_code=null
+  update decisions set status='NEW', resolved_at=null, resolution_code=null, created_at=now()
     where id='$DEC653';
   select ksh_import_summary_publish('$P'::uuid, '$IMP653_ID'::uuid, $IMP653_VER, '$IMP653_NAME', '$IMP653_HASH');" >/dev/null
 chk "#653: HHL widzi decisions decider=HHL" "$(Q "select ((payload->>'decisions')::int >= 1) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='FORWARDER' and n.read_at is null limit 1")" t

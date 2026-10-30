@@ -7019,3 +7019,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok F7 r4:** `tests/db/import.sh` — (1) wrapper boolean bez `::text`; (2) seed S653-RG + cancel → KSH_ROW_GONE z importu (bez fallbacku `decision_open_from_event`); (3) `workflow_worker` przed ryzykiem T-CANCEL-653; (4) CARRIER decisions≥1; import **424**.
 - Bez push na main.
 
+## 2026-10-30 04:45 — #656 CI db FAIL → fix okna created_at w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe”; CI @ 8de1c445 — unit/visual ✔; **db FAIL** import 421/424 (2 FAIL: HHL/CARRIER decisions≥1).
+- Przyczyna: republish SUMMARY w teście liczy `created_at >= imported_at` (= `now()` w publish), a DEC653 z importu była starsza.
+- **Krok:** `tests/db/import.sh` — przed `ksh_import_summary_publish` ustaw `created_at=now()` na DEC653. EXPECTED nadal **424**.
+- Push → CI → F7. Potem #654→**0343**, #651→**0344**. Bez push na main.
+
+
