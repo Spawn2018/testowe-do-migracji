@@ -269,6 +269,50 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`here_month_spend: ${r.error.message}`);
       return Number(r.data ?? 0);
     },
+    /** #667 C — lista geometrii do crona here-roads. */
+    async listHereRoadGeometry() {
+      const r = await sb.from('here_road_geometry').select('leg,fetched_at,points,retry_after');
+      if (r.error) throw new Error(`here_road_geometry: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        leg: String(row.leg),
+        fetched_at: String(row.fetched_at),
+        points: row.points,
+        retry_after: row.retry_after != null ? String(row.retry_after) : null,
+      }));
+    },
+    async storeHereRoad(leg: string, points: unknown, summary: string, nowIso?: string) {
+      const args: Record<string, unknown> = { p_leg: leg, p_points: points, p_summary: summary };
+      if (nowIso) args.p_now = nowIso;
+      must(await sb.rpc('here_store_road', args), 'here_store_road');
+    },
+    async hereCorridorBundle(code: string) {
+      const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', code).maybeSingle();
+      const updatedAt = Date.parse(String(corrRow.data?.updated_at ?? '')) || 0;
+      type Pt = [number, number];
+      const parsePts = (raw: unknown): Pt[] => {
+        if (!Array.isArray(raw)) return [];
+        const out: Pt[] = [];
+        for (const p of raw) {
+          if (!Array.isArray(p) || p.length < 2) continue;
+          const lat = Number(p[0]);
+          const lng = Number(p[1]);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) out.push([lat, lng]);
+        }
+        return out;
+      };
+      let pts: Pt[] = [];
+      let via: Pt[] = [];
+      const ptsRpc = await sb.rpc('here_corridor_points', { p_code: code });
+      if (!ptsRpc.error) pts = parsePts(ptsRpc.data);
+      const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: code, p_max: 14 });
+      if (!viaRpc.error) via = parsePts(viaRpc.data);
+      return { code, pts, via, updatedAt };
+    },
+    async stenaSeInlandCorridorCode() {
+      const r = await sb.rpc('stena_se_inland_corridor_code');
+      if (r.error || typeof r.data !== 'string' || !r.data) return null;
+      return r.data;
+    },
     async listActiveLoadsForTelematics() {
       const r = await sb.from('loads').select('id,trailer_plate,telematics_vehicle_id,status,plan_load_date,plan_delivery_date,tracking_opened_at')
         .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');

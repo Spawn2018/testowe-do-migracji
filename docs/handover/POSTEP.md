@@ -7211,3 +7211,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” na #668/#673/#674. Bez scalenia. Bez push na main.
 - **Krok (#667 B):** migracja **0352** — leg `SE-KAA-INLAND`; `here_store_road` / `here_road_corridor_dev_m`. Edge `here-roads`: `SE-KAA` ← via `SE_E22`; `SE-KAA-INLAND` ← `stena_se_inland_corridor_code()` (bez pustego TRACK). Front `ROAD_LEGS=5` + SPEC. Testy unit i667/bmapa; bmapa EXPECTED 168→173. **Dalej:** C cron HERE przed purge; D diagnostyka; E słownik BN7; F e2e prod.
 - Bez push na main.
+
+## 2026-10-30 21:30 — #667 C cron HERE (przed purge)
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r3 @ `3ae700fc` — czekam „gotowe do scalenia”; CI db/visual w toku → G-15 bez push na #668); #667 ten PR; #608 w planie; #550 WSTRZYMANE. #674 bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) przed #673 (0352/0353). Bez push na main.
+- **Krok (#667 C):** wspólny `refreshRoadLegs` (próg cron 21 d); Edge `here-roads` dual (JWT przeglądarka / service cron); job `here-roads` + SOURCE_DOWN `HERE_ROADS` sticky; migracja **0353** `tower-here-roads` (04:15 UTC). Testy i667/bmapa/risk-keys/refresh. **Dalej:** D diagnostyka; E BN7; F e2e prod.
+- Bez push na main.

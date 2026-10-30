@@ -35,6 +35,7 @@ describe('#667 pomarańczowe drogi (krok A)', () => {
 /** #667 B — SE-KAA (E22) + SE-KAA-INLAND z korytarzy #627, nie pusty TRACK. */
 describe('#667 pomarańczowe drogi (krok B SE-KAA dual)', () => {
   const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
+  const refresh = readFileSync('supabase/functions/_shared/here/refreshRoadLegs.ts', 'utf8');
   const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
   const mig = 'supabase/migrations/0352_667_se_kaa_dual_here.sql';
 
@@ -46,16 +47,48 @@ describe('#667 pomarańczowe drogi (krok B SE-KAA dual)', () => {
     expect(sql).toMatch(/here_store_road/);
   });
 
-  it('Edge: SE-KAA ← SE_E22; SE-KAA-INLAND ← stena_se_inland_corridor_code', () => {
-    expect(edge).toMatch(/corridorCode: 'SE_E22'/);
-    expect(edge).toMatch(/SE-KAA-INLAND/);
+  it('Edge/refresh: SE-KAA ← SE_E22; SE-KAA-INLAND ← inland corridor', () => {
+    expect(refresh).toMatch(/corridorCode: 'SE_E22'/);
+    expect(refresh).toMatch(/SE-KAA-INLAND/);
+    expect(refresh).toMatch(/corridorInland: true/);
+    expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
     expect(edge).toMatch(/stena_se_inland_corridor_code/);
-    expect(edge).toMatch(/corridorInland: true/);
-    expect(edge).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
+    expect(edge).toMatch(/refreshRoadLegs/);
   });
 
   it('front: ROAD_LEGS=5 i SPEC SE-KAA-INLAND', () => {
     expect(apply).toMatch(/ROAD_LEGS = 5/);
     expect(apply).toMatch(/'SE-KAA-INLAND': ROAD_KAA/);
+  });
+});
+
+/** #667 C — cron before purge 30 d + SOURCE_DOWN HERE_ROADS. */
+describe('#667 pomarańczowe drogi (krok C cron HERE)', () => {
+  const refresh = readFileSync('supabase/functions/_shared/here/refreshRoadLegs.ts', 'utf8');
+  const jobs = readFileSync('supabase/functions/_shared/integrations/jobs.ts', 'utf8');
+  const sync = readFileSync('supabase/functions/_shared/integrations/sync.ts', 'utf8');
+  const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
+  const mig = 'supabase/migrations/0353_667_here_roads_cron.sql';
+
+  it('migracja 0353: tower-here-roads raz na dobę', () => {
+    expect(existsSync(mig)).toBe(true);
+    const sql = readFileSync(mig, 'utf8');
+    expect(sql).toMatch(/tower-here-roads/);
+    expect(sql).toMatch(/tower_cron_here_roads_invoke/);
+    expect(sql).toMatch(/\/functions\/v1\/here-roads/);
+    expect(sql).toMatch(/15 4 \* \* \*/);
+  });
+
+  it('refreshRoadLegs: próg cron 21 d; job + SOURCE_DOWN HERE_ROADS sticky', () => {
+    expect(refresh).toMatch(/ROAD_CRON_REFRESH_MS = 21 \* 864e5/);
+    expect(jobs).toMatch(/runHereRoads/);
+    expect(jobs).toMatch(/'here-roads': runHereRoads/);
+    expect(jobs).toMatch(/'here-roads': 1440/);
+    expect(jobs).toMatch(/ROAD_CRON_REFRESH_MS/);
+    expect(jobs).toMatch(/SOURCE_DOWN:HERE_ROADS/);
+    expect(sync).toMatch(/HERE_ROADS/);
+    expect(sync).toMatch(/src === 'HERE_ROADS'/);
+    expect(edge).toMatch(/isServiceRequest/);
+    expect(edge).toMatch(/runJob\('here-roads'/);
   });
 });

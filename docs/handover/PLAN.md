@@ -1167,7 +1167,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. §2 D-1050: przy czekaniu na F7 #668 — nie stoimy.
 1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~ w tym PR; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
 2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← `stena_se_inland_corridor_code()`; migracja **0352**; `ROAD_LEGS=5`; Edge bez pustego TRACK~~.
-3. Cron odświeżania `here_road_geometry` przed purge 30 dni; brak linii → SOURCE_DOWN/JOB_FAILURE HERE_ROADS.
+3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job `here-roads` + migracja **0353** `tower-here-roads`; SOURCE_DOWN `HERE_ROADS` sticky przy braku linii; Edge dual (JWT / service)~~.
 4. Diagnostyka: odrzucone legi w Stanie systemu + `integration_runs`.
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania.
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
@@ -2121,3 +2121,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 14:54 | #661 SCALONE `392a9bc2` (F7 gotowe @ bf2572b4); start BN2 dopisek testów Terminal A / RECZNIE | pętla |
 | 30.10.2026 20:10 | #667 krok A: mapPool PROD + paintOrangeRoads; #668 czekam F7 @ 5aaa0544; #672 DP front bez F7 | pętla |
 | 30.10.2026 20:55 | #667 krok B: SE-KAA←SE_E22 + SE-KAA-INLAND (**0352**); ROAD_LEGS=5; #668 czekam F7 | pętla |
+| 30.10.2026 21:30 | #667 krok C: cron HERE 21 d (**0353**) + SOURCE_DOWN HERE_ROADS; #668 czekam F7 | pętla |
