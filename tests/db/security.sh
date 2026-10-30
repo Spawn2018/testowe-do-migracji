@@ -284,8 +284,9 @@ sys "update loads set telematics_vehicle_id='https://portal.safefleet.pl/safefle
 out=$(sys "select telematics_provider || '|' || telematics_vehicle_id || '|' || coalesce(safefleet_token,'') from loads where id='$L1'")
 echo "$out" | grep -qx "SAFEFLEET|safefleet:b1c2d3|aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3" && { ok=$((ok+1)); echo "  OK    #662: sanitizer zapisuje token i znacznik"; } || { fail=$((fail+1)); echo "  FAIL  #662 sanitizer: $out"; }
 # Przywróć RIO z B6 — dalsze #392/#442 zakładają ten stan startowy.
+# Sanitizer RIO zamienia URL na znacznik rio:<uuid> (nie zostawia rio.cloud w vehicle_id).
 sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
-out=$(sys "select (safefleet_token is null and telematics_vehicle_id like '%rio.cloud%' and rio_secret='klucz-b6')::text from loads where id='$L1'")
+out=$(sys "select (safefleet_token is null and telematics_vehicle_id = 'rio:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' and rio_secret='klucz-b6')::text from loads where id='$L1'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #662: po RIO safefleet_token puste"; } || { fail=$((fail+1)); echo "  FAIL  #662 clear po RIO: $out"; }
 
 echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"

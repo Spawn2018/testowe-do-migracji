@@ -1164,8 +1164,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
 1. ~~Rozpoznanie URL → `telematics_provider=SAFEFLEET`, token w `safefleet_token` (bez SELECT), znacznik `safefleet:<6>`~~.
 2. ~~Job `safefleet-poll` co 2 min (`TELM_SAFEFLEET_POLL`), `positions.source=SAFEFLEET`, trajectory, ryzyko po 3 błędach~~.
-3. ~~UI chip + Stan systemu; testy parser/job~~; **testy RLS** security (+8, EXPECTED 494) — SCX/KSH bez SELECT tokenu.
-4. Po F7 → wróć do #661 BN2.
+3. ~~UI chip + Stan systemu; testy parser/job~~; ~~testy RLS security (+8, EXPECTED 494)~~; CI fix asercji clear po RIO (`rio:<uuid>`).
+4. Po F7 → **#662-b** (v_skip audytu safefleet_*, `integration_runs.ok` przy down/invalid, maska URL w audit_log) → wróć do #661 BN2.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — ~~import wyłączony~~ → **włączony** decyzją #653 (30.10 01:15); `import_enabled=true`, powiadomienia ON (`p_quiet=false`).

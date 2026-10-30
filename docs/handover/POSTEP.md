@@ -7144,3 +7144,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI @ `fb0051da`: unit/visual/db ✔ — potem krok RLS z odbioru #662.
 - **Krok:** `security.sh` — authenticated bez SELECT/UPDATE/INSERT `safefleet_token`; SCX/KSH odmowa odczytu; sanitizer URL→token+znacznik; clear po RIO. EXPECTED security **494** / TEST **490**.
 - Push → CI → F7. Bez push na main.
+
+## 2026-10-30 12:55 — #662 CI db: asercja clear po RIO
+
+- Skrzynka: #662 pilne W TOKU (PR #663); #608 w planie; #550 WSTRZYMANE. Brak „F7: gotowe” po `285a924a`.
+- Scalanie: F7 @ `fb0051d` unieważnione nowym commitem; #661 wstrzymane.
+- CI @ `285a924a`: unit/visual ✔; **db FAIL** security 493/1 — asercja `telematics_vehicle_id like '%rio.cloud%'` (sanitizer RIO zapisuje `rio:<uuid>`).
+- **Krok:** `security.sh` — clear po RIO: `safefleet_token is null` + `telematics_vehicle_id = 'rio:…'` + `rio_secret`. EXPECTED nadal **494**.
+- Po F7 #663: #662-b z komentarza F7 (v_skip audytu, integration_runs.ok, maska audit_log). Potem #661. Bez push na main.
