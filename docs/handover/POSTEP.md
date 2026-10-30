@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 01:45 — #648 BN1 seed + TLLA-HEL e2e (0342); #651 czeka F7
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: #651 CI **zielone** @ `52861cdc` (unit/visual/db) — brak „F7: gotowe”; nie scalono. Bez push na main.
+- **Krok BN1/#648:** gałąź `pakiet/bn1-648-seed` / migracja **0342** — `bn1_seed_baltic_geofences(p_project)` (seed.sql + migracja); e2e TLLA-HEL→Tallinn A → `AT_PORT_GDANSK`; `ferry_route_set_active` (HHL_ADMIN; active=false → promote pomija; SCX 42501). FK `sailings.route` odłożone (OTHER). nullguard +1 GUARD.
+- Push → CI → prośba o F7. #651 równolegle czeka F7.
+
 ## 2026-10-30 00:20 — #650 F7 r3 POPRAWKI (B1'' ack bez dat)
 
 - Skrzynka: #650 F7 r3 POPRAWKI @ cb97a1ca (1 bloker). #608 w planie; #550 **WSTRZYMANE**. #651 po #650.

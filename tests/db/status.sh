@@ -2419,5 +2419,61 @@ q "alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
      check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
+# BN1/#648: seed jedną funkcją; e2e TLLA-HEL → Tallinn A; active=false wyłącza promote (HHL_ADMIN)
+echo; echo "[BN1/#648] seed + TLLA-HEL e2e + ferry_route_set_active"
+HHL=11111111-0000-0000-0000-000000000001
+chk "BN1 648: seed idempotentny (0 nowych)" \
+  "select public.bn1_seed_baltic_geofences('$P')" 0
+chk "BN1 648: 15 stref bałtyckich po seed" \
+  "select count(*) from geofences where project_id='$P' and name in (
+     'Bufor 20 km przed Tallinn A','Terminal Tallinn A',
+     'Bufor 20 km przed Tallinn D HEL','Terminal Tallinn D HEL',
+     'Bufor 20 km przed Tallinn D','Terminal Tallinn D',
+     'Bufor 20 km przed Muuga','Terminal Muuga HHLA',
+     'Bufor 20 km przed Paldiski','Terminal Paldiski',
+     'Terminal Helsinki West Harbour T2','Terminal Helsinki Katajanokka',
+     'Terminal Vuosaari','Terminal Stockholm Värtahamnen','Terminal Kapellskär')" 15
+
+S648v=77777777-0000-0000-0000-00000000648a
+L648v=$(L e5)
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+    ('$S648v','$P','66666666-0000-0000-0000-000000000001','TLLA-HEL',
+     '2026-10-16 12:00+00','2026-10-16 14:00+00','ZAPLANOWANY','VIKING');" >/dev/null
+mk $L648v V648 "'HHL/V648'" "'SCX/V648'" IN_TRANSIT_PL "'$S648v'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L648v','MILESTONE_LOADED','2026-10-15 08:00+00');" >/dev/null
+# Tallinn A (Viking) — rodzina TLL-HEL; 2 fixy w strefie PORT_OUT
+pos $L648v 59.44400 24.76800 "2026-10-16 10:00+00"
+pos $L648v 59.44410 24.76810 "2026-10-16 10:05+00"
+chk "BN1 648 e2e: TLLA-HEL + Tallinn A → AT_PORT_GDANSK" "$(st $L648v)" AT_PORT_GDANSK
+
+S648p=77777777-0000-0000-0000-00000000648b
+L648p=$(L e6)
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+    ('$S648p','$P','66666666-0000-0000-0000-000000000001','TLLA-HEL',
+     '2026-10-16 08:00+00','2026-10-16 10:00+00','ZAPLANOWANY','VIKING');" >/dev/null
+mk $L648p P648 "'HHL/P648'" "'SCX/P648'" AT_PORT_GDANSK "'$S648p'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L648p','MILESTONE_LOADED','2026-10-15 08:00+00');" >/dev/null
+# HHL_ADMIN wyłącza trasę → promote pomija (ferry_route_is_outbound = false)
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select ferry_route_set_active('TLLA-HEL', false); commit" >/dev/null
+chk "BN1 648: TLLA-HEL active=false" \
+  "select active::text from ferry_routes where code='TLLA-HEL'" f
+chk "BN1 648: outbound TLLA-HEL po wyłączeniu = false" \
+  "select public.ferry_route_is_outbound('TLLA-HEL')" f
+chk "BN1 648: promote nie rusza ładunku na wyłączonej trasie" \
+  "select promote_ferry_departures('2026-10-16 10:00+00'); select status from loads where id='$L648p'" AT_PORT_GDANSK
+# SCX nie może zmieniać active
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
+ select ferry_route_set_active('TLLA-HEL', true); rollback;" 2>&1)
+echo "$out" | grep -qiE 'Wyłącznie administrator|42501' \
+  && { ok=$((ok+1)); echo "  OK    BN1 648: SCX odmowa ferry_route_set_active"; } \
+  || { fail=$((fail+1)); echo "  FAIL  BN1 648: SCX odmowa ferry_route_set_active: $out"; }
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select ferry_route_set_active('TLLA-HEL', true); commit" >/dev/null
+chk "BN1 648: TLLA-HEL przywrócone active" \
+  "select active::text from ferry_routes where code='TLLA-HEL'" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
