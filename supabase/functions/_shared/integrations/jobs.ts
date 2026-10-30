@@ -56,6 +56,9 @@ import {
   speedKmhFromPrev, type RioTrackerOn,
 } from '../telematics/rioPositionSharing.ts';
 import {
+  fetchSafefleetPosition, fetchSafefleetTrajectory, safefleetUrlSafe, scrubSafefleetToken,
+} from '../telematics/safefleetTemporaryLink.ts';
+import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
@@ -159,6 +162,29 @@ export interface RioLoadPatch {
   rio_error_streak?: number;
 }
 
+/** #662 — wiersz do odpytania SafeFleet (token tylko w Edge / service_role). */
+export interface SafefleetLoadRow {
+  id: string;
+  safefleet_token: string;
+  safefleet_check_state: string | null;
+  safefleet_check_at: string | null;
+  safefleet_last_fix_at: string | null;
+  safefleet_error_streak: number;
+  safefleet_trajectory_done: boolean;
+  telematics_vehicle_id: string | null;
+  status: string | null;
+  plannedLoadDate: string | null;
+  trackingOpenedAt: string | null;
+}
+
+export interface SafefleetLoadPatch {
+  safefleet_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+  safefleet_check_at?: string;
+  safefleet_last_fix_at?: string;
+  safefleet_error_streak?: number;
+  safefleet_trajectory_done?: boolean;
+}
+
 export interface SyncStore {
   projectId(): Promise<string>;
   vessels(): Promise<VesselRow[]>;
@@ -200,21 +226,26 @@ export interface SyncStore {
   /** TELM: zapis pozycji (process_position). */
   processPosition?(row: {
     loadId: string; lat: number; lon: number; ts: string;
-    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
     speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
   }): Promise<void>;
   lastPositionAt?(loadId: string, source: string): Promise<string | null>;
   telmEmtrackWebEnabled?(): Promise<boolean>;
   /** E44: flaga TELM_RIO_LINKS — wyłącza odczyt linków RIO. */
   telmRioLinksEnabled?(): Promise<boolean>;
+  /** #662: flaga TELM_SAFEFLEET_POLL. */
+  telmSafefleetPollEnabled?(): Promise<boolean>;
   /** E44: blokada nakładania się przebiegów rio-links (TTL + token właściciela). */
   rioLinksLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
   rioLinksLockRelease?(token?: string): Promise<void>;
+  /** #662: blokada safefleet-poll. */
+  safefleetPollLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
+  safefleetPollLockRelease?(token?: string): Promise<void>;
   /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
   saveOrphanPosition?(row: {
     plate: string; trackingObjectId?: string | null;
     lat: number; lon: number; ts: string;
-    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
     speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
   }): Promise<void>;
   /** #622: alarm HHL — GPS>2h, sieroty z tokenem naczepy. */
@@ -228,6 +259,9 @@ export interface SyncStore {
   listRioLoadsForPoll?(): Promise<RioLoadRow[]>;
   /** E44: wynik odczytu — bez secret w patch. */
   updateRioLoadState?(loadId: string, patch: RioLoadPatch): Promise<void>;
+  /** #662: transporty SAFEFLEET (token tylko service_role). */
+  listSafefleetLoadsForPoll?(): Promise<SafefleetLoadRow[]>;
+  updateSafefleetLoadState?(loadId: string, patch: SafefleetLoadPatch): Promise<void>;
   /** Ostatnia pozycja z lat/lon (do prędkości RIO). */
   lastPositionFix?(loadId: string, source: string): Promise<{ lat: number; lon: number; ts: string } | null>;
   /** II-8: zapis bieżącej pogody morskiej */
@@ -2266,6 +2300,226 @@ export async function runRioLinks(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
+ * #662 — odczyt pozycji z linku tymczasowego SafeFleet.
+ * Cron `tower-safefleet-poll` co 2 min. Job: `safefleet-poll`. Token nigdy w logach (tylko 6 znaków).
+ */
+export async function runSafefleetPoll(deps: JobDeps): Promise<JobResult> {
+  const started = deps.now().getTime();
+  const nowIso = new Date(started).toISOString();
+
+  const enabled = deps.store.telmSafefleetPollEnabled
+    ? await deps.store.telmSafefleetPollEnabled()
+    : true;
+  if (!enabled) {
+    return {
+      job: 'safefleet-poll', mode: 'LIVE', ok: true,
+      disabled: true,
+      reason: 'Flaga TELM_SAFEFLEET_POLL wyłączona — bez zapisu pozycji',
+      observations: { flag: 'false', links: '0', disabled: 'true' },
+    };
+  }
+
+  const lockToken = crypto.randomUUID();
+  if (deps.store.safefleetPollLockTry) {
+    const got = await deps.store.safefleetPollLockTry(90, lockToken);
+    if (!got) {
+      return {
+        job: 'safefleet-poll', mode: 'LIVE', ok: true,
+        reason: 'Nakładający się przebieg safefleet-poll — pominięto',
+        observations: { links: '0', overlap: '1' },
+      };
+    }
+  }
+
+  try {
+    const loads = deps.store.listSafefleetLoadsForPoll
+      ? await deps.store.listSafefleetLoadsForPoll()
+      : [];
+    let queried = 0;
+    let written = 0;
+    let skippedWindow = 0;
+    let skippedDup = 0;
+    let invalid = 0;
+    let down = 0;
+    let noPosition = 0;
+    let trajectory = 0;
+    const warnings: string[] = [];
+    let risks = 0;
+
+    for (const load of loads) {
+      if (deps.now().getTime() - started > 40_000) break;
+
+      const matchRow = {
+        id: load.id,
+        trailer_plate: null as string | null,
+        telematics_vehicle_id: load.telematics_vehicle_id ?? `safefleet:${load.safefleet_token.slice(-6)}`,
+        status: load.status,
+        plannedLoadDate: load.plannedLoadDate,
+        trackingOpenedAt: load.trackingOpenedAt,
+      };
+      const inWindow = loadInTrackingWindow(matchRow, nowIso);
+      if (!inWindow) {
+        skippedWindow++;
+        continue;
+      }
+
+      queried++;
+      const safeUrl = safefleetUrlSafe(load.safefleet_token);
+      const res = await fetchSafefleetPosition({
+        token: load.safefleet_token,
+        fetchImpl: deps.fetch,
+        nowMs: started,
+      });
+
+      const apply = async (patch: SafefleetLoadPatch) => {
+        if (!deps.store.updateSafefleetLoadState) return;
+        await deps.store.updateSafefleetLoadState(load.id, patch);
+        Object.assign(load, patch);
+      };
+
+      if (!res.ok) {
+        const streak = (load.safefleet_error_streak ?? 0) + 1;
+        const kind = res.kind;
+        if (kind === 'invalid') {
+          invalid++;
+          await apply({
+            safefleet_check_state: 'invalid',
+            safefleet_check_at: nowIso,
+            safefleet_error_streak: streak,
+          });
+        } else if (kind === 'no_position') {
+          noPosition++;
+          down++;
+          await apply({
+            safefleet_check_state: 'down',
+            safefleet_check_at: nowIso,
+            safefleet_error_streak: streak,
+          });
+        } else {
+          down++;
+          await apply({
+            safefleet_check_state: 'down',
+            safefleet_check_at: nowIso,
+            safefleet_error_streak: streak,
+          });
+        }
+        warnings.push(scrubSafefleetToken(res.warning));
+        // ≥3 kolejne błędy (invalid / error / pusty) → ryzyko HHL+SCX (dedup).
+        if (streak >= 3) {
+          if (await deps.store.raiseRisk({
+            kind: 'RESOURCE_MISSING',
+            severity: 'HIGH',
+            title: 'Link SafeFleet nie działa / wygasł',
+            titleKey: 'rk_safefleet_dead',
+            params: {},
+            detail: {
+              zrodlo: 'SAFEFLEET', loadId: load.id, status: res.status,
+              url: safeUrl, warning: scrubSafefleetToken(res.warning), streak,
+            },
+            dedup: `SAFEFLEET_DEAD:${load.id}`,
+            sourceUrl: safeUrl,
+            loadId: load.id,
+          })) risks++;
+        }
+        continue;
+      }
+
+      const wasBad = load.safefleet_check_state === 'invalid' || load.safefleet_check_state === 'down';
+      await apply({
+        safefleet_check_state: 'ok',
+        safefleet_check_at: nowIso,
+        safefleet_last_fix_at: res.observedAt,
+        safefleet_error_streak: 0,
+      });
+      if (wasBad) await deps.store.resolveRisks(`SAFEFLEET_DEAD:${load.id}`);
+
+      // Opcjonalnie raz: trajectory → presences w oknie (bez duplikatów po ts).
+      if (!load.safefleet_trajectory_done && deps.store.processPosition) {
+        const points = await fetchSafefleetTrajectory({
+          token: load.safefleet_token,
+          fetchImpl: deps.fetch,
+          nowMs: started,
+        });
+        for (const p of points) {
+          if (!loadInTrackingWindow(matchRow, p.ts)) continue;
+          const prev = deps.store.lastPositionFix
+            ? await deps.store.lastPositionFix(load.id, 'SAFEFLEET')
+            : null;
+          if (prev && Date.parse(prev.ts) >= Date.parse(p.ts)) continue;
+          await deps.store.processPosition({
+            loadId: load.id,
+            lat: p.lat,
+            lon: p.lon,
+            ts: p.ts,
+            source: 'SAFEFLEET',
+            speed: null,
+            heading: null,
+            ignition: null,
+            raw: { provider: 'SAFEFLEET', url: safeUrl, trajectory: true },
+          });
+          trajectory++;
+        }
+        await apply({ safefleet_trajectory_done: true });
+      }
+
+      const prevFix = deps.store.lastPositionFix
+        ? await deps.store.lastPositionFix(load.id, 'SAFEFLEET')
+        : null;
+      if (prevFix && Date.parse(prevFix.ts) >= Date.parse(res.observedAt)) {
+        skippedDup++;
+        continue;
+      }
+
+      if (deps.store.processPosition) {
+        await deps.store.processPosition({
+          loadId: load.id,
+          lat: res.lat,
+          lon: res.lon,
+          ts: res.observedAt,
+          source: 'SAFEFLEET',
+          speed: res.speedKmh,
+          heading: res.heading,
+          ignition: res.ignition,
+          raw: {
+            provider: 'SAFEFLEET',
+            url: safeUrl,
+            licensePlate: res.licensePlate,
+          },
+        });
+        written++;
+      }
+      if (deps.store.inferPhaseFromPosition) {
+        await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+      }
+    }
+
+    return {
+      job: 'safefleet-poll',
+      mode: 'LIVE',
+      ok: true,
+      risks,
+      warnings: warnings.slice(0, 20),
+      observations: {
+        candidates: String(loads.length),
+        links: String(loads.length),
+        queried: String(queried),
+        written: String(written),
+        trajectory: String(trajectory),
+        invalid: String(invalid),
+        down: String(down),
+        no_position: String(noPosition),
+        skipped_window: String(skippedWindow),
+        skipped_dup: String(skippedDup),
+      },
+    };
+  } finally {
+    if (deps.store.safefleetPollLockRelease) {
+      await deps.store.safefleetPollLockRelease(lockToken);
+    }
+  }
+}
+
+/**
  * B9 — ponowienie translation_queue (blad/brak; limit: nowy miesiąc = nowy wiersz deepl_usage).
  * Po sukcesie: pamięć + opis ryzyka + usunięcie z kolejki + zamknięcie TRANSLATE_WAIT.
  * Wpisy >15 min (poza odrzucone) → ryzyko ROAD_SE / rk_translate_wait (per hash).
@@ -2353,6 +2607,7 @@ export const JOBS = {
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
   'emtrack-web': runEmtrackWeb,
   'rio-links': runRioLinks,
+  'safefleet-poll': runSafefleetPoll,
   'route-hazards': runRouteHazards,
   'translate-retry': runTranslateRetry,
 } as const;
@@ -2362,7 +2617,8 @@ export type JobName = keyof typeof JOBS;
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2, 'route-hazards': 60,
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2,
+  'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,
 };
 

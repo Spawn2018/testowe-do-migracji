@@ -24,7 +24,7 @@ export function trackingRefHasSecret(ref: string | null | undefined): boolean {
 
 /**
  * Wartość bezpieczna dla zdarzeń, toastów i lokalnego stanu po zapisie:
- * RIO z kluczem → `rio:<uuid>`; już `rio:` zostaje; emtrack/other bez secret bez zmian.
+ * RIO z kluczem → `rio:<uuid>`; SafeFleet → `safefleet:<6>`; emtrack/other bez secret bez zmian.
  */
 export function redactTrackingRef(ref: string | null | undefined): string | null {
   if (ref == null) return null;
@@ -33,6 +33,10 @@ export function redactTrackingRef(ref: string | null | undefined): string | null
   if (/^rio:[0-9a-f-]{36}$/i.test(s)) return `rio:${s.slice(4).toLowerCase()}`;
   const id = rioTrackingId(s);
   if (id) return `rio:${id}`;
+  /* #662: pełny URL SafeFleet → znacznik bez tokenu */
+  const sf = /^https:\/\/portal\.safefleet\.pl\/safefleet\/temporary_link\/view\/([0-9a-f]{32})\/?$/i.exec(s);
+  if (sf) return `safefleet:${sf[1].slice(-6).toLowerCase()}`;
+  if (/^safefleet:[0-9a-f]{6}$/i.test(s)) return s.toLowerCase();
   if (trackingRefHasSecret(s)) return null;
   return s;
 }

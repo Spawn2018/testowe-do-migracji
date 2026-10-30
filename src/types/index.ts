@@ -301,7 +301,7 @@ export interface EtaDetail {
  * Bez `secret`: przeglądarka dostaje tylko rejestrację, ważność, wynik zapytania testowego i ostrzeżenia.
  */
 export interface TrackingLinkInfo {
-  provider: 'RIO' | 'EMTRACK' | 'OTHER';
+  provider: 'RIO' | 'EMTRACK' | 'SAFEFLEET' | 'OTHER';
   /** `asset_name` z RIO — rejestracja pojazdu z lokalizatorem (np. „GD 4417K”) */
   asset?: string | null;
   /** ważność linku RIO (`start` / `end`) */

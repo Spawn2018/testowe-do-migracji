@@ -1157,8 +1157,15 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
 Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **W TOKU: BN2** (rozkłady).
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
-2. **BN2** — W TOKU (**0347**+**0348**, PR #660): Tallink LIVE; Portnet ATD/ATA w **ferry-portnet** co 15 min; Port of Tallinn **tylko odwołania** (F7 r3 — bez `actual_*` z planu tablicy); Ports of Stockholm `actual_*` na istniejących (bez insertów/godzin). Domknięcie W_REJSIE: HEL-TLL/HELA-TLL/VUO-MUU/**STO-TLL**/**KPS-PLD**. Dalej: scrape HTML Viking/Eckerö/DFDS (14 dni), domknięcie BN2.
+2. **BN2** — W TOKU (**0347**+**0348**, PR #660 SCALONE `a94645d9`; PR #661 `pakiet/bn2-viking-eckero-dfds`): Tallink LIVE; Portnet; Viking/Eckerö/DFDS LIVE HTML (14 dni) + Terminal A; F7 #661: B1 DFDS bez stałej HTML, B2 PoT bez fałszywego +1 dzień, okresy ważności, testy — **wstrzymane na PILNE #662**.
 3. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+
+### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — W TOKU (`pakiet/662-safefleet-link`, migracja **0349**, PR #663)
+Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
+1. ~~Rozpoznanie URL → `telematics_provider=SAFEFLEET`, token w `safefleet_token` (bez SELECT), znacznik `safefleet:<6>`~~.
+2. ~~Job `safefleet-poll` co 2 min (`TELM_SAFEFLEET_POLL`), `positions.source=SAFEFLEET`, trajectory, ryzyko po 3 błędach~~.
+3. ~~UI chip + Stan systemu; testy parser/job~~; ~~testy RLS security (+8, EXPECTED 494)~~; CI fix asercji clear po RIO (`rio:<uuid>`).
+4. Po F7 → **#662-b** (v_skip audytu safefleet_*, `integration_runs.ok` przy down/invalid, maska URL w audit_log) → wróć do #661 BN2.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
 3. **28B:B** — ~~import wyłączony~~ → **włączony** decyzją #653 (30.10 01:15); `import_enabled=true`, powiadomienia ON (`p_quiet=false`).
@@ -2058,3 +2065,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 10:00 | BN2 #660 F7 r1: RECZNIE/ODWOLANY, Tallink partial, **0348** ferry-portnet 15 min, DST, timeout | pętla |
 | 30.10.2026 10:25 | BN2 #660 F7 r2: PoT/Stockholm bez zmyślonych godzin; closeStale +STO-TLL/KPS-PLD | pętla |
 | 30.10.2026 10:50 | BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu tablicy) | pętla |
+| 30.10.2026 12:15 | #662 PILNE SafeFleet (SG-27): start **0349** przed F7 #661 | pętla |
+| 30.10.2026 12:35 | #662 RLS: security +8 (EXPECTED 494); CI zielone @ fb0051da | pętla |

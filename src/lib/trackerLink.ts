@@ -6,12 +6,29 @@
 import type { Load, TrackingLinkInfo } from '../types';
 import { PROD_BUILD } from './prodFacade';
 
-export type TrackerKind = 'emtrack' | 'rio' | 'other' | 'none';
+export type TrackerKind = 'emtrack' | 'rio' | 'safefleet' | 'other' | 'none';
+
+/** #662: pełny link tymczasowy SafeFleet (32 hex). */
+const SAFEFLEET_LINK_RE =
+  /^https:\/\/portal\.safefleet\.pl\/safefleet\/temporary_link\/view\/[0-9a-f]{32}\/?$/i;
+
+export function isSafefleetTrackingRef(ref: string | null | undefined): boolean {
+  const r = (ref ?? '').trim();
+  return SAFEFLEET_LINK_RE.test(r) || /^safefleet:[0-9a-f]{6}$/i.test(r);
+}
+
+/** Wygląda na SafeFleet, ale wzór niepasujący — komunikat walidacji w awizacji. */
+export function isBrokenSafefleetTrackingRef(ref: string | null | undefined): boolean {
+  const r = (ref ?? '').trim().toLowerCase();
+  if (!r || isSafefleetTrackingRef(r)) return false;
+  return r.includes('safefleet.pl') || r.includes('temporary_link');
+}
 
 export function trackerKind(ref: string | null | undefined): TrackerKind {
   const r = (ref ?? '').trim().toLowerCase();
   if (!r) return 'none';
   if (r.includes('position-sharing.rio.cloud') || r.startsWith('rio:')) return 'rio';
+  if (isSafefleetTrackingRef(r) || r.includes('safefleet.pl')) return 'safefleet';
   if (r.includes('emtrack')) return 'emtrack';
   return 'other';
 }
