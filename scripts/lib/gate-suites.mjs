@@ -23,9 +23,9 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 397, // #653: +1 N3 clear bez dokładania driver; testy tylko-zmienione pole (zamiast kompletu 6); było 396 (#650)
+  import: 423, // #653 CI @ 879b21bd: 423 OK/0 FAIL (EXPECTED 424 był o 1 za wysoko; CARRIER wliczony)
   nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
-  i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
+  i2: 672, // #653: +1 SUMMARY zamiast PLAN_DATES IN_APP; było 671
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)

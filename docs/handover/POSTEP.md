@@ -6988,3 +6988,51 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Przyczyny: (1) `#496` w `status.sh` przywracał starą listę `sailings_route_check` (GDN/GDY) po teście OTHER → TLL-HEL padał; (2) RPC z GUARD wołane bez sesji `authenticated` → „Brak aktywnego konta”.
 - Fix: przywrócenie regexu BN1 po `#496`; kraje/snapshot przez `set local role authenticated` + JWT HHL. status nadal **443**.
 - Push → CI → prośba o F7. Bez push na main.
+
+## 2026-10-30 02:55 — #653: dzwonek tylko KSH_IMPORT_SUMMARY (0342)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).
+- Scalanie: #655 CI zielone @ 83a92e59 — czeka F7; #651 F7 gotowe — **po** #655+#0342; #654 db FAIL (po #651).
+- **Krok #653 (odbiór 01:15):** zalanie dzwonka po imporcie — PR `pakiet/653-import-bell-summary` / **0342**: wrapper `import_schedule` (`import_bell_quiet`+`bulk_quiet`); trigger wycisza PLAN_DATES/SCHEDULE_CRIT/RISK/DECISION; SUMMARY z „w tym: N spraw, M decyzji”; jednorazowo read_at na zalanie 00:56Z; import **405**.
+- TS-01 outbound #9 @ 01:13Z (6 kluczy): przed wdrożeniem #655 — trigger #650 (komplet 6); aktor bez SELECT (Supabase MCP bez auth w tej sesji) — do odbioru koordynatora.
+- Bez push na main.
+
+## 2026-10-30 03:10 — #655 SCALONE + #656 F7 POPRAWKI
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**.
+- Scalanie: **#655 SCALONE** `29000fd2` (F7 gotowe @ 83a92e59). #656 F7 POPRAWKI (komentarz 02:04Z). #651 F7 gotowe — po #656 jako **0343**; #654 → **0344**.
+- **Krok #653 F7 #656:** (1) wrapper bez `bulk_quiet` — tylko `import_bell_quiet`; (2) `l13_decision_email` cisza przy `import_bell_quiet`; (3) liczby spraw/decyzji w SUMMARY wg widoczności (SCX/KSH bez HHL-only); (4) testy: awiz+krytyczna → sprawa/decyzja + 0 dzwonków per-transport; cancel→workflow; przeciek GUC; eskalacja DECISION_ESCALATED; import **422**.
+- Bez push na main.
+
+## 2026-10-30 03:45 — #656 F7 POPRAWKI r2
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).
+- Scalanie: brak „F7: gotowe”; #651 CONFLICTING (rebase po #656); #654 CONFLICTING + db FAIL.
+- CI @ b76f2382: unit/visual ✔; **db FAIL** (import 406/15, i2 668/3, dec-auto 79/4, g20 14/1) — wrapper vs `import_schedule_impl` w prosrc; `bulk_quiet` w `trg_plan_dates_notify` zły warunek z `import_bell_quiet`.
+- **Krok F7 r2 #656:** (1) `bulk_quiet` → zawsze pełna cisza w `trg_plan_dates_notify`; (2) SUMMARY decisions = RLS 0315; (3) `LOAD_STATUS_CHANGED` w quiet + test; (4) g20/dec-auto → `import_schedule_impl`; (5) I-10/i2 pod SUMMARY; import **423**. Numery: #654=**0343**, #651=**0344** (po #656).
+- Bez push na main.
+
+## 2026-10-30 04:05 — #656 F7 POPRAWKI r4 (tylko testy)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**.
+- Scalanie: F7 r4 @ cae4d21 — migracja 0342 OK; CI db import 417/423 (5 FAIL). #651 F7 gotowe (po #656); #654 CONFLICTING.
+- **Krok F7 r4:** `tests/db/import.sh` — (1) wrapper boolean bez `::text`; (2) seed S653-RG + cancel → KSH_ROW_GONE z importu (bez fallbacku `decision_open_from_event`); (3) `workflow_worker` przed ryzykiem T-CANCEL-653; (4) CARRIER decisions≥1; import **424**.
+- Bez push na main.
+
+## 2026-10-30 04:45 — #656 CI db FAIL → fix okna created_at w teście
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe”; CI @ 8de1c445 — unit/visual ✔; **db FAIL** import 421/424 (2 FAIL: HHL/CARRIER decisions≥1).
+- Przyczyna: republish SUMMARY w teście liczy `created_at >= imported_at` (= `now()` w publish), a DEC653 z importu była starsza.
+- **Krok:** `tests/db/import.sh` — przed `ksh_import_summary_publish` ustaw `created_at=now()` na DEC653. EXPECTED nadal **424**.
+- Push → CI → F7. Potem #654→**0343**, #651→**0344**. Bez push na main.
+
+## 2026-10-30 05:05 — #656 CI: EXPECTED import 424→423
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe”. #651 F7 gotowe (CONFLICTING — po #656); #654 CONFLICTING.
+- CI @ 879b21bd: unit/visual ✔; **db FAIL** tylko licznik: import **423 OK / 0 FAIL**, EXPECTED 424.
+- **Krok:** `gate-suites.mjs` import **423** (424 był o 1 za wysoko; asercje #653 w tym CARRIER przechodzą). Push → CI → F7.
+- Potem #654→**0343**, #651→**0344**. Bez push na main.
+
+
