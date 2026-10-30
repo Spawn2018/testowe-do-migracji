@@ -9,7 +9,7 @@ import { dictEntry } from '../i18n/messages';
 import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
 import {
   LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, outboundRoutesOf,
-  routeByCode, sailingOfOperator, type FerryOperator,
+  isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
 } from './ferryCatalog';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
@@ -100,7 +100,8 @@ export function ferryFromSailing(s: Sailing | undefined, bookingRef: string | nu
   };
 }
 
-export interface SailingDraft { vessel: string; route: Sailing['route']; departureAt: string; arrivalAt: string }
+/** BN9-b: `operator` — armator statku z listy (Finlandia → Eckerö, nie pierwszy armator trasy Terminal A) */
+export interface SailingDraft { vessel: string; route: Sailing['route']; departureAt: string; arrivalAt: string; operator?: string }
 export type SailingDraftError = 'VESSEL' | 'TIMES' | 'ORDER' | 'DUPLICATE' | null;
 export function checkSailingDraft(d: SailingDraft, all: Sailing[]): SailingDraftError {
   if (!d.vessel.trim()) return 'VESSEL';
@@ -263,7 +264,8 @@ function lineDepartures(
 ): Sailing[] {
   return all
     .filter((s) => {
-      if (crossingLine(s) !== line || !routeByCode(s.route)?.outbound || !operatorsForRoute(s.route).includes(line)) return false;
+      /* BN9-b: wyjazdowe trasy armatora ze słownika — także Terminal A (TLLA-HEL) i kody z bazy */
+      if (crossingLine(s) !== line || !isOperatorOutboundRoute(line, s.route)) return false;
       if (skipCancelled && s.status === 'ODWOLANY') return false;
       const dep = Date.parse(effDeparture(s));
       return Number.isFinite(dep) && dep >= fromMs;

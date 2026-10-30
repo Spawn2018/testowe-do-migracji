@@ -1197,7 +1197,7 @@ test.describe('wyglad/P7-d Rejsy (E30 pkt 7)', () => {
     await page.setViewportSize({ width: 1366, height: 900 });
     await boot(page, 'HHL');
     await openRejsy(page);
-    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Gdańsk → Nynäshamn i Gdynia → Karlskrona');
+    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Polska → Szwecja oraz Estonia → Finlandia i Szwecja');
     expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty', '']);
     await expect(page.locator('[data-sail-future]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('[data-sail-returns]')).toHaveAttribute('aria-pressed', 'false');

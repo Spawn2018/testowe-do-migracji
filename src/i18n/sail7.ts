@@ -6,7 +6,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 
 const PL: Record<string, string> = {
-  sv_sub: 'Gdańsk → Nynäshamn i Gdynia → Karlskrona',
+  sv_sub: 'Polska → Szwecja oraz Estonia → Finlandia i Szwecja',
   sv_future: 'Przyszłe',
   sv_returns: 'Pokaż powroty',
   sv_src_POLFERRIES: 'Polferries',
@@ -21,7 +21,10 @@ const PL: Record<string, string> = {
   sv_st_cancelled: 'odwołany',
   sv_st_gone: 'wypłynął',
   sv_none: 'Brak rejsów w wybranym zakresie.',
-  sv_none_future: 'Brak przyszłych rejsów do Szwecji w rozkładzie.',
+  sv_none_future: 'Brak przyszłych rejsów wyjazdowych w rozkładzie.',
+  /* BN9-b: filtr armatora */
+  sv_line_filter: 'Armator',
+  sv_line_all: 'Wszyscy armatorzy',
   sv_reach: 'Rozkład w bazie: {list}.',
   sv_reach_item: '{line} do {date}',
   sv_reach_POLFERRIES: 'Polferries',
