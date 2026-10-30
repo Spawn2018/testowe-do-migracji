@@ -6910,6 +6910,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 07:30 — #657 CI: import FAIL — testy #650 po revoke
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: #657 bez „F7: gotowe”; CI `db` FAIL @ `fe9e2834` — import 418/7 (enqueue przez authenticated → permission denied).
+- **Krok:** `import.sh` — authenticated → `permission denied`; pozytywny backfill / N5 CANCELLED|REMOVED przez SQL (postgres + JWT HHL_ADMIN). EXPECTED import **425** bez zmiany. Push → CI → F7. Bez push na main.
+
+## 2026-10-30 07:07 — #651 SCALONE; #653 revoke enqueue_active_wt (0345)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: F7 „gotowe do scalenia” @ `858b8e5` (Spawn2018, po tipie) + CI zielone → **#651 SCALONE** `17fda50e` (**0344**). Bez push na main.
+- **Krok #653 (4):** gałąź `pakiet/653-revoke-enqueue-active-wt` / migracja **0345** — `revoke` `ksh_sync_outbound_enqueue_active_wt` z `authenticated`/`anon`/`public`; funkcja zostaje (HHL_ADMIN+2FA w ciele); usunięta z allowlisty i null-guard; testy privilege w `import.sh` (+2). import **425**; nullguard **895**.
+- Dalej po F7: uwagi nieblokujące F7 #654 (#648), potem BN2. Bez push na main.
+
 ## 2026-10-30 06:37 — #654 SCALONE; #651 → 0344
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.

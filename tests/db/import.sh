@@ -487,6 +487,9 @@ chk "A6: authenticated bez EXECUTE outbound_enqueue" "$(Q "select has_function_p
 chk "A6: authenticated bez EXECUTE outbound_list" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_list(uuid,int)','execute')")" f
 chk "A6: authenticated bez EXECUTE outbound_ack" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_ack(jsonb,text,text)','execute')")" f
 chk "A6: authenticated bez EXECUTE l1b_note_file_changed" "$(Q "select has_function_privilege('authenticated','l1b_note_file_changed(uuid,uuid,text,text,int)','execute')")" f
+# #653: backfill WT→plik wyłączony z API (decyzja właściciela 30.10 — bez uzupełniania wstecz)
+chk "#653: authenticated bez EXECUTE enqueue_active_wt" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_enqueue_active_wt()','execute')")" f
+chk "#653: anon bez EXECUTE enqueue_active_wt" "$(Q "select has_function_privilege('anon','ksh_sync_outbound_enqueue_active_wt()','execute')")" f
 val "A6: SCX widzi 0 outbound" $SCX "select count(*) from ksh_sync_outbound" 0
 val "A6: KSH widzi 0 outbound" $KSH "select count(*) from ksh_sync_outbound" 0
 $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
@@ -2375,7 +2378,7 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "KSH-ONLY|true|false|1" ]; then
   ok=$((ok+1)); echo "  OK    #653: zmiana hhl_order_no → tylko ten klucz"; else fail=$((fail+1)); echo "  FAIL  #653: tylko hhl → $out"; fi
-# Ręczne wt6 (backfill) nadal działa — OPS odmowa; HHL_ADMIN → pending z kompletem
+# #653: backfill poza API (revoke authenticated) — ręczne SQL jako postgres + JWT HHL_ADMIN
 $PSQL -c "update loads set
   driver_name='Komplet650', driver_delivery_name=null,
   driver_phone='600650650', driver_delivery_phone=null, driver_phone_country='PL',
@@ -2384,22 +2387,26 @@ $PSQL -c "update loads set
   carrier_order_no='SCAN-IDEM', hhl_order_no='KSH-IDEM'
   where id='$SG_OUT'" >/dev/null
 $PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
-err "#650: OPS enqueue_active_wt odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
+err "#650: OPS enqueue_active_wt odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "permission denied"
 $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
+err "#653: authenticated ADMIN enqueue odmowa (revoke)" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "permission denied"
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-val "#650: backfill → pending z hhl_order_no" $HHL \
-  "select ksh_sync_outbound_enqueue_active_wt(); select count(*)>0 from ksh_sync_outbound where project_id='$P' and status='pending' and patch ? 'hhl_order_no'" t commit
-# N5: pusta wartość WT → brak klucza w wt6; podwójny backfill; audit; ADMIN bez 2FA
+out=$($PSQL -c "begin; set local request.jwt.claim.sub='$HHL';
+  select ksh_sync_outbound_enqueue_active_wt();
+  select count(*)>0 from ksh_sync_outbound where project_id='$P' and status='pending' and patch ? 'hhl_order_no';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "t" ]; then ok=$((ok+1)); echo "  OK    #650: backfill → pending z hhl_order_no"; else fail=$((fail+1)); echo "  FAIL  #650: backfill → pending z hhl_order_no  (otrzymano: $out, oczekiwano: t)"; fi
+# N5: pusta wartość WT → brak klucza w wt6; podwójny backfill; audit
 $PSQL -c "update loads set hhl_order_no=null where id='$SG_OUT'" >/dev/null
 chk "#650: puste WT → brak klucza" "$(Q "select (public.ksh_sync_outbound_wt6_patch('$SG_OUT') ? 'hhl_order_no')")" f
 $PSQL -c "update loads set hhl_order_no='KSH-IDEM' where id='$SG_OUT'" >/dev/null
 N650=$(Q "select count(*) from ksh_sync_outbound where project_id='$P' and status='pending'")
-val "#650: drugi backfill bez nowych wierszy" $HHL \
-  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where project_id='$P' and status='pending'" "$N650" commit
+out=$($PSQL -c "begin; set local request.jwt.claim.sub='$HHL';
+  select ksh_sync_outbound_enqueue_active_wt();
+  select count(*) from ksh_sync_outbound where project_id='$P' and status='pending';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "$N650" ]; then ok=$((ok+1)); echo "  OK    #650: drugi backfill bez nowych wierszy"; else fail=$((fail+1)); echo "  FAIL  #650: drugi backfill bez nowych wierszy  (otrzymano: $out, oczekiwano: $N650)"; fi
 chk "#650: audit backfill" "$(Q "select count(*)>0 from audit_log where action='KSH_SYNC_OUTBOUND_BACKFILL_WT'")" t
-$PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
-err "#650: ADMIN aal1 enqueue odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
-$PSQL -c "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
 # N5: backfill pomija CANCELLED/REMOVED; trigger REMOVED bez kolejki
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 SG_CX=$(Q "insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date,
@@ -2414,12 +2421,18 @@ $PSQL -c "insert into shipment_items (project_id, load_id, shipment_code, length
   values ('$P', '$SG_CX', 'CX-650', 18, 2.4, 2.4, 1)" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX'" >/dev/null
 $PSQL -c "update loads set status='CANCELLED' where id='$SG_CX'" >/dev/null
-val "#650 N5: backfill bez CANCELLED" $HHL \
-  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending'" 0 commit
+out=$($PSQL -c "begin; set local request.jwt.claim.sub='$HHL';
+  select ksh_sync_outbound_enqueue_active_wt();
+  select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #650 N5: backfill bez CANCELLED"; else fail=$((fail+1)); echo "  FAIL  #650 N5: backfill bez CANCELLED  (otrzymano: $out, oczekiwano: 0)"; fi
 $PSQL -c "update loads set status='REMOVED' where id='$SG_CX'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX'" >/dev/null
-val "#650 N5: backfill bez REMOVED" $HHL \
-  "select ksh_sync_outbound_enqueue_active_wt(); select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending'" 0 commit
+out=$($PSQL -c "begin; set local request.jwt.claim.sub='$HHL';
+  select ksh_sync_outbound_enqueue_active_wt();
+  select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending';
+commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
+if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #650 N5: backfill bez REMOVED"; else fail=$((fail+1)); echo "  FAIL  #650 N5: backfill bez REMOVED  (otrzymano: $out, oczekiwano: 0)"; fi
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set driver_name='RemovedDrv' where id='$SG_CX';
   select count(*) from ksh_sync_outbound where load_id='$SG_CX' and status='pending';
