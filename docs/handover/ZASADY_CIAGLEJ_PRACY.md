@@ -35,6 +35,10 @@ Sprawdzenie: `gh issue view <n> --json author,labels,comments` → `author.login
 - cięcie zakresu;
 - zmiana daty wydania (28.10.2026, 20:00).
 
+## Rejestr drobnych poprawek (DP) — #671
+
+**Każda** drobna poprawka i każda uwaga „nieblokujące / na później / następny PR” trafia do PLAN §4 (podsekcja „Rejestr drobnych poprawek (DP)”) z numerem `DP-n`, źródłem, właścicielem, etapem i stanem. Nic nie może przepaść ani zostać okrojone. W tym samym przebiegu dopisz pozycję do rejestru (commit docs na gałęzi PR albo `docs/*`). Pozycji DP nie zamykasz bez commitu realizującego albo decyzji właściciela. Stan DP sprawdzasz przy każdym przejściu do następnego etapu.
+
 ## Zakazy pętli
 
 - bez `git push` na `main`;

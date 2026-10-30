@@ -42,7 +42,9 @@ import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
 } from '../ferry/eckero.ts';
 import {
-  DFDS_SCHEDULE_PAGE, DFDS_UA, DFDS_WEEKLY_PDF_URL, parseDfdsWeeklyHtml,
+  DFDS_SCHEDULE_PAGE, DFDS_TERMINAL_KPS, DFDS_TERMINAL_PLD, DFDS_UA, DFDS_WEEKLY_PDF_URL,
+  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, mergeDfdsSailings,
+  parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -536,7 +538,10 @@ async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
   };
 }
 
-/** BN2 / F7 #661 B1 — DFDS: tylko faktycznie sparsowana treść (HTML/PDF); bez stałej HTML. */
+/**
+ * #666 E / BN2 — DFDS Dynamic `/api/timetable` (oba kierunki, tygodnie do horyzontu);
+ * zapas: PDF sezonowy ze strony, potem HTML/PDF tygodniówki. Bez stałej HTML w jobie.
+ */
 async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
   warnings: string[];
@@ -544,47 +549,89 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   structureFail: boolean;
 }> {
   const warnings: string[] = [];
+  const dirs = [
+    { portOfLoading: DFDS_TERMINAL_PLD, portOfDischarge: DFDS_TERMINAL_KPS },
+    { portOfLoading: DFDS_TERMINAL_KPS, portOfDischarge: DFDS_TERMINAL_PLD },
+  ] as const;
+  const weeks = dfdsWeekWindows(deps.now(), days);
+  const jobs = weeks.flatMap((w) => dirs.map((d) => ({ ...w, ...d })));
+  let apiOk = 0;
+  let apiStructureFail = false;
+  const apiParts = await mapPoolLimit(jobs, 4, async (job) => {
+    const url = dfdsTimetableUrl({
+      portOfLoading: job.portOfLoading,
+      portOfDischarge: job.portOfDischarge,
+      dateFromIso: job.dateFromIso,
+      dateToIso: job.dateToIso,
+    });
+    const page = await readText(deps, url, {
+      headers: { 'User-Agent': DFDS_UA, Accept: 'application/json' },
+    });
+    if (!page.ok) return { sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'], warn: [page.warning] };
+    let json: unknown;
+    try {
+      json = JSON.parse(page.text);
+    } catch {
+      return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'] };
+    }
+    const parsed = parseDfdsTimetableApi(json);
+    return { sailings: parsed.sailings, warn: parsed.warnings };
+  });
+  let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
+  for (const part of apiParts) {
+    warnings.push(...part.warn);
+    if (part.sailings.length > 0) {
+      apiOk += 1;
+      apiSailings = mergeDfdsSailings(apiSailings, part.sailings);
+    } else if (part.warn.some((w) => /Struktura|nie-JSON/i.test(w))) {
+      apiStructureFail = true;
+    }
+  }
+
   const page = await readText(deps, DFDS_SCHEDULE_PAGE, {
     headers: { 'User-Agent': DFDS_UA, Accept: 'text/html' },
   });
-  const pdf = await readText(deps, DFDS_WEEKLY_PDF_URL, {
+  if (!page.ok) warnings.push(page.warning);
+  const pdfUrl = (page.ok && extractDfdsSeasonalPdfUrl(page.text)) || DFDS_WEEKLY_PDF_URL;
+  const pdf = await readText(deps, pdfUrl, {
     headers: { 'User-Agent': DFDS_UA, Accept: 'application/pdf' },
   });
-  if (!page.ok) warnings.push(page.warning);
   if (!pdf.ok) warnings.push(pdf.warning);
-  if (!page.ok && !pdf.ok) {
-    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
-  }
+
+  let fallback: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'] = [];
   if (page.ok) {
     const fromPage = parseDfdsWeeklyHtml(page.text, { now: deps.now(), days });
-    if (fromPage.sailings.length > 0) {
-      return {
-        sailings: fromPage.sailings,
-        warnings: [...warnings, ...fromPage.warnings],
-        fetchedOk: 1,
-        structureFail: false,
-      };
-    }
     warnings.push(...fromPage.warnings);
+    if (fromPage.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPage.sailings);
   }
   if (pdf.ok) {
-    // PDF tekstowy: wyciąg z bajtów może zawierać HTML-podobną tabelę albo plain text.
     const fromPdf = parseDfdsWeeklyHtml(pdf.text, { now: deps.now(), days });
-    if (fromPdf.sailings.length > 0) {
-      return {
-        sailings: fromPdf.sailings,
-        warnings: [...warnings, ...fromPdf.warnings],
-        fetchedOk: 1,
-        structureFail: false,
-      };
-    }
     warnings.push(...fromPdf.warnings);
+    if (fromPdf.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPdf.sailings);
   }
-  // HTTP 200 bez czytelnej tabeli → struktura zmieniona (SOURCE_DOWN), nie zmyślone godziny.
-  if (!warnings.some((w) => /Struktura|brak tabeli/i.test(w))) {
+
+  // Dynamic ma pierwszeństwo; PDF/HTML tylko uzupełnia brakujące dni (bez duplikatów).
+  const sailings = mergeDfdsSailings(apiSailings, fallback);
+  if (sailings.length > 0) {
+    return {
+      sailings,
+      warnings,
+      fetchedOk: apiOk > 0 || fallback.length > 0 ? 1 : 0,
+      structureFail: false,
+    };
+  }
+  if (apiOk === 0 && !page.ok && !pdf.ok) {
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
+  }
+  if (!warnings.some((w) => /Struktura|brak tabeli|Dynamic/i.test(w))) {
     warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
   }
-  return { sailings: [], warnings, fetchedOk: 0, structureFail: true };
+  return {
+    sailings: [],
+    warnings,
+    fetchedOk: 0,
+    structureFail: apiStructureFail || true,
+  };
 }
 
 /** BN2 — Portnet Digitraffic: ATA/ATD → actual_* na dopasowanych rejsach (±3 h od planu). */

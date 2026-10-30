@@ -1422,7 +1422,9 @@ err "#666/0351: HHL_OPS nie przypisze rejsu z actual_departure_at" $OPS_D15 \
   "jeszcze nie wypłynął"
 val "#666/0351: HHL_ADMIN przypisuje rejs z actual_departure_at" $HHL \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15e' where id='$L_D15' returning 1" 1 commit
-$PSQL -c "set session_replication_role=replica; update loads set sailing_id=null where id='$L_D15'" >/dev/null
+# Przywróć przyszły rejs (jak przed 0351), żeby NO_SAILING nie otwierał się przy teście pozycji.
+$PSQL -c "set session_replication_role=replica; update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15'" >/dev/null
+$PSQL -c "select l3_scan()" >/dev/null
 # F7 #370 (decyzja 20:01): pozycja bez linku nie wycisza; link wycisza (wycofane D1/N6).
 $PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values

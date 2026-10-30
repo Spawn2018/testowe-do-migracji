@@ -7218,3 +7218,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#669** SCALONE `85aef636` (F7 gotowe @ `2a0588e`); **#670** SCALONE `85ee37f1` (F7 gotowe @ `4774580`). CI zielone, merge — nie fork.
 - **Krok (#666 F7 r1):** `fetchStenaDays` równolegle limit 4; SOURCE_DOWN STENA tylko gdy `fetchedOk===0` lub struktura bez rejsów; migracja **0351** (`actual_departure_at` w `guard_load_update`); testy unit (załadunek 20.11 / Stena+Tallink, Polferries historyczne, komunikaty 55, Cargo 04.00*, job Stena concurrency/częściowa awaria) + i2 DB. **Dalej:** DFDS Dynamic po F7; potem **#667**.
 - Bez push na main.
+
+## 2026-10-30 19:10 — #671 DP + #666 DFDS Dynamic
+
+- Skrzynka: **#671** (Spawn2018) → PLAN §4 rejestr DP-1…DP-12 + BN9-c1…c6 + ZASADY_CIAGLEJ_PRACY (sekcja DP); #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 — brak „F7: gotowe do scalenia”; unit/visual ✔ @ 28c062a0; db FAIL i2 (NO_TRACKING po 0351) — naprawione w tym kroku.
+- **Krok (#666 E DFDS Dynamic):** publiczne `www.dfds.com/api/timetable` (EEPLN↔SEKPS, tygodnie×2, lim. 4); zapas PDF sezonowy ze strony + HTML; SOURCE_DOWN gdy wszystkie zawiodą; fixture + testy parser/job; i2: przywróć przyszły rejs po teście 0351. **Dalej:** F7 #668; potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 19:15 — #666 DFDS Dynamic + #671 rejestr DP; fix i2
+
+- Skrzynka: **#671** (Spawn2018) wpisane — rejestr DP-1…12, BN9-c1…c6, zasada DP w `ZASADY_CIAGLEJ_PRACY.md`. #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #668; CI `28c062a0` — unit/visual ✔, db FAIL i2 D-1501 NO_TRACKING (po 0351).
+- **Krok:** DFDS Dynamic — `/api/timetable` EEPLN↔SEKPS, tygodnie do 60 d, lim. 4; zapas PDF ze strony + HTML; fixture API; fix i2: przywróć przyszły rejs przed testem pozycji. **Dalej:** F7 #668; potem **#667**.
+- Bez push na main.

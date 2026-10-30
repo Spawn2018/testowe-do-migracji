@@ -17,6 +17,7 @@ const PORTNET = fx('digitraffic-port-calls-megastar-2026-10-29.json');
 const PORT_TLL = fx('port-tallinn-departures-arrivals-sample.html');
 const PORT_STO = fx('ports-stockholm-portentry-sample.json');
 const DFDS_HTML = fx('dfds-weekly-paldiski-kapellskar-sample.html');
+const DFDS_API = fx('dfds-timetable-api-sample.json');
 const VIKING_HTML = fx('viking-timetable-helsinki-tallinn-sample.html');
 const VIKING_CARGO_HTML = fx('viking-cargo-helsinki-tallinn-sample.html');
 const NOW = new Date('2026-10-30T12:00:00Z');
@@ -419,6 +420,21 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     };
     await runFerrySchedule(deps(st, pages));
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+  });
+
+  it('#666: DFDS Dynamic API → rejsy PLD-KPS/KPS-PLD; HTML/PDF zbędne', async () => {
+    const st = new MemStore();
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'api/timetable': JSON.stringify([...both.pld_kps_week44, ...both.kps_pld_week44]),
+      'routes-and-schedules': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
+    expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'KPS-PLD')).toBe(true);
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
   });
 

@@ -12,7 +12,10 @@ import {
   parseVikingSchedule, parseVikingTimetableHtml, parseVikingPlannedChanges,
 } from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
-import { parseDfdsSchedule, parseDfdsWeeklyHtml } from '../src/lib/ferry/dfds';
+import {
+  extractDfdsSeasonalPdfUrl, mergeDfdsSailings, parseDfdsSchedule,
+  parseDfdsTimetableApi, parseDfdsWeeklyHtml,
+} from '../src/lib/ferry/dfds';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
 import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/lib/ferry/portsStockholm';
 
@@ -28,6 +31,7 @@ const VIKING_HTML = readFileSync(new URL('./fixtures/viking-timetable-helsinki-t
 const VIKING_CARGO_HTML = readFileSync(new URL('./fixtures/viking-cargo-helsinki-tallinn-sample.html', import.meta.url), 'utf8');
 const ECKERO_HTML = readFileSync(new URL('./fixtures/eckero-timetable-finlandia-finbo-sample.html', import.meta.url), 'utf8');
 const DFDS_HTML = readFileSync(new URL('./fixtures/dfds-weekly-paldiski-kapellskar-sample.html', import.meta.url), 'utf8');
+const DFDS_API = JSON.parse(readFileSync(new URL('./fixtures/dfds-timetable-api-sample.json', import.meta.url), 'utf8'));
 
 describe('BN2 Tallink timetable', () => {
   it('buduje URL z zakresem dat', () => {
@@ -225,6 +229,27 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.warnings.filter((w) => /Struktura/i.test(w))).toEqual([]);
     expect(r.sailings.some((s) => s.route === 'PLD-KPS' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
     expect(r.sailings.some((s) => s.route === 'KPS-PLD' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
+  });
+
+  it('#666 DFDS Dynamic: API obu kierunków + odstępstwo 23:59 + PDF ze strony', () => {
+    const pld = parseDfdsTimetableApi(DFDS_API.pld_kps_week44);
+    const kps = parseDfdsTimetableApi(DFDS_API.kps_pld_week44);
+    expect(pld.warnings).toEqual([]);
+    expect(kps.warnings).toEqual([]);
+    expect(pld.sailings.every((s) => s.route === 'PLD-KPS' && s.vessel === 'M/F Sirena Seaways')).toBe(true);
+    expect(kps.sailings.every((s) => s.route === 'KPS-PLD' && s.vessel === 'M/F Sirena Seaways')).toBe(true);
+    // Tydzień 44: Mon/Tue 23:59 lokalnie (odstępstwo vs sezonowy 22:00) → UTC 21:59 EET.
+    expect(pld.sailings.some((s) => s.departureUtc === '2026-10-26T21:59:00.000Z')).toBe(true);
+    expect(pld.sailings.some((s) => s.departureUtc.startsWith('2026-10-30T'))).toBe(true);
+    expect(kps.sailings.some((s) => s.departureUtc.startsWith('2026-10-26') || s.departureUtc.startsWith('2026-11-01'))).toBe(true);
+    const merged = mergeDfdsSailings(pld.sailings, kps.sailings);
+    expect(merged.length).toBe(pld.sailings.length + kps.sailings.length);
+    expect(mergeDfdsSailings(pld.sailings, pld.sailings).length).toBe(pld.sailings.length);
+    const bad = parseDfdsTimetableApi({ foo: 1 });
+    expect(bad.sailings).toEqual([]);
+    expect(bad.warnings.join(' ')).toMatch(/tablicy|Dynamic/);
+    const html = `Download seasonal schedule <a href="https://assets.ctfassets.net/z860498abl84/Gy4OYoQ6LuDjJU4BuGKun/f8fe25019414d460662df90e830c3ba6/Schedule_Paldiski_-_Kapellskär.pdf">PDF</a>`;
+    expect(extractDfdsSeasonalPdfUrl(html)).toMatch(/Schedule_Paldiski/);
   });
 
   it('F7 #661: rozwinięcie tygodnia przez DST (marzec / październik Tallinn)', () => {
