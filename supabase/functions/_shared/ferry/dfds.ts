@@ -245,6 +245,30 @@ export function mergeDfdsMissingDays(api: DfdsSailing[], fallback: DfdsSailing[]
   return out;
 }
 
+export type DfdsFailedWindow = {
+  dateFromIso: string;
+  dateToIso: string;
+  route: FerryRoute;
+};
+
+/** F7 #668 r4: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły. */
+export function filterDfdsFallbackToFailedWeeks(
+  fallback: DfdsSailing[],
+  failed: readonly DfdsFailedWindow[],
+): DfdsSailing[] {
+  if (failed.length === 0) return fallback;
+  return fallback.filter((s) => {
+    const tz = s.route === 'PLD-KPS' ? 'Europe/Tallinn' : 'Europe/Stockholm';
+    const ymd = ymdInTz(new Date(s.departureUtc), tz);
+    return failed.some((w) => {
+      if (w.route !== s.route) return false;
+      const from = w.dateFromIso.slice(0, 10);
+      const to = w.dateToIso.slice(0, 10);
+      return ymd >= from && ymd <= to;
+    });
+  });
+}
+
 type WeeklyLeg = {
   days: Set<number>;
   route: FerryRoute;

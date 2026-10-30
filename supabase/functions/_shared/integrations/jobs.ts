@@ -43,7 +43,8 @@ import {
 } from '../ferry/eckero.ts';
 import {
   DFDS_SCHEDULE_PAGE, DFDS_TERMINAL_KPS, DFDS_TERMINAL_PLD, DFDS_UA, DFDS_WEEKLY_PDF_URL,
-  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, mergeDfdsMissingDays, mergeDfdsSailings,
+  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks,
+  mergeDfdsMissingDays, mergeDfdsSailings, type DfdsFailedWindow,
   parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
@@ -383,7 +384,13 @@ async function mapPoolLimit<T, R>(items: readonly T[], limit: number, fn: (item:
 /** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy.
  * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów.
  * F7 #668 N9: łączny budżet czasu (domyślnie 90 s) — po limicie zapisujemy już pobrane. */
-export async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_000): Promise<{
+export async function fetchStenaDays(
+  deps: JobDeps,
+  days: number,
+  budgetMs = 90_000,
+  /** F7 #668 r4: wstrzyknięty zegar ścienny (test budżetu bez zależności od Date.now). */
+  wallNow: () => number = Date.now,
+): Promise<{
   sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number; structureFail: boolean;
 }> {
   const warnings: string[] = [];
@@ -392,12 +399,12 @@ export async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_
   let fetchedOk = 0;
   let structureFail = false;
   /* N9: ścienny zegar — deps.now() w testach bywa zamrożony. */
-  const started = Date.now();
+  const started = wallNow();
   const dates = dateRangeYmd(deps.now(), days);
   /* F7 #668 r3 N9: przeplatanie po dacie (GDKA/KAGD tego samego dnia), nie cała trasa najpierw. */
   const jobs = dates.flatMap((date) => (['GDKA', 'KAGD'] as const).map((routeCode) => ({ routeCode, date })));
   const parts = await mapPoolLimit(jobs, 4, async ({ routeCode, date }) => {
-    if (Date.now() - started > budgetMs) {
+    if (wallNow() - started > budgetMs) {
       return {
         sailings: [] as StenaSailing[],
         warnings: [] as string[],
@@ -451,7 +458,10 @@ export async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_
     warnings.push(...p.warnings);
   }
   if (budgetHits > 0) {
-    warnings.push(`Stena: przerwano po ${Math.round(budgetMs / 1000)} s — zapisano ${fetchedOk} dni, pominięto ${budgetHits}.`);
+    /* F7 #668 r4: fetchedOk = pary trasa×dzień, nie kalendarzowe doby. */
+    warnings.push(
+      `Stena: przerwano po ${Math.round(budgetMs / 1000)} s — zapisano ${fetchedOk} pobrań (trasa×dzień), pominięto ${budgetHits}.`,
+    );
   }
   return { sailings, warnings, http403, fetchedOk, structureFail };
 }
@@ -579,6 +589,9 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   const jobs = weeks.flatMap((w) => dirs.map((d) => ({ ...w, ...d })));
   let apiOk = 0;
   let apiStructureFail = false;
+  const failedWindows: DfdsFailedWindow[] = [];
+  const routeOfDir = (portOfLoading: string): DfdsFailedWindow['route'] =>
+    portOfLoading === DFDS_TERMINAL_PLD ? 'PLD-KPS' : 'KPS-PLD';
   const apiParts = await mapPoolLimit(jobs, 4, async (job) => {
     const url = dfdsTimetableUrl({
       portOfLoading: job.portOfLoading,
@@ -589,28 +602,45 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     const page = await readText(deps, url, {
       headers: { 'User-Agent': DFDS_UA, Accept: 'application/json' },
     });
-    if (!page.ok) return { sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'], warn: [page.warning] };
+    if (!page.ok) {
+      return {
+        sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'],
+        warn: [page.warning],
+        job,
+        ok: false,
+      };
+    }
     let json: unknown;
     try {
       json = JSON.parse(page.text);
     } catch {
-      return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'] };
+      return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'], job, ok: false };
     }
     const parsed = parseDfdsTimetableApi(json);
-    return { sailings: parsed.sailings, warn: parsed.warnings };
+    return {
+      sailings: parsed.sailings,
+      warn: parsed.warnings,
+      job,
+      ok: parsed.sailings.length > 0,
+    };
   });
   let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
   for (const part of apiParts) {
     warnings.push(...part.warn);
-    if (part.sailings.length > 0) {
+    if (part.ok) {
       apiOk += 1;
       apiSailings = mergeDfdsSailings(apiSailings, part.sailings);
-    } else if (part.warn.some((w) => /Struktura|nie-JSON/i.test(w))) {
-      apiStructureFail = true;
+    } else {
+      failedWindows.push({
+        dateFromIso: part.job.dateFromIso,
+        dateToIso: part.job.dateToIso,
+        route: routeOfDir(part.job.portOfLoading),
+      });
+      if (part.warn.some((w) => /Struktura|nie-JSON/i.test(w))) apiStructureFail = true;
     }
   }
 
-  /* F7 #668 N2: pełne API → bez strony/PDF. r3 pkt 5: częściowa awaria → uzupełnij doby z PDF/HTML. */
+  /* F7 #668 N2: pełne API → bez strony/PDF. r3/r4: częściowa awaria → PDF tylko dla tygodni, które padły. */
   const apiComplete = apiSailings.length > 0 && apiOk >= jobs.length;
   if (apiComplete) {
     return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
@@ -638,7 +668,10 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     if (fromPdf.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPdf.sailings);
   }
 
-  /* F7 #668 N1/r3: PDF/HTML tylko doby (trasa+dzień lokalny) nieobecne w API; także przy częściowej awarii. */
+  /* F7 #668 r4: przy częściowym API zawęż PDF do padniętych tygodni (odwołany rejs nie wraca z PDF). */
+  if (apiSailings.length > 0 && failedWindows.length > 0) {
+    fallback = filterDfdsFallbackToFailedWeeks(fallback, failedWindows);
+  }
   const sailings = mergeDfdsMissingDays(apiSailings, fallback);
   if (sailings.length > 0) {
     if (apiSailings.length > 0 && apiOk < jobs.length) {

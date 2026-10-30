@@ -738,24 +738,32 @@ describe('#666 F7 Stena 60 d — równoległość i SOURCE_DOWN tylko przy total
     expect(stOk.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_SCHEDULE:'))).toBe(false);
   });
 
-  it('F7 #668 r3 N9: budżet 0 ms → ostrzeżenie; bez SOURCE_DOWN gdy coś pobrano', async () => {
+  it('F7 #668 r3/r4 N9: budżet z wstrzykniętym zegarem; bez SOURCE_DOWN gdy coś pobrano', async () => {
     const STENA_JSON = fx('stena-timetable-gdka-2026-10-01.json');
     let n = 0;
+    let tick = 0;
+    const wallNow = () => {
+      tick += 1;
+      /* start=0; po 4. sprawdzeniu budżetu → ponad limit (symulacja bez Date.now). */
+      return tick <= 5 ? 0 : 100_000;
+    };
     const f = (async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('_jcr_content.timetable.')) {
         n += 1;
-        await new Promise((r) => setTimeout(r, 15));
         return new Response(STENA_JSON.replaceAll('2026-10-01', '2026-10-30'), { status: 200 });
       }
       throw new Error(`nieoczekiwane: ${url}`);
     }) as typeof fetch;
-    /* budgetMs=0: pierwsza fala (≤4) startuje przy elapsed=0; kolejne pomijane po upływie czasu */
-    const r = await fetchStenaDays({ store: new MemStore(), fetch: f, env: {}, now: () => NOW }, 8, 0);
-    expect(r.warnings.some((w) => /przerwano/i.test(w))).toBe(true);
+    const r = await fetchStenaDays(
+      { store: new MemStore(), fetch: f, env: {}, now: () => NOW },
+      8,
+      90_000,
+      wallNow,
+    );
+    expect(r.warnings.some((w) => /przerwano/i.test(w) && /trasa×dzień|trasaxdzień|pobrań/i.test(w))).toBe(true);
     expect(r.fetchedOk).toBeGreaterThan(0);
-    expect(n).toBeLessThan(16); // 8 d × 2; część pominięta
-    /* fetchedOk>0 → w jobie nie byłoby SOURCE_DOWN (tylko przy totalnej awarii) */
+    expect(n).toBeLessThan(16);
     expect(r.fetchedOk === 0).toBe(false);
   });
 });

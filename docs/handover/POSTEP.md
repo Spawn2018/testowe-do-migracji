@@ -7267,3 +7267,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”; F7 r3 POPRAWKI w #668 (nie main). Kolejność: #668 przed #673 (0351→0352).
 - **Krok (F7 r3):** Bloker 1 — sezon = ostatnie otwarcie `c-accordion__item` przed tabelą; bez `seasonAll` przy akordeonie; fixture + 2. element bez dat; Cinderella 22.6–8.8.2027 (`ymdInRanges` w Planned changes). Bloker 2 — `mergeDfdsMissingDays` klucz `route|ymdInTz` (Tallinn/Sztokholm). Uwagi: `parseSeasonRanges` sort; `ymdInRanges([])=false` + eckero; DFDS częściowe API→PDF; N2/N3/N4/N9 testy; 0351 Cinderella/Gabriella. DP-21: prawdziwy HTML Cargo czeka na IP domowe (403 Cloudflare z DC). Unit fokus 65/65. **Dalej:** F7 #668 → **#667**.
 - Bez push na main.
+
+## 2026-10-30 21:45 — #668 F7 r4 poprawki (trasa akordeonu + DFDS 00:30)
+
+- Skrzynka: #666 W TOKU (PR #668); #667 po #666 (PR #673 F7 r1 POPRAWKI B1–B3 czeka); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”; CI #668 @ 3ae700fc było zielone; F7 r4 POPRAWKI. Kolejność: #668 (0351) → #673 → #674.
+- **Krok (F7 r4):** Bloker 1 — trasa = attrs → nagłówek tabeli → ostatnia etykieta w kawałku akordeonu; zapas ostatnie `<details>`; test dwóch tabel w jednym elemencie. Bloker 2 — test merge 00:30 lokalnie (UTC poprzedniej doby) PLD+KPS. Uwagi: `d.m.–d.m.yyyy`; PDF tylko padnięte tygodnie×kierunki; Stena `wallNow` + tekst „pobrań (trasa×dzień)”; Planned changes per kierunek + najbliższa godzina. **Dalej:** CI → gotowe do F7 → #667.
+- Bez push na main.

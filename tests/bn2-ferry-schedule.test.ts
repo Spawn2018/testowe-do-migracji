@@ -13,8 +13,8 @@ import {
 } from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
 import {
-  extractDfdsSeasonalPdfUrl, mergeDfdsMissingDays, mergeDfdsSailings, parseDfdsSchedule,
-  parseDfdsTimetableApi, parseDfdsWeeklyHtml,
+  extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks, mergeDfdsMissingDays, mergeDfdsSailings,
+  parseDfdsSchedule, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../src/lib/ferry/dfds';
 import { parseSeasonRanges, ymdInRanges } from '../supabase/functions/_shared/ferry/weeklySchedule';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
@@ -245,6 +245,29 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(ymdInRanges('2027-07-01', [])).toBe(false);
   });
 
+  it('F7 #668 r4: parseSeasonRanges d.m.–d.m.yyyy (rok dziedziczony)', () => {
+    const r = parseSeasonRanges('1.1.–21.6.2027 oraz 10.08.2026–31.12.2026');
+    expect(r.some((x) => x.from === '2027-01-01' && x.to === '2027-06-21')).toBe(true);
+    expect(r.some((x) => x.from === '2026-08-10' && x.to === '2026-12-31')).toBe(true);
+  });
+
+  it('F7 #668 r4 Bloker 1: dwa kierunki w jednym elemencie akordeonu', () => {
+    const html = `
+<details class="c-accordion__item">
+  <h3>10.08.2026–31.12.2026</h3>
+  <h4>Tallinn–Helsinki</h4>
+  <table><tr><td>Tallinn–Helsinki</td></tr><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>07.00</td><td>09.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+  <h4>Helsinki–Tallinn</h4>
+  <table><tr><td>Helsinki–Tallinn</td></tr><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>10.30</td><td>13.10</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>`;
+    const r = parseVikingTimetableHtml(html, { fromYmd: '2026-10-30', days: 3 });
+    expect(r.sailings.some((s) => s.route === 'TLLA-HEL')).toBe(true);
+    expect(r.sailings.some((s) => s.route === 'HELA-TLL')).toBe(true);
+    expect(r.warnings.some((w) => /bez rozpoznanego sezonu/i.test(w))).toBe(false);
+  });
+
   it('F7 #668 r3 N1: mergeDfdsMissingDays — doba lokalna (nie UTC slice)', () => {
     // 23:59 EET 26.10 = 21:59 UTC; PDF 22:00 EET tej samej doby = 19:00 UTC
     const api = [{
@@ -264,6 +287,49 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(merged.some((s) => s.departureUtc === '2026-10-26T21:59:00.000Z')).toBe(true);
     expect(merged.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(false);
     expect(merged.some((s) => s.departureUtc === '2026-10-28T19:00:00.000Z')).toBe(true);
+  });
+
+  it('F7 #668 r4 Bloker 2: mergeDfdsMissingDays — 00:30 lokalnie (UTC poprzedniej doby)', () => {
+    // PLD 00:30 EET 26.10 = 22:30Z 25.10 — stary slice(0,10) brałby 25.10
+    const apiPld = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-25T22:30:00.000Z', arrivalUtc: '2026-10-26T07:00:00.000Z',
+    }];
+    const pdfSameLocal = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-26T19:00:00.000Z', arrivalUtc: '2026-10-27T05:00:00.000Z',
+    }];
+    const pdfPrevLocal = [{
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-25T19:00:00.000Z', arrivalUtc: '2026-10-26T05:00:00.000Z',
+    }];
+    const mPld = mergeDfdsMissingDays(apiPld, [...pdfSameLocal, ...pdfPrevLocal]);
+    expect(mPld).toHaveLength(2);
+    expect(mPld.some((s) => s.departureUtc === '2026-10-25T22:30:00.000Z')).toBe(true);
+    expect(mPld.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(false);
+    expect(mPld.some((s) => s.departureUtc === '2026-10-25T19:00:00.000Z')).toBe(true);
+    // KPS 00:30 CET 26.10 = 23:30Z 25.10
+    const apiKps = [{
+      route: 'KPS-PLD' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-25T23:30:00.000Z', arrivalUtc: '2026-10-26T08:00:00.000Z',
+    }];
+    const pdfKpsSame = [{
+      route: 'KPS-PLD' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-26T21:00:00.000Z', arrivalUtc: '2026-10-27T06:00:00.000Z',
+    }];
+    const pdfKpsPrev = [{
+      route: 'KPS-PLD' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-25T21:00:00.000Z', arrivalUtc: '2026-10-26T06:00:00.000Z',
+    }];
+    const mKps = mergeDfdsMissingDays(apiKps, [...pdfKpsSame, ...pdfKpsPrev]);
+    expect(mKps).toHaveLength(2);
+    expect(mKps.some((s) => s.departureUtc === '2026-10-26T21:00:00.000Z')).toBe(false);
+    expect(mKps.some((s) => s.departureUtc === '2026-10-25T21:00:00.000Z')).toBe(true);
+    const filtered = filterDfdsFallbackToFailedWeeks(
+      [...pdfSameLocal, ...pdfPrevLocal],
+      [{ dateFromIso: '2026-10-25T00:00:00.000Z', dateToIso: '2026-10-25T23:59:59.000Z', route: 'PLD-KPS' }],
+    );
+    expect(filtered.every((s) => s.departureUtc.startsWith('2026-10-25'))).toBe(true);
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

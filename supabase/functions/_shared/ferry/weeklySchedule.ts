@@ -123,6 +123,17 @@ export function parseSeasonRanges(raw: string): YmdRange[] {
       pos: m.index,
     });
   }
+  /* F7 #668 r4: „1.1.–21.6.2027” — rok tylko przy końcu; (?!\d{2}) odpina pełne dd.mm.yyyy–…. */
+  const reDotEndYear =
+    /\b(\d{1,2})\.(\d{1,2})\.(?!\d{2})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g;
+  while ((m = reDotEndYear.exec(text)) != null) {
+    const y = m[5]!;
+    found.push({
+      from: `${y}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`,
+      to: `${y}-${m[4]!.padStart(2, '0')}-${m[3]!.padStart(2, '0')}`,
+      pos: m.index,
+    });
+  }
   found.sort((a, b) => a.pos - b.pos);
   return found.map(({ from, to }) => ({ from, to }));
 }

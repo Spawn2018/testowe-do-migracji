@@ -1155,8 +1155,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
-Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r3 poprawki @ PR #668 — Bloker 1 (ostatni akordeon) + Bloker 2 (DFDS doba lokalna) + uwagi 1–11; po pushu — **czekam F7 „gotowe do scalenia”**.
-1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3: sezon = ostatnie `c-accordion__item` przed tabelą (bez `seasonAll` przy akordeonie); fixture + nierozpoznany 2. element; Cinderella 22.6–8.8.2027; statek z `ymdInRanges` w Planned changes.
+Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r4 poprawki @ PR #668 — Bloker 1 (trasa = ostatnia etykieta w akordeonie) + Bloker 2 (test 00:30 lokalnie) + uwagi 1–5; po pushu — **czekam F7 „gotowe do scalenia”**. Kolejność: #668 (0351) → #673 → #674.
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3/r4: sezon = ostatnie `c-accordion__item`; trasa attrs→nagłówek→ostatnia etykieta; wyjątki per kierunek; `d.m.–d.m.yyyy`.
 2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351 + Cinderella/Gabriella)~~; N4 `historicalSailingsAllowed` (+ demo null); N5 `actualDepartureAt` w `hasDeparted`.
 3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~; N3 jawna lista 14 kodów.
 4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
@@ -2138,3 +2138,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 20:35 | #668 F7 r2: Viking sezony (accordion) + DFDS N1/N2 + N5/N6/N8/N9; DP-20/21; #667 PR #673 krok A | pętla |
 | 30.10.2026 21:15 | #668 F7 r3: Viking ostatni accordion + DFDS doba lokalna + N2/N3/N4/N9; 0351 Cinderella/Gabriella; czekam F7 | pętla |
 | 30.10.2026 21:15 | #668 F7 r3 poprawki: Viking ostatni akordeon + DFDS doba lokalna + uwagi 1–11; DP-21 scrape z domu | pętla |
+| 30.10.2026 21:45 | #668 F7 r4: trasa z ostatniej etykiety w akordeonie; DFDS 00:30 lokalnie; PDF tylko padnięte tygodnie; Stena wallNow | pętla |

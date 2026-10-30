@@ -160,6 +160,68 @@ function routeFromLabel(text: string): FerryRoute | null {
   return null;
 }
 
+/** F7 #668 r4: ostatnia etykieta trasy w kawałku (najbliższa tabeli) — nie pierwsza Tallinn–Helsinki w elemencie. */
+function lastRouteFromLabel(text: string): FerryRoute | null {
+  const t = text.toLowerCase().replace(/[–—]/g, '-');
+  const hits: { i: number; r: FerryRoute }[] = [];
+  for (const [re, r] of [
+    [/tallinn\s*-?\s*helsinki/gi, 'TLLA-HEL' as FerryRoute],
+    [/helsinki\s*-?\s*tallinn/gi, 'HELA-TLL' as FerryRoute],
+  ] as const) {
+    let m: RegExpExecArray | null;
+    const copy = new RegExp(re.source, re.flags);
+    while ((m = copy.exec(t)) != null) hits.push({ i: m.index, r });
+  }
+  if (hits.length === 0) return null;
+  hits.sort((a, b) => a.i - b.i);
+  return hits[hits.length - 1]!.r;
+}
+
+function lastDetailsChunk(before: string): string | null {
+  const re = /<details\b[^>]*>/gi;
+  let last = -1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(before)) != null) last = m.index;
+  return last >= 0 ? before.slice(last) : null;
+}
+
+function hmToMin(hm: string): number {
+  const [h, m] = hm.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
+function nearestVesselForRoute(
+  legs: WeeklyLeg[],
+  route: FerryRoute,
+  depHm: string,
+  ymd: string,
+): string | null {
+  const candidates = legs.filter((l) => l.route === route && ymdInRanges(ymd, l.ranges));
+  if (candidates.length === 0) return null;
+  const exact = candidates.find((l) => l.depHm === depHm);
+  if (exact) return exact.vessel;
+  const target = hmToMin(depHm);
+  let best = candidates[0]!;
+  let bestDiff = Infinity;
+  for (const c of candidates) {
+    const d = Math.abs(hmToMin(c.depHm) - target);
+    if (d < bestDiff) {
+      bestDiff = d;
+      best = c;
+    }
+  }
+  return best.vessel;
+}
+
+function exceptionRoutesForYmd(planned: PlannedDay[], ymd: string): Set<FerryRoute> {
+  const out = new Set<FerryRoute>();
+  for (const day of planned) {
+    if (!day.ymds.includes(ymd)) continue;
+    for (const leg of day.legs) out.add(leg.route);
+  }
+  return out;
+}
+
 function pad2(n: string): string {
   return n.padStart(2, '0');
 }
@@ -293,9 +355,10 @@ export function parseVikingTimetableHtml(
     let openM: RegExpExecArray | null;
     while ((openM = itemOpenRe.exec(before)) != null) lastOpenIdx = openM.index;
     const hasAccordion = lastOpenIdx >= 0;
+    /* F7 #668 r4: zapas bez akordeonu = ostatnie <details> (nie pierwsze w prefiksie). */
     const accordionChunk = hasAccordion
       ? before.slice(lastOpenIdx)
-      : (before.match(/<details[\s\S]*$/i)?.[0] ?? null);
+      : lastDetailsChunk(before);
     const fromChunk = accordionChunk ? parseSeasonRanges(accordionChunk) : [];
     const picked = hasAccordion ? fromChunk : parseSeasonRanges(before);
     if (picked.length === 0) {
@@ -303,10 +366,11 @@ export function parseVikingTimetableHtml(
       continue;
     }
     const ranges: YmdRange[] = [picked[picked.length - 1]!];
+    /* F7 #668 r4: attrs → nagłówek tabeli → ostatnia etykieta w kawałku (nie pierwsza Tallinn–HEL). */
     let route: FerryRoute | null =
       routeFromLabel(attrs) ??
-      routeFromLabel(accordionChunk ?? '') ??
-      routeFromLabel(body.slice(0, 240));
+      routeFromLabel(body.slice(0, 240)) ??
+      (accordionChunk ? lastRouteFromLabel(accordionChunk) : null);
     if (!route) {
       if (/data-route\s*=\s*["']helsinki-tallinn["']/i.test(attrs)) route = 'HELA-TLL';
       else if (/data-route\s*=\s*["']tallinn-helsinki["']/i.test(attrs)) route = 'TLLA-HEL';
@@ -346,11 +410,11 @@ export function parseVikingTimetableHtml(
   const fromYmd = opts?.fromYmd ?? ymdInTz(opts?.now ?? new Date(), 'Europe/Helsinki');
   const yearHint = Number(fromYmd.slice(0, 4));
   const planned = parseVikingPlannedChanges(html, yearHint);
-  const exceptionYmds = new Set(planned.flatMap((p) => p.ymds));
   const dates = dateRangeFromYmd(fromYmd, opts?.days ?? 14);
   for (const leg of legs) {
     for (const ymd of dates) {
-      if (exceptionYmds.has(ymd)) continue;
+      /* F7 #668 r4: wyjątek wycina tylko kierunek wymieniony w „Planned changes”, nie całą dobę. */
+      if (exceptionRoutesForYmd(planned, ymd).has(leg.route)) continue;
       if (!ymdInRanges(ymd, leg.ranges)) continue;
       if (!leg.days.has(weekdayInTz(ymd, leg.tzDep))) continue;
       pushUtcSailing(sailings, leg.route, leg.vessel, ymd, leg.depHm, leg.arrHm, leg.arrNextDay);
@@ -360,12 +424,14 @@ export function parseVikingTimetableHtml(
     for (const ymd of day.ymds) {
       if (!dates.includes(ymd)) continue;
       for (const leg of day.legs) {
-        /* F7 #668 N6/r3: statek z tabeli sezonowej w zakresie daty (lato = Cinderella, nie XPRS). */
-        const fromTable = legs.find((l) =>
-          l.route === leg.route && l.depHm === leg.depHm && ymdInRanges(ymd, l.ranges)
-        )?.vessel
-          ?? legs.find((l) => l.route === leg.route && ymdInRanges(ymd, l.ranges))?.vessel
-          ?? 'M/F Viking XPRS';
+        /* F7 #668 N6/r3 + r4: ta sama godzina; inaczej najbliższa godzina tej trasy; brak → ostrzeżenie. */
+        const fromTable = nearestVesselForRoute(legs, leg.route, leg.depHm, ymd);
+        if (!fromTable) {
+          warnings.push(
+            `Viking Planned changes: brak statku w tabeli sezonowej dla ${leg.route} ${leg.depHm} (${ymd}).`,
+          );
+          continue;
+        }
         pushUtcSailing(sailings, leg.route, fromTable, ymd, leg.depHm, leg.arrHm, false);
       }
     }
