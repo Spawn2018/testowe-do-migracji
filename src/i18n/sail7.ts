@@ -25,6 +25,9 @@ const PL: Record<string, string> = {
   /* BN9-b: filtr armatora */
   sv_line_filter: 'Armator',
   sv_line_all: 'Wszyscy armatorzy',
+  /* DP-3, DP-5 */
+  sv_route_unknown: 'nieznana trasa',
+  sv_route_unknown_err: 'Nieznana trasa — wybierz trasę z listy',
   sv_reach: 'Rozkład w bazie: {list}.',
   sv_reach_item: '{line} do {date}',
   sv_reach_POLFERRIES: 'Polferries',

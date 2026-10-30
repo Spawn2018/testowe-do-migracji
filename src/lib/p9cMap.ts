@@ -14,13 +14,10 @@ import { delayPillMinutes } from './prodDash';
 import { formatListDateTime } from './format';
 import { transportLabel, transportSearchBlob } from './transportName';
 import { trackingNoLink } from './trackerLink';
-import { FERRY_PORTS } from './ferryCatalog';
-import { portName } from './portName';
+import { ferryRouteEnds } from './portName';
+import { routeOfVessel } from './vesselGroups';
 
 const TZ = 'Europe/Warsaw';
-/** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
-const PORT_PL: Record<string, string> = Object.fromEntries(FERRY_PORTS.map((p) => [p.code, portName('pl', p.code)]));
-
 /** „00:19” (czas polski). */
 export function hm(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -101,8 +98,11 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
     const s = ctx.sailingOf(l.sailingId);
     const vessel = s?.vessel ?? l.ferry.vessel;
     if (vessel) {
-      const [a, b] = (s?.route ?? 'GDN-NYN').split('-');
-      stageSub = `${vessel} · ${PORT_PL[a] ?? a} → ${PORT_PL[b] ?? b}`;
+      /* DP-4: porty ze słownika tras; trasa nieznana — surowy kod; bez rejsu — trasa z armatora statku (jedna trasa
+         wyjazdowa), inaczej sam statek (bez zgadywania GDN-NYN) */
+      const route = s?.route ?? routeOfVessel(vessel);
+      const ends = ferryRouteEnds('pl', route);
+      stageSub = ends ? `${vessel} · ${ends.a} → ${ends.b}` : route ? `${vessel} · ${route}` : vessel;
     }
   }
 

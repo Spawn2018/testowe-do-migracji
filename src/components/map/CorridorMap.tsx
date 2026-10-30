@@ -18,10 +18,10 @@ import { ferryMarkerTone } from '../../lib/ferry/stenaAis';
 import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
-import { WATER_GDN_NYN, WATER_GDY_KAA, h6Requests } from '../../lib/map/draw';
-import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
+import { h6Requests } from '../../lib/map/draw';
+import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
 import {
-  acquireMap, attributionOf, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
+  acquireMap, attributionOf, drawFerryLanes, ensureBasemap, FERRY_LANE_STYLE, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
@@ -455,18 +455,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       if (!cancelled && summary && entryRef.current) entryRef.current.el.dataset.ferries = summary;
       if (cancelled || !layers || ferries.length === 0) return;
       layers.ferryLeg.clearLayers();
-      const style = { color: '#6BA8D6', weight: 3, opacity: 0.9 };
-      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), style).addTo(layers.ferryLeg);
-      /* przeprawa bez odcinka z HERE — stały tor wodny jak dotąd */
-      const lanes = { 'FERRY-GDN-NYN': WATER_GDN_NYN, 'FERRY-GDY-KAA': WATER_GDY_KAA } as const;
-      for (const [leg, lane] of Object.entries(lanes)) {
-        if (ferries.some((f) => f.leg === leg)) continue;
-        L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), style).addTo(layers.ferryLeg);
-      }
-      /* BN9-b: tory Korytarza bałtyckiego zostają po przerysowaniu przepraw z HERE */
-      for (const line of Object.values(WATER_TRACKS_EXTRA)) {
-        L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), style).addTo(layers.ferryLeg);
-      }
+      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layers.ferryLeg);
+      /* DP-7: przeprawa bez odcinka z HERE i tory Korytarza bałtyckiego — to samo rysowanie co przy tworzeniu mapy */
+      drawFerryLanes(layers.ferryLeg, new Set(ferries.map((f) => f.leg)));
     });
     return () => { cancelled = true; };
   }, [mapReady, basemapReady]);
@@ -573,8 +564,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
         const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
         if (!l) return null;
-        const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
-        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
+        const ls = l.sailingId ? undefined : sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(l.ferry.vessel) && x.departureAt === l.ferry.departureAt);
+        /* DP-4: bez rejsu — trasa z armatora statku (jedna trasa wyjazdowa), nie domyślne GDN-NYN */
+        return { vessel: l.ferry.vessel, route: ls?.route ?? routeOfVessel(l.ferry.vessel), departureAt: l.ferry.departureAt };
       };
       const shipOf = (fk: string): ShipFix | null => {
         const v = vesselKey(ferryInfo(fk)?.vessel);
