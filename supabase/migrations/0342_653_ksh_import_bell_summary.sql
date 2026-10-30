@@ -20,7 +20,8 @@ begin
        'SCHEDULE_DATE_CRITICAL',
        'RISK_OPEN',
        'RISK_SEVERITY',
-       'DECISION_OPEN'
+       'DECISION_OPEN',
+       'LOAD_STATUS_CHANGED'
      ) then
     return null;
   end if;
@@ -52,8 +53,8 @@ declare
   v_code text := public.load_sms_code(new.id);
   v_bell_quiet boolean := (current_setting('tower.import_bell_quiet', true) = 'on');
 begin
-  -- Zwykły bulk_quiet (nie import) — pełna cisza jak dotąd.
-  if current_setting('tower.bulk_quiet', true) = 'on' and v_bell_quiet is not true then
+  -- bulk_quiet (historia/dostarczone / p_quiet w impl) — pełna cisza, także przy imporcie.
+  if current_setting('tower.bulk_quiet', true) = 'on' then
     return null;
   end if;
   if (new.plan_load_date, new.plan_load_from, new.plan_load_to, new.plan_delivery_date, new.plan_delivery_from, new.plan_delivery_to)
@@ -130,9 +131,9 @@ declare
   v_result jsonb;
 begin
   v_prev_bell := current_setting('tower.import_bell_quiet', true);
-  -- #653/#594 F7: przy p_quiet=false — dzwonek tylko zbiorczy; sprawy/decyzje/wf zostają
-  -- (bez bulk_quiet — 0325 ustawia go tylko dla wierszy historycznych/dostarczonych).
-  -- Przy p_quiet=true — bez bell_quiet (pełna cisza jak #426, w tym bulk z impl).
+  -- #653/#594 F7: przy p_quiet=false — dzwonek tylko zbiorczy; sprawy/decyzje/wf zostają.
+  -- Wrapper nie ustawia flagi ciszy hurtowej (zostawia to impl dla historii/dostarczonych).
+  -- Przy p_quiet=true — bez bell_quiet (pełna cisza jak #426, w tym flaga hurtowa z impl).
   if p_quiet is not true then
     perform set_config('tower.import_bell_quiet', 'on', true);
   end if;
@@ -164,7 +165,7 @@ revoke all on function public.import_schedule_impl(uuid, jsonb, text[], jsonb, b
   from public, anon, authenticated;
 
 comment on function public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) is
-  '#653: wrapper — import_bell_quiet (bez bulk_quiet); p_quiet steruje SUMMARY/#426.';
+  '#653: wrapper — import_bell_quiet; p_quiet steruje SUMMARY/#426; cisza hurtowa tylko w impl.';
 comment on function public.import_schedule_impl(uuid, jsonb, text[], jsonb, boolean, boolean) is
   'Implementacja import_schedule (0325); wołana wyłącznie przez wrapper #653.';
 
@@ -395,6 +396,8 @@ begin
          and rs.detected_at >= v_at
          and l.carrier_org_id = u.org_id
          and rs.audience in ('WSZYSCY', 'HHL_PRZEWOZNIK');
+      -- Jak decisions_read (0315): CARRIER widzi decider_role in (CARRIER,HHL),
+      -- bez SEFS_WEEK_CORR / KSH_CARRIER_CHANGED / KSH_REMOVED_BACK.
       select count(*)::int into v_decs
         from public.decisions d
         join public.decision_types dt on dt.code = d.type_code
@@ -404,8 +407,8 @@ begin
          and d.load_id = any (v_load_ids)
          and d.created_at >= v_at
          and l.carrier_org_id = u.org_id
-         and d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK', 'ETA_CALIBRATION_APPROVAL')
-         and dt.decider_role is distinct from 'ADMIN';
+         and d.type_code not in ('SEFS_WEEK_CORR', 'KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK')
+         and dt.decider_role in ('CARRIER', 'HHL');
     else
       -- CLIENT (KSH)
       select count(*)::int into v_risks
@@ -415,6 +418,7 @@ begin
          and rs.load_id = any (v_load_ids)
          and rs.detected_at >= v_at
          and rs.audience in ('WSZYSCY', 'HHL_KLIENT');
+      -- Jak decisions_read (0315): CLIENT tylko decider_role='CLIENT'.
       select count(*)::int into v_decs
         from public.decisions d
         join public.decision_types dt on dt.code = d.type_code
@@ -422,8 +426,8 @@ begin
          and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
          and d.load_id = any (v_load_ids)
          and d.created_at >= v_at
-         and d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK', 'ETA_CALIBRATION_APPROVAL')
-         and dt.decider_role is distinct from 'ADMIN';
+         and d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK')
+         and dt.decider_role = 'CLIENT';
     end if;
 
     v_short := format(

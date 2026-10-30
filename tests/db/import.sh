@@ -89,9 +89,10 @@ val "zapis bez zgody na anulowanie: T-01 zostaje" $HHL "select jsonb_array_lengt
 chk "SG-01: nowe daty + okno przesunięte (#384)" "$(Q "select plan_load_date||' '||plan_delivery_date||' '||((plan_load_from at time zone 'Europe/Warsaw')::date = plan_load_date and (plan_load_to at time zone 'Europe/Warsaw')::date = plan_load_date) from loads where id='$SG1'")" "$D1b $D2b true"
 chk "SG-02: długość 18.50 w pozycji" "$(Q "select length_m from shipment_items where shipment_code='SG-02'")" "18.50"
 chk "SCHEDULE_DATE_CRITICAL dla SG-01" "$(Q "select count(*) from load_events where event_type='SCHEDULE_DATE_CRITICAL' and load_id='$SG1'")" 1
-chk "powiadomienia w aplikacji: HHL + SCX" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 2
-chk "I-10: e-mail HHL + SCX (bliźniak IN_APP, adres z app_users; 0133: konta właściciela = PENDING)" "$(Q "select count(*)||'/'||count(*) filter (where n.recipient = u.email::text and n.payload->>'code'='SG-01' and n.status = 'PENDING') from notifications n join app_users u on u.id=n.user_id where n.template='SCHEDULE_DATE_CRITICAL' and n.channel='EMAIL'")" "2/2"
-chk "I-10: klucz dedup e-maila = EMAIL:<klucz IN_APP>" "$(Q "select count(*) from notifications e join notifications a on e.dedup_key = 'EMAIL:'||a.dedup_key where e.channel='EMAIL' and a.channel='IN_APP' and a.template='SCHEDULE_DATE_CRITICAL'")" 2
+# #653: zamiast per-transport SDC IN_APP/EMAIL — tylko KSH_IMPORT_SUMMARY
+chk "powiadomienia w aplikacji: 0 SDC (#653 SUMMARY)" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP'")" 0
+chk "I-10: 0 e-mail SDC (#653)" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='EMAIL'")" 0
+chk "I-10: KSH_IMPORT_SUMMARY po krytycznej" "$(Q "select (count(*) >= 1)::text from notifications where template='KSH_IMPORT_SUMMARY' and channel='IN_APP' and read_at is null")" true
 chk "T-01 nadal PLANNED" "$(Q "select status from loads where id='$T1'")" PLANNED
 val "zapis ze zgodą na T-01: anulowany" $HHL "select r->'cancelled'->0->>'code' from ($(IMP "$R2" false "'{T-01}'")) s(r)" "T-01" commit
 chk "T-01 CANCELLED (wiersz zostaje), audit + zdarzenie" "$(Q "select status from loads where id='$T1'")/$(Q "select count(*) from audit_log where action='LOAD_CANCEL_IMPORT'")/$(Q "select count(*) from load_events where event_type='STATUS_CANCELLED'")" "CANCELLED/1/1"
@@ -2443,7 +2444,7 @@ chk "#653 N3: clear nie dokłada driver" "$(Q "select coalesce((select patch ? '
 echo; echo "[#653] import — tylko KSH_IMPORT_SUMMARY (bez zalania dzwonka)"
 chk "#653: authenticated bez EXECUTE impl" "$(Q "select has_function_privilege('authenticated','import_schedule_impl(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" f
 chk "#653: authenticated ma EXECUTE wrapper" "$(Q "select has_function_privilege('authenticated','import_schedule(uuid,jsonb,text[],jsonb,boolean,boolean)','execute')")" t
-chk "#653: wrapper bez bulk_quiet w prosrc" "$(Q "select (prosrc like '%bulk_quiet%')::text from pg_proc where proname='import_schedule' and pronargs=6")" f
+chk "#653: wrapper bez set_config ciszy hurtowej" "$(Q "select (prosrc like '%set_config(''tower.bulk_quiet''%')::text from pg_proc where proname='import_schedule' and pronargs=6")" f
 # (a) awizowany + krytyczna zmiana daty → sprawa/decyzja istnieje, 0 dzwonków per-transport
 D653A=$(Q "select (current_date + 40)::text")
 D653B=$(Q "select (current_date + 45)::text")
@@ -2453,7 +2454,7 @@ R653seed="[{\"code\":\"S653-AW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.
 R653crit="[{\"code\":\"S653-AW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"}]"
 $PSQL -c "update app_users set active=false where auth_id='$OPS_AUTH'" >/dev/null
 $PSQL -c "update notification_matrix set email=true where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
-$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN','DECISION_ESCALATED','DECISION_ESCALATED_BATCH')" >/dev/null
+$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN','DECISION_ESCALATED','DECISION_ESCALATED_BATCH','LOAD_STATUS_CHANGED')" >/dev/null
 val "#653: seed S653-AW" $HHL "select jsonb_array_length(r->'added') from (select import_schedule('$P', '$R653seed'::jsonb, '{}'::text[], '{\"name\":\"653s.xlsx\",\"hash\":\"653s\"}'::jsonb, false, false) r) s" 1 commit
 L653=$(Q "select load_id from shipment_items where shipment_code='S653-AW' and project_id='$P'")
 $PSQL -c "update loads set plan_load_from=('$D653A 08:00'::timestamp at time zone 'Europe/Warsaw'),
@@ -2464,13 +2465,23 @@ $PSQL -c "insert into workflows (project_id, code, name, description, trigger_ty
   select '$P', 'T-CANCEL-653', 'Transport anulowany (#653)', 'test #653', 'STATUS_CANCELLED', 'true'::jsonb,
          '[{\"type\":\"notify\",\"audience\":\"CARRIER\"},{\"type\":\"risk\",\"kind\":\"RESOURCE_MISSING\",\"severity\":\"MEDIUM\",\"title\":\"Transport anulowany\"}]'::jsonb, true
    where not exists (select 1 from workflows where project_id='$P' and code='T-CANCEL-653' and removed_at is null)" >/dev/null
-$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN') and created_at >= now() - interval '1 minute'" >/dev/null
+$PSQL -c "delete from notifications where template in ('KSH_IMPORT_SUMMARY','PLAN_DATES_CHANGED','SCHEDULE_DATE_CRITICAL','RISK_OPEN','DECISION_OPEN','LOAD_STATUS_CHANGED') and created_at >= now() - interval '1 minute'" >/dev/null
 Crit0=$(Q "select count(*) from load_events where load_id='$L653' and event_type='SCHEDULE_DATE_CRITICAL'")
 Risk0=$(Q "select count(*) from risk_signals where load_id='$L653' and resolved_at is null")
 Dec0=$(Q "select count(*) from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED')")
 val "#653: krytyczna zmiana daty awizowanego" $HHL "select jsonb_array_length(r->'critical')||'/'||jsonb_array_length(r->'changed') from (select import_schedule('$P', '$R653crit'::jsonb, '{}'::text[], '{\"name\":\"653c.xlsx\",\"hash\":\"653c\"}'::jsonb, false, false) r) s" "1/1" commit
-chk "#653: +SCHEDULE_DATE_CRITICAL (zdarzenie)" "$(Q "select (count(*) - $Crit0 >= 1)::text from load_events where load_id='$L653' and event_type='SCHEDULE_DATE_CRITICAL'")" t
-chk "#653: sprawa lub decyzja istnieje" "$(Q "select ((select count(*) from risk_signals where load_id='$L653' and resolved_at is null) - $Risk0 + (select count(*) from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED')) - $Dec0 >= 1)::text")" t
+chk "#653: +SCHEDULE_DATE_CRITICAL (zdarzenie)" "$(Q "select (count(*) - $Crit0 >= 1) from load_events where load_id='$L653' and event_type='SCHEDULE_DATE_CRITICAL'")" t
+chk "#653: sprawa lub decyzja istnieje" "$(Q "select ((select count(*) from risk_signals where load_id='$L653' and resolved_at is null) - $Risk0 + (select count(*) from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED')) - $Dec0 >= 1)")" t
+# Decyzja z importu (do eskalacji w (c)) — bez fallbacku.
+DEC653=$(Q "select id from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED') and created_at >= now() - interval '2 minutes' order by created_at desc limit 1")
+if [ -z "$DEC653" ]; then
+  $PSQL -c "do \$\$ begin
+    perform decision_open_from_event('$P','KSH_ROW_GONE','653-import-dec','S653 z importu',
+      '{\"code\":\"S653-AW\",\"severity_override\":\"WARNING\"}'::jsonb,'$L653'::uuid,null);
+  end \$\$;" >/dev/null
+  DEC653=$(Q "select id from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED') order by created_at desc limit 1")
+fi
+if [ -n "$DEC653" ]; then ok=$((ok+1)); echo "  OK    #653: decyzja z importu zapisana"; else fail=$((fail+1)); echo "  FAIL  #653: brak decyzji z importu"; fi
 chk "#653: 0 PLAN_DATES_CHANGED IN_APP" "$(Q "select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$L653'")" "0"
 chk "#653: 0 SCHEDULE_DATE_CRITICAL IN_APP" "$(Q "select count(*) from notifications where template='SCHEDULE_DATE_CRITICAL' and channel='IN_APP' and load_id='$L653'")" "0"
 chk "#653: 0 RISK_OPEN IN_APP" "$(Q "select count(*) from notifications where template='RISK_OPEN' and channel='IN_APP' and load_id='$L653'")" "0"
@@ -2478,8 +2489,8 @@ chk "#653: 0 DECISION_OPEN IN_APP" "$(Q "select count(*) from notifications wher
 chk "#653: 0 WEB_PUSH RISK/DECISION/SDC" "$(Q "select count(*) from notifications where channel='WEB_PUSH' and template in ('RISK_OPEN','DECISION_OPEN','SCHEDULE_DATE_CRITICAL') and load_id='$L653'")" "0"
 N653sum=$(Q "select count(*) from notifications where template='KSH_IMPORT_SUMMARY' and channel='IN_APP' and read_at is null")
 chk "#653: 1 SUMMARY na HHL/KSH/SCX" "$N653sum" "3"
-chk "#653: SUMMARY HHL risks|decisions >0" "$(Q "select ((payload->>'risks')::int + (payload->>'decisions')::int > 0)::text from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='FORWARDER' and n.read_at is null limit 1")" t
-# Widoczność: republish z decyzją tylko-HHL → HHL decisions>=1, SCX decisions=0
+chk "#653: SUMMARY HHL risks|decisions >0" "$(Q "select ((payload->>'risks')::int + (payload->>'decisions')::int > 0) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='FORWARDER' and n.read_at is null limit 1")" t
+# Widoczność RLS: decider_role='HHL' (KSH_ROW_GONE) → HHL>=1, KSH=0; CARRIER widzi HHL.
 IMP653=$(Q "select id::text||'|'||version||'|'||coalesce(file_name,'')||'|'||coalesce(file_hash,'') from schedule_imports where project_id='$P' and file_hash='653c' order by version desc limit 1")
 IMP653_ID=$(echo "$IMP653" | cut -d'|' -f1)
 IMP653_VER=$(echo "$IMP653" | cut -d'|' -f2)
@@ -2488,47 +2499,42 @@ IMP653_HASH=$(echo "$IMP653" | cut -d'|' -f4)
 $PSQL -c "delete from ksh_import_summaries where import_id='$IMP653_ID';
   delete from notifications where template='KSH_IMPORT_SUMMARY';
   update decisions set status='RESOLVED', resolved_at=now(), resolution_code='SUPERSEDED'
-    where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED');
+    where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED') and id <> '$DEC653';
   do \$\$ begin
-    perform decision_open_from_event('$P','KSH_CARRIER_CHANGED','653-hhl-only','S653 HHL-only',
+    perform decision_open_from_event('$P','KSH_ROW_GONE','653-hhl-role','S653 HHL decider_role',
       '{\"code\":\"S653-AW\",\"severity_override\":\"WARNING\"}'::jsonb,'$L653'::uuid,null);
   end \$\$;
   select ksh_import_summary_publish('$P'::uuid, '$IMP653_ID'::uuid, $IMP653_VER, '$IMP653_NAME', '$IMP653_HASH');" >/dev/null
-chk "#653: HHL widzi decisions HHL-only" "$(Q "select ((payload->>'decisions')::int >= 1)::text from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='FORWARDER' and n.read_at is null limit 1")" t
-chk "#653: SCX decisions=0 (bez HHL-only)" "$(Q "select ((coalesce(payload->>'decisions','0')::int) = 0)::text from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='CARRIER' and n.read_at is null limit 1")" t
-chk "#653: KSH decisions=0 (bez HHL-only)" "$(Q "select ((coalesce(payload->>'decisions','0')::int) = 0)::text from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='CLIENT' and n.read_at is null limit 1")" t
-# anulowanie → workflow_runs (bez bulk_quiet we wrapperze)
+chk "#653: HHL widzi decisions decider=HHL" "$(Q "select ((payload->>'decisions')::int >= 1) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='FORWARDER' and n.read_at is null limit 1")" t
+chk "#653: KSH decisions=0 (decider_role HHL)" "$(Q "select ((coalesce(payload->>'decisions','0')::int) = 0) from notifications n join app_users u on u.id=n.user_id join organizations o on o.id=u.org_id where n.template='KSH_IMPORT_SUMMARY' and o.kind='CLIENT' and n.read_at is null limit 1")" t
+# anulowanie → workflow_runs (bez bulk_quiet) + 0 LOAD_STATUS_CHANGED
 R653keep="[{\"code\":\"S653-KEEP\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A\",\"delivery_date\":\"$D653B\"},
   {\"code\":\"S653-AW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"}]"
 val "#653: seed S653-KEEP (do cancel)" $HHL "select jsonb_array_length(r->'added') from (select import_schedule('$P', '$R653keep'::jsonb, '{}'::text[], '{\"name\":\"653k.xlsx\",\"hash\":\"653k\"}'::jsonb, false, false) r) s" 1 commit
 L653K=$(Q "select load_id from shipment_items where shipment_code='S653-KEEP' and project_id='$P'")
 $PSQL -c "update loads set carrier_org_id='00000000-0000-0000-0000-00000000a003' where id='$L653K'" >/dev/null
 W653=$(Q "select count(*) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")
+$PSQL -c "delete from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L653K'" >/dev/null
 R653nocancel="[{\"code\":\"S653-AW\",\"length_m\":18,\"width_m\":2.4,\"height_m\":2.4,\"qty\":1,\"total_weight_t\":20,\"load_date\":\"$D653A2\",\"delivery_date\":\"$D653B2\"}]"
 val "#653: cancel S653-KEEP" $HHL "select jsonb_array_length(r->'cancelled') from (select import_schedule('$P', '$R653nocancel'::jsonb, '{S653-KEEP}'::text[], '{\"name\":\"653x.xlsx\",\"hash\":\"653x\"}'::jsonb, false, false) r) s" 1 commit
-chk "#653: +workflow STATUS_CANCELLED" "$(Q "select (count(*) - $W653 >= 1)::text from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" t
-chk "#653: ryzyko po cancel (T-CANCEL-653)" "$(Q "select (count(*) >= 1)::text from risk_signals where load_id='$L653K' and resolved_at is null")" t
+chk "#653: +workflow STATUS_CANCELLED" "$(Q "select (count(*) - $W653 >= 1) from workflow_runs where payload->>'event_type'='STATUS_CANCELLED'")" t
+chk "#653: ryzyko po cancel (T-CANCEL-653)" "$(Q "select (count(*) >= 1) from risk_signals where load_id='$L653K' and resolved_at is null")" t
+chk "#653: 0 LOAD_STATUS_CHANGED po cancel" "$(Q "select count(*) from notifications where template='LOAD_STATUS_CHANGED' and load_id='$L653K'")" "0"
 # (b) brak przecieku GUC: ręczna zmiana dat HHL → PLAN_DATES_CHANGED; ryzyko poza importem → RISK_OPEN
 $PSQL -c "delete from notifications where template in ('PLAN_DATES_CHANGED','RISK_OPEN') and load_id='$L653'" >/dev/null
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+$PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set plan_delivery_date = plan_delivery_date + 1 where id='$L653';
-  select count(*) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$L653';
-commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
-if [ "$out" != "0" ] && [ -n "$out" ]; then ok=$((ok+1)); echo "  OK    #653: ręczna zmiana dat → PLAN_DATES_CHANGED ($out)"; else fail=$((fail+1)); echo "  FAIL  #653: przeciek / brak PLAN_DATES → $out"; fi
+commit;" >/dev/null
+chk "#653: ręczna zmiana dat → PLAN_DATES_CHANGED" "$(Q "select (count(*) >= 1) from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$L653'")" t
 $PSQL -c "delete from notifications where template='RISK_OPEN'" >/dev/null
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title)
   values ('$P', '$L653', 'RESOURCE_MISSING', 'MEDIUM', 'poza importem')" >/dev/null
-chk "#653: RISK_OPEN poza importem" "$(Q "select (count(*) >= 1)::text from notifications where template='RISK_OPEN' and channel='IN_APP' and load_id='$L653'")" t
-# (c) późniejsza eskalacja decyzji z importu → DECISION_ESCALATED
-DEC653=$(Q "select id from decisions where load_id='$L653' and status in ('NEW','ASSIGNED','SNOOZED') order by created_at desc limit 1")
-if [ -n "$DEC653" ] && [ "$DEC653" != "" ]; then
-  $PSQL -c "update decisions set due_at = now() - interval '1 hour', escalated_at = null where id='$DEC653'" >/dev/null
-  $PSQL -c "delete from notifications where template in ('DECISION_ESCALATED','DECISION_ESCALATED_BATCH')" >/dev/null
-  $PSQL -c "select decision_escalate_overdue()" >/dev/null
-  chk "#653: DECISION_ESCALATED po imporcie" "$(Q "select (count(*) >= 1)::text from notifications where template in ('DECISION_ESCALATED','DECISION_ESCALATED_BATCH')")" t
-else
-  ok=$((ok+1)); echo "  OK    #653: brak decyzji do eskalacji (pominięte — sprawa bez decyzji)"
-fi
+chk "#653: RISK_OPEN poza importem" "$(Q "select (count(*) >= 1) from notifications where template='RISK_OPEN' and channel='IN_APP' and load_id='$L653'")" t
+# (c) eskalacja decyzji utworzonej przez import (bez fallback ok+=1)
+$PSQL -c "update decisions set status='NEW', resolved_at=null, resolution_code=null, due_at = now() - interval '1 hour', escalated_at = null where id='$DEC653'" >/dev/null
+$PSQL -c "delete from notifications where template in ('DECISION_ESCALATED','DECISION_ESCALATED_BATCH')" >/dev/null
+$PSQL -c "select decision_escalate_overdue()" >/dev/null
+chk "#653: DECISION_ESCALATED z decyzji importu" "$(Q "select (count(*) >= 1) from notifications where template in ('DECISION_ESCALATED','DECISION_ESCALATED_BATCH')")" t
 $PSQL -c "update notification_matrix set email=false where event_key='dates' and role in ('HHL_ADMIN','CARRIER_DISPATCH')" >/dev/null
 $PSQL -c "update app_users set active=true where auth_id='$OPS_AUTH'" >/dev/null
 

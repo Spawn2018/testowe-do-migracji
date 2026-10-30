@@ -57,7 +57,7 @@ sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local ro
      select admin_impersonate_stop(); commit;" >/dev/null
 
 echo; echo "[g20] import_schedule — kontekst i zmiana daty"
-sval "import_schedule ustawia tower.import_ctx" "select (prosrc like '%tower.import_ctx%')::text from pg_proc where proname='import_schedule' and pronargs=6" "true"
+sval "import_schedule ustawia tower.import_ctx" "select (prosrc like '%tower.import_ctx%')::text from pg_proc where proname='import_schedule_impl' and pronargs=6" "true"
 # A6 N9: zaległy pending (np. po ksh_confirm_dates przy write_enabled) blokuje daty z pliku —
 # ten test sprawdza sam import, nie konflikt z kolejką zapisu.
 sys "delete from ksh_sync_outbound where load_id='$L2'" >/dev/null

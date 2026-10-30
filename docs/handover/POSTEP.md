@@ -7004,3 +7004,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok #653 F7 #656:** (1) wrapper bez `bulk_quiet` — tylko `import_bell_quiet`; (2) `l13_decision_email` cisza przy `import_bell_quiet`; (3) liczby spraw/decyzji w SUMMARY wg widoczności (SCX/KSH bez HHL-only); (4) testy: awiz+krytyczna → sprawa/decyzja + 0 dzwonków per-transport; cancel→workflow; przeciek GUC; eskalacja DECISION_ESCALATED; import **422**.
 - Bez push na main.
 
+## 2026-10-30 03:45 — #656 F7 POPRAWKI r2
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).
+- Scalanie: brak „F7: gotowe”; #651 CONFLICTING (rebase po #656); #654 CONFLICTING + db FAIL.
+- CI @ b76f2382: unit/visual ✔; **db FAIL** (import 406/15, i2 668/3, dec-auto 79/4, g20 14/1) — wrapper vs `import_schedule_impl` w prosrc; `bulk_quiet` w `trg_plan_dates_notify` zły warunek z `import_bell_quiet`.
+- **Krok F7 r2 #656:** (1) `bulk_quiet` → zawsze pełna cisza w `trg_plan_dates_notify`; (2) SUMMARY decisions = RLS 0315; (3) `LOAD_STATUS_CHANGED` w quiet + test; (4) g20/dec-auto → `import_schedule_impl`; (5) I-10/i2 pod SUMMARY; import **423**. Numery: #654=**0343**, #651=**0344** (po #656).
+- Bez push na main.
+
