@@ -9,8 +9,7 @@
  * 3. Po zejściu z promu albo wyjeździe ze strefy — znów osobne znaczniki (wynika z pozycji, bez pamięci).
  */
 import type { StageTile } from './stageTiles';
-import { FERRY_PORTS } from './ferryCatalog';
-import { portName } from './portName';
+import { ferryRouteEnds } from './portName';
 
 export type GroupItem = {
   id: string;
@@ -202,7 +201,6 @@ export type GroupView = {
 export type FerryInfo = { vessel: string | null; route: string | null; departureAt: string | null };
 
 /** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
-const PORT_PL: Record<string, string> = Object.fromEntries(FERRY_PORTS.map((p) => [p.code, portName('pl', p.code)]));
 
 export function groupView(
   g: Extract<Placed, { kind: 'ferry' | 'zone' }>,
@@ -234,10 +232,15 @@ export function groupView(
   const title = vessel ? ctx.tx('p9e_ferry_title', { vessel, cars }) : ctx.tx('p9e_ferry_title_bare', { cars });
   let sub: string | null = null;
   if (info) {
-    const [a, b] = (info.route ?? 'GDN-NYN').split('-');
-    const pa = PORT_PL[a] ?? a;
-    const pb = PORT_PL[b] ?? b;
-    if (info.departureAt) {
+    /* DP-4: porty ze słownika tras (Terminal A, kody z bazy); nieznana trasa — surowy kod, bez GDN-NYN */
+    const ends = ferryRouteEnds('pl', info.route);
+    const pa = ends?.a ?? info.route ?? '';
+    const pb = ends?.b ?? '';
+    if (!ends) {
+      sub = info.departureAt
+        ? ctx.tx(Date.parse(info.departureAt) <= Date.parse(ctx.nowIso) ? 'p9e_ferry_dep_past_bare' : 'p9e_ferry_dep_next_bare', { r: pa, t: ctx.dt(info.departureAt) })
+        : (pa || null);
+    } else if (info.departureAt) {
       const past = Date.parse(info.departureAt) <= Date.parse(ctx.nowIso);
       sub = ctx.tx(past ? 'p9e_ferry_dep_past' : 'p9e_ferry_dep_next', { a: pa, b: pb, t: ctx.dt(info.departureAt) });
     } else {

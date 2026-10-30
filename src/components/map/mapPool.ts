@@ -162,14 +162,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
     }
   }
   const ferryLeg = L.layerGroup().addTo(map);
-  for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
-    L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(ferryLeg);
-  }
-  /* BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja) — zawsze, ten sam styl;
-     kadrowanie mapy (`corridorBoundsOf`) bez zmian, jak dla Stena/Polferries */
-  for (const line of Object.values(WATER_TRACKS_EXTRA)) {
-    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(ferryLeg);
-  }
+  drawFerryLanes(ferryLeg);
   const detour = L.layerGroup().addTo(map);
   const geofences = L.layerGroup().addTo(map);
   const poi = L.layerGroup().addTo(map);
@@ -387,4 +380,24 @@ export function poolListeners(): { zoomend: number; moveend: number } {
 if (typeof window !== 'undefined') {
   const w = window as unknown as { __wtMapPool?: typeof poolStats & { listeners?: typeof poolListeners } };
   w.__wtMapPool = Object.assign(poolStats, { listeners: poolListeners });
+}
+
+/** Styl torów promowych — jeden dla wszystkich map korytarza. */
+export const FERRY_LANE_STYLE = { color: '#6BA8D6', weight: 3, opacity: 0.9 } as const;
+
+/**
+ * DP-7 (F7 #670): stałe tory wodne rysowane w jednym miejscu — przy tworzeniu mapy i po przerysowaniu przepraw z HERE
+ * (`CorridorMap`). `skipLegs` — przeprawy, które HERE już narysowało (FERRY-GDN-NYN, FERRY-GDY-KAA).
+ * BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja) — zawsze, ten sam styl;
+ * kadrowanie mapy (`corridorBoundsOf`) bez zmian, jak dla Stena/Polferries.
+ */
+export function drawFerryLanes(layer: L.LayerGroup, skipLegs: ReadonlySet<string> = new Set()): void {
+  const lanes = { 'FERRY-GDN-NYN': WATER_GDN_NYN, 'FERRY-GDY-KAA': WATER_GDY_KAA } as const;
+  for (const [leg, lane] of Object.entries(lanes)) {
+    if (skipLegs.has(leg)) continue;
+    L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
+  }
+  for (const line of Object.values(WATER_TRACKS_EXTRA)) {
+    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
+  }
 }
