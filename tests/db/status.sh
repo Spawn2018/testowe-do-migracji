@@ -2558,13 +2558,16 @@ chk "BN1 648: promote nie rusza ładunku na wyłączonej trasie" \
 # SCX nie może zmieniać active
 out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
  select ferry_route_set_active('TLLA-HEL', true); rollback;" 2>&1)
-echo "$out" | grep -qiE 'Wyłącznie administrator|42501' \
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
   && { ok=$((ok+1)); echo "  OK    BN1 648: SCX odmowa ferry_route_set_active"; } \
   || { fail=$((fail+1)); echo "  FAIL  BN1 648: SCX odmowa ferry_route_set_active: $out"; }
 q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select ferry_route_set_active('TLLA-HEL', true); commit" >/dev/null
 chk "BN1 648: TLLA-HEL przywrócone active" \
   "select active from ferry_routes where code='TLLA-HEL'" t
+# F7 #654 nieblokujące: kontrola pozytywna — promote przy active=true nie przechodzi pusto
+chk "BN1 648: promote przy active=true → FERRY" \
+  "select promote_ferry_departures('2026-10-16 10:00+00'); select status from loads where id='$L648p'" FERRY
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
