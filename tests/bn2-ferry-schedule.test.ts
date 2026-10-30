@@ -55,6 +55,39 @@ describe('BN2 Tallink timetable', () => {
     expect(r.sailings).toEqual([]);
     expect(r.warnings.join(' ')).toMatch(/Struktura|trips/);
   });
+
+  it('HEL→TAL: pierFrom LSA2 + pierTo DTER → HEL-TLL (Terminal D po stronie Tallinna)', () => {
+    const r = parseTallinkTimetable({
+      trips: {
+        '2026-10-30': {
+          outwards: [{
+            cityFrom: 'HEL', cityTo: 'TAL', pierFrom: 'LSA2', pierTo: 'DTER',
+            shipCode: 'MEGASTAR', departureIsoDate: '2026-10-30T07:30', arrivalIsoDate: '2026-10-30T09:30',
+          }],
+        },
+      },
+    });
+    expect(r.sailings).toHaveLength(1);
+    expect(r.sailings[0]!.route).toBe('HEL-TLL');
+    expect(r.sailings[0]!.vessel).toBe('M/F Megastar');
+  });
+
+  it('shipCode QUEEN (TLL↔STO) → M/F Baltic Queen', () => {
+    const r = parseTallinkTimetable({
+      trips: {
+        '2026-10-31': {
+          outwards: [{
+            cityFrom: 'TAL', cityTo: 'STO', pierFrom: 'DTER', pierTo: 'VHAM',
+            shipCode: 'QUEEN', departureIsoDate: '2026-10-31T18:00', arrivalIsoDate: '2026-11-01T10:00',
+          }],
+        },
+      },
+    });
+    expect(r.sailings).toHaveLength(1);
+    expect(r.sailings[0]!.route).toBe('TLL-STO');
+    expect(r.sailings[0]!.vessel).toBe('M/F Baltic Queen');
+    expect(r.sailings[0]!.shipCode).toBe('QUEEN');
+  });
 });
 
 describe('BN2 Digitraffic Portnet', () => {

@@ -2059,3 +2059,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 10:25 | BN2 #660 F7 r2: PoT/Stockholm bez zmyślonych godzin; closeStale +STO-TLL/KPS-PLD | pętla |
 | 30.10.2026 10:50 | BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu tablicy) | pętla |
 | 30.10.2026 11:15 | #660 SCALONE `a94645d9` (F7 gotowe @ 2315459); start BN2 Viking/Eckerö/DFDS LIVE | pętla |
+| 30.10.2026 11:50 | #640 ferry-schedule jednorazowy: TALLINK 93 (TLL-HEL); #661 fix QUEEN + HEL-TLL pier | pętla |

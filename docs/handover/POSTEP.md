@@ -6910,6 +6910,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 11:50 — BN2 #661: Tallink QUEEN + HEL-TLL pier (po jednorazowym ferry-schedule)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: #661 CI @ `9139ebb3` unit/db/visual ✔; F7 jeszcze nie; ten commit przed F7.
+- **Odbiór #640:** jednorazowy Edge `ferry-schedule` prod @ 10:36Z → `integration_runs` **104185** ok; TALLINK **93** (tylko TLL-HEL); HEL-TLL/TLL-STO/STO-TLL = 0; ostrzeżenia QUEEN ×~52.
+- **Krok:** alias `QUEEN`→`M/F Baltic Queen`; filtr Terminal D na pier Tallinna (`pierFrom` TAL→HEL, `pierTo` HEL→TAL). Testy bn2 +2. Po scaleniu: ponowny `ferry-schedule`.
+- Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 11:20 — #660 SCALONE; BN2 Viking/Eckerö/DFDS LIVE
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
