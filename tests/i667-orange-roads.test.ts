@@ -10,7 +10,7 @@ describe('#667 pomarańczowe drogi (krok A)', () => {
   const zones = readFileSync('src/components/zones/ZonesMap.tsx', 'utf8');
 
   it('mapPool w PROD ładuje drogi przez applyBasemap (nie tylko demo)', () => {
-    expect(pool).toMatch(/PROD_BUILD/);
+    expect(pool).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(pool).toMatch(/loadRoadLines/);
     expect(pool).toMatch(/paintOrangeRoads/);
     expect(pool).toMatch(/orangeRoads/);
