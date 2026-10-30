@@ -2,6 +2,7 @@
  * BN2 (#573) — parsery rozkładów bałtyckich i Portnet (bez sieci).
  * Tallink: prawdziwa odpowiedź booking.tallink.com 30.10.2026.
  * Digitraffic Portnet: prawdziwa odpowiedź Megastar 29–30.10.2026.
+ * Port of Tallinn / Ports of Stockholm: próbki z 30.10.2026.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -10,12 +11,16 @@ import { parseDigitrafficPortCalls } from '../src/lib/ferry/digitrafficPortCalls
 import { parseVikingSchedule } from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule } from '../src/lib/ferry/eckero';
 import { parseDfdsSchedule } from '../src/lib/ferry/dfds';
+import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
+import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/lib/ferry/portsStockholm';
 
 const TALLINK = JSON.parse(readFileSync(new URL('./fixtures/tallink-timetable-tal-hel-2026-10-30.json', import.meta.url), 'utf8'));
 const PORTNET = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-port-calls-megastar-2026-10-29.json', import.meta.url), 'utf8'));
 const VIKING = JSON.parse(readFileSync(new URL('./fixtures/viking-schedule-sample.json', import.meta.url), 'utf8'));
 const ECKERO = JSON.parse(readFileSync(new URL('./fixtures/eckero-schedule-sample.json', import.meta.url), 'utf8'));
 const DFDS = JSON.parse(readFileSync(new URL('./fixtures/dfds-schedule-sample.json', import.meta.url), 'utf8'));
+const PORT_TLL = readFileSync(new URL('./fixtures/port-tallinn-departures-arrivals-sample.html', import.meta.url), 'utf8');
+const PORT_STO = JSON.parse(readFileSync(new URL('./fixtures/ports-stockholm-portentry-sample.json', import.meta.url), 'utf8'));
 
 describe('BN2 Tallink timetable', () => {
   it('buduje URL z zakresem dat', () => {
@@ -88,5 +93,51 @@ describe('BN2 Viking / Eckerö / DFDS (fixture znormalizowany)', () => {
     const r = parseDfdsSchedule(DFDS);
     expect(r.warnings).toEqual([]);
     expect(r.sailings.map((s) => s.route).sort()).toEqual(['KPS-PLD', 'PLD-KPS']);
+  });
+});
+
+describe('BN2 Port of Tallinn HTML', () => {
+  it('odczytuje odjazdy Terminal A/D i Muuga HHLA', () => {
+    const r = parsePortTallinnHtml(PORT_TLL, '2026-10-30');
+    expect(r.events.length).toBeGreaterThan(0);
+    expect(r.events.some((e) => e.vessel === 'M/F Viking XPRS' && e.route === 'TLLA-HEL')).toBe(true);
+    expect(r.events.some((e) => e.vessel === 'M/F MyStar' && e.route === 'TLL-HEL')).toBe(true);
+    expect(r.events.some((e) => e.vessel === 'M/F Finbo Cargo' && e.route === 'MUU-VUO')).toBe(true);
+    const sails = portTallinnToSailings(r.events);
+    expect(sails.length).toBeGreaterThan(0);
+    expect(sails.every((s) => Date.parse(s.departureUtc) < Date.parse(s.arrivalUtc))).toBe(true);
+  });
+
+  it('przyjazdy Helsinki → Tallinn A/D', () => {
+    const r = parsePortTallinnHtml(PORT_TLL, '2026-10-30');
+    expect(r.events.some((e) => e.kind === 'ARRIVAL' && e.route === 'HELA-TLL')).toBe(true);
+  });
+
+  it('zła struktura → ostrzeżenie', () => {
+    const r = parsePortTallinnHtml('<html></html>', '2026-10-30');
+    expect(r.events).toEqual([]);
+    expect(r.warnings.join(' ')).toMatch(/brak tabeli|struktura/i);
+  });
+});
+
+describe('BN2 Ports of Stockholm portentry', () => {
+  it('Sirena Kapellskär → PLD-KPS / KPS-PLD + actual_*', () => {
+    const r = parsePortsStockholmPortEntry(PORT_STO);
+    expect(r.warnings).toEqual([]);
+    expect(r.calls.some((c) => c.vessel === 'M/F Sirena Seaways' && c.arrivalRoute === 'PLD-KPS')).toBe(true);
+    expect(r.calls.some((c) => c.actualArrivalUtc && c.actualDepartureUtc)).toBe(true);
+    const sails = portsStockholmToSailings(r.calls);
+    expect(sails.some((s) => s.route === 'PLD-KPS' || s.route === 'KPS-PLD')).toBe(true);
+  });
+
+  it('Baltic Queen Värtahamnen → TLL-STO / STO-TLL', () => {
+    const r = parsePortsStockholmPortEntry(PORT_STO);
+    expect(r.calls.some((c) => c.vessel === 'M/F Baltic Queen' && c.arrivalRoute === 'TLL-STO')).toBe(true);
+  });
+
+  it('zła struktura → ostrzeżenie', () => {
+    const r = parsePortsStockholmPortEntry({});
+    expect(r.calls).toEqual([]);
+    expect(r.warnings.join(' ')).toMatch(/Struktura|items/);
   });
 });

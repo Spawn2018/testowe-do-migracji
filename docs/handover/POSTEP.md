@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 09:40 — BN2 krok 2: Port of Tallinn + Ports of Stockholm
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: #660 CI @ `e368e26e` zielone (unit/db/visual); **brak** „F7: gotowe do scalenia” po tipie — nie scalono. Bez push na main.
+- **Krok BN2:** `portTallinn.ts` (HTML ts.ee departures/arrivals) + `portsStockholm.ts` (API portentry); `ferry-schedule` → rozkład dnia armatorów bałtyckich + SOURCE_DOWN PORT_TALLINN/PORTS_STOCKHOLM + actual_* Sztokholm. Testy `bn2-ferry-schedule` 15/15. Dalej: scrape HTML Viking/Eckerö/DFDS 14 dni.
+- Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 09:10 — #659 SCALONE; start BN2 (0347 Tallink + Portnet)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.

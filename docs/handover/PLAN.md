@@ -1157,7 +1157,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
 Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **W TOKU: BN2** (rozkłady).
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
-2. **BN2** — W TOKU (**0347**): parsery Tallink/Viking/Eckerö/DFDS + Digitraffic Portnet; `ferry-schedule` Tallink LIVE + actual_* Portnet; statki bałtyckie. Dalej: scrape Viking/Eckerö/DFDS HTML, Port of Tallinn, Ports of Stockholm.
+2. **BN2** — W TOKU (**0347**, PR #660): Tallink LIVE + Digitraffic Portnet actual_*; **Port of Tallinn** (HTML odjazdy/przyjazdy → rozkład dnia Viking/Eckerö/Tallink/Finbo + odwołania) + **Ports of Stockholm** (API portentry → rozkład Kapellskär/Värtahamnen + actual_*). Dalej: dedykowany scrape HTML stron Viking/Eckerö/DFDS (14 dni), domknięcie BN2.
 3. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2054,3 +2054,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 08:15 | #659 F7 POPRAWKI: test HHL_ADMIN aal1→2FA / aal2 OK; status **501** | pętla |
 | 30.10.2026 08:35 | #659 F7 r2: aal2 false→f + true→t (nie true→true); status **502** | pętla |
 | 30.10.2026 09:10 | #659 SCALONE `60c6ddf3` (F7 @ 4f6740a / **0346**); start **BN2** **0347** (Tallink+Portnet) | pętla |
+| 30.10.2026 09:40 | BN2 #660 krok 2: Port of Tallinn HTML + Ports of Stockholm API (actual_*/rozkład dnia) | pętla |
