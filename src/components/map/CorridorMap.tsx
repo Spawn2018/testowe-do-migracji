@@ -20,6 +20,7 @@ import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
+import { vesselsLoader } from '../../lib/vesselsLoad';
 import {
   acquireMap, attributionOf, drawFerryLanes, ensureBasemap, FERRY_LANE_STYLE, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
@@ -169,6 +170,16 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const mapRef = useRef<L.Map | null>(null);
   const layersRef = useRef<LayerBag | null>(null);
   const entryRef = useRef<PoolEntry | null>(null);
+  /* DP-17 (F7 r2 #672): statki z bazy także na mapach (jedna pamięć z Rejsami) — po pobraniu przerysowanie dymków */
+  const [, setVesselsTick] = useState(0);
+  useEffect(() => {
+    if (!vesselsLoader) return undefined;
+    let live = true;
+    vesselsLoader.load().then(() => { if (live) setVesselsTick((n) => n + 1); }).catch(() => {
+      console.warn('[Mapa] lista statków z bazy niedostępna — lista zapasowa');
+    });
+    return () => { live = false; };
+  }, []);
   const theme = useTowerStore((s) => s.theme);
   /* E41: podpis znacznika i przebieg — nazwa transportu według firmy, która patrzy */
   const role = useTowerStore((s) => s.role);

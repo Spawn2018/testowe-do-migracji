@@ -24,24 +24,11 @@ import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
-import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, OPERATOR_MATCH_ORDER, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
+import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
 import { ferryRouteLabel, ferryRouteName, ferryRouteShort } from '../lib/portName';
-import { VESSELS_FALLBACK, vesselOperator, type VesselGroup } from '../lib/vesselGroups';
-import { manualRouteError, showRouteUnknown } from '../lib/sailingsForm';
-import { SUPABASE_AUTH_ENABLED } from '../auth/config';
-
-/* DP-8: odczyt `vessels` tylko w paczce produkcyjnej (I-2: paczka demo bez klienta Supabase).
-   U6: jedno pobranie na sesję — pamięć podręczna modułu (także po zamknięciu i otwarciu formularza). */
-let vesselsCache: Promise<VesselGroup[]> | null = null;
-const loadVessels = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED
-  ? (): Promise<VesselGroup[]> => {
-    vesselsCache ??= import('../data/vesselsServer').then((m) => m.loadVesselGroups()).catch((e: unknown) => {
-      vesselsCache = null; /* błąd — następne otwarcie spróbuje ponownie */
-      throw e;
-    });
-    return vesselsCache;
-  }
-  : null;
+import { currentVesselGroups, defaultVessel, vesselOperator, type VesselGroup } from '../lib/vesselGroups';
+import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../lib/sailingsForm';
+import { vesselsLoader } from '../lib/vesselsLoad';
 
 export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean; onShowLoads?: (sailingId: string) => void }) {
   const role = useTowerStore((s) => s.role);
@@ -66,11 +53,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const [delayId, setDelayId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   /* DP-8: statki z tabeli `vessels` (produkcja, przy otwarciu formularza); zapas — stała lista BN9-b */
-  const [vesselGroups, setVesselGroups] = useState<readonly VesselGroup[]>(VESSELS_FALLBACK);
+  const [vesselGroups, setVesselGroups] = useState<readonly VesselGroup[]>(currentVesselGroups);
   useEffect(() => {
-    if (!loadVessels || !adding) return undefined;
+    if (!vesselsLoader || !adding) return undefined;
     let live = true;
-    loadVessels()
+    vesselsLoader.load()
       .then((g) => { if (live && g.length) setVesselGroups(g); })
       .catch(() => {
         /* U5: lista zapasowa BN9-b; bez danych w komunikacie */
@@ -79,24 +66,31 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
     return () => { live = false; };
   }, [adding]);
 
-  /* BN9-b: filtr armatora (6 armatorów, kilkaset rejsów) — „Wszyscy” i armatorzy, którzy mają rejsy */
+  /* BN9-b: filtr armatora (6 armatorów, kilkaset rejsów).
+     DP-20 (F7 r2 #668, decyzja 55): zawsze wszyscy armatorzy, także bez rejsów (Viking Line, DFDS). */
   const [lineSel, setLineSel] = useState<FerryOperator | 'ALL'>('ALL');
   const allRows = useMemo(() => sailRows(sailings, loads, now, { future, returns }), [sailings, loads, now, future, returns]);
-  const linesPresent = useMemo(() => OPERATOR_MATCH_ORDER.filter((op) => allRows.some((r) => r.line === op)), [allRows]);
+  const lineOptions = sailingLineOptions();
   const rows = useMemo(() => (lineSel === 'ALL' ? allRows : allRows.filter((r) => r.line === lineSel)), [allRows, lineSel]);
   /* wyglad/W-cele-przejsc (d), E7 pkt 4: wejście z wiersza promu — ten rejs widoczny (także po odejściu), przewinięty i wyróżniony */
   const sailingFocus = useTowerStore((s) => s.sailingFocus);
   const [focusId, setFocusId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!sailingFocus) return;
-    useTowerStore.getState().setSailingFocus(null);
-    if (!sailings.some((x) => x.id === sailingFocus)) return;
-    if (!sailRows(sailings, loads, now, { future, returns }).some((r) => r.sailing.id === sailingFocus)) {
-      setFuture(false);
-      setReturns(true);
+  /* DP-18: dostosowanie stanu w trakcie renderu zamiast setState w efekcie (oxlint set-state-in-effect) */
+  const [handledFocus, setHandledFocus] = useState<string | null>(null);
+  if (sailingFocus !== handledFocus) {
+    setHandledFocus(sailingFocus);
+    if (sailingFocus && sailings.some((x) => x.id === sailingFocus)) {
+      if (!sailRows(sailings, loads, now, { future, returns }).some((r) => r.sailing.id === sailingFocus)) {
+        setFuture(false);
+        setReturns(true);
+      }
+      setFocusId(sailingFocus);
     }
-    setFocusId(sailingFocus);
-  }, [sailingFocus]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
+  useEffect(() => {
+    /* zdjęcie żądania w sklepie (system zewnętrzny względem komponentu) */
+    if (sailingFocus) useTowerStore.getState().setSailingFocus(null);
+  }, [sailingFocus]);
   useEffect(() => {
     if (!focusId) return undefined;
     const raf = window.requestAnimationFrame(() => document.querySelector(`[data-sailings] [data-sailing="${CSS.escape(focusId)}"]`)?.scrollIntoView({ block: 'center' }));
@@ -160,7 +154,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         <button type="button" className="chipbtn" aria-pressed={returns} data-sail-returns onClick={() => setReturns((v) => !v)}>
           {sv(locale, 'sv_returns')}
         </button>
-        {linesPresent.length > 1 ? (
+        {lineOptions.length > 1 ? (
           <select
             className="input sv-line"
             value={lineSel}
@@ -169,7 +163,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             onChange={(e) => setLineSel(e.target.value as FerryOperator | 'ALL')}
           >
             <option value="ALL">{sv(locale, 'sv_line_all')}</option>
-            {linesPresent.map((op) => <option key={op} value={op}>{operatorName(op)}</option>)}
+            {lineOptions.map((op) => <option key={op} value={op}>{operatorName(op)}</option>)}
           </select>
         ) : null}
         <div className="spacer" />
@@ -207,7 +201,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           <dl className="kv">
             <dt>{t(locale, 'sail_col_vessel')}</dt>
             <dd>
-              <select name="vessel" className="input" defaultValue="Wawel">
+              <select name="vessel" className="input" defaultValue={defaultVessel(vesselGroups)}>
                 {vesselGroups.map((g) => (
                   <optgroup key={g.op} label={operatorName(g.op)}>
                     {g.names.map((v) => <option key={v} value={v}>{v}</option>)}
@@ -273,7 +267,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
       })() : null}
 
       {rows.length === 0 ? (
-        <div className="empty" data-sail-empty><p>{sv(locale, future && !returns ? 'sv_none_future' : 'sv_none')}</p></div>
+        <div className="empty" data-sail-empty><p>{sv(locale, emptyRowsKey(lineSel, future, returns))}</p></div>
       ) : phone ? (
         <ul className="sv-cards" data-sail-cards>
           {rows.map((r) => (

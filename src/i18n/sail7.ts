@@ -25,6 +25,8 @@ const PL: Record<string, string> = {
   /* BN9-b: filtr armatora */
   sv_line_filter: 'Armator',
   sv_line_all: 'Wszyscy armatorzy',
+  /* DP-20, decyzja 55 */
+  sv_line_empty: 'Brak rejsów tego armatora w rozkładzie — źródło niedostępne albo rozkład nie został jeszcze pobrany; rejs można dodać później.',
   /* DP-3, DP-5 */
   sv_route_unknown: 'nieznana trasa',
   sv_route_unknown_err: 'Nieznana trasa — wybierz trasę z listy',

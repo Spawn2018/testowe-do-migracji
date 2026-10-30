@@ -3,7 +3,7 @@
  * Nazwy bez przedrostka „M/F”, armator rozpoznany z tekstu (`operatorFromText`). Zapas: stała lista BN9-b
  * (tryb demo, błąd odczytu, pusta tabela).
  */
-import { FERRY_OPERATOR_CODES, LEGACY_OPERATORS, operatorFromText, outboundRoutesOf, type FerryOperator } from './ferryCatalog';
+import { FERRY_OPERATOR_CODES, operatorFromText, type FerryOperator } from './ferryCatalog';
 
 export interface VesselGroup { op: FerryOperator; names: readonly string[] }
 
@@ -48,14 +48,61 @@ export function vesselKeyOf(name: string | null | undefined): string {
  * DP-4: trasa auta na promie bez przypisanego rejsu — z armatora statku.
  * U8: auto bez rejsu dostaje trasę wyjazdową armatora — to zachowanie jak dotąd dla Polferries (dawne domyślne
  * Gdańsk → Nynäshamn), teraz także dla Steny (Gdynia → Karlskrona).
- * B1: tylko armatorzy sprzed Korytarza bałtyckiego (`LEGACY_OPERATORS`: Polferries, Stena) — każdy z nich ma jedną
- * trasę wyjazdową. Nowi armatorzy (Viking: Terminal A, Tallink: kilka tras, Eckerö, DFDS) i statek nieznany → null,
- * bez zgadywania terminala i trasy.
+ * B1: tylko armatorzy sprzed Korytarza bałtyckiego (Polferries, Stena). Nowi armatorzy (Viking: Terminal A,
+ * Tallink: kilka tras, Eckerö, DFDS) i statek nieznany → null, bez zgadywania terminala i trasy.
+ * DP-14 (F7 r2 #672): trasa wpisana wprost — druga trasa armatora w słowniku z bazy (np. Świnoujście–Ystad)
+ * nie może po cichu zabrać autu trasy.
  */
-export function routeOfVessel(vessel: string | null | undefined, groups: readonly VesselGroup[] = VESSELS_FALLBACK): string | null {
+export const LEGACY_VESSEL_ROUTE: Readonly<Partial<Record<FerryOperator, string>>> = {
+  POLFERRIES: 'GDN-NYN',
+  STENA: 'GDY-KAA',
+};
+
+export function routeOfVessel(vessel: string | null | undefined, groups: readonly VesselGroup[] = currentVesselGroups()): string | null {
   if (!vessel) return null;
   const op = vesselOperator(groups, vessel) ?? operatorFromText(vessel);
-  if (!op || !LEGACY_OPERATORS.includes(op)) return null;
-  const routes = outboundRoutesOf(op);
-  return routes.length === 1 ? routes[0] : null;
+  if (!op) return null;
+  return LEGACY_VESSEL_ROUTE[op] ?? null;
+}
+
+/* DP-16, DP-17: jedna lista statków na sesję — Rejsy i mapy. Loader wstrzykiwany (testy, paczka demo bez Supabase). */
+let lastGroups: readonly VesselGroup[] | null = null;
+
+/** Ostatnio pobrana lista z bazy albo lista zapasowa (DP-17: mapy widzą statki dopisane w bazie). */
+export function currentVesselGroups(): readonly VesselGroup[] {
+  return lastGroups ?? VESSELS_FALLBACK;
+}
+
+export interface VesselsLoader {
+  /** Jedno pobranie na sesję; po błędzie pamięć się czyści i następne wywołanie próbuje ponownie. */
+  load(): Promise<VesselGroup[]>;
+  /** Tylko testy. */
+  reset(): void;
+}
+
+export function createVesselsLoader(fetchGroups: () => Promise<VesselGroup[]>): VesselsLoader {
+  let cache: Promise<VesselGroup[]> | null = null;
+  return {
+    load() {
+      cache ??= fetchGroups().then((g) => {
+        if (g.length) lastGroups = g;
+        return g;
+      }).catch((e: unknown) => {
+        cache = null;
+        throw e;
+      });
+      return cache;
+    },
+    reset() {
+      cache = null;
+      lastGroups = null;
+    },
+  };
+}
+
+/** DP-19: domyślny statek formularza — „Wawel” bez względu na wielkość liter i „M/F”; inaczej pierwszy z listy. */
+export function defaultVessel(groups: readonly VesselGroup[], want = 'Wawel'): string | undefined {
+  const key = vesselKeyOf(want);
+  for (const g of groups) for (const n of g.names) if (vesselKeyOf(n) === key) return n;
+  return groups[0]?.names[0];
 }

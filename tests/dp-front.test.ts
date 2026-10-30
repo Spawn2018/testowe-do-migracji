@@ -9,8 +9,8 @@ import { p9m, p9mp } from '../src/i18n/p9c';
 import { p9e, p9ep } from '../src/i18n/p9e';
 import { sv } from '../src/i18n/sail7';
 import { ferryRouteEnds } from '../src/lib/portName';
-import { groupVessels, routeOfVessel, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
-import { manualRouteError, showRouteUnknown } from '../src/lib/sailingsForm';
+import { createVesselsLoader, currentVesselGroups, defaultVessel, groupVessels, LEGACY_VESSEL_ROUTE, routeOfVessel, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
+import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../src/lib/sailingsForm';
 import { ferryLaneLines, HERE_FERRY_LEGS } from '../src/lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../src/lib/map/ferryLines';
 import { WATER_GDN_NYN } from '../src/lib/map/draw';
@@ -145,7 +145,78 @@ describe('DP-8 · statki z tabeli vessels', () => {
     expect(VESSELS_FALLBACK.map((x) => x.op)).toEqual(['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS']);
     const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
     expect(panel).not.toMatch(/const VESSELS\b/);
-    expect(panel).toMatch(/import\('\.\.\/data\/vesselsServer'\)/);
-    expect(panel).toMatch(/VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED/);
+    expect(panel).toMatch(/vesselsLoader/);
+    /* DP-16/17: jeden moduł z warunkiem paczki produkcyjnej (I-2) dla Rejsów i map */
+    const load = readFileSync('src/lib/vesselsLoad.ts', 'utf8');
+    expect(load).toMatch(/import\('\.\.\/data\/vesselsServer'\)/);
+    expect(load).toMatch(/VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED/);
+  });
+});
+
+describe('DP-14 · trasa auta bez rejsu wpisana wprost', () => {
+  it('Polferries → GDN-NYN, Stena → GDY-KAA niezależnie od liczby tras armatora w słowniku', () => {
+    expect(LEGACY_VESSEL_ROUTE).toEqual({ POLFERRIES: 'GDN-NYN', STENA: 'GDY-KAA' });
+    expect(routeOfVessel('Wawel')).toBe('GDN-NYN');
+    expect(routeOfVessel('NOVA STAR')).toBe('GDN-NYN');
+    expect(routeOfVessel('Stena Spirit')).toBe('GDY-KAA');
+    for (const v of ['Viking XPRS', 'Viking Grace', 'Finlandia', 'Sirena Seaways', 'Baltic Queen', 'Megastar']) expect(routeOfVessel(v)).toBeNull();
+  });
+});
+
+describe('DP-15 · kolejność armatorów listy statków', () => {
+  it('wejście w innej kolejności → kolejność katalogu (Polferries, Stena, …)', () => {
+    const g = groupVessels([
+      { name: 'M/F Finlandia', operator: 'Eckerö Line' },
+      { name: 'M/F Viking XPRS', operator: 'Viking Line' },
+      { name: 'M/F Stena Ebba', operator: 'Stena Line' },
+      { name: 'M/F Wawel', operator: 'Polferries' },
+    ]);
+    expect(g.map((x) => x.op)).toEqual(['POLFERRIES', 'STENA', 'VIKING', 'ECKERO']);
+  });
+});
+
+describe('DP-16, DP-17 · jedna pamięć listy statków', () => {
+  const groups = [{ op: 'POLFERRIES' as const, names: ['Wawel', 'Galileusz'] }];
+  it('jedno pobranie na sesję; mapy widzą listę z bazy', async () => {
+    let calls = 0;
+    const l = createVesselsLoader(async () => { calls++; return groups; });
+    l.reset();
+    expect(currentVesselGroups()).toBe(VESSELS_FALLBACK);
+    await l.load(); await l.load();
+    expect(calls).toBe(1);
+    expect(currentVesselGroups()).toEqual(groups);
+    /* statek dopisany w bazie (nazwa bez armatora) → trasa armatora */
+    expect(routeOfVessel('Galileusz')).toBe('GDN-NYN');
+    l.reset();
+  });
+  it('po błędzie pamięć się czyści i następne wywołanie próbuje ponownie', async () => {
+    let calls = 0;
+    const l = createVesselsLoader(async () => { calls++; if (calls === 1) throw new Error('x'); return groups; });
+    l.reset();
+    await expect(l.load()).rejects.toThrow('x');
+    expect(currentVesselGroups()).toBe(VESSELS_FALLBACK);
+    await expect(l.load()).resolves.toEqual(groups);
+    expect(calls).toBe(2);
+    l.reset();
+  });
+});
+
+describe('DP-19 · domyślny statek', () => {
+  it('„Wawel” bez względu na wielkość liter, inaczej pierwszy z listy', () => {
+    expect(defaultVessel([{ op: 'POLFERRIES', names: ['WAWEL', 'Nova Star'] }])).toBe('WAWEL');
+    expect(defaultVessel([{ op: 'STENA', names: ['Stena Ebba'] }])).toBe('Stena Ebba');
+    expect(defaultVessel(VESSELS_FALLBACK)).toBe('Wawel');
+  });
+});
+
+describe('DP-20 · filtr armatora w Rejsach (decyzja 55)', () => {
+  it('zawsze 6 armatorów, także bez rejsów', () => {
+    expect([...sailingLineOptions()].sort()).toEqual(['DFDS', 'ECKERO', 'POLFERRIES', 'STENA', 'TALLINK', 'VIKING']);
+  });
+  it('armator bez rejsów → komunikat decyzji 55', () => {
+    expect(emptyRowsKey('DFDS', true, false)).toBe('sv_line_empty');
+    expect(sv('pl', 'sv_line_empty')).toMatch(/Brak rejsów tego armatora/);
+    expect(emptyRowsKey('ALL', true, false)).toBe('sv_none_future');
+    expect(emptyRowsKey('ALL', false, true)).toBe('sv_none');
   });
 });
