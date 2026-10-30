@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import {
   autoRiskCode, autoStatusText, buildSeedSailings, cancelledSailingRisks, checkSailingDraft, effDeparture,
-  ferryFromSailing, historicalSailings, sailingAssignDenied, selectableSailings,
+  ferryFromSailing, hasDeparted, historicalSailings, sailingAssignDenied, selectableSailings,
 } from '../src/lib/sailings';
 import { sailingFromRow, riskFromRow } from '../src/data/mappers';
 import { friendlyDbError } from '../src/lib/orderNumbers';
@@ -33,6 +33,17 @@ describe('M10 przypisanie rejsu', () => {
       S({ id: 'e', departureAt: '2026-09-23T12:00:00Z', arrivalAt: '2026-09-24T06:00:00Z', delayedDepartureAt: '2026-09-23T18:00:00Z', status: 'OPOZNIONY' })];
     expect(selectableSailings(all, NOW, 'c').map((s) => s.id)).toEqual(['c', 'e', 'a']);
     expect(effDeparture(all[4])).toBe('2026-09-23T18:00:00Z');
+  });
+  it('F7 #668 N5: actualDepartureAt (AIS) → hasDeparted; SCX nie widzi na liście przyszłych', () => {
+    const aisPast = S({
+      id: 'ais',
+      departureAt: '2026-09-24T18:00:00Z',
+      arrivalAt: '2026-09-25T12:00:00Z',
+      actualDepartureAt: '2026-09-23T12:00:00Z',
+    });
+    expect(hasDeparted(aisPast, NOW)).toBe(true);
+    expect(selectableSailings([aisPast, S({ id: 'f' })], NOW, null).map((s) => s.id)).toEqual(['f']);
+    expect(sailingAssignDenied('SCX', base, undefined, aisPast, NOW)).toBe('DEPARTED');
   });
   it('rezerwacja z rejsu: statek, godziny po opóźnieniu, status; odwołany → CANCELLED', () => {
     const f = ferryFromSailing(S({ delayedDepartureAt: '2026-09-24T19:00:00Z', delayedArrivalAt: '2026-09-25T13:00:00Z', status: 'OPOZNIONY' }), 'PF-1');

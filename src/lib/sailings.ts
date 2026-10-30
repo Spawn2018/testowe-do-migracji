@@ -14,7 +14,12 @@ import {
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
 export const effArrival = (s: Sailing): string => s.delayedArrivalAt ?? s.arrivalAt;
-export const hasDeparted = (s: Sailing, nowIso: string): boolean => Date.parse(effDeparture(s)) <= Date.parse(nowIso);
+/** F7 #668 N5: wypłynięty także przy actualDepartureAt (AIS), nie tylko plan/opóźnienie. */
+export const hasDeparted = (s: Sailing, nowIso: string): boolean => {
+  const now = Date.parse(nowIso);
+  if (s.actualDepartureAt && Date.parse(s.actualDepartureAt) <= now) return true;
+  return Date.parse(effDeparture(s)) <= now;
+};
 
 /** Statusy „na promie lub dalej” — rejsu nie zmienia już przewoźnik (lustro wyzwalacza 0008). */
 const AFTER_FERRY: ReadonlySet<LoadStatus> = new Set<LoadStatus>(['ON_FERRY', 'AT_PORT_SE', 'IN_TRANSIT_SE', 'APPROACHING_SITE', 'UNLOADING', 'DELIVERED']);

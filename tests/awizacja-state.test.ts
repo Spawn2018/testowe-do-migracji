@@ -3,6 +3,7 @@ import {
   awizacjaOperators,
   earliestFerryDepartureMs,
   hasAwizacja,
+  historicalSailingsAllowed,
   isBeforePlannedLoad,
   PORT_CLEARANCE_H,
   reachableSailings,
@@ -120,6 +121,12 @@ describe('#666 decyzja 52/55 — historyczne Polferries i komunikaty', () => {
   };
   it('historicalSailings obejmuje Polferries (grupa tylko HHL_ADMIN w UI)', () => {
     expect(historicalSailings([pastPf], nowIso, 'POLFERRIES').map((s) => s.id)).toEqual(['pf-past']);
+  });
+  it('F7 #668 N4: historicalSailingsAllowed — HHL_ADMIN tak, OPS/SCX nie', () => {
+    expect(historicalSailingsAllowed('HHL_ADMIN')).toBe(true);
+    expect(historicalSailingsAllowed('HHL_OPS')).toBe(false);
+    expect(historicalSailingsAllowed('SCX')).toBe(false);
+    expect(historicalSailingsAllowed('KSH')).toBe(false);
   });
   it('decyzja 55: zawsze 6 armatorów; tekst pustej listy w słowniku', () => {
     expect(awizacjaOperators([]).map((o) => o.id)).toEqual([

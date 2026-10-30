@@ -43,7 +43,7 @@ import {
 } from '../ferry/eckero.ts';
 import {
   DFDS_SCHEDULE_PAGE, DFDS_TERMINAL_KPS, DFDS_TERMINAL_PLD, DFDS_UA, DFDS_WEEKLY_PDF_URL,
-  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, mergeDfdsSailings,
+  dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, mergeDfdsMissingDays, mergeDfdsSailings,
   parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
@@ -381,8 +381,9 @@ async function mapPoolLimit<T, R>(items: readonly T[], limit: number, fn: (item:
 }
 
 /** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy.
- * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów. */
-async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
+ * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów.
+ * F7 #668 N9: łączny budżet czasu (domyślnie 90 s) — po limicie zapisujemy już pobrane. */
+async function fetchStenaDays(deps: JobDeps, days: number, budgetMs = 90_000): Promise<{
   sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number; structureFail: boolean;
 }> {
   const warnings: string[] = [];
@@ -390,9 +391,21 @@ async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
   let http403 = false;
   let fetchedOk = 0;
   let structureFail = false;
+  /* N9: ścienny zegar — deps.now() w testach bywa zamrożony. */
+  const started = Date.now();
   const dates = dateRangeYmd(deps.now(), days);
   const jobs = (['GDKA', 'KAGD'] as const).flatMap((routeCode) => dates.map((date) => ({ routeCode, date })));
   const parts = await mapPoolLimit(jobs, 4, async ({ routeCode, date }) => {
+    if (Date.now() - started > budgetMs) {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [] as string[],
+        http403: false,
+        ok: false,
+        structureFail: false,
+        skippedBudget: true,
+      };
+    }
     const url = stenaTimetableUrl(routeCode, date);
     const page = await readText(deps, url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
     if (!page.ok) {
@@ -402,6 +415,7 @@ async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
         http403: /HTTP 403/.test(page.warning),
         ok: false,
         structureFail: false,
+        skippedBudget: false,
       };
     }
     let json: unknown;
@@ -412,6 +426,7 @@ async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
         http403: false,
         ok: false,
         structureFail: false,
+        skippedBudget: false,
       };
     }
     const parsed = parseStenaTimetable(json, { routeCode, dateYmd: date });
@@ -422,14 +437,20 @@ async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
       http403: false,
       ok: true,
       structureFail: struct,
+      skippedBudget: false,
     };
   });
+  let budgetHits = 0;
   for (const p of parts) {
+    if (p.skippedBudget) { budgetHits += 1; continue; }
     if (p.ok) fetchedOk += 1;
     if (p.http403) http403 = true;
     if (p.structureFail) structureFail = true;
     sailings.push(...p.sailings);
     warnings.push(...p.warnings);
+  }
+  if (budgetHits > 0) {
+    warnings.push(`Stena: przerwano po ${Math.round(budgetMs / 1000)} s — zapisano ${fetchedOk} dni, pominięto ${budgetHits}.`);
   }
   return { sailings, warnings, http403, fetchedOk, structureFail };
 }
@@ -588,6 +609,11 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     }
   }
 
+  /* F7 #668 N2: gdy Dynamic dał rejsy — bez pobierania strony/PDF. */
+  if (apiSailings.length > 0) {
+    return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
+  }
+
   const page = await readText(deps, DFDS_SCHEDULE_PAGE, {
     headers: { 'User-Agent': DFDS_UA, Accept: 'text/html' },
   });
@@ -610,13 +636,13 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     if (fromPdf.sailings.length > 0) fallback = mergeDfdsSailings(fallback, fromPdf.sailings);
   }
 
-  // Dynamic ma pierwszeństwo; PDF/HTML tylko uzupełnia brakujące dni (bez duplikatów).
-  const sailings = mergeDfdsSailings(apiSailings, fallback);
+  /* F7 #668 N1: PDF/HTML tylko doby (trasa+dzień) nieobecne w API — tu API puste, więc cały zapas. */
+  const sailings = mergeDfdsMissingDays(apiSailings, fallback);
   if (sailings.length > 0) {
     return {
       sailings,
       warnings,
-      fetchedOk: apiOk > 0 || fallback.length > 0 ? 1 : 0,
+      fetchedOk: fallback.length > 0 ? 1 : 0,
       structureFail: false,
     };
   }
@@ -630,7 +656,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     sailings: [],
     warnings,
     fetchedOk: 0,
-    structureFail: apiStructureFail || true,
+    structureFail: apiStructureFail,
   };
 }
 

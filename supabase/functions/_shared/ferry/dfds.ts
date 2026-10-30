@@ -224,6 +224,22 @@ export function mergeDfdsSailings(primary: DfdsSailing[], secondary: DfdsSailing
   return out;
 }
 
+/** F7 #668 N1: zapas PDF/HTML tylko dla (trasa + doba UTC) nieobecnej w API — nie po exact departureUtc. */
+export function mergeDfdsMissingDays(api: DfdsSailing[], fallback: DfdsSailing[]): DfdsSailing[] {
+  const days = new Set(api.map((s) => `${s.route}|${s.departureUtc.slice(0, 10)}`));
+  const out = [...api];
+  const seen = new Set(api.map((s) => `${s.route}|${s.departureUtc}`));
+  for (const s of fallback) {
+    const day = `${s.route}|${s.departureUtc.slice(0, 10)}`;
+    if (days.has(day)) continue;
+    const k = `${s.route}|${s.departureUtc}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out;
+}
+
 type WeeklyLeg = {
   days: Set<number>;
   route: FerryRoute;

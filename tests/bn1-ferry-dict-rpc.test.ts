@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  applyFerryDictSnapshot, isKnownRoute, isOutbound, operatorsForRoute, operatorName,
-  resetFerryDictRpc, routeLabelPl,
+  applyFerryDictSnapshot, FERRY_ROUTES, isKnownRoute, isOutbound, operatorsForRoute, operatorName,
+  resetFerryDictRpc, routeLabelPl, routeShortLabel,
 } from '../src/lib/ferryCatalog';
 import { ferryPortPl } from '../src/lib/ferryStatusPl';
 import { ferryRouteFromDb, sailingFromRow, type SailingDbRow } from '../src/data/mappers';
@@ -90,6 +90,18 @@ describe('BN1 — ferry_dict_snapshot → katalog', () => {
     expect(ferryRouteFromDb('GDY-KAA')).toBe('GDY-KAA');
     expect(operatorsForRoute('GDN-NYN')).toEqual(['POLFERRIES']);
     expect(isOutbound('KAA-GDY')).toBe(false);
+  });
+
+  /* F7 #668 N3: 12 seed + 2 aliasy Terminal A = 14 kodów jak ferry_routes na prod */
+  it('F7 #668 N3: każdy kod FERRY_ROUTES + TLLA/HELA ma routeLabelPl i short ≠ kod', () => {
+    const codes = [...FERRY_ROUTES.map((r) => r.code), 'TLLA-HEL', 'HELA-TLL'];
+    expect(codes).toHaveLength(14);
+    for (const c of codes) {
+      const pl = routeLabelPl(c);
+      expect(pl, c).toBeTruthy();
+      expect(pl).not.toBe(c);
+      expect(routeShortLabel(c)).not.toBe(c);
+    }
   });
 
   /* DP-9 (#671 / BN9-b pkt 12): routeLabelPl — seed + nazwy z bazy w komunikatach armatora */

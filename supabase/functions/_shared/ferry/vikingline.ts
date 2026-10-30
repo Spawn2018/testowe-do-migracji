@@ -280,19 +280,27 @@ export function parseVikingTimetableHtml(
   const legs: WeeklyLeg[] = [];
   const tables = [...html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)];
   let fallbackIdx = 0;
-  let lastRanges: YmdRange[] = parseSeasonRanges(html.slice(0, 800));
   for (const tm of tables) {
     const attrs = tm[1] ?? '';
     const body = tm[2] ?? '';
     if (!/Departure|Odjazd|Lähtö/i.test(body) || !/Day|Päivä|Dzień/i.test(body)) continue;
     const idx = tm.index ?? 0;
-    const before = html.slice(Math.max(0, idx - 600), idx);
-    const local = parseSeasonRanges(before);
-    if (local.length) lastRanges = local;
-    const ranges = local.length ? local : lastRanges;
+    /* F7 #668 r2: na prawdziwej stronie Cargo nagłówek sezonu jest ~750 znaków przed <table>
+       (c-accordion__title). Bierzemy ostatni zakres dat w całym prefiksie — nie okno 600. */
+    const before = html.slice(0, idx);
+    const seasonAll = parseSeasonRanges(before);
+    const accordionChunk = before.match(/<(?:details|div)[^>]*c-accordion__item[^>]*>[\s\S]*$/i)?.[0]
+      ?? before.match(/<details[\s\S]*$/i)?.[0];
+    const fromAccordion = accordionChunk ? parseSeasonRanges(accordionChunk) : [];
+    const picked = fromAccordion.length ? fromAccordion : seasonAll;
+    if (picked.length === 0) {
+      warnings.push('Struktura rozkładu Viking zmieniona: tabela bez rozpoznanego sezonu — pominięta.');
+      continue;
+    }
+    const ranges: YmdRange[] = [picked[picked.length - 1]!];
     let route: FerryRoute | null =
       routeFromLabel(attrs) ??
-      routeFromLabel(before) ??
+      routeFromLabel(before.slice(-900)) ??
       routeFromLabel(body.slice(0, 240));
     if (!route) {
       if (/data-route\s*=\s*["']helsinki-tallinn["']/i.test(attrs)) route = 'HELA-TLL';
@@ -347,7 +355,11 @@ export function parseVikingTimetableHtml(
     for (const ymd of day.ymds) {
       if (!dates.includes(ymd)) continue;
       for (const leg of day.legs) {
-        pushUtcSailing(sailings, leg.route, 'M/F Viking XPRS', ymd, leg.depHm, leg.arrHm, false);
+        /* F7 #668 N6: statek z tabeli sezonowej (ta sama trasa+godzina), nie na sztywno XPRS. */
+        const fromTable = legs.find((l) => l.route === leg.route && l.depHm === leg.depHm)?.vessel
+          ?? legs.find((l) => l.route === leg.route)?.vessel
+          ?? 'M/F Viking XPRS';
+        pushUtcSailing(sailings, leg.route, fromTable, ymd, leg.depHm, leg.arrHm, false);
       }
     }
   }

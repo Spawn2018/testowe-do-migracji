@@ -26,10 +26,10 @@ export interface FreightFetchPlan {
 }
 
 /**
- * #666 decyzja 54: horyzont ≥ 60 dni (dziś + 59).
- * Jedno zapytanie AJAX zamiast 60× JSON/dzień.
+ * F7 #668 N8: okno dla zadania statusów Freight (żywy rozkład) — dziś + kilka dni.
+ * Horyzont 60 d jest w `fetchStenaDays` (JSON AEM / decyzja 54), nie tutaj.
  */
-export function freightWindow(now: Date, daysAhead = 59): FreightFetchPlan {
+export function freightWindow(now: Date, daysAhead = 3): FreightFetchPlan {
   const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const end = new Date(d.getTime() + daysAhead * 864e5);
   return { from: d.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10), routeCode: 'GDKA' };

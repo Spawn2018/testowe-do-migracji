@@ -14,6 +14,7 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import {
   awizacjaDuplicateWarning,
   awizacjaOperators,
+  historicalSailingsAllowed,
   isBeforePlannedLoad,
   reachableSailings,
   resourceSuggestions,
@@ -103,8 +104,8 @@ export function AwizacjaModal({ load, onClose }: Props) {
     () => reachableSailings(sailings, load, nowIso, operator),
     [sailings, load, nowIso, operator],
   );
-  /* D-20261020-1501-01: rejsy, które już wypłynęły i dopłynęły — tylko Administrator HHL (SCX i Operacje HHL: przyszłe) */
-  const histOn = role === 'HHL' && canFixAwizOf(role);
+  /* D-20261020-1501-01 / F7 #668 N4: historyczne tylko HHL_ADMIN (canFixAwizOf + czysta reguła). */
+  const histOn = role === 'HHL' && canFixAwizOf(role) && historicalSailingsAllowed(accountRole(role));
   const historyOptions = useMemo(
     () => (histOn ? historicalSailings(sailings, nowIso, operator).filter((s) => !sailingOptions.some((o) => o.id === s.id)) : []),
     [histOn, sailings, nowIso, operator, sailingOptions],

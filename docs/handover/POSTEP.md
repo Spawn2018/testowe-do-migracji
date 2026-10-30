@@ -7246,3 +7246,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” na #668 i #672. CI #668 @ `5aaa0544`: unit ✔, db ✔ (`41109056412`), visual ✔ (`41109056390`). PR #672 (wyglad DP-3/4/5/7/8) — CI zielone, bez F7.
 - **Krok:** status DP-3/4/5/7/8 → „w PR #672”; PLAN/POSTEP — CI zielone, czekam F7 #668. Komentarz „gotowe do F7”. **Dalej:** F7 #668 → **#667** mapy przed BN3.
 - Bez push na main.
+
+## 2026-10-30 20:35 — #672 SCALONE; #668 F7 r2 poprawki (Cargo + N1–N9)
+
+- Skrzynka: #666 W TOKU; #667 pilne po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#672** SCALONE `8ec16105` (F7 „gotowe do scalenia” @ `6e92dde`, CI zielone). #668 — F7 r2 POPRAWKI (nie „gotowe”).
+- **Krok (#668 F7 r2):** Bloker 1 — sezon Cargo z akordeonu / bez pustego zakresu; fixture accordion; N1/N2 DFDS; N3 etykiety 14 tras; N4 `historicalSailingsAllowed`; N5 `actualDepartureAt`; N6 statek z tabeli w wyjątkach; N8 Freight dziś+3; N9 Stena budżet 90 s; DP-14…21 w rejestrze. Bloker 2 SailingsPanel → DP-20 (koordynator). **Dalej:** F7 #668 → **#667**.
+- Bez push na main.
+
+## 2026-10-30 20:35 — #668 F7 r2: Viking sezony + N1/N2/N5/N6/N8/N9 + DP-20/21
+
+- Skrzynka: #666 F7 r2 POPRAWKI; #667 PR #673 krok A; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”; poprawki w #668.
+- **Krok (F7 r2):** Bloker 1 — sezon tabeli = ostatni zakres w prefiksie HTML / accordion (nie okno 600); tabela bez sezonu → pomiń; fixture accordion ~750 znaków; test unikalności 30.10 + Cinderella tylko lato 2027. N1/N2 DFDS (mergeMissingDays; bez PDF gdy API OK). N5 `actualDepartureAt` + `hasDeparted`. N6 statek z tabeli w Planned changes. N8 `freightWindow` 3 d (status). N9 Stena budżet 90 s. DP-20/21 w PLAN. **Dalej:** N3/N4 testy + CI → gotowe do F7.
+- Bez push na main.

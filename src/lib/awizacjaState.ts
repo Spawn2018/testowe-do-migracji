@@ -92,6 +92,16 @@ export function isBeforePlannedLoad(
   return Date.parse(effDeparture(s)) < earliestFerryDepartureMs(load, operator);
 }
 
+/**
+ * F7 #668 N4 / decyzja 52: grupa rejsów historycznych tylko dla Administratora HHL
+ * (nie HHL_OPS, nie SCX). Czysta reguła do testu bez renderu.
+ */
+export function historicalSailingsAllowed(accountRole: string | null | undefined): boolean {
+  if (accountRole === 'HHL_ADMIN') return true;
+  /* demo bez jawnej roli konta = Administrator */
+  return accountRole == null && import.meta.env.VITE_AUTH_MODE !== 'supabase';
+}
+
 /** Unikalne wcześniej użyte wartości (podpowiedzi). */
 export function resourceSuggestions(
   loads: Array<{ resources: LoadResources }>,
