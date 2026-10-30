@@ -2124,4 +2124,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 18:30 | #669+#670 SCALONE (F7 gotowe); #668 F7 r1: Stena 60d×4 + SOURCE_DOWN total + **0351** actual_departure + testy | pętla |
 | 30.10.2026 19:10 | #671 DP-1…12 + BN9-c* + zasada DP w ZASADY; #666 DFDS Dynamic `/api/timetable` + fix i2 NO_TRACKING po 0351 | pętla |
 | 30.10.2026 19:15 | #671 DP-1…12 + BN9-c* + zasada DP w ZASADY; #666 DFDS Dynamic `/api/timetable` + fix i2 NO_TRACKING po 0351 | pętla |
-| 30.10.2026 19:40 | #668 DP-9 routeLabelPl (seed+RPC) + DP-10 wska�nik; #671 zamkni�te; CI b6d4a85d zielone � czekam F7 | p�tla |
+| 30.10.2026 19:40 | #668 DP-9 routeLabelPl (seed+RPC) + DP-10; merge main #669+#670; #671 zamknięte; czekam F7 | pętla |

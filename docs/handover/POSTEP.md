@@ -7233,9 +7233,9 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 - **Krok:** DFDS Dynamic ‚Äî `/api/timetable` EEPLN‚ÜîSEKPS, tygodnie do 60 d, lim. 4; zapas PDF ze strony + HTML; fixture API; fix i2: przywr√≥ƒá przysz≈Çy rejs przed testem pozycji. **Dalej:** F7 #668; potem **#667**.
 - Bez push na main.
 
-## 2026-10-30 19:40 ó #666 DP-9 routeLabelPl + DP-10
+## 2026-10-30 19:40 ‚Äî #666 DP-9 routeLabelPl + DP-10
 
-- Skrzynka: **#671** zamkniÍte (wpisane @ b6d4a85d). #667 po #666; #608 w planie; #550 WSTRZYMANE.
-- Scalanie: PR #668 ó CI zielone @ b6d4a85d (unit/db/visual); brak ÑF7: gotowe do scaleniaî. PR #672 wyglπd DP ó bez F7, visual w toku.
-- **Krok (DP-9 + DP-10 w #668):** `routeLabelPl` ó alias õ seed (`portName`) õ nazwy portÛw/terminali ze snapshotu RPC; `ferryPortPl` przez `routeLabelPl` (trasy z bazy). Test DP-9 w `bn1-ferry-dict-rpc`. DP-10: job @ 74286d82 + wskaünik w `bn2-ferry-schedule`. **Dalej:** F7 #668; potem **#667**.
+- Skrzynka: **#671** zamkniƒôte (wpisane @ b6d4a85d). #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 ‚Äî CI zielone @ b6d4a85d (unit/db/visual); brak ‚ÄûF7: gotowe do scalenia‚Äù. PR #672 wyglƒÖd DP ‚Äî bez F7.
+- **Krok (DP-9 + DP-10 w #668):** merge main (#669+#670); `routeLabelPl` ‚Äî alias ‚Üí seed (`PORT_PL`) ‚Üí nazwy port√≥w/terminali ze snapshotu RPC ‚Üí `routeEnds`; `ferryPortPl` przez `routeLabelPl`. Test DP-9 w `bn1-ferry-dict-rpc`; DP-10 w `bn2-ferry-schedule` (+ job). **Dalej:** F7 #668; potem **#667**.
 - Bez push na main.
