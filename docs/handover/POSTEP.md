@@ -6910,6 +6910,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 07:30 — #657 CI: import FAIL — testy #650 po revoke
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: #657 bez „F7: gotowe”; CI `db` FAIL @ `fe9e2834` — import 418/7 (enqueue przez authenticated → permission denied).
+- **Krok:** `import.sh` — authenticated → `permission denied`; pozytywny backfill / N5 CANCELLED|REMOVED przez SQL (postgres + JWT HHL_ADMIN). EXPECTED import **425** bez zmiany. Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 07:07 — #651 SCALONE; #653 revoke enqueue_active_wt (0345)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować); #538/#537/#500/#499 w planie. Bez nowego `pilne` do budowy.
