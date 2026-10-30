@@ -7275,9 +7275,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 r4):** Bloker 1 — trasa = attrs → nagłówek tabeli → ostatnia etykieta w kawałku akordeonu; zapas ostatnie `<details>`; test dwóch tabel w jednym elemencie. Bloker 2 — test merge 00:30 lokalnie (UTC poprzedniej doby) PLD+KPS. Uwagi: `d.m.–d.m.yyyy`; PDF tylko padnięte tygodnie×kierunki; Stena `wallNow` + tekst „pobrań (trasa×dzień)”; Planned changes per kierunek + najbliższa godzina. **Dalej:** CI → gotowe do F7 → #667.
 - Bez push na main.
 
-## 2026-10-30 22:45 � #668 F7 r5 POPRAWKI; #674 SCALONE; #673 gotowe do F7
+## 2026-10-30 22:40 — #668 F7 r5 poprawki (sezon NY + DFDS pusty tydzień)
 
-- Skrzynka: #666 W TOKU (PR #668 F7 r5); #667 PR #673 F7 r1 B1�B3 @ 08ca23db gotowe do F7; #608 w planie; #550 WSTRZYMANE.
-- Scalanie: **#674 SCALONE** `8f916302`. #668/#673 bez F7 gotowe do scalenia. Kolejno��: #668 (0351) � #673 (0352/0353).
-- **Krok (F7 r5 #668):** B1 sezon przez NY (`from>to` � rok-1); B2 test h4/details bez etykiety w tabeli; DFDS pusty tydzie� OK ? awaria PDF; `filterDfdsFallback` granice lokalne; Planned changes Tallinn-head + nearestVessel + ostrze�enie. Unit fokus 63/63. **Dalej:** CI � gotowe do F7.
+- Skrzynka: #666 W TOKU (PR #668); #667 po #666 (PR #673 F7 r1 @ 08ca23db gotowe do F7); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#674 SCALONE** `8f916302`. #668/#673 bez „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352/0353).
+- **Krok (F7 r5):** B1 — `parseSeasonRanges` `22.12.–6.1.2027` → rok początku = rok końca−1. B2 — test trasy tylko w h4 (obie kolejności) + dwa `<details>` bez `c-accordion`. DFDS: HTTP+JSON pusty tydzień = OK (bez PDF); `filterDfdsFallbackToFailedWeeks` granice w TZ lokalnej; job: API bez pon. + kolejne 503 → odwołany nie wraca, padnięte z PDF. Planned changes: Tallinn-only head + nearestVessel (17:00→Cinderella) + ostrzeżenie Mariehamn. Unit fokus 63/63. **Dalej:** CI → gotowe do F7 → scalenie → #667.
 - Bez push na main.

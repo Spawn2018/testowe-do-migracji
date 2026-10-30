@@ -1156,12 +1156,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
 Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r5 poprawki @ PR #668 — B1 sezon przez NY; B2 test kierunku (h4 / details); DFDS pusty tydzień ≠ awaria; filter okna lokalnie; Planned changes Tallinn-head + nearestVessel. Po pushu — **czekam F7 „gotowe do scalenia”**. Kolejność: #668 (0351) → #673 → (#674 SCALONE).
-1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3/r4: sezon = ostatnie `c-accordion__item`; trasa attrs→nagłówek→ostatnia etykieta; wyjątki per kierunek; `d.m.–d.m.yyyy`.
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~; F7 r3–r5: sezon = ostatnie `c-accordion__item`; trasa attrs→nagłówek→ostatnia etykieta / h4; `22.12.–6.1.yyyy` przez NY; wyjątki per kierunek + Tallinn-only head + nearestVessel.
 2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351 + Cinderella/Gabriella)~~; N4 `historicalSailingsAllowed` (+ demo null); N5 `actualDepartureAt` w `hasDeparted`.
 3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~; N3 jawna lista 14 kodów.
 4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
-5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s + przeplatanie GDKA/KAGD; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; N1 doba lokalna; N2/r3 zapas PDF przy pustym lub częściowym API.
-6. ~~Testy unit F7 r1–r3~~; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: prawdziwy scrape Cargo z IP domowego (403 z DC).
+5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s + przeplatanie GDKA/KAGD; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; N1 doba lokalna; N2/r5: HTTP+JSON pusty tydzień OK (bez PDF); częściowa awaria → PDF tylko padnięte tygodnie (granice w TZ lokalnej).
+6. ~~Testy unit F7 r1–r5~~; odbiór F7. Bloker 2 SailingsPanel → DP-20 (koordynator). DP-21: prawdziwy scrape Cargo z IP domowego (403 z DC).
 
 ### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — PO #666
 Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3.
@@ -2139,3 +2139,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 21:15 | #668 F7 r3: Viking ostatni accordion + DFDS doba lokalna + N2/N3/N4/N9; 0351 Cinderella/Gabriella; czekam F7 | pętla |
 | 30.10.2026 21:15 | #668 F7 r3 poprawki: Viking ostatni akordeon + DFDS doba lokalna + uwagi 1–11; DP-21 scrape z domu | pętla |
 | 30.10.2026 21:45 | #668 F7 r4: trasa z ostatniej etykiety w akordeonie; DFDS 00:30 lokalnie; PDF tylko padnięte tygodnie; Stena wallNow | pętla |
+| 30.10.2026 22:40 | #668 F7 r5: sezon przez NY; test h4/details; DFDS pusty tydzień OK; Planned changes Tallinn+nearestVessel; job częściowa awaria | pętla |
