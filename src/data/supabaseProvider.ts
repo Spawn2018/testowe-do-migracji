@@ -30,7 +30,8 @@ import type { Load, LoadEvent, OrgKind } from '../types';
 export const PROJECT_CODE = 'STEGRA_BODEN';
 const LOAD_COLUMNS =
   'id,carrier_org_id,status,plan_load_date,plan_load_from,plan_load_to,plan_delivery_date,plan_delivery_from,' +
-  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,symbol,permit_kind,' +
+  'plan_delivery_to,tractor_plate,trailer_plate,escort_vehicles,ferry_booking_ref,sailing_id,telematics_vehicle_id,telematics_provider,symbol,permit_kind,' +
+  'safefleet_check_state,safefleet_check_at,safefleet_last_fix_at,' +
   'rio_tracking_id,rio_asset_name,rio_tracker_on,rio_valid_from,rio_valid_to,rio_check_state,rio_check_at,rio_last_fix_at,' +
   'plan_dates_status,plan_dates_confirmed_at,' +
   'combo_length_m,combo_width_m,combo_height_m,combo_weight_t,delay_minutes,eta_site,eta_confidence_min,eta_basis,eta_computed_at,actual_delivery_at,' +

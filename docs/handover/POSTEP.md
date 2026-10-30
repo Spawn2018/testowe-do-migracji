@@ -7130,3 +7130,10 @@ Tempo 3 dni: ~1â€“2 paczki bazy/dzieÅ„ przy 1â€“3 rundach F7; wyglÄ…d koordynato
 - BieÅ¼Ä…ca: BN1/#648 PR #654 (**0343**) â€” czeka F7; potem #651. Bez push na main.
 
 
+
+## 2026-10-30 12:15 — #662 PILNE SafeFleet (przed F7 #661)
+
+- Skrzynka: **#662 pilne** (Spawn2018) — connector SafeFleet przed poprawkami #661; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #661 bez „F7: gotowe” (koordynator: najpierw #662, potem B1/B2/okresy). CI #661 w toku na starej ga³êzi — bez nowych commitów BN2.
+- **Krok:** ga³¹Ÿ `pakiet/662-safefleet-link` / migracja **0349** (enum SAFEFLEET, `safefleet_token` bez SELECT, sanitize, flaga TELM_SAFEFLEET_POLL, cron 2 min, lock); Edge `safefleet-poll`; adapter + job; UI chip + LiveStatus; testy `safefleet-poll` / `w-safefleet-stan`.
+- Po F7 #662 › wróæ do #661 BN2. Bez push na main.

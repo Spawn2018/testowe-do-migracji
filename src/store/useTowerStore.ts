@@ -917,11 +917,12 @@ export const useTowerStore = create<TowerState>()(
               const kind = trackerKind(resources.trackingRef);
               const trackingLink = kind === 'none' ? undefined
                 : kind === 'emtrack' ? { provider: 'EMTRACK' as const, check: { state: 'ok' as const } }
-                  : kind === 'other' ? { provider: 'OTHER' as const, check: { state: 'ok' as const } }
+                  : kind === 'safefleet' ? { provider: 'SAFEFLEET' as const, check: { state: 'pending' as const } }
+                    : kind === 'other' ? { provider: 'OTHER' as const, check: { state: 'ok' as const } }
                     /* RIO: zostaje dotychczasowy opis lokalizatora (rejestracja, sprawdzenie) do odświeżenia z serwera;
                        bez wcześniejszego RIO — „do sprawdzenia” */
-                    : l.trackingLink?.provider === 'RIO' ? l.trackingLink
-                      : { provider: 'RIO' as const, check: { state: 'pending' as const } };
+                      : l.trackingLink?.provider === 'RIO' ? l.trackingLink
+                        : { provider: 'RIO' as const, check: { state: 'pending' as const } };
               return { ...l, resources, trackingLink };
             }
             return { ...l, resources };

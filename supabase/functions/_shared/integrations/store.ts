@@ -285,7 +285,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async processPosition(row: {
       loadId: string; lat: number; lon: number; ts: string;
-      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
       speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
     }) {
       must(await sb.rpc('process_position', {
@@ -336,6 +336,11 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_rio_links_enabled: ${r.error.message}`);
       return r.data === true;
     },
+    async telmSafefleetPollEnabled() {
+      const r = await sb.rpc('telm_safefleet_poll_enabled');
+      if (r.error) throw new Error(`telm_safefleet_poll_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
     async rioLinksLockTry(ttlSec = 90, token?: string) {
       const r = await sb.rpc('rio_links_lock_try', {
         p_ttl_sec: ttlSec,
@@ -348,10 +353,22 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const r = await sb.rpc('rio_links_lock_release', { p_token: token ?? null });
       if (r.error) throw new Error(`rio_links_lock_release: ${r.error.message}`);
     },
+    async safefleetPollLockTry(ttlSec = 90, token?: string) {
+      const r = await sb.rpc('safefleet_poll_lock_try', {
+        p_ttl_sec: ttlSec,
+        p_token: token ?? null,
+      });
+      if (r.error) throw new Error(`safefleet_poll_lock_try: ${r.error.message}`);
+      return r.data === true;
+    },
+    async safefleetPollLockRelease(token?: string) {
+      const r = await sb.rpc('safefleet_poll_lock_release', { p_token: token ?? null });
+      if (r.error) throw new Error(`safefleet_poll_lock_release: ${r.error.message}`);
+    },
     async saveOrphanPosition(row: {
       plate: string; trackingObjectId?: string | null;
       lat: number; lon: number; ts: string;
-      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK';
+      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
       speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
     }) {
       must(await sb.rpc('telm_save_orphan_position', {
@@ -422,6 +439,37 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       rio_error_streak?: number;
     }) {
       must(await sb.from('loads').update(patch).eq('id', loadId), 'loads rio state');
+    },
+    async listSafefleetLoadsForPoll() {
+      const r = await sb.from('loads').select(
+        'id,safefleet_token,safefleet_check_state,safefleet_check_at,safefleet_last_fix_at,safefleet_error_streak,safefleet_trajectory_done,telematics_vehicle_id,status,plan_load_date,tracking_opened_at',
+      )
+        .eq('telematics_provider', 'SAFEFLEET')
+        .not('safefleet_token', 'is', null)
+        .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+      if (r.error) throw new Error(`loads safefleet: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        id: row.id as string,
+        safefleet_token: String(row.safefleet_token),
+        safefleet_check_state: (row.safefleet_check_state as string | null) ?? null,
+        safefleet_check_at: (row.safefleet_check_at as string | null) ?? null,
+        safefleet_last_fix_at: (row.safefleet_last_fix_at as string | null) ?? null,
+        safefleet_error_streak: Number(row.safefleet_error_streak ?? 0),
+        safefleet_trajectory_done: row.safefleet_trajectory_done === true,
+        telematics_vehicle_id: (row.telematics_vehicle_id as string | null) ?? null,
+        status: (row.status as string | null) ?? null,
+        plannedLoadDate: (row.plan_load_date as string | null) ?? null,
+        trackingOpenedAt: (row.tracking_opened_at as string | null) ?? null,
+      }));
+    },
+    async updateSafefleetLoadState(loadId: string, patch: {
+      safefleet_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+      safefleet_check_at?: string;
+      safefleet_last_fix_at?: string;
+      safefleet_error_streak?: number;
+      safefleet_trajectory_done?: boolean;
+    }) {
+      must(await sb.from('loads').update(patch).eq('id', loadId), 'loads safefleet state');
     },
     async lastPositionFix(loadId: string, source: string) {
       const r = await sb.from('positions').select('lat,lon,ts').eq('load_id', loadId).eq('source', source)

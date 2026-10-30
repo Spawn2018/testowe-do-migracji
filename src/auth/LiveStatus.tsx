@@ -29,6 +29,8 @@ export const LIVE_SOURCES: readonly SourceDef[] = [
   { id: 'telematics', jobs: ['emtrack-web'], maxMin: 10, check: false },
   /* #437 E44: pozycje z linku RIO (podwykonawcy SCX), cron tower-rio-links co 2 min */
   { id: 'telematics-rio', jobs: ['rio-links'], maxMin: 10, check: false },
+  /* #662: SafeFleet link tymczasowy, cron tower-safefleet-poll co 2 min */
+  { id: 'telematics-safefleet', jobs: ['safefleet-poll'], maxMin: 10, check: false },
   { id: 'ferry-pos', jobs: ['ferry-ais', 'ferry-ais-listen'], maxMin: 15, check: false },
   { id: 'ferry-status', jobs: ['ferry-status'], maxMin: 30, check: false },
   { id: 'schedule', jobs: ['ferry-schedule'], maxMin: 26 * 60, check: false },

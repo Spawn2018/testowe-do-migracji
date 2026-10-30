@@ -11,12 +11,16 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Load, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { trackerKind } from '../../lib/trackerLink';
+import { isSafefleetTrackingRef, trackerKind } from '../../lib/trackerLink';
 import { trackingLinkNotes } from '../../lib/p4c';
 import { isoMs } from '../../lib/statusAxis';
 
 /** pełny link RIO z kluczem (do ukrycia) */
 const rioWithKey = (v: string) => trackerKind(v) === 'rio' && /[?&]secret=[^&\s]+/i.test(v);
+/** #662: pełny link SafeFleet z tokenem (do ukrycia jak RIO) */
+const safefleetWithToken = (v: string) =>
+  trackerKind(v) === 'safefleet' && /^https:\/\/portal\.safefleet\.pl\//i.test(v.trim());
+
 
 export function TrackingLinkField({
   value,
@@ -45,9 +49,12 @@ export function TrackingLinkField({
   const id = useId();
   const saved = savedRef ?? '';
   const savedIsRio = info?.provider === 'RIO' || trackerKind(saved) === 'rio';
+  const savedIsSafefleet = info?.provider === 'SAFEFLEET' || trackerKind(saved) === 'safefleet'
+    || isSafefleetTrackingRef(saved);
+  const savedSecret = savedIsRio || savedIsSafefleet;
   const [editing, setEditing] = useState(false);
-  /* to, co jest w polu (dla podpowiedzi); przy zapisanym RIO pole startuje puste */
-  const [typed, setTyped] = useState(() => (savedIsRio ? '' : value));
+  /* to, co jest w polu (dla podpowiedzi); przy zapisanym RIO/SafeFleet pole startuje puste */
+  const [typed, setTyped] = useState(() => (savedSecret ? '' : value));
   const [masked, setMasked] = useState(false);
   const pasted = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,11 +67,11 @@ export function TrackingLinkField({
     focusNext.current = null;
   });
 
-  const chip = savedIsRio && !editing;
-  const view = chip && info ? trackingLinkNotes(info, load, nowIso, locale) : null;
+  const chip = savedSecret && !editing;
+  const view = chip && info?.provider === 'RIO' ? trackingLinkNotes(info, load, nowIso, locale) : null;
   const asset = (info?.asset ?? '').trim();
   const expired = !!info?.validTo && isoMs(info.validTo) <= isoMs(nowIso);
-  const canOpen = !!onOpenRio && info?.check?.state !== 'invalid' && !expired;
+  const canOpen = !!onOpenRio && savedIsRio && info?.check?.state !== 'invalid' && !expired;
 
   /* przy zmianie zapisanego linku puste pole = zostaje obecny link */
   const push = (v: string) => onChange(editing && !v.trim() ? saved : v);
@@ -91,11 +98,15 @@ export function TrackingLinkField({
   const kind = trackerKind(typed);
   const hint = kind === 'rio'
     ? t(locale, 'p4c_tl_typed_rio')
-    : kind === 'emtrack'
-      ? t(locale, 'p4c_tl_typed_emtrack')
-      : kind === 'other'
-        ? t(locale, 'p4c_tl_typed_other')
-        : t(locale, 'p4c_tl_empty');
+    : kind === 'safefleet'
+      ? (isSafefleetTrackingRef(typed) || !typed.trim()
+        ? t(locale, 'p4c_tl_typed_safefleet')
+        : t(locale, 'p4c_tl_typed_safefleet_bad'))
+      : kind === 'emtrack'
+        ? t(locale, 'p4c_tl_typed_emtrack')
+        : kind === 'other'
+          ? t(locale, 'p4c_tl_typed_other')
+          : t(locale, 'p4c_tl_empty');
 
   return (
     <div className="form-field tlf" data-awiz-tracking data-tl-mode={chip ? 'saved' : masked ? 'new-rio' : editing ? 'change' : 'input'}>
@@ -103,7 +114,11 @@ export function TrackingLinkField({
       {chip ? (
         <div className="tlf-saved">
           <span className="tlf-chip" aria-describedby={id} data-tl-chip>
-            {asset ? tp(locale, 'p4c_tl_rio_chip', { asset }) : t(locale, 'p4c_tl_rio_chip_noasset')}
+            {savedIsSafefleet
+              ? t(locale, 'p4c_tl_safefleet_chip')
+              : asset
+                ? tp(locale, 'p4c_tl_rio_chip', { asset })
+                : t(locale, 'p4c_tl_rio_chip_noasset')}
           </span>
           <span className="tlf-acts">
             {canOpen ? (
@@ -135,7 +150,7 @@ export function TrackingLinkField({
             ref={inputRef}
             aria-labelledby={id}
             className="input"
-            defaultValue={editing || savedIsRio ? '' : value}
+            defaultValue={editing || savedSecret ? '' : value}
             onPaste={() => {
               pasted.current = true;
             }}
@@ -143,11 +158,11 @@ export function TrackingLinkField({
               const v = e.target.value;
               setTyped(v);
               push(v);
-              if (pasted.current && rioWithKey(v)) setMasked(true);
+              if (pasted.current && (rioWithKey(v) || safefleetWithToken(v))) setMasked(true);
               pasted.current = false;
             }}
             onBlur={(e) => {
-              if (rioWithKey(e.target.value)) setMasked(true);
+              if (rioWithKey(e.target.value) || safefleetWithToken(e.target.value)) setMasked(true);
             }}
             placeholder={t(locale, 'awiz_tracking_ph')}
             autoComplete="off"
