@@ -1155,13 +1155,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
-Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). F7 r1 + DFDS Dynamic w PR — czekam F7.
+Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). CI unit/db/visual zielone @ `5aaa0544` — **czekam F7 „gotowe do scalenia”**.
 1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~ w PR #668; HEL–STO przez Mariehamn — gdy trasa w katalogu (#640).
 2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351)~~; testy HHL_ADMIN vs SCX/OPS.
 3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~.
 4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
 5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; ~~**DFDS Dynamic** `/api/timetable` (EEPLN/SEKPS, tygodnie×2, lim. 4; zapas PDF sezonowy ze strony + HTML)~~ w PR #668.
-6. ~~Testy unit F7 r1 + Dynamic~~; e2e/visual + odbiór F7. Fix i2: po 0351 przywróć przyszły rejs przed testem pozycji NO_TRACKING.
+6. ~~Testy unit F7 r1 + Dynamic~~; ~~visual CI @ `5aaa0544`~~; odbiór F7. Fix i2: po 0351 przywróć przyszły rejs przed testem pozycji NO_TRACKING.
 
 ### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — PO #666
 Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3.
@@ -1178,12 +1178,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 |---|---|---|---|---|---|
 | DP-1 | Cursor | Trasy na sztywno (CASE) w `apply_ferry_se_from_position` / `a10_try_ferry_backup` / `detect_ferry_overdue` → `ferry_routes` | F7 #649 | BN3/BN8 | w kolejce |
 | DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | w kolejce |
-| DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | w kolejce |
-| DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | w kolejce |
-| DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | w kolejce |
+| DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
 | DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | w kolejce |
-| DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | w kolejce |
-| DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | w kolejce |
+| DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
 | DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
 | DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | w kolejce |
@@ -2125,3 +2125,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 19:10 | #671 DP-1…12 + BN9-c* + zasada DP w ZASADY; #666 DFDS Dynamic `/api/timetable` + fix i2 NO_TRACKING po 0351 | pętla |
 | 30.10.2026 19:15 | #671 DP-1…12 + BN9-c* + zasada DP w ZASADY; #666 DFDS Dynamic `/api/timetable` + fix i2 NO_TRACKING po 0351 | pętla |
 | 30.10.2026 19:40 | #668 DP-9 routeLabelPl (seed+RPC) + DP-10; merge main #669+#670; #671 zamknięte; czekam F7 | pętla |
+| 30.10.2026 20:03 | #668 CI unit/db/visual ✔ @ `5aaa0544` — czekam F7; DP-3/4/5/7/8 → PR #672; #667 po #666 | pętla |

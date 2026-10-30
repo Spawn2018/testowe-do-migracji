@@ -7239,3 +7239,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: PR #668 — CI zielone @ b6d4a85d (unit/db/visual); brak „F7: gotowe do scalenia”. PR #672 wygląd DP — bez F7.
 - **Krok (DP-9 + DP-10 w #668):** merge main (#669+#670); `routeLabelPl` — alias → seed (`PORT_PL`) → nazwy portów/terminali ze snapshotu RPC → `routeEnds`; `ferryPortPl` przez `routeLabelPl`. Test DP-9 w `bn1-ferry-dict-rpc`; DP-10 w `bn2-ferry-schedule` (+ job). **Dalej:** F7 #668; potem **#667**.
 - Bez push na main.
+
+## 2026-10-30 20:03 — #668 CI zielone @ 5aaa0544; DP-3/4/5/7/8 w #672
+
+- Skrzynka: #666 W TOKU (PR #668); #667 pilne **po #666** (nie przerywa); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — już w planie.
+- Scalanie: brak „F7: gotowe do scalenia” na #668 i #672. CI #668 @ `5aaa0544`: unit ✔, db ✔ (`41109056412`), visual ✔ (`41109056390`). PR #672 (wyglad DP-3/4/5/7/8) — CI zielone, bez F7.
+- **Krok:** status DP-3/4/5/7/8 → „w PR #672”; PLAN/POSTEP — CI zielone, czekam F7 #668. Komentarz „gotowe do F7”. **Dalej:** F7 #668 → **#667** mapy przed BN3.
+- Bez push na main.
