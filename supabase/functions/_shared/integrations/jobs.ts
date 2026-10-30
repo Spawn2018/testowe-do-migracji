@@ -1973,7 +1973,8 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
       if (!deps.store.hereCorridorBundle) return { code, pts: [], via: [], updatedAt: 0 };
       return deps.store.hereCorridorBundle(code);
     },
-    monthSpend: () => deps.store.hereMonthSpend?.() ?? Promise.resolve(0),
+    // F7 #673 r4 uwaga 3: brak hereMonthSpend → null (nie zakładaj 0 / nie wołaj HERE).
+    monthSpend: () => (deps.store.hereMonthSpend ? deps.store.hereMonthSpend() : Promise.resolve(null)),
     async noteRouting() {
       if (deps.store.noteHereUsage) await deps.store.noteHereUsage('routing', 1);
     },

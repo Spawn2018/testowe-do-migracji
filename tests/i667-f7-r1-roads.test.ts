@@ -1,8 +1,9 @@
 /**
  * #667 F7 r1 — B1 ROAD_KAA_E22 vs ROAD_KAA; N7 geometria bez Leaflet.
- * #667 F7 r3 B4/B5 — kaaDeviationOk sparse (SE_E22 / INLAND) + 30 pkt SE_E22 z 0298.
+ * #667 F7 r3–r4 B4/B5 — kaaDeviationOk sparse + densyfikacja Umeå–Skellefteå (0354).
  * Etap #667 / decyzja właściciela 30.10 15:54.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   ROAD_KAA, ROAD_KAA_E22, roadGeometryOk, kaaDeviationOk, type LatLng,
@@ -26,9 +27,43 @@ function denseVia(pts: readonly LatLng[], stepKm: number): LatLng[] {
   return out;
 }
 
+function segKm(a: LatLng, b: LatLng): number {
+  return Math.hypot((b[0] - a[0]) * 111, (b[1] - a[1]) * 55);
+}
+
+/** Jak `here_corridor_via_points`: via co ~100 km = najbliższy wierzchołek śladu (nie cięciwa). */
+function viaAlongCorridor(pts: readonly LatLng[], pMax = 14): LatLng[] {
+  if (pts.length < 2) return [...pts];
+  const steps = pts.map((p, i) => (i === 0 ? 0 : segKm(pts[i - 1]!, p)));
+  const cum: number[] = [];
+  let s = 0;
+  for (const d of steps) {
+    s += d;
+    cum.push(s);
+  }
+  const lenKm = cum[cum.length - 1]!;
+  let n = Math.min(pMax, Math.max(0, Math.floor(lenKm / 100) - 1));
+  if (n < 1 && lenKm >= 200) n = 1;
+  const vias: LatLng[] = [];
+  for (let i = 1; i <= n; i += 1) {
+    const target = (lenKm * i) / (n + 1);
+    let best = 0;
+    let bestAbs = Infinity;
+    for (let j = 0; j < cum.length; j += 1) {
+      const a = Math.abs(cum[j]! - target);
+      if (a < bestAbs) {
+        bestAbs = a;
+        best = j;
+      }
+    }
+    vias.push(pts[best]!);
+  }
+  return [pts[0]!, ...vias, pts[pts.length - 1]!];
+}
+
 /**
- * SE_E22 po 0354 F7 r3 B5 = 30 pkt z 0298 + origin HERE + Luleå E4/97.
- * (Vagnhärad 17.50/58.95 — bez niego status.sh #496 OFF_CORRIDOR fail.)
+ * SE_E22 po 0354 F7 r4 = 0298 + origin HERE + Luleå E4/97 + dens. Umeå–Skellefteå
+ * + Rockneby/Västervik na E22.
  */
 const SE_E22_PROD: LatLng[] = [
   [56.1646, 15.6308],
@@ -38,9 +73,9 @@ const SE_E22_PROD: LatLng[] = [
   [56.47, 16.06],
   [56.63, 16.17],
   [56.663, 16.366],
-  [56.87, 16.32],
+  [56.865, 16.385],
   [57.26, 16.45],
-  [57.758, 16.637],
+  [57.755, 16.580],
   [57.89, 16.40],
   [58.48, 16.32],
   [58.594, 16.183],
@@ -57,13 +92,19 @@ const SE_E22_PROD: LatLng[] = [
   [62.6323, 17.9379],
   [63.2909, 18.7153],
   [63.8258, 20.2630],
+  [64.3511, 21.2932], // F7 r4 dens.
   [64.7507, 20.9528],
   [65.3172, 21.4794],
   [65.606, 22.053],
   [65.8054, 21.7591],
 ];
 
-/** SE_KAA_INLAND po 0354 — pień + Västerås + ta sama północ. */
+/** SE_E22 sprzed densyfikacji r4 (bez 21.2932/64.3511) — do asercji negatywnej. */
+const SE_E22_BEFORE_R4: LatLng[] = SE_E22_PROD.filter(
+  ([lat, lng]) => !(Math.abs(lat - 64.3511) < 1e-6 && Math.abs(lng - 21.2932) < 1e-6),
+);
+
+/** SE_KAA_INLAND po 0354 r4 — pień + Västerås + dens. + Katrineholm. */
 const SE_KAA_INLAND_PROD: LatLng[] = [
   [56.1646, 15.6308],
   [56.198, 15.656],
@@ -72,15 +113,16 @@ const SE_KAA_INLAND_PROD: LatLng[] = [
   [56.47, 16.06],
   [56.63, 16.17],
   [56.663, 16.366],
-  [56.87, 16.32],
+  [56.865, 16.385],
   [57.26, 16.45],
-  [57.758, 16.637],
+  [57.755, 16.580],
   [57.89, 16.40],
   [58.48, 16.32],
   [58.594, 16.183],
   [58.795, 16.195],
   [58.996, 16.207],
   [59.133, 16.337],
+  [59.279, 16.120],
   [59.371, 16.507],
   [59.6099, 16.5448],
   [59.9079, 16.6066],
@@ -92,15 +134,16 @@ const SE_KAA_INLAND_PROD: LatLng[] = [
   [62.6323, 17.9379],
   [63.2909, 18.7153],
   [63.8258, 20.2630],
+  [64.3511, 21.2932],
   [64.7507, 20.9528],
   [65.3172, 21.4794],
   [65.606, 22.053],
   [65.8054, 21.7591],
 ];
 
-/** ControlPts = origin + wybrane via z korytarza + destination (jak HERE). */
-function ctrlFromCorridor(corridor: readonly LatLng[], idxs: number[]): LatLng[] {
-  return idxs.map((i) => corridor[i]!);
+/** ControlPts = origin + via z logiki here_corridor_via_points + destination. */
+function ctrlFromViaLogic(corridor: readonly LatLng[]): LatLng[] {
+  return viaAlongCorridor(corridor, 14);
 }
 
 /**
@@ -117,6 +160,18 @@ function hereLikeAlong(corridor: readonly LatLng[], ctrl: readonly LatLng[]): La
     if (nearCtrl) return [lat, lng] as LatLng;
     return [lat, lng + 0.09] as LatLng; // ~5 km E
   });
+}
+
+/** Pełna linia akceptacyjna: gęsty pień E22 + północ z fixture HERE SE-NYN. */
+function hereLineFromFixture(corridorSouth: readonly LatLng[]): LatLng[] {
+  const fix = JSON.parse(
+    readFileSync(new URL('./fixtures/se-nyn-north-here.json', import.meta.url), 'utf8'),
+  ) as { northHere: LatLng[] };
+  const south = denseVia(
+    corridorSouth.filter(([lat]) => lat < 63.2),
+    3,
+  );
+  return [...south, ...fix.northHere];
 }
 
 describe('#667 F7 r1 B1 SE-KAA bez Västerås', () => {
@@ -142,28 +197,39 @@ describe('#667 F7 r1 B1 SE-KAA bez Västerås', () => {
   });
 });
 
-describe('#667 F7 r3 B4/B5 kaaDeviationOk sparse + SE_E22 30 pkt', () => {
-  it('SE_E22 ma 30 wierzchołków (0298); origin HERE + Vagnhärad + Luleå E4', () => {
-    expect(SE_E22_PROD).toHaveLength(30);
+describe('#667 F7 r3/r4 B4/B5 kaaDeviationOk sparse + dens. Umeå–Skellefteå', () => {
+  it('SE_E22 ma dens. 21.2932/64.3511; origin HERE + Vagnhärad + Luleå E4', () => {
+    expect(SE_E22_PROD).toHaveLength(31);
     expect(SE_E22_PROD[0]).toEqual([56.1646, 15.6308]);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 58.95) < 0.01 && Math.abs(lng - 17.50) < 0.01)).toBe(true);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 65.606) < 0.01 && Math.abs(lng - 22.053) < 0.01)).toBe(true);
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 64.3511) < 1e-4 && Math.abs(lng - 21.2932) < 1e-4)).toBe(true);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 65.5848) < 0.01 && Math.abs(lng - 22.1547) < 0.01)).toBe(false);
   });
 
   it('linia HERE-like wzdłuż SE_E22 przechodzi sparse (controlPts + 15 km)', () => {
-    const ctrl = ctrlFromCorridor(SE_E22_PROD, [0, 12, 18, 20, 22, 29]);
+    const ctrl = ctrlFromViaLogic(SE_E22_PROD);
     const line = hereLikeAlong(SE_E22_PROD, ctrl);
     expect(kaaDeviationOk(line, SE_E22_PROD, { sparseCorridor: true, controlPts: ctrl })).toBe(true);
-    // stara reguła śladu — offset 5 km na północy > max(2, 0.15×odcinek)
     expect(kaaDeviationOk(line, SE_E22_PROD)).toBe(false);
   });
 
   it('linia HERE-like wzdłuż SE_KAA_INLAND przechodzi sparse', () => {
-    expect(SE_KAA_INLAND_PROD.length).toBeGreaterThanOrEqual(30);
-    const ctrl = ctrlFromCorridor(SE_KAA_INLAND_PROD, [0, 12, 17, 21, 23, 30]);
+    expect(SE_KAA_INLAND_PROD.length).toBeGreaterThanOrEqual(32);
+    const ctrl = ctrlFromViaLogic(SE_KAA_INLAND_PROD);
     const line = hereLikeAlong(SE_KAA_INLAND_PROD, ctrl);
     expect(kaaDeviationOk(line, SE_KAA_INLAND_PROD, { sparseCorridor: true, controlPts: ctrl })).toBe(true);
+  });
+
+  it('F7 r4 B4-test: fixture SE-NYN północ — pada na korytarzu sprzed dens., przechodzi po 0354 r4', () => {
+    const line = hereLineFromFixture(SE_E22_PROD);
+    const ctrlOld = ctrlFromViaLogic(SE_E22_BEFORE_R4);
+    const ctrlNew = ctrlFromViaLogic(SE_E22_PROD);
+    expect(kaaDeviationOk(line, SE_E22_BEFORE_R4, { sparseCorridor: true, controlPts: ctrlOld })).toBe(false);
+    expect(kaaDeviationOk(line, SE_E22_PROD, { sparseCorridor: true, controlPts: ctrlNew })).toBe(true);
+    const inlandCtrl = ctrlFromViaLogic(SE_KAA_INLAND_PROD);
+    const inlandLine = hereLineFromFixture(SE_KAA_INLAND_PROD);
+    expect(kaaDeviationOk(inlandLine, SE_KAA_INLAND_PROD, { sparseCorridor: true, controlPts: inlandCtrl })).toBe(true);
   });
 
   it('negatyw: linia przez Jönköping / E4 zachodnią odpada (objazd regionu)', () => {
@@ -177,10 +243,23 @@ describe('#667 F7 r3 B4/B5 kaaDeviationOk sparse + SE_E22 30 pkt', () => {
       [65.8054, 21.7591],
     ];
     const line = denseVia(west, 2);
-    const e22Ctrl = ctrlFromCorridor(SE_E22_PROD, [0, 12, 18, 20, 22, 29]);
-    const inlandCtrl = ctrlFromCorridor(SE_KAA_INLAND_PROD, [0, 12, 17, 21, 23, 30]);
+    const e22Ctrl = ctrlFromViaLogic(SE_E22_PROD);
+    const inlandCtrl = ctrlFromViaLogic(SE_KAA_INLAND_PROD);
     expect(kaaDeviationOk(line, SE_E22_PROD, { sparseCorridor: true, controlPts: e22Ctrl })).toBe(false);
     expect(kaaDeviationOk(line, SE_KAA_INLAND_PROD, { sparseCorridor: true, controlPts: inlandCtrl })).toBe(false);
+  });
+
+  it('negatyw: Norwegia (zachód) odpada', () => {
+    const no: LatLng[] = [
+      [56.1646, 15.6308],
+      [58.0, 11.5],
+      [60.0, 10.5],
+      [63.0, 10.0],
+      [65.8054, 21.7591],
+    ];
+    const line = denseVia(no, 2);
+    const ctrl = ctrlFromViaLogic(SE_E22_PROD);
+    expect(kaaDeviationOk(line, SE_E22_PROD, { sparseCorridor: true, controlPts: ctrl })).toBe(false);
   });
 
   it('SE_KAA_TRACK (bez sparse): stara reguła — dense OK, równoległa >2 km nie', () => {

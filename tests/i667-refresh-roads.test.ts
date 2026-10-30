@@ -98,4 +98,20 @@ describe('#667 C refreshRoadLegs', () => {
     expect(r.skippedBudget).toBe(true);
     expect(r.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
   });
+
+  it('F7 r4: brak hereMonthSpend (null) → bez wołania HERE + ostrzeżenie', async () => {
+    const fetchFn = vi.fn();
+    const s = store(ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)));
+    s.monthSpend = async () => null;
+    const r = await refreshRoadLegs(s, {
+      fetch: fetchFn as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+    });
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(r.skippedBudget).toBe(false);
+    expect(r.attempted).toBe(0);
+    expect(r.warnings.some((w) => /hereMonthSpend|wydatku HERE/i.test(w))).toBe(true);
+    expect(r.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
+  });
 });

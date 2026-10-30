@@ -226,8 +226,9 @@ retry_set=$(sys "select (retry_after is not null and retry_after > now())::text 
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
 retry_clr=$(sys "select (retry_after is null)::text from here_road_geometry where leg='SE-KAA'")
 [ "$retry_clr" = "true" ] && { ok=$((ok+1)); echo "  OK    sukces czyści retry_after"; } || { fail=$((fail+1)); echo "  FAIL  retry_after po sukcesie → $retry_clr"; }
+# #667 F7 r4: po 0354 RPC zwraca wszystkie legi (także SE-KAA-INLAND z points=null) → 5, nie 4.
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
-if [ "$legs" = "4" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 4"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
+if [ "$legs" = "5" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 5 (wszystkie legi, także bez punktów)"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
 kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
 e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E22'")

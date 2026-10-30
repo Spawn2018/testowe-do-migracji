@@ -69,7 +69,8 @@ export type RoadRefreshStore = {
   listGeometry(): Promise<RoadGeomRow[]>;
   storeRoad(leg: string, points: unknown, summary: string, nowIso?: string): Promise<boolean>;
   loadCorridor(code: string): Promise<CorridorBundle>;
-  monthSpend(): Promise<number>;
+  /** `null` = brak odczytu wydatku — nie wołaj HERE (F7 #673 r4 uwaga 3). */
+  monthSpend(): Promise<number | null>;
   noteRouting(): Promise<void>;
 };
 
@@ -102,6 +103,18 @@ export async function refreshRoadLegs(
   const maxAgeMs = opts.maxAgeMs ?? ROAD_FETCH_DAY_MS;
   const warnings: string[] = [];
   const spend = await store.monthSpend();
+  if (spend == null) {
+    const rows = await store.listGeometry();
+    const byLeg = new Map(rows.map((r) => [r.leg, r]));
+    const missing = ROAD_LEGS.filter((l) => !hasPoints(byLeg.get(l.leg)?.points)).map((l) => l.leg);
+    return {
+      stored: 0,
+      attempted: 0,
+      skippedBudget: false,
+      warnings: ['Brak odczytu wydatku HERE (hereMonthSpend) — bez wołania HERE'],
+      missingLegs: missing,
+    };
+  }
   if (spend >= HERE_BILLING_DEFAULTS.budgetUsd) {
     const rows = await store.listGeometry();
     const byLeg = new Map(rows.map((r) => [r.leg, r]));

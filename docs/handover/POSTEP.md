@@ -7344,4 +7344,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** konflikty PLAN/POSTEP po merge main; #666 → SCALONE; rejestr **DP-29…32** (F7 #668 r8 nieblokujące). Dalej: CI → F7 → deploy → DP-21 / ręczny ferry-schedule.
 - Bez push na main.
 
+## 2026-10-31 00:45 — #667 F7 r4 POPRAWKI (dens. Umeå–Skellefteå + CI bmapa)
+
+- Skrzynka: **#667** W TOKU (ten PR); #666 SCALONE; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #673. CI @ `e386b06c`: unit/visual ✔, **db FAIL** bmapa roads 5≠4. F7 r4 POPRAWKI.
+- **Krok (F7 r4 #673):** B4 — 0354: wierzchołek `21.2932/64.3511` (E22+INLAND); INLAND `16.120/59.279`; Rockneby/Västervik na E22. B4-test — fixture `se-nyn-north-here.json` + via jak `here_corridor_via_points`; pada na korytarzu sprzed dens., przechodzi po r4. CI — bmapa `roads=5` (legi z `points=null`). Uwaga 1 — prawdziwe `loadRoadLines` + atrapa fetch/Supabase. Uwaga 3 — `monthSpend` null → bez HERE. Unit fokus i667 ✔ (16). **Dalej:** CI → gotowe do F7; potem D/E/F.
 - Bez push na main.
