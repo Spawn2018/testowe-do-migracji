@@ -2045,3 +2045,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 03:45 | #656 F7 r2: bulk_quiet cisza; RLS decisions; LOAD_STATUS; impl w g20/dec-auto; import **423** i2 **672** | pętla |
 | 30.10.2026 04:05 | #656 F7 r4: testy import — KSH_ROW_GONE z importu, workflow_worker, CARRIER≥1; import **424** | pętla |
 | 30.10.2026 05:55 | #656 SCALONE `36ee0417`; #654 → **0343** (assert_not_preview, boolean t/f, EXPECTED) | pętla |
+| 30.10.2026 06:15 | #654 CI ✔ @ `581162b8` (unit/visual/db); czeka F7; #651 → **0344** po #654 | pętla |

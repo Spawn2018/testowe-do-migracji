@@ -7042,4 +7042,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `gate-suites.mjs` import **423** (424 był o 1 za wysoko; asercje #653 w tym CARRIER przechodzą). Push → CI → F7.
 - Potem #654→**0343**, #651→**0344**. Bez push na main.
 
+## 2026-10-30 06:15 — #654 CI zielone; czeka F7
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: **#656 SCALONE** `36ee0417`. #654 MERGEABLE @ `581162b8` — **brak** „F7: gotowe do scalenia”. #651 F7 gotowe @ `52861cdc` — CONFLICTING (po #654 → **0344**).
+- CI #654 @ `581162b8`: unit ✔, visual ✔, **db ✔** (status **484**, nullguard **900**). Komentarz prośby F7.
+- Bieżąca: BN1/#648 PR #654 (**0343**) — czeka F7; potem #651. Bez push na main.
+
 
