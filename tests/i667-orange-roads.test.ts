@@ -82,17 +82,22 @@ describe('#667 pomarańczowe drogi (krok C cron HERE)', () => {
     expect(sql).toMatch(/15 4 \* \* \*/);
   });
 
-  it('migracja 0354: B4 origin+Luleå E4 + map_display_state summary (DP-22)', () => {
+  it('migracja 0354: B5 SE_E22 = 30 pkt 0298 + origin/Luleå; DP-22 summary', () => {
     const m = 'supabase/migrations/0354_667_kaa_corridor_lulea.sql';
     expect(existsSync(m)).toBe(true);
     const sql = readFileSync(m, 'utf8');
     expect(sql).toMatch(/15\.6308,\s*56\.1646/);
     expect(sql).toMatch(/22\.053/);
     expect(sql).toMatch(/65\.606/);
+    expect(sql).toMatch(/17\.50,\s*58\.95/); // Vagnhärad — #496 OFF_CORRIDOR
+    expect(sql).toMatch(/15\.99,\s*56\.30/); // Brömsebro z 0298 (nie 16.10)
     expect(sql).toMatch(/map_display_state/);
     expect(sql).toMatch(/summary/);
     expect(sql).not.toMatch(/st_makepoint\(22\.1547/);
     expect(sql).toMatch(/st_makepoint\(22\.053/);
+    const e22Pts = [...sql.matchAll(/st_makepoint\([^)]+\)/g)];
+    // SE_E22 (30) + SE_KAA_INLAND (31) = 61
+    expect(e22Pts.length).toBeGreaterThanOrEqual(60);
   });
 
   it('refreshRoadLegs: próg cron 21 d; job + SOURCE_DOWN HERE_ROADS sticky', () => {

@@ -237,7 +237,6 @@ export interface SyncStore {
   listHereRoadGeometry?(): Promise<{ leg: string; fetched_at: string; points: unknown; retry_after: string | null }[]>;
   storeHereRoad?(leg: string, points: unknown, summary: string, nowIso?: string): Promise<void>;
   hereCorridorBundle?(code: string): Promise<{ code: string; pts: [number, number][]; via: [number, number][]; updatedAt: number }>;
-  stenaSeInlandCorridorCode?(): Promise<string | null>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
   listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null; trackingOpenedAt?: string | null }[]>;
   /** TELM: zapis pozycji (process_position). */

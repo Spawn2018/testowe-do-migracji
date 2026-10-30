@@ -308,11 +308,6 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (!viaRpc.error) via = parsePts(viaRpc.data);
       return { code, pts, via, updatedAt };
     },
-    async stenaSeInlandCorridorCode() {
-      const r = await sb.rpc('stena_se_inland_corridor_code');
-      if (r.error || typeof r.data !== 'string' || !r.data) return null;
-      return r.data;
-    },
     async listActiveLoadsForTelematics() {
       const r = await sb.from('loads').select('id,trailer_plate,telematics_vehicle_id,status,plan_load_date,plan_delivery_date,tracking_opened_at')
         .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');

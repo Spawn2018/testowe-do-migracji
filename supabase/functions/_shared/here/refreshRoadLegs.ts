@@ -196,7 +196,28 @@ export async function refreshRoadLegs(
     }
     const spec = leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts) : leg.spec;
     const okGeom = spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, spec);
-    const okDev = !isKaa || corridorPts.length < 2 || kaaDeviationOk(line, corridorPts);
+    // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
+    // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
+    const sparse =
+      corridorLabel === 'SE_E22' || corridorLabel === 'SE_KAA_INLAND';
+    const controlPts: LatLng[] = (() => {
+      if (!isKaa) return [];
+      const [oLat, oLng] = leg.origin.split(',').map(Number);
+      const [dLat, dLng] = leg.destination.split(',').map(Number);
+      const out: LatLng[] = [];
+      if (Number.isFinite(oLat) && Number.isFinite(oLng)) out.push([oLat!, oLng!]);
+      out.push(...viaPts);
+      if (Number.isFinite(dLat) && Number.isFinite(dLng)) out.push([dLat!, dLng!]);
+      return out;
+    })();
+    const okDev =
+      !isKaa ||
+      corridorPts.length < 2 ||
+      kaaDeviationOk(
+        line,
+        corridorPts,
+        sparse ? { sparseCorridor: true, controlPts } : undefined,
+      );
     if (!okGeom || !okDev) {
       const retryIso = new Date(nowMs + RETRY_REJECT_MS).toISOString();
       await store.storeRoad(

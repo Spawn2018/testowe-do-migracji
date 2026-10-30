@@ -1,24 +1,35 @@
--- #667 F7 r2 B4: korytarze SE_E22 / SE_KAA_INLAND — origin Karlskrona + Luleå na E4/97.
--- Pierwszy wierzchołek = origin HERE 56.1646,15.6308 (nie 56.1616,15.5866 — 2,77 km).
--- Luleå 65.5848,22.1547 (centrum) → ~65.606,22.053 (E4/97; realna SE-NYN mija centrum o 5,23 km).
+-- #667 F7 r2 B4 / r3 B5: korytarze SE_E22 / SE_KAA_INLAND — origin Karlskrona + Luleå na E4/97.
+-- SE_E22 = 30 pkt z 0298 (nie 21 z 0275); zmienione tylko origin HERE i Luleå E4/97.
 -- DP-22: map_display_state zwraca też legi bez points + summary (odrzucone / oczekujące).
 
 begin;
 
 -- ---------------------------------------------------------------------------
--- SE_E22 (wybrzeże / E4 przez Sztokholm) — te same punkty co 0275, z dwoma poprawkami.
+-- SE_E22 — 30 pkt z 0298 (Lyckeby…Vagnhärad…Södertälje); zmienione tylko:
+--   1) origin HERE 15.6308/56.1646 (nie Trossö 15.5866/56.1616)
+--   2) Luleå E4/97 22.053/65.606 (nie centrum 22.1547/65.5848)
+-- F7 r3 B5: nie cofać do 21 pkt z 0275 (usuwało Vagnhärad → fałszywy OFF_CORRIDOR).
 -- ---------------------------------------------------------------------------
 update public.corridor_polylines
    set geom = st_setsrid(st_makeline(array[
-         st_makepoint(15.6308, 56.1646),  -- origin HERE Karlskrona (#667 F7 r2 B4)
-         st_makepoint(15.95,   56.25),    -- Jämjö (E22)
-         st_makepoint(16.10,   56.30),    -- Brömsebro (E22)
+         st_makepoint(15.6308, 56.1646),  -- origin HERE Karlskrona (#667 F7 B4/B5)
+         st_makepoint(15.656,  56.198),   -- Lyckeby (E22) F7 #496
+         st_makepoint(15.84,   56.19),    -- Jämjö (E22)
+         st_makepoint(15.99,   56.30),    -- Brömsebro (E22) — 15.99 z 0298 (nie 16.10)
+         st_makepoint(16.06,   56.47),    -- Söderåkra (E22)
+         st_makepoint(16.17,   56.63),    -- Ljungbyholm (E22)
          st_makepoint(16.366,  56.663),   -- Kalmar
+         st_makepoint(16.32,   56.87),    -- Rockneby (E22)
+         st_makepoint(16.45,   57.26),    -- Oskarshamn (E22)
          st_makepoint(16.637,  57.758),   -- Västervik (E22)
          st_makepoint(16.40,   57.89),    -- Gamleby (E22)
          st_makepoint(16.32,   58.48),    -- Söderköping (E22)
          st_makepoint(16.183,  58.594),   -- Norrköping → E4
          st_makepoint(17.008,  58.753),   -- Nyköping (E4)
+         st_makepoint(17.50,   58.95),    -- Vagnhärad (E4) #496 — wymagane OFF_CORRIDOR=0
+         st_makepoint(17.54,   59.03),    -- Hölö (E4)
+         st_makepoint(17.57,   59.09),    -- Järna (E4)
+         st_makepoint(17.628,  59.195),   -- Södertälje (E4)
          st_makepoint(18.0686, 59.3293),  -- Sztokholm
          st_makepoint(17.6389, 59.8586),
          st_makepoint(17.1413, 60.6749),  -- Gävle
@@ -29,10 +40,10 @@ update public.corridor_polylines
          st_makepoint(20.2630, 63.8258),
          st_makepoint(20.9528, 64.7507),
          st_makepoint(21.4794, 65.3172),
-         st_makepoint(22.053,  65.606),   -- E4/97 przy Luleå (nie centrum 22.1547,65.5848)
+         st_makepoint(22.053,  65.606),   -- E4/97 przy Luleå (nie centrum)
          st_makepoint(21.7591, 65.8054)   -- Boden
        ]), 4326),
-       source = 'OSM / ODbL — Karlskrona (origin HERE) → E22 → E4 → Boden (#667 F7 r2 B4)',
+       source = 'OSM / ODbL — Karlskrona (origin HERE) → E22 → E4 (Vagnhärad…Södertälje) → Boden (#667 F7 r3 B5)',
        updated_at = now()
  where code = 'SE_E22';
 

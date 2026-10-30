@@ -290,11 +290,39 @@ export function maxDeviationSymmetricKm(
   return Math.max(maxDeviationToCorridorKm(line, corridor), maxDeviationToCorridorKm(corridor, line));
 }
 
+export type KaaDeviationOpts = {
+  /**
+   * #667 F7 r3 B4 wariant a — rzadki korytarz OSM (SE_E22 / SE_KAA_INLAND):
+   * korytarz→linia ≤ 2 km tylko dla origin/via/destination; linia→korytarz stałe 15 km.
+   * Bez opts = reguła śladu GPS (SE_KAA_TRACK): wszystkie wierzchołki ≤ 2 km + 0,15×odcinek.
+   */
+  sparseCorridor?: boolean;
+  /** Punkty sterujące HERE (origin, via, destination) — wymagane przy sparseCorridor. */
+  controlPts?: readonly LatLng[];
+};
+
 /**
- * #572 F7 r3 NOWE-3: korytarz→trasa ≤ 2 km; trasa→korytarz ≤ max(2 km; 0,15 × L odcinka śladu).
+ * #572 F7 r3 NOWE-3 / #667 F7 r3 B4: odchyłka linii HERE od korytarza.
+ * Domyślnie (ślad GPS): korytarz→trasa ≤ 2 km; trasa→korytarz ≤ max(2 km; 0,15 × L odcinka).
+ * sparseCorridor (SE_E22 / SE_KAA_INLAND): tylko controlPts ≤ 2 km; linia→korytarz ≤ 15 km.
  */
-export function kaaDeviationOk(line: readonly LatLng[], corridor: readonly LatLng[]): boolean {
+export function kaaDeviationOk(
+  line: readonly LatLng[],
+  corridor: readonly LatLng[],
+  opts?: KaaDeviationOpts,
+): boolean {
   if (line.length < 2 || corridor.length < 2) return false;
+  if (opts?.sparseCorridor) {
+    const ctrl = opts.controlPts ?? [];
+    if (ctrl.length < 2) return false;
+    for (const p of ctrl) {
+      if (nearestKm(line, p[0], p[1]) > 2) return false;
+    }
+    for (const p of line) {
+      if (nearestKm(corridor, p[0], p[1]) > 15) return false;
+    }
+    return true;
+  }
   if (maxDeviationToCorridorKm(line, corridor) > 2) return false;
   for (const p of line) {
     const d = nearestKm(corridor, p[0], p[1]);

@@ -7233,3 +7233,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 r2 #673):** B4 — migracja **0354** SE_E22/SE_KAA_INLAND (origin 56.1646,15.6308; Luleå E4/97 65.606,22.053); `map_display_state` + summary (fundament DP-22); `checkRoads` czyta summary; `hereRoadsInFlight`; MIN_INTERVAL 1380; usunięty martwy `inlandCorridorCode`; testy B1 21+ wierzch. + B2 jsdom (`jsdom` + projekt vitest). Unit fokus i667/bmapa ✔. **Dalej:** CI → gotowe do F7; potem UI DP-22 / E / F.
 - Bez push na main.
 
+
+## 2026-10-31 00:10 — #667 F7 r3 POPRAWKI (B5 SE_E22 0298 + B4 sparse)
+
+- Skrzynka: #666 W TOKU (PR #668 @ `f0dfbc61` — F7 r7; CI db/visual w toku; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #668/#673. Kolejność: #668 (0351) → #673 (0352–0354). Bez push na main.
+- **Krok (F7 r3 #673):** B5 — 0354 SE_E22 = 30 pkt z 0298 (Vagnhärad 17.50/58.95; Brömsebro 15.99); tylko origin HERE + Luleå E4/97. B4 — `kaaDeviationOk` sparse dla SE_E22/INLAND (controlPts ≤2 km; linia→korytarz 15 km); TRACK bez zmian. Uwagi: B2 render ZonesMap; usunięty `environmentMatchGlob` i martwy `stenaSeInlandCorridorCode`; test `hereRoadsInFlight`. Unit fokus i667 ✔. **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Bez push na main.

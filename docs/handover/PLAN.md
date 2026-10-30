@@ -1171,7 +1171,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; **F7 r2** — ~~B4 korytarze origin+Luleå E4 (**0354**); test B1 21+ wierzch.; B2 jsdom; race `hereRoadsInFlight`; MIN_INTERVAL 1380; bez martwego `inlandCorridorCode`~~ — czekam F7 „gotowe do scalenia”.
+7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; **F7 r3** — B5 SE_E22 = 30 pkt z 0298 (Vagnhärad); B4 `kaaDeviationOk` sparse (controlPts ≤2 km + linia→korytarz 15 km); B2 render ZonesMap; bez `environmentMatchGlob` / `stenaSeInlandCorridorCode`; test in-flight — **czekam F7 „gotowe do scalenia”**.
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
 Źródło: #671 (Spawn2018, `dla-cursora`). Każda drobna / „na później” → tu z numerem. Stan sprawdzany przy przejściu etapu. Kolejność pracy bez zmian: #668 → DFDS (#666) → #667 → BN3…
@@ -2140,3 +2140,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 21:30 | #667 krok C: cron HERE 21 d (**0353**) + SOURCE_DOWN HERE_ROADS; #668 czekam F7 | pętla |
 | 30.10.2026 22:25 | #674 SCALONE `8f916302`; #667 F7 r1: B1 ROAD_KAA_E22 / B2 ZonesMap roads / B3 SE_KAA_INLAND / N1; DP-22…28; #668 CI ✔ czekam F7 | pętla |
 | 30.10.2026 23:05 | #667 F7 r2: B4 korytarze 0354 (origin+Luleå E4); hereRoadsInFlight; MIN 1380; jsdom B2; DP-22 fundament; #668 czekam F7 gotowe | pętla |
+| 31.10.2026 00:10 | #673 F7 r3: B5 SE_E22=30 pkt 0298; B4 kaaDeviationOk sparse 15 km; B2 ZonesMap; bez stenaSeInland/environmentMatchGlob | pętla |

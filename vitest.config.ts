@@ -3,10 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    // #667 F7 r2: B2 Leaflet — pliki *.jsdom.test.ts (+ dyrektywa @vitest-environment w pliku).
-    environmentMatchGlob: [
-      ['**/*.jsdom.test.ts', 'jsdom'],
-    ],
+    // #667 F7 r3: jsdom tylko przez dyrektywę @vitest-environment w pliku (bez environmentMatchGlob).
     include: ['tests/**/*.test.ts', 'tests/**/*.jsdom.test.ts'],
     // M1: money.test.ts w suite (49 green + 1 skip bez NBP_LIVE)
     // setup.ts w jsdom nie nadpisuje document (Leaflet).
