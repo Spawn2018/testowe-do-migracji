@@ -7001,6 +7001,6 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**.
 - Scalanie: **#655 SCALONE** `29000fd2` (F7 gotowe @ 83a92e59). #656 F7 POPRAWKI (komentarz 02:04Z). #651 F7 gotowe — po #656 jako **0343**; #654 → **0344**.
-- **Krok #653 F7 #656:** (1) wrapper bez `bulk_quiet` — tylko `import_bell_quiet`; (2) `l13_decision_email` cisza przy `import_bell_quiet`; (3) liczby spraw/decyzji w SUMMARY wg widoczności (SCX/KSH bez HHL-only); (4) testy: awiz+krytyczna → sprawa/decyzja + 0 dzwonków per-transport; cancel→workflow; przeciek GUC; eskalacja DECISION_ESCALATED.
+- **Krok #653 F7 #656:** (1) wrapper bez `bulk_quiet` — tylko `import_bell_quiet`; (2) `l13_decision_email` cisza przy `import_bell_quiet`; (3) liczby spraw/decyzji w SUMMARY wg widoczności (SCX/KSH bez HHL-only); (4) testy: awiz+krytyczna → sprawa/decyzja + 0 dzwonków per-transport; cancel→workflow; przeciek GUC; eskalacja DECISION_ESCALATED; import **422**.
 - Bez push na main.
 
