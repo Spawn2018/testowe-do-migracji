@@ -1156,19 +1156,29 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; przed DFDS/BN3)
 Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42).
-1. **A Viking Cargo** — źródło `VIKING_CARGO` (strony Cargo HEL–TLL / HEL–STO); sales.vikingline = zapas; SOURCE_DOWN tylko gdy oba zawiodą; fixture + wyjątki świąteczne.
-2. **B Awizacja 51–53** — wszystkie przyszłe rejsy armatora (bez odcięcia załadunkiem; wcześniejsze oznaczone); historyczne tylko HHL_ADMIN (wszyscy armatorzy, też Polferries) + RPC; etykieta „Rejs promem”.
-3. **C Finlandia / Terminal A** — etykiety `TLLA-HEL`/`HELA-TLL` w Rejsach, mapie, Kokpicie, awizacji (`routeShortLabel`).
-4. **D decyzja 55** — zawsze wszyscy armatorzy w menu; komunikat przy braku rejsów.
-5. **E Stena ≥ 60 dni** + DFDS Dynamic schedule (endpoint frachtowy; zapas PDF; potem pasażerska).
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d)~~ w PR #668; HEL–STO przez Mariehamn — gdy trasa w katalogu (#640).
+2. **B Awizacja 51–53** — ~~UI~~; RPC historyczne tylko HHL_ADMIN — **do zrobienia**.
+3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~.
+4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
+5. **E Stena ≥ 60 dni** ~~OK~~; **DFDS Dynamic** (endpoint frachtowy; zapas PDF) — **następny krok**.
 6. Testy unit/e2e awizacji per armator × rola; odbiór F7 + visual.
 
+### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — PO #666
+Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3.
+1. Pomarańczowa linia drogowa na **każdej** mapie (Kokpit, Mapa, karta, Strefy, Odtwarzanie, Ryzyka, telefon) — `mapPool` też w PROD (dziś tylko demo).
+2. **SE-KAA** z HERE + obie drogi Karlskrona (#627 E22 / śródlądowa).
+3. Cron odświeżania `here_road_geometry` przed purge 30 dni; brak linii → SOURCE_DOWN/JOB_FAILURE HERE_ROADS.
+4. Diagnostyka: odrzucone legi w Stanie systemu + `integration_runs`.
+5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania.
+6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
+
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
-Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **BN2** LIVE SCALONE (#660+#661+#665); **#666** (pilne) przed BN3.
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **BN2** LIVE SCALONE (#660+#661+#665); **#666** (pilne) → **#667** (pilne mapy) przed BN3.
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
-3. **#666** (pilne) — awizacja + Viking Cargo + DFDS Dynamic — **przed BN3**.
-4. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+3. **#666** (pilne) — awizacja + Viking Cargo + DFDS Dynamic — **przed #667 / BN3**.
+4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — po #666, przed BN3.
+5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -2084,3 +2094,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 14:30 | #661 F7: Decyzja 50 Viking SOURCE_DOWN MEDIUM + testy jobów B3/DST | pętla |
 | 30.10.2026 14:54 | #661 SCALONE `392a9bc2` (F7 gotowe @ bf2572b4); start BN2 dopisek testów Terminal A / RECZNIE | pętla |
 | 30.10.2026 15:47 | #665 SCALONE `799ea18d`; skrzynka **#666 pilne** → przed BN3; start `pakiet/666-awizacja-viking-cargo` (51–55 + trasy TLLA + Stena 60 d) | pętla |
+| 30.10.2026 16:50 | #666 A Viking Cargo (HEL–TLL, wyjątki, 60 d, sales zapas); fix TS `outboundRoutesOf`; skrzynka **#667 pilne** mapy → po #666 przed BN3 | pętla |

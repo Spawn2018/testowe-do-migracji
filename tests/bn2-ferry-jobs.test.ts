@@ -18,6 +18,7 @@ const PORT_TLL = fx('port-tallinn-departures-arrivals-sample.html');
 const PORT_STO = fx('ports-stockholm-portentry-sample.json');
 const DFDS_HTML = fx('dfds-weekly-paldiski-kapellskar-sample.html');
 const VIKING_HTML = fx('viking-timetable-helsinki-tallinn-sample.html');
+const VIKING_CARGO_HTML = fx('viking-cargo-helsinki-tallinn-sample.html');
 const NOW = new Date('2026-10-30T12:00:00Z');
 const MEGA = 'v-mega';
 const MYST = 'v-myst';
@@ -106,6 +107,9 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
 const basePages = {
   'cargo/rozklad': CARGO,
   'port-calls': PORTNET,
+  /* #666 A: domyślnie oba źródła Viking niedostępne (nadpisz w teście). */
+  'viking-line-cargo': 503 as const,
+  'sales.vikingline.com': 503 as const,
 };
 
 const tallinkPages = {
@@ -499,10 +503,11 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
   });
 
-  it('Decyzja 50: Viking HTTP 403 → SOURCE_DOWN MEDIUM (bez rejsów VIKING)', async () => {
+  it('Decyzja 50: Viking Cargo+sales 403 → SOURCE_DOWN MEDIUM (bez rejsów VIKING)', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
+      'viking-line-cargo': 403,
       'sales.vikingline.com': 403,
       'eckeroline.com': 503,
       'dfds.com': 503,
@@ -515,11 +520,12 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
   });
 
-  it('Eckerö awaria + Viking HTML OK → rejsy VIKING, SOURCE_DOWN ECKERO', async () => {
+  it('#666 A: Cargo OK → rejsy VIKING mimo sales 403; Eckerö SOURCE_DOWN', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
-      'sales.vikingline.com': VIKING_HTML,
+      'viking-line-cargo': VIKING_CARGO_HTML,
+      'sales.vikingline.com': 403,
       'eckeroline.com': 503,
       'dfds.com': 503,
       'ctfassets.net': 503,
@@ -530,10 +536,11 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(false);
   });
 
-  it('idempotencja Viking: drugi przebieg bez nowych insertów', async () => {
+  it('#666 A: Cargo 403 + sales HTML → zapas; idempotencja', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
+      'viking-line-cargo': 403,
       'sales.vikingline.com': VIKING_HTML,
       'eckeroline.com': 503,
       'dfds.com': 503,
@@ -590,7 +597,8 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
 </body></html>`;
     const pages: Record<string, string | number> = {
       ...tallinkPages,
-      'sales.vikingline.com': VIKING_HTML,
+      'viking-line-cargo': VIKING_CARGO_HTML,
+      'sales.vikingline.com': 403,
       'eckeroline.com': 503,
       'dfds.com': 503,
       'ctfassets.net': 503,

@@ -7204,3 +7204,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak otwartych PR; #665 SCALONE `799ea18d` (na `main`).
 - **Krok 1 (#666 B/C/D/E częściowo):** decyzje 51–55 w awizacji (`reachableSailings` bez odcięcia załadunkiem; `awizacjaOperators` = wszyscy; historyczne = wypłynięte, też Polferries; „Rejs promem” + oznaczenie przed załadunkiem + komunikat pusty); `TLLA-HEL`/`HELA-TLL` w `FERRY_ROUTES` + `routeShortLabel`; Stena/Tallink/Eckerö/DFDS horyzont 60 d (`freightWindow` +59, `fetchStenaDays` 60). **Dalej w #666:** A Viking Cargo; DFDS Dynamic endpoint; RPC historyczne dla SCX/HHL_OPS; Viking sales zostaje zapasem.
 - Bez push na main.
+
+## 2026-10-30 16:50 — #666 A Viking Cargo + fix unit + #667 w planie
+
+- Skrzynka: **#667** (Spawn2018, `pilne`) wpisane §4 po #666 / przed BN3 (pomarańczowe drogi, SE-KAA, cron HERE). #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 — brak „F7: gotowe”; unit wcześniej FAIL (TS `outboundRoutesOf`); db/visual ✔ na `99aa30b3`.
+- **Krok (#666 A + fix):** Viking Cargo HEL–TLL jako źródło główne (`VIKING_CARGO_HEL_TLL_PAGE`), sales zapas, SOURCE_DOWN tylko gdy oba zawiodą; wyjątki „Planned changes” (24.12 tylko 10:30); horyzont 60 d; fixture z prawdziwej strony Cargo; TS `fromSeed: string[]`. **Dalej w #666:** DFDS Dynamic; RPC historyczne. Potem **#667**.
+- Bez push na main.

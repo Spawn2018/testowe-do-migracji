@@ -8,7 +8,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseTallinkTimetable, tallinkTimetableUrl } from '../src/lib/ferry/tallink';
 import { parseDigitrafficPortCalls } from '../src/lib/ferry/digitrafficPortCalls';
-import { parseVikingSchedule, parseVikingTimetableHtml } from '../src/lib/ferry/vikingline';
+import {
+  parseVikingSchedule, parseVikingTimetableHtml, parseVikingPlannedChanges,
+} from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
 import { parseDfdsSchedule, parseDfdsWeeklyHtml } from '../src/lib/ferry/dfds';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
@@ -23,6 +25,7 @@ const DFDS = JSON.parse(readFileSync(new URL('./fixtures/dfds-schedule-sample.js
 const PORT_TLL = readFileSync(new URL('./fixtures/port-tallinn-departures-arrivals-sample.html', import.meta.url), 'utf8');
 const PORT_STO = JSON.parse(readFileSync(new URL('./fixtures/ports-stockholm-portentry-sample.json', import.meta.url), 'utf8'));
 const VIKING_HTML = readFileSync(new URL('./fixtures/viking-timetable-helsinki-tallinn-sample.html', import.meta.url), 'utf8');
+const VIKING_CARGO_HTML = readFileSync(new URL('./fixtures/viking-cargo-helsinki-tallinn-sample.html', import.meta.url), 'utf8');
 const ECKERO_HTML = readFileSync(new URL('./fixtures/eckero-timetable-finlandia-finbo-sample.html', import.meta.url), 'utf8');
 const DFDS_HTML = readFileSync(new URL('./fixtures/dfds-weekly-paldiski-kapellskar-sample.html', import.meta.url), 'utf8');
 
@@ -166,6 +169,24 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.some((s) =>
       s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30') && s.vessel === 'M/F Viking XPRS'
     )).toBe(true);
+  });
+
+  it('#666 A Cargo: sezony + 60 dni + wyjątek 24.12 tylko 10:30 HEL→TLL', () => {
+    const r = parseVikingTimetableHtml(VIKING_CARGO_HTML, { fromYmd: '2026-10-30', days: 60 });
+    expect(r.warnings.filter((w) => /Struktura|pusta|zablokowana/i.test(w))).toEqual([]);
+    expect(r.sailings.length).toBeGreaterThan(50);
+    expect(r.sailings.every((s) => s.route === 'TLLA-HEL' || s.route === 'HELA-TLL')).toBe(true);
+    // 30.10.2026 = Fri → HELA-TLL 07:45 / 14:15 (sezon 10.08–31.12.2026)
+    expect(r.sailings.some((s) =>
+      s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30T') && s.vessel === 'M/F Viking XPRS'
+    )).toBe(true);
+    const hel2412 = r.sailings.filter((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-12-24'));
+    expect(hel2412).toHaveLength(1);
+    expect(hel2412[0]!.departureUtc).toMatch(/2026-12-24T08:30:00/); // 10:30 EET
+    const tll2412 = r.sailings.filter((s) => s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-12-24'));
+    expect(tll2412).toHaveLength(1);
+    const planned = parseVikingPlannedChanges(VIKING_CARGO_HTML, 2026);
+    expect(planned.some((p) => p.ymds.includes('2026-12-24'))).toBe(true);
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

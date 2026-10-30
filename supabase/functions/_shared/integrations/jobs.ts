@@ -36,7 +36,7 @@ import {
   parsePortsStockholmPortEntry,
 } from '../ferry/portsStockholm.ts';
 import {
-  VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
+  VIKING_CARGO_HEL_TLL_PAGE, VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
 } from '../ferry/vikingline.ts';
 import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
@@ -437,26 +437,44 @@ async function fetchTallinkDays(deps: JobDeps, days: number): Promise<{
   return { sailings, warnings, fetchedOk, structureFail };
 }
 
-/** BN2 — Viking Line HTML (14 dni). 403/Imperva → fetchedOk=0. */
+/**
+ * #666 A — Viking: najpierw Cargo HEL–TLL, potem sales (zapas).
+ * SOURCE_DOWN tylko gdy oba źródła zawiodą (decyzja 50 + #666 A).
+ */
 async function fetchVikingDays(deps: JobDeps, days: number): Promise<{
   sailings: ReturnType<typeof parseVikingTimetableHtml>['sailings'];
   warnings: string[];
   fetchedOk: number;
   structureFail: boolean;
 }> {
+  const warnings: string[] = [];
+  const cargo = await readText(deps, VIKING_CARGO_HEL_TLL_PAGE, {
+    headers: { 'User-Agent': VIKING_UA, Accept: 'text/html' },
+  });
+  if (cargo.ok) {
+    const parsed = parseVikingTimetableHtml(cargo.text, { now: deps.now(), days });
+    warnings.push(...parsed.warnings);
+    if (parsed.sailings.length > 0) {
+      return { sailings: parsed.sailings, warnings, fetchedOk: 1, structureFail: false };
+    }
+  } else {
+    warnings.push(cargo.warning);
+  }
   const page = await readText(deps, VIKING_SCHEDULE_PAGE, {
     headers: { 'User-Agent': VIKING_UA, Accept: 'text/html' },
   });
   if (!page.ok) {
-    return { sailings: [], warnings: [page.warning], fetchedOk: 0, structureFail: false };
+    warnings.push(page.warning);
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
   }
   const parsed = parseVikingTimetableHtml(page.text, { now: deps.now(), days });
+  warnings.push(...parsed.warnings);
   const structureFail = parsed.warnings.some((w) => /Struktura|zablokowana|pusta/i.test(w))
     && parsed.sailings.length === 0;
   return {
     sailings: parsed.sailings,
-    warnings: parsed.warnings,
-    fetchedOk: structureFail ? 0 : 1,
+    warnings,
+    fetchedOk: structureFail || parsed.sailings.length === 0 ? 0 : 1,
     structureFail,
   };
 }
@@ -833,7 +851,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_SCHEDULE:');
   }
 
-  const viking = await fetchVikingDays(deps, 14);
+  /* #666 A + decyzja 54: Viking Cargo, horyzont ≥ 60 dni; sales = zapas */
+  const viking = await fetchVikingDays(deps, 60);
   warnings.push(...viking.warnings);
   const vkFail = viking.fetchedOk === 0
     || (viking.structureFail && viking.sailings.length === 0);
@@ -850,7 +869,7 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
       'VIKING_SCHEDULE',
       viking.warnings.length ? viking.warnings : ['Brak odpowiedzi Viking'],
       now,
-      VIKING_SCHEDULE_PAGE,
+      VIKING_CARGO_HEL_TLL_PAGE,
     ));
     risks += 1;
   } else {

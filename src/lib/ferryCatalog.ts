@@ -267,7 +267,10 @@ export function routePorts(code: string | null | undefined): [FerryPortDef, Ferr
 
 /** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO, PLD-KPS; Viking: +TLLA-HEL). */
 export function outboundRoutesOf(operator: FerryOperator): readonly string[] {
-  const fromSeed = FERRY_ROUTES.filter((r) => r.outbound && r.operators.includes(operator)).map((r) => r.code);
+  // string[] — aliasy Terminal A / RPC to kody spoza wąskiego FERRY_ROUTES (TS: includes).
+  const fromSeed: string[] = FERRY_ROUTES
+    .filter((r) => r.outbound && r.operators.includes(operator))
+    .map((r) => r.code);
   const fromAlias: string[] = [];
   for (const [code, a] of SEED_ROUTE_ALIASES) {
     if (!a.outbound || !a.operators.includes(operator)) continue;
