@@ -18,6 +18,8 @@ const SHIP: Record<string, string> = {
   MEGASTAR: 'M/F Megastar',
   VICTORIA: 'M/F Victoria I',
   BALTICQUEEN: 'M/F Baltic Queen',
+  /** booking.tallink.com na TLL↔STO (CRUISE/SHUTTLE) zwraca shipCode „QUEEN”, nie BALTICQUEEN. */
+  QUEEN: 'M/F Baltic Queen',
   SILJAEUROPA: 'M/F Silja Europa',
   REGALPRINCESS: 'M/F Regal Princess',
 };
@@ -73,14 +75,14 @@ export function tallinkTimetableUrl(opts: {
   return `${TALLINK_BOOKING}/api/timetables?${q}`;
 }
 
-function mapRoute(cityFrom: string, cityTo: string, pierFrom: string): FerryRoute | null {
+function mapRoute(cityFrom: string, cityTo: string, pierFrom: string, pierTo: string): FerryRoute | null {
   const key = `${cityFrom.toUpperCase()}>${cityTo.toUpperCase()}`;
   const base = CITY_ROUTE[key];
   if (!base) return null;
-  // Tallink shuttle TLL↔HEL = Terminal D (DTER / D). Inne pier → nie Tallink w naszym modelu.
-  if ((base === 'TLL-HEL' || base === 'HEL-TLL') && pierFrom && !/^D/i.test(pierFrom)) {
-    return null;
-  }
+  // Tallink shuttle TLL↔HEL = Terminal D po stronie Tallinna (DTER / D).
+  // TAL→HEL: pierFrom=D…; HEL→TAL: pierFrom=LSA2 (Helsinki), pierTo=D… — filtr na pier Tallinna.
+  if (base === 'TLL-HEL' && pierFrom && !/^D/i.test(pierFrom)) return null;
+  if (base === 'HEL-TLL' && pierTo && !/^D/i.test(pierTo)) return null;
   return base;
 }
 
@@ -129,10 +131,11 @@ export function parseTallinkTimetable(json: unknown): TallinkParseResult {
       const cityTo = String(r.cityTo ?? '').toUpperCase();
       const pierFrom = String(r.pierFrom ?? '');
       const pierTo = String(r.pierTo ?? '');
-      const route = mapRoute(cityFrom, cityTo, pierFrom);
+      const route = mapRoute(cityFrom, cityTo, pierFrom, pierTo);
       if (!route) {
-        if (CITY_ROUTE[`${cityFrom}>${cityTo}`] && pierFrom && !/^D/i.test(pierFrom)) {
-          warnings.push(`Tallink ${day}: pier ${pierFrom} poza Terminalem D — pominięty (nie Tallink D→T2).`);
+        const tallinnPier = cityFrom === 'TAL' ? pierFrom : cityTo === 'TAL' ? pierTo : '';
+        if (CITY_ROUTE[`${cityFrom}>${cityTo}`] && tallinnPier && !/^D/i.test(tallinnPier)) {
+          warnings.push(`Tallink ${day}: pier Tallinna ${tallinnPier} poza Terminalem D — pominięty (nie Tallink D↔T2).`);
         }
         continue;
       }

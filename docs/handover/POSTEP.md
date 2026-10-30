@@ -6910,6 +6910,21 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 11:50 — BN2 #661: Tallink QUEEN + HEL-TLL pier (po jednorazowym ferry-schedule)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: #661 CI @ `9139ebb3` unit/db/visual ✔; F7 jeszcze nie; ten commit przed F7.
+- **Odbiór #640:** jednorazowy Edge `ferry-schedule` prod @ 10:36Z → `integration_runs` **104185** ok; TALLINK **93** (tylko TLL-HEL); HEL-TLL/TLL-STO/STO-TLL = 0; ostrzeżenia QUEEN ×~52.
+- **Krok:** alias `QUEEN`→`M/F Baltic Queen`; filtr Terminal D na pier Tallinna (`pierFrom` TAL→HEL, `pierTo` HEL→TAL). Testy bn2 +2. Po scaleniu: ponowny `ferry-schedule`.
+- Push → CI → F7. Bez push na main.
+
+## 2026-10-30 11:20 — #660 SCALONE; BN2 Viking/Eckerö/DFDS LIVE
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: **#660** F7 „gotowe do scalenia” @ `23154592` → merge `a94645d9` (bez dalszych commitów na #660).
+- **Krok BN2:** gałąź `pakiet/bn2-viking-eckero-dfds` — scrape HTML Viking (sales.vikingline.com) / Eckerö (eckeroline.com/timetable) / DFDS (sidugraafik tygodniowy po HTTP 200); 14 dni; Digitraffic FIHEL: Terminal A dla Viking XPRS + Finlandia → `TLLA-HEL`/`HELA-TLL`; atrybucja Digitraffic Portnet CC BY 4.0 + armatorzy w Rejsach; Port of Tallinn dziś+jutro w `ferry-portnet` co 15 min. Testy bn2-ferry-schedule 28 (+3 HTML).
+- Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 10:50 — BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
@@ -7157,6 +7172,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - Skrzynka: #662 pilne — connector SCALONE; #608 w planie; #550 WSTRZYMANE.
 - Scalanie: #663 → `189688bc` (F7 @ `2941001`, CI unit/visual/db ✔).
-- **NA PRODUKCJI** `189688bc`, 30.10.2026 14:26 CEST — Edge `safefleet-poll` (12:26:16Z), **0349**, Vercel `tower.log-mar.pl` (12:28:22Z), deploy-main `41055098148` ✔.
+- **NA PRODUKCJI** `189688bc`, 30.10.2026 **13:29 CET** (deploy-main `41055098148` ✔ 12:29 UTC) — Edge `safefleet-poll` Deployed 12:26:16Z, **0349**, Vercel `tower.log-mar.pl` 12:28:22Z. (wcześniejszy wpis 14:26 CEST — pomyłka; F7 #664).
 - **Krok #662-b** PR #664 (`pakiet/662-b-safefleet-audit`, **0350** @ `9d623534`): `audit_row_change` v_skip `safefleet_*`; `safefleet_token` w v_secret; maska URL w `audit_log` (+ jednorazowo); job `ok=false` przy down/invalid; sort trajektorii od najstarszego; security +1 (EXPECTED **495** / TEST **491**).
 - Po F7 #662-b → #661 B1/B2. Bez push na main.
+
+## 2026-10-30 14:00 — #664 SCALONE; #661 F7 B1/B2/okresy
+
+- Skrzynka: #662/#662-b SCALONE; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #664 → `1ee855fd` (F7 @ `4ddb090`, CI unit/visual/db ✔).
+- **Krok #661:** B1 DFDS bez `DFDS_PUBLISHED_WEEKLY_HTML` w jobie (tylko sparsowana treść; HTTP 200 bez tabeli → SOURCE_DOWN); B2 PoT tylko dzień tablicy (bez daty +1); okresy sezonów Viking/Eckerö/Finbo (`parseSeasonRanges`); testy parser + job.
+- Push → CI → F7. Bez push na main.
+
+## 2026-10-30 14:30 — #661 F7 Decyzja 50 + testy jobów B3
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe” po `736448e6`; CI @ `736448e6` unit/visual/db ✔.
+- **Krok:** Decyzja 50 — `sourceDownRisk(VIKING_SCHEDULE)` = **MEDIUM** (Imperva 403, HHL); testy jobów B3 Tallink TLL-HEL+HEL-TLL+QUEEN; Viking 403 MEDIUM; Eckerö awaria; idempotencja Viking; DST marzec/październik w parserze HTML.
+- Push → CI → F7. Bez push na main.

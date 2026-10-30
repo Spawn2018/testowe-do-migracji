@@ -13,6 +13,11 @@ import { effArrival, effDeparture } from '../lib/sailings';
 import { ROUTE_SHORT, reachOf, sailDay, sailRows, sailTime, sourceKey, type SailRow } from '../lib/sailView';
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
+import { DIGITRAFFIC_PORTCALL_ATTRIBUTION } from '../lib/ferry/digitrafficPortCalls';
+import { VIKING_ATTRIBUTION } from '../lib/ferry/vikingline';
+import { ECKERO_ATTRIBUTION } from '../lib/ferry/eckero';
+import { DFDS_ATTRIBUTION } from '../lib/ferry/dfds';
+import { TALLINK_ATTRIBUTION } from '../lib/ferry/tallink';
 import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
@@ -251,6 +256,13 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         {reachLine ? <span data-sail-reach>{reachLine}</span> : null}
         <span>{sv(locale, canEditSailings ? 'sv_note_admin' : 'sv_note_ro')}</span>
         {sailings.some((s) => s.source === 'POLFERRIES') ? <span data-attribution="polferries">{POLFERRIES_ATTRIBUTION}</span> : null}
+        {sailings.some((s) => s.source === 'TALLINK') ? <span data-attribution="tallink">{TALLINK_ATTRIBUTION}</span> : null}
+        {sailings.some((s) => s.source === 'VIKING') ? <span data-attribution="viking">{VIKING_ATTRIBUTION}</span> : null}
+        {sailings.some((s) => s.source === 'ECKERO') ? <span data-attribution="eckero">{ECKERO_ATTRIBUTION}</span> : null}
+        {sailings.some((s) => s.source === 'DFDS') ? <span data-attribution="dfds">{DFDS_ATTRIBUTION}</span> : null}
+        {sailings.some((s) =>
+          s.source === 'TALLINK' || s.source === 'VIKING' || s.source === 'ECKERO' || s.source === 'DFDS'
+        ) ? <span data-attribution="digitraffic-portcall">{DIGITRAFFIC_PORTCALL_ATTRIBUTION}</span> : null}
       </div>
     </div>
   );

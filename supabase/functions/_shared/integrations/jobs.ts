@@ -36,6 +36,15 @@ import {
   parsePortsStockholmPortEntry,
 } from '../ferry/portsStockholm.ts';
 import {
+  VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
+} from '../ferry/vikingline.ts';
+import {
+  ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
+} from '../ferry/eckero.ts';
+import {
+  DFDS_SCHEDULE_PAGE, DFDS_UA, DFDS_WEEKLY_PDF_URL, parseDfdsWeeklyHtml,
+} from '../ferry/dfds.ts';
+import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
@@ -428,6 +437,105 @@ async function fetchTallinkDays(deps: JobDeps, days: number): Promise<{
   return { sailings, warnings, fetchedOk, structureFail };
 }
 
+/** BN2 — Viking Line HTML (14 dni). 403/Imperva → fetchedOk=0. */
+async function fetchVikingDays(deps: JobDeps, days: number): Promise<{
+  sailings: ReturnType<typeof parseVikingTimetableHtml>['sailings'];
+  warnings: string[];
+  fetchedOk: number;
+  structureFail: boolean;
+}> {
+  const page = await readText(deps, VIKING_SCHEDULE_PAGE, {
+    headers: { 'User-Agent': VIKING_UA, Accept: 'text/html' },
+  });
+  if (!page.ok) {
+    return { sailings: [], warnings: [page.warning], fetchedOk: 0, structureFail: false };
+  }
+  const parsed = parseVikingTimetableHtml(page.text, { now: deps.now(), days });
+  const structureFail = parsed.warnings.some((w) => /Struktura|zablokowana|pusta/i.test(w))
+    && parsed.sailings.length === 0;
+  return {
+    sailings: parsed.sailings,
+    warnings: parsed.warnings,
+    fetchedOk: structureFail ? 0 : 1,
+    structureFail,
+  };
+}
+
+/** BN2 — Eckerö/Finbo HTML timetable (14 dni). */
+async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
+  sailings: ReturnType<typeof parseEckeroTimetableHtml>['sailings'];
+  warnings: string[];
+  fetchedOk: number;
+  structureFail: boolean;
+}> {
+  const page = await readText(deps, ECKERO_SCHEDULE_PAGE, {
+    headers: { 'User-Agent': ECKERO_UA, Accept: 'text/html' },
+  });
+  if (!page.ok) {
+    return { sailings: [], warnings: [page.warning], fetchedOk: 0, structureFail: false };
+  }
+  const parsed = parseEckeroTimetableHtml(page.text, { now: deps.now(), days });
+  const structureFail = parsed.warnings.some((w) => /Struktura|pusta/i.test(w))
+    && parsed.sailings.length === 0;
+  return {
+    sailings: parsed.sailings,
+    warnings: parsed.warnings,
+    fetchedOk: parsed.sailings.length > 0 ? 1 : 0,
+    structureFail,
+  };
+}
+
+/** BN2 / F7 #661 B1 — DFDS: tylko faktycznie sparsowana treść (HTML/PDF); bez stałej HTML. */
+async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
+  sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
+  warnings: string[];
+  fetchedOk: number;
+  structureFail: boolean;
+}> {
+  const warnings: string[] = [];
+  const page = await readText(deps, DFDS_SCHEDULE_PAGE, {
+    headers: { 'User-Agent': DFDS_UA, Accept: 'text/html' },
+  });
+  const pdf = await readText(deps, DFDS_WEEKLY_PDF_URL, {
+    headers: { 'User-Agent': DFDS_UA, Accept: 'application/pdf' },
+  });
+  if (!page.ok) warnings.push(page.warning);
+  if (!pdf.ok) warnings.push(pdf.warning);
+  if (!page.ok && !pdf.ok) {
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
+  }
+  if (page.ok) {
+    const fromPage = parseDfdsWeeklyHtml(page.text, { now: deps.now(), days });
+    if (fromPage.sailings.length > 0) {
+      return {
+        sailings: fromPage.sailings,
+        warnings: [...warnings, ...fromPage.warnings],
+        fetchedOk: 1,
+        structureFail: false,
+      };
+    }
+    warnings.push(...fromPage.warnings);
+  }
+  if (pdf.ok) {
+    // PDF tekstowy: wyciąg z bajtów może zawierać HTML-podobną tabelę albo plain text.
+    const fromPdf = parseDfdsWeeklyHtml(pdf.text, { now: deps.now(), days });
+    if (fromPdf.sailings.length > 0) {
+      return {
+        sailings: fromPdf.sailings,
+        warnings: [...warnings, ...fromPdf.warnings],
+        fetchedOk: 1,
+        structureFail: false,
+      };
+    }
+    warnings.push(...fromPdf.warnings);
+  }
+  // HTTP 200 bez czytelnej tabeli → struktura zmieniona (SOURCE_DOWN), nie zmyślone godziny.
+  if (!warnings.some((w) => /Struktura|brak tabeli/i.test(w))) {
+    warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
+  }
+  return { sailings: [], warnings, fetchedOk: 0, structureFail: true };
+}
+
 /** BN2 — Portnet Digitraffic: ATA/ATD → actual_* na dopasowanych rejsach (±3 h od planu). */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
@@ -551,10 +659,14 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
     return { ...empty, warnings, fail: true };
   }
   const html = `${depPage.ok ? depPage.text : ''}\n${arrPage.ok ? arrPage.text : ''}`;
-  const dateYmd = tallinnDateYmd(deps.now());
-  const parsed = parsePortTallinnHtml(html, dateYmd);
-  warnings.push(...parsed.warnings);
-  if (parsed.warnings.some((w) => /brak tabeli|pusta odpowiedź/i.test(w)) && parsed.events.length === 0) {
+  // F7 #661 B2: tylko dzień, który tablica faktycznie pokazuje (dziś) —
+  // ta sama tablica z datą +1 fałszywie oznacza jutrzejszy rejs jako ODWOLANY.
+  const today = tallinnDateYmd(deps.now());
+  const parsed = parsePortTallinnHtml(html, today);
+  const events = parsed.events;
+  const parsedWarnings = parsed.warnings;
+  warnings.push(...parsedWarnings);
+  if (parsedWarnings.some((w) => /brak tabeli|pusta odpowiedź/i.test(w)) && events.length === 0) {
     return { ...empty, warnings, fail: true };
   }
   const [vessels, existing] = await Promise.all([
@@ -563,8 +675,12 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
   const WINDOW_MS = 3 * 3600_000;
   let cancelled = 0;
-  for (const e of parsed.events) {
+  const seen = new Set<string>();
+  for (const e of events) {
     if (!e.cancelled) continue; // F7 r3: sam plan → bez actual_* / statusu
+    const dedup = `${e.vessel}|${e.route}|${e.atUtc}|${e.kind}`;
+    if (seen.has(dedup)) continue;
+    seen.add(dedup);
     const vesselId = byName.get(e.vessel);
     if (!vesselId) continue;
     const t = Date.parse(e.atUtc);
@@ -689,7 +805,7 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:STENA_SCHEDULE:');
   }
 
-  // BN2: Tallink (LIVE). Viking/Eckerö/DFDS — parsery gotowe; scrape HTML w kolejnym kroku.
+  // BN2: Tallink + Viking + Eckerö + DFDS LIVE.
   // F7 #660: SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez żadnych rejsów; kierunki OK zapisujemy.
   const tallink = await fetchTallinkDays(deps, 14);
   warnings.push(...tallink.warnings);
@@ -715,7 +831,80 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_SCHEDULE:');
   }
 
-  // Portnet ATD/ATA → osobny job ferry-portnet co 15 min (F7 #660 pkt 6).
+  const viking = await fetchVikingDays(deps, 14);
+  warnings.push(...viking.warnings);
+  const vkFail = viking.fetchedOk === 0
+    || (viking.structureFail && viking.sailings.length === 0);
+  if (viking.sailings.length > 0) {
+    const incomingV: IncomingSailing[] = viking.sailings.map((s) => ({
+      route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
+    }));
+    const r = await applySailings(deps, incomingV, since, 'VIKING');
+    inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
+    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
+  }
+  if (vkFail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'VIKING_SCHEDULE',
+      viking.warnings.length ? viking.warnings : ['Brak odpowiedzi Viking'],
+      now,
+      VIKING_SCHEDULE_PAGE,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
+  }
+
+  const eckero = await fetchEckeroDays(deps, 14);
+  warnings.push(...eckero.warnings);
+  const ekFail = eckero.fetchedOk === 0
+    || (eckero.structureFail && eckero.sailings.length === 0);
+  if (eckero.sailings.length > 0) {
+    const incomingE: IncomingSailing[] = eckero.sailings.map((s) => ({
+      route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
+    }));
+    const r = await applySailings(deps, incomingE, since, 'ECKERO');
+    inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
+    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
+  }
+  if (ekFail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'ECKERO_SCHEDULE',
+      eckero.warnings.length ? eckero.warnings : ['Brak odpowiedzi Eckerö'],
+      now,
+      ECKERO_SCHEDULE_PAGE,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:ECKERO_SCHEDULE:');
+  }
+
+  const dfds = await fetchDfdsDays(deps, 14);
+  warnings.push(...dfds.warnings);
+  const dfFail = dfds.fetchedOk === 0
+    || (dfds.structureFail && dfds.sailings.length === 0);
+  if (dfds.sailings.length > 0) {
+    const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
+      route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
+    }));
+    const r = await applySailings(deps, incomingD, since, 'DFDS');
+    inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
+    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
+  }
+  if (dfFail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'DFDS_SCHEDULE',
+      dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS'],
+      now,
+      DFDS_SCHEDULE_PAGE,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:DFDS_SCHEDULE:');
+  }
+
+  // Portnet ATD/ATA + Port of Tallinn odwołania → ferry-portnet co 15 min (F7 #660).
+  // W ferry-schedule zostawiamy też Tallinn (raz dziennie) jako zapas.
 
   // BN2 / F7 r3: Port of Tallinn — tylko odwołania (bez insertów / godzin / actual_* z planu).
   const tallinn = await applyPortTallinn(deps, since);
@@ -750,7 +939,8 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
   }
 
   return {
-    job: 'ferry-schedule', mode: 'LIVE', ok: !(pfFail && stFail && tlFail),
+    job: 'ferry-schedule', mode: 'LIVE',
+    ok: !(pfFail && stFail && tlFail && vkFail && ekFail && dfFail),
     inserted, updated, manualKept, unchanged, risks, warnings,
   };
 }
@@ -777,6 +967,21 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   }
   const closed = await closeStaleFiToEeWithoutAta(deps, since);
   updated += closed;
+  // F7 #660: Port of Tallinn odwołania także co 15 min (dzień + następny).
+  const tallinn = await applyPortTallinn(deps, since);
+  warnings.push(...tallinn.warnings);
+  updated += tallinn.cancelled;
+  if (tallinn.fail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'PORT_TALLINN',
+      tallinn.warnings.length ? tallinn.warnings : ['Brak odpowiedzi Port of Tallinn'],
+      now,
+      PORT_TALLINN_DEPARTURES_URL,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:PORT_TALLINN:');
+  }
   return {
     job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
