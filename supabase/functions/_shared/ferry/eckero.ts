@@ -7,7 +7,8 @@
  */
 import { localToUtc, type FerryRoute } from './polferries.ts';
 import {
-  dateRangeFromYmd, parseDaySpec, parseLocalTime, stripTags, weekdayInTz, ymdInTz,
+  dateRangeFromYmd, parseDaySpec, parseLocalTime, parseSeasonRanges, stripTags,
+  weekdayInTz, ymdInRanges, ymdInTz, type YmdRange,
 } from './weeklySchedule.ts';
 
 export const ECKERO_SCHEDULE_PAGE = 'https://www.eckeroline.com/timetable';
@@ -105,6 +106,8 @@ type WeeklyLeg = {
   arrNextDay: boolean;
   tzDep: string;
   tzArr: string;
+  /** F7 #661: tylko daty w zakresie sezonu (np. Finbo bez 24.12–5.01). */
+  ranges: YmdRange[];
 };
 
 /**
@@ -133,6 +136,7 @@ export function parseEckeroTimetableHtml(
   const dates = dateRangeFromYmd(fromYmd, days);
   for (const leg of legs) {
     for (const ymd of dates) {
+      if (!ymdInRanges(ymd, leg.ranges)) continue;
       if (!leg.days.has(weekdayInTz(ymd, leg.tzDep))) continue;
       const depUtc = localToUtc(ymd, leg.depHm, 0, leg.tzDep);
       const arrUtc = localToUtc(ymd, leg.arrHm, leg.arrNextDay ? 1 : 0, leg.tzArr);
@@ -164,6 +168,7 @@ function parseFinlandiaTables(html: string, warnings: string[]): WeeklyLeg[] {
   for (let c = 1; c < chunks.length; c++) {
     const chunk = chunks[c]!;
     if (!/2026|2027/.test(chunk.slice(0, 400))) continue;
+    const ranges = parseSeasonRanges(chunk.slice(0, 500));
     const tableEnd = chunk.indexOf('</table>');
     if (tableEnd < 0) continue;
     const table = chunk.slice(0, tableEnd);
@@ -183,7 +188,7 @@ function parseFinlandiaTables(html: string, warnings: string[]): WeeklyLeg[] {
           legs.push({
             days, vessel: 'M/F Finlandia', route: 'HELA-TLL',
             depHm: helDep.hm, arrHm: tllArr.hm, arrNextDay: tllArr.nextDay,
-            tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn',
+            tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn', ranges,
           });
         }
         const tllDep = parseLocalTime(cells[4]!);
@@ -192,7 +197,7 @@ function parseFinlandiaTables(html: string, warnings: string[]): WeeklyLeg[] {
           legs.push({
             days, vessel: 'M/F Finlandia', route: 'TLLA-HEL',
             depHm: tllDep.hm, arrHm: helArr.hm, arrNextDay: helArr.nextDay,
-            tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki',
+            tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki', ranges,
           });
         }
         continue;
@@ -212,13 +217,13 @@ function parseFinlandiaTables(html: string, warnings: string[]): WeeklyLeg[] {
           legs.push({
             days, vessel: 'M/F Finlandia', route: 'HELA-TLL',
             depHm: left.hm, arrHm: right.hm, arrNextDay: right.nextDay,
-            tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn',
+            tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn', ranges,
           });
         } else {
           legs.push({
             days, vessel: 'M/F Finlandia', route: 'TLLA-HEL',
             depHm: right.hm, arrHm: left.hm, arrNextDay: left.nextDay,
-            tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki',
+            tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki', ranges,
           });
         }
       }
@@ -234,6 +239,8 @@ function parseFinboTables(html: string, warnings: string[]): WeeklyLeg[] {
   for (let c = 1; c < chunks.length; c++) {
     const chunk = chunks[c]!;
     if (!/2026/.test(chunk.slice(0, 500))) continue;
+    // F7 #661: „Jan 6 – Dec 23” × sezony → przerwa 24.12–5.01 bez rejsów.
+    const ranges = parseSeasonRanges(chunk.slice(0, 800));
     const tableEnd = chunk.indexOf('</table>');
     if (tableEnd < 0) continue;
     const table = chunk.slice(0, tableEnd);
@@ -250,7 +257,7 @@ function parseFinboTables(html: string, warnings: string[]): WeeklyLeg[] {
         legs.push({
           days, vessel: 'M/F Finbo Cargo', route: 'VUO-MUU',
           depHm: vuoDep.hm, arrHm: muuArr.hm, arrNextDay: muuArr.nextDay,
-          tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn',
+          tzDep: 'Europe/Helsinki', tzArr: 'Europe/Tallinn', ranges,
         });
       }
       const muuDep = parseLocalTime(cells[4]!);
@@ -259,7 +266,7 @@ function parseFinboTables(html: string, warnings: string[]): WeeklyLeg[] {
         legs.push({
           days, vessel: 'M/F Finbo Cargo', route: 'MUU-VUO',
           depHm: muuDep.hm, arrHm: vuoArr.hm, arrNextDay: vuoArr.nextDay,
-          tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki',
+          tzDep: 'Europe/Tallinn', tzArr: 'Europe/Helsinki', ranges,
         });
       }
     }

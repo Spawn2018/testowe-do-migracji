@@ -42,9 +42,8 @@ import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
 } from '../ferry/eckero.ts';
 import {
-  DFDS_SCHEDULE_PAGE, DFDS_UA, DFDS_WEEKLY_PDF_URL, parseDfdsPublishedWeekly, parseDfdsWeeklyHtml,
+  DFDS_SCHEDULE_PAGE, DFDS_UA, DFDS_WEEKLY_PDF_URL, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
-import { addDaysYmd } from '../ferry/weeklySchedule.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
@@ -486,7 +485,7 @@ async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
   };
 }
 
-/** BN2 — DFDS: strona + PDF sidugraafik; przy HTTP 200 tabela tygodniowa opublikowana. */
+/** BN2 / F7 #661 B1 — DFDS: tylko faktycznie sparsowana treść (HTML/PDF); bez stałej HTML. */
 async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
   warnings: string[];
@@ -505,8 +504,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   if (!page.ok && !pdf.ok) {
     return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
   }
-  // HTML ze strony rzadko ma tabelę — gdy jest, użyj jej; inaczej sidugraafik po HTTP 200.
-  if (page.ok && /Paldiski/i.test(page.text) && /<table/i.test(page.text)) {
+  if (page.ok) {
     const fromPage = parseDfdsWeeklyHtml(page.text, { now: deps.now(), days });
     if (fromPage.sailings.length > 0) {
       return {
@@ -516,15 +514,24 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
         structureFail: false,
       };
     }
+    warnings.push(...fromPage.warnings);
   }
-  if (pdf.ok || page.ok) {
-    const pub = parseDfdsPublishedWeekly({ now: deps.now(), days });
-    return {
-      sailings: pub.sailings,
-      warnings: [...warnings, ...pub.warnings],
-      fetchedOk: pub.sailings.length > 0 ? 1 : 0,
-      structureFail: pub.sailings.length === 0,
-    };
+  if (pdf.ok) {
+    // PDF tekstowy: wyciąg z bajtów może zawierać HTML-podobną tabelę albo plain text.
+    const fromPdf = parseDfdsWeeklyHtml(pdf.text, { now: deps.now(), days });
+    if (fromPdf.sailings.length > 0) {
+      return {
+        sailings: fromPdf.sailings,
+        warnings: [...warnings, ...fromPdf.warnings],
+        fetchedOk: 1,
+        structureFail: false,
+      };
+    }
+    warnings.push(...fromPdf.warnings);
+  }
+  // HTTP 200 bez czytelnej tabeli → struktura zmieniona (SOURCE_DOWN), nie zmyślone godziny.
+  if (!warnings.some((w) => /Struktura|brak tabeli/i.test(w))) {
+    warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
   }
   return { sailings: [], warnings, fetchedOk: 0, structureFail: true };
 }
@@ -652,16 +659,12 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
     return { ...empty, warnings, fail: true };
   }
   const html = `${depPage.ok ? depPage.text : ''}\n${arrPage.ok ? arrPage.text : ''}`;
-  // F7 #660 następny PR: dzień bieżący + następny (odwołania nie czekają doby).
+  // F7 #661 B2: tylko dzień, który tablica faktycznie pokazuje (dziś) —
+  // ta sama tablica z datą +1 fałszywie oznacza jutrzejszy rejs jako ODWOLANY.
   const today = tallinnDateYmd(deps.now());
-  const dayList = [today, addDaysYmd(today, 1)];
-  const events: ReturnType<typeof parsePortTallinnHtml>['events'] = [];
-  const parsedWarnings: string[] = [];
-  for (const ymd of dayList) {
-    const parsed = parsePortTallinnHtml(html, ymd);
-    events.push(...parsed.events);
-    parsedWarnings.push(...parsed.warnings);
-  }
+  const parsed = parsePortTallinnHtml(html, today);
+  const events = parsed.events;
+  const parsedWarnings = parsed.warnings;
   warnings.push(...parsedWarnings);
   if (parsedWarnings.some((w) => /brak tabeli|pusta odpowiedź/i.test(w)) && events.length === 0) {
     return { ...empty, warnings, fail: true };

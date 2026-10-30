@@ -151,6 +151,22 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.some((s) => s.vessel === 'M/F Finbo Cargo')).toBe(true);
   });
 
+  it('F7 #661: Finbo przerwa 24.12–5.01; Finlandia 2 sezony; Viking poza zakresem', () => {
+    const finboBreak = parseEckeroTimetableHtml(ECKERO_HTML, { fromYmd: '2026-12-20', days: 20 });
+    const finbo = finboBreak.sailings.filter((s) => s.vessel === 'M/F Finbo Cargo');
+    expect(finbo.some((s) => s.departureUtc.startsWith('2026-12-22'))).toBe(true);
+    expect(finbo.every((s) => !s.departureUtc.startsWith('2026-12-24'))).toBe(true);
+    expect(finbo.every((s) => !s.departureUtc.startsWith('2026-12-25'))).toBe(true);
+    expect(finbo.every((s) => !s.departureUtc.startsWith('2027-01-02'))).toBe(true);
+    const finlandia = parseEckeroTimetableHtml(ECKERO_HTML, { fromYmd: '2027-06-01', days: 7 });
+    expect(finlandia.sailings.some((s) => s.vessel === 'M/F Finlandia')).toBe(true);
+    // Viking fixture: 01.09.2026–21.06.2027 — sierpień 2026 poza sezonem
+    const vikingOut = parseVikingTimetableHtml(VIKING_HTML, { fromYmd: '2026-08-01', days: 7 });
+    expect(vikingOut.sailings).toHaveLength(0);
+    const vikingIn = parseVikingTimetableHtml(VIKING_HTML, { fromYmd: '2026-10-30', days: 3 });
+    expect(vikingIn.sailings.length).toBeGreaterThan(0);
+  });
+
   it('DFDS HTML: PLD 22:00 Mon + KPS 09:30', () => {
     const r = parseDfdsWeeklyHtml(DFDS_HTML, { fromYmd: '2026-10-26', days: 7 }); // poniedziałek
     expect(r.warnings.filter((w) => /Struktura/i.test(w))).toEqual([]);

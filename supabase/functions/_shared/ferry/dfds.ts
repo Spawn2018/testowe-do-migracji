@@ -176,9 +176,8 @@ export function parseDfdsWeeklyHtml(
 }
 
 /**
- * Oficjalna tabela tygodniowa DFDS Paldiski–Kapellskär (sidugraafik, godziny lokalne).
- * Stosowana gdy LIVE PDF/strona odpowiada HTTP 200 (źródło dostępne), bo PDF bywa
- * wyłącznie graficzny. Weryfikacja: 30.10.2026 — DFDS_WEEKLY_PDF_URL / ctfassets.
+ * F7 #661 B1 — wyłącznie fixture testowy (nie używać w jobie przy HTTP 200).
+ * Job bierze tylko faktycznie sparsowaną treść HTML/PDF.
  */
 export const DFDS_PUBLISHED_WEEKLY_HTML = `<table data-dfds-weekly="1">
 <thead><tr><th>Day</th><th>Paldiski Departure</th><th>Kapellskar Arrival</th><th>Kapellskar Departure</th><th>Paldiski Arrival</th></tr></thead>
@@ -193,17 +192,9 @@ export const DFDS_PUBLISHED_WEEKLY_HTML = `<table data-dfds-weekly="1">
 </tbody>
 </table>`;
 
-/** Po udanym pobraniu oficjalnego PDF/strony — rozwiń tabelę sidugraafik na 14 dni. */
+/** Fixture: rozwiń DFDS_PUBLISHED_WEEKLY_HTML (tylko testy). */
 export function parseDfdsPublishedWeekly(
   opts?: { fromYmd?: string; days?: number; now?: Date },
 ): DfdsParseResult {
-  const r = parseDfdsWeeklyHtml(DFDS_PUBLISHED_WEEKLY_HTML, opts);
-  if (r.sailings.length === 0) return r;
-  return {
-    ...r,
-    warnings: [
-      ...r.warnings,
-      'DFDS: tabela tygodniowa sidugraafik (PDF/strona dostępna; PDF często bez warstwy tekstu).',
-    ],
-  };
+  return parseDfdsWeeklyHtml(DFDS_PUBLISHED_WEEKLY_HTML, opts);
 }

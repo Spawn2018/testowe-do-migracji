@@ -7,7 +7,8 @@
  */
 import { localToUtc, type FerryRoute } from './polferries.ts';
 import {
-  dateRangeFromYmd, parseDaySpec, parseLocalTime, stripTags, weekdayInTz, ymdInTz,
+  dateRangeFromYmd, parseDaySpec, parseLocalTime, parseSeasonRanges, stripTags,
+  weekdayInTz, ymdInRanges, ymdInTz, type YmdRange,
 } from './weeklySchedule.ts';
 
 export const VIKING_SCHEDULE_PAGE =
@@ -103,12 +104,14 @@ type WeeklyLeg = {
   arrNextDay: boolean;
   tzDep: string;
   tzArr: string;
+  ranges: YmdRange[];
 };
 
 /**
  * HTML tabel sezonowych Viking (Departure / Arrival / Day / Ship).
  * `data-route="helsinki-tallinn"` → HELA-TLL; `tallinn-helsinki` → TLLA-HEL.
  * Bez atrybutu: kolejność sekcji Helsinki–Tallinn, potem Tallinn–Helsinki.
+ * F7 #661: zakres z nagłówka przy tabeli (np. 01.09.2026–21.06.2027).
  */
 export function parseVikingTimetableHtml(
   html: string,
@@ -127,10 +130,17 @@ export function parseVikingTimetableHtml(
   const legs: WeeklyLeg[] = [];
   const tables = [...html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)];
   let fallbackIdx = 0;
+  let lastRanges: YmdRange[] = parseSeasonRanges(html.slice(0, 800));
   for (const tm of tables) {
     const attrs = tm[1] ?? '';
     const body = tm[2] ?? '';
     if (!/Departure|Odjazd|Lähtö/i.test(body) || !/Day|Päivä|Dzień/i.test(body)) continue;
+    // Nagłówek sezonu przed tabelą; brak → ostatni znany (kilka tabel pod jednym h2).
+    const idx = tm.index ?? 0;
+    const before = html.slice(Math.max(0, idx - 600), idx);
+    const local = parseSeasonRanges(before);
+    if (local.length) lastRanges = local;
+    const ranges = local.length ? local : lastRanges;
     let route: FerryRoute | null = null;
     if (/data-route\s*=\s*["']helsinki-tallinn["']/i.test(attrs) || /helsinki\s*[–-]\s*tallinn/i.test(attrs)) {
       route = 'HELA-TLL';
@@ -157,7 +167,7 @@ export function parseVikingTimetableHtml(
         continue;
       }
       legs.push({
-        days, route, depHm: dep.hm, arrHm: arr.hm, arrNextDay: arr.nextDay, tzDep, tzArr,
+        days, route, depHm: dep.hm, arrHm: arr.hm, arrNextDay: arr.nextDay, tzDep, tzArr, ranges,
       });
     }
   }
@@ -169,6 +179,7 @@ export function parseVikingTimetableHtml(
   const dates = dateRangeFromYmd(fromYmd, opts?.days ?? 14);
   for (const leg of legs) {
     for (const ymd of dates) {
+      if (!ymdInRanges(ymd, leg.ranges)) continue;
       if (!leg.days.has(weekdayInTz(ymd, leg.tzDep))) continue;
       const departureUtc = localToUtc(ymd, leg.depHm, 0, leg.tzDep);
       let arrivalUtc = localToUtc(ymd, leg.arrHm, leg.arrNextDay ? 1 : 0, leg.tzArr);

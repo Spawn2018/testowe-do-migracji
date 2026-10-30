@@ -16,6 +16,7 @@ const TALLINK = fx('tallink-timetable-tal-hel-2026-10-30.json');
 const PORTNET = fx('digitraffic-port-calls-megastar-2026-10-29.json');
 const PORT_TLL = fx('port-tallinn-departures-arrivals-sample.html');
 const PORT_STO = fx('ports-stockholm-portentry-sample.json');
+const DFDS_HTML = fx('dfds-weekly-paldiski-kapellskar-sample.html');
 const NOW = new Date('2026-10-30T12:00:00Z');
 const MEGA = 'v-mega';
 const MYST = 'v-myst';
@@ -382,5 +383,73 @@ describe('F7 #660 ferry-portnet', () => {
     expect(first.updated).toBeGreaterThan(0);
     const second = await runFerryPortnet(deps(st, { 'port-calls': PORTNET }, now));
     expect(second.updated).toBe(0);
+  });
+});
+
+describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
+  it('B1: HTTP 200 bez tabeli DFDS → SOURCE_DOWN, 0 rejsów DFDS (bez zmyślonych godzin)', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'dfds.com': '<html><body>Paldiski Kapellskar — no table</body></html>',
+      'ctfassets.net': '%PDF-1.4 binary without timetable text',
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.every((s) => s.source !== 'DFDS')).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+  });
+
+  it('B1: prawdziwa tabela HTML DFDS → rejsy bez SOURCE_DOWN', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'dfds.com': DFDS_HTML,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+  });
+
+  it('B2: odwołanie dziś nie oznacza jutrzejszego rejsu o tej godzinie', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'today', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-10-30T05:30:00.000Z', arrival_at: '2026-10-30T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 'tomorrow', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-10-31T05:30:00.000Z', arrival_at: '2026-10-31T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+    );
+    const html = `<!DOCTYPE html><html><body>
+<table class="table" id="passenger-lines-outbound"><tbody>
+<tr data-terminal="d" data-from_to="helsinki" data-company="tallink">
+<td data-sort_value="07:30">07:30</td>
+<td data-sort_value="MYSTAR">MYSTAR</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="D">Terminal D</td>
+<td data-sort_value="Tallink">Tallink</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr></tbody></table>
+<table class="table" id="passenger-lines-inbound"><tbody></tbody></table>
+</body></html>`;
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'api/timetables': 503,
+      'ts.ee/en/departures': html,
+      'ts.ee/en/arrivals': html,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'today')).toMatchObject({ status: 'ODWOLANY' });
+    expect(st.sailings.find((s) => s.id === 'tomorrow')).toMatchObject({ status: 'ZAPLANOWANY' });
   });
 });
