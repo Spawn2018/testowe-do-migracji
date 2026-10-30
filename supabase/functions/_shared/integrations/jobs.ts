@@ -1094,6 +1094,7 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
      F7 #668 r7 (decyzja 50): resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM. */
   const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
+  const dfFail = dfds.sailings.length === 0;
   if (dfds.sailings.length > 0) {
     const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
