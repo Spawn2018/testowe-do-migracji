@@ -107,6 +107,11 @@ export interface LoadRow {
   /** A7 (0237): symbol z tabeli właściciela i rodzaj zezwolenia */
   symbol?: string | null; permit_kind?: string | null;
   telematics_vehicle_id?: string | null;
+  /** #662 — bez `safefleet_token` (kolumna bez SELECT dla authenticated). */
+  telematics_provider?: string | null;
+  safefleet_check_state?: string | null;
+  safefleet_check_at?: string | null;
+  safefleet_last_fix_at?: string | null;
   /** E44 / H4 — bez `rio_secret` (kolumna bez SELECT dla authenticated). */
   rio_tracking_id?: string | null;
   rio_asset_name?: string | null;
@@ -186,6 +191,20 @@ export function trackingLinkFromRow(row: LoadRow): TrackingLinkInfo | null | und
   if (!hasRio && kind === 'none') return undefined;
   if (!hasRio && kind === 'emtrack') {
     return { provider: 'EMTRACK', check: { state: 'ok' } };
+  }
+  /* #662: SafeFleet — bez pełnego linku (token tylko na serwerze). */
+  if (!hasRio && (kind === 'safefleet' || row.telematics_provider === 'SAFEFLEET')) {
+    const st = row.safefleet_check_state;
+    const checkState =
+      st === 'ok' || st === 'pending' || st === 'invalid' || st === 'down' ? st : 'pending';
+    return {
+      provider: 'SAFEFLEET',
+      check: {
+        state: checkState,
+        at: row.safefleet_check_at ?? null,
+        lastFixAt: row.safefleet_last_fix_at ?? null,
+      },
+    };
   }
   if (!hasRio && kind === 'other') {
     return { provider: 'OTHER', check: { state: 'ok' } };

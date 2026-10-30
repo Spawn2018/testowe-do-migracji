@@ -7145,3 +7145,33 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Bieżąca: BN1/#648 PR #654 (**0343**) — czeka F7; potem #651. Bez push na main.
 
 
+
+## 2026-10-30 12:15 — #662 PILNE SafeFleet (przed F7 #661)
+
+- Skrzynka: **#662 pilne** (Spawn2018) — connector SafeFleet przed poprawkami #661; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #661 bez „F7: gotowe” (koordynator: najpierw #662, potem B1/B2/okresy).
+- **Krok:** gałąź `pakiet/662-safefleet-link` / migracja **0349** (enum SAFEFLEET, `safefleet_token` bez SELECT, sanitize, flaga TELM_SAFEFLEET_POLL, cron 2 min, lock); Edge `safefleet-poll`; adapter + job; UI chip + LiveStatus; testy `safefleet-poll` / `w-safefleet-stan`.
+- Po F7 #662 — wróć do #661 BN2. Bez push na main.
+
+## 2026-10-30 12:35 — #662 RLS testy (security +8)
+
+- Skrzynka: #662 pilne W TOKU (PR #663); #608 w planie; #550 WSTRZYMANE. Brak „F7: gotowe do scalenia” na #663/#661.
+- CI @ `fb0051da`: unit/visual/db ✔ — potem krok RLS z odbioru #662.
+- **Krok:** `security.sh` — authenticated bez SELECT/UPDATE/INSERT `safefleet_token`; SCX/KSH odmowa odczytu; sanitizer URL→token+znacznik; clear po RIO. EXPECTED security **494** / TEST **490**.
+- Push → CI → F7. Bez push na main.
+
+## 2026-10-30 12:55 — #662 CI db: asercja clear po RIO
+
+- Skrzynka: #662 pilne W TOKU (PR #663); #608 w planie; #550 WSTRZYMANE. Brak „F7: gotowe” po `285a924a`.
+- Scalanie: F7 @ `fb0051d` unieważnione nowym commitem; #661 wstrzymane.
+- CI @ `285a924a`: unit/visual ✔; **db FAIL** security 493/1 — asercja `telematics_vehicle_id like '%rio.cloud%'` (sanitizer RIO zapisuje `rio:<uuid>`).
+- **Krok:** `security.sh` — clear po RIO: `safefleet_token is null` + `telematics_vehicle_id = 'rio:…'` + `rio_secret`. EXPECTED nadal **494**.
+- Po F7 #663: #662-b z komentarza F7 (v_skip audytu, integration_runs.ok, maska audit_log). Potem #661. Bez push na main.
+
+## 2026-10-30 13:25 — #663 SCALONE; start #662-b
+
+- Skrzynka: #662 pilne — connector SCALONE; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #663 → `189688bc` (F7 @ `2941001`, CI unit/visual/db ✔).
+- **NA PRODUKCJI** `189688bc`, 30.10.2026 14:26 CEST — Edge `safefleet-poll` (12:26:16Z), **0349**, Vercel `tower.log-mar.pl` (12:28:22Z), deploy-main `41055098148` ✔.
+- **Krok #662-b** PR #664 (`pakiet/662-b-safefleet-audit`, **0350** @ `9d623534`): `audit_row_change` v_skip `safefleet_*`; `safefleet_token` w v_secret; maska URL w `audit_log` (+ jednorazowo); job `ok=false` przy down/invalid; sort trajektorii od najstarszego; security +1 (EXPECTED **495** / TEST **491**).
+- Po F7 #662-b → #661 B1/B2. Bez push na main.
