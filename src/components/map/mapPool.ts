@@ -156,10 +156,16 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const route = L.layerGroup().addTo(map);
   if (!PROD_BUILD) {
     /* audyt D-07 (E45, E1): demo — tylko odcinki lądowe (PL, SE z Nynäshamn, SE z Karlskrony), ciągłą linią jak trasy
-       HERE w produkcji (`CorridorMap` → `loadRoadLines`); odcinek morski rysuje warstwa promu. */
-    for (const line of DEMO_ROAD_LINES) {
-      L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), { color: '#E5A544', weight: 3, opacity: 0.9 }).addTo(route);
-    }
+       HERE w produkcji; odcinek morski rysuje warstwa promu. #667: ten sam paintOrangeRoads co PROD. */
+    void import('./applyBasemap').then(({ paintOrangeRoads }) => {
+      paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
+    }).catch(() => undefined);
+  } else {
+    /* #667 A: ta sama warstwa route w PROD (Kokpit / Mapa / karta / telefon) — loadRoadLines z applyBasemap.
+       CorridorMap odświeża po dociągnięciu Edge. */
+    void import('./applyBasemap').then(({ loadRoadLines, paintOrangeRoads }) =>
+      loadRoadLines().then((lines) => { paintOrangeRoads(route, lines); }),
+    ).catch(() => undefined);
   }
   const ferryLeg = L.layerGroup().addTo(map);
   for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {

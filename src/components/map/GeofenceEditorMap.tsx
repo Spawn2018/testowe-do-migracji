@@ -38,6 +38,8 @@ export function GeofenceEditorMap({
     const map = L.map(el, { zoomControl: true, attributionControl: true });
     map.setView([lat, lng], 11);
     const tiles = L.layerGroup().addTo(map);
+    /* #667 A: pomarańczowa trasa drogowa także w edytorze stref (osobny L.map, nie mapa z puli). */
+    const roads = L.layerGroup().addTo(map);
     const group = L.layerGroup().addTo(map);
     map.on('click', (e) => {
       onMoveRef.current(e.latlng.lat, e.latlng.lng);
@@ -45,6 +47,18 @@ export function GeofenceEditorMap({
     mapRef.current = map;
     groupRef.current = group;
     tilesRef.current = tiles;
+    if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
+      void import('./applyBasemap').then(({ loadRoadLines, paintOrangeRoads }) =>
+        loadRoadLines().then((lines) => { paintOrangeRoads(roads, lines); }),
+      ).catch(() => undefined);
+    } else {
+      void Promise.all([
+        import('./applyBasemap'),
+        import('../../data/roadLinesDemo'),
+      ]).then(([{ paintOrangeRoads }, { DEMO_ROAD_LINES }]) => {
+        paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));
+      }).catch(() => undefined);
+    }
     const timer = window.setTimeout(() => map.invalidateSize(), 200);
     return () => {
       window.clearTimeout(timer);

@@ -1154,11 +1154,57 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
+### #666 · PILNE: awizacja wszystkie rejsy + Viking Cargo + DFDS Dynamic — W TOKU (`pakiet/666-awizacja-viking-cargo`; PR #668; przed BN3)
+Źródło: #666 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:24 / 15:31 / 15:33 / 15:42). Przed BN3. Decyzje właściciela **48a, 49, 50, 51, 52, 53, 54, 55, 56** (akceptacja 15:42). CI unit/db/visual zielone @ `5aaa0544` — **czekam F7 „gotowe do scalenia”**.
+1. **A Viking Cargo** — ~~źródło Cargo HEL–TLL (sales = zapas; SOURCE_DOWN gdy oba zawiodą; wyjątki świąteczne; horyzont 60 d; 04.00* fracht)~~ w PR #668; HEL–STO przez Mariehamn — gdy trasa w katalogu (#640).
+2. **B Awizacja 51–53** — ~~UI~~; ~~`guard_load_update` historyczne / `actual_departure_at` (0351)~~; testy HHL_ADMIN vs SCX/OPS.
+3. **C Finlandia / Terminal A** — ~~etykiety `TLLA-HEL`/`HELA-TLL`~~.
+4. **D decyzja 55** — ~~zawsze wszyscy armatorzy + komunikat~~.
+5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; ~~**DFDS Dynamic** `/api/timetable` (EEPLN/SEKPS, tygodnie×2, lim. 4; zapas PDF sezonowy ze strony + HTML)~~ w PR #668.
+6. ~~Testy unit F7 r1 + Dynamic~~; ~~visual CI @ `5aaa0544`~~; odbiór F7. Fix i2: po 0351 przywróć przyszły rejs przed testem pozycji NO_TRACKING.
+
+### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — W TOKU (`pakiet/667-orange-roads`; po #666 / równolegle przy F7 #668)
+Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. §2 D-1050: przy czekaniu na F7 #668 — nie stoimy.
+1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~ w tym PR; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
+2. **SE-KAA** z HERE + obie drogi Karlskrona (#627 E22 / śródlądowa).
+3. Cron odświeżania `here_road_geometry` przed purge 30 dni; brak linii → SOURCE_DOWN/JOB_FAILURE HERE_ROADS.
+4. Diagnostyka: odrzucone legi w Stanie systemu + `integration_runs`.
+5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania.
+6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
+
+### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
+Źródło: #671 (Spawn2018, `dla-cursora`). Każda drobna / „na później” → tu z numerem. Stan sprawdzany przy przejściu etapu. Kolejność pracy bez zmian: #668 → DFDS (#666) → #667 → BN3…
+| DP | Właściciel | Co | Źródło | Etap | Stan |
+|---|---|---|---|---|---|
+| DP-1 | Cursor | Trasy na sztywno (CASE) w `apply_ferry_se_from_position` / `a10_try_ferry_backup` / `detect_ferry_overdue` → `ferry_routes` | F7 #649 | BN3/BN8 | w kolejce |
+| DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | w kolejce |
+| DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | w kolejce |
+| DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
+| DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
+| DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | w kolejce |
+| DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | w kolejce |
+
+### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
+Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
+- **BN9-c1** po BN3 — komunikaty i ręczny komunikat w Ryzykach;
+- **BN9-c2** po BN4 — markery promów, pozycja szacowana, pasek śledzenia;
+- **BN9-c3** po BN5 — pogoda morska Kokpit/Ryzyka;
+- **BN9-c4** po BN6 — Ryzyka › Drogi LT/LV/EE/FI;
+- **BN9-c5** po BN7/#667 — pomarańczowe linie (odbiór ekranami);
+- **BN9-c6** po BN8/#668 — awizacja, wiersz Rejs i ETA na karcie, Kokpit.
+
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
-Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **BN2** rozkłady LIVE SCALONE (#660+#661); dopiski testów F7 w toku; potem **BN3**.
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653~~ SCALONE (**0345**); ~~#654/#648 **0343**~~; ~~**#651 / 0344**~~; ~~**#648 / 0346**~~ SCALONE (`60c6ddf3` / PR #659). **BN2** rozkłady LIVE SCALONE (#660+#661); **#666** (pilne, PR #668 czekam F7) → **#667** (pilne mapy, ten PR) przed BN3.
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2` / F7 @ `bf2572b4`): Tallink; Portnet; Viking/Eckerö/DFDS HTML 14 dni + Terminal A; B1–B3; Decyzja 50 MEDIUM. **Dopisek F7 (nieblokujący):** test Portnet Terminal A + RECZNIE/duplikaty PoT (`pakiet/bn2-f7-portnet-terminal-a-tests`); po wdrożeniu #661 — ręczny `ferry-schedule` → #640.
-3. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+3. **#666** (pilne) — awizacja + Viking Cargo + DFDS Dynamic — **przed #667 / BN3** (PR #668).
+4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR).
+5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -2073,3 +2119,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 13:54 | #664 SCALONE `1ee855fd` (F7 @ 4ddb090 / **0350**); powrót #661 B1–B3 | pętla |
 | 30.10.2026 14:30 | #661 F7: Decyzja 50 Viking SOURCE_DOWN MEDIUM + testy jobów B3/DST | pętla |
 | 30.10.2026 14:54 | #661 SCALONE `392a9bc2` (F7 gotowe @ bf2572b4); start BN2 dopisek testów Terminal A / RECZNIE | pętla |
+| 30.10.2026 20:10 | #667 krok A: mapPool PROD + paintOrangeRoads; #668 czekam F7 @ 5aaa0544; #672 DP front bez F7 | pętla |

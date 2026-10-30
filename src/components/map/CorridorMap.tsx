@@ -438,15 +438,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   useEffect(() => {
     if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
-    void import('./applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => {
+    void import('./applyBasemap').then(async ({ loadRoadLines, paintOrangeRoads }) => {
+      const lines = await loadRoadLines();
       const layers = layersRef.current;
-      if (cancelled || !layers || lines.length === 0) return;
-      layers.route.clearLayers();
-      for (const line of lines) {
-        L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), {
-          color: '#E5A544', weight: 3, opacity: 0.9,
-        }).addTo(layers.route);
-      }
+      if (cancelled || !layers) return;
+      paintOrangeRoads(layers.route, lines);
     });
     /* E45 pkt 1 (L56): przeprawy według HERE, gdy serwer je poda; inaczej zostają stałe tory wodne z `mapPool` */
     void import('./applyBasemap').then(({ loadFerryLines }) => loadFerryLines()).then(({ lines: ferries, summary }) => {

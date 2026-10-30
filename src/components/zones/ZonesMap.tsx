@@ -97,12 +97,17 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
        i przerywane przeprawy promowe między miejscami, pod strefami */
     const route = L.layerGroup().addTo(map);
     routeRef.current = route;
-    const roadStyle = { color: tok('--amber', '#C97E12'), weight: 3, opacity: 0.8, interactive: false };
-    const drawRoads = (lines: readonly (readonly (readonly [number, number])[])[]) => {
-      for (const line of lines) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), roadStyle).addTo(route);
-    };
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') drawRoads(DEMO_ROAD_LINES.map((l) => l));
-    else void import('../map/applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => { if (routeRef.current === route) drawRoads(lines); }).catch(() => undefined);
+    /* #667: ten sam helper co mapPool / CorridorMap (kolor #E5A544); Strefy wcześniej brały --amber z tokenu. */
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+      void import('../map/applyBasemap').then(({ paintOrangeRoads }) => {
+        if (routeRef.current === route) paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
+      }).catch(() => undefined);
+    } else {
+      void import('../map/applyBasemap').then(async ({ loadRoadLines, paintOrangeRoads }) => {
+        const lines = await loadRoadLines();
+        if (routeRef.current === route) paintOrangeRoads(route, lines);
+      }).catch(() => undefined);
+    }
     for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
       L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: tok('--sea', '#245C87'), weight: 2, opacity: 0.8, dashArray: '6 6', interactive: false }).addTo(route);
     }

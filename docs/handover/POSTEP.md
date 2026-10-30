@@ -7197,3 +7197,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **#663 NA PRODUKCJI** `189688bc` @ **13:29 CET** (już w POSTEP 13:25; potwierdzenie F7 #661).
 - **Krok (F7 #661 nieblokujący):** test `parseDigitrafficPortCalls` Terminal A (Viking XPRS/Finlandia → `TLLA-HEL`/`HELA-TLL`, Tallink → `TLL-HEL`); job Viking+PoT bez duplikatów + RECZNIE nietknięte; PLAN §4 BN2 SCALONE + dopisek. Po deploy #661: ręczny `ferry-schedule` → #640. Potem BN3.
 - Bez push na main.
+
+## 2026-10-30 20:10 — #667 krok A (mapPool PROD) przy F7 #668
+
+- Skrzynka: #666/#667/#608 w planie; #550 WSTRZYMANE; #671 zamknięte (rejestr DP).
+- Scalanie: PR #668 CI zielone @ `5aaa0544` — brak „F7: gotowe do scalenia”; PR #672 wygląd DP — visual w toku / bez F7. Bez scalenia.
+- **Krok (#667 A):** wspólny `paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje drogi w PROD przez `loadRoadLines`; GeofenceEditorMap + ZonesMap + CorridorMap; test `i667-orange-roads`. PLAN §4 #666+#667+DP + ZASADY DP. **Dalej w #667:** SE-KAA + obie drogi Karlskrona; cron HERE przed purge; diagnostyka rejected legs; słownik BN7; e2e prod.
+- Bez push na main.
