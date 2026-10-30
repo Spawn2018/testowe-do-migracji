@@ -250,17 +250,8 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
 
 const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
 
-/** #667: jeden styl pomarańczowej trasy drogowej na wszystkich mapach (mapPool / CorridorMap / Strefy). */
-export const ORANGE_ROAD_STYLE = { color: '#E5A544', weight: 3, opacity: 0.9 } as const;
-
-/** Rysuje legi drogowe na warstwie; czyści warstwę tylko gdy są linie do narysowania. */
-export function paintOrangeRoads(layer: L.LayerGroup, lines: readonly LatLng[][]): void {
-  if (lines.length === 0) return;
-  layer.clearLayers();
-  for (const line of lines) {
-    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), ORANGE_ROAD_STYLE).addTo(layer);
-  }
-}
+/** #667: re-export — helper bez auth w `orangeRoads.ts` (paczka demo nie ciągnie applyBasemap). */
+export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';
 
 /** F7 #585: jedno wołanie here-roads na sesję + limit czasu (brakujący leg nie spamuje Edge). */
 let hereRoadsSessionAt = 0;

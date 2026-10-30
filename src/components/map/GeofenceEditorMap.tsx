@@ -48,14 +48,11 @@ export function GeofenceEditorMap({
     groupRef.current = group;
     tilesRef.current = tiles;
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-      void import('./applyBasemap').then(({ loadRoadLines, paintOrangeRoads }) =>
+      void Promise.all([import('./applyBasemap'), import('./orangeRoads')]).then(([{ loadRoadLines }, { paintOrangeRoads }]) =>
         loadRoadLines().then((lines) => { paintOrangeRoads(roads, lines); }),
       ).catch(() => undefined);
     } else {
-      void Promise.all([
-        import('./applyBasemap'),
-        import('../../data/roadLinesDemo'),
-      ]).then(([{ paintOrangeRoads }, { DEMO_ROAD_LINES }]) => {
+      void Promise.all([import('../../data/roadLinesDemo'), import('./orangeRoads')]).then(([{ DEMO_ROAD_LINES }, { paintOrangeRoads }]) => {
         paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));
       }).catch(() => undefined);
     }

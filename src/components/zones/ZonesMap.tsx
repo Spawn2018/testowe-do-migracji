@@ -97,13 +97,13 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
        i przerywane przeprawy promowe między miejscami, pod strefami */
     const route = L.layerGroup().addTo(map);
     routeRef.current = route;
-    /* #667: ten sam helper co mapPool / CorridorMap (kolor #E5A544); Strefy wcześniej brały --amber z tokenu. */
+    /* #667: ten sam helper (orangeRoads — bez auth w demo); Strefy wcześniej brały --amber z tokenu. */
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-      void import('../map/applyBasemap').then(({ paintOrangeRoads }) => {
+      void import('../map/orangeRoads').then(({ paintOrangeRoads }) => {
         if (routeRef.current === route) paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
       }).catch(() => undefined);
     } else {
-      void import('../map/applyBasemap').then(async ({ loadRoadLines, paintOrangeRoads }) => {
+      void Promise.all([import('../map/applyBasemap'), import('../map/orangeRoads')]).then(async ([{ loadRoadLines }, { paintOrangeRoads }]) => {
         const lines = await loadRoadLines();
         if (routeRef.current === route) paintOrangeRoads(route, lines);
       }).catch(() => undefined);

@@ -438,7 +438,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   useEffect(() => {
     if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
     let cancelled = false;
-    void import('./applyBasemap').then(async ({ loadRoadLines, paintOrangeRoads }) => {
+    void Promise.all([import('./applyBasemap'), import('./orangeRoads')]).then(async ([{ loadRoadLines }, { paintOrangeRoads }]) => {
       const lines = await loadRoadLines();
       const layers = layersRef.current;
       if (cancelled || !layers) return;

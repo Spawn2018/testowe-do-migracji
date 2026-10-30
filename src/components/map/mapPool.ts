@@ -157,13 +157,16 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   if (!PROD_BUILD) {
     /* audyt D-07 (E45, E1): demo — tylko odcinki lądowe (PL, SE z Nynäshamn, SE z Karlskrony), ciągłą linią jak trasy
        HERE w produkcji; odcinek morski rysuje warstwa promu. #667: ten sam paintOrangeRoads co PROD. */
-    void import('./applyBasemap').then(({ paintOrangeRoads }) => {
+    void import('./orangeRoads').then(({ paintOrangeRoads }) => {
       paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
     }).catch(() => undefined);
   } else {
     /* #667 A: ta sama warstwa route w PROD (Kokpit / Mapa / karta / telefon) — loadRoadLines z applyBasemap.
        CorridorMap odświeża po dociągnięciu Edge. */
-    void import('./applyBasemap').then(({ loadRoadLines, paintOrangeRoads }) =>
+    void Promise.all([
+      import('./applyBasemap'),
+      import('./orangeRoads'),
+    ]).then(([{ loadRoadLines }, { paintOrangeRoads }]) =>
       loadRoadLines().then((lines) => { paintOrangeRoads(route, lines); }),
     ).catch(() => undefined);
   }
