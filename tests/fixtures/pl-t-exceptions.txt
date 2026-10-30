@@ -89,3 +89,12 @@ Muuga
 Paldiski
 Vuosaari
 Kapellskär
+# BN9-b: armatorzy, porty i źródła Korytarza bałtyckiego (nazwy własne)
+Tallink
+Eckerö
+Finbo
+Portnet
+portnet
+Ports
+SafeFleet
+safefleet
