@@ -17,6 +17,7 @@ const PORTNET = fx('digitraffic-port-calls-megastar-2026-10-29.json');
 const PORT_TLL = fx('port-tallinn-departures-arrivals-sample.html');
 const PORT_STO = fx('ports-stockholm-portentry-sample.json');
 const DFDS_HTML = fx('dfds-weekly-paldiski-kapellskar-sample.html');
+const VIKING_HTML = fx('viking-timetable-helsinki-tallinn-sample.html');
 const NOW = new Date('2026-10-30T12:00:00Z');
 const MEGA = 'v-mega';
 const MYST = 'v-myst';
@@ -33,6 +34,9 @@ class MemStore implements SyncStore {
       { id: MEGA, name: 'M/F Megastar', mmsi: 276829000 },
       { id: MYST, name: 'M/F MyStar', mmsi: 276817000 },
       { id: SIRENA, name: 'M/F Sirena Seaways', mmsi: 277569000 },
+      { id: 'v-xprs', name: 'M/F Viking XPRS', mmsi: 230629000 },
+      { id: 'v-fin', name: 'M/F Finlandia', mmsi: 230987000 },
+      { id: 'v-queen', name: 'M/F Baltic Queen', mmsi: 276815000 },
       { id: 'v-waw', name: 'M/F Wawel', mmsi: null },
       { id: 'v-ns', name: 'M/F Nova Star', mmsi: 311000787 },
     ];
@@ -451,5 +455,95 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     await runFerrySchedule(deps(st, pages));
     expect(st.sailings.find((s) => s.id === 'today')).toMatchObject({ status: 'ODWOLANY' });
     expect(st.sailings.find((s) => s.id === 'tomorrow')).toMatchObject({ status: 'ZAPLANOWANY' });
+  });
+});
+
+const HEL_TLL_JSON = JSON.stringify({
+  trips: {
+    '2026-10-30': {
+      outwards: [{
+        cityFrom: 'HEL', cityTo: 'TAL', pierFrom: 'LSA2', pierTo: 'DTER',
+        shipCode: 'MEGASTAR', departureIsoDate: '2026-10-30T07:30', arrivalIsoDate: '2026-10-30T09:30',
+        sailId: 1, sailPackageCode: 'HEL-TAL', sailPackageName: 'Helsinki-Tallinn',
+      }],
+    },
+  },
+});
+
+const TLL_STO_QUEEN = JSON.stringify({
+  trips: {
+    '2026-10-31': {
+      outwards: [{
+        cityFrom: 'TAL', cityTo: 'STO', pierFrom: 'DTER', pierTo: 'VHAM',
+        shipCode: 'QUEEN', departureIsoDate: '2026-10-31T18:00', arrivalIsoDate: '2026-11-01T10:00',
+        sailId: 2, sailPackageCode: 'TAL-STO', sailPackageName: 'Tallinn-Stockholm',
+      }],
+    },
+  },
+});
+
+describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
+  it('B3: Tallink TLL-HEL + HEL-TLL + QUEEN TLL-STO w jednym przebiegu', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'from=tal&to=hel': TALLINK,
+      'from=hel&to=tal': HEL_TLL_JSON,
+      'from=tal&to=sto': TLL_STO_QUEEN,
+      'from=sto&to=tal': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.some((s) => s.source === 'TALLINK' && s.route === 'TLL-HEL')).toBe(true);
+    expect(st.sailings.some((s) => s.source === 'TALLINK' && s.route === 'HEL-TLL')).toBe(true);
+    expect(st.sailings.some((s) => s.source === 'TALLINK' && s.route === 'TLL-STO')).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
+  });
+
+  it('Decyzja 50: Viking HTTP 403 → SOURCE_DOWN MEDIUM (bez rejsów VIKING)', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'sales.vikingline.com': 403,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.every((s) => s.source !== 'VIKING')).toBe(true);
+    const vk = st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'));
+    expect(vk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
+  });
+
+  it('Eckerö awaria + Viking HTML OK → rejsy VIKING, SOURCE_DOWN ECKERO', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'sales.vikingline.com': VIKING_HTML,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.some((s) => s.source === 'VIKING' && (s.route === 'TLLA-HEL' || s.route === 'HELA-TLL'))).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:ECKERO_SCHEDULE:'))).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(false);
+  });
+
+  it('idempotencja Viking: drugi przebieg bez nowych insertów', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'sales.vikingline.com': VIKING_HTML,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    const n1 = st.sailings.filter((s) => s.source === 'VIKING').length;
+    expect(n1).toBeGreaterThan(0);
+    const r2 = await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.filter((s) => s.source === 'VIKING')).toHaveLength(n1);
+    expect(r2.inserted).toBe(0);
   });
 });

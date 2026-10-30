@@ -178,13 +178,16 @@ const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(utc));
 
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce, nigdy cicha pustka.
- *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień. */
+ *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień.
+ *  F7 #661 Decyzja 50: VIKING_SCHEDULE = MEDIUM (Imperva 403 — bez obchodzenia; HHL, bez push/e-mail). */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
   const sticky = src === 'EMTRACK_WEB' || src === 'RIO' || src === 'KSH_SHAREPOINT';
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
-    severity: /^(POLFERRIES|STENA|TALLINK|VIKING|ECKERO|DFDS)/.test(src) ? 'HIGH' : 'MEDIUM',
+    severity: src === 'VIKING_SCHEDULE'
+      ? 'MEDIUM'
+      : /^(POLFERRIES|STENA|TALLINK|ECKERO|DFDS)/.test(src) ? 'HIGH' : 'MEDIUM',
     title: sticky
       ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`
       : `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,

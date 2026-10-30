@@ -7182,3 +7182,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #664 → `1ee855fd` (F7 @ `4ddb090`, CI unit/visual/db ✔).
 - **Krok #661:** B1 DFDS bez `DFDS_PUBLISHED_WEEKLY_HTML` w jobie (tylko sparsowana treść; HTTP 200 bez tabeli → SOURCE_DOWN); B2 PoT tylko dzień tablicy (bez daty +1); okresy sezonów Viking/Eckerö/Finbo (`parseSeasonRanges`); testy parser + job.
 - Push → CI → F7. Bez push na main.
+
+## 2026-10-30 14:30 — #661 F7 Decyzja 50 + testy jobów B3
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: brak „F7: gotowe” po `736448e6`; CI @ `736448e6` unit/visual/db ✔.
+- **Krok:** Decyzja 50 — `sourceDownRisk(VIKING_SCHEDULE)` = **MEDIUM** (Imperva 403, HHL); testy jobów B3 Tallink TLL-HEL+HEL-TLL+QUEEN; Viking 403 MEDIUM; Eckerö awaria; idempotencja Viking; DST marzec/październik w parserze HTML.
+- Push → CI → F7. Bez push na main.

@@ -173,6 +173,25 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.some((s) => s.route === 'PLD-KPS' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
     expect(r.sailings.some((s) => s.route === 'KPS-PLD' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
   });
+
+  it('F7 #661: rozwinięcie tygodnia przez DST (marzec / październik Tallinn)', () => {
+    // Fixture z sezonem obejmującym marzec (produkcyjny Viking: od 01.09).
+    const html = `<html><body><h2>01.01.2026–31.12.2026</h2>
+<table data-route="tallinn-helsinki"><thead><tr><th>Departure</th><th>Arrival</th><th>Day</th><th>Ship</th></tr></thead>
+<tbody><tr><td>07.00</td><td>09.30</td><td>Every Day</td><td>Viking XPRS</td></tr></tbody></table>
+</body></html>`;
+    // 29.03.2026 03:00 EET→EEST (+2→+3); 25.10.2026 04:00 EEST→EET.
+    const spring = parseVikingTimetableHtml(html, { fromYmd: '2026-03-28', days: 3 });
+    expect(spring.sailings.find((s) => s.departureUtc.startsWith('2026-03-28'))!.departureUtc)
+      .toBe('2026-03-28T05:00:00.000Z'); // 07:00 EET
+    expect(spring.sailings.find((s) => s.departureUtc.startsWith('2026-03-30'))!.departureUtc)
+      .toBe('2026-03-30T04:00:00.000Z'); // 07:00 EEST
+    const autumn = parseVikingTimetableHtml(html, { fromYmd: '2026-10-24', days: 3 });
+    expect(autumn.sailings.find((s) => s.departureUtc.startsWith('2026-10-24'))!.departureUtc)
+      .toBe('2026-10-24T04:00:00.000Z'); // 07:00 EEST
+    expect(autumn.sailings.find((s) => s.departureUtc.startsWith('2026-10-25'))!.departureUtc)
+      .toBe('2026-10-25T05:00:00.000Z'); // 07:00 EET
+  });
 });
 
 describe('BN2 Port of Tallinn HTML', () => {
