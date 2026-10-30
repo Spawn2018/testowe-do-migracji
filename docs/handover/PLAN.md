@@ -1194,10 +1194,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-17 | koordynator | `routeOfVessel` w mapach z listą z bazy | F7 #672 | wyglad | w kolejce |
 | DP-18 | koordynator | oxlint `set-state-in-effect` `SailingsPanel.tsx:95` | F7 #672 | wyglad | w kolejce |
 | DP-19 | koordynator | domyślny statek odporny na wielkość liter | F7 #672 | wyglad | w kolejce |
-| DP-20 | koordynator | Rejsy: armator bez rejsów nie w filtrze (`linesPresent`) | F7 #668 r2 | wyglad (po #668+#672) | w kolejce |
-| DP-21 | Cursor | po wdrożeniu: Viking Cargo 403 z IP DC — sprawdź TLLA-HEL w #666 | F7 #668 r2 N7 | po deploy #668 | w kolejce |
 | DP-20 | koordynator | Rejsy: armator bez rejsów nadal w filtrze (`SailingsPanel` `linesPresent`) | F7 #668 r2 | wyglad po #668+#672 | w kolejce |
-| DP-21 | Cursor | po wdrożeniu: Viking Cargo z IP DC → 403 Cloudflare — sprawdź TLLA-HEL ze źródła Cargo w #666 (bez obchodzenia, decyzja 50) | F7 #668 r2 | po deploy #668 | w kolejce |
+| DP-21 | Cursor | po wdrożeniu: Viking Cargo z IP DC → 403 Cloudflare — sprawdź TLLA-HEL ze źródła Cargo w #666 (bez obchodzenia, decyzja 50) | F7 #668 r2 N7 | po deploy #668 | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
