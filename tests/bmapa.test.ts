@@ -177,7 +177,8 @@ describe('B-MAPA geometria', () => {
     expect(kaaDeviationOk(chord, dense)).toBe(false);
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
-    expect(apply).toMatch(/ROAD_LEGS = 4/);
+    expect(apply).toMatch(/ROAD_LEGS = 5/); // #667 B: + SE-KAA-INLAND
+    expect(apply).toMatch(/SE-KAA-INLAND/);
     expect(apply).toMatch(/AbortController/);
     expect(apply).toMatch(/timeout\/sieć/);
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
@@ -186,8 +187,11 @@ describe('B-MAPA geometria', () => {
     expect(edge).toMatch(/kaaDeviationOk/);
     expect(edge).toMatch(/shouldFetch/);
     expect(edge).toMatch(/roadKaaSpecFromVia/);
-    expect(edge).toMatch(/SE_KAA_TRACK/);
-    expect(edge).not.toMatch(/SE_E22/);
+    // #667 B: E22 + inland (TRACK tylko przez stena_se_inland_corridor_code)
+    expect(edge).toMatch(/SE_E22/);
+    expect(edge).toMatch(/SE-KAA-INLAND/);
+    expect(edge).toMatch(/stena_se_inland_corridor_code/);
+    expect(edge).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
     const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');
     expect(mig).toMatch(/SE_KAA_TRACK/);
     expect(mig).toMatch(/retry_after/);

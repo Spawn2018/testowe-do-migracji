@@ -233,6 +233,21 @@ kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_displ
 e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E22'")
 [ "$e22_before" = "$e22_after" ] && { ok=$((ok+1)); echo "  OK    SE_E22 bez zmian (N8)"; } || { fail=$((fail+1)); echo "  FAIL  SE_E22 nadpisane"; }
 
+# #667 B: druga noga SE-KAA-INLAND + zapis z SE_E22 / SE_KAA_INLAND
+echo; echo "[#667] B SE-KAA dual (E22 + inland)"
+sys "select here_store_road('SE-KAA-INLAND', here_corridor_points('SE_KAA_INLAND'), 'trasa Karlskrona–Boden śródlądowa (test #667)', now())" >/dev/null
+inland_ok=$(sys "select (points is not null and jsonb_array_length(points)>=2)::text from here_road_geometry where leg='SE-KAA-INLAND'")
+[ "$inland_ok" = "true" ] && { ok=$((ok+1)); echo "  OK    SE-KAA-INLAND zapisany z SE_KAA_INLAND"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA-INLAND → $inland_ok"; }
+dev_in=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA-INLAND','SE_KAA_INLAND')::text,'null')")
+awk "BEGIN{exit !($dev_in+0 <= 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    SE-KAA-INLAND odchyłka ↔ SE_KAA_INLAND ≤ 2 km ($dev_in m)"; } || { fail=$((fail+1)); echo "  FAIL  inland odchyłka → $dev_in"; }
+sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Karlskrona–Boden E22 (test #667)', now())" >/dev/null
+dev_e22=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_E22')::text,'null')")
+awk "BEGIN{exit !($dev_e22+0 <= 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    SE-KAA odchyłka ↔ SE_E22 ≤ 2 km ($dev_e22 m)"; } || { fail=$((fail+1)); echo "  FAIL  E22 odchyłka → $dev_e22"; }
+legs5=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
+if [ "$legs5" = "5" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 5"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs5"; fi
+kaa_in=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA-INLAND' and jsonb_array_length(e->'points')>=2)::text")
+[ "$kaa_in" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA-INLAND"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA-INLAND w roads → $kaa_in"; }
+
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).
 # F7 r6: source = TELEMATICS_API (enum); F7 r6b: hhl/carrier_order_no (enforce_order_numbers

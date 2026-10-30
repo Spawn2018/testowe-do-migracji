@@ -224,6 +224,7 @@ const SPEC: Record<string, typeof ROAD_PL | typeof ROAD_SE | typeof ROAD_KAA | '
   'SE-NYN': ROAD_SE,
   'PL-GDY': 'loose',
   'SE-KAA': ROAD_KAA,
+  'SE-KAA-INLAND': ROAD_KAA, // #667 B: ta sama tolerancja geometrii; via z korytarza śródlądowego
 };
 
 export function acceptedRoads(rows: unknown): LatLng[][] {
@@ -248,7 +249,7 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
   return out;
 }
 
-const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
+const ROAD_LEGS = 5; // PL-GDN, SE-NYN, PL-GDY, SE-KAA, SE-KAA-INLAND (#667 B)
 
 /** #667: re-export — helper bez auth w `orangeRoads.ts` (paczka demo nie ciągnie applyBasemap). */
 export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';

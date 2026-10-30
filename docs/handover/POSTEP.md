@@ -7204,3 +7204,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: PR #668 CI zielone @ `5aaa0544` — brak „F7: gotowe do scalenia”; PR #672 wygląd DP — visual w toku / bez F7. Bez scalenia.
 - **Krok (#667 A):** wspólny `paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje drogi w PROD przez `loadRoadLines`; GeofenceEditorMap + ZonesMap + CorridorMap; test `i667-orange-roads`. PLAN §4 #666+#667+DP + ZASADY DP. **Dalej w #667:** SE-KAA + obie drogi Karlskrona; cron HERE przed purge; diagnostyka rejected legs; słownik BN7; e2e prod.
 - Bez push na main.
+
+## 2026-10-30 20:55 — #667 B SE-KAA dual (E22 + inland)
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r2 @ `084b5f77` — czekam „gotowe do scalenia”; CI db/visual w toku G-15); #667 ten PR; #608 w planie; #550 WSTRZYMANE. #674 wygląd DP-front-2 bez F7.
+- Scalanie: brak „F7: gotowe do scalenia” na #668/#673/#674. Bez scalenia. Bez push na main.
+- **Krok (#667 B):** migracja **0352** — leg `SE-KAA-INLAND`; `here_store_road` / `here_road_corridor_dev_m`. Edge `here-roads`: `SE-KAA` ← via `SE_E22`; `SE-KAA-INLAND` ← `stena_se_inland_corridor_code()` (bez pustego TRACK). Front `ROAD_LEGS=5` + SPEC. Testy unit i667/bmapa; bmapa EXPECTED 168→173. **Dalej:** C cron HERE przed purge; D diagnostyka; E słownik BN7; F e2e prod.
+- Bez push na main.

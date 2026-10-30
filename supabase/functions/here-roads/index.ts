@@ -1,8 +1,9 @@
 /**
  * B-MAPA — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
- * #572 BN0 / F7 #585 r4: SE-KAA z via z SE_KAA_TRACK; shouldFetch (retry_after przed świeżością);
- * odchyłka NOWE-3; odrzucenie nie kasuje punktów.
+ * #572 BN0 / F7 #585 r4: SE-KAA z via; shouldFetch; odchyłka NOWE-3; odrzucenie nie kasuje punktów.
+ * #667 B: SE-KAA ← SE_E22 (wybrzeże); SE-KAA-INLAND ← stena_se_inland_corridor_code()
+ *   (SE_KAA_INLAND lub SE_KAA_TRACK). Bez twardej zależności od pustego TRACK.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { decodeFlexiblePolyline } from '../_shared/here/routeCheck.ts';
@@ -19,15 +20,43 @@ import {
 } from '../_shared/map/draw.ts';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 
-const LEGS = [
+type LegSpec = typeof ROAD_PL | typeof ROAD_SE | 'loose' | 'kaa';
+
+type RoadLeg = {
+  leg: string;
+  origin: string;
+  destination: string;
+  spec: LegSpec;
+  summary: string;
+  /** Stały kod korytarza (SE-KAA = E22). */
+  corridorCode?: string;
+  /** true → corridor = wynik stena_se_inland_corridor_code(). */
+  corridorInland?: boolean;
+};
+
+const LEGS: readonly RoadLeg[] = [
   { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: ROAD_PL, summary: 'Trasa drogowa Śrem–Gdańsk' },
   { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: ROAD_SE, summary: 'Trasa drogowa Nynäshamn–Boden' },
-  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose' as const, summary: 'Trasa drogowa Śrem–Gdynia' },
-  { leg: 'SE-KAA', origin: '56.1646,15.6308', destination: '65.80539,21.75914', spec: 'kaa' as const, summary: 'Trasa drogowa Karlskrona–Boden' },
+  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia' },
+  {
+    leg: 'SE-KAA',
+    origin: '56.1646,15.6308',
+    destination: '65.80539,21.75914',
+    spec: 'kaa',
+    summary: 'Trasa drogowa Karlskrona–Boden (E22 / wybrzeże)',
+    corridorCode: 'SE_E22',
+  },
+  {
+    leg: 'SE-KAA-INLAND',
+    origin: '56.1646,15.6308',
+    destination: '65.80539,21.75914',
+    spec: 'kaa',
+    summary: 'Trasa drogowa Karlskrona–Boden (śródlądowa)',
+    corridorInland: true,
+  },
 ] as const;
 
 const RETRY_REJECT_MS = 24 * 3600e3;
-const CORRIDOR_KAA = 'SE_KAA_TRACK';
 
 function parseCorridorPoints(raw: unknown): LatLng[] {
   if (!Array.isArray(raw)) return [];
@@ -39,6 +68,23 @@ function parseCorridorPoints(raw: unknown): LatLng[] {
     if (Number.isFinite(lat) && Number.isFinite(lng)) out.push([lat, lng]);
   }
   return out;
+}
+
+type CorridorBundle = { code: string; pts: LatLng[]; via: LatLng[]; updatedAt: number };
+
+async function loadCorridor(
+  sb: ReturnType<typeof createClient>,
+  code: string,
+): Promise<CorridorBundle> {
+  const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', code).maybeSingle();
+  const updatedAt = Date.parse(String(corrRow.data?.updated_at ?? '')) || 0;
+  let pts: LatLng[] = [];
+  let via: LatLng[] = [];
+  const ptsRpc = await sb.rpc('here_corridor_points', { p_code: code });
+  if (!ptsRpc.error) pts = parseCorridorPoints(ptsRpc.data);
+  const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: code, p_max: 14 });
+  if (!viaRpc.error) via = parseCorridorPoints(viaRpc.data);
+  return { code, pts, via, updatedAt };
 }
 
 Deno.serve(async (req) => {
@@ -72,33 +118,44 @@ Deno.serve(async (req) => {
     });
   }
 
-  let corridorPts: LatLng[] = [];
-  let viaPts: LatLng[] = [];
-  let corridorUpdatedAt = 0;
-  {
-    const corrRow = await sb.from('corridor_polylines').select('updated_at').eq('code', CORRIDOR_KAA).maybeSingle();
-    corridorUpdatedAt = Date.parse(String(corrRow.data?.updated_at ?? '')) || 0;
-    const ptsRpc = await sb.rpc('here_corridor_points', { p_code: CORRIDOR_KAA });
-    if (!ptsRpc.error) corridorPts = parseCorridorPoints(ptsRpc.data);
-    const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: CORRIDOR_KAA, p_max: 14 });
-    if (!viaRpc.error) viaPts = parseCorridorPoints(viaRpc.data);
+  const corridorCache = new Map<string, CorridorBundle>();
+  async function corridorFor(leg: RoadLeg): Promise<CorridorBundle | null> {
+    let code = leg.corridorCode ?? null;
+    if (leg.corridorInland) {
+      const rpc = await sb.rpc('stena_se_inland_corridor_code');
+      if (rpc.error || typeof rpc.data !== 'string' || !rpc.data) return null;
+      code = rpc.data;
+    }
+    if (!code) return null;
+    const cached = corridorCache.get(code);
+    if (cached) return cached;
+    const loaded = await loadCorridor(sb, code);
+    corridorCache.set(code, loaded);
+    return loaded;
   }
 
   let stored = 0;
   const nowMs = Date.now();
   for (const leg of LEGS) {
     const prev = have.get(leg.leg);
+    const isKaa = leg.spec === 'kaa';
+    const corridor = isKaa ? await corridorFor(leg) : null;
     const corridorNewer =
-      leg.leg === 'SE-KAA' &&
-      corridorUpdatedAt > 0 &&
+      isKaa &&
+      corridor != null &&
+      corridor.updatedAt > 0 &&
       prev != null &&
       Number.isFinite(Date.parse(prev.fetched_at)) &&
-      corridorUpdatedAt > Date.parse(prev.fetched_at);
+      corridor.updatedAt > Date.parse(prev.fetched_at);
     // F7 r4 P1: najpierw retry_after, potem świeżość 30 dni (także przy fetched_at=-infinity).
     if (!shouldFetch(prev, nowMs, corridorNewer)) continue;
 
-    // F7 #585: SE-KAA bez korytarza — pomiń (bez zapytania „na ślepo”).
-    if (leg.leg === 'SE-KAA' && corridorPts.length < 2) continue;
+    // #667: bez korytarza E22/INLAND nie wołaj HERE „na ślepo” (jak F7 #585 dla TRACK).
+    if (isKaa && (corridor == null || corridor.pts.length < 2)) continue;
+
+    const viaPts = corridor?.via ?? [];
+    const corridorPts = corridor?.pts ?? [];
+    const corridorLabel = corridor?.code ?? '?';
 
     const routeUrl = new URL('https://router.hereapi.com/v8/routes');
     routeUrl.searchParams.set('transportMode', 'truck');
@@ -106,7 +163,7 @@ Deno.serve(async (req) => {
     routeUrl.searchParams.set('destination', leg.destination);
     routeUrl.searchParams.set('return', 'polyline');
     routeUrl.searchParams.set('apiKey', key);
-    if (leg.leg === 'SE-KAA') {
+    if (isKaa) {
       for (const v of viaPts) {
         routeUrl.searchParams.append('via', `${v[0]},${v[1]}!passThrough=true`);
       }
@@ -137,15 +194,14 @@ Deno.serve(async (req) => {
     }
     const spec = leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts) : leg.spec;
     const okGeom = spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, spec);
-    const okDev =
-      leg.leg !== 'SE-KAA' || corridorPts.length < 2 || kaaDeviationOk(line, corridorPts);
+    const okDev = !isKaa || corridorPts.length < 2 || kaaDeviationOk(line, corridorPts);
     if (!okGeom || !okDev) {
       // NOWE-1/2: p_now = retry_after; fetched_at bez zmian; points zostają.
       const retryIso = new Date(Date.now() + RETRY_REJECT_MS).toISOString();
       await sb.rpc('here_store_road', {
         p_leg: leg.leg,
         p_points: null,
-        p_summary: leg.summary + (okGeom ? ' — odchyłka od SE_KAA_TRACK' : ' — geometria odrzucona'),
+        p_summary: leg.summary + (okGeom ? ` — odchyłka od ${corridorLabel}` : ' — geometria odrzucona'),
         p_now: retryIso,
       });
       continue;
