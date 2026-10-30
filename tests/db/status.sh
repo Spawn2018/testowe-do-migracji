@@ -2558,13 +2558,34 @@ chk "BN1 648: promote nie rusza ładunku na wyłączonej trasie" \
 # SCX nie może zmieniać active
 out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX';
  select ferry_route_set_active('TLLA-HEL', true); rollback;" 2>&1)
-echo "$out" | grep -qiE 'Wyłącznie administrator|42501' \
+echo "$out" | grep -qiE 'Administrator HHL|42501' \
   && { ok=$((ok+1)); echo "  OK    BN1 648: SCX odmowa ferry_route_set_active"; } \
   || { fail=$((fail+1)); echo "  FAIL  BN1 648: SCX odmowa ferry_route_set_active: $out"; }
 q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select ferry_route_set_active('TLLA-HEL', true); commit" >/dev/null
 chk "BN1 648: TLLA-HEL przywrócone active" \
   "select active from ferry_routes where code='TLLA-HEL'" t
+# F7 #654 nieblokujące: kontrola pozytywna — promote przy active=true nie przechodzi pusto
+chk "BN1 648: promote przy active=true → FERRY" \
+  "select promote_ferry_departures('2026-10-16 10:00+00'); select status from loads where id='$L648p'" FERRY
+# F7 #659: HHL_ADMIN bez 2FA → odmowa; aal2 false→f, potem true→t (nie true→true — wczesny return)
+q "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
+out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+ select ferry_route_set_active('TLLA-HEL', true); rollback;" 2>&1)
+echo "$out" | grep -qiE '2FA|42501' \
+  && { ok=$((ok+1)); echo "  OK    BN1 648: HHL_ADMIN aal1 odmowa ferry_route_set_active"; } \
+  || { fail=$((fail+1)); echo "  FAIL  BN1 648: HHL_ADMIN aal1 odmowa ferry_route_set_active: $out"; }
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   set local request.jwt.claim.aal='aal2';
+   select ferry_route_set_active('TLLA-HEL', false); commit" >/dev/null
+chk "BN1 648: HHL_ADMIN aal2 ferry_route_set_active false → f" \
+  "select active from ferry_routes where code='TLLA-HEL'" f
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   set local request.jwt.claim.aal='aal2';
+   select ferry_route_set_active('TLLA-HEL', true); commit" >/dev/null
+chk "BN1 648: HHL_ADMIN aal2 ferry_route_set_active true → t" \
+  "select active from ferry_routes where code='TLLA-HEL'" t
+q "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -6910,6 +6910,25 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 08:35 — #659 F7 r2: aal2 false→f + true→t (status 502)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: #659 bez „F7: gotowe”; CI @ `ca556ca7` zielone; F7 **POPRAWKI** (aal2 true→true puste).
+- **Krok:** MFA blok — aal1 odmowa bez zmian; aal2 `false` → `chk f`, aal2 `true` → `chk t`, flaga `MFA_HHL_ADMIN` przywrócona; EXPECTED status **502**. Push → CI → F7. Potem BN2. Bez push na main.
+
+## 2026-10-30 08:15 — #659 F7 POPRAWKI: test MFA aal1/aal2 (status 501)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: #659 bez „F7: gotowe”; CI @ `d45fb15c` zielone; F7 **POPRAWKI** (brak testu HHL_ADMIN bez 2FA).
+- **Krok:** `status.sh` BN1 648 — `MFA_HHL_ADMIN=true`, HHL aal1 → `2FA|42501`, aal2 → `active` bez zmian, przywrócenie flagi; EXPECTED status **501**. Push → CI → F7. Potem BN2. Bez push na main.
+
+## 2026-10-30 07:53 — #657 SCALONE; #648 F7 nieblokujące (0346)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: F7 „gotowe do scalenia” @ `d64fed0` (Spawn2018, po tipie) + CI zielone → **#657 SCALONE** `6201272c` (**0345**). Bez push na main.
+- **Krok #648 F7:** gałąź `pakiet/648-f7-ferry-route-mfa` / migracja **0346** — `ferry_route_set_active` jak `ksh_sync_write_set` (HHL_ADMIN + `mfa_satisfied`); test promote przy `active=true` → FERRY; null-guard komunikat 2FA; status **499**. POSTEP 01:45 już miał **0343** (bez zmiany numeru).
+- Push → CI → F7. Potem BN2. Bez push na main.
+
 ## 2026-10-30 07:30 — #657 CI: import FAIL — testy #650 po revoke
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
