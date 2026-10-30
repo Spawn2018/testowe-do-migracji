@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 486, // #588/C9 E19: +9 (Przeczytali×3, cancel×2, anon/auth email, SCX price, anon SELECT); było 477 (+5 C11)
-  status: 476, // BN1 0339 F7 #649 r2: +6 e2e AIS rodzina SE (NYN-GDN/GDN-NYN); było 470 (+4 AIS OTHER/TLL-HEL)
+  status: 484, // BN1 #648/0343: +8 seed/TLLA-HEL/set_active; było 476 (#649 +6 AIS SE)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,
@@ -23,9 +23,9 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 396, // #650 F7 r3: +1 N5 backfill REMOVED (własny ładunek); było 395
-  nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
-  i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
+  import: 423, // #653 CI @ 879b21bd: 423 OK/0 FAIL (EXPECTED 424 był o 1 za wysoko; CARRIER wliczony)
+  nullguard: 900, // BN1 #648: +1 GUARD ×5 (ferry_route_set_active); było 895 (#650 enqueue_active_wt)
+  i2: 672, // #653: +1 SUMMARY zamiast PLAN_DATES IN_APP; było 671
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)

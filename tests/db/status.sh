@@ -2458,8 +2458,9 @@ q "insert into load_events (load_id, event_type, occurred_at) values
 # HHL_ADMIN wyłącza trasę → promote pomija (ferry_route_is_outbound = false)
 q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select ferry_route_set_active('TLLA-HEL', false); commit" >/dev/null
+# Bez ::text — boolean z psql = t/f (nie true/false)
 chk "BN1 648: TLLA-HEL active=false" \
-  "select active::text from ferry_routes where code='TLLA-HEL'" f
+  "select active from ferry_routes where code='TLLA-HEL'" f
 chk "BN1 648: outbound TLLA-HEL po wyłączeniu = false" \
   "select public.ferry_route_is_outbound('TLLA-HEL')" f
 chk "BN1 648: promote nie rusza ładunku na wyłączonej trasie" \
@@ -2473,7 +2474,7 @@ echo "$out" | grep -qiE 'Wyłącznie administrator|42501' \
 q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select ferry_route_set_active('TLLA-HEL', true); commit" >/dev/null
 chk "BN1 648: TLLA-HEL przywrócone active" \
-  "select active::text from ferry_routes where code='TLLA-HEL'" t
+  "select active from ferry_routes where code='TLLA-HEL'" t
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

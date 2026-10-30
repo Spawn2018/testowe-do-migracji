@@ -1,5 +1,6 @@
--- BN1 / #648: jedna funkcja seedu stref bałtyckich + active=false (promote) tylko HHL_ADMIN.
+-- BN1 / #648 / 0343: jedna funkcja seedu stref bałtyckich + active=false (promote) tylko HHL_ADMIN.
 -- Współrzędne 1:1 z 0338 (bez edycji nałożonej migracji). e2e TLLA-HEL w status.sh.
+-- Po #656: numer 0342 zajęty przez dzwonek importu.
 
 begin;
 
@@ -84,6 +85,7 @@ declare
   v_code text := upper(btrim(coalesce(p_code, '')));
   v_prev boolean;
 begin
+  perform public.assert_not_preview();
   if (public.current_app_role() = 'HHL_ADMIN') is not true then
     raise exception 'Wyłącznie administrator HHL' using errcode = '42501';
   end if;

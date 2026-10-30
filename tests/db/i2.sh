@@ -453,7 +453,9 @@ chk "I-25: deadline = plan_delivery_to gdy jest godzina" "$(Q "select (load_deli
 val "import zmienia datę — zawsze (plik=źródło), overwrite zbędne" $HHL "select (r->'confirmed'->0->>'overwrite')||'/'||jsonb_array_length(r->'confirmed') from ($(IMP18 $D5 $D6 '' false)) s(r)" "true/1" commit
 chk "po imporcie: nowe daty, POTWIERDZONA" "$(Q "select plan_dates_status||'/'||plan_load_date||'/'||plan_delivery_date from loads where id='$LD'")" "POTWIERDZONA/$D5/$D6"
 chk "zmiana daty: zdarzenie PLAN_DATES_CHANGED" "$(Q "select (count(*) >= 1)::text from load_events where load_id='$LD' and event_type='PLAN_DATES_CHANGED'")" "true"
-chk "zmiana daty: powiadomienie IN_APP" "$(Q "select (count(*) >= 1)::text from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$LD'")" "true"
+# #653: przy imporcie bez PLAN_DATES IN_APP — zostaje KSH_IMPORT_SUMMARY
+chk "zmiana daty: 0 PLAN_DATES IN_APP (#653)" "$(Q "select count(*)::text from notifications where template='PLAN_DATES_CHANGED' and channel='IN_APP' and load_id='$LD'")" "0"
+chk "zmiana daty: KSH_IMPORT_SUMMARY (#653)" "$(Q "select (count(*) >= 1)::text from notifications where template='KSH_IMPORT_SUMMARY' and channel='IN_APP' and read_at is null")" "true"
 chk "próg wyprzedzenia KSH jest w Opcjach (LEAD_DAYS = 5), nie w app_parameters" "$(Q "select value_num::int::text from ops_thresholds where key='LEAD_DAYS'")/$(Q "select count(*) from app_parameters where key='DATE_CONFIRM_DAYS'")" "5/0"
 chk "TRANSIT_TARGET_DAYS = 4" "$(Q "select value::int from app_parameters where key='TRANSIT_TARGET_DAYS'")" "4"
 val "parametry czytelne dla zalogowanych" $KSH "select count(*) from app_parameters where key in ('DATE_CONFIRM_DAYS','TRANSIT_TARGET_DAYS')" 1

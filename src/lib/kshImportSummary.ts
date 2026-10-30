@@ -54,11 +54,15 @@ export function importSummaryNotice(p: Record<string, unknown>): { subject: stri
   const keys = ['transports', 'fields', 'added', 'cancelled'] as const;
   const has = keys.some((k) => typeof p[k] === 'number');
   const n = (k: string) => (Number.isFinite(Number(p[k])) ? Number(p[k]) : 0);
+  /* #653: sprawy/decyzje z importu — w treści zbiorczego, bez osobnych dzwonków */
+  const risks = n('risks');
+  const decisions = n('decisions');
+  const tail = risks > 0 || decisions > 0 ? ` · w tym: ${risks} spraw, ${decisions} decyzji` : '';
   return {
     subject: `Zmiany z pliku KSH${when ? ` — ${when}` : ''}`,
     /* bez liczb w payloadzie (np. liczone dopiero w oknie wg roli) — zdanie zamiast „0” */
     body: has
-      ? `Transporty: ${n('transports')} · pola: ${n('fields')} · nowe: ${n('added')} · anulowane/usunięte: ${n('cancelled')}`
+      ? `Transporty: ${n('transports')} · pola: ${n('fields')} · nowe: ${n('added')} · anulowane/usunięte: ${n('cancelled')}${tail}`
       : 'Otwórz, aby zobaczyć zmiany z ostatniego importu.',
   };
 }
