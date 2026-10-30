@@ -3,7 +3,7 @@
  * Nazwy bez przedrostka „M/F”, armator rozpoznany z tekstu (`operatorFromText`). Zapas: stała lista BN9-b
  * (tryb demo, błąd odczytu, pusta tabela).
  */
-import { OPERATOR_MATCH_ORDER, operatorFromText, type FerryOperator } from './ferryCatalog';
+import { OPERATOR_MATCH_ORDER, operatorFromText, outboundRoutesOf, type FerryOperator } from './ferryCatalog';
 
 export interface VesselGroup { op: FerryOperator; names: readonly string[] }
 
@@ -34,4 +34,18 @@ export function groupVessels(rows: readonly { name: string | null; operator: str
 /** Armator statku z listy (ręczny rejs zapamiętuje armatora statku, nie pierwszego armatora trasy). */
 export function vesselOperator(groups: readonly VesselGroup[], vessel: string): FerryOperator | undefined {
   return groups.find((g) => g.names.includes(vessel))?.op;
+}
+
+/**
+ * DP-4: trasa auta na promie bez przypisanego rejsu — z armatora statku, tylko gdy armator ma jedną trasę wyjazdową
+ * (Nova Star → Polferries → GDN-NYN; Stena → GDY-KAA). Armator z kilkoma trasami (Tallink) albo statek nieznany → null,
+ * bez zgadywania.
+ */
+export function routeOfVessel(vessel: string | null | undefined, groups: readonly VesselGroup[] = VESSELS_FALLBACK): string | null {
+  if (!vessel) return null;
+  const name = vessel.replace(/^M\/F\s+/i, '').trim();
+  const op = vesselOperator(groups, name) ?? operatorFromText(name);
+  if (!op) return null;
+  const routes = outboundRoutesOf(op);
+  return routes.length === 1 ? routes[0] : null;
 }

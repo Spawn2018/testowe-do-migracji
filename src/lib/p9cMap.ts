@@ -15,6 +15,7 @@ import { formatListDateTime } from './format';
 import { transportLabel, transportSearchBlob } from './transportName';
 import { trackingNoLink } from './trackerLink';
 import { ferryRouteEnds } from './portName';
+import { routeOfVessel } from './vesselGroups';
 
 const TZ = 'Europe/Warsaw';
 /** Nazwy portów po polsku ze słownika `p3a_port_*` (BN9-a: wszystkie porty z katalogu promów). */
@@ -99,9 +100,11 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
     const s = ctx.sailingOf(l.sailingId);
     const vessel = s?.vessel ?? l.ferry.vessel;
     if (vessel) {
-      /* DP-4: porty ze słownika tras; trasa nieznana — surowy kod; brak rejsu — sam statek (bez zgadywania GDN-NYN) */
-      const ends = ferryRouteEnds('pl', s?.route);
-      stageSub = ends ? `${vessel} · ${ends.a} → ${ends.b}` : s?.route ? `${vessel} · ${s.route}` : vessel;
+      /* DP-4: porty ze słownika tras; trasa nieznana — surowy kod; bez rejsu — trasa z armatora statku (jedna trasa
+         wyjazdowa), inaczej sam statek (bez zgadywania GDN-NYN) */
+      const route = s?.route ?? routeOfVessel(vessel);
+      const ends = ferryRouteEnds('pl', route);
+      stageSub = ends ? `${vessel} · ${ends.a} → ${ends.b}` : route ? `${vessel} · ${route}` : vessel;
     }
   }
 

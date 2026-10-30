@@ -19,6 +19,7 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
+import { routeOfVessel } from '../../lib/vesselGroups';
 import {
   acquireMap, attributionOf, drawFerryLanes, ensureBasemap, FERRY_LANE_STYLE, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
@@ -564,7 +565,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
         if (!l) return null;
         const ls = l.sailingId ? undefined : sailings.find((x) => x.vessel === l.ferry.vessel && x.departureAt === l.ferry.departureAt);
-        return { vessel: l.ferry.vessel, route: ls?.route ?? null, departureAt: l.ferry.departureAt };
+        /* DP-4: bez rejsu — trasa z armatora statku (jedna trasa wyjazdowa), nie domyślne GDN-NYN */
+        return { vessel: l.ferry.vessel, route: ls?.route ?? routeOfVessel(l.ferry.vessel), departureAt: l.ferry.departureAt };
       };
       const shipOf = (fk: string): ShipFix | null => {
         const v = vesselKey(ferryInfo(fk)?.vessel);

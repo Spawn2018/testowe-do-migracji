@@ -9,7 +9,7 @@ import { p9m, p9mp } from '../src/i18n/p9c';
 import { p9e, p9ep } from '../src/i18n/p9e';
 import { sv } from '../src/i18n/sail7';
 import { ferryRouteEnds } from '../src/lib/portName';
-import { groupVessels, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
+import { groupVessels, routeOfVessel, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
 import type { Load } from '../src/types';
 
 const NOW = '2026-10-09T22:30:00Z';
@@ -31,11 +31,11 @@ describe('DP-4 · porty ze słownika tras zamiast dzielenia kodu', () => {
     expect(ferryRouteEnds('pl', 'GDN-NYN')).toEqual({ a: 'Gdańsk', b: 'Nynäshamn' });
     expect(ferryRouteEnds('pl', null)).toBeNull();
   });
-  it('Mapa: „Finlandia · Tallinn A → Helsinki”; brak rejsu — sam statek, bez Gdańsk → Nynäshamn', () => {
+  it('Mapa: „Finlandia · Tallinn A → Helsinki”; bez rejsu — trasa z armatora statku albo sam statek', () => {
     const r = mapRow(ferryLoad(), ctx({ sailingOf: () => ({ id: 's1', vessel: 'Finlandia', route: 'TLLA-HEL' } as never) }));
     expect(r.stageSub).toBe('Finlandia · Tallinn A → Helsinki');
-    const bare = mapRow(ferryLoad('Wawel'), ctx());
-    expect(bare.stageSub).toBe('Wawel');
+    expect(mapRow(ferryLoad('Wawel'), ctx()).stageSub).toBe('Wawel · Gdańsk → Nynäshamn');
+    expect(mapRow(ferryLoad('Baltic Queen'), ctx()).stageSub).toBe('Baltic Queen');
     const unk = mapRow(ferryLoad(), ctx({ sailingOf: () => ({ id: 's1', vessel: 'X', route: 'ZZZ-QQQ' } as never) }));
     expect(unk.stageSub).toBe('X · ZZZ-QQQ');
   });
@@ -78,6 +78,16 @@ describe('DP-7 · tory promów rysowane w jednym miejscu', () => {
     expect(c).not.toMatch(/WATER_TRACKS_EXTRA|WATER_GDN_NYN|WATER_GDY_KAA/);
     const p = readFileSync('src/components/map/mapPool.ts', 'utf8');
     expect(p.match(/drawFerryLanes\(ferryLeg\)/g)?.length).toBe(1);
+  });
+});
+
+describe('DP-4 · trasa auta na promie bez rejsu', () => {
+  it('z armatora statku tylko przy jednej trasie wyjazdowej', () => {
+    expect(routeOfVessel('Nova Star')).toBe('GDN-NYN');
+    expect(routeOfVessel('M/F Stena Spirit')).toBe('GDY-KAA');
+    expect(routeOfVessel('Baltic Queen')).toBeNull();
+    expect(routeOfVessel('Nieznany')).toBeNull();
+    expect(routeOfVessel(null)).toBeNull();
   });
 });
 
