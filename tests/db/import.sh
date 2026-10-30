@@ -591,12 +591,12 @@ chk "A6: done → KSH_FILE_OUTBOUND" "$(Q "select count(*) - $EV0 from load_even
 # 42501 / permission denied dla authenticated na ack (brak EXECUTE albo require_service)
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; select ksh_sync_outbound_ack('[{\"id\":1,\"rev\":1}]'::jsonb,'done',null); rollback;" 2>&1 || true)
 if echo "$out" | grep -qiE '42501|permission denied|Tylko synchronizacja'; then ok=$((ok+1)); echo "  OK    A6: ack authenticated → 42501"; else fail=$((fail+1)); echo "  FAIL  A6: ack 42501 → $(echo "$out" | tail -1)"; fi
-# #650: echo wartości = migawka → nadal pending z kompletem WT6 (Edge skip_applied; nie 0)
+# #653: echo wartości = migawka → nadal pending (WT nadpisuje; Edge skip_applied)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 CODE_SNAP=$(Q "select public.load_sms_code('$SG_OUT'::uuid)")
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','FROM-FILE','ho','KSH-FILE')) where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL'; update loads set carrier_order_no='FROM-FILE', hhl_order_no='KSH-FILE' where id='$SG_OUT'; select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and patch ? 'carrier_order_no'; rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    #650: echo migawki → pending komplet (skip_applied)"; else fail=$((fail+1)); echo "  FAIL  #650: echo migawki → $out"; fi
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    #653: echo migawki → pending (skip_applied)"; else fail=$((fail+1)); echo "  FAIL  #653: echo migawki → $out"; fi
 # F7 r2: scalanie zachowuje najstarszą expected_file
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='service_role';
@@ -605,7 +605,7 @@ out=$($PSQL -c "begin; set local role service_role; set local request.jwt.claim.
   select expected_file->>'co' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
 if [ "$out" = "OLD" ]; then ok=$((ok+1)); echo "  OK    A6: expected_file najstarsza"; else fail=$((fail+1)); echo "  FAIL  A6: expected_file → $out"; fi
-# #650: A→B→A — co wraca do migawki, ale komplet WT6 zostaje w pending (Edge skip_applied)
+# #653: A→B→A — WT nadpisuje; co wraca do migawki zostaje w pending (Edge skip_applied)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
@@ -614,7 +614,7 @@ out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim
   update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
   select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no');
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    #650: A→B→A → co w pending (komplet)"; else fail=$((fail+1)); echo "  FAIL  #650: A→B→A → $out"; fi
+if [ "$out" = "1" ]; then ok=$((ok+1)); echo "  OK    #653: A→B→A → co w pending"; else fail=$((fail+1)); echo "  FAIL  #653: A→B→A → $out"; fi
 # kontrola pozytywna A→B → 1 klucz
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
@@ -800,14 +800,14 @@ $PSQL -c "begin; set local role service_role; set local request.jwt.claim.role='
     jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld','2026-11-01','lt',null,'dd',null,'dt',null,'co','SNAP-X','ho',null)));
 commit;" >/dev/null 2>&1
 chk "A6: N12/r6 expected.co z patch nie nadpisane" "$(Q "select coalesce(expected_file->>'co','')||'|'||coalesce(expected_file->>'ld','') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' order by id desc limit 1")" "SNAP-A|2026-11-01"
-# #650: powrót WT do A przy expected.co=A — komplet WT6 zostawia co w pending
+# #653: powrót WT do A przy expected.co=A — WT nadpisuje, co zostaje w pending
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set carrier_order_no='SNAP-A' where id='$SG_OUT';
 commit;" >/dev/null 2>&1
-chk "#650: N12 powrót A → co w pending (komplet)" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 1
+chk "#653: N12 powrót A → co w pending" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and jsonb_exists(patch,'carrier_order_no')")" 1
 
 # F7 r4 N7: skipped + nowy pending → scal, stary done
-# #650: B→A nie opróżnia patch (komplet WT6) — setup skipped:reverted_to_file ręcznie
+# setup skipped:reverted_to_file ręcznie
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "update ksh_sync_state set snapshot = jsonb_build_object('$CODE_SNAP', jsonb_build_object('ld',null,'lt',null,'dd',null,'dt',null,'co','SNAP-A','ho',null)) where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SNAP-A' where id='$SG_OUT'" >/dev/null
@@ -2344,8 +2344,8 @@ commit;" 2>&1 | grep -v -E '^(BEGIN|SET|COMMIT)$' | tail -1)
 if [ "$out" = "DriverB" ]; then
   ok=$((ok+1)); echo "  OK    #597: rev mismatch → pending DriverB"; else fail=$((fail+1)); echo "  FAIL  #597: rev mismatch → $out"; fi
 
-echo; echo "[#650] outbound komplet 6 pól WT→plik"
-# Zmiana tylko kierowcy → w patch też numery (HHL-Scan + HHL-KSH) z bieżącego WT
+echo; echo "[#653] outbound tylko zmienione pole WT→plik"
+# Zmiana tylko kierowcy → łatka {driver} bez numerów (#653 / właściciel 30.10 01:21)
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 $PSQL -c "update loads set carrier_order_no='SCAN-650', hhl_order_no='KSH-650',
   driver_name='KierowcaStary', driver_delivery_name=null, trailer_swap=false
@@ -2353,14 +2353,28 @@ $PSQL -c "update loads set carrier_order_no='SCAN-650', hhl_order_no='KSH-650',
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
   update loads set driver_name='KierowcaNowy' where id='$SG_OUT';
-  select coalesce(patch->>'driver','')||'|'||coalesce(patch->>'carrier_order_no','')||'|'||coalesce(patch->>'hhl_order_no','')
-    ||'|'||(patch ? 'driver')::text||'|'||(patch ? 'carrier_order_no')::text||'|'||(patch ? 'hhl_order_no')::text
+  select coalesce(patch->>'driver','')
+    ||'|'||(patch ? 'driver')::text
+    ||'|'||(patch ? 'carrier_order_no')::text
+    ||'|'||(patch ? 'hhl_order_no')::text
+    ||'|'||(select count(*)::text from jsonb_object_keys(patch))
     from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
 rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-if [ "$out" = "KierowcaNowy|SCAN-650|KSH-650|true|true|true" ]; then
-  ok=$((ok+1)); echo "  OK    #650: zmiana kierowcy → też numery w patch"; else fail=$((fail+1)); echo "  FAIL  #650: kierowca+numery → $out"; fi
-# Komplet już w snap (plik=WT) → enqueue i tak ma 6 kluczy; Edge skip_applied → 0 PATCH (tu: pending z kompletem)
+if [ "$out" = "KierowcaNowy|true|false|false|1" ]; then
+  ok=$((ok+1)); echo "  OK    #653: zmiana kierowcy → tylko driver"; else fail=$((fail+1)); echo "  FAIL  #653: tylko driver → $out"; fi
+# Zmiana tylko numeru HHL → {hhl_order_no}
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
+out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+  update loads set hhl_order_no='KSH-ONLY' where id='$SG_OUT';
+  select coalesce(patch->>'hhl_order_no','')
+    ||'|'||(patch ? 'hhl_order_no')::text
+    ||'|'||(patch ? 'driver')::text
+    ||'|'||(select count(*)::text from jsonb_object_keys(patch))
+    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
+rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
+if [ "$out" = "KSH-ONLY|true|false|1" ]; then
+  ok=$((ok+1)); echo "  OK    #653: zmiana hhl_order_no → tylko ten klucz"; else fail=$((fail+1)); echo "  FAIL  #653: tylko hhl → $out"; fi
+# Ręczne wt6 (backfill) nadal działa — OPS odmowa; HHL_ADMIN → pending z kompletem
 $PSQL -c "update loads set
   driver_name='Komplet650', driver_delivery_name=null,
   driver_phone='600650650', driver_delivery_phone=null, driver_phone_country='PL',
@@ -2368,29 +2382,13 @@ $PSQL -c "update loads set
   trailer_plate='TL650', trailer_swap=false,
   carrier_order_no='SCAN-IDEM', hhl_order_no='KSH-IDEM'
   where id='$SG_OUT'" >/dev/null
-CODE650=$(Q "select public.load_sms_code('$SG_OUT')")
-$PSQL -c "update ksh_sync_state set snapshot = coalesce(snapshot,'{}'::jsonb) || jsonb_build_object(
-  '$CODE650', jsonb_build_object(
-    'ld',null,'lt',null,'dd',null,'dt',null,
-    'co','SCAN-IDEM','ho','KSH-IDEM','dr','Komplet650','ph','600650650','tr','TR650','tl','TL650'
-  )) where project_id='$P'" >/dev/null
-$PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
-out=$($PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  update loads set driver_name='Komplet650b' where id='$SG_OUT';
-  select (patch ? 'driver' and patch ? 'driver_phone' and patch ? 'tractor' and patch ? 'trailer'
-          and patch ? 'carrier_order_no' and patch ? 'hhl_order_no')::text
-    from ksh_sync_outbound where load_id='$SG_OUT' and status='pending';
-rollback;" 2>&1 | grep -v -E '^(BEGIN|SET|ROLLBACK)$' | tail -1)
-if [ "$out" = "true" ]; then
-  ok=$((ok+1)); echo "  OK    #650: pending ma komplet 6 kluczy"; else fail=$((fail+1)); echo "  FAIL  #650: komplet 6 → $out"; fi
-# Backfill aktywnych — OPS odmowa; HHL_ADMIN → pending z kompletem numerów
 $PSQL -c "update app_users set role='HHL_OPS' where auth_id='$HHL'" >/dev/null
 err "#650: OPS enqueue_active_wt odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
 $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 val "#650: backfill → pending z hhl_order_no" $HHL \
   "select ksh_sync_outbound_enqueue_active_wt(); select count(*)>0 from ksh_sync_outbound where project_id='$P' and status='pending' and patch ? 'hhl_order_no'" t commit
-# N5: pusta wartość WT → brak klucza; podwójny backfill bez nowych wierszy; audit; ADMIN bez 2FA
+# N5: pusta wartość WT → brak klucza w wt6; podwójny backfill; audit; ADMIN bez 2FA
 $PSQL -c "update loads set hhl_order_no=null where id='$SG_OUT'" >/dev/null
 chk "#650: puste WT → brak klucza" "$(Q "select (public.ksh_sync_outbound_wt6_patch('$SG_OUT') ? 'hhl_order_no')")" f
 $PSQL -c "update loads set hhl_order_no='KSH-IDEM' where id='$SG_OUT'" >/dev/null
@@ -2401,7 +2399,7 @@ chk "#650: audit backfill" "$(Q "select count(*)>0 from audit_log where action='
 $PSQL -c "update security_flags set enabled=true where key='MFA_HHL_ADMIN'" >/dev/null
 err "#650: ADMIN aal1 enqueue odmowa" $HHL "select ksh_sync_outbound_enqueue_active_wt()" "Administrator HHL"
 $PSQL -c "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
-# N5: własny ładunek — backfill pomija CANCELLED i REMOVED; trigger REMOVED bez kolejki
+# N5: backfill pomija CANCELLED/REMOVED; trigger REMOVED bez kolejki
 $PSQL -c "delete from ksh_sync_outbound where project_id='$P'" >/dev/null
 SG_CX=$(Q "insert into loads (project_id, carrier_org_id, status, plan_load_date, plan_delivery_date,
     driver_name, driver_phone, driver_phone_country, tractor_plate, trailer_plate,
@@ -2429,16 +2427,17 @@ if [ "$out" = "0" ]; then ok=$((ok+1)); echo "  OK    #650 N5: trigger REMOVED �
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_CX';
   delete from shipment_items where load_id='$SG_CX';
   delete from loads where id='$SG_CX'" >/dev/null
-# N3: wyczyszczenie numeru usuwa klucz ze starego pending
+# N3: clear numeru usuwa klucz z pending — bez dokładania innych pól
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
 $PSQL -c "update loads set hhl_order_no='KSH-N3', carrier_order_no='SCAN-N3',
   driver_name='N3Drv', driver_delivery_name=null, trailer_swap=false where id='$SG_OUT'" >/dev/null
 $PSQL -c "delete from ksh_sync_outbound where load_id='$SG_OUT'" >/dev/null
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  update loads set driver_name='N3Drv2' where id='$SG_OUT'; commit;" >/dev/null
-chk "#650 N3: pending ma hhl przed clear" "$(Q "select (patch ? 'hhl_order_no') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" t
+  update loads set hhl_order_no='KSH-N3b' where id='$SG_OUT'; commit;" >/dev/null
+chk "#653 N3: pending ma hhl przed clear" "$(Q "select (patch ? 'hhl_order_no') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" t
 $PSQL -c "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
-  update loads set hhl_order_no=null, driver_name='N3Drv3' where id='$SG_OUT'; commit;" >/dev/null
-chk "#650 N3: po clear brak hhl w pending" "$(Q "select (patch ? 'hhl_order_no') from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'")" f
+  update loads set hhl_order_no=null where id='$SG_OUT'; commit;" >/dev/null
+chk "#653 N3: po clear brak hhl w pending" "$(Q "select count(*) from ksh_sync_outbound where load_id='$SG_OUT' and status='pending' and patch ? 'hhl_order_no'")" 0
+chk "#653 N3: clear nie dokłada driver" "$(Q "select coalesce((select patch ? 'driver' from ksh_sync_outbound where load_id='$SG_OUT' and status='pending'), false)")" f
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

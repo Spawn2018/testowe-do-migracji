@@ -6910,6 +6910,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 01:56 — #653 import ON + start PR tylko-zmienione pole (0341)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #653 **PILNE** (kolejność przed #651/#654).
+- Scalanie: #651 F7 gotowe @ `52861cdc` — **nie scalono** (po #653); #654 db FAIL (po #651).
+- **Krok 1 ZROBIONE (prod):** `import_enabled=true` 00:55:55Z (audit `#653 agent ops`, quiet=false); `write_enabled=true`; `mode=prod`. Cykl 00:56:06Z `dry_run=false`: changed=20, created=1, accepted=93; `KSH_IMPORT_SUMMARY` IN_APP×12 (HHL/SCX/KSH); `write_n=0` (brak nowej zmiany WT). Backfill **nie** wywołany. Meldunek w #653.
+- **Krok 2 W TOKU:** gałąź `pakiet/653-ksh-outbound-only-changed` — migracja **0341** (trigger bez `wt6` w łatce); import **397**.
+- Bez push na main.
+
 ## 2026-10-30 00:20 — #650 F7 r3 POPRAWKI (B1'' ack bez dat)
 
 - Skrzynka: #650 F7 r3 POPRAWKI @ cb97a1ca (1 bloker). #608 w planie; #550 **WSTRZYMANE**. #651 po #650.
