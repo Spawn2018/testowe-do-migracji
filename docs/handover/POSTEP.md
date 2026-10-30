@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 10:00 — BN2 #660 F7 r1 POPRAWKI (0348 ferry-portnet)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: F7 r1 **POPRAWKI** @ e368e26 + komentarz „nie rozszerzaj” @ 5ccc9d3 — **nie scalono**. CI @ 5ccc9d3 unit/db/visual ✔ (po G-15 czekano na koniec). Bez push na main.
+- **Krok F7 r1:** Portnet nie nadpisuje statusu RECZNIE/ODWOLANY (jak AIS); Tallink — bez booking, częściowa awaria ≠ SOURCE_DOWN, zapis kierunków OK; `ferry-portnet` co 15 min (**0348**) + domknięcie HEL-TLL/VUO-MUU po `arrival_at+2h` (bez ATA); timeout `readText` 20 s; DST Tallinn 24/25.10; testy `bn2-ferry-jobs` + ferry DST. Tallinn/Stockholm zostają w tym PR (te same reguły).
+- Push → CI → F7. Dalej BN2 po F7: scrape HTML Viking/Eckerö/DFDS. Bez push na main.
+
 ## 2026-10-30 09:40 — BN2 krok 2: Port of Tallinn + Ports of Stockholm
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.

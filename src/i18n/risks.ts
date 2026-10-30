@@ -100,6 +100,7 @@ const pl: Dict = {
   rk_ais_departure_delay: 'AIS: możliwe opóźnienie wypłynięcia {vessel} (~{minutes} min)',
   rk_ais_gap: 'Brak pozycji AIS: {vessel} — ostatni sygnał starszy niż godzina',
   job_label_ferry_ais: 'AIS promów (ferry-ais)',
+  job_label_ferry_portnet: 'Godziny portowe ATD/ATA (ferry-portnet)',
   job_label_usage_check: 'kontrola limitów (usage-check)',
   job_label_send_notifications: 'wysyłka powiadomień e-mail (send-notifications)',
   job_label_sms_gateway: 'bramka SMS (telefon z aplikacją Watch Tower SMS)',

@@ -1,10 +1,9 @@
 /**
  * BN2 — rozkład Tallink (booking.tallink.com /api/timetables).
  *
- * Źródło (sprawdzone 30.10.2026): najpierw GET booking.tallink.com (ciastko sesji),
- * potem GET /api/timetables?from=tal&to=hel&… . robots/publiczne API booking — User-Agent
- * uczciwy. Godziny lokalne bez strefy; TAL = Europe/Tallinn, HEL = Europe/Helsinki,
- * STO = Europe/Stockholm.
+ * Źródło (sprawdzone 30.10.2026): GET /api/timetables?from=tal&to=hel&… (F7 #660: bez
+ * strony booking — readText i tak nie niesie ciastek). User-Agent uczciwy.
+ * Godziny lokalne bez strefy; TAL = Europe/Tallinn, HEL = Europe/Helsinki, STO = Europe/Stockholm.
  *
  * Terminal D (pier DTER) → TLL-HEL / HEL-TLL; inne pier Tallinna → ostrzeżenie (Viking/Eckerö osobno).
  */
