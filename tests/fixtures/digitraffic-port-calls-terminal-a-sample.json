@@ -1,0 +1,65 @@
+{
+  "dataUpdatedTime": "2026-10-30T12:00:00.000Z",
+  "portCalls": [
+    {
+      "portCallId": 9001,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Viking XPRS",
+      "vesselNamePrefix": "ms",
+      "imoLloyds": 9375989,
+      "mmsi": 230629000,
+      "portAreaDetails": [
+        {
+          "ata": "2026-10-30T08:00:00.000Z",
+          "atd": "2026-10-30T09:00:00.000Z",
+          "eta": "2026-10-30T08:00:00.000Z",
+          "etd": "2026-10-30T09:00:00.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 9002,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Finlandia",
+      "vesselNamePrefix": "ms",
+      "imoLloyds": 9187627,
+      "mmsi": 230987000,
+      "portAreaDetails": [
+        {
+          "ata": "2026-10-30T10:00:00.000Z",
+          "atd": "2026-10-30T11:00:00.000Z",
+          "eta": "2026-10-30T10:00:00.000Z",
+          "etd": "2026-10-30T11:00:00.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 9003,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Megastar",
+      "vesselNamePrefix": "ms",
+      "imoLloyds": 9773064,
+      "mmsi": 276829000,
+      "portAreaDetails": [
+        {
+          "ata": "2026-10-30T12:00:00.000Z",
+          "atd": "2026-10-30T13:00:00.000Z",
+          "eta": "2026-10-30T12:00:00.000Z",
+          "etd": "2026-10-30T13:00:00.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    }
+  ]
+}
