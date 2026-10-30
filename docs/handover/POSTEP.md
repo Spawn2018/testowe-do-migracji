@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 10:50 — BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: F7 r3 **POPRAWKI (1 bloker)** @ 6412306 — nie scalono. CI @ 6412306 unit/db/visual ✔.
+- **Krok F7 r3:** `applyPortTallinn` — wyłącznie odwołania; usunięte gałęzie DEPARTURE/ARRIVAL ustawiające `actual_*` = plan `atUtc`. Test: zdarzenie z samym planem → `actual_*` puste, status bez zmian. Stockholm bez zmian (API ma prawdziwe `arrivalDateTime`/`departureDateTime`).
+- Push → CI → F7. Dalej BN2 po F7: scrape HTML Viking/Eckerö/DFDS. Bez push na main.
+
 ## 2026-10-30 10:25 — BN2 #660 F7 r2: PoT/Stockholm bez zmyślonych godzin
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).

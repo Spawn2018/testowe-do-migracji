@@ -1,6 +1,6 @@
 /**
  * BN2 / F7 #660 — testy joba ferry-schedule / ferry-portnet (mock fetch, bez sieci).
- * F7 r2: Port of Tallinn / Stockholm bez insertów i bez zmiany godzin rozkładu.
+ * F7 r2/r3: Port of Tallinn tylko odwołania; Stockholm actual_* bez insertów/godzin.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -136,8 +136,8 @@ describe('F7 #660 ferry-schedule Tallink', () => {
   });
 });
 
-describe('F7 #660 r2 Port of Tallinn / Stockholm bez zmyślonych godzin', () => {
-  it('Tallink + Port of Tallinn: bez duplikatu, arrival_at bez zmian', async () => {
+describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () => {
+  it('Tallink + Port of Tallinn: bez duplikatu, bez actual_* z planu tablicy', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
@@ -146,17 +146,47 @@ describe('F7 #660 r2 Port of Tallinn / Stockholm bez zmyślonych godzin', () => 
     };
     const r = await runFerrySchedule(deps(st, pages));
     expect(r.ok).toBe(true);
-    // MyStar 07:30 lokalnie = 05:30Z; Tallink arrival 09:30 = 07:30Z — PoT nie nadpisuje.
+    // MyStar 07:30 lokalnie = 05:30Z; Tallink arrival 09:30 = 07:30Z — PoT nie nadpisuje godzin.
+    // F7 r3: atUtc z tablicy = plan → actual_* i status bez zmian (nie „wypłynął” przed faktem).
     const myst = st.sailings.filter((s) => s.vessel_id === MYST && s.route === 'TLL-HEL'
       && s.departure_at === '2026-10-30T05:30:00.000Z');
     expect(myst).toHaveLength(1);
     expect(myst[0]).toMatchObject({
       source: 'TALLINK',
       arrival_at: '2026-10-30T07:30:00.000Z',
-      actual_departure_at: '2026-10-30T05:30:00.000Z',
+      status: 'ZAPLANOWANY',
     });
+    expect(myst[0]!.actual_departure_at ?? null).toBeNull();
+    expect(myst[0]!.actual_arrival_at ?? null).toBeNull();
     // PoT nie tworzy rejsów Viking/Eckerö (brak ich własnego rozkładu w tym PR).
     expect(st.sailings.every((s) => s.source !== 'VIKING' && s.source !== 'ECKERO')).toBe(true);
+  });
+
+  it('Port of Tallinn: zdarzenie z samym planem → actual_* puste, status bez zmian', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'plan', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-10-30T05:30:00.000Z', arrival_at: '2026-10-30T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'api/timetables': 503,
+      'ts.ee/en/departures': PORT_TLL,
+      'ts.ee/en/arrivals': PORT_TLL,
+    };
+    const r = await runFerrySchedule(deps(st, pages));
+    expect(r.ok).toBe(true);
+    const plan = st.sailings.find((s) => s.id === 'plan')!;
+    expect(plan).toMatchObject({
+      status: 'ZAPLANOWANY',
+      departure_at: '2026-10-30T05:30:00.000Z',
+      arrival_at: '2026-10-30T07:30:00.000Z',
+    });
+    expect(plan.actual_departure_at ?? null).toBeNull();
+    expect(plan.actual_arrival_at ?? null).toBeNull();
   });
 
   it('Ports of Stockholm: actual_* na istniejącym, bez insertu i bez zmiany godzin', async () => {

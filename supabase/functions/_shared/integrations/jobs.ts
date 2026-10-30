@@ -497,13 +497,14 @@ function tallinnDateYmd(now: Date): string {
 }
 
 /**
- * BN2 / F7 r2 — Port of Tallinn: tylko dopasowanie istniejących rejsów (statek + ±3 h)
- * → odwołania i actual_*; bez insertów i bez zmiany departure_at/arrival_at.
+ * BN2 / F7 r3 — Port of Tallinn: tylko odwołania na istniejących (statek + ±3 h).
+ * Bez insertów, bez zmiany godzin, bez actual_* z planu (atUtc = godzina planowana
+ * tablicy — actual_* wyłącznie z Portnet / Ports of Stockholm / AIS).
  */
 async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
-  warnings: string[]; fail: boolean; cancelled: number; actualUpdated: number;
+  warnings: string[]; fail: boolean; cancelled: number;
 }> {
-  const empty = { warnings: [] as string[], fail: false, cancelled: 0, actualUpdated: 0 };
+  const empty = { warnings: [] as string[], fail: false, cancelled: 0 };
   const headers = { 'User-Agent': PORT_TALLINN_UA, Accept: 'text/html' };
   const [depPage, arrPage] = await Promise.all([
     readText(deps, PORT_TALLINN_DEPARTURES_URL, { headers }),
@@ -528,53 +529,23 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
   const WINDOW_MS = 3 * 3600_000;
   let cancelled = 0;
-  let actualUpdated = 0;
   for (const e of parsed.events) {
+    if (!e.cancelled) continue; // F7 r3: sam plan → bez actual_* / statusu
     const vesselId = byName.get(e.vessel);
     if (!vesselId) continue;
     const t = Date.parse(e.atUtc);
-    if (e.cancelled) {
-      const hit = existing.find((s) =>
-        s.vessel_id === vesselId
-        && s.route === e.route
-        && Math.abs(Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at) - t) <= WINDOW_MS
-        && s.status !== 'ODWOLANY'
-        && s.source !== 'RECZNIE');
-      if (hit && await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
-        cancelled += 1;
-        hit.status = 'ODWOLANY';
-      }
-      continue;
-    }
-    if (e.kind === 'DEPARTURE') {
-      const hit = existing.find((s) =>
-        s.vessel_id === vesselId
-        && s.route === e.route
-        && Math.abs(Date.parse(s.departure_at) - t) <= WINDOW_MS
-        && s.actual_departure_at == null);
-      if (hit && await deps.store.updateSailing(
-        hit.id, sailingActualPatch(hit, { actual_departure_at: e.atUtc }, 'W_REJSIE'),
-      )) {
-        actualUpdated += 1;
-        hit.actual_departure_at = e.atUtc;
-        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
-      }
-    } else {
-      const hit = existing.find((s) =>
-        s.vessel_id === vesselId
-        && s.route === e.route
-        && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
-        && s.actual_arrival_at == null);
-      if (hit && await deps.store.updateSailing(
-        hit.id, sailingActualPatch(hit, { actual_arrival_at: e.atUtc }, 'DOPLYNAL'),
-      )) {
-        actualUpdated += 1;
-        hit.actual_arrival_at = e.atUtc;
-        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
-      }
+    const hit = existing.find((s) =>
+      s.vessel_id === vesselId
+      && s.route === e.route
+      && Math.abs(Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at) - t) <= WINDOW_MS
+      && s.status !== 'ODWOLANY'
+      && s.source !== 'RECZNIE');
+    if (hit && await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
+      cancelled += 1;
+      hit.status = 'ODWOLANY';
     }
   }
-  return { warnings, fail: false, cancelled, actualUpdated };
+  return { warnings, fail: false, cancelled };
 }
 
 /**
@@ -712,10 +683,10 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
 
   // Portnet ATD/ATA → osobny job ferry-portnet co 15 min (F7 #660 pkt 6).
 
-  // BN2 / F7 r2: Port of Tallinn — tylko odwołania + actual_* na istniejących (bez insertów / godzin).
+  // BN2 / F7 r3: Port of Tallinn — tylko odwołania (bez insertów / godzin / actual_* z planu).
   const tallinn = await applyPortTallinn(deps, since);
   warnings.push(...tallinn.warnings);
-  updated += tallinn.cancelled + tallinn.actualUpdated;
+  updated += tallinn.cancelled;
   if (tallinn.fail) {
     await deps.store.raiseRisk(sourceDownRisk(
       'PORT_TALLINN',
