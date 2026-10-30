@@ -7152,3 +7152,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI @ `285a924a`: unit/visual ✔; **db FAIL** security 493/1 — asercja `telematics_vehicle_id like '%rio.cloud%'` (sanitizer RIO zapisuje `rio:<uuid>`).
 - **Krok:** `security.sh` — clear po RIO: `safefleet_token is null` + `telematics_vehicle_id = 'rio:…'` + `rio_secret`. EXPECTED nadal **494**.
 - Po F7 #663: #662-b z komentarza F7 (v_skip audytu, integration_runs.ok, maska audit_log). Potem #661. Bez push na main.
+
+## 2026-10-30 13:25 — #663 SCALONE; start #662-b
+
+- Skrzynka: #662 pilne — connector SCALONE; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #663 → `189688bc` (F7 @ `2941001`, CI unit/visual/db ✔). deploy-main `41055098148` w toku (Edge `safefleet-poll`).
+- **Krok #662-b** (`pakiet/662-b-safefleet-audit`, **0350**): `audit_row_change` v_skip `safefleet_*`; `safefleet_token` w v_secret; maska URL w `audit_log` (+ jednorazowo); job `ok=false` przy down/invalid; sort trajektorii od najstarszego; security +1 (EXPECTED **495** / TEST **491**).
+- Po F7 #662-b → #661 B1/B2. Bez push na main.

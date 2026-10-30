@@ -2493,10 +2493,12 @@ export async function runSafefleetPoll(deps: JobDeps): Promise<JobResult> {
       }
     }
 
+    // Spec #662 pkt 5 / F7 #662-b: błąd down/invalid w przebiegu → integration_runs.ok=false.
+    const hadFault = invalid > 0 || down > 0;
     return {
       job: 'safefleet-poll',
       mode: 'LIVE',
-      ok: true,
+      ok: !hadFault,
       risks,
       warnings: warnings.slice(0, 20),
       observations: {
