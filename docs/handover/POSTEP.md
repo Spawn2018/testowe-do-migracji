@@ -7027,4 +7027,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `tests/db/import.sh` — przed `ksh_import_summary_publish` ustaw `created_at=now()` na DEC653. EXPECTED nadal **424**.
 - Push → CI → F7. Potem #654→**0343**, #651→**0344**. Bez push na main.
 
+## 2026-10-30 05:05 — #656 CI: EXPECTED import 424→423
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowych `dla-cursora` do wpisania.
+- Scalanie: brak „F7: gotowe”. #651 F7 gotowe (CONFLICTING — po #656); #654 CONFLICTING.
+- CI @ 879b21bd: unit/visual ✔; **db FAIL** tylko licznik: import **423 OK / 0 FAIL**, EXPECTED 424.
+- **Krok:** `gate-suites.mjs` import **423** (424 był o 1 za wysoko; asercje #653 w tym CARRIER przechodzą). Push → CI → F7.
+- Potem #654→**0343**, #651→**0344**. Bez push na main.
+
 
