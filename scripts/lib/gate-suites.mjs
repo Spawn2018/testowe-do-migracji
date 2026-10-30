@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 424, // #653 F7 r4: +1 CARRIER decisions>=1 (decider=HHL); było 423
+  import: 423, // #653 CI @ 879b21bd: 423 OK/0 FAIL (EXPECTED 424 był o 1 za wysoko; CARRIER wliczony)
   nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
   i2: 672, // #653: +1 SUMMARY zamiast PLAN_DATES IN_APP; było 671
   i30: 10,
