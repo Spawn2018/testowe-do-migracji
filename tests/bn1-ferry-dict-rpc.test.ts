@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  applyFerryDictSnapshot, isKnownRoute, isOutbound, operatorsForRoute, operatorName, resetFerryDictRpc,
+  applyFerryDictSnapshot, isKnownRoute, isOutbound, operatorsForRoute, operatorName,
+  resetFerryDictRpc, routeLabelPl,
 } from '../src/lib/ferryCatalog';
+import { ferryPortPl } from '../src/lib/ferryStatusPl';
 import { ferryRouteFromDb, sailingFromRow, type SailingDbRow } from '../src/data/mappers';
 
 afterEach(() => {
@@ -88,5 +90,28 @@ describe('BN1 — ferry_dict_snapshot → katalog', () => {
     expect(ferryRouteFromDb('GDY-KAA')).toBe('GDY-KAA');
     expect(operatorsForRoute('GDN-NYN')).toEqual(['POLFERRIES']);
     expect(isOutbound('KAA-GDY')).toBe(false);
+  });
+
+  /* DP-9 (#671 / BN9-b pkt 12): routeLabelPl — seed + nazwy z bazy w komunikatach armatora */
+  it('DP-9: routeLabelPl seed / alias / RPC (nazwy portów z bazy)', () => {
+    expect(routeLabelPl('TLLA-HEL')).toBe('Tallinn A–Helsinki');
+    expect(routeLabelPl('GDN-NYN')).toBe('Gdańsk–Nynäshamn');
+    expect(routeLabelPl('TLL-HEL')).toBe('Tallinn–Helsinki');
+    applyFerryDictSnapshot({
+      operators: [{ code: 'VIKING', name: 'Viking Line' }],
+      ports: [
+        { code: 'HEL_KAT', name: 'Helsinki', terminal: 'KAT', country: 'FI', lat: 60.16, lon: 24.97 },
+        { code: 'TLL_A', name: 'Tallinn', terminal: 'A', country: 'EE', lat: 59.44, lon: 24.77 },
+      ],
+      routes: [{
+        code: 'RPC-REV',
+        port_from: 'HEL_KAT',
+        port_to: 'TLL_A',
+        family_key: 'TLL-HEL',
+        operators: ['VIKING'],
+      }],
+    });
+    expect(routeLabelPl('RPC-REV')).toBe('Helsinki KAT–Tallinn A');
+    expect(ferryPortPl('RPC-REV')).toBe('Helsinki KAT–Tallinn A');
   });
 });

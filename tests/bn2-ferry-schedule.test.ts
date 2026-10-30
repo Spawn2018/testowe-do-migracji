@@ -283,6 +283,21 @@ describe('BN2 Port of Tallinn HTML', () => {
     expect(portTallinnToSailings(r.events).length).toBeGreaterThan(0);
   });
 
+  /* DP-10 (#671 / F7 #661): PoT — osobne trasy Terminal A (Viking) vs D (Tallink); bez mieszania. */
+  it('DP-10: Viking → TLLA-HEL, Tallink → TLL-HEL (bez dublowania tras)', () => {
+    const r = parsePortTallinnHtml(PORT_TLL, '2026-10-30');
+    const viking = r.events.filter((e) => /viking/i.test(e.vessel));
+    const tallink = r.events.filter((e) => /mystar|megastar/i.test(e.vessel));
+    expect(viking.length).toBeGreaterThan(0);
+    expect(tallink.length).toBeGreaterThan(0);
+    expect(viking.every((e) => e.route === 'TLLA-HEL' || e.route === 'HELA-TLL')).toBe(true);
+    expect(tallink.every((e) => e.route === 'TLL-HEL' || e.route === 'HEL-TLL')).toBe(true);
+    // Job nie wstawia z toSailings (F7 r2/r3) — helper istnieje tylko do testu parsera.
+    const fake = portTallinnToSailings(r.events);
+    expect(fake.some((s) => s.route === 'TLLA-HEL')).toBe(true);
+    expect(fake.some((s) => s.route === 'TLL-HEL')).toBe(true);
+  });
+
   it('przyjazdy Helsinki → Tallinn A/D', () => {
     const r = parsePortTallinnHtml(PORT_TLL, '2026-10-30');
     expect(r.events.some((e) => e.kind === 'ARRIVAL' && e.route === 'HELA-TLL')).toBe(true);

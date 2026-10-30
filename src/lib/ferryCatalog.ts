@@ -307,12 +307,40 @@ export function routeShortLabel(code: string | null | undefined): string {
   return code;
 }
 
-/** #666 C: etykieta PL trasy (Terminal A: „Tallinn A–Helsinki”). */
+/** PL nazwy portów seeda — lokalnie, bez `portName` (cykl z `routeEnds`). */
+const PORT_PL: Record<FerryPortCode, string> = {
+  GDN: 'Gdańsk', GDY: 'Gdynia', NYN: 'Nynäshamn', KAA: 'Karlskrona',
+  TLL: 'Tallinn', MUU: 'Muuga', PLD: 'Paldiski', HEL: 'Helsinki',
+  VUO: 'Vuosaari', STO: 'Sztokholm', KPS: 'Kapellskär',
+};
+
+/** Etykieta portu ze snapshotu: „Tallinn” / „Tallinn A” (terminal bez słowa Terminal). */
+function rpcPortLabel(code: string): string {
+  const info = rpcPortInfo.get(code);
+  if (!info) return code;
+  const term = (info.terminal ?? '').trim().replace(/^terminal\s+/i, '');
+  return term ? `${info.name} ${term}` : info.name;
+}
+
+/**
+ * DP-9 / BN9-b pkt 12 + #666 C: etykieta PL trasy w komunikatach armatora.
+ * Alias Terminal A → seed → kody z bazy (`ferry_dict_snapshot` + nazwy portów RPC).
+ */
 export function routeLabelPl(code: string | null | undefined): string | null {
   if (!code) return null;
   const alias = SEED_ROUTE_ALIASES.get(code);
   if (alias) return alias.pl;
-  return null;
+  const seed = routeByCode(code);
+  if (seed) return `${PORT_PL[seed.from]}–${PORT_PL[seed.to]}`;
+  const ends = routeEnds(code);
+  if (ends) {
+    const from = ends.fromTerminal ? `${PORT_PL[ends.from]} ${ends.fromTerminal}` : PORT_PL[ends.from];
+    const to = ends.toTerminal ? `${PORT_PL[ends.to]} ${ends.toTerminal}` : PORT_PL[ends.to];
+    return `${from}–${to}`;
+  }
+  const ports = rpcRoutePorts.get(code);
+  if (!ports) return null;
+  return `${rpcPortLabel(ports.from)}–${rpcPortLabel(ports.to)}`;
 }
 
 /** Pierwsza trasa wyjazdowa armatora (porty w wierszu „Sytuacja na trasie”). */
