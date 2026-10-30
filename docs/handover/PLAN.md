@@ -1179,19 +1179,31 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 |---|---|---|---|---|---|
 | DP-1 | Cursor | Trasy na sztywno (CASE) w `apply_ferry_se_from_position` / `a10_try_ferry_backup` / `detect_ferry_overdue` → `ferry_routes` | F7 #649 | BN3/BN8 | w kolejce |
 | DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | w kolejce |
-| DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
-| DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
-| DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | SCALONE (#672 `8ec16105`) |
+| DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | SCALONE (#672) |
+| DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | SCALONE (#672) |
 | DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | w kolejce |
-| DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
-| DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | w PR #672 (CI zielone; brak F7 scalenia) |
+| DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | SCALONE (#672) |
+| DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | SCALONE (#672) |
 | DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
 | DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | w kolejce |
 | DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | w kolejce |
+| DP-14 | koordynator | jawna trasa Polferries/Stena w `routeOfVessel` | F7 #672 | wyglad | SCALONE (#674 `8f916302`) |
+| DP-15 | koordynator | test U4 z inną kolejnością wejścia | F7 #672 | wyglad | SCALONE (#674) |
+| DP-16 | koordynator | test cache listy statków | F7 #672 | wyglad | SCALONE (#674) |
+| DP-17 | koordynator | `routeOfVessel` w mapach z listą z bazy | F7 #672 | wyglad | SCALONE (#674) |
+| DP-18 | koordynator | oxlint `set-state-in-effect` `SailingsPanel` | F7 #672 | wyglad | SCALONE (#674) |
+| DP-19 | koordynator | domyślny statek odporny na wielkość liter | F7 #672 | wyglad | SCALONE (#674) |
+| DP-20 | koordynator | Rejsy: armator bez rejsów nadal w filtrze | F7 #668 r2 | wyglad | SCALONE (#674) |
+| DP-21 | Cursor | po wdrożeniu: Viking Cargo 403 z DC — sprawdź TLLA-HEL (decyzja 50) | F7 #668 r2 N7 | po deploy #668 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie gdy front `checkRoads` odrzuci leg (który + dlaczego) | F7 #673 r1 N5 | #667 D | w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | w kolejce |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
+| DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | w kolejce |
+| DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | w kolejce |
+| DP-27 | koordynator | jedno ostrzeżenie po błędzie pobrania listy statków na sesję | F7 #674 | wyglad | w kolejce |
+| DP-28 | koordynator | testy źródłowe (regex) DP-17/N4–N6 → testy zachowania | F7 #674 | wyglad | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -2126,4 +2138,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 20:10 | #667 krok A: mapPool PROD + paintOrangeRoads; #668 czekam F7 @ 5aaa0544; #672 DP front bez F7 | pętla |
 | 30.10.2026 20:55 | #667 krok B: SE-KAA←SE_E22 + SE-KAA-INLAND (**0352**); ROAD_LEGS=5; #668 czekam F7 | pętla |
 | 30.10.2026 21:30 | #667 krok C: cron HERE 21 d (**0353**) + SOURCE_DOWN HERE_ROADS; #668 czekam F7 | pętla |
-| 30.10.2026 22:25 | #667 F7 r1: B1 ROAD_KAA_E22 / B2 ZonesMap roads / B3 SE_KAA_INLAND / N1 retry +1h; DP-22…24; #668 F7 r5 POPRAWKI | pętla |
+| 30.10.2026 22:25 | #674 SCALONE `8f916302`; #667 F7 r1: B1 ROAD_KAA_E22 / B2 ZonesMap roads / B3 SE_KAA_INLAND / N1; DP-22…28; #668 CI ✔ czekam F7 | pętla |

@@ -7219,10 +7219,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (#667 C):** wspólny `refreshRoadLegs` (próg cron 21 d); Edge `here-roads` dual (JWT przeglądarka / service cron); job `here-roads` + SOURCE_DOWN `HERE_ROADS` sticky; migracja **0353** `tower-here-roads` (04:15 UTC). Testy i667/bmapa/risk-keys/refresh. **Dalej:** D diagnostyka; E BN7; F e2e prod.
 - Bez push na main.
 
-## 2026-10-30 22:25 — #667 F7 r1 POPRAWKI (B1–B3, N1/N4/N7)
+## 2026-10-30 22:25 — #667 F7 r1 POPRAWKI (B1–B3, N1/N4/N7); #674 SCALONE
 
-- Skrzynka: #666 W TOKU (PR #668 F7 r5 POPRAWKI @ 86e27298 — CI zielone; czekam F7 gotowe do scalenia); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
-- Scalanie: brak F7 gotowe do scalenia. Kolejność: #668 (0351) → #673 (0352/0353). Bez push na main.
-- **Krok (F7 r1 #673):** B1 — SPEC SE-KAA = ROAD_KAA_E22 (bez Västerås); B2 — ZonesMap osobna warstwa roads (także mode=one); B3 — corridorCode SE_KAA_INLAND jawnie; N1 — HTTP → retry_after +1 h; N4 — cache map_display_state; N5 → DP-22; N2/N3 → DP-23/24. Testy i667-f7-r1 + i667/bmapa/refresh. C termin ≤ 04.11. **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Skrzynka: #666 W TOKU (PR #668 F7 r4 @ 86e27298 — CI unit/db/visual ✔; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#674 SCALONE** `8f916302` (F7 gotowe @ 511567b; DP-14…20). #668/#673 bez F7 gotowe. Kolejność: #668 (0351) → #673 (0352/0353). Bez push na main.
+- **Krok (F7 r1 #673):** B1 — SPEC SE-KAA = ROAD_KAA_E22 (bez Västerås); B2 — ZonesMap osobna warstwa roads (także mode=one); B3 — corridorCode SE_KAA_INLAND jawnie; N1 — HTTP → retry_after +1 h; N4 — cache map_display_state; N5 → DP-22; N2/N3 → DP-23/24; DP-25…28 z F7 #674. Testy i667-f7-r1 + i667/bmapa/refresh. C termin ≤ 04.11. **Dalej:** CI → gotowe do F7; potem D/E/F.
 - Bez push na main.
 
