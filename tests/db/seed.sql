@@ -41,33 +41,8 @@ where not exists (
   select 1 from geofences where name = 'Bufor przed Sremem'
 );
 
--- BN1: strefy bałtyckie (0338 wstawia przy STEGRA_BODEN; CI ma code=STEGRA — jak Bufor przed Śremem)
-insert into geofences (
-  project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes,
-  notify_enter, country, route
-)
-select '22222222-0000-0000-0000-000000000001', z.name, z.kind::geofence_kind,
-       make_circle_fence(z.lat, z.lon, z.r), z.hyst, z.dwell, 2, true, z.country, z.route
-  from (values
-    ('Bufor 20 km przed Tallinn A',       'PRE_PORT', 59.44400, 24.76800, 20000, 500, 0,   'EE', 'TLL-HEL'),
-    ('Terminal Tallinn A',                'PORT_OUT', 59.44400, 24.76800,   250, 100, 900, 'EE', 'TLL-HEL'),
-    ('Bufor 20 km przed Tallinn D HEL',   'PRE_PORT', 59.44000, 24.77500, 20000, 500, 0,   'EE', 'TLL-HEL'),
-    ('Terminal Tallinn D HEL',            'PORT_OUT', 59.44000, 24.77500,   250, 100, 900, 'EE', 'TLL-HEL'),
-    ('Bufor 20 km przed Tallinn D',       'PRE_PORT', 59.44000, 24.77500, 20000, 500, 0,   'EE', 'TLL-STO'),
-    ('Terminal Tallinn D',                'PORT_OUT', 59.44000, 24.77500,   250, 100, 900, 'EE', 'TLL-STO'),
-    ('Bufor 20 km przed Muuga',           'PRE_PORT', 59.50500, 24.95800, 20000, 500, 0,   'EE', 'MUU-VUO'),
-    ('Terminal Muuga HHLA',               'PORT_OUT', 59.50500, 24.95800,   800, 200, 900, 'EE', 'MUU-VUO'),
-    ('Bufor 20 km przed Paldiski',        'PRE_PORT', 59.33300, 24.08300, 20000, 500, 0,   'EE', 'PLD-KPS'),
-    ('Terminal Paldiski',                 'PORT_OUT', 59.33300, 24.08300,   800, 200, 900, 'EE', 'PLD-KPS'),
-    ('Terminal Helsinki West Harbour T2', 'PORT_IN',  60.15400, 24.91400,   800, 200, 600, 'FI', 'TLL-HEL'),
-    ('Terminal Helsinki Katajanokka',     'PORT_IN',  60.16600, 24.96800,   800, 200, 600, 'FI', 'TLL-HEL'),
-    ('Terminal Vuosaari',                 'PORT_IN',  60.21200, 25.18800,   800, 200, 600, 'FI', 'MUU-VUO'),
-    ('Terminal Stockholm Värtahamnen',    'PORT_IN',  59.35000, 18.11000,   800, 200, 600, 'SE', 'TLL-STO'),
-    ('Terminal Kapellskär',               'PORT_IN',  59.72300, 19.06600,   800, 200, 600, 'SE', 'PLD-KPS')
-  ) as z(name, kind, lat, lon, r, hyst, dwell, country, route)
- where not exists (
-   select 1 from geofences g where g.name = z.name
- );
+-- BN1/#648: strefy bałtyckie — jedna funkcja (współrzędne w bn1_seed_baltic_geofences)
+select public.bn1_seed_baltic_geofences('22222222-0000-0000-0000-000000000001');
 
 -- A7: zezwolenie firmowe + polisa HHL (0237 przy pustej bazie nic nie wstawia — orgs/projekty są tu)
 select a7_seed_firm_assets();

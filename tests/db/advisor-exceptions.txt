@@ -86,6 +86,7 @@ authenticated_security_definer_function_executable	public.ferry_track_sample	E19
 authenticated_security_definer_function_executable	public.ferry_sailings_map	E19 — allowlista RPC; sprawdzenie roli w funkcji (#421/#429)
 authenticated_security_definer_function_executable	public.ferry_dict_snapshot	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1)
 authenticated_security_definer_function_executable	public.ferry_route_port_countries	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1)
+authenticated_security_definer_function_executable	public.ferry_route_set_active	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1 #648)
 authenticated_security_definer_function_executable	public.fuel_add_reading	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.fx_rate_before	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.h1_route_check_state	E19 — allowlista RPC; sprawdzenie roli w funkcji

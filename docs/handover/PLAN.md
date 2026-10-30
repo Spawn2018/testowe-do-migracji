@@ -1149,14 +1149,14 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #650 (Spawn2018; właściciel 29.10 22:41) + F7. Migracja **0340** na produkcji. **Aktualizacja właściciela 30.10 01:21 (#653):** trigger wraca do **tylko zmienione pole** — zob. #653.
 
 ### #653 · PILNE: import ON + WT→plik tylko zmienione pole + dzwonek zbiorczy — W TOKU
-Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) **PR #656** (`pakiet/653-import-bell-summary` / **0342**): F7 r4 + CI fix republish + EXPECTED import **423** (CI 423 OK/0 FAIL; 424 był o 1 za wysoko); czeka CI+F7; (4) potem revoke `enqueue_active_wt` + #651=**0344** / #654=**0343** (F7: po #656). Backfill **nie wywoływać**.
+Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) ~~PR #656 / **0342** dzwonek SUMMARY~~ **SCALONE** `36ee0417`; (4) revoke `enqueue_active_wt` (nie wołać; funkcja zostaje HHL_ADMIN+2FA) + **#654=0343** / **#651=0344**. Backfill **nie wywoływać**.
 
 ### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
 
 ### #640 · Kolejność 29.10 12:13: po #637/#638 → BN1–BN10 → reszta (w tym 27B mapa) — W TOKU
-Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. **#653 przed scaleniem #651/#654** (import ON + PR tylko-zmienione pole).
-1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** SCALONE (`e2599170` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal; PORT_OUT A/D r=250; strefy po rodzinie trasy. **0339** SCALONE (`00a24fe0` / PR #649). **0341 CASE remain** (PR #651 @ `52861cdc`, F7 gotowe — scalenie **po** #653). **#648** (PR #654 / **0342** na gałęzi — po #651; db FAIL do poprawy): seed stref jedną funkcją; e2e TLLA-HEL; `ferry_route_set_active`; FK odłożone.
+Źródło: #640 (Spawn2018; właściciel 29.10 12:13) + F7 #638. Bez cięcia zakresu. Po ~~#638 ETA~~: **całe Wydanie 1.0 Korytarz bałtycki (#573) BN1→BN10 bez przerw**; potem reszta planu (#588 OWASP, 27B mapa/kalibracja, C5–C13, …) i P11. ~~#653 dzwonek~~ SCALONE; dalej #654/#651.
+1. **BN1** — słowniki `ferry_operators` / `ferry_ports` / `ferry_routes` (+ `ferry_route_operators`), strefy PRE_PORT/PORT_OUT/PORT_IN bałtyckie, `ferry_dict_snapshot`, operator z słownika; migracja **0338** SCALONE (`e2599170` / PR #647). `geofences.route`: model A = kod/rodzina trasy (`TLL-HEL`, `PLD-KPS` — BN1 bałtyk); model B = armator (`POLFERRIES`/`STENA` — historyczne PL). Tallinn: **D = Tallink** (`TLL_D` 59.440/24.775), **A = Viking/Eckerö**; rodzina `TLL-HEL` = operator×terminal; PORT_OUT A/D r=250; strefy po rodzinie trasy. **0339** SCALONE (`00a24fe0` / PR #649). **#648** (PR #654 / **0343**): `bn1_seed_baltic_geofences`; e2e TLLA-HEL→Tallinn A; `ferry_route_set_active` (+`assert_not_preview`); FK odłożone. **CASE remain** (PR #651 / **0344**, F7 gotowe @ `52861cdc` — po #654).
 2. BN2…BN10 — jak #573 (rozkłady, opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2038,8 +2038,11 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 29.10.2026 23:40 | #650 F7 POPRAWKI: WT nadpisuje 6 pól (decyzja 23:24); N3/N5; import **393** | pętla |
 | 30.10.2026 00:10 | #650 F7 r2: B1' daty≠blokada WT6; bez PUT; write_via; import **395** | pętla |
 | 30.10.2026 00:20 | #650 F7 r3: B1'' ack bez dat w sent; N5 własny ładunek; KEEP_TOWER→kolejka daty; import **396** | pętla |
+| 30.10.2026 01:45 | #651 CI zielone (czekam F7); start #648 **0342** seed + TLLA-HEL e2e + set_active | pętla |
 | 30.10.2026 01:56 | #653: import ON prod (changed=20); start **0341** tylko-zmienione pole; import **397**; #651/#654 po tym PR | pętla |
 | 30.10.2026 02:55 | #653: PR dzwonek **0342** (tylko SUMMARY); #655 CI ✔ czeka F7; import **405** | pętla |
 | 30.10.2026 03:10 | #655 SCALONE `29000fd2`; #656 F7 POPRAWKI (bez bulk_quiet, widoczność, testy); import **422** | pętla |
 | 30.10.2026 03:45 | #656 F7 r2: bulk_quiet cisza; RLS decisions; LOAD_STATUS; impl w g20/dec-auto; import **423** i2 **672** | pętla |
 | 30.10.2026 04:05 | #656 F7 r4: testy import — KSH_ROW_GONE z importu, workflow_worker, CARRIER≥1; import **424** | pętla |
+| 30.10.2026 05:55 | #656 SCALONE `36ee0417`; #654 → **0343** (assert_not_preview, boolean t/f, EXPECTED) | pętla |
+| 30.10.2026 06:15 | #654 CI ✔ @ `581162b8` (unit/visual/db); czeka F7; #651 → **0344** po #654 | pętla |

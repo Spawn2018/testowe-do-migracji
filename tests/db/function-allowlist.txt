@@ -130,6 +130,7 @@ authenticated ferry_track_sample
 authenticated ferry_sailings_map
 authenticated ferry_dict_snapshot
 authenticated ferry_route_port_countries
+authenticated ferry_route_set_active
 authenticated fuel_add_reading
 authenticated fx_rate_before
 authenticated h1_route_check_state

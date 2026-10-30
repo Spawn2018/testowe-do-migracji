@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 01:45 — #648 BN1 seed + TLLA-HEL e2e (0342); #651 czeka F7
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
+- Scalanie: #651 CI **zielone** @ `52861cdc` (unit/visual/db) — potem F7 gotowe; nie scalono (po #653). Bez push na main.
+- **Krok BN1/#648:** gałąź `pakiet/bn1-648-seed` / migracja **0342** — `bn1_seed_baltic_geofences(p_project)` (seed.sql + migracja); e2e TLLA-HEL→Tallinn A → `AT_PORT_GDANSK`; `ferry_route_set_active` (HHL_ADMIN; active=false → promote pomija; SCX 42501). FK `sailings.route` odłożone (OTHER). nullguard +1 GUARD.
+- Push → CI → prośba o F7. #651 równolegle czeka F7.
+
 ## 2026-10-30 01:56 — #653 import ON + start PR tylko-zmienione pole (0341)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**; #653 **PILNE** (kolejność przed #651/#654).
@@ -7034,5 +7041,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - CI @ 879b21bd: unit/visual ✔; **db FAIL** tylko licznik: import **423 OK / 0 FAIL**, EXPECTED 424.
 - **Krok:** `gate-suites.mjs` import **423** (424 był o 1 za wysoko; asercje #653 w tym CARRIER przechodzą). Push → CI → F7.
 - Potem #654→**0343**, #651→**0344**. Bez push na main.
+
+## 2026-10-30 06:15 — #654 CI zielone; czeka F7
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowych `dla-cursora`.
+- Scalanie: **#656 SCALONE** `36ee0417`. #654 MERGEABLE @ `581162b8` — **brak** „F7: gotowe do scalenia”. #651 F7 gotowe @ `52861cdc` — CONFLICTING (po #654 → **0344**).
+- CI #654 @ `581162b8`: unit ✔, visual ✔, **db ✔** (status **484**, nullguard **900**). Komentarz prośby F7.
+- Bieżąca: BN1/#648 PR #654 (**0343**) — czeka F7; potem #651. Bez push na main.
 
 
