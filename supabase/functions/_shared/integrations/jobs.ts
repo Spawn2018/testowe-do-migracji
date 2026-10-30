@@ -22,6 +22,20 @@ import {
   STENA_FERRIES_URL, STENA_IMO, STENA_MMSI, isTrackedMmsi, parseStenaFerries, pickNewerFix,
 } from '../ferry/stenaAis.ts';
 import {
+  TALLINK_BOOKING, TALLINK_UA, parseTallinkTimetable, tallinkTimetableUrl,
+} from '../ferry/tallink.ts';
+import {
+  DIGITRAFFIC_PORT_CALLS_URL, digitrafficPortCallsUrl, parseDigitrafficPortCalls,
+} from '../ferry/digitrafficPortCalls.ts';
+import {
+  PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
+  parsePortTallinnHtml,
+} from '../ferry/portTallinn.ts';
+import {
+  PORTS_STOCKHOLM_PORTENTRY_URL, PORTS_STOCKHOLM_UA,
+  parsePortsStockholmPortEntry,
+} from '../ferry/portsStockholm.ts';
+import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
@@ -264,14 +278,34 @@ export interface JobResult {
   disabled?: boolean;
 }
 
+/** F7 #660: limit ścienny odczytu (20 s) — bez zawieszenia joba na martwym źródle. */
+const READ_TEXT_TIMEOUT_MS = 20_000;
+
 async function readText(deps: JobDeps, url: string, init?: RequestInit): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), READ_TEXT_TIMEOUT_MS);
   try {
-    const res = await deps.fetch(url, init);
+    const res = await deps.fetch(url, { ...init, signal: ctrl.signal });
     if (!res.ok) return { ok: false, warning: `HTTP ${res.status} ${url}` };
     return { ok: true, text: await res.text() };
   } catch (e) {
-    return { ok: false, warning: `Błąd sieci ${url}: ${e instanceof Error ? e.message : String(e)}` };
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/abort/i.test(msg)) return { ok: false, warning: `Timeout ${READ_TEXT_TIMEOUT_MS / 1000}s ${url}` };
+    return { ok: false, warning: `Błąd sieci ${url}: ${msg}` };
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/** F7 #660: jak AIS — RECZNIE/ODWOLANY: actual_* bez zmiany statusu. */
+function sailingActualPatch(
+  s: { source: string; status: string },
+  actual: Pick<SailingPatch, 'actual_departure_at' | 'actual_arrival_at'>,
+  status: 'W_REJSIE' | 'DOPLYNAL',
+): SailingPatch {
+  const patch: SailingPatch = { ...actual };
+  if (s.source !== 'RECZNIE' && s.status !== 'ODWOLANY') patch.status = status;
+  return patch;
 }
 
 async function applySailings(
@@ -322,7 +356,264 @@ async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
   return { sailings, warnings, http403, fetchedOk };
 }
 
-/** ferry-schedule — rozkład cargo Polferries + rozkład Stena (JSON AEM). */
+/** BN2 — rozkład Tallink TAL↔HEL (Terminal D) + TAL↔STO na 14 dni.
+ * F7 #660: bez wywołania strony booking (readText i tak nie niesie ciastek); częściowa awaria ≠ SOURCE_DOWN. */
+async function fetchTallinkDays(deps: JobDeps, days: number): Promise<{
+  sailings: ReturnType<typeof parseTallinkTimetable>['sailings'];
+  warnings: string[];
+  fetchedOk: number;
+  structureFail: boolean;
+}> {
+  const warnings: string[] = [];
+  const sailings: ReturnType<typeof parseTallinkTimetable>['sailings'] = [];
+  let fetchedOk = 0;
+  let structureFail = false;
+  const dates = dateRangeYmd(deps.now(), days);
+  const dateFrom = dates[0]!;
+  const dateTo = dates[dates.length - 1]!;
+  for (const [from, to] of [['tal', 'hel'], ['hel', 'tal'], ['tal', 'sto'], ['sto', 'tal']] as const) {
+    const url = tallinkTimetableUrl({ from, to, dateFrom, dateTo });
+    const page = await readText(deps, url, {
+      headers: { 'User-Agent': TALLINK_UA, Accept: 'application/json' },
+    });
+    if (!page.ok) {
+      warnings.push(page.warning);
+      continue;
+    }
+    fetchedOk += 1;
+    let json: unknown;
+    try { json = JSON.parse(page.text); } catch {
+      warnings.push(`Tallink ${from}-${to}: nieczytelny JSON`);
+      continue;
+    }
+    const parsed = parseTallinkTimetable(json);
+    if (parsed.warnings.some((w) => /Struktura/i.test(w))) structureFail = true;
+    sailings.push(...parsed.sailings);
+    warnings.push(...parsed.warnings.filter((w) => /Struktura|nieczytelny|nieznany statek|awaria/i.test(w)));
+  }
+  return { sailings, warnings, fetchedOk, structureFail };
+}
+
+/** BN2 — Portnet Digitraffic: ATA/ATD → actual_* na dopasowanych rejsach (±3 h od planu). */
+async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
+  updated: number; warnings: string[]; fail: boolean;
+}> {
+  const now = deps.now();
+  const fromIso = new Date(now.getTime() - 2 * 864e5).toISOString();
+  const toIso = new Date(now.getTime() + 864e5).toISOString();
+  const url = digitrafficPortCallsUrl({ fromIso, toIso });
+  const page = await readText(deps, url, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'Digitraffic-User': DIGITRAFFIC_USER,
+    },
+  });
+  if (!page.ok) {
+    return { updated: 0, warnings: [page.warning], fail: true };
+  }
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    return { updated: 0, warnings: ['Digitraffic Portnet: nieczytelny JSON'], fail: true };
+  }
+  const parsed = parseDigitrafficPortCalls(json);
+  if (parsed.warnings.some((w) => /Struktura/i.test(w))) {
+    return { updated: 0, warnings: parsed.warnings, fail: true };
+  }
+  const [vessels, existing] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  let updated = 0;
+  const WINDOW_MS = 3 * 3600_000;
+  for (const c of parsed.calls) {
+    const vesselId = byName.get(c.vessel);
+    if (!vesselId) continue;
+    if (c.actualArrivalUtc && c.arrivalRoute) {
+      const t = Date.parse(c.actualArrivalUtc);
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === c.arrivalRoute
+        && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
+        && s.actual_arrival_at == null);
+      // F7 #660: RECZNIE → tylko actual_*; ODWOLANY bez zmiany statusu (jak AIS).
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_arrival_at: c.actualArrivalUtc }, 'DOPLYNAL'),
+      )) {
+        updated += 1;
+        hit.actual_arrival_at = c.actualArrivalUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      }
+    }
+    if (c.actualDepartureUtc && c.departureRoute) {
+      const t = Date.parse(c.actualDepartureUtc);
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === c.departureRoute
+        && Math.abs(Date.parse(s.departure_at) - t) <= WINDOW_MS
+        && s.actual_departure_at == null);
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_departure_at: c.actualDepartureUtc }, 'W_REJSIE'),
+      )) {
+        updated += 1;
+        hit.actual_departure_at = c.actualDepartureUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+      }
+    }
+  }
+  return { updated, warnings: parsed.warnings, fail: false };
+}
+
+/**
+ * F7 #660: Portnet = FI (HEL/VUO); Ports of Stockholm = SE (STO/KPS) — brak ATA w EE.
+ * Po arrival_at + 2 h bez ATA → DOPLYNAL (actual_arrival_at = null). F7 r2: + STO-TLL, KPS-PLD.
+ */
+async function closeStaleFiToEeWithoutAta(deps: JobDeps, sinceIso: string): Promise<number> {
+  const ROUTES = new Set(['HEL-TLL', 'HELA-TLL', 'VUO-MUU', 'STO-TLL', 'KPS-PLD']);
+  const nowMs = deps.now().getTime();
+  const existing = await deps.store.sailingsSince(sinceIso);
+  let updated = 0;
+  for (const s of existing) {
+    if (!ROUTES.has(s.route)) continue;
+    if (s.status !== 'W_REJSIE') continue;
+    if (s.actual_arrival_at != null) continue;
+    if (s.source === 'RECZNIE') continue;
+    if (Date.parse(s.arrival_at) + 2 * 3600_000 > nowMs) continue;
+    if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
+      updated += 1;
+      s.status = 'DOPLYNAL';
+    }
+  }
+  return updated;
+}
+
+function tallinnDateYmd(now: Date): string {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Tallinn', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const g = (t: string) => p.find((x) => x.type === t)!.value;
+  return `${g('year')}-${g('month')}-${g('day')}`;
+}
+
+/**
+ * BN2 / F7 r3 — Port of Tallinn: tylko odwołania na istniejących (statek + ±3 h).
+ * Bez insertów, bez zmiany godzin, bez actual_* z planu (atUtc = godzina planowana
+ * tablicy — actual_* wyłącznie z Portnet / Ports of Stockholm / AIS).
+ */
+async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
+  warnings: string[]; fail: boolean; cancelled: number;
+}> {
+  const empty = { warnings: [] as string[], fail: false, cancelled: 0 };
+  const headers = { 'User-Agent': PORT_TALLINN_UA, Accept: 'text/html' };
+  const [depPage, arrPage] = await Promise.all([
+    readText(deps, PORT_TALLINN_DEPARTURES_URL, { headers }),
+    readText(deps, PORT_TALLINN_ARRIVALS_URL, { headers }),
+  ]);
+  const warnings: string[] = [];
+  if (!depPage.ok) warnings.push(depPage.warning);
+  if (!arrPage.ok) warnings.push(arrPage.warning);
+  if (!depPage.ok && !arrPage.ok) {
+    return { ...empty, warnings, fail: true };
+  }
+  const html = `${depPage.ok ? depPage.text : ''}\n${arrPage.ok ? arrPage.text : ''}`;
+  const dateYmd = tallinnDateYmd(deps.now());
+  const parsed = parsePortTallinnHtml(html, dateYmd);
+  warnings.push(...parsed.warnings);
+  if (parsed.warnings.some((w) => /brak tabeli|pusta odpowiedź/i.test(w)) && parsed.events.length === 0) {
+    return { ...empty, warnings, fail: true };
+  }
+  const [vessels, existing] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const WINDOW_MS = 3 * 3600_000;
+  let cancelled = 0;
+  for (const e of parsed.events) {
+    if (!e.cancelled) continue; // F7 r3: sam plan → bez actual_* / statusu
+    const vesselId = byName.get(e.vessel);
+    if (!vesselId) continue;
+    const t = Date.parse(e.atUtc);
+    const hit = existing.find((s) =>
+      s.vessel_id === vesselId
+      && s.route === e.route
+      && Math.abs(Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at) - t) <= WINDOW_MS
+      && s.status !== 'ODWOLANY'
+      && s.source !== 'RECZNIE');
+    if (hit && await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
+      cancelled += 1;
+      hit.status = 'ODWOLANY';
+    }
+  }
+  return { warnings, fail: false, cancelled };
+}
+
+/**
+ * BN2 / F7 r2 — Ports of Stockholm: tylko dopasowanie istniejących (statek + ±3 h)
+ * → actual_*; bez insertów i bez zmiany departure_at/arrival_at.
+ */
+async function applyPortsStockholm(deps: JobDeps, sinceIso: string): Promise<{
+  warnings: string[]; fail: boolean; actualUpdated: number;
+}> {
+  const empty = { warnings: [] as string[], fail: false, actualUpdated: 0 };
+  const page = await readText(deps, PORTS_STOCKHOLM_PORTENTRY_URL, {
+    headers: { 'User-Agent': PORTS_STOCKHOLM_UA, Accept: 'application/json' },
+  });
+  if (!page.ok) return { ...empty, warnings: [page.warning], fail: true };
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    return { ...empty, warnings: ['Ports of Stockholm: nieczytelny JSON'], fail: true };
+  }
+  const parsed = parsePortsStockholmPortEntry(json);
+  if (parsed.warnings.some((w) => /Struktura/i.test(w))) {
+    return { ...empty, warnings: parsed.warnings, fail: true };
+  }
+  const warnings = [...parsed.warnings];
+  const [vessels, existing] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  let actualUpdated = 0;
+  const WINDOW_MS = 3 * 3600_000;
+  for (const c of parsed.calls) {
+    const vesselId = byName.get(c.vessel);
+    if (!vesselId) continue;
+    if (c.actualArrivalUtc && c.arrivalRoute) {
+      const t = Date.parse(c.actualArrivalUtc);
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === c.arrivalRoute
+        && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
+        && s.actual_arrival_at == null);
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_arrival_at: c.actualArrivalUtc }, 'DOPLYNAL'),
+      )) {
+        actualUpdated += 1;
+        hit.actual_arrival_at = c.actualArrivalUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      }
+    }
+    if (c.actualDepartureUtc && c.departureRoute) {
+      const t = Date.parse(c.actualDepartureUtc);
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === c.departureRoute
+        && Math.abs(Date.parse(s.departure_at) - t) <= WINDOW_MS
+        && s.actual_departure_at == null);
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_departure_at: c.actualDepartureUtc }, 'W_REJSIE'),
+      )) {
+        actualUpdated += 1;
+        hit.actual_departure_at = c.actualDepartureUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+      }
+    }
+  }
+  return { warnings, fail: false, actualUpdated };
+}
+
+/** ferry-schedule — Polferries + Stena + BN2 Tallink + Port of Tallinn / Ports of Stockholm (rozkład).
+ * Portnet ATD/ATA: ferry-portnet co 15 min (F7 #660). */
 export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const page = await readText(deps, POLFERRIES_SCHEDULE_URL, { headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' } });
@@ -364,9 +655,98 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:STENA_SCHEDULE:');
   }
 
+  // BN2: Tallink (LIVE). Viking/Eckerö/DFDS — parsery gotowe; scrape HTML w kolejnym kroku.
+  // F7 #660: SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez żadnych rejsów; kierunki OK zapisujemy.
+  const tallink = await fetchTallinkDays(deps, 14);
+  warnings.push(...tallink.warnings);
+  const tlFail = tallink.fetchedOk === 0
+    || (tallink.structureFail && tallink.sailings.length === 0);
+  if (tallink.sailings.length > 0) {
+    const incomingT: IncomingSailing[] = tallink.sailings.map((s) => ({
+      route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
+    }));
+    const r = await applySailings(deps, incomingT, since, 'TALLINK');
+    inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
+    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
+  }
+  if (tlFail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'TALLINK_SCHEDULE',
+      tallink.warnings.length ? tallink.warnings : ['Brak odpowiedzi Tallink'],
+      now,
+      TALLINK_BOOKING,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_SCHEDULE:');
+  }
+
+  // Portnet ATD/ATA → osobny job ferry-portnet co 15 min (F7 #660 pkt 6).
+
+  // BN2 / F7 r3: Port of Tallinn — tylko odwołania (bez insertów / godzin / actual_* z planu).
+  const tallinn = await applyPortTallinn(deps, since);
+  warnings.push(...tallinn.warnings);
+  updated += tallinn.cancelled;
+  if (tallinn.fail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'PORT_TALLINN',
+      tallinn.warnings.length ? tallinn.warnings : ['Brak odpowiedzi Port of Tallinn'],
+      now,
+      PORT_TALLINN_DEPARTURES_URL,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:PORT_TALLINN:');
+  }
+
+  // BN2 / F7 r2: Ports of Stockholm — tylko actual_* na istniejących (bez insertów / godzin).
+  const stockholm = await applyPortsStockholm(deps, since);
+  warnings.push(...stockholm.warnings);
+  updated += stockholm.actualUpdated;
+  if (stockholm.fail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'PORTS_STOCKHOLM',
+      stockholm.warnings.length ? stockholm.warnings : ['Brak odpowiedzi Ports of Stockholm'],
+      now,
+      PORTS_STOCKHOLM_PORTENTRY_URL,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:PORTS_STOCKHOLM:');
+  }
+
   return {
-    job: 'ferry-schedule', mode: 'LIVE', ok: !(pfFail && stFail),
+    job: 'ferry-schedule', mode: 'LIVE', ok: !(pfFail && stFail && tlFail),
     inserted, updated, manualKept, unchanged, risks, warnings,
+  };
+}
+
+/** ferry-portnet — Digitraffic Portnet ATD/ATA co 15 min (F7 #660 pkt 6) + domknięcie W_REJSIE FI→EE. */
+export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
+  const now = deps.now().toISOString();
+  const since = new Date(Date.parse(now) - 864e5).toISOString();
+  const warnings: string[] = [];
+  let risks = 0;
+  const portnet = await applyDigitrafficPortCallActuals(deps, since);
+  warnings.push(...portnet.warnings);
+  let updated = portnet.updated;
+  if (portnet.fail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'DIGITRAFFIC_PORTCALL',
+      portnet.warnings.length ? portnet.warnings : ['Brak odpowiedzi Portnet'],
+      now,
+      DIGITRAFFIC_PORT_CALLS_URL,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_PORTCALL:');
+  }
+  const closed = await closeStaleFiToEeWithoutAta(deps, since);
+  updated += closed;
+  return {
+    job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
+    updated, risks, warnings,
+    observations: closed ? { closed_without_ata: String(closed) } : undefined,
   };
 }
 
@@ -1968,6 +2348,7 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
 export const JOBS = {
   'ferry-schedule': runFerrySchedule, 'ferry-status': runFerryStatus, 'ferry-ais': runFerryAis,
   'ferry-ais-listen': runFerryAisListen,
+  'ferry-portnet': runFerryPortnet,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
   'emtrack-web': runEmtrackWeb,
@@ -1979,7 +2360,8 @@ export type JobName = keyof typeof JOBS;
 
 /** Minimalny odstęp między przebiegami [min] — ferry-status: co 15 min, nie częściej (ZRODLA_DANYCH §1.1). */
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
-  'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0, 'ferry-weather': 60,
+  'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
+  'ferry-portnet': 15, 'ferry-weather': 60,
   'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2, 'route-hazards': 60,
   'translate-retry': 5,
 };

@@ -1,0 +1,16 @@
+{
+  "sailings": [
+    {
+      "route": "TLLA-HEL",
+      "vessel": "Finlandia",
+      "departureLocal": "2026-10-30T09:00",
+      "arrivalLocal": "2026-10-30T11:30"
+    },
+    {
+      "route": "MUU-VUO",
+      "vessel": "Finbo Cargo",
+      "departureLocal": "2026-10-30T18:00",
+      "arrivalLocal": "2026-10-30T22:00"
+    }
+  ]
+}

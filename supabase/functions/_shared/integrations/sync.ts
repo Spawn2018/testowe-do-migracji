@@ -1,18 +1,25 @@
 /**
  * M12 — rdzeń integracji danych zewnętrznych (ZRODLA_DANYCH.md). Czyste funkcje — wspólne dla
  * funkcji Edge (Deno) i testów (vitest, bez sieci). Zasady (ZLECENIE_FINAL AN2 · M12):
- *  - pierwszeństwo źródeł rejsu: RECZNIE > POLFERRIES/STENA > DANE_STARTOWE — zmiany ręcznej HHL odczyt nie nadpisuje
+ *  - pierwszeństwo źródeł rejsu: RECZNIE > armatorzy (POLFERRIES/STENA/TALLINK/…) > DANE_STARTOWE — zmiany ręcznej HHL odczyt nie nadpisuje
  *  - status NIEZNANY → bez zmiany rejsu, ryzyko dla HHL
  *  - awaria źródła albo zmiana struktury strony → ryzyko „źródło niedostępne”, nigdy cicha pustka
  *  - ryzyka drogowe w rodzajach ROAD_SE / ROAD_PL
  */
 import type { FerryRoute, FerryStatus } from '../ferry/polferries.ts';
 
-export type SailingSource = 'DANE_STARTOWE' | 'RECZNIE' | 'POLFERRIES' | 'STENA';
-export type AutoSailingSource = 'POLFERRIES' | 'STENA';
+export type SailingSource =
+  | 'DANE_STARTOWE' | 'RECZNIE'
+  | 'POLFERRIES' | 'STENA'
+  | 'TALLINK' | 'VIKING' | 'ECKERO' | 'DFDS';
+export type AutoSailingSource =
+  | 'POLFERRIES' | 'STENA'
+  | 'TALLINK' | 'VIKING' | 'ECKERO' | 'DFDS';
 export type DbSailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
 export const SOURCE_RANK: Record<SailingSource, number> = {
-  DANE_STARTOWE: 1, POLFERRIES: 2, STENA: 2, RECZNIE: 3,
+  DANE_STARTOWE: 1,
+  POLFERRIES: 2, STENA: 2, TALLINK: 2, VIKING: 2, ECKERO: 2, DFDS: 2,
+  RECZNIE: 3,
 };
 
 export interface VesselRow { id: string; name: string; mmsi: number | null; imo?: number | null }
@@ -133,13 +140,19 @@ export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoS
 export type SourceId =
   | 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE'
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
-  | 'DIGITRAFFIC' | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
+  | 'TALLINK_SCHEDULE' | 'VIKING_SCHEDULE' | 'ECKERO_SCHEDULE' | 'DFDS_SCHEDULE'
+  | 'DIGITRAFFIC' | 'DIGITRAFFIC_PORTCALL' | 'PORT_TALLINN' | 'PORTS_STOCKHOLM'
+  | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
   | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
-  DIGITRAFFIC: 'AIS promów (Digitraffic)', STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
+  TALLINK_SCHEDULE: 'rozkład promów (Tallink)', VIKING_SCHEDULE: 'rozkład promów (Viking Line)',
+  ECKERO_SCHEDULE: 'rozkład promów (Eckerö/Finbo)', DFDS_SCHEDULE: 'rozkład promów (DFDS)',
+  DIGITRAFFIC: 'AIS promów (Digitraffic)', DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
+  PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)', PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
+  STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
@@ -151,7 +164,9 @@ const SOURCE_LABEL: Record<SourceId, string> = {
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
-  DIGITRAFFIC: 'FERRY', STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
+  TALLINK_SCHEDULE: 'FERRY', VIKING_SCHEDULE: 'FERRY', ECKERO_SCHEDULE: 'FERRY', DFDS_SCHEDULE: 'FERRY',
+  DIGITRAFFIC: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY', PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY',
+  STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
   HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',
   KSH_SHAREPOINT: 'JOB_FAILURE',
@@ -169,7 +184,7 @@ export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
-    severity: src.startsWith('POLFERRIES') || src.startsWith('STENA') ? 'HIGH' : 'MEDIUM',
+    severity: /^(POLFERRIES|STENA|TALLINK|VIKING|ECKERO|DFDS)/.test(src) ? 'HIGH' : 'MEDIUM',
     title: sticky
       ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`
       : `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,

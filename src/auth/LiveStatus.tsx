@@ -32,6 +32,8 @@ export const LIVE_SOURCES: readonly SourceDef[] = [
   { id: 'ferry-pos', jobs: ['ferry-ais', 'ferry-ais-listen'], maxMin: 15, check: false },
   { id: 'ferry-status', jobs: ['ferry-status'], maxMin: 30, check: false },
   { id: 'schedule', jobs: ['ferry-schedule'], maxMin: 26 * 60, check: false },
+  /* BN2 / F7 #660: Portnet ATD/ATA co 15 min */
+  { id: 'ferry-portnet', jobs: ['ferry-portnet'], maxMin: 30, check: false },
   { id: 'ferry-departures', jobs: ['ferry-departures'], maxMin: 26 * 60, check: false },
   { id: 'road-se', jobs: ['road-se'], maxMin: 45, check: false },
   { id: 'road-pl', jobs: ['road-pl'], maxMin: 45, check: false },

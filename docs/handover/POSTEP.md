@@ -6910,6 +6910,41 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 10:50 — BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: F7 r3 **POPRAWKI (1 bloker)** @ 6412306 — nie scalono. CI @ 6412306 unit/db/visual ✔.
+- **Krok F7 r3:** `applyPortTallinn` — wyłącznie odwołania; usunięte gałęzie DEPARTURE/ARRIVAL ustawiające `actual_*` = plan `atUtc`. Test: zdarzenie z samym planem → `actual_*` puste, status bez zmian. Stockholm bez zmian (API ma prawdziwe `arrivalDateTime`/`departureDateTime`).
+- Push → CI → F7. Dalej BN2 po F7: scrape HTML Viking/Eckerö/DFDS. Bez push na main.
+
+## 2026-10-30 10:25 — BN2 #660 F7 r2: PoT/Stockholm bez zmyślonych godzin
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować).
+- Scalanie: F7 r2 **POPRAWKI (1 bloker)** @ 7903ec5 — nie scalono. CI @ 7903ec5 było zielone.
+- **Krok F7 r2:** Port of Tallinn i Ports of Stockholm tylko dopasowują istniejące rejsy (statek ±3 h) → odwołania/`actual_*`; bez insertów i bez zmiany `departure_at`/`arrival_at`. `closeStaleFiToEeWithoutAta` + **STO-TLL** / **KPS-PLD**. Testy: Tallink+PoT bez duplikatu; Stockholm actual_*; RECZNIE przy odwołaniu; closeStale SE→EE. `bn2-ferry-jobs` + `bn2-ferry-schedule` 24/24.
+- Push → CI → F7. Dalej BN2 po F7: scrape HTML Viking/Eckerö/DFDS. Bez push na main.
+
+## 2026-10-30 10:00 — BN2 #660 F7 r1 POPRAWKI (0348 ferry-portnet)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: F7 r1 **POPRAWKI** @ e368e26 + komentarz „nie rozszerzaj” @ 5ccc9d3 — **nie scalono**. CI @ 5ccc9d3 unit/db/visual ✔ (po G-15 czekano na koniec). Bez push na main.
+- **Krok F7 r1:** Portnet nie nadpisuje statusu RECZNIE/ODWOLANY (jak AIS); Tallink — bez booking, częściowa awaria ≠ SOURCE_DOWN, zapis kierunków OK; `ferry-portnet` co 15 min (**0348**) + domknięcie HEL-TLL/VUO-MUU po `arrival_at+2h` (bez ATA); timeout `readText` 20 s; DST Tallinn 24/25.10; testy `bn2-ferry-jobs` + ferry DST. Tallinn/Stockholm zostają w tym PR (te same reguły).
+- Push → CI → F7. Dalej BN2 po F7: scrape HTML Viking/Eckerö/DFDS. Bez push na main.
+
+## 2026-10-30 09:40 — BN2 krok 2: Port of Tallinn + Ports of Stockholm
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: #660 CI @ `e368e26e` zielone (unit/db/visual); **brak** „F7: gotowe do scalenia” po tipie — nie scalono. Bez push na main.
+- **Krok BN2:** `portTallinn.ts` (HTML ts.ee departures/arrivals) + `portsStockholm.ts` (API portentry); `ferry-schedule` → rozkład dnia armatorów bałtyckich + SOURCE_DOWN PORT_TALLINN/PORTS_STOCKHOLM + actual_* Sztokholm. Testy `bn2-ferry-schedule` 15/15. Dalej: scrape HTML Viking/Eckerö/DFDS 14 dni.
+- Push → CI → F7. Bez push na main.
+
+## 2026-10-30 09:10 — #659 SCALONE; start BN2 (0347 Tallink + Portnet)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: F7 „gotowe do scalenia” @ `4f6740a` (Spawn2018, po tipie) + CI zielone → **#659 SCALONE** `60c6ddf3` (**0346**). #648 zamknięte. Bez push na main.
+- **Krok BN2:** gałąź `pakiet/bn2-ferry-schedules-baltic` / migracja **0347** (statki bałtyckie). Parsery `_shared/ferry/{tallink,vikingline,eckero,dfds,digitrafficPortCalls}.ts`; `ferry-schedule`: Tallink LIVE (14 dni TAL↔HEL/STO) + Digitraffic Portnet → `actual_*`; SOURCE_DOWN TALLINK/VIKING/ECKERO/DFDS/PORTCALL/PORT_TALLINN/PORTS_STOCKHOLM; testy `bn2-ferry-schedule` + risk-keys. Viking/Eckerö/DFDS HTML + Port of Tallinn / Stockholm — następny krok.
+- Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 08:35 — #659 F7 r2: aal2 false→f + true→t (status 502)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.

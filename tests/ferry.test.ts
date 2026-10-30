@@ -92,6 +92,13 @@ describe('Czas lokalny → UTC przy zmianie czasu', () => {
   it('zima: 18:00 = 17:00 UTC', () => expect(localToUtc('2026-12-01', '18:00')).toBe('2026-12-01T17:00:00.000Z'));
   it('przyjście +1 dzień przez noc zmiany czasu (24→25.10.2026)', () =>
     expect(localToUtc('2026-10-24', '12:00', 1)).toBe('2026-10-25T11:00:00.000Z'));
+  // F7 #660: przełom DST 25.10.2026 04:00→03:00 Tallinn (EEST UTC+3 → EET UTC+2).
+  it('Tallinn przed przełomem: 24.10 22:00 EEST = 19:00Z', () =>
+    expect(localToUtc('2026-10-24', '22:00', 0, 'Europe/Tallinn')).toBe('2026-10-24T19:00:00.000Z'));
+  it('Tallinn po przełomie: 25.10 04:00 EET = 02:00Z', () =>
+    expect(localToUtc('2026-10-25', '04:00', 0, 'Europe/Tallinn')).toBe('2026-10-25T02:00:00.000Z'));
+  it('Tallinn przed 04:00 w dniu zmiany: 25.10 01:30 jeszcze EEST = 22:30Z (24.10)', () =>
+    expect(localToUtc('2026-10-25', '01:30', 0, 'Europe/Tallinn')).toBe('2026-10-24T22:30:00.000Z'));
 });
 
 describe('Digitraffic — prawdziwa odpowiedź dla Nova Star', () => {
