@@ -7012,3 +7012,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok F7 r2 #656:** (1) `bulk_quiet` → zawsze pełna cisza w `trg_plan_dates_notify`; (2) SUMMARY decisions = RLS 0315; (3) `LOAD_STATUS_CHANGED` w quiet + test; (4) g20/dec-auto → `import_schedule_impl`; (5) I-10/i2 pod SUMMARY; import **423**. Numery: #654=**0343**, #651=**0344** (po #656).
 - Bez push na main.
 
+## 2026-10-30 04:05 — #656 F7 POPRAWKI r4 (tylko testy)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE**.
+- Scalanie: F7 r4 @ cae4d21 — migracja 0342 OK; CI db import 417/423 (5 FAIL). #651 F7 gotowe (po #656); #654 CONFLICTING.
+- **Krok F7 r4:** `tests/db/import.sh` — (1) wrapper boolean bez `::text`; (2) seed S653-RG + cancel → KSH_ROW_GONE z importu (bez fallbacku `decision_open_from_event`); (3) `workflow_worker` przed ryzykiem T-CANCEL-653; (4) CARRIER decisions≥1; import **424**.
+- Bez push na main.
+

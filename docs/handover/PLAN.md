@@ -1149,7 +1149,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #650 (Spawn2018; właściciel 29.10 22:41) + F7. Migracja **0340** na produkcji. **Aktualizacja właściciela 30.10 01:21 (#653):** trigger wraca do **tylko zmienione pole** — zob. #653.
 
 ### #653 · PILNE: import ON + WT→plik tylko zmienione pole + dzwonek zbiorczy — W TOKU
-Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) **PR #656** (`pakiet/653-import-bell-summary` / **0342**): F7 POPRAWKI r2 — `bulk_quiet` zawsze cisza w `trg_plan_dates_notify`; decisions SUMMARY = RLS 0315 (`CLIENT` / `CARRIER|HHL`); `LOAD_STATUS_CHANGED` w quiet; testy g20/dec-auto → `import_schedule_impl`; import **423** / i2 +1 SUMMARY; (4) potem revoke `enqueue_active_wt` + #651=**0344** / #654=**0343** (F7: po #656). Backfill **nie wywoływać**.
+Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) **PR #656** (`pakiet/653-import-bell-summary` / **0342**): F7 POPRAWKI r4 (tylko testy) — scenariusz KSH_ROW_GONE z importu (`p_cancel_codes`), bez fallbacku poza importem, `workflow_worker` przed ryzykiem cancel, CARRIER decisions≥1; import **424**; (4) potem revoke `enqueue_active_wt` + #651=**0344** / #654=**0343** (F7: po #656). Backfill **nie wywoływać**.
 
 ### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
@@ -2042,3 +2042,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 02:55 | #653: PR dzwonek **0342** (tylko SUMMARY); #655 CI ✔ czeka F7; import **405** | pętla |
 | 30.10.2026 03:10 | #655 SCALONE `29000fd2`; #656 F7 POPRAWKI (bez bulk_quiet, widoczność, testy); import **422** | pętla |
 | 30.10.2026 03:45 | #656 F7 r2: bulk_quiet cisza; RLS decisions; LOAD_STATUS; impl w g20/dec-auto; import **423** i2 **672** | pętla |
+| 30.10.2026 04:05 | #656 F7 r4: testy import — KSH_ROW_GONE z importu, workflow_worker, CARRIER≥1; import **424** | pętla |
