@@ -1,5 +1,6 @@
 -- #653: po imporcie KSH — tylko KSH_IMPORT_SUMMARY w dzwonku (bez PLAN_DATES_CHANGED /
--- SCHEDULE_DATE_CRITICAL / RISK_OPEN / DECISION_OPEN per transport). Sprawy i decyzje zostają.
+-- SCHEDULE_DATE_CRITICAL / RISK_OPEN / DECISION_OPEN per transport). Sprawy i decyzje zostają;
+-- workflow (wf_enqueue) działa (bez bulk_quiet we wrapperze — F7 #656).
 -- Scalenie po #655 (0341). Numer 0342.
 begin;
 
@@ -39,7 +40,6 @@ comment on function public.trg_notifications_import_bell_quiet() is
 
 -- ---------------------------------------------------------------------------
 -- 2. trg_plan_dates_notify: przy import_bell_quiet — zdarzenie + l3, bez IN_APP
---    (bulk_quiet z wrappera wycisza wf_enqueue; tu omijamy early-return).
 -- ---------------------------------------------------------------------------
 create or replace function public.trg_plan_dates_notify() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -108,7 +108,7 @@ end $$;
 revoke all on function public.trg_plan_dates_notify() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 3. Wrapper import_schedule: zawsze import_bell_quiet + bulk_quiet (wf cisza)
+-- 3. Wrapper import_schedule: tylko import_bell_quiet (bez bulk_quiet — F7 #656)
 -- ---------------------------------------------------------------------------
 alter function public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean)
   rename to import_schedule_impl;
@@ -127,27 +127,23 @@ set search_path = public
 as $$
 declare
   v_prev_bell text;
-  v_prev_bulk text;
   v_result jsonb;
 begin
   v_prev_bell := current_setting('tower.import_bell_quiet', true);
-  v_prev_bulk := current_setting('tower.bulk_quiet', true);
-  -- #653/#594: przy p_quiet=false — dzwonek tylko zbiorczy (bell_quiet), ale l3/zdarzenia dat zostają;
-  -- bulk_quiet wycisza wf_enqueue / e-maile L-13. Przy p_quiet=true — bez bell_quiet (pełna cisza jak #426).
+  -- #653/#594 F7: przy p_quiet=false — dzwonek tylko zbiorczy; sprawy/decyzje/wf zostają
+  -- (bez bulk_quiet — 0325 ustawia go tylko dla wierszy historycznych/dostarczonych).
+  -- Przy p_quiet=true — bez bell_quiet (pełna cisza jak #426, w tym bulk z impl).
   if p_quiet is not true then
     perform set_config('tower.import_bell_quiet', 'on', true);
-    perform set_config('tower.bulk_quiet', 'on', true);
   end if;
   begin
     v_result := public.import_schedule_impl(
       p_project, p_rows, p_cancel_codes, p_file, p_dry_run, p_quiet);
   exception when others then
     perform set_config('tower.import_bell_quiet', coalesce(v_prev_bell, ''), true);
-    perform set_config('tower.bulk_quiet', coalesce(v_prev_bulk, ''), true);
     raise;
   end;
   perform set_config('tower.import_bell_quiet', coalesce(v_prev_bell, ''), true);
-  perform set_config('tower.bulk_quiet', coalesce(v_prev_bulk, ''), true);
   return v_result;
 end;
 $$;
@@ -168,12 +164,90 @@ revoke all on function public.import_schedule_impl(uuid, jsonb, text[], jsonb, b
   from public, anon, authenticated;
 
 comment on function public.import_schedule(uuid, jsonb, text[], jsonb, boolean, boolean) is
-  '#653: wrapper — import_bell_quiet+bulk_quiet; p_quiet steruje tylko KSH_IMPORT_SUMMARY.';
+  '#653: wrapper — import_bell_quiet (bez bulk_quiet); p_quiet steruje SUMMARY/#426.';
 comment on function public.import_schedule_impl(uuid, jsonb, text[], jsonb, boolean, boolean) is
   'Implementacja import_schedule (0325); wołana wyłącznie przez wrapper #653.';
 
 -- ---------------------------------------------------------------------------
--- 4. KSH_IMPORT_SUMMARY: „w tym: N spraw, M decyzji”
+-- 3b. l13_decision_email: wycisz też przy import_bell_quiet (zamiast bulk_quiet)
+-- ---------------------------------------------------------------------------
+create or replace function public.l13_decision_email(p_decision uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  d decisions%rowtype;
+  v_role text;
+  v_sev text;
+  v_kind text;
+  v_bundle text;
+  v_order text;
+  v_payload jsonb;
+  v_hhl_only boolean;
+  r record;
+begin
+  select * into d from decisions where id = p_decision;
+  if not found then
+    return;
+  end if;
+  select decider_role, severity_default into v_role, v_sev
+    from decision_types where code = d.type_code;
+  v_sev := coalesce(d.severity, v_sev);
+  v_hhl_only := d.type_code in (
+    'KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK', 'ETA_CALIBRATION_APPROVAL'
+  ) or v_role = 'ADMIN';
+  v_kind := case when v_sev = 'CRITICAL' or d.type_code = 'FERRY_CANCELLED' then 'critical' else 'digest' end;
+  v_bundle := coalesce(
+    nullif(d.detail->>'bundle_key', ''),
+    nullif(d.detail->>'sailing_id', ''),
+    d.type_code || ':' || coalesce(d.detail->>'event_key', d.id::text)
+  );
+  select order_no into v_order from loads where id = d.load_id;
+  v_payload := jsonb_build_object(
+    'decision_id', d.id, 'type', d.type_code, 'title', d.title,
+    'status', d.status, 'event', 'OPEN', 'severity', v_sev,
+    'bundle_key', v_bundle, 'level', case when v_kind = 'critical' then 'critical' else 'info' end
+  );
+  -- F7 #656: import_bell_quiet wycisza e-mail (bulk_quiet zostaje dla hist/quiet #426).
+  if current_setting('tower.bulk_quiet', true) = 'on'
+     or current_setting('tower.import_bell_quiet', true) = 'on' then
+    return;
+  end if;
+  for r in
+    select distinct u.id as user_id, u.email::text as recipient, u.locale, o.kind as org_kind
+      from app_users u
+      join organizations o on o.id = u.org_id
+      join notification_matrix m
+        on m.event_key = 'dec_new' and m.role = u.role and m.email
+     where u.active and u.email is not null
+       and (
+         (o.kind = 'FORWARDER' and (v_role is distinct from 'ADMIN' or u.role = 'HHL_ADMIN'))
+         or (v_hhl_only is not true and o.kind = 'CARRIER' and v_role = 'CARRIER' and (
+              d.load_id is null
+              or exists (select 1 from loads l where l.id = d.load_id and l.carrier_org_id = o.id)))
+         or (v_hhl_only is not true and o.kind = 'CLIENT' and (
+              d.project_id is null
+              or exists (select 1 from projects pr where pr.id = d.project_id and pr.client_org_id = o.id)))
+       )
+  loop
+    perform public.l13_queue_email(
+      v_kind, 'DECISION_OPEN', r.user_id, r.recipient, d.load_id,
+      case when r.org_kind = 'CARRIER' then nullif(public.load_sms_code(d.load_id), '—') else v_order end,
+      v_payload || jsonb_build_object('locale', r.locale),
+      left('dec:OPEN:' || d.id::text || ':EM:' || r.user_id::text, 200),
+      case when v_kind = 'critical' then v_bundle else null end
+    );
+  end loop;
+  perform public.l13_email_guard_note(now());
+end $$;
+revoke all on function public.l13_decision_email(uuid) from public, anon, authenticated;
+comment on function public.l13_decision_email(uuid) is
+  'C3-p + #581 + #653: e-mail decyzji; ADMIN → HHL_ADMIN; cisza przy bulk_quiet/import_bell_quiet.';
+
+-- ---------------------------------------------------------------------------
+-- 4. KSH_IMPORT_SUMMARY: „w tym: N spraw, M decyzji” wg widoczności odbiorcy
 -- ---------------------------------------------------------------------------
 create or replace function public.ksh_import_summary_publish(
   p_project uuid,
@@ -201,6 +275,8 @@ declare
   v_ok boolean;
   v_risks int := 0;
   v_decs int := 0;
+  v_risks_hhl int := 0;
+  v_decs_hhl int := 0;
   v_load_ids uuid[];
 begin
   perform public.assert_not_preview();
@@ -228,26 +304,26 @@ begin
     into v_load_ids
     from jsonb_array_elements(v_changes) ch;
 
-  -- Sprawy / decyzje otwarte w tym przebiegu importu (ta sama transakcja).
-  select count(*)::int into v_risks
+  -- Sprawy / decyzje otwarte w tej samej transakcji importu (okno >= v_at).
+  select count(*)::int into v_risks_hhl
     from public.risk_signals rs
    where rs.project_id = p_project
      and rs.resolved_at is null
      and rs.load_id = any (v_load_ids)
-     and rs.detected_at >= v_at - interval '15 minutes';
+     and rs.detected_at >= v_at;
 
-  select count(*)::int into v_decs
+  select count(*)::int into v_decs_hhl
     from public.decisions d
    where d.project_id = p_project
      and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
      and d.load_id = any (v_load_ids)
-     and d.created_at >= v_at - interval '15 minutes';
+     and d.created_at >= v_at;
 
   insert into public.ksh_import_summaries (
     project_id, import_id, imported_at, file_name, file_hash, changes, stats
   ) values (
     p_project, p_import_id, v_at, p_file_name, p_file_hash, v_changes,
-    v_stats || jsonb_build_object('risks', v_risks, 'decisions', v_decs)
+    v_stats || jsonb_build_object('risks', v_risks_hhl, 'decisions', v_decs_hhl)
   ) returning id into v_id;
 
   delete from public.ksh_import_summaries s
@@ -304,6 +380,52 @@ begin
       continue;
     end if;
     v_fstats := public.ksh_import_summary_stats_of(v_filtered);
+
+    -- Liczby spraw/decyzji wg widoczności odbiorcy (F7 #656: SCX/KSH bez spraw tylko-HHL).
+    if u.org_kind = 'FORWARDER' then
+      v_risks := v_risks_hhl;
+      v_decs := v_decs_hhl;
+    elsif u.org_kind = 'CARRIER' then
+      select count(*)::int into v_risks
+        from public.risk_signals rs
+        join public.loads l on l.id = rs.load_id
+       where rs.project_id = p_project
+         and rs.resolved_at is null
+         and rs.load_id = any (v_load_ids)
+         and rs.detected_at >= v_at
+         and l.carrier_org_id = u.org_id
+         and rs.audience in ('WSZYSCY', 'HHL_PRZEWOZNIK');
+      select count(*)::int into v_decs
+        from public.decisions d
+        join public.decision_types dt on dt.code = d.type_code
+        join public.loads l on l.id = d.load_id
+       where d.project_id = p_project
+         and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+         and d.load_id = any (v_load_ids)
+         and d.created_at >= v_at
+         and l.carrier_org_id = u.org_id
+         and d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK', 'ETA_CALIBRATION_APPROVAL')
+         and dt.decider_role is distinct from 'ADMIN';
+    else
+      -- CLIENT (KSH)
+      select count(*)::int into v_risks
+        from public.risk_signals rs
+       where rs.project_id = p_project
+         and rs.resolved_at is null
+         and rs.load_id = any (v_load_ids)
+         and rs.detected_at >= v_at
+         and rs.audience in ('WSZYSCY', 'HHL_KLIENT');
+      select count(*)::int into v_decs
+        from public.decisions d
+        join public.decision_types dt on dt.code = d.type_code
+       where d.project_id = p_project
+         and d.status in ('NEW', 'ASSIGNED', 'SNOOZED')
+         and d.load_id = any (v_load_ids)
+         and d.created_at >= v_at
+         and d.type_code not in ('KSH_CARRIER_CHANGED', 'KSH_REMOVED_BACK', 'ETA_CALIBRATION_APPROVAL')
+         and dt.decider_role is distinct from 'ADMIN';
+    end if;
+
     v_short := format(
       'Transporty: %s · pola: %s · nowe: %s · anulowane/usunięte: %s',
       v_fstats->>'transports', v_fstats->>'fields',
@@ -346,7 +468,7 @@ revoke all on function public.ksh_import_summary_publish(uuid, uuid, int, text, 
   from public, anon, authenticated;
 
 comment on function public.ksh_import_summary_publish(uuid, uuid, int, text, text) is
-  '#594+#653: migawka + jedno IN_APP; treść z liczbą spraw/decyzji z importu.';
+  '#594+#653: migawka + jedno IN_APP; liczby spraw/decyzji wg widoczności odbiorcy.';
 
 -- ---------------------------------------------------------------------------
 -- 5. Jednorazowo: oznacz zalanie z 00:56:06Z jako przeczytane (bez zamykania spraw)
