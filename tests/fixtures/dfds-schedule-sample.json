@@ -1,0 +1,16 @@
+{
+  "sailings": [
+    {
+      "route": "PLD-KPS",
+      "vessel": "Sirena Seaways",
+      "departureLocal": "2026-10-30T21:00",
+      "arrivalLocal": "2026-10-31T07:00"
+    },
+    {
+      "route": "KPS-PLD",
+      "vessel": "Sirena Seaways",
+      "departureLocal": "2026-10-31T18:00",
+      "arrivalLocal": "2026-11-01T06:00"
+    }
+  ]
+}

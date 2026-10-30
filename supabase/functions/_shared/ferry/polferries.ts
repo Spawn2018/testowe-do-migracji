@@ -18,7 +18,11 @@
  *  5. Godziny na stronie są lokalne; Gdańsk i Nynäshamn mają tę samą strefę
  */
 
-export type FerryRoute = 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY';
+/** Kody tras jak `ferry_routes.code` / BN9-a `FerryRouteCode` (BN1–BN2). */
+export type FerryRoute =
+  | 'GDN-NYN' | 'NYN-GDN' | 'GDY-KAA' | 'KAA-GDY'
+  | 'TLL-HEL' | 'HEL-TLL' | 'TLLA-HEL' | 'HELA-TLL'
+  | 'MUU-VUO' | 'VUO-MUU' | 'TLL-STO' | 'STO-TLL' | 'PLD-KPS' | 'KPS-PLD';
 export type FerryStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'NIEZNANY';
 
 export interface ParsedSailing {

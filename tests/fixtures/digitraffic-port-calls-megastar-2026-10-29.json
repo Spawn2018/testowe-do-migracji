@@ -1,0 +1,199 @@
+{
+  "dataUpdatedTime": "2026-10-30T08:03:00.170190Z",
+  "portCalls": [
+    {
+      "portCallId": 3405135,
+      "portCallTimestamp": "2026-10-29T18:30:02.000Z",
+      "customsReference": "4/00298227",
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "domesticTrafficArrival": false,
+      "domesticTrafficDeparture": false,
+      "arrivalWithCargo": true,
+      "notLoading": false,
+      "discharge": 1,
+      "shipMasterArrival": "",
+      "shipMasterDeparture": "",
+      "managementNameArrival": " ",
+      "managementNameDeparture": " ",
+      "forwarderNameArrival": " ",
+      "forwarderNameDeparture": " ",
+      "freeTextArrival": " ",
+      "freeTextDeparture": " ",
+      "vesselName": "Megastar",
+      "vesselNamePrefix": "ms",
+      "radioCallSign": "ESKL",
+      "radioCallSignType": "real",
+      "imoLloyds": 9773064,
+      "mmsi": 276829000,
+      "nationality": "EE",
+      "vesselTypeCode": 20,
+      "certificateIssuer": "EE/Eesti vabariik",
+      "certificateStartDate": "2022-06-01T21:00:00.000Z",
+      "certificateEndDate": "2027-06-06T21:00:00.000Z",
+      "currentSecurityLevel": 1,
+      "agentInfo": [
+        {
+          "ediNumber": "003701142967",
+          "name": "Tallink Silja Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 1
+        },
+        {
+          "ediNumber": null,
+          "name": "Tallink Silja Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 2
+        }
+      ],
+      "imoInformation": [
+        {
+          "briefParticularsVoyage": "eetll-eetll",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Arrival",
+          "numberOfCrew": 194,
+          "numberOfPassangers": 572,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        },
+        {
+          "briefParticularsVoyage": "eetll-eetll",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Departure",
+          "numberOfCrew": 195,
+          "numberOfPassangers": 944,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        }
+      ],
+      "portAreaDetails": [
+        {
+          "arrivalDraught": 0,
+          "ata": "2026-10-29T16:30:00.000Z",
+          "ataSource": "Port",
+          "ataTimestamp": "2026-10-29T17:39:00.000Z",
+          "atd": "2026-10-29T17:15:00.000Z",
+          "atdSource": "Port",
+          "atdTimestamp": "2026-10-29T17:39:00.000Z",
+          "berthCode": "LJ7",
+          "berthName": "Jätkän laituripaikka 7",
+          "departureDraught": 0,
+          "eta": "2026-10-29T16:30:00.000Z",
+          "etaSource": "Agent",
+          "etaTimestamp": "2026-10-10T05:20:07.000Z",
+          "etd": "2026-10-29T17:30:00.000Z",
+          "etdSource": "Agent",
+          "etdTimestamp": "2026-10-10T05:20:24.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 3405145,
+      "portCallTimestamp": "2026-10-29T05:35:21.000Z",
+      "customsReference": "4/00298223",
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "domesticTrafficArrival": false,
+      "domesticTrafficDeparture": false,
+      "arrivalWithCargo": true,
+      "notLoading": false,
+      "discharge": 1,
+      "shipMasterArrival": "",
+      "shipMasterDeparture": "",
+      "managementNameArrival": " ",
+      "managementNameDeparture": " ",
+      "forwarderNameArrival": " ",
+      "forwarderNameDeparture": " ",
+      "freeTextArrival": " ",
+      "freeTextDeparture": " ",
+      "vesselName": "Megastar",
+      "vesselNamePrefix": "ms",
+      "radioCallSign": "ESKL",
+      "radioCallSignType": "real",
+      "imoLloyds": 9773064,
+      "mmsi": 276829000,
+      "nationality": "EE",
+      "vesselTypeCode": 20,
+      "certificateIssuer": "EE/Eesti vabariik",
+      "certificateStartDate": "2022-06-01T21:00:00.000Z",
+      "certificateEndDate": "2027-06-06T21:00:00.000Z",
+      "currentSecurityLevel": 1,
+      "agentInfo": [
+        {
+          "ediNumber": null,
+          "name": "Tallink Silja Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 2
+        },
+        {
+          "ediNumber": "003701142967",
+          "name": "Tallink Silja Oy",
+          "portCallDirection": "Arrival or whole PortCall",
+          "role": 1
+        }
+      ],
+      "imoInformation": [
+        {
+          "briefParticularsVoyage": "eetll-eetll",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Arrival",
+          "numberOfCrew": 169,
+          "numberOfPassangers": 63,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        },
+        {
+          "briefParticularsVoyage": "eetll-eetll",
+          "cargoDeclarationOb": 1,
+          "crewListsOb": 0,
+          "crewsEffectsDeclarationsOb": 0,
+          "healthDeclarationsOb": 0,
+          "imoGeneralDeclaration": "Departure",
+          "numberOfCrew": 0,
+          "numberOfPassangers": null,
+          "passangerListsOb": 0,
+          "portOfDischarge": " ",
+          "shipStoresDeclarationsOb": 0
+        }
+      ],
+      "portAreaDetails": [
+        {
+          "arrivalDraught": 0,
+          "ata": "2026-10-28T22:35:00.000Z",
+          "ataSource": "Agent",
+          "ataTimestamp": "2026-10-29T04:24:15.340Z",
+          "atd": "2026-10-29T05:21:00.000Z",
+          "atdSource": "Agent",
+          "atdTimestamp": "2026-10-29T05:21:47.793Z",
+          "berthCode": "LJ7",
+          "berthName": "Jätkän laituripaikka 7",
+          "departureDraught": 0,
+          "eta": "2026-10-28T22:30:00.000Z",
+          "etaSource": "Agent",
+          "etaTimestamp": "2026-10-10T05:20:12.000Z",
+          "etd": "2026-10-29T05:30:00.000Z",
+          "etdSource": "Agent",
+          "etdTimestamp": "2026-10-10T05:20:28.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    }
+  ]
+}
