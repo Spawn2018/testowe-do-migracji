@@ -187,6 +187,14 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(tll2412).toHaveLength(1);
     const planned = parseVikingPlannedChanges(VIKING_CARGO_HTML, 2026);
     expect(planned.some((p) => p.ymds.includes('2026-12-24'))).toBe(true);
+    // 30.10 = Fri → 04.00* Tallinn→Helsinki (tylko fracht, gwiazdka w rozkładzie)
+    const freight0400 = r.sailings.filter((s) =>
+      s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-10-30') && s.vessel === 'M/F Viking XPRS'
+    );
+    expect(freight0400.some((s) => s.departureUtc.includes('T02:00:00') || s.departureUtc.includes('T01:00:00'))).toBe(true);
+    // horyzont 60 d: listopad i grudzień z sezonu 10.08–31.12.2026
+    expect(r.sailings.some((s) => s.departureUtc.startsWith('2026-11-'))).toBe(true);
+    expect(r.sailings.some((s) => s.departureUtc.startsWith('2026-12-'))).toBe(true);
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

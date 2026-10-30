@@ -7211,3 +7211,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: PR #668 — brak „F7: gotowe”; unit wcześniej FAIL (TS `outboundRoutesOf`); db/visual ✔ na `99aa30b3`.
 - **Krok (#666 A + fix):** Viking Cargo HEL–TLL jako źródło główne (`VIKING_CARGO_HEL_TLL_PAGE`), sales zapas, SOURCE_DOWN tylko gdy oba zawiodą; wyjątki „Planned changes” (24.12 tylko 10:30); horyzont 60 d; fixture z prawdziwej strony Cargo; TS `fromSeed: string[]`. **Dalej w #666:** DFDS Dynamic; RPC historyczne. Potem **#667**.
 - Bez push na main.
+
+## 2026-10-30 18:30 — #669+#670 SCALONE; #668 F7 r1 (Stena równolegle + testy + 0351)
+
+- Skrzynka: #666 W TOKU; #667 po #666 (nie przerywa); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#669** SCALONE `85aef636` (F7 gotowe @ `2a0588e`); **#670** SCALONE `85ee37f1` (F7 gotowe @ `4774580`). CI zielone, merge — nie fork.
+- **Krok (#666 F7 r1):** `fetchStenaDays` równolegle limit 4; SOURCE_DOWN STENA tylko gdy `fetchedOk===0` lub struktura bez rejsów; migracja **0351** (`actual_departure_at` w `guard_load_update`); testy unit (załadunek 20.11 / Stena+Tallink, Polferries historyczne, komunikaty 55, Cargo 04.00*, job Stena concurrency/częściowa awaria) + i2 DB. **Dalej:** DFDS Dynamic po F7; potem **#667**.
+- Bez push na main.

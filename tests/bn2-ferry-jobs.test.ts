@@ -40,6 +40,9 @@ class MemStore implements SyncStore {
       { id: 'v-queen', name: 'M/F Baltic Queen', mmsi: 276815000 },
       { id: 'v-waw', name: 'M/F Wawel', mmsi: null },
       { id: 'v-ns', name: 'M/F Nova Star', mmsi: 311000787 },
+      { id: 'v-ebba', name: 'M/F Stena Ebba', mmsi: null },
+      { id: 'v-spir', name: 'M/F Stena Spirit', mmsi: null },
+      { id: 'v-este', name: 'M/F Stena Estelle', mmsi: null },
     ];
   }
   async sailingsSince(from: string) {
@@ -619,5 +622,83 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
       status: 'ZAPLANOWANY', source: 'RECZNIE',
       departure_at: '2026-10-30T04:00:00.000Z',
     });
+  });
+});
+
+describe('#666 F7 Stena 60 d — równoległość i SOURCE_DOWN tylko przy totalnej awarii', () => {
+  const STENA_JSON = fx('stena-timetable-gdka-2026-10-01.json');
+
+  it('częściowa awaria dni Steny → bez SOURCE_DOWN; max 4 równoległe', async () => {
+    const st = new MemStore();
+    let inFlight = 0;
+    let maxFlight = 0;
+    let stenaHits = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('_jcr_content.timetable.')) {
+        inFlight += 1;
+        maxFlight = Math.max(maxFlight, inFlight);
+        stenaHits += 1;
+        await new Promise((r) => setTimeout(r, 5));
+        inFlight -= 1;
+        // co 7. zapytanie 503 — reszta pusta tablica (OK)
+        if (stenaHits % 7 === 0) return new Response('err', { status: 503 });
+        return new Response('[]', { status: 200 });
+      }
+      if (url.includes('cargo/rozklad')) return new Response(CARGO, { status: 200 });
+      if (url.includes('viking-line-cargo') || url.includes('sales.vikingline.com')) {
+        return new Response('err', { status: 503 });
+      }
+      if (url.includes('api/timetables')) return new Response(TALLINK, { status: 200 });
+      if (url.includes('eckeroline') || url.includes('dfds.com') || url.includes('ctfassets')) {
+        return new Response('err', { status: 503 });
+      }
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    const r = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+    expect(r.ok).toBe(true);
+    expect(stenaHits).toBe(120); // 60 d × 2 trasy
+    expect(maxFlight).toBeLessThanOrEqual(4);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_SCHEDULE:'))).toBe(false);
+  });
+
+  it('całkowita awaria Steny → SOURCE_DOWN; jeden dzień OK → bez SOURCE_DOWN', async () => {
+    const stFail = new MemStore();
+    await runFerrySchedule(deps(stFail, {
+      ...tallinkPages,
+      '_jcr_content.timetable.': 503,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    expect(stFail.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_SCHEDULE:'))).toBe(true);
+
+    const stOk = new MemStore();
+    let n = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('_jcr_content.timetable.')) {
+        n += 1;
+        // pierwszy dzień GDKA z prawdziwym JSON; reszta pusta / jedna 503
+        if (n === 1) return new Response(STENA_JSON.replaceAll('2026-10-01', '2026-10-30'), { status: 200 });
+        if (n === 2) return new Response('err', { status: 503 });
+        return new Response('[]', { status: 200 });
+      }
+      if (url.includes('cargo/rozklad')) return new Response(CARGO, { status: 200 });
+      if (url.includes('from=tal&to=hel')) return new Response(TALLINK, { status: 200 });
+      if (url.includes('api/timetables') || url.includes('from=')) return new Response('err', { status: 503 });
+      if (url.includes('viking') || url.includes('eckeroline') || url.includes('dfds') || url.includes('ctfassets')) {
+        return new Response('err', { status: 503 });
+      }
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: stOk, fetch: f, env: {}, now: () => NOW });
+    expect(stOk.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:STENA_SCHEDULE:'))).toBe(false);
   });
 });

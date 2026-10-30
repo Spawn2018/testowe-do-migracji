@@ -363,40 +363,73 @@ async function applySailings(
   return { plan, updated, manualKept: plan.manualKept + raced };
 }
 
-/** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy. */
+/** #666 F7: pula równoległych odczytów (limit 4) — 60 d × 2 trasy bez sekwencji 120×20 s. */
+async function mapPoolLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, limit), items.length || 1) }, async () => {
+    while (true) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i]!);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+/** Pobiera JSON rozkładu Stena na kilka dni × 2 trasy.
+ * #666 F7: równolegle (limit 4); SOURCE_DOWN tylko gdy fetchedOk===0 lub zmiana struktury bez rejsów. */
 async function fetchStenaDays(deps: JobDeps, days: number): Promise<{
-  sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number;
+  sailings: StenaSailing[]; warnings: string[]; http403: boolean; fetchedOk: number; structureFail: boolean;
 }> {
   const warnings: string[] = [];
   const sailings: StenaSailing[] = [];
   let http403 = false;
   let fetchedOk = 0;
+  let structureFail = false;
   const dates = dateRangeYmd(deps.now(), days);
-  for (const routeCode of ['GDKA', 'KAGD'] as const) {
-    for (const date of dates) {
-      const url = stenaTimetableUrl(routeCode, date);
-      const page = await readText(deps, url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
-      if (!page.ok) {
-        warnings.push(page.warning);
-        if (/HTTP 403/.test(page.warning)) http403 = true;
-        continue;
-      }
-      fetchedOk += 1;
-      let json: unknown;
-      try { json = JSON.parse(page.text); } catch {
-        warnings.push(`Stena ${routeCode} ${date}: nieczytelny JSON`);
-        continue;
-      }
-      const parsed = parseStenaTimetable(json, { routeCode, dateYmd: date });
-      // pusty dzień (HTTP 200 + []) — OK, bez ostrzeżenia o awarii
-      sailings.push(...parsed.sailings);
-      for (const w of parsed.warnings) {
-        if (/brak rejsów na/i.test(w)) continue;
-        warnings.push(w);
-      }
+  const jobs = (['GDKA', 'KAGD'] as const).flatMap((routeCode) => dates.map((date) => ({ routeCode, date })));
+  const parts = await mapPoolLimit(jobs, 4, async ({ routeCode, date }) => {
+    const url = stenaTimetableUrl(routeCode, date);
+    const page = await readText(deps, url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' } });
+    if (!page.ok) {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [page.warning],
+        http403: /HTTP 403/.test(page.warning),
+        ok: false,
+        structureFail: false,
+      };
     }
+    let json: unknown;
+    try { json = JSON.parse(page.text); } catch {
+      return {
+        sailings: [] as StenaSailing[],
+        warnings: [`Stena ${routeCode} ${date}: nieczytelny JSON`],
+        http403: false,
+        ok: false,
+        structureFail: false,
+      };
+    }
+    const parsed = parseStenaTimetable(json, { routeCode, dateYmd: date });
+    const struct = parsed.warnings.some((w) => /Struktura/i.test(w));
+    return {
+      sailings: parsed.sailings,
+      warnings: parsed.warnings.filter((w) => !/brak rejsów na/i.test(w)),
+      http403: false,
+      ok: true,
+      structureFail: struct,
+    };
+  });
+  for (const p of parts) {
+    if (p.ok) fetchedOk += 1;
+    if (p.http403) http403 = true;
+    if (p.structureFail) structureFail = true;
+    sailings.push(...p.sailings);
+    warnings.push(...p.warnings);
   }
-  return { sailings, warnings, http403, fetchedOk };
+  return { sailings, warnings, http403, fetchedOk, structureFail };
 }
 
 /** BN2 — rozkład Tallink TAL↔HEL (Terminal D) + TAL↔STO na 14 dni.
@@ -804,11 +837,11 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:POLFERRIES_SCHEDULE:');
   }
 
-  /* #666 decyzja 54: horyzont ≥ 60 dni (Stena JSON AEM; Freight w ferry-status też 60) */
+  /* #666 decyzja 54 + F7: horyzont ≥ 60 dni; SOURCE_DOWN tylko przy całkowitej awarii (jak Tallink #660) */
   const stena = await fetchStenaDays(deps, 60);
   warnings.push(...stena.warnings);
-  const stFail = stena.http403 || stena.fetchedOk === 0
-    || stena.warnings.some((w) => /Struktura|HTTP|nieczytelny JSON/i.test(w));
+  const stFail = stena.fetchedOk === 0
+    || (stena.structureFail && stena.sailings.length === 0);
   if (stFail) {
     await deps.store.raiseRisk(sourceDownRisk('STENA_SCHEDULE', stena.warnings.length ? stena.warnings : ['Brak odpowiedzi Stena'], now, STENA_ROUTE_PAGE));
     risks += 1;
