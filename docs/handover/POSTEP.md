@@ -6910,6 +6910,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 08:15 — #659 F7 POPRAWKI: test MFA aal1/aal2 (status 501)
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego `pilne` do budowy.
+- Scalanie: #659 bez „F7: gotowe”; CI @ `d45fb15c` zielone; F7 **POPRAWKI** (brak testu HHL_ADMIN bez 2FA).
+- **Krok:** `status.sh` BN1 648 — `MFA_HHL_ADMIN=true`, HHL aal1 → `2FA|42501`, aal2 → `active` bez zmian, przywrócenie flagi; EXPECTED status **501**. Push → CI → F7. Potem BN2. Bez push na main.
+
 ## 2026-10-30 07:53 — #657 SCALONE; #648 F7 nieblokujące (0346)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE**. Bez nowego `pilne`.
