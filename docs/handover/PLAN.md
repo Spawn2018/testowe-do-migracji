@@ -1163,15 +1163,15 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; ~~**DFDS Dynamic** `/api/timetable` (EEPLN/SEKPS, tygodnie×2, lim. 4; zapas PDF sezonowy ze strony + HTML)~~ w PR #668.
 6. ~~Testy unit F7 r1 + Dynamic~~; ~~visual CI @ `5aaa0544`~~; odbiór F7. Fix i2: po 0351 przywróć przyszły rejs przed testem pozycji NO_TRACKING.
 
-### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — W TOKU (`pakiet/667-orange-roads`; po #666 / równolegle przy F7 #668)
-Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. §2 D-1050: przy czekaniu na F7 #668 — nie stoimy.
-1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~ w tym PR; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
-2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← `stena_se_inland_corridor_code()`; migracja **0352**; `ROAD_LEGS=5`; Edge bez pustego TRACK~~.
-3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job `here-roads` + migracja **0353** `tower-here-roads`; SOURCE_DOWN `HERE_ROADS` sticky przy braku linii; Edge dual (JWT / service)~~. **Termin ≤ 04.11** (purge PL-GDN/PL-GDY/SE-NYN 05.11).
-4. Diagnostyka: odrzucone legi w Stanie systemu + `integration_runs` (F7 r1 N5 → DP-22; N1 retry_after +1 h przy HTTP w tym PR).
+### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — W TOKU (`pakiet/667-orange-roads`; PR #673; po #666)
+Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. §2 D-1050: przy czekaniu na F7 #668 — nie stoimy. Kolejność scalania: #668 (0351) → #673 (0352–0354).
+1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
+2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← jawnie `SE_KAA_INLAND`; migracja **0352**; `ROAD_LEGS=5`~~.
+3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
+4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. **F7 r1 POPRAWKI** (B1 ROAD_KAA_E22 / B2 ZonesMap osobna warstwa / B3 SE_KAA_INLAND jawnie / N1·N4·N7) — w tym PR po kroku C.
+7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; **F7 r2** — ~~B4 korytarze origin+Luleå E4 (**0354**); test B1 21+ wierzch.; B2 jsdom; race `hereRoadsInFlight`; MIN_INTERVAL 1380; bez martwego `inlandCorridorCode`~~ — czekam F7 „gotowe do scalenia”.
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
 Źródło: #671 (Spawn2018, `dla-cursora`). Każda drobna / „na później” → tu z numerem. Stan sprawdzany przy przejściu etapu. Kolejność pracy bez zmian: #668 → DFDS (#666) → #667 → BN3…
@@ -1197,7 +1197,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-19 | koordynator | domyślny statek odporny na wielkość liter | F7 #672 | wyglad | SCALONE (#674) |
 | DP-20 | koordynator | Rejsy: armator bez rejsów nadal w filtrze | F7 #668 r2 | wyglad | SCALONE (#674) |
 | DP-21 | Cursor | po wdrożeniu: Viking Cargo 403 z DC — sprawdź TLLA-HEL (decyzja 50) | F7 #668 r2 N7 | po deploy #668 | w kolejce |
-| DP-22 | Cursor | Stan systemu: ostrzeżenie gdy front `checkRoads` odrzuci leg (który + dlaczego) | F7 #673 r1 N5 | #667 D | w kolejce |
+| DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | w kolejce |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
 | DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | w kolejce |
@@ -2139,3 +2139,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 20:55 | #667 krok B: SE-KAA←SE_E22 + SE-KAA-INLAND (**0352**); ROAD_LEGS=5; #668 czekam F7 | pętla |
 | 30.10.2026 21:30 | #667 krok C: cron HERE 21 d (**0353**) + SOURCE_DOWN HERE_ROADS; #668 czekam F7 | pętla |
 | 30.10.2026 22:25 | #674 SCALONE `8f916302`; #667 F7 r1: B1 ROAD_KAA_E22 / B2 ZonesMap roads / B3 SE_KAA_INLAND / N1; DP-22…28; #668 CI ✔ czekam F7 | pętla |
+| 30.10.2026 23:05 | #667 F7 r2: B4 korytarze 0354 (origin+Luleå E4); hereRoadsInFlight; MIN 1380; jsdom B2; DP-22 fundament; #668 czekam F7 gotowe | pętla |

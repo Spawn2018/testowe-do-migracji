@@ -2,7 +2,7 @@
  * B-MAPA / #667 — geometria trasy ciężarówki HERE do rysowania. Bez wymiarów, bez myta.
  * Zapis na 30 dni. Przy pełnym budżecie (100 USD) nie woła HERE.
  * #572 BN0 / F7 #585 r4: SE-KAA z via; shouldFetch; odchyłka; odrzucenie nie kasuje punktów.
- * #667 B: SE-KAA ← SE_E22; SE-KAA-INLAND ← stena_se_inland_corridor_code().
+ * #667 B / F7 r1 B3: SE-KAA ← SE_E22; SE-KAA-INLAND ← jawnie SE_KAA_INLAND.
  * #667 C: wspólny refreshRoadLegs; cron (service role) → job here-roads + SOURCE_DOWN HERE_ROADS;
  *   przeglądarka (JWT) → odświeżenie bez ryzyka (jak dotychczas).
  */
@@ -58,11 +58,6 @@ function roadStore(sb: ReturnType<typeof createClient>): RoadRefreshStore {
       const viaRpc = await sb.rpc('here_corridor_via_points', { p_code: code, p_max: 14 });
       if (!viaRpc.error) via = parseCorridorPoints(viaRpc.data);
       return { code, pts, via, updatedAt };
-    },
-    async inlandCorridorCode() {
-      const rpc = await sb.rpc('stena_se_inland_corridor_code');
-      if (rpc.error || typeof rpc.data !== 'string' || !rpc.data) return null;
-      return rpc.data;
     },
     async monthSpend() {
       const spend = await sb.rpc('here_month_spend');

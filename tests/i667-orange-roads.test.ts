@@ -63,15 +63,7 @@ describe('#667 pomarańczowe drogi (krok B SE-KAA dual)', () => {
   });
 });
 
-describe('#667 F7 r1 B2 ZonesMap osobna warstwa dróg', () => {
-  const zones = readFileSync('src/components/zones/ZonesMap.tsx', 'utf8');
-  it('roadsRef + paint na roads; tory w route; drogi w mode one', () => {
-    expect(zones).toMatch(/roadsRef/);
-    expect(zones).toMatch(/paintOrangeRoads\(roads/);
-    expect(zones).toMatch(/WATER_GDN_NYN[\s\S]*addTo\(route\)/);
-    expect(zones).toMatch(/drogi zawsze|roads && !map\.hasLayer\(roads\)/);
-  });
-});
+/** B2 zachowanie (jsdom) — tests/i667-b2-zones-roads.jsdom.test.ts (F7 r2). */
 
 /** #667 C — cron before purge 30 d + SOURCE_DOWN HERE_ROADS. */
 describe('#667 pomarańczowe drogi (krok C cron HERE)', () => {
@@ -90,11 +82,24 @@ describe('#667 pomarańczowe drogi (krok C cron HERE)', () => {
     expect(sql).toMatch(/15 4 \* \* \*/);
   });
 
+  it('migracja 0354: B4 origin+Luleå E4 + map_display_state summary (DP-22)', () => {
+    const m = 'supabase/migrations/0354_667_kaa_corridor_lulea.sql';
+    expect(existsSync(m)).toBe(true);
+    const sql = readFileSync(m, 'utf8');
+    expect(sql).toMatch(/15\.6308,\s*56\.1646/);
+    expect(sql).toMatch(/22\.053/);
+    expect(sql).toMatch(/65\.606/);
+    expect(sql).toMatch(/map_display_state/);
+    expect(sql).toMatch(/summary/);
+    expect(sql).not.toMatch(/st_makepoint\(22\.1547/);
+    expect(sql).toMatch(/st_makepoint\(22\.053/);
+  });
+
   it('refreshRoadLegs: próg cron 21 d; job + SOURCE_DOWN HERE_ROADS sticky', () => {
     expect(refresh).toMatch(/ROAD_CRON_REFRESH_MS = 21 \* 864e5/);
     expect(jobs).toMatch(/runHereRoads/);
     expect(jobs).toMatch(/'here-roads': runHereRoads/);
-    expect(jobs).toMatch(/'here-roads': 1440/);
+    expect(jobs).toMatch(/'here-roads': 1380/);
     expect(jobs).toMatch(/ROAD_CRON_REFRESH_MS/);
     expect(jobs).toMatch(/SOURCE_DOWN:HERE_ROADS/);
     expect(sync).toMatch(/HERE_ROADS/);

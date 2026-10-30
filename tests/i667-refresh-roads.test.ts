@@ -39,7 +39,6 @@ function store(rows: RoadGeomRow[], spend = 0): RoadRefreshStore & { stored: str
       via: [[60, 18]] as [number, number][],
       updatedAt: 0,
     }),
-    inlandCorridorCode: async () => 'SE_KAA_INLAND',
     monthSpend: async () => spend,
     noteRouting: async () => {},
   };

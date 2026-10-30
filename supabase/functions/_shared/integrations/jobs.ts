@@ -1758,7 +1758,6 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
       if (!deps.store.hereCorridorBundle) return { code, pts: [], via: [], updatedAt: 0 };
       return deps.store.hereCorridorBundle(code);
     },
-    inlandCorridorCode: () => deps.store.stenaSeInlandCorridorCode?.() ?? Promise.resolve(null),
     monthSpend: () => deps.store.hereMonthSpend?.() ?? Promise.resolve(0),
     async noteRouting() {
       if (deps.store.noteHereUsage) await deps.store.noteHereUsage('routing', 1);
@@ -2910,7 +2909,8 @@ export type JobName = keyof typeof JOBS;
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'here-roads': 1440,
+  // #667 F7 r2: 1380 min — dzienny cron (ran_at po zakończeniu) nie pomija kolejnego dnia.
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,

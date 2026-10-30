@@ -69,7 +69,6 @@ export type RoadRefreshStore = {
   listGeometry(): Promise<RoadGeomRow[]>;
   storeRoad(leg: string, points: unknown, summary: string, nowIso?: string): Promise<boolean>;
   loadCorridor(code: string): Promise<CorridorBundle>;
-  inlandCorridorCode(): Promise<string | null>;
   monthSpend(): Promise<number>;
   noteRouting(): Promise<void>;
 };
@@ -124,7 +123,6 @@ export async function refreshRoadLegs(
 
   async function corridorFor(leg: RoadLegDef): Promise<CorridorBundle | null> {
     // #667 F7 r1 B3: tylko jawny corridorCode (SE_E22 / SE_KAA_INLAND).
-    // inlandCorridorCode zostaje w store (diagnostyka / zapas), nie steruje legami.
     const code = leg.corridorCode ?? null;
     if (!code) return null;
     const cached = corridorCache.get(code);

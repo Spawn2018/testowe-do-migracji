@@ -7226,3 +7226,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 r1 #673):** B1 — SPEC SE-KAA = ROAD_KAA_E22 (bez Västerås); B2 — ZonesMap osobna warstwa roads (także mode=one); B3 — corridorCode SE_KAA_INLAND jawnie; N1 — HTTP → retry_after +1 h; N4 — cache map_display_state; N5 → DP-22; N2/N3 → DP-23/24; DP-25…28 z F7 #674. Testy i667-f7-r1 + i667/bmapa/refresh. C termin ≤ 04.11. **Dalej:** CI → gotowe do F7; potem D/E/F.
 - Bez push na main.
 
+## 2026-10-30 23:05 — #667 F7 r2 POPRAWKI (B4 korytarze + uwagi)
+
+- Skrzynka: #666 W TOKU (PR #668 @ `ac8471fa` — F7 r5; CI db/visual w toku / czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352–0354). Bez push na main.
+- **Krok (F7 r2 #673):** B4 — migracja **0354** SE_E22/SE_KAA_INLAND (origin 56.1646,15.6308; Luleå E4/97 65.606,22.053); `map_display_state` + summary (fundament DP-22); `checkRoads` czyta summary; `hereRoadsInFlight`; MIN_INTERVAL 1380; usunięty martwy `inlandCorridorCode`; testy B1 21+ wierzch. + B2 jsdom (`jsdom` + projekt vitest). Unit fokus i667/bmapa ✔. **Dalej:** CI → gotowe do F7; potem UI DP-22 / E / F.
+- Bez push na main.
+

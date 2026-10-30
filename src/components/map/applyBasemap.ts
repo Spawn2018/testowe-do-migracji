@@ -238,7 +238,8 @@ function roadLineWhy(leg: string, spec: RoadSpec | 'loose', line: LatLng[]): str
 
 /**
  * #667 F7 r1 N5/N7: przyjęte linie + powody odrzuceń (jak checkFerries).
- * Pełne ostrzeżenie w Stanie systemu → DP-22 (krok D).
+ * #667 F7 r2 / DP-22: przy braku punktów — `summary` z bazy (odchyłka / HTTP / oczekuje).
+ * Pełne ostrzeżenie w Stanie systemu → DP-22 (UI).
  */
 export function checkRoads(rows: unknown): {
   accepted: LatLng[][];
@@ -252,9 +253,10 @@ export function checkRoads(rows: unknown): {
     const leg = String((row as { leg?: string }).leg ?? '');
     const spec = SPEC[leg];
     const points = (row as { points?: unknown }).points;
+    const summary = String((row as { summary?: string }).summary ?? '').trim();
     if (!spec) continue;
-    if (!Array.isArray(points)) {
-      rejected.push({ leg, why: 'brak punktów' });
+    if (!Array.isArray(points) || points.length < 2) {
+      rejected.push({ leg, why: summary || 'brak punktów' });
       continue;
     }
     const line: LatLng[] = [];
@@ -264,8 +266,12 @@ export function checkRoads(rows: unknown): {
       const lng = Number(p[1]);
       if (Number.isFinite(lat) && Number.isFinite(lng)) line.push([lat, lng]);
     }
+    if (line.length < 2) {
+      rejected.push({ leg, why: summary || 'brak punktów' });
+      continue;
+    }
     const why = roadLineWhy(leg, spec, line);
-    if (why) rejected.push({ leg, why });
+    if (why) rejected.push({ leg, why: summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why });
     else out.push(line);
   }
   return { accepted: out, rejected };
@@ -288,6 +294,8 @@ export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';
 
 /** F7 #585: jedno wołanie here-roads na sesję + limit czasu (brakujący leg nie spamuje Edge). */
 let hereRoadsSessionAt = 0;
+/** #667 F7 r2: równoległe mapPool+CorridorMap dzielą jedną obietnicę POST (bez dwóch płatnych tras). */
+let hereRoadsInFlight: Promise<LatLng[][]> | null = null;
 const HERE_ROADS_SESSION_MS = 5 * 60_000;
 const HERE_ROADS_TIMEOUT_MS = 15_000;
 
@@ -302,34 +310,40 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     // #572 / #667: nie kończ przy 2 legach — SE-KAA z SE_E22 + INLAND.
     if (lines.length >= ROAD_LEGS) return lines;
     if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
+    if (hereRoadsInFlight) return hereRoadsInFlight;
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
     if (!token) return lines;
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
-    try {
-      await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: '{}',
-        signal: ac.signal,
-      });
-    } catch {
-      // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
-    } finally {
-      clearTimeout(timer);
-      hereRoadsSessionAt = Date.now();
-    }
-    try {
-      lines = await read(true);
-    } catch {
-      /* zostaw lines */
-    }
-    return lines;
+    const started = lines;
+    hereRoadsInFlight = (async () => {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: '{}',
+          signal: ac.signal,
+        });
+      } catch {
+        // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
+      } finally {
+        clearTimeout(timer);
+        hereRoadsSessionAt = Date.now();
+      }
+      try {
+        return await read(true);
+      } catch {
+        return started;
+      } finally {
+        hereRoadsInFlight = null;
+      }
+    })();
+    return hereRoadsInFlight;
   } catch {
     return [];
   }

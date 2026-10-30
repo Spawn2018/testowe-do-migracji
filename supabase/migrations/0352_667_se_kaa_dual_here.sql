@@ -1,5 +1,5 @@
 -- #667 B: dwie pomarańczowe drogi Karlskrona→Boden (SE-KAA = E22/wybrzeże; SE-KAA-INLAND).
--- Edge here-roads bierze via z SE_E22 / stena_se_inland_corridor_code() — nie z pustego SE_KAA_TRACK.
+-- Edge/refresh: SE-KAA ← SE_E22; SE-KAA-INLAND ← jawnie SE_KAA_INLAND (F7 r1 B3; nie TRACK).
 -- Numer 0352: 0351 zajęte przez #666 (PR #668); przy rebase bez #668 — sprawdź wolny numer.
 
 begin;
