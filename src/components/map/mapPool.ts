@@ -12,7 +12,6 @@ import L from 'leaflet';
 import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
-import { PROD_BUILD } from '../../lib/prodFacade';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
 import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -154,15 +153,14 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   L.control.zoom({ position: 'topright' }).addTo(map);
   const tiles = L.layerGroup().addTo(map);
   const route = L.layerGroup().addTo(map);
-  if (!PROD_BUILD) {
-    /* audyt D-07 (E45, E1): demo — tylko odcinki lądowe (PL, SE z Nynäshamn, SE z Karlskrony), ciągłą linią jak trasy
-       HERE w produkcji; odcinek morski rysuje warstwa promu. #667: ten sam paintOrangeRoads co PROD. */
+  /* Bramka przez import.meta.env (nie PROD_BUILD), żeby Vite wyciął applyBasemap z paczki demo (I-2). */
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+    /* audyt D-07 (E45, E1): demo — odcinki lądowe; #667: ten sam paintOrangeRoads co PROD. */
     void import('./orangeRoads').then(({ paintOrangeRoads }) => {
       paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
     }).catch(() => undefined);
   } else {
-    /* #667 A: ta sama warstwa route w PROD (Kokpit / Mapa / karta / telefon) — loadRoadLines z applyBasemap.
-       CorridorMap odświeża po dociągnięciu Edge. */
+    /* #667 A: warstwa route w PROD (Kokpit / Mapa / karta / telefon) — loadRoadLines; CorridorMap odświeża. */
     void Promise.all([
       import('./applyBasemap'),
       import('./orangeRoads'),
