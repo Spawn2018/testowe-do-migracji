@@ -9,8 +9,11 @@ import { p9m, p9mp } from '../src/i18n/p9c';
 import { p9e, p9ep } from '../src/i18n/p9e';
 import { sv } from '../src/i18n/sail7';
 import { ferryRouteEnds } from '../src/lib/portName';
-import { createVesselsLoader, currentVesselGroups, defaultVessel, groupVessels, LEGACY_VESSEL_ROUTE, routeOfVessel, subscribeVesselGroups, vesselGroupsVersion, vesselOperator, VESSELS_FALLBACK } from '../src/lib/vesselGroups';
-import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../src/lib/sailingsForm';
+import { createVesselsLoader, currentVesselGroups, defaultVessel, groupVessels, LEGACY_VESSEL_ROUTE, routeOfVessel, subscribeVesselGroups, vesselOperator, VESSELS_FALLBACK, VESSELS_WARN } from '../src/lib/vesselGroups';
+import { emptyRowsKey, manualRouteError, sailingFocusPlan, sailingLineOptions, showRouteUnknown, vesselSelectKey } from '../src/lib/sailingsForm';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
+import { useVesselGroups } from '../src/lib/useVesselGroups';
 import { ferryLaneLines, HERE_FERRY_LEGS } from '../src/lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../src/lib/map/ferryLines';
 import { WATER_GDN_NYN } from '../src/lib/map/draw';
@@ -197,25 +200,36 @@ describe('DP-16, DP-17 · jedna pamięć listy statków', () => {
     expect(calls).toBe(1);
     l.reset();
   });
-  it('B1/N1: zmiana listy powiadamia subskrybentów; mapa i tabela mapy zależą od listy', async () => {
+  it('B1/N1 (DP-25, DP-28): zmiana listy powiadamia subskrybentów i podmienia referencję; hook widzi nową listę', async () => {
     let n = 0;
     const off = subscribeVesselGroups(() => { n++; });
     const l = createVesselsLoader(async () => groups);
-    const v0 = vesselGroupsVersion();
+    l.reset();
+    const before = currentVesselGroups();
+    expect(currentVesselGroups()).toBe(before); /* stabilny snapshot — bez pętli renderów */
+    const Probe = () => createElement('i', null, useVesselGroups().map((g) => g.names.join('+')).join('|'));
+    expect(renderToString(createElement(Probe))).not.toContain('Galileusz');
     await l.load();
     expect(n).toBeGreaterThanOrEqual(1);
-    expect(vesselGroupsVersion()).toBeGreaterThan(v0);
+    expect(currentVesselGroups()).not.toBe(before); /* nowa referencja = zależność efektu mapy i memo tabeli */
+    expect(renderToString(createElement(Probe))).toContain('Wawel+Galileusz');
     off();
     l.reset();
-    /* mapRow z listą sesji (z bazy) */
+    /* mapRow z listą sesji (z bazy) — to, co przelicza memo Mapy i efekt rysowania */
     expect(mapRow(ferryLoad('Galileusz'), ctx({ vessels: groups })).stageSub).toBe('Galileusz · Gdańsk → Nynäshamn');
     expect(mapRow(ferryLoad('Galileusz'), ctx()).stageSub).toBe('Galileusz');
-    const cm = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
-    expect(cm).toMatch(/const vessels = useVesselGroups\(\);/);
-    expect(cm).toMatch(/panelAtSite, applyHover, vessels\]\);/);
-    expect(cm).toMatch(/routeOfVessel\(l\.ferry\.vessel, vessels\)/);
-    const mv = readFileSync('src/views/MapView.tsx', 'utf8');
-    expect(mv).toMatch(/fixIds, sailings, locale, vessels\]\);/);
+    expect(routeOfVessel('Galileusz', groups)).toBe('GDN-NYN');
+  });
+  it('DP-27: błąd odczytu listy — jedno ostrzeżenie na sesję', async () => {
+    const msgs: string[] = [];
+    const l = createVesselsLoader(async () => { throw new Error('x'); }, (m) => { msgs.push(m); });
+    l.reset();
+    await expect(l.load()).rejects.toThrow('x');
+    await expect(l.load()).rejects.toThrow('x');
+    await expect(l.load()).rejects.toThrow('x');
+    expect(msgs).toEqual([VESSELS_WARN]);
+    expect(VESSELS_WARN).not.toMatch(/Error|x$/);
+    l.reset();
   });
   it('po błędzie pamięć się czyści i następne wywołanie próbuje ponownie', async () => {
     let calls = 0;
@@ -249,10 +263,31 @@ describe('DP-20 · filtr armatora w Rejsach (decyzja 55)', () => {
     expect(emptyRowsKey('ALL', true, true, false)).toBe('sv_none_future');
     expect(emptyRowsKey('ALL', true, false, true)).toBe('sv_none');
   });
-  it('N4–N6: filtr zawsze widoczny, wybór statku po pobraniu listy, wejście z promu zeruje filtr', () => {
-    const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
-    expect(panel).not.toMatch(/lineOptions\.length > 1/);
-    expect(panel).toMatch(/<select key=\{vesselGroups === VESSELS_FALLBACK \? 'zapas' : 'baza'\} name="vessel"/);
-    expect(panel).toMatch(/setLineSel\('ALL'\);\n\s*setFocusId\(sailingFocus\)/);
+  it('N4–N6 (DP-28): filtr zawsze widoczny, wybór statku po pobraniu listy, wejście z promu zeruje filtr', () => {
+    expect(sailingLineOptions()).toHaveLength(6);
+    expect(vesselSelectKey(VESSELS_FALLBACK, VESSELS_FALLBACK)).toBe('zapas');
+    expect(vesselSelectKey([{ op: 'POLFERRIES', names: ['Wawel'] }], VESSELS_FALLBACK)).toBe('baza');
+    /* rejs widoczny przy bieżących przełącznikach → tylko filtr na „Wszyscy” i wyróżnienie */
+    expect(sailingFocusPlan('s1', ['s1', 's2'], ['s1'])).toEqual({ focusId: 's1', lineSel: 'ALL', showAll: false });
+    /* rejs miniony / powrót → pokaż wszystko */
+    expect(sailingFocusPlan('s2', ['s1', 's2'], ['s1'])).toEqual({ focusId: 's2', lineSel: 'ALL', showAll: true });
+    /* rejsu nie ma w rozkładzie albo brak żądania → nic nie zmieniamy */
+    expect(sailingFocusPlan('zz', ['s1'], ['s1'])).toBeNull();
+    expect(sailingFocusPlan(null, ['s1'], ['s1'])).toBeNull();
+  });
+});
+
+describe('DP-6 · jedna funkcja skrótu trasy', () => {
+  it('routeShortLabel dla 14 tras: format „TLLA → HEL”; Terminal A po stronie Tallinna w obu kierunkach', async () => {
+    const { routeShortLabel } = await import('../src/lib/ferryCatalog');
+    expect(Object.fromEntries(['GDN-NYN', 'NYN-GDN', 'GDY-KAA', 'KAA-GDY', 'TLL-HEL', 'HEL-TLL', 'TLLA-HEL', 'HELA-TLL',
+      'MUU-VUO', 'VUO-MUU', 'TLL-STO', 'STO-TLL', 'PLD-KPS', 'KPS-PLD'].map((c) => [c, routeShortLabel(c)]))).toEqual({
+      'GDN-NYN': 'GDN → NYN', 'NYN-GDN': 'NYN → GDN', 'GDY-KAA': 'GDY → KAA', 'KAA-GDY': 'KAA → GDY',
+      'TLL-HEL': 'TLL → HEL', 'HEL-TLL': 'HEL → TLL', 'TLLA-HEL': 'TLLA → HEL', 'HELA-TLL': 'HEL → TLLA',
+      'MUU-VUO': 'MUU → VUO', 'VUO-MUU': 'VUO → MUU', 'TLL-STO': 'TLL → STO', 'STO-TLL': 'STO → TLL',
+      'PLD-KPS': 'PLD → KPS', 'KPS-PLD': 'KPS → PLD',
+    });
+    const portName = await import('../src/lib/portName');
+    expect('ferryRouteShort' in portName).toBe(false);
   });
 });

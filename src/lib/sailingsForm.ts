@@ -32,3 +32,25 @@ export function emptyRowsKey(lineSel: FerryOperator | 'ALL', lineHasAny: boolean
   if (lineSel !== 'ALL' && !lineHasAny) return 'sv_line_empty';
   return future && !returns ? 'sv_none_future' : 'sv_none';
 }
+
+/**
+ * N5 (F7 #674) / DP-28: klucz pola „Statek” — zmiana listy (zapas → baza) montuje pole od nowa,
+ * żeby domyślny „Wawel” z bazy był wybrany już przy pierwszym otwarciu formularza.
+ */
+export function vesselSelectKey(groups: readonly unknown[], fallback: readonly unknown[]): 'zapas' | 'baza' {
+  return groups === fallback ? 'zapas' : 'baza';
+}
+
+/**
+ * N6 (F7 #674) / DP-28: wejście z wiersza promu — co ustawić, żeby rejs był widoczny i wyróżniony.
+ * `null` = rejsu nie ma w rozkładzie (nic nie zmieniamy). Filtr armatora zawsze wraca do „Wszyscy”;
+ * gdy rejsu nie widać przy bieżących przełącznikach — pokazujemy też minione i powroty.
+ */
+export function sailingFocusPlan(
+  focusId: string | null,
+  sailingIds: readonly string[],
+  visibleIds: readonly string[],
+): { focusId: string; lineSel: 'ALL'; showAll: boolean } | null {
+  if (!focusId || !sailingIds.includes(focusId)) return null;
+  return { focusId, lineSel: 'ALL', showAll: !visibleIds.includes(focusId) };
+}

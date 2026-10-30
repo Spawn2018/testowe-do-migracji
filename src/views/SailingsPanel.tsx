@@ -24,10 +24,11 @@ import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
-import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
-import { ferryRouteLabel, ferryRouteName, ferryRouteShort } from '../lib/portName';
-import { currentVesselGroups, defaultVessel, vesselOperator, VESSELS_FALLBACK, type VesselGroup } from '../lib/vesselGroups';
-import { emptyRowsKey, manualRouteError, sailingLineOptions, showRouteUnknown } from '../lib/sailingsForm';
+import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, operatorName, routeEnds, routeShortLabel, type FerryOperator } from '../lib/ferryCatalog';
+import { ferryRouteLabel, ferryRouteName } from '../lib/portName';
+import { defaultVessel, vesselOperator, VESSELS_FALLBACK } from '../lib/vesselGroups';
+import { useVesselGroups } from '../lib/useVesselGroups';
+import { emptyRowsKey, manualRouteError, sailingFocusPlan, sailingLineOptions, showRouteUnknown, vesselSelectKey } from '../lib/sailingsForm';
 import { vesselsLoader } from '../lib/vesselsLoad';
 
 export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean; onShowLoads?: (sailingId: string) => void }) {
@@ -52,18 +53,12 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const [adding, setAdding] = useState(false);
   const [delayId, setDelayId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  /* DP-8: statki z tabeli `vessels` (produkcja, przy otwarciu formularza); zapas — stała lista BN9-b */
-  const [vesselGroups, setVesselGroups] = useState<readonly VesselGroup[]>(currentVesselGroups);
+  /* DP-8: statki z tabeli `vessels` (produkcja, przy otwarciu formularza); zapas — stała lista BN9-b.
+     DP-26: jedna lista sesji przez `useVesselGroups()` (ta sama co mapy); DP-27: ostrzeżenie raz na sesję w loaderze. */
+  const vesselGroups = useVesselGroups();
   useEffect(() => {
-    if (!vesselsLoader || !adding) return undefined;
-    let live = true;
-    vesselsLoader.load()
-      .then((g) => { if (live && g.length) setVesselGroups(g); })
-      .catch(() => {
-        /* U5: lista zapasowa BN9-b; bez danych w komunikacie */
-        console.warn('[Rejsy] lista statków z bazy niedostępna — lista zapasowa');
-      });
-    return () => { live = false; };
+    if (!adding) return;
+    vesselsLoader?.load().catch(() => { /* lista zapasowa BN9-b */ });
   }, [adding]);
 
   /* BN9-b: filtr armatora (6 armatorów, kilkaset rejsów).
@@ -79,14 +74,19 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const [handledFocus, setHandledFocus] = useState<string | null>(null);
   if (sailingFocus !== handledFocus) {
     setHandledFocus(sailingFocus);
-    if (sailingFocus && sailings.some((x) => x.id === sailingFocus)) {
-      if (!sailRows(sailings, loads, now, { future, returns }).some((r) => r.sailing.id === sailingFocus)) {
+    /* N6 (F7 #674) / DP-28: plan z czystej funkcji — rejs widoczny także przy innym wybranym armatorze */
+    const plan = sailingFocusPlan(
+      sailingFocus,
+      sailings.map((x) => x.id),
+      sailingFocus ? sailRows(sailings, loads, now, { future, returns }).map((r) => r.sailing.id) : [],
+    );
+    if (plan) {
+      if (plan.showAll) {
         setFuture(false);
         setReturns(true);
       }
-      /* N6 (F7 #674): wejście z wiersza promu pokazuje rejs także przy innym wybranym armatorze */
-      setLineSel('ALL');
-      setFocusId(sailingFocus);
+      setLineSel(plan.lineSel);
+      setFocusId(plan.focusId);
     }
   }
   useEffect(() => {
@@ -128,7 +128,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const routeUnknown = (r: SailRow) => showRouteUnknown(r.sailing);
   const routeCell = (r: SailRow) => (
     <>
-      {ferryRouteShort(r.sailing.route)}
+      {routeShortLabel(r.sailing.route)}
       {routeUnknown(r) ? <> <span className="pill p-amber" data-route-unknown>{sv(locale, 'sv_route_unknown')}</span></> : null}
     </>
   );
@@ -202,7 +202,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           <dl className="kv">
             <dt>{t(locale, 'sail_col_vessel')}</dt>
             <dd>
-              <select key={vesselGroups === VESSELS_FALLBACK ? 'zapas' : 'baza'} name="vessel" className="input" defaultValue={defaultVessel(vesselGroups)}>
+              <select key={vesselSelectKey(vesselGroups, VESSELS_FALLBACK)} name="vessel" className="input" defaultValue={defaultVessel(vesselGroups)}>
                 {vesselGroups.map((g) => (
                   <optgroup key={g.op} label={operatorName(g.op)}>
                     {g.names.map((v) => <option key={v} value={v}>{v}</option>)}
