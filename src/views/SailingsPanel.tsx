@@ -10,10 +10,12 @@ import { t } from '../i18n/messages';
 import { sv, svp } from '../i18n/sail7';
 import { getNowIso } from '../lib/frozenNow';
 import { effArrival, effDeparture } from '../lib/sailings';
-import { ROUTE_SHORT, reachOf, sailDay, sailRows, sailTime, sourceKey, type SailRow } from '../lib/sailView';
+import { reachOf, sailDay, sailRows, sailTime, sourceKey, type SailRow } from '../lib/sailView';
 import { TZ_OPS, isoToDatetimeLocalValue, wallLocalToIso } from '../lib/time';
 import { POLFERRIES_ATTRIBUTION } from '../lib/ferry/polferries';
 import { DIGITRAFFIC_PORTCALL_ATTRIBUTION } from '../lib/ferry/digitrafficPortCalls';
+import { PORT_TALLINN_ATTRIBUTION } from '../lib/ferry/portTallinn';
+import { PORTS_STOCKHOLM_ATTRIBUTION } from '../lib/ferry/portsStockholm';
 import { VIKING_ATTRIBUTION } from '../lib/ferry/vikingline';
 import { ECKERO_ATTRIBUTION } from '../lib/ferry/eckero';
 import { DFDS_ATTRIBUTION } from '../lib/ferry/dfds';
@@ -22,10 +24,18 @@ import { getAuthProfile } from '../auth/profile';
 import { PROD_BUILD } from '../lib/prodFacade';
 import '../components/schedule/sail7.css';
 import { accountRole } from '../lib/accountRole';
-import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, isKnownRoute } from '../lib/ferryCatalog';
-import { ferryRouteName } from '../lib/portName';
+import { FERRY_ROUTES as FERRY_ROUTE_OPTIONS, isKnownRoute, operatorName, OPERATOR_MATCH_ORDER, routeEnds, type FerryOperator } from '../lib/ferryCatalog';
+import { ferryRouteLabel, ferryRouteName, ferryRouteShort } from '../lib/portName';
 
-const VESSELS = ['Wawel', 'Nova Star', 'Stena Spirit', 'Stena Estelle', 'Stena Ebba'] as const;
+/* BN9-b: statki wszystkich armatorów ze słownika (`vessels`), w grupach armatorów — ręczny rejs nowej trasy */
+const VESSELS: readonly { op: FerryOperator; names: readonly string[] }[] = [
+  { op: 'POLFERRIES', names: ['Wawel', 'Nova Star'] },
+  { op: 'STENA', names: ['Stena Spirit', 'Stena Estelle', 'Stena Ebba'] },
+  { op: 'TALLINK', names: ['Megastar', 'MyStar', 'Victoria I', 'Baltic Queen'] },
+  { op: 'VIKING', names: ['Viking XPRS'] },
+  { op: 'ECKERO', names: ['Finlandia', 'Finbo Cargo'] },
+  { op: 'DFDS', names: ['Sirena Seaways'] },
+];
 
 export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean; onShowLoads?: (sailingId: string) => void }) {
   const role = useTowerStore((s) => s.role);
@@ -50,7 +60,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const [delayId, setDelayId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const rows = useMemo(() => sailRows(sailings, loads, now, { future, returns }), [sailings, loads, now, future, returns]);
+  /* BN9-b: filtr armatora (6 armatorów, kilkaset rejsów) — „Wszyscy” i armatorzy, którzy mają rejsy */
+  const [lineSel, setLineSel] = useState<FerryOperator | 'ALL'>('ALL');
+  const allRows = useMemo(() => sailRows(sailings, loads, now, { future, returns }), [sailings, loads, now, future, returns]);
+  const linesPresent = useMemo(() => OPERATOR_MATCH_ORDER.filter((op) => allRows.some((r) => r.line === op)), [allRows]);
+  const rows = useMemo(() => (lineSel === 'ALL' ? allRows : allRows.filter((r) => r.line === lineSel)), [allRows, lineSel]);
   /* wyglad/W-cele-przejsc (d), E7 pkt 4: wejście z wiersza promu — ten rejs widoczny (także po odejściu), przewinięty i wyróżniony */
   const sailingFocus = useTowerStore((s) => s.sailingFocus);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -119,6 +133,18 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         <button type="button" className="chipbtn" aria-pressed={returns} data-sail-returns onClick={() => setReturns((v) => !v)}>
           {sv(locale, 'sv_returns')}
         </button>
+        {linesPresent.length > 1 ? (
+          <select
+            className="input sv-line"
+            value={lineSel}
+            aria-label={sv(locale, 'sv_line_filter')}
+            data-sail-line
+            onChange={(e) => setLineSel(e.target.value as FerryOperator | 'ALL')}
+          >
+            <option value="ALL">{sv(locale, 'sv_line_all')}</option>
+            {linesPresent.map((op) => <option key={op} value={op}>{operatorName(op)}</option>)}
+          </select>
+        ) : null}
         <div className="spacer" />
         {canEditSailings ? (
           <button type="button" className="btn" data-sail-new onClick={() => { setAdding((v) => !v); setErr(null); }}>
@@ -137,8 +163,12 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             const routeRaw = String(fd.get('route') || 'GDN-NYN');
             /* BN9-a: każda trasa z katalogu promów; nieznana wartość — jak dotąd GDN-NYN */
             const route = isKnownRoute(routeRaw) ? routeRaw : 'GDN-NYN';
+            const vessel = String(fd.get('vessel') || '');
+            const op = VESSELS.find((g) => g.names.includes(vessel))?.op;
             const r = addSailing({
-              vessel: String(fd.get('vessel') || ''),
+              vessel,
+              /* BN9-b: armator statku (trasa Terminal A ma dwóch armatorów) */
+              ...(op ? { operator: operatorName(op) } : {}),
               route,
               departureAt: wallLocalToIso(String(fd.get('dep') || ''), TZ_OPS) ?? '',
               arrivalAt: wallLocalToIso(String(fd.get('arr') || ''), TZ_OPS) ?? '',
@@ -150,7 +180,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
             <dt>{t(locale, 'sail_col_vessel')}</dt>
             <dd>
               <select name="vessel" className="input" defaultValue="Wawel">
-                {VESSELS.map((v) => <option key={v} value={v}>{v}</option>)}
+                {VESSELS.map((g) => (
+                  <optgroup key={g.op} label={operatorName(g.op)}>
+                    {g.names.map((v) => <option key={v} value={v}>{v}</option>)}
+                  </optgroup>
+                ))}
               </select>
             </dd>
             <dt>{t(locale, 'sail_col_route')}</dt>
@@ -159,6 +193,8 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
                 {/* BN9-a: trasy z katalogu promów — dzisiejsze cztery w tej samej kolejności, potem nowe wyjazdowe i powroty.
                     Świadomy wyjątek od zasady „nowe tylko gdy są dane”: ręczny rejs nowej trasy musi dać się dodać. */}
                 {FERRY_ROUTE_OPTIONS.map((r) => <option key={r.code} value={r.code}>{ferryRouteName('pl', r.from, r.to)}</option>)}
+                {/* BN9-b: Tallinn A (Viking Line, Eckerö) */}
+                {(['TLLA-HEL', 'HELA-TLL'] as const).map((c) => <option key={c} value={c}>{ferryRouteLabel('pl', c)}</option>)}
               </select>
             </dd>
             <dt>{t(locale, 'sail_col_dep')} / {t(locale, 'sail_col_arr')}</dt>
@@ -215,7 +251,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           {rows.map((r) => (
             <li key={r.sailing.id} className={`sv-card${r.sailing.status === 'ODWOLANY' ? ' is-off' : ''}${focusId === r.sailing.id ? ' is-go-target' : ''}`} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
               <div className="sv-c1"><b>{depCell(r)}</b><span>· {r.sailing.vessel}</span>{pills(r)}</div>
-              <div className="sv-c2">{ROUTE_SHORT[r.sailing.route]} · {svp(locale, 'sv_arr', { t: sailTime(r.arr) })}</div>
+              <div className="sv-c2">{ferryRouteShort(r.sailing.route)} · {svp(locale, 'sv_arr', { t: sailTime(r.arr) })}</div>
               <div className="sv-c3"><span>{sv(locale, sourceKey(r.sailing.source))}</span><span>·</span><span>{sv(locale, 'sv_loads_l')}</span>{codesBtn(r)}</div>
               {canAct(r) ? <div className="sv-acts">{actions(r)}</div> : null}
             </li>
@@ -240,7 +276,7 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
                 <tr key={r.sailing.id} className={[r.sailing.status === 'ODWOLANY' ? 'is-off' : '', focusId === r.sailing.id ? 'is-go-target' : ''].filter(Boolean).join(' ') || undefined} data-sailing={r.sailing.id} data-sail-status={r.sailing.status}>
                   <td className="sv-time"><span className="sv-dep">{depCell(r)}</span>{pills(r)}</td>
                   <td>{r.sailing.vessel}</td>
-                  <td className="sv-route">{ROUTE_SHORT[r.sailing.route]}</td>
+                  <td className="sv-route">{ferryRouteShort(r.sailing.route)}</td>
                   <td className="sv-time">{arrCell(r)}</td>
                   <td data-sail-source={r.sailing.source}>{sv(locale, sourceKey(r.sailing.source))}</td>
                   <td>{codesBtn(r)}</td>
@@ -263,6 +299,11 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
         {sailings.some((s) =>
           s.source === 'TALLINK' || s.source === 'VIKING' || s.source === 'ECKERO' || s.source === 'DFDS'
         ) ? <span data-attribution="digitraffic-portcall">{DIGITRAFFIC_PORTCALL_ATTRIBUTION}</span> : null}
+        {/* BN9-b: odwołania z Port of Tallinn i godziny z portów Sztokholmu (decyzje 47, 49) */}
+        {sailings.some((s) => routeEnds(s.route)?.from === 'TLL' || routeEnds(s.route)?.to === 'TLL')
+          ? <span data-attribution="port-tallinn">{PORT_TALLINN_ATTRIBUTION}</span> : null}
+        {sailings.some((s) => ['STO', 'KPS'].includes(routeEnds(s.route)?.from ?? '') || ['STO', 'KPS'].includes(routeEnds(s.route)?.to ?? ''))
+          ? <span data-attribution="ports-stockholm">{PORTS_STOCKHOLM_ATTRIBUTION}</span> : null}
       </div>
     </div>
   );

@@ -86,7 +86,7 @@ function Phones({ l, locale }: { l: Load; locale: Locale }) {
 function Status({ l, ctx }: { l: Load; ctx: SchedRowCtx }) {
   return (
     <span className="st-wrap s7-st">
-      <StatusPill status={l.status} stage={l.stage} />
+      <StatusPill status={l.status} stage={l.stage} sailingId={l.sailingId} />
       <StatusMarkers load={l} delayMin={ctx.delayOf(l)} />
       {l.unloadedAt ? <small className="s7-sub">{dmy(l.unloadedAt, TZ_UNLOAD_SE)}</small> : null}
     </span>

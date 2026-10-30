@@ -138,7 +138,7 @@ const PL: Record<string, string> = {
   p6_ferry_open: 'Pokaż rejs w Harmonogramie › Rejsy',
   p6_ksh_open: 'Otwórz transport',
   p6_ferries_note: 'Jeden wiersz na rejs, najnowszy pomiar. „Statek w porcie” trafia do historii rejsu, nie na tę listę.',
-  p6_ferries_none: 'Brak rejsów do Szwecji w rozkładzie na najbliższe dni.',
+  p6_ferries_none: 'Brak rejsów do Szwecji ani do Finlandii w rozkładzie na najbliższe dni.',
   p6_ferries_nodata: 'Brak danych o rejsach.',
   p6_ferry_warn: 'Ostrzeżenia rejsów',
   p6_sea_attr: 'Dane morskie: {attr} · pomiar {at}',
@@ -150,6 +150,9 @@ const PL: Record<string, string> = {
   p6_alt_why_CANCELLED: 'Rejs {vessel} odwołany.',
   p6_alt_why_STORM: 'Sztorm na przeprawie {from}.',
   p6_alt_list: 'Najbliższe odejścia do Szwecji: {line}',
+  /* BN9-b: przeprawy z Estonii do Finlandii */
+  p6_alt_list_FI: 'Najbliższe odejścia do Finlandii: {line}',
+  p6_alt_both_dest: 'Sztorm albo odwołania u wszystkich armatorów w tym kierunku — bez propozycji.',
   p6_alt_note: 'Zmiana przeprawy nie wymaga nowego zezwolenia. Rejs rezerwuje Scandinavian Express.',
   p6_alt_both: 'Sztorm albo odwołania na obu przeprawach — bez propozycji.',
   p6_alt_nodata: 'Brak danych o rozkładzie drugiej przeprawy.',

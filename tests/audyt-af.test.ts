@@ -109,7 +109,8 @@ describe('A-03 / A-04 — prom: pełne nazwy portów, ten sam rejs PL → SE w p
     expect(top).not.toMatch(/nextLiveSailing/);
     const dash = readFileSync('src/views/DashboardView.tsx', 'utf8');
     expect(dash).toMatch(/nextGdnSailing\(new Date\(nowMinute \* 60_000\)\)/);
-    expect(dash.match(/ferryRouteName\(locale,/g)).toHaveLength(2);
+    /* BN9-b: rejs z bazy — etykieta trasy z kodu (Terminal A, przeprawy z Estonii); demo — z portów */
+    expect(dash.match(/ferryRoute(Name|Label)\(locale,/g)).toHaveLength(2);
     expect(dash).not.toMatch(/route: `\$\{/);
   });
 });

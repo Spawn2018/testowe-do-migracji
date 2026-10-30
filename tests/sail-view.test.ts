@@ -72,7 +72,7 @@ describe('E30 pkt 7: Rejsy', () => {
     expect(sailTime('2027-01-09T17:00:00Z')).toBe('09.01.2027, 18:00');
   });
   it('nagłówek obejmuje obie przeprawy; ekran bez starego „Rozkład Gdańsk ⇄ Nynäshamn” i bez „pokaż minione”', () => {
-    expect(sv('pl', 'sv_sub')).toBe('Gdańsk → Nynäshamn i Gdynia → Karlskrona');
+    expect(sv('pl', 'sv_sub')).toBe('Polska → Szwecja oraz Estonia → Finlandia i Szwecja');
     const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
     expect(panel).not.toMatch(/sail_sub|sail_show_past|sail_source_note|sail_src_\$/);
     expect(panel).toMatch(/data-sail-returns/);

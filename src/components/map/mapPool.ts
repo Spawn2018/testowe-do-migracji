@@ -14,6 +14,7 @@ import { SITES } from '../../lib/status';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { PROD_BUILD } from '../../lib/prodFacade';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
+import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
 import { useTowerStore } from '../../store/useTowerStore';
 import { reportBasemapFailure } from '../../lib/p9aSource';
 import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
@@ -163,6 +164,11 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const ferryLeg = L.layerGroup().addTo(map);
   for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
     L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(ferryLeg);
+  }
+  /* BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja) — zawsze, ten sam styl;
+     kadrowanie mapy (`corridorBoundsOf`) bez zmian, jak dla Stena/Polferries */
+  for (const line of Object.values(WATER_TRACKS_EXTRA)) {
+    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), { color: '#6BA8D6', weight: 3, opacity: 0.9 }).addTo(ferryLeg);
   }
   const detour = L.layerGroup().addTo(map);
   const geofences = L.layerGroup().addTo(map);

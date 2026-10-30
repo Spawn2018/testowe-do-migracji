@@ -219,14 +219,14 @@ export function RoutePanel({
         {alt ? (
           <div className="rk-alt" data-ferry-alt={PROD ? 'db' : 'demo'}>
             <h4 className="rk-sec">{rt(locale, 'p6_alt_h')}</h4>
-            {alt.kind === 'BOTH' ? <p className="rk-muted">{rt(locale, 'p6_alt_both')}</p> : (
+            {alt.kind === 'BOTH' ? <p className="rk-muted">{rt(locale, alt.dest ? 'p6_alt_both_dest' : 'p6_alt_both')}</p> : (
               <>
                 <p className="rk-alt-why">
                   {alt.reason === 'CANCELLED'
                     ? rtp(locale, 'p6_alt_why_CANCELLED', { vessel: alt.vessel })
                     : rtp(locale, 'p6_alt_why_STORM', { from: rt(locale, `p6_line_${alt.from}`) })}
                 </p>
-                <p className="rk-alt-why"><b>{rtp(locale, 'p6_alt_list', { line: rt(locale, `p6_line_${alt.to}`) })}</b></p>
+                <p className="rk-alt-why"><b>{rtp(locale, alt.dest === 'FI' ? 'p6_alt_list_FI' : 'p6_alt_list', { line: rt(locale, `p6_line_${alt.to}`) })}</b></p>
                 {alt.kind === 'NODATA' ? <p className="rk-muted">{rt(locale, 'p6_alt_nodata')}</p> : (
                   <ul className="rk-alt-list" data-ferry-line={alt.to.toLowerCase()}>
                     {(phone ? alt.sailings.slice(0, 1) : alt.sailings).map((s) => (

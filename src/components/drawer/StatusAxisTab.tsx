@@ -5,9 +5,10 @@
  * Stopka: kto zmienia + „Zmień status” (SCX i administrator HHL, decyzja 17:46). Okno — `StatusChangeModal`.
  */
 import { useState, type ReactNode } from 'react';
+import { useTowerStore } from '../../store/useTowerStore';
 import type { Bill, Document, Geofence, Load, LoadEvent, LoadStatus, Locale, OrgKind, ReadyGap } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { statusLabel } from '../../lib/statusLabel';
+import { routeStatusLabel } from '../../lib/statusLabel';
 import { readyGapsText } from '../../lib/p4c';
 import { axisActor, buildStatusAxis, dayOnly, dayTime, hoursMinutes, isoMs, timeOnly, type AxisHit, type AxisRow } from '../../lib/statusAxis';
 import { axisMilestones, planNote, type PlanNote } from '../../lib/p6cAxis';
@@ -47,8 +48,9 @@ function settleText(
 
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-function rowName(r: AxisRow, locale: Locale): string {
-  return r.statuses.map((s) => statusLabel(s, undefined, locale)).join(' · ');
+function rowName(r: AxisRow, locale: Locale, route: string | null = null): string {
+  /* BN9-b (25A): przeprawa z Estonii — „Port wypłynięcia — Muuga”; Polferries i Stena bez zmian */
+  return r.statuses.map((s) => routeStatusLabel(s, undefined, locale, route)).join(' · ');
 }
 
 function rowSub(
@@ -154,7 +156,7 @@ export function StatusAxisTab({
   documents = [],
   bills = [],
 }: {
-  load: Pick<Load, 'id' | 'status' | 'stage' | 'unloadedAt' | 'resources' | 'plannedLoadDate' | 'plannedDeliverDate' | 'trackingLink'>;
+  load: Pick<Load, 'id' | 'status' | 'stage' | 'unloadedAt' | 'resources' | 'plannedLoadDate' | 'plannedDeliverDate' | 'trackingLink'> & { sailingId?: string | null };
   events: readonly LoadEvent[];
   geofences: readonly Pick<Geofence, 'id' | 'name'>[];
   locale: Locale;
@@ -173,6 +175,7 @@ export function StatusAxisTab({
   bills?: readonly Bill[];
 }) {
   const axis = buildStatusAxis(load, events);
+  const route = useTowerStore((st) => (load.sailingId ? st.sailings.find((x) => x.id === load.sailingId)?.route ?? null : null));
   const milestones = axisMilestones(axis, events, geofences);
   /* po dostawie: rozliczenie z danych firmy (A5); wcześniej — dotychczasowe zdania */
   const afterDelivery = axis.current === 'DELIVERED' || axis.current === 'READY_TO_INVOICE' || axis.current === 'INVOICED';
@@ -230,7 +233,7 @@ export function StatusAxisTab({
                 {shown.map((r) => {
                   const sub0 = rowSub(r, load, geofences, hits, phone, locale, readyGaps, settle);
                   /* bez powtórzenia nazwy („Na promie · Na promie”) */
-                  const sub = sub0 && sub0.trim().toLocaleLowerCase('pl') !== rowName(r, locale).toLocaleLowerCase('pl') ? sub0 : null;
+                  const sub = sub0 && sub0.trim().toLocaleLowerCase('pl') !== rowName(r, locale, route).toLocaleLowerCase('pl') ? sub0 : null;
                   const waiting = r.kind === 'pending' && r.statuses[0] === 'READY_TO_INVOICE' && axis.current === 'DELIVERED';
                   /* E17 + A10: źródło przy statusie — IMPORT / RĘCZNIE / GPS / AIS / ROZKŁAD / DANE / DOKUMENTY / KIEROWCA / FAKTURA (AUTO, gdy automat nie podał źródła) */
                   const tag = r.hit && (r.kind === 'done' || r.kind === 'current')
@@ -248,7 +251,7 @@ export function StatusAxisTab({
                       <span className="sax-mk" aria-hidden />
                       <div className="sax-main">
                         <div className="sax-nm">
-                          <span className="sax-name">{rowName(r, locale)}</span>
+                          <span className="sax-name">{rowName(r, locale, route)}</span>
                           {tag ? (
                             <span className={`sax-tag ${tag === 'manual' ? 'manual' : 'auto'}`} data-axis-src={tag}>
                               {tag === 'manual' ? t(locale, 'p4b_tag_manual') : tag === 'auto' ? t(locale, 'p4b_tag_auto') : fs6(locale, `p6c_tag_${tag}`)}
