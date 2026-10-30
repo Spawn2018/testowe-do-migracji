@@ -7131,9 +7131,16 @@ Tempo 3 dni: ~1‚Äì2 paczki bazy/dzie≈Ñ przy 1‚Äì3 rundach F7; wyglƒÖd koordynato
 
 
 
-## 2026-10-30 12:15 ó #662 PILNE SafeFleet (przed F7 #661)
+## 2026-10-30 12:15 ‚Äî #662 PILNE SafeFleet (przed F7 #661)
 
-- Skrzynka: **#662 pilne** (Spawn2018) ó connector SafeFleet przed poprawkami #661; #608 w planie; #550 WSTRZYMANE.
-- Scalanie: #661 bez ÑF7: gotoweî (koordynator: najpierw #662, potem B1/B2/okresy). CI #661 w toku na starej ga≥Ízi ó bez nowych commitÛw BN2.
-- **Krok:** ga≥πü `pakiet/662-safefleet-link` / migracja **0349** (enum SAFEFLEET, `safefleet_token` bez SELECT, sanitize, flaga TELM_SAFEFLEET_POLL, cron 2 min, lock); Edge `safefleet-poll`; adapter + job; UI chip + LiveStatus; testy `safefleet-poll` / `w-safefleet-stan`.
-- Po F7 #662 õ wrÛÊ do #661 BN2. Bez push na main.
+- Skrzynka: **#662 pilne** (Spawn2018) ‚Äî connector SafeFleet przed poprawkami #661; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: #661 bez ‚ÄûF7: gotowe‚Äù (koordynator: najpierw #662, potem B1/B2/okresy).
+- **Krok:** ga≈ÇƒÖ≈∫ `pakiet/662-safefleet-link` / migracja **0349** (enum SAFEFLEET, `safefleet_token` bez SELECT, sanitize, flaga TELM_SAFEFLEET_POLL, cron 2 min, lock); Edge `safefleet-poll`; adapter + job; UI chip + LiveStatus; testy `safefleet-poll` / `w-safefleet-stan`.
+- Po F7 #662 ‚Äî wr√≥ƒá do #661 BN2. Bez push na main.
+
+## 2026-10-30 12:35 ‚Äî #662 RLS testy (security +8)
+
+- Skrzynka: #662 pilne W TOKU (PR #663); #608 w planie; #550 WSTRZYMANE. Brak ‚ÄûF7: gotowe do scalenia‚Äù na #663/#661.
+- CI @ `fb0051da`: unit/visual/db ‚úî ‚Äî potem krok RLS z odbioru #662.
+- **Krok:** `security.sh` ‚Äî authenticated bez SELECT/UPDATE/INSERT `safefleet_token`; SCX/KSH odmowa odczytu; sanitizer URL‚Üítoken+znacznik; clear po RIO. EXPECTED security **494** / TEST **490**.
+- Push ‚Üí CI ‚Üí F7. Bez push na main.

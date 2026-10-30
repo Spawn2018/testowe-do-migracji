@@ -1160,11 +1160,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **BN2** — W TOKU (**0347**+**0348**, PR #660 SCALONE `a94645d9`; PR #661 `pakiet/bn2-viking-eckero-dfds`): Tallink LIVE; Portnet; Viking/Eckerö/DFDS LIVE HTML (14 dni) + Terminal A; F7 #661: B1 DFDS bez stałej HTML, B2 PoT bez fałszywego +1 dzień, okresy ważności, testy — **wstrzymane na PILNE #662**.
 3. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — W TOKU (`pakiet/662-safefleet-link`, migracja **0349**)
+### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — W TOKU (`pakiet/662-safefleet-link`, migracja **0349**, PR #663)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
-1. Rozpoznanie URL → `telematics_provider=SAFEFLEET`, token w `safefleet_token` (bez SELECT), znacznik `safefleet:<6>` w `telematics_vehicle_id`.
-2. Job `safefleet-poll` co 2 min (flaga `TELM_SAFEFLEET_POLL`), zapis `positions.source=SAFEFLEET`, trajectory opcjonalnie, ryzyko po 3 błędach.
-3. UI: chip „SafeFleet · link ustawiony”; Stan systemu; testy parser/job.
+1. ~~Rozpoznanie URL → `telematics_provider=SAFEFLEET`, token w `safefleet_token` (bez SELECT), znacznik `safefleet:<6>`~~.
+2. ~~Job `safefleet-poll` co 2 min (`TELM_SAFEFLEET_POLL`), `positions.source=SAFEFLEET`, trajectory, ryzyko po 3 błędach~~.
+3. ~~UI chip + Stan systemu; testy parser/job~~; **testy RLS** security (+8, EXPECTED 494) — SCX/KSH bez SELECT tokenu.
 4. Po F7 → wróć do #661 BN2.
 
 2. **27C:B** — ryzyko śladu GPS SG-23 w historii PR #585 zaakceptowane; nic nie robić. Zasada: żadnych śladów GPS / kodów / danych osobowych w repo.
@@ -2066,3 +2066,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 10:25 | BN2 #660 F7 r2: PoT/Stockholm bez zmyślonych godzin; closeStale +STO-TLL/KPS-PLD | pętla |
 | 30.10.2026 10:50 | BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu tablicy) | pętla |
 | 30.10.2026 12:15 | #662 PILNE SafeFleet (SG-27): start **0349** przed F7 #661 | pętla |
+| 30.10.2026 12:35 | #662 RLS: security +8 (EXPECTED 494); CI zielone @ fb0051da | pętla |

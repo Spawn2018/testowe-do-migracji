@@ -272,6 +272,22 @@ sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/
 out=$(sys "select rio_secret from loads where id='$L1'")
 echo "$out" | grep -qx "klucz-b6" && { ok=$((ok+1)); echo "  OK    B6: sanitizer nadal zapisuje rio_secret"; } || { fail=$((fail+1)); echo "  FAIL  B6 sanitizer: $out"; }
 
+echo; echo "[#662] safefleet_token bez SELECT (jak rio_secret); SCX/KSH nie czytają linku"
+# Token zmyślony (nie z SG-27). Kolumna bez SELECT/INSERT/UPDATE dla authenticated.
+val "#662: authenticated bez SELECT safefleet_token" $HHL "select has_column_privilege('authenticated','loads','safefleet_token','select')::text" false
+val "#662: authenticated bez UPDATE safefleet_token" $HHL "select has_column_privilege('authenticated','loads','safefleet_token','update')::text" false
+val "#662: authenticated bez INSERT safefleet_token" $HHL "select has_column_privilege('authenticated','loads','safefleet_token','insert')::text" false
+err "#662: SCX nie zapisze safefleet_token wprost" $SCX "update loads set safefleet_token='aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3' where id='$L2'" "permission denied"
+err "#662: KSH nie odczyta safefleet_token" $KSH "select safefleet_token from loads where id='$L1'" "permission denied"
+err "#662: SCX nie odczyta safefleet_token" $SCX "select safefleet_token from loads where id='$L2'" "permission denied"
+sys "update loads set telematics_vehicle_id='https://portal.safefleet.pl/safefleet/temporary_link/view/aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3/' where id='$L1'" >/dev/null
+out=$(sys "select telematics_provider || '|' || telematics_vehicle_id || '|' || coalesce(safefleet_token,'') from loads where id='$L1'")
+echo "$out" | grep -qx "SAFEFLEET|safefleet:b1c2d3|aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3" && { ok=$((ok+1)); echo "  OK    #662: sanitizer zapisuje token i znacznik"; } || { fail=$((fail+1)); echo "  FAIL  #662 sanitizer: $out"; }
+# Przywróć RIO z B6 — dalsze #392/#442 zakładają ten stan startowy.
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
+out=$(sys "select (safefleet_token is null and telematics_vehicle_id like '%rio.cloud%' and rio_secret='klucz-b6')::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #662: po RIO safefleet_token puste"; } || { fail=$((fail+1)); echo "  FAIL  #662 clear po RIO: $out"; }
+
 echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
 # Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
 # Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani
