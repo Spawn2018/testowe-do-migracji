@@ -14,11 +14,31 @@ export const DIGITRAFFIC_PORT_CALLS_URL = 'https://meri.digitraffic.fi/api/port-
 export const DIGITRAFFIC_PORTCALL_ATTRIBUTION =
   'Godziny portowe: Fintraffic Digitraffic Portnet, licencja CC BY 4.0';
 
-/** UN/LOCODE → nasz port / trasa względem EETLL / EEMUU / EEPLD. */
-const FI_PORTS: Record<string, { code: string; fromEe: FerryRoute; toEe: FerryRoute }> = {
-  FIHEL: { code: 'HEL', fromEe: 'TLL-HEL', toEe: 'HEL-TLL' },
-  FIVUO: { code: 'VUO', fromEe: 'MUU-VUO', toEe: 'VUO-MUU' },
+/** UN/LOCODE → nasz port. Trasa TLL↔HEL zależy od statku (F7 #660: Terminal A → TLLA-HEL). */
+const FI_PORTS: Record<string, { code: string }> = {
+  FIHEL: { code: 'HEL' },
+  FIVUO: { code: 'VUO' },
 };
+
+/** Terminal A (Viking / Eckerö Finlandia) vs D (Tallink) — F7 #660 następny PR BN2. */
+const TERMINAL_A_VESSELS = new Set([
+  'M/F Viking XPRS',
+  'M/F Finlandia',
+]);
+
+function routesForPort(
+  portCode: string,
+  vessel: string,
+): { fromEe: FerryRoute; toEe: FerryRoute } | null {
+  if (portCode === 'VUO') return { fromEe: 'MUU-VUO', toEe: 'VUO-MUU' };
+  if (portCode === 'HEL') {
+    if (TERMINAL_A_VESSELS.has(vessel)) {
+      return { fromEe: 'TLLA-HEL', toEe: 'HELA-TLL' };
+    }
+    return { fromEe: 'TLL-HEL', toEe: 'HEL-TLL' };
+  }
+  return null;
+}
 
 const VESSEL_BY_NAME: Record<string, string> = {
   megastar: 'M/F Megastar',
@@ -106,8 +126,10 @@ export function parseDigitrafficPortCalls(json: unknown): PortCallParseResult {
     const atd = area.atd ? new Date(String(area.atd)).toISOString() : null;
     const eta = area.eta ? new Date(String(area.eta)).toISOString() : null;
     const etd = area.etd ? new Date(String(area.etd)).toISOString() : null;
-    const arrivalRoute = ata && eePartner(prevPort) ? fi.fromEe : null;
-    const departureRoute = atd && eePartner(nextPort) ? fi.toEe : null;
+    const routes = routesForPort(fi.code, vessel);
+    if (!routes) continue;
+    const arrivalRoute = ata && eePartner(prevPort) ? routes.fromEe : null;
+    const departureRoute = atd && eePartner(nextPort) ? routes.toEe : null;
     if (!arrivalRoute && !departureRoute && !eta && !etd) continue;
     calls.push({
       vessel,

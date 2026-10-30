@@ -6910,6 +6910,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok:** `eta_obs_route_family` ← `ferry_routes.family_key`; `ferry_geofence_matches_route` w `apply_geofence_status` + `compute_load_eta` (nie primary operator). Aliasy `TLLA-HEL`/`HELA-TLL`. status **457** (+8).
 - Push → CI → prośba o F7. Dalej BN1: CASE-y ETA/AIS → słownik; front z RPC. Bez push na main.
 
+## 2026-10-30 11:20 — #660 SCALONE; BN2 Viking/Eckerö/DFDS LIVE
+
+- Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.
+- Scalanie: **#660** F7 „gotowe do scalenia” @ `23154592` → merge `a94645d9` (bez dalszych commitów na #660).
+- **Krok BN2:** gałąź `pakiet/bn2-viking-eckero-dfds` — scrape HTML Viking (sales.vikingline.com) / Eckerö (eckeroline.com/timetable) / DFDS (sidugraafik tygodniowy po HTTP 200); 14 dni; Digitraffic FIHEL: Terminal A dla Viking XPRS + Finlandia → `TLLA-HEL`/`HELA-TLL`; atrybucja Digitraffic Portnet CC BY 4.0 + armatorzy w Rejsach; Port of Tallinn dziś+jutro w `ferry-portnet` co 15 min. Testy bn2-ferry-schedule 28 (+3 HTML).
+- Push → CI → F7. Bez push na main.
+
 ## 2026-10-30 10:50 — BN2 #660 F7 r3: PoT tylko odwołania (bez actual_* z planu)
 
 - Skrzynka: #608 w planie; #550 **WSTRZYMANE** (`pilne`, nic nie budować). Bez nowego wpisu.

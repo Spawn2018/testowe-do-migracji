@@ -8,9 +8,9 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseTallinkTimetable, tallinkTimetableUrl } from '../src/lib/ferry/tallink';
 import { parseDigitrafficPortCalls } from '../src/lib/ferry/digitrafficPortCalls';
-import { parseVikingSchedule } from '../src/lib/ferry/vikingline';
-import { parseEckeroSchedule } from '../src/lib/ferry/eckero';
-import { parseDfdsSchedule } from '../src/lib/ferry/dfds';
+import { parseVikingSchedule, parseVikingTimetableHtml } from '../src/lib/ferry/vikingline';
+import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
+import { parseDfdsSchedule, parseDfdsWeeklyHtml } from '../src/lib/ferry/dfds';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
 import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/lib/ferry/portsStockholm';
 
@@ -21,6 +21,9 @@ const ECKERO = JSON.parse(readFileSync(new URL('./fixtures/eckero-schedule-sampl
 const DFDS = JSON.parse(readFileSync(new URL('./fixtures/dfds-schedule-sample.json', import.meta.url), 'utf8'));
 const PORT_TLL = readFileSync(new URL('./fixtures/port-tallinn-departures-arrivals-sample.html', import.meta.url), 'utf8');
 const PORT_STO = JSON.parse(readFileSync(new URL('./fixtures/ports-stockholm-portentry-sample.json', import.meta.url), 'utf8'));
+const VIKING_HTML = readFileSync(new URL('./fixtures/viking-timetable-helsinki-tallinn-sample.html', import.meta.url), 'utf8');
+const ECKERO_HTML = readFileSync(new URL('./fixtures/eckero-timetable-finlandia-finbo-sample.html', import.meta.url), 'utf8');
+const DFDS_HTML = readFileSync(new URL('./fixtures/dfds-weekly-paldiski-kapellskar-sample.html', import.meta.url), 'utf8');
 
 describe('BN2 Tallink timetable', () => {
   it('buduje URL z zakresem dat', () => {
@@ -93,6 +96,33 @@ describe('BN2 Viking / Eckerö / DFDS (fixture znormalizowany)', () => {
     const r = parseDfdsSchedule(DFDS);
     expect(r.warnings).toEqual([]);
     expect(r.sailings.map((s) => s.route).sort()).toEqual(['KPS-PLD', 'PLD-KPS']);
+  });
+});
+
+describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
+  it('Viking HTML: Fri 10:30 HEL→TLL i 14-dniowy zakres', () => {
+    const r = parseVikingTimetableHtml(VIKING_HTML, { fromYmd: '2026-10-30', days: 14 });
+    expect(r.warnings.filter((w) => /Struktura|pusta|zablokowana/i.test(w))).toEqual([]);
+    expect(r.sailings.length).toBeGreaterThan(10);
+    expect(r.sailings.every((s) => s.route === 'TLLA-HEL' || s.route === 'HELA-TLL')).toBe(true);
+    // 30.10.2026 = piątek → HELA-TLL 07:45 / 14:15
+    expect(r.sailings.some((s) =>
+      s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30') && s.vessel === 'M/F Viking XPRS'
+    )).toBe(true);
+  });
+
+  it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {
+    const r = parseEckeroTimetableHtml(ECKERO_HTML, { fromYmd: '2026-10-30', days: 7 });
+    expect(r.sailings.some((s) => s.vessel === 'M/F Finlandia' && s.route === 'TLLA-HEL')).toBe(true);
+    expect(r.sailings.some((s) => s.vessel === 'M/F Finlandia' && s.route === 'HELA-TLL')).toBe(true);
+    expect(r.sailings.some((s) => s.vessel === 'M/F Finbo Cargo')).toBe(true);
+  });
+
+  it('DFDS HTML: PLD 22:00 Mon + KPS 09:30', () => {
+    const r = parseDfdsWeeklyHtml(DFDS_HTML, { fromYmd: '2026-10-26', days: 7 }); // poniedziałek
+    expect(r.warnings.filter((w) => /Struktura/i.test(w))).toEqual([]);
+    expect(r.sailings.some((s) => s.route === 'PLD-KPS' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
+    expect(r.sailings.some((s) => s.route === 'KPS-PLD' && s.departureUtc.startsWith('2026-10-26'))).toBe(true);
   });
 });
 
