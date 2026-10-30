@@ -78,6 +78,10 @@ const pl: Dict = {
   p3a_acc_preview: 'Podgląd: HHL · KSH · SCX',
   p3a_acc_logout: 'Wyloguj',
   p3a_ferry_open: 'Promy, tydzień i data',
+  /* W-topbar-promy: pasek komputera — najbliższy rejs + „+N” z listą pozostałych armatorów */
+  p3a_ferry_more: '+{n}',
+  p3a_ferry_more_aria: 'Pokaż najbliższe rejsy wszystkich armatorów ({n})',
+  p3a_ferry_pop_hd: 'Najbliższe odjazdy promów',
   p3a_port_GDN: 'Gdańsk',
   p3a_port_GDY: 'Gdynia',
   p3a_port_NYN: 'Nynäshamn',
