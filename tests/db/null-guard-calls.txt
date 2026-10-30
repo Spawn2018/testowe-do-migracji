@@ -66,7 +66,6 @@ ksh_sync_preview_get | EMPTY | select coalesce(ksh_sync_preview_get()::text, '�
 ksh_import_summary_get | EMPTY | select coalesce(ksh_import_summary_get(null)::text, '∅') | ∅
 ksh_sync_write_set | GUARD | select ksh_sync_write_set(false) | Administrator HHL|42501
 ksh_sync_import_set | GUARD | select ksh_sync_import_set(false) | Administrator HHL|42501
-ksh_sync_outbound_enqueue_active_wt | GUARD | select ksh_sync_outbound_enqueue_active_wt() | Administrator HHL|42501
 rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL
 rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyłącznie HHL
 rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyłącznie HHL

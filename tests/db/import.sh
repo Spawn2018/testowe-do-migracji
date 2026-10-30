@@ -487,6 +487,9 @@ chk "A6: authenticated bez EXECUTE outbound_enqueue" "$(Q "select has_function_p
 chk "A6: authenticated bez EXECUTE outbound_list" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_list(uuid,int)','execute')")" f
 chk "A6: authenticated bez EXECUTE outbound_ack" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_ack(jsonb,text,text)','execute')")" f
 chk "A6: authenticated bez EXECUTE l1b_note_file_changed" "$(Q "select has_function_privilege('authenticated','l1b_note_file_changed(uuid,uuid,text,text,int)','execute')")" f
+# #653: backfill WT→plik wyłączony z API (decyzja właściciela 30.10 — bez uzupełniania wstecz)
+chk "#653: authenticated bez EXECUTE enqueue_active_wt" "$(Q "select has_function_privilege('authenticated','ksh_sync_outbound_enqueue_active_wt()','execute')")" f
+chk "#653: anon bez EXECUTE enqueue_active_wt" "$(Q "select has_function_privilege('anon','ksh_sync_outbound_enqueue_active_wt()','execute')")" f
 val "A6: SCX widzi 0 outbound" $SCX "select count(*) from ksh_sync_outbound" 0
 val "A6: KSH widzi 0 outbound" $KSH "select count(*) from ksh_sync_outbound" 0
 $PSQL -c "update app_users set role='HHL_ADMIN' where auth_id='$HHL'" >/dev/null
