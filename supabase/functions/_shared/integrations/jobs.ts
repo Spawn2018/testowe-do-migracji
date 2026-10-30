@@ -29,11 +29,11 @@ import {
 } from '../ferry/digitrafficPortCalls.ts';
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
-  parsePortTallinnHtml, portTallinnToSailings,
+  parsePortTallinnHtml,
 } from '../ferry/portTallinn.ts';
 import {
   PORTS_STOCKHOLM_PORTENTRY_URL, PORTS_STOCKHOLM_UA,
-  parsePortsStockholmPortEntry, portsStockholmToSailings,
+  parsePortsStockholmPortEntry,
 } from '../ferry/portsStockholm.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -466,11 +466,11 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
 }
 
 /**
- * F7 #660 pkt 4: Portnet = tylko FI — HEL-TLL / VUO-MUU (i Terminal A) dostają ATD, bez ATA w EE.
- * AIS/strefy nie mają hubów HEL/TLL/VUO/MUU → po arrival_at + 2 h bez ATA → DOPLYNAL (actual_arrival_at = null).
+ * F7 #660: Portnet = FI (HEL/VUO); Ports of Stockholm = SE (STO/KPS) — brak ATA w EE.
+ * Po arrival_at + 2 h bez ATA → DOPLYNAL (actual_arrival_at = null). F7 r2: + STO-TLL, KPS-PLD.
  */
 async function closeStaleFiToEeWithoutAta(deps: JobDeps, sinceIso: string): Promise<number> {
-  const ROUTES = new Set(['HEL-TLL', 'HELA-TLL', 'VUO-MUU']);
+  const ROUTES = new Set(['HEL-TLL', 'HELA-TLL', 'VUO-MUU', 'STO-TLL', 'KPS-PLD']);
   const nowMs = deps.now().getTime();
   const existing = await deps.store.sailingsSince(sinceIso);
   let updated = 0;
@@ -488,15 +488,6 @@ async function closeStaleFiToEeWithoutAta(deps: JobDeps, sinceIso: string): Prom
   return updated;
 }
 
-function balticOperatorSource(vessel: string, company = ''): AutoSailingSource {
-  const v = vessel.toLowerCase();
-  const c = company.toLowerCase();
-  if (/viking/.test(v) || /viking/.test(c)) return 'VIKING';
-  if (/finlandia|finbo|ecker/.test(v) || /ecker|finbo/.test(c)) return 'ECKERO';
-  if (/sirena|dfds/.test(v) || /dfds/.test(c)) return 'DFDS';
-  return 'TALLINK';
-}
-
 function tallinnDateYmd(now: Date): string {
   const p = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Europe/Tallinn', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -505,14 +496,14 @@ function tallinnDateYmd(now: Date): string {
   return `${g('year')}-${g('month')}-${g('day')}`;
 }
 
-/** BN2 — Port of Tallinn: rozkład dnia (Viking/Eckerö/Tallink/Finbo) + odwołania. */
+/**
+ * BN2 / F7 r2 — Port of Tallinn: tylko dopasowanie istniejących rejsów (statek + ±3 h)
+ * → odwołania i actual_*; bez insertów i bez zmiany departure_at/arrival_at.
+ */
 async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
-  inserted: number; updated: number; manualKept: number; unchanged: number;
-  warnings: string[]; fail: boolean; cancelled: number;
+  warnings: string[]; fail: boolean; cancelled: number; actualUpdated: number;
 }> {
-  const empty = {
-    inserted: 0, updated: 0, manualKept: 0, unchanged: 0, warnings: [] as string[], fail: false, cancelled: 0,
-  };
+  const empty = { warnings: [] as string[], fail: false, cancelled: 0, actualUpdated: 0 };
   const headers = { 'User-Agent': PORT_TALLINN_UA, Accept: 'text/html' };
   const [depPage, arrPage] = await Promise.all([
     readText(deps, PORT_TALLINN_DEPARTURES_URL, { headers }),
@@ -531,18 +522,18 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
   if (parsed.warnings.some((w) => /brak tabeli|pusta odpowiedź/i.test(w)) && parsed.events.length === 0) {
     return { ...empty, warnings, fail: true };
   }
-  const cancelledEvents = parsed.events.filter((e) => e.cancelled);
+  const [vessels, existing] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const WINDOW_MS = 3 * 3600_000;
   let cancelled = 0;
-  if (cancelledEvents.length > 0) {
-    const [vessels, existing] = await Promise.all([
-      deps.store.vessels(), deps.store.sailingsSince(sinceIso),
-    ]);
-    const byName = new Map(vessels.map((v) => [v.name, v.id]));
-    const WINDOW_MS = 3 * 3600_000;
-    for (const e of cancelledEvents) {
-      const vesselId = byName.get(e.vessel);
-      if (!vesselId) continue;
-      const t = Date.parse(e.atUtc);
+  let actualUpdated = 0;
+  for (const e of parsed.events) {
+    const vesselId = byName.get(e.vessel);
+    if (!vesselId) continue;
+    const t = Date.parse(e.atUtc);
+    if (e.cancelled) {
       const hit = existing.find((s) =>
         s.vessel_id === vesselId
         && s.route === e.route
@@ -553,37 +544,47 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
         cancelled += 1;
         hit.status = 'ODWOLANY';
       }
+      continue;
+    }
+    if (e.kind === 'DEPARTURE') {
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === e.route
+        && Math.abs(Date.parse(s.departure_at) - t) <= WINDOW_MS
+        && s.actual_departure_at == null);
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_departure_at: e.atUtc }, 'W_REJSIE'),
+      )) {
+        actualUpdated += 1;
+        hit.actual_departure_at = e.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+      }
+    } else {
+      const hit = existing.find((s) =>
+        s.vessel_id === vesselId
+        && s.route === e.route
+        && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
+        && s.actual_arrival_at == null);
+      if (hit && await deps.store.updateSailing(
+        hit.id, sailingActualPatch(hit, { actual_arrival_at: e.atUtc }, 'DOPLYNAL'),
+      )) {
+        actualUpdated += 1;
+        hit.actual_arrival_at = e.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      }
     }
   }
-  const bySource = new Map<AutoSailingSource, IncomingSailing[]>();
-  for (const s of portTallinnToSailings(parsed.events)) {
-    const src = balticOperatorSource(s.vessel, s.company);
-    const list = bySource.get(src) ?? [];
-    list.push({
-      route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
-    });
-    bySource.set(src, list);
-  }
-  let inserted = 0; let updated = 0; let manualKept = 0; let unchanged = 0;
-  for (const [src, incoming] of bySource) {
-    if (incoming.length === 0) continue;
-    const r = await applySailings(deps, incoming, sinceIso, src);
-    inserted += r.plan.inserts.length; updated += r.updated;
-    manualKept += r.manualKept; unchanged += r.plan.unchanged;
-    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
-  }
-  return { inserted, updated, manualKept, unchanged, warnings, fail: false, cancelled };
+  return { warnings, fail: false, cancelled, actualUpdated };
 }
 
-/** BN2 — Ports of Stockholm: rozkład Kapellskär/Värtahamnen + actual_* z API. */
+/**
+ * BN2 / F7 r2 — Ports of Stockholm: tylko dopasowanie istniejących (statek + ±3 h)
+ * → actual_*; bez insertów i bez zmiany departure_at/arrival_at.
+ */
 async function applyPortsStockholm(deps: JobDeps, sinceIso: string): Promise<{
-  inserted: number; updated: number; manualKept: number; unchanged: number;
   warnings: string[]; fail: boolean; actualUpdated: number;
 }> {
-  const empty = {
-    inserted: 0, updated: 0, manualKept: 0, unchanged: 0,
-    warnings: [] as string[], fail: false, actualUpdated: 0,
-  };
+  const empty = { warnings: [] as string[], fail: false, actualUpdated: 0 };
   const page = await readText(deps, PORTS_STOCKHOLM_PORTENTRY_URL, {
     headers: { 'User-Agent': PORTS_STOCKHOLM_UA, Accept: 'application/json' },
   });
@@ -597,21 +598,6 @@ async function applyPortsStockholm(deps: JobDeps, sinceIso: string): Promise<{
     return { ...empty, warnings: parsed.warnings, fail: true };
   }
   const warnings = [...parsed.warnings];
-  const bySource = new Map<AutoSailingSource, IncomingSailing[]>();
-  for (const s of portsStockholmToSailings(parsed.calls)) {
-    const src = balticOperatorSource(s.vessel);
-    const list = bySource.get(src) ?? [];
-    list.push(s);
-    bySource.set(src, list);
-  }
-  let inserted = 0; let updated = 0; let manualKept = 0; let unchanged = 0;
-  for (const [src, incoming] of bySource) {
-    if (incoming.length === 0) continue;
-    const r = await applySailings(deps, incoming, sinceIso, src);
-    inserted += r.plan.inserts.length; updated += r.updated;
-    manualKept += r.manualKept; unchanged += r.plan.unchanged;
-    warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
-  }
   const [vessels, existing] = await Promise.all([
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
@@ -652,9 +638,7 @@ async function applyPortsStockholm(deps: JobDeps, sinceIso: string): Promise<{
       }
     }
   }
-  return {
-    inserted, updated, manualKept, unchanged, warnings, fail: false, actualUpdated,
-  };
+  return { warnings, fail: false, actualUpdated };
 }
 
 /** ferry-schedule — Polferries + Stena + BN2 Tallink + Port of Tallinn / Ports of Stockholm (rozkład).
@@ -728,11 +712,10 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
 
   // Portnet ATD/ATA → osobny job ferry-portnet co 15 min (F7 #660 pkt 6).
 
-  // BN2: Port of Tallinn (HTML dzień) — rozkład Viking/Eckerö/Tallink/Finbo + odwołania.
+  // BN2 / F7 r2: Port of Tallinn — tylko odwołania + actual_* na istniejących (bez insertów / godzin).
   const tallinn = await applyPortTallinn(deps, since);
   warnings.push(...tallinn.warnings);
-  inserted += tallinn.inserted; updated += tallinn.updated + tallinn.cancelled;
-  manualKept += tallinn.manualKept; unchanged += tallinn.unchanged;
+  updated += tallinn.cancelled + tallinn.actualUpdated;
   if (tallinn.fail) {
     await deps.store.raiseRisk(sourceDownRisk(
       'PORT_TALLINN',
@@ -745,11 +728,10 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:PORT_TALLINN:');
   }
 
-  // BN2: Ports of Stockholm API — Kapellskär/Värtahamnen (DFDS/Tallink) + actual_*.
+  // BN2 / F7 r2: Ports of Stockholm — tylko actual_* na istniejących (bez insertów / godzin).
   const stockholm = await applyPortsStockholm(deps, since);
   warnings.push(...stockholm.warnings);
-  inserted += stockholm.inserted; updated += stockholm.updated + stockholm.actualUpdated;
-  manualKept += stockholm.manualKept; unchanged += stockholm.unchanged;
+  updated += stockholm.actualUpdated;
   if (stockholm.fail) {
     await deps.store.raiseRisk(sourceDownRisk(
       'PORTS_STOCKHOLM',

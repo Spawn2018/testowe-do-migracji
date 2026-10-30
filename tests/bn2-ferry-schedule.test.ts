@@ -103,9 +103,8 @@ describe('BN2 Port of Tallinn HTML', () => {
     expect(r.events.some((e) => e.vessel === 'M/F Viking XPRS' && e.route === 'TLLA-HEL')).toBe(true);
     expect(r.events.some((e) => e.vessel === 'M/F MyStar' && e.route === 'TLL-HEL')).toBe(true);
     expect(r.events.some((e) => e.vessel === 'M/F Finbo Cargo' && e.route === 'MUU-VUO')).toBe(true);
-    const sails = portTallinnToSailings(r.events);
-    expect(sails.length).toBeGreaterThan(0);
-    expect(sails.every((s) => Date.parse(s.departureUtc) < Date.parse(s.arrivalUtc))).toBe(true);
+    // F7 r2: job nie używa toSailings (zmyślony crossing); helper tylko do sprawdzenia parsera.
+    expect(portTallinnToSailings(r.events).length).toBeGreaterThan(0);
   });
 
   it('przyjazdy Helsinki → Tallinn A/D', () => {
@@ -126,8 +125,8 @@ describe('BN2 Ports of Stockholm portentry', () => {
     expect(r.warnings).toEqual([]);
     expect(r.calls.some((c) => c.vessel === 'M/F Sirena Seaways' && c.arrivalRoute === 'PLD-KPS')).toBe(true);
     expect(r.calls.some((c) => c.actualArrivalUtc && c.actualDepartureUtc)).toBe(true);
-    const sails = portsStockholmToSailings(r.calls);
-    expect(sails.some((s) => s.route === 'PLD-KPS' || s.route === 'KPS-PLD')).toBe(true);
+    // F7 r2: job nie tworzy rozkładu z Stockholm — tylko actual_* na istniejących.
+    expect(portsStockholmToSailings(r.calls).some((s) => s.route === 'PLD-KPS' || s.route === 'KPS-PLD')).toBe(true);
   });
 
   it('Baltic Queen Värtahamnen → TLL-STO / STO-TLL', () => {

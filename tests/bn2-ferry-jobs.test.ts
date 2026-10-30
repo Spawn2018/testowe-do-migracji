@@ -1,6 +1,6 @@
 /**
  * BN2 / F7 #660 — testy joba ferry-schedule / ferry-portnet (mock fetch, bez sieci).
- * Częściowa awaria Tallinka, Portnet vs RECZNIE/ODWOLANY, domknięcie W_REJSIE FI→EE, idempotencja.
+ * F7 r2: Port of Tallinn / Stockholm bez insertów i bez zmiany godzin rozkładu.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -14,8 +14,12 @@ const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.ur
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
 const TALLINK = fx('tallink-timetable-tal-hel-2026-10-30.json');
 const PORTNET = fx('digitraffic-port-calls-megastar-2026-10-29.json');
+const PORT_TLL = fx('port-tallinn-departures-arrivals-sample.html');
+const PORT_STO = fx('ports-stockholm-portentry-sample.json');
 const NOW = new Date('2026-10-30T12:00:00Z');
 const MEGA = 'v-mega';
+const MYST = 'v-myst';
+const SIRENA = 'v-sirena';
 
 class MemStore implements SyncStore {
   sailings: DbSailing[] = [];
@@ -26,6 +30,8 @@ class MemStore implements SyncStore {
   async vessels() {
     return [
       { id: MEGA, name: 'M/F Megastar', mmsi: 276829000 },
+      { id: MYST, name: 'M/F MyStar', mmsi: 276817000 },
+      { id: SIRENA, name: 'M/F Sirena Seaways', mmsi: 277569000 },
       { id: 'v-waw', name: 'M/F Wawel', mmsi: null },
       { id: 'v-ns', name: 'M/F Nova Star', mmsi: 311000787 },
     ];
@@ -81,7 +87,10 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
     if (url.includes('_jcr_content.timetable.')) {
       return new Response('[]', { status: 200 });
     }
-    if (url.includes('stenalinefreight.com') || url.includes('portoftallinn') || url.includes('stockholm')) {
+    if (url.includes('stenalinefreight.com')) {
+      return new Response('niedostepne', { status: 503 });
+    }
+    if (url.includes('ts.ee') || url.includes('portsofstockholm')) {
       return new Response('niedostepne', { status: 503 });
     }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
@@ -94,17 +103,18 @@ const basePages = {
   'port-calls': PORTNET,
 };
 
+const tallinkPages = {
+  ...basePages,
+  'from=tal&to=hel': TALLINK,
+  'from=hel&to=tal': 503 as const,
+  'from=tal&to=sto': 503 as const,
+  'from=sto&to=tal': 503 as const,
+};
+
 describe('F7 #660 ferry-schedule Tallink', () => {
   it('częściowa awaria Tallinka → zapisuje kierunki OK, bez SOURCE_DOWN', async () => {
     const st = new MemStore();
-    const pages: Record<string, string | number> = {
-      ...basePages,
-      'from=tal&to=hel': TALLINK,
-      'from=hel&to=tal': 503,
-      'from=tal&to=sto': 503,
-      'from=sto&to=tal': 503,
-    };
-    const r = await runFerrySchedule(deps(st, pages));
+    const r = await runFerrySchedule(deps(st, { ...tallinkPages }));
     expect(r.ok).toBe(true);
     expect(st.sailings.some((s) => s.source === 'TALLINK' && s.route === 'TLL-HEL')).toBe(true);
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
@@ -123,6 +133,111 @@ describe('F7 #660 ferry-schedule Tallink', () => {
     const again = await runFerrySchedule(deps(st, pages));
     expect(st.risks.filter((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toHaveLength(1);
     expect(again.ok).toBe(true);
+  });
+});
+
+describe('F7 #660 r2 Port of Tallinn / Stockholm bez zmyślonych godzin', () => {
+  it('Tallink + Port of Tallinn: bez duplikatu, arrival_at bez zmian', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'ts.ee/en/departures': PORT_TLL,
+      'ts.ee/en/arrivals': PORT_TLL,
+    };
+    const r = await runFerrySchedule(deps(st, pages));
+    expect(r.ok).toBe(true);
+    // MyStar 07:30 lokalnie = 05:30Z; Tallink arrival 09:30 = 07:30Z — PoT nie nadpisuje.
+    const myst = st.sailings.filter((s) => s.vessel_id === MYST && s.route === 'TLL-HEL'
+      && s.departure_at === '2026-10-30T05:30:00.000Z');
+    expect(myst).toHaveLength(1);
+    expect(myst[0]).toMatchObject({
+      source: 'TALLINK',
+      arrival_at: '2026-10-30T07:30:00.000Z',
+      actual_departure_at: '2026-10-30T05:30:00.000Z',
+    });
+    // PoT nie tworzy rejsów Viking/Eckerö (brak ich własnego rozkładu w tym PR).
+    expect(st.sailings.every((s) => s.source !== 'VIKING' && s.source !== 'ECKERO')).toBe(true);
+  });
+
+  it('Ports of Stockholm: actual_* na istniejącym, bez insertu i bez zmiany godzin', async () => {
+    const st = new MemStore();
+    // actual 19:05 / 21:10 lokalny Stockholm (CET) → 18:05Z / 20:10Z; dep ≥ since (now−1d).
+    st.sailings.push(
+      {
+        id: 'pld', vessel_id: SIRENA, route: 'PLD-KPS',
+        departure_at: '2026-10-29T12:30:00.000Z', arrival_at: '2026-10-29T18:05:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'DFDS',
+      },
+      {
+        id: 'kps', vessel_id: SIRENA, route: 'KPS-PLD',
+        departure_at: '2026-10-29T20:10:00.000Z', arrival_at: '2026-10-30T06:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'DFDS',
+      },
+    );
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'api/timetables': 503,
+      'portsofstockholm.com': PORT_STO,
+    };
+    const beforeIds = new Set(st.sailings.map((s) => s.id));
+    const r = await runFerrySchedule(deps(st, pages));
+    expect(r.ok).toBe(true);
+    expect(st.sailings.find((s) => s.id === 'pld')).toMatchObject({
+      arrival_at: '2026-10-29T18:05:00.000Z',
+      departure_at: '2026-10-29T12:30:00.000Z',
+      actual_arrival_at: '2026-10-29T18:05:00.000Z',
+      status: 'DOPLYNAL',
+      source: 'DFDS',
+    });
+    expect(st.sailings.find((s) => s.id === 'kps')).toMatchObject({
+      departure_at: '2026-10-29T20:10:00.000Z',
+      arrival_at: '2026-10-30T06:00:00.000Z',
+      actual_departure_at: '2026-10-29T20:10:00.000Z',
+      status: 'W_REJSIE',
+      source: 'DFDS',
+    });
+    // Stockholm nie dodaje nowych rejsów Sireny (tylko actual_*).
+    expect(st.sailings.filter((s) => s.vessel_id === SIRENA && !beforeIds.has(s.id))).toHaveLength(0);
+  });
+
+  it('RECZNIE przy odwołaniu z Port of Tallinn nietknięte', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'recz', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-10-30T05:30:00.000Z', arrival_at: '2026-10-30T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+    });
+    const html = `<!DOCTYPE html><html><body>
+<table class="table" id="passenger-lines-outbound"><tbody>
+<tr data-terminal="d" data-from_to="helsinki" data-company="tallink">
+<td data-sort_value="07:30">07:30</td>
+<td data-sort_value="MYSTAR">MYSTAR</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="D">Terminal D</td>
+<td data-sort_value="Tallink">Tallink</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr></tbody></table>
+<table class="table" id="passenger-lines-inbound"><tbody></tbody></table>
+</body></html>`;
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'api/timetables': 503,
+      'ts.ee/en/departures': html,
+      'ts.ee/en/arrivals': html,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'recz')).toMatchObject({
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+      departure_at: '2026-10-30T05:30:00.000Z',
+      arrival_at: '2026-10-30T07:30:00.000Z',
+    });
   });
 });
 
@@ -184,20 +299,41 @@ describe('F7 #660 ferry-portnet', () => {
     });
   });
 
-  it('HEL-TLL po arrival_at+2h bez ATA → DOPLYNAL (actual_arrival_at null)', async () => {
+  it('HEL-TLL / STO-TLL / KPS-PLD po arrival_at+2h bez ATA → DOPLYNAL', async () => {
     const st = new MemStore();
-    st.sailings.push({
-      id: 'stuck', vessel_id: MEGA, route: 'HEL-TLL',
-      departure_at: '2026-10-29T10:00:00.000Z', arrival_at: '2026-10-29T12:00:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      actual_departure_at: '2026-10-29T10:10:00.000Z', actual_arrival_at: null,
-      status: 'W_REJSIE', source: 'TALLINK',
-    });
-    // Pusty Portnet — tylko domknięcie.
+    st.sailings.push(
+      {
+        id: 'stuck-hel', vessel_id: MEGA, route: 'HEL-TLL',
+        departure_at: '2026-10-29T10:00:00.000Z', arrival_at: '2026-10-29T12:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-29T10:10:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+      {
+        id: 'stuck-sto', vessel_id: MEGA, route: 'STO-TLL',
+        departure_at: '2026-10-28T22:00:00.000Z', arrival_at: '2026-10-29T10:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-28T22:05:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+      {
+        id: 'stuck-kps', vessel_id: SIRENA, route: 'KPS-PLD',
+        departure_at: '2026-10-29T08:00:00.000Z', arrival_at: '2026-10-29T18:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-29T08:10:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'DFDS',
+      },
+    );
     const empty = JSON.stringify({ portCalls: [] });
-    const r = await runFerryPortnet(deps(st, { 'port-calls': empty }, new Date('2026-10-29T15:00:00Z')));
+    const r = await runFerryPortnet(deps(st, { 'port-calls': empty }, new Date('2026-10-29T21:00:00Z')));
     expect(r.ok).toBe(true);
-    expect(st.sailings.find((s) => s.id === 'stuck')).toMatchObject({
+    expect(st.sailings.find((s) => s.id === 'stuck-hel')).toMatchObject({
+      status: 'DOPLYNAL', actual_arrival_at: null,
+    });
+    expect(st.sailings.find((s) => s.id === 'stuck-sto')).toMatchObject({
+      status: 'DOPLYNAL', actual_arrival_at: null,
+    });
+    expect(st.sailings.find((s) => s.id === 'stuck-kps')).toMatchObject({
       status: 'DOPLYNAL', actual_arrival_at: null,
     });
   });

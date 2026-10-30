@@ -127,6 +127,7 @@ export function parsePortsStockholmPortEntry(json: unknown): PortsStockholmParse
   return { calls, warnings };
 }
 
+/** @deprecated F7 #660 r2: Ports of Stockholm nie tworzy rozkładu (szacowany crossing). Zostaje dla testów parsera. */
 export function portsStockholmToSailings(calls: PortsStockholmCall[]): Array<{
   route: FerryRoute;
   vessel: string;
@@ -135,12 +136,7 @@ export function portsStockholmToSailings(calls: PortsStockholmCall[]): Array<{
 }> {
   const out: Array<{ route: FerryRoute; vessel: string; departureUtc: string; arrivalUtc: string }> = [];
   for (const c of calls) {
-    // Wypłynięcie SE → EE: plan dep w SE, plan arr ≈ dep + typowy czas (z calculated pair).
     if (c.departureRoute && c.plannedDepartureUtc && c.plannedArrivalUtc) {
-      // Para calculated: arrival=przyjazd do SE, departure=wypłynięcie z SE (kolejny leg).
-      // Dla rozkładu KPS-PLD / STO-TLL używamy plannedDeparture jako dep;
-      // arrival po stronie EE ≈ plannedDeparture + (plannedDeparture - plannedArrival) gdy dep > arr,
-      // inaczej +9.5 h (DFDS) / +16 h (Tallink noc).
       const depMs = Date.parse(c.plannedDepartureUtc);
       const arrSeMs = Date.parse(c.plannedArrivalUtc);
       const gap = depMs > arrSeMs ? (depMs - arrSeMs) : (
@@ -154,7 +150,6 @@ export function portsStockholmToSailings(calls: PortsStockholmCall[]): Array<{
       });
     }
     if (c.arrivalRoute && c.plannedArrivalUtc && c.plannedDepartureUtc) {
-      // Przyjazd do SE: dep z EE ≈ arrival - gap postoju przed kolejnym dep, min. typowy crossing.
       const arrMs = Date.parse(c.plannedArrivalUtc);
       const cross = c.arrivalRoute === 'PLD-KPS' ? 10 * 3600_000 : 16 * 3600_000;
       out.push({

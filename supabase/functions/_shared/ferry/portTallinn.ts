@@ -211,7 +211,7 @@ export function parsePortTallinnHtml(
   return { events, warnings };
 }
 
-/** Zdarzenia → rejsy do applySailings (odjazd = departure, druga strona = arrival). */
+/** @deprecated F7 #660 r2: Port of Tallinn nie tworzy rozkładu (CROSSING_MIN = zmyślony czas). Zostaje dla testów parsera. */
 export function portTallinnToSailings(events: PortTallinnEvent[]): Array<{
   route: FerryRoute;
   vessel: string;
