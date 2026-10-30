@@ -1,19 +1,14 @@
 /**
+ * @vitest-environment jsdom
  * #667 F7 r2 uwaga 1 — B2: test zachowania (jsdom), nie regex źródeł.
  * Osobna warstwa dróg: paintOrangeRoads nie kasuje torów na `route`.
- * Środowisko jsdom bez tests/setup.ts (projekt vitest „jsdom”).
+ * setup.ts w jsdom nie nadpisuje document (Leaflet).
  */
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import L from 'leaflet';
-import { paintOrangeRoads } from '../src/components/map/orangeRoads';
-import { DEMO_ROAD_LINES } from '../src/data/roadLinesDemo';
-import { WATER_GDN_NYN } from '../src/lib/map/draw';
 
 beforeAll(() => {
-  // Leaflet w jsdom: createSVGRect bywa brakujące.
-  const proto = SVGSVGElement?.prototype as SVGSVGElement & {
-    createSVGRect?: () => DOMRect;
-  };
+  const proto = (globalThis as unknown as { SVGSVGElement?: { prototype: { createSVGRect?: () => DOMRect } } })
+    .SVGSVGElement?.prototype;
   if (proto && typeof proto.createSVGRect !== 'function') {
     proto.createSVGRect = () => ({
       x: 0, y: 0, width: 0, height: 0,
@@ -22,6 +17,11 @@ beforeAll(() => {
     }) as DOMRect;
   }
 });
+
+const { default: L } = await import('leaflet');
+const { paintOrangeRoads } = await import('../src/components/map/orangeRoads');
+const { DEMO_ROAD_LINES } = await import('../src/data/roadLinesDemo');
+const { WATER_GDN_NYN } = await import('../src/lib/map/draw');
 
 describe('#667 F7 r2 B2 ZonesMap osobna warstwa (jsdom)', () => {
   let el: HTMLDivElement;
@@ -51,7 +51,6 @@ describe('#667 F7 r2 B2 ZonesMap osobna warstwa (jsdom)', () => {
     const ferryBefore = route.getLayers().length;
     expect(ferryBefore).toBeGreaterThan(0);
 
-    // jak ZonesMap mode=all / mode=one: drogi zawsze na roadsRef
     paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));
     expect(roads.getLayers().length).toBe(DEMO_ROAD_LINES.length);
     expect(route.getLayers().length).toBe(ferryBefore);
