@@ -251,7 +251,8 @@ export type DfdsFailedWindow = {
   route: FerryRoute;
 };
 
-/** F7 #668 r4: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły. */
+/** F7 #668 r4/r5: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły.
+ * Granice okna w tej samej strefie co doba lokalna rejsu (nie slice UTC). */
 export function filterDfdsFallbackToFailedWeeks(
   fallback: DfdsSailing[],
   failed: readonly DfdsFailedWindow[],
@@ -262,8 +263,8 @@ export function filterDfdsFallbackToFailedWeeks(
     const ymd = ymdInTz(new Date(s.departureUtc), tz);
     return failed.some((w) => {
       if (w.route !== s.route) return false;
-      const from = w.dateFromIso.slice(0, 10);
-      const to = w.dateToIso.slice(0, 10);
+      const from = ymdInTz(new Date(w.dateFromIso), tz);
+      const to = ymdInTz(new Date(w.dateToIso), tz);
       return ymd >= from && ymd <= to;
     });
   });

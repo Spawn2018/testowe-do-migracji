@@ -458,6 +458,168 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(pdfHits).toBe(0);
   });
 
+  it('F7 #668 r5: API bez poniedziałku + kolejne tygodnie 503 → odwołany nie wraca; padnięte z PDF', async () => {
+    const st = new MemStore();
+    const both = JSON.parse(DFDS_API) as {
+      pld_kps_week44: Array<{ scheduledDeparture?: string; portOfLoading?: string }>;
+      kps_pld_week44: unknown[];
+    };
+    /* Tydzień 44 bez pon. 26.10 PLD — HTML/PDF ma Mon 22:00; nie może wrócić z zapasu. */
+    const pldSansMon = both.pld_kps_week44.filter(
+      (r) => !String(r.scheduledDeparture ?? '').startsWith('2026-10-26'),
+    );
+    expect(pldSansMon.length).toBeLessThan(both.pld_kps_week44.length);
+    const week1Start = '2026-10-26';
+    let pageHits = 0;
+    let pdfHits = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) {
+        const u = new URL(url);
+        const from = u.searchParams.get('dateFrom') ?? '';
+        const load = u.searchParams.get('portOfLoading') ?? '';
+        if (from.startsWith(week1Start)) {
+          const body = load === 'EEPLN' ? pldSansMon : both.kps_pld_week44;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        return new Response('err', { status: 503 });
+      }
+      if (url.includes('routes-and-schedules')) {
+        pageHits += 1;
+        return new Response(DFDS_HTML, { status: 200 });
+      }
+      if (url.includes('ctfassets.net')) {
+        pdfHits += 1;
+        return new Response(DFDS_HTML, { status: 200 });
+      }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+    const dfds = st.sailings.filter((s) => s.source === 'DFDS');
+    expect(dfds.some((s) => s.route === 'PLD-KPS')).toBe(true);
+    /* Odwołany pon. 26.10 z API — HTML Mon 22:00 nie wraca (tydzień OK, nie failedWindow). */
+    expect(dfds.every((s) => !s.departure_at.startsWith('2026-10-26T20:00'))).toBe(true);
+    /* Kolejne tygodnie 503 → uzupełnione z HTML (np. pon. 02.11 22:00 EET = 20:00Z). */
+    expect(dfds.some((s) => s.route === 'PLD-KPS' && s.departure_at.startsWith('2026-11-02T20:00'))).toBe(true);
+    expect(pageHits + pdfHits).toBeGreaterThan(0);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+  });
+
+  it('F7 #668 r5: API pusty tydzień (dok) ≠ awaria — bez PDF dla tego okna', async () => {
+    const st = new MemStore();
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const week1Start = '2026-10-26';
+    let pageHits = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) {
+        const u = new URL(url);
+        const from = u.searchParams.get('dateFrom') ?? '';
+        const load = u.searchParams.get('portOfLoading') ?? '';
+        if (from.startsWith(week1Start)) {
+          /* HTTP+JSON OK, pusta lista = dok / tydzień bez rejsów — nie failedWindow. */
+          return new Response('[]', { status: 200 });
+        }
+        /* Drugi tydzień: pełne API (żeby job miał rejsy i nie brał PDF na tydzień 1). */
+        if (from.startsWith('2026-11-02')) {
+          const body = load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        return new Response(JSON.stringify(load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44), {
+          status: 200,
+        });
+      }
+      if (url.includes('routes-and-schedules') || url.includes('ctfassets.net')) {
+        pageHits += 1;
+        return new Response(DFDS_HTML, { status: 200 });
+      }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+    /* Wszystkie tygodnie HTTP OK (także puste) → bez strony/PDF. */
+    expect(pageHits).toBe(0);
+    expect(st.sailings.every((s) => !s.departure_at.startsWith('2026-10-26T20:00'))).toBe(true);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+  });
+
+  it('F7 #668 r5: DFDS — odwołany rejs z tygodnia API nie wraca z PDF; 503 → uzupełnienie', async () => {
+    const st = new MemStore();
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: Record<string, unknown>[]; kps_pld_week44: Record<string, unknown>[] };
+    const removed = both.pld_kps_week44[0]!;
+    const removedDep = String(removed.scheduledDeparture);
+    const week1Body = JSON.stringify([
+      ...both.pld_kps_week44.slice(1),
+      ...both.kps_pld_week44,
+    ]);
+    let pdfHits = 0;
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) {
+        /* Pierwszy tydzień (dateFrom ≈ 2026-10-26) → API bez jednego rejsu; kolejne → 503 */
+        if (url.includes('2026-10-26') || url.includes('dateFrom=2026-10-26')) {
+          return new Response(week1Body, { status: 200 });
+        }
+        /* parse dateFrom from query */
+        const m = url.match(/dateFrom=([^&]+)/);
+        const from = m ? decodeURIComponent(m[1]!) : '';
+        if (from.startsWith('2026-10-26') || from.startsWith('2026-10-25')) {
+          return new Response(week1Body, { status: 200 });
+        }
+        return new Response('err', { status: 503 });
+      }
+      if (url.includes('routes-and-schedules')) {
+        return new Response(`<html><body><a href="https://downloads.ctfassets.net/x/dfds.pdf">pdf</a>${DFDS_HTML}</body></html>`, { status: 200 });
+      }
+      if (url.includes('ctfassets.net') || url.includes('dfds.pdf')) {
+        pdfHits += 1;
+        return new Response(DFDS_HTML, { status: 200 });
+      }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+    const dfds = st.sailings.filter((s) => s.source === 'DFDS');
+    expect(dfds.length).toBeGreaterThan(0);
+    /* Odwołany z tygodnia 1 (API) nie wraca z PDF mimo że PDF ma ten dzień */
+    const removedUtc = new Date(removedDep).toISOString();
+    expect(dfds.some((s) => s.departure_at === removedUtc)).toBe(false);
+    /* Kolejne tygodnie (503) uzupełnione z PDF — rejsy po horyzoncie week1 */
+    expect(dfds.some((s) => s.departure_at >= '2026-11-03')).toBe(true);
+    expect(pdfHits).toBeGreaterThan(0);
+  });
+
   it('B2: odwołanie dziś nie oznacza jutrzejszego rejsu o tej godzinie', async () => {
     const st = new MemStore();
     st.sailings.push(

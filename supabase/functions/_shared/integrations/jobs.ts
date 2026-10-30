@@ -617,11 +617,16 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
       return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'], job, ok: false };
     }
     const parsed = parseDfdsTimetableApi(json);
+    /* F7 #668 r5: HTTP+JSON OK z pustą listą = pusty tydzień (dok), nie awaria do uzupełnienia z PDF. */
+    const emptyOk = parsed.sailings.length === 0;
     return {
       sailings: parsed.sailings,
-      warn: parsed.warnings,
+      warn: emptyOk
+        ? [...parsed.warnings, `DFDS Dynamic: API pusty tydzień ${job.dateFromIso.slice(0, 10)}`]
+        : parsed.warnings,
       job,
-      ok: parsed.sailings.length > 0,
+      ok: true,
+      emptyOk,
     };
   });
   let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
@@ -630,6 +635,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     if (part.ok) {
       apiOk += 1;
       apiSailings = mergeDfdsSailings(apiSailings, part.sailings);
+      /* Pusty tydzień OK — nie wrzucaj do failedWindows (PDF nie „przywraca” odwołanych). */
     } else {
       failedWindows.push({
         dateFromIso: part.job.dateFromIso,
@@ -640,8 +646,9 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     }
   }
 
-  /* F7 #668 N2: pełne API → bez strony/PDF. r3/r4: częściowa awaria → PDF tylko dla tygodni, które padły. */
-  const apiComplete = apiSailings.length > 0 && apiOk >= jobs.length;
+  /* F7 #668 N2/r5: wszystkie tygodnie HTTP+JSON OK (także puste) → bez strony/PDF.
+     Częściowa awaria (failedWindows) → PDF tylko dla tygodni, które padły. */
+  const apiComplete = apiOk >= jobs.length && failedWindows.length === 0;
   if (apiComplete) {
     return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
   }
@@ -674,7 +681,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   }
   const sailings = mergeDfdsMissingDays(apiSailings, fallback);
   if (sailings.length > 0) {
-    if (apiSailings.length > 0 && apiOk < jobs.length) {
+    if (apiSailings.length > 0 && failedWindows.length > 0) {
       const filled = sailings.length > apiSailings.length;
       warnings.push(
         filled

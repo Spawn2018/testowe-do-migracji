@@ -193,7 +193,7 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     const tll2412 = r.sailings.filter((s) => s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-12-24'));
     expect(tll2412).toHaveLength(1);
     const planned = parseVikingPlannedChanges(VIKING_CARGO_HTML, 2026);
-    expect(planned.some((p) => p.ymds.includes('2026-12-24'))).toBe(true);
+    expect(planned.days.some((p) => p.ymds.includes('2026-12-24'))).toBe(true);
     // 30.10 = Fri → 04.00* Tallinn→Helsinki (tylko fracht, gwiazdka w rozkładzie)
     const freight0400 = r.sailings.filter((s) =>
       s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-10-30') && s.vessel === 'M/F Viking XPRS'
@@ -251,6 +251,20 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.some((x) => x.from === '2026-08-10' && x.to === '2026-12-31')).toBe(true);
   });
 
+  it('F7 #668 r5 B1: sezon przez Nowy Rok 22.12.–6.1.2027', () => {
+    const r = parseSeasonRanges('22.12.–6.1.2027');
+    expect(r).toEqual([{ from: '2026-12-22', to: '2027-01-06' }]);
+    const html = `
+<details class="c-accordion__item">
+  <h3>22.12.–6.1.2027</h3>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>10.30</td><td>13.10</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>`;
+    const out = parseVikingTimetableHtml(html, { fromYmd: '2026-12-28', days: 4 });
+    expect(out.sailings.some((s) => s.departureUtc.startsWith('2026-12-28'))).toBe(true);
+    expect(out.sailings.some((s) => s.departureUtc.startsWith('2026-12-31'))).toBe(true);
+  });
+
   it('F7 #668 r4 Bloker 1: dwa kierunki w jednym elemencie akordeonu', () => {
     const html = `
 <details class="c-accordion__item">
@@ -266,6 +280,99 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.some((s) => s.route === 'TLLA-HEL')).toBe(true);
     expect(r.sailings.some((s) => s.route === 'HELA-TLL')).toBe(true);
     expect(r.warnings.some((w) => /bez rozpoznanego sezonu/i.test(w))).toBe(false);
+  });
+
+  it('F7 #668 r5 B2: trasa tylko w h4 (bez etykiety w tabeli) — obie kolejności', () => {
+    const mk = (first: string, second: string) => `
+<details class="c-accordion__item">
+  <h3>10.08.2026–31.12.2026</h3>
+  <h4>${first}</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>07.00</td><td>09.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+  <h4>${second}</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>10.30</td><td>13.10</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>`;
+    const a = parseVikingTimetableHtml(mk('Tallinn–Helsinki', 'Helsinki–Tallinn'), { fromYmd: '2026-10-30', days: 2 });
+    const aTll = a.sailings.filter((s) => s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-10-30'));
+    const aHel = a.sailings.filter((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30'));
+    expect(aTll).toHaveLength(1);
+    expect(aHel).toHaveLength(1);
+    expect(aTll[0]!.departureUtc < aHel[0]!.departureUtc).toBe(true); // 07:00 przed 10:30
+    const b = parseVikingTimetableHtml(mk('Helsinki–Tallinn', 'Tallinn–Helsinki'), { fromYmd: '2026-10-30', days: 2 });
+    const bHel = b.sailings.filter((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-10-30'));
+    const bTll = b.sailings.filter((s) => s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-10-30'));
+    expect(bHel).toHaveLength(1);
+    expect(bTll).toHaveLength(1);
+    expect(bHel[0]!.departureUtc < bTll[0]!.departureUtc).toBe(true);
+  });
+
+  it('F7 #668 r5 B2: bez c-accordion — dwa details (ostatni wygrywa sezon+trasy)', () => {
+    const html = `
+<details>
+  <h3>1.1.–21.6.2027</h3>
+  <h4>Tallinn–Helsinki</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>06.00</td><td>08.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>
+<details>
+  <h3>10.08.2026–31.12.2026</h3>
+  <h4>Tallinn–Helsinki</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>07.00</td><td>09.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+  <h4>Helsinki–Tallinn</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>10.30</td><td>13.10</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>`;
+    const r = parseVikingTimetableHtml(html, { fromYmd: '2026-10-30', days: 2 });
+    expect(r.sailings.some((s) => s.route === 'TLLA-HEL')).toBe(true);
+    expect(r.sailings.some((s) => s.route === 'HELA-TLL')).toBe(true);
+    expect(r.sailings.every((s) => !s.departureUtc.startsWith('2027-'))).toBe(true);
+  });
+
+  it('F7 #668 r5: Planned changes — nearestVessel + tylko kierunek wyjątku', () => {
+    /* Wyjątek tylko HEL→TLL: tygodniówka HEL wycięta; TLL z tabeli zostaje; 17:00 → Cinderella (bliżej 18:00). */
+    const html = `
+<details class="c-accordion__item">
+  <h3>10.08.2026–31.12.2026</h3>
+  <h4>Helsinki–Tallinn</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>14.00</td><td>16.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr>
+  <tr><td>18.00</td><td>20.30</td><td>Mon–Sun</td><td>Viking Cinderella</td></tr></table>
+  <h4>Tallinn–Helsinki</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>07.00</td><td>09.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>
+<p>Planned changes in timetable</p>
+<p>Christmas 2026 24.12.2026 Timetable from Helsinki to Tallinn: Sailing at 17.00, arrival at 19.30</p>`;
+    const planned = parseVikingPlannedChanges(html, 2026);
+    expect(planned.days.some((d) => d.ymds.includes('2026-12-24') && d.legs.some((l) => l.route === 'HELA-TLL'))).toBe(true);
+    expect(planned.days.every((d) => !d.ymds.includes('2026-12-24') || !d.legs.some((l) => l.route === 'TLLA-HEL'))).toBe(true);
+    const r = parseVikingTimetableHtml(html, { fromYmd: '2026-12-23', days: 3 });
+    const hel24 = r.sailings.filter((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-12-24'));
+    expect(hel24).toHaveLength(1);
+    /* 17:00 bliżej 18:00 Cinderella niż 14:00 XPRS; godzina wyjątku nie sezonowa */
+    expect(hel24[0]!.vessel).toMatch(/Cinderella/i);
+    expect(hel24[0]!.departureUtc).toContain('T15:00');
+    /* TLL bez wyjątku — tygodniówka 07:00 zostaje */
+    expect(r.sailings.some((s) => s.route === 'TLLA-HEL' && s.departureUtc.startsWith('2026-12-24'))).toBe(true);
+    expect(r.sailings.some((s) => s.route === 'HELA-TLL' && s.departureUtc.startsWith('2026-12-23'))).toBe(true);
+  });
+
+  it('F7 #668 r5: Planned changes — brak tabeli trasy → ostrzeżenie; Tallinn-only head', () => {
+    const html = `
+<details class="c-accordion__item">
+  <h3>10.08.2026–31.12.2026</h3>
+  <h4>Helsinki–Tallinn</h4>
+  <table><tr><td>Departure</td><td>Arrival</td><td>Day</td><td>Ship</td></tr>
+  <tr><td>14.00</td><td>16.30</td><td>Mon–Sun</td><td>Viking XPRS</td></tr></table>
+</details>
+<p>Planned changes in timetable</p>
+<p>25.12.2026 Timetable from Tallinn to Helsinki: Sailing at 10.30, arrival at 13.00</p>
+<p>26.12.2026 Timetable from Mariehamn to nowhere: Sailing at 12.00, arrival at 14.00</p>`;
+    const r = parseVikingTimetableHtml(html, { fromYmd: '2026-12-25', days: 2 });
+    expect(r.warnings.some((w) => /brak statku w tabeli sezonowej.*TLLA-HEL/i.test(w))).toBe(true);
+    expect(r.warnings.some((w) => /nierozpoznany nagłówek.*Mariehamn/i.test(w))).toBe(true);
   });
 
   it('F7 #668 r3 N1: mergeDfdsMissingDays — doba lokalna (nie UTC slice)', () => {
@@ -287,6 +394,25 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(merged.some((s) => s.departureUtc === '2026-10-26T21:59:00.000Z')).toBe(true);
     expect(merged.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(false);
     expect(merged.some((s) => s.departureUtc === '2026-10-28T19:00:00.000Z')).toBe(true);
+  });
+
+  it('F7 #668 r5: filterDfdsFallbackToFailedWeeks — granice okna w strefie lokalnej', () => {
+    // Okno: 26.10 22:00Z–02.11 21:59Z (= 27.10 00:00–03.11 00:00 EET) — slice UTC uciąłby 27.10
+    const failed = [{
+      dateFromIso: '2026-10-26T22:00:00.000Z',
+      dateToIso: '2026-11-02T21:59:59.999Z',
+      route: 'PLD-KPS' as const,
+    }];
+    const inWin = {
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-10-27T20:00:00.000Z', arrivalUtc: '2026-10-28T05:30:00.000Z',
+    };
+    const outWin = {
+      route: 'PLD-KPS' as const, vessel: 'M/F Sirena Seaways',
+      departureUtc: '2026-11-03T20:00:00.000Z', arrivalUtc: '2026-11-04T05:30:00.000Z',
+    };
+    const filtered = filterDfdsFallbackToFailedWeeks([inWin, outWin], failed);
+    expect(filtered).toEqual([inWin]);
   });
 
   it('F7 #668 r4 Bloker 2: mergeDfdsMissingDays — 00:30 lokalnie (UTC poprzedniej doby)', () => {
@@ -325,11 +451,13 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(mKps).toHaveLength(2);
     expect(mKps.some((s) => s.departureUtc === '2026-10-26T21:00:00.000Z')).toBe(false);
     expect(mKps.some((s) => s.departureUtc === '2026-10-25T21:00:00.000Z')).toBe(true);
+    /* F7 #668 r5: okno w strefie lokalnej — 25.10 00:00–23:59Z = 25.10 02:00–26.10 01:59 EET */
     const filtered = filterDfdsFallbackToFailedWeeks(
       [...pdfSameLocal, ...pdfPrevLocal],
       [{ dateFromIso: '2026-10-25T00:00:00.000Z', dateToIso: '2026-10-25T23:59:59.000Z', route: 'PLD-KPS' }],
     );
-    expect(filtered.every((s) => s.departureUtc.startsWith('2026-10-25'))).toBe(true);
+    expect(filtered.some((s) => s.departureUtc === '2026-10-25T19:00:00.000Z')).toBe(true);
+    expect(filtered.some((s) => s.departureUtc === '2026-10-26T19:00:00.000Z')).toBe(true); // 26.10 21:00 EET w oknie
   });
 
   it('Eckerö HTML: Finlandia TLLA-HEL 06:00 Mon-Sat + Finbo', () => {

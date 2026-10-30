@@ -231,25 +231,40 @@ function pad2(n: string): string {
  * Daty bez roku biorą rok z kontekstu (Christmas 2026 / pełna data w bloku).
  * Nie mylić z godzinami „arrival at 23.10” — nagłówek dnia = data + „Timetable from”.
  */
-export function parseVikingPlannedChanges(html: string, fallbackYear: number): PlannedDay[] {
+export function parseVikingPlannedChanges(
+  html: string,
+  fallbackYear: number,
+): { days: PlannedDay[]; warnings: string[] } {
   const text = stripTags(html).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ');
+  const warnings: string[] = [];
   const idx = text.search(/Planned changes in timetable/i);
-  if (idx < 0) return [];
+  if (idx < 0) return { days: [], warnings };
   const chunk = text.slice(idx, idx + 8000);
   let yearHint = fallbackYear;
   const xmas = chunk.match(/Christmas\s+(\d{4})/i);
   if (xmas) yearHint = Number(xmas[1]);
 
-  // Nagłówki dni zaczynają się od „… Timetable from Helsinki” (kierunek powrotny jest w tym samym bloku).
-  // Dzięki temu „arrival at 23.10 Timetable from Tallinn” nie staje się osobnym dniem.
+  // F7 #668 r5: nagłówek dnia = data + „Timetable from Helsinki|Tallinn”
+  // (wyjątek tylko TLL→HEL zaczyna się od Tallinn; „arrival at 23.10 Timetable…” nie jest dniem).
   const reHead =
-    /(?<!\d)(\d{1,2}\.\d{1,2}(?:\.\d{4})?(?:\s*[–\-]\s*\d{1,2}\.\d{1,2}\.\d{4})?)\s*Timetable from Helsinki/gi;
+    /(?<!\d)(\d{1,2}\.\d{1,2}(?:\.\d{4})?(?:\s*[–\-]\s*\d{1,2}\.\d{1,2}\.\d{4})?)\s*Timetable from (?:Helsinki|Tallinn)/gi;
   const heads: { start: number; dateRaw: string }[] = [];
   let hm: RegExpExecArray | null;
   while ((hm = reHead.exec(chunk)) != null) {
     heads.push({ start: hm.index, dateRaw: hm[1]!.replace(/\s+/g, '') });
   }
-  const out: PlannedDay[] = [];
+  /* Nierozpoznany nagłówek w sekcji wyjątków (data + „Timetable from …” spoza Helsinki/Tallinn). */
+  const reOddHead =
+    /(?<!\d)\d{1,2}\.\d{1,2}(?:\.\d{4})?(?:\s*[–\-]\s*\d{1,2}\.\d{1,2}\.\d{4})?\s*Timetable from (?!Helsinki\b|Tallinn\b)(\w+)/gi;
+  const oddHeads: string[] = [];
+  while ((hm = reOddHead.exec(chunk)) != null) {
+    const port = hm[1] ?? '';
+    if (port && !oddHeads.includes(port)) oddHeads.push(port);
+  }
+  for (const port of oddHeads) {
+    warnings.push(`Viking Planned changes: nierozpoznany nagłówek „Timetable from ${port}”.`);
+  }
+  const days: PlannedDay[] = [];
   for (let i = 0; i < heads.length; i++) {
     const head = heads[i]!;
     const end = i + 1 < heads.length ? heads[i + 1]!.start : chunk.length;
@@ -277,9 +292,9 @@ export function parseVikingPlannedChanges(html: string, fallbackYear: number): P
         legs.push({ route, depHm: dep.hm, arrHm: arr.hm });
       }
     }
-    if (legs.length) out.push({ ymds, legs });
+    if (legs.length) days.push({ ymds, legs });
   }
-  return out;
+  return { days, warnings };
 }
 
 function expandPlannedDateToken(raw: string, yearHint: number): string[] {
@@ -409,7 +424,9 @@ export function parseVikingTimetableHtml(
   }
   const fromYmd = opts?.fromYmd ?? ymdInTz(opts?.now ?? new Date(), 'Europe/Helsinki');
   const yearHint = Number(fromYmd.slice(0, 4));
-  const planned = parseVikingPlannedChanges(html, yearHint);
+  const plannedRes = parseVikingPlannedChanges(html, yearHint);
+  warnings.push(...plannedRes.warnings);
+  const planned = plannedRes.days;
   const dates = dateRangeFromYmd(fromYmd, opts?.days ?? 14);
   for (const leg of legs) {
     for (const ymd of dates) {

@@ -7274,3 +7274,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”; CI #668 @ 3ae700fc było zielone; F7 r4 POPRAWKI. Kolejność: #668 (0351) → #673 → #674.
 - **Krok (F7 r4):** Bloker 1 — trasa = attrs → nagłówek tabeli → ostatnia etykieta w kawałku akordeonu; zapas ostatnie `<details>`; test dwóch tabel w jednym elemencie. Bloker 2 — test merge 00:30 lokalnie (UTC poprzedniej doby) PLD+KPS. Uwagi: `d.m.–d.m.yyyy`; PDF tylko padnięte tygodnie×kierunki; Stena `wallNow` + tekst „pobrań (trasa×dzień)”; Planned changes per kierunek + najbliższa godzina. **Dalej:** CI → gotowe do F7 → #667.
 - Bez push na main.
+
+## 2026-10-30 22:45 � #668 F7 r5 POPRAWKI; #674 SCALONE; #673 gotowe do F7
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r5); #667 PR #673 F7 r1 B1�B3 @ 08ca23db gotowe do F7; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#674 SCALONE** `8f916302`. #668/#673 bez F7 gotowe do scalenia. Kolejno��: #668 (0351) � #673 (0352/0353).
+- **Krok (F7 r5 #668):** B1 sezon przez NY (`from>to` � rok-1); B2 test h4/details bez etykiety w tabeli; DFDS pusty tydzie� OK ? awaria PDF; `filterDfdsFallback` granice lokalne; Planned changes Tallinn-head + nearestVessel + ostrze�enie. Unit fokus 63/63. **Dalej:** CI � gotowe do F7.
+- Bez push na main.
