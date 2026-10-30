@@ -85,14 +85,19 @@ describe('#662 SafeFleet adapter', () => {
     expect(parseSafefleetRefreshPayload([])).toMatchObject({ ok: false, kind: 'no_position' });
   });
 
-  it('trajectory: timestampAgo → ts wstecz', () => {
+  it('trajectory: timestampAgo → ts wstecz; sort od najstarszego', () => {
     const now = Date.parse('2026-10-30T12:00:00Z');
     const pts = parseSafefleetTrajectoryPayload({
       journey: null,
-      presences: [{ lat: 52.1, lng: 17.1, timestampAgo: 120 }],
+      // API: najpierw świeższy (ago=60), potem starszy (ago=180)
+      presences: [
+        { lat: 52.2, lng: 17.2, timestampAgo: 60 },
+        { lat: 52.1, lng: 17.1, timestampAgo: 180 },
+      ],
     }, now);
-    expect(pts).toHaveLength(1);
-    expect(pts[0].ts).toBe('2026-10-30T11:58:00.000Z');
+    expect(pts).toHaveLength(2);
+    expect(pts[0].ts).toBe('2026-10-30T11:57:00.000Z');
+    expect(pts[1].ts).toBe('2026-10-30T11:59:00.000Z');
   });
 
   it('fetchSafefleetPosition: 404 → invalid; 500 → down', async () => {
@@ -193,5 +198,27 @@ describe('#662 runSafefleetPoll', () => {
       now: () => new Date('2026-10-30T12:00:00Z'),
     });
     expect(r).toMatchObject({ ok: true, disabled: true });
+  });
+
+  it('#662-b: invalid/down w przebiegu → ok=false', async () => {
+    const load = baseLoad({ safefleet_trajectory_done: true });
+    const store: Partial<SyncStore> = {
+      telmSafefleetPollEnabled: async () => true,
+      listSafefleetLoadsForPoll: async () => [load],
+      updateSafefleetLoadState: async (_id, patch) => {
+        if (patch.safefleet_error_streak != null) load.safefleet_error_streak = patch.safefleet_error_streak;
+        if (patch.safefleet_check_state) load.safefleet_check_state = patch.safefleet_check_state;
+      },
+      raiseRisk: async () => false,
+      resolveRisks: async () => 0,
+    };
+    const bad = await runSafefleetPoll({
+      store: store as SyncStore,
+      fetch: async () => new Response('error', { status: 404 }),
+      env: {},
+      now: () => new Date('2026-10-30T12:00:00Z'),
+    });
+    expect(bad.ok).toBe(false);
+    expect(bad.observations?.invalid).toBe('1');
   });
 });

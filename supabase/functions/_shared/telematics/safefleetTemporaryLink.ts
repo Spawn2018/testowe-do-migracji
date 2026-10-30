@@ -205,6 +205,8 @@ export function parseSafefleetTrajectoryPayload(
     const ts = new Date(nowMs - ago * 1000).toISOString();
     out.push({ lat, lon, ts });
   }
+  // API bywa od najnowszego — zapis od najstarszego, żeby dedup po ts nie gubił punktów.
+  out.sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
   return out;
 }
 

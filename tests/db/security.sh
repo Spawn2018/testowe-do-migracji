@@ -289,6 +289,15 @@ sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/
 out=$(sys "select (safefleet_token is null and telematics_vehicle_id = 'rio:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' and rio_secret='klucz-b6')::text from loads where id='$L1'")
 [ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #662: po RIO safefleet_token puste"; } || { fail=$((fail+1)); echo "  FAIL  #662 clear po RIO: $out"; }
 
+# #662-b: maska pełnego URL SafeFleet w audit_log → safefleet:<6>
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+  ('ROW_UPDATE','loads','662b-mask',
+   '{\"telematics_vehicle_id\":\"https://portal.safefleet.pl/safefleet/temporary_link/view/aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3/\"}'::jsonb,
+   '{\"telematics_vehicle_id\":\"https://portal.safefleet.pl/safefleet/temporary_link/view/aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3/\",\"safefleet_token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaab1c2d3\"}'::jsonb)" >/dev/null
+out=$(sys "select new_value->>'telematics_vehicle_id' || '|' || coalesce(new_value->>'safefleet_token','') from audit_log where entity_id='662b-mask' order by created_at desc limit 1")
+echo "$out" | grep -qx 'safefleet:b1c2d3|••••' && { ok=$((ok+1)); echo "  OK    #662-b: audit_log maskuje URL i token"; } || { fail=$((fail+1)); echo "  FAIL  #662-b maska audit: $out"; }
+sys "delete from audit_log where entity_id='662b-mask'" >/dev/null
+
 echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
 # Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
 # Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani
