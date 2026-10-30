@@ -23,7 +23,7 @@ export const EXPECTED_LOCAL = {
   watchdog: 27,
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
-  import: 405, // #653: +9 (impl/wrapper + 3×daty bez zalania dzwonka); było 396 (#650 N5)
+  import: 422, // #653 F7: +25 (bell_quiet, awiz/wf/widoczność/przeciek/eskalacja); było 397 (#655)
   nullguard: 895, // #650: +1 GUARD ×5 (ksh_sync_outbound_enqueue_active_wt); było 890 (BN1 0338)
   i2: 671, // #467 F7: +1 sms_send_test HHL_OPS; było 670 (dry-run + orphan)
   i30: 10,

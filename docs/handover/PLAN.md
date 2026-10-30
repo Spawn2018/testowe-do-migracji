@@ -1149,7 +1149,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #650 (Spawn2018; właściciel 29.10 22:41) + F7. Migracja **0340** na produkcji. **Aktualizacja właściciela 30.10 01:21 (#653):** trigger wraca do **tylko zmienione pole** — zob. #653.
 
 ### #653 · PILNE: import ON + WT→plik tylko zmienione pole + dzwonek zbiorczy — W TOKU
-Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) **PR #656** (`pakiet/653-import-bell-summary` / **0342**): F7 POPRAWKI — bez `bulk_quiet` we wrapperze; `l13_decision_email` × `import_bell_quiet`; liczby spraw/decyzji wg widoczności; testy awiz+krytyczna/wf/przeciek/eskalacja; (4) potem revoke `enqueue_active_wt` + #651=**0343** / #654=**0344**. Backfill **nie wywoływać**.
+Źródło: #653 (Spawn2018; właściciel 30.10 01:15 + 01:21 + odbiór dzwonka). Kolejność: (1) ~~`ksh_sync_import_set(true)` + powiadomienia~~ **ZROBIONE** 30.10 00:55–00:56Z; (2) ~~PR #655 / **0341** tylko-zmienione pole~~ **SCALONE** `29000fd2`; (3) **PR #656** (`pakiet/653-import-bell-summary` / **0342**): F7 POPRAWKI — bez `bulk_quiet` we wrapperze; `l13_decision_email` × `import_bell_quiet`; liczby spraw/decyzji wg widoczności; testy awiz+krytyczna/wf/przeciek/eskalacja; import **422**; (4) potem revoke `enqueue_active_wt` + #651=**0343** / #654=**0344**. Backfill **nie wywoływać**.
 
 ### #645 · PILNE #637: workbook cell write — NA PRODUKCJI (`2c8e3e1c` / PR #646 / **0336**, 29.10.2026 16:34Z)
 Źródło: #645 (Spawn2018; właściciel 29.10 15:13). Graph Excel workbook API: `createSession` → usedRange → konflikt/idempotencja → `PATCH range` (tekst z `'`) → `closeSession`. F7 gotowe @ `ff41ed3` (R1–R4). Po deploy: próba na kopii OK bez zamykania. #644 zamknięte jako zastąpione.
@@ -2040,4 +2040,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 30.10.2026 00:20 | #650 F7 r3: B1'' ack bez dat w sent; N5 własny ładunek; KEEP_TOWER→kolejka daty; import **396** | pętla |
 | 30.10.2026 01:56 | #653: import ON prod (changed=20); start **0341** tylko-zmienione pole; import **397**; #651/#654 po tym PR | pętla |
 | 30.10.2026 02:55 | #653: PR dzwonek **0342** (tylko SUMMARY); #655 CI ✔ czeka F7; import **405** | pętla |
-| 30.10.2026 03:10 | #655 SCALONE `29000fd2`; #656 F7 POPRAWKI (bez bulk_quiet, widoczność, testy) | pętla |
+| 30.10.2026 03:10 | #655 SCALONE `29000fd2`; #656 F7 POPRAWKI (bez bulk_quiet, widoczność, testy); import **422** | pętla |
