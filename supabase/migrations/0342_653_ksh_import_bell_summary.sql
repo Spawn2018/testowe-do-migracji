@@ -132,9 +132,12 @@ declare
 begin
   v_prev_bell := current_setting('tower.import_bell_quiet', true);
   v_prev_bulk := current_setting('tower.bulk_quiet', true);
-  -- #653/#594: dzwonek tylko zbiorczy; bulk_quiet wycisza wf_enqueue / e-maile L-13.
-  perform set_config('tower.import_bell_quiet', 'on', true);
-  perform set_config('tower.bulk_quiet', 'on', true);
+  -- #653/#594: przy p_quiet=false — dzwonek tylko zbiorczy (bell_quiet), ale l3/zdarzenia dat zostają;
+  -- bulk_quiet wycisza wf_enqueue / e-maile L-13. Przy p_quiet=true — bez bell_quiet (pełna cisza jak #426).
+  if p_quiet is not true then
+    perform set_config('tower.import_bell_quiet', 'on', true);
+    perform set_config('tower.bulk_quiet', 'on', true);
+  end if;
   begin
     v_result := public.import_schedule_impl(
       p_project, p_rows, p_cancel_codes, p_file, p_dry_run, p_quiet);
