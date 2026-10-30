@@ -254,3 +254,10 @@ Zamierzona zmiana UI (D-20261020-1118-01, decyzja właściciela 20.10.2026, 11:1
 ## #594 B4 (27.10.2026) — rozmycie tła za paskiem transportu
 
 Zamierzona zmiana UI (polecenie właściciela 27.10.2026, 14:55, #594 pkt 3: „gdy widoczny jest prawy pasek transportu to tło ulega rozmyciu”). Migawka odświeżona z przebiegu `visual.yml` `update=true` (run 40583817432, gałąź `wyglad/W-594-gesty-rozmycie`, commit `22e4746`). Zmieniona wyłącznie `stan-zablokowany-dark.png`: reszta ekranu za otwartym paskiem jest rozmyta (`backdrop-filter: blur(3px)`, od 769 px). Pozostałe migawki identyczne bajt w bajt. Matrycy 280 ujęć nie ruszano.
+
+## BN9-b (30.10.2026) — migawki smoke mapy: tory Korytarza bałtyckiego
+Odświeżone tylko `tests/__screenshots__/mapa-hhl-pl-1920-{light,dark-default}.png`, z workflowu `visual` (`update=true`,
+gałąź `wyglad/BN9-b`, przebieg 41083266249, artefakt `visual-artifacts`). Pozostałe migawki w artefakcie są identyczne co do bajtu.
+Przyczyna: warstwa promu (`mapPool` → ferryLeg) rysuje teraz zawsze niebieskie tory TLL–HEL, MUU–VUO, TLL–STO i PLD–KPS.
+W kadrze widać je przy Sztokholmie, Tallinnie i Helsinkach: 791 px (jasny) i 953 px (ciemny), zmierzone na PR #670 i lokalnie.
+Kadrowanie, linie drogowe i markery bez zmian. Zamierzone, **regresji 0**. Wzorca `shots-baseline` nie zmieniano.
