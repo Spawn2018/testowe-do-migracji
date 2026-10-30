@@ -67,18 +67,24 @@ describe('#667 C refreshRoadLegs', () => {
     expect(r.skippedBudget).toBe(false);
   });
 
-  it('stare wiersze bez punktów → missingLegs (SOURCE_DOWN po stronie joba)', async () => {
+  it('stare wiersze bez punktów → missingLegs; HTTP 500 → retry_after (F7 r1 N1)', async () => {
     const fetchFn = vi.fn(async () => new Response('nope', { status: 500 }));
     const s = store(ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)));
+    const retries: string[] = [];
+    const orig = s.storeRoad.bind(s);
+    s.storeRoad = async (leg, points, summary, nowIso) => {
+      if (nowIso) retries.push(leg);
+      return orig(leg, points, summary, nowIso);
+    };
     const r = await refreshRoadLegs(s, {
       fetch: fetchFn as unknown as typeof fetch,
       hereApiKey: 'k',
       maxAgeMs: ROAD_CRON_REFRESH_MS,
     });
-    // HTTP 500 → bez zapisu; punkty zostają puste
     expect(r.attempted).toBe(5);
     expect(r.missingLegs.length).toBe(5);
     expect(r.warnings.some((w) => /HTTP 500/.test(w))).toBe(true);
+    expect(retries).toHaveLength(5);
   });
 
   it('budżet wyczerpany + brak punktów → skippedBudget + missing', async () => {

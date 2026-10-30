@@ -220,6 +220,7 @@ export const ROAD_SE: RoadSpec = {
 /**
  * #572 BN0 / F7 r3 N1: awaryjne punkty kontrolne (gdy brak via z bazy).
  * Norrköping/Västerås ze śladu (nie jezioro Mälaren); Edge i tak bierze `here_corridor_via_points`.
+ * #667 F7 r1 B1: to walidacja **śródlądowa** (SE-KAA-INLAND); E22/wybrzeże → ROAD_KAA_E22.
  */
 export const ROAD_KAA: RoadSpec = {
   minPoints: 2000,
@@ -234,6 +235,25 @@ export const ROAD_KAA: RoadSpec = {
     { lat: 62.4, lng: 17.4, km: 5 },
     { lat: 63.8, lng: 20.2, km: 5 },
     { lat: 65.3, lng: 21.5, km: 5 },
+    { lat: 65.80539, lng: 21.75914, km: 3 },
+  ],
+};
+
+/**
+ * #667 F7 r1 B1: SE-KAA = E22 / E4 przez Sztokholm (SE_E22) — bez Västerås
+ * (E4 jest ~68 km od Västerås; ROAD_KAA odrzucałby poprawną geometrię).
+ */
+export const ROAD_KAA_E22: RoadSpec = {
+  minPoints: 2000,
+  maxSegKm: 3,
+  minKm: 1000,
+  maxKm: 1600,
+  via: [
+    { lat: 56.1646, lng: 15.6308, km: 3 },
+    { lat: 58.59, lng: 16.18, km: 10 }, // Norrköping
+    { lat: 59.33, lng: 18.05, km: 20 }, // Sztokholm (E4)
+    { lat: 60.67, lng: 17.14, km: 10 }, // Gävle
+    { lat: 62.39, lng: 17.31, km: 10 }, // Sundsvall
     { lat: 65.80539, lng: 21.75914, km: 3 },
   ],
 };

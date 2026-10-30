@@ -47,18 +47,29 @@ describe('#667 pomarańczowe drogi (krok B SE-KAA dual)', () => {
     expect(sql).toMatch(/here_store_road/);
   });
 
-  it('Edge/refresh: SE-KAA ← SE_E22; SE-KAA-INLAND ← inland corridor', () => {
+  it('Edge/refresh: SE-KAA ← SE_E22; SE-KAA-INLAND ← SE_KAA_INLAND (F7 r1 B3)', () => {
     expect(refresh).toMatch(/corridorCode: 'SE_E22'/);
-    expect(refresh).toMatch(/SE-KAA-INLAND/);
-    expect(refresh).toMatch(/corridorInland: true/);
+    expect(refresh).toMatch(/corridorCode: 'SE_KAA_INLAND'/);
+    expect(refresh).not.toMatch(/corridorInland:\s*true/);
     expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
-    expect(edge).toMatch(/stena_se_inland_corridor_code/);
     expect(edge).toMatch(/refreshRoadLegs/);
   });
 
-  it('front: ROAD_LEGS=5 i SPEC SE-KAA-INLAND', () => {
+  it('front: ROAD_LEGS=5; SE-KAA=E22; SE-KAA-INLAND=ROAD_KAA (F7 r1 B1)', () => {
     expect(apply).toMatch(/ROAD_LEGS = 5/);
+    expect(apply).toMatch(/'SE-KAA': ROAD_KAA_E22/);
     expect(apply).toMatch(/'SE-KAA-INLAND': ROAD_KAA/);
+    expect(apply).toMatch(/checkRoads/);
+  });
+});
+
+describe('#667 F7 r1 B2 ZonesMap osobna warstwa dróg', () => {
+  const zones = readFileSync('src/components/zones/ZonesMap.tsx', 'utf8');
+  it('roadsRef + paint na roads; tory w route; drogi w mode one', () => {
+    expect(zones).toMatch(/roadsRef/);
+    expect(zones).toMatch(/paintOrangeRoads\(roads/);
+    expect(zones).toMatch(/WATER_GDN_NYN[\s\S]*addTo\(route\)/);
+    expect(zones).toMatch(/drogi zawsze|roads && !map\.hasLayer\(roads\)/);
   });
 });
 

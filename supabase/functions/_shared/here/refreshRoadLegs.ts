@@ -29,7 +29,6 @@ export type RoadLegDef = {
   spec: LegSpec;
   summary: string;
   corridorCode?: string;
-  corridorInland?: boolean;
 };
 
 /** Legi #667 B: PL-GDN, SE-NYN, PL-GDY, SE-KAA (E22), SE-KAA-INLAND. */
@@ -51,7 +50,9 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     destination: '65.80539,21.75914',
     spec: 'kaa',
     summary: 'Trasa drogowa Karlskrona–Boden (śródlądowa)',
-    corridorInland: true,
+    // #667 F7 r1 B3: jawnie SE_KAA_INLAND — stena_se_inland_corridor_code() na prod
+    // zwraca SE_KAA_TRACK (ta sama odchyłka co stary SE-KAA).
+    corridorCode: 'SE_KAA_INLAND',
   },
 ] as const;
 
@@ -122,10 +123,9 @@ export async function refreshRoadLegs(
   const corridorCache = new Map<string, CorridorBundle>();
 
   async function corridorFor(leg: RoadLegDef): Promise<CorridorBundle | null> {
-    let code = leg.corridorCode ?? null;
-    if (leg.corridorInland) {
-      code = await store.inlandCorridorCode();
-    }
+    // #667 F7 r1 B3: tylko jawny corridorCode (SE_E22 / SE_KAA_INLAND).
+    // inlandCorridorCode zostaje w store (diagnostyka / zapas), nie steruje legami.
+    const code = leg.corridorCode ?? null;
     if (!code) return null;
     const cached = corridorCache.get(code);
     if (cached) return cached;
@@ -172,6 +172,9 @@ export async function refreshRoadLegs(
     }
     const res = await opts.fetch(routeUrl, { headers: { 'User-Agent': 'WatchTower/1' } });
     if (!res.ok) {
+      // #667 F7 r1 N1: retry_after +1 h (bez pętli HERE); job zapisuje ostrzeżenia w integration_runs.
+      const retryIso = new Date(nowMs + 3600e3).toISOString();
+      await store.storeRoad(leg.leg, null, `${leg.summary} — HTTP ${res.status}`, retryIso);
       warnings.push(`${leg.leg}: HTTP ${res.status}`);
       continue;
     }

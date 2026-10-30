@@ -191,12 +191,11 @@ describe('B-MAPA geometria', () => {
     expect(refresh).toMatch(/shouldFetch/);
     expect(refresh).toMatch(/roadKaaSpecFromVia/);
     expect(refresh).toMatch(/loadCorridor/);
-    // #667 B: E22 + inland (TRACK tylko przez stena_se_inland_corridor_code)
+    // #667 B / F7 r1 B3: E22 + jawne SE_KAA_INLAND
     expect(refresh).toMatch(/SE_E22/);
-    expect(refresh).toMatch(/SE-KAA-INLAND/);
-    expect(refresh).toMatch(/corridorInland: true/);
+    expect(refresh).toMatch(/corridorCode: 'SE_KAA_INLAND'/);
+    expect(refresh).not.toMatch(/corridorInland:\s*true/);
     expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
-    expect(edge).toMatch(/stena_se_inland_corridor_code/);
     const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');
     expect(mig).toMatch(/SE_KAA_TRACK/);
     expect(mig).toMatch(/retry_after/);
