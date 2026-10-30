@@ -330,16 +330,17 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(r.sailings.every((s) => !s.departureUtc.startsWith('2027-'))).toBe(true);
   });
 
-  it('F7 #668 r6: lastDetailsChunk — trzeci details bez h4/etykiety → HELA-TLL (nie pierwsze details)', () => {
-    /* Mutacja „pierwsze <details>” brałaby Tallinn–Helsinki → TLLA-HEL. */
+  it('F7 #668 r7: lastDetailsChunk — trzeci details bez h4/etykiety → HELA-TLL (nie pierwsze details)', () => {
+    /* Mutacja „pierwsze <details>…koniec before” kończy się Tallinn–Helsinki → TLLA-HEL (pada).
+       Oryginał: ostatnie <details> bez etykiety → zapas HELA-TLL. */
     const html = `
 <details>
   <h3>1.1.–21.6.2027</h3>
-  <h4>Tallinn–Helsinki</h4>
+  <h4>Helsinki–Tallinn</h4>
 </details>
 <details>
   <h3>22.6.–8.8.2027</h3>
-  <h4>Helsinki–Tallinn</h4>
+  <h4>Tallinn–Helsinki</h4>
 </details>
 <details>
   <h3>10.08.2026–31.12.2026</h3>

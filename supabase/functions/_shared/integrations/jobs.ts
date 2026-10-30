@@ -579,6 +579,8 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   warnings: string[];
   fetchedOk: number;
   structureFail: boolean;
+  /** F7 #668 r7: liczba rejsów z API Dynamic (0 = tylko PDF/HTML albo totalna awaria). */
+  apiSailingsCount: number;
 }> {
   const warnings: string[] = [];
   const dirs = [
@@ -630,11 +632,12 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
       };
     }
     if (parsed.sailings.length === 0) {
+      /* F7 #668 r7: bez martwego „bez rozpoznanych”; pusty warnings → oczekiwano tablicy. */
       return {
         sailings: [],
         warn: parsed.warnings.length
           ? parsed.warnings
-          : ['DFDS Dynamic: struktura bez rozpoznanych rejsów'],
+          : ['Struktura rozkładu DFDS Dynamic zmieniona: oczekiwano tablicy.'],
         job,
         ok: false,
         emptyOk: false,
@@ -661,7 +664,8 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
         dateToIso: part.job.dateToIso,
         route: routeOfDir(part.job.portOfLoading),
       });
-      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|bez rozpoznanych/i.test(w))) {
+      /* F7 #668 r7: także junk z samym „nieczytelne godziny”. */
+      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|nieczytelne godziny|oczekiwano tablicy/i.test(w))) {
         apiStructureFail = true;
       }
     }
@@ -671,7 +675,13 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
      Wszystkie tygodnie puste → zapas PDF; struktura → failedWindows + PDF. */
   const apiComplete = failedWindows.length === 0 && apiSailings.length > 0;
   if (apiComplete) {
-    return { sailings: apiSailings, warnings, fetchedOk: apiOk, structureFail: false };
+    return {
+      sailings: apiSailings,
+      warnings,
+      fetchedOk: apiOk,
+      structureFail: false,
+      apiSailingsCount: apiSailings.length,
+    };
   }
 
   const page = await readText(deps, DFDS_SCHEDULE_PAGE, {
@@ -715,10 +725,11 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
       warnings,
       fetchedOk: apiSailings.length > 0 ? apiOk : (fallback.length > 0 ? 1 : 0),
       structureFail: false,
+      apiSailingsCount: apiSailings.length,
     };
   }
   if (apiOk === 0 && !page.ok && !pdf.ok) {
-    return { sailings: [], warnings, fetchedOk: 0, structureFail: false };
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: false, apiSailingsCount: 0 };
   }
   if (!warnings.some((w) => /Struktura|brak tabeli|Dynamic/i.test(w))) {
     warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
@@ -728,6 +739,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     warnings,
     fetchedOk: 0,
     structureFail: apiStructureFail,
+    apiSailingsCount: apiSailings.length,
   };
 }
 
@@ -1078,11 +1090,10 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:ECKERO_SCHEDULE:');
   }
 
-  /* #666 decyzja 54 + E: DFDS Dynamic schedule — osobny krok; tu rozszerzenie tygodniówki */
+  /* #666 decyzja 54 + E: DFDS Dynamic schedule — osobny krok; tu rozszerzenie tygodniówki.
+     F7 #668 r7 (decyzja 50): resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM. */
   const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
-  const dfFail = dfds.fetchedOk === 0
-    || (dfds.structureFail && dfds.sailings.length === 0);
   if (dfds.sailings.length > 0) {
     const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
@@ -1091,16 +1102,20 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
     warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
   }
-  if (dfFail) {
-    await deps.store.raiseRisk(sourceDownRisk(
-      'DFDS_SCHEDULE',
-      dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS'],
-      now,
-      DFDS_SCHEDULE_PAGE,
-    ));
-    risks += 1;
-  } else {
+  if (dfds.apiSailingsCount > 0) {
     await deps.store.resolveRisks('SOURCE_DOWN:DFDS_SCHEDULE:');
+  } else {
+    const fromPdfOnly = dfds.sailings.length > 0;
+    const msgs = fromPdfOnly
+      ? [
+        'główne źródło DFDS niedostępne lub zmienione — rozkład z zapasu PDF',
+        ...dfds.warnings.slice(0, 9),
+      ]
+      : (dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS']);
+    const risk = sourceDownRisk('DFDS_SCHEDULE', msgs, now, DFDS_SCHEDULE_PAGE);
+    if (fromPdfOnly) risk.severity = 'MEDIUM';
+    await deps.store.raiseRisk(risk);
+    risks += 1;
   }
 
   // Portnet ATD/ATA + Port of Tallinn odwołania → ferry-portnet co 15 min (F7 #660).

@@ -7288,3 +7288,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352–0354).
 - **Krok (F7 r6):** B1 — `emptyOk` tylko `Array.isArray && length===0`; `{}`/nieparsowalne → failedWindow + struktura; `apiComplete` tylko przy rejsach; wszystkie `[]` → PDF. Uwaga 1 — test lastDetailsChunk (3× details). Uwaga 2 — filter PDF okno UTC [from,to]. Unit bn2-ferry-* 65/65. **Dalej:** CI → gotowe do F7 → scalenie → #667.
 - Bez push na main.
+
+## 2026-10-30 23:50 — #668 F7 r7 POPRAWKI (PDF→MEDIUM + B1/B2)
+
+- Skrzynka: #666 ten PR (F7 r7); #667 F7 r3 POPRAWKI (SE_E22=0298 + kaaDeviationOk) — po #668; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. CI r6 @ 0430f292 było zielone; nowy commit unieważnia.
+- **Krok (F7 r7):** decyzja 50 — `apiSailingsCount`; resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM („główne źródło… zapas PDF”). B1 — tydz.1 PLD `{}`/junk/nieczytelne + reszta OK → PDF + „częściowa awaria API (19/20)”; deterministyczne `{}`+PDF / `{}` bez PDF. B2 — h4: HEL–TLL, potem TLL–HEL. Unit bn2-ferry-* 66/66. **Dalej:** CI → gotowe do F7 → #667.
+- Bez push na main.

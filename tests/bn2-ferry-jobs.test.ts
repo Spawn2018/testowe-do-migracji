@@ -413,7 +413,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
   });
 
-  it('B1: prawdziwa tabela HTML DFDS → rejsy bez SOURCE_DOWN', async () => {
+  it('B1: prawdziwa tabela HTML DFDS → rejsy + SOURCE_DOWN MEDIUM (API bez rejsów, F7 #668 r7)', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
@@ -422,7 +422,9 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     };
     await runFerrySchedule(deps(st, pages));
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
-    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    const risk = st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
+    expect(risk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    expect(JSON.stringify(risk?.detail)).toMatch(/zapasu PDF/i);
   });
 
   it('#666: DFDS Dynamic API → rejsy PLD-KPS/KPS-PLD; HTML/PDF zbędne', async () => {
@@ -562,7 +564,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
   });
 
-  it('F7 #668 r6 B1: wszystkie tygodnie [] → PDF; wszystkie {} → PDF + SOURCE_DOWN', async () => {
+  it('F7 #668 r7: wszystkie []/{} → PDF + SOURCE_DOWN MEDIUM; API OK → zamknięte', async () => {
     const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
     const runWith = async (body: string) => {
       const st = new MemStore();
@@ -597,26 +599,153 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
       return { st, out, pdfHits };
     };
 
+    /* Decyzja 50 / F7 r7: zapas PDF ≠ źródło sprawne — SOURCE_DOWN MEDIUM przy 0 rejsów z API. */
     const empty = await runWith('[]');
     expect(empty.pdfHits).toBeGreaterThan(0);
     expect(empty.st.sailings.some((s) => s.source === 'DFDS')).toBe(true);
-    expect(empty.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    const emptyRisk = empty.st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
+    expect(emptyRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    expect(JSON.stringify(emptyRisk?.detail)).toMatch(/zapasu PDF/i);
 
     const bad = await runWith('{}');
     expect(bad.pdfHits).toBeGreaterThan(0);
-    /* PDF/HTML może dać rejsy — wtedy bez SOURCE_DOWN; gdy struktura bez zapasu → ryzyko. */
-    if (bad.st.sailings.filter((s) => s.source === 'DFDS').length === 0) {
-      expect(bad.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
-      expect(bad.out.warnings.some((w) => /Struktura|oczekiwano tablicy/i.test(w))).toBe(true);
-    } else {
-      expect(bad.out.warnings.some((w) => /Struktura|oczekiwano tablicy/i.test(w))).toBe(true);
+    expect(bad.st.sailings.some((s) => s.source === 'DFDS')).toBe(true);
+    expect(bad.out.warnings.some((w) => /oczekiwano tablicy/i.test(w))).toBe(true);
+    const badRisk = bad.st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
+    expect(badRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    expect(JSON.stringify(badRisk?.detail)).toMatch(/zapasu PDF/i);
+
+    /* PDF bez rejsów (strona pusta) → SOURCE_DOWN + „oczekiwano tablicy”. */
+    {
+      const st = new MemStore();
+      const f = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('api/timetable')) return new Response('{}', { status: 200 });
+        if (url.includes('routes-and-schedules') || url.includes('ctfassets.net') || url.includes('dfds.pdf')) {
+          return new Response('<html><body>brak tabeli</body></html>', { status: 200 });
+        }
+        const pages: Record<string, string | number> = { ...tallinkPages };
+        const hit = Object.entries(pages).find(([k]) => url.includes(k));
+        if (hit) {
+          return typeof hit[1] === 'number'
+            ? new Response('err', { status: hit[1] })
+            : new Response(hit[1], { status: 200 });
+        }
+        if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+        if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+          return new Response('err', { status: 503 });
+        }
+        throw new Error(`nieoczekiwane: ${url}`);
+      }) as typeof fetch;
+      const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+      expect(st.sailings.every((s) => s.source !== 'DFDS')).toBe(true);
+      expect(out.warnings.some((w) => /oczekiwano tablicy/i.test(w))).toBe(true);
+      expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
     }
 
     /* Niepusta tablica bez rozpoznanych tras → jak struktura (failedWindow + PDF). */
     const junk = await runWith(JSON.stringify([{ portOfLoading: 'XX', portOfDischarge: 'YY', vehicleName: 'X' }]));
     expect(junk.pdfHits).toBeGreaterThan(0);
     expect(junk.out.warnings.some((w) => /nieznana trasa|Struktura/i.test(w))).toBe(true);
-    void both;
+    expect(junk.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+
+    /* Potem API OK → SOURCE_DOWN zamknięte. */
+    const stOk = new MemStore();
+    stOk.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_source_down', params: {},
+      detail: {}, dedup: `SOURCE_DOWN:DFDS_SCHEDULE:${NOW.toISOString().slice(0, 10)}`, sourceUrl: null,
+    });
+    const fOk = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) {
+        const u = new URL(url);
+        const load = u.searchParams.get('portOfLoading') ?? '';
+        const body = load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44;
+        return new Response(JSON.stringify(body), { status: 200 });
+      }
+      if (url.includes('routes-and-schedules') || url.includes('ctfassets.net')) {
+        throw new Error('PDF nie powinien być pobrany przy API OK');
+      }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerrySchedule({ store: stOk, fetch: fOk, env: {}, now: () => NOW });
+    expect(stOk.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    expect(stOk.sailings.some((s) => s.source === 'DFDS')).toBe(true);
+  });
+
+  it('F7 #668 r7 B1: tydzień 1 PLD {} / junk + reszta OK → PDF + częściowa awaria 19/20', async () => {
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const week1Start = '2026-10-26';
+    const runMixed = async (badBody: string) => {
+      const st = new MemStore();
+      let pageHits = 0;
+      let pdfHits = 0;
+      const f = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('api/timetable')) {
+          const u = new URL(url);
+          const from = u.searchParams.get('dateFrom') ?? '';
+          const load = u.searchParams.get('portOfLoading') ?? '';
+          if (from.startsWith(week1Start) && load === 'EEPLN') {
+            return new Response(badBody, { status: 200 });
+          }
+          const body = load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        if (url.includes('routes-and-schedules')) {
+          pageHits += 1;
+          return new Response(
+            `<html><body><a href="https://downloads.ctfassets.net/x/dfds.pdf">pdf</a>${DFDS_HTML}</body></html>`,
+            { status: 200 },
+          );
+        }
+        if (url.includes('ctfassets.net') || url.includes('dfds.pdf')) {
+          pdfHits += 1;
+          return new Response(DFDS_HTML, { status: 200 });
+        }
+        const pages: Record<string, string | number> = { ...tallinkPages };
+        const hit = Object.entries(pages).find(([k]) => url.includes(k));
+        if (hit) {
+          return typeof hit[1] === 'number'
+            ? new Response('err', { status: hit[1] })
+            : new Response(hit[1], { status: 200 });
+        }
+        if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+        if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+          return new Response('err', { status: 503 });
+        }
+        throw new Error(`nieoczekiwane: ${url}`);
+      }) as typeof fetch;
+      const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+      return { st, out, pageHits, pdfHits };
+    };
+
+    const junkHours = JSON.stringify([{
+      portOfLoading: 'EEPLN', portOfDischarge: 'SEKPS', vehicleName: 'Sirena Seaways',
+      scheduledDeparture: 'not-a-date', scheduledArrival: 'also-bad',
+    }]);
+    for (const badBody of ['{}', JSON.stringify([{ portOfLoading: 'XX', portOfDischarge: 'YY', vehicleName: 'X' }]), junkHours]) {
+      const r = await runMixed(badBody);
+      expect(r.pageHits + r.pdfHits).toBeGreaterThan(0);
+      expect(r.out.warnings.some((w) => /częściowa awaria API \(19\/20\)/i.test(w))).toBe(true);
+      /* Okno padnięte: PLD tydzień 1 — rejs z PDF w tym zakresie (po filtrze). */
+      expect(r.st.sailings.some((s) => s.source === 'DFDS' && s.departure_at >= '2026-10-26' && s.departure_at < '2026-11-02')).toBe(true);
+      expect(r.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+      if (badBody === junkHours) {
+        expect(r.out.warnings.some((w) => /nieczytelne godziny/i.test(w))).toBe(true);
+      }
+    }
   });
 
   it('F7 #668 r5: DFDS — odwołany rejs z tygodnia API nie wraca z PDF; 503 → uzupełnienie', async () => {
