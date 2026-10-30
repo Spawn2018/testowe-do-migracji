@@ -7,7 +7,7 @@
  * (`WATER_GDN_NYN`, `WATER_GDY_KAA`) — dzisiejszy rysunek.
  */
 import { haversineKm, lineLengthKm, maxSegmentKm, type LatLng } from './draw';
-import { routeByCode, type WaterTrackId } from '../ferryCatalog';
+import { waterTrackOf, type WaterTrackId } from '../ferryCatalog';
 
 export type FerryLeg = 'FERRY-GDN-NYN' | 'FERRY-GDY-KAA';
 
@@ -146,7 +146,8 @@ export const WATER_TRACKS_EXTRA: Record<ExtraWaterTrack, readonly LatLng[]> = {
 export function extraWaterTracksFor(routes: Iterable<string | null | undefined>): { id: ExtraWaterTrack; line: readonly LatLng[] }[] {
   const ids = new Set<ExtraWaterTrack>();
   for (const code of routes) {
-    const track = routeByCode(code)?.waterTrack;
+    /* BN9-b: Terminal A (TLLA-HEL) i kody z bazy — tor rodziny trasy */
+    const track = waterTrackOf(code);
     if (track && track in WATER_TRACKS_EXTRA) ids.add(track as ExtraWaterTrack);
   }
   return [...ids].map((id) => ({ id, line: WATER_TRACKS_EXTRA[id] }));

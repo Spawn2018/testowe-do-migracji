@@ -38,7 +38,7 @@ const SILENT_MS = 15 * 60 * 1000;
 
 /** Zadania integracji zapisujące integration_runs (ostatni przebieg każdego — także rzadkich, raz na dobę). */
 export const KNOWN_JOBS = [
-  'send-notifications', 'rio-links', 'safefleet-poll', 'ferry-ais', 'ferry-ais-listen', 'ferry-status', 'ferry-schedule', 'ferry-portnet', 'ferry-departures', 'ferry-weather',
+  'send-notifications', 'rio-links', 'safefleet-poll', 'emtrack-web', 'ferry-ais', 'ferry-ais-listen', 'ferry-status', 'ferry-schedule', 'ferry-portnet', 'ferry-departures', 'ferry-weather',
   'road-se', 'road-pl', 'daily-admin-digest', 'email-budget', 'rodo', 'usage-check', 'fuel-wob',
 ] as const;
 
@@ -187,7 +187,9 @@ export default function SystemStatusPanel() {
   const nf = (n: number | undefined) => Number(n ?? 0).toLocaleString('pl-PL');
   const jobName = (job: string) => {
     const k = `b6_job_${job.replace(/-/g, '_')}`;
-    return hasKey(locale, k) ? t(locale, k) : job;
+    /* BN9-b: zadania opisane już w „Pozostałych zadaniach” (ol2_job_*) — ta sama nazwa, bez kodu */
+    const k2 = `ol2_job_${job.replace(/-/g, '_')}`;
+    return hasKey(locale, k) ? t(locale, k) : hasKey(locale, k2) ? t(locale, k2) : job;
   };
 
   return (

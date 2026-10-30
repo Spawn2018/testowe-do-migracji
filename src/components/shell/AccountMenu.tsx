@@ -159,6 +159,9 @@ export function AccountMenu() {
         </span>
         <span className="acc-caret" aria-hidden>▼</span>
       </button>
+      {/* W-topbar-promy (właściciel 30.10, 15:48): telefon — tło rozmyte jak przy dzwonku (#594 B3), bez „✕”;
+          na komputerze `.bell-scrim` jest ukryte w CSS */}
+      {open ? <div className="bell-scrim" aria-hidden="true" data-top-scrim="account" onClick={close} /> : null}
       <div className="acc-menu" id="accountMenu" role="group" aria-label={name} hidden={!open} data-acc-menu>
         <div className="acc-hd">
           <b>{name}</b>

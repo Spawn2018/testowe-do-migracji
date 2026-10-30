@@ -150,6 +150,8 @@ let rpcOperatorNames = new Map<string, string>();
 /** port_from / port_to → country z snapshotu (isOutbound jak SQL ferry_route_is_outbound). */
 let rpcPortCountry = new Map<string, string>();
 let rpcRoutePorts = new Map<string, { from: string; to: string }>();
+/** BN9-b: port ze snapshotu → nazwa i terminal („Tallinn”, „Terminal A”). */
+let rpcPortInfo = new Map<string, { name: string; terminal: string | null }>();
 
 export type FerryDictSnapshot = {
   operators: { code: string; name: string }[];
@@ -187,10 +189,13 @@ export function applyFerryDictSnapshot(snap: FerryDictSnapshot): void {
   }
   rpcOperatorNames = names;
   const countries = new Map<string, string>();
+  const info = new Map<string, { name: string; terminal: string | null }>();
   for (const p of snap.ports ?? []) {
     if (p?.code && p.country) countries.set(p.code, p.country);
+    if (p?.code && p.name) info.set(p.code, { name: p.name, terminal: p.terminal ?? null });
   }
   rpcPortCountry = countries;
+  rpcPortInfo = info;
 }
 
 /** Testy / demo: wróć do samego seeda. */
@@ -201,6 +206,7 @@ export function resetFerryDictRpc(): void {
   rpcOperatorNames = new Map();
   rpcPortCountry = new Map();
   rpcRoutePorts = new Map();
+  rpcPortInfo = new Map();
 }
 
 export const FERRY_ROUTE_CODES: readonly FerryRouteCode[] = FERRY_ROUTES.map((r) => r.code);
@@ -353,4 +359,68 @@ export function sailingOfOperator(s: { route?: string | null; operator?: string 
   if (operator === 'POLFERRIES') return named !== 'STENA' && (served || !s.route);
   if (operator === 'STENA') return named === 'STENA' || served;
   return named === operator || (!named && served);
+}
+
+
+/* ---------- BN9-b: każda trasa ze słownika (seed, Terminal A, kody z bazy) ma porty, tor i nazwę ---------- */
+
+/** Końce trasy: kody portów z katalogu i terminal, gdy trasa go wyróżnia (Tallinn A — Viking Line, Eckerö). */
+export interface RouteEnds {
+  from: FerryPortCode;
+  to: FerryPortCode;
+  fromTerminal?: string;
+  toTerminal?: string;
+}
+
+/** „TLL_A” → TLL + „A”, „HEL_T2” → HEL; kody seeda bez zmian. */
+function seedPortOf(code: string): { port: FerryPortCode; terminal?: string } | null {
+  const [base, term] = code.split('_');
+  if (!PORT_BY_CODE.has(base)) return null;
+  return { port: base as FerryPortCode, terminal: term === 'A' ? 'A' : undefined };
+}
+
+export function routeEnds(code: string | null | undefined): RouteEnds | null {
+  if (!code) return null;
+  const seed = ROUTE_BY_CODE.get(code);
+  if (seed) return { from: seed.from, to: seed.to };
+  if (code === 'TLLA-HEL') return { from: 'TLL', to: 'HEL', fromTerminal: 'A' };
+  if (code === 'HELA-TLL') return { from: 'HEL', to: 'TLL', toTerminal: 'A' };
+  const rp = rpcRoutePorts.get(code);
+  if (rp) {
+    const a = seedPortOf(rp.from);
+    const b = seedPortOf(rp.to);
+    if (a && b) return { from: a.port, to: b.port, fromTerminal: a.terminal, toTerminal: b.terminal };
+  }
+  const [x, y] = code.split('-');
+  const a = x ? seedPortOf(x.replace(/A$/, '')) : null;
+  const b = y ? seedPortOf(y.replace(/A$/, '')) : null;
+  return a && b ? { from: a.port, to: b.port, fromTerminal: x.endsWith('A') ? 'A' : undefined, toTerminal: y.endsWith('A') ? 'A' : undefined } : null;
+}
+
+/** Tor wodny trasy (Terminal A i kody z bazy — tor rodziny, np. TLLA-HEL → TLL-HEL). */
+export function waterTrackOf(code: string | null | undefined): WaterTrackId | null {
+  if (!code) return null;
+  const seed = ROUTE_BY_CODE.get(code);
+  if (seed) return seed.waterTrack;
+  const alias = SEED_ROUTE_ALIASES.get(code);
+  if (alias) return alias.waterTrack;
+  const fam = rpcFamilyByRoute.get(code);
+  if (fam && ROUTE_BY_CODE.has(fam)) return ROUTE_BY_CODE.get(fam)!.waterTrack;
+  const ends = routeEnds(code);
+  if (!ends) return null;
+  const r = FERRY_ROUTES.find((x) => (x.from === ends.from && x.to === ends.to));
+  return r?.waterTrack ?? null;
+}
+
+/** Nazwa portu ze słownika z bazy (gdy kod spoza katalogu) — „Tallinn”. */
+export function rpcPortName(code: string): string | null {
+  return rpcPortInfo.get(code)?.name ?? null;
+}
+
+/**
+ * BN9-b — czy trasa jest wyjazdową trasą armatora: katalog, Terminal A (TLLA-HEL: Viking Line, Eckerö) i kody z bazy.
+ * `outboundRoutesOf` zostaje bez zmian (awizacja, #666).
+ */
+export function isOperatorOutboundRoute(operator: FerryOperator, code: string | null | undefined): boolean {
+  return !!code && isOutbound(code) && operatorsForRoute(code).includes(operator);
 }

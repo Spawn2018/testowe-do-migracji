@@ -1550,6 +1550,7 @@ export const useTowerStore = create<TowerState>()(
           id: uid('sail'), vessel: d.vessel.trim(), route: d.route,
           departureAt: new Date(d.departureAt).toISOString(), arrivalAt: new Date(d.arrivalAt).toISOString(),
           delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'RECZNIE',
+          ...(d.operator ? { operator: d.operator } : {}),
         };
         set((st) => ({ sailings: [...st.sailings, sailing] }));
         writeThrough({ type: 'sailing.save', sailing, isNew: true });

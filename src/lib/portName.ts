@@ -5,6 +5,7 @@
  */
 import { I18N_ALL } from '../i18n/messages';
 import type { Locale } from '../types';
+import { routeEnds } from './ferryCatalog';
 
 export function portName(locale: Locale, code: string): string {
   const key = `p3a_port_${code}`;
@@ -14,4 +15,28 @@ export function portName(locale: Locale, code: string): string {
 /** „Gdańsk → Nynäshamn”. */
 export function ferryRouteName(locale: Locale, from: string, to: string): string {
   return `${portName(locale, from)} → ${portName(locale, to)}`;
+}
+
+/** BN9-b: port z terminalem — „Tallinn A” (Viking Line, Eckerö); bez terminala sama nazwa. */
+function endName(locale: Locale, code: string, terminal?: string): string {
+  const n = portName(locale, code);
+  return terminal ? `${n} ${terminal}` : n;
+}
+
+/**
+ * BN9-b — nazwa trasy z jej kodu dla każdej trasy ze słownika: „Gdańsk → Nynäshamn”, „Tallinn A → Helsinki”.
+ * Kod spoza katalogu i słownika zostaje bez zmian (bez podmiany na Gdańsk → Nynäshamn).
+ */
+export function ferryRouteLabel(locale: Locale, code: string | null | undefined): string {
+  const e = routeEnds(code);
+  if (!e) return code ?? '';
+  return `${endName(locale, e.from, e.fromTerminal)} → ${endName(locale, e.to, e.toTerminal)}`;
+}
+
+/** Skrót trasy „GDN → NYN”, „TLL A → HEL” (Harmonogram › Rejsy). */
+export function ferryRouteShort(code: string | null | undefined): string {
+  const e = routeEnds(code);
+  if (!e) return code ?? '';
+  /* zgodnie z #668 (routeShortLabel): „TLLA → HEL” */
+  return `${e.from}${e.fromTerminal ?? ''} → ${e.to}${e.toTerminal ?? ''}`;
 }

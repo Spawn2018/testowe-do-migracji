@@ -289,7 +289,7 @@ export function LoadDrawer() {
                   ? <span className="wb-code" data-content>{label.slice(0, dot)}<span className="wb-dot"> · </span><span className="wb-no">{label.slice(dot + 3)}</span></span>
                   : <span className="wb-code" data-content>{label}</span>;
               })()}
-              <StatusPill status={load.status} stage={load.stage} />
+              <StatusPill status={load.status} stage={load.stage} sailingId={load.sailingId} />
               {load.delayed ? <span className="pill p-red" data-drawer-delay title={t(locale, 'p4b_eta_delay_tip')}>{delayPillText}</span> : null}
             </div>
             {!phone ? (

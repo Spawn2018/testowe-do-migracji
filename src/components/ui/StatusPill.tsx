@@ -1,5 +1,5 @@
 import type { CorridorStage, Load, LoadStatus } from '../../types';
-import { stageOnlyLabel, statusLabel } from '../../lib/statusLabel';
+import { routeStatusLabel, stageOnlyLabel } from '../../lib/statusLabel';
 import { statusMarkers } from '../../lib/stageTiles';
 import { t } from '../../i18n/messages';
 import { statusTone } from '../../lib/status';
@@ -27,15 +27,19 @@ export function formatDelayPill(delayMin: number): string {
 export function StatusPill({
   status,
   stage,
+  sailingId,
 }: {
   status: LoadStatus;
   stage?: CorridorStage;
+  /** BN9-b (25A): rejs transportu — przy przeprawie z Estonii nazwa portu w statusie */
+  sailingId?: string | null;
 }) {
   const locale = useTowerStore((s) => s.locale);
+  const route = useTowerStore((s) => (sailingId ? s.sailings.find((x) => x.id === sailingId)?.route ?? null : null));
   /* wyglad/P4 (E25, L7): „Opóźniony” i „Cichy” to oznaczenia obok statusu, nie status — w pigułce nazwa etapu */
   const flagOnly = (status === 'DELAYED' || status === 'SILENT') && !!stage;
   const tone = flagOnly ? 'ok' : statusTone(status);
-  return <span className={`pill ${TONE_PILL[tone]}`}>{flagOnly ? stageOnlyLabel(stage!, locale) : statusLabel(status, stage, locale)}</span>;
+  return <span className={`pill ${TONE_PILL[tone]}`}>{flagOnly ? stageOnlyLabel(stage!, locale) : routeStatusLabel(status, stage, locale, route)}</span>;
 }
 
 /**

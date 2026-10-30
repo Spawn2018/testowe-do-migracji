@@ -480,7 +480,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         if (!projectId) throw new Error('rejs: brak projektu');
         const row = sailingToRow(m.sailing);
         if (m.isNew) {
-          const vName = vesselToDb(m.sailing.vessel === 'Wawel' || m.sailing.vessel === 'Nova Star' ? m.sailing.vessel : null) ?? m.sailing.vessel;
+          /* BN9-b: każdy statek z listy („Megastar” → „M/F Megastar”); wcześniej tylko Wawel i Nova Star miały przedrostek */
+          const vName = vesselToDb(m.sailing.vessel) ?? m.sailing.vessel;
           const v = await sb.from('vessels').select('id').eq('name', vName).maybeSingle();
           const vessel = must(v, 'statek') as { id: string } | null;
           if (!vessel) throw new Error(`rejs: nieznany statek ${m.sailing.vessel}`);

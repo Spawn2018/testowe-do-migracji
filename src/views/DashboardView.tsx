@@ -11,7 +11,7 @@ import { trackingPhase } from '../lib/stageTiles';
 import { getNow } from '../lib/frozenNow';
 import { computeCorridorKpis } from '../lib/corridorKpis';
 import { nextGdnSailing, seaForSailing } from '../lib/voyage';
-import { ferryRouteName } from '../lib/portName';
+import { ferryRouteLabel, ferryRouteName } from '../lib/portName';
 import { vesselById } from '../lib/ferry';
 import { effDeparture, nearestCrossingByOperator } from '../lib/sailings';
 import { OPERATOR_MATCH_ORDER } from '../lib/ferryCatalog';
@@ -108,9 +108,8 @@ export function DashboardView() {
       const near = nearestCrossingByOperator(sailings, nowMinute * 60_000, 1);
       const s = OPERATOR_MATCH_ORDER.map((op) => near[op]?.[0]).filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
       if (!s) return null;
-      const [from, to] = s.route.split('-');
-      /* E37, E21 (audyt-A A-03): pełne nazwy portów „Gdańsk → Nynäshamn”, jak w pasku górnym */
-      return { vessel: s.vessel, route: ferryRouteName(locale, from ?? '', to ?? ''), depIso: effDeparture(s), sea: marineSea };
+      /* E37, E21 (audyt-A A-03): pełne nazwy portów „Gdańsk → Nynäshamn”, jak w pasku górnym; BN9-b: „Tallinn A → Helsinki” */
+      return { vessel: s.vessel, route: ferryRouteLabel(locale, s.route), depIso: effDeparture(s), sea: marineSea };
     }
     /* audyt-A A-04: demo — najbliższy odjazd z Gdańska, ten sam rejs co w pasku górnym */
     const s = nextGdnSailing(new Date(nowMinute * 60_000));

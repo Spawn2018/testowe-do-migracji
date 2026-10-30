@@ -15,7 +15,7 @@ import { portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
-import { effDeparture, nearestCrossingByOperator } from '../../lib/sailings';
+import { effDeparture, nearestCrossingByOperator, sailingStatusLabel, sailingStatusPill } from '../../lib/sailings';
 import { LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorName } from '../../lib/ferryCatalog';
 import { formatListDateTime } from '../../lib/format';
 import { lazyRetry } from '../../lib/lazyRetry';
@@ -35,7 +35,8 @@ function isoWeek(d: Date): number {
 
 /** Jeden rejs w pasku (E37 pkt 1: „6 h 13 min Stena Estelle · 08:00 · Gdynia → Karlskrona”). */
 /** `head` + `to` = `line`; poniżej 1440 px pasek pokazuje tylko `head` (statek · godzina · port wyjścia — E20 pkt 2). */
-type FerryRow = { mins: number; cd: string; line: string; short: string; head: string; to: string };
+/* W-topbar-promy: `op` (armator) i `status` (np. „opóźniony”) — lista wszystkich rejsów pod „+N” w pasku komputera */
+type FerryRow = { mins: number; cd: string; line: string; short: string; head: string; to: string; op: string; status?: { label: string; pill: string } };
 
 function countdown(mins: number): string {
   return `${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')} min`;
@@ -49,13 +50,40 @@ function depLabel(depIso: string, nowIso: string): string {
   return day === today && time ? time : dep;
 }
 
+/** Tryb pokazowy: `#/?ferries=all` (tylko build demo) — sześciu armatorów jak na produkcji, do porównania wyglądu paska. */
+function demoAllFerries(): boolean {
+  try {
+    const q = window.location.hash.split('?')[1] ?? '';
+    return new URLSearchParams(q).get('ferries') === 'all';
+  } catch {
+    return false;
+  }
+}
+
+function demoAllSailings(nowMs: number): Sailing[] {
+  const at = (h: number) => new Date(nowMs + h * 3_600_000).toISOString();
+  const mk = (id: string, vessel: string, route: Sailing['route'], source: Sailing['source'], h: number, dur: number, status: Sailing['status'] = 'ZAPLANOWANY'): Sailing => ({
+    id, vessel, route, departureAt: at(h), arrivalAt: at(h + dur), delayedDepartureAt: null, delayedArrivalAt: null, status, source,
+  });
+  return [
+    mk('d-st', 'Stena Estelle', 'GDY-KAA', 'STENA', 1.4, 10.5),
+    mk('d-tl', 'MyStar', 'TLL-HEL', 'TALLINK', 2.1, 2, 'OPOZNIONY'),
+    mk('d-vk', 'Viking XPRS', 'TLLA-HEL', 'VIKING', 3.6, 2.5),
+    mk('d-ec', 'Finlandia', 'TLLA-HEL', 'ECKERO', 4.25, 2.25),
+    mk('d-pf', 'Wawel', 'GDN-NYN', 'POLFERRIES', 5.5, 18),
+    mk('d-df', 'Sirena Seaways', 'PLD-KPS', 'DFDS', 9.75, 9.5),
+  ];
+}
+
 function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof nearestCrossingByOperator>[0]): FerryRow[] {
   const nowMs = now.getTime();
   const nowIso = now.toISOString();
   const rows: FerryRow[] = [];
-  if (PROD_BUILD) {
+  /* W-topbar-promy: tryb pokazowy z `#/?ferries=all` — ten sam układ co produkcja dla 6 armatorów (dowód zrzutów; tylko demo) */
+  const demoAll = !PROD_BUILD && demoAllFerries();
+  if (PROD_BUILD || demoAll) {
     /* P7 — produkcja: najbliższa Stena (GDY→KAA) i najbliższy Polferries (GDN→NYN) z bazy. */
-    const near = nearestCrossingByOperator(sailings, nowMs, 1);
+    const near = nearestCrossingByOperator(demoAll ? demoAllSailings(nowMs) : sailings, nowMs, 1);
     /* BN9-a: Stena i Polferries zawsze (bez rejsu — „brak rejsu”); nowi armatorzy z katalogu tylko z rejsem */
     const lines: (readonly [Sailing | undefined, string])[] = [[near.STENA[0], 'Stena'], [near.POLFERRIES[0], 'Polferries']];
     for (const op of OPERATOR_MATCH_ORDER) {
@@ -66,7 +94,7 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
     for (const [s, op] of lines) {
       if (!s) {
         const none = `${op} · ${t(locale, 'i2_no_sailing')}`;
-        rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: none, short: op, head: none, to: '' });
+        rows.push({ mins: Number.MAX_SAFE_INTEGER, cd: '—', line: none, short: op, head: none, to: '', op });
         continue;
       }
       const depIso = effDeparture(s);
@@ -82,6 +110,8 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
         short: `${op} ${fmtTime(depIso)}`,
         head,
         to: portName(locale, to),
+        op,
+        status: s.status === 'OPOZNIONY' ? { label: sailingStatusLabel(s.status, locale), pill: sailingStatusPill(s.status) } : undefined,
       });
     }
   } else {
@@ -98,6 +128,7 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
       short: `Polferries ${fmtTime(s.depLocal)}`,
       head,
       to: portName(locale, s.arrPort),
+      op: 'Polferries',
     });
   }
   return rows.sort((a, b) => a.mins - b.mins);
@@ -133,6 +164,9 @@ function FerryChip({ rows, wk, date }: { rows: FerryRow[]; wk: number; date: str
         <span className="ferry-chip-cd"><ClaudeIcon name="ferry" />{first.cd}</span>
         <span className="ferry-chip-lb">{first.short}</span>
       </button>
+      {/* W-topbar-promy (właściciel 30.10, 15:48): telefon — tło rozmyte jak przy dzwonku (#594 B3), bez „✕”;
+          dotknięcie tła zamyka (onClick — jak w dzwonku, bez kliknięcia w element pod spodem) */}
+      {open ? <div className="bell-scrim" aria-hidden="true" data-top-scrim="ferry" onClick={() => setOpen(false)} /> : null}
       {open ? (
         <div className="ferry-pop" id="ferryPop" role="group" aria-label={t(locale, 'p3a_ferry_open')} data-ferry-pop>
           {rows.map((row, i) => (
@@ -148,6 +182,65 @@ function FerryChip({ rows, wk, date }: { rows: FerryRow[]; wk: number; date: str
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** W-topbar-promy (właściciel 30.10, 15:48): komputer — w pasku jeden najbliższy rejs w jednej linii,
+    pozostali armatorzy pod „+N” (lista z odliczaniem, armatorem, statkiem, godziną, trasą i statusem).
+    Wcześniej wszystkie rejsy jeden pod drugim — przy 4–6 armatorach pasek się rozjeżdżał. Telefon bez zmian (FerryChip). */
+function OpsFerries({ rows }: { rows: FerryRow[] }) {
+  const locale = useTowerStore((s) => s.locale);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setOpen(false); btnRef.current?.focus(); }
+    };
+    document.addEventListener('mousedown', onDoc);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  const first = rows[0];
+  if (!first) return null;
+  const more = rows.length - 1;
+  return (
+    <span className="ops-ferries" ref={ref}>
+      <span className="ops-rows">
+        <span data-ferry-row={0} className="ops-row">
+          <span className="cd">{first.cd}</span>
+          <span className="lb">{first.head}{first.to ? <span className="ops-to"> → {first.to}</span> : null}</span>
+          {first.status ? <span className={`pill ${first.status.pill} ops-st`}>{first.status.label}</span> : null}
+        </span>
+      </span>
+      {more > 0 ? (
+        <button ref={btnRef} type="button" className="ops-more" aria-expanded={open} aria-controls="opsFerryPop"
+          aria-label={tp(locale, 'p3a_ferry_more_aria', { n: String(rows.length) })}
+          onClick={() => setOpen((v) => !v)} data-ops-more>
+          {tp(locale, 'p3a_ferry_more', { n: String(more) })}
+        </button>
+      ) : null}
+      {open ? (
+        <span className="ops-pop" id="opsFerryPop" role="group" aria-label={t(locale, 'p3a_ferry_pop_hd')} data-ops-pop>
+          <span className="ops-pop-hd">{t(locale, 'p3a_ferry_pop_hd')}</span>
+          {rows.map((row, i) => (
+            <span key={i} className="ops-pop-row" data-ops-pop-row={i}>
+              <b className="ops-pop-cd">{row.cd}</b>
+              <span className="ops-pop-op">{row.op}</span>
+              <span className="ops-pop-line">{row.line}</span>
+              {row.status ? <span className={`pill ${row.status.pill}`}>{row.status.label}</span> : null}
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -233,14 +326,7 @@ export function Topbar() {
         {switchView ? <span className="sep" /> : null}
         <span className="wk">{tp(locale, 'a6_top_wk', { n: String(ops.wk) })}</span>
         <span className="ops-ferry-ico"><ClaudeIcon name="ferry" /></span>
-        <span className="ops-rows">
-          {ops.ferryRows.map((row, i) => (
-            <span key={i} data-ferry-row={i} className="ops-row">
-              <span className="cd">{row.cd}</span>
-              <span className="lb">{row.head}{row.to ? <span className="ops-to"> → {row.to}</span> : null}</span>
-            </span>
-          ))}
-        </span>
+        <OpsFerries rows={ops.ferryRows} />
         <span className="sep" />
         {/* P10 — data bez zegara */}
         <span className="cd ops-date" data-ops-date>{ops.date}</span>

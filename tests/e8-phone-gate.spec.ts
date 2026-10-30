@@ -1197,7 +1197,7 @@ test.describe('wyglad/P7-d Rejsy (E30 pkt 7)', () => {
     await page.setViewportSize({ width: 1366, height: 900 });
     await boot(page, 'HHL');
     await openRejsy(page);
-    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Gdańsk → Nynäshamn i Gdynia → Karlskrona');
+    await expect(page.locator('[data-page="schedule"] .panel-hd .sub')).toHaveText('Polska → Szwecja oraz Estonia → Finlandia i Szwecja');
     expect(await page.locator('[data-sailings] thead th').allInnerTexts()).toEqual(['Odejście', 'Statek', 'Trasa', 'Przypłynięcie', 'Źródło', 'Transporty', '']);
     await expect(page.locator('[data-sail-future]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('[data-sail-returns]')).toHaveAttribute('aria-pressed', 'false');
@@ -3348,5 +3348,50 @@ test.describe('wyglad/W-konta — Operacje HHL i Użytkownik SCX w demo', () => 
     await expect(page.locator('#accountBtn .acc-who span')).toHaveText('SCX · Użytkownik');
     await page.click('#accountBtn');
     await expect(page.locator('[data-demo-kind="CARRIER_USER"]')).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+test.describe('wyglad/W-topbar-promy — pasek promów (komputer) i rozmyte tło (telefon)', () => {
+  const ALL_URL = `/#/?now=${encodeURIComponent('2026-09-23T14:32:00Z')}&ferries=all`;
+
+  test('komputer 1280–1920: jeden najbliższy rejs w jednej linii, „+N” otwiera listę armatorów, pasek się nie rozjeżdża', async ({ page }) => {
+    for (const width of [1280, 1366, 1440, 1920]) {
+      await page.setViewportSize({ width, height: 900 });
+      await boot(page, 'HHL', false, ALL_URL);
+      await expect(page.locator('#ops [data-ferry-row]')).toHaveCount(1);
+      const m = await page.evaluate(() => {
+        const bar = document.querySelector('.topbar') as HTMLElement;
+        const ops = document.querySelector('#ops') as HTMLElement;
+        return { bar: bar.getBoundingClientRect().height, scroll: bar.scrollHeight, ops: ops.getBoundingClientRect().height };
+      });
+      expect(m.scroll, `${width}: treść paska wyższa od paska`).toBeLessThanOrEqual(m.bar);
+      expect(m.ops, `${width}: rejsy wyższe od paska`).toBeLessThan(m.bar);
+      await expect(page.locator('[data-ops-more]')).toBeVisible();
+      await page.click('[data-ops-more]');
+      await expect(page.locator('[data-ops-pop]')).toBeVisible();
+      expect(await page.locator('[data-ops-pop-row]').count()).toBeGreaterThan(1);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('[data-ops-pop]')).toHaveCount(0);
+      await expect(page.locator('.bell-scrim')).toHaveCount(0);
+    }
+  });
+
+  test('telefon: lista promów i menu konta — tło rozmyte jak przy dzwonku, bez „✕”; dotknięcie tła zamyka', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await boot(page, 'HHL', false, ALL_URL);
+    await page.click('[data-ferry-chip]');
+    await expect(page.locator('[data-ferry-pop]')).toBeVisible();
+    const scrim = page.locator('[data-top-scrim="ferry"]');
+    await expect(scrim).toBeVisible();
+    expect(await scrim.evaluate((el) => getComputedStyle(el).backdropFilter)).toContain('blur');
+    await expect(page.locator('[data-ferry-pop] .bell-x, [data-ferry-pop] [aria-label="Zamknij"]')).toHaveCount(0);
+    await page.mouse.click(195, 800);
+    await expect(page.locator('[data-ferry-pop]')).toHaveCount(0);
+    await page.click('#accountBtn');
+    await expect(page.locator('[data-acc-menu]')).toBeVisible();
+    await expect(page.locator('[data-top-scrim="account"]')).toBeVisible();
+    await expect(page.locator('[data-acc-menu] .bell-x')).toHaveCount(0);
+    await page.mouse.click(195, 800);
+    await expect(page.locator('[data-acc-menu]')).toBeHidden();
   });
 });

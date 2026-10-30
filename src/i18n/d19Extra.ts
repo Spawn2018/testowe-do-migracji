@@ -245,6 +245,11 @@ export const d19Pl: Dict = {
   s_invoiced: 'Zafakturowano',
   s_road_pl: 'Droga PL',
   s_road_se: 'Droga SE',
+  /* BN9-b, decyzja 25A: przeprawy z Estonii — te same statusy, nazwa portu z rejsu */
+  s_port_out_named: 'Port wypłynięcia — {port}',
+  s_port_in_named: 'Port przypłynięcia — {port}',
+  s_road_to_port: 'Droga do portu',
+  s_road_to_site: 'Droga do placu',
   s_unloaded: 'Rozładowany',
   a6_dr_change_status: 'Zmień status',
   a6_dr_status_when: 'Data i godzina',

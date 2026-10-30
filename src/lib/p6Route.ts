@@ -7,8 +7,11 @@
  */
 import type { Load, Sailing, SailingStatus } from '../types';
 import type { MarineConditionRow } from './marineWeatherDb';
-import { FERRY_OPERATORS, outboundRoutesOf, primaryRouteOf, routeByCode, type FerryOperator, type FerryPortCode } from './ferryCatalog';
-import { crossingLine, effDeparture, nearestCrossingSailings } from './sailings';
+import {
+  FERRY_OPERATORS, FERRY_ROUTES, LEGACY_OPERATORS, isOperatorOutboundRoute, portByCode, primaryRouteOf, routeEnds,
+  type FerryCountry, type FerryOperator, type FerryPortCode,
+} from './ferryCatalog';
+import { crossingLine, effDeparture, nearestCrossingByOperator, nearestCrossingSailings } from './sailings';
 import { stageTileOf } from './stageTiles';
 
 /** Armator przeprawy — z katalogu promów (BN9-a). */
@@ -92,13 +95,14 @@ export function ferryRowsFromDb(
 
 /** Porty wiersza promu: z trasy rejsu, a bez niej z `LINE_PORTS`. */
 export function rowPorts(r: Pick<FerryRowView, 'line' | 'route'>): { from: FerryPortCode; to: FerryPortCode } {
-  const route = routeByCode(r.route);
-  return route ? { from: route.from, to: route.to } : LINE_PORTS[r.line];
+  const e = routeEnds(r.route);
+  return e ? { from: e.from, to: e.to } : LINE_PORTS[r.line];
 }
 
 /** Trasa wyjazdowa tego armatora (z katalogu). */
 function isLineOutbound(line: CrossingLine, route: Sailing['route']): boolean {
-  return outboundRoutesOf(line).includes(route);
+  /* BN9-b: także Terminal A (TLLA-HEL: Viking Line, Eckerö) i kody tras z bazy */
+  return isOperatorOutboundRoute(line, route);
 }
 
 export function ferryAlert(r: Pick<FerryRowView, 'status' | 'sea' | 'delayedIso'>): FerryAlert {
@@ -110,28 +114,56 @@ export function ferryAlert(r: Pick<FerryRowView, 'status' | 'sea' | 'delayedIso'
 }
 
 export type AltProposal =
-  | { kind: 'ALT'; from: CrossingLine; to: CrossingLine; reason: 'CANCELLED' | 'STORM'; vessel: string; sailings: Sailing[] }
-  | { kind: 'BOTH' }
-  | { kind: 'NODATA'; from: CrossingLine; to: CrossingLine; reason: 'CANCELLED' | 'STORM'; vessel: string };
+  | { kind: 'ALT'; from: CrossingLine; to: CrossingLine; reason: 'CANCELLED' | 'STORM'; vessel: string; sailings: Sailing[]; dest?: FerryCountry }
+  | { kind: 'BOTH'; dest?: FerryCountry }
+  | { kind: 'NODATA'; from: CrossingLine; to: CrossingLine; reason: 'CANCELLED' | 'STORM'; vessel: string; dest?: FerryCountry };
+
+/** Kraj portu docelowego trasy wiersza (SE / FI) — z katalogu, Terminal A i kody z bazy jak trasa rodziny. */
+function destCountryOf(r: Pick<FerryRowView, 'line' | 'route'>): FerryCountry | null {
+  const to = rowPorts(r).to;
+  return portByCode(to)?.country ?? null;
+}
 
 /**
  * PLAN 8.4 (E7-5, D-45, L-9): odwołanie albo sztorm na jednej przeprawie → najbliższe odejścia drugiej,
  * tylko gdy druga jest bez odwołań i sztormu. Oba zagrożone → bez propozycji. Brak rozkładu drugiej → „Brak danych”.
+ * Polferries ⇄ Stena — bez zmian. BN9-b: przeprawy z Estonii — inny armator w ten sam kraj (Finlandia: Tallink,
+ * Viking Line, Eckerö; Szwecja: Tallink ⇄ DFDS), pierwszy bez odwołań i sztormu, z najbliższym odejściem.
  */
 export function altProposal(rows: readonly FerryRowView[], sailings: readonly Sailing[], nowMs: number): AltProposal | null {
-  const bad = (line: CrossingLine) => rows.find((r) => r.line === line && (ferryAlert(r) === 'CANCELLED' || ferryAlert(r) === 'STORM')) ?? null;
+  const isBad = (r: FerryRowView) => ferryAlert(r) === 'CANCELLED' || ferryAlert(r) === 'STORM';
+  const bad = (line: CrossingLine) => rows.find((r) => r.line === line && isBad(r)) ?? null;
   const pol = bad('POLFERRIES');
   const sten = bad('STENA');
   if (pol && sten) return { kind: 'BOTH' };
   const hit = pol ?? sten;
-  if (!hit) return null;
-  const from = hit.line;
-  const to: CrossingLine = from === 'POLFERRIES' ? 'STENA' : 'POLFERRIES';
-  const reason = ferryAlert(hit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
-  const near = nearestCrossingSailings(sailings, nowMs);
-  const list = to === 'STENA' ? near.stena : near.polferries;
-  if (!list.length) return { kind: 'NODATA', from, to, reason, vessel: hit.vessel };
-  return { kind: 'ALT', from, to, reason, vessel: hit.vessel, sailings: list };
+  if (hit) {
+    const from = hit.line;
+    const to: CrossingLine = from === 'POLFERRIES' ? 'STENA' : 'POLFERRIES';
+    const reason = ferryAlert(hit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
+    const near = nearestCrossingSailings(sailings, nowMs);
+    const list = to === 'STENA' ? near.stena : near.polferries;
+    if (!list.length) return { kind: 'NODATA', from, to, reason, vessel: hit.vessel };
+    return { kind: 'ALT', from, to, reason, vessel: hit.vessel, sailings: list };
+  }
+  /* BN9-b: przeprawy z Estonii */
+  const bHit = rows.find((r) => !LEGACY_OPERATORS.includes(r.line) && isBad(r));
+  if (!bHit) return null;
+  const dest = destCountryOf(bHit);
+  if (!dest) return null;
+  const reason = ferryAlert(bHit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
+  const near = nearestCrossingByOperator(sailings, nowMs);
+  const toDest = (s: Sailing) => portByCode(routeEnds(s.route)?.to ?? null)?.country === dest;
+  const cands = FERRY_OPERATORS.map((o) => o.code).filter((op) => op !== bHit.line && !LEGACY_OPERATORS.includes(op)
+    && FERRY_ROUTES.some((r) => r.outbound && r.operators.includes(op) && portByCode(r.to)?.country === dest));
+  if (!cands.length) return null;
+  const okCands = cands.filter((op) => !rows.some((r) => r.line === op && isBad(r) && destCountryOf(r) === dest));
+  if (!okCands.length) return { kind: 'BOTH', dest };
+  for (const op of okCands) {
+    const list = (near[op] ?? []).filter(toDest);
+    if (list.length) return { kind: 'ALT', from: bHit.line, to: op, reason, vessel: bHit.vessel, sailings: list, dest };
+  }
+  return { kind: 'NODATA', from: bHit.line, to: okCands[0], reason, vessel: bHit.vessel, dest };
 }
 
 /* ---------- drogi ---------- */
