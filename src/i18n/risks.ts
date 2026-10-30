@@ -86,7 +86,7 @@ const pl: Dict = {
   /* D-20261020-1501-01 — sprawy z l3_scan (baza: l3:NO_SAILING / l3:NO_TRACKING) */
   rk_no_sailing: "{code}: brak rejsu promu w awizacji",
   rk_no_sailing_text: "Rejs można dodać w awizacji także później; do tego czasu sprawa zostaje otwarta.",
-  rk_no_sailing_next: "Przewoźnik albo Administrator HHL: Edytuj awizację → Rejs do Szwecji",
+  rk_no_sailing_next: "Przewoźnik albo Administrator HHL: Edytuj awizację → Rejs promem",
   rk_no_awiz_se: "{code}: brak awizacji kierowcy SE (48\u00a0h przed dostawą)",
   rk_no_awiz_se_text: "Przepięcie naczepy: kierowca, telefon i ciągnik odcinka SE trzeba podać najpóźniej 48\u00a0h przed dostawą.",
   rk_no_awiz_se_next: "Przewoźnik albo Administrator HHL: Edytuj awizację → Odcinek SE",

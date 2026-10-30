@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import {
   autoRiskCode, autoStatusText, buildSeedSailings, cancelledSailingRisks, checkSailingDraft, effDeparture,
-  ferryFromSailing, historicalSailings, sailingAssignDenied, selectableSailings,
+  ferryFromSailing, hasDeparted, historicalSailings, sailingAssignDenied, selectableSailings,
 } from '../src/lib/sailings';
 import { sailingFromRow, riskFromRow } from '../src/data/mappers';
 import { friendlyDbError } from '../src/lib/orderNumbers';
@@ -33,6 +33,17 @@ describe('M10 przypisanie rejsu', () => {
       S({ id: 'e', departureAt: '2026-09-23T12:00:00Z', arrivalAt: '2026-09-24T06:00:00Z', delayedDepartureAt: '2026-09-23T18:00:00Z', status: 'OPOZNIONY' })];
     expect(selectableSailings(all, NOW, 'c').map((s) => s.id)).toEqual(['c', 'e', 'a']);
     expect(effDeparture(all[4])).toBe('2026-09-23T18:00:00Z');
+  });
+  it('F7 #668 N5: actualDepartureAt (AIS) → hasDeparted; SCX nie widzi na liście przyszłych', () => {
+    const aisPast = S({
+      id: 'ais',
+      departureAt: '2026-09-24T18:00:00Z',
+      arrivalAt: '2026-09-25T12:00:00Z',
+      actualDepartureAt: '2026-09-23T12:00:00Z',
+    });
+    expect(hasDeparted(aisPast, NOW)).toBe(true);
+    expect(selectableSailings([aisPast, S({ id: 'f' })], NOW, null).map((s) => s.id)).toEqual(['f']);
+    expect(sailingAssignDenied('SCX', base, undefined, aisPast, NOW)).toBe('DEPARTED');
   });
   it('rezerwacja z rejsu: statek, godziny po opóźnieniu, status; odwołany → CANCELLED', () => {
     const f = ferryFromSailing(S({ delayedDepartureAt: '2026-09-24T19:00:00Z', delayedArrivalAt: '2026-09-25T13:00:00Z', status: 'OPOZNIONY' }), 'PF-1');
@@ -100,10 +111,11 @@ describe('D-20261020-1501-01 — rejsy historyczne tylko dla Administratora HHL'
     expect(sailingAssignDenied('HHL', base, undefined, S({ id: 'x', status: 'ODWOLANY', departureAt: '2026-09-20T16:00:00Z' }), NOW, 'HHL_ADMIN')).toBe('CANCELLED');
     expect(sailingAssignDenied('KSH', base, undefined, S({ status: 'ODWOLANY' }), NOW)).toBe('ROLE');
   });
-  it('lista historyczna: wypłynęły i dopłynęły (nie te w rejsie), bez odwołanych, najnowsze pierwsze', () => {
+  it('lista historyczna (#666 decyzja 52): już wypłynęły (także w drodze), bez odwołanych, najnowsze pierwsze', () => {
     const all = [past, onSea, S({ id: 'h3', departureAt: '2026-09-18T16:00:00Z', arrivalAt: '2026-09-19T10:00:00Z' }),
       S({ id: 'h4', departureAt: '2026-09-17T16:00:00Z', arrivalAt: '2026-09-18T10:00:00Z', status: 'ODWOLANY' }), S({ id: 'f1' })];
-    expect(historicalSailings(all, NOW).map((s) => s.id)).toEqual(['h1', 'h3']);
+    /* onSea (h2) wypłynął 10:00, NOW 14:32 — wchodzi do historycznych; f1 jeszcze nie wypłynął */
+    expect(historicalSailings(all, NOW).map((s) => s.id)).toEqual(['h2', 'h1', 'h3']);
   });
   it('5A (25.10): rejsy historyczne bez limitu dni — także sprzed pół roku; limit tylko jawnie', () => {
     const old = S({ id: 'h0', departureAt: '2026-03-01T16:00:00Z', arrivalAt: '2026-03-02T10:00:00Z' });

@@ -102,29 +102,46 @@ const MONTH: Record<string, string> = {
 
 export type YmdRange = { from: string; to: string };
 
-/** Zakresy dat z nagłówków sezonowych (EN „Jan 6th 2026 - Dec 23rd 2026”, „01.09.2026–21.06.2027”). */
+/** Zakresy dat z nagłówków sezonowych (EN „Jan 6th 2026 - Dec 23rd 2026”, „01.09.2026–21.06.2027”).
+ * F7 #668 r3: sortuj po pozycji w tekście (mieszane formaty EN / dd.mm.yyyy). */
 export function parseSeasonRanges(raw: string): YmdRange[] {
   const text = stripTags(raw).replace(/\u00a0/g, ' ');
-  const out: YmdRange[] = [];
+  const found: { from: string; to: string; pos: number }[] = [];
   const reEn =
     /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\s*[-–—]\s*(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\b/gi;
   let m: RegExpExecArray | null;
   while ((m = reEn.exec(text)) != null) {
     const from = `${m[3]}-${MONTH[m[1]!.toLowerCase()]!}-${m[2]!.padStart(2, '0')}`;
     const to = `${m[6]}-${MONTH[m[4]!.toLowerCase()]!}-${m[5]!.padStart(2, '0')}`;
-    out.push({ from, to });
+    found.push({ from, to, pos: m.index });
   }
   const reDot = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g;
   while ((m = reDot.exec(text)) != null) {
-    out.push({
+    found.push({
       from: `${m[3]}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`,
       to: `${m[6]}-${m[5]!.padStart(2, '0')}-${m[4]!.padStart(2, '0')}`,
+      pos: m.index,
     });
   }
-  return out;
+  /* F7 #668 r4: „1.1.–21.6.2027” — rok tylko przy końcu; (?!\d{2}) odpina pełne dd.mm.yyyy–….
+     F7 #668 r5 B1: „22.12.–6.1.2027” przez Nowy Rok → rok początku = rok końca − 1. */
+  const reDotEndYear =
+    /\b(\d{1,2})\.(\d{1,2})\.(?!\d{2})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g;
+  while ((m = reDotEndYear.exec(text)) != null) {
+    const yEnd = Number(m[5]!);
+    let from = `${yEnd}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`;
+    const to = `${yEnd}-${m[4]!.padStart(2, '0')}-${m[3]!.padStart(2, '0')}`;
+    if (from > to) {
+      from = `${yEnd - 1}-${m[2]!.padStart(2, '0')}-${m[1]!.padStart(2, '0')}`;
+    }
+    found.push({ from, to, pos: m.index });
+  }
+  found.sort((a, b) => a.pos - b.pos);
+  return found.map(({ from, to }) => ({ from, to }));
 }
 
+/** F7 #668 r3: pusta lista = poza sezonem (false). „Bez sezonu” obsłuż jawnie u wołającego. */
 export function ymdInRanges(ymd: string, ranges: YmdRange[]): boolean {
-  if (ranges.length === 0) return true;
+  if (ranges.length === 0) return false;
   return ranges.some((r) => ymd >= r.from && ymd <= r.to);
 }

@@ -4,7 +4,10 @@
  * z kodami (kliknięcie filtruje Harmonogram), pod tabelą zasięg rozkładów. Same obliczenia widoku (F8).
  */
 import type { FerryRoute, Load, Sailing } from '../types';
-import { FERRY_ROUTES, isOutbound as isOutboundRoute, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, type FerryOperator } from './ferryCatalog';
+import {
+  FERRY_ROUTES, isOutbound as isOutboundRoute, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute,
+  routeShortLabel, type FerryOperator,
+} from './ferryCatalog';
 import { effArrival, effDeparture } from './sailings';
 import { fmtDate, fmtDateTime } from './time';
 
@@ -18,10 +21,18 @@ export function lineOf(s: Pick<Sailing, 'route' | 'operator'>): SailLine {
   return operatorFromText(s.operator) ?? operatorsForRoute(s.route)[0] ?? 'POLFERRIES';
 }
 
-/** „GDN → NYN” — z kodów tras w katalogu. */
-export const ROUTE_SHORT: Record<FerryRoute, string> = Object.fromEntries(
-  FERRY_ROUTES.map((r) => [r.code, `${r.from} → ${r.to}`]),
-) as Record<FerryRoute, string>;
+/**
+ * „GDN → NYN” — z katalogu; #666 C: Proxy na `routeShortLabel` (Terminal A + trasy z RPC).
+ * Indeksacja `ROUTE_SHORT[code]` dla nieznanego kodu zwraca etykietę z helpera.
+ */
+export const ROUTE_SHORT: Record<string, string> = new Proxy(
+  Object.fromEntries([
+    ...FERRY_ROUTES.map((r) => [r.code, routeShortLabel(r.code)] as const),
+    ['TLLA-HEL', routeShortLabel('TLLA-HEL')] as const,
+    ['HELA-TLL', routeShortLabel('HELA-TLL')] as const,
+  ]),
+  { get: (t, prop) => (typeof prop === 'string' ? (t[prop] ?? routeShortLabel(prop)) : undefined) },
+);
 
 const TZ = 'Europe/Warsaw';
 

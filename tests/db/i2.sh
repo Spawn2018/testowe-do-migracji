@@ -1403,6 +1403,28 @@ val "D-1501: HHL_OPS + przyszły rejs → zgoda" $OPS_D15 \
 $PSQL -c "set session_replication_role=replica; update loads set sailing_id=null where id='$L_D15'" >/dev/null
 val "D-1501: SCX przypisuje rejs przyszły" $SCX \
   "update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15' returning 1" 1 commit
+# #666 F7 / 0351: plan w przyszłości, ale actual_departure_at ustawione → wypłynięty dla SCX/OPS.
+$PSQL -c "insert into vessels (id, name, operator) values
+ ('55555555-0000-0000-0000-00000000d15e','D150 Act','Polferries')
+ on conflict (id) do update set name=excluded.name" >/dev/null
+$PSQL -c "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, actual_departure_at, status, source) values
+ ('66666666-0000-0000-0000-00000000d15e','$P','55555555-0000-0000-0000-00000000d15e','GDN-NYN',
+  now() + interval '3 days', now() + interval '3 days 18 hours', now() - interval '1 hour',
+  'W_REJSIE','RECZNIE')
+ on conflict (id) do update set departure_at=excluded.departure_at, arrival_at=excluded.arrival_at,
+  actual_departure_at=excluded.actual_departure_at, status=excluded.status, vessel_id=excluded.vessel_id" >/dev/null
+$PSQL -c "set session_replication_role=replica; update loads set sailing_id=null where id='$L_D15'" >/dev/null
+err "#666/0351: SCX nie przypisze rejsu z actual_departure_at" $SCX \
+  "update loads set sailing_id='66666666-0000-0000-0000-00000000d15e' where id='$L_D15'" \
+  "jeszcze nie wypłynął"
+err "#666/0351: HHL_OPS nie przypisze rejsu z actual_departure_at" $OPS_D15 \
+  "update loads set sailing_id='66666666-0000-0000-0000-00000000d15e' where id='$L_D15'" \
+  "jeszcze nie wypłynął"
+val "#666/0351: HHL_ADMIN przypisuje rejs z actual_departure_at" $HHL \
+  "update loads set sailing_id='66666666-0000-0000-0000-00000000d15e' where id='$L_D15' returning 1" 1 commit
+# Przywróć przyszły rejs (jak przed 0351), żeby NO_SAILING nie otwierał się przy teście pozycji.
+$PSQL -c "set session_replication_role=replica; update loads set sailing_id='66666666-0000-0000-0000-00000000d15b' where id='$L_D15'" >/dev/null
+$PSQL -c "select l3_scan()" >/dev/null
 # F7 #370 (decyzja 20:01): pozycja bez linku nie wycisza; link wycisza (wycofane D1/N6).
 $PSQL -c "delete from positions where load_id='$L_D15'" >/dev/null
 $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values

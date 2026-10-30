@@ -25,10 +25,10 @@ const HTML = `
 `;
 
 describe('FERRY-STATUS — rozkład Stena Freight', () => {
-  it('token, okno dziś+6, oba kierunki, statusy i wcześniejszy odjazd', () => {
+  it('token, okno dziś+3 (F7 #668 N8 status; 60 d w fetchStenaDays), oba kierunki, statusy', () => {
     expect(freightSecurityToken('var ajax_object = {"security":"abc123"};')).toBe('abc123');
     const w = freightWindow(new Date('2026-10-05T22:00:00Z'));
-    expect(w).toEqual({ from: '2026-10-05', to: '2026-10-11', routeCode: 'GDKA' });
+    expect(w).toEqual({ from: '2026-10-05', to: '2026-10-08', routeCode: 'GDKA' });
     const { sailings, warnings } = parseStenaFreightTimetable(HTML);
     expect(warnings.filter((x) => /Struktura/.test(x))).toEqual([]);
     expect(sailings.map((s) => `${s.route}:${s.vessel}:${s.status}`)).toEqual([

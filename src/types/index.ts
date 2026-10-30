@@ -132,6 +132,8 @@ export interface Sailing {
   arrivalAt: string;
   delayedDepartureAt: string | null;
   delayedArrivalAt: string | null;
+  /** F7 #668 N5 / 0351: rzeczywiste wypłynięcie (AIS) — jak delayed, liczy się do „już wypłynął”. */
+  actualDepartureAt?: string | null;
   status: SailingStatus;
   source: 'DANE_STARTOWE' | 'RECZNIE' | FerryOperator;
 }

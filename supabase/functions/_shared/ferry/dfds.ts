@@ -1,9 +1,9 @@
 /**
- * BN2 — DFDS Paldiski ↔ Kapellskär (PLD-KPS / KPS-PLD), M/F Sirena Seaways.
+ * BN2 / #666 — DFDS Paldiski ↔ Kapellskär (PLD-KPS / KPS-PLD), M/F Sirena Seaways.
  *
- * LIVE: HTML tabeli tygodniowej (fixture / strona rozkładu) albo tekst wyciągnięty
- * z publicznego PDF sidugraafik. PDF graficzny freight bez tekstu → ostrzeżenie.
- * User-Agent uczciwy.
+ * Źródło główne: publiczny `/api/timetable` strony frachtowej („Dynamic schedule”).
+ * Zapas: PDF sezonowy ze strony (link „Download seasonal schedule”), potem HTML
+ * tabeli tygodniowej / stary PDF sidugraafik. User-Agent uczciwy.
  */
 import { localToUtc, type FerryRoute } from './polferries.ts';
 import {
@@ -12,9 +12,14 @@ import {
 
 export const DFDS_SCHEDULE_PAGE =
   'https://www.dfds.com/en/freight-ferries-and-logistics/routes-and-schedules/paldiski-kapellskar';
-/** Publiczny PDF z godzinami (tekstowy sidugraafik EE). */
+/** Publiczny endpoint Dynamic schedule (Next.js `/api/timetable`). */
+export const DFDS_TIMETABLE_API = 'https://www.dfds.com/api/timetable';
+/** Terminale frachtowe z Contentful (B2BTimetableSection). */
+export const DFDS_TERMINAL_PLD = 'EEPLN';
+export const DFDS_TERMINAL_KPS = 'SEKPS';
+/** Publiczny PDF z godzinami (tekstowy sidugraafik EE — zapas, gdy brak linku ze strony). */
 export const DFDS_WEEKLY_PDF_URL =
-  'https://assets.ctfassets.net/mivicpf5zews/2GDqCesfJrbDJq1OBxv848/7946dc316336b255c20153cee9f4cace/Paldiski_-_Kapellsk_r_s_idugraafik.pdf';
+  'https://assets.ctfassets.net/z860498abl84/Gy4OYoQ6LuDjJU4BuGKun/f8fe25019414d460662df90e830c3ba6/Schedule_Paldiski_-_Kapellsk%C3%A4r.pdf';
 export const DFDS_UA = 'Watch Tower (https://tower.log-mar.pl; ferry timetable)';
 export const DFDS_ATTRIBUTION = 'Rozkład: DFDS Paldiski–Kapellskär';
 
@@ -24,6 +29,10 @@ const SHIP: Record<string, string> = {
 };
 
 const ROUTES = new Set<FerryRoute>(['PLD-KPS', 'KPS-PLD']);
+const TERMINAL_ROUTE: Record<string, FerryRoute> = {
+  [`${DFDS_TERMINAL_PLD}>${DFDS_TERMINAL_KPS}`]: 'PLD-KPS',
+  [`${DFDS_TERMINAL_KPS}>${DFDS_TERMINAL_PLD}`]: 'KPS-PLD',
+};
 
 export interface DfdsSailing {
   route: FerryRoute;
@@ -95,6 +104,171 @@ export function parseDfdsSchedule(raw: unknown): DfdsParseResult {
     });
   }
   return { sailings, warnings };
+}
+
+/** URL Dynamic schedule (tydzień + kierunek). */
+export function dfdsTimetableUrl(opts: {
+  portOfLoading: string;
+  portOfDischarge: string;
+  dateFromIso: string;
+  dateToIso: string;
+}): string {
+  const q = new URLSearchParams({
+    dateFrom: opts.dateFromIso,
+    dateTo: opts.dateToIso,
+    portOfLoading: opts.portOfLoading,
+    portOfDischarge: opts.portOfDischarge,
+  });
+  return `${DFDS_TIMETABLE_API}?${q.toString()}`;
+}
+
+/** Okna tygodniowe (pon–niedz UTC) pokrywające horyzont od `now`. */
+export function dfdsWeekWindows(now: Date, daysAhead: number): { dateFromIso: string; dateToIso: string }[] {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const dow = start.getUTCDay();
+  const monday = new Date(start);
+  monday.setUTCDate(monday.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  const horizon = new Date(start);
+  horizon.setUTCDate(horizon.getUTCDate() + Math.max(0, daysAhead));
+  const out: { dateFromIso: string; dateToIso: string }[] = [];
+  for (let d = new Date(monday); d <= horizon; d.setUTCDate(d.getUTCDate() + 7)) {
+    const from = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
+    const to = new Date(from);
+    to.setUTCDate(to.getUTCDate() + 6);
+    to.setUTCHours(23, 59, 59, 999);
+    out.push({ dateFromIso: from.toISOString(), dateToIso: to.toISOString() });
+  }
+  return out;
+}
+
+function normalizeVessel(name: string): string | null {
+  const key = name.trim().toLowerCase();
+  if (!key) return null;
+  if (SHIP[key]) return SHIP[key]!;
+  if (key.startsWith('m/f ')) return name.trim();
+  return SHIP[key.replace(/^m\/f\s+/, '')] ?? null;
+}
+
+function isoToUtc(iso: string): string | null {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
+/**
+ * #666 — odpowiedź `/api/timetable` (tablica rejsów z terminalami EEPLN/SEKPS).
+ */
+export function parseDfdsTimetableApi(raw: unknown): DfdsParseResult {
+  const warnings: string[] = [];
+  const sailings: DfdsSailing[] = [];
+  if (!Array.isArray(raw)) {
+    warnings.push('Struktura rozkładu DFDS Dynamic zmieniona: oczekiwano tablicy.');
+    return { sailings, warnings };
+  }
+  if (raw.length === 0) {
+    warnings.push('DFDS Dynamic: brak rejsów w odczycie.');
+    return { sailings, warnings };
+  }
+  for (let i = 0; i < raw.length; i++) {
+    const row = raw[i] as Record<string, unknown> | null;
+    if (!row || typeof row !== 'object') {
+      warnings.push(`DFDS Dynamic: nieczytelny rejs nr ${i + 1}.`);
+      continue;
+    }
+    const load = String(row.portOfLoading ?? '').toUpperCase();
+    const disc = String(row.portOfDischarge ?? '').toUpperCase();
+    const route = TERMINAL_ROUTE[`${load}>${disc}`];
+    if (!route) {
+      warnings.push(`DFDS Dynamic: nieznana trasa ${load}→${disc} — pominięty.`);
+      continue;
+    }
+    const vessel = normalizeVessel(String(row.vehicleName ?? ''));
+    if (!vessel) {
+      warnings.push(`DFDS Dynamic: nieznany statek „${row.vehicleName}” — pominięty.`);
+      continue;
+    }
+    const departureUtc = isoToUtc(String(row.scheduledDeparture ?? ''));
+    const arrivalUtc = isoToUtc(String(row.scheduledArrival ?? ''));
+    if (!departureUtc || !arrivalUtc) {
+      warnings.push(`DFDS Dynamic ${route}: nieczytelne godziny.`);
+      continue;
+    }
+    sailings.push({ route, vessel, departureUtc, arrivalUtc });
+  }
+  if (sailings.length === 0 && warnings.length === 0) {
+    warnings.push('DFDS Dynamic: brak rejsów w odczycie.');
+  }
+  return { sailings, warnings };
+}
+
+/** Link „Download seasonal schedule” ze strony frachtowej (PDF może się zmieniać). */
+export function extractDfdsSeasonalPdfUrl(html: string): string | null {
+  if (!html) return null;
+  const m = html.match(/https:\/\/(?:assets|images)\.ctfassets\.net\/[^"'\\\s>]+\.pdf/i);
+  if (!m) return null;
+  const url = m[0]!.replace(/\\u0026/g, '&').replace(/&amp;/g, '&');
+  if (!/Paldiski|Kapellsk|Schedule/i.test(url)) return null;
+  return url;
+}
+
+/** Bez duplikatów trasa + odjazd (pierwszeństwo pierwszego źródła). */
+export function mergeDfdsSailings(primary: DfdsSailing[], secondary: DfdsSailing[]): DfdsSailing[] {
+  const seen = new Set(primary.map((s) => `${s.route}|${s.departureUtc}`));
+  const out = [...primary];
+  for (const s of secondary) {
+    const k = `${s.route}|${s.departureUtc}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out;
+}
+
+/** Doba lokalna odjazdu (PLD = Tallinn, KPS = Sztokholm) — nie slice UTC (00:30 EET ≠ poprzedni dzień). */
+export function dfdsLocalDayKey(s: DfdsSailing): string {
+  const tz = s.route === 'PLD-KPS' ? 'Europe/Tallinn' : 'Europe/Stockholm';
+  return `${s.route}|${ymdInTz(new Date(s.departureUtc), tz)}`;
+}
+
+/** F7 #668 N1/r3: zapas PDF/HTML tylko dla (trasa + doba lokalna) nieobecnej w API. */
+export function mergeDfdsMissingDays(api: DfdsSailing[], fallback: DfdsSailing[]): DfdsSailing[] {
+  const days = new Set(api.map(dfdsLocalDayKey));
+  const out = [...api];
+  const seen = new Set(api.map((s) => `${s.route}|${s.departureUtc}`));
+  for (const s of fallback) {
+    if (days.has(dfdsLocalDayKey(s))) continue;
+    const k = `${s.route}|${s.departureUtc}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+  }
+  return out;
+}
+
+export type DfdsFailedWindow = {
+  dateFromIso: string;
+  dateToIso: string;
+  route: FerryRoute;
+};
+
+/** F7 #668 r6: przy częściowej awarii PDF tylko dla tygodni×kierunków, które padły.
+ * Okno = chwile UTC [dateFromIso, dateToIso] (zakres zapytania API) — nie 8 dób lokalnych.
+ * Doba lokalna zostaje w mergeDfdsMissingDays. */
+export function filterDfdsFallbackToFailedWeeks(
+  fallback: DfdsSailing[],
+  failed: readonly DfdsFailedWindow[],
+): DfdsSailing[] {
+  if (failed.length === 0) return fallback;
+  return fallback.filter((s) => {
+    const dep = Date.parse(s.departureUtc);
+    if (!Number.isFinite(dep)) return false;
+    return failed.some((w) => {
+      if (w.route !== s.route) return false;
+      const from = Date.parse(w.dateFromIso);
+      const to = Date.parse(w.dateToIso);
+      return Number.isFinite(from) && Number.isFinite(to) && dep >= from && dep <= to;
+    });
+  });
 }
 
 type WeeklyLeg = {

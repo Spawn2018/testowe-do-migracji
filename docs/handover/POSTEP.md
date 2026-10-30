@@ -7198,6 +7198,103 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 #661 nieblokujący):** test `parseDigitrafficPortCalls` Terminal A (Viking XPRS/Finlandia → `TLLA-HEL`/`HELA-TLL`, Tallink → `TLL-HEL`); job Viking+PoT bez duplikatów + RECZNIE nietknięte; PLAN §4 BN2 SCALONE + dopisek. Po deploy #661: ręczny `ferry-schedule` → #640. Potem BN3.
 - Bez push na main.
 
+## 2026-10-30 15:47 — #666 PILNE: awizacja + trasy TLLA + horyzont 60 d (krok 1)
+
+- Skrzynka: **#666** (Spawn2018, `pilne`+`dla-cursora`) — przed DFDS/BN3; uzupełnienia 15:31/15:33/15:35/15:42 (decyzje 48a–56 przyjęte). #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak otwartych PR; #665 SCALONE `799ea18d` (na `main`).
+- **Krok 1 (#666 B/C/D/E częściowo):** decyzje 51–55 w awizacji (`reachableSailings` bez odcięcia załadunkiem; `awizacjaOperators` = wszyscy; historyczne = wypłynięte, też Polferries; „Rejs promem” + oznaczenie przed załadunkiem + komunikat pusty); `TLLA-HEL`/`HELA-TLL` w `FERRY_ROUTES` + `routeShortLabel`; Stena/Tallink/Eckerö/DFDS horyzont 60 d (`freightWindow` +59, `fetchStenaDays` 60). **Dalej w #666:** A Viking Cargo; DFDS Dynamic endpoint; RPC historyczne dla SCX/HHL_OPS; Viking sales zostaje zapasem.
+- Bez push na main.
+
+## 2026-10-30 16:50 — #666 A Viking Cargo + fix unit + #667 w planie
+
+- Skrzynka: **#667** (Spawn2018, `pilne`) wpisane §4 po #666 / przed BN3 (pomarańczowe drogi, SE-KAA, cron HERE). #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 — brak „F7: gotowe”; unit wcześniej FAIL (TS `outboundRoutesOf`); db/visual ✔ na `99aa30b3`.
+- **Krok (#666 A + fix):** Viking Cargo HEL–TLL jako źródło główne (`VIKING_CARGO_HEL_TLL_PAGE`), sales zapas, SOURCE_DOWN tylko gdy oba zawiodą; wyjątki „Planned changes” (24.12 tylko 10:30); horyzont 60 d; fixture z prawdziwej strony Cargo; TS `fromSeed: string[]`. **Dalej w #666:** DFDS Dynamic; RPC historyczne. Potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 18:30 — #669+#670 SCALONE; #668 F7 r1 (Stena równolegle + testy + 0351)
+
+- Skrzynka: #666 W TOKU; #667 po #666 (nie przerywa); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#669** SCALONE `85aef636` (F7 gotowe @ `2a0588e`); **#670** SCALONE `85ee37f1` (F7 gotowe @ `4774580`). CI zielone, merge — nie fork.
+- **Krok (#666 F7 r1):** `fetchStenaDays` równolegle limit 4; SOURCE_DOWN STENA tylko gdy `fetchedOk===0` lub struktura bez rejsów; migracja **0351** (`actual_departure_at` w `guard_load_update`); testy unit (załadunek 20.11 / Stena+Tallink, Polferries historyczne, komunikaty 55, Cargo 04.00*, job Stena concurrency/częściowa awaria) + i2 DB. **Dalej:** DFDS Dynamic po F7; potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 19:10 — #671 DP + #666 DFDS Dynamic
+
+- Skrzynka: **#671** (Spawn2018) → PLAN §4 rejestr DP-1…DP-12 + BN9-c1…c6 + ZASADY_CIAGLEJ_PRACY (sekcja DP); #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 — brak „F7: gotowe do scalenia”; unit/visual ✔ @ 28c062a0; db FAIL i2 (NO_TRACKING po 0351) — naprawione w tym kroku.
+- **Krok (#666 E DFDS Dynamic):** publiczne `www.dfds.com/api/timetable` (EEPLN↔SEKPS, tygodnie×2, lim. 4); zapas PDF sezonowy ze strony + HTML; SOURCE_DOWN gdy wszystkie zawiodą; fixture + testy parser/job; i2: przywróć przyszły rejs po teście 0351. **Dalej:** F7 #668; potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 19:15 — #666 DFDS Dynamic + #671 rejestr DP; fix i2
+
+- Skrzynka: **#671** (Spawn2018) wpisane — rejestr DP-1…12, BN9-c1…c6, zasada DP w `ZASADY_CIAGLEJ_PRACY.md`. #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #668; CI `28c062a0` — unit/visual ✔, db FAIL i2 D-1501 NO_TRACKING (po 0351).
+- **Krok:** DFDS Dynamic — `/api/timetable` EEPLN↔SEKPS, tygodnie do 60 d, lim. 4; zapas PDF ze strony + HTML; fixture API; fix i2: przywróć przyszły rejs przed testem pozycji. **Dalej:** F7 #668; potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 19:40 — #666 DP-9 routeLabelPl + DP-10
+
+- Skrzynka: **#671** zamknięte (wpisane @ b6d4a85d). #667 po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: PR #668 — CI zielone @ b6d4a85d (unit/db/visual); brak „F7: gotowe do scalenia”. PR #672 wygląd DP — bez F7.
+- **Krok (DP-9 + DP-10 w #668):** merge main (#669+#670); `routeLabelPl` — alias → seed (`PORT_PL`) → nazwy portów/terminali ze snapshotu RPC → `routeEnds`; `ferryPortPl` przez `routeLabelPl`. Test DP-9 w `bn1-ferry-dict-rpc`; DP-10 w `bn2-ferry-schedule` (+ job). **Dalej:** F7 #668; potem **#667**.
+- Bez push na main.
+
+## 2026-10-30 20:03 — #668 CI zielone @ 5aaa0544; DP-3/4/5/7/8 w #672
+
+- Skrzynka: #666 W TOKU (PR #668); #667 pilne **po #666** (nie przerywa); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — już w planie.
+- Scalanie: brak „F7: gotowe do scalenia” na #668 i #672. CI #668 @ `5aaa0544`: unit ✔, db ✔ (`41109056412`), visual ✔ (`41109056390`). PR #672 (wyglad DP-3/4/5/7/8) — CI zielone, bez F7.
+- **Krok:** status DP-3/4/5/7/8 → „w PR #672”; PLAN/POSTEP — CI zielone, czekam F7 #668. Komentarz „gotowe do F7”. **Dalej:** F7 #668 → **#667** mapy przed BN3.
+- Bez push na main.
+
+## 2026-10-30 20:35 — #672 SCALONE; #668 F7 r2 poprawki (Cargo + N1–N9)
+
+- Skrzynka: #666 W TOKU; #667 pilne po #666; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#672** SCALONE `8ec16105` (F7 „gotowe do scalenia” @ `6e92dde`, CI zielone). #668 — F7 r2 POPRAWKI (nie „gotowe”).
+- **Krok (#668 F7 r2):** Bloker 1 — sezon Cargo z akordeonu / bez pustego zakresu; fixture accordion; N1/N2 DFDS; N3 etykiety 14 tras; N4 `historicalSailingsAllowed`; N5 `actualDepartureAt`; N6 statek z tabeli w wyjątkach; N8 Freight dziś+3; N9 Stena budżet 90 s; DP-14…21 w rejestrze. Bloker 2 SailingsPanel → DP-20 (koordynator). **Dalej:** F7 #668 → **#667**.
+- Bez push na main.
+
+## 2026-10-30 20:35 — #668 F7 r2: Viking sezony + N1/N2/N5/N6/N8/N9 + DP-20/21
+
+- Skrzynka: #666 F7 r2 POPRAWKI; #667 PR #673 krok A; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”; poprawki w #668.
+- **Krok (F7 r2):** Bloker 1 — sezon tabeli = ostatni zakres w prefiksie HTML / accordion (nie okno 600); tabela bez sezonu → pomiń; fixture accordion ~750 znaków; test unikalności 30.10 + Cinderella tylko lato 2027. N1/N2 DFDS (mergeMissingDays; bez PDF gdy API OK). N5 `actualDepartureAt` + `hasDeparted`. N6 statek z tabeli w Planned changes. N8 `freightWindow` 3 d (status). N9 Stena budżet 90 s. DP-20/21 w PLAN. **Dalej:** N3/N4 testy + CI → gotowe do F7.
+- Bez push na main.
+
+## 2026-10-30 21:15 — #668 F7 r3 poprawki (Viking akordeon + DFDS doba lokalna)
+
+- Skrzynka: #666 W TOKU (PR #668); #667 po #666 (PR #673 A+B w stash/CI); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”; F7 r3 POPRAWKI w #668 (nie main). Kolejność: #668 przed #673 (0351→0352).
+- **Krok (F7 r3):** Bloker 1 — sezon = ostatnie otwarcie `c-accordion__item` przed tabelą; bez `seasonAll` przy akordeonie; fixture + 2. element bez dat; Cinderella 22.6–8.8.2027 (`ymdInRanges` w Planned changes). Bloker 2 — `mergeDfdsMissingDays` klucz `route|ymdInTz` (Tallinn/Sztokholm). Uwagi: `parseSeasonRanges` sort; `ymdInRanges([])=false` + eckero; DFDS częściowe API→PDF; N2/N3/N4/N9 testy; 0351 Cinderella/Gabriella. DP-21: prawdziwy HTML Cargo czeka na IP domowe (403 Cloudflare z DC). Unit fokus 65/65. **Dalej:** F7 #668 → **#667**.
+- Bez push na main.
+
+## 2026-10-30 21:45 — #668 F7 r4 poprawki (trasa akordeonu + DFDS 00:30)
+
+- Skrzynka: #666 W TOKU (PR #668); #667 po #666 (PR #673 F7 r1 POPRAWKI B1–B3 czeka); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”; CI #668 @ 3ae700fc było zielone; F7 r4 POPRAWKI. Kolejność: #668 (0351) → #673 → #674.
+- **Krok (F7 r4):** Bloker 1 — trasa = attrs → nagłówek tabeli → ostatnia etykieta w kawałku akordeonu; zapas ostatnie `<details>`; test dwóch tabel w jednym elemencie. Bloker 2 — test merge 00:30 lokalnie (UTC poprzedniej doby) PLD+KPS. Uwagi: `d.m.–d.m.yyyy`; PDF tylko padnięte tygodnie×kierunki; Stena `wallNow` + tekst „pobrań (trasa×dzień)”; Planned changes per kierunek + najbliższa godzina. **Dalej:** CI → gotowe do F7 → #667.
+- Bez push na main.
+
+## 2026-10-30 22:40 — #668 F7 r5 poprawki (sezon NY + DFDS pusty tydzień)
+
+- Skrzynka: #666 W TOKU (PR #668); #667 po #666 (PR #673 F7 r1 @ 08ca23db gotowe do F7); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#674 SCALONE** `8f916302`. #668/#673 bez „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352/0353).
+- **Krok (F7 r5):** B1 — `parseSeasonRanges` `22.12.–6.1.2027` → rok początku = rok końca−1. B2 — test trasy tylko w h4 (obie kolejności) + dwa `<details>` bez `c-accordion`. DFDS: HTTP+JSON pusty tydzień = OK (bez PDF); `filterDfdsFallbackToFailedWeeks` granice w TZ lokalnej; job: API bez pon. + kolejne 503 → odwołany nie wraca, padnięte z PDF. Planned changes: Tallinn-only head + nearestVessel (17:00→Cinderella) + ostrzeżenie Mariehamn. Unit fokus 63/63. **Dalej:** CI → gotowe do F7 → scalenie → #667.
+- Bez push na main.
+
+## 2026-10-30 23:20 — #668 F7 r6 POPRAWKI (DFDS emptyOk + okno UTC)
+
+- Skrzynka: #666 ten PR (F7 r6); #667 @ 72b48247 gotowe do F7; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352–0354).
+- **Krok (F7 r6):** B1 — `emptyOk` tylko `Array.isArray && length===0`; `{}`/nieparsowalne → failedWindow + struktura; `apiComplete` tylko przy rejsach; wszystkie `[]` → PDF. Uwaga 1 — test lastDetailsChunk (3× details). Uwaga 2 — filter PDF okno UTC [from,to]. Unit bn2-ferry-* 65/65. **Dalej:** CI → gotowe do F7 → scalenie → #667.
+- Bez push na main.
+
+## 2026-10-30 23:50 — #668 F7 r7 POPRAWKI (PDF→MEDIUM + B1/B2)
+
+- Skrzynka: #666 ten PR (F7 r7); #667 F7 r3 POPRAWKI (SE_E22=0298 + kaaDeviationOk) — po #668; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. CI r6 @ 0430f292 było zielone; nowy commit unieważnia.
+- **Krok (F7 r7):** decyzja 50 — `apiSailingsCount`; resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM („główne źródło… zapas PDF”). B1 — tydz.1 PLD `{}`/junk/nieczytelne + reszta OK → PDF + „częściowa awaria API (19/20)”; deterministyczne `{}`+PDF / `{}` bez PDF. B2 — h4: HEL–TLL, potem TLL–HEL. Unit bn2-ferry-* 66/66. **Dalej:** CI → gotowe do F7 → #667.
+
 ## 2026-10-30 20:10 — #667 krok A (mapPool PROD) przy F7 #668
 
 - Skrzynka: #666/#667/#608 w planie; #550 WSTRZYMANE; #671 zamknięte (rejestr DP).
@@ -7239,4 +7336,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #666 W TOKU (PR #668 @ `f0dfbc61` — F7 r7; CI db/visual w toku; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
 - Scalanie: brak „F7: gotowe do scalenia” na #668/#673. Kolejność: #668 (0351) → #673 (0352–0354). Bez push na main.
 - **Krok (F7 r3 #673):** B5 — 0354 SE_E22 = 30 pkt z 0298 (Vagnhärad 17.50/58.95; Brömsebro 15.99); tylko origin HERE + Luleå E4/97. B4 — `kaaDeviationOk` sparse dla SE_E22/INLAND (controlPts ≤2 km; linia→korytarz 15 km); TRACK bez zmian. Uwagi: B2 render ZonesMap; usunięty `environmentMatchGlob` i martwy `stenaSeInlandCorridorCode`; test `hereRoadsInFlight`. Unit fokus i667 ✔. **Dalej:** CI → gotowe do F7; potem D/E/F.
+
+## 2026-10-31 00:25 — #668 SCALONE; #673 merge main + DP-29…32
+
+- Skrzynka: **#666** SCALONE; **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#668 SCALONE** `53890480` (F7 gotowe @ `f0dfbc61` / **0351**, 23:17Z). #673 — merge main; F7 r3 @ `ee43be3a` wcześniej; **czekam F7 „gotowe do scalenia”**.
+- **Krok:** konflikty PLAN/POSTEP po merge main; #666 → SCALONE; rejestr **DP-29…32** (F7 #668 r8 nieblokujące). Dalej: CI → F7 → deploy → DP-21 / ręczny ferry-schedule.
+- Bez push na main.
+
 - Bez push na main.
