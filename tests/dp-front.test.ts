@@ -82,12 +82,7 @@ describe('DP-3, DP-5 · Harmonogram › Rejsy (U1–U3)', () => {
     for (const bad of ['GDN-KAA', 'ZZZ-QQQ', '']) expect(manualRouteError(bad)).toBe('sv_route_unknown_err');
     expect(sv('pl', 'sv_route_unknown_err')).toBe('Nieznana trasa — wybierz trasę z listy');
   });
-  it('panel używa tych reguł (pigułka i komunikat błędu w formularzu)', () => {
-    const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
-    expect(panel).toMatch(/showRouteUnknown\(r\.sailing\)/);
-    expect(panel).toMatch(/manualRouteError\(route\)/);
-    expect(panel).toMatch(/data-sail-error/);
-  });
+  /* DP-33: podłączenie w panelu sprawdza render w tests/dp-front-4.jsdom.test.ts (pigułka, komunikat, brak zapisu). */
 });
 
 describe('DP-7 · tory promów z jednego źródła', () => {
@@ -101,12 +96,7 @@ describe('DP-7 · tory promów z jednego źródła', () => {
     expect(ferryLaneLines(new Set(['FERRY-GDN-NYN']))).toHaveLength(1 + extra);
     expect(ferryLaneLines(new Set(HERE_FERRY_LEGS))).toHaveLength(extra);
   });
-  it('mapPool i CorridorMap rysują przez drawFerryLanes', () => {
-    const c = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
-    expect(c).toMatch(/drawFerryLanes\(layers\.ferryLeg, new Set\(ferries\.map\(\(f\) => f\.leg\)\)\)/);
-    expect(c).not.toMatch(/WATER_TRACKS_EXTRA|WATER_GDN_NYN|WATER_GDY_KAA/);
-    expect(readFileSync('src/components/map/mapPool.ts', 'utf8').match(/drawFerryLanes\(ferryLeg\)/g)?.length).toBe(1);
-  });
+  /* DP-33: rysowanie przez drawFerryLanes — test zachowania w tests/dp-front-4.jsdom.test.ts. */
 });
 
 describe('DP-4 · trasa auta na promie bez rejsu', () => {
@@ -146,13 +136,7 @@ describe('DP-8 · statki z tabeli vessels', () => {
   });
   it('zapas: stała lista BN9-b, w panelu bez stałej VESSELS', () => {
     expect(VESSELS_FALLBACK.map((x) => x.op)).toEqual(['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS']);
-    const panel = readFileSync('src/views/SailingsPanel.tsx', 'utf8');
-    expect(panel).not.toMatch(/const VESSELS\b/);
-    expect(panel).toMatch(/vesselsLoader/);
-    /* DP-16/17: jeden moduł z warunkiem paczki produkcyjnej (I-2) dla Rejsów i map */
-    const load = readFileSync('src/lib/vesselsLoad.ts', 'utf8');
-    expect(load).toMatch(/import\('\.\.\/data\/vesselsServer'\)/);
-    expect(load).toMatch(/VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED/);
+    /* DP-33: panel i paczka demo — test zachowania w tests/dp-front-4.jsdom.test.ts (lista zapasowa, brak loadera w demo). */
   });
 });
 

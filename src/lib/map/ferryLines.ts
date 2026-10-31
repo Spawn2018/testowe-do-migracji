@@ -102,7 +102,7 @@ export type ExtraWaterTrack = Exclude<WaterTrackId, 'GDN-NYN' | 'GDY-KAA'>;
  * Tory wodne [szer., dł.] — od wody przy terminalu wyjazdowym do wody przy docelowym (nie są geometrią HERE). Wyznaczone
  * po wodzie na wielokątach lądu OpenStreetMap (land-polygons, 26.10.2026; najkrótsza droga z zapasem od brzegu przez
  * punkty kursu armatora) i sprawdzone: żaden odcinek nie przecina lądu. Ten sam styl linii co `WATER_GDN_NYN` /
- * `WATER_GDY_KAA`. Rysowane tylko, gdy trasę ma widoczny transport (dziś żaden — mapa bez zmian).
+ * `WATER_GDY_KAA`. Rysowane zawsze (od BN9-b, przez `ferryLaneLines`) — na mapach korytarza i na mapie Stref (DP-13).
  */
 export const WATER_TRACKS_EXTRA: Record<ExtraWaterTrack, readonly LatLng[]> = {
   /* Tallinn (Vanasadam) → Tallinna laht między Paljassaare a Viimsi, na zachód od Aegna → Zatoka Fińska → podejście do
