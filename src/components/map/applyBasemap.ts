@@ -296,7 +296,7 @@ export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';
 let hereRoadsSessionAt = 0;
 /** #667 F7 r2: równoległe mapPool+CorridorMap dzielą jedną obietnicę POST (bez dwóch płatnych tras). */
 let hereRoadsInFlight: Promise<LatLng[][]> | null = null;
-const HERE_ROADS_SESSION_MS = 5 * 60_000;
+let HERE_ROADS_SESSION_MS = 5 * 60_000;
 const HERE_ROADS_TIMEOUT_MS = 15_000;
 
 /** #667 F7 r4: reset cache/in-flight w testach jednostkowych `loadRoadLines`. */
@@ -304,6 +304,11 @@ export function __resetRoadLinesCacheForTests(): void {
   displayState = null;
   hereRoadsSessionAt = 0;
   hereRoadsInFlight = null;
+}
+
+/** #667 F7 r6 B6: okno sesji 0 w teście in-flight (żeby drugi call nie odpadał po finally). */
+export function __setHereRoadsSessionMsForTests(ms: number): void {
+  HERE_ROADS_SESSION_MS = ms;
 }
 
 /** #667 F7 r1 N4: loadRoadLines + loadFerryLines dzielą cache `readMapDisplayState` (TTL 60 s). */

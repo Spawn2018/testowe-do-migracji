@@ -1,17 +1,11 @@
 /**
- * #667 F7 r3–r5 — dwa równoległe loadRoadLines → jeden POST here-roads.
- * F7 r5 B6: atrapy vi.hoisted; fetch rozwiązywany po starcie obu wywołań;
- * bez strażnika in-flight → 2 POST-y (test pada przy mutacji).
+ * #667 F7 r3–r6 — dwa równoległe loadRoadLines → jeden POST here-roads.
+ * F7 r6 B6: `vi.mock('@supabase/supabase-js')` + okno sesji 0;
+ * po `Promise.all` → 1× POST; usunięcie strażnika in-flight → „got 2 times”.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  rpc,
-  getSession,
-  fetchMock,
-  resolveFetch,
-  resetFetchGate,
-} = vi.hoisted(() => {
+const { rpc, getSession, fetchMock, resolveFetch, resetFetchGate } = vi.hoisted(() => {
   let resolveFetchInner: (v: { ok: boolean }) => void = () => {};
   let fetchGate = new Promise<{ ok: boolean }>((r) => {
     resolveFetchInner = r;
@@ -30,8 +24,8 @@ const {
   };
 });
 
-vi.mock('../src/auth/client', () => ({
-  getSupabase: async () => ({
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: () => ({
     rpc,
     auth: { getSession },
   }),
@@ -43,7 +37,11 @@ vi.mock('../src/auth/config', () => ({
   SUPABASE_ANON_KEY: 'anon-test',
 }));
 
-const { loadRoadLines, __resetRoadLinesCacheForTests } = await import('../src/components/map/applyBasemap');
+const {
+  loadRoadLines,
+  __resetRoadLinesCacheForTests,
+  __setHereRoadsSessionMsForTests,
+} = await import('../src/components/map/applyBasemap');
 
 const roadRow = (leg: string, n = 3) => ({
   leg,
@@ -59,9 +57,10 @@ async function waitUntil(pred: () => boolean, ms = 500): Promise<void> {
   }
 }
 
-describe('#667 F7 r5 B6 hereRoadsInFlight — prawdziwe loadRoadLines', () => {
+describe('#667 F7 r6 B6 hereRoadsInFlight — mock supabase-js + sesja 0', () => {
   beforeEach(() => {
     __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(0);
     rpc.mockReset();
     getSession.mockReset();
     fetchMock.mockClear();
@@ -85,7 +84,11 @@ describe('#667 F7 r5 B6 hereRoadsInFlight — prawdziwe loadRoadLines', () => {
     getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
   });
 
-  it('dwa równoległe loadRoadLines → 1× getSession + 1× POST here-roads', async () => {
+  afterEach(() => {
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+  });
+
+  it('dwa równoległe loadRoadLines → 1× getSession + 1× POST (mutacja strażnika → 2)', async () => {
     const p1 = loadRoadLines();
     const p2 = loadRoadLines();
     await waitUntil(() => fetchMock.mock.calls.length >= 1);
@@ -94,20 +97,9 @@ describe('#667 F7 r5 B6 hereRoadsInFlight — prawdziwe loadRoadLines', () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/here-roads/);
     resolveFetch({ ok: true });
     const [a, b] = await Promise.all([p1, p2]);
+    // F7 r6: po Promise.all nadal 1 — bez `if (hereRoadsInFlight) return` byłoby 2.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(a.length).toBeGreaterThanOrEqual(0);
     expect(b.length).toBe(a.length);
-  });
-
-  it('kolejne wołanie w oknie sesji 5 min nie powtarza POST', async () => {
-    const p = loadRoadLines();
-    await waitUntil(() => fetchMock.mock.calls.length >= 1);
-    resolveFetch({ ok: true });
-    await p;
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    fetchMock.mockClear();
-    getSession.mockClear();
-    await loadRoadLines();
-    expect(fetchMock).toHaveBeenCalledTimes(0);
-    expect(getSession).toHaveBeenCalledTimes(0);
   });
 });

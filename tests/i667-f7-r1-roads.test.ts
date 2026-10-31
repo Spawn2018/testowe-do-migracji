@@ -1,6 +1,7 @@
 /**
  * #667 F7 r1 — B1 ROAD_KAA_E22 vs ROAD_KAA; N7 geometria bez Leaflet.
- * #667 F7 r3–r5 B4/B5/B7 — kaaDeviationOk sparse + dens. + via na E4 (Uppsala/Gävle/Hudiksvall).
+ * #667 F7 r3–r6 B4/B5/B7 — kaaDeviationOk sparse + dens. + via na E4;
+ * F7 r6: korytarze z 0354 (st_makepoint); Umeå/Piteå/Sundsvall na jezdni E4.
  * Etap #667 / decyzja właściciela 30.10 15:54.
  */
 import { readFileSync } from 'node:fs';
@@ -73,102 +74,36 @@ function viaAlongCorridor(pts: readonly LatLng[], pMax = 14): LatLng[] {
   return [pts[0]!, ...vias, pts[pts.length - 1]!];
 }
 
-/**
- * SE_E22 po 0354 F7 r5 = 0298 + origin HERE + Luleå E4/97 + dens. Umeå–Skellefteå
- * + Rockneby/Västervik + Uppsala/Gävle/Hudiksvall na E4 (B7).
- */
-const SE_E22_PROD: LatLng[] = [
-  [56.1646, 15.6308],
-  [56.198, 15.656],
-  [56.19, 15.84],
-  [56.30, 15.99],
-  [56.47, 16.06],
-  [56.63, 16.17],
-  [56.663, 16.366],
-  [56.865, 16.385],
-  [57.26, 16.45],
-  [57.755, 16.580],
-  [57.89, 16.40],
-  [58.48, 16.32],
-  [58.594, 16.183],
-  [58.753, 17.008],
-  [58.95, 17.50], // Vagnhärad
-  [59.03, 17.54],
-  [59.09, 17.57],
-  [59.195, 17.628],
-  [59.3293, 18.0686],
-  [59.8767, 17.6953], // F7 r5 B7 Uppsala E4
-  [60.6638, 17.109], // F7 r5 B7 Gävle E4
-  [61.7279, 17.065], // F7 r5 B7 Hudiksvall E4
-  [62.3908, 17.3069],
-  [62.6323, 17.9379],
-  [63.2909, 18.7153],
-  [63.8258, 20.2630],
-  [64.3511, 21.2932], // F7 r4 dens.
-  [64.7507, 20.9528],
-  [65.3172, 21.4794],
-  [65.606, 22.053],
-  [65.8054, 21.7591],
-];
+/** F7 r6 uwaga 2: korytarz z pliku 0354 (parsowanie `st_makepoint`), nie ręczna kopia. */
+function corridorFrom0354(code: 'SE_E22' | 'SE_KAA_INLAND'): LatLng[] {
+  const sql = readFileSync(
+    new URL('../supabase/migrations/0354_667_kaa_corridor_lulea.sql', import.meta.url),
+    'utf8',
+  );
+  const marker = `where code = '${code}'`;
+  const idx = sql.indexOf(marker);
+  if (idx < 0) throw new Error(`brak ${code} w 0354`);
+  const before = sql.slice(0, idx);
+  const start = before.lastIndexOf('st_makeline(array[');
+  if (start < 0) throw new Error(`brak st_makeline dla ${code}`);
+  const end = before.indexOf(']), 4326)', start);
+  if (end < 0) throw new Error(`brak końca array dla ${code}`);
+  const body = before.slice(start + 'st_makeline(array['.length, end);
+  const pts: LatLng[] = [];
+  for (const pm of body.matchAll(/st_makepoint\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/g)) {
+    pts.push([Number(pm[2]), Number(pm[1])]);
+  }
+  if (pts.length < 8) throw new Error(`${code}: za mało punktów (${pts.length})`);
+  return pts;
+}
 
-/** Oczekiwane via z SQL `here_corridor_via_points(14)` po B7 (haversine) — F7 r5 B4-test (b). */
-const SE_E22_VIA_SQL: LatLng[] = [
-  [56.1646, 15.6308],
-  [56.865, 16.385],
-  [57.89, 16.4],
-  [58.594, 16.183],
-  [59.195, 17.628],
-  [59.8767, 17.6953],
-  [60.6638, 17.109],
-  [61.7279, 17.065],
-  [62.6323, 17.9379],
-  [63.2909, 18.7153],
-  [64.3511, 21.2932],
-  [64.7507, 20.9528],
-  [65.8054, 21.7591],
-];
+const SE_E22_PROD = corridorFrom0354('SE_E22');
+const SE_KAA_INLAND_PROD = corridorFrom0354('SE_KAA_INLAND');
 
 /** SE_E22 sprzed densyfikacji r4 (bez 21.2932/64.3511) — do asercji negatywnej. */
 const SE_E22_BEFORE_R4: LatLng[] = SE_E22_PROD.filter(
   ([lat, lng]) => !(Math.abs(lat - 64.3511) < 1e-6 && Math.abs(lng - 21.2932) < 1e-6),
 );
-
-/** SE_KAA_INLAND po 0354 r5 — pień + Västerås + dens. + Katrineholm + E4 B7. */
-const SE_KAA_INLAND_PROD: LatLng[] = [
-  [56.1646, 15.6308],
-  [56.198, 15.656],
-  [56.19, 15.84],
-  [56.30, 15.99],
-  [56.47, 16.06],
-  [56.63, 16.17],
-  [56.663, 16.366],
-  [56.865, 16.385],
-  [57.26, 16.45],
-  [57.755, 16.580],
-  [57.89, 16.40],
-  [58.48, 16.32],
-  [58.594, 16.183],
-  [58.795, 16.195],
-  [58.996, 16.207],
-  [59.133, 16.337],
-  [59.279, 16.120], // Katrineholm–Eskilstuna (OSRM; odbiór SELECT po wdrożeniu)
-  [59.371, 16.507],
-  [59.6099, 16.5448],
-  [59.9079, 16.6066],
-  [60.151, 16.929],
-  [60.45, 17.00],
-  [60.6638, 17.109],
-  [61.7279, 17.065],
-  [62.3908, 17.3069],
-  [62.6323, 17.9379],
-  [63.2909, 18.7153],
-  [63.8258, 20.2630],
-  [64.3511, 21.2932],
-  [64.7507, 20.9528],
-  [65.3172, 21.4794],
-  [65.606, 22.053],
-  [65.8054, 21.7591],
-];
 
 /** ControlPts = origin + via z logiki here_corridor_via_points + destination. */
 function ctrlFromViaLogic(corridor: readonly LatLng[]): LatLng[] {
@@ -226,23 +161,45 @@ describe('#667 F7 r1 B1 SE-KAA bez Västerås', () => {
   });
 });
 
-describe('#667 F7 r3–r5 B4/B5/B7 kaaDeviationOk sparse + dens. + E4 via', () => {
-  it('SE_E22 ma dens. 21.2932/64.3511; Uppsala E4 B7; origin HERE + Vagnhärad + Luleå', () => {
+describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
+  it('0354 SE_E22: dens. + Uppsala E4 + Umeå/Piteå/Sundsvall na jezdni (F7 r6)', () => {
     expect(SE_E22_PROD).toHaveLength(31);
     expect(SE_E22_PROD[0]).toEqual([56.1646, 15.6308]);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 58.95) < 0.01 && Math.abs(lng - 17.50) < 0.01)).toBe(true);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 65.606) < 0.01 && Math.abs(lng - 22.053) < 0.01)).toBe(true);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 64.3511) < 1e-4 && Math.abs(lng - 21.2932) < 1e-4)).toBe(true);
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 59.8767) < 1e-4 && Math.abs(lng - 17.6953) < 1e-4)).toBe(true);
-    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 59.8586) < 1e-4 && Math.abs(lng - 17.6389) < 1e-4)).toBe(false);
+    // F7 r6: stare punkty poza E4 usunięte
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 63.8258) < 1e-4 && Math.abs(lng - 20.2630) < 1e-4)).toBe(false);
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 65.3172) < 1e-4 && Math.abs(lng - 21.4794) < 1e-4)).toBe(false);
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 62.3908) < 1e-4 && Math.abs(lng - 17.3069) < 1e-4)).toBe(false);
+    // F7 r6: nowe na E4 / HERE
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 63.8127) < 1e-4 && Math.abs(lng - 20.3263) < 1e-4)).toBe(true);
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 65.3232) < 1e-4 && Math.abs(lng - 21.4319) < 1e-4)).toBe(true);
+    expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 62.391) < 1e-4 && Math.abs(lng - 17.340) < 1e-4)).toBe(true);
   });
 
-  it('F7 r5 B4-test (b): viaAlongCorridor (haversine) = lista SQL po B7', () => {
+  it('F7 r6 B4-test (b): viaAlongCorridor (haversine) = lista po przesunięciu na E4', () => {
     const via = viaAlongCorridor(SE_E22_PROD, 14);
-    expect(via).toHaveLength(SE_E22_VIA_SQL.length);
+    const expected: LatLng[] = [
+      [56.1646, 15.6308],
+      [56.865, 16.385],
+      [57.89, 16.4],
+      [58.594, 16.183],
+      [59.195, 17.628],
+      [59.8767, 17.6953],
+      [60.6638, 17.109],
+      [61.7279, 17.065],
+      [62.6323, 17.9379],
+      [63.2909, 18.7153],
+      [64.3511, 21.2932],
+      [64.7507, 20.9528],
+      [65.8054, 21.7591],
+    ];
+    expect(via).toHaveLength(expected.length);
     for (let i = 0; i < via.length; i += 1) {
-      expect(via[i]![0]).toBeCloseTo(SE_E22_VIA_SQL[i]![0], 3);
-      expect(via[i]![1]).toBeCloseTo(SE_E22_VIA_SQL[i]![1], 3);
+      expect(via[i]![0]).toBeCloseTo(expected[i]![0], 3);
+      expect(via[i]![1]).toBeCloseTo(expected[i]![1], 3);
     }
   });
 
@@ -261,12 +218,10 @@ describe('#667 F7 r3–r5 B4/B5/B7 kaaDeviationOk sparse + dens. + E4 via', () =
   });
 
   it('F7 r5 uwaga 1: wierzchołek INLAND 16.120/59.279 w korytarzu (OSRM; odbiór SELECT po wdrożeniu)', () => {
-    // Brak północnego śladu inland w fixture (tylko SE-NYN) — punkt z OSRM zostaje;
-    // pełna zgodność z prawdziwą drogą śródlądową: SELECT po wdrożeniu (#667).
     expect(SE_KAA_INLAND_PROD.some(([lat, lng]) => Math.abs(lat - 59.279) < 1e-4 && Math.abs(lng - 16.120) < 1e-4)).toBe(true);
   });
 
-  it('F7 r5 B4-test (a): fixture SE-NYN prod — pada na korytarzu sprzed dens., przechodzi po 0354 r4/r5', () => {
+  it('F7 r6 B4-test (a): fixture SE-NYN + korytarze z 0354 — pada bez dens., przechodzi po r4/r6', () => {
     const line = hereLineFromFixture(SE_E22_PROD);
     const ctrlOld = ctrlFromViaLogic(SE_E22_BEFORE_R4);
     const ctrlNew = ctrlFromViaLogic(SE_E22_PROD);

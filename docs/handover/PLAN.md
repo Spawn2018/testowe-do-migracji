@@ -1171,7 +1171,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; ~~**F7 r5** fixture SE-NYN / B6–B7 / bmapa 174~~; **F7 r6** — bmapa: `jsonb_typeof(points)='null'` (nie `IS NULL` na JSON null); merge main (**#675** SCALONE) — **czekam F7 „gotowe do scalenia”**.
+7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; ~~**F7 r5** fixture SE-NYN / B6–B7 / bmapa 174~~; ~~**F7 r6** bmapa `jsonb_typeof` + merge **#675**~~; **F7 r6 POPRAWKI** — B6 mock `@supabase/supabase-js` + sesja 0; Umeå/Piteå/62.391 na E4; test (a) czyta 0354 — **czekam F7**.
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -1228,7 +1228,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r6 bmapa JSON null + merge main #675).
+4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r6 POPRAWKI: B6 + E4 snap Umeå/Piteå).
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2166,4 +2166,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 00:25 | #673 merge main (#668); DP-29…32; czekam F7 gotowe do scalenia | pętla |
 | 31.10.2026 01:15 | #673 F7 r5: fixture SE-NYN prod; B7 Uppsala/Gävle/Hudiksvall E4; in-flight przed read; bmapa 174; runHereRoads null spend | pętla |
 | 31.10.2026 01:35 | #675 SCALONE `6660b3c8` (F7 gotowe @ 0698399); #673 F7 r6: bmapa jsonb_typeof null (CI db) | pętla |
+| 31.10.2026 01:55 | #673 F7 r6 POPRAWKI: B6 mock supabase-js + sesja 0; Umeå/Piteå/62.391 na E4; test czyta 0354 | pętla |
 
