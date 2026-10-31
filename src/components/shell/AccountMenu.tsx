@@ -76,7 +76,6 @@ function lastLogin(locale: Locale, iso: string): string {
 export function AccountMenu() {
   const locale = useTowerStore((s) => s.locale);
   const role = useTowerStore((s) => s.role);
-  const setRole = useTowerStore((s) => s.setRole);
   const toggleTheme = useTowerStore((s) => s.toggleTheme);
   const profile = useProfile();
   const [open, setOpen] = useState(false);

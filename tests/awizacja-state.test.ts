@@ -138,7 +138,8 @@ describe('#666 decyzja 52/55 — historyczne Polferries i komunikaty', () => {
     expect(awizacjaOperators([]).map((o) => o.id)).toEqual([
       'POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS',
     ]);
-    expect(pt('pl', 'p7_m_sailing_empty')).toMatch(/Brak rejsów w rozkładzie/);
+    /* DP-49: jeden tekst z Harmonogramem › Rejsy (i18n/sailingsEmpty.ts) */
+    expect(pt('pl', 'p7_m_sailing_empty')).toMatch(/Brak rejsów tego armatora w rozkładzie/);
     expect(pt('pl', 'p7_m_sailing_before_load')).toBe('przed planowanym załadunkiem');
     expect(pt('pl', 'p7_m_sailing_hist')).toMatch(/tylko Administrator HHL/);
   });

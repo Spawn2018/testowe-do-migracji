@@ -50,34 +50,50 @@ export interface DecisionsApi {
   snooze: (id: string, hours: number) => Promise<string | null>;
 }
 
+/** null = paczka demo albo hook wyłączony (bez zmiany stanu); inaczej wiersze albo komunikat błędu bazy. */
+export type DecisionsFetch = null | { rows: TodoDecision[] } | { error: string };
+
+/** DP-52: zapytanie o otwarte decyzje bez dotykania stanu Reacta (wcześniej treść `refresh`). */
+export async function fetchOpenDecisions(enabled: boolean): Promise<DecisionsFetch> {
+  /* warunek wpisany wprost — paczka demo bez klienta Supabase (I-2) */
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase' || !enabled) return null;
+  const { getSupabase } = await import('../../auth/client');
+  const sb = await getSupabase();
+  const q = await sb
+    .from('decisions')
+    .select('id,type_code,status,title,due_at,escalated_at,load_id,risk_id,detail,decision_types(title_key,options,decider_role)')
+    .in('status', ['NEW', 'ASSIGNED', 'SNOOZED'])
+    .order('due_at', { ascending: true, nullsFirst: false })
+    .limit(50);
+  if (q.error) return { error: q.error.message };
+  return { rows: ((q.data ?? []) as unknown as DecRow[]).map(decisionFromRow) };
+}
+
 export function useOpenDecisions(enabled: boolean): DecisionsApi {
   const [rows, setRows] = useState<TodoDecision[]>([]);
   const [error, setError] = useState<string | null>(null);
   const rowsRef = useRef<TodoDecision[]>([]);
   rowsRef.current = rows;
 
-  const refresh = useCallback(async () => {
-    /* warunek wpisany wprost — paczka demo bez klienta Supabase (I-2) */
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase' || !enabled) return;
-    const { getSupabase } = await import('../../auth/client');
-    const sb = await getSupabase();
-    const q = await sb
-      .from('decisions')
-      .select('id,type_code,status,title,due_at,escalated_at,load_id,risk_id,detail,decision_types(title_key,options,decider_role)')
-      .in('status', ['NEW', 'ASSIGNED', 'SNOOZED'])
-      .order('due_at', { ascending: true, nullsFirst: false })
-      .limit(50);
-    if (q.error) {
-      setError(q.error.message);
+  /* DP-52: pobranie (system zewnętrzny) osobno od zapisu stanu — efekt ustawia stan dopiero w wywołaniu zwrotnym
+     po odpowiedzi bazy (jak dotąd: setState zawsze po `await`), bez synchronicznego setState w efekcie. */
+  const apply = useCallback((r: DecisionsFetch) => {
+    if (!r) return;
+    if ('error' in r) {
+      setError(r.error);
       return;
     }
-    setRows(((q.data ?? []) as unknown as DecRow[]).map(decisionFromRow));
+    setRows(r.rows);
     setError(null);
-  }, [enabled]);
+  }, []);
+
+  const refresh = useCallback(async () => {
+    apply(await fetchOpenDecisions(enabled));
+  }, [enabled, apply]);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void fetchOpenDecisions(enabled).then(apply);
+  }, [enabled, apply]);
 
   const resolve = useCallback(async (
     id: string,

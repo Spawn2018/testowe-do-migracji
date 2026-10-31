@@ -15,6 +15,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # DP-42: słownik pisowni PL-T (tests/pl-t.test.ts) — w CI (CI=true) brak hunspell/pl_PL to błąd, nie pominięcie
+      - name: hunspell + pl_PL
+        run: sudo apt-get update -q && sudo apt-get install -y -q hunspell hunspell-pl
       # Kontrola typów jak w `npm run build` (deploy-main): błąd TS wychodzi w PR, nie dopiero przy wdrożeniu (F7 #348 B1)
       - name: npx tsc -b
         run: npx tsc -b
