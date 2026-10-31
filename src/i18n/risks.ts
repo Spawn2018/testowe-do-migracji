@@ -107,6 +107,9 @@ const pl: Dict = {
   job_label_backup: 'kopia zapasowa (backup-export)',
   // --- funkcje Edge (integracje)
   rk_ferry_status_unknown: 'Nieznany status rejsu {vessel} {dep} — bez zmiany, do weryfikacji HHL',
+  /* BN3 decyzja 59: Tallink Alert bez jednoznacznego rejsu → tylko ryzyko MEDIUM */
+  rk_tallink_alert_ambiguous: 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL',
+  rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
