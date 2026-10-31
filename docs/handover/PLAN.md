@@ -1219,8 +1219,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
 | DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / PR #689 | SCALONE `5fc7d4a0` | DONE |
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
-| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów + stronicowanie | F7 #690 r2 / #691 | BN3 / ferry | w kolejce (#691); w #690: 63c + import Viking) |
-| DP-116 | Cursor | `max_rows=1000` w innych jobach ferry (nie tylko 63c Viking) — stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 | w kolejce (#691) |
+| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 / ferry | w #690: 63c+import Viking; reszta w kolejce (#691) |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1325,7 +1324,7 @@ DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 **Podział PR (prognoza):**
 1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
 2. **#685-b (63b)** — W TOKU (PR #690 `pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + projekt `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule` ≠ `applySailings`; F7 r1–r2: ZAPLANOWANY+przyszłe ±3 h; B4 sezon z progiem 50% + pary (trasa,statek)+dni; podgląd z planem; max(departure) bez limitu 1000; parser `&#x2013;`/`li.accordion`; ekran BN9-c1 koordynator).
-3. **#685-c (63c)** — w b: apply zamyka `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** > 30 d (kompletny plik); cron nie wystawia przy ≥ 30 d (`maxVikingFileDepartureAt`).
+3. **#685-c (63c)** — w b: apply zamyka `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** > 30 d (kompletny plik + próg 50%); cron nie wystawia przy ≥ 30 d (`maxVikingFileDepartureAt`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0359** na main; **0360** przed Edge `viking-schedule-import`.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
