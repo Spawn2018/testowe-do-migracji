@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 
@@ -26,9 +26,13 @@ type Props = {
 export function OptionsAccordion({ locale, sections, forceOpen }: Props) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [q, setQ] = useState('');
-  useEffect(() => {
+  /* DP-52: zmiana `forceOpen` otwiera sekcję w trakcie renderu (wzorzec „stan z poprzedniej wartości propsa”),
+     zamiast setState w efekcie — to samo zachowanie: każda nowa niepusta wartość otwiera swoją sekcję. */
+  const [seenForce, setSeenForce] = useState<string | null | undefined>(null);
+  if (forceOpen !== seenForce) {
+    setSeenForce(forceOpen);
     if (forceOpen) setOpen((prev) => ({ ...prev, [forceOpen]: true }));
-  }, [forceOpen]);
+  }
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();

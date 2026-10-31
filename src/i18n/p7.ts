@@ -4,6 +4,7 @@
  */
 import type { Locale } from '../types';
 import { t } from './messages';
+import { SAILINGS_EMPTY_TEXT } from './sailingsEmpty';
 
 const PL: Record<string, string> = {
   /* nagłówek panelu */
@@ -182,7 +183,10 @@ const PL: Record<string, string> = {
   /* #666 decyzja 51 */
   p7_m_sailing_before_load: 'przed planowanym załadunkiem',
   /* #666 decyzja 55 */
-  p7_m_sailing_empty: 'Brak rejsów w rozkładzie — źródło niedostępne lub rozkład jeszcze niepobrany; rejs można dodać później',
+  /* DP-49: jeden tekst z Harmonogramem › Rejsy (`sv_line_empty`) — źródło: i18n/sailingsEmpty.ts */
+  p7_m_sailing_empty: SAILINGS_EMPTY_TEXT,
+  /* DP-48: ten sam dopisek jako linia pod polem dla wybranego rejsu (w opcji bywa ucięty) */
+  p7_m_sailing_before_load_sel: 'Wybrany rejs odpływa przed planowanym załadunkiem.',
   /* D-20261020-1525-01: Odcinek SE — puste pola dozwolone; kierowcę SE awizuje się najpóźniej 48 h przed dostawą */
   p7_m_se_later: 'Można zapisać puste: inny kierowca i ciągnik od promu. Kierowcę SE trzeba awizować najpóźniej 48\u00a0h przed dostawą.',
   p7_m_se_later_miss: 'Do uzupełnienia najpóźniej 48\u00a0h przed dostawą: {what}. Do tego czasu sprawa „Brak awizacji kierowcy SE”.',

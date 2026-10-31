@@ -4,6 +4,7 @@
  */
 import type { Locale } from '../types';
 import { t } from './messages';
+import { SAILINGS_EMPTY_TEXT } from './sailingsEmpty';
 
 const PL: Record<string, string> = {
   sv_sub: 'Polska → Szwecja oraz Estonia → Finlandia i Szwecja',
@@ -26,7 +27,8 @@ const PL: Record<string, string> = {
   sv_line_filter: 'Armator',
   sv_line_all: 'Wszyscy armatorzy',
   /* DP-20, decyzja 55 */
-  sv_line_empty: 'Brak rejsów tego armatora w rozkładzie — źródło niedostępne albo rozkład nie został jeszcze pobrany; rejs można dodać później.',
+  /* DP-49: jeden tekst z oknem Awizacja (`p7_m_sailing_empty`) — źródło: i18n/sailingsEmpty.ts */
+  sv_line_empty: SAILINGS_EMPTY_TEXT,
   /* DP-3, DP-5 */
   sv_route_unknown: 'nieznana trasa',
   sv_route_unknown_err: 'Nieznana trasa — wybierz trasę z listy',

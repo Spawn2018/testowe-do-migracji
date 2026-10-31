@@ -15,21 +15,40 @@ const EXC = new Set(
     .split('\n').map((l) => l.replace(/#.*/, '').trim()).filter(Boolean),
 );
 
-/** hunspell + pl_PL — na Windows zwykle brak (Debian: apt install hunspell hunspell-pl). */
+/**
+ * hunspell + pl_PL — na Windows zwykle brak (Debian: apt install hunspell hunspell-pl).
+ * DP-42: `-i utf-8` — słownik pl_PL jest w ISO8859-2; bez jawnego kodowania wejścia hunspell przy locale C/POSIX
+ * tnie polskie litery („Załączniki” → „czniki”) i test padał fałszywie.
+ */
+const HUNSPELL_ARGS = ['-d', 'pl_PL', '-i', 'utf-8', '-l'];
 function hunspellAvailable(): boolean {
   try {
-    execFileSync('hunspell', ['-d', 'pl_PL', '-l'], { input: 'test\n', encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    execFileSync('hunspell', HUNSPELL_ARGS, { input: 'test\n', encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
     return true;
   } catch {
     return false;
   }
 }
+
+/**
+ * DP-42: co zrobić z testem pisowni.
+ * - słownik jest → `run`;
+ * - brak słownika lokalnie → `skip` z czytelnym powodem;
+ * - brak słownika w CI (`CI=true`, GitHub Actions) → `fail` — w CI słownik instaluje `.github/workflows/unit.yml`,
+ *   więc jego brak to błąd konfiguracji, a nie powód do cichego pominięcia.
+ */
+export function plDictMode(available: boolean, env: Record<string, string | undefined>, platform: string): { mode: 'run' | 'skip' | 'fail'; reason: string } {
+  if (available) return { mode: 'run', reason: '' };
+  const missing = platform === 'win32'
+    ? 'brak hunspell/pl_PL na Windows (wymaga Linux CI lub apt install hunspell hunspell-pl)'
+    : 'brak hunspell ze słownikiem pl_PL (apt install hunspell hunspell-pl)';
+  if (env.CI === 'true') return { mode: 'fail', reason: `CI=true, a ${missing} — CI musi mieć słownik (unit.yml)` };
+  return { mode: 'skip', reason: `pominięte — ${missing}` };
+}
+
 const HUNSPELL_OK = hunspellAvailable();
-const skipHunspell = !HUNSPELL_OK
-  ? process.platform === 'win32'
-    ? 'pominięte na Windows — brak hunspell/pl_PL (wymaga Linux CI lub apt install hunspell hunspell-pl)'
-    : 'pominięte — brak hunspell z słownikiem pl_PL'
-  : false;
+const DICT = plDictMode(HUNSPELL_OK, process.env, process.platform);
+const skipHunspell = DICT.mode === 'skip' ? DICT.reason : false;
 
 /** Słowa do sprawdzenia: bez znaczników {n}, kodów (cyfry, WERSALIKI ≥ 2), adresów i identyfikatorów. */
 export function plWords(text: string): string[] {
@@ -43,16 +62,22 @@ export function plWords(text: string): string[] {
 }
 
 function hunspellMisses(words: string[]): string[] {
-  const out = execFileSync('hunspell', ['-d', 'pl_PL', '-l'], { input: words.join('\n'), encoding: 'utf8' });
+  const out = execFileSync('hunspell', HUNSPELL_ARGS, { input: words.join('\n'), encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
   return [...new Set(out.split('\n').map((l) => l.trim()).filter(Boolean))];
 }
 
 describe('PL-T — słownik PL bez błędów pisowni (hunspell pl_PL + wyjątki)', () => {
-  // Jawny powód w nazwie (Windows nie ma hunspell/pl_PL — Linux CI nadal egzekwuje).
-  const hunspellIt = HUNSPELL_OK ? it : it.skip;
+  // Jawny powód w nazwie (lokalnie bez słownika — skip; w CI brak słownika = błąd, DP-42).
+  const hunspellIt = DICT.mode === 'skip' ? it.skip : it;
+
+  if (DICT.mode === 'fail') {
+    it(`słownik hunspell pl_PL dostępny w CI — ${DICT.reason}`, () => {
+      throw new Error(DICT.reason);
+    });
+  }
 
   hunspellIt(
-    HUNSPELL_OK
+    DICT.mode !== 'skip'
       ? 'hunspell z pl_PL jest zainstalowany'
       : `hunspell z pl_PL jest zainstalowany — SKIP: ${skipHunspell}`,
     () => {
@@ -62,7 +87,7 @@ describe('PL-T — słownik PL bez błędów pisowni (hunspell pl_PL + wyjątki)
   );
 
   hunspellIt(
-    HUNSPELL_OK
+    DICT.mode !== 'skip'
       ? 'każda wartość słownika PL: 0 słów spoza pl_PL i listy wyjątków'
       : `każda wartość słownika PL — SKIP: ${skipHunspell}`,
     () => {
@@ -84,6 +109,19 @@ describe('PL-T — słownik PL bez błędów pisowni (hunspell pl_PL + wyjątki)
     const hits = Object.entries(I18N_ALL.pl).flatMap(([k, v]) =>
       FORBIDDEN.filter((f) => new RegExp(`(^|[^\\p{L}])${f}([^\\p{L}]|$)`, 'u').test(v)).map((f) => `${f} ← ${k}`));
     expect(hits).toEqual([]);
+  });
+
+  it('DP-42: brak słownika — lokalnie skip z powodem, w CI (CI=true) błąd; słownik jest — uruchom', () => {
+    expect(plDictMode(true, { CI: 'true' }, 'linux').mode).toBe('run');
+    expect(plDictMode(true, {}, 'win32').mode).toBe('run');
+    const local = plDictMode(false, {}, 'linux');
+    expect(local.mode).toBe('skip');
+    expect(local.reason).toMatch(/pominięte — brak hunspell ze słownikiem pl_PL/);
+    expect(plDictMode(false, {}, 'win32').reason).toMatch(/Windows/);
+    const ci = plDictMode(false, { CI: 'true' }, 'linux');
+    expect(ci.mode).toBe('fail');
+    expect(ci.reason).toMatch(/CI=true/);
+    expect(plDictMode(false, { CI: 'false' }, 'linux').mode).toBe('skip');
   });
 
   it('plWords pomija znaczniki, kody i adresy', () => {

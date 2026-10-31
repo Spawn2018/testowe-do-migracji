@@ -111,6 +111,11 @@ export function AwizacjaModal({ load, onClose }: Props) {
     [histOn, sailings, nowIso, operator, sailingOptions],
   );
 
+  /* DP-48: dopisek „przed planowanym załadunkiem” w tekście opcji jest ucinany w zamkniętym polu (pół szerokości) —
+     dla wybranego rejsu powtarzamy go jako osobną linię pod polem. Warunek bez zmian: ten sam `isBeforePlannedLoad`. */
+  const selSailing = sailingOptions.find((o) => o.id === sailingId);
+  const selBefore = !!selSailing && isBeforePlannedLoad(selSailing, load, operator);
+
   const dupCode = awizacjaDuplicateWarning(loads, load.id, { driverName, tractorPlate });
 
   const driverHints = resourceSuggestions(loads, 'driverName');
@@ -375,6 +380,9 @@ export function AwizacjaModal({ load, onClose }: Props) {
                     </optgroup>
                   ) : null}
                 </select>
+                {selBefore ? (
+                  <small className="am-hint am-hint-before" data-awiz-sailing-before>{pt(locale, 'p7_m_sailing_before_load_sel')}</small>
+                ) : null}
                 {!sailingOptions.length && !historyOptions.length ? (
                   <small className="am-hint" data-awiz-sailing-empty>{pt(locale, 'p7_m_sailing_empty')}</small>
                 ) : (
