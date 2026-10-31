@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 18:20 — #687 DP-114 Tallink HEL–TLL URL + niepełna pula
+
+- Skrzynka: **#687** W TOKU (przed scaleniem #688); #685/#688 F7 r1 POPRAWKI czekają; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok DP-114:**
+  - `TALLINK_HEL_TLL_URL` → `…/travelling/one-way/helsinki-tallinn-ferry` (GET 200; stary `/en/helsinki-tallinn` = 404);
+  - niepełna pula (HTTP ≠ OK / pusta) → brak auto-ODWOLANY; Alert → ryzyko MEDIUM (`TALLINK_ALERT_INCOMPLETE:`);
+  - streak ≥ 3 → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM; DP-98 DONE;
+  - vitest bn3-tallink-alert **54**.
+- **Dalej:** CI → gotowe do F7 → scalenie #687 → F7 #688 R1-B1…B4.
+- Bez push na main.
+
 ## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
