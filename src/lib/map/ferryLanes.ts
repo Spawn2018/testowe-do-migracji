@@ -8,8 +8,13 @@ import { WATER_TRACKS_EXTRA } from './ferryLines';
 
 export type LaneLine = readonly (readonly [number, number])[];
 
-/** Styl torów promowych — jeden dla wszystkich map korytarza. */
-export const FERRY_LANE_STYLE = { color: '#6BA8D6', weight: 3, opacity: 0.9 } as const;
+/**
+ * Styl torów promowych — JEDEN dla wszystkich map: korytarz (Kokpit, Mapa, szuflada/karta transportu, telefon —
+ * `mapPool`/`drawFerryLanes`/`CorridorMap`) i mapa Stref (`ZonesMap` mode="all").
+ * DP-76 (decyzja właściciela 31.10.2026): jasnoniebieski przerywany — kolor z mapy korytarza, przerywanie z mapy Stref.
+ * Komponenty nie mają własnych literałów koloru ani przerywania torów — tylko ta stała.
+ */
+export const FERRY_LANE_STYLE = { color: '#6BA8D6', weight: 3, opacity: 0.9, dashArray: '6 6' } as const;
 
 /** Odcinki HERE, które zastępują stały tor (GDN–NYN, GDY–KAA). */
 export const HERE_FERRY_LEGS = ['FERRY-GDN-NYN', 'FERRY-GDY-KAA'] as const;
