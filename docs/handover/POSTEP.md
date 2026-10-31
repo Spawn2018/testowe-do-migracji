@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 20:20 — #688 F7 r1 Digitraffic (73/74 / 0359)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. #685-a W TOKU.
+- Scalanie: **#689 SCALONE** `5fc7d4a0`. Brak „F7: gotowe do scalenia” na #688. Bez push na main.
+- **Krok F7 #688 r1** (`50718f81`):
+  - **B1** — `etaFrom`/`etdFrom`+mmsi (nie `from`/`to`); merge dwóch odpowiedzi;
+  - **B2** — decyzja 73: TLLA-HEL −150 / HELA-TLL +160 min (dosłowne godziny w testach);
+  - **B3** — trafienie ±30 min → bez nadpisania HTML/RECZNIE;
+  - **B4** — migracja **0359** `source_ref`; update po ref; delete wycofanych / ryzyko z transportem;
+  - vitest bn2-ferry-schedule+jobs **81** (lokalnie ✔).
+- **Dalej:** push → CI → gotowe do F7 @ `50718f81`.
+- Bez push na main.
+
 ## 2026-10-31 20:15 — #689 SCALONE; start #688 F7 r1
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. #685 W TOKU (a).
