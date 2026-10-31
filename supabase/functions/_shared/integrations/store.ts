@@ -105,6 +105,17 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const r = must(await sb.from('integration_runs').select('ran_at').eq('job', job).order('ran_at', { ascending: false }).limit(1), 'integration_runs') as { ran_at: string }[];
       return r[0]?.ran_at ?? null;
     },
+    /** F7 #689 R1-B3: ostatnie N wyników (od najnowszego) — streak Tallink Alert bez pamięci modułu. */
+    async recentJobResults(job: string, limit: number) {
+      const n = Math.max(0, Math.min(50, Math.floor(limit)));
+      if (n === 0) return [];
+      const r = must(
+        await sb.from('integration_runs').select('result').eq('job', job)
+          .order('ran_at', { ascending: false }).limit(n),
+        'integration_runs recent',
+      ) as { result: Record<string, unknown> | null }[];
+      return r.map((row) => (row.result ?? {}) as import('./jobs.ts').JobResult);
+    },
     async recordRun(job: string, ok: boolean, result: unknown) {
       must(await sb.from('integration_runs').insert({ job, ok, result }), 'integration_runs insert');
     },

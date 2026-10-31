@@ -6,16 +6,21 @@
  * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.
  */
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   alertHtmlAllowsAutoCancel,
   autoCancelFromCancelSentence,
   decodeTallinkCmsHtml,
   departureMatchesAlert,
   finalizeTallinkAlertsForStatus,
+  isTallinkAlertHtmlUsable,
   matchTallinkAlertSailings,
   parseAlertContentDates,
   parseTallinkAlerts,
+  TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN,
+  TALLINK_ALERT_PAGE_MIN_BYTES,
+  TALLINK_HEL_TLL_URL,
+  TALLINK_HOME_URL,
 } from '../src/lib/ferry/tallinkAlert';
 import { parsePortTallinnHtml } from '../src/lib/ferry/portTallinn';
 import {
@@ -268,6 +273,12 @@ describe('BN3 Tallink Alert', () => {
 });
 
 describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
+  it('F7 #689 R1-B1: isTallinkAlertHtmlUsable — Imperva / krótki HTML → nieOK; Cws+Footer → OK', () => {
+    expect(isTallinkAlertHtmlUsable('<html></html>').ok).toBe(false);
+    expect(isTallinkAlertHtmlUsable(`${'x'.repeat(3000)}_Incapsula_Resource`).ok).toBe(false);
+    expect(isTallinkAlertHtmlUsable(FIX).ok).toBe(true);
+  });
+
   it('jednoznaczny → ODWOLANY + 1 AUTO; drugi przebieg 0 nowych; niejednoznaczny → ryzyko bez statusu', async () => {
     const st = new MemStore();
     st.sailings.push({
@@ -307,6 +318,172 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(amb.sailings.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
     expect(amb.notices).toHaveLength(0);
     expect(amb.risks.some((r) => String(r.titleKey).includes('tallink_alert'))).toBe(true);
+  });
+
+  it('DP-114: TALLINK_HEL_TLL_URL = travelling/one-way/helsinki-tallinn-ferry (nie /en/helsinki-tallinn)', () => {
+    expect(TALLINK_HEL_TLL_URL).toBe('https://www.tallink.com/travelling/one-way/helsinki-tallinn-ferry');
+    expect(TALLINK_HEL_TLL_URL).not.toContain('/en/helsinki-tallinn');
+    expect(TALLINK_HOME_URL).toBe('https://www.tallink.com/');
+    expect(FIX.length).toBeGreaterThanOrEqual(TALLINK_ALERT_PAGE_MIN_BYTES);
+    expect(isTallinkAlertHtmlUsable(FIX).ok).toBe(true);
+  });
+
+  it('DP-114 pkt 2: HEL–TLL 404 → brak auto-ODWOLANY; Alert → ryzyko MEDIUM', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    // Kolejność kluczy: najpierw ścieżka trasy, potem reszta tallink.com (HOME).
+    await runAndRecord(st, {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': FIX,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    });
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'))).toBe(true);
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_incomplete')).toBe(true);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    expect(st.runs.at(-1)!.result.tallink_alert_incomplete).toBe(true);
+  });
+
+  it('F7 #689 R1-B1: 200 + Imperva / krótki HTML → brak auto, ryzyko MEDIUM', async () => {
+    const imperva = `${'x'.repeat(2100)} _Incapsula_Resource Request unsuccessful`;
+    const short = '<html><CwsP>tiny</CwsP></html>';
+    expect(isTallinkAlertHtmlUsable(imperva).ok).toBe(false);
+    expect(isTallinkAlertHtmlUsable(short).ok).toBe(false);
+
+    for (const junk of [imperva, short]) {
+      const st = new MemStore();
+      st.sailings.push({
+        id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      await runAndRecord(st, {
+        'helsinki-tallinn-ferry': junk,
+        'tallink.com': FIX,
+        'ts.ee': 503,
+        portsofstockholm: 503,
+      });
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+      const inc = st.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'));
+      expect(inc).toHaveLength(1);
+      expect(inc[0]!.severity).toBe('MEDIUM');
+    }
+  });
+
+  it('F7 #689 R1-B2: mutacje HTTP/pustka → ZAPLANOWANY, 0 notices, 1× INCOMPLETE', async () => {
+    // Klucz trasy przed 'tallink.com' — HEL-TLL URL też zawiera tallink.com.
+    const cases: Array<Record<string, string | number>> = [
+      { 'helsinki-tallinn-ferry': FIX, 'tallink.com': 404 }, // HOME 404, HEL OK
+      { 'helsinki-tallinn-ferry': 403, 'tallink.com': FIX },
+      { 'helsinki-tallinn-ferry': 500, 'tallink.com': FIX },
+      { 'helsinki-tallinn-ferry': 503, 'tallink.com': FIX },
+      { 'helsinki-tallinn-ferry': '', 'tallink.com': FIX },
+      { 'helsinki-tallinn-ferry': FIX, 'tallink.com': '' }, // HOME pusty, HEL OK
+    ];
+    for (const pages of cases) {
+      const st = new MemStore();
+      st.sailings.push({
+        id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      await runAndRecord(st, { ...pages, 'ts.ee': 503, portsofstockholm: 503 });
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+      const inc = st.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'));
+      expect(inc).toHaveLength(1);
+      expect(inc[0]!.severity).toBe('MEDIUM');
+    }
+
+    // wyjątek / timeout (HOME i HEL)
+    const stEx = new MemStore();
+    stEx.sailings.push({
+      id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    const throwFetch = (async () => {
+      throw new Error('network down');
+    }) as typeof fetch;
+    const res = await runFerryStatus({
+      store: stEx, fetch: throwFetch, env: {}, now: () => NOW,
+    });
+    await stEx.recordRun('ferry-status', res.ok, res);
+    // obie strony padły → brak Alertów do INCOMPLETE; brak auto
+    expect(stEx.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stEx.notices).toHaveLength(0);
+    expect(res.tallink_alert_incomplete).toBe(true);
+  });
+
+  it('F7 #689 R1-B3: 3 przebiegi z vi.resetModules → 1× SOURCE_DOWN; sukces zamyka; 2+ok+2 bez SOURCE_DOWN', async () => {
+    const failPages = {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': FIX,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    };
+    const st = new MemStore();
+    for (let i = 0; i < TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN - 1; i++) {
+      vi.resetModules();
+      const { runFerryStatus: run } = await import('../supabase/functions/_shared/integrations/jobs');
+      const res = await run(deps(st, failPages, NOW));
+      await st.recordRun('ferry-status', res.ok, res);
+      expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    }
+    vi.resetModules();
+    const { runFerryStatus: run3 } = await import('../supabase/functions/_shared/integrations/jobs');
+    const res3 = await run3(deps(st, failPages, NOW));
+    await st.recordRun('ferry-status', res3.ok, res3);
+    expect(st.risks.filter((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toHaveLength(1);
+    expect(st.risks.find((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))!.severity).toBe('MEDIUM');
+
+    // sukces zamyka SOURCE_DOWN
+    vi.resetModules();
+    const { runFerryStatus: runOk } = await import('../supabase/functions/_shared/integrations/jobs');
+    const okRes = await runOk(deps(st, { 'tallink.com': FIX, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
+    await st.recordRun('ferry-status', okRes.ok, okRes);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+
+    // 2 błędy → sukces → 2 błędy → brak SOURCE_DOWN
+    const st2 = new MemStore();
+    for (let i = 0; i < 2; i++) {
+      const r = await runFerryStatus(deps(st2, failPages, NOW));
+      await st2.recordRun('ferry-status', r.ok, r);
+    }
+    const mid = await runFerryStatus(deps(st2, { 'tallink.com': FIX, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
+    await st2.recordRun('ferry-status', mid.ok, mid);
+    for (let i = 0; i < 2; i++) {
+      const r = await runFerryStatus(deps(st2, failPages, NOW));
+      await st2.recordRun('ferry-status', r.ok, r);
+    }
+    expect(st2.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+  });
+
+  it('DP-114 pkt 3: obie strony 404 — SOURCE_DOWN też dopiero od 3. przebiegu', async () => {
+    const st = new MemStore();
+    const pages = {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': 404,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    };
+    await runAndRecord(st, pages);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    await runAndRecord(st, pages);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    await runAndRecord(st, pages);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(true);
   });
 
   it('mutacja (b): negacja nie ustawia ODWOLANY', async () => {
@@ -650,10 +827,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `</Scheduler>` +
       `<CwsP>Correction: the departure will operate.</CwsP>` +
       `</CwsSection></Scheduler>`;
-    const json = JSON.stringify({ page: { content: { rendered: nested } } })
-      .replace(/</g, '\\u003c')
-      .replace(/>/g, '\\u003e');
-    const html = `<!DOCTYPE html><html><body><script id="__CMS__">${json}</script></body></html>`;
+    const html = wrapRendered(nested);
     const st = new MemStore();
     st.sailings.push({ ...sailingsOk });
     await runFerryStatus(deps(st, {
@@ -1591,7 +1765,29 @@ function wrapRendered(inner: string): string {
   const json = JSON.stringify({ page: { content: { rendered: inner } } })
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e');
-  return `<!DOCTYPE html><html><body><script id="__CMS__">${json}</script></body></html>`;
+  return padTallinkPage(
+    `<!DOCTYPE html><html><body><script id="__CMS__">${json}</script></body></html>`,
+  );
+}
+
+/** F7 #689 R1-B1: dołóż Footer/Cws + padding do ≥ 2 KB (bez zmiany treści Alertu). */
+function padTallinkPage(html: string): string {
+  if (isTallinkAlertHtmlUsable(html).ok) return html;
+  const footer =
+    `<footer data-analytics-group="Footer"><CwsP>pad</CwsP></footer>` +
+    `<!--${'x'.repeat(TALLINK_ALERT_PAGE_MIN_BYTES)}-->`;
+  if (html.includes('</body>')) return html.replace('</body>', `${footer}</body>`);
+  return `${html}${footer}`;
+}
+
+async function runAndRecord(
+  store: MemStore,
+  pages: Record<string, string | number>,
+  now = NOW,
+): Promise<JobResult> {
+  const res = await runFerryStatus(deps(store, pages, now));
+  await store.recordRun('ferry-status', res.ok, res);
+  return res;
 }
 
 class MemStore implements SyncStore {
@@ -1644,6 +1840,10 @@ class MemStore implements SyncStore {
   }
   async latestPositions() { return []; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
+  /** F7 #689 R1-B3: od najnowszego. */
+  async recentJobResults(job: string, limit: number) {
+    return this.runs.filter((r) => r.job === job).slice(-limit).reverse().map((r) => r.result);
+  }
   async recordRun(job: string, ok: boolean, result: JobResult) {
     this.runs.push({ job, at: NOW.toISOString(), ok, result });
   }
@@ -1653,7 +1853,9 @@ class MemStore implements SyncStore {
 function deps(store: MemStore, pages: Record<string, string | number>, now = NOW): JobDeps {
   const f = (async (input: RequestInfo | URL) => {
     const url = String(input);
-    const hit = Object.entries(pages).find(([k]) => url.includes(k));
+    const hit = Object.entries(pages)
+      .filter(([k]) => url.includes(k))
+      .sort((a, b) => b[0].length - a[0].length)[0];
     if (hit) {
       return typeof hit[1] === 'number'
         ? new Response('err', { status: hit[1] })
