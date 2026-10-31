@@ -4,7 +4,7 @@
  * Render ZonesMap i Harmonogram › Rejsy w jsdom; lista statków sesji przez wstrzyknięty loader.
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, createElement } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 beforeAll(() => {
@@ -46,9 +46,21 @@ afterEach(() => {
 describe('DP-13 · mapa Stref: tory promów ze wspólnego źródła', () => {
   it('mode=all: tory Polska–Szwecja i 4 przeprawy bałtyckie (przerywane) + drogi; mode=one: bez torów', async () => {
     useTowerStore.setState({ theme: 'day' });
+    const { default: L } = await import('leaflet');
+    const lines = vi.spyOn(L, 'polyline');
     mount();
     await act(async () => { root.render(createElement(ZonesMap, { mode: 'all', label: 'all', zones: [] })); });
     await tick(250);
+    /* N1 (F7 r1): położenie, nie tylko liczba — pierwszy punkt każdego toru = ferryLaneLines()[i][0] w kolejności [lat, lng] */
+    const lanes = lines.mock.results
+      .map((r) => r.value as import('leaflet').Polyline)
+      .filter((pl) => pl.options.dashArray === '6 6');
+    lines.mockRestore();
+    expect(lanes).toHaveLength(ferryLaneLines().length);
+    lanes.forEach((pl, i) => {
+      const first = (pl.getLatLngs() as import('leaflet').LatLng[])[0];
+      expect([first.lat, first.lng]).toEqual([...ferryLaneLines()[i][0]]);
+    });
     const dashed = () => [...host.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => p.getAttribute('stroke-dasharray') === '6 6');
     const solid = () => [...host.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => p.getAttribute('stroke-dasharray') !== '6 6');
     expect(ferryLaneLines().length).toBeGreaterThan(2);
@@ -79,7 +91,7 @@ describe('DP-33 · Harmonogram › Rejsy — zachowanie panelu (DP-3, DP-5)', ()
     expect(pill?.textContent).toBe(sv('pl', 'sv_route_unknown'));
     expect(host.querySelectorAll('[data-route-unknown]').length).toBeGreaterThan(0);
   });
-  it('DP-5: „Dodaj rejs” z kodem spoza słownika — komunikat i bez zapisu', async () => {
+  it('DP-5: obrona w obsłudze wysłania formularza — trasa spoza słownika (opcję GDN-KAA dodaje test, UI jej nie oferuje) daje komunikat i brak zapisu', async () => {
     const addSailing = vi.fn(() => ({ ok: true as const }));
     useTowerStore.setState({ role: 'HHL', locale: 'pl', addSailing } as never);
     mount();
@@ -130,14 +142,19 @@ describe('DP-36 · useVesselGroups subskrybuje listę sesji', () => {
   it('komponent przerysowuje się po load() (nowa lista), bez ręcznego odświeżenia', async () => {
     const loader = createVesselsLoader(async () => [{ op: 'STENA', names: ['Stena Test'] }]);
     loader.reset();
-    let renders = 0;
-    const Probe = () => { renders += 1; const g = useVesselGroups(); return createElement('span', { 'data-probe': g[0]?.names[0] ?? '' }); };
+    /* N2 (F7 r1): licznik renderów w useEffect (po zatwierdzeniu renderu), bez mutacji zmiennej zewnętrznej w trakcie renderu */
+    const committed = vi.fn();
+    const Probe = () => {
+      const g = useVesselGroups();
+      useEffect(() => { committed(); });
+      return createElement('span', { 'data-probe': g[0]?.names[0] ?? '' });
+    };
     mount();
     await act(async () => { root.render(createElement(Probe)); });
     expect(host.querySelector('[data-probe]')?.getAttribute('data-probe')).toBe(VESSELS_FALLBACK[0].names[0]);
-    const before = renders;
+    const before = committed.mock.calls.length;
     await act(async () => { await loader.load(); });
-    expect(renders).toBeGreaterThan(before);
+    expect(committed.mock.calls.length).toBeGreaterThan(before);
     expect(host.querySelector('[data-probe]')?.getAttribute('data-probe')).toBe('Stena Test');
     loader.reset();
   });
