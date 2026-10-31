@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 09:05 — BN3 wycinek 3: Tallink Alert / ts.ee Lisainfo / source AUTO (0358)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — bez „F7: gotowe do scalenia” (wcześniej „gotowe do F7” @ `435733ec`, CI ✔); nowy commit → ponowne F7. Bez push na main.
+- **Krok** (`pakiet/bn3-tallink-tsee-auto`):
+  - **0358** — `operator_notices.source` AUTO/RECZNIE, `source_url`, `created_by` null dla AUTO; apply → RECZNIE;
+  - Tallink Alert (decyzja 59) w `ferry-status`: jednoznaczne → ODWOLANY + AUTO notice; niejednoznaczne → FERRY MEDIUM;
+  - ts.ee Lisainfo → `cancelled` + AUTO notice przy Port of Tallinn;
+  - testy `bn3-tallink-alert` (fixture CMS + Lisainfo).
+- **Dalej:** CI → „gotowe do F7”; DP-97; potem BN3 pkt 7–8 (winter-nav / MMSI / DP-1+11) albo F7 poprawki.
+- Bez push na main.
+
 ## 2026-10-31 08:40 — #682 SCALONE; BN3 wycinek 3 start (DP-94/95/96)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

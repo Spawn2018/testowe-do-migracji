@@ -57,6 +57,29 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }
       return wrote;
     },
+    async insertOperatorNotice(row: {
+      sailingId: string;
+      operator: string;
+      kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
+      note?: string | null;
+      sourceUrl?: string | null;
+      newDeparture?: string | null;
+    }) {
+      const r = must(
+        await sb.from('operator_notices').insert({
+          sailing_id: row.sailingId,
+          operator: row.operator,
+          kind: row.kind,
+          new_departure: row.newDeparture ?? null,
+          note: row.note ?? null,
+          created_by: null,
+          source: 'AUTO',
+          source_url: row.sourceUrl ?? null,
+        }).select('id').maybeSingle(),
+        'operator_notices insert AUTO',
+      ) as { id: string } | null;
+      return r?.id ?? null;
+    },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
         p_project: await projectId(), p_load: r.loadId ?? null, p_kind: r.kind, p_sev: r.severity, p_title: r.title,
