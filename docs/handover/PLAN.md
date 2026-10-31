@@ -1311,8 +1311,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (po #683 SCALONE `63088803`)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
-1. **#685-a (63a)** — W TOKU (`pakiet/685a-digitraffic-viking-schedule`): Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User: LOGMAR/WatchTower` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL source=VIKING; dopasowanie ±30 min jak #682; RECZNIE bez zmian; SOURCE_DOWN zostaje (zamyka 63c); testy na wycinku odpowiedzi.
-2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking_cargo_hel_tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
+1. **#685-a (63a)** — W TOKU (PR #688 `pakiet/685a-digitraffic-viking-schedule` @ `693a926d`; CI unit/db/visual ✔; czekam F7): Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User: LOGMAR/WatchTower` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL source=VIKING (przejście 120 min); dopasowanie ±30 min jak #682; RECZNIE bez zmian; SOURCE_DOWN zostaje (zamyka 63c); testy na wycinku odpowiedzi.
+2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking-cargo-hel-tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
 3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
 Kolejność: a → b(+c). DP-21 pozostaje w #666/63b.
 
@@ -2307,6 +2307,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 17:00 | #683 F7 R14: tylko testy mutacji (data-type na Schedulerze; campaignHasServiceText gałęzie); uwaga §8: licznik Alert w komentarzach/duplikatach — przy żywym Alercie + DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność | pętla |
 | 31.10.2026 17:25 | #683 SCALONE `63088803` (F7: gotowe @ 993e42fe); start #685-a Digitraffic Viking ES/XPRS → sailings | pętla |
 | 31.10.2026 17:25 | #683 SCALONE `63088803` (F7: gotowe do scalenia @ 993e42fe); start #685-a Digitraffic Viking (FIHEL/ES/XPRS → sailings) | pętla |
+| 31.10.2026 17:55 | #685-a PR #688 @ 693a926d — CI unit/db/visual ✔; crossing 120 min (korekta docs); czekam F7; potem #685-b | pętla |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
 | 31.10.2026 — | F7 #683 r10 uwaga właściciel: fixture kampanii ma `CwsAlert type=…`; jeśli Tallink opakuje serwisowe w `CwsAlert` / `CwsLink` („Read more”) → ryzyko; po pierwszym żywym Alercie serwisowym — surowy HTML jako fixture + ocena allowlisty (osobny DP) | F7 #683 r10 |
