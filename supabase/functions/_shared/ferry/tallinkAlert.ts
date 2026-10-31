@@ -8,6 +8,9 @@
  * R4-B1: auto-ODWOLANY tylko gdy w tym samym zdaniu co cancel: statek + 1×HH:MM + 1×data;
  *   bez wskazówek względnych/nierozpoznanych w całej treści (updated/tomorrow/dni tygodnia…).
  * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
+ * R6 / decyzja 68: cała treść = dokładnie jedno zdanie wzorcowe (+ opcjonalnie zdania z listy przeprosin);
+ *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
+ * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
 import type { FerryRoute } from './polferries.ts';
@@ -60,6 +63,11 @@ const CONDITIONAL_RE =
 const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
 const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
 const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
+/** F7 #683 R6 / decyzja 68: jedyny dozwolony sufiks przed kropką (prawdziwy Alert 28.10). */
+const DUE_TO_SUFFIX = String.raw`(?:\s+due\s+to\s+(?:a\s+)?(?:technical\s+fault|technical\s+reasons|weather\s+conditions|storm|strong\s+winds))?`;
+/** F7 #683 R6: zamknięta lista zdań neutralnych (dokładne dopasowanie całego zdania). */
+const NEUTRAL_APOLOGY_RE =
+  /^We\s+apologi[sz]e\s+for\s+(?:any\s+|the\s+)inconvenience\.?$/i;
 
 export type TallinkAlertKind = 'ODWOLANY' | 'INFO' | 'IGNORE';
 
@@ -240,16 +248,17 @@ function routeFromPorts(aRaw: string, bRaw: string): FerryRoute | null {
 }
 
 /**
- * F7 #683 R5: zdanie pasuje w całości do ścisłego wzorca allowlist
- * (statek + HH:MM + from/to + data + is/has been cancelled; bez dodatkowego tekstu).
- * Mutacja: poluzowanie (dowolny tekst przed/po) → test pada.
+ * F7 #683 R5/R6: zdanie pasuje w całości do ścisłego wzorca allowlist
+ * (statek + HH:MM + from/to + data + is/has been cancelled [+ due to …]; bez dodatkowego tekstu).
+ * Mutacja: poluzowanie (dowolny tekst przed/po) albo zdjęcie `$` po sufiksie → test pada.
  */
 function matchStrictAutoCancelSentence(sent: string, year: number): AutoCancelFields | null {
   const s = sent.trim().replace(/\s+/g, ' ');
   const ship = SHIP_NAME_ALT;
   const port = PORT_NAME_ALT;
   const date = DATE_CAPTURE;
-  const cancelTail = String.raw`(?:is|has been)\s+cancel(?:led|ed)\.?`;
+  // R6: opcjonalny due-to, potem kropka; `$` obowiązkowe (mutacja: bez `$` → test pada).
+  const cancelTail = String.raw`(?:is|has been)\s+cancel(?:led|ed)${DUE_TO_SUFFIX}\.?`;
   const patterns: RegExp[] = [
     // The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.
     new RegExp(
@@ -297,9 +306,14 @@ function matchStrictAutoCancelSentence(sent: string, year: number): AutoCancelFi
   return null;
 }
 
+function isNeutralApologySentence(sent: string): boolean {
+  return NEUTRAL_APOLOGY_RE.test(sent.trim().replace(/\s+/g, ' '));
+}
+
 /**
- * F7 #683 R5: jedna bramka auto-ODWOLANY — ścisły wzorzec + brak opaque/warunkowych/wznowienia.
- * R4 trio w zdaniu zastąpione allowlistą (decyzja koordynatora przy decyzji 59).
+ * F7 #683 R5/R6 (decyzja 68): auto-ODWOLANY tylko gdy cała treść = jedno zdanie wzorcowe
+ * (+ opcjonalnie zdania z listy przeprosin). Strażnicy opaque/conditional/resume
+ * zostają (R6-B2 — mutacje z czystym wzorcem + osobne zdanie).
  */
 export function autoCancelFromCancelSentence(
   text: string,
@@ -311,7 +325,13 @@ export function autoCancelFromCancelSentence(
   const hits: AutoCancelFields[] = [];
   for (const sent of alertSentences(text)) {
     const hit = matchStrictAutoCancelSentence(sent, year);
-    if (hit) hits.push(hit);
+    if (hit) {
+      hits.push(hit);
+      continue;
+    }
+    // R6-B1: każde inne zdanie (poza listą przeprosin) → ryzyko MEDIUM.
+    // Mutacja: bez tego warunku → testy R6 padają.
+    if (!isNeutralApologySentence(sent)) return null;
   }
   if (hits.length !== 1) return null;
   return hits[0]!;

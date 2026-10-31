@@ -1296,12 +1296,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R5 allowlist** (auto-ODWOLANY wyłącznie ścisły wzorzec zdania; may/buffet/trasa z innego zdania → MEDIUM; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R6** (decyzja **68**: cała treść = jedno zdanie wzorcowe + opcjonalnie przeprosiny; sufiks `due to …`; nie przekreślać do F7 OK); **decyzja 69**: wpis AUTO w `operator_notices` tylko przy ODWOLANY — przy ryzyku historią jest samo ryzyko (`detail.tekst` + `sourceUrl`; bez migracji, FK `sailing_id` NOT NULL); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
-4. Odwołanie: ts.ee / Tallink Alert (decyzja 59, F7 #683 B1–B4); ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
-5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; front BN9-c1 (koordynator).
+4. Odwołanie: ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683); ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
+5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; **decyzja 69** AUTO tylko przy ODWOLANY; front BN9-c1 (koordynator).
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. Digitraffic winter-navigation; Urząd Morski Gdynia (zapas Stena); port-call v2 cancelled (obserwacja).
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
@@ -1662,6 +1662,8 @@ Bez ekranów Opcji (te w P10b, po P3).
 | **59** | Tallink Alert z jawnym odwołaniem + jednoznaczne dopasowanie rejsu → `ODWOLANY`; inaczej FERRY MEDIUM (bez statusu). | **przyjęta** 31.10 (zmiana względem rekomendacji); kod wycinek 3 |
 | **63** | Rozkład Viking Line TLLA⇄HEL: **63a** Digitraffic port-calls (najbliższe dni); **63b** import HTML z pliku właściciela (HHL_ADMIN+2FA; ekran BN9-c1); **63c** `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane przy rozkładzie z pliku ≥ 30 dni. Bez obchodzenia 403. | **przyjęta** 31.10 (#685; potw. właściciel 09:56); kod po #683 |
 | **67** | `SOURCE_DOWN` dla `TALLINK_SCHEDULE`, `ECKERO_SCHEDULE`, `DFDS_SCHEDULE` = **MEDIUM** także przy **całkowitej** awarii źródła (nie tylko częściowej). Uzasadnienie: rozkłady pobierane raz na dobę; wcześniejsze rejsy zostają w bazie, więc brak świeżego pobrania nie jest awarią krytyczną dla operacji. **Polferries / Stena** bez zmian = **HIGH**. Zakres kodu: `sync.ts` `sourceDownRisk` (F7 #682 r1; DP-96). | **przyjęta** 31.10.2026 F7 #682 |
+| **68** | Tallink Alert: auto-ODWOLANY tylko gdy cała treść (po zdjęciu tagów) = **dokładnie jedno** zdanie wzorcowe allowlist, ewentualnie + zdania z zamkniętej listy przeprosin („We apologise/apologize for any/the inconvenience.”). Opcjonalny sufiks przed kropką: `due to (a )?(technical fault\|technical reasons\|weather conditions\|storm\|strong winds)`. Każde inne zdanie → FERRY MEDIUM. | **przyjęta** 31.10 F7 #683 r6 |
+| **69** | Wpis AUTO w `operator_notices` tylko przy ODWOLANY. Przy ryzyku (ambiguous/unmatched) historią jest samo ryzyko (`detail.tekst` + `sourceUrl`). Bez nowej migracji (`sailing_id` NOT NULL + FK). | **przyjęta** 31.10 F7 #683 r6 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -2287,4 +2289,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 10:30 | #683 F7 R2-B2: >1 HH:MM/data w Tallink Alert → multiTime/ambiguous; DP-105…109; CI @ f42ce3a0 zielone | pętla |
 | 31.10.2026 11:05 | #683 F7 R3-B1: ODWOLANY tylko przy dacie z treści; Scheduler = wygaśnięcie; DP-111/112; potem #685 | pętla |
 | 31.10.2026 11:35 | #685 decyzja 63 wpisana §4/§5/§8; #683 F7 R4-B1: auto-ODWOLANY = trio w zdaniu cancel (bez względnych) | pętla |
+| 31.10.2026 12:40 | #683 F7 R6: decyzja 68 (jedno zdanie wzorcowe + przeprosiny / due to); decyzja 69 (AUTO tylko przy ODWOLANY); testy 21 | pętla |
 
