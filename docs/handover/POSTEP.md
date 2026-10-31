@@ -7434,3 +7434,32 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #677 już na `main` `675bb299`. `deploy-main` ✔ (0355 + Edge `here-roads`). Bez push na main.
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
+
+## 2026-10-31 06:50 — #680 F7 B2+B4+B5 (p_operator + formularz + testy)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499 w planie. Bez nowych `pilne`.
+- Scalanie: #680 — F7 r1 POPRAWKI (B2/B4/B5); CI poprzedni: security FAIL (komentarz przed assert), visual ✔. Bez push na main.
+- **Krok F7 #680:** 0356 — `assert_not_preview()` bez komentarza przed (strażnik B5); sygnatura + `p_operator` (walidacja `ferry_route_operators`, drop 4-arg); formularz: wybór armatora → lista 40 rejsów, `p_operator`; tekst „wszystkich armatorów…”. Testy ferry-status **14** (POLFERRIES/VIKING/STENA/zły op/Podgląd). PLAN: DP-21 → #666 (63b); DP-83/84/85. **Dalej:** CI + „gotowe do F7” → źródła statusów.
+- Bez push na main.
+
+## 2026-10-31 06:20 — #680 CI db FAIL → assert B5 + ferry-status 9
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `pilne`.
+- Scalanie: #680 — brak „F7: gotowe do scalenia” (tylko „gotowe do F7”); CI db FAIL (security 494/1 + ferry-status 9≠8). Bez push na main.
+- **Krok:** 0356 — `perform public.assert_not_preview()` jako pierwsza instrukcja po BEGIN (B5 strażnik RPC); `EXPECTED_LOCAL['ferry-status']=9` (test Tallink). **Dalej:** CI + F7 #680 → BN3 źródła statusów (DFDS remark / Portnet ATA / PoT).
+- Bez push na main.
+
+## 2026-10-31 06:00 — BN3 wycinek 1: operator_notices bałtyckie (0356)
+
+- Skrzynka: **#667** NA PRODUKCJI / zamknięte; #608 w planie; #550 WSTRZYMANE. #679 SCALONE (`c20b7c95`).
+- Scalanie: brak otwartego „F7: gotowe do scalenia” poza #679 (już scalone). Bez push na main.
+- **Krok (BN3 #573):** migracja **0356** — FK `operator_notices.operator` → `ferry_operators`; `operator_notice_apply` z źródła rejsu / vessels / `ferry_route_primary_operator` (bez CASE GDY-KAA→STENA). Formularz: teksty + armator w liście rejsów. Test `ferry-status.sh`: Tallink TLL-HEL → `operator=TALLINK`. **Dalej:** scrapery service-updates + PoT/Portnet.
+- Bez push na main.
+
+## 2026-10-31 06:00 — DP-21 DONE; BN3 start (decyzja 60)
+
+- Skrzynka: #667 CLOSED; #608 w planie; #550 WSTRZYMANE. #679 docs (DP-69) czekam F7.
+- Scalanie: brak „F7: gotowe do scalenia” na #679. Bez push na main.
+- **Krok DP-21:** probe `vikingline.com/.../cargo/.../helsinki-tallinn/` i `sales.vikingline.com/...` → **403** (len 5683). `SOURCE_DOWN:VIKING_SCHEDULE` OPEN **MEDIUM** (decyzja 50). Sailings: **0× VIKING**; TLLA-HEL/HELA-TLL tylko **ECKERO**.
+- **Krok BN3 (pkt 60):** SELECT `ferry_route_operators` PLD-KPS/KPS-PLD = tylko DFDS; 0 przyszłych Tallink. Front: `ferryCatalog` bez TALLINK na PLD-KPS/KPS-PLD; test bn9a. PLAN §4 BN3 W TOKU (spec 57–61). **Dalej:** BN3 pkt 2–9 (źródła statusów, `operator_notices`, progi).
+- Bez push na main.
