@@ -7400,3 +7400,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia #E5A544 (paintOrangeRoads / ZonesMap / Geofence); SE-KAA w payloadzie `map_display_state`; PROD mapy z `loadRoadLines`+`paintOrangeRoads`; cron 21 d przed purge 30 d (`attempted=5`, SE-KAA w missing po HTTP 500). Playwright lokalnie: `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Merge `main` (#676). Rejestr: DP-13/33…37 SCALONE; **DP-53** (Cursor, bramka dist demo). Unit i667 F+E+orange ✔ (22). **Dalej:** CI → gotowe do F7 #677.
 - Bez push na main.
 
+## 2026-10-31 04:15 — #677 CI ✔; rejestr DP-54…57 (F7 r2)
+
+- Skrzynka: **#667** pilne W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: „F7: gotowe do scalenia” było @ `70df5d96` (przed F e2e) — **nie scalać**; po F e2e czekam ponowne „gotowe do scalenia”. CI unit/db/visual ✔ @ `fbe7b06d`. Bez push na main.
+- **Krok (docs):** rejestr **DP-54…57** z F7 #677 r2 (nieblokujące, mały PR po #677): M1b browserOnly; M4b missingLegs BN7; test `{error}` store/Edge; CORS przy fail `listLegs`. PLAN §4/§8. **Dalej:** gotowe do F7 → scalenie → wdrożenie 0355→Edge → SELECT 12 legów + `here-roads` w #667.
+- Bez push na main.
+
