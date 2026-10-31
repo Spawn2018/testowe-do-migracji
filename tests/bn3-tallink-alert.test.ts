@@ -1,13 +1,14 @@
 /**
- * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69).
- * F7 #683 B1–B5 + R2–R8: allowlist + R6/R7 + R8 nested Scheduler / ^ / decyzja 70.
+ * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71).
+ * F7 #683 B1–B5 + R2–R9: allowlista zdań (68) + allowlista HTML (71).
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
- * („due to a technical fault”); treść pod test, nie żywy CMS.
+ * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  alertHtmlAllowsAutoCancel,
   autoCancelFromCancelSentence,
   decodeTallinkCmsHtml,
   departureMatchesAlert,
@@ -734,6 +735,60 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(stSame.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(stSame.notices).toHaveLength(0);
     expect(stSame.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+  });
+
+  it('F7 R9 / decyzja 71: allowlista HTML — obejścia R9-B1..B4 → ryzyko; fixture → ODWOLANY', async () => {
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+
+    // Fixture (CwsSpan / hideSpacing / timeStart) mieści się w allowliście → ODWOLANY.
+    expect(parseTallinkAlerts(FIX, TALLINK_HOME(), NOW).alerts[0]!.autoCancelOk).toBe(true);
+
+    const riskInners = [
+      // R9-B1: </Scheduler> w komentarzu ucinał blok.
+      `<CwsP>${C}</CwsP><!--</Scheduler>--><CwsP>Correction: the departure will operate as planned.</CwsP>`,
+      // R9-B2: atrybut z &nbsp; (title niedozwolony + encje w wartości).
+      `<CwsAlert title="Correction:&nbsp;the&nbsp;departure&nbsp;will&nbsp;operate"><CwsP>${C}</CwsP></CwsAlert>`,
+      // R9-B3: znaczniki komentarza w atrybutach img.
+      `<CwsP>${C}</CwsP><img alt="<!--"><CwsP>Correction: the departure will operate.</CwsP><img alt="-->">`,
+      // CwsLink / nieznany atrybut / zagnieżdżony Scheduler / nieznana encja.
+      `<CwsLink text="Departure reinstated - details"/><CwsP>${C}</CwsP>`,
+      `<CwsP foo="bar">${C}</CwsP>`,
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02"><CwsP>${C}</CwsP></Scheduler>`,
+      `<CwsP>${C}&#x3C;</CwsP>`,
+      // Sam komentarz z wzorcem.
+      `<!--<CwsP>${C}</CwsP>-->`,
+    ];
+    for (const inner of riskInners) {
+      const st = new MemStore();
+      st.sailings.push({ ...sailingsOk });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlertInner(inner, '2026-11-02'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+    }
+
+    // Mutacje allowlisty (jednostkowe): poluzowanie → true na wejściu, które musi padać.
+    const badFull =
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP><!--x--></CwsSection></Scheduler>`;
+    expect(alertHtmlAllowsAutoCancel(badFull)).toBe(false);
+    const okFull =
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    expect(alertHtmlAllowsAutoCancel(okFull)).toBe(true);
+    const imgFull =
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><img alt="x"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    expect(alertHtmlAllowsAutoCancel(imgFull)).toBe(false);
   });
 });
 

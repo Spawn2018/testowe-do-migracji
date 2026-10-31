@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 14:25 — #683 F7 R9 POPRAWKI (decyzja 71 allowlista HTML)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r9 **POPRAWKI** @ `2ca2acb2` (CI ✔). Bez push na main.
+- **Krok R9 / decyzja 71:**
+  - allowlista surowej struktury HTML bloku Alert (tagi/atrybuty/encje; brak komentarzy/CDATA/PI);
+  - dopisane względem F7: `CwsSpan`, `timeStart`, `timeEnd`, `hideSpacing` (prawdziwy Alert / fixture);
+  - czarna lista z decyzji 70 zbędna dla bramki auto; reguła zdań 68 bez zmian;
+  - `extractBalancedSchedulers` przez `matchAll`; testy bn3-tallink-alert **28**.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
 ## 2026-10-31 14:15 — #683 CI ✔ @ 2ca2acb2; decyzja 70 właściciel
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.

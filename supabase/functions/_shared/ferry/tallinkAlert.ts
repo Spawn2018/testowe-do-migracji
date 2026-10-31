@@ -12,8 +12,12 @@
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
  * R7: stripTags całego bloku Alert (nie tylko CwsP); fallback bez auto przy braku Schedulera;
  *   bez OPAQUE/CONDITIONAL (`may` ≠ May); statek/trasa tylko z wzorca.
- * R8: zbalansowany Scheduler (zagnieżdżony → bez auto); `^` we wzorcach 1–2;
- *   decyzja 70: atrybuty tekstowe / komentarze HTML / from X to X → ryzyko.
+ * R8: zbalansowany Scheduler; `^` we wzorcach 1–2; decyzja 70 (czarna lista atrybutów) —
+ *   zastąpiona decyzją 71.
+ * R9 / decyzja 71: auto-ODWOLANY tylko przy dozwolonej strukturze HTML (allowlista tagów/
+ *   atrybutów/encji; brak komentarzy/CDATA/PI); potem reguła zdań z decyzji 68.
+ *   Dopisane do allowlisty względem F7 r9 (prawdziwy Alert 28.10 / fixture): `CwsSpan`,
+ *   `timeStart`, `timeEnd`, `hideSpacing`.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -100,87 +104,138 @@ export function decodeTallinkCmsHtml(raw: string): string {
     .replace(/\\\//g, '/');
 }
 
-/** F7 #683 R8 / decyzja 70: komentarze HTML przed jakimkolwiek dopasowaniem (także niezamknięte). */
-function stripHtmlComments(s: string): string {
-  return s.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<!--[\s\S]*$/g, ' ');
+/**
+ * F7 #683 R9 / decyzja 71 — dozwolone tagi (dokładna nazwa, wielkość liter bez znaczenia).
+ * `CwsSpan` dopisane (prawdziwy Alert / fixture; F7 wymieniało `span`).
+ */
+const ALLOWED_ALERT_TAGS = new Set([
+  'scheduler', 'cwssection', 'cwsp',
+  'cwsh1', 'cwsh2', 'cwsh3', 'cwsh4', 'cwsh5', 'cwsh6',
+  'br', 'strong', 'b', 'em', 'span', 'cwsspan',
+]);
+
+/**
+ * F7 #683 R9 / decyzja 71 — dozwolone atrybuty.
+ * `timeStart`/`timeEnd`/`hideSpacing` dopisane (prawdziwy Alert / fixture + wrapAlert).
+ */
+const ALLOWED_ALERT_ATTRS = new Set([
+  'datestart', 'dateend', 'timestart', 'timeend',
+  'data-analytics-group', 'class', 'classname',
+  'weight', 'color', 'size', 'variant', 'hidespacing',
+]);
+
+const ALLOWED_ENTITY_RE =
+  /^&(?:nbsp|#160|#xA0|amp|#39|rsquo|apos|quot);/i;
+
+function decodeAllowedEntities(s: string): string {
+  return s
+    .replace(/&nbsp;|&#160;|&#xA0;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&#39;|&apos;|&rsquo;/gi, "'")
+    .replace(/&quot;/gi, '"');
 }
 
 function stripTags(s: string): string {
-  return stripHtmlComments(s)
-    .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&#038;/g, '&')
-    .replace(/\s+/g, ' ').trim();
+  // Komentarze tylko do treści ryzyka (bramka auto używa allowlisty surowej).
+  return s
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<!--[\s\S]*$/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;|&#xA0;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
- * F7 #683 R8 / decyzja 70: niepusty tekst (≥ 2 słowa) w atrybucie
- * title|text|alt|aria-label|label|caption|heading|subtitle|description → bez auto.
+ * F7 #683 R9 / decyzja 71: surowy HTML bloku Alert ma wyłącznie dozwoloną budowę.
+ * Mutacje: dodanie tagu/atrybutu do allowlisty, zdjęcie reguły komentarzy/encji → testy padają.
  */
-const ATTR_TEXT_NAMES =
-  'title|text|alt|aria-label|label|caption|heading|subtitle|description';
+export function alertHtmlAllowsAutoCancel(rawHtml: string): boolean {
+  // Reguła 3: komentarze / CDATA / PI gdziekolwiek → brak auto.
+  if (/<!--|--!>|<!\[CDATA\[|<\?/i.test(rawHtml)) return false;
 
-function hasSignificantAttrText(html: string): boolean {
-  const re = new RegExp(
-    String.raw`\b(?:${ATTR_TEXT_NAMES})\s*=\s*(?:"([^"]*)"|'([^']*)')`,
-    'gi',
-  );
-  for (const m of html.matchAll(re)) {
-    const val = (m[1] ?? m[2] ?? '').trim();
-    if (val.split(/\s+/).filter(Boolean).length >= 2) return true;
+  // Reguła 4: tylko dozwolone encje.
+  for (let i = 0; i < rawHtml.length; i++) {
+    if (rawHtml[i] !== '&') continue;
+    const m = rawHtml.slice(i).match(ALLOWED_ENTITY_RE);
+    if (!m) return false;
+    i += m[0].length - 1;
   }
-  return false;
+
+  // Reguły 1–2: tagi i atrybuty.
+  let schedulerOpens = 0;
+  const tagRe = /<\/?([a-zA-Z][\w-]*)\b([^>]*)\/?>/g;
+  for (const m of rawHtml.matchAll(tagRe)) {
+    const name = m[1]!.toLowerCase();
+    const isClose = m[0].startsWith('</');
+    if (!ALLOWED_ALERT_TAGS.has(name)) return false;
+    if (name === 'scheduler' && !isClose) schedulerOpens += 1;
+    if (isClose) continue;
+    const attrChunk = m[2] ?? '';
+    // Samozamykające / puste OK; parsuj atrybuty.
+    const attrRe =
+      /([^\s="'<>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    for (const a of attrChunk.matchAll(attrRe)) {
+      const an = a[1]!.toLowerCase();
+      if (!ALLOWED_ALERT_ATTRS.has(an)) return false;
+      const val = a[2] ?? a[3] ?? a[4];
+      if (val != null && /[<>&]/.test(val)) return false;
+    }
+  }
+  // Dokładnie jeden zewnętrzny Scheduler.
+  if (schedulerOpens !== 1) return false;
+  return true;
 }
 
 /**
- * F7 #683 R8-B1: elementy `<Scheduler>` zbalansowanym licznikiem tagów
- * (leniwy `*?` kończy na wewnętrznym `</Scheduler>`).
+ * F7 #683 R8-B1 / R9: elementy `<Scheduler>` — pozycje z jednego `matchAll`, potem licznik.
  */
 function extractBalancedSchedulers(
   html: string,
-): Array<{ attrs: string; body: string; nestedOrUnbalanced: boolean }> {
-  const out: Array<{ attrs: string; body: string; nestedOrUnbalanced: boolean }> = [];
-  const openRe = /<Scheduler\b([^>]*)>/gi;
-  let m: RegExpExecArray | null;
-  while ((m = openRe.exec(html)) !== null) {
-    const attrs = m[1] ?? '';
-    const startBody = m.index + m[0].length;
+): Array<{ attrs: string; body: string; full: string }> {
+  type Tok = { type: 'open' | 'close'; index: number; len: number; attrs: string };
+  const tokens: Tok[] = [];
+  for (const m of html.matchAll(/<\/?Scheduler\b([^>]*)>/gi)) {
+    const isClose = /^<\s*\//.test(m[0]);
+    tokens.push({
+      type: isClose ? 'close' : 'open',
+      index: m.index!,
+      len: m[0].length,
+      attrs: isClose ? '' : (m[1] ?? ''),
+    });
+  }
+  const out: Array<{ attrs: string; body: string; full: string }> = [];
+  let i = 0;
+  while (i < tokens.length) {
+    const open = tokens[i]!;
+    if (open.type !== 'open') {
+      i += 1;
+      continue;
+    }
     let depth = 1;
-    let i = startBody;
-    let nested = false;
+    let j = i + 1;
     let closed = false;
-    while (i < html.length && depth > 0) {
-      const nextOpen = html.slice(i).search(/<Scheduler\b/i);
-      const nextClose = html.slice(i).search(/<\/Scheduler\s*>/i);
-      if (nextClose < 0) break;
-      if (nextOpen >= 0 && nextOpen < nextClose) {
-        nested = true;
-        depth += 1;
-        i += nextOpen + 1;
-        continue;
-      }
-      depth -= 1;
+    while (j < tokens.length && depth > 0) {
+      if (tokens[j]!.type === 'open') depth += 1;
+      else depth -= 1;
       if (depth === 0) {
-        const closeAt = i + nextClose;
-        const closeLen = html.slice(closeAt).match(/^<\/Scheduler\s*>/i)![0].length;
-        const body = html.slice(startBody, closeAt);
-        const openCount = (body.match(/<Scheduler\b/gi) ?? []).length;
-        const closeCount = (body.match(/<\/Scheduler\s*>/gi) ?? []).length;
-        out.push({
-          attrs,
-          body,
-          nestedOrUnbalanced: nested || openCount !== closeCount,
-        });
-        openRe.lastIndex = closeAt + closeLen;
+        const closeTok = tokens[j]!;
+        const startBody = open.index + open.len;
+        const body = html.slice(startBody, closeTok.index);
+        const full = html.slice(open.index, closeTok.index + closeTok.len);
+        out.push({ attrs: open.attrs, body, full });
+        i = j + 1;
         closed = true;
         break;
       }
-      i += nextClose + 1;
+      j += 1;
     }
     if (!closed) {
-      // Niezamknięty Scheduler — reszta jako body, bez auto.
       out.push({
-        attrs,
-        body: html.slice(startBody),
-        nestedOrUnbalanced: true,
+        attrs: open.attrs,
+        body: html.slice(open.index + open.len),
+        full: html.slice(open.index),
       });
       break;
     }
@@ -480,7 +535,7 @@ export function parseTallinkAlerts(
   // R7-B2: licz bloki Alert (także wygasłe) — nie uruchamiaj fallbacku przy Schedulerze z zeszłego roku.
   let schedulerAlertBlocks = 0;
   for (const block of blocks) {
-    const { attrs, body, nestedOrUnbalanced } = block;
+    const { attrs, body, full } = block;
     if (!/data-analytics-group\s*=\s*"Alert"/i.test(body)
       && !/data-analytics-group\s*=\s*"Alert"/i.test(attrs)
       && !/data-analytics-group="Alert"/i.test(body)) continue;
@@ -488,12 +543,10 @@ export function parseTallinkAlerts(
     schedulerAlertBlocks += 1;
     const dateStart = attrs.match(/dateStart\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
     const dateEnd = attrs.match(/dateEnd\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
-    // R8-B1: zagnieżdżony/niezbalansowany Scheduler → bez auto.
-    // Decyzja 70: znaczący tekst w atrybutach → bez auto.
-    const allowAuto = !nestedOrUnbalanced && !hasSignificantAttrText(body);
-    // R7-B1 / decyzja 68: cała treść Alertu po zdjęciu tagów (CwsH3/List/Text/goły tekst).
-    // R8 / decyzja 70: komentarze HTML usuwane w stripTags.
-    const text = stripTags(body).trim();
+    // R9 / decyzja 71: allowlista surowej struktury HTML (zamiast czarnej listy R8/70).
+    const allowAuto = alertHtmlAllowsAutoCancel(full);
+    // Decyzja 68: treść po zdjęciu tagów; dozwolone encje zamieniane przed zdaniami.
+    const text = stripTags(decodeAllowedEntities(body)).trim();
     if (!text) continue;
     pushAlert(text, body, dateStart, dateEnd, allowAuto);
   }
