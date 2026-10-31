@@ -1309,12 +1309,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ts.ee/Alert (F7 #683 B5); Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
-### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — W TOKU (przed scaleniem #688)
+### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — W TOKU (PR #689 @ `027d650f`; przed scaleniem #688)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
 1. ~~URL~~ → `https://www.tallink.com/travelling/one-way/helsinki-tallinn-ferry` (link z HOME; zwykły GET 200).
 2. ~~Niepełna pula~~ (któraś strona ≠ 200 / pusta) → **brak auto-ODWOLANY**; Alerty → ryzyko MEDIUM.
-3. ~~Streak ≥ 3~~ przebiegi z błędem strony → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM. Testy bn3-tallink-alert.
-DP-98 DONE. Kolejność: **scal #687 przed #688** (F7 r1 #688).
+3. ~~Streak ≥ 3~~ przebiegi z błędem strony → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM. Testy bn3-tallink-alert **55**.
+DP-98 DONE. Kolejność: **scal #689 (#687) przed #688** (F7 r1 #688).
 
 ### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r1 POPRAWKI; po #687)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
