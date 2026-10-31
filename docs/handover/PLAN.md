@@ -1217,7 +1217,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-96 | Cursor | decyzja 67 w PLAN §5 z uzasadnieniem (`TALLINK`/`ECKERO`/`DFDS_SCHEDULE` = MEDIUM przy całkowitej awarii; Polferries/Stena HIGH) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
 | DP-97 | Cursor | ryzyka `FERRY_UNKNOWN:PORTNET_ATA/ATD:…` bez auto-zamknięcia; `params.dep` w UTC zamiast czasu warszawskiego | F7 #682 r2 | BN3 | w kolejce |
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
-| DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto-ODWOLANY; streak ≥ 3 → SOURCE_DOWN TALLINK_STATUS | #687 | przed scaleniem #688 | W TOKU (`pakiet/687-dp114-tallink-hel-tll-url`) |
+| DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs | #687 / F7 #689 r1 | przed scaleniem #688 | W TOKU (F7 r1) |
+| DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1309,12 +1310,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ts.ee/Alert (F7 #683 B5); Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
-### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — W TOKU (PR #689 @ `027d650f`; przed scaleniem #688)
+### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — W TOKU (PR #689; F7 r1 POPRAWKI)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
 1. ~~URL~~ → `https://www.tallink.com/travelling/one-way/helsinki-tallinn-ferry` (link z HOME; zwykły GET 200).
-2. ~~Niepełna pula~~ (któraś strona ≠ 200 / pusta) → **brak auto-ODWOLANY**; Alerty → ryzyko MEDIUM.
-3. ~~Streak ≥ 3~~ przebiegi z błędem strony → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM. Testy bn3-tallink-alert **55**.
-DP-98 DONE. Kolejność: **scal #689 (#687) przed #688** (F7 r1 #688).
+2. ~~Niepełna pula~~ (HTTP ≠ OK / pusta / challenge Incapsula / bez znacznika Cws|Footer / &lt; 2 KB) → **brak auto-ODWOLANY**; Alerty → `TALLINK_ALERT_INCOMPLETE` MEDIUM (`rk_tallink_alert_incomplete`). Brak Schedulera ≠ niepełna.
+3. ~~Streak ≥ 3~~ z `integration_runs.result.tallink_alert_incomplete` (nie pamięć modułu) → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM. Testy bn3-tallink-alert **58**.
+DP-98 DONE; DP-115 (Stena IRM backoff) w kolejce. Kolejność: **scal #689 (#687) przed #688**.
 
 ### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r1 POPRAWKI; po #687)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).

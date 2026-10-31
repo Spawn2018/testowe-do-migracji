@@ -49,6 +49,7 @@ import {
 } from '../ferry/dfds.ts';
 import {
   TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN, TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
+  isTallinkAlertHtmlUsable,
   finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, parseTallinkAlerts,
 } from '../ferry/tallinkAlert.ts';
 import {
@@ -223,6 +224,8 @@ export interface SyncStore {
   raiseRisk(r: RiskInput & { loadId?: string }): Promise<boolean>;
   latestPositions(maxAgeMin: number): Promise<VehiclePos[]>;
   lastRun(job: string): Promise<string | null>;
+  /** F7 #689 R1-B3: ostatnie N wyników joba z integration_runs (od najnowszego). */
+  recentJobResults?(job: string, limit: number): Promise<JobResult[]>;
   /** zamyka otwarte ryzyka o kluczu z prefiksem (np. źródło znów działa) — zwraca liczbę */
   resolveRisks(dedupPrefix: string): Promise<number>;
   /** zamyka otwarte ryzyka z prefiksu, których klucza nie ma na liście (sytuacja zniknęła) */
@@ -346,6 +349,8 @@ export interface JobResult {
   departures?: number;
   /** #446: flaga wyłączona — Stan systemu nie pokazuje „działa” (front: result.disabled). */
   disabled?: boolean;
+  /** F7 #689 R1-B3 / DP-114: niepełna pula Tallink Alert — streak SOURCE_DOWN z integration_runs. */
+  tallink_alert_incomplete?: boolean;
 }
 
 /** F7 #660: limit ścienny odczytu (20 s) — bez zawieszenia joba na martwym źródle. */
@@ -1485,7 +1490,8 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   }
 
   // BN3: Tallink Alert (decyzja 59) — ODWOLANY przy jednoznacznym dopasowaniu; inaczej FERRY MEDIUM.
-  // DP-114: niepełna pula (któraś strona ≠ OK) → brak auto-ODWOLANY; streak ≥ 3 → SOURCE_DOWN.
+  // DP-114 / F7 #689: niepełna pula (HTTP≠OK / challenge / śmieć) → brak auto; streak z integration_runs.
+  let tallinkAlertIncomplete = false;
   {
     const urls = [TALLINK_HOME_URL, TALLINK_HEL_TLL_URL];
     const headers = { 'User-Agent': TALLINK_ALERT_UA, Accept: 'text/html' };
@@ -1494,10 +1500,15 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     const allAlerts = [];
     for (const url of urls) {
       const page = await readText(deps, url, { headers });
-      if (!page.ok || !String(page.text ?? '').trim()) {
-        const w = page.ok
-          ? `Tallink Alert: pusta odpowiedź ${url}`
-          : page.warning;
+      if (!page.ok) {
+        warnings.push(page.warning);
+        failMsgs.push(page.warning);
+        alertFail += 1;
+        continue;
+      }
+      const usable = isTallinkAlertHtmlUsable(page.text);
+      if (!usable.ok) {
+        const w = `${usable.reason} (${url})`;
         warnings.push(w);
         failMsgs.push(w);
         alertFail += 1;
@@ -1508,11 +1519,24 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       allAlerts.push(...parsed.alerts);
     }
     const poolIncomplete = alertFail > 0;
-    if (poolIncomplete) tallinkAlertPageFailStreak += 1;
-    else tallinkAlertPageFailStreak = 0;
+    tallinkAlertIncomplete = poolIncomplete;
+
+    // F7 #689 R1-B3: seria z integration_runs (zimny start Edge) + bieżący przebieg.
+    let priorStreak = 0;
+    if (poolIncomplete && deps.store.recentJobResults) {
+      const recent = await deps.store.recentJobResults(
+        'ferry-status',
+        TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN,
+      );
+      for (const prev of recent) {
+        if (prev.tallink_alert_incomplete) priorStreak += 1;
+        else break;
+      }
+    }
+    const failStreak = poolIncomplete ? priorStreak + 1 : 0;
 
     // DP-114 pkt 3: SOURCE_DOWN dopiero po ≥ 3 kolejnych przebiegach z błędem (także gdy obie strony padły).
-    const sourceDown = tallinkAlertPageFailStreak >= TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN;
+    const sourceDown = failStreak >= TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN;
     if (sourceDown) {
       if (await deps.store.raiseRisk(sourceDownRisk(
         'TALLINK_STATUS',
@@ -1524,6 +1548,9 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       ))) risks += 1;
     } else {
       await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_STATUS:');
+    }
+    if (!poolIncomplete) {
+      await deps.store.resolveRisks('TALLINK_ALERT_INCOMPLETE:');
     }
 
     if (alertFail < urls.length) {
@@ -1547,11 +1574,14 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         if (alert.kind !== 'ODWOLANY') continue;
         // DP-114 pkt 2: niepełna pula → tylko ryzyko MEDIUM, bez auto-ODWOLANY (reguła 72 traci połowę).
         if (poolIncomplete) {
+          // F7 #689 nieblokujące: bez INCOMPLETE gdy rejs już ODWOLANY.
+          const hit = matchTallinkAlertSailings(alert, cands);
+          if (hit.kind === 'already_cancelled') continue;
           const ok = await deps.store.raiseRisk({
             kind: 'FERRY',
             severity: 'MEDIUM',
             title: 'Tallink Alert: niepełna pula stron — bez auto-odwołania, weryfikacja HHL',
-            titleKey: 'rk_tallink_alert_unmatched',
+            titleKey: 'rk_tallink_alert_incomplete',
             params: { vessel: alert.vessel ?? '' },
             detail: {
               tekst: alert.text.slice(0, 400),
@@ -1622,6 +1652,7 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   const result: JobResult = {
     job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail && dfStatusFail),
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
+    tallink_alert_incomplete: tallinkAlertIncomplete || undefined,
   };
   // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).
   if (updated > 0 || inserted > 0) {
@@ -1659,16 +1690,9 @@ export function acceptActualDepartureAt(
   return true;
 }
 
-/** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7). */
+/** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7).
+ *  DP-115: ten sam wzorzec stanu w pamięci modułu co dawny streak Tallink — ocenić osobno. */
 let stenaIrmBackoffUntilMs = 0;
-
-/** DP-114: kolejne przebiegi z błędem którejś strony Tallink Alert (HOME / HEL–TLL). */
-let tallinkAlertPageFailStreak = 0;
-
-/** Testy DP-114 — reset streak między przypadkami. */
-export function __resetTallinkAlertFailStreakForTests(): void {
-  tallinkAlertPageFailStreak = 0;
-}
 
 async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null; suppressRisk?: boolean }> {
   if (nowMs < stenaIrmBackoffUntilMs) {

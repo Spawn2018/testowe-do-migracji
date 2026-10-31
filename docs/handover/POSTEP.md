@@ -7331,6 +7331,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Bez push na main.
 
 
+## 2026-10-31 19:10 — #689 F7 r1 POPRAWKI (DP-114 usable HTML + streak z runs)
+
+- Skrzynka: #689 F7 r1 POPRAWKI; #688 czeka po scaleniu #689; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak «F7: gotowe do scalenia» (POPRAWKI). Bez push na main.
+- **Krok F7 #689 r1:**
+  - **B1** — `isTallinkAlertHtmlUsable` (Footer/Cws, bez Incapsula/captcha, ≥ 2 KB); brak Schedulera ≠ niepełna;
+  - **B2** — testy mutacji HOME/HEL 404/403/5xx/pustka/throw + Imperva 200;
+  - **B3** — `JobResult.tallink_alert_incomplete` + `recentJobResults` z `integration_runs` (zimny start Edge); test `vi.resetModules`;
+  - nieblokujące: INCOMPLETE titleKey; skip gdy już ODWOLANY; resolve INCOMPLETE przy pełnej puli; **DP-115** stenaIrmBackoff.
+- vitest bn3-tallink-alert **58**. **Dalej:** CI → gotowe do F7 → scal #689 → F7 r1 #688.
+- Bez push na main.
+
 ## 2026-10-31 00:10 — #667 F7 r3 POPRAWKI (B5 SE_E22 0298 + B4 sparse)
 
 - Skrzynka: #666 W TOKU (PR #668 @ `f0dfbc61` — F7 r7; CI db/visual w toku; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.

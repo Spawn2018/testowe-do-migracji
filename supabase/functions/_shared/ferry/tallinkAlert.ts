@@ -46,6 +46,37 @@ export const TALLINK_ALERT_UA = 'Watch Tower (https://tower.log-mar.pl; ferry ti
 export const TALLINK_ALERT_ATTRIBUTION = 'Komunikat: Tallink (tallink.com)';
 /** DP-114: po ilu kolejnych przebiegach z błędem strony → SOURCE_DOWN:TALLINK_STATUS. */
 export const TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN = 3;
+/** F7 #689 R1-B1: minimalna długość prawdziwej strony Tallinka (nie challenge / pusty HTML). */
+export const TALLINK_ALERT_PAGE_MIN_BYTES = 2048;
+
+/** Znacznik prawdziwej strony (Footer albo komponenty Cws*). Brak Schedulera ≠ niepełna. */
+const TALLINK_PAGE_MARKER_RE =
+  /data-analytics-group\s*=\s*(["']?)Footer\1|<Cws[A-Z][A-Za-z0-9]*/i;
+/** F7 #689 R1-B1: Incapsula / captcha przy HTTP 200. */
+const TALLINK_PAGE_BLOCK_RE = /_Incapsula_Resource|Incapsula\s+incident|\bcaptcha\b/i;
+
+/**
+ * F7 #689 R1-B1: strona Tallink Alert jest użyteczna tylko gdy ma znacznik prawdziwej strony,
+ * nie wygląda na blokadę i ma ≥ 2 KB. HTTP 200 + śmieć/challenge → niepełna pula.
+ */
+export function isTallinkAlertHtmlUsable(
+  html: string,
+): { ok: true } | { ok: false; reason: string } {
+  const text = String(html ?? '');
+  if (text.length < TALLINK_ALERT_PAGE_MIN_BYTES) {
+    return {
+      ok: false,
+      reason: `Tallink Alert: odpowiedź za krótka (${text.length} B, min ${TALLINK_ALERT_PAGE_MIN_BYTES})`,
+    };
+  }
+  if (TALLINK_PAGE_BLOCK_RE.test(text)) {
+    return { ok: false, reason: 'Tallink Alert: odpowiedź wygląda na blokadę (Incapsula/captcha)' };
+  }
+  if (!TALLINK_PAGE_MARKER_RE.test(text)) {
+    return { ok: false, reason: 'Tallink Alert: brak znacznika prawdziwej strony Tallinka' };
+  }
+  return { ok: true };
+}
 
 const SHIP_ALIASES: Array<{ re: RegExp; vessel: string }> = [
   { re: /\bmystar\b/i, vessel: 'M/F MyStar' },
